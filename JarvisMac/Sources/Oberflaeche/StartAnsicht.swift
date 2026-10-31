@@ -49,18 +49,22 @@ struct StartAnsicht: View {
                             }
                         }
                     }
-                    DreiZeilen(abstand: 8) {
-                        ForEach(Self.schnellFragen, id: \.self) { frage in
-                            SchnellTag(titel: frage) { steuerung.gespraech = nil; steuerung.sende(frage) }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 40).padding(.bottom, 20)
                 .frame(maxWidth: 860)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
+            // Fest über der Blase, damit die Tags ohne Scrollen zu sehen sind.
+            DreiZeilen(abstand: 8) {
+                ForEach(Self.schnellFragen, id: \.self) { frage in
+                    SchnellTag(titel: frage) { steuerung.gespraech = nil; steuerung.sende(frage) }
+                }
+            }
+            .padding(.horizontal, 44).padding(.top, 10)
+            .frame(maxWidth: 940)
+            .frame(maxWidth: .infinity)
+            .clipped()
             EingabeBlase(gespraech: nil, anhang: $anhang)
         }
         .task { await daten.laden() }

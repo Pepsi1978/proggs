@@ -51,7 +51,7 @@ struct EingabeBlase: View {
                 HStack(spacing: 10) {
                     plusMenue
                     // Wie am Handy schaltet der freie Platz zwischen Plus und Modell um.
-                    Color.clear.frame(maxWidth: .infinity, minHeight: 34)
+                    Color.clear.frame(maxWidth: .infinity).frame(height: 34)
                         .contentShape(Rectangle())
                         .onTapGesture { umschalten() }
                         .help(kompakt ? "Eingabe öffnen" : "Eingabe verkleinern")
@@ -68,7 +68,11 @@ struct EingabeBlase: View {
         .padding(.horizontal, 40).padding(.bottom, 22).padding(.top, 6)
         .frame(maxWidth: 940)
         .frame(maxWidth: .infinity)
-        .onAppear { fokus = true }
+        .onAppear {
+            fokus = true
+            // Beim Fensterstart nimmt sonst das erste Textfeld der Leiste den Fokus.
+            Task { try? await Task.sleep(for: .milliseconds(150)); fokus = true }
+        }
         .onChange(of: steuerung.blaseFokus) { _, _ in fokus = true }
     }
 
