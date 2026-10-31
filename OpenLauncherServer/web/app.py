@@ -356,9 +356,6 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
             elif d.get("t") == "s":
                 gerollt[0] = True
                 await _im_faden(launcher.rollen, name, max(-500, min(500, int(d.get("n", 0)))))
-            elif d.get("t") == "e":
-                gerollt[0] = False
-                await _im_faden(launcher.verlauf_ende, name, True)
             elif d.get("t") == "r":
                 fcntl.ioctl(herr, termios.TIOCSWINSZ, struct.pack("HHHH", max(int(d["r"]), 2), max(int(d["c"]), 2), 0, 0))
     finally:

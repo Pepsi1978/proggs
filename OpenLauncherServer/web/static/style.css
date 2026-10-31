@@ -34,6 +34,12 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 .wisch { position:absolute; inset:0; z-index:20; touch-action:none; }
 #tasten { display:flex; flex:none; gap:4px; padding:5px 6px 0; overflow-x:auto; }
 #tasten button { flex:1 0 auto; padding:5px 10px; min-height:36px; font-size:14px; }
+#tasten button.an { border-color:var(--akzent); color:var(--akzent); }
+/* Liegt über dem Terminal statt daneben: Öffnen und Schließen ändern die Größe der laufenden CLI nicht. */
+#tasten-wahl { position:relative; flex:none; height:0; }
+#buchstaben { position:absolute; left:0; right:0; bottom:0; z-index:40; display:flex; gap:4px; padding:6px; overflow-x:auto; background:var(--flaeche); border-top:1px solid var(--rand); }
+#buchstaben[hidden] { display:none; }
+#buchstaben button { flex:0 0 46px; padding:0; font-size:16px; font-weight:600; }
 #eingabe { display:flex; flex:none; gap:6px; padding:6px; }
 #eingabe textarea { margin:0; flex:1; resize:none; padding:9px; max-height:120px; }
 #browser.an { padding:0; overflow:hidden; }

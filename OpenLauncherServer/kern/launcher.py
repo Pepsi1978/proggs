@@ -496,15 +496,11 @@ def rollen(name: str, zeilen: int) -> None:
     subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", vollbild, verlauf], capture_output=True, timeout=5)
 
 
-def verlauf_ende(name: str, nach_unten: bool = False) -> None:
-    """Den Verlauf-Modus verlassen; im Verlauf landen Eingaben sonst bei tmux statt bei der CLI. [nach_unten]: der Knopf Ende, Vollbild-Oberflächen springen ans Ende."""
+def verlauf_ende(name: str) -> None:
+    """Den Verlauf-Modus verlassen; im Verlauf landen Eingaben sonst bei tmux statt bei der CLI."""
     ziel = f"={pruefe_name(name)}:"
     _BLAETTERN.pop(name, None)
-    verlauf = f"if-shell -F -t {ziel} '#{{pane_in_mode}}' 'send-keys -t {ziel} -X cancel'"
-    if nach_unten:
-        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", f"send-keys -t {ziel} End", verlauf], capture_output=True, timeout=5)
-    else:
-        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
+    subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
 
 
 def wartet_auf_anmeldung(name: str) -> bool:

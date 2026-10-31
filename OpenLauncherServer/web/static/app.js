@@ -111,7 +111,6 @@ function wischenEinrichten() {
     const zeilen = Math.trunc(radRest / zeilenHoehe());
     if (zeilen) { radRest -= zeilen * zeilenHoehe(); rollen(-zeilen); }
   }, { capture: true, passive: false });
-  $("ende").addEventListener("click", () => { rollenStoppen(); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" })); });
   if (!("ontouchstart" in window)) return;
   const decke = element("div", "wisch");
   flaeche.append(decke);
@@ -185,7 +184,29 @@ function aufmachen() {
   };
 }
 zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen").textContent = "Sitzung schließen"; schliesse(n); zeige("sitzungen"); } });
-document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
+// STRG und ALT: Ein Tipper öffnet die Leiste A bis Z zum Wischen, ein Buchstabe schickt die Tastenkombination und schließt sie.
+// Strg+B zweimal: Tmux behält das erste als eigenes Präfix und reicht erst das zweite an die CLI weiter.
+const kombination = {
+  strg: (b) => (b === "b" ? "\x02\x02" : String.fromCharCode(b.charCodeAt(0) - 96)),
+  alt: (b) => `\x1b${b}`,
+};
+let wahl = "";
+function waehle(art) {
+  wahl = art;
+  $("buchstaben").hidden = !art;
+  if (art) $("buchstaben").scrollLeft = 0;
+  for (const name of Object.keys(kombination)) $(name).classList.toggle("an", name === art);
+}
+for (const b of "abcdefghijklmnopqrstuvwxyz") {
+  const knopf = document.createElement("button");
+  knopf.textContent = b.toUpperCase();
+  knopf.addEventListener("click", () => { const art = wahl; waehle(""); schicke(kombination[art](b)); });
+  $("buchstaben").append(knopf);
+}
+for (const name of Object.keys(kombination)) $(name).addEventListener("click", () => waehle(wahl === name ? "" : name));
+document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => { waehle(""); schicke(b.dataset.t); }));
+// Der Fokus bleibt im Eingabefeld, sonst klappt die Handy-Tastatur bei jedem Tipper zu.
+for (const name of ["strg", "alt", "buchstaben"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("text");
