@@ -9,6 +9,14 @@ final class ZentraleDaten {
     var wetter: String?
     var laedt = false
     var zuletzt: Date?
+    /// Gesetzt, wenn der letzte Abruf gar nichts brachte; ein Erfolg löscht es.
+    var letzterFehlschlag: Date?
+
+    /// Lädt unabhängig von der Ansicht, damit ein Wechsel den Abruf nicht abbricht. Nach einem Fehlschlag frühestens nach einer Minute wieder.
+    func vorladen() {
+        if let f = letzterFehlschlag, Date().timeIntervalSince(f) < 60 { return }
+        Task { await laden() }
+    }
 
     func laden(erzwingen: Bool = false) async {
         if laedt { return }
@@ -25,7 +33,12 @@ final class ZentraleDaten {
         // Was gerade nicht kam, bleibt stehen; nur ein Erfolg sperrt das erneute Laden für fünf Minuten.
         auswertung = ra.map(Self.kuerzeAuswertung) ?? auswertung
         aufgaben = rb ?? aufgaben; termine = rc ?? termine; wetter = rd ?? wetter
-        if ra != nil || rb != nil || rc != nil || rd != nil { zuletzt = Date() }
+        if ra != nil || rb != nil || rc != nil || rd != nil {
+            zuletzt = Date()
+            letzterFehlschlag = nil
+        } else {
+            letzterFehlschlag = Date()
+        }
     }
 
     /// Nur der Teil für Frank (ohne den angehängten Regel- und Gedächtnisblock).
@@ -70,9 +83,7 @@ struct ZentraleAnsicht: View {
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.never)
-        .task {
-            await daten.laden()
-        }
+        .onAppear { daten.vorladen() }
     }
 
     static var datumZeile: String {

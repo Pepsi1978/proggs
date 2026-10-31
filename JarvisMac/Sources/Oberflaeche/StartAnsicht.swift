@@ -15,7 +15,14 @@ struct StartAnsicht: View {
         "Was nehme ich heute ein?", "Schau dir meinen Bildschirm an", "Was hast du dir gemerkt?",
     ]
 
+    /// 150 Punkte (rund 3,5 cm) Luft zur Eingabezeile; in kleinen Fenstern weniger, damit Kugel und Begrüßung sichtbar bleiben.
+    private func abstandZurBlase(fensterHoehe: CGFloat) -> CGFloat {
+        let platzFuerDenRest: CGFloat = 510
+        return min(150, max(12, fensterHoehe - platzFuerDenRest))
+    }
+
     var body: some View {
+        GeometryReader { fenster in
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 22) {
@@ -30,6 +37,9 @@ struct StartAnsicht: View {
                             Text(ZentraleAnsicht.gruss).font(.jarvis(34, .bold))
                         }
                         Text(ZentraleAnsicht.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
+                        if daten.letzterFehlschlag != nil && !daten.laedt {
+                            Text("Das Handy-Jarvis ist gerade nicht erreichbar.").font(.jarvis(13)).foregroundStyle(Farbe.warnung)
+                        }
                     }
                 }
                 .padding(.horizontal, 64).padding(.bottom, 20)
@@ -43,14 +53,14 @@ struct StartAnsicht: View {
                     SchnellTag(titel: frage) { steuerung.gespraech = nil; steuerung.sende(frage) }
                 }
             }
-            // Rund 3,5 cm Luft zur Eingabezeile.
-            .padding(.horizontal, 64).padding(.top, 10).padding(.bottom, 150)
+            .padding(.horizontal, 64).padding(.top, 10).padding(.bottom, abstandZurBlase(fensterHoehe: fenster.size.height))
             .frame(maxWidth: 980)
             .frame(maxWidth: .infinity)
             .clipped()
             EingabeBlase(gespraech: nil, anhang: $anhang)
         }
-        .task { await daten.laden() }
+        }
+        .onAppear { daten.vorladen() }
     }
 }
 
