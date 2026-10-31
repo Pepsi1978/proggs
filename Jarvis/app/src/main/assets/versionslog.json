@@ -512,6 +512,7 @@
     {"versionCode": 507, "versionName": "1.8.496", "stand": "31.10.2026, 18:55 Uhr", "notiz": "Programmierbutton: Sol 6.1 oder Opus 5.5 wählst du jetzt vor dem Diktat, das Modell gilt ohne erneute Frage, und die Tastatur kommt nur noch über das kleine Symbol neben dem Mikrofon."},
     {"versionCode": 508, "versionName": "1.8.497", "stand": "31.10.2026, 19:15 Uhr", "notiz": "Die Tastatur kommt nie mehr von selbst, auch nicht bei Nachtrag: Der neue Tastaturbutton zwischen Modell und Mikrofon öffnet und schließt sie."},
     {"versionCode": 509, "versionName": "1.8.498", "stand": "31.10.2026, 19:24 Uhr", "notiz": "Modellwahl am Programmierbutton: kein doppelter Auftrag, die Wahl gilt auch nach einer Rückfrage, und ältere offene Auswahlen bleiben erhalten."},
-    {"versionCode": 510, "versionName": "1.8.499", "stand": "31.10.2026, 19:27 Uhr", "notiz": "Interne Korrektur: Versehentlich mitgelieferte, noch unfertige Anhang-Änderungen sind aus dieser Version wieder entfernt."}
+    {"versionCode": 510, "versionName": "1.8.499", "stand": "31.10.2026, 19:27 Uhr", "notiz": "Interne Korrektur: Versehentlich mitgelieferte, noch unfertige Anhang-Änderungen sind aus dieser Version wieder entfernt."},
+    {"versionCode": 511, "versionName": "1.8.500", "stand": "31.10.2026, 19:31 Uhr", "notiz": "Fotos und Dateien vom Plus gehen jetzt direkt und schnell mit jedem Programmierauftrag und Nachtrag in genau die richtige Sitzung und erscheinen dort als echte Bilder."}
 ]
 }
