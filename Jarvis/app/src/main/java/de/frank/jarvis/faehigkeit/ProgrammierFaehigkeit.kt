@@ -13,6 +13,8 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.observability.Logbuch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,6 +23,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.time.Instant
 import java.time.ZoneId
@@ -469,9 +472,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     wahl.isEmpty() -> vorwahlStart(gespraech, knopfModell, vorwahlText, appName, auftrag, a.optBoolean("review"), neu, ziel, aktuell, modell, cli) { Ergebnis(fehltFuer(modell), fehler = true) }
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
-                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty()))
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
                     modell == MODELL_SOL && cli == CLI_CODEX && !a.has("review") && ziel != "cloud" && rechnerDa(ziel) ->
-                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, CLI_CODEX, STUFE_REVIEW, runde = worte?.aktuell.orEmpty()))
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, CLI_CODEX, STUFE_REVIEW, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
                     else -> {
                         // Per Sprache gewählt: Die Knöpfe im selben Gespräch haben ausgedient (sonst startete ein Tipp ein zweites Mal).
                         // Ein Auftrag mit vorgewähltem Modell ist ein eigener: Karten älterer Aufträge bleiben offen.
@@ -583,10 +586,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Ein Start, der auf Franks Wahl per Knopf wartet. [ursprung]: im Sprachgespräch gestellt (dann wird das Ende vorgelesen).
      * [stufe]: was gerade gefragt ist (Modell, bei Sol das CLI, bei Codex das Review); [modell] und [cli] sind die Antworten davor.
      */
+    private suspend fun anhangPfade() = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.liste.orEmpty().map { it.pfad }
+
+    /** Die schon beim Relay liegenden Anhänge dieses Starts ([{sha, name}]), für die Ziele. */
+    private class HochgeladeneAnhaenge(val liste: JSONArray) : kotlin.coroutines.AbstractCoroutineContextElement(Key) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<HochgeladeneAnhaenge>
+    }
+
     private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
                                   val ursprung: de.frank.jarvis.speech.SprachUrsprung?, val ziel: String = "",
                                   val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL,
-                                  val seit: Long = System.currentTimeMillis(), val runde: String = "")
+                                  val seit: Long = System.currentTimeMillis(), val runde: String = "", val anhaenge: List<String> = emptyList())
 
     /** Ein per Knopf gestarteter Auftrag, gemerkt je Gespräch für [KNOPF_FRIST_MS] (siehe [knopfStartIn]). */
     private class KnopfStart(val nummer: String, val app: String, val modell: String, val cli: String, val runde: String = "", val zeit: Long = System.currentTimeMillis())
@@ -620,7 +630,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
         offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS &&
             (runde.isEmpty() || it.value.runde == runde) }?.let { (id, alt) ->
-            val neuGefasst = alt.copy(app = appName, auftrag = auftrag)
+            val neuGefasst = alt.copy(app = appName, auftrag = auftrag, anhaenge = anhangPfade().ifEmpty { alt.anhaenge })
             offeneWahlen[id] = neuGefasst
             // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
             karten[id]?.let { karten[id] = it.copy(frage = frageUndKnoepfe(neuGefasst).first, zeit = System.currentTimeMillis(), ausRunde = true) }
@@ -631,7 +641,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“ und „Sol 6.1“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
-        karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde))
+        karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde, anhaenge = anhangPfade()))
         return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“ und „Sol 6.1“. $KARTE_FRAGT " +
             "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
     }
@@ -729,7 +739,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     private suspend fun tippVerarbeiten(wahlId: String, w: OffeneWahl, wert: String) {
-        val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext)
+        val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext) +
+            ProgrammierChat.AuftragsAnhaenge(w.anhaenge.map { de.frank.jarvis.data.Anhang(it) })
         // Folgefragen: Sol am Windows-PC → CLI, Codex CLI → Review. Ist der PC aus, geht Sol wie bisher ohne Frage weiter.
         val naechste = when {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
@@ -763,6 +774,65 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
                                      modell: String = MODELL_OPUS, cli: String = CLI_CODEX, nurFuerSitzung: String = ""): Ergebnis {
+        // Erst vollständig beim Relay, dann der Start: Nie eine Sitzung, der Franks Bilder oder Dateien fehlen.
+        val anhaenge = try { anhaengeHochladen() } catch (fehler: Exception) {
+            return Ergebnis("Der Auftrag ist NICHT gestartet: ${fehler.message} Sag Frank das und bitte ihn, noch einmal zu senden.", fehler = true)
+        }
+        return withContext(HochgeladeneAnhaenge(anhaenge)) { starteErstesOhneUpload(wahl, appName, auftrag, review, nummer, neu, modell, cli, nurFuerSitzung) }
+    }
+
+    /**
+     * Legt Franks Anhänge dieser Runde beim Relay ab, parallel und direkt (kein Umweg über das Modell), und liefert [{sha, name}].
+     * Der Relay nimmt dieselbe Prüfsumme beliebig oft an, darum genügt der einfache Neuversuch. Ohne Anhänge sofort leer.
+     */
+    private suspend fun anhaengeHochladen(): JSONArray {
+        val liste = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.liste.orEmpty()
+        if (liste.isEmpty()) return JSONArray()
+        return withContext(Dispatchers.IO) {
+            val dateien = de.frank.jarvis.data.Anhaenge.fuerSitzung(app, liste)
+            val fehlt = liste.size - liste.count { it.datei.isFile }
+            if (fehlt > 0) throw IllegalStateException("$fehlt Anhang/Anhänge liegen nicht mehr auf dem Handy.")
+            val gleichzeitig = kotlinx.coroutines.sync.Semaphore(4)
+            kotlinx.coroutines.coroutineScope {
+                dateien.distinctBy { it.sha }.map { d ->
+                    async { gleichzeitig.withPermit { einenAnhangHochladen(d) } }
+                }.forEach { it.await() }
+            }
+            Logbuch.system("Programmier-Anhänge übertragen", "${dateien.size} Datei(en), ${dateien.sumOf { it.datei.length() } / 1024} KB")
+            JSONArray().apply { dateien.forEach { put(JSONObject().put("sha", it.sha).put("name", it.name)) } }
+        }
+    }
+
+    private suspend fun einenAnhangHochladen(d: de.frank.jarvis.data.UebertragDatei) {
+        var letzter: Exception? = null
+        repeat(3) { versuch ->
+            try {
+                val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/anhang/${d.sha}").header("X-Jarvis-Token", e.serverToken)
+                    .put(d.datei.asRequestBody("application/octet-stream".toMediaType())).build()
+                HTTP.newCall(anfrage).execute().use { a ->
+                    if (a.isSuccessful) return
+                    throw IllegalStateException("HTTP ${a.code}")
+                }
+            } catch (fehler: Exception) {
+                letzter = fehler
+                kotlinx.coroutines.delay(1000L * (versuch + 1))
+            }
+        }
+        throw IllegalStateException("Der Anhang „${d.name}“ kam nicht beim Jarvis-Server an (${letzter?.message}).")
+    }
+
+    /** Für die Cloud: Sie hat kein Token und holt die Dateien über ihre Prüfsumme. */
+    private fun cloudAnhangText(anhaenge: JSONArray): String {
+        if (anhaenge.length() == 0) return ""
+        val zeilen = (0 until anhaenge.length()).map { i ->
+            val a = anhaenge.getJSONObject(i)
+            "curl -fsSL -o \"${a.optString("name").replace(Regex("[^A-Za-z0-9._-]"), "_")}\" https://${e.serverHost}/anhang/${a.optString("sha")}/d"
+        }
+        return "\n\nANHÄNGE VON FRANK: Lade sie zuerst und öffne sie, sie gehören zu genau diesem Auftrag und sind maßgeblich:\n" + zeilen.joinToString("\n")
+    }
+
+    private suspend fun starteErstesOhneUpload(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
+                                               modell: String, cli: String, nurFuerSitzung: String): Ergebnis {
         val uebersprungen = mutableListOf<String>()
         val (ausChatGpt, aufrufGespraech) = herkunft()
         // Im Sprachgespräch gestellt (Hey Jarvis mit Vorlesen oder Live): dauerhaft im Auftragsbuch, damit der Abschluss später
@@ -1089,12 +1159,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Knopf „Nachtrag“ der Eingabeblase im Programmiergespräch [gespraech]: [text] geht ohne Modell als Nachtrag in die Sitzung
      * dieses Gesprächs. Der Knopf ist Franks ausdrücklicher Wunsch; Ziel ist der noch laufende Auftrag, sonst der jüngste.
      */
-    suspend fun nachtragPerKnopf(gespraech: String, text: String): Ergebnis {
+    suspend fun nachtragPerKnopf(gespraech: String, text: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList()): Ergebnis {
         val auftraege = Auftragsbuch.alleImGespraech(app, gespraech)
         val id = (auftraege.lastOrNull { it.optString("stand") in listOf("laeuft", "frage") } ?: auftraege.lastOrNull())?.optString("id")
             ?: return Ergebnis("In diesem Gespräch läuft keine Programmier-Sitzung, der Nachtrag wurde nicht gesendet.", fehler = true)
         val worte = "Nachtrag in die gleiche Session $id"
-        return withContext(ProgrammierChat.GespraechKennung(gespraech) + ProgrammierChat.FranksWorte(worte, streng = true)) {
+        return withContext(ProgrammierChat.GespraechKennung(gespraech) + ProgrammierChat.FranksWorte(worte, streng = true) + ProgrammierChat.AuftragsAnhaenge(anhaenge)) {
             nachtrag(id, DiktatTrenner.auftrag(text), worte)
         }
     }
@@ -1156,7 +1226,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "Der Nachtrag wurde nicht gesendet. Sag Frank das offen: Setzt er die Sitzung am PC mit claude --resume fort, gehen Nachträge und Rückfragen " +
                 "unter derselben Nummer direkt hinein.", fehler = true)
         }
-        val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, text, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
+        // Erst vollständig beim Relay, dann der Nachtrag: Nie ein Nachtrag, dessen Bilder fehlen.
+        val anhaenge = try { anhaengeHochladen() } catch (fehler: Exception) {
+            return Ergebnis("Der Nachtrag wurde nicht gesendet: ${fehler.message} Bitte noch einmal senden.", fehler = true)
+        }
+        val mitAnhaengen = text + (if (cloud) cloudAnhangText(anhaenge) else "")
+        val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, mitAnhaengen, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
             ?: return Ergebnis("Den Auftrag $id gibt es nicht mehr im Auftragsbuch. Nichts wurde gesendet.", fehler = true)
         val nummer = n.optString("id")
         if (doppelt && n.optString("stand") !in listOf("angenommen", "fehler")) {
@@ -1170,7 +1245,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Angenommen: Nachtrag $nummer für Auftrag $id ($appName) liegt bereit. Die Cloud-Sitzung bekommt ihn mit ihrer nächsten Fortschrittsmeldung; " +
                 "zugestellt ist er erst, wenn programmierauftraege das zeigt. Meldet sie sich nicht mehr, kommt er nicht an; eine neue Sitzung startet Jarvis nicht von selbst.")
         }
-        val antwort = runCatching { anSitzung(id, nummer, text) }.getOrElse { fehler ->
+        val antwort = runCatching { anSitzung(id, nummer, text, anhaenge) }.getOrElse { fehler ->
             Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen"), "fehler")
             return Ergebnis("Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). Er ist im Auftrag $id vermerkt, " +
                 "aber nicht zugestellt; ein erneuter Aufruf mit demselben Text schickt ihn noch einmal, ohne ihn zu verdoppeln.", fehler = true)
@@ -1208,8 +1283,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Legt [text] als Nachtrag [nummer] beim Relay für die Sitzung von Auftrag [id] ab; Antwort: zugestellt, wartet, kontakt_vor_s, pc. */
-    private suspend fun anSitzung(id: String, nummer: String, text: String): JSONObject = withContext(Dispatchers.IO) {
+    private suspend fun anSitzung(id: String, nummer: String, text: String, anhaenge: JSONArray = JSONArray()): JSONObject = withContext(Dispatchers.IO) {
         val rumpf = JSONObject().put("auftrag_id", id).put("nachtrag_id", nummer).put("text", text)
+        if (anhaenge.length() > 0) rumpf.put("anhaenge", anhaenge)
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/nachtrag").header("X-Jarvis-Token", e.serverToken)
             .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
         HTTP.newCall(anfrage).execute().use { a ->
@@ -2245,6 +2321,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 rumpf.put("slug", w.modell.slug).put("anbieter", w.modell.anbieter).put("name", w.modell.name).put("effort", w.effort)
                     .put("profil", w.profil).put("modus", w.modus).put("cli", w.cli)
             }
+            kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste?.takeIf { it.length() > 0 }?.let { rumpf.put("anhaenge", it) }
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -2325,6 +2402,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: ").append(if (review) "ja" else "nein").append('\n')
                 append("AUFTRAG:\n").append(auftrag)
+                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()))
             }.take(HOECHSTENS)
             val anfrage = Request.Builder().url(e.routineUrl)
                 .header("Authorization", "Bearer ${e.routineToken}")
@@ -2366,6 +2444,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: nein\n")
                 append("AUFTRAG:\n").append(auftrag)
+                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()))
             }.take(HOECHSTENS)
             val thread = auth.codexCloudRpc { rpc ->
                 val liste = rpc("environment/config/list", JSONObject()).optJSONArray("data") ?: JSONArray()
@@ -2637,7 +2716,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .apply {
                         offeneWahlen[id]?.let { w ->
                             put("wahl", JSONObject().put("app", w.app).put("auftrag", w.auftrag).put("review", w.review).put("neu", w.neu)
-                                .put("gespraech", w.gespraech).put("ziel", w.ziel).put("modell", w.modell).put("cli", w.cli).put("stufe", w.stufe).put("seit", w.seit))
+                                .put("gespraech", w.gespraech).put("ziel", w.ziel).put("modell", w.modell).put("cli", w.cli).put("stufe", w.stufe).put("seit", w.seit)
+                                .put("anhaenge", JSONArray(w.anhaenge)))
                         }
                     })
             }
@@ -2662,7 +2742,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     val optionen = if (l == null) emptyList() else (0 until l.length()).mapNotNull { l.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
                     val w = o.optJSONObject("wahl")?.let {
                         OffeneWahl(it.optString("app"), it.optString("auftrag"), it.optBoolean("review"), it.optBoolean("neu"), it.optString("gespraech"), null,
-                            it.optString("ziel"), it.optString("modell"), it.optString("cli"), it.optString("stufe", STUFE_MODELL), it.optLong("seit", zeit))
+                            it.optString("ziel"), it.optString("modell"), it.optString("cli"), it.optString("stufe", STUFE_MODELL), it.optLong("seit", zeit),
+                            anhaenge = it.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { i -> l.optString(i) } }.orEmpty())
                     }
                     val s = o.optString("stand")
                     // Offen ohne gemerkten Auftrag ließe sich nicht starten: dann nicht mehr aktiv.

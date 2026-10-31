@@ -119,6 +119,11 @@ object ProgrammierChat {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<FranksWorte>
     }
 
+    /** Franks Anhänge dieser Runde: Sie gehen an der Modellantwort vorbei direkt an die Programmier-Sitzung (programmieren, programmier_nachtrag). */
+    class AuftragsAnhaenge(val liste: List<de.frank.jarvis.data.Anhang>) : kotlin.coroutines.AbstractCoroutineContextElement(Key) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<AuftragsAnhaenge>
+    }
+
     /** Anfang der ersten Nachricht eines eigenen Auftrags-Gesprächs: Sie ist der Auftrag, nicht Franks Wort an Jarvis. */
     const val AUFTRAG_VORSPANN = "An den Programmierer ("
     private const val PLUGIN_VORSPANN = "Über das Jarvis-Plugin (ChatGPT/MCP) an den Programmierer ("

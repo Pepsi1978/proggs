@@ -33,6 +33,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import jarvis_anhaenge
+
 PROFIL = "minimal"
 MODUS = "schnell"
 MODELL = "claude-opus-5-5[1m]"
@@ -308,14 +310,18 @@ def starte_sitzung(auftrag: dict) -> str:
     if cli:
         modellname = re.sub(r"[^\w ._()-]", "", str(auftrag.get("name") or auftrag.get("slug") or "")).strip()
         name += f" ({modellname}" + ("" if cli == "claude" else f", {cli}") + ")"
+    nummer = str(auftrag.get("nummer", ""))
+    mit_hooks = bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer))
+    if auftrag.get("anhaenge"):
+        # Vor dem Start vollständig auf dem Rechner. Die Bilder fügt der SessionStart-Hook von Claude Code als [Image #n] ein.
+        zugang = lies_zugang()
+        auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"], cli in ("", "claude") and mit_hooks)}
     text = auftragstext(auftrag)
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
     raeume_auf()
     auftrag_datei = TEMP / f"auftrag-{stempel}.txt"
     auftrag_datei.write_text(text, encoding="utf-8")
-    nummer = str(auftrag.get("nummer", ""))
-    mit_hooks = bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer))
 
     # Normalfall: über den OpenLauncherMac, genau wie der Startknopf (Profil, aktive CLAUDE.md mit Schnellmodus, Anmeldung,
     # Terminal-Farbe), dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncherMac 1.24.39.

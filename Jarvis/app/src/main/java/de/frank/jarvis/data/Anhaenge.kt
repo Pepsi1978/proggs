@@ -37,6 +37,9 @@ data class Anhang(val pfad: String) {
     }
 }
 
+/** Eine Datei auf dem Weg zur Programmier-Sitzung: Prüfsumme, Name und wo sie auf dem Handy liegt. */
+class UebertragDatei(val sha: String, val name: String, val datei: File)
+
 /** Was vom Anhang ans Modell geht: Bilder (als data-URL) und lesbarer Text. */
 class ModellAnhaenge(val bilder: List<String>, val text: String)
 
@@ -44,6 +47,8 @@ object Anhaenge {
     private const val KANTE = 1600
     private const val MAX_TEXT = 60_000
     private const val MAX_PDF_SEITEN = 6
+    private const val MAX_SITZUNG_SEITEN = 20
+    private const val SEITE_BREITE = 1400
 
     fun ordner(context: Context) = File(context.filesDir, "gespraeche/anhaenge").apply { mkdirs() }
 
@@ -128,6 +133,52 @@ object Anhaenge {
             }
         }
         return ModellAnhaenge(bilder, text.toString())
+    }
+
+    /**
+     * Die Dateien für die Programmier-Sitzung: jeder Anhang im Original, zu PDFs zusätzlich die Seiten als Bilder. Die kommen in der
+     * CLI als echte Bilder an und bleiben lesbar, auch wenn dort pdftoppm fehlt (am 31.10.2026 scheiterte daran das Lesen eines PDFs).
+     */
+    fun fuerSitzung(context: Context, anhaenge: List<Anhang>): List<UebertragDatei> {
+        val seitenOrdner = File(context.cacheDir, "anhang-seiten").apply { mkdirs() }
+        val grenze = System.currentTimeMillis() - 86_400_000
+        seitenOrdner.listFiles()?.filter { it.lastModified() < grenze }?.forEach { runCatching { it.delete() } }
+        return anhaenge.filter { it.datei.isFile }.flatMap { a ->
+            val seiten = if (!a.istPdf) emptyList() else runCatching { pdfSeitenDateien(a.datei, seitenOrdner) }.getOrDefault(emptyList())
+            listOf(UebertragDatei(sha256(a.datei), a.name, a.datei)) + seiten.mapIndexed { i, f ->
+                UebertragDatei(sha256(f), a.name.substringBeforeLast('.') + "_Seite_${i + 1}.jpg", f)
+            }
+        }
+    }
+
+    private fun sha256(f: File): String {
+        val pruefung = java.security.MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { ein ->
+            val puffer = ByteArray(256 * 1024)
+            while (true) { val n = ein.read(puffer); if (n < 0) break; pruefung.update(puffer, 0, n) }
+        }
+        return pruefung.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun pdfSeitenDateien(f: File, ordner: File): List<File> {
+        val ergebnis = mutableListOf<File>()
+        ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+            PdfRenderer(pfd).use { pdf ->
+                for (i in 0 until minOf(pdf.pageCount, MAX_SITZUNG_SEITEN)) {
+                    pdf.openPage(i).use { seite ->
+                        val hoehe = (SEITE_BREITE.toFloat() * seite.height / seite.width).toInt().coerceAtLeast(1)
+                        val bmp = Bitmap.createBitmap(SEITE_BREITE, hoehe, Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(Color.WHITE)
+                        seite.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        val ziel = File(ordner, "${System.nanoTime()}.jpg")
+                        ziel.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+                        bmp.recycle()
+                        ergebnis += ziel
+                    }
+                }
+            }
+        }
+        return ergebnis
     }
 
     private fun pdfSeiten(f: File): List<String> {

@@ -530,6 +530,69 @@ ENTFERNT = ZUSTAND.with_name("lokal-entfernt.json")
 ENTFERNT_HALTEN_S = 30 * 86400  # so lange bleibt eine in Jarvis entfernte lokale Sitzung stumm
 
 
+ANHANG_ORDNER = Path(os.environ.get("JARVIS_ANHAENGE", "/data/anhaenge"))
+ANHANG_SHA = re.compile(r"^[0-9a-f]{64}$")
+ANHANG_MAX = 300 * 1024 * 1024
+ANHANG_HALTEN_S = 14 * 86400
+
+
+def anhang_liste(daten: dict) -> list:
+    """Die Anhaenge eines Auftrags oder Nachtrags: nur Pruefsumme und Name, die Datei liegt unter /geraet/anhang/<sha>."""
+    roh = daten.get("anhaenge")
+    return [{"sha": a["sha"], "name": str(a.get("name", ""))[:200]} for a in (roh if isinstance(roh, list) else [])[:40]
+            if isinstance(a, dict) and ANHANG_SHA.match(str(a.get("sha", "")))]
+
+
+async def anhang_ablegen(request: web.Request) -> web.Response:
+    """PUT /geraet/anhang/<sha> (Handy): Datei eines Programmierauftrags, stueckweise auf die Platte, nach SHA-256 geprueft."""
+    if not darf_handy(request):
+        return web.Response(status=404, text="Not found")
+    sha = request.match_info["sha"]
+    if not ANHANG_SHA.match(sha):
+        return web.Response(status=400, text="Pruefsumme ungueltig")
+    ANHANG_ORDNER.mkdir(parents=True, exist_ok=True)
+    ziel = ANHANG_ORDNER / sha
+    schleife = asyncio.get_running_loop()
+    teil = ANHANG_ORDNER / f".{uuid.uuid4().hex}.teil"
+    pruefung = hashlib.sha256()
+    groesse = 0
+    try:
+        with open(teil, "wb") as f:
+            puffer = bytearray()
+            async for stueck in request.content.iter_any():
+                groesse += len(stueck)
+                if groesse > ANHANG_MAX:
+                    return web.Response(status=413, text="Datei zu gross")
+                pruefung.update(stueck)
+                puffer += stueck
+                if len(puffer) >= 1024 * 1024:
+                    await schleife.run_in_executor(None, f.write, bytes(puffer))
+                    puffer.clear()
+            if puffer:
+                await schleife.run_in_executor(None, f.write, bytes(puffer))
+        if pruefung.hexdigest() != sha:
+            return web.Response(status=400, text="Pruefsumme passt nicht")
+        os.replace(teil, ziel)
+        grenze = time.time() - ANHANG_HALTEN_S
+        for alt in ANHANG_ORDNER.iterdir():
+            if alt.stat().st_mtime < grenze:
+                alt.unlink(missing_ok=True)
+        log.info("Anhang abgelegt: %d KB", groesse // 1024)
+        return web.json_response({"ok": True, "groesse": groesse})
+    finally:
+        teil.unlink(missing_ok=True)
+
+
+async def anhang_holen(request: web.Request) -> web.StreamResponse:
+    """GET /pc/anhang/<sha> (Bruecke, Hook) und GET /anhang/<sha>/<name> (Cloud-Sitzung, hat kein Token: Die Pruefsumme ist der Zugriffsschluessel)."""
+    sha = request.match_info["sha"]
+    if "name" not in request.match_info and not darf_pc(request):
+        return web.Response(status=404, text="Not found")
+    if not ANHANG_SHA.match(sha) or not (ANHANG_ORDNER / sha).is_file():
+        return web.Response(status=404, text="Not found")
+    return web.FileResponse(ANHANG_ORDNER / sha, headers={"Content-Type": "application/octet-stream"})
+
+
 class PcBruecke:
     """Programmierauftraege vom Handy an Franks PC (siehe Kopf der Datei)."""
 
@@ -749,7 +812,7 @@ class PcBruecke:
             return web.Response(status=400, text="Nachtrag unlesbar")
         liste = self.nachtraege.setdefault(auftrag_id, [])
         if nachtrag_id not in self.erledigt and not any(n.get("nachtrag_id") == nachtrag_id for n in liste):
-            liste.append({"nachtrag_id": nachtrag_id, "text": text[:20_000], "zeit": time.time()})
+            liste.append({"nachtrag_id": nachtrag_id, "text": text[:20_000], "anhaenge": anhang_liste(daten), "zeit": time.time()})
             self._sichere_nachtraege()
             log.info("Nachtrag fuer %s eingereiht", auftrag_id)
         self._ereignis(auftrag_id).set()
@@ -1000,7 +1063,7 @@ class PcBruecke:
             # katalog: ein Modell aus dem OpenLauncher-Angebot mit slug, anbieter, effort, profil, modus und cli
             # (claude, codex, opencode, kimi, antigravity); nur der Mac startet es.
             katalog = daten.get("modell") == "katalog"
-            eintrag = {"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
+            eintrag = {"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "anhaenge": anhang_liste(daten), "review": bool(daten.get("review")),
                        "nummer": jarvis_id, "modell": "katalog" if katalog else "sol" if daten.get("modell") == "sol" else "opus",
                        "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
                        "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac",
@@ -1744,6 +1807,9 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/signal", relay.signal)
     pc = PcBruecke(relay)
     anwendung.router.add_post("/geraet/pc-auftrag", pc.auftrag)
+    anwendung.router.add_put("/geraet/anhang/{sha}", anhang_ablegen)
+    anwendung.router.add_get("/pc/anhang/{sha}", anhang_holen)
+    anwendung.router.add_get("/anhang/{sha}/{name}", anhang_holen)
     anwendung.router.add_get("/geraet/pc", pc.status)
     anwendung.router.add_get("/pc/auftrag", pc.abholen)
     anwendung.router.add_get("/pc/faehigkeiten", pc.faehigkeiten)
