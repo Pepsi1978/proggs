@@ -1,5 +1,9 @@
 package de.frank.jarvis.faehigkeit
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+
 /**
  * Trenner zwischen eingesprochenen Beiträgen in der Eingabeblase (normales Diktat, nicht Live): „ ; “ (Leerzeichen, Semikolon,
  * Leerzeichen) direkt hinter dem letzten Zeichen des Beitrags, ohne Zeilenumbruch. Im normalen Gespräch markiert er nur Beiträge;
@@ -52,6 +56,20 @@ object DiktatTrenner {
 
     /** Die nicht leeren Abschnitte zwischen den Trennern (neue und alte Form); leere fallen weg. */
     fun abschnitte(text: String): List<String> = ("\n" + text).split(ZWISCHEN).map { it.trim() }.filter { it.isNotEmpty() }
+
+    /**
+     * KI-Verbesserung, die die Aufgabengrenzen nicht antasten kann: [glaetten] sieht immer nur einen Abschnitt (höchstens vier
+     * gleichzeitig), die Abschnitte kommen danach mit genau [TRENNER] zusammen. Ein Trenner in einer Antwort wird zum gewöhnlichen
+     * Semikolon, eine leere Antwort lässt den Abschnitt unverändert. Leer, wenn keine Antwort brauchbar war.
+     */
+    suspend fun jeAbschnitt(text: String, glaetten: suspend (String) -> String): String {
+        val teile = abschnitte(text)
+        val antworten = teile.chunked(4).flatMap { gruppe ->
+            coroutineScope { gruppe.map { t -> async { ohneSchluss(glaetten(t)).replace(TRENNER, "; ") } }.awaitAll() }
+        }
+        if (antworten.all { it.isEmpty() }) return ""
+        return teile.zip(antworten) { t, a -> a.ifEmpty { t } }.joinToString(TRENNER)
+    }
 
     /** Mehr als ein Beitrag bzw. mehr als eine Aufgabe. */
     fun mehrteilig(text: String): Boolean = abschnitte(text).size > 1

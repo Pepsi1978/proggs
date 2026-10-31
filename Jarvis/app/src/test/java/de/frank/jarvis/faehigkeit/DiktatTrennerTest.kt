@@ -109,4 +109,15 @@ class DiktatTrennerTest {
         assertEquals("Neu ; ", DiktatTrenner.mitSchlussWie("Alt ; ", "Neu ;"))
         assertEquals("Neu", DiktatTrenner.mitSchlussWie("Alt", "Neu"))
     }
+
+    @Test fun kiVerbesserungBehaeltJedeAufgabengrenze() = kotlinx.coroutines.runBlocking {
+        val neu = DiktatTrenner.jeAbschnitt("erste aufgabe ; zweite aufgabe ; dritte aufgabe ; ") { "Neu: $it ; " }
+        assertEquals("Neu: erste aufgabe ; Neu: zweite aufgabe ; Neu: dritte aufgabe", neu)
+        assertEquals("$neu ; ", DiktatTrenner.mitSchlussWie("a ; b ; ", neu))
+    }
+
+    @Test fun kiAntwortMitTrennerMachtKeineNeueAufgabe() = kotlinx.coroutines.runBlocking {
+        assertEquals("x; y ; b", DiktatTrenner.jeAbschnitt("a ; b") { if (it == "a") "x ; y" else "" })
+        assertEquals("", DiktatTrenner.jeAbschnitt("a ; b") { "" })
+    }
 }

@@ -1640,7 +1640,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Text der offenen Prompt-Eingabe (neuer Prompt oder Bearbeiten). Jede eigene Änderung beendet das KI-Rückgängig. */
     var promptText: String
         get() = if (promptBearbeitet != null) promptBearbeitText else promptEntwurf
-        set(wert) { promptVorKi = null; promptTextSetzen(promptBearbeitet?.erstellt, wert) }
+        // Nur echte Änderungen beenden „Rückgängig“: Das Textfeld meldet auch Cursor- und Tastatur-Updates mit unverändertem Text.
+        set(wert) { if (wert != promptText) promptVorKi = null; promptTextSetzen(promptBearbeitet?.erstellt, wert) }
 
     /** Schreibt in den Entwurf der Eingabe, für die [erstellt] steht (null = neuer Prompt). */
     private fun promptTextSetzen(erstellt: Long?, wert: String) {
@@ -1747,19 +1748,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Glättet jede Einsprache einzeln, sonst schriebe das Modell mehrere Aufgaben zu einem Fließtext zusammen. Höchstens vier gleichzeitig;
-     * ein versehentlicher Trenner in einer Antwort wird zum gewöhnlichen Semikolon. Leer, wenn keine Antwort brauchbar war.
-     */
-    private suspend fun promptGlaetten(text: String): String {
-        val teile = DiktatTrenner.abschnitte(text)
-        val antworten = teile.chunked(4).flatMap { gruppe ->
-            coroutineScope { gruppe.map { t -> async { DiktatTrenner.ohneSchluss(kiGlaetten(PROMPT_KORREKTUR, t)).replace(DiktatTrenner.TRENNER, "; ") } }.awaitAll() }
-        }
-        if (antworten.all { it.isEmpty() }) return ""
-        return teile.zip(antworten) { t, a -> a.ifEmpty { t } }.joinToString(DiktatTrenner.TRENNER)
-    }
-
     /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis. */
     fun promptFormulieren() {
         val ziel = promptBearbeitet?.erstellt
@@ -1769,7 +1757,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptFormuliert = true
         viewModelScope.launch {
             try {
-                val neu = promptGlaetten(text)
+                val neu = DiktatTrenner.jeAbschnitt(text) { kiGlaetten(PROMPT_KORREKTUR, it) }
                 val aktuell = promptTextVon(ziel)
                 when {
                     // Bearbeiten inzwischen geschlossen: die KI-Fassung gehört zu keinem offenen Text mehr.
@@ -1848,7 +1836,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         antwortFormuliertFeld = feld
         viewModelScope.launch {
             try {
-                val neu = kiGlaetten(ANTWORT_KORREKTUR, text)
+                val neu = DiktatTrenner.mitSchlussWie(text, DiktatTrenner.jeAbschnitt(text) { kiGlaetten(ANTWORT_KORREKTUR, it) })
                 if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else antwortKiFassungen[feld] = text to neu
             } catch (e: CancellationException) {
                 throw e
@@ -3652,7 +3640,7 @@ private const val PROMPT_KORREKTUR =
         "(oft weiter an einen Programmierer) schickt. Frank hat ihn eingesprochen oder eingetippt. Erfasse den Inhalt sinngemäß und schreibe ihn als klaren, " +
         "vollständigen, für sich allein verständlichen Auftrag. Behalte jeden inhaltlichen Punkt, jeden Namen, jede Zahl und jede Anforderung, füge nichts hinzu " +
         "und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. Absätze oder Aufzählungen " +
-        "nur, wenn sie den Auftrag klarer machen. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+        "nur, wenn sie den Auftrag klarer machen. Der Text ist genau ein Abschnitt: Trenne Sätze mit Punkten, nicht mit Semikolons. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Glättung einer eigenen Antwort auf eine Rückfrage der Programmier-Sitzung. */
 private const val ANTWORT_KORREKTUR =
