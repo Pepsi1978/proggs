@@ -105,8 +105,12 @@ if ($obj) {
             if ($obj.quota.'3p-5h') { $b5 = $obj.quota.'3p-5h' } elseif ($obj.quota.'gemini-5h') { $b5 = $obj.quota.'gemini-5h' }
             if ($obj.quota.'3p-weekly') { $b7 = $obj.quota.'3p-weekly' } elseif ($obj.quota.'gemini-weekly') { $b7 = $obj.quota.'gemini-weekly' }
         } else {
+            $isArgon = $model -match '(?i)argon'
             if ($obj.quota.'gemini-5h') { $b5 = $obj.quota.'gemini-5h' } elseif ($obj.quota.'3p-5h') { $b5 = $obj.quota.'3p-5h' }
-            if ($obj.quota.'gemini-weekly') { $b7 = $obj.quota.'gemini-weekly' } elseif ($obj.quota.'3p-weekly') { $b7 = $obj.quota.'3p-weekly' }
+            if ($isArgon -and $obj.quota.'gemini-argon-wtu-weekly') { $b7 = $obj.quota.'gemini-argon-wtu-weekly' }
+            elseif ($obj.quota.'gemini-weekly') { $b7 = $obj.quota.'gemini-weekly' }
+            elseif ($obj.quota.'gemini-argon-wtu-weekly') { $b7 = $obj.quota.'gemini-argon-wtu-weekly' }
+            elseif ($obj.quota.'3p-weekly') { $b7 = $obj.quota.'3p-weekly' }
         }
         if (-not $b5 -and $obj.quota.'5h') { $b5 = $obj.quota.'5h' }
         if (-not $b7 -and $obj.quota.'weekly') { $b7 = $obj.quota.'weekly' }

@@ -41,9 +41,10 @@ fi
 # folgenden Felder verschoben hat. session_id landete dann in five_h_used,
 # transcript_path war leer, fresh-session-Erkennung schlug fehl.
 parsed=$(echo "$input" | jq -r '
-    def is_3p: ((.model.id // .model.display_name // "") | test("gemini"; "i") | not);
-    def q_5h: ((.quota // {}) | (if is_3p then (."3p-5h" // ."gemini-5h") else (."gemini-5h" // ."3p-5h") end // ."5h" // (to_entries | map(select(.key | test("5h|five|hour|short|daily"; "i"))) | .[0].value) // null));
-    def q_d7: ((.quota // {}) | (if is_3p then (."3p-weekly" // ."gemini-weekly") else (."gemini-weekly" // ."3p-weekly") end // ."weekly" // (to_entries | map(select(.key | test("week|7d|seven"; "i"))) | .[0].value) // null));
+    ((.model.id // .model.display_name // "") | test("gemini"; "i") | not) as $is_3p |
+    ((.model.id // .model.display_name // "") | test("argon"; "i")) as $is_argon |
+    def q_5h: ((.quota // {}) | (if $is_3p then (."3p-5h" // ."gemini-5h") else (."gemini-5h" // ."3p-5h") end // ."5h" // (to_entries | map(select(.key | test("5h|five|hour|short|daily"; "i"))) | .[0].value) // null));
+    def q_d7: ((.quota // {}) | (if $is_3p then (."3p-weekly" // ."gemini-weekly") else (if $is_argon then (."gemini-argon-wtu-weekly" // ."gemini-weekly") else (."gemini-weekly" // ."gemini-argon-wtu-weekly") end // ."3p-weekly") end // ."weekly" // (to_entries | map(select(.key | test("week|7d|seven"; "i"))) | .[0].value) // null));
     def q_used(b): if b == null then "" elif (b.used_percentage // null) != null then (b.used_percentage | tostring) elif (b.remaining_fraction // null) != null then (((1.0 - b.remaining_fraction) * 100) | tostring) elif (b.remaining_percentage // null) != null then ((100.0 - b.remaining_percentage) | tostring) else "" end;
     def q_resets(b): if b == null then "" elif (b.resets_at // null) != null then (b.resets_at | tostring) elif (b.reset_in_seconds // null) != null then ("+" + (b.reset_in_seconds | floor | tostring)) elif (b.reset_time // "") != "" then ((try (b.reset_time | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring) catch "") // "") else "" end;
     [
