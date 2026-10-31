@@ -1,15 +1,23 @@
 package de.frank.jarvis.helfer
 
 import android.content.Context
+import android.os.Process
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlinx.coroutines.Dispatchers
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -32,11 +40,21 @@ data class HelferErgebnis(val ok: Boolean, val text: String, val daten: JSONObje
 object HelferLauf {
     private const val MAX_LAUF_MS = 60_000L
     private const val MAX_DATEI = 20 * 1024 * 1024
+    private const val MAX_ENTPACKT = 64 * 1024 * 1024
+    private const val MAX_HTTP_BYTES = 4_000_000L
+    /** Rhino prüft die Zeitgrenze nur zwischen Befehlen; hängt ein Skript in einem Regex, gibt der Aufrufer es nach dieser Nachfrist auf. */
+    private const val NACHFRIST_MS = 5_000L
+    private const val MAX_PRUEFUNG_MS = 120_000L
+    private const val PROBE_AUSGABE = "probe-ausgabe"
+    /** Höchstens zwei Läufe gleichzeitig, jeder auf eigenem Faden mit niedriger Priorität: Das Live-Gespräch geht vor. */
+    private val LAEUFE = Semaphore(2)
     private val HTTP = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).callTimeout(40, TimeUnit.SECONDS).followRedirects(false).build()
 
     private class Zeitfrist : ContextFactory() {
         override fun makeContext(): Js = super.makeContext().apply {
             optimizationLevel = -1
+            // Ohne Grenze legt Endlos-Rekursion im Interpreter Frames auf den Heap, bis der Speicher der ganzen App voll ist.
+            maximumInterpreterStackDepth = 2_000
             languageVersion = Js.VERSION_ES6
             instructionObserverThreshold = 10_000
             setClassShutter { false }
@@ -51,7 +69,7 @@ object HelferLauf {
     private val fabrik = Zeitfrist()
 
     /** Was das Skript als `jarvis` sieht; alles per JSON-Text, damit keine Java-Objekte ins Skript gelangen. */
-    class Bruecke(private val c: Context, private val h: Helfer, private val ausgabe: File, private val probe: Boolean) {
+    class Bruecke(private val c: Context, private val h: Helfer, private val ausgabe: File, private val probe: Boolean, private val kontext: CoroutineContext, private val frist: Long) {
         val dateien = mutableListOf<Pair<String, String>>()
 
         private fun erlaubterHost(url: String, konto: HelferKonto?): Boolean {
@@ -86,7 +104,12 @@ object HelferLauf {
             anfrage.url(ziel).method(methode, rumpf ?: if (methode in setOf("POST", "PUT", "PATCH")) ByteArray(0).toRequestBody(null) else null)
             HTTP.newCall(anfrage.build()).execute().use { r ->
                 if (konto != null) KontenRegister.nutzungMerken(c, konto.id, h.name)
-                val text = r.body?.string().orEmpty().take(2_000_000)
+                // Nur begrenzt lesen: body.string() lüde die ganze Antwort in den Speicher, bevor gekürzt wird.
+                val text = r.body?.let { b ->
+                    val quelle = b.source()
+                    quelle.request(MAX_HTTP_BYTES)
+                    quelle.buffer.readString(minOf(quelle.buffer.size, MAX_HTTP_BYTES), b.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8)
+                }.orEmpty().take(2_000_000)
                 return JSONObject().put("code", r.code).put("text", if (wert != null) text.replace(wert, "***") else text).toString()
             }
         }
@@ -96,7 +119,9 @@ object HelferLauf {
             val w = Register.werkzeuge(c).firstOrNull { it.name == name } ?: error("Dieses Werkzeug gibt es nicht: $name")
             check(w.nurLesen || !probe) { "In der Prüfung laufen nur lesende Werkzeuge." }
             check(w.nurLesen || h.freigegebeneRechte.isNotEmpty()) { "Die Rechte dieses Helfers sind noch nicht freigegeben." }
-            val e = runBlocking { w.ausfuehren(JSONObject(argumente)) }
+            val rest = frist - System.currentTimeMillis()
+            check(rest > 0) { "Die Zeitgrenze des Helfers ist erreicht." }
+            val e = runBlocking(kontext) { withTimeoutOrNull(rest) { w.ausfuehren(JSONObject(argumente)) } } ?: error("Das Werkzeug $name hat nicht rechtzeitig geantwortet.")
             return JSONObject().put("text", e.text).put("fehler", e.fehler).toString()
         }
 
@@ -116,27 +141,48 @@ object HelferLauf {
             return File(ausgabe, name)
         }
 
+        /** Erst vollständig schreiben, dann umbenennen: Ein Abbruch ersetzt nie eine gute Datei durch eine halbe. */
+        private inline fun atomar(ziel: File, schreiben: (File) -> Unit) {
+            val zwischen = File.createTempFile(".entstehend-", "", ausgabe)
+            try {
+                schreiben(zwischen)
+                check(zwischen.renameTo(ziel)) { "Die Datei konnte nicht abgelegt werden." }
+            } finally {
+                zwischen.delete()
+            }
+        }
+
         fun textDatei(name: String, text: String): String {
             check(text.length < MAX_DATEI) { "Die Datei ist zu groß." }
+            val bytes = text.toByteArray()
+            check(bytes.size < MAX_DATEI) { "Die Datei ist zu groß." }
             val d = zielDatei(name)
-            d.writeText(text)
+            atomar(d) { it.writeBytes(bytes) }
             dateien += name to d.absolutePath
             return d.absolutePath
         }
 
         fun zipDatei(name: String, inhalte: String): String {
+            // Die 20 MB gelten für das fertige Archiv; Text komprimiert stark, deshalb begrenzt das hier vorab den Speicher.
+            check(inhalte.length < MAX_ENTPACKT) { "Der Inhalt ist zu groß." }
             val j = JSONObject(inhalte)
             val d = zielDatei(name)
-            ZipOutputStream(d.outputStream().buffered()).use { z ->
-                // DOCX und XLSX erwarten [Content_Types].xml als ersten Eintrag.
-                j.keys().asSequence().sortedBy { if (it.startsWith("[Content_Types]")) "" else it }.forEach { pfad ->
-                    check(!pfad.contains("..") && !pfad.startsWith("/")) { "Ungültiger Pfad im Archiv." }
-                    z.putNextEntry(ZipEntry(pfad))
-                    z.write(j.optString(pfad).toByteArray())
-                    z.closeEntry()
+            atomar(d) { zwischen ->
+                var summe = 0L
+                ZipOutputStream(zwischen.outputStream().buffered()).use { z ->
+                    // DOCX und XLSX erwarten [Content_Types].xml als ersten Eintrag.
+                    j.keys().asSequence().sortedBy { if (it.startsWith("[Content_Types]")) "" else it }.forEach { pfad ->
+                        check(!pfad.contains("..") && !pfad.startsWith("/")) { "Ungültiger Pfad im Archiv." }
+                        val bytes = j.optString(pfad).toByteArray()
+                        summe += bytes.size
+                        check(summe < MAX_ENTPACKT) { "Der Inhalt ist zu groß." }
+                        z.putNextEntry(ZipEntry(pfad))
+                        z.write(bytes)
+                        z.closeEntry()
+                    }
                 }
+                check(zwischen.length() < MAX_DATEI) { "Die Datei ist zu groß." }
             }
-            check(d.length() < MAX_DATEI) { d.delete(); "Die Datei ist zu groß." }
             dateien += name to d.absolutePath
             return d.absolutePath
         }
@@ -161,12 +207,39 @@ var jarvis = (function (b) {
 """
 
     /** Ein Lauf. [ordner] enthält Skript; in der Prüfung der noch nicht installierte Probeordner. */
-    suspend fun ausfuehren(c: Context, h: Helfer, eingabe: JSONObject, ordner: File = HelferKatalog.aktuell(c, h.kennung), probe: Boolean = false): HelferErgebnis = withContext(Dispatchers.Default) {
+    suspend fun ausfuehren(c: Context, h: Helfer, eingabe: JSONObject, ordner: File = HelferKatalog.aktuell(c, h.kennung), probe: Boolean = false): HelferErgebnis {
+        // Werkzeuge des Skripts behalten den Kontext des Aufrufers (Agent, Hintergrundlauf), aber nicht seinen Job: Den Abbruch trägt der Interrupt.
+        val aufrufer = currentCoroutineContext().minusKey(Job).minusKey(ContinuationInterceptor)
+        return LAEUFE.withPermit {
+            val beginn = System.currentTimeMillis()
+            val fertig = CompletableDeferred<HelferErgebnis>()
+            val faden = Thread({
+                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+                fertig.complete(
+                    try { laufen(c, h, eingabe, ordner, probe, aufrufer) }
+                    catch (e: Throwable) { HelferErgebnis(false, "", fehler = "Der Helfer ist abgestürzt: ${e.javaClass.simpleName}", dauerMs = System.currentTimeMillis() - beginn) }
+                )
+            }, "helfer-${h.kennung}").apply { isDaemon = true }
+            faden.start()
+            try {
+                withTimeoutOrNull(MAX_LAUF_MS + NACHFRIST_MS) { fertig.await() } ?: run {
+                    faden.interrupt()
+                    HelferErgebnis(false, "", fehler = "Zeitgrenze von ${MAX_LAUF_MS / 1000} Sekunden erreicht", dauerMs = System.currentTimeMillis() - beginn)
+                }
+            } catch (e: CancellationException) {
+                faden.interrupt()
+                throw e
+            }
+        }
+    }
+
+    private fun laufen(c: Context, h: Helfer, eingabe: JSONObject, ordner: File, probe: Boolean, aufrufer: CoroutineContext): HelferErgebnis {
         val beginn = System.currentTimeMillis()
-        val ausgabe = HelferKatalog.ausgabe(c, h.kennung)
-        val bruecke = Bruecke(c, h, ausgabe, probe)
+        // Prüfläufe bekommen einen eigenen Ordner: Sie löschen ihre Dateien danach und dürfen kein echtes Ergebnis treffen.
+        val ausgabe = if (probe) File(ordner, PROBE_AUSGABE).apply { mkdirs() } else HelferKatalog.ausgabe(c, h.kennung)
+        val bruecke = Bruecke(c, h, ausgabe, probe, aufrufer, beginn + MAX_LAUF_MS)
         val cx = fabrik.enterContext()
-        try {
+        return try {
             val scope = cx.initSafeStandardObjects()
             // Nur diese Methoden: Der ClassShutter sperrt Java-Klassen, ein Wrapper-Objekt mit reinen Text-Methoden bleibt erreichbar.
             ScriptableObject.putProperty(scope, "__bruecke", BrueckeJs(bruecke, scope))
@@ -181,9 +254,12 @@ var jarvis = (function (b) {
             val genannt = r.optJSONArray("dateien")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { it.optString("name") to it.optString("pfad") } } ?: emptyList()
             HelferErgebnis(true, KontenRegister.schwaerzen(c, r.optString("text")), r.optJSONObject("daten") ?: JSONObject(), (genannt + bruecke.dateien).distinctBy { it.second }, dauerMs = System.currentTimeMillis() - beginn)
         } catch (e: Throwable) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            // Auch Stack-Überlauf und Speichermangel eines Skripts dürfen Jarvis nicht mitreißen.
-            val grund = KontenRegister.schwaerzen(c, (e as? org.mozilla.javascript.RhinoException)?.details() ?: e.message ?: e.javaClass.simpleName).take(500)
+            // Auch Stack-Überlauf und Speichermangel eines Skripts dürfen Jarvis nicht mitreißen; dort nur ein fester Text, das Schwärzen bräuchte selbst Speicher.
+            val grund = when (e) {
+                is OutOfMemoryError -> "Der Helfer braucht zu viel Speicher."
+                is StackOverflowError -> "Der Helfer ruft sich zu tief selbst auf."
+                else -> KontenRegister.schwaerzen(c, (e as? org.mozilla.javascript.RhinoException)?.details() ?: e.message ?: e.javaClass.simpleName).take(500)
+            }
             HelferErgebnis(false, "", fehler = grund, dauerMs = System.currentTimeMillis() - beginn)
         } finally {
             Js.exit()
@@ -217,10 +293,19 @@ var jarvis = (function (b) {
         val tests = manifest.optJSONArray("tests") ?: JSONArray()
         val zeilen = JSONArray()
         var alle = true
+        val ende = System.currentTimeMillis() + MAX_PRUEFUNG_MS
+        var abgelaufen = false
         for (i in 0 until tests.length()) {
             val t = tests.optJSONObject(i) ?: continue
+            // Ein hängendes Skript soll die Registrierung nicht je Test eine Minute aufhalten.
+            if (abgelaufen || System.currentTimeMillis() > ende) {
+                alle = false
+                zeilen.put(JSONObject().put("name", t.optString("name")).put("ok", false).put("dauer_ms", 0).put("grund", "Übersprungen: Zeitgrenze der Prüfung erreicht"))
+                continue
+            }
             val erwartet = t.optJSONObject("erwartet") ?: JSONObject().put("ok", true)
             val r = ausfuehren(c, h, t.optJSONObject("eingabe") ?: JSONObject(), ordner, probe = true)
+            if (r.dauerMs >= MAX_LAUF_MS) abgelaufen = true
             val enthaelt = erwartet.optJSONArray("enthaelt")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
             val gesamt = r.text + " " + r.daten + " " + r.dateien.joinToString { it.first }
             val ok = r.ok == erwartet.optBoolean("ok", true) && enthaelt.all { gesamt.contains(it) } &&
@@ -229,6 +314,7 @@ var jarvis = (function (b) {
             zeilen.put(JSONObject().put("name", t.optString("name")).put("ok", ok).put("dauer_ms", r.dauerMs).put("grund", if (ok) "" else (r.fehler.ifEmpty { "Ergebnis passt nicht: " + r.text.take(200) })))
             r.dateien.forEach { runCatching { File(it.second).delete() } }
         }
+        File(ordner, PROBE_AUSGABE).deleteRecursively()
         return alle to JSONObject().put("zeit", System.currentTimeMillis() / 1000).put("ergebnis", if (alle) "${tests.length()} von ${tests.length()} Tests bestanden" else "Tests nicht bestanden").put("tests", zeilen)
     }
 }

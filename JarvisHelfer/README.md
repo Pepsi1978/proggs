@@ -70,7 +70,9 @@ function ausfuehren(eingabe) {
 - `jarvis.textDatei(name, text)` → `pfad`; `jarvis.zipDatei(name, {"pfad/in/zip": "text"})` → `pfad` (DOCX und XLSX sind solche Archive).
 - `jarvis.log(text)`.
 
-Grenzen: 60 s Laufzeit, keine Java-Brücke, 20 MB je Datei.
+Grenzen: 60 s Laufzeit, keine Java-Brücke, 20 MB je Datei, 64 MB Archivinhalt vor dem Packen, 2.000 Aufrufebenen, 4 MB je HTTP-Antwort. Höchstens zwei Läufe gleichzeitig, mit niedriger Priorität.
+
+Prüfung: alle Tests zusammen höchstens 2 Minuten, nach einem Zeitüberschreiten werden die übrigen übersprungen. Prüfläufe schreiben in einen eigenen Ordner. `enthaelt` vergleicht auch gegen `daten` als JSON-Text, und Android schreibt dort `/` als `\/`: Erwartungen mit Schrägstrich gehören in `text`.
 
 ## Mac-Programm
 
