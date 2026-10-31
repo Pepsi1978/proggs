@@ -130,7 +130,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
 | **Elgato Stream-Deck-Plugin** (klassisches WebSocket/JS-SDK + Node-SDK) | [`peripherie/stream-deck.md`](peripherie/stream-deck.md) | 2026-07-02 | ~86 | `*.sdPlugin/*`, Stream-Deck-`manifest.json` (mit `SDKVersion`/`Actions`/`States`), `propertyInspector`, `code.js`/`plugin.html`/`inspector.html` im Plugin-Webview, `@elgato/streamdeck` · „Stream Deck", „Elgato", „sdPlugin", „Property Inspector", „willAppear", „keyDown", „setState", „DisableAutomaticStates" · Best-Practices: `best-practices/peripherie/stream-deck.md` |
-| **Huawei-Zifferblätter (.hwt)** | [`peripherie/huawei-watchface.md`](peripherie/huawei-watchface.md) | 2026-10-30 | ~4 | `.hwt`, `watch_face_config.xml`, `watchface.bin` · „Zifferblatt", „Watch Face", „Huawei Watch", „Theme Studio" · Best-Practices: `best-practices/peripherie/huawei-watchface.md` |
+| **Huawei-Zifferblätter (.hwt)** | [`peripherie/huawei-watchface.md`](peripherie/huawei-watchface.md) | 2026-10-31 | ~6 | `.hwt`, `watch_face_config.xml`, `watchface.bin` · „Zifferblatt", „Watch Face", „Huawei Watch", „Theme Studio" · Best-Practices: `best-practices/peripherie/huawei-watchface.md` |
 
 ### 🎮 `gaming/` — PC-Gaming-Tuning
 

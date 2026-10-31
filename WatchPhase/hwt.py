@@ -1,9 +1,8 @@
 """Schreibt Huawei-Zifferblätter (.hwt) ohne Theme Studio.
 
-Das Format stammt aus der Analyse echter Theme-Studio-Exporte. tests/test_rundreise.py
-prüft watchface.bin Byte für Byte gegen solche Exporte und den Aufbau der fertigen Datei.
+hwt_bauen erzeugt das Format der Watch 3 (innen PNGs und XML). watchface_bin ist das Format
+der GT-Serie; die Uhr hat es verworfen, es bleibt nur für tests/test_rundreise.py erhalten.
 """
-import hashlib
 import io
 import struct
 import xml.etree.ElementTree as ET
@@ -14,8 +13,6 @@ from PIL import Image
 RLE_MARKE = b"\x89\x67\x45\x23"
 BILD_MAGIC = b"\x45\x23\x88\x88"
 BILDBEREICH_KOPF = b"\x55\x55\x55\x55\x01\x00\x00\x01"
-# Vierter Wert in hashCode: in allen untersuchten Exporten gleich, Herkunft unbekannt.
-HASH_KONSTANTE = "0E0B408C4FA09BA786E0530DAAEBDB7D972C42EFB8710CDB9377B859B9468444"
 ZIP_ZEIT = (2026, 1, 1, 0, 0, 0)  # fest, damit gleicher Inhalt die gleiche Datei ergibt
 ELEMENT_ID = {"background": 0, "time": 1, "date": 2, "widget": 3}
 
@@ -165,22 +162,19 @@ def _zip(eintraege):
     return puffer.getvalue()
 
 
-def hwt_bauen(config_xml, bilder, description_xml, ability_xml, vorschau, titel, titel_cn):
-    """vorschau: dict mit cover.jpg, aod.jpg, icon_small.jpg als Bytes."""
-    innen = [("watchface/", b""), ("watchface/res/", b"")]
-    innen += [(f"watchface/res/A100_{i + 1:03d}.png", b) for i, b in enumerate(bilder)]
+def hwt_bauen(config_xml, bilder, description_xml, vorschau):
+    """Baut die .hwt wie echte Watch-3-Dateien: innen PNGs und XML, keine watchface.bin.
+
+    vorschau: dict mit cover.jpg, aod.jpg, icon_small.jpg als Bytes.
+    """
+    innen = [("watchface/res/", b"")]
+    innen += [(f"watchface/res/A100_{i:03d}.png", b) for i, b in enumerate(bilder)]
     innen += [
         ("watchface/watch_face_config.xml", config_xml),
         ("watchface/watch_face_info.xml", description_xml),
-        ("watchface.bin", watchface_bin(config_xml, bilder, titel, titel_cn)),
     ]
-    gesicht = _zip(innen)
-    pruef = [hashlib.sha256(x).hexdigest().upper() for x in (description_xml, gesicht, ability_xml)]
     aussen = [
-        ("ability.xml", ability_xml),
-        ("com.huawei.watchface", gesicht),
+        ("com.huawei.watchface", _zip(innen)),
         ("description.xml", description_xml),
-        ("hashCode", ",".join(pruef + [HASH_KONSTANTE]).encode()),
-        ("preview/", b""),
     ] + [(f"preview/{k}", v) for k, v in sorted(vorschau.items())]
     return _zip(aussen)

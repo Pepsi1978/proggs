@@ -14,13 +14,12 @@ MITTE = GROESSE // 2
 SS = 4  # Überabtastung
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 TITEL = "Watch Phase"
-TAG_X = 110  # Abstand des Datums von der Mitte
-BLAU = (64, 170, 245)
-LEUCHTEN = (70, 175, 255)
+TAG_X = 117  # Abstand des Datums von der Mitte
+GRAU = (150, 150, 150)
+LEUCHTEN = (205, 205, 205)
+ROT = (235, 30, 40)
 SCHRIFT = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"  # nur macOS
 SCHRIFT_TAG = "/System/Library/Fonts/Supplemental/Arial.ttf"  # nur macOS
-# Lage der value_type-Werte in der Bitliste von ability.xml, aus Theme-Studio-Exporten abgeleitet.
-WERT_BIT = {70: 64, 71: 65, 150: 141, 153: 144, 154: 145}
 ROEMISCH = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"]
 
 
@@ -53,12 +52,12 @@ def scheibe():
     abstand = 4.2
     linie = np.abs((r % abstand) - abstand / 2) < 0.48
     # Ein schwarzes Fenster hält den Tag lesbar, wie auf dem Foto.
-    fenster = (np.abs(dx - TAG_X) < 21) & (np.abs(dy) < 15)
-    innen = (r < 144) & ~fenster
+    fenster = (np.abs(dx - TAG_X) < 22) & (np.abs(dy) < 15)
+    innen = (r < 153) & ~fenster
     hg = np.zeros((*r.shape, 3))
-    hg[hell & innen] = (12, 20, 34)
-    hg[~hell & innen] = (6, 10, 17)
-    ring = np.where(hell[..., None], np.array([[[116, 148, 190]]]), np.array([[[72, 92, 124]]]))
+    hg[hell & innen] = (22, 22, 22)
+    hg[~hell & innen] = (10, 10, 10)
+    ring = np.where(hell[..., None], np.array([[[172, 172, 172]]]), np.array([[[104, 104, 104]]]))
     aus = np.where((linie & innen)[..., None], ring, hg)
     bild = Image.fromarray(aus.astype(np.uint8), "RGB").convert("RGBA")
     return bild
@@ -69,28 +68,28 @@ def ziffern_und_punkte(gedimmt=False):
     punkte = ImageDraw.Draw(ebene)
     for i in range(60):
         w = math.radians(i * 6)
-        px = (MITTE + 207 * math.sin(w)) * SS
-        py = (MITTE - 207 * math.cos(w)) * SS
+        px = (MITTE + 221 * math.sin(w)) * SS
+        py = (MITTE - 221 * math.cos(w)) * SS
         if i % 5 == 0:
-            f, rad = (255, 255, 255, 255), 5.6
+            f, rad = (255, 255, 255, 255), 5.9
         else:
-            f, rad = (*BLAU, 255), 2.8
+            f, rad = (*GRAU, 255), 3.0
         if gedimmt and i % 5:
             continue
         rad *= SS
         punkte.ellipse((px - rad, py - rad, px + rad, py + rad), fill=f)
-    schrift = ImageFont.truetype(SCHRIFT, 50 * SS)
+    schrift = ImageFont.truetype(SCHRIFT, 53 * SS)
     for stunde, text in enumerate(ROEMISCH):
-        blatt = Image.new("RGBA", (180 * SS, 80 * SS), (0, 0, 0, 0))
+        blatt = Image.new("RGBA", (190 * SS, 84 * SS), (0, 0, 0, 0))
         d = ImageDraw.Draw(blatt)
-        d.text((90 * SS, 40 * SS), text, font=schrift, fill=(255, 255, 255, 255), anchor="mm")
+        d.text((95 * SS, 42 * SS), text, font=schrift, fill=(255, 255, 255, 255), anchor="mm")
         # Schmal wie auf dem Foto; 3, 6, 9 und 12 stehen gerade, die übrigen um 30 Grad geneigt.
         blatt = blatt.resize((int(blatt.width * 0.62), blatt.height), Image.LANCZOS)
         drehung = (stunde * 30 + 45) % 90 - 45
         blatt = blatt.rotate(-drehung, Image.BICUBIC, expand=True)
         w = math.radians(stunde * 30)
-        px = (MITTE + 172 * math.sin(w)) * SS - blatt.width / 2
-        py = (MITTE - 172 * math.cos(w)) * SS - blatt.height / 2
+        px = (MITTE + 183 * math.sin(w)) * SS - blatt.width / 2
+        py = (MITTE - 183 * math.cos(w)) * SS - blatt.height / 2
         ebene.alpha_composite(blatt, (int(px), int(py)))
     return glimmen(ebene, 1.8, 1.3)
 
@@ -145,7 +144,7 @@ def nabe(aod=False):
     bild = Image.new("RGBA", (g * SS, g * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(bild)
     m = g * SS / 2
-    for rad, f in ((12, (150, 215, 255, 255)), (8, (235, 245, 255, 255))):
+    for rad, f in ((12, (185, 185, 185, 255)), (8, (245, 245, 245, 255))):
         q = rad * SS
         d.ellipse((m - q, m - q, m + q, m + q), fill=f)
     if not aod:
@@ -204,18 +203,18 @@ def hand_ebene(i, vt, amb, res, pivot):
     seite = 2 * py
     o = MITTE - py
     return (
-        f'<layer index="{i}" draw_type="hand_res" value_type="{vt}" ambient_mode="{amb}" res_left="A100_{res:03d}.png" '
-        f'rotate_start_angel="0" rotate_end_angel="360" rotate_point_hand="{px},{py}" rotate_rect="{o},{o},{seite},{seite}"/>'
+        f'<layer index="{i}" draw_type="hand_res" res_scale="" res_left="A100_{res:03d}.png" res_right="" res_dot="" res_shadow="" '
+        f'rotate_rect="{o},{o},{seite},{seite}" rotate_point_hand="{px},{py}" rotate_start_angel="0" rotate_end_angel="360" value_type="{vt}" ambient_mode="{amb}"/>'
     )
 
 
 def main():
     hg, aod = hintergrund(), hintergrund_aod()
-    h, hp = zeiger(108, 14, 8, ring_bei=100, ring=9)
-    m, mp = zeiger(178, 14, 7, ring_bei=147, ring=6)
-    s, sp = zeiger(212, 34, 2.2, farbe=(255, 170, 192, 255), schein=(255, 60, 105), staerke=0.8)
-    h_a, hap = zeiger(108, 14, 8, ring_bei=100, ring=9, farbe=(190, 215, 240, 255), schein=None)
-    m_a, map_ = zeiger(178, 14, 7, ring_bei=147, ring=6, farbe=(190, 215, 240, 255), schein=None)
+    h, hp = zeiger(138, 15, 8, ring_bei=106, ring=9)
+    m, mp = zeiger(189, 15, 7, ring_bei=156, ring=6)
+    s, sp = zeiger(225, 36, 2.2, farbe=(*ROT, 255), schein=(255, 45, 45), staerke=0.7)
+    h_a, hap = zeiger(138, 15, 8, ring_bei=106, ring=9, farbe=(210, 210, 210, 255), schein=None)
+    m_a, map_ = zeiger(189, 15, 7, ring_bei=156, ring=6, farbe=(210, 210, 210, 255), schein=None)
     na, na_a = nabe(), nabe(aod=True)
     ziffern = [ziffer(i) for i in range(10)]
     teile = {"h": (h, hp), "m": (m, mp), "s": (s, sp), "nabe": na, "ziffern": ziffern}
@@ -225,7 +224,7 @@ def main():
     aod_bild = rundmaske(zeichnen(aod, teile_a, 10, 8, None, None))
 
     benannt = [
-        ("vorschau", cover.convert("RGB").resize((250, 250), Image.LANCZOS)),
+        ("vorschau", cover),
         ("hg", hg.convert("RGB")),
         ("aod", aod.convert("RGB")),
         *((f"ziffer{i}", z) for i, z in enumerate(ziffern)),
@@ -233,56 +232,45 @@ def main():
         ("h_a", h_a), ("m_a", m_a), ("nabe_a", na_a),
     ]
     bilder = [b for _, b in benannt]
-    nr = {name: i + 1 for i, (name, _) in enumerate(benannt)}
+    nr = {name: i for i, (name, _) in enumerate(benannt)}
     res = lambda name: f"A100_{nr[name]:03d}.png"
-    einer = ",".join(res(f"ziffer{i}") for i in range(10))
-    zehner = ",".join(res(f"ziffer{i}") for i in range(4))
-    config = f'''<?xml version="1.0" encoding="utf-8"?>
+    tag = ",".join(res(f"ziffer{i}") for i in range(10))
+    # Aufbau wie echte Watch-3-Dateien (Version 1.1.1): Reihenfolge time, date, background.
+    config = f'''<?xml version="1.0" encoding="UTF-8"?>
 <watchface>
-    <element label="background" is_support_option="false" res_preview="">
-        <layer index="1" draw_type="single_res" ambient_mode="0" res_name="{res("hg")}" res_position="0,0"/>
-        <layer index="2" draw_type="single_res" ambient_mode="1" res_name="{res("aod")}" res_position="0,0"/>
-    </element>
-    <element label="date" is_support_option="false" res_preview="">
-        <layer index="1" draw_type="selected_res" value_type="70" ambient_mode="0" res_name="{zehner}" res_position="{TAG_X + MITTE - 17},219"/>
-        <layer index="2" draw_type="selected_res" value_type="71" ambient_mode="0" res_name="{einer}" res_position="{TAG_X + MITTE},219"/>
-    </element>
-    <element label="time" is_support_option="false" res_preview="">
-        {hand_ebene(1, 150, 0, nr["h"], hp)}
-        {hand_ebene(2, 153, 0, nr["m"], mp)}
-        {hand_ebene(3, 154, 0, nr["s"], sp)}
-        <layer index="4" draw_type="single_res" ambient_mode="0" res_name="{res("nabe")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
-        {hand_ebene(5, 150, 1, nr["h_a"], hap)}
-        {hand_ebene(6, 153, 1, nr["m_a"], map_)}
-        <layer index="7" draw_type="single_res" ambient_mode="1" res_name="{res("nabe_a")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
-    </element>
+  <element is_support_option="false" label="time" res_preview="">
+    {hand_ebene(1, 150, 0, nr["h"], hp)}
+    {hand_ebene(2, 153, 0, nr["m"], mp)}
+    {hand_ebene(3, 154, 0, nr["s"], sp)}
+    <layer index="4" draw_type="single_res" res_name="{res("nabe")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}" ambient_mode="0"/>
+    {hand_ebene(5, 150, 1, nr["h_a"], hap)}
+    {hand_ebene(6, 153, 1, nr["m_a"], map_)}
+    <layer index="7" draw_type="single_res" res_name="{res("nabe_a")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}" ambient_mode="1"/>
+  </element>
+  <element is_support_option="false" label="date" res_preview="">
+    <layer index="1" draw_type="combined_res" res_name="{tag}" res_invalid="" res_default="" res_sign="" x_offset="0" y_offset="0" res_position="{TAG_X + MITTE},219" res_align="center" value_type="17" ambient_mode="0"/>
+  </element>
+  <element is_support_option="false" label="background" res_preview="{res("hg")}">
+    <layer index="1" draw_type="single_res" res_name="{res("hg")}" res_position="0,0" ambient_mode="0"/>
+    <layer index="2" draw_type="single_res" res_name="{res("aod")}" res_position="0,0" ambient_mode="1"/>
+  </element>
 </watchface>
 '''.encode()
     description = f'''<?xml version="1.0" encoding="UTF-8"?>
-  <HwTheme>
-        <title>{TITEL}</title>
-        <title-cn>{TITEL}</title-cn>
-        <author>Frank</author>
-        <designer>Frank</designer>
-        <screen>HWHD09</screen>
-        <version>2.0.2</version>
-        <font>Default</font>
-        <font-cn>默认</font-cn>
-        <briefinfo>{{"de_DE":"Watch Phase für die Watch 3"}}</briefinfo>
-  </HwTheme>
-'''.encode()
-    nullen = "0" * 32
-    gesetzt = set(WERT_BIT.values())
-    wertarten = ["".join("1" if w * 32 + i in gesetzt else "0" for i in range(32)) for w in range(18)] + ["0000"]
-    ability = f'''<?xml version="1.0" encoding="UTF-8"?>
-        <attribute>
-            <dataType>{nullen},{nullen},{"0" * 22}</dataType>
-            <valueType>{",".join(wertarten)}</valueType>
-            <xmlType>10001101000000000000000000000000,00</xmlType>
-        </attribute>
+<HwTheme>
+  <title>{TITEL}</title>
+  <title-cn>{TITEL}</title-cn>
+  <author>Frank</author>
+  <designer>Frank</designer>
+  <screen>HWHD09</screen>
+  <version>1.1.1</version>
+  <font>Default</font>
+  <font-cn>默认</font-cn>
+  <briefinfo>{{"de_DE":"Watch Phase für die Watch 3"}}</briefinfo>
+</HwTheme>
 '''.encode()
     vorschau = {"cover.jpg": jpg(cover, 960), "aod.jpg": jpg(aod_bild, 960), "icon_small.jpg": jpg(cover, 390)}
-    datei = hwt.hwt_bauen(config, [png(b) for b in bilder], description, ability, vorschau, TITEL, TITEL)
+    datei = hwt.hwt_bauen(config, [png(b) for b in bilder], description, vorschau)
 
     dist = os.path.join(ORDNER, "dist")
     os.makedirs(dist, exist_ok=True)
