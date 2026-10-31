@@ -592,6 +592,25 @@ class CodexAuthManager(context: Context) {
         }
     }
 
+    /** Nutzungslimits des ChatGPT-Kontos, wie sie die Codex-CLI liest (Antwort von `backend-api/wham/usage`). */
+    suspend fun nutzungLesen(): JSONObject {
+        val token = validAccessToken()
+        val konto = jwtAccountId(token) ?: accountId
+            ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
+        val antwort = executeForText(
+            RESPONSES_HTTP_CLIENT,
+            Request.Builder().url("https://chatgpt.com/backend-api/wham/usage")
+                .header("Accept", "application/json")
+                .header("Authorization", "Bearer $token")
+                .header("originator", "codex_cli_rs")
+                .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Aufgaben)")
+                .header("ChatGPT-Account-ID", konto)
+                .build(),
+        )
+        classifyHttpError(antwort.code, antwort.body)
+        return parseJson(antwort.body, "OpenAI hat keine lesbaren Nutzungsdaten geliefert.")
+    }
+
     private fun tokenNeedsRefresh(): Boolean =
         System.currentTimeMillis() >= store.getLong(KEY_EXPIRES_AT, 0L) - REFRESH_SKEW_MS
 

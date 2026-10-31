@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Sensors
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TouchApp
@@ -167,6 +168,7 @@ private fun symbol(art: Meldungsart): ImageVector = when (art) {
     Meldungsarten.RUECKFRAGE -> Icons.Rounded.NotificationsActive
     Meldungsarten.ABLAGE -> Icons.Rounded.Folder
     Meldungsarten.GEMINI -> Icons.Rounded.Key
+    Meldungsarten.KONTINGENT -> Icons.Rounded.Speed
     Meldungsarten.ABFAHRT -> Icons.Rounded.DirectionsCar
     Meldungsarten.TIMER -> Icons.Rounded.Timer
     Meldungsarten.STOPPUHR -> Icons.Rounded.AvTimer

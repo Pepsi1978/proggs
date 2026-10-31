@@ -86,7 +86,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
@@ -94,6 +94,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         if (reiter == "guthaben") GuthabenReiter(vm)
+        if (reiter == "kontingente") KontingenteReiter(vm)
         if (reiter == "tools") EigeneToolsBereich(vm)
         if (reiter == "konten") KontenBereich(vm)
 
@@ -709,7 +710,7 @@ internal fun GoogleAnmeldung(onFertig: () -> Unit) = AnmeldeBrowser(
  * mit dem Kennzeichen des normalen Chrome lässt sie sie zu.
  */
 @Composable
-private fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, fertig: (String) -> Boolean, onFertig: () -> Unit) {
+internal fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, fertig: (String) -> Boolean, onFertig: () -> Unit) {
     val f = LocalFarben.current
     androidx.compose.ui.window.Dialog(onDismissRequest = onFertig, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(f.hgOben)) {

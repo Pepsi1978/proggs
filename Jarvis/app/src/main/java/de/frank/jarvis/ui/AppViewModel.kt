@@ -3426,6 +3426,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Kontingente (Nutzungslimits der KI-Abos) ----
+
+    var kontingente by mutableStateOf<de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Stand?>(null); private set
+    var kontingenteLaedt by mutableStateOf(false); private set
+
+    init {
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.frisch.collect { s -> if (s != null) kontingente = s }
+        }
+    }
+
+    fun kontingenteAbfragen(erzwingen: Boolean = false) {
+        if (kontingenteLaedt) return
+        val app = getApplication<android.app.Application>()
+        kontingenteLaedt = true
+        viewModelScope.launch {
+            if (kontingente == null) kontingente = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.gespeichert(app) }
+            kontingente = de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.stand(app, erzwingen)
+            kontingenteLaedt = false
+        }
+    }
+
+    fun kontingentAbmelden(id: String) {
+        val app = getApplication<android.app.Application>()
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.abmelden(app, id)
+            kontingenteAbfragen(erzwingen = true)
+        }
+    }
+
     // ---- Google-Guthaben (Gemini-Stimmen) ----
 
     var googleGuthaben by mutableStateOf<de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.Stand?>(null); private set

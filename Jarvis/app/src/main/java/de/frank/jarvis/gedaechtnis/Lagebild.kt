@@ -77,6 +77,7 @@ enum class Bereich(
     IDEEN("ideen", "Geniale Ideen", "GENIALE IDEEN (alle offenen; die neuesten mit Text, ältere mit Titel; Volltext mit ideen_lesen und id)", 30 * 60_000L, true, true, 5_000L),
     ZIELE("ziele", "Ziele", "ZIELE (App Ziele: Franks ausgearbeitete Ziele mit Frist, Weg und Fortschritt der notwendigen Aufgaben; Vorschläge und Recherche mit ziele_lesen und id)", 30 * 60_000L, true, true, 5_000L),
     TRAININGS("trainings", "Trainings", "TRAININGS DER LETZTEN 14 TAGE", 15 * 60_000L, false, true, 15_000L),
+    KONTINGENTE("kontingente", "Kontingente", "KONTINGENTE (Franks Nutzungslimits bei Claude, ChatGPT/Codex, Kimi und Gemini; steht bei einem Limit ZU SCHNELL oder ist es aufgebraucht, weise Frank von dir aus darauf hin und plane danach)", 15 * 60_000L, false, false, 90_000L),
     WETTER("wetter", "Wetter", "WETTER HEUTE, MORGEN, ÜBERMORGEN", 30 * 60_000L, false, false, 40_000L),
     RUECKBLICK("rueckblick", "Die letzten 10 Tage", "RÜCKBLICK DER LETZTEN 10 TAGE (Dienste und Termine je Tag, dazu das Fazit der jeweiligen Tagesauswertung)", 30 * 60_000L, false, false, 8_000L, Regex("^\\s*$-")),
     ABLAGE("ablage", "Ablage", "ABLAGE VON JARVIS (neueste Einträge; Inhalt mit ablage_lesen)", 15 * 60_000L, true, true, 3_000L),
@@ -392,6 +393,7 @@ object Lagebild {
             Bereich.IDEEN -> alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.ZIELE -> alle.filterIsInstance<ZieleFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.TRAININGS -> alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()?.trainingsLive(14) ?: "NICHT VERFÜGBAR"
+            Bereich.KONTINGENTE -> rufe("kontingente_lesen", JSONObject())
             Bereich.WETTER -> alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.aktuell(3) ?: "NICHT VERFÜGBAR"
             Bereich.RUECKBLICK -> rueckblick(app, rufe("kalender_lesen", JSONObject().put("von", heute.minusDays(10).toString()).put("bis", heute.minusDays(1).toString())))
             Bereich.ABLAGE -> AblageZentrale.speicher(app).eintraege().take(12).let { liste ->
@@ -652,7 +654,7 @@ object Lagebild {
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
         Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
-        Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.WETTER to 900,
+        Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 1_600, Bereich.WETTER to 900,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
     private const val SEIT_DECKEL = 5_000

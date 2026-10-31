@@ -4,7 +4,7 @@ Was Jarvis am Rechner über die Handy-App und die Zusammenarbeit mit dem CLI wis
 - Jarvis: Gespräch mit Eingabeblase (Plus, Modell mit Guthaben und Kosten, Diktat, Live-Blase), Startbildschirm mit Tagesauswertung, Live-Gedächtnis, Einrichtungs-Checkliste.
 - Ablage: Texte und Dateien aller Art mit Filtern, Suche und Vorschau; Reiter Prompts mit nummerierten Prompts (Mikrofon, KI-Knopf, Diskette, Senden).
 - Aktivität: Protokoll, was Jarvis, ChatGPT und Agenten getan haben.
-- Einstellungen: Jarvis, Guthaben (Anthropic, Google), Benachrichtigungen, Stimme, Alltag und Timer, Konten und Apps, System.
+- Einstellungen: Jarvis, Guthaben (Anthropic, Google), Kontingente (Limits von Claude, ChatGPT/Codex, Kimi, Gemini), Benachrichtigungen, Stimme, Alltag und Timer, Konten und Apps, System.
 - Seitenleiste: Gespräche, Programmierung, Projekte; oranger Punkt, wenn dort gearbeitet wird.
 - Gedächtnis-Ansicht und Merklisten: Live-Gedächtnis mit Bereichen, Langzeitkontext, Funktionsübersicht, Regeln, Ziele, Über Frank, Programmierregeln, Stil, Entscheidungen, Zusammenarbeit mit ChatGPT.
 - Der Reiter Live-Gespräch ist am Mac eigenständig und zählt hier nicht dazu.

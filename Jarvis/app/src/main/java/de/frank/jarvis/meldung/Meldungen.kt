@@ -128,6 +128,11 @@ object Meldungsarten {
         "gemini", "Gemini-Schlüssel gewechselt", "Sagt Bescheid, wenn das kostenlose Gemini-Kontingent leer ist und Jarvis mit dem bezahlten Schlüssel weiterspricht.",
         "Nur im Live-Gespräch, deshalb immer lautlos.", ERGEBNISSE, "jarvis_ergebnisse",
     )
+    val KONTINGENT = Meldungsart(
+        "kontingent", "Kontingent zu schnell", "Warnt, wenn ein Limit bei Claude, ChatGPT/Codex, Kimi oder Gemini beim jetzigen Tempo vor dem Zurücksetzen aufgebraucht wäre.",
+        "Einmal je Zeitfenster, sobald mindestens 30 Prozent genutzt sind und das Tempo zu hoch ist.", ERGEBNISSE, "jarvis_ergebnisse",
+        ton = true, vorlesen = true, ruhezeit = true,
+    )
     val ABFAHRT = Meldungsart(
         "abfahrt", "Losfahren", "Sagt dir an Arbeitstagen, wann du zur Arbeit losfahren musst, mit Navigation per Tipp.",
         "Vor jedem Dienst, rechtzeitig vor der nötigen Abfahrt.", ALLTAG, "jarvis_abfahrt",
@@ -186,7 +191,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, ABFAHRT, TIMER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
 }
 

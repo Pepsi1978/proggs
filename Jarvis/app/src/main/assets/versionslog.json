@@ -521,6 +521,7 @@
     {"versionCode": 516, "versionName": "1.8.505", "stand": "31.10.2026, 20:28 Uhr", "notiz": "In der Server-Konsole gibt es jetzt Kopieren und Einfügen für Terminal und Eingabefeld."},
     {"versionCode": 517, "versionName": "1.8.506", "stand": "31.10.2026, 20:34 Uhr", "notiz": "Die Server-Konsole meldet jetzt, wenn Kopieren scheitert, und erkennt das Schließen der Tastatur zuverlässig."},
     {"versionCode": 518, "versionName": "1.8.507", "stand": "31.10.2026, 21:19 Uhr", "notiz": "Am Programmierbutton kannst du jetzt auch Kimi K3.1 Pro und Gemini 4 Argon wählen; beide starten über OpenLauncher mit Minimalprofil, Schnellmodus und Effort High."},
-    {"versionCode": 519, "versionName": "1.8.508", "stand": "31.10.2026, 21:29 Uhr", "notiz": "Kimi K3.1 Pro und Gemini 4 Argon: Genannte Angaben wie Effort oder CLI bleiben erhalten, kurze Antworten werden genauer erkannt, und bei Argon fragt Jarvis vor dem Start nach dem Review."}
+    {"versionCode": 519, "versionName": "1.8.508", "stand": "31.10.2026, 21:29 Uhr", "notiz": "Kimi K3.1 Pro und Gemini 4 Argon: Genannte Angaben wie Effort oder CLI bleiben erhalten, kurze Antworten werden genauer erkannt, und bei Argon fragt Jarvis vor dem Start nach dem Review."},
+    {"versionCode": 520, "versionName": "1.8.509", "stand": "31.10.2026, 21:33 Uhr", "notiz": "Neuer Reiter Kontingente: Limits von Claude, ChatGPT/Codex, Kimi und Gemini mit Zurücksetzen in deutscher Zeit; Jarvis behält sie im Gedächtnis und warnt, wenn ein Limit vor dem Zurücksetzen leer wäre."}
 ]
 }

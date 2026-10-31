@@ -6,7 +6,7 @@ struct EinstellungenAnsicht: View {
     @MainActor static var startReiter = "gehirn"
 
     private let reiterListe: [(String, String, String)] = [
-        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
+        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
         ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
@@ -34,6 +34,7 @@ struct EinstellungenAnsicht: View {
                             switch reiter {
                             case "gehirn": gehirn
                             case "guthaben": GuthabenAnsicht()
+                            case "kontingente": KontingenteAnsicht()
                             case "stimme": stimme
                             case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
                             case "live": live

@@ -291,6 +291,11 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.ANTHROPIC_API_KEY, "")
         set(value) = writeString(Keys.ANTHROPIC_API_KEY, value)
 
+    /** Sitzung von claude.ai für die Kontingente; gilt, bis Frank sich abmeldet. */
+    var claudeAiSitzung: String
+        get() = readString(Keys.CLAUDE_AI_SITZUNG, "")
+        set(value) = writeString(Keys.CLAUDE_AI_SITZUNG, value)
+
     /** Sitzung der Anthropic-Konsole: Sie gilt, bis Frank sich abmeldet, auch wenn das Cookie im Browser abläuft. */
     var anthropicConsoleSitzung: String
         get() = readString(Keys.ANTHROPIC_CONSOLE_SITZUNG, "")
@@ -407,6 +412,7 @@ class SecureSettings(context: Context) : Closeable {
         const val OPENAI_API_KEY = "openai_api_key"
         const val ANTHROPIC_API_KEY = "anthropic_api_key"
         const val ANTHROPIC_CONSOLE_SITZUNG = "anthropic_console_sitzung"
+        const val CLAUDE_AI_SITZUNG = "claude_ai_sitzung"
         const val ANTHROPIC_CONSOLE_ABGELEHNT = "anthropic_console_abgelehnt"
         const val MODEL = "model"
         const val REASONING = "reasoning"
