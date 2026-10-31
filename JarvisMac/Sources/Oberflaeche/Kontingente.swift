@@ -63,7 +63,7 @@ struct KontingenteAnsicht: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Wie viel deiner Abos noch übrig ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.")
+            Text("Wie viel deiner Abos verbraucht ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.")
                 .font(.jarvis(13)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
             if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
             else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
@@ -97,12 +97,12 @@ struct KontingenteAnsicht: View {
     private func limit(_ l: Kontingente.Limit) -> some View {
         let abgelaufen = k.ausSpeicher && l.resetSek > 0 && l.resetSek <= Date().timeIntervalSince1970
         let schnell = l.zuSchnell && !k.ausSpeicher
-        let genutzt = abgelaufen ? 0 : l.genutzt
+        let genutzt = min(100, max(0, abgelaufen ? 0 : l.genutzt))
         let reset = abgelaufen ? "Inzwischen zurückgesetzt" : (k.ausSpeicher && !l.resetAm.isEmpty ? "Zurückgesetzt: " + l.resetAm : l.resetSatz)
         return VStack(alignment: .leading, spacing: 4) {
             Text(l.name).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
-            Text("\(zahl(abgelaufen ? 100 : l.uebrig)) % übrig").font(.jarvis(24, .bold)).foregroundStyle(schnell ? Farbe.rot : Farbe.haupt)
-            balken(min(1, max(0, genutzt / 100)), rot: schnell)
+            Text("\(zahl(genutzt)) % verbraucht").font(.jarvis(24, .bold)).foregroundStyle(schnell ? Farbe.rot : Farbe.haupt)
+            balken(genutzt / 100, rot: schnell)
             Text(reset).font(.jarvis(13)).foregroundStyle(Farbe.text)
             if !l.tempo.isEmpty && !k.ausSpeicher {
                 Text(schnell ? "Zu schnell: " + l.tempo : l.tempo)
