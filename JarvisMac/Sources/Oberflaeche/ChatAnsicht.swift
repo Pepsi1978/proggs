@@ -19,8 +19,8 @@ struct ChatAnsicht: View {
                         }
                         Color.clear.frame(height: 8).id("ende")
                     }
-                    .padding(.horizontal, 40).padding(.vertical, 24)
-                    .frame(maxWidth: 940)
+                    .padding(.horizontal, 64).padding(.vertical, 24)
+                    .frame(maxWidth: 964)
                     .frame(maxWidth: .infinity)
                 }
                 .scrollIndicators(.automatic)

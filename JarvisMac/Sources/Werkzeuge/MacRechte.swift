@@ -68,19 +68,22 @@ enum MacRechte {
         default: .nein
         }
         let auto = await Task.detached { automation.map { ($0.1, automationStatus($0.0, fragen: false)) } }.value
-        // Läuft ein Programm gerade nicht, sagt macOS nichts dazu: Es zählt nicht gegen den Stand.
+        // Läuft ein Programm gerade nicht, sagt macOS nichts dazu: Dann ist der Stand nicht bekannt, „Fehlende anfragen“ startet es dafür.
         let autoZustand: Zustand = auto.contains { $0.1 == OSStatus(errAEEventNotPermitted) } ? .nein
             : auto.contains { $0.1 == OSStatus(errAEEventWouldRequireUserConsent) } ? .offen
-            : auto.allSatisfy { $0.1 == noErr || $0.1 == OSStatus(procNotFound) } ? .ja : .unbekannt
+            : auto.allSatisfy { $0.1 == noErr } ? .ja : .unbekannt
         let mitteilung = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
         let diskzugriff = await Task.detached { vollerDiskzugriff() }.value
-        let sudo = await Shell.zsh("/usr/bin/sudo -n true 2>/dev/null", sekunden: 5).code == 0
-        let installieren = await regelOhneAbfrage("system.install.software")
-        let admin = await regelOhneAbfrage("system.privilege.admin")
+        // -k: Eine eben erst eingegebene Anmeldung zählt nicht als dauerhaftes Recht.
+        async let sudoLauf = Shell.zsh("/usr/bin/sudo -k -n true 2>/dev/null", sekunden: 5)
+        async let installierenLauf = regelOhneAbfrage("system.install.software")
+        async let adminLauf = regelOhneAbfrage("system.privilege.admin")
+        let (sudoErgebnis, installieren, admin) = await (sudoLauf, installierenLauf, adminLauf)
+        let sudo = sudoErgebnis.code == 0
         return [
             Zeile(titel: "Bedienungshilfen", zustand: AXIsProcessTrusted() ? .ja : .nein, text: "Klicken, tippen, Dialoge lesen und bestätigen.", bereich: "Privacy_Accessibility"),
             Zeile(titel: "Bildschirmaufnahme", zustand: CGPreflightScreenCaptureAccess() ? .ja : .nein, text: "Den Bildschirm ansehen.", bereich: "Privacy_ScreenCapture"),
-            Zeile(titel: "Automation", zustand: autoZustand, text: "Steuert " + auto.map { "\($0.0)\($0.1 == noErr ? " ✓" : "")" }.joined(separator: ", ") + ".", bereich: "Privacy_Automation"),
+            Zeile(titel: "Automation", zustand: autoZustand, text: "Steuert " + auto.map { "\($0.0)\($0.1 == noErr ? " ✓" : $0.1 == OSStatus(procNotFound) ? " (läuft nicht, ungeprüft)" : "")" }.joined(separator: ", ") + ".", bereich: "Privacy_Automation"),
             Zeile(titel: "Festplattenvollzugriff", zustand: diskzugriff ? .ja : .nein, text: "Geschützte Ordner lesen. Kann nur Frank in den Systemeinstellungen einschalten.", bereich: "Privacy_AllFiles"),
             Zeile(titel: "Programme verwalten", zustand: .unbekannt, text: "Programme in /Applications ändern und ersetzen. Kann nur Frank in den Systemeinstellungen einschalten.", bereich: "Privacy_AppBundles"),
             Zeile(titel: "Mikrofon", zustand: mikrofon, text: "Weckwort, Diktat und Live.", bereich: "Privacy_Microphone"),
@@ -101,6 +104,9 @@ enum MacRechte {
         _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         if !AXIsProcessTrusted() { _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) }
         if !CGPreflightScreenCaptureAccess() { _ = CGRequestScreenCaptureAccess() }
+        // macOS fragt nur für laufende Programme: im Hintergrund starten, ohne Fenster nach vorn zu holen.
+        for a in automation { _ = await Shell.zsh("/usr/bin/open -gj -b \(a.0)", sekunden: 10) }
+        try? await Task.sleep(for: .seconds(1))
         await Task.detached { for a in automation { _ = automationStatus(a.0, fragen: true) } }.value
     }
 }

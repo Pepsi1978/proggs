@@ -50,8 +50,8 @@ struct StartAnsicht: View {
                         }
                     }
                 }
-                .padding(.horizontal, 40).padding(.bottom, 20)
-                .frame(maxWidth: 860)
+                .padding(.horizontal, 64).padding(.bottom, 20)
+                .frame(maxWidth: 884)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
@@ -84,6 +84,8 @@ private struct SchnellTag: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        // Verborgene Tags dürfen nie den Tastaturfokus bekommen.
+        .focusable(false)
         .onHover { schwebt = $0 }
     }
 }

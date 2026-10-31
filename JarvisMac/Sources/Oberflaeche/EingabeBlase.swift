@@ -15,6 +15,10 @@ struct EingabeBlase: View {
     @State private var diktatFehler = ""
     @State private var nachDiktatSenden = false
     @FocusState private var fokus: Bool
+    @State private var weg = Merker()
+
+    /// Ein Diktat kann seine Ansicht überleben: Dann darf sein Ende die neue Blase nicht mehr verändern.
+    private final class Merker { var fort = false }
 
     private var hatText: Bool { !steuerung.eingabeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var kompakt: Bool { steuerung.blaseKompakt && steuerung.eingabeText.isEmpty }
@@ -69,11 +73,14 @@ struct EingabeBlase: View {
         .frame(maxWidth: 940)
         .frame(maxWidth: .infinity)
         .onAppear {
+            weg.fort = false
             fokus = true
             // Beim Fensterstart nimmt sonst das erste Textfeld der Leiste den Fokus.
             Task { try? await Task.sleep(for: .milliseconds(150)); fokus = true }
         }
         .onChange(of: steuerung.blaseFokus) { _, _ in fokus = true }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { steuerung.blaseHoehe = $0 }
+        .onDisappear { weg.fort = true }
     }
 
     private func umschalten() {
@@ -129,6 +136,7 @@ struct EingabeBlase: View {
 
     @ViewBuilder private var knoepfe: some View {
         DiktatKnopf(text: $steuerung.eingabeText, vorschau: false, meldeLaeuft: { laeuft in
+            guard !weg.fort else { return }
             diktiert = laeuft
             if laeuft { steuerung.blaseKompakt = false }
             else {
@@ -170,10 +178,11 @@ struct EingabeBlase: View {
         if t.hasSuffix(";") { t = String(t.dropLast()).trimmingCharacters(in: .whitespaces) }
         guard !t.isEmpty || anhang != nil else { return }
         diktatFehler = ""
-        if anhang == nil, t.hasPrefix(ProgrammierVorspann.nachtrag), let gespraech, gespraech.istProgrammierung {
-            let rest = String(t.dropFirst(ProgrammierVorspann.nachtrag.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        if ProgrammierVorspann.hatNachtrag(t), let gespraech, let id = gespraech.auftragId {
+            guard anhang == nil else { diktatFehler = "Ein Nachtrag geht nur als Text. Bitte den Anhang entfernen."; return }
+            let rest = ProgrammierVorspann.ohneNachtrag(t).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !rest.isEmpty else { diktatFehler = "Bitte den Nachtrag hinter dem Doppelpunkt ergänzen."; return }
-            steuerung.nachtragSenden(gespraech, text: rest)
+            steuerung.nachtragSenden(gespraech, id: id, text: rest)
             return
         }
         let neuerAuftrag = ProgrammierVorspann.hatAuftrag(t)

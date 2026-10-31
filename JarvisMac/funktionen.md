@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.40 -->
+<!-- stand: JarvisMac 1.0.41 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -16,7 +16,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - `mac_befehl` (zsh), `mac_applescript`, `mac_oeffnen`, `mac_programme` (liste/vordergrund/beenden), `mac_bildschirm` (Bildschirmfoto ans Modell), `mac_bedienen` (Computer Use: klicken, ziehen, scrollen in Bildpixeln des letzten Fotos, danach neues Foto; braucht Bedienungshilfen), `mac_aufnahme` (Bildschirmvideo nach ~/Movies/Jarvis), `mac_tastatur`, `mac_zwischenablage`, `mac_mitteilung`, `mac_lautstaerke`, `mac_datei`, `mac_status`. Ist der Vollzugriff aus, gehen nur noch Öffnen, Mitteilungen, Programmliste und Status.
 - `mac_screenshot` („Erstelle einen Screenshot“: ganzer Bildschirm als PNG am Bildschirmfoto-Ort, zusätzlich in der Zwischenablage), `screenshot_ins_cli` (Screenshot per Ctrl+V oder als Pfad in die zuletzt benutzte Terminal-Sitzung, optional mit Text und Absenden).
 - `mac_einstellungen` (eigene Mac-Einstellungen per Sprache lesen/ändern), `mac_funktionen_lesen` (diese Übersicht).
-- `mac_dialog` (normale Bestätigungsdialoge eines Auftrags lesen, drücken oder vorab vormerken, etwa das Ja zu einem beauftragten OpenLauncher-Update; auf persönliche Freigaben warten), `mac_rechte` (Stand der macOS-Rechte). Anmeldung, Passwörter, Touch ID und Datenschutz-Freigaben bedient Jarvis nie: Es meldet sie und arbeitet danach weiter. Endgültiges wie Löschen braucht Franks Ja. Nicht im Agentenkanal.
+- `mac_dialog` (normale Bestätigungsdialoge eines Auftrags lesen, drücken oder vorab vormerken, etwa das Ja zu einem beauftragten OpenLauncher-Update; auf persönliche Freigaben warten; Overlay-Updates bleiben Franks Klick), `mac_rechte` (Stand der macOS-Rechte). Anmeldung, Passwörter, Touch ID und Datenschutz-Freigaben bedient Jarvis nie: Es meldet sie und arbeitet danach weiter. Endgültiges wie Löschen braucht Franks Ja, auch wenn es nur im Dialogtext steht. Nicht im Agentenkanal.
 - `terminal_befehl` (sichtbares Terminal-Fenster), `openlauncher_sitzung` (OpenLauncher `--jarvis-auftrag` mit CLI, Modell, Profil, Modus, Effort), `updater_zentrale` (Programmliste, öffnen), `chatgpt_app` (Nachricht in die ChatGPT-App).
 
 ## Sprache
@@ -53,7 +53,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - `repo_lesen` liest am Mac versionierte Dateien direkt aus ~/proggs (ohne Vollzugriff wie bisher über das Handy) und markiert Gekürztes. `cli_frage` fragt im Hintergrund das CLI: nur Lesen und Suchen, ~/SK gesperrt, ohne Hooks und MCP-Server.
 
 ## Neu seit 1.0.23
-- Tempo: Live-Gedächtnis wird schon beim Weckwort und neuen Gespräch vorgeladen, Werkzeugliste bleibt warm, Handy aus kostet keine Wartezeit; Gespräche, Logbuch, Mikrofon-Start und Aufnahme-Analyse laufen neben dem Hauptfaden, Gespräche laden im Hintergrund, gestreamter Text höchstens 20-mal je Sekunde und ohne Neurechnen alter Nachrichten; Animationen ruhen im Hintergrund und während Sprache und Live. Stopp beendet auch laufende Mac-Befehle. Scheitert eine Mitschrift, versucht Jarvis es ein zweites Mal und bietet danach neben dem Mikrofon „erneut umwandeln“ an, die Aufnahme bleibt bis zum nächsten Diktat erhalten. Text aus einer verschwundenen Blase übernimmt die nächste Blase.
+- Tempo: Live-Gedächtnis wird schon beim Weckwort und neuen Gespräch vorgeladen, Werkzeugliste bleibt warm, Handy aus kostet keine Wartezeit; Gespräche, Logbuch, Mikrofon-Start und Aufnahme-Analyse laufen neben dem Hauptfaden, Gespräche laden im Hintergrund, gestreamter Text höchstens 20-mal je Sekunde und ohne Neurechnen alter Nachrichten; Animationen ruhen im Hintergrund und während Sprache und Live. Stopp beendet auch laufende Mac-Befehle. Scheitert eine Mitschrift, versucht Jarvis es ein zweites Mal und bietet danach neben dem Mikrofon „erneut umwandeln“ an, die Aufnahme bleibt bis zum nächsten Diktat erhalten.
 
 ## Entfernt in 1.0.37
-- Einstellungsbereich Programmierung mit Sessions-Liste und Formularen für Rückfrage und Nachtrag; die Sessions stehen im Leistenreiter Programmierung. Reiter „Neues Gespräch“. Plus-Menüpunkt „OpenLauncher-Session hier am Mac“. In der Zentrale Begrüßung, Datum, Sprechblase und Schnellverknüpfungen.
+- Einstellungsbereich Programmierung mit Sessions-Liste und Formularen für Rückfrage und Nachtrag; Mac-Gespräche mit Auftrag stehen im Leistenreiter Programmierung, Sitzungen anderer Rechner nennt Jarvis auf Nachfrage. Reiter „Neues Gespräch“. Plus-Menüpunkt „OpenLauncher-Session hier am Mac“. In der Zentrale Begrüßung, Datum, Sprechblase und Schnellverknüpfungen.

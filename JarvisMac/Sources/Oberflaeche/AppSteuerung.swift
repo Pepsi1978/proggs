@@ -32,19 +32,24 @@ enum Bereich: String, CaseIterable, Identifiable {
 final class AppSteuerung {
     static let shared = AppSteuerung()
     var bereich: Bereich = .start { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
-    var gespraech: Gespraech?
-    /// Der Text der Sprechblase, wie am Handy einer für alle Ansichten: Er überlebt jeden Ansichtswechsel, und die rechte Leiste kann ihn bearbeiten.
-    var eingabeText = "" { didSet { if !eingabeText.isEmpty { geleerterText = nil } } }
+    var gespraech: Gespraech? {
+        // Ein „Nachtrag:“ gehört zur Sitzung, in der er begonnen wurde: Im nächsten Gespräch bleibt nur der Text.
+        didSet { if gespraech !== oldValue, nachtragAktiv { eingabeText = ProgrammierVorspann.ohneNachtrag(eingabeText) } }
+    }
+    /// Der Text der Sprechblase, wie am Handy einer für alle Ansichten: Er überlebt jeden Ansichtswechsel, und die schwebenden Knöpfe können ihn bearbeiten.
+    var eingabeText = "" { didSet { if !eingabeText.isEmpty { geleerterText = nil; blaseKompakt = false } } }
+    /// Höhe der Blase samt Rand: Die schwebenden Knöpfe stehen direkt darüber.
+    var blaseHoehe: CGFloat = 96
     /// Eingeklappt zeigt die Blase nur ihre untere Zeile; mit Text bleibt sie immer offen.
     var blaseKompakt = true
     /// Zählt hoch, wenn die Blase den Fokus bekommen soll.
     var blaseFokus = 0
     /// Was der Papierkorb der Blase zuletzt geleert hat, für „Rückgängig“.
     var geleerterText: String?
-    /// Vorformulierter Text für die Blase (Prompt senden, in neuem Gespräch fortsetzen).
+    /// Vorformulierter Text für die Blase (Prompt senden, in neuem Gespräch fortsetzen). Schon Getipptes bleibt dahinter stehen.
     var entwurf: String {
         get { eingabeText }
-        set { eingabeText = newValue; if !newValue.isEmpty { blaseKompakt = false; blaseFokus += 1 } }
+        set { eingabeText = AufgabenText.verbinde(newValue, eingabeText); if !newValue.isEmpty { blaseFokus += 1 } }
     }
     /// Der Prompt, der gerade im Vollbild bearbeitet wird.
     var promptBearbeiten: PromptEintrag?
@@ -98,7 +103,7 @@ final class AppSteuerung {
 
     /// imProjekt = aus der Projektleiste („Neues Gespräch im Projekt“); alles andere beginnt auf dem Startbildschirm.
     func neuesGespraech(imProjekt: Bool = false) {
-        guard imProjekt else { startOeffnen(); return }
+        guard imProjekt else { startOeffnen(spracheBeenden: false); return }
         // Ein offener Entwurf bleibt: Mehrmaliges Drücken legt nichts an.
         let g = entwurfOderNeu()
         g.projekt = projekt
@@ -107,9 +112,9 @@ final class AppSteuerung {
     }
 
     /// „Start“: neues Gespräch mit offener Blase. Angelegt wird es erst mit der ersten Nachricht, leere Gespräche gibt es also nicht.
-    func startOeffnen() {
+    func startOeffnen(spracheBeenden: Bool = true) {
         Task { await McpKlient.shared.kontextVorladen() }
-        if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden() }
+        if spracheBeenden, SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden() }
         gespraech = nil
         bereich = .start
         blaseKompakt = false
@@ -126,11 +131,9 @@ final class AppSteuerung {
 
     var programmiererAktiv: Bool { ProgrammierVorspann.hatAuftrag(eingabeText) }
     var nachtragAktiv: Bool { ProgrammierVorspann.hatNachtrag(eingabeText) }
-    var nachtragMoeglich: Bool { gespraech?.istProgrammierung == true }
+    var nachtragMoeglich: Bool { gespraech?.auftragId != nil }
 
-    /// Die Blase steht nur auf Start und im Gespräch: Von anderswo führen die Knöpfe dorthin.
     private func zurBlase() {
-        if bereich != .start && bereich != .gespraech { bereich = gespraech != nil ? .gespraech : .start }
         blaseKompakt = false
         blaseFokus += 1
     }
@@ -149,31 +152,34 @@ final class AppSteuerung {
         zurBlase()
     }
 
-    /// „Nachtrag:“ vorn: Der Text geht ohne Modell in genau die Sitzung dieses Gesprächs. Geht er nicht raus, kommt er in die Blase zurück.
-    func nachtragSenden(_ g: Gespraech, text: String) {
+    /// „Nachtrag:“ vorn: Der Text geht ohne Modell in genau die Sitzung dieses Gesprächs. Geht er nicht raus und das Gespräch ist noch offen, kommt er in die Blase zurück.
+    func nachtragSenden(_ g: Gespraech, id: String, text: String) {
         let roh = eingabeText
         eingabeText = ""
         blaseKompakt = true
-        g.nachrichten.append(Nachricht(rolle: .frank, text: "\(ProgrammierVorspann.nachtrag) \(text)"))
+        let gesendet = Nachricht(rolle: .frank, text: "\(ProgrammierVorspann.nachtrag) \(text)")
+        let antwortFeld = Nachricht(rolle: .jarvis, text: "", laeuft: true)
+        g.nachrichten += [gesendet, antwortFeld]
         g.speichern()
         Task {
-            let antwort: String
-            var fehler = false
-            if let id = g.auftragId {
-                let r = await McpKlient.shared.rufe("programmier_nachtrag", ["auftrag_id": id, "text": text, "franks_worte": "Nachtrag in die gleiche Session \(id)"])
-                antwort = r.text; fehler = r.fehler
-            } else {
-                antwort = "Zu diesem Gespräch ist keine Programmier-Sitzung bekannt, der Nachtrag wurde nicht gesendet."
-                fehler = true
+            let r = await McpKlient.shared.rufe("programmier_nachtrag", ["auftrag_id": id, "text": text, "franks_worte": "Nachtrag in die gleiche Session \(id)"])
+            log("gespraech", "Nachtrag per Knopf", wo: "Schwebeknöpfe", fehler: r.fehler ? r.text : nil)
+            let antwort = McpKlient.ohneKontextHinweis(r.text).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let i = g.nachrichten.firstIndex(where: { $0.id == antwortFeld.id }) {
+                g.nachrichten[i].text = antwort.isEmpty ? (r.fehler ? "Der Nachtrag ging nicht raus." : "Nachtrag übergeben.") : antwort
+                g.nachrichten[i].laeuft = false
             }
-            log("gespraech", "Nachtrag per Knopf", wo: "Schwebeknöpfe", fehler: fehler ? antwort : nil)
-            g.nachrichten.append(Nachricht(rolle: .jarvis, text: McpKlient.ohneKontextHinweis(antwort)))
-            if (g.verlauf.last?["role"] as? String) == "assistant" {
-                g.verlauf.append(["role": "user", "content": [["type": "text", "text": "\(ProgrammierVorspann.nachtrag) \(text)"]]])
-                g.verlauf.append(["role": "assistant", "content": [["type": "text", "text": antwort]]])
+            if r.fehler {
+                // Noch im selben Gespräch und die Blase ist frei: zum erneuten Senden zurück; sonst bleibt der Text im Gespräch stehen.
+                if gespraech === g, eingabeText.isEmpty {
+                    g.nachrichten.removeAll { $0.id == gesendet.id }
+                    eingabeText = roh
+                }
+            } else {
+                // Der Verlauf ans Modell darf hier nicht wachsen, er könnte gerade zwischen tool_use und tool_result stehen: Die nächste Frage bringt den Nachtrag mit.
+                g.gesendeteNachtraege.append(text)
             }
             g.speichern()
-            if fehler && eingabeText.isEmpty { eingabeText = roh; blaseKompakt = false }
         }
     }
 
@@ -230,6 +236,7 @@ final class AppSteuerung {
     /// Laufende Fragen und das Sprachgespräch dieses Gesprächs enden, etwa beim Löschen.
     func gespraechBeendet(_ g: Gespraech) {
         for f in fragen.values where f.gespraech == g.id { f.aufgabe.cancel() }
+        MacDialoge.vormerkungLoeschen()
         if SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden() }
     }
 

@@ -5,6 +5,7 @@ import SwiftUI
 struct VorleseEinstellungenAnsicht: View {
     @State private var v = VorleseEinstellungen.shared
     @State private var stimme = Stimme.shared
+    @State private var probeVon: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -85,13 +86,19 @@ struct VorleseEinstellungenAnsicht: View {
                     HStack(spacing: 10) {
                         // Favoriten stehen oben im Menü.
                         Picker("", selection: Binding(get: { v.stimme(v.anbieter) }, set: { v.setzeStimme($0, fuer: v.anbieter) })) {
+                            if !liste.contains(where: { $0.id == gewaehlt }) { Text("Nicht mehr verfügbar, bitte wählen").tag(gewaehlt) }
                             ForEach(liste) { st in
                                 Text("\(v.favoriten.contains(st.id) ? "★ " : "")\(st.name) · \(st.geschlecht == .weiblich ? "weiblich" : "männlich")").tag(st.id)
                             }
                         }
                         .labelsHidden().frame(minWidth: 0, maxWidth: .infinity)
                         RundKnopf(symbol: favorit ? "star.fill" : "star", hilfe: favorit ? "Favorit entfernen" : "Als Favorit markieren", aktiv: favorit, farbe: Farbe.gold, groesse: 30) { v.favoritUmschalten(gewaehlt) }
-                        RundKnopf(symbol: stimme.spricht ? "speaker.wave.2.fill" : "play.fill", hilfe: "Hörprobe", groesse: 30) { Task { await stimme.probe(gewaehlt) } }
+                        let probeLaeuft = probeVon == gewaehlt && stimme.spricht
+                        RundKnopf(symbol: probeLaeuft ? "stop.fill" : "play.fill", hilfe: probeLaeuft ? "Hörprobe beenden" : "Hörprobe", groesse: 30) {
+                            if probeLaeuft { stimme.stopp(); probeVon = nil; return }
+                            probeVon = gewaehlt
+                            Task { await stimme.probe(gewaehlt); if probeVon == gewaehlt { probeVon = nil } }
+                        }
                     }
                 }
             }

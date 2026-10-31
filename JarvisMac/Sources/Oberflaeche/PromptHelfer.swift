@@ -18,6 +18,8 @@ enum AufgabenText {
         let n = ohneEndTrenner(neu)
         guard !n.isEmpty else { return basis }
         let b = ohneEndTrenner(basis)
+        // Ein bloßer Vorspann ist keine Aufgabe: Das Gesagte gehört direkt dahinter.
+        if b == ProgrammierVorspann.auftrag || b == ProgrammierVorspann.nachtrag { return b + " " + n + trenner }
         return (b.isEmpty ? "" : b + trenner) + n + trenner
     }
 

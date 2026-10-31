@@ -27,7 +27,7 @@ struct HauptFenster: View {
             // Wie am Handy frei über dem Inhalt, nur dort, wo die Blase steht: Sie kosten keinen Platz.
             .overlay(alignment: .bottomTrailing) {
                 if steuerung.bereich == .start || steuerung.bereich == .gespraech {
-                    SchwebeKnoepfe().padding(.trailing, 14).padding(.bottom, 146)
+                    SchwebeKnoepfe().padding(.trailing, 14).padding(.bottom, steuerung.blaseHoehe + 4)
                 }
             }
         }
@@ -60,7 +60,7 @@ private struct TastenKuerzel: View {
     @State private var steuerung = AppSteuerung.shared
     var body: some View {
         ZStack {
-            Button("") { AppSteuerung.shared.neuesGespraech() }.keyboardShortcut("n", modifiers: .command)
+            Button("") { AppSteuerung.shared.startOeffnen() }.keyboardShortcut("n", modifiers: .command)
             Button("") { AppSteuerung.shared.live() }.keyboardShortcut("l", modifiers: .command)
             Button("") { AppSteuerung.shared.sprechen() }.keyboardShortcut("d", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .einstellungen }.keyboardShortcut(",", modifiers: .command)
