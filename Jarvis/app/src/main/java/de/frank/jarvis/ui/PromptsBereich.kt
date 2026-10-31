@@ -227,10 +227,8 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
     val p = liste?.firstOrNull { it.erstellt == offen } ?: return
     val schliessen = { vm.promptOffen = null }
     BackHandler(onBack = schliessen)
-    val konfiguration = androidx.compose.ui.platform.LocalConfiguration.current
-    val gross = konfiguration.screenWidthDp >= 600
-    // Quer zählt im Vollbild jede Zeile für den Text: Die Rückmeldung rückt neben die Knöpfe, der große Abstand nach unten entfällt.
-    val quer = gross && konfiguration.screenWidthDp > konfiguration.screenHeightDp
+    // Im Vollbild zählt in beiden Lagen jede Zeile für den Text: Die Rückmeldung steht neben den Knöpfen, die Knöpfe ganz unten.
+    val gross = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     var loeschen by remember(p.erstellt) { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(if (gross) f.hgOben else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f))
         // Berührungen gehen nicht an die Ablage darunter.
@@ -259,7 +257,7 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
             // Beschreibung beim langen Drücken bzw. „Kopiert“ als kurze Rückmeldung über den Symbolen.
             val rueckmeldung = hinweis ?: if (kopiert) "Kopiert" else " "
             val rueckmeldungFarbe = if (hinweis == null && kopiert) f.erfolg else f.textLeise
-            if (!quer) Text(rueckmeldung, color = rueckmeldungFarbe, fontSize = 13.sp,
+            if (!gross) Text(rueckmeldung, color = rueckmeldungFarbe, fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), textAlign = TextAlign.End)
             if (!loeschen) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, zeige) { loeschen = true }
@@ -270,7 +268,7 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
                 Symbol(Icons.Rounded.Share, "Senden an …", f.text, zeige) {
                     teilen(vm, context, de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer} senden an")
                 }
-                if (quer) Text(rueckmeldung, Modifier.weight(1f), color = rueckmeldungFarbe, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+                if (gross) Text(rueckmeldung, Modifier.weight(1f), color = rueckmeldungFarbe, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
                 else Spacer(Modifier.weight(1f))
                 // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
                 Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
@@ -288,8 +286,6 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
                 }
                 Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
             }
-            // Hochformat wie in der Eingabe: rund einen Zentimeter Abstand zum unteren Rand.
-            if (gross && !quer) Spacer(Modifier.height(63.dp))
         }
     }
 }
