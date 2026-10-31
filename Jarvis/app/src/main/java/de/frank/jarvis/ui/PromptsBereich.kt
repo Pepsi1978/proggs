@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -332,10 +331,14 @@ fun PromptEbene(vm: AppViewModel) {
     val ungespeichert = if (vm.promptBearbeitet != null) vm.promptText != ausgang else vm.promptText.isNotBlank() || vm.nimmtAuf || vm.schreibtMit
     val versuchen = { if (ungespeichert && !verwerfen) verwerfen = true else vm.promptEingabeSchliessen() }
     BackHandler(onBack = versuchen)
+    // Frontdisplay im Hochformat (Fold 8: 1248 × 1972 px, 475 × 751 dp, 420 dpi): Die Höhe gehört dem Text, die Knöpfe stehen direkt über dem Systemrand.
+    // Aufgeklappt und im Querformat ist die Breite mindestens 600 dp, dort bleiben die großzügigeren Abstände.
+    val front = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
     Column(Modifier.fillMaxSize().background(f.hgOben)
         // Berührungen neben den Bedienelementen gehen nicht an die Ablage darunter.
         .pointerInput(Unit) { detectTapGestures { } }
-        .windowInsetsPadding(WindowInsets.safeDrawing).padding(18.dp)) {
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+        .then(if (front) Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 8.dp) else Modifier.padding(18.dp))) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Box(Modifier.size(40.dp).antippen(aktion = versuchen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
@@ -367,10 +370,10 @@ fun PromptEbene(vm: AppViewModel) {
             interceptor = { anfrage, weiter -> if (tastatur) weiter.startInputMethod(anfrage) else kotlinx.coroutines.awaitCancellation() },
         ) {
         BasicTextField(feld, { if (it.text != feld.text) vm.promptText = it.text; feld = it },
-            Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
+            Modifier.padding(top = if (front) 4.dp else 12.dp, bottom = if (front) 8.dp else 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
             textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
             decorationBox = { inhalt ->
-                Box(Modifier.padding(16.dp)) {
+                Box(Modifier.padding(if (front) 12.dp else 16.dp)) {
                     if (feld.text.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
                     inhalt()
                 }
@@ -395,8 +398,6 @@ fun PromptEbene(vm: AppViewModel) {
             else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
             Rund(Icons.Rounded.Save, "Speichern", f.primaer) { vm.promptSpeichern { vm.promptEingabeSchliessen() } }
         }
-        // Zugeklappt ohne Tastatur rund einen Zentimeter Abstand nach unten; aufgeklappt und mit Tastatur zählt jede Zeile fürs Textfeld.
-        if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600 && WindowInsets.ime.getBottom(LocalDensity.current) == 0) Spacer(Modifier.height(63.dp))
     }
 }
 
