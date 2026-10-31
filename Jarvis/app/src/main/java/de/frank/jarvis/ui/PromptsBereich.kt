@@ -1,5 +1,6 @@
 package de.frank.jarvis.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -214,8 +215,12 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     liste?.firstOrNull { it.erstellt == offen }?.let { p ->
         var loeschen by remember(p.erstellt) { mutableStateOf(false) }
-        Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false)) {
-            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
+        // Das Fenster belegt die ganze Fläche und hält selbst Abstand zu den Systemleisten: Sonst rechnet es mit der vollen
+        // Displayhöhe, und sein unteres Ende ragt im Querformat um die Höhe der Leisten aus dem Bild.
+        Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null) { offen = null }.windowInsetsPadding(WindowInsets.safeDrawing), contentAlignment = Alignment.Center) {
+            // Das leere clickable fängt Tipper auf die Karte ab, damit nur ein Tipp daneben schließt.
+            Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).clickable(interactionSource = null, indication = null) {}.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Prompt ${p.nummer}", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
@@ -260,6 +265,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     }
                     Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
                 }
+            }
             }
         }
     }

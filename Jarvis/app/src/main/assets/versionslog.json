@@ -485,6 +485,8 @@
     {"versionCode": 481, "versionName": "1.8.470", "stand": "31.10.2026, 10:21 Uhr", "notiz": "Der KI-Knopf verbessert nach einem Fehler in einem Abschnitt die übrigen trotzdem, versteht Bezüge zwischen den Aufgaben und meldet, wenn nichts geändert wurde; „Rückgängig“ bleibt zuverlässig erhalten."},
     {"versionCode": 482, "versionName": "1.8.471", "stand": "31.10.2026, 10:24 Uhr", "notiz": "Der Abgleich der Ablage ist nach dem Review robuster: Dateien vom Mac kommen zuverlässig an, ein Fehler hält den Rest nicht auf, und während eines Gesprächs ruhen auch laufende Übertragungen."},
     {"versionCode": 483, "versionName": "1.8.472", "stand": "31.10.2026, 10:31 Uhr", "notiz": "Neu gebaute Fassung mit allen Korrekturen am KI-Knopf: Aufgabentrenner bleiben erhalten, und „Rückgängig“ bleibt nach der KI-Verbesserung stehen."},
-    {"versionCode": 484, "versionName": "1.8.473", "stand": "31.10.2026, 10:46 Uhr", "notiz": "Im aufgeklappten Prompt bleiben die Knöpfe auch im Querformat sichtbar, der Text scrollt im verbleibenden Platz."}
+    {"versionCode": 484, "versionName": "1.8.473", "stand": "31.10.2026, 10:46 Uhr", "notiz": "Im aufgeklappten Prompt bleiben die Knöpfe auch im Querformat sichtbar, der Text scrollt im verbleibenden Platz."},
+    {"versionCode": 485, "versionName": "1.8.474", "stand": "31.10.2026, 10:50 Uhr", "notiz": "Das Fenster des aufgeklappten Prompts ragt im Querformat nicht mehr unten aus dem Bild, die Knöpfe sind vollständig zu sehen."},
+    {"versionCode": 486, "versionName": "1.8.475", "stand": "31.10.2026, 10:51 Uhr", "notiz": "Die Anbindung des Hostinger-Servers ist nach dem Review robuster: klare Meldungen beim Ziel Server, Sol weicht richtig aus, die Server-Konsole meldet sich ohne Token in der Adresse an, und das Fernwartungssymbol ist nur grün, wenn ein Bildschirm erreichbar ist."}
 ]
 }
