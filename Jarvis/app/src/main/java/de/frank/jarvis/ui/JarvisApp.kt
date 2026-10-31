@@ -159,6 +159,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             }
             }
             }
+            if (!vm.gesperrt) PromptAnsichtEbene(vm)
             if (!vm.gesperrt) PromptEbene(vm)
             if (!vm.gesperrt) PromptLoeschenFrage(vm)
             // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.

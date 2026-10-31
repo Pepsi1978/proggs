@@ -1,6 +1,5 @@
 package de.frank.jarvis.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,8 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
@@ -108,8 +105,6 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     val bereich = rememberCoroutineScope()
     val stand by Prompts.stand.collectAsState()
     val liste by ladeImHintergrund<List<Prompt>?>(null, stand, behalten = true) { Prompts.alle(context) }
-    // Gemerkt wird der Anlagezeitpunkt, nicht die Nummer: eine gelöschte Nummer kann an einen neuen Prompt gehen.
-    var offen by rememberSaveable { mutableStateOf<Long?>(null) }
     val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
     // Auch nach dem Verbinden des Modells: vorher kann keine Überschrift entstehen.
     LaunchedEffect(liste, vm.modellBereit) { liste?.let { vm.promptTitelNachziehen(it) } }
@@ -187,8 +182,8 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         itemsIndexed(sortiert, key = { _, p -> p.erstellt }) { i, p ->
             // Die Nummer ist der Platz: oben immer Prompt 1, auch während des Ziehens. Nach Quelle sortiert bleibt jeder Prompt bei seiner festen Nummer.
             Row(reorderItem(zustand, p.erstellt, reduziert).fillMaxWidth().glas(f, erhoeht = 0.7f), verticalAlignment = Alignment.CenterVertically) {
-                // Nur der Textteil öffnet den Prompt; der Griff bleibt frei, sonst öffnete ein abgebrochenes Ziehen den Dialog.
-                Column(Modifier.weight(1f).antippen { offen = p.erstellt }.padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
+                // Nur der Textteil öffnet den Prompt; der Griff bleibt frei, sonst öffnete ein abgebrochenes Ziehen den Prompt.
+                Column(Modifier.weight(1f).antippen { vm.promptOffen = p.erstellt }.padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
                     // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
                     Text(buildAnnotatedString {
                         withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${if (nachQuelle) p.nummer else i + 1}") }
@@ -212,61 +207,83 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
     }
+}
 
-    liste?.firstOrNull { it.erstellt == offen }?.let { p ->
-        var loeschen by remember(p.erstellt) { mutableStateOf(false) }
-        // Das Fenster belegt die ganze Fläche und hält selbst Abstand zu den Systemleisten: Sonst rechnet es mit der vollen
-        // Displayhöhe, und sein unteres Ende ragt im Querformat um die Höhe der Leisten aus dem Bild.
-        Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null) { offen = null }.windowInsetsPadding(WindowInsets.safeDrawing), contentAlignment = Alignment.Center) {
-            // Das leere clickable fängt Tipper auf die Karte ab, damit nur ein Tipp daneben schließt.
-            Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).clickable(interactionSource = null, indication = null) {}.padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Prompt ${p.nummer}", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
+/**
+ * Ein geöffneter Prompt. Eine Ebene über der ganzen App (in [JarvisApp]), kein Dialogfenster: Das legte Android bei randloser App zu hoch an,
+ * die Knöpfe lagen im Querformat teils außerhalb des Bildschirms (Almanach jetpack-compose 8.9). Auf großem Bildschirm (Fold aufgeklappt, auch
+ * nach dem Drehen) füllt der Prompt alles aus und die Knöpfe stehen unten; auf dem schmalen bleibt er eine Karte, die ein Tipp daneben schließt.
+ */
+@Composable
+fun PromptAnsichtEbene(vm: AppViewModel) {
+    val offen = vm.promptOffen ?: return
+    val f = LocalFarben.current
+    val context = LocalContext.current
+    val bereich = rememberCoroutineScope()
+    val stand by Prompts.stand.collectAsState()
+    val liste by ladeImHintergrund<List<Prompt>?>(null, stand, behalten = true) { Prompts.alle(context) }
+    // Anderswo gelöscht (Sprache, Abgleich): Dann gibt es nichts mehr zu zeigen.
+    LaunchedEffect(liste) { if (liste?.none { it.erstellt == offen } == true) vm.promptOffen = null }
+    val p = liste?.firstOrNull { it.erstellt == offen } ?: return
+    val schliessen = { vm.promptOffen = null }
+    BackHandler(onBack = schliessen)
+    val gross = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
+    var loeschen by remember(p.erstellt) { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize().background(if (gross) f.hgOben else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f))
+        // Berührungen gehen nicht an die Ablage darunter.
+        .pointerInput(gross) { detectTapGestures { if (!gross) schliessen() } }
+        .windowInsetsPadding(WindowInsets.safeDrawing), contentAlignment = Alignment.Center) {
+        Column(
+            if (gross) Modifier.fillMaxSize().padding(18.dp)
+            else Modifier.padding(16.dp).fillMaxWidth().deckend(f).pointerInput(Unit) { detectTapGestures { } }.padding(18.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Prompt ${p.nummer}", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Box(Modifier.size(40.dp).antippen { schliessen() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
+            }
+            if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            Text("Von ${p.quelleName}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            // Der Text bekommt nur den Platz, den Kopf und Knöpfe übrig lassen, und scrollt darin.
+            Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.weight(1f, fill = gross).fillMaxWidth().padding(vertical = 10.dp)
+                .then(if (gross) Modifier else Modifier.heightIn(max = 420.dp)).verticalScroll(rememberScrollState()))
+            var hinweis by remember(p.erstellt) { mutableStateOf<String?>(null) }
+            // Zählt jedes lange Drücken, damit derselbe Hinweis erneut die volle Zeit stehen bleibt.
+            var hinweisNr by remember(p.erstellt) { mutableStateOf(0) }
+            val zeige: (String) -> Unit = { hinweis = it; hinweisNr++ }
+            var kopiert by remember(p.erstellt) { mutableStateOf(false) }
+            LaunchedEffect(hinweisNr) { if (hinweis != null) { delay(1_800); hinweis = null } }
+            LaunchedEffect(kopiert) { if (kopiert) { delay(1_500); kopiert = false } }
+            // Beschreibung beim langen Drücken bzw. „Kopiert“ als kurze Rückmeldung über den Symbolen.
+            Text(hinweis ?: if (kopiert) "Kopiert" else " ", color = if (hinweis == null && kopiert) f.erfolg else f.textLeise, fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), textAlign = TextAlign.End)
+            if (!loeschen) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, zeige) { loeschen = true }
+                Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, zeige) { schliessen(); vm.promptBearbeiten(p) }
+                Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, zeige) {
+                    vm.kopiere(de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer}", melden = false); kopiert = true
                 }
-                if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
-                Text("Von ${p.quelleName}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
-                // Der Text bekommt nur den Platz, den Kopf und Knöpfe übrig lassen: Sonst schöbe er sie im Querformat aus dem Fenster.
-                Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.weight(1f, fill = false).padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
-                var hinweis by remember(p.erstellt) { mutableStateOf<String?>(null) }
-                // Zählt jedes lange Drücken, damit derselbe Hinweis erneut die volle Zeit stehen bleibt.
-                var hinweisNr by remember(p.erstellt) { mutableStateOf(0) }
-                val zeige: (String) -> Unit = { hinweis = it; hinweisNr++ }
-                var kopiert by remember(p.erstellt) { mutableStateOf(false) }
-                LaunchedEffect(hinweisNr) { if (hinweis != null) { delay(1_800); hinweis = null } }
-                LaunchedEffect(kopiert) { if (kopiert) { delay(1_500); kopiert = false } }
-                // Beschreibung beim langen Drücken bzw. „Kopiert“ als kurze Rückmeldung über den Symbolen.
-                Text(hinweis ?: if (kopiert) "Kopiert" else " ", color = if (hinweis == null && kopiert) f.erfolg else f.textLeise, fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), textAlign = TextAlign.End)
-                if (!loeschen) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, zeige) { loeschen = true }
-                    Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, zeige) { offen = null; vm.promptBearbeiten(p) }
-                    Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, zeige) {
-                        vm.kopiere(de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer}", melden = false); kopiert = true
-                    }
-                    Symbol(Icons.Rounded.Share, "Senden an …", f.text, zeige) {
-                        teilen(vm, context, de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer} senden an")
-                    }
-                    Spacer(Modifier.weight(1f))
-                    // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
-                    Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
-                        .antippen(lange = { zeige("Senden") }, langeText = "Senden") { offen = null; vm.promptSenden(p) }, contentAlignment = Alignment.Center) {
-                        Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
-                    }
+                Symbol(Icons.Rounded.Share, "Senden an …", f.text, zeige) {
+                    teilen(vm, context, de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer} senden an")
                 }
-                if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
-                        bereich.launch {
-                            val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer, p.erstellt) }
-                            vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
-                            if (weg != null) offen = null
-                        }
-                    }
-                    Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
+                Spacer(Modifier.weight(1f))
+                // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
+                Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
+                    .antippen(lange = { zeige("Senden") }, langeText = "Senden") { schliessen(); vm.promptSenden(p) }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
                 }
             }
+            if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
+                    bereich.launch {
+                        val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer, p.erstellt) }
+                        vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
+                        if (weg != null) schliessen()
+                    }
+                }
+                Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
             }
+            // Wie in der Eingabe: rund einen Zentimeter Abstand zum unteren Rand.
+            if (gross) Spacer(Modifier.height(63.dp))
         }
     }
 }

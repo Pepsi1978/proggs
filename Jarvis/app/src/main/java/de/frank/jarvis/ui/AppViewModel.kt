@@ -1628,6 +1628,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     var promptEntwurf by mutableStateOf("")
     var promptSpeichert by mutableStateOf(false); private set
+    /** Der gerade geöffnete Prompt. Gemerkt wird der Anlagezeitpunkt, nicht die Nummer: Eine gelöschte Nummer kann an einen neuen Prompt gehen. */
+    var promptOffen by mutableStateOf<Long?>(null)
     /** Die Eingabe für einen neuen Prompt ist offen; beim Bearbeiten steht stattdessen [promptBearbeitet]. */
     var promptNeuOffen by mutableStateOf(false); private set
     /** Der Prompt, der gerade bearbeitet wird; null = die Eingabe legt einen neuen Prompt an. */
