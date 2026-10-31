@@ -51,10 +51,9 @@ def version(p: dict) -> str:
     return m.group(0) if m else aus[:40]
 
 
-def in_benutzung(p: dict) -> bool:
-    """Läuft dieses Programm gerade, als eigener Prozess oder als Skript unter node? Eine CLI nie unter einer laufenden Sitzung ersetzen."""
-    code, _ = _lauf(f"pgrep -u \"$(id -u)\" -f '(^|/){p['befehl']}( |$)' >/dev/null", 10)
-    return code == 0
+def in_benutzung(schluessel: str) -> bool:
+    """Eine CLI nie unter einer laufenden Sitzung ersetzen. Maßgeblich sind die Sitzungen: node-CLIs tragen im Prozessnamen nur ihr Skript."""
+    return any(s.get("cli") == schluessel and s["stand"] != "beendet" for s in launcher.sitzungen())
 
 
 def anmeldung(schluessel: str, p: dict) -> str:
@@ -81,7 +80,7 @@ def status_schreiben(aktualisieren: bool) -> dict:
         eintrag = {"name": p["name"], "version": vorher, "zuletzt": alt.get(schluessel, {}).get("zuletzt", ""), "meldung": alt.get(schluessel, {}).get("meldung", "")}
         if aktualisieren:
             jetzt = time.strftime("%d.%m.%Y %H:%M")
-            if in_benutzung(p):
+            if in_benutzung(schluessel):
                 eintrag["meldung"] = f"{jetzt}: läuft gerade, beim nächsten Lauf"
             else:
                 code, aus = _lauf(p["update"] if vorher else p["installieren"])
