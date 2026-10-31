@@ -17,7 +17,7 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 **Fallen auf dem Server:**
 - `/etc/hosts` zeigte den eigenen Namen auf 127.0.1.1, die Brücke kam nicht zum Relay. Geändert in `/etc/hosts` und `/etc/cloud/templates/hosts.debian.tmpl`.
 - tmux meldet für ein laufendes Startskript immer `bash`. Das Ende einer CLI steht deshalb in `~/.openlauncher/sitzungen/<name>.fertig`.
-- `AGENTS.md` im Repo trägt auf dem Server die Server-Fassung und ist per `skip-worktree` aus jedem Commit heraus.
+- Mehrere Sitzungen teilen sich `~/proggs` und die eine `AGENTS.md` (im Repo ignoriert), wie am Mac: Startet eine andere CLI mit anderem Profil, gilt für eine neu lesende Sitzung dessen Fassung.
 
 **Bei einer Neuinstallation:** Kimi fragt beim ersten Start „Trust this folder?“. Einmal von Hand bestätigen, gemerkt wird das in `~/.kimi-code/workspace-trust/`; sonst bleibt jeder Kimi-Auftrag dort stehen.
 

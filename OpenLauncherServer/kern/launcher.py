@@ -88,26 +88,10 @@ def regeltext(quelle: Path, modus: str) -> str:
 # ---------------------------------------------------------------- Repo
 
 def repo_abgleich() -> dict:
-    """Spult vor, ohne die aktive AGENTS.md anzufassen. Nur wenn der neue Stand diese Datei ändert, wird sie kurz zurückgenommen und danach
-    wiederhergestellt: Sonst verlören laufende Sitzungen ihr Profil. Das Ergebnis steht im Reiter System, ein Fehlschlag verhindert keinen Start."""
-    git = ["git", "-C", str(PROGGS)]
-    agents = PROGGS / "AGENTS.md"
-
-    def lauf(*argumente, sekunden=120):
-        return subprocess.run(git + list(argumente), capture_output=True, text=True, timeout=sekunden, stdin=subprocess.DEVNULL)
-
+    """Spult vor. Die aktive AGENTS.md bleibt unberührt, denn sie ist im Repo ignoriert. Das Ergebnis steht im Reiter System, ein Fehlschlag
+    verhindert keinen Start."""
     try:
-        ergebnis = lauf("pull", "--ff-only", "--quiet")
-        if ergebnis.returncode != 0 and "AGENTS.md" in ergebnis.stderr:
-            aktiv = _lies(agents)
-            lauf("update-index", "--no-skip-worktree", "AGENTS.md", sekunden=20)
-            lauf("checkout", "--", "AGENTS.md", sekunden=20)
-            try:
-                ergebnis = lauf("pull", "--ff-only", "--quiet")
-            finally:
-                if aktiv:
-                    _schreib(agents, aktiv)
-                lauf("update-index", "--skip-worktree", "AGENTS.md", sekunden=20)
+        ergebnis = subprocess.run(["git", "-C", str(PROGGS), "pull", "--ff-only", "--quiet"], capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL)
         stand = {"ok": ergebnis.returncode == 0, "meldung": ergebnis.stderr.strip()[-300:]}
     except (subprocess.TimeoutExpired, OSError) as fehler:
         stand = {"ok": False, "meldung": str(fehler)[-300:]}
@@ -245,10 +229,9 @@ def _stand_hooks() -> dict:
 # ---------------------------------------------------------------- Codex, Kimi, Antigravity, OpenCode
 
 def agents_aktivieren(profil: str, modus: str) -> None:
-    """Gegenstück zu activateCodexProjectAgents. Die Datei ist versioniert: skip-worktree hält die Server-Fassung aus jedem Commit heraus."""
+    """Gegenstück zu activateCodexProjectAgents. Die Datei ist im Repo ignoriert, die Server-Fassung kommt also in keinen Commit."""
     pruefe_wahl(profil, modus)
     _schreib(PROGGS / "AGENTS.md", regeltext(PROFILE / "OpenCodeMac" / profil / "AGENTS.md", modus))
-    subprocess.run(["git", "-C", str(PROGGS), "update-index", "--skip-worktree", "AGENTS.md"], capture_output=True, timeout=20)
 
 
 def codex_zuhause() -> Path:
