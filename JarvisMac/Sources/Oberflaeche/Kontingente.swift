@@ -7,7 +7,7 @@ final class Kontingente {
     private static let speicher = "kontingente.letzterStand"
 
     struct Limit: Identifiable {
-        let name: String, genutzt: Double, uebrig: Double, resetSatz: String, resetAm: String, resetSek: Double, tempo: String, zuSchnell: Bool
+        let name: String, genutzt: Double, resetSatz: String, resetAm: String, resetSek: Double, tempo: String, zuSchnell: Bool
         var id: String { name }
     }
     struct Anbieter: Identifiable {
@@ -50,7 +50,7 @@ final class Kontingente {
             Anbieter(id: a["id"] as? String ?? "", titel: a["titel"] as? String ?? "", konto: a["konto"] as? String ?? "", hinweis: a["hinweis"] as? String ?? "",
                      anmelden: a["anmelden"] as? Bool ?? false, stand: a["stand"] as? String ?? "",
                      limits: (a["limits"] as? [[String: Any]] ?? []).map { l in
-                         Limit(name: l["name"] as? String ?? "", genutzt: (l["genutzt"] as? NSNumber)?.doubleValue ?? 0, uebrig: (l["uebrig"] as? NSNumber)?.doubleValue ?? 0,
+                         Limit(name: l["name"] as? String ?? "", genutzt: (l["genutzt"] as? NSNumber)?.doubleValue ?? 0,
                                resetSatz: l["resetSatz"] as? String ?? "", resetAm: l["resetAm"] as? String ?? "", resetSek: (l["resetSek"] as? NSNumber)?.doubleValue ?? 0,
                                tempo: l["tempo"] as? String ?? "", zuSchnell: l["zuSchnell"] as? Bool ?? false)
                      })
@@ -95,8 +95,8 @@ struct KontingenteAnsicht: View {
 
     /// Aus dem Speicher: festes Datum statt „heute“, kein Tempo; ein inzwischen abgelaufenes Fenster gilt wieder als frei.
     private func limit(_ l: Kontingente.Limit) -> some View {
-        let abgelaufen = k.ausSpeicher && l.resetSek > 0 && l.resetSek <= Date().timeIntervalSince1970
-        let schnell = l.zuSchnell && !k.ausSpeicher
+        let abgelaufen = l.resetSek > 0 && l.resetSek <= Date().timeIntervalSince1970
+        let schnell = l.zuSchnell && !k.ausSpeicher && !abgelaufen
         let genutzt = min(100, max(0, abgelaufen ? 0 : l.genutzt))
         let reset = abgelaufen ? "Inzwischen zurückgesetzt" : (k.ausSpeicher && !l.resetAm.isEmpty ? "Zurückgesetzt: " + l.resetAm : l.resetSatz)
         return VStack(alignment: .leading, spacing: 4) {
@@ -104,7 +104,7 @@ struct KontingenteAnsicht: View {
             Text("\(zahl(genutzt)) % verbraucht").font(.jarvis(24, .bold)).foregroundStyle(schnell ? Farbe.rot : Farbe.haupt)
             balken(genutzt / 100, rot: schnell)
             Text(reset).font(.jarvis(13)).foregroundStyle(Farbe.text)
-            if !l.tempo.isEmpty && !k.ausSpeicher {
+            if !l.tempo.isEmpty && !k.ausSpeicher && !abgelaufen {
                 Text(schnell ? "Zu schnell: " + l.tempo : l.tempo)
                     .font(.jarvis(12, schnell ? .semibold : .regular)).foregroundStyle(schnell ? Farbe.rot : Farbe.text3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -117,7 +117,7 @@ struct KontingenteAnsicht: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(Farbe.glas(0.08))
-                Capsule().fill(rot ? AnyShapeStyle(Farbe.rot) : AnyShapeStyle(Farbe.akzent)).frame(width: geo.size.width * anteil)
+                Capsule().fill(rot ? AnyShapeStyle(Farbe.rot) : AnyShapeStyle(Farbe.akzent)).frame(width: max(0, geo.size.width * min(1, max(0, anteil))))
             }
         }
         .frame(height: 8)
