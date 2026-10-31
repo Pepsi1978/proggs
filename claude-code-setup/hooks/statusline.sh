@@ -40,25 +40,34 @@ fi
 # Whitespace-IFS-Zeichen zu EINEM Trenner, was bei leeren rate_limits-Feldern alle
 # folgenden Felder verschoben hat. session_id landete dann in five_h_used,
 # transcript_path war leer, fresh-session-Erkennung schlug fehl.
-parsed=$(echo "$input" | jq -r '[
-    .effort.level // "",
-    .model.display_name // .model.id // "?",
-    .workspace.current_dir // "",
-    .context_window.remaining_percentage // "",
-    .rate_limits.five_hour.used_percentage // "",
-    .rate_limits.five_hour.resets_at // "",
-    .rate_limits.seven_day.used_percentage // "",
-    .rate_limits.seven_day.resets_at // "",
-    .session_id // "unknown",
-    .transcript_path // "",
-    .context_window.used_percentage // "",
-    (if (.cost.total_cost_usd // null) != null then ((.cost.total_cost_usd * 100) | round | tostring) else "" end),
-    (if (.cost.total_lines_added // null) != null then (.cost.total_lines_added | tostring) else "" end),
-    (if (.cost.total_lines_removed // null) != null then (.cost.total_lines_removed | tostring) else "" end),
-    (if (.cost.total_duration_ms // null) != null then ((.cost.total_duration_ms / 1000) | floor | tostring) else "" end),
-    .version // ""
-] | join("")' 2>/dev/null)
-IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct cost_cents lines_added lines_removed duration_s cli_version <<< "$parsed"
+parsed=$(echo "$input" | jq -r '
+    def is_3p: ((.model.id // .model.display_name // "") | test("gemini"; "i") | not);
+    def q_5h: ((.quota // {}) | (if is_3p then (."3p-5h" // ."gemini-5h") else (."gemini-5h" // ."3p-5h") end // ."5h" // (to_entries | map(select(.key | test("5h|five|hour|short|daily"; "i"))) | .[0].value) // null));
+    def q_d7: ((.quota // {}) | (if is_3p then (."3p-weekly" // ."gemini-weekly") else (."gemini-weekly" // ."3p-weekly") end // ."weekly" // (to_entries | map(select(.key | test("week|7d|seven"; "i"))) | .[0].value) // null));
+    def q_used(b): if b == null then "" elif (b.used_percentage // null) != null then (b.used_percentage | tostring) elif (b.remaining_fraction // null) != null then (((1.0 - b.remaining_fraction) * 100) | tostring) elif (b.remaining_percentage // null) != null then ((100.0 - b.remaining_percentage) | tostring) else "" end;
+    def q_resets(b): if b == null then "" elif (b.resets_at // null) != null then (b.resets_at | tostring) elif (b.reset_in_seconds // null) != null then ("+" + (b.reset_in_seconds | floor | tostring)) elif (b.reset_time // "") != "" then ((b.reset_time | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring) // "") else "" end;
+    [
+        (.effort.level // .model.effort // ""),
+        (.model.display_name // .model.id // "?"),
+        (.workspace.current_dir // .cwd // ""),
+        (.context_window.remaining_percentage // ""),
+        (if (.rate_limits.five_hour.used_percentage // null) != null then (.rate_limits.five_hour.used_percentage | tostring) else q_used(q_5h) end),
+        (if (.rate_limits.five_hour.resets_at // null) != null then (.rate_limits.five_hour.resets_at | tostring) else q_resets(q_5h) end),
+        (if (.rate_limits.seven_day.used_percentage // null) != null then (.rate_limits.seven_day.used_percentage | tostring) else q_used(q_d7) end),
+        (if (.rate_limits.seven_day.resets_at // null) != null then (.rate_limits.seven_day.resets_at | tostring) else q_resets(q_d7) end),
+        (.session_id // .conversation_id // "unknown"),
+        (.transcript_path // ""),
+        (.context_window.used_percentage // ""),
+        (if (.cost.total_cost_usd // .cost.total_usd // null) != null then (((.cost.total_cost_usd // .cost.total_usd) * 100) | round | tostring) else "" end),
+        (if (.cost.total_lines_added // null) != null then (.cost.total_lines_added | tostring) else "" end),
+        (if (.cost.total_lines_removed // null) != null then (.cost.total_lines_removed | tostring) else "" end),
+        (if (.cost.total_duration_ms // null) != null then ((.cost.total_duration_ms / 1000) | floor | tostring) else "" end),
+        (.version // ""),
+        (.permission_mode // .cycle_mode // ""),
+        (.product // ""),
+        (.email // "")
+    ] | join("\u001f")' 2>/dev/null)
+IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct cost_cents lines_added lines_removed duration_s cli_version perm_mode product_name agy_email <<< "$parsed"
 
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
@@ -77,6 +86,10 @@ effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
 model="${model/ context)/)}"
 model="${model/ Context)/)}"
 model="${model/ Kontext)/)}"
+# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> kuerzen, da Effort daneben steht
+for _esuf in " (Low)" " (Medium)" " (High)" " (XHigh)" " (Max)" " (low)" " (medium)" " (high)" " (xhigh)" " (max)"; do
+    model="${model%$_esuf}"
+done
 
 # Windows-Pfad-Normalisierung (Frank-Bug 2026-07-08): cwd kommt auf Windows mit
 # BACKSLASHES (C:\Users\barwa\proggs). Der Pfad wird weiter unten in einen printf-
@@ -148,7 +161,11 @@ cwd=$(shorten_path "$cwd_raw" 100)
 #   2. LESE-VALIDIERUNG: kaputte Files automatisch entfernt, jq filtert
 #      ungueltige Eintraege beim MAX-Pass
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
-state_dir="$HOME/.claude/state"
+if [ "$product_name" = "antigravity" ]; then
+    state_dir="$HOME/.gemini/antigravity-cli/state"
+else
+    state_dir="$HOME/.claude/state"
+fi
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
 # date statt printf '%(%s)T' — letzteres ist bash 4.2+, faellt auf macOS bash 3.2
 # still aus (now_ts leer → alle Zeit-/Countdown-Berechnungen kaputt). Frank 2026-06-11.
@@ -158,6 +175,20 @@ state_dir="$HOME/.claude/state"
 _dt=$(date '+%s|%H:%M')
 now_ts=${_dt%%|*}
 time=${_dt#*|}
+
+# Antigravity liefert im quota-Objekt oft reset_in_seconds (als "+<sekunden>" markiert) -> in Unix-Timestamp umrechnen
+case "$five_h_resets_raw" in
+    +*[0-9]*)
+        _rel="${five_h_resets_raw#+}"
+        case "$_rel" in ''|*[!0-9]*) five_h_resets_raw="" ;; *) five_h_resets_raw=$((now_ts + _rel)) ;; esac
+        ;;
+esac
+case "$week_resets_raw" in
+    +*[0-9]*)
+        _rel="${week_resets_raw#+}"
+        case "$_rel" in ''|*[!0-9]*) week_resets_raw="" ;; *) week_resets_raw=$((now_ts + _rel)) ;; esac
+        ;;
+esac
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -206,7 +237,11 @@ if [ -s "$fp_cache" ]; then
         _fp_from_cache=1
     fi
 fi
-[ -f "$claude_json" ] && [ -z "$_fp_from_cache" ] && acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
+if [ "$product_name" = "antigravity" ] && [ -n "$agy_email" ]; then
+    acct_uuid="$agy_email"
+elif [ -f "$claude_json" ] && [ -z "$_fp_from_cache" ]; then
+    acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
+fi
 if [ -n "$_fp_from_cache" ]; then
     : # account_fp bereits aus Cache — keine Berechnung noetig
 elif [ -n "$acct_uuid" ]; then
@@ -870,9 +905,29 @@ case "$duration_s" in
         ;;
 esac
 
-# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code veraltet ist (Ausloeser:
+# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code / Antigravity veraltet ist (Ausloeser:
 # 2026-08-26 lief 2.1.196 statt 2.1.246, ohne dass es irgendwo auffiel)
 [ -n "$cli_version" ] && line2="${line2}   $(printf "${DIM}${ICON_VER} v%s${R}" "$cli_version")"
+
+# ⏵⏵ Berechtigungs-Modus (Bypass Permissions / Yolo-Mode) — in Claude Code steht das in einer
+# eigenen TUI-Zeile, in Antigravity ersetzt die eigene Statusline die Standardzeile, daher hier anzeigen.
+if [ "$product_name" = "antigravity" ] || [ -n "$perm_mode" ]; then
+    case "$perm_mode" in
+        bypassPermissions|always-proceed|turbo)
+            line2="${line2}   $(printf "${RED}⏵⏵ bypass permissions on${R}")" ;;
+        auto)
+            line2="${line2}   $(printf "${YELLOW}⏵⏵ auto mode${R}")" ;;
+        accept-edits|acceptEdits)
+            line2="${line2}   $(printf "${B}⏵⏵ accept edits${R}")" ;;
+        plan)
+            line2="${line2}   $(printf "${M}⏸ plan mode${R}")" ;;
+        default|"")
+            if [ "$product_name" = "antigravity" ]; then
+                line2="${line2}   $(printf "${RED}⏵⏵ bypass permissions on${R}")"
+            fi
+            ;;
+    esac
+fi
 
 [ -n "$line2" ] && printf "%s\n" "$line2"
 

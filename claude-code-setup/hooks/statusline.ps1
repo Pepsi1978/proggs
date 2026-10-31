@@ -21,6 +21,8 @@ if ($input_raw) {
 $effort = $null
 if ($obj -and $obj.effort -and $obj.effort.level) {
     $effort = [string]$obj.effort.level
+} elseif ($obj -and $obj.model -and $obj.model.effort) {
+    $effort = [string]$obj.model.effort
 }
 if (-not $effort) {
     try {
@@ -47,6 +49,9 @@ $lines_added = $null
 $lines_removed = $null
 $duration_s = $null
 $cli_version = ''
+$perm_mode = ''
+$product_name = ''
+$agy_email = ''
 
 if ($obj) {
     # Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
@@ -55,8 +60,9 @@ if ($obj) {
     } elseif ($obj.model.id) {
         $model = [string]$obj.model.id
     }
-    if ($obj.workspace.current_dir) {
-        $cwd = $obj.workspace.current_dir
+    $rawCwd = if ($obj.workspace -and $obj.workspace.current_dir) { [string]$obj.workspace.current_dir } elseif ($obj.cwd) { [string]$obj.cwd } else { '' }
+    if ($rawCwd) {
+        $cwd = $rawCwd
         $homeDir = $env:USERPROFILE
         if ($homeDir -and $cwd.StartsWith($homeDir)) {
             $cwd = ('~' + $cwd.Substring($homeDir.Length)) -replace '\\', '/'
@@ -97,6 +103,51 @@ if ($obj) {
     if ($obj.rate_limits.seven_day.resets_at) {
         $week_resets = [long]$obj.rate_limits.seven_day.resets_at
     }
+    # Antigravity CLI (quota-Objekt statt rate_limits)
+    if ($obj.quota) {
+        $nowQuota = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $is3p = $model -notmatch '(?i)gemini'
+        $qProps = @($obj.quota.PSObject.Properties)
+        $b5 = $null
+        $b7 = $null
+        if ($is3p) {
+            if ($obj.quota.'3p-5h') { $b5 = $obj.quota.'3p-5h' } elseif ($obj.quota.'gemini-5h') { $b5 = $obj.quota.'gemini-5h' }
+            if ($obj.quota.'3p-weekly') { $b7 = $obj.quota.'3p-weekly' } elseif ($obj.quota.'gemini-weekly') { $b7 = $obj.quota.'gemini-weekly' }
+        } else {
+            if ($obj.quota.'gemini-5h') { $b5 = $obj.quota.'gemini-5h' } elseif ($obj.quota.'3p-5h') { $b5 = $obj.quota.'3p-5h' }
+            if ($obj.quota.'gemini-weekly') { $b7 = $obj.quota.'gemini-weekly' } elseif ($obj.quota.'3p-weekly') { $b7 = $obj.quota.'3p-weekly' }
+        }
+        if (-not $b5 -and $obj.quota.'5h') { $b5 = $obj.quota.'5h' }
+        if (-not $b7 -and $obj.quota.'weekly') { $b7 = $obj.quota.'weekly' }
+        if (-not $b5) {
+            $m5 = $qProps | Where-Object { $_.Name -match '(?i)5h|five|hour|short|daily' } | Select-Object -First 1
+            if ($m5) { $b5 = $m5.Value }
+        }
+        if (-not $b7) {
+            $m7 = $qProps | Where-Object { $_.Name -match '(?i)week|7d|seven' } | Select-Object -First 1
+            if ($m7) { $b7 = $m7.Value }
+        }
+        if ($b5 -and $five_h_used -eq $null) {
+            if ($b5.used_percentage -ne $null) { $five_h_used = [int][Math]::Round([double]$b5.used_percentage) }
+            elseif ($b5.remaining_fraction -ne $null) { $five_h_used = [int][Math]::Round((1.0 - [double]$b5.remaining_fraction) * 100.0) }
+            elseif ($b5.remaining_percentage -ne $null) { $five_h_used = [int][Math]::Round(100.0 - [double]$b5.remaining_percentage) }
+        }
+        if ($b5 -and $five_h_resets -eq 0) {
+            if ($b5.resets_at) { try { $five_h_resets = [long]$b5.resets_at } catch {} }
+            elseif ($b5.reset_in_seconds -ne $null) { try { $five_h_resets = $nowQuota + [long][Math]::Floor([double]$b5.reset_in_seconds) } catch {} }
+            elseif ($b5.reset_time) { try { $five_h_resets = [DateTimeOffset]::Parse([string]$b5.reset_time).ToUnixTimeSeconds() } catch {} }
+        }
+        if ($b7 -and $week_used -eq $null) {
+            if ($b7.used_percentage -ne $null) { $week_used = [int][Math]::Round([double]$b7.used_percentage) }
+            elseif ($b7.remaining_fraction -ne $null) { $week_used = [int][Math]::Round((1.0 - [double]$b7.remaining_fraction) * 100.0) }
+            elseif ($b7.remaining_percentage -ne $null) { $week_used = [int][Math]::Round(100.0 - [double]$b7.remaining_percentage) }
+        }
+        if ($b7 -and $week_resets -eq 0) {
+            if ($b7.resets_at) { try { $week_resets = [long]$b7.resets_at } catch {} }
+            elseif ($b7.reset_in_seconds -ne $null) { try { $week_resets = $nowQuota + [long][Math]::Floor([double]$b7.reset_in_seconds) } catch {} }
+            elseif ($b7.reset_time) { try { $week_resets = [DateTimeOffset]::Parse([string]$b7.reset_time).ToUnixTimeSeconds() } catch {} }
+        }
+    }
     if ($obj.transcript_path) {
         $transcript_path = [string]$obj.transcript_path
     }
@@ -105,6 +156,8 @@ if ($obj) {
     # Dezimaltrennzeichen-Problem (de-DE-Komma!) die Anzeige verfaelschen.
     if ($obj.cost.total_cost_usd -ne $null) {
         try { $cost_cents = [long][Math]::Round([double]$obj.cost.total_cost_usd * 100) } catch { $cost_cents = $null }
+    } elseif ($obj.cost.total_usd -ne $null) {
+        try { $cost_cents = [long][Math]::Round([double]$obj.cost.total_usd * 100) } catch { $cost_cents = $null }
     }
     if ($obj.cost.total_lines_added -ne $null) {
         try { $lines_added = [long]$obj.cost.total_lines_added } catch { $lines_added = $null }
@@ -118,11 +171,24 @@ if ($obj) {
     if ($obj.version) {
         $cli_version = [string]$obj.version
     }
+    if ($obj.permission_mode) {
+        $perm_mode = [string]$obj.permission_mode
+    } elseif ($obj.cycle_mode) {
+        $perm_mode = [string]$obj.cycle_mode
+    }
+    if ($obj.product) {
+        $product_name = [string]$obj.product
+    }
+    if ($obj.email) {
+        $agy_email = [string]$obj.email
+    }
 }
 
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24).
 # PS -replace ist case-insensitiv, deckt context/Context/Kontext ab.
 $model = $model -replace ' (context|kontext)\)', ')'
+# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> kuerzen, da Effort daneben steht
+$model = $model -replace ' \((low|medium|high|xhigh|max)\)$', ''
 
 # Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
 # Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort. Eine idle
@@ -173,8 +239,8 @@ function Test-ValidResetTs7d($ts, $now) {
 }
 
 try {
-    $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } else { '' }
-    $stateDir = Join-Path $env:USERPROFILE '.claude\state'
+    $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } elseif ($obj -and $obj.conversation_id) { [string]$obj.conversation_id } else { '' }
+    $stateDir = if ($product_name -eq 'antigravity') { Join-Path $env:USERPROFILE '.gemini\antigravity-cli\state' } else { Join-Path $env:USERPROFILE '.claude\state' }
     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
     $nowTs = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
@@ -197,7 +263,9 @@ try {
     $accountFp = 'default'
     $acctUuid = $null
     $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
-    if (Test-Path $claudeJson) {
+    if ($product_name -eq 'antigravity' -and $agy_email) {
+        $acctUuid = $agy_email
+    } elseif (Test-Path $claudeJson) {
         try {
             $cj = Get-Content -Raw -Encoding UTF8 -Path $claudeJson | ConvertFrom-Json
             if ($cj.oauthAccount -and $cj.oauthAccount.accountUuid) { $acctUuid = [string]$cj.oauthAccount.accountUuid }
@@ -760,9 +828,34 @@ if ($duration_s -ne $null -and $duration_s -ge 0) {
     $line2 += "   ${DIM}${ICON_DUR} ${durTxt}${R}"
 }
 
-# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code veraltet ist (Ausloeser:
+# 🏷 CLI-Version — macht sofort sichtbar wenn Claude Code / Antigravity veraltet ist (Ausloeser:
 # 2026-08-26 lief 2.1.196 statt 2.1.246, ohne dass es irgendwo auffiel)
 if ($cli_version) { $line2 += "   ${DIM}${ICON_VER} v${cli_version}${R}" }
+
+# ⏵⏵ Berechtigungs-Modus (Bypass Permissions / Yolo-Mode) — in Claude Code steht das in einer
+# eigenen TUI-Zeile, in Antigravity ersetzt die eigene Statusline die Standardzeile, daher hier anzeigen.
+if ($product_name -eq 'antigravity' -or $perm_mode) {
+    $M_COL = "$ESC[38;2;180;130;255m"
+    switch ($perm_mode) {
+        { $_ -in @('bypassPermissions', 'always-proceed', 'turbo') } {
+            $line2 += "   ${RED}⏵⏵ bypass permissions on${R}"
+        }
+        'auto' {
+            $line2 += "   ${YELLOW}⏵⏵ auto mode${R}"
+        }
+        { $_ -in @('accept-edits', 'acceptEdits') } {
+            $line2 += "   ${B}⏵⏵ accept edits${R}"
+        }
+        'plan' {
+            $line2 += "   ${M_COL}⏸ plan mode${R}"
+        }
+        default {
+            if ($product_name -eq 'antigravity') {
+                $line2 += "   ${RED}⏵⏵ bypass permissions on${R}"
+            }
+        }
+    }
+}
 
 if ($line2) { $out += "`n" + $line2 }
 

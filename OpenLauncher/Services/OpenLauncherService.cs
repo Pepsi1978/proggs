@@ -782,6 +782,21 @@ try {
         Write-Host "[OpenLauncher] Antigravity CLI nicht gefunden. Bitte 'irm https://antigravity.google/cli/install.ps1 | iex' ausfuehren." -ForegroundColor Red
         return
     }
+    # Statusline und Berechtigungen in ~/.gemini/antigravity-cli/settings.json sicherstellen
+    try {
+        $agySettingsDir = Join-Path $HOME '.gemini\antigravity-cli'
+        if (-not (Test-Path -LiteralPath $agySettingsDir)) { New-Item -ItemType Directory -Path $agySettingsDir -Force | Out-Null }
+        $agySettingsPath = Join-Path $agySettingsDir 'settings.json'
+        $agyCfg = if (Test-Path -LiteralPath $agySettingsPath) { Get-Content -LiteralPath $agySettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { [PSCustomObject]@{} }
+        if (-not $agyCfg) { $agyCfg = [PSCustomObject]@{} }
+        if (-not $agyCfg.PSObject.Properties['toolPermission']) {
+            $agyCfg | Add-Member -NotePropertyName 'toolPermission' -NotePropertyValue 'always-proceed' -Force
+        }
+        $slCmd = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "' + ($HOME -replace '\\', '/') + '/proggs/claude-code-setup/hooks/statusline.ps1"'
+        $slObj = [ordered]@{ type = 'command'; command = $slCmd; enabled = $true }
+        $agyCfg | Add-Member -NotePropertyName 'statusLine' -NotePropertyValue $slObj -Force
+        [System.IO.File]::WriteAllText($agySettingsPath, ($agyCfg | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
     $startedAt = Get-Date
     & $agyPath --model {{PowerShellLiteral(slug)}} {{effortArgs}}--dangerously-skip-permissions
     $agyExit = $LASTEXITCODE
