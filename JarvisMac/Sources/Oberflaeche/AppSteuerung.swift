@@ -103,10 +103,9 @@ final class AppSteuerung {
     /// Ja auf die Frage nach dem Senden: löscht nur den Eintrag der Ablage, der Text in der Eingabe bleibt.
     func gesendetenPromptLoeschen(_ p: PromptEintrag) {
         Task {
-            // Die Nummer ist nur der Platz in der Liste und kann sich verschoben haben: Das Handy löscht über die feste Kennung und nur bei unverändertem Text.
-            guard p.erstellt != 0 else { promptLoeschenFehler = "Die Jarvis-App auf dem Handy ist zu alt dafür, der Prompt wurde nicht gelöscht."; return }
-            let r = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "loeschen", "nummer": p.nummer, "erstellt": p.erstellt, "text": p.text])
-            if r.fehler { promptLoeschenFehler = r.text; return }
+            // Über die feste Kennung und nur bei unverändertem Text: Eine inzwischen geänderte Fassung bleibt stehen.
+            let r = await AblageAbgleich.shared.werkzeug("prompt_speichern", ["aktion": "loeschen", "nummer": p.nummer, "erstellt": p.erstellt, "text": p.text])
+            if let r, r.fehler { promptLoeschenFehler = r.text; return }
             log("ablage", "Gesendeten Prompt gelöscht", wo: "Ablage/Prompts")
             promptStand += 1
         }

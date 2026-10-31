@@ -97,12 +97,14 @@ struct ProgrammierungAnsicht: View {
 // MARK: - Prompt-Speicher (wie Reiter „Prompts“ in der Handy-Ablage)
 
 struct PromptEintrag: Identifiable, Hashable {
-    let nummer: Int
+    var nummer: Int
     let titel: String
     let text: String
     /// Feste Kennung des Handys (Anlagezeitpunkt); 0 = unbekannt.
     var erstellt: Int64 = 0
-    var id: Int { nummer }
+    /// Die Jarvis-Version, von der der Prompt stammt.
+    var quelle = ""
+    var id: Int64 { erstellt != 0 ? erstellt : Int64(nummer) }
 
     static func zerlege(_ roh: String) -> [PromptEintrag] {
         var r: [PromptEintrag] = []
@@ -134,9 +136,11 @@ struct PromptEintrag: Identifiable, Hashable {
 }
 
 struct PromptsAnsicht: View {
-    @State private var prompts: [PromptEintrag] = []
-    @State private var laedt = false
+    @State private var abgleich = AblageAbgleich.shared
     @State private var fehler = ""
+    @State private var quellenOffen = false
+    @AppStorage("prompts.nachQuelle") private var nachQuelle = false
+    @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
     @State private var offen: PromptEintrag?
     @State private var steuerung = AppSteuerung.shared
 
@@ -155,26 +159,39 @@ struct PromptsAnsicht: View {
                         KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: true) {
                             let t = steuerung.promptEntwurf
                             Task {
-                                let r = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "speichern", "text": t])
                                 // Nur Gespeichertes verschwindet aus dem Feld.
-                                if r.fehler { fehler = r.text; return }
+                                do { try await abgleich.promptSpeichern(t) } catch { fehler = error.localizedDescription; return }
                                 fehler = ""
                                 if steuerung.promptEntwurf == t { steuerung.promptEntwurf = "" }
-                                await laden()
                             }
                         }
                     }
                     if !fehler.isEmpty { Text(fehler).font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
                 }
             }
-            if laedt { ProgressView() }
-            ForEach(prompts) { p in
+            HStack {
+                Spacer()
+                Menu {
+                    Picker("Sortieren nach", selection: $nachQuelle) {
+                        Text("Eigene Reihenfolge").tag(false)
+                        Text("Nach Quelle").tag(true)
+                    }
+                    .pickerStyle(.inline)
+                    Button("Reihenfolge der Quellen …") { quellenOffen = true }
+                } label: {
+                    Label(nachQuelle ? "Nach Quelle" : "Eigene Reihenfolge", systemImage: "arrow.up.arrow.down").font(.jarvis(12))
+                }
+                .menuStyle(.borderlessButton).fixedSize()
+                .popover(isPresented: $quellenOffen) { QuellenListe() }
+            }
+            ForEach(angezeigt) { p in
                 GlasKarte(abstand: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .top) {
                             Text("\(p.nummer)").font(.jarvis(18, .heavy)).foregroundStyle(Farbe.akzent).frame(width: 30)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(p.titel.isEmpty ? "Prompt \(p.nummer)" : p.titel).font(.jarvis(14, .semibold))
+                                Text("Von \(p.quelle)").font(.jarvis(11)).foregroundStyle(Farbe.text3)
                                 Text(p.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(offen == p ? nil : 2).textSelection(.enabled)
                             }
                             Spacer()
@@ -184,7 +201,7 @@ struct PromptsAnsicht: View {
                         HStack(spacing: 8) {
                             Spacer()
                             KleinKnopf(symbol: "trash", hilfe: "Löschen") {
-                                Task { _ = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "loeschen", "nummer": p.nummer]); await laden() }
+                                Task { do { try await abgleich.promptLoeschen(erstellt: p.erstellt); fehler = "" } catch { fehler = error.localizedDescription } }
                             }
                             KleinKnopf(symbol: "doc.on.doc", hilfe: "Kopieren") {
                                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(p.text, forType: .string)
@@ -200,14 +217,16 @@ struct PromptsAnsicht: View {
                 }
             }
         }
-        .task(id: steuerung.promptStand) { await laden() }
     }
 
-    private func laden() async {
-        laedt = true
-        // Kommt nichts vom Handy, bleibt die Liste stehen.
-        if let t = await McpKlient.shared.text("prompts_lesen") { prompts = PromptEintrag.zerlege(t) }
-        laedt = false
+    /// Nach Quelle sortiert ändert nur die Anzeige: Innerhalb einer Quelle und bei den Nummern bleibt es bei der eigenen Reihenfolge.
+    private var angezeigt: [PromptEintrag] {
+        guard nachQuelle else { return abgleich.prompts }
+        let o = QuellenOrdnung.liste(quellenWert)
+        return abgleich.prompts.sorted { a, b in
+            let x = QuellenOrdnung.rang(o, a.quelle), y = QuellenOrdnung.rang(o, b.quelle)
+            return x != y ? x < y : a.nummer < b.nummer
+        }
     }
 }
 

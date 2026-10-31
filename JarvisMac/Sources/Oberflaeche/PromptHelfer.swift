@@ -260,19 +260,19 @@ struct PromptEditorVollbild: View {
         speichert = true; fehler = ""
         Task {
             defer { speichert = false }
-            var a: JSONObjekt = ["aktion": "speichern", "text": text]
-            if prompt.nummer > 0 && !alsNeu {
-                // Die Nummer ist nur der Platz in der Liste: Nach dem Löschen eines anderen Prompts rückt alles auf. Deshalb am Text wiederfinden.
-                guard let liste = await McpKlient.shared.text("prompts_lesen") else { fehler = "Das Handy ist gerade nicht erreichbar, nichts wurde gespeichert."; return }
-                guard let aktuell = PromptEintrag.zerlege(liste).first(where: { $0.text == prompt.text }) else {
-                    fehler = "Dieser Prompt wurde inzwischen geändert oder gelöscht. Speichern legt deine Fassung als neuen Prompt an."
-                    alsNeu = true
-                    return
+            let abgleich = AblageAbgleich.shared
+            do {
+                if prompt.nummer > 0 && !alsNeu {
+                    guard abgleich.prompts.first(where: { $0.erstellt == prompt.erstellt })?.text == prompt.text else {
+                        fehler = "Dieser Prompt wurde inzwischen geändert oder gelöscht. Speichern legt deine Fassung als neuen Prompt an."
+                        alsNeu = true
+                        return
+                    }
+                    try await abgleich.promptAendern(erstellt: prompt.erstellt, text: text)
+                } else {
+                    try await abgleich.promptSpeichern(text)
                 }
-                a = ["aktion": "aendern", "text": text, "nummer": aktuell.nummer]
-            }
-            let r = await McpKlient.shared.rufe("prompt_speichern", a)
-            if r.fehler { fehler = r.text; return }
+            } catch { fehler = error.localizedDescription; return }
             steuerung.promptStand += 1
             schliessen(gespeichert: true)
         }

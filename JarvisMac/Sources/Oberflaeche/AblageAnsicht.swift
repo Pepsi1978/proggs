@@ -2,8 +2,9 @@ import AppKit
 import PDFKit
 import SwiftUI
 import UniformTypeIdentifiers
+import ImageIO
 
-// MARK: - Daten (Werkzeug ablage_struktur des Handys)
+// MARK: - Daten (gemeinsame Ablage auf dem Server, siehe AblageAbgleich)
 
 struct AblageDatei: Identifiable, Hashable {
     let id: String
@@ -12,6 +13,7 @@ struct AblageDatei: Identifiable, Hashable {
     let kategorie: String  // BILDER, DOKUMENTE, TEXTE …
     let endung: String
     let groesse: Int
+    let sha: String
 }
 
 struct AblageEintrag: Identifiable, Hashable {
@@ -21,19 +23,43 @@ struct AblageEintrag: Identifiable, Hashable {
     let hatText: Bool
     let recherche: Bool
     let dateien: [AblageDatei]
+    let textSha: String?
+    /// Die Jarvis-Version, von der der Eintrag stammt.
+    let quelle: String
+}
 
-    static func zerlege(_ text: String) -> [AblageEintrag]? {
-        // Das Handy hängt gelegentlich Hinweiszeilen an; das JSON steht immer in der ersten Zeile.
-        guard let zeile = text.split(separator: "\n").first, let o = JSON.objekt(String(zeile)), let liste = o["eintraege"] as? [JSONObjekt] else { return nil }
-        return liste.map { e in
-            AblageEintrag(id: e["id"] as? String ?? "", titel: e["titel"] as? String ?? "",
-                          geaendert: Date(timeIntervalSince1970: (e["geaendert"] as? Double ?? 0) / 1000),
-                          hatText: e["hat_text"] as? Bool ?? false, recherche: e["recherche"] as? Bool ?? false,
-                          dateien: (e["dateien"] as? [JSONObjekt] ?? []).map { d in
-                              AblageDatei(id: d["id"] as? String ?? "", name: d["name"] as? String ?? "", art: d["art"] as? String ?? "",
-                                          kategorie: d["kategorie"] as? String ?? "", endung: d["endung"] as? String ?? "", groesse: d["groesse"] as? Int ?? 0)
-                          })
+/// Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle; gilt nur auf diesem Gerät.
+enum QuellenOrdnung {
+    static let alle = ["Jarvis Handy", "Jarvis Mac OS", "Jarvis Windows"]
+    static func liste(_ wert: String) -> [String] {
+        let gewaehlt = wert.split(separator: ",").map(String.init).filter(alle.contains)
+        return gewaehlt + alle.filter { !gewaehlt.contains($0) }
+    }
+    /// Unbekannte Quellen (eine spätere Version) stehen hinter allen bekannten.
+    static func rang(_ ordnung: [String], _ quelle: String) -> Int { ordnung.firstIndex(of: quelle) ?? ordnung.count }
+}
+
+/// Oben steht, was zuerst angezeigt wird.
+struct QuellenListe: View {
+    @AppStorage("ablage.quellen") private var wert = QuellenOrdnung.alle.joined(separator: ",")
+    var body: some View {
+        let liste = QuellenOrdnung.liste(wert)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Reihenfolge der Quellen").font(.jarvis(13, .semibold))
+            ForEach(Array(liste.enumerated()), id: \.element) { i, q in
+                HStack(spacing: 6) {
+                    Text("\(i + 1). \(q)").font(.jarvis(13)).frame(width: 150, alignment: .leading)
+                    KleinKnopf(symbol: "chevron.up", hilfe: "Nach oben") { tausche(liste, i, i - 1) }.disabled(i == 0)
+                    KleinKnopf(symbol: "chevron.down", hilfe: "Nach unten") { tausche(liste, i, i + 1) }.disabled(i == liste.count - 1)
+                }
+            }
         }
+        .padding(14)
+    }
+    private func tausche(_ l: [String], _ a: Int, _ b: Int) {
+        var n = l
+        n.swapAt(a, b)
+        wert = n.joined(separator: ",")
     }
 }
 
@@ -92,29 +118,23 @@ struct AblageElement: Identifiable, Hashable {
 
 @MainActor @Observable
 final class AblageDaten {
-    var eintraege: [AblageEintrag] = []
+    private let quelle = AblageAbgleich.shared
+    var eintraege: [AblageEintrag] { quelle.eintraege }
+    var fehler: String? { quelle.fehler }
+    var meldung: String?
     var laedt = false
-    var fehler: String?
     var treffer: Set<String>?
 
-    /// Volltextsuche am Handy: auch Wörter aus Berichten und Texten, nicht nur Namen.
+    /// Volltextsuche: auch Wörter aus Berichten und Texten, nicht nur Namen.
     func suchen(_ wort: String) async {
         let w = wort.trimmingCharacters(in: .whitespaces)
         guard !w.isEmpty else { treffer = nil; return }
-        let r = await McpKlient.shared.rufe("ablage_struktur", ["suche": w], sekunden: 40)
-        guard !r.fehler, let z = r.text.split(separator: "\n").first, let o = JSON.objekt(String(z)), let ids = o["treffer"] as? [String] else { treffer = nil; return }
-        treffer = Set(ids)
+        treffer = await quelle.suche(w)
     }
 
     func laden() async {
         laedt = true; defer { laedt = false }
-        let r = await McpKlient.shared.rufe("ablage_struktur", [:], sekunden: 40)
-        guard !r.fehler, let liste = AblageEintrag.zerlege(r.text) else {
-            fehler = r.fehler ? r.text : "Die Antwort des Handys war nicht lesbar. Läuft dort schon die neueste Jarvis-Version?"
-            return
-        }
-        fehler = nil
-        eintraege = liste
+        await quelle.jetztAbgleichen()
     }
 
     func elemente(_ b: AblageBereich, suche: String) -> [AblageElement] {
@@ -152,21 +172,7 @@ final class AblageDaten {
     }
 }
 
-/// Das Handy nimmt höchstens vier gleichzeitige Aufrufe je Werkzeug an: Der Mac stellt sich hinten an, statt abgewiesen zu werden.
-actor AbrufPlaetze {
-    static let shared = AbrufPlaetze()
-    private var frei = 3
-    private var wartend: [CheckedContinuation<Void, Never>] = []
-    func nehmen() async {
-        if frei > 0 { frei -= 1; return }
-        await withCheckedContinuation { wartend.append($0) }
-    }
-    func geben() {
-        if wartend.isEmpty { frei += 1 } else { wartend.removeFirst().resume() }
-    }
-}
-
-/// Lädt Dateien stückweise über das Relay (eine Antwort darf nicht beliebig groß sein) und merkt sich Vorschaubilder.
+/// Die Inhalte liegen als Kopie der gemeinsamen Ablage am Mac (AblageAbgleich); Vorschauen entstehen hier, Dateien zum Öffnen als benannte Kopie.
 enum AblageLader {
     static let ordner: URL = {
         let u = Pfade.temp.appendingPathComponent("Ablage", isDirectory: true)
@@ -174,66 +180,40 @@ enum AblageLader {
         return u
     }()
 
-    /// Ein Abruf mit Warteschlange und bis zu drei Wiederholungen.
-    private static func abruf(_ argumente: JSONObjekt, sekunden: Double) async throws -> (Data, Bool) {
-        var letzter = "Unlesbare Antwort vom Handy"
-        for versuch in 0..<3 {
-            try Task.checkCancellation()
-            if versuch > 0 { try await Task.sleep(for: .seconds(Double(versuch) * 1.5)) }
-            await AbrufPlaetze.shared.nehmen()
-            let r = await McpKlient.shared.rufe("ablage_datei", argumente, sekunden: sekunden)
-            await AbrufPlaetze.shared.geben()
-            if let z = r.text.split(separator: "\n").first, !r.fehler, let o = JSON.objekt(String(z)),
-               let b = o["daten"] as? String, let bytes = Data(base64Encoded: b) {
-                return (bytes, o["ende"] as? Bool == true)
+    @MainActor static func vorschau(_ e: AblageElement, laengste: Int) async -> NSImage? {
+        guard let d = e.datei, let u = try? await AblageAbgleich.shared.inhalt(d.sha) else { return nil }
+        let art = d.art
+        let cg: CGImage? = await Task.detached(priority: .utility) {
+            if art == "PDF" {
+                guard let seite = PDFDocument(url: u)?.page(at: 0) else { return nil }
+                return seite.thumbnail(of: CGSize(width: laengste, height: laengste), for: .mediaBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
             }
-            if r.fehler { letzter = r.text }
-        }
-        throw NSError(domain: "Ablage", code: 2, userInfo: [NSLocalizedDescriptionKey: letzter])
+            guard art == "BILD", let quelle = CGImageSourceCreateWithURL(u as CFURL, nil) else { return nil }
+            let o: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: laengste]
+            return CGImageSourceCreateThumbnailAtIndex(quelle, 0, o as CFDictionary)
+        }.value
+        if let cg { return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height)) }
+        return art == "SVG" || art == "ANIMATION" ? NSImage(contentsOf: u) : nil
     }
 
-    static func vorschau(_ e: AblageElement, laengste: Int) async -> NSImage? {
-        guard let d = e.datei else { return nil }
-        // SVG und GIF rastert das Handy nicht; kleine Dateien zeigt der Mac selbst.
-        if d.art == "SVG" || d.art == "ANIMATION" {
-            guard d.groesse <= 5_000_000, let u = try? await datei(e, fortschritt: { _ in }) else { return nil }
-            return NSImage(contentsOf: u)
-        }
-        let cache = ordner.appendingPathComponent("\(d.id)-\(laengste).jpg")
-        if let bild = NSImage(contentsOf: cache) { return bild }
-        guard let (bytes, _) = try? await abruf(["eintrag_id": e.eintrag.id, "datei_id": d.id, "vorschau": laengste], sekunden: 60) else { return nil }
-        try? bytes.write(to: cache)
-        return NSImage(data: bytes)
-    }
-
-    /// Ganze Datei in den Zwischenordner, Stück für Stück direkt auf die Platte. Abbrechen und Wiederaufnahme nach einem Fehler sind möglich.
-    static func datei(_ e: AblageElement, fortschritt: @MainActor (Double) -> Void) async throws -> URL {
+    /// Die Datei unter ihrem Namen im Zwischenordner, damit andere Programme sie öffnen können.
+    @MainActor static func datei(_ e: AblageElement, fortschritt: @MainActor (Double) -> Void) async throws -> URL {
         guard let d = e.datei else { throw NSError(domain: "Ablage", code: 1) }
+        let quelle = try await AblageAbgleich.shared.inhalt(d.sha)
+        fortschritt(1)
         let ziel = ordner.appendingPathComponent(d.id, isDirectory: true)
         try FileManager.default.createDirectory(at: ziel, withIntermediateDirectories: true)
         let url = ziel.appendingPathComponent((d.name as NSString).lastPathComponent)
         if let a = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int, a == d.groesse { return url }
-        let teil = url.appendingPathExtension("part")
-        if !FileManager.default.fileExists(atPath: teil.path) { FileManager.default.createFile(atPath: teil.path, contents: nil) }
-        let h = try FileHandle(forWritingTo: teil)
-        defer { try? h.close() }
-        var versatz = Int(try h.seekToEnd())
-        while true {
-            let (bytes, ende) = try await abruf(["eintrag_id": e.eintrag.id, "datei_id": d.id, "versatz": versatz], sekunden: 70)
-            try h.write(contentsOf: bytes)
-            versatz += bytes.count
-            await fortschritt(d.groesse > 0 ? Double(versatz) / Double(d.groesse) : 1)
-            if ende || bytes.isEmpty { break }
-        }
         try? FileManager.default.removeItem(at: url)
-        try FileManager.default.moveItem(at: teil, to: url)
+        try FileManager.default.copyItem(at: quelle, to: url)
         // Wie beim Browser-Download: macOS warnt beim Öffnen von Programmen und Skripten aus der Ablage.
         let kennung = "0081;\(String(Int(Date().timeIntervalSince1970), radix: 16));Jarvis;"
         _ = kennung.withCString { setxattr(url.path, "com.apple.quarantine", $0, strlen($0), 0, 0) }
         return url
     }
 
-    /// Kopien aus dem Handy nicht ewig liegen lassen.
+    /// Benannte Kopien nicht ewig liegen lassen.
     static func aufraeumen() {
         let grenze = Date().addingTimeInterval(-7 * 86400)
         let inhalt = (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
@@ -258,15 +238,34 @@ struct AblageAnsicht: View {
     @State private var neuOffen = false
     @State private var neuTitel = ""
     @State private var neuText = ""
+    @State private var quellenOffen = false
+    @AppStorage("ablage.sortierung") private var sortierung = "neueste"
+    @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage wie auf deinem Handy, nach Dateiarten sortiert.")
+                BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage auf allen Jarvis-Versionen, automatisch abgeglichen.")
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Farbe.text3)
                     TextField("In diesem Bereich suchen, auch in Texten …", text: $suche).textFieldStyle(.plain)
                     if daten.laedt { ProgressView().controlSize(.small) }
+                    Menu {
+                        Picker("Sortieren nach", selection: $sortierung) {
+                            Text("Neueste zuerst").tag("neueste")
+                            Text("Älteste zuerst").tag("aelteste")
+                            Text("Name A–Z").tag("name")
+                            Text("Größte zuerst").tag("groesse")
+                            Text("Nach Quelle").tag("quelle")
+                        }
+                        .pickerStyle(.inline)
+                        Button("Reihenfolge der Quellen …") { quellenOffen = true }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down").foregroundStyle(Farbe.haupt)
+                    }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("Sortieren")
+                    .popover(isPresented: $quellenOffen) { QuellenListe() }
+                    RundKnopf(symbol: "plus", hilfe: "Dateien vom Mac in die Ablage legen", groesse: 28) { dateienWaehlen() }
                     RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 28) { Task { await daten.laden() } }
                 }
                 .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(Farbe.glas(0.05)))
@@ -275,19 +274,18 @@ struct AblageAnsicht: View {
                         ordnerKachel(b)
                     }
                 }
-                if let f = daten.fehler { Text(f).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
+                if let f = daten.meldung ?? daten.fehler { Text(f).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
                 inhalt
             }
             .padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .task { await daten.laden() }
         .task(id: suche) {
             try? await Task.sleep(for: .seconds(0.4))
             if !Task.isCancelled { await daten.suchen(suche) }
         }
         .onChange(of: bereich) { _, b in log("ablage", "Bereich \(b.titel) geöffnet", wo: "Ablage") }
         .sheet(item: $offen) { e in
-            AblageDetail(element: e) { offen = nil; Task { await daten.laden() } }
+            AblageDetail(element: e) { offen = nil }
         }
     }
 
@@ -315,7 +313,7 @@ struct AblageAnsicht: View {
         if bereich == .prompts {
             PromptsAnsicht()
         } else {
-            let liste = daten.elemente(bereich, suche: suche)
+            let liste = sortiert(daten.elemente(bereich, suche: suche))
             if bereich == .texte { neuerEintrag }
             if liste.isEmpty {
                 Text(daten.laedt ? "Lade …" : "Hier liegt noch nichts.").font(.jarvis(14)).foregroundStyle(Farbe.text2).padding(.top, 8)
@@ -337,9 +335,7 @@ struct AblageAnsicht: View {
                 Image(systemName: bereich.symbol).foregroundStyle(bereich.farbe).frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(e.name).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text).lineLimit(1)
-                    if e.datei != nil && e.eintrag.titel != e.name {
-                        Text(e.eintrag.titel).font(.jarvis(11)).foregroundStyle(Farbe.text3).lineLimit(1)
-                    }
+                    Text(e.datei != nil && e.eintrag.titel != e.name ? "\(e.eintrag.titel) · \(e.eintrag.quelle)" : e.eintrag.quelle).font(.jarvis(11)).foregroundStyle(Farbe.text3).lineLimit(1)
                 }
                 Spacer()
                 if let d = e.datei { Text(Self.groesse(d.groesse)).font(.jarvis(11)).foregroundStyle(Farbe.text3) }
@@ -350,6 +346,37 @@ struct AblageAnsicht: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func sortiert(_ l: [AblageElement]) -> [AblageElement] {
+        let neu = { (a: AblageElement, b: AblageElement) in a.eintrag.geaendert > b.eintrag.geaendert }
+        switch sortierung {
+        case "aelteste": return l.sorted { a, b in a.eintrag.geaendert < b.eintrag.geaendert }
+        case "name": return l.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case "groesse": return l.sorted { ($0.datei?.groesse ?? 0) > ($1.datei?.groesse ?? 0) }
+        case "quelle":
+            // Erst die Versionen in der gewählten Reihenfolge, innerhalb einer Version das Neueste zuerst.
+            let o = QuellenOrdnung.liste(quellenWert)
+            return l.sorted { a, b in
+                let x = QuellenOrdnung.rang(o, a.eintrag.quelle), y = QuellenOrdnung.rang(o, b.eintrag.quelle)
+                return x != y ? x < y : neu(a, b)
+            }
+        default: return l.sorted(by: neu)
+        }
+    }
+
+    private func dateienWaehlen() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        Task {
+            daten.meldung = nil
+            for u in urls {
+                do { try await AblageAbgleich.shared.dateiHinzufuegen(u) } catch { daten.meldung = "„\(u.lastPathComponent)“: \(error.localizedDescription)" }
+            }
+        }
     }
 
     static func groesse(_ b: Int) -> String { ByteCountFormatter.string(fromByteCount: Int64(b), countStyle: .file) }
@@ -373,8 +400,10 @@ struct AblageAnsicht: View {
                     KapselKnopf(symbol: "tray.and.arrow.down.fill", titel: "In die Ablage", hervorgehoben: true) {
                         let t = neuTitel, x = neuText
                         Task {
-                            let r = await McpKlient.shared.rufe("ablage_schreiben", ["titel": t, "inhalt": x])
-                            if r.fehler { daten.fehler = r.text } else { neuTitel = ""; neuText = ""; neuOffen = false; await daten.laden() }
+                            do {
+                                try await AblageAbgleich.shared.textSpeichern(titel: t, inhalt: x)
+                                daten.meldung = nil; neuTitel = ""; neuText = ""; neuOffen = false
+                            } catch { daten.meldung = error.localizedDescription }
                         }
                     }
                 }
@@ -407,6 +436,7 @@ struct BildKachel: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Farbe.glas(schwebt ? 0.3 : 0.06)))
                 Text(element.name).font(.jarvis(11, .medium)).foregroundStyle(Farbe.text2).lineLimit(1)
+                Text(element.eintrag.quelle).font(.jarvis(10)).foregroundStyle(Farbe.text3).lineLimit(1)
             }
             .contentShape(Rectangle())
         }
@@ -433,14 +463,16 @@ struct AblageDetail: View {
     @State private var laedt = true
     @State private var loeschenFrage = false
     @State private var dateiArbeit: Task<Void, Never>?
-    @State private var gekuerzt = false
 
     private var datei: AblageDatei? { element.datei }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Text(element.name).font(.jarvis(18, .bold)).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(element.name).font(.jarvis(18, .bold)).lineLimit(1)
+                    Text("Von \(element.eintrag.quelle) · \(element.eintrag.geaendert.formatted(date: .abbreviated, time: .shortened))").font(.jarvis(12)).foregroundStyle(Farbe.text3)
+                }
                 Spacer()
                 if datei != nil {
                     KapselKnopf(symbol: "arrow.up.forward.app", titel: "Öffnen") { starte { await oeffnen() } }
@@ -450,7 +482,6 @@ struct AblageDetail: View {
                 RundKnopf(symbol: "xmark", hilfe: "Schließen", groesse: 30) { schliessen() }
             }
             if let fehler { Text(fehler).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
-            if gekuerzt { Text("Der Text ist sehr lang und hier gekürzt; vollständig steht er auf dem Handy.").font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
             if dateiArbeit != nil { ProgressView(value: fortschritt).frame(maxWidth: 240) }
             Group {
                 if let bild {
@@ -462,7 +493,7 @@ struct AblageDetail: View {
                 } else if laedt {
                     VStack(spacing: 10) {
                         ProgressView(value: fortschritt > 0 ? fortschritt : nil).frame(width: 240)
-                        Text("Hole die Datei vom Handy …").font(.jarvis(13)).foregroundStyle(Farbe.text2)
+                        Text("Hole die Datei vom Server …").font(.jarvis(13)).foregroundStyle(Farbe.text2)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -497,12 +528,7 @@ struct AblageDetail: View {
         defer { laedt = false }
         log("ablage", "Geöffnet: \(element.name)", wo: "Ablage")
         guard let d = datei else {
-            let r = await McpKlient.shared.rufe("ablage_struktur", ["eintrag_id": element.eintrag.id, "nur_text": true], sekunden: 40)
-            if r.fehler { fehler = r.text } else {
-                let o = r.text.split(separator: "\n").first.flatMap { JSON.objekt(String($0)) }
-                text = o?["text"] as? String ?? r.text
-                gekuerzt = o?["gekuerzt"] as? Bool == true
-            }
+            do { text = try await AblageAbgleich.shared.text(element.eintrag) } catch { fehler = error.localizedDescription }
             return
         }
         do {
@@ -541,10 +567,7 @@ struct AblageDetail: View {
     }
 
     private func loeschen() async {
-        var a: JSONObjekt = ["eintrag_id": element.eintrag.id]
-        if let d = datei { a["datei_id"] = d.id }
-        let r = await McpKlient.shared.rufe("ablage_loeschen", a)
-        if r.fehler { fehler = r.text; return }
+        do { try await AblageAbgleich.shared.loeschen(eintragId: element.eintrag.id, dateiId: datei?.id) } catch { fehler = error.localizedDescription; return }
         (datei.map { [$0] } ?? element.eintrag.dateien).forEach(AblageLader.vergessen)
         geloescht()
     }

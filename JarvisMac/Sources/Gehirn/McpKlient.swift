@@ -173,8 +173,19 @@ actor McpKlient {
         name.hasSuffix("_lesen") || ["jarvis_kontext", "gedaechtnis_suchen", "web_suche", "ablage_datei", "ablage_struktur", "vorgaenge"].contains(name)
     }
 
+    /// Diese Werkzeuge erzeugen am Handy einen Ablage-Eintrag: Er soll trotzdem als vom Mac gelten.
+    private static let legtInAblage: Set<String> = ["ablage_schreiben", "ablage_datei_speichern", "bild_erzeugen", "in_ablage_uebernehmen"]
+
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
         let start = Date()
+        // Ablage und Prompts liegen auf dem Server: Der Mac schreibt selbst dorthin, auch wenn das Handy aus ist.
+        if let lokal = await AblageAbgleich.shared.werkzeug(name, argumente) {
+            if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
+            log("werkzeug", "Ablage-Werkzeug \(name): \(lokal.fehler ? "Fehler" : "ok")", wo: "Server", werkzeug: name, fehler: lokal.fehler ? lokal.text : nil, dauerMs: Int(Date().timeIntervalSince(start) * 1000))
+            return lokal
+        }
+        var argumente = argumente
+        if Self.legtInAblage.contains(name) { argumente["_quelle"] = AblageAbgleich.quelle }
         let e = await rufeOhneLog(name, argumente, sekunden: sekunden)
         if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
         let ms = Int(Date().timeIntervalSince(start) * 1000)

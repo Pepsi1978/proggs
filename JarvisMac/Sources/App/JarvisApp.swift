@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = VorleseEinstellungen.shared
         Task { _ = await CodexAnmeldung.shared.angemeldet }
         Task.detached(priority: .utility) { AblageLader.aufraeumen() }
+        AblageAbgleich.shared.hochfahren()
         Task { _ = await McpKlient.shared.werkzeuge(frisch: true) }
         AppSteuerung.shared.hochfahren()
     }
