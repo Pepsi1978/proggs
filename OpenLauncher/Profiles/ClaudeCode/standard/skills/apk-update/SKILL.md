@@ -70,7 +70,8 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
 2. **Update muss fertig sein.** `git -C ~/proggs status -sb -- <Projekt>` prüfen. Offene
    Änderungen am Projekt zuerst nach Regel 9 abschließen (bauen, Version bumpen, committen,
    pushen). Nie halbfertigen Code als Update ausliefern.
-3. **Skript starten** (im Vordergrund mit dem höchsten Zeitlimit: Es wartet nur auf den Build, nicht auf den Upload):
+3. **Skript starten** (mit dem höchsten Zeitlimit: Es wartet nur auf den Build, nicht auf den Upload; dauert der Build länger
+   und das Werkzeug verschiebt den Befehl in den Hintergrund, auf das Ende warten und nie abbrechen):
    ```powershell
    pwsh -NoProfile -File "C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1" -Projekt <Projekt>
    ```
@@ -128,8 +129,11 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
 4. **Ausgabe auswerten** (Zeilen mit `APK_UPDATE_`):
    - `APK_UPDATE_STATUS=gestartet` (Exit 0) → fertig für diese Sitzung, der Upload läuft im Hintergrund. Als
      „APK-Update: ja (Upload läuft im Hintergrund), versionCode …“ melden und **nicht** nachsehen, ob er durch ist.
-   - `APK_UPDATE_STATUS=laeuft` (Exit 0) → Für genau diesen Stand läuft schon ein Upload; nichts zu tun.
-   - `APK_UPDATE_ERSETZT=…` → Ein älterer Upload wurde abgebrochen, der Lauf macht mit dem neuen Stand weiter.
+   - `APK_UPDATE_STATUS=laeuft` (Exit 0) → Für genau diesen Stand läuft schon ein Upload; nichts zu tun. Nur wenn Frank
+     meldet, dass er hängt: erneut mit `-UploadErsetzen` starten.
+   - `APK_UPDATE_ERSETZT=…` → Der neue Stand ist gebaut und geprüft, der ältere Upload wurde dafür abgebrochen.
+   - `APK_UPDATE_WARNUNG=Der letzte Upload im Hintergrund ist gescheitert: …` → In der Abschlussmeldung nennen. Der aktuelle
+     Lauf veröffentlicht trotzdem neu.
    - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
      nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
    - `APK_UPDATE_STATUS=ok` mit `APK_UPDATE_BEREIT=cloud` → Google Drive hat beide Uploads bestätigt.
@@ -241,8 +245,9 @@ und dass die Signatur der APK zur installierten App passt.
 
 ## Abschluss melden
 
-Am Mac gilt der Upload dabei als gestartet, nicht als fertig. Scheitert er später, steht der Grund im Protokoll und
-`update.json` bleibt beim bisherigen Stand.
+Am Mac gilt der Upload dabei als gestartet, nicht als fertig. Scheitert er später, steht der Grund im Protokoll, `update.json`
+bleibt beim bisherigen Stand, und der nächste Lauf für diese App meldet es. Ein Neustart des Macs beendet den Upload; auch das holt
+der nächste Lauf nach.
 
 Projekt, Version alt → neu (versionCode), Pfad der APK, ob `build.gradle.kts` angehoben und
 committet wurde. Die Handy-App findet das Update bei der nächsten Prüfung (Standard alle 30 Minuten oder

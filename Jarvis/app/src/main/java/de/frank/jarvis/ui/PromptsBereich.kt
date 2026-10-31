@@ -93,6 +93,9 @@ import kotlinx.coroutines.withContext
 /** Filterwert des Reiters „Prompts“ in der Ablage (kein Ablage-Kategorie-Name). */
 const val PROMPTS_REITER = "PROMPTS"
 
+/** Ab dieser Breite ist es der große Bildschirm: Fold aufgeklappt oder Querformat. Darunter das Frontdisplay im Hochformat. */
+private const val GROSS_AB_DP = 600
+
 /**
  * Reiter „Prompts“ der Ablage: nummerierte, vorformulierte Aufträge an Jarvis. Nach dem letzten steht „+“ (eintippen oder
  * einsprechen, KI bringt den Text in gutes Deutsch, Diskette speichert). Antippen öffnet den Prompt; „Senden“ startet
@@ -228,7 +231,7 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
     val schliessen = { vm.promptOffen = null }
     BackHandler(onBack = schliessen)
     // Im Vollbild zählt in beiden Lagen jede Zeile für den Text: Die Rückmeldung steht neben den Knöpfen, die Knöpfe ganz unten.
-    val gross = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
+    val gross = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= GROSS_AB_DP
     var loeschen by remember(p.erstellt) { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(if (gross) f.hgOben else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f))
         // Berührungen gehen nicht an die Ablage darunter.
@@ -333,7 +336,7 @@ fun PromptEbene(vm: AppViewModel) {
     BackHandler(onBack = versuchen)
     // Frontdisplay im Hochformat (Fold 8: 1248 × 1972 px, 475 × 751 dp, 420 dpi): Die Höhe gehört dem Text, die Knöpfe stehen direkt über dem Systemrand.
     // Aufgeklappt und im Querformat ist die Breite mindestens 600 dp, dort bleiben die großzügigeren Abstände.
-    val front = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
+    val front = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < GROSS_AB_DP
     Column(Modifier.fillMaxSize().background(f.hgOben)
         // Berührungen neben den Bedienelementen gehen nicht an die Ablage darunter.
         .pointerInput(Unit) { detectTapGestures { } }

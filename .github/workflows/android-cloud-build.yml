@@ -119,7 +119,7 @@ jobs:
       matrix:
         projekt: ${{ fromJSON(needs.auswahl.outputs.projekte) }}
     concurrency:
-      group: android-cloud-build-${{ matrix.projekt }}
+      group: android-cloud-build-${{ matrix.projekt }}-${{ inputs.probe && 'probe' || 'echt' }}
       cancel-in-progress: true
     env:
       PROJEKT: ${{ matrix.projekt }}

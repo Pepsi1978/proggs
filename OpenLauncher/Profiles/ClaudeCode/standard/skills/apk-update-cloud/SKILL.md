@@ -99,13 +99,15 @@ kleine Fixes gehen ohne Wartezeit raus.
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
 7. **Nicht auf den Bau warten:** Der Merge hat den Bau gestartet, er läuft bei GitHub unabhängig von dieser Sitzung weiter,
-   auch wenn sie geschlossen wird. Direkt weiter mit Schritt 8. Ein weiterer Merge für dieselbe App bricht einen noch
-   laufenden Bau ab und veröffentlicht den neuen Stand; Änderungen aus einem späteren Review also einfach mit diesem Ablauf
-   ab Schritt 1 nachschieben. `warte-auf-bau.sh <N>` nur starten, wenn Frank ausdrücklich nach dem Ergebnis fragt oder meldet,
-   dass das Update nicht ankommt: `BAU=gruen` liegt in Drive, `BAU=laeuft` noch einmal starten, `BAU=kein-lauf` prüfen, ob die
-   Änderung unter `<Projekt>/app/**` liegt, `BAU=rot` Protokoll lesen (`get_job_logs`, `failed_only`), beheben und ab Schritt 1
-   wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war). Meldet es `ZUGANG=fehlt`: GitHub-MCP
-   `actions_list` und `actions_get` nehmen.
+   auch wenn sie geschlossen wird. `warte-auf-bau.sh <N>` als **Hintergrund-Befehl** starten (`run_in_background`) und ohne
+   Pause mit Schritt 8 weitermachen. Ein weiterer Merge für dieselbe App bricht einen noch laufenden Bau ab und veröffentlicht den
+   neuen Stand; Änderungen aus einem späteren Review also einfach mit diesem Ablauf ab Schritt 1 nachschieben. Meldet sich das
+   Skript, solange die Sitzung offen ist:
+   - `BAU=gruen` → nichts weiter. `BAU=laeuft` → noch einmal im Hintergrund starten.
+   - `BAU=kein-lauf` → prüfen, ob die Änderung unter `<Projekt>/app/**` liegt, sonst Frank melden.
+   - `BAU=rot` → Protokoll lesen (`get_job_logs`, `failed_only`), beheben und ab Schritt 1 wiederholen, immer mit neuem
+     Versionslog-Eintrag. Liegt die Ursache außerhalb der App (Secret abgelaufen, Drive-Zugang widerrufen): Frank melden.
+   - `ZUGANG=fehlt` → GitHub-MCP `actions_list` und `actions_get` nehmen.
 8. **Abschlussmeldung** an Frank, immer genau dieser Block (Details in `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md` §10):
    ```
    ☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
