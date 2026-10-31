@@ -57,6 +57,17 @@ NUR, was Engine C bedeutet (Tabelle in Schritt 3).
 
 ---
 
+## Block 0.0a — Auf dem Hostinger-Server (`JARVIS_SERVER=1`) ⭐
+
+Zuerst `echo $JARVIS_SERVER` prüfen. Steht dort `1`, läuft die Sitzung auf Franks Hostinger-Server. Dort liegen bewusst keine Firecrawl-, Tavily- oder OpenRouter-Schlüssel, und Frank hat entschieden (31.10.2026): nur der eingebaute Weg.
+
+- **Frage 1 entfällt.** Engine A und B gibt es hier nicht, `mm-research.py`, `or-research.py` und `research-swarm.py` nicht starten.
+- **Claude Code:** immer Engine C, also der Sonnet-5.5-Schwarm wie in Schritt 3 beschrieben (Agent-Tool mit `model:"sonnet"`, bis zu 7 parallel). Sonst wie an den Rechnern; Rückfragen mit `AskUserQuestion` kommen auf Franks Handy.
+- **OpenAI-Modelle (Codex CLI, OpenCode):** Sonnet gibt es dort nicht. Recherchiere mit der eingebauten Websuche des Modells; Codex startet hier mit `--search`. Teile die Unterthemen auf mehrere Unteragenten auf, wenn das CLI sie anbietet, sonst arbeite sie nacheinander ab. Codex kann nicht zurückfragen: Entscheide selbst und nenne das im Bericht.
+- **Unverändert:** Ablauf, Frage 2 (Schritt 6, wo das CLI fragen kann), Persistenz in `best-practices/` und `bugs/` (Schritt 8) und die Hook-Registrierung (Schritt 9).
+
+---
+
 ## Block 0.1 — Frage 1 im Wortlaut (PFLICHT, jedes Mal) ⭐
 
 Drei sichtbare Schritte, in dieser Reihenfolge, VOR jeder Web-Recherche:

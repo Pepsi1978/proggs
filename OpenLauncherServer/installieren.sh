@@ -87,7 +87,7 @@ als 'command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | b
 als 'command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/install.sh | bash' || echo "Antigravity CLI nicht installiert"
 for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" || echo "$P nicht installiert"; done
 als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
-als 'npm install -g --silent pnpm@latest' || echo "pnpm nicht installiert"
+als 'npm install -g --silent pnpm@latest chrome-devtools-mcp@latest' || echo "pnpm oder chrome-devtools-mcp nicht installiert"
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
 als 'bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"
 

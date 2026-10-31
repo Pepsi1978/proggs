@@ -12,6 +12,7 @@
   <button data-seite="sitzungen" class="an">Sitzungen</button>
   <button data-seite="terminal">Terminal</button>
   <button data-seite="launcher">OpenLauncher</button>
+  <button data-seite="browser">Browser</button>
   <button data-seite="system">System</button>
 </nav>
 
@@ -28,6 +29,11 @@
     <div id="kopf"><span id="titel" class="leise">Keine Sitzung gewählt</span><button id="schliessen" class="gefahr klein" hidden>Sitzung schließen</button></div>
     <div id="links"></div>
     <div id="xterm"></div>
+    <div id="stimme" hidden>
+      <button id="stimme-zeile" title="Zeile löschen">✕</button>
+      <button id="stimme-auto" title="Automatisch absenden">↵ aus</button>
+      <button id="stimme-mikro" title="Sprechen">🎤</button>
+    </div>
     <div id="tasten">
       <button data-t="&#27;">Esc</button><button data-t="&#3;">Strg+C</button><button data-t="&#9;">Tab</button>
       <button data-t="&#27;[A">↑</button><button data-t="&#27;[B">↓</button><button data-t="&#27;[D">←</button><button data-t="&#27;[C">→</button><button id="ende">⤓ Ende</button>
@@ -44,6 +50,11 @@
     <label>Erste Nachricht (optional)<textarea id="prompt" rows="3"></textarea></label>
     <button id="start" class="haupt">Starten</button>
     <p id="start-meldung" class="leise"></p>
+  </section>
+
+  <section id="browser" class="seite">
+    <p id="browser-meldung" class="leise">Der Browser startet …</p>
+    <iframe id="browser-bild" title="Chrome auf dem Server" hidden></iframe>
   </section>
 
   <section id="system" class="seite">

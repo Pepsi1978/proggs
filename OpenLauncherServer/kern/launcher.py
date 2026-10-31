@@ -13,6 +13,7 @@ import json
 import os
 import re
 import shlex
+import socket
 import subprocess
 import sys
 import time
@@ -26,6 +27,9 @@ SKRIPTE = ZUSTAND / "start"
 PROFILE = PROGGS / "OpenLauncher" / "Profiles"
 HOOK = PROGGS / "Jarvis" / "werkzeuge" / "pc-bruecke" / "jarvis_hook.py"
 ZUSATZ = PROGGS / "OpenLauncherServer" / "server-zusatz.md"
+BROWSER_START = PROGGS / "OpenLauncherServer" / "browser" / "start.sh"
+BROWSER_MCP = PROGGS / "OpenLauncherServer" / "browser" / "mcp.sh"
+BROWSER_FREI_S = 1800  # so lange ohne Verbindung läuft der Browser weiter, danach gibt er seinen Speicher frei
 RECHNER = "Hostinger-Server"
 TMUX = ["tmux", "-L", "jarvis"]
 PROFIL_IDS = ("minimal", "standard", "strict")
@@ -63,7 +67,7 @@ def _schreib(pfad: Path, text: str, rechte: int = 0o644) -> None:
 
 
 def pruefe_name(name: str) -> str:
-    if not NAME.fullmatch(name) or name == "basis":
+    if not NAME.fullmatch(name) or name in ("basis", "browser"):
         raise ValueError("Ungültiger Sitzungsname")
     return name
 
@@ -176,9 +180,10 @@ def _erststart_setzen(ordner: Path) -> None:
         return
     projekt = daten.get("projects", {}).get(str(PROGGS), {})
     # Der Werbedialog für die Vollbildanzeige erscheint nach der ersten Antwort und fängt jede weitere Eingabe ab, auch Nachträge.
-    if daten.get("hasCompletedOnboarding") and daten.get("bypassPermissionsModeAccepted") and projekt.get("hasTrustDialogAccepted") and daten.get("fullscreenUpsellSeenCount", 0) >= 99:
+    if daten.get("hasCompletedOnboarding") and daten.get("bypassPermissionsModeAccepted") and projekt.get("hasTrustDialogAccepted") and daten.get("fullscreenUpsellSeenCount", 0) >= 99 and "chrome-devtools" in daten.get("mcpServers", {}):
         return
     daten.update(hasCompletedOnboarding=True, bypassPermissionsModeAccepted=True, fullscreenUpsellSeenCount=99)
+    daten.setdefault("mcpServers", {})["chrome-devtools"] = {"type": "stdio", "command": "bash", "args": [str(BROWSER_MCP)]}
     daten.setdefault("theme", "dark")
     daten.setdefault("projects", {}).setdefault(str(PROGGS), {}).update(hasTrustDialogAccepted=True, hasCompletedProjectOnboarding=True)
     _schreib(pfad, json.dumps(daten, ensure_ascii=False, indent=2), 0o600)
@@ -248,6 +253,8 @@ def codex_zuhause() -> Path:
     konfig = zuhause / "config.toml"
     if not konfig.exists():
         _schreib(konfig, f'# Von OpenLauncher Server angelegt. Codex ergänzt hier selbst seine Vertrauensstufen.\n\n[projects."{PROGGS}"]\ntrust_level = "trusted"\n')
+    if "mcp_servers.chrome-devtools" not in _lies(konfig):
+        _schreib(konfig, _lies(konfig).rstrip("\n") + f'\n\n[mcp_servers.chrome-devtools]\ncommand = "bash"\nargs = ["{BROWSER_MCP}"]\n')
     globale_skills()
     return zuhause
 
@@ -330,7 +337,7 @@ def _codex_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
     stufe = ""
     if modell.lower().endswith("-fast"):
         modell, stufe = modell[:-5], " -c 'service_tier=\"priority\"'"
-    argumente = f"--dangerously-bypass-approvals-and-sandbox -C {q(str(PROGGS))} -m {q(modell)} -c 'project_doc_max_bytes=1048576'{stufe}"
+    argumente = f"--dangerously-bypass-approvals-and-sandbox --search -C {q(str(PROGGS))} -m {q(modell)} -c 'project_doc_max_bytes=1048576'{stufe}"
     if effort:
         argumente += " -c " + q(f'model_reasoning_effort="{effort}"')
     return f'''export CODEX_HOME={q(str(zuhause))}
@@ -356,7 +363,11 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
     else:
         daten.setdefault("variant", {}).pop(kennung, None)
     _schreib(zustand, json.dumps(daten, ensure_ascii=False))
-    return f'''export OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
+    # Auch OpenCode nutzt den einen Browser des Servers, nie einen eigenen je Sitzung.
+    profil_datei = ZUSTAND / "opencode-profil.json"
+    _schreib(profil_datei, json.dumps({"$schema": "https://opencode.ai/config.json", "mcp": {"chrome-devtools": {"type": "local", "command": ["bash", str(BROWSER_MCP)], "enabled": True},
+                                                                                             "chrome-personal": {"enabled": False}}}))
+    return f'''export OPENCODE_CONFIG={q(str(profil_datei))} OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
 mkdir -p "$HOME/.local/share/opencode/log/stderr"
 FEHLER="$HOME/.local/share/opencode/log/stderr/opencode-stderr-$(date +%Y%m%d-%H%M%S)-$$.log"
 if [ -n "$PROMPT" ]; then opencode -m {q(kennung)} --prompt "$PROMPT" 2>"$FEHLER"; else opencode -m {q(kennung)} 2>"$FEHLER"; fi
@@ -535,7 +546,7 @@ def sitzungen() -> list:
     liste = []
     for zeile in aus.splitlines():
         teile = zeile.split("\t")
-        if len(teile) < 4 or teile[0] == "basis":
+        if len(teile) < 4 or teile[0] in ("basis", "browser"):
             continue
         name, befehl, aktiv = teile[0], teile[1], int(teile[2] or 0)
         try:
@@ -566,9 +577,39 @@ def schliessen(name: str) -> None:
         datei.unlink(missing_ok=True)
 
 
+def browser_laeuft() -> bool:
+    return subprocess.run(TMUX + ["has-session", "-t", "=browser"], capture_output=True, timeout=5).returncode == 0
+
+
+def browser_starten() -> None:
+    """Der eine Chrome des Servers auf dem unsichtbaren Bildschirm :99, nur bei Bedarf: Er belegt rund 500 MB. Läuft im tmux-Dienst, also unter dessen Speicherdeckel."""
+    if not browser_laeuft():
+        subprocess.run(TMUX + ["new-session", "-d", "-s", "browser", f"bash {shlex.quote(str(BROWSER_START))}"], capture_output=True, timeout=10)
+    (ZUSTAND / "browser-benutzt").touch()
+    for _ in range(40):
+        try:
+            with socket.create_connection(("127.0.0.1", 9222), timeout=0.5):
+                return
+        except OSError:
+            time.sleep(0.5)
+    raise RuntimeError("Der Browser ist nicht gestartet.")
+
+
+def _browser_aufraeumen() -> None:
+    if not browser_laeuft():
+        return
+    verbunden = subprocess.run(["ss", "-Htn", "state", "established", "( sport = :9222 or sport = :5900 )"], capture_output=True, text=True, timeout=5).stdout.strip()
+    merke = ZUSTAND / "browser-benutzt"
+    if verbunden:
+        merke.touch()
+    elif (_alter(merke) or BROWSER_FREI_S + 1) > BROWSER_FREI_S:
+        subprocess.run(TMUX + ["kill-session", "-t", "=browser"], capture_output=True, timeout=10)
+
+
 def aufraeumen() -> None:
     """Schließt Beendete nach einer Stunde und untätige CLIs nach UNTAETIG_ZU_S. Offene Terminals und eine gerade angezeigte Sitzung bleiben,
     und Dateien von Sitzungen, die es nicht mehr gibt (etwa nach einem Neustart von tmux), verschwinden."""
+    _browser_aufraeumen()
     alle = sitzungen()
     for s in alle:
         if s["angezeigt"]:
@@ -654,6 +695,7 @@ def main() -> int:
     s.add_argument("--modus", default="schnell")
     unter.add_parser("liste")
     unter.add_parser("abgleich")
+    unter.add_parser("browser")
     z = unter.add_parser("schliessen")
     z.add_argument("name")
     a = teil.parse_args()
@@ -661,6 +703,8 @@ def main() -> int:
         print(starten(a.cli, a.modell, a.anbieter, a.effort, a.profil, a.modus))
     elif a.aktion == "liste":
         print(json.dumps(sitzungen(), ensure_ascii=False, indent=1))
+    elif a.aktion == "browser":
+        browser_starten()
     elif a.aktion == "abgleich":
         stand = repo_abgleich()
         return 0 if stand["ok"] else 1

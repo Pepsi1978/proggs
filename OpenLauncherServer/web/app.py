@@ -204,6 +204,43 @@ def _links_aus(text: str) -> list:
     return gefunden
 
 
+async def browser_start(_: web.Request) -> web.Response:
+    await _im_faden(launcher.browser_starten)
+    return web.json_response({"ok": True})
+
+
+async def bildschirm(request: web.Request) -> web.WebSocketResponse:
+    """Reicht den VNC-Bildschirm des Browsers als WebSocket durch; er lauscht nur auf localhost, die Anmeldung der Konsole schützt ihn."""
+    ws = web.WebSocketResponse(protocols=("binary",), heartbeat=25, max_msg_size=16 * 1024 * 1024)
+    await ws.prepare(request)
+    try:
+        leser, schreiber = await asyncio.open_connection("127.0.0.1", 5900)
+    except OSError:
+        await ws.close(code=4404)
+        return ws
+
+    async def zum_browser():
+        async for nachricht in ws:
+            if nachricht.type == WSMsgType.BINARY:
+                schreiber.write(nachricht.data)
+                await schreiber.drain()
+        schreiber.close()
+
+    async def zur_seite():
+        while daten := await leser.read(65536):
+            await ws.send_bytes(daten)
+        await ws.close()
+
+    aufgaben = [asyncio.create_task(zum_browser()), asyncio.create_task(zur_seite())]
+    try:
+        await asyncio.wait(aufgaben, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for aufgabe in aufgaben:
+            aufgabe.cancel()
+        schreiber.close()
+    return ws
+
+
 async def links(request: web.Request) -> web.Response:
     """Adressen aus der Terminalausgabe: Im Handy-Terminal bricht eine lange Anmelde-Adresse um und lässt sich nicht antippen."""
     name = request.match_info["name"]
@@ -365,6 +402,10 @@ def anwendung() -> web.Application:
     a.router.add_post("/api/anmeldung", anmeldung)
     a.router.add_get("/api/links/{name}", links)
     a.router.add_get("/ws/{name}", terminal)
+    a.router.add_post("/api/browser", browser_start)
+    a.router.add_get("/vnc-ws", bildschirm)
+    if Path("/usr/share/novnc").is_dir():
+        a.router.add_static("/vnc", "/usr/share/novnc", append_version=False)
     a.router.add_static("/static", HIER / "static", append_version=False)
     return a
 

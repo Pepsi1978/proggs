@@ -33,6 +33,8 @@ PROGRAMME = {
              "anmeldung": "kimi login", "stand": "", "installieren": f"{NPM} --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest"},
     "antigravity": {"name": "Antigravity CLI", "befehl": "agy", "update": "agy update", "anmeldung": "agy", "stand": "",
                     "installieren": "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
+    "chrome-devtools-mcp": {"name": "Browser-Steuerung", "befehl": "chrome-devtools-mcp", "update": f"{NPM} chrome-devtools-mcp@latest", "anmeldung": "", "stand": "true",
+                            "installieren": f"{NPM} chrome-devtools-mcp@latest"},
     # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
     "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth status", "installieren": "true"},
 }

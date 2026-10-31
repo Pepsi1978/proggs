@@ -21,6 +21,7 @@ function zeige(name) {
   if (name === "terminal") { setTimeout(passen, 30); }
   if (name === "sitzungen") ladeSitzungen();
   if (name === "system") ladeSystem();
+  if (name === "browser") browserOeffnen();
 }
 document.querySelectorAll("#reiter button").forEach((b) => b.addEventListener("click", () => zeige(b.dataset.seite)));
 
@@ -152,6 +153,7 @@ function trennen() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   $("titel").textContent = "Keine Sitzung gewählt";
   $("schliessen").hidden = true;
+  if (typeof stimmeZeigen === "function") stimmeZeigen();
   $("links").replaceChildren();
   if (term) term.reset();
 }
@@ -160,6 +162,7 @@ function verbinde(name, titel) {
   if (aktuell !== name) { trennen(); aktuell = name; }
   $("titel").textContent = titel || name;
   $("schliessen").hidden = false;
+  stimmeZeigen();
   zeige("terminal");
   aufmachen();
 }
@@ -248,6 +251,49 @@ $("start").addEventListener("click", async () => {
   } catch (f) { $("start-meldung").textContent = f.message; }
 });
 
+// ---- Browser
+async function browserOeffnen() {
+  const bild = $("browser-bild");
+  if (!bild.hidden) return;
+  try {
+    await api("/api/browser", {});
+    bild.src = "/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc-ws&reconnect=1";
+    bild.hidden = false;
+    $("browser-meldung").hidden = true;
+  } catch (f) { $("browser-meldung").textContent = `Der Browser ließ sich nicht starten: ${f.message}`; }
+}
+
+// ---- Sprache (TVO): Nur in Jarvis, das Handy nimmt auf und wandelt um. Erscheint von selbst, sobald ein Terminal offen ist, wie das Overlay an den Rechnern.
+const SPRACHE = window.JarvisSprache;
+let automatisch = false, schonGesprochen = false;
+function stimmeZeigen() { if (SPRACHE) $("stimme").hidden = !aktuell; }
+function mikroStand(stand) {
+  const knopf = $("stimme-mikro");
+  knopf.dataset.stand = stand;
+  knopf.textContent = stand === "nimmt" ? "■" : stand === "wandelt" ? "…" : "🎤";
+}
+window.stimmeFertig = (text, fehler) => {
+  mikroStand("bereit");
+  if (fehler) { $("titel").textContent = fehler; return; }
+  if (!text) return;
+  // Mehrere Eingaben hintereinander bekommen ein Leerzeichen dazwischen, wie am Rechner.
+  schicke((schonGesprochen && !automatisch ? " " : "") + text);
+  schonGesprochen = !automatisch;
+  if (automatisch) setTimeout(() => schicke("\r"), 60);
+};
+if (SPRACHE) {
+  $("stimme-mikro").addEventListener("click", () => {
+    const stand = $("stimme-mikro").dataset.stand;
+    if (stand === "wandelt") return;
+    if (stand === "nimmt") { mikroStand("wandelt"); SPRACHE.stop(); } else { mikroStand("nimmt"); SPRACHE.start(); }
+  });
+  $("stimme-zeile").addEventListener("click", () => { schonGesprochen = false; schicke("\u0015"); });
+  try { automatisch = localStorage.getItem("stimme-auto") === "1"; } catch { /* nur Komfort */ }
+  const autoAnzeigen = () => { $("stimme-auto").textContent = automatisch ? "↵ an" : "↵ aus"; $("stimme-auto").classList.toggle("an", automatisch); };
+  autoAnzeigen();
+  $("stimme-auto").addEventListener("click", () => { automatisch = !automatisch; try { localStorage.setItem("stimme-auto", automatisch ? "1" : "0"); } catch { /* nur Komfort */ } autoAnzeigen(); });
+}
+
 // ---- System
 async function ladeSystem() {
   const d = await api("/api/system").catch(() => null);
@@ -264,6 +310,7 @@ async function ladeSystem() {
     karte.append(zeile);
     if (p.meldung) karte.append(element("div", "leise", p.meldung));
     const aktionen = element("div", "aktionen");
+    if (schluessel === "chrome-devtools-mcp") { ziel.append(karte); continue; }
     const knopf = element("button", "", "Anmelden");
     knopf.addEventListener("click", async () => { const { name } = await api("/api/anmeldung", { cli: schluessel }); verbinde(name, `Anmeldung ${p.name}`); });
     aktionen.append(knopf);
