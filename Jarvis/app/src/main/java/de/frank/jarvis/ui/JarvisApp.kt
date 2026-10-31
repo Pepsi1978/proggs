@@ -90,7 +90,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -226,9 +225,16 @@ private fun Leiste(vm: AppViewModel) {
         // Beim Antippen zählt nur, wer gerade wirklich antwortet (RechnerStatus.pruefen liefert das ungeglättet).
         val context = androidx.compose.ui.platform.LocalContext.current
         val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        // Läuft ein Start, bricht erneutes Tippen ihn ab: Die Anzeige verschwindet sofort, der abgebrochene Start öffnet nichts mehr.
+        // Dasselbe gilt, wenn Frank die App verlässt oder den Reiter wechselt: Sonst spränge die Fernwartung später ungefragt auf.
+        var start by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        val startAbbrechen = { start?.cancel(); start = null }
+        androidx.compose.runtime.LaunchedEffect(vm.reiter) { startAbbrechen() }
         androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
             lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                while (true) { de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen(); kotlinx.coroutines.delay(10_000) }
+                try {
+                    while (true) { de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen(); kotlinx.coroutines.delay(10_000) }
+                } finally { startAbbrechen() }
             }
         }
         val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
@@ -237,25 +243,23 @@ private fun Leiste(vm: AppViewModel) {
         // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren. Keiner: nicht blind
         // verbinden (früher der Mac, dann 6 s schwarzer Bildschirm), sondern sagen, dass keiner erreichbar ist.
         val bereich = androidx.compose.runtime.rememberCoroutineScope()
-        var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-        // Läuft ein Start, bricht erneutes Tippen ihn ab: Die Anzeige verschwindet sofort, der abgebrochene Start öffnet nichts mehr.
-        var start by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        // Die Rechner aus der Prüfung beim Antippen; null = keine Auswahl offen.
+        var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<de.frank.jarvis.fernsteuerung.Fernziel>?>(null) }
         val sucht = start != null
         val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
             if (z.konsole) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
             else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
                 .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
         }
-        if (auswahl) RechnerAuswahl(de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value.orEmpty(), { auswahl = false }) { auswahl = false; oeffnen(it) }
+        auswahl?.let { da -> RechnerAuswahl(da, { auswahl = null }) { auswahl = null; oeffnen(it) } }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
-                start?.let { it.cancel(); start = null; return@antippen }
+                if (start != null) { startAbbrechen(); return@antippen }
                 start = bereich.launch {
                     val da = de.frank.jarvis.fernsteuerung.RechnerStatus.schnell()
-                    coroutineContext.ensureActive()
                     start = null
                     when {
-                        da.size > 1 -> auswahl = true
+                        da.size > 1 -> auswahl = da
                         da.size == 1 -> oeffnen(da.first())
                         else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
                     }

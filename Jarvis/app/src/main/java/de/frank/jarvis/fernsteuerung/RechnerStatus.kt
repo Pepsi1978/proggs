@@ -2,8 +2,11 @@ package de.frank.jarvis.fernsteuerung
 
 import androidx.compose.runtime.mutableStateOf
 import de.frank.jarvis.observability.Logbuch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 
 /**
  * Fernwartungszustand für das Symbol unten rechts: welche Rechner der Fernwartungs-Dienst im Tunnel gerade wirklich
@@ -19,6 +22,9 @@ import kotlinx.coroutines.sync.withLock
  *
  * Logbuch (Art „netz“, Ereignisse „Fernwartung: …“): jede gescheiterte Prüfung mit Grund und Dauer, jeder Farbwechsel mit
  * Auslöser. Erfolgreiche Prüfungen ohne Wechsel bleiben draußen (alle 10 s). Alle Aufrufe laufen auf dem Main-Thread.
+ *
+ * Es läuft immer nur eine Prüfung, wer währenddessen fragt, bekommt deren Ergebnis. Sie läuft in einem eigenen Bereich:
+ * Bricht Frank den Start der Fernwartung ab, endet nur sein Warten, und ein neuer Start hängt sich an dieselbe Prüfung.
  */
 object RechnerStatus {
     private const val SCHONFRIST_MS = 60_000L
@@ -29,7 +35,8 @@ object RechnerStatus {
     private val zuletztDa = mutableMapOf<Fernziel, Long>()
     /** Zählt Sitzungsereignisse je Rechner: Eine Prüfung, während der eine Sitzung begann oder abriss, ist veraltet. */
     private val ereignisse = mutableMapOf<Fernziel, Int>()
-    private val sperre = Mutex()
+    private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var laufend: Deferred<List<Fernziel>>? = null
 
     private const val FRISCH_MS = 20_000L
     @Volatile private var geprueftAm = 0L
@@ -45,7 +52,10 @@ object RechnerStatus {
     }
 
     /** Prüft jetzt alle Rechner, aktualisiert das Symbol und liefert die Rechner, die gerade wirklich geantwortet haben. */
-    suspend fun pruefen(): List<Fernziel> = sperre.withLock {
+    suspend fun pruefen(): List<Fernziel> =
+        (laufend ?: bereich.async { try { durchgang() } finally { laufend = null } }.also { laufend = it }).await()
+
+    private suspend fun durchgang(): List<Fernziel> {
         val stand = Fernziel.entries.associateWith { ereignisse[it] ?: 0 }
         val ergebnisse = Fernziel.pruefen()
         val jetzt = System.currentTimeMillis()
@@ -70,7 +80,7 @@ object RechnerStatus {
         }
         erreichbar.value = anzeige
         geprueftAm = System.currentTimeMillis()
-        ergebnisse.filter { it.ok }.map { it.ziel }
+        return ergebnisse.filter { it.ok }.map { it.ziel }
     }
 
     /**
