@@ -34,7 +34,7 @@ final class JarvisAgent {
     - Franks Projekte liegen in ~/proggs (Monorepo). Zugangsdaten (~/SK, Tresor von Jarvis) sind für dich gesperrt: nie lesen, nie ausgeben, nie vorlesen.
     - OpenLauncher, TerminalVoiceOverlay und ClaudeVoiceOverlay nur über ihre Update-Skripte aktualisieren, nie von Hand bauen.
     - Beginnt Franks Nachricht mit „Übergib bitte folgende Aufgabe an den Programmierer:“ oder „Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell …:“, ist alles danach ausdrücklich ein NEUER Programmierauftrag für das CLI auf diesem Mac: \
-    programmieren mit ziel pc und, wenn Frank nichts anderes nennt, modell opus; ein Modell im Einstieg (Opus 5.5, Sol 6.1, Kimi K3.1 Pro, Gemini 4 Argon) gilt verbindlich, frag nicht danach, die App setzt es selbst in den Aufruf; vollständig ausformuliert, beantworte oder programmiere ihn nicht selbst, nimm nicht programmier_nachtrag. \
+    programmieren mit ziel pc und, wenn Frank nichts anderes nennt, modell opus; ein Modell im Einstieg (Opus 5.5, Sol 6.1, Kimi K3.1 Pro, Gemini 4 Argon) gilt verbindlich, frag nicht nach dem Modell, die App setzt es selbst in den Aufruf. Bei Sol 6.1 stellst du die CLI- und Review-Frage, wenn das Ergebnis sie verlangt; bei Gemini 4 Argon fragst du vor dem Aufruf kurz, ob am Ende ein Review laufen soll, und gibst review mit, denn Antigravity kann nicht selbst fragen. Effort, Profil, Modus und CLI nur, wenn Frank sie nennt; vollständig ausformuliert, beantworte oder programmiere ihn nicht selbst, nimm nicht programmier_nachtrag. \
     Nur so bekommt die Sitzung eine Auftragsnummer für Nachträge und Rückfragen. Nenne Frank den Rechner aus dem Ergebnis; läuft der Auftrag nicht am Mac, sag ihm das ausdrücklich. Alle durch „ ; “ getrennten Aufgaben gehen unverändert getrennt in genau EINEN Aufruf, also eine Sitzung. \
     Ist das Handy nicht erreichbar, startest du denselben Auftrag direkt mit openlauncher_sitzung und sagst Frank, dass Nachträge an diese Sitzung dann nicht gehen. \
     „Starte eine OpenLauncher-Session …“ mit genanntem Modell/CLI = openlauncher_sitzung.
@@ -115,6 +115,7 @@ final class JarvisAgent {
         defer { g.arbeitet = false; g.speichern() }
         GespraechsSpeicher.shared.nachOben(g)
 
+        let vorigeWahl = ProgrammierVorspann.offeneWahl(in: g.nachrichten)
         g.nachrichten.append(Nachricht(rolle: .frank, text: text, gesprochen: gesprochen, bild: bild))
         var inhalt: [JSONObjekt] = []
         if let bild { inhalt.append(Self.bildBlock(bild)) }
@@ -217,7 +218,7 @@ final class JarvisAgent {
             let ergebnisse: [WerkzeugErgebnis] = await withTaskGroup(of: (Int, WerkzeugErgebnis).self) { gruppe in
                 for (i, auf) in aufrufe.enumerated() {
                     let name = auf["name"] as? String ?? "?"
-                    let args = ProgrammierVorspann.verbindlich(werkzeug: name, args: auf["input"] as? JSONObjekt ?? [:], frage: text)
+                    let args = ProgrammierVorspann.verbindlich(werkzeug: name, args: auf["input"] as? JSONObjekt ?? [:], frage: text, vorige: vorigeWahl)
                     gruppe.addTask { (i, await Self.fuehreAus(name, args, lokal: lokaleNamen.contains(name))) }
                 }
                 var r = [WerkzeugErgebnis](repeating: WerkzeugErgebnis(text: ""), count: aufrufe.count)

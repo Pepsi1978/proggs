@@ -34,7 +34,11 @@ final class AppSteuerung {
     var bereich: Bereich = .start { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
     var gespraech: Gespraech? {
         // Ein „Nachtrag:“ gehört zur Sitzung, in der er begonnen wurde: Im nächsten Gespräch bleibt nur der Text.
-        didSet { if gespraech !== oldValue, nachtragAktiv { eingabeText = ProgrammierVorspann.ohneNachtrag(eingabeText) } }
+        didSet {
+            guard gespraech !== oldValue else { return }
+            programmierVorwahlSchliessen()
+            if nachtragAktiv { eingabeText = ProgrammierVorspann.ohneNachtrag(eingabeText) }
+        }
     }
     /// Der Text der Sprechblase, wie am Handy einer für alle Ansichten: Er überlebt jeden Ansichtswechsel, und die schwebenden Knöpfe können ihn bearbeiten.
     var eingabeText = "" { didSet { if !eingabeText.isEmpty { geleerterText = nil; blaseKompakt = false } } }
@@ -123,6 +127,7 @@ final class AppSteuerung {
 
     /// „Neue Session“ der schwebenden Knöpfe, wie am Handy: leeres Gespräch, die Blase klappt ohne Text ein.
     func neueSession() {
+        programmierVorwahlSchliessen()
         startOeffnen()
         blaseKompakt = true
     }
@@ -141,6 +146,11 @@ final class AppSteuerung {
     }
 
     /// Setzt den Vorspann vor den Text; ein zweiter Klick nimmt genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
+    func programmierVorwahlSchliessen() {
+        vorwahlFrist?.cancel()
+        programmierVorwahlOffen = false
+    }
+
     func programmiererUmschalten() {
         vorwahlFrist?.cancel()
         if programmiererAktiv { programmierVorwahlOffen = false; eingabeText = ProgrammierVorspann.ohneAuftrag(eingabeText); return }
@@ -156,14 +166,14 @@ final class AppSteuerung {
 
     /// Knopf der Modellwahl: setzt den Einstieg mit diesem Modell vor den Text; gesendet wird erst von Frank.
     func programmierVorwahl(_ modell: ProgrammierVorspann.Modell) {
-        vorwahlFrist?.cancel()
-        programmierVorwahlOffen = false
-        eingabeText = ProgrammierVorspann.mitAuftrag(ProgrammierVorspann.ohneNachtrag(eingabeText), vorspann: modell.vorspann)
+        programmierVorwahlSchliessen()
+        eingabeText = ProgrammierVorspann.mitAuftrag(ProgrammierVorspann.ohneAuftrag(ProgrammierVorspann.ohneNachtrag(eingabeText)), vorspann: modell.vorspann)
         zurBlase()
     }
 
     func nachtragUmschalten() {
         guard nachtragMoeglich else { return }
+        programmierVorwahlSchliessen()
         if nachtragAktiv { eingabeText = ProgrammierVorspann.ohneNachtrag(eingabeText); return }
         eingabeText = ProgrammierVorspann.mitNachtrag(ProgrammierVorspann.ohneAuftrag(eingabeText))
         zurBlase()
@@ -223,6 +233,7 @@ final class AppSteuerung {
 
     /// Text an Jarvis schicken (aus Zentrale, Menüleiste oder Chat).
     func sende(_ text: String, gesprochen: Bool = false, bild: Data? = nil) {
+        programmierVorwahlSchliessen()
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty || bild != nil else { return }
         log("gespraech", "Frage an Jarvis: \(t.prefix(500))", wo: gesprochen ? "Sprache" : "Texteingabe")

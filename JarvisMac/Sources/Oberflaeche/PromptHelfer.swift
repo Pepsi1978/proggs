@@ -71,37 +71,64 @@ enum ProgrammierVorspann {
     static let auftrag = "Übergib bitte folgende Aufgabe an den Programmierer:"
     static let nachtrag = "Nachtrag:"
 
-    /// Die vier Modelle des Programmierknopfs, wie am Handy (ProgrammiererVorlage.kt). `handy` geht an `programmieren`, `mac` an `openlauncher_sitzung`.
+    /// Die vier Modelle des Programmierknopfs, wie am Handy (ProgrammiererVorlage.kt). `handy` geht an `programmieren`, `mac` an `openlauncher_sitzung`, `clis` sind die wählbaren CLIs.
     struct Modell: Identifiable {
         let label: String
+        let vorspann: String
         let handy: [String: String]
         let mac: [String: String]
+        let clis: [String]
         var id: String { label }
-        var vorspann: String { "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell \(label):" }
+        init(_ label: String, handy: [String: String], mac: [String: String], clis: [String]) {
+            self.label = label
+            vorspann = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell \(label):"
+            self.handy = handy; self.mac = mac; self.clis = clis
+        }
     }
     private static let standard = ["effort": "high", "profil": "minimal", "modus": "schnell"]
+    private static func mitStandard(_ d: [String: String]) -> [String: String] { d.merging(standard) { a, _ in a } }
     static let modelle: [Modell] = [
-        Modell(label: "Opus 5.5", handy: ["modell": "opus"], mac: ["modell": "claude-opus-5-5[1m]", "cli": "claude"].merging(standard) { a, _ in a }),
-        Modell(label: "Sol 6.1", handy: ["modell": "sol"], mac: ["modell": "gpt-6.1-sol", "anbieter": "openai", "cli": "codex"].merging(standard) { a, _ in a }),
-        Modell(label: "Kimi K3.1 Pro", handy: ["modell": "Kimi K3.1 Pro", "cli": "opencode"].merging(standard) { a, _ in a },
-               mac: ["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"].merging(standard) { a, _ in a }),
-        Modell(label: "Gemini 4 Argon", handy: ["modell": "Gemini 4 Argon", "cli": "antigravity"].merging(standard) { a, _ in a },
-               mac: ["modell": "gemini-4-argon", "anbieter": "google", "cli": "antigravity"].merging(standard) { a, _ in a }),
+        Modell("Opus 5.5", handy: ["modell": "opus"], mac: mitStandard(["modell": "claude-opus-5-5[1m]", "cli": "claude"]), clis: ["claude"]),
+        Modell("Sol 6.1", handy: ["modell": "sol"], mac: mitStandard(["modell": "gpt-6.1-sol", "anbieter": "openai", "cli": "codex"]), clis: ["codex", "opencode"]),
+        Modell("Kimi K3.1 Pro", handy: mitStandard(["modell": "Kimi K3.1 Pro", "cli": "opencode"]),
+               mac: mitStandard(["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"]), clis: ["opencode", "kimi"]),
+        Modell("Gemini 4 Argon", handy: mitStandard(["modell": "Gemini 4 Argon", "cli": "antigravity"]),
+               mac: mitStandard(["modell": "gemini-4-argon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity", "opencode"]),
     ]
-    private static var alleAuftraege: [String] { [auftrag] + modelle.map(\.vorspann) }
+    private static let alleAuftraege: [String] = [auftrag] + modelle.map(\.vorspann)
 
     /// Das per Knopf im Einstieg gewählte Modell; nil ohne Modell im Einstieg.
     static func modell(in t: String) -> Modell? { let v = vorn(t); return modelle.first { v.hasPrefix($0.vorspann) } }
     static func istBlosserEinstieg(_ t: String) -> Bool { alleAuftraege.contains(t) || t == nachtrag }
 
-    /// Der Knopf gilt verbindlich, auch gegen eine andere Angabe des Modells.
-    static func verbindlich(werkzeug: String, args: JSONObjekt, frage: String) -> JSONObjekt {
-        guard let m = modell(in: frage) else { return args }
-        var neu = args
+    /// Wie am Handy: Musste Jarvis erst nachfragen, gilt das Modell der vorigen Nachricht weiter, höchstens 10 Minuten und nur, solange nichts gestartet ist.
+    static func offeneWahl(in n: [Nachricht]) -> String? {
+        guard let i = n.lastIndex(where: { $0.rolle == .frank }), modell(in: n[i].text) != nil, Date().timeIntervalSince(n[i].zeit) < 600,
+              !n[(i + 1)...].contains(where: { $0.schritte.contains { ["programmieren", "openlauncher_sitzung"].contains($0.werkzeug) } }) else { return nil }
+        return n[i].text
+    }
+
+    private static func cliGenannt(_ cli: String, in t: String) -> Bool {
+        let muster = ["kimi": "kimi\\s*(code\\s*)?cli", "opencode": "open\\s*code", "antigravity": "antigravity|\\bagy\\b", "codex": "codex", "claude": "claude\\s*code"][cli]
+        return muster.map { t.range(of: $0, options: [.regularExpression, .caseInsensitive]) != nil } ?? false
+    }
+
+    /// Der Knopf gilt verbindlich: Modell immer; CLI, Effort, Profil und Modus nur, solange Frank sie nicht selbst nennt.
+    static func verbindlich(werkzeug: String, args: JSONObjekt, frage: String, vorige: String?) -> JSONObjekt {
+        guard let m = modell(in: frage) ?? (hatAuftrag(frage) ? nil : vorige.flatMap { modell(in: $0) }) else { return args }
+        let fest: [String: String]
         switch werkzeug {
-        case "programmieren": m.handy.forEach { neu[$0.key] = $0.value }
-        case "openlauncher_sitzung": m.mac.forEach { neu[$0.key] = $0.value }
-        default: break
+        case "programmieren": fest = m.handy
+        case "openlauncher_sitzung": fest = m.mac
+        default: return args
+        }
+        var neu = args
+        let worte = frage + "\n" + (vorige ?? "")
+        for (k, v) in fest {
+            let alt = (args[k] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+            if standard[k] != nil, !alt.isEmpty { continue }
+            if k == "cli", m.clis.contains(alt), cliGenannt(alt, in: worte) { continue }
+            neu[k] = v
         }
         return neu
     }

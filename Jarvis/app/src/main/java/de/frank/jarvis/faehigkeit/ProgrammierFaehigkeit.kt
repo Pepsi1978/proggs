@@ -419,18 +419,22 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val festModell = knopfModell?.let { ProgrammiererVorlage.katalogName(it) }
                 if (festModell != null) {
                     a.put("modell", festModell)
-                    a.put("cli", ProgrammiererVorlage.katalogCli(knopfModell.orEmpty()))
+                    a.put("cli", ProgrammiererVorlage.katalogCliFuer(knopfModell.orEmpty(), a.optString("cli").trim(), aktuell + "\n" + vorwahl?.text.orEmpty()))
                 } else if (knopfModell != null) {
                     a.put("modell", knopfModell)
                     // Die Wahl ist verbindlich: Ein fremdes CLI (anders geschrieben, als Kurzname) führte sonst zu einem anderen Modell oder einer Rückfrage.
                     OpenLauncherKatalog.cliAus(a.optString("cli").trim())?.let { if (it !in listOf(CLI_CODEX, CLI_OPENCODE)) a.remove("cli") }
                 }
+                // Steht nach einem Fehlstart die Karte dieser Runde offen, entscheidet der Tipp: Ein erneuter Aufruf des Modells startet nichts und fragt nichts.
+                if (knopfModell == null && karteZurRunde && runde != null && ProgrammiererVorlage.katalogName(runde.modell) != null) {
+                    a.remove("modell"); a.remove("cli")
+                }
                 // Kurze Antwort „Kimi“ oder „Argon“ auf eine offene Modellkarte gilt wie der Tipp auf den Knopf.
-                if (knopfModell == null && !ausChatGpt && offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL }) {
-                    festesModellAusAntwort(worte?.aktuell).takeIf { it.isNotEmpty() }?.let { m ->
-                        a.put("modell", ProgrammiererVorlage.katalogName(m))
-                        a.put("cli", ProgrammiererVorlage.katalogCli(m))
-                    }
+                val antwortModell = if (knopfModell == null && !ausChatGpt && !karteZurRunde && offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL })
+                    festesModellAusAntwort(worte?.aktuell).takeIf { it.isNotEmpty() } else null
+                antwortModell?.let { m ->
+                    a.put("modell", ProgrammiererVorlage.katalogName(m))
+                    a.put("cli", ProgrammiererVorlage.katalogCliFuer(m, a.optString("cli").trim(), worte?.aktuell.orEmpty()))
                 }
                 val modell = when {
                     knopfModell != null -> knopfModell
@@ -463,8 +467,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val katalogWorte = if (vorwahl != null && vorwahl.text != aktuell) aktuell + "\n" + vorwahl.text else worte?.aktuell
                 val ersterKatalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
                 // Ein per Knopf gewähltes Modell aus dem Angebot scheitert nicht an einer Zusatzangabe des Modells: dann ohne sie.
-                val katalog = if (festModell != null && ersterKatalog is Ergebnis) {
-                    listOf("effort", "profil", "modus").forEach { a.remove(it) }
+                val katalog = if (festModell != null && ersterKatalog is Ergebnis && ZUSATZ_FELDER.any { a.optString(it).isNotBlank() }) {
+                    ZUSATZ_FELDER.forEach { a.remove(it) }
                     katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
                 } else ersterKatalog
                 // Die Vorwahl startet auf jeden Fall; nur die Zusatzangaben entfallen, und Frank erfährt das.
@@ -494,16 +498,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     katalog is Ergebnis && vorwahl == null -> katalog
                     // Für diese Modelle gibt es keinen Weg außerhalb des Angebots: nie still als Opus starten.
                     festModell != null && katalog !is OpenLauncherKatalog.Wahl ->
-                        ausweg(katalog as? Ergebnis ?: Ergebnis("Noch nichts gestartet: $festModell ließ sich nicht im Angebot von OpenLauncher finden.", fehler = true))
+                        ausweg(Ergebnis("$festModell ist nicht gestartet: Das Angebot von OpenLauncher ist gerade nicht lesbar oder enthält das Modell nicht.", fehler = true))
+                    festModell != null && ziel == "cloud" ->
+                        ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                    // Ohne Hooks (Antigravity, Kimi Code CLI) kann die Sitzung nicht selbst nach dem Review fragen: wie bei Sol im Codex CLI vorher fragen.
+                    (knopfModell ?: antwortModell)?.takeIf { ProgrammiererVorlage.katalogName(it) != null } != null && katalog is OpenLauncherKatalog.Wahl &&
+                        katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE) && !a.has("review") ->
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, (knopfModell ?: antwortModell).orEmpty(), katalog.cli, STUFE_REVIEW,
+                            runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade(), zusatz = ZUSATZ_FELDER.joinToString("|") { a.optString(it).trim() }))
                     katalog is OpenLauncherKatalog.Wahl -> {
-                        val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
-                        (if (pc.isEmpty()) ausweg(Ergebnis(ziele.first().fehlt(), fehler = true)) else starten(katalog.cli) { nummer ->
-                            withContext(KatalogStart(katalog) + ServerWahl(ziel)) {
-                                // Ohne Hooks (Codex, Kimi, Antigravity) gilt Franks Review-Angabe als REVIEW-Zeile; die anderen fragen am Ende selbst.
-                                starteErstes(pc, appName, auftrag, a.optBoolean("review") && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE),
-                                    nummer, neu, MODELL_KATALOG, katalog.cli)
-                            }
-                        }).also { ergebnis ->
+                        starten(katalog.cli) { nummer ->
+                            withContext(ServerWahl(ziel)) { starteKatalog(katalog, appName, auftrag, a.optBoolean("review"), nummer, neu) }
+                        }.also { ergebnis ->
                             // Erst nach dem Start haben offene Knöpfe ausgedient; nach einem Fehlstart bleiben sie (Opus/Sol als Ausweg).
                             // Ein Auftrag mit vorgewähltem Modell ist ein eigener: Karten älterer Aufträge bleiben offen.
                             if (knopfModell == null && (!ergebnis.fehler || ergebnis.text.startsWith("Unklar"))) herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
@@ -580,7 +586,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // (auch kein Laden des Angebots und keine Rückfrage, die den Auftrag aufhielte).
         if (!ausChatGpt && !worte.isNullOrBlank() && !OpenLauncherKatalog.textGenannt(modellText, worte)) return null
         val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.1 Sol"; else -> modellText }
-        val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: Exception) {
+        val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
         }
         return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
@@ -646,7 +652,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
                                   val ursprung: de.frank.jarvis.speech.SprachUrsprung?, val ziel: String = "",
                                   val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL,
-                                  val seit: Long = System.currentTimeMillis(), val runde: String = "", val anhaenge: List<String> = emptyList())
+                                  val seit: Long = System.currentTimeMillis(), val runde: String = "", val anhaenge: List<String> = emptyList(),
+                                  /** Franks Effort|Profil|Modus zu Kimi oder Argon, bis die Folgefrage beantwortet ist. */
+                                  val zusatz: String = "")
 
     /** Ein per Knopf gestarteter Auftrag, gemerkt je Gespräch für [KNOPF_FRIST_MS] (siehe [knopfStartIn]). */
     /** Eine mit Modelleinstieg gesendete Nachricht: [text] kennzeichnet die Runde, [start] den schon laufenden Auftrag. Nur im Speicher, nach einem Neustart wird nichts geerbt. */
@@ -668,14 +676,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
 
     /** Die Angebotswahl zum Knopf [wert] (Standards minimal, schnell, high): [OpenLauncherKatalog.Wahl] oder [Ergebnis] mit dem Grund. */
-    private suspend fun festeKatalogWahl(wert: String): Any {
+    private suspend fun festeKatalogWahl(wert: String, cli: String, zusatz: String): Any {
         val name = ProgrammiererVorlage.katalogName(wert) ?: return Ergebnis("Noch nichts gestartet: Unbekanntes Modell $wert.", fehler = true)
         val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Noch nichts gestartet: ${fehler.message}", fehler = true)
         }
-        return when (val l = OpenLauncherKatalog.aufloesen(alle, name, "", "", "", ProgrammiererVorlage.katalogCli(wert).orEmpty())) {
+        val z = zusatz.split("|") + listOf("", "", "")
+        val c = cli.ifEmpty { ProgrammiererVorlage.katalogCli(wert).orEmpty() }
+        return when (val l = OpenLauncherKatalog.aufloesen(alle, name, z[0], z[1], z[2], c)) {
             is OpenLauncherKatalog.Aufloesung.Start -> l.wahl
-            is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("Noch nichts gestartet: ${l.text}", fehler = true)
+            is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("$name ist nicht gestartet: Eine Angabe passt nicht zum Angebot von OpenLauncher.", fehler = true)
+        }
+    }
+
+    /** Startet eine geprüfte Angebotswahl am Mac oder Server. Ohne Hooks (Codex, Kimi, Antigravity) wird [review] zur REVIEW-Zeile; die anderen fragen am Ende selbst. */
+    private suspend fun starteKatalog(k: OpenLauncherKatalog.Wahl, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean): Ergebnis {
+        val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
+        if (pc.isEmpty()) return Ergebnis(ziele.first().fehlt(), fehler = true)
+        return withContext(KatalogStart(k)) {
+            starteErstes(pc, appName, auftrag, review && k.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE), nummer, neu, MODELL_KATALOG, k.cli)
         }
     }
 
@@ -691,7 +710,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String, runde: String): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC oder, ist der aus, in Codex Cloud). Frag ihn kurz: " +
-            "„Opus 5.5 oder Sol 6.1?“ und rufe programmieren danach mit demselben Auftrag und modell=opus bzw. modell=sol erneut auf.")
+            "„Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Argon mit cli=antigravity erneut auf.")
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
         // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
@@ -704,13 +723,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             wahlenSichern(app)
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
                 STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
-                STUFE_REVIEW -> "Frank hat schon Sol 6.1 im Codex CLI gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
+                STUFE_REVIEW -> "Frank hat schon ${modellName(alt.modell, alt.cli)} gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
                 else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.1“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
         karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde, anhaenge = anhangPfade()))
         return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“, „Sol 6.1“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“. $KARTE_FRAGT " +
-            "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
+            "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro bzw. modell=Gemini 4 Argon auf; sonst starte nichts.")
     }
 
     /**
@@ -721,6 +740,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun wahlAnbieten(w: OffeneWahl): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         val review = w.stufe == STUFE_REVIEW
+        val festName = ProgrammiererVorlage.katalogName(w.modell)
+        if (festName != null) return if (ausChatGpt || gespraech.isEmpty())
+            Ergebnis("Noch nichts gestartet: $festName im ${OpenLauncherKatalog.CLI_NAMEN[w.cli]} kann keine Rückfragen stellen. Frag Frank kurz: „Soll ein Review laufen, wenn die App oder das APK-Update fertig programmiert ist? Ja oder Nein?“ " +
+                "und rufe programmieren danach mit demselben Auftrag, modell=$festName, cli=${w.cli} und review=true bzw. review=false erneut auf.")
+        else {
+            offeneWahlen.filterValues { it.gespraech == gespraech && it.stufe == STUFE_MODELL }.keys.forEach { erinnerungen.remove(it)?.cancel() }
+            karte(w.copy(gespraech = gespraech, ursprung = kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]))
+            Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review. $KARTE_FRAGT Der Tipp startet den Auftrag; starte nichts selbst.")
+        }
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis(if (review)
             "Noch nichts gestartet: Sol 6.1 im Codex CLI kann keine Rückfragen stellen, deshalb fragt Jarvis vorher nach dem Review (diese Frage gehört zum " +
                 "Codex-Ablauf und gilt nicht als ungefragt angefordertes Review). Frag Frank kurz: „Soll ein Review laufen, wenn die App oder das APK-Update fertig " +
@@ -778,7 +806,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
         STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
-        STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+        STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
         else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
@@ -812,6 +840,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val naechste = when {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
+            w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_ARGON && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
             else -> null
         }
         if (naechste != null) {
@@ -819,18 +848,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return
         }
         val modell = if (w.stufe == STUFE_MODELL) wert else w.modell
-        val cli = when (w.stufe) { STUFE_CLI -> wert; STUFE_REVIEW -> CLI_CODEX; else -> CLI_CODEX }
+        val cli = when (w.stufe) { STUFE_CLI -> wert; STUFE_REVIEW -> w.cli.ifEmpty { CLI_CODEX }; else -> CLI_CODEX }
         val review = if (w.stufe == STUFE_REVIEW) wert == REVIEW_JA else w.review && cli != CLI_OPENCODE
         val nummer = Auftragsbuch.neueNummer()
         val ergebnis = withContext(umgebung + ServerWahl(w.ziel)) {
             if (ProgrammiererVorlage.katalogName(modell) != null) {
                 // Kimi K3.1 Pro und Gemini 4 Argon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
-                when (val k = festeKatalogWahl(modell)) {
-                    is OpenLauncherKatalog.Wahl -> {
-                        val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
-                        if (pc.isEmpty()) Ergebnis(ziele.first().fehlt(), fehler = true)
-                        else withContext(KatalogStart(k)) { starteErstes(pc, w.app, w.auftrag, w.review && k.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE), nummer, w.neu, MODELL_KATALOG, k.cli) }
-                    }
+                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell)} ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
+                else when (val k = festeKatalogWahl(modell, w.cli, w.zusatz)) {
+                    is OpenLauncherKatalog.Wahl -> starteKatalog(k, w.app, w.auftrag, review, nummer, w.neu)
                     else -> k as Ergebnis
                 }
             } else {
@@ -2821,12 +2847,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         /** Franks kurze Antwort nennt genau Kimi K3.1 Pro oder Gemini 4 Argon: dessen Knopfwert, sonst leer. Ein anderes Kimi („Kimi K3“) zählt nicht. */
         internal fun festesModellAusAntwort(worte: String?): String {
-            val t = OpenLauncherKatalog.gesprochen(worte?.trim().orEmpty()).lowercase(Locale.ROOT)
-            if (t.isEmpty() || t.length > 60 || Regex("\\b(opus|sol)\\b").containsMatchIn(t)) return ""
-            val kimi = Regex("\\bkimi\\b").containsMatchIn(t) && !Regex("\\bk?\\s*3(?![.,]\\d)").containsMatchIn(t) && "highspeed" !in t.replace(" ", "")
-            val argon = Regex("\\bargon\\b|\\bgemini\\s*4\\b").containsMatchIn(t)
-            return when { kimi && !argon -> ProgrammiererVorlage.MODELL_KIMI; argon && !kimi -> ProgrammiererVorlage.MODELL_ARGON; else -> "" }
+            val t = OpenLauncherKatalog.gesprochen(worte?.trim().orEmpty()).lowercase(Locale.ROOT).trimEnd('.', '!', ' ')
+            return when {
+                t.isEmpty() || t.length > 60 -> ""
+                KIMI_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_KIMI
+                ARGON_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_ARGON
+                else -> ""
+            }
         }
+        private val KIMI_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*kimi(?:\\s*k?\\s*3[.,]1)?(?:\\s*pro)?(?:\\s+bitte)?")
+        private val ARGON_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*(?:argon|gemini(?:\\s*4)?\\s+argon|gemini\\s*4)(?:\\s+bitte)?")
+        private val ZUSATZ_FELDER = listOf("effort", "profil", "modus")
 
         /** Nennt Frank selbst ein Modell (Opus, Sol oder GPT)? Nur dann gilt ein vom Modell eingesetztes modell ohne Knöpfe. */
         internal fun modellGenannt(worte: String): Boolean = Regex("\\b(opus|sol|gpt)\\b").containsMatchIn(worte.lowercase(Locale.ROOT))
@@ -2851,7 +2882,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .apply {
                         offeneWahlen[id]?.let { w ->
                             put("wahl", JSONObject().put("app", w.app).put("auftrag", w.auftrag).put("review", w.review).put("neu", w.neu)
-                                .put("gespraech", w.gespraech).put("ziel", w.ziel).put("modell", w.modell).put("cli", w.cli).put("stufe", w.stufe).put("seit", w.seit)
+                                .put("gespraech", w.gespraech).put("ziel", w.ziel).put("modell", w.modell).put("cli", w.cli).put("stufe", w.stufe).put("seit", w.seit).put("zusatz", w.zusatz)
                                 .put("anhaenge", JSONArray(w.anhaenge)))
                         }
                     })
@@ -2878,7 +2909,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     val w = o.optJSONObject("wahl")?.let {
                         OffeneWahl(it.optString("app"), it.optString("auftrag"), it.optBoolean("review"), it.optBoolean("neu"), it.optString("gespraech"), null,
                             it.optString("ziel"), it.optString("modell"), it.optString("cli"), it.optString("stufe", STUFE_MODELL), it.optLong("seit", zeit),
-                            anhaenge = it.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { i -> l.optString(i) } }.orEmpty())
+                            anhaenge = it.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { i -> l.optString(i) } }.orEmpty(), zusatz = it.optString("zusatz"))
                     }
                     val s = o.optString("stand")
                     // Offen ohne gemerkten Auftrag ließe sich nicht starten: dann nicht mehr aktiv.
