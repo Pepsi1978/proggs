@@ -1878,11 +1878,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val app = getApplication<android.app.Application>()
                 if (bearbeitet != null) {
-                    val ok = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.aendere(app, bearbeitet.nummer, text, bearbeitet.erstellt) }
+                    val ok = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.aendere(app, bearbeitet.nummer, text, bearbeitet.erstellt, nurBeiText = bearbeitet.text) }
                     val p = if (ok) null else withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.speichere(app, text) }
                     meldung = when {
                         ok -> "Prompt ${bearbeitet.nummer} geändert."
-                        p != null -> "Prompt ${bearbeitet.nummer} gibt es nicht mehr. Der Text ist als Prompt ${p.nummer} gespeichert."
+                        p != null -> "Prompt ${bearbeitet.nummer} wurde inzwischen geändert oder gelöscht. Dein Text ist als Prompt ${p.nummer} gespeichert."
                         else -> "Prompt ${bearbeitet.nummer} ließ sich nicht speichern."
                     }
                     if (!ok && p == null) return@launch

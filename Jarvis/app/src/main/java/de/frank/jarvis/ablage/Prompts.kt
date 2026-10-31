@@ -30,7 +30,7 @@ object Prompts {
     val stand: StateFlow<Long> = _stand.asStateFlow()
 
     /** [ordnungZeit]: wann zuletzt umsortiert wurde. [geloescht]: hier gelöschte Prompts (Kennung → Zeit), die der Server noch nicht kennt. */
-    private class Stand(val liste: List<Prompt>, val defekt: Boolean = false, val ordnungZeit: Long = 0L, val geloescht: Map<Long, Long> = emptyMap())
+    private class Stand(val liste: List<Prompt>, val defekt: Boolean = false, val ordnungZeit: Long = 0L, val geloescht: Map<Long, Long> = emptyMap(), val inOrdnung: Set<Long> = emptySet())
 
     /** [Prompt.erstellt] dient als feste Kennung: fehlende (0) oder doppelte Werte bekommen beim Lesen den nächsten freien. */
     private fun List<Prompt>.eindeutig(): List<Prompt> {
@@ -60,7 +60,9 @@ object Prompts {
                 arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trimStart(), it.optLong("erstellt"), it.optString("titel").trim(), it.optString("quelle"), it.optLong("geaendert").takeIf { g -> g > 0 } ?: it.optLong("erstellt")) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
             }.sortedBy { it.nummer }.eindeutig().durchnummeriert()
             val weg = json.optJSONObject("geloescht")
-            Stand(liste, false, json.optLong("ordnung_zeit"), weg?.keys()?.asSequence()?.mapNotNull { k -> k.toLongOrNull()?.let { it to weg.optLong(k) } }?.toMap().orEmpty())
+            val ord = json.optJSONArray("in_ordnung")
+            Stand(liste, false, json.optLong("ordnung_zeit"), weg?.keys()?.asSequence()?.mapNotNull { k -> k.toLongOrNull()?.let { it to weg.optLong(k) } }?.toMap().orEmpty(),
+                ord?.let { o -> (0 until o.length()).mapTo(HashSet()) { o.optLong(it) } }.orEmpty())
         } catch (e: Exception) {
             runCatching { f.copyTo(File(f.path + ".defekt-" + f.lastModified())) }
             Logbuch.fehler("Prompts defekt", e)
@@ -69,9 +71,9 @@ object Prompts {
     }
 
     @Synchronized
-    private fun schreibe(c: Context, liste: List<Prompt>, ordnungZeit: Long? = null, geloescht: Map<Long, Long>? = null): Boolean {
+    private fun schreibe(c: Context, liste: List<Prompt>, ordnungZeit: Long? = null, geloescht: Map<Long, Long>? = null, inOrdnung: Set<Long>? = null): Boolean {
         val alt = lies(c)
-        val inhalt = JSONObject().put("format", 1).put("ordnung_zeit", ordnungZeit ?: alt.ordnungZeit)
+        val inhalt = JSONObject().put("format", 1).put("ordnung_zeit", ordnungZeit ?: alt.ordnungZeit).put("in_ordnung", JSONArray((inOrdnung ?: alt.inOrdnung).toList()))
             .put("geloescht", JSONObject().apply { (geloescht ?: alt.geloescht).forEach { (k, v) -> put(k.toString(), v) } })
             .put("prompts", JSONArray(liste.map { JSONObject().put("nummer", it.nummer).put("text", it.text).put("erstellt", it.erstellt).put("titel", it.titel).put("quelle", it.quelle).put("geaendert", it.geaendert) })).toString(2)
         val atomar = AtomicFile(datei(c))
@@ -106,9 +108,11 @@ object Prompts {
      * inzwischen steht (nach Löschen oder Verschieben trägt er womöglich eine andere [nummer]).
      */
     @Synchronized
-    fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
+    fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null, nurBeiText: String? = null): Boolean {
         val s = lies(c)
         val ziel = s.liste.firstOrNull { if (erstellt != null) it.erstellt == erstellt else it.nummer == nummer }
+        // Eine andere Jarvis-Version hat ihn inzwischen geändert: nicht still überschreiben.
+        if (nurBeiText != null && ziel?.text != nurBeiText) return false
         val sauber = DiktatTrenner.gespeichert(text)
         if (s.defekt || sauber.isEmpty() || ziel == null) return false
         return schreibe(c, s.liste.map { if (it.erstellt == ziel.erstellt) it.copy(text = sauber, titel = if (it.text == sauber) it.titel else "", geaendert = System.currentTimeMillis()) else it })
@@ -119,7 +123,7 @@ object Prompts {
     fun setzeTitel(c: Context, erstellt: Long, text: String, titel: String): Boolean {
         val s = lies(c)
         if (s.defekt || s.liste.none { it.erstellt == erstellt && it.text == text }) return false
-        return schreibe(c, s.liste.map { if (it.erstellt == erstellt && it.text == text) it.copy(titel = titel.trim(), geaendert = System.currentTimeMillis()) else it })
+        return schreibe(c, s.liste.map { if (it.erstellt == erstellt && it.text == text) it.copy(titel = titel.trim()) else it })
     }
 
     @Synchronized
@@ -144,12 +148,16 @@ object Prompts {
         val gezogen = reihenfolge.distinct()
         val drin = gezogen.toSet()
         val neu = gezogen.mapNotNull(nach::get) + s.liste.filter { it.erstellt !in drin }
-        return neu.map { it.erstellt } == s.liste.map { it.erstellt } || schreibe(c, neu.durchnummeriert(), ordnungZeit = System.currentTimeMillis())
+        return neu.map { it.erstellt } == s.liste.map { it.erstellt } || schreibe(c, neu.durchnummeriert(), ordnungZeit = System.currentTimeMillis(), inOrdnung = neu.mapTo(HashSet()) { it.erstellt })
     }
 
     // ---- Abgleich mit dem Server (AblageSync) ----
 
     fun ordnungZeit(c: Context): Long = lies(c).ordnungZeit
+
+    /** Diese Reihenfolge ist beim Server: Alle Jarvis-Versionen kennen genau diese Prompts als geordnet. */
+    @Synchronized
+    fun ordnungGesendet(c: Context, ids: List<Long>) { val s = lies(c); if (!s.defekt) schreibe(c, s.liste, inOrdnung = ids.toSet()) }
 
     fun offeneLoeschungen(c: Context): Map<Long, Long> = lies(c).geloescht
 
@@ -162,13 +170,13 @@ object Prompts {
         val s = lies(c)
         if (s.defekt) return false
         val da = s.liste.any { it.erstellt == p.erstellt }
-        return schreibe(c, (if (da) s.liste.map { if (it.erstellt == p.erstellt) p.copy(nummer = it.nummer) else it } else mitNeuem(s.liste, p)).durchnummeriert())
+        return schreibe(c, (if (da) s.liste.map { if (it.erstellt == p.erstellt) p.copy(nummer = it.nummer) else it } else mitNeuem(s.liste, p, s.inOrdnung)).durchnummeriert())
     }
 
-    /** Neue stehen unten, untereinander das Älteste zuerst: So kommen alle Jarvis-Versionen auf dieselben Nummern, egal in welcher Folge sie eintreffen. */
-    private fun mitNeuem(liste: List<Prompt>, p: Prompt): List<Prompt> {
+    /** Neue stehen unter der gemeinsamen Reihenfolge, untereinander das Älteste zuerst: So kommen alle Jarvis-Versionen auf dieselben Nummern, egal in welcher Folge sie eintreffen. */
+    private fun mitNeuem(liste: List<Prompt>, p: Prompt, inOrdnung: Set<Long>): List<Prompt> {
         var platz = liste.size
-        while (platz > 0 && liste[platz - 1].erstellt > p.erstellt) platz--
+        while (platz > 0 && liste[platz - 1].erstellt !in inOrdnung && liste[platz - 1].erstellt > p.erstellt) platz--
         return liste.subList(0, platz) + p + liste.subList(platz, liste.size)
     }
 
@@ -185,6 +193,6 @@ object Prompts {
         if (s.defekt) return false
         val nach = s.liste.associateBy { it.erstellt }
         val drin = reihenfolge.toSet()
-        return schreibe(c, (reihenfolge.distinct().mapNotNull(nach::get) + s.liste.filter { it.erstellt !in drin }).durchnummeriert(), ordnungZeit = zeit)
+        return schreibe(c, (reihenfolge.distinct().mapNotNull(nach::get) + s.liste.filter { it.erstellt !in drin }).durchnummeriert(), ordnungZeit = zeit, inOrdnung = drin)
     }
 }

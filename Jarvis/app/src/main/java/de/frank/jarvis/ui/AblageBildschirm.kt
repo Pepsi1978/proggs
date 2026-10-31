@@ -133,6 +133,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val laeufe by Agenten.laeufe.collectAsState()
     val uebertragungen by AblageZentrale.uebertragungen(context).liste.collectAsState()
     val arbeiten by AblageZentrale.arbeiten.collectAsState()
+    val abgleichHinweis by de.frank.jarvis.ablage.AblageSync.hinweis.collectAsState()
     val bereich = rememberCoroutineScope()
     val aktionen = rememberAblageAktionen(vm)
     // null = noch nicht geladen (kein Leer-Hinweis); bei Änderungen bleibt die vorige Liste stehen, bis die neue da ist.
@@ -196,14 +197,14 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     fun loesche(e: Eintrag, a: Anhang?) {
         val teil = if (a == null) nurReiter(e) else null
         bereich.launch {
-            withContext(Dispatchers.IO) {
+            val geloescht = withContext(Dispatchers.IO) {
                 when {
                     a != null -> speicher.loescheAnhang(e.id, a.id)
-                    teil != null -> teil.forEach { speicher.loescheAnhang(e.id, it.id) }
+                    teil != null -> teil.map { speicher.loescheAnhang(e.id, it.id) }.all { it }
                     else -> speicher.loescheEintrag(e.id)
                 }
             }
-            vm.meldung = if (a != null) "„${a.originalName}“ gelöscht." else if (teil != null) "${teil.size} Datei(en) aus „${e.titel}“ gelöscht." else "„${e.titel}“ gelöscht."
+            vm.meldung = if (!geloescht) "„${a?.originalName ?: e.titel}“ ließ sich nicht löschen oder ist schon weg." else if (a != null) "„${a.originalName}“ gelöscht." else if (teil != null) "${teil.size} Datei(en) aus „${e.titel}“ gelöscht." else "„${e.titel}“ gelöscht."
             if (a == null) { offenerEintrag = null; offenerAnhang = null } else offenerAnhang = null
         }
     }
@@ -274,6 +275,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
             }
         }
+        abgleichHinweis?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = f.gefahr, fontSize = 13.sp) }
         // Alle Bereiche auf einen Blick, umbrechend statt seitlich zu wischen.
         FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Alle", filter == null) { filter = null }

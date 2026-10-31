@@ -122,6 +122,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     private val defektMerker = File(wurzel, "ablage-index.defekt")
     /** Hier gelöschte Einträge, die der Server noch nicht kennt: Kennung und Zeitpunkt. Nur so erfahren die anderen Jarvis-Versionen davon. */
     private val loeschungen = File(wurzel, "ablage-geloescht.json")
+    /** Einträge, denen eine Datei oder ein Text abhanden kam (nicht gelöscht): Das darf nie als Änderung an die anderen Geräte gehen, der Abgleich holt sie zurück. */
+    private val verlorenDatei = File(wurzel, "ablage-verloren.json")
     private val sperre = Any()
 
     // Zustand des letzten Ladens (alles unter [sperre]).
@@ -147,6 +149,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
 
     /** Sucht einen Eintrag: genauer Titel (ohne Groß/klein) oder ein eindeutiger Teil davon. */
     fun finde(titel: String): Eintrag? {
+        // Ein leerer Titel ergäbe über dateiname „Notiz“ und träfe womöglich einen fremden Eintrag, auch beim Löschen.
+        if (titel.isBlank()) return null
         val gesucht = schluessel(titel.removeSuffix(".md"))
         if (gesucht.isEmpty()) return null
         val alle = eintraege()
@@ -155,7 +159,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     }
 
     /** Nur genauer Titel: für das Anhängen von Dateien, damit nie ein falscher Eintrag ergänzt wird. */
-    fun findeGenau(titel: String): Eintrag? = schluessel(titel).let { g -> eintraege().firstOrNull { schluessel(it.titel) == g } }
+    fun findeGenau(titel: String): Eintrag? = if (titel.isBlank()) null else schluessel(titel).let { g -> eintraege().firstOrNull { schluessel(it.titel) == g } }
 
     fun datei(anhang: Anhang): File = File(wurzel, anhang.speicher)
     fun textDatei(eintrag: Eintrag): File? = eintrag.textDatei?.let { File(textOrdner, it) }?.takeIf { it.isFile }
@@ -277,11 +281,13 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     fun loescheEintrag(id: String, melden: Boolean = true): Boolean = synchronized(sperre) {
         val liste = abgeglichen().toMutableList()
         val e = liste.firstOrNull { it.id == id } ?: return false
+        // Der Merker zuerst, und ohne ihn kein Löschen: Sonst kehrte der Eintrag beim nächsten Abgleich zurück. Der Text vor dem Verzeichnis:
+        // Bleibt er nach einem Absturz liegen, gälte er sonst als Migration und käme mit neuer Kennung wieder.
+        if (melden && !merkeLoeschung(e.id)) return false
+        e.textDatei?.let { File(textOrdner, it).delete() }
         liste.removeAll { it.id == id }
         speichere(liste)
-        e.textDatei?.let { File(textOrdner, it).delete() }
         File(dateiOrdner, e.id).deleteRecursively()
-        if (melden) merkeLoeschung(e.id)
         true
     }
 
@@ -289,7 +295,22 @@ class AblageSpeicher private constructor(private val wurzel: File) {
 
     private fun lieseLoeschungen(): JSONObject = runCatching { JSONObject(loeschungen.readText()) }.getOrElse { JSONObject() }
 
-    private fun merkeLoeschung(id: String) { runCatching { schreibeAtomar(loeschungen, lieseLoeschungen().put(id, System.currentTimeMillis()).toString().toByteArray()) } }
+    private fun merkeLoeschung(id: String): Boolean = runCatching { schreibeAtomar(loeschungen, lieseLoeschungen().put(id, System.currentTimeMillis()).toString().toByteArray()) }.isSuccess
+
+    private fun lieseVerloren(): MutableSet<String> = runCatching { JSONArray(verlorenDatei.readText()).let { j -> (0 until j.length()).mapTo(HashSet()) { j.getString(it) } } }.getOrDefault(HashSet())
+
+    private fun merkeVerloren(id: String) {
+        val alle = lieseVerloren()
+        if (alle.add(id)) runCatching { schreibeAtomar(verlorenDatei, JSONArray(alle.toList()).toString().toByteArray()) }
+    }
+
+    /** Einträge, denen etwas abhanden kam und die der Abgleich zurückholen soll. */
+    fun verloren(): Set<String> = synchronized(sperre) { abgeglichen(); lieseVerloren() }
+
+    fun verlorenErledigt(id: String): Unit = synchronized(sperre) {
+        val alle = lieseVerloren()
+        if (alle.remove(id)) runCatching { schreibeAtomar(verlorenDatei, JSONArray(alle.toList()).toString().toByteArray()) }
+    }
 
     fun offeneLoeschungen(): Map<String, Long> = synchronized(sperre) { lieseLoeschungen().let { j -> j.keys().asSequence().associateWith { j.optLong(it) } } }
 
@@ -299,19 +320,20 @@ class AblageSpeicher private constructor(private val wurzel: File) {
      * Übernimmt den Stand eines Eintrags vom Server. [textQuelle] = neuer Text (sonst bleibt der vorhandene, wenn [mitText]);
      * [dateien] = neue Anhänge nach Kennung; Anhänge mit gleicher Kennung und gleichem Inhalt bleiben liegen.
      * Alles unter der Sperre: Das Aufräumen in [abgeglichen] sieht nie eine Textdatei ohne Eintrag.
+     * [erwartet] = Änderungszeit des Eintrags, auf dem die Entscheidung beruht (null = es gab ihn nicht): Hat sich hier seither etwas getan
+     * (der Download kann Minuten dauern), wird nichts ersetzt und false geliefert.
      */
-    fun setzeFern(neu: Eintrag, mitText: Boolean, textQuelle: File?, dateien: Map<String, File>): Unit = synchronized(sperre) {
+    fun setzeFern(neu: Eintrag, mitText: Boolean, textQuelle: File?, dateien: Map<String, File>, erwartet: Long?): Boolean = synchronized(sperre) {
         val liste = abgeglichen().toMutableList()
         val alt = liste.firstOrNull { it.id == neu.id }
+        if (alt?.geaendert != erwartet) return false
         val belegt = liste.filter { it.id != neu.id }.mapNotNull { it.textDatei }.toSet()
         val name = if (!mitText) null else alt?.textDatei?.takeIf { it !in belegt } ?: run {
             val basis = dateiname(neu.titel)
             generateSequence(1) { it + 1 }.map { if (it == 1) "$basis.md" else "$basis ($it).md" }.first { it !in belegt && !File(textOrdner, it).exists() }
         }
         if (textQuelle != null && name != null) {
-            val ziel = File(textOrdner, name)
-            ziel.delete()
-            verschiebe(textQuelle, ziel)
+            verschiebeErsetzend(textQuelle, File(textOrdner, name))
         }
         // Sonst hielte das Verzeichnis die Datei für außerhalb geändert und schöbe die Änderungszeit nach vorn.
         if (name != null) File(textOrdner, name).setLastModified(neu.geaendert)
@@ -321,8 +343,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             if (da != null) a.copy(speicher = da.speicher, vorschau = da.vorschau) else {
                 val q = dateien[a.id] ?: throw AblageFehler("Die Datei ${a.originalName} fehlt.")
                 val ziel = File(File(dateiOrdner, neu.id).apply { mkdirs() }, a.id + "." + a.endung)
-                ziel.delete()
-                verschiebe(q, ziel)
+                verschiebeErsetzend(q, ziel)
                 a.copy(speicher = ziel.relativeTo(wurzel).invariantSeparatorsPath, vorschau = null)
             }
         }
@@ -330,6 +351,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         val ergebnis = neu.copy(textDatei = name, anhaenge = anhaenge)
         if (alt == null) liste += ergebnis else liste.replaceAll { if (it.id == neu.id) ergebnis else it }
         speichere(liste)
+        verlorenErledigt(neu.id)
+        true
     }
 
     fun loescheAnhang(eintragId: String, anhangId: String): Boolean = synchronized(sperre) {
@@ -376,7 +399,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         var geaendert = false
         val mds = textOrdner.listFiles { f -> f.isFile && f.name.endsWith(".md") }.orEmpty().associateBy { it.name }
         // Text verschwunden (außerhalb gelöscht): Eintrag ohne Anhänge entfällt, sonst bleibt er ohne Text.
-        liste.replaceAll { e -> if (e.textDatei != null && e.textDatei !in mds) { geaendert = true; e.copy(textDatei = null) } else e }
+        liste.replaceAll { e -> if (e.textDatei != null && e.textDatei !in mds) { geaendert = true; merkeVerloren(e.id); e.copy(textDatei = null) } else e }
         val vergeben = liste.mapNotNull { it.textDatei }.toMutableSet()
         mds.values.filter { it.name !in vergeben }.sortedBy { it.lastModified() }.forEach { md ->
             val passend = liste.indexOfFirst { it.textDatei == null && dateiname(it.titel) + ".md" == md.name }
@@ -478,8 +501,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
                                 vorschau = a.optString("vorschau").takeIf { !a.isNull("vorschau") && it.isNotEmpty() },
                                 kennung = a.optString("kennung").takeIf { !a.isNull("kennung") && it.isNotEmpty() },
                             )
-                        }.onFailure { uebersprungen++ }.getOrNull()
-                    }.filter { File(wurzel, it.speicher).isFile },
+                        }.onFailure { uebersprungen++; merkeVerloren(e.getString("id")) }.getOrNull()
+                    }.filter { a -> File(wurzel, a.speicher).isFile.also { da -> if (!da) merkeVerloren(e.getString("id")) } },
                 )
             }.onFailure { uebersprungen++ }.getOrNull()
         }
@@ -543,6 +566,14 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             } finally {
                 if (tmp.exists()) tmp.delete()
             }
+        }
+
+        /** Ersetzt das Ziel in einem Schritt: Ein Absturz hinterlässt nie eine Lücke zwischen alter und neuer Datei. */
+        private fun verschiebeErsetzend(quelle: File, ziel: File) {
+            if (quelle.renameTo(ziel)) return
+            ziel.delete()
+            quelle.copyTo(ziel, overwrite = true)
+            quelle.delete()
         }
 
         private fun verschiebe(quelle: File, ziel: File) {

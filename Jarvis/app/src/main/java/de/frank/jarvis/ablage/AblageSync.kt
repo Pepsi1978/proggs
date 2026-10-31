@@ -6,6 +6,7 @@ import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.GespraechsFokus
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -16,6 +17,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -33,17 +37,24 @@ import org.json.JSONObject
  * Hält die Ablage dieses Handys mit dem Server gleich, von dem alle Jarvis-Versionen (Handy, Mac OS, später Windows) sie beziehen.
  * Das Handy behält seinen eigenen Speicher ([AblageSpeicher], [Prompts]): Werkzeuge, Agenten und die Oberfläche arbeiten unverändert darauf.
  *
- * Ablauf eines Laufs: erst holen, dann senden. Es gewinnt die jüngere Änderung; [Zustand.bekannt] merkt sich je Dokument den zuletzt
- * abgeglichenen Inhalt, daran ist zu erkennen, ob sich hier etwas geändert hat. Gelöscht wird nur auf ausdrückliche Meldung, nie
- * weil etwas auf einer Seite fehlt: Ein noch nicht gesendeter Eintrag darf nicht verschwinden.
+ * Ablauf eines Laufs: erst holen, dann senden. [Zustand.bekannt] merkt sich je Dokument den zuletzt abgeglichenen Inhalt:
+ * - Nur der Server hat sich geändert: Seine Fassung gilt.
+ * - Nur hier hat sich etwas geändert: Es wird gesendet, die Uhrzeiten spielen keine Rolle.
+ * - Beide: Nichts geht verloren. Die Dateien werden vereint, die jüngere Textfassung gilt, die ältere kommt als eigener Eintrag dazu.
+ * Gelöscht wird nur auf ausdrückliche Meldung, nie weil etwas auf einer Seite fehlt: Ein noch nicht gesendeter Eintrag darf nicht verschwinden,
+ * und eine hier abhanden gekommene Datei ([AblageSpeicher.verloren]) geht nicht als Löschung an die anderen, sondern kommt vom Server zurück.
  *
  * Angestoßen wird über das Signal des Servers, jede eigene Änderung und das Verbinden; alle 15 Minuten zur Sicherheit.
- * Der Lauf hat niedrige Priorität und steht still, solange ein Gespräch läuft, auch mitten in einer Übertragung (Sprachmodus vor Hintergrundarbeit).
- * Über das Datenvolumen wacht er bewusst nicht: Frank hat unbegrenzte mobile Daten.
+ * Der Lauf hat niedrige Priorität und steht still, solange ein Gespräch läuft, auch mitten in einer Übertragung (Sprachmodus vor Hintergrundarbeit);
+ * Downloads setzen danach an derselben Stelle fort. Über das Datenvolumen wacht er bewusst nicht: Frank hat unbegrenzte mobile Daten.
  */
 object AblageSync {
     private const val ZYKLUS_MS = 15 * 60_000L
     private const val NACH_FEHLER_MS = 60_000L
+    /** Hängt der Gesprächszustand (nie freigegebener Fokus), darf das den Abgleich nicht für immer anhalten. */
+    private const val GESPRAECH_HOECHSTENS_MS = 20 * 60_000L
+    /** So oft versucht ein Lauf ein Dokument, das nicht zu holen ist; danach hält es die übrigen nicht mehr auf (bis zum nächsten Prozessstart). */
+    private const val VERSUCHE = 5
     private const val DATEI = "ablage-sync.json"
     private val json = "application/json".toMediaType()
     private val roh = "application/octet-stream".toMediaType()
@@ -55,13 +66,21 @@ object AblageSync {
     @Volatile private var gestartet = false
     /** Alles vergleichen statt nur das Neue: einmal je Prozess und nach einem abgelehnten Senden. Das holt nach, was hier verloren oder liegen blieb. */
     private var vollabgleich = true
-    /** Was der Server dauerhaft ablehnt (zu groß, ungültig): Bis zur nächsten Änderung oder zum Neustart nicht wieder senden, sonst liefe es jede Minute neu. */
+    /** Was der Server endgültig ablehnt (zu groß, ungültig): Bis zur nächsten Änderung oder zum Neustart nicht wieder senden, sonst liefe es jede Minute neu. */
     private val aufgegeben = HashSet<String>()
+    private val fehlversuche = HashMap<String, Int>()
     /** Prüfsummen der Texte je Datei, solange Größe und Datum gleich bleiben: Jeder Lauf bräuchte sie sonst für alle Einträge neu. */
     private val textSummen = HashMap<String, Triple<Long, Long, String>>()
+    private var gespraechSeit = 0L
+
+    private val _hinweis = MutableStateFlow<String?>(null)
+    /** Was Frank wissen muss, wenn der Abgleich nicht rundläuft; null = alles in Ordnung. */
+    val hinweis: StateFlow<String?> = _hinweis.asStateFlow()
 
     /** Der Server hat das endgültig abgelehnt; ein neuer Versuch ändert daran nichts. */
     private class DauerFehler(meldung: String) : IOException(meldung)
+    /** Kein Fehler: später noch einmal (Gespräch läuft, hier hat sich gerade etwas geändert). */
+    private class Spaeter(meldung: String) : IOException(meldung)
 
     fun anstossen() { anstoss.trySend(Unit) }
 
@@ -78,10 +97,12 @@ object AblageSync {
                 warten = try {
                     lauf(app)
                     fehlerFolge = 0
+                    hinweisSetzen(null)
                     ZYKLUS_MS
                 } catch (e: Exception) {
                     Logbuch.netz("Ablage-Abgleich", "unterbrochen: ${e.message}")
                     fehlerFolge++
+                    hinweisSetzen(if (fehlerFolge >= 3) "Die Ablage gleicht sich gerade nicht ab, Jarvis versucht es weiter." else null)
                     (NACH_FEHLER_MS shl (fehlerFolge - 1).coerceAtMost(4)).coerceAtMost(ZYKLUS_MS)
                 }
             }
@@ -91,14 +112,30 @@ object AblageSync {
         bereich.launch { Prompts.stand.collectLatest { delay(2_000); anstossen() } }
     }
 
-    /** Solange ein Gespräch läuft, geht nichts über die Leitung. */
-    private suspend fun gespraechAbwarten() { while (GespraechsFokus.stilleHinweise) delay(5_000) }
+    private fun hinweisSetzen(netz: String?) {
+        val offen = aufgegeben.size + fehlversuche.values.count { it >= VERSUCHE }
+        _hinweis.value = netz ?: if (offen > 0) "$offen Einträge lassen sich nicht abgleichen, Details unter Aktivität." else null
+    }
 
-    /** Mitten in einer Übertragung: abbrechen, der nächste Lauf holt sie nach dem Gespräch nach. */
-    private fun gespraechPruefen() { if (GespraechsFokus.stilleHinweise) throw IOException("Übertragung pausiert: Gespräch läuft") }
+    /** Läuft ein Gespräch? Nach der Höchstdauer gilt der Zustand als hängend und hält den Abgleich nicht länger an. */
+    private fun gespraechLaeuft(): Boolean {
+        if (!GespraechsFokus.stilleHinweise) { gespraechSeit = 0; return false }
+        val jetzt = System.currentTimeMillis()
+        if (gespraechSeit == 0L) gespraechSeit = jetzt
+        if (jetzt - gespraechSeit < GESPRAECH_HOECHSTENS_MS) return true
+        Logbuch.netz("Ablage-Abgleich", "Gesprächszustand seit über 20 Minuten, gleiche trotzdem ab")
+        return false
+    }
+
+    /** Solange ein Gespräch läuft, geht nichts über die Leitung. */
+    private suspend fun gespraechAbwarten() { while (gespraechLaeuft()) delay(5_000) }
+
+    /** Mitten in einer Übertragung: abbrechen, der nächste Lauf macht nach dem Gespräch weiter. */
+    private fun gespraechPruefen() { if (gespraechLaeuft()) throw Spaeter("Übertragung pausiert: Gespräch läuft") }
 
     private class Zustand(val datei: File) {
         var stand = 0L
+        var instanz = ""
         val bekannt = HashMap<String, String>()
         /** Zeit der zuletzt abgeglichenen Fassung je Dokument. */
         val zeiten = HashMap<String, Long>()
@@ -106,15 +143,40 @@ object AblageSync {
             runCatching {
                 val j = JSONObject(datei.readText())
                 stand = j.optLong("stand")
+                instanz = j.optString("instanz")
                 j.optJSONObject("bekannt")?.let { b -> b.keys().forEach { bekannt[it] = b.optString(it) } }
                 j.optJSONObject("zeiten")?.let { b -> b.keys().forEach { zeiten[it] = b.optLong(it) } }
             }
         }
-        fun sichere() = AblageSpeicher.schreibeAtomar(datei, JSONObject().put("stand", stand).put("bekannt", JSONObject(bekannt as Map<*, *>)).put("zeiten", JSONObject(zeiten as Map<*, *>)).toString().toByteArray())
+        fun sichere() = AblageSpeicher.schreibeAtomar(datei, JSONObject().put("stand", stand).put("instanz", instanz).put("bekannt", JSONObject(bekannt as Map<*, *>)).put("zeiten", JSONObject(zeiten as Map<*, *>)).toString().toByteArray())
         /** Geht diese Uhr nach, gälte eine Änderung sonst als älter als der Stand, auf dem sie aufbaut. */
         fun zeitFuer(schluessel: String, geaendert: Long) = maxOf(geaendert, (zeiten[schluessel] ?: 0L) + 1).coerceAtLeast(1)
         fun merke(schluessel: String, abdruck: String, zeit: Long) { bekannt[schluessel] = abdruck; zeiten[schluessel] = zeit }
         fun vergiss(schluessel: String) { bekannt.remove(schluessel); zeiten.remove(schluessel) }
+    }
+
+    /** Was hier gerade liegt; neu gelesen nur, wenn sich seit dem letzten Lesen etwas geändert hat. So bleibt jede Entscheidung aktuell, ohne je Dokument alles zu lesen. */
+    private class Bestand(val app: Context, val speicher: AblageSpeicher) {
+        var eintraege = HashMap<String, Eintrag>()
+        var offen: Map<String, Long> = emptyMap()
+        var verloren: Set<String> = emptySet()
+        var prompts = HashMap<Long, Prompt>()
+        var promptsOffen: Map<Long, Long> = emptyMap()
+        private var marke = -1L
+        private var promptMarke = -1L
+        fun aktuell() {
+            if (marke != speicher.stand.value) {
+                marke = speicher.stand.value
+                eintraege = HashMap(speicher.eintraege().associateBy { it.id })
+                offen = speicher.offeneLoeschungen()
+                verloren = speicher.verloren()
+            }
+            if (promptMarke != Prompts.stand.value) {
+                promptMarke = Prompts.stand.value
+                prompts = HashMap(Prompts.alle(app).associateBy { it.erstellt })
+                promptsOffen = Prompts.offeneLoeschungen(app)
+            }
+        }
     }
 
     private suspend fun lauf(app: Context) {
@@ -124,6 +186,8 @@ object AblageSync {
         val basis = "https://${e.serverHost}/j/${e.geheimnis}/ablage"
         val speicher = AblageZentrale.speicher(app)
         val z = Zustand(File(app.filesDir, DATEI))
+        // Etwas kam hier abhanden: Der Stand-Zeiger steht längst dahinter, also alles vergleichen.
+        if (speicher.verloren().isNotEmpty()) vollabgleich = true
         val alleGeholt = holen(app, basis, speicher, z)
         if (alleGeholt) vollabgleich = false
         z.sichere()
@@ -135,145 +199,194 @@ object AblageSync {
     // ---- Holen ----
 
     private suspend fun holen(app: Context, basis: String, speicher: AblageSpeicher, z: Zustand): Boolean {
-        val seit = if (vollabgleich) 0L else z.stand
-        val antwort = http(Request.Builder().url("$basis/aenderungen?seit=$seit").build()).use { r ->
-            if (!r.isSuccessful) throw IOException("Server antwortet mit ${r.code}")
-            JSONObject(r.body?.string().orEmpty())
-        }
-        // Der Server hat weniger als wir je von ihm gesehen haben: Er wurde neu aufgesetzt. Dann muss der ganze Bestand wieder hoch.
-        val neu = antwort.optLong("stand")
-        if (neu < z.stand || antwort.optBoolean("neuaufbau")) {
-            Logbuch.netz("Ablage-Abgleich", "Server wurde neu aufgesetzt, sende den ganzen Bestand")
-            z.bekannt.clear()
-            z.zeiten.clear()
-            z.stand = 0
-        }
-        val docs = antwort.getJSONArray("docs")
+        val bestand = Bestand(app, speicher)
+        var seit = if (vollabgleich) 0L else z.stand
         var alleGut = true
-        val lokal = HashMap(speicher.eintraege().associateBy { it.id })
-        for (i in 0 until docs.length()) {
-            gespraechAbwarten()
-            val d = docs.getJSONObject(i)
-            try {
-                when (d.optString("art")) {
-                    "eintrag" -> eintragHolen(basis, speicher, z, d, lokal)
-                    "prompt" -> promptHolen(app, z, d)
-                    "ordnung" -> ordnungHolen(app, z, d)
-                }
-            } catch (f: Exception) {
-                // Das Dokument bleibt offen: Der Stand rückt nicht vor, der nächste Lauf versucht es erneut.
-                alleGut = false
-                Logbuch.netz("Ablage-Abgleich", "${d.optString("art")} ${d.optString("id")}: ${f.message}")
+        var neu: Long
+        while (true) {
+            val antwort = http(Request.Builder().url("$basis/aenderungen?seit=$seit").build()).use { r ->
+                if (!r.isSuccessful) throw IOException("Server antwortet mit ${r.code}")
+                JSONObject(r.body?.string().orEmpty())
             }
+            // Ein anderer Speicher als beim letzten Mal: Der Server wurde neu aufgesetzt oder aus einem Backup geholt. Dann muss der ganze Bestand wieder hoch.
+            val instanz = antwort.optString("instanz")
+            if (instanz.isNotEmpty() && instanz != z.instanz) {
+                val gewechselt = z.instanz.isNotEmpty()
+                z.instanz = instanz
+                if (gewechselt) {
+                    Logbuch.netz("Ablage-Abgleich", "Server wurde neu aufgesetzt, sende den ganzen Bestand")
+                    z.bekannt.clear()
+                    z.zeiten.clear()
+                    z.stand = 0
+                    if (seit != 0L) { seit = 0; continue }
+                }
+            }
+            neu = antwort.optLong("stand")
+            val docs = antwort.getJSONArray("docs")
+            for (i in 0 until docs.length()) {
+                gespraechAbwarten()
+                val d = docs.getJSONObject(i)
+                val marke = d.optString("art") + ":" + d.optString("id")
+                try {
+                    bestand.aktuell()
+                    when (d.optString("art")) {
+                        "eintrag" -> eintragHolen(basis, speicher, z, d, bestand)
+                        "prompt" -> promptHolen(app, z, d, bestand)
+                        "ordnung" -> ordnungHolen(app, z, d)
+                    }
+                    fehlversuche.remove(marke)
+                } catch (f: Spaeter) {
+                    alleGut = false
+                } catch (f: Exception) {
+                    // Das Dokument bleibt offen und wird wiederholt. Lässt es sich auch dann nicht holen, hält es den Rest nicht länger auf.
+                    val versuche = (fehlversuche[marke] ?: 0) + 1
+                    fehlversuche[marke] = versuche
+                    if (versuche < VERSUCHE) alleGut = false
+                    else if (versuche == VERSUCHE) Logbuch.fehler("Ablage-Abgleich: $marke übersprungen", f)
+                    Logbuch.netz("Ablage-Abgleich", "$marke: ${f.message}")
+                }
+            }
+            if (alleGut) z.stand = neu
+            if (!antwort.optBoolean("mehr")) break
+            seit = neu
         }
-        if (alleGut) z.stand = neu
         return alleGut
     }
 
-    /** Darf der Stand vom Server den von hier ersetzen? Ja, wenn sich hier seit dem letzten Abgleich nichts getan hat oder er nicht älter ist. */
-    private fun fernGewinnt(hierUnveraendert: Boolean, fernZeit: Long, lokalZeit: Long) = hierUnveraendert || fernZeit >= lokalZeit
-
-    private fun eintragHolen(basis: String, speicher: AblageSpeicher, z: Zustand, d: JSONObject, karte: MutableMap<String, Eintrag>) {
+    private fun eintragHolen(basis: String, speicher: AblageSpeicher, z: Zustand, d: JSONObject, b: Bestand) {
         val id = sicher(d.getString("id"))
         val schluessel = "eintrag:$id"
         val geaendert = d.optLong("geaendert")
-        val offen = speicher.offeneLoeschungen()[id]
-        val lokal = karte[id]
+        val offen = b.offen[id]
+        val lokal = b.eintraege[id]
         val lokalText = lokal?.let { textSha(speicher, it) }
         val lokalAbdruck = lokal?.let { abdruck(it, lokalText) }
-        val hierUnveraendert = lokalAbdruck != null && z.bekannt[schluessel] == lokalAbdruck
+        val bekannt = z.bekannt[schluessel]
+        val istVerloren = id in b.verloren
+        val hierUnveraendert = lokalAbdruck != null && (bekannt == lokalAbdruck || istVerloren)
         if (d.optBoolean("geloescht")) {
-            if (offen != null) { if (offen <= geaendert) speicher.quittiereLoeschung(id); return }
+            if (offen != null) { speicher.quittiereLoeschung(id); z.vergiss(schluessel); return }
             if (lokal == null) { z.vergiss(schluessel); return }
-            if (fernGewinnt(hierUnveraendert, geaendert, lokal.geaendert)) {
+            // Hier etwas Neues trotz Löschung am anderen Gerät: Es bleibt und geht wieder hoch, verloren geht nichts.
+            if (hierUnveraendert || bekannt == null) {
                 speicher.loescheEintrag(id, melden = false)
-                karte.remove(id)
                 z.vergiss(schluessel)
-            }
+            } else z.zeiten[schluessel] = geaendert
             return
         }
-        if (offen != null) { if (offen >= geaendert) return; speicher.quittiereLoeschung(id) }
         val w = d.getJSONObject("daten")
         val fern = eintragAus(w, id, geaendert)
         // Auf Android liefert optString bei JSON-null den Text „null“.
         val textFern = if (w.isNull("text_sha")) null else w.optString("text_sha").takeIf { it.isNotBlank() }
         val fernAbdruck = abdruck(fern, textFern)
+        // Nur das Echo des schon Bekannten (auch bei nachgehender Uhr): Eine Löschung oder Änderung von hier gilt weiter.
+        if (offen != null) { if (bekannt == fernAbdruck || offen >= geaendert) return; speicher.quittiereLoeschung(id) }
         if (lokalAbdruck == fernAbdruck) { z.merke(schluessel, fernAbdruck, geaendert); return }
-        if (lokal != null && !fernGewinnt(hierUnveraendert, geaendert, lokal.geaendert)) return
+        if (lokal != null && !istVerloren && bekannt == fernAbdruck) return
+
+        if (lokal != null && !hierUnveraendert) { konfliktLoesen(basis, speicher, z, schluessel, fern, textFern, lokal, lokalText); return }
 
         // Ging das Verzeichnis hier verloren, trägt derselbe Text jetzt eine neue Kennung: Sie darf nicht als Doppel an alle gehen.
-        if (lokal == null && textFern != null) {
-            karte.values.firstOrNull { it.titel == fern.titel && it.anhaenge.isEmpty() && z.bekannt["eintrag:${it.id}"] == null && textSha(speicher, it) == textFern }?.let { doppelt ->
-                speicher.loescheEintrag(doppelt.id, melden = false)
-                karte.remove(doppelt.id)
-            }
-        }
+        val doppelt = if (lokal == null && textFern != null) b.eintraege.values.firstOrNull { it.titel == fern.titel && it.anhaenge.isEmpty() && z.bekannt["eintrag:${it.id}"] == null && textSha(speicher, it) == textFern } else null
         val textTeil = if (textFern != null && textFern != lokalText) laden(basis, textFern, speicher) else null
         val dateien = HashMap<String, File>()
-        try {
-            fern.anhaenge.filter { a -> lokal?.anhaenge?.none { it.id == a.id && it.sha256 == a.sha256 } != false }.forEach { a -> dateien[a.id] = laden(basis, a.sha256, speicher) }
-            speicher.setzeFern(fern, textFern != null, textTeil, dateien)
-        } finally {
-            textTeil?.delete()
-            dateien.values.forEach { it.delete() }
-        }
-        speicher.eintrag(id)?.let { karte[id] = it }
+        fern.anhaenge.filter { a -> lokal?.anhaenge?.none { it.id == a.id && it.sha256 == a.sha256 } != false }.forEach { a -> dateien[a.id] = laden(basis, a.sha256, speicher) }
+        // Erst wenn alles da ist: Scheitert ein Download, ist die lokale Kopie nicht schon weg.
+        doppelt?.let { speicher.loescheEintrag(it.id, melden = false) }
+        if (!speicher.setzeFern(fern, textFern != null, textTeil, dateien, lokal?.geaendert)) throw Spaeter("$schluessel hat sich hier gerade geändert")
         z.merke(schluessel, fernAbdruck, geaendert)
     }
 
-    private fun promptHolen(app: Context, z: Zustand, d: JSONObject) {
+    /** Hier und auf dem Server geändert: Die Dateien beider Seiten bleiben, die jüngere Textfassung gilt, die ältere kommt als eigener Eintrag dazu. Das Ergebnis geht wieder an alle. */
+    private fun konfliktLoesen(basis: String, speicher: AblageSpeicher, z: Zustand, schluessel: String, fern: Eintrag, textFern: String?, lokal: Eintrag, lokalText: String?) {
+        Logbuch.netz("Ablage-Abgleich", "Konflikt bei „${lokal.titel}“: beide Seiten geändert, vereine")
+        val fernNeuer = fern.geaendert >= lokal.geaendert
+        val nurHier = lokal.anhaenge.filter { x -> fern.anhaenge.none { it.id == x.id } }
+        val dateien = HashMap<String, File>()
+        fern.anhaenge.filter { a -> lokal.anhaenge.none { it.id == a.id && it.sha256 == a.sha256 } }.forEach { a -> dateien[a.id] = laden(basis, a.sha256, speicher) }
+        val textTeil = if (fernNeuer && textFern != null && textFern != lokalText) laden(basis, textFern, speicher) else null
+        if (textFern != null && lokalText != null && textFern != lokalText) {
+            val aelter = if (fernNeuer) speicher.text(lokal) else laden(basis, textFern, speicher).let { f -> f.readText().also { f.delete() } }
+            // Der Titel hängt an der älteren Fassung: Eine Wiederholung ergibt keinen zweiten Eintrag, eine frühere ältere Fassung bleibt.
+            val wann = java.text.SimpleDateFormat("dd.MM.yyyy HH.mm", Locale.GERMAN).format(java.util.Date(minOf(fern.geaendert, lokal.geaendert)))
+            speicher.schreibeText("${lokal.titel} (ältere Fassung $wann)", aelter)
+        }
+        val basisEintrag = if (fernNeuer) fern else lokal.copy(anhaenge = emptyList())
+        val vereint = basisEintrag.copy(anhaenge = fern.anhaenge + nurHier, geaendert = maxOf(fern.geaendert, lokal.geaendert))
+        val mitText = lokalText != null || textFern != null
+        // Hatte nur eine Seite Text, bleibt er; die Fassung von hier liegt schon an ihrem Platz.
+        val fernOhneLokal = !fernNeuer && lokalText == null && textFern != null
+        val nurFernText = if (fernOhneLokal) laden(basis, textFern!!, speicher) else textTeil
+        if (!speicher.setzeFern(vereint, mitText, nurFernText, dateien, lokal.geaendert)) throw Spaeter("$schluessel hat sich hier gerade geändert")
+        // Nicht als abgeglichen merken: Das Vereinte muss noch an alle, und seine Zeit muss die vom Server schlagen.
+        z.bekannt.remove(schluessel)
+        z.zeiten[schluessel] = fern.geaendert
+    }
+
+    private fun promptHolen(app: Context, z: Zustand, d: JSONObject, b: Bestand) {
         val erstellt = d.getString("id").toLong()
         val schluessel = "prompt:$erstellt"
         val geaendert = d.optLong("geaendert")
-        val lokal = Prompts.alle(app).firstOrNull { it.erstellt == erstellt }
-        val offen = Prompts.offeneLoeschungen(app)[erstellt]
-        val hierUnveraendert = lokal != null && z.bekannt[schluessel] == abdruck(lokal)
+        val lokal = b.prompts[erstellt]
+        val offen = b.promptsOffen[erstellt]
+        val bekannt = z.bekannt[schluessel]
+        val hierUnveraendert = lokal != null && bekannt == abdruck(lokal)
         if (d.optBoolean("geloescht")) {
-            if (offen != null) { if (offen <= geaendert) Prompts.quittiereLoeschung(app, erstellt); return }
+            if (offen != null) { Prompts.quittiereLoeschung(app, erstellt); z.vergiss(schluessel); return }
             if (lokal == null) { z.vergiss(schluessel); return }
-            if (fernGewinnt(hierUnveraendert, geaendert, lokal.geaendert)) { Prompts.loescheFern(app, erstellt); z.vergiss(schluessel) }
+            if (hierUnveraendert || bekannt == null) { Prompts.loescheFern(app, erstellt); z.vergiss(schluessel) } else z.zeiten[schluessel] = geaendert
             return
         }
-        if (offen != null) { if (offen >= geaendert) return; Prompts.quittiereLoeschung(app, erstellt) }
         val w = d.getJSONObject("daten")
         val fern = Prompt(lokal?.nummer ?: 1, w.optString("text"), erstellt, w.optString("titel"), w.optString("quelle"), geaendert)
         if (fern.text.isEmpty()) return
+        // Nur das Echo des schon Bekannten (auch bei nachgehender Uhr): Eine Löschung oder Änderung von hier gilt weiter.
+        if (offen != null) { if (bekannt == abdruck(fern) || offen >= geaendert) return; Prompts.quittiereLoeschung(app, erstellt) }
         if (lokal != null && abdruck(lokal) == abdruck(fern)) { z.merke(schluessel, abdruck(fern), geaendert); return }
-        if (lokal != null && !fernGewinnt(hierUnveraendert, geaendert, lokal.geaendert)) return
+        if (lokal != null && bekannt == abdruck(fern)) return
+        // Beide geändert: Die jüngere Fassung gilt, die ältere bleibt als eigener Prompt. Eine bloße KI-Überschrift hier ist kein Grund dafür.
+        if (lokal != null && !hierUnveraendert && lokal.text != fern.text) {
+            if (geaendert < lokal.geaendert) { Prompts.setzeFern(app, fern.copy(erstellt = lokal.erstellt + 1, titel = "", geaendert = geaendert)); return }
+            Prompts.setzeFern(app, lokal.copy(erstellt = geaendert + 1, titel = "", nummer = 1))
+        }
         if (Prompts.setzeFern(app, fern)) z.merke(schluessel, abdruck(fern), geaendert) else throw IOException("Prompt-Datei nicht schreibbar")
     }
 
     private fun ordnungHolen(app: Context, z: Zustand, d: JSONObject) {
         val zeit = d.optLong("geaendert")
-        if (zeit > Prompts.ordnungZeit(app)) {
+        val lokal = Prompts.ordnungZeit(app)
+        if (zeit == lokal) { z.merke("ordnung:prompts", zeit.toString(), zeit); return }
+        if (zeit > lokal) {
             val liste = d.getJSONObject("daten").optJSONArray("reihenfolge") ?: return
             if (Prompts.ordneFern(app, (0 until liste.length()).map { liste.optLong(it) }, zeit)) z.merke("ordnung:prompts", zeit.toString(), zeit)
         }
     }
 
-    /** Lädt eine Datei in den Teil-Ordner und prüft sie; erst danach kommt sie in die Ablage. */
+    /**
+     * Lädt eine Datei in den Teil-Ordner und prüft sie; erst danach kommt sie in die Ablage. Der Teil-Name kommt aus der Prüfsumme:
+     * Ein abgebrochener Download (Netz, Gespräch) macht beim nächsten Lauf an derselben Stelle weiter statt von vorn.
+     */
     private fun laden(basis: String, sha: String, speicher: AblageSpeicher): File {
-        val teil = speicher.neueTeilDatei()
-        try {
-            http(Request.Builder().url("$basis/blob/${sicher(sha)}").build()).use { r ->
-                if (!r.isSuccessful) throw IOException("Datei nicht abrufbar (${r.code})")
-                teil.outputStream().use { aus ->
-                    val ein = r.body!!.byteStream()
-                    val puffer = ByteArray(64 * 1024)
-                    while (true) {
-                        gespraechPruefen()
-                        val n = ein.read(puffer)
-                        if (n < 0) break
-                        aus.write(puffer, 0, n)
-                    }
+        val teil = File(speicher.teilOrdner, sicher(sha) + ".teil")
+        if (teil.isFile && teil.length() > 0 && AblageSpeicher.sha256(teil) == sha) return teil
+        val schon = if (teil.isFile) teil.length() else 0L
+        val anfrage = Request.Builder().url("$basis/blob/$sha").apply { if (schon > 0) header("Range", "bytes=$schon-") }.build()
+        http(anfrage).use { r ->
+            if (r.code == 416) { teil.delete(); throw IOException("Teildatei passte nicht, beginne neu") }
+            if (!r.isSuccessful) throw IOException("Datei nicht abrufbar (${r.code})")
+            FileOutputStream(teil, r.code == 206).use { aus ->
+                val ein = r.body!!.byteStream()
+                val puffer = ByteArray(64 * 1024)
+                while (true) {
+                    gespraechPruefen()
+                    val n = ein.read(puffer)
+                    if (n < 0) break
+                    aus.write(puffer, 0, n)
                 }
             }
-            if (AblageSpeicher.sha256(teil) != sha) throw IOException("Prüfsumme passt nicht")
-            return teil
-        } catch (e: Exception) {
-            teil.delete()
-            throw e
         }
+        if (AblageSpeicher.sha256(teil) != sha) { teil.delete(); throw IOException("Prüfsumme passt nicht") }
+        return teil
     }
 
     // ---- Senden ----
@@ -287,16 +400,19 @@ object AblageSync {
                 arbeit()
             } catch (f: DauerFehler) {
                 aufgegeben += marke
-                Logbuch.netz("Ablage-Abgleich", "$was abgelehnt, wird nicht wiederholt: ${f.message}")
+                Logbuch.fehler("Ablage-Abgleich: $was abgelehnt, wird nicht wiederholt", f)
             } catch (f: Exception) {
                 allesGut = false
                 Logbuch.netz("Ablage-Abgleich", "$was: ${f.message}")
             }
         }
-        /** Der Server hat eine gleich alte oder jüngere Fassung: Der nächste Lauf holt alles und klärt das nach der Regel „Jüngeres gewinnt“. */
+        /** Der Server hat eine jüngere Fassung: Der nächste Lauf holt alles und führt beide zusammen. */
         fun abgelehnt() { vollabgleich = true; allesGut = false }
+        // Beim Vollabgleich ist die Lage neu (Geheimnis, Server, Zeitlimit eines Proxys): Abgelehntes bekommt noch eine Chance.
+        if (vollabgleich) aufgegeben.clear()
 
         speicher.offeneLoeschungen().forEach { (id, zeit) ->
+            gespraechAbwarten()
             val s = "eintrag:$id"
             versuch(s, "$s:weg") {
                 val t = z.zeitFuer(s, zeit)
@@ -304,25 +420,31 @@ object AblageSync {
             }
         }
         Prompts.offeneLoeschungen(app).forEach { (id, zeit) ->
+            gespraechAbwarten()
             val s = "prompt:$id"
             versuch(s, "$s:weg") {
                 val t = z.zeitFuer(s, zeit)
                 if (put(basis, "prompt", id.toString(), JSONObject(), t, geloescht = true)) { Prompts.quittiereLoeschung(app, id); z.vergiss(s) } else abgelehnt()
             }
         }
-        speicher.eintraege().forEach { e ->
+        val verloren = speicher.verloren()
+        speicher.eintraege().forEach { alt ->
+            val s = "eintrag:${alt.id}"
+            // Abhanden gekommen und auf dem Server bekannt: Das holt der Abgleich zurück, es ist keine Änderung für die anderen.
+            if (alt.id in verloren && z.bekannt[s] != null) return@forEach
+            if (z.bekannt[s] == abdruck(alt, textSha(speicher, alt))) return@forEach
             gespraechAbwarten()
-            val s = "eintrag:${e.id}"
+            // Frisch gelesen: Während eines langen Uploads oder Gesprächs kann der Eintrag sich geändert haben oder gelöscht sein.
+            val e = speicher.eintrag(alt.id) ?: return@forEach
             val sha = textSha(speicher, e)
             val a = abdruck(e, sha)
-            if (z.bekannt[s] == a) return@forEach
             versuch(s, "$s:$a") {
                 val inhalte = HashMap<String, File>()
                 if (sha != null) speicher.textDatei(e)?.let { inhalte[sha] = it }
                 val mitSha = e.anhaenge.map { x -> if (x.sha256.isBlank()) x.copy(sha256 = AblageSpeicher.sha256(speicher.datei(x))) else x }
                 mitSha.forEach { x -> inhalte[x.sha256] = speicher.datei(x) }
                 val t = z.zeitFuer(s, e.geaendert)
-                if (put(basis, "eintrag", e.id, eintragAlsDaten(speicher, e.copy(anhaenge = mitSha), sha), t, inhalte = inhalte)) z.merke(s, a, t) else abgelehnt()
+                if (put(basis, "eintrag", e.id, eintragAlsDaten(speicher, e.copy(anhaenge = mitSha), sha), t, inhalte = inhalte)) { z.merke(s, a, t); speicher.verlorenErledigt(e.id) } else abgelehnt()
             }
             z.sichere()
         }
@@ -331,6 +453,7 @@ object AblageSync {
             val s = "prompt:${p.erstellt}"
             val a = abdruck(p)
             if (z.bekannt[s] == a) return@forEach
+            gespraechAbwarten()
             versuch(s, "$s:$a") {
                 val daten = JSONObject().put("text", p.text).put("titel", p.titel).put("erstellt", p.erstellt).put("quelle", p.quelleName)
                 val t = z.zeitFuer(s, p.geaendert)
@@ -339,9 +462,11 @@ object AblageSync {
         }
         val zeit = Prompts.ordnungZeit(app).coerceAtLeast(1)
         if (z.bekannt["ordnung:prompts"] != zeit.toString() && prompts.isNotEmpty()) {
+            gespraechAbwarten()
             versuch("Reihenfolge", "ordnung:$zeit") {
-                val daten = JSONObject().put("reihenfolge", JSONArray(prompts.map { it.erstellt }))
-                if (put(basis, "ordnung", "prompts", daten, zeit)) z.merke("ordnung:prompts", zeit.toString(), zeit) else abgelehnt()
+                val ids = Prompts.alle(app).map { it.erstellt }
+                val daten = JSONObject().put("reihenfolge", JSONArray(ids))
+                if (put(basis, "ordnung", "prompts", daten, zeit)) { z.merke("ordnung:prompts", zeit.toString(), zeit); Prompts.ordnungGesendet(app, ids) } else abgelehnt()
             }
         }
         return allesGut
@@ -351,7 +476,8 @@ object AblageSync {
     private fun put(basis: String, art: String, id: String, daten: JSONObject, geaendert: Long, geloescht: Boolean = false, inhalte: Map<String, File> = emptyMap()): Boolean {
         val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", geloescht).put("von", AblageQuellen.HANDY).toString()
         fun versuch() = http(Request.Builder().url("$basis/doc/$art/$id").put(rumpf.toRequestBody(json)).build())
-        fun ablehnung(code: Int): IOException = if (code in 400..499) DauerFehler("Server antwortet mit $code") else IOException("Server antwortet mit $code")
+        // Nur was der Inhalt selbst verschuldet, ist endgültig. 404 kann ein laufendes Ausrollen sein, 408 und 429 der Proxy.
+        fun ablehnung(code: Int): IOException = if (code == 400 || code == 413) DauerFehler("Server antwortet mit $code") else IOException("Server antwortet mit $code")
         versuch().use { r ->
             if (r.isSuccessful) return JSONObject(r.body?.string().orEmpty()).optBoolean("uebernommen")
             if (r.code != 409) throw ablehnung(r.code)
@@ -402,7 +528,7 @@ object AblageSync {
     private fun abdruck(p: Prompt): String = listOf(p.text, p.titel, p.quelleName).joinToString("\u0001")
 
     private fun eintragAlsDaten(speicher: AblageSpeicher, e: Eintrag, textSha: String?): JSONObject {
-        val kopf = runCatching { speicher.textDatei(e)?.inputStream()?.use { String(it.readNBytes(40), Charsets.UTF_8) } }.getOrNull().orEmpty()
+        val kopf = runCatching { speicher.text(e, 40) }.getOrDefault("")
         return JSONObject().put("id", e.id).put("titel", e.titel).put("text_sha", textSha ?: JSONObject.NULL).put("text_groesse", speicher.textDatei(e)?.length() ?: 0)
             .put("erstellt", e.erstellt).put("geaendert", e.geaendert).put("herkunft", e.herkunft).put("quelle", e.quelleName).put("beschreibung", e.beschreibung)
             .put("recherche", "recherche" in e.titel.lowercase(Locale.GERMAN) || kopf.startsWith("# Recherche"))
