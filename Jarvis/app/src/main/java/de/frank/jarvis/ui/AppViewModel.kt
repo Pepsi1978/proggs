@@ -373,15 +373,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + de.frank.jarvis.faehigkeit.ProgrammierChat.AuftragsAnhaenge(anhaenge) + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
-                // Ein Programmierauftrag muss die Dateien nicht erst durchs Modell schicken (kostet Zeit und Tokens): Sie gehen direkt an die Sitzung.
-                val programmierer = de.frank.jarvis.faehigkeit.ProgrammiererVorlage.aktiv(text)
-                val beilage = if (anhaenge.isEmpty() || programmierer) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
-                val hinweisAnhaenge = if (anhaenge.isEmpty()) "" else "\n\n(Franks Anhänge: " + anhaenge.joinToString(", ") { it.name } +
-                    ". Mit programmieren oder programmier_nachtrag gehen sie von selbst vollständig an die Sitzung; beschreibe sie dort nicht und nenne keine Pfade.)"
-                val auftrag = text + beilage?.text.orEmpty() + hinweisAnhaenge + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
+                val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
+                val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
                 // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 30 Minuten, also mehr als die 20 Minuten bei 100 Schritten).
                 val schritte = einstellungen.schrittlimit
                 val zeitlimit = (if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L))
@@ -992,26 +988,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun nachtragSenden() {
         val id = sitzungId ?: return
         if (nimmtAuf || schreibtMit) return
-        val anh = anhaenge.toList()
-        val text = DiktatTrenner.ohneSchluss(entwurf).removePrefix(NACHTRAG_VORSPANN).trim().ifEmpty { if (anh.isNotEmpty()) "Siehe die Anhänge." else "" }
+        val text = DiktatTrenner.ohneSchluss(entwurf).removePrefix(NACHTRAG_VORSPANN).trim()
         if (text.isEmpty()) { meldung = "Bitte den Nachtrag hinter dem Doppelpunkt ergänzen."; return }
         val roh = entwurf
         entwurf = ""
-        anhaenge.clear()
         entwurfDiktiert = false
         knoepfeAus()
-        gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text", anhaenge = anh.map { it.pfad })
+        gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text")
         sitzungSichern()
         eingabeKompakt = true
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
-            val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text, anh) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
+            val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
                 .getOrElse { de.frank.jarvis.faehigkeit.Ergebnis(it.message ?: "Der Nachtrag ging nicht raus.", fehler = true) }
             // Die Annahme steht schon unten im Gespräch; oben erscheint nur ein Fehler, und nur dessen erster Satz (der Rest richtet sich ans Modell).
             if (ergebnis.fehler) {
                 meldung = ergebnis.text.substringBefore(". ").trimEnd('.') + "."
                 if (entwurf.isEmpty()) entwurf = roh
-                if (anhaenge.isEmpty()) anhaenge.addAll(anh)
             }
         }
     }
@@ -1054,7 +1047,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val anh = anhaenge.toList()
         if (text.isBlank() && anh.isEmpty()) return
         // Mit „Nachtrag:“ vorn (Plus-Menü „+ Nachtrag“) im Programmiergespräch: direkt als Nachtrag in die Sitzung.
-        if (nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragSenden(); return }
+        if (anh.isEmpty() && nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragSenden(); return }
         if (denkt) return
         // Kam Text ins Feld über das Diktier-Mikrofon, wird die erste Antwort darauf vorgelesen (Einstellung).
         val diktiert = entwurfDiktiert
