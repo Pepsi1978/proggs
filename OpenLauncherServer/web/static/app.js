@@ -88,6 +88,8 @@ function aufbauen() {
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open($("xterm"));
+  // Android holt die Tastatur bei jedem Tipper zurück, solange dieses Feld den Fokus hat, auch bei Esc oder STRG. Tippen am Handy geht nur übers Eingabefeld.
+  term.textarea.inputMode = "none";
   term.onData((d) => schicke(d));
   new ResizeObserver(() => passen()).observe($("xterm"));
   wischenEinrichten();
