@@ -18,7 +18,7 @@ function zeige(name) {
   seite = name;
   document.querySelectorAll("#reiter button").forEach((b) => b.classList.toggle("an", b.dataset.seite === name));
   document.querySelectorAll(".seite").forEach((s) => s.classList.toggle("an", s.id === name));
-  if (name === "terminal") { setTimeout(() => { passen(); if (term) term.focus(); }, 30); }
+  if (name === "terminal") { setTimeout(passen, 30); }
   if (name === "sitzungen") ladeSitzungen();
   if (name === "system") ladeSystem();
 }
@@ -113,7 +113,7 @@ function aufmachen() {
   };
 }
 $("schliessen").addEventListener("click", () => { if (aktuell && confirm("Sitzung wirklich beenden? Nicht gepushte Arbeit geht verloren.")) { const n = aktuell; schliesse(n); zeige("sitzungen"); } });
-document.querySelectorAll("#tasten button").forEach((b) => b.addEventListener("click", () => { schicke(b.dataset.t); if (term) term.focus(); }));
+document.querySelectorAll("#tasten button").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("text");
