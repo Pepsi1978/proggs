@@ -1,6 +1,9 @@
-# Watch Phase
+# Watch Phase und Klassiker
 
-Nachbau des Zifferblatts der Huawei Watch GT für die Watch 3, schwarz-weiß mit rotem Sekundenzeiger. Fertige Datei: `dist/WatchPhase.hwt`. Läuft seit dem 31.10.2026 auf der Uhr.
+Eigene Zifferblätter für die Huawei Watch 3. Alle vier stehen seit dem 31.10.2026 auf der Uhr.
+
+- Watch Phase: Nachbau des Zifferblatts der Huawei Watch GT, schwarz-weiß mit rotem Sekundenzeiger. `dist/WatchPhase.hwt`, gebaut mit `bauen.py`.
+- SLAVA, EIGER SPEED EDITION und BERING: nach Fotos von Franks Uhren. `dist/Slava.hwt`, `dist/EigerSpeedEdition.hwt`, `dist/Bering.hwt`, gebaut mit `klassiker.py`. „21 Jewels“ bei SLAVA ist auf dem Foto teils verdeckt und daher gelesen, nicht sicher.
 
 ## Auf die Uhr bringen
 

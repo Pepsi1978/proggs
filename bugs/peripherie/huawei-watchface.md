@@ -14,6 +14,12 @@ Stand: 31.10.2026. Versions-Anker: Watch 3 GLL-AL04 mit Firmware 3.0.0.179, Heal
 - Ursache: Health verbindet nach dem Force-Stop nicht von selbst.
 - Fix: In Health „Verbinden“ tippen. Nichts entkoppeln. Eine Abfrage „Standort immer zulassen“ gehört nicht dazu, sie lässt sich abbrechen.
 
+## §0b Tag steht über dem Datumsfenster
+- Symptom: Die Zahl sitzt auf der Uhr oberhalb des Felds, in der Vorschau passt sie.
+- Ursache: Bei `combined_res` ist die y-Angabe in `res_position` die Mitte der Zahl, nicht die obere Kante.
+- Betroffen: Watch 3 GLL-AL04, Firmware 3.0.0.179, erlebt am 31.10.2026.
+- Fix: `res_position` auf die Mitte des Felds setzen, x und y.
+
 ## §1 Upload meldet Erfolg, Zifferblatt erscheint nicht
 - Symptom: Gadgetbridge zeigt "installation complete", das Zifferblatt taucht nie auf.
 - Ursache: Ab HarmonyOS 6.1 bzw. Firmware nach 6.0.0.328 prüft die Uhr ein serversigniertes `contentSign`; der Schlüssel liegt bei Huawei.
