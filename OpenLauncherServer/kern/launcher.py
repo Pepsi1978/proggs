@@ -387,19 +387,34 @@ def _kimi_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
 '''
 
 
-# Wie OpenLauncher am Mac: Statusleiste und Berechtigungen setzen, Franks übrige Einstellungen bleiben stehen. Das Skript liegt im Repo und läuft auch unter Linux.
-_AGY_EINSTELLUNGEN = r'''AGY_SETTINGS="$HOME/.gemini/antigravity-cli/settings.json"
-mkdir -p "$(dirname "$AGY_SETTINGS")"
-[ -f "$AGY_SETTINGS" ] || echo '{}' > "$AGY_SETTINGS"
-jq '.toolPermission = (.toolPermission // "always-proceed") | .statusLine = {"type": "command", "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh", "enabled": true}' "$AGY_SETTINGS" > "$AGY_SETTINGS.tmp" 2>/dev/null && mv -f "$AGY_SETTINGS.tmp" "$AGY_SETTINGS" || rm -f "$AGY_SETTINGS.tmp"
-'''
+def _agy_statusleiste() -> str:
+    """Trägt die Statusleiste wie OpenLauncher am Mac in die Einstellungen ein; Franks übrige Werte bleiben stehen. Antwortet mit einer Shell-Zeile, falls es nicht ging."""
+    ziel = (HOME / ".gemini/antigravity-cli/settings.json").resolve()
+    soll = {"type": "command", "command": f"bash {shlex.quote(str(PROGGS / 'claude-code-setup/hooks/statusline.sh'))}", "enabled": True}
+    hinweis = "printf '\033[33m[OpenLauncher] Statusleiste nicht eingerichtet: %s\033[0m\n' {}
+"
+    text = _lies(ziel)
+    try:
+        einstellungen = json.loads(text) if text.strip() else {}
+    except ValueError:
+        einstellungen = None
+    if not isinstance(einstellungen, dict):
+        return hinweis.format(shlex.quote(f"{ziel} ist kein gültiges JSON-Objekt"))
+    if einstellungen.get("statusLine") != soll:
+        einstellungen["statusLine"] = soll
+        try:
+            _schreib(ziel, json.dumps(einstellungen, ensure_ascii=False, indent=2) + "
+", ziel.stat().st_mode & 0o777 if ziel.exists() else 0o644)
+        except OSError as e:
+            return hinweis.format(shlex.quote(str(e)))
+    return ""
 
 
 def _agy_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
     agents_aktivieren(profil, modus)
     q = shlex.quote
     stufe = f" --effort {q(effort)}" if effort else ""
-    return _AGY_EINSTELLUNGEN + f'''unset GEMINI_API_KEY
+    return _agy_statusleiste() + f'''unset GEMINI_API_KEY
 if [ -n "$PROMPT" ]; then agy --model {q(modell)}{stufe} --dangerously-skip-permissions -i "$PROMPT"; else agy --model {q(modell)}{stufe} --dangerously-skip-permissions; fi
 '''
 

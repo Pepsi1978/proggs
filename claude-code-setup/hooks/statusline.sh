@@ -382,7 +382,8 @@ do_cleanup=0
 if [ ! -f "$cleanup_marker" ]; then
     do_cleanup=1
 else
-    _cm=$(stat -f %m "$cleanup_marker" 2>/dev/null || stat -c %Y "$cleanup_marker" 2>/dev/null || echo 0)
+    # stat -c zuerst: GNU stat -f gibt trotz Fehler Text aus, der Riegel griffe unter Linux nie.
+    _cm=$(stat -c %Y "$cleanup_marker" 2>/dev/null || stat -f %m "$cleanup_marker" 2>/dev/null || echo 0)
     case "$_cm" in ''|*[!0-9]*) _cm=0 ;; esac
     [ "$((now_ts - _cm))" -ge 600 ] && do_cleanup=1
 fi
