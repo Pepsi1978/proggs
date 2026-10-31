@@ -28,6 +28,8 @@ HIER = Path(__file__).resolve().parent
 sys.path.insert(0, str(HIER.parent / "kern"))
 import clis  # noqa: E402
 import launcher  # noqa: E402
+sys.path.insert(0, str(HIER.parents[1] / "Jarvis" / "werkzeuge" / "pc-bruecke"))
+import jarvis_agy_kontingent  # noqa: E402
 
 ADRESSE = os.environ.get("KONSOLE_ADRESSE", "10.8.0.1")
 PORT = int(os.environ.get("KONSOLE_PORT", "8090"))
@@ -138,6 +140,14 @@ async def starten(request: web.Request) -> web.Response:
 
 async def shell(_: web.Request) -> web.Response:
     return web.json_response({"name": await _im_faden(launcher.befehl_starten, "PowerShell", "command -v pwsh >/dev/null && pwsh -l || bash -l")})
+
+
+async def antigravity_limits(_: web.Request) -> web.Response:
+    """Für Jarvis auf dem Handy, Knopf „Jetzt neu abfragen“ und die Abrufe um 6 und 18 Uhr."""
+    try:
+        return web.json_response({"limits": await _im_faden(jarvis_agy_kontingent.lesen)})
+    except Exception as fehler:
+        return web.json_response({"fehler": str(fehler)}, status=502)
 
 
 STATUS_AUFFRISCHEN = {"zeit": 0.0, "laeuft": False}
@@ -391,7 +401,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
 async def neu_laden_bei_aenderung(_: web.Application):
     """Neue Fassung aus dem Repo: beenden, systemd startet neu."""
     # Auch die Seiten: Ihre gepackten Fassungen entstehen beim Start, eine geänderte app.js käme sonst nie an.
-    dateien = [Path(__file__), Path(launcher.__file__), Path(clis.__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
+    dateien = [Path(__file__), Path(launcher.__file__), Path(clis.__file__), Path(jarvis_agy_kontingent.__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
     stand = [d.stat().st_mtime for d in dateien]
 
     async def wache():
@@ -445,6 +455,7 @@ def anwendung() -> web.Application:
     a.router.add_post("/api/starten", starten)
     a.router.add_post("/api/shell", shell)
     a.router.add_get("/api/system", system)
+    a.router.add_get("/api/antigravity-limits", antigravity_limits)
     a.router.add_post("/api/aktualisieren", aktualisieren)
     a.router.add_post("/api/anmeldung", anmeldung)
     a.router.add_get("/api/links/{name}", links)

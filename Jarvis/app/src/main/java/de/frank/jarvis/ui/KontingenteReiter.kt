@@ -31,8 +31,7 @@ internal fun KontingenteReiter(vm: AppViewModel) {
     val f = LocalFarben.current
     LaunchedEffect(Unit) { vm.kontingenteAbfragen() }
     var anmelden by rememberSaveable { mutableStateOf<String?>(null) }
-    Text("Wie viel deiner Abos verbraucht ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.",
-        color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 4.dp))
+    Knopf(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true) }
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
@@ -68,7 +67,6 @@ internal fun KontingenteReiter(vm: AppViewModel) {
             }
         }
     }
-    Knopf(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true) }
     when (anmelden) {
         "claude" -> {
             remember { KontingenteFaehigkeit.claudeAnmeldungVorbereiten() }

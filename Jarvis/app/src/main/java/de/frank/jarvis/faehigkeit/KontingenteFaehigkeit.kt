@@ -13,11 +13,16 @@ import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
 import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.settings.SecureSettings
+import de.frank.jarvis.fernsteuerung.Fernziel
+import de.frank.jarvis.fernsteuerung.MacSteuerung
 import de.frank.jarvis.meldung.Meldungen
 import de.frank.jarvis.meldung.Meldungsarten
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.GespraechsFokus
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -50,7 +55,8 @@ import org.json.JSONObject
  * - Claude: `claude.ai/api/organizations/<org>/usage`, aus der Seite heraus (eigene Anmeldung, die Bot-Abwehr lässt nur einen Browser durch).
  * - Codex: `chatgpt.com/backend-api/wham/usage` mit der ChatGPT-Anmeldung von Jarvis.
  * - Kimi: Text der Seite `kimi.ai/settings/subscription` in einem unsichtbaren WebView.
- * - Gemini: Limits der Antigravity-CLI. `agy -p /usage` läuft nur am Rechner: Server und Mac melden die Werte alle drei Stunden über `kontingente_melden`.
+ * - Gemini: Limits der Antigravity-CLI. `agy -p /usage` läuft nur am Rechner, deshalb über die Server-Konsole im WireGuard-Tunnel.
+ * Automatisch um 6 und 18 Uhr, sonst nur auf Knopfdruck.
  * Ändert ein Anbieter etwas, steht bei ihm ein Hinweis und der letzte Stand bleibt; die anderen Karten bleiben unberührt.
  */
 class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
@@ -66,9 +72,9 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             name = "kontingente_lesen",
             titel = "Kontingente lesen",
             beschreibung = "Jarvis: Franks aktuelle Nutzungslimits bei Claude, ChatGPT/Codex, Kimi und Gemini, je nach Abo über 5 Stunden, eine Woche oder einen Monat: " +
-                "genutzt, übrig, wann zurückgesetzt wird (deutsche Zeit) und ob das Limit beim jetzigen Tempo vorher aufgebraucht wäre. Holt höchstens alle 15 Minuten frisch.",
+                "genutzt, übrig, wann zurückgesetzt wird (deutsche Zeit) und ob das Limit beim jetzigen Tempo vorher aufgebraucht wäre. Holt automatisch um 6 und 18 Uhr frisch.",
             schema = schema(
-                "frisch" to schalter("true = jetzt neu bei den Anbietern abfragen statt des Stands der letzten 15 Minuten."),
+                "frisch" to schalter("true = jetzt neu bei den Anbietern abfragen statt des letzten Stands."),
                 "json" to schalter("true = Ausgabe als JSON für die Mac-Oberfläche."),
             ),
             nurLesen = true,
@@ -77,17 +83,6 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             val s = withTimeoutOrNull(WERKZEUG_FRIST_MS) { stand(context, erzwingen = a.optBoolean("frisch")) } ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
             Ergebnis(if (a.optBoolean("json")) s.alsJson().toString() else s.text(), fehler = s.anbieter.all { it.limits.isEmpty() })
         },
-        Werkzeug(
-            name = "kontingente_melden",
-            titel = "Antigravity-Limits melden",
-            beschreibung = "Technisch, nur für die Rechner-Brücken: übergibt die Limits aus `agy -p /usage`. Nicht im Gespräch benutzen; zum Lesen dient kontingente_lesen.",
-            schema = schema(
-                "quelle" to text("Woher die Werte kommen.", listOf("server", "mac")),
-                "limits" to text("JSON-Liste mit name, genutzt (Prozent), fenster (Sekunden) und reset (Sekunden seit 1970)."),
-                pflicht = listOf("quelle", "limits"),
-            ),
-            nurLesen = false,
-        ) { a -> Ergebnis(antigravityMelden(context, a.optString("quelle"), a.optString("limits"))) },
     )
 
     /** Ein Limit. [genutzt] in Prozent, wie zuletzt gelesen; [reset] in Sekunden seit 1970 (0 = beginnt erst mit der nächsten Nutzung). */
@@ -170,10 +165,11 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
     private class NichtAngemeldet(meldung: String) : IllegalStateException(meldung)
 
     companion object {
-        /** Knapp unter dem 15-Minuten-Takt des Wächters: Sein nächster Abruf findet den Stand dann sicher fällig. */
-        private const val FRISCH_MS = 14 * 60_000L
-        /** Nach einer Störung früher neu versuchen. Abgemeldete Anbieter zählen nicht, dort hilft Warten nicht. */
-        private const val FRISCH_NACH_FEHLER_MS = 3 * 60_000L
+        /** Automatische Abrufe, deutsche Zeit. Der Wächter fragt alle 15 Minuten nach und holt einen verpassten Termin nach. */
+        private val ABRUF_STUNDEN = listOf(6, 18)
+        /** Nach einem Termin mit Störung (z. B. kein Netz um 6 Uhr) kurz nachfassen, danach wartet es bis zum nächsten Termin. */
+        private const val NACHFASSEN_FENSTER_MS = 2 * 3_600_000L
+        private const val NACHFASSEN_ABSTAND_MS = 30 * 60_000L
         /** Abgemeldete Anbieter nur selten neu laden: Jeder Versuch kostet ein Browserfenster. */
         private const val ABGEMELDET_MS = 6 * 3_600_000L
         private const val ANBIETER_FRIST_MS = 50_000L
@@ -188,11 +184,6 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
         private const val CLAUDE = "https://claude.ai"
         const val CLAUDE_LOGIN = "$CLAUDE/login"
         const val KIMI_SEITE = "https://www.kimi.ai/settings/subscription"
-        private const val GEMINI_TITEL = "Gemini / Antigravity (Google)"
-        /** Zwei ausgefallene Meldungen im Drei-Stunden-Takt plus Spielraum: Ab hier sagt die Karte, dass der Stand alt ist. */
-        private const val ANTIGRAVITY_ALT_MS = 7 * 3_600_000L
-        /** Der Server läuft immer und ist die Hauptquelle. Der Mac zählt nur, wenn der Server einen Takt und mehr ausgelassen hat. */
-        private const val SERVER_VORRANG_MS = 4 * 3_600_000L
         val BERLIN: ZoneId = ZoneId.of("Europe/Berlin")
         private val STAND = DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'", Locale.GERMAN)
         private val UHR = DateTimeFormatter.ofPattern("HH:mm 'Uhr'", Locale.GERMAN)
@@ -309,8 +300,23 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             if (!neu.renameTo(datei(context))) { datei(context).writeText(inhalt); neu.delete() }
         }
 
+        /** Der letzte Termin um 6 oder 18 Uhr, in Millisekunden. */
+        private fun letzterTermin(jetzt: Long): Long {
+            val z = Instant.ofEpochMilli(jetzt).atZone(BERLIN)
+            return (ABRUF_STUNDEN.map { z.toLocalDate().atTime(it, 0).atZone(BERLIN) } + z.toLocalDate().minusDays(1).atTime(ABRUF_STUNDEN.last(), 0).atZone(BERLIN))
+                .map { it.toInstant().toEpochMilli() }.filter { it <= jetzt }.max()
+        }
+
+        private fun faellig(alt: Stand): Boolean {
+            val jetzt = System.currentTimeMillis()
+            val termin = letzterTermin(jetzt)
+            if (alt.geholt < termin) return true
+            val gestoert = alt.anbieter.any { it.hinweis != null && !it.anmeldenNoetig }
+            return gestoert && jetzt - termin < NACHFASSEN_FENSTER_MS && jetzt - alt.geholt >= NACHFASSEN_ABSTAND_MS
+        }
+
         /**
-         * Der aktuelle Stand: der gespeicherte, wenn er noch frisch ist (außer [erzwingen]), sonst neu abgefragt.
+         * Der aktuelle Stand: der gespeicherte bis zum nächsten Termin (außer [erzwingen]), sonst neu abgefragt.
          * Während eines Gesprächs bleibt es beim gespeicherten: Die Stimme geht vor, die unsichtbaren Seiten kosten Rechenzeit.
          */
         suspend fun stand(context: Context, erzwingen: Boolean = false): Stand = withContext(Dispatchers.IO) {
@@ -319,9 +325,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val alt = gespeichert(app)
                 if (!erzwingen && GespraechsFokus.stilleHinweise) return@withLock alt ?: Stand(emptyList(), 0L)
                 if (!erzwingen && alt != null) {
-                    // Gemini füllen Server und Mac: Ein neuer Abruf hier ändert an dessen Hinweis nichts.
-                    val frist = if (alt.anbieter.any { it.id != "gemini" && it.hinweis != null && !it.anmeldenNoetig }) FRISCH_NACH_FEHLER_MS else FRISCH_MS
-                    if (System.currentTimeMillis() - alt.geholt < frist) return@withLock alt
+                    if (!faellig(alt)) return@withLock alt
                 }
                 laufErzwungen = erzwingen
                 val beginn = System.currentTimeMillis()
@@ -329,10 +333,11 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                     Triple("claude", "Claude (Anthropic)") { claude(app) },
                     Triple("codex", "ChatGPT / Codex (OpenAI)") { codex(app) },
                     Triple("kimi", "Kimi") { kimi(app) },
+                    Triple("gemini", "Gemini / Antigravity (Google)") { gemini(app) },
                 )
                 val liste = coroutineScope {
                     abfragen.map { (id, titel, abfrage) -> async { anbieterLesen(id, titel, abfrage, alt?.von(id), erzwingen) } }.awaitAll()
-                } + antigravityAnbieter(app)
+                }
                 val s = Stand(liste, beginn)
                 val gewarnt = warnen(app, s)
                 runCatching { speichern(app, s, gewarnt) }
@@ -354,7 +359,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val (konto, limits) = withTimeout(ANBIETER_FRIST_MS) { abfrage() }
                 // Fehlt nur ein Limit, bleibt dessen letzter Stand: Es darf nicht ohne Hinweis verschwinden.
                 val fehlen = vorher?.limits.orEmpty().filter { alt -> limits.none { it.name == alt.name } }
-                val erwartet = if (id == "kimi") 2 else 1
+                val erwartet = when (id) { "kimi" -> 2; "gemini" -> 5; else -> 1 }
                 val hinweis = if (fehlen.isNotEmpty() || limits.size < erwartet) "Ein Limit ließ sich gerade nicht lesen" + (if (fehlen.isNotEmpty()) ", dort steht der letzte Stand." else ".") else null
                 Anbieter(id, titel, konto, limits + fehlen, hinweis, false, System.currentTimeMillis())
             } catch (f: TimeoutCancellationException) {
@@ -497,42 +502,32 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             return Limit(name, p, f, ende.toEpochSecond())
         }
 
-        private fun antigravityDatei(context: Context) = File(context.filesDir, "kontingente-antigravity.json")
-
-        private fun antigravityLimits(l: JSONArray): List<Limit> = (0 until l.length()).map { i ->
-            l.getJSONObject(i).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset")) }
-        }
-
-        /** Die Gemini-Karte aus der letzten Meldung von Server oder Mac. Ihr Stand ist die Zeit der Meldung, nicht die der Abfrage hier. */
-        private fun antigravityAnbieter(app: Context): Anbieter {
-            val j = runCatching { JSONObject(antigravityDatei(app).readText()) }.getOrNull()
-                ?: return Anbieter("gemini", GEMINI_TITEL, "", emptyList(), "Noch kein Stand: Server und Mac melden die Werte alle drei Stunden.", false, 0L)
-            val geholt = j.optLong("geholt")
-            val hinweis = if (System.currentTimeMillis() - geholt > ANTIGRAVITY_ALT_MS) "Alter Stand: Server und Mac haben länger nichts gemeldet." else null
-            val quelle = if (j.optString("quelle") == "server") "über den Server" else "über den Mac"
-            return Anbieter("gemini", GEMINI_TITEL, "Antigravity-CLI $quelle", antigravityLimits(j.getJSONArray("limits")), hinweis, false, geholt)
-        }
-
-        /** Nimmt die Werte aus `agy -p /usage` an und zeigt sie sofort. Das sonst gespeicherte Abrufdatum bleibt, damit die anderen Anbieter im Takt bleiben. */
-        suspend fun antigravityMelden(context: Context, quelle: String, limitsJson: String): String = withContext(Dispatchers.IO) {
-            val app = context.applicationContext
-            val limits = JSONArray(limitsJson)
-            require(antigravityLimits(limits).isNotEmpty()) { "Keine Limits gemeldet." }
-            sperre.withLock {
-                val jetzt = System.currentTimeMillis()
-                val alt = runCatching { JSONObject(antigravityDatei(app).readText()) }.getOrNull()
-                if (quelle != "server" && alt?.optString("quelle") == "server" && jetzt - alt.optLong("geholt") < SERVER_VORRANG_MS) return@withLock "Nicht übernommen: Der Server hat frischere Werte."
-                val inhalt = JSONObject().put("quelle", quelle).put("geholt", jetzt).put("limits", limits).toString()
-                val neu = File(app.filesDir, "kontingente-antigravity.json.neu")
-                neu.writeText(inhalt)
-                if (!neu.renameTo(antigravityDatei(app))) { antigravityDatei(app).writeText(inhalt); neu.delete() }
-                val stand = gespeichert(app) ?: Stand(emptyList(), 0L)
-                val karte = antigravityAnbieter(app)
-                val s = Stand(stand.anbieter.filter { it.id != "gemini" } + karte, stand.geholt)
-                runCatching { speichern(app, s, gewarntLesen(app)) }
-                _frisch.value = s
-                Logbuch.netz("Antigravity-Limits gemeldet", "quelle=$quelle anzahl=${karte.limits.size}")
-                "Übernommen."
+        /** `agy -p /usage` auf dem Server, über dessen Konsole im Tunnel. Anmeldung wie die Konsole selbst, mit dem Zugang der Fernsteuerung. */
+        private fun gemini(app: Context): Pair<String, List<Limit>> {
+            val basis = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
+            val token = MacSteuerung.token(app)
+            if (token.isEmpty()) throw IllegalStateException("Der Zugang zum Server fehlt (fernsteuerung-token.txt).")
+            fun verbindung(pfad: String) = (URL(basis + pfad).openConnection() as HttpURLConnection).apply { connectTimeout = 10_000; readTimeout = 40_000; instanceFollowRedirects = false }
+            try {
+                val anmeldung = verbindung("/anmelden").apply {
+                    requestMethod = "POST"; doOutput = true
+                    setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                    outputStream.use { it.write(("token=" + URLEncoder.encode(token, "UTF-8")).toByteArray()) }
+                }
+                val code = anmeldung.responseCode
+                val keks = anmeldung.getHeaderField("Set-Cookie")?.substringBefore(';')
+                anmeldung.disconnect()
+                if (code != 302 || keks == null) throw IllegalStateException("Die Server-Konsole lehnt die Anmeldung ab ($code).")
+                val abruf = verbindung("/api/antigravity-limits").apply { setRequestProperty("Cookie", keks) }
+                try {
+                    val ok = abruf.responseCode == 200
+                    val j = JSONObject((if (ok) abruf.inputStream else abruf.errorStream).bufferedReader().use { it.readText() })
+                    if (!ok) throw IllegalStateException(j.optString("fehler").ifEmpty { "Fehler ${abruf.responseCode}" }.let { "Der Server liest die Antigravity-Limits nicht: " + it.take(160) })
+                    val l = j.getJSONArray("limits")
+                    return "Antigravity-CLI" to (0 until l.length()).map { i -> l.getJSONObject(i).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset")) } }
+                } finally { abruf.disconnect() }
+            } catch (f: java.io.IOException) {
+                throw IllegalStateException("Der Server ist gerade nicht erreichbar (Tunnel?).")
             }
         }
 

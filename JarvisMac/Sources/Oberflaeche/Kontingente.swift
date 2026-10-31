@@ -63,15 +63,13 @@ struct KontingenteAnsicht: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Wie viel deiner Abos verbraucht ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.")
-                .font(.jarvis(13)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
-            if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
-            else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
-            ForEach(k.anbieter) { karte($0) }
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "arrow.clockwise", titel: "Jetzt neu abfragen", hervorgehoben: true) { Task { await k.laden(frisch: true) } }
                 if k.laedt { ProgressView().controlSize(.small) }
             }
+            if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
+            else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
+            ForEach(k.anbieter) { karte($0) }
             Text("Die Anmeldungen liegen auf dem Handy: Einstellungen → Kontingente.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
         }
         .task { await k.laden() }

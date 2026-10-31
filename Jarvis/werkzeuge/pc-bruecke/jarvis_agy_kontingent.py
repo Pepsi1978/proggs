@@ -1,22 +1,16 @@
-"""Antigravity-Limits fürs Handy: führt alle drei Stunden `agy -p /usage` aus und meldet die Werte per MCP (`kontingente_melden`).
+"""Antigravity-Limits: führt `agy -p /usage` aus und liefert die Werte. Die Server-Konsole gibt sie über /api/antigravity-limits ans Handy.
 
-Das Handy kann agy nicht selbst ausführen und die Seite gemini.google.com/usage zeigt ein anderes Kontingent. Hauptquelle ist deshalb
-der Server (läuft rund um die Uhr), der Mac springt ein, solange der Server nichts meldet. Jeder Aufruf ist ein kurzer eigener Prozess,
-der nach der Ausgabe endet und keine Sitzung anlegt (geprüft am 31.10.2026 an den Ordnern conversations und brain).
+Das Handy kann agy nicht selbst ausführen und die Seite gemini.google.com/usage zeigt ein anderes Kontingent. Jeder Aufruf ist ein kurzer
+eigener Prozess, der nach der Ausgabe endet und keine Sitzung anlegt (geprüft am 31.10.2026 an den Ordnern conversations und brain).
 """
 from __future__ import annotations
 
-import json
 import os
 import re
 import subprocess
-import time
-import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-TAKT_S = 3 * 3600
-NACH_FEHLER_S = 30 * 60
 FENSTER = {"Woche": 7 * 86400, "Fuenf": 5 * 3600}
 GRUPPEN = {"Gemini Models": "Gemini-Modelle", "Claude and GPT models": "Claude und GPT"}
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
@@ -55,31 +49,3 @@ def lesen() -> list[dict]:
     if not limits:
         raise RuntimeError(f"agy nennt keine Limits (Code {r.returncode}): {(r.stdout + r.stderr).strip()[:200]}")
     return limits
-
-
-def melden(quelle: str, limits: list[dict]) -> None:
-    adresse = (Path.home() / "SK" / "Jarvis" / "plugin-url.txt").read_text(encoding="utf-8").strip()
-    rumpf = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "kontingente_melden", "arguments": {
-        "quelle": quelle, "limits": json.dumps(limits, ensure_ascii=False)}}}
-    anfrage = urllib.request.Request(adresse, data=json.dumps(rumpf).encode("utf-8"), method="POST", headers={
-        "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "User-Agent": f"JarvisBruecke/{quelle}"})
-    with urllib.request.urlopen(anfrage, timeout=85) as antwort:
-        text = antwort.read().decode("utf-8", "replace")
-    if '"isError":true' in text.replace(" ", "") or '"error"' in text:
-        raise RuntimeError(f"Das Handy lehnt die Meldung ab: {text[:200]}")
-
-
-def faden(quelle: str, schreib) -> None:
-    """Endlosschleife für einen eigenen Faden der Brücke. Fehler kommen einmal je Wortlaut ins Protokoll."""
-    letzter = ""
-    while True:
-        try:
-            melden(quelle, lesen())
-            if letzter != "ok":
-                schreib(f"Antigravity-Limits gemeldet ({quelle})")
-            letzter, pause = "ok", TAKT_S
-        except Exception as fehler:
-            if str(fehler) != letzter:
-                schreib(f"Antigravity-Limits nicht gemeldet: {fehler}")
-            letzter, pause = str(fehler), NACH_FEHLER_S
-        time.sleep(pause)
