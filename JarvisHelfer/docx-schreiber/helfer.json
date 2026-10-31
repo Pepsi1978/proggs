@@ -13,7 +13,7 @@
     "text",
     "schreiben"
   ],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "ort": "handy",
   "art": "skript",
   "datei": "helfer.js",
@@ -47,7 +47,7 @@
   "grenzen": [
     "Nur Überschrift und Fließtext: keine Bilder, keine Tabellen, keine weitere Formatierung.",
     "Absätze ohne Inhalt werden ausgelassen; der Abstand zwischen Absätzen kommt aus der Formatvorlage.",
-    "Titel höchstens 500 Zeichen, Text insgesamt höchstens 1.000.000 Zeichen und 20.000 Absätze.",
+    "Titel höchstens 500 Zeichen, Text insgesamt höchstens 1.000.000 Zeichen und 20.000 Absätze; sehr viele Zeilenumbrüche, Tabs oder Sonderzeichen können früher an die Grenze stoßen.",
     "Eine vorhandene Datei gleichen Namens im Ausgabeordner wird ersetzt, auch wenn zwei Titel denselben Namen ergeben; für Eindeutigkeit dateiname angeben.",
     "Die Datei liegt nur im Ausgabeordner des Helfers und wird dort nach 30 Tagen gelöscht; der Helfer legt nichts in die Ablage."
   ],

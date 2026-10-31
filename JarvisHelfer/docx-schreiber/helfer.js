@@ -3,6 +3,8 @@
 var MAX_ZEICHEN = 1000000;
 var MAX_ABSAETZE = 20000;
 var MAX_TITEL = 500;
+// Umbrüche, Tabs und Maskierungen vervielfachen den Text; die Grenze schützt den Speicher, bevor das Archiv entsteht.
+var MAX_XML = 6000000;
 var ERLAUBTE_ANGABEN = { titel: true, absaetze: true, dateiname: true };
 var W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 var XML_KOPF = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
@@ -10,29 +12,18 @@ var XML_KOPF = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 var Z = String.fromCharCode;
 var XML_VERBOTEN = new RegExp("[" + Z(0) + "-" + Z(8) + Z(0x0E) + "-" + Z(0x1F) + Z(0xFFFE) + Z(0xFFFF) + "]", "g");
 var ZEILENENDE = new RegExp(Z(0x0D, 0x0A) + "|[" + Z(0x0A, 0x0B, 0x0C, 0x0D, 0x85, 0x2028, 0x2029) + "]");
-var SURROGAT = new RegExp("[" + Z(0xD800) + "-" + Z(0xDFFF) + "]");
+var SURROGATE = new RegExp("[" + Z(0xD800) + "-" + Z(0xDBFF) + "][" + Z(0xDC00) + "-" + Z(0xDFFF) + "]|[" + Z(0xD800) + "-" + Z(0xDFFF) + "]", "g");
+var XML_MASKE = /[&<>]/;
+var NICHT_LEER = new RegExp("[^\\s" + Z(0x85) + "]");
 
 // Zeichen, die in XML 1.0 verboten sind, würden die Datei unlesbar machen. Tab und Zeilenumbrüche bleiben.
 function saeubern(text) {
-  var ohne = text.replace(XML_VERBOTEN, "");
-  if (!SURROGAT.test(ohne)) return ohne;
-  var teile = [];
-  for (var i = 0; i < ohne.length; i++) {
-    var c = ohne.charCodeAt(i);
-    if (c >= 0xD800 && c <= 0xDBFF) {
-      var n = i + 1 < ohne.length ? ohne.charCodeAt(i + 1) : 0;
-      if (n >= 0xDC00 && n <= 0xDFFF) {
-        teile.push(ohne.charAt(i), ohne.charAt(i + 1));
-        i++;
-      }
-    } else if (c < 0xDC00 || c > 0xDFFF) {
-      teile.push(ohne.charAt(i));
-    }
-  }
-  return teile.join("");
+  // Gültige Paare (Emoji) bleiben, einzelne Surrogate entfallen; gültiger Text kostet so keine Schleife je Zeichen.
+  return text.replace(XML_VERBOTEN, "").replace(SURROGATE, function (treffer) { return treffer.length === 2 ? treffer : ""; });
 }
 
 function xmlText(text) {
+  if (!XML_MASKE.test(text)) return text;
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
@@ -148,7 +139,7 @@ function absaetzeLesen(wert, schonVerbraucht) {
     summe += wert[i].length;
     if (summe > MAX_ZEICHEN) throw zuLang();
     var absatz = saeubern(wert[i]);
-    if (absatz.split(ZEILENENDE).join("").trim() !== "") ergebnis.push(absatz);
+    if (NICHT_LEER.test(absatz)) ergebnis.push(absatz);
   }
   return ergebnis;
 }
@@ -168,6 +159,7 @@ function ausfuehren(eingabe) {
   var absaetze = absaetzeLesen(e.absaetze, titel.length);
   var name = e.dateiname === undefined || e.dateiname === null ? dateinameAusTitel(titel) : dateinamePruefen(e.dateiname);
   var rumpf = dokumentRumpf(titel, absaetze);
+  if (rumpf.length > MAX_XML) throw new Error("Der Text enthält zu viele Zeilenumbrüche, Tabs oder Sonderzeichen für ein Dokument.");
   var inhalt = archivInhalt(rumpf);
   var pfad = jarvis.zipDatei(name, inhalt);
 
