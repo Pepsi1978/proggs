@@ -42,7 +42,7 @@ dort haelt nur diese Anweisung die Kostenkontrolle.
 sind — in `minimal` sind sie es nicht. Alles Pflichtige steht deshalb HIER im Skill im Wortlaut:
 Frage 1 (Block 0.1), Frage 2 (Schritt 6) und die Persistenz-Checkliste (Schritt 8).
 
-**Gilt in JEDEM Arbeitsmodus — Freimodus, Schnellmodus, Normalmodus, Gruendlichkeitsmodus.**
+**Gilt in JEDEM Arbeitsmodus — Freimodus, Schnellmodus, Normalmodus, Gruendlichkeitsmodus.** (Einzige Ausnahme fuer Frage 1: der Hostinger-Server, Block 0.0a.)
 Der Schnellmodus sagt "ohne Nachfragen" und "keine Tests, keine Ueberpruefungen". Das meint den
 Umsetzungs-Teil einer Programmieraufgabe. Es hebt **nicht** auf:
 - **Frage 1** (Engine-Wahl) — sie ist eine Kosten-Freigabe, keine Rueckfrage zur Arbeitsweise. Eine
@@ -63,7 +63,7 @@ Zuerst `echo $JARVIS_SERVER` prüfen. Steht dort `1`, läuft die Sitzung auf Fra
 
 - **Frage 1 entfällt.** Engine A und B gibt es hier nicht, `mm-research.py`, `or-research.py` und `research-swarm.py` nicht starten.
 - **Claude Code:** immer Engine C, also der Sonnet-5.5-Schwarm wie in Schritt 3 beschrieben (Agent-Tool mit `model:"sonnet"`, bis zu 7 parallel). Sonst wie an den Rechnern; Rückfragen mit `AskUserQuestion` kommen auf Franks Handy.
-- **OpenAI-Modelle (Codex CLI, OpenCode):** Sonnet gibt es dort nicht. Recherchiere mit der eingebauten Websuche des Modells; Codex startet hier mit `--search`. Teile die Unterthemen auf mehrere Unteragenten auf, wenn das CLI sie anbietet, sonst arbeite sie nacheinander ab. Codex kann nicht zurückfragen: Entscheide selbst und nenne das im Bericht.
+- **Alle anderen (Codex CLI, OpenCode, Kimi Code, Antigravity):** Sonnet gibt es dort nicht. Recherchiere mit der Websuche, die das Modell oder CLI selbst anbietet; Codex startet hier mit `--search`. Teile die Unterthemen auf mehrere Unteragenten auf, wenn das CLI sie anbietet, sonst arbeite sie nacheinander ab. Hat die Sitzung gar keine Websuche, melde das, statt zu raten. Kann das CLI nicht zurückfragen (Codex, Kimi, Antigravity): Entscheide selbst und nenne das im Bericht.
 - **Unverändert:** Ablauf, Frage 2 (Schritt 6, wo das CLI fragen kann), Persistenz in `best-practices/` und `bugs/` (Schritt 8) und die Hook-Registrierung (Schritt 9).
 
 ---

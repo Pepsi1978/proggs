@@ -33,10 +33,10 @@ PROGRAMME = {
              "anmeldung": "kimi login", "stand": "", "installieren": f"{NPM} --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest"},
     "antigravity": {"name": "Antigravity CLI", "befehl": "agy", "update": "agy update", "anmeldung": "agy", "stand": "",
                     "installieren": "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
-    "chrome-devtools-mcp": {"name": "Browser-Steuerung", "befehl": "chrome-devtools-mcp", "update": f"{NPM} chrome-devtools-mcp@latest", "anmeldung": "", "stand": "true",
+    "chrome-devtools-mcp": {"name": "Browser-Steuerung", "befehl": "chrome-devtools-mcp", "update": f"{NPM} chrome-devtools-mcp@latest", "anmeldung": "", "stand": "",
                             "installieren": f"{NPM} chrome-devtools-mcp@latest"},
     # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
-    "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth status", "installieren": "true"},
+    "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth token", "installieren": "true"},
 }
 
 
@@ -71,6 +71,8 @@ def in_benutzung(schluessel: str, p: dict, alle: list) -> bool:
 
 
 def anmeldung(schluessel: str, p: dict) -> str:
+    if not p["anmeldung"]:
+        return "keine"
     if schluessel == "claude":
         return launcher.claude_anmeldung()
     if p["stand"]:
@@ -79,7 +81,7 @@ def anmeldung(schluessel: str, p: dict) -> str:
             return "angemeldet"
         return "abgemeldet"
     pfade = {"kimi": HOME / ".kimi-code", "antigravity": HOME / ".agy"}
-    return "unbekannt" if pfade.get(schluessel, HOME / "-").exists() else "abgemeldet"
+    return "unbekannt" if pfade[schluessel].exists() else "abgemeldet"
 
 
 def status_schreiben(aktualisieren: bool) -> dict:
@@ -108,6 +110,7 @@ def status_schreiben(aktualisieren: bool) -> dict:
                 else:
                     eintrag["meldung"] = f"{jetzt}: aktuell"
         eintrag["anmeldung"] = anmeldung(schluessel, p) if eintrag["version"] else "fehlt"
+        eintrag["anmeldbar"] = bool(p["anmeldung"])
         programme[schluessel] = eintrag
     code, pwsh = _lauf("pwsh --version", 20)
     daten = {"programme": programme, "powershell": pwsh if code == 0 else "", "geprueft": time.strftime("%d.%m.%Y %H:%M")}

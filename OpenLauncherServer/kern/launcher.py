@@ -45,6 +45,7 @@ ARBEITET_S = 180  # CLIs ohne Hooks: so lange nach der letzten Ausgabe gilt die 
 SCHLIESSBAR_S = 1800  # eine untätige CLI darf für einen neuen Auftrag erst nach dieser Zeit weichen
 UNTAETIG_ZU_S = 12 * 3600  # danach schließt der Launcher eine untätige CLI (länger wartet auch kein Warter auf Nachträge)
 FREI_ZU_S = 24 * 3600  # freie PowerShells: Eine vergessene hielte sonst das PowerShell-Update für immer auf
+INTERN = ("basis", "browser")  # tmux-Sitzungen des Dienstes, nie zum Anzeigen oder Schließen
 NAME = re.compile(r"[A-Za-z0-9._-]{1,80}")
 # Einzige Liste der Werkzeugpfade für Startskripte und CLI-Updates (installieren.sh führt für die eigene Shell dieselben).
 PFADE = ".local/bin .local/node/bin .kimi-code/bin .agy/bin android-sdk/platform-tools android-sdk/cmdline-tools/latest/bin".split()
@@ -67,7 +68,7 @@ def _schreib(pfad: Path, text: str, rechte: int = 0o644) -> None:
 
 
 def pruefe_name(name: str) -> str:
-    if not NAME.fullmatch(name) or name in ("basis", "browser"):
+    if not NAME.fullmatch(name) or name in INTERN:
         raise ValueError("Ungültiger Sitzungsname")
     return name
 
@@ -85,8 +86,8 @@ def pruefe_wahl(profil: str, modus: str) -> None:
 
 
 def regeltext(quelle: Path, modus: str) -> str:
-    """Profil, dann die Server-Regeln (sie gehen dem Profil vor), dann der Modus, wie composeClaudeContext am Mac."""
-    teile = [_uebersetzt(_lies(quelle)).strip(), _uebersetzt(_lies(ZUSATZ)).strip(), _lies(PROFILE / "WorkModes" / f"{modus}.md").strip()]
+    """Profil und Modus wie composeClaudeContext am Mac, dahinter die Server-Regeln: Sie gehen beiden vor."""
+    teile = [_uebersetzt(_lies(quelle)).strip(), _lies(PROFILE / "WorkModes" / f"{modus}.md").strip(), _uebersetzt(_lies(ZUSATZ)).strip()]
     return "\n\n".join(t for t in teile if t) + "\n"
 
 
@@ -246,7 +247,7 @@ def agents_aktivieren(profil: str, modus: str) -> None:
 
 
 def codex_zuhause() -> Path:
-    """Eigenes Zuhause wie am Mac: keine globale AGENTS.md, keine Plugins, keine MCP-Server. Die Anmeldung liegt ebenfalls hier."""
+    """Eigenes Zuhause wie am Mac: keine globale AGENTS.md, keine Plugins, als einziger MCP-Server die Browser-Steuerung. Die Anmeldung liegt ebenfalls hier."""
     zuhause = ZUSTAND / "codex-home"
     zuhause.mkdir(parents=True, exist_ok=True)
     _schreib(zuhause / "AGENTS.md", "")
@@ -546,7 +547,7 @@ def sitzungen() -> list:
     liste = []
     for zeile in aus.splitlines():
         teile = zeile.split("\t")
-        if len(teile) < 4 or teile[0] in ("basis", "browser"):
+        if len(teile) < 4 or teile[0] in INTERN:
             continue
         name, befehl, aktiv = teile[0], teile[1], int(teile[2] or 0)
         try:
@@ -584,7 +585,12 @@ def browser_laeuft() -> bool:
 def browser_starten() -> None:
     """Der eine Chrome des Servers auf dem unsichtbaren Bildschirm :99, nur bei Bedarf: Er belegt rund 500 MB. Läuft im tmux-Dienst, also unter dessen Speicherdeckel."""
     if not browser_laeuft():
-        subprocess.run(TMUX + ["new-session", "-d", "-s", "browser", f"bash {shlex.quote(str(BROWSER_START))}"], capture_output=True, timeout=10)
+        # Wie _tmux_starten: Ohne den Dienst entstünde ein tmux ohne Speicherdeckel.
+        if subprocess.run(TMUX + ["has-session", "-t", "=basis"], capture_output=True, timeout=10).returncode != 0:
+            raise RuntimeError("Der tmux-Dienst (jarvis-tmux) läuft gerade nicht.")
+        ergebnis = subprocess.run(TMUX + ["new-session", "-d", "-s", "browser", f"bash {shlex.quote(str(BROWSER_START))}"], capture_output=True, text=True, timeout=10)
+        if ergebnis.returncode != 0:
+            raise RuntimeError(f"tmux konnte den Browser nicht starten: {ergebnis.stderr.strip()[:200]}")
     (ZUSTAND / "browser-benutzt").touch()
     for _ in range(40):
         try:
@@ -596,9 +602,13 @@ def browser_starten() -> None:
 
 
 def _browser_aufraeumen() -> None:
-    if not browser_laeuft():
+    try:
+        if not browser_laeuft():
+            return
+        verbunden = subprocess.run(["ss", "-Htn", "state", "established", "( sport = :9222 or sport = :5900 )"], capture_output=True, text=True, timeout=5).stdout.strip()
+    except (subprocess.TimeoutExpired, OSError):
+        # Nur Aufräumen: Es darf keinen Start einer Sitzung scheitern lassen.
         return
-    verbunden = subprocess.run(["ss", "-Htn", "state", "established", "( sport = :9222 or sport = :5900 )"], capture_output=True, text=True, timeout=5).stdout.strip()
     merke = ZUSTAND / "browser-benutzt"
     if verbunden:
         merke.touch()

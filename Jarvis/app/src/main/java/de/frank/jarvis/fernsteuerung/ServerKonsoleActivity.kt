@@ -5,10 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
 import android.content.pm.PackageManager
-import android.media.AudioFormat
 import android.media.AudioManager
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.media.ToneGenerator
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -28,14 +25,12 @@ import de.frank.jarvis.speech.ParakeetLokal
 import de.frank.jarvis.weckwort.Weckwort
 import de.frank.module.transkriptionsmodul.GroqTranscriber
 import de.frank.module.transkriptionsmodul.TranskriptionAnbindung
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -72,7 +67,8 @@ class ServerKonsoleActivity : ComponentActivity() {
             addJavascriptInterface(Stimme(), "JarvisSprache")
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    if (request.url.host == Fernziel.SERVER.adresse) return false
+                    // Auch der Port zählt: Nur die Konsole selbst bleibt in dieser Ansicht und sieht die Sprach-Schnittstelle.
+                    if (request.url.host == Fernziel.SERVER.adresse && request.url.port == Fernziel.SERVER.port) return false
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
                     return true
                 }
@@ -121,72 +117,91 @@ class ServerKonsoleActivity : ComponentActivity() {
     private inner class Stimme {
         @JavascriptInterface fun start() { runOnUiThread { aufnahmeStarten() } }
         @JavascriptInterface fun stop() { runOnUiThread { aufnahmeBeenden() } }
+        @JavascriptInterface fun abbrechen() { runOnUiThread { aufnahmeAbbrechen() } }
     }
 
-    private var aufnahme: AudioRecord? = null
-    private var aufnahmeFaden: Job? = null
-    private val puffer = ByteArrayOutputStream()
+    private val mikro by lazy { TranskriptionAnbindung.mikrofon(applicationContext) }
+    /** Vom Tippen bis zum Ende der Umwandlung: Ein zweiter Start oder ein Abbruch fasst immer genau diesen Lauf an. */
+    private var lauf: Job? = null
+    private var haelt = false
 
     private fun melden(text: String, fehler: String = "") {
         ansicht.evaluateJavascript("stimmeFertig(${JSONObject.quote(text)}, ${JSONObject.quote(fehler)})", null)
     }
 
     private fun aufnahmeStarten() {
+        if (lauf != null) return
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1)
             melden("", "Bitte das Mikrofon erlauben und noch einmal tippen.")
             return
         }
-        aufnahmeFaden = lifecycleScope.launch {
+        haelt = true
+        lauf = lifecycleScope.launch {
             Weckwort.mikrofonHolen()
-            piep()
-            val groesse = maxOf(AudioRecord.getMinBufferSize(HZ, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT), HZ)
-            @SuppressLint("MissingPermission")
-            val mikro = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, HZ, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, groesse)
-            aufnahme = mikro
-            synchronized(puffer) { puffer.reset() }
-            withContext(Dispatchers.IO) {
-                mikro.startRecording()
-                val stueck = ByteArray(4096)
-                while (isActive) {
-                    val n = mikro.read(stueck, 0, stueck.size)
-                    if (n <= 0) break
-                    synchronized(puffer) { puffer.write(stueck, 0, n) }
-                }
+            try {
+                piep()
+                if (!mikro.start(this@ServerKonsoleActivity.lifecycleScope)) throw IllegalStateException("Das Mikrofon ist gerade belegt.")
+                // Hier wartet der Lauf auf aufnahmeBeenden oder den Abbruch; die Aufnahme selbst läuft im Mikrofon-Baustein.
+                awaitCancellation()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logbuch.fehler("Konsole: Aufnahme", e)
+                melden("", e.message ?: "Das Mikrofon ließ sich nicht öffnen.")
+                lauf = null
+            } finally {
+                Weckwort.mikrofonFreigeben()
             }
         }
     }
 
-    private fun aufnahmeFreigeben() {
-        aufnahmeFaden?.cancel()
-        aufnahmeFaden = null
-        aufnahme?.let { m -> runCatching { m.stop() }; m.release() }
-        aufnahme = null
-        Weckwort.mikrofonFreigeben()
+    private fun aufnahmeAbbrechen() {
+        val alt = lauf ?: return
+        lauf = null
+        haelt = false
+        alt.cancel()
+        if (mikro.isRecording()) lifecycleScope.launch { runCatching { mikro.stop() } }
     }
 
     private fun aufnahmeBeenden() {
-        aufnahmeFreigeben()
-        val pcm = synchronized(puffer) { puffer.toByteArray() }
-        lifecycleScope.launch {
-            piep()
+        val alt = lauf ?: return melden("", "")
+        // Während der Vorbereitung ist noch nichts aufgenommen: Ohne neuen Lauf bliebe sonst nur ein leerer Abbruch.
+        if (!mikro.isRecording()) {
+            aufnahmeAbbrechen()
+            return melden("", "Die Aufnahme war zu kurz.")
+        }
+        haelt = false
+        lauf = lifecycleScope.launch {
+            alt.cancelAndJoin()
             try {
-                if (pcm.size < HZ) { melden("", "Die Aufnahme war zu kurz."); return@launch }
-                val wav = withContext(Dispatchers.Default) { alsWav(pcm) }
-                val text = SecureSettings(this@ServerKonsoleActivity).use { s ->
-                    if (s.transkriptionLokal) ParakeetLokal.transkribiere(this@ServerKonsoleActivity, wav, null, s.filterStilleVorabAn, "")
-                    else withContext(Dispatchers.IO) {
-                        val groq = GroqTranscriber(apiKey = s.groqApiKey, filterStille = s.filterStilleVorabAn, filterMetriken = s.filterSegmentmetrikenAn,
-                            filterZeitstempel = s.filterZeitstempelAn, filterFloskeln = s.filterFloskelnAn, model = s.whisperModell)
-                        try { TranskriptionAnbindung.diktat(groq).transkribiere(wav, null).text } finally { groq.shutdown() }
-                    }
-                }.trim()
+                val wav = mikro.stop()
+                piep()
+                if (wav == null || wav.size < 2000) { melden("", "Die Aufnahme war zu kurz."); return@launch }
+                val stimmhaft = mikro.letzteStimmhaft
+                val text = withContext(Dispatchers.Default) {
+                    SecureSettings(applicationContext).use { s ->
+                        val begriffe = if (s.woerterbuchAn) GroqTranscriber.begriffe(s.woerterbuchBegriffe) else null
+                        if (s.transkriptionLokal) {
+                            if (!ParakeetLokal.bereit(applicationContext)) throw IllegalStateException("Das Offline-Modell fehlt noch: In Jarvis unter Sprache herunterladen.")
+                            ParakeetLokal.run { transkribiere(applicationContext, wav, stimmhaft, s.filterStilleVorabAn, begriffe?.let { hotwords(it) } ?: "") }
+                        } else {
+                            if (s.groqApiKey.isBlank()) throw IllegalStateException("Für das Diktat fehlt der Groq-Schlüssel in den Jarvis-Einstellungen.")
+                            val groq = GroqTranscriber(apiKey = s.groqApiKey, filterStille = s.filterStilleVorabAn, filterMetriken = s.filterSegmentmetrikenAn,
+                                filterZeitstempel = s.filterZeitstempelAn, filterFloskeln = s.filterFloskelnAn, model = s.whisperModell,
+                                prompt = begriffe?.let { GroqTranscriber.run { woerterbuchPrompt(it) } })
+                            try { withContext(Dispatchers.IO) { TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text } } finally { groq.shutdown() }
+                        }
+                    }.trim()
+                }
                 melden(text, if (text.isEmpty()) "Ich habe nichts verstanden." else "")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Logbuch.fehler("Konsole: Mitschrift", e)
                 melden("", e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden.")
+            } finally {
+                lauf = null
             }
         }
     }
@@ -196,17 +211,9 @@ class ServerKonsoleActivity : ComponentActivity() {
         try { ton.startTone(ToneGenerator.TONE_PROP_BEEP, 120); delay(160) } finally { ton.release() }
     }
 
-    private fun alsWav(pcm: ByteArray): ByteArray {
-        val kopf = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-            put("RIFF".toByteArray()); putInt(36 + pcm.size); put("WAVEfmt ".toByteArray()); putInt(16); putShort(1); putShort(1)
-            putInt(HZ); putInt(HZ * 2); putShort(2); putShort(16); put("data".toByteArray()); putInt(pcm.size)
-        }.array()
-        return kopf + pcm
-    }
-
     override fun onPause() {
-        // Im Hintergrund nie weiter aufnehmen.
-        if (aufnahme != null) { aufnahmeFreigeben(); melden("", "Die Aufnahme wurde beendet, weil die Konsole nicht mehr vorn war.") }
+        // Im Hintergrund nie aufnehmen, auch nicht, wenn die Aufnahme gerade erst vorbereitet wird. Eine laufende Umwandlung darf zu Ende gehen.
+        if (haelt) { aufnahmeAbbrechen(); melden("", "Die Aufnahme wurde beendet, weil die Konsole nicht mehr vorn war.") }
         super.onPause()
     }
 
@@ -222,8 +229,6 @@ class ServerKonsoleActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.statusBars())
         }
     }
-
-    private companion object { const val HZ = 16_000 }
 
     override fun onDestroy() {
         ansicht.destroy()

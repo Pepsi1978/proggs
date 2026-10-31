@@ -46,3 +46,6 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #stimme-auto.an { color:var(--gut); }
 #stimme-mikro { width:64px; height:64px; border-radius:50% !important; font-size:26px; background:var(--akzent) !important; color:#0b1220; border:0; }
 #stimme-mikro[data-stand="nimmt"] { background:var(--gefahr) !important; }
+#stimme-meldung { max-width:50vw; padding:8px 12px; border-radius:10px; background:#1a1f2bee; font-size:14px; }
+#stimme-meldung[hidden] { display:none; }
+.punkt.keine { background:var(--gut); }

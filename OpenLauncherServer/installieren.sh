@@ -8,18 +8,21 @@ REPO=$ZUHAUSE/proggs
 als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget libatomic1 dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc websockify xdotool openbox
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox
 
 # gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
-if [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
+install -d -m 0755 /etc/apt/keyrings
+if [ ! -f /etc/apt/keyrings/githubcli-archive-keyring.gpg ] || [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+  NEUE_QUELLE=1
 fi
-if [ ! -f /etc/apt/sources.list.d/google-chrome.list ]; then
+if [ ! -f /etc/apt/keyrings/google-chrome.gpg ] || [ ! -f /etc/apt/sources.list.d/google-chrome.list ]; then
   curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor --yes -o /etc/apt/keyrings/google-chrome.gpg
   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+  NEUE_QUELLE=1
 fi
-apt-get update -qq
+[ -z "${NEUE_QUELLE:-}" ] || apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gh google-chrome-stable fonts-noto-color-emoji
 
 # Swap: Ohne ihn beendet der Kernel bei Speicherspitzen beliebige Dienste.
@@ -89,7 +92,8 @@ for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" |
 als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
 als 'npm install -g --silent pnpm@latest chrome-devtools-mcp@latest' || echo "pnpm oder chrome-devtools-mcp nicht installiert"
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
-als 'bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"
+# Nur beim ersten Mal (jeder Lauf legt eine Sicherung an); der Mac-Build des Skripts gehört nicht hierher.
+[ -f "$ZUHAUSE/.config/opencode/plugins/work-mode.js" ] || als 'OPENCODE_SKIP_MACFIX=1 bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"
 
 # PowerShell aus dem Microsoft-Paketarchiv: die Shell der Konsole, aktuell gehalten von jarvis-powershell.timer. Fehlt sie, fällt die Konsole auf bash zurück.
 if ! command -v pwsh >/dev/null; then

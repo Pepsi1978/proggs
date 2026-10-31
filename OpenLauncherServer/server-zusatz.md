@@ -1,4 +1,4 @@
-# Server-Regeln (Hostinger-Server, gehen dem Profil oben vor)
+# Server-Regeln (Hostinger-Server, gehen Profil und Modus oben vor)
 
 Du läufst auf Franks Hostinger-Server (Ubuntu 24.04, 2 vCPU, 8 GB RAM, nebenbei laufen Werft Studio, Second Brain und der Jarvis-Relay), als Benutzer `jarvis` ohne root und ohne Docker. Das Repo ist `~/proggs`. Frank sieht dich in der Server-Konsole und in Jarvis.
 
@@ -9,7 +9,7 @@ Du läufst auf Franks Hostinger-Server (Ubuntu 24.04, 2 vCPU, 8 GB RAM, nebenbei
 - **Android installieren:** Das Handy ist im Tunnel unter `10.8.0.7:5555` erreichbar. `Werkzeuge/adb-wlan/adb-wlan.sh` verbindet, danach `adb -s 10.8.0.7:5555 install -r <apk>`. Jarvis immer über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>`. Ist das Handy nicht erreichbar, melde das: Das APK-Update kommt trotzdem über den Cloud-Bau in UpdateStation an.
 - **APK-Update (Regel 20):** Der Skill `apk-update` läuft hier nicht, denn Google Drive ist nicht angebunden. Ein Push vom Server auf `main` startet den GitHub-Ablauf `android-cloud-build.yml`. Er baut jede geänderte App, signiert sie und legt APK und `update.json` in den Drive-Ordner. Dein Teil ist Versionslog-Eintrag, Commit und Push. In der Abschlussmeldung: „APK-Update: per Cloud-Bau, versionCode X“. Den Skill `apk-update-cloud` hier ebenfalls nicht starten.
 - **Geht hier nicht, melde es statt es zu versuchen:** Mac- und Windows-Apps bauen oder installieren (`swiftc`, WPF), die Updateskripte von OpenLauncher, TVO und CVO, der Emulator (Regeln 12, 13, 17). Solche Änderungen committen und pushen; Frank installiert sie am jeweiligen Rechner.
-- **Web-Recherche:** Immer über den Skill `research`; sein Abschnitt „Auf dem Hostinger-Server“ sagt, was hier gilt: Claude nur Sonnet-Schwarm, OpenAI-Modelle ihre eigene Websuche. Rückfragen gehen wie gewohnt an Frank.
+- **Web-Recherche:** Immer über den Skill `research`; sein Abschnitt „Auf dem Hostinger-Server“ sagt, was hier gilt: Claude nur Sonnet-Schwarm, OpenAI-Modelle ihre eigene Websuche. Wo das CLI Rückfragen stellen kann, kommen sie auf Franks Handy.
 - **.NET:** SDK 8 und 10 sind da. WPF-Projekte lassen sich hier nur auf Fehler prüfen (Build mit `-p:EnableWindowsTargeting=true`), nicht starten; Bau und Installation bleiben am Windows-PC. Reine .NET-Konsolenprogramme laufen.
 - **Browser:** Der MCP-Server `chrome-devtools` steuert den einen Chrome des Servers (öffnen, klicken, Bildschirmfotos). Er startet bei Bedarf, und Frank sieht ihn in der Konsole im Reiter Browser. Keinen eigenen Chrome starten: Der Speicher reicht nur für einen.
-- **GitHub:** `gh` ist installiert, sobald Frank es in der Konsole unter System angemeldet hat. Sonst nur `git` über den Deploy-Key.
+- **GitHub:** `gh` ist installiert. Es braucht Franks Anmeldung in der Konsole unter System; solange `gh auth status` das verneint, geht nur `git` über den Deploy-Key.

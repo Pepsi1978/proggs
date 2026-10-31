@@ -71,8 +71,8 @@ async def schutz(request: web.Request, handler):
         return web.json_response({"fehler": "fremde Herkunft"}, status=403)
     try:
         return await handler(request)
-    except (ValueError, KeyError, TypeError) as fehler:
-        # Unlesbare Anfrage oder ungültige Wahl: verständlich an die Seite, nicht als HTTP 500.
+    except (ValueError, KeyError, TypeError, RuntimeError, subprocess.TimeoutExpired) as fehler:
+        # Unlesbare Anfrage, ungültige Wahl oder gescheiterter Start: verständlich an die Seite, nicht als HTTP 500.
         return web.json_response({"fehler": str(fehler) or "Ungültige Anfrage"}, status=400)
 
 
@@ -132,7 +132,7 @@ STATUS_AUFFRISCHEN = {"zeit": 0.0, "laeuft": False}
 
 
 async def _status_auffrischen() -> None:
-    """Anmeldestände frisch prüfen, höchstens alle 20 s: Sonst zeigte der Reiter bis zum nächsten Update-Lauf „nicht angemeldet“, obwohl der Login gelang."""
+    """Anmeldestände frisch prüfen, höchstens jede Minute (jede Prüfung startet mehrere CLIs): Sonst zeigte der Reiter bis zum nächsten Update-Lauf „nicht angemeldet“, obwohl der Login gelang."""
     try:
         await _im_faden(clis.status_schreiben, False)
     finally:
@@ -140,7 +140,7 @@ async def _status_auffrischen() -> None:
 
 
 async def system(request: web.Request) -> web.Response:
-    if not STATUS_AUFFRISCHEN["laeuft"] and time.monotonic() - STATUS_AUFFRISCHEN["zeit"] > 20:
+    if not STATUS_AUFFRISCHEN["laeuft"] and time.monotonic() - STATUS_AUFFRISCHEN["zeit"] > 60:
         STATUS_AUFFRISCHEN["laeuft"] = True
         aufgabe = asyncio.create_task(_status_auffrischen())
         request.app["aufgaben"].add(aufgabe)
@@ -175,8 +175,8 @@ async def aktualisieren(_: web.Request) -> web.Response:
 async def anmeldung(request: web.Request) -> web.Response:
     d = await request.json()
     p = clis.PROGRAMME.get(str(d.get("cli")))
-    if not p:
-        return web.json_response({"fehler": "Unbekanntes CLI"}, status=400)
+    if not p or not p["anmeldung"]:
+        return web.json_response({"fehler": "Dafür gibt es keine Anmeldung"}, status=400)
     umgebung = f"export CLAUDE_CONFIG_DIR={launcher.claude_ordner('minimal')} CODEX_HOME={launcher.codex_zuhause()}\n"
     if d.get("cli") == "claude":
         await _im_faden(launcher.claude_vorbereiten, "minimal", "schnell")
@@ -237,8 +237,41 @@ async def bildschirm(request: web.Request) -> web.WebSocketResponse:
     finally:
         for aufgabe in aufgaben:
             aufgabe.cancel()
+        # Abrisse sind im Mobilfunk normal; ihre Ausnahmen gehören nicht ins Protokoll.
+        await asyncio.gather(*aufgaben, return_exceptions=True)
         schreiber.close()
     return ws
+
+
+async def browser_wecken(leser: asyncio.StreamReader, schreiber: asyncio.StreamWriter) -> None:
+    """Port 9221 nur auf localhost: Die Browser-Steuerung der Sitzungen kommt hierher. Beim ersten Zugriff startet der Browser, dann werden die Bytes durchgereicht."""
+    ziel = None
+    try:
+        await _im_faden(launcher.browser_starten)
+        ziel_leser, ziel = await asyncio.open_connection("127.0.0.1", 9222)
+
+        async def pumpe(von: asyncio.StreamReader, nach: asyncio.StreamWriter):
+            while daten := await von.read(65536):
+                nach.write(daten)
+                await nach.drain()
+
+        aufgaben = [asyncio.create_task(pumpe(leser, ziel)), asyncio.create_task(pumpe(ziel_leser, schreiber))]
+        await asyncio.wait(aufgaben, return_when=asyncio.FIRST_COMPLETED)
+        for aufgabe in aufgaben:
+            aufgabe.cancel()
+        await asyncio.gather(*aufgaben, return_exceptions=True)
+    except (OSError, RuntimeError, subprocess.TimeoutExpired):
+        pass
+    finally:
+        for w in (schreiber, ziel):
+            if w is not None:
+                w.close()
+
+
+async def browser_wecker_starten(_: web.Application):
+    server = await asyncio.start_server(browser_wecken, "127.0.0.1", 9221)
+    yield
+    server.close()
 
 
 async def links(request: web.Request) -> web.Response:
@@ -255,8 +288,8 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     name = request.match_info["name"]
     ws = web.WebSocketResponse(heartbeat=25, max_msg_size=4 * 1024 * 1024)
     await ws.prepare(request)
-    # Die Sitzung gibt es nicht (mehr): 4404 sagt der Seite, dass neu Verbinden nichts bringt.
-    if not launcher.NAME.fullmatch(name) or await _im_faden(lambda: subprocess.run(launcher.TMUX + ["has-session", "-t", f"={name}"], capture_output=True, timeout=5).returncode) != 0:
+    # Die Sitzung gibt es nicht (mehr), oder sie gehört dem Dienst: 4404 sagt der Seite, dass neu Verbinden nichts bringt.
+    if not launcher.NAME.fullmatch(name) or name in launcher.INTERN or await _im_faden(lambda: subprocess.run(launcher.TMUX + ["has-session", "-t", f"={name}"], capture_output=True, timeout=5).returncode) != 0:
         await ws.close(code=4404)
         return ws
     herr, knecht = pty.openpty()
@@ -367,7 +400,11 @@ async def ohne_zwischenspeicher(request: web.Request, antwort: web.StreamRespons
     # Nach einem Vorspulen darf kein altes JavaScript gegen den neuen Server laufen. xterm hat eine feste Version: Es kommt aus dem Speicher des
     # Handys, ohne jede Rückfrage über den Tunnel.
     fest = request.path in ("/static/xterm.js", "/static/xterm.css", "/static/addon-fit.js")
-    antwort.headers["Cache-Control"] = "max-age=2592000" if fest and antwort.status == 200 else "no-cache"
+    # noVNC sind rund 60 Dateien aus einem Systempaket: Ohne das fragte jedes Öffnen jede einzeln über den Tunnel nach.
+    if antwort.status == 200 and (fest or request.path.startswith("/vnc/")):
+        antwort.headers["Cache-Control"] = "max-age=2592000" if fest else "max-age=86400"
+    else:
+        antwort.headers["Cache-Control"] = "no-cache"
 
 
 def gepackt_ablegen() -> None:
@@ -389,6 +426,7 @@ def anwendung() -> web.Application:
     a["aufgaben"] = set()
     a.on_response_prepare.append(ohne_zwischenspeicher)
     a.cleanup_ctx.append(neu_laden_bei_aenderung)
+    a.cleanup_ctx.append(browser_wecker_starten)
     a.router.add_get("/ping", ping)
     a.router.add_post("/anmelden", anmelden)
     a.router.add_get("/", startseite)
@@ -405,7 +443,7 @@ def anwendung() -> web.Application:
     a.router.add_post("/api/browser", browser_start)
     a.router.add_get("/vnc-ws", bildschirm)
     if Path("/usr/share/novnc").is_dir():
-        a.router.add_static("/vnc", "/usr/share/novnc", append_version=False)
+        a.router.add_static("/vnc", "/usr/share/novnc", append_version=False, follow_symlinks=True)
     a.router.add_static("/static", HIER / "static", append_version=False)
     return a
 

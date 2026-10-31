@@ -1,12 +1,14 @@
 [Unit]
-Description=Pakete der Hersteller aktualisieren: gh und Chrome immer, PowerShell nur, solange keine läuft
+Description=Pakete der Hersteller aktualisieren; Chrome, .NET und PowerShell nur, solange sie nicht laufen
 
 [Service]
 Type=oneshot
 Environment=DEBIAN_FRONTEND=noninteractive
-ExecStart=/usr/bin/apt-get update -qq
+# Ein gestörtes Paketarchiv darf die übrigen Updates nicht aufhalten.
+ExecStart=-/usr/bin/apt-get update -qq
+ExecStart=-/usr/bin/apt-get install -y -qq --only-upgrade gh
 ExecStart=-/bin/sh -c 'pgrep -x chrome >/dev/null || apt-get install -y -qq --only-upgrade google-chrome-stable'
-ExecStart=-/usr/bin/apt-get install -y -qq --only-upgrade gh dotnet-sdk-8.0 dotnet-sdk-10.0
+ExecStart=-/bin/sh -c 'pgrep -x dotnet >/dev/null || apt-get install -y -qq --only-upgrade dotnet-sdk-8.0 dotnet-sdk-10.0'
 ExecStart=-/bin/sh -c 'pgrep -x pwsh >/dev/null || apt-get install -y -qq --only-upgrade powershell'
 TimeoutStartSec=1200
 Nice=10

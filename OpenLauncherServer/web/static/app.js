@@ -21,7 +21,8 @@ function zeige(name) {
   if (name === "terminal") { setTimeout(passen, 30); }
   if (name === "sitzungen") ladeSitzungen();
   if (name === "system") ladeSystem();
-  if (name === "browser") browserOeffnen();
+  if (name === "browser") browserOeffnen(); else browserLoesen();
+  if (name !== "terminal") aufnahmeAbbrechen();
 }
 document.querySelectorAll("#reiter button").forEach((b) => b.addEventListener("click", () => zeige(b.dataset.seite)));
 
@@ -140,7 +141,7 @@ function wischenEinrichten() {
   });
   decke.addEventListener("touchcancel", () => { y = null; }, { passive: true });
 }
-function schicke(d) { rollenStoppen(); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d })); }
+function schicke(d) { rollenStoppen(); schonGesprochen = false; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d })); }
 function passen() {
   if (!term || seite !== "terminal") return;
   try { fit.fit(); } catch { return; }
@@ -153,7 +154,8 @@ function trennen() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   $("titel").textContent = "Keine Sitzung gewählt";
   $("schliessen").hidden = true;
-  if (typeof stimmeZeigen === "function") stimmeZeigen();
+  aufnahmeAbbrechen();
+  stimmeZeigen();
   $("links").replaceChildren();
   if (term) term.reset();
 }
@@ -253,20 +255,46 @@ $("start").addEventListener("click", async () => {
 
 // ---- Browser
 async function browserOeffnen() {
-  const bild = $("browser-bild");
+  const bild = $("browser-bild"), meldung = $("browser-meldung");
   if (!bild.hidden) return;
+  meldung.hidden = false;
+  meldung.textContent = "Der Browser startet …";
   try {
+    // Auch nach einem Absturz oder der Pause bei Untätigkeit: Der Server startet ihn, wenn nötig.
     await api("/api/browser", {});
+    if (seite !== "browser") return;
     bild.src = "/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc-ws&reconnect=1";
     bild.hidden = false;
-    $("browser-meldung").hidden = true;
-  } catch (f) { $("browser-meldung").textContent = `Der Browser ließ sich nicht starten: ${f.message}`; }
+    meldung.hidden = true;
+  } catch (f) { meldung.textContent = `Der Browser ließ sich nicht starten: ${f.message}`; }
 }
+// Beim Verlassen trennen: Sonst liefen Bilder weiter durch den Tunnel, und der Browser gälte nie als untätig.
+function browserLoesen() {
+  const bild = $("browser-bild");
+  if (bild.hidden) return;
+  bild.hidden = true;
+  bild.removeAttribute("src");
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { browserLoesen(); aufnahmeAbbrechen(); } else if (seite === "browser") browserOeffnen();
+});
 
 // ---- Sprache (TVO): Nur in Jarvis, das Handy nimmt auf und wandelt um. Erscheint von selbst, sobald ein Terminal offen ist, wie das Overlay an den Rechnern.
 const SPRACHE = window.JarvisSprache;
-let automatisch = false, schonGesprochen = false;
+let automatisch = false, schonGesprochen = false, diktatSitzung = null, meldeZeit = null;
 function stimmeZeigen() { if (SPRACHE) $("stimme").hidden = !aktuell; }
+function stimmeMelden(text) {
+  const m = $("stimme-meldung");
+  m.textContent = text;
+  m.hidden = !text;
+  clearTimeout(meldeZeit);
+  if (text) meldeZeit = setTimeout(() => { m.hidden = true; }, 5000);
+}
+function aufnahmeAbbrechen() {
+  if (!SPRACHE || $("stimme-mikro").dataset.stand !== "nimmt") return;
+  SPRACHE.abbrechen();
+  mikroStand("bereit");
+}
 function mikroStand(stand) {
   const knopf = $("stimme-mikro");
   knopf.dataset.stand = stand;
@@ -274,10 +302,13 @@ function mikroStand(stand) {
 }
 window.stimmeFertig = (text, fehler) => {
   mikroStand("bereit");
-  if (fehler) { $("titel").textContent = fehler; return; }
+  if (fehler) { stimmeMelden(fehler); return; }
   if (!text) return;
+  // Das Diktat gehört zu der Sitzung, in der es begann: nie mit automatischem Absenden in eine andere.
+  if (diktatSitzung !== aktuell || !ws || ws.readyState !== 1) { stimmeMelden(`Nicht eingefügt, die Sitzung hat gewechselt: ${text.slice(0, 120)}`); return; }
   // Mehrere Eingaben hintereinander bekommen ein Leerzeichen dazwischen, wie am Rechner.
-  schicke((schonGesprochen && !automatisch ? " " : "") + text);
+  const mitLeerzeichen = schonGesprochen && !automatisch;
+  schicke((mitLeerzeichen ? " " : "") + text);
   schonGesprochen = !automatisch;
   if (automatisch) setTimeout(() => schicke("\r"), 60);
 };
@@ -285,9 +316,9 @@ if (SPRACHE) {
   $("stimme-mikro").addEventListener("click", () => {
     const stand = $("stimme-mikro").dataset.stand;
     if (stand === "wandelt") return;
-    if (stand === "nimmt") { mikroStand("wandelt"); SPRACHE.stop(); } else { mikroStand("nimmt"); SPRACHE.start(); }
+    if (stand === "nimmt") { mikroStand("wandelt"); SPRACHE.stop(); } else { diktatSitzung = aktuell; mikroStand("nimmt"); SPRACHE.start(); }
   });
-  $("stimme-zeile").addEventListener("click", () => { schonGesprochen = false; schicke("\u0015"); });
+  $("stimme-zeile").addEventListener("click", () => schicke("\u0015"));
   try { automatisch = localStorage.getItem("stimme-auto") === "1"; } catch { /* nur Komfort */ }
   const autoAnzeigen = () => { $("stimme-auto").textContent = automatisch ? "↵ an" : "↵ aus"; $("stimme-auto").classList.toggle("an", automatisch); };
   autoAnzeigen();
@@ -305,12 +336,12 @@ async function ladeSystem() {
     karte.append(element("h3", "", p.name));
     const zeile = element("div", "leise");
     zeile.append(element("span", `punkt ${p.anmeldung}`));
-    const stand = { lokal: "Anmeldedaten vorhanden", angemeldet: "angemeldet", abgemeldet: "nicht angemeldet", unbekannt: "Anmeldung unbekannt", fehlt: "nicht installiert" }[p.anmeldung] || p.anmeldung;
+    const stand = { keine: "keine Anmeldung nötig", lokal: "Anmeldedaten vorhanden", angemeldet: "angemeldet", abgemeldet: "nicht angemeldet", unbekannt: "Anmeldung unbekannt", fehlt: "nicht installiert" }[p.anmeldung] || p.anmeldung;
     zeile.append(`${p.version || "–"} · ${stand}`);
     karte.append(zeile);
     if (p.meldung) karte.append(element("div", "leise", p.meldung));
     const aktionen = element("div", "aktionen");
-    if (schluessel === "chrome-devtools-mcp") { ziel.append(karte); continue; }
+    if (p.anmeldbar === false) { ziel.append(karte); continue; }
     const knopf = element("button", "", "Anmelden");
     knopf.addEventListener("click", async () => { const { name } = await api("/api/anmeldung", { cli: schluessel }); verbinde(name, `Anmeldung ${p.name}`); });
     aktionen.append(knopf);
