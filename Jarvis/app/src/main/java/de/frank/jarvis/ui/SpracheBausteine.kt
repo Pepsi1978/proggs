@@ -201,9 +201,8 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         Text("Sprachgespräch mit OpenAI oder Google: Jarvis antwortet sofort, hört weiter zu und lässt sich unterbrechen. Für deine Daten fragt er den normalen Jarvis. " +
             "OpenAI-Schlüssel von platform.openai.com (eigene Abrechnung, nicht das ChatGPT-Abo), Gemini-Schlüssel von aistudio.google.com.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-        Schluesselfeld(vm, "OpenAI-API-Schlüssel", s.openAiApiKey) { geaendert { s.openAiApiKey = it } }
-        Schluesselfeld(vm, "Gemini-Schlüssel, kostenlos (Projekt ohne Abrechnung)", s.geminiApiKey) { geaendert { s.geminiApiKey = it } }
-        Schluesselfeld(vm, "Gemini-Schlüssel, bezahlt (Projekt mit Abrechnung)", s.geminiApiKeyBezahlt) { geaendert { s.geminiApiKeyBezahlt = it } }
+        SchluesselVerweis(vm, "OpenAI-API-Schlüssel", s.openAiApiKey.isNotBlank())
+        SchluesselVerweis(vm, "Gemini-Schlüssel", s.geminiApiKey.isNotBlank() || s.geminiApiKeyBezahlt.isNotBlank())
         Text("Ein normaler AI-Studio-Schlüssel reicht. Kostenlos oder bezahlt entscheidet sein Projekt; im kostenlosen nutzt Google die Gespräche zum Training. " +
             "Welcher genutzt wird, stellst du unter „Gemini-Schlüssel“ ein.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -301,14 +300,13 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 StimmChips(vm, anbieter, TtsCatalog.edgeVoices, s.edgeTtsVoice) { geaendert { s.edgeTtsVoice = it } }
             }
             TtsProvider.GOOGLE_CLOUD -> {
-                Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
+                SchluesselVerweis(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey.isNotBlank())
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, TtsCatalog.googleVoices, s.googleTtsVoice) { geaendert { s.googleTtsVoice = it } }
             }
             TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE -> {
                 val flash = anbieter == TtsProvider.GEMINI_FLASH
-                Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", s.geminiTtsKeyFrei) { geaendert { s.geminiTtsKeyFrei = it } }
-                Schluesselfeld(vm, "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", s.geminiTtsKeyBezahlt) { geaendert { s.geminiTtsKeyBezahlt = it } }
+                SchluesselVerweis(vm, "Gemini-Stimme: Schlüssel", s.geminiTtsKeyFrei.isNotBlank() || s.geminiTtsKeyBezahlt.isNotBlank())
                 Unterzeile("Welcher Schlüssel")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
@@ -322,7 +320,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                     if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice) { id -> geaendert { if (flash) s.geminiFlashTtsVoice = id else s.geminiLiteTtsVoice = id } }
             }
             TtsProvider.AZURE -> {
-                Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { geaendert { s.azureTtsKey = it } }
+                SchluesselVerweis(vm, "Azure-Speech-Schlüssel", s.azureTtsKey.isNotBlank())
                 Schluesselfeld(vm, "Azure-Region (z. B. westeurope)", s.azureTtsRegion, geheim = false) { geaendert { s.azureTtsRegion = it } }
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, TtsCatalog.azureVoices, s.azureTtsVoice) { geaendert { s.azureTtsVoice = it } }
@@ -331,19 +329,19 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
             TtsProvider.QWEN -> {
-                Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
+                SchluesselVerweis(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey.isNotBlank())
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, TtsCatalog.qwenVoices, s.qwenStandardVoice) { geaendert { s.qwenStandardVoice = it } }
             }
             TtsProvider.QWEN_CLONE -> {
-                Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
+                SchluesselVerweis(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey.isNotBlank())
                 Schluesselfeld(vm, "Kennung deiner eigenen Stimme", s.qwenTtsVoiceId, geheim = false) { geaendert { s.qwenTtsVoiceId = it } }
             }
         }
         val rueckfall = s.ttsRueckfallKette
         RueckfallKette(vm, rueckfall, anbieter) { neu -> geaendert { s.ttsRueckfallKette = neu } }
         if (TtsProvider.GOOGLE_CLOUD.id in rueckfall &&anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
-            Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
+            SchluesselVerweis(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey.isNotBlank())
         }
         // Ein Tempo je Stimme, die es auswertet: die Hauptstimme und jede Rückfallstufe, jeweils nur einmal.
         val mitTempo = (listOf(anbieter) + rueckfall.mapNotNull { TtsCatalog.rueckfallStufe(it)?.anbieter }).distinct().filter { it.kenntTempo }

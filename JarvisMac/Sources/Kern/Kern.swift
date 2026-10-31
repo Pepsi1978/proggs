@@ -54,6 +54,14 @@ enum AppInfo {
 
 // MARK: - Zugänge (Schlüssel). Liegen verschlüsselt im Tresor (Tresor.swift), nie im Klartext, nie im Git.
 
+struct WeiteresKonto: Codable, Equatable, Sendable {
+    var titel = ""
+    var beschreibung = ""
+    var wert = ""
+    var dienst = ""
+    var gesperrt = false
+}
+
 struct Zugang: Codable, Equatable {
     var anthropic = ""
     var openai = ""
@@ -61,6 +69,25 @@ struct Zugang: Codable, Equatable {
     var google = ""      // Google Cloud TTS (Chirp 3 HD)
     var groq = ""
     var relay = ""       // MCP-Relay des Handy-Jarvis (https://…/j/<token>)
+    /// Zusätzliche Schlüssel für Helfer und neue Anwendungen, Kennung → Eintrag.
+    var weitere: [String: WeiteresKonto] = [:]
+    /// Feste Einträge, die Helfer nicht benutzen dürfen (eingebaute Funktionen arbeiten weiter).
+    var gesperrtFuerHelfer: [String] = []
+
+    init() {}
+
+    /// Von Hand, nicht synthetisiert: Eine Tresordatei von vor diesen Feldern muss lesbar bleiben.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        anthropic = try c.decodeIfPresent(String.self, forKey: .anthropic) ?? ""
+        openai = try c.decodeIfPresent(String.self, forKey: .openai) ?? ""
+        gemini = try c.decodeIfPresent(String.self, forKey: .gemini) ?? ""
+        google = try c.decodeIfPresent(String.self, forKey: .google) ?? ""
+        groq = try c.decodeIfPresent(String.self, forKey: .groq) ?? ""
+        relay = try c.decodeIfPresent(String.self, forKey: .relay) ?? ""
+        weitere = try c.decodeIfPresent([String: WeiteresKonto].self, forKey: .weitere) ?? [:]
+        gesperrtFuerHelfer = try c.decodeIfPresent([String].self, forKey: .gesperrtFuerHelfer) ?? []
+    }
 
     static let datei = Pfade.unterstuetzung.appendingPathComponent("zugang.json")
 
@@ -99,7 +126,7 @@ struct Zugang: Codable, Equatable {
 
     private func geheimnisseMelden() {
         let token = relay.split(separator: "/").last.map(String.init) ?? ""
-        Geheimnisse.setzen("zugang", [anthropic, openai, gemini, google, groq, relay, token])
+        Geheimnisse.setzen("zugang", [anthropic, openai, gemini, google, groq, relay, token] + weitere.values.map(\.wert))
     }
 }
 
@@ -233,6 +260,8 @@ struct ModellWahl: Identifiable, Hashable {
         .init(id: "gpt-6-luna", name: "GPT-6 Luna", anbieter: .openai),
         .init(id: "gpt-6.1-terra", name: "GPT-6.1 Terra", anbieter: .openai),
     ]
+    /// Für gründliche Recherchen: keine kleinen Modelle (Luna, Haiku).
+    static var fuerRecherche: [ModellWahl] { alle.filter { !$0.id.contains("luna") && !$0.id.contains("haiku") } }
     static func zu(_ id: String) -> ModellWahl { alle.first { $0.id == id } ?? alle[0] }
     /// Abgelöste Modelle: Wer das alte gewählt hatte, bekommt den Nachfolger statt des ersten Eintrags der Liste.
     static func aktuell(_ id: String) -> String { id == "gpt-5.6-terra" ? "gpt-6.1-terra" : id }
@@ -250,6 +279,11 @@ final class Einstellungen {
     } } }
     @ObservationIgnored private var speicherUhr: Task<Void, Never>?
     func zugangSichern() { speicherUhr?.cancel(); speicherUhr = nil; zugang.speichern() }
+
+    /// Eigene Tools: darf Jarvis fehlende Helfer selbst bauen lassen? Aus = Pause, vorhandene Helfer laufen weiter.
+    var helferAutomatik: Bool { didSet { d.set(helferAutomatik, forKey: "helferAutomatik"); Logbuch.shared.einstellung("helferAutomatik", "\(helferAutomatik)", wo: "Einstellungen") } }
+    var rechercheModell: String { didSet { d.set(rechercheModell, forKey: "rechercheModell"); Logbuch.shared.einstellung("rechercheModell", rechercheModell, wo: "Einstellungen") } }
+    var rechercheEffort: String { didSet { d.set(rechercheEffort, forKey: "rechercheEffort"); Logbuch.shared.einstellung("rechercheEffort", rechercheEffort, wo: "Einstellungen") } }
 
     var modell: String { didSet { d.set(modell, forKey: "modell"); Logbuch.shared.einstellung("modell", "\(modell)", wo: "Einstellungen") } }
     var effort: String { didSet { d.set(effort, forKey: "effort"); Logbuch.shared.einstellung("effort", "\(effort)", wo: "Einstellungen") } }
@@ -300,6 +334,9 @@ final class Einstellungen {
         let d = UserDefaults.standard
         func s(_ k: String, _ v: String) -> String { d.string(forKey: k) ?? v }
         func b(_ k: String, _ v: Bool) -> Bool { d.object(forKey: k) as? Bool ?? v }
+        helferAutomatik = b("helferAutomatik", true)
+        rechercheModell = s("rechercheModell", "gpt-6.1-sol")
+        rechercheEffort = s("rechercheEffort", "high")
         modell = ModellWahl.aktuell(s("modell", "claude-opus-5-5"))
         effort = s("effort", "medium")
         schrittLimit = d.object(forKey: "schrittLimit") as? Int ?? 40

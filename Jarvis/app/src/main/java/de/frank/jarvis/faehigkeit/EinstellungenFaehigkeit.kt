@@ -240,6 +240,20 @@ class EinstellungsKatalog(context: Context) {
     }
 
     /** Je Meldungsart die Schalter, die sie kann; Felder mit alter Kennung (ansage_…, abfahrt_…, ergebnisse_vorlesen) stehen schon einzeln da. */
+    private fun helferEintraege(): List<Eintrag> = listOf(
+        schalter("helfer_automatik", "Eigene Tools", "Helfer selbst bauen lassen", "Aus = pausiert: Jarvis baut nichts Neues, fertige Helfer bleiben nutzbar.", { e.helferAutomatik }) {
+            e.helferAutomatik = it
+            if (it) de.frank.jarvis.helfer.HelferAblauf.nachPause(app)
+        },
+        zahl("helfer_parallel", "Eigene Tools", "Werkzeugbauten gleichzeitig", "So viele Helfer entstehen höchstens zur selben Zeit.", 1, 5, "", { e.helferParallel }) { e.helferParallel = it },
+        zahl("helfer_pro_tag", "Eigene Tools", "Werkzeugbauten je Tag", "So viele Helfer darf Jarvis höchstens je Tag beauftragen.", 1, 50, "", { e.helferProTag }) { e.helferProTag = it },
+        auswahl("recherche_modell", "Eigene Tools", "Modell der Recherche", "Modell für gründliche Recherchen im Werkzeugbau; kleine Modelle stehen nicht zur Wahl.",
+            { de.frank.jarvis.helfer.RechercheModelle.ERLAUBT.map { it.apiId to it.label } }, { e.rechercheModell }) { e.rechercheModell = it },
+        auswahl("recherche_effort", "Eigene Tools", "Denkstufe der Recherche", "Denkstufe für diese Recherchen.",
+            { de.frank.jarvis.helfer.RechercheModelle.aus(e.rechercheModell).supportedEfforts.map { it.apiValue to it.titel(de.frank.jarvis.helfer.RechercheModelle.aus(e.rechercheModell)) } }, { e.rechercheEffort }) { e.rechercheEffort = it },
+        zahl("recherche_parallel", "Eigene Tools", "Parallele Rechercheagenten", "So viele Rechercheagenten laufen je Werkzeugbau höchstens gleichzeitig.", 1, 7, "", { e.rechercheParallel }) { e.rechercheParallel = it },
+    )
+
     private fun meldungsEintraege(): List<Eintrag> = de.frank.jarvis.meldung.Meldungsarten.alle.flatMap { art ->
         val p = de.frank.jarvis.meldung.MeldungsProfil(e, art)
         val b = "Benachrichtigungen: ${art.titel}"
@@ -419,6 +433,7 @@ class EinstellungsKatalog(context: Context) {
 
             // ---- Benachrichtigungen: je Meldungsart aus derselben Liste wie der Bildschirm; Felder mit alten Kennungen stehen oben ----
             *meldungsEintraege().toTypedArray(),
+            *helferEintraege().toTypedArray(),
             schalter("meldung_ruhe_an", "Benachrichtigungen", "Ruhezeit", "In der Ruhezeit kommen Agenten, Ablage, Programmieraufträge und Update-Ansagen lautlos, ohne Vorlesen und Wecker.", { e.meldungRuheAn }) { e.meldungRuheAn = it },
             uhrzeit("meldung_ruhe_von", "Benachrichtigungen", "Ruhezeit beginnt", "Ab dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheVon }) { e.meldungRuheVon = it },
             uhrzeit("meldung_ruhe_bis", "Benachrichtigungen", "Ruhezeit endet", "Bis zu dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheBis }) { e.meldungRuheBis = it },

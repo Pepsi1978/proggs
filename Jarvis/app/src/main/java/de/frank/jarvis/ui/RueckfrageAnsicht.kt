@@ -107,6 +107,10 @@ private class Rueckfrage(val k: JSONObject) {
     val antwort: String = k.optString("antwort")
     val grund: String = k.optString("grund")
     val bis: Long = k.optLong("bis")
+    /** Nur im Werkzeugbau: Frist ab Anzeige und was ohne Antwort gewählt wird; eine Freigabe läuft nie ab. */
+    val werkzeugbau: Boolean = k.optBoolean("werkzeugbau")
+    val freigabe: Boolean = k.optBoolean("freigabe")
+    val empfohlen: JSONArray = k.optJSONArray("empfohlen") ?: JSONArray()
     val fragen: List<Frage> = (k.optJSONArray("fragen") ?: JSONArray()).let { l ->
         (0 until l.length()).mapNotNull { l.optJSONObject(it) }.map { q ->
             val o = q.optJSONArray("options") ?: JSONArray()
@@ -149,6 +153,19 @@ private fun restzeit(r: Rueckfrage): String {
 @Composable
 private fun Standzeile(r: Rueckfrage, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
+    if (r.werkzeugbau && r.freigabe && RueckfrageStand.beantwortbar(r.stand) && standText(r) == null) {
+        Text("🔒 Braucht deine Freigabe. Ohne deine Antwort passiert das nicht, dieser Schritt bleibt blockiert.", modifier, color = f.primaer, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
+        return
+    }
+    if (r.werkzeugbau && RueckfrageStand.beantwortbar(r.stand) && standText(r) == null) {
+        val kontext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+        var rest by remember(r.id) { mutableStateOf(de.frank.jarvis.helfer.HelferAblauf.restSekunden(kontext, r.id)) }
+        LaunchedEffect(r.id) { while (true) { delay(1_000); rest = de.frank.jarvis.helfer.HelferAblauf.restSekunden(kontext, r.id) } }
+        val wahl = (0 until r.empfohlen.length()).map { r.empfohlen.optString(it) }.filter { it.isNotBlank() }.joinToString("; ").ifEmpty { "die beste Lösung nach Jarvis' Ermessen" }
+        val zeit = rest?.let { if (it > 0) "Noch ${it / 60}:${"%02d".format(it % 60)} min" else "Die Zeit ist um, Jarvis entscheidet, sobald du nicht mehr schreibst" } ?: "Die 2:30 min beginnen, sobald die Frage offen ist"
+        Text("$zeit. Ohne Antwort wähle ich: $wahl", modifier, color = f.primaer, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
+        return
+    }
     val text = standText(r) ?: restzeit(r).ifEmpty { return }
     val farbe = when (r.stand) {
         RueckfrageStand.BEANTWORTET, RueckfrageStand.AM_PC_BEANTWORTET, RueckfrageStand.ANGENOMMEN -> f.erfolg
@@ -318,6 +335,20 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
     }
     val beantwortbar = RueckfrageStand.beantwortbar(r.stand)
     val sendet = r.stand == RueckfrageStand.SENDET
+    // Werkzeugbau: Die 150 Sekunden beginnen erst hier, wenn Frank die Frage wirklich sieht; Tippen und Sprechen schieben die Entscheidung hinaus.
+    val fristKontext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(r.id, beantwortbar) {
+        if (r.werkzeugbau && !r.freigabe && beantwortbar) de.frank.jarvis.helfer.HelferAblauf.fristStart(fristKontext, r.id, gespraechId, r.auftragId.ifEmpty { r.k.optString("bau") }, r.empfohlen)
+    }
+    if (r.werkzeugbau) LaunchedEffect(r.id) {
+        var zuletzt = entwurfJson().toString()
+        while (true) {
+            delay(1_000)
+            val jetzt = entwurfJson().toString()
+            if (jetzt != zuletzt || vm.antwortDiktatFeld?.startsWith("${r.id}:") == true || vm.antwortFormuliertFeld?.startsWith("${r.id}:") == true) de.frank.jarvis.helfer.HelferAblauf.eingabeLaeuft(r.id)
+            zuletzt = jetzt
+        }
+    }
     // Diagnose (29.10.2026: Vollbild offen, Tippen auf die Optionen ohne Wirkung, nach Neustart durch ein Update bei zugeklapptem,
     // gesperrtem Handy): Stand beim Öffnen und bei jedem Wechsel festhalten, damit das Logbuch zeigt, ob die Optionen gesperrt waren.
     val fensterFokus = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
@@ -412,7 +443,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
                         if (r.frei) vm.programmierAntwort(r.id, emptyList(), antworten.filterNotNull().joinToString("\n"))
                         else vm.programmierAntwort(r.id, antworten.map { it.orEmpty() }, "")
                     }
-                    if (!sendet) Knopf("In der Claude-App beantworten", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) {
+                    if (!sendet && !r.k.optBoolean("lokal")) Knopf("In der Claude-App beantworten", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) {
                         sichern()
                         vm.programmierAntwort(r.id, emptyList(), "", freigeben = true)
                     }

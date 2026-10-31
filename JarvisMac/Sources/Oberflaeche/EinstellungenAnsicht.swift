@@ -7,7 +7,7 @@ struct EinstellungenAnsicht: View {
 
     private let reiterListe: [(String, String, String)] = [
         ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
-        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"),
+        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
     ]
@@ -38,6 +38,7 @@ struct EinstellungenAnsicht: View {
                             case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
                             case "live": live
                             case "mac": MacRechteAnsicht()
+                            case "tools": EigeneToolsAnsicht()
                             case "konten": KontenAnsicht()
                             default: ueber
                             }
@@ -258,15 +259,11 @@ struct KontenAnsicht: View {
             }
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
-                    KartenTitel(symbol: "key.fill", titel: "API-Schlüssel", farbe: Farbe.warnung)
-                    Text("Verschlüsselt im Tresor, gebunden an den Sicherheitschip dieses Macs. Anzeigen und Ändern nur nach Touch ID.")
+                    KartenTitel(symbol: "key.fill", titel: "Konten und APIs", farbe: Farbe.warnung)
+                    Text("Verschlüsselt im Tresor, gebunden an den Sicherheitschip dieses Macs. Anzeigen und Ändern nur nach Touch ID. Das schützt den Speicher, nicht vor Missbrauch durch ein bereits laufendes Programm unter deinem Benutzer.")
                         .font(.jarvis(12)).foregroundStyle(Farbe.text2)
                     TresorKopf()
-                    TresorFeld(titel: "Anthropic (Claude)", wert: $einst.zugang.anthropic)
-                    TresorFeld(titel: "OpenAI (Live, GPT)", wert: $einst.zugang.openai)
-                    TresorFeld(titel: "Gemini (Live)", wert: $einst.zugang.gemini)
-                    Text("Schlüssel für die Vorlesestimmen (Google, Gemini-TTS, Azure, Qwen) stehen unter Stimme.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
-                    TresorFeld(titel: "Groq (Whisper)", wert: $einst.zugang.groq)
+                    KontenListe()
                 }
             }
         }

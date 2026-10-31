@@ -96,7 +96,7 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
             Text("Du kannst Jarvis auch einfach fragen: „Wie lange brauche ich zum Alexanderplatz?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
-        if (e.mapsSchluessel.isBlank()) Schluesselfeld(vm, "Google-Maps-Schlüssel (Routes API)", e.mapsSchluessel) { e.mapsSchluessel = it; vm.abfahrtGeaendert(); vm.lagePruefen() }
+        if (e.mapsSchluessel.isBlank()) SchluesselVerweis(vm, "Google-Maps-Schlüssel (Routes API)", false)
         Text("Google-Maps-Abfragen diesen Monat: ${Routen.verbraucht(vm.getApplication())} von ${Routen.FREI_IM_MONAT} kostenlosen. Jarvis hört vorher auf, es entstehen keine Kosten.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
     }
 }

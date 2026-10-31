@@ -199,6 +199,8 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
 
     // E-Mail über Gmail (SMTP senden, IMAP lesen).
+    // Abgeschottete Laufzeit der eigenen Helfer (nur Interpreter, siehe helfer/HelferLauf.kt).
+    implementation("org.mozilla:rhino:1.7.15")
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
 }

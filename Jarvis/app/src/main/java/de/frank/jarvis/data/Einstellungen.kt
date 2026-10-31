@@ -228,6 +228,16 @@ class Einstellungen private constructor(context: Context) {
     var serverToken: String
         get() = s("server_token", "")
         set(v) = putGeheim("server_token", v.trim())
+    // ---- Eigene Tools ----
+    /** Darf Jarvis fehlende Helfer selbst bauen lassen? Aus = pausiert; fertige Helfer bleiben nutzbar. */
+    var helferAutomatik: Boolean get() = prefs.getBoolean("helfer_automatik", true); set(v) = put { putBoolean("helfer_automatik", v) }
+    var helferParallel: Int get() = prefs.getInt("helfer_parallel", 2).coerceIn(1, 5); set(v) = put { putInt("helfer_parallel", v.coerceIn(1, 5)) }
+    var helferProTag: Int get() = prefs.getInt("helfer_pro_tag", 10).coerceIn(1, 50); set(v) = put { putInt("helfer_pro_tag", v.coerceIn(1, 50)) }
+    /** Modell der gründlichen Recherche im Werkzeugbau (apiId), Vorgabe Sol 6.1 mit High. Kleine Modelle stehen nicht zur Wahl. */
+    var rechercheModell: String get() = s("recherche_modell", "gpt-6.1-sol"); set(v) = put { putString("recherche_modell", v) }
+    var rechercheEffort: String get() = s("recherche_effort", "high"); set(v) = put { putString("recherche_effort", v) }
+    var rechercheParallel: Int get() = prefs.getInt("recherche_parallel", 3).coerceIn(1, 7); set(v) = put { putInt("recherche_parallel", v.coerceIn(1, 7)) }
+
     /** Der Dienst läuft, sobald die App einmal geöffnet wurde; hier lässt er sich abschalten. */
     var dienstAn: Boolean get() = prefs.getBoolean("dienst_an", true); set(v) = put { putBoolean("dienst_an", v) }
 

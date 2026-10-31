@@ -82,6 +82,9 @@ START = time.time()        # Beginn dieses Hooks: Nur was danach begann, beweist
 ANMELDE_FEHLER = {"authentication_failed", "oauth_org_not_allowed", "account_on_hold", "verification_required"}
 DROSSEL_S = 20
 FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten nur in Jarvis
+# Werkzeugbau-Aufträge (Nummer beginnt mit W0, die 0 kommt in normalen Nummern nie vor): Die 150 Sekunden zählt das Handy ab der Anzeige.
+# Hier nur das Sicherheitsnetz, falls das Handy aus ist. Alle anderen Aufträge bleiben bei fünf Minuten.
+WERKZEUGBAU_WARTEN_S = 900
 PULS_S = 10               # Lebenszeichen höchstens so oft
 MAX_TEXT = 4000           # so lang darf eine Zwischenmeldung werden (sichtbar gekürzt, siehe kuerze)
 MAX_BERICHT = 60000       # der Abschlussbericht am Zugende („info“); früher galt auch hier 4000 und er endete mitten im Wort
@@ -933,8 +936,10 @@ FRAGE_HALTEN_LOKAL_S = 24 * 3600  # so lange ist eine freie Rückfrage einer lok
 
 def setze_auftrag(nummer: str) -> None:
     """Nummer der Sitzung und die Dateien, die daran hängen (Zustand, Sperre, Warter)."""
-    global AUFTRAG, ZUSTAND, SPERRE, WARTER
+    global AUFTRAG, ZUSTAND, SPERRE, WARTER, FRAGE_WARTEN_S
     AUFTRAG = nummer
+    if nummer.startswith("W0"):
+        FRAGE_WARTEN_S = WERKZEUGBAU_WARTEN_S
     ZUSTAND = ORDNER / f"hook-{nummer}.json"
     SPERRE = ORDNER / f"hook-{nummer}.lock"
     WARTER = ORDNER / f"warter-{nummer}.pid"
@@ -1243,6 +1248,11 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
     for f in fragen:
         frage_text = str(f.get("question", ""))
         labels = [str(o.get("label", "")) for o in f.get("options") or [] if isinstance(o, dict)]
+        # Werkzeugbau: Eine Freigabe (Kosten, Zugriff, Konto, Löschen, Installation) wird nie durch Schweigen erteilt.
+        if AUFTRAG.startswith("W0") and (str(f.get("header", "")).lower().startswith("freigabe") or frage_text.upper().startswith("FREIGABE")):
+            antworten[frage_text] = (f"Keine Freigabe von Frank ({grund}). Führe den betroffenen Schritt NICHT aus. Melde ihn als blockiert, "
+                                     "nenne den kleinsten nötigen nächsten Schritt und erledige die übrigen sicheren Teile.")
+            continue
         nein = next((l for l in labels if l.strip().lower().startswith("nein")), "")
         # Nur das Angebot eines Code-Reviews gilt als Nein, nie etwa „Soll ich die Review-Befunde beheben?“.
         if re.search(r"(?i)code[- ]?review", frage_text) and not re.search(r"(?i)befund|beheb|fix", frage_text):
@@ -1343,7 +1353,7 @@ def frage(eingabe: dict) -> None:
         sys.stdout.flush()
         merke_frage(tool_use_id, frage_id, "beantwortet")
         frage_status(frage_id, "erledigt", antwort=text, grund="abgelaufen")
-        melde_still("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung arbeitet weiter: " + text)
+        melde_still("laeuft", f"⏱️ Keine Antwort in {FRAGE_WARTEN_S // 60} Minuten, die Sitzung arbeitet weiter: " + text)
         return
     antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items()}
     zusatz = str(antwort.get("text", "")).strip()
@@ -1363,7 +1373,7 @@ def frage(eingabe: dict) -> None:
     sys.stdout.flush()
     merke_frage(tool_use_id, frage_id, "beantwortet")
     frage_status(frage_id, "beantwortet", antwort=text)
-    melde_still("laeuft", "💬 Antwort von Frank: " + text)
+    melde_still("laeuft", ("🤖 Entscheidung von Jarvis: " if "von Jarvis" in text else "💬 Antwort von Frank: ") + text)
 
 
 def stop(eingabe: dict) -> None:

@@ -50,6 +50,20 @@ enum MacEinstellungsKatalog {
                 guard let n = Int(v), (0...200).contains(n) else { return "Zahl 0–200" }
                 e.schrittLimit = n; return nil
             },
+            Eintrag(kennung: "helfer_automatik", bereich: "Eigene Tools", titel: "Helfer selbst bauen lassen", beschreibung: "Aus = Pause: Jarvis beauftragt keine neuen Helfer, vorhandene laufen weiter.",
+                    werte: "an | aus", lesen: { e.helferAutomatik ? "an" : "aus" }) { v in
+                guard let b = wahr(v) else { return "an oder aus" }; e.helferAutomatik = b; return nil
+            },
+            Eintrag(kennung: "recherche_modell", bereich: "Eigene Tools", titel: "Recherche-Modell", beschreibung: "Modell für gründliche Recherchen beim Helferbau; keine kleinen Modelle.",
+                    werte: ModellWahl.fuerRecherche.map(\.id).joined(separator: " | "), lesen: { e.rechercheModell }) { v in
+                guard let m = ModellWahl.fuerRecherche.first(where: { $0.id == v || $0.name.lowercased() == v.lowercased() }) else { return "Für Recherchen nicht wählbar" }
+                e.rechercheModell = m.id; return nil
+            },
+            Eintrag(kennung: "recherche_effort", bereich: "Eigene Tools", titel: "Recherche-Effort", beschreibung: "Wie gründlich die Recherche-Agenten denken.",
+                    werte: "medium | high | xhigh | max", lesen: { e.rechercheEffort }) { v in
+                guard ["medium", "high", "xhigh", "max"].contains(v) else { return "Erlaubt: medium, high, xhigh, max" }
+                e.rechercheEffort = v; return nil
+            },
             Eintrag(kennung: "lernen", bereich: "Jarvis' Kopf", titel: "Lernen am Mac", beschreibung: "Neue Angaben aus ruhenden Mac-Gesprächen ins gemeinsame Gedächtnis.",
                     werte: "an | aus", lesen: { e.lernenAn ? "an" : "aus" }) { v in
                 guard let b = wahr(v) else { return "an oder aus" }; e.lernenAn = b; return nil
@@ -171,5 +185,5 @@ extension MacWerkzeuge {
         },
     ]
 
-    static var alleLokal: [LokalesWerkzeug] { alle + weitere + MacDialoge.werkzeuge + RepoWerkzeuge.alle + AgentenKanal.werkzeuge }
+    static var alleLokal: [LokalesWerkzeug] { alle + weitere + MacDialoge.werkzeuge + RepoWerkzeuge.alle + AgentenKanal.werkzeuge + HelferWerkzeuge.alle }
 }

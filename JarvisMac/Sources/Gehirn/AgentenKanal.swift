@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Der allgemeine Kanal zwischen Jarvis Mac OS und Jarvis am Handy: zwei gleichberechtigte Agenten, die sich jederzeit schreiben.
@@ -17,7 +18,7 @@ final class AgentenKanal {
     private static let zeitlimit = 600.0
     private static let hoechstalter = 6.0 * 3600
     private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
-                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog"]
+                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog", "mac_helfer_bauen", "helfer_bauen"]
     private let eingangDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-eingang.json")
     private let verlaufDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-verlauf.json")
 
@@ -26,6 +27,8 @@ final class AgentenKanal {
     private var verlauf: [JSONObjekt] = []
     private var wartende: [String: CheckedContinuation<String?, Never>] = [:]
     private var arbeitet = false
+    private var helferInArbeit: Set<String> = []
+    private var rechercheLaeuft = false
     /// Hält App Nap fern: Verdeckt gestartet soll die App weiter abfragen und arbeiten.
     private var aktivitaet: NSObjectProtocol?
 
@@ -43,6 +46,7 @@ final class AgentenKanal {
             // Erst wenn die Gespräche geladen sind: Sonst legte die erste Nachricht ein zweites Kanalgespräch an.
             while !GespraechsSpeicher.shared.geladen { try? await Task.sleep(for: .milliseconds(100)) }
             abarbeiten()
+            HelferKatalog.shared.starten()
             await abfragen()
         }
     }
@@ -92,7 +96,8 @@ final class AgentenKanal {
             if erledigt.contains(id) || eingang.contains(where: { $0["id"] as? String == id }) { continue }
             let art = n["art"] as? String ?? "info"
             let text = n["text"] as? String ?? ""
-            merke(id: id, von: "Handy", art: art, text: text)
+            if !Self.istHelfer(art) { merke(id: id, von: "Handy", art: art, text: text) }
+            // Helfer-Post ist Technik: Sie steht nicht im Verlauf, den das Modell und Frank lesen.
             if art == "antwort" { antwortKam(auf: n["antwort_auf"] as? String ?? "", text: text); erledigt.append(id) }
             else { eingang.append(n) }
         }
@@ -110,8 +115,65 @@ final class AgentenKanal {
         Task { _ = await Shell.mitteilung("Jarvis am Handy", String(text.prefix(180))) }
     }
 
+    nonisolated static func istHelfer(_ art: String) -> Bool { art.hasPrefix("helfer_") || art == "cli_recherche" }
+
+    /// Helfer-Post ohne Modell, je Nachricht ein eigener Lauf: Ein langer Helfer hält den Kanal nicht auf. Die fertige Antwort bleibt
+    /// im Eingang, bis sie beim Relay liegt, und wird nie neu berechnet. Eine Recherche zur Zeit.
+    private func helferAbarbeiten() {
+        for n in eingang where Self.istHelfer(n["art"] as? String ?? "") {
+            let id = n["id"] as? String ?? ""
+            guard !id.isEmpty, !helferInArbeit.contains(id) else { continue }
+            if n["art"] as? String == "cli_recherche" {
+                if rechercheLaeuft, n["fertige_antwort"] == nil { continue }
+                if n["fertige_antwort"] == nil { rechercheLaeuft = true }
+            }
+            helferInArbeit.insert(id)
+            let rechercheBelegt = n["art"] as? String == "cli_recherche" && n["fertige_antwort"] == nil
+            Task {
+                let ok = await bearbeiteHelfer(n)
+                helferInArbeit.remove(id)
+                if rechercheBelegt { rechercheLaeuft = false }
+                if !ok { try? await Task.sleep(for: .seconds(30)) }
+                helferAbarbeiten()
+            }
+        }
+    }
+
+    private func bearbeiteHelfer(_ n: JSONObjekt) async -> Bool {
+        let id = n["id"] as? String ?? ""
+        let art = n["art"] as? String ?? ""
+        var antwort = n["fertige_antwort"] as? String
+        if antwort == nil {
+            let alter = Date().timeIntervalSince1970 - ((n["zeit"] as? NSNumber)?.doubleValue ?? 0)
+            let begonnen = n["begonnen"] as? Bool ?? false
+            if art == "helfer_aufruf" && begonnen {
+                // Der Mac starb während der Ausführung: Ob sie etwas bewirkt hat, ist offen. Nie blind wiederholen.
+                antwort = JSON.text(["ok": false, "fehler": "Jarvis Mac OS wurde während der Ausführung beendet. Das Ergebnis ist unklar, der Aufruf wird nicht wiederholt."] as JSONObjekt)
+            } else if alter > Self.hoechstalter {
+                antwort = JSON.text(["ok": false, "fehler": "Der Auftrag lag länger als sechs Stunden und wurde nicht mehr ausgeführt."] as JSONObjekt)
+            } else {
+                if let i = eingang.firstIndex(where: { $0["id"] as? String == id }) { eingang[i]["begonnen"] = true; sichere() }
+                antwort = await HelferKatalog.shared.kanalNachricht(art: art, text: n["text"] as? String ?? "")
+            }
+            if let i = eingang.firstIndex(where: { $0["id"] as? String == id }) { eingang[i]["fertige_antwort"] = antwort; sichere() }
+        }
+        guard await sende(art: "antwort", text: antwort ?? "{}", antwortAuf: id, id: "antwort-\(id)") else { return false }
+        eingang.removeAll { $0["id"] as? String == id }
+        erledigt.append(id)
+        sichere()
+        return true
+    }
+
+    /// Ändert sich der Katalog, erfährt es das Handy. Gleicher Inhalt, gleiche Kennung: Der Relay legt ihn nicht doppelt ab.
+    func katalogSenden() {
+        let text = JSON.text(["helfer": HelferKatalog.shared.kanalListe()] as JSONObjekt)
+        let kennung = "helfer-katalog-" + SHA256.hash(data: Data(text.utf8)).prefix(16).map { String(format: "%02x", $0) }.joined()
+        Task { _ = await sende(art: "helfer_katalog", text: text, id: kennung) }
+    }
+
     private func abarbeiten() {
-        guard !arbeitet, let n = eingang.first else { return }
+        helferAbarbeiten()
+        guard !arbeitet, let n = eingang.first(where: { !Self.istHelfer($0["art"] as? String ?? "") }) else { return }
         arbeitet = true
         Task {
             // Antwort nicht zugestellt (Mac ohne Netz): Sie bleibt im Eingang, später erneut senden.
@@ -212,7 +274,7 @@ final class AgentenKanal {
         guard let basis else { return nil }
         var rumpf: JSONObjekt = ["id": id, "art": art, "text": text]
         if let antwortAuf { rumpf["antwort_auf"] = antwortAuf }
-        merke(id: id, von: "Mac", art: art, text: text)
+        if !Self.istHelfer(art), !id.contains("helfer-") { merke(id: id, von: "Mac", art: art, text: text) }
         for versuch in 0..<4 {
             if versuch > 0 { try? await Task.sleep(for: .seconds(Double(1 << versuch))) }
             if let (code, daten) = try? await anfrage(basis, rumpf: rumpf, sekunden: 15), code == 200 { return JSON.objekt(daten) ?? [:] }

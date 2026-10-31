@@ -94,6 +94,23 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
         )
     }
 
+    /** Hört der Mac gerade? Kurzes Zeitlimit: Die Antwort darf den Katalog nicht aufhalten. */
+    suspend fun macErreichbar(): Boolean = withContext(Dispatchers.IO) {
+        runCatching { antwortJson(anfrage("/geraet/kanal/status").get().build()).let { it.optBoolean("mac_app") || it.optBoolean("bruecke") } }.getOrDefault(false)
+    }
+
+    /**
+     * Anfrage an den Mac ohne Modell ([art] nach JarvisHelfer/README.md): null = keine Antwort in [warteMs]; dann kommt sie später an, wird aber
+     * nie ein zweites Mal ausgeführt (dieselbe Kennung, Quittung, fertige Antwort am Mac). Taucht nicht im Kanalgespräch auf.
+     */
+    suspend fun helferAnfrage(art: String, inhalt: JSONObject, warteMs: Long): String? {
+        val kennung = "helfer-" + UUID.randomUUID()
+        val wartend = CompletableDeferred<String>().also { wartende[kennung] = it }
+        val ok = withContext(Dispatchers.IO) { runCatching { sende(kennung, art, inhalt.toString(), null, versuche = 2) }.isSuccess }
+        if (!ok) { wartende.remove(kennung); return null }
+        return try { withTimeoutOrNull(warteMs) { wartend.await() } } finally { wartende.remove(kennung) }
+    }
+
     private fun rumpf(j: JSONObject) = j.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
     private fun anfrage(pfad: String) = Request.Builder().url("https://${e.serverHost}$pfad").header("X-Jarvis-Token", e.serverToken)
@@ -179,7 +196,14 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
                 val art = nachricht!!.optString("art")
                 val text = nachricht.optString("text")
                 when (art) {
-                    "antwort" -> {
+                    // Der Mac meldet seinen Helferkatalog: nur das Abbild aktualisieren, ohne Modell und ohne Eintrag im Gespräch.
+                    "helfer_katalog" -> runCatching { JSONObject(text).optJSONArray("helfer")?.let { de.frank.jarvis.helfer.HelferKatalog.macKatalogUebernehmen(app, it) } }
+                        .onFailure { Logbuch.fehler("Agentenkanal: Helferkatalog", it) }
+                    "antwort" -> if (nachricht.optString("antwort_auf").startsWith("helfer-")) {
+                        // Ergebnis ohne Wartenden (der Lauf dauerte länger): nichts wiederholen, nur Bescheid sagen.
+                        val wartend = wartende.remove(nachricht.optString("antwort_auf"))
+                        if (wartend != null) wartend.complete(text) else melde("Mac-Helfer fertig", runCatching { JSONObject(text).optString("text") }.getOrDefault("").ifEmpty { "Das späte Ergebnis ist da." }.take(300))
+                    } else {
                         ins(GESPRAECH_MAC, "💻", text)
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
                         if (wartend != null) wartend.complete(text) else melde("Antwort von Jarvis Mac OS", text)

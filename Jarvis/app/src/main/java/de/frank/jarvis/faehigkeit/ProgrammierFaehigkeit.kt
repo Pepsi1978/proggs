@@ -56,6 +56,8 @@ import org.json.JSONObject
 data class AuftragsLage(val app: String, val stand: String, val aktiv: Long, val inhalt: String)
 
 class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
+    private val baubereich = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private val helferFragen = java.util.concurrent.ConcurrentHashMap<String, String>()
     override val id = "programmieren"
     override val name = "Programmieren"
     override val beschreibung = "Programmieraufträge an Franks Apps an Claude Code übergeben; die fertige App kommt über UpdateStation aufs Handy."
@@ -1392,6 +1394,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true, von: String = ProgrammierChat.VON_PROGRAMMIERER) {
+        if (de.frank.jarvis.helfer.HelferAblauf.istBau(eintrag.optString("id"))) {
+            de.frank.jarvis.helfer.HelferAblauf.sitzungsMeldung(app, eintrag)
+            // Werkzeugbau: Routine beantwortet Jarvis selbst; nur was übrig bleibt, geht als Vollbild an Frank.
+            if (frage != null && benachrichtigen) {
+                val zusatz = de.frank.jarvis.helfer.HelferAblauf.frageAufbereiten(frage)
+                verteileEinfach(eintrag, frage, false, von, zusatz)
+                baubereich.launch {
+                    if (!de.frank.jarvis.helfer.HelferAblauf.selbstBeantworten(app, eintrag, frage, zusatz)) {
+                        val kurz = (frage.optJSONArray("fragen") ?: JSONArray()).let { f -> (0 until f.length()).joinToString(" / ") { f.optJSONObject(it)?.optString("question").orEmpty() } }.trim()
+                        de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(frage.optString("frage_id"), frage.optLong("bis"))
+                        benachrichtige(eintrag, vorlesen = false)
+                        rueckfrageVorn(eintrag, frage, kurz, zusatz)
+                    }
+                }
+                return
+            }
+        }
+        verteileEinfach(eintrag, frage, benachrichtigen, von, null)
+    }
+
+    private fun verteileEinfach(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean, von: String, zusatz: JSONObject?) {
         // Gleich zuerst: Eine Rückfrage hält jedes laufende Vorlesen an dieser Stelle an, bis sie erledigt ist.
         if (frage != null && benachrichtigen && rueckfrageErreichtFrank(eintrag))
             frage.optString("frage_id").takeIf { it.isNotEmpty() }?.let { de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(it, frage.optLong("bis")) }
@@ -1418,6 +1441,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
                 .put("aufgabe", RueckfrageAufgabe.aus(eintrag)).put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
+            zusatz?.keys()?.forEach { kontext.put(it, zusatz.opt(it)) }
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             if (benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
             return
@@ -1441,6 +1465,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun beantworte(frageId: String, antworten: List<String>, text: String, freigeben: Boolean = false): String = withContext(Dispatchers.IO) {
         if (frageId.isEmpty()) throw IllegalArgumentException("Die frage_id fehlt.")
+        // Eigene Auswahlfrage von Jarvis im Werkzeugbau: Sie bleibt auf dem Handy, keine Sitzung wartet.
+        if (de.frank.jarvis.helfer.HelferAblauf.istLokaleFrage(frageId)) {
+            val inhalt = (antworten.filter { it.isNotEmpty() } + listOf(text).filter { it.isNotEmpty() }).joinToString("; ")
+            val gespraech = helferFragen.remove(frageId).orEmpty()
+            if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, RueckfrageStand.BEANTWORTET, inhalt)
+            rueckfrageAnsageAbbrechen(frageId)
+            return@withContext de.frank.jarvis.helfer.HelferAblauf.lokaleAntwort(app, frageId, inhalt)
+        }
+        de.frank.jarvis.helfer.HelferAblauf.fristErledigt(app, frageId)
         if (!freigeben && antworten.none { it.isNotEmpty() } && text.isEmpty()) throw IllegalArgumentException("Die Antwort ist leer.")
         val eintrag = Auftragsbuch.zuFrage(app, frageId)
         val gespraech = eintrag?.optString("gespraech").orEmpty()
@@ -1611,7 +1644,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Benachrichtigung folgen der eigenen Meldung „Rückfragen vom Programmierer“ (an: kurzer Ton, dann vorgelesen).
      * Erst nach dem Posten ins Gespräch aufrufen: Das Vollbild sucht die Frage dort.
      */
-    private fun rueckfrageVorn(eintrag: JSONObject, frage: JSONObject, kurz: String) {
+    private fun rueckfrageVorn(eintrag: JSONObject, frage: JSONObject, kurz: String, zusatz: JSONObject? = null) {
         val appName = eintrag.optString("app")
         val gespraech = eintrag.optString("gespraech")
         val frageId = frage.optString("frage_id")
@@ -1634,7 +1667,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Ein kurzer fester Satz gleich beim Eintreffen (= Beginn des Countdowns), nach dem kurzen Ton der Benachrichtigung;
         // die Frage selbst steht im Vollbild. Franks Vorgabe vom 23.10.2026: Die Code-Review-Frage nur allgemein ansagen,
         // ohne Projekt, App, Ziel oder Inhalt der Frage.
-        val satz = if (review) "Eine Code-Review-Frage liegt vor, der Programmierer wartet auf deine Antwort."
+        val thema = frage.optJSONArray("fragen")?.optJSONObject(0)?.optString("header")?.takeIf { it.isNotBlank() && it.lowercase() != "auswahl" }?.let { " zum Thema $it" } ?: " zum Helfer $appName"
+        val satz = if (zusatz?.optBoolean("werkzeugbau") == true) {
+            if (zusatz.optBoolean("freigabe")) "Ich brauche deine Freigabe$thema. Sie läuft nicht von selbst ab."
+            else "Ich habe eine Auswahlfrage$thema; du hast zweieinhalb Minuten Zeit zu antworten."
+        } else if (review) "Eine Code-Review-Frage liegt vor, der Programmierer wartet auf deine Antwort."
             else "Eine Rückfrage vom Programmierer zu $appName muss beantwortet werden."
         val art = de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE
         if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
@@ -1647,6 +1684,34 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private fun rueckfrageAnsageAbbrechen(frageId: String) {
         de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE, "rueckfrage-$frageId")
         de.frank.jarvis.speech.Vorleser.aktuell()?.freigeben(frageId)
+    }
+
+    // ---- Für den Werkzeugbau (helfer/HelferAblauf.kt): dieselben Wege wie jeder andere Auftrag ----
+
+    suspend fun herkunftFuerHelfer(): Pair<Boolean, String> = herkunft()
+    fun neueNummerFuerHelfer(): String = Auftragsbuch.neueNummer()
+
+    /** Startet die Bausitzung mit Opus 5.5 über die normale Reihenfolge der Rechner, ohne Modellkarte (die gehört zu Franks eigenen Aufträgen). */
+    suspend fun helferAuftragStarten(nummer: String, appName: String, auftrag: String): Ergebnis {
+        val wahl = zieleFuer("automatisch", MODELL_OPUS)
+        if (wahl.isEmpty()) return Ergebnis(fehltFuer(MODELL_OPUS), fehler = true)
+        return starteErstes(wahl, appName, auftrag, review = false, nummer = nummer, neu = true, modell = MODELL_OPUS)
+    }
+
+    /** Zeigt eine eigene Auswahlfrage von Jarvis im vorhandenen Vollbild. */
+    fun helferFrageAnzeigen(frageId: String, bau: JSONObject, frage: JSONObject, zusatz: JSONObject) {
+        val gespraech = bau.optString("gespraech").ifEmpty { laufendesGespraech().orEmpty() }
+        helferFragen[frageId] = gespraech
+        val eintrag = JSONObject().put("id", bau.optString("id")).put("app", "Helfer " + bau.optString("name")).put("gespraech", gespraech).put("schritt", "").put("auftrag", bau.optString("aufgabe"))
+        verteileEinfach(eintrag, frage, false, ProgrammierChat.VON_JARVIS, zusatz)
+        de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(frageId, 0L)
+        val kurz = frage.optJSONArray("fragen")?.optJSONObject(0)?.optString("question").orEmpty()
+        rueckfrageVorn(eintrag, frage, kurz, zusatz)
+    }
+
+    /** Bittet die Bausitzung, aufzuhören; ein Fehlschlag ist egal, die Registrierung ist ohnehin gesperrt. */
+    suspend fun helferSitzungAnhalten(id: String) {
+        anSitzung(id, "G" + neueNummerFuerHelfer(), "Frank hat diesen Werkzeugbau abgebrochen. Beende die Arbeit daran sofort, registriere nichts mehr und melde stand=fehler mit „abgebrochen“.")
     }
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */

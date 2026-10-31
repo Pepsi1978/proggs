@@ -86,7 +86,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "guthaben" to "Guthaben", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
@@ -94,6 +94,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         if (reiter == "guthaben") GuthabenReiter(vm)
+        if (reiter == "tools") EigeneToolsBereich(vm)
+        if (reiter == "konten") KontenBereich(vm)
 
         // Auf dem Reiter „Stimme“ ganz oben. Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
         if (reiter == "stimme") StillezeitKarte(vm)
@@ -132,9 +134,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp),
                 )
                 if (e.modell.istAnthropic) {
-                    Zeile("Anthropic-Schlüssel", if (vm.anthropicVerbunden) "Eingetragen" else "Fehlt", if (vm.anthropicVerbunden) f.erfolg else f.gefahr)
-                    Schluesselfeld(vm, "Anthropic-API-Schlüssel", vm.sprache.anthropicApiKey) { vm.anthropicSchluesselSpeichern(it) }
-                    Text("Schlüssel (sk-ant-…) von platform.claude.com unter API Keys.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    SchluesselVerweis(vm, "Anthropic-Schlüssel", vm.anthropicVerbunden)
                     AnthropicGuthaben(vm)
                 }
                 Unterzeile("Modell")
@@ -527,7 +527,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     "GitHub → Settings → Developer settings → Fine-grained tokens, Zugriff „Public repositories (read-only)“ genügt.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
-                Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
+                SchluesselVerweis(vm, "GitHub-Schlüssel", e.githubToken.isNotBlank())
             }
             // ---------------------------------------------------------------- Programmieren am Rechner
             Bereich("Programmieren am Rechner") { RechnerReihenfolge(e) }
@@ -539,7 +539,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     "und liefert die App über UpdateStation aus. Adresse und Token stehen im API-Trigger der Routine auf claude.ai/code/routines.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Schluesselfeld(vm, "Auslöse-Adresse", e.routineUrl, geheim = false) { e.routineUrl = it }
-                Schluesselfeld(vm, "Token", e.routineToken) { e.routineToken = it }
+                SchluesselVerweis(vm, "Token", e.routineToken.isNotBlank())
             }
         }
 

@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.41 -->
+<!-- stand: JarvisMac 1.0.43 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -18,6 +18,15 @@ Was Jarvis für macOS kann (geprüft am Code).
 - `mac_einstellungen` (eigene Mac-Einstellungen per Sprache lesen/ändern), `mac_funktionen_lesen` (diese Übersicht).
 - `mac_dialog` (normale Bestätigungsdialoge eines Auftrags lesen, drücken oder vorab vormerken, etwa das Ja zu einem beauftragten OpenLauncher-Update; auf persönliche Freigaben warten; Overlay-Updates bleiben Franks Klick), `mac_rechte` (Stand der macOS-Rechte). Anmeldung, Passwörter, Touch ID und Datenschutz-Freigaben bedient Jarvis nie: Es meldet sie und arbeitet danach weiter. Endgültiges wie Löschen braucht Franks Ja, auch wenn es nur im Dialogtext steht. Nicht im Agentenkanal.
 - `terminal_befehl` (sichtbares Terminal-Fenster), `openlauncher_sitzung` (OpenLauncher `--jarvis-auftrag` mit CLI, Modell, Profil, Modus, Effort), `updater_zentrale` (Programmliste, öffnen), `chatgpt_app` (Nachricht in die ChatGPT-App).
+
+## Eigene Tools
+- Einstellungen → Eigene Tools: Inhaltsverzeichnis mit Reihenfolge, Detail je Helfer (Zweck, Fähigkeiten, Aufruf, Eingaben, Ergebnis, Rechte, Grenzen, Zustand, Fassung, letzte Prüfung), Aktivieren, Deaktivieren, Freigeben, letzte Fassung, Papierkorb. Oben Pause für den Helferbau und Modell und Effort der Recherche (Vorgabe Sol 6.1, High; ohne Luna und Haiku; auch `mac_einstellungen`).
+- `mac_helfer_suchen`, `mac_helfer_info`, `mac_helfer_ausfuehren`, `mac_helfer_verwalten`, `mac_helfer_bauen` (über `helfer_bauen` des Handys; ohne Handy Sitzung am Mac mit Opus 5.5, höchstens 5 am Tag). Bau-Vorschrift: JarvisHelfer/README.md. Ein Helfer gilt erst nach bestandenen Tests auf diesem Mac als bereit; durchgefallen bleibt die bisherige Fassung. Konten, Werkzeugrechte und Wirkung nach außen braucht Franks Freigabe, nur im Bereich selbst.
+- Das Handy ruft Mac-Helfer über den Agentenkanal ohne Modell auf (`helfer_liste`, `helfer_aufruf`, `helfer_installieren`, `helfer_verwalten`, `cli_recherche`), nichts wird doppelt ausgeführt. Unterbrochene Aufrufe werden nicht wiederholt, sondern als unklar gemeldet. `cli_recherche`: Claude Code nur lesend mit bis zu 7 Unteragenten, 20 Minuten, eine zur Zeit.
+- Grenze: Mac-Helfer laufen unter Franks Benutzer und sind nicht abgeschottet. Erklärte Netz-Hosts setzt die Laufzeit nicht durch, Schutz sind Review, Freigabe und die bereinigte Umgebung.
+
+## Konten und APIs
+- Einstellungen → Konten und APIs: alle Schlüssel untereinander, je zwei kurze Sätze und „Verwendet von“, weitere Schlüssel hinzufügen, ändern, für Helfer sperren. Speicher bleibt der Tresor (Secure Enclave), Anzeige nur nach Touch ID. Das schützt den Speicher, nicht vor Missbrauch durch ein laufendes Programm unter Franks Benutzer. Helfer bekommen freigegebene Schlüssel nur für ihren Lauf als Umgebungsvariable; Ausgaben werden geschwärzt.
 
 ## Sprache
 - Weckwort „Hey Jarvis“ (einstellbar) offline am Mac; ⌥⌘J überall sprechen, ⌥⌘K Fenster. Ist Jarvis vorn, geht das offene Gespräch weiter; sonst beginnt ein neues im Hintergrund und oben mittig erscheint die orange Sprachpille wie am Handy (Pegel-Spektrum, nimmt nie den Fokus, nicht auf Bildschirmfotos; Klick öffnet Jarvis, X, lange drücken, Rechtsklick oder nach oben ziehen beendet).

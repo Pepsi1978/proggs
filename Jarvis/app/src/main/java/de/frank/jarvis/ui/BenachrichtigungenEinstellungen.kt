@@ -434,13 +434,13 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         Spacer(Modifier.height(10.dp))
         StimmChips(vm, anbieter!!, stimmen, p.stimme) { p.stimme = it }
     }
-    if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { s.googleTtsApiKey = it; stand++ }
+    if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) SchluesselVerweis(vm, "Google-Cloud-Schlüssel", false)
     if (anbieter == TtsProvider.AZURE && azureFehlt) {
-        Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { s.azureTtsKey = it; stand++ }
+        SchluesselVerweis(vm, "Azure-Speech-Schlüssel", s.azureTtsKey.isNotBlank())
         Schluesselfeld(vm, "Azure-Region (z. B. westeurope)", s.azureTtsRegion, geheim = false) { s.azureTtsRegion = it; stand++ }
     }
-    if (anbieter == TtsProvider.QWEN && qwenFehlt) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { s.qwenTtsApiKey = it; stand++ }
-    if ((anbieter == TtsProvider.GEMINI_FLASH || anbieter == TtsProvider.GEMINI_LITE) && geminiFehlt) Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos", s.geminiTtsKeyFrei) { s.geminiTtsKeyFrei = it; stand++ }
+    if (anbieter == TtsProvider.QWEN && qwenFehlt) SchluesselVerweis(vm, "Alibaba-Schlüssel (Qwen)", false)
+    if ((anbieter == TtsProvider.GEMINI_FLASH || anbieter == TtsProvider.GEMINI_LITE) && geminiFehlt) SchluesselVerweis(vm, "Gemini-Stimme: Schlüssel", false)
     Unterzeile("Sprechtempo")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(0f to "Wie Jarvis", 0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
