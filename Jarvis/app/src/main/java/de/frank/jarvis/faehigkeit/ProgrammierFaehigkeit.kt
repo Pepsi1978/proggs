@@ -377,6 +377,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "auftrag" to text(AUFTRAGS_REGELN),
                     "review" to schalter("Nur bei modell=sol und cli=codex oder bei einem frei gewählten Modell im Codex CLI, Kimi Code CLI oder Antigravity CLI: Franks Antwort, ob ein Review laufen soll, wenn die App oder das APK-Update fertig programmiert ist " +
                         "(Codex kann nicht selbst fragen). Sonst weglassen: Opus und OpenCode fragen am Ende selbst."),
+                    "review_umfang" to text("Nur im Antigravity CLI und nur zusammen mit review=true: Franks Antwort, wie gründlich das Review sein soll: standard oder sehr_ausfuehrlich (bis zu 100 Findings). Nie raten; fehlt sie, fragt Jarvis.",
+                        listOf(REVIEW_STANDARD, REVIEW_SEHR_AUSFUEHRLICH)),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc (sein Mac oder Windows-PC), server (Hostinger-Server) oder cloud. Vorgabe automatisch (Reihenfolge aus den Einstellungen, zuletzt die Cloud).", listOf("automatisch", "pc", "server", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1: am Windows-PC im Codex CLI, " +
@@ -501,14 +503,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         ausweg(Ergebnis("$festModell ist nicht gestartet: Das Angebot von OpenLauncher ist gerade nicht lesbar oder enthält das Modell nicht.", fehler = true))
                     festModell != null && ziel == "cloud" ->
                         ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
-                    // Ohne Hooks (Antigravity, Kimi Code CLI) kann die Sitzung nicht selbst nach dem Review fragen: wie bei Sol im Codex CLI vorher fragen.
+                    // Antigravity, auch frei genannt: vor jedem Start „Review: Ja oder Nein?“, bei Ja danach der Umfang (Franks Wahl vom 31.10.2026).
+                    katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY && (!a.has("review") || a.optBoolean("review") && reviewUmfang(a) == null) ->
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, (knopfModell ?: antwortModell) ?: katalog.modell.name, CLI_ANTIGRAVITY,
+                            if (a.has("review")) STUFE_REVIEW_UMFANG else STUFE_REVIEW, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade(),
+                            zusatz = "${katalog.effort}|${katalog.profil}|${katalog.modus}"))
+                    // Ohne Hooks (Kimi Code CLI) kann die Sitzung nicht selbst nach dem Review fragen: wie bei Sol im Codex CLI vorher fragen.
                     (knopfModell ?: antwortModell)?.takeIf { ProgrammiererVorlage.katalogName(it) != null } != null && katalog is OpenLauncherKatalog.Wahl &&
                         katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE) && !a.has("review") ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, (knopfModell ?: antwortModell).orEmpty(), katalog.cli, STUFE_REVIEW,
                             runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade(), zusatz = ZUSATZ_FELDER.joinToString("|") { a.optString(it).trim() }))
                     katalog is OpenLauncherKatalog.Wahl -> {
                         starten(katalog.cli) { nummer ->
-                            withContext(ServerWahl(ziel)) { starteKatalog(katalog, appName, auftrag, a.optBoolean("review"), nummer, neu) }
+                            withContext(ServerWahl(ziel) + ReviewWahl(reviewUmfang(a).orEmpty())) { starteKatalog(katalog, appName, auftrag, a.optBoolean("review"), nummer, neu) }
                         }.also { ergebnis ->
                             // Erst nach dem Start haben offene Knöpfe ausgedient; nach einem Fehlstart bleiben sie (Opus/Sol als Ausweg).
                             // Ein Auftrag mit vorgewähltem Modell ist ein eigener: Karten älterer Aufträge bleiben offen.
@@ -672,12 +679,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         gespraech.takeIf { it.isNotEmpty() }?.let { knopfStarts[it] }?.takeIf { System.currentTimeMillis() - it.zeit < KNOPF_FRIST_MS }
             ?.takeIf { runde.isEmpty() || it.runde.isEmpty() || it.runde == runde }
 
-    private fun modellName(modell: String, cli: String) = ProgrammiererVorlage.katalogName(modell) ?:
+    private fun reviewUmfang(a: JSONObject) = a.optString("review_umfang").trim().lowercase().takeIf { it == REVIEW_STANDARD || it == REVIEW_SEHR_AUSFUEHRLICH }
+
+    private fun modellName(modell: String, cli: String) = ProgrammiererVorlage.katalogName(modell) ?: modell.takeIf { cli == CLI_ANTIGRAVITY && it !in listOf(MODELL_OPUS, MODELL_SOL) } ?:
         if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
 
     /** Die Angebotswahl zum Knopf [wert] (Standards minimal, schnell, high): [OpenLauncherKatalog.Wahl] oder [Ergebnis] mit dem Grund. */
     private suspend fun festeKatalogWahl(wert: String, cli: String, zusatz: String): Any {
-        val name = ProgrammiererVorlage.katalogName(wert) ?: return Ergebnis("Noch nichts gestartet: Unbekanntes Modell $wert.", fehler = true)
+        // Ein frei genanntes Modell im Antigravity CLI steht in der Review-Karte unter seinem Namen.
+        val name = ProgrammiererVorlage.katalogName(wert) ?: wert.takeIf { cli == CLI_ANTIGRAVITY } ?: return Ergebnis("Noch nichts gestartet: Unbekanntes Modell $wert.", fehler = true)
         val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Noch nichts gestartet: ${fehler.message}", fehler = true)
         }
@@ -724,6 +734,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
                 STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon ${modellName(alt.modell, alt.cli)} gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
+                STUFE_REVIEW_UMFANG -> "Frank will ein Review; im Chat stehen die Knöpfe „Standard“ und „Sehr ausführlich (bis 100 Findings)“."
                 else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.1“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
@@ -740,7 +751,21 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun wahlAnbieten(w: OffeneWahl): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         val review = w.stufe == STUFE_REVIEW
-        val festName = ProgrammiererVorlage.katalogName(w.modell)
+        val festName = ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.cli == CLI_ANTIGRAVITY }
+        if (w.cli == CLI_ANTIGRAVITY) {
+            if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frag Frank kurz: „Review: Ja oder Nein?“, bei Ja danach: „Standard oder sehr ausführlich mit bis zu 100 Findings?“ " +
+                "Rufe programmieren danach mit demselben Auftrag, modell=$festName und cli=antigravity erneut auf: bei Nein review=false, bei Ja review=true und review_umfang=$REVIEW_STANDARD bzw. $REVIEW_SEHR_AUSFUEHRLICH.")
+            // Zweiter Aufruf derselben Runde: keine zweite Karte, die offene übernimmt den neu gefassten Auftrag.
+            offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && it.value.runde == w.runde && it.value.stufe in listOf(STUFE_REVIEW, STUFE_REVIEW_UMFANG) }?.let { (id, alt) ->
+                offeneWahlen[id] = alt.copy(app = w.app, auftrag = w.auftrag, anhaenge = w.anhaenge.ifEmpty { alt.anhaenge })
+                wahlenSichern(app)
+                return Ergebnis("Noch nicht gestartet: Im Chat stehen schon die Review-Knöpfe. $KARTE_FRAGT Der Tipp startet den Auftrag in der neuen Fassung; starte nichts selbst.")
+            }
+            offeneWahlen.filterValues { it.gespraech == gespraech && it.stufe == STUFE_MODELL }.keys.forEach { erinnerungen.remove(it)?.cancel() }
+            karte(w.copy(gespraech = gespraech, ursprung = kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]))
+            return Ergebnis("Noch nicht gestartet: Im Chat stehen die Review-Knöpfe. $KARTE_FRAGT Der Tipp startet den Auftrag; starte nichts selbst. " +
+                "Sagt Frank es später: bei Nein review=false, bei Ja review=true und review_umfang=$REVIEW_STANDARD bzw. $REVIEW_SEHR_AUSFUEHRLICH.")
+        }
         if (festName != null) return if (ausChatGpt || gespraech.isEmpty())
             Ergebnis("Noch nichts gestartet: $festName im ${OpenLauncherKatalog.CLI_NAMEN[w.cli]} kann keine Rückfragen stellen. Frag Frank kurz: „Soll ein Review laufen, wenn die App oder das APK-Update fertig programmiert ist? Ja oder Nein?“ " +
                 "und rufe programmieren danach mit demselben Auftrag, modell=$festName, cli=${w.cli} und review=true bzw. review=false erneut auf.")
@@ -806,7 +831,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
         STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
-        STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+        STUFE_REVIEW_UMFANG -> "Programmierauftrag${fuer(w.app)}: Review Standard oder sehr ausführlich mit bis zu 100 Findings?" to listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich (bis 100 Findings)")
+        STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: " + (if (w.cli == CLI_ANTIGRAVITY) "Review: Ja oder Nein?"
+            else "Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?") to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
         else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
@@ -841,6 +868,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
             w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_ARGON && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
+            w.stufe == STUFE_REVIEW && w.cli == CLI_ANTIGRAVITY && wert == REVIEW_JA -> w.copy(stufe = STUFE_REVIEW_UMFANG)
             else -> null
         }
         if (naechste != null) {
@@ -848,13 +876,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return
         }
         val modell = if (w.stufe == STUFE_MODELL) wert else w.modell
-        val cli = when (w.stufe) { STUFE_CLI -> wert; STUFE_REVIEW -> w.cli.ifEmpty { CLI_CODEX }; else -> CLI_CODEX }
-        val review = if (w.stufe == STUFE_REVIEW) wert == REVIEW_JA else w.review && cli != CLI_OPENCODE
+        val cli = when (w.stufe) { STUFE_CLI -> wert; STUFE_REVIEW, STUFE_REVIEW_UMFANG -> w.cli.ifEmpty { CLI_CODEX }; else -> CLI_CODEX }
+        val review = when (w.stufe) { STUFE_REVIEW -> wert == REVIEW_JA; STUFE_REVIEW_UMFANG -> true; else -> w.review && cli != CLI_OPENCODE }
+        val umfang = if (w.stufe == STUFE_REVIEW_UMFANG) wert else ""
         val nummer = Auftragsbuch.neueNummer()
-        val ergebnis = withContext(umgebung + ServerWahl(w.ziel)) {
-            if (ProgrammiererVorlage.katalogName(modell) != null) {
+        val ergebnis = withContext(umgebung + ServerWahl(w.ziel) + ReviewWahl(umfang)) {
+            if (ProgrammiererVorlage.katalogName(modell) != null || w.cli == CLI_ANTIGRAVITY) {
                 // Kimi K3.1 Pro und Gemini 4 Argon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
-                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell)} ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
+                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
                 else when (val k = festeKatalogWahl(modell, w.cli, w.zusatz)) {
                     is OpenLauncherKatalog.Wahl -> starteKatalog(k, w.app, w.auftrag, review, nummer, w.neu)
                     else -> k as Ergebnis
@@ -2464,6 +2493,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             frei?.let { w ->
                 rumpf.put("slug", w.modell.slug).put("anbieter", w.modell.anbieter).put("name", w.modell.name).put("effort", w.effort)
                     .put("profil", w.profil).put("modus", w.modus).put("cli", w.cli)
+                // Nur Antigravity kennt den Umfang; die anderen CLIs bleiben bei ihrem Ja/Nein.
+                if (w.cli == CLI_ANTIGRAVITY && review) kotlinx.coroutines.currentCoroutineContext()[ReviewWahl]?.umfang?.takeIf { it.isNotEmpty() }?.let { rumpf.put("review_umfang", it) }
             }
             kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste?.takeIf { it.length() > 0 }?.let { rumpf.put("anhaenge", it) }
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
@@ -2748,10 +2779,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Antworten auf die Review-Frage vor einem Codex-Auftrag. */
         const val REVIEW_JA = "ja"
         const val REVIEW_NEIN = "nein"
+        /** Umfang des Reviews im Antigravity CLI. */
+        const val REVIEW_STANDARD = "standard"
+        const val REVIEW_SEHR_AUSFUEHRLICH = "sehr_ausfuehrlich"
         /** Was eine Auswahlkarte gerade fragt. */
         private const val STUFE_MODELL = "modell"
         private const val STUFE_CLI = "cli"
         private const val STUFE_REVIEW = "review"
+        private const val STUFE_REVIEW_UMFANG = "review_umfang"
+
+        /** Trägt Franks Review-Umfang (Antigravity) bis PcBruecke.starte. */
+        private class ReviewWahl(val umfang: String) : kotlin.coroutines.AbstractCoroutineContextElement(ReviewWahl) {
+            companion object Key : kotlin.coroutines.CoroutineContext.Key<ReviewWahl>
+        }
 
         /** Trägt ein frei gewähltes Modell (Effort, Profil, Modus, CLI) bis PcBruecke.starte. */
         private class KatalogStart(val wahl: OpenLauncherKatalog.Wahl) : kotlin.coroutines.AbstractCoroutineContextElement(KatalogStart) {

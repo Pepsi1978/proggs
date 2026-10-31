@@ -1123,6 +1123,8 @@ class PcBruecke:
                 for feld in ("slug", "anbieter", "name", "effort", "profil", "modus"):
                     eintrag[feld] = str(daten.get(feld, ""))[:80]
                 eintrag["cli"] = daten.get("cli") if daten.get("cli") in ("claude", "codex", "opencode", "kimi", "antigravity") else "claude"
+                if daten.get("review_umfang") in ("standard", "sehr_ausfuehrlich"):
+                    eintrag["review_umfang"] = daten["review_umfang"]
             self.auftraege.append(eintrag)
             self.neuer_auftrag.set()
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])

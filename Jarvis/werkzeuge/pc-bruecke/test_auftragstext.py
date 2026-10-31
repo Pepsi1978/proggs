@@ -38,6 +38,17 @@ class AuftragstextTest(unittest.TestCase):
         # Claude Code fragt am Ende selbst nach dem Review: Der Kopf nennt es nie, auch nicht mit review=true.
         self.assertNotIn("REVIEW", auftragstext({"app": "X", "review": True, "auftrag": "a"}))
 
+    def test_antigravity_review_verbindlich(self):
+        basis = {"app": "X", "auftrag": "a", "modell": "katalog", "cli": "antigravity", "slug": "s", "anbieter": "google"}
+        self.assertIn("REVIEW: Nein (", auftragstext({**basis, "review": False}))
+        self.assertIn("REVIEW: Ja, Standard (", auftragstext({**basis, "review": True, "review_umfang": "standard"}))
+        self.assertIn("REVIEW: Ja, sehr ausführlich (", auftragstext({**basis, "review": True, "review_umfang": "sehr_ausfuehrlich"}))
+
+    def test_codex_review_unveraendert(self):
+        basis = {"app": "X", "auftrag": "a", "modell": "katalog", "cli": "codex", "slug": "s", "anbieter": "openai"}
+        self.assertIn("REVIEW: Nein\n", auftragstext({**basis, "review": False}))
+        self.assertIn("REVIEW: Ja (vor dem Abschluss", auftragstext({**basis, "review": True, "review_umfang": "sehr_ausfuehrlich"}))
+
     def test_null_wird_nicht_zu_none(self):
         text = auftragstext({"app": None, "auftrag": None})
         self.assertIn("APP: \n", text)
