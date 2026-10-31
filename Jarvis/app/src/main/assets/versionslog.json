@@ -502,6 +502,7 @@
     {"versionCode": 498, "versionName": "1.8.487", "stand": "31.10.2026, 11:57 Uhr", "notiz": "Die Fernwartungsauswahl zeigt nur Rechner, die wirklich antworten, und die Server-Konsole meldet sich selbst neu an, wenn ihr Zugang nicht mehr gilt."},
     {"versionCode": 499, "versionName": "1.8.488", "stand": "31.10.2026, 12:21 Uhr", "notiz": "Neu: Eigene Tools und Konten und APIs: Jarvis lässt sich fehlende Helfer selbst bauen, prüft sie und erledigt damit deine Aufgabe; alle Schlüssel liegen jetzt an einer Stelle."},
     {"versionCode": 500, "versionName": "1.8.489", "stand": "31.10.2026, 12:28 Uhr", "notiz": "Die Server-Konsole hat jetzt ein Sprach-Overlay wie das TVO: Mikrofon, Zeile löschen und automatisches Absenden erscheinen von selbst im Terminal."},
-    {"versionCode": 500, "versionName": "1.8.489", "stand": "31.10.2026, 12:34 Uhr", "notiz": "Eigene Tools: Die Antwortfrist entscheidet zuverlässig genau einmal, Hintergrund-Agenten können keine Helfer mehr bauen, und alle Schlüssel lassen sich nur noch unter Konten und APIs ändern."}
+    {"versionCode": 500, "versionName": "1.8.489", "stand": "31.10.2026, 12:34 Uhr", "notiz": "Eigene Tools: Die Antwortfrist entscheidet zuverlässig genau einmal, Hintergrund-Agenten können keine Helfer mehr bauen, und alle Schlüssel lassen sich nur noch unter Konten und APIs ändern."},
+    {"versionCode": 501, "versionName": "1.8.490", "stand": "31.10.2026, 12:36 Uhr", "notiz": "Enthält die Stände zweier gleichzeitiger Sitzungen, darunter das Sprach-Overlay der Server-Konsole und die abgesicherten Hintergrundläufe."}
 ]
 }
