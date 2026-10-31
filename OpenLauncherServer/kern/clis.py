@@ -33,6 +33,8 @@ PROGRAMME = {
              "anmeldung": "kimi login", "stand": "", "installieren": f"{NPM} --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest"},
     "antigravity": {"name": "Antigravity CLI", "befehl": "agy", "update": "agy update", "anmeldung": "agy", "stand": "",
                     "installieren": "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
+    # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
+    "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth status", "installieren": "true"},
 }
 
 
@@ -75,7 +77,7 @@ def anmeldung(schluessel: str, p: dict) -> str:
             return "angemeldet"
         return "abgemeldet"
     pfade = {"kimi": HOME / ".kimi-code", "antigravity": HOME / ".agy"}
-    return "unbekannt" if pfade[schluessel].exists() else "abgemeldet"
+    return "unbekannt" if pfade.get(schluessel, HOME / "-").exists() else "abgemeldet"
 
 
 def status_schreiben(aktualisieren: bool) -> dict:

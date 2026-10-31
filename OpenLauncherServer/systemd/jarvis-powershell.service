@@ -1,9 +1,12 @@
 [Unit]
-Description=PowerShell aktualisieren (nicht, solange eine PowerShell läuft)
+Description=Pakete der Hersteller aktualisieren: gh und Chrome immer, PowerShell nur, solange keine läuft
 
 [Service]
 Type=oneshot
 Environment=DEBIAN_FRONTEND=noninteractive
-ExecStart=/bin/sh -c 'pgrep -x pwsh >/dev/null && exit 0; apt-get update -qq -o Dir::Etc::sourcelist=sources.list.d/microsoft-prod.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0 && apt-get install -y -qq --only-upgrade powershell'
-TimeoutStartSec=900
+ExecStart=/usr/bin/apt-get update -qq
+ExecStart=-/bin/sh -c 'pgrep -x chrome >/dev/null || apt-get install -y -qq --only-upgrade google-chrome-stable'
+ExecStart=-/usr/bin/apt-get install -y -qq --only-upgrade gh dotnet-sdk-8.0 dotnet-sdk-10.0
+ExecStart=-/bin/sh -c 'pgrep -x pwsh >/dev/null || apt-get install -y -qq --only-upgrade powershell'
+TimeoutStartSec=1200
 Nice=10

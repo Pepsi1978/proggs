@@ -8,7 +8,19 @@ REPO=$ZUHAUSE/proggs
 als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget libatomic1
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget libatomic1 dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc websockify xdotool openbox
+
+# gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
+if [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+fi
+if [ ! -f /etc/apt/sources.list.d/google-chrome.list ]; then
+  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor --yes -o /etc/apt/keyrings/google-chrome.gpg
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+fi
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gh google-chrome-stable fonts-noto-color-emoji
 
 # Swap: Ohne ihn beendet der Kernel bei Speicherspitzen beliebige Dienste.
 if ! swapon --show | grep -q /swapfile; then
@@ -52,6 +64,7 @@ org.gradle.workers.max=2
 org.gradle.parallel=false
 kotlin.daemon.jvmargs=-Xmx1536m
 org.gradle.daemon.idletimeout=300000
+org.gradle.caching=true
 G'
 [ -f "$ZUHAUSE/SK/Android/debug-shared.keystore" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 600 "$ZUHAUSE/SK/Android/debug-shared.keystore" "$ZUHAUSE/.android/debug.keystore"
 
@@ -74,6 +87,9 @@ als 'command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | b
 als 'command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/install.sh | bash' || echo "Antigravity CLI nicht installiert"
 for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" || echo "$P nicht installiert"; done
 als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
+als 'npm install -g --silent pnpm@latest' || echo "pnpm nicht installiert"
+# Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
+als 'bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"
 
 # PowerShell aus dem Microsoft-Paketarchiv: die Shell der Konsole, aktuell gehalten von jarvis-powershell.timer. Fehlt sie, fällt die Konsole auf bash zurück.
 if ! command -v pwsh >/dev/null; then
