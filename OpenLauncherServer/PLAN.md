@@ -74,7 +74,7 @@ Handy (Jarvis) ── POST /geraet/pc-auftrag ──► Relay ◄── Long-Pol
 8. **Oberfläche:** eine Web-App im Tunnel unter `http://10.8.0.1:8090`, mit Zugangstoken, für Handy gebaut und auch am
    Mac-Browser nutzbar. Vier Reiter:
    - **Sitzungen:** Liste mit Auftrag, CLI, Modell, Stand; antippen öffnet das Terminal, Schließen beendet sie.
-   - **Terminal:** echte CLI mit Eingabezeile (xterm.js), Sondertasten für Esc, Strg+C, Pfeile.
+   - **Terminal:** echte CLI mit Eingabezeile (xterm.js), Sondertasten für Esc, Tab, Pfeile, dazu STRG und ALT mit wischbarer Leiste A bis Z; ⤓ erscheint nur nach dem Scrollen.
    - **OpenLauncher:** Modell, Profil, Modus, Effort und CLI wählen, starten.
    - **System:** CLI-Versionen, Anmeldestände, Speicher, „Jetzt aktualisieren“.
    Eigener Dienst statt `ttyd` (im Ubuntu-Archiv 1.7.4): ein Port und ein Token für alle Sitzungen, ohne Prozess je Sitzung.

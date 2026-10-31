@@ -99,6 +99,18 @@ async def _im_faden(funktion, *argumente):
     return await asyncio.get_running_loop().run_in_executor(None, funktion, *argumente)
 
 
+# Der Verlauf-Modus gehört zur tmux-Sitzung, nicht zur Verbindung: Scrollt das Handy, muss auch die Eingabe vom Rechner ihn beenden.
+GEROLLT: set[str] = set()
+
+
+async def _tmux_versuchen(funktion, *argumente) -> None:
+    """Ein hakendes tmux darf die Verbindung nicht abreißen: Die Eingabe dahinter, etwa ein Strg+C, muss trotzdem ankommen."""
+    try:
+        await _im_faden(funktion, *argumente)
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        pass
+
+
 async def sitzungen(_: web.Request) -> web.Response:
     alle = await _im_faden(launcher.sitzungen)
     return web.json_response({"sitzungen": alle, "belegt": launcher.belegt(alle)})
@@ -304,7 +316,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     warteschlange: asyncio.Queue = asyncio.Queue()
     angehalten = [False]
     # Der Verlauf-Modus gehört zur Sitzung, nicht zu dieser Verbindung: Beim ersten Eingeben also immer verlassen, auch nach einem Neustart der Konsole.
-    gerollt = [True]
+    GEROLLT.add(name)
 
     def lesbar():
         try:
@@ -349,13 +361,16 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
                 continue
             d = json.loads(nachricht.data)
             if d.get("t") == "i":
-                if gerollt[0]:
-                    gerollt[0] = False
-                    await _im_faden(launcher.verlauf_ende, name)
+                if name in GEROLLT:
+                    GEROLLT.discard(name)
+                    await _tmux_versuchen(launcher.verlauf_ende, name)
                 await schreiben(str(d.get("d", "")).encode("utf-8"))
             elif d.get("t") == "s":
-                gerollt[0] = True
-                await _im_faden(launcher.rollen, name, max(-500, min(500, int(d.get("n", 0)))))
+                GEROLLT.add(name)
+                await _tmux_versuchen(launcher.rollen, name, max(-500, min(500, int(d.get("n", 0)))))
+            elif d.get("t") == "e":
+                GEROLLT.discard(name)
+                await _tmux_versuchen(launcher.verlauf_ende, name, True)
             elif d.get("t") == "r":
                 fcntl.ioctl(herr, termios.TIOCSWINSZ, struct.pack("HHHH", max(int(d["r"]), 2), max(int(d["c"]), 2), 0, 0))
     finally:
@@ -369,10 +384,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
         os.close(herr)
         await _im_faden(prozess.wait)
         # Beim nächsten Öffnen steht die Sitzung wieder am aktuellen Stand, und Eingaben von Jarvis landen nicht im Verlauf-Modus.
-        try:
-            await _im_faden(launcher.verlauf_ende, name)
-        except (subprocess.TimeoutExpired, OSError, ValueError):
-            pass
+        await _tmux_versuchen(launcher.verlauf_ende, name)
     return ws
 
 
@@ -447,4 +459,5 @@ def anwendung() -> web.Application:
 
 if __name__ == "__main__":
     gepackt_ablegen()
+    launcher.tmux_praefix_aus()
     web.run_app(anwendung(), host=ADRESSE, port=PORT, access_log=None, print=None)

@@ -496,11 +496,23 @@ def rollen(name: str, zeilen: int) -> None:
     subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", vollbild, verlauf], capture_output=True, timeout=5)
 
 
-def verlauf_ende(name: str) -> None:
-    """Den Verlauf-Modus verlassen; im Verlauf landen Eingaben sonst bei tmux statt bei der CLI."""
+def tmux_praefix_aus() -> None:
+    """Auch im laufenden tmux, das nie neu startet und tmux.conf nur bei der Installation liest: Sonst käme Strg+B nie bei der CLI an."""
+    try:
+        subprocess.run(TMUX + ["set-option", "-g", "prefix", "None"], capture_output=True, timeout=5)
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+
+def verlauf_ende(name: str, nach_unten: bool = False) -> None:
+    """Den Verlauf-Modus verlassen; im Verlauf landen Eingaben sonst bei tmux statt bei der CLI. [nach_unten]: der Knopf ⤓, Vollbild-Oberflächen springen ans Ende."""
     ziel = f"={pruefe_name(name)}:"
     _BLAETTERN.pop(name, None)
-    subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
+    verlauf = f"if-shell -F -t {ziel} '#{{pane_in_mode}}' 'send-keys -t {ziel} -X cancel'"
+    if nach_unten:
+        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", f"send-keys -t {ziel} End", verlauf], capture_output=True, timeout=5)
+    else:
+        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
 
 
 def wartet_auf_anmeldung(name: str) -> bool:

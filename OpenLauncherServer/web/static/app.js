@@ -14,7 +14,11 @@ const dauer = (s) => s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` 
 
 // ---- Reiter
 let seite = "sitzungen";
+// Tastenleiste STRG/ALT, siehe waehle().
+const kombination = { strg: (b) => String.fromCharCode(b.charCodeAt(0) - 96), alt: (b) => `\x1b${b}` };
+let tastenWahl = "";
 function zeige(name) {
+  waehle("");
   seite = name;
   document.querySelectorAll("#reiter button").forEach((b) => b.classList.toggle("an", b.dataset.seite === name));
   document.querySelectorAll(".seite").forEach((s) => s.classList.toggle("an", s.id === name));
@@ -93,6 +97,7 @@ function aufbauen() {
 let offeneZeilen = 0, rollZeit = null, schwung = null;
 function rollenStoppen() { clearInterval(schwung); schwung = null; clearTimeout(rollZeit); rollZeit = null; offeneZeilen = 0; }
 function rollen(zeilen) {
+  $("nach-unten").hidden = false;
   offeneZeilen += zeilen;
   if (rollZeit) return;
   rollZeit = setTimeout(() => {
@@ -111,6 +116,14 @@ function wischenEinrichten() {
     const zeilen = Math.trunc(radRest / zeilenHoehe());
     if (zeilen) { radRest -= zeilen * zeilenHoehe(); rollen(-zeilen); }
   }, { capture: true, passive: false });
+  // Der Rückweg ohne Nebenwirkung: Jede Taste ginge zusätzlich an die CLI, und Esc würde sie unterbrechen.
+  const nachUnten = $("nach-unten");
+  nachUnten.addEventListener("mousedown", (e) => e.preventDefault());
+  nachUnten.addEventListener("click", () => {
+    rollenStoppen();
+    nachUnten.hidden = true;
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" }));
+  });
   if (!("ontouchstart" in window)) return;
   const decke = element("div", "wisch");
   flaeche.append(decke);
@@ -128,7 +141,7 @@ function wischenEinrichten() {
   decke.addEventListener("touchend", (e) => {
     y = null;
     // Ein kurzer Tipper öffnet wie gewohnt die Tastatur des Terminals.
-    if (weg < 10) { e.preventDefault(); if (term) term.focus(); return; }
+    if (weg < 10) { e.preventDefault(); waehle(""); if (term) term.focus(); return; }
     // Stand der Finger vor dem Loslassen still, läuft nichts nach.
     if (e.timeStamp - zuletzt > 100 || Math.abs(tempo) < 0.4) return;
     schwung = setInterval(() => {
@@ -140,13 +153,24 @@ function wischenEinrichten() {
   });
   decke.addEventListener("touchcancel", () => { y = null; }, { passive: true });
 }
-function schicke(d) { rollenStoppen(); schonGesprochen = false; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d })); }
+function schicke(d) {
+  rollenStoppen();
+  schonGesprochen = false;
+  waehle("");
+  $("nach-unten").hidden = true;
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d }));
+  // Sonst sieht ein Strg+C im Funkloch aus, als wäre es angekommen.
+  else if (aktuell) $("titel").textContent = "Keine Verbindung, Eingabe nicht gesendet.";
+}
 function passen() {
   if (!term || seite !== "terminal") return;
   try { fit.fit(); } catch { return; }
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "r", c: term.cols, r: term.rows }));
 }
+let sitzungsTitel = "";
 function trennen() {
+  waehle("");
+  $("nach-unten").hidden = true;
   rollenStoppen();
   aktuell = null;
   clearTimeout(neuVersuch);
@@ -161,7 +185,8 @@ function trennen() {
 function verbinde(name, titel) {
   aufbauen();
   if (aktuell !== name) { trennen(); aktuell = name; }
-  $("titel").textContent = titel || name;
+  sitzungsTitel = titel || name;
+  $("titel").textContent = sitzungsTitel;
   $("schliessen").hidden = false;
   stimmeZeigen();
   zeige("terminal");
@@ -174,7 +199,7 @@ function aufmachen() {
   term.reset();
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${encodeURIComponent(name)}`);
   ws.binaryType = "arraybuffer";
-  ws.onopen = () => passen();
+  ws.onopen = () => { $("titel").textContent = sitzungsTitel; passen(); };
   ws.onmessage = (e) => term.write(new Uint8Array(e.data));
   // Abriss (Mobilfunk, Tunnel): wieder anhängen. Die Sitzung läuft in tmux weiter.
   ws.onclose = (e) => {
@@ -185,28 +210,25 @@ function aufmachen() {
 }
 zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen").textContent = "Sitzung schließen"; schliesse(n); zeige("sitzungen"); } });
 // STRG und ALT: Ein Tipper öffnet die Leiste A bis Z zum Wischen, ein Buchstabe schickt die Tastenkombination und schließt sie.
-// Strg+B zweimal: Tmux behält das erste als eigenes Präfix und reicht erst das zweite an die CLI weiter.
-const kombination = {
-  strg: (b) => (b === "b" ? "\x02\x02" : String.fromCharCode(b.charCodeAt(0) - 96)),
-  alt: (b) => `\x1b${b}`,
-};
-let wahl = "";
 function waehle(art) {
-  wahl = art;
+  tastenWahl = art;
   $("buchstaben").hidden = !art;
   if (art) $("buchstaben").scrollLeft = 0;
+  // Das Mikrofon läge sonst halb unter der Leiste, ein Tipp darauf träfe einen Buchstaben.
+  $("terminal").classList.toggle("wahl-offen", !!art);
   for (const name of Object.keys(kombination)) $(name).classList.toggle("an", name === art);
 }
 for (const b of "abcdefghijklmnopqrstuvwxyz") {
-  const knopf = document.createElement("button");
-  knopf.textContent = b.toUpperCase();
-  knopf.addEventListener("click", () => { const art = wahl; waehle(""); schicke(kombination[art](b)); });
+  const knopf = element("button", "", b.toUpperCase());
+  knopf.addEventListener("click", () => { const art = tastenWahl; waehle(""); schicke(kombination[art](b)); });
   $("buchstaben").append(knopf);
 }
-for (const name of Object.keys(kombination)) $(name).addEventListener("click", () => waehle(wahl === name ? "" : name));
-document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => { waehle(""); schicke(b.dataset.t); }));
+for (const name of Object.keys(kombination)) $(name).addEventListener("click", () => waehle(tastenWahl === name ? "" : name));
+document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
 // Der Fokus bleibt im Eingabefeld, sonst klappt die Handy-Tastatur bei jedem Tipper zu.
-for (const name of ["strg", "alt", "buchstaben"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
+for (const name of ["tasten", "buchstaben"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
+// Wer weiterschreibt statt einen Buchstaben zu wählen, braucht die Leiste nicht mehr; sie läge sonst über der Eingabezeile der CLI.
+$("text").addEventListener("input", () => waehle(""));
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("text");

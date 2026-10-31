@@ -9,6 +9,7 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 | Server-Konsole (nur im Tunnel, `http://10.8.0.1:8090`) | `web/` | `jarvis-konsole.service` |
 | CLI-Updates alle 3 Stunden, nur wenn die CLI nicht läuft | `kern/clis.py` | `jarvis-clis.timer` |
 | Repo vorspulen alle 5 Minuten; Dienste starten bei neuer Fassung selbst neu | `kern/launcher.py abgleich` | `jarvis-repo.timer` |
+| Tmux ohne Präfix (`tmux.conf`, beim Konsolenstart auch im laufenden tmux gesetzt), damit Strg+B bei der CLI ankommt | `kern/launcher.py tmux_praefix_aus` | Konsole |
 | tmux mit Speicher- und CPU-Deckel | `systemd/jarvis-tmux.service` | enthält alle Sitzungen |
 | Regeln für Sitzungen auf dem Server (gehen dem Profil vor) | `server-zusatz.md` | wird an Profil und Modus gehängt |
 
