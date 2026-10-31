@@ -778,6 +778,204 @@ def bergmann_gold():
     schreiben("Bergmann1956Gold", "Bergmann 1956 Gold", "Bergmann 1956 in Gold für die Watch 3", gold_hg(), berg_aod(grund=(236, 200, 120)), teile, teile_a, TAG_BERG)
 
 
+# ---------- SLAVA Gold Glas ----------
+# Streng symmetrisch und mit neutralem Licht: keine Lichtrichtung, jeder Index sieht gleich aus.
+# Vom gewölbten Glas bleiben nur die Stauchung zum Rand und eine gleichmäßige Glaskante.
+
+GLANZ_STUFEN = [(0.0, (66, 42, 10)), (0.28, (158, 114, 44)), (0.52, (230, 186, 98)), (0.76, (255, 226, 150)), (1.0, (255, 253, 236))]
+
+
+def glanz_farbe(wert, alpha):
+    """Macht aus einer Helligkeitskarte poliertes Gold."""
+    stellen = [t for t, _ in GLANZ_STUFEN]
+    wert = np.clip(wert, 0, 1)
+    rgb = [np.interp(wert, stellen, [f[i] for _, f in GLANZ_STUFEN]) for i in range(3)]
+    return Image.fromarray(np.dstack((*rgb, alpha)).clip(0, 255).astype(np.uint8), "RGBA")
+
+
+def gold_neutral(ebene):
+    """Gold ohne Lichtrichtung: Kanten dunkler, Mitte heller, ringsum gleich."""
+    hoehe = np.asarray(ebene.getchannel("A").filter(ImageFilter.GaussianBlur(0.8 * K)), dtype=float) / 255
+    return glanz_farbe(0.30 + 0.56 * hoehe, np.asarray(ebene.getchannel("A"), dtype=float))
+
+
+def glas_index(wd, ad, winkel, r0, r1, halb):
+    """Facettierter Index mit fester Helligkeit je Fläche, damit alle zwölf gleich aussehen."""
+    spitze = halb * 1.2
+    g = halb * 0.34
+    g0, g1 = r0 + spitze, r1 - halb * 0.5
+    flaechen = [
+        ([(g0, -halb), (r1, -halb), (g1, -g), (g0, -g)], 0.50),
+        ([(g0, halb), (r1, halb), (g1, g), (g0, g)], 0.50),
+        ([(r1, -halb), (r1, halb), (g1, g), (g1, -g)], 0.36),
+        ([(r0, 0), (g0, -halb), (g0, -g), (g0, 0)], 0.68),
+        ([(r0, 0), (g0, halb), (g0, g), (g0, 0)], 0.68),
+        ([(g0, -g), (g1, -g), (g1, g), (g0, g)], 0.80),
+    ]
+    for punkte, wert in flaechen:
+        xy = [radial(winkel, l, q) for l, q in punkte]
+        wd.polygon(xy, fill=int(wert * 255))
+        ad.polygon(xy, fill=255)
+    wd.line([radial(winkel, g0, 0), radial(winkel, g1, 0)], fill=250, width=int(0.5 * K))
+
+
+def glas_blatt():
+    """Einheitliches Anthrazit mit sehr feinem Sonnenschliff, ohne Lichtkeile."""
+    rng = np.random.default_rng(1967)
+    g = GROESSE * K
+    y, x = np.mgrid[0:g, 0:g]
+    dx, dy = (x + 0.5) / K - MITTE, (y + 0.5) / K - MITTE
+    r = np.hypot(dx, dy)
+    theta = np.arctan2(dx, -dy)
+    n = 7200
+    fein = rng.normal(0, 1, n)
+    mittel = np.convolve(np.tile(rng.normal(0, 1, n), 3), np.ones(9) / 9, "same")[n:2 * n]
+    i = ((theta + math.pi) / (2 * math.pi) * n).astype(int) % n
+    hell = (58 + 4.5 * fein[i] + 6 * mittel[i]) * (1.03 - 0.10 * np.clip(r / 233, 0, 1) ** 2)
+    aus = np.stack((hell * 1.02, hell * 0.975, hell * 0.94), axis=-1)
+    return Image.fromarray(np.clip(aus, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+
+
+def glas_indizes():
+    g = GROESSE * K
+    wk, ak = Image.new("L", (g, g), 0), Image.new("L", (g, g), 0)
+    wd, ad = ImageDraw.Draw(wk), ImageDraw.Draw(ak)
+    for stunde in range(12):
+        if stunde != 3:
+            glas_index(wd, ad, stunde * 30, 158, 222, 11.5)
+    y, x = np.mgrid[0:g, 0:g]
+    r = np.hypot(x + 0.5 - g / 2, y + 0.5 - g / 2) / K
+    # Spiegelung läuft nur entlang des Index, deshalb ist sie bei allen gleich.
+    wert = np.asarray(wk, dtype=float) / 255 + 0.13 * np.sin(r / 8.5) + 0.05 * np.sin(r / 3.1)
+    return glanz_farbe(wert, np.asarray(ak, dtype=float))
+
+
+def glas_datum(bild):
+    cx, cy = TAG_SLAVA * K, MITTE * K
+    rahmen = leer()
+    d = ImageDraw.Draw(rahmen)
+    ab, ah, ib, ih = 31 * K, 26 * K, 23 * K, 18 * K
+    d.rectangle((cx - ab, cy - ah, cx + ab, cy + ah), fill=(255, 255, 255, 255))
+    d.rectangle((cx - ib, cy - ih, cx + ib, cy + ih), fill=(0, 0, 0, 0))
+    bild.alpha_composite(schatten(gold_neutral(rahmen), 1.2, 0.7))
+    d = ImageDraw.Draw(bild)
+    r = 1.2 * K
+    d.rectangle((cx - ib - r, cy - ih - r, cx + ib + r, cy + ih + r), fill=(18, 16, 12, 255))
+    d.rectangle((cx - ib, cy - ih, cx + ib, cy + ih), fill=(242, 238, 224, 255))
+
+
+def woelben(bild):
+    """Staucht das Blatt zum Rand hin, wie durch ein gewölbtes Glas gesehen; die Mitte bleibt unberührt."""
+    q = np.asarray(bild.convert("RGB"), dtype=np.float32)
+    g = q.shape[0]
+    y, x = np.mgrid[0:g, 0:g]
+    dx, dy = x + 0.5 - g / 2, y + 0.5 - g / 2
+    ro = np.hypot(dx, dy) / K
+    faktor = 1 + 0.052 * np.clip(ro / 233, 0, 1.1) ** 5
+    sx = np.clip(g / 2 + dx * faktor - 0.5, 0, g - 1.001)
+    sy = np.clip(g / 2 + dy * faktor - 0.5, 0, g - 1.001)
+    x0, y0 = sx.astype(int), sy.astype(int)
+    fx, fy = (sx - x0)[..., None], (sy - y0)[..., None]
+    aus = (q[y0, x0] * (1 - fx) * (1 - fy) + q[y0, x0 + 1] * fx * (1 - fy)
+           + q[y0 + 1, x0] * (1 - fx) * fy + q[y0 + 1, x0 + 1] * fx * fy)
+    return Image.fromarray(aus.clip(0, 255).astype(np.uint8), "RGB").convert("RGBA")
+
+
+def glaskante(bild):
+    """Ringsum gleich: leichte Abdunklung zum Rand und eine feine helle Glaskante."""
+    g = bild.width
+    y, x = np.mgrid[0:g, 0:g]
+    r = np.hypot(x + 0.5 - g / 2, y + 0.5 - g / 2) / (233 * K)
+    q = np.asarray(bild.convert("RGB"), dtype=np.float32)
+    t = np.clip((r - 0.90) / 0.075, 0, 1)
+    dunkel = 1 - 0.42 * (t * t * (3 - 2 * t))
+    hell = 58 * np.exp(-(((r - 0.962) / 0.0055) ** 2))
+    aus = q * dunkel[..., None] + hell[..., None]
+    return Image.fromarray(aus.clip(0, 255).astype(np.uint8), "RGB").convert("RGBA")
+
+
+def glas_hg():
+    bild = glas_blatt()
+    ebene = leer()
+    d = ImageDraw.Draw(ebene)
+    for i in range(60):
+        if i % 5 or i == 15:
+            strich(d, i * 6, 214, 229, 1.5, (255, 255, 255, 255))
+    text_mitte(ebene, (MITTE, MITTE - 109), "SLAVA", ImageFont.truetype(ARIAL, 26 * K), (255, 255, 255, 255), abstand=7)
+    # Auf dem Foto teils verdeckt, gelesen als „21 Jewels“.
+    text_mitte(ebene, (MITTE, MITTE + 104), "21 Jewels", ImageFont.truetype(ARIAL, 18 * K), (255, 255, 255, 255), abstand=0.6)
+    bild.alpha_composite(schatten(gold_neutral(ebene), 0.9, 0.6))
+    bild.alpha_composite(schatten(glas_indizes(), 1.4, 0.8))
+    glas_datum(bild)
+    bild = glaskante(woelben(bild))
+    # Goldrand, auf dem das Glas sitzt.
+    rand = leer()
+    d = ImageDraw.Draw(rand)
+    m = MITTE * K
+    d.ellipse((m - 233 * K, m - 233 * K, m + 233 * K, m + 233 * K), fill=(255, 255, 255, 255))
+    d.ellipse((m - 227.5 * K, m - 227.5 * K, m + 227.5 * K, m + 227.5 * K), fill=(0, 0, 0, 0))
+    bild.alpha_composite(gold_neutral(rand))
+    return klein(bild)
+
+
+def glas_zeiger(laenge, schweif, basis, schulter, einlage, einlage_breit, stumpf=False):
+    rand = 6
+    halb = 20
+    py = rand + laenge
+    b, h = 2 * halb * K, (laenge + schweif + 2 * rand) * K
+    wk, ak = Image.new("L", (b, h), 0), Image.new("L", (b, h), 0)
+    wd, ad = ImageDraw.Draw(wk), ImageDraw.Draw(ak)
+    p = lambda qx, qy: ((halb + qx) * K, (py - qy) * K)
+    ende = 0.9 if stumpf else 0.8
+    umriss = [p(-basis * 0.6, -schweif), p(-basis, 0), p(-schulter, laenge * ende), p(0, laenge),
+              p(schulter, laenge * ende), p(basis, 0), p(basis * 0.6, -schweif)]
+    wd.polygon(umriss, fill=168)
+    ad.polygon(umriss, fill=255)
+    wd.line([p(0, -schweif), p(0, laenge)], fill=250, width=int(0.5 * K))
+    yy, _ = np.mgrid[0:h, 0:b] / K
+    wert = np.asarray(wk, dtype=float) / 255 + 0.08 * np.sin(yy / 13)
+    bild = glanz_farbe(wert, np.asarray(ak, dtype=float))
+    d = ImageDraw.Draw(bild)
+    e0, e1 = einlage
+    pa, pb = p(-einlage_breit - 0.5, laenge * e1), p(einlage_breit + 0.5, laenge * e0)
+    d.rectangle((pa[0], pa[1], pb[0], pb[1]), fill=(255, 232, 170, 255))
+    pa, pb = p(-einlage_breit, laenge * e1 - 0.5), p(einlage_breit, laenge * e0 + 0.5)
+    d.rectangle((pa[0], pa[1], pb[0], pb[1]), fill=(10, 9, 8, 255))
+    return klein(schatten(bild, 1.2, 0.5)), (halb, py)
+
+
+def glas_sekunde():
+    def malen(d, p):
+        d.polygon([p(-1.4, -42), p(1.4, -42), p(0.45, 192), p(-0.45, 192)], fill=(240, 204, 128, 255))
+
+    return zeiger(192, 42, malen)
+
+
+def glas_nabe():
+    g = 34 * K
+    y, x = np.mgrid[0:g, 0:g]
+    r = np.hypot(x + 0.5 - g / 2, y + 0.5 - g / 2) / K
+    wert = np.where(r < 2.4, 0.42, np.where(r < 6.4, 0.86, np.where(r < 7.6, 0.2, 0.62 + 0.12 * np.sin(r * 1.6))))
+    return klein(glanz_farbe(wert, (r < 13) * 255.0))
+
+
+def slava_gold_glas():
+    teile = {
+        "h": glas_zeiger(124, 32, 8, 8, (0.22, 0.86), 3.0, stumpf=True),
+        "m": glas_zeiger(196, 36, 9, 3.6, (0.28, 0.79), 2.2),
+        "s": glas_sekunde(),
+        "nabe": glas_nabe(),
+        "ziffern": [slava_ziffer(i) for i in range(10)],
+    }
+    teile_a = {
+        "h": slava_zeiger(124, 32, 8, 8, (0.22, 0.86), 3.0, aod=True, stumpf=True),
+        "m": slava_zeiger(196, 36, 9, 3.6, (0.28, 0.79), 2.2, aod=True),
+        "nabe": slava_nabe(aod=True),
+    }
+    schreiben("SlavaGoldGlas", "SLAVA Gold Glas", "SLAVA in Gold mit gewölbtem Glas für die Watch 3",
+              glas_hg(), slava_aod(), teile, teile_a, TAG_SLAVA)
+
+
 def main():
     os.makedirs(os.path.join(ORDNER, "dist"), exist_ok=True)
     slava()
@@ -786,6 +984,7 @@ def main():
     bering_schwarz()
     bergmann()
     bergmann_gold()
+    slava_gold_glas()
 
 
 if __name__ == "__main__":
