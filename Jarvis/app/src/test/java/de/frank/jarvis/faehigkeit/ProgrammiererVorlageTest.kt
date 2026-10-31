@@ -27,6 +27,14 @@ class ProgrammiererVorlageTest {
         assertFalse(ProgrammiererVorlage.aktiv("Filter"))
     }
 
+    @Test fun jederModellknopfHatEinenEinstieg() {
+        ProgrammiererVorlage.MODELL_OPTIONEN.forEach { (wert, label) ->
+            val einstieg = ProgrammiererVorlage.vorspannFuer(wert)
+            assertTrue(einstieg.contains(label))
+            assertEquals(wert, ProgrammiererVorlage.modell("$einstieg A"))
+        }
+    }
+
     @Test fun vorspannPasstZumModell() {
         assertEquals(ProgrammiererVorlage.VORSPANN_OPUS, ProgrammiererVorlage.vorspannFuer(ProgrammiererVorlage.MODELL_OPUS))
         assertEquals(ProgrammiererVorlage.VORSPANN_SOL, ProgrammiererVorlage.vorspannFuer(ProgrammiererVorlage.MODELL_SOL))

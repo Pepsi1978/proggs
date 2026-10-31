@@ -361,6 +361,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun rundeStarten(text: String, anhaenge: List<de.frank.jarvis.data.Anhang>, verlauf: List<ChatTurn>, frage: Int, vorlesen: Boolean, hinweis: String) {
         val plugins = aktivePlugins.toList()
         val id = sitzungId ?: return
+        // Neu gesendet (nur dann trägt der Hinweis den Programmierer-Text; ein erneuter Versuch bleibt in seiner Runde und startet nicht doppelt).
+        if (hinweis.startsWith(ProgrammiererVorlage.HINWEIS)) de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.vorwahlGesendet(id, text)
         // Im Gesprächsmodus gesprochen und mit Vorlesen: Diese Runde (und jeder Agent, den sie startet) trägt den Sprachursprung.
         val ursprung = if (vorlesen && weckwortLauf?.isActive == true) SprachUrsprung(SprachModus.WECKWORT, id) else null
         val runde = Runde(id, frage, ursprung)
@@ -949,11 +951,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Nach dem Antippen des Programmierbuttons stehen die Knöpfe der Modellwahl da, noch vor dem Diktat. */
     var programmierVorwahlOffen by mutableStateOf(false); private set
 
+    private var vorwahlFrist: kotlinx.coroutines.Job? = null
+
     fun programmierVorwahlSchliessen() { programmierVorwahlOffen = false }
+
+    /** Der Programmierbutton leuchtet, solange sein Einstieg im Entwurf steht oder die Modellwahl offen ist. */
+    val programmiererLeuchtet: Boolean get() = programmiererAktiv || programmierVorwahlOffen
 
     /** Programmierbutton (Schwebesymbol und Plus-Menü): öffnet oder schließt die Modellwahl; steht der Einstieg schon im Entwurf, nimmt er ihn heraus. */
     fun programmiererTippen() {
-        if (!programmiererAktiv) { programmierVorwahlOffen = !programmierVorwahlOffen; return }
+        if (!programmiererAktiv) {
+            vorwahlFrist?.cancel()
+            programmierVorwahlOffen = !programmierVorwahlOffen
+            // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg.
+            if (programmierVorwahlOffen) vorwahlFrist = viewModelScope.launch { kotlinx.coroutines.delay(60_000); programmierVorwahlOffen = false }
+            return
+        }
         entwurf = ProgrammiererVorlage.entfernen(entwurf)
         if (sitzungId == null) sitzungProgrammierung = false
     }

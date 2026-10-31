@@ -408,20 +408,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val modellWert = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
                 // Franks Wahl vom 31.10.2026: Per Programmierbutton vor dem Diktat gewählt, steht das Modell im Auftragseinstieg und gilt
                 // verbindlich, auch gegen eine andere Angabe des Modells; dann kommen keine Knöpfe Opus/Sol mehr.
-                // Gilt auch für Franks nächste Nachricht, falls Jarvis erst nachfragen musste, aber nur solange der Auftrag noch nicht
-                // gestartet ist und keine Karte zu dieser Runde offen ist (dann läuft alles über die Karte).
+                // Gilt auch für Franks nächste Nachricht, falls Jarvis erst nachfragen musste (siehe vorwahlRunde), aber nur solange der
+                // Auftrag noch nicht gestartet ist und keine Karte zu dieser Runde offen ist (dann läuft alles über die Karte).
                 val aktuell = worte?.aktuell.orEmpty()
-                val vorwahlText = listOf(aktuell, worte?.vorher.orEmpty()).firstOrNull { ProgrammiererVorlage.modell(it) != null }
-                val vorwahlGestartet = vorwahlText != null && gespraech.isNotEmpty() && knopfStarts[gespraech]?.runde == vorwahlText
-                val knopfModell = vorwahlText?.takeIf { t -> !vorwahlGestartet && offeneWahlen.values.none { it.gespraech == gespraech && (it.runde == t || it.runde == aktuell) } }
-                    ?.let { ProgrammiererVorlage.modell(it) }
+                val runde = vorwahlRunde(ausChatGpt, gespraech, aktuell, worte?.vorher)
+                val karteZurRunde = offeneWahlen.values.any { it.gespraech == gespraech && (it.runde == runde?.text || it.runde == aktuell) }
+                val vorwahl = runde?.takeIf { it.start == null && !karteZurRunde }
+                val knopfModell = vorwahl?.modell
                 if (knopfModell != null) {
                     a.put("modell", knopfModell)
-                    if (a.optString("cli").trim().lowercase() in listOf(CLI_KIMI, CLI_ANTIGRAVITY)) a.remove("cli")
+                    // Die Wahl ist verbindlich: Ein fremdes CLI (anders geschrieben, als Kurzname) führte sonst zu einem anderen Modell oder einer Rückfrage.
+                    OpenLauncherKatalog.cliAus(a.optString("cli").trim())?.let { if (it !in listOf(CLI_CODEX, CLI_OPENCODE)) a.remove("cli") }
                 }
                 val modell = when {
                     knopfModell != null -> knopfModell
                     ausChatGpt || gespraech.isEmpty() -> modellWert
+                    // Der Einstieg nennt das Modell selbst; zählte das als Antwort, schlösse ein erneuter Aufruf die Ausweg-Karte nach einem Fehlstart.
+                    ProgrammiererVorlage.modell(aktuell) != null -> ""
                     offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL } ->
                         modellAusAntwort(worte?.aktuell).ifEmpty { modellWert.takeIf { modellGenannt(worte?.aktuell.orEmpty()) }.orEmpty() }
                     else -> ""
@@ -434,32 +437,53 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val wahl = zieleFuer(ziel, modell, cli)
                 val neu = a.optBoolean("neu")
                 // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
-                // Ruft das Modell nach einem Start mit vorgewähltem Modell in derselben Runde noch einmal auf, gibt es keinen zweiten Auftrag.
+                // Ruft das Modell nach einem Start mit vorgewähltem Modell in derselben Runde noch einmal auf (auch mit neu=true), gibt es keinen zweiten Auftrag.
+                val laufend = runde?.start?.takeIf { runde.text == aktuell }
                 val knopf = when {
+                    laufend != null -> laufend
                     neu -> null
-                    vorwahlGestartet && vorwahlText == aktuell -> knopfStarts[gespraech]
-                    ProgrammiererVorlage.aufgabe(aktuell) != null -> null
-                    else -> knopfStartIn(herkunft().second, aktuell)
+                    ProgrammiererVorlage.aktiv(aktuell) && ProgrammiererVorlage.modell(aktuell) == null -> null
+                    else -> knopfStartIn(gespraech, aktuell)
                 }
                 // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
                 // ein anderes CLI), startet genau das am Mac. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
-                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.aktuell, worte?.angebot)
+                // Stammt die Vorwahl aus der vorigen Nachricht, gehört deren Einstieg zu Franks Worten, sonst fielen Effort und Co. still weg.
+                val katalogWorte = if (vorwahl != null && vorwahl.text != aktuell) aktuell + "\n" + vorwahl.text else worte?.aktuell
+                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
+                // Die Vorwahl startet auf jeden Fall; nur die Zusatzangaben entfallen, und Frank erfährt das.
+                if (katalog is Ergebnis && vorwahl != null) ProgrammierChat.poste(app, gespraech, "⚠️ Zusatzangaben wie Effort oder Profil ließen sich nicht übernehmen; der Auftrag startet mit den Standardwerten.", ProgrammierChat.ART_STATUS)
+
+                // Scheitert ein Start mit vorgewähltem Modell, steht der Grund im Gespräch und die Knöpfe Opus/Sol sind der Ausweg, ohne den Auftrag neu zu sagen.
+                suspend fun ausweg(f: Ergebnis): Ergebnis {
+                    if (vorwahl == null) return f
+                    ProgrammierChat.poste(app, gespraech, "⚠️ " + f.text, ProgrammierChat.ART_STATUS)
+                    return modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, aktuell)
+                }
+                // Mit Vorwahl schon vor dem Start gemerkt: Das Modell ruft manchmal doppelt auf.
+                suspend fun starten(startCli: String, start: suspend (String) -> Ergebnis): Ergebnis {
+                    val nummer = Auftragsbuch.neueNummer()
+                    val v = vorwahl ?: return start(nummer)
+                    v.start = KnopfStart(nummer, appName, v.modell, startCli, v.text)
+                    val e = try { start(nummer) } catch (t: Throwable) { v.start = null; throw t }
+                    if (!e.fehler || e.text.startsWith("Unklar")) { aeltereKartenZurueckstellen(gespraech); return e }
+                    v.start = null
+                    return ausweg(e)
+                }
                 when {
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
                     // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
                     knopf != null -> schonPerKnopfGestartet(knopf)
-                    katalog is Ergebnis -> katalog
+                    katalog is Ergebnis && vorwahl == null -> katalog
                     katalog is OpenLauncherKatalog.Wahl -> {
                         val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
-                        vorwahlStart(gespraech, knopfModell, vorwahlText, appName, auftrag, a.optBoolean("review"), neu, ziel, aktuell, MODELL_KATALOG, katalog.cli) { nummer ->
-                            if (pc.isEmpty()) Ergebnis(ziele.first().fehlt(), fehler = true)
-                            else withContext(KatalogStart(katalog) + ServerWahl(ziel)) {
+                        (if (pc.isEmpty()) ausweg(Ergebnis(ziele.first().fehlt(), fehler = true)) else starten(katalog.cli) { nummer ->
+                            withContext(KatalogStart(katalog) + ServerWahl(ziel)) {
                                 // Ohne Hooks (Codex, Kimi, Antigravity) gilt Franks Review-Angabe als REVIEW-Zeile; die anderen fragen am Ende selbst.
                                 starteErstes(pc, appName, auftrag, a.optBoolean("review") && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE),
                                     nummer, neu, MODELL_KATALOG, katalog.cli)
                             }
-                        }.also { ergebnis ->
+                        }).also { ergebnis ->
                             // Erst nach dem Start haben offene Knöpfe ausgedient; nach einem Fehlstart bleiben sie (Opus/Sol als Ausweg).
                             // Ein Auftrag mit vorgewähltem Modell ist ein eigener: Karten älterer Aufträge bleiben offen.
                             if (knopfModell == null && (!ergebnis.fehler || ergebnis.text.startsWith("Unklar"))) herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
@@ -469,7 +493,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
                     // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
                     modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
-                    wahl.isEmpty() -> vorwahlStart(gespraech, knopfModell, vorwahlText, appName, auftrag, a.optBoolean("review"), neu, ziel, aktuell, modell, cli) { Ergebnis(fehltFuer(modell), fehler = true) }
+                    wahl.isEmpty() -> ausweg(Ergebnis(fehltFuer(modell), fehler = true))
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
@@ -480,7 +504,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         // Ein Auftrag mit vorgewähltem Modell ist ein eigener: Karten älterer Aufträge bleiben offen.
                         if (knopfModell == null) herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
                         // OpenCode fragt am Ende selbst nach dem Review (wie Claude Code): dann nie eine REVIEW-Zeile im Auftrag.
-                        vorwahlStart(gespraech, knopfModell, vorwahlText, appName, auftrag, a.optBoolean("review"), neu, ziel, aktuell, modell.ifEmpty { MODELL_OPUS }, cli.ifEmpty { CLI_CODEX }) { nummer ->
+                        starten(cli.ifEmpty { CLI_CODEX }) { nummer ->
                             withContext(ServerWahl(ziel)) {
                                 starteErstes(wahl, appName, auftrag, a.optBoolean("review") && cli != CLI_OPENCODE, nummer, neu,
                                     modell.ifEmpty { MODELL_OPUS }, cli.ifEmpty { CLI_CODEX })
@@ -493,20 +517,26 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Startet einen Auftrag. Mit vorgewähltem Modell ([knopfModell]) ist er für Wiederholungen derselben Runde gemerkt, schon vor dem
-     * Start (das Modell ruft manchmal doppelt auf). Scheitert er, steht der Grund im Gespräch und die Knöpfe Opus/Sol sind der Ausweg,
-     * ohne den Auftrag neu zu sagen. Das ist keine Nachfrage nach der Wahl, sondern der einzige Weg weiter, wenn das Modell nicht startet.
+     * Die Modell-Vorwahl, die für diesen Aufruf gilt: aus dem Einstieg der aktuellen Nachricht, oder, falls Jarvis erst nachfragen
+     * musste, aus Franks voriger Nachricht. Dieser Weg nur in [VORWAHL_FOLGE_MS], solange noch nichts gestartet ist, und nie, wenn die
+     * aktuelle Nachricht einen eigenen Einstieg hat: Ein späterer Auftrag erbt so kein altes Modell.
      */
-    private suspend fun vorwahlStart(gespraech: String, knopfModell: String?, vorwahlText: String?, appName: String, auftrag: String, review: Boolean, neu: Boolean,
-                                     ziel: String, runde: String, modell: String, cli: String, start: suspend (String) -> Ergebnis): Ergebnis {
-        val nummer = Auftragsbuch.neueNummer()
-        if (knopfModell == null || vorwahlText == null || gespraech.isEmpty()) return start(nummer)
-        knopfStarts[gespraech] = KnopfStart(nummer, appName, modell, cli, vorwahlText)
-        val ergebnis = start(nummer)
-        if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) return ergebnis
-        knopfStarts.remove(gespraech)
-        ProgrammierChat.poste(app, gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
-        return modellWahlAnbieten(appName, auftrag, review, neu, ziel, runde)
+    private fun vorwahlRunde(ausChatGpt: Boolean, gespraech: String, aktuell: String, vorher: String?): VorwahlRunde? {
+        if (ausChatGpt || gespraech.isEmpty()) return null
+        val gemerkt = vorwahlRunden[gespraech]
+        val modell = ProgrammiererVorlage.modell(aktuell)
+        return when {
+            modell != null -> gemerkt?.takeIf { it.text == aktuell } ?: VorwahlRunde(aktuell, modell).also { vorwahlRunden[gespraech] = it }
+            ProgrammiererVorlage.aktiv(aktuell) -> null
+            else -> gemerkt?.takeIf { it.text == vorher && it.start == null && System.currentTimeMillis() - it.seit < VORWAHL_FOLGE_MS }
+        }
+    }
+
+    /** Nach einem Start mit Vorwahl sähen offene Karten älterer Aufträge wie eine Frage zu diesem aus: keine Knöpfe unten, keine Erinnerung; per Sprache bleiben sie wählbar. */
+    private fun aeltereKartenZurueckstellen(gespraech: String) {
+        val ids = offeneWahlen.filterValues { it.gespraech == gespraech }.keys
+        ids.forEach { erinnerungen.remove(it)?.cancel() }
+        frischeWahlen.update { it - ids }
     }
 
     /**
@@ -599,6 +629,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                                   val seit: Long = System.currentTimeMillis(), val runde: String = "", val anhaenge: List<String> = emptyList())
 
     /** Ein per Knopf gestarteter Auftrag, gemerkt je Gespräch für [KNOPF_FRIST_MS] (siehe [knopfStartIn]). */
+    /** Eine mit Modelleinstieg gesendete Nachricht: [text] kennzeichnet die Runde, [start] den schon laufenden Auftrag. Nur im Speicher, nach einem Neustart wird nichts geerbt. */
+    private class VorwahlRunde(val text: String, val modell: String, val seit: Long = System.currentTimeMillis()) {
+        @Volatile var start: KnopfStart? = null
+    }
+
     private class KnopfStart(val nummer: String, val app: String, val modell: String, val cli: String, val runde: String = "", val zeit: Long = System.currentTimeMillis())
 
     /**
@@ -712,7 +747,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
         STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
         STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
+        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5 oder Sol 6.1?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
@@ -1023,7 +1058,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (Auftragsbuch.finde(app, auftragId)?.optString("stand") != STAND_UNKLAR) return
         val stand = daten.optString("stand")
         // Doch nicht gestartet: Ein neuer Start aus dem Gespräch darf nicht mehr als „läuft schon“ abgewiesen werden.
-        if (stand == "fehler") knopfStarts.entries.removeIf { it.value.nummer.equals(auftragId, ignoreCase = true) }
+        if (stand == "fehler") {
+            knopfStarts.entries.removeIf { it.value.nummer.equals(auftragId, ignoreCase = true) }
+            vorwahlRunden.values.filter { it.start?.nummer.equals(auftragId, ignoreCase = true) }.forEach { it.start = null }
+        }
         val eintrag = Auftragsbuch.melde(app, auftragId, stand, ProgrammierAbschluss.kuerzen(daten.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "") ?: return
         verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
     }
@@ -2632,6 +2670,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val offeneWahlen = java.util.concurrent.ConcurrentHashMap<String, OffeneWahl>()
         /** Per Knopf gestartete Aufträge je Gespräch (nur im Speicher) und wie lange ein erneuter Aufruf als derselbe Auftrag gilt. */
         private val knopfStarts = java.util.concurrent.ConcurrentHashMap<String, KnopfStart>()
+        private val vorwahlRunden = java.util.concurrent.ConcurrentHashMap<String, VorwahlRunde>()
+        private const val VORWAHL_FOLGE_MS = 10 * 60 * 1000L
+
+        /** Frank hat eine Nachricht neu gesendet (kein erneuter Versuch): Mit Modelleinstieg beginnt eine neue Runde, auch bei gleichem Text. */
+        fun vorwahlGesendet(gespraech: String, text: String) {
+            ProgrammiererVorlage.modell(text)?.let { vorwahlRunden[gespraech] = VorwahlRunde(text, it) }
+        }
         private const val KNOPF_FRIST_MS = 5 * 60_000L
 
         /** Was das Modell nach einer Auswahlkarte tun soll: nichts selbst fragen, die Karte fragt (siehe [wahlInRunde]). */

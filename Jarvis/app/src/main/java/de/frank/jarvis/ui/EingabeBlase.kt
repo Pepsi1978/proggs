@@ -288,7 +288,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(4.dp))
             // Frank spricht fast alles ein: Die Tastatur kommt nie von selbst, nur über diesen Knopf zwischen Modell und Mikrofon; nochmal tippen schließt sie.
-            TastaturKnopf(feldFokus, oeffnen = { vm.eingabeKompakt = false; tastaturWunsch = true }, schliessen = { tastatur?.hide(); fokusVerwalter.clearFocus() })
+            TastaturKnopf(kompakt, vm.tastaturWeg, oeffnen = { vm.eingabeKompakt = false; tastaturWunsch = true }, schliessen = { tastatur?.hide(); fokusVerwalter.clearFocus() })
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(if (vm.nimmtAuf) f.gefahr else Color.Transparent).antippen { vm.diktatTippen() },
@@ -323,7 +323,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 // Im Programmiergespräch: etwa einen Zentimeter neben „Programmierer“ der Knopf „+ Nachtrag“; er setzt „Nachtrag:“ vor den Text.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.antippen { plusOffen = false; vm.programmiererTippen() }.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Code, null, tint = if (vm.programmiererAktiv) f.erfolg else f.text, modifier = Modifier.size(26.dp))
+                        Icon(Icons.Rounded.Code, null, tint = if (vm.programmiererLeuchtet) f.erfolg else f.text, modifier = Modifier.size(26.dp))
                         Text("Programmierer", color = f.text, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp))
                     }
                     Spacer(Modifier.width(24.dp))
@@ -333,7 +333,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                         Text("Nachtrag", color = f.text, fontSize = 18.sp, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
                     }
                 }
-            } else MenueZeile(Icons.Rounded.Code, "Programmierer", farbe = if (vm.programmiererAktiv) f.erfolg else null) { plusOffen = false; vm.programmiererTippen() }
+            } else MenueZeile(Icons.Rounded.Code, "Programmierer", farbe = if (vm.programmiererLeuchtet) f.erfolg else null) { plusOffen = false; vm.programmiererTippen() }
             MenueZeile(Icons.Rounded.Extension, "Plugins") { plusOffen = false; pluginsOffen = true }
         }
     }
@@ -383,14 +383,21 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
 }
 
 /**
- * Öffnet und schließt die Tastatur. Als offen gilt auch ein fokussiertes Feld, denn eine schwebende Tastatur meldet keinen Abstand unten.
+ * Öffnet und schließt die Tastatur. Offen heißt: Sie meldet einen Abstand unten, oder der Knopf hat sie geöffnet (eine schwebende Tastatur
+ * meldet keinen). Mit der Zurück-Geste geschlossen, beim Einklappen oder per [weg] gilt sie wieder als zu, damit ein einziger Tipp sie holt.
  * Eigenes Composable, damit nicht bei jedem Animationsbild der Tastatur die ganze Eingabeblase neu zusammengesetzt wird.
  */
 @Composable
-private fun TastaturKnopf(feldFokus: Boolean, oeffnen: () -> Unit, schliessen: () -> Unit) {
+private fun TastaturKnopf(kompakt: Boolean, weg: Int, oeffnen: () -> Unit, schliessen: () -> Unit) {
     val f = LocalFarben.current
-    val offen = WindowInsets.ime.getBottom(LocalDensity.current) > 0 || feldFokus
-    Box(Modifier.size(40.dp).clip(CircleShape).antippen { if (offen) schliessen() else oeffnen() }, contentAlignment = Alignment.Center) {
+    val imeDa = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    var geoeffnet by remember { mutableStateOf(false) }
+    var warDa by remember { mutableStateOf(false) }
+    LaunchedEffect(imeDa) { if (imeDa) warDa = true else if (warDa) { warDa = false; geoeffnet = false } }
+    LaunchedEffect(kompakt) { if (kompakt) geoeffnet = false }
+    LaunchedEffect(weg) { geoeffnet = false }
+    val offen = imeDa || geoeffnet
+    Box(Modifier.size(40.dp).clip(CircleShape).antippen { geoeffnet = !offen; if (offen) schliessen() else oeffnen() }, contentAlignment = Alignment.Center) {
         Icon(Icons.Rounded.Keyboard, if (offen) "Tastatur schließen" else "Tastatur öffnen", tint = if (offen) f.primaer else f.text, modifier = Modifier.size(22.dp))
     }
 }
@@ -437,10 +444,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
             de.frank.jarvis.data.Gespraeche.wahlId(n.kontext).let { id -> id in frisch && stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN }
     }
-    // Vergessene Modellwahl: Sie soll nicht dauerhaft eine spätere Karte verdecken.
-    LaunchedEffect(vm.programmierVorwahlOffen) {
-        if (vm.programmierVorwahlOffen) { delay(60_000); vm.programmierVorwahlSchliessen() }
-    }
+    // Kommt eine Karte zu einem laufenden Auftrag, darf die offene Modellwahl ihre Knöpfe nicht verdecken.
+    LaunchedEffect(karte?.kontext) { if (karte != null) vm.programmierVorwahlSchliessen() }
     Column(modifier, horizontalAlignment = Alignment.End) {
         // Eingeklappt verschwindet der ganze Stapel nach unten in den Pfeil; die Liste behält ihren Abstand, der Chat springt nicht.
         androidx.compose.animation.AnimatedVisibility(
@@ -513,7 +518,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
                 OffeneAuswahl(vm, karte)
                 Spacer(Modifier.width(8.dp))
             }
-            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv || vm.programmierVorwahlOffen, { vm.programmiererTippen() }) {
+            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
@@ -558,7 +563,7 @@ private fun WahlKnoepfe(vm: AppViewModel, karte: Nachricht) {
 /** Was gerade zur Wahl steht: die Modellwahl des Programmierbuttons (gleiche Reihenfolge wie auf der Karte) oder die Knöpfe der offenen Karte. */
 @Composable
 private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
-    if (vm.programmierVorwahlOffen) AuswahlKnoepfe(wahlOptionen("")) { vm.programmierVorwahl(it) }
+    if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.MODELL_OPTIONEN) { vm.programmierVorwahl(it) }
     else karte?.let { WahlKnoepfe(vm, it) }
 }
 
@@ -579,7 +584,7 @@ private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String
 /** Knöpfe einer Auswahlkarte aus ihrem Kontext (Wert, Beschriftung); ältere Karten ohne „optionen“ sind die Modellwahl. */
 internal fun wahlOptionen(kontext: String): List<Pair<String, String>> {
     val liste = runCatching { org.json.JSONObject(kontext).optJSONArray("optionen") }.getOrNull()
-    return if (liste == null || liste.length() == 0) listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1")
+    return if (liste == null || liste.length() == 0) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.MODELL_OPTIONEN
     else (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
 }
 

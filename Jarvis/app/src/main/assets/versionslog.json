@@ -514,6 +514,7 @@
     {"versionCode": 509, "versionName": "1.8.498", "stand": "31.10.2026, 19:24 Uhr", "notiz": "Modellwahl am Programmierbutton: kein doppelter Auftrag, die Wahl gilt auch nach einer Rückfrage, und ältere offene Auswahlen bleiben erhalten."},
     {"versionCode": 510, "versionName": "1.8.499", "stand": "31.10.2026, 19:27 Uhr", "notiz": "Interne Korrektur: Versehentlich mitgelieferte, noch unfertige Anhang-Änderungen sind aus dieser Version wieder entfernt."},
     {"versionCode": 511, "versionName": "1.8.500", "stand": "31.10.2026, 19:31 Uhr", "notiz": "Fotos und Dateien vom Plus gehen jetzt direkt und schnell mit jedem Programmierauftrag und Nachtrag in genau die richtige Sitzung und erscheinen dort als echte Bilder."},
-    {"versionCode": 512, "versionName": "1.8.501", "stand": "31.10.2026, 19:41 Uhr", "notiz": "Ein weiterer Nachtrag mit gleichem Text und anderem Anhang geht jetzt zuverlässig in die Sitzung, statt als doppelt zu gelten."}
+    {"versionCode": 512, "versionName": "1.8.501", "stand": "31.10.2026, 19:41 Uhr", "notiz": "Ein weiterer Nachtrag mit gleichem Text und anderem Anhang geht jetzt zuverlässig in die Sitzung, statt als doppelt zu gelten."},
+    {"versionCode": 513, "versionName": "1.8.502", "stand": "31.10.2026, 19:49 Uhr", "notiz": "Modellwahl am Programmierbutton zuverlässiger: Ein späterer Auftrag erbt kein altes Modell, nach einem Fehlstart bleibt der Ausweg offen, und der Tastaturknopf öffnet mit einem Tipp."}
 ]
 }

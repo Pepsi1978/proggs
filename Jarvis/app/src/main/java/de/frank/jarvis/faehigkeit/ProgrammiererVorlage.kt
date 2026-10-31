@@ -15,6 +15,9 @@ object ProgrammiererVorlage {
     const val MODELL_OPUS = "opus"
     const val MODELL_SOL = "sol"
 
+    /** Wert und Beschriftung der Modellknöpfe, für Vorwahl und Karte dieselbe Reihenfolge. */
+    val MODELL_OPTIONEN = listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
+
     private val ALLE = listOf(VORSPANN, VORSPANN_OPUS, VORSPANN_SOL)
 
     /** Der Einstieg, mit dem [text] beginnt; null, wenn keiner. */
