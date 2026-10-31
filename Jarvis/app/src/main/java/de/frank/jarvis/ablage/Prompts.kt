@@ -47,8 +47,16 @@ object Prompts {
 
     private fun datei(c: Context) = File(c.applicationContext.filesDir, DATEI)
 
+    /** Nur dieses Objekt schreibt die Datei: Bis zum nächsten Schreiben gilt das Gelesene, sonst parste jede Änderung sie mehrfach. */
+    private var gelesen: Stand? = null
+
     @Synchronized
     private fun lies(c: Context): Stand {
+        gelesen?.let { return it }
+        return liesDatei(c).also { if (!it.defekt) gelesen = it }
+    }
+
+    private fun liesDatei(c: Context): Stand {
         val f = datei(c)
         val text = try { String(AtomicFile(f).readFully(), Charsets.UTF_8) } catch (_: FileNotFoundException) { return Stand(emptyList()) }
             catch (e: Exception) { Logbuch.fehler("Prompts lesen", e); return Stand(emptyList(), defekt = true) }
@@ -79,7 +87,7 @@ object Prompts {
         val atomar = AtomicFile(datei(c))
         val aus = try { atomar.startWrite() } catch (e: Exception) { Logbuch.fehler("Prompts schreiben", e); return false }
         return try {
-            aus.write(inhalt.toByteArray(Charsets.UTF_8)); atomar.finishWrite(aus); _stand.update { it + 1 }; true
+            aus.write(inhalt.toByteArray(Charsets.UTF_8)); atomar.finishWrite(aus); gelesen = null; _stand.update { it + 1 }; true
         } catch (e: Exception) {
             atomar.failWrite(aus); Logbuch.fehler("Prompts schreiben", e); false
         }
@@ -157,12 +165,12 @@ object Prompts {
 
     /** Diese Reihenfolge ist beim Server: Alle Jarvis-Versionen kennen genau diese Prompts als geordnet. */
     @Synchronized
-    fun ordnungGesendet(c: Context, ids: List<Long>) { val s = lies(c); if (!s.defekt) schreibe(c, s.liste, inOrdnung = ids.toSet()) }
+    fun ordnungGesendet(c: Context, ids: List<Long>) { val s = lies(c); if (!s.defekt && s.inOrdnung != ids.toSet()) schreibe(c, s.liste, inOrdnung = ids.toSet()) }
 
     fun offeneLoeschungen(c: Context): Map<Long, Long> = lies(c).geloescht
 
     @Synchronized
-    fun quittiereLoeschung(c: Context, erstellt: Long) { val s = lies(c); if (!s.defekt) schreibe(c, s.liste, geloescht = s.geloescht - erstellt) }
+    fun quittiereLoeschung(c: Context, erstellt: Long) { val s = lies(c); if (!s.defekt && erstellt in s.geloescht) schreibe(c, s.liste, geloescht = s.geloescht - erstellt) }
 
     /** Stand eines Prompts vom Server: ändert ihn an seinem Platz, ein neuer kommt unten dazu. */
     @Synchronized

@@ -108,6 +108,7 @@ import de.frank.jarvis.ui.theme.glas
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -129,11 +130,15 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val speicher = remember { AblageZentrale.speicher(context) }
-    val stand by speicher.stand.collectAsState()
+    // Gedrosselt: Beim Abgleich vieler Einträge würde die Liste sonst bei jedem einzeln neu aufgebaut und spränge.
+    val stand by remember { speicher.stand.onEach { delay(300) } }.collectAsState(speicher.stand.value)
     val laeufe by Agenten.laeufe.collectAsState()
     val uebertragungen by AblageZentrale.uebertragungen(context).liste.collectAsState()
     val arbeiten by AblageZentrale.arbeiten.collectAsState()
-    val abgleichHinweis by de.frank.jarvis.ablage.AblageSync.hinweis.collectAsState()
+    val abgleich by de.frank.jarvis.ablage.AblageSync.status.collectAsState()
+    // Solange die Ablage offen ist, regelmäßig nachfragen: Ein Signal über eine halb tote Verbindung käme sonst erst nach dem nächsten Neuverbinden.
+    LaunchedEffect(Unit) { while (true) { de.frank.jarvis.ablage.AblageSync.anstossen(); delay(30_000) } }
+    val raster = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val bereich = rememberCoroutineScope()
     val aktionen = rememberAblageAktionen(vm)
     // null = noch nicht geladen (kein Leer-Hinweis); bei Änderungen bleibt die vorige Liste stehen, bis die neue da ist.
@@ -162,8 +167,14 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
 
     // Volltextsuche im Text der Einträge: nur gelesen, solange gesucht wird, einmal im Hintergrund (gekürzt), nicht je Tastendruck.
     val suchAktiv = suche.isNotBlank()
+    // Nur Geändertes neu lesen: Sonst läse jede eintreffende Änderung während einer Suche alle Texte wieder.
+    val textCache = remember { HashMap<String, Pair<Long, String>>() }
     val texte by ladeImHintergrund(emptyMap<String, String>(), alle, suchAktiv) {
-        if (!suchAktiv) emptyMap() else alle.associate { it.id to speicher.text(it, 200_000).lowercase(Locale.GERMAN) }
+        if (!suchAktiv) emptyMap() else synchronized(textCache) {
+            alle.associate { e ->
+                e.id to (textCache[e.id]?.takeIf { it.first == e.geaendert }?.second ?: speicher.text(e, 200_000).lowercase(Locale.GERMAN).also { textCache[e.id] = e.geaendert to it })
+            }
+        }
     }
     val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k } }
     // Filtern und Sortieren abseits des Hauptfadens, kurz entprellt; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
@@ -275,7 +286,13 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
             }
         }
-        abgleichHinweis?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = f.gefahr, fontSize = 13.sp) }
+        val abgleichText = abgleich.hinweis ?: when {
+            abgleich.dateien.isNotEmpty() -> "Überträgt ${abgleich.dateien.size} große Datei(en): „${abgleich.dateien[0].first}“" + (if (abgleich.geladen > 0) " · ${Dateityp.groesse(abgleich.geladen)} von ${Dateityp.groesse(abgleich.dateien[0].second)}" else "")
+            abgleich.laeuft -> "Gleicht ab …"
+            abgleich.zuletzt > 0 -> "Abgeglichen um " + java.text.SimpleDateFormat("HH:mm", Locale.GERMAN).format(java.util.Date(abgleich.zuletzt))
+            else -> null
+        }
+        abgleichText?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = if (abgleich.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         // Alle Bereiche auf einen Blick, umbrechend statt seitlich zu wischen.
         FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Alle", filter == null) { filter = null }
@@ -285,8 +302,12 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
         val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
+        // Steht man ganz oben, bleibt man oben: Sonst landet ein neuer Eintrag von einem anderen Gerät unsichtbar über der Sichtfläche.
+        val ersterEintrag = sicht?.firstOrNull()?.id
+        LaunchedEffect(ersterEintrag) { if (raster.firstVisibleItemIndex <= 1 && raster.firstVisibleItemScrollOffset < 200) raster.animateScrollToItem(0) }
         LazyVerticalGrid(
             GridCells.Fixed(ansicht.spalten),
+            state = raster,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.LISTE) 6.dp else if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
             horizontalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
@@ -481,6 +502,10 @@ private fun ansichtSymbol(a: Ansicht): ImageVector = when (a) {
     Ansicht.LISTE -> Icons.AutoMirrored.Rounded.List
 }
 
+private val vorschauSpeicher = object : android.util.LruCache<String, ImageBitmap>(64 * 1024) {
+    override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4 / 1024
+}
+
 /**
  * Vorschaubild aus dem Speicher (einmal erzeugt, bleibt erhalten), sonst ein eindeutiges Dateitypsymbol.
  * [pixel] > 0: Bilder für große Kacheln direkt aus der Datei in dieser Größe, damit sie scharf sind.
@@ -489,14 +514,16 @@ private fun ansichtSymbol(a: Ansicht): ImageVector = when (a) {
 private fun Vorschaubild(e: Eintrag, a: Anhang?, modifier: Modifier = Modifier.size(56.dp), radius: Dp = 14.dp, pixel: Int = 0, symbolGroesse: Dp = 28.dp) {
     val f = LocalFarben.current
     val context = LocalContext.current
-    val bild by ladeImHintergrund<ImageBitmap?>(null, a?.id, a?.vorschau, pixel) {
-        if (a == null) null else runCatching {
+    // Aus dem Speicher, wenn schon einmal dekodiert: Beim Zurückscrollen und bei eintreffenden Änderungen steht das Bild sofort da, statt erst wieder das Symbol.
+    val cacheName = a?.let { "${it.sha256.ifEmpty { it.id }}-$pixel" }
+    val bild by ladeImHintergrund<ImageBitmap?>(cacheName?.let { vorschauSpeicher.get(it) }, cacheName) {
+        cacheName?.let { vorschauSpeicher.get(it) } ?: if (a == null) null else runCatching {
             val s = AblageZentrale.speicher(context)
             if (pixel > 0 && a.art == Art.BILD) Medien.bildVerkleinert(s.datei(a), pixel)?.asImageBitmap()?.let { return@runCatching it }
             val ziel = s.vorschauDatei(a)
             val datei = if (ziel.isFile) ziel else Medien.vorschaubild(s.datei(a), a.art, ziel)?.also { s.setzeVorschau(e.id, a.id, it) }
             datei?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
-        }.getOrNull()
+        }.getOrNull()?.also { vorschauSpeicher.put(cacheName!!, it) }
     }
     val b = bild
     val form = RoundedCornerShape(radius)

@@ -185,6 +185,7 @@ object Tunnel {
             synchronized(this) { abgebrochen = socket; socket?.cancel() }
             Logbuch.netz("Netzwechsel", "Verbindung wird über das neue Netz neu aufgebaut")
         }
+        de.frank.jarvis.ablage.AblageSync.netzGewechselt()
         anstoss.trySend(Unit)
     }
 

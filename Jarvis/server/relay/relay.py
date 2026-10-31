@@ -1468,7 +1468,8 @@ ABLAGE_MAX_DATEI = 8 * 1024 ** 3
 ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung"}
 ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
-ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
+ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente und Bytes je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
+ABLAGE_SEITE_BYTES = 2 * 1024 * 1024
 
 
 class AblageAbgleich:
@@ -1478,6 +1479,8 @@ class AblageAbgleich:
         self.blobs.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(ABLAGE_ORDNER / "ablage.db")
         self.db.execute("PRAGMA journal_mode=WAL")
+        # Kein fsync je Dokument im Event-Loop. Bei einem Stromausfall gingen nur die letzten Aenderungen verloren, und die senden die Geraete dann neu.
+        self.db.execute("PRAGMA synchronous=NORMAL")
         self.db.execute("""CREATE TABLE IF NOT EXISTS docs (art TEXT, id TEXT, daten TEXT, geaendert INTEGER, geloescht INTEGER,
                            von TEXT, stand INTEGER, PRIMARY KEY (art, id))""")
         self.db.execute("CREATE INDEX IF NOT EXISTS docs_stand ON docs (stand)")
@@ -1531,8 +1534,8 @@ class AblageAbgleich:
         neuaufbau = seit > self._stand()
         if neuaufbau:
             seit = 0
-        neu = "SELECT 1 FROM docs WHERE stand > ? AND von != ? LIMIT 1"
-        if warten and self.db.execute(neu, (seit, geraet)).fetchone() is None:
+        # Gewartet wird nur, wenn gar nichts Neues da ist. Auch eigene Dokumente kommen sofort: Beim Weiterblaettern oder nach einem Neuaufbau kostete sonst jede Seite 25 s.
+        if warten and self.db.execute("SELECT 1 FROM docs WHERE stand > ? LIMIT 1", (seit,)).fetchone() is None:
             zukunft = asyncio.get_running_loop().create_future()
             eintrag = (geraet, zukunft)
             self.warter.append(eintrag)
@@ -1543,12 +1546,22 @@ class AblageAbgleich:
             finally:
                 if eintrag in self.warter:
                     self.warter.remove(eintrag)
-        zeilen = self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand LIMIT ?", (seit, ABLAGE_SEITE + 1)).fetchall()
-        mehr = len(zeilen) > ABLAGE_SEITE
-        zeilen = zeilen[:ABLAGE_SEITE]
-        docs = [{"art": z[0], "id": z[1], "daten": json.loads(z[2]), "geaendert": z[3], "geloescht": bool(z[4]), "von": z[5], "stand": z[6]} for z in zeilen]
+        # Die gespeicherten Daten gehen ungeparst durch: Das spart Zeit im Event-Loop und Speicher.
+        teile = []
+        groesse = 0
+        letzter = 0
+        mehr = False
+        for z in self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand", (seit,)):
+            if len(teile) >= ABLAGE_SEITE or (teile and groesse + len(z[2]) > ABLAGE_SEITE_BYTES):
+                mehr = True
+                break
+            groesse += len(z[2])
+            letzter = z[6]
+            teile.append('{"art":%s,"id":%s,"daten":%s,"geaendert":%d,"geloescht":%s,"von":%s,"stand":%d}' % (
+                json.dumps(z[0]), json.dumps(z[1]), z[2], z[3], "true" if z[4] else "false", json.dumps(z[5], ensure_ascii=False), z[6]))
         # Bei einer Teilantwort ist der Stand der des letzten Dokuments: Der naechste Abruf macht genau dort weiter.
-        return web.json_response({"stand": docs[-1]["stand"] if mehr else self._stand(), "docs": docs, "neuaufbau": neuaufbau, "mehr": mehr, "instanz": self.instanz}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
+        kopf = json.dumps({"stand": letzter if mehr else self._stand(), "neuaufbau": neuaufbau, "mehr": mehr, "instanz": self.instanz})
+        return web.Response(text=kopf[:-1] + ',"docs":[' + ",".join(teile) + "]}", content_type="application/json")
 
     async def doc(self, request: web.Request) -> web.Response:
         art, kennung = request.match_info["art"], request.match_info["id"]
@@ -1572,7 +1585,9 @@ class AblageAbgleich:
         if zeile is not None and zeile[0] >= geaendert:
             # Dieselbe Fassung noch einmal (die Antwort ging unterwegs verloren): Sie ist angekommen, kein Konflikt.
             gleich = zeile[0] == geaendert and bool(zeile[2]) == geloescht and json.loads(zeile[1]) == ({} if geloescht else daten)
-            return web.json_response({"uebernommen": gleich, "stand": self._stand()})
+            # Abgelehnt: die juengere Fassung gleich mitgeben, damit das Geraet nicht deshalb alles neu holen muss.
+            doc = {"art": art, "id": kennung, "daten": json.loads(zeile[1]), "geaendert": zeile[0], "geloescht": bool(zeile[2])}
+            return web.json_response({"uebernommen": gleich, "stand": self._stand(), "doc": None if gleich else doc}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
         if not geloescht:
             shas = self._dateien(daten)
             if any(not ABLAGE_SHA.match(s) for s in shas):
@@ -1615,12 +1630,19 @@ class AblageAbgleich:
             def stueck_ablegen(f, stueck):
                 pruefung.update(stueck)
                 f.write(stueck)
+            # Gesammelt bis 1 MB: Das Netz liefert oft viel kleinere Stuecke, und jeder Fadenwechsel kostet bei 0,5 CPU spuerbar.
             with open(teil, "wb") as f:
-                async for stueck in request.content.iter_chunked(1024 * 1024):
+                puffer = bytearray()
+                async for stueck in request.content.iter_any():
                     groesse += len(stueck)
                     if groesse > ABLAGE_MAX_DATEI:
                         return web.Response(status=413, text="Datei zu gross")
-                    await schleife.run_in_executor(None, stueck_ablegen, f, stueck)
+                    puffer += stueck
+                    if len(puffer) >= 1024 * 1024:
+                        await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
+                        puffer.clear()
+                if puffer:
+                    await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
                 # Erst fest auf der Platte, dann unter dem endgueltigen Namen: Nach einem Stromausfall gilt sonst eine halbe Datei als vorhanden.
                 f.flush()
                 await schleife.run_in_executor(None, os.fsync, f.fileno())
@@ -1637,13 +1659,15 @@ class AblageAbgleich:
             return web.Response(status=404, text="Not found")
         return web.FileResponse(self._pfad(sha), headers={"Content-Type": "application/octet-stream"})
 
-    def benutzte_inhalte(self) -> set:
-        benutzt = set()
-        for (daten,) in self.db.execute("SELECT daten FROM docs WHERE geloescht = 0"):
-            benutzt.update(self._dateien(json.loads(daten)))
-        return benutzt
-
-    def aufraeumen(self, benutzt: set) -> None:
+    def aufraeumen(self) -> None:
+        # Laeuft im eigenen Faden, deshalb eine eigene Verbindung: Alle Dokumente zu parsen, hielte sonst den Event-Loop an.
+        verbindung = sqlite3.connect(ABLAGE_ORDNER / "ablage.db")
+        try:
+            benutzt = set()
+            for (daten,) in verbindung.execute("SELECT daten FROM docs WHERE geloescht = 0"):
+                benutzt.update(self._dateien(json.loads(daten)))
+        finally:
+            verbindung.close()
         grenze = time.time() - ABLAGE_FRIST_S
         weg = 0
         for datei in self.blobs.iterdir():
@@ -1661,8 +1685,7 @@ class AblageAbgleich:
         async def lauf():
             while True:
                 try:
-                    # Die Datenbank gehoert dem Event-Loop, das Durchgehen der Dateien nicht.
-                    await asyncio.get_running_loop().run_in_executor(None, self.aufraeumen, self.benutzte_inhalte())
+                    await asyncio.get_running_loop().run_in_executor(None, self.aufraeumen)
                 except Exception:
                     log.exception("Ablage aufraeumen")
                 await asyncio.sleep(86_400)

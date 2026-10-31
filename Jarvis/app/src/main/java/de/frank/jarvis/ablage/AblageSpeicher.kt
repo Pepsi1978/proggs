@@ -422,6 +422,11 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     }
 
     private fun lade(): List<Eintrag> {
+        // Unverändert seit dem letzten Lesen oder Schreiben: nicht neu parsen. Jede Listenzeile, jeder Abgleich und jedes Werkzeug fragt hier.
+        cache?.takeIf { index.isFile && cacheZeit == index.lastModified() && cacheLaenge == index.length() }?.let { liste ->
+            indexLesbar = true
+            return liste.map { e -> if (e.anhaenge.all { File(wurzel, it.speicher).isFile }) e else { merkeVerloren(e.id); e.copy(anhaenge = e.anhaenge.filter { File(wurzel, it.speicher).isFile }) } }
+        }
         indexLesbar = false
         var vorhanden = false
         for (quelle in listOf(index, sicherung)) {
@@ -430,7 +435,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             uebersprungen = 0
             val liste = runCatching { ausJson(JSONObject(quelle.readText())) }.getOrNull()
             if (liste != null) {
-                if (quelle == index) indexLesbar = true
+                if (quelle == index) { indexLesbar = true; cacheMerken(liste) }
                 // Einzelne Einträge waren kaputt: Original sichern und Anhänge ohne Eintrag künftig stehen lassen.
                 if (uebersprungen > 0) { beiseitelegen(quelle); merkeDefekt() }
                 return liste
@@ -442,6 +447,12 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         if (vorhanden) { verzeichnisDefekt = true; merkeDefekt() }
         return emptyList()
     }
+
+    private var cache: List<Eintrag>? = null
+    private var cacheZeit = 0L
+    private var cacheLaenge = 0L
+
+    private fun cacheMerken(liste: List<Eintrag>) { cache = liste; cacheZeit = index.lastModified(); cacheLaenge = index.length() }
 
     private fun beiseitelegen(quelle: File) {
         if (!defektKopiert.add(quelle.name)) return
@@ -458,6 +469,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         if (indexLesbar && index.isFile) index.copyTo(sicherung, overwrite = true)
         schreibeAtomar(index, json.toByteArray())
         indexLesbar = true
+        cacheMerken(liste)
         if (melden) _stand.value = _stand.value + 1
     }
 

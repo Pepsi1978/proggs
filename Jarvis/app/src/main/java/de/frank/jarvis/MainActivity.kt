@@ -256,6 +256,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Wer die App öffnet, will den neuesten Stand; im Tiefschlaf stehen Tunnel-Wartezeit und Abgleich-Zyklus still.
+        de.frank.jarvis.tunnel.Tunnel.jetztVerbinden()
+        de.frank.jarvis.ablage.AblageSync.anstossen()
         // Jarvis ist offen: Frank hat die klingelnde Meldung gesehen (Antippen öffnet meist Jarvis), der Weckton darf aufhören.
         de.frank.jarvis.meldung.WeckerTon.alleStopp()
         // Gedrosselt: Die Prüfung weckt die Partner-Apps, das muss nicht bei jedem Zurückkehren sein.
