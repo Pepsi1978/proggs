@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
+
+import launcher
 
 FENSTER = {"Woche": 7 * 86400, "Fuenf": 5 * 3600}
 GRUPPEN = {"Gemini Models": "Gemini-Modelle", "Claude and GPT models": "Claude und GPT"}
@@ -17,10 +20,8 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 
 def agy_pfad() -> str:
-    for p in (Path.home() / ".local/bin/agy", Path.home() / ".agy/bin/agy"):
-        if p.exists():
-            return str(p)
-    return "agy"
+    pfade = [str(Path.home() / p) for p in launcher.PFADE] + [os.environ.get("PATH", "")]
+    return shutil.which("agy", path=os.pathsep.join(pfade)) or "agy"
 
 
 def auswerten(ausgabe: str) -> list[dict]:
@@ -35,7 +36,11 @@ def auswerten(ausgabe: str) -> list[dict]:
             reset = int(datetime.fromisoformat(teile[3].replace("Z", "+00:00")).timestamp())
         except ValueError:
             continue
-        fuenf = "five hour" in teile[1].lower()
+        art = teile[1].lower()
+        fuenf = re.search(r"(five|5)[ -]?hour", art) is not None
+        # Eine unbekannte Art nicht als Woche ausgeben: Name und Fenster wären falsch.
+        if not fuenf and "week" not in art:
+            continue
         name = f"{GRUPPEN.get(teile[0], teile[0])}: {'5-Stunden-Limit' if fuenf else 'Wochenlimit'}"
         limits.append({"name": name, "genutzt": round(100.0 - rest, 1), "fenster": FENSTER["Fuenf" if fuenf else "Woche"], "reset": reset})
     return limits
@@ -44,7 +49,7 @@ def auswerten(ausgabe: str) -> list[dict]:
 def lesen() -> list[dict]:
     # Ohne API-Schlüssel, wie beim Start der CLI: Es zählt das Abo.
     umgebung = {k: v for k, v in os.environ.items() if k != "GEMINI_API_KEY"}
-    r = subprocess.run([agy_pfad(), "-p", "/usage"], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=90, env=umgebung)
+    r = subprocess.run([agy_pfad(), "-p", "/usage"], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=25, env=umgebung)
     limits = auswerten(r.stdout)
     if not limits:
         raise RuntimeError(f"agy nennt keine Limits (Code {r.returncode}): {(r.stdout + r.stderr).strip()[:200]}")

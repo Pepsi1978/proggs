@@ -86,12 +86,13 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     /** Ein Limit. [genutzt] in Prozent, wie zuletzt gelesen; [reset] in Sekunden seit 1970 (0 = beginnt erst mit der nächsten Nutzung). */
-    class Limit(val name: String, val genutzt: Double, val fensterSek: Long, val reset: Long) {
+    class Limit(val name: String, val genutzt: Double, val fensterSek: Long, val reset: Long, val gelesen: Long = sekunden()) {
         fun abgelaufen(jetzt: Long) = reset in 1..jetzt
         /** Ist das Fenster seit der letzten Abfrage abgelaufen, gilt das Limit wieder als frei. */
         fun genutztJetzt(jetzt: Long): Double = if (abgelaufen(jetzt)) 0.0 else genutzt
         fun uebrigJetzt(jetzt: Long): Double = (100.0 - genutztJetzt(jetzt)).coerceAtLeast(0.0)
-        private fun vergangen(jetzt: Long) = fensterSek - (reset - jetzt)
+        /** Bis zum Lesezeitpunkt: [genutzt] steht bis zum nächsten Abruf still, die Uhr darf das Tempo nicht künstlich senken. */
+        private fun vergangen(jetzt: Long) = fensterSek - (reset - (if (gelesen > 0) gelesen else jetzt))
         private fun rechenbar(jetzt: Long) = reset > jetzt && fensterSek > 0 && genutzt > 0 && vergangen(jetzt) >= fensterSek / 10
 
         /** Prozent, bei denen das Limit beim bisherigen Tempo am Ende des Fensters stünde; null = noch zu früh. */
@@ -105,7 +106,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
         /** Ganzer Satzteil: „Zurückgesetzt: heute, 22:01 Uhr“. */
         fun resetSatz(jetzt: Long): String = when {
             reset <= 0 -> "Das Zeitfenster beginnt mit der nächsten Nutzung"
-            abgelaufen(jetzt) -> "Inzwischen zurückgesetzt"
+            abgelaufen(jetzt) -> "Zurückgesetzt, neuer Verbrauch erst beim nächsten Abruf"
             else -> "Zurückgesetzt: " + zeitText(reset)
         }
 
@@ -118,7 +119,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             return "Tempo passt: hochgerechnet etwa ${h.toInt()} % bis zum Zurücksetzen."
         }
 
-        fun json() = JSONObject().put("name", name).put("genutzt", genutzt).put("fenster", fensterSek).put("reset", reset)
+        fun json() = JSONObject().put("name", name).put("genutzt", genutzt).put("fenster", fensterSek).put("reset", reset).put("gelesen", gelesen)
     }
 
     /** Ein Anbieter. [anmeldenNoetig] = nur eine neue Anmeldung hilft; [hinweis] = warum der Stand fehlt, unvollständig oder alt ist. */
@@ -167,11 +168,11 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** Automatische Abrufe, deutsche Zeit. Der Wächter fragt alle 15 Minuten nach und holt einen verpassten Termin nach. */
         private val ABRUF_STUNDEN = listOf(6, 18)
-        /** Nach einem Termin mit Störung (z. B. kein Netz um 6 Uhr) kurz nachfassen, danach wartet es bis zum nächsten Termin. */
-        private const val NACHFASSEN_FENSTER_MS = 2 * 3_600_000L
+        /** Nach einem Termin mit Störung (z. B. kein Netz um 6 Uhr) die gestörten Anbieter nachfassen, danach warten sie bis zum nächsten Termin. Weit genug für einen nachgeholten Termin. */
+        private const val NACHFASSEN_FENSTER_MS = 6 * 3_600_000L
         private const val NACHFASSEN_ABSTAND_MS = 30 * 60_000L
         /** Abgemeldete Anbieter nur selten neu laden: Jeder Versuch kostet ein Browserfenster. */
-        private const val ABGEMELDET_MS = 6 * 3_600_000L
+        private const val ABGEMELDET_MS = 23 * 3_600_000L
         private const val ANBIETER_FRIST_MS = 50_000L
         /** Der Server vor dem Relay bricht nach 90 Sekunden ab. */
         private const val WERKZEUG_FRIST_MS = 75_000L
@@ -282,7 +283,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val a = liste.getJSONObject(i)
                 val l = a.getJSONArray("limits")
                 Anbieter(a.getString("id"), a.getString("titel"), a.optString("konto"),
-                    (0 until l.length()).map { k -> l.getJSONObject(k).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset")) } },
+                    (0 until l.length()).map { k -> l.getJSONObject(k).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset"), it.optLong("gelesen")) } },
                     a.optString("hinweis").takeIf { it.isNotEmpty() }, a.optBoolean("anmelden"), a.optLong("geholt"))
             }, j.optLong("geholt"))
         }.getOrNull()
@@ -335,8 +336,16 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                     Triple("kimi", "Kimi") { kimi(app) },
                     Triple("gemini", "Gemini / Antigravity (Google)") { gemini(app) },
                 )
+                // Nachfassen nach einem Termin: Nur Gestörtes neu holen, der Rest bleibt, sonst öffnete jeder Versuch alle Browserfenster.
+                val nurGestoert = !erzwingen && alt != null && alt.geholt >= letzterTermin(beginn)
                 val liste = coroutineScope {
-                    abfragen.map { (id, titel, abfrage) -> async { anbieterLesen(id, titel, abfrage, alt?.von(id), erzwingen) } }.awaitAll()
+                    abfragen.map { (id, titel, abfrage) ->
+                        async {
+                            val vorher = alt?.von(id)
+                            if (nurGestoert && vorher != null && (vorher.hinweis == null || vorher.anmeldenNoetig)) vorher
+                            else anbieterLesen(id, titel, abfrage, vorher, erzwingen)
+                        }
+                    }.awaitAll()
                 }
                 val s = Stand(liste, beginn)
                 val gewarnt = warnen(app, s)
@@ -358,8 +367,9 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             return try {
                 val (konto, limits) = withTimeout(ANBIETER_FRIST_MS) { abfrage() }
                 // Fehlt nur ein Limit, bleibt dessen letzter Stand: Es darf nicht ohne Hinweis verschwinden.
-                val fehlen = vorher?.limits.orEmpty().filter { alt -> limits.none { it.name == alt.name } }
-                val erwartet = when (id) { "kimi" -> 2; "gemini" -> 5; else -> 1 }
+                // Gemini liefert alles auf einmal: Ein fehlender Name ist dort umbenannt oder entfallen, nicht ungelesen.
+                val fehlen = if (id == "gemini") emptyList() else vorher?.limits.orEmpty().filter { alt -> limits.none { it.name == alt.name } }
+                val erwartet = if (id == "kimi") 2 else 1
                 val hinweis = if (fehlen.isNotEmpty() || limits.size < erwartet) "Ein Limit ließ sich gerade nicht lesen" + (if (fehlen.isNotEmpty()) ", dort steht der letzte Stand." else ".") else null
                 Anbieter(id, titel, konto, limits + fehlen, hinweis, false, System.currentTimeMillis())
             } catch (f: TimeoutCancellationException) {
@@ -507,9 +517,10 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             val basis = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
             val token = MacSteuerung.token(app)
             if (token.isEmpty()) throw IllegalStateException("Der Zugang zum Server fehlt (fernsteuerung-token.txt).")
-            fun verbindung(pfad: String) = (URL(basis + pfad).openConnection() as HttpURLConnection).apply { connectTimeout = 10_000; readTimeout = 40_000; instanceFollowRedirects = false }
+            // Unter ANBIETER_FRIST_MS zusammen: Blockierendes Lesen lässt sich nicht abbrechen. agy hat auf dem Server 25 s.
+            fun verbindung(pfad: String, lesenMs: Int) = (URL(basis + pfad).openConnection() as HttpURLConnection).apply { connectTimeout = 5_000; readTimeout = lesenMs; instanceFollowRedirects = false }
             try {
-                val anmeldung = verbindung("/anmelden").apply {
+                val anmeldung = verbindung("/anmelden", 5_000).apply {
                     requestMethod = "POST"; doOutput = true
                     setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
                     outputStream.use { it.write(("token=" + URLEncoder.encode(token, "UTF-8")).toByteArray()) }
@@ -518,16 +529,17 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val keks = anmeldung.getHeaderField("Set-Cookie")?.substringBefore(';')
                 anmeldung.disconnect()
                 if (code != 302 || keks == null) throw IllegalStateException("Die Server-Konsole lehnt die Anmeldung ab ($code).")
-                val abruf = verbindung("/api/antigravity-limits").apply { setRequestProperty("Cookie", keks) }
+                val abruf = verbindung("/api/antigravity-limits", 30_000).apply { setRequestProperty("Cookie", keks) }
                 try {
-                    val ok = abruf.responseCode == 200
-                    val j = JSONObject((if (ok) abruf.inputStream else abruf.errorStream).bufferedReader().use { it.readText() })
-                    if (!ok) throw IllegalStateException(j.optString("fehler").ifEmpty { "Fehler ${abruf.responseCode}" }.let { "Der Server liest die Antigravity-Limits nicht: " + it.take(160) })
+                    val status = abruf.responseCode
+                    val rumpf = (if (status == 200) abruf.inputStream else abruf.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+                    val j = runCatching { JSONObject(rumpf) }.getOrNull()
+                    if (status != 200 || j == null) throw IllegalStateException("Der Server liest die Antigravity-Limits nicht: " + (j?.optString("fehler")?.takeIf { it.isNotEmpty() } ?: "Fehler $status").take(160))
                     val l = j.getJSONArray("limits")
                     return "Antigravity-CLI" to (0 until l.length()).map { i -> l.getJSONObject(i).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset")) } }
                 } finally { abruf.disconnect() }
             } catch (f: java.io.IOException) {
-                throw IllegalStateException("Der Server ist gerade nicht erreichbar (Tunnel?).")
+                throw IllegalStateException("Der Server antwortet gerade nicht (Tunnel?).")
             }
         }
 

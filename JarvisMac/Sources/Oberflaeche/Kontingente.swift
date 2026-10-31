@@ -96,7 +96,7 @@ struct KontingenteAnsicht: View {
         let abgelaufen = l.resetSek > 0 && l.resetSek <= Date().timeIntervalSince1970
         let schnell = l.zuSchnell && !k.ausSpeicher && !abgelaufen
         let genutzt = min(100, max(0, abgelaufen ? 0 : l.genutzt))
-        let reset = abgelaufen ? "Inzwischen zurückgesetzt" : (k.ausSpeicher && !l.resetAm.isEmpty ? "Zurückgesetzt: " + l.resetAm : l.resetSatz)
+        let reset = abgelaufen ? "Zurückgesetzt, neuer Verbrauch erst beim nächsten Abruf" : (k.ausSpeicher && !l.resetAm.isEmpty ? "Zurückgesetzt: " + l.resetAm : l.resetSatz)
         return VStack(alignment: .leading, spacing: 4) {
             Text(l.name).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
             Text("\(zahl(genutzt)) % verbraucht").font(.jarvis(24, .bold)).foregroundStyle(schnell ? Farbe.rot : Farbe.haupt)

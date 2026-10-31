@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Companion.prozent
 import de.frank.jarvis.ui.theme.LocalFarben
@@ -58,7 +57,7 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                 }
                 a.hinweis?.let { Text(it, color = if (a.limits.isEmpty() && !a.anmeldenNoetig) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
                 a.standText().takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)) }
-                if (a.anmeldenNoetig && a.id != "codex") {
+                if (a.anmeldenNoetig && (a.id == "claude" || a.id == "kimi")) {
                     Knopf(when (a.id) { "claude" -> "Bei claude.ai anmelden"; else -> "Bei Kimi anmelden" }, Modifier.padding(top = 10.dp).fillMaxWidth()) { anmelden = a.id }
                 }
                 if ((a.id == "claude" || a.id == "kimi") && (a.limits.isNotEmpty() || (a.anmeldenNoetig && a.hinweis?.contains("lehnt") == true))) {
