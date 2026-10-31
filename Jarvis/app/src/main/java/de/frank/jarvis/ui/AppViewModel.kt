@@ -3286,6 +3286,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val modellBereit: Boolean get() = if (einstellungen.modell.istAnthropic) anthropicVerbunden else kiVerbunden
     private fun zuerstVerbinden() = if (einstellungen.modell.istAnthropic) "den Anthropic-API-Schlüssel eintragen" else "mit ChatGPT verbinden"
 
+    /** Nach einem Schlüsselwechsel unter „Konten und APIs“: dieselben Folgen wie früher an den einzelnen Feldern. */
+    fun kontoGeaendert(id: String) {
+        when (id) {
+            "anthropic" -> anthropicVerbunden = sprache.anthropicApiKey.isNotBlank()
+            "maps" -> { abfahrtGeaendert(); lagePruefen() }
+            "mail" -> lagePruefen()
+            "server" -> JarvisDienst.abgleichen(getApplication())
+        }
+    }
+
     fun anthropicSchluesselSpeichern(schluessel: String) {
         sprache.anthropicApiKey = schluessel.trim()
         anthropicVerbunden = sprache.anthropicApiKey.isNotBlank()

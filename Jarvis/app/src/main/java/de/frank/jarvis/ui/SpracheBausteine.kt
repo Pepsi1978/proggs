@@ -161,14 +161,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             }
         }
         if (!lokal) Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (${s.whisperModell}${if (s.whisperModell == de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_LARGE_V3 && de.frank.module.transkriptionsmodul.GroqTranscriber.largeV3Gesperrt()) ", derzeit Turbo – Large V3 gesperrt" else ""}) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-        var groq by rememberSaveable { mutableStateOf(s.groqApiKey) }
-        Unterzeile("Groq-Schlüssel")
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Eingabe(groq, { groq = it }, "gsk_…", Modifier.weight(1f), geheim = true)
-            Spacer(Modifier.width(8.dp))
-            Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { groq = it } }
-        }
-        if (groq.trim() != s.groqApiKey) Knopf("Schlüssel speichern", Modifier.padding(top = 10.dp).fillMaxWidth()) { geaendert { s.groqApiKey = groq.trim() }; vm.meldung = "Groq-Schlüssel gespeichert." }
+        SchluesselVerweis(vm, "Groq-Schlüssel", s.groqApiKey.isNotBlank())
         Unterzeile("Filter gegen erfundene Texte bei Stille")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Stille vorab", aktiv = s.filterStilleVorabAn) { geaendert { s.filterStilleVorabAn = !s.filterStilleVorabAn } }

@@ -113,10 +113,7 @@ struct VorleseEinstellungenAnsicht: View {
                 KartenTitel(symbol: "key.fill", titel: "Schlüssel fürs Vorlesen", farbe: Farbe.warnung)
                 Text("Verschlüsselt im Tresor dieses Macs, Anzeigen und Ändern nur nach Touch ID. Edge braucht keinen Schlüssel.")
                     .font(.jarvis(11)).foregroundStyle(Farbe.text2)
-                TresorKopf()
-                TresorFeld(titel: "Google Cloud (Chirp 3 HD)", wert: $v.zugang.google)
-                TresorFeld(titel: "Gemini TTS kostenlos", wert: $v.zugang.geminiFrei)
-                TresorFeld(titel: "Gemini TTS bezahlt", wert: $v.zugang.geminiBezahlt)
+                Text("Die Schlüssel stehen unter Einstellungen → Konten und APIs.").font(.jarvis(12)).foregroundStyle(Farbe.text2)
                 HStack {
                     Text("Gemini-Reihenfolge").font(.jarvis(13, .medium)).frame(width: 150, alignment: .leading)
                     Picker("", selection: $v.geminiWahl) {
@@ -126,13 +123,11 @@ struct VorleseEinstellungenAnsicht: View {
                     }
                     .labelsHidden().frame(maxWidth: .infinity)
                 }
-                TresorFeld(titel: "Azure Speech-Schlüssel", wert: $v.zugang.azure)
                 HStack {
                     Text("Azure-Region").font(.jarvis(13, .medium)).frame(width: 150, alignment: .leading)
                     TextField("westeurope", text: $v.zugang.azureRegion).textFieldStyle(.roundedBorder)
                 }
                 Text("F0 kostenlos 500 000 Zeichen im Monat; HD-Stimmen nur mit S0.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
-                TresorFeld(titel: "Alibaba DashScope", wert: $v.zugang.qwen)
             }
         }
     }

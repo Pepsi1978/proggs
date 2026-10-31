@@ -35,6 +35,17 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = null
 
+    /** Für Läufe ohne Frank (Agenten, Kanal): nur ansehen; ausführen nur in der Ursprungsaufgabe eines Baus. Fremde Texte sollen hier nichts bauen oder auslösen können. */
+    fun imHintergrund(): Faehigkeit = object : Faehigkeit by this@HelferFaehigkeit {
+        override val id = "helfer-hintergrund"
+        override val hinweise = "EIGENE TOOLS: Hier nur helfer_suchen und helfer_info; helfer_ausfuehren nur, wenn dein Auftrag ausdrücklich einen Helfer nennt. Bauen geht hier nicht."
+        override val werkzeuge = this@HelferFaehigkeit.werkzeuge.filter { it.name in setOf("helfer_suchen", "helfer_info", "helfer_ausfuehren") }.map { w ->
+            if (w.name != "helfer_ausfuehren") w else w.als { a ->
+                if (currentCoroutineContext()[HelferAblauf.ImLauf] == null) Ergebnis("Hintergrundläufe benutzen keine Helfer; das geht nur im Gespräch mit Frank.", fehler = true) else w.ausfuehren(a)
+            }
+        }
+    }
+
     private fun kurz(h: Helfer, macDa: Boolean?): String = buildString {
         append("- ").append(h.kennung).append(" (").append(if (h.ort == "mac") "Mac" else "Handy").append(", ").append(HelferZustand.text(h.zustand, h.aktiv))
         if (h.ort == "mac" && macDa == false && h.einsatzbereit) append(", Mac gerade nicht erreichbar")

@@ -85,6 +85,8 @@ FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten
 # Werkzeugbau-Aufträge (Nummer beginnt mit W0, die 0 kommt in normalen Nummern nie vor): Die 150 Sekunden zählt das Handy ab der Anzeige.
 # Hier nur das Sicherheitsnetz, falls das Handy aus ist. Alle anderen Aufträge bleiben bei fünf Minuten.
 WERKZEUGBAU_WARTEN_S = 900
+if AUFTRAG.startswith("W0"):
+    FRAGE_WARTEN_S = WERKZEUGBAU_WARTEN_S
 PULS_S = 10               # Lebenszeichen höchstens so oft
 MAX_TEXT = 4000           # so lang darf eine Zwischenmeldung werden (sichtbar gekürzt, siehe kuerze)
 MAX_BERICHT = 60000       # der Abschlussbericht am Zugende („info“); früher galt auch hier 4000 und er endete mitten im Wort

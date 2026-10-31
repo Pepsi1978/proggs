@@ -2,37 +2,37 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key>
-    <string>de.frank.jarvismac</string>
-    <key>CFBundleName</key>
-    <string>Jarvis</string>
-    <key>CFBundleDisplayName</key>
-    <string>Jarvis</string>
-    <key>CFBundleExecutable</key>
-    <string>Jarvis</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleVersion</key>
-    <string>1.0.43</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.43</string>
-    <key>BuildTimestamp</key>
-    <string>__BUILD_TIMESTAMP__</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>26.0</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Jarvis hört auf „Hey Jarvis“, nimmt deine Sprachbefehle auf und führt Live-Gespräche.</string>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>Jarvis erkennt das Weckwort und deine Sprache direkt auf dem Mac.</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>Jarvis steuert Programme wie Terminal, Finder, OpenLauncher und ChatGPT für dich.</string>
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>Jarvis kann auf Wunsch den Bildschirm ansehen, um dir zu helfen.</string>
+	<key>BuildTimestamp</key>
+	<string>__BUILD_TIMESTAMP__</string>
+	<key>CFBundleDisplayName</key>
+	<string>Jarvis</string>
+	<key>CFBundleExecutable</key>
+	<string>Jarvis</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>de.frank.jarvismac</string>
+	<key>CFBundleName</key>
+	<string>Jarvis</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.44</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.44</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Jarvis steuert Programme wie Terminal, Finder, OpenLauncher und ChatGPT für dich.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Jarvis hört auf „Hey Jarvis“, nimmt deine Sprachbefehle auf und führt Live-Gespräche.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Jarvis kann auf Wunsch den Bildschirm ansehen, um dir zu helfen.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Jarvis erkennt das Weckwort und deine Sprache direkt auf dem Mac.</string>
 </dict>
 </plist>

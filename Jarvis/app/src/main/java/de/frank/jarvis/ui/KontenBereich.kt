@@ -78,8 +78,9 @@ private fun KontoZeile(vm: AppViewModel, k: KontoEintrag, offen: Boolean, umscha
     val f = LocalFarben.current
     val c = LocalContext.current.applicationContext
     val activity = LocalContext.current as? FragmentActivity
-    val da = remember(k.id, offen) { k.lesen().isNotBlank() }
-    val gesperrt = remember(k.id, offen, KontenRegister.stand.value) { KontenRegister.gesperrt(c, k.id) }
+    val stand by KontenRegister.stand.collectAsState()
+    val da = remember(k.id, offen, stand) { k.lesen().isNotBlank() }
+    val gesperrt = remember(k.id, offen, stand) { KontenRegister.gesperrt(c, k.id) }
     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Row(Modifier.fillMaxWidth().clickable(onClick = umschalten), verticalAlignment = Alignment.CenterVertically) {
             Text(k.titel, Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -113,7 +114,7 @@ private fun KontoZeile(vm: AppViewModel, k: KontoEintrag, offen: Boolean, umscha
         }
         if (neu.isNotBlank()) {
             if (helfer.isNotEmpty() && da) Text("Der Austausch gilt sofort auch für: ${helfer.joinToString(", ")}.", color = f.text, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Knopf("Speichern", Modifier.padding(top = 8.dp).fillMaxWidth()) { k.schreiben(neu.trim()); neu = ""; sichtbar = null; KontenRegister.stand.value++; vm.meldung = "Gespeichert." }
+            Knopf("Speichern", Modifier.padding(top = 8.dp).fillMaxWidth()) { k.schreiben(neu.trim()); neu = ""; sichtbar = null; KontenRegister.stand.value++; vm.kontoGeaendert(k.id); vm.meldung = "Gespeichert." }
         }
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (da && sichtbar == null) Knopf("Anzeigen", Modifier.weight(1f), haupt = false) {

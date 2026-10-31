@@ -81,6 +81,7 @@ object HelferAblauf {
     /** So lange schiebt eine begonnene Eingabe die Entscheidung hinaus. */
     private const val EINGABE_S = 90L
     private const val MAX_FEHLVERSUCHE = 3
+    private const val OHNE_ANZEIGE_MS = 15 * 60_000L
 
     fun istBau(id: String) = id.startsWith(PRAEFIX)
 
@@ -134,6 +135,9 @@ object HelferAblauf {
             auftraege(app).filter { it.optString("stand") == BauStand.AUFGABE }.forEach { e ->
                 neuerStand(app, e.optString("id"), BauStand.BLOCKIERT, "Beim Ausführen deiner Aufgabe wurde Jarvis beendet. Ob sie erledigt ist, ist unklar; ich wiederhole sie nicht von selbst, damit nichts doppelt passiert.")
             }
+            // Erzeugte Dateien nur begrenzt aufheben; dauerhaft ist die Ablage.
+            val grenze = System.currentTimeMillis() - 30L * 24 * 3_600_000L
+            HelferKatalog.alle(app, true).forEach { h -> HelferKatalog.ausgabe(app, h.kennung).listFiles()?.filter { it.lastModified() < grenze }?.forEach { it.delete() } }
             val f = lies(fristenDatei(app))
             (0 until f.length()).mapNotNull { f.optJSONObject(it) }.forEach { fristLaufen(app, it) }
         }
@@ -327,6 +331,11 @@ object HelferAblauf {
 
     /** Zeigt die Auswahl im Rückfrage-Vollbild und wartet auf Franks Antwort oder die Frist. Liefert die Entscheidung als Satz. */
     private suspend fun lokaleAuswahl(c: Context, id: String, auswahl: JSONObject): String {
+        // Ohne Gespräch (etwa aus ChatGPT) gäbe es kein Vollbild: Der Bau bekommt für die Frage ein eigenes.
+        if (finde(c, id)?.optString("gespraech").isNullOrEmpty()) {
+            val neu = ProgrammierChat.neuesGespraech(c, "Helfer " + (finde(c, id)?.optString("name") ?: ""), finde(c, id)?.optString("aufgabe").orEmpty())
+            aendere(c, id) { it.put("gespraech", neu) }
+        }
         val e = finde(c, id) ?: return ""
         val frageId = "HF" + id + System.currentTimeMillis().toString(36)
         val optionen = auswahl.optJSONArray("optionen") ?: JSONArray()
@@ -336,7 +345,15 @@ object HelferAblauf {
         lokaleWartende[frageId] = { warten.complete(it) }
         neuerStand(c, id, BauStand.RUECKFRAGE, "Rückfrage: ${auswahl.optString("frage").take(120)}")
         prog(c).helferFrageAnzeigen(frageId, e, frage, frageAufbereiten(frage))
-        val antwort = warten.await()
+        // Nie geöffnet (kein Overlay-Recht, Handy weggelegt): nicht ewig warten, dieselbe Grenze wie im Hook.
+        val antwort = kotlinx.coroutines.withTimeoutOrNull(OHNE_ANZEIGE_MS) { warten.await() } ?: run {
+            val empf = frageAufbereiten(frage).optJSONArray("empfohlen")?.optString(0).orEmpty().ifEmpty { "die bestmögliche Lösung" }
+            lokaleWartende.remove(frageId)
+            fristErledigt(c, frageId)
+            ProgrammierChat.rueckfrageStand(c, e.optString("gespraech"), frageId, RueckfrageStand.BEANTWORTET, "$empf (automatisch von Jarvis, die Frage wurde nicht geöffnet)")
+            entscheidungMerken(c, id, "Automatisch entschieden, weil die Frage 15 Minuten nicht geöffnet wurde: $empf.")
+            "$empf (automatisch von Jarvis, Frank hat nicht geantwortet)"
+        }
         lokaleWartende.remove(frageId)
         aendere(c, id) { it.put("stand", BauStand.PROGRAMMIERUNG) }
         return "${auswahl.optString("frage")} → $antwort"
@@ -444,6 +461,8 @@ object HelferAblauf {
             val ende = f.optLong("start") + FRIST_S * 1000
             while (System.currentTimeMillis() < ende) delay((ende - System.currentTimeMillis()).coerceIn(100, 2_000))
             while (System.currentTimeMillis() - (letzteEingabe[frageId] ?: 0L) < EINGABE_S * 1000) delay(2_000)
+            // Austragen, bevor geantwortet wird: fristErledigt bricht sonst genau diesen Lauf mitten in der Antwort ab.
+            jobs.remove(frageId)
             automatischEntscheiden(c, f)
         }
         jobs.put(frageId, job)?.cancel()
@@ -477,6 +496,8 @@ object HelferAblauf {
 
     fun sitzungsMeldung(c: Context, eintrag: JSONObject) {
         val id = eintrag.optString("id")
+        // Ohne Ursprungsgespräch (etwa aus ChatGPT): Stand und Ergebnis stehen in der Programmier-Session des Baus.
+        if (finde(c, id)?.optString("gespraech").isNullOrEmpty() && eintrag.optString("gespraech").isNotEmpty()) aendere(c, id) { it.put("gespraech", eintrag.optString("gespraech")) }
         val e = finde(c, id) ?: return
         if (e.optString("stand") !in setOf(BauStand.PROGRAMMIERUNG, BauStand.RUECKFRAGE, BauStand.PRUEFUNG)) return
         val s = eintrag.optString("letzterStand", eintrag.optString("stand"))
