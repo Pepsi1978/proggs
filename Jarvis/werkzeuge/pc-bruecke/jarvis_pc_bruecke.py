@@ -33,6 +33,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from jarvis_review import antigravity_review_zeile
+
 
 PROFIL = "minimal"
 MODUS = "schnell"
@@ -290,15 +292,7 @@ def auftragstext(auftrag: dict) -> str:
         review = ("REVIEW: Ja (vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben)\n"
                   if auftrag.get("review") else "REVIEW: Nein\n")
         if cli == "antigravity":
-            # Frank hat vor dem Start in Jarvis gewählt: verbindlich, und die Sitzung darf am Ende nie danach fragen (Profilregel 22 wäre sonst blockierend).
-            if not auftrag.get("review"):
-                review = "REVIEW: Nein (von Frank vor dem Start in Jarvis entschieden, verbindlich: kein Review, und frag am Ende nicht nach einem Review)\n"
-            elif auftrag.get("review_umfang") == "sehr_ausfuehrlich":
-                review = ("REVIEW: Ja, sehr ausführlich (von Frank vor dem Start in Jarvis gewählt, verbindlich: nach der Programmierung automatisch die Änderungen dieser Sitzung "
-                          "sehr gründlich auf Fehler prüfen, mit bis zu 100 Befunden, die Befunde beheben und den Pflicht-Abschluss damit abschließen; frag nicht nach einem Review)\n")
-            else:
-                review = ("REVIEW: Ja, Standard (von Frank vor dem Start in Jarvis gewählt, verbindlich: nach der Programmierung automatisch den gesamten Diff "
-                          "gründlich auf Fehler prüfen, die Befunde beheben und den Pflicht-Abschluss damit abschließen; frag nicht nach einem Review)\n")
+            review = antigravity_review_zeile(auftrag)
     return f"""{kopf}
 
 APP: {app}

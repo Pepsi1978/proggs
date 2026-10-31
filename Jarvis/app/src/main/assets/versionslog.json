@@ -525,6 +525,7 @@
     {"versionCode": 520, "versionName": "1.8.509", "stand": "31.10.2026, 21:33 Uhr", "notiz": "Neuer Reiter Kontingente: Limits von Claude, ChatGPT/Codex, Kimi und Gemini mit Zurücksetzen in deutscher Zeit; Jarvis behält sie im Gedächtnis und warnt, wenn ein Limit vor dem Zurücksetzen leer wäre."},
     {"versionCode": 521, "versionName": "1.8.510", "stand": "31.10.2026, 21:48 Uhr", "notiz": "Kontingente zuverlässiger: Neuanmeldung bei Claude klappt, ein abgestürzter Browser reißt Jarvis nicht mehr mit, abgelaufene Limits gelten wieder als frei, und Warnungen kommen sicher an."},
     {"versionCode": 522, "versionName": "1.8.511", "stand": "31.10.2026, 22:03 Uhr", "notiz": "Unter Kontingente sind alle Anbieter-Bereiche einschließlich OpenAI jetzt standardmäßig aufgeklappt und zeigen bei allen Limits den Verbrauch statt des Restkontingents."},
-    {"versionCode": 523, "versionName": "1.8.512", "stand": "31.10.2026, 22:14 Uhr", "notiz": "Bei Aufträgen über Antigravity fragt Jarvis vor dem Start nach dem Review: Nein, Standard oder sehr ausführlich mit bis zu 100 Findings, und die Sitzung führt die Wahl am Ende ohne weitere Rückfrage aus."}
+    {"versionCode": 523, "versionName": "1.8.512", "stand": "31.10.2026, 22:14 Uhr", "notiz": "Bei Aufträgen über Antigravity fragt Jarvis vor dem Start nach dem Review: Nein, Standard oder sehr ausführlich mit bis zu 100 Findings, und die Sitzung führt die Wahl am Ende ohne weitere Rückfrage aus."},
+    {"versionCode": 524, "versionName": "1.8.513", "stand": "31.10.2026, 22:26 Uhr", "notiz": "Die Review-Wahl für Antigravity lässt sich jetzt auch per Sprache beantworten, und Jarvis startet ohne deine Antwort kein Review und übernimmt keinen falschen Umfang mehr."}
 ]
 }

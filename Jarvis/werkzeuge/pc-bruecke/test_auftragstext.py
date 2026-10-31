@@ -43,6 +43,7 @@ class AuftragstextTest(unittest.TestCase):
         self.assertIn("REVIEW: Nein (", auftragstext({**basis, "review": False}))
         self.assertIn("REVIEW: Ja, Standard (", auftragstext({**basis, "review": True, "review_umfang": "standard"}))
         self.assertIn("REVIEW: Ja, sehr ausführlich (", auftragstext({**basis, "review": True, "review_umfang": "sehr_ausfuehrlich"}))
+        self.assertIn("Umfang nicht übermittelt", auftragstext({**basis, "review": True}))
 
     def test_codex_review_unveraendert(self):
         basis = {"app": "X", "auftrag": "a", "modell": "katalog", "cli": "codex", "slug": "s", "anbieter": "openai"}

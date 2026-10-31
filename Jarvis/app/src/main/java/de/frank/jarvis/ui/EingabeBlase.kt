@@ -574,8 +574,7 @@ private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String
     val f = LocalFarben.current
     // Je Zeile höchstens zwei Knöpfe: Vier Modelle passen sonst nicht auf das Frontdisplay. Der erste (Standard) bleibt hervorgehoben.
     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Eine lange Beschriftung bekommt die Zeile für sich, sonst liefe sie aus dem Bild.
-        optionen.chunked(if (optionen.any { it.second.length > 16 }) 1 else 2).forEachIndexed { zeile, teil ->
+        optionen.chunked(2).forEachIndexed { zeile, teil ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 teil.forEachIndexed { i, (wert, label) ->
                     val erster = zeile == 0 && i == 0
