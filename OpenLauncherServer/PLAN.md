@@ -50,7 +50,9 @@ Handy (Jarvis) ── POST /geraet/pc-auftrag ──► Relay ◄── Long-Pol
 2. **Eigener Benutzer `jarvis`, nie root, nicht in der Gruppe `docker`.** Die Sitzungen laufen mit
    `--dangerously-skip-permissions` auf einem Server mit Gesundheits- und Gedächtnisdaten; Docker-Zugriff wäre root-Zugriff.
 3. **Ressourcenschutz:** 4 GB Swap, systemd-Slice `jarvis-sitzungen` mit `MemoryMax` und `CPUQuota`, damit eine Sitzung
-   nie Relay oder Second Brain abschießt. Ab der dritten Sitzung lehnt die Brücke ab; Jarvis nimmt dann die Cloud.
+   nie Relay oder Second Brain abschießt. Sind 2 Sitzungen aktiv, meldet die Brücke beim Abfragen „belegt“, und der Relay
+   gibt ihr gar nicht erst einen Auftrag. Er geht an den nächsten Rechner oder in die Cloud. Ablehnen nach dem Abholen wäre
+   falsch: Mit `ok=false` springt das Handy aus, obwohl der Auftrag schon zugestellt ist.
 4. **Server-Brücke in Python** (`OpenLauncherServer/bruecke/`), Dienst als systemd-User-Unit, nur ausgehende Verbindung.
    Sie meldet `X-Jarvis-Rang: server` und ihre Fähigkeiten (`opus, sol, katalog`).
 5. **OpenLauncher Server portiert die Logik, nicht die Oberfläche.** Kern in Python: Profil → `CLAUDE_CONFIG_DIR`, Modus →
@@ -88,6 +90,7 @@ Handy (Jarvis) ── POST /geraet/pc-auftrag ──► Relay ◄── Long-Pol
 | `ProgrammierFaehigkeit.kt` | `ziel=server`, Reihenfolge, Texte in `pc_status`; `rechnerDa()` prüft Fähigkeit statt Rang |
 | `Einstellungen.kt`, `EinstellungsKatalog` | Rechner-Reihenfolge |
 | `fernsteuerung/` plus neue `ServerKonsoleActivity` | WebView, `network_security_config` nur für `10.8.0.1` |
+| `auftragstext()` (in der neuen Server-Brücke) | Eigener Abschnitt VORGEHEN: GitHub Actions und `apk-update-cloud` statt „Installation per WLAN“, sonst versucht die erste Sitzung trotz Profil `adb` |
 | `jarvis_hook.py` | Bei `JARVIS_SERVER=1` nie „am Rechner“ |
 | `claude-login-sync.py` | Linux-Zweig |
 | Skill `apk-update-cloud` | Merkmal `JARVIS_SERVER=1` zulassen |
@@ -133,3 +136,6 @@ Diese Punkte sind nicht bestätigt und blockieren nichts vorab. Was dafür ins W
 - **Gemeinsamer Klon:** Parallele Sitzungen im selben Arbeitsbaum können sich stören, wie schon heute am Mac.
 - **Relay-Umbau:** Der Relay ist die zentrale Stelle für alle Aufträge. Darum Rückwärtsverträglichkeit zuerst und Test gegen
   beide bestehenden Brücken vor dem Deploy.
+- **Reihenfolge beim Ausrollen ist zwingend: erst Relay, dann Brücke.** Der heutige Relay führt jeden Rang außer `ersatz` als
+  Windows-PC. Eine Server-Brücke bekäme dort Sol-Aufträge, die für den PC gedacht sind. Darum nennt der neue Relay seine
+  Fähigkeit in einer Antwort-Kopfzeile, und die Brücke holt ohne sie keine Aufträge ab.
