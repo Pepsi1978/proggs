@@ -7,7 +7,7 @@ final class Kontingente {
     private static let speicher = "kontingente.letzterStand"
 
     struct Limit: Identifiable {
-        let name: String, genutzt: Double, uebrig: Double, reset: String, tempo: String, zuSchnell: Bool
+        let name: String, genutzt: Double, uebrig: Double, resetSatz: String, resetAm: String, resetSek: Double, tempo: String, zuSchnell: Bool
         var id: String { name }
     }
     struct Anbieter: Identifiable {
@@ -17,17 +17,21 @@ final class Kontingente {
     var anbieter: [Anbieter] = []
     var fehler: String?
     var laedt = false
+    /// Der Stand stammt vom letzten Programmlauf: „heute“ und das Tempo galten nur damals.
+    var ausSpeicher = false
 
     init() {
-        if let t = UserDefaults.standard.string(forKey: Self.speicher) { anbieter = Self.lies(t) ?? [] }
+        if let t = UserDefaults.standard.string(forKey: Self.speicher), let alt = Self.lies(t) { anbieter = alt; ausSpeicher = true }
     }
 
     func laden(frisch: Bool = false) async {
-        if laedt { return }
+        // Ein ausdrücklicher Wunsch wartet die laufende Abfrage ab, statt verloren zu gehen.
+        if laedt && !frisch { return }
+        while laedt { try? await Task.sleep(for: .milliseconds(300)) }
         laedt = true; defer { laedt = false }
         var argumente: JSONObjekt = ["json": true]
         if frisch { argumente["frisch"] = true }
-        let r = await McpKlient.shared.rufe("kontingente_lesen", argumente, sekunden: 120)
+        let r = await McpKlient.shared.rufe("kontingente_lesen", argumente, sekunden: 85)
         let t = McpKlient.ohneKontextHinweis(r.text)
         guard let neu = Self.lies(t) else {
             fehler = t.isEmpty ? "Das Handy antwortet gerade nicht." : t
@@ -36,6 +40,7 @@ final class Kontingente {
         }
         fehler = nil
         anbieter = neu
+        ausSpeicher = false
         UserDefaults.standard.set(t, forKey: Self.speicher)
     }
 
@@ -45,7 +50,8 @@ final class Kontingente {
             Anbieter(id: a["id"] as? String ?? "", titel: a["titel"] as? String ?? "", konto: a["konto"] as? String ?? "", hinweis: a["hinweis"] as? String ?? "",
                      anmelden: a["anmelden"] as? Bool ?? false, stand: a["stand"] as? String ?? "",
                      limits: (a["limits"] as? [[String: Any]] ?? []).map { l in
-                         Limit(name: l["name"] as? String ?? "", genutzt: l["genutzt"] as? Double ?? 0, uebrig: l["uebrig"] as? Double ?? 0, reset: l["reset"] as? String ?? "",
+                         Limit(name: l["name"] as? String ?? "", genutzt: (l["genutzt"] as? NSNumber)?.doubleValue ?? 0, uebrig: (l["uebrig"] as? NSNumber)?.doubleValue ?? 0,
+                               resetSatz: l["resetSatz"] as? String ?? "", resetAm: l["resetAm"] as? String ?? "", resetSek: (l["resetSek"] as? NSNumber)?.doubleValue ?? 0,
                                tempo: l["tempo"] as? String ?? "", zuSchnell: l["zuSchnell"] as? Bool ?? false)
                      })
         }
@@ -60,6 +66,7 @@ struct KontingenteAnsicht: View {
             Text("Wie viel deiner Abos noch übrig ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.")
                 .font(.jarvis(13)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
             if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
+            else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
             ForEach(k.anbieter) { karte($0) }
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "arrow.clockwise", titel: "Jetzt neu abfragen", hervorgehoben: true) { Task { await k.laden(frisch: true) } }
@@ -77,20 +84,7 @@ struct KontingenteAnsicht: View {
             VStack(alignment: .leading, spacing: 10) {
                 KartenTitel(symbol: "gauge.with.dots.needle.67percent", titel: a.titel)
                 if !a.konto.isEmpty { Text(a.konto).font(.jarvis(12)).foregroundStyle(Farbe.text3) }
-                ForEach(a.limits) { l in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(l.name).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
-                        Text("\(zahl(l.uebrig)) % übrig").font(.jarvis(24, .bold)).foregroundStyle(l.zuSchnell ? Farbe.rot : Farbe.haupt)
-                        balken(min(1, max(0, l.genutzt / 100)), rot: l.zuSchnell)
-                        Text("Zurückgesetzt: " + l.reset).font(.jarvis(13)).foregroundStyle(Farbe.text)
-                        if !l.tempo.isEmpty {
-                            Text(l.zuSchnell ? "Zu schnell: " + l.tempo.replacingOccurrences(of: "ZU SCHNELL: ", with: "") : l.tempo)
-                                .font(.jarvis(12, l.zuSchnell ? .semibold : .regular)).foregroundStyle(l.zuSchnell ? Farbe.rot : Farbe.text3)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.top, 4)
-                }
+                ForEach(a.limits) { limit($0) }
                 if !a.hinweis.isEmpty {
                     Text(a.hinweis + (a.anmelden ? " Anmelden auf dem Handy unter Einstellungen → Kontingente." : "")).font(.jarvis(12)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true)
                 }
@@ -99,11 +93,31 @@ struct KontingenteAnsicht: View {
         }
     }
 
+    /// Aus dem Speicher: festes Datum statt „heute“, kein Tempo; ein inzwischen abgelaufenes Fenster gilt wieder als frei.
+    private func limit(_ l: Kontingente.Limit) -> some View {
+        let abgelaufen = k.ausSpeicher && l.resetSek > 0 && l.resetSek <= Date().timeIntervalSince1970
+        let schnell = l.zuSchnell && !k.ausSpeicher
+        let genutzt = abgelaufen ? 0 : l.genutzt
+        let reset = abgelaufen ? "Inzwischen zurückgesetzt" : (k.ausSpeicher && !l.resetAm.isEmpty ? "Zurückgesetzt: " + l.resetAm : l.resetSatz)
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(l.name).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
+            Text("\(zahl(abgelaufen ? 100 : l.uebrig)) % übrig").font(.jarvis(24, .bold)).foregroundStyle(schnell ? Farbe.rot : Farbe.haupt)
+            balken(min(1, max(0, genutzt / 100)), rot: schnell)
+            Text(reset).font(.jarvis(13)).foregroundStyle(Farbe.text)
+            if !l.tempo.isEmpty && !k.ausSpeicher {
+                Text(schnell ? "Zu schnell: " + l.tempo : l.tempo)
+                    .font(.jarvis(12, schnell ? .semibold : .regular)).foregroundStyle(schnell ? Farbe.rot : Farbe.text3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.top, 4)
+    }
+
     private func balken(_ anteil: Double, rot: Bool) -> some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(Farbe.glas(0.08))
-                if rot { Capsule().fill(Farbe.rot).frame(width: geo.size.width * anteil) } else { Capsule().fill(Farbe.akzent).frame(width: geo.size.width * anteil) }
+                Capsule().fill(rot ? AnyShapeStyle(Farbe.rot) : AnyShapeStyle(Farbe.akzent)).frame(width: geo.size.width * anteil)
             }
         }
         .frame(height: 8)

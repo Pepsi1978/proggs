@@ -3437,14 +3437,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var kontingenteNochmal = false
+
     fun kontingenteAbfragen(erzwingen: Boolean = false) {
-        if (kontingenteLaedt) return
+        // Ein ausdrücklicher Wunsch (Knopf, nach An- oder Abmelden) läuft danach, statt verloren zu gehen.
+        if (kontingenteLaedt) { if (erzwingen) kontingenteNochmal = true; return }
         val app = getApplication<android.app.Application>()
         kontingenteLaedt = true
         viewModelScope.launch {
-            if (kontingente == null) kontingente = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.gespeichert(app) }
-            kontingente = de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.stand(app, erzwingen)
-            kontingenteLaedt = false
+            try {
+                if (kontingente == null) kontingente = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.gespeichert(app) }
+                kontingente = de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.stand(app, erzwingen)
+            } catch (f: kotlinx.coroutines.CancellationException) {
+                throw f
+            } catch (f: Exception) {
+                de.frank.jarvis.observability.Logbuch.fehler("Kontingente abfragen", f)
+            } finally {
+                kontingenteLaedt = false
+            }
+            if (kontingenteNochmal) { kontingenteNochmal = false; kontingenteAbfragen(erzwingen = true) }
         }
     }
 

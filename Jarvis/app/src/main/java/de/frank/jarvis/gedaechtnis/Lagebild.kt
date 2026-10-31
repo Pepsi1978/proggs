@@ -654,7 +654,7 @@ object Lagebild {
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
         Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
-        Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 1_600, Bereich.WETTER to 900,
+        Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 2_600, Bereich.WETTER to 900,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
     private const val SEIT_DECKEL = 5_000

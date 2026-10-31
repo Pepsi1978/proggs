@@ -598,7 +598,7 @@ class CodexAuthManager(context: Context) {
         val konto = jwtAccountId(token) ?: accountId
             ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
         val antwort = executeForText(
-            RESPONSES_HTTP_CLIENT,
+            AUTH_HTTP_CLIENT,
             Request.Builder().url("https://chatgpt.com/backend-api/wham/usage")
                 .header("Accept", "application/json")
                 .header("Authorization", "Bearer $token")
