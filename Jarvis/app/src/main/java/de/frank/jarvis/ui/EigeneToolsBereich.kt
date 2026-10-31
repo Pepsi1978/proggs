@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -53,15 +56,7 @@ fun EigeneToolsBereich(vm: AppViewModel) {
     val macDa by produceState<Boolean?>(null, stand) {
         value = withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Register.alle(c).filterIsInstance<MacJarvisFaehigkeit>().first().macErreichbar() }.getOrDefault(false) }
     }
-    var offen by rememberSaveable { mutableStateOf("") }
     val e = vm.einstellungen
-    val auswahl = (eigene + macListe).firstOrNull { it.kennung == offen }
-
-    if (auswahl != null) {
-        androidx.activity.compose.BackHandler { offen = "" }
-        HelferDetail(vm, auswahl, macDa) { offen = "" }
-        return
-    }
 
     Column(Modifier.fillMaxWidth().glas(f, 18.dp, erhoeht = 0.3f).padding(14.dp)) {
         Zeile("Automatik", if (e.helferAutomatik) "An" else "Pausiert", if (e.helferAutomatik) f.erfolg else f.gefahr)
@@ -85,16 +80,16 @@ fun EigeneToolsBereich(vm: AppViewModel) {
     val aufHandy = eigene.filter { it.zustand != HelferZustand.PAPIERKORB }
     Bereich("Auf dem Handy (${aufHandy.size})", aufklappbar = false) {
         if (aufHandy.isEmpty()) Text("Noch keine Helfer. Sie entstehen von selbst, wenn eine Aufgabe sie braucht.", color = f.textSchwach, fontSize = 14.sp)
-        aufHandy.forEach { h -> HelferZeile(h, macDa) { offen = h.kennung } }
+        aufHandy.forEach { h -> HelferEintrag(vm, h, macDa) }
     }
     Bereich("Auf dem Mac (${macListe.size})", aufklappbar = false) {
         val gesehen = HelferKatalog.macZuletztGesehen(c)
         val zeit = if (gesehen == 0L) "noch nie gemeldet" else "Stand vom " + java.text.SimpleDateFormat("dd.MM., HH:mm", java.util.Locale.GERMANY).format(java.util.Date(gesehen)) + " Uhr"
         Text((if (macDa == true) "Mac erreichbar · " else "Mac gerade nicht erreichbar · ") + zeit, color = if (macDa == true) f.erfolg else f.textLeise, fontSize = 13.sp)
-        macListe.forEach { h -> HelferZeile(h, macDa) { offen = h.kennung } }
+        macListe.forEach { h -> HelferEintrag(vm, h, macDa) }
     }
     val papierkorb = eigene.filter { it.zustand == HelferZustand.PAPIERKORB }
-    if (papierkorb.isNotEmpty()) Bereich("Papierkorb (${papierkorb.size})") { papierkorb.forEach { h -> HelferZeile(h, macDa) { offen = h.kennung } } }
+    if (papierkorb.isNotEmpty()) Bereich("Papierkorb (${papierkorb.size})") { papierkorb.forEach { h -> HelferEintrag(vm, h, macDa) } }
 
     Bereich("Recherche und Grenzen") {
         val modell = RechercheModelle.aus(e.rechercheModell)
@@ -125,13 +120,15 @@ private fun ZahlChips(werte: List<Int>, aktuell: Int, setzen: (Int) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { werte.forEach { n -> Chip(n.toString(), aktiv = aktuell == n) { setzen(n) } } }
 }
 
+/** Ein Helfer, standardmäßig zugeklappt: Auch bei vielen bleibt die Liste kurz. Jeder klappt für sich auf. */
 @Composable
-private fun HelferZeile(h: Helfer, macDa: Boolean?, oeffnen: () -> Unit) {
+private fun HelferEintrag(vm: AppViewModel, h: Helfer, macDa: Boolean?) {
     val f = LocalFarben.current
-    Column(Modifier.fillMaxWidth().clickable(onClick = oeffnen).padding(vertical = 9.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    var offen by rememberSaveable("helfer_offen_" + h.ort + h.kennung) { mutableStateOf(false) }
+    val nichtDa = h.ort == "mac" && h.einsatzbereit && macDa != true
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().clickable { offen = !offen }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(h.name, Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            val nichtDa = h.ort == "mac" && h.einsatzbereit && macDa != true
             Text(if (nichtDa) "Mac aus" else HelferZustand.text(h.zustand, h.aktiv), color = when {
                 nichtDa -> f.textLeise
                 h.einsatzbereit -> f.erfolg
@@ -139,13 +136,17 @@ private fun HelferZeile(h: Helfer, macDa: Boolean?, oeffnen: () -> Unit) {
                 h.zustand == HelferZustand.WARTET_AUF_FREIGABE -> f.primaer
                 else -> f.textLeise
             }, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            androidx.compose.material3.Icon(
+                if (offen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.padding(start = 4.dp),
+            )
         }
-        Text(h.zweck, color = f.textLeise, fontSize = 13.sp, maxLines = 2)
+        if (offen) Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) { HelferDetail(vm, h, macDa) }
     }
 }
 
 @Composable
-private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?, zurueck: () -> Unit) {
+private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?) {
     val f = LocalFarben.current
     val c = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
@@ -154,8 +155,7 @@ private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?, zurueck: 
         val r = Register.alle(c).filterIsInstance<HelferFaehigkeit>().first().verwalten(h.kennung, a)
         vm.meldung = r.text
     }
-    Knopf("Zurück zur Übersicht", Modifier.fillMaxWidth(), haupt = false, aktion = zurueck)
-    Bereich(h.name, aufklappbar = false) {
+    Column(Modifier.fillMaxWidth()) {
         val nichtDa = h.ort == "mac" && macDa != true
         Zeile("Zustand", HelferZustand.text(h.zustand, h.aktiv), if (h.einsatzbereit) f.erfolg else f.textLeise)
         if (nichtDa) Zeile("Mac", "Gerade nicht erreichbar", f.textLeise)
@@ -175,7 +175,7 @@ private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?, zurueck: 
         LangText("Letzte Prüfung", zeit + h.pruefung.optString("ergebnis", "keine"))
         if (h.review.has("befunde")) LangText("Review", "${h.review.optInt("befunde")} Befunde, ${h.review.optInt("kritisch_offen")} kritisch offen. ${h.review.optString("zusammenfassung")}")
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (h.zustand == HelferZustand.WARTET_AUF_FREIGABE && h.ort != "mac") {
             Text("Dieser Helfer möchte: ${h.rechte.alsText()}. Ohne deine Freigabe läuft er nicht.", color = f.text, fontSize = 14.sp)
             Knopf("Freigeben", Modifier.fillMaxWidth()) { HelferKatalog.freigeben(c, h.kennung); HelferAblauf.nachFreigabe(c, h.kennung) }
@@ -188,7 +188,7 @@ private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?, zurueck: 
                 val geteilt = HelferKatalog.geteilteKonten(c, h)
                 Text("Gelöscht werden Programm, alle Fassungen und der eigene Speicher dieses Helfers. Konten und Schlüssel bleiben erhalten" +
                     (if (geteilt.isEmpty()) "." else ", auch die von anderen Helfern mitgenutzten: ${geteilt.joinToString(", ")}.") + " Andere Helfer hängen nicht von diesem ab.", color = f.text, fontSize = 14.sp)
-                Knopf("Ja, endgültig löschen", Modifier.fillMaxWidth(), farbe = f.gefahr) { HelferKatalog.endgueltigLoeschen(c, h.kennung); loeschenFrage = false; zurueck() }
+                Knopf("Ja, endgültig löschen", Modifier.fillMaxWidth(), farbe = f.gefahr) { HelferKatalog.endgueltigLoeschen(c, h.kennung); loeschenFrage = false }
             }
         } else {
             Knopf(if (h.aktiv) "Deaktivieren" else "Aktivieren", Modifier.fillMaxWidth(), haupt = false) { aktion(if (h.aktiv) "deaktivieren" else "aktivieren") }
@@ -199,7 +199,7 @@ private fun HelferDetail(vm: AppViewModel, h: Helfer, macDa: Boolean?, zurueck: 
                 }
                 if (HelferKatalog.hatVorherigeFassung(c, h.kennung)) Knopf("Letzte geprüfte Fassung", Modifier.fillMaxWidth(), haupt = false) { aktion("rueckrollen") }
             }
-            Knopf("In den Papierkorb", Modifier.fillMaxWidth(), haupt = false) { aktion("papierkorb"); zurueck() }
+            Knopf("In den Papierkorb", Modifier.fillMaxWidth(), haupt = false) { aktion("papierkorb") }
         }
     }
 }
