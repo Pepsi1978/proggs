@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Großer Startbildschirm wie am Handy: Kugel und Begrüßung, Tagesauswertung, Schnell-Tags, unten die Blase mit Modell, Kosten und dem Knopf für den Live-Bildschirm.
-/// Die Zentrale bleibt daneben als Übersicht mit allen Karten; alles Weitere liegt unter Einstellungen.
+/// Großer Startbildschirm: Kugel und Begrüßung, Schnell-Tags, unten die Blase mit Modell, Kosten und dem Knopf für den Live-Bildschirm.
+/// Die Tagesauswertung steht nur in der Zentrale (die Daten werden hier schon vorgeladen); alles Weitere liegt unter Einstellungen.
 struct StartAnsicht: View {
     @State private var daten = ZentraleDaten.shared
     @State private var steuerung = AppSteuerung.shared
@@ -31,24 +31,6 @@ struct StartAnsicht: View {
                         }
                         Text(ZentraleAnsicht.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
                     }
-                    GlasKarte {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                KartenTitel(symbol: "sun.horizon.fill", titel: "Tagesauswertung")
-                                Spacer()
-                                if daten.laedt { ProgressView().controlSize(.small) }
-                                RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 30) { Task { await daten.laden(erzwingen: true) } }
-                            }
-                            if let a = daten.auswertung {
-                                MarkdownText(text: ZentraleAnsicht.anfang(a), groesse: 14).frame(maxWidth: .infinity, alignment: .leading)
-                                Button("Alles in der Zentrale ansehen") { steuerung.bereich = .zentrale }
-                                    .buttonStyle(.plain).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.haupt)
-                            } else {
-                                Text(daten.laedt ? "Lade deine Tagesauswertung …" : "Das Handy-Jarvis ist gerade nicht erreichbar.")
-                                    .font(.jarvis(14)).foregroundStyle(Farbe.text2)
-                            }
-                        }
-                    }
                 }
                 .padding(.horizontal, 64).padding(.bottom, 20)
                 .frame(maxWidth: 884)
@@ -61,7 +43,8 @@ struct StartAnsicht: View {
                     SchnellTag(titel: frage) { steuerung.gespraech = nil; steuerung.sende(frage) }
                 }
             }
-            .padding(.horizontal, 64).padding(.top, 10)
+            // Rund 3,5 cm Luft zur Eingabezeile.
+            .padding(.horizontal, 64).padding(.top, 10).padding(.bottom, 150)
             .frame(maxWidth: 980)
             .frame(maxWidth: .infinity)
             .clipped()
