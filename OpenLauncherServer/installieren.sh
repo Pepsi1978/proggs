@@ -56,7 +56,7 @@ G'
 [ -f "$ZUHAUSE/SK/Android/debug-shared.keystore" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 600 "$ZUHAUSE/SK/Android/debug-shared.keystore" "$ZUHAUSE/.android/debug.keystore"
 
 # Repo über einen eigenen Schreibschlüssel (Deploy-Key, gilt nur für dieses Repo). LFS-Dateien nur bei Bedarf holen.
-als 'mkdir -p ~/.ssh && chmod 700 ~/.ssh; [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -C jarvis-server -f ~/.ssh/id_ed25519; ssh-keyscan -q github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts'
+als 'mkdir -p ~/.ssh && chmod 700 ~/.ssh; [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -C jarvis-server -f ~/.ssh/id_ed25519; curl -fsSL https://api.github.com/meta | jq -r ".ssh_keys[]" | sed "s/^/github.com /" > ~/.ssh/known_hosts; chmod 600 ~/.ssh/known_hosts'
 als 'git config --global user.name "Jarvis Server"; git config --global user.email jarvis-server@users.noreply.github.com; git config --global pull.rebase true; git config --global init.defaultBranch main; git lfs install --skip-smudge >/dev/null'
 if [ ! -d "$REPO/.git" ]; then
   # ssh -T endet bei GitHub auch im Erfolgsfall mit Code 1: Nur die Meldung zählt.
