@@ -480,6 +480,7 @@
     {"versionCode": 476, "versionName": "1.8.465", "stand": "30.10.2026, 22:34 Uhr", "notiz": "Die Eingabeblase ist nach dem Review robuster: Die Tastatur öffnet zuverlässig, geht beim Gesprächswechsel zu, der Aufnahmestatus bleibt auch mit Text sichtbar und reiner Leerraum blockiert das Einklappen nicht mehr."},
     {"versionCode": 477, "versionName": "1.8.466", "stand": "31.10.2026, 09:40 Uhr", "notiz": "Die Ablage mit Prompts gleicht sich jetzt automatisch über den Server mit allen Jarvis-Versionen ab, jeder Eintrag zeigt seine Quelle, und der Sortierknopf ordnet auf Wunsch nach Quelle."},
     {"versionCode": 478, "versionName": "1.8.467", "stand": "31.10.2026, 10:08 Uhr", "notiz": "Der KI-Knopf behält bei Prompts und Antworten alle Aufgabentrenner „ ; “, und nach der KI-Verbesserung bleibt „Rückgängig“ stehen, statt beim Antippen des Textes zu verschwinden."},
-    {"versionCode": 479, "versionName": "1.8.468", "stand": "31.10.2026, 10:09 Uhr", "notiz": "Programmieraufträge können jetzt auch auf dem Hostinger-Server laufen, die Rechner-Reihenfolge kennt ihn, und das Fernwartungssymbol öffnet die neue Server-Konsole."}
+    {"versionCode": 479, "versionName": "1.8.468", "stand": "31.10.2026, 10:09 Uhr", "notiz": "Programmieraufträge können jetzt auch auf dem Hostinger-Server laufen, die Rechner-Reihenfolge kennt ihn, und das Fernwartungssymbol öffnet die neue Server-Konsole."},
+    {"versionCode": 480, "versionName": "1.8.469", "stand": "31.10.2026, 10:20 Uhr", "notiz": "Der Rechnerstatus nennt jetzt richtig, dass Sol 6.1 auch auf dem Hostinger-Server läuft."}
 ]
 }

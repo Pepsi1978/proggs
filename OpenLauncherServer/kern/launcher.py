@@ -39,7 +39,6 @@ MAX_ARBEITEND = 2
 MAX_OFFEN = 4
 ARBEITET_S = 180  # so lange nach der letzten Ausgabe gilt eine Sitzung als arbeitend
 UNTAETIG_ZU_S = 12 * 3600  # danach schließt der Launcher eine untätige CLI (länger wartet auch kein Warter auf Nachträge)
-SHELLS = ("bash", "sh", "pwsh", "zsh", "dash")
 
 
 def _lies(pfad: Path) -> str:
@@ -254,7 +253,9 @@ PROMPT=""
 """
 
 # Nach dem Ende bleibt die Sitzung als Shell offen, wie der Terminal-Tab am Mac. Die Konsole zeigt sie dann als „beendet“.
+# Die Merkdatei sagt der Konsole, dass die CLI beendet ist: tmux nennt auch während des Laufs „bash“ (Skript ohne Job-Steuerung).
 FUSS = """
+: > "$HOME/.openlauncher/sitzungen/{name}.fertig"
 echo
 echo "[OpenLauncher] Die CLI ist beendet. Diese Sitzung lässt sich in der Konsole schließen."
 exec bash -l
@@ -373,7 +374,7 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     kopf = KOPF.format(rechner=q(RECHNER), titel=q(titel), ordner=q(str(PROGGS)), prompt_datei=q(prompt_datei),
                        auftrag_id=f"export JARVIS_AUFTRAG_ID={q(nummer)}" if nummer else "")
     skript = SKRIPTE / f"start-{name}.sh"
-    _schreib(skript, kopf + rumpf + FUSS)
+    _schreib(skript, kopf + rumpf + FUSS.format(name=name))
     skript.chmod(0o700)
     _schreib(SITZUNGEN / f"{name}.json", json.dumps({"name": name, "titel": titel, "cli": cli, "modell": modell, "anbieter": anbieter, "effort": effort,
                                                      "profil": profil, "modus": modus, "auftrag": nummer, "beginn": int(time.time())}, ensure_ascii=False))
@@ -387,7 +388,7 @@ def befehl_starten(titel: str, befehl: str, cli: str = "") -> str:
     q = shlex.quote
     kopf = KOPF.format(rechner=q(RECHNER), titel=q(titel), ordner=q(str(PROGGS)), prompt_datei="''", auftrag_id="")
     skript = SKRIPTE / f"start-{name}.sh"
-    _schreib(skript, kopf + befehl + "\n" + FUSS)
+    _schreib(skript, kopf + befehl + "\n" + FUSS.format(name=name))
     skript.chmod(0o700)
     _schreib(SITZUNGEN / f"{name}.json", json.dumps({"name": name, "titel": titel, "cli": cli, "frei": True, "beginn": int(time.time())}, ensure_ascii=False))
     _tmux_starten(name, skript)
@@ -412,7 +413,7 @@ def sitzungen() -> list:
         except ValueError:
             meta = {}
         still = int(jetzt - aktiv)
-        stand = "beendet" if befehl in SHELLS and not meta.get("frei") else "arbeitet" if still < ARBEITET_S else "wartet"
+        stand = "beendet" if (SITZUNGEN / f"{name}.fertig").exists() else "arbeitet" if still < ARBEITET_S else "wartet"
         liste.append({**meta, "name": name, "titel": meta.get("titel") or name, "stand": stand, "still_s": still, "befehl": befehl,
                       "angezeigt": teile[3] != "0"})
     return sorted(liste, key=lambda s: -s.get("beginn", 0))
@@ -423,7 +424,7 @@ def schliessen(name: str) -> None:
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", name) or name == "basis":
         raise ValueError("Ungültiger Sitzungsname")
     subprocess.run(TMUX + ["kill-session", "-t", f"={name}"], capture_output=True, timeout=10)
-    for datei in (SITZUNGEN / f"{name}.json", SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt"):
+    for datei in (SITZUNGEN / f"{name}.json", SITZUNGEN / f"{name}.fertig", SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt"):
         datei.unlink(missing_ok=True)
 
 

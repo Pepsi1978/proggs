@@ -1,6 +1,14 @@
 # OpenLauncher Server: Bauplan
 
-Stand: 31.10.2026, 09:45 Uhr. Beraten mit Fable. Noch nichts davon ist gebaut.
+Stand: 31.10.2026. Beraten mit Fable. Gebaut, mit diesen Abweichungen vom ersten Plan:
+
+- **Android baut auch der Server** (JDK, SDK, Gradle gedeckelt) und installiert über den Tunnel: Franks Vorgabe, dass neue Versionen zuerst per adb kommen, wiegt schwerer als die knappe Leistung.
+- **APK-Update ohne Pull Request:** `android-cloud-build.yml` baut Pushes, deren Kommitter der Server ist. Der Skill `apk-update-cloud` wird dafür nicht gebraucht, und der Server braucht nur den Deploy-Key, kein `gh`-Token.
+- **Nicht angemeldet heißt nächstes Ziel:** Der Auftrag geht dann in die Cloud, statt zu warten.
+- **Reihenfolge per Ziehen** in der bestehenden Rechnerliste von Jarvis, der Server auch an erster oder zweiter Stelle.
+- **PowerShell 7.6.9** ist installiert und in der Konsole wählbar.
+
+Der Rest gilt wie unten beschrieben.
 
 ## Ziel
 

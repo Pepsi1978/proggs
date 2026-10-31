@@ -157,7 +157,7 @@ async def links(request: web.Request) -> web.Response:
     name = request.match_info["name"]
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", name):
         return web.json_response({"links": []})
-    aus = await _im_faden(lambda: subprocess.run(launcher.TMUX + ["capture-pane", "-p", "-J", "-S", "-200", "-t", f"={name}"],
+    aus = await _im_faden(lambda: subprocess.run(launcher.TMUX + ["capture-pane", "-p", "-J", "-S", "-200", "-t", f"={name}:"],
                                                  capture_output=True, text=True, timeout=5).stdout)
     # Die Anzeige umbricht auch ohne -J-Treffer, wenn die CLI selbst umbricht: zusammenhängende Zeilen zusätzlich verbunden prüfen.
     gefunden = LINK.findall(aus) + LINK.findall(re.sub(r"\n(?=[^\s])", "", aus))

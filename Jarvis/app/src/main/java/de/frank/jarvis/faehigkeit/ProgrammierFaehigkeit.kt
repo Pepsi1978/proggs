@@ -149,7 +149,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             !pcDa -> "Programmieraufträge gehen in die Cloud."
             erster?.optBoolean("da") == true && zweiter?.optBoolean("da") == true && naechster != erster.optString("rechner") ->
                 "Der nächste Auftrag ginge an $naechster: Der $ersterName fragt gerade nicht ab, deshalb springt der $zweiterName ein."
-            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft immer am Windows-PC."
+            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft am Windows-PC oder auf dem Hostinger-Server."
             else -> "Der nächste Auftrag ginge an $naechster."
         }
         val server = eintraege.firstOrNull { it.optString("rang") == "server" }
