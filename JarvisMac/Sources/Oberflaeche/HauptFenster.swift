@@ -243,8 +243,27 @@ struct SchwebeKnoepfe: View {
                     steuerung.nachtragUmschalten()
                 }
             }
-            SchwebeKnopf(symbol: "chevron.left.forwardslash.chevron.right", hilfe: "Neuer Programmierauftrag", leuchtet: steuerung.programmiererAktiv) {
+            SchwebeKnopf(symbol: "chevron.left.forwardslash.chevron.right", hilfe: "Neuer Programmierauftrag", leuchtet: steuerung.programmiererAktiv || steuerung.programmierVorwahlOffen) {
                 steuerung.programmiererUmschalten()
+            }
+            .overlay(alignment: .trailing) {
+                // Links neben dem Symbol, ohne den Stapel zu verschieben.
+                if steuerung.programmierVorwahlOffen {
+                    HStack(spacing: 8) {
+                        ForEach(Array(ProgrammierVorspann.modelle.enumerated()), id: \.element.id) { i, m in
+                            Button { steuerung.programmierVorwahl(m) } label: {
+                                Text(m.label).font(.jarvis(14)).fontWeight(.semibold).lineLimit(1)
+                                    .foregroundStyle(i == 0 ? Color.black : Color.white)
+                                    .padding(.horizontal, 14).frame(height: 38)
+                                    .background(Capsule().fill(i == 0 ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color(white: 0.2))))
+                                    .contentShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .fixedSize()
+                    .offset(x: -46)
+                }
             }
         }
         .alert("Gespräch löschen?", isPresented: Binding(get: { loeschenZiel != nil }, set: { if !$0 { loeschenZiel = nil } }), presenting: loeschenZiel) { g in

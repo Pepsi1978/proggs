@@ -519,6 +519,7 @@
     {"versionCode": 514, "versionName": "1.8.503", "stand": "31.10.2026, 19:56 Uhr", "notiz": "Anhänge gehen auch nach einer Rückfrage von Jarvis mit, erreichen nur die gemeinte Sitzung und werden schneller übertragen, weil schon vorhandene Dateien nicht erneut hochgeladen werden."},
     {"versionCode": 515, "versionName": "1.8.504", "stand": "31.10.2026, 20:00 Uhr", "notiz": "Interne Aufräumarbeit an der Prompt-Eingabe, für dich ändert sich an der Bedienung nichts."},
     {"versionCode": 516, "versionName": "1.8.505", "stand": "31.10.2026, 20:28 Uhr", "notiz": "In der Server-Konsole gibt es jetzt Kopieren und Einfügen für Terminal und Eingabefeld."},
-    {"versionCode": 517, "versionName": "1.8.506", "stand": "31.10.2026, 20:34 Uhr", "notiz": "Die Server-Konsole meldet jetzt, wenn Kopieren scheitert, und erkennt das Schließen der Tastatur zuverlässig."}
+    {"versionCode": 517, "versionName": "1.8.506", "stand": "31.10.2026, 20:34 Uhr", "notiz": "Die Server-Konsole meldet jetzt, wenn Kopieren scheitert, und erkennt das Schließen der Tastatur zuverlässig."},
+    {"versionCode": 518, "versionName": "1.8.507", "stand": "31.10.2026, 21:19 Uhr", "notiz": "Am Programmierbutton kannst du jetzt auch Kimi K3.1 Pro und Gemini 4 Argon wählen; beide starten über OpenLauncher mit Minimalprofil, Schnellmodus und Effort High."}
 ]
 }

@@ -130,6 +130,8 @@ final class AppSteuerung {
     // MARK: Programmierung und Nachtrag (Bedienlogik wie ProgrammierSchweber und AppViewModel am Handy)
 
     var programmiererAktiv: Bool { ProgrammierVorspann.hatAuftrag(eingabeText) }
+    var programmierVorwahlOffen = false
+    private var vorwahlFrist: Task<Void, Never>?
     var nachtragAktiv: Bool { ProgrammierVorspann.hatNachtrag(eingabeText) }
     var nachtragMoeglich: Bool { gespraech?.auftragId != nil }
 
@@ -140,8 +142,23 @@ final class AppSteuerung {
 
     /// Setzt den Vorspann vor den Text; ein zweiter Klick nimmt genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
     func programmiererUmschalten() {
-        if programmiererAktiv { eingabeText = ProgrammierVorspann.ohneAuftrag(eingabeText); return }
-        eingabeText = ProgrammierVorspann.mitAuftrag(ProgrammierVorspann.ohneNachtrag(eingabeText))
+        vorwahlFrist?.cancel()
+        if programmiererAktiv { programmierVorwahlOffen = false; eingabeText = ProgrammierVorspann.ohneAuftrag(eingabeText); return }
+        programmierVorwahlOffen.toggle()
+        // Vergessene Modellwahl schließt sich wie am Handy nach einer Minute.
+        if programmierVorwahlOffen {
+            vorwahlFrist = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(60))
+                if !Task.isCancelled { self?.programmierVorwahlOffen = false }
+            }
+        }
+    }
+
+    /// Knopf der Modellwahl: setzt den Einstieg mit diesem Modell vor den Text; gesendet wird erst von Frank.
+    func programmierVorwahl(_ modell: ProgrammierVorspann.Modell) {
+        vorwahlFrist?.cancel()
+        programmierVorwahlOffen = false
+        eingabeText = ProgrammierVorspann.mitAuftrag(ProgrammierVorspann.ohneNachtrag(eingabeText), vorspann: modell.vorspann)
         zurBlase()
     }
 

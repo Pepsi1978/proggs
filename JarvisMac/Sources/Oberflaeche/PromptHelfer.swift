@@ -19,7 +19,7 @@ enum AufgabenText {
         guard !n.isEmpty else { return basis }
         let b = ohneEndTrenner(basis)
         // Ein bloßer Vorspann ist keine Aufgabe: Das Gesagte gehört direkt dahinter.
-        if b == ProgrammierVorspann.auftrag || b == ProgrammierVorspann.nachtrag { return b + " " + n + trenner }
+        if ProgrammierVorspann.istBlosserEinstieg(b) { return b + " " + n + trenner }
         return (b.isEmpty ? "" : b + trenner) + n + trenner
     }
 
@@ -71,17 +71,52 @@ enum ProgrammierVorspann {
     static let auftrag = "Übergib bitte folgende Aufgabe an den Programmierer:"
     static let nachtrag = "Nachtrag:"
 
+    /// Die vier Modelle des Programmierknopfs, wie am Handy (ProgrammiererVorlage.kt). `handy` geht an `programmieren`, `mac` an `openlauncher_sitzung`.
+    struct Modell: Identifiable {
+        let label: String
+        let handy: [String: String]
+        let mac: [String: String]
+        var id: String { label }
+        var vorspann: String { "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell \(label):" }
+    }
+    private static let standard = ["effort": "high", "profil": "minimal", "modus": "schnell"]
+    static let modelle: [Modell] = [
+        Modell(label: "Opus 5.5", handy: ["modell": "opus"], mac: ["modell": "claude-opus-5-5[1m]", "cli": "claude"].merging(standard) { a, _ in a }),
+        Modell(label: "Sol 6.1", handy: ["modell": "sol"], mac: ["modell": "gpt-6.1-sol", "anbieter": "openai", "cli": "codex"].merging(standard) { a, _ in a }),
+        Modell(label: "Kimi K3.1 Pro", handy: ["modell": "Kimi K3.1 Pro", "cli": "opencode"].merging(standard) { a, _ in a },
+               mac: ["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"].merging(standard) { a, _ in a }),
+        Modell(label: "Gemini 4 Argon", handy: ["modell": "Gemini 4 Argon", "cli": "antigravity"].merging(standard) { a, _ in a },
+               mac: ["modell": "gemini-4-argon", "anbieter": "google", "cli": "antigravity"].merging(standard) { a, _ in a }),
+    ]
+    private static var alleAuftraege: [String] { [auftrag] + modelle.map(\.vorspann) }
+
+    /// Das per Knopf im Einstieg gewählte Modell; nil ohne Modell im Einstieg.
+    static func modell(in t: String) -> Modell? { let v = vorn(t); return modelle.first { v.hasPrefix($0.vorspann) } }
+    static func istBlosserEinstieg(_ t: String) -> Bool { alleAuftraege.contains(t) || t == nachtrag }
+
+    /// Der Knopf gilt verbindlich, auch gegen eine andere Angabe des Modells.
+    static func verbindlich(werkzeug: String, args: JSONObjekt, frage: String) -> JSONObjekt {
+        guard let m = modell(in: frage) else { return args }
+        var neu = args
+        switch werkzeug {
+        case "programmieren": m.handy.forEach { neu[$0.key] = $0.value }
+        case "openlauncher_sitzung": m.mac.forEach { neu[$0.key] = $0.value }
+        default: break
+        }
+        return neu
+    }
+
     private static func vorn(_ t: String) -> String { String(t.drop { $0.isWhitespace }) }
     private static func ohne(_ vorspann: String, _ t: String) -> String {
         let v = vorn(t)
         return v.hasPrefix(vorspann) ? vorn(String(v.dropFirst(vorspann.count))) : t
     }
 
-    static func hatAuftrag(_ t: String) -> Bool { vorn(t).hasPrefix(auftrag) }
+    static func hatAuftrag(_ t: String) -> Bool { let v = vorn(t); return alleAuftraege.contains { v.hasPrefix($0) } }
     static func hatNachtrag(_ t: String) -> Bool { vorn(t).hasPrefix(nachtrag) }
-    static func ohneAuftrag(_ t: String) -> String { ohne(auftrag, t) }
+    static func ohneAuftrag(_ t: String) -> String { let v = vorn(t); return alleAuftraege.first { v.hasPrefix($0) }.map { ohne($0, t) } ?? t }
     static func ohneNachtrag(_ t: String) -> String { ohne(nachtrag, t) }
-    static func mitAuftrag(_ t: String) -> String { "\(auftrag) \(t.trimmingCharacters(in: .whitespacesAndNewlines))" }
+    static func mitAuftrag(_ t: String, vorspann: String = auftrag) -> String { "\(vorspann) \(t.trimmingCharacters(in: .whitespacesAndNewlines))" }
     static func mitNachtrag(_ t: String) -> String { "\(nachtrag) \(vorn(t))" }
 }
 

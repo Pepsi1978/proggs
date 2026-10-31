@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -515,7 +516,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Eingeklappt verschwinden sie hier sofort; dann stehen sie allein über dem Pfeil (siehe unten), nie doppelt.
             if (!vm.schweberEingeklappt && (karte != null || vm.programmierVorwahlOffen)) {
-                OffeneAuswahl(vm, karte)
+                // Mehrzeilige Auswahl wächst nach oben, ohne den Symbolstapel zu verschieben.
+                Box(Modifier.height(SCHWEBE_GROESSE).wrapContentHeight(Alignment.Bottom, unbounded = true)) { OffeneAuswahl(vm, karte) }
                 Spacer(Modifier.width(8.dp))
             }
             SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }) {
@@ -570,12 +572,18 @@ private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
 @Composable
 private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String) -> Unit) {
     val f = LocalFarben.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        optionen.forEachIndexed { i, (wert, label) ->
-            Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
-                .background(if (i == 0) f.text else f.flaeche).antippen { aktion(wert) }
-                .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                Text(label, color = if (i == 0) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    // Je Zeile höchstens zwei Knöpfe: Vier Modelle passen sonst nicht auf das Frontdisplay. Der erste (Standard) bleibt hervorgehoben.
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        optionen.chunked(2).forEachIndexed { zeile, teil ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                teil.forEachIndexed { i, (wert, label) ->
+                    val erster = zeile == 0 && i == 0
+                    Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
+                        .background(if (erster) f.text else f.flaeche).antippen { aktion(wert) }
+                        .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (erster) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
             }
         }
     }

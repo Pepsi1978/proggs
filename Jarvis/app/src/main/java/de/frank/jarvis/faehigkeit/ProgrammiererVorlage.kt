@@ -11,14 +11,22 @@ object ProgrammiererVorlage {
     const val VORSPANN = "Übergib bitte folgende Aufgabe an den Programmierer:"
     const val VORSPANN_OPUS = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Opus 5.5:"
     const val VORSPANN_SOL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Sol 6.1:"
+    const val VORSPANN_KIMI = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Kimi K3.1 Pro:"
+    const val VORSPANN_ARGON = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Gemini 4 Argon:"
 
     const val MODELL_OPUS = "opus"
     const val MODELL_SOL = "sol"
+    const val MODELL_KIMI = "kimi"
+    const val MODELL_ARGON = "argon"
 
     /** Wert und Beschriftung der Modellknöpfe, für Vorwahl und Karte dieselbe Reihenfolge. */
-    val MODELL_OPTIONEN = listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
+    val MODELL_OPTIONEN = listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1", MODELL_KIMI to "Kimi K3.1 Pro", MODELL_ARGON to "Gemini 4 Argon")
 
-    private val ALLE = listOf(VORSPANN, VORSPANN_OPUS, VORSPANN_SOL)
+    /** Knopfmodelle, die über das OpenLauncher-Angebot starten (Minimalprofil, Schnellmodus, Effort High): Name im Angebot und CLI wie in OpenLauncher/model-defaults.json. */
+    fun katalogName(modell: String): String? = when (modell) { MODELL_KIMI -> "Kimi K3.1 Pro"; MODELL_ARGON -> "Gemini 4 Argon"; else -> null }
+    fun katalogCli(modell: String): String? = when (modell) { MODELL_KIMI -> "opencode"; MODELL_ARGON -> "antigravity"; else -> null }
+
+    private val ALLE = listOf(VORSPANN, VORSPANN_OPUS, VORSPANN_SOL, VORSPANN_KIMI, VORSPANN_ARGON)
 
     /** Der Einstieg, mit dem [text] beginnt; null, wenn keiner. */
     fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } }
@@ -26,10 +34,12 @@ object ProgrammiererVorlage {
     /** Beginnt [text] mit einem Auftragseinstieg? */
     fun aktiv(text: String): Boolean = vorspannIn(text) != null
 
-    /** Der Einstieg zum per Knopf gewählten [modell] ([MODELL_OPUS] oder [MODELL_SOL]); ein unbekannter Wert darf nie still zu einem verbindlichen Modell werden. */
+    /** Der Einstieg zum per Knopf gewählten [modell] (siehe [MODELL_OPTIONEN]); ein unbekannter Wert darf nie still zu einem verbindlichen Modell werden. */
     fun vorspannFuer(modell: String): String = when (modell) {
         MODELL_OPUS -> VORSPANN_OPUS
         MODELL_SOL -> VORSPANN_SOL
+        MODELL_KIMI -> VORSPANN_KIMI
+        MODELL_ARGON -> VORSPANN_ARGON
         else -> throw IllegalArgumentException("Unbekanntes Modell: $modell")
     }
 
@@ -37,6 +47,8 @@ object ProgrammiererVorlage {
     fun modell(text: String): String? = when (vorspannIn(text)) {
         VORSPANN_OPUS -> MODELL_OPUS
         VORSPANN_SOL -> MODELL_SOL
+        VORSPANN_KIMI -> MODELL_KIMI
+        VORSPANN_ARGON -> MODELL_ARGON
         else -> null
     }
 
@@ -67,6 +79,6 @@ object ProgrammiererVorlage {
 
     /** [HINWEIS] für [text]; steht das Modell im Einstieg, gilt es verbindlich und jede Frage danach entfällt. */
     fun hinweis(text: String): String = HINWEIS + (modell(text)?.let {
-        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=$it. Das geht der Regel oben zum genannten Modell vor: Frag nicht nach Opus oder Sol und nimm kein anderes Modell; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
+        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=$it. Das geht der Regel oben zum genannten Modell vor: Frag nicht nach dem Modell und nimm kein anderes; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
     }.orEmpty())
 }
