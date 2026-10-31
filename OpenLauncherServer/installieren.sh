@@ -84,7 +84,7 @@ fi
 install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
 if command -v ufw >/dev/null; then ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null; else echo "ufw fehlt: Port 8090 auf wg0 selbst freigeben"; fi
-systemctl enable --now jarvis-tmux.service jarvis-konsole.service jarvis-server-bruecke.service jarvis-clis.timer jarvis-repo.timer
+systemctl enable --now jarvis-tmux.service jarvis-konsole.service jarvis-server-bruecke.service jarvis-clis.timer jarvis-repo.timer jarvis-powershell.timer
 systemctl restart jarvis-konsole.service jarvis-server-bruecke.service
 # tmux nicht neu starten, das beendete alle Sitzungen: Die Konfiguration nur neu einlesen.
 sudo -u "$BENUTZER" -H tmux -L jarvis source-file "$REPO/OpenLauncherServer/systemd/tmux.conf" || true

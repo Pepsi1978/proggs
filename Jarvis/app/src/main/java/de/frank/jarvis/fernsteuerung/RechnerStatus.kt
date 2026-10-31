@@ -31,6 +31,19 @@ object RechnerStatus {
     private val ereignisse = mutableMapOf<Fernziel, Int>()
     private val sperre = Mutex()
 
+    private const val FRISCH_MS = 20_000L
+    @Volatile private var geprueftAm = 0L
+
+    /**
+     * Für das Antippen: Liegt die letzte Prüfung (alle 10 s, solange Jarvis vorn ist) keine [FRISCH_MS] zurück und hat jemand geantwortet, gilt ihr
+     * Ergebnis. Eine neue Prüfung wartet sonst jedes Mal auf den ausgeschalteten Rechner, gemessen 6 bis 9 Sekunden bis zum ersten Bild.
+     * Antwortet ein Rechner doch nicht, meldet das sein Bildschirm selbst.
+     */
+    suspend fun schnell(): List<Fernziel> {
+        val da = erreichbar.value
+        return if (!da.isNullOrEmpty() && System.currentTimeMillis() - geprueftAm < FRISCH_MS) da else pruefen()
+    }
+
     /** Prüft jetzt alle Rechner, aktualisiert das Symbol und liefert die Rechner, die gerade wirklich geantwortet haben. */
     suspend fun pruefen(): List<Fernziel> = sperre.withLock {
         val stand = Fernziel.entries.associateWith { ereignisse[it] ?: 0 }
@@ -56,6 +69,7 @@ object RechnerStatus {
             z.takeIf { bleibt }
         }
         erreichbar.value = anzeige
+        geprueftAm = System.currentTimeMillis()
         ergebnisse.filter { it.ok }.map { it.ziel }
     }
 

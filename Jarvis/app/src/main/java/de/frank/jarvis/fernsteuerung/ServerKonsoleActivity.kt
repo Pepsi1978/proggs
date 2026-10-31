@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -66,7 +67,10 @@ class ServerKonsoleActivity : ComponentActivity() {
             override fun handleOnBackPressed() = finish()
         })
         // POST statt Adresse: So steht der Zugang in keinem Verlauf; danach gilt ein davon abgeleitetes Cookie.
-        ansicht.postUrl("http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}/anmelden", ("token=" + Uri.encode(zugang)).toByteArray())
+        // Mit gültigem Cookie direkt zur Seite: spart einen Weg über den Tunnel.
+        val adresse = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
+        if (CookieManager.getInstance().getCookie(adresse)?.contains("konsole=") == true) ansicht.loadUrl("$adresse/")
+        else ansicht.postUrl("$adresse/anmelden", ("token=" + Uri.encode(zugang)).toByteArray())
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

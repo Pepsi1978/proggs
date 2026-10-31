@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import gzip
 import hashlib
 import hmac
 import json
@@ -123,10 +124,8 @@ async def starten(request: web.Request) -> web.Response:
     return web.json_response({"name": name})
 
 
-async def shell(request: web.Request) -> web.Response:
-    d = await request.json()
-    art = "pwsh" if d.get("art") == "pwsh" else "bash"
-    return web.json_response({"name": await _im_faden(launcher.befehl_starten, f"Terminal {art}", f"{art} -l" if art == "bash" else "pwsh")})
+async def shell(_: web.Request) -> web.Response:
+    return web.json_response({"name": await _im_faden(launcher.befehl_starten, "PowerShell", "pwsh -l")})
 
 
 STATUS_AUFFRISCHEN = {"zeit": 0.0, "laeuft": False}
@@ -234,6 +233,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     os.set_blocking(herr, False)
     warteschlange: asyncio.Queue = asyncio.Queue()
     angehalten = [False]
+    gerollt = [False]
 
     def lesbar():
         try:
@@ -278,7 +278,16 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
                 continue
             d = json.loads(nachricht.data)
             if d.get("t") == "i":
+                if gerollt[0]:
+                    gerollt[0] = False
+                    await _im_faden(launcher.verlauf_ende, name)
                 await schreiben(str(d.get("d", "")).encode("utf-8"))
+            elif d.get("t") == "s":
+                gerollt[0] = True
+                await _im_faden(launcher.rollen, name, max(-500, min(500, int(d.get("n", 0)))))
+            elif d.get("t") == "e":
+                gerollt[0] = False
+                await _im_faden(launcher.verlauf_ende, name)
             elif d.get("t") == "r":
                 fcntl.ioctl(herr, termios.TIOCSWINSZ, struct.pack("HHHH", max(int(d["r"]), 2), max(int(d["c"]), 2), 0, 0))
     finally:
@@ -310,9 +319,19 @@ async def neu_laden_bei_aenderung(_: web.Application):
     aufgabe.cancel()
 
 
-async def ohne_zwischenspeicher(_: web.Request, antwort: web.StreamResponse) -> None:
-    # Nach einem Vorspulen darf kein altes JavaScript gegen den neuen Server laufen.
-    antwort.headers["Cache-Control"] = "no-cache"
+async def ohne_zwischenspeicher(request: web.Request, antwort: web.StreamResponse) -> None:
+    # Nach einem Vorspulen darf kein altes JavaScript gegen den neuen Server laufen. xterm hat eine feste Version: Es kommt aus dem Speicher des
+    # Handys, ohne jede Rückfrage über den Tunnel.
+    fest = request.path in ("/static/xterm.js", "/static/xterm.css", "/static/addon-fit.js")
+    antwort.headers["Cache-Control"] = "max-age=2592000" if fest else "no-cache"
+
+
+def gepackt_ablegen() -> None:
+    """aiohttp liefert <datei>.gz von selbst aus: Das Terminal schrumpft von 290 auf rund 70 KB, das merkt man im Mobilfunk beim ersten Laden."""
+    for name in ("xterm.js", "xterm.css", "addon-fit.js", "app.js", "style.css"):
+        quelle, ziel = HIER / "static" / name, HIER / "static" / f"{name}.gz"
+        if not ziel.exists() or ziel.stat().st_mtime < quelle.stat().st_mtime:
+            ziel.write_bytes(gzip.compress(quelle.read_bytes(), 9))
 
 
 def anwendung() -> web.Application:
@@ -338,4 +357,5 @@ def anwendung() -> web.Application:
 
 
 if __name__ == "__main__":
+    gepackt_ablegen()
     web.run_app(anwendung(), host=ADRESSE, port=PORT, access_log=None, print=None)

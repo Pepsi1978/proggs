@@ -1,0 +1,9 @@
+[Unit]
+Description=PowerShell aktualisieren (nicht, solange eine PowerShell läuft)
+
+[Service]
+Type=oneshot
+Environment=DEBIAN_FRONTEND=noninteractive
+ExecStart=/bin/sh -c 'pgrep -x pwsh >/dev/null && exit 0; apt-get update -qq -o Dir::Etc::sourcelist=sources.list.d/microsoft-prod.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0 && apt-get install -y -qq --only-upgrade powershell'
+TimeoutStartSec=900
+Nice=10

@@ -291,6 +291,7 @@ FUSS = """
 : > "$HOME/.openlauncher/sitzungen/{name}.fertig"
 echo
 echo "[OpenLauncher] Die CLI ist beendet. Diese Sitzung lässt sich in der Konsole schließen."
+command -v pwsh >/dev/null && exec pwsh -l
 exec bash -l
 """
 
@@ -451,9 +452,36 @@ def _starten_oder_aufraeumen(name: str, skript: Path) -> None:
         raise
 
 
+def anzeige(name: str) -> str:
+    """Was die Sitzung gerade im Terminal zeigt."""
+    return subprocess.run(TMUX + ["capture-pane", "-p", "-t", f"={name}:"], capture_output=True, text=True, timeout=10).stdout
+
+
+def rollen(name: str, zeilen: int) -> None:
+    """Den Verlauf der Sitzung verschieben: zeilen > 0 zurück, < 0 vor. Oberflächen im Vollbild (OpenCode, Kimi) haben keinen tmux-Verlauf,
+    sie blättern selbst. Im Verlauf-Modus landen Eingaben sonst bei tmux, deshalb beendet verlauf_ende ihn vor jeder Eingabe."""
+    ziel = f"={pruefe_name(name)}:"
+    stand = subprocess.run(TMUX + ["display-message", "-p", "-t", ziel, "#{alternate_on} #{pane_in_mode}"], capture_output=True, text=True, timeout=5).stdout.split()
+    if len(stand) < 2:
+        return
+    if stand[0] == "1":
+        subprocess.run(TMUX + ["send-keys", "-t", ziel] + ["PageUp" if zeilen > 0 else "PageDown"] * max(1, abs(zeilen) // 10), capture_output=True, timeout=5)
+    elif zeilen > 0:
+        if stand[1] == "0":
+            subprocess.run(TMUX + ["copy-mode", "-e", "-t", ziel], capture_output=True, timeout=5)
+        subprocess.run(TMUX + ["send-keys", "-t", ziel, "-X", "-N", str(zeilen), "scroll-up"], capture_output=True, timeout=5)
+    elif stand[1] == "1":
+        subprocess.run(TMUX + ["send-keys", "-t", ziel, "-X", "-N", str(-zeilen), "scroll-down"], capture_output=True, timeout=5)
+
+
+def verlauf_ende(name: str) -> None:
+    ziel = f"={pruefe_name(name)}:"
+    subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
+
+
 def wartet_auf_anmeldung(name: str) -> bool:
     """Steht die frisch gestartete CLI am Anmeldedialog? Dann arbeitet sie nie los, auch wenn der Start gelungen aussieht."""
-    aus = subprocess.run(TMUX + ["capture-pane", "-p", "-t", f"={name}:"], capture_output=True, text=True, timeout=10).stdout
+    aus = anzeige(name)
     return bool(re.search(r"You are currently not signed in|Choose how you want to use Codex|Run /connect to add an AI provider", aus))
 
 

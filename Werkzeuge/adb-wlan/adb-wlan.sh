@@ -143,7 +143,7 @@ LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
 for _ in $(seq 1 90); do mkdir "$LOCK" 2>/dev/null && break; sleep 1; done
 aufraeumen() {
   # Log klein halten
-  if [ -f "$LOG" ] && [ "$(stat -f %z "$LOG" 2>/dev/null || echo 0)" -gt 524288 ]; then
+  if [ -f "$LOG" ] && [ "$(wc -c <"$LOG" 2>/dev/null | tr -d ' ' || echo 0)" -gt 524288 ]; then
     tail -n 2000 "$LOG" > "$LOG.tmp" && mv -f "$LOG.tmp" "$LOG"
   fi
   rmdir "$LOCK" 2>/dev/null

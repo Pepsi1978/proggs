@@ -21,4 +21,4 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 
 **Bei einer Neuinstallation:** Kimi fragt beim ersten Start „Trust this folder?“. Einmal von Hand bestätigen, gemerkt wird das in `~/.kimi-code/workspace-trust/`; sonst bleibt jeder Kimi-Auftrag dort stehen.
 
-**Version:** `VERSION`, Form `0.1.1`, angezeigt im Reiter System; pro Commit an diesem Ordner einmal erhöhen.
+**Version:** `VERSION`, Form `0.1.9`, angezeigt im Reiter System; pro Commit an diesem Ordner einmal erhöhen.

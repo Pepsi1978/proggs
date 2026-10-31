@@ -173,6 +173,39 @@ def _quittiere(quittung: dict, zugang: dict) -> None:
             time.sleep(2)
 
 
+def lange_befehle(gemeldet: dict, zugang: dict) -> None:
+    """Hooks melden erst, wenn ein Werkzeug fertig ist. Hier dauert ein Gradle-Bau Minuten, und in Jarvis stünde so lange nichts: Läuft ein Befehl länger
+    als eine Minute, sagt die Brücke einmal was (und alle 5 Minuten, dass er noch läuft)."""
+    for s in launcher.sitzungen():
+        nummer = s.get("auftrag")
+        if not nummer or s.get("cli") != "claude" or s["stand"] != "arbeitet":
+            continue
+        zeilen = launcher.anzeige(s["name"]).splitlines()
+        laufzeit = next((m for z in reversed(zeilen) if (m := re.search(r"\((?:(\d+)m )?(\d+)s · timeout", z))), None)
+        befehl = next((z.strip(" ●⎿") for z in reversed(zeilen) if re.match(r"\s*● \w+\(", z)), "")
+        if not laufzeit or not befehl:
+            continue
+        sekunden = int(laufzeit[1] or 0) * 60 + int(laufzeit[2])
+        schluessel = (nummer, befehl)
+        if sekunden < 60 or time.time() - gemeldet.get(schluessel, 0) < 300:
+            continue
+        gemeldet[schluessel] = time.time()
+        schritt = f"⏳ Läuft seit {sekunden // 60} min: {befehl[:150]}"
+        code, _ = rufe(f"https://{zugang['host']}/pc/meldung", zugang["token"], 20,
+                       {"auftrag_id": nummer, "stand": "laeuft", "schritt": schritt, "rechner": launcher.RECHNER, "hook_beginn": int(time.time())})
+        schreib(f"Fortschritt {nummer}: {schritt} -> {code}")
+
+
+def fortschritt_faden() -> None:
+    gemeldet: dict = {}
+    while True:
+        time.sleep(30)
+        try:
+            lange_befehle(gemeldet, lies_zugang())
+        except Exception as fehler:
+            schreib(f"Fortschritt: {fehler}")
+
+
 def relay_kennt_server(zugang: dict) -> bool:
     code, roh = rufe(f"https://{zugang['host']}/pc/faehigkeiten", zugang["token"], 20)
     return code == 200 and "server" in json.loads(roh.decode("utf-8")).get("raenge", [])
@@ -186,6 +219,7 @@ def main() -> int:
     except OSError:
         return 0
     schreib("Brücke gestartet")
+    threading.Thread(target=fortschritt_faden, daemon=True).start()
     dateien = [Path(__file__), Path(launcher.__file__)]
     stand = [d.stat().st_mtime for d in dateien]
     pause, geprueft = 2, False

@@ -251,7 +251,7 @@ private fun Leiste(vm: AppViewModel) {
             Modifier.weight(1f).height(50.dp).antippen {
                 start?.let { it.cancel(); start = null; return@antippen }
                 start = bereich.launch {
-                    val da = de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen()
+                    val da = de.frank.jarvis.fernsteuerung.RechnerStatus.schnell()
                     coroutineContext.ensureActive()
                     start = null
                     when {

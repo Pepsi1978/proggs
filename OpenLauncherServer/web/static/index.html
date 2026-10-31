@@ -20,8 +20,7 @@
     <p id="auslastung" class="leise"></p>
     <div id="liste"></div>
     <div class="zeile">
-      <button id="neu-bash">Neues Terminal</button>
-      <button id="neu-pwsh">PowerShell</button>
+      <button id="neu-pwsh">Neue PowerShell</button>
     </div>
   </section>
 
@@ -31,7 +30,7 @@
     <div id="xterm"></div>
     <div id="tasten">
       <button data-t="&#27;">Esc</button><button data-t="&#3;">Strg+C</button><button data-t="&#9;">Tab</button>
-      <button data-t="&#27;[A">↑</button><button data-t="&#27;[B">↓</button><button data-t="&#27;[D">←</button><button data-t="&#27;[C">→</button>
+      <button data-t="&#27;[A">↑</button><button data-t="&#27;[B">↓</button><button data-t="&#27;[D">←</button><button data-t="&#27;[C">→</button><button id="ende">⤓ Ende</button>
     </div>
     <form id="eingabe"><textarea id="text" rows="1" placeholder="Eingabe an die CLI" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea><button>Senden</button></form>
   </section>
@@ -54,8 +53,8 @@
   </section>
 </main>
 
-<script src="/static/xterm.js"></script>
-<script src="/static/addon-fit.js"></script>
-<script src="/static/app.js"></script>
+<script defer src="/static/xterm.js"></script>
+<script defer src="/static/addon-fit.js"></script>
+<script defer src="/static/app.js"></script>
 </body>
 </html>

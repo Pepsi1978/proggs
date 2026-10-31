@@ -72,8 +72,7 @@ async function schliesse(name) {
   await api("/api/schliessen", { name });
   ladeSitzungen();
 }
-$("neu-bash").addEventListener("click", async () => { const { name } = await api("/api/shell", { art: "bash" }); verbinde(name, "Terminal"); });
-$("neu-pwsh").addEventListener("click", async () => { const { name } = await api("/api/shell", { art: "pwsh" }); verbinde(name, "PowerShell"); });
+$("neu-pwsh").addEventListener("click", async () => { const { name } = await api("/api/shell", {}); verbinde(name, "PowerShell"); });
 
 // ---- Terminal
 let term = null, fit = null, ws = null, aktuell = null, neuVersuch = null;
@@ -85,6 +84,36 @@ function aufbauen() {
   term.open($("xterm"));
   term.onData((d) => schicke(d));
   new ResizeObserver(() => passen()).observe($("xterm"));
+  wischenEinrichten();
+}
+// Mit dem Finger scrollen: tmux hält den Verlauf, das Terminal auf dem Handy nicht. Wischen wird zu Zeilen, ein Schwung läuft kurz nach.
+function rollen(zeilen) { if (zeilen && ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "s", n: zeilen })); }
+function wischenEinrichten() {
+  const flaeche = $("xterm");
+  const zeilenHoehe = () => Math.max(8, flaeche.clientHeight / (term ? term.rows : 24));
+  let y = null, rest = 0, tempo = 0, zuletzt = 0, schwung = null;
+  flaeche.addEventListener("touchstart", (e) => { clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; zuletzt = e.timeStamp; }, { capture: true, passive: true });
+  flaeche.addEventListener("touchmove", (e) => {
+    if (y === null) return;
+    e.preventDefault(); e.stopPropagation();
+    const neu = e.touches[0].clientY, weg = neu - y;
+    tempo = weg / Math.max(1, e.timeStamp - zuletzt);
+    zuletzt = e.timeStamp; y = neu; rest += weg;
+    const zeilen = Math.trunc(rest / zeilenHoehe());
+    if (zeilen) { rest -= zeilen * zeilenHoehe(); rollen(zeilen); }
+  }, { capture: true, passive: false });
+  flaeche.addEventListener("touchend", () => {
+    y = null;
+    if (Math.abs(tempo) < 0.4) return;
+    schwung = setInterval(() => {
+      tempo *= 0.8;
+      const zeilen = Math.trunc(tempo * 60 / zeilenHoehe());
+      if (!zeilen) { clearInterval(schwung); return; }
+      rollen(zeilen);
+    }, 60);
+  }, { capture: true, passive: true });
+  flaeche.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); rollen(-Math.sign(e.deltaY) * 3); }, { capture: true, passive: false });
+  $("ende").addEventListener("click", () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" })); });
 }
 function schicke(d) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d })); }
 function passen() {
@@ -126,7 +155,7 @@ function aufmachen() {
   };
 }
 zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen").textContent = "Sitzung schließen"; schliesse(n); zeige("sitzungen"); } });
-document.querySelectorAll("#tasten button").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
+document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("text");

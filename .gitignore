@@ -77,3 +77,6 @@ Experimente/local.properties
 /_dbtmp/
 # Laufende OpenLauncher-Profil-Sperren enthalten Zugangsdaten
 OpenLauncher/Profiles/**/*.lock/
+
+# OpenLauncher Server: gepackte Fassungen entstehen beim Start der Konsole
+OpenLauncherServer/web/static/*.gz
