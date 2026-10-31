@@ -457,8 +457,11 @@ def wartet_auf_anmeldung(name: str) -> bool:
 
 
 def befehl_starten(titel: str, befehl: str, cli: str = "") -> str:
-    """Eine freie Sitzung (Shell, Anmeldung): gleiche Umgebung wie die CLIs, aber ohne Profil."""
+    """Eine freie Sitzung (Shell, Anmeldung): gleiche Umgebung wie die CLIs. Wer hier claude oder codex aufruft, landet in der Anmeldung des
+    Minimal-Profils; sonst hieße es dort „nicht angemeldet“, obwohl der Login gilt."""
     name = _sitzungsname(titel)
+    claude_vorbereiten("minimal", "schnell")
+    befehl = f"export CLAUDE_CONFIG_DIR={shlex.quote(str(claude_ordner('minimal')))} CODEX_HOME={shlex.quote(str(codex_zuhause()))}\n{befehl}"
     q = shlex.quote
     kopf = KOPF.format(rechner=q(RECHNER), name=q(name), pfad=_pfad(), titel=q(titel), ordner=q(str(PROGGS)), prompt_datei="''", auftrag_id="")
     skript = SKRIPTE / f"start-{name}.sh"

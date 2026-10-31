@@ -18,6 +18,7 @@ import struct
 import subprocess
 import sys
 import termios
+import time
 from pathlib import Path
 
 from aiohttp import WSMsgType, web
@@ -127,7 +128,23 @@ async def shell(request: web.Request) -> web.Response:
     return web.json_response({"name": await _im_faden(launcher.befehl_starten, f"Terminal {art}", f"{art} -l" if art == "bash" else "pwsh")})
 
 
-async def system(_: web.Request) -> web.Response:
+STATUS_AUFFRISCHEN = {"zeit": 0.0, "laeuft": False}
+
+
+async def _status_auffrischen() -> None:
+    """Anmeldestände frisch prüfen, höchstens alle 20 s: Sonst zeigte der Reiter bis zum nächsten Update-Lauf „nicht angemeldet“, obwohl der Login gelang."""
+    try:
+        await _im_faden(clis.status_schreiben, False)
+    finally:
+        STATUS_AUFFRISCHEN.update(zeit=time.monotonic(), laeuft=False)
+
+
+async def system(request: web.Request) -> web.Response:
+    if not STATUS_AUFFRISCHEN["laeuft"] and time.monotonic() - STATUS_AUFFRISCHEN["zeit"] > 20:
+        STATUS_AUFFRISCHEN["laeuft"] = True
+        request.app["aufgaben"].add(asyncio.create_task(_status_auffrischen()))
+        request.app["aufgaben"] = {a for a in request.app["aufgaben"] if not a.done()}
+
     def lesen():
         try:
             daten = json.loads(clis.STATUS.read_text("utf-8"))
@@ -277,6 +294,7 @@ async def ohne_zwischenspeicher(_: web.Request, antwort: web.StreamResponse) -> 
 
 def anwendung() -> web.Application:
     a = web.Application(middlewares=[schutz])
+    a["aufgaben"] = set()
     a.on_response_prepare.append(ohne_zwischenspeicher)
     a.cleanup_ctx.append(neu_laden_bei_aenderung)
     a.router.add_get("/ping", ping)

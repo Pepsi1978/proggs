@@ -25,7 +25,19 @@ function zeige(name) {
 document.querySelectorAll("#reiter button").forEach((b) => b.addEventListener("click", () => zeige(b.dataset.seite)));
 
 // ---- Sitzungen
+// Zweimal tippen statt confirm(): Die WebView in Jarvis lehnt JavaScript-Dialoge ohne eigene Behandlung still ab.
+let scharf = null;
+function zweimal(knopf, aktion) {
+  knopf.addEventListener("click", () => {
+    if (scharf === knopf) { scharf = null; aktion(); return; }
+    const text = knopf.textContent;
+    scharf = knopf;
+    knopf.textContent = "Wirklich beenden?";
+    setTimeout(() => { if (scharf === knopf) { scharf = null; knopf.textContent = text; } }, 4000);
+  });
+}
 async function ladeSitzungen() {
+  if (scharf) return;
   let daten;
   try { daten = await api("/api/sitzungen"); } catch (f) { $("auslastung").textContent = f.message; return; }
   $("auslastung").textContent = daten.belegt ? "Der Server ist ausgelastet: Neue Jarvis-Aufträge gehen an den nächsten Rechner." : "";
@@ -48,7 +60,8 @@ async function ladeSitzungen() {
     const oeffnen = element("button", "", "Öffnen");
     oeffnen.addEventListener("click", () => verbinde(s.name, s.titel));
     const zu = element("button", "gefahr", "Schließen");
-    zu.addEventListener("click", () => { if (s.stand === "beendet" || confirm(`„${s.titel}“ wirklich beenden? Nicht gepushte Arbeit geht verloren.`)) schliesse(s.name); });
+    if (s.stand === "beendet") zu.addEventListener("click", () => schliesse(s.name));
+    else zweimal(zu, () => schliesse(s.name));
     aktionen.append(oeffnen, zu);
     karte.append(aktionen);
     liste.append(karte);
@@ -112,7 +125,7 @@ function aufmachen() {
     neuVersuch = setTimeout(aufmachen, 2000);
   };
 }
-$("schliessen").addEventListener("click", () => { if (aktuell && confirm("Sitzung wirklich beenden? Nicht gepushte Arbeit geht verloren.")) { const n = aktuell; schliesse(n); zeige("sitzungen"); } });
+zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen").textContent = "Sitzung schließen"; schliesse(n); zeige("sitzungen"); } });
 document.querySelectorAll("#tasten button").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -213,4 +226,4 @@ $("update").addEventListener("click", async () => { const { name } = await api("
 window.addEventListener("unhandledrejection", (e) => { const m = $("auslastung"); m.textContent = `Fehler: ${e.reason && e.reason.message || e.reason}`; zeige("sitzungen"); });
 ladeSitzungen();
 ladeKatalog();
-setInterval(() => { if (seite === "sitzungen") ladeSitzungen(); else if (seite === "terminal") ladeLinks(); }, 4000);
+setInterval(() => { if (seite === "sitzungen") ladeSitzungen(); else if (seite === "terminal") ladeLinks(); else if (seite === "system") ladeSystem(); }, 4000);
