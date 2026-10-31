@@ -12,21 +12,28 @@ object ProgrammiererVorlage {
     const val VORSPANN_OPUS = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Opus 5.5:"
     const val VORSPANN_SOL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Sol 6.1:"
 
+    const val MODELL_OPUS = "opus"
+    const val MODELL_SOL = "sol"
+
     private val ALLE = listOf(VORSPANN, VORSPANN_OPUS, VORSPANN_SOL)
 
     /** Der Einstieg, mit dem [text] beginnt; null, wenn keiner. */
-    private fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } }
+    fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } }
 
     /** Beginnt [text] mit einem Auftragseinstieg? */
     fun aktiv(text: String): Boolean = vorspannIn(text) != null
 
-    /** Der Einstieg zum per Knopf gewählten [modell] (ProgrammierFaehigkeit.MODELL_OPUS oder MODELL_SOL). */
-    fun vorspannFuer(modell: String): String = if (modell == ProgrammierFaehigkeit.MODELL_SOL) VORSPANN_SOL else VORSPANN_OPUS
+    /** Der Einstieg zum per Knopf gewählten [modell] ([MODELL_OPUS] oder [MODELL_SOL]); ein unbekannter Wert darf nie still zu einem verbindlichen Modell werden. */
+    fun vorspannFuer(modell: String): String = when (modell) {
+        MODELL_OPUS -> VORSPANN_OPUS
+        MODELL_SOL -> VORSPANN_SOL
+        else -> throw IllegalArgumentException("Unbekanntes Modell: $modell")
+    }
 
     /** Das verbindlich gewählte Modell aus dem Einstieg von [text]; null ohne Modell im Einstieg. */
     fun modell(text: String): String? = when (vorspannIn(text)) {
-        VORSPANN_OPUS -> ProgrammierFaehigkeit.MODELL_OPUS
-        VORSPANN_SOL -> ProgrammierFaehigkeit.MODELL_SOL
+        VORSPANN_OPUS -> MODELL_OPUS
+        VORSPANN_SOL -> MODELL_SOL
         else -> null
     }
 
@@ -57,6 +64,6 @@ object ProgrammiererVorlage {
 
     /** [HINWEIS] für [text]; steht das Modell im Einstieg, gilt es verbindlich und jede Frage danach entfällt. */
     fun hinweis(text: String): String = HINWEIS + (modell(text)?.let {
-        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=$it. Frag nicht nach Opus oder Sol und nimm kein anderes Modell.)"
+        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=$it. Das geht der Regel oben zum genannten Modell vor: Frag nicht nach Opus oder Sol und nimm kein anderes Modell; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
     }.orEmpty())
 }

@@ -200,18 +200,20 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         LaunchedEffect(vm.entwurf) { if (feld.text != vm.entwurf) feld = TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length)) }
         val fokus = remember { FocusRequester() }
         val tastatur = LocalSoftwareKeyboardController.current
-        LaunchedEffect(vm.entwurfFokus) {
-            if (!vm.entwurfFokus) return@LaunchedEffect
+        // Nur vom Tastaturbutton gesetzt: fokussiert das Feld einmal (Cursor am Ende) und setzt sich zurück.
+        var tastaturWunsch by remember { mutableStateOf(false) }
+        LaunchedEffect(tastaturWunsch) {
+            if (!tastaturWunsch) return@LaunchedEffect
             // Erst am Ende zurücksetzen: Der Wert ist der Schlüssel dieses Effekts, früher zurückgesetzt bräche er sich beim Warten selbst ab.
             try {
                 // Eingeklappt gibt es kein Feld zum Fokussieren.
                 if (vm.eingabeKompakt) return@LaunchedEffect
-                // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
+                // Das Feld erscheint nach dem Aufklappen erst im nächsten Bild: einige Male versuchen, die Tastatur erst nach Erfolg.
                 repeat(10) {
                     delay(80)
                     if (runCatching { fokus.requestFocus() }.isSuccess) { tastatur?.show(); return@LaunchedEffect }
                 }
-            } finally { vm.entwurfFokus = false }
+            } finally { tastaturWunsch = false }
         }
         val fokusVerwalter = LocalFocusManager.current
         var feldFokus by remember { mutableStateOf(false) }
@@ -286,12 +288,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(4.dp))
             // Frank spricht fast alles ein: Die Tastatur kommt nie von selbst, nur über diesen Knopf zwischen Modell und Mikrofon; nochmal tippen schließt sie.
-            val tastaturOffen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-            Box(Modifier.size(36.dp).clip(CircleShape).antippen {
-                if (tastaturOffen) { tastatur?.hide(); fokusVerwalter.clearFocus() } else { vm.eingabeKompakt = false; vm.entwurfFokus = true }
-            }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Keyboard, if (tastaturOffen) "Tastatur schließen" else "Tastatur öffnen", tint = if (tastaturOffen) f.primaer else f.text, modifier = Modifier.size(22.dp))
-            }
+            TastaturKnopf(feldFokus, oeffnen = { vm.eingabeKompakt = false; tastaturWunsch = true }, schliessen = { tastatur?.hide(); fokusVerwalter.clearFocus() })
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(if (vm.nimmtAuf) f.gefahr else Color.Transparent).antippen { vm.diktatTippen() },
@@ -385,6 +382,19 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Öffnet und schließt die Tastatur. Als offen gilt auch ein fokussiertes Feld, denn eine schwebende Tastatur meldet keinen Abstand unten.
+ * Eigenes Composable, damit nicht bei jedem Animationsbild der Tastatur die ganze Eingabeblase neu zusammengesetzt wird.
+ */
+@Composable
+private fun TastaturKnopf(feldFokus: Boolean, oeffnen: () -> Unit, schliessen: () -> Unit) {
+    val f = LocalFarben.current
+    val offen = WindowInsets.ime.getBottom(LocalDensity.current) > 0 || feldFokus
+    Box(Modifier.size(40.dp).clip(CircleShape).antippen { if (offen) schliessen() else oeffnen() }, contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Keyboard, if (offen) "Tastatur schließen" else "Tastatur öffnen", tint = if (offen) f.primaer else f.text, modifier = Modifier.size(22.dp))
+    }
+}
+
 /** Größe der schwebenden Symbole und ihr Abstand untereinander; unter dem Stapel bleibt eine freie Bubble Platz. */
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
@@ -426,6 +436,10 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val karte = if (vm.entwurf.isNotBlank()) null else vm.gespraech.lastOrNull { n ->
         n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
             de.frank.jarvis.data.Gespraeche.wahlId(n.kontext).let { id -> id in frisch && stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN }
+    }
+    // Vergessene Modellwahl: Sie soll nicht dauerhaft eine spätere Karte verdecken.
+    LaunchedEffect(vm.programmierVorwahlOffen) {
+        if (vm.programmierVorwahlOffen) { delay(60_000); vm.programmierVorwahlSchliessen() }
     }
     Column(modifier, horizontalAlignment = Alignment.End) {
         // Eingeklappt verschwindet der ganze Stapel nach unten in den Pfeil; die Liste behält ihren Abstand, der Chat springt nicht.
@@ -495,9 +509,9 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Eingeklappt verschwinden sie hier sofort; dann stehen sie allein über dem Pfeil (siehe unten), nie doppelt.
-            if (!vm.schweberEingeklappt) {
-                if (vm.programmierVorwahlOffen) VorwahlKnoepfe(vm) else karte?.let { WahlKnoepfe(vm, it) }
-                if (vm.programmierVorwahlOffen || karte != null) Spacer(Modifier.width(8.dp))
+            if (!vm.schweberEingeklappt && (karte != null || vm.programmierVorwahlOffen)) {
+                OffeneAuswahl(vm, karte)
+                Spacer(Modifier.width(8.dp))
             }
             SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv || vm.programmierVorwahlOffen, { vm.programmiererTippen() }) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
@@ -512,7 +526,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             enter = androidx.compose.animation.fadeIn(tween(150, delayMillis = 150)),
             exit = androidx.compose.animation.ExitTransition.None,
         ) {
-            if (vm.programmierVorwahlOffen) VorwahlKnoepfe(vm) else karte?.let { WahlKnoepfe(vm, it) }
+            OffeneAuswahl(vm, karte)
         }
         // Unter „Programmierer“ in der freien Bubble: Pfeil ohne Kreis und Grund, grau wie der Papierkorb. Nach unten = einklappen,
         // nach oben = wieder aufklappen. Er bleibt an seiner Stelle, die übrigen Symbole stehen ausgeklappt so hoch wie früher.
@@ -541,10 +555,11 @@ private fun WahlKnoepfe(vm: AppViewModel, karte: Nachricht) {
     AuswahlKnoepfe(wahlOptionen(karte.kontext)) { vm.programmierModell(id, it) }
 }
 
-/** Die Modellwahl direkt nach dem Antippen des Programmierbuttons, noch vor dem Diktat. */
+/** Was gerade zur Wahl steht: die Modellwahl des Programmierbuttons (gleiche Reihenfolge wie auf der Karte) oder die Knöpfe der offenen Karte. */
 @Composable
-private fun VorwahlKnoepfe(vm: AppViewModel) {
-    AuswahlKnoepfe(listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5")) { vm.programmierVorwahl(it) }
+private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
+    if (vm.programmierVorwahlOffen) AuswahlKnoepfe(wahlOptionen("")) { vm.programmierVorwahl(it) }
+    else karte?.let { WahlKnoepfe(vm, it) }
 }
 
 @Composable

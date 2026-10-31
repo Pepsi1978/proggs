@@ -373,11 +373,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + de.frank.jarvis.faehigkeit.ProgrammierChat.AuftragsAnhaenge(anhaenge) + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
-                val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
-                val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
+                // Ein Programmierauftrag muss die Dateien nicht erst durchs Modell schicken (kostet Zeit und Tokens): Sie gehen direkt an die Sitzung.
+                val programmierer = de.frank.jarvis.faehigkeit.ProgrammiererVorlage.aktiv(text)
+                val beilage = if (anhaenge.isEmpty() || programmierer) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
+                val hinweisAnhaenge = if (anhaenge.isEmpty()) "" else "\n\n(Franks Anhänge: " + anhaenge.joinToString(", ") { it.name } +
+                    ". Mit programmieren oder programmier_nachtrag gehen sie von selbst vollständig an die Sitzung; beschreibe sie dort nicht und nenne keine Pfade.)"
+                val auftrag = text + beilage?.text.orEmpty() + hinweisAnhaenge + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
                 // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 30 Minuten, also mehr als die 20 Minuten bei 100 Schritten).
                 val schritte = einstellungen.schrittlimit
                 val zeitlimit = (if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L))
@@ -899,9 +903,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun anhangWeg(a: de.frank.jarvis.data.Anhang) { anhaenge.remove(a); runCatching { a.datei.delete() } }
 
-    /** Vom Tastaturbutton gesetzt, dem einzigen Weg zur Tastatur außer dem Tipp ins Feld: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
-    var entwurfFokus by mutableStateOf(false)
-
     /**
      * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
      * ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein. Steht Text im Entwurf, ist sie immer offen, egal woher er kommt:
@@ -919,14 +920,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var tastaturWeg by mutableStateOf(0); private set
 
     /**
-     * „Programmierer“ und „Nachtrag“ leuchten genau dann grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren);
+     * „Programmierer“ und „Nachtrag“ leuchten grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren), „Programmierer“ auch bei offener Modellwahl;
      * Abschicken oder erneutes Antippen nimmt ihn heraus, dann sind sie wieder durchsichtig. „Neue Session“ leuchtet nach dem Antippen.
      */
     val programmiererAktiv: Boolean get() = ProgrammiererVorlage.aktiv(entwurf)
     val nachtragAktiv: Boolean get() = entwurf.trimStart().startsWith(NACHTRAG_VORSPANN)
     var neueSessionAktiv by mutableStateOf(false); private set
 
-    private fun knoepfeAus() { neueSessionAktiv = false }
+    private fun knoepfeAus() { neueSessionAktiv = false; programmierVorwahlOffen = false }
 
     /** Nimmt genau „Nachtrag:“ vorn wieder heraus; Getipptes dahinter bleibt unverändert. */
     private fun ohneNachtragVorspann(text: String) =
@@ -945,38 +946,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         neueSessionBlitz++
     }
 
-    /** Nach dem Antippen des Programmierbuttons stehen die Knöpfe „Sol 6.1“ und „Opus 5.5“ da, noch vor dem Diktat. */
+    /** Nach dem Antippen des Programmierbuttons stehen die Knöpfe der Modellwahl da, noch vor dem Diktat. */
     var programmierVorwahlOffen by mutableStateOf(false); private set
 
-    /** Nimmt den Auftragseinstieg wieder aus dem Entwurf, Getipptes dahinter bleibt. */
-    private fun programmiererEntfernen() {
+    fun programmierVorwahlSchliessen() { programmierVorwahlOffen = false }
+
+    /** Programmierbutton (Schwebesymbol und Plus-Menü): öffnet oder schließt die Modellwahl; steht der Einstieg schon im Entwurf, nimmt er ihn heraus. */
+    fun programmiererTippen() {
+        if (!programmiererAktiv) { programmierVorwahlOffen = !programmierVorwahlOffen; return }
         entwurf = ProgrammiererVorlage.entfernen(entwurf)
         if (sitzungId == null) sitzungProgrammierung = false
     }
 
-    /** Programmierbutton (Schwebesymbol und Plus-Menü): öffnet oder schließt die Modellwahl; steht der Einstieg schon im Entwurf, nimmt er ihn heraus. */
-    fun programmiererTippen() {
-        if (programmiererAktiv) programmiererEntfernen() else programmierVorwahlOffen = !programmierVorwahlOffen
-    }
-
-    /** Knopf „Sol 6.1“ oder „Opus 5.5“: setzt den Einstieg mit diesem Modell ein. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
+    /** Knopf der Modellwahl: setzt den Einstieg mit diesem Modell ein. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
     fun programmierVorwahl(modell: String) {
         programmierVorwahlOffen = false
-        if (sitzungId == null) sitzungProgrammierung = true
-        entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf), ProgrammiererVorlage.vorspannFuer(modell))
+        einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell))
         tastaturWeg++
     }
 
-    /**
-     * Senden-Knopf eines Prompts: Vorspann ohne Modell in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil.
-     * Steht er schon drin, nimmt ein erneutes Aufrufen genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
-     */
-    fun programmiererEinsetzen() {
-        if (programmiererAktiv) { programmiererEntfernen(); return }
+    /** [vorspann] in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. Ein „Nachtrag:“ vorn weicht ihm. Die Blase klappt mit dem Text von selbst auf. */
+    private fun einstiegSetzen(vorspann: String) {
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
-        entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf))
-        // Die Blase klappt mit dem Text von selbst auf und zeigt ihn; die Tastatur bleibt zu.
+        entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf), vorspann)
     }
 
     /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
@@ -999,23 +992,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun nachtragSenden() {
         val id = sitzungId ?: return
         if (nimmtAuf || schreibtMit) return
-        val text = DiktatTrenner.ohneSchluss(entwurf).removePrefix(NACHTRAG_VORSPANN).trim()
+        val anh = anhaenge.toList()
+        val text = DiktatTrenner.ohneSchluss(entwurf).removePrefix(NACHTRAG_VORSPANN).trim().ifEmpty { if (anh.isNotEmpty()) "Siehe die Anhänge." else "" }
         if (text.isEmpty()) { meldung = "Bitte den Nachtrag hinter dem Doppelpunkt ergänzen."; return }
         val roh = entwurf
         entwurf = ""
+        anhaenge.clear()
         entwurfDiktiert = false
         knoepfeAus()
-        gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text")
+        gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text", anhaenge = anh.map { it.pfad })
         sitzungSichern()
         eingabeKompakt = true
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
-            val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
+            val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text, anh) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
                 .getOrElse { de.frank.jarvis.faehigkeit.Ergebnis(it.message ?: "Der Nachtrag ging nicht raus.", fehler = true) }
             // Die Annahme steht schon unten im Gespräch; oben erscheint nur ein Fehler, und nur dessen erster Satz (der Rest richtet sich ans Modell).
             if (ergebnis.fehler) {
                 meldung = ergebnis.text.substringBefore(". ").trimEnd('.') + "."
                 if (entwurf.isEmpty()) entwurf = roh
+                if (anhaenge.isEmpty()) anhaenge.addAll(anh)
             }
         }
     }
@@ -1058,7 +1054,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val anh = anhaenge.toList()
         if (text.isBlank() && anh.isEmpty()) return
         // Mit „Nachtrag:“ vorn (Plus-Menü „+ Nachtrag“) im Programmiergespräch: direkt als Nachtrag in die Sitzung.
-        if (anh.isEmpty() && nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragSenden(); return }
+        if (nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragSenden(); return }
         if (denkt) return
         // Kam Text ins Feld über das Diktier-Mikrofon, wird die erste Antwort darauf vorgelesen (Einstellung).
         val diktiert = entwurfDiktiert
@@ -1941,7 +1937,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Alte Anhänge gehören nicht zum Prompt und gingen sonst unbemerkt mit in die neue Session.
         anhaenge.toList().forEach { anhangWeg(it) }
         entwurf = p.text.trim()
-        programmiererEinsetzen()
+        // Beginnt der Prompt schon mit einem Einstieg (auch mit Modell), bleibt dieser stehen.
+        einstiegSetzen(ProgrammiererVorlage.vorspannIn(entwurf) ?: ProgrammiererVorlage.VORSPANN)
         reiter = Reiter.JARVIS
         promptLoeschenFrage = p
     }
@@ -2931,7 +2928,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraechLeeren()
         eingabeKompakt = true
         tastaturWeg++
-        programmierVorwahlOffen = false
         knoepfeAus()
     }
 
@@ -3059,7 +3055,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeVerwerfen()
         eingabeKompakt = true
         tastaturWeg++
-        programmierVorwahlOffen = false
         knoepfeAus()
         viewModelScope.launch { sitzungLaden(id) }
     }
