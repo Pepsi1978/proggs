@@ -6,7 +6,6 @@ const api = async (pfad, daten) => {
   if (!antwort.ok) throw new Error(inhalt.fehler || `HTTP ${antwort.status}`);
   return inhalt;
 };
-const STAND = { arbeitet: "arbeitet", wartet: "wartet", beendet: "beendet" };
 const CLI_NAME = { claude: "Claude Code", codex: "Codex CLI", opencode: "OpenCode", kimi: "Kimi Code", antigravity: "Antigravity CLI" };
 const MODUS_NAME = { frei: "Freimodus", schnell: "Schnellmodus", normal: "Normalmodus", gruendlich: "Gründlichkeitsmodus" };
 const PROFIL_NAME = { minimal: "Minimal", standard: "Standard", strict: "Strikt" };
@@ -38,7 +37,7 @@ async function ladeSitzungen() {
     karte.append(element("h3", "", s.titel));
     const zeile = element("div", "leise");
     zeile.append(element("span", `punkt ${s.stand}`));
-    const angaben = [STAND[s.stand] || s.stand];
+    const angaben = [s.stand];
     if (s.stand !== "arbeitet") angaben.push(`seit ${dauer(s.still_s)} still`);
     if (s.modell) angaben.push(s.modell);
     if (s.effort) angaben.push(s.effort);
@@ -49,7 +48,7 @@ async function ladeSitzungen() {
     const oeffnen = element("button", "", "Öffnen");
     oeffnen.addEventListener("click", () => verbinde(s.name, s.titel));
     const zu = element("button", "gefahr", "Schließen");
-    zu.addEventListener("click", () => schliesse(s.name));
+    zu.addEventListener("click", () => { if (s.stand === "beendet" || confirm(`„${s.titel}“ wirklich beenden? Nicht gepushte Arbeit geht verloren.`)) schliesse(s.name); });
     aktionen.append(oeffnen, zu);
     karte.append(aktionen);
     liste.append(karte);
@@ -107,9 +106,13 @@ function aufmachen() {
   ws.onopen = () => passen();
   ws.onmessage = (e) => term.write(new Uint8Array(e.data));
   // Abriss (Mobilfunk, Tunnel): wieder anhängen. Die Sitzung läuft in tmux weiter.
-  ws.onclose = () => { if (aktuell === name) neuVersuch = setTimeout(aufmachen, 2000); };
+  ws.onclose = (e) => {
+    if (aktuell !== name) return;
+    if (e.code === 4404) { trennen(); $("titel").textContent = "Diese Sitzung ist beendet."; ladeSitzungen(); return; }
+    neuVersuch = setTimeout(aufmachen, 2000);
+  };
 }
-$("schliessen").addEventListener("click", () => { if (aktuell) { const n = aktuell; schliesse(n); zeige("sitzungen"); } });
+$("schliessen").addEventListener("click", () => { if (aktuell && confirm("Sitzung wirklich beenden? Nicht gepushte Arbeit geht verloren.")) { const n = aktuell; schliesse(n); zeige("sitzungen"); } });
 document.querySelectorAll("#tasten button").forEach((b) => b.addEventListener("click", () => { schicke(b.dataset.t); if (term) term.focus(); }));
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -201,10 +204,13 @@ async function ladeSystem() {
     ziel.append(karte);
   }
   const speicher = d.speicher && d.speicher.gesamt_mb ? `Speicher frei: ${(d.speicher.frei_mb / 1024).toFixed(1)} von ${(d.speicher.gesamt_mb / 1024).toFixed(1)} GB. ` : "";
-  $("system-info").textContent = `${speicher}Geprüft: ${d.geprueft || "noch nie"}. PowerShell: ${d.powershell || "nicht installiert"}. OpenLauncher Server ${d.version || ""}`;
+  const repo = d.repo && d.repo.ok === false ? ` Repo-Abgleich gescheitert (${d.repo.zeit}): ${d.repo.meldung}` : "";
+  $("system-info").textContent = `${speicher}${repo} Geprüft: ${d.geprueft || "noch nie"}. PowerShell: ${d.powershell || "nicht installiert"}. OpenLauncher Server ${d.version || ""}`;
 }
 $("update").addEventListener("click", async () => { const { name } = await api("/api/aktualisieren", {}); verbinde(name, "CLI-Updates"); });
 
+// Fehlgeschlagene Knöpfe und Abrufe sichtbar machen, statt dass beim Tippen nichts geschieht.
+window.addEventListener("unhandledrejection", (e) => { const m = $("auslastung"); m.textContent = `Fehler: ${e.reason && e.reason.message || e.reason}`; zeige("sitzungen"); });
 ladeSitzungen();
 ladeKatalog();
 setInterval(() => { if (seite === "sitzungen") ladeSitzungen(); else if (seite === "terminal") ladeLinks(); }, 4000);

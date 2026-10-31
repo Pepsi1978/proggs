@@ -9,11 +9,11 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 
 /** Rechner, deren Bildschirm Jarvis fernbedienen kann, mit ihrer Adresse im eigenen Tunnel (WireGuard). */
-enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String, val port: Int = FernsteuerungActivity.PORT) {
+enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String, val port: Int = FernsteuerungActivity.PORT, val konsole: Boolean = false) {
     MAC("10.8.0.6", "Mac-Bildschirm", "Der Mac", "dem Mac"),
     WINDOWS("10.8.0.2", "Windows-Bildschirm", "Der Windows-PC", "dem Windows-PC"),
     /** Kein Bildschirm: Die Server-Konsole (OpenLauncherServer/web) öffnet [ServerKonsoleActivity] statt der Fernsteuerung. */
-    SERVER("10.8.0.1", "Server-Konsole", "Der Hostinger-Server", "dem Hostinger-Server", 8090);
+    SERVER("10.8.0.1", "Server-Konsole", "Der Hostinger-Server", "dem Hostinger-Server", 8090, konsole = true);
 
     companion object {
         fun aus(name: String?): Fernziel = entries.firstOrNull { it.name == name } ?: MAC

@@ -550,6 +550,7 @@ class PcBruecke:
         self.plaetze = {rang: {"zuletzt": 0.0, "rechner": "", "abfragen": {}, "belegt": False} for rang in PLAETZE}
         self.mac_katalog = False
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
+        self.abgeholt = {}           # Auftrag-id -> Auftrag, bis die Quittung da ist (zum Weitergeben, siehe quittung)
         # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
         # laesst die anderen liegen (kein Herausnehmen und Zuruecklegen: das brachte die Reihenfolge durcheinander und konnte
         # einen Sol- und einen Opus-Auftrag endlos zwischen den Rechnern kreisen lassen).
@@ -768,7 +769,9 @@ class PcBruecke:
         # letzten Arbeit noch ab und tut es jetzt nicht mehr, ist die Sitzung weg; Jarvis unterscheidet das an beiden Zeiten.
         return web.json_response({"angenommen": True, "zugestellt": nachtrag_id in self.erledigt, "wartet": self._wartet(auftrag_id),
                                   "kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
-                                  "warter_vor_s": int(jetzt - warter) if warter else None, "pc": self.da()})
+                                  "warter_vor_s": int(jetzt - warter) if warter else None,
+                                  # Auch der Server hält Sitzungen: Fragt seine Brücke ab, ist „der PC ist aus“ die falsche Diagnose.
+                                  "pc": self.da() or jetzt - self.plaetze["server"]["zuletzt"] < PC_FRISCH_S})
 
     async def nachtrag_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/nachtrag?auftrag_id=…&warten=… (Hook): 200 {"nachtraege": [...]}, 204 = keiner. Entfernt nichts (erst die Quittung)."""
@@ -849,7 +852,9 @@ class PcBruecke:
         if regel == "zuerst":
             return ["server"] + rechner
         if regel == "mitte":
-            return rechner[:1] + ["server"] + rechner[1:]
+            # Franks Reihenfolge: Vorrangrechner, Server, anderer Rechner; davon nur, wer dieses Modell kann.
+            voll = ["haupt", "server", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "server", "haupt"]
+            return [r for r in voll if r == "server" or r in rechner]
         if regel == "zuletzt":
             return rechner + ["server"]
         return rechner
@@ -890,10 +895,10 @@ class PcBruecke:
         """GET /pc/auftrag (Bruecke): wartet bis zu PC_WARTEN_S auf einen Auftrag, sonst 204."""
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
-        if not self.da():
-            log.info("PC-Bruecke verbunden")
         rang = request.headers.get("X-Jarvis-Rang", "").strip().lower()
         rang = rang if rang in ("ersatz", "server") else "haupt"
+        if time.monotonic() - self.plaetze[rang]["zuletzt"] >= PC_FRISCH_S:
+            log.info("Bruecke verbunden: %s", rang)
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
         if rang == "ersatz":
             # Nur eine Mac-Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
@@ -938,6 +943,7 @@ class PcBruecke:
             self.auftraege.remove(auftrag)
             self.rechner = rechner
             self.zugestellt_an[auftrag["id"]] = rechner
+            self.abgeholt[auftrag["id"]] = auftrag
             return web.json_response(auftrag)
 
     async def quittung(self, request: web.Request) -> web.Response:
@@ -949,6 +955,18 @@ class PcBruecke:
             wartend = self.quittungen.get(daten["id"])
         except Exception:
             return web.Response(status=400, text="Quittung unlesbar")
+        # „weiter“ (Server-Bruecke): sicher nicht gestartet. Der Auftrag geht an den naechsten Rechner, solange einer da ist; so
+        # springt das Handy nicht ueber den Mac hinweg in die Cloud. Sonst kommt die Absage wie jede andere ans Handy.
+        abgeholt = self.abgeholt.get(daten["id"])
+        if daten.get("weiter") and abgeholt is not None and wartend is not None and not wartend.done():
+            abgeholt["server"] = ""
+            if self._naechster(abgeholt):
+                self.abgeholt.pop(daten["id"], None)
+                self.zugestellt_an.pop(daten["id"], None)
+                log.info("Server gibt den Auftrag weiter: %s", str(daten.get("text", ""))[:120])
+                self.auftraege.insert(0, abgeholt)
+                self.neuer_auftrag.set()
+                return web.json_response({"angenommen": True, "weitergegeben": True})
         if wartend is not None and not wartend.done():
             wartend.set_result(daten)
         # Die Quittung kommt nach der frischen Pruefung vor dem Start: nur den Anmeldestand merken (die Erreichbarkeit
@@ -1024,6 +1042,7 @@ class PcBruecke:
         """Raeumt die Quittung eines Auftrags weg und nennt den Rechner, der ihn abgeholt hat."""
         wartend.cancel()
         self.quittungen.pop(nummer, None)
+        self.abgeholt.pop(nummer, None)
         return self.zugestellt_an.pop(nummer, self.rechner)
 
     async def _spaete_quittung(self, nummer: str, jarvis_id: str, wartend: asyncio.Future) -> None:
@@ -1449,6 +1468,7 @@ ABLAGE_MAX_DATEI = 8 * 1024 ** 3
 ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung"}
 ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
+ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
 
 
 class AblageAbgleich:
@@ -1461,7 +1481,11 @@ class AblageAbgleich:
         self.db.execute("""CREATE TABLE IF NOT EXISTS docs (art TEXT, id TEXT, daten TEXT, geaendert INTEGER, geloescht INTEGER,
                            von TEXT, stand INTEGER, PRIMARY KEY (art, id))""")
         self.db.execute("CREATE INDEX IF NOT EXISTS docs_stand ON docs (stand)")
+        # Kennung dieses Speichers: Die Geraete erkennen daran zuverlaessig, dass er neu aufgesetzt oder aus einem Backup geholt wurde.
+        self.db.execute("CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, wert TEXT)")
+        self.db.execute("INSERT OR IGNORE INTO meta (name, wert) VALUES ('instanz', ?)", (uuid.uuid4().hex,))
         self.db.commit()
+        self.instanz = self.db.execute("SELECT wert FROM meta WHERE name = 'instanz'").fetchone()[0]
         self.warter = []  # (Name der wartenden Version, Future)
 
     def _stand(self) -> int:
@@ -1519,9 +1543,12 @@ class AblageAbgleich:
             finally:
                 if eintrag in self.warter:
                     self.warter.remove(eintrag)
-        zeilen = self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand", (seit,)).fetchall()
+        zeilen = self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand LIMIT ?", (seit, ABLAGE_SEITE + 1)).fetchall()
+        mehr = len(zeilen) > ABLAGE_SEITE
+        zeilen = zeilen[:ABLAGE_SEITE]
         docs = [{"art": z[0], "id": z[1], "daten": json.loads(z[2]), "geaendert": z[3], "geloescht": bool(z[4]), "von": z[5], "stand": z[6]} for z in zeilen]
-        return web.json_response({"stand": self._stand(), "docs": docs, "neuaufbau": neuaufbau}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
+        # Bei einer Teilantwort ist der Stand der des letzten Dokuments: Der naechste Abruf macht genau dort weiter.
+        return web.json_response({"stand": docs[-1]["stand"] if mehr else self._stand(), "docs": docs, "neuaufbau": neuaufbau, "mehr": mehr, "instanz": self.instanz}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     async def doc(self, request: web.Request) -> web.Response:
         art, kennung = request.match_info["art"], request.match_info["id"]
@@ -1536,19 +1563,29 @@ class AblageAbgleich:
             daten = rumpf.get("daten") or {}
             von = str(rumpf["von"]).strip()[:40]
             assert isinstance(daten, dict) and von
+        except web.HTTPException:
+            raise  # Zu gross (413) ist etwas anderes als unvollstaendig.
         except Exception:
             return web.Response(status=400, text="Dokument unvollstaendig")
         geaendert = min(geaendert, int(time.time() * 1000))
-        zeile = self.db.execute("SELECT geaendert, daten FROM docs WHERE art = ? AND id = ?", (art, kennung)).fetchone()
+        zeile = self.db.execute("SELECT geaendert, daten, geloescht FROM docs WHERE art = ? AND id = ?", (art, kennung)).fetchone()
         if zeile is not None and zeile[0] >= geaendert:
-            return web.json_response({"uebernommen": False, "stand": self._stand()})
+            # Dieselbe Fassung noch einmal (die Antwort ging unterwegs verloren): Sie ist angekommen, kein Konflikt.
+            gleich = zeile[0] == geaendert and bool(zeile[2]) == geloescht and json.loads(zeile[1]) == ({} if geloescht else daten)
+            return web.json_response({"uebernommen": gleich, "stand": self._stand()})
         if not geloescht:
             shas = self._dateien(daten)
             if any(not ABLAGE_SHA.match(s) for s in shas):
                 return web.Response(status=400, text="Pruefsumme ungueltig")
+            # Die Kennungen landen auf den Geraeten in Dateipfaden.
+            if any(not isinstance(a, dict) or not ABLAGE_ID.match(str(a.get("id", ""))) for a in daten.get("anhaenge") or []):
+                return web.Response(status=400, text="Anhang ungueltig")
             fehlend = sorted({s for s in shas if not self._pfad(s).is_file()})
             if fehlend:
                 return web.json_response({"fehlend": fehlend}, status=409)
+            # Wieder gebraucht: Das Aufraeumen darf sie jetzt nicht mehr entfernen, auch wenn es gerade laeuft.
+            for s in set(shas):
+                os.utime(self._pfad(s))
         # Ab jetzt nicht mehr gebraucht: Die 30 Tage bis zum Entfernen zaehlen ab diesem Moment, nicht ab dem Hochladen.
         if zeile is not None:
             for sha in set(self._dateien(json.loads(zeile[1]))) - set(() if geloescht else self._dateien(daten)):
@@ -1584,6 +1621,9 @@ class AblageAbgleich:
                     if groesse > ABLAGE_MAX_DATEI:
                         return web.Response(status=413, text="Datei zu gross")
                     await schleife.run_in_executor(None, stueck_ablegen, f, stueck)
+                # Erst fest auf der Platte, dann unter dem endgueltigen Namen: Nach einem Stromausfall gilt sonst eine halbe Datei als vorhanden.
+                f.flush()
+                await schleife.run_in_executor(None, os.fsync, f.fileno())
             if pruefung.hexdigest() != sha:
                 return web.Response(status=400, text="Pruefsumme passt nicht")
             os.replace(teil, self._pfad(sha))
@@ -1607,10 +1647,13 @@ class AblageAbgleich:
         grenze = time.time() - ABLAGE_FRIST_S
         weg = 0
         for datei in self.blobs.iterdir():
-            alt = datei.stat().st_mtime < (time.time() - 86_400 if datei.name.startswith(".") else grenze)
-            if alt and datei.name not in benutzt:
-                datei.unlink(missing_ok=True)
-                weg += 1
+            try:
+                alt = datei.stat().st_mtime < (time.time() - 86_400 if datei.name.startswith(".") else grenze)
+                if alt and datei.name not in benutzt:
+                    datei.unlink(missing_ok=True)
+                    weg += 1
+            except FileNotFoundError:
+                continue  # Ein Upload ist gerade fertig geworden.
         if weg:
             log.info("Ablage: %s alte Dateien entfernt", weg)
 

@@ -16,7 +16,8 @@ import android.widget.Toast
 /**
  * Die Konsole des Hostinger-Servers (OpenLauncherServer/web): Sitzungen, laufende CLI, OpenLauncher, System. Nur im WireGuard-Tunnel erreichbar.
  * Anmeldung mit demselben Zugang wie die Fernsteuerung; HTTP ist nur für 10.8.0.1 erlaubt (res/xml/netz_regeln.xml), der Tunnel verschlüsselt.
- * Adressen außerhalb des Tunnels (Anmeldeseiten der Anbieter) öffnet der Browser des Handys.
+ * Adressen außerhalb des Tunnels (Anmeldeseiten der Anbieter) öffnet der Browser des Handys; ohne Mehrfenster-Unterstützung kommt auch
+ * target=_blank bei shouldOverrideUrlLoading an.
  */
 class ServerKonsoleActivity : ComponentActivity() {
     private lateinit var ansicht: WebView
@@ -41,21 +42,13 @@ class ServerKonsoleActivity : ComponentActivity() {
                     if (request.isForMainFrame) Toast.makeText(this@ServerKonsoleActivity, "Server-Konsole nicht erreichbar: ${error.description}", Toast.LENGTH_LONG).show()
                 }
             }
-            // target=_blank (Anmelde-Adressen in der Konsole) kommt hier an und geht ebenfalls in den Browser.
-            settings.setSupportMultipleWindows(true)
-            webChromeClient = object : android.webkit.WebChromeClient() {
-                override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
-                    val adresse = view.hitTestResult.extra ?: return false
-                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(adresse))) }
-                    return false
-                }
-            }
         }
         setContentView(ansicht)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = finish()
         })
-        ansicht.loadUrl("http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}/?token=" + Uri.encode(zugang))
+        // POST statt Adresse: So steht der Zugang in keinem Verlauf; danach gilt ein davon abgeleitetes Cookie.
+        ansicht.postUrl("http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}/anmelden", ("token=" + Uri.encode(zugang)).toByteArray())
     }
 
     override fun onDestroy() {

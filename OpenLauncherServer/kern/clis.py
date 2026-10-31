@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -18,7 +19,7 @@ import launcher  # noqa: E402
 
 HOME = Path.home()
 STATUS = launcher.ZUSTAND / "cli-status.json"
-UMGEBUNG = dict(os.environ, PATH=f"{HOME}/.local/bin:{HOME}/.local/node/bin:{HOME}/.kimi-code/bin:{HOME}/.agy/bin:{os.environ.get('PATH', '')}",
+UMGEBUNG = dict(os.environ, PATH=":".join([f"{HOME}/{p}" for p in launcher.PFADE] + [os.environ.get("PATH", "")]),
                 CLAUDE_CONFIG_DIR=str(launcher.claude_ordner("minimal")), CODEX_HOME=str(launcher.ZUSTAND / "codex-home"), NPM_CONFIG_PREFIX=f"{HOME}/.local")
 NPM = "npm install -g"
 PROGRAMME = {
@@ -36,10 +37,15 @@ PROGRAMME = {
 
 
 def _lauf(befehl: str, sekunden: int = 300) -> tuple[int, str]:
+    """Eigene Prozessgruppe: Sonst hielte ein hängender Enkel (curl | bash, npm) die Ausgabe offen, und das Zeitlimit griffe nicht."""
+    p = subprocess.Popen(["bash", "-c", befehl], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=UMGEBUNG,
+                         stdin=subprocess.DEVNULL, start_new_session=True)
     try:
-        e = subprocess.run(["bash", "-c", befehl], capture_output=True, text=True, timeout=sekunden, env=UMGEBUNG, stdin=subprocess.DEVNULL)
-        return e.returncode, (e.stdout + e.stderr).strip()
+        aus, _ = p.communicate(timeout=sekunden)
+        return p.returncode, (aus or "").strip()
     except subprocess.TimeoutExpired:
+        os.killpg(p.pid, signal.SIGKILL)
+        p.communicate()
         return 124, "Zeitlimit überschritten"
 
 
@@ -51,9 +57,13 @@ def version(p: dict) -> str:
     return m.group(0) if m else aus[:40]
 
 
-def in_benutzung(schluessel: str) -> bool:
-    """Eine CLI nie unter einer laufenden Sitzung ersetzen. Maßgeblich sind die Sitzungen: node-CLIs tragen im Prozessnamen nur ihr Skript."""
-    return any(s.get("cli") == schluessel and s["stand"] != "beendet" for s in launcher.sitzungen())
+def in_benutzung(schluessel: str, p: dict, alle: list) -> bool:
+    """Eine CLI nie unter einer laufenden Sitzung ersetzen. Die Sitzungen nennen ihr CLI; der Prozesstest findet auch die in einem freien Terminal."""
+    if any(s.get("cli") == schluessel and s["stand"] != "beendet" for s in alle):
+        return True
+    muster = {"codex": "@openai/codex", "opencode": "opencode-ai", "kimi": "@moonshot-ai/kimi-code"}.get(schluessel)
+    code, _ = _lauf(f"pgrep -u \"$(id -u)\" -f '(^|/){p['befehl']}( |$)" + (f"|{muster}/" if muster else "") + "' >/dev/null", 10)
+    return code == 0
 
 
 def anmeldung(schluessel: str, p: dict) -> str:
@@ -75,12 +85,13 @@ def status_schreiben(aktualisieren: bool) -> dict:
     except (OSError, ValueError):
         pass
     programme = {}
+    alle = launcher.sitzungen()
     for schluessel, p in PROGRAMME.items():
         vorher = version(p)
         eintrag = {"name": p["name"], "version": vorher, "zuletzt": alt.get(schluessel, {}).get("zuletzt", ""), "meldung": alt.get(schluessel, {}).get("meldung", "")}
         if aktualisieren:
             jetzt = time.strftime("%d.%m.%Y %H:%M")
-            if in_benutzung(schluessel):
+            if in_benutzung(schluessel, p, alle):
                 eintrag["meldung"] = f"{jetzt}: läuft gerade, beim nächsten Lauf"
             else:
                 code, aus = _lauf(p["update"] if vorher else p["installieren"])

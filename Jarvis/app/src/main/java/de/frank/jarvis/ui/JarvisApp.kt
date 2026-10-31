@@ -230,13 +230,15 @@ private fun Leiste(vm: AppViewModel) {
             }
         }
         val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
+        // Grün heißt weiter: Ein Bildschirm ist erreichbar. Nur die immer laufende Server-Konsole färbt das Symbol in der Akzentfarbe.
+        val nurKonsole = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.let { da -> da.isNotEmpty() && da.all { it.konsole } } == true
         // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren. Keiner: nicht blind
         // verbinden (früher der Mac, dann 6 s schwarzer Bildschirm), sondern sagen, dass keiner erreichbar ist.
         val bereich = androidx.compose.runtime.rememberCoroutineScope()
         var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         var sucht by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
-            if (z == de.frank.jarvis.fernsteuerung.Fernziel.SERVER) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
+            if (z.konsole) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
             else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
                 .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
         }
@@ -254,13 +256,13 @@ private fun Leiste(vm: AppViewModel) {
                         else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
                     }
                 }
-            }.semantics { contentDescription = "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
+            }.semantics { contentDescription = "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
             // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau: das Tippen ist angekommen.
-            val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
+            val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) f.primaer else f.erfolg; false -> f.gefahr; null -> f.textLeise }
             // Gleiche Größe wie die Reitersymbole (20 dp).
             Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
                 if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)

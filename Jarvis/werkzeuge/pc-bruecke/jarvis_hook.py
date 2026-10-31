@@ -723,7 +723,7 @@ def uebergib(neu: list[dict]) -> str:
     return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
-            f"stand=fertig mit programmier_fortschritt. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}.\n\n{teile}")
+            f"{'mit jarvis_hook.py melde fertig' if os.environ.get('JARVIS_SERVER') else 'stand=fertig mit programmier_fortschritt'}. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}.\n\n{teile}")
 
 
 def _windows_prozesse() -> dict[int, tuple[int, str]]:

@@ -62,11 +62,10 @@ def belegt() -> bool:
         return False
 
 
-def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> tuple[int, bytes]:
+def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None, kopf: dict | None = None) -> tuple[int, bytes]:
     anfrage = urllib.request.Request(adresse, method="POST" if rumpf is not None else "GET",
                                      data=json.dumps(rumpf, ensure_ascii=False).encode("utf-8") if rumpf is not None else None,
-                                     headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": launcher.RECHNER, "X-Jarvis-Rang": "server", "X-Jarvis-Katalog": "1",
-                                              "X-Jarvis-Belegt": "1" if belegt() else "0",
+                                     headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": launcher.RECHNER, "X-Jarvis-Rang": "server", "X-Jarvis-Katalog": "1", **(kopf or {}),
                                               "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
@@ -99,7 +98,8 @@ def wahl(auftrag: dict) -> dict:
 def auftragstext(auftrag: dict, cli: str) -> str:
     """Wie auftragstext() der Mac-Brücke, mit dem Abschluss dieses Servers. Der Auftrag geht zeilengenau hinein."""
     text = (auftrag.get("auftrag") or "").replace("\r\n", "\n").replace("\r", "\n")
-    kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); die Sitzung läuft auf seinem Hostinger-Server, Frank verfolgt sie in Jarvis und in der Server-Konsole."
+    kopf = ("Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); die Sitzung läuft auf seinem Hostinger-Server, Frank verfolgt sie in Jarvis und in der Server-Konsole.\n"
+            f'MELDEN (statt programmier_fortschritt, das es hier nicht gibt, auch wenn der Auftrag es nennt): python3 "{HOOK}" melde <laeuft|fertig|fehler> "<ein Satz>"')
     unklar1 = "Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen."
     unklar2 = "2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden."
     review = ""
@@ -107,7 +107,6 @@ def auftragstext(auftrag: dict, cli: str) -> str:
         unklar1 = "Nicht eindeutig: Frank mit dem Werkzeug question fragen und die Kandidaten nennen."
         unklar2 = "2. Wesentliche Unklarheiten mit dem Werkzeug question klären, Kleinigkeiten selbst entscheiden."
     elif cli in ("codex", "kimi", "antigravity"):
-        kopf += f'\nMELDEN (statt programmier_fortschritt, das es hier nicht gibt): python3 "{HOOK}" melde <laeuft|fertig|fehler> "<ein Satz>"'
         unklar1 = "Nicht eindeutig: die wahrscheinlichste App nehmen und das in der ersten Meldung nennen."
         unklar2 = "2. Niemand antwortet in dieser Sitzung: Unklarheiten selbst sinnvoll entscheiden und in der Meldung nennen, nie auf eine Antwort warten."
         review = ("REVIEW: Ja (vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben)\n"
@@ -125,14 +124,19 @@ VORGEHEN
 """
 
 
-def starte(auftrag: dict) -> str:
-    w = wahl(auftrag)
+def starte(auftrag: dict, w: dict) -> str:
     app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
     titel = f"Jarvis: {app}" + (f" ({re.sub(r'[^\w ._()-]', '', w['name'])}" + ("" if w["cli"] == "claude" else f", {w['cli']}") + ")" if w["name"] else "")
     nummer = str(auftrag.get("nummer", ""))
     launcher.platz_schaffen()
-    launcher.starten(w["cli"], w["modell"], w["anbieter"], w["effort"], w["profil"], w["modus"], titel, auftragstext(auftrag, w["cli"]),
-                     nummer if re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer) else "")
+    name = launcher.starten(w["cli"], w["modell"], w["anbieter"], w["effort"], w["profil"], w["modus"], titel, auftragstext(auftrag, w["cli"]),
+                            nummer if re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer) else "")
+    if w["cli"] != "claude":
+        # Nur Claude Code lässt sich vorab fragen; die übrigen zeigen den fehlenden Login erst beim Start.
+        time.sleep(8)
+        if launcher.wartet_auf_anmeldung(name):
+            launcher.schliessen(name)
+            raise RuntimeError(f"{w['cli']} auf dem Hostinger-Server ist nicht angemeldet (Server-Konsole, Reiter System).")
     return titel
 
 
@@ -140,21 +144,19 @@ def bearbeite(auftrag: dict, zugang: dict) -> None:
     w = wahl(auftrag)
     try:
         if launcher.belegt():
-            # Sicher nicht gestartet: Das Handy nimmt das nächste Ziel, ohne doppelte Sitzung.
             raise RuntimeError("Der Hostinger-Server ist gerade ausgelastet.")
-        # Nicht angemeldet: sicher nicht gestartet, also darf das nächste Ziel (die Cloud) übernehmen. Der Server läuft unbeaufsichtigt;
+        # Nicht angemeldet: sicher nicht gestartet, also darf der nächste Rechner oder die Cloud übernehmen. Der Server läuft unbeaufsichtigt;
         # anders als am eigenen Rechner bliebe sonst jeder Auftrag liegen, bis Frank die Konsole öffnet.
         if w["cli"] == "claude":
             pruefe_anmeldung()
             if ANMELDUNG["stand"] == "abgemeldet":
                 raise RuntimeError("Claude Code auf dem Hostinger-Server ist nicht angemeldet (Server-Konsole, Reiter System).")
-        elif w["cli"] == "codex" and not (launcher.ZUSTAND / "codex-home" / "auth.json").exists():
-            raise RuntimeError("Codex auf dem Hostinger-Server ist nicht angemeldet (Server-Konsole, Reiter System).")
-        titel = starte(auftrag)
+        titel = starte(auftrag, w)
         quittung = {"id": auftrag.get("id"), "ok": True, "text": f"Sitzung '{titel}' gestartet"}
         schreib(f"Sitzung '{titel}' gestartet")
     except Exception as fehler:
-        quittung = {"id": auftrag.get("id"), "ok": False, "text": f"Start fehlgeschlagen: {fehler}"}
+        # „weiter“: Der Relay gibt den Auftrag dem nächsten Rechner; gibt es keinen, geht diese Absage ans Handy.
+        quittung = {"id": auftrag.get("id"), "ok": False, "weiter": True, "text": f"Nicht gestartet: {fehler}"}
         schreib(quittung["text"])
     _quittiere(quittung, zugang)
 
@@ -207,7 +209,7 @@ def main() -> int:
             if time.time() - letzter_scan >= 600:
                 letzter_scan = time.time()
                 launcher.aufraeumen()
-            code, roh = rufe(f"https://{zugang['host']}/pc/auftrag", zugang["token"], 40)
+            code, roh = rufe(f"https://{zugang['host']}/pc/auftrag", zugang["token"], 40, kopf={"X-Jarvis-Belegt": "1" if belegt() else "0"})
             pause = 2
             if code == 204:
                 continue

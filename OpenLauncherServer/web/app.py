@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import hashlib
 import hmac
 import json
 import os
@@ -30,6 +31,9 @@ ADRESSE = os.environ.get("KONSOLE_ADRESSE", "10.8.0.1")
 PORT = int(os.environ.get("KONSOLE_PORT", "8090"))
 TOKEN = (Path.home() / "SK" / "Jarvis" / "fernsteuerung-token.txt").read_text("utf-8").strip()
 COOKIE = "konsole"
+# Das Cookie ist nicht der Token selbst: Derselbe Token öffnet auch die Bildschirm-Fernsteuerung der Rechner.
+COOKIE_WERT = hmac.new(TOKEN.encode(), b"server-konsole", hashlib.sha256).hexdigest()
+FEHLVERSUCHE = {"zahl": 0}
 LINK = re.compile(r"https?://[^\s\"'<>]+")
 ANMELDEN_SEITE = """<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Server-Konsole</title><body style="background:#10131a;color:#e6e9ef;font:16px system-ui;padding:24px">
@@ -42,11 +46,11 @@ def _gleich(wert: str) -> bool:
 
 
 def _angemeldet(request: web.Request) -> bool:
-    return _gleich(request.cookies.get(COOKIE, ""))
+    return hmac.compare_digest(request.cookies.get(COOKIE, "").encode(), COOKIE_WERT.encode())
 
 
 def _mit_cookie(antwort: web.Response) -> web.Response:
-    antwort.set_cookie(COOKIE, TOKEN, httponly=True, samesite="Strict", max_age=365 * 86400)
+    antwort.set_cookie(COOKIE, COOKIE_WERT, httponly=True, samesite="Strict", max_age=365 * 86400)
     return antwort
 
 
@@ -55,10 +59,6 @@ async def schutz(request: web.Request, handler):
     if request.path in ("/ping", "/anmelden"):
         return await handler(request)
     if not _angemeldet(request):
-        wert = request.query.get("token", "")
-        if request.path == "/" and _gleich(wert):
-            # Jarvis öffnet mit ?token=…: danach gilt das Cookie, der Token verschwindet aus der Adresse.
-            raise _mit_cookie(web.HTTPFound("/"))
         if request.path == "/":
             return web.Response(text=ANMELDEN_SEITE, content_type="text/html")
         return web.json_response({"fehler": "nicht angemeldet"}, status=401)
@@ -66,7 +66,11 @@ async def schutz(request: web.Request, handler):
     herkunft = request.headers.get("Origin", "")
     if herkunft and herkunft.split("://", 1)[-1] != request.host:
         return web.json_response({"fehler": "fremde Herkunft"}, status=403)
-    return await handler(request)
+    try:
+        return await handler(request)
+    except (ValueError, KeyError, TypeError) as fehler:
+        # Unlesbare Anfrage oder ungültige Wahl: verständlich an die Seite, nicht als HTTP 500.
+        return web.json_response({"fehler": str(fehler) or "Ungültige Anfrage"}, status=400)
 
 
 async def ping(_: web.Request) -> web.Response:
@@ -76,12 +80,16 @@ async def ping(_: web.Request) -> web.Response:
 async def anmelden(request: web.Request) -> web.Response:
     daten = await request.post()
     if _gleich(str(daten.get("token", "")).strip()):
+        FEHLVERSUCHE["zahl"] = 0
         raise _mit_cookie(web.HTTPFound("/"))
+    # Raten kostet Zeit: bis zu 30 s je Versuch, auch im Tunnel.
+    FEHLVERSUCHE["zahl"] += 1
+    await asyncio.sleep(min(FEHLVERSUCHE["zahl"], 30))
     return web.Response(text=ANMELDEN_SEITE, content_type="text/html", status=403)
 
 
 async def startseite(_: web.Request) -> web.FileResponse:
-    return web.FileResponse(HIER / "static" / "index.html", headers={"Cache-Control": "no-cache"})
+    return web.FileResponse(HIER / "static" / "index.html")
 
 
 async def _im_faden(funktion, *argumente):
@@ -89,7 +97,8 @@ async def _im_faden(funktion, *argumente):
 
 
 async def sitzungen(_: web.Request) -> web.Response:
-    return web.json_response({"sitzungen": await _im_faden(launcher.sitzungen), "belegt": await _im_faden(launcher.belegt)})
+    alle = await _im_faden(launcher.sitzungen)
+    return web.json_response({"sitzungen": alle, "belegt": launcher.belegt(alle)})
 
 
 async def schliessen(request: web.Request) -> web.Response:
@@ -128,6 +137,10 @@ async def system(_: web.Request) -> web.Response:
         wert = speicher[1].split() if len(speicher) > 1 else []
         daten["speicher"] = {"gesamt_mb": int(wert[1]), "frei_mb": int(wert[6])} if len(wert) > 6 else {}
         try:
+            daten["repo"] = json.loads((launcher.ZUSTAND / "repo-status.json").read_text("utf-8"))
+        except (OSError, ValueError):
+            daten["repo"] = {}
+        try:
             daten["version"] = (HIER.parent / "VERSION").read_text("utf-8").strip()
         except OSError:
             daten["version"] = ""
@@ -155,13 +168,10 @@ async def anmeldung(request: web.Request) -> web.Response:
 async def links(request: web.Request) -> web.Response:
     """Adressen aus der Terminalausgabe: Im Handy-Terminal bricht eine lange Anmelde-Adresse um und lässt sich nicht antippen."""
     name = request.match_info["name"]
-    if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", name):
-        return web.json_response({"links": []})
+    launcher.pruefe_name(name)
     aus = await _im_faden(lambda: subprocess.run(launcher.TMUX + ["capture-pane", "-p", "-J", "-S", "-200", "-t", f"={name}:"],
                                                  capture_output=True, text=True, timeout=5).stdout)
-    # Die Anzeige umbricht auch ohne -J-Treffer, wenn die CLI selbst umbricht: zusammenhängende Zeilen zusätzlich verbunden prüfen.
-    gefunden = LINK.findall(aus) + LINK.findall(re.sub(r"\n(?=[^\s])", "", aus))
-    einmal = list(dict.fromkeys(g.rstrip(".,)") for g in gefunden if len(g) > 12))
+    einmal = list(dict.fromkeys(g.rstrip(".,;") for g in LINK.findall(aus) if len(g) > 12))
     return web.json_response({"links": einmal[-5:]})
 
 
@@ -169,17 +179,21 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     name = request.match_info["name"]
     ws = web.WebSocketResponse(heartbeat=25, max_msg_size=4 * 1024 * 1024)
     await ws.prepare(request)
-    if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", name):
-        await ws.close()
+    # Die Sitzung gibt es nicht (mehr): 4404 sagt der Seite, dass neu Verbinden nichts bringt.
+    if not launcher.NAME.fullmatch(name) or await _im_faden(lambda: subprocess.run(launcher.TMUX + ["has-session", "-t", f"={name}"], capture_output=True, timeout=5).returncode) != 0:
+        await ws.close(code=4404)
         return ws
     herr, knecht = pty.openpty()
     umgebung = dict(os.environ, TERM="xterm-256color", LANG="C.UTF-8", LC_ALL="C.UTF-8")
+    # Der pty muss das steuernde Terminal von tmux sein: Nur dann kommt beim Falten und Drehen das Signal für die neue Größe an.
     prozess = subprocess.Popen(launcher.TMUX + ["attach-session", "-t", f"={name}"], stdin=knecht, stdout=knecht, stderr=knecht,
-                               start_new_session=True, env=umgebung, close_fds=True)
+                               start_new_session=True, env=umgebung, close_fds=True,
+                               preexec_fn=lambda: fcntl.ioctl(0, termios.TIOCSCTTY, 0))
     os.close(knecht)
     schleife = asyncio.get_running_loop()
     os.set_blocking(herr, False)
-    warteschlange: asyncio.Queue = asyncio.Queue(maxsize=256)
+    warteschlange: asyncio.Queue = asyncio.Queue()
+    angehalten = [False]
 
     def lesbar():
         try:
@@ -190,11 +204,11 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
             daten = b""
         if not daten:
             schleife.remove_reader(herr)
-        try:
-            warteschlange.put_nowait(daten)
-        except asyncio.QueueFull:
-            # Der Empfänger kommt nicht nach (Mobilfunk): tmux zeichnet beim nächsten Bildaufbau ohnehin alles neu.
-            pass
+        warteschlange.put_nowait(daten)
+        # Der Empfänger kommt nicht nach (Mobilfunk): nicht mehr lesen statt Bytes zu verwerfen, tmux wartet dann.
+        if daten and warteschlange.qsize() > 64:
+            schleife.remove_reader(herr)
+            angehalten[0] = True
 
     schleife.add_reader(herr, lesbar)
 
@@ -205,6 +219,17 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
                 await ws.close()
                 return
             await ws.send_bytes(daten)
+            if angehalten[0] and warteschlange.qsize() < 16:
+                angehalten[0] = False
+                schleife.add_reader(herr, lesbar)
+
+    async def schreiben(daten: bytes):
+        # Der pty ist nichtblockierend: Lange Eingaben gehen nur in Teilen hinein.
+        while daten:
+            try:
+                daten = daten[os.write(herr, daten):]
+            except BlockingIOError:
+                await asyncio.sleep(0.01)
 
     sender = asyncio.create_task(senden())
     try:
@@ -213,7 +238,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
                 continue
             d = json.loads(nachricht.data)
             if d.get("t") == "i":
-                os.write(herr, str(d.get("d", "")).encode("utf-8"))
+                await schreiben(str(d.get("d", "")).encode("utf-8"))
             elif d.get("t") == "r":
                 fcntl.ioctl(herr, termios.TIOCSWINSZ, struct.pack("HHHH", max(int(d["r"]), 2), max(int(d["c"]), 2), 0, 0))
     finally:
@@ -245,8 +270,14 @@ async def neu_laden_bei_aenderung(_: web.Application):
     aufgabe.cancel()
 
 
+async def ohne_zwischenspeicher(_: web.Request, antwort: web.StreamResponse) -> None:
+    # Nach einem Vorspulen darf kein altes JavaScript gegen den neuen Server laufen.
+    antwort.headers["Cache-Control"] = "no-cache"
+
+
 def anwendung() -> web.Application:
     a = web.Application(middlewares=[schutz])
+    a.on_response_prepare.append(ohne_zwischenspeicher)
     a.cleanup_ctx.append(neu_laden_bei_aenderung)
     a.router.add_get("/ping", ping)
     a.router.add_post("/anmelden", anmelden)

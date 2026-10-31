@@ -443,9 +443,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
                     wahl.isEmpty() -> Ergebnis(fehltFuer(modell), fehler = true)
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
-                    modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa() ->
+                    modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty()))
-                    modell == MODELL_SOL && cli == CLI_CODEX && !a.has("review") && ziel != "cloud" && rechnerDa() ->
+                    modell == MODELL_SOL && cli == CLI_CODEX && !a.has("review") && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, CLI_CODEX, STUFE_REVIEW, runde = worte?.aktuell.orEmpty()))
                     else -> {
                         // Per Sprache gewählt: Die Knöpfe im selben Gespräch haben ausgedient (sonst startete ein Tipp ein zweites Mal).
@@ -512,15 +512,21 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }.filter { it.bereit() }
 
     /**
-     * Fragt gerade der Windows-PC (Rang „haupt“) beim Relay ab? Nur dort läuft Sol; ist nur der Mac da, startet Opus wie bisher
-     * ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
+     * Fragt gerade ein Rechner ab, der Sol nimmt (Windows-PC oder freier Hostinger-Server, je nach [ziel])? Ist nur der Mac da, startet Opus
+     * wie bisher ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
      */
-    private suspend fun rechnerDa(): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun rechnerDa(ziel: String): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a ->
                 if (!a.isSuccessful) return@use false
                 val alle = JSONObject(a.body?.string().orEmpty()).optJSONArray("rechner_alle") ?: return@use false
-                (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { it.optString("rang") in listOf("haupt", "server") && it.optBoolean("da") }
+                (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { r ->
+                    r.optBoolean("da") && when (r.optString("rang")) {
+                        "haupt" -> ziel != "server"
+                        "server" -> ziel != "pc" && !r.optBoolean("belegt")
+                        else -> false
+                    }
+                }
             }
         }.getOrDefault(false)
     }
@@ -681,7 +687,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext)
         // Folgefragen: Sol am Windows-PC → CLI, Codex CLI → Review. Ist der PC aus, geht Sol wie bisher ohne Frage weiter.
         val naechste = when {
-            w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa() -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
+            w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
             else -> null
         }
@@ -2136,21 +2142,28 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 throw NichtDa("Der Jarvis-Server war nicht erreichbar, deshalb die Cloud.")
             }
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
+            val nurServer = kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel == "server"
             // Abgeholt, aber die Startbestätigung kam nicht in der Frist des Relays (Brücke langsam, am 24.10.2026 51 s): läuft
             // vermutlich. Nie „nicht gestartet“ und nie die Cloud; die späte Quittung reicht der Relay als Meldung nach.
             if (code in 200..299 && antwort.optBoolean("unbestaetigt")) throw Unbestaetigt(antwort.optString("rechner").ifEmpty { "dem PC" })
             when {
-                // Frei gewählte Modelle startet nur der Mac: kein Ersatz am Windows-PC und keiner in der Cloud.
+                // Ausdrücklich „auf dem Server“: kein Ersatz, und die Meldung nennt den Server.
+                nurServer && code == 409 -> throw IllegalStateException("Der Hostinger-Server nimmt gerade nicht an (aus oder ausgelastet). Der Auftrag ist nicht gestartet.")
+                nurServer && code == 504 -> throw IllegalStateException("Der Hostinger-Server hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
+                nurServer && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Hostinger-Server konnte die Sitzung nicht starten." })
+                // Frei gewählte Modelle startet nur der Mac oder der Server: kein Ersatz am Windows-PC und keiner in der Cloud.
                 frei != null && code == 409 -> throw IllegalStateException("Weder der Mac noch der Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
                     "Bitte die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.1 starten.")
-                frei != null && code == 504 -> throw IllegalStateException("Der Mac hat den Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am Mac nachsehen.")
+                frei != null && code == 504 -> throw IllegalStateException("${antwort.optString("rechner").ifEmpty { "Der Rechner" }} hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
                 frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Mac konnte die Sitzung nicht starten." })
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
                 openCode && code == 409 -> throw IllegalStateException("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.1 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).
                 sol && code == 409 -> throw NichtDa("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an, deshalb Sol 6.1 in Codex Cloud.")
                 // 504 heißt seit Relay-Stand 24.10.2026: nicht abgeholt, also sicher nicht gestartet (und startet auch nicht mehr).
-                sol && code == 504 -> throw IllegalStateException("Der Windows-PC hat den Sol-Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am PC nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
+                sol && code == 504 -> throw IllegalStateException("Der Rechner hat den Sol-Auftrag nicht abgeholt, er ist nicht gestartet. Bitte dort nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
+                // Der Server lehnt ab (etwa nicht angemeldet), und kein Rechner übernimmt: sicher nicht gestartet, Codex Cloud darf ran.
+                sol && !openCode && code in 200..299 && !antwort.optBoolean("ok") && antwort.optBoolean("server") -> throw NichtDa("${antwort.optString("text").take(160)} Deshalb Sol 6.1 in Codex Cloud.")
                 sol && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sol-Sitzung nicht starten." })
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
@@ -2166,8 +2179,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val rechner = antwort.optString("rechner").ifEmpty { "dem PC" }
             // Auf dem Server gibt es die Sitzung in der Server-Konsole; sie meldet Schritte und Rückfragen wie am Rechner.
-            if (antwort.optBoolean("server")) Start("", "Die Sitzung „Jarvis: $app“ läuft auf dem Hostinger-Server" + (frei?.let { " (${it.beschreibung()})" } ?: if (sol) " (Sol 6.1, ${if (openCode) "OpenCode" else "Codex CLI"})" else "") +
-                ". Zu sehen ist sie in der Server-Konsole über das Fernwartungssymbol. Die fertige App kommt über den Tunnel aufs Handy und über den Cloud-Bau in UpdateStation.")
+            if (antwort.optBoolean("server")) Start("", "Der Auftrag für $app läuft auf dem Hostinger-Server" + (frei?.let { " (${it.beschreibung()})" } ?: if (sol) " (Sol 6.1, ${if (openCode) "OpenCode" else "Codex CLI"})" else "") +
+                ". Zu sehen ist die Sitzung in der Server-Konsole über das Fernwartungssymbol. Android-Apps kommen über den Tunnel aufs Handy und über den Cloud-Bau in UpdateStation; Mac- und Windows-Apps kann der Server nur bearbeiten und pushen.")
             else if (frei != null) Start("", "Die Sitzung „Jarvis: $app (${frei.modell.name}${if (frei.cli == CLI_CLAUDE) "" else ", ${frei.cli}"})“ läuft auf $rechner: " +
                 "${frei.beschreibung()}. " + when (frei.cli) {
                     CLI_CLAUDE -> "Sie ist in der Claude-App unter Code zu sehen; Schritte und Rückfragen laufen über Jarvis."

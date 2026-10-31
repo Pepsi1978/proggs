@@ -29,16 +29,16 @@ if [ ! -x "$ZUHAUSE/.local/node/bin/node" ]; then
   als "mkdir -p ~/.local/node ~/.local/bin && curl -fsSL https://nodejs.org/dist/$V/node-$V-linux-x64.tar.xz | tar -xJ --strip-components=1 -C ~/.local/node"
 fi
 
-# PATH und Zeitzone für jede Shell des Benutzers.
-if ! grep -q OpenLauncherServer "$ZUHAUSE/.profile" 2>/dev/null; then
-  cat >> "$ZUHAUSE/.profile" <<'P'
-
+# PATH und Zeitzone für jede Shell des Benutzers; der Block wird bei jedem Lauf erneuert.
+touch "$ZUHAUSE/.profile"
+sed -i '/^# OpenLauncherServer$/,/^# OpenLauncherServer Ende$/d; /^export PATH=.*\.kimi-code\/bin/d; /^export ANDROID_HOME=.*JARVIS_SERVER/d' "$ZUHAUSE/.profile"
+cat >> "$ZUHAUSE/.profile" <<'P'
 # OpenLauncherServer
 export PATH="$HOME/.local/bin:$HOME/.local/node/bin:$HOME/.kimi-code/bin:$HOME/.agy/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH"
 export ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="$HOME/android-sdk" NPM_CONFIG_PREFIX="$HOME/.local" TZ=Europe/Berlin JARVIS_SERVER=1 JARVIS_RECHNER=Hostinger-Server
+# OpenLauncherServer Ende
 P
-  chown "$BENUTZER": "$ZUHAUSE/.profile"
-fi
+chown "$BENUTZER": "$ZUHAUSE/.profile"
 
 # Android SDK (Regel: bauen und per Tunnel installieren geht auch von hier).
 if [ ! -x "$ZUHAUSE/android-sdk/platform-tools/adb" ]; then
@@ -56,7 +56,7 @@ G'
 [ -f "$ZUHAUSE/SK/Android/debug-shared.keystore" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 600 "$ZUHAUSE/SK/Android/debug-shared.keystore" "$ZUHAUSE/.android/debug.keystore"
 
 # Repo über einen eigenen Schreibschlüssel (Deploy-Key, gilt nur für dieses Repo). LFS-Dateien nur bei Bedarf holen.
-als 'mkdir -p ~/.ssh && chmod 700 ~/.ssh; [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -C jarvis-server -f ~/.ssh/id_ed25519; curl -fsSL https://api.github.com/meta | jq -r ".ssh_keys[]" | sed "s/^/github.com /" > ~/.ssh/known_hosts; chmod 600 ~/.ssh/known_hosts'
+als 'mkdir -p ~/.ssh && chmod 700 ~/.ssh; [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -C jarvis-server -f ~/.ssh/id_ed25519; curl -fsSL https://api.github.com/meta | jq -r ".ssh_keys[]" | sed "s/^/github.com /" > ~/.ssh/known_hosts.neu; [ -s ~/.ssh/known_hosts.neu ] && mv ~/.ssh/known_hosts.neu ~/.ssh/known_hosts; rm -f ~/.ssh/known_hosts.neu; chmod 600 ~/.ssh/known_hosts'
 als 'git config --global user.name "Jarvis Server"; git config --global user.email jarvis-server@users.noreply.github.com; git config --global pull.rebase true; git config --global init.defaultBranch main; git lfs install --skip-smudge >/dev/null'
 if [ ! -d "$REPO/.git" ]; then
   # ssh -T endet bei GitHub auch im Erfolgsfall mit Code 1: Nur die Meldung zählt.
@@ -83,7 +83,9 @@ fi
 
 install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null
+if command -v ufw >/dev/null; then ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null; else echo "ufw fehlt: Port 8090 auf wg0 selbst freigeben"; fi
 systemctl enable --now jarvis-tmux.service jarvis-konsole.service jarvis-server-bruecke.service jarvis-clis.timer jarvis-repo.timer
 systemctl restart jarvis-konsole.service jarvis-server-bruecke.service
+# tmux nicht neu starten, das beendete alle Sitzungen: Die Konfiguration nur neu einlesen.
+sudo -u "$BENUTZER" -H tmux -L jarvis source-file "$REPO/OpenLauncherServer/systemd/tmux.conf" || true
 echo "FERTIG"

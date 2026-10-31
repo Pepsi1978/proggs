@@ -386,7 +386,7 @@ class EinstellungsKatalog(context: Context) {
             // ---- Programmieren am Rechner ----
             auswahl("rechner_reihenfolge", "Programmieren am Rechner", "Welcher Rechner zuerst",
                 "An welchen Rechner Programmieraufträge zuerst gehen; ist er nicht erreichbar, springt der nächste ein (Mac, Windows-PC, Hostinger-Server), sind alle aus oder belegt, die Cloud. Sol 6.1 läuft am Windows-PC oder auf dem Hostinger-Server.",
-                { listOf("mac" to "Mac zuerst", "windows" to "Windows-PC zuerst", "server" to "Hostinger-Server zuerst") }, { e.rechnerReihenfolge.first() }) { e.rechnerReihenfolge = listOf(it) },
+                { listOf("mac" to "Mac zuerst", "windows" to "Windows-PC zuerst", "server" to "Hostinger-Server zuerst") }, { e.rechnerReihenfolge.first() }) { e.rechnerReihenfolge = listOf(it) + e.rechnerReihenfolge },
             // ---- E-Mail und GitHub ----
             Eintrag("mail_adresse", "E-Mail (Gmail)", "Gmail-Adresse", "Das Gmail-Konto, über das Jarvis Mails sendet und liest; das App-Passwort gehört zu ihm und wird nur in der App eingetragen.",
                 "eine E-Mail-Adresse", { e.mailAdresse }) { w ->
