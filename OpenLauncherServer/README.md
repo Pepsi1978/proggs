@@ -19,4 +19,6 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 - tmux meldet für ein laufendes Startskript immer `bash`. Das Ende einer CLI steht deshalb in `~/.openlauncher/sitzungen/<name>.fertig`.
 - `AGENTS.md` im Repo trägt auf dem Server die Server-Fassung und ist per `skip-worktree` aus jedem Commit heraus.
 
+**Bei einer Neuinstallation:** Kimi fragt beim ersten Start „Trust this folder?“. Einmal von Hand bestätigen, gemerkt wird das in `~/.kimi-code/workspace-trust/`; sonst bleibt jeder Kimi-Auftrag dort stehen.
+
 **Version:** `VERSION`, Form `0.1.1`, angezeigt im Reiter System; pro Commit an diesem Ordner einmal erhöhen.
