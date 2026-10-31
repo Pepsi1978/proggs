@@ -64,7 +64,7 @@ enum AufgabenText {
     """
 }
 
-/// Die festen Vorspänne der rechten Leiste, wörtlich wie am Handy (ProgrammiererVorlage.kt, NACHTRAG_VORSPANN).
+/// Die festen Vorspänne der schwebenden Knöpfe, wörtlich wie am Handy (ProgrammiererVorlage.kt, NACHTRAG_VORSPANN).
 enum ProgrammierVorspann {
     static let auftrag = "Übergib bitte folgende Aufgabe an den Programmierer:"
     static let nachtrag = "Nachtrag:"

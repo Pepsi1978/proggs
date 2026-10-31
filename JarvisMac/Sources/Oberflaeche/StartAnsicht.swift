@@ -61,8 +61,8 @@ struct StartAnsicht: View {
                     SchnellTag(titel: frage) { steuerung.gespraech = nil; steuerung.sende(frage) }
                 }
             }
-            .padding(.horizontal, 44).padding(.top, 10)
-            .frame(maxWidth: 940)
+            .padding(.horizontal, 64).padding(.top, 10)
+            .frame(maxWidth: 980)
             .frame(maxWidth: .infinity)
             .clipped()
             EingabeBlase(gespraech: nil, anhang: $anhang)

@@ -24,9 +24,12 @@ struct HauptFenster: View {
             .clipped()
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.18), value: steuerung.bereich)
-            Rectangle().fill(Farbe.linie).frame(width: 1)
-            RechteLeiste()
-                .frame(width: 92)
+            // Wie am Handy frei über dem Inhalt, nur dort, wo die Blase steht: Sie kosten keinen Platz.
+            .overlay(alignment: .bottomTrailing) {
+                if steuerung.bereich == .start || steuerung.bereich == .gespraech {
+                    SchwebeKnoepfe().padding(.trailing, 14).padding(.bottom, 146)
+                }
+            }
         }
         .background(JarvisHintergrund())
         .foregroundStyle(Farbe.text)
@@ -218,34 +221,32 @@ struct Seitenleiste: View {
     }
 }
 
-/// Die feste Leiste rechts, nach dem Schwebestapel des Handys: Neue Session, Papierkorb, ein freier Platz, Nachtrag, Programmierung. Immer sichtbar, ohne Einklappen.
-struct RechteLeiste: View {
+/// Die schwebenden Knöpfe nach dem Stapel des Handys: Neue Session, Papierkorb, ein freier Platz, Nachtrag, Programmierung. Ohne eigene Fläche, Papierkorb und Nachtrag nur, wenn sie etwas tun können.
+struct SchwebeKnoepfe: View {
     @State private var steuerung = AppSteuerung.shared
     @State private var loeschenZiel: Gespraech?
     @State private var sessionBlitz = false
 
     var body: some View {
         VStack(spacing: 10) {
-            Spacer()
-            RechterKnopf(symbol: "plus.bubble.fill", titel: "Neue Session", leuchtet: sessionBlitz) {
+            SchwebeKnopf(symbol: "plus.bubble.fill", hilfe: "Neue Session", leuchtet: sessionBlitz) {
                 steuerung.neueSession()
                 sessionBlitz = true
                 Task { try? await Task.sleep(for: .milliseconds(450)); sessionBlitz = false }
             }
-            RechterKnopf(symbol: "trash.fill", titel: "Papierkorb", hilfe: "Gespräch löschen", an: !(steuerung.gespraech?.nachrichten.isEmpty ?? true)) {
-                loeschenZiel = steuerung.gespraech
+            if let g = steuerung.gespraech, !g.nachrichten.isEmpty {
+                SchwebeKnopf(symbol: "trash.fill", hilfe: "Gespräch löschen") { loeschenZiel = g }
             }
-            Color.clear.frame(height: 24)
-            RechterKnopf(symbol: "plus", titel: "Nachtrag", hilfe: steuerung.nachtragMoeglich ? "Nachtrag in die Programmier-Sitzung dieses Gesprächs" : "Nur in einem Programmiergespräch", leuchtet: steuerung.nachtragAktiv, an: steuerung.nachtragMoeglich) {
-                steuerung.nachtragUmschalten()
+            Color.clear.frame(height: 14)
+            if steuerung.nachtragMoeglich {
+                SchwebeKnopf(symbol: "plus", hilfe: "Nachtrag in die Programmier-Sitzung dieses Gesprächs", leuchtet: steuerung.nachtragAktiv) {
+                    steuerung.nachtragUmschalten()
+                }
             }
-            RechterKnopf(symbol: "chevron.left.forwardslash.chevron.right", titel: "Programmierung", hilfe: "Neuer Programmierauftrag", leuchtet: steuerung.programmiererAktiv) {
+            SchwebeKnopf(symbol: "chevron.left.forwardslash.chevron.right", hilfe: "Neuer Programmierauftrag", leuchtet: steuerung.programmiererAktiv) {
                 steuerung.programmiererUmschalten()
             }
         }
-        .padding(.horizontal, 6).padding(.bottom, 22)
-        .frame(maxHeight: .infinity)
-        .background(Farbe.tiefe(0.22))
         .alert("Gespräch löschen?", isPresented: Binding(get: { loeschenZiel != nil }, set: { if !$0 { loeschenZiel = nil } }), presenting: loeschenZiel) { g in
             Button("Löschen", role: .destructive) {
                 // Das Ziel steht seit dem Klick fest: Hat das Gespräch inzwischen gewechselt, bleibt die offene Ansicht stehen.
@@ -262,31 +263,24 @@ struct RechteLeiste: View {
     }
 }
 
-private struct RechterKnopf: View {
+private struct SchwebeKnopf: View {
     let symbol: String
-    let titel: String
-    var hilfe: String?
+    let hilfe: String
     var leuchtet = false
-    var an = true
     let aktion: () -> Void
     @State private var schwebt = false
 
     var body: some View {
         Button(action: aktion) {
-            VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(leuchtet ? Color.black : Farbe.text2)
-                    .frame(width: 38, height: 38)
-                    .background(Circle().fill(leuchtet ? AnyShapeStyle(Farbe.gruen) : AnyShapeStyle(Farbe.glas(schwebt && an ? 0.13 : 0.07))))
-                Text(titel).font(.jarvis(10, .medium)).foregroundStyle(Farbe.text2).lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            Image(systemName: symbol).font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(leuchtet ? Color.black : Farbe.text2)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(leuchtet ? AnyShapeStyle(Farbe.gruen) : AnyShapeStyle(Farbe.glas(schwebt ? 0.13 : 0.05))))
+                .glassEffect(.regular, in: .circle)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .disabled(!an)
-        .opacity(an ? 1 : 0.4)
-        .help(hilfe ?? titel)
+        .help(hilfe)
         .onHover { schwebt = $0 }
     }
 }

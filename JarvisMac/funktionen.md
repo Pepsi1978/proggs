@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.38 -->
+<!-- stand: JarvisMac 1.0.39 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -35,7 +35,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Leiste mit Reitern Gespräche, Programmierung, Projekte (oranger Punkt, wenn dort gearbeitet wird); Projekte anlegen, Gespräche im Projekt.
 - Unter jeder Antwort: Kopieren, Vorlesen, Daumen hoch/runter (daraus lernt die Stil-Datei), Teilen, in neuem Gespräch fortsetzen, erneut fragen. Anthropic-Restguthaben vor dem Claude-Modellnamen.
 - Leiste links: Start, Zentrale, Ablage, Einstellungen, unten Version mit Build-Datum und -Uhrzeit. Der Live-Bildschirm öffnet sich über den Knopf „Live“ in der Blase; läuft ein Gespräch, steht „Live läuft“ in der Leiste. ⌘L startet oder beendet Live direkt. Einstellungen: Kopf, Guthaben, Stimme (Stimmen als Menü mit Stern und Hörprobe), Sprache, Live (nur Modell und Stimme des gewählten Anbieters), Mac & Rechte (Stand jedes Rechts, Fehlende anfragen, was bei Frank bleibt), Konten, Gedächtnis (Merken, Langzeitkontext, Gemerktes, Live-Gedächtnis, Funktionsübersicht Mac und Handy, Handy-Reiter und CLI, Regeln für ChatGPT Live), Aktivität (Mac-Logbuch, Handy-Protokoll), Über. Die Einstellungsliste bleibt dabei immer gleich.
-- Leiste rechts, immer sichtbar: Neue Session, Papierkorb (Gespräch löschen mit Rückfrage), Nachtrag (nur im Programmiergespräch), Programmierung. Programmierung setzt den Übergabetext des Handys vor den Text, Nachtrag „Nachtrag:“; grün, solange er vorn steht, erneuter Klick nimmt ihn heraus. Ein neuer Auftrag geht mit allen „ ; “-Aufgaben in einer Sitzung an das CLI (`programmieren` mit Ziel PC, ohne Handy `openlauncher_sitzung`) und bekommt aus einem Programmiergespräch ein eigenes Gespräch; der Nachtrag geht ohne Modell in die Sitzung dieses Gesprächs.
+- Schwebende Knöpfe wie am Handy, auf Start und im Gespräch rechts über der Blase: Neue Session, Papierkorb (Gespräch löschen mit Rückfrage, nur mit Gespräch), Nachtrag (nur im Programmiergespräch), Programmierung. Programmierung setzt den Übergabetext des Handys vor den Text, Nachtrag „Nachtrag:“; grün, solange er vorn steht, erneuter Klick nimmt ihn heraus. Ein neuer Auftrag geht mit allen „ ; “-Aufgaben in einer Sitzung an das CLI (`programmieren` mit Ziel PC, ohne Handy `openlauncher_sitzung`) und bekommt aus einem Programmiergespräch ein eigenes Gespräch; der Nachtrag geht ohne Modell in die Sitzung dieses Gesprächs.
 - Menüleisten-Symbol mit Schnellfrage, Sprechen, Live. Fenster-Kürzel ⌘N, ⌘D, ⌘L, ⌘1 Start, ⌘2 Zentrale, ⌘3 Ablage, ⌘,.
 
 ## Neu seit 1.0.5

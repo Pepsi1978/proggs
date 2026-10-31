@@ -116,7 +116,7 @@ final class AppSteuerung {
         blaseFokus += 1
     }
 
-    /// „Neue Session“ der rechten Leiste, wie am Handy: leeres Gespräch, die Blase klappt ohne Text ein.
+    /// „Neue Session“ der schwebenden Knöpfe, wie am Handy: leeres Gespräch, die Blase klappt ohne Text ein.
     func neueSession() {
         startOeffnen()
         blaseKompakt = true
@@ -166,7 +166,7 @@ final class AppSteuerung {
                 antwort = "Zu diesem Gespräch ist keine Programmier-Sitzung bekannt, der Nachtrag wurde nicht gesendet."
                 fehler = true
             }
-            log("gespraech", "Nachtrag per Knopf", wo: "Rechte Leiste", fehler: fehler ? antwort : nil)
+            log("gespraech", "Nachtrag per Knopf", wo: "Schwebeknöpfe", fehler: fehler ? antwort : nil)
             g.nachrichten.append(Nachricht(rolle: .jarvis, text: McpKlient.ohneKontextHinweis(antwort)))
             if (g.verlauf.last?["role"] as? String) == "assistant" {
                 g.verlauf.append(["role": "user", "content": [["type": "text", "text": "\(ProgrammierVorspann.nachtrag) \(text)"]]])
