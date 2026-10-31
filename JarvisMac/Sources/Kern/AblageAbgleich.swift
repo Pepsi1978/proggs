@@ -21,6 +21,7 @@ final class AblageAbgleich {
     @ObservationIgnored private var stand = 0
     @ObservationIgnored private var laeuft = false
     @ObservationIgnored private var ladeAufgabe: Task<Void, Never>?
+    @ObservationIgnored private var nochmalLaden = false
     @ObservationIgnored private var laufendeLadungen: [String: Task<URL, Error>] = [:]
 
     private let ordner: URL = {
@@ -49,11 +50,9 @@ final class AblageAbgleich {
     }
 
     private func schleife() async {
-        var warten = true
         while true {
             do {
-                try await holen(warten: warten ? 25 : 0)
-                warten = true
+                try await holen(warten: 25)
                 if fehler != nil { fehler = nil }
                 verbunden = true
             } catch {
@@ -66,22 +65,27 @@ final class AblageAbgleich {
     }
 
     /// Einmal sofort abgleichen (Knopf „Neu laden“).
-    func jetztAbgleichen() async { try? await holen(warten: 0) }
+    func jetztAbgleichen() async {
+        do { try await holen(warten: 0); fehler = nil } catch { fehler = "Server nicht erreichbar, du siehst den letzten Stand: \(error.localizedDescription)" }
+    }
 
     private func holen(warten: Int) async throws {
         guard let basis else { throw URLError(.badURL); }
-        guard let url = URL(string: "\(basis)/aenderungen?seit=\(stand)&warten=\(warten)&geraet=Jarvis%20Mac%20OS") else { throw URLError(.badURL) }
+        guard let url = URL(string: "\(basis)/aenderungen?seit=\(stand)&warten=\(warten)&geraet=\(Self.quelle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else { throw URLError(.badURL) }
         let (daten, antwort) = try await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: Double(warten) + 30))
         guard (antwort as? HTTPURLResponse)?.statusCode == 200, let o = JSON.objekt(daten), let liste = o["docs"] as? [JSONObjekt] else { throw URLError(.badServerResponse) }
         let neu = Self.zahl(o["stand"])
-        // Der Server wurde neu aufgesetzt: Sein Stand ist kleiner als unserer, die Liste ist vollständig.
-        if neu < Int64(stand) { docs = [:] }
+        // Nur der Server weiß sicher, dass er neu aufgesetzt wurde. Ein kleinerer Stand allein kann auch eine überholte Antwort sein („Neu laden“ neben dem Long-Polling).
+        let neuaufbau = o["neuaufbau"] as? Bool == true
+        if neuaufbau { docs = [:] } else if neu < Int64(stand) { return }
         for d in liste {
             guard let art = d["art"] as? String, let id = d["id"] as? String else { continue }
+            // Eine Antwort von vor dem eigenen Speichern darf die gerade gespeicherte Fassung nicht zurückdrehen.
+            if let da = docs["\(art):\(id)"], Self.zahl(da["stand"]) > Self.zahl(d["stand"]) { continue }
             docs["\(art):\(id)"] = d
         }
         guard neu != Int64(stand) || !liste.isEmpty else { return }
-        stand = Int(neu)
+        stand = max(Int(neu), neuaufbau ? 0 : stand)
         speichereDocs()
         neuAufbauen()
         if !liste.isEmpty { log("ablage", "\(liste.count) Änderung(en) vom Server", wo: "Ablage") }
@@ -100,15 +104,24 @@ final class AblageAbgleich {
 
     /// Lädt im Hintergrund alles, was hier noch fehlt, und räumt Inhalte weg, die kein Eintrag mehr braucht.
     private func allesLaden() {
-        guard ladeAufgabe == nil else { return }
+        guard ladeAufgabe == nil else { nochmalLaden = true; return }
         ladeAufgabe = Task {
-            defer { ladeAufgabe = nil }
-            let benutzt = benutzteInhalte()
-            for sha in benutzt where !FileManager.default.fileExists(atPath: pfad(sha).path) {
-                _ = try? await inhalt(sha)
+            var fehlgeschlagen = false
+            for sha in benutzteInhalte() where !FileManager.default.fileExists(atPath: pfad(sha).path) {
+                do { _ = try await inhalt(sha) } catch { fehlgeschlagen = true }
             }
-            let vorhanden = (try? FileManager.default.contentsOfDirectory(atPath: blobs.path)) ?? []
-            for name in vorhanden where !benutzt.contains(name) { try? FileManager.default.removeItem(at: blobs.appendingPathComponent(name)) }
+            // Erst jetzt und frisch berechnet; was gerade erst entstand, gehört vermutlich zu einem laufenden Speichern und bleibt einen Tag liegen.
+            let benutzt = benutzteInhalte()
+            let grenze = Date().addingTimeInterval(-86_400)
+            let vorhanden = (try? FileManager.default.contentsOfDirectory(at: blobs, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+            for u in vorhanden where !benutzt.contains(u.lastPathComponent) {
+                if let d = try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, d < grenze { try? FileManager.default.removeItem(at: u) }
+            }
+            ladeAufgabe = nil
+            if nochmalLaden { nochmalLaden = false; allesLaden() } else if fehlgeschlagen {
+                try? await Task.sleep(for: .seconds(300))
+                allesLaden()
+            }
         }
     }
 
@@ -162,14 +175,13 @@ final class AblageAbgleich {
         return (try? String(contentsOf: u, encoding: .utf8)) ?? ""
     }
 
-    /// Volltextsuche: Titel, Dateinamen, Beschreibungen und Texte.
+    /// Volltextsuche: Titel, Dateinamen, Beschreibungen der Dateien und Texte; ein noch fehlender Text wird dafür geholt.
     func suche(_ wort: String) async -> Set<String> {
         let w = wort.lowercased()
         var r = Set<String>()
         for e in eintraege {
-            if e.titel.lowercased().contains(w) || e.dateien.contains(where: { $0.name.lowercased().contains(w) }) { r.insert(e.id); continue }
-            guard let sha = e.textSha else { continue }
-            let u = pfad(sha)
+            if e.titel.lowercased().contains(w) || e.dateien.contains(where: { $0.name.lowercased().contains(w) || $0.beschreibung.lowercased().contains(w) }) { r.insert(e.id); continue }
+            guard let sha = e.textSha, let u = try? await inhalt(sha) else { continue }
             let treffer = await Task.detached(priority: .utility) { ((try? String(contentsOf: u, encoding: .utf8)) ?? "").lowercased().contains(w) }.value
             if treffer { r.insert(e.id) }
         }
@@ -197,13 +209,17 @@ final class AblageAbgleich {
             (antwort, kopf) = try await URLSession.shared.data(for: req)
         }
         guard (kopf as? HTTPURLResponse)?.statusCode == 200 else { throw AblageFehler.server }
-        guard JSON.objekt(antwort)?["uebernommen"] as? Bool == true else { throw AblageFehler.neuereFassung }
-        docs["\(art):\(id)"] = ["art": art, "id": id, "daten": geloescht ? [:] : daten, "geaendert": geaendert, "geloescht": geloescht, "von": Self.quelle] as JSONObjekt
+        guard let ok = JSON.objekt(antwort), ok["uebernommen"] as? Bool == true else { throw AblageFehler.neuereFassung }
+        docs["\(art):\(id)"] = ["art": art, "id": id, "daten": geloescht ? [:] : daten, "geaendert": geaendert, "geloescht": geloescht, "von": Self.quelle, "stand": Self.zahl(ok["stand"])] as JSONObjekt
+        Task { await McpKlient.shared.kontextVerwerfen() }
         speichereDocs()
         neuAufbauen()
     }
 
     private static func jetzt() -> Int64 { Int64(Date().timeIntervalSince1970 * 1000) }
+
+    /// Geht diese Uhr nach, gälte die eigene Änderung sonst als älter als der Stand, auf dem sie aufbaut.
+    private func zeit(_ art: String, _ id: String) -> Int64 { max(Self.jetzt(), Self.zahl(docs["\(art):\(id)"]?["geaendert"]) + 1) }
     private static func neueId() -> String { String(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(20)) }
 
     /// Legt einen Inhalt in den eigenen Speicher, damit er nicht noch einmal vom Server geholt werden muss.
@@ -221,14 +237,18 @@ final class AblageAbgleich {
 
     /// Neuer Text oder Ersatz bei genau gleichem Titel (wie am Handy); mit anhaengen wird ergänzt.
     func textSpeichern(titel: String, inhalt: String, anhaengen: Bool = false) async throws {
-        let sauber = titel.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = sauber.isEmpty ? "Notiz" : sauber
+        let name = Self.titelSauber(titel)
         var volltext = inhalt.trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
-        let vorhanden = eintraege.first { $0.titel.lowercased() == name.lowercased() }
+        // Wie am Handy: Ersetzt wird nur bei genau gleichem Titel, ein eindeutiger Teil des Titels genügt nur zum Anhängen.
+        var vorhanden = eintraege.first { Self.titelSauber($0.titel).lowercased() == name.lowercased() }
+        if vorhanden == nil && anhaengen {
+            let teil = eintraege.filter { Self.titelSauber($0.titel).lowercased().contains(name.lowercased()) }
+            if teil.count == 1 { vorhanden = teil[0] }
+        }
         if anhaengen, let v = vorhanden, v.textSha != nil { volltext = (try await text(v)) + "\n\n" + volltext }
         let (sha, u) = try merke(Data(volltext.utf8))
-        let zeit = Self.jetzt()
         let id = vorhanden?.id ?? Self.neueId()
+        let zeit = self.zeit("eintrag", id)
         var w = vorhanden.flatMap { eintragDaten($0.id) } ?? ["id": id, "titel": name, "erstellt": zeit, "herkunft": Self.quelle, "quelle": Self.quelle, "beschreibung": "", "anhaenge": [JSONObjekt]()]
         w["text_sha"] = sha
         w["text_groesse"] = volltext.utf8.count
@@ -242,7 +262,15 @@ final class AblageAbgleich {
     func dateiHinzufuegen(_ datei: URL) async throws {
         let sha = try await Self.pruefsumme(datei)
         let u = pfad(sha)
-        if !FileManager.default.fileExists(atPath: u.path) { try FileManager.default.copyItem(at: datei, to: u) }
+        // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still. Über eine Zwischendatei, das Datum zählt für das Aufräumen.
+        try await Task.detached(priority: .userInitiated) {
+            guard !FileManager.default.fileExists(atPath: u.path) else { return }
+            let teil = u.appendingPathExtension("teil")
+            try? FileManager.default.removeItem(at: teil)
+            try FileManager.default.copyItem(at: datei, to: teil)
+            try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: teil.path)
+            try FileManager.default.moveItem(at: teil, to: u)
+        }.value
         let groesse = (try? FileManager.default.attributesOfItem(atPath: u.path)[.size] as? Int) ?? 0
         let endung = datei.pathExtension.lowercased()
         let typ = Dateiart.bestimme(endung)
@@ -259,7 +287,7 @@ final class AblageAbgleich {
 
     /// Löscht den Eintrag oder nur eine seiner Dateien, auf allen Jarvis-Versionen.
     func loeschen(eintragId: String, dateiId: String? = nil) async throws {
-        let zeit = Self.jetzt()
+        let zeit = self.zeit("eintrag", eintragId)
         if let dateiId, var w = eintragDaten(eintragId) {
             let rest = (w["anhaenge"] as? [JSONObjekt] ?? []).filter { $0["id"] as? String != dateiId }
             let hatText = (w["text_sha"] as? String)?.isEmpty == false
@@ -296,11 +324,11 @@ final class AblageAbgleich {
         guard !sauber.isEmpty else { throw AblageFehler.leer }
         if w["text"] as? String != sauber { w["titel"] = "" }
         w["text"] = sauber
-        try await senden(art: "prompt", id: String(erstellt), daten: w, geaendert: Self.jetzt())
+        try await senden(art: "prompt", id: String(erstellt), daten: w, geaendert: zeit("prompt", String(erstellt)))
     }
 
     func promptLoeschen(erstellt: Int64) async throws {
-        try await senden(art: "prompt", id: String(erstellt), daten: [:], geaendert: Self.jetzt(), geloescht: true)
+        try await senden(art: "prompt", id: String(erstellt), daten: [:], geaendert: zeit("prompt", String(erstellt)), geloescht: true)
     }
 
     // MARK: Werkzeuge des Modells
@@ -315,9 +343,40 @@ final class AblageAbgleich {
                 guard !inhalt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return WerkzeugErgebnis(text: "Der Inhalt ist leer.", fehler: true) }
                 try await textSpeichern(titel: titel, inhalt: inhalt, anhaengen: a["anhaengen"] as? Bool == true)
                 return WerkzeugErgebnis(text: "Abgelegt als „\(titel)“.")
+            case "ablage_lesen":
+                // Ohne Titel die Liste vom Handy (mit Vorläufigem), Unbekanntes kann ein vorläufiges Ergebnis dort sein.
+                guard let titel = (a["titel"] as? String).flatMap({ $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }), let e = finde(titel) else { return nil }
+                var t = "Eintrag „\(e.titel)“ von \(e.quelle) (Stand \(e.geaendert.formatted(date: .abbreviated, time: .shortened))):\n\n"
+                if e.textSha != nil { t += String(try await text(e).prefix(60_000)) + "\n" }
+                if !e.dateien.isEmpty { t += "\nDATEIEN (in der Ablage ansehen):\n" + e.dateien.map { "- \($0.name) (\($0.art), \(AblageAnsicht.groesse($0.groesse)))" }.joined(separator: "\n") }
+                return WerkzeugErgebnis(text: t)
+            case "ablage_loeschen":
+                // Direkte Aufrufe der App kannten nur die Kennung; Unbekanntes kann ein vorläufiges Ergebnis am Handy sein.
+                let kennung = a["eintrag_id"] as? String
+                guard let e = kennung.map({ k in eintraege.first { $0.id == k } }) ?? finde(a["titel"] as? String ?? "") else { return nil }
+                let wunsch = (a["datei"] as? String)?.trimmingCharacters(in: .whitespaces).lowercased() ?? ""
+                if let id = a["datei_id"] as? String {
+                    guard let d = e.dateien.first(where: { $0.id == id }) else { return WerkzeugErgebnis(text: "Diese Datei gibt es nicht mehr.", fehler: true) }
+                    try await loeschen(eintragId: e.id, dateiId: d.id)
+                    return WerkzeugErgebnis(text: "Gelöscht: „\(d.name)“ aus „\(e.titel)“.")
+                }
+                if !wunsch.isEmpty {
+                    let teil = e.dateien.filter { $0.name.lowercased().contains(wunsch) }
+                    guard let d = e.dateien.first(where: { $0.name.lowercased() == wunsch }) ?? (teil.count == 1 ? teil[0] : nil) else { return WerkzeugErgebnis(text: "Keine eindeutige Datei „\(wunsch)“ in „\(e.titel)“.", fehler: true) }
+                    try await loeschen(eintragId: e.id, dateiId: d.id)
+                    return WerkzeugErgebnis(text: "Gelöscht: „\(d.name)“ aus „\(e.titel)“.")
+                }
+                try await loeschen(eintragId: e.id)
+                return WerkzeugErgebnis(text: "Gelöscht: „\(e.titel)“.")
             case "prompts_lesen":
+                let kopf = { (p: PromptEintrag) in "Prompt \(p.nummer)\(p.titel.isEmpty ? "" : " (\(p.titel))") [id \(p.erstellt)]:\n\(p.text)" }
+                let n = Self.zahl(a["nummer"])
+                if n > 0 {
+                    guard let p = prompts.first(where: { Int64($0.nummer) == n }) else { return WerkzeugErgebnis(text: "Einen Prompt mit der Nummer \(n) gibt es nicht.", fehler: true) }
+                    return WerkzeugErgebnis(text: kopf(p))
+                }
                 if prompts.isEmpty { return WerkzeugErgebnis(text: "Noch keine Prompts gespeichert.") }
-                return WerkzeugErgebnis(text: prompts.map { p in "Prompt \(p.nummer)\(p.titel.isEmpty ? "" : " (\(p.titel))") [id \(p.erstellt)]:\n\(p.text)" }.joined(separator: "\n\n"))
+                return WerkzeugErgebnis(text: prompts.map(kopf).joined(separator: "\n\n"))
             case "prompt_speichern":
                 let aktion = a["aktion"] as? String ?? "speichern", text = a["text"] as? String ?? ""
                 let erstellt = Self.zahl(a["erstellt"]), nummer = Self.zahl(a["nummer"])
@@ -346,9 +405,37 @@ final class AblageAbgleich {
         }
     }
 
+    /// Genauer Titel oder ein eindeutiger Teil davon, wie am Handy.
+    private func finde(_ titel: String) -> AblageEintrag? {
+        let g = Self.titelSauber(titel).lowercased()
+        if let e = eintraege.first(where: { Self.titelSauber($0.titel).lowercased() == g }) { return e }
+        let teil = eintraege.filter { Self.titelSauber($0.titel).lowercased().contains(g) }
+        return teil.count == 1 ? teil[0] : nil
+    }
+
+    /// Die Liste aus der eigenen Kopie, wenn das Handy nicht antwortet.
+    func liste() -> WerkzeugErgebnis {
+        if eintraege.isEmpty { return WerkzeugErgebnis(text: "Die Ablage ist leer.") }
+        let zeilen = eintraege.prefix(80).map { e in
+            "- \(e.titel) (\(e.quelle), \(e.geaendert.formatted(date: .abbreviated, time: .omitted)))" + (e.dateien.isEmpty ? "" : ": " + e.dateien.map(\.name).joined(separator: ", "))
+        }
+        return WerkzeugErgebnis(text: "\(eintraege.count) Eintrag/Einträge in der Ablage (Handy nicht erreichbar, Vorläufiges fehlt hier):\n" + zeilen.joined(separator: "\n"))
+    }
+
+    /// Wie AblageSpeicher.dateiname am Handy: ohne Pfadzeichen und .md, höchstens 80 Zeichen, sonst entstünden Doppel.
+    private static func titelSauber(_ titel: String) -> String {
+        var t = titel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.lowercased().hasSuffix(".md") { t = String(t.dropLast(3)) }
+        t = t.replacingOccurrences(of: #"[\\/:*?"<>|[:cntrl:]]"#, with: " ", options: .regularExpression)
+        t = t.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        t = String(t.prefix(80)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? "Notiz" : t
+    }
+
     // MARK: Ansicht
 
-    nonisolated static func zahl(_ x: Any?) -> Int64 { (x as? NSNumber)?.int64Value ?? 0 }
+    /// Das Modell schickt Zahlen mitunter als Text.
+    nonisolated static func zahl(_ x: Any?) -> Int64 { (x as? NSNumber)?.int64Value ?? (x as? String).flatMap { Int64($0.trimmingCharacters(in: .whitespaces)) } ?? 0 }
 
     private func neuAufbauen() {
         var neu: [AblageEintrag] = []
@@ -359,11 +446,11 @@ final class AblageAbgleich {
             case "eintrag":
                 let dateien = (w["anhaenge"] as? [JSONObjekt] ?? []).map { a in
                     AblageDatei(id: a["id"] as? String ?? "", name: a["name"] as? String ?? "", art: a["art"] as? String ?? "SONSTIGE", kategorie: a["kategorie"] as? String ?? "SONSTIGE",
-                                endung: a["endung"] as? String ?? "", groesse: Int(Self.zahl(a["groesse"])), sha: a["sha256"] as? String ?? "")
+                                endung: a["endung"] as? String ?? "", groesse: Int(Self.zahl(a["groesse"])), sha: a["sha256"] as? String ?? "", beschreibung: a["beschreibung"] as? String ?? "")
                 }
                 let sha = (w["text_sha"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 neu.append(AblageEintrag(id: id, titel: w["titel"] as? String ?? "", geaendert: Date(timeIntervalSince1970: Double(Self.zahl(d["geaendert"])) / 1000), hatText: sha != nil,
-                                         recherche: w["recherche"] as? Bool ?? false, dateien: dateien, textSha: sha, quelle: Self.quellenName(w["quelle"])))
+                                         recherche: w["recherche"] as? Bool ?? false, dateien: dateien, textSha: sha, textGroesse: Int(Self.zahl(w["text_groesse"])), quelle: Self.quellenName(w["quelle"])))
             case "prompt":
                 ps.append(PromptEintrag(nummer: 0, titel: w["titel"] as? String ?? "", text: w["text"] as? String ?? "", erstellt: Int64(id) ?? 0, quelle: Self.quellenName(w["quelle"])))
             default: break

@@ -34,9 +34,8 @@ final class AppSteuerung {
     var entwurf = ""
     /// Text, dessen Blase verschwunden ist (getippt oder ein Diktat, das erst danach fertig wurde). Die nächste Blase übernimmt ihn.
     var blasenRest = ""
-    /// Der Prompt, der gerade im Vollbild bearbeitet wird; promptStand zählt hoch, wenn die Liste neu geladen werden muss.
+    /// Der Prompt, der gerade im Vollbild bearbeitet wird.
     var promptBearbeiten: PromptEintrag?
-    var promptStand = 0
     /// Der noch nicht gespeicherte neue Prompt: Er überlebt das Vollbild und den Wechsel des Bereichs.
     var promptEntwurf = ""
     /// Der eben gesendete Prompt, solange die Frage offen ist, ob er aus der Ablage weg soll.
@@ -107,7 +106,6 @@ final class AppSteuerung {
             let r = await AblageAbgleich.shared.werkzeug("prompt_speichern", ["aktion": "loeschen", "nummer": p.nummer, "erstellt": p.erstellt, "text": p.text])
             if let r, r.fehler { promptLoeschenFehler = r.text; return }
             log("ablage", "Gesendeten Prompt gelöscht", wo: "Ablage/Prompts")
-            promptStand += 1
         }
     }
 

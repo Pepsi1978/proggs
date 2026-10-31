@@ -14,6 +14,7 @@ struct AblageDatei: Identifiable, Hashable {
     let endung: String
     let groesse: Int
     let sha: String
+    var beschreibung = ""
 }
 
 struct AblageEintrag: Identifiable, Hashable {
@@ -24,6 +25,7 @@ struct AblageEintrag: Identifiable, Hashable {
     let recherche: Bool
     let dateien: [AblageDatei]
     let textSha: String?
+    var textGroesse = 0
     /// Die Jarvis-Version, von der der Eintrag stammt.
     let quelle: String
 }
@@ -181,8 +183,16 @@ enum AblageLader {
     }()
 
     @MainActor static func vorschau(_ e: AblageElement, laengste: Int) async -> NSImage? {
-        guard let d = e.datei, let u = try? await AblageAbgleich.shared.inhalt(d.sha) else { return nil }
+        guard let d = e.datei else { return nil }
+        // Einmal erzeugt bleibt sie liegen: Sonst dekodierte jede Kachel beim Erscheinen wieder das Original.
+        let cache = ordner.appendingPathComponent("\(d.sha)-\(laengste).jpg")
+        if let bild = await Task.detached(priority: .utility, operation: { NSImage(contentsOf: cache) }).value { return bild }
+        guard let u = try? await AblageAbgleich.shared.inhalt(d.sha) else { return nil }
         let art = d.art
+        if art == "SVG" || art == "ANIMATION" {
+            guard d.groesse <= 5_000_000 else { return nil }
+            return await Task.detached(priority: .utility) { NSImage(contentsOf: u) }.value
+        }
         let cg: CGImage? = await Task.detached(priority: .utility) {
             if art == "PDF" {
                 guard let seite = PDFDocument(url: u)?.page(at: 0) else { return nil }
@@ -192,8 +202,10 @@ enum AblageLader {
             let o: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: laengste]
             return CGImageSourceCreateThumbnailAtIndex(quelle, 0, o as CFDictionary)
         }.value
-        if let cg { return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height)) }
-        return art == "SVG" || art == "ANIMATION" ? NSImage(contentsOf: u) : nil
+        guard let cg else { return nil }
+        let jpeg = NSBitmapImageRep(cgImage: cg).representation(using: .jpeg, properties: [.compressionFactor: 0.8])
+        try? jpeg?.write(to: cache)
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 
     /// Die Datei unter ihrem Namen im Zwischenordner, damit andere Programme sie öffnen können.
@@ -205,8 +217,11 @@ enum AblageLader {
         try FileManager.default.createDirectory(at: ziel, withIntermediateDirectories: true)
         let url = ziel.appendingPathComponent((d.name as NSString).lastPathComponent)
         if let a = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int, a == d.groesse { return url }
-        try? FileManager.default.removeItem(at: url)
-        try FileManager.default.copyItem(at: quelle, to: url)
+        // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still.
+        try await Task.detached(priority: .userInitiated) {
+            try? FileManager.default.removeItem(at: url)
+            try FileManager.default.copyItem(at: quelle, to: url)
+        }.value
         // Wie beim Browser-Download: macOS warnt beim Öffnen von Programmen und Skripten aus der Ablage.
         let kennung = "0081;\(String(Int(Date().timeIntervalSince1970), radix: 16));Jarvis;"
         _ = kennung.withCString { setxattr(url.path, "com.apple.quarantine", $0, strlen($0), 0, 0) }
@@ -353,7 +368,7 @@ struct AblageAnsicht: View {
         switch sortierung {
         case "aelteste": return l.sorted { a, b in a.eintrag.geaendert < b.eintrag.geaendert }
         case "name": return l.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        case "groesse": return l.sorted { ($0.datei?.groesse ?? 0) > ($1.datei?.groesse ?? 0) }
+        case "groesse": return l.sorted { ($0.datei?.groesse ?? $0.eintrag.textGroesse) > ($1.datei?.groesse ?? $1.eintrag.textGroesse) }
         case "quelle":
             // Erst die Versionen in der gewählten Reihenfolge, innerhalb einer Version das Neueste zuerst.
             let o = QuellenOrdnung.liste(quellenWert)
@@ -458,7 +473,6 @@ struct AblageDetail: View {
     @State private var bild: NSImage?
     @State private var text: String?
     @State private var pdf: URL?
-    @State private var fortschritt = 0.0
     @State private var fehler: String?
     @State private var laedt = true
     @State private var loeschenFrage = false
@@ -482,7 +496,7 @@ struct AblageDetail: View {
                 RundKnopf(symbol: "xmark", hilfe: "Schließen", groesse: 30) { schliessen() }
             }
             if let fehler { Text(fehler).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
-            if dateiArbeit != nil { ProgressView(value: fortschritt).frame(maxWidth: 240) }
+            if dateiArbeit != nil { ProgressView().controlSize(.small) }
             Group {
                 if let bild {
                     Image(nsImage: bild).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -492,7 +506,7 @@ struct AblageDetail: View {
                     ScrollView { MarkdownText(text: text, groesse: 14).frame(maxWidth: .infinity, alignment: .leading).padding(4) }
                 } else if laedt {
                     VStack(spacing: 10) {
-                        ProgressView(value: fortschritt > 0 ? fortschritt : nil).frame(width: 240)
+                        ProgressView().controlSize(.small)
                         Text("Hole die Datei vom Server …").font(.jarvis(13)).foregroundStyle(Farbe.text2)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -537,7 +551,7 @@ struct AblageDetail: View {
                 if bild != nil { return }
             }
             if ["BILD", "PDF", "TEXT", "MARKDOWN", "CODE", "DATEN", "TABELLE_TEXT", "HTML", "ANIMATION", "SVG"].contains(d.art), d.groesse <= 40_000_000 {
-                let u = try await AblageLader.datei(element) { fortschritt = $0 }
+                let u = try await AblageLader.datei(element) { _ in }
                 switch d.art {
                 case "PDF": pdf = u
                 case "BILD", "ANIMATION", "SVG": bild = NSImage(contentsOf: u)
@@ -549,14 +563,14 @@ struct AblageDetail: View {
 
     private func oeffnen() async {
         do {
-            let u = try await AblageLader.datei(element) { fortschritt = $0 }
+            let u = try await AblageLader.datei(element) { _ in }
             NSWorkspace.shared.open(u)
         } catch { fehler = error.localizedDescription }
     }
 
     private func sichern() async {
         do {
-            let u = try await AblageLader.datei(element) { fortschritt = $0 }
+            let u = try await AblageLader.datei(element) { _ in }
             let panel = NSSavePanel()
             panel.nameFieldStringValue = u.lastPathComponent
             guard panel.runModal() == .OK, let ziel = panel.url else { return }

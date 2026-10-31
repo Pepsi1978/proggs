@@ -176,6 +176,9 @@ actor McpKlient {
     /// Diese Werkzeuge erzeugen am Handy einen Ablage-Eintrag: Er soll trotzdem als vom Mac gelten.
     private static let legtInAblage: Set<String> = ["ablage_schreiben", "ablage_datei_speichern", "bild_erzeugen", "in_ablage_uebernehmen"]
 
+    /// Die Oberfläche hat die Ablage geändert: Der gemerkte Kontext zeigt sie nicht mehr richtig.
+    func kontextVerwerfen() { kontextVorrat = ""; kontextZeit = .distantPast }
+
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
         let start = Date()
         // Ablage und Prompts liegen auf dem Server: Der Mac schreibt selbst dorthin, auch wenn das Handy aus ist.
@@ -186,7 +189,9 @@ actor McpKlient {
         }
         var argumente = argumente
         if Self.legtInAblage.contains(name) { argumente["_quelle"] = AblageAbgleich.quelle }
-        let e = await rufeOhneLog(name, argumente, sekunden: sekunden)
+        var e = await rufeOhneLog(name, argumente, sekunden: sekunden)
+        // Die Liste kommt vom Handy, weil sie auch Vorläufiges zeigt. Ist es aus, reicht die eigene Kopie der Ablage.
+        if e.fehler && name == "ablage_lesen" { e = await AblageAbgleich.shared.liste() }
         if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
         let ms = Int(Date().timeIntervalSince(start) * 1000)
         // Das Logbuch soll die App verbessern, nicht das Leben mitschreiben: Private Inhalte nur als Länge, Dateiabrufe nur bei Fehlern.

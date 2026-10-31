@@ -105,34 +105,6 @@ struct PromptEintrag: Identifiable, Hashable {
     /// Die Jarvis-Version, von der der Prompt stammt.
     var quelle = ""
     var id: Int64 { erstellt != 0 ? erstellt : Int64(nummer) }
-
-    static func zerlege(_ roh: String) -> [PromptEintrag] {
-        var r: [PromptEintrag] = []
-        var aktuell: (Int, String, Int64)?
-        // Nur Kopfzeilen mit fester Kennung zählen, sonst hielte eine Zeile „Prompt 1:“ im Text für einen neuen Eintrag. Ältere Handy-Versionen senden keine Kennung.
-        let mitKennung = #"^Prompt \d+( \(.*\))? \[id \d+\]:\s*$"#
-        let kopf = roh.components(separatedBy: "\n").contains { $0.range(of: mitKennung, options: .regularExpression) != nil } ? mitKennung : #"^Prompt \d+( \(.*\))?:\s*$"#
-        var zeilen: [String] = []
-        func fertig() {
-            if let a = aktuell { r.append(PromptEintrag(nummer: a.0, titel: a.1, text: zeilen.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines), erstellt: a.2)) }
-            zeilen = []
-        }
-        for z in roh.components(separatedBy: "\n") {
-            if z.hasPrefix("(Falls in diesem Gespräch") { continue }
-            if z.range(of: kopf, options: .regularExpression) != nil {
-                let rest = z.dropFirst(7)
-                let nummer = Int(rest.prefix { $0.isNumber }) ?? 0
-                var titel = ""
-                if let a = z.firstIndex(of: "("), let b = z.lastIndex(of: ")"), a < b { titel = String(z[z.index(after: a)..<b]) }
-                var erstellt: Int64 = 0
-                if let k = z.range(of: "[id ", options: .backwards) { erstellt = Int64(z[k.upperBound...].prefix { $0.isNumber }) ?? 0 }
-                fertig(); aktuell = (nummer, titel, erstellt); continue
-            }
-            zeilen.append(z)
-        }
-        fertig()
-        return r
-    }
 }
 
 struct PromptsAnsicht: View {
@@ -192,12 +164,12 @@ struct PromptsAnsicht: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(p.titel.isEmpty ? "Prompt \(p.nummer)" : p.titel).font(.jarvis(14, .semibold))
                                 Text("Von \(p.quelle)").font(.jarvis(11)).foregroundStyle(Farbe.text3)
-                                Text(p.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(offen == p ? nil : 2).textSelection(.enabled)
+                                Text(p.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(offen?.id == p.id ? nil : 2).textSelection(.enabled)
                             }
                             Spacer()
                         }
                         .contentShape(Rectangle())
-                        .onTapGesture { withAnimation(.spring(duration: 0.3)) { offen = offen == p ? nil : p } }
+                        .onTapGesture { withAnimation(.spring(duration: 0.3)) { offen = offen?.id == p.id ? nil : p } }
                         HStack(spacing: 8) {
                             Spacer()
                             KleinKnopf(symbol: "trash", hilfe: "Löschen") {

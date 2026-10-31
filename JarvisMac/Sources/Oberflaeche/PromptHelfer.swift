@@ -273,7 +273,6 @@ struct PromptEditorVollbild: View {
                     try await abgleich.promptSpeichern(text)
                 }
             } catch { fehler = error.localizedDescription; return }
-            steuerung.promptStand += 1
             schliessen(gespeichert: true)
         }
     }
