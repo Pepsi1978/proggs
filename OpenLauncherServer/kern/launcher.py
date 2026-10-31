@@ -387,11 +387,19 @@ def _kimi_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
 '''
 
 
+# Wie OpenLauncher am Mac: Statusleiste und Berechtigungen setzen, Franks übrige Einstellungen bleiben stehen. Das Skript liegt im Repo und läuft auch unter Linux.
+_AGY_EINSTELLUNGEN = r'''AGY_SETTINGS="$HOME/.gemini/antigravity-cli/settings.json"
+mkdir -p "$(dirname "$AGY_SETTINGS")"
+[ -f "$AGY_SETTINGS" ] || echo '{}' > "$AGY_SETTINGS"
+jq '.toolPermission = (.toolPermission // "always-proceed") | .statusLine = {"type": "command", "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh", "enabled": true}' "$AGY_SETTINGS" > "$AGY_SETTINGS.tmp" 2>/dev/null && mv -f "$AGY_SETTINGS.tmp" "$AGY_SETTINGS" || rm -f "$AGY_SETTINGS.tmp"
+'''
+
+
 def _agy_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
     agents_aktivieren(profil, modus)
     q = shlex.quote
     stufe = f" --effort {q(effort)}" if effort else ""
-    return f'''unset GEMINI_API_KEY
+    return _AGY_EINSTELLUNGEN + f'''unset GEMINI_API_KEY
 if [ -n "$PROMPT" ]; then agy --model {q(modell)}{stufe} --dangerously-skip-permissions -i "$PROMPT"; else agy --model {q(modell)}{stufe} --dangerously-skip-permissions; fi
 '''
 
