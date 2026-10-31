@@ -293,6 +293,9 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     finally:
         sender.cancel()
         schleife.remove_reader(herr)
+        # Beim nächsten Öffnen steht die Sitzung wieder am aktuellen Stand, und Eingaben von Jarvis landen nicht im Verlauf-Modus.
+        if gerollt[0]:
+            await _im_faden(launcher.verlauf_ende, name)
         # Nur die Anzeige trennen: Die CLI läuft in tmux weiter.
         try:
             os.killpg(prozess.pid, signal.SIGHUP)

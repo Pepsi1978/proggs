@@ -112,6 +112,7 @@ function wischenEinrichten() {
       rollen(zeilen);
     }, 60);
   }, { capture: true, passive: true });
+  flaeche.addEventListener("touchcancel", () => { y = null; }, { capture: true, passive: true });
   flaeche.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); rollen(-Math.sign(e.deltaY) * 3); }, { capture: true, passive: false });
   $("ende").addEventListener("click", () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" })); });
 }

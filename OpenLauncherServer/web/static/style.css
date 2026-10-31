@@ -1,6 +1,6 @@
 :root { --grund:#10131a; --flaeche:#1a1f2b; --rand:#2b3241; --text:#e6e9ef; --leise:#97a0b3; --akzent:#6ea8fe; --gut:#4cc38a; --warn:#e0b252; --gefahr:#f0716b; }
 * { box-sizing:border-box; }
-html,body { height:100%; margin:0; background:var(--grund); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
+html,body { overscroll-behavior:none; overflow:hidden; height:100%; margin:0; background:var(--grund); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
 body { display:flex; flex-direction:column; height:100dvh; }
 nav { display:flex; flex:none; background:var(--flaeche); border-bottom:1px solid var(--rand); }
 nav button { flex:1; background:none; border:0; border-bottom:2px solid transparent; border-radius:0; color:var(--leise); padding:13px 2px; font-size:14px; min-width:0; }
