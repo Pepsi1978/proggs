@@ -14,18 +14,13 @@ struct PromptEintrag: Identifiable, Hashable {
     var id: Int64 { erstellt != 0 ? erstellt : Int64(nummer) }
 }
 
-struct PromptsAnsicht: View {
+/// Eigene Ansicht, damit Tippen im Entwurf nicht jedes Mal die ganze Prompt-Liste neu auswertet.
+struct NeuerPromptKarte: View {
     @State private var abgleich = AblageAbgleich.shared
-    @State private var fehler = ""
-    @State private var quellenOffen = false
-    @State private var loeschFrage: PromptEintrag?
-    @AppStorage("prompts.nachQuelle") private var nachQuelle = false
-    @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
-    @State private var offen: PromptEintrag?
     @State private var steuerung = AppSteuerung.shared
+    @State private var fehler = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
                     KartenTitel(symbol: "plus.circle.fill", titel: "Neuer Prompt", farbe: Farbe.gruen)
@@ -49,6 +44,22 @@ struct PromptsAnsicht: View {
                     if !fehler.isEmpty { Text(fehler).font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
                 }
             }
+    }
+}
+
+struct PromptsAnsicht: View {
+    @State private var abgleich = AblageAbgleich.shared
+    @State private var fehler = ""
+    @State private var quellenOffen = false
+    @State private var loeschFrage: PromptEintrag?
+    @AppStorage("prompts.nachQuelle") private var nachQuelle = false
+    @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
+    @State private var offen: PromptEintrag?
+    @State private var steuerung = AppSteuerung.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            NeuerPromptKarte()
             HStack {
                 Spacer()
                 Menu {
@@ -64,7 +75,8 @@ struct PromptsAnsicht: View {
                 .menuStyle(.borderlessButton).fixedSize()
                 .popover(isPresented: $quellenOffen) { QuellenListe() }
             }
-            ForEach(angezeigt) { p in
+            // Lazy: Bei vielen Prompts bauten sonst jede eintreffende Änderung alle Karten neu.
+            LazyVStack(alignment: .leading, spacing: 16) { ForEach(angezeigt) { p in
                 GlasKarte(abstand: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .top) {
@@ -95,7 +107,7 @@ struct PromptsAnsicht: View {
                         }
                     }
                 }
-            }
+            } }
         }
         .confirmationDialog("Prompt \(loeschFrage?.nummer ?? 0) auf allen Jarvis-Versionen löschen?", isPresented: Binding(get: { loeschFrage != nil }, set: { if !$0 { loeschFrage = nil } })) {
             Button("Löschen", role: .destructive) {

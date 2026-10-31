@@ -120,7 +120,18 @@ struct AblageElement: Identifiable, Hashable {
 
 @MainActor @Observable
 final class AblageDaten {
-    private let quelle = AblageAbgleich.shared
+    let quelle = AblageAbgleich.shared
+    @ObservationIgnored private var zaehlerStand = -1
+    @ObservationIgnored private var zaehler: [AblageBereich: Int] = [:]
+
+    /// Einmal je Neuaufbau gezählt, nicht bei jedem Neuzeichnen und jedem Tastendruck in der Suche.
+    func anzahl(_ b: AblageBereich) -> Int {
+        if zaehlerStand != quelle.aufbauStand {
+            zaehlerStand = quelle.aufbauStand
+            zaehler = Dictionary(uniqueKeysWithValues: AblageBereich.allCases.map { ($0, elemente($0, suche: "").count) })
+        }
+        return zaehler[b] ?? 0
+    }
     var eintraege: [AblageEintrag] { quelle.eintraege }
     var fehler: String? { quelle.fehler }
     var meldung: String?
@@ -195,26 +206,26 @@ enum AblageLader {
             guard d.groesse <= 5_000_000 else { return nil }
             return await Task.detached(priority: .utility) { NSImage(contentsOf: u) }.value
         }
+        // Alles abseits des Hauptfadens, auch Kodieren und Schreiben: Sonst ruckelte das erste Öffnen von „Bilder“.
         let cg: CGImage? = await Task.detached(priority: .utility) {
+            let bild: CGImage?
             if art == "PDF" {
-                guard let seite = PDFDocument(url: u)?.page(at: 0) else { return nil }
-                return seite.thumbnail(of: CGSize(width: laengste, height: laengste), for: .mediaBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
-            }
-            guard art == "BILD", let quelle = CGImageSourceCreateWithURL(u as CFURL, nil) else { return nil }
-            let o: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: laengste]
-            return CGImageSourceCreateThumbnailAtIndex(quelle, 0, o as CFDictionary)
+                bild = PDFDocument(url: u)?.page(at: 0)?.thumbnail(of: CGSize(width: laengste, height: laengste), for: .mediaBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
+            } else if art == "BILD", let quelle = CGImageSourceCreateWithURL(u as CFURL, nil) {
+                let o: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: laengste]
+                bild = CGImageSourceCreateThumbnailAtIndex(quelle, 0, o as CFDictionary)
+            } else { bild = nil }
+            if let bild, let jpeg = NSBitmapImageRep(cgImage: bild).representation(using: .jpeg, properties: [.compressionFactor: 0.8]) { try? jpeg.write(to: cache) }
+            return bild
         }.value
         guard let cg else { return nil }
-        let jpeg = NSBitmapImageRep(cgImage: cg).representation(using: .jpeg, properties: [.compressionFactor: 0.8])
-        try? jpeg?.write(to: cache)
         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 
     /// Die Datei unter ihrem Namen im Zwischenordner, damit andere Programme sie öffnen können.
-    @MainActor static func datei(_ e: AblageElement, fortschritt: @MainActor (Double) -> Void) async throws -> URL {
+    @MainActor static func datei(_ e: AblageElement) async throws -> URL {
         guard let d = e.datei else { throw NSError(domain: "Ablage", code: 1) }
         let quelle = try await AblageAbgleich.shared.inhalt(d.sha)
-        fortschritt(1)
         let ziel = ordner.appendingPathComponent(d.sha, isDirectory: true)
         try FileManager.default.createDirectory(at: ziel, withIntermediateDirectories: true)
         var name = (d.name as NSString).lastPathComponent
@@ -254,9 +265,6 @@ struct AblageAnsicht: View {
     @State private var bereich: AblageBereich = .bilder
     @State private var suche = ""
     @State private var offen: AblageElement?
-    @State private var neuOffen = false
-    @State private var neuTitel = ""
-    @State private var neuText = ""
     @State private var quellenOffen = false
     @AppStorage("ablage.sortierung") private var sortierung = "neueste"
     @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
@@ -293,6 +301,10 @@ struct AblageAnsicht: View {
                         ordnerKachel(b)
                     }
                 }
+                ForEach(daten.quelle.hochladend, id: \.self) { n in
+                    HStack(spacing: 8) { ProgressView().controlSize(.small); Text("„\(n)“ geht in die Ablage …").font(.jarvis(12)).foregroundStyle(Farbe.text2) }
+                }
+                if daten.quelle.ausstehend > 0 { Text("Holt noch \(daten.quelle.ausstehend) Datei(en) vom Server …").font(.jarvis(12)).foregroundStyle(Farbe.text3) }
                 if let f = daten.meldung ?? daten.fehler { Text(f).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
                 inhalt
             }
@@ -304,7 +316,7 @@ struct AblageAnsicht: View {
         }
         .onChange(of: bereich) { _, b in log("ablage", "Bereich \(b.titel) geöffnet", wo: "Ablage") }
         .sheet(item: $offen) { e in
-            AblageDetail(element: e) { offen = nil }
+            AblageDetail(start: e) { offen = nil }
         }
     }
 
@@ -316,7 +328,7 @@ struct AblageAnsicht: View {
                     .frame(width: 34, height: 34).background(RoundedRectangle(cornerRadius: 10).fill(b.farbe.opacity(0.13)))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(b.titel).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text).lineLimit(1).minimumScaleFactor(0.8)
-                    if b != .prompts { Text("\(daten.elemente(b, suche: "").count)").font(.jarvis(11)).foregroundStyle(Farbe.text3) }
+                    if b != .prompts { Text("\(daten.anzahl(b))").font(.jarvis(11)).foregroundStyle(Farbe.text3) }
                 }
                 Spacer(minLength: 0)
             }
@@ -333,9 +345,9 @@ struct AblageAnsicht: View {
             PromptsAnsicht()
         } else {
             let liste = sortiert(daten.elemente(bereich, suche: suche))
-            if bereich == .texte { neuerEintrag }
+            if bereich == .texte { NeuerTextEintrag(meldung: $daten.meldung) }
             if liste.isEmpty {
-                Text(daten.laedt ? "Lade …" : "Hier liegt noch nichts.").font(.jarvis(14)).foregroundStyle(Farbe.text2).padding(.top, 8)
+                Text(daten.laedt || !daten.quelle.bereit ? "Der Abgleich läuft …" : "Hier liegt noch nichts.").font(.jarvis(14)).foregroundStyle(Farbe.text2).padding(.top, 8)
             } else if bereich == .bilder {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
                     ForEach(liste) { e in BildKachel(element: e) { offen = e } }
@@ -399,8 +411,16 @@ struct AblageAnsicht: View {
     }
 
     static func groesse(_ b: Int) -> String { ByteCountFormatter.string(fromByteCount: Int64(b), countStyle: .file) }
+}
 
-    private var neuerEintrag: some View {
+/// Eigene Ansicht, damit Tippen hier nicht jedes Mal alle Bereiche und die ganze Liste neu auswertet.
+struct NeuerTextEintrag: View {
+    @Binding var meldung: String?
+    @State private var neuOffen = false
+    @State private var neuTitel = ""
+    @State private var neuText = ""
+
+    var body: some View {
         GlasKarte(abstand: 14) {
             VStack(alignment: .leading, spacing: 10) {
                 Button { withAnimation(.easeOut(duration: 0.15)) { neuOffen.toggle() } } label: {
@@ -421,8 +441,8 @@ struct AblageAnsicht: View {
                         Task {
                             do {
                                 try await AblageAbgleich.shared.textSpeichern(titel: t, inhalt: x)
-                                daten.meldung = nil; neuTitel = ""; neuText = ""; neuOffen = false
-                            } catch { daten.meldung = error.localizedDescription }
+                                meldung = nil; neuTitel = ""; neuText = ""; neuOffen = false
+                            } catch { meldung = error.localizedDescription }
                         }
                     }
                 }
@@ -437,6 +457,7 @@ struct BildKachel: View {
     @State private var bild: NSImage?
     @State private var fertig = false
     @State private var schwebt = false
+    @State private var abgleich = AblageAbgleich.shared
 
     var body: some View {
         Button(action: aktion) {
@@ -461,8 +482,9 @@ struct BildKachel: View {
         }
         .buttonStyle(.plain)
         .onHover { schwebt = $0 }
-        .task {
-            bild = await AblageLader.vorschau(element, laengste: 420)
+        // Neu bei neuem Inhalt, und solange kein Bild da ist, auch wenn eine Datei eintrifft.
+        .task(id: "\(element.datei?.sha ?? "")-\(bild == nil ? abgleich.inhalteStand : 0)") {
+            if let b = await AblageLader.vorschau(element, laengste: 420) { bild = b }
             fertig = true
         }
     }
@@ -471,7 +493,18 @@ struct BildKachel: View {
 // MARK: - Ansicht einer Datei
 
 struct AblageDetail: View {
-    let element: AblageElement
+    let start: AblageElement
+    @State private var abgleich = AblageAbgleich.shared
+
+    /// Immer der aktuelle Stand: Ändert ein anderes Gerät den Eintrag, zeigt das offene Fenster die neue Fassung; ist er weg, schließt es sich.
+    private var element: AblageElement {
+        guard let e = abgleich.eintraege.first(where: { $0.id == start.eintrag.id }) else { return start }
+        return AblageElement(eintrag: e, datei: start.datei.flatMap { d in e.dateien.first { $0.id == d.id } } ?? start.datei)
+    }
+    private var weg: Bool {
+        guard let e = abgleich.eintraege.first(where: { $0.id == start.eintrag.id }) else { return true }
+        return start.datei.map { d in !e.dateien.contains { $0.id == d.id } } ?? false
+    }
     let geloescht: () -> Void
     @Environment(\.dismiss) private var schliessen
     @State private var bild: NSImage?
@@ -523,7 +556,8 @@ struct AblageDetail: View {
         .padding(22)
         .frame(width: 900, height: 660)
         .background(Farbe.grund2)
-        .task { await laden() }
+        .task(id: (element.eintrag.textSha ?? "") + (datei?.sha ?? "")) { await laden() }
+        .onChange(of: weg) { _, w in if w { schliessen() } }
         .onDisappear { dateiArbeit?.cancel() }
         .confirmationDialog(loeschenText, isPresented: $loeschenFrage) {
             Button("Löschen", role: .destructive) { Task { await loeschen() } }
@@ -543,6 +577,7 @@ struct AblageDetail: View {
     }
 
     private func laden() async {
+        laedt = true; bild = nil; text = nil; pdf = nil
         defer { laedt = false }
         log("ablage", "Geöffnet: \(element.name)", wo: "Ablage")
         guard let d = datei else {
@@ -555,7 +590,7 @@ struct AblageDetail: View {
                 if bild != nil { return }
             }
             if ["BILD", "PDF", "TEXT", "MARKDOWN", "CODE", "DATEN", "TABELLE_TEXT", "HTML", "ANIMATION", "SVG"].contains(d.art), d.groesse <= 40_000_000 {
-                let u = try await AblageLader.datei(element) { _ in }
+                let u = try await AblageLader.datei(element)
                 switch d.art {
                 case "PDF": pdf = u
                 case "BILD", "ANIMATION", "SVG": bild = await Task.detached(priority: .userInitiated) { NSImage(contentsOf: u) }.value
@@ -567,14 +602,14 @@ struct AblageDetail: View {
 
     private func oeffnen() async {
         do {
-            let u = try await AblageLader.datei(element) { _ in }
+            let u = try await AblageLader.datei(element)
             NSWorkspace.shared.open(u)
         } catch { fehler = error.localizedDescription }
     }
 
     private func sichern() async {
         do {
-            let u = try await AblageLader.datei(element) { _ in }
+            let u = try await AblageLader.datei(element)
             let panel = NSSavePanel()
             panel.nameFieldStringValue = u.lastPathComponent
             guard panel.runModal() == .OK, let ziel = panel.url else { return }

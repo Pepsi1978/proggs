@@ -182,16 +182,17 @@ actor McpKlient {
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
         let start = Date()
         // Ablage und Prompts liegen auf dem Server: Der Mac schreibt selbst dorthin, auch wenn das Handy aus ist.
-        if let lokal = await AblageAbgleich.shared.werkzeugMitFrist(name, argumente, sekunden: sekunden) {
+        if AblageAbgleich.eigeneWerkzeuge.contains(name), let lokal = await AblageAbgleich.shared.werkzeugMitFrist(name, argumente, sekunden: sekunden) {
             if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
             log("werkzeug", "Ablage-Werkzeug \(name): \(lokal.fehler ? "Fehler" : "ok")", wo: "Server", werkzeug: name, fehler: lokal.fehler ? lokal.text : nil, dauerMs: Int(Date().timeIntervalSince(start) * 1000))
             return lokal
         }
         var argumente = argumente
         if Self.legtInAblage.contains(name) { argumente["_quelle"] = AblageAbgleich.quelle }
-        var e = await rufeOhneLog(name, argumente, sekunden: sekunden)
+        let nurListe = name == "ablage_lesen"
+        var e = await rufeOhneLog(name, argumente, sekunden: nurListe ? 3 : sekunden)
         // Die Liste kommt vom Handy, weil sie auch Vorläufiges zeigt. Ist es aus, reicht die eigene Kopie der Ablage.
-        if e.fehler && name == "ablage_lesen" && e.text.contains("nicht erreichbar") { e = await AblageAbgleich.shared.liste() }
+        if nurListe && (argumente["titel"] as? String ?? "").trimmingCharacters(in: .whitespaces).isEmpty { e = await AblageAbgleich.shared.listeMit(e) }
         if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
         let ms = Int(Date().timeIntervalSince(start) * 1000)
         // Das Logbuch soll die App verbessern, nicht das Leben mitschreiben: Private Inhalte nur als Länge, Dateiabrufe nur bei Fehlern.

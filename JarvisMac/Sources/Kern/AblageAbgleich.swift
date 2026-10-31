@@ -1,3 +1,4 @@
+import AppKit
 import CryptoKit
 import Foundation
 import Observation
@@ -7,6 +8,9 @@ import UniformTypeIdentifiers
 /// Der Mac hält die komplette Ablage als Kopie unter Application Support/JarvisMac/Ablage: Dokumente in docs.json, Inhalte nach Prüfsumme unter blobs.
 /// Lesen geht also auch ohne Netz und ohne Handy; Schreiben braucht den Server und gilt erst, wenn er es angenommen hat.
 /// Neues von anderen Versionen kommt per Long-Polling sofort an; eigene Änderungen wecken den Mac nicht.
+/// Bringt ein JSON-Objekt zwischen Hauptfaden und Hintergrund; danach benutzt es nur noch eine Seite.
+struct JSONKiste: @unchecked Sendable { let wert: JSONObjekt? }
+
 @MainActor @Observable
 final class AblageAbgleich {
     static let shared = AblageAbgleich()
@@ -16,6 +20,16 @@ final class AblageAbgleich {
     private(set) var prompts: [PromptEintrag] = []
     private(set) var fehler: String?
     private(set) var verbunden = false
+    /// Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht.
+    private(set) var bereit = false
+    /// Dateien, die noch vom Server kommen.
+    private(set) var ausstehend = 0
+    /// Dateien vom Mac, die gerade hochgehen.
+    private(set) var hochladend: [String] = []
+    /// Zählt jeden neu eingetroffenen Inhalt: Kacheln ohne Bild versuchen es dann erneut.
+    private(set) var inhalteStand = 0
+    /// Zählt jeden Neuaufbau der Liste.
+    private(set) var aufbauStand = 0
 
     @ObservationIgnored private var docs: [String: JSONObjekt] = [:]
     @ObservationIgnored private var stand = 0
@@ -23,11 +37,22 @@ final class AblageAbgleich {
     @ObservationIgnored private var ladeAufgabe: Task<Void, Never>?
     @ObservationIgnored private var nochmalLaden = false
     @ObservationIgnored private var wiederholung: Task<Void, Never>?
-    @ObservationIgnored private var ladePause = 300.0
+    @ObservationIgnored fileprivate var abruf: Task<Int, Error>?
+    @ObservationIgnored private var aufbauPlan: Task<Void, Never>?
+    @ObservationIgnored private var speicherPlan: Task<Void, Never>?
+    @ObservationIgnored fileprivate var nachversuche: [String: (Int, Date)] = [:]
+    @ObservationIgnored private var fortsetzen: [String: Data] = [:]
+    @ObservationIgnored private var textIndex: [String: String] = [:]
+    @ObservationIgnored private var letztesAufraeumen = Date.distantPast
+    /// Dateien auf eigenen Verbindungen und höchstens zwei zugleich: Sonst verdrängen viele Vorschauen den Long-Poll und die Werkzeugaufrufe (der Server spricht nur HTTP/1.1).
+    @ObservationIgnored private let dateiSession: URLSession = {
+        let c = URLSessionConfiguration.default
+        c.httpMaximumConnectionsPerHost = 2
+        c.timeoutIntervalForResource = 6 * 3600
+        return URLSession(configuration: c)
+    }()
     /** Kennung des Serverspeichers: Wechselt sie, wurde er neu aufgesetzt, und die eigene Kopie muss zurück auf ihn. */
     @ObservationIgnored private var instanz = ""
-    /** Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht. */
-    @ObservationIgnored private var bereit = false
     @ObservationIgnored private var laufendeLadungen: [String: Task<URL, Error>] = [:]
 
     private let ordner: URL = {
@@ -49,23 +74,49 @@ final class AblageAbgleich {
     func hochfahren() {
         guard !laeuft else { return }
         laeuft = true
-        ladeDocs()
-        neuAufbauen()
-        allesLaden()
-        Task { await schleife() }
+        // Nach dem Ruhezustand hängt der Long-Poll an einer toten Verbindung: abbrechen statt bis zum Zeitlimit warten.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                AblageAbgleich.shared.abruf?.cancel()
+                AblageAbgleich.shared.nachversuche = [:]
+                AblageAbgleich.shared.allesLaden()
+            }
+        }
+        Task {
+            // Abseits des Hauptfadens: Bei großem Bestand verzögerte das JSON sonst den Start der App.
+            await ladeDocs()
+            neuAufbauen()
+            allesLaden()
+            await schleife()
+        }
     }
 
     private func schleife() async {
-        while true {
+        var fehlerFolge = 0
+        while !Task.isCancelled {
+            let beginn = Date()
+            let t = Task { try await holen(warten: 25) }
+            abruf = t
             do {
-                try await holen(warten: 25)
+                let anzahl = try await t.value
+                fehlerFolge = 0
                 if fehler != nil { fehler = nil }
                 verbunden = true
+                // Kam ohne Wartezeit und ohne Inhalt zurück: nicht im Dauerfeuer weiterfragen.
+                if anzahl == 0 && Date().timeIntervalSince(beginn) < 1 { try? await Task.sleep(for: .seconds(2)) }
+            } catch is CancellationError {
+                continue
+            } catch let e as URLError where e.code == .cancelled {
+                continue
             } catch {
+                // Ein einzelner Aussetzer kostet nichts und zeigt nichts; erst wenn es dauert, wird es langsamer und sichtbar.
+                fehlerFolge += 1
                 verbunden = false
-                fehler = "Server nicht erreichbar, du siehst den letzten Stand: \(error.localizedDescription)"
-                log("ablage", "Abgleich unterbrochen", wo: "Ablage", fehler: error.localizedDescription)
-                try? await Task.sleep(for: .seconds(15))
+                if fehlerFolge >= 2 {
+                    fehler = "Server nicht erreichbar, du siehst den letzten Stand: \(error.localizedDescription)"
+                    log("ablage", "Abgleich unterbrochen", wo: "Ablage", fehler: error.localizedDescription)
+                }
+                try? await Task.sleep(for: .seconds([0.0, 2.0, 5.0, 15.0][min(fehlerFolge, 3)]))
             }
         }
     }
@@ -75,80 +126,125 @@ final class AblageAbgleich {
         do { try await holen(warten: 0); fehler = nil } catch { fehler = "Server nicht erreichbar, du siehst den letzten Stand: \(error.localizedDescription)" }
     }
 
-    private func holen(warten: Int) async throws {
-        guard let basis else { throw URLError(.badURL); }
+    @discardableResult
+    private func holen(warten: Int) async throws -> Int {
+        guard let basis else { throw URLError(.badURL) }
         guard let url = URL(string: "\(basis)/aenderungen?seit=\(stand)&warten=\(warten)&geraet=\(Self.quelle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else { throw URLError(.badURL) }
         let (daten, antwort) = try await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: Double(warten) + 30))
-        guard (antwort as? HTTPURLResponse)?.statusCode == 200, let o = JSON.objekt(daten), let liste = o["docs"] as? [JSONObjekt] else { throw URLError(.badServerResponse) }
+        guard (antwort as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        // Das Lesen der Antwort abseits des Hauptfadens: Eine Seite kann viele Dokumente enthalten.
+        let kiste = await Task.detached(priority: .userInitiated) { JSONKiste(wert: JSON.objekt(daten)) }.value
+        guard let o = kiste.wert, let liste = o["docs"] as? [JSONObjekt] else { throw URLError(.badServerResponse) }
         let neu = Self.zahl(o["stand"])
         // Der Server wurde neu aufgesetzt oder aus einem Backup geholt: Die eigene Kopie wird nicht verworfen, sie geht zurück auf den Server.
-        if let i = o["instanz"] as? String, !i.isEmpty, i != instanz {
-            let gewechselt = !instanz.isEmpty
-            instanz = i
-            if gewechselt {
-                log("ablage", "Server wurde neu aufgesetzt, sende die eigene Kopie", wo: "Ablage")
-                for k in docs.keys { docs[k]?["stand"] = 0 }
-                stand = 0
-                speichereDocs()
-                Task { await kopieZurueckSenden() }
-                return
-            }
+        let i = o["instanz"] as? String ?? ""
+        let neuerSpeicher = !instanz.isEmpty && !i.isEmpty && i != instanz
+        if !i.isEmpty { instanz = i }
+        if neuerSpeicher || o["neuaufbau"] as? Bool == true {
+            log("ablage", "Server wurde neu aufgesetzt, sende die eigene Kopie", wo: "Ablage")
+            for k in docs.keys { docs[k]?["stand"] = 0 }
+            stand = 0
+            speichereDocs()
+            Task { await kopieZurueckSenden() }
+            return 0
         }
         bereit = true
         // Ein kleinerer Stand ist eine überholte Antwort („Neu laden“ neben dem Long-Polling).
-        if neu < Int64(stand) { return }
+        if neu < Int64(stand) { return 0 }
+        var geaendert = false
         for d in liste {
             guard let art = d["art"] as? String, let id = d["id"] as? String else { continue }
-            // Eine Antwort von vor dem eigenen Speichern darf die gerade gespeicherte Fassung nicht zurückdrehen.
-            if let da = docs["\(art):\(id)"], Self.zahl(da["stand"]) > Self.zahl(d["stand"]) { continue }
-            docs["\(art):\(id)"] = d
+            let schluessel = "\(art):\(id)"
+            // Eine Antwort von vor dem eigenen Speichern darf die gerade gespeicherte Fassung nicht zurückdrehen; das eigene Echo ändert nichts.
+            if let da = docs[schluessel], Self.zahl(da["stand"]) >= Self.zahl(d["stand"]) { continue }
+            docs[schluessel] = d
+            geaendert = true
         }
-        guard neu != Int64(stand) || !liste.isEmpty else { return }
+        let weiter = Int(neu) != stand
         stand = max(Int(neu), stand)
-        speichereDocs()
-        neuAufbauen()
-        if !liste.isEmpty { log("ablage", "\(liste.count) Änderung(en) vom Server", wo: "Ablage") }
-        allesLaden()
+        if geaendert || weiter { speichereDocs() }
+        if geaendert {
+            aufbauPlanen()
+            log("ablage", "\(liste.count) Änderung(en) vom Server", wo: "Ablage")
+            allesLaden()
+        }
+        return liste.count
     }
 
-    private func ladeDocs() {
-        guard let d = try? Data(contentsOf: docsDatei), let o = JSON.objekt(d) else { return }
+    /// Kommen viele Änderungen nacheinander, wird die Liste einmal aufgebaut statt je Änderung.
+    private func aufbauPlanen() {
+        guard aufbauPlan == nil else { return }
+        aufbauPlan = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            aufbauPlan = nil
+            neuAufbauen()
+        }
+    }
+
+    private func ladeDocs() async {
+        let datei = docsDatei
+        let kiste = await Task.detached(priority: .userInitiated) { JSONKiste(wert: (try? Data(contentsOf: datei)).flatMap { JSON.objekt($0) }) }.value
+        guard let o = kiste.wert else { return }
         stand = Int(Self.zahl(o["stand"]))
         instanz = o["instanz"] as? String ?? ""
         bereit = stand > 0
         docs = o["docs"] as? [String: JSONObjekt] ?? [:]
     }
 
+    /// Gesammelt und abseits des Hauptfadens. Die Datei ist nur eine Kopie: Fehlt die letzte Sekunde, holt der Abgleich sie wieder.
     private func speichereDocs() {
-        try? JSON.daten(["stand": stand, "docs": docs, "instanz": instanz] as JSONObjekt).write(to: docsDatei, options: .atomic)
+        guard speicherPlan == nil else { return }
+        speicherPlan = Task {
+            try? await Task.sleep(for: .seconds(1))
+            speicherPlan = nil
+            let kiste = JSONKiste(wert: ["stand": stand, "docs": docs, "instanz": instanz] as JSONObjekt)
+            let datei = docsDatei
+            await Task.detached(priority: .utility) { if let w = kiste.wert { try? JSON.daten(w).write(to: datei, options: .atomic) } }.value
+        }
     }
 
-    /// Lädt im Hintergrund alles, was hier noch fehlt, und räumt Inhalte weg, die kein Eintrag mehr braucht.
-    private func allesLaden() {
+    /// Lädt im Hintergrund alles, was hier noch fehlt. Eine Datei, die gerade nicht will (404, beschädigt, Platte voll), wartet für sich und hält die anderen nicht auf.
+    func allesLaden() {
         guard ladeAufgabe == nil else { nochmalLaden = true; return }
         ladeAufgabe = Task {
-            var fehlgeschlagen = false
-            for sha in benutzteInhalte() where !FileManager.default.fileExists(atPath: pfad(sha).path) {
-                do { _ = try await inhalt(sha) } catch { fehlgeschlagen = true }
-            }
-            // Erst jetzt und frisch berechnet; was gerade erst entstand, gehört vermutlich zu einem laufenden Speichern und bleibt einen Tag liegen.
             let benutzt = benutzteInhalte()
-            let grenze = Date().addingTimeInterval(-86_400)
-            let vorhanden = (try? FileManager.default.contentsOfDirectory(at: blobs, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-            for u in vorhanden where !benutzt.contains(u.lastPathComponent) {
-                if let d = try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, d < grenze { try? FileManager.default.removeItem(at: u) }
+            let ordner = blobs
+            let fehlend = await Task.detached(priority: .utility) { benutzt.filter { !FileManager.default.fileExists(atPath: ordner.appendingPathComponent($0).path) } }.value
+            ausstehend = fehlend.count
+            var bald = false
+            for sha in fehlend {
+                let (versuche, naechster) = nachversuche[sha] ?? (0, .distantPast)
+                if naechster > Date() { bald = true; continue }
+                do {
+                    _ = try await inhalt(sha)
+                    nachversuche[sha] = nil
+                    ausstehend -= 1
+                } catch {
+                    // Mit wachsendem Abstand je Datei: Eine volle Platte oder eine defekte Datei lädt sonst immer wieder Gigabytes.
+                    nachversuche[sha] = (versuche + 1, Date().addingTimeInterval(min(60 * pow(2, Double(versuche)), 3600)))
+                    bald = true
+                }
+            }
+            // Selten aufräumen: Das Durchgehen aller Dateien lohnt nicht bei jeder Änderung. Was gerade erst entstand, gehört vermutlich zu einem laufenden Speichern und bleibt einen Tag liegen.
+            if Date().timeIntervalSince(letztesAufraeumen) > 3600 {
+                letztesAufraeumen = Date()
+                let frisch = benutzteInhalte()
+                await Task.detached(priority: .utility) {
+                    let grenze = Date().addingTimeInterval(-86_400)
+                    let vorhanden = (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+                    for u in vorhanden where !frisch.contains(u.lastPathComponent) {
+                        if let d = try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, d < grenze { try? FileManager.default.removeItem(at: u) }
+                    }
+                }.value
             }
             ladeAufgabe = nil
             wiederholung?.cancel()
-            if nochmalLaden { nochmalLaden = false; allesLaden() } else if fehlgeschlagen {
-                // Nur eine Wiederholung zur Zeit und mit wachsendem Abstand: Eine volle Platte oder eine defekte Datei lädt sonst immer wieder Gigabytes.
-                let pause = ladePause
-                ladePause = min(ladePause * 2, 3600)
+            if nochmalLaden { nochmalLaden = false; allesLaden() } else if bald {
                 wiederholung = Task {
-                    try? await Task.sleep(for: .seconds(pause))
+                    try? await Task.sleep(for: .seconds(60))
                     if !Task.isCancelled { allesLaden() }
                 }
-            } else { ladePause = 300 }
+            }
         }
     }
 
@@ -183,19 +279,31 @@ final class AblageAbgleich {
 
     private func pfad(_ sha: String) -> URL { blobs.appendingPathComponent(sha) }
 
-    /// Der Inhalt zu einer Prüfsumme, notfalls jetzt vom Server. Ein Inhalt wird nur einmal gleichzeitig geladen.
+    /// Der Inhalt zu einer Prüfsumme, notfalls jetzt vom Server. Ein Inhalt wird nur einmal gleichzeitig geladen, ein abgebrochener Download macht beim nächsten Versuch weiter.
     func inhalt(_ sha: String) async throws -> URL {
         let ziel = pfad(sha)
         if FileManager.default.fileExists(atPath: ziel.path) { return ziel }
         if let laufend = laufendeLadungen[sha] { return try await laufend.value }
         guard let basis, let url = URL(string: "\(basis)/blob/\(sha)") else { throw URLError(.badURL) }
         let t = Task<URL, Error> {
-            let (tmp, antwort) = try await URLSession.shared.download(for: URLRequest(url: url, timeoutInterval: 600))
+            let tmp: URL, antwort: URLResponse
+            do {
+                if let r = fortsetzen[sha] {
+                    fortsetzen[sha] = nil
+                    (tmp, antwort) = try await dateiSession.download(resumeFrom: r)
+                } else {
+                    (tmp, antwort) = try await dateiSession.download(for: URLRequest(url: url, timeoutInterval: 120))
+                }
+            } catch {
+                if let r = (error as? URLError)?.downloadTaskResumeData { fortsetzen[sha] = r }
+                throw error
+            }
             defer { try? FileManager.default.removeItem(at: tmp) }
-            guard (antwort as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.fileDoesNotExist) }
+            guard (antwort as? HTTPURLResponse).map({ $0.statusCode == 200 || $0.statusCode == 206 }) == true else { throw URLError(.fileDoesNotExist) }
             guard try await Self.pruefsumme(tmp) == sha else { throw URLError(.cannotDecodeContentData) }
             try? FileManager.default.removeItem(at: ziel)
             try FileManager.default.moveItem(at: tmp, to: ziel)
+            inhalteStand += 1
             return ziel
         }
         laufendeLadungen[sha] = t
@@ -219,16 +327,19 @@ final class AblageAbgleich {
         return await Task.detached(priority: .userInitiated) { (try? String(contentsOf: u, encoding: .utf8)) ?? "" }.value
     }
 
-    /// Volltextsuche: Titel, Dateinamen, Beschreibungen der Dateien und Texte; ein noch fehlender Text wird dafür geholt.
+    /// Volltextsuche: Titel, Dateinamen, Beschreibungen der Dateien und Texte. Noch nicht geladene Texte werden übersprungen, die Suche wartet nie aufs Netz.
     func suche(_ wort: String) async -> Set<String> {
         let w = wort.lowercased()
         var r = Set<String>()
         for e in eintraege {
             if Task.isCancelled { break }
             if e.titel.lowercased().contains(w) || e.dateien.contains(where: { $0.name.lowercased().contains(w) || $0.beschreibung.lowercased().contains(w) }) { r.insert(e.id); continue }
-            guard let sha = e.textSha, let u = try? await inhalt(sha) else { continue }
-            let treffer = await Task.detached(priority: .utility) { ((try? String(contentsOf: u, encoding: .utf8)) ?? "").lowercased().contains(w) }.value
-            if treffer { r.insert(e.id) }
+            guard let sha = e.textSha else { continue }
+            if textIndex[sha] == nil {
+                let u = pfad(sha)
+                if let t = await Task.detached(priority: .utility, operation: { try? String(contentsOf: u, encoding: .utf8) }).value { textIndex[sha] = t.lowercased() }
+            }
+            if textIndex[sha]?.contains(w) == true { r.insert(e.id) }
         }
         return r
     }
@@ -255,14 +366,17 @@ final class AblageAbgleich {
                 guard let datei = inhalte[sha], let hoch = URL(string: "\(basis)/blob/\(sha)") else { throw AblageFehler.inhaltFehlt }
                 var r = URLRequest(url: hoch, timeoutInterval: 900)
                 r.httpMethod = "PUT"
-                let (_, k) = try await URLSession.shared.upload(for: r, fromFile: datei)
+                let (_, k) = try await dateiSession.upload(for: r, fromFile: datei)
                 guard (k as? HTTPURLResponse)?.statusCode == 200 else { throw AblageFehler.hochladen }
             }
             (antwort, kopf) = try await schicken()
         }
         guard (kopf as? HTTPURLResponse)?.statusCode == 200 else { throw AblageFehler.server }
         guard let ok = JSON.objekt(antwort), ok["uebernommen"] as? Bool == true else { throw AblageFehler.neuereFassung }
-        docs["\(art):\(id)"] = ["art": art, "id": id, "daten": geloescht ? [:] : daten, "geaendert": geaendert, "geloescht": geloescht, "von": Self.quelle, "stand": Self.zahl(ok["stand"])] as JSONObjekt
+        let neuerStand = Self.zahl(ok["stand"])
+        docs["\(art):\(id)"] = ["art": art, "id": id, "daten": geloescht ? [:] : daten, "geaendert": geaendert, "geloescht": geloescht, "von": Self.quelle, "stand": neuerStand] as JSONObjekt
+        // Lückenlos direkt dahinter: Der Zeiger rückt mit, das eigene Echo braucht nicht zu kommen.
+        if neuerStand == Int64(stand) + 1 { stand += 1 }
         Task { await McpKlient.shared.kontextVerwerfen() }
         speichereDocs()
         neuAufbauen()
@@ -318,6 +432,8 @@ final class AblageAbgleich {
 
     /// Eine Datei vom Mac in die Ablage: ein eigener Eintrag mit dem Dateinamen als Titel.
     func dateiHinzufuegen(_ datei: URL) async throws {
+        hochladend.append(datei.lastPathComponent)
+        defer { if let i = hochladend.firstIndex(of: datei.lastPathComponent) { hochladend.remove(at: i) } }
         // Erst kopieren, dann die Prüfsumme der Kopie: Ändert sich die Datei gerade, liegt so nie falscher Inhalt unter einer Prüfsumme.
         // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still. Das Datum zählt für das Aufräumen.
         let teil = blobs.appendingPathComponent(UUID().uuidString + ".teil")
@@ -391,6 +507,17 @@ final class AblageAbgleich {
 
     // MARK: Werkzeuge des Modells
 
+    /// Was der Mac selbst erledigt; alles andere geht ans Handy, ohne erst den Hauptfaden zu berühren.
+    nonisolated static let eigeneWerkzeuge: Set<String> = ["ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern"]
+
+    /// Die Liste vom Handy zeigt auch Vorläufiges, kennt aber am Mac gerade Gespeichertes womöglich noch nicht. Antwortet es nicht schnell, reicht die eigene Kopie.
+    func listeMit(_ vomHandy: WerkzeugErgebnis) -> WerkzeugErgebnis {
+        if vomHandy.fehler { return liste() }
+        let fehlend = eintraege.filter { !vomHandy.text.contains($0.titel) }
+        if fehlend.isEmpty { return vomHandy }
+        return WerkzeugErgebnis(text: vomHandy.text + "\n\nSchon in der Ablage, am Handy noch nicht angekommen:\n" + fehlend.prefix(30).map { "- \($0.titel) (\($0.quelle))" }.joined(separator: "\n"))
+    }
+
     /// Wie werkzeug, aber nach der Frist bekommt das Modell eine Antwort; ein großer Download läuft dann im Hintergrund weiter.
     func werkzeugMitFrist(_ name: String, _ a: JSONObjekt, sekunden: Double) async -> WerkzeugErgebnis? {
         final class Einmal { var fertig = false }
@@ -401,10 +528,14 @@ final class AblageAbgleich {
                 einmal.fertig = true
                 c.resume(returning: r)
             }
-            Task { ende(await self.werkzeug(name, a)) }
-            Task {
+            let uhr = Task {
                 try? await Task.sleep(for: .seconds(sekunden))
-                ende(WerkzeugErgebnis(text: "Die Ablage hat nicht rechtzeitig geantwortet, eine Datei wird noch geholt. Bitte gleich noch einmal versuchen.", fehler: true))
+                if !Task.isCancelled { ende(WerkzeugErgebnis(text: "Die Ablage hat nicht rechtzeitig geantwortet, eine Datei wird noch geholt. Bitte gleich noch einmal versuchen.", fehler: true)) }
+            }
+            Task {
+                let r = await self.werkzeug(name, a)
+                uhr.cancel()
+                ende(r)
             }
         }
     }
@@ -554,6 +685,7 @@ final class AblageAbgleich {
         for i in ps.indices { ps[i].nummer = i + 1 }
         eintraege = neu.sorted { $0.geaendert > $1.geaendert }
         prompts = ps
+        aufbauStand += 1
     }
 
     private static func kennungOk(_ s: String?) -> Bool {
