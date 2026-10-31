@@ -1634,14 +1634,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var promptBearbeitet by mutableStateOf<de.frank.jarvis.ablage.Prompt?>(null); private set
     /** Text des bearbeiteten Prompts, getrennt von [promptEntwurf], damit Diktat und KI nie im falschen Entwurf landen. */
     private var promptBearbeitText by mutableStateOf("")
-    /** Text vor der letzten KI-Verbesserung, für „Rückgängig“; null = nichts rückgängig zu machen. */
-    var promptVorKi by mutableStateOf<String?>(null); private set
+    /** Text vor der letzten KI-Verbesserung und die KI-Fassung; „Rückgängig“ gilt nur, solange die KI-Fassung noch im Feld steht. */
+    private var promptKi by mutableStateOf<Pair<String, String>?>(null)
+    val promptVorKi: String? get() = promptKi?.takeIf { it.second == promptText }?.first
 
     /** Text der offenen Prompt-Eingabe (neuer Prompt oder Bearbeiten). Jede eigene Änderung beendet das KI-Rückgängig. */
     var promptText: String
         get() = if (promptBearbeitet != null) promptBearbeitText else promptEntwurf
-        // Nur echte Änderungen beenden „Rückgängig“: Das Textfeld meldet auch Cursor- und Tastatur-Updates mit unverändertem Text.
-        set(wert) { if (wert != promptText) promptVorKi = null; promptTextSetzen(promptBearbeitet?.erstellt, wert) }
+        // „Rückgängig“ hängt an [promptVorKi]: Es gilt, solange der Text noch die KI-Fassung ist.
+        set(wert) { promptTextSetzen(promptBearbeitet?.erstellt, wert) }
 
     /** Schreibt in den Entwurf der Eingabe, für die [erstellt] steht (null = neuer Prompt). */
     private fun promptTextSetzen(erstellt: Long?, wert: String) {
@@ -1656,7 +1657,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun promptNeu() {
         promptBearbeitet = null
         promptEntwurf = ""
-        promptVorKi = null
+        promptKi = null
         promptNeuOffen = true
     }
 
@@ -1664,14 +1665,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun promptBearbeiten(p: de.frank.jarvis.ablage.Prompt) {
         promptBearbeitet = p
         promptBearbeitText = p.text
-        promptVorKi = null
+        promptKi = null
     }
 
     /** Rückgängig-Knopf: stellt den Text vor der KI-Verbesserung wieder her. */
     fun promptKiRueckgaengig() {
         val vorher = promptVorKi ?: return
         promptTextSetzen(promptBearbeitet?.erstellt, vorher)
-        promptVorKi = null
+        promptKi = null
     }
 
     /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an den Entwurf an, danach steht „ ; “ am Ende. */
@@ -1687,7 +1688,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     promptTextVon(ziel)?.let { alt ->
                         val neu = DiktatTrenner.anhaengen(alt, t)
                         if (neu != alt) {
-                            if (ziel == promptBearbeitet?.erstellt) promptVorKi = null
+                            if (ziel == promptBearbeitet?.erstellt) promptKi = null
                             promptTextSetzen(ziel, neu)
                         }
                     }
@@ -1703,7 +1704,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (nimmtAuf && promptDiktat) aufnahmeBeenden()
         promptNeuOffen = false
         promptBearbeitet = null
-        promptVorKi = null
+        promptKi = null
     }
 
     /** Fassungen (Anlagezeitpunkt + Text), deren Überschrift gerade angefragt wird oder geliefert wurde. */
@@ -1757,17 +1758,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptFormuliert = true
         viewModelScope.launch {
             try {
-                val neu = DiktatTrenner.jeAbschnitt(text) { kiGlaetten(PROMPT_KORREKTUR, it) }
+                val fassung = DiktatTrenner.jeAbschnitt(text) { abschnitt, gesamt -> kiGlaetten(PROMPT_KORREKTUR, abschnitt, gesamt) }
+                val neu = fassung.text
                 val aktuell = promptTextVon(ziel)
                 when {
                     // Bearbeiten inzwischen geschlossen: die KI-Fassung gehört zu keinem offenen Text mehr.
                     aktuell == null -> Unit
-                    neu.length < 5 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
+                    DiktatTrenner.ohneSchluss(neu).length < 5 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
                     // Inzwischen weitergetippt: die neuere Fassung gewinnt.
                     aktuell != text -> meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
+                    neu == text -> meldung = "Die KI hat nichts geändert."
                     else -> {
-                        promptTextSetzen(ziel, DiktatTrenner.mitSchlussWie(text, neu))
-                        if (ziel == promptBearbeitet?.erstellt) promptVorKi = text
+                        promptTextSetzen(ziel, neu)
+                        if (ziel == promptBearbeitet?.erstellt) promptKi = text to neu
+                        if (fassung.ausgefallen > 0) meldung = teilAusfall(fassung.ausgefallen)
                     }
                 }
             } catch (e: CancellationException) {
@@ -1821,9 +1825,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         else if (!schreibtMit) { antwortStartAbbrechen = true; antwortDiktatFeld = null; diktatZiel = null }
     }
 
-    /** Ein Text, von der KI nach [auftrag] geglättet; ohne Anführungszeichen außen herum. */
-    private suspend fun kiGlaetten(auftrag: String, text: String): String =
-        auth.streamChat(auftrag, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+    /** Ein Text, von der KI nach [auftrag] geglättet; ohne Anführungszeichen außen herum. [gesamt] dient nur als Kontext für Bezüge auf andere Abschnitte. */
+    private suspend fun kiGlaetten(auftrag: String, text: String, gesamt: String? = null): String {
+        val eingabe = if (gesamt == null) text else "Gesamttext, nur zum Verstehen von Bezügen, nicht ausgeben:\n$gesamt\n\nÜberarbeite und gib nur diesen einen Abschnitt aus:\n$text"
+        return auth.streamChat(auftrag, listOf(ChatTurn("user", eingabe)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+    }
+
+    private fun teilAusfall(anzahl: Int) = if (anzahl == 1) "Ein Abschnitt konnte nicht verbessert werden und blieb unverändert." else "$anzahl Abschnitte konnten nicht verbessert werden und blieben unverändert."
 
     /** KI-Knopf unter einem Antwortfeld: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
     fun antwortFormulieren(feld: String, text: String) {
@@ -1836,8 +1844,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         antwortFormuliertFeld = feld
         viewModelScope.launch {
             try {
-                val neu = DiktatTrenner.mitSchlussWie(text, DiktatTrenner.jeAbschnitt(text) { kiGlaetten(ANTWORT_KORREKTUR, it) })
-                if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else antwortKiFassungen[feld] = text to neu
+                val fassung = DiktatTrenner.jeAbschnitt(text) { abschnitt, gesamt -> kiGlaetten(ANTWORT_KORREKTUR, abschnitt, gesamt) }
+                when {
+                    DiktatTrenner.ohneSchluss(fassung.text).length < 2 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
+                    fassung.text == text -> meldung = "Die KI hat nichts geändert."
+                    else -> {
+                        antwortKiFassungen[feld] = text to fassung.text
+                        if (fassung.ausgefallen > 0) meldung = teilAusfall(fassung.ausgefallen)
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1878,7 +1893,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             meldung = "Gespeichert. Deine Ergänzung danach ist noch nicht gespeichert."
                             promptBearbeitet = p ?: bearbeitet.copy(text = text)
                         }
-                        else -> { promptBearbeitet = null; promptVorKi = null; fertig() }
+                        else -> { promptBearbeitet = null; promptKi = null; fertig() }
                     }
                     return@launch
                 }
@@ -1887,7 +1902,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 else {
                     meldung = "Als Prompt ${p.nummer} gespeichert."
                     if (DiktatTrenner.gespeichert(promptEntwurf) == text) promptEntwurf = ""
-                    if (promptBearbeitet == null) promptVorKi = null
+                    if (promptBearbeitet == null) promptKi = null
                     fertig()
                 }
             } finally {
@@ -3647,7 +3662,7 @@ private const val ANTWORT_KORREKTUR =
     "Du bringst Franks Antwort auf eine Rückfrage seiner Programmier-Sitzung in gutes Deutsch. Frank hat sie eingesprochen oder eingetippt. " +
         "Erfasse den Inhalt sinngemäß und schreibe ihn als klare, für sich allein verständliche Antwort an den Programmierer. Behalte jeden inhaltlichen Punkt, " +
         "jeden Namen, jede Zahl und jede Anforderung, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und " +
-        "berichtige Hörfehler der Spracherkennung. Beantworte nichts selbst. Antworte nur mit der fertigen Antwort, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+        "berichtige Hörfehler der Spracherkennung. Trenne Sätze mit Punkten, nicht mit Semikolons. Beantworte nichts selbst. Antworte nur mit der fertigen Antwort, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
 private const val REGEL_KORREKTUR =

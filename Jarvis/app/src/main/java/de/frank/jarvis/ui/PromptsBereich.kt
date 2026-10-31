@@ -308,7 +308,8 @@ fun PromptEbene(vm: AppViewModel) {
         LaunchedEffect(vm.promptText) { if (feld.text != vm.promptText) feld = TextFieldValue(vm.promptText, TextRange(vm.promptText.length)) }
         val fokus = remember { FocusRequester() }
         LaunchedEffect(Unit) { fokus.requestFocus() }
-        BasicTextField(feld, { feld = it; vm.promptText = it.text },
+        // Nur eigene Textänderungen ins ViewModel: Ein Tastatur-Update mit dem alten Text überschriebe sonst die gerade gesetzte KI-Fassung.
+        BasicTextField(feld, { if (it.text != feld.text) vm.promptText = it.text; feld = it },
             Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
             textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
             decorationBox = { inhalt ->

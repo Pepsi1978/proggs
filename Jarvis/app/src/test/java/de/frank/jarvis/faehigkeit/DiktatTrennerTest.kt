@@ -111,13 +111,28 @@ class DiktatTrennerTest {
     }
 
     @Test fun kiVerbesserungBehaeltJedeAufgabengrenze() = kotlinx.coroutines.runBlocking {
-        val neu = DiktatTrenner.jeAbschnitt("erste aufgabe ; zweite aufgabe ; dritte aufgabe ; ") { "Neu: $it ; " }
-        assertEquals("Neu: erste aufgabe ; Neu: zweite aufgabe ; Neu: dritte aufgabe", neu)
-        assertEquals("$neu ; ", DiktatTrenner.mitSchlussWie("a ; b ; ", neu))
+        val neu = DiktatTrenner.jeAbschnitt("erste aufgabe ; zweite aufgabe ; dritte aufgabe ; ") { t, _ -> "Neu: $t ; " }
+        assertEquals("Neu: erste aufgabe ; Neu: zweite aufgabe ; Neu: dritte aufgabe ; ", neu.text)
+        assertEquals(0, neu.ausgefallen)
     }
 
     @Test fun kiAntwortMitTrennerMachtKeineNeueAufgabe() = kotlinx.coroutines.runBlocking {
-        assertEquals("x; y ; b", DiktatTrenner.jeAbschnitt("a ; b") { if (it == "a") "x ; y" else "" })
-        assertEquals("", DiktatTrenner.jeAbschnitt("a ; b") { "" })
+        assertEquals("x; y ; b", DiktatTrenner.jeAbschnitt("a ; b") { t, _ -> if (t == "a") "x ; y" else "" }.text)
+        assertEquals("", DiktatTrenner.jeAbschnitt("a ; b") { _, _ -> "" }.text)
+        for (antwort in listOf("x ;\ny", "x\n;\ny", "x ; ; y")) assertEquals(2, DiktatTrenner.abschnitte(DiktatTrenner.jeAbschnitt("a ; b") { t, _ -> if (t == "a") antwort else "b" }.text).size)
+    }
+
+    @Test fun kiFehlerInEinemAbschnittBehaeltDieUebrigen() = kotlinx.coroutines.runBlocking {
+        val neu = DiktatTrenner.jeAbschnitt("a ; b") { t, _ -> if (t == "b") throw IllegalStateException("Netz") else "A" }
+        assertEquals("A ; b", neu.text)
+        assertEquals(1, neu.ausgefallen)
+    }
+
+    @Test fun kiBekommtGesamttextNurBeiMehrerenAbschnitten() = kotlinx.coroutines.runBlocking {
+        var kontext: String? = "x"
+        DiktatTrenner.jeAbschnitt("a") { t, g -> kontext = g; t }
+        assertEquals(null, kontext)
+        DiktatTrenner.jeAbschnitt("a ; b ; ") { t, g -> kontext = g; t }
+        assertEquals("a ; b", kontext)
     }
 }

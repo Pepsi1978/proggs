@@ -1,8 +1,11 @@
 package de.frank.jarvis.faehigkeit
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Trenner zwischen eingesprochenen Beiträgen in der Eingabeblase (normales Diktat, nicht Live): „ ; “ (Leerzeichen, Semikolon,
@@ -57,18 +60,38 @@ object DiktatTrenner {
     /** Die nicht leeren Abschnitte zwischen den Trennern (neue und alte Form); leere fallen weg. */
     fun abschnitte(text: String): List<String> = ("\n" + text).split(ZWISCHEN).map { it.trim() }.filter { it.isNotEmpty() }
 
+    /** Ergebnis von [jeAbschnitt]: der ganze Text samt Schluss-Trenner der Vorlage („“ = nichts brauchbar), [ausgefallen] = Abschnitte ohne KI-Fassung. */
+    data class Fassung(val text: String, val ausgefallen: Int)
+
     /**
-     * KI-Verbesserung, die die Aufgabengrenzen nicht antasten kann: [glaetten] sieht immer nur einen Abschnitt (höchstens vier
-     * gleichzeitig), die Abschnitte kommen danach mit genau [TRENNER] zusammen. Ein Trenner in einer Antwort wird zum gewöhnlichen
-     * Semikolon, eine leere Antwort lässt den Abschnitt unverändert. Leer, wenn keine Antwort brauchbar war.
+     * KI-Verbesserung, die die Aufgabengrenzen nicht antasten kann: [glaetten] liefert immer nur die Fassung eines Abschnitts
+     * (höchstens vier gleichzeitig; bei mehreren Abschnitten bekommt es den Gesamttext als Kontext für Bezüge, sonst null), die
+     * Abschnitte kommen danach mit genau [TRENNER] zusammen. Jede Trennerform in einer Antwort wird zum gewöhnlichen Semikolon.
+     * Eine leere Antwort oder ein Fehler lässt den Abschnitt unverändert; scheitern alle mit Fehler, geht der erste weiter.
      */
-    suspend fun jeAbschnitt(text: String, glaetten: suspend (String) -> String): String {
+    suspend fun jeAbschnitt(text: String, glaetten: suspend (abschnitt: String, gesamt: String?) -> String): Fassung {
         val teile = abschnitte(text)
-        val antworten = teile.chunked(4).flatMap { gruppe ->
-            coroutineScope { gruppe.map { t -> async { ohneSchluss(glaetten(t)).replace(TRENNER, "; ") } }.awaitAll() }
+        val gesamt = if (teile.size > 1) teile.joinToString(TRENNER) else null
+        val plaetze = Semaphore(4)
+        var fehler: Exception? = null
+        val antworten = coroutineScope {
+            teile.map { t ->
+                async {
+                    plaetze.withPermit {
+                        try {
+                            ohneSchluss(glaetten(t, gesamt)).replace(ZWISCHEN, ";")
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            if (fehler == null) fehler = e
+                            ""
+                        }
+                    }
+                }
+            }.awaitAll()
         }
-        if (antworten.all { it.isEmpty() }) return ""
-        return teile.zip(antworten) { t, a -> a.ifEmpty { t } }.joinToString(TRENNER)
+        if (antworten.all { it.isEmpty() }) { fehler?.let { throw it }; return Fassung("", teile.size) }
+        return Fassung(mitSchlussWie(text, teile.zip(antworten) { t, a -> a.ifEmpty { t } }.joinToString(TRENNER)), antworten.count { it.isEmpty() })
     }
 
     /** Mehr als ein Beitrag bzw. mehr als eine Aufgabe. */
