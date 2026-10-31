@@ -33,7 +33,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-import jarvis_anhaenge
 
 PROFIL = "minimal"
 MODUS = "schnell"
@@ -314,6 +313,7 @@ def starte_sitzung(auftrag: dict) -> str:
     mit_hooks = bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer))
     if auftrag.get("anhaenge"):
         # Vor dem Start vollständig auf dem Rechner. Die Bilder fügt der SessionStart-Hook von Claude Code als [Image #n] ein.
+        import jarvis_anhaenge
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"], cli in ("", "claude") and mit_hooks)}
     text = auftragstext(auftrag)

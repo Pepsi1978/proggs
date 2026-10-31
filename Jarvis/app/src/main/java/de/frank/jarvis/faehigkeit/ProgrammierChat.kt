@@ -121,8 +121,15 @@ object ProgrammierChat {
 
     /** Franks Anhänge dieser Runde: Sie gehen an der Modellantwort vorbei direkt an die Programmier-Sitzung (programmieren, programmier_nachtrag). */
     class AuftragsAnhaenge(val liste: List<de.frank.jarvis.data.Anhang>) : kotlin.coroutines.AbstractCoroutineContextElement(Key) {
+        /** Schon an eine Sitzung gegangen: Ein weiterer Auftrag derselben Runde bekommt sie nicht auch noch. */
+        @Volatile var verbraucht = false
         companion object Key : kotlin.coroutines.CoroutineContext.Key<AuftragsAnhaenge>
     }
+
+    /** Pfade, die schon an eine Sitzung gingen: Eine Folgerunde (Jarvis fragte erst zurück) nimmt nur noch die übrigen mit. */
+    private val uebertragen = java.util.Collections.synchronizedSet(HashSet<String>())
+    fun alsUebertragen(pfade: List<String>) { uebertragen.addAll(pfade) }
+    fun nochNichtUebertragen(pfad: String) = pfad !in uebertragen
 
     /** Anfang der ersten Nachricht eines eigenen Auftrags-Gesprächs: Sie ist der Auftrag, nicht Franks Wort an Jarvis. */
     const val AUFTRAG_VORSPANN = "An den Programmierer ("

@@ -534,61 +534,112 @@ ANHANG_ORDNER = Path(os.environ.get("JARVIS_ANHAENGE", "/data/anhaenge"))
 ANHANG_SHA = re.compile(r"^[0-9a-f]{64}$")
 ANHANG_MAX = 300 * 1024 * 1024
 ANHANG_HALTEN_S = 14 * 86400
+ANHANG_GESAMT = 5 * 1024 * 1024 * 1024
+# Das Handy nimmt je Nachricht bis zu 10 Dateien, zu jedem PDF kommen bis zu 20 Seitenbilder.
+ANHANG_MAX_ZAHL = 250
+ANHANG_GERAEUMT = 0.0
 
 
 def anhang_liste(daten: dict) -> list:
     """Die Anhaenge eines Auftrags oder Nachtrags: nur Pruefsumme und Name, die Datei liegt unter /geraet/anhang/<sha>."""
     roh = daten.get("anhaenge")
-    return [{"sha": a["sha"], "name": str(a.get("name", ""))[:200]} for a in (roh if isinstance(roh, list) else [])[:40]
+    return [{"sha": a["sha"], "name": str(a.get("name", ""))[:200]} for a in (roh if isinstance(roh, list) else [])[:ANHANG_MAX_ZAHL]
             if isinstance(a, dict) and ANHANG_SHA.match(str(a.get("sha", "")))]
 
 
+def anhang_zugriff(sha: str) -> str:
+    """Der Schluessel fuer Cloud-Sitzungen (sie haben kein Token). Nur wer ihn vom Relay bekam, kann die Datei ohne Token laden: Die Pruefsumme allein genuegt nicht."""
+    return hmac.new(TOKEN.encode("utf-8"), b"anhang:" + sha.encode("ascii"), hashlib.sha256).hexdigest()[:40]
+
+
+async def strom_ablegen(request: web.Request, ziel: Path, sha: str, grenze: int) -> web.Response:
+    """Stueckweise von der Leitung auf die Platte: Der Dienst hat nur 128 MB, und client_max_size gilt nur fuer read().
+    Pruefen und Schreiben abseits des Event-Loops: Der bedient auch MCP und den Tunnel."""
+    teil = ziel.parent / f".{uuid.uuid4().hex}.teil"
+    pruefung = hashlib.sha256()
+    groesse = 0
+    schleife = asyncio.get_running_loop()
+    try:
+        def stueck_ablegen(f, stueck):
+            pruefung.update(stueck)
+            f.write(stueck)
+        # Gesammelt bis 1 MB: Das Netz liefert oft viel kleinere Stuecke, und jeder Fadenwechsel kostet bei 0,5 CPU spuerbar.
+        with open(teil, "wb") as f:
+            puffer = bytearray()
+            async for stueck in request.content.iter_any():
+                groesse += len(stueck)
+                if groesse > grenze:
+                    return web.Response(status=413, text="Datei zu gross")
+                puffer += stueck
+                if len(puffer) >= 1024 * 1024:
+                    await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
+                    puffer.clear()
+            if puffer:
+                await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
+            # Erst fest auf der Platte, dann unter dem endgueltigen Namen: Nach einem Stromausfall gilt sonst eine halbe Datei als vorhanden.
+            f.flush()
+            await schleife.run_in_executor(None, os.fsync, f.fileno())
+        if pruefung.hexdigest() != sha:
+            return web.Response(status=400, text="Pruefsumme passt nicht")
+        os.replace(teil, ziel)
+        return web.json_response({"ok": True, "groesse": groesse})
+    finally:
+        teil.unlink(missing_ok=True)
+
+
+def anhaenge_raeumen() -> None:
+    """Aelter als ANHANG_HALTEN_S weg; ueber ANHANG_GESAMT die aeltesten zuerst, damit /data nie volllaeuft (auch Ablage und Zustand liegen dort)."""
+    grenze = time.time() - ANHANG_HALTEN_S
+    bleiben = []
+    for datei in ANHANG_ORDNER.iterdir():
+        stand = datei.stat()
+        if stand.st_mtime < grenze:
+            datei.unlink(missing_ok=True)
+        elif not datei.name.startswith("."):
+            bleiben.append((stand.st_mtime, stand.st_size, datei))
+    summe = sum(g for _, g, _ in bleiben)
+    for _, groesse, datei in sorted(bleiben, key=lambda e: e[0]):
+        if summe <= ANHANG_GESAMT:
+            break
+        datei.unlink(missing_ok=True)
+        summe -= groesse
+
+
 async def anhang_ablegen(request: web.Request) -> web.Response:
-    """PUT /geraet/anhang/<sha> (Handy): Datei eines Programmierauftrags, stueckweise auf die Platte, nach SHA-256 geprueft."""
+    """PUT /geraet/anhang/<sha> (Handy): Datei eines Programmierauftrags. Antwort mit dem Cloud-Schluessel."""
+    global ANHANG_GERAEUMT
     if not darf_handy(request):
         return web.Response(status=404, text="Not found")
     sha = request.match_info["sha"]
     if not ANHANG_SHA.match(sha):
         return web.Response(status=400, text="Pruefsumme ungueltig")
     ANHANG_ORDNER.mkdir(parents=True, exist_ok=True)
-    ziel = ANHANG_ORDNER / sha
-    schleife = asyncio.get_running_loop()
-    teil = ANHANG_ORDNER / f".{uuid.uuid4().hex}.teil"
-    pruefung = hashlib.sha256()
-    groesse = 0
-    try:
-        with open(teil, "wb") as f:
-            puffer = bytearray()
-            async for stueck in request.content.iter_any():
-                groesse += len(stueck)
-                if groesse > ANHANG_MAX:
-                    return web.Response(status=413, text="Datei zu gross")
-                pruefung.update(stueck)
-                puffer += stueck
-                if len(puffer) >= 1024 * 1024:
-                    await schleife.run_in_executor(None, f.write, bytes(puffer))
-                    puffer.clear()
-            if puffer:
-                await schleife.run_in_executor(None, f.write, bytes(puffer))
-        if pruefung.hexdigest() != sha:
-            return web.Response(status=400, text="Pruefsumme passt nicht")
-        os.replace(teil, ziel)
-        grenze = time.time() - ANHANG_HALTEN_S
-        for alt in ANHANG_ORDNER.iterdir():
-            if alt.stat().st_mtime < grenze:
-                alt.unlink(missing_ok=True)
-        log.info("Anhang abgelegt: %d KB", groesse // 1024)
-        return web.json_response({"ok": True, "groesse": groesse})
-    finally:
-        teil.unlink(missing_ok=True)
+    antwort = await strom_ablegen(request, ANHANG_ORDNER / sha, sha, ANHANG_MAX)
+    if antwort.status != 200:
+        return antwort
+    if time.monotonic() - ANHANG_GERAEUMT > 600:
+        ANHANG_GERAEUMT = time.monotonic()
+        await asyncio.get_running_loop().run_in_executor(None, anhaenge_raeumen)
+    log.info("Anhang abgelegt")
+    return web.json_response({"ok": True, "zugriff": anhang_zugriff(sha)})
+
+
+async def anhang_pruefen(request: web.Request) -> web.Response:
+    """HEAD /geraet/anhang/<sha> (Handy): Liegt die Datei schon hier, spart das den Upload; die Haltefrist beginnt neu."""
+    sha = request.match_info["sha"]
+    if not darf_handy(request) or not ANHANG_SHA.match(sha) or not (ANHANG_ORDNER / sha).is_file():
+        return web.Response(status=404)
+    os.utime(ANHANG_ORDNER / sha)
+    return web.Response(status=200, headers={"X-Anhang-Zugriff": anhang_zugriff(sha)})
 
 
 async def anhang_holen(request: web.Request) -> web.StreamResponse:
-    """GET /pc/anhang/<sha> (Bruecke, Hook) und GET /anhang/<sha>/<name> (Cloud-Sitzung, hat kein Token: Die Pruefsumme ist der Zugriffsschluessel)."""
+    """GET /pc/anhang/<sha> (Bruecke, Hook) und GET /anhang/<sha>/<zugriff> (Cloud-Sitzung, siehe anhang_zugriff)."""
     sha = request.match_info["sha"]
-    if "name" not in request.match_info and not darf_pc(request):
+    if not ANHANG_SHA.match(sha):
         return web.Response(status=404, text="Not found")
-    if not ANHANG_SHA.match(sha) or not (ANHANG_ORDNER / sha).is_file():
+    zugriff = request.match_info.get("zugriff")
+    if not (darf_pc(request) if zugriff is None else _gleich(zugriff, anhang_zugriff(sha))) or not (ANHANG_ORDNER / sha).is_file():
         return web.Response(status=404, text="Not found")
     return web.FileResponse(ANHANG_ORDNER / sha, headers={"Content-Type": "application/octet-stream"})
 
@@ -1683,38 +1734,7 @@ class AblageAbgleich:
             return web.Response(status=404, text="Not found")
         if not ABLAGE_SHA.match(sha):
             return web.Response(status=400, text="Pruefsumme ungueltig")
-        teil = self.blobs / f".{uuid.uuid4().hex}.teil"
-        pruefung = hashlib.sha256()
-        groesse = 0
-        schleife = asyncio.get_running_loop()
-        try:
-            # Stueckweise von der Leitung auf die Platte: Der Dienst hat nur 128 MB, und client_max_size gilt nur fuer read().
-            # Pruefen und Schreiben abseits des Event-Loops: Der bedient auch MCP und den Tunnel.
-            def stueck_ablegen(f, stueck):
-                pruefung.update(stueck)
-                f.write(stueck)
-            # Gesammelt bis 1 MB: Das Netz liefert oft viel kleinere Stuecke, und jeder Fadenwechsel kostet bei 0,5 CPU spuerbar.
-            with open(teil, "wb") as f:
-                puffer = bytearray()
-                async for stueck in request.content.iter_any():
-                    groesse += len(stueck)
-                    if groesse > ABLAGE_MAX_DATEI:
-                        return web.Response(status=413, text="Datei zu gross")
-                    puffer += stueck
-                    if len(puffer) >= 1024 * 1024:
-                        await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
-                        puffer.clear()
-                if puffer:
-                    await schleife.run_in_executor(None, stueck_ablegen, f, bytes(puffer))
-                # Erst fest auf der Platte, dann unter dem endgueltigen Namen: Nach einem Stromausfall gilt sonst eine halbe Datei als vorhanden.
-                f.flush()
-                await schleife.run_in_executor(None, os.fsync, f.fileno())
-            if pruefung.hexdigest() != sha:
-                return web.Response(status=400, text="Pruefsumme passt nicht")
-            os.replace(teil, self._pfad(sha))
-            return web.json_response({"ok": True, "groesse": groesse})
-        finally:
-            teil.unlink(missing_ok=True)
+        return await strom_ablegen(request, self._pfad(sha), sha, ABLAGE_MAX_DATEI)
 
     async def blob_holen(self, request: web.Request) -> web.StreamResponse:
         sha = request.match_info["sha"]
@@ -1769,6 +1789,8 @@ async def mitschrift(request: web.Request, handler):
     teile = request.path.split("/")
     if len(teile) > 2 and teile[1] == "j":
         teile[2] = "<geheim>" if len(teile[2]) >= 32 else "<falsch>"
+    if len(teile) > 2 and teile[1] == "anhang":
+        teile[2:] = ["<geheim>"]
     pfad = "/".join(teile)[:120]
     start = asyncio.get_running_loop().time()
     status = 500
@@ -1809,7 +1831,8 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/pc-auftrag", pc.auftrag)
     anwendung.router.add_put("/geraet/anhang/{sha}", anhang_ablegen)
     anwendung.router.add_get("/pc/anhang/{sha}", anhang_holen)
-    anwendung.router.add_get("/anhang/{sha}/{name}", anhang_holen)
+    anwendung.router.add_get("/anhang/{sha}/{zugriff}", anhang_holen)
+    anwendung.router.add_route("HEAD", "/geraet/anhang/{sha}", anhang_pruefen)
     anwendung.router.add_get("/geraet/pc", pc.status)
     anwendung.router.add_get("/pc/auftrag", pc.abholen)
     anwendung.router.add_get("/pc/faehigkeiten", pc.faehigkeiten)

@@ -616,7 +616,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Ein Start, der auf Franks Wahl per Knopf wartet. [ursprung]: im Sprachgespräch gestellt (dann wird das Ende vorgelesen).
      * [stufe]: was gerade gefragt ist (Modell, bei Sol das CLI, bei Codex das Review); [modell] und [cli] sind die Antworten davor.
      */
-    private suspend fun anhangPfade() = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.liste.orEmpty().map { it.pfad }
+    private suspend fun anhangPfade() = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.takeUnless { it.verbraucht }?.liste.orEmpty().map { it.pfad }
 
     /** Die schon beim Relay liegenden Anhänge dieses Starts ([{sha, name}]), für die Ziele. */
     private class HochgeladeneAnhaenge(val liste: JSONArray) : kotlin.coroutines.AbstractCoroutineContextElement(Key) {
@@ -810,58 +810,90 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
                                      modell: String = MODELL_OPUS, cli: String = CLI_CODEX, nurFuerSitzung: String = ""): Ergebnis {
         // Erst vollständig beim Relay, dann der Start: Nie eine Sitzung, der Franks Bilder oder Dateien fehlen.
-        val anhaenge = try { anhaengeHochladen() } catch (fehler: Exception) {
+        val anhaenge = try { anhaengeHochladen() } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Der Auftrag ist NICHT gestartet: ${fehler.message} Sag Frank das und bitte ihn, noch einmal zu senden.", fehler = true)
         }
-        return withContext(HochgeladeneAnhaenge(anhaenge)) { starteErstesOhneUpload(wahl, appName, auftrag, review, nummer, neu, modell, cli, nurFuerSitzung) }
+        val ergebnis = withContext(HochgeladeneAnhaenge(anhaenge)) { starteErstesOhneUpload(wahl, appName, auftrag, review, nummer, neu, modell, cli, nurFuerSitzung) }
+        if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) anhaengeVerbraucht()
+        return ergebnis
+    }
+
+    /** Diese Anhänge sind in einer Sitzung: Weitere Aufträge der Runde und Folgerunden bekommen sie nicht auch noch. */
+    private suspend fun anhaengeVerbraucht() {
+        kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.let { k ->
+            k.verbraucht = true
+            ProgrammierChat.alsUebertragen(k.liste.map { it.pfad })
+        }
     }
 
     /**
-     * Legt Franks Anhänge dieser Runde beim Relay ab, parallel und direkt (kein Umweg über das Modell), und liefert [{sha, name}].
-     * Der Relay nimmt dieselbe Prüfsumme beliebig oft an, darum genügt der einfache Neuversuch. Ohne Anhänge sofort leer.
+     * Legt Franks Anhänge dieser Runde beim Relay ab, parallel und direkt (kein Umweg über das Modell), und liefert [{sha, name, zugriff}].
+     * Ohne Anhänge oder wenn sie schon an eine Sitzung gingen sofort leer.
      */
     private suspend fun anhaengeHochladen(): JSONArray {
-        val liste = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]?.liste.orEmpty()
+        val kontext = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.AuftragsAnhaenge]
+        val liste = if (kontext == null || kontext.verbraucht) emptyList() else kontext.liste
         if (liste.isEmpty()) return JSONArray()
         return withContext(Dispatchers.IO) {
-            val dateien = de.frank.jarvis.data.Anhaenge.fuerSitzung(app, liste)
             val fehlt = liste.size - liste.count { it.datei.isFile }
             if (fehlt > 0) throw IllegalStateException("$fehlt Anhang/Anhänge liegen nicht mehr auf dem Handy.")
+            val dateien = de.frank.jarvis.data.Anhaenge.fuerSitzung(app, liste)
             val gleichzeitig = kotlinx.coroutines.sync.Semaphore(4)
-            kotlinx.coroutines.coroutineScope {
+            val zugriffe = kotlinx.coroutines.coroutineScope {
                 dateien.distinctBy { it.sha }.map { d ->
-                    async { gleichzeitig.withPermit { einenAnhangHochladen(d) } }
-                }.forEach { it.await() }
-            }
+                    async { gleichzeitig.withPermit { d.sha to einenAnhangHochladen(d) } }
+                }.map { it.await() }
+            }.toMap()
             Logbuch.system("Programmier-Anhänge übertragen", "${dateien.size} Datei(en), ${dateien.sumOf { it.datei.length() } / 1024} KB")
-            JSONArray().apply { dateien.forEach { put(JSONObject().put("sha", it.sha).put("name", it.name)) } }
+            JSONArray().apply { dateien.forEach { put(JSONObject().put("sha", it.sha).put("name", it.name).put("zugriff", zugriffe[it.sha].orEmpty())) } }
         }
     }
 
-    private suspend fun einenAnhangHochladen(d: de.frank.jarvis.data.UebertragDatei) {
-        var letzter: Exception? = null
-        repeat(3) { versuch ->
-            try {
-                val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/anhang/${d.sha}").header("X-Jarvis-Token", e.serverToken)
-                    .put(d.datei.asRequestBody("application/octet-stream".toMediaType())).build()
-                HTTP.newCall(anfrage).execute().use { a ->
-                    if (a.isSuccessful) return
-                    throw IllegalStateException("HTTP ${a.code}")
-                }
-            } catch (fehler: Exception) {
-                letzter = fehler
-                kotlinx.coroutines.delay(1000L * (versuch + 1))
+    /** Abbrechbar: Bricht Frank die Runde ab, endet auch die Übertragung. */
+    private suspend fun aufruf(anfrage: Request): okhttp3.Response = kotlinx.coroutines.suspendCancellableCoroutine { k ->
+        val anruf = HTTP.newCall(anfrage)
+        k.invokeOnCancellation { anruf.cancel() }
+        anruf.enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) { if (k.isActive) k.resumeWith(Result.failure(e)) }
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                if (k.isActive) k.resumeWith(Result.success(response)) else response.close()
             }
-        }
-        throw IllegalStateException("Der Anhang „${d.name}“ kam nicht beim Jarvis-Server an (${letzter?.message}).")
+        })
     }
 
-    /** Für die Cloud: Sie hat kein Token und holt die Dateien über ihre Prüfsumme. */
+    /** Liefert den Cloud-Schlüssel der Datei. Liegt sie schon beim Relay, entfällt der Upload; endgültige Absagen (4xx) werden nicht wiederholt. */
+    private suspend fun einenAnhangHochladen(d: de.frank.jarvis.data.UebertragDatei): String {
+        val adresse = "https://${e.serverHost}/geraet/anhang/${d.sha}"
+        try {
+            aufruf(Request.Builder().url(adresse).head().header("X-Jarvis-Token", e.serverToken).build()).use { a ->
+                if (a.isSuccessful) a.header("X-Anhang-Zugriff")?.let { return it }
+            }
+        } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (_: Exception) { }
+        var grund = ""
+        for (versuch in 0 until 3) {
+            if (versuch > 0) kotlinx.coroutines.delay(1000L * versuch)
+            var endgueltig = false
+            try {
+                aufruf(Request.Builder().url(adresse).header("X-Jarvis-Token", e.serverToken)
+                    .put(d.datei.asRequestBody("application/octet-stream".toMediaType())).build()).use { a ->
+                    if (a.isSuccessful) return JSONObject(a.body?.string().orEmpty()).optString("zugriff")
+                    grund = "HTTP ${a.code}"
+                    endgueltig = a.code in 400..499 && a.code != 408 && a.code != 429
+                }
+            } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
+                grund = fehler.message ?: fehler.javaClass.simpleName
+            }
+            if (endgueltig) break
+        }
+        throw IllegalStateException("Der Anhang „${d.name}“ kam nicht beim Jarvis-Server an ($grund).")
+    }
+
+    /** Für die Cloud: Sie hat kein Token und holt die Dateien mit dem Schlüssel des Relays. Laufende Nummer: gleichnamige Dateien überschrieben sich sonst. */
     private fun cloudAnhangText(anhaenge: JSONArray): String {
         if (anhaenge.length() == 0) return ""
         val zeilen = (0 until anhaenge.length()).map { i ->
             val a = anhaenge.getJSONObject(i)
-            "curl -fsSL -o \"${a.optString("name").replace(Regex("[^A-Za-z0-9._-]"), "_")}\" https://${e.serverHost}/anhang/${a.optString("sha")}/d"
+            "curl -fsSL -o \"%02d_%s\" https://%s/anhang/%s/%s".format(i + 1, a.optString("name").replace(Regex("[^A-Za-z0-9._-]"), "_"), e.serverHost, a.optString("sha"), a.optString("zugriff"))
         }
         return "\n\nANHÄNGE VON FRANK: Lade sie zuerst und öffne sie, sie gehören zu genau diesem Auftrag und sind maßgeblich:\n" + zeilen.joinToString("\n")
     }
@@ -1265,13 +1297,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "unter derselben Nummer direkt hinein.", fehler = true)
         }
         // Erst vollständig beim Relay, dann der Nachtrag: Nie ein Nachtrag, dessen Bilder fehlen.
-        val anhaenge = try { anhaengeHochladen() } catch (fehler: Exception) {
+        val anhaenge = try { anhaengeHochladen() } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Der Nachtrag wurde nicht gesendet: ${fehler.message} Bitte noch einmal senden.", fehler = true)
         }
         // Die Prüfsummen gehören in den Vergleich: Gleicher Text mit anderem Anhang („Siehe die Anhänge.“) ist ein neuer Nachtrag, kein doppelter.
-        val mitAnhaengen = text + (if (cloud) cloudAnhangText(anhaenge) else if (anhaenge.length() == 0) "" else
-            " (Anhänge: " + (0 until anhaenge.length()).joinToString(", ") { anhaenge.getJSONObject(it).optString("sha").take(8) } + ")")
-        val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, mitAnhaengen, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
+        val schluessel = (0 until anhaenge.length()).joinToString(",") { anhaenge.getJSONObject(it).optString("sha") }
+        val cloudAnhaenge = if (cloud) cloudAnhangText(anhaenge) else ""
+        val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, text.take(4_000) + cloudAnhaenge, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis", schluessel = schluessel)
             ?: return Ergebnis("Den Auftrag $id gibt es nicht mehr im Auftragsbuch. Nichts wurde gesendet.", fehler = true)
         val nummer = n.optString("id")
         if (doppelt && n.optString("stand") !in listOf("angenommen", "fehler")) {
@@ -1282,6 +1314,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ProgrammierChat.poste(app, zielGespraech, "📝 ${ProgrammierChat.VON_JARVIS} · Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text", ProgrammierChat.ART_STATUS)
         }
         if (cloud) {
+            anhaengeVerbraucht()
             return Ergebnis("Angenommen: Nachtrag $nummer für Auftrag $id ($appName) liegt bereit. Die Cloud-Sitzung bekommt ihn mit ihrer nächsten Fortschrittsmeldung; " +
                 "zugestellt ist er erst, wenn programmierauftraege das zeigt. Meldet sie sich nicht mehr, kommt er nicht an; eine neue Sitzung startet Jarvis nicht von selbst.")
         }
@@ -1290,6 +1323,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). Er ist im Auftrag $id vermerkt, " +
                 "aber nicht zugestellt; ein erneuter Aufruf mit demselben Text schickt ihn noch einmal, ohne ihn zu verdoppeln.", fehler = true)
         }
+        anhaengeVerbraucht()
         if (antwort.optBoolean("zugestellt")) {
             alsZugestellt(id, setOf(nummer), "")
             return Ergebnis("Zugestellt: Nachtrag $nummer ist in derselben Sitzung von Auftrag $id ($appName) angekommen, sie arbeitet ihn jetzt ab. " +
@@ -2187,7 +2221,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
          * dann der vorhandene und true. null = Auftrag unbekannt.
          */
         @Synchronized
-        fun nachtragNeu(context: Context, id: String, text: String, quelle: String, nachricht: String? = null): Pair<JSONObject, Boolean>? {
+        fun nachtragNeu(context: Context, id: String, text: String, quelle: String, nachricht: String? = null, schluessel: String = ""): Pair<JSONObject, Boolean>? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
             val nachtraege = eintrag.optJSONArray("nachtraege") ?: JSONArray().also { eintrag.put("nachtraege", it) }
@@ -2195,9 +2229,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Gesprächsnachrichten ([nachricht], eigene Nummer) dürfen sich wiederholen: „Wie ist der Stand?“ zweimal ist zweimal gefragt.
             if (nachricht == null) for (i in nachtraege.length() - 1 downTo 0) {
                 val n = nachtraege.getJSONObject(i)
-                if (NachtragsRegel.doppelt(n.optString("text"), n.optLong("zeit"), text, jetzt)) return n to true
+                if (n.optString("schluessel") == schluessel && NachtragsRegel.doppelt(n.optString("text"), n.optLong("zeit"), text, jetzt)) return n to true
             }
-            val n = JSONObject().put("id", nachricht ?: ("N" + neueNummer())).put("text", text.take(4_000)).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
+            val n = JSONObject().put("id", nachricht ?: ("N" + neueNummer())).put("text", if (schluessel.isEmpty()) text.take(4_000) else text).put("schluessel", schluessel).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
             nachtraege.put(n)
             while (nachtraege.length() > 20) nachtraege.remove(0)
             schreib(context, liste)
@@ -2441,8 +2475,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val text = buildString {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: ").append(if (review) "ja" else "nein").append('\n')
+                // Vor dem Auftrag: take() kürzt von hinten, die Anhänge dürfen dabei nie wegfallen.
+                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()).trimStart()).append('\n')
                 append("AUFTRAG:\n").append(auftrag)
-                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()))
             }.take(HOECHSTENS)
             val anfrage = Request.Builder().url(e.routineUrl)
                 .header("Authorization", "Bearer ${e.routineToken}")
@@ -2483,8 +2518,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val text = buildString {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: nein\n")
+                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()).trimStart()).append('\n')
                 append("AUFTRAG:\n").append(auftrag)
-                append(cloudAnhangText(kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste ?: JSONArray()))
             }.take(HOECHSTENS)
             val thread = auth.codexCloudRpc { rpc ->
                 val liste = rpc("environment/config/list", JSONObject()).optJSONArray("data") ?: JSONArray()

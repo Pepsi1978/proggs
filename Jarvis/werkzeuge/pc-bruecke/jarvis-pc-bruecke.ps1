@@ -215,7 +215,7 @@ function Starte-Sitzung($auftrag) {
         $anhangAus = Join-Path $anhangOrdner "anhaenge-$($auftrag.nummer).txt"
         [System.IO.File]::WriteAllText($anhangEin, ($auftrag | ConvertTo-Json -Depth 6 -Compress), [System.Text.UTF8Encoding]::new($false))
         $mitEinfuegen = if ((-not $sol) -and "$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { '1' } else { '0' }
-        & python (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_anhaenge.py') hole $anhangEin $anhangAus $mitEinfuegen 2>$null | Out-Null
+        try { & python (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_anhaenge.py') hole $anhangEin $anhangAus $mitEinfuegen 2>&1 | ForEach-Object { Schreib "Anhänge: $_" } } catch { Schreib "Anhänge: $_" }
         if (Test-Path -LiteralPath $anhangAus) { $anhangText = Get-Content -Raw -Encoding utf8 -LiteralPath $anhangAus }
         else { $anhangText = "`r`n`r`nFrank hat Anhänge geschickt, sie konnten nicht geladen werden: melde das Frank." }
         Remove-Item -LiteralPath $anhangEin, $anhangAus -Force -ErrorAction SilentlyContinue

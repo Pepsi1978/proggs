@@ -57,6 +57,14 @@ def _hole_eine(host: str, token: str, sha: str, ziel: Path) -> None:
     os.replace(teil, ziel)
 
 
+def _pruefsumme(pfad: Path) -> str:
+    pruefung = hashlib.sha256()
+    with open(pfad, "rb") as f:
+        while stueck := f.read(1024 * 1024):
+            pruefung.update(stueck)
+    return pruefung.hexdigest()
+
+
 def hole(host: str, token: str, nummer: str, anhaenge: list, unterordner: str = "start") -> tuple[list[Path], list[str]]:
     """Lädt die Anhänge parallel. Liefert (Pfade in Franks Reihenfolge, Namen der nicht geladenen)."""
     ordner = ORDNER / re.sub(r"[^A-Za-z0-9_-]", "_", nummer or "ohne") / re.sub(r"[^A-Za-z0-9_-]", "_", unterordner)
@@ -66,7 +74,7 @@ def hole(host: str, token: str, nummer: str, anhaenge: list, unterordner: str = 
     def eine(eintrag):
         i, a = eintrag
         ziel = ordner / sicherer_name(a.get("name", ""), i)
-        if ziel.is_file():
+        if ziel.is_file() and _pruefsumme(ziel) == a["sha"]:
             return ziel
         for versuch in range(3):
             try:
@@ -85,19 +93,30 @@ def ist_bild(pfad: Path) -> bool:
     return pfad.suffix.lower() in BILDER
 
 
+def _erwaehnen(pfad: Path, alle: list[Path]) -> bool:
+    """@pfad nur, wo es hilft: nicht bei PDFs mit Seitenbildern (der Inhalt käme doppelt) und nicht bei großen Textdateien (die blähten die erste Nachricht auf)."""
+    if pfad.suffix.lower() not in ERWAEHNEN:
+        return False
+    if pfad.suffix.lower() == ".pdf":
+        return not any(f"{pfad.stem.split('_', 1)[-1]}_Seite_" in p.name for p in alle)
+    return pfad.stat().st_size <= 200_000
+
+
 def textblock(pfade: list[Path], fehlend: list[str], einfuegen: bool, erwaehnen: bool = False) -> str:
     """Der Teil für den Text der Sitzung. [einfuegen]: Die Bilder kommen zusätzlich als eigene Eingabe mit [Image #n].
     [erwaehnen]: PDFs und Textdateien als @pfad (nur in der ersten Nachricht: Claude Code hängt sie dort selbst an)."""
     if not pfade and not fehlend:
         return ""
-    zeilen = ["ANHÄNGE VON FRANK (vom Handy, liegen vollständig auf diesem Rechner, gehören zu genau diesem Auftrag und sind maßgeblich):"]
-    zeilen += [f"- {'@' if erwaehnen and p.suffix.lower() in ERWAEHNEN else ''}{p}" for p in pfade]
+    zeilen = ["ANHÄNGE VON FRANK (vom Handy, liegen auf diesem Rechner, gehören zu genau diesem Auftrag und sind maßgeblich):"]
+    zeilen += [f"- {'@' if erwaehnen and _erwaehnen(p, pfade) else ''}{p}" for p in pfade]
     zeilen += [f"- NICHT ÜBERTRAGEN: {n} (melde das Frank)" for n in fehlend]
     if einfuegen and any(ist_bild(p) for p in pfade):
-        zeilen.append("Die Bilder kommen als echte Bilder ([Image #n]) in dieser oder der nächsten Eingabe; öffne sie nur mit Read, wenn sie nach deinem nächsten Schritt fehlen. "
-                      "PDFs und andere Dateien öffnest du über den Pfad.")
+        zeilen.append("Die Bilder kommen als echte Bilder ([Image #n]) in dieser oder der nächsten Eingabe. Sie müssen dir vorliegen, bevor du etwas änderst: "
+                      "Fehlen sie nach deinem ersten Schritt, öffne sie mit Read. PDFs und andere Dateien öffnest du über den Pfad.")
     else:
         zeilen.append("Öffne alle Anhänge über den Pfad (Bilder und PDFs mit deinem Lese-Werkzeug), bevor du anfängst.")
+    if any("_Seite_" in p.name for p in pfade):
+        zeilen.append("Dateien mit _Seite_ im Namen sind die Seiten eines PDFs als Bilder (höchstens die ersten 20 Seiten); weitere Seiten stehen im PDF selbst.")
     return "\n".join(zeilen)
 
 
@@ -105,11 +124,16 @@ def eingabe_fuer(pfade: list[Path], vorspann: str) -> tuple[str, int]:
     """Die ganze Eingabe in einem Stück (Vorspann und je Bild ein Bracketed Paste) und die Zahl der Bilder. Nur Bilder: PDFs und andere
     Dateien erkennt Claude Code beim Einfügen nicht, und eine @-Erwähnung wertet es in einer eingereihten Eingabe nicht aus."""
     bilder = [p for p in pfade if ist_bild(p)]
-    return _kopf(vorspann) + "".join(f"{ESC}[200~{p}{ESC}[201~ " for p in bilder), len(bilder)
+    return _kopf(_sauber(vorspann)) + "".join(f"{ESC}[200~{p}{ESC}[201~ " for p in bilder), len(bilder)
 
 
 def _mehrzeilig(vorspann: str) -> bool:
     return "\n" in vorspann or len(vorspann) > 300
+
+
+def _sauber(text: str) -> str:
+    """Ohne Steuerzeichen: Eine Endmarke oder Steuersequenz im Text bräche sonst aus dem Einfügen aus und wirkte wie Tastatureingaben."""
+    return re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", text.replace("\r\n", "\n"))
 
 
 def _kopf(vorspann: str) -> str:
@@ -117,9 +141,19 @@ def _kopf(vorspann: str) -> str:
     return f"{ESC}[200~{vorspann}{ESC}[201~ " if _mehrzeilig(vorspann) else vorspann
 
 
+def _claude_vorn(tty: str) -> bool:
+    """Läuft im Vordergrund dieses Terminals noch Claude Code? Sonst landete die Eingabe samt Enter in der Shell und würde dort ausgeführt."""
+    aus = subprocess.run(["ps", "-t", tty.removeprefix("/dev/"), "-o", "stat=,args="], capture_output=True, text=True, timeout=5).stdout
+    for zeile in aus.splitlines():
+        teile = zeile.split(None, 1)
+        if len(teile) == 2 and "+" in teile[0] and re.match(r"^(\S*/)?claude(\s|$)", teile[1]):
+            return True
+    return False
+
+
 def _warte_nach(bilder: int) -> None:
     # Claude Code liest die Bilder nach dem Einfügen ein; ein zu frühes Enter schickte die Eingabe ohne sie ab.
-    time.sleep(1.0 + 0.5 * bilder)
+    time.sleep(min(1.0 + 0.5 * bilder, 6.0))
 
 
 def _tmux(vorspann: str, pfade: list[Path]) -> bool:
@@ -128,20 +162,27 @@ def _tmux(vorspann: str, pfade: list[Path]) -> bool:
     if not bereich or not programm:
         return False
 
-    def t(*a):
-        subprocess.run([programm, *a], check=True, capture_output=True, timeout=10)
+    def t(*a) -> str:
+        return subprocess.run([programm, *a], check=True, capture_output=True, text=True, timeout=10).stdout
 
-    if _mehrzeilig(vorspann):
-        t("set-buffer", "--", vorspann)
-        t("paste-buffer", "-p", "-t", bereich)
+    if not _claude_vorn(t("display-message", "-p", "-t", bereich, "#{pane_tty}").strip()):
+        return False
+    # Eigener Puffer: Der tmux-Server gehört allen Sitzungen dieses Rechners, sonst fügte eine die Daten der anderen ein.
+    puffer = f"jarvis-{os.getpid()}"
+
+    def einfuegen_teil(text: str) -> None:
+        t("set-buffer", "-b", puffer, "--", text)
+        t("paste-buffer", "-p", "-d", "-b", puffer, "-t", bereich)
         t("send-keys", "-t", bereich, "-l", " ")
+
+    vorspann = _sauber(vorspann)
+    if _mehrzeilig(vorspann):
+        einfuegen_teil(vorspann)
     else:
         t("send-keys", "-t", bereich, "-l", vorspann)
     bilder = [p for p in pfade if ist_bild(p)]
     for p in bilder:
-        t("set-buffer", "--", str(p))
-        t("paste-buffer", "-p", "-t", bereich)
-        t("send-keys", "-t", bereich, "-l", " ")
+        einfuegen_teil(str(p))
     _warte_nach(len(bilder))
     t("send-keys", "-t", bereich, "Enter")
     return True
@@ -179,7 +220,7 @@ end run'''
 
 def _mac(vorspann: str, pfade: list[Path]) -> bool:
     tty = _mac_tty()
-    if not tty:
+    if not tty or not _claude_vorn(tty):
         return False
 
     def tippe(text: str) -> bool:
@@ -220,18 +261,27 @@ def _windows(vorspann: str, pfade: list[Path], claude_pid: int) -> bool:
         return False
 
     def tippe(text: str) -> None:
-        reihe = (RECORD * (len(text) * 2))()
-        for i, z in enumerate(text):
-            for j, unten in enumerate((True, False)):
-                r = reihe[i * 2 + j]
-                r.EventType = 1
-                r.Event.KeyEvent.bKeyDown = unten
-                r.Event.KeyEvent.wRepeatCount = 1
-                r.Event.KeyEvent.wVirtualKeyCode = 0x0D if z == "\r" else 0
-                r.Event.KeyEvent.UnicodeChar = z
-        geschrieben = wintypes.DWORD()
-        if not k32.WriteConsoleInputW(griff, reihe, len(reihe), ctypes.byref(geschrieben)):
-            raise OSError(ctypes.get_last_error())
+        # In UTF-16-Einheiten (Emoji sind zwei) und in Stücken: Der Aufruf nimmt nicht beliebig viele Ereignisse auf einmal.
+        roh = text.encode("utf-16-le", "surrogatepass")
+        einheiten = [chr(int.from_bytes(roh[i:i + 2], "little")) for i in range(0, len(roh), 2)]
+        for start in range(0, len(einheiten), 256):
+            stueck = einheiten[start:start + 256]
+            reihe = (RECORD * (len(stueck) * 2))()
+            for i, z in enumerate(stueck):
+                for j, unten in enumerate((True, False)):
+                    r = reihe[i * 2 + j]
+                    r.EventType = 1
+                    r.Event.KeyEvent.bKeyDown = unten
+                    r.Event.KeyEvent.wRepeatCount = 1
+                    r.Event.KeyEvent.wVirtualKeyCode = 0x0D if z == "\r" else 0
+                    r.Event.KeyEvent.UnicodeChar = z
+            offen, zeiger = len(reihe), 0
+            while offen > 0:
+                geschrieben = wintypes.DWORD()
+                if not k32.WriteConsoleInputW(griff, ctypes.byref(reihe, zeiger * ctypes.sizeof(RECORD)), offen, ctypes.byref(geschrieben)):
+                    raise OSError(ctypes.get_last_error())
+                zeiger += geschrieben.value
+                offen -= geschrieben.value
 
     try:
         text, bilder = eingabe_fuer(pfade, vorspann)

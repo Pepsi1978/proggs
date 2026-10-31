@@ -71,8 +71,6 @@ import hashlib
 import uuid
 from pathlib import Path
 
-import jarvis_anhaenge
-
 AUFTRAG = os.environ.get("JARVIS_AUFTRAG_ID", "").strip()
 # Am Rechner gestartete Sitzung (siehe Kopf): setze_auftrag(lokale_nummer(session_id)), dazu ihre Angaben für Jarvis.
 LOKAL = False
@@ -693,6 +691,10 @@ def beanspruche(liste: list[dict]) -> list[dict]:
     Nimmt nur Nachträge, die noch kein anderer Hook dieser Sitzung übergeben hat (Stop und Warter laufen gleichzeitig).
     Schon übergebene, die der Relay noch anbietet (Quittung kam nicht an), werden still nachquittiert.
     """
+    try:
+        anhaenge_holen([n for n in liste if n["nachtrag_id"] not in lies_zustand()["nachtraege"]])
+    except Exception as fehler:
+        schreib(f"Nachtrag-Anhänge vorab: {type(fehler).__name__}: {fehler}")
     with Sperre():
         z = lies_zustand()
         neu = [n for n in liste if n["nachtrag_id"] not in z["nachtraege"]]
@@ -712,40 +714,78 @@ def beanspruche(liste: list[dict]) -> list[dict]:
 NACHTRAG_BILDER: list[Path] = []
 
 
-def anhaenge_uebernehmen(neu: list[dict]) -> list[Path]:
-    """Holt die Anhänge der Nachträge auf den Rechner und ergänzt ihren Text. Liefert die Pfade."""
+def anhaenge_holen(neu: list[dict]) -> None:
+    """Lädt die Anhänge schon vor dem Beanspruchen: Ein Abbruch beim langen Download darf einen als übergeben vermerkten Nachtrag nicht verlieren."""
+    mit = [n for n in neu if n.get("anhaenge")]
+    if not mit:
+        return
+    import jarvis_anhaenge
+    host, token = zugang()
+    for n in mit:
+        jarvis_anhaenge.hole(host, token, AUFTRAG, n["anhaenge"], n["nachtrag_id"])
+
+
+def anhaenge_uebernehmen(neu: list[dict]) -> tuple[list[Path], list[str]]:
+    """Ergänzt den Text der Nachträge um ihre Anhänge (bereits geladene zählen, fehlende stehen im Text). Liefert Pfade und fehlende Namen."""
+    import jarvis_anhaenge
     alle: list[Path] = []
-    host, token = zugang() if any(n.get("anhaenge") for n in neu) else ("", "")
+    alle_fehlend: list[str] = []
     for n in neu:
         if not n.get("anhaenge"):
             continue
-        pfade, fehlend = jarvis_anhaenge.hole(host, token, AUFTRAG, n["anhaenge"], n["nachtrag_id"])
+        try:
+            host, token = zugang()
+            pfade, fehlend = jarvis_anhaenge.hole(host, token, AUFTRAG, n["anhaenge"], n["nachtrag_id"])
+        except Exception as fehler:
+            schreib(f"Nachtrag-Anhänge: {type(fehler).__name__}: {fehler}")
+            pfade, fehlend = [], [str(a.get("name", "")) for a in n["anhaenge"] if isinstance(a, dict)]
         n["text"] = f"{n['text']}\n\n{jarvis_anhaenge.textblock(pfade, fehlend, any(jarvis_anhaenge.ist_bild(p) for p in pfade) and not FREMDE_CLI)}"
         alle += pfade
-    return alle
+        alle_fehlend += fehlend
+    return alle, alle_fehlend
 
 
 def claude_pid() -> int:
-    return int(os.environ.get("CLAUDE_PID") or 0) or claude_prozess() or 0
+    return int(os.environ.get("JARVIS_ELTERN_PID") or 0) or int(os.environ.get("CLAUDE_PID") or 0) or claude_prozess() or 0
+
+
+def frage_offen() -> bool:
+    """Steht die Sitzung an einer Rückfrage? Dann ist die Eingabe ein Auswahldialog, und ein Enter wählte dort eine Option."""
+    try:
+        return any(v.get("status") in ("am_pc", "jarvis") for v in (lies_zustand().get("fragen") or {}).values())
+    except Exception:
+        return True
+
+
+def bilder_einfuegen_jetzt(pfade: list[Path], vorspann: str) -> str:
+    """Fügt ein, wenn die Eingabe frei ist. Sonst leer: Der Pfad steht im Text, die Sitzung öffnet die Bilder dann selbst."""
+    import jarvis_anhaenge
+    if frage_offen():
+        return ""
+    return jarvis_anhaenge.einfuegen(pfade, vorspann, claude_pid())
 
 
 def uebergib(neu: list[dict], bilder_einfuegen: bool = True) -> str:
     """Quittiert die Übergabe (Relay und Jarvis) und liefert den Text, mit dem die Sitzung weiterarbeitet. Bilder kommen als eigene
     Eingabe hinterher ([bilder_einfuegen]); der Warter schickt Text und Bilder lieber zusammen ab und nimmt dann NACHTRAG_BILDER."""
     NACHTRAG_BILDER.clear()
-    try:
-        pfade = anhaenge_uebernehmen(neu)
-        if pfade and not FREMDE_CLI:
-            NACHTRAG_BILDER.extend(pfade)
-            if bilder_einfuegen:
-                weg = jarvis_anhaenge.einfuegen(pfade, f"Anhänge von Frank zum Nachtrag (Auftrag {AUFTRAG}): ", claude_pid())
-                schreib(f"Nachtrag-Anhänge: {len(pfade)}, eingefügt über „{weg}“")
-    except Exception as fehler:
-        schreib(f"Nachtrag-Anhänge: {type(fehler).__name__}: {fehler}")
+    fehlend: list[str] = []
+    if any(n.get("anhaenge") for n in neu):
+        try:
+            pfade, fehlend = anhaenge_uebernehmen(neu)
+            if pfade and not FREMDE_CLI:
+                NACHTRAG_BILDER.extend(pfade)
+                if bilder_einfuegen:
+                    weg = bilder_einfuegen_jetzt(pfade, f"Anhänge von Frank zum Nachtrag (Auftrag {AUFTRAG}): ")
+                    schreib(f"Nachtrag-Anhänge: {len(pfade)}, eingefügt über „{weg}“")
+        except Exception as fehler:
+            schreib(f"Nachtrag-Anhänge: {type(fehler).__name__}: {fehler}")
     # Nachrichten aus dem Gespräch mit Jarvis (programmierer_sprechen, Nummer „G…“) tragen ihre Anleitung selbst: Frage beantworten
     # bzw. Wunsch bestätigen und umsetzen, danach weiterarbeiten. Sie sind kein Nachtrag mit Abschlusspflicht.
     gespraech = all(n["nachtrag_id"].startswith("G") for n in neu)
     kurz = " · ".join((n["text"].split("\n\n")[0] if n["nachtrag_id"].startswith("G") else n["text"].split("\n\nANHÄNGE VON FRANK")[0]).replace("\n", " ")[:300] for n in neu)
+    if fehlend:
+        kurz += " ⚠️ Nicht übertragen: " + ", ".join(fehlend)[:200]
     try:
         melde("nachtrag", "✓ Beim Programmierer angekommen." if gespraech else "📨 Nachtrag in der Sitzung angekommen: " + kurz,
               nachtrag_ids=[n["nachtrag_id"] for n in neu])
@@ -901,12 +941,18 @@ def warte(eingabe: dict) -> int:
     claude = int(os.environ.get("JARVIS_ELTERN_PID") or 0) or int(os.environ.get("CLAUDE_PID") or 0) or claude_prozess()
     claude_start = (startzeit(claude) or "") if claude else ""
     schreib(f"Warter gestartet ({eingabe.get('hook_event_name', '')}, Claude-Prozess {claude})")
-    # Neuer Auftrag mit Bildern: Die Brücke hat sie abgelegt, sobald die Eingabe steht als echte [Image #n] hinterher (erst danach warten).
-    bilder = jarvis_anhaenge.nimm_einfuegen(AUFTRAG) if not FREMDE_CLI else []
-    if bilder:
-        time.sleep(4)
-        weg = jarvis_anhaenge.einfuegen(bilder, f"Anhänge von Frank zu diesem Auftrag {AUFTRAG}: ", claude)
-        schreib(f"Auftrags-Anhänge: {len(bilder)}, eingefügt über „{weg}“")
+    # Neuer Auftrag mit Bildern: Die Brücke hat sie abgelegt. Sobald die Sitzung ihr Transkript schreibt, steht die Eingabe: dann als echte [Image #n] hinterher.
+    if not FREMDE_CLI and (Path.home() / ".jarvis-anhaenge" / AUFTRAG / "einfuegen.json").is_file():
+        import jarvis_anhaenge
+        bilder = jarvis_anhaenge.nimm_einfuegen(AUFTRAG)
+        if bilder:
+            transkript = str(eingabe.get("transcript_path") or "")
+            bis = time.monotonic() + 20
+            while time.monotonic() < bis and not (transkript and os.path.isfile(transkript)):
+                time.sleep(0.3)
+            time.sleep(2)
+            weg = bilder_einfuegen_jetzt(bilder, f"Anhänge von Frank zu diesem Auftrag {AUFTRAG}: ")
+            schreib(f"Auftrags-Anhänge: {len(bilder)}, eingefügt über „{weg}“")
     try:
         ende = time.monotonic() + WARTER_MAX_S
         while time.monotonic() < ende:
@@ -960,19 +1006,24 @@ def warte(eingabe: dict) -> int:
                 # Schon übergeben (Stop war schneller), Quittung noch unterwegs: nicht im Kreis fragen.
                 time.sleep(3)
                 continue
-            text = uebergib(neu, bilder_einfuegen=False)
-            # Mit Bildern: Text und [Image #n] in einer einzigen Eingabe, so bleibt es ein Zug. Kommt sie nicht an, weckt der Text wie immer.
-            if any(jarvis_anhaenge.ist_bild(p) for p in NACHTRAG_BILDER):
-                transkript = str(eingabe.get("transcript_path") or "")
-                try:
-                    stelle = os.path.getsize(transkript) if transkript else 0
-                except OSError:
-                    stelle = 0
-                weg = jarvis_anhaenge.einfuegen(NACHTRAG_BILDER, text, claude)
-                if weg and not weg.startswith("fehler") and jarvis_anhaenge.angekommen(transkript, stelle, f"NACHTRAG {neu[0]['nachtrag_id']}"):
-                    schreib(f"Warter: {len(neu)} Nachtrag/Nachträge samt Bildern eingefügt über „{weg}“")
-                    return 0
-                schreib(f"Warter: Einfügen nicht bestätigt („{weg}“), Nachtrag geht als Text")
+            transkript = str(eingabe.get("transcript_path") or "")
+            # Wartet die Sitzung, gehen Text und [Image #n] in einer einzigen Eingabe hinein: ein Zug. Arbeitet sie, ist das nicht prüfbar
+            # (eine eingereihte Eingabe steht erst später im Transkript, ein zweites Zustellen liefe doppelt): Dann weckt der Text, die Bilder reihen sich ein.
+            wartet = zugstand(transkript) in ("ende", "abbruch") if transkript else False
+            text = uebergib(neu, bilder_einfuegen=not wartet)
+            if wartet and NACHTRAG_BILDER:
+                import jarvis_anhaenge
+                if any(jarvis_anhaenge.ist_bild(p) for p in NACHTRAG_BILDER):
+                    try:
+                        stelle = os.path.getsize(transkript)
+                    except OSError:
+                        stelle = 0
+                    weg = bilder_einfuegen_jetzt(NACHTRAG_BILDER, text)
+                    marke = next((n["nachtrag_id"] for n in neu if n.get("anhaenge")), neu[0]["nachtrag_id"])
+                    if weg and not weg.startswith("fehler") and jarvis_anhaenge.angekommen(transkript, stelle, f"NACHTRAG {marke}"):
+                        schreib(f"Warter: {len(neu)} Nachtrag/Nachträge samt Bildern eingefügt über „{weg}“")
+                        return 0
+                    schreib(f"Warter: Einfügen nicht bestätigt („{weg}“), Nachtrag geht als Text")
             sys.stderr.write(text)
             schreib(f"Warter: {len(neu)} Nachtrag/Nachträge übergeben, Sitzung wird geweckt")
             return 2

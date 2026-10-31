@@ -375,14 +375,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + de.frank.jarvis.faehigkeit.ProgrammierChat.AuftragsAnhaenge(anhaenge) + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
+        // Fragte Jarvis erst zurück, gehören die Anhänge der Nachricht davor weiter zu diesem Auftrag, solange sie noch nicht übertragen sind.
+        val mitgehend = anhaenge.ifEmpty {
+            gespraech.take(frage).lastOrNull { it.vonMir }?.anhaenge.orEmpty()
+                .filter { de.frank.jarvis.faehigkeit.ProgrammierChat.nochNichtUebertragen(it) }.map { de.frank.jarvis.data.Anhang(it) }
+        }
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + de.frank.jarvis.faehigkeit.ProgrammierChat.AuftragsAnhaenge(mitgehend) + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
                 // Ein Programmierauftrag muss die Dateien nicht erst durchs Modell schicken (kostet Zeit und Tokens): Sie gehen direkt an die Sitzung.
                 val programmierer = de.frank.jarvis.faehigkeit.ProgrammiererVorlage.aktiv(text)
                 val beilage = if (anhaenge.isEmpty() || programmierer) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
-                val hinweisAnhaenge = if (anhaenge.isEmpty()) "" else "\n\n(Franks Anhänge: " + anhaenge.joinToString(", ") { it.name } +
-                    ". Mit programmieren oder programmier_nachtrag gehen sie von selbst vollständig an die Sitzung; beschreibe sie dort nicht und nenne keine Pfade.)"
+                // Nur wo es ums Programmieren geht: Bei „Was ist auf dem Foto?“ lenkte der Hinweis das Modell nur ab.
+                val umsProgrammieren = programmierer || sitzungen.any { it.id == id && it.programmierung } || Regex("programmier|nachtrag", RegexOption.IGNORE_CASE).containsMatchIn(text)
+                val hinweisAnhaenge = if (mitgehend.isEmpty() || !umsProgrammieren) "" else "\n\n(Franks Anhänge: " + mitgehend.joinToString(", ") { it.name } +
+                    ". Mit programmieren oder programmier_nachtrag gehen sie von selbst vollständig an die Sitzung, und zwar nur an die erste in dieser Runde; beschreibe sie dort nicht und nenne keine Pfade.)"
                 val auftrag = text + beilage?.text.orEmpty() + hinweisAnhaenge + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
                 // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 30 Minuten, also mehr als die 20 Minuten bei 100 Schritten).
                 val schritte = einstellungen.schrittlimit
@@ -1024,7 +1031,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (ergebnis.fehler) {
                 meldung = ergebnis.text.substringBefore(". ").trimEnd('.') + "."
                 if (entwurf.isEmpty()) entwurf = roh
-                if (anhaenge.isEmpty()) anhaenge.addAll(anh)
+                // Zurück in den Entwurf, auch wenn Frank inzwischen schon Neues angehängt hat.
+                anhaenge.addAll(0, anh.filterNot { it in anhaenge })
             }
         }
     }

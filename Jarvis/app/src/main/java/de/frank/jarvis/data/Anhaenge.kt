@@ -49,6 +49,7 @@ object Anhaenge {
     private const val MAX_PDF_SEITEN = 6
     private const val MAX_SITZUNG_SEITEN = 20
     private const val SEITE_BREITE = 1400
+    private const val SEITE_HOEHE_MAX = 4000
 
     fun ordner(context: Context) = File(context.filesDir, "gespraeche/anhaenge").apply { mkdirs() }
 
@@ -160,21 +161,25 @@ object Anhaenge {
         return pruefung.digest().joinToString("") { "%02x".format(it) }
     }
 
+    /** Jede Seite für sich: Scheitert eine (zu groß, Speicher), bleiben die anderen. */
     private fun pdfSeitenDateien(f: File, ordner: File): List<File> {
         val ergebnis = mutableListOf<File>()
         ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
             PdfRenderer(pfd).use { pdf ->
                 for (i in 0 until minOf(pdf.pageCount, MAX_SITZUNG_SEITEN)) {
-                    pdf.openPage(i).use { seite ->
-                        val hoehe = (SEITE_BREITE.toFloat() * seite.height / seite.width).toInt().coerceAtLeast(1)
-                        val bmp = Bitmap.createBitmap(SEITE_BREITE, hoehe, Bitmap.Config.ARGB_8888)
-                        bmp.eraseColor(Color.WHITE)
-                        seite.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                        val ziel = File(ordner, "${System.nanoTime()}.jpg")
-                        ziel.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-                        bmp.recycle()
-                        ergebnis += ziel
-                    }
+                    runCatching {
+                        pdf.openPage(i).use { seite ->
+                            val faktor = minOf(SEITE_BREITE.toFloat() / seite.width, SEITE_HOEHE_MAX.toFloat() / seite.height)
+                            val bmp = Bitmap.createBitmap((seite.width * faktor).toInt().coerceAtLeast(1), (seite.height * faktor).toInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                            try {
+                                bmp.eraseColor(Color.WHITE)
+                                seite.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                val ziel = File(ordner, "${System.nanoTime()}.jpg")
+                                ziel.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+                                ergebnis += ziel
+                            } finally { bmp.recycle() }
+                        }
+                    }.onFailure { de.frank.jarvis.observability.Logbuch.fehler("PDF-Seite ${i + 1} für die Sitzung", it) }
                 }
             }
         }

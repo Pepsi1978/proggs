@@ -20,8 +20,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "kern"))
 import launcher  # noqa: E402
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Jarvis" / "werkzeuge" / "pc-bruecke"))
-import jarvis_anhaenge  # noqa: E402
 
 ORDNER = Path.home() / "JarvisPcBruecke"
 PROTOKOLL = ORDNER / "bruecke.log"
@@ -133,6 +131,8 @@ def starte(auftrag: dict, w: dict) -> str:
     launcher.platz_schaffen()
     if auftrag.get("anhaenge"):
         # Vor dem Start vollständig auf dem Server; die Bilder fügt der SessionStart-Hook über tmux als [Image #n] ein.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Jarvis" / "werkzeuge" / "pc-bruecke"))
+        import jarvis_anhaenge
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"],
                                                                                                        w["cli"] == "claude" and bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer)))}
