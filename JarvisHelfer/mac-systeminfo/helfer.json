@@ -1,0 +1,33 @@
+{
+  "kennung": "mac-systeminfo",
+  "name": "Mac-Systemangaben",
+  "zweck": "Sagt, welche macOS-Version auf dem Mac läuft und wie viel Speicherplatz sofort frei ist.",
+  "faehigkeiten": ["macOS-Version lesen", "Build-Nummer lesen", "Freien Speicherplatz lesen"],
+  "schlagworte": ["mac", "macos", "version", "sw_vers", "system", "systeminfo", "speicher", "speicherplatz", "festplatte"],
+  "version": "1.0.0",
+  "ort": "mac",
+  "art": "skript",
+  "datei": "main.py",
+  "rolle": "",
+  "eingabe": {"type": "object", "properties": {}, "additionalProperties": false},
+  "ausgabe": "Ein Satz mit macOS-Version, Build und sofort freiem Speicherplatz; dieselben Angaben stehen in daten als macos_version, macos_version_zusatz, macos_build, speicher_frei_bytes und speicher_gesamt_bytes.",
+  "voraussetzungen": ["Lauffähiges python3 von Homebrew oder den Command Line Tools"],
+  "grenzen": [
+    "Nur lesend, keine Konten und kein Netz.",
+    "Der freie Speicher zählt nur sofort freien Platz des APFS-Containers; der Finder kann wegen löschbarer Daten mehr anzeigen."
+  ],
+  "braucht_app_update": false,
+  "rechte": {"netz": [], "konten": [], "werkzeuge": [], "extern": false},
+  "tests": [
+    {
+      "name": "Normalfall: Version und Speicher",
+      "eingabe": {},
+      "erwartet": {"ok": true, "enthaelt": ["macOS", "macos_version", "macos_build", "speicher_frei_bytes", "speicher_gesamt_bytes", "GB"]}
+    },
+    {
+      "name": "Fehlerfall: unbekannte Eingabe",
+      "eingabe": {"angabe": "kaffeemaschine"},
+      "erwartet": {"ok": false, "enthaelt": ["Unbekannte Eingabe", "angabe"]}
+    }
+  ]
+}
