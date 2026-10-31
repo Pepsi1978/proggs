@@ -90,6 +90,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -237,7 +238,9 @@ private fun Leiste(vm: AppViewModel) {
         // verbinden (früher der Mac, dann 6 s schwarzer Bildschirm), sondern sagen, dass keiner erreichbar ist.
         val bereich = androidx.compose.runtime.rememberCoroutineScope()
         var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-        var sucht by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        // Läuft ein Start, bricht erneutes Tippen ihn ab: Die Anzeige verschwindet sofort, der abgebrochene Start öffnet nichts mehr.
+        var start by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        val sucht = start != null
         val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
             if (z.konsole) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
             else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
@@ -246,28 +249,31 @@ private fun Leiste(vm: AppViewModel) {
         if (auswahl) RechnerAuswahl(de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value.orEmpty(), { auswahl = false }) { auswahl = false; oeffnen(it) }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
-                if (sucht) return@antippen
-                sucht = true
-                bereich.launch {
+                start?.let { it.cancel(); start = null; return@antippen }
+                start = bereich.launch {
                     val da = de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen()
-                    sucht = false
+                    coroutineContext.ensureActive()
+                    start = null
                     when {
                         da.size > 1 -> auswahl = true
                         da.size == 1 -> oeffnen(da.first())
                         else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
                     }
                 }
-            }.semantics { contentDescription = "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
+            }.semantics { contentDescription = if (sucht) "Fernwartung wird vorbereitet, erneut tippen bricht ab" else "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
-            // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau: das Tippen ist angekommen.
+            // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau mit drehendem Ring: das Tippen ist angekommen.
             val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) f.primaer else f.erfolg; false -> f.gefahr; null -> f.textLeise }
             // Gleiche Größe wie die Reitersymbole (20 dp).
-            Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
-                if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
-            })
+            Box(contentAlignment = Alignment.Center) {
+                if (sucht) androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = f.primaer, strokeWidth = 2.5.dp)
+                Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
+                    if (rechnerDa == true && !sucht) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
+                })
+            }
         }
         reiterKnopf(Reiter.EINSTELLUNGEN)
     }

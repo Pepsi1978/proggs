@@ -2,7 +2,9 @@ package de.frank.jarvis.fernsteuerung
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -48,8 +50,11 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
         private suspend fun bereit(z: Fernziel, port: Int, wartezeitMs: Int): Pruefung = withContext(Dispatchers.IO) {
             val beginn = System.currentTimeMillis()
             fun ergebnis(ok: Boolean, grund: String) = Pruefung(z, ok, grund, System.currentTimeMillis() - beginn)
+            // Ein abgebrochener Start schließt die wartende Verbindung sofort, damit ein neuer Start nicht auf die Frist warten muss.
+            val verbindung = Socket()
+            val waechter = launch { try { awaitCancellation() } finally { runCatching { verbindung.close() } } }
             try {
-                Socket().use { s ->
+                verbindung.use { s ->
                     s.connect(InetSocketAddress(z.adresse, port), wartezeitMs)
                     s.soTimeout = 800
                     try {
@@ -61,6 +66,8 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
                 ergebnis(false, "Verbindungsaufbau nach $wartezeitMs ms ohne Antwort (Tunnel-Paket verloren, Rechner schläft oder aus)")
             } catch (e: Exception) {
                 ergebnis(false, "${e.javaClass.simpleName}: ${e.message.orEmpty()}")
+            } finally {
+                waechter.cancel()
             }
         }
     }

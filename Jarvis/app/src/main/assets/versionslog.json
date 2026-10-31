@@ -495,6 +495,7 @@
     {"versionCode": 491, "versionName": "1.8.480", "stand": "31.10.2026, 11:02 Uhr", "notiz": "Beim Bearbeiten eines Prompts stehen Mikrofon, KI und Speichern auf dem aufgeklappten Handy jetzt ganz unten, das Textfeld wird größer."},
     {"versionCode": 492, "versionName": "1.8.481", "stand": "31.10.2026, 11:03 Uhr", "notiz": "Beim Schreiben und Bearbeiten eines Prompts springt die Tastatur nicht mehr von selbst auf, ein neuer Knopf neben dem Mikrofon öffnet sie bei Bedarf."},
     {"versionCode": 493, "versionName": "1.8.482", "stand": "31.10.2026, 11:09 Uhr", "notiz": "Die Server-Konsole läuft jetzt im Vollbild ohne Statusleiste, und ihre Reiter oben lassen sich antippen."},
-    {"versionCode": 494, "versionName": "1.8.483", "stand": "31.10.2026, 11:27 Uhr", "notiz": "Die Ablage gleicht sich schneller ab: Texte und Prompts warten nicht mehr auf große Dateien, nach einem Netzwechsel oder beim Öffnen der App geht es sofort weiter, und die Ablage zeigt den Stand des Abgleichs an."}
+    {"versionCode": 494, "versionName": "1.8.483", "stand": "31.10.2026, 11:27 Uhr", "notiz": "Die Ablage gleicht sich schneller ab: Texte und Prompts warten nicht mehr auf große Dateien, nach einem Netzwechsel oder beim Öffnen der App geht es sofort weiter, und die Ablage zeigt den Stand des Abgleichs an."},
+    {"versionCode": 495, "versionName": "1.8.484", "stand": "31.10.2026, 11:30 Uhr", "notiz": "Beim Start der Fernwartung dreht sich jetzt ein Ring um das Symbol, und ein zweites Tippen bricht den Start sofort ab."}
 ]
 }
