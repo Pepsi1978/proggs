@@ -131,8 +131,8 @@ object Plugins {
 }
 
 /**
- * Die Eingabeblase wie in der ChatGPT-App: oben das Textfeld („Mit Jarvis arbeiten“, die Tastatur kommt erst beim
- * Hineintippen), darunter Plus-Menü, Modell und Aufwand, das Diktier-Mikrofon und rechts die orange Live-Blase,
+ * Die Eingabeblase wie in der ChatGPT-App: oben das Textfeld („Mit Jarvis arbeiten“, die Tastatur kommt nur über den
+ * Tastaturbutton oder beim Hineintippen), darunter Plus-Menü, Modell und Aufwand, das Diktier-Mikrofon und rechts die orange Live-Blase,
  * die zum Senden-Pfeil wird, sobald Text oder ein Anhang da ist. Während eines Live-Gesprächs zeigt sie dessen Leiste.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -204,7 +204,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             if (!vm.entwurfFokus) return@LaunchedEffect
             // Erst am Ende zurücksetzen: Der Wert ist der Schlüssel dieses Effekts, früher zurückgesetzt bräche er sich beim Warten selbst ab.
             try {
-                // Eingeklappt gibt es kein Feld zum Fokussieren; die Tastatur kommt erst mit dem Tipp, der die Blase öffnet.
+                // Eingeklappt gibt es kein Feld zum Fokussieren.
                 if (vm.eingabeKompakt) return@LaunchedEffect
                 // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
                 repeat(10) {
@@ -260,13 +260,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt; mit Text bleibt sie groß, dann Tastatur weg oder wieder her.
+            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld ohne Tastatur, groß → wieder kompakt; mit Text bleibt sie groß und nimmt nur eine offene Tastatur weg.
             Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen {
                 when {
-                    kompakt -> { vm.eingabeKompakt = false; vm.entwurfFokus = true }
+                    kompakt -> vm.eingabeKompakt = false
                     vm.entwurf.isBlank() -> { tastatur?.hide(); vm.eingabeKompakt = true }
                     feldFokus -> { tastatur?.hide(); fokusVerwalter.clearFocus() }
-                    else -> vm.entwurfFokus = true
                 }
             }, contentAlignment = Alignment.CenterEnd) {
             // Eingeklappt oder mit Text ist kein Platzhalter zu sehen: Aufnahme und Mitschrift stehen dann statt des Modells im freien Platz.
@@ -286,14 +285,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             }
             Spacer(Modifier.width(4.dp))
-            // Im Programmierauftrag spricht Frank ein; die Tastatur kommt nur über dieses kleine Symbol neben dem Mikrofon.
-            if (vm.programmiererAktiv && !kompakt) {
-                val tastaturOffen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-                Box(Modifier.size(36.dp).clip(CircleShape).antippen {
-                    if (tastaturOffen) { tastatur?.hide(); fokusVerwalter.clearFocus() } else vm.entwurfFokus = true
-                }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Keyboard, if (tastaturOffen) "Tastatur schließen" else "Tastatur öffnen", tint = if (tastaturOffen) f.primaer else f.text, modifier = Modifier.size(22.dp))
-                }
+            // Frank spricht fast alles ein: Die Tastatur kommt nie von selbst, nur über diesen Knopf zwischen Modell und Mikrofon; nochmal tippen schließt sie.
+            val tastaturOffen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+            Box(Modifier.size(36.dp).clip(CircleShape).antippen {
+                if (tastaturOffen) { tastatur?.hide(); fokusVerwalter.clearFocus() } else { vm.eingabeKompakt = false; vm.entwurfFokus = true }
+            }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Keyboard, if (tastaturOffen) "Tastatur schließen" else "Tastatur öffnen", tint = if (tastaturOffen) f.primaer else f.text, modifier = Modifier.size(22.dp))
             }
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
             Box(

@@ -509,6 +509,7 @@
     {"versionCode": 504, "versionName": "1.8.493", "stand": "31.10.2026, 13:06 Uhr", "notiz": "Eigene Tools: Helfer kommen nur noch an ihre eigenen Dateien und an ausdrücklich freigegebene Daten, ein Abbruch stoppt wirklich alles, und Schlüssel lassen sich bei Bedarf entfernen."},
     {"versionCode": 505, "versionName": "1.8.494", "stand": "31.10.2026, 13:21 Uhr", "notiz": "Eigene Tools: Jeder Helfer ist jetzt ein eigener, zugeklappter Eintrag; Details und Bedienung erscheinen beim Aufklappen."},
     {"versionCode": 506, "versionName": "1.8.495", "stand": "31.10.2026, 18:50 Uhr", "notiz": "Prompt bearbeiten auf dem Frontdisplay: Die Knöpfe stehen weiter unten, der freie Streifen ist weg und der Text bekommt deutlich mehr Platz."},
-    {"versionCode": 507, "versionName": "1.8.496", "stand": "31.10.2026, 18:55 Uhr", "notiz": "Programmierbutton: Sol 6.1 oder Opus 5.5 wählst du jetzt vor dem Diktat, das Modell gilt ohne erneute Frage, und die Tastatur kommt nur noch über das kleine Symbol neben dem Mikrofon."}
+    {"versionCode": 507, "versionName": "1.8.496", "stand": "31.10.2026, 18:55 Uhr", "notiz": "Programmierbutton: Sol 6.1 oder Opus 5.5 wählst du jetzt vor dem Diktat, das Modell gilt ohne erneute Frage, und die Tastatur kommt nur noch über das kleine Symbol neben dem Mikrofon."},
+    {"versionCode": 508, "versionName": "1.8.497", "stand": "31.10.2026, 19:15 Uhr", "notiz": "Die Tastatur kommt nie mehr von selbst, auch nicht bei Nachtrag: Der neue Tastaturbutton zwischen Modell und Mikrofon öffnet und schließt sie."}
 ]
 }

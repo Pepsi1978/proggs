@@ -899,7 +899,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun anhangWeg(a: de.frank.jarvis.data.Anhang) { anhaenge.remove(a); runCatching { a.datei.delete() } }
 
-    /** Beim Tastatursymbol und beim Prompt gesetzt: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
+    /** Vom Tastaturbutton gesetzt, dem einzigen Weg zur Tastatur außer dem Tipp ins Feld: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
     var entwurfFokus by mutableStateOf(false)
 
     /**
@@ -976,8 +976,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
         entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf))
-        // Die Blase klappt mit dem Text von selbst auf und zeigt ihn.
-        entwurfFokus = true
+        // Die Blase klappt mit dem Text von selbst auf und zeigt ihn; die Tastatur bleibt zu.
     }
 
     /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
@@ -992,7 +991,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (nachtragAktiv) { entwurf = ohneNachtragVorspann(entwurf); return }
         val rest = ProgrammiererVorlage.entfernen(entwurf).trimStart()
         entwurf = "$NACHTRAG_VORSPANN $rest"
-        entwurfFokus = true
+        // Frank spricht ein: Die Tastatur kommt nicht und geht zu, falls sie offen ist.
+        tastaturWeg++
     }
 
     /** Senden mit „Nachtrag:“ vorn: Der Text (ohne den Vorspann) geht direkt als Nachtrag in die Sitzung dieses Gesprächs, ohne Modell. */
