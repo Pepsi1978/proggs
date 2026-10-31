@@ -237,7 +237,7 @@ struct SchwebeKnoepfe: View {
             if let g = steuerung.gespraech, !g.nachrichten.isEmpty {
                 SchwebeKnopf(symbol: "trash.fill", hilfe: "Gespräch löschen") { loeschenZiel = g }
             }
-            Color.clear.frame(height: 14)
+            Color.clear.frame(width: 38, height: 14)
             if steuerung.nachtragMoeglich {
                 SchwebeKnopf(symbol: "plus", hilfe: "Nachtrag in die Programmier-Sitzung dieses Gesprächs", leuchtet: steuerung.nachtragAktiv) {
                     steuerung.nachtragUmschalten()
