@@ -50,7 +50,7 @@ Dokumente mit fortlaufendem Stand in /data/ablage/ablage.db, Dateien und Texte n
 meldet sich mit dem Geheimnis ihrer MCP-Adresse (/j/<Geheimnis>/ablage/...) und ihrem Namen („Jarvis Handy“, „Jarvis Mac OS“, „Jarvis Windows“).
 Neues bekommen alle anderen sofort: das Handy als {"signal": "ablage"} ueber die WebSocket, die uebrigen per Long-Polling auf /aenderungen.
 Die Quelle einer Aenderung bekommt kein Signal. Es gewinnt die juengste Aenderung (Feld geaendert); Geloeschtes bleibt als Grabstein stehen,
-seine Dateien erst 30 Tage danach weg.
+seine Dateien erst 30 Tage danach weg. Eine Zeitangabe aus der Zukunft (falsche Geraeteuhr) wird auf jetzt begrenzt, sonst blockierte sie das Dokument.
 """
 import asyncio
 import hashlib
@@ -1504,7 +1504,8 @@ class AblageAbgleich:
             return web.Response(status=400, text="Zahl erwartet")
         geraet = request.query.get("geraet", "")[:40]
         # Ein Stand aus der Zukunft heisst: Der Speicher wurde neu aufgesetzt. Dann alles von vorn.
-        if seit > self._stand():
+        neuaufbau = seit > self._stand()
+        if neuaufbau:
             seit = 0
         neu = "SELECT 1 FROM docs WHERE stand > ? AND von != ? LIMIT 1"
         if warten and self.db.execute(neu, (seit, geraet)).fetchone() is None:
@@ -1520,7 +1521,7 @@ class AblageAbgleich:
                     self.warter.remove(eintrag)
         zeilen = self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand", (seit,)).fetchall()
         docs = [{"art": z[0], "id": z[1], "daten": json.loads(z[2]), "geaendert": z[3], "geloescht": bool(z[4]), "von": z[5], "stand": z[6]} for z in zeilen]
-        return web.json_response({"stand": self._stand(), "docs": docs}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
+        return web.json_response({"stand": self._stand(), "docs": docs, "neuaufbau": neuaufbau}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     async def doc(self, request: web.Request) -> web.Response:
         art, kennung = request.match_info["art"], request.match_info["id"]
@@ -1537,7 +1538,8 @@ class AblageAbgleich:
             assert isinstance(daten, dict) and von
         except Exception:
             return web.Response(status=400, text="Dokument unvollstaendig")
-        zeile = self.db.execute("SELECT geaendert FROM docs WHERE art = ? AND id = ?", (art, kennung)).fetchone()
+        geaendert = min(geaendert, int(time.time() * 1000))
+        zeile = self.db.execute("SELECT geaendert, daten FROM docs WHERE art = ? AND id = ?", (art, kennung)).fetchone()
         if zeile is not None and zeile[0] >= geaendert:
             return web.json_response({"uebernommen": False, "stand": self._stand()})
         if not geloescht:
@@ -1547,6 +1549,11 @@ class AblageAbgleich:
             fehlend = sorted({s for s in shas if not self._pfad(s).is_file()})
             if fehlend:
                 return web.json_response({"fehlend": fehlend}, status=409)
+        # Ab jetzt nicht mehr gebraucht: Die 30 Tage bis zum Entfernen zaehlen ab diesem Moment, nicht ab dem Hochladen.
+        if zeile is not None:
+            for sha in set(self._dateien(json.loads(zeile[1]))) - set(() if geloescht else self._dateien(daten)):
+                if ABLAGE_SHA.match(sha) and self._pfad(sha).is_file():
+                    os.utime(self._pfad(sha))
         stand = self._stand() + 1
         self.db.execute("INSERT OR REPLACE INTO docs (art, id, daten, geaendert, geloescht, von, stand) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (art, kennung, json.dumps({} if geloescht else daten, ensure_ascii=False), geaendert, int(geloescht), von, stand))
@@ -1564,16 +1571,20 @@ class AblageAbgleich:
         teil = self.blobs / f".{uuid.uuid4().hex}.teil"
         pruefung = hashlib.sha256()
         groesse = 0
+        schleife = asyncio.get_running_loop()
         try:
             # Stueckweise von der Leitung auf die Platte: Der Dienst hat nur 128 MB, und client_max_size gilt nur fuer read().
+            # Pruefen und Schreiben abseits des Event-Loops: Der bedient auch MCP und den Tunnel.
+            def stueck_ablegen(f, stueck):
+                pruefung.update(stueck)
+                f.write(stueck)
             with open(teil, "wb") as f:
                 async for stueck in request.content.iter_chunked(1024 * 1024):
                     groesse += len(stueck)
                     if groesse > ABLAGE_MAX_DATEI:
                         return web.Response(status=413, text="Datei zu gross")
-                    pruefung.update(stueck)
-                    f.write(stueck)
-            if groesse == 0 or pruefung.hexdigest() != sha:
+                    await schleife.run_in_executor(None, stueck_ablegen, f, stueck)
+            if pruefung.hexdigest() != sha:
                 return web.Response(status=400, text="Pruefsumme passt nicht")
             os.replace(teil, self._pfad(sha))
             return web.json_response({"ok": True, "groesse": groesse})
@@ -1586,10 +1597,13 @@ class AblageAbgleich:
             return web.Response(status=404, text="Not found")
         return web.FileResponse(self._pfad(sha), headers={"Content-Type": "application/octet-stream"})
 
-    def aufraeumen(self) -> None:
+    def benutzte_inhalte(self) -> set:
         benutzt = set()
         for (daten,) in self.db.execute("SELECT daten FROM docs WHERE geloescht = 0"):
             benutzt.update(self._dateien(json.loads(daten)))
+        return benutzt
+
+    def aufraeumen(self, benutzt: set) -> None:
         grenze = time.time() - ABLAGE_FRIST_S
         weg = 0
         for datei in self.blobs.iterdir():
@@ -1604,7 +1618,8 @@ class AblageAbgleich:
         async def lauf():
             while True:
                 try:
-                    self.aufraeumen()
+                    # Die Datenbank gehoert dem Event-Loop, das Durchgehen der Dateien nicht.
+                    await asyncio.get_running_loop().run_in_executor(None, self.aufraeumen, self.benutzte_inhalte())
                 except Exception:
                     log.exception("Ablage aufraeumen")
                 await asyncio.sleep(86_400)

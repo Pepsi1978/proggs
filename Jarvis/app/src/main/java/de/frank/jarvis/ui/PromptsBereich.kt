@@ -131,6 +131,14 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     var nachQuelle by remember { mutableStateOf(vm.einstellungen.promptsNachQuelle) }
     var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
     var sortMenue by remember { mutableStateOf(false) }
+    // Auch per Sprache umstellbar, während der Reiter offen ist: Die Anzeige folgt den Einstellungen.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(2_000)
+            vm.einstellungen.promptsNachQuelle.let { if (it != nachQuelle) nachQuelle = it }
+            vm.einstellungen.ablageQuellen.let { if (it != quellenWert) quellenWert = it }
+        }
+    }
     var quellenOffen by remember { mutableStateOf(false) }
     val sortiert = remember(reihenfolge, nachId, nachQuelle, quellenWert) {
         val eigene = reihenfolge.mapNotNull(nachId::get)

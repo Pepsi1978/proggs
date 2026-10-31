@@ -482,6 +482,7 @@
     {"versionCode": 478, "versionName": "1.8.467", "stand": "31.10.2026, 10:08 Uhr", "notiz": "Der KI-Knopf behält bei Prompts und Antworten alle Aufgabentrenner „ ; “, und nach der KI-Verbesserung bleibt „Rückgängig“ stehen, statt beim Antippen des Textes zu verschwinden."},
     {"versionCode": 479, "versionName": "1.8.468", "stand": "31.10.2026, 10:09 Uhr", "notiz": "Programmieraufträge können jetzt auch auf dem Hostinger-Server laufen, die Rechner-Reihenfolge kennt ihn, und das Fernwartungssymbol öffnet die neue Server-Konsole."},
     {"versionCode": 480, "versionName": "1.8.469", "stand": "31.10.2026, 10:20 Uhr", "notiz": "Der Rechnerstatus nennt jetzt richtig, dass Sol 6.1 auch auf dem Hostinger-Server läuft."},
-    {"versionCode": 481, "versionName": "1.8.470", "stand": "31.10.2026, 10:21 Uhr", "notiz": "Der KI-Knopf verbessert nach einem Fehler in einem Abschnitt die übrigen trotzdem, versteht Bezüge zwischen den Aufgaben und meldet, wenn nichts geändert wurde; „Rückgängig“ bleibt zuverlässig erhalten."}
+    {"versionCode": 481, "versionName": "1.8.470", "stand": "31.10.2026, 10:21 Uhr", "notiz": "Der KI-Knopf verbessert nach einem Fehler in einem Abschnitt die übrigen trotzdem, versteht Bezüge zwischen den Aufgaben und meldet, wenn nichts geändert wurde; „Rückgängig“ bleibt zuverlässig erhalten."},
+    {"versionCode": 482, "versionName": "1.8.471", "stand": "31.10.2026, 10:24 Uhr", "notiz": "Der Abgleich der Ablage ist nach dem Review robuster: Dateien vom Mac kommen zuverlässig an, ein Fehler hält den Rest nicht auf, und während eines Gesprächs ruhen auch laufende Übertragungen."}
 ]
 }

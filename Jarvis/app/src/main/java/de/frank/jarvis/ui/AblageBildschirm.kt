@@ -144,6 +144,14 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var sortierung by rememberSaveable { mutableStateOf(Sortierung.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageSortierung }?.name ?: Sortierung.NEUESTE.name) }
     var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
     var quellenOffen by remember { mutableStateOf(false) }
+    // Auch per Sprache umstellbar, während die Ablage offen ist: Die Anzeige folgt den Einstellungen.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(2_000)
+            Sortierung.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageSortierung }?.let { if (it.name != sortierung) sortierung = it.name }
+            vm.einstellungen.ablageQuellen.let { if (it != quellenWert) quellenWert = it }
+        }
+    }
     var auswahl by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val ansicht = Ansicht.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageAnsicht } ?: Ansicht.MITTEL
     // Offene Ansicht: Eintrag-ID, dazu optional die Anhang-ID.

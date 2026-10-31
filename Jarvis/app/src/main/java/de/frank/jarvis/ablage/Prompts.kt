@@ -162,7 +162,14 @@ object Prompts {
         val s = lies(c)
         if (s.defekt) return false
         val da = s.liste.any { it.erstellt == p.erstellt }
-        return schreibe(c, (if (da) s.liste.map { if (it.erstellt == p.erstellt) p.copy(nummer = it.nummer) else it } else s.liste + p).durchnummeriert())
+        return schreibe(c, (if (da) s.liste.map { if (it.erstellt == p.erstellt) p.copy(nummer = it.nummer) else it } else mitNeuem(s.liste, p)).durchnummeriert())
+    }
+
+    /** Neue stehen unten, untereinander das Älteste zuerst: So kommen alle Jarvis-Versionen auf dieselben Nummern, egal in welcher Folge sie eintreffen. */
+    private fun mitNeuem(liste: List<Prompt>, p: Prompt): List<Prompt> {
+        var platz = liste.size
+        while (platz > 0 && liste[platz - 1].erstellt > p.erstellt) platz--
+        return liste.subList(0, platz) + p + liste.subList(platz, liste.size)
     }
 
     @Synchronized

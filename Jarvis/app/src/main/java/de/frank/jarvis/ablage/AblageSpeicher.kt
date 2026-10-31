@@ -72,9 +72,12 @@ object AblageQuellen {
     private val kurz = linkedMapOf("handy" to HANDY, "mac" to MAC, "windows" to WINDOWS)
     private val gemerkt = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
+    /** Ein Aufruf wird in Minuten fertig; länger gemerkt träfe es einen späteren Eintrag gleichen Titels vom Handy. */
+    private const val MERKEN_MS = 15 * 60_000L
+
     fun merke(titel: String, quelle: String) { gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)] = quelle.trim().take(40) to System.currentTimeMillis() }
 
-    fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < 3_600_000L }?.first ?: HANDY
+    fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < MERKEN_MS }?.first ?: HANDY
 
     /** Die gespeicherte Reihenfolge, zum Beispiel „handy,mac,windows“, als Namen; Fehlendes kommt hinten dazu. */
     fun ordnung(wert: String): List<String> = (wert.split(',').mapNotNull { kurz[it.trim()] } + kurz.values).distinct()
@@ -270,14 +273,15 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         if (geaendert) speichere(liste, melden = false)
     }
 
-    fun loescheEintrag(id: String): Boolean = synchronized(sperre) {
+    /** [melden] = false: Eine andere Jarvis-Version hat gelöscht, das geht nicht als eigene Löschung zurück an den Server. */
+    fun loescheEintrag(id: String, melden: Boolean = true): Boolean = synchronized(sperre) {
         val liste = abgeglichen().toMutableList()
         val e = liste.firstOrNull { it.id == id } ?: return false
         liste.removeAll { it.id == id }
         speichere(liste)
         e.textDatei?.let { File(textOrdner, it).delete() }
         File(dateiOrdner, e.id).deleteRecursively()
-        merkeLoeschung(e.id)
+        if (melden) merkeLoeschung(e.id)
         true
     }
 
@@ -290,16 +294,6 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     fun offeneLoeschungen(): Map<String, Long> = synchronized(sperre) { lieseLoeschungen().let { j -> j.keys().asSequence().associateWith { j.optLong(it) } } }
 
     fun quittiereLoeschung(id: String): Unit = synchronized(sperre) { runCatching { schreibeAtomar(loeschungen, lieseLoeschungen().apply { remove(id) }.toString().toByteArray()) } }
-
-    /** Eine andere Jarvis-Version hat den Eintrag gelöscht: entfernen, ohne das wieder als eigene Löschung zu melden. */
-    fun loescheFern(id: String): Unit = synchronized(sperre) {
-        val liste = abgeglichen().toMutableList()
-        val e = liste.firstOrNull { it.id == id } ?: return
-        liste.removeAll { it.id == id }
-        speichere(liste)
-        e.textDatei?.let { File(textOrdner, it).delete() }
-        File(dateiOrdner, e.id).deleteRecursively()
-    }
 
     /**
      * Übernimmt den Stand eines Eintrags vom Server. [textQuelle] = neuer Text (sonst bleibt der vorhandene, wenn [mitText]);
