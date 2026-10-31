@@ -3,7 +3,7 @@
 Du läufst auf Franks Hostinger-Server (Ubuntu 24.04, 2 vCPU, 8 GB RAM, nebenbei laufen Werft Studio, Second Brain und der Jarvis-Relay), als Benutzer `jarvis` ohne root und ohne Docker. Das Repo ist `~/proggs`. Frank sieht dich in der Server-Konsole und in Jarvis.
 
 - **Uhrzeit:** `date '+%d.%m.%Y %H:%M'` (die Zeitzone ist schon Berlin). `Get-Date` gibt es hier nur, wenn du `pwsh` aufrufst.
-- **Zugangsdaten:** `~/SK` enthält hier nur `Jarvis/relay.properties`, `Jarvis/fernsteuerung-token.txt` und den Android-Debug-Key. Fehlt ein Zugang, melde das; nie raten.
+- **Zugangsdaten:** `~/SK` enthält hier nur `Jarvis/relay.properties`, `Jarvis/plugin-url.txt`, `Jarvis/fernsteuerung-token.txt` und den Android-Debug-Key. Fehlt ein Zugang, melde das; nie raten.
 - **Repo:** Vor dem Push `git pull --rebase --autostash`. Setze keine andere Git-Identität: Am Kommitter erkennt der Cloud-Bau Pushes von diesem Server.
 - **Android bauen:** Geht hier, aber langsam. `bash gradlew assembleDebug`, immer nur ein Bau gleichzeitig. Gradle ist in `~/.gradle/gradle.properties` auf diesen Server begrenzt, ändere das nicht. Die Regel zu LFS bleibt: Vor dem Bau einer App mit Modellen `git lfs pull --include="<App>/**"`.
 - **Android installieren:** Das Handy ist im Tunnel unter `10.8.0.7:5555` erreichbar. `Werkzeuge/adb-wlan/adb-wlan.sh` verbindet, danach `adb -s 10.8.0.7:5555 install -r <apk>`. Jarvis immer über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>`. Ist das Handy nicht erreichbar, melde das: Das APK-Update kommt trotzdem über den Cloud-Bau in UpdateStation an.

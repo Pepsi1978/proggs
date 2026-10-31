@@ -12,7 +12,7 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 | tmux mit Speicher- und CPU-Deckel | `systemd/jarvis-tmux.service` | enthält alle Sitzungen |
 | Regeln für Sitzungen auf dem Server (gehen dem Profil vor) | `server-zusatz.md` | wird an Profil und Modus gehängt |
 
-**Einrichten:** Vom Mac `~/SK/Jarvis/relay.properties`, `~/SK/Jarvis/fernsteuerung-token.txt` und `~/SK/Android/debug-shared.keystore` nach `/home/jarvis/SK/` kopieren, dann `installieren.sh` als root ausführen (beliebig oft ausführbar). Meldet es `DEPLOY_KEY_FEHLT`, den genannten Schlüssel mit `gh repo deploy-key add --allow-write` eintragen und neu starten. Danach in der Konsole unter System anmelden.
+**Einrichten:** Vom Mac `~/SK/Jarvis/relay.properties`, `~/SK/Jarvis/plugin-url.txt`, `~/SK/Jarvis/fernsteuerung-token.txt` und `~/SK/Android/debug-shared.keystore` nach `/home/jarvis/SK/` kopieren, dann `installieren.sh` als root ausführen (beliebig oft ausführbar). Meldet es `DEPLOY_KEY_FEHLT`, den genannten Schlüssel mit `gh repo deploy-key add --allow-write` eintragen und neu starten. Danach in der Konsole unter System anmelden.
 
 **Fallen auf dem Server:**
 - `/etc/hosts` zeigte den eigenen Namen auf 127.0.1.1, die Brücke kam nicht zum Relay. Geändert in `/etc/hosts` und `/etc/cloud/templates/hosts.debian.tmpl`.
