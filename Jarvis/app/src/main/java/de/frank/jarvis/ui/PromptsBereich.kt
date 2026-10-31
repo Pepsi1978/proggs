@@ -215,14 +215,15 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     liste?.firstOrNull { it.erstellt == offen }?.let { p ->
         var loeschen by remember(p.erstellt) { mutableStateOf(false) }
         Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false)) {
-            Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
+            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Prompt ${p.nummer}", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
                 }
                 if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                 Text("Von ${p.quelleName}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
-                Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
+                // Der Text bekommt nur den Platz, den Kopf und Knöpfe übrig lassen: Sonst schöbe er sie im Querformat aus dem Fenster.
+                Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.weight(1f, fill = false).padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
                 var hinweis by remember(p.erstellt) { mutableStateOf<String?>(null) }
                 // Zählt jedes lange Drücken, damit derselbe Hinweis erneut die volle Zeit stehen bleibt.
                 var hinweisNr by remember(p.erstellt) { mutableStateOf(0) }
