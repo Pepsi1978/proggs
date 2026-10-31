@@ -1230,7 +1230,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val anhaenge = try { anhaengeHochladen() } catch (fehler: Exception) {
             return Ergebnis("Der Nachtrag wurde nicht gesendet: ${fehler.message} Bitte noch einmal senden.", fehler = true)
         }
-        val mitAnhaengen = text + (if (cloud) cloudAnhangText(anhaenge) else "")
+        // Die Prüfsummen gehören in den Vergleich: Gleicher Text mit anderem Anhang („Siehe die Anhänge.“) ist ein neuer Nachtrag, kein doppelter.
+        val mitAnhaengen = text + (if (cloud) cloudAnhangText(anhaenge) else if (anhaenge.length() == 0) "" else
+            " (Anhänge: " + (0 until anhaenge.length()).joinToString(", ") { anhaenge.getJSONObject(it).optString("sha").take(8) } + ")")
         val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, mitAnhaengen, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
             ?: return Ergebnis("Den Auftrag $id gibt es nicht mehr im Auftragsbuch. Nichts wurde gesendet.", fehler = true)
         val nummer = n.optString("id")

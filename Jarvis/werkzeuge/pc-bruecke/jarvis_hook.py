@@ -745,7 +745,7 @@ def uebergib(neu: list[dict], bilder_einfuegen: bool = True) -> str:
     # Nachrichten aus dem Gespräch mit Jarvis (programmierer_sprechen, Nummer „G…“) tragen ihre Anleitung selbst: Frage beantworten
     # bzw. Wunsch bestätigen und umsetzen, danach weiterarbeiten. Sie sind kein Nachtrag mit Abschlusspflicht.
     gespraech = all(n["nachtrag_id"].startswith("G") for n in neu)
-    kurz = " · ".join((n["text"].split("\n\n")[0] if n["nachtrag_id"].startswith("G") else n["text"]).replace("\n", " ")[:300] for n in neu)
+    kurz = " · ".join((n["text"].split("\n\n")[0] if n["nachtrag_id"].startswith("G") else n["text"].split("\n\nANHÄNGE VON FRANK")[0]).replace("\n", " ")[:300] for n in neu)
     try:
         melde("nachtrag", "✓ Beim Programmierer angekommen." if gespraech else "📨 Nachtrag in der Sitzung angekommen: " + kurz,
               nachtrag_ids=[n["nachtrag_id"] for n in neu])
