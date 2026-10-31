@@ -517,6 +517,7 @@
     {"versionCode": 512, "versionName": "1.8.501", "stand": "31.10.2026, 19:41 Uhr", "notiz": "Ein weiterer Nachtrag mit gleichem Text und anderem Anhang geht jetzt zuverlässig in die Sitzung, statt als doppelt zu gelten."},
     {"versionCode": 513, "versionName": "1.8.502", "stand": "31.10.2026, 19:49 Uhr", "notiz": "Modellwahl am Programmierbutton zuverlässiger: Ein späterer Auftrag erbt kein altes Modell, nach einem Fehlstart bleibt der Ausweg offen, und der Tastaturknopf öffnet mit einem Tipp."},
     {"versionCode": 514, "versionName": "1.8.503", "stand": "31.10.2026, 19:56 Uhr", "notiz": "Anhänge gehen auch nach einer Rückfrage von Jarvis mit, erreichen nur die gemeinte Sitzung und werden schneller übertragen, weil schon vorhandene Dateien nicht erneut hochgeladen werden."},
-    {"versionCode": 515, "versionName": "1.8.504", "stand": "31.10.2026, 20:00 Uhr", "notiz": "Interne Aufräumarbeit an der Prompt-Eingabe, für dich ändert sich an der Bedienung nichts."}
+    {"versionCode": 515, "versionName": "1.8.504", "stand": "31.10.2026, 20:00 Uhr", "notiz": "Interne Aufräumarbeit an der Prompt-Eingabe, für dich ändert sich an der Bedienung nichts."},
+    {"versionCode": 516, "versionName": "1.8.505", "stand": "31.10.2026, 20:28 Uhr", "notiz": "In der Server-Konsole gibt es jetzt Kopieren und Einfügen für Terminal und Eingabefeld."}
 ]
 }

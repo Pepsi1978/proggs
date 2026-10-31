@@ -25,6 +25,7 @@ button.klein { padding:4px 10px; font-size:13px; min-height:32px; }
 .punkt.wartet,.punkt.unbekannt { background:var(--warn); }
 .punkt.abgemeldet,.punkt.fehlt { background:var(--gefahr); }
 label { display:block; margin-bottom:12px; font-size:14px; color:var(--leise); }
+#text { -webkit-touch-callout:none; }
 select,textarea { display:block; width:100%; margin-top:4px; background:var(--flaeche); color:var(--text); border:1px solid var(--rand); border-radius:8px; padding:11px; font:16px system-ui,sans-serif; }
 #kopf { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 10px; flex:none; min-height:38px; }
 #titel { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -39,6 +40,11 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #tasten-wahl { position:relative; flex:none; height:0; }
 #buchstaben { position:absolute; left:0; right:0; bottom:0; z-index:40; display:flex; gap:4px; padding:6px; overflow-x:auto; background:var(--flaeche); border-top:1px solid var(--rand); }
 #buchstaben[hidden] { display:none; }
+#menue { position:absolute; left:0; right:0; bottom:0; z-index:40; display:flex; gap:4px; padding:6px; overflow-x:auto; background:var(--flaeche); border-top:1px solid var(--rand); }
+#menue[hidden] { display:none; }
+#menue button { flex:1 0 auto; padding:0 12px; font-size:14px; white-space:nowrap; }
+#stimme-tastatur.an { color:var(--akzent); }
+.wisch { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 #terminal.wahl-offen #stimme { visibility:hidden; }
 #nach-unten { position:absolute; top:8px; right:8px; z-index:25; width:44px; padding:0; border-radius:50%; font-size:20px; background:#1a1f2bdd; }
 #nach-unten[hidden] { display:none; }

@@ -1,6 +1,8 @@
 package de.frank.jarvis.fernsteuerung
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
@@ -65,6 +67,7 @@ class ServerKonsoleActivity : ComponentActivity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             addJavascriptInterface(Stimme(), "JarvisSprache")
+            addJavascriptInterface(Ablage(), "JarvisAblage")
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     // Auch der Port zählt: Nur die Konsole selbst bleibt in dieser Ansicht und sieht die Sprach-Schnittstelle.
@@ -118,6 +121,15 @@ class ServerKonsoleActivity : ComponentActivity() {
         @JavascriptInterface fun start() { runOnUiThread { aufnahmeStarten() } }
         @JavascriptInterface fun stop() { runOnUiThread { aufnahmeBeenden() } }
         @JavascriptInterface fun abbrechen() { runOnUiThread { aufnahmeAbbrechen() } }
+    }
+
+    /** Zwischenablage für die Seite: Über HTTP im Tunnel gibt es dort kein navigator.clipboard, und das Menü von Android steht beim Eingabefeld nicht bereit. */
+    private inner class Ablage {
+        private val dienst get() = getSystemService(ClipboardManager::class.java)
+        @JavascriptInterface fun lesen(): String = runCatching {
+            dienst.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@ServerKonsoleActivity)?.toString()
+        }.getOrNull().orEmpty()
+        @JavascriptInterface fun schreiben(text: String) { runCatching { dienst.setPrimaryClip(ClipData.newPlainText("Server-Konsole", text)) } }
     }
 
     private val mikro by lazy { TranskriptionAnbindung.mikrofon(applicationContext) }

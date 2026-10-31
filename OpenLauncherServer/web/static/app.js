@@ -106,6 +106,20 @@ function rollen(zeilen) {
     offeneZeilen = 0;
   }, 100);
 }
+// Lage in der Zeichenreihe des gesamten Puffers, damit die Länge auch über Zeilen hinweg stimmt.
+let markierAnfang = 0;
+function zelle(x, y) {
+  const r = term.element.querySelector(".xterm-screen").getBoundingClientRect();
+  const spalte = Math.max(0, Math.min(term.cols - 1, Math.floor((x - r.left) / r.width * term.cols)));
+  const zeile = Math.max(0, Math.min(term.rows - 1, Math.floor((y - r.top) / r.height * term.rows)));
+  return (term.buffer.active.viewportY + zeile) * term.cols + spalte;
+}
+function markierenBis(ziel) {
+  const von = Math.min(markierAnfang, ziel);
+  term.select(von % term.cols, Math.floor(von / term.cols), Math.abs(ziel - markierAnfang) + 1);
+}
+function markierenBeginnen(x, y) { markierAnfang = zelle(x, y); markierenBis(markierAnfang); }
+function markierenZiehen(x, y) { markierenBis(zelle(x, y)); }
 function wischenEinrichten() {
   const flaeche = $("xterm");
   const zeilenHoehe = () => Math.max(8, flaeche.clientHeight / (term ? term.rows : 24));
@@ -128,20 +142,33 @@ function wischenEinrichten() {
   const decke = element("div", "wisch");
   flaeche.append(decke);
   let y = null, rest = 0, tempo = 0, zuletzt = 0, weg = 0;
-  decke.addEventListener("touchstart", (e) => { clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; weg = 0; zuletzt = e.timeStamp; }, { passive: true });
+  // Lange drücken und ziehen markiert; die Markierung gilt bis zum nächsten Tipper oder einem Eintrag im Menü.
+  let halten = null, markiert = false;
+  decke.addEventListener("contextmenu", (e) => e.preventDefault());
+  decke.addEventListener("touchstart", (e) => {
+    clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; weg = 0; zuletzt = e.timeStamp;
+    const { clientX: x0, clientY: y0 } = e.touches[0];
+    markiert = false;
+    clearTimeout(halten);
+    halten = setTimeout(() => { markiert = true; navigator.vibrate?.(20); waehle(""); markierenBeginnen(x0, y0); }, 450);
+  }, { passive: true });
   decke.addEventListener("touchmove", (e) => {
     if (y === null) return;
     e.preventDefault();
+    if (markiert) { markierenZiehen(e.touches[0].clientX, e.touches[0].clientY); return; }
     const neu = e.touches[0].clientY, schritt = neu - y;
     if (e.timeStamp > zuletzt) tempo = schritt / (e.timeStamp - zuletzt);
     zuletzt = e.timeStamp; y = neu; rest += schritt; weg += Math.abs(schritt);
+    if (weg >= 10) clearTimeout(halten);
     const zeilen = Math.trunc(rest / zeilenHoehe());
     if (zeilen) { rest -= zeilen * zeilenHoehe(); rollen(zeilen); }
   }, { passive: false });
   decke.addEventListener("touchend", (e) => {
     y = null;
-    // Ein kurzer Tipper öffnet wie gewohnt die Tastatur des Terminals.
-    if (weg < 10) { e.preventDefault(); waehle(""); if (term) term.focus(); return; }
+    clearTimeout(halten);
+    if (markiert) { e.preventDefault(); markiert = false; terminalMenue(); return; }
+    // Ein kurzer Tipper schließt nur, was offen ist. Die Tastatur kommt nie von hier: Frank spricht seine Eingaben, geschrieben wird im Eingabefeld.
+    if (weg < 10) { e.preventDefault(); waehle(""); term.clearSelection(); if (tastaturAn) tastatur(false); return; }
     // Stand der Finger vor dem Loslassen still, läuft nichts nach.
     if (e.timeStamp - zuletzt > 100 || Math.abs(tempo) < 0.4) return;
     schwung = setInterval(() => {
@@ -151,7 +178,7 @@ function wischenEinrichten() {
       rollen(zeilen);
     }, 60);
   });
-  decke.addEventListener("touchcancel", () => { y = null; }, { passive: true });
+  decke.addEventListener("touchcancel", () => { y = null; markiert = false; clearTimeout(halten); }, { passive: true });
 }
 function schicke(d) {
   rollenStoppen();
@@ -212,6 +239,7 @@ zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen
 // STRG und ALT: Ein Tipper öffnet die Leiste A bis Z zum Wischen, ein Buchstabe schickt die Tastenkombination und schließt sie.
 function waehle(art) {
   tastenWahl = art;
+  $("menue").hidden = true;
   $("buchstaben").hidden = !art;
   if (art) $("buchstaben").scrollLeft = 0;
   // Das Mikrofon läge sonst halb unter der Leiste, ein Tipp darauf träfe einen Buchstaben.
@@ -229,6 +257,90 @@ document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventLis
 for (const name of ["tasten", "buchstaben"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
 // Wer weiterschreibt statt einen Buchstaben zu wählen, braucht die Leiste nicht mehr; sie läge sonst über der Eingabezeile der CLI.
 $("text").addEventListener("input", () => waehle(""));
+// Zwischenablage: In Jarvis über die Schnittstelle der App, denn die Konsole läuft im Tunnel über HTTP und sieht navigator.clipboard dort nicht.
+let hinweisZeit = null;
+function hinweis(text) {
+  $("titel").textContent = text;
+  clearTimeout(hinweisZeit);
+  hinweisZeit = setTimeout(() => { if (aktuell) $("titel").textContent = sitzungsTitel; }, 2500);
+}
+function kopieren(text) {
+  if (!text) return;
+  if (window.JarvisAblage) { JarvisAblage.schreiben(text); hinweis("Kopiert."); }
+  else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => hinweis("Kopiert."), () => hinweis("Kopieren hat nicht geklappt."));
+  else hinweis("Kopieren geht hier nur in Jarvis.");
+}
+async function einfuegen(ziel) {
+  let text = "";
+  if (window.JarvisAblage) text = JarvisAblage.lesen();
+  else if (navigator.clipboard) text = await navigator.clipboard.readText().catch(() => "");
+  else return hinweis("Einfügen geht hier nur in Jarvis.");
+  if (text) ziel(text); else hinweis("Die Zwischenablage ist leer.");
+}
+function menue(eintraege) {
+  waehle("");
+  $("menue").replaceChildren(...eintraege.map(([name, aktion]) => {
+    const knopf = element("button", "", name);
+    knopf.addEventListener("click", () => { $("menue").hidden = true; $("terminal").classList.remove("wahl-offen"); term?.clearSelection(); aktion(); });
+    return knopf;
+  }));
+  $("menue").hidden = false;
+  $("terminal").classList.add("wahl-offen");
+}
+function terminalMenue() {
+  // Der Text wird jetzt festgehalten: Eine weiterlaufende CLI darf die Markierung auf dem Bildschirm überschreiben.
+  const text = term.getSelection();
+  menue([
+    ["Kopieren", () => kopieren(text)],
+    ["Alles auswählen", () => { term.selectAll(); terminalMenue(); }],
+    ["Einfügen", () => einfuegen((t) => term.paste(t))],
+    ["✕", () => {}],
+  ]);
+}
+function feldMenue() {
+  const t = $("text");
+  const auswahl = () => t.value.slice(t.selectionStart, t.selectionEnd);
+  menue([
+    ["Einfügen", () => einfuegen((x) => t.setRangeText(x, t.selectionStart, t.selectionEnd, "end"))],
+    ["Kopieren", () => kopieren(auswahl() || t.value)],
+    ["Ausschneiden", () => { kopieren(auswahl() || t.value); if (auswahl()) t.setRangeText("", t.selectionStart, t.selectionEnd, "end"); else t.value = ""; }],
+    ["Alles auswählen", () => { t.focus(); t.select(); feldMenue(); }],
+    ["✕", () => {}],
+  ]);
+}
+$("menue").addEventListener("mousedown", (e) => e.preventDefault());
+// Tastatur: Sie kommt nur beim Tipper ins Eingabefeld oder über den Knopf, nie bei anderen Tastern oder langem Drücken (inputmode none hält sie dann unten).
+let tastaturAn = false, letzteHoehe = window.innerHeight;
+function tastatur(an) {
+  const t = $("text");
+  tastaturAn = an;
+  t.inputMode = an ? "text" : "none";
+  $("stimme-tastatur").classList.toggle("an", an);
+  t.blur();
+  if (an) t.focus();
+}
+$("stimme-tastatur").addEventListener("mousedown", (e) => e.preventDefault());
+$("stimme-tastatur").addEventListener("click", () => tastatur(!tastaturAn));
+// Per Zurück-Geste oder Senden geschlossen: Das Fenster wächst wieder, der Zustand muss folgen, sonst holt der nächste Tipper sie zurück.
+window.addEventListener("resize", () => {
+  const h = window.innerHeight;
+  if (tastaturAn && h > letzteHoehe + 100) tastatur(false);
+  letzteHoehe = h;
+});
+{
+  const t = $("text");
+  let halten = null, gehalten = false, x0 = 0, y0 = 0;
+  t.addEventListener("contextmenu", (e) => e.preventDefault());
+  t.addEventListener("touchstart", (e) => {
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; gehalten = false;
+    clearTimeout(halten);
+    halten = setTimeout(() => { gehalten = true; navigator.vibrate?.(20); feldMenue(); }, 500);
+  }, { passive: true });
+  t.addEventListener("touchmove", (e) => { if (Math.hypot(e.touches[0].clientX - x0, e.touches[0].clientY - y0) > 10) clearTimeout(halten); }, { passive: true });
+  t.addEventListener("touchend", () => clearTimeout(halten), { passive: true });
+  t.addEventListener("touchcancel", () => clearTimeout(halten), { passive: true });
+  t.addEventListener("click", () => { if (gehalten) gehalten = false; else if (!tastaturAn) tastatur(true); });
+}
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("text");
