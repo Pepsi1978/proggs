@@ -75,7 +75,7 @@ als 'command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/inst
 for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" || echo "$P nicht installiert"; done
 als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
 
-# PowerShell aus dem Microsoft-Paketarchiv (nur als wählbare Shell, nichts hängt davon ab).
+# PowerShell aus dem Microsoft-Paketarchiv: die Shell der Konsole, aktuell gehalten von jarvis-powershell.timer. Fehlt sie, fällt die Konsole auf bash zurück.
 if ! command -v pwsh >/dev/null; then
   curl -fsSL -o /tmp/ms.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb && dpkg -i /tmp/ms.deb >/dev/null && apt-get update -qq && apt-get install -y -qq powershell || echo "PowerShell nicht installiert"
   rm -f /tmp/ms.deb

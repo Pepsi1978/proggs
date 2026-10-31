@@ -40,6 +40,7 @@ MAX_OFFEN = 4
 ARBEITET_S = 180  # CLIs ohne Hooks: so lange nach der letzten Ausgabe gilt die Sitzung als arbeitend
 SCHLIESSBAR_S = 1800  # eine untätige CLI darf für einen neuen Auftrag erst nach dieser Zeit weichen
 UNTAETIG_ZU_S = 12 * 3600  # danach schließt der Launcher eine untätige CLI (länger wartet auch kein Warter auf Nachträge)
+FREI_ZU_S = 24 * 3600  # freie PowerShells: Eine vergessene hielte sonst das PowerShell-Update für immer auf
 NAME = re.compile(r"[A-Za-z0-9._-]{1,80}")
 # Einzige Liste der Werkzeugpfade für Startskripte und CLI-Updates (installieren.sh führt für die eigene Shell dieselben).
 PFADE = ".local/bin .local/node/bin .kimi-code/bin .agy/bin android-sdk/platform-tools android-sdk/cmdline-tools/latest/bin".split()
@@ -224,7 +225,11 @@ def _stand_hooks() -> dict:
         if matcher:
             e["matcher"] = matcher
         return e
-    return {"UserPromptSubmit": [merke("aktiv")], "PreToolUse": [merke("aktiv", "*")], "PostToolUse": [merke("aktiv", "*")], "Stop": [merke("ruhe")], "StopFailure": [merke("ruhe")]}
+    # Laufendes Werkzeug für die Brücke (Jarvis erfährt so von langen Befehlen): Der Hook bekommt Name und Eingabe als JSON.
+    laeuft = {"matcher": "*", "hooks": [{"type": "command", "command": '[ -z "$OL_SITZUNG" ] || cat > "$HOME/.openlauncher/sitzungen/$OL_SITZUNG.werkzeug"', "timeout": 5, "async": True}]}
+    fertig = {"matcher": "*", "hooks": [{"type": "command", "command": '[ -z "$OL_SITZUNG" ] || rm -f "$HOME/.openlauncher/sitzungen/$OL_SITZUNG.werkzeug"', "timeout": 5, "async": True}]}
+    return {"UserPromptSubmit": [merke("aktiv")], "PreToolUse": [merke("aktiv", "*"), laeuft], "PostToolUse": [merke("aktiv", "*"), fertig],
+            "PostToolUseFailure": [fertig], "Stop": [merke("ruhe")], "StopFailure": [merke("ruhe")]}
 
 
 # ---------------------------------------------------------------- Codex, Kimi, Antigravity, OpenCode
@@ -291,6 +296,9 @@ FUSS = """
 : > "$HOME/.openlauncher/sitzungen/{name}.fertig"
 echo
 echo "[OpenLauncher] Die CLI ist beendet. Diese Sitzung lässt sich in der Konsole schließen."
+# Erst auf Zuruf: Eine PowerShell belegt 100 MB, die sich sonst der nächste Android-Bau teilen müsste, und hielte ihr eigenes Update auf.
+echo "[OpenLauncher] Eingabetaste öffnet eine PowerShell."
+read -r _
 command -v pwsh >/dev/null && exec pwsh -l
 exec bash -l
 """
@@ -382,7 +390,7 @@ def _sitzungsname(titel: str) -> str:
 
 
 def _sitzungsdateien(name: str) -> list:
-    return [SITZUNGEN / f"{name}{endung}" for endung in (".json", ".fertig", ".aktiv", ".ruhe")] + [SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt"]
+    return [SITZUNGEN / f"{name}{endung}" for endung in (".json", ".fertig", ".aktiv", ".ruhe", ".werkzeug")] + [SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt"]
 
 
 def _tmux_starten(name: str, skript: Path) -> None:
@@ -457,26 +465,34 @@ def anzeige(name: str) -> str:
     return subprocess.run(TMUX + ["capture-pane", "-p", "-t", f"={name}:"], capture_output=True, text=True, timeout=10).stdout
 
 
+_BLAETTERN = {}  # Sitzung -> Zeilen, die noch keine ganze Seite ergeben
+
+
 def rollen(name: str, zeilen: int) -> None:
-    """Den Verlauf der Sitzung verschieben: zeilen > 0 zurück, < 0 vor. Oberflächen im Vollbild (OpenCode, Kimi) haben keinen tmux-Verlauf,
-    sie blättern selbst. Im Verlauf-Modus landen Eingaben sonst bei tmux, deshalb beendet verlauf_ende ihn vor jeder Eingabe."""
+    """Den Verlauf der Sitzung verschieben: zeilen > 0 zurück, < 0 vor. Oberflächen im Vollbild (OpenCode, Kimi) haben keinen tmux-Verlauf und blättern
+    selbst, je 10 Zeilen eine Seite. Ein einziger tmux-Aufruf: Beim Wischen kommen mehrere Befehle pro Sekunde."""
     ziel = f"={pruefe_name(name)}:"
-    stand = subprocess.run(TMUX + ["display-message", "-p", "-t", ziel, "#{alternate_on} #{pane_in_mode}"], capture_output=True, text=True, timeout=5).stdout.split()
-    if len(stand) < 2:
-        return
-    if stand[0] == "1":
-        subprocess.run(TMUX + ["send-keys", "-t", ziel] + ["PageUp" if zeilen > 0 else "PageDown"] * max(1, abs(zeilen) // 10), capture_output=True, timeout=5)
-    elif zeilen > 0:
-        if stand[1] == "0":
-            subprocess.run(TMUX + ["copy-mode", "-e", "-t", ziel], capture_output=True, timeout=5)
-        subprocess.run(TMUX + ["send-keys", "-t", ziel, "-X", "-N", str(zeilen), "scroll-up"], capture_output=True, timeout=5)
-    elif stand[1] == "1":
-        subprocess.run(TMUX + ["send-keys", "-t", ziel, "-X", "-N", str(-zeilen), "scroll-down"], capture_output=True, timeout=5)
+    rest = _BLAETTERN.get(name, 0) + zeilen
+    seiten = int(rest / 10)
+    _BLAETTERN[name] = rest - seiten * 10
+    taste = "PageUp" if seiten > 0 else "PageDown"
+    vollbild = f"send-keys -t {ziel} " + " ".join([taste] * abs(seiten)) if seiten else f"select-pane -t {ziel}"
+    if zeilen > 0:
+        verlauf = f"copy-mode -e -t {ziel} ; send-keys -t {ziel} -X -N {zeilen} scroll-up"
+    else:
+        verlauf = f"if-shell -F -t {ziel} '#{{pane_in_mode}}' 'send-keys -t {ziel} -X -N {-zeilen} scroll-down'"
+    subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", vollbild, verlauf], capture_output=True, timeout=5)
 
 
-def verlauf_ende(name: str) -> None:
+def verlauf_ende(name: str, nach_unten: bool = False) -> None:
+    """Den Verlauf-Modus verlassen; im Verlauf landen Eingaben sonst bei tmux statt bei der CLI. [nach_unten]: der Knopf Ende, Vollbild-Oberflächen springen ans Ende."""
     ziel = f"={pruefe_name(name)}:"
-    subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
+    _BLAETTERN.pop(name, None)
+    verlauf = f"if-shell -F -t {ziel} '#{{pane_in_mode}}' 'send-keys -t {ziel} -X cancel'"
+    if nach_unten:
+        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{alternate_on}", f"send-keys -t {ziel} End", verlauf], capture_output=True, timeout=5)
+    else:
+        subprocess.run(TMUX + ["if-shell", "-F", "-t", ziel, "#{pane_in_mode}", f"send-keys -t {ziel} -X cancel"], capture_output=True, timeout=5)
 
 
 def wartet_auf_anmeldung(name: str) -> bool:
@@ -557,7 +573,7 @@ def aufraeumen() -> None:
     for s in alle:
         if s["angezeigt"]:
             continue
-        if (s["stand"] == "beendet" and s["still_s"] > 3600) or (s["stand"] == "wartet" and not s.get("frei") and s["still_s"] > UNTAETIG_ZU_S):
+        if (s["stand"] == "beendet" and s["still_s"] > 3600) or (s["stand"] == "wartet" and s["still_s"] > (FREI_ZU_S if s.get("frei") else UNTAETIG_ZU_S)):
             schliessen(s["name"])
     lebend = {s["name"] for s in alle}
     for datei in list(SITZUNGEN.glob("*")) if SITZUNGEN.exists() else []:

@@ -125,7 +125,7 @@ async def starten(request: web.Request) -> web.Response:
 
 
 async def shell(_: web.Request) -> web.Response:
-    return web.json_response({"name": await _im_faden(launcher.befehl_starten, "PowerShell", "pwsh -l")})
+    return web.json_response({"name": await _im_faden(launcher.befehl_starten, "PowerShell", "command -v pwsh >/dev/null && pwsh -l || bash -l")})
 
 
 STATUS_AUFFRISCHEN = {"zeit": 0.0, "laeuft": False}
@@ -233,7 +233,8 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
     os.set_blocking(herr, False)
     warteschlange: asyncio.Queue = asyncio.Queue()
     angehalten = [False]
-    gerollt = [False]
+    # Der Verlauf-Modus gehört zur Sitzung, nicht zu dieser Verbindung: Beim ersten Eingeben also immer verlassen, auch nach einem Neustart der Konsole.
+    gerollt = [True]
 
     def lesbar():
         try:
@@ -287,15 +288,12 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
                 await _im_faden(launcher.rollen, name, max(-500, min(500, int(d.get("n", 0)))))
             elif d.get("t") == "e":
                 gerollt[0] = False
-                await _im_faden(launcher.verlauf_ende, name)
+                await _im_faden(launcher.verlauf_ende, name, True)
             elif d.get("t") == "r":
                 fcntl.ioctl(herr, termios.TIOCSWINSZ, struct.pack("HHHH", max(int(d["r"]), 2), max(int(d["c"]), 2), 0, 0))
     finally:
         sender.cancel()
         schleife.remove_reader(herr)
-        # Beim nächsten Öffnen steht die Sitzung wieder am aktuellen Stand, und Eingaben von Jarvis landen nicht im Verlauf-Modus.
-        if gerollt[0]:
-            await _im_faden(launcher.verlauf_ende, name)
         # Nur die Anzeige trennen: Die CLI läuft in tmux weiter.
         try:
             os.killpg(prozess.pid, signal.SIGHUP)
@@ -303,12 +301,18 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
             pass
         os.close(herr)
         await _im_faden(prozess.wait)
+        # Beim nächsten Öffnen steht die Sitzung wieder am aktuellen Stand, und Eingaben von Jarvis landen nicht im Verlauf-Modus.
+        try:
+            await _im_faden(launcher.verlauf_ende, name)
+        except (subprocess.TimeoutExpired, OSError, ValueError):
+            pass
     return ws
 
 
 async def neu_laden_bei_aenderung(_: web.Application):
     """Neue Fassung aus dem Repo: beenden, systemd startet neu."""
-    dateien = [Path(__file__), Path(launcher.__file__), Path(clis.__file__)]
+    # Auch die Seiten: Ihre gepackten Fassungen entstehen beim Start, eine geänderte app.js käme sonst nie an.
+    dateien = [Path(__file__), Path(launcher.__file__), Path(clis.__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
     stand = [d.stat().st_mtime for d in dateien]
 
     async def wache():
@@ -326,15 +330,21 @@ async def ohne_zwischenspeicher(request: web.Request, antwort: web.StreamRespons
     # Nach einem Vorspulen darf kein altes JavaScript gegen den neuen Server laufen. xterm hat eine feste Version: Es kommt aus dem Speicher des
     # Handys, ohne jede Rückfrage über den Tunnel.
     fest = request.path in ("/static/xterm.js", "/static/xterm.css", "/static/addon-fit.js")
-    antwort.headers["Cache-Control"] = "max-age=2592000" if fest else "no-cache"
+    antwort.headers["Cache-Control"] = "max-age=2592000" if fest and antwort.status == 200 else "no-cache"
 
 
 def gepackt_ablegen() -> None:
     """aiohttp liefert <datei>.gz von selbst aus: Das Terminal schrumpft von 290 auf rund 70 KB, das merkt man im Mobilfunk beim ersten Laden."""
     for name in ("xterm.js", "xterm.css", "addon-fit.js", "app.js", "style.css"):
         quelle, ziel = HIER / "static" / name, HIER / "static" / f"{name}.gz"
-        if not ziel.exists() or ziel.stat().st_mtime < quelle.stat().st_mtime:
-            ziel.write_bytes(gzip.compress(quelle.read_bytes(), 9))
+        try:
+            if not ziel.exists() or ziel.stat().st_mtime < quelle.stat().st_mtime:
+                neu = ziel.with_name(f"{ziel.name}.{os.getpid()}.neu")
+                neu.write_bytes(gzip.compress(quelle.read_bytes(), 9))
+                os.replace(neu, ziel)
+        except OSError:
+            # Nur eine Beschleunigung: Ohne sie läuft die Konsole, und eine veraltete Packung darf nie ausgeliefert werden.
+            ziel.unlink(missing_ok=True)
 
 
 def anwendung() -> web.Application:

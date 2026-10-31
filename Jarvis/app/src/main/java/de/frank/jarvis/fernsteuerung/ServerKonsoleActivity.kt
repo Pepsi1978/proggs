@@ -27,11 +27,17 @@ import android.widget.Toast
  */
 class ServerKonsoleActivity : ComponentActivity() {
     private lateinit var ansicht: WebView
+    private val adresse = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
+    private var angemeldet = false
+
+    private fun anmelden() {
+        angemeldet = true
+        ansicht.postUrl("$adresse/anmelden", ("token=" + Uri.encode(MacSteuerung.token(this))).toByteArray())
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val zugang = MacSteuerung.token(this)
         ansicht = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             setBackgroundColor(android.graphics.Color.parseColor("#10131A"))
@@ -42,6 +48,14 @@ class ServerKonsoleActivity : ComponentActivity() {
                     if (request.url.host == Fernziel.SERVER.adresse) return false
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
                     return true
+                }
+
+                // Ein Cookie, das nicht mehr gilt (Zugang gewechselt), führt zum Formular: dann einmal selbst anmelden.
+                override fun onPageFinished(view: WebView, url: String) {
+                    if (angemeldet) return
+                    view.evaluateJavascript("!!document.querySelector('form[action=\"/anmelden\"]')") { formular ->
+                        if (formular == "true" && !angemeldet) { angemeldet = true; anmelden() }
+                    }
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -68,9 +82,8 @@ class ServerKonsoleActivity : ComponentActivity() {
         })
         // POST statt Adresse: So steht der Zugang in keinem Verlauf; danach gilt ein davon abgeleitetes Cookie.
         // Mit gültigem Cookie direkt zur Seite: spart einen Weg über den Tunnel.
-        val adresse = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
         if (CookieManager.getInstance().getCookie(adresse)?.contains("konsole=") == true) ansicht.loadUrl("$adresse/")
-        else ansicht.postUrl("$adresse/anmelden", ("token=" + Uri.encode(zugang)).toByteArray())
+        else anmelden()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

@@ -174,26 +174,37 @@ def _quittiere(quittung: dict, zugang: dict) -> None:
 
 
 def lange_befehle(gemeldet: dict, zugang: dict) -> None:
-    """Hooks melden erst, wenn ein Werkzeug fertig ist. Hier dauert ein Gradle-Bau Minuten, und in Jarvis stünde so lange nichts: Läuft ein Befehl länger
-    als eine Minute, sagt die Brücke einmal was (und alle 5 Minuten, dass er noch läuft)."""
+    """Hooks melden erst, wenn ein Werkzeug fertig ist. Hier dauert ein Gradle-Bau Minuten, und in Jarvis stünde so lange nichts: Läuft ein Werkzeug länger als
+    eine Minute, sagt die Brücke einmal was, und alle 5 Minuten, dass es noch läuft. Quelle ist die Merkdatei des PreToolUse-Hooks. Ohne „rechner“: Der Relay
+    wertete die Meldung sonst als Beweis einer gültigen Anmeldung, dabei hat hier kein Modell geantwortet."""
+    jetzt = time.time()
+    for schluessel in [k for k, v in gemeldet.items() if jetzt - v > 3600]:
+        del gemeldet[schluessel]
     for s in launcher.sitzungen():
         nummer = s.get("auftrag")
         if not nummer or s.get("cli") != "claude" or s["stand"] != "arbeitet":
             continue
-        zeilen = launcher.anzeige(s["name"]).splitlines()
-        laufzeit = next((m for z in reversed(zeilen) if (m := re.search(r"\((?:(\d+)m )?(\d+)s · timeout", z))), None)
-        befehl = next((z.strip(" ●⎿") for z in reversed(zeilen) if re.match(r"\s*● \w+\(", z)), "")
-        if not laufzeit or not befehl:
+        try:
+            datei = launcher.SITZUNGEN / f"{s['name']}.werkzeug"
+            start = datei.stat().st_mtime
+            werkzeug = json.loads(datei.read_text("utf-8"))
+        except (OSError, ValueError):
             continue
-        sekunden = int(laufzeit[1] or 0) * 60 + int(laufzeit[2])
-        schluessel = (nummer, befehl)
-        if sekunden < 60 or time.time() - gemeldet.get(schluessel, 0) < 300:
+        name = str(werkzeug.get("tool_name", ""))
+        # Eine Rückfrage wartet auf Frank, und der sieht sie schon.
+        if jetzt - start < 60 or name == "AskUserQuestion" or jetzt - gemeldet.get((nummer, start), 0) < 300:
             continue
-        gemeldet[schluessel] = time.time()
-        schritt = f"⏳ Läuft seit {sekunden // 60} min: {befehl[:150]}"
-        code, _ = rufe(f"https://{zugang['host']}/pc/meldung", zugang["token"], 20,
-                       {"auftrag_id": nummer, "stand": "laeuft", "schritt": schritt, "rechner": launcher.RECHNER, "hook_beginn": int(time.time())})
+        eingabe = werkzeug.get("tool_input") or {}
+        was = str(eingabe.get("description") or eingabe.get("command") or eingabe.get("prompt") or name)[:150]
+        schritt = f"⏳ Läuft seit {int(jetzt - start) // 60} min: {was}"
+        try:
+            code, _ = rufe(f"https://{zugang['host']}/pc/meldung", zugang["token"], 20, {"auftrag_id": nummer, "stand": "laeuft", "schritt": schritt})
+        except Exception as fehler:
+            schreib(f"Fortschritt {nummer}: {fehler}")
+            continue
         schreib(f"Fortschritt {nummer}: {schritt} -> {code}")
+        if code < 300:
+            gemeldet[(nummer, start)] = jetzt
 
 
 def fortschritt_faden() -> None:

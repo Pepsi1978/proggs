@@ -251,6 +251,12 @@ private fun Leiste(vm: AppViewModel) {
             else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
                 .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
         }
+        // Die Auswahl zeigt einen Stand von jetzt: Beim Verlassen der App schließen, sonst böte sie nach Minuten einen längst ausgeschalteten Rechner an.
+        androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
+            lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                try { kotlinx.coroutines.awaitCancellation() } finally { auswahl = null }
+            }
+        }
         auswahl?.let { da -> RechnerAuswahl(da, { auswahl = null }) { auswahl = null; oeffnen(it) } }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
