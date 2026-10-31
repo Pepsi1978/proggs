@@ -122,6 +122,6 @@ Geändert: <ein Satz>
 Version: <App> <alt> → <neu> (versionCode <n>)
 Codex-Review: <übersprungen (Nein) | keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
 Commit + Push: ja · PR #<n> gemergt: ja
-GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
+GitHub-Bau: gestartet, läuft im Hintergrund
 ```
-Bei Aufgaben ohne App-Änderung: Version, Bau, Drive und UpdateStation mit „entfällt“ (Codex je nach Ja/Nein).
+Bei Aufgaben ohne App-Änderung: Version und Bau mit „entfällt“ (Codex je nach Ja/Nein).

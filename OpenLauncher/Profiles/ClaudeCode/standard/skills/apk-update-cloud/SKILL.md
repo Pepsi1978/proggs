@@ -98,22 +98,14 @@ kleine Fixes gehen ohne Wartezeit raus.
    nicht umgehen: Frank melden und auf den Berechtigungsmodus „Änderungen akzeptieren“ hinweisen. Scheitert der Merge an einem
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
-7. **Bau abwarten, fertig sofort erkennen:** Direkt nach dem Merge, wieder mit Zeitlimit 600000 ms:
-   `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-bau.sh <N>`
-   Das Skript sucht den Lauf von `android-cloud-build.yml` zum Merge-Commit, fragt alle 15 Sekunden
-   nach und kehrt **in dem Moment** zurück, in dem der Bau fertig ist. Keine feste Nachkontrolle nach
-   6 Minuten planen. Meldet es `ZUGANG=fehlt`: GitHub-MCP `actions_list` (`list_workflow_runs`,
-   `resource_id: android-cloud-build.yml`) und `actions_get` (`get_workflow_run`) nehmen. Ein nacktes
-   `BAU=kein-lauf (Commit )` ohne Commit-Nummer heißt: der Zugang fehlte, nicht der Bau.
-   - `BAU=gruen` → Frank kurz melden: „<App> <Version> liegt in Google Drive, UpdateStation zeigt es bei der
-     nächsten Prüfung (oder ‚Jetzt prüfen‘).“
-   - `BAU=laeuft` (nach 9,5 min noch nicht fertig) → Skript sofort noch einmal starten.
-   - `BAU=kein-lauf` → der Merge hat keine App-Dateien berührt oder der Auslöser greift nicht: prüfen,
-     ob die Änderung unter `<Projekt>/app/**` liegt, sonst Frank melden.
-   - `BAU=rot` → Protokoll lesen (`get_job_logs`, `failed_only`), Ursache beheben und denselben Ablauf ab
-     Schritt 1 wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war;
-     bei „Versionslog-Eintrag fehlt“ genau diesen nachtragen). Erst aufgeben und Frank fragen, wenn
-     die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
+7. **Nicht auf den Bau warten:** Der Merge hat den Bau gestartet, er läuft bei GitHub unabhängig von dieser Sitzung weiter,
+   auch wenn sie geschlossen wird. Direkt weiter mit Schritt 8. Ein weiterer Merge für dieselbe App bricht einen noch
+   laufenden Bau ab und veröffentlicht den neuen Stand; Änderungen aus einem späteren Review also einfach mit diesem Ablauf
+   ab Schritt 1 nachschieben. `warte-auf-bau.sh <N>` nur starten, wenn Frank ausdrücklich nach dem Ergebnis fragt oder meldet,
+   dass das Update nicht ankommt: `BAU=gruen` liegt in Drive, `BAU=laeuft` noch einmal starten, `BAU=kein-lauf` prüfen, ob die
+   Änderung unter `<Projekt>/app/**` liegt, `BAU=rot` Protokoll lesen (`get_job_logs`, `failed_only`), beheben und ab Schritt 1
+   wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war). Meldet es `ZUGANG=fehlt`: GitHub-MCP
+   `actions_list` und `actions_get` nehmen.
 8. **Abschlussmeldung** an Frank, immer genau dieser Block (Details in `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md` §10):
    ```
    ☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
@@ -121,7 +113,7 @@ kleine Fixes gehen ohne Wartezeit raus.
    Version: <App> <alt> → <neu> (versionCode <n>)
    Codex-Review: <übersprungen (Nein) | keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
    Commit + Push: ja · PR #<n> gemergt: ja
-   GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
+   GitHub-Bau: gestartet, läuft im Hintergrund
    ```
 
 ## Jarvis

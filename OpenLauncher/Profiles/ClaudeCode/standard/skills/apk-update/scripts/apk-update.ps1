@@ -12,6 +12,11 @@
 # lokal (bugs/werkzeuge/google-drive-desktop-abgebrochene-uploads.md).
 #
 # Prüfen und reparieren ohne Build: pwsh -File apk-update.ps1 -Projekt <Projekt oder Alle> -Reparieren
+#
+# Am Mac wartet die Sitzung nicht auf Google Drive: Das Skript baut und prüft, übergibt das Ablegen und das Warten auf den
+# Upload-Beleg an einen eigenständigen Prozess und endet mit APK_UPDATE_STATUS=gestartet. Der Prozess überlebt das Schließen
+# der Sitzung (Protokoll: ~/Library/Logs/apk-update/<Projekt>.log). Ein neuer Lauf mit geändertem Stand bricht einen noch
+# laufenden Upload ab und ersetzt ihn; bei unverändertem Stand meldet er APK_UPDATE_STATUS=laeuft. -Vordergrund wartet wie früher.
 
 param(
     [Parameter(Mandatory = $true)][string]$Projekt,
@@ -24,7 +29,11 @@ param(
     # Ohne Build: Vergleicht update.json mit der APK und holt abgebrochene Uploads aus dem Drive-Speicher zurück.
     [switch]$Reparieren,
     # Höchste Wartezeit je Datei auf den Upload-Beleg von Google Drive.
-    [int]$UploadFristMinuten = 45
+    [int]$UploadFristMinuten = 45,
+    # Bis zum Upload-Beleg warten, statt den Upload im Hintergrund weiterlaufen zu lassen.
+    [switch]$Vordergrund,
+    # Nur intern: Der eigenständige Upload-Prozess bekommt hier seine Auftragsdatei.
+    [string]$UploadAuftrag = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -192,6 +201,153 @@ function Sende-Signal([string]$projektName, [string]$paketName, [int]$code) {
     } catch { Write-Host "APK_UPDATE_WARNUNG=Signal ans Handy nicht gesendet: $($_.Exception.Message)" }
 }
 
+# --- Eigenständiger Upload-Prozess ----------------------------------------------------------
+function Upload-Marker([string]$name) { Join-Path $sperrDir "$($name.ToLowerInvariant()).upload.json" }
+# Der Marker des laufenden Upload-Prozesses, oder $null, wenn keiner mehr läuft.
+function Lies-Upload-Marker([string]$name) {
+    $pfad = Upload-Marker $name
+    if (-not (Test-Path -LiteralPath $pfad)) { return $null }
+    try { $m = Get-Content -LiteralPath $pfad -Raw -Encoding utf8 | ConvertFrom-Json } catch { return $null }
+    # Die Prozessnummer kann neu vergeben sein: Nur ein echter Upload-Prozess zählt.
+    $befehl = (& ps -o command= -p ([int]$m.pid) 2>$null) -join ' '
+    if ("$befehl" -notlike '*-UploadAuftrag*') { return $null }
+    return $m
+}
+# Bricht den Upload ab. Die APK geht aus dem Drive-Ordner, damit Drive sie nicht weiter hochlädt,
+# außer update.json nennt sie schon: Dann ist sie bestätigt und bleibt der gültige Stand.
+function Beende-Upload($m, [string]$name) {
+    Stop-Process -Id ([int]$m.pid) -Force -ErrorAction SilentlyContinue
+    foreach ($i in 1..40) {
+        if (-not (Get-Process -Id ([int]$m.pid) -ErrorAction SilentlyContinue)) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    $ordner = Join-Path $updatesDir $name
+    $genannt = $null
+    try { $genannt = "$((Get-Content (Join-Path $ordner 'update.json') -Raw -Encoding utf8 | ConvertFrom-Json).apk)" } catch { }
+    if ("$($m.apkDatei)" -and "$($m.apkDatei)" -ne $genannt) { Remove-Item -LiteralPath (Join-Path $ordner "$($m.apkDatei)") -Force -ErrorAction SilentlyContinue }
+    foreach ($f in "$($m.temp)", "$($m.auftrag)", (Upload-Marker $name)) { if ($f) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } }
+}
+# Nur der committete, gepushte Stand zählt. Sonst nennt update.json einen Commit, aus dem die APK nicht gebaut wurde.
+function Pruefe-Git-Stand {
+    $offen = @(git -C $proggs status --porcelain -- @quellen 2>&1)
+    if ($LASTEXITCODE -ne 0) { Fehler "git status für $Projekt fehlgeschlagen: $($offen -join ' ')" }
+    if ($offen.Count -gt 0) { Fehler "Offene Änderungen in $Projekt ($(($offen | Select-Object -First 5) -join '; ')). Erst committen und pushen, dann veröffentlichen." }
+    # Ohne erfolgreichen Abgleich ist nicht belegt, dass der Stand gepusht und aktuell ist: abbrechen.
+    git -C $proggs fetch --quiet 2>$null
+    if ($LASTEXITCODE -ne 0) { Fehler "git fetch fehlgeschlagen – ohne Abgleich mit origin wird nicht veröffentlicht." }
+    $mainStand = git -C $proggs rev-parse --verify 'refs/remotes/origin/main' 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $mainStand) { Fehler "origin/main ist nicht verfügbar. Erst den Hauptbranch von origin abrufen." }
+    $lokalStand = git -C $proggs rev-parse HEAD 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $lokalStand) { Fehler "Lokaler HEAD konnte nicht ermittelt werden." }
+    if ($lokalStand -ne $mainStand) { Fehler "Der gebaute HEAD ist nicht origin/main. Erst den aktuellen main-Stand abgleichen und per Fast Forward nach main pushen (git push origin HEAD:main)." }
+}
+
+# Ablegen: erst APK mit Upload-Beleg, dann update.json mit Upload-Beleg, zuletzt aufräumen. Liest die Werte aus dem Skriptbereich.
+# Beide Dateien entstehen außerhalb des Drive-Ordners und kommen per Umbenennen hinein: lokal ist
+# so nie eine halb geschriebene Datei sichtbar. Bis zum Beleg bleibt die Quelle für neue Versuche erhalten.
+function Veroeffentlichen {
+    New-Item -ItemType Directory -Force -Path $zielDir | Out-Null
+    foreach ($o in $verwaistPfade) { Write-Host "APK_UPDATE_WARNUNG=verwaiste $(Split-Path $o -Leaf) (unvollständiger Lauf) wird ersetzt" }
+    Lege-Ab $temp $zielApk
+    if ((Get-FileHash $zielApk -Algorithm SHA256).Hash.ToLower() -ne $sha256) { Fehler "APK im Zielordner weicht nach dem Ablegen ab ($zielApk)." }
+
+    if ($uploadPruefbar) {
+        Write-Host "Warte auf den Upload-Beleg von Google Drive für $apkDatei ..."
+        $grund = Warte-Auf-Upload $zielApk $temp
+        if ($grund) {
+            # Der bisherige Stand bleibt gültig: Ohne Beleg kommt keine update.json, die neue APK geht wieder raus.
+            Remove-Item -LiteralPath $zielApk -Force -ErrorAction SilentlyContinue
+            Fehler "$grund update.json bleibt unverändert, nichts wurde ausgeliefert. Erneut starten, sobald Google Drive wieder hochlädt."
+        }
+    } elseif (-not $OhneGeraet) {
+        Write-Host "APK_UPDATE_WARNUNG=Upload hier nicht prüfbar, Google Drive übernimmt ihn ohne Beleg"
+    }
+
+    $jetzt = Get-Date
+    # Die letzten 15 Einträge des Versionslogs gehen mit, damit UpdateStation "Neu in dieser Version" zeigt.
+    $verlauf = @($eintraege | Select-Object -Last 15 | ForEach-Object {
+        [ordered]@{ versionCode = [int]$_.versionCode; versionName = "$($_.versionName)"; stand = "$($_.stand)"; notiz = "$($_.notiz)" }
+    })
+    $manifest = [ordered]@{
+        format         = 1
+        projekt        = $Projekt
+        paket          = $paket
+        versionCode    = $apkCode
+        versionName    = $apkName
+        versionStand   = "$(@($eintraege)[-1].stand)"
+        apk            = $apkDatei
+        groesse        = $groesse
+        sha256         = $sha256
+        signaturSha256 = $signatur
+        variante       = $apkOrdner
+        erstelltAm     = $jetzt.ToString('dd.MM.yyyy HH:mm')
+        erstelltAmIso  = $jetzt.ToString('yyyy-MM-ddTHH:mm:sszzz')
+        commit         = "$commit"
+        versionslog    = $verlauf
+    }
+    $manifestTemp = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$Projekt-$lauf-update.json"
+    $script:aufraeumen.Add($manifestTemp)
+    [IO.File]::WriteAllText($manifestTemp, ($manifest | ConvertTo-Json -Depth 5), $utf8)
+    if ($uploadPruefbar) { [IO.File]::WriteAllText($offenMarker, $apkDatei, $utf8) }
+    Lege-Ab $manifestTemp $manifestPfad
+    $kontrolle = Get-Content $manifestPfad -Raw -Encoding utf8 | ConvertFrom-Json
+    if ([int]$kontrolle.versionCode -ne $apkCode -or "$($kontrolle.sha256)" -ne $sha256) { Fehler "update.json nach dem Schreiben nicht stimmig ($manifestPfad)." }
+    if ($uploadPruefbar) {
+        $grund = Warte-Auf-Upload $manifestPfad $manifestTemp
+        if ($grund) { Fehler "$grund Die APK ist bestätigt, ein neuer Lauf wiederholt den Beleg für update.json." }
+    }
+
+    # Weitere verwaiste Dateien mit genau dieser Nummer (anderer Name) sind jetzt überholt.
+    foreach ($o in $verwaistPfade) { if ((Split-Path $o -Leaf) -ne $apkDatei) { Remove-Item -LiteralPath $o -Force -ErrorAction SilentlyContinue } }
+    Raeume-Alte-Apks $zielDir $apkDatei $alteApk
+
+    Write-Host "APK_UPDATE_STATUS=ok"
+    # Im Cloud-Bau (-OhneGeraet) liegen die Dateien hier erst lokal: Dort sendet der Workflow das Signal nach dem Upload.
+    if ($OhneGeraet) { Write-Host "APK_UPDATE_SIGNAL=übersprungen (Cloud-Bau sendet nach dem Upload)" }
+    else { Sende-Signal $Projekt $paket $apkCode }
+    Remove-Item $offenMarker -Force -ErrorAction SilentlyContinue
+    if ($uploadPruefbar) { Write-Host "APK_UPDATE_BEREIT=cloud (Google Drive hat den Upload von APK und update.json bestätigt)" }
+    else { Write-Host "APK_UPDATE_BEREIT=lokal (liegt im Ordner; den Upload übernimmt Google Drive oder der Cloud-Bau)" }
+    Write-Host "APK_UPDATE_PAKET=$paket"
+    Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $P, am Handy: $I)"
+    Write-Host "APK_UPDATE_SIGNATUR=$signiert, SHA-256 $($signatur.Substring(0,16))..."
+    Write-Host "APK_UPDATE_DATEI=$zielApk"
+    Aufraeumen
+}
+
+# Der eigenständige Upload-Prozess: übernimmt die fertig geprüfte APK aus dem Bau-Lauf.
+if ($UploadAuftrag) {
+    Write-Host "--- $(Get-Date -Format 'dd.MM.yyyy HH:mm:ss') Upload-Prozess $PID für $Projekt"
+    $auftrag = Get-Content -LiteralPath $UploadAuftrag -Raw -Encoding utf8 | ConvertFrom-Json
+    $script:aufraeumen.Add($UploadAuftrag)
+    $temp = "$($auftrag.temp)"
+    $script:aufraeumen.Add($temp)
+    # Der Bau-Lauf gibt die Sperre gerade frei.
+    foreach ($i in 1..40) {
+        $script:sperre = Nimm-Sperre $Projekt
+        if ($script:sperre) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $script:sperre) { Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf bearbeitet." }
+    $markerPfad = Upload-Marker $Projekt
+    $script:aufraeumen.Add($markerPfad)
+    [IO.File]::WriteAllText($markerPfad, (@{ pid = $PID; commit = "$($auftrag.commit)"; versionCode = [int]$auftrag.apkCode; apkDatei = "$($auftrag.apkDatei)"; temp = $temp; auftrag = $UploadAuftrag } | ConvertTo-Json), $utf8)
+    $lauf = "$($auftrag.lauf)"; $commit = "$($auftrag.commit)"
+    $zielDir = Join-Path $updatesDir $Projekt
+    $manifestPfad = Join-Path $zielDir 'update.json'
+    $offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"
+    $apkDatei = "$($auftrag.apkDatei)"; $zielApk = Join-Path $zielDir $apkDatei
+    $sha256 = "$($auftrag.sha256)"; $groesse = [long]$auftrag.groesse; $signatur = "$($auftrag.signatur)"; $signiert = "$($auftrag.signiert)"
+    $paket = "$($auftrag.paket)"; $apkCode = [int]$auftrag.apkCode; $apkName = "$($auftrag.apkName)"; $apkOrdner = "$($auftrag.apkOrdner)"
+    $alteApk = if ($auftrag.alteApk) { "$($auftrag.alteApk)" } else { $null }
+    $verwaistPfade = @($auftrag.verwaistPfade | Where-Object { $_ })
+    $eintraege = @($auftrag.eintraege)
+    $P = [int]$auftrag.P; $I = [int]$auftrag.I
+    $uploadPruefbar = $true
+    Veroeffentlichen
+    exit 0
+}
+
 # --- Reparieren: update.json und APK ohne Build abgleichen ------------------------------------
 # Veröffentlichte Stände bleiben unverändert; zurück kommt nur die APK mit exakt der Prüfsumme aus update.json.
 function Suche-Abgebrochene([string]$apkName, [long]$groesse, [string]$sha) {
@@ -282,13 +438,6 @@ if ((Split-Path $projektDir -Parent) -ne $proggs -or -not (Test-Path $projektDir
 # Schreibweise vom Datenträger übernehmen, damit Drive-Ordner und Projekt gleich heißen.
 $Projekt = (Get-Item $projektDir).Name
 
-# --- Exklusiv pro Projekt: parallele Läufe (andere Sitzungen) dürfen sich nicht überschreiben ---
-$lauf = [guid]::NewGuid().ToString('N').Substring(0, 8)
-$script:sperre = Nimm-Sperre $Projekt
-if (-not $script:sperre) { Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut oder veröffentlicht. Warten und erneut starten." }
-# Merkt einen Lauf, der update.json abgelegt, aber Signal und Aufräumen noch nicht erreicht hat.
-$offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"
-
 $gradleFile = Join-Path $projektDir 'app\build.gradle.kts'
 if (-not (Test-Path $gradleFile)) {
     if (Test-Path (Join-Path $projektDir 'app\build.gradle')) {
@@ -308,6 +457,35 @@ $gradleText = [IO.File]::ReadAllText($gradleFile)
 # zum Stand der App: Ihre Änderungen zählen bei allen Git-Prüfungen und der Entscheidung "schon aktuell" mit.
 $quellen = @($Projekt) + @([regex]::Matches($gradleText, '\.\./([A-Za-z0-9][A-Za-z0-9_.\-]*)/') | ForEach-Object { $_.Groups[1].Value } |
     Where-Object { $_ -ne $Projekt -and (Test-Path (Join-Path $proggs $_) -PathType Container) } | Sort-Object -Unique)
+
+# --- Exklusiv pro Projekt: parallele Läufe (andere Sitzungen) dürfen sich nicht überschreiben ---
+$lauf = [guid]::NewGuid().ToString('N').Substring(0, 8)
+$script:sperre = Nimm-Sperre $Projekt
+if (-not $script:sperre) {
+    # Belegt ein Upload-Prozess die Sperre: Bei gleichem Stand läuft er weiter, bei neuem Stand wird er ersetzt.
+    $upload = Lies-Upload-Marker $Projekt
+    if (-not $upload) { Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut oder veröffentlicht. Warten und erneut starten." }
+    Pruefe-Git-Stand
+    git -C $proggs diff --quiet "$($upload.commit)" HEAD -- @quellen 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "APK_UPDATE_STATUS=laeuft"
+        Write-Host "APK_UPDATE_HINWEIS=Der Upload von $($upload.apkDatei) läuft schon im Hintergrund und passt zum aktuellen Stand; nichts zu tun."
+        exit 0
+    }
+    Write-Host "APK_UPDATE_ERSETZT=Upload von $($upload.apkDatei) abgebrochen, der neue Stand wird veröffentlicht"
+    Beende-Upload $upload $Projekt
+    foreach ($i in 1..40) {
+        $script:sperre = Nimm-Sperre $Projekt
+        if ($script:sperre) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $script:sperre) { Fehler "$Projekt bleibt nach dem Abbruch des alten Uploads gesperrt. Erneut starten." }
+}
+# Die Sperre gehört diesem Lauf, also arbeitet kein Upload-Prozess mehr: Reste eines abgestürzten Prozesses können weg.
+Get-ChildItem $sperrDir -Filter "$($Projekt.ToLowerInvariant()).job-*" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Upload-Marker $Projekt) -Force -ErrorAction SilentlyContinue
+# Merkt einen Lauf, der update.json abgelegt, aber Signal und Aufräumen noch nicht erreicht hat.
+$offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"
 $erwartetesPaket = $eintrag.paket
 if (-not $erwartetesPaket) {
     $ids = [regex]::Matches($gradleText, 'applicationId\s*=\s*"([^"]+)"')
@@ -480,18 +658,9 @@ if ($eintraege.Count -eq 0) { Fehler "Versionslog $logPfad hat keine Einträge."
 $versionCode = [int]$eintraege[-1].versionCode
 
 # --- Nur committeten, gepushten Stand bewerten (vor jeder Bump- oder Veröffentlichungsentscheidung) ---
-# Sonst nennt update.json einen Commit, aus dem die APK nicht gebaut wurde.
-$offen = @(git -C $proggs status --porcelain -- @quellen 2>&1)
-if ($LASTEXITCODE -ne 0) { Fehler "git status für $Projekt fehlgeschlagen: $($offen -join ' ')" }
-if ($offen.Count -gt 0) { Fehler "Offene Änderungen in $Projekt ($(($offen | Select-Object -First 5) -join '; ')). Erst committen und pushen, dann veröffentlichen." }
-# Ohne erfolgreichen Abgleich ist nicht belegt, dass der Stand gepusht und aktuell ist: abbrechen.
-git -C $proggs fetch --quiet 2>$null
-if ($LASTEXITCODE -ne 0) { Fehler "git fetch fehlgeschlagen – ohne Abgleich mit origin wird nicht veröffentlicht." }
-$mainStand = git -C $proggs rev-parse --verify 'refs/remotes/origin/main' 2>$null
-if ($LASTEXITCODE -ne 0 -or -not $mainStand) { Fehler "origin/main ist nicht verfügbar. Erst den Hauptbranch von origin abrufen." }
-$lokalStand = git -C $proggs rev-parse HEAD 2>$null
-if ($LASTEXITCODE -ne 0 -or -not $lokalStand) { Fehler "Lokaler HEAD konnte nicht ermittelt werden." }
-if ($lokalStand -ne $mainStand) { Fehler "Der gebaute HEAD ist nicht origin/main. Erst den aktuellen main-Stand abgleichen und per Fast Forward nach main pushen (git push origin HEAD:main)." }
+Pruefe-Git-Stand
+# Hier festhalten: Während des Baus oder Uploads kann eine andere Sitzung weitere Commits ziehen.
+$commit = git -C $proggs rev-parse --short HEAD 2>$null
 
 # --- Zuletzt veröffentlichter Stand P (konservativ je Manifest-Zustand) ---------------------
 #   UNLESBAR: höchste APK inklusive N – unklar, ob vcN schon öffentlich war, daher nie gleich
@@ -526,6 +695,7 @@ $I = $installiertCode
 
 # --- Wiederholung eines schon abgeschlossenen Laufs: already-current -----------------------
 # Nur wenn alles eindeutig übereinstimmt; jede Unsicherheit führt auf den konservativen Weg.
+$belegOffen = $false
 if ($manifestZustand -eq 'OK' -and $manifestCode -eq $N) {
     $grund = $null
     $apkPfadAlt = if ($alteApk) { Join-Path $zielDir $alteApk } else { $null }
@@ -543,22 +713,27 @@ if ($manifestZustand -eq 'OK' -and $manifestCode -eq $N) {
             elseif ($I -gt $N) { $grund = "am Handy ist schon vc$I installiert" }
             elseif (Upload-Pruefbar $zielDir) {
                 # Ein früherer Lauf kann vor dem Beleg geendet haben. Ein Drive-Problem ist kein Grund für eine neue Version.
+                # Ohne -Vordergrund nur nachsehen: Drive lädt ohnehin weiter, die Sitzung wartet nicht darauf.
+                $fristVorher = $UploadFristMinuten
+                if (-not $Vordergrund) { $UploadFristMinuten = 0 }
                 $beleg = Warte-Auf-Upload $apkPfadAlt ''
                 if (-not $beleg) { $beleg = Warte-Auf-Upload $manifestPfad '' }
-                if ($beleg) { Fehler "$beleg vc$N bleibt unverändert, keine neue Version. Erneut starten, sobald Google Drive wieder hochlädt." }
+                $UploadFristMinuten = $fristVorher
+                if ($beleg -and $Vordergrund) { Fehler "$beleg vc$N bleibt unverändert, keine neue Version. Erneut starten, sobald Google Drive wieder hochlädt." }
+                if ($beleg) { $belegOffen = $true; Write-Host "APK_UPDATE_WARNUNG=Google Drive hat vc$N noch nicht bestätigt und lädt selbst weiter." }
             }
         }
     }
     if (-not $grund) {
         # Der frühere Lauf endete vor Signal und Aufräumen: Das holt der belegte Stand jetzt nach.
-        if (Test-Path $offenMarker) {
+        if ((Test-Path $offenMarker) -and -not $belegOffen) {
             Raeume-Alte-Apks $zielDir $alteApk $alteApk
             Sende-Signal $Projekt "$($alt.paket)" $N
             Remove-Item $offenMarker -Force -ErrorAction SilentlyContinue
         }
         Aufraeumen
         Write-Host "APK_UPDATE_STATUS=already-current"
-        Write-Host "APK_UPDATE_BEREIT=$(if (Upload-Pruefbar $zielDir) { 'cloud' } else { 'lokal' }) (bereits veröffentlicht: vc$N aus Commit $($alt.commit); nichts zu tun, kein Commit)"
+        Write-Host "APK_UPDATE_BEREIT=$(if ($belegOffen) { 'unbestaetigt' } elseif (Upload-Pruefbar $zielDir) { 'cloud' } else { 'lokal' }) (bereits veröffentlicht: vc$N aus Commit $($alt.commit); nichts zu tun, kein Commit)"
         Write-Host "APK_UPDATE_DATEI=$apkPfadAlt"
         exit 0
     }
@@ -654,81 +829,45 @@ if ($paket -ne $erwartetesPaket) { Fehler "Paket in der APK ist '$paket', erwart
 if ($apkCode -ne $N) { Fehler "versionCode der APK ($apkCode) passt nicht zum Versionslog ($N). Liest build.gradle.kts den Versionslog? Build veraltet?" }
 if ($apkCode -le $P -or $apkCode -lt $I) { Fehler "versionCode $apkCode ist nicht höher als veröffentlicht ($P) bzw. niedriger als installiert ($I)." }
 
-# --- Ablegen: erst APK mit Upload-Beleg, dann update.json mit Upload-Beleg, zuletzt aufräumen ---
-# Beide Dateien entstehen außerhalb des Drive-Ordners und kommen per Umbenennen hinein: lokal ist
-# so nie eine halb geschriebene Datei sichtbar. Bis zum Beleg bleibt die Quelle für neue Versuche erhalten.
-New-Item -ItemType Directory -Force -Path $zielDir | Out-Null
+# --- Ablegen, am Mac im eigenständigen Prozess -----------------------------------------------
 $sicherName = ($apkName -replace '[^\w\.\-]', '_')
 $apkDatei = "$Projekt-$sicherName-vc$apkCode.apk"
 $zielApk = Join-Path $zielDir $apkDatei
-foreach ($o in $verwaistN) { Write-Host "APK_UPDATE_WARNUNG=verwaiste $($o.datei.Name) (unvollständiger Lauf) wird ersetzt" }
+$verwaistPfade = @($verwaistN | ForEach-Object { $_.datei.FullName })
 $sha256 = (Get-FileHash $temp -Algorithm SHA256).Hash.ToLower()
 $groesse = (Get-Item $temp).Length
 $uploadPruefbar = Upload-Pruefbar $zielDir
+# Ohne Prüfer kein Beleg: Das soll hier auffallen, nicht erst im Hintergrund.
 if ($uploadPruefbar) { $null = Upload-Pruefer }
-Lege-Ab $temp $zielApk
-if ((Get-FileHash $zielApk -Algorithm SHA256).Hash.ToLower() -ne $sha256) { Fehler "APK im Zielordner weicht nach dem Ablegen ab ($zielApk)." }
 
-if ($uploadPruefbar) {
-    Write-Host "Warte auf den Upload-Beleg von Google Drive für $apkDatei ..."
-    $grund = Warte-Auf-Upload $zielApk $temp
-    if ($grund) {
-        # Der bisherige Stand bleibt gültig: Ohne Beleg kommt keine update.json, die neue APK geht wieder raus.
-        Remove-Item -LiteralPath $zielApk -Force -ErrorAction SilentlyContinue
-        Fehler "$grund update.json bleibt unverändert, nichts wurde ausgeliefert. Erneut starten, sobald Google Drive wieder hochlädt."
+if ($uploadPruefbar -and -not $Vordergrund) {
+    $basis = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).job-$lauf"
+    [IO.File]::Move($temp, "$basis.apk", $true)
+    [IO.File]::WriteAllText("$basis.json", ([ordered]@{
+        temp = "$basis.apk"; lauf = $lauf; commit = "$commit"; apkDatei = $apkDatei; sha256 = $sha256; groesse = $groesse; signatur = $signatur; signiert = $signiert
+        paket = $paket; apkCode = $apkCode; apkName = $apkName; apkOrdner = $apkOrdner; alteApk = $alteApk; verwaistPfade = $verwaistPfade
+        eintraege = @($eintraege | Select-Object -Last 15); P = $P; I = $I
+    } | ConvertTo-Json -Depth 5), $utf8)
+    $protokollDir = Join-Path $HOME 'Library/Logs/apk-update'
+    New-Item -ItemType Directory -Force -Path $protokollDir | Out-Null
+    $protokoll = Join-Path $protokollDir "$Projekt.log"
+    # Sperre freigeben und als eigene Sitzung starten: So überlebt der Upload das Ende von Skript und Claude-Sitzung.
+    $script:sperre.Dispose(); $script:sperre = $null
+    $start = 'log=$1; shift; /usr/bin/perl -MPOSIX -e "POSIX::setsid(); exec @ARGV" "$@" </dev/null >>"$log" 2>&1 &'
+    & /bin/sh -c $start sh $protokoll (Get-Process -Id $PID).Path -NoProfile -File $PSCommandPath -Projekt $Projekt -ProggsWurzel $proggs -UpdatesWurzel $updatesDir -UploadFristMinuten 360 -UploadAuftrag "$basis.json"
+    $laeuft = $null
+    foreach ($i in 1..80) {
+        $laeuft = Lies-Upload-Marker $Projekt
+        if ($laeuft -and "$($laeuft.auftrag)" -eq "$basis.json") { break }
+        $laeuft = $null
+        Start-Sleep -Milliseconds 250
     }
-} elseif (-not $OhneGeraet) {
-    Write-Host "APK_UPDATE_WARNUNG=Upload hier nicht prüfbar, Google Drive übernimmt ihn ohne Beleg"
+    if (-not $laeuft) { Fehler "Der Upload-Prozess ist nicht angelaufen, siehe $protokoll." }
+    Aufraeumen
+    Write-Host "APK_UPDATE_STATUS=gestartet"
+    Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $P, am Handy: $I)"
+    Write-Host "APK_UPDATE_PROTOKOLL=$protokoll"
+    Write-Host "APK_UPDATE_HINWEIS=Der Upload läuft eigenständig weiter, auch nach dem Schließen der Sitzung. Nicht darauf warten."
+    exit 0
 }
-
-$jetzt = Get-Date
-$commit = (git -C $proggs rev-parse --short HEAD 2>$null)
-# Die letzten 15 Einträge des Versionslogs gehen mit, damit UpdateStation "Neu in dieser Version" zeigt.
-$verlauf = @($eintraege | Select-Object -Last 15 | ForEach-Object {
-    [ordered]@{ versionCode = [int]$_.versionCode; versionName = "$($_.versionName)"; stand = "$($_.stand)"; notiz = "$($_.notiz)" }
-})
-$manifest = [ordered]@{
-    format         = 1
-    projekt        = $Projekt
-    paket          = $paket
-    versionCode    = $apkCode
-    versionName    = $apkName
-    versionStand   = "$($eintraege[-1].stand)"
-    apk            = $apkDatei
-    groesse        = $groesse
-    sha256         = $sha256
-    signaturSha256 = $signatur
-    variante       = $apkOrdner
-    erstelltAm     = $jetzt.ToString('dd.MM.yyyy HH:mm')
-    erstelltAmIso  = $jetzt.ToString('yyyy-MM-ddTHH:mm:sszzz')
-    commit         = "$commit"
-    versionslog    = $verlauf
-}
-$manifestTemp = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$Projekt-$lauf-update.json"
-$script:aufraeumen.Add($manifestTemp)
-[IO.File]::WriteAllText($manifestTemp, ($manifest | ConvertTo-Json -Depth 5), $utf8)
-if ($uploadPruefbar) { [IO.File]::WriteAllText($offenMarker, $apkDatei, $utf8) }
-Lege-Ab $manifestTemp $manifestPfad
-$kontrolle = Get-Content $manifestPfad -Raw -Encoding utf8 | ConvertFrom-Json
-if ([int]$kontrolle.versionCode -ne $apkCode -or "$($kontrolle.sha256)" -ne $sha256) { Fehler "update.json nach dem Schreiben nicht stimmig ($manifestPfad)." }
-if ($uploadPruefbar) {
-    $grund = Warte-Auf-Upload $manifestPfad $manifestTemp
-    if ($grund) { Fehler "$grund Die APK ist bestätigt, ein neuer Lauf wiederholt den Beleg für update.json." }
-}
-
-# Weitere verwaiste Dateien mit genau dieser Nummer (anderer Name) sind jetzt überholt.
-foreach ($o in $verwaistN) { if ($o.datei.Name -ne $apkDatei) { Remove-Item -LiteralPath $o.datei.FullName -Force -ErrorAction SilentlyContinue } }
-Raeume-Alte-Apks $zielDir $apkDatei $alteApk
-
-Write-Host "APK_UPDATE_STATUS=ok"
-# Im Cloud-Bau (-OhneGeraet) liegen die Dateien hier erst lokal: Dort sendet der Workflow das Signal nach dem Upload.
-if ($OhneGeraet) { Write-Host "APK_UPDATE_SIGNAL=übersprungen (Cloud-Bau sendet nach dem Upload)" }
-else { Sende-Signal $Projekt $paket $apkCode }
-Remove-Item $offenMarker -Force -ErrorAction SilentlyContinue
-if ($uploadPruefbar) { Write-Host "APK_UPDATE_BEREIT=cloud (Google Drive hat den Upload von APK und update.json bestätigt)" }
-else { Write-Host "APK_UPDATE_BEREIT=lokal (liegt im Ordner; den Upload übernimmt Google Drive oder der Cloud-Bau)" }
-Write-Host "APK_UPDATE_PAKET=$paket"
-Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $P, am Handy: $I)"
-Write-Host "APK_UPDATE_SIGNATUR=$signiert, SHA-256 $($signatur.Substring(0,16))..."
-Write-Host "APK_UPDATE_DATEI=$zielApk"
-Aufraeumen
+Veroeffentlichen

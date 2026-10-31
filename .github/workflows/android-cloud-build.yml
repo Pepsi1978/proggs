@@ -120,7 +120,7 @@ jobs:
         projekt: ${{ fromJSON(needs.auswahl.outputs.projekte) }}
     concurrency:
       group: android-cloud-build-${{ matrix.projekt }}
-      cancel-in-progress: false
+      cancel-in-progress: true
     env:
       PROJEKT: ${{ matrix.projekt }}
       SKRIPT: OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1

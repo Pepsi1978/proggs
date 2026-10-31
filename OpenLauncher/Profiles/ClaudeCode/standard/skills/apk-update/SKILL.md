@@ -22,6 +22,15 @@ Die fertige APK landet in `Meine Ablage\Dokumente\Updates\<Projekt>\`, Google Dr
 sie, und die Handy-App **UpdateStation** (`~/proggs/UpdateStation`) meldet „Update für App X
 gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als der installierte.
 
+## Nie auf den Upload warten
+
+Das APK-Update ist Franks Rückfallebene, entscheidend ist die Installation auf dem Handy. Reihenfolge am Ende einer
+Aufgabe: Bauen, Version, Commit, Push, Installation, dann dieser Skill, und danach **sofort** die Abschlussmeldung und die
+Code-Review-Frage. Am Mac baut und prüft das Skript, übergibt das Ablegen und das Warten auf Google Drive an einen
+eigenständigen Prozess und endet mit `APK_UPDATE_STATUS=gestartet`. Dieser Prozess überlebt das Schließen der Sitzung.
+Liefert das Code-Review Änderungen, den Skill danach erneut starten: Der neue Lauf bricht einen noch laufenden Upload ab, nimmt
+dessen APK aus dem Ordner und lädt die neue hoch. Unter Windows entfällt das Warten, weil das Skript dort keinen Upload-Beleg abfragt.
+
 ## Bauen aus der Cloud
 
 Kommt „apk update“ in einer **Cloud-Sitzung** (kein `C:\Users\barwa\SK`, kein Windows-PC), gilt
@@ -61,8 +70,7 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
 2. **Update muss fertig sein.** `git -C ~/proggs status -sb -- <Projekt>` prüfen. Offene
    Änderungen am Projekt zuerst nach Regel 9 abschließen (bauen, Version bumpen, committen,
    pushen). Nie halbfertigen Code als Update ausliefern.
-3. **Skript im Hintergrund starten** (`run_in_background`, denn Gradle und der Upload-Beleg können länger
-   als das höchste Zeitlimit dauern; auf die Abschlussmeldung warten, nie vorher abbrechen):
+3. **Skript starten** (im Vordergrund mit dem höchsten Zeitlimit: Es wartet nur auf den Build, nicht auf den Upload):
    ```powershell
    pwsh -NoProfile -File "C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1" -Projekt <Projekt>
    ```
@@ -107,6 +115,8 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
      SDK-adb); `-OhneGeraet` (nur für Tests) überspringt das,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
      und bricht ab, wenn Paket oder Version nicht passen,
+   - übergibt am Mac ab hier an den eigenständigen Upload-Prozess (Protokoll
+     `~/Library/Logs/apk-update/<Projekt>.log`, Frist 6 Stunden je Datei; `-Vordergrund` wartet stattdessen im Skript),
    - legt die APK als `<Projekt>-<versionName>-vc<versionCode>.apk` ab und **wartet am Mac auf den
      Upload-Beleg von Google Drive** (`upload-status.swift`). Bricht Drive den Upload ab und löscht die
      Datei, legt das Skript sie bis zu dreimal neu ab. Ohne Beleg nimmt es die APK wieder heraus, meldet
@@ -116,6 +126,10 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
      Veröffentlichungspunkt. Erst dann meldet es `ok`, sendet das Signal ans Handy und räumt auf: **die 5
      neuesten APKs** bleiben, dazu immer die bisher referenzierte.
 4. **Ausgabe auswerten** (Zeilen mit `APK_UPDATE_`):
+   - `APK_UPDATE_STATUS=gestartet` (Exit 0) → fertig für diese Sitzung, der Upload läuft im Hintergrund. Als
+     „APK-Update: ja (Upload läuft im Hintergrund), versionCode …“ melden und **nicht** nachsehen, ob er durch ist.
+   - `APK_UPDATE_STATUS=laeuft` (Exit 0) → Für genau diesen Stand läuft schon ein Upload; nichts zu tun.
+   - `APK_UPDATE_ERSETZT=…` → Ein älterer Upload wurde abgebrochen, der Lauf macht mit dem neuen Stand weiter.
    - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
      nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
    - `APK_UPDATE_STATUS=ok` mit `APK_UPDATE_BEREIT=cloud` → Google Drive hat beide Uploads bestätigt.
@@ -226,6 +240,9 @@ und dass die Signatur der APK zur installierten App passt.
   `projekte.json` korrigieren.
 
 ## Abschluss melden
+
+Am Mac gilt der Upload dabei als gestartet, nicht als fertig. Scheitert er später, steht der Grund im Protokoll und
+`update.json` bleibt beim bisherigen Stand.
 
 Projekt, Version alt → neu (versionCode), Pfad der APK, ob `build.gradle.kts` angehoben und
 committet wurde. Die Handy-App findet das Update bei der nächsten Prüfung (Standard alle 30 Minuten oder

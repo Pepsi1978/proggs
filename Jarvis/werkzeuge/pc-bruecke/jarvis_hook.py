@@ -1245,7 +1245,7 @@ def post(eingabe: dict) -> None:
             elif re.search(r"\badb\b.*\binstall\b", befehl):
                 raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert" + installweg(befehl), sofort=True)
             elif re.search(r"apk-update", befehl):
-                raus += sammel(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update für UpdateStation bereit", sofort=True)
+                raus += sammel(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update gestartet, Upload läuft im Hintergrund" if re.search(r"APK_UPDATE_STATUS=(gestartet|laeuft)", text) else "☁️ APK-Update für UpdateStation bereit", sofort=True)
             else:
                 raus += sammel(z, None)
         else:
