@@ -391,8 +391,7 @@ def _agy_statusleiste() -> str:
     """Trägt die Statusleiste wie OpenLauncher am Mac in die Einstellungen ein; Franks übrige Werte bleiben stehen. Antwortet mit einer Shell-Zeile, falls es nicht ging."""
     ziel = (HOME / ".gemini/antigravity-cli/settings.json").resolve()
     soll = {"type": "command", "command": f"bash {shlex.quote(str(PROGGS / 'claude-code-setup/hooks/statusline.sh'))}", "enabled": True}
-    hinweis = "printf '\033[33m[OpenLauncher] Statusleiste nicht eingerichtet: %s\033[0m\n' {}
-"
+    hinweis = "printf '\\033[33m[OpenLauncher] Statusleiste nicht eingerichtet: %s\\033[0m\\n' {}\n"
     text = _lies(ziel)
     try:
         einstellungen = json.loads(text) if text.strip() else {}
@@ -403,8 +402,7 @@ def _agy_statusleiste() -> str:
     if einstellungen.get("statusLine") != soll:
         einstellungen["statusLine"] = soll
         try:
-            _schreib(ziel, json.dumps(einstellungen, ensure_ascii=False, indent=2) + "
-", ziel.stat().st_mode & 0o777 if ziel.exists() else 0o644)
+            _schreib(ziel, json.dumps(einstellungen, ensure_ascii=False, indent=2) + "\n", ziel.stat().st_mode & 0o777 if ziel.exists() else 0o644)
         except OSError as e:
             return hinweis.format(shlex.quote(str(e)))
     return ""
