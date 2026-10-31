@@ -1,0 +1,228 @@
+{
+  "kennung": "docx-schreiber",
+  "name": "Word-Dateien schreiben",
+  "zweck": "Erzeugt eine echte Word-Datei (DOCX) aus einem Titel und Absätzen.",
+  "faehigkeiten": [
+    "DOCX aus Titel und Absätzen erzeugen"
+  ],
+  "schlagworte": [
+    "word",
+    "docx",
+    "dokument",
+    "datei",
+    "text",
+    "schreiben"
+  ],
+  "version": "1.0.0",
+  "ort": "handy",
+  "art": "skript",
+  "datei": "helfer.js",
+  "rolle": "",
+  "eingabe": {
+    "type": "object",
+    "properties": {
+      "titel": {
+        "type": "string",
+        "description": "Überschrift des Dokuments."
+      },
+      "absaetze": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Absätze in Reihenfolge; optional."
+      },
+      "dateiname": {
+        "type": "string",
+        "description": "Einfacher Dateiname ohne Pfad, etwa abnahme.docx; ohne Angabe aus dem Titel gebildet."
+      }
+    },
+    "required": [
+      "titel"
+    ],
+    "additionalProperties": false
+  },
+  "ausgabe": "Eine DOCX-Datei im Ausgabeordner des Helfers, dazu eine kurze Bestätigung mit Dateiname, Titel und Anzahl der Absätze.",
+  "voraussetzungen": [],
+  "grenzen": [
+    "Nur Überschrift und Fließtext: keine Bilder, keine Tabellen, keine weitere Formatierung.",
+    "Absätze ohne Inhalt werden ausgelassen; der Abstand zwischen Absätzen kommt aus der Formatvorlage.",
+    "Titel höchstens 500 Zeichen, Text insgesamt höchstens 1.000.000 Zeichen und 20.000 Absätze.",
+    "Eine vorhandene Datei gleichen Namens im Ausgabeordner wird ersetzt, auch wenn zwei Titel denselben Namen ergeben; für Eindeutigkeit dateiname angeben.",
+    "Die Datei liegt nur im Ausgabeordner des Helfers und wird dort nach 30 Tagen gelöscht; der Helfer legt nichts in die Ablage."
+  ],
+  "braucht_app_update": false,
+  "rechte": {
+    "netz": [],
+    "konten": [],
+    "werkzeuge": [],
+    "extern": false
+  },
+  "tests": [
+    {
+      "name": "Normalfall: Überschrift und Absatz landen im Dokument",
+      "eingabe": {
+        "titel": "Abnahme Eigene Tools",
+        "absaetze": [
+          "Dieser Text stammt aus dem ersten selbst gebauten Helfer."
+        ],
+        "dateiname": "helfer-selbsttest-normal.docx"
+      },
+      "erwartet": {
+        "ok": true,
+        "enthaelt": [
+          "helfer-selbsttest-normal.docx",
+          "[Content_Types].xml",
+          "document.xml",
+          "styles.xml",
+          "Heading1",
+          ">Abnahme Eigene Tools<",
+          ">Dieser Text stammt aus dem ersten selbst gebauten Helfer.<"
+        ]
+      }
+    },
+    {
+      "name": "Sonderzeichen werden für XML maskiert",
+      "eingabe": {
+        "titel": "Größe & <Form>",
+        "absaetze": [
+          "a < b & c > d"
+        ],
+        "dateiname": "helfer-selbsttest-zeichen"
+      },
+      "erwartet": {
+        "ok": true,
+        "enthaelt": [
+          "helfer-selbsttest-zeichen.docx",
+          "Größe &amp; &lt;Form&gt;",
+          "a &lt; b &amp; c &gt; d"
+        ]
+      }
+    },
+    {
+      "name": "Umbruch und Tab werden Word-Elemente, Steuerzeichen entfallen",
+      "eingabe": {
+        "titel": "Zeilen",
+        "absaetze": [
+          "eins\nzwei\tdrei\u0007vier\fende"
+        ],
+        "dateiname": "helfer-selbsttest-zeilen.docx"
+      },
+      "erwartet": {
+        "ok": true,
+        "enthaelt": [
+          ">eins<",
+          "<w:br",
+          ">zwei<",
+          "<w:tab",
+          ">dreivier<",
+          ">ende<"
+        ]
+      }
+    },
+    {
+      "name": "Nur Titel, Dateiname aus dem Titel gebildet",
+      "eingabe": {
+        "titel": "Helfer-Selbsttest: nur Titel.docx"
+      },
+      "erwartet": {
+        "ok": true,
+        "enthaelt": [
+          "Helfer-Selbsttest nur Titel.docx",
+          "0 Absätze"
+        ]
+      }
+    },
+    {
+      "name": "Fehler: Titel fehlt",
+      "eingabe": {
+        "absaetze": [
+          "Text"
+        ]
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Titel leer",
+      "eingabe": {
+        "titel": "   "
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Titel ist kein Text",
+      "eingabe": {
+        "titel": 5
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Absätze sind keine Liste",
+      "eingabe": {
+        "titel": "A",
+        "absaetze": "Text"
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Absatz ist kein Text",
+      "eingabe": {
+        "titel": "A",
+        "absaetze": [
+          1
+        ]
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Dateiname mit Pfad",
+      "eingabe": {
+        "titel": "A",
+        "dateiname": "../a.docx"
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: Dateiname endet mit Punkt",
+      "eingabe": {
+        "titel": "A",
+        "dateiname": "bericht."
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: unbekannte Angabe",
+      "eingabe": {
+        "titel": "A",
+        "absatz": "Text"
+      },
+      "erwartet": {
+        "ok": false
+      }
+    },
+    {
+      "name": "Fehler: geerbter Name als Angabe",
+      "eingabe": {
+        "titel": "A",
+        "constructor": "Text"
+      },
+      "erwartet": {
+        "ok": false
+      }
+    }
+  ]
+}
