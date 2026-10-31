@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -318,7 +319,9 @@ fun PromptLoeschenFrage(vm: AppViewModel) {
  * Eingabe eines neuen oder zu bearbeitenden Prompts als ganzer Bildschirm: eintippen oder einsprechen, KI-Knopf formuliert in
  * gutes Deutsch (rückgängig machbar), Diskette speichert. Eine Ebene über der ganzen App (in [JarvisApp]), kein Dialogfenster:
  * Das legte Android bei randloser App zu hoch an, die Knöpfe unten lagen außerhalb des Bildschirms (Almanach jetpack-compose 8.9).
+ * Die Tastatur öffnet nur der eigene Knopf: Frank spricht fast immer ein, ein Tipp in den Text setzt bloß die Schreibmarke.
  */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun PromptEbene(vm: AppViewModel) {
     if (!vm.promptNeuOffen && vm.promptBearbeitet == null) return
@@ -342,7 +345,27 @@ fun PromptEbene(vm: AppViewModel) {
         LaunchedEffect(vm.promptText) { if (feld.text != vm.promptText) feld = TextFieldValue(vm.promptText, TextRange(vm.promptText.length)) }
         val fokus = remember { FocusRequester() }
         LaunchedEffect(Unit) { fokus.requestFocus() }
+        var tastatur by remember { mutableStateOf(false) }
+        val fokusVerwalter = androidx.compose.ui.platform.LocalFocusManager.current
+        val tastaturSteuerung = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+        val ablauf = rememberCoroutineScope()
+        // Die Sperre greift erst bei der nächsten Eingabesitzung, deshalb den Fokus einmal abgeben und neu setzen.
+        val sitzungNeu: suspend () -> Unit = {
+            fokusVerwalter.clearFocus()
+            androidx.compose.runtime.withFrameNanos { }
+            fokus.requestFocus()
+        }
+        val tastaturOffen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        var warOffen by remember { mutableStateOf(false) }
+        // Von Hand zugeklappt: Der nächste Tipp in den Text öffnet sie nicht wieder.
+        LaunchedEffect(tastaturOffen) {
+            if (tastaturOffen) warOffen = true
+            else if (warOffen) { warOffen = false; tastatur = false; sitzungNeu() }
+        }
         // Nur eigene Textänderungen ins ViewModel: Ein Tastatur-Update mit dem alten Text überschriebe sonst die gerade gesetzte KI-Fassung.
+        androidx.compose.ui.platform.InterceptPlatformTextInput(
+            interceptor = { anfrage, weiter -> if (tastatur) weiter.startInputMethod(anfrage) else kotlinx.coroutines.awaitCancellation() },
+        ) {
         BasicTextField(feld, { if (it.text != feld.text) vm.promptText = it.text; feld = it },
             Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
             textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
@@ -352,6 +375,7 @@ fun PromptEbene(vm: AppViewModel) {
                     inhalt()
                 }
             })
+        }
         if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Kern(28.dp, f.primaer, aktiv = true)
             Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
@@ -362,6 +386,10 @@ fun PromptEbene(vm: AppViewModel) {
         } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
                 vm.promptMikrofonTippen()
+            }
+            Rund(Icons.Rounded.Keyboard, if (tastatur) "Tastatur schließen" else "Tastatur öffnen", if (tastatur) f.primaer else f.text) {
+                if (tastatur) tastaturSteuerung?.hide()
+                else ablauf.launch { tastatur = true; sitzungNeu(); tastaturSteuerung?.show() }
             }
             if (vm.promptVorKi != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vm.promptKiRueckgaengig() }
             else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
