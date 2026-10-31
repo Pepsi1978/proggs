@@ -25,13 +25,13 @@ import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Companion.prozent
 import de.frank.jarvis.ui.theme.LocalFarben
 
-/** Reiter „Kontingente“: je Anbieter die Limits mit Rest, Zurücksetzen in deutscher Zeit und Tempo. */
+/** Reiter „Kontingente“: je Anbieter die Limits mit Verbrauch, Zurücksetzen in deutscher Zeit und Tempo. */
 @Composable
 internal fun KontingenteReiter(vm: AppViewModel) {
     val f = LocalFarben.current
     LaunchedEffect(Unit) { vm.kontingenteAbfragen() }
     var anmelden by rememberSaveable { mutableStateOf<String?>(null) }
-    Text("Wie viel deiner Abos noch übrig ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.",
+    Text("Wie viel deiner Abos verbraucht ist und wann es zurückgesetzt wird, alle Zeiten in deutscher Zeit. Jarvis behält das im Blick und meldet sich, wenn ein Limit vor dem Zurücksetzen leer wäre.",
         color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 4.dp))
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
@@ -39,15 +39,16 @@ internal fun KontingenteReiter(vm: AppViewModel) {
     } else {
         val jetzt = System.currentTimeMillis() / 1000
         stand.anbieter.forEach { a ->
-            Bereich(a.titel) {
+            Bereich(a.titel, startOffen = true) {
                 if (a.konto.isNotEmpty()) Text(a.konto, color = f.textSchwach, fontSize = 13.sp)
                 a.limits.forEach { l ->
                     val schnell = l.zuSchnell(jetzt)
+                    val genutzt = l.genutztJetzt(jetzt).coerceIn(0.0, 100.0)
                     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
                         Text(l.name, color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text("${prozent(l.uebrigJetzt(jetzt))} % übrig", color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        Text("${prozent(genutzt)} % verbraucht", color = if (schnell) f.gefahr else f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                         Box(Modifier.padding(top = 6.dp, bottom = 6.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.flaecheStark)) {
-                            Box(Modifier.fillMaxWidth((l.genutztJetzt(jetzt) / 100).toFloat().coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(if (schnell) f.gefahr else f.primaer))
+                            Box(Modifier.fillMaxWidth((genutzt / 100.0).toFloat().coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(if (schnell) f.gefahr else f.primaer))
                         }
                         Text(l.resetSatz(jetzt), color = f.text, fontSize = 14.sp)
                         l.tempoText(jetzt).takeIf { it.isNotEmpty() }?.let {

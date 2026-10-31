@@ -381,11 +381,11 @@ fun Karte(modifier: Modifier = Modifier, toenung: Color? = null, inhalt: @Compos
     Column(modifier.fillMaxWidth().glas(f, toenung = toenung).padding(18.dp), content = inhalt)
 }
 
-/** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt; mit [aufklappbar] = false immer offen. */
+/** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt (oder offen mit [startOffen]); mit [aufklappbar] = false immer offen. */
 @Composable
-fun Bereich(titel: String, aufklappbar: Boolean = true, inhalt: @Composable ColumnScope.() -> Unit) {
+fun Bereich(titel: String, aufklappbar: Boolean = true, startOffen: Boolean = false, inhalt: @Composable ColumnScope.() -> Unit) {
     val f = LocalFarben.current
-    var offen by androidx.compose.runtime.saveable.rememberSaveable(titel) { mutableStateOf(!aufklappbar) }
+    var offen by androidx.compose.runtime.saveable.rememberSaveable(titel, startOffen) { mutableStateOf(!aufklappbar || startOffen) }
     val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
     Column(Modifier.fillMaxWidth().glas(f)) {
         Row(
