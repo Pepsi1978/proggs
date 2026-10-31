@@ -54,9 +54,6 @@ struct ChatAnsicht: View {
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Capsule().fill(Farbe.glas(0.06)))
             }
-            RundKnopf(symbol: "trash", hilfe: "Gespräch löschen") {
-                GespraechsSpeicher.shared.loeschen(gespraech); steuerung.gespraech = nil; steuerung.bereich = .start
-            }
         }
         .padding(.horizontal, 28).padding(.top, 30).padding(.bottom, 12)
         .background(LinearGradient(colors: [Farbe.grund.opacity(0.7), .clear], startPoint: .top, endPoint: .bottom))

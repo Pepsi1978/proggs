@@ -13,6 +13,7 @@ struct HauptFenster: View {
                 switch steuerung.bereich {
                 case .start: StartAnsicht()
                 case .zentrale: ZentraleAnsicht()
+                case .ablage: AblageAnsicht()
                 case .gespraech:
                     if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { StartAnsicht() }
                 case .live: LiveAnsicht()
@@ -23,6 +24,9 @@ struct HauptFenster: View {
             .clipped()
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.18), value: steuerung.bereich)
+            Rectangle().fill(Farbe.linie).frame(width: 1)
+            RechteLeiste()
+                .frame(width: 92)
         }
         .background(JarvisHintergrund())
         .foregroundStyle(Farbe.text)
@@ -48,7 +52,7 @@ struct HauptFenster: View {
     }
 }
 
-/// Fenster-Tastenkürzel: ⌘N neues Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘1 Start, ⌘2 Zentrale.
+/// Fenster-Tastenkürzel: ⌘N und ⌘1 Start mit neuem Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘2 Zentrale, ⌘3 Ablage.
 private struct TastenKuerzel: View {
     @State private var steuerung = AppSteuerung.shared
     var body: some View {
@@ -57,8 +61,9 @@ private struct TastenKuerzel: View {
             Button("") { AppSteuerung.shared.live() }.keyboardShortcut("l", modifiers: .command)
             Button("") { AppSteuerung.shared.sprechen() }.keyboardShortcut("d", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .einstellungen }.keyboardShortcut(",", modifiers: .command)
-            Button("") { AppSteuerung.shared.bereich = .start }.keyboardShortcut("1", modifiers: .command)
+            Button("") { AppSteuerung.shared.startOeffnen() }.keyboardShortcut("1", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .zentrale }.keyboardShortcut("2", modifiers: .command)
+            Button("") { AppSteuerung.shared.bereich = .ablage }.keyboardShortcut("3", modifiers: .command)
         }
         // Im Prompt-Editor würden sie den Bereich unsichtbar darunter wechseln.
         .disabled(steuerung.promptBearbeiten != nil)
@@ -112,21 +117,23 @@ struct Seitenleiste: View {
             .padding(.top, 34)
             .padding(.horizontal, 6)
 
-            Button { steuerung.neuesGespraech() } label: {
-                HStack {
-                    Image(systemName: "plus.bubble.fill")
-                    Text("Neues Gespräch").font(.jarvis(14, .semibold))
-                    Spacer()
-                    Text("⌘N").font(.jarvis(11, .medium)).foregroundStyle(Color.black.opacity(0.55))
-                }
-                .foregroundStyle(Color.black)
-                .padding(.horizontal, 14).padding(.vertical, 11)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.akzent))
-            }
-            .buttonStyle(.plain)
-
             VStack(spacing: 2) {
-                ForEach([Bereich.start, .zentrale, .einstellungen]) { b in
+                // „Start“ beginnt ein neues Gespräch und öffnet unten die Sprechblase.
+                Button { steuerung.startOeffnen() } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: Bereich.start.symbol).font(.system(size: 13, weight: .semibold)).frame(width: 20)
+                        Text(Bereich.start.titel).font(.jarvis(14, .semibold))
+                        Spacer()
+                        Text("⌘N").font(.jarvis(11, .medium)).foregroundStyle(Color.black.opacity(0.55))
+                    }
+                    .foregroundStyle(Color.black)
+                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.akzent))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 4)
+                ForEach([Bereich.zentrale, .ablage, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
                 }
                 // Der Rückweg zu einem laufenden Gespräch; gestartet wird Live aus der Startblase.
@@ -197,13 +204,90 @@ struct Seitenleiste: View {
 
             HStack(spacing: 10) {
                 RundKnopf(symbol: design.modus.symbol, hilfe: design.hilfe, groesse: 30) { design.weiter() }
-                Text("Jarvis für macOS \(AppInfo.version)").font(.jarvis(10)).foregroundStyle(Farbe.text3)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Jarvis für macOS \(AppInfo.version)")
+                    Text("Build \(AppInfo.stand) Uhr")
+                }
+                .font(.jarvis(10)).foregroundStyle(Farbe.text3)
                 Spacer()
             }
             .padding(.bottom, 12).padding(.leading, 2)
         }
         .padding(.horizontal, 14)
         .background(Farbe.tiefe(0.22))
+    }
+}
+
+/// Die feste Leiste rechts, nach dem Schwebestapel des Handys: Neue Session, Papierkorb, ein freier Platz, Nachtrag, Programmierung. Immer sichtbar, ohne Einklappen.
+struct RechteLeiste: View {
+    @State private var steuerung = AppSteuerung.shared
+    @State private var loeschenZiel: Gespraech?
+    @State private var sessionBlitz = false
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Spacer()
+            RechterKnopf(symbol: "plus.bubble.fill", titel: "Neue Session", leuchtet: sessionBlitz) {
+                steuerung.neueSession()
+                sessionBlitz = true
+                Task { try? await Task.sleep(for: .milliseconds(450)); sessionBlitz = false }
+            }
+            RechterKnopf(symbol: "trash.fill", titel: "Papierkorb", hilfe: "Gespräch löschen", an: !(steuerung.gespraech?.nachrichten.isEmpty ?? true)) {
+                loeschenZiel = steuerung.gespraech
+            }
+            Color.clear.frame(height: 24)
+            RechterKnopf(symbol: "plus", titel: "Nachtrag", hilfe: steuerung.nachtragMoeglich ? "Nachtrag in die Programmier-Sitzung dieses Gesprächs" : "Nur in einem Programmiergespräch", leuchtet: steuerung.nachtragAktiv, an: steuerung.nachtragMoeglich) {
+                steuerung.nachtragUmschalten()
+            }
+            RechterKnopf(symbol: "chevron.left.forwardslash.chevron.right", titel: "Programmierung", hilfe: "Neuer Programmierauftrag", leuchtet: steuerung.programmiererAktiv) {
+                steuerung.programmiererUmschalten()
+            }
+        }
+        .padding(.horizontal, 6).padding(.bottom, 22)
+        .frame(maxHeight: .infinity)
+        .background(Farbe.tiefe(0.22))
+        .alert("Gespräch löschen?", isPresented: Binding(get: { loeschenZiel != nil }, set: { if !$0 { loeschenZiel = nil } }), presenting: loeschenZiel) { g in
+            Button("Löschen", role: .destructive) {
+                // Das Ziel steht seit dem Klick fest: Hat das Gespräch inzwischen gewechselt, bleibt die offene Ansicht stehen.
+                GespraechsSpeicher.shared.loeschen(g)
+                if steuerung.gespraech === g {
+                    steuerung.gespraech = nil
+                    if steuerung.bereich == .gespraech { steuerung.bereich = .start }
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { _ in
+            Text("Möchtest du dieses Gespräch wirklich löschen? Es wird endgültig entfernt und erscheint nicht mehr unter Gespräche.")
+        }
+    }
+}
+
+private struct RechterKnopf: View {
+    let symbol: String
+    let titel: String
+    var hilfe: String?
+    var leuchtet = false
+    var an = true
+    let aktion: () -> Void
+    @State private var schwebt = false
+
+    var body: some View {
+        Button(action: aktion) {
+            VStack(spacing: 4) {
+                Image(systemName: symbol).font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(leuchtet ? Color.black : Farbe.text2)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(leuchtet ? AnyShapeStyle(Farbe.gruen) : AnyShapeStyle(Farbe.glas(schwebt && an ? 0.13 : 0.07))))
+                Text(titel).font(.jarvis(10, .medium)).foregroundStyle(Farbe.text2).lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!an)
+        .opacity(an ? 1 : 0.4)
+        .help(hilfe ?? titel)
+        .onHover { schwebt = $0 }
     }
 }
 

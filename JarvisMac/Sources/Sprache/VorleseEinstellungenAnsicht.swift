@@ -5,7 +5,6 @@ import SwiftUI
 struct VorleseEinstellungenAnsicht: View {
     @State private var v = VorleseEinstellungen.shared
     @State private var stimme = Stimme.shared
-    @State private var probeLaeuft: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -75,56 +74,27 @@ struct VorleseEinstellungenAnsicht: View {
                         KapselKnopf(symbol: "arrow.clockwise", titel: "Aus dem Alibaba-Konto laden") { Task { await v.klonStimmenLaden() } }
                     }
                 }
-                Text("Stern = Favorit (steht oben). Rechtsklick geht auch. ▶ spielt eine Hörprobe.")
-                    .font(.jarvis(11)).foregroundStyle(Farbe.text3)
                 if let f = v.klonFehler, v.anbieter == .qwenKlon { Text(f).font(.jarvis(12)).foregroundStyle(Farbe.rot) }
                 let liste = v.stimmenListe(v.anbieter)
                 if liste.isEmpty {
                     Text(v.anbieter == .qwenKlon ? "Noch keine geklonte Stimme geladen – Alibaba-Schlüssel eintragen und laden."
                          : "Keine Stimmen.").font(.jarvis(13)).foregroundStyle(Farbe.text2)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(liste) { st in zeile(st) }
+                    let gewaehlt = v.stimme(v.anbieter)
+                    let favorit = v.favoriten.contains(gewaehlt)
+                    HStack(spacing: 10) {
+                        // Favoriten stehen oben im Menü.
+                        Picker("", selection: Binding(get: { v.stimme(v.anbieter) }, set: { v.setzeStimme($0, fuer: v.anbieter) })) {
+                            ForEach(liste) { st in
+                                Text("\(v.favoriten.contains(st.id) ? "★ " : "")\(st.name) · \(st.geschlecht == .weiblich ? "weiblich" : "männlich")").tag(st.id)
+                            }
                         }
+                        .labelsHidden().frame(minWidth: 0, maxWidth: .infinity)
+                        RundKnopf(symbol: favorit ? "star.fill" : "star", hilfe: favorit ? "Favorit entfernen" : "Als Favorit markieren", aktiv: favorit, farbe: Farbe.gold, groesse: 30) { v.favoritUmschalten(gewaehlt) }
+                        RundKnopf(symbol: stimme.spricht ? "speaker.wave.2.fill" : "play.fill", hilfe: "Hörprobe", groesse: 30) { Task { await stimme.probe(gewaehlt) } }
                     }
-                    .frame(maxHeight: 340)
                 }
             }
-        }
-    }
-
-    private func zeile(_ st: VorleseStimme) -> some View {
-        let gewaehlt = v.stimme(v.anbieter) == st.id
-        let favorit = v.favoriten.contains(st.id)
-        return HStack(spacing: 10) {
-            Button { v.favoritUmschalten(st.id) } label: {
-                Image(systemName: favorit ? "star.fill" : "star").foregroundStyle(favorit ? Color.yellow : Farbe.text3)
-            }
-            .buttonStyle(.plain).help(favorit ? "Favorit entfernen" : "Als Favorit markieren")
-            VStack(alignment: .leading, spacing: 1) {
-                Text(st.name).font(.jarvis(13, gewaehlt ? .semibold : .regular)).foregroundStyle(Farbe.text)
-                Text(st.geschlecht == .weiblich ? "weiblich" : "männlich").font(.jarvis(10)).foregroundStyle(Farbe.text3)
-            }
-            Spacer()
-            if gewaehlt { Image(systemName: "checkmark.circle.fill").foregroundStyle(Farbe.gruen) }
-            Button {
-                probeLaeuft = st.id
-                Task { await stimme.probe(st.id); if probeLaeuft == st.id { probeLaeuft = nil } }
-            } label: {
-                Image(systemName: probeLaeuft == st.id && stimme.spricht ? "speaker.wave.2.fill" : "play.circle")
-                    .foregroundStyle(Farbe.haupt)
-            }
-            .buttonStyle(.plain).help("Hörprobe")
-        }
-        .padding(.horizontal, 10).padding(.vertical, 7)
-        .background(RoundedRectangle(cornerRadius: 9).fill(Farbe.glas(gewaehlt ? 0.09 : 0.02)))
-        .contentShape(Rectangle())
-        .onTapGesture { v.setzeStimme(st.id, fuer: v.anbieter) }
-        .contextMenu {
-            Button(favorit ? "Favorit entfernen" : "Als Favorit markieren") { v.favoritUmschalten(st.id) }
-            Button("Hörprobe") { Task { await stimme.probe(st.id) } }
-            Button("Auswählen") { v.setzeStimme(st.id, fuer: v.anbieter) }
         }
     }
 

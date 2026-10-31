@@ -8,10 +8,10 @@ struct JarvisApp: App {
     var body: some Scene {
         Window("Jarvis", id: "haupt") {
             HauptFenster()
-                .frame(minWidth: 980, minHeight: 640)
+                .frame(minWidth: 1060, minHeight: 640)
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 1360, height: 820)
 
         MenuBarExtra("Jarvis", systemImage: "waveform.circle.fill") {
             MenueLeiste()

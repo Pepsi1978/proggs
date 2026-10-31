@@ -171,5 +171,5 @@ extension MacWerkzeuge {
         },
     ]
 
-    static var alleLokal: [LokalesWerkzeug] { alle + weitere + RepoWerkzeuge.alle + AgentenKanal.werkzeuge }
+    static var alleLokal: [LokalesWerkzeug] { alle + weitere + MacDialoge.werkzeuge + RepoWerkzeuge.alle + AgentenKanal.werkzeuge }
 }

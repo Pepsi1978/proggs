@@ -64,6 +64,25 @@ enum AufgabenText {
     """
 }
 
+/// Die festen Vorspänne der rechten Leiste, wörtlich wie am Handy (ProgrammiererVorlage.kt, NACHTRAG_VORSPANN).
+enum ProgrammierVorspann {
+    static let auftrag = "Übergib bitte folgende Aufgabe an den Programmierer:"
+    static let nachtrag = "Nachtrag:"
+
+    private static func vorn(_ t: String) -> String { String(t.drop { $0.isWhitespace }) }
+    private static func ohne(_ vorspann: String, _ t: String) -> String {
+        let v = vorn(t)
+        return v.hasPrefix(vorspann) ? vorn(String(v.dropFirst(vorspann.count))) : t
+    }
+
+    static func hatAuftrag(_ t: String) -> Bool { vorn(t).hasPrefix(auftrag) }
+    static func hatNachtrag(_ t: String) -> Bool { vorn(t).hasPrefix(nachtrag) }
+    static func ohneAuftrag(_ t: String) -> String { ohne(auftrag, t) }
+    static func ohneNachtrag(_ t: String) -> String { ohne(nachtrag, t) }
+    static func mitAuftrag(_ t: String) -> String { "\(auftrag) \(t.trimmingCharacters(in: .whitespacesAndNewlines))" }
+    static func mitNachtrag(_ t: String) -> String { "\(nachtrag) \(vorn(t))" }
+}
+
 /// „Ich höre zu …“ mit Pegel, danach „Schreibe mit …“; für die Blase und jedes Textfeld mit Diktat.
 struct DiktatStatus: View {
     var groesse: CGFloat
@@ -92,7 +111,7 @@ struct DiktatKnopf: View {
     @State private var meldung = ""
     @State private var weg = Merker()
 
-    /// Überlebt das Neuzeichnen: Ist die Ansicht fort, zeigt das Feld nichts mehr, und der fertige Text geht an die nächste Blase.
+    /// Überlebt das Neuzeichnen: Ist die Ansicht fort, zeigt das Feld nichts mehr, und der fertige Text geht in die Blase.
     private final class Merker { var ansichtFort = false }
 
     var body: some View {
@@ -148,7 +167,7 @@ struct DiktatKnopf: View {
     private func uebernehmen(_ erkannt: String) {
         if weg.ansichtFort {
             let s = AppSteuerung.shared
-            s.blasenRest = AufgabenText.anhaengen(s.blasenRest, erkannt)
+            s.eingabeText = AufgabenText.anhaengen(s.eingabeText, erkannt)
         } else {
             text = AufgabenText.anhaengen(text, erkannt)
         }

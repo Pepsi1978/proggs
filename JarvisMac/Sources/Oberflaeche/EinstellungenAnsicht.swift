@@ -1,4 +1,3 @@
-import AVFoundation
 import SwiftUI
 
 struct EinstellungenAnsicht: View {
@@ -9,44 +8,27 @@ struct EinstellungenAnsicht: View {
     private let reiterListe: [(String, String, String)] = [
         ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
         ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"),
-        ("programmierung", "Programmierung", "chevron.left.forwardslash.chevron.right"), ("ablage", "Ablage", "tray.full.fill"), ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
+        ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
     ]
 
-    /// Diese vier bringen Kopf und Scrollen selbst mit und brauchen die Breite: Daneben schrumpft die Liste auf ihre Symbole.
-    private var eigenerKopf: Bool { ["programmierung", "ablage", "gedaechtnis", "aktivitaet"].contains(reiter) }
-
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            if eigenerKopf {
-                VStack(spacing: 6) {
-                    ForEach(reiterListe, id: \.0) { r in
-                        RundKnopf(symbol: r.2, hilfe: r.1, aktiv: reiter == r.0, groesse: 36) { reiter = r.0 }
-                    }
-                    Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Einstellungen").font(.jarvis(24, .bold)).padding(.bottom, 14).padding(.leading, 8)
+                ForEach(reiterListe, id: \.0) { r in
+                    LeistenEintrag(symbol: r.2, titel: r.1, aktiv: reiter == r.0) { reiter = r.0 }
                 }
-                .frame(width: 64)
-                .padding(.top, 40)
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Einstellungen").font(.jarvis(24, .bold)).padding(.bottom, 14).padding(.leading, 8)
-                    ForEach(reiterListe, id: \.0) { r in
-                        LeistenEintrag(symbol: r.2, titel: r.1, aktiv: reiter == r.0) { reiter = r.0 }
-                    }
-                    Spacer()
-                }
-                .frame(width: 230)
-                .padding(.top, 40).padding(.horizontal, 18)
+                Spacer()
             }
+            .frame(width: 230)
+            .padding(.top, 40).padding(.horizontal, 18)
             Group {
-                if eigenerKopf {
-                    switch reiter {
-                    case "programmierung": ProgrammierungAnsicht()
-                    case "ablage": AblageAnsicht()
-                    case "gedaechtnis": GedaechtnisAnsicht()
-                    default: AktivitaetAnsicht()
-                    }
-                } else {
+                switch reiter {
+                // Diese beiden bringen Kopf und Scrollen selbst mit.
+                case "gedaechtnis": GedaechtnisAnsicht()
+                case "aktivitaet": AktivitaetAnsicht()
+                default:
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
                             switch reiter {
@@ -55,7 +37,7 @@ struct EinstellungenAnsicht: View {
                             case "stimme": stimme
                             case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
                             case "live": live
-                            case "mac": mac
+                            case "mac": MacRechteAnsicht()
                             case "konten": KontenAnsicht()
                             default: ueber
                             }
@@ -163,62 +145,24 @@ struct EinstellungenAnsicht: View {
                 zeile("Bei Stille beenden", "Beendet das Live-Gespräch, wenn so lange niemand spricht. GPT-Live kostet auch bei Stille weiter.") {
                     Picker("", selection: $einst.liveStilleMinuten) { ForEach(LiveOptionen.stilleEnde, id: \.minuten) { Text($0.name).tag($0.minuten) } }.labelsHidden().frame(maxWidth: 260)
                 }
-                zeile("OpenAI-Modell") {
-                    Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                }
-                zeile("OpenAI-Stimme") {
-                    Picker("", selection: $einst.liveStimmeOpenAI) {
-                        ForEach(einst.liveModellOpenAI == "gpt-live-1" ? LiveOptionen.liveStimmen : LiveOptionen.realtimeStimmen, id: \.id) { Text($0.name).tag($0.id) }
-                    }.labelsHidden().frame(maxWidth: 260)
-                }
-                zeile("Gemini-Modell") {
-                    Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                }
-                zeile("Gemini-Stimme") {
-                    Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                }
-            }
-        }
-    }
-
-    private var mac: some View {
-        VStack(spacing: 18) {
-            GlasKarte {
-                VStack(alignment: .leading, spacing: 8) {
-                    KartenTitel(symbol: "bolt.shield.fill", titel: "Vollzugriff", farbe: Farbe.warnung)
-                    zeile("Jarvis darf am Mac alles", "Befehle, Programme, Dateien, Tastatur, Bildschirm und Terminal ohne Rückfrage – wie „Bypass Permissions“. Aus = nur Programme und Adressen öffnen, Mitteilungen, Status.") {
-                        Toggle("", isOn: $einst.vollzugriff).toggleStyle(.switch)
+                if einst.liveAnbieter == "gemini" {
+                    zeile("Gemini-Modell") {
+                        Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
+                    }
+                    zeile("Gemini-Stimme") {
+                        Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
+                    }
+                } else {
+                    zeile("OpenAI-Modell") {
+                        Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
+                    }
+                    zeile("OpenAI-Stimme") {
+                        Picker("", selection: $einst.liveStimmeOpenAI) {
+                            ForEach(einst.liveModellOpenAI == "gpt-live-1" ? LiveOptionen.liveStimmen : LiveOptionen.realtimeStimmen, id: \.id) { Text($0.name).tag($0.id) }
+                        }.labelsHidden().frame(maxWidth: 260)
                     }
                 }
             }
-            GlasKarte {
-                VStack(alignment: .leading, spacing: 10) {
-                    KartenTitel(symbol: "checkmark.shield.fill", titel: "Rechte von macOS", farbe: Farbe.gruen)
-                    Text("Einmal erteilen, dann bleibt es (Jarvis ist fest signiert).").font(.jarvis(12)).foregroundStyle(Farbe.text2)
-                    RechtZeile(titel: "Mikrofon", text: "Für Weckwort, Diktat und Live.", status: Self.mikrofonStatus) {
-                        AVCaptureDevice.requestAccess(for: .audio) { _ in }
-                    } oeffnen: { Self.oeffne("Privacy_Microphone") }
-                    RechtZeile(titel: "Spracherkennung", text: "Für die Erkennung direkt auf dem Mac.", status: nil, anfragen: nil) { Self.oeffne("Privacy_SpeechRecognition") }
-                    RechtZeile(titel: "Bedienungshilfen", text: "Damit Jarvis tippen und klicken kann.", status: AXIsProcessTrusted() ? "erteilt" : "fehlt") {
-                        let opt = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-                        _ = AXIsProcessTrustedWithOptions(opt)
-                    } oeffnen: { Self.oeffne("Privacy_Accessibility") }
-                    RechtZeile(titel: "Bildschirmaufnahme", text: "Damit Jarvis deinen Bildschirm ansehen kann.", status: CGPreflightScreenCaptureAccess() ? "erteilt" : "fehlt") {
-                        _ = CGRequestScreenCaptureAccess()
-                    } oeffnen: { Self.oeffne("Privacy_ScreenCapture") }
-                    RechtZeile(titel: "Automation", text: "Terminal, ChatGPT, System Events steuern – fragt macOS beim ersten Mal selbst.", status: nil, anfragen: nil) {
-                        Self.oeffne("Privacy_Automation")
-                    }
-                }
-            }
-        }
-    }
-
-    static var mikrofonStatus: String {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized: return "erteilt"
-        case .denied, .restricted: return "verweigert"
-        default: return "offen"
         }
     }
 
@@ -233,7 +177,7 @@ struct EinstellungenAnsicht: View {
                     JarvisKugel(pegel: 0, zustand: .ruhe, groesse: 70)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Jarvis für macOS").font(.jarvis(20, .bold))
-                        Text("Version \(AppInfo.version) · Stand \(AppInfo.stand)").font(.jarvis(13)).foregroundStyle(Farbe.text2)
+                        Text("Version \(AppInfo.version) · Build \(AppInfo.stand) Uhr").font(.jarvis(13)).foregroundStyle(Farbe.text2)
                         Text("Handy-Jarvis: \(AppSteuerung.shared.handyVerbunden ? "verbunden (\(AppSteuerung.shared.handyVersion))" : "nicht erreichbar")")
                             .font(.jarvis(13)).foregroundStyle(Farbe.text2)
                     }
@@ -262,34 +206,6 @@ struct StufenWahl: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-}
-
-struct RechtZeile: View {
-    let titel: String
-    let text: String
-    let status: String?
-    let anfragen: (() -> Void)?
-    let oeffnen: () -> Void
-
-    init(titel: String, text: String, status: String?, anfragen: (() -> Void)?, oeffnen: @escaping () -> Void) {
-        self.titel = titel; self.text = text; self.status = status; self.anfragen = anfragen; self.oeffnen = oeffnen
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: status == "erteilt" ? "checkmark.circle.fill" : "circle.dashed")
-                .foregroundStyle(status == "erteilt" ? Farbe.gruen : Farbe.text3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titel).font(.jarvis(13, .semibold))
-                Text(text).font(.jarvis(11)).foregroundStyle(Farbe.text2)
-            }
-            Spacer()
-            if let status { Text(status).font(.jarvis(11, .medium)).foregroundStyle(Farbe.text3) }
-            if let anfragen { Button("Anfragen", action: anfragen) }
-            Button("Öffnen", action: oeffnen)
-        }
-        .padding(.vertical, 4)
     }
 }
 

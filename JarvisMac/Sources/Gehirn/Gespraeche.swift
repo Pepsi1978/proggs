@@ -23,7 +23,7 @@ struct Nachricht: Codable, Identifiable, Hashable {
 
 private struct GespraechsDatei: Codable {
     var id: UUID; var titel: String; var erstellt: Date; var geaendert: Date
-    var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?; var projekt: String?
+    var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?; var projekt: String?; var auftragId: String?
 }
 
 /// Eine eingelesene Datei, fertig entschlüsselt: Das teure JSON läuft im Hintergrund, angelegt wird das Gespräch auf dem Hauptfaden.
@@ -48,6 +48,8 @@ final class Gespraech: Identifiable {
     var gelerntBis = 0
     /// Projekt, zu dem das Gespräch gehört (nil = normales Gespräch).
     var projekt: String?
+    /// Nummer des Programmierauftrags, der aus diesem Gespräch gestartet wurde: das Ziel für „Nachtrag“.
+    var auftragId: String?
     /// Gespräch mit Programmierauftrag – steht im Leistenreiter „Programmierung“. Gemerkt statt gerechnet: Die Seitenleiste
     /// liest es für alle Gespräche und würde sonst bei jedem gestreamten Textstück neu zeichnen.
     private(set) var istProgrammierung = false
@@ -83,14 +85,14 @@ final class Gespraech: Identifiable {
         guard !nachrichten.isEmpty, !geloescht else { return }
         geaendert = Date()
         GespraechsSpeicher.shared.aufnehmen(self)
-        let (id, titel, erstellt, geaendert, nachrichten, verlauf, kontext, gelerntBis, projekt, url) =
-            (self.id, self.titel, self.erstellt, self.geaendert, self.nachrichten, self.verlauf, self.kontext, self.gelerntBis, self.projekt, dateiURL)
+        let (id, titel, erstellt, geaendert, nachrichten, verlauf, kontext, gelerntBis, projekt, auftragId, url) =
+            (self.id, self.titel, self.erstellt, self.geaendert, self.nachrichten, self.verlauf, self.kontext, self.gelerntBis, self.projekt, self.auftragId, dateiURL)
         // Das Gespräch samt Bildern kodieren und schreiben dauert: nicht auf dem Hauptfaden, sonst stocken Oberfläche und Pegel.
         let nr = Self.stand.neu(id)
         Self.schreiber.async {
             guard Self.stand.aktuell(id, nr) else { return }
             let d = GespraechsDatei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
-                                    verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt)
+                                    verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt, auftragId: auftragId)
             if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: url, options: .atomic) }
         }
     }
@@ -99,7 +101,7 @@ final class Gespraech: Identifiable {
         let d = gelesen.datei
         id = d.id; titel = d.titel; erstellt = d.erstellt; geaendert = d.geaendert
         nachrichten = d.nachrichten; verlauf = gelesen.verlauf
-        kontext = d.kontext; gelerntBis = d.gelerntBis ?? 0; projekt = d.projekt
+        kontext = d.kontext; gelerntBis = d.gelerntBis ?? 0; projekt = d.projekt; auftragId = d.auftragId
         programmierungPruefen()
     }
 

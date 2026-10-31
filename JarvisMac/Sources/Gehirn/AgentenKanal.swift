@@ -17,7 +17,7 @@ final class AgentenKanal {
     private static let zeitlimit = 600.0
     private static let hoechstalter = 6.0 * 3600
     private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
-                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten"]
+                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog"]
     private let eingangDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-eingang.json")
     private let verlaufDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-verlauf.json")
 

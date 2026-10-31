@@ -7,7 +7,7 @@ installiert als `/Applications/Jarvis.app`, signiert mit „Frank Local Dev“ (
 Die Version steht in `Info.plist` in **zwei** Schlüsseln, die immer gleich sein müssen:
 `CFBundleVersion` und `CFBundleShortVersionString`, Form `1.0.0`. Pro Commit genau einmal die letzte Stelle erhöhen.
 Den Zeitstempel nie von Hand eintragen: `build.sh` setzt `BuildTimestamp` aus der echten Systemzeit
-(Platzhalter `__BUILD_TIMESTAMP__` bleibt in der Quelle). Die App zeigt beides in der Seitenleiste und unter Einstellungen → Über.
+(Platzhalter `__BUILD_TIMESTAMP__` bleibt in der Quelle). Die App zeigt beides unten in der linken Seitenleiste und unter Einstellungen → Über.
 
 ## Bauen und installieren
 ```bash

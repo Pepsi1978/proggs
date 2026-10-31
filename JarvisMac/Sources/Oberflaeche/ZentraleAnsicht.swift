@@ -41,7 +41,6 @@ final class ZentraleDaten {
 struct ZentraleAnsicht: View {
     @State private var daten = ZentraleDaten.shared
     @State private var steuerung = AppSteuerung.shared
-    @State private var anhang: Data?
     @State private var auswertungOffen = false
     @State private var neuLaeuft = false
     @State private var neuFehler = false
@@ -61,22 +60,10 @@ struct ZentraleAnsicht: View {
             VStack(spacing: 20) {
                 ZugangsHinweis()
                 macKarte
-                VStack(spacing: 10) {
-                    held
-                    schnellVerknuepfungen
-                }
-                .frame(maxWidth: 640)
-                HStack(alignment: .top, spacing: 18) {
-                    auswertungsKarte.frame(maxWidth: .infinity)
-                    listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
-                        .frame(width: 360)
-                }
-                HStack(alignment: .top, spacing: 18) {
-                    listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
-                        .frame(maxWidth: .infinity)
-                    listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)
-                        .frame(width: 360)
-                }
+                auswertungsKarte
+                listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
+                listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
+                listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 26)
@@ -87,38 +74,6 @@ struct ZentraleAnsicht: View {
             await daten.laden()
         }
     }
-
-    /// Kompakte Kopfzeile: Kugel links neben der Begrüßung, darunter das Eingabefeld.
-    private var held: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 22) {
-                Button { steuerung.kuerzelSprechen() } label: {
-                    KugelLive(groesse: 96)
-                }
-                .buttonStyle(.plain)
-                .help("Antippen zum Sprechen (⌥⌘J überall)")
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 10) {
-                        LivePunkt()
-                        Text(Self.gruss).font(.jarvis(30, .bold))
-                        .foregroundStyle(LinearGradient(colors: [Farbe.text, Farbe.haupt], startPoint: .leading, endPoint: .trailing))
-                    }
-                    Text(Self.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
-                }
-            }
-            EingabeBlase(gespraech: nil, anhang: $anhang, zweizeilig: true)
-        }
-    }
-
-    private var schnellVerknuepfungen: some View {
-        VStack(spacing: 8) {
-            ForEach(Self.vorschlaege, id: \.self) { v in
-                KapselKnopf(symbol: "arrow.turn.down.right", titel: v, voll: true) { steuerung.gespraech = nil; steuerung.sende(v) }
-            }
-        }
-    }
-
-    static let vorschlaege = ["Wie ist mein Tag?", "Was steht heute an?", "Wie habe ich geschlafen?", "Prüfe meine Updates"]
 
     static var datumZeile: String {
         let f = DateFormatter(); f.locale = Locale(identifier: "de_DE"); f.dateFormat = "EEEE, d. MMMM yyyy"
@@ -175,7 +130,7 @@ struct ZentraleAnsicht: View {
             VStack(alignment: .leading, spacing: 12) {
                 KartenTitel(symbol: symbol, titel: titel, farbe: farbe)
                 if let text {
-                    MarkdownText(text: Self.aufbereiten(text), groesse: 13)
+                    MarkdownText(text: Self.aufbereiten(text), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Text(daten.laedt ? "Lade …" : "Nicht verfügbar").font(.jarvis(13)).foregroundStyle(Farbe.text3)
                 }
