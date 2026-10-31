@@ -301,12 +301,19 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
     globale_skills()
     q = shlex.quote
     kennung = modell if "/" in modell else f"{anbieter}/{modell}"
-    # Am Mac legt configureProvider die Stufe im Varianten-Zustand von OpenCode ab; hier genügt der Startschalter.
-    stufe = f" --variant {q(effort)}" if effort and effort != "none" else ""
+    # Wie patchModelVariantState am Mac: Die Oberfläche von OpenCode kennt --variant nicht, die Stufe steht in ihrem Zustand.
+    if effort and effort != "none":
+        zustand = HOME / ".local" / "state" / "opencode" / "model.json"
+        try:
+            daten = json.loads(_lies(zustand) or "{}")
+        except ValueError:
+            daten = {}
+        daten.setdefault("variant", {})[kennung] = effort
+        _schreib(zustand, json.dumps(daten, ensure_ascii=False))
     return f'''export OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
 mkdir -p "$HOME/.local/share/opencode/log/stderr"
 FEHLER="$HOME/.local/share/opencode/log/stderr/opencode-stderr-$(date +%Y%m%d-%H%M%S)-$$.log"
-if [ -n "$PROMPT" ]; then opencode -m {q(kennung)}{stufe} --prompt "$PROMPT" 2>"$FEHLER"; else opencode -m {q(kennung)}{stufe} 2>"$FEHLER"; fi
+if [ -n "$PROMPT" ]; then opencode -m {q(kennung)} --prompt "$PROMPT" 2>"$FEHLER"; else opencode -m {q(kennung)} 2>"$FEHLER"; fi
 [ -s "$FEHLER" ] && echo "[OpenLauncher] Fehlerausgaben dieses Laufs: $FEHLER" || rm -f "$FEHLER"
 '''
 
