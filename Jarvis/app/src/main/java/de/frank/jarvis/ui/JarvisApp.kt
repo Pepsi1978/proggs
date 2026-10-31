@@ -236,10 +236,11 @@ private fun Leiste(vm: AppViewModel) {
         var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         var sucht by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
-            context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
+            if (z == de.frank.jarvis.fernsteuerung.Fernziel.SERVER) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
+            else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
                 .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
         }
-        if (auswahl) RechnerAuswahl({ auswahl = false }) { auswahl = false; oeffnen(it) }
+        if (auswahl) RechnerAuswahl(de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value.orEmpty(), { auswahl = false }) { auswahl = false; oeffnen(it) }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
                 if (sucht) return@antippen
@@ -250,10 +251,10 @@ private fun Leiste(vm: AppViewModel) {
                     when {
                         da.size > 1 -> auswahl = true
                         da.size == 1 -> oeffnen(da.first())
-                        else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac und Windows-PC antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
+                        else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
                     }
                 }
-            }.semantics { contentDescription = "Fernwartung Mac oder Windows, " + when (rechnerDa) { true -> "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
+            }.semantics { contentDescription = "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -269,21 +270,23 @@ private fun Leiste(vm: AppViewModel) {
     }
 }
 
-/** Mac und Windows-PC sind beide erreichbar: Frank wählt, wessen Bildschirm er sehen will. */
+/** Mehrere Rechner sind erreichbar: Frank wählt, wessen Bildschirm oder Konsole er sehen will. */
 @Composable
-private fun RechnerAuswahl(schliessen: () -> Unit, gewaehlt: (de.frank.jarvis.fernsteuerung.Fernziel) -> Unit) {
+private fun RechnerAuswahl(da: List<de.frank.jarvis.fernsteuerung.Fernziel>, schliessen: () -> Unit, gewaehlt: (de.frank.jarvis.fernsteuerung.Fernziel) -> Unit) {
     val f = LocalFarben.current
     androidx.compose.material3.AlertDialog(
         onDismissRequest = schliessen,
         containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
         title = { Text("Fernwartung") },
-        text = { Text("Mac und Windows-PC sind beide erreichbar. Welchen Bildschirm möchtest du sehen?") },
-        confirmButton = {
-            androidx.compose.material3.Button(onClick = { gewaehlt(de.frank.jarvis.fernsteuerung.Fernziel.WINDOWS) }) { Text("Windows") }
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Was möchtest du sehen?")
+                da.forEach { z ->
+                    androidx.compose.material3.Button(onClick = { gewaehlt(z) }, Modifier.fillMaxWidth()) { Text(z.titel) }
+                }
+            }
         },
-        dismissButton = {
-            androidx.compose.material3.Button(onClick = { gewaehlt(de.frank.jarvis.fernsteuerung.Fernziel.MAC) }) { Text("Mac") }
-        },
+        confirmButton = {},
     )
 }
 

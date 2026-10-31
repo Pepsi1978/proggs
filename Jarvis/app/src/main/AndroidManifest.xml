@@ -75,6 +75,7 @@
          (INSTALL_FAILED_MISSING_SPLIT). So geht kein nacktes adb install an der Installationsfrage vorbei. -->
     <application
         android:isSplitRequired="true"
+        android:networkSecurityConfig="@xml/netz_regeln"
         android:name=".JarvisApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/datensicherung_regeln"
@@ -96,6 +97,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Server-Konsole im Tunnel (OpenLauncherServer/web). Falten/Drehen ohne Neuaufbau, damit das Terminal bleibt. -->
+        <activity
+            android:name=".fernsteuerung.ServerKonsoleActivity"
+            android:exported="false"
+            android:label="Server-Konsole"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|density|uiMode" />
 
         <!-- Mac-Bildschirm live bedienen (Gegenstück: werkzeuge/mac-fernsteuerung). Falten/Drehen ohne Neuaufbau. -->
         <activity

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Klartext-HTTP nur zur Server-Konsole im WireGuard-Tunnel (der Tunnel verschlüsselt); überall sonst bleibt es verboten. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.8.0.1</domain>
+    </domain-config>
+</network-security-config>

@@ -5,7 +5,7 @@ set -euo pipefail
 BENUTZER=jarvis
 ZUHAUSE=/home/$BENUTZER
 REPO=$ZUHAUSE/proggs
-als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "$1"; }
+als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget
@@ -59,7 +59,9 @@ G'
 als 'mkdir -p ~/.ssh && chmod 700 ~/.ssh; [ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -C jarvis-server -f ~/.ssh/id_ed25519; ssh-keyscan -q github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts'
 als 'git config --global user.name "Jarvis Server"; git config --global user.email jarvis-server@users.noreply.github.com; git config --global pull.rebase true; git config --global init.defaultBranch main; git lfs install --skip-smudge >/dev/null'
 if [ ! -d "$REPO/.git" ]; then
-  if ! als "ssh -o BatchMode=yes -T git@github.com" 2>&1 | grep -q 'successfully authenticated'; then
+  # ssh -T endet bei GitHub auch im Erfolgsfall mit Code 1: Nur die Meldung zählt.
+  ANTWORT=$(als "ssh -o BatchMode=yes -T git@github.com" 2>&1 || true)
+  if ! grep -q 'successfully authenticated' <<<"$ANTWORT"; then
     echo "DEPLOY_KEY_FEHLT:"; cat "$ZUHAUSE/.ssh/id_ed25519.pub"; exit 3
   fi
   als "git clone --filter=blob:none --quiet git@github.com:Pepsi1978/proggs.git $REPO"

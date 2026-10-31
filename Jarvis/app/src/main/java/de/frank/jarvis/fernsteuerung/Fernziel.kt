@@ -9,9 +9,11 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 
 /** Rechner, deren Bildschirm Jarvis fernbedienen kann, mit ihrer Adresse im eigenen Tunnel (WireGuard). */
-enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String) {
+enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String, val port: Int = FernsteuerungActivity.PORT) {
     MAC("10.8.0.6", "Mac-Bildschirm", "Der Mac", "dem Mac"),
-    WINDOWS("10.8.0.2", "Windows-Bildschirm", "Der Windows-PC", "dem Windows-PC");
+    WINDOWS("10.8.0.2", "Windows-Bildschirm", "Der Windows-PC", "dem Windows-PC"),
+    /** Kein Bildschirm: Die Server-Konsole (OpenLauncherServer/web) öffnet [ServerKonsoleActivity] statt der Fernsteuerung. */
+    SERVER("10.8.0.1", "Server-Konsole", "Der Hostinger-Server", "dem Hostinger-Server", 8090);
 
     companion object {
         fun aus(name: String?): Fernziel = entries.firstOrNull { it.name == name } ?: MAC
@@ -30,9 +32,9 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
             entries.map { z ->
                 async(Dispatchers.IO) {
                     // Im Tunnel geht gelegentlich ein einzelner Verbindungsversuch verloren: einmal nachfassen.
-                    val erst = bereit(z, FernsteuerungActivity.PORT, wartezeitMs)
+                    val erst = bereit(z, z.port, wartezeitMs)
                     if (erst.ok) erst
-                    else bereit(z, FernsteuerungActivity.PORT, 4000).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
+                    else bereit(z, z.port, 4000).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
                 }
             }.map { it.await() }
         }

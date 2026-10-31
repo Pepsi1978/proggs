@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.AEADBadTagException
 
 /** Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]). */
-private val RECHNER = listOf("mac", "windows")
+private val RECHNER = listOf("mac", "windows", "server")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
@@ -374,7 +374,9 @@ class Einstellungen private constructor(context: Context) {
     var rechnerReihenfolge: List<String>
         get() = ((prefs.getString("rechner_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in RECHNER } + RECHNER).distinct()
         set(v) = put { putString("rechner_reihenfolge", (v.filter { it in RECHNER } + RECHNER).distinct().joinToString(",")) }
-    val macZuerst: Boolean get() = rechnerReihenfolge.first() == "mac"
+    val macZuerst: Boolean get() = rechnerReihenfolge.first { it != "server" } == "mac"
+    /** Wo der Hostinger-Server in der Reihenfolge steht, für den Relay: zuerst, mitte oder zuletzt. */
+    val serverPlatz: String get() = when (rechnerReihenfolge.indexOf("server")) { 0 -> "zuerst"; 1 -> "mitte"; else -> "zuletzt" }
     // ---- Timer ----
     /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
     var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }
