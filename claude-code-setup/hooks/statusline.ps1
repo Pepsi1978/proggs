@@ -837,7 +837,16 @@ if ($cli_version) { $line2 += "   ${DIM}${ICON_VER} v${cli_version}${R}" }
 
 # ⏵⏵ Berechtigungs-Modus (Bypass Permissions / Yolo-Mode) — in Claude Code steht das in einer
 # eigenen TUI-Zeile, in Antigravity ersetzt die eigene Statusline die Standardzeile, daher hier anzeigen.
-if ($product_name -eq 'antigravity' -or $perm_mode) {
+if ($product_name -eq 'antigravity' -and (-not $perm_mode -or $perm_mode -eq 'default')) {
+    try {
+        $agySettingsPath = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\settings.json'
+        if (Test-Path $agySettingsPath) {
+            $agyCfg = Get-Content -Raw -Encoding UTF8 -Path $agySettingsPath | ConvertFrom-Json
+            if ($agyCfg.toolPermission) { $perm_mode = [string]$agyCfg.toolPermission }
+        }
+    } catch { }
+}
+if ($perm_mode) {
     $M_COL = "$ESC[38;2;180;130;255m"
     switch ($perm_mode) {
         { $_ -in @('bypassPermissions', 'always-proceed', 'turbo') } {
@@ -852,10 +861,8 @@ if ($product_name -eq 'antigravity' -or $perm_mode) {
         'plan' {
             $line2 += "   ${M_COL}⏸ plan mode${R}"
         }
-        default {
-            if ($product_name -eq 'antigravity') {
-                $line2 += "   ${RED}⏵⏵ bypass permissions on${R}"
-            }
+        { $_ -in @('request-review', 'strict') } {
+            $line2 += "   ${DIM}⏵⏵ ${perm_mode}${R}"
         }
     }
 }

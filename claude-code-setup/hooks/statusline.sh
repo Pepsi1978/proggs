@@ -917,7 +917,12 @@ esac
 
 # ⏵⏵ Berechtigungs-Modus (Bypass Permissions / Yolo-Mode) — in Claude Code steht das in einer
 # eigenen TUI-Zeile, in Antigravity ersetzt die eigene Statusline die Standardzeile, daher hier anzeigen.
-if [ "$product_name" = "antigravity" ] || [ -n "$perm_mode" ]; then
+if [ "$product_name" = "antigravity" ] && { [ -z "$perm_mode" ] || [ "$perm_mode" = "default" ]; }; then
+    if [ -f "$HOME/.gemini/antigravity-cli/settings.json" ]; then
+        perm_mode=$(jq -r '.toolPermission // "default"' "$HOME/.gemini/antigravity-cli/settings.json" 2>/dev/null)
+    fi
+fi
+if [ -n "$perm_mode" ]; then
     case "$perm_mode" in
         bypassPermissions|always-proceed|turbo)
             line2="${line2}   $(printf "${RED}⏵⏵ bypass permissions on${R}")" ;;
@@ -927,11 +932,8 @@ if [ "$product_name" = "antigravity" ] || [ -n "$perm_mode" ]; then
             line2="${line2}   $(printf "${B}⏵⏵ accept edits${R}")" ;;
         plan)
             line2="${line2}   $(printf "${M}⏸ plan mode${R}")" ;;
-        default|"")
-            if [ "$product_name" = "antigravity" ]; then
-                line2="${line2}   $(printf "${RED}⏵⏵ bypass permissions on${R}")"
-            fi
-            ;;
+        request-review|strict)
+            line2="${line2}   $(printf "${DIM}⏵⏵ %s${R}" "$perm_mode")" ;;
     esac
 fi
 
