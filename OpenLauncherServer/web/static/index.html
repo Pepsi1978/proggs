@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
+<title>Server-Konsole</title>
+<link rel="stylesheet" href="/static/xterm.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav id="reiter">
+  <button data-seite="sitzungen" class="an">Sitzungen</button>
+  <button data-seite="terminal">Terminal</button>
+  <button data-seite="launcher">OpenLauncher</button>
+  <button data-seite="system">System</button>
+</nav>
+
+<main>
+  <section id="sitzungen" class="seite an">
+    <p id="auslastung" class="leise"></p>
+    <div id="liste"></div>
+    <div class="zeile">
+      <button id="neu-bash">Neues Terminal</button>
+      <button id="neu-pwsh">PowerShell</button>
+    </div>
+  </section>
+
+  <section id="terminal" class="seite">
+    <div id="kopf"><span id="titel" class="leise">Keine Sitzung gewählt</span><button id="schliessen" class="gefahr klein" hidden>Sitzung schließen</button></div>
+    <div id="links"></div>
+    <div id="xterm"></div>
+    <div id="tasten">
+      <button data-t="&#27;">Esc</button><button data-t="&#3;">Strg+C</button><button data-t="&#9;">Tab</button>
+      <button data-t="&#27;[A">↑</button><button data-t="&#27;[B">↓</button><button data-t="&#27;[D">←</button><button data-t="&#27;[C">→</button>
+    </div>
+    <form id="eingabe"><textarea id="text" rows="1" placeholder="Eingabe an die CLI" autocomplete="off" autocapitalize="sentences"></textarea><button>Senden</button></form>
+  </section>
+
+  <section id="launcher" class="seite">
+    <label>Modell<select id="modell"></select></label>
+    <label>CLI<select id="cli"></select></label>
+    <label>Profil<select id="profil"></select></label>
+    <label>Modus<select id="modus"></select></label>
+    <label>Effort<select id="effort"></select></label>
+    <label>Erste Nachricht (optional)<textarea id="prompt" rows="3"></textarea></label>
+    <button id="start" class="haupt">Starten</button>
+    <p id="start-meldung" class="leise"></p>
+  </section>
+
+  <section id="system" class="seite">
+    <div id="programme"></div>
+    <div class="zeile"><button id="update">CLIs jetzt aktualisieren</button></div>
+    <p id="system-info" class="leise"></p>
+  </section>
+</main>
+
+<script src="/static/xterm.js"></script>
+<script src="/static/addon-fit.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

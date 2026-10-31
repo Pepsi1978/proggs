@@ -1,0 +1,10 @@
+[Unit]
+Description=CLIs alle 3 Stunden aktualisieren
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=3h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

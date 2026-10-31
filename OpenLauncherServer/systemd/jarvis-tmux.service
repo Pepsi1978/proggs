@@ -1,0 +1,21 @@
+[Unit]
+Description=tmux-Server aller CLI-Sitzungen (Speicher- und CPU-Deckel schützen Relay und Second Brain)
+After=network-online.target
+
+[Service]
+Type=forking
+User=jarvis
+WorkingDirectory=/home/jarvis/proggs
+Environment=HOME=/home/jarvis TZ=Europe/Berlin LANG=C.UTF-8 LC_ALL=C.UTF-8
+ExecStart=/usr/bin/tmux -L jarvis -f /home/jarvis/proggs/OpenLauncherServer/systemd/tmux.conf new-session -d -s basis
+ExecStop=/usr/bin/tmux -L jarvis kill-server
+Restart=always
+RestartSec=5
+MemoryHigh=4500M
+MemoryMax=5500M
+CPUQuota=170%
+OOMPolicy=continue
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

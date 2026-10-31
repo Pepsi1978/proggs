@@ -1,0 +1,16 @@
+[Unit]
+Description=Server-Konsole (nur im WireGuard-Tunnel, 10.8.0.1:8090)
+After=network-online.target wg-quick@wg0.service jarvis-tmux.service
+Wants=wg-quick@wg0.service jarvis-tmux.service
+
+[Service]
+User=jarvis
+WorkingDirectory=/home/jarvis/proggs
+Environment=HOME=/home/jarvis TZ=Europe/Berlin PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /home/jarvis/proggs/OpenLauncherServer/web/app.py
+Restart=always
+RestartSec=5
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

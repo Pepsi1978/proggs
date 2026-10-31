@@ -1,0 +1,37 @@
+:root { --grund:#10131a; --flaeche:#1a1f2b; --rand:#2b3241; --text:#e6e9ef; --leise:#97a0b3; --akzent:#6ea8fe; --gut:#4cc38a; --warn:#e0b252; --gefahr:#f0716b; }
+* { box-sizing:border-box; }
+html,body { height:100%; margin:0; background:var(--grund); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
+body { display:flex; flex-direction:column; height:100dvh; }
+nav { display:flex; flex:none; background:var(--flaeche); border-bottom:1px solid var(--rand); }
+nav button { flex:1; background:none; border:0; border-bottom:2px solid transparent; border-radius:0; color:var(--leise); padding:13px 2px; font-size:14px; min-width:0; }
+nav button.an { color:var(--text); border-bottom-color:var(--akzent); }
+main { flex:1; min-height:0; }
+.seite { display:none; height:100%; overflow:auto; padding:14px 16px; }
+.seite.an { display:block; }
+#terminal.an { display:flex; flex-direction:column; padding:0; overflow:hidden; }
+button { background:var(--flaeche); color:var(--text); border:1px solid var(--rand); border-radius:8px; padding:11px 14px; font:inherit; min-height:44px; }
+button.haupt { background:var(--akzent); color:#0b1220; border:0; font-weight:600; width:100%; }
+button.gefahr { color:var(--gefahr); }
+button.klein { padding:4px 10px; font-size:13px; min-height:32px; }
+.leise { color:var(--leise); font-size:14px; }
+.zeile { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.zeile button { flex:1; min-width:140px; }
+.karte { background:var(--flaeche); border:1px solid var(--rand); border-radius:10px; padding:12px; margin-bottom:10px; }
+.karte h3 { margin:0 0 3px; font-size:16px; font-weight:600; overflow-wrap:anywhere; }
+.karte .aktionen { display:flex; gap:8px; margin-top:10px; }
+.karte .aktionen button { flex:1; }
+.punkt { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--leise); }
+.punkt.arbeitet,.punkt.angemeldet,.punkt.lokal { background:var(--gut); }
+.punkt.wartet,.punkt.unbekannt { background:var(--warn); }
+.punkt.abgemeldet,.punkt.fehlt { background:var(--gefahr); }
+label { display:block; margin-bottom:12px; font-size:14px; color:var(--leise); }
+select,textarea { display:block; width:100%; margin-top:4px; background:var(--flaeche); color:var(--text); border:1px solid var(--rand); border-radius:8px; padding:11px; font:16px system-ui,sans-serif; }
+#kopf { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 10px; flex:none; min-height:38px; }
+#titel { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#links { flex:none; padding:0 10px; }
+#links a { display:block; color:var(--akzent); padding:6px 0; font-size:13px; overflow-wrap:anywhere; }
+#xterm { flex:1; min-height:0; background:#000; padding:2px; }
+#tasten { display:flex; flex:none; gap:4px; padding:5px 6px 0; overflow-x:auto; }
+#tasten button { flex:1 0 auto; padding:5px 10px; min-height:36px; font-size:14px; }
+#eingabe { display:flex; flex:none; gap:6px; padding:6px; }
+#eingabe textarea { margin:0; flex:1; resize:none; padding:9px; max-height:120px; }

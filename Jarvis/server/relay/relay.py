@@ -504,6 +504,7 @@ class Tagebuch:
                                  dumps=lambda daten: json.dumps(daten, ensure_ascii=False))
 
 
+PLAETZE = ("haupt", "ersatz", "server")
 PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
 PC_HAUPT_LUECKE_S = 3  # so kurz nach einer Abfrage einer Bruecke gilt sie noch als „holt gleich ab“
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
@@ -544,13 +545,10 @@ class PcBruecke:
         # zuerst drankommt, schickt das Handy mit jedem Auftrag („vorrang“: mac oder windows, Einstellung in Jarvis; Standard
         # seit 25.10.2026 der Mac). Der andere Rechner bekommt Opus-Auftraege nur, solange der Vorrangrechner nicht abfragt.
         # Sol 6.1 bleibt immer beim Windows-PC (nur dort laeuft das Codex CLI). Die Rang-Namen bleiben fuer Bruecken und App.
-        self.haupt_zuletzt = 0.0
-        self.haupt_rechner = ""
-        self.ersatz_zuletzt = 0.0
+        # Dritter Platz seit 31.10.2026: der Hostinger-Server (X-Jarvis-Rang: server, OpenLauncherServer/bruecke). Ein Auftrag kommt
+        # nur zu ihm, wenn das Handy es mit „server“ erlaubt (zuletzt, mitte, zuerst, nur); aeltere Handys bekommen ihn also nie.
+        self.plaetze = {rang: {"zuletzt": 0.0, "rechner": "", "abfragen": {}, "belegt": False} for rang in PLAETZE}
         self.mac_katalog = False
-        self.ersatz_rechner = ""
-        self.haupt_abfragen = {}  # id(request) -> request: offene Abfragen des Windows-PCs, nur lebende zaehlen
-        self.mac_abfragen = {}    # id(request) -> request: offene Abfragen des Macs, nur lebende zaehlen
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
         # laesst die anderen liegen (kein Herausnehmen und Zuruecklegen: das brachte die Reihenfolge durcheinander und konnte
@@ -806,19 +804,18 @@ class PcBruecke:
     def da(self) -> bool:
         return time.monotonic() - self.zuletzt < PC_FRISCH_S
 
-    def _haupt_da(self) -> bool:
-        return time.monotonic() - self.haupt_zuletzt < PC_FRISCH_S
-
-    def _nimmt(self, mac: bool) -> bool:
+    def _nimmt(self, rang: str) -> bool:
         """
-        Der Mac (mac=True) bzw. der Windows-PC holt einen Auftrag gleich selbst: Er wartet gerade mit einer lebenden Abfrage,
+        Der Rechner auf diesem Platz holt einen Auftrag gleich selbst: Er wartet gerade mit einer lebenden Abfrage,
         oder seine letzte Abfrage endete eben erst (die naechste folgt sofort). Nicht die 45 s von PC_FRISCH_S: Solange wartete
         das Handy schon auf die Quittung, der andere Rechner griffe erst zu, wenn das Handy auf die Cloud ausweicht (zwei Sitzungen).
         """
-        abfragen = self.mac_abfragen if mac else self.haupt_abfragen
-        if any(a.transport is not None and not a.transport.is_closing() for a in abfragen.values()):
+        platz = self.plaetze[rang]
+        if platz["belegt"]:
+            return False
+        if any(a.transport is not None and not a.transport.is_closing() for a in platz["abfragen"].values()):
             return True
-        return time.monotonic() - (self.ersatz_zuletzt if mac else self.haupt_zuletzt) < PC_HAUPT_LUECKE_S
+        return time.monotonic() - platz["zuletzt"] < PC_HAUPT_LUECKE_S
 
     def _anmeldung_merken(self, rechner: str, request: web.Request) -> None:
         stand = request.headers.get("X-Jarvis-Anmeldung", "").strip().lower()
@@ -830,45 +827,64 @@ class PcBruecke:
         self.bruecke_anmeldung[rechner] = {"stand": stand if stand in ("lokal", "abgemeldet") else "unbekannt",
                                            "geprueft": geprueft if stand else 0}
 
-    def _rechner_da(self, mac: bool) -> bool:
-        return time.monotonic() - (self.ersatz_zuletzt if mac else self.haupt_zuletzt) < PC_FRISCH_S
+    def _rechner_da(self, rang: str) -> bool:
+        platz = self.plaetze[rang]
+        return time.monotonic() - platz["zuletzt"] < PC_FRISCH_S and not platz["belegt"]
 
-    def _naechster_ist_mac(self, mac_zuerst: bool) -> bool:
-        """Wer einen Opus-Auftrag bekaeme: der Vorrangrechner, wenn er gleich abholt oder der andere nicht da ist."""
-        return mac_zuerst if self._nimmt(mac=mac_zuerst) or not self._rechner_da(not mac_zuerst) else not mac_zuerst
+    def _reihenfolge(self, auftrag: dict) -> list:
+        """Welche Plaetze diesen Auftrag nehmen duerfen, der erste zuerst."""
+        modell = auftrag.get("modell")
+        # Sol 6.1 (Codex CLI) kann am Schreibtisch nur der Windows-PC. Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot
+        # (Effort, Profil, Modus, CLI) startet dort nur die Mac-Bruecke: Die Windows-Bruecke kennt diese Felder nicht und
+        # startete sonst still Opus. Opus gehoert dem Vorrangrechner, der andere springt ein.
+        if modell == "sol":
+            rechner = ["haupt"]
+        elif modell == "katalog":
+            rechner = ["ersatz"] if self.mac_katalog else []
+        else:
+            rechner = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
+        regel = auftrag.get("server")
+        if regel == "nur":
+            return ["server"]
+        if regel == "zuerst":
+            return ["server"] + rechner
+        if regel == "mitte":
+            return rechner[:1] + ["server"] + rechner[1:]
+        if regel == "zuletzt":
+            return rechner + ["server"]
+        return rechner
 
-    def _darf(self, mac: bool, auftrag: dict) -> bool:
-        # Sol 6.1 (Codex CLI) kann nur der Windows-PC. Opus gehoert dem Vorrangrechner; der andere nimmt ihn nur, solange
-        # der Vorrangrechner nicht gleich selbst abholt.
-        if auftrag.get("modell") == "sol":
-            return not mac
-        # Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot (Effort, Profil, Modus, CLI) startet nur die Mac-Bruecke:
-        # Die Windows-Bruecke kennt diese Felder nicht und startete sonst still Opus.
-        if auftrag.get("modell") == "katalog":
-            return mac and self.mac_katalog
-        mac_zuerst = auftrag.get("vorrang") != "windows"
-        return mac == mac_zuerst or not self._nimmt(mac=mac_zuerst)
+    def _naechster(self, auftrag: dict) -> str:
+        """Der Platz, der den Auftrag jetzt bekaeme: der erste, der gleich abholt, sonst der erste, der ueberhaupt da ist."""
+        reihe = [r for r in self._reihenfolge(auftrag) if self._rechner_da(r)]
+        return next((r for r in reihe if self._nimmt(r)), reihe[0] if reihe else "")
 
-    def _auftrag_fuer(self, mac: bool) -> dict | None:
+    def _darf(self, rang: str, auftrag: dict) -> bool:
+        # Ein Platz nimmt den Auftrag nur, solange keiner vor ihm gleich selbst abholt.
+        reihe = self._reihenfolge(auftrag)
+        if rang not in reihe or self.plaetze[rang]["belegt"]:
+            return False
+        return not any(self._nimmt(r) for r in reihe[:reihe.index(rang)])
+
+    def _auftrag_fuer(self, rang: str) -> dict | None:
         """Der aelteste Auftrag, den diese Bruecke holen darf; verwaiste (das Handy wartet nicht mehr) fallen dabei weg."""
         for auftrag in list(self.auftraege):
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
                 self.auftraege.remove(auftrag)
-            elif self._darf(mac, auftrag):
+            elif self._darf(rang, auftrag):
                 return auftrag
         return None
 
-    def _melde_dich(self, ersatz: bool, rechner: str, request: web.Request | None = None) -> None:
+    def _melde_dich(self, rang: str, rechner: str, request: web.Request | None = None) -> None:
         if request is not None:
             self._anmeldung_merken(rechner, request)
         jetzt = time.monotonic()
-        self.zuletzt = jetzt
-        if ersatz:
-            self.ersatz_zuletzt, self.ersatz_rechner = jetzt, rechner
-        else:
-            self.haupt_zuletzt, self.haupt_rechner = jetzt, rechner
+        # „da“ meint Franks Schreibtisch-Rechner: Der immer laufende Server haelt ein aelteres Handy sonst von der Cloud ab.
+        if rang != "server":
+            self.zuletzt = jetzt
+        self.plaetze[rang].update(zuletzt=jetzt, rechner=rechner)
 
     async def abholen(self, request: web.Request) -> web.Response:
         """GET /pc/auftrag (Bruecke): wartet bis zu PC_WARTEN_S auf einen Auftrag, sonst 204."""
@@ -876,27 +892,36 @@ class PcBruecke:
             return web.Response(status=404, text="Not found")
         if not self.da():
             log.info("PC-Bruecke verbunden")
-        ersatz = request.headers.get("X-Jarvis-Rang", "").strip().lower() == "ersatz"
+        rang = request.headers.get("X-Jarvis-Rang", "").strip().lower()
+        rang = rang if rang in ("ersatz", "server") else "haupt"
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
-        if ersatz:
+        if rang == "ersatz":
             # Nur eine Mac-Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
             self.mac_katalog = request.headers.get("X-Jarvis-Katalog") == "1"
-        self._melde_dich(ersatz, rechner, request)
-        abfragen = self.mac_abfragen if ersatz else self.haupt_abfragen
+        # Voll ausgelastet: fragt weiter ab (bleibt sichtbar), bekommt aber nichts; der Auftrag geht an den naechsten.
+        self.plaetze[rang]["belegt"] = request.headers.get("X-Jarvis-Belegt") == "1"
+        self._melde_dich(rang, rechner, request)
+        abfragen = self.plaetze[rang]["abfragen"]
         abfragen[id(request)] = request
         try:
-            return await self._warte_auf_auftrag(request, ersatz, rechner)
+            return await self._warte_auf_auftrag(request, rang, rechner)
         finally:
             abfragen.pop(id(request), None)
 
-    async def _warte_auf_auftrag(self, request: web.Request, ersatz: bool, rechner: str) -> web.Response:
+    async def faehigkeiten(self, request: web.Request) -> web.Response:
+        """GET /pc/faehigkeiten: Die Server-Bruecke fragt ohne diese Antwort nichts ab. Ein aelterer Relay fuehrte sie als Windows-PC."""
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        return web.json_response({"raenge": list(PLAETZE)})
+
+    async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str) -> web.Response:
         frist = asyncio.get_running_loop().time() + PC_WARTEN_S
         while True:
             rest = frist - asyncio.get_running_loop().time()
             if rest <= 0:
-                self._melde_dich(ersatz, rechner)
+                self._melde_dich(rang, rechner)
                 return web.Response(status=204)
-            auftrag = self._auftrag_fuer(ersatz)
+            auftrag = self._auftrag_fuer(rang)
             if auftrag is None:
                 # In kurzen Stuecken warten: So merkt der zweite Rechner binnen Sekunden, wenn der erste wegfaellt.
                 self.neuer_auftrag.clear()
@@ -905,7 +930,7 @@ class PcBruecke:
                 except asyncio.TimeoutError:
                     pass
                 continue
-            self._melde_dich(ersatz, rechner)
+            self._melde_dich(rang, rechner)
             # Ist die Abfrage der Bruecke inzwischen abgerissen (Ruhezustand, Netzwechsel), ginge der Auftrag ins Leere:
             # liegen lassen, die naechste Abfrage holt ihn.
             if request.transport is None or request.transport.is_closing():
@@ -938,17 +963,13 @@ class PcBruecke:
         "name", "effort", "profil", "modus"}. 409 = kein PC da, 504 = keine Quittung."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
-        if not self.da():
-            return web.json_response({"pc": False}, status=409)
         try:
             daten = await request.json()
             assert isinstance(daten.get("app"), str) and isinstance(daten.get("auftrag"), str) and daten["auftrag"].strip()
         except Exception:
             return web.Response(status=400, text="Auftrag unlesbar")
-        # Sol nur mit dem Windows-PC (Hauptrechner); fragt nur der Mac ab, ist fuer Sol kein Rechner da.
-        if daten.get("modell") == "sol" and not self._haupt_da():
-            return web.json_response({"pc": False}, status=409)
-        if daten.get("modell") == "katalog" and not (self._rechner_da(mac=True) and self.mac_katalog):
+        # Kein Rechner da, der diesen Auftrag nehmen darf (fuer Sol etwa nur der Mac): 409, das Handy nimmt das naechste Ziel.
+        if not self._naechster(daten):
             return web.json_response({"pc": False, "mac": False}, status=409)
         nummer = uuid.uuid4().hex
         jarvis_id = str(daten.get("nummer", ""))[:20]
@@ -964,7 +985,8 @@ class PcBruecke:
             eintrag = {"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
                        "nummer": jarvis_id, "modell": "katalog" if katalog else "sol" if daten.get("modell") == "sol" else "opus",
                        "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
-                       "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac"}
+                       "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac",
+                       "server": daten.get("server") if daten.get("server") in ("zuletzt", "zuerst", "mitte", "nur") else ""}
             if katalog:
                 for feld in ("slug", "anbieter", "name", "effort", "profil", "modus"):
                     eintrag[feld] = str(daten.get(feld, ""))[:80]
@@ -986,6 +1008,7 @@ class PcBruecke:
                 self.spaete.add(aufgabe)
                 aufgabe.add_done_callback(self.spaete.discard)
                 return web.json_response({"pc": True, "ok": True, "unbestaetigt": True, "rechner": rechner,
+                                          "server": bool(rechner) and rechner == self.plaetze["server"]["rechner"],
                                           "text": "Der PC hat den Auftrag abgeholt, die Startbestaetigung steht noch aus."}, status=202)
             # Nie abgeholt: Er startet auch nie mehr (_warte_auf_auftrag ueberspringt ihn ohne wartende Future).
             log.info("PC hat den Auftrag nicht abgeholt")
@@ -994,6 +1017,7 @@ class PcBruecke:
             if not spaeter:
                 rechner = self._quittung_abschliessen(nummer, wartend)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner,
+                                  "server": bool(rechner) and rechner == self.plaetze["server"]["rechner"],
                                   "anmeldung_fehlt": bool(quittung.get("anmeldung_fehlt"))})
 
     def _quittung_abschliessen(self, nummer: str, wartend: asyncio.Future) -> str:
@@ -1166,12 +1190,15 @@ class PcBruecke:
         jetzt = time.monotonic()
         vor = int(jetzt - self.zuletzt) if self.zuletzt else None
         rechner = []
-        for rang, zuletzt, name in (("haupt", self.haupt_zuletzt, self.haupt_rechner), ("ersatz", self.ersatz_zuletzt, self.ersatz_rechner)):
-            if zuletzt:
-                rechner.append({"rechner": name, "rang": rang, "da": jetzt - zuletzt < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - zuletzt)})
+        for rang, platz in self.plaetze.items():
+            if platz["zuletzt"]:
+                rechner.append({"rechner": platz["rechner"], "rang": rang, "da": jetzt - platz["zuletzt"] < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - platz["zuletzt"]),
+                                "belegt": platz["belegt"]})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
         # ?vorrang=windows: Franks Reihenfolge aus der App (Standard Mac zuerst).
-        aktiv = self.ersatz_rechner if self._naechster_ist_mac(request.query.get("vorrang") != "windows") else self.haupt_rechner
+        # ?server=zuletzt|mitte|zuerst|nur: Franks Wahl fuer den Server (ohne Angabe wie bisher nur Mac und Windows).
+        naechster = self._naechster({"vorrang": request.query.get("vorrang"), "server": request.query.get("server")})
+        aktiv = self.plaetze[naechster]["rechner"] if naechster else self.plaetze["ersatz"]["rechner"] or self.plaetze["haupt"]["rechner"]
         jetzt_s = time.time()
         for r in rechner:
             b = self.bruecke_anmeldung.get(r["rechner"]) or {"stand": "unbekannt", "geprueft": 0}
@@ -1185,7 +1212,8 @@ class PcBruecke:
             if max(kontakt or 0, warter or 0) > jetzt - 86_400:
                 sitzungen[auftrag_id] = {"kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
                                          "warter_vor_s": int(jetzt - warter) if warter else None, "lebt": self._wartet(auftrag_id)}
-        return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner, "sitzungen": sitzungen})
+        return web.json_response({"pc": self.da(), "server": self._rechner_da("server"), "naechster": naechster, "rechner": aktiv, "zuletzt_vor_s": vor,
+                                  "rechner_alle": rechner, "sitzungen": sitzungen})
 
 
 KANAL_DATEI = Path(os.environ.get("JARVIS_KANAL", "/data/agentenkanal.json"))
@@ -1637,6 +1665,7 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/pc-auftrag", pc.auftrag)
     anwendung.router.add_get("/geraet/pc", pc.status)
     anwendung.router.add_get("/pc/auftrag", pc.abholen)
+    anwendung.router.add_get("/pc/faehigkeiten", pc.faehigkeiten)
     anwendung.router.add_post("/pc/quittung", pc.quittung)
     anwendung.router.add_post("/pc/meldung", pc.meldung)
     anwendung.router.add_get("/pc/antwort", pc.antwort_abholen)

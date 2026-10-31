@@ -1,0 +1,11 @@
+[Unit]
+Description=CLIs aktualisieren (nur die, die gerade nicht laufen)
+
+[Service]
+Type=oneshot
+User=jarvis
+WorkingDirectory=/home/jarvis/proggs
+Environment=HOME=/home/jarvis TZ=Europe/Berlin
+ExecStart=/usr/bin/python3 /home/jarvis/proggs/OpenLauncherServer/kern/clis.py aktualisieren
+TimeoutStartSec=1800
+Nice=10

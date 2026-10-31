@@ -152,6 +152,8 @@ def rechner() -> str:
 
 
 def _rechnername() -> str:
+    if os.environ.get("JARVIS_RECHNER"):
+        return os.environ["JARVIS_RECHNER"]
     if os.name == "nt":
         return os.environ.get("COMPUTERNAME") or socket.gethostname()
     if sys.platform == "darwin":
@@ -971,6 +973,9 @@ def hook_marke() -> None:
 def pc_ruhe_s() -> float:
     """Sekunden seit der letzten Eingabe an Tastatur oder Maus dieses Rechners. Unbekannt = 0: Dann gilt Frank als am
     Rechner, und eine Frage erscheint wie gewohnt dort."""
+    # Auf dem Hostinger-Server sitzt nie jemand am Rechner: Die Frage gehört aufs Handy.
+    if os.environ.get("JARVIS_SERVER"):
+        return 86400.0
     try:
         if os.name == "nt":
             import ctypes

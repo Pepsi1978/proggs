@@ -1,0 +1,10 @@
+[Unit]
+Description=Repo auf dem Server abgleichen (nur vorspulen)
+
+[Service]
+Type=oneshot
+User=jarvis
+WorkingDirectory=/home/jarvis/proggs
+Environment=HOME=/home/jarvis
+ExecStart=/usr/bin/python3 /home/jarvis/proggs/OpenLauncherServer/kern/launcher.py abgleich
+TimeoutStartSec=300

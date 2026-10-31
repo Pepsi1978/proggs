@@ -1,0 +1,16 @@
+[Unit]
+Description=Jarvis-Server-Brücke (holt Programmieraufträge vom Relay)
+After=network-online.target jarvis-tmux.service
+Wants=jarvis-tmux.service
+
+[Service]
+User=jarvis
+WorkingDirectory=/home/jarvis/proggs
+Environment=HOME=/home/jarvis TZ=Europe/Berlin JARVIS_SERVER=1 JARVIS_RECHNER=Hostinger-Server
+ExecStart=/usr/bin/python3 /home/jarvis/proggs/OpenLauncherServer/bruecke/server_bruecke.py
+Restart=always
+RestartSec=5
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
