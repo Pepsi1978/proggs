@@ -1,0 +1,102 @@
+{
+  "opencode/ling-3.0-flash-fin-free [opencode]": [
+    "none",
+    "thinking"
+  ],
+  "opencode/mimo-v2.5-free": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "opencode/mimo-v2.5-free [opencode]": [],
+  "opencode/mimo-v2.6-flash-free [opencode]": [],
+  "opencode/muse-spark-1.2-contributor-free [opencode]": [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh"
+  ],
+  "opencode/muse-spark-1.3-contributor-free [opencode]": [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh"
+  ],
+  "opencode/nemotron-3-ultra-free": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "opencode/nemotron-3-ultra-free [opencode]": [],
+  "opencode/nemotron-3.5-lightning-free [opencode]": [],
+  "openrouter/~z-ai/glm-latest": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/google/gemma-4-31b-it:free [opencode]": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/meta/muse-spark-1.3-contributor": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/minimax/minimax-m3 [opencode]": [
+    "none",
+    "thinking"
+  ],
+  "openrouter/minimax/minimax-m3:free": [],
+  "openrouter/minimax/minimax-m3:free [opencode]": [
+    "none",
+    "thinking"
+  ],
+  "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free [opencode]": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/openai/gpt-6-astra": [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max"
+  ],
+  "openrouter/openai/gpt-6-astra-pro": [
+    "high"
+  ],
+  "openrouter/stealth/space-bunny-alpha [opencode]": [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max"
+  ],
+  "openrouter/xiaomi/mimo-v2.5 [opencode]": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "openrouter/xiaomi/mimo-v2.6-pro [opencode]": [
+    "none",
+    "thinking"
+  ],
+  "openrouter/z-ai/glm-5.2:free": [
+    "high",
+    "xhigh"
+  ],
+  "openrouter/z-ai/glm-5.2:free [opencode]": [
+    "high",
+    "xhigh"
+  ]
+}

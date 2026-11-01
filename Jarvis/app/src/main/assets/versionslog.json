@@ -563,6 +563,7 @@
 {"versionCode": 558, "versionName": "1.8.547", "stand": "01.11.2026, 19:13 Uhr", "notiz": "Kontingente: Jeder Anbieterbereich hat einen eigenen Aktualisieren-Knopf mit Ladeanzeige und klarer Abschluss- oder Fehlermeldung."},
 {"versionCode": 559, "versionName": "1.8.548", "stand": "01.11.2026, 19:25 Uhr", "notiz": "Kontingente: Aktualisieren-Knopf nachgebessert, jetzt auch ohne bisherigen Stand bei jedem Anbieter und mit verlässlicher Abschlussanzeige."},
 {"versionCode": 560, "versionName": "1.8.549", "stand": "01.11.2026, 19:56 Uhr", "notiz": "Benachrichtigungen haben einheitliche Optionen für Ton, Ausgabeform und Vorlesen; Erinnerungen als Benachrichtigung und als Wecker haben unabhängige Einstellungen mit wählbarem Weckton."},
-{"versionCode": 561, "versionName": "1.8.550", "stand": "01.11.2026, 20:10 Uhr", "notiz": "Benachrichtigungen nach sehr ausführlichem Review nachgebessert: unabhängige Klingeldauer, zuverlässige Erinnerungswecker auch ohne Klingeldienst, sauberes Verstummen und konsistente Ton- und Stimmenausgabe."}
+{"versionCode": 561, "versionName": "1.8.550", "stand": "01.11.2026, 20:10 Uhr", "notiz": "Benachrichtigungen nach sehr ausführlichem Review nachgebessert: unabhängige Klingeldauer, zuverlässige Erinnerungswecker auch ohne Klingeldienst, sauberes Verstummen und konsistente Ton- und Stimmenausgabe."},
+{"versionCode": 562, "versionName": "1.8.551", "stand": "01.11.2026, 21:36 Uhr", "notiz": "Der Programmierbutton fragt nach dem Modell auch das CLI ab und bietet mit OpenLauncher eine Vollbildauswahl für Modell, Effort, Profil, Modus und CLI an; alles steht verbindlich im Auftrag."}
 ]
 }

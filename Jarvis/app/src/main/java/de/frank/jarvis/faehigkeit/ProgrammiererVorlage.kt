@@ -18,18 +18,59 @@ object ProgrammiererVorlage {
     const val MODELL_SOL = "sol"
     const val MODELL_KIMI = "kimi"
     const val MODELL_ARGON = "argon"
+    /** Fünfter Knopf der Vorwahl: öffnet die Vollbildauswahl; kein Modell und deshalb nicht in [MODELL_OPTIONEN] (alte Karten fallen darauf zurück). */
+    const val OPENLAUNCHER = "openlauncher"
+    /** Steht im Einstieg, wenn OpenLauncher dem Modell keine Effort-Stufe anbietet (Wortlaut wie im OpenLauncher). */
+    const val OHNE_EFFORT = "ohne Stufe"
 
     /** Ein Modellknopf. [katalogName]: startet über das OpenLauncher-Angebot (Minimalprofil, Schnellmodus, Effort High) mit [cli] (Franks Standard vom 31.10.2026) oder einem der [clis], wenn Frank es nennt. */
-    private data class KnopfModell(val wert: String, val label: String, val vorspann: String, val katalogName: String? = null, val cli: String? = null, val clis: List<String> = emptyList())
+    private data class KnopfModell(val wert: String, val label: String, val vorspann: String, val katalogName: String? = null, val cli: String? = null, val clis: List<String>)
     private val KNOPF_MODELLE = listOf(
-        KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS),
-        KnopfModell(MODELL_SOL, "Sol 6.1", VORSPANN_SOL),
-        KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", listOf("opencode", "kimi")),
-        KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", listOf("antigravity", "opencode")),
+        KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS, clis = listOf("claude")),
+        KnopfModell(MODELL_SOL, "Sol 6.1", VORSPANN_SOL, clis = listOf("codex", "opencode")),
+        KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", clis = listOf("opencode", "kimi")),
+        KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode")),
     )
 
     /** Wert und Beschriftung der Modellknöpfe, für Vorwahl und Karte dieselbe Reihenfolge. */
     val MODELL_OPTIONEN = KNOPF_MODELLE.map { it.wert to it.label }
+
+    /** Die Knöpfe des Programmierbuttons: die vier Modelle und danach die Vollbildauswahl. */
+    val VORWAHL_OPTIONEN = MODELL_OPTIONEN + (OPENLAUNCHER to "OpenLauncher")
+
+    private val CLI_KNOPF = mapOf("claude" to "Claude Code", "codex" to "Codex CLI", "opencode" to "OpenCode CLI", "kimi" to "Kimi Code CLI", "antigravity" to "Antigravity CLI")
+    private fun cliEinstieg(k: KnopfModell, cli: String) =
+        k.vorspann.removeSuffix(":") + (if (cli == "claude") " in " else " im ") + CLI_KNOPF.getValue(cli) + ":"
+
+    /** Wert und Beschriftung der CLIs, die OpenLauncher dem Knopf [modell] anbietet; der erste ist der Standard. */
+    fun cliOptionen(modell: String): List<Pair<String, String>> =
+        KNOPF_MODELLE.firstOrNull { it.wert == modell }?.clis.orEmpty().map { it to CLI_KNOPF.getValue(it) }
+
+    /** Einstieg je Modell und gewähltem CLI → (Modell, CLI). */
+    private val CLI_EINSTIEGE: Map<String, Pair<String, String>> =
+        KNOPF_MODELLE.flatMap { k -> k.clis.map { cliEinstieg(k, it) to (k.wert to it) } }.toMap()
+
+    /** Der Einstieg zum Knopf [modell] mit gewähltem [cli]. */
+    fun vorspannFuer(modell: String, cli: String): String {
+        val k = KNOPF_MODELLE.firstOrNull { it.wert == modell } ?: throw IllegalArgumentException("Unbekanntes Modell: $modell")
+        require(cli in k.clis) { "CLI $cli passt nicht zu $modell" }
+        return cliEinstieg(k, cli)
+    }
+
+    /** Alles, was Frank in der Vollbildauswahl gewählt hat, in den Worten von OpenLauncher. */
+    data class FreieWahl(val modell: String, val anbieter: String, val effort: String, val profil: String, val modus: String, val cli: String)
+
+    private const val EINSTIEG_MODELL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell "
+    private val FREI = Regex("^" + Regex.escape(EINSTIEG_MODELL) + "(.+?) von ([^,\\n]+), Effort ([^,\\n]+), Profil ([^,\\n]+), Modus ([^,\\n]+), CLI ([^:\\n]+):")
+
+    /** Der Einstieg der Vollbildauswahl; [freieWahl] liest ihn beim Senden wieder aus. */
+    fun vorspannFrei(w: FreieWahl) = "$EINSTIEG_MODELL${w.modell} von ${w.anbieter}, Effort ${w.effort}, Profil ${w.profil}, Modus ${w.modus}, CLI ${w.cli}:"
+
+    /** Die Angaben aus dem Einstieg der Vollbildauswahl; null bei jedem anderen Text. */
+    fun freieWahl(text: String): FreieWahl? = FREI.find(text.trimStart())?.groupValues?.let { FreieWahl(it[1], it[2], it[3], it[4], it[5], it[6]) }
+
+    /** Das im Einstieg gewählte CLI eines Modellknopfs; null ohne CLI im Einstieg. */
+    fun cli(text: String): String? = vorspannIn(text)?.let { CLI_EINSTIEGE[it]?.second }
 
     fun katalogName(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.katalogName
     fun katalogCli(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.cli
@@ -47,10 +88,10 @@ object ProgrammiererVorlage {
         return if (wunsch != null && wunsch in knopf.clis && genannt?.containsMatchIn(worte) == true) wunsch else knopf.cli
     }
 
-    private val ALLE = listOf(VORSPANN) + KNOPF_MODELLE.map { it.vorspann }
+    private val ALLE = listOf(VORSPANN) + KNOPF_MODELLE.map { it.vorspann } + CLI_EINSTIEGE.keys
 
     /** Der Einstieg, mit dem [text] beginnt; null, wenn keiner. */
-    fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } }
+    fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } ?: FREI.find(t)?.value }
 
     /** Beginnt [text] mit einem Auftragseinstieg? */
     fun aktiv(text: String): Boolean = vorspannIn(text) != null
@@ -60,7 +101,9 @@ object ProgrammiererVorlage {
         KNOPF_MODELLE.firstOrNull { it.wert == modell }?.vorspann ?: throw IllegalArgumentException("Unbekanntes Modell: $modell")
 
     /** Das verbindlich gewählte Modell aus dem Einstieg von [text]; null ohne Modell im Einstieg. */
-    fun modell(text: String): String? = vorspannIn(text).let { v -> KNOPF_MODELLE.firstOrNull { it.vorspann == v }?.wert }
+    fun modell(text: String): String? = vorspannIn(text).let { v ->
+        KNOPF_MODELLE.firstOrNull { it.vorspann == v }?.wert ?: CLI_EINSTIEGE[v]?.first ?: freieWahl(text)?.modell
+    }
 
     /** Der Entwurf mit [vorspann] vorn und Leerzeichen dahinter; schon Getipptes bleibt als Aufgabe dahinter stehen, ein anderer Einstieg weicht. */
     fun einsetzen(entwurf: String, vorspann: String = VORSPANN): String {
@@ -88,7 +131,12 @@ object ProgrammiererVorlage {
         "effort, profil, modus und cli mit; dann fragt Jarvis nicht nach Opus oder Sol.)"
 
     /** [HINWEIS] für [text]; steht das Modell im Einstieg, gilt es verbindlich und jede Frage danach entfällt. */
-    fun hinweis(text: String): String = HINWEIS + (modell(text)?.let {
-        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=${katalogName(it) ?: it}. Das geht der Regel oben zum genannten Modell vor: Frag nicht nach dem Modell und nimm kein anderes; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
+    fun hinweis(text: String): String = HINWEIS + (freieWahl(text)?.let {
+        "\n\n(Frank hat in der OpenLauncher-Auswahl alles schon gewählt, es gilt verbindlich für diesen Auftrag: modell=${it.modell}, effort=${it.effort}, profil=${it.profil}, modus=${it.modus}, cli=${it.cli}. " +
+            "Das geht der Regel oben vor: Jarvis übernimmt diese Angaben selbst aus dem Einstieg. Frag nichts davon nach und nimm nichts anderes.)"
+    } ?: modell(text)?.let { m ->
+        val gewaehlt = cli(text)
+        "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=${katalogName(m) ?: m}" + (gewaehlt?.let { ", cli=$it" }.orEmpty()) +
+            ". Das geht der Regel oben zum genannten Modell vor: Frag nicht nach dem Modell" + (if (gewaehlt != null) " oder dem CLI" else "") + " und nimm kein anderes; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
     }.orEmpty())
 }

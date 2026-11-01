@@ -962,6 +962,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun programmierVorwahlSchliessen() { programmierVorwahlOffen = false }
 
+    /** Das Modell, zu dem gerade die CLI-Knöpfe stehen; null = die Modellknöpfe. Gilt nur bei offener Vorwahl. */
+    var programmierVorwahlModell by mutableStateOf<String?>(null); private set
+
+    /** Die Vollbildauswahl hinter dem Knopf „OpenLauncher“. */
+    var openLauncherWahlOffen by mutableStateOf(false); private set
+
+    fun openLauncherWahlSchliessen() { openLauncherWahlOffen = false }
+
+    /** Ende der Vollbildauswahl: Alle Angaben kommen als Einstieg ins Feld, gesendet wird erst mit dem Pfeil. */
+    fun openLauncherWahlUebernehmen(wahl: ProgrammiererVorlage.FreieWahl) {
+        openLauncherWahlOffen = false
+        einstiegSetzen(ProgrammiererVorlage.vorspannFrei(wahl))
+        tastaturWeg++
+    }
+
+    private fun vorwahlFristNeu() {
+        vorwahlFrist?.cancel()
+        vorwahlFrist = viewModelScope.launch { kotlinx.coroutines.delay(60_000); programmierVorwahlOffen = false }
+    }
+
     /** Der Programmierbutton leuchtet, solange sein Einstieg im Entwurf steht oder die Modellwahl offen ist. */
     val programmiererLeuchtet: Boolean get() = programmiererAktiv || programmierVorwahlOffen
 
@@ -970,18 +990,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!programmiererAktiv) {
             vorwahlFrist?.cancel()
             programmierVorwahlOffen = !programmierVorwahlOffen
+            programmierVorwahlModell = null
             // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg.
-            if (programmierVorwahlOffen) vorwahlFrist = viewModelScope.launch { kotlinx.coroutines.delay(60_000); programmierVorwahlOffen = false }
+            if (programmierVorwahlOffen) vorwahlFristNeu()
             return
         }
         entwurf = ProgrammiererVorlage.entfernen(entwurf)
         if (sitzungId == null) sitzungProgrammierung = false
     }
 
-    /** Knopf der Modellwahl: setzt den Einstieg mit diesem Modell ein. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
+    /** Knopf der Modellwahl: Bei mehreren CLIs kommen deren Knöpfe, bei einem steht der Einstieg sofort im Feld; „OpenLauncher“ öffnet die Vollbildauswahl. */
     fun programmierVorwahl(modell: String) {
+        if (modell == ProgrammiererVorlage.OPENLAUNCHER) {
+            programmierVorwahlOffen = false
+            openLauncherWahlOffen = true
+            return
+        }
+        val clis = ProgrammiererVorlage.cliOptionen(modell)
+        if (clis.size > 1) {
+            programmierVorwahlModell = modell
+            vorwahlFristNeu()
+        } else programmierVorwahlCli(modell, clis.single().first)
+    }
+
+    /** Modell und CLI stehen fest: Einstieg ins Feld. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
+    fun programmierVorwahlCli(modell: String, cli: String) {
         programmierVorwahlOffen = false
-        einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell))
+        programmierVorwahlModell = null
+        einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell, cli))
         tastaturWeg++
     }
 

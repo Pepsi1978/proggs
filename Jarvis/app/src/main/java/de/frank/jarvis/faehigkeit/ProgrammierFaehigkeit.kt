@@ -419,18 +419,26 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val karteZurRunde = offeneWahlen.values.any { it.gespraech == gespraech && (it.runde == runde?.text || it.runde == aktuell) }
                 val vorwahl = runde?.takeIf { it.start == null && !karteZurRunde }
                 val knopfModell = vorwahl?.modell
+                // Aus der OpenLauncher-Vollbildauswahl: Alle Angaben stehen im Einstieg und gelten verbindlich, das Modell (LLM) ändert daran nichts.
+                val freieAngabe = vorwahl?.let { ProgrammiererVorlage.freieWahl(it.text) }
+                // Per Knopf gewähltes CLI aus dem Einstieg.
+                val vorwahlCli = vorwahl?.let { ProgrammiererVorlage.cli(it.text) }
                 // Kimi K3.1 Pro und Gemini 4 Argon starten über das OpenLauncher-Angebot, mit festem CLI (Franks Wahl vom 31.10.2026).
                 val festModell = knopfModell?.let { ProgrammiererVorlage.katalogName(it) }
                 if (festModell != null) {
                     a.put("modell", festModell)
-                    a.put("cli", ProgrammiererVorlage.katalogCliFuer(knopfModell.orEmpty(), a.optString("cli").trim(), aktuell + "\n" + vorwahl?.text.orEmpty()))
+                    a.put("cli", vorwahlCli ?: ProgrammiererVorlage.katalogCliFuer(knopfModell.orEmpty(), a.optString("cli").trim(), aktuell + "\n" + vorwahl?.text.orEmpty()))
+                } else if (freieAngabe != null) {
+                    a.put("modell", freieAngabe.modell)
+                    a.remove("cli")
                 } else if (knopfModell != null) {
                     a.put("modell", knopfModell)
+                    if (vorwahlCli == CLI_CODEX || vorwahlCli == CLI_OPENCODE) a.put("cli", vorwahlCli)
                     // Die Wahl ist verbindlich: Ein fremdes CLI (anders geschrieben, als Kurzname) führte sonst zu einem anderen Modell oder einer Rückfrage.
                     OpenLauncherKatalog.cliAus(a.optString("cli").trim())?.let { if (it !in listOf(CLI_CODEX, CLI_OPENCODE)) a.remove("cli") }
                 }
                 // Steht nach einem Fehlstart die Karte dieser Runde offen, entscheidet der Tipp: Ein erneuter Aufruf des Modells startet nichts und fragt nichts.
-                if (knopfModell == null && karteZurRunde && runde != null && ProgrammiererVorlage.katalogName(runde.modell) != null) {
+                if (knopfModell == null && karteZurRunde && runde != null && (ProgrammiererVorlage.katalogName(runde.modell) != null || ProgrammiererVorlage.freieWahl(runde.text) != null)) {
                     a.remove("modell"); a.remove("cli")
                 }
                 // Kurze Antwort „Kimi“ oder „Argon“ auf eine offene Modellkarte gilt wie der Tipp auf den Knopf.
@@ -469,14 +477,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // ein anderes CLI), startet genau das am Mac oder Windows-PC. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
                 // Stammt die Vorwahl aus der vorigen Nachricht, gehört deren Einstieg zu Franks Worten, sonst fielen Effort und Co. still weg.
                 val katalogWorte = if (vorwahl != null && vorwahl.text != aktuell) aktuell + "\n" + vorwahl.text else worte?.aktuell
-                val ersterKatalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
+                val ersterKatalog = when {
+                    auftrag.length < 20 || knopf != null -> null
+                    freieAngabe != null -> freieKatalogWahl(freieAngabe)
+                    else -> katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
+                }
                 // Ein per Knopf gewähltes Modell aus dem Angebot scheitert nicht an einer Zusatzangabe des Modells: dann ohne sie.
                 val katalog = if (festModell != null && ersterKatalog is Ergebnis && ZUSATZ_FELDER.any { a.optString(it).isNotBlank() }) {
                     ZUSATZ_FELDER.forEach { a.remove(it) }
                     katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
                 } else ersterKatalog
                 // Die Vorwahl startet auf jeden Fall; nur die Zusatzangaben entfallen, und Frank erfährt das.
-                if (ersterKatalog is Ergebnis && vorwahl != null && (festModell == null || katalog is OpenLauncherKatalog.Wahl)) ProgrammierChat.poste(app, gespraech, "⚠️ Zusatzangaben wie Effort oder Profil ließen sich nicht übernehmen; der Auftrag startet mit den Standardwerten.", ProgrammierChat.ART_STATUS)
+                if (ersterKatalog is Ergebnis && vorwahl != null && freieAngabe == null && (festModell == null || katalog is OpenLauncherKatalog.Wahl)) ProgrammierChat.poste(app, gespraech, "⚠️ Zusatzangaben wie Effort oder Profil ließen sich nicht übernehmen; der Auftrag startet mit den Standardwerten.", ProgrammierChat.ART_STATUS)
 
                 // Scheitert ein Start mit vorgewähltem Modell, steht der Grund im Gespräch und die Knöpfe Opus/Sol sind der Ausweg, ohne den Auftrag neu zu sagen.
                 suspend fun ausweg(f: Ergebnis): Ergebnis {
@@ -515,6 +527,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
                     knopf != null -> schonPerKnopfGestartet(knopf)
                     katalog is Ergebnis && vorwahl == null -> katalog
+                    freieAngabe != null && katalog is Ergebnis -> ausweg(katalog)
+                    freieAngabe != null && ziel == "cloud" ->
+                        ausweg(Ergebnis("${freieAngabe.modell} ist nicht gestartet: Die OpenLauncher-Auswahl läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     // Für diese Modelle gibt es keinen Weg außerhalb des Angebots: nie still als Opus starten.
                     festModell != null && katalog !is OpenLauncherKatalog.Wahl ->
                         ausweg(Ergebnis("$festModell ist nicht gestartet: Das Angebot von OpenLauncher ist gerade nicht lesbar oder enthält das Modell nicht.", fehler = true))
@@ -527,6 +542,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, gespraech, null, ziel, (knopfModell ?: antwortModell) ?: katalog.modell.name, CLI_ANTIGRAVITY,
                             if (a.has("review")) STUFE_REVIEW_UMFANG else STUFE_REVIEW, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade(),
                             zusatz = "${katalog.effort}|${katalog.profil}|${katalog.modus}",
+                            gewaehlt = "${katalog.modell.anbieter}\t${katalog.modell.slug}\t${katalog.modell.name}"))
+                    // Vollbildauswahl im Codex oder Kimi Code CLI: Die Sitzung kann nicht selbst nach dem Review fragen; alle übrigen Angaben stehen schon fest.
+                    freieAngabe != null && katalog is OpenLauncherKatalog.Wahl && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE) && !a.has("review") ->
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, gespraech, null, ziel, katalog.modell.name, katalog.cli, STUFE_REVIEW,
+                            runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade(), zusatz = "${katalog.effort}|${katalog.profil}|${katalog.modus}",
                             gewaehlt = "${katalog.modell.anbieter}\t${katalog.modell.slug}\t${katalog.modell.name}"))
                     // Ohne Hooks (Codex und Kimi Code CLI) kann die Sitzung nicht selbst nach dem Review fragen: wie bei Sol im Codex CLI vorher fragen.
                     (knopfModell ?: antwortModell)?.takeIf { ProgrammiererVorlage.katalogName(it) != null } != null && katalog is OpenLauncherKatalog.Wahl &&
@@ -567,6 +587,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 }
             },
         )
+    }
+
+    /** Der Einstieg der Vollbildauswahl als geprüfte Wahl: [OpenLauncherKatalog.Wahl] oder [Ergebnis] mit dem Grund. */
+    private suspend fun freieKatalogWahl(f: ProgrammiererVorlage.FreieWahl): Any {
+        val angebot = try { OpenLauncherKatalog.angebot(app) } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
+            return Ergebnis("${f.modell} ist nicht gestartet: ${fehler.message}", fehler = true)
+        }
+        return angebot.wahlAus(f) ?: Ergebnis("${f.modell} ist nicht gestartet: Die Angaben im Einstieg passen nicht zum Angebot von OpenLauncher.", fehler = true)
     }
 
     /**
@@ -728,7 +756,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun reviewUmfang(a: JSONObject) = a.optString("review_umfang").trim().lowercase().takeIf { it == REVIEW_STANDARD || it == REVIEW_SEHR_AUSFUEHRLICH }
 
-    private fun modellName(modell: String, cli: String) = ProgrammiererVorlage.katalogName(modell) ?: modell.takeIf { cli == CLI_ANTIGRAVITY && it !in listOf(MODELL_OPUS, MODELL_SOL) } ?:
+    private fun modellName(modell: String, cli: String) = ProgrammiererVorlage.katalogName(modell) ?: modell.takeIf { it.isNotEmpty() && it !in listOf(MODELL_OPUS, MODELL_SOL) } ?:
         if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
 
     /** Die Angebotswahl zum Knopf [wert] (Standards minimal, schnell, high): [OpenLauncherKatalog.Wahl] oder [Ergebnis] mit dem Grund. */

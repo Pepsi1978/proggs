@@ -20,14 +20,43 @@ import org.json.JSONObject
  */
 object OpenLauncherKatalog {
 
-    data class Modell(val anbieter: String, val slug: String, val name: String) {
+    data class Modell(val anbieter: String, val slug: String, val name: String, val anbieterName: String = "") {
         /** Die CLIs, die OpenLauncher diesem Modell anbietet (bei mehreren fragt Jarvis, wenn Frank keins nennt). */
         val clis: List<String> get() = clisFuer(anbieter)
     }
 
+    /** Ein Anbieterbereich der Modellliste von OpenLauncher (eine Gruppe aus models.json), nur sichtbare Modelle. */
+    data class Gruppe(val id: String, val titel: String, val anbieter: String, val modelle: List<Modell>)
+
+    /** Das geladene Angebot: Gruppen und die am PC abweichend gemerkten Effort-Stufen (effort-stufen.json). */
+    class Angebot(val gruppen: List<Gruppe>, private val gemerkt: Map<String, List<String>>) {
+        val modelle: List<Modell> get() = gruppen.flatMap { it.modelle }
+
+        /** Die Effort-Stufen, die OpenLauncher dem Modell anbietet (LoadThinkingOptionsAsync): für OpenCode Zen, OpenRouter und NVIDIA zuerst der Stand vom PC. */
+        fun efforts(m: Modell): List<String> {
+            val schluessel = "${m.anbieter}/${m.slug}"
+            return (gemerkt["$schluessel [opencode]"] ?: gemerkt[schluessel]).takeIf { !direkt(m) } ?: OpenLauncherEfforts.stufen(m.anbieter, m.slug)
+        }
+
+        /** Prüft den Einstieg der Vollbildauswahl genau gegen das Angebot; null, wenn etwas nicht (mehr) passt. */
+        fun wahlAus(f: ProgrammiererVorlage.FreieWahl): Wahl? {
+            val m = modelle.firstOrNull { it.name == f.modell && it.anbieterName == f.anbieter } ?: return null
+            val stufen = efforts(m)
+            val effort = if (f.effort == ProgrammiererVorlage.OHNE_EFFORT) "".takeIf { stufen.isEmpty() } else stufen.firstOrNull { OpenLauncherEfforts.name(it) == f.effort }
+            val profil = OpenLauncherEfforts.PROFILE.firstOrNull { it.name == f.profil }?.wert
+            val modus = OpenLauncherEfforts.MODI.firstOrNull { it.name == f.modus }?.wert
+            val cli = m.clis.firstOrNull { CLI_NAMEN[it] == f.cli }
+            return Wahl(m, effort ?: return null, profil ?: return null, modus ?: return null, cli ?: return null)
+        }
+    }
+
+    /** Die Gruppen in Franks Reihenfolge: Anthropic, OpenAI, Moonshot, Google, danach die übrigen wie im OpenLauncher. */
+    fun sortiert(gruppen: List<Gruppe>) = gruppen.sortedBy { g -> VORRANG.indexOf(g.anbieter.lowercase(Locale.ROOT)).let { if (it < 0) VORRANG.size else it } }
+    fun anfangsOffen(g: Gruppe) = g.anbieter.lowercase(Locale.ROOT) in VORRANG
+
     data class Wahl(val modell: Modell, val effort: String, val profil: String, val modus: String, val cli: String) {
         /** Für Franks Ohren: „Kimi K3 (1M) in OpenCode, Effort High, Minimalprofil, Schnellmodus“. */
-        fun beschreibung() = "${modell.name} in ${CLI_NAMEN[cli]}, Effort ${effortName(effort)}, ${PROFIL_NAMEN[profil]}, ${MODUS_NAMEN[modus]}"
+        fun beschreibung() = "${modell.name} in ${CLI_NAMEN[cli]}, " + (if (effort.isEmpty()) "ohne Effort" else "Effort ${effortName(effort)}") + ", ${PROFIL_NAMEN[profil]}, ${MODUS_NAMEN[modus]}"
     }
 
     sealed class Aufloesung {
@@ -39,6 +68,7 @@ object OpenLauncherKatalog {
     const val ANTHROPIC = "anthropic"
     private const val MOONSHOT = "kimi-code-plan-global"
     private const val GOOGLE = "google"
+    private val VORRANG = listOf(ANTHROPIC, "openai", MOONSHOT, GOOGLE)
 
     val CLI_NAMEN = linkedMapOf("claude" to "Claude Code", "codex" to "Codex CLI", "opencode" to "OpenCode", "kimi" to "Kimi Code CLI", "antigravity" to "Antigravity CLI")
     val PROFIL_NAMEN = linkedMapOf("minimal" to "Minimalprofil", "standard" to "Standardprofil", "strict" to "Striktprofil")
@@ -71,10 +101,12 @@ object OpenLauncherKatalog {
     // ---- Laden (GitHub, zehn Minuten im Speicher) ----
 
     private val HTTP = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS).build()
-    @Volatile private var zwischen: Pair<Long, List<Modell>>? = null
+    @Volatile private var zwischen: Pair<Long, Angebot>? = null
     private const val HALTEN_MS = 10 * 60_000L
 
-    suspend fun modelle(context: Context): List<Modell> = withContext(Dispatchers.IO) {
+    suspend fun modelle(context: Context): List<Modell> = angebot(context).modelle
+
+    suspend fun angebot(context: Context): Angebot = withContext(Dispatchers.IO) {
         zwischen?.takeIf { System.currentTimeMillis() - it.first < HALTEN_MS }?.let { return@withContext it.second }
         val e = Einstellungen.get(context.applicationContext)
         fun lies(pfad: String): String {
@@ -86,28 +118,39 @@ object OpenLauncherKatalog {
                 return a.body?.string().orEmpty()
             }
         }
-        val liste = runCatching { auslesen(lies("OpenLauncher/models.json")) }
-            .getOrElse { fehler -> zwischen?.second ?: throw IllegalStateException("Das Angebot von OpenLauncher ist gerade nicht lesbar (${fehler.message}).") }
-        zwischen = System.currentTimeMillis() to liste
-        liste
+        val gruppen = runCatching { gruppenAus(lies("OpenLauncher/models.json")) }
+            .getOrElse { fehler -> zwischen?.second?.gruppen ?: throw IllegalStateException("Das Angebot von OpenLauncher ist gerade nicht lesbar (${fehler.message}).") }
+        // Fehlt die Datei, gelten die festen Stufen von OpenLauncher.
+        val gemerkt = runCatching { stufenAus(lies("OpenLauncher/effort-stufen.json")) }.getOrDefault(emptyMap())
+        Angebot(gruppen, gemerkt).also { zwischen = System.currentTimeMillis() to it }
     }
 
     /** models.json (Gruppen mit Models); Profil, Modus und Effort sind Franks Standards, nicht model-defaults.json. */
-    internal fun auslesen(modelsJson: String): List<Modell> {
+    internal fun auslesen(modelsJson: String): List<Modell> = gruppenAus(modelsJson).flatMap { it.modelle }
+
+    internal fun gruppenAus(modelsJson: String): List<Gruppe> {
         val gruppen = JSONArray(modelsJson)
-        val liste = mutableListOf<Modell>()
+        val liste = mutableListOf<Gruppe>()
         for (g in 0 until gruppen.length()) {
-            val modelle = gruppen.optJSONObject(g)?.optJSONArray("Models") ?: continue
+            val gruppe = gruppen.optJSONObject(g) ?: continue
+            val modelle = gruppe.optJSONArray("Models") ?: continue
+            val sichtbar = mutableListOf<Modell>()
             for (i in 0 until modelle.length()) {
                 val m = modelle.optJSONObject(i) ?: continue
                 if (m.optBoolean("IsHidden")) continue
                 val anbieter = m.optString("ProviderId")
                 val slug = m.optString("Slug")
                 if (anbieter.isBlank() || slug.isBlank()) continue
-                liste += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug })
+                sichtbar += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, m.optString("ProviderName").ifBlank { anbieter })
             }
+            if (sichtbar.isNotEmpty()) liste += Gruppe(gruppe.optString("Id"), gruppe.optString("Title").ifBlank { sichtbar.first().anbieterName }, sichtbar.first().anbieter, sichtbar)
         }
         return liste
+    }
+
+    internal fun stufenAus(json: String): Map<String, List<String>> {
+        val o = JSONObject(json)
+        return o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }
     }
 
     // ---- Auflösen ----

@@ -565,7 +565,9 @@ private fun WahlKnoepfe(vm: AppViewModel, karte: Nachricht) {
 /** Was gerade zur Wahl steht: die Modellwahl des Programmierbuttons (gleiche Reihenfolge wie auf der Karte) oder die Knöpfe der offenen Karte. */
 @Composable
 private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
-    if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.MODELL_OPTIONEN) { vm.programmierVorwahl(it) }
+    val vorwahlModell = vm.programmierVorwahlModell
+    if (vm.programmierVorwahlOffen && vorwahlModell != null) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.cliOptionen(vorwahlModell)) { vm.programmierVorwahlCli(vorwahlModell, it) }
+    else if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.VORWAHL_OPTIONEN) { vm.programmierVorwahl(it) }
     else karte?.let { WahlKnoepfe(vm, it) }
 }
 
