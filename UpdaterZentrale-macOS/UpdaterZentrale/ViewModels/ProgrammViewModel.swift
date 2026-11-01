@@ -80,7 +80,10 @@ final class ProgrammViewModel {
     // MARK: - Veraenderlicher Zustand
 
     private(set) var zustand: UpdateZustand = .unbekannt {
-        didSet { melden() }
+        didSet {
+            if zustand == .aktuell && einstellungen.fuer(eintrag.id).updateUebergebenAm != nil { uebergabeMerken(nil) }
+            melden()
+        }
     }
     private(set) var statusText = "Noch nicht geprüft" { didSet { melden() } }
     private(set) var installierteVersion = "" { didSet { melden() } }
@@ -107,7 +110,23 @@ final class ProgrammViewModel {
 
     var protokoll: String { protokollPuffer }
 
-    var hatUpdate: Bool { zustand == .updateVerfuegbar }
+    /// Ein schon an eine CLI-Sitzung uebergebenes Update wird nicht erneut angeboten: weder hier noch dem Sammellauf.
+    var hatUpdate: Bool { zustand == .updateVerfuegbar && !updateUebergeben }
+
+    /// Eine Sitzung hat dieses Update; nach dieser Zeit gilt sie als beendet, wie eine OpenCode-Sitzung.
+    var updateUebergeben: Bool {
+        guard let am = einstellungen.fuer(eintrag.id).updateUebergebenAm else { return false }
+        return Date().timeIntervalSince(am) < OpenCodeSitzungAktualisierer.sperrzeit
+    }
+
+    /// Nicht fuer die OpenCode-Karte: ihr normales Update ist schon so eine Sitzung, mit eigener Sperre.
+    var kannAnCliUebergeben: Bool { aktionBetont && eintrag.art.lowercased() != "opencodesitzung" }
+
+    private func uebergabeMerken(_ zeitpunkt: Date?) {
+        einstellungen.fuer(eintrag.id).updateUebergebenAm = zeitpunkt
+        einstellungen.speichern()
+        melden()
+    }
 
     /// Die Update-Schaltflaeche laedt nur dann zum Klick ein, wenn wirklich eine neuere Version
     /// vorliegt. Hat eine Pruefung nichts gefunden, steht dort "Aktuell" und sie ist abgeschaltet,
@@ -120,7 +139,7 @@ final class ProgrammViewModel {
         if uebernahmeOffen { return eintrag.art.lowercased() == "opencodesitzung" ? "Sitzung baut" : "Neustart nötig" }
         switch zustand {
         case .aktuell: return "Aktuell"
-        case .updateVerfuegbar: return "Aktualisieren"
+        case .updateVerfuegbar: return updateUebergeben ? "Sitzung läuft" : "Aktualisieren"
         case .pruefe: return "Prüft …"
         case .nichtInstalliert: return "Nicht installiert"
         default: return "Aktualisieren"
@@ -128,7 +147,7 @@ final class ProgrammViewModel {
     }
 
     /// Nur ein echtes Update bekommt die Akzentfarbe; alles andere bleibt ruhig.
-    var aktionBetont: Bool { zustand == .updateVerfuegbar && !uebernahmeOffen }
+    var aktionBetont: Bool { hatUpdate && !uebernahmeOffen }
 
     var kannPruefen: Bool { aktualisierer != nil && !istBeschaeftigt && !koordination.belegt }
 
@@ -307,16 +326,50 @@ final class ProgrammViewModel {
     }
 
     /// Schickt das ganze anstehende Update als Auftrag an eine neue Claude-Code-Sitzung, statt es hier auszufuehren.
+    /// Die Sitzung arbeitet ohne Nachfragen, also wird hier zuerst alles gefragt, was der normale Lauf fragen wuerde.
+    /// Die app-weite Sperre bleibt belegt, solange der Launcher startet; das kann bis zu zwei Minuten dauern.
     func updateAnCliUebergeben() async {
-        guard !uebergibtAnClaude, hatUpdate else { return }
+        guard !uebergibtAnClaude, kannAnCliUebergeben else { return }
+
+        if kannCliBeenden && !Dialoge.fragen(
+            "\(name) kann laufende CLI-Sitzungen beenden:\n\n\(eintrag.cliRisiko ?? "")"
+            + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem an eine CLI-Sitzung übergeben?",
+            "CLI-Sitzungen in Gefahr") {
+            return
+        }
+
+        let beendenNoetig = eintrag.beendenVorUpdate && Prozessdienst.laeuft(eintrag)
+        if beendenNoetig && !Dialoge.fragen(
+            "\(name) läuft gerade und muss zum Aktualisieren beendet werden. Das übernimmt die CLI-Sitzung.\n\nJetzt übergeben?",
+            "Programm beenden?") {
+            return
+        }
+
+        // Ohne Statuspraefix hat das Skript keine eigene Rueckfrage: dann muss die App fragen.
+        let skriptFragen = eintrag.art.lowercased() == "reposkript" && (eintrag.statusPraefix ?? "").istLeer
+        if skriptFragen && !Dialoge.fragen(
+            "\(name) wird neu gebaut und neu gestartet.\n\nJetzt an eine CLI-Sitzung übergeben?", "\(name) aktualisieren?") {
+            return
+        }
+
+        guard let eigen = erwerben(nil, "uebergabe") else { return }
+        defer { eigen.freigeben() }
         uebergibtAnClaude = true
         defer { uebergibtAnClaude = false }
         statusText = "Übergebe das Update von \(name) an Claude Code …"
-        if let problem = await ClaudeUebergabe.updateStarten(eintrag, installiert: installierteVersion, verfuegbar: verfuegbareVersion) {
+        let (problem, vielleicht) = await ClaudeUebergabe.updateStarten(eintrag, installiert: installierteVersion, verfuegbar: verfuegbareVersion,
+                                                                        befehl: befehlsBeschreibung(), beendenZugestimmt: beendenNoetig,
+                                                                        skriptZugestimmt: skriptFragen)
+        // Ein stummer Launcher hat die Sitzung meist doch gestartet: ein zweiter Klick darf keine weitere starten.
+        if problem == nil || vielleicht { uebergabeMerken(Date()) }
+        Diagnose.ereignis(problem == nil ? .info : .warnung, "uebergabe", "update.uebergeben",
+                          problem ?? "\(name) an eine CLI-Sitzung übergeben.",
+                          ["programm": eintrag.id, "ziel": verfuegbareVersion])
+        if let problem {
             statusText = problem
             beiMeldung?(problem)
         } else {
-            statusText = "Update von \(name) an Claude Code übergeben – die Sitzung läuft im Terminal. Danach „Prüfen“ zeigt den neuen Stand."
+            statusText = "Update von \(name) an Claude Code übergeben – die Sitzung läuft im Terminal. Danach bestätigt „Prüfen“ den neuen Stand."
         }
     }
 
@@ -359,6 +412,12 @@ final class ProgrammViewModel {
             + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem aktualisieren?",
             "CLI-Sitzungen in Gefahr") {
             return
+        }
+        if updateUebergeben {
+            // Die Sitzung kann vorzeitig geendet haben, also bleibt das moeglich -- aber nur mit Absicht.
+            guard Dialoge.fragen("Dieses Update ging schon an eine CLI-Sitzung. Läuft sie noch, kämen sich beide Updates in die Quere."
+                                 + "\n\nJetzt trotzdem hier aktualisieren?", "CLI-Sitzung läuft") else { return }
+            uebergabeMerken(nil)
         }
         let vorher = letzterBericht?.zeit
         await aktualisieren()

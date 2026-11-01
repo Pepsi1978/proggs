@@ -423,7 +423,7 @@
                                 <Button Content="An CLI übergeben" Margin="0,8,0,0" Style="{StaticResource SchalterZweit}"
                                         Command="{Binding UpdateAnCliUebergebenCommand}"
                                         IsEnabled="{Binding AktionMoeglich}"
-                                        Visibility="{Binding AktionBetont, Converter={StaticResource BoolSichtbar}}"
+                                        Visibility="{Binding KannAnCliUebergeben, Converter={StaticResource BoolSichtbar}}"
                                         ToolTip="Startet über den OpenLauncher eine neue Claude-Code-Sitzung (Opus 5.5, Minimal, Schnellmodus, Effort High), die dieses Update als Auftrag vollständig ausführt" />
 
                                 <Grid Margin="0,8,0,0">

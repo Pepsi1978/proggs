@@ -272,7 +272,7 @@ final class ProgrammKarteView: KartenView {
         aktionsSchalter.isEnabled = modell.aktionMoeglich
         aktionsSchalter.betont = modell.aktionBetont
 
-        cliSchalter.isHidden = !modell.aktionBetont
+        cliSchalter.isHidden = !modell.kannAnCliUebergeben
         cliSchalter.isEnabled = modell.aktionMoeglich && !modell.uebergibtAnClaude
 
         pruefenSchalter.isEnabled = modell.kannPruefen

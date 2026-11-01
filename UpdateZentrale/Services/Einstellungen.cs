@@ -29,6 +29,12 @@ public sealed class ProgrammEinstellung
     /// uebersteht so Neustarts. Nur gesetzt, wenn die Sitzung wirklich startete.
     /// </summary>
     public DateTime? AutomatischUebergebenAm { get; set; }
+
+    /// <summary>
+    /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die
+    /// Karte es nicht erneut an und der Sammellauf laesst es aus; eine Pruefung mit "aktuell" loescht es.
+    /// </summary>
+    public DateTime? UpdateUebergebenAm { get; set; }
 }
 
 public sealed class SammelFortsetzung

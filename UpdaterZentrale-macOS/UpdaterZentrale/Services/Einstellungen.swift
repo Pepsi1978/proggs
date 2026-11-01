@@ -17,12 +17,17 @@ final class ProgrammEinstellung: Codable {
     /// Neustarts hinweg). Nur gesetzt, wenn die Sitzung wirklich startete.
     var automatischUebergebenAm: Date?
 
+    /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die
+    /// Karte es nicht erneut an und der Sammellauf laesst es aus; eine Pruefung mit "aktuell" loescht es.
+    var updateUebergebenAm: Date?
+
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case ausgeblendet = "Ausgeblendet"
         case fehlerQuittiertBis = "FehlerQuittiertBis"
         case automatischUebergebenAm = "AutomatischUebergebenAm"
+        case updateUebergebenAm = "UpdateUebergebenAm"
     }
 
     init(from decoder: Decoder) throws {
@@ -30,6 +35,7 @@ final class ProgrammEinstellung: Codable {
         ausgeblendet = (try? c.decode(Bool.self, forKey: .ausgeblendet)) ?? false
         fehlerQuittiertBis = try? c.decode(Date.self, forKey: .fehlerQuittiertBis)
         automatischUebergebenAm = try? c.decode(Date.self, forKey: .automatischUebergebenAm)
+        updateUebergebenAm = try? c.decode(Date.self, forKey: .updateUebergebenAm)
     }
 }
 

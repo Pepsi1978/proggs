@@ -126,7 +126,25 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     public string Protokoll => _protokoll.ToString();
 
-    public bool HatUpdate => Zustand == UpdateZustand.UpdateVerfuegbar;
+    /// <summary>An update already handed to a CLI session is not offered again: neither here nor to a batch run.</summary>
+    public bool HatUpdate => Zustand == UpdateZustand.UpdateVerfuegbar && !UpdateUebergeben;
+
+    /// <summary>A session has this update; after this time it counts as ended, the same as an OpenCode session.</summary>
+    public bool UpdateUebergeben => _einstellungen.Fuer(Eintrag.Id).UpdateUebergebenAm is { } am
+                                    && DateTime.Now - am < Providers.OpenCodeSitzungAktualisierer.Sperrzeit;
+
+    /// <summary>Not for the OpenCode card: its normal update already is such a session, with its own lock.</summary>
+    public bool KannAnCliUebergeben => AktionBetont && !Eintrag.Art.Equals("opencodesitzung", StringComparison.OrdinalIgnoreCase);
+
+    private void UebergabeMerken(DateTime? zeitpunkt)
+    {
+        _einstellungen.Fuer(Eintrag.Id).UpdateUebergebenAm = zeitpunkt;
+        _einstellungen.Speichern();
+        OnPropertyChanged(nameof(HatUpdate));
+        OnPropertyChanged(nameof(AktionsText));
+        OnPropertyChanged(nameof(AktionBetont));
+        OnPropertyChanged(nameof(KannAnCliUebergeben));
+    }
 
     /// <summary>
     /// The update button only invites action when there really is a newer version. Once a check
@@ -193,14 +211,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
         : Zustand switch
         {
             UpdateZustand.Aktuell => "Aktuell",
-            UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
+            UpdateZustand.UpdateVerfuegbar => UpdateUebergeben ? "Sitzung läuft" : "Aktualisieren",
             UpdateZustand.Pruefe => "Prüft …",
             UpdateZustand.NichtInstalliert => "Nicht installiert",
             _ => "Aktualisieren"
         };
 
     /// <summary>Only a real update gets the accent button; everything else stays calm.</summary>
-    public bool AktionBetont => Zustand == UpdateZustand.UpdateVerfuegbar && !UebernahmeOffen;
+    public bool AktionBetont => HatUpdate && !UebernahmeOffen;
 
     public bool KannPruefen => _aktualisierer is not null && !IstBeschaeftigt && !_koordination.Belegt;
 
@@ -257,6 +275,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         OnPropertyChanged(nameof(AktionMoeglich));
         OnPropertyChanged(nameof(AktionsText));
         OnPropertyChanged(nameof(AktionBetont));
+        OnPropertyChanged(nameof(KannAnCliUebergeben));
     }
 
     /// <summary>Opens the log of the run that is shown on the card.</summary>
@@ -270,23 +289,68 @@ public sealed partial class ProgrammViewModel : ObservableObject
     [RelayCommand]
     private async Task AnClaudeUebergebenAsync()
     {
-        if (LetzterBericht is not { IstFehler: true } bericht) return;
-        Melde("Übergebe das Problem mit " + Name + " an Claude Code …");
-        Melde(await ClaudeUebergabe.StartenAsync(Eintrag, bericht)
-              ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal.");
+        if (_uebergabeLaeuft || LetzterBericht is not { IstFehler: true } bericht) return;
+        _uebergabeLaeuft = true;
+        try
+        {
+            Melde("Übergebe das Problem mit " + Name + " an Claude Code …");
+            Melde(await ClaudeUebergabe.StartenAsync(Eintrag, bericht)
+                  ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal.");
+        }
+        finally
+        {
+            _uebergabeLaeuft = false;
+        }
     }
+
+    /// <summary>The two handover buttons of a card must not start two sessions for one program.</summary>
+    private bool _uebergabeLaeuft;
 
     /// <summary>
     /// Sends the whole pending update as a task to a new Claude Code session instead of running it here.
-    /// An async command is disabled while it runs, so a double click starts one session, not two.
+    /// The session works without asking, so everything the normal run would ask is asked here first.
+    /// The app-wide lock is held while the launcher starts it, which can take up to two minutes.
     /// </summary>
     [RelayCommand]
     private async Task UpdateAnCliUebergebenAsync()
     {
-        if (!HatUpdate) return;
-        Melde("Übergebe das Update von " + Name + " an Claude Code …");
-        Melde(await ClaudeUebergabe.UpdateStartenAsync(Eintrag, InstallierteVersion, VerfuegbareVersion)
-              ?? "Update von " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal. Danach „Prüfen“ zeigt den neuen Stand.");
+        if (_uebergabeLaeuft || !KannAnCliUebergeben) return;
+
+        if (KannCliBeenden && !Dialoge.Fragen(
+                Name + " kann laufende CLI-Sitzungen beenden:\n\n" + Eintrag.CliRisiko
+                + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem an eine CLI-Sitzung übergeben?",
+                "CLI-Sitzungen in Gefahr"))
+            return;
+
+        var beendenNoetig = Eintrag.BeendenVorUpdate && Prozessdienst.Laeuft(Eintrag);
+        if (beendenNoetig && !Dialoge.Fragen(Name + " läuft gerade und muss zum Aktualisieren beendet werden. "
+                                             + "Das übernimmt die CLI-Sitzung.\n\nJetzt übergeben?", "Programm beenden?"))
+            return;
+
+        // Without a status prefix the script has no question of its own: the app has to ask.
+        var skriptFragen = Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(Eintrag.StatusPraefix);
+        if (skriptFragen && !Dialoge.Fragen(Name + " wird neu gebaut und neu gestartet.\n\nJetzt an eine CLI-Sitzung übergeben?", Name + " aktualisieren?"))
+            return;
+
+        if (!Erwerben(null, out var eigen, "uebergabe")) return;
+        _uebergabeLaeuft = true;
+        try
+        {
+            Melde("Übergebe das Update von " + Name + " an Claude Code …");
+            var (problem, vielleicht) = await ClaudeUebergabe.UpdateStartenAsync(Eintrag, InstallierteVersion, VerfuegbareVersion,
+                                                                                 BefehlsBeschreibung(), beendenNoetig, skriptFragen);
+            // An unanswered launcher usually started the session anyway: a second click must not start another.
+            if (problem is null || vielleicht) UebergabeMerken(DateTime.Now);
+            Diagnose.Ereignis(problem is null ? Schwere.Info : Schwere.Warnung, "uebergabe", "update.uebergeben",
+                              problem ?? Name + " an eine CLI-Sitzung übergeben.", null,
+                              new Dictionary<string, object?> { ["programm"] = Eintrag.Id, ["ziel"] = VerfuegbareVersion });
+            Melde(problem ?? "Update von " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal. Danach bestätigt „Prüfen“ den neuen Stand.");
+        }
+        finally
+        {
+            _uebergabeLaeuft = false;
+            eigen?.Dispose();
+        }
     }
 
     /// <summary>
@@ -510,6 +574,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
         OnPropertyChanged(nameof(AktionMoeglich));
         OnPropertyChanged(nameof(AktionsText));
         OnPropertyChanged(nameof(AktionBetont));
+        OnPropertyChanged(nameof(KannAnCliUebergeben));
+        if (value == UpdateZustand.Aktuell && _einstellungen.Fuer(Eintrag.Id).UpdateUebergebenAm is not null) UebergabeMerken(null);
     }
 
     partial void OnIstBeschaeftigtChanged(bool value)
@@ -559,6 +625,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 "CLI-Sitzungen in Gefahr"))
         {
             return Task.CompletedTask;
+        }
+        if (UpdateUebergeben)
+        {
+            // The session may have ended early, so this stays possible -- but only on purpose.
+            if (!Dialoge.Fragen("Dieses Update ging schon an eine CLI-Sitzung. Läuft sie noch, kämen sich beide Updates in die Quere."
+                                + "\n\nJetzt trotzdem hier aktualisieren?", "CLI-Sitzung läuft"))
+                return Task.CompletedTask;
+            UebergabeMerken(null);
         }
         return AktualisierenKernAsync(null);
     }

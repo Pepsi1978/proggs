@@ -1,17 +1,28 @@
 using System.IO;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using UpdateZentrale.Models;
 using UpdateZentrale.Providers;
 
 namespace UpdateZentrale.Services;
 
 /// <summary>
-/// Hands a failed run to a fresh Claude Code session in the terminal: Opus 5.5, profile minimal,
-/// fast mode, effort high. Uses the same OpenLauncher start as the OpenCode session card
-/// (--jarvis-auftrag, unelevated, exit code checked), with the problem as first message.
+/// Hands a failed run or a whole pending update to a fresh Claude Code session in the terminal:
+/// Opus 5.5, profile minimal, fast mode, effort high. Uses the same OpenLauncher start as the
+/// OpenCode session card (--jarvis-auftrag, unelevated, exit code checked), with the task as first message.
 /// </summary>
 public static class ClaudeUebergabe
 {
+    private static readonly JsonSerializerOptions KatalogOptionen = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     /// <summary>
     /// The launcher passes the whole task to claude as one command-line argument, and Windows caps
     /// a command line at 32767 characters. The log tail stays well below that; the full log is
@@ -99,10 +110,15 @@ public static class ClaudeUebergabe
         return await SitzungStartenAsync("fehler-" + kennung, "UpdateZentrale: Fehler " + kennung, () => AuftragText(faelle));
     }
 
-    /// <summary>Hands a whole pending update to a new session. Null on success, otherwise why no session was started.</summary>
-    public static async Task<string?> UpdateStartenAsync(ProgrammEintrag eintrag, string installiert, string verfuegbar)
-        => (await SitzungStartenAsync("update-" + eintrag.Id, "UpdateZentrale: Update " + eintrag.Id,
-                                      () => UpdateAuftragText(eintrag, installiert, verfuegbar))).Problem;
+    /// <summary>Hands a whole pending update to a new session.</summary>
+    /// <param name="befehl">The way this card would run the update itself.</param>
+    /// <param name="beendenZugestimmt">The program is running and the user agreed to closing it.</param>
+    /// <param name="skriptZugestimmt">The script has no question of its own and the user already answered the app's.</param>
+    /// <returns>Problem: why no session was started; Vielleicht: the launcher did not answer, it may run anyway.</returns>
+    public static Task<(string? Problem, bool Vielleicht)> UpdateStartenAsync(ProgrammEintrag eintrag, string installiert, string verfuegbar,
+                                                                              string befehl, bool beendenZugestimmt, bool skriptZugestimmt)
+        => SitzungStartenAsync("update-" + eintrag.Id, "UpdateZentrale: Update " + eintrag.Id,
+                               () => UpdateAuftragText(eintrag, installiert, verfuegbar, befehl, beendenZugestimmt, skriptZugestimmt));
 
     /// <param name="dateiName">Task file name without time stamp and extension.</param>
     /// <param name="sitzungsName">
@@ -137,35 +153,45 @@ public static class ClaudeUebergabe
         }
     }
 
-    private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar)
+    private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar, string befehl,
+                                            bool beendenZugestimmt, bool skriptZugestimmt)
     {
+        static string Anzeige(string version) => string.IsNullOrWhiteSpace(version) ? "unbekannt" : version;
+
+        var projekt = Path.Combine(Pfade.RepoWurzel, "UpdateZentrale");
         var sb = new StringBuilder();
-        sb.AppendLine("Auftrag von der UpdateZentrale (Windows): Führe das Update von " + eintrag.Name + " vollständig aus (" + installiert + " → " + verfuegbar + ").");
+        sb.AppendLine("Auftrag von der UpdateZentrale (Windows): Führe das Update von " + eintrag.Name + " vollständig aus ("
+                      + Anzeige(installiert) + " → " + Anzeige(verfuegbar) + "). Die Versionen stammen von der letzten Prüfung, lies den Stand zuerst frisch.");
         sb.AppendLine();
         sb.AppendLine("Gehe so vor:");
-        sb.AppendLine("1. Führe das Update über den Weg aus, den der Katalogeintrag unten beschreibt. Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
-        sb.AppendLine("2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende.");
+        sb.AppendLine("1. Führe das Update über den Weg der UpdateZentrale aus: " + befehl + ". Einzelheiten stehen im Katalogeintrag unten, die Umsetzung in "
+                      + Path.Combine(projekt, "Providers") + ". Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
+        sb.AppendLine("2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende. "
+                      + "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.");
         sb.AppendLine("3. Prüfe am Ende die installierte Version nach und melde das Ergebnis.");
-        sb.AppendLine("4. Hat der Weg der UpdateZentrale versagt: Bau die Vorbeugung dauerhaft ein (" + Path.Combine(Pfade.RepoWurzel, "UpdateZentrale")
+        sb.AppendLine("4. Hat der Weg der UpdateZentrale versagt: Bau die Vorbeugung dauerhaft ein (" + projekt
                       + ", Katalog programs.json) und halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest.");
+        sb.AppendLine();
+        sb.AppendLine("Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.");
+        sb.AppendLine("Beende andere laufende Programme nicht ohne Rückfrage.");
+        if (eintrag.BeendenVorUpdate)
+            sb.AppendLine(beendenZugestimmt
+                ? eintrag.Name + " läuft und muss fürs Update beendet werden, dem habe ich beim Klick zugestimmt."
+                : eintrag.Name + " muss fürs Update beendet sein. Beim Klick lief es nicht; läuft es inzwischen, frag vor dem Beenden nach.");
+        if (skriptZugestimmt) sb.AppendLine("Dem Neubau über das Skript habe ich beim Klick zugestimmt.");
         if (eintrag.KannCliBeenden)
         {
             sb.AppendLine();
             sb.AppendLine("Achtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: " + eintrag.CliRisiko);
-            sb.AppendLine("Starte es so, dass es auch dann zu Ende läuft, wenn diese Sitzung dabei endet.");
+            sb.AppendLine("Starte es abgekoppelt, damit es auch dann zu Ende läuft, wenn diese Sitzung endet. Verlangt es geschlossene Terminalfenster, melde das, statt es zu erzwingen. "
+                          + "Endet die Sitzung vorher, bestätigt die nächste Prüfung der UpdateZentrale das Ergebnis.");
         }
         sb.AppendLine();
         sb.AppendLine("Protokolle der UpdateZentrale: " + Protokollierung.Ordner);
         sb.AppendLine();
         sb.AppendLine("Katalogeintrag:");
         sb.AppendLine("----");
-        sb.AppendLine(System.Text.Json.JsonSerializer.Serialize(eintrag, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        }));
+        sb.AppendLine(JsonSerializer.Serialize(eintrag, KatalogOptionen));
         sb.AppendLine("----");
         return sb.ToString();
     }

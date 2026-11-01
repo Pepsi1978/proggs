@@ -1,9 +1,9 @@
 import Foundation
 
-/// Uebergibt einen gescheiterten Lauf an eine neue Claude-Code-Sitzung im Terminal: Opus 5.5,
-/// Profil minimal, Schnellmodus, Effort high. Nutzt denselben OpenLauncher-Start wie die
-/// OpenCode-Sitzungskarte (--jarvis-auftrag, Exit-Code geprueft), mit dem Problem als erster
-/// Nachricht. Port von Services/ClaudeUebergabe.cs (UpdateZentrale 1.3.41/1.3.42).
+/// Uebergibt einen gescheiterten Lauf oder ein ganzes anstehendes Update an eine neue
+/// Claude-Code-Sitzung im Terminal: Opus 5.5, Profil minimal, Schnellmodus, Effort high. Nutzt
+/// denselben OpenLauncher-Start wie die OpenCode-Sitzungskarte (--jarvis-auftrag, Exit-Code
+/// geprueft), mit dem Auftrag als erster Nachricht. Port von Services/ClaudeUebergabe.cs.
 enum ClaudeUebergabe {
 
     /// Der Launcher reicht den ganzen Auftrag als ein Argument an claude weiter. Das Ende des
@@ -77,18 +77,24 @@ enum ClaudeUebergabe {
         guard let erster = faelle.first else { return (nil, false) }
         let kennung = faelle.count == 1 ? erster.0.id : "sammel-\(faelle.count)"
         return await sitzungStarten(dateiName: "fehler-\(kennung)", sitzungsName: "Updater-Zentrale: Fehler \(kennung)",
-                                    kennung: kennung, auftrag: auftragText(faelle))
+                                    auftrag: auftragText(faelle))
     }
 
-    /// Uebergibt ein ganzes anstehendes Update an eine neue Sitzung. Nil bei Erfolg, sonst warum keine Sitzung gestartet wurde.
-    static func updateStarten(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String) async -> String? {
+    /// Uebergibt ein ganzes anstehendes Update an eine neue Sitzung.
+    /// - Parameters:
+    ///   - befehl: der Weg, auf dem diese Karte das Update selbst ausfuehren wuerde.
+    ///   - beendenZugestimmt: das Programm laeuft, und der Benutzer hat dem Beenden zugestimmt.
+    ///   - skriptZugestimmt: das Skript fragt nicht selbst, der Benutzer hat die Frage der App beantwortet.
+    /// - Returns: `problem`: warum keine Sitzung startete; `vielleicht`: der Launcher antwortete nicht, sie laeuft womoeglich doch.
+    static func updateStarten(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String, befehl: String,
+                              beendenZugestimmt: Bool, skriptZugestimmt: Bool) async -> (problem: String?, vielleicht: Bool) {
         await sitzungStarten(dateiName: "update-\(eintrag.id)", sitzungsName: "Updater-Zentrale: Update \(eintrag.id)",
-                             kennung: eintrag.id,
-                             auftrag: updateAuftragText(eintrag, installiert: installiert, verfuegbar: verfuegbar)).problem
+                             auftrag: updateAuftragText(eintrag, installiert: installiert, verfuegbar: verfuegbar, befehl: befehl,
+                                                        beendenZugestimmt: beendenZugestimmt, skriptZugestimmt: skriptZugestimmt))
     }
 
-    private static func sitzungStarten(dateiName: String, sitzungsName: String, kennung: String,
-                                       auftrag: String) async -> (problem: String?, vielleicht: Bool) {
+    private static func sitzungStarten(dateiName: String, sitzungsName: String,
+                                       auftrag: @autoclosure () -> String) async -> (problem: String?, vielleicht: Bool) {
         let launcher = OpenCodeSitzungAktualisierer.launcherExe
         guard FileManager.default.isExecutableFile(atPath: launcher) else {
             return ("OpenLauncher nicht gefunden: " + launcher, false)
@@ -100,9 +106,9 @@ enum ClaudeUebergabe {
         stempel.dateFormat = "yyyyMMdd-HHmmss"
         let datei = (ordner as NSString).appendingPathComponent("\(dateiName)-\(stempel.string(from: Date())).md")
         do {
-            try auftrag.write(toFile: datei, atomically: true, encoding: .utf8)
+            try auftrag().write(toFile: datei, atomically: true, encoding: .utf8)
         } catch {
-            Diagnose.ereignis(.warnung, "uebergabe", "auftrag.schreiben", error.localizedDescription, ["programm": kennung])
+            Diagnose.ereignis(.warnung, "uebergabe", "auftrag.schreiben", error.localizedDescription, ["programm": dateiName])
             return ("Übergabe an Claude Code fehlgeschlagen: \(error.localizedDescription)", false)
         }
 
@@ -114,17 +120,31 @@ enum ClaudeUebergabe {
             : ("Der OpenLauncher konnte die Sitzung nicht starten (Code \(code)) – Einzelheiten im OpenLauncher-Log.", false)
     }
 
-    private static func updateAuftragText(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String) -> String {
-        var t = "Auftrag von der Updater-Zentrale (macOS): Führe das Update von \(eintrag.name) vollständig aus (\(installiert) → \(verfuegbar)).\n\n"
+    private static func updateAuftragText(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String, befehl: String,
+                                          beendenZugestimmt: Bool, skriptZugestimmt: Bool) -> String {
+        let von = installiert.istLeer ? "unbekannt" : installiert
+        let nach = verfuegbar.istLeer ? "unbekannt" : verfuegbar
+        var t = "Auftrag von der Updater-Zentrale (macOS): Führe das Update von \(eintrag.name) vollständig aus (\(von) → \(nach)). "
+              + "Die Versionen stammen von der letzten Prüfung, lies den Stand zuerst frisch.\n\n"
         t += "Gehe so vor:\n"
-        t += "1. Führe das Update über den Weg aus, den der Katalogeintrag unten beschreibt. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
-        t += "2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende.\n"
+        t += "1. Führe das Update über den Weg der Updater-Zentrale aus: \(befehl). Einzelheiten stehen im Katalogeintrag unten, die Umsetzung in "
+           + Pfade.projektOrdner + "/UpdaterZentrale/Providers. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
+        t += "2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende. "
+           + "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.\n"
         t += "3. Prüfe am Ende die installierte Version nach und melde das Ergebnis.\n"
         t += "4. Hat der Weg der Updater-Zentrale versagt: Bau die Vorbeugung dauerhaft ein (" + Pfade.projektOrdner
            + ", Katalog programs.json) und halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest.\n"
+        t += "\nBeende andere laufende Programme nicht ohne Rückfrage.\n"
+        if eintrag.beendenVorUpdate {
+            t += beendenZugestimmt
+                ? "\(eintrag.name) läuft und muss fürs Update beendet werden, dem habe ich beim Klick zugestimmt.\n"
+                : "\(eintrag.name) muss fürs Update beendet sein. Beim Klick lief es nicht; läuft es inzwischen, frag vor dem Beenden nach.\n"
+        }
+        if skriptZugestimmt { t += "Dem Neubau über das Skript habe ich beim Klick zugestimmt, das Skript fragt nicht selbst.\n" }
         if eintrag.kannCliBeenden {
             t += "\nAchtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: \(eintrag.cliRisiko ?? "")\n"
-            t += "Starte es so, dass es auch dann zu Ende läuft, wenn diese Sitzung dabei endet.\n"
+            t += "Starte es abgekoppelt, damit es auch dann zu Ende läuft, wenn diese Sitzung endet. Verlangt es geschlossene Terminalfenster, melde das, statt es zu erzwingen. "
+               + "Endet die Sitzung vorher, bestätigt die nächste Prüfung der Updater-Zentrale das Ergebnis.\n"
         }
         t += "\nProtokolle der Updater-Zentrale: \(Protokollierung.ordner)\n\nKatalogeintrag:\n----\n"
         let kodierer = JSONEncoder()
