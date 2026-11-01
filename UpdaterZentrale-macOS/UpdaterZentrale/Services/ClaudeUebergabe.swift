@@ -75,6 +75,20 @@ enum ClaudeUebergabe {
     /// `vielleicht`: der Launcher antwortete nicht rechtzeitig -- die Sitzung laeuft womoeglich doch.
     private static func startenKern(_ faelle: [(ProgrammEintrag, UpdateBericht)]) async -> (problem: String?, vielleicht: Bool) {
         guard let erster = faelle.first else { return (nil, false) }
+        let kennung = faelle.count == 1 ? erster.0.id : "sammel-\(faelle.count)"
+        return await sitzungStarten(dateiName: "fehler-\(kennung)", sitzungsName: "Updater-Zentrale: Fehler \(kennung)",
+                                    kennung: kennung, auftrag: auftragText(faelle))
+    }
+
+    /// Uebergibt ein ganzes anstehendes Update an eine neue Sitzung. Nil bei Erfolg, sonst warum keine Sitzung gestartet wurde.
+    static func updateStarten(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String) async -> String? {
+        await sitzungStarten(dateiName: "update-\(eintrag.id)", sitzungsName: "Updater-Zentrale: Update \(eintrag.id)",
+                             kennung: eintrag.id,
+                             auftrag: updateAuftragText(eintrag, installiert: installiert, verfuegbar: verfuegbar)).problem
+    }
+
+    private static func sitzungStarten(dateiName: String, sitzungsName: String, kennung: String,
+                                       auftrag: String) async -> (problem: String?, vielleicht: Bool) {
         let launcher = OpenCodeSitzungAktualisierer.launcherExe
         guard FileManager.default.isExecutableFile(atPath: launcher) else {
             return ("OpenLauncher nicht gefunden: " + launcher, false)
@@ -84,21 +98,43 @@ enum ClaudeUebergabe {
         Pfade.ordnerAnlegen(ordner)
         let stempel = DateFormatter()
         stempel.dateFormat = "yyyyMMdd-HHmmss"
-        let kennung = faelle.count == 1 ? erster.0.id : "sammel-\(faelle.count)"
-        let datei = (ordner as NSString).appendingPathComponent("fehler-\(kennung)-\(stempel.string(from: Date())).md")
+        let datei = (ordner as NSString).appendingPathComponent("\(dateiName)-\(stempel.string(from: Date())).md")
         do {
-            try auftragText(faelle).write(toFile: datei, atomically: true, encoding: .utf8)
+            try auftrag.write(toFile: datei, atomically: true, encoding: .utf8)
         } catch {
             Diagnose.ereignis(.warnung, "uebergabe", "auftrag.schreiben", error.localizedDescription, ["programm": kennung])
             return ("Übergabe an Claude Code fehlgeschlagen: \(error.localizedDescription)", false)
         }
 
-        let argumente = OpenCodeSitzungAktualisierer.argumente(datei, name: "Updater-Zentrale: Fehler \(kennung)")
+        let argumente = OpenCodeSitzungAktualisierer.argumente(datei, name: sitzungsName)
         guard let code = await OpenCodeSitzungAktualisierer.launcherStarten(argumente) else {
             return ("Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar.", true)
         }
         return code == 0 ? (nil, false)
             : ("Der OpenLauncher konnte die Sitzung nicht starten (Code \(code)) – Einzelheiten im OpenLauncher-Log.", false)
+    }
+
+    private static func updateAuftragText(_ eintrag: ProgrammEintrag, installiert: String, verfuegbar: String) -> String {
+        var t = "Auftrag von der Updater-Zentrale (macOS): Führe das Update von \(eintrag.name) vollständig aus (\(installiert) → \(verfuegbar)).\n\n"
+        t += "Gehe so vor:\n"
+        t += "1. Führe das Update über den Weg aus, den der Katalogeintrag unten beschreibt. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
+        t += "2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende.\n"
+        t += "3. Prüfe am Ende die installierte Version nach und melde das Ergebnis.\n"
+        t += "4. Hat der Weg der Updater-Zentrale versagt: Bau die Vorbeugung dauerhaft ein (" + Pfade.projektOrdner
+           + ", Katalog programs.json) und halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest.\n"
+        if eintrag.kannCliBeenden {
+            t += "\nAchtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: \(eintrag.cliRisiko ?? "")\n"
+            t += "Starte es so, dass es auch dann zu Ende läuft, wenn diese Sitzung dabei endet.\n"
+        }
+        t += "\nProtokolle der Updater-Zentrale: \(Protokollierung.ordner)\n\nKatalogeintrag:\n----\n"
+        let kodierer = JSONEncoder()
+        kodierer.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        if let daten = try? kodierer.encode(eintrag), let json = String(data: daten, encoding: .utf8) {
+            t += json + "\n"
+        } else {
+            t += "(Id \(eintrag.id), Art \(eintrag.art); der Eintrag steht in programs.json)\n"
+        }
+        return t + "----\n"
     }
 
     private static func auftragText(_ faelle: [(ProgrammEintrag, UpdateBericht)]) -> String {

@@ -277,6 +277,19 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Sends the whole pending update as a task to a new Claude Code session instead of running it here.
+    /// An async command is disabled while it runs, so a double click starts one session, not two.
+    /// </summary>
+    [RelayCommand]
+    private async Task UpdateAnCliUebergebenAsync()
+    {
+        if (!HatUpdate) return;
+        Melde("Übergebe das Update von " + Name + " an Claude Code …");
+        Melde(await ClaudeUebergabe.UpdateStartenAsync(Eintrag, InstallierteVersion, VerfuegbareVersion)
+              ?? "Update von " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal. Danach „Prüfen“ zeigt den neuen Stand.");
+    }
+
+    /// <summary>
     /// Direkt nach einem Fehlschlag, ohne Klick: hoechstens eine Sitzung je Programm in
     /// <see cref="ClaudeUebergabe.Sperrfrist"/>, damit ein Dauerfehler keine Kette startet.
     /// </summary>

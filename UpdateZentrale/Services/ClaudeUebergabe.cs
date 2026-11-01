@@ -95,19 +95,33 @@ public static class ClaudeUebergabe
     private static async Task<(string? Problem, bool Vielleicht)> StartenKernAsync(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
     {
         if (faelle.Count == 0) return (null, false);
+        var kennung = faelle.Count == 1 ? faelle[0].Eintrag.Id : "sammel-" + faelle.Count;
+        return await SitzungStartenAsync("fehler-" + kennung, "UpdateZentrale: Fehler " + kennung, () => AuftragText(faelle));
+    }
+
+    /// <summary>Hands a whole pending update to a new session. Null on success, otherwise why no session was started.</summary>
+    public static async Task<string?> UpdateStartenAsync(ProgrammEintrag eintrag, string installiert, string verfuegbar)
+        => (await SitzungStartenAsync("update-" + eintrag.Id, "UpdateZentrale: Update " + eintrag.Id,
+                                      () => UpdateAuftragText(eintrag, installiert, verfuegbar))).Problem;
+
+    /// <param name="dateiName">Task file name without time stamp and extension.</param>
+    /// <param name="sitzungsName">
+    /// Built from the id, not the display name: the elevated path writes the arguments into a .cmd,
+    /// which cmd.exe reads in the OEM code page and would garble umlauts in.
+    /// </param>
+    /// <param name="auftrag">The task text.</param>
+    private static async Task<(string? Problem, bool Vielleicht)> SitzungStartenAsync(string dateiName, string sitzungsName, Func<string> auftrag)
+    {
         if (!File.Exists(OpenCodeSitzungAktualisierer.LauncherExe))
             return ("OpenLauncher nicht gefunden: " + OpenCodeSitzungAktualisierer.LauncherExe, false);
 
         try
         {
-            var kennung = faelle.Count == 1 ? faelle[0].Eintrag.Id : "sammel-" + faelle.Count;
             var ordner = Directory.CreateDirectory(Path.Combine(Pfade.BenutzerOrdner, "auftraege")).FullName;
-            var datei = Path.Combine(ordner, "fehler-" + kennung + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md");
-            await File.WriteAllTextAsync(datei, AuftragText(faelle), new UTF8Encoding(false));
+            var datei = Path.Combine(ordner, dateiName + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md");
+            await File.WriteAllTextAsync(datei, auftrag(), new UTF8Encoding(false));
 
-            // The id, not the display name: the elevated path writes the arguments into a .cmd,
-            // which cmd.exe reads in the OEM code page and would garble umlauts in.
-            var args = OpenCodeSitzungAktualisierer.Argumente(datei, "UpdateZentrale: Fehler " + kennung);
+            var args = OpenCodeSitzungAktualisierer.Argumente(datei, sitzungsName);
             var code = await OpenCodeSitzungAktualisierer.LauncherStartenAsync(args, ordner, new Progress<string>(_ => { }), CancellationToken.None);
             return code switch
             {
@@ -121,6 +135,39 @@ public static class ClaudeUebergabe
             Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
             return ("Übergabe an Claude Code fehlgeschlagen: " + diagAusnahme.Message, false);
         }
+    }
+
+    private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Auftrag von der UpdateZentrale (Windows): Führe das Update von " + eintrag.Name + " vollständig aus (" + installiert + " → " + verfuegbar + ").");
+        sb.AppendLine();
+        sb.AppendLine("Gehe so vor:");
+        sb.AppendLine("1. Führe das Update über den Weg aus, den der Katalogeintrag unten beschreibt. Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
+        sb.AppendLine("2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende.");
+        sb.AppendLine("3. Prüfe am Ende die installierte Version nach und melde das Ergebnis.");
+        sb.AppendLine("4. Hat der Weg der UpdateZentrale versagt: Bau die Vorbeugung dauerhaft ein (" + Path.Combine(Pfade.RepoWurzel, "UpdateZentrale")
+                      + ", Katalog programs.json) und halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest.");
+        if (eintrag.KannCliBeenden)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Achtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: " + eintrag.CliRisiko);
+            sb.AppendLine("Starte es so, dass es auch dann zu Ende läuft, wenn diese Sitzung dabei endet.");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Protokolle der UpdateZentrale: " + Protokollierung.Ordner);
+        sb.AppendLine();
+        sb.AppendLine("Katalogeintrag:");
+        sb.AppendLine("----");
+        sb.AppendLine(System.Text.Json.JsonSerializer.Serialize(eintrag, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        }));
+        sb.AppendLine("----");
+        return sb.ToString();
     }
 
     private static string AuftragText(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)

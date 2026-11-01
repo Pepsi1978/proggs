@@ -41,6 +41,8 @@ final class ProgrammKarteView: KartenView {
 
     // Bedienelemente
     private let aktionsSchalter = Schalter(.ruhig, "Aktualisieren")
+    /// Nur bei echtem Update: das ganze Update als Auftrag an eine neue CLI-Sitzung.
+    private let cliSchalter = Schalter(.zweit, "An CLI übergeben")
     private let pruefenSchalter = Schalter(.zweit, "Prüfen")
     private let startenSchalter = Schalter(.leise, "Starten")
     private let balken = Fortschrittsbalken()
@@ -141,6 +143,10 @@ final class ProgrammKarteView: KartenView {
         // --- Bedienelemente rechts ---
         aktionsSchalter.target = self
         aktionsSchalter.action = #selector(aktualisierenGeklickt)
+        cliSchalter.target = self
+        cliSchalter.action = #selector(cliGeklickt)
+        cliSchalter.toolTip = "Startet über den OpenLauncher eine neue Claude-Code-Sitzung (Opus 5.5, Minimal, Schnellmodus, Effort High), "
+                            + "die dieses Update als Auftrag vollständig ausführt"
         pruefenSchalter.target = self
         pruefenSchalter.action = #selector(pruefenGeklickt)
         startenSchalter.target = self
@@ -154,7 +160,7 @@ final class ProgrammKarteView: KartenView {
 
         balken.isHidden = true
 
-        let rechts = NSStackView(views: [aktionsSchalter, kleineReihe, balken])
+        let rechts = NSStackView(views: [aktionsSchalter, cliSchalter, kleineReihe, balken])
         rechts.orientation = .vertical
         rechts.alignment = .centerX
         rechts.spacing = 8
@@ -176,6 +182,7 @@ final class ProgrammKarteView: KartenView {
             rechts.widthAnchor.constraint(equalToConstant: 148),
 
             aktionsSchalter.widthAnchor.constraint(equalTo: rechts.widthAnchor),
+            cliSchalter.widthAnchor.constraint(equalTo: rechts.widthAnchor),
             kleineReihe.widthAnchor.constraint(equalTo: rechts.widthAnchor),
             balken.widthAnchor.constraint(equalTo: rechts.widthAnchor),
 
@@ -265,6 +272,9 @@ final class ProgrammKarteView: KartenView {
         aktionsSchalter.isEnabled = modell.aktionMoeglich
         aktionsSchalter.betont = modell.aktionBetont
 
+        cliSchalter.isHidden = !modell.aktionBetont
+        cliSchalter.isEnabled = modell.aktionMoeglich && !modell.uebergibtAnClaude
+
         pruefenSchalter.isEnabled = modell.kannPruefen
         startenSchalter.isEnabled = modell.kannStarten
 
@@ -285,6 +295,10 @@ final class ProgrammKarteView: KartenView {
 
     @objc private func aktualisierenGeklickt() {
         Task { await modell.aktualisierenGeklickt() }
+    }
+
+    @objc private func cliGeklickt() {
+        Task { await modell.updateAnCliUebergeben() }
     }
 
     @objc private func pruefenGeklickt() {

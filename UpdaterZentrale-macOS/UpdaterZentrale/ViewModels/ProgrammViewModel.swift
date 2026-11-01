@@ -306,6 +306,20 @@ final class ProgrammViewModel {
         }
     }
 
+    /// Schickt das ganze anstehende Update als Auftrag an eine neue Claude-Code-Sitzung, statt es hier auszufuehren.
+    func updateAnCliUebergeben() async {
+        guard !uebergibtAnClaude, hatUpdate else { return }
+        uebergibtAnClaude = true
+        defer { uebergibtAnClaude = false }
+        statusText = "Übergebe das Update von \(name) an Claude Code …"
+        if let problem = await ClaudeUebergabe.updateStarten(eintrag, installiert: installierteVersion, verfuegbar: verfuegbareVersion) {
+            statusText = problem
+            beiMeldung?(problem)
+        } else {
+            statusText = "Update von \(name) an Claude Code übergeben – die Sitzung läuft im Terminal. Danach „Prüfen“ zeigt den neuen Stand."
+        }
+    }
+
     func starten() {
         if !Prozessdienst.starten(eintrag) {
             beiMeldung?("Konnte nicht gestartet werden: \(eintrag.zielPfad)")
