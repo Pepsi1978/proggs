@@ -181,6 +181,7 @@ class MainActivity : FragmentActivity() {
         setContent { JarvisApp(vm, this) }
         if (savedInstanceState == null) weckwortPruefen(intent, neu = true)
         if (savedInstanceState == null) rueckfragePruefen(intent)
+        if (savedInstanceState == null) erinnerungPruefen(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -188,9 +189,16 @@ class MainActivity : FragmentActivity() {
         setIntent(intent)
         weckwortPruefen(intent, neu = false)
         rueckfragePruefen(intent)
+        erinnerungPruefen(intent)
     }
 
     /** Tipp auf die Benachrichtigung einer Rückfrage: ihr Gespräch öffnen und die Frage im Vollbild zeigen. */
+    private fun erinnerungPruefen(intent: Intent?) {
+        val id = intent?.getStringExtra(de.frank.jarvis.ablage.ErinnerungPlaner.EXTRA_OEFFNEN) ?: return
+        intent.removeExtra(de.frank.jarvis.ablage.ErinnerungPlaner.EXTRA_OEFFNEN)
+        vm.erinnerungOffen = id
+    }
+
     private fun rueckfragePruefen(intent: Intent?) {
         val gespraech = intent?.getStringExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_GESPRAECH) ?: return
         val frageId = intent.getStringExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE).orEmpty()

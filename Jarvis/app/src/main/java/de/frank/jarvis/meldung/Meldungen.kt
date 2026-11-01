@@ -145,6 +145,12 @@ object Meldungsarten {
         "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer",
         schaltbar = false, vorlesen = true, dringend = true, eigenerTextStandard = "{name} ist abgelaufen.",
     )
+    /** Stimme und Tempo wie Jarvis, solange hier keine eigene gewählt ist. Vorgelesen wird immer; die Form (Benachrichtigung oder Wecker) gehört zur einzelnen Erinnerung. */
+    val ERINNERUNG = Meldungsart(
+        "erinnerung", "Erinnerungen", "Meldet fällige Erinnerungen aus dem Reiter Erinnerung der Ablage und liest ihre Kurzfassung vor.",
+        "Zu den eingestellten Zeitpunkten, auf dem Gerät, das du gerade benutzt.", ALLTAG, "jarvis_erinnerung",
+        schaltbar = false, sprichtImmer = true,
+    )
     val STOPPUHR = Meldungsart(
         "stoppuhr", "Stoppuhr", "Zeigt die laufende Stoppuhr mit mitlaufender Zeit.",
         "Solange eine Stoppuhr läuft.", ALLTAG, "jarvis-stoppuhr",
@@ -191,7 +197,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, ERINNERUNG, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
 }
 

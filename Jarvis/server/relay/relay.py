@@ -1597,7 +1597,8 @@ ABLAGE_HANDY = "Jarvis Handy"
 ABLAGE_WARTEN_S = 25
 ABLAGE_FRIST_S = 30 * 86_400          # so lange bleiben Dateien ohne Eintrag liegen (Schutz vor Fehlbedienung und Abgleichfehlern)
 ABLAGE_MAX_DATEI = 8 * 1024 ** 3
-ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung"}
+ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung", "erinnerung", "quittung"}
+ANWESEND_FRIST_MS = 5 * 60_000        # so lange gilt ein Geraet nach seiner letzten Benutzung als das, an dem Frank gerade sitzt
 ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
 ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente und Bytes je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
@@ -1622,6 +1623,19 @@ class AblageAbgleich:
         self.db.commit()
         self.instanz = self.db.execute("SELECT wert FROM meta WHERE name = 'instanz'").fetchone()[0]
         self.warter = []  # (Name der wartenden Version, Future)
+        self.anwesend = {}  # Name der Version -> Zeit der letzten Benutzung (ms); nur im Speicher, nach einem Neustart melden sich die Geraete binnen einer Minute neu
+
+    async def anwesenheit(self, request: web.Request) -> web.Response:
+        """Welches Geraet benutzt Frank gerade? Das zuletzt benutzte innerhalb der Frist, sonst das Handy. Bestimmt, wo eine faellige Erinnerung erscheint."""
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        geraet = request.query.get("geraet", "").strip()[:40]
+        jetzt = int(time.time() * 1000)
+        if geraet and request.query.get("aktiv") == "1":
+            self.anwesend[geraet] = jetzt
+        frisch = {n: z for n, z in self.anwesend.items() if jetzt - z <= ANWESEND_FRIST_MS}
+        ziel = max(frisch, key=frisch.get) if frisch else ABLAGE_HANDY
+        return web.json_response({"ziel": ziel, "geraete": frisch}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     def _stand(self) -> int:
         return self.db.execute("SELECT COALESCE(MAX(stand), 0) FROM docs").fetchone()[0]
@@ -1884,6 +1898,7 @@ def app() -> web.Application:
     ablage = AblageAbgleich(relay)
     anwendung.on_startup.append(ablage.waechter)
     anwendung.router.add_get("/j/{geheimnis}/ablage/aenderungen", ablage.aenderungen)
+    anwendung.router.add_get("/j/{geheimnis}/ablage/anwesenheit", ablage.anwesenheit)
     anwendung.router.add_put("/j/{geheimnis}/ablage/doc/{art}/{id}", ablage.doc)
     anwendung.router.add_put("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_ablegen)
     anwendung.router.add_get("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_holen)

@@ -23,6 +23,7 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         // Laufende Timer nach einem Neustart wieder scharf stellen.
         de.frank.jarvis.timer.Timer.starte(this)
         de.frank.jarvis.timer.Stoppuhr.starte(this)
+        de.frank.jarvis.ablage.ErinnerungPlaner.starte(this)
         // Überholte, unverändert gebliebene Symbiose-Vorgaben einmal ersetzen (Regel 6: Websuche statt Agent); Dateizugriff nicht auf dem Hauptfaden.
         Thread {
             runCatching { de.frank.jarvis.faehigkeit.Symbiose.aktualisiereVorgaben(this) }

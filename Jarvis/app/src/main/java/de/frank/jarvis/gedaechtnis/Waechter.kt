@@ -171,6 +171,8 @@ object Waechter {
             }
             tag = LocalDate.now()
             runCatching { Lernlauf.anstossen(app) }.onFailure { Logbuch.fehler("Lernlauf anstoßen", it) }
+            // Im eigenen Rahmen: Die Minutenrunde wartet nie auf das Modell.
+            bereich.launch { runCatching { de.frank.jarvis.ablage.ErinnerungHinweis.pruefen(app) }.onFailure { Logbuch.fehler("Erinnerungshinweis", it) } }
             // Ein fester Minutentakt: Die Runde selbst kostet nichts, wenn nichts fällig ist. Kürzer zu schlafen brächte nichts
             // (die Abstände sind lang) und ließe einen gestörten Bereich, dessen Stand stehen bleibt, im Sekundentakt neu lesen.
             delay(60_000L)

@@ -154,6 +154,7 @@ object AblageSync {
         val speicher = AblageZentrale.speicher(app)
         bereich.launch { speicher.stand.drop(1).collect { v -> delay(400); if (v != eigenerStand.get()) anstossen() } }
         bereich.launch { Prompts.stand.drop(1).collect { v -> delay(400); if (v != eigenerPromptStand.get()) anstossen() } }
+        bereich.launch { Erinnerungen.stand.drop(1).collect { delay(400); anstossen() } }
     }
 
     private fun hinweisText(netz: String?): String? {
@@ -331,7 +332,46 @@ object AblageSync {
             "eintrag" -> eintragHolen(app, basis, speicher, z, d, b, imHintergrund)
             "prompt" -> promptHolen(app, z, d, b)
             "ordnung" -> ordnungHolen(app, z, d)
+            "erinnerung" -> erinnerungHolen(app, z, d)
+            "quittung" -> if (!d.optBoolean("geloescht")) quittungHolen(app, d)
         }
+    }
+
+    private fun abdruck(e: Erinnerung): String = kurz(Erinnerungen.alsJson(e).toString())
+
+    /** Wie bei den Prompts, aber ohne zweite Fassung: Bei Änderungen auf beiden Seiten gilt der jüngere Inhalt, die Auslösungen beider Seiten bleiben, und das Vereinte geht wieder an alle. */
+    private fun erinnerungHolen(app: Context, z: Zustand, d: JSONObject) {
+        val id = sicher(d.getString("id"))
+        val s = "erinnerung:$id"
+        val geaendert = d.optLong("geaendert")
+        val lokal = Erinnerungen.eine(app, id)
+        val offen = Erinnerungen.offeneLoeschungen(app)[id]
+        val bekannt = z.bekannt[s]
+        val hierUnveraendert = lokal != null && bekannt == abdruck(lokal)
+        if (d.optBoolean("geloescht")) {
+            if (offen != null) { Erinnerungen.quittiereLoeschung(app, id); z.vergiss(s); return }
+            if (lokal == null) { z.vergiss(s); return }
+            if (hierUnveraendert || bekannt == null) { Erinnerungen.loescheFern(app, id); z.vergiss(s) } else z.zeiten[s] = geaendert
+            return
+        }
+        val fern = Erinnerungen.aus(id, d.getJSONObject("daten"), geaendert)
+        val a = abdruck(fern)
+        if (offen != null) { if (bekannt == a || offen >= geaendert) return; Erinnerungen.quittiereLoeschung(app, id) }
+        if (lokal != null && abdruck(lokal) == a) { z.merke(s, a, geaendert); return }
+        if (lokal != null && bekannt == a) return
+        if (lokal != null && !hierUnveraendert) {
+            if (!Erinnerungen.setzeFern(app, Erinnerungen.vereine(lokal, fern))) throw IOException("Erinnerungen nicht schreibbar")
+            z.bekannt.remove(s)
+            z.zeiten[s] = geaendert
+            return
+        }
+        if (Erinnerungen.setzeFern(app, fern)) z.merke(s, a, geaendert) else throw IOException("Erinnerungen nicht schreibbar")
+    }
+
+    private fun quittungHolen(app: Context, d: JSONObject) {
+        val id = d.getString("id")
+        val w = d.getJSONObject("daten")
+        if (!Erinnerungen.quittungFern(app, Quittung(id, w.optLong("zeit"), w.optString("von"), w.optString("erinnerung")))) throw IOException("Erinnerungen nicht schreibbar")
     }
 
     private fun eintragHolen(app: Context, basis: String, speicher: AblageSpeicher, z: Zustand, d: JSONObject, b: Bestand, imHintergrund: Boolean) {
@@ -601,6 +641,34 @@ object AblageSync {
                 val ids = Prompts.alle(app).map { it.erstellt }
                 val r = put(basis, "ordnung", "prompts", JSONObject().put("reihenfolge", JSONArray(ids)), zeit)
                 if (r.uebernommen) { z.merke("ordnung:prompts", zeit.toString(), zeit); eigenPrompt { Prompts.ordnungGesendet(app, ids) } } else abgelehnt(r)
+            }
+        }
+        // Erinnerungen und Bestätigungen vor den Einträgen: Eine Bestätigung muss andere Geräte schnell zum Schweigen bringen.
+        Erinnerungen.quittungen(app).values.forEach { q ->
+            val s = "quittung:${q.id}"
+            if (z.bekannt[s] != null) return@forEach
+            versuch(s, s) {
+                val r = put(basis, "quittung", q.id, JSONObject().put("zeit", q.zeit).put("von", q.von).put("erinnerung", q.erinnerung), q.zeit.coerceAtLeast(1))
+                if (r.uebernommen) z.merke(s, "1", q.zeit) else abgelehnt(r)
+                // Eine schon vorhandene Bestätigung genügt: Einmal bestätigt bleibt bestätigt, egal von welchem Gerät.
+                z.merke(s, "1", q.zeit)
+            }
+        }
+        Erinnerungen.offeneLoeschungen(app).forEach { (id, zeit) ->
+            val s = "erinnerung:$id"
+            versuch(s, "$s:weg") {
+                val r = put(basis, "erinnerung", id, JSONObject(), z.zeitFuer(s, zeit), geloescht = true)
+                if (r.uebernommen) { Erinnerungen.quittiereLoeschung(app, id); z.vergiss(s) } else abgelehnt(r)
+            }
+        }
+        Erinnerungen.alle(app).forEach { e ->
+            val s = "erinnerung:${e.id}"
+            val a = abdruck(e)
+            if (z.bekannt[s] == a) return@forEach
+            versuch(s, "$s:$a") {
+                val t = z.zeitFuer(s, e.geaendert)
+                val r = put(basis, "erinnerung", e.id, Erinnerungen.alsJson(e), t)
+                if (r.uebernommen) z.merke(s, a, t) else abgelehnt(r)
             }
         }
         val verloren = speicher.verloren()

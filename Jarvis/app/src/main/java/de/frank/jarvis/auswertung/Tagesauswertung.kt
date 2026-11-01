@@ -336,6 +336,7 @@ object Tagesauswertung {
         val trainings = async(Dispatchers.IO) { rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20)) }
         val tagebuch = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.rueckblick(7) } ?: "NICHT VERFÜGBAR" }
         val ideen = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
+        val erinnerungen = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<de.frank.jarvis.faehigkeit.ErinnerungenFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
         val wissen = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
         val aufgabenHeute = async(Dispatchers.IO) { rufe("aufgaben_lesen", JSONObject().put("bereich", "heute")) }
         val aufgabenMorgen = async(Dispatchers.IO) { rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen")) }
@@ -355,6 +356,9 @@ object Tagesauswertung {
 
             append("== GESTELLTE WECKER ==\n")
             append(wecker.await()).append("\n\n")
+
+            append("== ERINNERUNGEN (Fälliges, die nächsten 14 Tage und allgemeine ohne Termin) ==\n")
+            append(erinnerungen.await()).append("\n\n")
 
             append("== BIODATEN: WERTE DES AKTUELLEN TAGES ==\n")
             append(bioTag.await()).append("\n\n")
@@ -430,7 +434,7 @@ Dein Ziel: Frank weiß danach, wie es ihm geht, was für ein Tag heute ist und w
 So gehst du vor:
 1. Lies zuerst den RAHMEN. Er legt verbindlich fest, ob ein Tag Arbeitstag oder frei ist, welcher Dienst ansteht, wann Frank schläft und wann er Zeit hat. Rechne das nicht neu.
 2. Deute die Biodaten immer vor diesem Hintergrund. Nach einem Nachtdienst schläft Frank am Tag, etwa von 6 bis 15 Uhr. Tagschlaf ist oft kürzer und unruhiger als Nachtschlaf. Sind dann Schlafdauer, Tiefschlaf oder REM niedriger oder die Wachzeit höher als sonst, nenne den Tagschlaf als wahrscheinlichen Grund und rate zu Erholung und Entspannung statt zu Belastung. Ein Schlafwert gehört zu dem Tag, an dem der Schlaf endet. Fehlt der Schlafwert von heute, weil Frank laut Rahmen noch schläft oder gerade aufgestanden ist, ist das normal.
-3. Verbinde alles miteinander: Erholung mit Dienst und Training, Wetter mit den freien Zeitfenstern, Aufgaben und Ideen mit der Zeit und der Kraft, die Frank heute wirklich hat.
+3. Verbinde alles miteinander: Erholung mit Dienst und Training, Wetter mit den freien Zeitfenstern, Aufgaben und Ideen mit der Zeit und der Kraft, die Frank heute wirklich hat. Aus den ERINNERUNGEN nimm wichtige bevorstehende Verpflichtungen und Termine in AKTUELL oder AUSBLICK auf, und nenne eine allgemeine Erinnerung ohne Termin nur, wenn sie heute zur freien Zeit und zur Kraft passt.
 
 Feste Regeln:
 - Verwende nur Zahlen, die unten stehen, und schätze nichts. Steht bei etwas NICHT VERFÜGBAR, sage das in einem Satz und deute es nicht.
@@ -454,7 +458,7 @@ $daten
 
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
-        "rahmen" to "RAHMEN", "termine" to "TERMINE", "wetter" to "WETTER", "wecker" to "GESTELLTE WECKER", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
+        "rahmen" to "RAHMEN", "termine" to "TERMINE", "wetter" to "WETTER", "wecker" to "GESTELLTE WECKER", "erinnerungen" to "ERINNERUNGEN", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
         "biodaten_verlauf" to "BIODATEN: VERLAUF", "rueckblick_termine" to "DIENSTE UND TERMINE DER LETZTEN", "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 

@@ -362,7 +362,7 @@ class McpServer(context: Context) {
 
     private fun anleitung(): String = buildString {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
-        append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
+        append("oder Erinnerungen, nutze diese Werkzeuge. „Erinnere mich …“ gehört nur zu erinnerung_speichern, nie zusätzlich als Aufgabe oder Termin. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
         // Die versionierten Grundregeln stehen vorn: Manche Programme kürzen die Anleitung, der Anfang kommt immer an.
         append(Integration.REGELN).append('\n')

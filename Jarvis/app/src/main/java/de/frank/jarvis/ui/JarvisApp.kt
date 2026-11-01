@@ -162,6 +162,8 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             if (!vm.gesperrt) PromptAnsichtEbene(vm)
             if (!vm.gesperrt) PromptEbene(vm)
             if (!vm.gesperrt) PromptLoeschenFrage(vm)
+            if (!vm.gesperrt) ErinnerungAnsichtEbene(vm)
+            if (!vm.gesperrt) ErinnerungEbene(vm)
             // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.
             if (!vm.gesperrt) RueckfrageEbene(vm)
             if (!vm.gesperrt) TokenlimitFenster(vm)

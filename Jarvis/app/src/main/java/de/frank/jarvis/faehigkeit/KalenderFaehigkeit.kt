@@ -45,7 +45,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             "Weitere Einträge: „Hausmüll“ und „Gelbe Tonne“ (Abholung), „Geb. <Name>“ (Geburtstag), Spiele von Union und Dortmund. " +
             "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“ oder „U“ als Ganztagstermin macht den Tag zum freien Tag bzw. Urlaubstag " +
             "(für X nimmt Frank Blau; ohne Farbangabe übernimmt Jarvis die Farbe seiner bisherigen Einträge gleichen Namens). " +
-            "Termine gehören in den Kalender, Dinge zum Erledigen mit Erinnerung in Geniale Aufgaben."
+            "Termine gehören in den Kalender, Dinge zum Erledigen in Geniale Aufgaben. „Erinnere mich …“ gehört nur zu erinnerung_speichern, außer Frank verlangt ausdrücklich einen Termin oder eine Aufgabe."
 
     private val erlaubt: Boolean
         get() = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED

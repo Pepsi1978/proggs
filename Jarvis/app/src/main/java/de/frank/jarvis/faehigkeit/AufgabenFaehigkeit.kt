@@ -94,7 +94,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "aufgabe_anlegen",
             titel = "Aufgabe speichern",
             beschreibung = "Jarvis: speichert eine neue Aufgabe oder einen Termin in Geniale Aufgaben. " +
-                "Nutze es, wenn Frank sagt „Jarvis, speichere …“, „merk dir …“, „ich möchte um 18 Uhr …“, „erinnere mich …“. " +
+                "Nutze es, wenn Frank sagt „Jarvis, speichere …“, „merk dir …“, „ich möchte um 18 Uhr …“ oder ausdrücklich eine Aufgabe verlangt. „Erinnere mich …“ gehört dagegen nur zu erinnerung_speichern, nicht hierher. " +
                 "WICHTIG: Nennt Frank eine Uhrzeit, aber keinen Tag, und ist der Tag nicht eindeutig, rufe das Werkzeug NICHT auf, " +
                 "sondern frage zuerst kurz nach („Heute oder morgen?“). Fehlen andere Angaben, nimm die Vorgaben. " +
                 "Den Titel bildet die App selbst; Erinnerung mit Vorlesen ist standardmäßig an.",

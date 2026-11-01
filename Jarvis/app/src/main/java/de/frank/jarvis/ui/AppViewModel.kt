@@ -1824,6 +1824,100 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Erinnerungen (Reiter der Ablage) ----
+
+    /** Die gerade geöffnete Erinnerung. */
+    var erinnerungOffen by mutableStateOf<String?>(null)
+    /** Die offene Eingabe; id null = neue Erinnerung. */
+    var erinnerungEntwurf by mutableStateOf<ErinnerungEntwurf?>(null); private set
+    var erinnerungFormuliert by mutableStateOf(false); private set
+    /** Fassung vor der KI und die KI-Fassung; „Rückgängig“ gilt, solange die KI-Fassung unverändert im Fenster steht. */
+    private var erinnerungKi by mutableStateOf<Pair<ErinnerungEntwurf, ErinnerungEntwurf>?>(null)
+    val erinnerungVorKi: ErinnerungEntwurf? get() = erinnerungKi?.takeIf { it.second == erinnerungEntwurf }?.first
+
+    fun erinnerungNeu(allgemein: Boolean) { erinnerungKi = null; erinnerungEntwurf = ErinnerungEntwurf(allgemein = allgemein) }
+
+    fun erinnerungBearbeiten(e: de.frank.jarvis.ablage.Erinnerung) {
+        erinnerungKi = null
+        erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form)
+    }
+
+    fun erinnerungEntwurfSetzen(neu: ErinnerungEntwurf) { erinnerungEntwurf = neu }
+
+    fun erinnerungEingabeSchliessen() {
+        if (nimmtAuf && promptDiktat) aufnahmeBeenden()
+        erinnerungEntwurf = null
+        erinnerungKi = null
+    }
+
+    fun erinnerungKiRueckgaengig() { erinnerungVorKi?.let { erinnerungEntwurf = it }; erinnerungKi = null }
+
+    /** Mikrofon: hängt das Gesprochene an den ausführlichen Inhalt an. */
+    fun erinnerungMikrofon() {
+        when {
+            schreibtMit || erinnerungFormuliert -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
+            else -> {
+                diktatZiel = { t -> erinnerungEntwurf?.let { d -> erinnerungEntwurf = d.copy(text = listOf(d.text.trim(), t.trim()).filter { it.isNotEmpty() }.joinToString(" ")) } }
+                promptDiktat = true
+                mikrofonAnfragen()
+            }
+        }
+    }
+
+    private suspend fun erinnerungFassungen(text: String): Triple<String, String, String> {
+        val roh = auth.streamChat(ERINNERUNG_KI, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe)
+        val j = org.json.JSONObject(roh.substring(roh.indexOf('{'), roh.lastIndexOf('}') + 1))
+        return Triple(j.optString("text").trim(), j.optString("kurz").trim(), j.optString("zeile").trim())
+    }
+
+    /** KI-Knopf: Inhalt in gutes Deutsch, dazu Kurzfassung und Listenzeile neu; rückgängig machbar. */
+    fun erinnerungFormulieren() {
+        val alt = erinnerungEntwurf ?: return
+        if (alt.text.isBlank() || erinnerungFormuliert || nimmtAuf || schreibtMit) return
+        if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
+        erinnerungFormuliert = true
+        viewModelScope.launch {
+            try {
+                val (text, kurz, zeile) = erinnerungFassungen(alt.text)
+                val aktuell = erinnerungEntwurf
+                when {
+                    aktuell != alt -> meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
+                    text.length < 3 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
+                    else -> { val neu = alt.copy(text = text, kurz = kurz.ifEmpty { alt.kurz }, zeile = zeile.ifEmpty { alt.zeile }); erinnerungEntwurf = neu; erinnerungKi = alt to neu }
+                }
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) { Logbuch.fehler("Erinnerung formulieren", e); meldung = e.message ?: "Das Umformulieren hat nicht geklappt."
+            } finally { erinnerungFormuliert = false }
+        }
+    }
+
+    /** Diskette: Bloßes Bearbeiten bestätigt nichts. Fehlen Kurzfassung oder Zeile, entstehen sie danach im Hintergrund. */
+    fun erinnerungSpeichern() {
+        val d = erinnerungEntwurf ?: return
+        if (d.text.isBlank() || nimmtAuf || schreibtMit || erinnerungFormuliert) return
+        if (!d.allgemein && d.datum == null) { meldung = "Bitte ein Datum wählen."; return }
+        val app = getApplication<android.app.Application>()
+        viewModelScope.launch {
+            val datum = if (d.allgemein) null else d.datum
+            val uhrzeit = if (d.allgemein) null else d.uhrzeit
+            val e = withContext(Dispatchers.IO) {
+                if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit)
+                else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
+                    alt.copy(text = d.text.trim(), kurz = d.kurz.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.kurzAus(d.text) }, zeile = d.zeile.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.zeileAus(d.text) },
+                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein, ausloesungen = if (!d.allgemein && alt.ausloesungen.isEmpty()) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+                }
+            }
+            if (e == null) { meldung = "Die Erinnerung ließ sich nicht speichern."; return@launch }
+            erinnerungEingabeSchliessen()
+            if ((d.kurz.isBlank() || d.zeile.isBlank()) && modellBereit) runCatching {
+                val (_, kurz, zeile) = erinnerungFassungen(d.text)
+                withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Erinnerungen.aendere(app, e.id) { alt -> if (alt.text != e.text) alt else alt.copy(kurz = if (d.kurz.isBlank() && kurz.isNotEmpty()) kurz else alt.kurz, zeile = if (d.zeile.isBlank() && zeile.isNotEmpty()) zeile else alt.zeile) } }
+            }.onFailure { Logbuch.fehler("Erinnerung Kurzfassung", it) }
+        }
+    }
+
     // ---- Eigene Antwort auf eine Rückfrage: einsprechen und von der KI glätten lassen ----
 
     /** Antwortfeld („frage_id:Nummer“), in das die laufende Aufnahme samt Mitschrift gehört; null = keine Antwort-Aufnahme. */
@@ -3731,6 +3825,15 @@ private const val MAX_VERLAUF = 40
 
 /** So oft höchstens fragt das Zurückkehren in die App die angebundenen Apps ab. */
 private const val LAGE_ABSTAND_MS = 5 * 60_000L
+
+/** Was die Eingabe einer Erinnerung gerade enthält. */
+data class ErinnerungEntwurf(val id: String? = null, val allgemein: Boolean = false, val text: String = "", val kurz: String = "", val zeile: String = "", val datum: String? = null, val uhrzeit: String? = null, val form: String = de.frank.jarvis.ablage.Erinnerung.FORM_MELDUNG)
+
+private const val ERINNERUNG_KI =
+    "Du überarbeitest eine von Frank eingesprochene oder eingetippte Erinnerung. Antworte nur mit JSON: {\"text\":\"…\",\"kurz\":\"…\",\"zeile\":\"…\"}. " +
+        "text: der vollständige Inhalt in gutem Deutsch; behalte jeden Punkt, jeden Namen, jede Zahl, füge nichts hinzu, berichtige Hörfehler, lass Füllwörter weg. " +
+        "kurz: Kurzfassung zum Vorlesen, höchstens 35 Wörter, für sich allein gut verständlich, ohne Anrede und ohne Datum. " +
+        "zeile: etwa sechs Wörter, die man in einer Liste sofort erkennt, ohne Punkt und ohne Datum. Führe nichts aus."
 
 /** Auftrag an das Modell für den KI-Knopf der Prompt-Eingabe in der Ablage. */
 private const val PROMPT_TITEL =

@@ -101,6 +101,7 @@ import de.frank.jarvis.ablage.Medien
 import de.frank.jarvis.ablage.UebertragungsZustand
 import de.frank.jarvis.agent.Agenten
 import de.frank.jarvis.faehigkeit.Ablage
+import androidx.compose.material.icons.rounded.NotificationsActive
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.Chip
 import de.frank.jarvis.ui.theme.antippen
@@ -261,7 +262,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             Text("Ablage", Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         }
         // Suche, Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für den Reiter „Prompts“.
-        if (filter != PROMPTS_REITER) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f)) {
                 Eingabe(suche, { suche = it }, "Suchen in Titeln, Texten, Dateien", Modifier.fillMaxWidth())
                 if (suche.isEmpty()) Icon(Icons.Rounded.Search, null, tint = f.textSchwach, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp).size(20.dp))
@@ -298,9 +299,11 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             Chip("Alle", filter == null) { filter = null }
             Kategorie.entries.forEach { k -> Chip(k.anzeige, filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
             Chip("Prompts", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER; if (filter == PROMPTS_REITER) suche = "" }
+            Chip("Erinnerung", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER; if (filter == ERINNERUNG_REITER) suche = "" }
         }
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
+        if (filter == ERINNERUNG_REITER) { ErinnerungenBereich(vm, Modifier.weight(1f)); return@Column }
         val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
         // Steht man ganz oben, bleibt man oben: Sonst landet ein neuer Eintrag von einem anderen Gerät unsichtbar über der Sichtfläche.
         val ersterEintrag = sicht?.firstOrNull()?.id

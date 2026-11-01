@@ -64,6 +64,7 @@ enum class Bereich(
     RAHMEN("rahmen", "Dienst und Schlafzeiten", "RAHMEN DER NÄCHSTEN 7 TAGE (fest gerechnet, verbindlich: Dienst, Schlaf- und freie Zeiten)", 30 * 60_000L, true, false, 4_000L),
     TERMINE("termine", "Kalender", "TERMINE HEUTE UND IN DEN NÄCHSTEN 14 TAGEN (Vorausblick, mit der ausgewerteten Dienst-Zeile je Tag)", 30 * 60_000L, true, true, 4_000L, Regex("^\\s+- ")),
     AUFGABEN("aufgaben", "Geniale Aufgaben", "AUFGABEN (Geniale Aufgaben)", 30 * 60_000L, true, true, 5_000L),
+    ERINNERUNGEN("erinnerungen", "Erinnerungen", "ERINNERUNGEN (Reiter Erinnerung der Ablage; mit Datum und allgemeine ohne Termin; passende von dir aus ansprechen, vollständig mit erinnerungen_lesen)", 15 * 60_000L, true, true, 3_000L),
     WECKER("wecker", "Genialer Wecker", "WECKER (Genialer Wecker)", 30 * 60_000L, true, true, 4_000L),
     STACKS(
         "stacks", "Stack-Labor",
@@ -339,6 +340,7 @@ object Lagebild {
     private fun betroffen(f: Faehigkeit?, werkzeug: String): List<Bereich> = when (f?.id) {
         "aufgaben" -> listOf(Bereich.AUFGABEN)
         "ideen" -> listOf(Bereich.IDEEN)
+        "erinnerungen" -> listOf(Bereich.ERINNERUNGEN)
         "ziele" -> listOf(Bereich.ZIELE)
         "wecker" -> listOf(Bereich.WECKER)
         "stacklabor" -> listOf(Bereich.STACKS)
@@ -380,6 +382,7 @@ object Lagebild {
                         "$name: " + text.let { if (it.length > grenze) it.take(grenze).substringBeforeLast('\n') + "\n… (gekürzt; alles mit aufgaben_lesen)" else it }
                     }
             }
+            Bereich.ERINNERUNGEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.ErinnerungenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.WECKER -> alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick(mitJetzt = false) ?: "NICHT VERFÜGBAR"
             Bereich.STACKS -> alle.filterIsInstance<StackLaborFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.GESPRAECHE -> Gespraechsgedaechtnis.kurzzeit(app)
@@ -653,7 +656,7 @@ object Lagebild {
     private const val MONATE_MINDESTENS = 3_000
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
-        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
+        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.ERINNERUNGEN to 1_500, Bereich.WECKER to 700,
         Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 2_600, Bereich.WETTER to 900,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
