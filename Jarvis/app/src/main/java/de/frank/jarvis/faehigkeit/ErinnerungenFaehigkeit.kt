@@ -169,6 +169,8 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         },
     )
 
+    private fun vorbeiHinweis(e: Erinnerung) = if (Erinnerungen.meldetSichNoch(e)) "" else " ACHTUNG: Alle Zeitpunkte sind schon vorbei, von selbst meldet sie sich nicht. Sag das Frank und frag nach einer Uhrzeit."
+
     private fun ausfuehren(a: JSONObject): Ergebnis {
         if (Erinnerungen.defekt(context)) return Ergebnis("Die Erinnerungsdatei ist beschädigt und wurde gesichert; nichts gespeichert.", fehler = true)
         val aktion = a.optString("aktion")
@@ -181,7 +183,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             val form = if (a.optString("form") == Erinnerung.FORM_WECKER) Erinnerung.FORM_WECKER else Erinnerung.FORM_MELDUNG
             val e = Erinnerungen.anlegen(context, text, a.optString("zeile"), a.optString("kurz"), datum?.toString(), uhrzeit, form, vorab, Einstellungen.get(context).erinnerungOhneUhrzeit)
                 ?: return Ergebnis("Die Erinnerung ließ sich nicht speichern.", fehler = true)
-            return Ergebnis(if (e.allgemein) "Als allgemeine Erinnerung gespeichert: ${e.zeile}. Jarvis meldet sich, wenn es passt." else "Gespeichert für ${e.datumAnzeige()}: ${e.zeile}. Form: ${if (e.wecker) "Wecker" else "Benachrichtigung"}. Zeitpunkte: " + e.ausloesungen.joinToString { e.vorlaufText(it) } + ".")
+            return Ergebnis(if (e.allgemein) "Als allgemeine Erinnerung gespeichert: ${e.zeile}. Jarvis meldet sich, wenn es passt." else "Gespeichert für ${e.datumAnzeige()}: ${e.zeile}. Form: ${if (e.wecker) "Wecker" else "Benachrichtigung"}. Zeitpunkte: " + e.ausloesungen.joinToString { e.vorlaufText(it) } + "." + vorbeiHinweis(e))
         }
         val (e, f) = finde(a)
         if (e == null) return Ergebnis(f.orEmpty(), fehler = true)
@@ -197,17 +199,20 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 val neu = Erinnerungen.aendere(context, e.id) { alt ->
                     alt.copy(text = a.optString("text").trim().ifEmpty { alt.text }, kurz = a.optString("kurz").trim().ifEmpty { alt.kurz }, zeile = a.optString("zeile").trim().ifEmpty { alt.zeile },
                         datum = datum?.toString(), uhrzeit = uhrzeit, form = form, allgemein = datum == null,
-                        ausloesungen = if (datum != null && alt.ausloesungen.isEmpty()) listOf(Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+                        // Nur beim Wechsel von allgemein zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
+                        ausloesungen = if (datum != null && alt.allgemein) listOf(Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
                 } ?: return Ergebnis("Nicht gespeichert.", fehler = true)
-                Ergebnis("Geändert: ${neu.datumAnzeige()}, ${neu.zeile}, Form ${if (neu.wecker) "Wecker" else "Benachrichtigung"}. Das ist keine Bestätigung.")
+                Ergebnis("Geändert: ${neu.datumAnzeige()}, ${neu.zeile}, Form ${if (neu.wecker) "Wecker" else "Benachrichtigung"}. Das ist keine Bestätigung." + if (neu.ausloesungen.isNotEmpty()) vorbeiHinweis(neu) else "")
             }
             "loeschen" -> if (Erinnerungen.loesche(context, e.id)) Ergebnis("Gelöscht: ${e.zeile}.") else Ergebnis("Nicht gelöscht.", fehler = true)
             "ausloesung_hinzufuegen" -> {
                 if (e.allgemein) return Ergebnis("Das ist eine allgemeine Erinnerung ohne Termin; dafür gibt es keine Zeitpunkte. Gib ihr erst ein Datum (aendern).", fehler = true)
                 val u = if (a.gesetzt("ausloesung_uhrzeit")) uhrzeitAus(a.optString("ausloesung_uhrzeit")) ?: return Ergebnis("Keine Uhrzeit: ${a.optString("ausloesung_uhrzeit")}", fehler = true) else null
+                if (!a.has("minuten")) return Ergebnis("Es fehlt minuten: wie lange vor dem Termin.", fehler = true)
                 val neu = Erinnerungen.neueAusloesung(a.optInt("minuten", 0).coerceAtLeast(0), u)
                 val z = e.zeitVon(neu) ?: return Ergebnis("Der Termin ist nicht lesbar.", fehler = true)
                 if (z <= System.currentTimeMillis()) return Ergebnis("Dieser Zeitpunkt (${Erinnerungen.zeitText(z)}) ist schon vorbei, nichts eingestellt.", fehler = true)
+                if (Erinnerungen.doppelt(e, neu)) return Ergebnis("Dieser Zeitpunkt (${Erinnerungen.zeitText(z)}) ist schon eingestellt.")
                 Erinnerungen.aendere(context, e.id) { it.copy(ausloesungen = it.ausloesungen + neu) } ?: return Ergebnis("Nicht gespeichert.", fehler = true)
                 Ergebnis("Zusätzlich erinnere ich dich ${e.vorlaufText(neu)}: ${Erinnerungen.zeitText(z)}.")
             }
@@ -220,16 +225,16 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             "bestaetigen" -> {
                 val jetzt = System.currentTimeMillis()
                 val offen = e.termine().filter { Erinnerungen.quittung(context, it.quittung) == null }
-                val ziel = if (a.gesetzt("ausloesung_id")) offen.firstOrNull { it.ausloesung?.id == a.optString("ausloesung_id") } else offen.firstOrNull { it.zeit <= jetzt } ?: offen.firstOrNull()
-                    ?: return Ergebnis("Bei dieser Erinnerung ist nichts offen.")
-                if (ziel == null) return Ergebnis("Dieser Zeitpunkt ist nicht offen.", fehler = true)
-                ErinnerungPlaner.bestaetige(context, ziel)
-                val rest = offen.size - 1
-                Ergebnis("Bestätigt: ${ziel.anzeige}. " + if (rest > 0) "$rest weitere Zeitpunkte bleiben geplant." else "Weitere Zeitpunkte sind nicht offen.")
+                // Ohne Angabe nur, was gerade wirklich fällig ist: Nie eine tote oder eine künftige Auslösung statt des klingelnden Weckers.
+                val ziel = if (a.gesetzt("ausloesung_id")) offen.firstOrNull { it.ausloesung?.id == a.optString("ausloesung_id") } ?: return Ergebnis("Dieser Zeitpunkt ist nicht offen.", fehler = true)
+                    else offen.firstOrNull { it.zeit <= jetzt && Erinnerungen.meldbar(it, jetzt) } ?: return Ergebnis("Bei dieser Erinnerung ist gerade nichts fällig. Einen künftigen Zeitpunkt bestätigst du nur mit ausloesung_id.")
+                if (!ErinnerungPlaner.bestaetige(context, ziel)) return Ergebnis("Die Bestätigung ließ sich nicht speichern.", fehler = true)
+                val rest = offen.count { it.zeit > jetzt }
+                Ergebnis("Bestätigt: ${ziel.anzeige}. " + if (rest > 0) "$rest weitere Zeitpunkte bleiben geplant." else "Weitere Zeitpunkte sind nicht geplant.")
             }
-            "erledigt" -> { Erinnerungen.aendere(context, e.id) { it.copy(erledigt = System.currentTimeMillis()) }; Ergebnis("Als erledigt markiert: ${e.zeile}.") }
-            "wieder_offen" -> { Erinnerungen.aendere(context, e.id) { it.copy(erledigt = 0L) }; Ergebnis("Wieder offen: ${e.zeile}.") }
-            "erwaehnt" -> { Erinnerungen.aendere(context, e.id) { it.copy(zuletztErwaehnt = System.currentTimeMillis()) }; Ergebnis("Vermerkt.") }
+            "erledigt" -> if (Erinnerungen.aendere(context, e.id) { it.copy(erledigt = System.currentTimeMillis()) } != null) Ergebnis("Als erledigt markiert: ${e.zeile}.") else Ergebnis("Nicht gespeichert.", fehler = true)
+            "wieder_offen" -> if (Erinnerungen.aendere(context, e.id) { it.copy(erledigt = 0L) } != null) Ergebnis("Wieder offen: ${e.zeile}. Schon vergangene Zeitpunkte melden sich nicht nachträglich.") else Ergebnis("Nicht gespeichert.", fehler = true)
+            "erwaehnt" -> if (Erinnerungen.aendere(context, e.id) { it.copy(zuletztErwaehnt = System.currentTimeMillis()) } != null) Ergebnis("Vermerkt.") else Ergebnis("Nicht gespeichert.", fehler = true)
             else -> Ergebnis("Unbekannte aktion „$aktion“.", fehler = true)
         }
     }

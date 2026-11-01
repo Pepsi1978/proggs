@@ -45,12 +45,13 @@ class ErinnerungKlingelDienst : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Wer per startForegroundService gerufen wird, muss startForeground liefern, auch wenn schon alles aus ist.
-        runCatching {
+        val vorn = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(NUMMER, baueMeldung(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
             else startForeground(NUMMER, baueMeldung())
-        }.onFailure { Logbuch.fehler("Erinnerung Vordergrund", it) }
+        }.onFailure { Logbuch.fehler("Erinnerung Vordergrund", it) }.isSuccess
+        if (!vorn) { ErinnerungPlaner.dienstGescheitert(this); stopSelf(); return START_NOT_STICKY }
         if (ErinnerungPlaner.klingelt.value.isEmpty()) { beenden(); return START_NOT_STICKY }
-        if (spieler == null) klingeln()
+        if (ablauf == null) klingeln()
         else aktualisieren()
         return START_NOT_STICKY
     }
@@ -74,12 +75,19 @@ class ErinnerungKlingelDienst : Service() {
         ablauf = bereich.launch {
             delay(6_000L)
             while (isActive) {
+                // Der Live-Sprachmodus hat Vorrang: Beginnt ein Gespräch, schweigt der Wecker und klingelt danach weiter.
+                if (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) {
+                    runCatching { spieler?.pause() }
+                    while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) delay(1_000L)
+                    runCatching { spieler?.start() }
+                }
                 ErinnerungPlaner.klingelt.value.forEach { f ->
                     runCatching { spieler?.setVolume(0.12f, 0.12f) }
                     ErinnerungStimme.sprich(applicationContext, f.erinnerung, alsWecker = true)
                     runCatching { spieler?.setVolume(1f, 1f) }
                 }
-                delay(120_000L)
+                var rest = 120
+                while (rest-- > 0 && !de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) delay(1_000L)
             }
         }
     }
@@ -113,7 +121,9 @@ class ErinnerungKlingelDienst : Service() {
         val titel = if (liste.size > 1) "${liste.size} Erinnerungen" else liste.firstOrNull()?.erinnerung?.zeile ?: "Erinnerung"
         return NotificationCompat.Builder(this, de.frank.jarvis.timer.Timer.KANAL_STILL).setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle(titel).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
+            // Auch bei „Inhalt verbergen“ muss sich der Wecker gesperrt abstellen lassen, nur der Text bleibt dann verborgen.
+            .setVisibility(if (de.frank.jarvis.data.Einstellungen.get(this).meldungInhaltVerbergen) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true)
             .apply { liste.firstOrNull()?.let { setContentIntent(ErinnerungPlaner.oeffnenAbsicht(this@ErinnerungKlingelDienst, it.erinnerung.id, 19_997)) } }
             .addAction(R.drawable.ic_stat_jarvis, "Aus", rundfunk(19_996, ErinnerungPlaner.AKTION_BESTAETIGEN))

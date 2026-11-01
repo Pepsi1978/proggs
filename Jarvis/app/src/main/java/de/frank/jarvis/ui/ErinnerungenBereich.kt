@@ -200,6 +200,7 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
             plus = false
             val z = e.zeitVon(a)
             if (z == null || z <= System.currentTimeMillis()) vm.meldung = "Dieser Zeitpunkt ist schon vorbei."
+            else if (Erinnerungen.doppelt(e, a)) vm.meldung = "Dieser Zeitpunkt ist schon eingestellt."
             else bereich.launch(Dispatchers.IO) { Erinnerungen.aendere(app, e.id) { it.copy(ausloesungen = it.ausloesungen + a) } }
         }
     }
@@ -274,7 +275,7 @@ fun ErinnerungEbene(vm: AppViewModel) {
             Chip("Allgemein", d.allgemein) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = true)) }
         }
         if (!d.allgemein) Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Chip(d.datum?.let { LocalDate.parse(it).format(DateTimeFormatter.ofPattern("d. MMM yyyy", Locale.GERMAN)) } ?: "Datum wählen", d.datum != null) { datumWaehlen(context, d.datum) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(datum = it)) } }
+            Chip(d.datum?.let { t -> runCatching { LocalDate.parse(t).format(DateTimeFormatter.ofPattern("d. MMM yyyy", Locale.GERMAN)) }.getOrDefault(t) } ?: "Datum wählen", d.datum != null) { datumWaehlen(context, d.datum) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(datum = it)) } }
             Chip(d.uhrzeit?.let { "$it Uhr" } ?: "Ohne Uhrzeit", d.uhrzeit != null) { uhrWaehlen(context, d.uhrzeit ?: vm.einstellungen.erinnerungOhneUhrzeit) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(uhrzeit = it)) } }
             if (d.uhrzeit != null) Box(Modifier.size(36.dp).antippen { vm.erinnerungEntwurfSetzen(d.copy(uhrzeit = null)) }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Uhrzeit entfernen", tint = f.textLeise, modifier = Modifier.size(18.dp)) }
             Spacer(Modifier.weight(1f))

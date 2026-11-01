@@ -1841,9 +1841,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var erinnerungKi by mutableStateOf<Pair<ErinnerungEntwurf, ErinnerungEntwurf>?>(null)
     val erinnerungVorKi: ErinnerungEntwurf? get() = erinnerungKi?.takeIf { it.second == erinnerungEntwurf }?.first
 
-    fun erinnerungNeu(allgemein: Boolean) { erinnerungKi = null; erinnerungEntwurf = ErinnerungEntwurf(allgemein = allgemein) }
+    /** Zählt jede geöffnete Eingabe: Eine späte Mitschrift landet nie in der nächsten Erinnerung. */
+    private var erinnerungSitzung = 0
+    private var erinnerungSpeichert = false
+
+    fun erinnerungNeu(allgemein: Boolean) { erinnerungSitzung++; erinnerungKi = null; erinnerungEntwurf = ErinnerungEntwurf(allgemein = allgemein) }
 
     fun erinnerungBearbeiten(e: de.frank.jarvis.ablage.Erinnerung) {
+        erinnerungSitzung++
         erinnerungKi = null
         erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form)
     }
@@ -1865,7 +1870,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf -> aufnahmeBeenden()
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
-                diktatZiel = { t -> erinnerungEntwurf?.let { d -> erinnerungEntwurf = d.copy(text = listOf(d.text.trim(), t.trim()).filter { it.isNotEmpty() }.joinToString(" ")) } }
+                val sitzung = erinnerungSitzung
+                diktatZiel = { t -> erinnerungEntwurf?.takeIf { sitzung == erinnerungSitzung }?.let { d -> erinnerungEntwurf = d.copy(text = listOf(d.text.trim(), t.trim()).filter { it.isNotEmpty() }.joinToString(" ")) } }
                 promptDiktat = true
                 mikrofonAnfragen()
             }
@@ -1902,25 +1908,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Diskette: Bloßes Bearbeiten bestätigt nichts. Fehlen Kurzfassung oder Zeile, entstehen sie danach im Hintergrund. */
     fun erinnerungSpeichern() {
         val d = erinnerungEntwurf ?: return
-        if (d.text.isBlank() || nimmtAuf || schreibtMit || erinnerungFormuliert) return
+        if (d.text.isBlank() || nimmtAuf || schreibtMit || erinnerungFormuliert || erinnerungSpeichert) return
         if (!d.allgemein && d.datum == null) { meldung = "Bitte ein Datum wählen."; return }
         val app = getApplication<android.app.Application>()
+        erinnerungSpeichert = true
         viewModelScope.launch {
+            try {
             val datum = if (d.allgemein) null else d.datum
             val uhrzeit = if (d.allgemein) null else d.uhrzeit
             val e = withContext(Dispatchers.IO) {
                 if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit)
                 else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
                     alt.copy(text = d.text.trim(), kurz = d.kurz.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.kurzAus(d.text) }, zeile = d.zeile.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.zeileAus(d.text) },
-                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein, ausloesungen = if (!d.allgemein && alt.ausloesungen.isEmpty()) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein, ausloesungen = if (!d.allgemein && alt.allgemein) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
                 }
             }
             if (e == null) { meldung = "Die Erinnerung ließ sich nicht speichern."; return@launch }
             erinnerungEingabeSchliessen()
+            if (e.ausloesungen.isNotEmpty() && !de.frank.jarvis.ablage.Erinnerungen.meldetSichNoch(e)) meldung = "Gespeichert, aber alle Zeitpunkte sind schon vorbei: Sie meldet sich nicht von selbst."
             if ((d.kurz.isBlank() || d.zeile.isBlank()) && modellBereit) runCatching {
                 val (_, kurz, zeile) = erinnerungFassungen(d.text)
                 withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Erinnerungen.aendere(app, e.id) { alt -> if (alt.text != e.text) alt else alt.copy(kurz = if (d.kurz.isBlank() && kurz.isNotEmpty()) kurz else alt.kurz, zeile = if (d.zeile.isBlank() && zeile.isNotEmpty()) zeile else alt.zeile) } }
             }.onFailure { Logbuch.fehler("Erinnerung Kurzfassung", it) }
+            } finally { erinnerungSpeichert = false }
         }
     }
 

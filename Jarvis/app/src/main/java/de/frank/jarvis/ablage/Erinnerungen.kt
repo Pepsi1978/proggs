@@ -128,9 +128,13 @@ object Erinnerungen {
                 q.keys().asSequence().associateWith { k -> q.getJSONObject(k).let { Quittung(k, it.optLong("zeit"), it.optString("von"), it.optString("erinnerung")) } },
                 w.keys().asSequence().associateWith { w.optLong(it) })
         } catch (e: Exception) {
-            runCatching { f.copyTo(File(f.path + ".defekt-" + f.lastModified())) }
+            // Der Server hat den Bestand: Die kaputte Datei wird gesichert und aus dem Weg geräumt, der Vollabgleich holt alles zurück.
+            val gesichert = runCatching { f.copyTo(File(f.path + ".defekt-" + f.lastModified())) }.isSuccess
             Logbuch.fehler("Erinnerungen defekt", e)
-            Stand(emptyList(), emptyMap(), emptyMap(), defekt = true)
+            if (!gesichert) return Stand(emptyList(), emptyMap(), emptyMap(), defekt = true)
+            f.delete()
+            AblageSync.vollAbgleichAnstossen()
+            Stand(emptyList(), emptyMap(), emptyMap())
         }
     }
 
@@ -207,7 +211,10 @@ object Erinnerungen {
     fun aendere(c: Context, id: String, aendern: (Erinnerung) -> Erinnerung): Erinnerung? {
         val s = lies(c)
         val alt = s.liste.firstOrNull { it.id == id } ?: return null
-        val neu = aendern(alt).copy(geaendert = maxOf(System.currentTimeMillis(), alt.geaendert + 1))
+        var neu = aendern(alt).copy(geaendert = maxOf(System.currentTimeMillis(), alt.geaendert + 1))
+        // Verschobener Termin oder wieder geöffnet: Was jetzt schon vorbei ist, meldet sich nicht nachträglich; Künftiges bleibt.
+        val wiederOffen = alt.erledigt != 0L && neu.erledigt == 0L
+        if (alt.termin() != neu.termin() || wiederOffen) neu = neu.copy(ausloesungen = neu.ausloesungen.map { it.copy(angelegt = neu.geaendert) }, hinweisUm = if (wiederOffen) 0L else neu.hinweisUm)
         return neu.takeIf { schreibe(c, Stand(s.liste.map { if (it.id == id) neu else it }, s.quittungen, s.geloescht)) }
     }
 
@@ -240,13 +247,22 @@ object Erinnerungen {
 
     @Synchronized fun quittungFern(c: Context, q: Quittung): Boolean { val s = lies(c); return q.id in s.quittungen || schreibe(c, Stand(s.liste, s.quittungen + (q.id to q), s.geloescht)) }
 
-    /** Beide Seiten haben geändert: Der jüngere Inhalt gilt, eingestellte Auslösungen beider Seiten bleiben. */
-    fun vereine(lokal: Erinnerung, fern: Erinnerung): Erinnerung {
+    /**
+     * Beide Seiten haben seit dem letzten Abgleich ([basis]) geändert: Der jüngere Inhalt gilt. Von der älteren Seite bleiben nur Auslösungen, die sie seitdem neu eingestellt hat;
+     * was die jüngere entfernt hat, kommt so nicht zurück. Eine Erledigung geht nicht verloren, wenn die jüngere Seite nur etwas anderes geändert hat.
+     */
+    fun vereine(lokal: Erinnerung, fern: Erinnerung, basis: Long = 0L): Erinnerung {
         val neuer = if (fern.geaendert >= lokal.geaendert) fern else lokal
         val aelter = if (neuer === fern) lokal else fern
-        return neuer.copy(ausloesungen = neuer.ausloesungen + aelter.ausloesungen.filter { a -> neuer.ausloesungen.none { it.id == a.id } },
-            zuletztErwaehnt = maxOf(lokal.zuletztErwaehnt, fern.zuletztErwaehnt), hinweisUm = maxOf(lokal.hinweisUm, fern.hinweisUm), geaendert = maxOf(lokal.geaendert, fern.geaendert))
+        return neuer.copy(ausloesungen = neuer.ausloesungen + aelter.ausloesungen.filter { a -> a.angelegt > basis && neuer.ausloesungen.none { it.id == a.id } },
+            erledigt = maxOf(lokal.erledigt, fern.erledigt), zuletztErwaehnt = maxOf(lokal.zuletztErwaehnt, fern.zuletztErwaehnt), hinweisUm = maxOf(lokal.hinweisUm, fern.hinweisUm), geaendert = maxOf(lokal.geaendert, fern.geaendert))
     }
+
+    /** Fällt dieser Zeitpunkt auf einen schon eingestellten? Dann gäbe es zwei Meldungen in derselben Minute. */
+    fun doppelt(e: Erinnerung, a: Ausloesung): Boolean { val z = e.zeitVon(a); return e.ausloesungen.any { e.zeitVon(it) == z } }
+
+    /** Meldet sich diese Erinnerung noch von selbst? Sonst sagt das Werkzeug es, statt still nichts zu tun. */
+    fun meldetSichNoch(e: Erinnerung, jetzt: Long = System.currentTimeMillis()) = e.allgemein || e.termine().any { it.zeit > jetzt }
 
     fun alsJson(e: Erinnerung): JSONObject = JSONObject().put("allgemein", e.allgemein).put("zeile", e.zeile).put("kurz", e.kurz).put("text", e.text)
         .put("datum", e.datum ?: JSONObject.NULL).put("uhrzeit", e.uhrzeit ?: JSONObject.NULL).put("ohne_uhrzeit_um", e.ohneUhrzeitUm).put("form", e.form)

@@ -54,6 +54,9 @@ object ErinnerungHinweis {
         if (!agent.verbunden) return
         p.edit().putLong("geprueft", jetzt).apply()
         val a = Lagebild.stand.value.abschnitte
+        // Ohne Dienst und Schlaf lässt sich „passt es gerade?“ nicht beantworten.
+        val rahmen = a[Bereich.RAHMEN]?.text.orEmpty()
+        if (rahmen.isBlank() || rahmen.startsWith("NICHT VERFÜGBAR")) return
         val eingabe = buildString {
             append("JETZT: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append("\n\n")
             append("RAHMEN:\n").append(a[Bereich.RAHMEN]?.text.orEmpty().take(2_000)).append("\n\n")

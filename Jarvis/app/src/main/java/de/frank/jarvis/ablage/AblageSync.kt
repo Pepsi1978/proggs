@@ -94,6 +94,7 @@ object AblageSync {
     /** Eigene Schreibvorgänge wecken den Abgleich nicht noch einmal: ohne das folgte auf jede übernommene Änderung ein leerer zweiter Lauf. */
     private val eigenerStand = AtomicLong(-1)
     private val eigenerPromptStand = AtomicLong(-1)
+    private val eigenerErinnerungStand = AtomicLong(-1)
 
     // ---- große Dateien ----
     private class DateiArbeit(val marke: String, val titel: String, val groesse: Long, val arbeit: suspend () -> Unit)
@@ -154,7 +155,7 @@ object AblageSync {
         val speicher = AblageZentrale.speicher(app)
         bereich.launch { speicher.stand.drop(1).collect { v -> delay(400); if (v != eigenerStand.get()) anstossen() } }
         bereich.launch { Prompts.stand.drop(1).collect { v -> delay(400); if (v != eigenerPromptStand.get()) anstossen() } }
-        bereich.launch { Erinnerungen.stand.drop(1).collect { delay(400); anstossen() } }
+        bereich.launch { Erinnerungen.stand.drop(1).collect { v -> delay(400); if (v != eigenerErinnerungStand.get()) anstossen() } }
     }
 
     private fun hinweisText(netz: String?): String? {
@@ -275,6 +276,12 @@ object AblageSync {
     // ---- Holen ----
 
     private suspend fun holen(app: Context, basis: String, speicher: AblageSpeicher, z: Zustand): Boolean {
+        // Noch nie abgeglichen (neu installiert, Daten gelöscht): Erinnerungen kommen vor ihren Bestätigungen an und dürfen sich bis zum Ende nicht melden.
+        if (z.stand == 0L) ErinnerungPlaner.abgleichPause = true
+        try { return holenSeiten(app, basis, speicher, z) } finally { if (ErinnerungPlaner.abgleichPause) { ErinnerungPlaner.abgleichPause = false; ErinnerungPlaner.anstossen(app) } }
+    }
+
+    private suspend fun holenSeiten(app: Context, basis: String, speicher: AblageSpeicher, z: Zustand): Boolean {
         val bestand = Bestand(app, speicher)
         var seit = if (vollabgleich) 0L else z.stand
         val ganz = seit == 0L
@@ -331,10 +338,28 @@ object AblageSync {
         when (d.optString("art")) {
             "eintrag" -> eintragHolen(app, basis, speicher, z, d, b, imHintergrund)
             "prompt" -> promptHolen(app, z, d, b)
-            "ordnung" -> ordnungHolen(app, z, d)
+            "ordnung" -> if (d.optString("id") == "erinnerung") erinnerungEinstellungHolen(app, z, d) else ordnungHolen(app, z, d)
             "erinnerung" -> erinnerungHolen(app, z, d)
-            "quittung" -> if (!d.optBoolean("geloescht")) quittungHolen(app, d)
+            "quittung" -> if (!d.optBoolean("geloescht")) quittungHolen(app, z, d)
         }
+    }
+
+    private fun <T> eigenErinnerung(arbeit: () -> T): T {
+        val vorher = Erinnerungen.stand.value
+        val r = arbeit()
+        if (Erinnerungen.stand.value == vorher + 1) eigenerErinnerungStand.set(vorher + 1)
+        return r
+    }
+
+    /** Die Erinnerungsdatei war beschädigt und ist neu begonnen: alles vom Server holen. */
+    fun vollAbgleichAnstossen() { zustand?.let { it.bekannt.keys.filter { k -> k.startsWith("erinnerung:") || k.startsWith("quittung:") }.forEach { k -> it.vergiss(k) } }; vollabgleich = true; anstossen() }
+
+    /** Die Uhrzeit für Termine ohne Uhrzeit gilt für alle Geräte: Mac und Windows lesen sie von hier. Die jüngere Einstellung gewinnt. */
+    private fun erinnerungEinstellungHolen(app: Context, z: Zustand, d: JSONObject) {
+        val e = Einstellungen.get(app)
+        val zeit = d.optLong("geaendert")
+        if (zeit > e.erinnerungOhneUhrzeitZeit) d.getJSONObject("daten").optString("ohne_uhrzeit_um").takeIf { it.isNotBlank() }?.let { e.erinnerungOhneUhrzeitFern(it, zeit) }
+        z.merke("ordnung:erinnerung", e.erinnerungOhneUhrzeit, zeit)
     }
 
     private fun abdruck(e: Erinnerung): String = kurz(Erinnerungen.alsJson(e).toString())
@@ -349,9 +374,9 @@ object AblageSync {
         val bekannt = z.bekannt[s]
         val hierUnveraendert = lokal != null && bekannt == abdruck(lokal)
         if (d.optBoolean("geloescht")) {
-            if (offen != null) { Erinnerungen.quittiereLoeschung(app, id); z.vergiss(s); return }
+            if (offen != null) { eigenErinnerung { Erinnerungen.quittiereLoeschung(app, id) }; z.vergiss(s); return }
             if (lokal == null) { z.vergiss(s); return }
-            if (hierUnveraendert || bekannt == null) { Erinnerungen.loescheFern(app, id); z.vergiss(s) } else z.zeiten[s] = geaendert
+            if (hierUnveraendert || bekannt == null) { eigenErinnerung { Erinnerungen.loescheFern(app, id) }; z.vergiss(s) } else z.zeiten[s] = geaendert
             return
         }
         val fern = Erinnerungen.aus(id, d.getJSONObject("daten"), geaendert)
@@ -360,18 +385,20 @@ object AblageSync {
         if (lokal != null && abdruck(lokal) == a) { z.merke(s, a, geaendert); return }
         if (lokal != null && bekannt == a) return
         if (lokal != null && !hierUnveraendert) {
-            if (!Erinnerungen.setzeFern(app, Erinnerungen.vereine(lokal, fern))) throw IOException("Erinnerungen nicht schreibbar")
+            if (!Erinnerungen.setzeFern(app, Erinnerungen.vereine(lokal, fern, z.zeiten[s] ?: 0L))) throw IOException("Erinnerungen nicht schreibbar")
             z.bekannt.remove(s)
             z.zeiten[s] = geaendert
             return
         }
-        if (Erinnerungen.setzeFern(app, fern)) z.merke(s, a, geaendert) else throw IOException("Erinnerungen nicht schreibbar")
+        if (eigenErinnerung { Erinnerungen.setzeFern(app, fern) }) z.merke(s, a, geaendert) else throw IOException("Erinnerungen nicht schreibbar")
     }
 
-    private fun quittungHolen(app: Context, d: JSONObject) {
+    private fun quittungHolen(app: Context, z: Zustand, d: JSONObject) {
         val id = d.getString("id")
         val w = d.getJSONObject("daten")
-        if (!Erinnerungen.quittungFern(app, Quittung(id, w.optLong("zeit"), w.optString("von"), w.optString("erinnerung")))) throw IOException("Erinnerungen nicht schreibbar")
+        if (!eigenErinnerung { Erinnerungen.quittungFern(app, Quittung(id, w.optLong("zeit"), w.optString("von"), w.optString("erinnerung"))) }) throw IOException("Erinnerungen nicht schreibbar")
+        // Kam vom Server: nicht wieder hinaufschicken.
+        z.merke("quittung:$id", "1", d.optLong("geaendert"))
     }
 
     private fun eintragHolen(app: Context, basis: String, speicher: AblageSpeicher, z: Zustand, d: JSONObject, b: Bestand, imHintergrund: Boolean) {
@@ -648,23 +675,31 @@ object AblageSync {
             val s = "quittung:${q.id}"
             if (z.bekannt[s] != null) return@forEach
             versuch(s, s) {
-                val r = put(basis, "quittung", q.id, JSONObject().put("zeit", q.zeit).put("von", q.von).put("erinnerung", q.erinnerung), q.zeit.coerceAtLeast(1))
-                if (r.uebernommen) z.merke(s, "1", q.zeit) else abgelehnt(r)
-                // Eine schon vorhandene Bestätigung genügt: Einmal bestätigt bleibt bestätigt, egal von welchem Gerät.
+                // Auch eine abgelehnte zählt: Einmal bestätigt bleibt bestätigt, egal von welchem Gerät.
+                put(basis, "quittung", q.id, JSONObject().put("zeit", q.zeit).put("von", q.von).put("erinnerung", q.erinnerung), q.zeit.coerceAtLeast(1))
                 z.merke(s, "1", q.zeit)
             }
         }
         Erinnerungen.offeneLoeschungen(app).forEach { (id, zeit) ->
+            gespraechAbwarten()
             val s = "erinnerung:$id"
             versuch(s, "$s:weg") {
                 val r = put(basis, "erinnerung", id, JSONObject(), z.zeitFuer(s, zeit), geloescht = true)
-                if (r.uebernommen) { Erinnerungen.quittiereLoeschung(app, id); z.vergiss(s) } else abgelehnt(r)
+                if (r.uebernommen) { eigenErinnerung { Erinnerungen.quittiereLoeschung(app, id) }; z.vergiss(s) } else abgelehnt(r)
+            }
+        }
+        Einstellungen.get(app).let { e ->
+            val s = "ordnung:erinnerung"
+            if (e.erinnerungOhneUhrzeitZeit > 0 && z.bekannt[s] != e.erinnerungOhneUhrzeit) versuch(s, "$s:${e.erinnerungOhneUhrzeit}") {
+                val r = put(basis, "ordnung", "erinnerung", JSONObject().put("ohne_uhrzeit_um", e.erinnerungOhneUhrzeit), e.erinnerungOhneUhrzeitZeit)
+                if (r.uebernommen) z.merke(s, e.erinnerungOhneUhrzeit, e.erinnerungOhneUhrzeitZeit) else abgelehnt(r)
             }
         }
         Erinnerungen.alle(app).forEach { e ->
             val s = "erinnerung:${e.id}"
             val a = abdruck(e)
             if (z.bekannt[s] == a) return@forEach
+            gespraechAbwarten()
             versuch(s, "$s:$a") {
                 val t = z.zeitFuer(s, e.geaendert)
                 val r = put(basis, "erinnerung", e.id, Erinnerungen.alsJson(e), t)

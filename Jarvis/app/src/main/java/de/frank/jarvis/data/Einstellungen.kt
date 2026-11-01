@@ -411,7 +411,10 @@ class Einstellungen private constructor(context: Context) {
     var meldungRuheAn: Boolean get() = prefs.getBoolean("meldung_ruhe_an", false); set(v) = put { putBoolean("meldung_ruhe_an", v) }
     var meldungRuheVon: String get() = s("meldung_ruhe_von", "21:00"); set(v) = put { putString("meldung_ruhe_von", v) }
     /** Um diese Uhrzeit meldet sich eine Erinnerung, die nur ein Datum hat; steht beim Anlegen fest in der Erinnerung, damit alle Geräte gleich rechnen. */
-    var erinnerungOhneUhrzeit: String get() = s("erinnerung_ohne_uhrzeit", "10:00"); set(v) = put { putString("erinnerung_ohne_uhrzeit", v) }
+    var erinnerungOhneUhrzeit: String get() = s("erinnerung_ohne_uhrzeit", "10:00"); set(v) { put { putString("erinnerung_ohne_uhrzeit", v); putLong("erinnerung_ohne_uhrzeit_zeit", System.currentTimeMillis()) }; de.frank.jarvis.ablage.AblageSync.anstossen() }
+    /** Wann sie zuletzt geändert wurde; 0 = nie, dann gibt es nichts abzugleichen. */
+    val erinnerungOhneUhrzeitZeit: Long get() = prefs.getLong("erinnerung_ohne_uhrzeit_zeit", 0L)
+    fun erinnerungOhneUhrzeitFern(wert: String, zeit: Long) = put { putString("erinnerung_ohne_uhrzeit", wert); putLong("erinnerung_ohne_uhrzeit_zeit", zeit) }
     var meldungRuheBis: String get() = s("meldung_ruhe_bis", "06:00"); set(v) = put { putString("meldung_ruhe_bis", v) }
     /** Auf dem Sperrbildschirm nur „Jarvis“ zeigen, nicht den Inhalt. */
     var meldungInhaltVerbergen: Boolean get() = prefs.getBoolean("meldung_inhalt_verbergen", false); set(v) = put { putBoolean("meldung_inhalt_verbergen", v) }

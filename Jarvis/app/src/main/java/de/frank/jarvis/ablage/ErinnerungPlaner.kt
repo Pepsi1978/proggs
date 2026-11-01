@@ -70,6 +70,11 @@ object ErinnerungPlaner {
     private val netz = OkHttpClient.Builder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build()
     private val stimmen = ConcurrentHashMap<String, Job>()
     @Volatile private var gestartet = false
+    private val stimmAnstoss = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    /** Erster Abgleich nach einer Neuinstallation: Bestätigungen fehlen noch, also nichts Neues zeigen. */
+    @Volatile var abgleichPause = false
+    /** Wecker, deren Klingeldienst Android nicht starten ließ: Sie klingeln über die Meldung. */
+    private val ersatzKlingeln: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /** Gerade klingelnde Auslösungen (Wecker): laufen, bis Frank ausdrücklich bestätigt. */
     private val _klingelt = MutableStateFlow<List<Faellig>>(emptyList())
@@ -87,13 +92,16 @@ object ErinnerungPlaner {
                 runCatching { pruefen(app) }.onFailure { Logbuch.fehler("Erinnerung prüfen", it) }
                 // Auch Änderungen anderer Geräte stehen so gleich im Live-Gedächtnis.
                 de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.ERINNERUNGEN), "Änderung an Erinnerungen")
-                runCatching { ErinnerungStimme.vorbereiten(app) }.onFailure { Logbuch.fehler("Erinnerung Stimme vorbereiten", it) }
+                stimmAnstoss.trySend(Unit)
             }
         }
         // Anwesenheit: Solange das Handy entsperrt benutzt wird, meldet es das einmal je Minute.
         bereich.launch { while (true) { delay(60_000L); if (benutzt(app)) ziel(app) } }
-        bereich.launch { while (true) { runCatching { ErinnerungStimme.vorbereiten(app) }.onFailure { Logbuch.fehler("Erinnerung Stimme vorbereiten", it) }; delay(10 * 60_000L) } }
+        // Ein einziger Arbeiter: Eine laufende Sprachausgabe wird nie abgebrochen und nie doppelt bezahlt.
+        bereich.launch { while (true) { runCatching { ErinnerungStimme.vorbereiten(app) }.onFailure { Logbuch.fehler("Erinnerung Stimme vorbereiten", it) }; withTimeoutOrNull(10 * 60_000L) { stimmAnstoss.receive() } } }
     }
+
+    fun anstossen(context: Context) { val app = context.applicationContext; bereich.launch { runCatching { pruefen(app) }.onFailure { Logbuch.fehler("Erinnerung prüfen", it) } } }
 
     private fun benutzt(app: Context) = app.getSystemService(PowerManager::class.java).isInteractive && !app.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
@@ -110,6 +118,8 @@ object ErinnerungPlaner {
     /** Der Kern: Bestätigtes verstummen lassen, Fälliges zeigen, nächsten Wecker stellen. Nach jeder Änderung, jedem Abgleich und jedem Wecker. */
     suspend fun pruefen(context: Context) = pruefSperre.withLock {
         val app = context.applicationContext
+        // Vorübergehend unlesbar heißt nicht „alles gelöscht“.
+        if (Erinnerungen.defekt(app)) return@withLock
         val jetzt = System.currentTimeMillis()
         val faellig = Erinnerungen.faellig(app, jetzt)
         val offen = faellig.map { it.quittung }.toSet()
@@ -117,41 +127,55 @@ object ErinnerungPlaner {
         var schon = gezeigt(app)
         (schon - offen).forEach { verstummen(app, it) }
         schon = schon intersect offen
-        _klingelt.value.filter { it.quittung !in offen }.forEach { verstummen(app, it.quittung) }
-        val neu = faellig.filter { it.quittung !in schon }
-        var warten = false
+        val alsWecker = faellig.filter { it.erinnerung.wecker }.map { it.quittung }.toSet()
+        // Auch wenn die Form inzwischen Benachrichtigung ist: Der Ton hört auf, die Meldung erscheint unten neu.
+        _klingelt.value.filter { it.quittung !in alsWecker }.forEach { verstummen(app, it.quittung) }
+        (ersatzKlingeln - alsWecker).forEach { verstummen(app, it) }
+        // Der Live-Sprachmodus hat Vorrang: Ein Wecker wartet das Gespräch ab und klingelt danach.
+        val live = GespraechsFokus.stilleHinweise
+        val neu = faellig.filter { it.quittung !in schon && !(it.erinnerung.wecker && live) }
+        var warten = faellig.any { it.quittung !in schon && it.erinnerung.wecker && live }
+        val jetztGezeigt = HashSet<String>()
         if (neu.isNotEmpty()) {
-            val hier = ziel(app) == AblageQuellen.HANDY
-            if (hier) {
-                neu.forEach { zeige(app, it) }
-                schon = schon + neu.map { it.quittung }
+            if (!abgleichPause && ziel(app) == AblageQuellen.HANDY) {
+                neu.forEach { zeige(app, it); jetztGezeigt += it.quittung }
+                schon = schon + jetztGezeigt
             } else warten = true
         }
         setzeGezeigt(app, schon)
-        // Ein Neustart beendet das Klingeln, nicht die Pflicht zum Ausschalten.
-        faellig.filter { it.erinnerung.wecker && it.quittung in schon && _klingelt.value.none { k -> k.quittung == it.quittung } }.forEach { klingeln(app, it) }
+        // Ein Neustart beendet Klingeln und Meldung, nicht die Pflicht zu bestätigen. Vorgelesen wird dabei nicht noch einmal.
+        val sichtbar = runCatching { app.getSystemService(NotificationManager::class.java).activeNotifications.map { it.id }.toSet() }.getOrDefault(emptySet())
+        faellig.filter { it.quittung in schon && it.quittung !in jetztGezeigt }.forEach { f ->
+            if (f.erinnerung.wecker) { if (!live && f.quittung !in ersatzKlingeln && _klingelt.value.none { k -> k.quittung == f.quittung }) klingeln(app, f) }
+            else if (meldungsNummer(f.quittung) !in sichtbar) zeigeMeldung(app, f, sprechen = false)
+        }
         stelleWecker(app, Erinnerungen.naechste(app, jetzt).firstOrNull(), if (warten) jetzt + NACHFRAGE_MS else null)
     }
 
     private fun verstummen(app: Context, quittung: String) {
         stimmen.remove(quittung)?.cancel()
-        app.getSystemService(NotificationManager::class.java).cancel(meldungsNummer(quittung))
+        val nummer = meldungsNummer(quittung)
+        app.getSystemService(NotificationManager::class.java).cancel(nummer)
+        de.frank.jarvis.meldung.WeckerTon.stopp(nummer)
+        ersatzKlingeln.remove(quittung)
         if (_klingelt.value.any { it.quittung == quittung }) {
             _klingelt.value = _klingelt.value.filterNot { it.quittung == quittung }
             ErinnerungKlingelDienst.abgleichen()
         }
     }
 
-    fun bestaetige(context: Context, f: Faellig) {
+    /** false = nicht gespeichert: Dann klingelt es weiter, statt dass die Bestätigung still verloren geht. */
+    fun bestaetige(context: Context, f: Faellig): Boolean {
         val app = context.applicationContext
-        Erinnerungen.bestaetige(app, f)
-        verstummen(app, f.quittung)
+        val ok = Erinnerungen.bestaetige(app, f)
+        if (ok) verstummen(app, f.quittung)
+        return ok
     }
 
     /** Aus einer Meldung oder vom Aus-Knopf; [quittung] null = alles, was gerade klingelt. */
     private fun bestaetigeAus(app: Context, quittung: String?) {
         val alle = Erinnerungen.alle(app).flatMap { it.termine() }
-        if (quittung == null) _klingelt.value.forEach { bestaetige(app, it) }
+        if (quittung == null) (_klingelt.value + alle.filter { it.quittung in ersatzKlingeln }).forEach { bestaetige(app, it) }
         else alle.firstOrNull { it.quittung == quittung }?.let { bestaetige(app, it) } ?: verstummen(app, quittung)
     }
 
@@ -167,6 +191,11 @@ object ErinnerungPlaner {
         val e = f.erinnerung
         Logbuch.system("Erinnerung fällig", "${e.zeile} (${e.form})")
         if (e.wecker) { klingeln(app, f); return }
+        zeigeMeldung(app, f, sprechen = true)
+    }
+
+    private fun zeigeMeldung(app: Context, f: Faellig, sprechen: Boolean) {
+        val e = f.erinnerung
         val nummer = meldungsNummer(f.quittung)
         val ok = absicht(app, AKTION_BESTAETIGEN, f.quittung, nummer)
         val bauer = NotificationCompat.Builder(app, KANAL).setSmallIcon(R.drawable.ic_stat_jarvis)
@@ -177,13 +206,26 @@ object ErinnerungPlaner {
             // Wegwischen zählt als Bestätigung, sonst käme dieselbe Auslösung auf den anderen Geräten wieder.
             .setDeleteIntent(ok)
         Meldungen.zeige(app, Meldungsarten.ERINNERUNG, nummer, bauer, e.zeile, null)
-        stimmen[f.quittung] = bereich.launch { ErinnerungStimme.sprich(app, e, alsWecker = false) }
+        if (sprechen) stimmen[f.quittung] = bereich.launch { ErinnerungStimme.sprich(app, e, alsWecker = false) }
     }
 
     private fun klingeln(app: Context, f: Faellig) {
+        // Die Meldung der Benachrichtigungs-Form gehört nicht neben den Wecker.
+        app.getSystemService(NotificationManager::class.java).cancel(meldungsNummer(f.quittung))
         _klingelt.value = _klingelt.value.filterNot { it.quittung == f.quittung } + f
         runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, ErinnerungKlingelDienst::class.java)) }
-            .onFailure { Logbuch.fehler("Erinnerung klingeln", it) }
+            .onFailure { Logbuch.fehler("Erinnerung klingeln", it); dienstGescheitert(app) }
+    }
+
+    /** Android lässt den Klingeldienst nicht zu (etwa direkt nach dem Hochfahren): Weckton über die Meldung, ausgeschaltet wird genauso. */
+    fun dienstGescheitert(context: Context) {
+        val app = context.applicationContext
+        _klingelt.value.forEach { f ->
+            ersatzKlingeln += f.quittung
+            zeigeMeldung(app, f, sprechen = true)
+            de.frank.jarvis.meldung.WeckerTon.starte(app, meldungsNummer(f.quittung), "", Meldungsarten.ERINNERUNG.id)
+        }
+        _klingelt.value = emptyList()
     }
 
     private fun stelleWecker(app: Context, naechste: Faellig?, nachfrage: Long?) {
@@ -255,8 +297,12 @@ object ErinnerungStimme {
     private suspend fun erzeuge(app: Context, kurz: String): File {
         val s = SecureSettings(app)
         val roh = Synthese(app, s).synthetisiere(kurz, Meldungen.profil(app, Meldungsarten.ERINNERUNG).stimmWahl)
-        val ziel = File(ordner(app), schluessel(app, kurz) + "." + roh.extension.ifBlank { "audio" })
-        roh.copyTo(ziel, overwrite = true)
+        val k = schluessel(app, kurz)
+        val ziel = File(ordner(app), k + "." + roh.extension.ifBlank { "audio" })
+        // Erst fertig unter dem richtigen Namen: Eine halbe Datei gälte sonst dauerhaft als bereit.
+        val teil = File(ordner(app), "teil-$k-" + System.nanoTime())
+        roh.copyTo(teil, overwrite = true)
+        if (!teil.renameTo(ziel)) { teil.delete(); throw java.io.IOException("Sprachdatei nicht ablegbar") }
         return ziel
     }
 
@@ -282,10 +328,15 @@ object ErinnerungStimme {
         val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:erinnerung-stimme").apply { setReferenceCounted(false) }
         runCatching { wach.acquire(3 * 60_000L) }
         try {
-            val f = datei(app, e.kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, e.kurz) }.getOrNull() }
-            if (f == null || !spiele(f, if (alsWecker) attributeWecker else attributeMeldung)) systemstimme(app, e.kurz)
+            // Mehrere zugleich fällige sprechen nacheinander, nicht übereinander.
+            reihe.withLock {
+                val f = datei(app, e.kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, e.kurz) }.getOrNull() }
+                if (f == null || !spiele(f, if (alsWecker) attributeWecker else attributeMeldung)) systemstimme(app, e.kurz)
+            }
         } finally { runCatching { if (wach.isHeld) wach.release() } }
     }
+
+    private val reihe = Mutex()
 
     private suspend fun spiele(f: File, attribute: AudioAttributes): Boolean = suspendCancellableCoroutine { w ->
         val p = MediaPlayer()
@@ -302,22 +353,23 @@ object ErinnerungStimme {
     }
 
     private suspend fun systemstimme(app: Context, text: String) {
-        var tts: TextToSpeech? = null
-        withTimeoutOrNull(60_000L) {
-            suspendCancellableCoroutine<Unit> { w ->
-                w.invokeOnCancellation { runCatching { tts?.stop() } }
-                tts = TextToSpeech(app) { status ->
-                    if (status != TextToSpeech.SUCCESS) { if (w.isActive) w.resume(Unit); return@TextToSpeech }
-                    tts?.language = Locale.GERMAN
-                    tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+        // Erst warten, bis der Dienst bereit ist: Sein Rückruf kann kommen, bevor der Konstruktor zurückgekehrt ist.
+        val bereit = kotlinx.coroutines.CompletableDeferred<Int>()
+        val tts = TextToSpeech(app) { bereit.complete(it) }
+        try {
+            withTimeoutOrNull(60_000L) {
+                if (bereit.await() != TextToSpeech.SUCCESS) return@withTimeoutOrNull
+                suspendCancellableCoroutine<Unit> { w ->
+                    w.invokeOnCancellation { runCatching { tts.stop() } }
+                    tts.language = Locale.GERMAN
+                    tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                         override fun onStart(id: String?) {}
                         override fun onDone(id: String?) { if (w.isActive) w.resume(Unit) }
                         @Deprecated("Pflicht der Schnittstelle") override fun onError(id: String?) { if (w.isActive) w.resume(Unit) }
                     })
-                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "erinnerung")
+                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "erinnerung")
                 }
             }
-        }
-        runCatching { tts?.shutdown() }
+        } finally { runCatching { tts.shutdown() } }
     }
 }

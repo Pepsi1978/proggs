@@ -1600,6 +1600,7 @@ ABLAGE_FRIST_S = 30 * 86_400          # so lange bleiben Dateien ohne Eintrag li
 ABLAGE_MAX_DATEI = 8 * 1024 ** 3
 ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung", "erinnerung", "quittung"}
 ANWESEND_FRIST_MS = 5 * 60_000        # so lange gilt ein Geraet nach seiner letzten Benutzung als das, an dem Frank gerade sitzt
+ANWESEND_KURZ_MS = 90_000             # so lange geht ein Rechner dem gleichzeitig benutzten Handy vor (die Geraete melden sich jede Minute)
 ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
 ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente und Bytes je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
@@ -1635,7 +1636,9 @@ class AblageAbgleich:
         if geraet and request.query.get("aktiv") == "1":
             self.anwesend[geraet] = jetzt
         frisch = {n: z for n, z in self.anwesend.items() if jetzt - z <= ANWESEND_FRIST_MS}
-        ziel = max(frisch, key=frisch.get) if frisch else ABLAGE_HANDY
+        # Eindeutig, auch wenn zwei Geraete in derselben Minute benutzt wurden: Ein gerade bedienter Rechner geht vor, das Handy liegt dann meist nur daneben.
+        rechner = {n: z for n, z in frisch.items() if n != ABLAGE_HANDY and jetzt - z <= ANWESEND_KURZ_MS}
+        ziel = max(rechner, key=rechner.get) if rechner else (max(frisch, key=frisch.get) if frisch else ABLAGE_HANDY)
         return web.json_response({"ziel": ziel, "geraete": frisch}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     def _stand(self) -> int:
