@@ -567,6 +567,7 @@
 {"versionCode": 562, "versionName": "1.8.551", "stand": "01.11.2026, 21:36 Uhr", "notiz": "Der Programmierbutton fragt nach dem Modell auch das CLI ab und bietet mit OpenLauncher eine Vollbildauswahl für Modell, Effort, Profil, Modus und CLI an; alles steht verbindlich im Auftrag."},
 {"versionCode": 563, "versionName": "1.8.552", "stand": "01.11.2026, 21:41 Uhr", "notiz": "Der Fernwartungsknopf steht jetzt rechts im Symbolstapel direkt über dem Programmierbutton, bei laufender Session über dem Plus für Nachträge; Papierkorb und Neue Session haben die Plätze getauscht."},
 {"versionCode": 564, "versionName": "1.8.553", "stand": "01.11.2026, 21:51 Uhr", "notiz": "Review-Befunde der OpenLauncher-Auswahl behoben: Modelle ohne Effort-Stufe starten ohne Stufe, Review-Fragen nennen das gewählte Modell und CLI und lassen sich per Sprache beantworten."},
-{"versionCode": 565, "versionName": "1.8.554", "stand": "01.11.2026, 22:07 Uhr", "notiz": "Die OpenLauncher-Auswahl bietet nur noch Kombinationen an, die am Windows-Rechner starten: Argon nur in Antigravity, Ultra nur im Codex CLI, unbekannte Modelle sind ausgeblendet."}
+{"versionCode": 565, "versionName": "1.8.554", "stand": "01.11.2026, 22:07 Uhr", "notiz": "Die OpenLauncher-Auswahl bietet nur noch Kombinationen an, die am Windows-Rechner starten: Argon nur in Antigravity, Ultra nur im Codex CLI, unbekannte Modelle sind ausgeblendet."},
+{"versionCode": 566, "versionName": "1.8.555", "stand": "01.11.2026, 22:11 Uhr", "notiz": "Die OpenLauncher-Auswahl zeigt wieder das volle Angebot des Windows-OpenLauncher, ohne ausgeblendete Modelle oder CLIs."}
 ]
 }

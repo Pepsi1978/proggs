@@ -76,7 +76,7 @@ fun OpenLauncherWahlEbene(vm: AppViewModel) {
 
     val modell = angebot?.modelle?.firstOrNull { "${it.anbieter}\t${it.slug}" == modellId }
     val efforts = if (modell != null) angebot.efforts(modell) else emptyList()
-    val clis = modell?.clisMit(effort).orEmpty()
+    val clis = modell?.clis.orEmpty()
     val stufe = when {
         modell == null -> 0
         efforts.isNotEmpty() && effort.isEmpty() -> 1

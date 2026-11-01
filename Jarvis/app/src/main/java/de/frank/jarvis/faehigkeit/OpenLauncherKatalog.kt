@@ -23,13 +23,7 @@ object OpenLauncherKatalog {
 
     data class Modell(val anbieter: String, val slug: String, val name: String, val anbieterName: String = "") {
         /** Die CLIs, die OpenLauncher diesem Modell anbietet (bei mehreren fragt Jarvis, wenn Frank keins nennt). */
-        val clis: List<String> get() = clisFuer(anbieter).filterNot {
-            // Probelauf am Windows-PC vom 01.11.2026: Googles Schlüssel in OpenCode hat für Argon ein Kontingent von 0, startbar ist es nur in Antigravity.
-            it == "opencode" && anbieter.equals(GOOGLE, true) && slug.startsWith("gemini-4-argon")
-        }
-
-        /** Die CLIs, die mit [effort] wirklich starten: OpenAI weist Ultra über OpenCode ab, nur das Codex CLI kann es. */
-        fun clisMit(effort: String): List<String> = clis.filterNot { it == "opencode" && effort == "ultra" }
+        val clis: List<String> get() = clisFuer(anbieter)
 
         /** Wie ModelEntry.ModelString: Trägt der Slug den Anbieter schon vorn, kommt er nicht doppelt (außer bei NVIDIA). */
         val modellString: String get() = if (!anbieter.equals("nvidia", true) && slug.startsWith("$anbieter/", true)) slug else "$anbieter/$slug"
@@ -39,10 +33,7 @@ object OpenLauncherKatalog {
     data class Gruppe(val id: String, val titel: String, val anbieter: String, val modelle: List<Modell>)
 
     /** Das geladene Angebot: Gruppen und die am PC abweichend gemerkten Effort-Stufen (effort-stufen.json). */
-    class Angebot(alleGruppen: List<Gruppe>, val gemerkt: Map<String, List<String>>) {
-        // Was OpenCode am Windows-PC gar nicht kennt, ließe sich nur auswählen, aber nicht starten.
-        private val nichtStartbar = gemerkt[NICHT_STARTBAR].orEmpty().toSet()
-        val gruppen: List<Gruppe> = alleGruppen.map { g -> g.copy(modelle = g.modelle.filter { it.modellString !in nichtStartbar }) }.filter { it.modelle.isNotEmpty() }
+    class Angebot(val gruppen: List<Gruppe>, val gemerkt: Map<String, List<String>>) {
         val modelle: List<Modell> = gruppen.flatMap { it.modelle }
 
         /**
@@ -64,7 +55,7 @@ object OpenLauncherKatalog {
             val effort = if (f.effort == ProgrammiererVorlage.OHNE_EFFORT) "".takeIf { stufen.isEmpty() } else stufen.firstOrNull { OpenLauncherEfforts.name(it) == f.effort }
             val profil = OpenLauncherEfforts.PROFILE.firstOrNull { it.name == f.profil }?.wert
             val modus = OpenLauncherEfforts.MODI.firstOrNull { it.name == f.modus }?.wert
-            val cli = m.clisMit(effort.orEmpty()).firstOrNull { CLI_NAMEN[it] == f.cli }
+            val cli = m.clis.firstOrNull { CLI_NAMEN[it] == f.cli }
             return Wahl(m, effort ?: return null, profil ?: return null, modus ?: return null, cli ?: return null)
         }
     }
@@ -85,8 +76,6 @@ object OpenLauncherKatalog {
     }
 
     const val ANTHROPIC = "anthropic"
-    /** Eintrag in effort-stufen.json: Modelle, die OpenCode am Windows-PC nicht kennt (siehe tools/effort-stufen-exportieren.ps1). */
-    private const val NICHT_STARTBAR = "nicht-startbar"
     private const val MOONSHOT = "kimi-code-plan-global"
     private const val GOOGLE = "google"
     private val VORRANG = listOf(ANTHROPIC, "openai", MOONSHOT, GOOGLE)
@@ -328,7 +317,6 @@ object OpenLauncherKatalog {
         val effort = effortGenannt ?: EFFORT_STANDARD.takeIf { it in erlaubt } ?: erlaubt.last()
         if (effort !in erlaubt) return Aufloesung.Frage("Den Effort „$effortText“ gibt es für ${m.name} in ${CLI_NAMEN[cli]} nicht. Möglich: " +
             erlaubt.joinToString(", ") { effortName(it) } + ".")
-        if (cli !in m.clisMit(effort)) return Aufloesung.Frage("Effort ${effortName(effort)} läuft bei ${m.name} nur in " + m.clisMit(effort).joinToString(" oder ") { CLI_NAMEN.getValue(it) } + ".")
         val profil = profilAus(profilText) ?: PROFIL_STANDARD
         if (profil !in PROFIL_NAMEN) return Aufloesung.Frage("Das Profil „$profilText“ gibt es bei OpenLauncher nicht. Möglich: " + PROFIL_NAMEN.values.joinToString(", ") + ".")
         val modus = modusAus(modusText) ?: MODUS_STANDARD
