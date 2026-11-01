@@ -7,10 +7,11 @@ enum Programmpruefung {
 
     /// Nil = vollstaendig (oder nichts zu pruefen); sonst was fehlt, als Satz fuer die Meldung.
     /// `pfadVorLauf`: der vor dem Update wirksame Pfad. Fehlt die Datei danach, faellt exePfadWirksam auf den
-    /// Katalog-Pfad zurueck, und die Meldung naennte einen Ort, an dem das Programm nie lag.
+    /// Katalog-Pfad zurueck, und die Meldung naennte einen Ort, an dem das Programm nie lag. Ein jetzt
+    /// vorhandener Pfad geht vor: das Update kann das Programm an einen anderen Katalog-Ort gelegt haben.
     static func vollstaendig(_ eintrag: ProgrammEintrag, pfadVorLauf: String? = nil) -> String? {
         let fm = FileManager.default
-        let ziel = pfadVorLauf ?? eintrag.zielPfad
+        let ziel = fm.fileExists(atPath: eintrag.zielPfad) ? eintrag.zielPfad : (pfadVorLauf ?? eintrag.zielPfad)
         guard !ziel.istLeer else { return nil }
         guard fm.fileExists(atPath: ziel) else {
             return "\(eintrag.name) fehlt nach dem Update (\(ziel)) – bitte neu installieren."

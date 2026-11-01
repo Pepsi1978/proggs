@@ -38,15 +38,44 @@ internal static class NpmGlobal
     }
 
     /// <summary>
-    /// Waechst, solange npm laedt: cacache schreibt eine Tarball laufend nach _cacache\tmp. Macht das
-    /// Zeitlimit zur Ruhezeit, ein langsamer, aber laufender Download wird nicht mehr abgeschossen.
+    /// Fehlt das Werkzeug oder sein Paketordner? Ein Shim kann das verschobene Paket ueberleben und
+    /// scheitert dann erst beim Start. Liegt es inzwischen an einem anderen Katalog-Pfad (Umzug auf den
+    /// nativen Installer), ist nichts zerstoert und die npm-Kopie darf nicht zurueckkommen.
     /// </summary>
-    private static long DownloadGroesse()
+    internal static bool Zerstoert(ProgrammEintrag eintrag, string programmDatei, string globalOrdner)
+    {
+        if (File.Exists(programmDatei) && Directory.Exists(Path.Combine(globalOrdner, "node_modules", eintrag.NpmPaket ?? "")))
+            return false;
+        return !new[] { eintrag.ExePfad }.Concat(eintrag.ExePfadAlternativen)
+            .Where(kandidat => !string.IsNullOrWhiteSpace(kandidat))
+            .Select(Pfade.Aufloesen)
+            .Any(pfad => !string.Equals(pfad, programmDatei, StringComparison.OrdinalIgnoreCase) && File.Exists(pfad));
+    }
+
+    private static long TmpGroesse()
     {
         var ordner = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "npm-cache", "_cacache", "tmp");
         return Directory.Exists(ordner)
             ? new DirectoryInfo(ordner).EnumerateFiles("*", SearchOption.AllDirectories).Sum(datei => datei.Length)
             : 0;
+    }
+
+    /// <summary>
+    /// Macht das Zeitlimit zur Ruhezeit: cacache schreibt laufend nach _cacache\tmp und verschiebt
+    /// fertige Tarballs von dort. Die Groesse selbst faellt also immer wieder; gezaehlt wird deshalb
+    /// jede Aenderung, weil nur ein steigender Wert die Ruhezeit-Uhr zuruecksetzt.
+    /// </summary>
+    internal static Func<long> DownloadLebenszeichen()
+    {
+        long? letzte = null;
+        long aenderungen = 0;
+        return () =>
+        {
+            var aktuell = TmpGroesse();
+            if (letzte is not null && letzte != aktuell) aenderungen++;
+            letzte = aktuell;
+            return aenderungen;
+        };
     }
 
     /// <summary>Argumente des Vorab-Downloads: nur in den npm-Cache, die globale Installation bleibt unberuehrt.</summary>
@@ -68,9 +97,18 @@ internal static class NpmGlobal
         try
         {
             protokoll.Report("Lädt " + eintrag.NpmPaket + " vorab in den npm-Cache, die installierte Version bleibt dabei unberührt …");
-            var lauf = await Kommandozeile.AusfuehrenAsync(npm, VorabArgumente(eintrag.NpmPaket!, ziel),
+            Task<BefehlErgebnis> Starten() => Kommandozeile.AusfuehrenAsync(npm, VorabArgumente(eintrag.NpmPaket!, ziel),
                 TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), Path.GetDirectoryName(npm), abbruch: abbruch, alsAufrufer: true,
-                lebenszeichen: DownloadGroesse);
+                lebenszeichen: DownloadLebenszeichen());
+
+            var lauf = await Starten();
+            // Wie beim Update selbst: ein kurzer Netzfehler geht beim naechsten Versuch meist durch.
+            for (var versuch = 2; versuch <= 3 && CliAktualisierer.IstNetzfehler(lauf); versuch++)
+            {
+                protokoll.Report("Netzfehler beim Vorab-Download – Versuch " + versuch + " von 3 …");
+                await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
+                lauf = await Starten();
+            }
 
             if (lauf.Abgebrochen || lauf.BeendenProblem is not null) return Kommandozeile.UnsauberesEnde(lauf);
             if (lauf.Abgelaufen || CliAktualisierer.IstNetzfehler(lauf))
@@ -111,10 +149,19 @@ internal static class NpmGlobal
         }
 
         protokoll.Report(Path.GetFileName(programmDatei) + " fehlt nach dem abgebrochenen npm-Lauf – stelle " + eintrag.NpmPaket + " wieder her …");
-        var lauf = await Kommandozeile.AusfuehrenAsync(npm, "install -g " + eintrag.NpmPaket + "@latest --no-audit --no-fund",
+        var lauf = await Kommandozeile.AusfuehrenAsync(npm, WiederherstellArgumente(eintrag),
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), Path.GetDirectoryName(npm), abbruch: CancellationToken.None, alsAufrufer: true,
-            lebenszeichen: DownloadGroesse);
+            lebenszeichen: DownloadLebenszeichen());
         protokoll.Report(lauf.Ausgabe);
-        return !lauf.Abgelaufen && lauf.ExitCode == 0 && File.Exists(programmDatei);
+        return !lauf.Abgelaufen && lauf.ExitCode == 0 && !Zerstoert(eintrag, programmDatei, GlobalOrdner);
+    }
+
+    /// <summary>Ein npm-Befehl aus dem Katalog gilt unveraendert: er traegt z. B. --allow-scripts fuer native Module.</summary>
+    internal static string WiederherstellArgumente(ProgrammEintrag eintrag)
+    {
+        var katalog = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "");
+        return katalog.StartsWith("install ", StringComparison.OrdinalIgnoreCase)
+            ? katalog
+            : "install -g " + eintrag.NpmPaket + "@latest --no-audit --no-fund";
     }
 }

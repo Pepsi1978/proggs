@@ -117,6 +117,21 @@ public sealed class CliAktualisierer : IAktualisierer
         var npmGlobal = NpmGlobal.Betrifft(eintrag, programmDatei, NpmGlobal.GlobalOrdner);
         if (npmGlobal && await NpmGlobal.VorabLadenAsync(eintrag, protokoll, abbruch) is { } vorab) return vorab;
 
+        try
+        {
+            return await UpdateLaufenAsync(eintrag, exe, programmDatei, npmGlobal, protokoll, abbruch);
+        }
+        catch (OperationCanceledException) when (npmGlobal && NpmGlobal.Zerstoert(eintrag, programmDatei, NpmGlobal.GlobalOrdner))
+        {
+            // Cancelled in a retry pause: the removed package must not stay removed.
+            await NpmGlobal.WiederherstellenAsync(eintrag, programmDatei, protokoll);
+            throw;
+        }
+    }
+
+    private static async Task<PruefErgebnis> UpdateLaufenAsync(ProgrammEintrag eintrag, string exe, string programmDatei, bool npmGlobal,
+                                                               IProgress<string> protokoll, CancellationToken abbruch)
+    {
         // %USERPROFILE% & Co. as in the paths -- the helper scripts under werkzeuge\ are found that way.
         var args = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "update");
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
@@ -127,8 +142,12 @@ public sealed class CliAktualisierer : IAktualisierer
         var ordner = Path.GetDirectoryName(exe);
 
         // alsAufrufer: die verwaltete exe kann das Admin-Flag dieser App tragen (siehe Kommandozeile).
-        var lauf = await Kommandozeile.AusfuehrenAsync(
-            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
+        // npm tools: quiet time instead of a fixed limit, in case the run has to download after all.
+        Task<BefehlErgebnis> Starten() => Kommandozeile.AusfuehrenAsync(
+            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true,
+            lebenszeichen: npmGlobal ? NpmGlobal.DownloadLebenszeichen() : null);
+
+        var lauf = await Starten();
         protokoll.Report(lauf.Ausgabe);
 
         // The tools fetch their own release list. When that one request fails ("Unable to fetch
@@ -138,17 +157,9 @@ public sealed class CliAktualisierer : IAktualisierer
         {
             protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
             await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
-            lauf = await Kommandozeile.AusfuehrenAsync(
-                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
+            lauf = await Starten();
             protokoll.Report(lauf.Ausgabe);
         }
-
-        if (IstDownloadFrist(lauf))
-            return new PruefErgebnis(UpdateZustand.Fehler,
-                Meldung: LangsamesNetzMeldung + eintrag.Name + " bricht seinen eigenen Download nach etwa 10 Minuten ab. "
-                         + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
-                         + "Die installierte Version bleibt unverändert nutzbar.",
-                Protokoll: lauf.Ausgabe);
 
         // The tool says another update is still running. Only for tools that update themselves
         // (not via pwsh/cmd): their orphaned leftovers are a stalled earlier run, see VerwaisteBeenden.
@@ -156,15 +167,24 @@ public sealed class CliAktualisierer : IAktualisierer
             && await Task.Run(() => VerwaisteBeenden(exe, protokoll, abbruch), abbruch) > 0)
         {
             protokoll.Report("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …");
-            lauf = await Kommandozeile.AusfuehrenAsync(
-                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
+            lauf = await Starten();
             protokoll.Report(lauf.Ausgabe);
         }
 
-        // npm removed the old package and the run ended before the new one arrived.
-        if (npmGlobal && !File.Exists(programmDatei) && await NpmGlobal.WiederherstellenAsync(eintrag, programmDatei, protokoll))
+        // npm removed the old package and the run ended before the new one arrived. Not while part
+        // of the old process tree survived: two npm runs in the same node_modules make it worse.
+        var zerstoert = npmGlobal && NpmGlobal.Zerstoert(eintrag, programmDatei, NpmGlobal.GlobalOrdner);
+        if (zerstoert && lauf.BeendenProblem is null && await NpmGlobal.WiederherstellenAsync(eintrag, programmDatei, protokoll))
             return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update abgeschlossen, nachdem npm die Installation unterbrochen hatte.",
                                      Protokoll: lauf.Ausgabe);
+
+        // Only while it is true: "stays usable" must not stand over a removed package.
+        if (IstDownloadFrist(lauf) && !zerstoert)
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: LangsamesNetzMeldung + eintrag.Name + " bricht seinen eigenen Download nach etwa 10 Minuten ab. "
+                         + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
+                         + "Die installierte Version bleibt unverändert nutzbar.",
+                Protokoll: lauf.Ausgabe);
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
         if (lauf.ExitCode != 0)

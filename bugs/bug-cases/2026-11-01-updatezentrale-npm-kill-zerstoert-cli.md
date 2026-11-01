@@ -1,6 +1,6 @@
 # UpdateZentrale: Zeitlimit-Kill während `npm install -g` zerstört die CLI (01.11.2026)
 
-> Behoben in UpdateZentrale 1.3.68 und Updater-Zentrale macOS 1.0.40. Geschwisterfall: `2026-10-28-updaterzentrale-brew-zeitlimit-langsamer-download.md`.
+> Behoben in UpdateZentrale 1.3.68 und Updater-Zentrale macOS 1.0.40, Review-Befunde nachgezogen in der jeweils nächsten Version. Geschwisterfall: `2026-10-28-updaterzentrale-brew-zeitlimit-langsamer-download.md`.
 
 ## Symptom
 
@@ -20,8 +20,10 @@ Das Update selbst hat sieben Mal vorher geklappt. Es scheitert nur, wenn der Dow
 - `Providers/NpmGlobal`: Liegt die Programmdatei im globalen npm-Ordner und ist `npmPaket` gesetzt, lädt `npm install --prefix <temp> <paket>@latest --ignore-scripts` die neue Version zuerst in den npm-Cache. Ein Abbruch dort zerstört nichts. Das eigentliche Update tauscht danach aus dem Cache.
 - Das Zeitlimit des Vorab-Downloads zählt als Ruhezeit: Es läuft ab, wenn `_cacache\tmp` nicht mehr wächst.
 - Scheitert der Vorab-Download am Netz, endet der Lauf mit der `LangsamesNetzMeldung`: installierte Version unverändert, keine Übergabe an Claude.
-- Fehlt die Programmdatei nach dem Lauf trotzdem, stellt `npm install -g <paket>@latest` sie sofort wieder her, auch nach einem Klick auf Abbrechen.
-- `Programmpruefung.Vollstaendig` prüft den vor dem Lauf wirksamen Pfad und nennt damit den richtigen Ort.
+- Auch der eigentliche Update-Lauf zählt für npm-Werkzeuge als Ruhezeit, falls er doch selbst laden muss. Gezählt wird jede Größenänderung von `tmp`, weil npm fertige Dateien dort herausschiebt.
+- Fehlen Programmdatei oder Paketordner nach dem Lauf trotzdem, stellt npm das Paket sofort wieder her, auch nach einem Klick auf Abbrechen. Ein npm-Befehl aus dem Katalog gilt dabei unverändert, damit z. B. `--allow-scripts` erhalten bleibt.
+- Keine Wiederherstellung, wenn Teile des alten Prozessbaums noch leben (zwei npm-Läufe im selben `node_modules`) oder das Werkzeug inzwischen an einem anderen Katalog-Pfad liegt (Umzug auf den nativen Installer).
+- `Programmpruefung.Vollstaendig` nimmt den jetzt wirksamen Pfad und sonst den vor dem Lauf wirksamen. Die Meldung nennt damit den richtigen Ort.
 - macOS hat dieselbe npm-Reihenfolge und bekommt deshalb dasselbe, erkannt über einen Symlink nach `node_modules`. Die Meldung ist dort eine normale Fehlermeldung, die Übergabe bleibt also aktiv.
 
 ## Nebenbefunde

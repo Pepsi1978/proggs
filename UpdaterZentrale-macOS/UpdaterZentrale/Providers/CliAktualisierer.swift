@@ -99,9 +99,11 @@ struct CliAktualisierer: Aktualisierer {
 
         // npm sucht seine Module relativ zum Arbeitsverzeichnis (MODULE_NOT_FOUND); der eigene
         // Ordner des Programms ist immer richtig und fuer jedes andere Werkzeug harmlos.
-        var lauf = await Kommandozeile.ausfuehren(exe, argumente,
+        // npm-Werkzeuge: Ruhezeit statt festem Limit, falls der Lauf doch selbst laden muss.
+        var lauf = await Kommandozeile.ausfuehren(exe, Kommandozeile.zerlegen(argumente),
                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
+                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent,
+                                                  lebenszeichen: npmGlobal ? NpmGlobal.downloadGroesse : nil)
         protokoll.berichte(lauf.ausgabe)
 
         // Das Werkzeug meldet, dass noch ein anderes Update laeuft. Nur fuer Werkzeuge, die sich
@@ -110,14 +112,16 @@ struct CliAktualisierer: Aktualisierer {
            Self.gleicheDatei(exe, Pfade.aufloesen(eintrag.exePfadWirksam)),
            await Self.verwaisteBeenden(exe, protokoll) > 0 {
             protokoll.berichte("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …")
-            lauf = await Kommandozeile.ausfuehren(exe, argumente,
+            lauf = await Kommandozeile.ausfuehren(exe, Kommandozeile.zerlegen(argumente),
                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
+                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent,
+                                                  lebenszeichen: npmGlobal ? NpmGlobal.downloadGroesse : nil)
             protokoll.berichte(lauf.ausgabe)
         }
 
         // npm hat das alte Paket entfernt, und der Lauf endete, bevor das neue da war.
-        if npmGlobal, !FileManager.default.fileExists(atPath: programmDatei),
+        // Liegt es jetzt an einem anderen Katalog-Pfad (Umzug auf den nativen Installer), ist nichts zerstoert.
+        if npmGlobal, !FileManager.default.fileExists(atPath: programmDatei), !eintrag.aufDiesemRechnerVorhanden,
            await NpmGlobal.wiederherstellen(eintrag, programmDatei, protokoll) {
             return PruefErgebnis(zustand: .fertig, meldung: "Update abgeschlossen, nachdem npm die Installation unterbrochen hatte.",
                                  protokoll: lauf.ausgabe)

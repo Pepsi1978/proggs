@@ -16,7 +16,7 @@ enum NpmGlobal {
 
     /// Waechst, solange npm laedt: cacache schreibt eine Tarball laufend nach _cacache/tmp. Macht das
     /// Zeitlimit zur Ruhezeit, ein langsamer, aber laufender Download wird nicht mehr abgeschossen.
-    private static let downloadGroesse: @Sendable () -> Int64 = {
+    static let downloadGroesse: @Sendable () -> Int64 = {
         let ordner = (NSHomeDirectory() as NSString).appendingPathComponent(".npm/_cacache/tmp")
         guard let dateien = FileManager.default.enumerator(atPath: ordner) else { return 0 }
         var summe: Int64 = 0
@@ -27,10 +27,18 @@ enum NpmGlobal {
         return summe
     }
 
+    /// Frisch gesucht statt `Pfade.npm`: das ist einmalig ermittelt, und beim Katalogeintrag von npm
+    /// selbst kann genau diese Datei die zerstoerte sein.
+    private static var npmDatei: String? {
+        ([Pfade.npm, "/opt/homebrew/bin/npm", "/usr/local/bin/npm",
+          (NSHomeDirectory() as NSString).appendingPathComponent(".local/bin/npm")])
+            .first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
     /// Laedt die neue Version in den npm-Cache, solange die alte noch unangetastet ist.
     /// Nil = weiter mit dem Update; sonst das Ergebnis, das den Lauf beendet.
     static func vorabLaden(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis? {
-        guard let paket = eintrag.npmPaket, FileManager.default.isExecutableFile(atPath: Pfade.npm) else { return nil }
+        guard let paket = eintrag.npmPaket, let npm = npmDatei else { return nil }
 
         let ziel = (NSTemporaryDirectory() as NSString).appendingPathComponent("uz-npmvorab-" + UUID().uuidString)
         guard (try? FileManager.default.createDirectory(atPath: ziel, withIntermediateDirectories: true)) != nil else { return nil }
@@ -38,11 +46,11 @@ enum NpmGlobal {
 
         protokoll.berichte("Lädt \(paket) vorab in den npm-Cache, die installierte Version bleibt dabei unberührt …")
         let lauf = await Kommandozeile.ausfuehren(
-            Pfade.npm,
+            npm,
             ["install", "--prefix", ziel, paket + "@latest", "--ignore-scripts", "--no-audit", "--no-fund",
              "--no-package-lock", "--no-bin-links", "--loglevel=error"],
             zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-            arbeitsverzeichnis: (Pfade.npm as NSString).deletingLastPathComponent,
+            arbeitsverzeichnis: (npm as NSString).deletingLastPathComponent,
             lebenszeichen: downloadGroesse)
 
         if lauf.abgelaufen {
@@ -61,17 +69,23 @@ enum NpmGlobal {
     /// Stellt ein vom abgebrochenen Update zerstoertes Werkzeug wieder her. Laeuft auch nach einem Klick
     /// auf Abbrechen zu Ende (Marke hier geleert): ein fehlendes Werkzeug ist schlimmer als die kurze Wartezeit.
     static func wiederherstellen(_ eintrag: ProgrammEintrag, _ programmDatei: String, _ protokoll: Fortschritt) async -> Bool {
-        guard let paket = eintrag.npmPaket, FileManager.default.isExecutableFile(atPath: Pfade.npm) else {
+        guard let paket = eintrag.npmPaket, let npm = npmDatei else {
             protokoll.berichte("Wiederherstellung nicht möglich: npm wurde nicht gefunden.")
             return false
         }
 
+        // Ein npm-Befehl aus dem Katalog gilt unveraendert: er traegt z. B. --allow-scripts fuer native Module.
+        let katalog = eintrag.updateArgumente ?? ""
+        let argumente = katalog.hasPrefix("install ")
+            ? Kommandozeile.zerlegen(katalog)
+            : ["install", "-g", paket + "@latest", "--no-audit", "--no-fund"]
+
         protokoll.berichte("\((programmDatei as NSString).lastPathComponent) fehlt nach dem abgebrochenen npm-Lauf – stelle \(paket) wieder her …")
         let lauf = await AbbruchMarke.$aktuell.withValue(nil) {
             await Kommandozeile.ausfuehren(
-                Pfade.npm, ["install", "-g", paket + "@latest", "--no-audit", "--no-fund"],
+                npm, argumente,
                 zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                arbeitsverzeichnis: (Pfade.npm as NSString).deletingLastPathComponent,
+                arbeitsverzeichnis: (npm as NSString).deletingLastPathComponent,
                 lebenszeichen: downloadGroesse)
         }
         protokoll.berichte(lauf.ausgabe)
