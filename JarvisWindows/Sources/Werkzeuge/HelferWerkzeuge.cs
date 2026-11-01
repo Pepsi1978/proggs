@@ -100,14 +100,14 @@ public static class HelferWerkzeuge
         return t;
     }
 
-    private static bool TagesZaehlerErhoehen()
+    private static int TagesZahl() => Vorgaben.Text("helferBauTag") == DateTime.Now.ToString("yyyy-MM-dd") ? Vorgaben.Ganz("helferBauZahl", 0) : 0;
+
+    /// <summary>Zählt erst nach dem Start: Ein gescheiterter Start kostet keinen der fünf Aufträge des Tages.</summary>
+    private static void TagesZaehlerErhoehen()
     {
-        var heute = DateTime.Now.ToString("yyyy-MM-dd");
-        var n = Vorgaben.Text("helferBauTag") == heute ? Vorgaben.Ganz("helferBauZahl", 0) : 0;
-        if (n >= TagesGrenze) return false;
-        Vorgaben.Setze("helferBauTag", heute);
+        var n = TagesZahl();
+        Vorgaben.Setze("helferBauTag", DateTime.Now.ToString("yyyy-MM-dd"));
         Vorgaben.Setze("helferBauZahl", n + 1);
-        return true;
     }
 
     private static string Auftrag(string aufgabe, string faehigkeit, string kennung, string schluessel, string modell, string effort)
@@ -220,7 +220,7 @@ public static class HelferWerkzeuge
                 var kennung = a.Text("kennung") ?? "";
                 if (faehigkeit.Length < 10 || aufgabe.Length == 0) return new WerkzeugErgebnis("Aufgabe und Fähigkeit vollständig angeben.", Fehler: true);
                 // Das Handy kennt bei helfer_bauen nur die Orte handy und mac; mac liefe auf dem falschen Rechner. Windows-Helfer entstehen deshalb direkt hier.
-                if (!TagesZaehlerErhoehen()) return new WerkzeugErgebnis($"Heute wurden schon {TagesGrenze} Helfer direkt am PC beauftragt; das ist die Grenze.", Fehler: true);
+                if (TagesZahl() >= TagesGrenze) return new WerkzeugErgebnis($"Heute wurden schon {TagesGrenze} Helfer direkt am PC beauftragt; das ist die Grenze.", Fehler: true);
                 if (WinWerkzeuge.Alle.FirstOrDefault(w => w.Definition.Name == "openlauncher_sitzung") is not { } start) return new WerkzeugErgebnis("OpenLauncher-Weg fehlt.", Fehler: true);
                 var text = Auftrag(aufgabe, faehigkeit, kennung, NeuerBauSchluessel(kennung), e.RechercheModell, e.RechercheEffort);
                 var ergebnis = await start.Ausfuehren(new JSONObjekt
@@ -228,6 +228,7 @@ public static class HelferWerkzeuge
                     ["auftrag"] = text, ["name"] = "Jarvis: Helfer", ["cli"] = "claude", ["modell"] = "claude-opus-5-5[1m]", ["profil"] = "minimal", ["modus"] = "schnell", ["effort"] = "high",
                 });
                 if (ergebnis.Fehler) return ergebnis;
+                TagesZaehlerErhoehen();
                 return new WerkzeugErgebnis("Der Helferbau läuft direkt am PC mit Claude Opus 5.5. Fertig ist er erst, wenn er nach bestandener Prüfung im Katalog als bereit steht (windows_helfer_suchen).");
             }),
     };

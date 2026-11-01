@@ -49,6 +49,8 @@ public static class JarvisApp
 {
     private const string MutexName = @"Local\JarvisWindows-Einzelinstanz";
     private static uint nachrichtZeigen;
+    private static uint nachrichtBeenden;
+    private static bool gesperrt, schlaeft, anzeigeAus;
     private static HwndSource? botschaften;
     private static System.Windows.Forms.NotifyIcon? symbol;
     private static MenueLeiste? menue;
@@ -60,14 +62,23 @@ public static class JarvisApp
     public static IntPtr Griff => botschaften?.Handle ?? IntPtr.Zero;
     /// <summary>Das Symbol im Infobereich; Shell.Mitteilung zeigt seine Hinweise darüber.</summary>
     public static System.Windows.Forms.NotifyIcon? Symbol => symbol;
-    public static bool BildschirmAus { get; private set; }
+    /// <summary>Gesperrt, im Ruhezustand oder Anzeige aus. Drei getrennte Stände: Eine aufwachende Anzeige hebt eine Sperre nicht auf.</summary>
+    public static bool BildschirmAus => gesperrt || schlaeft || anzeigeAus;
 
     [STAThread]
     public static int Main(string[] args)
     {
         var hintergrund = args.Contains("--hintergrund", StringComparer.OrdinalIgnoreCase);
+        // publish.ps1: sauber beenden lassen, damit Einstellungen, Zugang und Gespräche noch auf die Platte kommen.
+        var beenden = args.Contains("--beenden", StringComparer.OrdinalIgnoreCase);
         nachrichtZeigen = Nativ.RegisterWindowMessageW("JarvisWindows.FensterZeigen");
+        nachrichtBeenden = Nativ.RegisterWindowMessageW("JarvisWindows.Beenden");
         using var einzel = new Mutex(true, MutexName, out var erster);
+        if (beenden)
+        {
+            if (!erster) Nativ.PostMessageW(Nativ.HWND_BROADCAST, nachrichtBeenden, IntPtr.Zero, IntPtr.Zero);
+            return 0;
+        }
         if (!erster)
         {
             if (!hintergrund)
@@ -89,16 +100,18 @@ public static class JarvisApp
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log("fehler", "Absturz: " + e.ExceptionObject, wo: "App");
         app.Startup += (_, _) => FertigGestartet(hintergrund);
         app.Exit += (_, _) => Abschluss();
-        Microsoft.Win32.SystemEvents.SessionEnding += (_, _) => Abschluss();
+        // Beim Abmelden kann noch abgebrochen werden: Dann nur sichern. Symbol und Abschluss erst, wenn es wirklich endet.
+        Microsoft.Win32.SystemEvents.SessionEnding += (_, _) => Sichern();
+        Microsoft.Win32.SystemEvents.SessionEnded += (_, _) => Abschluss();
         Microsoft.Win32.SystemEvents.SessionSwitch += (_, e) =>
         {
-            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock) BildschirmAus = true;
-            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock) BildschirmAus = false;
+            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock) gesperrt = true;
+            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock) gesperrt = false;
         };
         Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
         {
-            if (e.Mode == Microsoft.Win32.PowerModes.Suspend) BildschirmAus = true;
-            if (e.Mode == Microsoft.Win32.PowerModes.Resume) BildschirmAus = false;
+            if (e.Mode == Microsoft.Win32.PowerModes.Suspend) schlaeft = true;
+            if (e.Mode == Microsoft.Win32.PowerModes.Resume) schlaeft = false;
         };
         return app.Run();
     }
@@ -114,6 +127,7 @@ public static class JarvisApp
         Ui.Starte(async () => { _ = await CodexAnmeldung.Shared.Angemeldet(); });
         Task.Run(() => AblageLader.Aufraeumen());
         AblageAbgleich.Shared.Hochfahren();
+        ErinnerungPlaner.Shared.Starten();
         Ui.Starte(async () => { _ = await McpKlient.Shared.Werkzeuge(frisch: true); });
         BotschaftenAnlegen();
         SymbolAnlegen();
@@ -122,16 +136,21 @@ public static class JarvisApp
         else AppSteuerung.Shared.FensterZustandGeaendert();
     }
 
+    private static void Sichern()
+    {
+        Einstellungen.Shared.ZugangSichern();
+        VorleseEinstellungen.Shared.ZugangSichern();
+        Vorgaben.Sichern();
+        GespraechsSpeicher.Abschliessen();
+    }
+
     private static void Abschluss()
     {
         if (abschlussLief) return;
         abschlussLief = true;
         try { TresorSperre.Shared.Sperren(); } catch { }
-        Einstellungen.Shared.ZugangSichern();
-        VorleseEinstellungen.Shared.ZugangSichern();
         Logbuch.Shared.Schreib("system", "Jarvis beendet");
-        Vorgaben.Sichern();
-        GespraechsSpeicher.Abschliessen();
+        Sichern();
         if (symbol != null) { symbol.Visible = false; symbol.Dispose(); symbol = null; }
         Thread.Sleep(100); // Das Logbuch schreibt im Hintergrund: Der letzte Eintrag soll noch auf die Platte.
     }
@@ -149,6 +168,7 @@ public static class JarvisApp
     private static IntPtr Botschaft(IntPtr h, int msg, IntPtr w, IntPtr l, ref bool erledigt)
     {
         if (msg == nachrichtZeigen) { AppSteuerung.Shared.FensterZeigen(); erledigt = true; return IntPtr.Zero; }
+        if (msg == nachrichtBeenden) { Beenden(); erledigt = true; return IntPtr.Zero; }
         switch (msg)
         {
             case Nativ.WM_HOTKEY:
@@ -157,7 +177,7 @@ public static class JarvisApp
                 break;
             case Nativ.WM_POWERBROADCAST when w == Nativ.PBT_POWERSETTINGCHANGE:
                 var s = Marshal.PtrToStructure<Nativ.POWERBROADCAST_SETTING>(l);
-                if (s.PowerSetting == anzeigeStand) BildschirmAus = s.Data == 0;
+                if (s.PowerSetting == anzeigeStand) anzeigeAus = s.Data == 0;
                 break;
         }
         return IntPtr.Zero;

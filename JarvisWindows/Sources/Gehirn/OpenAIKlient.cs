@@ -52,6 +52,10 @@ public sealed class OpenAIKlient : ModellAnbieter
         }
 
         var versuch = 0;
+        var erneuert = false;
+        // Hat der Strom schon Text geliefert, wird nicht wiederholt: Anzeige und Vorleser bekämen ihn doppelt.
+        var gesendet = false;
+        void Melde(string s) { gesendet = true; onText(s); }
         while (true)
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, codex ? CodexURL : ApiURL);
@@ -75,9 +79,14 @@ public sealed class OpenAIKlient : ModellAnbieter
             req.Content = GehirnNetz.JsonInhalt(r);
             try
             {
-                return await Stream(req, onText, ct);
+                return await Stream(req, Melde, ct);
             }
-            catch (AnbieterFehler f) when (f.Art == AnbieterFehlerArt.Http && (f.Code == 408 || f.Code >= 500) && versuch < 2)
+            catch (AnbieterFehler f) when (codex && f.Art == AnbieterFehlerArt.Http && f.Code is 401 or 403 && !erneuert && !gesendet)
+            {
+                // Der Zugriffstoken galt nicht mehr: einmal erneuern und wiederholen (UngueltigMelden lief in Stream).
+                erneuert = true;
+            }
+            catch (AnbieterFehler f) when (f.Art == AnbieterFehlerArt.Http && (f.Code == 408 || f.Code >= 500) && versuch < 2 && !gesendet)
             {
                 versuch += 1;
                 Log("fehler", $"OpenAI {f.Code}, neuer Versuch {versuch}: {f.Text.Kappe(120)}");
@@ -284,6 +293,8 @@ public sealed class OpenAIKlient : ModellAnbieter
             }
             if (fertig) break;
         }
+        // Ein abgerissener Strom ist kein Erfolg: Es gab weder „completed“ noch „incomplete“.
+        if (!fertig) throw AnbieterFehler.Netz("Die Antwort des Modells brach vorzeitig ab.");
 
         var inhalt = new List<JSONObjekt>();
         var textAusItems = "";
@@ -310,7 +321,7 @@ public sealed class OpenAIKlient : ModellAnbieter
         var text = textAusItems.Length == 0 ? deltas.ToString() : textAusItems;
         if (text.Length > 0) inhalt.Add(new JSONObjekt { ["type"] = "text", ["text"] = text });
         inhalt.AddRange(aufrufe);
-        if (aufrufe.Count > 0) ergebnis.StopGrund = "tool_use";
+        if (aufrufe.Count > 0 && ergebnis.StopGrund != "max_tokens") ergebnis.StopGrund = "tool_use";
         ergebnis.Inhalt = inhalt;
         return ergebnis;
     }

@@ -40,7 +40,7 @@ public sealed class McpKlient
     private DateTime letzterFehlschlag = DateTime.MinValue;
     private int fehlschlaegeInFolge;
     private Task<List<WerkzeugDefinition>>? werkzeugAbruf;
-    private CancellationTokenSource? werkzeugAbbruch;
+    private int kontextStand;
     private string kontextVorrat = "";
     private DateTime kontextZeit = DateTime.MinValue;
     private Task? kontextAbruf;
@@ -104,7 +104,6 @@ public sealed class McpKlient
     {
         var a = Adresse;
         Task<List<WerkzeugDefinition>> abruf;
-        CancellationTokenSource? abbruch;
         lock (schloss)
         {
             if (a != verbundeneAdresse) // Relay gewechselt
@@ -116,6 +115,7 @@ public sealed class McpKlient
                 fehlschlaegeInFolge = 0;
                 kontextVorrat = "";
                 kontextZeit = DateTime.MinValue;
+                kontextStand += 1;
             }
             // Die App erneuert die Liste selbst im Hintergrund: Keine Frage wartet darauf.
             if (!frisch && werkzeugCache.Count > 0) return werkzeugCache;
@@ -123,20 +123,18 @@ public sealed class McpKlient
             if (!frisch && (DateTime.Now - letzterFehlschlag).TotalSeconds < 45) return new();
             if (werkzeugAbruf == null)
             {
-                werkzeugAbbruch = new CancellationTokenSource();
-                var token = werkzeugAbbruch.Token;
+                // Ohne ct: Mehrere Fragen teilen sich diesen Abruf, der Stopp der einen darf ihn den anderen nicht nehmen.
                 werkzeugAbruf = Task.Run(async () =>
                 {
-                    try { return await WerkzeugeAbrufen(token); }
-                    finally { lock (schloss) { werkzeugAbruf = null; werkzeugAbbruch = null; } }
+                    try { return await WerkzeugeAbrufen(default); }
+                    finally { lock (schloss) werkzeugAbruf = null; }
                 });
             }
             abruf = werkzeugAbruf;
-            abbruch = werkzeugAbbruch;
         }
         // Stopp soll nicht auf den Abruf warten müssen.
-        using (ct.Register(() => { try { abbruch?.Cancel(); } catch (ObjectDisposedException) { } }))
-            return await abruf;
+        try { return await abruf.WaitAsync(ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { lock (schloss) return werkzeugCache; }
     }
 
     private async Task<List<WerkzeugDefinition>> WerkzeugeAbrufen(CancellationToken ct)
@@ -196,12 +194,14 @@ public sealed class McpKlient
         lock (schloss)
         {
             if (kontextAbruf != null || (DateTime.Now - kontextZeit).TotalSeconds <= 60) return Task.CompletedTask;
+            var stand = kontextStand;
             kontextAbruf = Task.Run(async () =>
             {
                 try
                 {
                     var r = await Rufe("jarvis_kontext", new JSONObjekt(), 30);
-                    if (!r.Fehler) lock (schloss) { kontextVorrat = r.Text; kontextZeit = DateTime.Now; }
+                    // Wurde der Vorrat derweil verworfen (etwa nach jarvis_merken), ist dieser Stand schon veraltet.
+                    if (!r.Fehler) lock (schloss) { if (stand == kontextStand) { kontextVorrat = r.Text; kontextZeit = DateTime.Now; } }
                 }
                 finally { lock (schloss) kontextAbruf = null; }
             });
@@ -234,7 +234,7 @@ public sealed class McpKlient
     /// <summary>Die Oberfläche hat die Ablage geändert: Der gemerkte Kontext zeigt sie nicht mehr richtig.</summary>
     public Task KontextVerwerfen()
     {
-        lock (schloss) { kontextVorrat = ""; kontextZeit = DateTime.MinValue; }
+        lock (schloss) { kontextVorrat = ""; kontextZeit = DateTime.MinValue; kontextStand += 1; }
         return Task.CompletedTask;
     }
 
@@ -255,10 +255,11 @@ public sealed class McpKlient
         }
         var args = new JSONObjekt(argumente);
         if (LegtInAblage.Contains(name)) args["_quelle"] = AblageAbgleich.Quelle;
-        var nurListe = name == "ablage_lesen";
+        // Nur die Liste hat einen Ersatz am Laptop und darf deshalb kurz warten; ein Titel, der nur am Handy liegt, braucht die volle Zeit.
+        var nurListe = name == "ablage_lesen" && (args.Text("titel") ?? "").Trim().Length == 0;
         var e = await RufeOhneLog(name, args, nurListe ? 3 : sekunden, ct);
         // Die Liste kommt vom Handy, weil sie auch Vorläufiges zeigt. Ist es aus, reicht die eigene Kopie der Ablage.
-        if (nurListe && (args.Text("titel") ?? "").Trim().Length == 0) e = AblageAbgleich.Shared.ListeMit(e);
+        if (nurListe) e = AblageAbgleich.Shared.ListeMit(e);
         if (!NurLesend(name)) await KontextVerwerfen();
         var ms = (int)(DateTime.Now - start).TotalMilliseconds;
         // Das Logbuch soll die App verbessern, nicht das Leben mitschreiben: Private Inhalte nur als Länge, Dateiabrufe nur bei Fehlern.

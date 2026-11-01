@@ -106,19 +106,19 @@ public sealed class QuellenListe : UserControl
 }
 
 /// <summary>Ein Ordner des Explorers, wie die Filter der Handy-Ablage; PDFs und Recherchen sind eigene Bereiche.</summary>
-public enum AblageBereich { Bilder, Pdfs, Prompts, Recherchen, Texte, Dokumente, Tabellen, Praesentationen, Audio, Video, Sonstige }
+public enum AblageBereich { Bilder, Pdfs, Prompts, Erinnerung, Recherchen, Texte, Dokumente, Tabellen, Praesentationen, Audio, Video, Sonstige }
 
 public static class AblageBereichMehr
 {
     public static string Titel(this AblageBereich b) => b switch
     {
-        AblageBereich.Bilder => "Bilder", AblageBereich.Pdfs => "PDFs", AblageBereich.Prompts => "Prompts", AblageBereich.Recherchen => "Recherchen", AblageBereich.Texte => "Texte",
+        AblageBereich.Bilder => "Bilder", AblageBereich.Pdfs => "PDFs", AblageBereich.Prompts => "Prompts", AblageBereich.Erinnerung => "Erinnerung", AblageBereich.Recherchen => "Recherchen", AblageBereich.Texte => "Texte",
         AblageBereich.Dokumente => "Dokumente", AblageBereich.Tabellen => "Tabellen", AblageBereich.Praesentationen => "Präsentationen", AblageBereich.Audio => "Audio",
         AblageBereich.Video => "Video", _ => "Sonstige",
     };
     public static string Symbol(this AblageBereich b) => b switch
     {
-        AblageBereich.Bilder => "photo.fill", AblageBereich.Pdfs => "doc.richtext.fill", AblageBereich.Prompts => "bolt.fill", AblageBereich.Recherchen => "magnifyingglass.circle.fill",
+        AblageBereich.Bilder => "photo.fill", AblageBereich.Pdfs => "doc.richtext.fill", AblageBereich.Prompts => "bolt.fill", AblageBereich.Erinnerung => "bell.fill", AblageBereich.Recherchen => "magnifyingglass.circle.fill",
         AblageBereich.Texte => "doc.text.fill", AblageBereich.Dokumente => "doc.fill", AblageBereich.Tabellen => "tablecells.fill", AblageBereich.Praesentationen => "rectangle.on.rectangle.angled",
         AblageBereich.Audio => "waveform", AblageBereich.Video => "film.fill", _ => "archivebox.fill",
     };
@@ -127,7 +127,7 @@ public static class AblageBereichMehr
         AblageBereich.Bilder or AblageBereich.Video => Farbe.Kupfer,
         AblageBereich.Pdfs or AblageBereich.Audio => Farbe.Warnung,
         AblageBereich.Prompts or AblageBereich.Tabellen => Farbe.Gruen,
-        AblageBereich.Recherchen or AblageBereich.Praesentationen => Farbe.Gold,
+        AblageBereich.Recherchen or AblageBereich.Praesentationen or AblageBereich.Erinnerung => Farbe.Gold,
         _ => Farbe.Haupt,
     };
 }
@@ -194,7 +194,7 @@ public sealed class AblageDaten : Beobachtbar
         {
             switch (b)
             {
-                case AblageBereich.Prompts: break;
+                case AblageBereich.Prompts or AblageBereich.Erinnerung: break;
                 case AblageBereich.Recherchen:
                     if (e.Recherche) r.Add(new AblageElement(e, null));
                     break;
@@ -401,6 +401,7 @@ public sealed class AblageAnsicht : UserControl
     private readonly DispatcherTimer suchUhr = new() { Interval = TimeSpan.FromSeconds(0.4) };
     private readonly DispatcherTimer listenUhr = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private PromptsAnsicht? prompts;
+    private ErinnerungenAnsicht? erinnerungen;
     private NeuerTextEintrag? neuerText;
 
     public AblageAnsicht()
@@ -512,7 +513,7 @@ public sealed class AblageAnsicht : UserControl
         var bild = Flaeche(Sy(b.Symbol(), 15, farbe, FontWeights.SemiBold), Farbton13(farbe), 10);
         bild.Width = 34; bild.Height = 34;
         var name = T(b.Titel(), 13, FontWeights.SemiBold, null, 1);
-        var karte = Flaeche(H(10, bild, Fuell(V(1, name, b != AblageBereich.Prompts ? T(daten.Anzahl(b).ToString(), 11, null, Farbe.Text3) : null))),
+        var karte = Flaeche(H(10, bild, Fuell(V(1, name, b is not (AblageBereich.Prompts or AblageBereich.Erinnerung) ? T(daten.Anzahl(b).ToString(), 11, null, Farbe.Text3) : null))),
             Farbe.Glas(aktiv ? 0.13 : 0.04), 14, 10, 10, aktiv ? MitDeckkraft(farbe, 0.7) : Farbe.Glas(0.06));
         return Klick(karte, () =>
         {
@@ -538,6 +539,7 @@ public sealed class AblageAnsicht : UserControl
         // Der Texteintrag behält seinen Zustand: Vor dem Neuaufbau aus der alten Liste lösen, sonst hätte er zwei Eltern.
         if (inhalt.Content is StackPanel alt && neuerText != null) alt.Children.Remove(neuerText);
         if (bereich == AblageBereich.Prompts) { inhalt.Content = prompts ??= new PromptsAnsicht(); return; }
+        if (bereich == AblageBereich.Erinnerung) { inhalt.Content = erinnerungen ??= new ErinnerungenAnsicht(); return; }
         var liste = Sortiert(daten.Elemente(bereich, suche));
         var s = new StackPanel();
         if (bereich == AblageBereich.Texte) VAnfuegen(s, neuerText ??= new NeuerTextEintrag(t => daten.Meldung = t), 18);

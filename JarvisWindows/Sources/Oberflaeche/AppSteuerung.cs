@@ -317,6 +317,9 @@ public sealed class AppSteuerung : Beobachtbar
     /// <summary>Nur zum Beobachten: meldet, wenn eine Frage beginnt oder endet oder sich das Sprachgespräch ändert (Abbrechbar neu prüfen).</summary>
     public int Fragen => fragen.Count;
 
+    /// <summary>Der Agentenkanal hat einen Lauf begonnen oder beendet: Der Stopp-Knopf prüft neu.</summary>
+    public void AbbruchStandGeaendert() => Melde(nameof(Fragen));
+
     /// <summary>Text an Jarvis schicken (aus Zentrale, Menüleiste oder Chat).</summary>
     public void Sende(string text, bool gesprochen = false, byte[]? bild = null)
     {
@@ -353,7 +356,7 @@ public sealed class AppSteuerung : Beobachtbar
     {
         var s = SprachSchleife.Shared;
         if (ReferenceEquals(s.Gespraech, g) && (s.Zustand == SprachZustand.Denkt || s.Zustand == SprachZustand.Spricht)) return true;
-        return g.Arbeitet && fragen.Values.Any(f => f.Gespraech == g.Id);
+        return g.Arbeitet && (fragen.Values.Any(f => f.Gespraech == g.Id) || AgentenKanal.Shared.LaeuftIn(g));
     }
 
     public void Abbrechen(Gespraech g)
@@ -365,9 +368,13 @@ public sealed class AppSteuerung : Beobachtbar
     /// <summary>Laufende Fragen und das Sprachgespräch dieses Gesprächs enden, etwa beim Löschen.</summary>
     public void GespraechBeendet(Gespraech g)
     {
-        foreach (var f in fragen.Values.Where(f => f.Gespraech == g.Id)) f.Abbruch.Cancel();
-        WinDialoge.VormerkungLoeschen();
-        if (ReferenceEquals(SprachSchleife.Shared.Gespraech, g) && SprachSchleife.Shared.Zustand != SprachZustand.Aus) SprachSchleife.Shared.Beenden();
+        var betroffen = fragen.Values.Where(f => f.Gespraech == g.Id).ToList();
+        foreach (var f in betroffen) f.Abbruch.Cancel();
+        AgentenKanal.Shared.LaufAbbrechen(g);
+        var sprache = ReferenceEquals(SprachSchleife.Shared.Gespraech, g) && SprachSchleife.Shared.Zustand != SprachZustand.Aus;
+        // Die Vormerkung gehört zum gestoppten Auftrag: Ein unbeteiligter Lauf, der endet oder gelöscht wird, nimmt sie nicht mit.
+        if (betroffen.Count > 0 || sprache) WinDialoge.VormerkungLoeschen();
+        if (sprache) SprachSchleife.Shared.Beenden();
     }
 
     public void Sprechen() => KuerzelSprechen();

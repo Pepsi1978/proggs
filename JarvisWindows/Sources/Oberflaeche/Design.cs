@@ -92,7 +92,7 @@ public static class Sym
         ["antenna.radiowaves.left.and.right"] = "", ["archivebox.fill"] = "", ["arrow.clockwise"] = "", ["arrow.down"] = "", ["arrow.down.circle.fill"] = "",
         ["arrow.right"] = "", ["arrow.triangle.2.circlepath"] = "", ["arrow.triangle.branch"] = "", ["arrow.turn.up.right"] = "", ["arrow.up"] = "",
         ["arrow.up.arrow.down"] = "", ["arrow.up.forward.app"] = "", ["arrow.up.left.and.arrow.down.right"] = "", ["arrow.up.right.square"] = "", ["arrow.uturn.backward"] = "",
-        ["bolt.fill"] = "", ["bolt.heart.fill"] = "", ["bolt.shield.fill"] = "", ["bookmark.fill"] = "", ["brain"] = "", ["brain.head.profile.fill"] = "",
+        ["bell.fill"] = "", ["clock"] = "", ["bolt.fill"] ="", ["bolt.heart.fill"] = "", ["bolt.shield.fill"] = "", ["bookmark.fill"] = "", ["brain"] = "", ["brain.head.profile.fill"] = "",
         ["bubble.left.and.bubble.right.fill"] = "", ["bubble.left.and.text.bubble.right.fill"] = "", ["bubble.left.fill"] = "", ["calendar"] = "", ["checklist"] = "",
         ["checkmark"] = "", ["checkmark.circle.fill"] = "", ["checkmark.seal.fill"] = "", ["checkmark.shield.fill"] = "", ["chevron.down"] = "", ["chevron.left"] = "",
         ["chevron.left.forwardslash.chevron.right"] = "", ["chevron.right"] = "", ["chevron.up"] = "", ["circle.lefthalf.filled"] = "", ["cloud.sun.fill"] = "",

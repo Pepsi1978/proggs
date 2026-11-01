@@ -145,12 +145,7 @@ public static class GehirnNetz
 public static class GehirnHilfe
 {
     /// <summary>Wie String.prefix: schneidet nie mitten in ein Ersatzzeichenpaar. Ein halbes Emoji ließe sonst das Schreiben des ganzen JSON scheitern.</summary>
-    public static string Kappe(this string s, int n)
-    {
-        if (s.Length <= n) return s;
-        if (n <= 0) return "";
-        return char.IsHighSurrogate(s[n - 1]) ? s[..(n - 1)] : s[..n];
-    }
+    public static string Kappe(this string s, int n) => s.Schnitt(n);
 
     /// <summary>Wartet höchstens `sekunden` auf eine Arbeit (mitFrist am Mac). true = rechtzeitig fertig. Die Arbeit läuft danach weiter, bis ihr Besitzer sie abbricht.</summary>
     public static async Task<bool> Frist(double sekunden, Task arbeit)
@@ -314,6 +309,7 @@ public sealed class AnthropicKlient : ModellAnbieter
         var bloecke = new Dictionary<int, JSONObjekt>();
         var teilJSON = new Dictionary<int, string>();
         var ergebnis = new ModellAntwort();
+        var fertig = false;
         await foreach (var zeile in GehirnNetz.Zeilen(antwort, 600, ct))
         {
             if (!zeile.StartsWith("data:", StringComparison.Ordinal)) continue;
@@ -321,6 +317,9 @@ public sealed class AnthropicKlient : ModellAnbieter
             if (e == null) continue;
             switch (e.Text("type") ?? "")
             {
+                case "message_stop":
+                    fertig = true;
+                    break;
                 case "message_start":
                 {
                     var u = e.Obj("message")?.Obj("usage");
@@ -377,6 +376,8 @@ public sealed class AnthropicKlient : ModellAnbieter
                     throw AnbieterFehler.Http(500, e.Obj("error")?.Text("message") ?? "Unbekannter Fehler");
             }
         }
+        // Ein abgerissener Strom ist kein Erfolg: Ein halber Werkzeugaufruf liefe sonst mit leeren Argumenten.
+        if (!fertig) throw AnbieterFehler.Netz("Die Antwort des Modells brach vorzeitig ab.");
         ergebnis.Inhalt = bloecke.Keys.OrderBy(k => k).Select(k => bloecke[k]).ToList();
         if (ergebnis.StopGrund == "refusal" && ergebnis.Inhalt.Count == 0) throw AnbieterFehler.Abgelehnt("");
         return ergebnis;

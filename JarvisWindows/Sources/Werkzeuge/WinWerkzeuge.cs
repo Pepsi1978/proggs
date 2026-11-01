@@ -68,10 +68,29 @@ public static class Shell
         return t;
     }
 
-    private static string VollerPfad(string s)
+    public static string VollerPfad(string s)
     {
         var t = Erweitert(s);
         try { return Path.GetFullPath(t.Replace('/', '\\'), Pfade.Proggs); } catch { return t; }
+    }
+
+    private static readonly Regex WegMitPunkten = new(@"[^\s'""`|;,()<>]*\.\.[\\/][^\s'""`|;,()<>]*", RegexOptions.Compiled);
+
+    /// <summary>Tresor.Sperre, die auch Umwege über „..“ sieht: im Ordner und in Pfaden innerhalb des Befehlstexts. Bleibt eine Textprüfung, also eine Bremse; die Schwärzung ist die zweite Stufe.</summary>
+    public static WerkzeugErgebnis? Sperre(string? ordner, params string?[] texte)
+    {
+        var basis = ordner != null ? VollerPfad(ordner) : Pfade.Proggs;
+        var teile = new List<string?>(texte) { ordner, ordner != null ? basis : null };
+        foreach (var t in texte)
+        {
+            if (t == null) continue;
+            foreach (Match m in WegMitPunkten.Matches(t))
+            {
+                var weg = Regex.Replace(m.Value, @"^(\$home|\$\{home\}|\$env:userprofile)", _ => Pfade.Heim, RegexOptions.IgnoreCase);
+                try { teile.Add(Path.GetFullPath(Erweitert(weg).Replace('/', '\\'), basis)); } catch { }
+            }
+        }
+        return Tresor.Sperre(teile.ToArray());
     }
 
     /// <summary>Führt einen Befehl in pwsh aus (gleiche Umgebung wie Franks Terminal, ohne Fenster). Das Skript läuft aus einer Datei: Das ist frei von Zitierfallen und Längengrenzen.</summary>
@@ -111,12 +130,13 @@ public static class Shell
         var ende = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         p.Exited += (_, _) => { int code; try { code = p.ExitCode; } catch { code = -1; } ende.TrySetResult(code); };
         try { p.Start(); }
-        catch (Exception ex) { return new Ergebnis("", ex.Message, -1, false); }
+        catch (Exception ex) { p.Dispose(); return new Ergebnis("", ex.Message, -1, false); }
 
         var aus = new SammelPuffer();
         var err = new SammelPuffer();
-        Lese(p.StandardOutput.BaseStream, aus);
-        Lese(p.StandardError.BaseStream, err);
+        var leser = new[] { Lese(p.StandardOutput.BaseStream, aus), Lese(p.StandardError.BaseStream, err) };
+        // Erst freigeben, wenn Prozess und Leser durch sind: Hält ein Hintergrundkind die Pipe offen, lebt der Leser so lange mit und endet danach von selbst.
+        _ = Task.WhenAll(leser.Append(ende.Task)).ContinueWith(_ => p.Dispose(), TaskScheduler.Default);
         _ = Task.Run(() =>
         {
             try { if (eingabe != null) p.StandardInput.Write(eingabe); p.StandardInput.Close(); } catch { }
@@ -139,7 +159,7 @@ public static class Shell
         return new Ergebnis(aus.Text, err.Text, -15, erste == frist);
     }
 
-    private static void Lese(Stream s, SammelPuffer ziel) => Task.Factory.StartNew(() =>
+    private static Task Lese(Stream s, SammelPuffer ziel) => Task.Factory.StartNew(() =>
     {
         var puffer = new byte[16384];
         try { int n; while ((n = s.Read(puffer, 0, puffer.Length)) > 0) ziel.Anhaengen(puffer, n); } catch { }
@@ -233,6 +253,51 @@ public static class Zwischenablage
     }
 
     public static string? LeseText() => Auf(() => Versuche(() => Clipboard.ContainsText() ? Clipboard.GetText() : null));
+
+    /// <summary>Was vor einem Einfügen in der Zwischenablage lag: Text, Bild und Dateien.</summary>
+    public sealed record Stand(string? Text, BitmapSource? Bild, System.Collections.Specialized.StringCollection? Dateien);
+
+    public static Stand? Sichere()
+    {
+        try
+        {
+            return Auf(() => Versuche(() =>
+            {
+                var text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
+                var bild = Clipboard.ContainsImage() ? Clipboard.GetImage() : null;
+                if (bild is { CanFreeze: true }) bild.Freeze();
+                var dateien = Clipboard.ContainsFileDropList() ? Clipboard.GetFileDropList() : null;
+                return new Stand(text, bild, dateien is { Count: > 0 } ? dateien : null);
+            }));
+        }
+        catch (Exception ex) { Log("fehler", "Zwischenablage nicht lesbar", wo: "Zwischenablage", fehler: ex.Message); return null; }
+    }
+
+    public static uint Nummer() => WinApi.GetClipboardSequenceNumber();
+
+    /// <summary>Legt den alten Stand zurück, aber nur, wenn seit dem eigenen Schreiben (nummer) niemand sonst etwas kopiert hat: Franks neue Kopie geht vor.</summary>
+    public static void SpaeterZurueck(Stand? s, uint nummer, int ms = 2000)
+    {
+        if (s == null || (s.Text == null && s.Bild == null && s.Dateien == null)) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(ms);
+            if (Nummer() != nummer) return;
+            try
+            {
+                Auf(() => Versuche(() =>
+                {
+                    var o = new DataObject();
+                    if (s.Text != null) o.SetText(s.Text);
+                    if (s.Bild != null) o.SetImage(s.Bild);
+                    if (s.Dateien != null) o.SetFileDropList(s.Dateien);
+                    Clipboard.SetDataObject(o, true);
+                    return true;
+                }));
+            }
+            catch (Exception ex) { Log("fehler", "Zwischenablage nicht zurückgelegt", wo: "Zwischenablage", fehler: ex.Message); }
+        });
+    }
 
     public static bool SchreibeText(string text)
     {
@@ -334,6 +399,8 @@ public static partial class WinWerkzeuge
 
     private static readonly Regex IstWeg = new(@"^([a-z]:[\\/]|\\\\|~|%|\.{1,2}[\\/]|shell:|ms-[a-z-]+:|mailto:|tel:)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly Regex AusfuehrbaresZiel = new(@"\.(exe|com|bat|cmd|ps1|psm1|vbs|vbe|js|jse|wsf|wsh|msi|msc|scr|hta|lnk|pif|reg|cpl)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static WerkzeugErgebnis Abgewiesen(string was) => new($"{was} ging nicht: Windows hat die Eingabe nicht angenommen (gesperrter Bildschirm oder eine Sicherheitsabfrage ist offen).", Fehler: true);
 
     public static readonly IReadOnlyList<LokalesWerkzeug> Alle = new[]
@@ -345,7 +412,7 @@ public static partial class WinWerkzeuge
             {
                 if (Gesperrt() is { } g1) return g1;
                 if (BildschirmGesperrt() is { } g2) return g2;
-                if (Tresor.Sperre(a.Text("befehl"), a.Text("ordner"), a.Text("ordner") is { } o ? Shell.Erweitert(o) : null) is { } g3) return g3;
+                if (Shell.Sperre(a.Text("ordner"), a.Text("befehl")) is { } g3) return g3;
                 var s = (double)(a.Ganz("zeitlimit_s") ?? 120);
                 return BefehlsText(await Shell.Pwsh(a.Text("befehl") ?? "", a.Text("ordner"), Math.Min(Math.Max(s, 5), 1800)));
             }),
@@ -360,7 +427,7 @@ public static partial class WinWerkzeuge
             {
                 if (Gesperrt() is { } g1) return g1;
                 if (BildschirmGesperrt() is { } g2) return g2;
-                if (Tresor.Sperre(a.Text("skript")) is { } g3) return g3;
+                if (Shell.Sperre(null, a.Text("skript")) is { } g3) return g3;
                 return BefehlsText(await Shell.Pwsh(a.Text("skript") ?? "", sekunden: 90));
             }),
         Werkzeug("windows_oeffnen",
@@ -370,9 +437,11 @@ public static partial class WinWerkzeuge
             {
                 var ziel = (a.Text("ziel") ?? "").Trim();
                 var erweitert = Shell.Erweitert(ziel);
-                if (Tresor.Sperre(ziel, erweitert) is { } g) return g;
                 var mit = a.Text("mit");
+                if (Shell.Sperre(null, ziel, erweitert, ziel.Contains("://") || ziel.Length == 0 ? null : Shell.VollerPfad(ziel), mit, string.IsNullOrWhiteSpace(mit) ? null : Shell.VollerPfad(mit)) is { } g) return g;
                 if (ziel.Length == 0) return new WerkzeugErgebnis("ziel fehlt.", Fehler: true);
+                // Ohne Vollzugriff bleibt Öffnen erlaubt, aber es darf nichts ausführen: sonst hebelte „mit pwsh“ oder ein Skript als Ziel den Schalter aus.
+                if ((!string.IsNullOrWhiteSpace(mit) || AusfuehrbaresZiel.IsMatch(erweitert)) && Gesperrt() is { } g0) return g0;
                 if (!ziel.Contains("://") && !IstWeg.IsMatch(ziel) && mit == null)
                     return await ProgrammOeffnen(ziel) is { } f ? new WerkzeugErgebnis(f, Fehler: true) : new WerkzeugErgebnis($"{ziel} wird geöffnet.");
                 try
@@ -463,11 +532,31 @@ public static partial class WinWerkzeuge
                 Directory.CreateDirectory(ordner);
                 var stempel = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
                 string meldung;
+                var abbruch = Shell.Abbruch.Value;
+                const string tresorText = "Aufnahme abgebrochen und verworfen: Der Tresor wurde geöffnet, seine Schlüssel stehen dann im Klartext auf dem Bildschirm.";
                 if (Shell.Finde("ffmpeg") is { } ffmpeg)
                 {
                     var datei = Path.Combine(ordner, $"aufnahme-{stempel}.mp4");
+                    // Der Tresor kann während der Aufnahme aufgehen: Dann sofort beenden und die Datei löschen.
+                    using var waechter = new CancellationTokenSource();
+                    var tresorOffen = false;
+                    _ = Task.Run(async () =>
+                    {
+                        while (!waechter.IsCancellationRequested)
+                        {
+                            if (TresorSperre.Shared.Entsperrt) { tresorOffen = true; waechter.Cancel(); return; }
+                            try { await Task.Delay(250, waechter.Token); } catch (OperationCanceledException) { return; }
+                        }
+                    });
                     var r = await Shell.Prozess(ffmpeg, new[] { "-y", "-loglevel", "error", "-f", "gdigrab", "-framerate", "15", "-i", "desktop", "-t", sekunden.ToString(),
-                        "-vf", "crop=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", datei }, sekunden: sekunden + 30);
+                        "-vf", "crop=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", datei }, sekunden: sekunden + 30, ct: waechter.Token);
+                    if (!tresorOffen) waechter.Cancel();
+                    if (tresorOffen)
+                    {
+                        try { File.Delete(datei); } catch { }
+                        return new WerkzeugErgebnis(tresorText, Fehler: true);
+                    }
+                    if (abbruch.IsCancellationRequested) return new WerkzeugErgebnis("Aufnahme abgebrochen.", Fehler: true);
                     if (!File.Exists(datei) || r.Code != 0) return new WerkzeugErgebnis($"Aufnahme ging nicht. {r.Fehler}", Fehler: true);
                     meldung = $"Aufnahme gespeichert: {datei}.";
                 }
@@ -478,9 +567,15 @@ public static partial class WinWerkzeuge
                     var n = 0;
                     for (var i = 1; i <= sekunden; i++)
                     {
+                        if (TresorSperre.Shared.Entsperrt)
+                        {
+                            try { Directory.Delete(folge, true); } catch { }
+                            return new WerkzeugErgebnis(tresorText, Fehler: true);
+                        }
+                        if (abbruch.IsCancellationRequested) return new WerkzeugErgebnis($"Aufnahme abgebrochen, {n} Einzelbilder liegen in {folge}.", Fehler: true);
                         var bild = await Task.Run(() => Screenshot.Foto(0));
                         if (bild != null) { await File.WriteAllBytesAsync(Path.Combine(folge, $"{i:0000}.png"), bild.Png); n++; }
-                        await Task.Delay(1000);
+                        try { await Task.Delay(1000, abbruch); } catch (OperationCanceledException) { }
                     }
                     if (n == 0) return new WerkzeugErgebnis("Aufnahme ging nicht (Bildschirm gesperrt oder eine Sicherheitsabfrage ist offen).", Fehler: true);
                     meldung = $"ffmpeg fehlt, deshalb statt eines Videos {n} Einzelbilder (eines je Sekunde): {folge}. Für echtes Video: winget install Gyan.FFmpeg.";
@@ -512,11 +607,13 @@ public static partial class WinWerkzeuge
                 if (await Task.Run(VorderApp.Terminal) is not { } ziel) return new WerkzeugErgebnis("Kein offenes Terminal gefunden (Windows Terminal, PowerShell, WezTerm, Alacritty …).", Fehler: true);
                 if (await Screenshot.Aufnehmen(null) is not { } s) return new WerkzeugErgebnis("Screenshot ging nicht (Bildschirm gesperrt oder eine Sicherheitsabfrage ist offen).", Fehler: true);
                 var alsPfad = a.Text("art") == "pfad";
-                var vorher = Zwischenablage.LeseText();
+                var vorher = Zwischenablage.Sichere();
+                uint? nummer = null;
                 try
                 {
                     if (!(alsPfad ? Zwischenablage.SchreibeText(s.Pfad) : Zwischenablage.SchreibeBild(s.Daten)))
                         return new WerkzeugErgebnis($"Die Zwischenablage ist belegt; Screenshot liegt unter {s.Pfad}.", Fehler: true);
+                    nummer = Zwischenablage.Nummer();
                     // Nie blind tippen: Ohne bestätigtes Terminal vorn landet Strg+V sonst in einem anderen Programm.
                     if (!await Fenster.NachVorn(ziel.Hwnd)) return new WerkzeugErgebnis($"{ziel.Prozess} ließ sich nicht nach vorn holen, deshalb nichts eingefügt. Screenshot liegt unter {s.Pfad}.", Fehler: true);
                     await Task.Delay(600);
@@ -538,7 +635,7 @@ public static partial class WinWerkzeuge
                 finally
                 {
                     // Alte Zwischenablage nach dem Einfügen zurücklegen.
-                    if (vorher != null) _ = Task.Run(async () => { await Task.Delay(2000); Zwischenablage.SchreibeText(vorher); });
+                    if (nummer is { } n) Zwischenablage.SpaeterZurueck(vorher, n);
                 }
             }),
         Werkzeug("windows_tastatur",
@@ -634,8 +731,12 @@ public static partial class WinWerkzeuge
                         catch (Exception ex) { return new WerkzeugErgebnis(ex.Message, Fehler: true); }
                         return new WerkzeugErgebnis($"Gespeichert: {pfad} ({inhalt.Length} Zeichen)");
                     case "liste":
-                        try { return new WerkzeugErgebnis(string.Join("\n", Directory.EnumerateFileSystemEntries(pfad).Select(Path.GetFileName).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).Take(500))); }
-                        catch { return new WerkzeugErgebnis(""); }
+                        try
+                        {
+                            var eintraege = string.Join("\n", Directory.EnumerateFileSystemEntries(pfad).Select(Path.GetFileName).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).Take(500));
+                            return new WerkzeugErgebnis(eintraege.Length == 0 ? "(Der Ordner ist leer.)" : eintraege);
+                        }
+                        catch (Exception ex) { return new WerkzeugErgebnis($"Nicht auflistbar: {pfad} ({ex.Message})", Fehler: true); }
                     default:
                         return new WerkzeugErgebnis("Unbekannte Aktion", Fehler: true);
                 }
@@ -648,7 +749,7 @@ public static partial class WinWerkzeuge
                 if (Gesperrt() is { } g1) return g1;
                 if (BildschirmGesperrt() is { } g2) return g2;
                 var ordner = Shell.Erweitert(a.Text("ordner") ?? "~/proggs");
-                if (Tresor.Sperre(a.Text("befehl"), a.Text("ordner"), ordner) is { } g3) return g3;
+                if (Shell.Sperre(ordner, a.Text("befehl"), a.Text("ordner")) is { } g3) return g3;
                 // Der Befehl läuft aus einer Datei: Auf der Kommandozeile von wt trennte jedes „;“ eine neue Unteranweisung ab.
                 var datei = Path.Combine(Pfade.Temp, $"terminal-{Guid.NewGuid():N}.ps1");
                 await File.WriteAllTextAsync(datei, $"Remove-Item -LiteralPath $PSCommandPath -ErrorAction SilentlyContinue\nSet-Location -LiteralPath {Shell.Zitiert(ordner)}\n{a.Text("befehl") ?? ""}\n", new UTF8Encoding(true));
@@ -679,7 +780,7 @@ public static partial class WinWerkzeuge
             async a =>
             {
                 if (Gesperrt() is { } g1) return g1;
-                if (Tresor.Sperre(a.Text("auftrag"), a.Text("ordner")) is { } g2) return g2;
+                if (Shell.Sperre(a.Text("ordner"), a.Text("auftrag")) is { } g2) return g2;
                 if (OpenLauncher is not { } exe) return new WerkzeugErgebnis("OpenLauncher ist nicht gebaut (proggs\\OpenLauncher\\bin\\Release).", Fehler: true);
                 var datei = Path.Combine(Pfade.Temp, $"auftrag-{DateTimeOffset.Now.ToUnixTimeSeconds()}-{Guid.NewGuid():N}.txt");
                 await File.WriteAllTextAsync(datei, a.Text("auftrag") ?? "", new UTF8Encoding(false));
@@ -723,7 +824,9 @@ public static partial class WinWerkzeuge
             {
                 if (Gesperrt() is { } g) return g;
                 static FensterInfo? Fenstersuche() => Fenster.Programme().FirstOrDefault(f => f.Prozess.Contains("chatgpt", StringComparison.OrdinalIgnoreCase) || f.Titel.Equals("ChatGPT", StringComparison.OrdinalIgnoreCase));
+                var vorher = Zwischenablage.Sichere();
                 if (!Zwischenablage.SchreibeText(a.Text("text") ?? "")) return new WerkzeugErgebnis("Die Zwischenablage ist gerade belegt.", Fehler: true);
+                var nummer = Zwischenablage.Nummer();
                 var fenster = await Task.Run(Fenstersuche);
                 if (fenster == null)
                 {
@@ -750,6 +853,7 @@ public static partial class WinWerkzeuge
                     await Task.Delay(300);
                     if (Tasten.Druecke("enter") is { } f2) return new WerkzeugErgebnis(f2, Fehler: true);
                 }
+                Zwischenablage.SpaeterZurueck(vorher, nummer);
                 return new WerkzeugErgebnis(senden ? "Text in ChatGPT eingefügt und abgeschickt; ob er angekommen ist, zeigt windows_bildschirm." : "Text in ChatGPT eingefügt; ob er angekommen ist, zeigt windows_bildschirm.");
             }),
         Werkzeug("windows_logbuch",
@@ -952,6 +1056,8 @@ public static class Screenshot
     /// <summary>Foto aller Monitore als PNG, lange Kante höchstens langeKante (0 = volle Größe). Bleibt es zu groß fürs Modell, wird es kleiner. null = Windows gibt kein Bild her.</summary>
     public static BildschirmFoto? Foto(int langeKante = 1440)
     {
+        // Sperrbildschirm und UAC: BitBlt meldet dort oft Erfolg und liefert Schwarz.
+        if (WinApi.SichererDesktop()) return null;
         var r = WinBedienung.VirtuellerDesktop();
         try
         {
@@ -972,6 +1078,11 @@ public static class Screenshot
                     g.ReleaseHdc(ziel);
                 }
             }
+            if (GanzSchwarz(voll))
+            {
+                Log("fehler", "Bildschirmfoto ist ganz schwarz (Anzeige aus oder gesperrt)", wo: "Screenshot");
+                return null;
+            }
             if (langeKante <= 0) return new BildschirmFoto(AlsPng(voll), r.Size, r);
             var kante = langeKante;
             while (true)
@@ -986,6 +1097,18 @@ public static class Screenshot
             Log("fehler", "Bildschirmfoto ging nicht", wo: "Screenshot", fehler: ex.Message);
             return null;
         }
+    }
+
+    /// <summary>Stichprobe über das ganze Bild; ein echter Desktop hat immer helle Punkte.</summary>
+    private static bool GanzSchwarz(SD.Bitmap b)
+    {
+        for (var ix = 0; ix < 32; ix++)
+            for (var iy = 0; iy < 32; iy++)
+            {
+                var c = b.GetPixel((ix * 2 + 1) * b.Width / 64, (iy * 2 + 1) * b.Height / 64);
+                if (c.R != 0 || c.G != 0 || c.B != 0) return false;
+            }
+        return true;
     }
 
     private static byte[] AlsPng(SD.Image b)

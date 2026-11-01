@@ -351,7 +351,13 @@ public static partial class Globale
     public static void Log(string art, string text, string? wo = null, string? werkzeug = null, string? eingabe = null, string? ergebnis = null, string? fehler = null, int? dauerMs = null)
         => Logbuch.Shared.Schreib(art, text, wo, werkzeug, eingabe, ergebnis, fehler, dauerMs);
 
-    public static string Schnitt(this string s, int n) => s.Length <= n ? s : s[..n];
+    /// <summary>Wie String.prefix: schneidet nie mitten in ein Ersatzzeichenpaar. Ein halbes Emoji ließe sonst das Schreiben des ganzen JSON scheitern.</summary>
+    public static string Schnitt(this string s, int n)
+    {
+        if (s.Length <= n) return s;
+        if (n <= 0) return "";
+        return char.IsHighSurrogate(s[n - 1]) ? s[..(n - 1)] : s[..n];
+    }
 }
 
 public enum Anbieter { Anthropic, Openai }

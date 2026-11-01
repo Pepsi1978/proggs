@@ -141,10 +141,10 @@ public static class WinEinstellungsKatalog
                     e.LiveStilleMinuten = m;
                     return null;
                 }),
-                new("live_modell_openai", "Live-Gespräch", "OpenAI-Live-Modell", "", string.Join(" | ", LiveOptionen.OpenAIModelle.Select(x => x.Id)), () => e.LiveModellOpenAI, w => { e.LiveModellOpenAI = w; return null; }),
-                new("live_stimme_openai", "Live-Gespräch", "OpenAI-Live-Stimme", "", string.Join(" | ", LiveOptionen.LiveStimmen.Select(x => x.Id)), () => e.LiveStimmeOpenAI, w => { e.LiveStimmeOpenAI = w; return null; }),
-                new("live_modell_gemini", "Live-Gespräch", "Gemini-Live-Modell", "", string.Join(" | ", LiveOptionen.GeminiModelle.Select(x => x.Id)), () => e.LiveModellGemini, w => { e.LiveModellGemini = w; return null; }),
-                new("live_stimme_gemini", "Live-Gespräch", "Gemini-Live-Stimme", "", string.Join(" | ", LiveOptionen.GeminiStimmen.Select(x => x.Id)), () => e.LiveStimmeGemini, w => { e.LiveStimmeGemini = w; return null; }),
+                new("live_modell_openai", "Live-Gespräch", "OpenAI-Live-Modell", "", string.Join(" | ", LiveOptionen.OpenAIModelle.Select(x => x.Id)), () => e.LiveModellOpenAI, w => LiveWahl.Setze(LiveOptionen.OpenAIModelle.Select(x => x.Id), w, v => e.LiveModellOpenAI = v)),
+                new("live_stimme_openai", "Live-Gespräch", "OpenAI-Live-Stimme", "", string.Join(" | ", LiveOptionen.LiveStimmen.Select(x => x.Id)), () => e.LiveStimmeOpenAI, w => LiveWahl.Setze(LiveOptionen.LiveStimmen.Select(x => x.Id), w, v => e.LiveStimmeOpenAI = v)),
+                new("live_modell_gemini", "Live-Gespräch", "Gemini-Live-Modell", "", string.Join(" | ", LiveOptionen.GeminiModelle.Select(x => x.Id)), () => e.LiveModellGemini, w => LiveWahl.Setze(LiveOptionen.GeminiModelle.Select(x => x.Id), w, v => e.LiveModellGemini = v)),
+                new("live_stimme_gemini", "Live-Gespräch", "Gemini-Live-Stimme", "", string.Join(" | ", LiveOptionen.GeminiStimmen.Select(x => x.Id)), () => e.LiveStimmeGemini, w => LiveWahl.Setze(LiveOptionen.GeminiStimmen.Select(x => x.Id), w, v => e.LiveStimmeGemini = v)),
                 new("darstellung", "Darstellung", "Darstellung", "Hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin.", "hell | automatik | dunkel", () => d.Modus.ToString().ToLowerInvariant(), w =>
                 {
                     switch (w.ToLowerInvariant())
@@ -159,6 +159,18 @@ public static class WinEinstellungsKatalog
                 new("vollzugriff", "PC", "Vollzugriff", "Jarvis darf am PC alles ohne Rückfrage.", "nur lesen", () => AnAus(e.Vollzugriff), _ => "Den Vollzugriff schaltet nur Frank selbst um (Einstellungen → Windows & Rechte)."),
             };
         }
+    }
+}
+
+/// <summary>Ein Tippfehler darf nicht dauerhaft gespeichert werden: Das Live-Gespräch scheiterte sonst bei jedem Start.</summary>
+internal static class LiveWahl
+{
+    public static string? Setze(IEnumerable<string> erlaubt, string wert, Action<string> setzen)
+    {
+        var liste = erlaubt.ToList();
+        if (!liste.Contains(wert)) return "Erlaubt: " + string.Join(", ", liste);
+        setzen(wert);
+        return null;
     }
 }
 

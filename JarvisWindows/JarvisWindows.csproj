@@ -14,7 +14,7 @@
     <RootNamespace>JarvisWindows</RootNamespace>
     <Product>Jarvis Windows HP</Product>
     <!-- Regel 6: Version pro Commit genau einmal erhöhen. Zeitstempel setzt der Bau selbst aus der Systemzeit. -->
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon Condition="Exists('Resources\AppIcon.ico')">Resources\AppIcon.ico</ApplicationIcon>

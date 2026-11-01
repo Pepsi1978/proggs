@@ -24,7 +24,20 @@ public sealed class HelferEintrag
     public string VorPapierkorb { get; set; } = "";
 
     [JsonIgnore] public string Id => Kennung;
-    [JsonIgnore] public JSONObjekt Manifest => JSON.Objekt(ManifestText) ?? new JSONObjekt();
+    /// <summary>Gelesen wird oft (Suche, Liste, Rechte), geändert selten: einmal parsen, bis sich der Text ändert. Das Paar ist ein Objekt, damit andere Fäden nie halb Neues sehen.</summary>
+    private Tuple<string, JSONObjekt>? gelesen;
+    [JsonIgnore] public JSONObjekt Manifest
+    {
+        get
+        {
+            var text = ManifestText;
+            var g = gelesen;
+            if (g != null && ReferenceEquals(g.Item1, text)) return g.Item2;
+            var neu = JSON.Objekt(text) ?? new JSONObjekt();
+            gelesen = Tuple.Create(text, neu);
+            return neu;
+        }
+    }
     public string Text(string k) => Manifest.Text(k) ?? "";
     public List<string> Liste(string k) => Manifest.Texte(k);
     [JsonIgnore] public JSONObjekt Rechte => Manifest.Obj("rechte") ?? new JSONObjekt();
@@ -48,7 +61,7 @@ public sealed class HelferKatalog : Beobachtbar
     /// Der Relay nimmt höchstens 1 MB je Nachricht (MAX_RUMPF), Base64 macht daraus ein Drittel mehr.</summary>
     private const int KanalDateien = 700_000;
     private const string OhneVollzugriff = "Der Vollzugriff ist am Laptop ausgeschaltet; Helfer laufen dort gerade nicht (Einstellungen → Laptop).";
-    private static readonly Regex GesperrteWerkzeuge = new(@"^(programmier.*|helfer_.*|windows_helfer_.*|agent_starten|mail_senden|.*loeschen|.*einstellungen.*|windows_.*|openlauncher_sitzung|terminal_befehl)\z", RegexOptions.Compiled);
+    private static readonly Regex GesperrteWerkzeuge = new(@"^(programmier.*|helfer_.*|windows_helfer_.*|agent_starten|mail_senden|.*loeschen|.*einstellungen.*|windows_.*|openlauncher_sitzung|terminal_befehl|chatgpt_app|screenshot_ins_cli|updater_zentrale|cli_frage|handy_jarvis_.*)\z", RegexOptions.Compiled);
 
     private ObservableCollection<HelferEintrag> _eintraege = new();
     public ObservableCollection<HelferEintrag> Eintraege { get => _eintraege; private set => Setze(ref _eintraege, value); }
@@ -341,14 +354,38 @@ public sealed class HelferKatalog : Beobachtbar
                 Log("fehler", $"Helfer {k}: {ergebnisF}", wo: "Eigene Tools");
                 return new JSONObjekt { ["ok"] = false, ["fehler"] = ergebnisF, ["zustand"] = Finde(k)?.Zustand ?? Fehlerhaft };
             }
+            // Die alte Fassung wird erst aufgegeben, wenn die neue sicher liegt: Ein Virenscanner oder offener Ordner darf sie nie vernichten.
+            JSONObjekt NichtUebernommen(string grund)
+            {
+                OrdnerWeg(neu);
+                var text = $"Fassung {version} nicht übernommen: {grund}";
+                Aendere(k, e =>
+                {
+                    if (!bewaehrt && !imKorb) e.Zustand = Fehlerhaft;
+                    e.PruefungZeit = jetzt;
+                    e.PruefungErgebnis = bewaehrt ? text + " Die bisherige Fassung gilt weiter." : text;
+                });
+                Log("fehler", $"Helfer {k}: {text}", wo: "Eigene Tools");
+                return Nein(text);
+            }
+            var gesichert = false;
             if (bewaehrt && Directory.Exists(aktuell))
             {
                 OrdnerWeg(vorher);
-                try { Directory.Move(aktuell, vorher); } catch { }
+                try { Directory.Move(aktuell, vorher); gesichert = true; }
+                catch (Exception ex) { return NichtUebernommen(ex.Message); }
             }
-            OrdnerWeg(aktuell);
+            else
+            {
+                OrdnerWeg(aktuell);
+                if (Directory.Exists(aktuell)) return NichtUebernommen("Der alte Ordner ließ sich nicht entfernen.");
+            }
             try { Directory.Move(neu, aktuell); }
-            catch (Exception ex) { return Nein($"Fassung nicht übernommen: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                if (gesichert) try { Directory.Move(vorher, aktuell); } catch { }
+                return NichtUebernommen(ex.Message);
+            }
             var anzahl = m.Liste("tests")?.Count ?? 0;
             var ergebnis = $"{anzahl} Tests bestanden auf diesem Laptop; Review: {review.Ganz("befunde") ?? 0} Befunde, keine kritischen offen.";
             Aendere(k, e =>
@@ -509,7 +546,7 @@ public sealed class HelferKatalog : Beobachtbar
         if (m.Text("art") == "agent")
         {
             var erlaubt = (m.Obj("rechte")?.Texte("werkzeuge") ?? new List<string>()).Where(w => !GesperrteWerkzeuge.IsMatch(w)).ToHashSet();
-            return await AgentLauf(m.Text("rolle") ?? "", kennung, eingabe, frist, erlaubt);
+            return await AgentLauf(m.Text("rolle") ?? "", kennung, eingabe, frist, erlaubt, (m.Obj("rechte")?.Liste("netz")?.Count ?? 0) > 0);
         }
         var datei = Path.Combine(ordner, m.Text("datei") ?? "main.ps1");
         var b = basis ?? Ordner(kennung);
@@ -517,13 +554,13 @@ public sealed class HelferKatalog : Beobachtbar
     }
 
     /// <summary>Nur die erklärten Werkzeuge: Was der Steckbrief nicht nennt, gibt es für diesen Lauf nicht, also auch keine verschachtelten Helfer.</summary>
-    private async Task<Lauf> AgentLauf(string rolle, string name, string eingabe, double frist, HashSet<string> erlaubt)
+    private async Task<Lauf> AgentLauf(string rolle, string name, string eingabe, double frist, HashSet<string> erlaubt, bool netz)
     {
         var g = GespraechsSpeicher.Shared.Neu();
         g.Titel = $"Helfer {name}";
         var auftrag = $"[EIGENES TOOL {name} – Lauf ohne Frank]\n{rolle}\n\nEingabe als JSON:\n{eingabe}\n\nAntworte nur mit dem Ergebnis. Fehlt etwas Nötiges, beginne mit FEHLER:";
         var abbruch = new CancellationTokenSource();
-        var t = AgentenKanal.MitImLauf(() => JarvisAgent.Shared.Frage(auftrag, g, nurWerkzeuge: erlaubt, ct: abbruch.Token));
+        var t = AgentenKanal.MitImLauf(() => JarvisAgent.Shared.Frage(auftrag, g, nurWerkzeuge: erlaubt, ct: abbruch.Token, websuche: netz));
         if (!await GehirnHilfe.Frist(frist, t))
         {
             abbruch.Cancel();
@@ -746,52 +783,7 @@ public sealed class HelferKatalog : Beobachtbar
 
     // MARK: Kanal zum Handy
 
-    public Task<string> KanalNachricht(string art, string text) => Haupt.Auf(() => KanalNachrichtLauf(art, text));
-
-    private async Task<string> KanalNachrichtLauf(string art, string text)
-    {
-        var j = JSON.Objekt(text) ?? new JSONObjekt();
-        switch (art)
-        {
-            case "helfer_liste":
-                return JSON.Text(new JSONObjekt { ["helfer"] = KanalListe() });
-            case "helfer_aufruf":
-            {
-                var r = await AusfuehrenLauf(j.Text("helfer") ?? "", j.Obj("eingabe") ?? new JSONObjekt());
-                if (!r.Ok) return JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = r.Fehler });
-                var rest = KanalDateien;
-                var dateien = new List<JSONObjekt>();
-                foreach (var d in r.Dateien)
-                {
-                    byte[] inhalt;
-                    try { inhalt = File.ReadAllBytes(d.pfad); } catch { inhalt = Array.Empty<byte>(); }
-                    if (inhalt.Length > rest)
-                    {
-                        dateien.Add(new JSONObjekt { ["name"] = d.name, ["zu_gross"] = true, ["pfad"] = d.pfad });
-                        continue;
-                    }
-                    rest -= inhalt.Length;
-                    dateien.Add(new JSONObjekt { ["name"] = d.name, ["base64"] = Convert.ToBase64String(inhalt), ["pfad"] = d.pfad });
-                }
-                return JSON.Text(new JSONObjekt { ["ok"] = true, ["text"] = r.Text, ["daten"] = JSON.Objekt(r.DatenText) ?? new JSONObjekt(), ["dateien"] = dateien, ["dauer_ms"] = r.DauerMs });
-            }
-            case "helfer_installieren":
-            {
-                var dateien = new Dictionary<string, string>();
-                foreach (var (k, v) in j.Obj("dateien") ?? new JSONObjekt())
-                    if (v is string t) dateien[k] = t;
-                return JSON.Text(await InstallierenLauf(j.Obj("manifest") ?? new JSONObjekt(), dateien, j.Obj("review") ?? new JSONObjekt()));
-            }
-            case "helfer_verwalten":
-            {
-                if (!Einstellungen.Shared.Vollzugriff) return JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = OhneVollzugriff });
-                var r = VerwaltenLauf(j.Text("helfer") ?? "", j.Text("aktion") ?? "");
-                return JSON.Text(new JSONObjekt { ["ok"] = r.ok, [r.ok ? "text" : "fehler"] = r.text });
-            }
-            case "cli_recherche":
-                return await HelferWerkzeuge.CliRecherche(j.Text("frage") ?? "", (int)(j.Ganz("anzahl") ?? 3), j.Text("modell") ?? "");
-            default:
-                return JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = $"Unbekannte Art {art}." });
-        }
-    }
+    /// <summary>Das Handy schickt dem HP keine Helfer-Post und führt seine Helfer nicht. Sie wird beantwortet, aber nie ausgeführt: Sonst liefe fremder Code ohne Bauschlüssel und ohne Freigabe.</summary>
+    public Task<string> KanalNachricht(string art, string text)
+        => Task.FromResult(JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = $"{AppInfo.Name} führt über den Kanal keine Helfer-Aufträge aus ({art}). Schick den Auftrag als Nachricht mit art=frage." }));
 }

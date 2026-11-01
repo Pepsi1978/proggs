@@ -30,6 +30,7 @@ public sealed class Lernen
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(600), ct);
+            zeitgeber.Remove(g.Id);
             await Haupt.Auf(() => Lerne(g));
         }
         catch (OperationCanceledException) { }
@@ -38,6 +39,8 @@ public sealed class Lernen
 
     private async Task Lerne(Gespraech g)
     {
+        // Gelöscht: Dazu gehören auch die Läufe der Helfer. Dort redet nicht Frank, daraus wird nichts über ihn gelernt.
+        if (g.Geloescht) return;
         // Läuft gerade etwas, später noch einmal versuchen statt diese Phase zu verlieren.
         if (g.Arbeitet) { MerkeAktivitaet(g); return; }
         var neu = g.Nachrichten.Skip(Math.Min(g.GelerntBis, g.Nachrichten.Count)).ToList();

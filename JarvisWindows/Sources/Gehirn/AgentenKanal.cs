@@ -34,6 +34,8 @@ public sealed class AgentenKanal
     {
         "jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
         "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "windows_dialog",
+        // Aufträge vom Handy bedienen den Laptop voll (Computer Use, PowerShell, Terminal, CLI), ändern aber nicht Jarvis' eigene Einstellungen und schreiben nicht in ChatGPT.
+        "windows_einstellungen", "chatgpt_app",
         // Fremde Texte im Kanal lösen keine Helfer aus; ansehen (suchen, info) bleibt erlaubt.
         "windows_helfer_ausfuehren", "windows_helfer_verwalten", "windows_helfer_bauen",
         "helfer_ausfuehren", "helfer_verwalten", "helfer_bauen", "helfer_registrieren", "helfer_auftraege",
@@ -48,9 +50,20 @@ public sealed class AgentenKanal
     private bool arbeitet;
     private readonly HashSet<string> helferInArbeit = new();
     private bool rechercheLaeuft;
+    private CancellationTokenSource? laufAbbruch;
+    private Guid? laufGespraech;
     /// <summary>Nach so vielen gescheiterten Zustellungen wird ein großes Ergebnis durch einen Hinweis ersetzt.</summary>
     private const int Zustellungen = 5;
     private const int GrossAb = 64_000;
+
+    /// <summary>Beantwortet der Kanal gerade eine Nachricht in diesem Gespräch? Dann zeigt die Blase den Stopp-Knopf.</summary>
+    public bool LaeuftIn(Gespraech g) => laufGespraech == g.Id;
+
+    /// <summary>Frank stoppt den Lauf: Er endet samt laufender Befehle, Jarvis am Handy erfährt es, die Nachricht wird nicht wiederholt.</summary>
+    public void LaufAbbrechen(Gespraech g)
+    {
+        if (laufGespraech == g.Id) laufAbbruch?.Cancel();
+    }
 
     private AgentenKanal()
     {
@@ -275,9 +288,16 @@ public sealed class AgentenKanal
             if (antwort == null)
             {
                 var alter = GehirnHilfe.JetztSekunden() - (n.Zahl("zeit") ?? 0);
-                antwort = alter > Hoechstalter
-                    ? "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt."
-                    : await Beantworte(art, text, id);
+                // Ein Lauf kann schon etwas bewirkt haben, wenn er durch Absturz oder Beenden abriss: nie blind wiederholen.
+                if (n.Wahr("begonnen") == true)
+                    antwort = $"{AppInfo.Name} wurde während der Bearbeitung beendet. Ob der Auftrag ganz ausgeführt wurde, ist offen; er wird nicht wiederholt. Frag nach dem Stand oder gib ihn neu.";
+                else if (alter > Hoechstalter)
+                    antwort = "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt.";
+                else
+                {
+                    if (EingangMit(id) is { } laufend) { laufend["begonnen"] = true; Sichere(); }
+                    antwort = await Beantworte(art, text, id);
+                }
                 if (EingangMit(id) is { } e)
                 {
                     e["fertige_antwort"] = antwort;
@@ -299,25 +319,56 @@ public sealed class AgentenKanal
         var g = KanalGespraech();
         var auftrag = Auftrag(art, text, VerlaufText(ohne: id));
         var antwort = "";
-        for (var versuch = 0; versuch < 3; versuch++)
+        var gestoppt = "Frank hat diesen Lauf am Laptop gestoppt. Was bis dahin geschehen ist, bleibt bestehen.";
+        var abbruch = new CancellationTokenSource();
+        laufAbbruch = abbruch;
+        laufGespraech = g.Id;
+        AppSteuerung.Shared.AbbruchStandGeaendert();
+        try
         {
-            if (versuch > 0) await Task.Delay(TimeSpan.FromSeconds(20));
-            g.Verlauf = new List<JSONObjekt>();
-            g.Kontext = "";
-            while (g.Nachrichten.Count > 200) g.Nachrichten.RemoveAt(0);
-            var abbruch = new CancellationTokenSource();
-            var lauf = MitImLauf(() => JarvisAgent.Shared.Frage(auftrag, g, ohneWerkzeuge: Gesperrt, ct: abbruch.Token));
-            if (!await GehirnHilfe.Frist(Zeitlimit, lauf))
+            for (var versuch = 0; versuch < 3; versuch++)
             {
-                abbruch.Cancel();
-                return $"{AppInfo.Name} ist nach zehn Minuten nicht fertig geworden und hat abgebrochen. Frag enger gefasst noch einmal.";
+                try
+                {
+                    if (versuch > 0) await Task.Delay(TimeSpan.FromSeconds(20), abbruch.Token);
+                    // Erst wenn das Gespräch frei ist, den Verlauf leeren: Ein laufender Lauf hinge seine Ergebnisse sonst an die neue Liste, und die API lehnte sie ab.
+                    var frei = DateTime.Now.AddSeconds(Zeitlimit);
+                    while (g.Arbeitet)
+                    {
+                        if (DateTime.Now > frei) return $"{AppInfo.Name} ist nach zehn Minuten nicht fertig geworden und hat abgebrochen. Frag enger gefasst noch einmal.";
+                        await Task.Delay(200, abbruch.Token);
+                    }
+                }
+                catch (OperationCanceledException) { return gestoppt; }
+                // Ab hier bis zum Beginn der Frage kein await: Sonst könnte wieder jemand das Gespräch belegen.
+                g.Verlauf = new List<JSONObjekt>();
+                g.Kontext = "";
+                while (g.Nachrichten.Count > 200) g.Nachrichten.RemoveAt(0);
+                var lauf = MitImLauf(() => JarvisAgent.Shared.Frage(auftrag, g, ohneWerkzeuge: Gesperrt, ct: abbruch.Token));
+                if (!await GehirnHilfe.Frist(Zeitlimit, lauf))
+                {
+                    abbruch.Cancel();
+                    return $"{AppInfo.Name} ist nach zehn Minuten nicht fertig geworden und hat abgebrochen. Frag enger gefasst noch einmal.";
+                }
+                try { antwort = await lauf; }
+                catch (Exception ex)
+                {
+                    Log("fehler", "Agentenkanal: Lauf gescheitert", wo: "Agentenkanal", fehler: ex.Message);
+                    antwort = $"⚠️ {ex.Message}";
+                }
+                if (abbruch.IsCancellationRequested) return gestoppt;
+                // Modellfehler: Frage meldet sie als Text, und ein Aussetzer soll keine Antwort sein.
+                if (!(antwort.Split("\n\n").LastOrDefault() ?? "").StartsWith("⚠️", StringComparison.Ordinal))
+                    return antwort.Length == 0 ? "(keine Antwort)" : antwort.Replace("sag „weiter“, dann mache ich weiter.", "frag nach, wenn ich weitermachen soll.");
             }
-            antwort = await lauf;
-            // Modellfehler: Frage meldet sie als Text, und ein Aussetzer soll keine Antwort sein.
-            if (!(antwort.Split("\n\n").LastOrDefault() ?? "").StartsWith("⚠️", StringComparison.Ordinal))
-                return antwort.Length == 0 ? "(keine Antwort)" : antwort.Replace("sag „weiter“, dann mache ich weiter.", "frag nach, wenn ich weitermachen soll.");
+            return $"{AppInfo.Name} konnte nicht antworten: {antwort}";
         }
-        return $"{AppInfo.Name} konnte nicht antworten: {antwort}";
+        finally
+        {
+            laufAbbruch = null;
+            laufGespraech = null;
+            AppSteuerung.Shared.AbbruchStandGeaendert();
+        }
     }
 
     private static string Auftrag(string art, string text, string verlauf)
@@ -326,7 +377,7 @@ public sealed class AgentenKanal
         {
             "stand" => "Ermittle den aktuellen Stand der Programmieraufgaben auf diesem Laptop, nicht aus der Erinnerung: laufende Sitzungen (`Get-Process claude`, Terminal-Fenster und ihr Inhalt per windows_powershell, %LOCALAPPDATA%\\JarvisPcBruecke), `git -C ~/proggs status -sb` und `git log`, laufende Bauvorgänge. Nenne je Aufgabe, was fertig ist, was gerade läuft und was hängt.",
             "begutachten" => "Begutachte das gesamte Geschehen auf diesem Laptop zu dieser Aufgabe: Bildschirm (windows_bildschirm), Programme, Terminal-Inhalte, Sitzungen, Logs, Git-Stand, Bau und Tests. Sag deine Einschätzung: Was läuft gut, was ist falsch oder riskant, was sollte als Nächstes geschehen.",
-            _ => "Beantworte die Frage, prüfe dafür am Laptop selbst nach, statt zu raten.",
+            _ => "Ist es ein Auftrag, führe ihn wirklich am Laptop aus (Computer Use, PowerShell, Terminal, CLI), statt ihn nur zu beantworten, und melde das Ergebnis. Ist es eine Frage, beantworte sie und prüfe dafür am Laptop selbst nach, statt zu raten.",
         };
         return $"[AGENTENKANAL – Nachricht von deinem Schwester-Agenten Jarvis am Handy, nicht von Frank. Art: {art}]\n{text}\n\n{vorgabe}\n"
             + "Deine Antwort geht zurück an Jarvis am Handy: kurz, sachlich, für sich verständlich. Rückfragen und Vorschläge, wer was wann macht, schreibst du einfach in die Antwort."
@@ -412,6 +463,9 @@ public sealed class AgentenKanal
         }
         var antwort = await w.Task;
         if (antwort != null) return new WerkzeugErgebnis(antwort);
+        if (ct.IsCancellationRequested) return new WerkzeugErgebnis("(abgebrochen)", true);
+        // Das Senden läuft noch: Zugestellt ist damit nichts, das darf das Modell Frank nicht sagen.
+        if (abgelegt == null) return new WerkzeugErgebnis("Die Nachricht ist nach einer Minute noch nicht beim Relay angekommen; ob sie ankommt, ist offen. Eine Antwort stünde später in handy_jarvis_lesen.", true);
         if (abgelegt == false)
             return new WerkzeugErgebnis("Die Nachricht ist nicht beim Relay angekommen (keine Verbindung oder keine Relay-Adresse).", true);
         if (!handyDa) return new WerkzeugErgebnis("Das Handy ist gerade nicht verbunden. Die Frage bleibt eingereiht; die Antwort steht später in handy_jarvis_lesen.");

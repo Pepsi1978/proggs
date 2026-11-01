@@ -9,21 +9,36 @@ $aus = Join-Path $projekt 'publish'
 
 dotnet publish (Join-Path $projekt 'JarvisWindows.csproj') -c Release -r win-x64 --self-contained true -o $aus --nologo -v q
 if ($LASTEXITCODE -ne 0) { throw 'Bau fehlgeschlagen' }
+Copy-Item (Join-Path $projekt 'tools\hp-wecker.ps1') (Join-Path $aus 'hp-wecker.ps1') -Force
 if ($NurBauen) { Write-Output "Gebaut: $aus"; return }
 
+# Fenster schließen versteckt die App nur. Sauber beendet sie erst --beenden: Einstellungen, Zugang und Gespräche kommen dann noch auf die Platte.
 function Beende-App {
-    Get-Process JarvisWindows -ErrorAction SilentlyContinue | ForEach-Object {
-        $null = $_.CloseMainWindow()
-        if (-not $_.WaitForExit(3000)) { Stop-Process -Id $_.Id -Force }
+    $laufend = @(Get-Process JarvisWindows -ErrorAction SilentlyContinue)
+    if ($laufend.Count -eq 0) { return }
+    $alt = Join-Path $ziel 'JarvisWindows.exe'
+    if (Test-Path $alt) {
+        $bote = Start-Process -FilePath $alt -ArgumentList '--beenden' -PassThru
+        $null = $bote.WaitForExit(5000)
+    }
+    foreach ($p in $laufend) {
+        if (-not $p.WaitForExit(10000)) { Stop-Process -Id $p.Id -Force; $null = $p.WaitForExit(3000) }
     }
 }
 New-Item -ItemType Directory -Force $ziel | Out-Null
+$marke = Join-Path $env:LOCALAPPDATA 'JarvisWindows\installiert-gerade'
+New-Item -ItemType Directory -Force (Split-Path $marke) | Out-Null
+Set-Content -Path $marke -Value (Get-Date -Format o)
 # Der Wecker oder Frank kann die App während des Kopierens neu starten; sie sperrt dann ihre Dateien. Robocopy wartet von sich aus fast ewig (/R:1000000), darum kurze Versuche und neu beenden.
-for ($versuch = 1; $versuch -le 5; $versuch++) {
-    Beende-App
-    robocopy $aus $ziel /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-    if ($LASTEXITCODE -lt 8) { break }
-    if ($versuch -eq 5) { throw "Kopieren fehlgeschlagen ($LASTEXITCODE)" }
+try {
+    for ($versuch = 1; $versuch -le 5; $versuch++) {
+        Beende-App
+        robocopy $aus $ziel /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -lt 8) { break }
+        if ($versuch -eq 5) { throw "Kopieren fehlgeschlagen ($LASTEXITCODE)" }
+    }
+} finally {
+    Remove-Item $marke -Force -ErrorAction SilentlyContinue
 }
 $global:LASTEXITCODE = 0
 
@@ -41,14 +56,18 @@ $lnk.WorkingDirectory = $ziel
 $lnk.Save()
 
 # Wecker: hält den HP beim Relay als verbunden und startet die App, wenn das Handy es verlangt.
-$wecker = Join-Path $projekt 'tools\hp-wecker.ps1'
+# Aus dem Installationsordner: Ein git pull oder ein verschobenes Repo ändert so kein laufendes Skript.
+$wecker = Join-Path $ziel 'hp-wecker.ps1'
 $pwsh = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if (-not $pwsh) { $pwsh = (Get-Command powershell).Source }
 $aktion = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$wecker`""
 $ausloeser = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $regeln = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
 Register-ScheduledTask -TaskName 'JarvisWindowsWecker' -Action $aktion -Trigger $ausloeser -Settings $regeln -Force | Out-Null
-if ((Get-ScheduledTask -TaskName 'JarvisWindowsWecker').State -ne 'Running') { Start-ScheduledTask -TaskName 'JarvisWindowsWecker' }
+# Neu starten, damit die neue Fassung gilt. Stop-ScheduledTask allein verwaiste die pwsh (siehe Jarvis-PC-Brücke); darum den Prozess selbst beenden.
+Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*hp-wecker.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+for ($i = 0; $i -lt 10 -and (Get-ScheduledTask -TaskName 'JarvisWindowsWecker').State -eq 'Running'; $i++) { Start-Sleep -Milliseconds 500 }
+Start-ScheduledTask -TaskName 'JarvisWindowsWecker'
 
 Start-Process -FilePath $exe
 Write-Output "Installiert und gestartet: $exe"

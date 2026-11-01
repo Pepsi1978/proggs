@@ -70,7 +70,8 @@ public sealed class CodexAnmeldung
     public Task UngueltigMelden(int code)
     {
         lock (schloss)
-            if (speicher != null) speicher = Kopie(speicher, DateTime.MinValue);
+            // Nicht MinValue: GueltigerToken rechnet davon noch 120 Sekunden ab und würde sonst bei jedem weiteren Aufruf werfen.
+            if (speicher != null) speicher = Kopie(speicher, DateTime.Now.AddDays(-1));
         return Task.CompletedTask;
     }
 

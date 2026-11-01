@@ -24,6 +24,10 @@ public sealed class AblageAbgleich : Beobachtbar
     public ObservableCollection<AblageEintrag> Eintraege { get => _eintraege; private set => Setze(ref _eintraege, value); }
     private ObservableCollection<PromptEintrag> _prompts = new();
     public ObservableCollection<PromptEintrag> Prompts { get => _prompts; private set => Setze(ref _prompts, value); }
+    /// <summary>Alle Erinnerungen, ohne feste Ordnung; ändert sich mit AufbauStand.</summary>
+    public IReadOnlyList<Erinnerung> Erinnerungen { get; private set; } = Array.Empty<Erinnerung>();
+    /// <summary>Die Bestätigungen vom Server, nach Kennung der Auslösung.</summary>
+    public IReadOnlyDictionary<string, Quittung> Quittungen { get; private set; } = new Dictionary<string, Quittung>();
     private string? _fehler;
     public string? Fehler { get => _fehler; private set => Setze(ref _fehler, value); }
     private bool _verbunden;
@@ -78,6 +82,9 @@ public sealed class AblageAbgleich : Beobachtbar
             return a[..^4] + "/ablage";
         }
     }
+
+    /// <summary>Die Adresse der Ablage, für die Anwesenheit der Erinnerungen.</summary>
+    public static string? AblageBasis => Basis;
 
     // MARK: Abgleich
 
@@ -325,14 +332,20 @@ public sealed class AblageAbgleich : Beobachtbar
             var shas = w.Objekte("anhaenge").Select(a => a.Text("sha256")).Where(s => s != null).Select(s => s!).ToList();
             if (w.Text("text_sha") is { Length: > 0 } t) shas.Add(t);
             foreach (var s in shas) inhalte[s] = Pfad(s);
-            try { await Senden(art, id, w, Zahl(d.GetValueOrDefault("geaendert")), d.Wahr("geloescht") == true, inhalte); } catch { }
+            try { await Senden(art, id, w, Zahl(d.GetValueOrDefault("geaendert")), d.Wahr("geloescht") == true, inhalte, abschliessen: false); } catch { }
         }
+        // Einmal am Ende statt je Dokument: Sonst wäre das bei vielen Dokumenten quadratisch und auf dem Hauptfaden.
+        SpeichereDocs();
+        AufbauPlanen();
     }
 
     /// <summary>Eine ganz neue Kopie kennt vorhandene Titel und Nummern noch nicht: Sonst entstünden Doppel oder „gibt es nicht“.</summary>
     private async Task ErsterAbgleich()
     {
-        if (!Bereit) await Holen(0, default);
+        if (Bereit) return;
+        // Eine Antwort trägt höchstens eine Seite: Alles holen und die Liste sofort aufbauen, sonst sucht das Werkzeug gleich danach in einer leeren Liste.
+        for (var seite = 0; seite < 1000 && await Holen(0, default) > 0; seite++) { }
+        NeuAufbauen();
     }
 
     private HashSet<string> BenutzteInhalte()
@@ -460,7 +473,7 @@ public sealed class AblageAbgleich : Beobachtbar
     // MARK: Schreiben
 
     /// <summary>Schickt ein Dokument zum Server; fehlende Inhalte kommen zuerst hoch. Erst danach gilt es auch hier.</summary>
-    private async Task Senden(string art, string id, JSONObjekt daten, long geaendert, bool geloescht = false, Dictionary<string, string>? inhalte = null)
+    private async Task Senden(string art, string id, JSONObjekt daten, long geaendert, bool geloescht = false, Dictionary<string, string>? inhalte = null, bool abschliessen = true)
     {
         var basis = Basis ?? throw AblageFehler.KeineAdresse;
         var url = $"{basis}/doc/{art}/{id}";
@@ -488,7 +501,8 @@ public sealed class AblageAbgleich : Beobachtbar
                 if (inhalte == null || !inhalte.TryGetValue(sha, out var datei)) throw AblageFehler.InhaltFehlt;
                 await using var strom = new FileStream(datei, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, true);
                 using var r = new HttpRequestMessage(HttpMethod.Put, $"{basis}/blob/{sha}") { Content = new StreamContent(strom) };
-                var (k, _) = await GehirnNetz.Anfrage(r, 900, default, GehirnNetz.DateiClient);
+                // Die Frist wächst mit der Datei (bis 8 GB): Eine feste Grenze ließe große Dateien bei jedem Versuch scheitern.
+                var (k, _) = await GehirnNetz.Anfrage(r, Math.Max(900, strom.Length / 100_000.0), default, GehirnNetz.DateiClient);
                 if (k != 200) throw AblageFehler.Hochladen;
             }
             (kopf, antwort) = await Schicken();
@@ -505,6 +519,7 @@ public sealed class AblageAbgleich : Beobachtbar
         // Lückenlos direkt dahinter: Der Zeiger rückt mit, das eigene Echo braucht nicht zu kommen.
         if (neuerStand == stand + 1) stand += 1;
         _ = McpKlient.Shared.KontextVerwerfen();
+        if (!abschliessen) return;
         SpeichereDocs();
         NeuAufbauen();
     }
@@ -677,10 +692,21 @@ public sealed class AblageAbgleich : Beobachtbar
         return Senden("prompt", id, new JSONObjekt(), Zeit("prompt", id), geloescht: true);
     });
 
+    // MARK: Erinnerungen
+
+    /// <summary>Neu oder geändert; gilt erst, wenn der Server es angenommen hat.</summary>
+    public Task ErinnerungSpeichern(Erinnerung e) => Haupt.Auf(() => Senden("erinnerung", e.Id, e.AlsJson(), Zeit("erinnerung", e.Id)));
+
+    public Task ErinnerungLoeschen(string id) => Haupt.Auf(() => Senden("erinnerung", id, new JSONObjekt(), Zeit("erinnerung", id), geloescht: true));
+
+    /// <summary>Quittungen kommen nur dazu, werden nie gelöscht; geaendert = zeit.</summary>
+    public Task QuittungSenden(Quittung q) => Haupt.Auf(() => Senden("quittung", q.Id,
+        new JSONObjekt { ["zeit"] = q.Zeit, ["von"] = q.Von, ["erinnerung"] = q.Erinnerung }, Math.Max(q.Zeit, 1)));
+
     // MARK: Werkzeuge des Modells
 
     /// <summary>Was der Laptop selbst erledigt; alles andere geht ans Handy, ohne erst den Hauptfaden zu berühren.</summary>
-    public static readonly IReadOnlySet<string> EigeneWerkzeuge = new HashSet<string> { "ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern" };
+    public static readonly IReadOnlySet<string> EigeneWerkzeuge = new HashSet<string> { "ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern", "erinnerung_speichern", "erinnerungen_lesen" };
 
     /// <summary>Die Liste vom Handy zeigt auch Vorläufiges, kennt aber am Laptop gerade Gespeichertes womöglich noch nicht. Antwortet es nicht schnell, reicht die eigene Kopie.</summary>
     public WerkzeugErgebnis ListeMit(WerkzeugErgebnis vomHandy)
@@ -696,7 +722,10 @@ public sealed class AblageAbgleich : Beobachtbar
     {
         var lauf = Werkzeug(name, a);
         if (await GehirnHilfe.Frist(sekunden, lauf)) return await lauf;
-        return new WerkzeugErgebnis("Die Ablage hat nicht rechtzeitig geantwortet, eine Datei wird noch geholt. Bitte gleich noch einmal versuchen.", true);
+        // Der Lauf arbeitet weiter: Beim Schreiben entstünde durch eine Wiederholung sonst alles doppelt.
+        return name is "ablage_lesen" or "prompts_lesen" or "erinnerungen_lesen"
+            ? new WerkzeugErgebnis("Die Ablage hat nicht rechtzeitig geantwortet, eine Datei wird noch geholt. Bitte gleich noch einmal versuchen.", true)
+            : new WerkzeugErgebnis("Das läuft noch im Hintergrund weiter und ist nicht bestätigt. Nicht wiederholen, sondern gleich mit dem passenden Lese-Werkzeug prüfen.", true);
     }
 
     /// <summary>Was der Laptop selbst am Server erledigt. Alles andere geht weiter ans Handy; dort erzeugte Einträge bekommen die Quelle des Laptops über _quelle.</summary>
@@ -795,6 +824,10 @@ public sealed class AblageAbgleich : Beobachtbar
                             return new WerkzeugErgebnis($"Als Prompt {neu.Nummer} im Reiter Prompts der Ablage gespeichert.");
                     }
                 }
+                case "erinnerung_speichern":
+                    return await ErinnerungWerkzeuge.Speichern(a);
+                case "erinnerungen_lesen":
+                    return ErinnerungWerkzeuge.Lesen(a);
                 default:
                     return null;
             }
@@ -855,6 +888,8 @@ public sealed class AblageAbgleich : Beobachtbar
     {
         var neu = new List<AblageEintrag>();
         var ps = new List<(string titel, string text, long erstellt, string quelle)>();
+        var erinnerungen = new List<Erinnerung>();
+        var quittungen = new Dictionary<string, Quittung>();
         foreach (var d in docs.Values)
         {
             if (d.Wahr("geloescht") == true) continue;
@@ -875,8 +910,16 @@ public sealed class AblageAbgleich : Beobachtbar
                 case "prompt":
                     ps.Add((w.Text("titel") ?? "", w.Text("text") ?? "", long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var e) ? e : 0, QuellenName(w.GetValueOrDefault("quelle"))));
                     break;
+                case "erinnerung":
+                    erinnerungen.Add(Erinnerung.Aus(id, w, Zahl(d.GetValueOrDefault("geaendert"))));
+                    break;
+                case "quittung":
+                    quittungen[id] = new Quittung(id, Zahl(w.GetValueOrDefault("zeit")), w.Text("von") ?? "", w.Text("erinnerung") ?? "");
+                    break;
             }
         }
+        Erinnerungen = erinnerungen;
+        Quittungen = quittungen;
         // Die gezogene Reihenfolge des Handys; was sie noch nicht kennt, steht unten, das Älteste zuerst.
         var ordnung = (docs.GetValueOrDefault("ordnung:prompts")?.Obj("daten")?.Liste("reihenfolge") ?? new List<object?>()).Select(Zahl).ToList();
         var platz = new Dictionary<long, int>();

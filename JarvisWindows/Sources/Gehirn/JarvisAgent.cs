@@ -89,11 +89,12 @@ public sealed class JarvisAgent
 
     /// <summary>Stellt Jarvis eine Frage im Gespräch. Gibt den fertigen Antworttext zurück.</summary>
     public Task<string> Frage(string text, Gespraech g, bool gesprochen = false, byte[]? bild = null, IEnumerable<string>? ohneWerkzeuge = null, IEnumerable<string>? nurWerkzeuge = null,
-                              Action<string>? onText = null, CancellationToken ct = default)
-        => Haupt.Auf(() => FrageLauf(text, g, gesprochen, bild, ohneWerkzeuge?.ToHashSet(), nurWerkzeuge?.ToHashSet(), onText, ct));
+                              Action<string>? onText = null, CancellationToken ct = default, bool? websuche = null)
+        // Wer die Werkzeuge einschränkt, bekommt die Websuche nur ausdrücklich: Sie ist ein Weg ins Netz wie jeder andere.
+        => Haupt.Auf(() => FrageLauf(text, g, gesprochen, bild, ohneWerkzeuge?.ToHashSet(), nurWerkzeuge?.ToHashSet(), onText, websuche ?? nurWerkzeuge == null, ct));
 
     private async Task<string> FrageLauf(string text, Gespraech g, bool gesprochen, byte[]? bild, HashSet<string>? ohneWerkzeuge, HashSet<string>? nurWerkzeuge,
-                                         Action<string>? onText, CancellationToken ct)
+                                         Action<string>? onText, bool websuche, CancellationToken ct)
     {
         // Ein Gespräch, eine Werkzeugschleife: sonst landet eine neue Frage zwischen tool_use und tool_result.
         while (g.Arbeitet)
@@ -102,6 +103,7 @@ public sealed class JarvisAgent
             try { await Task.Delay(200, ct); } catch (OperationCanceledException) { return ""; }
         }
         g.Arbeitet = true;
+        Nachricht? laufend = null;
         try
         {
             GespraechsSpeicher.Shared.NachOben(g);
@@ -124,6 +126,7 @@ public sealed class JarvisAgent
 
             var jarvis = new Nachricht(Rolle.Jarvis, "", laeuft: true);
             g.Nachrichten.Add(jarvis);
+            laufend = jarvis;
             await Verdichte(g);
 
             var mcpListe = McpKlient.Shared.Werkzeuge(ct: ct);
@@ -135,6 +138,7 @@ public sealed class JarvisAgent
                 .Concat(handyWerkzeuge.Where(w => !lokaleNamen.Contains(w.Name) && !McpKlient.NurFuerOberflaeche.Contains(w.Name)))
                 .Where(w => ohneWerkzeuge?.Contains(w.Name) != true && nurWerkzeuge?.Contains(w.Name) != false)
                 .ToList();
+            var erlaubteNamen = alleWerkzeuge.Select(w => w.Name).ToHashSet();
             var system = await SystemTeile(g);
             var (a, modell) = await AnbieterWahl();
             var effort = e.Effort;
@@ -167,7 +171,7 @@ public sealed class JarvisAgent
                     puffer.Runde += 1;
                     puffer.Text = "";
                     var runde = puffer.Runde;
-                    antwort = await a.Antworte(system, alleWerkzeuge, true, g.Verlauf.ToList(), modell, effort, stueck =>
+                    antwort = await a.Antworte(system, alleWerkzeuge, websuche, g.Verlauf.ToList(), modell, effort, stueck =>
                     {
                         Haupt.Post(() =>
                         {
@@ -189,6 +193,7 @@ public sealed class JarvisAgent
                         break;
                     }
                     Log("fehler", $"Gehirn: {ex.Message}");
+                    if (puffer.Text.Length > 0) textTeile.Add(puffer.Text);
                     textTeile.Add($"⚠️ {ex.Message}");
                     // Unbeantwortete Nutzernachricht entfernen wäre falsch; Verlauf bleibt gültig, wenn die letzte Nachricht vom Nutzer ist.
                     break;
@@ -200,7 +205,11 @@ public sealed class JarvisAgent
                 if (texte.Trim().Length > 0) textTeile.Add(texte);
                 Zeige();
                 Log("gehirn", $"{modell} Schritt {schritt}: {antwort.StopGrund}, ein {antwort.EingabeTokens}+cache {antwort.CacheTokens}, aus {antwort.AusgabeTokens}");
-                g.Verlauf.Add(new JSONObjekt { ["role"] = "assistant", ["content"] = antwort.Inhalt });
+                // Abgeschnitten: Ein Werkzeugaufruf darin ist unvollständig, er darf weder laufen noch ohne Ergebnis im Verlauf stehen.
+                var abgeschnitten = antwort.StopGrund == "max_tokens";
+                var fuerVerlauf = abgeschnitten ? antwort.Inhalt.Where(b => b.Text("type") is not ("tool_use" or "server_tool_use")).ToList() : antwort.Inhalt;
+                if (!abgeschnitten || fuerVerlauf.Any(b => b.Text("type") == "text"))
+                    g.Verlauf.Add(new JSONObjekt { ["role"] = "assistant", ["content"] = fuerVerlauf });
                 if (istClaude)
                 {
                     kosten += ClaudePreis.Dollar(modell, antwort);
@@ -209,6 +218,7 @@ public sealed class JarvisAgent
 
                 if (antwort.StopGrund == "pause_turn") continue;
                 if (antwort.StopGrund == "refusal") { textTeile.Add("(Die Anfrage wurde vom Modell abgelehnt.)"); break; }
+                if (abgeschnitten) { textTeile.Add("(Die Antwort hat das Längenlimit erreicht und ist abgeschnitten – sag „weiter“, dann mache ich weiter.)"); break; }
                 var aufrufe = antwort.Inhalt.Where(b => b.Text("type") == "tool_use").ToList();
                 if (aufrufe.Count == 0) break;
 
@@ -228,6 +238,8 @@ public sealed class JarvisAgent
                     var name = auf.Text("name") ?? "?";
                     var args = ProgrammierVorspann.Verbindlich(name, auf.Obj("input") ?? new JSONObjekt(), text, vorigeWahl);
                     var lokal = lokaleNamen.Contains(name);
+                    // Angeboten heißt nicht erlaubt: Auch ein erfundener oder eingeschleuster Aufruf eines gesperrten Werkzeugs läuft nicht.
+                    if (!erlaubteNamen.Contains(name)) return Task.FromResult(new WerkzeugErgebnis($"Das Werkzeug {name} steht in diesem Lauf nicht zur Verfügung.", true));
                     return Task.Run(() => FuehreAus(name, args, lokal, ct));
                 }).ToList();
                 var ergebnisse = await Task.WhenAll(aufgaben);
@@ -264,6 +276,12 @@ public sealed class JarvisAgent
         }
         finally
         {
+            // Auch bei einem Fehler außerhalb des Modellaufrufs: Sonst dreht die Nachricht bis zum Neustart.
+            if (laufend is { Laeuft: true })
+            {
+                laufend.Laeuft = false;
+                if (laufend.Text.Length == 0) laufend.Text = "⚠️ Die Antwort ist unerwartet abgebrochen.";
+            }
             g.Arbeitet = false;
             g.Speichern();
         }
@@ -353,11 +371,24 @@ public sealed class JarvisAgent
         return r;
     }
 
+    private static long BildZeichen(IEnumerable<JSONObjekt> bloecke)
+    {
+        long summe = 0;
+        foreach (var b in bloecke)
+        {
+            if (b.Text("type") == "image") summe += b.Obj("source")?.Text("data")?.Length ?? 0;
+            else if (b.Text("type") == "tool_result") summe += BildZeichen(b.Objekte("content"));
+        }
+        return summe;
+    }
+
     /// <summary>null = noch klein genug. Baut neue Einträge; die alten bleiben unberührt.</summary>
     private static List<JSONObjekt>? Verdichtet(List<JSONObjekt> eingang)
     {
         var groesse = JSON.Daten(eingang).Length;
-        if (groesse <= 6_000_000) return null;
+        // Grob vier Byte je Token, Bilder zählen dabei nicht als Text.
+        var bilder = eingang.Sum(n => BildZeichen(n.Objekte("content")));
+        if (groesse <= 6_000_000 && (groesse - bilder) / 4 <= 500_000) return null;
         const int behalte = 6; // jüngste Einträge unverändert
         var grenze = Math.Max(0, eingang.Count - behalte);
         var verlauf = new List<JSONObjekt>(eingang);

@@ -5,13 +5,32 @@ $ErrorActionPreference = 'Continue'
 $ordner = Join-Path $env:LOCALAPPDATA 'JarvisWindows'
 New-Item -ItemType Directory -Force $ordner | Out-Null
 $protokoll = Join-Path $ordner 'wecker.log'
-$exe = Join-Path $env:LOCALAPPDATA 'Programs\JarvisWindowsHP\JarvisWindows.exe'
+# Läuft aus dem Installationsordner (publish.ps1 kopiert es dorthin): So ändert kein git pull ein laufendes Skript.
+$exe = Join-Path $PSScriptRoot 'JarvisWindows.exe'
+$marke = Join-Path $ordner 'installiert-gerade'
 
 function Schreib([string]$t) {
     try {
         if ((Test-Path $protokoll) -and (Get-Item $protokoll).Length -gt 1MB) { Remove-Item $protokoll -Force }
         Add-Content -Path $protokoll -Value ("{0:dd.MM.yyyy HH:mm:ss} {1}" -f (Get-Date), $t) -Encoding utf8
     } catch {}
+}
+
+# Während publish.ps1 kopiert, nicht starten: Die App sperrte sonst ihre Dateien. Der Relay meldet eine liegende Frage bald erneut.
+function Wird-Installiert {
+    return (Test-Path $marke) -and ((Get-Date) - (Get-Item $marke).LastWriteTime).TotalMinutes -lt 10
+}
+
+function Starte-App([bool]$vorn) {
+    for ($versuch = 1; $versuch -le 3; $versuch++) {
+        try {
+            if ($vorn) { Start-Process -FilePath $exe } else { Start-Process -FilePath $exe -ArgumentList '--hintergrund' }
+            return
+        } catch {
+            Schreib "Start gescheitert (Versuch $versuch): $($_.Exception.Message)"
+            Start-Sleep -Seconds 2
+        }
+    }
 }
 
 function Lies-Zugang {
@@ -32,10 +51,9 @@ while ($true) {
         if ($antwort.StatusCode -eq 200) {
             $befehl = $antwort.Content | ConvertFrom-Json
             if ($befehl.befehl -eq 'jarvis_starten') {
-                $argumente = if ($befehl.vorn) { @() } else { @('--hintergrund') }
                 Schreib "Start angefordert, vorn=$($befehl.vorn)"
                 # Die App ist Einzelinstanz: Läuft sie schon, holt der zweite Start nur das Fenster nach vorn.
-                if ($argumente.Count) { Start-Process -FilePath $exe -ArgumentList $argumente } else { Start-Process -FilePath $exe }
+                if (Wird-Installiert) { Schreib 'Wird gerade installiert, kein Start.' } else { Starte-App ([bool]$befehl.vorn) }
             }
         }
     } catch {

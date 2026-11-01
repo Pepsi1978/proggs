@@ -8,6 +8,7 @@ namespace JarvisWindows;
 /// <summary>Die Fensterschnittstellen, die alle Werkzeuge teilen. Die App läuft nur als win-x64: INPUT hat hier die 64-Bit-Anordnung.</summary>
 internal static class WinApi
 {
+    [DllImport("user32.dll")] public static extern uint GetClipboardSequenceNumber();
     public const int INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
     public const uint MOUSEEVENTF_MOVE = 0x0001, MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004, MOUSEEVENTF_RIGHTDOWN = 0x0008, MOUSEEVENTF_RIGHTUP = 0x0010,
         MOUSEEVENTF_WHEEL = 0x0800, MOUSEEVENTF_HWHEEL = 0x1000, MOUSEEVENTF_VIRTUALDESK = 0x4000, MOUSEEVENTF_ABSOLUTE = 0x8000;
@@ -198,7 +199,8 @@ public static class Fenster
             }
             finally
             {
-                if (alt) WinApi.Sende(WinApi.Taste((ushort)WinApi.VK_MENU, true));
+                // Alt allein loslassen öffnete im Zielfenster das Menü, das folgende Strg+V oder Enter landete dort. Eine unbelegte Taste (F24) dazwischen verhindert das.
+                if (alt) WinApi.Sende(WinApi.Taste(0x87, false), WinApi.Taste(0x87, true), WinApi.Taste((ushort)WinApi.VK_MENU, true));
                 if (anVorn) WinApi.AttachThreadInput(eigen, vornFaden, false);
                 if (anZiel) WinApi.AttachThreadInput(eigen, zielFaden, false);
             }
