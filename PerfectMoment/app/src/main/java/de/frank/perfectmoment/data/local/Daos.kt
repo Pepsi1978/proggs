@@ -25,6 +25,9 @@ abstract class SessionDao {
     @Query("SELECT * FROM sessions WHERE custom = 1 AND introContext = :source ORDER BY id LIMIT 1")
     abstract suspend fun sessionFromSource(source: String): SessionEntity?
 
+    @Query("SELECT * FROM sessions WHERE custom = 1 AND introContext = :source ORDER BY id")
+    abstract suspend fun sessionsFromSource(source: String): List<SessionEntity>
+
     @Insert
     abstract suspend fun insertSession(session: SessionEntity): Long
 

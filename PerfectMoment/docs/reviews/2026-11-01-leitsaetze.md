@@ -1,0 +1,27 @@
+# Sehr ausführliches Review: Leitsätze aus Ziele
+
+Ausgangsstand: `f501c56f6`, ausschließlich die Änderungen dieses Auftrags an Ziele und Perfect Moment. Prüfung durch dieselbe Sitzung, ohne zusätzliche Agenten. Neun Befundgruppen behoben; keine künstliche Auffüllung auf 100 Befunde.
+
+| Nr. | Befund / Ursache | Korrektur und Absicherung |
+|---|---|---|
+| 1 | Ein nicht installierter oder gerade nicht verfügbarer Ziele-Provider konnte bereits beim Registrieren des Beobachters den Start unterbrechen. Die erste Session-Liste hing zusätzlich am Provider-Abruf; ohne erfolgreiche erste Abfrage fehlte die Leitsatz-Session. | Beobachter mit protokollierter Fehlerbehandlung und erneutem Anmeldeversuch; systemeigene Session unabhängig vom Abruf anlegen; übrige Verläufe sofort beobachten. Letzter erfolgreicher Datenstand bleibt erhalten, Fehlerhinweis ist sichtbar. Provider-Lesen erfolgt außerhalb der Transaktion und des UI-Threads mit Abbruchsignal. |
+| 2 | Jede Ziele-Änderung startete einen weiteren Abgleich, der an derselben Sperre wartete. | Änderungsanforderungen bündeln, während eines laufenden Abrufs eingegangene Änderungen anschließend erneut lesen. Die Sperre verhindert weiterhin doppelte Initialisierung und überholte Schreibreihenfolgen. |
+| 3 | Zwischen Öffnen des Details und Start/Fortsetzen konnten Leitsätze erneut geändert worden sein. Ein dabei gelöschter Fortsetzungspunkt ließ Fortsetzen scheitern. | Unmittelbar vor Start und Fortsetzen erneut synchronisieren. Wenn die Quelle den Fortsetzungspunkt wegen einer Änderung verworfen hat, mit aktuellem Bestand neu starten. Bei nicht erreichbarer Quelle keinen alten Stand als aktuell abspielen. |
+| 4 | Die Datenbank wurde aktualisiert, eine schon laufende oder pausierte Sitzung hielt jedoch eine alte Kopie ihrer Texte und Audiodaten. | Den aktiven verknüpften Vorlese-Bestand erneuern, altes Audio und alte Pausenfortsetzungen verwerfen, Restdauer und Pausenstatus erhalten. Andere Sessions und reine Änderungen der zufälligen Abspielreihenfolge lösen keinen Neustart aus. Ein leer gewordener Bestand beendet die Sitzung. |
+| 5 | Wiederherstellungen ordneten Sessions ausschließlich nach Geräte-ID zu und konnten eine zweite Leitsatz-Session erzeugen. | Die Quellenkennung zusätzlich transaktional berücksichtigen. Beim Abgleich vorhandene doppelte, automatisch abgeleitete Quellen-Sessions auf einen kanonischen Eintrag zusammenführen. Handgeschriebene Sessions gleichen Namens sind davon nicht betroffen. |
+| 6 | Der Sortierhelfer rechnete mit der angehefteten Quellen-Session, während das ViewModel Tauschen über diese Position ablehnte; dadurch wurden Fingerbewegung und Kartenplatz unterschiedlich berechnet. | Sortierhelfer und Verschiebefunktion verwenden dieselbe Liste ausschließlich beweglicher eigener Sessions. Die Leitsatz-Session bleibt unabhängig von gespeicherten Benutzerreihenfolgen oben. |
+| 7 | Der längere Quellenabruf beim Detail-Öffnen konnte nach einem Zurück- oder Bildschirmwechsel die inzwischen verlassene Ansicht erneut öffnen. | Detail-Öffnen an einen abbrechbaren Job binden; weitere Öffnungen und Navigation brechen den vorherigen Vorgang ab. |
+| 8 | Eine abgebrochene Transkription konnte verspätet den neuen Entwurf berühren oder im Aufräumen den Aufnahmezustand einer später gestarteten Aufnahme zurücksetzen. Eine verspätete Mikrofonfreigabe war nicht an den ursprünglichen Bildschirm gebunden. | Aufnahmegeneration, Coroutine-Abbruchprüfung und Zielbildschirm prüfen. Ausstehende Freigaben beim Verlassen verwerfen; alte Aufräumarbeiten dürfen den neuen Aufnahmezustand nicht verändern. |
+| 9 | Der Hinweis beim Start einer leeren Leitsatz-Session forderte das Hinzufügen einer Frage in Perfect Moment, obwohl diese Session bewusst ihre Quelle in Ziele hat. | Leitsatz-spezifischer Hinweis verweist auf Speichern in der Ziele-App. |
+
+## Verwandte Fehlerquellen und Funktionserhalt
+
+- Datenänderungen: Ziele bearbeitet den Leitsatz gezielt; normale Zieländerungen und Auswertungen erhalten ihn transaktional. Löschung, Wiederherstellung, Zielstatus und Reihenfolge wurden anhand der Aufrufstellen einbezogen.
+- Worttreue: Kein KI-Aufruf, kein `trim`, keine Zeilenumbruch-Ersetzung und keine Kürzung zwischen Ziele-Provider, Import, Datenbank und Anzeige. Doppelte gleiche Leitsätze verschiedener Ziele bleiben als eigene Einträge erhalten.
+- Wiedergabe: Andere eigene Sessions und KI-Sessions behalten ihre vorhandenen Start-, Sortier- und Fortsetzungspfade. Quellenaktualisierung ist auf verknüpfte Vorlese-Sessions begrenzt. Eine alte Wiedergabe darf neue Leitsätze nicht beim Speichern eines Fortsetzungspunktes überschreiben.
+- Berechtigungen: Rein lesender, signaturgeschützter Ziele-Provider; beide Apps verwenden den gemeinsamen Signierschlüssel. Ausfall wird angezeigt statt mit einem leeren Snapshot Daten zu löschen.
+- Datenbank: Additive Ziele-Migration 5 → 6 mit leerem Standard; keine destruktive Migration. Perfect Moment benötigt keine Schemaänderung, die Quellenkennung wird mit bestehenden Sicherungsfeldern erhalten.
+
+## Abnahmeumfang
+
+Statische Prüfung des gesamten Auftragsdiffs und der betroffenen Navigations-, Aufnahme-, Sicherungs- und Wiedergabepfade. Debug-Builds beider Apps sowie Installation und APK-Veröffentlichung erfolgen im Pflicht-Abschluss. Entsprechend dem aktiven Schnellmodus keine automatischen Tests und keine manuelle Bedienprüfung; Spracheingabe und UI prüft Frank auf dem Gerät.

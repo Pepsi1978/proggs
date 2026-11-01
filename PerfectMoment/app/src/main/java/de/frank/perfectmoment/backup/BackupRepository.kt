@@ -2,6 +2,9 @@ package de.frank.perfectmoment.backup
 
 import android.content.Context
 import android.os.Build
+import androidx.room.withTransaction
+import de.frank.perfectmoment.data.local.isZieleLeitsaetze
+import de.frank.perfectmoment.data.local.ZIELE_LEITSAETZE_QUELLE
 import de.frank.perfectmoment.data.local.PerfectMomentDatabase
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.settings.SecureSettings
@@ -99,22 +102,28 @@ class BackupRepository(
 
         var restoredSessions = 0
         payload.sessions.forEach { entry ->
-            // Sessions carry their questions, so only add ones this device does not have yet.
-            if (database.sessionDao().getSession(entry.session.id) == null) {
-                val newId = database.sessionDao().insertSession(entry.session)
-                if (entry.questions.isNotEmpty()) {
-                    database.sessionDao().insertQuestions(
-                        entry.questions.map { question ->
-                            QuestionEntity(
-                                sessionId = newId,
-                                orderIndex = question.orderIndex,
-                                emoji = question.emoji,
-                                text = question.text,
-                            )
-                        },
-                    )
+            database.withTransaction {
+                // Diese Session gehört zu einer Quelle, nicht zu einer zufälligen Geräte-ID.
+                if (entry.session.isZieleLeitsaetze &&
+                    database.sessionDao().sessionFromSource(ZIELE_LEITSAETZE_QUELLE) != null
+                ) return@withTransaction
+                // Sessions carry their questions, so only add ones this device does not have yet.
+                if (database.sessionDao().getSession(entry.session.id) == null) {
+                    val newId = database.sessionDao().insertSession(entry.session)
+                    if (entry.questions.isNotEmpty()) {
+                        database.sessionDao().insertQuestions(
+                            entry.questions.map { question ->
+                                QuestionEntity(
+                                    sessionId = newId,
+                                    orderIndex = question.orderIndex,
+                                    emoji = question.emoji,
+                                    text = question.text,
+                                )
+                            },
+                        )
+                    }
+                    restoredSessions++
                 }
-                restoredSessions++
             }
         }
         return Summary(payload.hooks.size, payload.skills.size, restoredSessions)

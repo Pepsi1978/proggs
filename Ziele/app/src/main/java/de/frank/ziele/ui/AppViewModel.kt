@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 sealed interface Bildschirm {
     data object Liste : Bildschirm
@@ -112,7 +114,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 repo.leitsatzSpeichern(zielId, text)
                 bildschirm = Bildschirm.Detail(zielId)
-                melde("Leitsatz gespeichert · automatisch in Perfect Moment verfügbar")
+                melde("Leitsatz gespeichert")
             } catch (c: CancellationException) {
                 throw c
             } catch (e: Exception) {
@@ -129,6 +131,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var diktatZiel by mutableStateOf(DiktatZiel.ZIEL); private set
     var mikrofonAnfragen: () -> Unit = {}
     private var aufnahmeJob: Job? = null
+    private var aufnahmeGeneration = 0L
+    private var mikroBildschirm: Bildschirm? = null
 
     // ---- KI-Verbindung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set
@@ -639,6 +643,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Aufnahme.AUS -> {
                 if (einstellungen.groqKey.isBlank() && !ParakeetUeberJarvis.gewaehlt(getApplication())) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen (oder aus Jarvis übernehmen)."); return }
                 diktatZiel = ziel
+                mikroBildschirm = bildschirm
                 mikrofonAnfragen()
             }
             Aufnahme.LAEUFT -> aufnahmeBeenden()
@@ -647,6 +652,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubnisErgebnis(ok: Boolean) {
+        val erwartet = mikroBildschirm
+        mikroBildschirm = null
+        if (erwartet == null || erwartet != bildschirm) return
         if (!ok) { melde("Ohne Mikrofon-Erlaubnis geht die Spracheingabe nicht."); return }
         if (aufnahme != Aufnahme.AUS) return
         tts.stop(); sprichtId = null
@@ -659,14 +667,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun aufnahmeVerwerfen() {
-        if (aufnahme == Aufnahme.LAEUFT) mikro.release()
+        aufnahmeGeneration++
+        mikroBildschirm = null
+        if (aufnahme != Aufnahme.AUS) mikro.release()
         aufnahmeJob?.cancel()
+        aufnahmeJob = null
         aufnahme = Aufnahme.AUS
     }
 
     private fun aufnahmeBeenden() {
         aufnahme = Aufnahme.VERARBEITET
         val wohin = diktatZiel
+        val generation = aufnahmeGeneration
+        val ursprung = bildschirm
         aufnahmeJob = viewModelScope.launch {
             val transcriber = GroqTranscriber(
                 apiKey = einstellungen.groqKey,
@@ -682,6 +695,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (wav == null) { melde("Es wurde nichts aufgenommen."); return@launch }
                 val text = if (ParakeetUeberJarvis.gewaehlt(getApplication())) ParakeetUeberJarvis.transkribiere(getApplication(), wav)
                 else Diktat(transcriber).transkribiere(wav).text.trim()
+                currentCoroutineContext().ensureActive()
+                if (generation != aufnahmeGeneration || (wohin == DiktatZiel.LEITSATZ && bildschirm != ursprung)) return@launch
                 when {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }
@@ -696,7 +711,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 melde(e.message ?: "Die Spracherkennung ist fehlgeschlagen.")
             } finally {
                 transcriber.shutdown()
-                aufnahme = Aufnahme.AUS
+                if (generation == aufnahmeGeneration) aufnahme = Aufnahme.AUS
             }
         }
     }

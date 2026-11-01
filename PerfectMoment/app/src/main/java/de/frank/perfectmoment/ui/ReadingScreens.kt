@@ -81,7 +81,7 @@ fun ReadingSection(
                         dragModifier = reorderHandle(
                             state = reorder,
                             id = session.id,
-                            order = { viewModel.readingSessions.map(SessionEntity::id) },
+                            order = { viewModel.movableReadingSessions.map(SessionEntity::id) },
                             onMove = viewModel::moveReadingSession,
                             onDrop = viewModel::persistReadingSessionOrder,
                         ),

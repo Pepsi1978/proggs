@@ -13,6 +13,7 @@ import de.frank.perfectmoment.auth.QuestionResponseValidator
 import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.data.local.SessionEntity
+import de.frank.perfectmoment.data.local.isZieleLeitsaetze
 import de.frank.perfectmoment.data.repository.ContentRepository
 import de.frank.perfectmoment.data.repository.SessionRepository
 import de.frank.perfectmoment.data.settings.SecureSettings
@@ -237,6 +238,21 @@ class SessionController(
 
     private fun historyTitle(session: SessionEntity): String =
         session.summary.ifBlank { session.topic }
+
+    /** Ein Ziele-Abgleich gilt auch für eine schon laufende oder pausierte Leitsatz-Sitzung. */
+    suspend fun refreshLeitsaetze() {
+        if (_runtime.value?.reading != true) return
+        operationMutex.withLock {
+            val runtime = _runtime.value ?: return@withLock
+            if (!runtime.reading) return@withLock
+            val id = runtime.sessionId ?: return@withLock
+            val source = sessionRepository.getSession(id) ?: return@withLock
+            if (!source.session.isZieleLeitsaetze) return@withLock
+            val questions = source.questions.map { Question(it.id, it.emoji, it.text) }
+            // Die gemischte Abspielreihenfolge ist keine Quellenänderung.
+            if (_state.value?.questions?.toSet() != questions.toSet()) engine?.replaceReadingQuestions(questions)
+        }
+    }
 
     /**
      * Setzt eine Sitzung genau am gespeicherten Punkt fort. Bereits vorgelesene Fragen bleiben

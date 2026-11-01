@@ -151,6 +151,20 @@ class SessionEngine(
         scope.launch { setSpeakerOnInternal(!_state.value.speakerOn) }
     }
 
+    /** Aktualisiert ausschließlich verknüpfte Vorlese-Bestände; veraltetes Audio wird sofort verworfen. */
+    fun replaceReadingQuestions(questions: List<Question>) {
+        if (!loopQuestions) return
+        scope.launch {
+            val current = _state.value
+            if (current.phase == Phase.ENDED || current.questions == questions) return@launch
+            val alt = current.questions.getOrNull(current.currentIndex)
+            val index = questions.indexOfFirst { it.id == alt?.id || it.text == alt?.text }
+                .takeIf { it >= 0 } ?: current.currentIndex.coerceIn(0, (questions.size - 1).coerceAtLeast(0))
+            _state.value = current.copy(questions = questions, currentIndex = index)
+            if (questions.isEmpty()) endSession() else jumpToQuestionInternal(index)
+        }
+    }
+
     fun updateConfig(updated: SessionConfig) {
         scope.launch {
             val previous = config

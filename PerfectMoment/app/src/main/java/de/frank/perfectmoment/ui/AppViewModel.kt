@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -155,16 +156,40 @@ class AppViewModel(
     private val leitsaetzeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) { leitsaetzeAktualisieren() }
     }
+    private var leitsaetzeObserverRegistriert = false
+    private var leitsaetzeSyncJob: Job? = null
+    private var leitsaetzeAngefordert = false
+    private var readingDetailJob: Job? = null
     var leitsaetzeFehler by mutableStateOf<String?>(null); private set
     val zeigtLeitsaetze: Boolean get() = historyDetail?.session?.isZieleLeitsaetze == true
 
     fun leitsaetzeAktualisieren() {
-        viewModelScope.launch { synchronisiereLeitsaetze() }
+        leitsaetzeAngefordert = true
+        if (leitsaetzeSyncJob?.isActive == true) return
+        leitsaetzeSyncJob = viewModelScope.launch {
+            while (leitsaetzeAngefordert) {
+                leitsaetzeAngefordert = false
+                synchronisiereLeitsaetze()
+            }
+        }
+    }
+
+    private fun leitsaetzeBeobachten() {
+        if (leitsaetzeObserverRegistriert) return
+        try {
+            appContext.contentResolver.registerContentObserver(LeitsaetzeSync.URI, true, leitsaetzeObserver)
+            leitsaetzeObserverRegistriert = true
+        } catch (e: Exception) {
+            // Ziele kann noch fehlen oder gerade aktualisiert werden. Beim nächsten Öffnen neu versuchen.
+            Log.w("PmLeitsaetze", "Änderungsbeobachtung noch nicht verfügbar", e)
+        }
     }
 
     private suspend fun synchronisiereLeitsaetze(): Boolean {
         return try {
+            leitsaetzeBeobachten()
             container.leitsaetzeSync.aktualisieren()
+            sessionController.refreshLeitsaetze()
             leitsaetzeFehler = null
             val id = historyDetail?.session?.takeIf { it.isZieleLeitsaetze }?.id
             if (id != null) {
@@ -175,6 +200,7 @@ class AppViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (e: Exception) {
+            Log.w("PmLeitsaetze", "Automatische Übernahme fehlgeschlagen; letzter Stand bleibt erhalten", e)
             leitsaetzeFehler = "Leitsätze konnten nicht aus Ziele gelesen werden: ${e.message ?: "Verbindung nicht verfügbar"}"
             false
         }
@@ -673,11 +699,13 @@ class AppViewModel(
             )
         }
 
+    val movableReadingSessions: List<SessionEntity>
+        get() = readingSessions.filterNot { it.isZieleLeitsaetze }
+
     /** Schiebt eine eigene Session während des Ziehens an ihren neuen Platz. */
     fun moveReadingSession(from: Int, to: Int) {
-        val current = readingSessions
+        val current = movableReadingSessions
         if (from !in current.indices || to !in current.indices || from == to) return
-        if (current[from].isZieleLeitsaetze || current[to].isZieleLeitsaetze) return
         readingOrder = current.map(SessionEntity::id).toMutableList().apply { add(to, removeAt(from)) }
     }
 
@@ -688,7 +716,7 @@ class AppViewModel(
     }
 
     init {
-        appContext.contentResolver.registerContentObserver(LeitsaetzeSync.URI, true, leitsaetzeObserver)
+        leitsaetzeAktualisieren()
         if (ttsProvider == TtsProvider.GOOGLE_CLOUD.id && googleApiKey.isBlank()) {
             ttsProvider = TtsProvider.EDGE.id
             settings.ttsProvider = TtsProvider.EDGE.id
@@ -714,7 +742,6 @@ class AppViewModel(
             }
         }
         viewModelScope.launch {
-            synchronisiereLeitsaetze()
             sessionRepository.observeSessions().collect { sessions = it }
         }
         viewModelScope.launch {
@@ -730,6 +757,7 @@ class AppViewModel(
     }
 
     fun navigate(target: AppScreen) {
+        readingDetailJob?.cancel()
         if (screen == AppScreen.HISTORY_DETAIL && target != AppScreen.HISTORY_DETAIL) {
             commitHistoryTitle()
         }
@@ -792,6 +820,7 @@ class AppViewModel(
     }
 
     fun back() {
+        readingDetailJob?.cancel()
         cancelVoiceInput()
         if (screen == AppScreen.VOICE) stopVoicePreview()
         if (sheet != null) {
@@ -1537,7 +1566,8 @@ class AppViewModel(
     }
 
     fun openHistoryDetail(id: Long) {
-        viewModelScope.launch {
+        readingDetailJob?.cancel()
+        readingDetailJob = viewModelScope.launch {
             historyDetail = sessionRepository.getSession(id)
             historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
@@ -1666,8 +1696,9 @@ class AppViewModel(
     }
 
     fun openReadingDetail(id: Long) {
-        viewModelScope.launch {
-            if (sessions.any { it.id == id && it.isZieleLeitsaetze }) synchronisiereLeitsaetze()
+        readingDetailJob?.cancel()
+        readingDetailJob = viewModelScope.launch {
+            if (sessionRepository.getSession(id)?.session?.isZieleLeitsaetze == true) synchronisiereLeitsaetze()
             historyDetail = sessionRepository.getSession(id)
             historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
@@ -1860,7 +1891,8 @@ class AppViewModel(
     fun playReadingSession() {
         val detail = historyDetail ?: return
         if (detail.questions.isEmpty()) {
-            message = "Füge zuerst mindestens eine Frage hinzu."
+            message = if (detail.session.isZieleLeitsaetze) "Speichere zuerst einen Leitsatz in der Ziele-App."
+                else "Füge zuerst mindestens eine Frage hinzu."
             return
         }
         commitHistoryTitle()
@@ -1884,6 +1916,9 @@ class AppViewModel(
         val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
+                if (sessionRepository.getSession(sessionId)?.session?.isZieleLeitsaetze == true && !synchronisiereLeitsaetze()) {
+                    error(leitsaetzeFehler ?: "Die Leitsätze sind gerade nicht erreichbar.")
+                }
                 sessionController.playReadingSession(sessionId, shuffle)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -1930,6 +1965,14 @@ class AppViewModel(
         val generation = beginSessionStart()
         sessionStartJob = viewModelScope.launch {
             try {
+                val linked = sessionRepository.getSession(sessionId)?.session?.isZieleLeitsaetze == true
+                if (linked) {
+                    check(synchronisiereLeitsaetze()) { leitsaetzeFehler ?: "Die Leitsätze sind gerade nicht erreichbar." }
+                    if (sessionRepository.getSession(sessionId)?.session?.resumeQuestionIndex == null) {
+                        sessionController.playReadingSession(sessionId, randomReplay)
+                        return@launch
+                    }
+                }
                 sessionController.resumeSession(sessionId, useChangedSettings, shuffle)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -2320,7 +2363,7 @@ class AppViewModel(
     }
 
     override fun onCleared() {
-        appContext.contentResolver.unregisterContentObserver(leitsaetzeObserver)
+        if (leitsaetzeObserverRegistriert) appContext.contentResolver.unregisterContentObserver(leitsaetzeObserver)
         cancelVoiceInput()
         sessionStartGeneration++
         sessionStartJob?.cancel()
