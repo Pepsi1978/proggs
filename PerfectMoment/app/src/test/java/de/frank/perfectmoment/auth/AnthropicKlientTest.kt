@@ -7,14 +7,23 @@ import org.junit.Test
 class AnthropicKlientTest {
     @Test
     fun acceptsEveryAnthropicKeyPrefix() {
-        assertTrue(AnthropicKlient.istApiSchluessel("sk-ant-api03-abc"))
-        assertTrue(AnthropicKlient.istApiSchluessel("sk-ant-user-abc"))
+        listOf("sk-ant-api03-abc", "sk-ant-user-abc").forEach {
+            assertTrue(it, AnthropicKlient.istApiSchluessel(it))
+            assertTrue(it, AnthropicKlient.wirktWieAnthropicSchluessel(it))
+        }
     }
 
     @Test
-    fun rejectsSubscriptionTokensAndForeignKeys() {
-        assertFalse(AnthropicKlient.istApiSchluessel("sk-ant-oat01-abc"))
-        assertFalse(AnthropicKlient.istApiSchluessel("sk-proj-abc"))
-        assertFalse(AnthropicKlient.istApiSchluessel(""))
+    fun blocksOnlyWhatCertainlyCannotWork() {
+        listOf("", "sk-ant-oat01-abc", "sk-ant-…", "sk‑ant-abc").forEach {
+            assertFalse(it, AnthropicKlient.istApiSchluessel(it))
+            assertFalse(it, AnthropicKlient.wirktWieAnthropicSchluessel(it))
+        }
+    }
+
+    @Test
+    fun foreignKeyOnlyWarnsAndLeavesTheVerdictToTheApi() {
+        assertTrue(AnthropicKlient.istApiSchluessel("sk-proj-abc"))
+        assertFalse(AnthropicKlient.wirktWieAnthropicSchluessel("sk-proj-abc"))
     }
 }

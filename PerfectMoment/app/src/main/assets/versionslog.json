@@ -19,6 +19,7 @@
     { "versionCode": 121, "versionName": "0.1.132", "stand": "01.11.2026, 21:48 Uhr", "notiz": "Review-Feinschliff: Auch die vorgeschlagenen Eingangsfragen kommen aus der Fülle, und Fragen, die noch suchen, in die Zukunft zeigen oder als Wie-Frage im Präsens stehen, werden zuverlässiger verworfen; selbst angelegte Skills bleiben davon unberührt." },
     { "versionCode": 122, "versionName": "0.1.133", "stand": "01.11.2026, 21:54 Uhr", "notiz": "Der Anthropic-API-Schlüssel steht jetzt direkt in den Einstellungen unter KI-Verbindung, damit Claude Opus 5.5 und die anderen Claude-Modelle ohne ChatGPT-Verbindung nutzbar sind." },
     { "versionCode": 123, "versionName": "0.1.134", "stand": "01.11.2026, 21:58 Uhr", "notiz": "Review-Feinschliff: Ein falscher Schlüssel fällt schon beim Eintragen auf, Hinweise und Fehlermeldung führen direkt zum Schlüsselfeld, und die Tastatur merkt sich Schlüssel nicht mehr." },
-    { "versionCode": 124, "versionName": "0.1.135", "stand": "01.11.2026, 22:03 Uhr", "notiz": "Anthropic-API-Schlüssel, die mit sk-ant-user beginnen, werden jetzt angenommen statt fälschlich abgelehnt." }
+    { "versionCode": 124, "versionName": "0.1.135", "stand": "01.11.2026, 22:03 Uhr", "notiz": "Anthropic-API-Schlüssel, die mit sk-ant-user beginnen, werden jetzt angenommen statt fälschlich abgelehnt." },
+    { "versionCode": 125, "versionName": "0.1.136", "stand": "01.11.2026, 22:07 Uhr", "notiz": "Bei eingeschaltetem Fingerabdruckschutz bleiben alle API-Schlüssel verdeckt und gesperrt, bis du sie per Fingerabdruck freigibst; auch das Ausschalten des Schutzes verlangt den Fingerabdruck. Ein ungewöhnlicher Anthropic-Schlüssel wird nur noch mit einem Hinweis markiert, nicht mehr gesperrt." }
   ]
 }

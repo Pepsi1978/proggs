@@ -103,7 +103,7 @@ enum class VoiceRecorderState { IDLE, RECORDING, SAVING }
 enum class RecordingTarget { START, INTRO, HOOK, READING_QUESTION }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
 
-const val ANTHROPIC_KEY_FEHLT = "Bitte zuerst den Anthropic-API-Schlüssel unter KI-Verbindung eintragen."
+const val ANTHROPIC_KEY_FEHLT = "Bitte zuerst den Anthropic-API-Schlüssel unter KI-Verbindung eintragen oder korrigieren."
 enum class HistorySort(val label: String) {
     MOST_USED("Am häufigsten"),
     NEWEST("Neueste"),
@@ -235,6 +235,7 @@ class AppViewModel(
     val sessionState: StateFlow<SessionState?> = sessionController.state
     val theme: StateFlow<String> = settings.themeFlow
     val appLockEnabled: StateFlow<Boolean> = settings.appLockEnabledFlow
+    val apiKeysUnlocked: StateFlow<Boolean> = container.appLockManager.keysUnlocked
 
     var screen by mutableStateOf(
         if (sessionController.runtime.value != null) AppScreen.SESSION else AppScreen.START,
@@ -387,6 +388,8 @@ class AppViewModel(
     var anthropicKey by mutableStateOf(AnthropicKlient.schluessel(appContext))
         private set
     val anthropicKeyNutzbar: Boolean get() = AnthropicKlient.istApiSchluessel(anthropicKey)
+    val anthropicKeyFalschHinweis: Boolean
+        get() = anthropicKey.isNotBlank() && !AnthropicKlient.wirktWieAnthropicSchluessel(anthropicKey)
     var showAnthropicKey by mutableStateOf(false)
         private set
     /** Gesetzt, wenn die Einstellungen bis zum Schlüsselfeld scrollen sollen. */
@@ -2389,7 +2392,19 @@ class AppViewModel(
         message = value
     }
 
-    fun disableAppLock() = container.appLockManager.disable()
+    fun lockApiKeys() {
+        container.appLockManager.lockKeys()
+        hideApiKeys()
+    }
+
+    /** Nach einer neuen Freigabe stehen die Schlüssel wieder verdeckt da. */
+    fun hideApiKeys() {
+        showGoogleKey = false
+        showGroqKey = false
+        showQwenKey = false
+        showNeueKeys = false
+        showAnthropicKey = false
+    }
 
     private fun refreshRawData() {
         viewModelScope.launch {

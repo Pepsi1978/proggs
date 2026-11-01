@@ -85,6 +85,7 @@ fun PerfectMomentApp(
     copyDeviceCode: (String) -> Unit,
     openDevicePage: (String) -> Unit,
     toggleAppLock: (Boolean) -> Unit,
+    unlockApiKeys: () -> Unit,
 ) {
     val runtime by viewModel.sessionRuntime.collectAsStateWithLifecycle()
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
@@ -164,7 +165,9 @@ fun PerfectMomentApp(
                         microphonePermissionGranted,
                         requestMicrophonePermission,
                     )
-                    AppScreen.SETTINGS -> SettingsScreen(viewModel, appLockEnabled, toggleAppLock)
+                    AppScreen.SETTINGS -> ApiKeyLock(viewModel, appLockEnabled, unlockApiKeys) {
+                        SettingsScreen(viewModel, appLockEnabled, toggleAppLock)
+                    }
                     AppScreen.HOOKS -> HooksScreen(viewModel)
                     AppScreen.HOOK_EDITOR -> HookEditorScreen(
                         viewModel,

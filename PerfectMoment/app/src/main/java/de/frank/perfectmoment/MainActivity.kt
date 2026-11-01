@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import de.frank.perfectmoment.security.LockPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -168,6 +169,7 @@ class MainActivity : FragmentActivity() {
                             copyDeviceCode = ::copyDeviceCode,
                             openDevicePage = ::openDevicePage,
                             toggleAppLock = ::toggleAppLock,
+                            unlockApiKeys = ::unlockApiKeys,
                         )
                     }
                 }
@@ -207,24 +209,33 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun toggleAppLock(enabled: Boolean) {
-        if (!enabled) {
-            viewModel.disableAppLock()
-            return
+        // Auch das Ausschalten braucht den Fingerabdruck, sonst wäre die Schlüsselsperre mit einem Tipp umgangen.
+        if (enabled) {
+            requestFingerprint(LockPrompt.ENABLE_LOCK, "Fingerabdruckschutz einschalten")
+        } else {
+            requestFingerprint(LockPrompt.DISABLE_LOCK, "Fingerabdruckschutz ausschalten")
         }
+    }
+
+    private fun unlockApiKeys() {
+        requestFingerprint(LockPrompt.UNLOCK_KEYS, "API-Schlüssel freigeben")
+    }
+
+    private fun requestFingerprint(prompt: LockPrompt, title: String) {
         val availability = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
         if (availability != BiometricManager.BIOMETRIC_SUCCESS) {
             viewModel.showMessage(biometricUnavailableMessage(availability))
             return
         }
-        if (!container.appLockManager.beginPrompt(enabling = true)) return
-        fingerprintPrompt.authenticate(promptInfo("Fingerabdruckschutz einschalten"))
+        if (!container.appLockManager.beginPrompt(prompt)) return
+        fingerprintPrompt.authenticate(promptInfo(title))
     }
 
     private fun promptUnlock() {
         if (!container.settings.appLockEnabled || !container.appLockManager.locked.value) return
         val availability = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
         if (availability != BiometricManager.BIOMETRIC_SUCCESS) return
-        if (!container.appLockManager.beginPrompt(enabling = false)) return
+        if (!container.appLockManager.beginPrompt(LockPrompt.UNLOCK_APP)) return
         fingerprintPrompt.authenticate(promptInfo("Perfect Moment entsperren"))
     }
 

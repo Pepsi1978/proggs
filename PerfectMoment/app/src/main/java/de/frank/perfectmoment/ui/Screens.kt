@@ -87,6 +87,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -1717,6 +1719,7 @@ fun SettingsScreen(
                     visible = true,
                     onValueChange = viewModel::updateAzureRegion,
                     onToggleVisibility = { },
+                    secret = false,
                 )
                 SecureKeyRow(
                     label = "Groq-API",
@@ -1742,6 +1745,7 @@ fun SettingsScreen(
                     onValueChange = viewModel::updateQwenVoiceId,
                     onToggleVisibility = viewModel::toggleQwenKeyVisibility,
                     divider = false,
+                    secret = false,
                 )
             }
             SettingsSection("Spracheingabe · Offline") {
@@ -1787,9 +1791,9 @@ fun SettingsScreen(
                         onValueChange = viewModel::updateAnthropicKey,
                         onToggleVisibility = viewModel::toggleAnthropicKeyVisibility,
                     )
-                    if (viewModel.anthropicKey.isNotBlank() && !viewModel.anthropicKeyNutzbar) {
+                    if (viewModel.anthropicKeyFalschHinweis) {
                         Text(
-                            "Das ist kein Anthropic-API-Schlüssel. Er beginnt mit sk-ant-; Anmelde-Tokens eines Claude-Abos (sk-ant-oat) gehen hier nicht.",
+                            "Das sieht nicht nach einem Anthropic-API-Schlüssel aus. Er beginnt mit sk-ant-; Anmelde-Tokens eines Claude-Abos (sk-ant-oat) gehen hier nicht.",
                             color = colors.warning,
                             fontFamily = Inter,
                             fontSize = 12.sp,
@@ -2017,6 +2021,27 @@ private fun qwenVoiceLabel(voiceId: String): String = when {
     else -> Regex("^qwen-tts-vc-(.+?)-voice-").find(voiceId)?.groupValues?.get(1) ?: voiceId
 }
 
+/** Gesetzt, solange die API-Schlüssel gesperrt sind: startet die Freigabe per Fingerabdruck. */
+private val LocalApiKeyUnlock = compositionLocalOf<(() -> Unit)?> { null }
+
+/**
+ * Bei eingeschaltetem Fingerabdruckschutz bleiben die Schlüssel auch in der entsperrten App verdeckt,
+ * bis sie freigegeben sind. Beim Verlassen der Einstellungen sperren sie sich wieder.
+ */
+@Composable
+fun ApiKeyLock(
+    viewModel: AppViewModel,
+    appLockEnabled: Boolean,
+    unlockApiKeys: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val unlocked by viewModel.apiKeysUnlocked.collectAsStateWithLifecycle()
+    val locked = appLockEnabled && !unlocked
+    LaunchedEffect(locked) { if (locked) viewModel.hideApiKeys() }
+    DisposableEffect(Unit) { onDispose { viewModel.lockApiKeys() } }
+    CompositionLocalProvider(LocalApiKeyUnlock provides unlockApiKeys.takeIf { locked }, content = content)
+}
+
 @Composable
 private fun SecureKeyRow(
     label: String,
@@ -2026,16 +2051,38 @@ private fun SecureKeyRow(
     onValueChange: (String) -> Unit,
     onToggleVisibility: () -> Unit,
     divider: Boolean = true,
+    secret: Boolean = true,
 ) {
     val colors = LocalPmColors.current
+    val unlock = LocalApiKeyUnlock.current.takeIf { secret }
     Box {
         Row(
-            Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 20.dp),
+            Modifier.fillMaxWidth().height(68.dp)
+                .then(if (unlock != null) Modifier.pmClickable(onClick = unlock) else Modifier)
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
                 Text(label, color = colors.text1, fontFamily = Inter, fontSize = 15.sp)
                 Text(supporting, color = colors.text3, fontFamily = Inter, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            // Gesperrt gibt es kein Eingabefeld: Der Wert ist weder lesbar noch kopierbar oder änderbar.
+            if (unlock != null) {
+                Text(
+                    if (value.isBlank()) "Nicht hinterlegt" else "••••••••",
+                    color = colors.text2,
+                    fontFamily = Inter,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(126.dp),
+                )
+                Icon(
+                    Icons.Outlined.Lock,
+                    "Mit Fingerabdruck freigeben",
+                    tint = colors.goldDim,
+                    modifier = Modifier.padding(start = 10.dp).size(20.dp),
+                )
+                return@Row
             }
             BasicTextField(
                 value = value,

@@ -71,7 +71,8 @@ object AnthropicKlient {
 
     @Volatile private var speicher: SharedPreferences? = null
 
-    private fun speicher(context: Context): SharedPreferences = speicher ?: synchronized(this) {
+    /** Null, wenn der Keystore versagt: Dann wird lieber nichts gespeichert als der Schlüssel im Klartext. */
+    private fun speicher(context: Context): SharedPreferences? = speicher ?: synchronized(this) {
         speicher ?: runCatching {
             val key = MasterKey.Builder(context.applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
             EncryptedSharedPreferences.create(
@@ -79,27 +80,31 @@ object AnthropicKlient {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
-        }.getOrElse { context.applicationContext.getSharedPreferences("anthropic_zugang_einfach", Context.MODE_PRIVATE) }
-            .also { speicher = it }
+        }.getOrNull()?.also { speicher = it }
     }
 
     /** Anthropic-API-Schlüssel (sk-ant-…) von platform.claude.com. */
-    fun schluessel(context: Context): String = speicher(context).getString("api_key", "").orEmpty().trim()
+    fun schluessel(context: Context): String = speicher(context)?.getString("api_key", "").orEmpty().trim()
     fun hatSchluessel(context: Context): Boolean = istApiSchluessel(schluessel(context))
     /**
-     * Anthropic-Schlüssel haben verschiedene Präfixe (sk-ant-api…, sk-ant-user…), deshalb nicht auf eines festlegen.
-     * Ausgeschlossen sind nur fremde Schlüssel und Abo-Tokens (sk-ant-oat…), die als x-api-key nicht gelten.
+     * Gesperrt wird nur sicher Unbrauchbares: Abo-Tokens (sk-ant-oat…) gelten nicht als x-api-key, und Zeichen
+     * außerhalb von ASCII lässt OkHttp im Header scheitern, samt Schlüssel in der Fehlermeldung. Das Präfix ist nicht
+     * dokumentiert (Franks Schlüssel beginnt mit sk-ant-user), über alles andere entscheidet deshalb die API.
      */
-    fun istApiSchluessel(wert: String): Boolean = wert.trim().let { it.startsWith("sk-ant-") && !it.startsWith("sk-ant-oat") }
+    fun istApiSchluessel(wert: String): Boolean =
+        wert.isNotBlank() && !wert.startsWith("sk-ant-oat") && wert.all { it.code in 0x21..0x7E }
+
+    /** Nur für den Hinweis am Eingabefeld, sperrt nichts. */
+    fun wirktWieAnthropicSchluessel(wert: String): Boolean = istApiSchluessel(wert) && wert.startsWith("sk-ant-")
     fun schluesselSpeichern(context: Context, wert: String) {
-        speicher(context).edit().putString("api_key", wert.trim()).apply()
+        speicher(context)?.edit()?.putString("api_key", wert.trim())?.apply()
     }
 
     /** Gewählter Anbieter, für Prüfungen ohne Zugriff auf die Modellwahl („ist die KI bereit?“). */
     fun anbieter(context: Context): KiAnbieter =
-        if (speicher(context).getString("anbieter", null) == KiAnbieter.ANTHROPIC.name) KiAnbieter.ANTHROPIC else KiAnbieter.OPENAI
+        if (speicher(context)?.getString("anbieter", null) == KiAnbieter.ANTHROPIC.name) KiAnbieter.ANTHROPIC else KiAnbieter.OPENAI
     fun anbieterSetzen(context: Context, anbieter: KiAnbieter) {
-        speicher(context).edit().putString("anbieter", anbieter.name).apply()
+        speicher(context)?.edit()?.putString("anbieter", anbieter.name)?.apply()
     }
     /** Bereit zum Denken: bei Anthropic mit Schlüssel, sonst entscheidet [openAiVerbunden]. */
     fun bereit(context: Context, openAiVerbunden: Boolean): Boolean =
@@ -107,14 +112,14 @@ object AnthropicKlient {
 
     /** Zuletzt gewählter Anbieter und zuletzt gewähltes Claude-Modell, für Apps ohne eigenen Speicherplatz dafür. */
     fun letztesClaudeModell(context: Context): ClaudeModell =
-        ClaudeModell.von(speicher(context).getString("claude_modell", null)) ?: ClaudeModell.OPUS
+        ClaudeModell.von(speicher(context)?.getString("claude_modell", null)) ?: ClaudeModell.OPUS
     fun claudeModellMerken(context: Context, modell: ClaudeModell) {
-        speicher(context).edit().putString("claude_modell", modell.apiId).apply()
+        speicher(context)?.edit()?.putString("claude_modell", modell.apiId)?.apply()
     }
     fun letztesOpenAiModell(context: Context, standard: String): String =
-        speicher(context).getString("openai_modell", null) ?: standard
+        speicher(context)?.getString("openai_modell", null) ?: standard
     fun openAiModellMerken(context: Context, modell: String) {
-        speicher(context).edit().putString("openai_modell", modell).apply()
+        speicher(context)?.edit()?.putString("openai_modell", modell)?.apply()
     }
 
     /**
@@ -145,7 +150,7 @@ object AnthropicKlient {
     ): ClaudeAntwort = withContext(Dispatchers.IO) {
         val claude = ClaudeModell.von(modell) ?: ClaudeModell.OPUS
         val key = schluessel(context).takeIf(::istApiSchluessel)
-            ?: throw AnthropicFehler("Für ${claude.label} fehlt ein gültiger Anthropic-API-Schlüssel. Bitte in den Einstellungen eintragen.")
+            ?: throw AnthropicFehler("Für ${claude.label} fehlt ein gültiger Anthropic-API-Schlüssel. Bitte in den Einstellungen eintragen oder korrigieren.")
         var versuch = 0
         var mitFallback = claude != ClaudeModell.HAIKU
         while (true) {

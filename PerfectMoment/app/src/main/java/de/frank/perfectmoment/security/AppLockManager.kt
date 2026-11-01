@@ -4,16 +4,22 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import de.frank.perfectmoment.data.settings.SecureSettings
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Wofür der Fingerabdruck gerade abgefragt wird. */
+enum class LockPrompt { UNLOCK_APP, ENABLE_LOCK, DISABLE_LOCK, UNLOCK_KEYS }
+
 class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObserver {
-    private val promptActive = AtomicBoolean(false)
-    private val promptEnablesLock = AtomicBoolean(false)
+    private val pendingPrompt = AtomicReference<LockPrompt?>(null)
     private val _locked = MutableStateFlow(settings.appLockEnabled)
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
+
+    /** Die API-Schlüssel brauchen zusätzlich zur entsperrten App eine eigene Freigabe. */
+    private val _keysUnlocked = MutableStateFlow(false)
+    val keysUnlocked: StateFlow<Boolean> = _keysUnlocked.asStateFlow()
 
     fun start() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
@@ -23,27 +29,35 @@ class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObs
         if (settings.appLockEnabled) _locked.value = true
     }
 
-    fun beginPrompt(enabling: Boolean): Boolean {
-        if (!promptActive.compareAndSet(false, true)) return false
-        promptEnablesLock.set(enabling)
-        return true
+    override fun onStop(owner: LifecycleOwner) {
+        lockKeys()
     }
 
+    fun beginPrompt(prompt: LockPrompt): Boolean = pendingPrompt.compareAndSet(null, prompt)
+
     fun finishAuthentication(success: Boolean) {
-        val enabling = promptEnablesLock.getAndSet(false)
-        promptActive.set(false)
-        if (success && enabling) {
-            settings.appLockEnabled = true
-            _locked.value = false
-        } else if (success && settings.appLockEnabled) {
-            _locked.value = false
+        val prompt = pendingPrompt.getAndSet(null)
+        if (!success) return
+        when (prompt) {
+            LockPrompt.ENABLE_LOCK -> {
+                settings.appLockEnabled = true
+                _keysUnlocked.value = false
+                _locked.value = false
+            }
+            LockPrompt.UNLOCK_APP -> if (settings.appLockEnabled) _locked.value = false
+            LockPrompt.DISABLE_LOCK -> disable()
+            LockPrompt.UNLOCK_KEYS -> if (settings.appLockEnabled) _keysUnlocked.value = true
+            null -> Unit
         }
     }
 
-    fun disable() {
-        promptActive.set(false)
-        promptEnablesLock.set(false)
+    fun lockKeys() {
+        _keysUnlocked.value = false
+    }
+
+    private fun disable() {
         settings.appLockEnabled = false
+        _keysUnlocked.value = false
         _locked.value = false
     }
 }
