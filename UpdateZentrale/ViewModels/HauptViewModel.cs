@@ -716,6 +716,12 @@ public sealed partial class HauptViewModel : ObservableObject
         var laufend = new List<(string Name, string Zeile)>();
         var fertig = 0;
         var cliHinweis = "";
+        var uebergabeHinweise = new List<string>();
+        var offeneFehler = new List<(ProgrammEintrag Eintrag, UpdateBericht Bericht)>();
+        // Failures go to a session at once. Only while the own tools and the CLI-critical updates are
+        // still ahead do they wait: those steps ask to close all terminals and would end that session.
+        var fehlerHalten = plan.Any(s => s.Phase <= Sammelplan.PhaseCli);
+        string? abschlussStatus = null;
         PruefGesamt = Math.Max(plan.Count, 1);
         PruefFertig = 0;
         using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, laufName + ": " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
@@ -730,8 +736,44 @@ public sealed partial class HauptViewModel : ObservableObject
         {
             PruefFertig = fertig;
             KopfStatus = laufName + ": " + (versatz + fertig) + " von " + gesamtZahl + " fertig, " + laufend.Count + " laufen gerade"
-                         + " – seit " + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + "." + cliHinweis;
+                         + " – seit " + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + "." + cliHinweis + UebergabeText();
             LaufDetail = string.Join("\n", laufend.Select(l => l.Zeile));
+        }
+
+        string UebergabeText() => string.Concat(uebergabeHinweise.Select(h => "  ·  " + h));
+
+        void FehlerFreigeben()
+        {
+            fehlerHalten = false;
+            if (offeneFehler.Count == 0) return;
+            var faelle = offeneFehler.ToList();
+            offeneFehler.Clear();
+            _ = FehlerUebergebenAsync(faelle);
+        }
+
+        // Fire and forget: a slow launcher must hold up neither the other updates nor the batch's ownership.
+        async Task FehlerUebergebenAsync(List<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
+        {
+            string hinweis;
+            try
+            {
+                var ergebnis = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
+                hinweis = ergebnis.Problem
+                          ?? (ergebnis.Gestartet
+                              ? "Fehler von " + string.Join(", ", faelle.Select(f => f.Bericht.Name)) + " automatisch an Claude Code übergeben."
+                              : ClaudeUebergabe.SperrHinweis);
+            }
+            catch (Exception diagAusnahme)
+            {
+                Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
+                hinweis = "Übergabe an Claude Code fehlgeschlagen: " + diagAusnahme.Message;
+            }
+
+            if (uebergabeHinweise.Contains(hinweis)) return;
+            uebergabeHinweise.Add(hinweis);
+            if (abschlussStatus is null) Anzeigen();
+            // Something else ran meanwhile: do not falsify its status with this batch's result.
+            else if (KopfStatus == abschlussStatus) KopfStatus = abschlussStatus = abschlussStatus + "  ·  " + hinweis;
         }
 
         void Abschluss(string ereignis) => Protokollierung.SammellaufSchreiben(new
@@ -753,6 +795,11 @@ public sealed partial class HauptViewModel : ObservableObject
             try
             {
                 bericht = await s.Programm.AktualisierenImSammelAsync(besitz, new SammelKontext(sammelId, s.Phase, position));
+                if (bericht is not null && ClaudeUebergabe.AutomatischRelevant(bericht))
+                {
+                    offeneFehler.Add((s.Programm.Eintrag, bericht));
+                    if (!fehlerHalten) FehlerFreigeben();
+                }
                 return bericht;
             }
             finally
@@ -808,6 +855,7 @@ public sealed partial class HauptViewModel : ObservableObject
                 _einstellungen.Speichern();
             }
 
+            var letzteHaltephase = rest.Where(s => s.Phase <= Sammelplan.PhaseCli).Select(s => s.Phase).DefaultIfEmpty(0).Max();
             foreach (var phase in rest.GroupBy(s => s.Phase).OrderBy(g => g.Key))
             {
                 var schritte = phase.ToList();
@@ -828,6 +876,7 @@ public sealed partial class HauptViewModel : ObservableObject
                         fertig += schritte.Count;
                         cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen.";
                         Anzeigen();
+                        if (phase.Key >= letzteHaltephase) FehlerFreigeben();
                         continue;
                     }
                 }
@@ -863,13 +912,16 @@ public sealed partial class HauptViewModel : ObservableObject
                     Anzeigen();
                     Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.cli_fertig", KopfStatus, sammelId);
                 }
+
+                if (phase.Key >= letzteHaltephase) FehlerFreigeben();
             }
 
             var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
             KopfStatus = laufName + " sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
                          + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".")
                          + (cliHinweis.Contains("übersprungen") ? cliHinweis : "")
-                         + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "");
+                         + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "")
+                         + UebergabeText();
             vorgang.Beenden("abgeschlossen", KopfStatus);
 
         }
@@ -879,22 +931,9 @@ public sealed partial class HauptViewModel : ObservableObject
             LaeuftSammelvorgang = false;
             LaufDetail = "";
             SortierungAnwenden();
-        }
-
-        // Erst am Ende, ausserhalb des Sammelbesitzes und in EINER Sitzung: mitten im Lauf koennten
-        // spaetere Schritte (Terminal, CLI, Launcher) die Sitzung beenden, mehrere Sitzungen kaemen sich
-        // auf main in die Quere, und ein langsamer Launcher soll keine neuen Updates blockieren.
-        var faelle = plan.Where(s => s.Programm.LetzterBericht is { } b && b.SammelId == sammelId)
-                         .Select(s => (s.Programm.Eintrag, s.Programm.LetzterBericht!)).ToList();
-        if (faelle.Any(f => ClaudeUebergabe.AutomatischRelevant(f.Item2)))
-        {
-            var zusammenfassung = KopfStatus;
-            var uebergabe = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
-            // Inzwischen lief schon etwas anderes: dessen Status nicht mit dem alten Ergebnis verfaelschen.
-            if (KopfStatus != zusammenfassung) return;
-            if (uebergabe.Problem is not null) KopfStatus += "  ·  " + uebergabe.Problem;
-            else if (uebergabe.Gestartet) KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
-            else KopfStatus += "  ·  " + ClaudeUebergabe.SperrHinweis;
+            // Also after an exception in the batch: what is still held must not get lost with it.
+            abschlussStatus = KopfStatus;
+            FehlerFreigeben();
         }
     }
 

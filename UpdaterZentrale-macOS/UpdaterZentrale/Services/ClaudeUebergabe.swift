@@ -24,8 +24,9 @@ enum ClaudeUebergabe {
     /// tells them how to share main. Who comes later waits and is then checked against the lock.
     @MainActor private static var automatischLaeuft = false
 
-    /// Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".
-    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.ergebnis == .fehlgeschlagen }
+    /// Jeder Lauf, den die Karte als Fehler zeigt, auch "nicht verifiziert": das Werkzeug meldete Erfolg,
+    /// der Stand aenderte sich aber nicht.
+    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.istFehler }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
     struct AutoErgebnis { var gestartet = false; var problem: String? }
@@ -58,6 +59,8 @@ enum ClaudeUebergabe {
         for (eintrag, _) in offen { einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date() }
         einstellungen.speichern()
         let (problem, vielleicht) = await startenKern(offen)
+        Diagnose.ereignis(problem == nil ? .info : .warnung, "uebergabe", "auto.start", problem ?? "Sitzung gestartet",
+                          ["programme": offen.map(\.0.id).joined(separator: ",")])
         // Unclear (the launcher did not answer): the session usually runs anyway, so the mark stays.
         if problem != nil && !vielleicht {
             for ((eintrag, _), alt) in zip(offen, bisher) {
@@ -185,7 +188,8 @@ enum ClaudeUebergabe {
         t += "Regeln für diese Sitzung:\n"
         t += "- Beende andere laufende Programme nicht ohne Rückfrage. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
         t += "- Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.\n"
-        t += "- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.\n\n"
+        t += "- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.\n"
+        t += "- Die Updater-Zentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (brew, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden.\n\n"
         for (eintrag, bericht) in faelle {
             t += faelle.count > 1 ? "\n=== \(bericht.name) ===\n" : ""
             t += "Programm: \(bericht.name) (Id \(eintrag.id), Art \(eintrag.art))\n"

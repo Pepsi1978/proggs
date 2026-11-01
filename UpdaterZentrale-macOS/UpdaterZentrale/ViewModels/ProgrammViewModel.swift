@@ -551,7 +551,7 @@ final class ProgrammViewModel {
             fortschritt.berichte(Self.abschlussZeile(bericht) + "  (Dauer " + Protokollierung.dauerText(dauer) + ")")
             Protokollierung.laufBeenden(&bericht)
             self.letzterBericht = bericht
-            // Im Sammellauf uebergibt der Sammellauf am Ende alle Fehler in EINER Sitzung.
+            // Im Sammellauf uebergibt der Sammellauf, sobald kein CLI-kritischer Schritt mehr aussteht.
             if kontext == nil && ClaudeUebergabe.automatischRelevant(bericht) {
                 Task { await self.anClaudeUebergeben(automatisch: true) }
             }

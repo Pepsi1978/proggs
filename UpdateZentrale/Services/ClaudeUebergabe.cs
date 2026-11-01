@@ -47,10 +47,13 @@ public static class ClaudeUebergabe
     /// </summary>
     private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
-    /// <summary>Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".</summary>
-    /// A line too slow for the tool's own download deadline is no code problem: no session for that.
+    /// <summary>
+    /// Every run the card shows as an error, including "not verified": the tool claimed success but the
+    /// state did not change. Only a line too slow for the tool's own download deadline is no code
+    /// problem and gets no session.
+    /// </summary>
     public static bool AutomatischRelevant(UpdateBericht bericht)
-        => bericht.Ergebnis == LaufErgebnis.Fehlgeschlagen
+        => bericht.IstFehler
            && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal);
 
     /// <param name="Gestartet">Eine Sitzung wurde (vermutlich) gestartet.</param>
@@ -86,6 +89,9 @@ public static class ClaudeUebergabe
             foreach (var f in offen) einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
             einstellungen.Speichern();
             var (problem, vielleicht) = await StartenKernAsync(offen);
+            Diagnose.Ereignis(problem is null ? Schwere.Info : Schwere.Warnung, "uebergabe", "auto.start",
+                              problem ?? "Sitzung gestartet", null,
+                              new Dictionary<string, object?> { ["programme"] = string.Join(",", offen.Select(f => f.Eintrag.Id)) });
             // Unclear (the launcher did not answer): the session usually runs anyway, so the mark stays.
             if (problem is not null && !vielleicht)
             {
@@ -233,6 +239,7 @@ public static class ClaudeUebergabe
         sb.AppendLine("- " + BeendenHinweis + " Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
         sb.AppendLine("- " + RueckfrageHinweis);
         sb.AppendLine("- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.");
+        sb.AppendLine("- Die UpdateZentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (winget, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden.");
         foreach (var (eintrag, bericht) in faelle)
         {
             sb.AppendLine();

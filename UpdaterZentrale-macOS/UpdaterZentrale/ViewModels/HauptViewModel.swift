@@ -516,6 +516,12 @@ final class HauptViewModel {
         var laufend: [(name: String, zeile: String)] = []
         var fertig = 0
         var cliHinweis = ""
+        var uebergabeHinweise: [String] = []
+        var offeneFehler: [(ProgrammEintrag, UpdateBericht)] = []
+        // Fehler gehen sofort an eine Sitzung. Nur solange die eigenen Werkzeuge und die CLI-kritischen
+        // Updates noch ausstehen, warten sie: diese Schritte wollen alle Terminals zu und beendeten die Sitzung.
+        var fehlerHalten = plan.contains { $0.phase <= Sammelplan.phaseCli }
+        var abschlussStatus: String?
         fortschrittGesamt = max(plan.count, 1)
         fortschrittFertig = 0
         let vorgang = Diagnose.vorgangBeginnen("sammelupdate", nil, laufName + ": " + plan.map(\.programm.eintrag.id).joined(separator: ", "))
@@ -527,11 +533,45 @@ final class HauptViewModel {
             }
         ])
 
+        func uebergabeText() -> String { uebergabeHinweise.map { "  ·  " + $0 }.joined() }
+
         func anzeigen() {
             fortschrittFertig = fertig
             kopfStatus = laufName + ": \(versatz + fertig) von \(gesamtZahl) fertig, \(laufend.count) laufen gerade"
-                + " – seit " + Protokollierung.dauerText(Date().timeIntervalSince(gesamtBeginn)) + "." + cliHinweis
+                + " – seit " + Protokollierung.dauerText(Date().timeIntervalSince(gesamtBeginn)) + "." + cliHinweis + uebergabeText()
             laufDetail = laufend.map(\.zeile).joined(separator: "\n")
+        }
+
+        func uebergabeMelden(_ hinweis: String) {
+            guard !uebergabeHinweise.contains(hinweis) else { return }
+            uebergabeHinweise.append(hinweis)
+            if let status = abschlussStatus {
+                // Inzwischen lief schon etwas anderes: dessen Status nicht mit diesem Ergebnis verfaelschen.
+                if kopfStatus == status {
+                    kopfStatus = status + "  ·  " + hinweis
+                    abschlussStatus = kopfStatus
+                }
+            } else {
+                anzeigen()
+            }
+        }
+
+        // Eigene Aufgabe: ein langsamer Launcher haelt weder die anderen Updates noch den Sammelbesitz auf.
+        func fehlerFreigeben() {
+            fehlerHalten = false
+            guard !offeneFehler.isEmpty else { return }
+            let faelle = offeneFehler
+            offeneFehler = []
+            Task { @MainActor in
+                let ergebnis = await ClaudeUebergabe.automatischStarten(faelle, self.einstellungen)
+                if let problem = ergebnis.problem {
+                    uebergabeMelden(problem)
+                } else if ergebnis.gestartet {
+                    uebergabeMelden("Fehler von " + faelle.map(\.1.name).joined(separator: ", ") + " automatisch an Claude Code übergeben.")
+                } else {
+                    uebergabeMelden(ClaudeUebergabe.sperrHinweis)
+                }
+            }
         }
 
         func abschluss(_ ereignis: String) {
@@ -551,6 +591,10 @@ final class HauptViewModel {
             anzeigen()
             let beginn = Date()
             let bericht = await s.programm.aktualisierenImSammel(besitz, SammelKontext(id: sammelId, phase: s.phase, position: position))
+            if let bericht, ClaudeUebergabe.automatischRelevant(bericht) {
+                offeneFehler.append((s.programm.eintrag, bericht))
+                if !fehlerHalten { fehlerFreigeben() }
+            }
             laufend.removeAll { $0.name == s.programm.name }
             fertig += 1
             anzeigen()
@@ -606,6 +650,7 @@ final class HauptViewModel {
         }
 
         let phasen = Array(Set(rest.map(\.phase))).sorted()
+        let letzteHaltephase = phasen.filter { $0 <= Sammelplan.phaseCli }.max() ?? 0
         for phase in phasen {
             let schritte = rest.filter { $0.phase == phase }
 
@@ -624,6 +669,7 @@ final class HauptViewModel {
                     fertig += schritte.count
                     cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen."
                     anzeigen()
+                    if phase >= letzteHaltephase { fehlerFreigeben() }
                     continue
                 }
             }
@@ -659,6 +705,8 @@ final class HauptViewModel {
                 anzeigen()
                 Diagnose.ereignis(.info, "sammel", "sammel.cli_fertig", kopfStatus)
             }
+
+            if phase >= letzteHaltephase { fehlerFreigeben() }
         }
 
         let fehler = laeufe.filter { ["Fehlgeschlagen", "Nicht verifiziert", "ohne Bericht"].contains($0.ergebnis) }.count
@@ -666,33 +714,12 @@ final class HauptViewModel {
             + (fehler > 0 ? " – \(fehler) mit Problemen, siehe rote Karten." : ".")
             + (cliHinweis.contains("übersprungen") ? cliHinweis : "")
             + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "")
+            + uebergabeText()
         vorgang.beenden("abgeschlossen", kopfStatus)
         abschluss(ende)
         laeuftSammelvorgang = false
-
-        // Erst am Ende und in EINER Sitzung: mitten im Lauf koennten spaetere Schritte (Terminal,
-        // CLI, Launcher) die Sitzung wieder beenden, und mehrere Sitzungen kaemen sich auf main in die Quere.
-        let faelle = plan.compactMap { s -> (ProgrammEintrag, UpdateBericht)? in
-            guard let b = s.programm.letzterBericht, b.sammelId == sammelId else { return nil }
-            return (s.programm.eintrag, b)
-        }
-        // Eigene Aufgabe: der Sammelbesitz (defer oben) ist dann schon frei, ein langsamer Launcher
-        // blockiert keine neuen Updates.
-        if faelle.contains(where: { ClaudeUebergabe.automatischRelevant($0.1) }) {
-            let zusammenfassung = kopfStatus
-            Task { @MainActor in
-                let uebergabe = await ClaudeUebergabe.automatischStarten(faelle, self.einstellungen)
-                // Inzwischen lief schon etwas anderes: dessen Status nicht mit dem alten Ergebnis verfaelschen.
-                guard self.kopfStatus == zusammenfassung else { return }
-                if let problem = uebergabe.problem {
-                    self.kopfStatus += "  ·  " + problem
-                } else if uebergabe.gestartet {
-                    self.kopfStatus += "  ·  Fehler automatisch an Claude Code übergeben."
-                } else {
-                    self.kopfStatus += "  ·  " + ClaudeUebergabe.sperrHinweis
-                }
-            }
-        }
+        abschlussStatus = kopfStatus
+        fehlerFreigeben()
         laufDetail = ""
         if nachDauerSortieren { sortierungAnwenden() }
     }

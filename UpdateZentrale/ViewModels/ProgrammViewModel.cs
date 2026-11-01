@@ -876,7 +876,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
-            // Im Sammellauf uebergibt der Sammellauf am Ende alle Fehler in EINER Sitzung.
+            // In a batch the batch hands the failure over as soon as no CLI-critical step is ahead.
             if (kontext is null && ClaudeUebergabe.AutomatischRelevant(bericht)) _ = AutomatischUebergebenAsync(bericht);
             if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Protokollierung.Messwert(bericht) is { } messwert)
                 DauernSetzen(_dauern.Append(messwert));
@@ -1085,7 +1085,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             };
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
-            // Inside a batch the batch hands over all its failures in one session at its end.
+            // In a batch the batch hands the failure over as soon as no CLI-critical step is ahead.
             if (kontext is null && ClaudeUebergabe.AutomatischRelevant(bericht)) _ = AutomatischUebergebenAsync(bericht);
         }
         catch (Exception diagAusnahme)
