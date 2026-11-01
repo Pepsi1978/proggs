@@ -24,6 +24,8 @@ final class Guthaben {
     var macAbgelaufen: Bool { macAbgelehntAm != nil }
     private var macAbgelehntAm: Date?
     var anmeldungOffen = false
+    /// Die Google-Anmeldung dieses Macs wurde abgelehnt; der Stand kommt solange vom Handy.
+    var googleAbgelaufen = false
     /// Nur wenn neu anmelden hilft: Ein Netzfehler oder die Bot-Abwehr zählen nicht, ein alter Stand vom Handy nach dessen Ablehnung schon.
     var konsoleGetrennt: Bool {
         if macAbgelaufen { return anthropicRest == nil || anthropicHinweis != nil }
@@ -104,9 +106,26 @@ final class Guthaben {
     }
 
     private func googleLaden(frisch: Bool) async {
+        if WebSitzungen.angemeldet("google") {
+            do {
+                googleUebernehmen(try await GoogleSitzung.stand(frisch: frisch))
+                googleAbgelaufen = false
+                return
+            } catch GoogleSitzung.Fehler.abgelaufen {
+                googleAbgelaufen = true
+                log("guthaben", GoogleSitzung.Fehler.abgelaufen.localizedDescription, wo: "Konsolen")
+            } catch {
+                log("fehler", "Google-Guthaben am Mac nicht abrufbar", wo: "Konsolen", fehler: error.localizedDescription)
+            }
+        } else { googleAbgelaufen = false }
         let r = await McpKlient.shared.rufe("google_guthaben", frisch ? ["frisch": true] : [:], sekunden: 60)
         let t = McpKlient.ohneKontextHinweis(r.text)
-        guard !r.fehler, let rest = Self.zahl(t, #"übrig ([0-9.,]+) "#) else { googleHinweis = t; return }
+        if r.fehler { googleHinweis = t; return }
+        googleUebernehmen(t)
+    }
+
+    private func googleUebernehmen(_ t: String) {
+        guard let rest = Self.zahl(t, #"übrig ([0-9.,]+) "#) else { googleHinweis = t; return }
         googleHinweis = nil
         googleText = t
         googleRest = rest

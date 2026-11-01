@@ -93,7 +93,8 @@ final class LiveTon: @unchecked Sendable {
             } catch {
                 letzterFehler = error
                 log("fehler", "Live: Tonstart Versuch \(versuch + 1) fehlgeschlagen: \(error.localizedDescription)")
-                versuch += (error as NSError).domain == "JarvisObjC" ? 2 : 1
+                // Kein Tonlauf: gleich zum Versuch ohne Echounterdrückung, nie darüber hinaus.
+                versuch = (error as NSError).domain == "JarvisObjC" ? max(versuch + 1, 2) : versuch + 1
             }
         }
         tonAbbauen()   // Die Engine kann trotz Fehler laufen, das Mikrofon darf nicht offen bleiben.

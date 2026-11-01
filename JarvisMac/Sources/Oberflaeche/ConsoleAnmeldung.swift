@@ -231,17 +231,24 @@ struct ConsoleAnmeldungAnsicht: View {
                 Button("Schließen") { guthaben.anmeldungOffen = false }
             }
             .padding(14)
-            ConsoleBrowser { guthaben.anmeldungOffen = false }
+            ConsoleBrowser(fertig: { guthaben.anmeldungOffen = false })
         }
         .frame(width: 560, height: 740)
         .foregroundStyle(Farbe.text)
     }
 }
 
-private struct ConsoleBrowser: NSViewRepresentable {
-    let fertig: () -> Void
+/// Für die Knöpfe der anderen Konsolen: der laufende Browser, solange er steht.
+@MainActor final class BrowserGriff { weak var web: WKWebView? }
 
-    func makeCoordinator() -> Koordinator { Koordinator(fertig: fertig) }
+/// Ohne start und erkannt die Anthropic-Konsole; sonst prüft erkannt je Sekunde, ob die Anmeldung steht, und sichert sie selbst.
+struct ConsoleBrowser: NSViewRepresentable {
+    let fertig: () -> Void
+    var start: URL? = nil
+    var erkannt: (@MainActor (WKWebView) async -> Bool)? = nil
+    var griff: BrowserGriff? = nil
+
+    func makeCoordinator() -> Koordinator { Koordinator(fertig: fertig, start: start, erkannt: erkannt, griff: griff) }
 
     func makeNSView(context: Context) -> NSView {
         let rahmen = NSView()
@@ -263,7 +270,13 @@ private struct ConsoleBrowser: NSViewRepresentable {
         private var popups: [WKWebView] = []
         private var popupKnopf: NSButton?
         private var erledigt = false
-        init(fertig: @escaping () -> Void) { self.fertig = fertig }
+        private var prueftGerade = false
+        private let start: URL?
+        private let erkannt: (@MainActor (WKWebView) async -> Bool)?
+        private let griff: BrowserGriff?
+        init(fertig: @escaping () -> Void, start: URL?, erkannt: (@MainActor (WKWebView) async -> Bool)?, griff: BrowserGriff?) {
+            self.fertig = fertig; self.start = start; self.erkannt = erkannt; self.griff = griff
+        }
 
         func starten(in rahmen: NSView) {
             self.rahmen = rahmen
@@ -271,7 +284,8 @@ private struct ConsoleBrowser: NSViewRepresentable {
             konfiguration.websiteDataStore = speicher
             let web = browser(konfiguration, in: rahmen)
             haupt = web
-            web.load(URLRequest(url: ConsoleSitzung.loginURL))
+            griff?.web = web
+            web.load(URLRequest(url: start ?? ConsoleSitzung.loginURL))
             // Die Console wechselt nach der Anmeldung per Client-Navigation, und das Cookie kann später kommen als die neue Adresse: regelmäßig nachsehen.
             wache = Task { [weak self] in
                 while !Task.isCancelled {
@@ -292,6 +306,16 @@ private struct ConsoleBrowser: NSViewRepresentable {
         }
 
         private func pruefen() async {
+            if let erkannt {
+                guard !erledigt, !prueftGerade, let web = haupt else { return }
+                prueftGerade = true
+                defer { prueftGerade = false }
+                guard await erkannt(web), !erledigt else { return }
+                erledigt = true
+                wache?.cancel()
+                fertig()
+                return
+            }
             guard !erledigt, let u = haupt?.url?.absoluteString, u.hasPrefix("https://platform.claude.com"), !u.contains("/login") else { return }
             let cookies = await speicher.httpCookieStore.allCookies()
             guard !erledigt, cookies.contains(where: { $0.name == "sessionKey" }) else { return }

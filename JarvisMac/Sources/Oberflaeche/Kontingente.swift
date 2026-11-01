@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Einstellungen → Kontingente: Die Limits holt das Handy (`kontingente_lesen`), dort liegen auch die Anmeldungen. Der letzte Stand bleibt, wenn das Handy gerade nicht antwortet.
+/// Einstellungen → Kontingente: Mit eigener Anmeldung (Einstellungen → Konsolen) liest der Mac die Limits selbst, sonst holt sie das Handy (`kontingente_lesen`). Der letzte Stand bleibt, wenn eine Quelle gerade nicht antwortet.
 @MainActor @Observable
 final class Kontingente {
     static let shared = Kontingente()
@@ -19,6 +19,8 @@ final class Kontingente {
     var laedt = false
     /// Der Stand stammt vom letzten Programmlauf: „heute“ und das Tempo galten nur damals.
     var ausSpeicher = false
+    /// Diese Dienste stehen gerade vom Handy in der Liste.
+    var vomHandy: Set<String> = []
 
     init() {
         if let t = UserDefaults.standard.string(forKey: Self.speicher), let alt = Self.lies(t) { anbieter = alt; ausSpeicher = true }
@@ -29,19 +31,59 @@ final class Kontingente {
         if laedt && !frisch { return }
         while laedt { try? await Task.sleep(for: .milliseconds(300)) }
         laedt = true; defer { laedt = false }
+        var stand = Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var hier: [(id: String, titel: String)] = []
+        for d in KontingentQuellen.alle {
+            if await KontingentQuellen.hierMoeglich(d.id) { hier.append(d) }
+        }
+        var handyIds = Set(KontingentQuellen.alle.map(\.id)).subtracting(hier.map(\.id))
+        // Abgemeldet und vom Handy ohne Zahlen: Der alte Stand darf nicht bleiben.
+        for id in stand.keys where handyIds.contains(id) && !vomHandy.contains(id) { stand.removeValue(forKey: id) }
+        func zeige() {
+            anbieter = KontingentQuellen.alle.compactMap { stand[$0.id] }
+            vomHandy = handyIds
+        }
+        // Der Mac zuerst und nebeneinander: Das Handy kann bis zu 85 Sekunden brauchen und hält hier niemanden auf.
+        var handy: Task<(liste: [Anbieter]?, text: String), Never>? = handyIds.isEmpty ? nil : Task { await Self.vomHandyHolen(frisch: frisch) }
+        var abgelehnt: [String] = []
+        await withTaskGroup(of: Anbieter.self) { gruppe in
+            for d in hier { gruppe.addTask { await KontingentQuellen.lies(d.id, titel: d.titel, frisch: frisch) } }
+            for await a in gruppe {
+                stand[a.id] = a
+                if a.anmelden { abgelehnt.append(a.id) }
+                zeige()
+            }
+        }
+        // Abgelehnte Anmeldung am Mac: dann doch vom Handy, falls dort eine liegt.
+        if handy == nil && !abgelehnt.isEmpty { handy = Task { await Self.vomHandyHolen(frisch: frisch) } }
+        fehler = nil
+        if let handy {
+            let (liste, text) = await handy.value
+            if let liste {
+                for a in liste where handyIds.contains(a.id) || (abgelehnt.contains(a.id) && !a.limits.isEmpty) {
+                    stand[a.id] = a
+                    handyIds.insert(a.id)
+                }
+            } else {
+                if hier.isEmpty { fehler = text.isEmpty ? "Das Handy antwortet gerade nicht." : text }
+                log("fehler", "Kontingente vom Handy nicht abrufbar", wo: "Kontingente", fehler: text)
+            }
+        }
+        zeige()
+        ausSpeicher = false
+        let speicherbar: [JSONObjekt] = anbieter.map { a in
+            ["id": a.id, "titel": a.titel, "konto": a.konto, "hinweis": a.hinweis, "anmelden": a.anmelden, "stand": a.stand,
+             "limits": a.limits.map { l in ["name": l.name, "genutzt": l.genutzt, "resetSatz": l.resetSatz, "resetAm": l.resetAm, "resetSek": l.resetSek, "tempo": l.tempo, "zuSchnell": l.zuSchnell] as JSONObjekt }]
+        }
+        UserDefaults.standard.set(JSON.text(["anbieter": speicherbar] as JSONObjekt), forKey: Self.speicher)
+    }
+
+    private static func vomHandyHolen(frisch: Bool) async -> (liste: [Anbieter]?, text: String) {
         var argumente: JSONObjekt = ["json": true]
         if frisch { argumente["frisch"] = true }
         let r = await McpKlient.shared.rufe("kontingente_lesen", argumente, sekunden: 85)
         let t = McpKlient.ohneKontextHinweis(r.text)
-        guard let neu = Self.lies(t) else {
-            fehler = t.isEmpty ? "Das Handy antwortet gerade nicht." : t
-            log("fehler", "Kontingente nicht abrufbar", wo: "Kontingente", fehler: fehler)
-            return
-        }
-        fehler = nil
-        anbieter = neu
-        ausSpeicher = false
-        UserDefaults.standard.set(t, forKey: Self.speicher)
+        return (lies(t), t)
     }
 
     private static func lies(_ t: String) -> [Anbieter]? {
@@ -70,7 +112,7 @@ struct KontingenteAnsicht: View {
             if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
             else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
             ForEach(k.anbieter) { karte($0) }
-            Text("Die Anmeldungen liegen auf dem Handy: Einstellungen → Kontingente.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
+            Text("Anmelden unter Einstellungen → Konsolen. Ohne Anmeldung hier am Mac kommt der Stand vom Handy.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
         }
         .task { await k.laden() }
     }
@@ -84,7 +126,7 @@ struct KontingenteAnsicht: View {
                 if !a.konto.isEmpty { Text(a.konto).font(.jarvis(12)).foregroundStyle(Farbe.text3) }
                 ForEach(a.limits) { limit($0) }
                 if !a.hinweis.isEmpty {
-                    Text(a.hinweis + (a.anmelden ? " Anmelden auf dem Handy unter Einstellungen → Kontingente." : "")).font(.jarvis(12)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true)
+                    Text(a.hinweis + (a.anmelden ? (k.vomHandy.contains(a.id) ? " Anmelden unter Einstellungen → Konsolen oder auf dem Handy." : " Anmelden unter Einstellungen → Konsolen.") : "")).font(.jarvis(12)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true)
                 }
                 if !a.stand.isEmpty { Text(a.stand).font(.jarvis(11)).foregroundStyle(Farbe.text3) }
             }

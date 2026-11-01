@@ -66,6 +66,7 @@ struct LiveZeile: Identifiable, Hashable {
         ausstehend = []
         naechsteJarvisVomAgenten = 0
         offeneAuftraege = 0
+        auftragsKette = nil   // Eine neue Sitzung wartet nicht auf die Frage einer alten.
         gespraech = g
         zustand = .verbindet
         Stimme.shared.stopp()
@@ -265,7 +266,8 @@ struct LiveZeile: Identifiable, Hashable {
             var zwischenstand = false
             let wache = Task { @MainActor in
                 try? await Task.sleep(for: .seconds(hoheStufe ? 120 : 60))
-                guard !fertig, !Task.isCancelled, let s = self.sitzung else { return }
+                // Nur die eigene Sitzung: Die Kennung gilt nirgends sonst.
+                guard !fertig, !Task.isCancelled, self.sitzung === s else { return }
                 // Braucht Jarvis länger: Zwischenstand, die Arbeit läuft weiter und wird nachgereicht.
                 zwischenstand = true
                 s.ergebnis(kennung: kennung, text: LiveOptionen.dauertNoch)
@@ -274,11 +276,15 @@ struct LiveZeile: Identifiable, Hashable {
             let antwort = await JarvisAgent.shared.frage(frage, in: g, gesprochen: true)
             fertig = true
             wache.cancel()
-            self.offeneAuftraege = max(0, self.offeneAuftraege - 1)
-            self.letzteAktivitaet = Date()
+            // Spät fertig in einer neuen Sitzung: Deren Zähler und Stille-Ende gehen diesen Auftrag nichts an.
+            let eigeneSitzung = self.sitzung === s && self.aktiv
+            if eigeneSitzung {
+                self.offeneAuftraege = max(0, self.offeneAuftraege - 1)
+                self.letzteAktivitaet = Date()
+            }
             let text = antwort.isEmpty ? "Jarvis hat keine Antwort geliefert." : antwort
             let beendenGewuenscht = g.nachrichten.last(where: { $0.rolle == .jarvis })?.schritte.contains { $0.werkzeug == "sprachsession_beenden" } ?? false
-            if let s = self.sitzung, self.aktiv {
+            if eigeneSitzung {
                 self.naechsteJarvisVomAgenten += 1
                 let ok = zwischenstand ? s.nachreichen(kennung: kennung, text: text) : s.ergebnis(kennung: kennung, text: text)
                 if !ok { await Stimme.shared.sprich(text) }
