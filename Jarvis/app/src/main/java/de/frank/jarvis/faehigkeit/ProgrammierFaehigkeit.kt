@@ -385,7 +385,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
                         "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
                         "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac oder Windows-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
-                    "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh oder max (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
+                    "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh, max oder ultra (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
                     "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
                     "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: schnell."),
                     "cli" to text("Nur wenn Frank es gewählt oder gesagt hat: claude (Claude Code), codex (Codex CLI), opencode (OpenCode), kimi (Kimi Code CLI) oder " +
@@ -506,7 +506,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     v.start = null
                     return ausweg(e)
                 }
-                if (katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY) {
+                // Sol im per Knopf gewählten Codex CLI genauso: Nur Frank entscheidet das Review, nicht das Modell.
+                if (vorwahlCli == CLI_CODEX && !Regex("(?i)review").containsMatchIn(katalogWorte.orEmpty())) a.remove("review")
+                // Alle CLIs ohne eigene Review-Frage (Antigravity, Codex, Kimi Code).
+                if (katalog is OpenLauncherKatalog.Wahl && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE)) {
                     // Wie beim Modell: In der App zählt eine Review-Angabe nur, wenn Franks eigene Worte sie enthalten. Die Brücke nennt sie verbindlich seine Wahl.
                     if (!ausChatGpt && gespraech.isNotEmpty() && !Regex("(?i)review").containsMatchIn(katalogWorte.orEmpty())) { a.remove("review"); a.remove("review_umfang") }
                     if (a.opt("review") !is Boolean) a.remove("review")
@@ -566,7 +569,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
                     // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
                     modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
-                    wahl.isEmpty() -> ausweg(Ergebnis(fehltFuer(modell), fehler = true))
+                    wahl.isEmpty() -> ausweg(Ergebnis(fehltFuer(modell, cli), fehler = true))
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
@@ -691,7 +694,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Was fehlt, wenn keins der Ziele für [modell] bereit ist. */
-    private fun fehltFuer(modell: String) = if (modell == MODELL_SOL) codex.fehlt() else ziele.last().fehlt()
+    private fun fehltFuer(modell: String, cli: String = "") = when {
+        // Sol im OpenCode CLI läuft nur an einem Rechner, nie in Codex Cloud.
+        modell == MODELL_SOL && cli == CLI_OPENCODE -> ziele.first().fehlt()
+        modell == MODELL_SOL -> codex.fehlt()
+        else -> ziele.last().fehlt()
+    }
 
     /**
      * Ein Start, der auf Franks Wahl per Knopf wartet. [ursprung]: im Sprachgespräch gestellt (dann wird das Ende vorgelesen).
@@ -729,9 +737,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         gespraech.takeIf { it.isNotEmpty() }?.let { knopfStarts[it] }?.takeIf { System.currentTimeMillis() - it.zeit < KNOPF_FRIST_MS }
             ?.takeIf { runde.isEmpty() || it.runde.isEmpty() || it.runde == runde }
 
-    /** Die offene Antigravity-Review-Karte dieses Gesprächs und Franks kurze Antwort darauf, falls [worte] eine ist. */
+    /** Die offene Review-Karte dieses Gesprächs und Franks kurze Antwort darauf, falls [worte] eine ist. */
     private fun reviewPerSprache(gespraech: String, worte: String): Pair<String, String>? {
-        val offen = offeneWahlen.entries.filter { it.value.gespraech == gespraech && it.value.cli == CLI_ANTIGRAVITY &&
+        val offen = offeneWahlen.entries.filter { it.value.gespraech == gespraech &&
             it.value.stufe in listOf(STUFE_REVIEW, STUFE_REVIEW_UMFANG) && System.currentTimeMillis() - it.value.seit < VORWAHL_FOLGE_MS }
             .maxByOrNull { it.value.seit } ?: return null
         val t = worte.trim().lowercase(Locale.ROOT)
@@ -825,7 +833,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun wahlAnbieten(w: OffeneWahl): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         val review = w.stufe == STUFE_REVIEW
-        val festName = ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.cli == CLI_ANTIGRAVITY }
+        val festName = ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.cli == CLI_ANTIGRAVITY || w.gewaehlt.isNotEmpty() }
         if (w.cli == CLI_ANTIGRAVITY) {
             if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frag Frank kurz: „Review: Ja oder Nein?“, bei Ja danach: „Standard oder sehr ausführlich mit bis zu 100 Findings?“ " +
                 "Rufe programmieren danach mit demselben Auftrag, modell=$festName und cli=antigravity erneut auf: bei Nein review=false, bei Ja review=true und review_umfang=$REVIEW_STANDARD bzw. $REVIEW_SEHR_AUSFUEHRLICH.")
@@ -912,7 +920,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
         STUFE_REVIEW_UMFANG -> "Programmierauftrag${fuer(w.app)}: Review Standard oder sehr ausführlich mit bis zu 100 Findings?" to listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich")
         STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: " + (if (w.cli == CLI_ANTIGRAVITY) "Review: Ja oder Nein?"
-            else "Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?") to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+            else "Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.gewaehlt.isNotEmpty() } ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?") to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
         else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
@@ -970,7 +978,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 }
             } else {
                 val wahl = zieleFuer(w.ziel, modell, cli)
-                if (wahl.isEmpty()) Ergebnis(fehltFuer(modell), fehler = true)
+                if (wahl.isEmpty()) Ergebnis(fehltFuer(modell, cli), fehler = true)
                 else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
             }
         }
@@ -2581,7 +2589,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val frei = if (modell == MODELL_KATALOG) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.wahl else null
             if (modell == MODELL_KATALOG && frei == null) throw IllegalStateException("Die Modellwahl fehlt.")
             frei?.let { w ->
-                rumpf.put("slug", w.modell.slug).put("anbieter", w.modell.anbieter).put("name", w.modell.name).put("effort", w.effort)
+                rumpf.put("slug", w.modell.slug).put("anbieter", w.modell.anbieter).put("name", w.modell.name)
+                    // Leer machten die Rechner daraus Effort High; „none“ setzt bei OpenCode keine Stufe, Codex, Kimi und Antigravity lassen es weg.
+                    .put("effort", w.effort.ifEmpty { if (w.cli == CLI_CLAUDE) "" else "none" })
                     .put("profil", w.profil).put("modus", w.modus).put("cli", w.cli)
                 // Nur Antigravity kennt den Umfang; die anderen CLIs bleiben bei ihrem Ja/Nein.
                 if (w.cli == CLI_ANTIGRAVITY && review) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.umfang?.takeIf { it.isNotEmpty() }?.let { rumpf.put("review_umfang", it) }

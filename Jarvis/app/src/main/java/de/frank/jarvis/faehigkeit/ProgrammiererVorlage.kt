@@ -38,7 +38,8 @@ object ProgrammiererVorlage {
     /** Die Knöpfe des Programmierbuttons: die vier Modelle und danach die Vollbildauswahl. */
     val VORWAHL_OPTIONEN = MODELL_OPTIONEN + (OPENLAUNCHER to "OpenLauncher")
 
-    private val CLI_KNOPF = mapOf("claude" to "Claude Code", "codex" to "Codex CLI", "opencode" to "OpenCode CLI", "kimi" to "Kimi Code CLI", "antigravity" to "Antigravity CLI")
+    /** Beschriftung wie im OpenLauncher; nur auf den Schnellwahlknöpfen heißt OpenCode „OpenCode CLI“. */
+    private val CLI_KNOPF = OpenLauncherKatalog.CLI_NAMEN + ("opencode" to "OpenCode CLI")
     private fun cliEinstieg(k: KnopfModell, cli: String) =
         k.vorspann.removeSuffix(":") + (if (cli == "claude") " in " else " im ") + CLI_KNOPF.getValue(cli) + ":"
 
@@ -58,16 +59,16 @@ object ProgrammiererVorlage {
     }
 
     /** Alles, was Frank in der Vollbildauswahl gewählt hat, in den Worten von OpenLauncher. */
-    data class FreieWahl(val modell: String, val anbieter: String, val effort: String, val profil: String, val modus: String, val cli: String)
+    data class FreieWahl(val modell: String, val anbieter: String, val slug: String, val effort: String, val profil: String, val modus: String, val cli: String)
 
     private const val EINSTIEG_MODELL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell "
-    private val FREI = Regex("^" + Regex.escape(EINSTIEG_MODELL) + "(.+?) von ([^,\\n]+), Effort ([^,\\n]+), Profil ([^,\\n]+), Modus ([^,\\n]+), CLI ([^:\\n]+):")
+    private val FREI = Regex("^" + Regex.escape(EINSTIEG_MODELL) + "(.+) von ([^,\\n]+?) \\(([^\\n]*?)\\), Effort ([^,\\n]+), Profil ([^,\\n]+), Modus ([^,\\n]+), CLI ([^:\\n]+):")
 
     /** Der Einstieg der Vollbildauswahl; [freieWahl] liest ihn beim Senden wieder aus. */
-    fun vorspannFrei(w: FreieWahl) = "$EINSTIEG_MODELL${w.modell} von ${w.anbieter}, Effort ${w.effort}, Profil ${w.profil}, Modus ${w.modus}, CLI ${w.cli}:"
+    fun vorspannFrei(w: FreieWahl) = "$EINSTIEG_MODELL${w.modell} von ${w.anbieter} (${w.slug}), Effort ${w.effort}, Profil ${w.profil}, Modus ${w.modus}, CLI ${w.cli}:"
 
     /** Die Angaben aus dem Einstieg der Vollbildauswahl; null bei jedem anderen Text. */
-    fun freieWahl(text: String): FreieWahl? = FREI.find(text.trimStart())?.groupValues?.let { FreieWahl(it[1], it[2], it[3], it[4], it[5], it[6]) }
+    fun freieWahl(text: String): FreieWahl? = FREI.find(text.trimStart())?.groupValues?.let { FreieWahl(it[1], it[2], it[3], it[4], it[5], it[6], it[7]) }
 
     /** Das im Einstieg gewählte CLI eines Modellknopfs; null ohne CLI im Einstieg. */
     fun cli(text: String): String? = vorspannIn(text)?.let { CLI_EINSTIEGE[it]?.second }

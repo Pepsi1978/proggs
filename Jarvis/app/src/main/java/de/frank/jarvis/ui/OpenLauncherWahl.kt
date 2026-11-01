@@ -85,7 +85,7 @@ fun OpenLauncherWahlEbene(vm: AppViewModel) {
         else -> 4
     }
     fun fertig(m: OpenLauncherKatalog.Modell, gewaehlterModus: String, cli: String) = vm.openLauncherWahlUebernehmen(ProgrammiererVorlage.FreieWahl(
-        m.name, m.anbieterName,
+        m.name, m.anbieterName, m.slug,
         if (effort.isEmpty()) ProgrammiererVorlage.OHNE_EFFORT else OpenLauncherEfforts.name(effort),
         OpenLauncherEfforts.PROFILE.first { it.wert == profil }.name,
         OpenLauncherEfforts.MODI.first { it.wert == gewaehlterModus }.name,

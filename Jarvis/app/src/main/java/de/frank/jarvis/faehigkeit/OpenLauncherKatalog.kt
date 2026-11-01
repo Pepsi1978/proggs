@@ -5,6 +5,7 @@ import de.frank.jarvis.data.Einstellungen
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -29,18 +30,25 @@ object OpenLauncherKatalog {
     data class Gruppe(val id: String, val titel: String, val anbieter: String, val modelle: List<Modell>)
 
     /** Das geladene Angebot: Gruppen und die am PC abweichend gemerkten Effort-Stufen (effort-stufen.json). */
-    class Angebot(val gruppen: List<Gruppe>, private val gemerkt: Map<String, List<String>>) {
-        val modelle: List<Modell> get() = gruppen.flatMap { it.modelle }
+    class Angebot(val gruppen: List<Gruppe>, val gemerkt: Map<String, List<String>>) {
+        val modelle: List<Modell> = gruppen.flatMap { it.modelle }
 
-        /** Die Effort-Stufen, die OpenLauncher dem Modell anbietet (LoadThinkingOptionsAsync): für OpenCode Zen, OpenRouter und NVIDIA zuerst der Stand vom PC. */
+        /**
+         * Die Effort-Stufen, die OpenLauncher dem Modell anbietet (LoadThinkingOptionsAsync): der Stand vom PC, sonst die feste Tabelle;
+         * die aktuellen OpenAI-Modelle immer aus der Tabelle. Effort kommt hier vor dem CLI, deshalb gilt der erste gemerkte Stand seiner CLIs.
+         */
         fun efforts(m: Modell): List<String> {
-            val schluessel = "${m.anbieter}/${m.slug}"
-            return (gemerkt["$schluessel [opencode]"] ?: gemerkt[schluessel]).takeIf { !direkt(m) } ?: OpenLauncherEfforts.stufen(m.anbieter, m.slug)
+            if (OpenLauncherEfforts.immerFest(m.anbieter, m.slug)) return OpenLauncherEfforts.stufen(m.anbieter, m.slug)
+            // Wie ModelEntry.ModelString: Trägt der Slug den Anbieter schon vorn, kommt er nicht doppelt (außer bei NVIDIA).
+            val schluessel = if (!m.anbieter.equals("nvidia", true) && m.slug.startsWith("${m.anbieter}/", true)) m.slug else "${m.anbieter}/${m.slug}"
+            val gemerkteStufen = m.clis.firstNotNullOfOrNull { gemerkt["$schluessel [${if (it == "claude") "claude-code" else it}]"] } ?: gemerkt[schluessel]
+            return gemerkteStufen ?: OpenLauncherEfforts.stufen(m.anbieter, m.slug)
         }
 
         /** Prüft den Einstieg der Vollbildauswahl genau gegen das Angebot; null, wenn etwas nicht (mehr) passt. */
         fun wahlAus(f: ProgrammiererVorlage.FreieWahl): Wahl? {
-            val m = modelle.firstOrNull { it.name == f.modell && it.anbieterName == f.anbieter } ?: return null
+            // Über den Slug: Anzeigenamen können sich beim Abgleich ändern oder doppelt vorkommen. Gleiche Slugs gibt es nur bei verschiedenen Anbietern.
+            val m = modelle.firstOrNull { it.slug == f.slug && it.anbieterName == f.anbieter } ?: return null
             val stufen = efforts(m)
             val effort = if (f.effort == ProgrammiererVorlage.OHNE_EFFORT) "".takeIf { stufen.isEmpty() } else stufen.firstOrNull { OpenLauncherEfforts.name(it) == f.effort }
             val profil = OpenLauncherEfforts.PROFILE.firstOrNull { it.name == f.profil }?.wert
@@ -56,7 +64,7 @@ object OpenLauncherKatalog {
 
     data class Wahl(val modell: Modell, val effort: String, val profil: String, val modus: String, val cli: String) {
         /** Für Franks Ohren: „Kimi K3 (1M) in OpenCode, Effort High, Minimalprofil, Schnellmodus“. */
-        fun beschreibung() = "${modell.name} in ${CLI_NAMEN[cli]}, " + (if (effort.isEmpty()) "ohne Effort" else "Effort ${effortName(effort)}") + ", ${PROFIL_NAMEN[profil]}, ${MODUS_NAMEN[modus]}"
+        fun beschreibung() = "${modell.name} in ${CLI_NAMEN[cli]}, " + (if (effort.isEmpty()) "ohne Effort" else "Effort ${OpenLauncherEfforts.name(effort)}") + ", ${PROFIL_NAMEN[profil]}, ${MODUS_NAMEN[modus]}"
     }
 
     sealed class Aufloesung {
@@ -72,12 +80,12 @@ object OpenLauncherKatalog {
 
     val CLI_NAMEN = linkedMapOf("claude" to "Claude Code", "codex" to "Codex CLI", "opencode" to "OpenCode", "kimi" to "Kimi Code CLI", "antigravity" to "Antigravity CLI")
     val PROFIL_NAMEN = linkedMapOf("minimal" to "Minimalprofil", "standard" to "Standardprofil", "strict" to "Striktprofil")
-    val MODUS_NAMEN = linkedMapOf("frei" to "Freimodus", "schnell" to "Schnellmodus", "normal" to "Normalmodus", "gruendlich" to "Gründlichkeitsmodus")
-    /** Effort-Stufen, die OpenLauncher je CLI weitergibt (Kimi kennt nur drei, alles andere ließe der Launcher still fallen). */
+    val MODUS_NAMEN = OpenLauncherEfforts.MODI.associate { it.wert to it.name }
+    /** Effort-Stufen, die OpenLauncher je CLI weitergibt; nur für Modelle, zu denen [OpenLauncherEfforts.stufen] nichts kennt. */
     private val EFFORTS = mapOf(
         "claude" to listOf("low", "medium", "high", "xhigh", "max"),
-        "codex" to listOf("minimal", "low", "medium", "high", "xhigh"),
-        "opencode" to listOf("none", "minimal", "low", "medium", "high", "xhigh", "max"),
+        "codex" to listOf("low", "medium", "high", "xhigh", "max", "ultra"),
+        "opencode" to listOf("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"),
         "kimi" to listOf("low", "high", "max"),
         "antigravity" to listOf("low", "medium", "high", "xhigh", "max"),
     )
@@ -96,7 +104,7 @@ object OpenLauncherKatalog {
     const val MODUS_STANDARD = "schnell"
     const val EFFORT_STANDARD = "high"
 
-    private fun effortName(e: String) = when (e) { "xhigh" -> "Extra High"; else -> e.replaceFirstChar { it.uppercase() } }
+    private fun effortName(e: String) = OpenLauncherEfforts.name(e)
 
     // ---- Laden (GitHub, zehn Minuten im Speicher) ----
 
@@ -118,11 +126,18 @@ object OpenLauncherKatalog {
                 return a.body?.string().orEmpty()
             }
         }
-        val gruppen = runCatching { gruppenAus(lies("OpenLauncher/models.json")) }
-            .getOrElse { fehler -> zwischen?.second?.gruppen ?: throw IllegalStateException("Das Angebot von OpenLauncher ist gerade nicht lesbar (${fehler.message}).") }
-        // Fehlt die Datei, gelten die festen Stufen von OpenLauncher.
-        val gemerkt = runCatching { stufenAus(lies("OpenLauncher/effort-stufen.json")) }.getOrDefault(emptyMap())
-        Angebot(gruppen, gemerkt).also { zwischen = System.currentTimeMillis() to it }
+        val (neueGruppen, neueStufen) = kotlinx.coroutines.coroutineScope {
+            val g = async { runCatching { gruppenAus(lies("OpenLauncher/models.json")) } }
+            val s = async { runCatching { stufenAus(lies("OpenLauncher/effort-stufen.json")) } }
+            g.await() to s.await()
+        }
+        val alt = zwischen?.second
+        val gruppen = neueGruppen.getOrElse { fehler -> alt?.gruppen ?: throw IllegalStateException("Das Angebot von OpenLauncher ist gerade nicht lesbar (${fehler.message}).") }
+        // Ohne Datei gilt der letzte Stand, sonst die feste Tabelle von OpenLauncher.
+        val gemerkt = neueStufen.getOrElse { alt?.gemerkt ?: emptyMap() }
+        // Ein Teilausfall hält nicht zehn Minuten: In einer Minute wird neu gelesen.
+        val zeit = System.currentTimeMillis() - if (neueGruppen.isSuccess && neueStufen.isSuccess) 0L else HALTEN_MS - 60_000L
+        Angebot(gruppen, gemerkt).also { zwischen = zeit to it }
     }
 
     /** models.json (Gruppen mit Models); Profil, Modus und Effort sind Franks Standards, nicht model-defaults.json. */
@@ -134,23 +149,28 @@ object OpenLauncherKatalog {
         for (g in 0 until gruppen.length()) {
             val gruppe = gruppen.optJSONObject(g) ?: continue
             val modelle = gruppe.optJSONArray("Models") ?: continue
-            val sichtbar = mutableListOf<Modell>()
+            val sichtbar = LinkedHashMap<String, Modell>()
             for (i in 0 until modelle.length()) {
                 val m = modelle.optJSONObject(i) ?: continue
                 if (m.optBoolean("IsHidden")) continue
                 val anbieter = m.optString("ProviderId")
                 val slug = m.optString("Slug")
                 if (anbieter.isBlank() || slug.isBlank()) continue
-                sichtbar += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, m.optString("ProviderName").ifBlank { anbieter })
+                // Doppelte Slugs oder Gruppen ließen das Raster der Auswahl abstürzen.
+                sichtbar.getOrPut(slug) { Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, m.optString("ProviderName").ifBlank { anbieter }) }
             }
-            if (sichtbar.isNotEmpty()) liste += Gruppe(gruppe.optString("Id"), gruppe.optString("Title").ifBlank { sichtbar.first().anbieterName }, sichtbar.first().anbieter, sichtbar)
+            val erstes = sichtbar.values.firstOrNull() ?: continue
+            liste += Gruppe(gruppe.optString("Id").ifBlank { "gruppe$g" }, gruppe.optString("Title").ifBlank { erstes.anbieterName }, erstes.anbieter, sichtbar.values.toList())
         }
-        return liste
+        return liste.distinctBy { it.id }
     }
 
     internal fun stufenAus(json: String): Map<String, List<String>> {
         val o = JSONObject(json)
-        return o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }
+        val stufen = LinkedHashMap<String, List<String>>()
+        // Eine unlesbare Zeile kostet nur diesen Eintrag.
+        o.keys().forEach { k -> o.optJSONArray(k)?.let { a -> stufen[k] = (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) }.distinct() } }
+        return stufen
     }
 
     // ---- Auflösen ----
@@ -246,6 +266,8 @@ object OpenLauncherKatalog {
             "high", "hoch" -> "high"
             "xhigh", "extrahigh", "extrahoch", "sehrhoch", "veryhigh" -> "xhigh"
             "max", "maximal", "maximum" -> "max"
+            "ultra" -> "ultra"
+            "thinking" -> "thinking"
             else -> ""
         }
     }
@@ -288,7 +310,7 @@ object OpenLauncherKatalog {
             m.clis.joinToString(" und ") { CLI_NAMEN.getValue(it) } + " an. Frag Frank, in welchem CLI es starten soll, und gib seine Wahl in cli mit.", m)
         val cli = cliGenannt ?: m.clis.single()
         if (cli !in m.clis) return Aufloesung.Frage("${m.name} läuft bei OpenLauncher nur in " + m.clis.joinToString(" oder ") { CLI_NAMEN.getValue(it) } + ".")
-        val erlaubt = EFFORTS.getValue(cli)
+        val erlaubt = OpenLauncherEfforts.stufen(m.anbieter, m.slug).ifEmpty { EFFORTS.getValue(cli) }
         val effortGenannt = effortAus(effortText)
         val effort = effortGenannt ?: EFFORT_STANDARD.takeIf { it in erlaubt } ?: erlaubt.last()
         if (effort !in erlaubt) return Aufloesung.Frage("Den Effort „$effortText“ gibt es für ${m.name} in ${CLI_NAMEN[cli]} nicht. Möglich: " +

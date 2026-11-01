@@ -5,7 +5,7 @@ import java.util.Locale
 /**
  * Was der Windows-OpenLauncher zur Wahl stellt. [stufen] folgt OpenCodeVariantCatalog.GetLauncherLevels, [name] und
  * [beschreibung] folgen MainViewModel.ToThinkingOption, [PROFILE] und [MODI] den Listen im Konstruktor von MainViewModel.
- * Ändert sich dort etwas, muss es hier mit. Rein und ohne Android.
+ * Ändert sich dort etwas, muss es hier mit. Einzige Abweichung: Claude Opus 5.5 kennt Windows nur aus seinem gemerkten Stand. Rein und ohne Android.
  */
 object OpenLauncherEfforts {
     data class Eintrag(val wert: String, val name: String, val beschreibung: String)
@@ -38,6 +38,9 @@ object OpenLauncherEfforts {
     private val AKTUELL = listOf("low", "medium", "high", "xhigh", "max", "ultra")
     private val LUNA = listOf("low", "medium", "high", "xhigh", "max")
     private val SOL_FAMILIE = setOf("gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra")
+
+    /** Die aktuellen OpenAI-Modelle zeigt OpenLauncher immer aus der festen Tabelle, nie aus einem gemerkten Stand. */
+    fun immerFest(anbieter: String, slug: String) = anbieter.equals("openai", true) && (slug in SOL_FAMILIE || slug == "gpt-6-luna")
 
     fun stufen(anbieter: String, slugRoh: String): List<String> {
         val slug = slugRoh.trim().lowercase(Locale.ROOT).removePrefix("openrouter/")

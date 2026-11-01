@@ -1,102 +1,199 @@
 {
-  "opencode/ling-3.0-flash-fin-free [opencode]": [
-    "none",
-    "thinking"
-  ],
-  "opencode/mimo-v2.5-free": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "opencode/mimo-v2.5-free [opencode]": [],
-  "opencode/mimo-v2.6-flash-free [opencode]": [],
-  "opencode/muse-spark-1.2-contributor-free [opencode]": [
-    "minimal",
-    "low",
-    "medium",
-    "high",
-    "xhigh"
-  ],
-  "opencode/muse-spark-1.3-contributor-free [opencode]": [
-    "minimal",
-    "low",
-    "medium",
-    "high",
-    "xhigh"
-  ],
-  "opencode/nemotron-3-ultra-free": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "opencode/nemotron-3-ultra-free [opencode]": [],
-  "opencode/nemotron-3.5-lightning-free [opencode]": [],
-  "openrouter/~z-ai/glm-latest": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/google/gemma-4-31b-it:free [opencode]": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/meta/muse-spark-1.3-contributor": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/minimax/minimax-m3 [opencode]": [
-    "none",
-    "thinking"
-  ],
-  "openrouter/minimax/minimax-m3:free": [],
-  "openrouter/minimax/minimax-m3:free [opencode]": [
-    "none",
-    "thinking"
-  ],
-  "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free [opencode]": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/openai/gpt-6-astra": [
-    "low",
-    "medium",
-    "high",
-    "xhigh",
-    "max"
-  ],
-  "openrouter/openai/gpt-6-astra-pro": [
-    "high"
-  ],
-  "openrouter/stealth/space-bunny-alpha [opencode]": [
-    "low",
-    "medium",
-    "high",
-    "xhigh",
-    "max"
-  ],
-  "openrouter/xiaomi/mimo-v2.5 [opencode]": [
-    "low",
-    "medium",
-    "high"
-  ],
-  "openrouter/xiaomi/mimo-v2.6-pro [opencode]": [
-    "none",
-    "thinking"
-  ],
-  "openrouter/z-ai/glm-5.2:free": [
-    "high",
-    "xhigh"
-  ],
-  "openrouter/z-ai/glm-5.2:free [opencode]": [
-    "high",
-    "xhigh"
-  ]
+    "anthropic/claude-fable-5-1[1m] [claude-code]":  [
+                                                         "low",
+                                                         "medium",
+                                                         "high",
+                                                         "xhigh",
+                                                         "max"
+                                                     ],
+    "anthropic/claude-haiku-5-5 [claude-code]":  [
+                                                     "low",
+                                                     "medium",
+                                                     "high",
+                                                     "xhigh",
+                                                     "max"
+                                                 ],
+    "anthropic/claude-opus-5-5[1m] [claude-code]":  [
+                                                        "low",
+                                                        "medium",
+                                                        "high",
+                                                        "xhigh",
+                                                        "max"
+                                                    ],
+    "anthropic/claude-sonnet-5-5[1m] [claude-code]":  [
+                                                          "low",
+                                                          "medium",
+                                                          "high",
+                                                          "xhigh",
+                                                          "max"
+                                                      ],
+    "google/gemini-3.8-flash [antigravity]":  [
+                                                  "low",
+                                                  "medium",
+                                                  "high"
+                                              ],
+    "google/gemini-3.8-flash [opencode]":  [
+                                               "low",
+                                               "medium",
+                                               "high"
+                                           ],
+    "google/gemini-4-argon [antigravity]":  [
+                                                "medium",
+                                                "high"
+                                            ],
+    "google/gemini-4-argon [opencode]":  [
+                                             "medium",
+                                             "high"
+                                         ],
+    "kimi-code-plan-global/k3 [opencode]":  [
+                                                "low",
+                                                "high",
+                                                "max"
+                                            ],
+    "kimi-code-plan-global/k3-256k [kimi]":  [
+                                                 "low",
+                                                 "high",
+                                                 "max"
+                                             ],
+    "kimi-code-plan-global/k3-256k [opencode]":  [
+                                                     "low",
+                                                     "high",
+                                                     "max"
+                                                 ],
+    "openai/gpt-5.6-terra":  [
+                                 "none",
+                                 "low",
+                                 "medium",
+                                 "high",
+                                 "xhigh"
+                             ],
+    "openai/gpt-5.6-terra [opencode]":  [
+                                            "none",
+                                            "low",
+                                            "medium",
+                                            "high",
+                                            "xhigh",
+                                            "max"
+                                        ],
+    "openai/gpt-6.1-sol [codex]":  [
+                                       "low",
+                                       "medium",
+                                       "high",
+                                       "xhigh",
+                                       "max",
+                                       "ultra"
+                                   ],
+    "openai/gpt-6.1-sol [opencode]":  [
+                                          "low",
+                                          "medium",
+                                          "high",
+                                          "xhigh",
+                                          "max",
+                                          "ultra"
+                                      ],
+    "openai/gpt-6.1-terra [codex]":  [
+                                         "low",
+                                         "medium",
+                                         "high",
+                                         "xhigh",
+                                         "max",
+                                         "ultra"
+                                     ],
+    "openai/gpt-6.1-terra [opencode]":  [
+                                            "low",
+                                            "medium",
+                                            "high",
+                                            "xhigh",
+                                            "max",
+                                            "ultra"
+                                        ],
+    "openai/gpt-6-astra":  [
+                               "low",
+                               "medium",
+                               "high",
+                               "xhigh",
+                               "max"
+                           ],
+    "openai/gpt-6-astra [codex]":  [
+                                       "low",
+                                       "medium",
+                                       "high",
+                                       "xhigh",
+                                       "max",
+                                       "ultra"
+                                   ],
+    "openai/gpt-6-astra [opencode]":  [
+                                          "low",
+                                          "medium",
+                                          "high",
+                                          "xhigh",
+                                          "max"
+                                      ],
+    "openai/gpt-6-luna [opencode]":  [
+                                         "none",
+                                         "low",
+                                         "medium",
+                                         "high",
+                                         "xhigh",
+                                         "max"
+                                     ],
+    "opencode/mimo-v2.6-flash-free [opencode]":  [
+
+                                                 ],
+    "opencode/nemotron-3.5-lightning-free [opencode]":  [
+
+                                                        ],
+    "opencode/nemotron-3-ultra-free":  [
+                                           "low",
+                                           "medium",
+                                           "high"
+                                       ],
+    "opencode/nemotron-3-ultra-free [opencode]":  [
+
+                                                  ],
+    "openrouter/~z-ai/glm-latest":  [
+                                        "low",
+                                        "medium",
+                                        "high"
+                                    ],
+    "openrouter/google/gemma-4-31b-it:free [opencode]":  [
+                                                             "low",
+                                                             "medium",
+                                                             "high"
+                                                         ],
+    "openrouter/meta/muse-spark-1.3-contributor":  [
+                                                       "low",
+                                                       "medium",
+                                                       "high"
+                                                   ],
+    "openrouter/minimax/minimax-m3 [opencode]":  [
+                                                     "none",
+                                                     "thinking"
+                                                 ],
+    "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free":  [
+                                                              "low",
+                                                              "medium",
+                                                              "high"
+                                                          ],
+    "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free [opencode]":  [
+                                                                         "low",
+                                                                         "medium",
+                                                                         "high"
+                                                                     ],
+    "openrouter/stealth/space-bunny-alpha [opencode]":  [
+                                                            "low",
+                                                            "medium",
+                                                            "high",
+                                                            "xhigh",
+                                                            "max"
+                                                        ],
+    "openrouter/xiaomi/mimo-v2.5 [opencode]":  [
+                                                   "low",
+                                                   "medium",
+                                                   "high"
+                                               ],
+    "openrouter/xiaomi/mimo-v2.6-pro [opencode]":  [
+                                                       "none",
+                                                       "thinking"
+                                                   ]
 }
