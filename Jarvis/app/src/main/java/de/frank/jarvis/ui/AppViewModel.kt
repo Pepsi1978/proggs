@@ -1751,6 +1751,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var promptTitelLauf: Job? = null
     @Volatile private var promptTitelNochmal = false
 
+    /** Suche in der Ablage: Die KI wählt nach Bedeutung die wahrscheinlichsten Einträge. Fehler gehen an den Aufrufer, die Worttreffer bleiben dann stehen. */
+    suspend fun ablageKiReihenfolge(anfrage: String, kandidaten: List<de.frank.jarvis.ablage.AblageSuche.Dokument>): List<String> {
+        val antwort = auth.streamChat(de.frank.jarvis.ablage.AblageSuche.KI_AUFTRAG, listOf(ChatTurn("user", de.frank.jarvis.ablage.AblageSuche.kiFrage(anfrage, kandidaten))), einstellungen.modell, ReasoningEffort.LOW)
+        return de.frank.jarvis.ablage.AblageSuche.kiAntwort(antwort, kandidaten)
+    }
+
     /**
      * Holt für Prompts ohne Überschrift im Hintergrund eine kurze KI-Überschrift, die zeigt, worum es im Prompt geht.
      * Nacheinander und mit niedriger Denkstufe (viele Prompts ohne Überschrift lösen keine Anfragewelle aus); schlägt eine

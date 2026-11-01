@@ -550,6 +550,7 @@
     {"versionCode": 545, "versionName": "1.8.534", "stand": "01.11.2026, 17:35 Uhr", "notiz": "Neuer Reiter Erinnerung in der Ablage: Erinnerungen mit Datum und mehreren Zeitpunkten oder allgemein, als Benachrichtigung oder Wecker, immer vorgelesen und auf allen Geräten abgeglichen."},
     {"versionCode": 546, "versionName": "1.8.535", "stand": "01.11.2026, 17:49 Uhr", "notiz": "Agentenkanal zu Mac und Windows HP: Fertige Antworten gehen nach einem Abbruch nicht verloren, und späte Antworten melden sich zuverlässig."},
     {"versionCode": 547, "versionName": "1.8.536", "stand": "01.11.2026, 17:52 Uhr", "notiz": "Alle Reiter der Ablage zeigen ihre Anzahl, auch Prompts und Erinnerung, und Inhalte vom Windows-Laptop heißen Jarvis Windows HP."},
-    {"versionCode": 548, "versionName": "1.8.537", "stand": "01.11.2026, 18:01 Uhr", "notiz": "Die Ablage ist kompakter: Die Suchleiste ist weg, Sortierung und Ansicht stehen neben der Überschrift und die Reiter direkt darunter über die ganze Breite."}
+    {"versionCode": 548, "versionName": "1.8.537", "stand": "01.11.2026, 18:01 Uhr", "notiz": "Die Ablage ist kompakter: Die Suchleiste ist weg, Sortierung und Ansicht stehen neben der Überschrift und die Reiter direkt darunter über die ganze Breite."},
+    {"versionCode": 549, "versionName": "1.8.538", "stand": "01.11.2026, 18:08 Uhr", "notiz": "Neuer runder Suchknopf in der Ablage: Er öffnet ein Suchfenster über die ganze Ablage und zeigt die wahrscheinlichsten Treffer, auch bei Tippfehlern und nach Bedeutung."}
 ]
 }
