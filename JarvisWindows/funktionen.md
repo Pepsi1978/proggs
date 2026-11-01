@@ -1,4 +1,4 @@
-<!-- stand: JarvisWindows 1.0.1 -->
+<!-- stand: JarvisWindows 1.0.2 -->
 Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -49,6 +49,7 @@ Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Neu seit 1.0.1
 - Bildlaufleisten schmal und rund, Farben folgen Hell und Dunkel.
+- Das Fenster startet immer über den ganzen Bildschirm.
 
 ## Abweichungen von der Mac-Fassung
 - Helfer dieses Laptops erreicht das Handy über `jarvis_windows_hp_sprechen`, nicht über seinen Helferkatalog; ein Helferbau läuft direkt am Laptop.

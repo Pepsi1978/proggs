@@ -11,13 +11,20 @@ dotnet publish (Join-Path $projekt 'JarvisWindows.csproj') -c Release -r win-x64
 if ($LASTEXITCODE -ne 0) { throw 'Bau fehlgeschlagen' }
 if ($NurBauen) { Write-Output "Gebaut: $aus"; return }
 
-Get-Process JarvisWindows -ErrorAction SilentlyContinue | ForEach-Object {
-    $null = $_.CloseMainWindow()
-    if (-not $_.WaitForExit(3000)) { Stop-Process -Id $_.Id -Force }
+function Beende-App {
+    Get-Process JarvisWindows -ErrorAction SilentlyContinue | ForEach-Object {
+        $null = $_.CloseMainWindow()
+        if (-not $_.WaitForExit(3000)) { Stop-Process -Id $_.Id -Force }
+    }
 }
 New-Item -ItemType Directory -Force $ziel | Out-Null
-robocopy $aus $ziel /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) { throw "Kopieren fehlgeschlagen ($LASTEXITCODE)" }
+# Der Wecker oder Frank kann die App während des Kopierens neu starten; sie sperrt dann ihre Dateien. Robocopy wartet von sich aus fast ewig (/R:1000000), darum kurze Versuche und neu beenden.
+for ($versuch = 1; $versuch -le 5; $versuch++) {
+    Beende-App
+    robocopy $aus $ziel /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -lt 8) { break }
+    if ($versuch -eq 5) { throw "Kopieren fehlgeschlagen ($LASTEXITCODE)" }
+}
 $global:LASTEXITCODE = 0
 
 $exe = Join-Path $ziel 'JarvisWindows.exe'

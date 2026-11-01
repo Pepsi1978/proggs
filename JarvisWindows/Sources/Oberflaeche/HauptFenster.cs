@@ -43,6 +43,7 @@ public sealed class HauptFenster : Window
         Width = 1280; Height = 820;
         MinWidth = 980; MinHeight = 640;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowState = WindowState.Maximized;   // Franks Vorgabe: Jarvis startet immer über den ganzen Bildschirm.
         FontFamily = Ui.Schrift;
         Background = Brushes.Black;
         UseLayoutRounding = true;
