@@ -47,6 +47,7 @@ object LiveOptionen {
          */
         private fun migriert(id: String, w: String): String {
             if (id == "backend" && w.isNotBlank()) return de.frank.jarvis.auth.CodexModel.fromLabel(w).apiId
+            if (id == "j_modell" && w == "gpt-5.6-terra") return "gpt-6.1-terra"
             if (id != "rt_max" || w.isBlank() || ueber.containsKey(id)) return w
             val neu = when (val n = w.toIntOrNull()) {
                 null -> if (w == "inf") "4000" else w
@@ -75,17 +76,17 @@ object LiveOptionen {
     val BACKENDS = linkedMapOf(
         "gpt-6-luna" to Preis(0.10, 0.01, 0.50),
         "gpt-6.1-sol" to Preis(2.00, 0.10, 10.00),
-        "gpt-5.6-terra" to Preis(2.00, 0.20, 12.00),
+        "gpt-6.1-terra" to Preis(1.00, 0.05, 5.00),
         "gpt-6-astra" to Preis(10.00, 1.00, 50.00),
     )
     private val BACKEND_NAMEN = mapOf(
         "gpt-6-luna" to "GPT-6 Luna", "gpt-6.1-sol" to "GPT-6.1 Sol",
-        "gpt-5.6-terra" to "GPT-5.6 Terra", "gpt-6-astra" to "GPT-6 Astra",
+        "gpt-6.1-terra" to "GPT-6.1 Terra", "gpt-6-astra" to "GPT-6 Astra",
     )
     private val BACKEND_TEXT = mapOf(
         "gpt-6-luna" to "Schnell und sehr günstig, von OpenAI als Start empfohlen. Für Gespräche fast immer genug.",
         "gpt-6.1-sol" to "Neueste Sol-Fassung, kein Effort „none“, auch mit Ultrafast.",
-        "gpt-5.6-terra" to "Mittelklasse der 5.6-Familie.",
+        "gpt-6.1-terra" to "Mittelklasse der 6.1-Familie, kein Effort „none“.",
         "gpt-6-astra" to "Das stärkste Modell, sehr teuer. Kein Effort „none“, auch mit Ultrafast.",
     )
 
@@ -181,7 +182,7 @@ object LiveOptionen {
         "max" to Wahl("max", "Maximal", "Das Gründlichste. Neu, wird eventuell noch abgelehnt."),
     )
     private fun backendEfforts(modell: String): List<String> = when (modell) {
-        "gpt-6.1-sol", "gpt-6-astra" -> listOf("low", "medium", "high", "xhigh", "max")
+        "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-astra" -> listOf("low", "medium", "high", "xhigh", "max")
         else -> listOf("none", "low", "medium", "high", "xhigh", "max")
     }
     /** Denkstufe kostet Ausgabe-Tokens: grobe Zusatzmenge je Antwort für die Schätzung. */
@@ -215,7 +216,7 @@ object LiveOptionen {
 
     private val JARVIS_MODELL_TEXT = mapOf(
         "gpt-6-luna" to "Schnell, für Gespräche meist genug. Empfehlung bei hoher Denkstufe.",
-        "gpt-5.6-terra" to "Mittelklasse, gründlicher als Luna.",
+        "gpt-6.1-terra" to "Mittelklasse, gründlicher als Luna.",
         "gpt-6.1-sol" to "Kräftig für schwierige Fragen, längere Pausen.",
         "gpt-6-astra" to "Das stärkste Modell, die längsten Pausen.",
         "claude-haiku-5-5" to "Anthropic, sehr schnell und sehr günstig. Braucht den Anthropic-Schlüssel.",

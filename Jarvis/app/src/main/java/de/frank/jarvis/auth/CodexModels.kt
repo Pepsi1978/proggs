@@ -7,7 +7,7 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
     SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
-    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
+    TERRA("GPT-6.1 Terra", "gpt-6.1-terra"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
     FABLE("Claude Fable 5.1", "claude-fable-5-1", KiAnbieter.ANTHROPIC),
     SONNET("Claude Sonnet 5.5", "claude-sonnet-5-5", KiAnbieter.ANTHROPIC),

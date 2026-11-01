@@ -529,6 +529,7 @@
     {"versionCode": 524, "versionName": "1.8.513", "stand": "31.10.2026, 22:26 Uhr", "notiz": "Die Review-Wahl für Antigravity lässt sich jetzt auch per Sprache beantworten, und Jarvis startet ohne deine Antwort kein Review und übernimmt keinen falschen Umfang mehr."},
     {"versionCode": 525, "versionName": "1.8.514", "stand": "31.10.2026, 22:41 Uhr", "notiz": "Unter Kontingente zeigt Gemini jetzt die fünf Limits deiner Antigravity-CLI statt der immer leeren Werte der Gemini-Seite."},
     {"versionCode": 526, "versionName": "1.8.515", "stand": "31.10.2026, 22:47 Uhr", "notiz": "Kontingente: Der Knopf „Jetzt neu abfragen“ steht ganz oben und holt auch Gemini; automatisch wird nur noch um 6 und 18 Uhr abgefragt."},
-    {"versionCode": 527, "versionName": "1.8.516", "stand": "31.10.2026, 22:58 Uhr", "notiz": "Kontingente: Das Tempo rechnet mit dem Stand des letzten Abrufs, und bei einer Störung wird nur der gestörte Anbieter erneut abgefragt."}
+    {"versionCode": 527, "versionName": "1.8.516", "stand": "31.10.2026, 22:58 Uhr", "notiz": "Kontingente: Das Tempo rechnet mit dem Stand des letzten Abrufs, und bei einer Störung wird nur der gestörte Anbieter erneut abgefragt."},
+    {"versionCode": 528, "versionName": "1.8.517", "stand": "01.11.2026, 01:08 Uhr", "notiz": "KI-Auswahl: GPT-6.1 Terra ersetzt GPT-5.6 Terra, gespeicherte Terra-Auswahlen wechseln automatisch mit."}
 ]
 }
