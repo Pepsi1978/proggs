@@ -1303,6 +1303,8 @@ def post(eingabe: dict) -> None:
                     raus += sammel(z, "☁️ APK-Update gestartet, Upload läuft im Hintergrund", sofort=True)
                 elif re.search(r"APK_UPDATE_STATUS=(ok|already-current)", text):
                     raus += sammel(z, "☁️ APK-Update für UpdateStation bereit", sofort=True)
+                elif "APK_UPDATE_STATUS=ausgesetzt" in text:
+                    raus += sammel(z, "⏸️ APK-Update ausgesetzt, kein Upload", sofort=True)
                 else:
                     raus += sammel(z, None)
             else:

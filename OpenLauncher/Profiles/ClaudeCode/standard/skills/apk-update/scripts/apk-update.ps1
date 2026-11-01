@@ -5,7 +5,7 @@
 # Aufruf: pwsh -File apk-update.ps1 -Projekt FisetinBegleiter [-OhneBuild]
 # Ausgabe-Zeilen mit Präfix APK_UPDATE_ sind für den Skill maschinenlesbar.
 # Exit 0 = veröffentlicht (ok), schon veröffentlicht (already-current), Upload im Hintergrund gestartet (gestartet)
-# oder schon laufend (laeuft); bei den beiden letzten ist noch nichts bestätigt. 1 = Fehler, 2 = Versionslog vorbereitet, erst committen.
+# oder schon laufend (laeuft), bei den beiden letzten ist noch nichts bestätigt; oder Upload per projekte.json ausgesetzt (ausgesetzt). 1 = Fehler, 2 = Versionslog vorbereitet, erst committen.
 #
 # update.json ist der Veröffentlichungspunkt: Sie kommt erst in den Drive-Ordner, wenn Drive den Upload
 # der APK bestätigt hat. Google Drive für Desktop bricht große Uploads teils ab und löscht die APK danach
@@ -456,6 +456,7 @@ if ($Reparieren) {
     $script:gesamtFrist = (Get-Date).AddMinutes($UploadFristMinuten)
     foreach ($o in $ordnerListe) {
         $ordnerName = Split-Path $o -Leaf
+        if ((Get-Content (Join-Path $skillDir 'projekte.json') -Raw -Encoding utf8 | ConvertFrom-Json).projekte.$ordnerName.driveUploadAusgesetzt) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|ausgesetzt"; continue }
         if (Lies-Upload-Marker $ordnerName) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|Ein Upload läuft gerade im Hintergrund."; $alleOk = $false; continue }
         $ordnerSperre = Nimm-Sperre $ordnerName
         if (-not $ordnerSperre) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|Ein anderer apk-update-Lauf arbeitet gerade daran."; $alleOk = $false; continue }
@@ -517,6 +518,19 @@ $fehlerDatei = Join-Path $HOME "Library/Logs/apk-update/$Projekt.fehler"
 if (Test-Path -LiteralPath $fehlerDatei) {
     Write-Host "APK_UPDATE_WARNUNG=Der letzte Upload im Hintergrund ist gescheitert: $(Get-Content -LiteralPath $fehlerDatei -Raw -Encoding utf8)"
     Remove-Item -LiteralPath $fehlerDatei -Force -ErrorAction SilentlyContinue
+}
+# Per projekte.json ausgesetzt: kein Bau, kein Upload, update.json bleibt beim bisherigen Stand, ein laufender Upload endet.
+# Der GitHub-Bau bleibt davon frei: Er lädt über GitHubs Leitung hoch und ist der einzige Weg von Cloud-Sitzungen aufs Handy.
+if ($eintrag.driveUploadAusgesetzt -and -not $env:GITHUB_ACTIONS) {
+    $upload = Lies-Upload-Marker $Projekt
+    if ($upload) {
+        Write-Host "APK_UPDATE_ERSETZT=Upload von $($upload.apkDatei) abgebrochen, der Drive-Upload für $Projekt ist ausgesetzt"
+        Beende-Upload $upload $Projekt
+    }
+    Aufraeumen
+    Write-Host "APK_UPDATE_STATUS=ausgesetzt"
+    Write-Host "APK_UPDATE_HINWEIS=Drive-Upload für $Projekt ist ausgesetzt, nichts gebaut oder hochgeladen. Als 'APK-Update: nein (ausgesetzt)' melden. Wiedereinschalten: driveUploadAusgesetzt in projekte.json auf false."
+    exit 0
 }
 # Merkt einen Lauf, der update.json abgelegt, aber Signal und Aufräumen noch nicht erreicht hat.
 $offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"

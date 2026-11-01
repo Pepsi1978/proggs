@@ -134,6 +134,8 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    - `APK_UPDATE_ERSETZT=…` → Der neue Stand ist gebaut und geprüft, der ältere Upload wurde dafür abgebrochen.
    - `APK_UPDATE_WARNUNG=Der letzte Upload im Hintergrund ist gescheitert: …` → In der Abschlussmeldung nennen. Der aktuelle
      Lauf veröffentlicht trotzdem neu.
+   - `APK_UPDATE_STATUS=ausgesetzt` (Exit 0) → Der Drive-Upload dieser App ist per `projekte.json` ausgesetzt (siehe Sonderfälle): nichts gebaut, nichts
+     hochgeladen, ein laufender Upload wurde beendet. Kein Fehler; als „APK-Update: nein (ausgesetzt)“ melden. Die Installation per adb bleibt Pflicht.
    - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
      nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
    - `APK_UPDATE_STATUS=ok` mit `APK_UPDATE_BEREIT=cloud` → Google Drive hat beide Uploads bestätigt.
@@ -228,6 +230,9 @@ und dass die Signatur der APK zur installierten App passt.
 
 ## Sonderfälle
 
+- **Upload aussetzen:** `"driveUploadAusgesetzt": true` am Projekt in `projekte.json` schaltet den Upload vom Mac und vom Windows-PC ab, derzeit nur bei
+  **Jarvis** (seit 01.11.2026, Franks Internet zu schwach). Der GitHub-Bau für Cloud- und Server-Sitzungen lädt weiter hoch, weil er Franks Leitung nicht
+  belastet. Wiedereinschalten: Feld auf `false`, committen, pushen, Skill einmal starten; er veröffentlicht dann den aktuellen Stand.
 - **Standard ist Debug** (Franks Vorgabe vom 30.09.2026): Auf dem Handy laufen Debug-Builds, damit
   App-Daten und Logs per adb lesbar sind und Ruckeln sichtbar wird. Release nur, wenn Frank es für
   eine App ausdrücklich will (dann `gradleTask`/`apkOrdner` in `projekte.json` eintragen).
