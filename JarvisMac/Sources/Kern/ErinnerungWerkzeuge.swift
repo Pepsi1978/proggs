@@ -141,10 +141,11 @@ enum ErinnerungWerkzeuge {
                 if !kurz.isEmpty { n.kurz = kurz }
                 if !zeile.isEmpty { n.zeile = zeile }
                 n.datum = datum; n.uhrzeit = uhrzeit; n.form = form; n.allgemein = datum == nil
-                if datum != nil && n.ausloesungen.isEmpty { n.ausloesungen = [Erinnerung.neueAusloesung(0)] }
+                // Nur beim Wechsel von allgemein zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
+                if datum != nil && alt.allgemein { n.ausloesungen = [Erinnerung.neueAusloesung(0)] }
                 return n
             }
-            return WerkzeugErgebnis(text: "Geändert: \(neu.datumAnzeige), \(neu.zeile), Form \(neu.wecker ? "Wecker" : "Benachrichtigung"). Das ist keine Bestätigung.")
+            return WerkzeugErgebnis(text: "Geändert: \(neu.datumAnzeige), \(neu.zeile), Form \(neu.wecker ? "Wecker" : "Benachrichtigung"). Das ist keine Bestätigung." + (neu.ausloesungen.isEmpty ? "" : vorbeiHinweis(neu)))
         case "loeschen":
             try await abgleich.erinnerungLoeschen(e.id)
             return WerkzeugErgebnis(text: "Gelöscht: \(e.zeile).")
@@ -155,9 +156,11 @@ enum ErinnerungWerkzeuge {
                 guard let v = uhrzeitAus(wert(a, "ausloesung_uhrzeit")) else { return fehler("Keine Uhrzeit: \(wert(a, "ausloesung_uhrzeit"))") }
                 u = v
             }
+            if a["minuten"] == nil || a["minuten"] is NSNull { return fehler("Es fehlt minuten: wie lange vor dem Termin.") }
             let neu = Erinnerung.neueAusloesung(max(0, Int(AblageAbgleich.zahl(a["minuten"]))), uhrzeit: u)
             guard let z = e.zeitVon(neu) else { return fehler("Der Termin ist nicht lesbar.") }
             if z <= jetzt() { return fehler("Dieser Zeitpunkt (\(ErinnerungZeit.zeitText(z))) ist schon vorbei, nichts eingestellt.") }
+            if e.doppelt(neu) { return WerkzeugErgebnis(text: "Dieser Zeitpunkt (\(ErinnerungZeit.zeitText(z))) ist schon eingestellt.") }
             try await abgleich.erinnerungAendern(e.id) { alt in var n = alt; n.ausloesungen.append(neu); return n }
             return WerkzeugErgebnis(text: "Zusätzlich erinnere ich dich \(e.vorlaufText(neu)): \(ErinnerungZeit.zeitText(z)).")
         case "ausloesung_entfernen":
@@ -174,19 +177,22 @@ enum ErinnerungWerkzeuge {
                 guard let t = offen.first(where: { $0.ausloesung?.id == k }) else { return fehler("Dieser Zeitpunkt ist nicht offen.") }
                 ziel = t
             } else {
-                guard let t = offen.first(where: { $0.zeit <= jetzt }) ?? offen.first else { return WerkzeugErgebnis(text: "Bei dieser Erinnerung ist nichts offen.") }
+                // Ohne Angabe nur, was gerade wirklich fällig ist: Nie eine tote oder eine künftige Auslösung statt des klingelnden Weckers.
+                guard let t = offen.first(where: { $0.zeit <= jetzt && $0.meldbar(jetzt) }) else {
+                    return WerkzeugErgebnis(text: "Bei dieser Erinnerung ist gerade nichts fällig. Einen künftigen Zeitpunkt bestätigst du nur mit ausloesung_id.")
+                }
                 ziel = t
             }
             planer.bestaetige(ziel)
-            let rest = offen.count - 1
-            return WerkzeugErgebnis(text: "Bestätigt: \(ziel.anzeige). " + (rest > 0 ? "\(rest) weitere Zeitpunkte bleiben geplant." : "Weitere Zeitpunkte sind nicht offen."))
+            let rest = offen.filter { $0.zeit > jetzt }.count
+            return WerkzeugErgebnis(text: "Bestätigt: \(ziel.anzeige). " + (rest > 0 ? "\(rest) weitere Zeitpunkte bleiben geplant." : "Weitere Zeitpunkte sind nicht geplant."))
         case "erledigt":
             let zeit = jetzt()
             try await abgleich.erinnerungAendern(e.id) { alt in var n = alt; n.erledigt = zeit; return n }
             return WerkzeugErgebnis(text: "Als erledigt markiert: \(e.zeile).")
         case "wieder_offen":
             try await abgleich.erinnerungAendern(e.id) { alt in var n = alt; n.erledigt = 0; return n }
-            return WerkzeugErgebnis(text: "Wieder offen: \(e.zeile).")
+            return WerkzeugErgebnis(text: "Wieder offen: \(e.zeile). Schon vergangene Zeitpunkte melden sich nicht nachträglich.")
         case "erwaehnt":
             let zeit = jetzt()
             try await abgleich.erinnerungAendern(e.id) { alt in var n = alt; n.zuletztErwaehnt = zeit; return n }
@@ -214,6 +220,10 @@ enum ErinnerungWerkzeuge {
         let e = try await abgleich.erinnerungAnlegen(text: text, zeile: wert(a, "zeile"), kurz: wert(a, "kurz"), datum: datum, uhrzeit: uhrzeit, form: form, vorab: vorab)
         if e.allgemein { return WerkzeugErgebnis(text: "Als allgemeine Erinnerung gespeichert: \(e.zeile). Jarvis meldet sich, wenn es passt.") }
         let zeiten = e.ausloesungen.map { e.vorlaufText($0) }.joined(separator: ", ")
-        return WerkzeugErgebnis(text: "Gespeichert für \(e.datumAnzeige): \(e.zeile). Form: \(e.wecker ? "Wecker" : "Benachrichtigung"). Zeitpunkte: \(zeiten).")
+        return WerkzeugErgebnis(text: "Gespeichert für \(e.datumAnzeige): \(e.zeile). Form: \(e.wecker ? "Wecker" : "Benachrichtigung"). Zeitpunkte: \(zeiten)." + vorbeiHinweis(e))
+    }
+
+    private static func vorbeiHinweis(_ e: Erinnerung) -> String {
+        e.meldetSichNoch(jetzt()) ? "" : " ACHTUNG: Alle Zeitpunkte sind schon vorbei, von selbst meldet sie sich nicht. Sag das Frank und frag nach einer Uhrzeit."
     }
 }

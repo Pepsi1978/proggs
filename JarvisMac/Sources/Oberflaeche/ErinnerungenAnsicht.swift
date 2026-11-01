@@ -220,6 +220,7 @@ private struct ErinnerungDetailEbene: View {
         .sheet(isPresented: $plusOffen) {
             AusloesungWahl(erinnerung: e) { a in
                 guard let z = e.zeitVon(a), z > Int64(Date().timeIntervalSince1970 * 1000) else { return "Dieser Zeitpunkt ist schon vorbei." }
+                if e.doppelt(a) { return "Dieser Zeitpunkt (\(ErinnerungZeit.zeitText(z))) ist schon eingestellt." }
                 plusOffen = false
                 aendern(e.id) { $0.ausloesungen.append(a) }
                 return nil
@@ -245,7 +246,7 @@ private struct ErinnerungDetailEbene: View {
                         KapselKnopf(symbol: "checkmark", titel: "Bestätigen") { planer.bestaetige(t) }
                     }
                     if let a = t.ausloesung {
-                        KleinKnopf(symbol: "xmark", hilfe: "Zeitpunkt entfernen") { aendern(e.id) { $0.ausloesungen.removeAll { $0.id == a.id } } }
+                        KleinKnopf(symbol: "xmark", hilfe: "Zeitpunkt entfernen") { aendern(e.id) { alt in alt.ausloesungen.removeAll { x in x.id == a.id } } }
                     }
                 }
             }
@@ -442,7 +443,7 @@ private struct ErinnerungEditorVollbild: View {
                     .environment(\.locale, Locale(identifier: "de_DE"))
             }
         WahlChip(titel: d.uhrzeit.map { "\($0) Uhr" } ?? "Ohne Uhrzeit", aktiv: d.uhrzeit != nil) {
-            uhrEntwurf = ErinnerungZeit.uhrDatum(d.uhrzeit ?? "10:00")
+            uhrEntwurf = ErinnerungZeit.uhrDatum(d.uhrzeit ?? AblageAbgleich.shared.erinnerungOhneUhrzeit)
             uhrOffen = true
         }
         .popover(isPresented: $uhrOffen) {
@@ -510,7 +511,8 @@ private struct ErinnerungEditorVollbild: View {
                         n.kurz = kurz.isEmpty ? Erinnerung.kurzAus(text) : kurz
                         n.zeile = zeile.isEmpty ? Erinnerung.zeileAus(text) : zeile
                         n.datum = datum; n.uhrzeit = uhrzeit; n.form = e.form; n.allgemein = e.allgemein
-                        if !e.allgemein && n.ausloesungen.isEmpty { n.ausloesungen = [Erinnerung.neueAusloesung(0)] }
+                        // Nur beim Wechsel von allgemein zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
+                        if !e.allgemein && alt.allgemein { n.ausloesungen = [Erinnerung.neueAusloesung(0)] }
                         return n
                     }
                 } else {

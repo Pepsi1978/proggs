@@ -19,6 +19,7 @@ final class ErinnerungPlaner {
     @ObservationIgnored private var laeuft = false
     @ObservationIgnored private var nochmal = false
     @ObservationIgnored private var sendetQuittungen = false
+    @ObservationIgnored private var angekommen = Set<String>()
     @ObservationIgnored private var gefragt = Set<String>()
     @ObservationIgnored private var naechsteNachfrage = Date.distantPast
     @ObservationIgnored private var weckerTon: NSSound?
@@ -59,7 +60,7 @@ final class ErinnerungPlaner {
     /// Vor dem ersten Aufbau der Liste wäre alles „gelöscht“ und die gemerkten Auslösungen gingen verloren.
     private var bereit: Bool {
         let a = AblageAbgleich.shared
-        return gestartet && a.bereit && a.aufbauStand > 0
+        return gestartet && a.bereit && a.aufbauStand > 0 && !a.ersteSeitenOffen
     }
 
     func starten() {
@@ -115,12 +116,15 @@ final class ErinnerungPlaner {
         let server = AblageAbgleich.shared.quittungen
         let bekannt = lokaleQuittungen.keys.filter { server[$0] != nil }
         if !bekannt.isEmpty {
-            for k in bekannt { lokaleQuittungen[k] = nil }
+            for k in bekannt {
+                lokaleQuittungen[k] = nil
+                angekommen.remove(k)
+            }
             quittungenSichern()
         }
-        guard !sendetQuittungen, !lokaleQuittungen.isEmpty else { return }
+        let offen = lokaleQuittungen.values.filter { !angekommen.contains($0.id) }
+        guard !sendetQuittungen, !offen.isEmpty else { return }
         sendetQuittungen = true
-        let offen = Array(lokaleQuittungen.values)
         Task {
             defer { sendetQuittungen = false }
             for q in offen {
@@ -128,6 +132,9 @@ final class ErinnerungPlaner {
                     try await AblageAbgleich.shared.quittungSenden(q)
                     lokaleQuittungen[q.id] = nil
                     quittungenSichern()
+                } catch AblageFehler.neuereFassung {
+                    // Der Server hat sie schon von einem anderen Gerät: angekommen. Sie bleibt gültig, bis der Abgleich sie bringt, sonst erschiene sie kurz wieder.
+                    angekommen.insert(q.id)
                 } catch {
                     // Bleibt gemerkt: Der nächste Lauf versucht es wieder. Ohne Netz hätten die übrigen dasselbe Schicksal.
                     log("erinnerung", "Bestätigung noch nicht beim Server", wo: "Erinnerung", fehler: error.localizedDescription)
@@ -207,9 +214,7 @@ final class ErinnerungPlaner {
         guard bereit else { return }
         let jetzt = Self.jetzt()
         var gueltig: [String: Faellig] = [:]
-        for e in AblageAbgleich.shared.erinnerungen where e.erledigt == 0 {
-            for f in e.termine() where f.zeit <= jetzt && quittung(f.quittung) == nil { gueltig[f.quittung] = f }
-        }
+        for f in faellig(jetzt) { gueltig[f.quittung] = f }
         let vorher = gezeigt.count
         gezeigt = gezeigt.filter { gueltig[$0] != nil }
         if gezeigt.count != vorher { gezeigtSichern() }

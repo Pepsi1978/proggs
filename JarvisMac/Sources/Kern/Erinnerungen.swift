@@ -175,7 +175,16 @@ struct Erinnerung: Identifiable, Hashable, Sendable {
         if a.minuten == 0 { return uhrzeit != nil ? "Zum Termin" : "Am Termintag" }
         if a.minuten % 1440 == 0 { return tageText(a.minuten / 1440) + " vorher" }
         if a.minuten % 60 == 0 { return stundenText(a.minuten / 60) + " vorher" }
-        return "\(a.minuten) Minuten vorher"
+        return a.minuten == 1 ? "1 Minute vorher" : "\(a.minuten) Minuten vorher"
+    }
+
+    /// Meldet sich diese Erinnerung noch von selbst? Sonst sagt das Werkzeug es, statt still nichts zu tun.
+    func meldetSichNoch(_ jetzt: Int64) -> Bool { allgemein || termine().contains { $0.zeit > jetzt } }
+
+    /// Fällt dieser Zeitpunkt auf einen schon eingestellten? Dann gäbe es zwei Meldungen in derselben Minute.
+    func doppelt(_ a: Ausloesung) -> Bool {
+        let z = zeitVon(a)
+        return ausloesungen.contains { zeitVon($0) == z }
     }
 
     /// Erste Zeile des Eintrags: Datum und nur eine ausdrücklich genannte Uhrzeit.

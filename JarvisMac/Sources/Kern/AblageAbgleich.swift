@@ -24,6 +24,8 @@ final class AblageAbgleich {
     private(set) var verbunden = false
     /// Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht.
     private(set) var bereit = false
+    /// Der allererste Abgleich hat noch nicht alle Seiten: Bestätigungen stehen hinter ihren Erinnerungen, vorher sähe alles unbestätigt aus. Überlebt einen Neustart.
+    @ObservationIgnored private(set) var ersteSeitenOffen = false
     /// Dateien, die noch vom Server kommen.
     private(set) var ausstehend = 0
     /// Dateien vom Mac, die gerade hochgehen.
@@ -131,6 +133,7 @@ final class AblageAbgleich {
     @discardableResult
     private func holen(warten: Int) async throws -> Int {
         guard let basis else { throw URLError(.badURL) }
+        if stand == 0 { ersteSeitenOffen = true }
         guard let url = URL(string: "\(basis)/aenderungen?seit=\(stand)&warten=\(warten)&geraet=\(Self.quelle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else { throw URLError(.badURL) }
         let (daten, antwort) = try await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: Double(warten) + 30))
         guard (antwort as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
@@ -164,12 +167,16 @@ final class AblageAbgleich {
         }
         let weiter = Int(neu) != stand
         stand = max(Int(neu), stand)
-        if geaendert || weiter { speichereDocs() }
+        let ersteSeitenDurch = ersteSeitenOffen && o["mehr"] as? Bool != true
+        if ersteSeitenDurch { ersteSeitenOffen = false }
+        if geaendert || weiter || ersteSeitenDurch { speichereDocs() }
         if geaendert {
             aufbauPlanen()
             log("ablage", "\(liste.count) Änderung(en) vom Server", wo: "Ablage")
             allesLaden()
         }
+        // Sofort: Der Planer darf ab jetzt zeigen und muss dafür die vollständige Liste sehen.
+        if ersteSeitenDurch { neuAufbauen() }
         return liste.count
     }
 
@@ -190,6 +197,7 @@ final class AblageAbgleich {
         stand = Int(Self.zahl(o["stand"]))
         instanz = o["instanz"] as? String ?? ""
         bereit = stand > 0
+        ersteSeitenOffen = o["erste_seiten_offen"] as? Bool == true
         docs = o["docs"] as? [String: JSONObjekt] ?? [:]
     }
 
@@ -199,7 +207,7 @@ final class AblageAbgleich {
         speicherPlan = Task {
             try? await Task.sleep(for: .seconds(1))
             speicherPlan = nil
-            let kiste = JSONKiste(wert: ["stand": stand, "docs": docs, "instanz": instanz] as JSONObjekt)
+            let kiste = JSONKiste(wert: ["stand": stand, "docs": docs, "instanz": instanz, "erste_seiten_offen": ersteSeitenOffen] as JSONObjekt)
             let datei = docsDatei
             await Task.detached(priority: .utility) { if let w = kiste.wert { try? JSON.daten(w).write(to: datei, options: .atomic) } }.value
         }
@@ -264,7 +272,15 @@ final class AblageAbgleich {
 
     /// Eine ganz neue Kopie kennt vorhandene Titel und Nummern noch nicht: Sonst entstünden Doppel oder „gibt es nicht“.
     private func ersterAbgleich() async throws {
-        if !bereit { try await holen(warten: 0) }
+        guard !bereit || ersteSeitenOffen else { return }
+        // Eine Antwort trägt höchstens eine Seite: Alles holen und die Liste sofort aufbauen, sonst sucht das Werkzeug gleich danach in einer leeren Liste.
+        var seite = 0
+        while seite < 1000 {
+            let anzahl = try await holen(warten: 0)
+            if anzahl == 0 { break }
+            seite += 1
+        }
+        neuAufbauen()
     }
 
     private func benutzteInhalte() -> Set<String> {
@@ -509,7 +525,13 @@ final class AblageAbgleich {
 
     // MARK: Erinnerungen
 
-    /// Wie Erinnerungen.anlegen am Handy. Ohne Datum wird es eine allgemeine Erinnerung; am Mac gibt es keine Einstellung für die Zeit ohne Uhrzeit, darum die Vorgabe des Handys.
+    /// Wann eine neue Erinnerung ohne Uhrzeit auslöst: Das Handy pflegt die Einstellung im Dokument ordnung/erinnerung.
+    var erinnerungOhneUhrzeit: String {
+        let w = ((docs["ordnung:erinnerung"]?["daten"] as? JSONObjekt)?["ohne_uhrzeit_um"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return w.isEmpty ? "10:00" : w
+    }
+
+    /// Wie Erinnerungen.anlegen am Handy. Ohne Datum wird es eine allgemeine Erinnerung.
     @discardableResult
     func erinnerungAnlegen(text: String, zeile: String, kurz: String, datum: String?, uhrzeit: String?, form: String, vorab: [Ausloesung]) async throws -> Erinnerung {
         let sauber = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -519,7 +541,7 @@ final class AblageAbgleich {
         let allgemein = datum == nil
         let z = zeile.trimmingCharacters(in: .whitespacesAndNewlines), k = kurz.trimmingCharacters(in: .whitespacesAndNewlines)
         let e = Erinnerung(id: id, allgemein: allgemein, zeile: z.isEmpty ? Erinnerung.zeileAus(sauber) : z, kurz: k.isEmpty ? Erinnerung.kurzAus(sauber) : k, text: sauber, datum: datum, uhrzeit: uhrzeit,
-                           form: form, ausloesungen: allgemein ? [] : (vorab.isEmpty ? [Erinnerung.neueAusloesung(0)] : vorab), quelle: Self.quelle, erstellt: zeit, geaendert: zeit)
+                           ohneUhrzeitUm: erinnerungOhneUhrzeit, form: form, ausloesungen: allgemein ? [] : (vorab.isEmpty ? [Erinnerung.neueAusloesung(0)] : vorab), quelle: Self.quelle, erstellt: zeit, geaendert: zeit)
         try await senden(art: "erinnerung", id: id, daten: e.alsJson(), geaendert: zeit)
         log("ablage", "Erinnerung angelegt", wo: "Ablage/Erinnerung")
         return e
@@ -532,6 +554,12 @@ final class AblageAbgleich {
         var neu = aendern(alt)
         let zeit = self.zeit("erinnerung", id)
         neu.geaendert = zeit
+        // Verschobener Termin oder wieder geöffnet: Was jetzt schon vorbei ist, meldet sich nicht nachträglich; Künftiges bleibt.
+        let wiederOffen = alt.erledigt != 0 && neu.erledigt == 0
+        if alt.termin != neu.termin || wiederOffen {
+            for i in neu.ausloesungen.indices { neu.ausloesungen[i].angelegt = zeit }
+            if wiederOffen { neu.hinweisUm = 0 }
+        }
         try await senden(art: "erinnerung", id: id, daten: neu.alsJson(), geaendert: zeit)
         return neu
     }
