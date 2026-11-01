@@ -41,6 +41,8 @@ final class ProgrammKarteView: KartenView {
 
     // Bedienelemente
     private let aktionsSchalter = Schalter(.ruhig, "Aktualisieren")
+    /// Nur solange ein Update dieser Karte laeuft.
+    private let abbrechenSchalter = Schalter(.zweit, "Abbrechen")
     /// Nur bei echtem Update: das ganze Update als Auftrag an eine neue CLI-Sitzung.
     private let cliSchalter = Schalter(.zweit, "An CLI übergeben")
     private let pruefenSchalter = Schalter(.zweit, "Prüfen")
@@ -143,6 +145,11 @@ final class ProgrammKarteView: KartenView {
         // --- Bedienelemente rechts ---
         aktionsSchalter.target = self
         aktionsSchalter.action = #selector(aktualisierenGeklickt)
+        abbrechenSchalter.target = self
+        abbrechenSchalter.action = #selector(abbrechenGeklickt)
+        abbrechenSchalter.toolTip = "Beendet die laufende Installation dieses Programms. Das Update bleibt danach offen "
+                                  + "und lässt sich neu starten oder an eine CLI-Sitzung übergeben."
+        abbrechenSchalter.isHidden = true
         cliSchalter.target = self
         cliSchalter.action = #selector(cliGeklickt)
         cliSchalter.toolTip = "Startet über den OpenLauncher eine neue Claude-Code-Sitzung (Opus 5.5, Minimal, Schnellmodus, Effort High), "
@@ -160,7 +167,7 @@ final class ProgrammKarteView: KartenView {
 
         balken.isHidden = true
 
-        let rechts = NSStackView(views: [aktionsSchalter, cliSchalter, kleineReihe, balken])
+        let rechts = NSStackView(views: [aktionsSchalter, abbrechenSchalter, cliSchalter, kleineReihe, balken])
         rechts.orientation = .vertical
         rechts.alignment = .centerX
         rechts.spacing = 8
@@ -182,6 +189,7 @@ final class ProgrammKarteView: KartenView {
             rechts.widthAnchor.constraint(equalToConstant: 148),
 
             aktionsSchalter.widthAnchor.constraint(equalTo: rechts.widthAnchor),
+            abbrechenSchalter.widthAnchor.constraint(equalTo: rechts.widthAnchor),
             cliSchalter.widthAnchor.constraint(equalTo: rechts.widthAnchor),
             kleineReihe.widthAnchor.constraint(equalTo: rechts.widthAnchor),
             balken.widthAnchor.constraint(equalTo: rechts.widthAnchor),
@@ -272,8 +280,10 @@ final class ProgrammKarteView: KartenView {
         aktionsSchalter.isEnabled = modell.aktionMoeglich
         aktionsSchalter.betont = modell.aktionBetont
 
+        abbrechenSchalter.isHidden = !modell.kannAbbrechen
+
         cliSchalter.isHidden = !modell.kannAnCliUebergeben
-        cliSchalter.isEnabled = modell.aktionMoeglich && !modell.uebergibtAnClaude
+        cliSchalter.isEnabled = (modell.aktionMoeglich || modell.uebergabeNachAbbruch) && !modell.uebergibtAnClaude
 
         pruefenSchalter.isEnabled = modell.kannPruefen
         startenSchalter.isEnabled = modell.kannStarten
@@ -295,6 +305,10 @@ final class ProgrammKarteView: KartenView {
 
     @objc private func aktualisierenGeklickt() {
         Task { await modell.aktualisierenGeklickt() }
+    }
+
+    @objc private func abbrechenGeklickt() {
+        modell.updateAbbrechen()
     }
 
     @objc private func cliGeklickt() {

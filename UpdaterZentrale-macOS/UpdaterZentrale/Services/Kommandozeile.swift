@@ -5,6 +5,29 @@ struct BefehlErgebnis: Sendable {
     let exitCode: Int
     let ausgabe: String
     let abgelaufen: Bool
+    /// Beendet durch den Abbrechen-Knopf; `abgelaufen` ist dann auch gesetzt, die Anbieter behandeln beides gleich.
+    var abgebrochen: Bool = false
+}
+
+/// Der Abbrechen-Knopf einer Karte. Liegt als Task-Local um den ganzen Update-Lauf, damit jeder Aufruf von
+/// `Kommandozeile.ausfuehren` in diesem Lauf ihn sieht, ohne dass ihn jeder Anbieter durchreichen muss.
+final class AbbruchMarke: @unchecked Sendable {
+    @TaskLocal static var aktuell: AbbruchMarke?
+
+    private let schloss = NSLock()
+    private var gesetzt = false
+
+    var istAbgebrochen: Bool {
+        schloss.lock()
+        defer { schloss.unlock() }
+        return gesetzt
+    }
+
+    func abbrechen() {
+        schloss.lock()
+        defer { schloss.unlock() }
+        gesetzt = true
+    }
 }
 
 /// Fuehrt Konsolenwerkzeuge aus und gibt deren gesamte Ausgabe zurueck.
@@ -128,13 +151,15 @@ enum Kommandozeile {
                            lebenszeichen: (@Sendable () -> Int64)? = nil,
                            hoechstdauer: TimeInterval = 8 * 3600) async -> BefehlErgebnis {
         let umwelt = umgebung
+        // Hier gelesen: Task-Locals kommen auf dem Dispatch-Thread unten nicht an.
+        let abbruch = AbbruchMarke.aktuell
         return await withCheckedContinuation { fortsetzung in
             // Eigener Thread: Process blockiert, und der MainActor darf dabei nie stehenbleiben.
             DispatchQueue.global(qos: .userInitiated).async {
                 let ergebnis = ausfuehrenBlockierend(datei, argumente, zeitlimit: zeitlimit,
                                                      arbeitsverzeichnis: arbeitsverzeichnis,
                                                      umwelt: umwelt, lebenszeichen: lebenszeichen,
-                                                     hoechstdauer: hoechstdauer)
+                                                     hoechstdauer: hoechstdauer, abbruch: abbruch)
                 fortsetzung.resume(returning: ergebnis)
             }
         }
@@ -146,7 +171,13 @@ enum Kommandozeile {
                                               arbeitsverzeichnis: String?,
                                               umwelt: [String: String],
                                               lebenszeichen: (@Sendable () -> Int64)? = nil,
-                                              hoechstdauer: TimeInterval = 8 * 3600) -> BefehlErgebnis {
+                                              hoechstdauer: TimeInterval = 8 * 3600,
+                                              abbruch: AbbruchMarke? = nil) -> BefehlErgebnis {
+        let wurdeAbgebrochen = { abbruch?.istAbgebrochen == true }
+        // Schon abgebrochen: kein weiterer Schritt desselben Updates startet mehr.
+        if wurdeAbgebrochen() {
+            return BefehlErgebnis(exitCode: -1, ausgabe: "Abgebrochen.", abgelaufen: true, abgebrochen: true)
+        }
         guard FileManager.default.isExecutableFile(atPath: datei) else {
             return BefehlErgebnis(exitCode: -1,
                                   ausgabe: "Start fehlgeschlagen: \((datei as NSString).lastPathComponent) wurde nicht gefunden (\(datei)).",
@@ -202,7 +233,7 @@ enum Kommandozeile {
                 var letztesZeichen = lebenszeichen()
                 var letzteMenge = 0
                 var naechstePruefung = Date().addingTimeInterval(5)
-                while prozess.isRunning && Date() < ende && Date() < deckel {
+                while prozess.isRunning && Date() < ende && Date() < deckel && !wurdeAbgebrochen() {
                     Thread.sleep(forTimeInterval: 0.05)
                     guard Date() >= naechstePruefung else { continue }
                     naechstePruefung = Date().addingTimeInterval(5)
@@ -215,23 +246,29 @@ enum Kommandozeile {
                     }
                 }
             } else {
-                while prozess.isRunning && Date() < ende {
+                while prozess.isRunning && Date() < ende && !wurdeAbgebrochen() {
                     Thread.sleep(forTimeInterval: 0.05)
                 }
             }
-            if prozess.isRunning {
-                // Erst freundlich, dann hart -- ein haengender Installer soll die App nicht binden.
-                // Der ganze Prozessbaum geht mit: ein Installer-Kind, das weiterlaeuft, hielte
-                // sonst das Programm (und die Ausgabe-Pipe) fest.
-                let nachfahren = prozessbaum(prozess.processIdentifier)
-                prozess.terminate()
-                for pid in nachfahren { kill(pid, SIGTERM) }
-                let gnadenfrist = Date().addingTimeInterval(5)
-                while prozess.isRunning && Date() < gnadenfrist { Thread.sleep(forTimeInterval: 0.05) }
-                if prozess.isRunning { kill(prozess.processIdentifier, SIGKILL) }
-                for pid in nachfahren where kill(pid, 0) == 0 { kill(pid, SIGKILL) }
-                abgelaufen = true
+        } else if abbruch != nil {
+            while prozess.isRunning && !wurdeAbgebrochen() {
+                Thread.sleep(forTimeInterval: 0.05)
             }
+        }
+        var abgebrochen = false
+        if prozess.isRunning && (zeitlimit > 0 || wurdeAbgebrochen()) {
+            // Erst freundlich, dann hart -- ein haengender Installer soll die App nicht binden.
+            // Der ganze Prozessbaum geht mit: ein Installer-Kind, das weiterlaeuft, hielte
+            // sonst das Programm (und die Ausgabe-Pipe) fest.
+            abgebrochen = wurdeAbgebrochen()
+            let nachfahren = prozessbaum(prozess.processIdentifier)
+            prozess.terminate()
+            for pid in nachfahren { kill(pid, SIGTERM) }
+            let gnadenfrist = Date().addingTimeInterval(5)
+            while prozess.isRunning && Date() < gnadenfrist { Thread.sleep(forTimeInterval: 0.05) }
+            if prozess.isRunning { kill(prozess.processIdentifier, SIGKILL) }
+            for pid in nachfahren where kill(pid, 0) == 0 { kill(pid, SIGKILL) }
+            abgelaufen = true
         }
         prozess.waitUntilExit()
 
@@ -254,7 +291,8 @@ enum Kommandozeile {
 
         return BefehlErgebnis(exitCode: Int(prozess.terminationStatus),
                               ausgabe: saeubern(text),
-                              abgelaufen: abgelaufen)
+                              abgelaufen: abgelaufen,
+                              abgebrochen: abgebrochen)
     }
 
     /// Alle Nachfahren eines Prozesses (Kinder, Enkel …), ermittelt ueber `pgrep -P`.

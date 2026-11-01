@@ -94,6 +94,36 @@ final class ProgrammViewModel {
 
     var letzterBericht: UpdateBericht? { didSet { melden() } }
 
+    /// Der Abbrechen-Knopf des laufenden Updates; nil, solange keins laeuft.
+    private var abbruchMarke: AbbruchMarke? { didSet { melden() } }
+
+    /// Der Benutzer hat das letzte Update dieser Karte abgebrochen; ein neues Update setzt das zurueck.
+    private var vomNutzerAbgebrochen = false
+
+    var kannAbbrechen: Bool { abbruchMarke.map { !$0.istAbgebrochen } ?? false }
+
+    /// Eine gerade abgebrochene Karte darf auch waehrend des Sammellaufs an eine Sitzung: der Lauf ist
+    /// an ihr vorbei, und oft bricht man genau deshalb ab.
+    var uebergabeNachAbbruch: Bool {
+        vomNutzerAbgebrochen && !istBeschaeftigt && letzterBericht?.ergebnis == .abgebrochen
+    }
+
+    /// Beendet das laufende Update dieser Karte samt Prozessbaum; das Update bleibt danach offen.
+    /// Fragt zuerst, denn ein beendeter Installer kann ein halb ersetztes Programm hinterlassen.
+    func updateAbbrechen() {
+        guard kannAbbrechen else { return }
+        guard Dialoge.fragen("Das Update von \(name) jetzt abbrechen?\n\nDie laufende Installation wird beendet. "
+                             + "Das kann ein halb ersetztes Programm hinterlassen; die Updater-Zentrale prüft das danach und meldet es.",
+                             "Update abbrechen?") else { return }
+        // Der Lauf kann geendet haben, waehrend die Frage offen war.
+        guard let marke = abbruchMarke, !marke.istAbgebrochen else { return }
+        vomNutzerAbgebrochen = true
+        statusText = "Bricht das Update ab …"
+        Diagnose.ereignis(.info, "karte", "update.abbruch", "\(name): Update vom Nutzer abgebrochen.", ["programm": eintrag.id])
+        marke.abbrechen()
+        melden()
+    }
+
     /// Uebernimmt die gemerkte Antwort der letzten Pruefung, damit die Liste sofort etwas zeigt.
     func standUebernehmen(_ stand: PruefstandEintrag) {
         guard let gemerkt = Pruefstand.zustand(stand.zustand) else { return }
@@ -352,7 +382,13 @@ final class ProgrammViewModel {
             return
         }
 
-        guard let eigen = erwerben(nil, "uebergabe") else { return }
+        let eigen: Freigabe
+        if uebergabeNachAbbruch && koordination.belegt {
+            eigen = Freigabe(nil)
+        } else {
+            guard let erworben = erwerben(nil, "uebergabe") else { return }
+            eigen = erworben
+        }
         defer { eigen.freigeben() }
         uebergibtAnClaude = true
         defer { uebergibtAnClaude = false }
@@ -458,6 +494,8 @@ final class ProgrammViewModel {
         await lauf("update") { fortschritt in
             let uhr = Date()
             let kontext = self.sammelKontext
+            let marke = AbbruchMarke.aktuell
+            let angebotVorher = self.verfuegbareVersion
             let kette = UpdateKette(aktualisierer, self.eintrag, fortschritt) { self.statusText = $0 }
             let (vorher, vorPruefung) = await kette.vorpruefen()
             Protokollierung.laufBeginnen(self.eintrag, befehl: self.befehlsBeschreibung(),
@@ -465,6 +503,13 @@ final class ProgrammViewModel {
 
             var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
             var liefVorher = false
+
+            // Schon in der Vorpruefung abgebrochen: keine Frage und kein Beenden mehr.
+            if urteil == nil && marke?.istAbgebrochen == true {
+                urteil = KettenUrteil(ergebnis: .abgebrochen, meldung: "Abgebrochen.",
+                                      fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
+                                      fuerKarte: vorPruefung, updateAufrufe: 0, updateLiefDurch: false)
+            }
 
             if urteil == nil {
                 liefVorher = Prozessdienst.laeuft(self.eintrag)
@@ -511,6 +556,19 @@ final class ProgrammViewModel {
             }
             var ende = urteil!
 
+            // Von Hand abgebrochen: die Anbieter sehen darin ein abgelaufenes Kommando und melden einen Fehler.
+            // Das Update ist aber nur weiter offen, die Karte bietet es (und die CLI-Uebergabe) wieder an.
+            let nutzerAbbruch = marke?.istAbgebrochen == true && ende.ergebnis != .erfolgreich
+            if nutzerAbbruch {
+                ende.ergebnis = .abgebrochen
+                ende.meldung = "Vom Nutzer abgebrochen – der Prozessbaum wurde beendet."
+                ende.fingerabdruckNachher = vorher
+                ende.updateLiefDurch = false
+                ende.fuerKarte.zustand = angebotVorher.istLeer ? .abgebrochen : .updateVerfuegbar
+                ende.fuerKarte.verfuegbareVersion = angebotVorher
+                ende.fuerKarte.meldung = "Abgebrochen – das Update ist weiter offen."
+            }
+
             // Ein abgebrochenes oder gescheitertes Update kann die App halb ersetzt zuruecklassen
             // (alte geloescht, neue nicht fertig verschoben). Das muss als eigener Befund sichtbar werden.
             // Auch bei einer schon vorher kaputten App: der Hinweis zum Neuinstallieren bleibt dann stehen.
@@ -524,7 +582,9 @@ final class ProgrammViewModel {
 
             // Einmal neu starten, nach der ganzen Kette -- nie zwischen Durchlaeufen, wo ein
             // laufendes Ziel den naechsten Installer blockieren wuerde.
-            if self.eintrag.neuStartenNachUpdate && liefVorher && ende.updateLiefDurch {
+            // Auch nach einem Abbruch: das Update hat das Programm geschlossen, es soll nicht zu bleiben.
+            if self.eintrag.neuStartenNachUpdate && liefVorher
+                && (ende.updateLiefDurch || (nutzerAbbruch && ende.ergebnis == .abgebrochen)) {
                 fortschritt.berichte("Startet \(self.name) neu.")
                 Prozessdienst.starten(self.eintrag)
             }
@@ -651,7 +711,11 @@ final class ProgrammViewModel {
         }
 
         letztePruefung = nil
-        let ergebnis = await arbeit(fortschritt)
+        let marke = art == "update" ? AbbruchMarke() : nil
+        if art == "update" { vomNutzerAbgebrochen = false }
+        abbruchMarke = marke
+        let ergebnis = await AbbruchMarke.$aktuell.withValue(marke) { await arbeit(fortschritt) }
+        abbruchMarke = nil
         if art == "pruefung" { letztePruefung = ergebnis }
 
         zustand = ergebnis.zustand
