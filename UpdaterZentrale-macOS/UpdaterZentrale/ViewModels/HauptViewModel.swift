@@ -338,28 +338,12 @@ final class HauptViewModel {
         // Ist ein zuvor abgelegtes Update inzwischen angekommen -- oder haengt es noch?
         for programm in programme { await programm.ausstehendesPruefen() }
 
-        // Neu geprueft wird nur, was keine frische Antwort hat. Die eigenen Werkzeuge immer: das
-        // kostet einen gemeinsamen git pull und ist der einzige Weg, wie eine gerade im Repo
-        // angekommene Version ohne Klick erscheint.
-        let grenze = Date().addingTimeInterval(-Self.standGueltig)
-        let faellig = programme.filter { p in
-            guard let zeit = p.standVom else { return true }
-            return zeit < grenze || p.eintrag.art == "reposkript"
-        }
-        if faellig.isEmpty {
-            let aeltester = programme.compactMap(\.standVom).min()
-            kopfStatus = "Stand der letzten Prüfung von " + (aeltester.map(Formate.uhrzeit) ?? "–") + " Uhr – "
-                       + updateZusammenfassung + ". „Alle prüfen“ fragt neu ab."
-            vorgang.beenden("uebernommen", kopfStatus)
-            return
-        }
-
-        await allePruefenMitBesitz(besitz, nur: faellig)
+        // Jeder Start fragt jedes Programm neu ab: installiert, welche Version, was ist verfuegbar.
+        // Eine gemerkte Antwort fuellt die Karten nur, bis die frische da ist -- sie ersetzt die
+        // Pruefung nie.
+        await allePruefenMitBesitz(besitz)
         vorgang.beenden("abgeschlossen", kopfStatus)
     }
-
-    /// Wie lange eine gemerkte Antwort beim naechsten Start die Pruefung erspart.
-    private static let standGueltig: TimeInterval = 60 * 60
 
     func allePruefen() async {
         guard let besitz = koordination.sammelBeginnen() else {
@@ -375,9 +359,9 @@ final class HauptViewModel {
         vorgang.beenden("abgeschlossen", kopfStatus)
     }
 
-    private func allePruefenMitBesitz(_ besitz: Laufbesitz, nur: [ProgrammViewModel]? = nil) async {
+    private func allePruefenMitBesitz(_ besitz: Laufbesitz) async {
         // Eine Momentaufnahme: die Liste darf sich unter dem Lauf nicht verschieben.
-        let liste = nur ?? programme
+        let liste = programme
 
         // Erst den Homebrew-Katalog auffrischen, DANN pruefen. Ohne das liest `brew info` den
         // lokalen Tap, und der kann Tage alt sein -- die Pruefung meldete dann "Aktuell", obwohl

@@ -332,16 +332,13 @@ public sealed partial class HauptViewModel : ObservableObject
     /// Runs once after the window is up, so the list is meaningful without a first click -- and
     /// so the update buttons show "Aktuell" wherever nothing is pending.
     /// </summary>
-    /// <param name="alles">
-    /// The hidden start at Windows logon checks everything. A window opened by hand only checks
-    /// what has no fresh answer -- after the logon check that is nothing, and the list is simply there.
-    /// </param>
-    public async Task ErstePruefungAsync(bool alles = false)
+    /// <param name="hintergrund">True for the hidden start at Windows logon.</param>
+    public async Task ErstePruefungAsync(bool hintergrund = false)
     {
-        await ErstePruefungKernAsync(alles);
+        await ErstePruefungKernAsync();
 
         // A batch interrupted by the self-update goes on now -- never from the hidden logon start.
-        if (!alles && _einstellungen.SammelFortsetzen is not null)
+        if (!hintergrund && _einstellungen.SammelFortsetzen is not null)
         {
             try
             {
@@ -354,7 +351,12 @@ public sealed partial class HauptViewModel : ObservableObject
         }
     }
 
-    private async Task ErstePruefungKernAsync(bool alles)
+    /// <summary>
+    /// Every start asks every program again: is it installed, which version, what is available.
+    /// The user relies on this list, so a stored answer only fills the cards until the fresh one is
+    /// in -- it never replaces the check.
+    /// </summary>
+    private async Task ErstePruefungKernAsync()
     {
         await Task.Delay(400);
 
@@ -364,26 +366,6 @@ public sealed partial class HauptViewModel : ObservableObject
 
         // Which programs already start elevated through a scheduled task? Independent queries.
         await Task.WhenAll(Programme.Select(p => p.AufgabenZustandLesenAsync()));
-
-        var grenze = DateTime.Now - StandGueltig;
-        // The own tools are always asked again: that costs one shared git pull, and it is the
-        // only way a version that just arrived in the repo shows up without a click. A remembered
-        // "not installed" is asked again too: a program installed outside the app (winget, an agent)
-        // would otherwise keep that card wrong until the stored state expires.
-        var faellig = alles
-            ? Programme.ToList()
-            : Programme.Where(p => p.StandVom is not { } zeit || zeit < grenze
-                                   || p.Zustand == UpdateZustand.NichtInstalliert
-                                   || p.Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (faellig.Count == 0 && !Programme.Any(p => p.UebernahmeOffen))
-        {
-            var aeltester = Programme.Min(p => p.StandVom);
-            KopfStatus = "Stand der letzten Prüfung von " + (aeltester?.ToString("HH:mm") ?? "–") + " Uhr – "
-                         + UpdateZusammenfassung + ". „Alle prüfen“ fragt neu ab.";
-            vorgang.Beenden("uebernommen", KopfStatus);
-            _ = HintergrundSicherstellenAsync();
-            return;
-        }
 
         // The startup pass queries winget, git and the Appx registry just like a batch run, so it
         // holds the same exclusive ownership -- a click during it waits instead of running beside it.
@@ -402,7 +384,7 @@ public sealed partial class HauptViewModel : ObservableObject
             // Did a previously staged update arrive in the meantime -- or is it still hanging?
             foreach (var p in Programme.ToList()) await p.AusstehendesPruefenAsync();
 
-            await AllePruefenMitBesitzAsync(besitz, faellig);
+            await AllePruefenMitBesitzAsync(besitz);
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         catch (Exception ex)
@@ -417,9 +399,6 @@ public sealed partial class HauptViewModel : ObservableObject
             _ = HintergrundSicherstellenAsync();
         }
     }
-
-    /// <summary>How long a stored answer spares the check at the next start.</summary>
-    private static readonly TimeSpan StandGueltig = TimeSpan.FromMinutes(60);
 
     [ObservableProperty] private int _pruefGesamt = 1;
     [ObservableProperty] private int _pruefFertig;
@@ -547,11 +526,11 @@ public sealed partial class HauptViewModel : ObservableObject
         }
     }
 
-    private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz, IReadOnlyList<ProgrammViewModel>? nur = null)
+    private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz)
     {
         // A snapshot: the list must not shift under the run (reload is blocked meanwhile, this is
         // the second layer).
-        var liste = (nur ?? Programme).ToList();
+        var liste = Programme.ToList();
         PruefGesamt = Math.Max(liste.Count, 1);
         PruefFertig = 0;
 

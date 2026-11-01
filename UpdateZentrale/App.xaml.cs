@@ -92,7 +92,7 @@ public partial class App : Application
     {
         try
         {
-            if (fenster.DataContext is ViewModels.HauptViewModel modell) await modell.ErstePruefungAsync(alles: hintergrund);
+            if (fenster.DataContext is ViewModels.HauptViewModel modell) await modell.ErstePruefungAsync(hintergrund);
         }
         catch (Exception ex)
         {
