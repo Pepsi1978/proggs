@@ -105,7 +105,7 @@ fun ErinnerungenBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
             items(liste.orEmpty(), key = { it.id }) { e ->
                 val vorbei = !allgemein && (e.erledigt != 0L || (e.termin() ?: 0L) < System.currentTimeMillis())
                 Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { vm.erinnerungOffen = e.id }.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(if (allgemein) (if (e.erledigt != 0L) "Erledigt" else "Ohne festen Termin") else e.datumAnzeige() + if (e.erledigt != 0L) " · erledigt" else "",
+                    Text(if (allgemein) (if (e.erledigt != 0L) "Erledigt" else "Ohne festen Termin") else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Erinnerung") + if (e.erledigt != 0L) " · erledigt" else "",
                         color = if (vorbei) f.textLeise else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(e.zeile, color = if (vorbei) f.textLeise else f.text, fontSize = 16.sp, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                 }
@@ -141,7 +141,7 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
     Box(Modifier.fillMaxSize().background(f.hgOben).pointerInput(Unit) { detectTapGestures { } }.windowInsetsPadding(WindowInsets.safeDrawing)) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (e.allgemein) "Ohne festen Termin" else e.datumAnzeige(), Modifier.weight(1f), color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(if (e.allgemein) "Ohne festen Termin" else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Erinnerung"), Modifier.weight(1f), color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Box(Modifier.size(40.dp).antippen { schliessen() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {

@@ -555,6 +555,7 @@
     {"versionCode": 550, "versionName": "1.8.539", "stand": "01.11.2026, 18:16 Uhr", "notiz": "Interne Pflege am Agentenkanal, für dich ändert sich nichts."},
     {"versionCode": 551, "versionName": "1.8.540", "stand": "01.11.2026, 18:18 Uhr", "notiz": "Erinnerungen zuverlässiger: Wecker warten ein Gespräch ab und klingeln auch nach einem Neustart, Bestätigen trifft nur Fälliges, verschobene Termine melden sich nicht nachträglich."},
     {"versionCode": 552, "versionName": "1.8.541", "stand": "01.11.2026, 18:20 Uhr", "notiz": "Die Ablage-Suche findet jetzt auch Einträge, die das Wort nur einmal im Text enthalten, öffnet Erinnerungen direkt, merkt sich beim Zurückkommen ihren Stand und nutzt für die Bedeutungssuche ein günstiges Modell."},
-    {"versionCode": 553, "versionName": "1.8.542", "stand": "01.11.2026, 18:21 Uhr", "notiz": "Beschreibung der Erinnerungen für Jarvis auf den aktuellen Stand gebracht."}
+    {"versionCode": 553, "versionName": "1.8.542", "stand": "01.11.2026, 18:21 Uhr", "notiz": "Beschreibung der Erinnerungen für Jarvis auf den aktuellen Stand gebracht."},
+    {"versionCode": 554, "versionName": "1.8.543", "stand": "01.11.2026, 18:38 Uhr", "notiz": "Erinnerungen zeigen ihre Form direkt neben dem Datum, und die KI fragt vor dem Anlegen immer nach Benachrichtigung oder Wecker."}
 ]
 }

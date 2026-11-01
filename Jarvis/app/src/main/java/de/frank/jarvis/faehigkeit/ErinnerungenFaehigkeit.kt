@@ -20,7 +20,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             "Aufgaben, Kalender und Wecker nur, wenn Frank das ausdrücklich so sagt („leg eine Aufgabe an“, „trag einen Termin ein“, „stell einen Wecker“). " +
             "Beim Anlegen schreibst du drei Fassungen: text (vollständig in Franks Sinn, jeder Punkt, jeder Name, jede Zahl), kurz (höchstens 35 Wörter, für sich allein verständlich, zum Vorlesen, ohne Anrede) und zeile (etwa sechs Wörter für die Liste). " +
             "Eine nicht genannte Uhrzeit nie erfinden: uhrzeit dann weglassen. Ohne Datum wird sie eine allgemeine Erinnerung; dafür NICHT nach einem Termin fragen, Jarvis entscheidet selbst, wann ein Hinweis passt. " +
-            "Form: Vorgabe Benachrichtigung; ist bei etwas Wichtigem nicht klar, ob Frank geweckt werden will, frag kurz „Benachrichtigung oder Wecker?“. Vorgelesen wird immer. " +
+            "Form: Beim Anlegen fragst du vor dem Speichern immer ausdrücklich „Benachrichtigung oder Wecker?“ und speicherst Franks Auswahl in form; ohne seine Antwort legst du die Erinnerung nicht an. Vorgelesen wird immer. " +
             "Allgemeine offene Erinnerungen sprichst du von dir aus an, wenn sie gerade wirklich passen (Gesprächsthema, freie Zeit), nie mehrfach kurz hintereinander und nicht, wenn zuletzt_erwähnt von heute ist; danach aktion erwaehnt. " +
             "Bestätigen betrifft genau eine Auslösung, die übrigen bleiben geplant; Bearbeiten ist keine Bestätigung. ids nie vorlesen."
 
@@ -119,7 +119,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "erinnerung_speichern",
             titel = "Erinnerung speichern",
             beschreibung = "Jarvis: Reiter „Erinnerung“ der Ablage. „Erinnere mich am 12.8.2027 daran, mein Abo zu kündigen“ → aktion anlegen mit datum (Uhrzeit nur, wenn genannt). „Erinnere mich später an …“ → aktion anlegen ohne datum: allgemeine Erinnerung. " +
-                "Nicht zusätzlich als Aufgabe oder Termin anlegen. aendern: nur die genannten Felder. ausloesung_hinzufuegen: „erinnere mich zusätzlich zwei Tage vorher“ (minuten, hier 2880). ausloesung_entfernen mit ausloesung_id. " +
+                "Nicht zusätzlich als Aufgabe oder Termin anlegen. Beim Anlegen immer ausdrücklich „Benachrichtigung oder Wecker?“ fragen und erst nach Franks Antwort mit seiner Auswahl in form speichern. aendern: nur die genannten Felder. ausloesung_hinzufuegen: „erinnere mich zusätzlich zwei Tage vorher“ (minuten, hier 2880). ausloesung_entfernen mit ausloesung_id. " +
                 "form: meldung oder wecker. bestaetigen: genau eine Auslösung (mit ausloesung_id oder die älteste fällige), die übrigen bleiben. erledigt: die ganze Erinnerung ist erledigt, wieder_offen macht das rückgängig. erwaehnt: du hast eine allgemeine Erinnerung gerade angesprochen. loeschen: nur auf Franks ausdrücklichen Wunsch.",
             schema = schema(
                 "aktion" to text("Was geschehen soll.", listOf("anlegen", "aendern", "loeschen", "ausloesung_hinzufuegen", "ausloesung_entfernen", "bestaetigen", "erledigt", "wieder_offen", "erwaehnt")),
