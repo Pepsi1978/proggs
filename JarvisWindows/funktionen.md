@@ -77,3 +77,4 @@ Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Entfernt in 1.0.37
 - Einstellungsbereich Programmierung mit Sessions-Liste und Formularen für Rückfrage und Nachtrag; Laptop-Gespräche mit Auftrag stehen im Leistenreiter Programmierung, Sitzungen anderer Rechner nennt Jarvis auf Nachfrage. Reiter „Neues Gespräch“. Plus-Menüpunkt „OpenLauncher-Session hier am Laptop“. In der Zentrale Begrüßung, Datum, Sprechblase und Schnellverknüpfungen.
+- Ablage: Alle Bereiche zeigen ihre aktuelle Anzahl, auch Prompts und Erinnerung.

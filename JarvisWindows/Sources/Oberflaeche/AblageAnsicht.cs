@@ -154,6 +154,8 @@ public sealed class AblageDaten : Beobachtbar
             zaehlerStand = Quelle.AufbauStand;
             zaehler = Enum.GetValues<AblageBereich>().ToDictionary(x => x, x => Elemente(x, "").Count);
         }
+        if (b == AblageBereich.Prompts) return Quelle.Prompts.Count;
+        if (b == AblageBereich.Erinnerung) return Quelle.Erinnerungen.Count;
         return zaehler.TryGetValue(b, out var n) ? n : 0;
     }
     public IEnumerable<AblageEintrag> Eintraege => Quelle.Eintraege;
@@ -513,7 +515,7 @@ public sealed class AblageAnsicht : UserControl
         var bild = Flaeche(Sy(b.Symbol(), 15, farbe, FontWeights.SemiBold), Farbton13(farbe), 10);
         bild.Width = 34; bild.Height = 34;
         var name = T(b.Titel(), 13, FontWeights.SemiBold, null, 1);
-        var karte = Flaeche(H(10, bild, Fuell(V(1, name, b is not (AblageBereich.Prompts or AblageBereich.Erinnerung) ? T(daten.Anzahl(b).ToString(), 11, null, Farbe.Text3) : null))),
+        var karte = Flaeche(H(10, bild, Fuell(V(1, name, T(daten.Anzahl(b).ToString(), 11, null, Farbe.Text3)))),
             Farbe.Glas(aktiv ? 0.13 : 0.04), 14, 10, 10, aktiv ? MitDeckkraft(farbe, 0.7) : Farbe.Glas(0.06));
         return Klick(karte, () =>
         {

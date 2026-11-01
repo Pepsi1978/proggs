@@ -296,10 +296,16 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         abgleichText?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = if (abgleich.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         // Alle Bereiche auf einen Blick, umbrechend statt seitlich zu wischen.
         FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Alle", filter == null) { filter = null }
-            Kategorie.entries.forEach { k -> Chip(k.anzeige, filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
-            Chip("Prompts", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER; if (filter == PROMPTS_REITER) suche = "" }
-            Chip("Erinnerung", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER; if (filter == ERINNERUNG_REITER) suche = "" }
+            // Die Zahlen folgen dem Abgleich: Jede neue Fassung aus einer anderen Jarvis-Version zählt sofort mit.
+            val promptStand by de.frank.jarvis.ablage.Prompts.stand.collectAsState()
+            val erinnerungStand by de.frank.jarvis.ablage.Erinnerungen.stand.collectAsState()
+            val promptZahl by ladeImHintergrund(0, promptStand) { de.frank.jarvis.ablage.Prompts.alle(context).size }
+            val erinnerungZahl by ladeImHintergrund(0, erinnerungStand) { de.frank.jarvis.ablage.Erinnerungen.alle(context).size }
+            val zahlen = remember(alle) { Kategorie.entries.associateWith { k -> alle.count { k in it.kategorien } } }
+            Chip("Alle ${alle.size}", filter == null) { filter = null }
+            Kategorie.entries.forEach { k -> Chip("${k.anzeige} ${zahlen[k] ?: 0}", filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
+            Chip("Prompts $promptZahl", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER; if (filter == PROMPTS_REITER) suche = "" }
+            Chip("Erinnerung $erinnerungZahl", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER; if (filter == ERINNERUNG_REITER) suche = "" }
         }
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }

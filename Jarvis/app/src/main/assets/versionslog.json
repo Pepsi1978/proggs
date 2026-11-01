@@ -548,6 +548,7 @@
     {"versionCode": 543, "versionName": "1.8.532", "stand": "01.11.2026, 16:52 Uhr", "notiz": "Die Frist vor einer neuen Jarvis-Version folgt jetzt der echten Uhr und läuft zusätzlich als Countdown in der Benachrichtigung, auch auf dem Sperrbildschirm."},
     {"versionCode": 544, "versionName": "1.8.533", "stand": "01.11.2026, 16:58 Uhr", "notiz": "Computer Use am Windows-PC schließt nur noch genau benannte Programme, warnt bei schwarzem Bild und holt neue Fenster nach vorn."},
     {"versionCode": 545, "versionName": "1.8.534", "stand": "01.11.2026, 17:35 Uhr", "notiz": "Neuer Reiter Erinnerung in der Ablage: Erinnerungen mit Datum und mehreren Zeitpunkten oder allgemein, als Benachrichtigung oder Wecker, immer vorgelesen und auf allen Geräten abgeglichen."},
-    {"versionCode": 546, "versionName": "1.8.535", "stand": "01.11.2026, 17:49 Uhr", "notiz": "Agentenkanal zu Mac und Windows HP: Fertige Antworten gehen nach einem Abbruch nicht verloren, und späte Antworten melden sich zuverlässig."}
+    {"versionCode": 546, "versionName": "1.8.535", "stand": "01.11.2026, 17:49 Uhr", "notiz": "Agentenkanal zu Mac und Windows HP: Fertige Antworten gehen nach einem Abbruch nicht verloren, und späte Antworten melden sich zuverlässig."},
+    {"versionCode": 547, "versionName": "1.8.536", "stand": "01.11.2026, 17:52 Uhr", "notiz": "Alle Reiter der Ablage zeigen ihre Anzahl, auch Prompts und Erinnerung, und Inhalte vom Windows-Laptop heißen Jarvis Windows HP."}
 ]
 }

@@ -70,7 +70,7 @@ data class Erinnerung(
         a.minuten == 0 -> if (uhrzeit != null) "Zum Termin" else "Am Termintag"
         a.minuten % 1440 == 0 -> tageText(a.minuten / 1440) + " vorher"
         a.minuten % 60 == 0 -> stundenText(a.minuten / 60) + " vorher"
-        else -> "${a.minuten} Minuten vorher"
+        else -> if (a.minuten == 1) "1 Minute vorher" else "${a.minuten} Minuten vorher"
     }
 
     /** Erste Zeile des Eintrags: Datum und nur eine ausdrücklich genannte Uhrzeit. */

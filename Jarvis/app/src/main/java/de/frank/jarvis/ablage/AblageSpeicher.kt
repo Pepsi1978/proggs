@@ -68,7 +68,8 @@ class AblageFehler(meldung: String) : Exception(meldung)
 object AblageQuellen {
     const val HANDY = "Jarvis Handy"
     const val MAC = "Jarvis Mac OS"
-    const val WINDOWS = "Jarvis Windows"
+    /** Genau der Name, den die App auf dem HP-Laptop als Quelle sendet (AppInfo.Name). */
+    const val WINDOWS = "Jarvis Windows HP"
     private val kurz = linkedMapOf("handy" to HANDY, "mac" to MAC, "windows" to WINDOWS)
     private val gemerkt = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
@@ -85,7 +86,7 @@ object AblageQuellen {
     fun alsWert(namen: List<String>): String = namen.mapNotNull { n -> kurz.entries.firstOrNull { it.value == n }?.key }.joinToString(",")
 
     /** Unbekannte Quellen (eine spätere Version) stehen hinter allen bekannten. */
-    fun rang(ordnung: List<String>, quelle: String): Int = ordnung.indexOf(quelle).let { if (it < 0) ordnung.size else it }
+    fun rang(ordnung: List<String>, quelle: String): Int = ordnung.indexOf(if (quelle == "Jarvis Windows") WINDOWS else quelle).let { if (it < 0) ordnung.size else it }
 
     /** Alle Reihenfolgen für die Einstellung per Sprache. */
     val alleOrdnungen: List<Pair<String, String>> = listOf("handy,mac,windows", "handy,windows,mac", "mac,handy,windows", "mac,windows,handy", "windows,handy,mac", "windows,mac,handy")
