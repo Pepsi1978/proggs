@@ -138,9 +138,7 @@ object Timer {
             .setContentIntent(PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), unveraenderlich))
             .addAction(R.drawable.ic_stat_jarvis, "Aus", aus)
             .setDeleteIntent(aus)
-            .build()
-            .apply { if (laut) flags = flags or android.app.Notification.FLAG_INSISTENT }
-        runCatching { app.getSystemService(NotificationManager::class.java).notify(meldungsId(id), meldung) }.onFailure { Log.w(TAG, "Meldung nicht möglich", it) }
+        de.frank.jarvis.meldung.Meldungen.zeige(app, de.frank.jarvis.meldung.Meldungsarten.TIMER, meldungsId(id), meldung, "$name ist abgelaufen", null, laut = laut)
     }
 
     /**
@@ -164,6 +162,7 @@ object Timer {
     }
 
     fun meldungAus(context: Context, id: Int) {
+        de.frank.jarvis.meldung.WeckerTon.stopp(meldungsId(id))
         context.getSystemService(NotificationManager::class.java).cancel(meldungsId(id))
     }
 

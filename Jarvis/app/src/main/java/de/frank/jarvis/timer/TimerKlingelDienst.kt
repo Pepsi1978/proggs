@@ -70,14 +70,16 @@ class TimerKlingelDienst : Service() {
 
     private fun klingeln() {
         val e = Einstellungen.get(this)
+        val profil = de.frank.jarvis.meldung.Meldungen.profil(this, de.frank.jarvis.meldung.Meldungsarten.TIMER)
         val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
         val toene = listOfNotNull(
+            profil.weckton.takeIf { it.isNotBlank() }?.let(android.net.Uri::parse),
             RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
         )
-        for (ton in toene) {
+        for (ton in if (profil.ton) toene else emptyList()) {
             val p = MediaPlayer()
             val ok = runCatching {
                 p.setAudioAttributes(attribute)
@@ -91,7 +93,7 @@ class TimerKlingelDienst : Service() {
             }.onFailure { Log.w(TAG, "Weckton $ton nicht abspielbar", it) }.isSuccess
             if (ok) { spieler = p; break } else runCatching { p.release() }
         }
-        if (e.timerVibration) runCatching {
+        if (profil.ton && e.timerVibration) runCatching {
             val v = if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java).defaultVibrator
             else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
             v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attribute)

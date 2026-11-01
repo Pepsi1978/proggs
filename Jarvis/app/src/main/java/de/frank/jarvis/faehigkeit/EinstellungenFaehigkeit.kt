@@ -269,7 +269,7 @@ class EinstellungsKatalog(context: Context) {
     /** Je Meldungsart die Schalter, die sie kann; Felder mit alter Kennung (ansage_…, abfahrt_…, ergebnisse_vorlesen) stehen schon einzeln da. */
     private fun meldungsEintraege(): List<Eintrag> = de.frank.jarvis.meldung.Meldungsarten.alle.flatMap { art ->
         val p = de.frank.jarvis.meldung.MeldungsProfil(e, art)
-        val b = "Benachrichtigungen: ${art.titel}"
+        val b = "Benachrichtigungen: " + (if (art.formFest) "Erinnerungen – " else "") + art.titel
         fun neu(feld: String) = feld !in art.alt
         buildList {
             if (art.schaltbar && neu("an")) add(schalter(art.schluessel("an"), b, "${art.titel} anzeigen", art.wozu, { p.an }) {
@@ -281,10 +281,10 @@ class EinstellungsKatalog(context: Context) {
                 de.frank.jarvis.meldung.Meldungen.folgen(app, art)
             })
             if (art.ton) add(schalter(art.schluessel("ton"), b, "${art.titel} mit Ton", "Aus = die Meldung kommt lautlos.", { p.ton }) { p.ton = it })
-            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem gewählten Weckton so lange wie eingestellt oder bis die Meldung angetippt oder weggewischt wird, danach liest Jarvis vor; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Wirkt nicht, solange die Meldung lautlos ist.", { p.wecker }) { p.wecker = it })
-            if (art.wecker) add(auswahl(art.schluessel("weckton"), b, "Weckton für ${art.titel}", "Der Ton, mit dem die Meldung wie ein Wecker klingelt.",
+            if (art.wecker && !art.formFest && neu("wecker")) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Ausgabeform: normale Benachrichtigung oder Wecker. Lautlos schaltet nur den Ton aus; Vorlesen ist unabhängig davon.", { p.wecker }) { p.wecker = it })
+            if (art.wecker && art != de.frank.jarvis.meldung.Meldungsarten.ERINNERUNG) add(auswahl(art.schluessel("weckton"), b, "Weckton für ${art.titel}", "Der Ton, mit dem die Meldung wie ein Wecker klingelt.",
                 { listOf("" to "Standard-Weckton") + de.frank.jarvis.meldung.WeckerTon.toene(app) }, { p.weckton }) { p.weckton = it })
-            if (art.wecker) add(zahl(art.schluessel("weckton_sekunden"), b, "Dauer des Wecktons für ${art.titel}", "So viele Sekunden klingelt der Weckton, dann verstummt er und Jarvis liest vor; 0 = bis die Meldung angetippt oder weggewischt wird.", 0, 300, "Sekunden", { p.wecktonSekunden }) { p.wecktonSekunden = it })
+            if (art.wecker && art != de.frank.jarvis.meldung.Meldungsarten.ERINNERUNG && art != de.frank.jarvis.meldung.Meldungsarten.TIMER) add(zahl(art.schluessel("weckton_sekunden"), b, "Dauer des Wecktons für ${art.titel}", if (art.formFest) "Dauer des Tons vor dem Text; 0 = 10 Sekunden. Wiederholung bis zur Bestätigung." else "So viele Sekunden klingelt der Weckton, danach auf Wunsch Vorlesen; 0 = bis zum Antippen oder Wegwischen.", 0, 300, "Sekunden", { p.wecktonSekunden }) { p.wecktonSekunden = it })
             if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
             art.eigenerTextStandard?.let { standard -> add(Eintrag(art.schluessel("vorlesetext"), b, "Vorgelesener Text für ${art.titel}",
                 "Was Jarvis bei dieser Meldung vorliest; „{name}“ setzt den Namen ein. „standard“ stellt den Standardsatz „$standard“ wieder her.",

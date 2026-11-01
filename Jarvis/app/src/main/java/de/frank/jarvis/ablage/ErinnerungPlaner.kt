@@ -206,8 +206,13 @@ object ErinnerungPlaner {
             .addAction(R.drawable.ic_stat_jarvis, "Bestätigen", ok)
             // Wegwischen zählt als Bestätigung, sonst käme dieselbe Auslösung auf den anderen Geräten wieder.
             .setDeleteIntent(ok)
-        Meldungen.zeige(app, Meldungsarten.ERINNERUNG, nummer, bauer, e.zeile, null)
-        if (sprechen) stimmen[f.quittung] = bereich.launch { ErinnerungStimme.sprich(app, e, alsWecker = false) }
+        val art = Meldungen.erinnerungsArt(e.wecker)
+        Meldungen.zeige(app, art, nummer, bauer, e.zeile, null, laut = sprechen)
+        if (sprechen) stimmen[f.quittung] = bereich.launch {
+            if (e.wecker) while (de.frank.jarvis.meldung.WeckerTon.klingelt(nummer)) delay(250L)
+            else if (Meldungen.profil(app, art).ton) delay(1_000L)
+            ErinnerungStimme.sprich(app, e, alsWecker = e.wecker)
+        }
     }
 
     private fun klingeln(app: Context, f: Faellig) {
@@ -224,7 +229,6 @@ object ErinnerungPlaner {
         _klingelt.value.forEach { f ->
             ersatzKlingeln += f.quittung
             zeigeMeldung(app, f, sprechen = true)
-            de.frank.jarvis.meldung.WeckerTon.starte(app, meldungsNummer(f.quittung), "", Meldungsarten.ERINNERUNG.id)
         }
         _klingelt.value = emptyList()
     }
@@ -283,22 +287,22 @@ object ErinnerungStimme {
 
     private fun ordner(app: Context) = File(app.filesDir, "erinnerung-stimme").apply { mkdirs() }
 
-    private fun schluessel(app: Context, kurz: String): String {
+    private fun schluessel(app: Context, kurz: String, alsWecker: Boolean): String {
         val s = SecureSettings(app)
-        val p = Meldungen.profil(app, Meldungsarten.ERINNERUNG)
+        val p = Meldungen.profil(app, Meldungen.erinnerungsArt(alsWecker))
         val roh = listOf(kurz, s.ttsProvider, s.edgeTtsVoice, s.googleTtsVoice, s.azureTtsVoice, s.geminiFlashTtsVoice, s.geminiLiteTtsVoice, s.qwenStandardVoice, p.stimme, p.tempo, s.ttsTempo(s.ttsProvider)).joinToString("|")
         return MessageDigest.getInstance("SHA-256").digest(roh.toByteArray()).joinToString("") { "%02x".format(it) }.take(32)
     }
 
-    private fun datei(app: Context, kurz: String): File? { val k = schluessel(app, kurz); return ordner(app).listFiles()?.firstOrNull { it.name.startsWith("$k.") && it.length() > 0 } }
+    private fun datei(app: Context, kurz: String, alsWecker: Boolean): File? { val k = schluessel(app, kurz, alsWecker); return ordner(app).listFiles()?.firstOrNull { it.name.startsWith("$k.") && it.length() > 0 } }
 
     /** Liegt die Sprachausgabe für diese Kurzfassung fertig auf dem Handy? */
-    fun bereit(context: Context, kurz: String) = datei(context.applicationContext, kurz) != null
+    fun bereit(context: Context, kurz: String, alsWecker: Boolean = false) = datei(context.applicationContext, kurz, alsWecker) != null
 
-    private suspend fun erzeuge(app: Context, kurz: String): File {
+    private suspend fun erzeuge(app: Context, kurz: String, alsWecker: Boolean): File {
         val s = SecureSettings(app)
-        val roh = Synthese(app, s).synthetisiere(kurz, Meldungen.profil(app, Meldungsarten.ERINNERUNG).stimmWahl)
-        val k = schluessel(app, kurz)
+        val roh = Synthese(app, s).synthetisiere(kurz, Meldungen.profil(app, Meldungen.erinnerungsArt(alsWecker)).stimmWahl)
+        val k = schluessel(app, kurz, alsWecker)
         val ziel = File(ordner(app), k + "." + roh.extension.ifBlank { "audio" })
         // Erst fertig unter dem richtigen Namen: Eine halbe Datei gälte sonst dauerhaft als bereit.
         val teil = File(ordner(app), "teil-$k-" + System.nanoTime())
@@ -313,10 +317,10 @@ object ErinnerungStimme {
         val jetzt = System.currentTimeMillis()
         val quittungen = Erinnerungen.quittungen(app)
         val offen = Erinnerungen.alle(app).filter { e -> e.erledigt == 0L && (e.allgemein || e.termine().any { it.quittung !in quittungen && jetzt - it.zeit < Erinnerungen.VERPASST_NACH_MS }) }
-        val gebraucht = offen.map { schluessel(app, it.kurz) }.toSet()
+        val gebraucht = offen.map { schluessel(app, it.kurz, it.wecker) }.toSet()
         ordner(app).listFiles()?.filter { it.nameWithoutExtension !in gebraucht }?.forEach { it.delete() }
-        for (e in offen) if (datei(app, e.kurz) == null) {
-            try { erzeuge(app, e.kurz) } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (f: Exception) { Logbuch.netz("Erinnerung Stimme", "noch nicht erzeugt: ${f.message}"); return }
+        for (e in offen) if (Meldungen.vorlesenAn(app, Meldungen.erinnerungsArt(e.wecker)) && datei(app, e.kurz, e.wecker) == null) {
+            try { erzeuge(app, e.kurz, e.wecker) } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (f: Exception) { Logbuch.netz("Erinnerung Stimme", "noch nicht erzeugt: ${f.message}"); return }
         }
     }
 
@@ -324,10 +328,18 @@ object ErinnerungStimme {
     suspend fun sprich(context: Context, e: Erinnerung, alsWecker: Boolean) = sprichText(context, e.kurz, alsWecker)
 
     /** Keine Erinnerung anlegen: Die Probe verwendet dieselben beiden Stimmenwege wie eine fällige Meldung. */
-    suspend fun probe(context: Context) = sprichText(context, "Probe. So liest Jarvis deine Erinnerungen vor.", alsWecker = false)
+    suspend fun probe(context: Context, alsWecker: Boolean = false) {
+        val art = Meldungen.erinnerungsArt(alsWecker)
+        val nummer = if (alsWecker) 4_490 else 4_491
+        Meldungen.ereignis(context, art, nummer, "Probe: Erinnerungen", "So meldet Jarvis deine Erinnerungen.")
+        if (alsWecker) while (de.frank.jarvis.meldung.WeckerTon.klingelt(nummer)) delay(250L)
+        sprichText(context, "Probe. So liest Jarvis deine Erinnerungen vor.", alsWecker)
+    }
 
     private suspend fun sprichText(context: Context, kurz: String, alsWecker: Boolean) {
         val app = context.applicationContext
+        val art = Meldungen.erinnerungsArt(alsWecker)
+        if (!Meldungen.vorlesenAn(app, art)) return
         if (!alsWecker) {
             withTimeoutOrNull(15 * 60_000L) { while (GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) delay(1_000L) } ?: return
         }
@@ -336,10 +348,11 @@ object ErinnerungStimme {
         try {
             // Mehrere zugleich fällige sprechen nacheinander, nicht übereinander.
             reihe.withLock {
-                val f = datei(app, kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, kurz) }.getOrNull() }
+                if (!Meldungen.vorlesenAn(app, art)) return@withLock
+                val f = datei(app, kurz, alsWecker) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, kurz, alsWecker) }.getOrNull() }
                 val attribute = if (alsWecker) attributeWecker else attributeMeldung
                 val stream = if (alsWecker) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
-                de.frank.jarvis.speech.Ansage.mitLautstaerke(app, Meldungen.profil(app, Meldungsarten.ERINNERUNG).lautstaerke, stream) {
+                de.frank.jarvis.speech.Ansage.mitLautstaerke(app, Meldungen.profil(app, art).lautstaerke, stream) {
                     if (f == null || !spiele(f, attribute)) systemstimme(app, kurz, attribute)
                 }
             }

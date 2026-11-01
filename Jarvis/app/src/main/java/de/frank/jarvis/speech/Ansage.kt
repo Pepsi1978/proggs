@@ -135,8 +135,7 @@ object Ansage {
 
     /** Ansage anderer Apps mit den eigenen Einstellungen (Stimme, Tempo, Lautstärke). */
     fun ansage(context: Context, titel: String, text: String) {
-        val p = de.frank.jarvis.meldung.Meldungen.profil(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE)
-        sprich(context, "ansage", titel, text, p.lautstaerke, p.stimmWahl)
+        de.frank.jarvis.meldung.Meldungen.ereignis(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE, 4_493, titel, text)
     }
 }
 
@@ -154,7 +153,7 @@ class AnsageEmpfaenger : BroadcastReceiver() {
         if (!de.frank.jarvis.meldung.Meldungen.an(context, art)) return
         if (de.frank.jarvis.meldung.Meldungen.inRuhe(context, art)) return
         // Wie jede Meldung: Ein laufendes Live-Gespräch wartet sie ab (höchstens 15 Minuten), mit Stimme und Lautstärke der Ansagen.
-        de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(context, art, titel, text, schluessel = "$titel:$text")
+        Ansage.ansage(context, titel, text)
     }
 
     companion object {

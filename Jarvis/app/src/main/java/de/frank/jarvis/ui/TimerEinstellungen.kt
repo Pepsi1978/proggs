@@ -20,15 +20,10 @@ fun TimerOptionen(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
     run {
-        Unterzeile("Wenn der Timer abläuft")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Wie ein Wecker", aktiv = e.timerWecker) { e.timerWecker = true }
-            Chip("Kurze Meldung", aktiv = !e.timerWecker) { e.timerWecker = false }
-        }
         Text(
             if (e.timerWecker) "Der Timer klingelt mit dem Weckton, auch bei „Nicht stören“, bis du ihn ausschaltest: in der Benachrichtigung mit „Aus“ oder „Schlummern“, " +
                 "in Jarvis oben auf der Startseite (auch bei gesperrter App) oder per Sprache: „Stopp den Timer“. Wegwischen allein schaltet ihn nicht aus."
-            else "Der Timer meldet sich mit einer Benachrichtigung, die klingelt, bis du sie wegwischst oder „Aus“ tippst.",
+            else "Der Timer meldet sich als normale Benachrichtigung; Ton und Vorlesen richten sich nach deiner Auswahl oben.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp),
         )
         if (e.timerWecker) {

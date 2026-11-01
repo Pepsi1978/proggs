@@ -39,7 +39,7 @@ object Stoppuhr {
     val stand: StateFlow<StoppuhrStand> = _stand.asStateFlow()
     @Volatile private var geladen = false
 
-    fun starte(context: Context) { lade(context.applicationContext); meldung(context.applicationContext) }
+    fun starte(context: Context) { lade(context.applicationContext); meldung(context.applicationContext, laut = false) }
 
     fun aktuell(context: Context): StoppuhrStand { lade(context.applicationContext); return _stand.value }
 
@@ -93,14 +93,14 @@ object Stoppuhr {
     }
 
     /** Nach dem Schalter unter Einstellungen → Benachrichtigungen: Meldung zeigen oder entfernen. */
-    fun meldungErneuern(context: Context) = meldung(context.applicationContext)
+    fun meldungErneuern(context: Context) = meldung(context.applicationContext, laut = false)
 
     /** Läuft sie, steht eine stille Meldung mit mitlaufender Zeit da; angehalten oder zurückgesetzt verschwindet sie. */
-    private fun meldung(app: Context) {
+    private fun meldung(app: Context, laut: Boolean = true) {
         val nm = app.getSystemService(NotificationManager::class.java)
         val s = _stand.value
         // Angehalten, oder unter Einstellungen → Benachrichtigungen abgeschaltet: keine Meldung.
-        if (!s.laeuft || !de.frank.jarvis.meldung.Meldungen.an(app, de.frank.jarvis.meldung.Meldungsarten.STOPPUHR)) { runCatching { nm.cancel(MELDUNG_ID) }; return }
+        if (!s.laeuft || !de.frank.jarvis.meldung.Meldungen.an(app, de.frank.jarvis.meldung.Meldungsarten.STOPPUHR)) { de.frank.jarvis.meldung.WeckerTon.stopp(MELDUNG_ID); runCatching { nm.cancel(MELDUNG_ID) }; return }
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(
             NotificationChannel(KANAL, "Stoppuhr", NotificationManager.IMPORTANCE_LOW).apply { description = "Zeigt die laufende Stoppuhr."; setShowBadge(false) },
         )
@@ -112,7 +112,6 @@ object Stoppuhr {
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setContentIntent(oeffnen)
-            .build()
-        runCatching { nm.notify(MELDUNG_ID, m) }.onFailure { Log.w(TAG, "Meldung nicht möglich", it) }
+        de.frank.jarvis.meldung.Meldungen.zeige(app, de.frank.jarvis.meldung.Meldungsarten.STOPPUHR, MELDUNG_ID, m, "Stoppuhr läuft", "Deine Stoppuhr läuft.", laut = laut)
     }
 }

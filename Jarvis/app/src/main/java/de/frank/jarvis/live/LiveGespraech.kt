@@ -449,14 +449,14 @@ class LiveGespraech(
         // Unter Einstellungen → Benachrichtigungen abschaltbar.
         if (!de.frank.jarvis.meldung.Meldungen.an(app, de.frank.jarvis.meldung.Meldungsarten.GEMINI)) return@runCatching
         de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
-        app.getSystemService(android.app.NotificationManager::class.java).notify(4320,
+        de.frank.jarvis.meldung.Meldungen.zeige(app, de.frank.jarvis.meldung.Meldungsarten.GEMINI, 4320,
             androidx.core.app.NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(de.frank.jarvis.R.drawable.ic_stat_jarvis)
                 .setContentTitle("Jarvis: bezahlter Gemini-Schlüssel aktiv")
                 .setContentText(text)
                 .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText("$text\nAnlass: ${anlass.take(200)}"))
                 .setAutoCancel(true)
-                .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
-                .build())
+                .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise),
+            "Jarvis: bezahlter Gemini-Schlüssel aktiv", text)
     }.onFailure { Log.w(LiveRouting.TAG, "Gemini: Mitteilung zum Schlüsselwechsel fehlgeschlagen: ${it.message}") }
 
     private fun geminiSetup(): JSONObject {

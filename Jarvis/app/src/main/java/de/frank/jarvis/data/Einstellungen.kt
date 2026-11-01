@@ -99,6 +99,19 @@ class Einstellungen private constructor(context: Context) {
     }
 
     init {
+        // Einmalige Kopie statt dynamischem Rückgriff: Die beiden Erinnerungsformen überschreiben einander nie.
+        if (!roh.getBoolean("erinnerung_profile_getrennt", false)) roh.edit().apply {
+            listOf("stimme", "tempo", "lautstaerke").forEach { feld ->
+                val alt = "meldung_erinnerung_$feld"
+                val neu = "meldung_erinnerung_wecker_$feld"
+                if (!roh.contains(neu)) when (val wert = roh.all[alt]) {
+                    is String -> putString(neu, wert)
+                    is Float -> putFloat(neu, wert)
+                    is Int -> putInt(neu, wert)
+                }
+            }
+            putBoolean("erinnerung_profile_getrennt", true)
+        }.apply()
         // Freibetrag der früheren Guthaben-Abfrage (bis 1.8.221); den gewährten Betrag nennt jetzt Anthropic selbst.
         if (roh.contains("anthropic_freibetrag")) roh.edit().remove("anthropic_freibetrag").apply()
         // Gestört: Zugangsdaten, die eine ältere Fassung im Klartext-Ersatz abgelegt hat, für diese Sitzung übernehmen und

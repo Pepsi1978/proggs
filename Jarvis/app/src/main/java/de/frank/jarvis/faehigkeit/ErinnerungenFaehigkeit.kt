@@ -75,7 +75,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val t = e.termine()
             if (t.isNotEmpty()) append("\n\nZeitpunkte:\n").append(t.joinToString("\n") { stand(it, jetzt) })
-            append("\nSprachausgabe offline: ").append(if (ErinnerungStimme.bereit(context, e.kurz)) "bereit" else "noch nicht erzeugt")
+            append("\nSprachausgabe offline: ").append(if (ErinnerungStimme.bereit(context, e.kurz, e.wecker)) "bereit" else "noch nicht erzeugt")
         }
     }
 

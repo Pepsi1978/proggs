@@ -42,9 +42,9 @@ class Meldungsart(
     /** Android verlangt sie, solange der zugehörige Dienst läuft: kein Aus-Schalter. */
     val pflicht: Boolean = false,
     val schaltbar: Boolean = true,
-    val ton: Boolean = false,
-    val vorlesen: Boolean = false,
-    val wecker: Boolean = false,
+    val ton: Boolean = !pflicht,
+    val vorlesen: Boolean = !pflicht,
+    val wecker: Boolean = !pflicht,
     val minimierbar: Boolean = false,
     /** Hält sich an die Ruhezeit (still, ohne Vorlesen und Wecker). */
     val ruhezeit: Boolean = false,
@@ -57,6 +57,10 @@ class Meldungsart(
     val eigenerTextStandard: String? = null,
     /** 0 = so laut, wie das Handy steht: Ohne eigene Wahl stellt Jarvis die Lautstärke nicht um. */
     val lautStandard: Int = 0,
+    /** Erinnerungen behalten ihre beim Anlegen gewählte Form. */
+    val formFest: Boolean = false,
+    val weckerStandard: Boolean = false,
+    val tonStandard: Boolean = true,
     val alt: Map<String, String> = emptyMap(),
 ) {
     fun schluessel(feld: String) = alt[feld] ?: "meldung_${id}_$feld"
@@ -65,7 +69,7 @@ class Meldungsart(
 /** Die Einstellungen einer [Meldungsart], gelesen und geschrieben über [Einstellungen]. */
 class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var an: Boolean get() = e.wahr(art.schluessel("an"), true); set(v) = e.setzeWahr(art.schluessel("an"), v)
-    var ton: Boolean get() = e.wahr(art.schluessel("ton"), true); set(v) = e.setzeWahr(art.schluessel("ton"), v)
+    var ton: Boolean get() = e.wahr(art.schluessel("ton"), art.tonStandard); set(v) = e.setzeWahr(art.schluessel("ton"), v)
     var vorlesen: Boolean get() = e.wahr(art.schluessel("vorlesen"), art.vorlesenStandard); set(v) = e.setzeWahr(art.schluessel("vorlesen"), v)
     /** Stimm-Kennung aus dem TtsCatalog; leer = wie Jarvis. */
     var stimme: String get() = e.wort(art.schluessel("stimme"), ""); set(v) = e.setzeWort(art.schluessel("stimme"), v)
@@ -73,7 +77,7 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var tempo: Float get() = e.komma(art.schluessel("tempo"), 0f); set(v) = e.setzeKomma(art.schluessel("tempo"), v)
     /** Prozent der höchsten Medienlautstärke; 0 = so laut, wie das Handy gerade steht. */
     var lautstaerke: Int get() = e.ganz(art.schluessel("lautstaerke"), art.lautStandard).coerceIn(0, 100); set(v) = e.setzeGanz(art.schluessel("lautstaerke"), v.coerceIn(0, 100))
-    var wecker: Boolean get() = e.wahr(art.schluessel("wecker"), false); set(v) = e.setzeWahr(art.schluessel("wecker"), v)
+    var wecker: Boolean get() = if (art.formFest) art.weckerStandard else e.wahr(art.schluessel("wecker"), art.weckerStandard); set(v) { if (!art.formFest) e.setzeWahr(art.schluessel("wecker"), v) }
     var minimiert: Boolean get() = e.wahr(art.schluessel("minimiert"), false); set(v) = e.setzeWahr(art.schluessel("minimiert"), v)
 
     /** Selbst geschriebener Vorlesetext; „{name}“ steht für den Namen (etwa des Timers). Leer = der Standardsatz der Art. */
@@ -126,7 +130,7 @@ object Meldungsarten {
     )
     val GEMINI = Meldungsart(
         "gemini", "Gemini-Schlüssel gewechselt", "Sagt Bescheid, wenn das kostenlose Gemini-Kontingent leer ist und Jarvis mit dem bezahlten Schlüssel weiterspricht.",
-        "Nur im Live-Gespräch, deshalb immer lautlos.", ERGEBNISSE, "jarvis_ergebnisse",
+        "Beim Schlüsselwechsel; im Live-Gespräch lautlos, Vorlesen wartet das Gespräch ab.", ERGEBNISSE, "jarvis_ergebnisse", tonStandard = false,
     )
     val KONTINGENT = Meldungsart(
         "kontingent", "Kontingent zu schnell", "Warnt, wenn ein Limit bei Claude, ChatGPT/Codex, Kimi oder Gemini beim jetzigen Tempo vor dem Zurücksetzen aufgebraucht wäre.",
@@ -144,27 +148,33 @@ object Meldungsarten {
         // Der hörbare Timer-Kanal („jarvis-timer“), nicht der stumme des Klingel-Dienstes.
         "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer",
         schaltbar = false, vorlesen = true, dringend = true, eigenerTextStandard = "{name} ist abgelaufen.",
+        weckerStandard = true, alt = mapOf("wecker" to "timer_wecker"),
     )
-    /** Stimme und Tempo wie Jarvis, solange hier keine eigene gewählt ist. Vorgelesen wird immer; die Form (Benachrichtigung oder Wecker) gehört zur einzelnen Erinnerung. */
+    /** Zwei unabhängige Profile; die Form gehört weiterhin zur einzelnen Erinnerung. */
     val ERINNERUNG = Meldungsart(
-        "erinnerung", "Erinnerungen", "Meldet fällige Erinnerungen aus dem Reiter Erinnerung der Ablage und liest ihre Kurzfassung vor.",
+        "erinnerung", "Als Benachrichtigung", "Einstellungen für Erinnerungen in der Form Benachrichtigung.",
         "Zu den eingestellten Zeitpunkten, auf dem Gerät, das du gerade benutzt.", ALLTAG, "jarvis_erinnerung",
-        schaltbar = false, sprichtImmer = true,
+        schaltbar = false, vorlesenStandard = true, formFest = true,
+    )
+    val ERINNERUNG_WECKER = Meldungsart(
+        "erinnerung_wecker", "Als Wecker", "Einstellungen für Erinnerungen in der Form Wecker; unabhängig von normalen Erinnerungsbenachrichtigungen.",
+        "Zu den eingestellten Zeitpunkten, bis du die Auslösung bestätigst.", ALLTAG, "jarvis-timer-wecker",
+        schaltbar = false, vorlesenStandard = true, formFest = true, weckerStandard = true,
     )
     val STOPPUHR = Meldungsart(
         "stoppuhr", "Stoppuhr", "Zeigt die laufende Stoppuhr mit mitlaufender Zeit.",
-        "Solange eine Stoppuhr läuft.", ALLTAG, "jarvis-stoppuhr",
+        "Beim Starten oder Fortsetzen; danach läuft die Zeitanzeige still weiter.", ALLTAG, "jarvis-stoppuhr", tonStandard = false,
     )
     val ANSAGE = Meldungsart(
         "ansage", "Update-Ansagen", "Jarvis sagt an, wenn in UpdateStation ein Update fertig geladen bereitliegt.",
         "Wenn UpdateStation ein neues Update meldet.", ALLTAG, null,
-        sprichtImmer = true, ruhezeit = true, lautStandard = 100,
+        vorlesenStandard = true, ruhezeit = true, lautStandard = 100, tonStandard = false,
         alt = mapOf("an" to "ansage_vorlesen", "stimme" to "ansage_stimme", "tempo" to "ansage_tempo", "lautstaerke" to "ansage_lautstaerke"),
     )
     val INSTALLFRAGE = Meldungsart(
         "installfrage", "Installationsfrage ansagen", "Jarvis sagt an, wenn eine neue Jarvis-Version installiert werden kann und das Fenster auf deine Antwort wartet.",
         "Wenn die Frage zur Installation erscheint, außer während einer Aufnahme oder eines Gesprächs.", ALLTAG, null,
-        sprichtImmer = true, ruhezeit = true, lautStandard = 100,
+        vorlesenStandard = true, ruhezeit = true, lautStandard = 100, tonStandard = false,
         eigenerTextStandard = "Eine neue Jarvis-Version kann installiert werden. Bitte wähle auf dem Handy im Jarvis-Fenster, wann die Installation starten soll. Ohne Antwort startet sie gleich von selbst.",
     )
     val WECKWORT_HOERT = Meldungsart(
@@ -179,7 +189,7 @@ object Meldungsarten {
     )
     val WECKWORT_AUS = Meldungsart(
         "weckwort_aus", "Weckwort ist aus", "Erinnert dich, das Weckwort nach einem Neustart mit einem Tipp wieder einzuschalten.",
-        "Nach Neustart oder Update, wenn Android den Mikrofon-Dienst nicht starten ließ.", WECKWORT, "jarvis_weckwort",
+        "Nach Neustart oder Update, wenn Android den Mikrofon-Dienst nicht starten ließ.", WECKWORT, "jarvis_weckwort", tonStandard = false,
     )
     val BEREITSCHAFT = Meldungsart(
         "bereitschaft", "Jarvis-Bereitschaft", "Zeigt, dass Jarvis im Hintergrund läuft und für ChatGPT erreichbar ist.",
@@ -197,7 +207,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, ERINNERUNG, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, ERINNERUNG, ERINNERUNG_WECKER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
 }
 
@@ -216,6 +226,27 @@ object Meldungen {
     private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun profil(context: Context, art: Meldungsart) = MeldungsProfil(Einstellungen.get(context), art)
+
+    fun erinnerungsArt(alsWecker: Boolean) = if (alsWecker) Meldungsarten.ERINNERUNG_WECKER else Meldungsarten.ERINNERUNG
+
+    /** Eigener hörbarer Ereigniskanal, auch wenn der frühere Statuskanal nur LOW war. */
+    fun normalerKanal(context: Context, art: Meldungsart): String {
+        val id = "jarvis_meldung_${art.id}"
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(id, art.titel, NotificationManager.IMPORTANCE_HIGH).apply {
+                setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
+            })
+        return id
+    }
+
+    fun ereignis(context: Context, art: Meldungsart, nummer: Int, titel: String, text: String, vorlesen: Boolean = true) {
+        val app = context.applicationContext
+        val b = NotificationCompat.Builder(app, normalerKanal(app, art)).setSmallIcon(R.drawable.ic_stat_jarvis)
+            .setContentTitle(titel).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
+            .setContentIntent(PendingIntent.getActivity(app, nummer, Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        zeige(app, art, nummer, b, titel, if (art.formFest || !vorlesen) null else text)
+    }
 
     /** Ist die Meldung eingeschaltet? Nicht schaltbare sind immer an. */
     fun an(context: Context, art: Meldungsart) = !art.schaltbar || profil(context, art).an
@@ -261,14 +292,15 @@ object Meldungen {
         val tonAus = art.ton && !p.ton
         val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
         val still = !laut || ruhe || (leise && imGespraechStill) || tonAus
-        if (klingeln) {
+        if (!art.pflicht) bauer.setChannelId(normalerKanal(app, art))
+        if (p.wecker) {
             weckerKanalAnlegen(app)
             bauer.setChannelId(KANAL_WECKER).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
         }
         bauer.setSilent(still && !klingeln)
         // SECRET: auf dem Sperrbildschirm gar nicht, erst nach dem Entsperren (PRIVATE wäre der Standard und hülfe nicht).
         // Ein klingelnder Wecker muss sich aber gesperrt abstellen lassen: dann PRIVATE (sichtbar, Inhalt verborgen).
-        if (e.meldungInhaltVerbergen) bauer.setVisibility(if (klingeln) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_SECRET)
+        if (e.meldungInhaltVerbergen) bauer.setVisibility(if (p.wecker) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_SECRET)
         val meldung = bauer.build()
         // Wegwischen beendet den Weckton sofort (ohne eigenen Lösch-Auftrag der Aufrufstelle).
         if (meldung.deleteIntent == null) meldung.deleteIntent = PendingIntent.getBroadcast(app, nummer,
@@ -290,7 +322,7 @@ object Meldungen {
     private fun klingle(app: Context, nummer: Int, art: Meldungsart, p: MeldungsProfil) {
         // Die Kennung gehört genau zu diesem Klingeln: Eine neuere Meldung unter derselben Nummer beendet nicht die alte Schleife.
         val kennung = WeckerTon.starte(app, nummer, p.weckton, art.id)
-        val sekunden = p.wecktonSekunden
+        val sekunden = if (art == Meldungsarten.ERINNERUNG_WECKER) p.wecktonSekunden.takeIf { it > 0 } ?: 10 else p.wecktonSekunden
         nebenher.launch {
             val bis = System.currentTimeMillis() + if (sekunden > 0) sekunden * 1_000L else WECKTON_HOECHSTENS_MS
             // Die Meldung braucht einen Moment, bis Android sie als sichtbar führt.
@@ -320,7 +352,7 @@ object Meldungen {
     /** Wie [vorlesenSpaeter], aber kehrt erst nach dem Start der Stimme (oder dem Verwerfen) zurück; bleibt dabei abbrechbar. */
     suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) = coroutineScope {
         val name = "${art.id}:$schluessel"
-        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich) }
+        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange ?: { WeckerTon.klingeltArt(art.id) }, ausdruecklich) }
         wartend.put(name, job)?.cancel()
         job.invokeOnCompletion { wartend.remove(name, job) }
         job.start()
@@ -373,8 +405,7 @@ object Meldungen {
             Meldungsarten.ABFAHRT -> de.frank.jarvis.fahrt.Abfahrt.probe(app)
             Meldungsarten.TIMER -> de.frank.jarvis.timer.Timer.starten(app, 5_000L, "Probe-Timer")
             Meldungsarten.ANSAGE -> Ansage.ansage(app, "UpdateStation", "Ein Update von Jarvis ist bereit in UpdateStation.")
-            Meldungsarten.INSTALLFRAGE -> profil(app, art).let { p -> Ansage.sprich(app, "ansage", "Jarvis-Update", p.sprechtext(""), p.lautstaerke, p.stimmWahl) }
-            Meldungsarten.ERINNERUNG -> nebenher.launch { de.frank.jarvis.ablage.ErinnerungStimme.probe(app) }
+            Meldungsarten.ERINNERUNG, Meldungsarten.ERINNERUNG_WECKER -> nebenher.launch { de.frank.jarvis.ablage.ErinnerungStimme.probe(app, art == Meldungsarten.ERINNERUNG_WECKER) }
             else -> {
                 de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
                 de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(app)
@@ -440,6 +471,8 @@ object WeckerTon {
 
     /** Klingelt unter [nummer] gerade etwas (mit [kennung]: genau dieses Klingeln)? */
     fun klingelt(nummer: Int, kennung: Long? = null): Boolean = laufend[nummer]?.let { kennung == null || it.kennung == kennung } == true
+
+    fun klingeltArt(art: String): Boolean = laufend.values.any { it.art == art }
 
     /**
      * Startet den Ton und kehrt sofort zurück (geladen wird abseits, nicht auf dem Hauptfaden). [ton] leer = Standard-Weckton;

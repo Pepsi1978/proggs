@@ -180,7 +180,7 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                 if (!e.allgemein) Box(Modifier.padding(top = 6.dp).size(48.dp).knopf3d(f.primaer, f.tertiaer, 24.dp, f.dunkel).antippen { plus = true }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Add, "Erinnerungszeitpunkt hinzufügen", tint = f.aufPrimaer)
                 }
-                val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz) } }
+                val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz, e.wecker) } }
                 Text(if (bereit) "Sprachausgabe liegt offline bereit." else "Sprachausgabe wird erzeugt, sobald Netz da ist.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
                 Text("Von ${e.quelle.ifBlank { "Jarvis Handy" }}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
             }

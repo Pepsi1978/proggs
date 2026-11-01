@@ -101,7 +101,7 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
     // Aufnahme und Vorlesen erscheinen nur, während sie laufen: nicht als „eingeschaltet“ zählen.
     val aktiv = profile.count { istAn(vm, it) && it.art != Meldungsarten.AUFNAHME && it.art != Meldungsarten.VORLESEN }
     val vorgelesen = profile.count { p -> istAn(vm, p) && ((p.art.vorlesen && p.vorlesen) || p.art.sprichtImmer) }
-    val wecker = profile.count { p -> istAn(vm, p) && p.weckerWirksam } + if (e.timerWecker) 1 else 0
+    val wecker = profile.count { p -> istAn(vm, p) && p.weckerWirksam }
 
     // ---------------------------------------------------------------- Überblick
     Karte(toenung = if (vm.hinweiseAn) f.primaer else f.gefahr) {
@@ -156,7 +156,10 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
     // ---------------------------------------------------------------- Die Meldungen
     Meldungsarten.gruppen.forEach { gruppe ->
         Abschnitt(gruppe, Modifier.padding(top = 8.dp))
-        profile.filter { it.art.gruppe == gruppe }.forEach { p -> MeldungsKarte(vm, p, activity) }
+        profile.filter { it.art.gruppe == gruppe }.forEach { p ->
+            if (p.art == Meldungsarten.ERINNERUNG) Abschnitt("Erinnerungen")
+            MeldungsKarte(vm, p, activity)
+        }
     }
 }
 
@@ -176,6 +179,7 @@ private fun symbol(art: Meldungsart): ImageVector = when (art) {
     Meldungsarten.KONTINGENT -> Icons.Rounded.Speed
     Meldungsarten.ABFAHRT -> Icons.Rounded.DirectionsCar
     Meldungsarten.TIMER -> Icons.Rounded.Timer
+    Meldungsarten.ERINNERUNG, Meldungsarten.ERINNERUNG_WECKER -> Icons.Rounded.Alarm
     Meldungsarten.STOPPUHR -> Icons.Rounded.AvTimer
     Meldungsarten.ANSAGE -> Icons.Rounded.Campaign
     Meldungsarten.WECKWORT_HOERT -> Icons.Rounded.Hearing
@@ -249,14 +253,16 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                     }
                 }
                 if (art.wecker) {
-                    Unterzeile("Wie ein Wecker")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Chip("Normal", aktiv = !p.wecker) { p.wecker = false }
+                    Unterzeile("Ausgabeform")
+                    if (art.formFest) Text(if (p.wecker) "Wie ein Wecker" else "Normale Benachrichtigung", color = f.text, fontSize = 14.sp)
+                    else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Chip("Benachrichtigung", aktiv = !p.wecker) { p.wecker = false }
                         Chip("Wie ein Wecker", aktiv = p.wecker, icon = Icons.Rounded.Alarm) { p.wecker = true }
                     }
                     Text(when {
-                        !p.wecker -> "Ein kurzer Hinweiston, wie bei anderen Apps."
-                        !p.weckerWirksam -> "Gerade ohne Wirkung: Die Meldung ist auf Lautlos gestellt, dann klingelt auch kein Wecker."
+                        art.formFest -> "Die beim Anlegen gewählte Form bestimmt, welcher dieser beiden unabhängigen Einstellbereiche verwendet wird. Ton und Vorlesen lassen sich unabhängig schalten."
+                        !p.wecker -> "Eine normale Benachrichtigung; ein kurzer Hinweiston nur bei „Mit Ton“."
+                        !p.weckerWirksam -> "Die Wecker-Ausgabe bleibt gewählt, klingelt bei „Lautlos“ aber nicht. Vorlesen ist unabhängig davon."
                         else -> "Klingelt mit dem gewählten Weckton in der Wecker-Lautstärke, bis die Dauer um ist oder du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind."
                     }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                     if (p.wecker) WecktonOptionen(p, app)
@@ -268,14 +274,15 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                     }
                     Text("Ankunftszeiten, Adressen und Standort stehen unter Alltag und Timer → Pünktlich losfahren.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
-                if (art == Meldungsarten.TIMER) TimerOptionen(vm)
                 if (art.vorlesen) {
                     Unterzeile(if (art == Meldungsarten.AGENT) "Vorlesen (kurze Zusammenfassung)" else "Vorlesen")
                     AnAus(p.vorlesen) { p.vorlesen = it }
                     if (p.vorlesen && art.eigenerTextStandard != null) VorleseText(p)
                     if (p.vorlesen) StimmOptionen(vm, p)
                 }
+                if (art == Meldungsarten.TIMER) TimerOptionen(vm)
                 if (art.sprichtImmer && p.an) StimmOptionen(vm, p)
+                if (art.pflicht) Text("Diese Android-Daueranzeige beschreibt nur den laufenden Dienst und bleibt lautlos; sie ist keine Ereignismeldung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 if (art.ruhezeit && e.meldungRuheAn) Text("Hält sich an die Ruhezeit von ${e.meldungRuheVon} bis ${e.meldungRuheBis} Uhr.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
 
                 val probe = !art.pflicht && art != Meldungsarten.STOPPUHR
@@ -297,7 +304,7 @@ private fun merkmale(vm: AppViewModel, p: MeldungsProfil, an: Boolean): List<Pai
     return buildList {
         if (art.minimierbar && p.minimiert) add(Icons.Rounded.UnfoldLess to "Wegwischbar")
         if (art.ton) add(if (p.ton) Icons.Rounded.NotificationsActive to "Mit Ton" else Icons.Rounded.NotificationsOff to "Lautlos")
-        if (p.weckerWirksam || (art == Meldungsarten.TIMER && e.timerWecker)) add(Icons.Rounded.Alarm to "Wecker")
+        if (p.wecker) add(Icons.Rounded.Alarm to "Wecker")
         if ((art.vorlesen && p.vorlesen) || art.sprichtImmer) add(Icons.Rounded.RecordVoiceOver to if (p.lautstaerke == 0) "Vorlesen" else "Vorlesen ${p.lautstaerke} %")
         if (art.ruhezeit && e.meldungRuheAn) add(Icons.Rounded.Bedtime to "Ruhezeit")
         if (isEmpty()) add(Icons.Rounded.Notifications to if (art.pflicht) "Android verlangt sie" else "An")
@@ -313,7 +320,9 @@ private fun pflichtText(art: Meldungsart) = when (art) {
 
 /** Der Android-Kanal, den „In Android“ öffnet; als Wecker der Wecker-Kanal. */
 private fun kanalVon(p: MeldungsProfil): String? = when {
+    p.art == Meldungsarten.ERINNERUNG_WECKER -> p.art.kanal
     p.weckerWirksam -> Meldungen.KANAL_WECKER
+    !p.art.pflicht -> "jarvis_meldung_${p.art.id}"
     else -> p.art.kanal
 }
 
@@ -323,6 +332,7 @@ private fun androidKanalOeffnen(activity: ComponentActivity, kanal: String) {
     de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(activity)
     de.frank.jarvis.timer.Timer.kanalAnlegen(activity.applicationContext)
     if (kanal == Meldungen.KANAL_WECKER) Meldungen.weckerKanalAnlegen(activity)
+    Meldungsarten.alle.firstOrNull { kanal == "jarvis_meldung_${it.id}" }?.let { Meldungen.normalerKanal(activity, it) }
     val gibt = activity.getSystemService(NotificationManager::class.java).getNotificationChannel(kanal) != null
     val absicht = if (gibt) Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName).putExtra(Settings.EXTRA_CHANNEL_ID, kanal)
         else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
@@ -340,8 +350,8 @@ private fun nachSchalten(vm: AppViewModel, art: Meldungsart) {
 @Composable
 private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
     val f = LocalFarben.current
-    var ton by remember(p.art.id) { mutableStateOf(p.weckton) }
-    var sekunden by remember(p.art.id) { mutableIntStateOf(p.wecktonSekunden) }
+    val ton = p.weckton
+    val sekunden = p.wecktonSekunden
     // Den Namen holt Android aus der Mediendatenbank: abseits des Hauptfadens, damit der Bildschirm nicht hakt.
     val name by produceState(if (ton.isBlank()) "Standard-Weckton" else "…", ton) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.meldung.WeckerTon.name(app, ton) }
@@ -358,8 +368,7 @@ private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
             android.widget.Toast.makeText(app, "Diesen Ton darf Jarvis nicht abspielen. Bitte einen Weckton aus der Liste des Handys wählen.", android.widget.Toast.LENGTH_LONG).show()
             return@rememberLauncherForActivityResult
         }
-        ton = neu
-        p.weckton = ton
+        p.weckton = neu
     }
     Unterzeile("Weckton")
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -375,13 +384,15 @@ private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
         }
         Knopf("Anhören", Modifier.weight(1f), Icons.Rounded.PlayArrow, haupt = false) { de.frank.jarvis.meldung.WeckerTon.probe(app, ton) }
     }
+    if (p.art == Meldungsarten.TIMER) return
     Unterzeile("So lange klingelt der Weckton")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(5, 10, 15, 20, 30, 45, 60, 0).forEach { s ->
-            Chip(if (s == 0) "Bis Antippen" else "$s s", aktiv = sekunden == s) { sekunden = s; p.wecktonSekunden = s }
+            Chip(if (s == 0 && p.art == Meldungsarten.ERINNERUNG_WECKER) "Standard (10 s)" else if (s == 0) "Bis Antippen" else "$s s", aktiv = sekunden == s) { p.wecktonSekunden = s }
         }
     }
     Text(when {
+        p.art == Meldungsarten.ERINNERUNG_WECKER -> "Der Ton erklingt vor dem Text für ${if (sekunden == 0) 10 else sekunden} Sekunden. Danach liest Jarvis nur bei eingeschaltetem Vorlesen. Der Wecker wiederholt sich bis zur Bestätigung."
         sekunden == 0 -> "Klingelt, bis du die Meldung antippst oder wegwischst (höchstens 10 Minuten); erst danach liest Jarvis vor."
         p.art.vorlesen && p.vorlesen -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton, die Meldung bleibt stehen und Jarvis liest sofort vor. Antippen oder Wegwischen beendet den Ton früher."
         else -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton; die Meldung bleibt stehen."
@@ -480,9 +491,9 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     }
     if (lautstaerke in 1..19) Text("Gespeichert bleiben $lautstaerke %. Eine neue Wahl am Regler liegt zwischen 20 und 100 %.",
         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-    Text(if (p.art == Meldungsarten.ERINNERUNG) {
-        if (lautstaerke == 0) "Normale Erinnerungen nutzen die aktuelle Medienlautstärke, Erinnerungswecker die aktuelle Wecker-Lautstärke."
-        else "Jarvis stellt die Lautstärke nur fürs Vorlesen ein und danach wieder zurück: bei normalen Erinnerungen die Medienlautstärke, bei Erinnerungsweckern die Wecker-Lautstärke."
+    Text(if (p.art == Meldungsarten.ERINNERUNG_WECKER) {
+        if (lautstaerke == 0) "Erinnerungswecker nutzen beim Vorlesen die aktuelle Wecker-Lautstärke."
+        else "Jarvis stellt die Wecker-Lautstärke nur fürs Vorlesen ein und danach wieder zurück."
     } else if (lautstaerke == 0) "Jarvis liest so laut vor, wie die Medienlautstärke gerade steht."
         else "Jarvis stellt die Medienlautstärke nur dafür ein und danach wieder zurück. Ist ein Kopfhörer oder das Auto per Bluetooth verbunden, kommt die Stimme dort.",
         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))

@@ -570,9 +570,8 @@ class WeckwortDienst : Service() {
             .setAutoCancel(true)
             .setTimeoutAfter(60_000)
             .setSilent(!profil.ton)
-            .build()
         val nm = getSystemService(NotificationManager::class.java)
-        runCatching { nm.notify(RUF_ID, meldung) }
+        Meldungen.zeige(this, Meldungsarten.RUF, RUF_ID, meldung, "Hey Jarvis", text)
         // Übernimmt die App danach doch noch, verschwindet die dann falsche „Tippen“-Meldung.
         Weckwort.rufMeldungGezeigt { runCatching { nm.cancel(RUF_ID) } }
     }
@@ -767,8 +766,7 @@ class WeckwortDienst : Service() {
                 .setContentText("Tippen, um es wieder einzuschalten.")
                 .setContentIntent(tippen)
                 .setAutoCancel(true)
-                .build()
-            runCatching { app.getSystemService(NotificationManager::class.java).notify(RUF_ID, meldung) }
+            Meldungen.zeige(app, Meldungsarten.WECKWORT_AUS, RUF_ID, meldung, "Hey Jarvis ist aus", "Tippen, um das Weckwort wieder einzuschalten.")
         }
     }
 

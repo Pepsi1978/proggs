@@ -177,10 +177,13 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     private fun kuendigeAn() {
         runCatching {
             val art = Meldungsarten.INSTALLFRAGE
-            if (!sollSprechen() || Meldungen.inRuhe(this, art) || ansage?.isActive == true) return
+            if (!Meldungen.an(this, art) || GespraechsFokus.aufnahme || GespraechsFokus.stilleHinweise || Meldungen.inRuhe(this, art) || ansage?.isActive == true) return
             val profil = Meldungen.profil(this, art)
+            Meldungen.ereignis(this, art, ANSAGE_NUMMER, "Jarvis-Update", profil.sprechtext(""), vorlesen = false)
             ansage = lifecycleScope.launch {
                 val stimme = launch {
+                    while (de.frank.jarvis.meldung.WeckerTon.klingelt(ANSAGE_NUMMER)) delay(200L)
+                    if (!sollSprechen()) return@launch
                     runCatching { Ansage.sprichUndWarte(this@InstallFrageDienst, "ansage", "Jarvis-Update", profil.sprechtext(""), profil.lautstaerke, profil.stimmWahl) }
                         .onFailure { if (it !is CancellationException) Logbuch.fehler("Installationsfrage: Ansage gescheitert", it) }
                 }
@@ -192,7 +195,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         }.onFailure { Logbuch.fehler("Installationsfrage: Ansage gescheitert", it) }
     }
 
-    private fun sollSprechen() = Meldungen.an(this, Meldungsarten.INSTALLFRAGE) && !GespraechsFokus.aufnahme && !GespraechsFokus.stilleHinweise
+    private fun sollSprechen() = Meldungen.vorlesenAn(this, Meldungsarten.INSTALLFRAGE) && !GespraechsFokus.aufnahme && !GespraechsFokus.stilleHinweise
 
     /** Das Fenster bleibt offen, wenn die Antwort nicht ankäme: Sonst installierte das Skript trotz gewählter Verzögerung. */
     private fun antworte(minuten: Int) {
@@ -208,6 +211,8 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     }.onFailure { Logbuch.fehler("Installationsfrage: Datei nicht geschrieben", it) }.isSuccess
 
     override fun onDestroy() {
+        de.frank.jarvis.meldung.WeckerTon.stopp(ANSAGE_NUMMER)
+        getSystemService(NotificationManager::class.java).cancel(ANSAGE_NUMMER)
         ansicht?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
         ansicht = null
         // Bricht auch die Ansage ab: Nach der Antwort ist sie überholt, sie verstummt, und die Lautstärke geht zurück.
@@ -220,6 +225,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         const val DATEI = "install-antwort.txt"
         const val KANAL = "jarvis_installationsfrage"
         const val BENACHRICHTIGUNG = 4310
+        const val ANSAGE_NUMMER = 4492
         const val FRIST_S = 30
     }
 

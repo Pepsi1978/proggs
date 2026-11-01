@@ -38,6 +38,9 @@ class ErinnerungKlingelDienst : Service() {
     private var spieler: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var ablauf: Job? = null
+    private var tonWache: Job? = null
+    private var stimme: Job? = null
+    private var spricht = false
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -57,34 +60,51 @@ class ErinnerungKlingelDienst : Service() {
     }
 
     private fun klingeln() {
+        val profil = de.frank.jarvis.meldung.Meldungen.profil(this, de.frank.jarvis.meldung.Meldungsarten.ERINNERUNG_WECKER)
         val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-        for (ton in listOfNotNull(RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))) {
+        for (ton in listOfNotNull(profil.weckton.takeIf { it.isNotBlank() }?.let(android.net.Uri::parse), RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))) {
             val p = MediaPlayer()
             val ok = runCatching {
                 p.setAudioAttributes(attribute); p.setDataSource(this, ton); p.isLooping = true
-                p.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK); p.prepare(); p.start()
+                p.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK); p.prepare()
             }.isSuccess
             if (ok) { spieler = p; break } else runCatching { p.release() }
         }
         runCatching {
             val v = if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java).defaultVibrator else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
-            v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attribute)
             vibrator = v
         }
-        // Erst der Ton, dann die Kurzfassung bei leisem Weckton, danach alle zwei Minuten erneut.
-        ablauf = bereich.launch {
-            delay(6_000L)
+        // Auch während der Tonphase und des Vorlesens haben Live-Gespräch und Lautlos Vorrang.
+        tonWache = bereich.launch {
+            var vibriert = false
             while (isActive) {
-                // Der Live-Sprachmodus hat Vorrang: Beginnt ein Gespräch, schweigt der Wecker und klingelt danach weiter.
-                if (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) {
-                    runCatching { spieler?.pause() }
-                    while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) delay(1_000L)
-                    runCatching { spieler?.start() }
-                }
-                ErinnerungPlaner.klingelt.value.forEach { f ->
-                    runCatching { spieler?.setVolume(0.12f, 0.12f) }
-                    ErinnerungStimme.sprich(applicationContext, f.erinnerung, alsWecker = true)
-                    runCatching { spieler?.setVolume(1f, 1f) }
+                val live = de.frank.jarvis.speech.GespraechsFokus.stilleHinweise || de.frank.jarvis.speech.GespraechsFokus.aufnahme
+                val hoerbar = profil.ton && !live && !spricht
+                runCatching {
+                    if (hoerbar && spieler?.isPlaying == false) spieler?.start()
+                    if (!hoerbar && spieler?.isPlaying == true) spieler?.pause()
+                    if (hoerbar && !vibriert) vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attribute)
+                    if (!hoerbar && vibriert) vibrator?.cancel()
+                    vibriert = hoerbar
+                }.onFailure { Logbuch.fehler("Erinnerung Ton schalten", it) }
+                if (live || !profil.vorlesen) stimme?.cancel()
+                delay(200L)
+            }
+        }
+        // Erst der gewählte Ton, dann auf Wunsch der Text, danach alle zwei Minuten erneut.
+        ablauf = bereich.launch {
+            while (isActive) {
+                while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise || de.frank.jarvis.speech.GespraechsFokus.aufnahme) delay(500L)
+                if (profil.ton) delay((profil.wecktonSekunden.takeIf { it > 0 } ?: 10) * 1_000L)
+                if (profil.vorlesen) {
+                    spricht = true
+                    runCatching { spieler?.pause(); vibrator?.cancel() }
+                    try {
+                        ErinnerungPlaner.klingelt.value.forEach { f ->
+                            stimme = launch { ErinnerungStimme.sprich(applicationContext, f.erinnerung, alsWecker = true) }
+                            stimme?.join()
+                        }
+                    } finally { spricht = false; stimme = null }
                 }
                 var rest = 120
                 while (rest-- > 0 && !de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) delay(1_000L)
@@ -99,6 +119,7 @@ class ErinnerungKlingelDienst : Service() {
 
     private fun beenden() {
         ablauf?.cancel(); ablauf = null
+        tonWache?.cancel(); tonWache = null
         runCatching { spieler?.stop() }; runCatching { spieler?.release() }; spieler = null
         runCatching { vibrator?.cancel() }; vibrator = null
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -108,6 +129,7 @@ class ErinnerungKlingelDienst : Service() {
     override fun onDestroy() {
         instanz = null
         ablauf?.cancel()
+        tonWache?.cancel()
         runCatching { spieler?.release() }; spieler = null
         runCatching { vibrator?.cancel() }
         super.onDestroy()

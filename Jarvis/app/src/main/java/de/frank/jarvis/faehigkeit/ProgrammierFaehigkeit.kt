@@ -1911,7 +1911,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val nummer = 300_000 + (auftragId.hashCode() and 0xFFFF)
         runCatching {
             val nm = app.getSystemService(android.app.NotificationManager::class.java)
-            if (nm.activeNotifications.any { it.id == nummer && it.notification.extras.getString(EXTRA_RUECKFRAGE) == frageId }) nm.cancel(nummer)
+            if (nm.activeNotifications.any { it.id == nummer && it.notification.extras.getString(EXTRA_RUECKFRAGE) == frageId }) {
+                de.frank.jarvis.meldung.WeckerTon.stopp(nummer)
+                nm.cancel(nummer)
+            }
         }
     }
 
@@ -2028,7 +2031,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val art = de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE
         if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
             Logbuch.system("Rückfrage-Ansage eingereiht", "Auftrag ${eintrag.optString("id")}")
-            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId")
+            val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId",
+                solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(nummer) })
         }
     }
 
