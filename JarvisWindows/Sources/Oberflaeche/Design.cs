@@ -451,6 +451,46 @@ public static class Takt
         el.Loaded += (_, _) => Pruefe();
     }
 
+    /// <summary>Bildschirmsynchron für aktive Kugeln; unsichtbar und im Hintergrund vollständig abgemeldet.</summary>
+    public static void BindeBildtakt(FrameworkElement el, Func<double> intervall, Action<double> tick)
+    {
+        var verbunden = false;
+        var naechste = 0.0;
+        TimeSpan? letztesBild = null;
+        void BildFertig(object? sender, EventArgs args)
+        {
+            if (args is RenderingEventArgs bild)
+            {
+                if (letztesBild == bild.RenderingTime) return;
+                letztesBild = bild.RenderingTime;
+            }
+            var jetzt = Jetzt;
+            if (jetzt < naechste) return;
+            tick(jetzt);
+            naechste = jetzt + intervall() * 0.9;
+        }
+        void Pruefe()
+        {
+            var soll = el.IsLoaded && el.IsVisible && AppSteuerung.Shared.AppVorn;
+            if (soll == verbunden) return;
+            verbunden = soll;
+            if (soll)
+            {
+                naechste = 0;
+                letztesBild = null;
+                CompositionTarget.Rendering += BildFertig;
+            }
+            else CompositionTarget.Rendering -= BildFertig;
+        }
+        void Geaendert(object? sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName is nameof(AppSteuerung.AppVorn) or null) Pruefe();
+        }
+        el.IsVisibleChanged += (_, _) => Pruefe();
+        el.Loaded += (_, _) => { AppSteuerung.Shared.PropertyChanged += Geaendert; Pruefe(); };
+        el.Unloaded += (_, _) => { AppSteuerung.Shared.PropertyChanged -= Geaendert; Pruefe(); };
+    }
+
     /// <summary>Nach Wechsel von AppVorn aufrufen.</summary>
     public static void Abgleichen()
     {
@@ -582,7 +622,7 @@ public abstract class Stapel2 : Decorator
 }
 
 /// <summary>Die Jarvis-Kugel: runde, seitlich schimmernde Lichtkugel ohne Rahmen. Vibriert beim Sprechen, zeigt beim Zuhören Wellen und ein Mikrofon.
-/// Zeichnet über den gemeinsamen Takt; alles je Bild sind nur Transformationen und Deckkraft auf zwischengespeicherten Ebenen.</summary>
+/// Zeichnet aktive Bewegung im Bildschirmtakt mit geglättetem Pegel und stetiger Phase auf zwischengespeicherten Ebenen.</summary>
 public class JarvisKugel : Grid
 {
     public enum KugelZustand { Ruhe, Hoert, Denkt, Spricht }
@@ -604,6 +644,9 @@ public class JarvisKugel : Grid
     private readonly TextBlock? mikro;
     private readonly ScaleTransform mikroSkala = new();
     private KugelZustand? gesetzt;
+    private double? letzteZeit;
+    private double animationsZeit, bewegungsPhase, pegelWeich, sprechenWeich, hoerenWeich;
+    private double tempoWeich = 0.5;
 
     public JarvisKugel(float pegel = 0, KugelZustand zustand = KugelZustand.Ruhe, double groesse = 220, bool still = false) : this(pegel, zustand, groesse, still, false) { }
 
@@ -678,8 +721,9 @@ public class JarvisKugel : Grid
             };
             Lege(mikro, g * 0.24);
         }
-        if (!roh && !still) Takt.Binde(this, () => Zustand == KugelZustand.Ruhe ? 1.0 / 15 : 1.0 / 30, Zeichne);
-        Zeichne(700_000_000 + Takt.Jetzt);
+        if (!roh && !still)
+            Takt.BindeBildtakt(this, () => Zustand == KugelZustand.Ruhe && sprechenWeich < 0.001 && hoerenWeich < 0.001 ? 1.0 / 15 : 0, Zeichne);
+        Zeichne(Takt.Jetzt);
     }
 
     private void Lege(FrameworkElement e, double seite)
@@ -704,8 +748,6 @@ public class JarvisKugel : Grid
         boegen[0].P.Stroke = weiss;
         var f0 = new SolidColorBrush(Farbe.MitWert(farben[0], 0.85)); f0.Freeze();
         boegen[1].P.Stroke = f0;
-        wellen.Visibility = Zustand == KugelZustand.Hoert ? Visibility.Visible : Visibility.Collapsed;
-        if (mikro != null) mikro.Visibility = Zustand == KugelZustand.Hoert ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private static Brush HofPinsel(Color c, double g)
@@ -783,20 +825,33 @@ public class JarvisKugel : Grid
         if (Still) return;
         Aktualisieren();
         FarbenSetzen();
-        var t = 700_000_000 % 100_000 + uhr;
+        // Lange Pausen (Fenster im Hintergrund) nicht als Bewegungssprung nachholen.
+        var dt = letzteZeit is { } vorher ? Math.Clamp(uhr - vorher, 0, 0.05) : 0;
+        letzteZeit = uhr;
+        animationsZeit += dt;
+        var t = animationsZeit;
         var g = Groesse;
-        var p = (double)Math.Clamp(Pegel, 0f, 1f);
-        var tempo = Zustand == KugelZustand.Denkt ? 2.4 : (Zustand == KugelZustand.Ruhe ? 0.5 : 1.2);
+        var zielPegel = float.IsFinite(Pegel) ? Math.Clamp(Pegel, 0f, 1f) : 0;
+        var weich = 1 - Math.Exp(-dt / 0.18);
+        pegelWeich += (zielPegel - pegelWeich) * weich;
+        sprechenWeich += ((Zustand == KugelZustand.Spricht ? 1 : 0) - sprechenWeich) * weich;
+        hoerenWeich += ((Zustand == KugelZustand.Hoert ? 1 : 0) - hoerenWeich) * weich;
+        var zielTempo = Zustand == KugelZustand.Denkt ? 2.4 : (Zustand == KugelZustand.Ruhe ? 0.5 : 1.2);
+        tempoWeich += (zielTempo - tempoWeich) * weich;
+        bewegungsPhase += dt * tempoWeich;
+        var p = pegelWeich;
         var atmen = 1 + 0.03 * Math.Sin(t * 1.6) + p * 0.22;
-        var beben = Zustand == KugelZustand.Spricht ? Math.Max(p, 0.4) : 0;
+        var beben = sprechenWeich * Math.Max(p, 0.25);
         hofSkala.ScaleX = hofSkala.ScaleY = atmen;
-        if (Zustand == KugelZustand.Hoert) wellen.Setze(t, p);
+        wellen.Visibility = hoerenWeich > 0.001 ? Visibility.Visible : Visibility.Collapsed;
+        wellen.Opacity = hoerenWeich;
+        if (hoerenWeich > 0.001) wellen.Setze(t, p);
         for (var i = 0; i < 3; i++)
         {
             var (_, d, w) = schichten[i];
-            d.Angle = (t * 40 * tempo * (i + 1) + i * 70) % 360;
-            w.X = Math.Cos(t * tempo + i * 2) * g * 0.035 * (1 + p * 2);
-            w.Y = Math.Sin(t * tempo * 1.2 + i) * g * 0.035 * (1 + p * 2);
+            d.Angle = (bewegungsPhase * 40 * (i + 1) + i * 70) % 360;
+            w.X = Math.Cos(bewegungsPhase + i * 2) * g * 0.035 * (1 + p * 2);
+            w.Y = Math.Sin(bewegungsPhase * 1.2 + i) * g * 0.035 * (1 + p * 2);
         }
         kern.Opacity = 0.55 + p * 0.4;
         for (var i = 0; i < 2; i++)
@@ -805,12 +860,17 @@ public class JarvisKugel : Grid
             boegen[i].D.Angle = seite - 36 + 22 * Math.Sin(t * 0.9 + seite);
             boegen[i].P.Opacity = Math.Clamp(0.5 + 0.35 * Math.Sin(t * 1.7 + seite), 0, 1);
         }
-        if (mikro != null && Zustand == KugelZustand.Hoert) mikroSkala.ScaleX = mikroSkala.ScaleY = 1 + p * 0.35;
-        bebenSkala.ScaleX = 1 + 0.07 * beben * Math.Sin(t * 33);
-        bebenSkala.ScaleY = 1 + 0.07 * beben * Math.Cos(t * 41);
+        if (mikro != null)
+        {
+            mikro.Visibility = hoerenWeich > 0.001 ? Visibility.Visible : Visibility.Collapsed;
+            mikro.Opacity = hoerenWeich;
+            mikroSkala.ScaleX = mikroSkala.ScaleY = 1 + p * 0.35;
+        }
+        bebenSkala.ScaleX = 1 + 0.035 * beben * Math.Sin(t * 4.2);
+        bebenSkala.ScaleY = 1 + 0.035 * beben * Math.Sin(t * 5.1);
         bebenSkala.CenterX = bebenSkala.CenterY = g / 2;
-        bebenWeg.X = g * 0.018 * beben * Math.Sin(t * 47);
-        bebenWeg.Y = g * 0.018 * beben * Math.Cos(t * 53);
+        bebenWeg.X = g * 0.009 * beben * Math.Sin(t * 3.6);
+        bebenWeg.Y = g * 0.009 * beben * Math.Sin(t * 4.4);
     }
 
     /// <summary>Eigene Zuhör-Animation: Wellen laufen vom Rand der Kugel nach außen, lauter gesprochen = kräftiger.</summary>
@@ -827,7 +887,9 @@ public class JarvisKugel : Grid
             for (var i = 0; i < 3; i++)
             {
                 var phase = (t * 0.55 + i / 3.0) % 1;
-                var stift = new Pen(new SolidColorBrush(Farbe.MitWert(farbe, Math.Clamp((1 - phase) * (0.45 + p * 0.5), 0, 1))), g * 0.012);
+                // An beiden Enden unsichtbar: kein plötzlich neu auftauchender Ring beim Umlauf.
+                var huelle = Math.Pow(Math.Sin(Math.PI * phase), 2);
+                var stift = new Pen(new SolidColorBrush(Farbe.MitWert(farbe, Math.Clamp(huelle * (0.45 + p * 0.5), 0, 1))), g * 0.012);
                 var r = g * (0.8 + 0.75 * phase) / 2;
                 dc.DrawEllipse(null, stift, mitte, r, r);
             }

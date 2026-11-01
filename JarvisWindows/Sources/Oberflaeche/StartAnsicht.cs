@@ -41,7 +41,8 @@ public sealed class StartAnsicht : Grid
             return t;
         }, new[] { nameof(ZentraleDaten.LetzterFehlschlag), nameof(ZentraleDaten.Laedt) }, daten);
         var oben = V(22, new ZugangsHinweis(), kugel, V(6, H(10, new LivePunkt(), gruss).Mittig(), datum, nichtDa));
-        var scroller = new Scroller(new Border { Child = oben, MaxWidth = 884, Padding = new Thickness(64, 0, 64, 20) });
+        // 76 geräteunabhängige Punkte entsprechen ungefähr zwei Zentimetern.
+        var scroller = new Scroller(new Border { Child = oben, MaxWidth = 884, Padding = new Thickness(64, 76, 64, 20) });
         Children.Add(scroller);
 
         // Fest über der Blase, damit die Tags ohne Scrollen zu sehen sind.

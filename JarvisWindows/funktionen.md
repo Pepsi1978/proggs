@@ -1,4 +1,4 @@
-<!-- stand: JarvisWindows 1.0.5 -->
+<!-- stand: JarvisWindows 1.0.7 -->
 Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -38,7 +38,7 @@ Was Jarvis Windows HP kann (geprüft am Code).
 - Gleichzeitig zuhören und sprechen mit OpenAI GPT-Live/Realtime oder Gemini Live (eigene Schlüssel), Echounterdrückung des Laptops, Unterbrechen möglich; startet die Echounterdrückung nicht, zweiter Versuch und danach Echosperre statt Abbruch, auch wenn der Ton nach dem Start nicht anläuft (kein Absturz mehr); Sachfragen gehen an dasselbe Jarvis-Gehirn. Solange Live läuft, steht oben immer die Sprachpille; ihr X beendet das Gespräch sofort. „Bei Stille beenden“ in den Einstellungen: nach 2, 5 (Vorgabe) oder 10 Minuten oder nie, gilt ab dem nächsten Gespräch; Sprechen am Mikrofon zählt nicht als Stille, das Ende wird angezeigt.
 
 ## Oberfläche
-- Start (beim Öffnen, orange oben in der Leiste): große Kugel, Begrüßung, Schnell-Tags (genau drei Zeilen, umbrechend, aus 24 Fragen, Klick sendet) mit 150 Punkten Abstand zur Sprechblase darunter, in kleinen Fenstern weniger; die Tagesauswertung steht nur in der Zentrale, ist das Handy nicht erreichbar, sagt der Start das unter dem Datum. Klick auf Start oder Strg+N beginnt ein neues Gespräch und öffnet die Blase.
+- Start (beim Öffnen, orange oben in der Leiste): große Kugel und Begrüßung etwa zwei Zentimeter tiefer; Schnell-Tags (genau drei Zeilen, umbrechend, aus 24 Fragen, Klick sendet) mit 150 Punkten Abstand zur Sprechblase darunter, in kleinen Fenstern weniger; die Tagesauswertung steht nur in der Zentrale, ist das Handy nicht erreichbar, sagt der Start das unter dem Datum. Klick auf Start oder Strg+N beginnt ein neues Gespräch und öffnet die Blase.
 - Sprechblase wie am Handy: eingeklappt nur Plus, Modell, Mikrofon und ein Knopf (Live, mit Text oder Anhang der Pfeil, während einer Antwort Stopp). Freier Platz oder Mikrofon öffnet sie nach oben, erneutes Drücken verkleinert sie; Lostippen öffnet sie auch. Mit Text bleibt sie offen und zeigt den Papierkorb, danach „Rückgängig“. Der Text bleibt bei jedem Ansichtswechsel erhalten. Gespeichert wird ein Gespräch erst mit der ersten Nachricht, alte leere verschwinden beim Start.
 - Zentrale: Am Laptop oben, darunter in gleicher Breite Tagesauswertung (vorlesbar, neu erstellen lassen), Aufgaben heute, Termine, Wetter.
 - Leiste mit Reitern Gespräche, Programmierung, Projekte (oranger Punkt, wenn dort gearbeitet wird); Projekte anlegen, Gespräche im Projekt.
@@ -62,7 +62,7 @@ Was Jarvis Windows HP kann (geprüft am Code).
 - Weckwort über Parakeet (Modell einmalig laden, rund 640 MB); ohne Modell die Windows-Spracherkennung, die die Datenschutz-Einstellung „Online-Spracherkennung“ braucht.
 - Echounterdrückung nur, wenn Windows den Effekt des Mikrofons als aktiv bestätigt, sonst Echosperre.
 
-- Kugel rund ohne Rahmen, seitlicher Schimmer, vibriert beim Sprechen, beim Zuhören Wellen und Mikrofon.
+- Kugel rund ohne Rahmen, seitlicher Schimmer; beim Sprechen sanfte Bewegung, beim Zuhören weich ein- und auslaufende Wellen und Mikrofon. Aktive Animation im Bildschirmtakt mit geglättetem Pegel und fließenden Bewegungsübergängen; im Hintergrund pausiert sie.
 - Tresor: alle Schlüssel und die ChatGPT-Anmeldung verschlüsselt, gebunden an den DPAPI; Anzeige nur nach Windows Hello, höchstens eine Minute. Jarvis' Werkzeuge weisen Zugriffe auf Zugangsdaten ab (Textprüfung, keine vollständige Sperre); Schlüssel werden in Werkzeugergebnissen und Logbuch geschwärzt.
 - Ablage als Explorer mit Bereichen (Bilder, PDFs, Prompts, Recherchen, Texte, Dokumente, Tabellen, Präsentationen, Audio, Video, Sonstige), Vorschau, Öffnen, Sichern, Löschen, Dateien vom Laptop hinzufügen. Gemeinsame Ablage über den Server (`Kern/AblageAbgleich.cs`): komplette Kopie am Laptop, Neues kommt sofort per Long-Polling, Lesen auch ohne Handy und Netz, Schreiben braucht den Server. Jeder Eintrag und Prompt zeigt seine Quelle; Sortierknopf auch nach Quelle, Reihenfolge der Quellen frei wählbar (je Gerät). `ablage_schreiben` und `prompt_speichern`/`prompts_lesen` laufen direkt am Server, am Handy erzeugte Dateien tragen über `_quelle` die Quelle des Laptop.
 - Gedächtnis: Langzeitkontext (Textdatei, synchron mit dem Handy, Entwurf bleibt erhalten, bei Konflikt entscheidet Frank), Gemerktes und Live-Gedächtnis eingeklappt, Live-Gedächtnis aktualisiert sich jede Minute.
