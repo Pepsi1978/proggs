@@ -12,6 +12,8 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -22,36 +24,68 @@ import kotlinx.coroutines.withTimeoutOrNull
 object Ansage {
     private const val TAG = "JarvisAnsage"
 
-    // Mehrere Ansagen können sich überlappen: Die Ausgangslautstärke merkt sich nur die erste, zurück stellt erst die letzte.
+    // Verschachtelte Ansagen: Nach der jüngsten gilt wieder die Wahl der vorherigen, am Ende die Handy-Lautstärke.
     private val sperre = Any()
-    private class LautstaerkeStand(val ausgang: Int, var zuletztGesetzt: Int, var aktiv: Int = 0)
+    private class LautstaerkeWahl(var laut: Int)
+    private class LautstaerkeStand(var ausgang: Int, var zuletztGesetzt: Int) {
+        val wahlen = mutableListOf<LautstaerkeWahl>()
+        /** Eine Änderung mit den Lautstärketasten gilt auch nach der nächsten eingeschobenen Ansage. */
+        fun manuell(jetzt: Int) {
+            if (jetzt == zuletztGesetzt) return
+            ausgang = jetzt
+            wahlen.forEach { it.laut = jetzt }
+            zuletztGesetzt = jetzt
+        }
+    }
     private val lautstaerken = mutableMapOf<Int, LautstaerkeStand>()
 
     /** Auch lokal gespeicherte Erinnerungen nutzen denselben Schutz; Wecker sprechen auf ihrem eigenen Tonweg. */
     suspend fun mitLautstaerke(context: Context, prozent: Int, stream: Int = AudioManager.STREAM_MUSIC, sprechen: suspend () -> Unit) {
-        if (prozent <= 0) { sprechen(); return }
+        currentCoroutineContext().ensureActive()
         val ton = context.getSystemService(AudioManager::class.java)
-        val maximum = ton.getStreamMaxVolume(stream)
-        val laut = (maximum * prozent.coerceIn(1, 100) / 100.0).roundToInt().coerceIn(1, maximum.coerceAtLeast(1))
-        synchronized(sperre) {
-            val stand = lautstaerken.getOrPut(stream) { LautstaerkeStand(ton.getStreamVolume(stream), laut) }
-            stand.aktiv++
-            runCatching { ton.setStreamVolume(stream, laut, 0); stand.zuletztGesetzt = ton.getStreamVolume(stream) }
-                .onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
+        // Ein nicht lesbarer Tonweg darf die Erinnerung nicht ganz verstummen lassen.
+        val wahl = runCatching {
+            synchronized(sperre) {
+                val jetzt = ton.getStreamVolume(stream)
+                val maximum = ton.getStreamMaxVolume(stream)
+                val minimum = if (android.os.Build.VERSION.SDK_INT >= 28) ton.getStreamMinVolume(stream) else 0
+                val stand = lautstaerken.getOrPut(stream) { LautstaerkeStand(jetzt, jetzt) }
+                stand.manuell(jetzt)
+                val laut = if (prozent <= 0) stand.ausgang else
+                    (maximum * prozent.coerceIn(1, 100) / 100.0).roundToInt().coerceIn(minOf(maxOf(1, minimum), maximum), maximum)
+                LautstaerkeWahl(laut).also {
+                    stand.wahlen.add(it)
+                    setzeLautstaerke(ton, stream, stand, laut)
+                }
+            }
+        }.onFailure { Log.w(TAG, "Tonweg nicht lesbar, Vorlesen mit Handy-Lautstärke", it) }.getOrNull()
+        if (wahl == null) {
+            sprechen()
+            return
         }
         try {
             sprechen()
         } finally {
             synchronized(sperre) {
                 val stand = lautstaerken.getValue(stream)
-                if (--stand.aktiv == 0) {
-                    lautstaerken.remove(stream)
-                    // Eine Änderung mit den Lautstärketasten während des Vorlesens hat Vorrang.
-                    runCatching { if (ton.getStreamVolume(stream) == stand.zuletztGesetzt) ton.setStreamVolume(stream, stand.ausgang, 0) }
-                        .onFailure { Log.w(TAG, "Lautstärke ließ sich nicht zurückstellen", it) }
+                val warLetzte = stand.wahlen.lastOrNull() === wahl
+                stand.wahlen.remove(wahl)
+                try {
+                    stand.manuell(ton.getStreamVolume(stream))
+                    if (warLetzte) setzeLautstaerke(ton, stream, stand, stand.wahlen.lastOrNull()?.laut ?: stand.ausgang)
+                } catch (f: Exception) {
+                    Log.w(TAG, "Lautstärke ließ sich nicht zurückstellen", f)
+                } finally {
+                    if (stand.wahlen.isEmpty()) lautstaerken.remove(stream)
                 }
             }
         }
+    }
+
+    private fun setzeLautstaerke(ton: AudioManager, stream: Int, stand: LautstaerkeStand, laut: Int) {
+        if (laut == stand.zuletztGesetzt) return
+        runCatching { ton.setStreamVolume(stream, laut, 0); stand.zuletztGesetzt = ton.getStreamVolume(stream) }
+            .onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
     }
 
     /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke, 0 = so laut, wie das Handy steht. */
@@ -79,7 +113,9 @@ object Ansage {
                             quelle = "$art:" + System.currentTimeMillis()
                             vorleser.sprich(quelle, titel, text, wahl = wahl)
                             // Steht sie wegen einer Rückfrage, bleiben Lautstärke und Wachhaltung bis zu ihrem Ende.
-                            vorleser.warteAufEnde(quelle, hoechstens) { runCatching { wach.acquire(hoechstens + 10_000L) } }
+                            val ende = vorleser.warteAufEnde(quelle, hoechstens) { runCatching { wach.acquire(hoechstens + 10_000L) } }
+                            // Die Frist darf nicht enden, während die eigene Stimme danach ohne Lautstärkeschutz weiterläuft.
+                            if (ende == null && vorleser.stand.value.quelle == quelle) vorleser.stopp()
                         }
                     } catch (abbruch: kotlinx.coroutines.CancellationException) {
                         // Erst verstummen, dann stellt mitLautstaerke den Tonweg zurück.

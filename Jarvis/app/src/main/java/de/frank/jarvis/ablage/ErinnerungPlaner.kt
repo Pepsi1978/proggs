@@ -321,7 +321,12 @@ object ErinnerungStimme {
     }
 
     /** Liest die Kurzfassung vor. Eine laufende Aufnahme oder ein Gespräch wartet es ab, höchstens 15 Minuten; ein Wecker spricht ohne zu warten. */
-    suspend fun sprich(context: Context, e: Erinnerung, alsWecker: Boolean) {
+    suspend fun sprich(context: Context, e: Erinnerung, alsWecker: Boolean) = sprichText(context, e.kurz, alsWecker)
+
+    /** Keine Erinnerung anlegen: Die Probe verwendet dieselben beiden Stimmenwege wie eine fällige Meldung. */
+    suspend fun probe(context: Context) = sprichText(context, "Probe. So liest Jarvis deine Erinnerungen vor.", alsWecker = false)
+
+    private suspend fun sprichText(context: Context, kurz: String, alsWecker: Boolean) {
         val app = context.applicationContext
         if (!alsWecker) {
             withTimeoutOrNull(15 * 60_000L) { while (GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) delay(1_000L) } ?: return
@@ -331,11 +336,11 @@ object ErinnerungStimme {
         try {
             // Mehrere zugleich fällige sprechen nacheinander, nicht übereinander.
             reihe.withLock {
-                val f = datei(app, e.kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, e.kurz) }.getOrNull() }
+                val f = datei(app, kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, kurz) }.getOrNull() }
                 val attribute = if (alsWecker) attributeWecker else attributeMeldung
                 val stream = if (alsWecker) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
                 de.frank.jarvis.speech.Ansage.mitLautstaerke(app, Meldungen.profil(app, Meldungsarten.ERINNERUNG).lautstaerke, stream) {
-                    if (f == null || !spiele(f, attribute)) systemstimme(app, e.kurz, attribute)
+                    if (f == null || !spiele(f, attribute)) systemstimme(app, kurz, attribute)
                 }
             }
         } finally { runCatching { if (wach.isHeld) wach.release() } }

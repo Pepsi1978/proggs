@@ -716,7 +716,8 @@ class Vorleser(
         try {
             lauf.join()
         } catch (abbruch: CancellationException) {
-            lauf.cancel()
+            // Der Einschub läuft in einem eigenen Bereich. Erst Player/Fokus aufräumen, danach darf Ansage die Lautstärke zurückstellen.
+            withContext(kotlinx.coroutines.NonCancellable) { lauf.cancel(); lauf.join() }
             throw abbruch
         }
     }

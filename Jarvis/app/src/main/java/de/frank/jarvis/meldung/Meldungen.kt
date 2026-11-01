@@ -374,6 +374,7 @@ object Meldungen {
             Meldungsarten.TIMER -> de.frank.jarvis.timer.Timer.starten(app, 5_000L, "Probe-Timer")
             Meldungsarten.ANSAGE -> Ansage.ansage(app, "UpdateStation", "Ein Update von Jarvis ist bereit in UpdateStation.")
             Meldungsarten.INSTALLFRAGE -> profil(app, art).let { p -> Ansage.sprich(app, "ansage", "Jarvis-Update", p.sprechtext(""), p.lautstaerke, p.stimmWahl) }
+            Meldungsarten.ERINNERUNG -> nebenher.launch { de.frank.jarvis.ablage.ErinnerungStimme.probe(app) }
             else -> {
                 de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
                 de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(app)

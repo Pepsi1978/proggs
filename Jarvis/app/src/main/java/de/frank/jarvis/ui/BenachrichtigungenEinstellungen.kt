@@ -458,9 +458,10 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     val lautstaerke = p.lautstaerke
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Wie Handy", aktiv = lautstaerke == 0) { p.lautstaerke = 0 }
-        Text(if (lautstaerke == 0) "Eigene Lautstärke am Regler wählen" else "$lautstaerke %",
-            color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterVertically))
+        Chip("Eigene Lautstärke", aktiv = lautstaerke > 0) { if (p.lautstaerke == 0) p.lautstaerke = 100 }
     }
+    Text(if (lautstaerke == 0) "Aktuelle Handy-Lautstärke" else "$lautstaerke %",
+        color = f.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
     // Alte Werte (auch unter 20 %) bleiben erhalten, bis Frank selbst am Regler eine neue Wahl trifft.
     Slider(
         value = lautstaerke.coerceIn(20, 100).toFloat(),
@@ -469,6 +470,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
             if (neu != p.lautstaerke) p.lautstaerke = neu
         },
         valueRange = 20f..100f,
+        enabled = lautstaerke > 0,
         modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Vorlese-Lautstärke für ${p.art.titel}" },
         colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.rand),
     )
@@ -476,7 +478,12 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         Text("20 %", color = f.textLeise, fontSize = 13.sp)
         Text("100 %", color = f.textLeise, fontSize = 13.sp)
     }
-    Text(if (p.lautstaerke == 0) "Jarvis liest so laut vor, wie die Medienlautstärke gerade steht."
+    if (lautstaerke in 1..19) Text("Gespeichert bleiben $lautstaerke %. Eine neue Wahl am Regler liegt zwischen 20 und 100 %.",
+        color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+    Text(if (p.art == Meldungsarten.ERINNERUNG) {
+        if (lautstaerke == 0) "Normale Erinnerungen nutzen die aktuelle Medienlautstärke, Erinnerungswecker die aktuelle Wecker-Lautstärke."
+        else "Jarvis stellt die Lautstärke nur fürs Vorlesen ein und danach wieder zurück: bei normalen Erinnerungen die Medienlautstärke, bei Erinnerungsweckern die Wecker-Lautstärke."
+    } else if (lautstaerke == 0) "Jarvis liest so laut vor, wie die Medienlautstärke gerade steht."
         else "Jarvis stellt die Medienlautstärke nur dafür ein und danach wieder zurück. Ist ein Kopfhörer oder das Auto per Bluetooth verbunden, kommt die Stimme dort.",
         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 }
