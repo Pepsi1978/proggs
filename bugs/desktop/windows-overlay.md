@@ -871,7 +871,7 @@
 - **Symptom:** Der Build gelingt, `rebuild-overlay.ps1` meldet trotzdem `failed`, weil die Produktversion der exe nicht zur `<Version>` passt. Das Overlay war dabei schon beendet.
 - **Ursache:** `<InformationalVersion>` trug eine eigene Versionsnummer und wurde beim Bump vergessen (22.10. und 01.11.2026). Sie bestimmt die Produktversion der exe.
 - **Versionen:** bis TVO 1.11.34 und CVO 2.4.30.
-- **FIX:** `<InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>`. `rebuild-overlay.ps1` ab 1.8.0 prüft die ausgewerteten Properties vor dem Ja/Nein-Fenster und beendet bei Widerspruch nichts.
+- **FIX:** `<InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>`, `VersionStand` entsteht beim Bauen. `rebuild-overlay.ps1` ab 1.8.1 prüft die ausgewerteten Properties vor dem Ja/Nein-Fenster und nach dem Klick und beendet bei Widerspruch nichts (`refused`).
 - **Quelle:** `bugs/bug-cases/2026-11-01-overlays-informationalversion-versatz.md` (eigener Vorfall)
 
 ---

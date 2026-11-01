@@ -19,11 +19,11 @@
     <AssemblyName>TerminalVoiceOverlay</AssemblyName>
     <Product>Spracheingabe - Terminal</Product>
     <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
-         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung Version und VersionStand aendern.
-         InformationalVersion NIE von Hand setzen: Sie folgt aus Version, sonst bricht
-         rebuild-overlay.ps1 mit "Build-Artefakt passt nicht zum Projekt" ab (01.11.2026). -->
-    <Version>1.11.35</Version>
-    <VersionStand>01.11.2026, 12:16 Uhr</VersionStand>
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
+         Bump only Version. InformationalVersion and its timestamp derive from it at build time;
+         a second hand-kept value made rebuild-overlay.ps1 fail after the overlay had stopped. -->
+    <Version>1.11.36</Version>
+    <VersionStand>$([System.DateTime]::Now.ToString('dd.MM.yyyy, HH:mm')) Uhr</VersionStand>
     <InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Terminal</AssemblyTitle>
     <Company>Voice Overlay</Company>

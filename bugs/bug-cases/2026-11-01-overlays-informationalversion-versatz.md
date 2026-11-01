@@ -1,6 +1,6 @@
 # TVO/CVO: Update scheitert mit „Build-Artefakt passt nicht zum Projekt“ (01.11.2026)
 
-> Behoben in TVO 1.11.35, CVO 2.4.31, rebuild-overlay.ps1 1.8.0, UpdateZentrale 1.3.60, Updater-Zentrale macOS 1.0.32. Erster Vorfall: 22.10.2026.
+> Behoben in TVO 1.11.35, CVO 2.4.31, rebuild-overlay.ps1 1.8.0, UpdateZentrale 1.3.60, Updater-Zentrale macOS 1.0.32; nach Code-Review nachgeschärft in TVO 1.11.36, CVO 2.4.32, rebuild-overlay.ps1 1.8.1, UpdateZentrale 1.3.62, macOS 1.0.34. Erster Vorfall: 22.10.2026.
 
 ## Symptom
 
@@ -15,9 +15,9 @@
 
 ## Vorbeugung
 
-- Eine Quelle: `<InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>`. Von Hand werden nur noch `Version` und `VersionStand` geändert.
-- `rebuild-overlay.ps1` wertet beide Properties vor dem Ja/Nein-Fenster mit `dotnet msbuild -getProperty` aus. Passen sie nicht zusammen, endet es mit `failed`, und das Overlay läuft weiter.
-- `UpdateKette` liest den Fingerabdruck auch im Fehlerzweig neu (Windows und macOS).
+- Eine Quelle: `<InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>`. `VersionStand` entsteht beim Bauen aus der Systemzeit, von Hand wird nur noch `Version` geändert.
+- `rebuild-overlay.ps1` wertet beide Properties vor dem Ja/Nein-Fenster und nach dem Klick mit `dotnet msbuild -getProperty` aus (Zeitgrenze 60 s). Bei Widerspruch oder unauswertbarem Projekt läuft das Overlay weiter und die Rückmeldung ist `refused`; bei `Both` wird das andere Ziel trotzdem aktualisiert. Antwortet MSBuild nicht, warnt das Skript sichtbar und läuft weiter.
+- `UpdateKette` liest den Stand auch im Fehler- und Abbruchzweig neu (Windows und macOS). Die Lesung kann das Urteil nicht ersetzen und meldet `(nicht lesbar)`, wenn sie nichts liefert. Unter Windows ist sie auf 20 s begrenzt, auf macOS ohne eigene Grenze.
 
 ## Regel für die Fehlerart
 

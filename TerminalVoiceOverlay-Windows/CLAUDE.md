@@ -40,6 +40,10 @@ ClaudeVoiceOverlay, use `Both` instead of `TVO`.
 HIGHEST allowed timeout (600000 ms) and never abort it while the window waits. Output
 `OVERLAY_UPDATE_STATUS=cancelled` (No) or `=no-answer` (4 min without click) → do NOT retry,
 report to Frank. Never pass `-Force` unless Frank explicitly says so.
+A preflight runs before the window and again after the click. `OVERLAY_UPDATE_STATUS=refused` means
+it rejected the project (contradictory versions, project not evaluable): no window, nothing killed,
+nothing built. Fix the csproj, do not retry unchanged. Bump only `<Version>`; `InformationalVersion`
+and its timestamp derive from it at build time.
 (Source: memory `feedback_overlay_auto_rebuild_after_commit`.)
 
 ## Architecture

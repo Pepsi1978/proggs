@@ -23,6 +23,8 @@ internal sealed class SkriptProvider : IAktualisierer
 
     public int Updates, Pruefungen, Staende;
     public Func<Task>? VorUpdate;
+    public Exception? StandFehler;
+    public bool StandHaengt;
 
     public SkriptProvider(IEnumerable<string> staende, IEnumerable<PruefErgebnis> pruefungen, IEnumerable<PruefErgebnis>? updates = null)
     {
@@ -36,6 +38,8 @@ internal sealed class SkriptProvider : IAktualisierer
     public Task<string> FingerabdruckAsync(ProgrammEintrag e, CancellationToken a)
     {
         Staende++;
+        if (StandFehler is not null) throw StandFehler;
+        if (StandHaengt) return new TaskCompletionSource<string>().Task;
         if (_staende.Count > 0) _letzterStand = _staende.Dequeue();
         return Task.FromResult(_letzterStand);
     }
@@ -221,6 +225,62 @@ public sealed class UpdateKetteTests
         Assert.Equal(erwartet, u.Ergebnis);
         Assert.Equal(1, p.Updates);
         Assert.Equal(0, p.Pruefungen);
+    }
+
+    [Theory]
+    [InlineData(UpdateZustand.Abgebrochen, LaufErgebnis.Abgebrochen)]
+    [InlineData(UpdateZustand.Fehler, LaufErgebnis.Fehlgeschlagen)]
+    public async Task Abbruch_oder_Fehler_meldet_den_echten_Stand(UpdateZustand update, LaufErgebnis erwartet)
+    {
+        var p = new SkriptProvider(new[] { "B" }, new[] { Offen("2.0") }, new[] { new PruefErgebnis(update, Meldung: "x") });
+        var (kette, _, _) = Kette(p);
+        var u = await kette.AusfuehrenAsync("A", Offen("2.0"), default);
+
+        Assert.Equal(erwartet, u.Ergebnis);
+        Assert.Equal("A", u.FingerabdruckVorher);
+        Assert.Equal("B", u.FingerabdruckNachher);
+    }
+
+    [Fact]
+    public async Task Leerer_Stand_nach_Fehler_gilt_als_nicht_lesbar()
+    {
+        var p = new SkriptProvider(new[] { "" }, new[] { Offen("2.0") }, new[] { new PruefErgebnis(UpdateZustand.Fehler, Meldung: "x") });
+        var (kette, _, _) = Kette(p);
+        var u = await kette.AusfuehrenAsync("A", Offen("2.0"), default);
+
+        Assert.Equal(LaufErgebnis.Fehlgeschlagen, u.Ergebnis);
+        Assert.Equal(UpdateKette.NichtLesbar, u.FingerabdruckNachher);
+    }
+
+    [Fact]
+    public async Task Ausnahme_beim_Lesen_des_Stands_ersetzt_das_Fehlurteil_nicht()
+    {
+        var p = new SkriptProvider(new[] { "B" }, new[] { Offen("2.0") }, new[] { new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Bau gescheitert") })
+        {
+            StandFehler = new IOException("nicht lesbar")
+        };
+        var (kette, _, _) = Kette(p);
+        var u = await kette.AusfuehrenAsync("A", Offen("2.0"), default);
+
+        Assert.Equal(LaufErgebnis.Fehlgeschlagen, u.Ergebnis);
+        Assert.Equal("Bau gescheitert", u.Meldung);
+        Assert.Equal(UpdateKette.NichtLesbar, u.FingerabdruckNachher);
+    }
+
+    [Fact]
+    public async Task Haengendes_Lesen_und_ausgeloester_Abbruch_halten_das_Urteil_nicht_auf()
+    {
+        var p = new SkriptProvider(new[] { "B" }, new[] { Offen("2.0") }, new[] { new PruefErgebnis(UpdateZustand.Fehler, Meldung: "x") })
+        {
+            StandHaengt = true
+        };
+        var kette = new UpdateKette(p, new ProgrammEintrag(), new Progress<string>()) { AbschlussLesegrenze = TimeSpan.FromMilliseconds(50) };
+        using var abbruch = new CancellationTokenSource();
+        abbruch.Cancel();
+        var u = await kette.AusfuehrenAsync("A", Offen("2.0"), abbruch.Token);
+
+        Assert.Equal(LaufErgebnis.Fehlgeschlagen, u.Ergebnis);
+        Assert.Equal(UpdateKette.NichtLesbar, u.FingerabdruckNachher);
     }
 
     // 9

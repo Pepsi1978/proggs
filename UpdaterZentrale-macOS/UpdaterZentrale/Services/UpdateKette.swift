@@ -105,6 +105,14 @@ final class UpdateKette {
             return k
         }
 
+        // A script may stop after it has already replaced the program, so the start value would
+        // falsely read as "nothing happened". An unreadable state is named as such.
+        func standNachAbschluss() async -> String {
+            status("Prüft das Ergebnis …")
+            let stand = await aktualisierer.fingerabdruck(eintrag)
+            return stand.istLeer ? "(nicht lesbar)" : stand
+        }
+
         for durchlauf in 1...maxDurchlaeufe {
             if durchlauf > 1 {
                 let hinweis = "Folgeupdate \(durchlauf) von \(maxDurchlaeufe)"
@@ -125,12 +133,11 @@ final class UpdateKette {
             if ergebnis.zustand == .abgebrochen {
                 var k = ergebnis
                 k.zustand = .abgebrochen
+                standNach = await standNachAbschluss()
                 return ende(.abgebrochen, Self.text(ergebnis.meldung, "Abgebrochen."), k)
             }
             if ergebnis.zustand == .fehler || ergebnis.zustand == .nichtInstalliert {
-                // A script may fail after it has already rebuilt the program. Report the real
-                // state; the start value would read as "nothing happened" and mislead the analysis.
-                standNach = await aktualisierer.fingerabdruck(eintrag)
+                standNach = await standNachAbschluss()
                 return ende(.fehlgeschlagen, Self.text(ergebnis.meldung, "Das Update ist fehlgeschlagen."), alsFehler(ergebnis))
             }
 

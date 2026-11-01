@@ -101,7 +101,7 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
 
         var args = ("-NoProfile -ExecutionPolicy Bypass -File \"" + skript + "\" " + eintrag.SkriptArgumente).TrimEnd();
         protokoll.Report("pwsh " + args);
-        protokoll.Report("Das Skript zeigt jetzt ein Ja/Nein-Fenster. Ohne Klick auf 'Ja' passiert nichts.");
+        protokoll.Report("Das Skript zeigt gleich ein Ja/Nein-Fenster, sofern seine Vorprüfung nichts beanstandet. Ohne Klick auf 'Ja' passiert nichts.");
 
         // The scripts wait up to 240 s for the click, so the timeout must sit clearly above that.
         var zeitlimit = TimeSpan.FromSeconds(Math.Max(eintrag.DialogWartezeitSekunden, 300) + eintrag.ZeitlimitMinuten * 60);

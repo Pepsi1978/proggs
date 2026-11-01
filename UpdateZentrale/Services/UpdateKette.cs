@@ -51,6 +51,9 @@ public sealed class UpdateKette
     public int MaxDurchlaeufe { get; init; } = 3;
     public int MaxNachpruefungen { get; init; } = 4;
     public TimeSpan Pause { get; init; } = TimeSpan.FromSeconds(3);
+    public TimeSpan AbschlussLesegrenze { get; init; } = TimeSpan.FromSeconds(20);
+
+    internal const string NichtLesbar = "(nicht lesbar)";
 
     public UpdateKette(IAktualisierer aktualisierer, ProgrammEintrag eintrag, IProgress<string> protokoll,
                        Action<string>? status = null, Func<TimeSpan, CancellationToken, Task>? warten = null)
@@ -116,12 +119,13 @@ public sealed class UpdateKette
             arbeitSekunden += arbeit.Elapsed.TotalSeconds;
 
             if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
+            {
+                standNach = await StandNachAbschlussAsync();
                 return Ende(LaufErgebnis.Abgebrochen, Text(ergebnis.Meldung, "Abgebrochen."), ergebnis with { Zustand = UpdateZustand.Abgebrochen });
+            }
             if (ergebnis.Zustand is UpdateZustand.Fehler or UpdateZustand.NichtInstalliert)
             {
-                // A script may fail after it has already rebuilt the program. Report the real
-                // state; the start value would read as "nothing happened" and mislead the analysis.
-                standNach = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
+                standNach = await StandNachAbschlussAsync();
                 return Ende(LaufErgebnis.Fehlgeschlagen, Text(ergebnis.Meldung, "Das Update ist fehlgeschlagen."),
                     ergebnis with { Zustand = UpdateZustand.Fehler });
             }
@@ -236,6 +240,28 @@ public sealed class UpdateKette
                 new Dictionary<string, object?> { ["ergebnis"] = urteil.ToString(), ["aufrufe"] = aufrufe, ["standVorher"] = fingerabdruckStart, ["standNachher"] = standNach });
             return new(urteil, meldung, fingerabdruckStart, standNach,
                 karte with { Meldung = meldung }, aufrufe, liefDurch, ausstehend, uebergaenge, Math.Round(arbeitSekunden, 1));
+        }
+    }
+
+    /// <summary>
+    /// The state after a failed or cancelled run. A script may stop after it has already replaced
+    /// the program, so the start value would falsely read as "nothing happened". This reading is
+    /// diagnostic only: it is bounded, ignores the possibly fired cancel token and can never
+    /// replace the verdict that already stands. An unreadable state is named as such.
+    /// </summary>
+    private async Task<string> StandNachAbschlussAsync()
+    {
+        _status("Prüft das Ergebnis …");
+        try
+        {
+            using var grenze = new CancellationTokenSource(AbschlussLesegrenze);
+            var stand = await _aktualisierer.FingerabdruckAsync(_eintrag, grenze.Token).WaitAsync(grenze.Token);
+            return string.IsNullOrWhiteSpace(stand) ? NichtLesbar : stand;
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Gefangen(ex, "kette", Schwere.Warnung);
+            return NichtLesbar;
         }
     }
 

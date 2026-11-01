@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.8.0 - 01.11.2026, 12:16 Uhr
+# Version 1.8.1 - 01.11.2026, 12:27 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -39,6 +39,9 @@
     auf "Ja" wird nichts beendet und nichts gebaut — so wird keine laufende Spracheingabe
     abgeschossen. Rueckmeldung als Zeile OVERLAY_UPDATE_STATUS=cancelled | no-answer.
     Nach DialogTimeoutSeconds ohne Klick gilt "Nein", nie "Ja".
+    Vorher prueft das Skript die Versionsangaben im Projekt. Beanstandet es alle Ziele, erscheint
+    kein Fenster: OVERLAY_UPDATE_STATUS=refused, Exit 1, nichts beendet, nichts gebaut. Die Pruefung
+    laeuft nach dem Klick erneut; ein dabei oder bei "Both" beanstandetes Ziel endet mit "failed".
     Es gibt BEWUSST keinen Schalter, der die Rueckfrage ueberspringt: das Update ist immer an
     den Klick auf "Ja" gebunden (Vorgabe des Benutzers, 21.09.2026).
 #>
@@ -195,6 +198,80 @@ function Invoke-Publish {
     finally { Pop-Location }
 }
 
+# The product version may carry a suffix: "1.2.3", "1.2.3 (stamp)" or "1.2.3+hash".
+function Test-VersionMatches {
+    param([string]$Actual, [string]$Expected)
+    return $Actual -eq $Expected -or
+        $Actual.StartsWith("$Expected ", [StringComparison]::OrdinalIgnoreCase) -or
+        $Actual.StartsWith("$Expected+", [StringComparison]::OrdinalIgnoreCase)
+}
+
+# Asks MSBuild for the evaluated properties; the csproj text only holds "$(Version)".
+# State: ok | broken (MSBuild rejects the project, the build would fail too) | unknown (no answer).
+function Get-ProjectVersions {
+    param([hashtable]$O, [int]$TimeoutSeconds = 60)
+
+    $projectPath = Join-Path $O.Folder "$($O.Name).csproj"
+    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
+        return @{ State = 'unknown'; Detail = "Projektdatei fehlt: $projectPath" }
+    }
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    foreach ($argument in @('msbuild', $projectPath, '-nologo', '-getProperty:Version', '-getProperty:InformationalVersion')) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    try {
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        $outputTask = $process.StandardOutput.ReadToEndAsync()
+        $errorTask = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+            $process.Kill($true)
+            return @{ State = 'unknown'; Detail = "MSBuild antwortet nicht innerhalb von $TimeoutSeconds s" }
+        }
+        if (-not $outputTask.Wait(5000) -or -not $errorTask.Wait(5000)) {
+            return @{ State = 'unknown'; Detail = 'MSBuild-Ausgabe nicht lesbar' }
+        }
+        if ($process.ExitCode -ne 0) {
+            $reason = @(("$($errorTask.Result)`n$($outputTask.Result)") -split "`r?`n" | Where-Object { $_ -match 'error' } | Select-Object -First 1)
+            return @{ State = 'broken'; Detail = "MSBuild Exit $($process.ExitCode): $reason" }
+        }
+        $properties = ($outputTask.Result | ConvertFrom-Json).Properties
+    }
+    catch {
+        return @{ State = 'unknown'; Detail = $_.Exception.Message }
+    }
+    if (-not $properties.Version -or -not $properties.InformationalVersion) {
+        return @{ State = 'unknown'; Detail = 'MSBuild lieferte keine Versionsangaben' }
+    }
+    return @{ State = 'ok'; Version = [string]$properties.Version; Informational = [string]$properties.InformationalVersion }
+}
+
+# Runs before the overlay is stopped, so a project that cannot pass leaves the overlay running.
+# Only an unreadable answer lets the update go on, visibly: Test-BuiltArtifact still decides then.
+function Test-OverlayPreflight {
+    param([string]$T)
+
+    $versions = Get-ProjectVersions -O $Overlays[$T]
+    switch ($versions.State) {
+        'broken' {
+            Write-Err "${T}: Projekt nicht auswertbar, der Build wuerde scheitern. $($versions.Detail)"
+            return $false
+        }
+        'unknown' {
+            Write-Warn "${T}: Vorpruefung nicht moeglich, das Update laeuft trotzdem weiter. $($versions.Detail)"
+            return $true
+        }
+    }
+    if (-not (Test-VersionMatches -Actual $versions.Informational -Expected $versions.Version)) {
+        Write-Err "${T}: Version $($versions.Version) passt nicht zu InformationalVersion '$($versions.Informational)'. InformationalVersion in der csproj aus `$(Version) ableiten."
+        return $false
+    }
+    return $true
+}
+
 function Test-BuiltArtifact {
     param([hashtable]$O)
 
@@ -205,39 +282,16 @@ function Test-BuiltArtifact {
         return @{ Ok = $false; Expected = '<fehlt>'; Actual = '<fehlt>' }
     }
 
-    [xml]$project = Get-Content -LiteralPath $projectPath -Raw
-    $expected = [string]$project.Project.PropertyGroup.Version
-    $actual = (Get-Item -LiteralPath $exePath).VersionInfo.ProductVersion
-    $versionMatches = $actual -eq $expected -or
-        $actual.StartsWith("$expected ", [StringComparison]::OrdinalIgnoreCase) -or
-        $actual.StartsWith("$expected+", [StringComparison]::OrdinalIgnoreCase)
-    return @{ Ok = $versionMatches; Expected = $expected; Actual = $actual }
-}
-
-# Vorpruefung VOR Dialog und Prozess-Ende: Die Produktversion der exe kommt aus InformationalVersion,
-# Test-BuiltArtifact vergleicht sie aber mit Version. Laufen beide auseinander (Vorfaelle 22.10. und
-# 01.11.2026), scheitert das Update erst nach dem Beenden des Overlays. MSBuild wertet die Properties
-# aus, denn im Klartext der csproj steht "$(Version)". Antwortet MSBuild nicht, entscheidet weiter
-# Test-BuiltArtifact nach dem Build.
-function Test-ProjectVersionConsistent {
-    param([hashtable]$O)
-
-    $projectPath = Join-Path $O.Folder "$($O.Name).csproj"
-    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { return @{ Ok = $true } }
-    try {
-        $json = & dotnet msbuild $projectPath -nologo -getProperty:Version -getProperty:InformationalVersion 2>$null
-        if ($LASTEXITCODE -ne 0) { return @{ Ok = $true } }
-        $properties = ($json -join "`n" | ConvertFrom-Json).Properties
+    $versions = Get-ProjectVersions -O $O
+    if ($versions.State -eq 'ok') {
+        $expected = $versions.Version
     }
-    catch { return @{ Ok = $true } }
-
-    $version = [string]$properties.Version
-    $informational = [string]$properties.InformationalVersion
-    if (-not $version -or -not $informational) { return @{ Ok = $true } }
-    $consistent = $informational -eq $version -or
-        $informational.StartsWith("$version ", [StringComparison]::OrdinalIgnoreCase) -or
-        $informational.StartsWith("$version+", [StringComparison]::OrdinalIgnoreCase)
-    return @{ Ok = $consistent; Version = $version; Informational = $informational }
+    else {
+        [xml]$project = Get-Content -LiteralPath $projectPath -Raw
+        $expected = [string]$project.Project.PropertyGroup.Version
+    }
+    $actual = (Get-Item -LiteralPath $exePath).VersionInfo.ProductVersion
+    return @{ Ok = (Test-VersionMatches -Actual $actual -Expected $expected); Expected = $expected; Actual = $actual }
 }
 
 # Startet das Overlay wie beim Boot: ueber watcher.vbs (wscript.exe).
@@ -339,16 +393,11 @@ function Show-UpdateDialog {
 $targets = if ($Target -eq 'Both') { @('CVO', 'TVO') } else { @($Target) }
 $failed = @()
 
-# Falsche Versionsangaben fruehzeitig melden: Das Overlay laeuft dann einfach weiter.
-foreach ($t in $targets) {
-    $check = Test-ProjectVersionConsistent -O $Overlays[$t]
-    if (-not $check.Ok) {
-        Write-Err "${t}: Version $($check.Version) passt nicht zu InformationalVersion '$($check.Informational)'. InformationalVersion in der csproj aus `$(Version) ableiten."
-        $failed += $t
-    }
-}
-if ($failed.Count -gt 0) {
-    Write-Host "OVERLAY_UPDATE_STATUS=failed ($($failed -join ', '): Versionsangaben im Projekt widerspruechlich, nichts beendet, nichts gebaut)"
+# A rejected target stays running and untouched; with "Both" the other one still gets its update.
+$failed = @($targets | Where-Object { -not (Test-OverlayPreflight -T $_) })
+$targets = @($targets | Where-Object { $failed -notcontains $_ })
+if ($targets.Count -eq 0) {
+    Write-Host "OVERLAY_UPDATE_STATUS=refused ($($failed -join ', '): Vorpruefung beanstandet das Projekt, nichts beendet, nichts gebaut)"
     exit 1
 }
 
@@ -386,6 +435,12 @@ foreach ($t in $targets) {
 
     if (-not (Test-Path $O.Folder)) {
         Write-Err "Ordner fehlt: $($O.Folder)"
+        $failed += $t
+        continue
+    }
+
+    # The dialog may have been open for minutes, and a parallel session may have changed the repo.
+    if (-not (Test-OverlayPreflight -T $t)) {
         $failed += $t
         continue
     }

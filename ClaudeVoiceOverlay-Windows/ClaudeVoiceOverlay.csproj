@@ -20,10 +20,10 @@
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
          2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
-    <!-- Bei JEDER Aenderung Version und VersionStand aendern. InformationalVersion NIE von Hand
-         setzen: Sie folgt aus Version, sonst bricht rebuild-overlay.ps1 ab (01.11.2026). -->
-    <Version>2.4.31</Version>
-    <VersionStand>01.11.2026, 12:16 Uhr</VersionStand>
+    <!-- Bump only Version. InformationalVersion and its timestamp derive from it at build time;
+         a second hand-kept value made rebuild-overlay.ps1 fail after the overlay had stopped. -->
+    <Version>2.4.32</Version>
+    <VersionStand>$([System.DateTime]::Now.ToString('dd.MM.yyyy, HH:mm')) Uhr</VersionStand>
     <InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
     <Company>Voice Overlay</Company>
