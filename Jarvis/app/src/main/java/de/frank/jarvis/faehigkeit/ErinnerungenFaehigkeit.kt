@@ -130,7 +130,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 "zeile" to text("Listenzeile: etwa sechs Wörter."),
                 "datum" to text("Termin als JJJJ-MM-TT. Weglassen = allgemeine Erinnerung ohne Termin."),
                 "uhrzeit" to text("Nur wenn Frank eine Uhrzeit ausdrücklich nennt, HH:MM. Beim Ändern: „keine“ entfernt sie."),
-                "form" to text("meldung (Benachrichtigung) oder wecker (klingelt, bis ausgeschaltet).", listOf("meldung", "wecker")),
+                "form" to text("Pflicht beim Anlegen nach ausdrücklicher Rückfrage: meldung (Benachrichtigung) oder wecker (klingelt, bis ausgeschaltet).", listOf("meldung", "wecker")),
                 "vorab_minuten" to text("Beim Anlegen, optional: Zeitpunkte als Minuten vor dem Termin, mit Komma getrennt, 0 = zum Termin; 1 Stunde = 60, 1 Tag = 1440. Vorgabe: 0."),
                 "minuten" to zahl("Bei ausloesung_hinzufuegen: so viele Minuten vor dem Termin."),
                 "ausloesung_uhrzeit" to text("Bei ausloesung_hinzufuegen, nur für Termine ohne Uhrzeit: um diese Zeit, HH:MM."),
@@ -177,10 +177,14 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         if (aktion == "anlegen") {
             val text = a.optString("text").trim()
             if (text.isEmpty()) return Ergebnis("Der Inhalt fehlt.", fehler = true)
+            val form = when (a.optString("form")) {
+                Erinnerung.FORM_MELDUNG -> Erinnerung.FORM_MELDUNG
+                Erinnerung.FORM_WECKER -> Erinnerung.FORM_WECKER
+                else -> return Ergebnis("Frag Frank ausdrücklich „Benachrichtigung oder Wecker?“ und übergib seine Auswahl in form.", fehler = true)
+            }
             val datum = if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else null
             val uhrzeit = if (datum != null && a.gesetzt("uhrzeit")) uhrzeitAus(a.optString("uhrzeit")) ?: return Ergebnis("„${a.optString("uhrzeit")}“ ist keine Uhrzeit.", fehler = true) else null
             val vorab = vorabAus(a.optString("vorab_minuten")).map { Erinnerungen.neueAusloesung(it) }
-            val form = if (a.optString("form") == Erinnerung.FORM_WECKER) Erinnerung.FORM_WECKER else Erinnerung.FORM_MELDUNG
             val e = Erinnerungen.anlegen(context, text, a.optString("zeile"), a.optString("kurz"), datum?.toString(), uhrzeit, form, vorab, Einstellungen.get(context).erinnerungOhneUhrzeit)
                 ?: return Ergebnis("Die Erinnerung ließ sich nicht speichern.", fehler = true)
             return Ergebnis(if (e.allgemein) "Als allgemeine Erinnerung gespeichert: ${e.zeile}. Jarvis meldet sich, wenn es passt." else "Gespeichert für ${e.datumAnzeige()}: ${e.zeile}. Form: ${if (e.wecker) "Wecker" else "Benachrichtigung"}. Zeitpunkte: " + e.ausloesungen.joinToString { e.vorlaufText(it) } + "." + vorbeiHinweis(e))
