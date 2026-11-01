@@ -79,6 +79,7 @@ public static class JarvisApp
         }
         // Zuerst: Haupt.Post fiele ohne Application.Current auf den direkten Aufruf zurück, Meldungen liefen sonst auf Hintergrundfäden.
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        ScrollLeiste.Einrichten(app);
         app.DispatcherUnhandledException += (_, e) =>
         {
             Log("fehler", "Unbehandelt in der Oberfläche: " + e.Exception.Message, wo: "App", fehler: e.Exception.ToString());

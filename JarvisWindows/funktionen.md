@@ -1,4 +1,4 @@
-<!-- stand: JarvisWindows 1.0.0 -->
+<!-- stand: JarvisWindows 1.0.1 -->
 Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -46,6 +46,9 @@ Was Jarvis Windows HP kann (geprüft am Code).
 - Leiste links: Start, Zentrale, Ablage, Einstellungen, unten Version mit Build-Datum und -Uhrzeit. Der Live-Bildschirm öffnet sich über den Knopf „Live“ in der Blase; läuft ein Gespräch, steht „Live läuft“ in der Leiste. Strg+L startet oder beendet Live direkt. Einstellungen: Kopf, Guthaben, Stimme (Stimmen als Menü mit Stern und Hörprobe), Sprache, Live (nur Modell und Stimme des gewählten Anbieters), Laptop & Rechte (Stand jedes Rechts, Fehlende anfragen, was bei Frank bleibt), Konten, Gedächtnis (Merken, Langzeitkontext, Gemerktes, Live-Gedächtnis, Funktionsübersicht Laptop und Handy, Handy-Reiter und CLI, Regeln für ChatGPT Live), Aktivität (Laptop-Logbuch, Handy-Protokoll), Über. Die Einstellungsliste bleibt dabei immer gleich.
 - Schwebende Knöpfe wie am Handy, auf Start und im Gespräch rechts über der Blase: Neue Session, Papierkorb (Gespräch löschen mit Rückfrage, nur mit Gespräch), Nachtrag (nur im Programmiergespräch), Programmierung. Programmierung zeigt links daneben die Modellknöpfe Opus 5.5, Sol 6.1, Kimi K3.1 Pro (OpenCode) und Gemini 4 Argon (Antigravity), die sich nach einer Minute schließen; die Wahl setzt „Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell …:“ vor den Text und gilt verbindlich (Kimi und Argon über OpenLauncher mit Minimalprofil, Schnellmodus, Effort High). Nachtrag setzt „Nachtrag:“; grün, solange er vorn steht, erneuter Klick nimmt ihn heraus. Ein neuer Auftrag geht mit allen „ ; “-Aufgaben in einer Sitzung an das CLI (`programmieren` mit Ziel PC, ohne Handy `openlauncher_sitzung`) und bekommt aus einem Programmiergespräch ein eigenes Gespräch; der Nachtrag geht ohne Modell in die Sitzung dieses Gesprächs.
 - Symbol im Infobereich mit Schnellfrage, Sprechen, Live. Fenster-Kürzel Strg+N, Strg+D, Strg+L, Strg+1 Start, Strg+2 Zentrale, Strg+3 Ablage, Strg+,.
+
+## Neu seit 1.0.1
+- Bildlaufleisten schmal und rund, Farben folgen Hell und Dunkel.
 
 ## Abweichungen von der Mac-Fassung
 - Helfer dieses Laptops erreicht das Handy über `jarvis_windows_hp_sprechen`, nicht über seinen Helferkatalog; ein Helferbau läuft direkt am Laptop.
