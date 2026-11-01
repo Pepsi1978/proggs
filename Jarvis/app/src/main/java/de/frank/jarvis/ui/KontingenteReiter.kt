@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Companion.prozent
 import de.frank.jarvis.ui.theme.LocalFarben
@@ -28,9 +29,9 @@ import de.frank.jarvis.ui.theme.LocalFarben
 @Composable
 internal fun KontingenteReiter(vm: AppViewModel) {
     val f = LocalFarben.current
-    LaunchedEffect(Unit) { vm.kontingenteAbfragen() }
+    LaunchedEffect(Unit) { vm.kontingenteAbfragen(); vm.anthropicGuthabenAbfragen() }
     var anmelden by rememberSaveable { mutableStateOf<String?>(null) }
-    Knopf(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true) }
+    Knopf(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true); vm.anthropicGuthabenAbfragen(erzwingen = true) }
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
@@ -63,6 +64,7 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                 if ((a.id == "claude" || a.id == "kimi") && (a.limits.isNotEmpty() || (a.anmeldenNoetig && a.hinweis?.contains("lehnt") == true))) {
                     Knopf("Abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kontingentAbmelden(a.id) }
                 }
+                if (a.id == "claude") ApiFreikontingent(vm)
             }
         }
     }
@@ -76,5 +78,30 @@ internal fun KontingenteReiter(vm: AppViewModel) {
         // Kimi nennt nach außen kein festes Zeichen für „angemeldet“: Du siehst deine Limits im Fenster und schließt es dann selbst.
         "kimi" -> AnmeldeBrowser("Bei Kimi anmelden, danach schließen", KontingenteFaehigkeit.KIMI_SEITE, googleTauglich = true,
             fertig = { false }, onFertig = { anmelden = null; vm.kontingenteAbfragen(erzwingen = true) })
+    }
+}
+
+/** Anthropic-API-Freikontingent als fester Balken bis 100 $, aus dem Stand des Reiters „Guthaben“. Fehlendes steht als „nicht verfügbar“ da. */
+@Composable
+private fun ApiFreikontingent(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val g = vm.anthropicGuthaben
+    val verbraucht = g?.freiVerbrauchtUsd
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text("Anthropic-API-Freikontingent", color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            when {
+                verbraucht != null -> "${AnthropicGuthabenFaehigkeit.betrag(verbraucht)} $ von 100 $ verbraucht"
+                vm.anthropicGuthabenLaedt -> "Wird abgefragt …"
+                else -> "Verbrauch nicht verfügbar"
+            },
+            color = if (verbraucht != null) f.text else f.textLeise, fontSize = if (verbraucht != null) 26.sp else 15.sp, fontWeight = if (verbraucht != null) FontWeight.Bold else FontWeight.Normal,
+        )
+        Box(Modifier.padding(top = 6.dp, bottom = 6.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.flaecheStark)) {
+            Box(Modifier.fillMaxWidth(((verbraucht ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.primaer))
+        }
+        Text(g?.naechstes?.let { "Zurücksetzen voraussichtlich " + bis(it) } ?: "Rücksetzzeitpunkt nicht verfügbar", color = f.text, fontSize = 14.sp)
+        g?.hinweis?.let { Text(it, color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
+        g?.standText()?.takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
     }
 }

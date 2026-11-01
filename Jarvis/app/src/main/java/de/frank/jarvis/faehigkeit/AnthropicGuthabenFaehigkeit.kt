@@ -86,6 +86,11 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
 
         val verbrauchtUsd: Double? get() = gewaehrtUsd?.let { g -> restUsd?.let { (g - it).coerceAtLeast(0.0) } }
 
+        /** Vom monatlichen Abo-Guthaben verbraucht (eigene Credits zählen nicht); null = nicht ermittelbar. */
+        val freiVerbrauchtUsd: Double? get() = abobetragUsd?.let { abo ->
+            restUsd?.let { r -> eigenesUsd?.let { e -> (abo - (r - e)).coerceIn(0.0, abo) } }
+        }
+
         private fun eur(usd: Double): String = kurs?.let { " (≈ ${betrag(usd * it)} €)" } ?: ""
 
         private fun verfallText(): String = runCatching {

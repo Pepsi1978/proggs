@@ -36,7 +36,7 @@ import java.util.Locale
 
 private val DATUM: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
 
-private fun bis(d: LocalDate): String = DATUM.format(d) + " · " + GoogleGuthabenFaehigkeit.tageText(ChronoUnit.DAYS.between(LocalDate.now(), d))
+internal fun bis(d: LocalDate): String = DATUM.format(d) + " · " + GoogleGuthabenFaehigkeit.tageText(ChronoUnit.DAYS.between(LocalDate.now(), d))
 
 /**
  * Reiter „Guthaben“: alles geschenkte Guthaben auf einen Blick, je Anbieter eine Karte im selben Aufbau —
