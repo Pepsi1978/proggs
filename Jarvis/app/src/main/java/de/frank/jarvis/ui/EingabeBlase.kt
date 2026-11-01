@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DesktopMac
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Refresh
@@ -119,6 +120,8 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.withContext
 
 /** Das Orange der Live-Blase (wie in der ChatGPT-App). */
@@ -406,7 +409,7 @@ private fun TastaturKnopf(kompakt: Boolean, weg: Int, oeffnen: () -> Unit, schli
 /** Größe der schwebenden Symbole und ihr Abstand untereinander; unter dem Stapel bleibt eine freie Bubble Platz. */
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
-/** Ein freier Platz in Symbolgröße zwischen den übrigen Symbolen und Nachtrag/Programmierer. */
+/** Ein freier Platz in Symbolgröße zwischen den übrigen Symbolen und Fernwartung/Nachtrag/Programmierer. */
 private val SCHWEBE_FREIPLATZ = SCHWEBE_GROESSE + SCHWEBE_ABSTAND
 private val SCHWEBE_LUECKE = SCHWEBE_FREIPLATZ + SCHWEBE_ABSTAND
 
@@ -421,15 +424,15 @@ val SCHWEBE_FREI_RECHTS = SCHWEBE_RECHTS + SCHWEBE_VERSATZ + SCHWEBE_GROESSE + 6
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
-    // Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
+    // Hell/Dunkel, Neue Session, Fernwartung, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
     // und der freie Platz zwischen den übrigen Symbolen und den Programmier-Symbolen.
-    val anzahl = 3 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
+    val anzahl = 4 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
     return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_FREIPLATZ + SCHWEBE_LUECKE
 }
 
 /**
  * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, im selben Abstand untereinander:
- * oben Hell/Dunkel und „Neue Session“, darunter der Papierkorb „Gespräch löschen“, dann ein freier Platz, darunter, nur im Programmiergespräch, ein Plus
+ * oben Hell/Dunkel, darunter der Papierkorb „Gespräch löschen“ und „Neue Session“, dann ein freier Platz, darunter die Fernwartung, darunter, nur im Programmiergespräch, ein Plus
  * (wie Plus → „+ Nachtrag“) und als letztes das Programmier-Symbol (wie Plus → „Programmierer“). Darunter bis zur Eingabeblase
  * eine freie Bubble Platz mit dem Klapp-Pfeil. Ohne Blase, nur ein kleiner,
  * leicht schimmernder, durchscheinender Grund.
@@ -455,7 +458,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             exit = androidx.compose.animation.shrinkVertically(tween(180), shrinkTowards = Alignment.Bottom) + androidx.compose.animation.fadeOut(tween(140)),
         ) {
         Column(horizontalAlignment = Alignment.End) {
-        // Hell → Automatisch (nach der Sonne, gespeichert als „system“) → Dunkel → Hell, direkt über „Neue Session“. Das Symbol zeigt den aktuellen Modus.
+        // Hell → Automatisch (nach der Sonne, gespeichert als „system“) → Dunkel → Hell, ganz oben im Stapel. Das Symbol zeigt den aktuellen Modus.
         val modus = vm.einstellungen.modus
         SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
@@ -466,6 +469,15 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
                 null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
+        // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
+        var loeschenZiel by remember { mutableStateOf<String?>(null) }
+        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
+            SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
+                Icon(Icons.Rounded.Delete, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        }
         // „Neue Session“: Sprechblase im selben durchscheinenden Schwarz wie der Papierkorb, mit weißem Kreuz. Antippen lässt sie kurz
         // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
         val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
@@ -476,15 +488,6 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
         Spacer(Modifier.height(SCHWEBE_ABSTAND))
-        // Aktuelles Gespräch löschen, direkt unter „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
-        // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
-        var loeschenZiel by remember { mutableStateOf<String?>(null) }
-        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
-            SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
-                Icon(Icons.Rounded.Delete, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
-            }
-            Spacer(Modifier.height(SCHWEBE_ABSTAND))
-        }
         loeschenZiel?.let { ziel -> androidx.compose.material3.AlertDialog(
             onDismissRequest = { loeschenZiel = null },
             containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
@@ -502,9 +505,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
         ) }
-        // Zwischen den übrigen Symbolen und den Programmier-Symbolen (Nachtrag, Programmierer) bleibt immer genau ein Platz frei,
+        // Zwischen den übrigen Symbolen und den Programmier-Symbolen (Fernwartung, Nachtrag, Programmierer) bleibt immer genau ein Platz frei,
         // egal ob Papierkorb oder Nachtrag gerade zu sehen sind.
         Spacer(Modifier.height(SCHWEBE_FREIPLATZ))
+        FernwartungsSymbol()
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
         if (vm.nachtragMoeglich) {
             SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
                 Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
@@ -596,6 +601,83 @@ internal fun wahlOptionen(kontext: String): List<Pair<String, String>> {
     val liste = runCatching { org.json.JSONObject(kontext).optJSONArray("optionen") }.getOrNull()
     return if (liste == null || liste.length() == 0) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.MODELL_OPTIONEN
     else (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
+}
+
+/**
+ * Fernwartung: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner hat in der letzten Minute geantwortet
+ * (Fernwartungs-Dienst im Tunnel), rot = keiner; geprüft wird in der Leiste (JarvisApp). Beim Antippen zählt nur, wer gerade wirklich
+ * antwortet (RechnerStatus.schnell liefert das ungeglättet).
+ */
+@Composable
+private fun FernwartungsSymbol() {
+    val f = LocalFarben.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    // Läuft ein Start, bricht erneutes Tippen ihn ab: Die Anzeige verschwindet sofort, der abgebrochene Start öffnet nichts mehr.
+    // Verschwindet das Symbol (anderer Reiter, Einklappen, Live-Gespräch), endet der Start mit ihm; beim Verlassen der App bricht ihn der Effekt unten ab.
+    var start by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val startAbbrechen = { start?.cancel(); start = null }
+    // Die Rechner aus der Prüfung beim Antippen; null = keine Auswahl offen.
+    var auswahl by remember { mutableStateOf<List<de.frank.jarvis.fernsteuerung.Fernziel>?>(null) }
+    // Die Auswahl zeigt einen Stand von jetzt: Beim Verlassen der App schließen, sonst böte sie nach Minuten einen längst ausgeschalteten Rechner an.
+    LaunchedEffect(lebenszyklus) {
+        lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            try { kotlinx.coroutines.awaitCancellation() } finally { startAbbrechen(); auswahl = null }
+        }
+    }
+    val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
+    // Grün heißt weiter: Ein Bildschirm ist erreichbar. Nur die immer laufende Server-Konsole färbt das Symbol in der Akzentfarbe.
+    val nurKonsole = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.let { da -> da.isNotEmpty() && da.all { it.konsole } } == true
+    val bereich = androidx.compose.runtime.rememberCoroutineScope()
+    val sucht = start != null
+    val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
+        if (z.konsole) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
+        else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
+            .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
+    }
+    auswahl?.let { da -> RechnerAuswahl(da, { auswahl = null }) { auswahl = null; oeffnen(it) } }
+    val beschreibung = if (sucht) "Fernwartung wird vorbereitet, erneut tippen bricht ab" else "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" }
+    SchwebeSymbol(beschreibung, false, {
+        if (start != null) startAbbrechen()
+        else start = bereich.launch {
+            // Antworten mehrere, fragt Jarvis, welcher; sonst direkt zum erreichbaren. Keiner: nicht blind verbinden, sondern es sagen.
+            val da = de.frank.jarvis.fernsteuerung.RechnerStatus.schnell()
+            start = null
+            when {
+                da.size > 1 -> auswahl = da
+                da.size == 1 -> oeffnen(da.first())
+                else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }) {
+        // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
+        // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau mit drehendem Ring: das Tippen ist angekommen.
+        val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) f.primaer else f.erfolg; false -> f.gefahr; null -> f.textLeise }
+        if (sucht) androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = f.primaer, strokeWidth = 2.5.dp)
+        Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(24.dp).drawBehind {
+            if (rechnerDa == true && !sucht) drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), Color.Transparent)), radius = size.minDimension * 1.1f)
+        })
+    }
+}
+
+/** Mehrere Rechner sind erreichbar: Frank wählt, wessen Bildschirm oder Konsole er sehen will. */
+@Composable
+private fun RechnerAuswahl(da: List<de.frank.jarvis.fernsteuerung.Fernziel>, schliessen: () -> Unit, gewaehlt: (de.frank.jarvis.fernsteuerung.Fernziel) -> Unit) {
+    val f = LocalFarben.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = schliessen,
+        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+        title = { Text("Fernwartung") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Was möchtest du sehen?")
+                da.forEach { z ->
+                    androidx.compose.material3.Button(onClick = { gewaehlt(z) }, Modifier.fillMaxWidth()) { Text(z.titel) }
+                }
+            }
+        },
+        confirmButton = {},
+    )
 }
 
 @Composable

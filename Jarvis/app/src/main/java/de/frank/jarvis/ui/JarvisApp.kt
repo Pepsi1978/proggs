@@ -36,11 +36,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.DesktopMac
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -90,7 +88,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.launch
 
 @Composable
 fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
@@ -208,7 +205,7 @@ private fun Leiste(vm: AppViewModel) {
         Modifier.padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth().height(62.dp).glas(f, 31.dp, erhoeht = 1.2f, fuellung = f.flaecheStark).padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // Reihenfolge: Reiter, dann Fernwartung, Einstellungen ganz rechts.
+        // Reihenfolge: Reiter, Einstellungen ganz rechts.
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
             val aktiv = vm.reiter == r
             val icon = when (r) { Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune }
@@ -223,93 +220,16 @@ private fun Leiste(vm: AppViewModel) {
             }
         }
         Reiter.entries.filter { it != Reiter.EINSTELLUNGEN }.forEach { reiterKnopf(it) }
-        // Kein Reiter: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner hat in der letzten
-        // Minute geantwortet (Fernwartungs-Dienst im Tunnel), rot = keiner. Geprüft alle 10 s, solange Jarvis vorn ist.
-        // Beim Antippen zählt nur, wer gerade wirklich antwortet (RechnerStatus.pruefen liefert das ungeglättet).
-        val context = androidx.compose.ui.platform.LocalContext.current
+        // Die Fernwartung selbst steht im Schwebestapel (FernwartungsSymbol). Ihre Farbe wird weiter hier in allen Reitern geprüft:
+        // alle 10 s, solange Jarvis vorn ist, damit sie beim Zurückkehren und Aufklappen sofort stimmt und das Logbuch lückenlos bleibt.
         val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
-        // Läuft ein Start, bricht erneutes Tippen ihn ab: Die Anzeige verschwindet sofort, der abgebrochene Start öffnet nichts mehr.
-        // Dasselbe gilt, wenn Frank die App verlässt oder den Reiter wechselt: Sonst spränge die Fernwartung später ungefragt auf.
-        var start by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
-        val startAbbrechen = { start?.cancel(); start = null }
-        androidx.compose.runtime.LaunchedEffect(vm.reiter) { startAbbrechen() }
         androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
             lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                try {
-                    while (true) { de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen(); kotlinx.coroutines.delay(10_000) }
-                } finally { startAbbrechen() }
-            }
-        }
-        val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
-        // Grün heißt weiter: Ein Bildschirm ist erreichbar. Nur die immer laufende Server-Konsole färbt das Symbol in der Akzentfarbe.
-        val nurKonsole = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.let { da -> da.isNotEmpty() && da.all { it.konsole } } == true
-        // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren. Keiner: nicht blind
-        // verbinden (früher der Mac, dann 6 s schwarzer Bildschirm), sondern sagen, dass keiner erreichbar ist.
-        val bereich = androidx.compose.runtime.rememberCoroutineScope()
-        // Die Rechner aus der Prüfung beim Antippen; null = keine Auswahl offen.
-        var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<de.frank.jarvis.fernsteuerung.Fernziel>?>(null) }
-        val sucht = start != null
-        val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
-            if (z.konsole) context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.ServerKonsoleActivity::class.java))
-            else context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
-                .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
-        }
-        // Die Auswahl zeigt einen Stand von jetzt: Beim Verlassen der App schließen, sonst böte sie nach Minuten einen längst ausgeschalteten Rechner an.
-        androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
-            lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                try { kotlinx.coroutines.awaitCancellation() } finally { auswahl = null }
-            }
-        }
-        auswahl?.let { da -> RechnerAuswahl(da, { auswahl = null }) { auswahl = null; oeffnen(it) } }
-        Row(
-            Modifier.weight(1f).height(50.dp).antippen {
-                if (start != null) { startAbbrechen(); return@antippen }
-                start = bereich.launch {
-                    val da = de.frank.jarvis.fernsteuerung.RechnerStatus.schnell()
-                    start = null
-                    when {
-                        da.size > 1 -> auswahl = da
-                        da.size == 1 -> oeffnen(da.first())
-                        else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }
-            }.semantics { contentDescription = if (sucht) "Fernwartung wird vorbereitet, erneut tippen bricht ab" else "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
-            // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau mit drehendem Ring: das Tippen ist angekommen.
-            val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) f.primaer else f.erfolg; false -> f.gefahr; null -> f.textLeise }
-            // Gleiche Größe wie die Reitersymbole (20 dp).
-            Box(contentAlignment = Alignment.Center) {
-                if (sucht) androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = f.primaer, strokeWidth = 2.5.dp)
-                Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
-                    if (rechnerDa == true && !sucht) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
-                })
+                while (true) { de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen(); kotlinx.coroutines.delay(10_000) }
             }
         }
         reiterKnopf(Reiter.EINSTELLUNGEN)
     }
-}
-
-/** Mehrere Rechner sind erreichbar: Frank wählt, wessen Bildschirm oder Konsole er sehen will. */
-@Composable
-private fun RechnerAuswahl(da: List<de.frank.jarvis.fernsteuerung.Fernziel>, schliessen: () -> Unit, gewaehlt: (de.frank.jarvis.fernsteuerung.Fernziel) -> Unit) {
-    val f = LocalFarben.current
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = schliessen,
-        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
-        title = { Text("Fernwartung") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Was möchtest du sehen?")
-                da.forEach { z ->
-                    androidx.compose.material3.Button(onClick = { gewaehlt(z) }, Modifier.fillMaxWidth()) { Text(z.titel) }
-                }
-            }
-        },
-        confirmButton = {},
-    )
 }
 
 /** Rückfrage, wenn eine Chat-Aufgabe Franks Tokenlimit ausgeschöpft hat. Tippen daneben entscheidet nichts. */
