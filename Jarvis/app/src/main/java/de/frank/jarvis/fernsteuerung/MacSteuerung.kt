@@ -14,7 +14,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Computer Use: ein einzelner Befehl an den Fernsteuerungs-Dienst des Macs (Jarvis/werkzeuge/mac-fernsteuerung/Befehle.swift).
+ * Computer Use: ein einzelner Befehl an den Fernsteuerungs-Dienst des Macs (Jarvis/werkzeuge/mac-fernsteuerung/Befehle.swift)
+ * oder des Windows-PCs (Jarvis/werkzeuge/windows-fernsteuerung/befehle.py); beide sprechen dasselbe Protokoll.
  * Jeder Befehl hat eine eigene Verbindung (Anmeldung mit art=werkzeug); eine offene Live-Sitzung bleibt dabei bestehen.
  * Rahmen wie bei [FernVerbindung]: 0x10 Anmeldung, 0x12 Befehl; zurück 0x05 Antwort, bei Dateien danach 0x06 mit den Rohdaten.
  */
@@ -26,25 +27,25 @@ object MacSteuerung {
         runCatching { File(context.applicationContext.filesDir, "fernsteuerung-token.txt").readText().trim() }.getOrDefault("")
 
     /** Antwort des Dienstes; eine mitgelieferte Datei landet in [datei]. Wirft [IOException], wenn der Mac nicht erreichbar ist. */
-    suspend fun befehl(context: Context, befehl: JSONObject, fristMs: Int = 30_000, datei: File? = null): JSONObject {
+    suspend fun befehl(context: Context, befehl: JSONObject, fristMs: Int = 30_000, datei: File? = null, ziel: Fernziel = Fernziel.MAC): JSONObject {
         val t = token(context)
-        if (t.isEmpty()) throw IOException("Der Zugang zum Mac fehlt (fernsteuerung-token.txt).")
+        if (t.isEmpty()) throw IOException("Der Zugang zu ${ziel.dativ} fehlt (fernsteuerung-token.txt).")
         // Im Tunnel geht gelegentlich ein Verbindungsversuch verloren oder eine Verbindung hängt (siehe Fernziel): einmal nachfassen.
         // Nach einer hängenden Antwort nur bei reinen Ansichten; eine Aktion könnte schon gewirkt haben und liefe sonst doppelt.
         val nurAnsicht = befehl.optString("t") == "bildschirm" || (befehl.optString("t") == "programme" && befehl.optString("aktion") == "liste")
-        return try { einmal(t, befehl, fristMs, datei, VERBINDEN_MS) } catch (e: java.net.SocketTimeoutException) {
-            if (nurAnsicht || e.message.orEmpty().contains("connect", ignoreCase = true)) einmal(t, befehl, fristMs, datei, 4000) else throw e
+        return try { einmal(ziel, t, befehl, fristMs, datei, VERBINDEN_MS) } catch (e: java.net.SocketTimeoutException) {
+            if (nurAnsicht || e.message.orEmpty().contains("connect", ignoreCase = true)) einmal(ziel, t, befehl, fristMs, datei, 4000) else throw e
         }
     }
 
-    private suspend fun einmal(token: String, befehl: JSONObject, fristMs: Int, datei: File?, verbindenMs: Int): JSONObject = suspendCancellableCoroutine { fort ->
+    private suspend fun einmal(ziel: Fernziel, token: String, befehl: JSONObject, fristMs: Int, datei: File?, verbindenMs: Int): JSONObject = suspendCancellableCoroutine { fort ->
         val s = Socket()
         fort.invokeOnCancellation { runCatching { s.close() } }
         thread(isDaemon = true, name = "Mac-Befehl") {
             try {
                 s.use {
                     s.tcpNoDelay = true
-                    s.connect(InetSocketAddress(Fernziel.MAC.adresse, FernsteuerungActivity.PORT), verbindenMs)
+                    s.connect(InetSocketAddress(ziel.adresse, ziel.port), verbindenMs)
                     s.soTimeout = fristMs
                     val aus = DataOutputStream(s.getOutputStream().buffered())
                     fun senden(typ: Int, j: JSONObject) {

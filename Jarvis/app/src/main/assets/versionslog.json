@@ -543,6 +543,7 @@
     {"versionCode": 538, "versionName": "1.8.527", "stand": "01.11.2026, 01:49 Uhr", "notiz": "Der Abschlussbericht nennt das ausgesetzte APK-Update richtig; Cloud- und Server-Bauten von Jarvis kommen weiterhin auch über UpdateStation."},
     {"versionCode": 539, "versionName": "1.8.528", "stand": "01.11.2026, 02:03 Uhr", "notiz": "Fernwartung: Das Fenster öffnet immer ohne Tastatur, nur der seitliche Tastatur-Knopf klappt sie aus und wieder ein."},
     {"versionCode": 540, "versionName": "1.8.529", "stand": "01.11.2026, 02:08 Uhr", "notiz": "Fernwartung: Die Tastatur bleibt beim Herunterziehen der Benachrichtigungen offen, geht beim Sperren oder Verlassen zu, und Tippen landet nach einem Feldwechsel sauber im neuen Feld."},
-    {"versionCode": 541, "versionName": "1.8.530", "stand": "01.11.2026, 16:23 Uhr", "notiz": "Jarvis spricht jetzt auch mit Jarvis Windows HP auf dem HP-Laptop: starten, Aufgaben geben, Stand abfragen, in beide Richtungen."}
+    {"versionCode": 541, "versionName": "1.8.530", "stand": "01.11.2026, 16:23 Uhr", "notiz": "Jarvis spricht jetzt auch mit Jarvis Windows HP auf dem HP-Laptop: starten, Aufgaben geben, Stand abfragen, in beide Richtungen."},
+    {"versionCode": 542, "versionName": "1.8.531", "stand": "01.11.2026, 16:35 Uhr", "notiz": "Jarvis bedient jetzt auch den Windows-PC per Computer Use und startet frei gewählte Modelle wie Kimi oder Antigravity auch dort."}
 ]
 }

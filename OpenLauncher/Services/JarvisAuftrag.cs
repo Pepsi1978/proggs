@@ -5,7 +5,9 @@ namespace OpenLauncher.Services;
 /// <summary>
 /// Startbefehl ohne Fenster für Programmieraufträge von Jarvis (Franks Sprachassistent):
 /// <c>OpenLauncher.exe --jarvis-auftrag &lt;auftrag.txt&gt; [--name "Jarvis: App"] [--profil minimal] [--modus schnell]
-/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER] [--cli claude|codex|opencode]</c>.
+/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER]
+/// [--cli claude|codex|opencode|kimi|antigravity] [--anbieter openai]</c>. Ab 1.24.111 jedes Modell aus dem Angebot:
+/// --anbieter wählt bei OpenCode die Modellgruppe, kimi und antigravity starten wie die CLI-Kacheln.
 /// Mit --cli codex (etwa --modell gpt-6.1-sol) startet stattdessen das Codex CLI wie der Startknopf, ohne Remote Control;
 /// mit --cli opencode OpenCode mit openai/&lt;modell&gt; (ab 1.24.99).
 /// Mit --auftrag-id bekommt die Sitzung die Jarvis-Hooks (Fortschritt und Rückfragen in den Jarvis-Chat).
@@ -45,7 +47,9 @@ public static class JarvisAuftrag
             if (auftragId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(auftragId, "^[A-Za-z0-9]{1,20}$"))
                 throw new ArgumentException("Ungültige Auftragsnummer", nameof(args));
 
-            var cli = Wert("--cli", "claude");
+            var cli = Wert("--cli", "claude").ToLowerInvariant();
+            var anbieter = Wert("--anbieter", "");
+            var id = auftragId.Length > 0 ? auftragId : null;
             var profile = new InstructionProfileService();
             if (cli == "codex")
             {
@@ -64,10 +68,32 @@ public static class JarvisAuftrag
                 profile.ActivateProjectAgents(profil, ordner);
                 var sitzung = profile.PrepareOpenCodeSession(profil, ordner, isLmStudio: false);
                 var launcher = new OpenLauncherService();
-                var eintrag = new Models.ModelEntry { ProviderId = "openai", ProviderName = "OpenAI", Slug = modell, DisplayName = modell, IsUserDefined = true };
-                var modelString = launcher.ConfigureProvider(eintrag, new Models.ProviderEntry(), Array.Empty<Models.ProviderEntry>(), effort);
+                var eintrag = anbieter.Length == 0 || anbieter.Equals("openai", StringComparison.OrdinalIgnoreCase)
+                    ? new Models.ModelEntry { ProviderId = "openai", ProviderName = "OpenAI", Slug = modell, DisplayName = modell, IsUserDefined = true }
+                    : ModelRegistry.Load().Groups.SelectMany(g => g.Models).FirstOrDefault(m => m.Slug == modell && m.ProviderId.Equals(anbieter, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new ArgumentException($"Modell {modell} ({anbieter}) steht nicht im Angebot", nameof(args));
+                // OpenRouter braucht in der Oberfläche eine Provider-Wahl; ohne sie routet OpenRouter selbst (kein Patch).
+                var modelString = anbieter.Equals("openrouter", StringComparison.OrdinalIgnoreCase) ? eintrag.ModelString
+                    : launcher.ConfigureProvider(eintrag, new Models.ProviderEntry(), Array.Empty<Models.ProviderEntry>(), effort);
                 launcher.Launch(modelString, ordner, effort, sitzung.ConfigPath, modus, useTmux: false,
                     initialPromptFile: datei, jarvisAuftragId: auftragId.Length > 0 ? auftragId : null, title: name);
+            }
+            else if (cli == "kimi")
+            {
+                // Kennt weder Remote Control noch die Jarvis-Hooks: Die Sitzung meldet selbst über jarvis_hook.py melde.
+                profile.ActivateCodexProjectAgents(profil, modus, ordner);
+                new OpenLauncherService().LaunchKimiCli(new Models.ModelEntry { Slug = modell }, ordner, effort, useTmux: false,
+                    initialPromptFile: datei, jarvisAuftragId: id, customTitle: name);
+            }
+            else if (cli == "antigravity")
+            {
+                profile.ActivateCodexProjectAgents(profil, modus, ordner);
+                new OpenLauncherService().LaunchAntigravityCli(new Models.ModelEntry { Slug = modell }, ordner, effort, useTmux: false,
+                    initialPromptFile: datei, jarvisAuftragId: id, customTitle: name);
+            }
+            else if (cli != "claude")
+            {
+                throw new ArgumentException($"Unbekanntes CLI: {cli}", nameof(args));
             }
             else
             {
@@ -75,7 +101,7 @@ public static class JarvisAuftrag
                 new OpenLauncherService().LaunchClaudeCode(modell, ordner, effort, configDir, useTmux: false, remoteControlName: name, initialPromptFile: datei,
                     jarvisAuftragId: auftragId.Length > 0 ? auftragId : null);
             }
-            log.Info("JarvisAuftrag", "Verarbeite", "Jarvis-Sitzung gestartet", new { cli, name, profil, modus, modell, effort, ordner, auftragId });
+            log.Info("JarvisAuftrag", "Verarbeite", "Jarvis-Sitzung gestartet", new { cli, anbieter, name, profil, modus, modell, effort, ordner, auftragId });
             return 0;
         }
         catch (Exception ex)

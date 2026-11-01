@@ -208,9 +208,9 @@ class JarvisAgent(context: Context) {
         if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
-        // Den Mac bedient nur das Gespräch mit Frank, nie ein Hintergrundlauf ohne sein Zuschauen.
+        // Den Mac und den Windows-PC bedient nur das Gespräch mit Frank, nie ein Hintergrundlauf ohne sein Zuschauen.
         // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.
-        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "mac")) }
+        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "mac" && it.id != "windows")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else if (!lernen && it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.imHintergrund() else it }
             // Ein Agent-Helfer bekommt nur die Werkzeuge aus seinem Steckbrief.
@@ -663,7 +663,7 @@ class JarvisAgent(context: Context) {
         private const val GESAMTBILD_MS = 15_000L
         /** Höchstens so viele Werkzeugaufrufe laufen in einem Schritt; der Rest geht als „NICHT AUSGEFÜHRT“ ans Modell zurück. */
         private const val MAX_AUFRUFE = 6
-        /** So viele Screenshots sieht das Modell höchstens gleichzeitig; mac_aufnahme liefert bis zu vier auf einmal. */
+        /** So viele Screenshots sieht das Modell höchstens gleichzeitig; mac_aufnahme und windows_aufnahme liefern bis zu vier auf einmal. */
         private const val MAX_WERKZEUG_BILDER = 4
         /** Was läuft, solange das Modell an einem Schritt denkt (für [Zeitablauf.unterbrochen]). */
         const val MODELL_DENKT = "Das Modell denkt nach"

@@ -8,7 +8,8 @@
 # Protokoll, beide Richtungen: [1 Byte Typ][4 Byte Länge, Big Endian][Nutzlast]
 #   PC -> Handy: 0x01 Info-JSON {w,h,ok}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt},
 #                0x04 Meldung-JSON {meldung}
-#   Handy -> PC: 0x10 Anmeldung-JSON {token}, 0x11 Eingabe-JSON {t:…}
+#   Handy -> PC: 0x10 Anmeldung-JSON {token, art?}, 0x11 Eingabe-JSON {t:…}
+#   Computer Use (art=werkzeug, eigene Verbindung neben der Live-Sitzung): siehe befehle.py
 # Nur lokal; von außen (Tunnel, Port 47800) kommt man über weiterleitung.js (Firewall).
 
 import ctypes
@@ -23,6 +24,7 @@ import sys
 import threading
 import time
 
+from befehle import Befehle
 from virtueller_bildschirm import VirtuellerBildschirm
 
 PORT = int(os.environ.get("FERNSTEUERUNG_PORT", "47801"))
@@ -237,12 +239,28 @@ class Wachhalter:
 VK = {
     "enter": 0x0D, "tab": 0x09, "leer": 0x20, "zurueck": 0x08, "esc": 0x1B, "entf": 0x2E,
     "links": 0x25, "hoch": 0x26, "rechts": 0x27, "runter": 0x28, "komma": 0xBC,
-    "pos1": 0x24, "ende": 0x23, "bildhoch": 0x21, "bildrunter": 0x22, "f4": 0x73, "win": 0x5B,
-    **{c: ord(c.upper()) for c in "abcdefghijklmnopqrstuvwxyz"},
+    "pos1": 0x24, "ende": 0x23, "bildhoch": 0x21, "bildrunter": 0x22, "win": 0x5B,
+    **{c: ord(c.upper()) for c in "abcdefghijklmnopqrstuvwxyz0123456789"},
+    **{f"f{i}": 0x6F + i for i in range(1, 13)},
 }
 ERWEITERT = {0x25, 0x26, 0x27, 0x28, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x5B}
 # „cmd“ vom Mac-Gegenstück entspricht unter Windows Strg (Kopieren, Einfügen, Rückgängig …).
-MODS = [("cmd", 0x11), ("ctrl", 0x11), ("shift", 0x10), ("alt", 0x12), ("win", 0x5B)]
+MODS = [("cmd", 0x11), ("ctrl", 0x11), ("strg", 0x11), ("shift", 0x10), ("alt", 0x12), ("win", 0x5B)]
+user32.VkKeyScanW.argtypes = [wt.WCHAR]
+user32.VkKeyScanW.restype = ctypes.c_short
+
+
+def taste_finden(name: str):
+    """(virtueller Tastencode, nötige Zusatztasten) oder None. Einzelne Zeichen wie „+“ oder „.“ über die aktuelle Tastaturbelegung."""
+    n = name.strip().lower()
+    if n in VK:
+        return VK[n], []
+    if len(name) == 1:
+        wert = user32.VkKeyScanW(name)
+        if wert != -1 and (wert & 0xFF) != 0xFF:
+            stand = (wert >> 8) & 0xFF
+            return wert & 0xFF, [c for bit, c in ((1, 0x10), (2, 0x11), (4, 0x12)) if stand & bit]
+    return None
 
 
 class Eingabe:
@@ -272,10 +290,11 @@ class Eingabe:
             n = min(max(int(j.get("n", 1)), 1), 3)
             if j.get("doppel"):
                 n = 1  # zweiter Klick eines Doppelklicks: der erste kam schon beim ersten Tippen
-            liste = [self._bewegen(j)]
+            mods = list(dict.fromkeys(c for m, c in MODS if m in [str(x) for x in j.get("m", [])]))
+            liste = [self._bewegen(j)] + [taste_eingabe(c) for c in mods]
             for _ in range(n):
                 liste += [maus_eingabe(M_LINKS_RUNTER), maus_eingabe(M_LINKS_HOCH)]
-            senden_eingaben(liste)
+            senden_eingaben(liste + [taste_eingabe(c, 0, T_HOCH) for c in reversed(mods)])
         elif t == "rechtsklick":
             senden_eingaben([self._bewegen(j), maus_eingabe(M_RECHTS_RUNTER), maus_eingabe(M_RECHTS_HOCH)])
         elif t == "runter":
@@ -321,14 +340,19 @@ class Eingabe:
             senden_eingaben(liste)
             time.sleep(0.004)
 
+    def kennt(self, name: str) -> bool:
+        return taste_finden(name) is not None
+
     def taste(self, name: str, mods):
-        vk = VK.get(name)
-        if vk is None:
+        gefunden = taste_finden(name)
+        if gefunden is None:
             return
+        vk, noetig = gefunden
         gewaehlt = []
         for m, code in MODS:
             if m in mods and code not in gewaehlt:
                 gewaehlt.append(code)
+        gewaehlt += [c for c in noetig if c not in gewaehlt]
         liste = [taste_eingabe(c, 0, T_ERWEITERT if c in ERWEITERT else 0) for c in gewaehlt]
         f = T_ERWEITERT if vk in ERWEITERT else 0
         if vk not in gewaehlt:
@@ -436,6 +460,7 @@ class Sitzung:
         self.sock = sock
         self.dienst = dienst
         self.angemeldet = False
+        self.werkzeug = False
         self.zuletzt = time.monotonic()
         self.offen = True
         self.schlange = queue.Queue(maxsize=8)
@@ -471,16 +496,27 @@ class Sitzung:
                     t = token()
                     if t and j.get("token") == t:
                         self.angemeldet = True
-                        self.dienst.angemeldet(self)
+                        # Computer Use: eigene Verbindung, die Live-Sitzung und ihre Aufnahme bleiben unberührt.
+                        self.werkzeug = j.get("art") == "werkzeug"
+                        if not self.werkzeug:
+                            self.dienst.angemeldet(self)
                     else:
                         log("Anmeldung abgelehnt")
                         break
-                elif typ == 0x11 and self.angemeldet:
+                elif typ == 0x11 and self.angemeldet and not self.werkzeug:
                     self.dienst.eingabe(self, j)
+                elif typ == 0x12 and self.angemeldet and self.werkzeug:
+                    threading.Thread(target=self._befehl, args=(j,), daemon=True, name="befehl").start()
         except Exception:
             pass
         finally:
             self.stop()
+
+    def _befehl(self, j):
+        antwort, datei = self.dienst.befehle.ausfuehren(j)
+        self.senden_json(0x05, antwort)
+        if datei is not None:
+            self.senden(0x06, datei)
 
     def _schreiben(self):
         try:
@@ -551,6 +587,7 @@ class Dienst:
         self.fehlstarts = 0
         self.zustand = (False, False, gesperrt())
         self.eingaben = queue.Queue()
+        self.befehle = Befehle(self, FFMPEG, gesperrt, fokus, bildschirm_groesse, bildschirm_wecken, ohne_bildschirm, log)
         threading.Thread(target=self._eingaben, daemon=True, name="eingabe").start()
         threading.Thread(target=self._beobachten, daemon=True, name="zustand").start()
 
@@ -559,7 +596,11 @@ class Dienst:
         while True:
             j = self.eingaben.get()
             try:
-                self.eingabe_.ausfuehren(j)
+                # Computer Use reiht einen ganzen Ablauf ein (befehle.py), die Live-Bedienung einzelne Eingaben.
+                if callable(j):
+                    j()
+                else:
+                    self.eingabe_.ausfuehren(j)
             except Exception as e:
                 log(f"Eingabe fehlgeschlagen: {e}")
 
@@ -692,7 +733,9 @@ class Dienst:
                 self.aufnahme.stop()
                 self.aufnahme = None
             # Nach der Sitzung weg damit, sonst landen beim Aufklappen Fenster auf einem unsichtbaren Bildschirm.
-            self.virtuell.aus()
+            # Arbeitet gerade Computer Use darauf, nimmt ihn _beobachten nach der Haltezeit ab.
+            if time.monotonic() >= self.befehle.werkzeug_bis:
+                self.virtuell.aus()
 
     def _beobachten(self):
         war_gesperrt = self.zustand[2]
@@ -713,6 +756,9 @@ class Dienst:
                 log("entsperrt, Aufnahme neu")
                 self.aufnahme_starten()
             war_gesperrt = gs
+            if s is None and self.virtuell.aktiv and self.befehle.werkzeug_bis and time.monotonic() >= self.befehle.werkzeug_bis:
+                self.befehle.werkzeug_bis = 0.0
+                threading.Thread(target=self.virtuell.aus, daemon=True, name="virtuell-aus").start()
             # Lebenszeichen alle 3 s vom Handy; bleibt es 12 s aus (Tunnel weg, Handy aus), Sitzung beenden.
             if s and time.monotonic() - s.zuletzt > 12:
                 log("kein Lebenszeichen vom Handy, Sitzung beendet")

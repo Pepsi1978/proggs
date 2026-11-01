@@ -384,7 +384,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1: am Windows-PC im Codex CLI, " +
                         "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
                         "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
-                        "OpenLauncher und startet genau dieses Modell am Mac, ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
+                        "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac oder Windows-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
                     "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh oder max (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
                     "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
                     "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: schnell."),
@@ -466,7 +466,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> knopfStartIn(gespraech, aktuell)
                 }
                 // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
-                // ein anderes CLI), startet genau das am Mac. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
+                // ein anderes CLI), startet genau das am Mac oder Windows-PC. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
                 // Stammt die Vorwahl aus der vorigen Nachricht, gehört deren Einstieg zu Franks Worten, sonst fielen Effort und Co. still weg.
                 val katalogWorte = if (vorwahl != null && vorwahl.text != aktuell) aktuell + "\n" + vorwahl.text else worte?.aktuell
                 val ersterKatalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, katalogWorte, worte?.angebot)
@@ -519,9 +519,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     festModell != null && katalog !is OpenLauncherKatalog.Wahl ->
                         ausweg(Ergebnis("$festModell ist nicht gestartet: Das Angebot von OpenLauncher ist gerade nicht lesbar oder enthält das Modell nicht.", fehler = true))
                     festModell != null && ziel == "cloud" ->
-                        ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                        ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY && ziel == "cloud" ->
-                        ausweg(Ergebnis("${katalog.modell.name} ist nicht gestartet: Das Antigravity CLI läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                        ausweg(Ergebnis("${katalog.modell.name} ist nicht gestartet: Das Antigravity CLI läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     // Antigravity, auch frei genannt: vor jedem Start „Review: Ja oder Nein?“, bei Ja danach der Umfang (Franks Wahl vom 31.10.2026).
                     katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY && (!a.has("review") || a.optBoolean("review") && reviewUmfang(a) == null) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, gespraech, null, ziel, (knopfModell ?: antwortModell) ?: katalog.modell.name, CLI_ANTIGRAVITY,
@@ -745,7 +745,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    /** Startet eine geprüfte Angebotswahl am Mac oder Server. Ohne Hooks (Codex, Kimi, Antigravity) wird [review] zur REVIEW-Zeile; die anderen fragen am Ende selbst. */
+    /** Startet eine geprüfte Angebotswahl am Mac, Windows-PC oder Server. Ohne Hooks (Codex, Kimi, Antigravity) wird [review] zur REVIEW-Zeile; die anderen fragen am Ende selbst. */
     private suspend fun starteKatalog(k: OpenLauncherKatalog.Wahl, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean, umfang: String): Ergebnis {
         val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
         if (pc.isEmpty()) return Ergebnis(ziele.first().fehlt(), fehler = true)
@@ -935,7 +935,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val ergebnis = withContext(umgebung + ServerWahl(w.ziel)) {
             if (ProgrammiererVorlage.katalogName(modell) != null || w.gewaehlt.isNotEmpty()) {
                 // Kimi K3.1 Pro und Gemini 4 Argon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
-                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
+                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
                 else when (val k = vorgepruefteWahl(w) ?: festeKatalogWahl(modell, w.cli, w.zusatz)) {
                     is OpenLauncherKatalog.Wahl -> starteKatalog(k, w.app, w.auftrag, review, nummer, w.neu, umfang)
                     else -> k as Ergebnis
@@ -1074,7 +1074,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // nurFuerSitzung (Bauschlüssel) geht an die Sitzung, aber nicht in Auftragsbuch, Gespräch oder Modellkontext.
             val mitFortschritt = auftragMitFortschritt(auftrag + nurFuerSitzung, when {
                 ziel is CodexCloud -> fortschrittCodex(nummer)
-                // Frei gewähltes Modell am Mac: Claude Code mit Hooks, OpenCode mit dem Plugin, Codex, Kimi und Antigravity melden selbst.
+                // Frei gewähltes Modell am Rechner: Claude Code mit Hooks, OpenCode mit dem Plugin, Codex, Kimi und Antigravity melden selbst.
                 modell == MODELL_KATALOG && cli == CLI_CLAUDE -> fortschrittsAnweisung(nummer, pc = true)
                 modell == MODELL_KATALOG && cli == CLI_OPENCODE -> fortschrittsAnweisung(nummer, pc = true, frageWerkzeug = "dem Werkzeug question")
                 modell == MODELL_KATALOG -> fortschrittSol(nummer)
@@ -2544,7 +2544,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell).put("vorrang", vorrang())
                 .put("server", when (kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel) { "server" -> "nur"; "pc" -> ""; else -> e.serverPlatz })
                 .put("cli", if (openCode) CLI_OPENCODE else CLI_CODEX)
-            // Frei gewähltes Modell: genau Franks geprüfte Wahl (nur der Mac startet sie, siehe Relay).
+            // Frei gewähltes Modell: genau Franks geprüfte Wahl (nur Brücken, die sie kennen, starten sie, siehe Relay).
             val frei = if (modell == MODELL_KATALOG) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.wahl else null
             if (modell == MODELL_KATALOG && frei == null) throw IllegalStateException("Die Modellwahl fehlt.")
             frei?.let { w ->
@@ -2574,11 +2574,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurServer && code == 409 -> throw IllegalStateException("Der Hostinger-Server nimmt gerade nicht an (aus oder ausgelastet). Der Auftrag ist nicht gestartet.")
                 nurServer && code == 504 -> throw IllegalStateException("Der Hostinger-Server hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
                 nurServer && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Hostinger-Server konnte die Sitzung nicht starten." })
-                // Frei gewählte Modelle startet nur der Mac oder der Server: kein Ersatz am Windows-PC und keiner in der Cloud.
-                frei != null && code == 409 -> throw IllegalStateException("Weder der Mac noch der Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
+                // Frei gewählte Modelle starten nur Mac, Windows-PC oder Server: kein Ersatz in der Cloud.
+                frei != null && code == 409 -> throw IllegalStateException("Weder Mac noch Windows-PC noch Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
                     "Bitte die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.1 starten.")
                 frei != null && code == 504 -> throw IllegalStateException("${antwort.optString("rechner").ifEmpty { "Der Rechner" }} hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
-                frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Mac konnte die Sitzung nicht starten." })
+                frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sitzung nicht starten." })
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
                 openCode && code == 409 -> throw IllegalStateException("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.1 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).

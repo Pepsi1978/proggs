@@ -486,7 +486,8 @@ $env:Path = $pathEntries -join ';'
     /// nicht als Schalter: sie wird in ~/.kimi-code/config.toml gesetzt ([thinking] effort und
     /// default_effort des Modells), der Rest der Datei bleibt unveraendert.
     /// </summary>
-    public void LaunchKimiCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
+    public void LaunchKimiCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false,
+        string? initialPromptFile = null, string? jarvisAuftragId = null, string? customTitle = null)
     {
         var log = Logger.Instance;
         FrischeUmgebung.Auffrischen();
@@ -500,10 +501,10 @@ $env:Path = $pathEntries -join ';'
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickCodexTerminalTabColor();
-            var innerScript = BuildKimiStartScript(alias, workDir, log.LogPath);
+            var innerScript = BuildKimiStartScript(alias, workDir, log.LogPath, initialPromptFile, jarvisAuftragId);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
-            var title = string.IsNullOrWhiteSpace(effort) ? $"Kimi-{tabColor.Name}" : $"Kimi-{tabColor.Name}-{effort}";
+            var title = customTitle ?? (string.IsNullOrWhiteSpace(effort) ? $"Kimi-{tabColor.Name}" : $"Kimi-{tabColor.Name}-{effort}");
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             // Wie Claude und Codex: Reiter im offenen Terminal-Fenster (-w 0), farbiger Reiter und
@@ -584,7 +585,7 @@ $env:Path = $pathEntries -join ';'
     /// Temp-Script fuer den Kimi-Start (-File statt inline -Command, wie beim Codex-Weg).
     /// --auto (Never Ask): Kimi fragt nie nach, alle Aktionen und Entscheidungen laufen automatisch.
     /// </summary>
-    private static string BuildKimiStartScript(string alias, string workDir, string logPath)
+    private static string BuildKimiStartScript(string alias, string workDir, string logPath, string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-kimi-cli-{Guid.NewGuid():N}.ps1");
         var script = $$"""
@@ -614,13 +615,23 @@ try {
     }
     $kimi = Get-Command kimi -ErrorAction SilentlyContinue
     $kimiPath = if ($kimi) { $kimi.Source } else { Join-Path $HOME '.kimi-code\bin\kimi.exe' }
+    # Jarvis-Auftrag: Die Sitzung meldet ihre Schritte mit dieser Nummer. Kimi kennt keine erste Nachricht fuer die TUI, nur -p
+    # (ein Durchlauf ohne Rueckfragen). Danach geht dieselbe Sitzung interaktiv weiter (-c), damit Frank am PC nachschauen kann.
+    $jarvisAuftragId = {{PowerShellLiteral(jarvisAuftragId ?? string.Empty)}}
+    if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId }
+    $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
+    $kimiResume = @()
+    if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) {
+        & $kimiPath --auto -m {{PowerShellLiteral(alias)}} -p (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)
+        $kimiResume = @('-c')
+    }
     # --auto (Never Ask) immer. Direkt nach dem Oeffnen eines Terminals beendet sich Kimi gelegentlich sofort
     # (Terminal noch nicht bereit) -- dann bis zu zwei weitere Versuche statt eines leeren Prompts.
     $attempt = 0
     do {
         $attempt++
         $startedAt = Get-Date
-        & $kimiPath --auto -m {{PowerShellLiteral(alias)}}
+        & $kimiPath --auto -m {{PowerShellLiteral(alias)}} @kimiResume
         $kimiExit = $LASTEXITCODE
         $kimiSeconds = [Math]::Round(((Get-Date) - $startedAt).TotalSeconds, 1)
         $quickExit = $kimiSeconds -lt 5
@@ -663,7 +674,8 @@ try {
     /// Arbeitsverzeichnisses, dort stehen Profil und Modus wie bei Codex/Kimi. Modell und Denkstufe
     /// gehen als Schalter mit (--model, --effort), ~/.gemini bleibt unberuehrt.
     /// </summary>
-    public void LaunchAntigravityCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
+    public void LaunchAntigravityCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false,
+        string? initialPromptFile = null, string? jarvisAuftragId = null, string? customTitle = null)
     {
         var log = Logger.Instance;
         FrischeUmgebung.Auffrischen();
@@ -676,10 +688,10 @@ try {
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickCodexTerminalTabColor();
-            var innerScript = BuildAntigravityStartScript(slug, effort, workDir, log.LogPath);
+            var innerScript = BuildAntigravityStartScript(slug, effort, workDir, log.LogPath, initialPromptFile, jarvisAuftragId);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
-            var title = string.IsNullOrWhiteSpace(effort) ? $"Agy-{tabColor.Name}" : $"Agy-{tabColor.Name}-{effort}";
+            var title = customTitle ?? (string.IsNullOrWhiteSpace(effort) ? $"Agy-{tabColor.Name}" : $"Agy-{tabColor.Name}-{effort}");
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             // Wie Claude, Codex und Kimi: Reiter im offenen Terminal-Fenster (-w 0), farbiger Reiter
@@ -736,7 +748,7 @@ try {
     /// (wie Kimi --auto; --mode auto gibt es unter Windows noch nicht). Fehlt agy, installiert das
     /// Skript es mit dem offiziellen Installer nach.
     /// </summary>
-    private static string BuildAntigravityStartScript(string slug, string? effort, string workDir, string logPath)
+    private static string BuildAntigravityStartScript(string slug, string? effort, string workDir, string logPath, string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-agy-cli-{Guid.NewGuid():N}.ps1");
         var effortArgs = effort == null ? string.Empty : $"--effort {PowerShellLiteral(effort)} ";
@@ -797,8 +809,14 @@ try {
         $agyCfg | Add-Member -NotePropertyName 'statusLine' -NotePropertyValue $slObj -Force
         [System.IO.File]::WriteAllText($agySettingsPath, ($agyCfg | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
     } catch { }
+    # Jarvis-Auftrag als erste Nachricht (-i: interaktiv mit Startnachricht); die Sitzung meldet ihre Schritte mit der Nummer.
+    $jarvisAuftragId = {{PowerShellLiteral(jarvisAuftragId ?? string.Empty)}}
+    if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId }
+    $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
+    $agyPrompt = @()
+    if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) { $agyPrompt = @('-i', (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)) }
     $startedAt = Get-Date
-    & $agyPath --model {{PowerShellLiteral(slug)}} {{effortArgs}}--dangerously-skip-permissions
+    & $agyPath --model {{PowerShellLiteral(slug)}} {{effortArgs}}--dangerously-skip-permissions @agyPrompt
     $agyExit = $LASTEXITCODE
     $agySeconds = [Math]::Round(((Get-Date) - $startedAt).TotalSeconds, 1)
     # Jedes agy-Ende ins Launcher-Log, damit ein Sofort-Beenden spaeter zuzuordnen ist.

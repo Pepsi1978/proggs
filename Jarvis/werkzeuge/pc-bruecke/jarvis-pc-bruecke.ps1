@@ -177,15 +177,36 @@ function Pruefe-Anmeldung-Jetzt {
     return $stand
 }
 
+# Wie antigravity_review_zeile in jarvis_review.py: Frank hat vor dem Start gewählt, die Sitzung darf am Ende nie danach fragen.
+function Antigravity-ReviewZeile($auftrag) {
+    if (-not $auftrag.review) { return "REVIEW: Nein (von Frank vor dem Start in Jarvis entschieden, verbindlich: kein Review, und frag am Ende nicht nach einem Review)`r`n" }
+    if ("$($auftrag.review_umfang)" -eq 'sehr_ausfuehrlich') {
+        return "REVIEW: Ja, sehr ausführlich (von Frank vor dem Start in Jarvis gewählt, verbindlich: nach der Programmierung automatisch die Änderungen dieser Sitzung " +
+            "sehr gründlich auf Fehler prüfen, mit bis zu 100 Befunden, die Befunde beheben und den Pflicht-Abschluss damit abschließen; frag nicht nach einem Review)`r`n"
+    }
+    $herkunft = if ("$($auftrag.review_umfang)" -eq 'standard') { 'von Frank vor dem Start in Jarvis gewählt' } else { 'Umfang nicht übermittelt, nenne das in der Fertig-Meldung' }
+    return "REVIEW: Ja, Standard ($herkunft, verbindlich: nach der Programmierung automatisch den gesamten Diff " +
+        "gründlich auf Fehler prüfen, die Befunde beheben und den Pflicht-Abschluss damit abschließen; frag nicht nach einem Review)`r`n"
+}
+
 function Starte-Sitzung($auftrag) {
     $app = ($auftrag.app -replace '[^\p{L}\p{N} ._-]', '').Trim()
     if (-not $app) { $app = 'App' }
     $name = "Jarvis: $app"
     # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.1, Minimal, Schnellmodus, Effort High).
     $sol = "$($auftrag.modell)" -eq 'sol'
+    # Frei gewähltes Modell aus dem OpenLauncher-Angebot: genau mit Franks Angaben (die App hat sie geprüft), nie still Opus.
+    $katalog = "$($auftrag.modell)" -eq 'katalog'
+    $katalogCli = if ($katalog) { $c = "$($auftrag.cli)"; if ($c) { $c } else { 'claude' } } else { '' }
     # Sol 6.1 läuft im Codex CLI (Vorgabe) oder im OpenCode CLI (Franks Wahl per Knopf in Jarvis).
-    $openCode = $sol -and "$($auftrag.cli)" -eq 'opencode'
-    $codex = $sol -and -not $openCode
+    $openCode = ($sol -and "$($auftrag.cli)" -eq 'opencode') -or $katalogCli -eq 'opencode'
+    $codex = ($sol -and -not $openCode) -or $katalogCli -in 'codex', 'kimi', 'antigravity'
+    $mitClaude = -not $sol -and $katalogCli -in '', 'claude'
+    if ($katalog) {
+        $modellName = ("$($auftrag.name)" -replace '[^\p{L}\p{N} ._()-]', '').Trim()
+        if (-not $modellName) { $modellName = ("$($auftrag.slug)" -replace '[^\p{L}\p{N} ._()-]', '').Trim() }
+        $name += " ($modellName$(if ($katalogCli -ne 'claude') { ", $katalogCli" }))"
+    }
     # Opus und OpenCode fragen am Ende selbst nach dem Review: Der Kopf nennt es dann nicht (Franks Wahl vom 22.10.2026).
     $reviewZeile = ''
     $kopf = 'Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.'
@@ -201,8 +222,9 @@ function Starte-Sitzung($auftrag) {
         # Codex CLI: keine Rückfragen und kein /code-review, und niemand antwortet im Terminal. Das Review hat Frank in Jarvis gewählt.
         $unklar1 = 'Nicht eindeutig: die wahrscheinlichste App nehmen und das in der ersten Meldung nennen.'
         $unklar2 = '2. Niemand antwortet in dieser Sitzung: Unklarheiten selbst sinnvoll entscheiden und in der Meldung nennen, nie auf eine Antwort warten.'
-        $reviewZeile = if ($auftrag.review) { "REVIEW: Ja (vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben)`r`n" } else { "REVIEW: Nein`r`n" }
-        $hook = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py').Replace('\', '/')
+        $reviewZeile = if ($katalogCli -eq 'antigravity') { Antigravity-ReviewZeile $auftrag }
+            elseif ($auftrag.review) { "REVIEW: Ja (vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben)`r`n" } else { "REVIEW: Nein`r`n" }
+        $hook =(Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py').Replace('\', '/')
         $kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis.`r`n" +
             "MELDEN (statt programmier_fortschritt, das es hier nicht gibt): python `"$hook`" melde <laeuft|fertig|fehler> `"<ein Satz>`""
     }
@@ -214,7 +236,7 @@ function Starte-Sitzung($auftrag) {
         $anhangEin = Join-Path $anhangOrdner "anhaenge-$($auftrag.nummer).json"
         $anhangAus = Join-Path $anhangOrdner "anhaenge-$($auftrag.nummer).txt"
         [System.IO.File]::WriteAllText($anhangEin, ($auftrag | ConvertTo-Json -Depth 6 -Compress), [System.Text.UTF8Encoding]::new($false))
-        $mitEinfuegen = if ((-not $sol) -and "$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { '1' } else { '0' }
+        $mitEinfuegen = if ($mitClaude -and "$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { '1' } else { '0' }
         try { & python (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_anhaenge.py') hole $anhangEin $anhangAus $mitEinfuegen 2>&1 | ForEach-Object { Schreib "Anhänge: $_" } } catch { Schreib "Anhänge: $_" }
         if (Test-Path -LiteralPath $anhangAus) { $anhangText = Get-Content -Raw -Encoding utf8 -LiteralPath $anhangAus }
         else { $anhangText = "`r`n`r`nFrank hat Anhänge geschickt, sie konnten nicht geladen werden: melde das Frank." }
@@ -255,14 +277,25 @@ $unklar2
     $kannJarvis = $false
     # Sol (Codex CLI) erst ab OpenLauncher 1.24.98 (--cli codex); einen Notweg ohne OpenLauncher gibt es dafür nicht.
     # OpenCode mit Jarvis-Auftrag erst ab 1.24.99 (--cli opencode).
-    $ab = if ($openCode) { '1.24.99' } elseif ($sol) { '1.24.98' } else { '1.24.89' }
+    # Frei gewählt: Claude Code und Codex CLI können das schon lange; Kimi, Antigravity und OpenCode mit fremdem Anbieter erst ab 1.24.111.
+    $ab = if ($katalogCli -in 'kimi', 'antigravity', 'opencode') { '1.24.111' } elseif ($katalogCli -eq 'codex') { '1.24.98' } elseif ($katalog) { '1.24.89' }
+        elseif ($openCode) { '1.24.99' } elseif ($sol) { '1.24.98' } else { '1.24.89' }
     if ($openLauncher -and (Test-Path -LiteralPath $openLauncher)) {
         try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]$ab } catch { }
     }
     if ($sol -and -not $kannJarvis) { throw "Sol 6.1 braucht OpenLauncher ab $ab ($(if ($openCode) { 'OpenCode CLI' } else { 'Codex CLI' })); bitte den OpenLauncher aktualisieren." }
+    # Der Notweg kennt nur Opus: ein frei gewähltes Modell nie still als Opus starten.
+    if ($katalog -and -not $kannJarvis) { throw "$katalogCli braucht am Windows-PC OpenLauncher ab $ab; bitte den OpenLauncher über das Updatescript aktualisieren." }
     if ($kannJarvis) {
         $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
-        if ($sol) {
+        if ($katalog) {
+            function Feld($wert, [string]$vorgabe) { $w = "$wert" -replace '["\r\n]', ''; if ($w) { $w } else { $vorgabe } }
+            $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', "`"$(Feld $auftrag.profil $Profil)`"", '--modus', "`"$(Feld $auftrag.modus $Modus)`"",
+                '--modell', "`"$(Feld $auftrag.slug $Modell)`"", '--effort', "`"$(Feld $auftrag.effort $Effort)`"", '--cli', $katalogCli)
+            $anbieter = Feld $auftrag.anbieter ''
+            if ($anbieter) { $argumente += @('--anbieter', "`"$anbieter`"") }
+        }
+        elseif ($sol) {
             $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name (Sol 6.1$(if ($openCode) { ', OpenCode' }))`"", '--profil', $Profil, '--modus', $Modus,
                 '--cli', $(if ($openCode) { 'opencode' } else { 'codex' }), '--modell', $ModellSol, '--effort', $Effort)
         }
@@ -335,7 +368,7 @@ function Schreib-Kopf([string]$token) {
     }
     & icacls.exe $kopfDatei /inheritance:r /grant:r "$($env:USERNAME):(R,W,D)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Rechte der Kopfzeilen-Datei ließen sich nicht einschränken.' }
-    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`r`nX-Jarvis-Rechner: $env:COMPUTERNAME`r`n", [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`r`nX-Jarvis-Rechner: $env:COMPUTERNAME`r`nX-Jarvis-Katalog: 1`r`n", [System.Text.UTF8Encoding]::new($false))
     $script:kopfToken = $token
 }
 
@@ -376,8 +409,9 @@ while ($true) {
         Schreib "Auftrag für $($auftrag.app)"
         try {
             # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen.
-            # Sol läuft im Codex oder OpenCode CLI: Die Claude-Anmeldung zählt dort nicht.
-            if ("$($auftrag.modell)" -ne 'sol' -and (Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
+            # Sol und frei gewählte andere CLIs haben eigene Anmeldungen: Die von Claude Code zählt dort nicht.
+            $brauchtClaude = "$($auftrag.modell)" -eq 'opus' -or ("$($auftrag.modell)" -eq 'katalog' -and "$($auftrag.cli)" -in '', 'claude')
+            if ($brauchtClaude -and (Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
                 $quittung = @{ id = $auftrag.id; ok = $false; anmeldung_fehlt = $true
                     text = "Claude Code auf $env:COMPUTERNAME ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, danach den Auftrag neu senden." }
                 Schreib 'Nicht gestartet: nicht angemeldet'
