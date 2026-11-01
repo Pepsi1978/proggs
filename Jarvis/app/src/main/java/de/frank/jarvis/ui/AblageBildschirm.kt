@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.ui.focus.focusRequester
-import kotlinx.coroutines.ensureActive
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -94,7 +91,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.graphics.BitmapFactory
 import de.frank.jarvis.ablage.AblageQuellen
-import de.frank.jarvis.ablage.AblageSuche
 import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.ablage.Anhang
 import de.frank.jarvis.ablage.Art
@@ -154,7 +150,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sucheOffen by rememberSaveable { mutableStateOf(false) }
     var sucheText by rememberSaveable { mutableStateOf("") }
-    val suchSpeicher = remember { HashMap<String, Pair<Long, AblageSuche.Index>>() }
+    var sucheFokus by remember { mutableStateOf(false) }
+    val suchZustand = remember { vm.ablageSucheZustand() }
+    val suchListe = androidx.compose.foundation.lazy.rememberLazyListState()
     var sortierung by rememberSaveable { mutableStateOf(Sortierung.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageSortierung }?.name ?: Sortierung.NEUESTE.name) }
     var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
     var quellenOffen by remember { mutableStateOf(false) }
@@ -240,9 +238,10 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     if (sucheOffen) {
         BackHandler { sucheOffen = false }
         AblageSucheSeite(
-            vm, alle, geladen != null, suchSpeicher, aktionen, sucheText, { sucheText = it }, schliessen = { sucheOffen = false },
+            vm, suchZustand, alle, geladen != null, aktionen, suchListe, sucheText, { sucheText = it }, sucheFokus, { sucheFokus = false }, schliessen = { sucheOffen = false },
             oeffnen = { offenerEintrag = it.id; offenerAnhang = null },
-            auswaehlen = { auswahl = auswahl + it.id; sucheOffen = false },
+            // Ohne Filter: Sonst stünde der ausgewählte Eintrag womöglich gar nicht in der Liste.
+            auswaehlen = { auswahl = auswahl + it.id; filter = null; sucheOffen = false },
             loeschen = { loeschFrage = it to null },
             zumReiter = { filter = it; sucheOffen = false },
         )
@@ -266,7 +265,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 20.dp, end = 12.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ablage", Modifier.weight(1f), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 // Die Suche gilt für die ganze Ablage und steht deshalb in jedem Reiter bereit.
-                Rundknopf(Icons.Rounded.Search, "In der ganzen Ablage suchen", farbe = f.primaer) { sucheOffen = true }
+                Rundknopf(Icons.Rounded.Search, "In der ganzen Ablage suchen", farbe = f.primaer) { sucheFokus = true; sucheOffen = true }
                 // Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für die Reiter „Prompts“ und „Erinnerung“.
                 if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) {
                     var sortMenue by remember { mutableStateOf(false) }
@@ -364,126 +363,6 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     }
 }
 
-/** Der lesbare Inhalt eines Eintrags für die Suche: sein Text und der Text seiner Text- und Office-Dateien (PDF und Medien nur über Namen und Beschreibung). */
-private fun suchInhalt(s: de.frank.jarvis.ablage.AblageSpeicher, e: Eintrag): String = buildString {
-    append(s.text(e, 100_000))
-    e.anhaenge.forEach { a ->
-        val text = runCatching {
-            when (a.art) {
-                Art.TEXT, Art.MARKDOWN, Art.CODE, Art.DATEN, Art.HTML, Art.TABELLE_TEXT -> Auszug.lies(s.datei(a), 100_000).text
-                Art.DOKUMENT, Art.TABELLE, Art.PRAESENTATION -> Auszug.office(s.datei(a), a.endung)?.take(100_000)
-                else -> null
-            }
-        }.getOrNull()
-        if (!text.isNullOrBlank()) append('\n').append(text)
-    }
-}
-
-/**
- * Die Suche über die ganze Ablage, auch Prompts und Erinnerungen. Die Worttreffer stehen sofort da; nach einer kurzen
- * Tipp-Pause wählt die KI nach Bedeutung die wahrscheinlichsten und setzt sie nach vorn. Ohne KI bleiben die Worttreffer.
- */
-@Composable
-private fun AblageSucheSeite(
-    vm: AppViewModel, alle: List<Eintrag>, geladen: Boolean, speicherIndex: HashMap<String, Pair<Long, AblageSuche.Index>>, aktionen: AblageAktionen,
-    text: String, textAendern: (String) -> Unit, schliessen: () -> Unit, oeffnen: (Eintrag) -> Unit, auswaehlen: (Eintrag) -> Unit, loeschen: (Eintrag) -> Unit, zumReiter: (String) -> Unit,
-) {
-    val f = LocalFarben.current
-    val context = LocalContext.current
-    val speicher = remember { AblageZentrale.speicher(context) }
-    val promptStand by de.frank.jarvis.ablage.Prompts.stand.collectAsState()
-    val erinnerungStand by de.frank.jarvis.ablage.Erinnerungen.stand.collectAsState()
-    val indizes by ladeImHintergrund<List<AblageSuche.Index>?>(null, alle, geladen, promptStand, erinnerungStand, behalten = true) {
-        if (!geladen) return@ladeImHintergrund null
-        fun index(d: AblageSuche.Dokument, stand: Long) = synchronized(speicherIndex) { speicherIndex[d.kennung]?.takeIf { it.first == stand }?.second } ?: AblageSuche.Index(d).also { x -> synchronized(speicherIndex) { speicherIndex[d.kennung] = stand to x } }
-        val eintraege = alle.map { e ->
-            val kennung = "e:" + e.id
-            synchronized(speicherIndex) { speicherIndex[kennung]?.takeIf { it.first == e.geaendert }?.second }
-                ?: index(AblageSuche.Dokument(kennung, e.titel, (listOf(e.beschreibung) + e.anhaenge.flatMap { listOf(it.originalName, it.beschreibung) }).filter { it.isNotBlank() }.joinToString(" · "), suchInhalt(speicher, e), e.geaendert), e.geaendert)
-        }
-        val prompts = de.frank.jarvis.ablage.Prompts.alle(context).map { p -> index(AblageSuche.Dokument("p:" + p.erstellt, p.titel.ifBlank { "Prompt ${p.nummer}" }, "Prompt", p.text, maxOf(p.geaendert, p.erstellt)), p.text.hashCode().toLong() + p.titel.hashCode()) }
-        val erinnerungen = de.frank.jarvis.ablage.Erinnerungen.alle(context).map { r -> index(AblageSuche.Dokument("r:" + r.id, r.zeile, listOfNotNull("Erinnerung", r.datum, r.uhrzeit).joinToString(" · "), r.kurz + "\n" + r.text, maxOf(r.geaendert, r.erstellt)), r.geaendert) }
-        eintraege + prompts + erinnerungen
-    }
-    var funde by remember { mutableStateOf(emptyList<AblageSuche.Fund>()) }
-    val anfrage = text.trim()
-    LaunchedEffect(anfrage, indizes) {
-        val x = indizes
-        if (x == null || anfrage.isEmpty()) { funde = emptyList(); return@LaunchedEffect }
-        delay(200)
-        funde = withContext(Dispatchers.Default) { val lauf = coroutineContext; AblageSuche.suche(x, anfrage) { lauf.ensureActive() } }
-    }
-    // Bereits beantwortete Anfragen nicht erneut schicken, auch nicht beim Zurückkommen aus einem geöffneten Treffer.
-    val kiSpeicher = rememberSaveable { mutableStateOf(emptyMap<String, List<String>>()) }
-    var kiLaeuft by remember { mutableStateOf(false) }
-    var kiFehler by remember { mutableStateOf(false) }
-    val kiBereit = vm.modellBereit
-    val indexDa = indizes != null
-    LaunchedEffect(anfrage, indexDa, kiBereit) {
-        kiFehler = false
-        kiLaeuft = false
-        val x = indizes
-        if (x == null || anfrage.length < 3 || !kiBereit || anfrage in kiSpeicher.value) return@LaunchedEffect
-        delay(1200)
-        kiLaeuft = true
-        try {
-            val reihe = vm.ablageKiReihenfolge(anfrage, AblageSuche.kiKandidaten(x, funde))
-            kiSpeicher.value = kiSpeicher.value + (anfrage to reihe)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            de.frank.jarvis.observability.Logbuch.fehler("Ablage-Suche", e)
-            kiFehler = true
-        } finally {
-            kiLaeuft = false
-        }
-    }
-    val reihe = kiSpeicher.value[anfrage]
-    val liste = remember(funde, reihe, indizes) { AblageSuche.mischen(funde, reihe.orEmpty(), indizes.orEmpty(), anfrage) }
-    val fokus = remember { androidx.compose.ui.focus.FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { fokus.requestFocus() } }
-    Column(Modifier.fillMaxSize().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Rundknopf(Icons.Rounded.Close, "Suche schließen", aktion = schliessen)
-            Eingabe(text, textAendern, "Was suchst du?", Modifier.weight(1f).focusRequester(fokus))
-        }
-        val hinweis = when {
-            indizes == null -> "Lese die Ablage …"
-            anfrage.isEmpty() -> "Stichworte oder eine Frage eingeben. Gesucht wird in Titeln, Texten, Dateien, Prompts und Erinnerungen."
-            kiLaeuft -> "${liste.size} Treffer · KI sucht nach der Bedeutung …"
-            kiFehler -> "${liste.size} Treffer nach Wortübereinstimmung, die KI war nicht erreichbar."
-            reihe != null -> if (liste.isEmpty()) "Nichts gefunden. Andere Worte probieren." else "Die ${liste.size} wahrscheinlichsten Treffer, von der KI geordnet."
-            liste.isEmpty() -> if (kiBereit && anfrage.length >= 3) "Noch keine Worttreffer, gleich sucht die KI nach der Bedeutung …" else "Nichts gefunden. Andere Worte probieren."
-            else -> "${liste.size} Treffer nach Wortübereinstimmung."
-        }
-        Text(hinweis, Modifier.padding(horizontal = 20.dp, vertical = 4.dp), color = if (kiFehler) f.gefahr else f.textSchwach, fontSize = 12.sp)
-        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(liste.size, key = { liste[it].dokument.kennung }) { i ->
-                val fund = liste[i]
-                val kennung = fund.dokument.kennung
-                val eintrag = if (kennung.startsWith("e:")) alle.firstOrNull { it.id == kennung.drop(2) } else null
-                Column {
-                    if (eintrag != null) {
-                        EintragZeile(eintrag, false, aktionen, tippen = { oeffnen(eintrag) }, lange = { auswaehlen(eintrag) }, loeschen = { loeschen(eintrag) })
-                    } else {
-                        val istPrompt = kennung.startsWith("p:")
-                        Row(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen {
-                            if (istPrompt) { zumReiter(PROMPTS_REITER); vm.promptOffen = kennung.drop(2).toLongOrNull() } else zumReiter(ERINNERUNG_REITER)
-                        }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (istPrompt) Icons.Rounded.Bolt else Icons.Rounded.NotificationsActive, null, tint = f.primaer, modifier = Modifier.size(24.dp))
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(fund.dokument.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(fund.dokument.nebentext, color = f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
-                    if (fund.auszug.isNotBlank()) Text(fund.auszug, Modifier.padding(start = 14.dp, end = 14.dp, top = 4.dp), color = f.textLeise, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-    }
-}
-
 /** Wie die Jarvis-Versionen beim Sortieren nach Quelle aufeinander folgen: oben steht, was zuerst angezeigt wird. Gilt nur auf diesem Gerät. */
 @Composable
 fun QuellenReihenfolge(ordnung: List<String>, aendern: (List<String>) -> Unit, schliessen: () -> Unit) {
@@ -513,7 +392,7 @@ private fun groesse(s: de.frank.jarvis.ablage.AblageSpeicher, e: Eintrag): Long 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen, tippen: () -> Unit, lange: () -> Unit, loeschen: () -> Unit) {
+internal fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen, tippen: () -> Unit, lange: () -> Unit, loeschen: () -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val speicher = remember { AblageZentrale.speicher(context) }

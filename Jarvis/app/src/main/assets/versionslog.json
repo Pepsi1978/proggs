@@ -552,6 +552,7 @@
     {"versionCode": 547, "versionName": "1.8.536", "stand": "01.11.2026, 17:52 Uhr", "notiz": "Alle Reiter der Ablage zeigen ihre Anzahl, auch Prompts und Erinnerung, und Inhalte vom Windows-Laptop heißen Jarvis Windows HP."},
     {"versionCode": 548, "versionName": "1.8.537", "stand": "01.11.2026, 18:01 Uhr", "notiz": "Die Ablage ist kompakter: Die Suchleiste ist weg, Sortierung und Ansicht stehen neben der Überschrift und die Reiter direkt darunter über die ganze Breite."},
     {"versionCode": 549, "versionName": "1.8.538", "stand": "01.11.2026, 18:08 Uhr", "notiz": "Neuer runder Suchknopf in der Ablage: Er öffnet ein Suchfenster über die ganze Ablage und zeigt die wahrscheinlichsten Treffer, auch bei Tippfehlern und nach Bedeutung."},
+    {"versionCode": 550, "versionName": "1.8.539", "stand": "01.11.2026, 18:18 Uhr", "notiz": "Die Ablage-Suche findet jetzt auch Einträge, die das Wort nur einmal im Text enthalten, öffnet Erinnerungen direkt, merkt sich beim Zurückkommen ihren Stand und nutzt für die Bedeutungssuche ein günstiges Modell."},
     {"versionCode": 550, "versionName": "1.8.539", "stand": "01.11.2026, 18:16 Uhr", "notiz": "Interne Pflege am Agentenkanal, für dich ändert sich nichts."},
     {"versionCode": 551, "versionName": "1.8.540", "stand": "01.11.2026, 18:18 Uhr", "notiz": "Erinnerungen zuverlässiger: Wecker warten ein Gespräch ab und klingeln auch nach einem Neustart, Bestätigen trifft nur Fälliges, verschobene Termine melden sich nicht nachträglich."}
 ]

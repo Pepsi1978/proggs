@@ -1751,9 +1751,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var promptTitelLauf: Job? = null
     @Volatile private var promptTitelNochmal = false
 
-    /** Suche in der Ablage: Die KI wählt nach Bedeutung die wahrscheinlichsten Einträge. Fehler gehen an den Aufrufer, die Worttreffer bleiben dann stehen. */
+    // Weich gehalten: Nur ein Zwischenspeicher, den Android bei Speichermangel freigeben darf, solange die Ablage nicht offen ist.
+    private var ablageSucheSpeicher = java.lang.ref.SoftReference<de.frank.jarvis.ablage.AblageSucheZustand>(null)
+
+    fun ablageSucheZustand(): de.frank.jarvis.ablage.AblageSucheZustand =
+        ablageSucheSpeicher.get() ?: de.frank.jarvis.ablage.AblageSucheZustand().also { ablageSucheSpeicher = java.lang.ref.SoftReference(it) }
+
+    /**
+     * Suche in der Ablage: Die KI wählt nach Bedeutung die wahrscheinlichsten Einträge. Immer das günstigste Modell des gewählten Anbieters,
+     * denn das läuft bei jeder Suche. Fehler gehen an den Aufrufer, die Worttreffer bleiben dann stehen.
+     */
     suspend fun ablageKiReihenfolge(anfrage: String, kandidaten: List<de.frank.jarvis.ablage.AblageSuche.Dokument>): List<String> {
-        val antwort = auth.streamChat(de.frank.jarvis.ablage.AblageSuche.KI_AUFTRAG, listOf(ChatTurn("user", de.frank.jarvis.ablage.AblageSuche.kiFrage(anfrage, kandidaten))), einstellungen.modell, ReasoningEffort.LOW)
+        val frage = withContext(Dispatchers.Default) { de.frank.jarvis.ablage.AblageSuche.kiFrage(anfrage, kandidaten) }
+        val modell = if (einstellungen.modell.istAnthropic) CodexModel.HAIKU else CodexModel.LUNA
+        val antwort = auth.streamChat(de.frank.jarvis.ablage.AblageSuche.KI_AUFTRAG, listOf(ChatTurn("user", frage)), modell, ReasoningEffort.LOW)
         return de.frank.jarvis.ablage.AblageSuche.kiAntwort(antwort, kandidaten)
     }
 
