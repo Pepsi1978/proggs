@@ -198,6 +198,7 @@ function Starte-Sitzung($auftrag) {
     # Frei gewähltes Modell aus dem OpenLauncher-Angebot: genau mit Franks Angaben (die App hat sie geprüft), nie still Opus.
     $katalog = "$($auftrag.modell)" -eq 'katalog'
     $katalogCli = if ($katalog) { $c = "$($auftrag.cli)"; if ($c) { $c } else { 'claude' } } else { '' }
+    if ($katalog -and $katalogCli -notin 'claude', 'codex', 'opencode', 'kimi', 'antigravity') { throw "Unbekanntes CLI im Auftrag." }
     # Sol 6.1 läuft im Codex CLI (Vorgabe) oder im OpenCode CLI (Franks Wahl per Knopf in Jarvis).
     $openCode = ($sol -and "$($auftrag.cli)" -eq 'opencode') -or $katalogCli -eq 'opencode'
     $codex = ($sol -and -not $openCode) -or $katalogCli -in 'codex', 'kimi', 'antigravity'
@@ -262,7 +263,15 @@ $unklar2
     if ($javaHome) { $env:JAVA_HOME = $javaHome.TrimEnd('\') }
     $env:PATH = [Environment]::ExpandEnvironmentVariables(
         ([Environment]::GetEnvironmentVariable('PATH', 'Machine').TrimEnd(';') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')))
-    $stempel = Get-Date -Format 'yyyyMMdd-HHmmss'
+    # Fehlt das CLI, meldete der OpenLauncher trotzdem „gestartet“ und das Skript endete still im Terminal: lieber gleich klar absagen.
+    if ($katalogCli -in 'codex', 'opencode', 'kimi', 'antigravity') {
+        $programm = @{ codex = 'codex'; opencode = 'opencode'; kimi = 'kimi'; antigravity = 'agy' }[$katalogCli]
+        $vorhanden = Get-Command $programm -ErrorAction SilentlyContinue
+        if (-not $vorhanden -and $katalogCli -eq 'kimi') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:USERPROFILE '.kimi-code\bin\kimi.exe') }
+        if (-not $vorhanden -and $katalogCli -eq 'antigravity') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'agy\bin\agy.exe') }
+        if (-not $vorhanden) { throw "Das CLI $programm ist auf $env:COMPUTERNAME nicht installiert." }
+    }
+    $stempel =Get-Date -Format 'yyyyMMdd-HHmmss'
     $ordner = Join-Path $env:TEMP 'JarvisPcBruecke'
     New-Item -ItemType Directory -Force -Path $ordner | Out-Null
     Raeume-Auf
@@ -410,7 +419,7 @@ while ($true) {
         try {
             # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen.
             # Sol und frei gewählte andere CLIs haben eigene Anmeldungen: Die von Claude Code zählt dort nicht.
-            $brauchtClaude = "$($auftrag.modell)" -eq 'opus' -or ("$($auftrag.modell)" -eq 'katalog' -and "$($auftrag.cli)" -in '', 'claude')
+            $brauchtClaude = "$($auftrag.modell)" -ne 'sol' -and ("$($auftrag.modell)" -ne 'katalog' -or "$($auftrag.cli)" -in '', 'claude')
             if ($brauchtClaude -and (Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
                 $quittung = @{ id = $auftrag.id; ok = $false; anmeldung_fehlt = $true
                     text = "Claude Code auf $env:COMPUTERNAME ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, danach den Auftrag neu senden." }

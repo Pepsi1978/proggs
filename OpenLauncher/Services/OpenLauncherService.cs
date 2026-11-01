@@ -622,8 +622,24 @@ try {
     $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
     $kimiResume = @()
     if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) {
-        & $kimiPath --auto -m {{PowerShellLiteral(alias)}} -p (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)
-        $kimiResume = @('-c')
+        $jarvisPrompt = Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile
+        # Windows erlaubt rund 32.000 Zeichen je Befehlszeile; Auftraege duerfen laenger sein.
+        if ($jarvisPrompt.Length -gt 28000) { $jarvisPrompt = "Dein vollstaendiger Auftrag steht in der Datei $initialPromptFile. Lies sie zuerst ganz und fuehre ihn genau so aus." }
+        # Beendet sich Kimi direkt nach dem Oeffnen sofort (siehe unten), lief der Auftrag nicht: neu versuchen und nie still weitermachen.
+        $promptVersuch = 0
+        do {
+            $promptVersuch++
+            $promptStart = Get-Date
+            & $kimiPath --auto -m {{PowerShellLiteral(alias)}} -p $jarvisPrompt
+            $promptExit = $LASTEXITCODE
+            $promptSchnell = ((Get-Date) - $promptStart).TotalSeconds -lt 5
+            if ($promptSchnell -and $promptVersuch -lt 3) { Start-Sleep -Milliseconds 1000 }
+        } while ($promptSchnell -and $promptVersuch -lt 3)
+        if ($promptExit -eq 0 -and -not $promptSchnell) {
+            $kimiResume = @('-c')
+        } elseif ($jarvisAuftragId) {
+            python (Join-Path $HOME 'proggs\Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py') melde fehler "Kimi konnte den Auftrag nicht ausfuehren (Exit-Code $promptExit), er ist nicht erledigt. Bitte am PC nachsehen, vielleicht fehlt die Anmeldung."
+        }
     }
     # --auto (Never Ask) immer. Direkt nach dem Oeffnen eines Terminals beendet sich Kimi gelegentlich sofort
     # (Terminal noch nicht bereit) -- dann bis zu zwei weitere Versuche statt eines leeren Prompts.
@@ -814,7 +830,12 @@ try {
     if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId }
     $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
     $agyPrompt = @()
-    if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) { $agyPrompt = @('-i', (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)) }
+    if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) {
+        $jarvisPrompt = Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile
+        # Windows erlaubt rund 32.000 Zeichen je Befehlszeile; Auftraege duerfen laenger sein.
+        if ($jarvisPrompt.Length -gt 28000) { $jarvisPrompt = "Dein vollstaendiger Auftrag steht in der Datei $initialPromptFile. Lies sie zuerst ganz und fuehre ihn genau so aus." }
+        $agyPrompt = @('-i', $jarvisPrompt)
+    }
     $startedAt = Get-Date
     & $agyPath --model {{PowerShellLiteral(slug)}} {{effortArgs}}--dangerously-skip-permissions @agyPrompt
     $agyExit = $LASTEXITCODE
@@ -834,6 +855,9 @@ try {
         Write-Host ("[OpenLauncher] agy-Ende konnte nicht ins Launcher-Log geschrieben werden: {0}" -f $_.Exception.Message) -ForegroundColor DarkGray
     }
     if ($agyExit -ne 0) {
+        if ($jarvisAuftragId) {
+            python (Join-Path $HOME 'proggs\Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py') melde fehler "Das Antigravity CLI hat sich mit Exit-Code $agyExit beendet. Bitte am PC nachsehen, vielleicht fehlt die Anmeldung."
+        }
         Write-Host ("[OpenLauncher] agy beendet mit Exit-Code {0}. Verfuegbare Modelle deines Abos: agy models" -f $agyExit) -ForegroundColor Yellow
     }
 } finally {

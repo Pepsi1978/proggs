@@ -545,6 +545,7 @@
     {"versionCode": 540, "versionName": "1.8.529", "stand": "01.11.2026, 02:08 Uhr", "notiz": "Fernwartung: Die Tastatur bleibt beim Herunterziehen der Benachrichtigungen offen, geht beim Sperren oder Verlassen zu, und Tippen landet nach einem Feldwechsel sauber im neuen Feld."},
     {"versionCode": 541, "versionName": "1.8.530", "stand": "01.11.2026, 16:23 Uhr", "notiz": "Jarvis spricht jetzt auch mit Jarvis Windows HP auf dem HP-Laptop: starten, Aufgaben geben, Stand abfragen, in beide Richtungen."},
     {"versionCode": 542, "versionName": "1.8.531", "stand": "01.11.2026, 16:35 Uhr", "notiz": "Jarvis bedient jetzt auch den Windows-PC per Computer Use und startet frei gewählte Modelle wie Kimi oder Antigravity auch dort."},
-    {"versionCode": 543, "versionName": "1.8.532", "stand": "01.11.2026, 16:52 Uhr", "notiz": "Die Frist vor einer neuen Jarvis-Version folgt jetzt der echten Uhr und läuft zusätzlich als Countdown in der Benachrichtigung, auch auf dem Sperrbildschirm."}
+    {"versionCode": 543, "versionName": "1.8.532", "stand": "01.11.2026, 16:52 Uhr", "notiz": "Die Frist vor einer neuen Jarvis-Version folgt jetzt der echten Uhr und läuft zusätzlich als Countdown in der Benachrichtigung, auch auf dem Sperrbildschirm."},
+    {"versionCode": 544, "versionName": "1.8.533", "stand": "01.11.2026, 16:58 Uhr", "notiz": "Computer Use am Windows-PC schließt nur noch genau benannte Programme, warnt bei schwarzem Bild und holt neue Fenster nach vorn."}
 ]
 }

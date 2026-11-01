@@ -24,8 +24,15 @@ import sys
 import threading
 import time
 
-from befehle import Befehle
 from virtueller_bildschirm import VirtuellerBildschirm
+
+# Computer Use ist eine Zugabe: Ein Fehler in befehle.py darf die Live-Fernwartung nicht mitreißen.
+BEFEHLE_FEHLER = ""
+try:
+    from befehle import Befehle
+except Exception as _fehler:
+    Befehle = None
+    BEFEHLE_FEHLER = f"{type(_fehler).__name__}: {_fehler}"
 
 PORT = int(os.environ.get("FERNSTEUERUNG_PORT", "47801"))
 STREAM_BREITE_MAX = 1600
@@ -245,7 +252,8 @@ VK = {
 }
 ERWEITERT = {0x25, 0x26, 0x27, 0x28, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x5B}
 # „cmd“ vom Mac-Gegenstück entspricht unter Windows Strg (Kopieren, Einfügen, Rückgängig …).
-MODS = [("cmd", 0x11), ("ctrl", 0x11), ("strg", 0x11), ("shift", 0x10), ("alt", 0x12), ("win", 0x5B)]
+MODS = [("cmd", 0x11), ("command", 0x11), ("ctrl", 0x11), ("control", 0x11), ("strg", 0x11), ("shift", 0x10), ("alt", 0x12), ("win", 0x5B), ("windows", 0x5B)]
+MOD_NAMEN = {m for m, _ in MODS}
 user32.VkKeyScanW.argtypes = [wt.WCHAR]
 user32.VkKeyScanW.restype = ctypes.c_short
 
@@ -254,7 +262,8 @@ def taste_finden(name: str):
     """(virtueller Tastencode, nötige Zusatztasten) oder None. Einzelne Zeichen wie „+“ oder „.“ über die aktuelle Tastaturbelegung."""
     n = name.strip().lower()
     if n in VK:
-        return VK[n], []
+        # Wie jedes andere Zeichen: „A“ heißt großes A.
+        return VK[n], [0x10] if len(name) == 1 and name.isupper() else []
     if len(name) == 1:
         wert = user32.VkKeyScanW(name)
         if wert != -1 and (wert & 0xFF) != 0xFF:
@@ -290,7 +299,7 @@ class Eingabe:
             n = min(max(int(j.get("n", 1)), 1), 3)
             if j.get("doppel"):
                 n = 1  # zweiter Klick eines Doppelklicks: der erste kam schon beim ersten Tippen
-            mods = list(dict.fromkeys(c for m, c in MODS if m in [str(x) for x in j.get("m", [])]))
+            mods = list(dict.fromkeys(c for m, c in MODS if m in [str(x).lower() for x in j.get("m", [])]))
             liste = [self._bewegen(j)] + [taste_eingabe(c) for c in mods]
             for _ in range(n):
                 liste += [maus_eingabe(M_LINKS_RUNTER), maus_eingabe(M_LINKS_HOCH)]
@@ -343,16 +352,22 @@ class Eingabe:
     def kennt(self, name: str) -> bool:
         return taste_finden(name) is not None
 
+    def unbekannte_mods(self, mods) -> list:
+        return [str(m) for m in mods if str(m).lower() not in MOD_NAMEN]
+
     def taste(self, name: str, mods):
         gefunden = taste_finden(name)
         if gefunden is None:
             return
         vk, noetig = gefunden
+        mods = [str(m).lower() for m in mods]
         gewaehlt = []
         for m, code in MODS:
             if m in mods and code not in gewaehlt:
                 gewaehlt.append(code)
-        gewaehlt += [c for c in noetig if c not in gewaehlt]
+        # Mit Zusatztaste zählt die Taste, nicht das Zeichen: Strg+C bleibt auch bei großem „C“ Kopieren, nicht Strg+Umschalt+C.
+        if not (gewaehlt and name.isalpha() and len(name) == 1):
+            gewaehlt += [c for c in noetig if c not in gewaehlt]
         liste = [taste_eingabe(c, 0, T_ERWEITERT if c in ERWEITERT else 0) for c in gewaehlt]
         f = T_ERWEITERT if vk in ERWEITERT else 0
         if vk not in gewaehlt:
@@ -498,7 +513,10 @@ class Sitzung:
                         self.angemeldet = True
                         # Computer Use: eigene Verbindung, die Live-Sitzung und ihre Aufnahme bleiben unberührt.
                         self.werkzeug = j.get("art") == "werkzeug"
-                        if not self.werkzeug:
+                        if self.werkzeug:
+                            # Reißt der Tunnel ohne Abschied ab, bliebe die Verbindung sonst für immer offen (Aufnahme bis 150 s).
+                            self.sock.settimeout(300)
+                        else:
                             self.dienst.angemeldet(self)
                     else:
                         log("Anmeldung abgelehnt")
@@ -513,6 +531,9 @@ class Sitzung:
             self.stop()
 
     def _befehl(self, j):
+        if self.dienst.befehle is None:
+            self.senden_json(0x05, {"ok": False, "fehler": f"Computer Use ist am Windows-PC nicht geladen ({BEFEHLE_FEHLER})."})
+            return
         antwort, datei = self.dienst.befehle.ausfuehren(j)
         self.senden_json(0x05, antwort)
         if datei is not None:
@@ -587,7 +608,9 @@ class Dienst:
         self.fehlstarts = 0
         self.zustand = (False, False, gesperrt())
         self.eingaben = queue.Queue()
-        self.befehle = Befehle(self, FFMPEG, gesperrt, fokus, bildschirm_groesse, bildschirm_wecken, ohne_bildschirm, log)
+        self.befehle = Befehle(self, FFMPEG, gesperrt, fokus, bildschirm_groesse, bildschirm_wecken, ohne_bildschirm, log) if Befehle else None
+        if BEFEHLE_FEHLER:
+            log(f"Computer Use nicht geladen: {BEFEHLE_FEHLER}")
         threading.Thread(target=self._eingaben, daemon=True, name="eingabe").start()
         threading.Thread(target=self._beobachten, daemon=True, name="zustand").start()
 
@@ -624,13 +647,18 @@ class Dienst:
         threading.Thread(target=bildschirm_wecken, daemon=True, name="wecken").start()
         self.aufnahme_starten()
 
+    def _computer_use_haelt(self) -> bool:
+        return self.befehle is not None and self.befehle.haelt()
+
     def _virtuell_starten(self, s: Sitzung):
         log("kein Bildschirm angeschlossen, virtueller Bildschirm")
         if self.virtuell.an():
             time.sleep(2)  # bis Windows ihn als Hauptbildschirm eingerichtet hat
         with self.sperre:
             if self.sitzung is not s:
-                self.virtuell.aus()  # Sitzung inzwischen weg: beendet() kam vor an()
+                # Sitzung inzwischen weg: beendet() kam vor an(). Arbeitet Computer Use darauf, nimmt ihn _beobachten später ab.
+                if not self._computer_use_haelt():
+                    self.virtuell.aus()
                 return
         self.aufnahme_starten()
 
@@ -734,7 +762,7 @@ class Dienst:
                 self.aufnahme = None
             # Nach der Sitzung weg damit, sonst landen beim Aufklappen Fenster auf einem unsichtbaren Bildschirm.
             # Arbeitet gerade Computer Use darauf, nimmt ihn _beobachten nach der Haltezeit ab.
-            if time.monotonic() >= self.befehle.werkzeug_bis:
+            if not self._computer_use_haelt():
                 self.virtuell.aus()
 
     def _beobachten(self):
@@ -756,9 +784,8 @@ class Dienst:
                 log("entsperrt, Aufnahme neu")
                 self.aufnahme_starten()
             war_gesperrt = gs
-            if s is None and self.virtuell.aktiv and self.befehle.werkzeug_bis and time.monotonic() >= self.befehle.werkzeug_bis:
-                self.befehle.werkzeug_bis = 0.0
-                threading.Thread(target=self.virtuell.aus, daemon=True, name="virtuell-aus").start()
+            if s is None and self.virtuell.aktiv and self.befehle is not None and self.befehle.werkzeug_bis and not self.befehle.haelt():
+                threading.Thread(target=self.befehle.virtuell_freigeben, daemon=True, name="virtuell-aus").start()
             # Lebenszeichen alle 3 s vom Handy; bleibt es 12 s aus (Tunnel weg, Handy aus), Sitzung beenden.
             if s and time.monotonic() - s.zuletzt > 12:
                 log("kein Lebenszeichen vom Handy, Sitzung beendet")

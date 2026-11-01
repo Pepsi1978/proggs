@@ -662,8 +662,8 @@ class PcBruecke:
         # Dritter Platz seit 31.10.2026: der Hostinger-Server (X-Jarvis-Rang: server, OpenLauncherServer/bruecke). Ein Auftrag kommt
         # nur zu ihm, wenn das Handy es mit „server“ erlaubt (zuletzt, mitte, zuerst, nur); aeltere Handys bekommen ihn also nie.
         self.plaetze = {rang: {"zuletzt": 0.0, "rechner": "", "abfragen": {}, "belegt": False} for rang in PLAETZE}
-        # Plaetze, deren Bruecke modell=katalog kennt (X-Jarvis-Katalog: 1).
-        self.katalog_plaetze: set[str] = set()
+        # Wann sich auf einem Platz zuletzt eine Bruecke gemeldet hat, die modell=katalog kennt (X-Jarvis-Katalog: 1).
+        self.katalog_zuletzt: dict[str, float] = {}
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         self.abgeholt = {}           # Auftrag-id -> Auftrag, bis die Quittung da ist (zum Weitergeben, siehe quittung)
         # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
@@ -955,13 +955,13 @@ class PcBruecke:
         # Sol 6.1 (Codex CLI) kann am Schreibtisch nur der Windows-PC. Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot
         # (Effort, Profil, Modus, CLI) nimmt nur eine Bruecke, die es kennt: Eine aeltere startete sonst still Opus.
         # Opus und frei gewaehlte Modelle gehoeren dem Vorrangrechner, der andere springt ein.
+        reihe = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
         if modell == "sol":
             rechner = ["haupt"]
         elif modell == "katalog":
-            reihe = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
-            rechner = [r for r in reihe if r in self.katalog_plaetze]
+            rechner = [r for r in reihe if time.monotonic() - self.katalog_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
         else:
-            rechner = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
+            rechner = reihe
         regel = auftrag.get("server")
         if regel == "nur":
             return ["server"]
@@ -987,14 +987,14 @@ class PcBruecke:
             return False
         return not any(self._nimmt(r) for r in reihe[:reihe.index(rang)])
 
-    def _auftrag_fuer(self, rang: str) -> dict | None:
+    def _auftrag_fuer(self, rang: str, kann_katalog: bool) -> dict | None:
         """Der aelteste Auftrag, den diese Bruecke holen darf; verwaiste (das Handy wartet nicht mehr) fallen dabei weg."""
         for auftrag in list(self.auftraege):
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
                 self.auftraege.remove(auftrag)
-            elif self._darf(rang, auftrag):
+            elif self._darf(rang, auftrag) and (kann_katalog or auftrag.get("modell") != "katalog"):
                 return auftrag
         return None
 
@@ -1016,19 +1016,18 @@ class PcBruecke:
         if time.monotonic() - self.plaetze[rang]["zuletzt"] >= PC_FRISCH_S:
             log.info("Bruecke verbunden: %s", rang)
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
-        if rang != "server":
-            # Nur eine Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
-            if request.headers.get("X-Jarvis-Katalog") == "1":
-                self.katalog_plaetze.add(rang)
-            else:
-                self.katalog_plaetze.discard(rang)
+        # Nur eine Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus). Das gilt je
+        # Abfrage: Zwei Rechner koennen denselben Platz teilen (zwei Windows-PCs), und nur der faehige darf ihn holen.
+        kann_katalog = request.headers.get("X-Jarvis-Katalog") == "1"
+        if kann_katalog:
+            self.katalog_zuletzt[rang] = time.monotonic()
         # Voll ausgelastet: fragt weiter ab (bleibt sichtbar), bekommt aber nichts; der Auftrag geht an den naechsten.
         self.plaetze[rang]["belegt"] = request.headers.get("X-Jarvis-Belegt") == "1"
         self._melde_dich(rang, rechner, request)
         abfragen = self.plaetze[rang]["abfragen"]
         abfragen[id(request)] = request
         try:
-            return await self._warte_auf_auftrag(request, rang, rechner)
+            return await self._warte_auf_auftrag(request, rang, rechner, kann_katalog)
         finally:
             abfragen.pop(id(request), None)
 
@@ -1038,14 +1037,14 @@ class PcBruecke:
             return web.Response(status=404, text="Not found")
         return web.json_response({"raenge": list(PLAETZE)})
 
-    async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str) -> web.Response:
+    async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str, kann_katalog: bool) -> web.Response:
         frist = asyncio.get_running_loop().time() + PC_WARTEN_S
         while True:
             rest = frist - asyncio.get_running_loop().time()
             if rest <= 0:
                 self._melde_dich(rang, rechner)
                 return web.Response(status=204)
-            auftrag = self._auftrag_fuer(rang)
+            auftrag = self._auftrag_fuer(rang, kann_katalog)
             if auftrag is None:
                 # In kurzen Stuecken warten: So merkt der zweite Rechner binnen Sekunden, wenn der erste wegfaellt.
                 self.neuer_auftrag.clear()
@@ -1077,7 +1076,8 @@ class PcBruecke:
         # „weiter“ (Server-Bruecke): sicher nicht gestartet. Der Auftrag geht an den naechsten Rechner, solange einer da ist; so
         # springt das Handy nicht ueber den Mac hinweg in die Cloud. Sonst kommt die Absage wie jede andere ans Handy.
         abgeholt = self.abgeholt.get(daten["id"])
-        if daten.get("weiter") and abgeholt is not None and wartend is not None and not wartend.done():
+        # „Nur der Server“ ist Franks ausdrueckliche Wahl: nie auf einen Schreibtisch-Rechner ausweichen, die Absage geht ans Handy.
+        if daten.get("weiter") and abgeholt is not None and abgeholt.get("server") != "nur" and wartend is not None and not wartend.done():
             abgeholt["server"] = ""
             if self._naechster(abgeholt):
                 self.abgeholt.pop(daten["id"], None)
@@ -1105,7 +1105,7 @@ class PcBruecke:
             assert isinstance(daten.get("app"), str) and isinstance(daten.get("auftrag"), str) and daten["auftrag"].strip()
         except Exception:
             return web.Response(status=400, text="Auftrag unlesbar")
-        # Kein Rechner da, der diesen Auftrag nehmen darf (fuer Sol etwa nur der Mac): 409, das Handy nimmt das naechste Ziel.
+        # Kein Rechner da, der diesen Auftrag nehmen darf (fuer Sol etwa nur der Windows-PC): 409, das Handy nimmt das naechste Ziel.
         if not self._naechster(daten):
             return web.json_response({"pc": False, "mac": False}, status=409)
         nummer = uuid.uuid4().hex

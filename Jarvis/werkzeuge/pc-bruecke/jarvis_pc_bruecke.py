@@ -8,7 +8,7 @@ die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang
 
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows. Nennt Frank in Jarvis ein
 Modell aus dem OpenLauncher-Angebot (Auftrag mit modell=katalog), startet die Brücke genau das: slug, anbieter, effort,
-profil, modus und cli (claude, codex, opencode, kimi, antigravity). Das kann nur der Mac (der Relay gibt solche Aufträge nur ihm).
+profil, modus und cli (claude, codex, opencode, kimi, antigravity). Das können auch die Windows-Brücke und der Server (X-Jarvis-Katalog: 1).
 Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Claude Code (X-Jarvis-Anmeldung: lokal,
 abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
 Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten

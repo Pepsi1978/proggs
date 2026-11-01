@@ -63,6 +63,15 @@ GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW = 0x00000080
 SWP_KEINE_GROESSE, SWP_KEINE_LAGE, SWP_KEINE_ORDNUNG, SWP_NICHT_AKTIVIEREN = 0x0001, 0x0002, 0x0004, 0x0010
 DWMWA_CLOAKED = 14
+SHELL_KLASSEN = {"Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd"}
+# Ganze Programme, die nie als Ganzes beendet werden: die Oberfläche von Windows und der gemeinsame Wirt aller Store-Apps.
+NIE_BEENDEN = {"explorer", "applicationframehost", "dwm", "winlogon", "csrss", "lsass", "services", "svchost", "searchhost", "startmenuexperiencehost", "shellexperiencehost", "textinputhost"}
+# Fast schwarzes Vollbild als JPEG (1280 Pixel breit, Qualität 5): Die Anzeige ist aus, das Bild zeigt nichts.
+SCHWARZ_BYTES = 10_000  # gemessen: ganz schwarz sind es rund 6.200 Bytes
+WECKEN_ABSTAND_S = 30
+user32.GetClassNameW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
+ole32 = ctypes.WinDLL("ole32", use_last_error=True)
+ole32.CoInitializeEx.argtypes = [ctypes.c_void_p, wt.DWORD]
 
 
 def prozess_name(fenster) -> str:
@@ -97,12 +106,17 @@ def _unsichtbar_verhuellt(fenster) -> bool:
 
 
 def alle_fenster() -> list:
-    """Hauptfenster der Programme, oberstes zuerst; minimierte gehören dazu (Lage dann bedeutungslos)."""
+    """Hauptfenster der Programme, oberstes zuerst; minimierte gehören dazu (Lage dann bedeutungslos). Ohne Desktop und Taskleiste:
+    WM_CLOSE an „Program Manager“ öffnet den Dialog zum Herunterfahren."""
     ergebnis = []
 
     def je_fenster(h, _):
         try:
             if not user32.IsWindowVisible(h) or user32.GetWindow(h, GW_OWNER) or _unsichtbar_verhuellt(h):
+                return True
+            klasse = ctypes.create_unicode_buffer(64)
+            user32.GetClassNameW(h, klasse, 64)
+            if klasse.value in SHELL_KLASSEN:
                 return True
             if user32.GetWindowLongPtrW(h, GWL_EXSTYLE) & WS_EX_TOOLWINDOW:
                 return True
@@ -122,12 +136,13 @@ def alle_fenster() -> list:
 
 
 def in_vordergrund(h) -> bool:
-    """Windows sperrt SetForegroundWindow für Hintergrundprozesse. Eine kurze Alt-Taste hebt die Sperre auf, sonst hilft das Anhängen
-    an den Eingabefaden des vorderen Fensters. Erfolg nur, wenn es vorn liegt UND nicht minimiert ist."""
+    """Windows sperrt SetForegroundWindow für Hintergrundprozesse: Erst der direkte Weg, dann das Anhängen an den Eingabefaden des
+    vorderen Fensters, zuletzt eine kurze Alt-Taste (sie könnte in Office das Menü öffnen, darum nur im Notfall und nie bei einem
+    Fenster, das schon vorn liegt). Erfolg nur, wenn es vorn liegt UND nicht minimiert ist."""
     if user32.IsIconic(h):
         user32.ShowWindow(h, SW_WIEDERHERSTELLEN)
-    user32.keybd_event(0x12, 0, 0, 0)
-    user32.keybd_event(0x12, 0, 2, 0)
+    elif user32.GetForegroundWindow() == h:
+        return True
     user32.SetForegroundWindow(h)
     if user32.GetForegroundWindow() != h:
         vorn = user32.GetForegroundWindow()
@@ -140,6 +155,10 @@ def in_vordergrund(h) -> bool:
         finally:
             if er:
                 user32.AttachThreadInput(ich, er, False)
+    if user32.GetForegroundWindow() != h:
+        user32.keybd_event(0x12, 0, 0, 0)
+        user32.keybd_event(0x12, 0, 2, 0)
+        user32.SetForegroundWindow(h)
     time.sleep(0.1)
     return user32.GetForegroundWindow() == h and not user32.IsIconic(h)
 
@@ -152,7 +171,8 @@ def _start_ziele(name: str) -> list:
         for ordner, _, dateien in os.walk(wurzel):
             for d in dateien:
                 stamm, endung = os.path.splitext(d)
-                if endung.lower() == ".lnk" and name.lower() in stamm.lower():
+                klein = stamm.lower()
+                if endung.lower() == ".lnk" and name.lower() in klein and not any(w in klein for w in ("uninstall", "deinstall", "entfernen", "help", "hilfe", "readme", "dokumentation")):
                     treffer.append((stamm.lower() != name.lower(), len(stamm), os.path.join(ordner, d)))
     return [t[2] for t in sorted(treffer)]
 
@@ -170,6 +190,8 @@ def _store_app(name: str) -> str:
 
 def _ausfuehren(ziel: str, argumente: str | None = None) -> bool:
     # ShellExecute kennt registrierte Programme (App Paths), Adressen und Dateien, ohne Eingaben durch eine Shell zu schicken.
+    # Es verlangt COM im aufrufenden Faden (Dateitypen mit Shell-Erweiterungen), und jeder Befehl hat einen eigenen Faden.
+    ole32.CoInitializeEx(None, 0x2 | 0x4)  # COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE
     return shell32.ShellExecuteW(None, "open", ziel, argumente, None, SW_NORMAL) > 32
 
 
@@ -187,8 +209,12 @@ def oeffnen(app: str, ziel: str) -> str | None:
         if _ausfuehren(lnk, argument):
             return None
     kennung = _store_app(app)
-    if kennung and _ausfuehren("explorer.exe", "shell:AppsFolder\\" + kennung):
-        return None
+    if kennung:
+        # Eine Store-App nimmt über diesen Weg kein Ziel mit: nie „geöffnet“ melden, wenn die Datei fehlt.
+        if ziel:
+            return f"{app} ist eine Store-App und nimmt so kein Ziel an. Öffne das Ziel ohne app, dann nimmt Windows das Standardprogramm."
+        if _ausfuehren("explorer.exe", "shell:AppsFolder\\" + kennung):
+            return None
     return f"Kein Programm „{app}“ gefunden."
 
 
@@ -204,6 +230,43 @@ class Befehle:
         self.log = log
         self.aufnahme_laeuft = threading.Lock()
         self.werkzeug_bis = 0.0
+        self.geweckt = 0.0
+        # Schützt Haltezeit und virtuellen Bildschirm: Ein Befehl genau zum Ablauf der Haltezeit darf ihn nicht verlieren.
+        self.virtuell_sperre = threading.Lock()
+
+    def haelt(self) -> bool:
+        return time.monotonic() < self.werkzeug_bis
+
+    def virtuell_freigeben(self) -> None:
+        """Nimmt den virtuellen Bildschirm nach der Haltezeit ab, solange keine Live-Sitzung ihn braucht."""
+        if not self.virtuell_sperre.acquire(blocking=False):
+            return
+        try:
+            if self.werkzeug_bis and not self.haelt() and self.dienst.sitzung is None:
+                self.werkzeug_bis = 0.0
+                self.dienst.virtuell.aus()
+        finally:
+            self.virtuell_sperre.release()
+
+    def _seriell(self, aufgabe, frist: float = 120):
+        """In dieselbe Warteschlange wie die Live-Bedienung, damit sich Eingaben nicht überholen. Liefert das Ergebnis oder wirft dessen Fehler."""
+        fertig = threading.Event()
+        ergebnis, fehler = [], []
+
+        def lauf():
+            try:
+                ergebnis.append(aufgabe())
+            except Exception as e:
+                fehler.append(e)
+            finally:
+                fertig.set()
+
+        self.dienst.eingaben.put(lauf)
+        if not fertig.wait(frist):
+            raise TimeoutError(f"Die Eingabe läuft nach {int(frist)} Sekunden noch.")
+        if fehler:
+            raise fehler[0]
+        return ergebnis[0]
 
     def ausfuehren(self, j: dict) -> tuple:
         """(Antwort, Datei oder None). Läuft in einem eigenen Faden je Befehl."""
@@ -229,12 +292,17 @@ class Befehle:
 
     def _ziel_sichern(self) -> None:
         """Anzeige wach; zugeklappt ohne Live-Sitzung hängt der virtuelle Bildschirm an (der Dienst nimmt ihn nach der Haltezeit wieder ab)."""
-        self.werkzeug_bis = time.monotonic() + WERKZEUG_HALTEN_S
-        wecker = threading.Thread(target=self.wecken, daemon=True, name="wecken")
-        wecker.start()
-        wecker.join(1.5)
-        if self.ohne_bildschirm() and not self.dienst.virtuell.aktiv and self.dienst.virtuell.an():
-            time.sleep(2)  # bis Windows ihn als Hauptbildschirm eingerichtet hat
+        jetzt = time.monotonic()
+        # Das Wecken schickt eine Nachricht an alle Fenster und kann hängen: nicht bei jedem Befehl einer Klick-und-Bild-Schleife.
+        if jetzt - self.geweckt >= WECKEN_ABSTAND_S:
+            self.geweckt = jetzt
+            wecker = threading.Thread(target=self.wecken, daemon=True, name="wecken")
+            wecker.start()
+            wecker.join(1.5)
+        with self.virtuell_sperre:
+            self.werkzeug_bis = time.monotonic() + WERKZEUG_HALTEN_S
+            if self.ohne_bildschirm() and not self.dienst.virtuell.aktiv and self.dienst.virtuell.an():
+                time.sleep(2)  # bis Windows ihn als Hauptbildschirm eingerichtet hat
 
     def _griff(self, zusatz: list, ausgabe: list, frist: float) -> subprocess.CompletedProcess:
         w, h = self.groesse()
@@ -259,18 +327,21 @@ class Befehle:
         text, geheim = self.fokus()
         vorne = user32.GetForegroundWindow()
         return {"ok": True, "bild": base64.b64encode(r.stdout).decode("ascii"), "w": BILD_BREITE, "h": hoehe, "vorne": prozess_name(vorne) if vorne else "",
-                "textfeld": text, "geheim": geheim}
+                "textfeld": text, "geheim": geheim, "schwarz": not isinstance(b, dict) and len(r.stdout) < SCHWARZ_BYTES}
 
     # --- Eingaben ---
 
     def _eingabe(self, j: dict) -> dict:
         schritte = j.get("schritte") or []
+        eingabe = self.dienst.eingabe_
         for s in schritte:
-            if s.get("t") == "taste" and not self.dienst.eingabe_.kennt(str(s.get("k", ""))):
+            if s.get("t") == "taste" and not eingabe.kennt(str(s.get("k", ""))):
                 return {"ok": False, "fehler": f"Unbekannte Taste {s.get('k')}"}
+            # Eine stille unbekannte Zusatztaste machte aus Strg+C ein getipptes „c“.
+            falsch = eingabe.unbekannte_mods(s.get("m", []))
+            if falsch:
+                return {"ok": False, "fehler": f"Unbekannte Zusatztaste {', '.join(falsch)} (bekannt: ctrl, shift, alt, win)."}
         self._ziel_sichern()
-        fertig = threading.Event()
-        fehler = []
 
         def lauf():
             try:
@@ -278,27 +349,42 @@ class Befehle:
                     if "warten_ms" in s:
                         time.sleep(min(max(int(s["warten_ms"]), 0), 10_000) / 1000)
                         continue
-                    self.dienst.eingabe_.ausfuehren(s)
+                    eingabe.ausfuehren(s)
                     time.sleep(0.03)
-            except Exception as e:
-                fehler.append(str(e))
-            finally:
-                fertig.set()
+            except Exception:
+                # Sonst bliebe die Maustaste aus einem abgebrochenen Ziehen gedrückt, und jede Bewegung zöge weiter.
+                eingabe.ausfuehren({"t": "loslassen"})
+                raise
+            return {"ok": True}
 
-        # In dieselbe Warteschlange wie die Live-Bedienung, damit sich nichts überholt.
-        self.dienst.eingaben.put(lauf)
-        fertig.wait(120)
-        return {"ok": False, "fehler": fehler[0]} if fehler else {"ok": True} if fertig.is_set() else {"ok": False, "fehler": "Die Eingabe läuft noch nach 2 Minuten."}
+        return self._seriell(lauf, 120 + sum(len(str(s.get("s", ""))) for s in schritte) * 0.02)
 
     # --- Programme und Fenster ---
 
-    def _fenster_von(self, name: str, suche: str = "") -> list:
-        n, s = name.lower(), suche.lower()
+    def _fenster_von(self, name: str, suche: str = "", streng: bool = False) -> list:
+        """[streng] für alles, was etwas schließt: nur der genaue Programmname. Sonst träfe „mail“ jedes Chrome-Fenster mit Mail im Titel."""
+        n, s = name.lower().removesuffix(".exe"), suche.lower()
+        if not n:
+            return []
         alle = alle_fenster()
         genau = [f for f in alle if f["app"].lower() == n]
         # Windows-Programme heißen oft anders als ihre Datei (chrome, Google Chrome): zuerst die Datei, dann auch der Fenstertitel.
-        passend = genau or [f for f in alle if n and (n in f["app"].lower() or f["app"].lower() in n and f["app"] or n in f["titel"].lower())]
+        passend = genau if streng else genau or [f for f in alle if f["app"] and (n in f["app"].lower() or f["app"].lower() in n or n in f["titel"].lower())]
         return [f for f in passend if not s or s in f["titel"].lower()]
+
+    def _neues_nach_vorn(self, vorher: set, name: str) -> None:
+        """Windows lässt den Start aus einem Hintergrunddienst oft hinter dem aktuellen Fenster: Sonst gingen die nächsten Eingaben ins falsche Programm."""
+        ende = time.monotonic() + 5
+        while time.monotonic() < ende:
+            neu = [f for f in alle_fenster() if f["h"] not in vorher]
+            if neu:
+                self._seriell(lambda: in_vordergrund(neu[0]["h"]))
+                return
+            time.sleep(0.25)
+        # Kein neues Fenster: Das Programm lief schon und hat das Ziel in einem vorhandenen Fenster geöffnet.
+        vorhanden = self._fenster_von(name) if name else []
+        if vorhanden:
+            self._seriell(lambda: in_vordergrund(vorhanden[0]["h"]))
 
     def _programme(self, j: dict) -> dict:
         aktion = j.get("aktion") or "liste"
@@ -321,20 +407,29 @@ class Befehle:
                 # Wie am Mac: Läuft es schon, kommt es nur nach vorn.
                 fenster = self._fenster_von(name)
                 if fenster:
-                    return {"ok": True} if in_vordergrund(fenster[0]["h"]) else {"ok": False, "fehler": f"{name} ließ sich nicht nach vorn holen."}
+                    h = fenster[0]["h"]
+                    return {"ok": True} if self._seriell(lambda: in_vordergrund(h)) else {"ok": False, "fehler": f"{name} ließ sich nicht nach vorn holen."}
+            vorher = {f["h"] for f in alle_fenster()}
             fehler = oeffnen(name, ziel)
-            return {"ok": False, "fehler": fehler} if fehler else {"ok": True}
-        fenster = self._fenster_von(name, str(j.get("fenster") or ""))
+            if fehler:
+                return {"ok": False, "fehler": fehler}
+            self._neues_nach_vorn(vorher, name)
+            return {"ok": True}
+        if not name:
+            return {"ok": False, "fehler": "Programm fehlt (app)."}
         if aktion == "beenden":
-            fenster = self._fenster_von(name)
+            if name.lower().removesuffix(".exe") in NIE_BEENDEN:
+                return {"ok": False, "fehler": f"{name} gehört zu Windows und wird nie als Ganzes beendet. Einzelne Fenster schließt fenster_schliessen mit fenster."}
+            fenster = self._fenster_von(name, streng=True)
             if not fenster:
-                return {"ok": False, "fehler": f"{name} läuft nicht oder hat kein Fenster."}
+                return {"ok": False, "fehler": f"Kein laufendes Programm heißt genau „{name}“. Nimm den Namen aus der Liste."}
             # Wie „Fenster schließen“ von Hand: Das Programm darf nach ungespeicherten Änderungen fragen.
-            for f in fenster:
-                user32.PostMessageW(f["h"], WM_CLOSE, 0, 0)
+            if not all([user32.PostMessageW(f["h"], WM_CLOSE, 0, 0) for f in fenster]):
+                return {"ok": False, "fehler": f"{name} nimmt das Schließen nicht an (läuft es mit Administratorrechten?)."}
             return {"ok": True}
         if aktion not in ("fenster_verschieben", "fenster_groesse", "fenster_minimieren", "fenster_schliessen", "fenster_vorn"):
             return {"ok": False, "fehler": f"Unbekannte Aktion {aktion}"}
+        fenster = self._fenster_von(name, str(j.get("fenster") or ""), streng=aktion == "fenster_schliessen")
         if not fenster:
             return {"ok": False, "fehler": f"Kein passendes Fenster von {name}."}
         h = fenster[0]["h"]
@@ -347,7 +442,7 @@ class Befehle:
         elif aktion == "fenster_minimieren":
             user32.ShowWindow(h, SW_MINIMIEREN)
         elif aktion == "fenster_vorn":
-            ergebnis = in_vordergrund(h)
+            ergebnis = self._seriell(lambda: in_vordergrund(h))
         else:
             ergebnis = user32.PostMessageW(h, WM_CLOSE, 0, 0)
         return {"ok": True} if ergebnis else {"ok": False, "fehler": "Das Fenster nimmt das nicht an."}

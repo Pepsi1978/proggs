@@ -26,7 +26,7 @@ object MacSteuerung {
     fun token(context: Context): String =
         runCatching { File(context.applicationContext.filesDir, "fernsteuerung-token.txt").readText().trim() }.getOrDefault("")
 
-    /** Antwort des Dienstes; eine mitgelieferte Datei landet in [datei]. Wirft [IOException], wenn der Mac nicht erreichbar ist. */
+    /** Antwort des Dienstes; eine mitgelieferte Datei landet in [datei]. Wirft [IOException], wenn der Rechner nicht erreichbar ist. */
     suspend fun befehl(context: Context, befehl: JSONObject, fristMs: Int = 30_000, datei: File? = null, ziel: Fernziel = Fernziel.MAC): JSONObject {
         val t = token(context)
         if (t.isEmpty()) throw IOException("Der Zugang zu ${ziel.dativ} fehlt (fernsteuerung-token.txt).")
@@ -78,13 +78,13 @@ object MacSteuerung {
     private fun dateiLesen(ein: DataInputStream, datei: File?) {
         val typ = ein.readUnsignedByte()
         val n = ein.readInt()
-        if (typ != 0x06 || n < 0) throw IOException("Unerwartete Datei vom Mac")
+        if (typ != 0x06 || n < 0) throw IOException("Unerwartete Datei vom Rechner")
         val puffer = ByteArray(1 shl 16)
         var rest = n
-        (datei ?: throw IOException("Unerwartete Datei vom Mac")).outputStream().use { o ->
+        (datei ?: throw IOException("Unerwartete Datei vom Rechner")).outputStream().use { o ->
             while (rest > 0) {
                 val g = ein.read(puffer, 0, minOf(rest, puffer.size))
-                if (g < 0) throw IOException("Datei vom Mac abgebrochen")
+                if (g < 0) throw IOException("Datei vom Rechner abgebrochen")
                 o.write(puffer, 0, g)
                 rest -= g
             }

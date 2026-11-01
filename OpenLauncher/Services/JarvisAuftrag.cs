@@ -58,7 +58,7 @@ public static class JarvisAuftrag
                 profile.ActivateCodexProjectAgents(profil, modus, ordner);
                 var codexHome = profile.PrepareCodexHome(profil);
                 new OpenLauncherService().LaunchCodexCli(new Models.ModelEntry { Slug = modell }, ordner, effort, codexHome, useTmux: false,
-                    initialPromptFile: datei, jarvisAuftragId: auftragId.Length > 0 ? auftragId : null, title: name);
+                    initialPromptFile: datei, jarvisAuftragId: id, title: name);
             }
             else if (cli == "opencode")
             {
@@ -66,7 +66,8 @@ public static class JarvisAuftrag
                 // als Start-Variante, Modus über das work-mode-Plugin. Fortschritt meldet die Sitzung über den Jarvis-MCP,
                 // Rückfragen und Nachträge laufen über das Plugin jarvis-auftrag.js (aktiv nur mit JARVIS_AUFTRAG_ID).
                 profile.ActivateProjectAgents(profil, ordner);
-                var sitzung = profile.PrepareOpenCodeSession(profil, ordner, isLmStudio: false);
+                var sitzung = profile.PrepareOpenCodeSession(profil, ordner, isLmStudio: anbieter.Equals(LmStudioService.ProviderId, StringComparison.OrdinalIgnoreCase));
+                if (id != null) InstalliereJarvisPlugin(home);
                 var launcher = new OpenLauncherService();
                 var eintrag = anbieter.Length == 0 || anbieter.Equals("openai", StringComparison.OrdinalIgnoreCase)
                     ? new Models.ModelEntry { ProviderId = "openai", ProviderName = "OpenAI", Slug = modell, DisplayName = modell, IsUserDefined = true }
@@ -76,7 +77,7 @@ public static class JarvisAuftrag
                 var modelString = anbieter.Equals("openrouter", StringComparison.OrdinalIgnoreCase) ? eintrag.ModelString
                     : launcher.ConfigureProvider(eintrag, new Models.ProviderEntry(), Array.Empty<Models.ProviderEntry>(), effort);
                 launcher.Launch(modelString, ordner, effort, sitzung.ConfigPath, modus, useTmux: false,
-                    initialPromptFile: datei, jarvisAuftragId: auftragId.Length > 0 ? auftragId : null, title: name);
+                    initialPromptFile: datei, jarvisAuftragId: id, title: name);
             }
             else if (cli == "kimi")
             {
@@ -99,7 +100,7 @@ public static class JarvisAuftrag
             {
                 var configDir = profile.EnsureClaudeConfigDir(profil, modus);
                 new OpenLauncherService().LaunchClaudeCode(modell, ordner, effort, configDir, useTmux: false, remoteControlName: name, initialPromptFile: datei,
-                    jarvisAuftragId: auftragId.Length > 0 ? auftragId : null);
+                    jarvisAuftragId: id);
             }
             log.Info("JarvisAuftrag", "Verarbeite", "Jarvis-Sitzung gestartet", new { cli, anbieter, name, profil, modus, modell, effort, ordner, auftragId });
             return 0;
@@ -109,5 +110,18 @@ public static class JarvisAuftrag
             log.Error("JarvisAuftrag", "Verarbeite", ex);
             return 1;
         }
+    }
+
+    /// <summary>Das Plugin jarvis-auftrag.js (Rückfragen, Abschluss, Nachträge ans Handy) liegt im Repo; OpenCode lädt es aus ~/.config/opencode/plugins.
+    /// Ohne JARVIS_AUFTRAG_ID tut es nichts, darf also immer dort liegen. Gegenstück zu installiereJarvisPlugin am Mac.</summary>
+    private static void InstalliereJarvisPlugin(string home)
+    {
+        var quelle = Path.Combine(home, "proggs", "opencode-setup", "plugins", "jarvis-auftrag.js");
+        var ziel = Path.Combine(home, ".config", "opencode", "plugins", "jarvis-auftrag.js");
+        if (!File.Exists(quelle)) return;
+        var neu = File.ReadAllBytes(quelle);
+        if (File.Exists(ziel) && File.ReadAllBytes(ziel).AsSpan().SequenceEqual(neu)) return;
+        Directory.CreateDirectory(Path.GetDirectoryName(ziel)!);
+        File.WriteAllBytes(ziel, neu);
     }
 }
