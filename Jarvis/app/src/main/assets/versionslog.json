@@ -560,6 +560,7 @@
     {"versionCode": 555, "versionName": "1.8.544", "stand": "01.11.2026, 18:44 Uhr", "notiz": "Neue Erinnerungen erfordern jetzt immer die ausdrücklich gewählte Form Benachrichtigung oder Wecker."},
     {"versionCode": 556, "versionName": "1.8.545", "stand": "01.11.2026, 18:51 Uhr", "notiz": "Alle Vorlese-Lautstärken der Benachrichtigungen haben jetzt einen Regler von 20 bis 100 Prozent neben Wie Handy; auch Erinnerungen sprechen mit ihrer eingestellten Lautstärke."},
     {"versionCode": 557, "versionName": "1.8.546", "stand": "01.11.2026, 19:01 Uhr", "notiz": "Vorlese-Regler nachgebessert: klare Wahl zwischen Wie Handy und eigener Lautstärke, hörbare Erinnerungs-Probe und zuverlässigeres Zurückstellen nach Einschüben und Abbrüchen."},
-{"versionCode": 558, "versionName": "1.8.547", "stand": "01.11.2026, 19:13 Uhr", "notiz": "Kontingente: Jeder Anbieterbereich hat einen eigenen Aktualisieren-Knopf mit Ladeanzeige und klarer Abschluss- oder Fehlermeldung."}
+{"versionCode": 558, "versionName": "1.8.547", "stand": "01.11.2026, 19:13 Uhr", "notiz": "Kontingente: Jeder Anbieterbereich hat einen eigenen Aktualisieren-Knopf mit Ladeanzeige und klarer Abschluss- oder Fehlermeldung."},
+{"versionCode": 559, "versionName": "1.8.548", "stand": "01.11.2026, 19:25 Uhr", "notiz": "Kontingente: Aktualisieren-Knopf nachgebessert, jetzt auch ohne bisherigen Stand bei jedem Anbieter und mit verlässlicher Abschlussanzeige."}
 ]
 }

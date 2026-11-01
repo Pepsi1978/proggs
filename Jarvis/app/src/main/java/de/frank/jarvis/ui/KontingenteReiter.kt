@@ -47,12 +47,15 @@ internal fun KontingenteReiter(vm: AppViewModel) {
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
         Bereich("Claude", startOffen = true, kopf = { AktualisierenKnopf(vm, "claude", "Claude", null) }) { LaufAnzeige(vm, "claude", null); ApiFreikontingent(vm) }
+        Bereich("ChatGPT / Codex (OpenAI)", startOffen = true, kopf = { AktualisierenKnopf(vm, "codex", "ChatGPT", null) }) { LaufAnzeige(vm, "codex", null) }
+        Bereich("Kimi", startOffen = true, kopf = { AktualisierenKnopf(vm, "kimi", "Kimi", null) }) { LaufAnzeige(vm, "kimi", null) }
         Bereich("Gemini / Antigravity (Google)", startOffen = true, kopf = { AktualisierenKnopf(vm, "gemini", "Gemini", null) }) { LaufAnzeige(vm, "gemini", null); AiStudioUebersicht(vm) }
     } else {
         val jetzt = System.currentTimeMillis() / 1000
         stand.anbieter.forEach { a ->
             Bereich(a.titel, startOffen = true, kopf = { AktualisierenKnopf(vm, a.id, a.titel, a) }) {
                 LaufAnzeige(vm, a.id, a)
+                if (a.limits.isEmpty() && a.hinweis == null && vm.laufVon(a.id, a) == null) Text("Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp)
                 if (a.konto.isNotEmpty()) Text(a.konto, color = f.textSchwach, fontSize = 13.sp)
                 a.limits.forEach { l ->
                     val schnell = l.zuSchnell(jetzt)

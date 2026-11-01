@@ -27,9 +27,31 @@ final class Kontingente {
         let laeuft: Bool
         var erfolg = false
         var text = ""
+        var um = Date()
+        var stand = ""
+        /// Am Tag danach darf „heute“ nicht mehr dastehen.
+        var anzeige: String {
+            guard erfolg else { return text }
+            let f = DateFormatter(); f.dateFormat = Calendar.current.isDateInToday(um) ? "'heute, 'HH:mm" : "dd.MM., HH:mm"
+            return "Aktualisiert: " + f.string(from: um) + " Uhr"
+        }
     }
     var laeufe: [String: Lauf] = [:]
     private var einzeln = 0
+    /// Ein ausdrücklicher Gesamtabruf wartet: Weitere Klicks hängen sich nicht zusätzlich an.
+    var wartet = false
+    private var handyBelegt = false
+
+    /// Das Ergebnis gilt nur, solange kein neuerer Abruf die Karte geändert hat.
+    func laufVon(_ a: Anbieter) -> Lauf? {
+        guard let l = laeufe[a.id] else { return nil }
+        return l.laeuft || (l.stand == a.stand && (!l.erfolg || a.hinweis.isEmpty)) ? l : nil
+    }
+
+    /// Jeder Anbieter bekommt eine Karte und damit einen Knopf, auch ohne bisherigen Stand.
+    var anzeige: [Anbieter] {
+        KontingentQuellen.alle.map { d in anbieter.first { $0.id == d.id } ?? Anbieter(id: d.id, titel: d.titel, konto: "", hinweis: "", anmelden: false, stand: "", limits: []) }
+    }
 
     init() {
         if let t = UserDefaults.standard.string(forKey: Self.speicher), let alt = Self.lies(t) { anbieter = alt; ausSpeicher = true }
@@ -37,13 +59,18 @@ final class Kontingente {
 
     func laden(frisch: Bool = false) async {
         // Ein ausdrücklicher Wunsch wartet die laufende Abfrage ab, statt verloren zu gehen.
-        if laedt && !frisch { return }
+        if (laedt || einzeln > 0) && !frisch { return }
+        if wartet { return }
         // Auch laufende Einzelabrufe abwarten: Der Gesamtabruf arbeitet auf seiner eigenen Kopie und würde sie sonst überschreiben.
-        while laedt || einzeln > 0 { try? await Task.sleep(for: .milliseconds(300)) }
+        while laedt || einzeln > 0 {
+            wartet = true
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { wartet = false; return }
+        }
+        wartet = false
         laedt = true; defer { laedt = false }
         // Ein neuer Gesamtabruf macht das Ergebnis eines früheren Einzelabrufs hinfällig.
         if frisch { laeufe = [:] }
-        var stand =Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var stand = Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var hier: [(id: String, titel: String)] = []
         for d in KontingentQuellen.alle {
             if await KontingentQuellen.hierMoeglich(d.id) { hier.append(d) }
@@ -92,36 +119,40 @@ final class Kontingente {
         laeufe[id] = Lauf(laeuft: true)
         einzeln += 1
         while laedt { try? await Task.sleep(for: .milliseconds(300)) }
-        let fehler = await einzelnHolen(id)
+        let meldung = await einzelnHolen(id)
         einzeln -= 1
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
-        laeufe[id] = Lauf(laeuft: false, erfolg: fehler == nil, text: fehler ?? "Aktualisiert: heute, " + f.string(from: Date()) + " Uhr")
+        laeufe[id] = Lauf(laeuft: false, erfolg: meldung == nil, text: meldung ?? "", stand: anbieter.first { $0.id == id }?.stand ?? "")
     }
 
     private func einzelnHolen(_ id: String) async -> String? {
         var neu: Anbieter?
-        var fehler: String?
+        var meldung: String?
         var ueberHandy = await !KontingentQuellen.hierMoeglich(id)
         if !ueberHandy {
             let titel = KontingentQuellen.alle.first { $0.id == id }?.titel ?? id
             let a = await KontingentQuellen.lies(id, titel: titel, frisch: true)
             neu = a
-            fehler = Self.fehlertext(a)
+            meldung = Self.fehlertext(a)
             // Abgelehnte Anmeldung am Mac: dann doch vom Handy, falls dort eine liegt.
             ueberHandy = a.anmelden
         }
         var ausHandy = false
         if ueberHandy {
+            // Das Handy arbeitet Einzelabrufe nacheinander ab: So bekommt jeder seine volle Frist.
+            while handyBelegt { try? await Task.sleep(for: .milliseconds(300)) }
+            handyBelegt = true
             let (liste, text) = await Self.vomHandyHolen(frisch: true, ziel: id)
+            handyBelegt = false
             if let a = liste?.first(where: { $0.id == id }) {
                 if neu == nil || !a.limits.isEmpty {
                     neu = a
                     ausHandy = true
                     // Nach Fristende schickt das Handy den letzten Stand: Der darf nicht als frisch gelten.
-                    fehler = (JSON.objekt(text)?["aktualisiert"] as? Bool) == true ? Self.fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat nicht rechtzeitig frisch geantwortet."
+                    meldung = (JSON.objekt(text)?["aktualisiert"] as? Bool) == true ? Self.fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat keinen frischen Stand bestätigt."
+                    fehler = nil
                 }
             } else {
-                if neu == nil { fehler = "Aktualisierung fehlgeschlagen: " + (liste != nil || text.isEmpty ? "Das Handy antwortet gerade nicht." : text) }
+                if neu == nil { meldung = "Aktualisierung fehlgeschlagen: " + (liste != nil || text.isEmpty ? "Das Handy antwortet gerade nicht." : text) }
                 log("fehler", "Kontingent vom Handy nicht abrufbar", wo: "Kontingente", fehler: text)
             }
         }
@@ -132,7 +163,7 @@ final class Kontingente {
             anbieter = KontingentQuellen.alle.compactMap { stand[$0.id] }
             sichere()
         }
-        return fehler
+        return meldung
     }
 
     private static func fehlertext(_ a: Anbieter) -> String? {
@@ -179,11 +210,11 @@ struct KontingenteAnsicht: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "arrow.clockwise", titel: "Jetzt neu abfragen", hervorgehoben: true) { Task { await k.laden(frisch: true) } }
-                if k.laedt { ProgressView().controlSize(.small) }
+                if k.laedt || k.wartet { ProgressView().controlSize(.small) }
             }
             if let f = k.fehler { Text(k.anbieter.isEmpty ? f : "Alter Stand. " + f).font(.jarvis(13)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true) }
             else if k.ausSpeicher { Text("Letzter Stand, die neue Abfrage läuft.").font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
-            ForEach(k.anbieter) { karte($0) }
+            ForEach(k.anzeige) { karte($0) }
             Text("Anmelden unter Einstellungen → Konsolen. Ohne Anmeldung hier am Mac kommt der Stand vom Handy.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
         }
         .task { await k.laden() }
@@ -194,7 +225,7 @@ struct KontingenteAnsicht: View {
     private func karte(_ a: Kontingente.Anbieter) -> some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
-                let lauf = k.laeufe[a.id]
+                let lauf = k.laufVon(a)
                 HStack(spacing: 10) {
                     KartenTitel(symbol: "gauge.with.dots.needle.67percent", titel: a.titel)
                     Spacer()
@@ -202,7 +233,9 @@ struct KontingenteAnsicht: View {
                 }
                 if let lauf {
                     if lauf.laeuft { Text("Wird aktualisiert …").font(.jarvis(13)).foregroundStyle(Farbe.text2) }
-                    else { Text(lauf.text).font(.jarvis(13, .semibold)).foregroundStyle(lauf.erfolg ? Farbe.haupt : Farbe.rot).fixedSize(horizontal: false, vertical: true) }
+                    else { Text(lauf.anzeige).font(.jarvis(13, .semibold)).foregroundStyle(lauf.erfolg ? Farbe.haupt : Farbe.rot).fixedSize(horizontal: false, vertical: true) }
+                } else if a.limits.isEmpty && a.hinweis.isEmpty && !k.laedt {
+                    Text("Noch nicht abgefragt.").font(.jarvis(13)).foregroundStyle(Farbe.text3)
                 }
                 if !a.konto.isEmpty { Text(a.konto).font(.jarvis(12)).foregroundStyle(Farbe.text3) }
                 ForEach(a.limits) { limit($0) }

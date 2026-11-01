@@ -25,9 +25,22 @@ public sealed class Kontingente : Beobachtbar
     public HashSet<string> VomHandy { get; private set; } = new();
 
     /// <summary>Einzelabruf aus dem Kopf einer Karte: läuft gerade oder ging so aus.</summary>
-    public sealed record Lauf(bool Laeuft, bool Erfolg = false, string Text = "");
+    public sealed record Lauf(bool Laeuft, bool Erfolg = false, string Text = "", DateTime Um = default, string Stand = "")
+    {
+        /// <summary>Am Tag danach darf „heute“ nicht mehr dastehen.</summary>
+        public string Anzeige => Erfolg ? "Aktualisiert: " + (Um.Date == DateTime.Today ? "heute, " : Um.ToString("dd.MM., ")) + Um.ToString("HH:mm") + " Uhr" : Text;
+    }
     public Dictionary<string, Lauf> Laeufe { get; } = new();
     private int _einzeln;
+    private bool _wartet, _handyBelegt;
+    /// <summary>Ein ausdrücklicher Gesamtabruf wartet: Weitere Klicks hängen sich nicht zusätzlich an.</summary>
+    public bool Wartet { get => _wartet; private set => Setze(ref _wartet, value); }
+
+    /// <summary>Das Ergebnis gilt nur, solange kein neuerer Abruf die Karte geändert hat.</summary>
+    public Lauf? LaufVon(AnbieterStand a) => Laeufe.TryGetValue(a.Id, out var l) && (l.Laeuft || (l.Stand == a.Stand && (!l.Erfolg || a.Hinweis.Length == 0))) ? l : null;
+
+    /// <summary>Jeder Anbieter bekommt eine Karte und damit einen Knopf, auch ohne bisherigen Stand.</summary>
+    public List<AnbieterStand> Anzeige => KontingentQuellen.Alle.Select(d => _anbieter.FirstOrDefault(a => a.Id == d.Id) ?? new AnbieterStand(d.Id, d.Titel, "", "", false, "", new())).ToList();
 
     public Kontingente()
     {
@@ -37,9 +50,11 @@ public sealed class Kontingente : Beobachtbar
     public async Task Laden(bool frisch = false)
     {
         // Ein ausdrücklicher Wunsch wartet die laufende Abfrage ab, statt verloren zu gehen.
-        if (Laedt && !frisch) return;
+        if ((Laedt || _einzeln > 0) && !frisch) return;
+        if (Wartet) return;
         // Auch laufende Einzelabrufe abwarten: Der Gesamtabruf arbeitet auf seiner eigenen Kopie und würde sie sonst überschreiben.
-        while (Laedt || _einzeln > 0) await Task.Delay(300);
+        while (Laedt || _einzeln > 0) { Wartet = true; await Task.Delay(300); }
+        Wartet = false;
         Laedt = true;
         // Ein neuer Gesamtabruf macht das Ergebnis eines früheren Einzelabrufs hinfällig.
         if (frisch) Laeufe.Clear();
@@ -115,7 +130,7 @@ public sealed class Kontingente : Beobachtbar
             fehler = "Aktualisierung fehlgeschlagen: " + f.Message;
         }
         finally { _einzeln--; }
-        Laeufe[id] = new Lauf(false, fehler == null, fehler ?? "Aktualisiert: heute, " + DateTime.Now.ToString("HH:mm") + " Uhr");
+        Laeufe[id] = new Lauf(false, fehler == null, fehler ?? "", DateTime.Now, _anbieter.FirstOrDefault(a => a.Id == id)?.Stand ?? "");
         Melde();
     }
 
@@ -134,7 +149,13 @@ public sealed class Kontingente : Beobachtbar
         var vomHandy = false;
         if (ueberHandy)
         {
-            var (liste, text) = await VomHandyHolen(true, id);
+            // Das Handy arbeitet Einzelabrufe nacheinander ab: So bekommt jeder seine volle Frist.
+            while (_handyBelegt) await Task.Delay(300);
+            _handyBelegt = true;
+            List<AnbieterStand>? liste;
+            string text;
+            try { (liste, text) = await VomHandyHolen(true, id); }
+            finally { _handyBelegt = false; }
             var a = liste?.FirstOrDefault(x => x.Id == id);
             if (a == null)
             {
@@ -146,7 +167,8 @@ public sealed class Kontingente : Beobachtbar
                 neu = a;
                 vomHandy = true;
                 // Nach Fristende schickt das Handy den letzten Stand: Der darf nicht als frisch gelten.
-                fehler = JSON.Objekt(text)?.Wahr("aktualisiert") == true ? Fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat nicht rechtzeitig frisch geantwortet.";
+                fehler = JSON.Objekt(text)?.Wahr("aktualisiert") == true ? Fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat keinen frischen Stand bestätigt.";
+                Fehler = null;
             }
         }
         if (neu != null)
@@ -162,7 +184,7 @@ public sealed class Kontingente : Beobachtbar
 
     private static string? Fehlertext(AnbieterStand a)
     {
-        if (a.Hinweis.StartsWith("Ein Limit")) return "Nicht vollständig aktualisiert: " + a.Hinweis;
+        if (a.Hinweis.StartsWith("Ein Limit", StringComparison.Ordinal)) return "Nicht vollständig aktualisiert: " + a.Hinweis;
         if (a.Hinweis.Length > 0) return "Aktualisierung fehlgeschlagen: " + a.Hinweis.Replace("Letzter Stand. ", "");
         return a.Limits.Count == 0 ? "Aktualisierung fehlgeschlagen: Der Anbieter nennt keine Limits." : null;
     }
@@ -204,10 +226,10 @@ public sealed class KontingenteAnsicht : LebendeAnsicht
 
     protected override UIElement Baue()
     {
-        var s = V(18, H(10, Kapsel("arrow.clockwise", "Jetzt neu abfragen", async () => await k.Laden(true), hervorgehoben: true), k.Laedt ? Drehkreis() : null, Spacer()));
+        var s = V(18, H(10, Kapsel("arrow.clockwise", "Jetzt neu abfragen", async () => await k.Laden(true), hervorgehoben: true), k.Laedt || k.Wartet ? Drehkreis() : null, Spacer()));
         if (k.Fehler is { } f) VAnfuegen(s, T(k.Anbieter.Count == 0 ? f : "Alter Stand. " + f, 13, null, Farbe.Warnung), 18);
         else if (k.AusSpeicher) VAnfuegen(s, T("Letzter Stand, die neue Abfrage läuft.", 13, null, Farbe.Warnung), 18);
-        foreach (var a in k.Anbieter) VAnfuegen(s, Karte_(a), 18);
+        foreach (var a in k.Anzeige) VAnfuegen(s, Karte_(a), 18);
         VAnfuegen(s, T("Anmelden unter Einstellungen → Konsolen. Ohne Anmeldung hier am Laptop kommt der Stand vom Handy.", 12, null, Farbe.Text3), 18);
         return s;
     }
@@ -216,9 +238,10 @@ public sealed class KontingenteAnsicht : LebendeAnsicht
 
     private UIElement Karte_(Kontingente.AnbieterStand a)
     {
-        k.Laeufe.TryGetValue(a.Id, out var lauf);
+        var lauf = k.LaufVon(a);
         var s = V(10, H(10, Titel("gauge.with.dots.needle.67percent", a.Titel), Spacer(), AktualisierenKnopf(a, lauf)));
-        if (lauf != null) VAnfuegen(s, lauf.Laeuft ? T("Wird aktualisiert …", 13, null, Farbe.Text2) : T(lauf.Text, 13, FontWeights.SemiBold, lauf.Erfolg ? Farbe.Haupt : Farbe.Rot), 10);
+        if (lauf != null) VAnfuegen(s, lauf.Laeuft ? T("Wird aktualisiert …", 13, null, Farbe.Text2) : T(lauf.Anzeige, 13, FontWeights.SemiBold, lauf.Erfolg ? Farbe.Haupt : Farbe.Rot), 10);
+        else if (a.Limits.Count == 0 && a.Hinweis.Length == 0 && !k.Laedt) VAnfuegen(s, T("Noch nicht abgefragt.", 13, null, Farbe.Text3), 10);
         if (a.Konto.Length > 0) VAnfuegen(s, T(a.Konto, 12, null, Farbe.Text3), 10);
         foreach (var l in a.Limits) VAnfuegen(s, Limit_(l), 10);
         // Nach einem gescheiterten Einzelabruf steht der Grund schon oben; der Weg zur Anmeldung bleibt.

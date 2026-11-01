@@ -37,7 +37,9 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -79,16 +81,22 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 "anbieter" to text("Nur mit frisch: fragt allein diesen Anbieter neu ab, die anderen bleiben beim letzten Stand.", listOf("claude", "codex", "kimi", "gemini")),
             ),
             nurLesen = true,
-        ) { a ->
-            val ziel = a.optString("anbieter").takeIf { a.optBoolean("frisch") && it in listOf("claude", "codex", "kimi", "gemini") }
-            // Vor der Frist des Relays antworten: lieber der letzte Stand als ein Fehler, während das Handy noch arbeitet.
-            val neu = withTimeoutOrNull(WERKZEUG_FRIST_MS) { if (ziel != null) anbieterAktualisieren(context, ziel) else stand(context, erzwingen = a.optBoolean("frisch")) }
-            val s = neu ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
-            // Der letzte Stand nach Fristende sieht aus wie ein Erfolg: Der gezielte Abruf sagt deshalb ausdrücklich, ob er fertig wurde.
-            val json = s.alsJson().also { if (ziel != null) it.put("ziel", ziel).put("aktualisiert", neu != null) }
-            Ergebnis(if (a.optBoolean("json")) json.toString() else s.text(), fehler = s.anbieter.all { it.limits.isEmpty() })
-        },
+        ) { a -> lesen(a) },
     )
+
+    private suspend fun lesen(a: JSONObject): Ergebnis {
+        val frisch = a.optBoolean("frisch")
+        val ziel = a.optString("anbieter").takeIf { frisch && it.isNotEmpty() }
+        // Ein Tippfehler darf nicht still alle Anbieter neu abfragen.
+        if (ziel != null && abfragen(context).none { it.first == ziel }) return Ergebnis("Unbekannter Anbieter „$ziel“. Möglich sind claude, codex, kimi und gemini.", fehler = true)
+        // Vor der Frist des Relays antworten: lieber der letzte Stand als ein Fehler, während das Handy noch arbeitet.
+        val neu = withTimeoutOrNull(WERKZEUG_FRIST_MS) { if (ziel != null) anbieterAktualisieren(context, ziel) else stand(context, erzwingen = frisch) }
+        val s = neu ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
+        // Der letzte Stand nach Fristende sieht aus wie ein Erfolg: Der gezielte Abruf sagt deshalb ausdrücklich, ob er fertig wurde.
+        val text = if (a.optBoolean("json")) s.alsJson().also { if (ziel != null) it.put("ziel", ziel).put("aktualisiert", neu != null) }.toString()
+        else (if (ziel != null && neu == null) "Der frische Abruf wurde nicht rechtzeitig fertig, das ist der letzte Stand.\n" else "") + s.text()
+        return Ergebnis(text, fehler = s.anbieter.all { it.limits.isEmpty() })
+    }
 
     /** Ein Limit. [genutzt] in Prozent, wie zuletzt gelesen; [reset] in Sekunden seit 1970 (0 = beginnt erst mit der nächsten Nutzung). */
     class Limit(val name: String, val genutzt: Double, val fensterSek: Long, val reset: Long, val gelesen: Long = sekunden()) {
@@ -400,6 +408,8 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val hinweis = if (fehlen.isNotEmpty() || limits.size < erwartet) "Ein Limit ließ sich gerade nicht lesen" + (if (fehlen.isNotEmpty()) ", dort steht der letzte Stand." else ".") else null
                 Anbieter(id, titel, konto, limits + fehlen, hinweis, false, System.currentTimeMillis())
             } catch (f: TimeoutCancellationException) {
+                // Lief die Frist des Werkzeugs ab, hat der Anbieter nichts falsch gemacht: nicht als Störung speichern.
+                currentCoroutineContext().ensureActive()
                 fehlschlag("Der Anbieter hat nicht rechtzeitig geantwortet.", false)
             } catch (f: kotlinx.coroutines.CancellationException) {
                 throw f

@@ -3470,16 +3470,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Zeigt sofort den gespeicherten Stand und fragt frisch nach, wenn er älter als 15 Minuten ist oder [erzwingen]. */
     fun anthropicGuthabenAbfragen(erzwingen: Boolean = false) {
         if (anthropicGuthabenLaedt) { if (erzwingen) anthropicGuthabenNochmal = true; return }
+        anthropicGuthabenLaedt = true
+        viewModelScope.launch { anthropicGuthabenHolen(erzwingen) }
+    }
+
+    private suspend fun anthropicGuthabenHolen(erzwingen: Boolean) {
         val app = getApplication<Application>()
         anthropicGuthabenLaedt = true
-        viewModelScope.launch {
+        try {
             if (anthropicGuthaben == null) gespeichertesGuthabenLaden()
             anthropicGuthaben = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen)
             // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
             anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet(app) }
-            anthropicGuthabenLaedt = false
-            if (anthropicGuthabenNochmal) { anthropicGuthabenNochmal = false; anthropicGuthabenAbfragen(erzwingen = true) }
-        }
+        } finally { anthropicGuthabenLaedt = false }
+        if (anthropicGuthabenNochmal) { anthropicGuthabenNochmal = false; anthropicGuthabenAbfragen(erzwingen = true) }
     }
 
     /** Nur den gespeicherten Stand zeigen, ohne Netz: Frisch abgefragt wird erst rund um eine Aufgabe. */
@@ -3596,13 +3600,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val beginn = System.currentTimeMillis()
             var fehler: String?
+            var geholt = kontingente?.von(id)?.geholt ?: 0L
             try {
+                // Der Stand selbst kommt über den Fluss `frisch`: Hier gesetzt, überschriebe er nach der Wartezeit aufs Guthaben einen neueren.
                 val (neu, guthabenHinweis) = kotlinx.coroutines.coroutineScope {
-                    val guthaben = this.async { kontingentGuthabenFrisch(app, id) }
+                    val guthaben = this.async { kontingentGuthabenFrisch(id) }
                     de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.anbieterAktualisieren(app, id) to guthaben.await()
                 }
-                kontingente = neu
                 val a = neu.von(id)
+                geholt = a?.geholt ?: 0L
                 fehler = when {
                     a == null -> "Aktualisierung fehlgeschlagen: Der Anbieter fehlt im Ergebnis."
                     a.hinweis != null && a.geholt < beginn -> "Aktualisierung fehlgeschlagen: " + a.hinweis.removePrefix("Letzter Stand. ")
@@ -3612,28 +3618,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     else -> null
                 }
             } catch (f: kotlinx.coroutines.CancellationException) {
+                // Sonst dreht der Ladekreis weiter und der Knopf bleibt gesperrt.
+                kontingentLaeufe[id] = KontingentLauf(false, geholt, "Aktualisierung abgebrochen.", System.currentTimeMillis() / 1000)
                 throw f
             } catch (f: Exception) {
                 de.frank.jarvis.observability.Logbuch.fehler("Kontingent $id aktualisieren", f)
                 fehler = "Aktualisierung fehlgeschlagen: " + (f.message ?: "unbekannter Fehler.")
             }
-            kontingentLaeufe[id] = KontingentLauf(false, kontingente?.von(id)?.geholt ?: 0L, fehler, System.currentTimeMillis() / 1000)
+            kontingentLaeufe[id] = KontingentLauf(false, geholt, fehler, System.currentTimeMillis() / 1000)
         }
     }
 
-    /** Das Guthaben im selben Bereich; liefert den Hinweis, wenn es nicht gelesen werden konnte. */
-    private suspend fun kontingentGuthabenFrisch(app: android.app.Application, id: String): String? = when (id) {
+    /**
+     * Das Guthaben im selben Bereich; liefert den Hinweis, wenn es nicht gelesen werden konnte.
+     * Ohne Anmeldung gibt es dort nichts zu aktualisieren: Das zählt nicht als Fehlschlag, der Hinweis steht weiter im Bereich.
+     */
+    private suspend fun kontingentGuthabenFrisch(id: String): String? = when (id) {
         "claude" -> {
-            anthropicGuthabenLaedt = true
-            try {
-                de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, true).also { anthropicGuthaben = it }.hinweis
-            } finally { anthropicGuthabenLaedt = false }
+            while (anthropicGuthabenLaedt) kotlinx.coroutines.delay(200)
+            anthropicGuthabenHolen(true)
+            anthropicGuthaben?.hinweis?.takeIf { anthropicConsoleAngemeldet }
         }
         "gemini" -> {
-            googleGuthabenLaedt = true
-            try {
-                de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.stand(app, true).also { googleGuthaben = it }.hinweis
-            } finally { googleGuthabenLaedt = false }
+            while (googleGuthabenLaedt) kotlinx.coroutines.delay(200)
+            googleGuthabenHolen(true)
+            googleGuthaben?.hinweis?.takeIf { googleAngemeldet }
         }
         else -> null
     }
@@ -3662,15 +3671,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Zeigt sofort den gespeicherten Stand und fragt frisch nach, wenn er älter als 15 Minuten ist oder [erzwingen]. */
     fun googleGuthabenAbfragen(erzwingen: Boolean = false) {
-        if (googleGuthabenLaedt) return
+        if (googleGuthabenLaedt) { if (erzwingen) googleGuthabenNochmal = true; return }
+        googleGuthabenLaedt = true
+        viewModelScope.launch { googleGuthabenHolen(erzwingen) }
+    }
+
+    private var googleGuthabenNochmal = false
+
+    private suspend fun googleGuthabenHolen(erzwingen: Boolean) {
         val app = getApplication<Application>()
         googleGuthabenLaedt = true
-        viewModelScope.launch {
+        try {
             if (googleGuthaben == null) googleGuthaben = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.gespeichert(app) }
             googleAngemeldet = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.angemeldet() }
             googleGuthaben = de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.stand(app, erzwingen)
-            googleGuthabenLaedt = false
-        }
+        } finally { googleGuthabenLaedt = false }
+        if (googleGuthabenNochmal) { googleGuthabenNochmal = false; googleGuthabenAbfragen(erzwingen = true) }
     }
 
     /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
