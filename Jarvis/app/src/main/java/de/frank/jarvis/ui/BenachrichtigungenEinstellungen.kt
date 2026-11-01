@@ -157,7 +157,6 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
     Meldungsarten.gruppen.forEach { gruppe ->
         Abschnitt(gruppe, Modifier.padding(top = 8.dp))
         profile.filter { it.art.gruppe == gruppe }.forEach { p ->
-            if (p.art == Meldungsarten.ERINNERUNG) Abschnitt("Erinnerungen")
             MeldungsKarte(vm, p, activity)
         }
     }
@@ -321,7 +320,8 @@ private fun pflichtText(art: Meldungsart) = when (art) {
 /** Der Android-Kanal, den „In Android“ öffnet; als Wecker der Wecker-Kanal. */
 private fun kanalVon(p: MeldungsProfil): String? = when {
     p.art == Meldungsarten.ERINNERUNG_WECKER -> p.art.kanal
-    p.weckerWirksam -> Meldungen.KANAL_WECKER
+    p.art == Meldungsarten.TIMER && p.wecker -> de.frank.jarvis.timer.Timer.KANAL_STILL
+    p.wecker -> Meldungen.KANAL_WECKER
     !p.art.pflicht -> "jarvis_meldung_${p.art.id}"
     else -> p.art.kanal
 }
@@ -424,17 +424,16 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     val qwenFehlt = remember(stand) { s.qwenTtsApiKey.isBlank() }
     val azureFehlt = remember(stand) { s.azureTtsKey.isBlank() }
     val geminiFehlt = remember(stand) { s.geminiTtsKeyFrei.isBlank() && s.geminiTtsKeyBezahlt.isBlank() }
-    var anbieter by remember(p.art.id) { mutableStateOf(TtsCatalog.anbieterZu(p.stimme)) }
+    val anbieter = TtsCatalog.anbieterZu(p.stimme)
     Unterzeile("Stimme")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Chip("Wie Jarvis", aktiv = anbieter == null) { anbieter = null; p.stimme = "" }
+        Chip("Wie Jarvis", aktiv = anbieter == null) { p.stimme = "" }
         listOf(
             TtsProvider.EDGE to TtsCatalog.DEFAULT_EDGE_VOICE, TtsProvider.GOOGLE_CLOUD to TtsCatalog.DEFAULT_GOOGLE_VOICE,
             TtsProvider.GEMINI_FLASH to TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE, TtsProvider.GEMINI_LITE to TtsCatalog.DEFAULT_GEMINI_LITE_VOICE,
             TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE, TtsProvider.AZURE to TtsCatalog.DEFAULT_AZURE_VOICE,
         ).forEach { (anb, standard) ->
             Chip(anb.label, aktiv = anbieter == anb) {
-                anbieter = anb
                 if (TtsCatalog.anbieterZu(p.stimme) != anb) p.stimme = standard
             }
         }

@@ -7,27 +7,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.PowerManager
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import de.frank.jarvis.R
 import de.frank.jarvis.observability.Logbuch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
  * Eine Erinnerung in der Form Wecker: Weckton in der Schleife, dazwischen liest Jarvis die Kurzfassung vor, bis Frank ausdrücklich ausschaltet.
@@ -35,13 +22,7 @@ import kotlinx.coroutines.launch
  * oder eine Bestätigung von einem anderen Gerät.
  */
 class ErinnerungKlingelDienst : Service() {
-    private var spieler: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
     private var ablauf: Job? = null
-    private var tonWache: Job? = null
-    private var stimme: Job? = null
-    private var spricht = false
-    private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onCreate() { super.onCreate(); instanz = this }
@@ -54,62 +35,9 @@ class ErinnerungKlingelDienst : Service() {
         }.onFailure { Logbuch.fehler("Erinnerung Vordergrund", it) }.isSuccess
         if (!vorn) { ErinnerungPlaner.dienstGescheitert(this); stopSelf(); return START_NOT_STICKY }
         if (ErinnerungPlaner.klingelt.value.isEmpty()) { beenden(); return START_NOT_STICKY }
-        if (ablauf == null) klingeln()
+        if (ablauf?.isActive != true) ablauf = ErinnerungsWeckablauf.starten(this, NUMMER) { ErinnerungPlaner.klingelt.value }
         else aktualisieren()
         return START_NOT_STICKY
-    }
-
-    private fun klingeln() {
-        val profil = de.frank.jarvis.meldung.Meldungen.profil(this, de.frank.jarvis.meldung.Meldungsarten.ERINNERUNG_WECKER)
-        val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-        for (ton in listOfNotNull(profil.weckton.takeIf { it.isNotBlank() }?.let(android.net.Uri::parse), RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))) {
-            val p = MediaPlayer()
-            val ok = runCatching {
-                p.setAudioAttributes(attribute); p.setDataSource(this, ton); p.isLooping = true
-                p.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK); p.prepare()
-            }.isSuccess
-            if (ok) { spieler = p; break } else runCatching { p.release() }
-        }
-        runCatching {
-            val v = if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java).defaultVibrator else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
-            vibrator = v
-        }
-        // Auch während der Tonphase und des Vorlesens haben Live-Gespräch und Lautlos Vorrang.
-        tonWache = bereich.launch {
-            var vibriert = false
-            while (isActive) {
-                val live = de.frank.jarvis.speech.GespraechsFokus.stilleHinweise || de.frank.jarvis.speech.GespraechsFokus.aufnahme
-                val hoerbar = profil.ton && !live && !spricht
-                runCatching {
-                    if (hoerbar && spieler?.isPlaying == false) spieler?.start()
-                    if (!hoerbar && spieler?.isPlaying == true) spieler?.pause()
-                    if (hoerbar && !vibriert) vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attribute)
-                    if (!hoerbar && vibriert) vibrator?.cancel()
-                    vibriert = hoerbar
-                }.onFailure { Logbuch.fehler("Erinnerung Ton schalten", it) }
-                if (live || !profil.vorlesen) stimme?.cancel()
-                delay(200L)
-            }
-        }
-        // Erst der gewählte Ton, dann auf Wunsch der Text, danach alle zwei Minuten erneut.
-        ablauf = bereich.launch {
-            while (isActive) {
-                while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise || de.frank.jarvis.speech.GespraechsFokus.aufnahme) delay(500L)
-                if (profil.ton) delay((profil.wecktonSekunden.takeIf { it > 0 } ?: 10) * 1_000L)
-                if (profil.vorlesen) {
-                    spricht = true
-                    runCatching { spieler?.pause(); vibrator?.cancel() }
-                    try {
-                        ErinnerungPlaner.klingelt.value.forEach { f ->
-                            stimme = launch { ErinnerungStimme.sprich(applicationContext, f.erinnerung, alsWecker = true) }
-                            stimme?.join()
-                        }
-                    } finally { spricht = false; stimme = null }
-                }
-                var rest = 120
-                while (rest-- > 0 && !de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) delay(1_000L)
-            }
-        }
     }
 
     private fun aktualisieren() {
@@ -119,9 +47,7 @@ class ErinnerungKlingelDienst : Service() {
 
     private fun beenden() {
         ablauf?.cancel(); ablauf = null
-        tonWache?.cancel(); tonWache = null
-        runCatching { spieler?.stop() }; runCatching { spieler?.release() }; spieler = null
-        runCatching { vibrator?.cancel() }; vibrator = null
+        de.frank.jarvis.meldung.WeckerTon.stopp(NUMMER)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -129,9 +55,7 @@ class ErinnerungKlingelDienst : Service() {
     override fun onDestroy() {
         instanz = null
         ablauf?.cancel()
-        tonWache?.cancel()
-        runCatching { spieler?.release() }; spieler = null
-        runCatching { vibrator?.cancel() }
+        de.frank.jarvis.meldung.WeckerTon.stopp(NUMMER)
         super.onDestroy()
     }
 

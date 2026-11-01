@@ -109,7 +109,7 @@ object Stoppuhr {
             .setContentTitle("Stoppuhr läuft")
             .setContentText("Gestartet um " + java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.GERMAN).format(java.util.Date(s.gestartetUm ?: System.currentTimeMillis())) + " Uhr")
             .setUsesChronometer(true).setWhen(System.currentTimeMillis() - s.gesamt()).setShowWhen(true)
-            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
+            .setOngoing(true).setOnlyAlertOnce(!laut).setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setContentIntent(oeffnen)
         de.frank.jarvis.meldung.Meldungen.zeige(app, de.frank.jarvis.meldung.Meldungsarten.STOPPUHR, MELDUNG_ID, m, "Stoppuhr läuft", "Deine Stoppuhr läuft.", laut = laut)

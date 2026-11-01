@@ -439,7 +439,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("auswertung_lernen", "Tagesauswertung", "Aus Tagebuch und Gesprächen lernen", "Verdichtet alte Monate, notiert neue Tatsachen über Frank aus Tagebuch und Gesprächen und prüft und räumt das Gelernte etwa alle sechs Stunden auf (Bericht unter Live-Gedächtnis).", { e.auswertungLernen }) { e.auswertungLernen = it; de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(context) },
 
             // ---- Timer ----
-            schalter("timer_wecker", "Benachrichtigungen: Timer", "Timer klingelt wie ein Wecker", "An = klingelt bis zum Ausschalten, aus = kurze Meldung mit Ton.", { e.timerWecker }) { e.timerWecker = it },
+            schalter("timer_wecker", "Benachrichtigungen: Timer", "Timer klingelt wie ein Wecker", "An = Wecker bis zum Ausschalten, aus = normale Benachrichtigung. Ton und Vorlesen sind unabhängig davon einstellbar.", { e.timerWecker }) { e.timerWecker = it },
             schalter("timer_vibration", "Benachrichtigungen: Timer", "Vibration", "Vibriert beim Klingeln.", { e.timerVibration }) { e.timerVibration = it },
             zahl("timer_lautstaerke", "Benachrichtigungen: Timer", "Lautstärke des Wecktons", "In Prozent der Wecker-Lautstärke des Handys.", 10, 100, "Prozent", { e.timerLautstaerke }) { e.timerLautstaerke = it },
             zahl("timer_schlummern", "Benachrichtigungen: Timer", "Schlummern", "Minuten für „Schlummern“.", 1, 30, "Minuten", { e.timerSchlummern }) { e.timerSchlummern = it },

@@ -91,7 +91,7 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     /** Weckton als Adresse aus dem Android-Tonwähler; leer = Standard-Weckton des Handys. */
     var weckton: String get() = e.wort(art.schluessel("weckton"), ""); set(v) = e.setzeWort(art.schluessel("weckton"), v)
     /** So viele Sekunden klingelt der Wecker, dann verstummt er und Jarvis liest vor; 0 = bis zum Antippen oder Wegwischen. */
-    var wecktonSekunden: Int get() = e.ganz(art.schluessel("weckton_sekunden"), if (art.vorlesen && vorlesen) 10 else 0).coerceIn(0, 300); set(v) = e.setzeGanz(art.schluessel("weckton_sekunden"), v.coerceIn(0, 300))
+    var wecktonSekunden: Int get() = e.ganz(art.schluessel("weckton_sekunden"), if (art.vorlesen) 10 else 0).coerceIn(0, 300); set(v) = e.setzeGanz(art.schluessel("weckton_sekunden"), v.coerceIn(0, 300))
 
     /** Klingelt sie wirklich wie ein Wecker? „Lautlos“ schaltet den Wecker mit ab, auch wenn er noch gewählt ist. */
     val weckerWirksam get() = art.wecker && wecker && !(art.ton && !ton)
@@ -100,6 +100,7 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
 object Meldungsarten {
     const val ERGEBNISSE = "Ergebnisse und Rückmeldungen"
     const val ALLTAG = "Alltag"
+    const val ERINNERUNGEN = "Erinnerungen"
     const val WECKWORT = "Weckwort"
     const val DAUER = "Daueranzeigen"
 
@@ -153,12 +154,12 @@ object Meldungsarten {
     /** Zwei unabhängige Profile; die Form gehört weiterhin zur einzelnen Erinnerung. */
     val ERINNERUNG = Meldungsart(
         "erinnerung", "Als Benachrichtigung", "Einstellungen für Erinnerungen in der Form Benachrichtigung.",
-        "Zu den eingestellten Zeitpunkten, auf dem Gerät, das du gerade benutzt.", ALLTAG, "jarvis_erinnerung",
+        "Zu den eingestellten Zeitpunkten, auf dem Gerät, das du gerade benutzt.", ERINNERUNGEN, "jarvis_erinnerung",
         schaltbar = false, vorlesenStandard = true, formFest = true,
     )
     val ERINNERUNG_WECKER = Meldungsart(
         "erinnerung_wecker", "Als Wecker", "Einstellungen für Erinnerungen in der Form Wecker; unabhängig von normalen Erinnerungsbenachrichtigungen.",
-        "Zu den eingestellten Zeitpunkten, bis du die Auslösung bestätigst.", ALLTAG, "jarvis-timer-wecker",
+        "Zu den eingestellten Zeitpunkten, bis du die Auslösung bestätigst.", ERINNERUNGEN, "jarvis-timer-wecker",
         schaltbar = false, vorlesenStandard = true, formFest = true, weckerStandard = true,
     )
     val STOPPUHR = Meldungsart(
@@ -208,7 +209,7 @@ object Meldungsarten {
     )
 
     val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, ERINNERUNG, ERINNERUNG_WECKER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
-    val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
+    val gruppen = listOf(ERGEBNISSE, ALLTAG, ERINNERUNGEN, WECKWORT, DAUER)
 }
 
 /** Zeigt Benachrichtigungen so, wie Frank sie unter Einstellungen → Benachrichtigungen eingestellt hat. */
@@ -290,7 +291,7 @@ object Meldungen {
         val leise = gespraech || (GespraechsFokus.aufnahme && !art.dringend)
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
         val tonAus = art.ton && !p.ton
-        val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
+        val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech && (!GespraechsFokus.aufnahme || art.dringend)
         val still = !laut || ruhe || (leise && imGespraechStill) || tonAus
         if (!art.pflicht) bauer.setChannelId(normalerKanal(app, art))
         if (p.wecker) {
@@ -307,13 +308,14 @@ object Meldungen {
             Intent(app, WeckerTonEmpfaenger::class.java).putExtra(WeckerTonEmpfaenger.EXTRA_NUMMER, nummer), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         // Eine neue Fassung derselben Meldung ohne Wecker (still aktualisiert, Stand „läuft“) beendet einen noch laufenden Weckton.
         if (!klingeln) WeckerTon.stopp(nummer)
-        runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, meldung) }
+        val gezeigt = runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, meldung) }
+            .onFailure { de.frank.jarvis.observability.Logbuch.fehler("Benachrichtigung: ${art.titel}", it) }.isSuccess
         // Den Weckton spielt Jarvis selbst (eigener Ton und eigene Dauer je Meldung, der Kanal ist stumm): Er läuft die gewählten
         // Sekunden oder bis Frank die Meldung antippt oder wegwischt, dann verstummt er, die Meldung bleibt stehen, und Jarvis liest vor.
-        if (klingeln) klingle(app, nummer, art, p)
+        if (klingeln && gezeigt) klingle(app, nummer, art, p)
         if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe)
             vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(), solange = if (klingeln) ({ WeckerTon.klingelt(nummer) }) else null)
-        return true
+        return gezeigt
     }
 
     /** Ohne Dauer („bis zum Antippen“) klingelt der Wecker höchstens so lange. */
@@ -324,12 +326,13 @@ object Meldungen {
         val kennung = WeckerTon.starte(app, nummer, p.weckton, art.id)
         val sekunden = if (art == Meldungsarten.ERINNERUNG_WECKER) p.wecktonSekunden.takeIf { it > 0 } ?: 10 else p.wecktonSekunden
         nebenher.launch {
-            val bis = System.currentTimeMillis() + if (sekunden > 0) sekunden * 1_000L else WECKTON_HOECHSTENS_MS
-            // Die Meldung braucht einen Moment, bis Android sie als sichtbar führt.
-            delay(1_500L)
+            val anfang = android.os.SystemClock.elapsedRealtime()
+            val bis = anfang + if (sekunden > 0) sekunden * 1_000L else WECKTON_HOECHSTENS_MS
+            // Während der kurzen Sichtbarkeitsfrist gelten Lautlos, Aufnahme und Abschalten schon sofort.
             // Ein Live-Gespräch hat Vorrang: Beginnt es, verstummt der Weckton (außer bei Losfahren und Timer).
-            while (WeckerTon.klingelt(nummer, kennung) && sichtbar(app, nummer) && System.currentTimeMillis() < bis &&
-                !(GespraechsFokus.stilleHinweise && !art.dringend)) delay(500L)
+            while (WeckerTon.klingelt(nummer, kennung) && (android.os.SystemClock.elapsedRealtime() - anfang < 1_500L || sichtbar(app, nummer)) && android.os.SystemClock.elapsedRealtime() < bis &&
+                p.weckerWirksam && an(app, art) && !inRuhe(app, art) &&
+                !((GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) && !art.dringend)) delay(200L)
             WeckerTon.stopp(nummer, kennung)
         }
     }
@@ -352,7 +355,7 @@ object Meldungen {
     /** Wie [vorlesenSpaeter], aber kehrt erst nach dem Start der Stimme (oder dem Verwerfen) zurück; bleibt dabei abbrechbar. */
     suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) = coroutineScope {
         val name = "${art.id}:$schluessel"
-        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange ?: { WeckerTon.klingeltArt(art.id) }, ausdruecklich) }
+        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich) }
         wartend.put(name, job)?.cancel()
         job.invokeOnCompletion { wartend.remove(name, job) }
         job.start()
@@ -462,6 +465,7 @@ object WeckerTon {
     private class Klang(val kennung: Long, val art: String) { var spieler: android.media.MediaPlayer? = null }
 
     private val laufend = java.util.concurrent.ConcurrentHashMap<Int, Klang>()
+    private val sperre = Any()
     private val zaehler = java.util.concurrent.atomic.AtomicLong()
     private val laden = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val probeEnde = Runnable { stopp(PROBE) }
@@ -472,28 +476,34 @@ object WeckerTon {
     /** Klingelt unter [nummer] gerade etwas (mit [kennung]: genau dieses Klingeln)? */
     fun klingelt(nummer: Int, kennung: Long? = null): Boolean = laufend[nummer]?.let { kennung == null || it.kennung == kennung } == true
 
-    fun klingeltArt(art: String): Boolean = laufend.values.any { it.art == art }
-
     /**
      * Startet den Ton und kehrt sofort zurück (geladen wird abseits, nicht auf dem Hauptfaden). [ton] leer = Standard-Weckton;
      * ist der gewählte nicht abspielbar, der Standard. Mit Vibration in Schleife wie ein Wecker, außer bei der Probe.
      */
     fun starte(context: Context, nummer: Int, ton: String, art: String): Long {
-        stopp(nummer)
         val app = context.applicationContext
-        val klang = Klang(zaehler.incrementAndGet(), art)
-        laufend[nummer] = klang
+        val klang = synchronized(sperre) {
+            stopp(nummer)
+            Klang(zaehler.incrementAndGet(), art).also { laufend[nummer] = it }
+        }
         laden.launch {
-            val p = spiele(app, ton)
-            val behalten = synchronized(klang) { if (p != null && laufend[nummer] === klang) { klang.spieler = p; true } else false }
+            val p = vorbereiten(app, ton)
+            val behalten = synchronized(sperre) {
+                if (p != null && laufend[nummer] === klang) {
+                    runCatching {
+                        p.start()
+                        klang.spieler = p
+                        if (nummer != PROBE) vibrieren(app)
+                    }.onFailure { android.util.Log.w(TAG, "Weckton nicht gestartet", it) }.isSuccess
+                } else false
+            }
             if (!behalten) { p?.let { runCatching { it.release() } }; laufend.remove(nummer, klang); return@launch }
-            if (nummer != PROBE) vibrieren(app)
         }
         return klang.kennung
     }
 
     /** Spielbereit gemachter Spieler mit dem ersten Ton, der sich öffnen lässt; null = keiner. */
-    private fun spiele(app: Context, ton: String): android.media.MediaPlayer? {
+    internal fun vorbereiten(app: Context, ton: String): android.media.MediaPlayer? {
         for (uri in toene(app, ton)) {
             val p = android.media.MediaPlayer()
             val ok = runCatching {
@@ -502,7 +512,6 @@ object WeckerTon {
                 p.isLooping = true
                 p.setWakeMode(app, android.os.PowerManager.PARTIAL_WAKE_LOCK)
                 p.prepare()
-                p.start()
             }.onFailure { android.util.Log.w(TAG, "Weckton $uri nicht abspielbar", it) }.isSuccess
             if (ok) return p
             runCatching { p.release() }
@@ -524,18 +533,18 @@ object WeckerTon {
 
     /** Beendet das Klingeln unter [nummer]; mit [kennung] nur, wenn es noch genau dieses ist. */
     fun stopp(nummer: Int, kennung: Long? = null) {
-        val klang = laufend[nummer] ?: return
-        if (kennung != null && klang.kennung != kennung) return
-        if (!laufend.remove(nummer, klang)) return
-        synchronized(klang) {
+        synchronized(sperre) {
+            val klang = laufend[nummer] ?: return
+            if (kennung != null && klang.kennung != kennung) return
+            if (!laufend.remove(nummer, klang)) return
             klang.spieler?.let { runCatching { it.stop() }; runCatching { it.release() } }
             klang.spieler = null
+            if (laufend.keys.none { it != PROBE }) vibrator?.let { runCatching { it.cancel() }; vibrator = null }
         }
-        if (laufend.keys.none { it != PROBE }) vibrator?.let { runCatching { it.cancel() }; vibrator = null }
     }
 
     /** Alle Wecktöne einer Meldungsart beenden (etwa nachdem sie ausgeschaltet wurde). */
-    fun stoppArt(art: String) = laufend.filterValues { it.art == art }.keys.forEach { stopp(it) }
+    fun stoppArt(art: String) = laufend.filterValues { it.art == art }.forEach { (nummer, klang) -> stopp(nummer, klang.kennung) }
 
     /** Alle Wecktöne beenden (Frank hat Jarvis geöffnet: Er hat die Meldung gesehen). */
     fun alleStopp() = laufend.keys.toList().forEach { stopp(it) }

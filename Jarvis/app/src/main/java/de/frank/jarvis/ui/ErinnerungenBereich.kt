@@ -181,7 +181,8 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                     Icon(Icons.Rounded.Add, "Erinnerungszeitpunkt hinzufügen", tint = f.aufPrimaer)
                 }
                 val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz, e.wecker) } }
-                Text(if (bereit) "Sprachausgabe liegt offline bereit." else "Sprachausgabe wird erzeugt, sobald Netz da ist.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                val vorlesen = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungen.erinnerungsArt(e.wecker)).vorlesen
+                Text(if (!vorlesen) "Vorlesen ist für diese Erinnerungsform ausgeschaltet." else if (bereit) "Sprachausgabe liegt offline bereit." else "Sprachausgabe wird erzeugt, sobald Netz da ist.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
                 Text("Von ${e.quelle.ifBlank { "Jarvis Handy" }}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
             }
             if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

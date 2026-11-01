@@ -102,28 +102,36 @@ object Timer {
         _laufend.value = _laufend.value.filterNot { it.id == id }
         speichere(app)
         kanalAnlegen(app)
-        // Auf Wunsch zusätzlich vorgelesen (Einstellungen → Benachrichtigungen → Timer abgelaufen).
-        // Sofort, nicht erst nach dem Klingeln: „Aus“ (klingelnAus) verwirft ein noch wartendes Vorlesen absichtlich.
-        if (!spaet && de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, de.frank.jarvis.meldung.Meldungsarten.TIMER))
-            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, de.frank.jarvis.meldung.Meldungsarten.TIMER, t.name,
-                de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.TIMER).sprechtext(t.name), schluessel = "${t.id}")
         if (!spaet && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
             _klingelt.value = (_klingelt.value.filterNot { it.id == id } + t)
             val gestartet = runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TimerKlingelDienst::class.java)) }
                 .onFailure { Log.w(TAG, "Klingel-Dienst ließ sich nicht starten", it) }.isSuccess
-            if (gestartet) return
+            if (gestartet) { vorlesen(app, t); return }
             _klingelt.value = _klingelt.value.filterNot { it.id == id }
         }
         // Spricht Jarvis gerade eine Antwort (exklusiver Tonfokus, Android spielt dann keine Hinweistöne), hätte der Timer-Ton
         // keine Chance: erst die Antwort beenden, dann klingeln. Der Timer ist wichtiger.
         val v = de.frank.jarvis.speech.Vorleser.aktuell()
-        if (v != null && v.stand.value.quelle?.startsWith("gespraech:") == true &&v.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
+        val p = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.TIMER)
+        if (!spaet && (p.ton || p.vorlesen) && v != null && v.stand.value.quelle?.startsWith("gespraech:") == true && v.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 // Erneut prüfen: Inzwischen kann schon die eigene Timer-Ansage laufen, die bleibt.
                 if (v.stand.value.quelle?.startsWith("gespraech:") == true) runCatching { v.stopp() }
                 meldung(app, id, t, laut = true)
+                vorlesen(app, t)
             }
-        else meldung(app, id, t, laut = true)
+        else {
+            meldung(app, id, t, laut = !spaet)
+            if (!spaet) vorlesen(app, t)
+        }
+    }
+
+    private fun vorlesen(app: Context, t: LaufenderTimer) {
+        val art = de.frank.jarvis.meldung.Meldungsarten.TIMER
+        if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, t.name,
+                de.frank.jarvis.meldung.Meldungen.profil(app, art).sprechtext(t.name), schluessel = "${t.id}",
+                solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(meldungsId(t.id)) })
     }
 
     /** Einfache Meldung. [laut] = klingelt, bis sie weggewischt wird; sonst still (etwa nach der Höchstdauer). */

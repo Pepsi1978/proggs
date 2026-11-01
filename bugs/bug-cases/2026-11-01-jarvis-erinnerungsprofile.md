@@ -11,3 +11,7 @@ Die feste Form verhindert, dass globale Einstellungen die beim Anlegen gewählte
 
 ## Abschluss
 Debug-Build erfolgreich. Im Schnellmodus keine Geräte-Funktionstests; die Bedienung und akustische Ausgabe prüft Frank selbst.
+
+## Ergänzung aus dem sehr ausführlichen Review
+
+Siehe `Jarvis/REVIEW-VU5J6.md` mit 20 konkreten Befunden. Dienst und Ersatzweg verwenden jetzt denselben `ErinnerungsWeckablauf`: dauerhaft bis zur Bestätigung, Wachhaltung auch bei Ton aus, Live-/Aufnahmevorrang und Abbruch inzwischen bestätigter oder geänderter Texte. Tondauer ist unabhängig vom Vorlese-Schalter. WeckerTon bereitet auf IO vor und prüft unter einer gemeinsamen Sperre vor dem tatsächlichen Start, ob der Lauf noch gültig ist; dadurch kein spät wiederkehrender Ton nach Stopp. Vorlese-Cache vor Netzarbeit kennzeichnen und Erzeugung/Bereinigung synchronisieren. Eine gemeinsame Meldungsart allein ist keine Identität für wartendes Vorlesen: immer die eigene Meldungsnummer zuordnen.

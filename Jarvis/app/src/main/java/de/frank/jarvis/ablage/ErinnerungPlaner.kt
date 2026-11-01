@@ -76,6 +76,7 @@ object ErinnerungPlaner {
     @Volatile var abgleichPause = false
     /** Wecker, deren Klingeldienst Android nicht starten ließ: Sie klingeln über die Meldung. */
     private val ersatzKlingeln: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    @Volatile private var faelligeErinnerungen: List<Faellig> = emptyList()
 
     /** Gerade klingelnde Auslösungen (Wecker): laufen, bis Frank ausdrücklich bestätigt. */
     private val _klingelt = MutableStateFlow<List<Faellig>>(emptyList())
@@ -123,6 +124,7 @@ object ErinnerungPlaner {
         if (Erinnerungen.defekt(app)) return@withLock
         val jetzt = System.currentTimeMillis()
         val faellig = Erinnerungen.faellig(app, jetzt)
+        faelligeErinnerungen = faellig
         val offen = faellig.map { it.quittung }.toSet()
         // Anderswo bestätigt, gelöscht, erledigt oder der Termin verschoben: hier sofort Schluss.
         var schon = gezeigt(app)
@@ -132,6 +134,8 @@ object ErinnerungPlaner {
         // Auch wenn die Form inzwischen Benachrichtigung ist: Der Ton hört auf, die Meldung erscheint unten neu.
         _klingelt.value.filter { it.quittung !in alsWecker }.forEach { verstummen(app, it.quittung) }
         (ersatzKlingeln - alsWecker).forEach { verstummen(app, it) }
+        // Auch Textänderungen einer schon klingelnden Auslösung erreichen den Vorleseablauf.
+        _klingelt.value = _klingelt.value.mapNotNull { alt -> faellig.firstOrNull { it.quittung == alt.quittung && it.erinnerung.wecker } }
         // Der Live-Sprachmodus hat Vorrang: Ein Wecker wartet das Gespräch ab und klingelt danach.
         val live = GespraechsFokus.stilleHinweise
         val neu = faellig.filter { it.quittung !in schon && !(it.erinnerung.wecker && live) }
@@ -207,11 +211,16 @@ object ErinnerungPlaner {
             // Wegwischen zählt als Bestätigung, sonst käme dieselbe Auslösung auf den anderen Geräten wieder.
             .setDeleteIntent(ok)
         val art = Meldungen.erinnerungsArt(e.wecker)
-        Meldungen.zeige(app, art, nummer, bauer, e.zeile, null, laut = sprechen)
-        if (sprechen) stimmen[f.quittung] = bereich.launch {
-            if (e.wecker) while (de.frank.jarvis.meldung.WeckerTon.klingelt(nummer)) delay(250L)
-            else if (Meldungen.profil(app, art).ton) delay(1_000L)
-            ErinnerungStimme.sprich(app, e, alsWecker = e.wecker)
+        Meldungen.zeige(app, art, nummer, bauer, e.zeile, null, laut = sprechen && !e.wecker)
+        if (sprechen) {
+            stimmen.remove(f.quittung)?.cancel()
+            stimmen[f.quittung] = if (e.wecker) ErinnerungsWeckablauf.starten(app, nummer) {
+                if (f.quittung !in ersatzKlingeln) emptyList()
+                else faelligeErinnerungen.filter { it.quittung == f.quittung && it.erinnerung.wecker }
+            } else bereich.launch {
+                if (Meldungen.profil(app, art).ton) delay(1_000L)
+                ErinnerungStimme.sprich(app, e, alsWecker = false)
+            }
         }
     }
 
@@ -299,16 +308,20 @@ object ErinnerungStimme {
     /** Liegt die Sprachausgabe für diese Kurzfassung fertig auf dem Handy? */
     fun bereit(context: Context, kurz: String, alsWecker: Boolean = false) = datei(context.applicationContext, kurz, alsWecker) != null
 
-    private suspend fun erzeuge(app: Context, kurz: String, alsWecker: Boolean): File {
+    private val erzeugung = Mutex()
+
+    private suspend fun erzeuge(app: Context, kurz: String, alsWecker: Boolean): File = erzeugung.withLock {
+        datei(app, kurz, alsWecker)?.let { return@withLock it }
         val s = SecureSettings(app)
-        val roh = Synthese(app, s).synthetisiere(kurz, Meldungen.profil(app, Meldungen.erinnerungsArt(alsWecker)).stimmWahl)
+        // Die Kennung muss vor der Netzarbeit feststehen; eine inzwischen andere Stimme darf den alten Ton nicht übernehmen.
         val k = schluessel(app, kurz, alsWecker)
+        val roh = Synthese(app, s).synthetisiere(kurz, Meldungen.profil(app, Meldungen.erinnerungsArt(alsWecker)).stimmWahl)
         val ziel = File(ordner(app), k + "." + roh.extension.ifBlank { "audio" })
         // Erst fertig unter dem richtigen Namen: Eine halbe Datei gälte sonst dauerhaft als bereit.
         val teil = File(ordner(app), "teil-$k-" + System.nanoTime())
         roh.copyTo(teil, overwrite = true)
         if (!teil.renameTo(ziel)) { teil.delete(); throw java.io.IOException("Sprachdatei nicht ablegbar") }
-        return ziel
+        ziel
     }
 
     /** Erzeugt, was fehlt, und räumt auf, was niemand mehr braucht. Fehlt das Netz, versucht es der nächste Lauf. */
@@ -318,7 +331,7 @@ object ErinnerungStimme {
         val quittungen = Erinnerungen.quittungen(app)
         val offen = Erinnerungen.alle(app).filter { e -> e.erledigt == 0L && (e.allgemein || e.termine().any { it.quittung !in quittungen && jetzt - it.zeit < Erinnerungen.VERPASST_NACH_MS }) }
         val gebraucht = offen.map { schluessel(app, it.kurz, it.wecker) }.toSet()
-        ordner(app).listFiles()?.filter { it.nameWithoutExtension !in gebraucht }?.forEach { it.delete() }
+        erzeugung.withLock { ordner(app).listFiles()?.filter { it.nameWithoutExtension !in gebraucht }?.forEach { it.delete() } }
         for (e in offen) if (Meldungen.vorlesenAn(app, Meldungen.erinnerungsArt(e.wecker)) && datei(app, e.kurz, e.wecker) == null) {
             try { erzeuge(app, e.kurz, e.wecker) } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (f: Exception) { Logbuch.netz("Erinnerung Stimme", "noch nicht erzeugt: ${f.message}"); return }
         }
@@ -333,6 +346,7 @@ object ErinnerungStimme {
         val nummer = if (alsWecker) 4_490 else 4_491
         Meldungen.ereignis(context, art, nummer, "Probe: Erinnerungen", "So meldet Jarvis deine Erinnerungen.")
         if (alsWecker) while (de.frank.jarvis.meldung.WeckerTon.klingelt(nummer)) delay(250L)
+        else if (Meldungen.profil(context, art).ton) delay(1_000L)
         sprichText(context, "Probe. So liest Jarvis deine Erinnerungen vor.", alsWecker)
     }
 
@@ -340,20 +354,29 @@ object ErinnerungStimme {
         val app = context.applicationContext
         val art = Meldungen.erinnerungsArt(alsWecker)
         if (!Meldungen.vorlesenAn(app, art)) return
-        if (!alsWecker) {
-            withTimeoutOrNull(15 * 60_000L) { while (GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) delay(1_000L) } ?: return
-        }
+        withTimeoutOrNull(15 * 60_000L) { while (GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) delay(500L) } ?: return
         val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:erinnerung-stimme").apply { setReferenceCounted(false) }
         runCatching { wach.acquire(3 * 60_000L) }
         try {
             // Mehrere zugleich fällige sprechen nacheinander, nicht übereinander.
             reihe.withLock {
                 if (!Meldungen.vorlesenAn(app, art)) return@withLock
-                val f = datei(app, kurz, alsWecker) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, kurz, alsWecker) }.getOrNull() }
+                val f = datei(app, kurz, alsWecker) ?: withTimeoutOrNull(12_000L) {
+                    try { kotlinx.coroutines.withContext(Dispatchers.IO) { erzeuge(app, kurz, alsWecker) } }
+                    catch (c: kotlinx.coroutines.CancellationException) { throw c }
+                    catch (e: Exception) { Logbuch.netz("Erinnerung Stimme", "Systemstimme: ${e.message}"); null }
+                }
+                // Während der Synthese kann Frank Vorlesen ausschalten oder ein Gespräch anfangen.
+                withTimeoutOrNull(15 * 60_000L) { while (GespraechsFokus.stilleHinweise || GespraechsFokus.aufnahme) delay(500L) } ?: return@withLock
+                if (!Meldungen.vorlesenAn(app, art)) return@withLock
                 val attribute = if (alsWecker) attributeWecker else attributeMeldung
                 val stream = if (alsWecker) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
                 de.frank.jarvis.speech.Ansage.mitLautstaerke(app, Meldungen.profil(app, art).lautstaerke, stream) {
-                    if (f == null || !spiele(f, attribute)) systemstimme(app, kurz, attribute)
+                    if (f == null || !spiele(f, attribute)) {
+                        val s = SecureSettings(app)
+                        val tempo = Meldungen.profil(app, art).tempo.takeIf { it > 0f } ?: s.ttsTempo(s.ttsProvider)
+                        systemstimme(app, kurz, attribute, tempo)
+                    }
                 }
             }
         } finally { runCatching { if (wach.isHeld) wach.release() } }
@@ -375,7 +398,7 @@ object ErinnerungStimme {
         }.onFailure { los(false) }
     }
 
-    private suspend fun systemstimme(app: Context, text: String, attribute: AudioAttributes) {
+    private suspend fun systemstimme(app: Context, text: String, attribute: AudioAttributes, tempo: Float) {
         // Erst warten, bis der Dienst bereit ist: Sein Rückruf kann kommen, bevor der Konstruktor zurückgekehrt ist.
         val bereit = kotlinx.coroutines.CompletableDeferred<Int>()
         val tts = TextToSpeech(app) { bereit.complete(it) }
@@ -385,13 +408,14 @@ object ErinnerungStimme {
                 suspendCancellableCoroutine<Unit> { w ->
                     w.invokeOnCancellation { runCatching { tts.stop() } }
                     tts.language = Locale.GERMAN
+                    tts.setSpeechRate(tempo.coerceIn(0.5f, 2f))
                     tts.setAudioAttributes(attribute)
                     tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                         override fun onStart(id: String?) {}
                         override fun onDone(id: String?) { if (w.isActive) w.resume(Unit) }
                         @Deprecated("Pflicht der Schnittstelle") override fun onError(id: String?) { if (w.isActive) w.resume(Unit) }
                     })
-                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "erinnerung")
+                    if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "erinnerung") == TextToSpeech.ERROR && w.isActive) w.resume(Unit)
                 }
             }
         } finally { runCatching { tts.shutdown() } }

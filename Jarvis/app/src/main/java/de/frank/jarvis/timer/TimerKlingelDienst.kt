@@ -9,12 +9,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -23,6 +21,13 @@ import androidx.core.app.NotificationCompat
 import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
 import de.frank.jarvis.data.Einstellungen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Lässt einen abgelaufenen Timer klingeln wie einen Wecker: Weckton in der Schleife (Wecker-Lautstärke, auch bei
@@ -32,6 +37,8 @@ import de.frank.jarvis.data.Einstellungen
 class TimerKlingelDienst : Service() {
     private var spieler: MediaPlayer? = null
     private var vibrator: Vibrator? = null
+    private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var ladeJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
     private val hoechstdauer = Runnable {
         // Niemand hat ausgeschaltet: still melden, damit der Timer nicht unbemerkt bleibt.
@@ -51,7 +58,7 @@ class TimerKlingelDienst : Service() {
         // Wer per startForegroundService gerufen wird, muss startForeground liefern, auch wenn schon alles aus ist.
         vordergrund(baueMeldung())
         if (Timer.klingelt.value.isEmpty()) { beenden(); return START_NOT_STICKY }
-        if (spieler == null) klingeln()
+        if (spieler == null && ladeJob?.isActive != true) klingeln()
         else {
             // Ein weiterer Timer ist abgelaufen: Er bekommt die volle Klingeldauer, nicht nur den Rest des ersten.
             val max = Einstellungen.get(this).timerKlingelMax
@@ -72,26 +79,22 @@ class TimerKlingelDienst : Service() {
         val e = Einstellungen.get(this)
         val profil = de.frank.jarvis.meldung.Meldungen.profil(this, de.frank.jarvis.meldung.Meldungsarten.TIMER)
         val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-        val toene = listOfNotNull(
-            profil.weckton.takeIf { it.isNotBlank() }?.let(android.net.Uri::parse),
-            RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-        )
-        for (ton in if (profil.ton) toene else emptyList()) {
-            val p = MediaPlayer()
-            val ok = runCatching {
-                p.setAudioAttributes(attribute)
-                p.setDataSource(this, ton)
-                p.isLooping = true
-                p.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK)
-                val v = e.timerLautstaerke / 100f
-                p.setVolume(v, v)
-                p.prepare()
-                p.start()
-            }.onFailure { Log.w(TAG, "Weckton $ton nicht abspielbar", it) }.isSuccess
-            if (ok) { spieler = p; break } else runCatching { p.release() }
+        if (profil.ton) ladeJob = bereich.launch(Dispatchers.IO) {
+            val p = de.frank.jarvis.meldung.WeckerTon.vorbereiten(applicationContext, profil.weckton)
+            var uebernommen = false
+            try {
+                withContext(Dispatchers.Main.immediate) {
+                    if (p != null && profil.ton && Timer.klingelt.value.isNotEmpty()) {
+                        runCatching {
+                            val v = e.timerLautstaerke / 100f
+                            p.setVolume(v, v)
+                            p.start()
+                            spieler = p
+                            uebernommen = true
+                        }.onFailure { Log.w(TAG, "Timer-Weckton nicht gestartet", it) }
+                    }
+                }
+            } finally { if (!uebernommen) runCatching { p?.release() } }
         }
         if (profil.ton && e.timerVibration) runCatching {
             val v = if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java).defaultVibrator
@@ -111,6 +114,7 @@ class TimerKlingelDienst : Service() {
     }
 
     private fun beenden() {
+        ladeJob?.cancel()
         handler.removeCallbacks(hoechstdauer)
         runCatching { spieler?.stop() }
         runCatching { spieler?.release() }
@@ -122,6 +126,7 @@ class TimerKlingelDienst : Service() {
     }
 
     override fun onDestroy() {
+        bereich.cancel()
         instanz = null
         handler.removeCallbacks(hoechstdauer)
         runCatching { spieler?.release() }

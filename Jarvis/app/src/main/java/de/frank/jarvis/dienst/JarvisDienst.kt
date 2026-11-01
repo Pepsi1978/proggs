@@ -267,10 +267,11 @@ class JarvisDienst : Service() {
                         .onSuccess { Vorgaenge.buch(this@JarvisDienst).mitgeteilt(listOf(v.id)) }
                 }
                 val agentTitel = "Jarvis: ${plan.name} fertig" + (vorgang?.let { " (Vorgang $it)" } ?: "")
+                val meldungsNummer = 20_000 + (System.currentTimeMillis() % 100_000).toInt()
                 de.frank.jarvis.meldung.Meldungen.zeige(
                     this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT,
                     // Eigener Bereich: trifft keine feste Meldung (1, 4200, 4300, 4301, 4310, 4400–4499, 4711, 7000–7999) und keine der Ablage (ab 200_000).
-                    20_000 + (System.currentTimeMillis() % 100_000).toInt(),
+                    meldungsNummer,
                     NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle(agentTitel)
                         .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
                         .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)),
@@ -301,7 +302,7 @@ class JarvisDienst : Service() {
                         // Mit Stimme und Lautstärke aus Einstellungen → Benachrichtigungen → Agent fertig; ein laufendes Gespräch wartet sie ab,
                         // und ein Abschalten der Meldung in der Zwischenzeit verwirft sie.
                         de.frank.jarvis.meldung.Meldungen.vorlesenWartend(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT, plan.name, fassung,
-                            schluessel = titel, ausdruecklich = vorlesen)
+                            schluessel = titel, solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(meldungsNummer) }, ausdruecklich = vorlesen)
                     }
                 }
             } finally {
