@@ -1789,7 +1789,7 @@ fun SettingsScreen(
                     )
                     if (viewModel.anthropicKey.isNotBlank() && !viewModel.anthropicKeyNutzbar) {
                         Text(
-                            "Das ist kein API-Schlüssel. Nötig ist einer, der mit sk-ant-api beginnt; Anmelde-Tokens eines Claude-Abos gehen hier nicht.",
+                            "Das ist kein Anthropic-API-Schlüssel. Er beginnt mit sk-ant-; Anmelde-Tokens eines Claude-Abos (sk-ant-oat) gehen hier nicht.",
                             color = colors.warning,
                             fontFamily = Inter,
                             fontSize = 12.sp,

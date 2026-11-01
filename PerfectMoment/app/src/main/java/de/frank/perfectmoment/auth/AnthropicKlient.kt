@@ -86,8 +86,11 @@ object AnthropicKlient {
     /** Anthropic-API-Schlüssel (sk-ant-…) von platform.claude.com. */
     fun schluessel(context: Context): String = speicher(context).getString("api_key", "").orEmpty().trim()
     fun hatSchluessel(context: Context): Boolean = istApiSchluessel(schluessel(context))
-    /** Nur echte API-Schlüssel taugen; Abo-Tokens (sk-ant-oat…) oder fremde Schlüssel enden sonst erst bei der API mit 401. */
-    fun istApiSchluessel(wert: String): Boolean = wert.trim().startsWith("sk-ant-api")
+    /**
+     * Anthropic-Schlüssel haben verschiedene Präfixe (sk-ant-api…, sk-ant-user…), deshalb nicht auf eines festlegen.
+     * Ausgeschlossen sind nur fremde Schlüssel und Abo-Tokens (sk-ant-oat…), die als x-api-key nicht gelten.
+     */
+    fun istApiSchluessel(wert: String): Boolean = wert.trim().let { it.startsWith("sk-ant-") && !it.startsWith("sk-ant-oat") }
     fun schluesselSpeichern(context: Context, wert: String) {
         speicher(context).edit().putString("api_key", wert.trim()).apply()
     }
@@ -142,7 +145,7 @@ object AnthropicKlient {
     ): ClaudeAntwort = withContext(Dispatchers.IO) {
         val claude = ClaudeModell.von(modell) ?: ClaudeModell.OPUS
         val key = schluessel(context).takeIf(::istApiSchluessel)
-            ?: throw AnthropicFehler("Für ${claude.label} fehlt ein Anthropic-API-Schlüssel (sk-ant-api…). Bitte in den Einstellungen eintragen.")
+            ?: throw AnthropicFehler("Für ${claude.label} fehlt ein gültiger Anthropic-API-Schlüssel. Bitte in den Einstellungen eintragen.")
         var versuch = 0
         var mitFallback = claude != ClaudeModell.HAIKU
         while (true) {
