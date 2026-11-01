@@ -109,6 +109,7 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             // Tippen auf die schwarzen Ränder neben dem Bild löst am Mac nichts aus.
             if (zweiFinger || !imBild(e.x, e.y)) return false
+            eingabeNeu()
             ereignis("klick", e.x, e.y)
             return true
         }
@@ -207,7 +208,7 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         }
     }
 
-    /** Übernimmt eine geänderte Eingabeart in die offene Tastatur, ohne sie zu öffnen. */
+    /** Neue Eingabesitzung ohne alten Entwurf, etwa nach einem Feldwechsel; öffnet die Tastatur nicht. */
     fun eingabeNeu() = imm.restartInput(this)
 
     private fun taste(name: String) = senden(JSONObject().put("t", "taste").put("k", name))

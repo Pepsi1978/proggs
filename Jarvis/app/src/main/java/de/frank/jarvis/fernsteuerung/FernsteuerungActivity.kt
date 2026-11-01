@@ -82,6 +82,7 @@ class FernsteuerungActivity : ComponentActivity() {
     private var status by mutableStateOf("")
     private var gesperrt by mutableStateOf(false)
     private var tastaturAn by mutableStateOf(false)
+    private var feldAmRechner = false
     private var leisteAn by mutableStateOf(false)
     private var getrennt by mutableStateOf(false)
     private var meldung by mutableStateOf("")
@@ -111,7 +112,8 @@ class FernsteuerungActivity : ComponentActivity() {
     }
 
     override fun onStart() { super.onStart(); verbinden() }
-    override fun onStop() { super.onStop(); trennen() }
+    // Wer das Fenster verlässt, findet es beim Zurückkehren ohne Tastatur wieder.
+    override fun onStop() { super.onStop(); tastaturZu(); trennen() }
 
     private fun token(): String = runCatching { File(filesDir, "fernsteuerung-token.txt").readText().trim() }.getOrDefault("")
 
@@ -161,14 +163,14 @@ class FernsteuerungActivity : ComponentActivity() {
     }
 
     private fun zustand(j: JSONObject) {
-        val warGesperrt = gesperrt
         gesperrt = j.optBoolean("gesperrt")
-        // Die Tastatur öffnet nur der seitliche Knopf; der Fokus auf dem Mac bestimmt lediglich die Eingabeart.
-        val geheim = j.optBoolean("geheim")
-        if (geheim != ansicht.geheim) { ansicht.geheim = geheim; if (tastaturAn) ansicht.eingabeNeu() }
-        // Die Tastatur des Passwortfelds schließt mit dem Entsperren, das Fenster bleibt danach ohne Tastatur.
-        if (warGesperrt && !gesperrt && tastaturAn) { tastaturAn = false; ansicht.tastaturZeigen(false) }
+        // Der Fokus auf dem Mac öffnet die Tastatur nicht mehr, er setzt nur die Eingabe zurück (Eingabeart, alter Entwurf).
+        ansicht.geheim = j.optBoolean("geheim")
+        val feld = j.optBoolean("tastatur")
+        if (feld != feldAmRechner) { feldAmRechner = feld; ansicht.eingabeNeu() }
     }
+
+    private fun tastaturZu() { tastaturAn = false; ansicht.tastaturZeigen(false) }
 
     private fun tastaturUmschalten() { tastaturAn = !tastaturAn; ansicht.tastaturZeigen(tastaturAn) }
 
@@ -180,6 +182,8 @@ class FernsteuerungActivity : ComponentActivity() {
         // Knopfzustand folgt der echten Tastatur (auch wenn sie per Zurück-Geste geschlossen wurde).
         val imeSichtbar = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         androidx.compose.runtime.LaunchedEffect(imeSichtbar) { tastaturAn = imeSichtbar }
+        // Sperre beginnt oder endet (auch durch Trennung): Der Knopf bzw. das Passwortfeld verschwindet, die Tastatur geht mit.
+        androidx.compose.runtime.LaunchedEffect(gesperrt) { tastaturZu() }
         // Außerhalb der Leiste, damit die Scroll-Position beim Aus- und Einblenden erhalten bleibt.
         val leisteScroll = rememberScrollState()
         // Oben kein Abstand: der Bereich der ausgeblendeten Statusleiste gehört dem Bild.
@@ -231,7 +235,8 @@ class FernsteuerungActivity : ComponentActivity() {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Knopf(icon = Icons.Rounded.Close, text = "Ende") { finish() }
-            Knopf(icon = Icons.Rounded.Keyboard, text = "Tastatur", aktiv = tastaturAn) { tastaturUmschalten() }
+            // Wie der seitliche Knopf nicht bei Sperre: Er zöge den Fokus aus dem Passwortfeld.
+            if (!gesperrt) Knopf(icon = Icons.Rounded.Keyboard, text = "Tastatur", aktiv = tastaturAn) { tastaturUmschalten() }
             Knopf(text = "Esc") { taste("esc") }
             Knopf(text = "Tab") { taste("tab") }
             Knopf(text = "⌫") { taste("zurueck") }
