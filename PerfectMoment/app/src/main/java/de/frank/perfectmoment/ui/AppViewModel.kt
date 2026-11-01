@@ -21,6 +21,7 @@ import de.frank.perfectmoment.backup.BackupRepository
 import de.frank.perfectmoment.backup.BackupStatus
 import de.frank.perfectmoment.backup.DriveAuth
 import de.frank.perfectmoment.backup.SkillTextExport
+import de.frank.perfectmoment.auth.AnthropicKlient
 import de.frank.perfectmoment.auth.AuthErrorKind
 import de.frank.perfectmoment.auth.CodexAuthException
 import de.frank.perfectmoment.auth.CodexModel
@@ -101,6 +102,8 @@ enum class RecordingState { IDLE, RECORDING, PROCESSING }
 enum class VoiceRecorderState { IDLE, RECORDING, SAVING }
 enum class RecordingTarget { START, INTRO, HOOK, READING_QUESTION }
 enum class ChatGptState { DISCONNECTED, CODE, EXPIRED, CONNECTED }
+
+const val ANTHROPIC_KEY_FEHLT = "Bitte zuerst den Anthropic-API-Schlüssel unter KI-Verbindung eintragen."
 enum class HistorySort(val label: String) {
     MOST_USED("Am häufigsten"),
     NEWEST("Neueste"),
@@ -379,7 +382,11 @@ class AppViewModel(
     )
         private set
     /** Die gewählte KI kann antworten: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
-    val kiBereit: Boolean get() = if (model.istAnthropic) authManager.kannDenken(model) else chatGptState == ChatGptState.CONNECTED
+    val kiBereit: Boolean get() = if (model.istAnthropic) anthropicKeyNutzbar else chatGptState == ChatGptState.CONNECTED
+    /** Als Compose-Zustand, damit „Sitzung beginnen“ sofort freigibt, sobald der Schlüssel eingetragen ist. */
+    var anthropicKey by mutableStateOf(AnthropicKlient.schluessel(appContext))
+        private set
+    val anthropicKeyNutzbar: Boolean get() = anthropicKey.isNotBlank() && !AnthropicKlient.istAnmeldeToken(anthropicKey)
     var deviceAuthInfo by mutableStateOf<DeviceAuthInfo?>(null)
         private set
     var chatGptError by mutableStateOf<String?>(null)
@@ -897,7 +904,7 @@ class AppViewModel(
             return
         }
         if (!kiBereit) {
-            message = "Bitte zuerst mit ChatGPT verbinden."
+            message = if (model.istAnthropic) ANTHROPIC_KEY_FEHLT else "Bitte zuerst mit ChatGPT verbinden."
             return
         }
         val source = topicBeforeImprovement ?: topic
@@ -997,6 +1004,12 @@ class AppViewModel(
         settings.model = value.apiId
         reasoning = ReasoningEffort.fromLabel(settings.reasoning)
         sheet = null
+        if (value.istAnthropic && !anthropicKeyNutzbar) message = ANTHROPIC_KEY_FEHLT
+    }
+
+    fun updateAnthropicKey(value: String) {
+        anthropicKey = value.filterNot(Char::isWhitespace)
+        AnthropicKlient.schluesselSpeichern(appContext, anthropicKey)
     }
 
     fun updateReasoning(value: ReasoningEffort) {

@@ -420,13 +420,16 @@ fun StartScreen(
             // Nur der ChatGPT-Hinweis bleibt — er führt zur Lösung. Dass ein Thema fehlt,
             // zeigt der gesperrte Knopf bereits.
             if (!connected) {
+                val brauchtAnthropicKey = viewModel.model.istAnthropic
                 Text(
-                    "Bitte zuerst mit ChatGPT verbinden",
+                    if (brauchtAnthropicKey) "Bitte zuerst den Anthropic-API-Schlüssel eintragen" else "Bitte zuerst mit ChatGPT verbinden",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(bottom = 10.dp)
-                        .pmClickable { viewModel.navigate(AppScreen.CHAT_GPT) },
+                        .pmClickable {
+                            viewModel.navigate(if (brauchtAnthropicKey) AppScreen.SETTINGS else AppScreen.CHAT_GPT)
+                        },
                 )
             }
             PrimaryButton(
@@ -1760,6 +1763,19 @@ fun SettingsScreen(
                     valueColor = if (viewModel.chatGptState == ChatGptState.CONNECTED) colors.text2 else colors.text3,
                     valueFontSize = if (viewModel.chatGptState == ChatGptState.CONNECTED) 13 else 14,
                 )
+                var anthropicKeySichtbar by remember { mutableStateOf(false) }
+                SecureKeyRow(
+                    label = "Anthropic-API-Schlüssel",
+                    supporting = if (viewModel.anthropicKey.isNotBlank() && !viewModel.anthropicKeyNutzbar) {
+                        "Das ist ein Anmelde-Token, nötig ist sk-ant-api…"
+                    } else {
+                        "Für die Claude-Modelle · eigene Abrechnung"
+                    },
+                    value = viewModel.anthropicKey,
+                    visible = anthropicKeySichtbar,
+                    onValueChange = viewModel::updateAnthropicKey,
+                    onToggleVisibility = { anthropicKeySichtbar = !anthropicKeySichtbar },
+                )
                 SettingRow("Modell", viewModel.model.label, onClick = { viewModel.openSheet(AppSheet.MODEL) }, showChevron = true)
                 SettingRow("Denkstärke", viewModel.reasoning.label, onClick = { viewModel.openSheet(AppSheet.REASONING) }, divider = false, showChevron = true)
             }
@@ -2493,24 +2509,6 @@ fun ChatGptScreen(
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Mit ChatGPT verbinden", viewModel::back, titleSize = 24)
-        // Zweiter Anbieter wie in Jarvis: Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel.
-        val kontext = androidx.compose.ui.platform.LocalContext.current
-        var anthropicKey by remember { mutableStateOf(de.frank.perfectmoment.auth.AnthropicKlient.schluessel(kontext)) }
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
-            Text("Anthropic (Claude-Modelle)", color = colors.text2, fontFamily = Inter, fontSize = 13.sp)
-            androidx.compose.material3.OutlinedTextField(
-                value = anthropicKey,
-                onValueChange = { anthropicKey = it; de.frank.perfectmoment.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
-                placeholder = { Text("API-Schlüssel sk-ant-…") },
-                singleLine = true,
-                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                "Wähle unter Modell ein Claude-Modell, dann denkt die App über diesen Schlüssel (eigene Abrechnung) statt über ChatGPT.",
-                color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
-            )
-        }
         when (viewModel.chatGptState) {
             ChatGptState.DISCONNECTED -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 48.dp),

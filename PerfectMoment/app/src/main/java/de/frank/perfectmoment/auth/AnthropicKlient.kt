@@ -86,6 +86,8 @@ object AnthropicKlient {
     /** Anthropic-API-Schlüssel (sk-ant-…) von platform.claude.com. */
     fun schluessel(context: Context): String = speicher(context).getString("api_key", "").orEmpty().trim()
     fun hatSchluessel(context: Context): Boolean = schluessel(context).isNotBlank()
+    /** Anmelde-Tokens eines Claude-Abos (sk-ant-oat…) sind keine API-Schlüssel und werden hier abgelehnt. */
+    fun istAnmeldeToken(wert: String): Boolean = wert.trim().startsWith("sk-ant-oat")
     fun schluesselSpeichern(context: Context, wert: String) {
         speicher(context).edit().putString("api_key", wert.trim()).apply()
     }
