@@ -264,11 +264,13 @@ $unklar2
     $env:PATH = [Environment]::ExpandEnvironmentVariables(
         ([Environment]::GetEnvironmentVariable('PATH', 'Machine').TrimEnd(';') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')))
     # Fehlt das CLI, meldete der OpenLauncher trotzdem „gestartet“ und das Skript endete still im Terminal: lieber gleich klar absagen.
-    if ($katalogCli -in 'codex', 'opencode', 'kimi', 'antigravity') {
-        $programm = @{ codex = 'codex'; opencode = 'opencode'; kimi = 'kimi'; antigravity = 'agy' }[$katalogCli]
+    # Gilt auch für die Standardwahl Sol: Sie läuft über Codex CLI oder OpenCode.
+    $pruefCli = if ($sol) { if ($openCode) { 'opencode' } else { 'codex' } } else { $katalogCli }
+    if ($pruefCli -in 'codex', 'opencode', 'kimi', 'antigravity') {
+        $programm = @{ codex = 'codex'; opencode = 'opencode'; kimi = 'kimi'; antigravity = 'agy' }[$pruefCli]
         $vorhanden = Get-Command $programm -ErrorAction SilentlyContinue
-        if (-not $vorhanden -and $katalogCli -eq 'kimi') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:USERPROFILE '.kimi-code\bin\kimi.exe') }
-        if (-not $vorhanden -and $katalogCli -eq 'antigravity') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'agy\bin\agy.exe') }
+        if (-not $vorhanden -and $pruefCli -eq 'kimi') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:USERPROFILE '.kimi-code\bin\kimi.exe') }
+        if (-not $vorhanden -and $pruefCli -eq 'antigravity') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'agy\bin\agy.exe') }
         if (-not $vorhanden) { throw "Das CLI $programm ist auf $env:COMPUTERNAME nicht installiert." }
     }
     $stempel =Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -311,12 +313,13 @@ $unklar2
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
         if ($mitHooks) { $argumente += @('--auftrag-id', $nummer) }
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
-        # Spätestens nach 30 s quittieren: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
+        # Spätestens 40 s nach Abholen des Auftrags quittieren, samt Anmeldeprüfung davor: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
         # Kein Fehler melden, wenn der OpenLauncher nur langsam ist: Er startet die Sitzung womöglich noch. Mit ok=false
         # spränge das Handy auf die Cloud aus, und zwei Sitzungen arbeiteten am selben Repo.
-        if (-not $prozess.WaitForExit(30000)) {
-            Schreib 'OpenLauncher nach 30 s noch nicht fertig, Start unbestätigt'
-            return "$name (Start unbestätigt: der OpenLauncher war nach 30 Sekunden noch nicht fertig)"
+        $restMs = [Math]::Max(1000, [int](40000 - ((Get-Date) - $script:auftragBeginn).TotalMilliseconds))
+        if (-not $prozess.WaitForExit($restMs)) {
+            Schreib 'OpenLauncher noch nicht fertig, Start unbestätigt'
+            return "$name (Start unbestätigt: der OpenLauncher war noch nicht fertig)"
         }
         if ($prozess.ExitCode -ne 0) { throw "Der OpenLauncher konnte die Sitzung nicht starten (Code $($prozess.ExitCode), siehe OpenLauncher-Log)." }
         return $name
@@ -416,6 +419,7 @@ while ($true) {
         if ($code -ne 200) { throw "HTTP $code" }
         $auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath $antwortDatei | ConvertFrom-Json
         Schreib "Auftrag für $($auftrag.app)"
+        $script:auftragBeginn = Get-Date
         try {
             # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen.
             # Sol und frei gewählte andere CLIs haben eigene Anmeldungen: Die von Claude Code zählt dort nicht.

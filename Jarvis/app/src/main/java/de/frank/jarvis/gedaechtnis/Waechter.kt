@@ -131,7 +131,7 @@ object Waechter {
             return
         }
         if (art == "agentenkanal") {
-            // Post von Jarvis Mac OS: kann beim Neuverbinden wiederkommen, die Fähigkeit erkennt das an der id.
+            // Post von Jarvis Mac OS oder Jarvis Windows HP (Feld geraet): kann beim Neuverbinden wiederkommen, die Fähigkeit erkennt das an der id.
             runCatching {
                 val alle = Register.alle(app)
                 val ziel = if (nachricht.optString("geraet") == "hp") alle.filterIsInstance<de.frank.jarvis.faehigkeit.WindowsHpJarvisFaehigkeit>().firstOrNull()
