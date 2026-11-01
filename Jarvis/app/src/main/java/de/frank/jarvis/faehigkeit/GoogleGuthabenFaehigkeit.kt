@@ -78,6 +78,8 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val ausgabenMonat: Double? = null,
         /** Summe der monatlichen Ausgabenlimits dieser Projekte; null = keins gesetzt oder nicht lesbar. */
         val ausgabenLimit: Double? = null,
+        /** Wann (Millisekunden) die Vorauszahlung zuletzt wirklich gelesen wurde; 0 = unbekannt. */
+        val vorauszahlungGelesen: Long = 0,
     ) {
         val restEur: Double? get() = if (geholt <= 0) null else gutschriften.sumOf { it.rest }
 
@@ -193,6 +195,7 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                 vorauszahlungVorher = if (j.has("vorauszahlungVorher")) j.getDouble("vorauszahlungVorher") else null,
                 ausgabenMonat = if (j.has("ausgabenMonat")) j.getDouble("ausgabenMonat") else null,
                 ausgabenLimit = if (j.has("ausgabenLimit")) j.getDouble("ausgabenLimit") else null,
+                vorauszahlungGelesen = j.optLong("vorauszahlungGelesen"),
             )
         }
 
@@ -200,7 +203,7 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             val g = JSONArray()
             s.gutschriften.forEach { g.put(JSONObject().put("betrag", it.betrag).put("verbraucht", it.verbraucht).put("rest", it.rest).put("ende", it.ende)) }
             val j = JSONObject().put("gutschriften", g).put("waehrung", s.waehrung).put("letzteGewaehrung", s.letzteGewaehrung).put("geholt", s.geholt)
-                .put("vorauszahlungSeit", s.vorauszahlungSeit)
+                .put("vorauszahlungSeit", s.vorauszahlungSeit).put("vorauszahlungGelesen", s.vorauszahlungGelesen)
             s.letzterBetrag?.let { j.put("letzterBetrag", it) }
             s.vorauszahlung?.let { j.put("vorauszahlung", it) }
             s.vorauszahlungVorher?.let { j.put("vorauszahlungVorher", it) }
@@ -307,14 +310,15 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     val monat = runCatching { ausgaben(ua) }.onFailure { Log.w(TAG, "Ausgaben nicht lesbar", it) }.getOrNull()
                     Stand(gutschriften, waehrung, letzte, letzterBetrag, jetztMs, hinweis, vz, seit, vorher,
-                        monat?.first ?: alt?.ausgabenMonat, if (monat != null) monat.second else alt?.ausgabenLimit)
+                        monat?.first ?: alt?.ausgabenMonat, if (monat != null) monat.second else alt?.ausgabenLimit,
+                        if (neu != null) jetztMs else alt?.vorauszahlungGelesen ?: 0L)
                         .also { schreib(app, it); _frisch.value = it }
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Google-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
                     if (alt != null) Stand(alt.gutschriften, alt.waehrung, alt.letzteGewaehrung, alt.letzterBetrag, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund",
-                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher, alt.ausgabenMonat, alt.ausgabenLimit)
+                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher, alt.ausgabenMonat, alt.ausgabenLimit, alt.vorauszahlungGelesen)
                     else Stand(emptyList(), "€", 0, null, 0, grund)
                 }
             }

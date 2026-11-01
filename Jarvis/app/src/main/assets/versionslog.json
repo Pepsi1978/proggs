@@ -534,6 +534,7 @@
     {"versionCode": 529, "versionName": "1.8.518", "stand": "01.11.2026, 01:12 Uhr", "notiz": "KI-Auswahl: Auch die Einstellungsabfrage per Sprache nennt bei einer alten Terra-Auswahl jetzt GPT-6.1 Terra."},
     {"versionCode": 530, "versionName": "1.8.519", "stand": "01.11.2026, 01:12 Uhr", "notiz": "Kontingente: Bei Claude zeigt ein Balken bis 100 Dollar das verbrauchte Anthropic-API-Freikontingent und das voraussichtliche Zurücksetzen."},
     {"versionCode": 531, "versionName": "1.8.520", "stand": "01.11.2026, 01:16 Uhr", "notiz": "Kontingente: Der Abmelden-Knopf steht bei Claude wieder ganz unten, unter dem API-Freikontingent."},
-    {"versionCode": 532, "versionName": "1.8.521", "stand": "01.11.2026, 01:18 Uhr", "notiz": "Kontingente: Das API-Freikontingent rechnet jetzt genau mit der aktuellen Abo-Gewährung, zählt Verfallenes nicht als verbraucht und zeigt ohne Wert keinen leeren Balken."}
+    {"versionCode": 532, "versionName": "1.8.521", "stand": "01.11.2026, 01:18 Uhr", "notiz": "Kontingente: Das API-Freikontingent rechnet jetzt genau mit der aktuellen Abo-Gewährung, zählt Verfallenes nicht als verbraucht und zeigt ohne Wert keinen leeren Balken."},
+    {"versionCode": 533, "versionName": "1.8.522", "stand": "01.11.2026, 01:25 Uhr", "notiz": "Guthaben: Im Gemini-Bereich stehen ganz unten unter Google AI Studio jetzt Freikontingent, Verbrauch und selbst eingezahltes Guthaben mit eigenem Aktualisieren-Knopf."}
 ]
 }
