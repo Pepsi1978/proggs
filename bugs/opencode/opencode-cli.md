@@ -969,6 +969,13 @@ Katalog (extern): https://models.dev/api.json . **Best-Practice-Bezug:**
 **FIX:** Bun-Version wechseln (Down-/Upgrade); Baseline-Build für ältere CPUs; Beta-Plugins entfernen. Upstream: oven-sh/bun.
 **Quelle:** https://github.com/anomalyco/opencode/issues/14724
 
+### 90a. Eigener Windows-Build bricht erst am Ende ab: „This script requires bun@^x.y.z“
+**Symptom:** `build-install-windows-mousefix.ps1` wendet die Patches an, Typecheck und Tests laufen durch, dann endet `script/build.ts` mit `This script requires bun@^1.4.4, but you are using bun@1.3.14` und „Custom-Binary konnte nicht gebaut werden“.
+**Ursache:** Upstream hebt `packageManager` in der `package.json` (1.19.3: bun@1.3.14, 1.19.5: bun@1.4.4). Auf dem Windows-PC gibt es zwei Bun-Kopien: `~/.bun/bin/bun.exe` steht im PATH vorn und wurde vor dem 01.11.2026 von keiner Karte überwacht, die UpdateZentrale pflegte nur die WinGet-Kopie.
+**Versionen:** OpenCode 1.19.5, Stand 01.11.2026.
+**FIX:** Kein Patch-Problem, die Patches nicht anfassen. `~/.bun/bin/bun.exe upgrade` ausführen und neu bauen. Seitdem überwacht die Karte `bun-nativ` diese Kopie.
+**Quelle:** eigener Build vom 01.11.2026.
+
 ### 91. Crash auf aarch64 mit 64-KB-Pagesize
 **Symptom:** Sofortiges `Aborted (core dumped)` beim Start (z.B. Grace Hopper, 64-KB-Pages).
 **Ursache:** Bun/JS-Engine inkompatibel mit 64-KB-Pagesize.

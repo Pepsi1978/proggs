@@ -764,6 +764,25 @@
       "akzent": "#FBF0DF"
     },
     {
+      "id": "bun-nativ",
+      "cliRisiko": "Ersetzt das bun, das Terminals und Builds benutzen; beim Bun-Update wurden schon laufende Terminal-Sitzungen beendet.",
+      "name": "Bun (~/.bun)",
+      "gruppe": "Entwicklung: Werkzeuge",
+      "beschreibung": "Eigene Bun-Installation unter ~/.bun, falls vorhanden, getrennt von der Homebrew-Kopie.",
+      "art": "cli",
+      "exePfad": "~/.bun/bin/bun",
+      "versionsArgumente": "--version",
+      "updateArgumente": "upgrade",
+      "npmPaket": "bun",
+      "ausblendenWennFehlt": true,
+      "zeitlimitMinuten": 10,
+      "prozesse": [],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "akzent": "#FBF0DF"
+    },
+    {
       "id": "biome",
       "name": "Biome",
       "gruppe": "Entwicklung: Werkzeuge",
