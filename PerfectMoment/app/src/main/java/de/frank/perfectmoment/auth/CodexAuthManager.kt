@@ -609,9 +609,6 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
-    /** Kann die App mit diesem Modell denken? OpenAI braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
-    fun kannDenken(model: CodexModel): Boolean = if (model.istAnthropic) AnthropicKlient.hatSchluessel(appContext) else isConnected
-
     suspend fun login(
         activity: ComponentActivity,
         onDeviceCode: (DeviceAuthInfo) -> Unit,

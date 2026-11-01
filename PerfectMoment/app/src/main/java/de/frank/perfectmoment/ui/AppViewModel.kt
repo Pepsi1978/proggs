@@ -386,7 +386,12 @@ class AppViewModel(
     /** Als Compose-Zustand, damit „Sitzung beginnen“ sofort freigibt, sobald der Schlüssel eingetragen ist. */
     var anthropicKey by mutableStateOf(AnthropicKlient.schluessel(appContext))
         private set
-    val anthropicKeyNutzbar: Boolean get() = anthropicKey.isNotBlank() && !AnthropicKlient.istAnmeldeToken(anthropicKey)
+    val anthropicKeyNutzbar: Boolean get() = AnthropicKlient.istApiSchluessel(anthropicKey)
+    var showAnthropicKey by mutableStateOf(false)
+        private set
+    /** Gesetzt, wenn die Einstellungen bis zum Schlüsselfeld scrollen sollen. */
+    var anthropicKeyAnsteuern by mutableStateOf(false)
+        private set
     var deviceAuthInfo by mutableStateOf<DeviceAuthInfo?>(null)
         private set
     var chatGptError by mutableStateOf<String?>(null)
@@ -1010,6 +1015,19 @@ class AppViewModel(
     fun updateAnthropicKey(value: String) {
         anthropicKey = value.filterNot(Char::isWhitespace)
         AnthropicKlient.schluesselSpeichern(appContext, anthropicKey)
+    }
+
+    fun toggleAnthropicKeyVisibility() {
+        showAnthropicKey = !showAnthropicKey
+    }
+
+    fun zumAnthropicKey() {
+        anthropicKeyAnsteuern = true
+        navigate(AppScreen.SETTINGS)
+    }
+
+    fun anthropicKeyAngesteuert() {
+        anthropicKeyAnsteuern = false
     }
 
     fun updateReasoning(value: ReasoningEffort) {

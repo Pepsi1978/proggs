@@ -43,6 +43,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -127,6 +129,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -428,7 +431,7 @@ fun StartScreen(
                     fontSize = 13.sp,
                     modifier = Modifier.padding(bottom = 10.dp)
                         .pmClickable {
-                            viewModel.navigate(if (brauchtAnthropicKey) AppScreen.SETTINGS else AppScreen.CHAT_GPT)
+                            if (brauchtAnthropicKey) viewModel.zumAnthropicKey() else viewModel.navigate(AppScreen.CHAT_GPT)
                         },
                 )
             }
@@ -1055,7 +1058,11 @@ private fun SessionErrorOverlay(viewModel: AppViewModel, error: String) {
             Spacer(Modifier.height(22.dp))
             PrimaryButton("Erneut versuchen", viewModel::retrySession)
             Spacer(Modifier.height(12.dp))
-            OutlineButton("Zu ChatGPT", colors.gold, { viewModel.navigate(AppScreen.CHAT_GPT) })
+            if (viewModel.model.istAnthropic) {
+                OutlineButton("Zum API-Schlüssel", colors.gold, viewModel::zumAnthropicKey)
+            } else {
+                OutlineButton("Zu ChatGPT", colors.gold, { viewModel.navigate(AppScreen.CHAT_GPT) })
+            }
             Spacer(Modifier.height(12.dp))
             OutlineButton("Zurück", colors.text2, viewModel::stopSession)
         }
@@ -1582,6 +1589,7 @@ private fun voiceDisplayName(id: String): String =
     (TtsCatalog.geminiFlashVoices + TtsCatalog.geminiLiteVoices + TtsCatalog.azureVoices).firstOrNull { it.id == id }?.name
         ?: id.substringAfterLast('-').removeSuffix("Neural")
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: AppViewModel,
@@ -1763,19 +1771,32 @@ fun SettingsScreen(
                     valueColor = if (viewModel.chatGptState == ChatGptState.CONNECTED) colors.text2 else colors.text3,
                     valueFontSize = if (viewModel.chatGptState == ChatGptState.CONNECTED) 13 else 14,
                 )
-                var anthropicKeySichtbar by remember { mutableStateOf(false) }
-                SecureKeyRow(
-                    label = "Anthropic-API-Schlüssel",
-                    supporting = if (viewModel.anthropicKey.isNotBlank() && !viewModel.anthropicKeyNutzbar) {
-                        "Das ist ein Anmelde-Token, nötig ist sk-ant-api…"
-                    } else {
-                        "Für die Claude-Modelle · eigene Abrechnung"
-                    },
-                    value = viewModel.anthropicKey,
-                    visible = anthropicKeySichtbar,
-                    onValueChange = viewModel::updateAnthropicKey,
-                    onToggleVisibility = { anthropicKeySichtbar = !anthropicKeySichtbar },
-                )
+                val anthropicKeyZiel = remember { BringIntoViewRequester() }
+                LaunchedEffect(viewModel.anthropicKeyAnsteuern) {
+                    if (viewModel.anthropicKeyAnsteuern) {
+                        anthropicKeyZiel.bringIntoView()
+                        viewModel.anthropicKeyAngesteuert()
+                    }
+                }
+                Column(Modifier.bringIntoViewRequester(anthropicKeyZiel)) {
+                    SecureKeyRow(
+                        label = "Anthropic-API-Schlüssel",
+                        supporting = "Claude-Modelle · eigene Abrechnung",
+                        value = viewModel.anthropicKey,
+                        visible = viewModel.showAnthropicKey,
+                        onValueChange = viewModel::updateAnthropicKey,
+                        onToggleVisibility = viewModel::toggleAnthropicKeyVisibility,
+                    )
+                    if (viewModel.anthropicKey.isNotBlank() && !viewModel.anthropicKeyNutzbar) {
+                        Text(
+                            "Das ist kein API-Schlüssel. Nötig ist einer, der mit sk-ant-api beginnt; Anmelde-Tokens eines Claude-Abos gehen hier nicht.",
+                            color = colors.warning,
+                            fontFamily = Inter,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
+                        )
+                    }
+                }
                 SettingRow("Modell", viewModel.model.label, onClick = { viewModel.openSheet(AppSheet.MODEL) }, showChevron = true)
                 SettingRow("Denkstärke", viewModel.reasoning.label, onClick = { viewModel.openSheet(AppSheet.REASONING) }, divider = false, showChevron = true)
             }
@@ -2020,6 +2041,8 @@ private fun SecureKeyRow(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
+                // Sonst behandelt die Tastatur den Schlüssel als Text und kann ihn sich merken oder korrigieren.
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                 visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                 cursorBrush = SolidColor(colors.gold),
                 textStyle = TextStyle(
