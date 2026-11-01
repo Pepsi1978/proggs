@@ -118,8 +118,13 @@ public sealed class UpdateKette
             if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
                 return Ende(LaufErgebnis.Abgebrochen, Text(ergebnis.Meldung, "Abgebrochen."), ergebnis with { Zustand = UpdateZustand.Abgebrochen });
             if (ergebnis.Zustand is UpdateZustand.Fehler or UpdateZustand.NichtInstalliert)
+            {
+                // A script may fail after it has already rebuilt the program. Report the real
+                // state; the start value would read as "nothing happened" and mislead the analysis.
+                standNach = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
                 return Ende(LaufErgebnis.Fehlgeschlagen, Text(ergebnis.Meldung, "Das Update ist fehlgeschlagen."),
                     ergebnis with { Zustand = UpdateZustand.Fehler });
+            }
 
             liefDurch = true;
 

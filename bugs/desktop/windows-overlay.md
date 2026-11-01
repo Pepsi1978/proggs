@@ -867,6 +867,13 @@
 - **FIX:** `ShutdownMode="OnExplicitShutdown"` + nur per `Application.Shutdown()` (Tray-„Beenden") beenden. Overlay-Fenster wiederverwenden (`Hide()`/`Show()` statt `new`+`Close()`); beim Verstecken `timer.Stop()` + `Tick -=`, ItemsSource abkoppeln, Bindings lösen; einen langlebigen App-Timer statt pro Fenster.
 - **Quelle:** https://learn.microsoft.com/en-us/dotnet/api/system.windows.application.shutdownmode · https://github.com/dotnet/wpf/issues/9331 (extern)
 
+### P10. Overlay-Update scheitert mit „Build-Artefakt passt nicht zum Projekt“ (eigener Vorfall)
+- **Symptom:** Der Build gelingt, `rebuild-overlay.ps1` meldet trotzdem `failed`, weil die Produktversion der exe nicht zur `<Version>` passt. Das Overlay war dabei schon beendet.
+- **Ursache:** `<InformationalVersion>` trug eine eigene Versionsnummer und wurde beim Bump vergessen (22.10. und 01.11.2026). Sie bestimmt die Produktversion der exe.
+- **Versionen:** bis TVO 1.11.34 und CVO 2.4.30.
+- **FIX:** `<InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>`. `rebuild-overlay.ps1` ab 1.8.0 prüft die ausgewerteten Properties vor dem Ja/Nein-Fenster und beendet bei Widerspruch nichts.
+- **Quelle:** `bugs/bug-cases/2026-11-01-overlays-informationalversion-versatz.md` (eigener Vorfall)
+
 ---
 
 ## ✅ Fix-Status (was ist in neueren Versionen schon behoben?)

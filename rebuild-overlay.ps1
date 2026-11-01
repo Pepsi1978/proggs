@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.7.1 - 23.10.2026, 12:14 Uhr
+# Version 1.8.0 - 01.11.2026, 12:16 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -214,6 +214,32 @@ function Test-BuiltArtifact {
     return @{ Ok = $versionMatches; Expected = $expected; Actual = $actual }
 }
 
+# Vorpruefung VOR Dialog und Prozess-Ende: Die Produktversion der exe kommt aus InformationalVersion,
+# Test-BuiltArtifact vergleicht sie aber mit Version. Laufen beide auseinander (Vorfaelle 22.10. und
+# 01.11.2026), scheitert das Update erst nach dem Beenden des Overlays. MSBuild wertet die Properties
+# aus, denn im Klartext der csproj steht "$(Version)". Antwortet MSBuild nicht, entscheidet weiter
+# Test-BuiltArtifact nach dem Build.
+function Test-ProjectVersionConsistent {
+    param([hashtable]$O)
+
+    $projectPath = Join-Path $O.Folder "$($O.Name).csproj"
+    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { return @{ Ok = $true } }
+    try {
+        $json = & dotnet msbuild $projectPath -nologo -getProperty:Version -getProperty:InformationalVersion 2>$null
+        if ($LASTEXITCODE -ne 0) { return @{ Ok = $true } }
+        $properties = ($json -join "`n" | ConvertFrom-Json).Properties
+    }
+    catch { return @{ Ok = $true } }
+
+    $version = [string]$properties.Version
+    $informational = [string]$properties.InformationalVersion
+    if (-not $version -or -not $informational) { return @{ Ok = $true } }
+    $consistent = $informational -eq $version -or
+        $informational.StartsWith("$version ", [StringComparison]::OrdinalIgnoreCase) -or
+        $informational.StartsWith("$version+", [StringComparison]::OrdinalIgnoreCase)
+    return @{ Ok = $consistent; Version = $version; Informational = $informational }
+}
+
 # Startet das Overlay wie beim Boot: ueber watcher.vbs (wscript.exe).
 # Faellt auf direkten exe-Start zurueck, falls kein watcher.vbs vorhanden ist.
 function Start-Overlay {
@@ -312,6 +338,19 @@ function Show-UpdateDialog {
 # --- Hauptablauf ---
 $targets = if ($Target -eq 'Both') { @('CVO', 'TVO') } else { @($Target) }
 $failed = @()
+
+# Falsche Versionsangaben fruehzeitig melden: Das Overlay laeuft dann einfach weiter.
+foreach ($t in $targets) {
+    $check = Test-ProjectVersionConsistent -O $Overlays[$t]
+    if (-not $check.Ok) {
+        Write-Err "${t}: Version $($check.Version) passt nicht zu InformationalVersion '$($check.Informational)'. InformationalVersion in der csproj aus `$(Version) ableiten."
+        $failed += $t
+    }
+}
+if ($failed.Count -gt 0) {
+    Write-Host "OVERLAY_UPDATE_STATUS=failed ($($failed -join ', '): Versionsangaben im Projekt widerspruechlich, nichts beendet, nichts gebaut)"
+    exit 1
+}
 
 # Ohne Freigabe per Klick passiert nichts: kein Beenden, kein Build, kein Start.
 # VORFALL 22.10.2026: Dieser Block stand in geschweiften Klammern ohne Aufruf -- PowerShell legt

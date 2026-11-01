@@ -128,6 +128,9 @@ final class UpdateKette {
                 return ende(.abgebrochen, Self.text(ergebnis.meldung, "Abgebrochen."), k)
             }
             if ergebnis.zustand == .fehler || ergebnis.zustand == .nichtInstalliert {
+                // A script may fail after it has already rebuilt the program. Report the real
+                // state; the start value would read as "nothing happened" and mislead the analysis.
+                standNach = await aktualisierer.fingerabdruck(eintrag)
                 return ende(.fehlgeschlagen, Self.text(ergebnis.meldung, "Das Update ist fehlgeschlagen."), alsFehler(ergebnis))
             }
 
