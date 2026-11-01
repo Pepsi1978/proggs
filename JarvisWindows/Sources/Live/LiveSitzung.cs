@@ -21,6 +21,10 @@ public class LiveSitzung
     public LiveTon Ton { get; }
     public LiveSitzungsDelegate? Delegate { get; set; }
     private volatile bool bereit;
+    /// <summary>Höchstens so viel Mikrofonton wird aufgehoben, solange die Verbindung nicht steht (Start, Gemini-Wechsel).</summary>
+    private const double VorlaufSekunden = 5;
+    private readonly Queue<byte[]> vorlauf = new();
+    private long vorlaufBytes;
     public bool Bereit { get => bereit; set => bereit = value; }
     public virtual bool IstGemini => false;
 
@@ -29,11 +33,34 @@ public class LiveSitzung
     public virtual void Starten() { }
     public virtual void Beenden() { }
     public virtual void Mikro(byte[] pcm) { }
+    /// <summary>Sendet den Block oder hebt ihn auf: Frank spricht oft schon beim Öffnen, und beim Verbindungswechsel fielen sonst Worte weg.
+    /// Eigene Sperre samt Senden: Der Rest geht immer vor dem neuen Block raus. Senden blockiert nie, das Mikrofon läuft ungestört weiter.</summary>
+    protected void SendeOderHebeAuf(byte[] pcm, bool frei, Action<byte[]> senden)
+    {
+        lock (vorlauf)
+        {
+            if (!frei)
+            {
+                vorlauf.Enqueue(pcm);
+                vorlaufBytes += pcm.Length;
+                var grenze = (long)(Ton.EingabeRate * 2 * VorlaufSekunden);
+                while (vorlaufBytes > grenze) vorlaufBytes -= vorlauf.Dequeue().Length;
+                return;
+            }
+            while (vorlauf.Count > 0) senden(vorlauf.Dequeue());
+            vorlaufBytes = 0;
+            senden(pcm);
+        }
+    }
+    /// <summary>Kann die Sitzung Jarvis' Antwort schon Satz für Satz sprechen, während das Gehirn noch schreibt?</summary>
+    public virtual bool KannStroemen => false;
+    /// <summary>Ein Satz der laufenden Antwort. false = nicht angekommen.</summary>
+    public virtual bool Stueck(string kennung, string text) => false;
     /// <summary>Jarvis' Antwort auf einen Auftrag zurück ans Sprachmodell. false = nicht angekommen.</summary>
     public virtual bool Ergebnis(string kennung, string text) => false;
     /// <summary>Spätes Ergebnis nach einem Zwischenstand jetzt sprechen lassen.</summary>
     public virtual bool Nachreichen(string kennung, string text) => false;
-    /// <summary>Regelmäßig (alle 100 ms) aus dem Live-Gespräch: Zeitgeber der Sitzung.</summary>
+    /// <summary>Regelmäßig (alle 50 ms) aus dem eigenen Takt-Faden des Live-Gesprächs: Zeitgeber der Sitzung. Läuft nicht auf dem Hauptfaden.</summary>
     public virtual void Takt() { }
     /// <summary>Frank tippt zum Unterbrechen.</summary>
     public virtual void Angetippt() => Ton.Leeren();
@@ -65,7 +92,12 @@ public sealed class LiveSocket
     private readonly Action<string> beiText;
     private readonly Action<int, string> beiZu;
     private readonly CancellationTokenSource abbruch = new();
-    private readonly Channel<byte[]> ausgang = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions { SingleReader = true });
+    /// <summary>null = nächster Tonblock aus tonSchlange. So behält Steuerung ihren Platz, und nur Ton kann bei gestörtem Netz wegfallen.</summary>
+    private readonly Channel<byte[]?> ausgang = Channel.CreateUnbounded<byte[]?>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Queue<byte[]> tonSchlange = new();
+    private bool tonVerworfenGemeldet;
+    /// <summary>So viele Tonblöcke warten höchstens: Bei gestörtem Netz soll der Dienst das Jetzt hören, nicht alles von vor Minuten.</summary>
+    public int TonGrenze { get; set; } = 20;
     private readonly object sperre = new();
     private bool zu;
     private bool verbunden;
@@ -102,7 +134,8 @@ public sealed class LiveSocket
             using (var zeit = CancellationTokenSource.CreateLinkedTokenSource(abbruch.Token))
             {
                 zeit.CancelAfter(TimeSpan.FromSeconds(30));
-                ws.ConnectAsync(adresse, zeit.Token).GetAwaiter().GetResult();
+                // Über den geteilten Weg mit IPv4 zuerst: Totes IPv6 ließe Live sonst lange bei „Verbindet“ hängen.
+                ws.ConnectAsync(adresse, SprachHttp.Invoker, zeit.Token).GetAwaiter().GetResult();
             }
         }
         catch (Exception ex)
@@ -155,8 +188,12 @@ public sealed class LiveSocket
     {
         try
         {
-            await foreach (var d in ausgang.Reader.ReadAllAsync(abbruch.Token))
-                await ws.SendAsync(new ArraySegment<byte>(d), WebSocketMessageType.Text, true, abbruch.Token);
+            await foreach (var eintrag in ausgang.Reader.ReadAllAsync(abbruch.Token))
+            {
+                var d = eintrag;
+                if (d == null) lock (tonSchlange) tonSchlange.TryDequeue(out d);
+                if (d != null) await ws.SendAsync(new ArraySegment<byte>(d), WebSocketMessageType.Text, true, abbruch.Token);
+            }
             // Von Trennen beendet: sauberer Abschluss.
             await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "", abbruch.Token);
         }
@@ -189,6 +226,28 @@ public sealed class LiveSocket
     {
         if (!Offen) return false;
         return ausgang.Writer.TryWrite(JSON.Daten(objekt));
+    }
+
+    /// <summary>Mikrofonton: Staut er sich, fällt der älteste Block weg.</summary>
+    public bool SendeTon(JSONObjekt objekt)
+    {
+        if (!Offen) return false;
+        var d = JSON.Daten(objekt);
+        lock (tonSchlange)
+        {
+            tonSchlange.Enqueue(d);
+            if (tonSchlange.Count > TonGrenze)
+            {
+                tonSchlange.Dequeue();   // Der Platzhalter im Ausgang gehört jetzt dem neuen Block.
+                if (!tonVerworfenGemeldet)
+                {
+                    tonVerworfenGemeldet = true;
+                    Log("live", "Netz zu langsam: alter Mikrofonton wird verworfen");
+                }
+                return true;
+            }
+        }
+        return ausgang.Writer.TryWrite(null);
     }
 
     /// <summary>Von uns beendet: kein Fehler mehr an den Aufrufer.</summary>

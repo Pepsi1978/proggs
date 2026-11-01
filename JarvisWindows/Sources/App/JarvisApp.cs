@@ -128,7 +128,6 @@ public static class JarvisApp
         Task.Run(() => AblageLader.Aufraeumen());
         AblageAbgleich.Shared.Hochfahren();
         ErinnerungPlaner.Shared.Starten();
-        Ui.Starte(async () => { _ = await McpKlient.Shared.Werkzeuge(frisch: true); });
         BotschaftenAnlegen();
         SymbolAnlegen();
         AppSteuerung.Shared.Hochfahren();
@@ -142,6 +141,7 @@ public static class JarvisApp
         VorleseEinstellungen.Shared.ZugangSichern();
         Vorgaben.Sichern();
         GespraechsSpeicher.Abschliessen();
+        try { AgentenKanal.Shared.SchreibenFertig().Wait(TimeSpan.FromSeconds(3)); } catch { }
     }
 
     private static void Abschluss()

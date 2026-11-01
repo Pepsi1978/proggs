@@ -19,7 +19,9 @@ public static class SprachHttp
     public static SocketsHttpHandler NeuerHandler() => new()
     {
         UseCookies = false,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+        // Im Gespräch liegen Minuten zwischen zwei Sätzen: Die Verbindung zu Stimme und Groq soll das überstehen.
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
         ConnectTimeout = TimeSpan.FromSeconds(15),
         ConnectCallback = async (kontext, ct) =>
         {
@@ -55,6 +57,18 @@ public static class SprachHttp
         var c = new HttpClient(Handler, disposeHandler: false) { Timeout = Timeout.InfiniteTimeSpan };
         c.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", $"JarvisWindows/{AppInfo.Version}");
         return c;
+    }
+
+    /// <summary>Baut die Verbindung vorab auf, das Ergebnis zählt nicht. Höchstens drei Sekunden, nie ein Fehler.</summary>
+    public static async Task Vorwaermen(string adresse)
+    {
+        try
+        {
+            using var frist = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            using var req = new HttpRequestMessage(HttpMethod.Head, adresse);
+            using var a = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, frist.Token).ConfigureAwait(false);
+        }
+        catch { }
     }
 
     /// <summary>Für ClientWebSocket.ConnectAsync.</summary>
@@ -219,7 +233,10 @@ public sealed class Mikrofon
     {
         int kanaele = Math.Max(1, f.Channels), bytes = Math.Max(1, f.BitsPerSample / 8), rahmen = n / (bytes * kanaele);
         var aus = new float[rahmen];
-        var istFloat = f.Encoding == WaveFormatEncoding.IeeeFloat || (f.Encoding == WaveFormatEncoding.Extensible && f.BitsPerSample == 32);
+        var sub = (f as WaveFormatExtensible)?.SubFormat;
+        // Extensible nur mit bekanntem Unterformat auswerten: 32-Bit-PCM als Float gelesen wäre reines Rauschen.
+        var istFloat = f.Encoding == WaveFormatEncoding.IeeeFloat || sub == new Guid("00000003-0000-0010-8000-00aa00389b71")
+            || (f.Encoding == WaveFormatEncoding.Extensible && sub == null && f.BitsPerSample == 32);
         int i = 0;
         for (int r = 0; r < rahmen; r++)
         {
@@ -249,6 +266,36 @@ public sealed class Mikrofon
         float summe = 0;
         for (int i = 0; i < n; i++) summe += s[i] * s[i];
         return MathF.Sqrt(summe / n);
+    }
+}
+
+/// <summary>Grundrauschen der letzten drei Sekunden, nach Zeit statt nach Pufferzahl: Bei 10-ms-Puffern wären 70 Einträge nur 0,7 Sekunden,
+/// das Perzentil stiege bei einem langen Satz auf Sprachpegel und die Aufnahme endete mitten im Satz. Die leisesten Stellen zählen: Sprache hat immer Lücken.</summary>
+public sealed class RauschBoden
+{
+    private const double Fenster = 3, ErsteMessung = 0.3, Takt = 0.25;
+    private readonly Queue<(float Rms, double Dauer)> verlauf = new();
+    private double imFenster, gesamt, seitMessung;
+    public float Wert { get; private set; } = 0.004f;
+    public float Schwelle => Math.Max(Wert * 3.2f, 0.012f);
+
+    public void Messe(float rms, double dauer)
+    {
+        verlauf.Enqueue((rms, dauer));
+        imFenster += dauer;
+        gesamt += dauer;
+        while (imFenster > Fenster && verlauf.Count > 1) imFenster -= verlauf.Dequeue().Dauer;
+        if (gesamt <= ErsteMessung)
+        {
+            Wert = Math.Max(0.002f, verlauf.Average(x => x.Rms));
+            return;
+        }
+        seitMessung += dauer;
+        if (seitMessung < Takt) return;
+        seitMessung = 0;
+        var sortiert = verlauf.Select(x => x.Rms).ToArray();
+        Array.Sort(sortiert);
+        Wert = Math.Max(0.002f, sortiert[sortiert.Length / 5]);
     }
 }
 
@@ -426,7 +473,8 @@ public sealed class ParakeetWeckErkenner : ISprachErkenner
     private const int VorlaufSamples = Rate * 4 / 10;       // 0,4 s vor dem ersten lauten Puffer
     private const int FensterSamples = Rate * 3;            // Ausschnitt höchstens 3 s …
     private const int UeberlappSamples = Rate;              // … mit 1 s Überlapp, damit ein Weckwort an der Schnittstelle nicht zerfällt
-    private const double StilleBisEnde = 0.6;
+    private const double StilleBisEnde = 0.45;
+    private const int FruehSamples = Rate * 6 / 5;          // nach 1,2 s schon einmal prüfen: „Hey Jarvis, …“ soll nicht aufs Ende des Fensters warten
     private const double MinStimme = 0.2;                   // Klicks und Husten nicht rechnen
 
     public Action<string, bool>? BeiText { get; set; }
@@ -438,10 +486,9 @@ public sealed class ParakeetWeckErkenner : ISprachErkenner
     private readonly string hotwords;
     private readonly List<float> vorlauf = new();
     private readonly List<float> abschnitt = new();
-    private readonly List<float> verlauf = new();
-    private float rauschboden = 0.004f;
-    private int messungen;
+    private readonly RauschBoden boden = new();
     private bool spricht;
+    private bool fruehGeprueft;
     private double stille, stimme;
     private float[]? offen;
     private bool rechnet;
@@ -472,21 +519,14 @@ public sealed class ParakeetWeckErkenner : ISprachErkenner
         lock (schloss)
         {
             if (ende) return;
-            messungen++;
-            verlauf.Add(rms);
-            if (verlauf.Count > 70) verlauf.RemoveAt(0);
-            if (messungen <= 6) rauschboden = Math.Max(0.002f, (rauschboden * (messungen - 1) + rms) / messungen);
-            else if (messungen % 5 == 0)
-            {
-                var sortiert = verlauf.OrderBy(x => x).ToList();
-                rauschboden = Math.Max(0.002f, sortiert[sortiert.Count / 5]);
-            }
-            var laut = rms > Math.Max(rauschboden * 3.2f, 0.012f);
+            boden.Messe(rms, dauer);
+            var laut = rms > boden.Schwelle;
             if (!spricht)
             {
                 if (laut)
                 {
                     spricht = true;
+                    fruehGeprueft = false;
                     stille = 0;
                     stimme = dauer;
                     abschnitt.Clear();
@@ -511,6 +551,11 @@ public sealed class ParakeetWeckErkenner : ISprachErkenner
                 Abgeben(abschnitt.ToArray());
                 abschnitt.RemoveRange(0, abschnitt.Count - UeberlappSamples);
                 stimme = 0;
+            }
+            else if (!fruehGeprueft && abschnitt.Count >= FruehSamples && stimme >= MinStimme)
+            {
+                fruehGeprueft = true;
+                Abgeben(abschnitt.ToArray());
             }
         }
     }

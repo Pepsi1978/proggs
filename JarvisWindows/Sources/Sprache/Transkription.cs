@@ -272,7 +272,7 @@ public sealed class TranskriptionsEinstellungenAnsicht : UserControl
             new KartenTitel("text.bubble.fill", "Transkription (Spracheingabe)", Farbe.Gruen),
             Ui.Tx("Gilt für Diktat, Sprachgespräch und „Hey Jarvis“. Jarvis wechselt nie still auf ein anderes Verfahren; fehlt etwas, sagt er es.", 12, null, Farbe.Text2),
             Ui.V(8,
-                Wahl("parakeet", "Parakeet primeline – offline", "Deutscher Fine-Tune von Parakeet TDT 0.6B v3, int8 über sherpa-onnx, nur CPU (4 Threads). Kein Internet, kein Schlüssel."),
+                Wahl("parakeet", "Parakeet primeline – offline", "Deutscher Fine-Tune von Parakeet TDT 0.6B v3, int8 über sherpa-onnx, nur CPU. Kein Internet, kein Schlüssel."),
                 Wahl("groq", "Groq Whisper – online", "Whisper Large V3 Turbo oder Large V3 bei Groq, mit Wörterbuch und Filtern. Braucht Netz und Groq-Schlüssel."),
                 Wahl("windows", "Windows – online", "Spracherkennung von Windows, mit Live-Vorschau beim Sprechen. Braucht die eingeschaltete Online-Spracherkennung in den Windows-Einstellungen.")),
             t == "parakeet" ? Parakeet() : null,

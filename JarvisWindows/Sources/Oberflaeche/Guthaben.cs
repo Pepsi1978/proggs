@@ -142,11 +142,40 @@ public sealed class Guthaben : Beobachtbar
         if (alterStand == null) geholt = DateTime.Now;
     }
 
+    /// <summary>Die Google-Anmeldung dieses Laptops wurde abgelehnt; der Stand kommt solange vom Handy.</summary>
+    public bool GoogleAbgelaufen { get => _googleAbgelaufen; private set => Setze(ref _googleAbgelaufen, value); }
+    private bool _googleAbgelaufen;
+
     private async Task GoogleLaden(bool frisch)
     {
+        if (WebSitzungen.Angemeldet("google"))
+        {
+            try
+            {
+                GoogleUebernehmen(await GoogleSitzung.Stand(frisch));
+                GoogleAbgelaufen = false;
+                return;
+            }
+            catch (GoogleSitzung.Abgelaufen f)
+            {
+                GoogleAbgelaufen = true;
+                Log("guthaben", f.Message, wo: "Konsolen");
+            }
+            catch (Exception ex)
+            {
+                Log("fehler", "Google-Guthaben am Laptop nicht abrufbar", wo: "Konsolen", fehler: ex.Message);
+            }
+        }
+        else GoogleAbgelaufen = false;
         var r = await McpKlient.Shared.Rufe("google_guthaben", frisch ? new JSONObjekt { ["frisch"] = true } : new JSONObjekt(), 60);
         var t = McpKlient.OhneKontextHinweis(r.Text);
-        var rest = r.Fehler ? null : Zahl(t, @"übrig ([0-9.,]+) ");
+        if (r.Fehler) { GoogleHinweis = t; return; }
+        GoogleUebernehmen(t);
+    }
+
+    private void GoogleUebernehmen(string t)
+    {
+        var rest = Zahl(t, @"übrig ([0-9.,]+) ");
         if (rest == null) { GoogleHinweis = t; return; }
         GoogleHinweis = null;
         GoogleText = t;

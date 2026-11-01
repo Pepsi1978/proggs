@@ -464,6 +464,9 @@ public sealed class Einstellungen : Beobachtbar
     public string Modell { get => _modell; set { Merke(ref _modell, value); Melde(nameof(ModellWahlAktuell)); } }
     private string _effort = Vorgaben.Text("effort") ?? "medium";
     public string Effort { get => _effort; set => Merke(ref _effort, value); }
+    private string _sprachEffort = Vorgaben.Text("sprachEffort") ?? "low";
+    /// <summary>Denkstufe für gesprochene Fragen: Kurze Antworten fürs Vorlesen brauchen keine lange Denkzeit vor dem ersten Wort. Das Modell bleibt dasselbe.</summary>
+    public string SprachEffort { get => _sprachEffort; set => Merke(ref _sprachEffort, value); }
     private int _schrittLimit = Vorgaben.Ganz("schrittLimit", 40);
     public int SchrittLimit { get => _schrittLimit; set => Merke(ref _schrittLimit, value); }
     private bool _vorlesen = Vorgaben.Wahr("vorlesen", true);

@@ -85,7 +85,7 @@ public sealed class AppSteuerung : Beobachtbar
     public double BlaseHoehe { get => _blaseHoehe; set => Setze(ref _blaseHoehe, value); }
     private bool _blaseKompakt = true;
     /// <summary>Eingeklappt zeigt die Blase nur ihre untere Zeile; mit Text bleibt sie immer offen.</summary>
-    public bool BlaseKompakt { get => _blaseKompakt; set => Setze(ref _blaseKompakt, value); }
+    public bool BlaseKompakt { get => _blaseKompakt; set { if (Setze(ref _blaseKompakt, value) && !value) GehirnNetz.Vorwaermen(); } }
     private int _blaseFokus;
     /// <summary>Zählt hoch, wenn die Blase den Fokus bekommen soll.</summary>
     public int BlaseFokus { get => _blaseFokus; set => Setze(ref _blaseFokus, value); }
@@ -117,6 +117,11 @@ public sealed class AppSteuerung : Beobachtbar
     private string _handyVersion = "";
     public string HandyVersion { get => _handyVersion; set => Setze(ref _handyVersion, value); }
     private bool kuerzelAn;
+    private bool kuerzelUhrLaeuft;
+    private readonly HashSet<int> kuerzelDa = new();
+    private string? _kuerzelFehler;
+    /// <summary>Text, wenn ein globales Kürzel von einem anderen Programm belegt ist; die App versucht es jede Minute neu.</summary>
+    public string? KuerzelFehler { get => _kuerzelFehler; private set => Setze(ref _kuerzelFehler, value); }
     private bool _appVorn = true;
     /// <summary>Jarvis ist die vordere App. Danach richten sich die Animationen: Im Hintergrund rechnen sie nicht.</summary>
     public bool AppVorn { get => _appVorn; private set { if (Setze(ref _appVorn, value)) Takt.Abgleichen(); } }
@@ -133,6 +138,8 @@ public sealed class AppSteuerung : Beobachtbar
         SprachSchleife.Shared.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(SprachSchleife.Zustand) or null) Melde(nameof(Fragen)); };
         Weckwort.Shared.BeiErkennung = () => Haupt.Post(WeckwortErkannt);
         if (Einstellungen.Shared.WeckwortAn) Weckwort.Shared.Starten();
+        // Das erste Kürzel soll nicht auf das Laden des Modells warten.
+        else if (Einstellungen.Shared.Transkription == "parakeet") ParakeetLocalClient.Shared.Preload();
         if (Einstellungen.Shared.GlobalesKuerzel) KuerzelRegistrieren();
         AgentenKanal.Shared.Starten();
         Ui.Starte(async () =>
@@ -145,6 +152,15 @@ public sealed class AppSteuerung : Beobachtbar
                 HandyVersion = await McpKlient.Shared.ServerVersion();
                 var unsicher = await McpKlient.Shared.Unsicher();
                 await Task.Delay(TimeSpan.FromSeconds(HandyVerbunden && !unsicher ? 300 : 30));
+            }
+        });
+        // Das Live-Gedächtnis liegt immer bereit: Eine neue Frage wartet nicht darauf, auch nicht nach langer Ruhe.
+        Ui.Starte(async () =>
+        {
+            while (true)
+            {
+                if (await McpKlient.Shared.Verbunden()) await McpKlient.Shared.KontextVorladen();
+                await Task.Delay(TimeSpan.FromMinutes(4));
             }
         });
         // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
@@ -339,10 +355,18 @@ public sealed class AppSteuerung : Beobachtbar
         {
             try
             {
-                var antwort = await JarvisAgent.Shared.Frage(t.Length == 0 ? "Schau dir das Bild an." : t, g, gesprochen: gesprochen, bild: bild, ct: abbruch.Token);
+                // Gesprochene Fragen klingen satzweise, während das Modell noch schreibt.
+                var strom = gesprochen && Einstellungen.Shared.Vorlesen ? Stimme.Shared.Strom() : null;
+                string antwort;
+                try { antwort = await JarvisAgent.Shared.Frage(t.Length == 0 ? "Schau dir das Bild an." : t, g, gesprochen: gesprochen, bild: bild, onText: strom == null ? null : strom.Text, ct: abbruch.Token); }
+                catch { strom?.Abbrechen(); throw; }
                 fragen.Remove(nr);
                 Melde(nameof(Fragen));
-                if (gesprochen && Einstellungen.Shared.Vorlesen && !abbruch.IsCancellationRequested) await Stimme.Shared.Sprich(antwort);
+                if (strom != null)
+                {
+                    if (abbruch.IsCancellationRequested) strom.Abbrechen();
+                    else await strom.Ende(antwort);
+                }
             }
             finally
             {
@@ -410,9 +434,16 @@ public sealed class AppSteuerung : Beobachtbar
             w.Topmost = true;
             w.Topmost = false;
             w.Activate();
+            // Ein unsichtbar gestarteter Aufrufer (Wecker) darf das Fenster nicht einfach nach vorn holen.
+            if (Nativ.GetForegroundWindow() != griff) _ = NachVornNachfassen(griff);
         }
         FensterZustandGeaendert();
     });
+
+    private static async Task NachVornNachfassen(IntPtr griff)
+    {
+        if (!await Fenster.NachVorn(griff)) Log("fehler", "Fenster ließ sich nicht nach vorn holen", wo: "AppSteuerung");
+    }
 
     /// <summary>Ist Jarvis wirklich vorn? Dann ist die Blase unten die Anzeige, sonst die Pille.</summary>
     public bool FensterVorn => Haupt.Wert(() =>
@@ -435,6 +466,7 @@ public sealed class AppSteuerung : Beobachtbar
     private void SprachgespraechStarten()
     {
         _ = McpKlient.Shared.KontextVorladen();
+        GehirnNetz.Vorwaermen();
         if (!FensterVorn)
         {
             // Im Hintergrund bleibt die Ansicht, wie sie ist: Ein Fehlalarm darf nichts Offenes verdrängen. Klick auf die Pille oder die Rückkehr zu Jarvis zeigt das Gespräch.
@@ -483,17 +515,39 @@ public sealed class AppSteuerung : Beobachtbar
 
     public void KuerzelRegistrieren()
     {
-        if (kuerzelAn) return;
         kuerzelAn = true;
         var griff = JarvisApp.Griff;
+        var belegt = new List<char>();
         foreach (var (nr, taste) in new[] { (1, 'J'), (2, 'K') })
-            if (!Nativ.RegisterHotKey(griff, nr, Nativ.MOD_CONTROL | Nativ.MOD_ALT | Nativ.MOD_NOREPEAT, taste))
-                Log("fehler", $"Globales Kürzel Strg+Alt+{taste} ist schon vergeben", wo: "AppSteuerung");
+        {
+            if (kuerzelDa.Contains(nr)) continue;
+            if (Nativ.RegisterHotKey(griff, nr, Nativ.MOD_CONTROL | Nativ.MOD_ALT | Nativ.MOD_NOREPEAT, taste)) kuerzelDa.Add(nr);
+            else belegt.Add(taste);
+        }
+        var fehler = belegt.Count == 0 ? null : string.Join(" und ", belegt.Select(t => $"Strg+Alt+{t}")) + " ist von einem anderen Programm belegt. Jarvis versucht es jede Minute neu; solange geht das Kürzel nicht.";
+        if (fehler != null && fehler != KuerzelFehler)
+        {
+            Log("fehler", fehler, wo: "AppSteuerung");
+            _ = Shell.Mitteilung("Jarvis: Tastenkürzel", fehler);
+        }
+        KuerzelFehler = fehler;
+        if (fehler != null) _ = KuerzelNochmal();
+    }
+
+    private async Task KuerzelNochmal()
+    {
+        if (kuerzelUhrLaeuft) return;
+        kuerzelUhrLaeuft = true;
+        await Task.Delay(TimeSpan.FromMinutes(1));
+        kuerzelUhrLaeuft = false;
+        if (kuerzelAn) KuerzelRegistrieren();
     }
 
     public void KuerzelAbmelden()
     {
         kuerzelAn = false;
+        kuerzelDa.Clear();
+        KuerzelFehler = null;
         var griff = JarvisApp.Griff;
         Nativ.UnregisterHotKey(griff, 1);
         Nativ.UnregisterHotKey(griff, 2);

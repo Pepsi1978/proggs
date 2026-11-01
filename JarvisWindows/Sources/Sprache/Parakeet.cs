@@ -20,7 +20,7 @@ public sealed class ParakeetError : Exception
 public sealed record ParakeetMessung(int LadeMs = 0, int RamMb = 0, int AudioMs = 0, int RechenMs = 0);
 
 /// <summary>Offline-Transkription mit parakeet-primeline: deutscher Fine-Tune von nvidia/parakeet-tdt-0.6b-v3,
-/// int8-ONNX über sherpa-onnx (NuGet org.k2fsa.sherpa.onnx), nur CPU mit 4 Threads. Hugging Face flozen1981/parakeet-primeline-onnx in der
+/// int8-ONNX über sherpa-onnx (NuGet org.k2fsa.sherpa.onnx), nur CPU, Threads nach Kernen. Hugging Face flozen1981/parakeet-primeline-onnx in der
 /// festgelegten Revision. Die Dateien (rund 640 MB) liegen einmal pro Rechner unter %LOCALAPPDATA%\VoiceOverlays\ und werden mit TVO und CVO geteilt.
 ///
 /// Nach dem einmaligen Download kein Netz, kein Schlüssel. Fehlt das Modell oder scheitert es, gibt es einen Fehler, nie einen Rückfall auf Groq oder Gemini.
@@ -55,7 +55,8 @@ public sealed class ParakeetLocalClient
     });
 
     private const int SampleRate = 16_000;
-    private const int Threads = 4;
+    /// <summary>Die Hälfte der logischen Kerne entspricht meist den physischen; mehr bringt der Encoder kaum und nimmt anderen Programmen die Luft.</summary>
+    private static readonly int Threads = Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
     /// <summary>Der Encoder scheitert über 400 s und braucht davor quadratisch mehr Speicher: längere Diktate in Stücken.</summary>
     private const int MaxChunkS = 90;
     private const int RetryChunkS = 20;
@@ -66,14 +67,17 @@ public sealed class ParakeetLocalClient
     private const float HotwordsScore = 3f;
     /// <summary>Wie am Handy: mehr als 100 Begriffe gehen nicht in die Beam-Suche.</summary>
     private const int MaxHotwords = 100;
-    /// <summary>Nach so langer Ruhe wird der Arbeitsspeicher wieder frei (TVO und CVO laufen gleichzeitig). Das Diktat lädt beim Aufnahmestart vor.</summary>
-    private static readonly TimeSpan IdleUnload = TimeSpan.FromMinutes(15);
+    /// <summary>Nach so langer Ruhe wird der Arbeitsspeicher wieder frei (TVO und CVO laufen gleichzeitig). Eine Stunde: Ein Kaltstart kostet bei jedem Kürzel mehrere Sekunden.</summary>
+    private static readonly TimeSpan IdleUnload = TimeSpan.FromMinutes(60);
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private OfflineRecognizer? _recognizer;
     private Timer? _idleTimer;
     /// <summary>Nur mit bpe.vocab läuft die Beam-Suche, die allein Wortlisten beachtet.</summary>
     private bool _hotwordsAvailable;
+
+    /// <summary>Die Beam-Suche rechnet rund 30 % langsamer und wird nur gebraucht, wenn eine Wortliste wirken soll (Weckwort oder Wörterbuch). Sonst Greedy.</summary>
+    private static bool BrauchtWortliste => Einstellungen.Shared.WeckwortAn || TranskriptionsEinstellungen.Shared.ParakeetWoerterbuchAn;
     /// <summary>Solange das Weckwort lauscht, bleibt das Modell geladen: Sonst käme die Antwort auf „Hey Jarvis“ erst nach dem Neuladen.</summary>
     private int _halten;
 
@@ -136,7 +140,7 @@ public sealed class ParakeetLocalClient
         {
             return await Task.Run(() =>
             {
-                var r = LoadIfNeeded();
+                var r = LoadIfNeeded(hotwords.Length > 0);
                 return Rechne(r, ReadSamples(fileURL), hotwords);
             }).ConfigureAwait(false);
         }
@@ -154,7 +158,7 @@ public sealed class ParakeetLocalClient
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            return await Task.Run(() => Rechne(LoadIfNeeded(), samples, hotwords)).ConfigureAwait(false);
+            return await Task.Run(() => Rechne(LoadIfNeeded(hotwords.Length > 0), samples, hotwords)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -172,7 +176,7 @@ public sealed class ParakeetLocalClient
         {
             return await Task.Run(() =>
             {
-                var r = LoadIfNeeded();
+                var r = LoadIfNeeded(hotwords.Length > 0);
                 var text = Decode(r, samples, _hotwordsAvailable ? hotwords : "");
                 ScheduleUnload();
                 return text;
@@ -231,8 +235,14 @@ public sealed class ParakeetLocalClient
         return File.Exists(p) ? new FileInfo(p).Length : 0L;
     });
 
-    private OfflineRecognizer LoadIfNeeded()
+    private OfflineRecognizer LoadIfNeeded(bool mitWortliste = false)
     {
+        // Greedy geladen, jetzt wird eine Wortliste gebraucht (Weckwort oder Wörterbuch wurden eingeschaltet): neu laden.
+        if (_recognizer != null && mitWortliste && !_hotwordsAvailable && File.Exists(Pfade.Ressource("bpe.vocab")))
+        {
+            _recognizer.Dispose();
+            _recognizer = null;
+        }
         if (_recognizer != null) return _recognizer;
         if (!IsInstalled) throw ParakeetError.NotInstalled;
         var sw = Stopwatch.StartNew();
@@ -249,7 +259,8 @@ public sealed class ParakeetLocalClient
         // Vokabular des Modells: zerlegt die Begriffe der Wortliste in Modell-Token. Liegt im Programmordner, nicht im
         // Modell-Download. Die Liste selbst kommt je Aufnahme über den Stream, darum kein HotwordsFile.
         var bpe = Pfade.Ressource("bpe.vocab");
-        _hotwordsAvailable = File.Exists(bpe);
+        var bpeDa = File.Exists(bpe);
+        _hotwordsAvailable = bpeDa && (mitWortliste || BrauchtWortliste);
         if (_hotwordsAvailable)
         {
             cfg.ModelConfig.BpeVocab = bpe;
@@ -259,7 +270,7 @@ public sealed class ParakeetLocalClient
         }
         else
         {
-            Log("fehler", "Parakeet: bpe.vocab fehlt im Programmordner, Wörterbuch wirkt nicht");
+            if (!bpeDa) Log("fehler", "Parakeet: bpe.vocab fehlt im Programmordner, Wörterbuch wirkt nicht");
             cfg.DecodingMethod = "greedy_search";
         }
         OfflineRecognizer r;

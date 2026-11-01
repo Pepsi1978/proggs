@@ -18,8 +18,9 @@ public static class GehirnNetz
         {
             ConnectCallback = VerbindeIPv4Zuerst,
             ConnectTimeout = TimeSpan.FromSeconds(30),
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            PooledConnectionIdleTimeout = TimeSpan.FromSeconds(60),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+            // Gehalten über übliche Sprechpausen: Sonst zahlt jede Frage nach einer Minute Ruhe DNS, TCP und TLS erneut.
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
             AutomaticDecompression = entpacken,
         };
         if (jeServer != null) h.MaxConnectionsPerServer = jeServer.Value;
@@ -55,6 +56,36 @@ public static class GehirnNetz
             }
         }
         throw letzter ?? new SocketException((int)SocketError.HostNotFound);
+    }
+
+    private static DateTime zuletztGewaermt = DateTime.MinValue;
+
+    /// <summary>Baut die Verbindungen zu Modell und Sprachdiensten schon auf, bevor Frank fertig gesprochen oder getippt hat (Weckwort, Strg+Alt+J, Blase öffnen).
+    /// Spart DNS, TCP und TLS vor dem ersten Wort. Höchstens alle 45 Sekunden, nie blockierend, Fehler sind egal.</summary>
+    public static void Vorwaermen()
+    {
+        var jetzt = DateTime.UtcNow;
+        if ((jetzt - zuletztGewaermt).TotalSeconds < 45) return;
+        zuletztGewaermt = jetzt;
+        var e = Einstellungen.Shared;
+        var z = e.Zugang;
+        var gehirn = e.ModellWahlAktuell.Anbieter == Anbieter.Anthropic && z.Anthropic.Length > 0 ? "https://api.anthropic.com/"
+            : z.Openai.Length > 0 ? "https://api.openai.com/" : "https://chatgpt.com/";
+        _ = Waerme(gehirn, Client);
+        if (z.Groq.Length > 0 && e.Transkription == "groq") _ = Waerme("https://api.groq.com/", SprachHttp.Client);
+        if (z.Google.Length > 0) _ = Waerme("https://texttospeech.googleapis.com/", SprachHttp.Client);
+        if (z.Gemini.Length > 0) _ = Waerme("https://generativelanguage.googleapis.com/", SprachHttp.Client);
+    }
+
+    private static async Task Waerme(string adresse, HttpClient c)
+    {
+        try
+        {
+            using var frist = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var req = new HttpRequestMessage(HttpMethod.Head, adresse);
+            using var a = await c.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, frist.Token);
+        }
+        catch (Exception) { }
     }
 
     /// <summary>Schickt die Anfrage und liest die ganze Antwort. Überschreitet sie die Frist: TimeoutException; Abbruch von außen: OperationCanceledException.</summary>
@@ -177,9 +208,11 @@ public sealed class ModellAntwort
     public int AusgabeTokens { get; set; }
     public int CacheTokens { get; set; }
     public int CacheSchreibTokens { get; set; }
+    /// <summary>Davon mit einer Stunde Lebensdauer: kostet 2 × Eingabe statt 1,25 ×.</summary>
+    public int CacheSchreib1hTokens { get; set; }
 }
 
-/// <summary>Listenpreise der Claude-API in Dollar je Million Tokens (Stand 06.10.2026). Cache schreiben = 1,25 × Eingabe. Websuche ist nicht enthalten.</summary>
+/// <summary>Listenpreise der Claude-API in Dollar je Million Tokens (Stand 06.10.2026). Cache schreiben = 1,25 × Eingabe (5 Minuten) oder 2 × (1 Stunde). Websuche ist nicht enthalten.</summary>
 public static class ClaudePreis
 {
     private static readonly Dictionary<string, (double ein, double aus, double cacheLesen)> Tabelle = new()
@@ -195,7 +228,7 @@ public static class ClaudePreis
         if (!Tabelle.TryGetValue(modell, out var p)) return 0;
         // Haiku kostet oberhalb von 100 000 Tokens Eingabe das Fünffache.
         if (modell == "claude-haiku-5-5" && a.EingabeTokens + a.CacheTokens + a.CacheSchreibTokens > 100_000) p = (0.50, 2.50, 0.05);
-        var ein = a.EingabeTokens * p.ein + a.CacheSchreibTokens * p.ein * 1.25 + a.CacheTokens * p.cacheLesen;
+        var ein = a.EingabeTokens * p.ein + (a.CacheSchreibTokens - a.CacheSchreib1hTokens) * p.ein * 1.25 + a.CacheSchreib1hTokens * p.ein * 2 + a.CacheTokens * p.cacheLesen;
         return (ein + a.AusgabeTokens * p.aus) / 1_000_000;
     }
 }
@@ -236,6 +269,8 @@ public sealed class AnthropicKlient : ModellAnbieter
     public AnthropicKlient(string schluessel) { this.schluessel = schluessel; }
 
     private static readonly JSONObjekt Fluechtig = new() { ["type"] = "ephemeral" };
+    /// <summary>Werkzeuge und System sind groß und ändern sich kaum: Sie überstehen so auch zehn Minuten Sprechpause, die Frage danach beginnt nicht kalt. Muss vor Fünf-Minuten-Einträgen stehen.</summary>
+    private static readonly JSONObjekt EineStunde = new() { ["type"] = "ephemeral", ["ttl"] = "1h" };
 
     // Immer im Hintergrund: Das Lesen des Stroms zeilenweise auf dem Hauptfaden ließe die Oberfläche stocken.
     public Task<ModellAntwort> Antworte(IReadOnlyList<string> system, IReadOnlyList<WerkzeugDefinition> werkzeuge, bool websuche, IReadOnlyList<JSONObjekt> verlauf,
@@ -263,11 +298,11 @@ public sealed class AnthropicKlient : ModellAnbieter
             var neu = modell is "claude-opus-5-5" or "claude-sonnet-5-5";
             tools.Add(new JSONObjekt { ["type"] = neu ? "web_search_20260209" : "web_search_20250305", ["name"] = "web_search", ["max_uses"] = 3 });
         }
-        if (tools.Count > 0) tools[^1]["cache_control"] = Fluechtig;
+        if (tools.Count > 0) tools[^1]["cache_control"] = EineStunde;
         var systemBloecke = system.Where(t => !string.IsNullOrEmpty(t)).Select((t, i) =>
         {
             var b = new JSONObjekt { ["type"] = "text", ["text"] = t };
-            if (i < 2) b["cache_control"] = Fluechtig;
+            if (i < 2) b["cache_control"] = EineStunde;
             return b;
         }).ToList();
         // Nur die Kopie bekommt den Haltepunkt: Der gespeicherte Verlauf bleibt unberührt.
@@ -328,6 +363,7 @@ public sealed class AnthropicKlient : ModellAnbieter
                         ergebnis.EingabeTokens = (int)(u.Ganz("input_tokens") ?? 0);
                         ergebnis.CacheTokens = (int)(u.Ganz("cache_read_input_tokens") ?? 0);
                         ergebnis.CacheSchreibTokens = (int)(u.Ganz("cache_creation_input_tokens") ?? 0);
+                        ergebnis.CacheSchreib1hTokens = (int)(u.Obj("cache_creation")?.Ganz("ephemeral_1h_input_tokens") ?? 0);
                     }
                     break;
                 }

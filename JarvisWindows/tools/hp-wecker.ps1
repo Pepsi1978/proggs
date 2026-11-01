@@ -41,20 +41,32 @@ function Lies-Zugang {
     return $werte
 }
 
+# Einer zur Zeit: Die Aufgabe startet jede Minute neu, falls er nicht mehr läuft.
+$sperre = [System.Threading.Mutex]::new($false, 'Local\JarvisWindowsWecker')
+try { if (-not $sperre.WaitOne(0)) { exit 0 } } catch [System.Threading.AbandonedMutexException] { }
+
+# Über curl.exe -4 wie die Brücke: Auf diesem Netz hängt Invoke-WebRequest sonst an IPv6 bis zum Zeitlimit, und der HP gälte als nicht verbunden (bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
+$curl = Join-Path $env:SystemRoot 'System32\curl.exe'
+$antwortDatei = Join-Path $ordner 'wecker-antwort.json'
+$kopfDatei = Join-Path $ordner 'wecker-kopf.txt'
+
 Schreib 'Wecker gestartet'
 $pause = 2
 while ($true) {
     try {
         $z = Lies-Zugang
-        $antwort = Invoke-WebRequest -Uri "https://$($z.host)/pc/hp-befehl" -Headers @{ 'X-Jarvis-Token' = $z.token } -TimeoutSec 40 -UseBasicParsing
+        # Der Token steht in einer Datei, nicht in der Befehlszeile: Die kann jedes Programm lesen.
+        [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $($z.token)`n", [System.Text.UTF8Encoding]::new($false))
+        Remove-Item -LiteralPath $antwortDatei -ErrorAction SilentlyContinue
+        $code = & $curl -4 -s -S --max-time 40 -H "@$kopfDatei" -o $antwortDatei -w '%{http_code}' "https://$($z.host)/pc/hp-befehl"
+        if ($code -eq '204') { $pause = 2; continue }
+        if ($code -ne '200') { throw "HTTP $code" }
         $pause = 2
-        if ($antwort.StatusCode -eq 200) {
-            $befehl = $antwort.Content | ConvertFrom-Json
-            if ($befehl.befehl -eq 'jarvis_starten') {
-                Schreib "Start angefordert, vorn=$($befehl.vorn)"
-                # Die App ist Einzelinstanz: Läuft sie schon, holt der zweite Start nur das Fenster nach vorn.
-                if (Wird-Installiert) { Schreib 'Wird gerade installiert, kein Start.' } else { Starte-App ([bool]$befehl.vorn) }
-            }
+        $befehl = Get-Content -Raw -Encoding utf8 -LiteralPath $antwortDatei | ConvertFrom-Json
+        if ($befehl.befehl -eq 'jarvis_starten') {
+            Schreib "Start angefordert, vorn=$($befehl.vorn)"
+            # Die App ist Einzelinstanz: Läuft sie schon, holt der zweite Start nur das Fenster nach vorn.
+            if (Wird-Installiert) { Schreib 'Wird gerade installiert, kein Start.' } else { Starte-App ([bool]$befehl.vorn) }
         }
     } catch {
         Schreib "Fehler: $($_.Exception.Message)"

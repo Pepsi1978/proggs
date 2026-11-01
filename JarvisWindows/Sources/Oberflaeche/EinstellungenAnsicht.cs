@@ -17,7 +17,7 @@ public sealed class EinstellungenAnsicht : UserControl
 
     private static readonly (string Id, string Titel, string Symbol)[] ReiterListe =
     {
-        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
+        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
         ("live", "Live-Gespräch", "waveform"), ("windows", "Windows & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
@@ -68,6 +68,7 @@ public sealed class EinstellungenAnsicht : UserControl
             "gehirn" => Gehirn(),
             "guthaben" => new GuthabenAnsicht(),
             "kontingente" => new KontingenteAnsicht(),
+            "konsolen" => new KonsolenAnsicht(),
             "stimme" => Stimme_(),
             "sprache" => V(18, Sprache(), new TranskriptionsEinstellungenAnsicht()),
             "live" => new LiveKarte(),
@@ -94,6 +95,9 @@ public sealed class EinstellungenAnsicht : UserControl
         Rand(V(8,
             V(3, T("Denkstufe", 14, FontWeights.SemiBold), T("Höher = gründlicher, aber langsamer und teurer.", 12, null, Farbe.Text2)),
             new StufenWahl(new[] { "low", "medium", "high", "xhigh", "max" }, () => einst.Effort, v => einst.Effort = v)), o: 6, u: 6),
+        Rand(V(8,
+            V(3, T("Denkstufe beim Sprechen", 14, FontWeights.SemiBold), T("Gilt für gesprochene Fragen. Niedriger = Jarvis antwortet schneller, das Modell bleibt gleich.", 12, null, Farbe.Text2)),
+            new StufenWahl(new[] { "low", "medium", "high", "xhigh", "max" }, () => einst.SprachEffort, v => einst.SprachEffort = v)), o: 6, u: 6),
         Zeile("Schrittlimit je Anfrage", "Wie viele Werkzeugschritte Jarvis höchstens am Stück macht (0 = unbegrenzt).",
             Stepper(() => einst.SchrittLimit, v => einst.SchrittLimit = v, 0, 200, 10)),
         Zeile("Lernen am PC", "Ruht ein Gespräch 10 Minuten, gibt Jarvis neue dauerhafte Angaben von dir ins gemeinsame Gedächtnis.",

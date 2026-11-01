@@ -373,6 +373,31 @@ public static partial class WinWerkzeuge
 
     public static string? OpenLauncher => NeuesteExe("OpenLauncher", "OpenLauncher.exe");
 
+    /// <summary>Wie die Brücke: Der Pfad wird frisch aus Windows gelesen, die App läuft tagelang.</summary>
+    private static bool CliVorhanden(string cli)
+    {
+        if (cli == "kimi" && File.Exists(Path.Combine(Pfade.Heim, ".kimi-code", "bin", "kimi.exe"))) return true;
+        if (cli == "antigravity" && File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "agy", "bin", "agy.exe"))) return true;
+        var name = cli == "antigravity" ? "agy" : cli;
+        var pfad = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) + ";" + Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+        foreach (var o in pfad.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var endung in new[] { ".exe", ".cmd", ".bat", ".ps1" })
+                try { if (File.Exists(Path.Combine(Environment.ExpandEnvironmentVariables(o.Trim()), name + endung))) return true; } catch (ArgumentException) { }
+        return false;
+    }
+
+    /// <summary>Auftragstexte bleiben 14 Tage liegen wie bei der Brücke.</summary>
+    private static void AuftraegeAufraeumen()
+    {
+        var grenze = DateTime.Now.AddDays(-14);
+        try
+        {
+            foreach (var d in Directory.EnumerateFiles(Pfade.Temp, "auftrag-*.txt"))
+                if (File.GetLastWriteTime(d) < grenze) File.Delete(d);
+        }
+        catch (Exception) { }
+    }
+
     /// <summary>Programme aus dem Startmenü, auch Store-Apps. Genau, dann Anfang, dann Teil des Namens.</summary>
     private static async Task<string?> StartApp(string name)
     {
@@ -782,13 +807,28 @@ public static partial class WinWerkzeuge
                 if (Gesperrt() is { } g1) return g1;
                 if (Shell.Sperre(a.Text("ordner"), a.Text("auftrag")) is { } g2) return g2;
                 if (OpenLauncher is not { } exe) return new WerkzeugErgebnis("OpenLauncher ist nicht gebaut (proggs\\OpenLauncher\\bin\\Release).", Fehler: true);
+                var cli = (a.Text("cli") ?? "").Trim().ToLowerInvariant();
+                if (cli.Length == 0) cli = "claude";
+                var modell = a.Text("modell");
+                // Ohne Modell setzt der OpenLauncher das Claude-Modell ein, und ein anderes CLI scheitert daran oder läuft falsch.
+                if (cli != "claude" && string.IsNullOrWhiteSpace(modell))
+                {
+                    if (cli != "codex") return new WerkzeugErgebnis($"Für das CLI {cli} braucht openlauncher_sitzung ein ausdrückliches modell.", Fehler: true);
+                    modell = "gpt-6.1-sol";
+                }
+                // Ein älterer OpenLauncher überginge die Wahl still und startete Claude Code.
+                var ab = cli is "kimi" or "antigravity" or "opencode" ? new Version(1, 24, 111) : cli == "codex" ? new Version(1, 24, 98) : new Version(1, 24, 89);
+                if (!Version.TryParse((System.Diagnostics.FileVersionInfo.GetVersionInfo(exe).ProductVersion ?? "").Split('+')[0], out var stand) || stand < ab)
+                    return new WerkzeugErgebnis($"Das CLI {cli} braucht OpenLauncher ab {ab}; bitte den OpenLauncher über das Updatescript aktualisieren.", Fehler: true);
+                if (cli != "claude" && !CliVorhanden(cli)) return new WerkzeugErgebnis($"Das CLI {cli} ist auf diesem Laptop nicht installiert.", Fehler: true);
+                _ = Task.Run(AuftraegeAufraeumen);
                 var datei = Path.Combine(Pfade.Temp, $"auftrag-{DateTimeOffset.Now.ToUnixTimeSeconds()}-{Guid.NewGuid():N}.txt");
                 await File.WriteAllTextAsync(datei, a.Text("auftrag") ?? "", new UTF8Encoding(false));
                 static string Sauber(string s) => Regex.Replace(s, "[\"\\r\\n]", "");
                 var name = Sauber(a.Text("name") ?? AppInfo.Name);
                 var teile = new List<string> { "--jarvis-auftrag", datei, "--name", name };
                 foreach (var k in new[] { "cli", "modell", "anbieter", "profil", "modus", "effort", "ordner" })
-                    if (a.Text(k) is { Length: > 0 } v) { teile.Add("--" + k); teile.Add(k == "ordner" ? Shell.Erweitert(Sauber(v)) : Sauber(v)); }
+                    if ((k == "modell" ? modell : a.Text(k)) is { Length: > 0 } v) { teile.Add("--" + k); teile.Add(k == "ordner" ? Shell.Erweitert(Sauber(v)) : Sauber(v)); }
                 try
                 {
                     using var p = Shell.Starte(exe, string.Join(" ", teile.Select(Shell.Argument)), versteckt: true);

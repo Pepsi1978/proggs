@@ -24,7 +24,8 @@ public sealed class LiveTon
     public const int KappenUeberMs = 30;
     public const int StilleSpitze = 200;
     public const double HoerbarEffektiv = 120;
-    public const int BlockMs = 100;
+    /// <summary>Mikrofonblock: OpenAI verlangt gleichmäßig 100 ms (§11), Gemini bekommt 40 ms für weniger Verzögerung beim Hinhören.</summary>
+    public int BlockMs { get; }
     /// <summary>Echosperre: Das Mikrofon bleibt nach dem Ende der Wiedergabe noch so lange zu (Puffer, Hall), §14.3.</summary>
     public const int EchoNachlaufMs = 400;
     /// <summary>Über Bluetooth liegt die Funkstrecke zwischen Puffer und Lautsprecher, §14.5 (Phantom-Mitschrift).</summary>
@@ -32,7 +33,7 @@ public sealed class LiveTon
     private const int AusgangLatenzWunschMs = 40;
 
     public double EingabeRate { get; }
-    /// <summary>PCM16 mono in EingabeRate, Blöcke zu 100 ms. Läuft im Mikrofon-Faden.</summary>
+    /// <summary>PCM16 mono in EingabeRate, Blöcke zu BlockMs. Läuft im Mikrofon-Faden.</summary>
     public Action<byte[]>? BeiMikro { get; set; }
     /// <summary>Mikrofon stumm (Stille statt Mikrofon an den Dienst), z. B. während eines späten Vorlesens.</summary>
     public bool MikroStumm { get { lock (schloss) return mikroStumm; } set { lock (schloss) mikroStumm = value; } }
@@ -62,6 +63,9 @@ public sealed class LiveTon
     private float pegelAusWert;
     private bool mikroStumm;
     private volatile bool laeuft;
+    private volatile bool gestoppt;
+    /// <summary>Mikrofon und Lautsprecher laufen.</summary>
+    public bool Laeuft => laeuft;
 
     private readonly TonFaden faden = new();
     private MMDeviceEnumerator? geraete;
@@ -87,7 +91,7 @@ public sealed class LiveTon
     private bool mikroFehlerGemeldet;
     private readonly ManualResetEventSlim erstesPaket = new(false);
 
-    public LiveTon(double eingabeRate) { EingabeRate = eingabeRate; }
+    public LiveTon(double eingabeRate, int blockMs = 100) { EingabeRate = eingabeRate; BlockMs = blockMs; }
 
     public static long JetztMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -148,6 +152,7 @@ public sealed class LiveTon
             {
                 Hochfahren(sprachverarbeitung: versuch < 2);
                 laeuft = true;
+                SperreAusPuffer();
                 WaechterSetzen();
                 if (versuch > 0) Log("live", $"Ton im {versuch + 1}. Versuch gestartet{(versuch == 2 ? " – ohne Echounterdrückung, Echosperre aktiv" : "")}");
                 return;
@@ -157,7 +162,8 @@ public sealed class LiveTon
             {
                 letzterFehler = ex;
                 Log("fehler", $"Live: Tonstart Versuch {versuch + 1} fehlgeschlagen: {ex.Message}");
-                versuch += ex is TonlaufFehler ? 2 : 1;
+                // Kein Tonlauf: Die Kategorie ist das Problem, also gleich zum Versuch ohne sie, nie darüber hinaus.
+                versuch = ex is TonlaufFehler ? Math.Max(versuch + 1, 2) : versuch + 1;
             }
         }
         TonAbbauen();   // Ein Teil kann trotz Fehler laufen, das Mikrofon darf nicht offen bleiben.
@@ -171,6 +177,7 @@ public sealed class LiveTon
         geraete ??= new MMDeviceEnumerator();
         stromAusgefallen = false;
         this.sprachverarbeitung = sprachverarbeitung;
+        ohneEchoUnterdrueckung = true;   // Bis der Effekt bestätigt ist: Die Begrüßung kann schon laufen, ihr Echo darf nicht ins Mikrofon.
         AusgangStarten();
         var echoAn = EingangStarten(sprachverarbeitung);
         ohneEchoUnterdrueckung = !echoAn;
@@ -197,17 +204,21 @@ public sealed class LiveTon
             stromAusgefallen = true;
             faden.Post(NeustartAnfordern);
         };
+        DuckingAus(d);
         w.Init(new SampleToWaveProvider(verteiler));
         ausgang = w;
         var client = PrivatesFeld<AudioClient>(w, "audioClient");
         if (client != null)
         {
-            DuckingAus(client);
             try { var ms = (int)(client.StreamLatency / 10_000); lock (schloss) latenzMs = ms > 0 ? ms : AusgangLatenzWunschMs; } catch { }
         }
-        // 250 ms Stille vorlegen, damit der Ausgang nicht leer startet (§14.2 Nr. 7).
-        PlaneStille(StartPolsterMs);
+        // 250 ms Stille vorlegen, damit der Ausgang nicht leer startet (§14.2 Nr. 7). Socket und Ton starten parallel:
+        // Liegt schon Ton der Begrüßung bereit, käme die Stille sonst hinter dessen Anfang.
+        bool leer;
+        lock (schloss) leer = gepuffertFrames == 0;
+        if (leer) PlaneStille(StartPolsterMs);
         w.Play();
+        SperreAusPuffer();
     }
 
     /// <summary>Gibt zurück, ob das Gerät wirklich Echounterdrückung macht.</summary>
@@ -251,7 +262,6 @@ public sealed class LiveTon
         };
         eingang = c;
         c.StartRecording();
-        if (client != null) DuckingAus(client);
         var echoAn = sprachverarbeitung && client != null && EchoEinschalten(client, ausgangGeraet?.ID);
         // Kein Paket trotz Start: Der Tonlauf steht, ein zweiter Versuch mit derselben Kategorie hilft nicht (wie „player did not see an IO cycle“ am Mac).
         if (!erstesPaket.Wait(1500)) throw new TonlaufFehler("Mikrofon liefert keinen Ton.");
@@ -352,6 +362,7 @@ public sealed class LiveTon
     /// <summary>Blockiert den Aufrufer nie: Der Ton-Faden räumt auf.</summary>
     public void Stoppen()
     {
+        gestoppt = true;
         laeuft = false;
         PufferZuruecksetzen();
         faden.Post(() =>
@@ -471,7 +482,8 @@ public sealed class LiveTon
     /// gekappt werden, wenn sich ein Polster aufgestaut hat.</summary>
     public void Spiele(byte[] pcm, bool kappenErlaubt = true)
     {
-        if (!laeuft || pcm.Length < 2) return;
+        // Auch vor dem Start annehmen: Socket und Ton starten parallel, die Begrüßung darf dabei nicht verloren gehen.
+        if (gestoppt || pcm.Length < 2) return;
         var s = MemoryMarshal.Cast<byte, short>(pcm);
         var frames = s.Length;
         double summe = 0;
@@ -512,6 +524,19 @@ public sealed class LiveTon
                 var nachlauf = EchoNachlaufMs + (ausgangBluetooth ? Math.Max(BluetoothMinLatenzMs, latenzMs) + BlockMs : 0);
                 sperreBisMs = jetzt + restMs + nachlauf;
             }
+        }
+    }
+
+    /// <summary>Ton, der vor dem Gerätestart ankam, läuft erst jetzt los: Sprechanzeige und Echosperre ab jetzt rechnen.</summary>
+    private void SperreAusPuffer()
+    {
+        lock (schloss)
+        {
+            if (gepuffertFrames == 0 || letzteHoerbarMs == 0) return;
+            var jetzt = JetztMs();
+            var restMs = gepuffertFrames * 1000 / (int)AusgabeRate + latenzMs;
+            hoerbarBisMs = jetzt + restMs + 150;
+            sperreBisMs = jetzt + restMs + EchoNachlaufMs + (ausgangBluetooth ? Math.Max(BluetoothMinLatenzMs, latenzMs) + BlockMs : 0);
         }
     }
 
@@ -731,16 +756,19 @@ public sealed class LiveTon
         }
     }
 
-    /// <summary>Eine Communications-Sitzung drückt sonst alles andere (auch Jarvis selbst) leiser, unter Windows bis zu 80 %. Wie am Mac: nicht ducken.</summary>
-    private static void DuckingAus(AudioClient client)
+    /// <summary>Das Communications-Mikrofon lässt Windows andere Wiedergaben leiser drücken, bis zu 80 %, auch Jarvis selbst. Diese App nimmt ihre Wiedergabe davon aus.
+    /// Vor dem Stromstart über den Sitzungsmanager des Lautsprechers; auf einer Aufnahme-Sitzung lehnt Windows das ab (0x88890003, gemessen).
+    /// Fremde Programme werden je nach Windows-Einstellung weiter leiser.</summary>
+    private static void DuckingAus(MMDevice d)
     {
         try
         {
-            var c = Schnittstelle(client);
-            if (c == null) return;
-            if (c.GetService(typeof(IAudioSessionControl2).GUID, out var dienst) >= 0 && dienst is IAudioSessionControl2 s) s.SetDuckingPreference(true);
+            var sitzung = PrivatesFeld<IAudioSessionControl2>(d.AudioSessionManager.AudioSessionControl, "audioSessionControlInterface2");
+            if (sitzung == null) { Log("live", "Ducking nicht abschaltbar: Sitzung nicht gefunden"); return; }
+            var hr = sitzung.SetDuckingPreference(true);
+            if (hr < 0) Log("live", $"Ducking nicht abschaltbar: 0x{hr:X8}");
         }
-        catch { }
+        catch (Exception ex) { Log("live", "Ducking nicht abschaltbar: " + ex.Message); }
     }
 
     private static bool IstBluetooth(MMDevice d)

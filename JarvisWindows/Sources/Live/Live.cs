@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using System.Windows.Threading;
 
 namespace JarvisWindows;
@@ -49,6 +50,7 @@ public sealed class LiveGespraech : Beobachtbar
     private LiveTon? ton;
     private Gespraech? gespraech;
     private DispatcherTimer? zeitgeber;
+    private CancellationTokenSource? taktAbbruch;
     private Bruecke? bruecke;
     private int offeneAuftraege;
     private Task? auftragsKette;
@@ -89,6 +91,7 @@ public sealed class LiveGespraech : Beobachtbar
         ausstehend.Clear();
         naechsteJarvisVomAgenten = 0;
         offeneAuftraege = 0;
+        auftragsKette = null;   // Eine neue Sitzung wartet nicht auf die Frage einer alten.
         gespraech = g;
         Zustand = LiveZustand.Verbindet;
         Stimme.Shared.Stopp();
@@ -107,7 +110,7 @@ public sealed class LiveGespraech : Beobachtbar
         }
         var e = Einstellungen.Shared;
         var gemini = e.LiveAnbieter == "gemini";
-        var neuerTon = new LiveTon(eingabeRate: gemini ? 16_000 : 24_000);
+        var neuerTon = new LiveTon(eingabeRate: gemini ? 16_000 : 24_000, blockMs: gemini ? 40 : 100);
         LiveSitzung neu;
         if (gemini)
         {
@@ -135,36 +138,54 @@ public sealed class LiveGespraech : Beobachtbar
             Log("live", text);
             Beenden();
         });
-        try { await neuerTon.Starten(); }
-        catch (UnauthorizedAccessException)
-        {
-            neuerTon.Stoppen();
-            if (Zustand != LiveZustand.Verbindet || !ReferenceEquals(gespraech, g)) return;
-            Abbrechen("Jarvis darf das Mikrofon nicht nutzen. Bitte in Einstellungen → Datenschutz und Sicherheit → Mikrofon erlauben.");
-            return;
-        }
-        catch (Exception ex)
-        {
-            neuerTon.Stoppen();
-            if (Zustand != LiveZustand.Verbindet || !ReferenceEquals(gespraech, g)) return;
-            Abbrechen($"Mikrofon oder Lautsprecher lässt sich nicht starten: {ex.Message}");
-            return;
-        }
-        // Frank kann während des Tonstarts beendet haben.
-        if (Zustand != LiveZustand.Verbindet || !ReferenceEquals(gespraech, g))
-        {
-            neuerTon.Stoppen();
-            return;
-        }
         ton = neuerTon;
         sitzung = neu;
         Log("live", $"Live-Gespräch beginnt: {Beschreibung}");
-        neu.Starten();
         letzteAktivitaet = DateTime.UtcNow;
         stilleMinuten = e.LiveStilleMinuten;
-        // Auch während Frank scrollt oder ein Fenster zieht: Beitragsenden und die Jarvis-Weiche hängen an diesem Takt.
+        // Nur Anzeige und Stille-Ende hängen am Hauptfaden.
         zeitgeber = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, (_, _) => Takt(), Dispatcher.CurrentDispatcher);
         zeitgeber.Start();
+        SitzungsTaktStarten(neu);
+        // Socket und Ton zugleich: Beide sind unabhängig, und so zählt nur der längere Weg. Ton, der vorher ankommt, wartet im Puffer.
+        neu.Starten();
+        try { await neuerTon.Starten(); }
+        catch (UnauthorizedAccessException)
+        {
+            AufbauGescheitert("Jarvis darf das Mikrofon nicht nutzen. Bitte in Einstellungen → Datenschutz und Sicherheit → Mikrofon erlauben.", neuerTon, neu);
+        }
+        catch (Exception ex)
+        {
+            AufbauGescheitert($"Mikrofon oder Lautsprecher lässt sich nicht starten: {ex.Message}", neuerTon, neu);
+        }
+    }
+
+    /// <summary>Beitragsenden und die Jarvis-Weiche laufen im eigenen Faden: Rendert oder blockiert die Oberfläche (Fensterzug, Ablage), rutscht die Übergabe an Jarvis nicht nach hinten.</summary>
+    private void SitzungsTaktStarten(LiveSitzung s)
+    {
+        var a = new CancellationTokenSource();
+        taktAbbruch = a;
+        new Thread(() =>
+        {
+            while (!a.IsCancellationRequested)
+            {
+                try { s.Takt(); }
+                catch (Exception ex) { Log("fehler", "Live: Takt der Sitzung fehlgeschlagen", fehler: ex.Message); }
+                a.Token.WaitHandle.WaitOne(50);
+            }
+        }) { IsBackground = true, Priority = ThreadPriority.AboveNormal, Name = "jarvis.live.takt" }.Start();
+    }
+
+    /// <summary>Der Tonstart ist gescheitert, der Socket läuft womöglich schon. Hat Frank inzwischen beendet, ist alles schon abgebaut.</summary>
+    private void AufbauGescheitert(string text, LiveTon t, LiveSitzung s)
+    {
+        if (!ReferenceEquals(ton, t)) return;
+        zeitgeber?.Stop(); zeitgeber = null;
+        taktAbbruch?.Cancel(); taktAbbruch = null;
+        s.Beenden();
+        t.Stoppen();
+        sitzung = null; ton = null;
+        Abbrechen(text);
     }
 
     private void Abbrechen(string text)
@@ -182,6 +203,7 @@ public sealed class LiveGespraech : Beobachtbar
         {
             if (!Aktiv) return;
             zeitgeber?.Stop(); zeitgeber = null;
+            taktAbbruch?.Cancel(); taktAbbruch = null;
             sitzung?.Beenden();
             ton?.Stoppen();
             sitzung = null; ton = null;
@@ -206,19 +228,18 @@ public sealed class LiveGespraech : Beobachtbar
     /// <summary>Frank tippt zum Unterbrechen (Jarvis verstummt sofort).</summary>
     public void Unterbrechen() => sitzung?.Angetippt();
 
-    // MARK: Takt (100 ms)
+    // MARK: Anzeige und Stille-Ende (100 ms, Hauptfaden)
 
     private void Takt()
     {
         var t = ton; var s = sitzung;
         if (t == null || s == null) return;
-        s.Takt();
         PegelEin = t.PegelEin;
         PegelAus = t.PegelAus;
         var spricht = t.SprichtHoerbar;
         var denkt = offeneAuftraege > 0 || ((s as LiveGemini)?.WeicheArbeitet ?? false);
         if (spricht || denkt || (s.Bereit && PegelEin >= StimmPegel)) letzteAktivitaet = DateTime.UtcNow;
-        var neu = !s.Bereit ? LiveZustand.Verbindet : spricht ? LiveZustand.Spricht : denkt ? LiveZustand.Denkt : LiveZustand.Hoert;
+        var neu = !s.Bereit || !t.Laeuft ? LiveZustand.Verbindet : spricht ? LiveZustand.Spricht : denkt ? LiveZustand.Denkt : LiveZustand.Hoert;
         if (neu != Zustand) Zustand = neu;
         var ruhe = (DateTime.UtcNow - letzteAktivitaet).TotalSeconds;
         if (!s.Bereit && ruhe > VerbindenMaxSek)
@@ -240,7 +261,7 @@ public sealed class LiveGespraech : Beobachtbar
     private void BeiBereit()
     {
         letzteAktivitaet = DateTime.UtcNow;
-        if (Zustand == LiveZustand.Verbindet) Zustand = LiveZustand.Hoert;
+        if (Zustand == LiveZustand.Verbindet && ton?.Laeuft == true) Zustand = LiveZustand.Hoert;
     }
 
     private void BeiNutzer(string text)
@@ -307,6 +328,7 @@ public sealed class LiveGespraech : Beobachtbar
             return;
         }
         offeneAuftraege += 1;
+        naechsteJarvisVomAgenten = 0;
         var frage = hinweis.Length == 0 ? worte : worte + "\n" + hinweis;
         var vorher = auftragsKette;
         var hoheStufe = Einstellungen.Shared.Effort is "high" or "xhigh" or "max";
@@ -315,24 +337,54 @@ public sealed class LiveGespraech : Beobachtbar
 
     private async Task AuftragAusfuehren(Task? vorher, string frage, Gespraech g, LiveSitzung s, string kennung, bool hoheStufe)
     {
-        if (vorher != null) await vorher;   // immer nur eine Anfrage gleichzeitig an dasselbe Gespräch
+        // Immer nur eine Anfrage gleichzeitig an dasselbe Gespräch. Ein Fehler der vorigen betrifft diese nicht.
+        if (vorher != null)
+        {
+            try { await vorher; }
+            catch (Exception ex) { Log("fehler", "Live: voriger Auftrag fehlgeschlagen", fehler: ex.Message); }
+        }
         var fertig = false;
         var zwischenstand = false;
+        var gestreamt = false;
+        var strom = new StringBuilder();
+        var gesendet = 0;
+        // Jede Anfrage endet irgendwann: Sonst stünden alle folgenden, und das Stille-Ende griffe nie.
+        using var frist = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        Action<string>? stroemen = null;
+        if (s.KannStroemen) stroemen = stueck =>
+        {
+            lock (strom)
+            {
+                strom.Append(stueck);
+                if (!ReferenceEquals(sitzung, s)) return;
+                while (SatzEnde(strom, gesendet) is var ende && ende > 0)
+                {
+                    var satz = strom.ToString(gesendet, ende - gesendet).Trim();
+                    gesendet = ende;
+                    if (satz.Length > 0 && s.Stueck(kennung, satz))
+                    {
+                        // Der erste Satz spricht, während das Gehirn noch schreibt. Spart die ganze Schreibzeit bis zum ersten Ton.
+                        gestreamt = true;
+                        naechsteJarvisVomAgenten += 1;
+                    }
+                }
+            }
+        };
         using var wacheAbbruch = new CancellationTokenSource();
         _ = Wache();
         async Task Wache()
         {
             try { await Task.Delay(TimeSpan.FromSeconds(hoheStufe ? 120 : 60), wacheAbbruch.Token); }
             catch (OperationCanceledException) { return; }
-            var aktuell = sitzung;
-            if (fertig || aktuell == null) return;
+            // Nur die eigene Sitzung: Die Kennung gilt nirgends sonst. Spricht Jarvis schon, braucht es keinen Zwischenstand.
+            if (fertig || gestreamt || !ReferenceEquals(sitzung, s)) return;
             // Braucht Jarvis länger: Zwischenstand, die Arbeit läuft weiter und wird nachgereicht.
             zwischenstand = true;
-            aktuell.Ergebnis(kennung, LiveOptionen.DauertNoch);
+            s.Ergebnis(kennung, LiveOptionen.DauertNoch);
             Log("live", "Jarvis braucht länger: Zwischenstand an das Live-Modell");
         }
         string antwort;
-        try { antwort = await JarvisAgent.Shared.Frage(frage, g, gesprochen: true); }
+        try { antwort = await JarvisAgent.Shared.Frage(frage, g, gesprochen: true, onText: stroemen, ct: frist.Token); }
         catch (Exception ex)
         {
             Log("fehler", "Live: Jarvis-Anfrage fehlgeschlagen", fehler: ex.Message);
@@ -340,26 +392,78 @@ public sealed class LiveGespraech : Beobachtbar
         }
         fertig = true;
         wacheAbbruch.Cancel();
-        offeneAuftraege = Math.Max(0, offeneAuftraege - 1);
-        letzteAktivitaet = DateTime.UtcNow;
+        // Spät fertig in einer neuen Sitzung: Deren Zähler und Stille-Ende gehen diesen Auftrag nichts an.
+        var eigeneSitzung = ReferenceEquals(sitzung, s) && Aktiv;
+        if (eigeneSitzung)
+        {
+            offeneAuftraege = Math.Max(0, offeneAuftraege - 1);
+            letzteAktivitaet = DateTime.UtcNow;
+        }
         var text = antwort.Length == 0 ? "Jarvis hat keine Antwort geliefert." : antwort;
         var beendenGewuenscht = g.Nachrichten.LastOrDefault(n => n.Rolle == Rolle.Jarvis)?.Schritte.Any(x => x.Werkzeug == "sprachsession_beenden") ?? false;
-        var jetzige = sitzung;
-        if (jetzige != null && Aktiv)
+        try
         {
-            naechsteJarvisVomAgenten += 1;
-            var ok = zwischenstand ? jetzige.Nachreichen(kennung, text) : jetzige.Ergebnis(kennung, text);
-            if (!ok) await Stimme.Shared.Sprich(text);
+            if (eigeneSitzung)
+            {
+                string? rest = null;
+                lock (strom) if (gestreamt) rest = RestNachStrom(strom.ToString(gesendet, strom.Length - gesendet), antwort);
+                if (rest != null)
+                {
+                    if (rest.Length > 0)
+                    {
+                        naechsteJarvisVomAgenten += 1;
+                        if (!s.Stueck(kennung, rest)) await Stimme.Shared.Sprich(rest);
+                    }
+                }
+                else
+                {
+                    naechsteJarvisVomAgenten += 1;
+                    var ok = zwischenstand ? s.Nachreichen(kennung, text) : s.Ergebnis(kennung, text);
+                    if (!ok) await Stimme.Shared.Sprich(text);
+                }
+            }
+            else if (zwischenstand)
+            {
+                // Gespräch inzwischen beendet: Ergebnis vorlesen (steht auch im Chat).
+                await Stimme.Shared.Sprich("Frank, die Antwort ist da. " + text);
+            }
         }
-        else if (zwischenstand)
-        {
-            // Gespräch inzwischen beendet: Ergebnis vorlesen (steht auch im Chat).
-            await Stimme.Shared.Sprich("Frank, die Antwort ist da. " + text);
-        }
+        catch (Exception ex) { Log("fehler", "Live: Antwort nicht übergeben", fehler: ex.Message); }
         if (beendenGewuenscht)
         {
             await Task.Delay(TimeSpan.FromSeconds(4));
             if (ReferenceEquals(sitzung, s)) Beenden();
         }
+    }
+
+    /// <summary>Was nach dem Strom noch zu sagen ist: der angefangene letzte Satz, und ein Fehlerhinweis, der nur im fertigen Text steht.</summary>
+    private static string RestNachStrom(string offen, string antwort)
+    {
+        var rest = offen.Trim();
+        var letzter = antwort.Split("\n\n").LastOrDefault()?.Trim() ?? "";
+        return letzter.StartsWith('⚠') || letzter.StartsWith("(abgebrochen") || letzter.StartsWith("(Schrittlimit")
+            ? (rest + " " + letzter).Trim()
+            : rest;
+    }
+
+    /// <summary>Ende des nächsten vollständigen Satzes ab start, sonst 0. Nicht hinter Zahlen und kurzen Kürzeln („3. Mai“, „z. B.“), und nicht zu kurz: GPT-Live formuliert jeden Kommentar für sich.</summary>
+    private static int SatzEnde(StringBuilder t, int start)
+    {
+        const int MinZeichen = 15;
+        for (var i = start; i < t.Length - 1; i++)
+        {
+            var c = t[i];
+            if (c == '\n' && i - start >= MinZeichen) return i + 1;
+            if (c is not ('.' or '!' or '?' or '…') || !char.IsWhiteSpace(t[i + 1]) || i - start < MinZeichen) continue;
+            if (c == '.')
+            {
+                var w = i;
+                while (w > start && !char.IsWhiteSpace(t[w - 1])) w--;
+                var wort = i - w;
+                if (wort <= 3 || char.IsDigit(t[i - 1])) continue;
+            }
+            return i + 1;
+        }
+        return 0;
     }
 }

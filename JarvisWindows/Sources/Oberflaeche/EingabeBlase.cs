@@ -305,11 +305,13 @@ public sealed class EingabeBlase : Decorator
         steuerung.Sende(t, bild: bild);
     }
 
-    private void BildWaehlen()
+    private async void BildWaehlen()
     {
         var d = new Microsoft.Win32.OpenFileDialog { Filter = "Bilder|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp;*.heic;*.tif;*.tiff|Alle Dateien|*.*" };
-        if (d.ShowDialog() == true)
-            try { steuerung.Anhang = BildHelfer.JpgDaten(File.ReadAllBytes(d.FileName)) ?? steuerung.Anhang; } catch { }
+        if (d.ShowDialog() != true) return;
+        var pfad = d.FileName;
+        var jpg = await Task.Run(() => { try { return BildHelfer.JpgDaten(File.ReadAllBytes(pfad)); } catch { return null; } });
+        if (jpg != null) steuerung.Anhang = jpg;
     }
 
     /// <summary>Hauptbildschirm als JPEG (höchstens 1440 px, Qualität 60), wie `screencapture -x -m` + `sips` am Mac.</summary>

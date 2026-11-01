@@ -11,7 +11,7 @@ namespace JarvisWindows;
 /// die fertige Antwort bleibt im Eingang, bis sie beim Relay liegt: Ein Absturz oder Funkloch verliert nichts und rechnet nichts doppelt.
 /// Fragen vom Handy beantwortet ein eigenes Gespräch: je Nachricht ein frisches Modellgespräch mit Auszug des Kanals, damit Live-Gedächtnis
 /// und Kosten nicht mit dem Kanal altern und wachsen. Kein Lernen daraus und keine Werkzeuge, die für Frank sprechen: Dort redet nicht Frank.
-/// Läuft auf dem Hauptfaden. Den Helfer-Katalog bekommt das Handy von hier nicht geschickt: Es führt die Helfer des HP nicht; Helfer-Post nimmt der Kanal trotzdem an.</summary>
+/// Läuft auf dem Hauptfaden. Den Helfer-Katalog bekommt das Handy von hier nicht geschickt: Es führt die Helfer des HP nicht; kommt doch Helfer-Post, bekommt sie eine klare Absage (HelferKatalog.KanalNachricht).</summary>
 public sealed class AgentenKanal
 {
     public static AgentenKanal Shared { get; } = new();
@@ -48,13 +48,12 @@ public sealed class AgentenKanal
     private List<JSONObjekt> verlauf = new();
     private readonly Dictionary<string, TaskCompletionSource<string?>> wartende = new();
     private bool arbeitet;
-    private readonly HashSet<string> helferInArbeit = new();
-    private bool rechercheLaeuft;
     private CancellationTokenSource? laufAbbruch;
     private Guid? laufGespraech;
-    /// <summary>Nach so vielen gescheiterten Zustellungen wird ein großes Ergebnis durch einen Hinweis ersetzt.</summary>
-    private const int Zustellungen = 5;
     private const int GrossAb = 64_000;
+    /// <summary>Hat der Relay die letzte Nachricht abgelehnt (400 leer oder unvollständig, 413 zu groß)? Dann hilft kein Wiederholen.</summary>
+    private int letzterCode;
+    private Task schreibKette = Task.CompletedTask;
 
     /// <summary>Beantwortet der Kanal gerade eine Nachricht in diesem Gespräch? Dann zeigt die Blase den Stopp-Knopf.</summary>
     public bool LaeuftIn(Gespraech g) => laufGespraech == g.Id;
@@ -83,11 +82,12 @@ public sealed class AgentenKanal
     {
         _ = Haupt.Auf(async () =>
         {
-            // Erst wenn die Gespräche geladen sind: Sonst legte die erste Nachricht ein zweites Kanalgespräch an.
+            // Sofort abfragen: Erst das zeigt dem Relay, dass die App läuft, und das Handy wartet darauf. Abgearbeitet wird, wenn die Gespräche geladen sind (Abarbeiten).
+            var abfragen = Abfragen();
             while (!GespraechsSpeicher.Shared.Geladen) await Task.Delay(100);
             Abarbeiten();
             HelferKatalog.Shared.Starten();
-            await Abfragen();
+            await abfragen;
         });
     }
 
@@ -121,6 +121,7 @@ public sealed class AgentenKanal
                 var (code, daten) = await Anfrage(basis, null, 40);
                 var j = code == 200 ? JSON.Objekt(daten) : null;
                 if (j == null) throw new IOException("Unerwartete Antwort vom Relay.");
+                if (j.Wahr("handy") is { } handyDa) McpKlient.Shared.HandySignal(handyDa);
                 var neu = j.Objekte("nachrichten");
                 // Ohne Quittung liefert der Relay sofort dasselbe noch einmal: darum wie jeder Fehler mit Pause.
                 if (neu.Count > 0 && !await Annehmen(neu, basis)) throw new IOException("Quittung nicht angekommen.");
@@ -136,6 +137,8 @@ public sealed class AgentenKanal
 
     private async Task<bool> Annehmen(List<JSONObjekt> neu, string basis)
     {
+        // Eine späte Antwort landet im Kanalgespräch: Ohne geladene Gespräche entstünde sonst ein zweites.
+        while (!GespraechsSpeicher.Shared.Geladen && neu.Any(n => n.Text("art") == "antwort")) await Task.Delay(100);
         var ids = new List<string>();
         foreach (var n in neu)
         {
@@ -152,6 +155,7 @@ public sealed class AgentenKanal
         }
         erledigt = erledigt.TakeLast(300).ToList();
         Sichere();
+        await SchreibenFertig();   // Erst auf der Platte, dann quittieren.
         Abarbeiten();
         try
         {
@@ -171,92 +175,12 @@ public sealed class AgentenKanal
 
     public static bool IstHelfer(string art) => art.StartsWith("helfer_", StringComparison.Ordinal) || art == "cli_recherche";
 
-    /// <summary>Helfer-Post ohne Modell, je Nachricht ein eigener Lauf: Ein langer Helfer hält den Kanal nicht auf. Die fertige Antwort bleibt
-    /// im Eingang, bis sie beim Relay liegt, und wird nie neu berechnet. Eine Recherche zur Zeit.</summary>
-    private void HelferAbarbeiten()
-    {
-        foreach (var n in eingang.Where(x => IstHelfer(x.Text("art") ?? "")).ToList())
-        {
-            var id = n.Text("id") ?? "";
-            if (id.Length == 0 || helferInArbeit.Contains(id)) continue;
-            var ohneAntwort = n.Text("fertige_antwort") == null;
-            var istRecherche = n.Text("art") == "cli_recherche";
-            if (istRecherche)
-            {
-                if (rechercheLaeuft && ohneAntwort) continue;
-                if (ohneAntwort) rechercheLaeuft = true;
-            }
-            helferInArbeit.Add(id);
-            var rechercheBelegt = istRecherche && ohneAntwort;
-            _ = HelferLauf(n, id, rechercheBelegt);
-        }
-    }
-
-    private async Task HelferLauf(JSONObjekt n, string id, bool rechercheBelegt)
-    {
-        var ok = false;
-        try { ok = await BearbeiteHelfer(n); }
-        catch (Exception ex) { Log("fehler", "Agentenkanal: Helfer-Post gescheitert", wo: "Agentenkanal", fehler: ex.Message); }
-        helferInArbeit.Remove(id);
-        if (rechercheBelegt) rechercheLaeuft = false;
-        if (!ok) await Task.Delay(TimeSpan.FromSeconds(30));
-        HelferAbarbeiten();
-    }
-
     private JSONObjekt? EingangMit(string id) => eingang.FirstOrDefault(x => x.Text("id") == id);
-
-    private async Task<bool> BearbeiteHelfer(JSONObjekt n)
-    {
-        var id = n.Text("id") ?? "";
-        var art = n.Text("art") ?? "";
-        var antwort = n.Text("fertige_antwort");
-        if (antwort == null)
-        {
-            var alter = GehirnHilfe.JetztSekunden() - (n.Zahl("zeit") ?? 0);
-            var begonnen = n.Wahr("begonnen") ?? false;
-            if (art == "helfer_aufruf" && begonnen)
-            {
-                // Der Laptop starb während der Ausführung: Ob sie etwas bewirkt hat, ist offen. Nie blind wiederholen.
-                antwort = JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = $"{AppInfo.Name} wurde während der Ausführung beendet. Das Ergebnis ist unklar, der Aufruf wird nicht wiederholt." });
-            }
-            else if (alter > Hoechstalter)
-            {
-                antwort = JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = "Der Auftrag lag länger als sechs Stunden und wurde nicht mehr ausgeführt." });
-            }
-            else
-            {
-                if (EingangMit(id) is { } e) { e["begonnen"] = true; Sichere(); }
-                antwort = await HelferKatalog.Shared.KanalNachricht(art, n.Text("text") ?? "");
-            }
-            if (EingangMit(id) is { } e2) { e2["fertige_antwort"] = antwort; Sichere(); }
-        }
-        if (!await Sende("antwort", antwort ?? "{}", id, $"antwort-{id}"))
-        {
-            // Ein großes Ergebnis, das nicht durchkommt, liegt sonst für immer im Eingang und wird bei jedem Sichern neu geschrieben.
-            if (EingangMit(id) is { } e3 && Encoding.UTF8.GetByteCount(antwort ?? "") > GrossAb)
-            {
-                var versuche = (int)(e3.Ganz("zustellungen") ?? 0);
-                e3["zustellungen"] = versuche + 1;
-                if (versuche + 1 >= Zustellungen)
-                {
-                    var pfade = (JSON.Objekt(antwort ?? "") ?? new JSONObjekt()).Objekte("dateien").Select(d => d.Text("pfad")).Where(p => p != null);
-                    e3["fertige_antwort"] = JSON.Text(new JSONObjekt { ["ok"] = false, ["fehler"] = "Ergebnis zu groß für den Kanal", ["pfad"] = string.Join(", ", pfade) });
-                }
-                Sichere();
-            }
-            return false;
-        }
-        eingang.RemoveAll(x => x.Text("id") == id);
-        erledigt.Add(id);
-        Sichere();
-        return true;
-    }
 
     private void Abarbeiten()
     {
-        HelferAbarbeiten();
-        if (arbeitet) return;
-        var n = eingang.FirstOrDefault(x => !IstHelfer(x.Text("art") ?? ""));
+        if (arbeitet || !GespraechsSpeicher.Shared.Geladen) return;
+        var n = eingang.FirstOrDefault();
         if (n == null) return;
         arbeitet = true;
         _ = Lauf(n);
@@ -288,14 +212,16 @@ public sealed class AgentenKanal
             if (antwort == null)
             {
                 var alter = GehirnHilfe.JetztSekunden() - (n.Zahl("zeit") ?? 0);
+                if (IstHelfer(art))
+                    antwort = await HelferKatalog.Shared.KanalNachricht(art, text);
                 // Ein Lauf kann schon etwas bewirkt haben, wenn er durch Absturz oder Beenden abriss: nie blind wiederholen.
-                if (n.Wahr("begonnen") == true)
+                else if (n.Wahr("begonnen") == true)
                     antwort = $"{AppInfo.Name} wurde während der Bearbeitung beendet. Ob der Auftrag ganz ausgeführt wurde, ist offen; er wird nicht wiederholt. Frag nach dem Stand oder gib ihn neu.";
                 else if (alter > Hoechstalter)
                     antwort = "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt.";
                 else
                 {
-                    if (EingangMit(id) is { } laufend) { laufend["begonnen"] = true; Sichere(); }
+                    if (EingangMit(id) is { } laufend) { laufend["begonnen"] = true; Sichere(); await SchreibenFertig(); }
                     antwort = await Beantworte(art, text, id);
                 }
                 if (EingangMit(id) is { } e)
@@ -304,13 +230,25 @@ public sealed class AgentenKanal
                     Sichere();
                 }
             }
-            // Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab.
-            if (!await Sende("antwort", antwort ?? "(keine Antwort)", id, $"antwort-{id}")) return false;
+            if (!await Zustellen(id, antwort ?? "")) return false;
         }
         eingang.RemoveAll(x => x.Text("id") == id);
         erledigt.Add(id);
         Sichere();
         return true;
+    }
+
+    /// <summary>Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab. Lehnt er sie ab, statt nicht erreichbar zu sein, ginge das ewig so weiter und alles dahinter stünde: Dann kommt ein Hinweis, und die Warteschlange läuft weiter.</summary>
+    private async Task<bool> Zustellen(string id, string antwort)
+    {
+        if (string.IsNullOrWhiteSpace(antwort)) antwort = "(keine Antwort)";
+        if (await Sende("antwort", antwort, id, $"antwort-{id}")) return true;
+        if (letzterCode is not (400 or 413)) return false;
+        Log("fehler", $"Agentenkanal: Relay lehnt die Antwort ab (HTTP {letzterCode})", wo: "Agentenkanal");
+        var kurz = $"Die vollständige Antwort ist zu groß für den Kanal, sie steht am Laptop im Gespräch „{Titel}“. Der Anfang:\n{antwort.Kappe(4000)}";
+        if (EingangMit(id) is { } e) { e["fertige_antwort"] = kurz; Sichere(); }
+        if (await Sende("antwort", kurz, id, $"antwort-{id}")) return true;
+        return letzterCode is 400 or 413;
     }
 
     private async Task<string> Beantworte(string art, string text, string id)
@@ -359,7 +297,7 @@ public sealed class AgentenKanal
                 if (abbruch.IsCancellationRequested) return gestoppt;
                 // Modellfehler: Frage meldet sie als Text, und ein Aussetzer soll keine Antwort sein.
                 if (!(antwort.Split("\n\n").LastOrDefault() ?? "").StartsWith("⚠️", StringComparison.Ordinal))
-                    return antwort.Length == 0 ? "(keine Antwort)" : antwort.Replace("sag „weiter“, dann mache ich weiter.", "frag nach, wenn ich weitermachen soll.");
+                    return string.IsNullOrWhiteSpace(antwort) ? "(keine Antwort)" : antwort.Replace("sag „weiter“, dann mache ich weiter.", "frag nach, wenn ich weitermachen soll.");
             }
             return $"{AppInfo.Name} konnte nicht antworten: {antwort}";
         }
@@ -412,6 +350,7 @@ public sealed class AgentenKanal
         // Große Ergebnisse brauchen über langsames Netz ihre Zeit.
         var groesse = Encoding.UTF8.GetByteCount(text);
         var frist = groesse > GrossAb ? Math.Max(120, groesse / 50_000.0) : 15;
+        letzterCode = 0;
         for (var versuch = 0; versuch < 4; versuch++)
         {
             if (versuch > 0) await Task.Delay(TimeSpan.FromSeconds(1 << versuch));
@@ -419,6 +358,7 @@ public sealed class AgentenKanal
             {
                 var (code, daten) = await Anfrage(basis, rumpf, frist);
                 if (code == 200) return JSON.Objekt(daten) ?? new JSONObjekt();
+                if (code is 400 or 413) { letzterCode = code; break; }
             }
             catch (Exception) { }
         }
@@ -477,13 +417,25 @@ public sealed class AgentenKanal
         if (verlauf.Any(x => x.Text("id") == id)) return;
         verlauf.Add(new JSONObjekt { ["id"] = id, ["von"] = von, ["art"] = art, ["text"] = text.Kappe(4000), ["zeit"] = GehirnHilfe.JetztSekunden() });
         verlauf = verlauf.TakeLast(100).ToList();
-        try { GehirnHilfe.SchreibeAtomar(verlaufDatei, JSON.Daten(new JSONObjekt { ["verlauf"] = verlauf })); } catch { }
+        Schreibe(verlaufDatei, new JSONObjekt { ["verlauf"] = verlauf.ToList() });
     }
 
     private void Sichere()
+        // Kopie der Einträge: Sie ändern sich auf dem Hauptfaden weiter, während im Hintergrund geschrieben wird.
+        => Schreibe(eingangDatei, new JSONObjekt { ["eingang"] = eingang.Select(x => new JSONObjekt(x)).ToList(), ["erledigt"] = erledigt.ToList() });
+
+    /// <summary>Der Reihe nach im Hintergrund: Der Hauptfaden wartet nie auf die Platte, und ein älterer Stand überholt keinen neueren.</summary>
+    private void Schreibe(string pfad, JSONObjekt daten)
     {
-        try { GehirnHilfe.SchreibeAtomar(eingangDatei, JSON.Daten(new JSONObjekt { ["eingang"] = eingang, ["erledigt"] = erledigt })); } catch { }
+        schreibKette = schreibKette.ContinueWith(_ =>
+        {
+            try { GehirnHilfe.SchreibeAtomar(pfad, JSON.Daten(daten)); }
+            catch (Exception ex) { Log("fehler", "Agentenkanal: Stand nicht gesichert", wo: "Agentenkanal", fehler: ex.Message); }
+        }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
+
+    /// <summary>Alles bisher Gesicherte liegt auf der Platte (vor der Quittung, beim Beenden).</summary>
+    public Task SchreibenFertig() => schreibKette;
 
     public string VerlaufText(int anzahl = 8, string ohne = "", int breite = 1500)
         => Haupt.Wert(() => string.Join("\n", verlauf.Where(n => n.Text("id") != ohne).TakeLast(anzahl).Select(n =>
@@ -516,7 +468,7 @@ public sealed class AgentenKanal
                 return new WerkzeugErgebnis(ok ? "Mitteilung an Jarvis am Handy abgelegt." : "Die Mitteilung ist nicht beim Relay angekommen.", !ok);
             }
             if (ImLauf) return new WerkzeugErgebnis("Du beantwortest gerade eine Kanalnachricht: Schreib die Rückfrage in deine Antwort.", true);
-            return await Shared.FrageHandy(text);
+            return await Shared.FrageHandy(text, Shell.Abbruch.Value);
         }),
         new LokalesWerkzeug(new WerkzeugDefinition(
             "handy_jarvis_lesen",

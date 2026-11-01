@@ -44,6 +44,8 @@ public sealed class McpKlient
     private string kontextVorrat = "";
     private DateTime kontextZeit = DateTime.MinValue;
     private Task? kontextAbruf;
+    /// <summary>Der Relay meldet über den Kanal, dass das Handy nicht verbunden ist. Dann wartet nichts mehr auf die acht Sekunden des Relays.</summary>
+    private bool handyWeg;
 
     private McpKlient() { }
 
@@ -120,7 +122,7 @@ public sealed class McpKlient
             // Die App erneuert die Liste selbst im Hintergrund: Keine Frage wartet darauf.
             if (!frisch && werkzeugCache.Count > 0) return werkzeugCache;
             // Eben nicht erreichbar: nicht bei jeder Frage erneut bis zur Zeitgrenze warten. Die App prüft alle 30 Sekunden selbst.
-            if (!frisch && (DateTime.Now - letzterFehlschlag).TotalSeconds < 45) return new();
+            if (!frisch && ((DateTime.Now - letzterFehlschlag).TotalSeconds < 45 || handyWeg)) return new();
             if (werkzeugAbruf == null)
             {
                 // Ohne ct: Mehrere Fragen teilen sich diesen Abruf, der Stopp der einen darf ihn den anderen nicht nehmen.
@@ -184,7 +186,22 @@ public sealed class McpKlient
         lock (schloss) return werkzeugCache;
     }
 
-    public Task<bool> Verbunden() { lock (schloss) return Task.FromResult(werkzeugCache.Count > 0); }
+    public Task<bool> Verbunden() { lock (schloss) return Task.FromResult(werkzeugCache.Count > 0 && !handyWeg); }
+
+    /// <summary>Stand des Handys beim Relay, kommt mit jeder Kanal-Abfrage. Ist es zurück, sind Liste und Gedächtnis gleich wieder warm.</summary>
+    public void HandySignal(bool da)
+    {
+        bool zurueck;
+        lock (schloss)
+        {
+            zurueck = handyWeg && da;
+            handyWeg = !da;
+        }
+        if (!zurueck) return;
+        _ = Task.Run(() => Werkzeuge(frisch: true));
+        _ = KontextVorladen();
+    }
+
     /// <summary>Der letzte Abruf ging schief: Die App prüft dann bald erneut statt erst in fünf Minuten.</summary>
     public Task<bool> Unsicher() { lock (schloss) return Task.FromResult(fehlschlaegeInFolge > 0); }
 
@@ -193,7 +210,7 @@ public sealed class McpKlient
     {
         lock (schloss)
         {
-            if (kontextAbruf != null || (DateTime.Now - kontextZeit).TotalSeconds <= 60) return Task.CompletedTask;
+            if (handyWeg || kontextAbruf != null || (DateTime.Now - kontextZeit).TotalSeconds <= 60) return Task.CompletedTask;
             var stand = kontextStand;
             kontextAbruf = Task.Run(async () =>
             {
@@ -209,18 +226,19 @@ public sealed class McpKlient
         return Task.CompletedTask;
     }
 
-    /// <summary>Das Live-Gedächtnis für ein neues Gespräch: der höchstens 5 Minuten alte Vorrat, sonst höchstens 8 Sekunden Warten.
+    /// <summary>Das Live-Gedächtnis für ein neues Gespräch: der höchstens 5 Minuten alte Vorrat (die App erneuert ihn alle 4 Minuten), sonst höchstens 1,5 Sekunden Warten.
     /// Kommt nichts, bleibt es leer: Das Modell erfährt das und die nächste Frage holt es nach. Ein alter Stand gilt nie.</summary>
     public async Task<string> KontextFuerGespraech()
     {
         string Frisch() { lock (schloss) return (DateTime.Now - kontextZeit).TotalSeconds < 300 ? kontextVorrat : ""; }
         if (Frisch().Length > 0) return Frisch();
         lock (schloss)
-            if (werkzeugCache.Count == 0 && (DateTime.Now - letzterFehlschlag).TotalSeconds < 45) return "";
+            if (handyWeg || ((werkzeugCache.Count == 0 || fehlschlaegeInFolge > 0) && (DateTime.Now - letzterFehlschlag).TotalSeconds < 45)) return "";
         await KontextVorladen();
         Task? t;
         lock (schloss) t = kontextAbruf;
-        if (t != null) await GehirnHilfe.Frist(8, t);
+        // Danach läuft der Abruf weiter: Die nächste Frage hat das Gedächtnis dann sofort.
+        if (t != null) await GehirnHilfe.Frist(1.5, t);
         return Frisch();
     }
 
@@ -257,7 +275,11 @@ public sealed class McpKlient
         if (LegtInAblage.Contains(name)) args["_quelle"] = AblageAbgleich.Quelle;
         // Nur die Liste hat einen Ersatz am Laptop und darf deshalb kurz warten; ein Titel, der nur am Handy liegt, braucht die volle Zeit.
         var nurListe = name == "ablage_lesen" && (args.Text("titel") ?? "").Trim().Length == 0;
-        var e = await RufeOhneLog(name, args, nurListe ? 3 : sekunden, ct);
+        // Das Handy gilt als weg: kurz probieren, ob es zurück ist, statt die Wartezeit des Relays abzusitzen.
+        bool weg;
+        lock (schloss) weg = handyWeg;
+        var e = await RufeOhneLog(name, args, nurListe ? 3 : weg ? Math.Min(sekunden, 2.5) : sekunden, ct);
+        if (weg && e.Fehler && !NurLesend(name)) e = e with { Text = e.Text + " Ob der Aufruf das Handy noch erreicht, ist offen: Vor einer Wiederholung prüfen." };
         // Die Liste kommt vom Handy, weil sie auch Vorläufiges zeigt. Ist es aus, reicht die eigene Kopie der Ablage.
         if (nurListe) e = AblageAbgleich.Shared.ListeMit(e);
         if (!NurLesend(name)) await KontextVerwerfen();

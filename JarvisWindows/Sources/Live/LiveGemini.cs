@@ -33,8 +33,9 @@ public sealed class LiveGemini : LiveSitzung
     public LiveGemini(LiveTon ton, string schluessel, string modell, string stimme) : base(ton)
     {
         this.schluessel = schluessel; this.modell = modell; this.stimme = stimme;
-        // Ruhezeit wie am Handy: Pause bis zur Antwort (800 ms) + 1200 ms.
-        weiche = new JarvisWeiche(ruheMs: 800 + 1_200);
+        // Pause bis zur Antwort (800 ms) + 400 ms: Franks Vorgabe ist Tempo. Am Handy sind es + 1200 ms; nur der Rückfall, wenn Gemini nicht
+        // reagiert, und Sprechen laut vorläufiger Mitschrift verlängert die Zeit. Noch nicht im Gespräch gemessen.
+        weiche = new JarvisWeiche(ruheMs: 800 + 400);
     }
 
     public override void Starten() => Verbinden();
@@ -48,7 +49,7 @@ public sealed class LiveGemini : LiveSitzung
         neu = new LiveSocket(adresse, null,
             beiOffen: () => neu!.Sende(Setup()),
             beiText: t => Ereignis(neu!, t),
-            beiZu: (code, grund) => Geschlossen(neu!, code, grund));
+            beiZu: (code, grund) => Geschlossen(neu!, code, grund)) { TonGrenze = 2000 / Ton.BlockMs };
         lock (sperre)
         {
             if (socket != null) { abgeloest?.Trennen(); abgeloest = socket; }
@@ -167,13 +168,13 @@ public sealed class LiveGemini : LiveSitzung
 
     public override void Mikro(byte[] pcm)
     {
-        if (!Bereit) return;
         LiveSocket? s;
         lock (sperre) s = wartetAufNeu ? null : socket;
-        s?.Sende(new JSONObjekt
+        // Auch beim Start und beim Wechsel nach goAway: Sonst fehlen Worte mitten im Satz.
+        SendeOderHebeAuf(pcm, Bereit && s != null, block => s!.SendeTon(new JSONObjekt
         {
-            ["realtimeInput"] = new JSONObjekt { ["audio"] = new JSONObjekt { ["data"] = Convert.ToBase64String(pcm), ["mimeType"] = "audio/pcm;rate=16000" } },
-        });
+            ["realtimeInput"] = new JSONObjekt { ["audio"] = new JSONObjekt { ["data"] = Convert.ToBase64String(block), ["mimeType"] = "audio/pcm;rate=16000" } },
+        }));
     }
 
     public override void Angetippt()

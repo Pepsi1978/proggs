@@ -56,6 +56,12 @@ public static class WinEinstellungsKatalog
                     e.Effort = w;
                     return null;
                 }),
+                new("sprach_denkstufe", "Jarvis' Kopf", "Denkstufe beim Sprechen", "Wie gründlich das Modell bei gesprochenen Fragen nachdenkt; niedriger heißt schnellere Antwort.", "low | medium | high | xhigh | max", () => e.SprachEffort, w =>
+                {
+                    if (!new[] { "low", "medium", "high", "xhigh", "max" }.Contains(w)) return "Erlaubt: low, medium, high, xhigh, max";
+                    e.SprachEffort = w;
+                    return null;
+                }),
                 new("schrittlimit", "Jarvis' Kopf", "Schrittlimit", "Werkzeugschritte je Anfrage, 0 = unbegrenzt.", "0–200", () => e.SchrittLimit.ToString(), w =>
                 {
                     if (!int.TryParse(w, out var n) || n is < 0 or > 200) return "Zahl 0–200";

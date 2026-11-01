@@ -161,6 +161,14 @@ public static class SprechText
             }
         }
         if (puffer.Length > 0) stuecke.Add(puffer);
+        // Beginnt die Antwort mit einem langen Satz: früh trennen, das erste Stück bestimmt die Zeit bis zum ersten Ton.
+        if (stuecke.Count > 0 && stuecke[0].Length > SatzStrom.ErsteGrenze)
+        {
+            var schnitt = SatzStrom.Schnittstelle(stuecke[0], SatzStrom.ErsteGrenze);
+            var ganz = stuecke[0];
+            stuecke[0] = ganz[..schnitt].Trim();
+            stuecke.Insert(1, ganz[schnitt..].Trim());
+        }
         // Überlange Einzelsätze (ohne Satzzeichen) hart an Wortgrenzen teilen.
         return stuecke.SelectMany(s =>
         {
@@ -175,5 +183,102 @@ public static class SprechText
             if (p.Length > 0) teile.Add(p);
             return teile;
         }).ToList();
+    }
+}
+
+/// <summary>Zerlegt einen wachsenden Antworttext in vorlesefertige Stücke: Das erste kommt nach dem ersten Satz, die weiteren sammeln kurze Sätze,
+/// damit nicht jedes „Ja.“ eine eigene Anfrage an die Stimme wird. Ein Punkt gilt erst als Satzende, wenn das nächste Zeichen da ist.</summary>
+public sealed class SatzStrom
+{
+    public const int ErsteGrenze = 140;
+    private const int Grenze = 350, MinErstes = 25, Min = 80;
+    private static readonly HashSet<string> Kuerzel = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bzw", "ca", "ggf", "evtl", "inkl", "exkl", "usw", "etc", "vgl", "nr", "abb", "kap", "mio", "mrd", "std", "sek", "tsd", "max", "min",
+        "dr", "prof", "hr", "fr", "st", "str", "tel", "bspw", "sog", "ggü",
+    };
+
+    private readonly StringBuilder puffer = new();
+    private string gesammelt = "";
+    private bool erstes = true;
+
+    public List<string> Hinzu(string text)
+    {
+        puffer.Append(text);
+        return Nimm(false);
+    }
+
+    public List<string> Ende() => Nimm(true);
+
+    /// <summary>Stelle zum Trennen bis `grenze`: am liebsten hinter einem Komma, sonst an einer Wortgrenze.</summary>
+    public static int Schnittstelle(string text, int grenze)
+    {
+        var bis = Math.Min(grenze, text.Length - 1);
+        var komma = text.LastIndexOf(", ", bis, StringComparison.Ordinal);
+        if (komma >= grenze / 3) return komma + 1;
+        var wort = text.LastIndexOf(' ', bis);
+        return wort > 0 ? wort : bis;
+    }
+
+    private static bool IstKuerzel(string t, int start, int punkt)
+    {
+        var a = punkt;
+        while (a > start && !char.IsWhiteSpace(t[a - 1])) a--;
+        var wort = t[a..punkt].TrimStart('(', '[', '„', '"', '*', '_');
+        if (wort.Length == 0) return false;
+        if (wort.Length == 1) return true;                                  // „z.“, „B.“
+        if (wort.All(char.IsDigit)) return wort.Length <= 2;                // „3. Platz“, Listen; eine Jahreszahl beendet den Satz
+        return wort.Contains('.') || Kuerzel.Contains(wort);
+    }
+
+    private List<string> Nimm(bool ende)
+    {
+        var aus = new List<string>();
+        var t = puffer.ToString();
+        int start = 0;
+        var imCode = false;
+        for (int i = 0; i < t.Length; i++)
+        {
+            if (string.CompareOrdinal(t, i, "```", 0, 3) == 0) { imCode = !imCode; i += 2; continue; }
+            if (imCode) continue;
+            var c = t[i];
+            var folgt = i + 1 < t.Length;
+            var grenze = c == '\n' || ((c == '.' || c == '!' || c == '?') && folgt && (t[i + 1] == ' ' || t[i + 1] == '\n') && (c != '.' || !IstKuerzel(t, start, i)));
+            if (!grenze) continue;
+            Satz(t[start..(i + 1)], aus);
+            start = i + 1;
+        }
+        // Ein langer Satz ohne Punkt soll nicht bis zu seinem Ende warten.
+        var obergrenze = erstes ? ErsteGrenze : Grenze;
+        if (!ende && !imCode && t.Length - start > obergrenze)
+        {
+            var rest = t[start..];
+            var schnitt = Schnittstelle(rest, obergrenze);
+            if (schnitt > 0) { Satz(rest[..schnitt], aus, sofort: true); start += schnitt; }
+        }
+        puffer.Remove(0, start);
+        if (ende)
+        {
+            Satz(puffer.ToString(), aus, sofort: true);
+            puffer.Clear();
+            if (gesammelt.Length > 0) Abgeben(aus);
+        }
+        return aus;
+    }
+
+    private void Satz(string s, List<string> aus, bool sofort = false)
+    {
+        // Zeilenumbrüche bleiben: Markdown-Listen und -Überschriften brauchen sie beim Bereinigen.
+        if (s.Trim().Length > 0) gesammelt += s;
+        if (gesammelt.Trim().Length > 0 && (sofort || gesammelt.Trim().Length >= (erstes ? MinErstes : Min))) Abgeben(aus);
+    }
+
+    private void Abgeben(List<string> aus)
+    {
+        var sauber = SprechText.FuerStimme(gesammelt);
+        gesammelt = "";
+        if (sauber.Length == 0) return;
+        aus.Add(sauber);
+        erstes = false;
     }
 }

@@ -4,7 +4,7 @@ using static JarvisWindows.Bau;
 
 namespace JarvisWindows;
 
-/// <summary>Einstellungen → Kontingente: Die Limits holt das Handy (kontingente_lesen), dort liegen auch die Anmeldungen. Der letzte Stand bleibt, wenn das Handy gerade nicht antwortet.</summary>
+/// <summary>Einstellungen → Kontingente: Mit eigener Anmeldung (Einstellungen → Konsolen) liest der Laptop die Limits selbst, sonst holt sie das Handy (kontingente_lesen). Der letzte Stand bleibt, wenn eine Quelle gerade nicht antwortet.</summary>
 public sealed class Kontingente : Beobachtbar
 {
     public static Kontingente Shared { get; } = new();
@@ -21,6 +21,8 @@ public sealed class Kontingente : Beobachtbar
     public bool Laedt { get => _laedt; private set => Setze(ref _laedt, value); }
     /// <summary>Der Stand stammt vom letzten Programmlauf: „heute“ und das Tempo galten nur damals.</summary>
     public bool AusSpeicher { get => _ausSpeicher; private set => Setze(ref _ausSpeicher, value); }
+    /// <summary>Diese Dienste stehen gerade vom Handy in der Liste.</summary>
+    public HashSet<string> VomHandy { get; private set; } = new();
 
     public Kontingente()
     {
@@ -35,23 +37,68 @@ public sealed class Kontingente : Beobachtbar
         Laedt = true;
         try
         {
-            var argumente = new JSONObjekt { ["json"] = true };
-            if (frisch) argumente["frisch"] = true;
-            var r = await McpKlient.Shared.Rufe("kontingente_lesen", argumente, 85);
-            var t = McpKlient.OhneKontextHinweis(r.Text);
-            var neu = Lies(t);
-            if (neu == null)
+            var stand = _anbieter.ToDictionary(a => a.Id);
+            var hier = new List<(string Id, string Titel)>();
+            foreach (var d in KontingentQuellen.Alle) if (await KontingentQuellen.HierMoeglich(d.Id)) hier.Add(d);
+            var vomHandy = KontingentQuellen.Alle.Select(d => d.Id).Where(id => hier.All(h => h.Id != id)).ToHashSet();
+            // Abgemeldet und vom Handy ohne Zahlen: Der alte Stand darf nicht bleiben.
+            foreach (var id in stand.Keys.Where(id => vomHandy.Contains(id) && !VomHandy.Contains(id)).ToList()) stand.Remove(id);
+            void Zeige()
             {
-                Fehler = t.Length == 0 ? "Das Handy antwortet gerade nicht." : t;
-                Log("fehler", "Kontingente nicht abrufbar", wo: "Kontingente", fehler: Fehler);
-                return;
+                Anbieter = KontingentQuellen.Alle.Where(d => stand.ContainsKey(d.Id)).Select(d => stand[d.Id]).ToList();
+                VomHandy = new HashSet<string>(vomHandy);
             }
-            Fehler = null;
-            Anbieter = neu;
+            // Der Laptop zuerst und nebeneinander: Das Handy kann bis zu 85 Sekunden brauchen und hält hier niemanden auf.
+            var handy = vomHandy.Count > 0 ? VomHandyHolen(frisch) : null;
+            var laeufe = hier.Select(async d =>
+            {
+                var a = await KontingentQuellen.Lies(d.Id, d.Titel, frisch);
+                stand[d.Id] = a;
+                Zeige();
+                return a;
+            }).ToList();
+            var fertig = await Task.WhenAll(laeufe);
+            // Abgelehnte Anmeldung am Laptop: dann doch vom Handy, falls dort eine liegt.
+            var abgelehnt = fertig.Where(a => a.Anmelden).Select(a => a.Id).ToList();
+            if (handy == null && abgelehnt.Count > 0) handy = VomHandyHolen(frisch);
+            if (handy != null)
+            {
+                var (liste, text) = await handy;
+                if (liste == null)
+                {
+                    if (hier.Count == 0) Fehler = text.Length == 0 ? "Das Handy antwortet gerade nicht." : text;
+                    Log("fehler", "Kontingente vom Handy nicht abrufbar", wo: "Kontingente", fehler: text);
+                }
+                else
+                {
+                    foreach (var a in liste)
+                    {
+                        if (!vomHandy.Contains(a.Id) && !(abgelehnt.Contains(a.Id) && a.Limits.Count > 0)) continue;
+                        stand[a.Id] = a;
+                        vomHandy.Add(a.Id);
+                    }
+                    Fehler = null;
+                }
+            }
+            else Fehler = null;
+            Zeige();
             AusSpeicher = false;
-            Vorgaben.Setze(Speicher, t);
+            Vorgaben.Setze(Speicher, JSON.Text(new JSONObjekt { ["anbieter"] = Anbieter.Select(a => (object?)new JSONObjekt
+            {
+                ["id"] = a.Id, ["titel"] = a.Titel, ["konto"] = a.Konto, ["hinweis"] = a.Hinweis, ["anmelden"] = a.Anmelden, ["stand"] = a.Stand,
+                ["limits"] = a.Limits.Select(l => (object?)new JSONObjekt { ["name"] = l.Name, ["genutzt"] = l.Genutzt, ["resetSatz"] = l.ResetSatz, ["resetAm"] = l.ResetAm, ["resetSek"] = l.ResetSek, ["tempo"] = l.Tempo, ["zuSchnell"] = l.ZuSchnell }).ToList(),
+            }).ToList() }));
         }
         finally { Laedt = false; }
+    }
+
+    private static async Task<(List<AnbieterStand>? Liste, string Text)> VomHandyHolen(bool frisch)
+    {
+        var argumente = new JSONObjekt { ["json"] = true };
+        if (frisch) argumente["frisch"] = true;
+        var r = await McpKlient.Shared.Rufe("kontingente_lesen", argumente, 85);
+        var t = McpKlient.OhneKontextHinweis(r.Text);
+        return (Lies(t), t);
     }
 
     private static List<AnbieterStand>? Lies(string t)
@@ -79,7 +126,7 @@ public sealed class KontingenteAnsicht : LebendeAnsicht
         if (k.Fehler is { } f) VAnfuegen(s, T(k.Anbieter.Count == 0 ? f : "Alter Stand. " + f, 13, null, Farbe.Warnung), 18);
         else if (k.AusSpeicher) VAnfuegen(s, T("Letzter Stand, die neue Abfrage läuft.", 13, null, Farbe.Warnung), 18);
         foreach (var a in k.Anbieter) VAnfuegen(s, Karte_(a), 18);
-        VAnfuegen(s, T("Die Anmeldungen liegen auf dem Handy: Einstellungen → Kontingente.", 12, null, Farbe.Text3), 18);
+        VAnfuegen(s, T("Anmelden unter Einstellungen → Konsolen. Ohne Anmeldung hier am Laptop kommt der Stand vom Handy.", 12, null, Farbe.Text3), 18);
         return s;
     }
 
@@ -90,7 +137,7 @@ public sealed class KontingenteAnsicht : LebendeAnsicht
         var s = V(10, Titel("gauge.with.dots.needle.67percent", a.Titel));
         if (a.Konto.Length > 0) VAnfuegen(s, T(a.Konto, 12, null, Farbe.Text3), 10);
         foreach (var l in a.Limits) VAnfuegen(s, Limit_(l), 10);
-        if (a.Hinweis.Length > 0) VAnfuegen(s, T(a.Hinweis + (a.Anmelden ? " Anmelden auf dem Handy unter Einstellungen → Kontingente." : ""), 12, null, Farbe.Warnung), 10);
+        if (a.Hinweis.Length > 0) VAnfuegen(s, T(a.Hinweis + (a.Anmelden ? (k.VomHandy.Contains(a.Id) ? " Anmelden unter Einstellungen → Konsolen oder auf dem Handy." : " Anmelden unter Einstellungen → Konsolen.") : ""), 12, null, Farbe.Warnung), 10);
         if (a.Stand.Length > 0) VAnfuegen(s, T(a.Stand, 11, null, Farbe.Text3), 10);
         return Karte(s);
     }

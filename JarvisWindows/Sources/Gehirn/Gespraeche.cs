@@ -225,10 +225,24 @@ public sealed class Gespraech : Beobachtbar
     }
 }
 
+/// <summary>Beobachtete Liste mit Austausch auf einmal: Eine Meldung statt einer je Eintrag, die Leiste baut dann nur einmal neu.</summary>
+internal sealed class MassenListe<T> : ObservableCollection<T>
+{
+    public void ErsetzeAlle(IEnumerable<T> neu)
+    {
+        Items.Clear();
+        foreach (var x in neu) Items.Add(x);
+        OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+        OnCollectionChanged(new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Reset));
+    }
+}
+
 public sealed class GespraechsSpeicher : Beobachtbar
 {
     public static GespraechsSpeicher Shared { get; } = new();
-    public ObservableCollection<Gespraech> Alle { get; } = new();
+    private readonly MassenListe<Gespraech> alle = new();
+    public ObservableCollection<Gespraech> Alle => alle;
     private bool _geladen;
     /// <summary>Die gespeicherten Gespräche sind von der Platte da (der Agentenkanal sucht sein Gespräch darin).</summary>
     public bool Geladen { get => _geladen; private set => Setze(ref _geladen, value); }
@@ -238,14 +252,17 @@ public sealed class GespraechsSpeicher : Beobachtbar
         // Im Hintergrund und parallel: Gespräche mit Bildern würden den Start sonst sichtbar aufhalten.
         Task.Run(() =>
         {
-            var gelesen = new List<GeleseneDatei>();
+            // Auch das Anlegen samt Dekodieren der Bilder im Hintergrund: Auf dem Hauptfaden fröre es die App genau dann ein, wenn Kürzel oder Weckwort zuerst gebraucht werden.
+            var gelesen = new List<Gespraech>();
             try
             {
                 var dateien = Directory.GetFiles(Pfade.Gespraeche, "*.json");
                 Parallel.ForEach(dateien, d =>
                 {
                     var g = Gespraech.Lesen(d);
-                    if (g != null) lock (gelesen) gelesen.Add(g);
+                    if (g == null) return;
+                    var fertig = new Gespraech(g);
+                    lock (gelesen) gelesen.Add(fertig);
                 });
             }
             catch (Exception ex) { Log("fehler", "Gespräche nicht gelesen", wo: "Gespräche", fehler: ex.Message); }
@@ -253,12 +270,10 @@ public sealed class GespraechsSpeicher : Beobachtbar
         });
     }
 
-    private void Uebernehmen(List<GeleseneDatei> gelesen)
+    private void Uebernehmen(List<Gespraech> gelesen)
     {
         var schonDa = Alle.Select(g => g.Id).ToHashSet();
-        var neu = Alle.Concat(gelesen.Where(g => !schonDa.Contains(g.Id)).Select(g => new Gespraech(g))).OrderByDescending(g => g.Geaendert).ToList();
-        Alle.Clear();
-        foreach (var g in neu) Alle.Add(g);
+        alle.ErsetzeAlle(Alle.Concat(gelesen.Where(g => !schonDa.Contains(g.Id))).OrderByDescending(g => g.Geaendert).ToList());
         Geladen = true;
     }
 

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Speech.Synthesis;
+using System.Threading.Channels;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using NAudio.CoreAudioApi;
@@ -70,6 +71,59 @@ public sealed class Stimme : Beobachtbar
     /// scheitert sie, Rückfallkette, dann Edge, zuletzt die Systemstimme.</summary>
     public Task Sprich(string text, string? stimme = null) => Haupt.Auf(() => SprichIntern(text, stimme));
 
+    /// <summary>Beginnt eine Ausgabe, die während der Modellantwort wächst: Der erste Satz klingt schon, während das Modell noch schreibt.
+    /// `beiErsterTon` läuft auf dem Hauptfaden, sobald wirklich etwas zu hören ist.</summary>
+    public VorleseStrom Strom(Action? beiErsterTon = null, string? stimme = null) => Haupt.Wert(() =>
+    {
+        StoppIntern();
+        generation++;
+        var meine = generation;
+        var s = new VorleseStrom(this, meine);
+        s.Lauf = StromIntern(s, stimme, meine, beiErsterTon);
+        return s;
+    });
+
+    /// <summary>Hält Ausgabegerät und Verbindung zur Stimme bereit, wenn gleich gesprochen wird. Spart bis zu einigen hundert Millisekunden vor dem ersten Ton.</summary>
+    public void Vorbereiten() => Haupt.Post(() =>
+    {
+        var anbieter = VorleseEinstellungen.Shared.Stand(sonderStimme: null).Anbieter;
+        _ = Task.Run(async () =>
+        {
+            try { BereiteEngine(); } catch { }
+            Haupt.Post(() => { if (!Spricht) PlaneFreigabe(); });
+            await VorleseSynthese.Vorwaermen(anbieter).ConfigureAwait(false);
+        });
+    });
+
+    /// <summary>Stoppt nur, solange dieser Strom noch der aktuelle ist: Ein später Abbruch darf keine neue Antwort abschneiden.</summary>
+    internal void StoppWenn(int meine) => Haupt.Post(() => { if (generation == meine) StoppIntern(); });
+
+    private async Task StromIntern(VorleseStrom s, string? sonder, int meine, Action? beiErsterTon)
+    {
+        Weckwort.Shared.Pausieren();
+        try
+        {
+            freigabeUhr?.Cancel();
+            try
+            {
+                await SpieleKanal(s.Stuecke.Reader, VorleseEinstellungen.Shared.Stand(sonderStimme: sonder), meine, beiErsterTon);
+            }
+            finally
+            {
+                if (generation == meine)
+                {
+                    Spricht = false;
+                    Pegel = 0;
+                    PlaneFreigabe();
+                }
+            }
+        }
+        finally
+        {
+            Weckwort.Shared.Fortsetzen();
+        }
+    }
+
     private async Task SprichIntern(string text, string? sonder)
     {
         StoppIntern();
@@ -90,10 +144,10 @@ public sealed class Stimme : Beobachtbar
                     await SprichSystem(sauber, stand.Tempo(VorleseAnbieter.System), meine);
                     return;
                 }
-                var rest = await SprichKette(SprechText.Stuecke(sauber), stand, meine);
-                if (generation != meine || rest.Count == 0) return;
-                Log("fehler", "Vorlesen: Stimmen oder Wiedergabe gescheitert – Rückfall auf die Systemstimme");
-                await SprichSystem(string.Join(" ", rest), stand.Tempo(VorleseAnbieter.System), meine);
+                var kanal = Channel.CreateUnbounded<string>();
+                foreach (var stueck in SprechText.Stuecke(sauber)) kanal.Writer.TryWrite(stueck);
+                kanal.Writer.TryComplete();
+                await SpieleKanal(kanal.Reader, stand, meine, null);
             }
             finally
             {
@@ -127,6 +181,8 @@ public sealed class Stimme : Beobachtbar
         pegelUhr = null;
         Spricht = false;
         Pegel = 0;
+        // Auch nach einem Stopp freigeben: Ein offener Audiostrom hielte den Rechner vom Energiesparen ab.
+        if (engine != null) PlaneFreigabe();
     }
 
     // MARK: Wiedergabe
@@ -215,9 +271,10 @@ public sealed class Stimme : Beobachtbar
         {
             using var en = new MMDeviceEnumerator();
             var geraet = en.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
-            if (engine != null && engineLaeuft && engineGeraet == geraet.ID) return;
+            if (engine != null && engineLaeuft && engineGeraet == geraet.ID) { geraet.Dispose(); return; }
             SchliesseEngine();
-            var misch = geraet.AudioClient.MixFormat;
+            WaveFormat misch;
+            using (var client = geraet.AudioClient) misch = client.MixFormat;
             ISampleProvider q = spieler;
             if (misch.SampleRate != q.WaveFormat.SampleRate) q = new WdlResamplingSampleProvider(q, misch.SampleRate);
             if (misch.Channels != 1) q = new AufKanaele(q, misch.Channels);
@@ -254,61 +311,119 @@ public sealed class Stimme : Beobachtbar
         freigabeUhr = uhr;
         _ = Task.Run(async () =>
         {
-            try { await Task.Delay(TimeSpan.FromSeconds(30), uhr.Token).ConfigureAwait(false); }
-            catch (OperationCanceledException) { return; }
+            // Im laufenden Gespräch offen halten: Sonst bezahlte fast jede Antwort das Öffnen des Geräts vor dem ersten Ton.
+            do
+            {
+                try { await Task.Delay(TimeSpan.FromSeconds(30), uhr.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return; }
+            } while (SprachSchleife.Shared.Zustand != SprachZustand.Aus);
             lock (ausgabeSchloss) SchliesseEngine();
         });
     }
 
-    /// <summary>Erzeugt die Stücke (zwei im Voraus) und spielt sie lückenlos. Gibt die Stücke zurück, die keine Stimme erzeugen konnte.</summary>
-    private async Task<List<string>> SprichKette(List<string> stuecke, VorleseStand stand, int meine)
+    /// <summary>Erzeugt die Stücke aus der Warteschlange und spielt sie lückenlos: Die Synthese der nächsten läuft schon, während das aktuelle klingt.
+    /// Das erste Stück hat eine kurze Frist, danach gelten die normalen. Scheitert eine Stimme, liest die Systemstimme den Rest.</summary>
+    private async Task SpieleKanal(ChannelReader<string> quelle, VorleseStand stand, int meine, Action? ersterTon)
     {
-        try { await Task.Run(BereiteEngine); }
-        catch (Exception ex)
+        void Hoerbar()
         {
-            Log("fehler", $"Vorlesen: Audioausgabe nicht startbar ({ex.Message})");
-            return stuecke;
+            Spricht = true;
+            var a = ersterTon;
+            ersterTon = null;
+            a?.Invoke();
         }
-        if (generation != meine) return new List<string>();
         syntheseAbbruch?.Cancel();
         var abbruch = new CancellationTokenSource();
         syntheseAbbruch = abbruch;
         var ct = abbruch.Token;
-        var aufgaben = new Dictionary<int, Task<float[]?>>();
-        void Sichere(int i)
+        var tempoSystem = stand.Tempo(VorleseAnbieter.System);
+        async Task RestMitSystem(IEnumerable<string> davor)
         {
-            if (i >= stuecke.Count || aufgaben.ContainsKey(i)) return;
-            var text = stuecke[i];
-            aufgaben[i] = Task.Run(async () =>
+            foreach (var t in davor)
             {
-                try
+                if (generation != meine) return;
+                Hoerbar();
+                await SprichSystem(t, tempoSystem, meine);
+            }
+            try
+            {
+                await foreach (var t in quelle.ReadAllAsync(syntheseAbbruch?.Token ?? default))
                 {
-                    var (ton, anbieter) = await VorleseSynthese.Synthetisiere(text, stand, ct).ConfigureAwait(false);
-                    // Gemini kennt kein Sprechtempo: der fertige Ton wird gestreckt (Tonhöhe bleibt).
-                    var strecken = anbieter.IstGemini ? stand.Tempo(anbieter) : 1;
-                    return VorleseSynthese.Puffer(ton, strecken);
+                    if (generation != meine) return;
+                    Hoerbar();
+                    await SprichSystem(t, tempoSystem, meine);
                 }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return null; }
-                catch (Exception ex)
-                {
-                    Log("fehler", $"Vorlesen: {ex.Message}");
-                    return null;
-                }
-            });
+            }
+            catch (OperationCanceledException) { }
         }
-        var rest = new List<string>();
-        for (int i = 0; i < stuecke.Count; i++)
+        if (stand.Anbieter == VorleseAnbieter.System) { await RestMitSystem(Array.Empty<string>()); return; }
+        try { await Task.Run(BereiteEngine); }
+        catch (Exception ex)
         {
-            Sichere(i); Sichere(i + 1); Sichere(i + 2);
-            var puffer = await aufgaben[i];
-            if (generation != meine) { abbruch.Cancel(); return new List<string>(); }
+            Log("fehler", $"Vorlesen: Audioausgabe nicht startbar ({ex.Message})");
+            await RestMitSystem(Array.Empty<string>());
+            return;
+        }
+        if (generation != meine) return;
+
+        Task<float[]?> Erzeuge(string text, bool erstes) => Task.Run(async () =>
+        {
+            try
+            {
+                var (ton, anbieter) = await VorleseSynthese.Synthetisiere(text, stand, ct, erstes ? ErstesStueckFrist : null).ConfigureAwait(false);
+                // Gemini kennt kein Sprechtempo: der fertige Ton wird gestreckt (Tonhöhe bleibt).
+                var strecken = anbieter.IstGemini ? stand.Tempo(anbieter) : 1;
+                return VorleseSynthese.Puffer(ton, strecken);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return null; }
+            catch (Exception ex)
+            {
+                Log("fehler", $"Vorlesen: {ex.Message}");
+                return null;
+            }
+        });
+
+        var plan = Channel.CreateUnbounded<(string Text, Task<float[]?> Ton)>();
+        var platz = new SemaphoreSlim(3);
+        string? liegengeblieben = null;
+        var pumpe = Task.Run(async () =>
+        {
+            var erstes = true;
+            try
+            {
+                await foreach (var t in quelle.ReadAllAsync(ct).ConfigureAwait(false))
+                {
+                    liegengeblieben = t;
+                    await platz.WaitAsync(ct).ConfigureAwait(false);
+                    liegengeblieben = null;
+                    plan.Writer.TryWrite((t, Erzeuge(t, erstes)));
+                    erstes = false;
+                }
+            }
+            catch (OperationCanceledException) { }
+            finally { plan.Writer.TryComplete(); }
+        });
+
+        var rest = new List<string>();
+        await foreach (var (text, ton) in plan.Reader.ReadAllAsync())
+        {
+            var puffer = await ton;
+            if (generation != meine) { abbruch.Cancel(); return; }
             if (puffer == null)
             {
-                rest = stuecke.Skip(i).ToList();
+                rest.Add(text);
                 abbruch.Cancel();
+                await pumpe;
+                while (plan.Reader.TryRead(out var weiter)) rest.Add(weiter.Text);
+                if (liegengeblieben != null) rest.Add(liegengeblieben);
                 break;
             }
+            Hoerbar();
             spieler.Plane(puffer);
+            platz.Release();
+            // Nicht weit vorauseilen: Eine Unterbrechung soll keine Stimme bezahlen, die niemand mehr hört.
+            while (spieler.Offen >= 3 && generation == meine && engineLaeuft) await Task.Delay(40);
+            if (generation != meine) { abbruch.Cancel(); return; }
         }
         // Warten, bis alles geplante gespielt ist.
         while (generation == meine && spieler.Offen > 0)
@@ -324,8 +439,16 @@ public sealed class Stimme : Beobachtbar
         }
         // Das zuletzt Abgeholte liegt noch im Gerätepuffer: nicht vorzeitig zum Mikrofon wechseln.
         if (generation == meine) await Task.Delay(LatenzMs + 40);
-        return generation == meine ? rest : new List<string>();
+        if (generation != meine || rest.Count == 0) return;
+        Log("fehler", "Vorlesen: Stimmen oder Wiedergabe gescheitert – Rückfall auf die Systemstimme");
+        // Die neue Quelle: Das Abbruchsignal der Synthese ist schon ausgelöst.
+        var weiterAbbruch = new CancellationTokenSource();
+        syntheseAbbruch = weiterAbbruch;
+        await RestMitSystem(rest);
     }
+
+    /// <summary>Lieber nach wenigen Sekunden die nächste Stimme als lange Stille vor dem ersten Ton.</summary>
+    private const double ErstesStueckFrist = 7;
 
     // MARK: Systemstimme
 
@@ -362,11 +485,12 @@ public sealed class Stimme : Beobachtbar
                 if (system == null)
                 {
                     var neu = new SpeechSynthesizer();
-                    neu.SetOutputToDefaultAudioDevice();
                     WaehleBesteDeutscheStimme(neu);
                     system = neu;
                 }
                 var s = system;
+                // Je Satz neu: Ein Wechsel des Headsets bliebe sonst stumm.
+                s.SetOutputToDefaultAudioDevice();
                 void Fertig(object? _, SpeakCompletedEventArgs a)
                 {
                     s.SpeakCompleted -= Fertig;
@@ -387,6 +511,71 @@ public sealed class Stimme : Beobachtbar
         if (ReferenceEquals(systemFertig, k)) systemFertig = null;
         uhr.Stop();
         if (ReferenceEquals(pegelUhr, uhr)) pegelUhr = null;
+    }
+}
+
+/// <summary>Eine laufende Sprachausgabe, die mit der Modellantwort wächst. `Text` nimmt die gestreamten Stücke, `Ende` den fertigen Antworttext
+/// und liest nur, was im Strom noch nicht kam (etwa eine Fehlermeldung), damit nichts doppelt klingt.</summary>
+public sealed class VorleseStrom
+{
+    private readonly Stimme stimme;
+    private readonly int meine;
+    private readonly object schloss = new();
+    private readonly SatzStrom saetze = new();
+    private readonly System.Text.StringBuilder gefuettert = new();
+    private bool beendet;
+    internal readonly Channel<string> Stuecke = Channel.CreateUnbounded<string>();
+    internal Task Lauf = Task.CompletedTask;
+
+    internal VorleseStrom(Stimme stimme, int meine) { this.stimme = stimme; this.meine = meine; }
+
+    public void Text(string stueck)
+    {
+        lock (schloss)
+        {
+            if (beendet) return;
+            gefuettert.Append(stueck);
+            foreach (var s in saetze.Hinzu(stueck)) Stuecke.Writer.TryWrite(s);
+        }
+    }
+
+    /// <summary>Das Modell ist fertig. Kehrt zurück, wenn alles gesprochen oder gestoppt ist.</summary>
+    public Task Ende(string endtext)
+    {
+        lock (schloss)
+        {
+            if (!beendet)
+            {
+                beendet = true;
+                var rest = Nachzutragen(gefuettert.ToString(), endtext);
+                if (rest.Length > 0) foreach (var s in saetze.Hinzu(rest)) Stuecke.Writer.TryWrite(s);
+                foreach (var s in saetze.Ende()) Stuecke.Writer.TryWrite(s);
+                Stuecke.Writer.TryComplete();
+            }
+        }
+        return Lauf;
+    }
+
+    public void Abbrechen()
+    {
+        lock (schloss) { beendet = true; Stuecke.Writer.TryComplete(); }
+        stimme.StoppWenn(meine);
+    }
+
+    /// <summary>Was vom Endtext hinter dem schon Gestreamten liegt. Leerraum zählt nicht: Die Runden werden im Endtext durch Absätze getrennt.
+    /// Passt der Anfang nicht, wird nichts nachgetragen: Lieber ein fehlender Satz als eine doppelte Antwort.</summary>
+    public static string Nachzutragen(string gestreamt, string endtext)
+    {
+        int i = 0, j = 0;
+        while (true)
+        {
+            while (i < gestreamt.Length && char.IsWhiteSpace(gestreamt[i])) i++;
+            if (i >= gestreamt.Length) break;
+            while (j < endtext.Length && char.IsWhiteSpace(endtext[j])) j++;
+            if (j >= endtext.Length || endtext[j] != gestreamt[i]) return "";
+            i++; j++;
+        }
+        return endtext[j..];
     }
 }
 
@@ -419,9 +608,7 @@ public sealed class Diktat : Beobachtbar
     private sealed class Messung
     {
         public float Pegel;
-        public float Rauschboden = 0.004f;
-        public int Messungen;
-        public readonly List<float> Verlauf = new();              // Pegel der letzten ~3 Sekunden
+        public readonly RauschBoden Boden = new();
         public double Dauer;
         public double SprachZeit;
         public bool Begonnen;
@@ -473,6 +660,12 @@ public sealed class Diktat : Beobachtbar
         if (verfahren == "parakeet") ParakeetLocalClient.Shared.Preload();   // lädt, während Frank spricht
         var messung = new Messung();
         var umwandler = new Umwandler(16000);
+        // Vom Weckwort: Das Mikrofon läuft schon, und was seit dem Weckwort gesagt wurde, liegt im Puffer. Kein Neuaufbau, kein verlorenes Wort.
+        var ue = Weckwort.Shared.NimmUebergabe();
+        var phrase = Einstellungen.Shared.Weckwort;
+        Abschnitte? abschnitte = verfahren == "parakeet" && ParakeetLocalClient.IsInstalled
+            ? new Abschnitte(stand => { var v = ue != null ? Weckwort.OhneWeckwort(stand, phrase) : stand; Haupt.Post(() => Vorschau = v); })
+            : null;
         ISprachErkenner? erkenner = null;
         if (mitWindows)
         {
@@ -483,59 +676,84 @@ public sealed class Diktat : Beobachtbar
             {
                 Fehler = $"Spracherkennung: {ex.Message}";
                 Log("fehler", $"Diktat: {Fehler}");
+                ue?.Verwerfen();
                 return null;
             }
         }
-        var mikro = new Mikrofon();
+        var mikro = ue?.Mikro ?? new Mikrofon();
+        var nachholen = ue?.Dauer ?? 0;
+        var stummBis = DateTime.MaxValue;
         var mitSamples = !mitWindows;
         var hoechstSamples = (long)(16000 * maxSekunden);
         OffeneAufnahme = null;
-        mikro.BeiPuffer = p =>
+        void Puffer(MikroPuffer p)
         {
             erkenner?.Fuettere(p);
             var rms = Mikrofon.Pegel(p);
             var dauer = p.Dauer;
             var w = mitSamples ? umwandler.Wandle(p) : null;
+            // Nachgeholtes zählt mit seiner echten Zeit: Sonst liefe die Stille-Uhr nach der Übergabe zu spät.
+            var zeit = DateTime.Now.AddSeconds(-nachholen);
+            var nachgeholt = nachholen > 0;
+            nachholen = Math.Max(0, nachholen - dauer);
             lock (messung)
             {
                 var m = messung;
                 m.Pegel = rms;
                 m.Dauer += dauer;
+                if (w != null && m.Samples.Count < hoechstSamples) m.Samples.AddRange(w);
                 // Die ersten 250 ms läuft der Piepton (wie am Handy): zählt weder als Sprache noch fürs Grundrauschen.
-                if (m.Dauer >= 0.25)
+                var werten = ue != null ? nachgeholt || DateTime.Now >= stummBis : m.Dauer >= 0.25;
+                if (werten)
                 {
-                    m.Messungen++;
-                    m.Verlauf.Add(rms);
-                    if (m.Verlauf.Count > 70) m.Verlauf.RemoveAt(0);
-                    if (m.Messungen <= 6)                  // danach ~0,25 s: Rauschboden messen
-                    {
-                        m.Rauschboden = Math.Max(0.002f, (m.Rauschboden * (m.Messungen - 1) + rms) / m.Messungen);
-                    }
-                    else if (m.Messungen % 5 == 0)
-                    {
-                        // Die leisesten Stellen der letzten Sekunden: Sprache hat immer Lücken, und ein einzelner Aussetzer zählt nicht.
-                        // So folgt der Boden auch einem Lüfter, der später anspringt, sonst hielte er die Aufnahme bis zur Höchstdauer offen.
-                        var sortiert = m.Verlauf.OrderBy(x => x).ToList();
-                        m.Rauschboden = Math.Max(0.002f, sortiert[sortiert.Count / 5]);
-                    }
-                    var schwelle = Math.Max(m.Rauschboden * 3.2f, 0.012f);
-                    if (rms > schwelle)
+                    // Die leisesten Stellen der letzten Sekunden: So folgt der Boden auch einem Lüfter, der später anspringt, sonst hielte er die Aufnahme bis zur Höchstdauer offen.
+                    m.Boden.Messe(rms, dauer);
+                    if (rms > m.Boden.Schwelle)
                     {
                         m.SprachZeit += dauer;
-                        m.LetzteSprache = DateTime.Now;
+                        m.LetzteSprache = zeit;
                         if (m.SprachZeit > 0.18) m.Begonnen = true;
                     }
                 }
-                if (w != null && m.Samples.Count < hoechstSamples) m.Samples.AddRange(w);
+                // Hinter einer Sprechpause ist ein Abschnitt fertig: schon jetzt rechnen.
+                if (abschnitte != null && m.Begonnen && m.Samples.Count - abschnitte.Bis >= 32000 && (zeit - m.LetzteSprache).TotalSeconds >= 0.5)
+                    abschnitte.Gib(m.Samples.GetRange(abschnitte.Bis, m.Samples.Count - abschnitte.Bis).ToArray());
             }
-        };
-        try { await mikro.StartenImHintergrund(); }
-        catch (Exception ex)
+        }
+        if (ue != null)
         {
-            Fehler = ex.Message;
-            Log("fehler", $"Diktat: Mikrofon startet nicht ({Fehler})");
-            if (erkenner != null) await erkenner.Beenden(abschliessen: false);
-            return null;
+            stummBis = DateTime.Now.AddSeconds(0.25);
+            ue.Uebergib(Puffer, () =>
+            {
+                lock (messung)
+                {
+                    if (ue.Rest.Length > 0)
+                    {
+                        // „Hey Jarvis, wie wird das Wetter“: Das ist schon der erste Beitrag.
+                        messung.Begonnen = true;
+                        if (messung.LetzteSprache == DateTime.MinValue) messung.LetzteSprache = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Nur das Weckwort: Jetzt ist Frank dran, die Warte- und Stille-Uhr beginnt erst mit ihm.
+                        messung.Begonnen = false;
+                        messung.SprachZeit = 0;
+                        messung.LetzteSprache = DateTime.MinValue;
+                    }
+                }
+            });
+        }
+        else
+        {
+            mikro.BeiPuffer = Puffer;
+            try { await mikro.StartenImHintergrund(); }
+            catch (Exception ex)
+            {
+                Fehler = ex.Message;
+                Log("fehler", $"Diktat: Mikrofon startet nicht ({Fehler})");
+                if (erkenner != null) await erkenner.Beenden(abschliessen: false);
+                return null;
+            }
         }
         Toene.Start();
         var start = DateTime.Now;
@@ -575,6 +793,8 @@ public sealed class Diktat : Beobachtbar
         if (erkenner != null)
         {
             text = await erkenner.Beenden(abschliessen: true);
+            // Die Windows-Erkennung hörte erst nach der Übergabe zu: Was im Atemzug des Weckworts kam, steht nur in dessen Text.
+            if (ue != null && ue.Rest.Length > 0) text = (ue.Rest + " " + text).Trim();
         }
         else
         {
@@ -582,7 +802,14 @@ public sealed class Diktat : Beobachtbar
             lock (messung) samples = messung.Samples.ToArray();
             try
             {
-                text = await ErkenneMitNeuversuch(samples);
+                string? nebenbei = null;
+                if (abschnitte != null)
+                {
+                    try { nebenbei = await abschnitte.Fertig(samples[Math.Min(abschnitte.Bis, samples.Length)..]); }
+                    catch (Exception ex) { Log("sprache", $"Letzter Abschnitt nicht erkannt, die ganze Aufnahme wird gerechnet: {ex.Message}"); }
+                }
+                text = nebenbei ?? await ErkenneMitNeuversuch(samples);
+                if (ue != null) text = Weckwort.OhneWeckwort(text, phrase);
             }
             catch (Exception ex)
             {
@@ -597,6 +824,62 @@ public sealed class Diktat : Beobachtbar
         Vorschau = text;
         Log("sprache", $"Diktat erkannt ({TranskriptionsEinstellungen.Shared.AnzeigeName}): {text.Schnitt(120)}");
         return text.Length == 0 ? null : text;
+    }
+
+    /// <summary>Rechnet fertige Abschnitte schon während des Sprechens (Parakeet): Am Ende bleibt nur der letzte offen, und die Antwort beginnt früher.</summary>
+    private sealed class Abschnitte
+    {
+        private readonly object schloss = new();
+        private readonly string hotwords = TranskriptionsEinstellungen.Shared.ParakeetHotwords;
+        private readonly List<string> teile = new();
+        private readonly Action<string> vorschau;
+        private Task lauf = Task.CompletedTask;
+        private bool gescheitert;
+        public int Bis { get; private set; }
+        public Abschnitte(Action<string> vorschau) { this.vorschau = vorschau; }
+
+        public void Gib(float[] stueck)
+        {
+            Bis += stueck.Length;
+            lock (schloss) lauf = Rechne(lauf, stueck);
+        }
+
+        private async Task Rechne(Task davor, float[] stueck)
+        {
+            await davor.ConfigureAwait(false);
+            try
+            {
+                var text = await ParakeetLocalClient.Shared.Transkribiere(stueck, hotwords).ConfigureAwait(false);
+                string stand;
+                lock (schloss)
+                {
+                    if (text.Length > 0) teile.Add(text);
+                    stand = string.Join(" ", teile);
+                }
+                vorschau(stand);
+            }
+            catch (Exception ex)
+            {
+                lock (schloss) gescheitert = true;
+                Log("sprache", $"Abschnitt nebenbei nicht erkannt, die ganze Aufnahme wird gerechnet: {ex.Message}");
+            }
+        }
+
+        /// <summary>null = ein Abschnitt scheiterte, die ganze Aufnahme muss gerechnet werden.</summary>
+        public async Task<string?> Fertig(float[] rest)
+        {
+            Task warte;
+            lock (schloss) warte = lauf;
+            await warte.ConfigureAwait(false);
+            string? letztes = "";
+            if (rest.Length > 0 && new SprachAnalyse(rest).StimmMs >= SprachAnalyse.MinSprachMs)
+                letztes = await ParakeetLocalClient.Shared.Transkribiere(new SprachAnalyse(rest).Zugeschnitten(rest), hotwords).ConfigureAwait(false);
+            lock (schloss)
+            {
+                if (gescheitert) return null;
+                return string.Join(" ", teile.Append(letztes).Where(t => !string.IsNullOrEmpty(t)));
+            }
+        }
     }
 
     private async Task<string> ErkenneMitNeuversuch(float[] samples)
@@ -661,6 +944,40 @@ public sealed class Weckwort : Beobachtbar
     private bool nachStartErneut;
     private CancellationTokenSource? neustartAufgabe;
     private DateTime letzterTreffer = DateTime.MinValue;
+    private WeckUebergabe? ring;
+    private WeckUebergabe? offeneUebergabe;
+    private CancellationTokenSource? wiederUhr;
+
+    /// <summary>Holt das noch laufende Mikrofon samt Vorlauf ab, wenn das Weckwort gerade gefallen ist. Nur einmal.</summary>
+    public WeckUebergabe? NimmUebergabe()
+    {
+        var u = offeneUebergabe;
+        offeneUebergabe = null;
+        return u;
+    }
+
+    /// <summary>Beim Anmelden ist ein Headset oder Dock vielleicht noch nicht da: später erneut versuchen, statt still taub zu bleiben.</summary>
+    private void PlaneWiederversuch()
+    {
+        wiederUhr?.Cancel();
+        var uhr = new CancellationTokenSource();
+        wiederUhr = uhr;
+        _ = Warte();
+        async Task Warte()
+        {
+            try { await Task.Delay(TimeSpan.FromSeconds(30), uhr.Token); }
+            catch (OperationCanceledException) { return; }
+            if (gewuenscht && pausen == 0 && !Lauscht) await StarteIntern();
+        }
+    }
+
+    private void MeldeStoerung(string fehler)
+    {
+        PlaneWiederversuch();
+        if (Fehler == fehler) return;      // alle 30 Sekunden derselbe Grund: einmal im Logbuch genügt
+        Fehler = fehler;
+        Log("fehler", fehler.StartsWith("Weckwort") ? fehler : $"Weckwort: {fehler}");
+    }
 
     private Weckwort()
     {
@@ -745,28 +1062,26 @@ public sealed class Weckwort : Beobachtbar
         {
             if (!await SprachRechte.Mikrofon())
             {
-                Fehler = "Mikrofon nicht erlaubt – Weckwort aus.";
-                Log("fehler", $"Weckwort: {Fehler}");
+                MeldeStoerung("Mikrofon nicht erlaubt – Weckwort aus.");
                 return;
             }
             ISprachErkenner e;
             try { e = await StarteErkenner(); }
             catch (Exception ex)
             {
-                Fehler = $"Weckwort: {ex.Message}";
-                Log("fehler", Fehler);
+                MeldeStoerung($"Weckwort: {ex.Message}");
                 return;
             }
             // Während des Starts pausiert oder abgeschaltet?
             if (!gewuenscht || pausen != 0) { await e.Beenden(abschliessen: false); return; }
             var m = new Mikrofon();
-            m.BeiPuffer = p => e.Fuettere(p);
+            var r = new WeckUebergabe(m, e);
+            m.BeiPuffer = r.Puffer;
             m.BeiGeraetewechsel = () => NeuStarten("Gerätewechsel");
             try { await m.StartenImHintergrund(); }
             catch (Exception ex)
             {
-                Fehler = $"Weckwort: Mikrofon startet nicht ({ex.Message})";
-                Log("fehler", Fehler);
+                MeldeStoerung($"Weckwort: Mikrofon startet nicht ({ex.Message})");
                 await e.Beenden(abschliessen: false);
                 return;
             }
@@ -777,20 +1092,24 @@ public sealed class Weckwort : Beobachtbar
                 await e.Beenden(abschliessen: false);
                 return;
             }
-            mikro = m; erkenner = e;
+            mikro = m; erkenner = e; ring = r;
+            wiederUhr?.Cancel();
             Lauscht = true; Fehler = null;
             Log("sprache", $"Weckwort lauscht auf „{Einstellungen.Shared.Weckwort}“ ({e.Name})");
-            // Regelmäßig frisch starten: Das hält den Zustand klein.
-            var intervall = e.NutztAnalyzer ? 600.0 : 50.0;
+            // Die Windows-Erkennung regelmäßig frisch starten: Das hält ihren Zustand klein. Parakeet hat keinen wachsenden Zustand, dort wäre es nur eine taube Sekunde.
             neustartAufgabe?.Cancel();
-            var uhr = new CancellationTokenSource();
-            neustartAufgabe = uhr;
-            _ = Intervall();
-            async Task Intervall()
+            neustartAufgabe = null;
+            if (e is not ParakeetWeckErkenner)
             {
-                try { await Task.Delay(TimeSpan.FromSeconds(intervall), uhr.Token); }
-                catch (OperationCanceledException) { return; }
-                NeuStarten("Intervall");
+                var uhr = new CancellationTokenSource();
+                neustartAufgabe = uhr;
+                _ = Intervall();
+                async Task Intervall()
+                {
+                    try { await Task.Delay(TimeSpan.FromSeconds(600), uhr.Token); }
+                    catch (OperationCanceledException) { return; }
+                    NeuStarten("Intervall");
+                }
             }
         }
         finally
@@ -817,10 +1136,29 @@ public sealed class Weckwort : Beobachtbar
         neustartAufgabe = null;
         var m = mikro;
         var e = erkenner;
-        mikro = null; erkenner = null;
+        mikro = null; erkenner = null; ring = null;
         Lauscht = false;
         if (m != null) await m.StoppenImHintergrund();
         return e;
+    }
+
+    /// <summary>Das gemeinte Gesagte: alles hinter dem ersten Weckwort. Kommt keines vor, bleibt der Text wie er ist.</summary>
+    public static string OhneWeckwort(string text, string phrase)
+    {
+        var woerter = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var norm = woerter.Select(GroqWhisper.Normal).ToArray();
+        var phraseWoerter = GroqWhisper.Normal(phrase).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var einleitung = new HashSet<string> { "hey", "hej", "hei", "he", "hallo", "okay", "ok", "hi", "ey" };
+        for (int i = 0; i < norm.Length; i++)
+        {
+            if (phraseWoerter.Length > 0 && i + phraseWoerter.Length <= norm.Length && phraseWoerter.SequenceEqual(norm.Skip(i).Take(phraseWoerter.Length)))
+                return Rest(i + phraseWoerter.Length);
+            var istJarvis = Varianten.Contains(norm[i]) && ((norm[i] != "travis" && norm[i] != "dravis") || (i > 0 && einleitung.Contains(norm[i - 1])));
+            if (istJarvis && (i == 0 || einleitung.Contains(norm[i - 1]))) return Rest(i + 1);
+        }
+        return text;
+
+        string Rest(int ab) => string.Join(" ", woerter.Skip(ab)).TrimStart(' ', ',', '.', '!', '?', ';', ':', '-', '–');
     }
 
     private static readonly HashSet<string> Varianten = new()
@@ -858,19 +1196,88 @@ public sealed class Weckwort : Beobachtbar
         letzterTreffer = DateTime.Now;
         var ende = text.Length > 60 ? text[^60..] : text;
         Log("sprache", $"Weckwort erkannt: „{ende}“");
-        // Der Piepton kommt mit der ersten Gesprächsrunde. Sobald das Mikrofon frei ist, geht es los; der Erkenner endet nebenher.
+        // Das Mikrofon läuft weiter und wird ans Diktat übergeben: Der Neuaufbau kostete Zeit und die Worte dazwischen. Der Piepton kommt mit der ersten Gesprächsrunde.
+        var rest = OhneWeckwort(text, Einstellungen.Shared.Weckwort);
+        if (rest == text) rest = "";
         _ = Weiter();
         async Task Weiter()
         {
-            var alterErkenner = await MikroAus();
+            neustartAufgabe?.Cancel();
+            neustartAufgabe = null;
+            var m = mikro;
+            var alterErkenner = erkenner;
+            var r = ring;
+            mikro = null; erkenner = null; ring = null;
+            Lauscht = false;
+            if (r != null)
+            {
+                r.Rest = rest;
+                r.ErkennerLoesen();
+                if (m != null) m.BeiGeraetewechsel = null;
+                offeneUebergabe = r;
+            }
             if (BeiErkennung != null) BeiErkennung();
             else SprachSchleife.Shared.Starten(GespraechsSpeicher.Shared.Neu());
             if (alterErkenner != null) await alterErkenner.Beenden(abschliessen: false);
-            // Hat niemand pausiert (z. B. leerer Handler), nach kurzer Zeit wieder lauschen.
             await Task.Delay(2000);
+            // Niemand hat das Mikrofon abgeholt (etwa Live oder ein leerer Handler).
+            if (r != null && ReferenceEquals(offeneUebergabe, r))
+            {
+                offeneUebergabe = null;
+                r.Verwerfen();
+            }
+            // Hat niemand pausiert (z. B. leerer Handler), wieder lauschen.
             if (pausen == 0) await StarteIntern();
         }
     }
+}
+
+/// <summary>Das laufende Mikrofon des Weckworts mit den letzten Sekunden als Vorlauf. Nach der Übergabe gehen die Puffer ohne Lücke an das Diktat.</summary>
+public sealed class WeckUebergabe
+{
+    private const double VorlaufSek = 8;
+    private readonly object schloss = new();
+    private readonly Queue<MikroPuffer> vorlauf = new();
+    private double dauer;
+    private ISprachErkenner? erkenner;
+    private Action<MikroPuffer>? ziel;
+    public Mikrofon Mikro { get; }
+    /// <summary>Was im selben Atemzug hinter dem Weckwort erkannt wurde.</summary>
+    public string Rest = "";
+    public double Dauer { get { lock (schloss) return dauer; } }
+
+    public WeckUebergabe(Mikrofon mikro, ISprachErkenner erkenner) { Mikro = mikro; this.erkenner = erkenner; }
+
+    /// <summary>Audio-Faden.</summary>
+    public void Puffer(MikroPuffer p)
+    {
+        ISprachErkenner? e;
+        lock (schloss)
+        {
+            if (ziel != null) { ziel(p); return; }
+            vorlauf.Enqueue(p);
+            dauer += p.Dauer;
+            while (dauer > VorlaufSek && vorlauf.Count > 1) dauer -= vorlauf.Dequeue().Dauer;
+            e = erkenner;
+        }
+        e?.Fuettere(p);
+    }
+
+    public void ErkennerLoesen() { lock (schloss) erkenner = null; }
+
+    /// <summary>Gibt den Vorlauf an `neuesZiel` und danach jeden weiteren Puffer. `danach` läuft direkt nach dem Vorlauf, bevor der nächste Puffer kommt.</summary>
+    public void Uebergib(Action<MikroPuffer> neuesZiel, Action danach)
+    {
+        lock (schloss)
+        {
+            while (vorlauf.Count > 0) neuesZiel(vorlauf.Dequeue());
+            dauer = 0;
+            danach();
+            ziel = neuesZiel;
+        }
+    }
+
+    public void Verwerfen() => _ = Mikro.StoppenImHintergrund();
 }
 
 // MARK: - Sprachschleife
@@ -921,6 +1328,10 @@ public sealed class SprachSchleife : Beobachtbar
     private async Task Schleife(Gespraech g, int meiner, bool inApp, CancellationToken ct)
     {
         Weckwort.Shared.Pausieren();
+        // Solange das Gespräch läuft, sollen Modell, Tonausgabe und Verbindung sofort bereitstehen.
+        var haeltParakeet = ParakeetLocalClient.IsInstalled;
+        if (haeltParakeet) ParakeetLocalClient.Shared.Halten(true);
+        Stimme.Shared.Vorbereiten();
         try
         {
             Log("sprache", "Sprachschleife gestartet");
@@ -949,12 +1360,17 @@ public sealed class SprachSchleife : Beobachtbar
                     break;
                 }
                 Zustand = SprachZustand.Denkt;
-                var antwort = await JarvisAgent.Shared.Frage(text, g, gesprochen: true, ct: ct);
-                if (lauf != meiner || ct.IsCancellationRequested) break;
-                if (Einstellungen.Shared.Vorlesen && antwort.Length > 0)
+                // Satzweise, während das Modell noch schreibt: Der erste Ton kommt nach dem ersten Satz, nicht nach der ganzen Antwort.
+                VorleseStrom? strom = Einstellungen.Shared.Vorlesen
+                    ? Stimme.Shared.Strom(beiErsterTon: () => { if (lauf == meiner) Zustand = SprachZustand.Spricht; })
+                    : null;
+                string antwort;
+                try { antwort = await JarvisAgent.Shared.Frage(text, g, gesprochen: true, onText: strom == null ? null : strom.Text, ct: ct); }
+                catch { strom?.Abbrechen(); throw; }
+                if (lauf != meiner || ct.IsCancellationRequested) { strom?.Abbrechen(); break; }
+                if (strom != null)
                 {
-                    Zustand = SprachZustand.Spricht;
-                    await Stimme.Shared.Sprich(antwort);
+                    await strom.Ende(antwort);
                     if (lauf != meiner || ct.IsCancellationRequested) break;
                 }
                 var letzte = g.Nachrichten.LastOrDefault(n => n.Rolle.ToString() == "Jarvis");
@@ -969,6 +1385,7 @@ public sealed class SprachSchleife : Beobachtbar
         }
         finally
         {
+            if (haeltParakeet) ParakeetLocalClient.Shared.Halten(false);
             Weckwort.Shared.Fortsetzen();
             if (lauf == meiner) Zustand = SprachZustand.Aus;
         }

@@ -118,11 +118,15 @@ public sealed class ChatAnsicht : Grid
         };
     }
 
-    private void Abgelegt(object sender, DragEventArgs e)
+    private async void Abgelegt(object sender, DragEventArgs e)
     {
         byte[]? jpg = null;
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } dateien)
-            try { jpg = BildHelfer.JpgDaten(File.ReadAllBytes(dateien[0])); } catch { }
+        {
+            // Ein großes Foto zu lesen und zu kodieren dauert: nicht auf dem Hauptfaden, sonst stocken Oberfläche und Live.
+            var pfad = dateien[0];
+            jpg = await Task.Run(() => { try { return BildHelfer.JpgDaten(File.ReadAllBytes(pfad)); } catch { return null; } });
+        }
         else if (e.Data.GetData(DataFormats.Bitmap) is BitmapSource b) jpg = BildHelfer.JpgDaten(b);
         if (jpg != null) AppSteuerung.Shared.Anhang = jpg;
     }

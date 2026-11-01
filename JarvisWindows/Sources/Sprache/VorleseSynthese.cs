@@ -56,13 +56,25 @@ public static class VorleseSynthese
     private static string OhneLeer(string s) => new(s.Where(c => !char.IsWhiteSpace(c)).ToArray());
 
     /// <summary>Ton für einen Absatz samt dem Anbieter, der ihn tatsächlich erzeugt hat (für das Tempo-Strecken bei Gemini).</summary>
-    public static async Task<(VorleseTon, VorleseAnbieter)> Synthetisiere(string text, VorleseStand s, CancellationToken ct = default)
+    /// <param name="frist">Höchstens so viele Sekunden je Anbieter (erstes Stück einer Antwort): Lieber schnell die nächste Stimme als lange Stille.</param>
+    public static async Task<(VorleseTon, VorleseAnbieter)> Synthetisiere(string text, VorleseStand s, CancellationToken ct = default, double? frist = null)
     {
+        async Task<VorleseTon> Mit(VorleseAnbieter a, string? schluessel, bool mitAusweg)
+        {
+            if (frist is not double sek) return await Erzeuge(a, text, s, schluessel, mitAusweg, ct).ConfigureAwait(false);
+            using var uhr = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            uhr.CancelAfter(TimeSpan.FromSeconds(sek));
+            try { return await Erzeuge(a, text, s, schluessel, mitAusweg, uhr.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw VorleseFehler.Zeitlimit($"{a.Titel} hat nicht innerhalb von {sek:0} Sekunden geantwortet.");
+            }
+        }
         var haupt = s.Anbieter;
         Exception hauptFehler;
         try
         {
-            return (await Erzeuge(haupt, text, s, null, s.Kette.Count > 0, ct), haupt);
+            return (await Mit(haupt, null, s.Kette.Count > 0).ConfigureAwait(false), haupt);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { hauptFehler = ex; }
@@ -73,7 +85,7 @@ public static class VorleseSynthese
             var stufe = s.Kette[i];
             try
             {
-                var ton = await Erzeuge(stufe.Anbieter, text, s, stufe.Schluessel, i < s.Kette.Count - 1, ct);
+                var ton = await Mit(stufe.Anbieter, stufe.Schluessel, i < s.Kette.Count - 1).ConfigureAwait(false);
                 Log("sprache", $"Vorlese-Rückfall: {stufe.Titel} statt {haupt.Titel} ({hauptFehler.Message.Schnitt(80)})");
                 return (ton, stufe.Anbieter);
             }
@@ -89,7 +101,7 @@ public static class VorleseSynthese
         {
             try
             {
-                var ton = await Erzeuge(VorleseAnbieter.Edge, text, s, null, false, ct);
+                var ton = await Mit(VorleseAnbieter.Edge, null, false).ConfigureAwait(false);
                 Log("sprache", $"Vorlese-Rückfall: Microsoft Edge statt {haupt.Titel}");
                 return (ton, VorleseAnbieter.Edge);
             }
@@ -110,6 +122,19 @@ public static class VorleseSynthese
         VorleseAnbieter.QwenKlon => Qwen(text, true, s, ct),
         _ => Task.FromException<VorleseTon>(VorleseFehler.Abbruch("Systemstimme wird direkt gesprochen.")),
     };
+
+    /// <summary>Baut die Verbindung zum Stimmen-Dienst vorab auf, damit die erste Antwort nicht auch noch DNS, TCP und TLS bezahlt. Das Ergebnis der Anfrage zählt nicht.</summary>
+    public static async Task Vorwaermen(VorleseAnbieter a)
+    {
+        var adresse = a switch
+        {
+            VorleseAnbieter.Google => "https://texttospeech.googleapis.com/",
+            VorleseAnbieter.GeminiFlash or VorleseAnbieter.GeminiLite => "https://generativelanguage.googleapis.com/",
+            VorleseAnbieter.Qwen or VorleseAnbieter.QwenKlon => "https://dashscope-intl.aliyuncs.com/",
+            _ => null,
+        };
+        if (adresse != null) await SprachHttp.Vorwaermen(adresse).ConfigureAwait(false);
+    }
 
     // MARK: HTTP mit Wiederholung
 

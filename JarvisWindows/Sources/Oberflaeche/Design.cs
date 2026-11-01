@@ -420,12 +420,19 @@ public sealed class Reaktiv : Decorator
     }
 }
 
-/// <summary>Gemeinsamer Bildtakt über CompositionTarget.Rendering: läuft nur, solange ein angemeldetes Element sichtbar ist und das Fenster vorn steht. Entspricht TimelineView(.animation(minimumInterval:, paused:)).</summary>
+/// <summary>Gemeinsamer Bildtakt über einen Timer im kürzesten verlangten Abstand (CompositionTarget.Rendering hielte WPF im vollen Bildtakt des Displays): läuft nur, solange ein angemeldetes Element sichtbar ist und das Fenster vorn steht. Entspricht TimelineView(.animation(minimumInterval:, paused:)).</summary>
 public static class Takt
 {
     private sealed class Eintrag { public required FrameworkElement El; public required Func<double> Intervall; public required Action<double> Tick; public double Naechste; }
     private static readonly List<Eintrag> Aktiv = new();
     private static bool abonniert;
+    private static readonly DispatcherTimer Uhrwerk = NeuesUhrwerk();
+    private static DispatcherTimer NeuesUhrwerk()
+    {
+        var u = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
+        u.Tick += (_, _) => Bild();
+        return u;
+    }
     private static readonly Stopwatch Uhr = Stopwatch.StartNew();
     /// <summary>Sekunden seit dem Start (timeIntervalSinceReferenceDate).</summary>
     public static double Jetzt => Uhr.Elapsed.TotalSeconds;
@@ -450,20 +457,25 @@ public static class Takt
         var soll = Aktiv.Count > 0 && AppSteuerung.Shared.AppVorn;
         if (soll == abonniert) return;
         abonniert = soll;
-        if (soll) CompositionTarget.Rendering += Bild; else CompositionTarget.Rendering -= Bild;
+        if (soll) Uhrwerk.Start(); else Uhrwerk.Stop();
     }
 
-    private static void Bild(object? s, EventArgs a)
+    private static void Bild()
     {
         var t = Jetzt;
+        var kuerzeste = 1.0;
         for (var i = Aktiv.Count - 1; i >= 0; i--)
         {
             if (i >= Aktiv.Count) continue;
             var e = Aktiv[i];
+            var abstand = e.Intervall();
+            kuerzeste = Math.Min(kuerzeste, abstand);
             if (t < e.Naechste) continue;
-            e.Naechste = t + e.Intervall() * 0.9;
+            e.Naechste = t + abstand * 0.9;
             e.Tick(t);
         }
+        var soll = TimeSpan.FromSeconds(Math.Max(kuerzeste, 0.016));
+        if (Uhrwerk.Interval != soll) Uhrwerk.Interval = soll;
     }
 }
 

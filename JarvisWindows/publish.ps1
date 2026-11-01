@@ -60,10 +60,18 @@ $lnk.Save()
 $wecker = Join-Path $ziel 'hp-wecker.ps1'
 $pwsh = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if (-not $pwsh) { $pwsh = (Get-Command powershell).Source }
-$aktion = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$wecker`""
-$ausloeser = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$regeln = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
-Register-ScheduledTask -TaskName 'JarvisWindowsWecker' -Action $aktion -Trigger $ausloeser -Settings $regeln -Force | Out-Null
+$conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
+$aktion = New-ScheduledTaskAction -Execute $conhost -Argument "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$wecker`""
+$benutzer = "$env:USERDOMAIN\$env:USERNAME"
+# Wächter wie bei der Jarvis-PC-Brücke: Stirbt der Wecker, wäre der HP sonst bis zur nächsten Anmeldung für das Handy nicht verbunden. Läuft er schon, beendet sich der neue sofort (Sperre im Skript).
+$ausloeser = @(
+    (New-ScheduledTaskTrigger -AtLogOn -User $benutzer),
+    (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1))
+)
+$regeln = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) `
+    -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+$haupt = New-ScheduledTaskPrincipal -UserId $benutzer -LogonType Interactive -RunLevel Limited
+Register-ScheduledTask -TaskName 'JarvisWindowsWecker' -Action $aktion -Trigger $ausloeser -Settings $regeln -Principal $haupt -Force | Out-Null
 # Neu starten, damit die neue Fassung gilt. Stop-ScheduledTask allein verwaiste die pwsh (siehe Jarvis-PC-Brücke); darum den Prozess selbst beenden.
 Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*hp-wecker.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 for ($i = 0; $i -lt 10 -and (Get-ScheduledTask -TaskName 'JarvisWindowsWecker').State -eq 'Running'; $i++) { Start-Sleep -Milliseconds 500 }

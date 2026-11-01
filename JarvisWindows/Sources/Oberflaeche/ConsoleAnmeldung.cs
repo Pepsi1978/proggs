@@ -314,10 +314,17 @@ internal sealed class ConsoleBrowser : UserControl
     private CoreWebView2Environment? umgebung;
     private WebView2? haupt;
     private bool erledigt, geprueft;
+    private readonly Uri start;
+    private readonly Func<CoreWebView2, Task<bool>>? erkannt;
+    /// <summary>Für die Knöpfe der anderen Konsolen: der laufende Browser, solange er steht.</summary>
+    internal CoreWebView2? Kern => haupt?.CoreWebView2;
 
-    public ConsoleBrowser(Action fertig)
+    /// <summary>Ohne start und erkannt die Anthropic-Konsole; sonst prüft erkannt je Sekunde, ob die Anmeldung steht, und sichert sie selbst.</summary>
+    public ConsoleBrowser(Action fertig, Uri? start = null, Func<CoreWebView2, Task<bool>>? erkannt = null)
     {
         this.fertig = fertig;
+        this.start = start ?? ConsoleSitzung.LoginURL;
+        this.erkannt = erkannt;
         gesamt.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         gesamt.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         // Über einem WebView2 kann WPF nichts zeichnen (Airspace): Der Knopf steht deshalb in einer Leiste darüber statt in der Ecke des Popups.
@@ -339,7 +346,7 @@ internal sealed class ConsoleBrowser : UserControl
             umgebung = await CoreWebView2Environment.CreateAsync(null, ordner);
             var web = await Browser();
             haupt = web;
-            web.CoreWebView2.Navigate(ConsoleSitzung.LoginURL.AbsoluteUri);
+            web.CoreWebView2.Navigate(start.AbsoluteUri);
             // Die Console wechselt nach der Anmeldung per Client-Navigation, und das Cookie kann später kommen als die neue Adresse: regelmäßig nachsehen.
             web.CoreWebView2.NavigationCompleted += async (_, _) => await Pruefen();
             wache.Start();
@@ -393,6 +400,20 @@ internal sealed class ConsoleBrowser : UserControl
     private async Task Pruefen()
     {
         if (erledigt || geprueft || haupt?.CoreWebView2 == null) return;
+        if (erkannt != null)
+        {
+            geprueft = true;
+            try
+            {
+                if (erledigt || !await erkannt(haupt.CoreWebView2)) return;
+                erledigt = true;
+                wache.Stop();
+                fertig();
+            }
+            catch (Exception ex) { Log("fehler", "Prüfung der Anmeldung gescheitert", wo: "Konsolen", fehler: ex.Message); }
+            finally { geprueft = false; }
+            return;
+        }
         var u = haupt.CoreWebView2.Source ?? "";
         if (!u.StartsWith("https://platform.claude.com", StringComparison.Ordinal) || u.Contains("/login")) return;
         geprueft = true;

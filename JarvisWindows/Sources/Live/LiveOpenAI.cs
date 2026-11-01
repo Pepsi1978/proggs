@@ -39,7 +39,7 @@ public sealed class LiveOpenAI : LiveSitzung
     {
         var adresse = Live ? "wss://api.openai.com/v1/live/sessions" : $"wss://api.openai.com/v1/realtime?model={modell}";
         var kopf = new Dictionary<string, string> { ["Authorization"] = $"Bearer {schluessel}" };
-        socket = new LiveSocket(adresse, kopf, Geoeffnet, Ereignis, Geschlossen);
+        socket = new LiveSocket(adresse, kopf, Geoeffnet, Ereignis, Geschlossen) { TonGrenze = 2000 / Ton.BlockMs };
         socket.Los();
     }
 
@@ -112,8 +112,9 @@ public sealed class LiveOpenAI : LiveSitzung
     public override void Mikro(byte[] pcm)
     {
         var s = socket;
-        if (!Bereit || s == null) return;
-        s.Sende(new JSONObjekt { ["type"] = Live ? "session.input_audio.append" : "input_audio_buffer.append", ["audio"] = Convert.ToBase64String(pcm) });
+        if (s == null) return;
+        SendeOderHebeAuf(pcm, Bereit, block =>
+            s.SendeTon(new JSONObjekt { ["type"] = Live ? "session.input_audio.append" : "input_audio_buffer.append", ["audio"] = Convert.ToBase64String(block) }));
     }
 
     public override void Angetippt()
@@ -344,11 +345,11 @@ public sealed class LiveOpenAI : LiveSitzung
             }
             case "input_audio_buffer.speech_started":
             {
-                string item; int ms;
+                string item; long ms;
                 lock (sperre)
                 {
                     item = antwortItem;
-                    ms = Math.Max(0, empfangenFrames - Ton.Gepuffert) * 1000 / (int)LiveTon.AusgabeRate;
+                    ms = Math.Max(0L, (long)empfangenFrames - Ton.Gepuffert) * 1000 / (long)LiveTon.AusgabeRate;
                 }
                 if (item.Length > 0 && Ton.SprichtHoerbar)
                 {
@@ -411,6 +412,16 @@ public sealed class LiveOpenAI : LiveSitzung
         }
         s.Sende(new JSONObjekt { ["type"] = "conversation.item.create", ["item"] = new JSONObjekt { ["type"] = "function_call_output", ["call_id"] = kennung, ["output"] = text } });
         return s.Sende(new JSONObjekt { ["type"] = "response.create" });
+    }
+
+    /// <summary>GPT-Live setzt mehrere Kommentare derselben Delegation fort (§5.2): Der erste Satz kann gesprochen werden, während Jarvis noch schreibt.</summary>
+    public override bool KannStroemen => Live;
+
+    public override bool Stueck(string kennung, string text)
+    {
+        var s = socket;
+        if (!Live || s == null || !s.Offen) return false;
+        return s.Sende(new JSONObjekt { ["type"] = "session.commentary.append", ["delegation_id"] = kennung, ["content"] = text.Schnitt(1500) });
     }
 
     public override bool Nachreichen(string kennung, string text)

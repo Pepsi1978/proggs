@@ -109,6 +109,7 @@ public sealed class JarvisAgent
             GespraechsSpeicher.Shared.NachOben(g);
 
             var vorigeWahl = ProgrammierVorspann.OffeneWahl(g.Nachrichten.ToList());
+            var zuletztGesprochen = g.Nachrichten.LastOrDefault()?.Zeit;
             g.Nachrichten.Add(new Nachricht(Rolle.Frank, text, gesprochen: gesprochen, bild: bild));
             var inhalt = new List<JSONObjekt>();
             if (bild != null) inhalt.Add(BildBlock(bild));
@@ -121,6 +122,12 @@ public sealed class JarvisAgent
                 });
                 g.GesendeteNachtraege = new List<string>();
             }
+            // Ein altes Gespräch geht weiter: Der System-Kontext stammt vom Gesprächsbeginn. Der neue Stand kommt als Anhang dieser Nachricht, damit der bisherige Verlauf unverändert bleibt.
+            if (g.Kontext.Length > 0 && zuletztGesprochen is { } zuletzt && (DateTime.Now - zuletzt).TotalMinutes >= 60)
+            {
+                var aktuell = await McpKlient.Shared.KontextFuerGespraech();
+                if (aktuell.Length > 0) inhalt.Add(new JSONObjekt { ["type"] = "text", ["text"] = "(Aktueller Stand des Live-Gedächtnisses; er gilt statt des älteren aus dem Gesprächsbeginn:\n" + aktuell + ")" });
+            }
             inhalt.Add(new JSONObjekt { ["type"] = "text", ["text"] = $"[{Zeitstempel()}{(gesprochen ? ", gesprochen" : "")}] {text}" });
             g.Verlauf.Add(new JSONObjekt { ["role"] = "user", ["content"] = inhalt });
 
@@ -131,7 +138,8 @@ public sealed class JarvisAgent
 
             var mcpListe = McpKlient.Shared.Werkzeuge(ct: ct);
             if (g.Kontext.Length == 0) g.Kontext = await McpKlient.Shared.KontextFuerGespraech();
-            var handyWerkzeuge = await mcpListe;
+            // Ist die Liste nicht schon warm, wartet die Antwort höchstens kurz darauf: Ohne Handy antwortet Jarvis eben ohne seine Werkzeuge.
+            var handyWerkzeuge = await Task.WhenAny(mcpListe, Task.Delay(1500)) == mcpListe ? await mcpListe : new List<WerkzeugDefinition>();
             var lokale = WinWerkzeuge.AlleLokal.ToList();
             var lokaleNamen = lokale.Select(w => w.Definition.Name).ToHashSet();
             var alleWerkzeuge = lokale.Select(w => w.Definition)
@@ -141,7 +149,7 @@ public sealed class JarvisAgent
             var erlaubteNamen = alleWerkzeuge.Select(w => w.Name).ToHashSet();
             var system = await SystemTeile(g);
             var (a, modell) = await AnbieterWahl();
-            var effort = e.Effort;
+            var effort = gesprochen ? e.SprachEffort : e.Effort;
             var limit = e.SchrittLimit;
             var istClaude = a is AnthropicKlient;
             var kosten = 0.0;
@@ -382,10 +390,32 @@ public sealed class JarvisAgent
         return summe;
     }
 
+    /// <summary>Größe des Verlaufs ohne ihn zu serialisieren: Das liefe sonst vor jeder Frage über alle Megabytes.</summary>
+    private static long GroesseGeschaetzt(object? o)
+    {
+        switch (o)
+        {
+            case string s: return s.Length + 2;
+            case IDictionary<string, object?> d:
+                {
+                    long summe = 2;
+                    foreach (var (k, v) in d) summe += k.Length + 4 + GroesseGeschaetzt(v);
+                    return summe;
+                }
+            case System.Collections.IEnumerable liste:
+                {
+                    long summe = 2;
+                    foreach (var x in liste) summe += GroesseGeschaetzt(x) + 1;
+                    return summe;
+                }
+            default: return 8;
+        }
+    }
+
     /// <summary>null = noch klein genug. Baut neue Einträge; die alten bleiben unberührt.</summary>
     private static List<JSONObjekt>? Verdichtet(List<JSONObjekt> eingang)
     {
-        var groesse = JSON.Daten(eingang).Length;
+        var groesse = GroesseGeschaetzt(eingang);
         // Grob vier Byte je Token, Bilder zählen dabei nicht als Text.
         var bilder = eingang.Sum(n => BildZeichen(n.Objekte("content")));
         if (groesse <= 6_000_000 && (groesse - bilder) / 4 <= 500_000) return null;
