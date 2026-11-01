@@ -18,6 +18,8 @@ final class AblageAbgleich {
 
     private(set) var eintraege: [AblageEintrag] = []
     private(set) var prompts: [PromptEintrag] = []
+    private(set) var erinnerungen: [Erinnerung] = []
+    private(set) var quittungen: [String: ErinnerungQuittung] = [:]
     private(set) var fehler: String?
     private(set) var verbunden = false
     /// Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht.
@@ -505,10 +507,53 @@ final class AblageAbgleich {
         try await senden(art: "prompt", id: String(erstellt), daten: [:], geaendert: zeit("prompt", String(erstellt)), geloescht: true)
     }
 
+    // MARK: Erinnerungen
+
+    /// Wie Erinnerungen.anlegen am Handy. Ohne Datum wird es eine allgemeine Erinnerung; am Mac gibt es keine Einstellung für die Zeit ohne Uhrzeit, darum die Vorgabe des Handys.
+    @discardableResult
+    func erinnerungAnlegen(text: String, zeile: String, kurz: String, datum: String?, uhrzeit: String?, form: String, vorab: [Ausloesung]) async throws -> Erinnerung {
+        let sauber = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sauber.isEmpty else { throw AblageFehler.leer }
+        let id = Self.neueId()
+        let zeit = self.zeit("erinnerung", id)
+        let allgemein = datum == nil
+        let z = zeile.trimmingCharacters(in: .whitespacesAndNewlines), k = kurz.trimmingCharacters(in: .whitespacesAndNewlines)
+        let e = Erinnerung(id: id, allgemein: allgemein, zeile: z.isEmpty ? Erinnerung.zeileAus(sauber) : z, kurz: k.isEmpty ? Erinnerung.kurzAus(sauber) : k, text: sauber, datum: datum, uhrzeit: uhrzeit,
+                           form: form, ausloesungen: allgemein ? [] : (vorab.isEmpty ? [Erinnerung.neueAusloesung(0)] : vorab), quelle: Self.quelle, erstellt: zeit, geaendert: zeit)
+        try await senden(art: "erinnerung", id: id, daten: e.alsJson(), geaendert: zeit)
+        log("ablage", "Erinnerung angelegt", wo: "Ablage/Erinnerung")
+        return e
+    }
+
+    /// Ändert den jetzt gültigen Stand. Erzeugt nie eine Quittung.
+    @discardableResult
+    func erinnerungAendern(_ id: String, _ aendern: (Erinnerung) -> Erinnerung) async throws -> Erinnerung {
+        guard let alt = erinnerungen.first(where: { $0.id == id }) else { throw AblageFehler.nichtMehrDa }
+        var neu = aendern(alt)
+        let zeit = self.zeit("erinnerung", id)
+        neu.geaendert = zeit
+        try await senden(art: "erinnerung", id: id, daten: neu.alsJson(), geaendert: zeit)
+        return neu
+    }
+
+    func erinnerungLoeschen(_ id: String) async throws {
+        try await senden(art: "erinnerung", id: id, daten: [:], geaendert: zeit("erinnerung", id), geloescht: true)
+    }
+
+    func quittungSenden(_ q: ErinnerungQuittung) async throws {
+        try await senden(art: "quittung", id: q.id, daten: q.alsJson(), geaendert: max(q.zeit, 1))
+    }
+
+    /// Fragt der Planer: Welches Gerät ist gerade dran? Mit aktiv = 1 meldet sich der Mac zugleich als benutzt.
+    func anwesenheitAdresse(aktiv: Bool) -> URL? {
+        guard let basis, let name = Self.quelle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+        return URL(string: "\(basis)/anwesenheit?geraet=\(name)&aktiv=\(aktiv ? 1 : 0)")
+    }
+
     // MARK: Werkzeuge des Modells
 
     /// Was der Mac selbst erledigt; alles andere geht ans Handy, ohne erst den Hauptfaden zu berühren.
-    nonisolated static let eigeneWerkzeuge: Set<String> = ["ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern"]
+    nonisolated static let eigeneWerkzeuge: Set<String> = ["ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern", "erinnerung_speichern", "erinnerungen_lesen"]
 
     /// Die Liste vom Handy zeigt auch Vorläufiges, kennt aber am Mac gerade Gespeichertes womöglich noch nicht. Antwortet es nicht schnell, reicht die eigene Kopie.
     func listeMit(_ vomHandy: WerkzeugErgebnis) -> WerkzeugErgebnis {
@@ -544,10 +589,12 @@ final class AblageAbgleich {
     func werkzeug(_ name: String, _ a: JSONObjekt) async -> WerkzeugErgebnis? {
         do {
             switch name {
-            case "ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern": try await ersterAbgleich()
+            case "ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern", "erinnerung_speichern", "erinnerungen_lesen": try await ersterAbgleich()
             default: return nil
             }
             switch name {
+            case "erinnerung_speichern", "erinnerungen_lesen":
+                return try await ErinnerungWerkzeuge.ausfuehren(name, a)
             case "ablage_schreiben":
                 guard a["als_pdf"] as? Bool != true else { return nil }
                 let titel = a["titel"] as? String ?? "", inhalt = a["inhalt"] as? String ?? ""
@@ -653,6 +700,8 @@ final class AblageAbgleich {
     private func neuAufbauen() {
         var neu: [AblageEintrag] = []
         var ps: [PromptEintrag] = []
+        var ers: [Erinnerung] = []
+        var qs: [String: ErinnerungQuittung] = [:]
         for d in docs.values where d["geloescht"] as? Bool != true {
             guard let w = d["daten"] as? JSONObjekt, let id = d["id"] as? String else { continue }
             switch d["art"] as? String {
@@ -667,6 +716,10 @@ final class AblageAbgleich {
                                          recherche: w["recherche"] as? Bool ?? false, dateien: dateien, textSha: sha, textGroesse: Int(Self.zahl(w["text_groesse"])), quelle: Self.quellenName(w["quelle"])))
             case "prompt":
                 ps.append(PromptEintrag(nummer: 0, titel: w["titel"] as? String ?? "", text: w["text"] as? String ?? "", erstellt: Int64(id) ?? 0, quelle: Self.quellenName(w["quelle"])))
+            case "erinnerung":
+                ers.append(Erinnerung.aus(id: id, w, geaendert: Self.zahl(d["geaendert"])))
+            case "quittung":
+                qs[id] = ErinnerungQuittung.aus(id: id, w)
             default: break
             }
         }
@@ -685,7 +738,11 @@ final class AblageAbgleich {
         for i in ps.indices { ps[i].nummer = i + 1 }
         eintraege = neu.sorted { $0.geaendert > $1.geaendert }
         prompts = ps
+        erinnerungen = ers
+        quittungen = qs
         aufbauStand += 1
+        // Eine Bestätigung von anderswo beendet Banner, Ton und Stimme sofort, nicht erst beim nächsten Lauf.
+        ErinnerungPlaner.shared.ablageGeaendert()
     }
 
     private static func kennungOk(_ s: String?) -> Bool {

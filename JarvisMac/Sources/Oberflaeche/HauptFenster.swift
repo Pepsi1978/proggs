@@ -39,6 +39,9 @@ struct HauptFenster: View {
         .overlay {
             if let p = steuerung.promptBearbeiten { PromptEditorVollbild(prompt: p).id(p.id).foregroundStyle(Farbe.text).tint(Farbe.haupt) }
         }
+        // Erinnerung: Detail und Bearbeiten decken alles ab, das Banner fälliger Erinnerungen steht über allem.
+        .overlay { ErinnerungEbenen() }
+        .overlay(alignment: .top) { ErinnerungBanner() }
         .sheet(isPresented: $guthaben.anmeldungOffen, onDismiss: { Task { await guthaben.laden(frisch: true) } }) { ConsoleAnmeldungAnsicht() }
         // Hier und nicht in der Prompt-Liste: Das Senden verlässt die Ablage. Abbrechen gilt als Nein, der Prompt bleibt.
         .alert("Soll der Prompt gelöscht werden?", isPresented: Binding(get: { steuerung.promptLoeschenFrage != nil }, set: { if !$0 { steuerung.promptLoeschenFrage = nil } }), presenting: steuerung.promptLoeschenFrage) { p in
@@ -69,7 +72,7 @@ private struct TastenKuerzel: View {
             Button("") { AppSteuerung.shared.bereich = .ablage }.keyboardShortcut("3", modifiers: .command)
         }
         // Im Prompt-Editor würden sie den Bereich unsichtbar darunter wechseln.
-        .disabled(steuerung.promptBearbeiten != nil)
+        .disabled(steuerung.promptBearbeiten != nil || steuerung.erinnerungOffen != nil || steuerung.erinnerungEntwurf != nil)
         .opacity(0).frame(width: 0, height: 0)
     }
 }

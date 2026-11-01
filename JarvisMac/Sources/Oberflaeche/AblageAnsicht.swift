@@ -67,13 +67,14 @@ struct QuellenListe: View {
 
 /// Ein Ordner des Explorers, wie die Filter der Handy-Ablage; PDFs und Recherchen sind eigene Bereiche.
 enum AblageBereich: String, CaseIterable, Identifiable {
-    case bilder, pdfs, prompts, recherchen, texte, dokumente, tabellen, praesentationen, audio, video, sonstige
+    case bilder, pdfs, prompts, erinnerung, recherchen, texte, dokumente, tabellen, praesentationen, audio, video, sonstige
     var id: String { rawValue }
     var titel: String {
         switch self {
         case .bilder: return "Bilder"
         case .pdfs: return "PDFs"
         case .prompts: return "Prompts"
+        case .erinnerung: return "Erinnerung"
         case .recherchen: return "Recherchen"
         case .texte: return "Texte"
         case .dokumente: return "Dokumente"
@@ -89,6 +90,7 @@ enum AblageBereich: String, CaseIterable, Identifiable {
         case .bilder: return "photo.fill"
         case .pdfs: return "doc.richtext.fill"
         case .prompts: return "bolt.fill"
+        case .erinnerung: return "bell.fill"
         case .recherchen: return "magnifyingglass.circle.fill"
         case .texte: return "doc.text.fill"
         case .dokumente: return "doc.fill"
@@ -104,7 +106,7 @@ enum AblageBereich: String, CaseIterable, Identifiable {
         case .bilder, .video: return Farbe.kupfer
         case .pdfs, .audio: return Farbe.warnung
         case .prompts, .tabellen: return Farbe.gruen
-        case .recherchen, .praesentationen: return Farbe.gold
+        case .recherchen, .praesentationen, .erinnerung: return Farbe.gold
         default: return Farbe.haupt
         }
     }
@@ -126,6 +128,8 @@ final class AblageDaten {
 
     /// Einmal je Neuaufbau gezählt, nicht bei jedem Neuzeichnen und jedem Tastendruck in der Suche.
     func anzahl(_ b: AblageBereich) -> Int {
+        if b == .prompts { return quelle.prompts.count }
+        if b == .erinnerung { return quelle.erinnerungen.count }
         if zaehlerStand != quelle.aufbauStand {
             zaehlerStand = quelle.aufbauStand
             zaehler = Dictionary(uniqueKeysWithValues: AblageBereich.allCases.map { ($0, elemente($0, suche: "").count) })
@@ -167,7 +171,7 @@ final class AblageDaten {
         var r: [AblageElement] = []
         for e in eintraege {
             switch b {
-            case .prompts: break
+            case .prompts, .erinnerung: break
             case .recherchen:
                 if e.recherche { r.append(AblageElement(eintrag: e, datei: nil)) }
             case .texte:
@@ -328,7 +332,7 @@ struct AblageAnsicht: View {
                     .frame(width: 34, height: 34).background(RoundedRectangle(cornerRadius: 10).fill(b.farbe.opacity(0.13)))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(b.titel).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text).lineLimit(1).minimumScaleFactor(0.8)
-                    if b != .prompts { Text("\(daten.anzahl(b))").font(.jarvis(11)).foregroundStyle(Farbe.text3) }
+                    Text("\(daten.anzahl(b))").font(.jarvis(11)).foregroundStyle(Farbe.text3)
                 }
                 Spacer(minLength: 0)
             }
@@ -343,6 +347,8 @@ struct AblageAnsicht: View {
     @ViewBuilder private var inhalt: some View {
         if bereich == .prompts {
             PromptsAnsicht()
+        } else if bereich == .erinnerung {
+            ErinnerungenAnsicht()
         } else {
             let liste = sortiert(daten.elemente(bereich, suche: suche))
             if bereich == .texte { NeuerTextEintrag(meldung: $daten.meldung) }

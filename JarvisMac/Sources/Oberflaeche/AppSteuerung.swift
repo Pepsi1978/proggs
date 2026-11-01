@@ -62,6 +62,10 @@ final class AppSteuerung {
     /// Der eben gesendete Prompt, solange die Frage offen ist, ob er aus der Ablage weg soll.
     var promptLoeschenFrage: PromptEintrag?
     var promptLoeschenFehler: String?
+    /// Die Erinnerung, deren Detail gerade offen ist (Kennung).
+    var erinnerungOffen: String?
+    /// Die Erinnerung, die gerade im Vollbild entsteht oder bearbeitet wird.
+    var erinnerungEntwurf: ErinnerungEntwurf?
     var handyVerbunden = false
     var handyVersion = ""
     private var hotKeyRefs: [EventHotKeyRef] = []
