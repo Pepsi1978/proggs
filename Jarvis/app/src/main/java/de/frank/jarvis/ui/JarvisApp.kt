@@ -385,7 +385,7 @@ fun Karte(modifier: Modifier = Modifier, toenung: Color? = null, inhalt: @Compos
 
 /** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt (oder offen mit [startOffen]); mit [aufklappbar] = false immer offen. */
 @Composable
-fun Bereich(titel: String, aufklappbar: Boolean = true, startOffen: Boolean = false, inhalt: @Composable ColumnScope.() -> Unit) {
+fun Bereich(titel: String, aufklappbar: Boolean = true, startOffen: Boolean = false, kopf: (@Composable () -> Unit)? = null, inhalt: @Composable ColumnScope.() -> Unit) {
     val f = LocalFarben.current
     var offen by androidx.compose.runtime.saveable.rememberSaveable(titel, startOffen) { mutableStateOf(!aufklappbar || startOffen) }
     val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
@@ -395,6 +395,7 @@ fun Bereich(titel: String, aufklappbar: Boolean = true, startOffen: Boolean = fa
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(titel, Modifier.weight(1f), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            kopf?.invoke()
             if (aufklappbar) Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen", Modifier.size(26.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
         }
         AnimatedVisibility(offen, enter = androidx.compose.animation.expandVertically() + fadeIn(), exit = androidx.compose.animation.shrinkVertically() + fadeOut()) {

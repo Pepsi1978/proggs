@@ -6,7 +6,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +34,7 @@ import de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Companion.prozent
 import de.frank.jarvis.ui.theme.LocalFarben
+import de.frank.jarvis.ui.theme.antippen
 
 /** Reiter „Kontingente“: je Anbieter die Limits mit Verbrauch, Zurücksetzen in deutscher Zeit und Tempo. */
 @Composable
@@ -36,12 +46,13 @@ internal fun KontingenteReiter(vm: AppViewModel) {
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
-        Bereich("Claude", startOffen = true) { ApiFreikontingent(vm) }
-        Bereich("Gemini / Antigravity (Google)", startOffen = true) { AiStudioUebersicht(vm) }
+        Bereich("Claude", startOffen = true, kopf = { AktualisierenKnopf(vm, "claude", "Claude", null) }) { LaufAnzeige(vm, "claude", null); ApiFreikontingent(vm) }
+        Bereich("Gemini / Antigravity (Google)", startOffen = true, kopf = { AktualisierenKnopf(vm, "gemini", "Gemini", null) }) { LaufAnzeige(vm, "gemini", null); AiStudioUebersicht(vm) }
     } else {
         val jetzt = System.currentTimeMillis() / 1000
         stand.anbieter.forEach { a ->
-            Bereich(a.titel, startOffen = true) {
+            Bereich(a.titel, startOffen = true, kopf = { AktualisierenKnopf(vm, a.id, a.titel, a) }) {
+                LaufAnzeige(vm, a.id, a)
                 if (a.konto.isNotEmpty()) Text(a.konto, color = f.textSchwach, fontSize = 13.sp)
                 a.limits.forEach { l ->
                     val schnell = l.zuSchnell(jetzt)
@@ -59,7 +70,8 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                         }
                     }
                 }
-                a.hinweis?.let { Text(it, color = if (a.limits.isEmpty() && !a.anmeldenNoetig) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
+                // Nach einem gescheiterten Einzelabruf steht der Grund schon oben im Bereich.
+                a.hinweis?.takeIf { vm.laufVon(a.id, a)?.fehler == null }?.let { Text(it, color = if (a.limits.isEmpty() && !a.anmeldenNoetig) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
                 a.standText().takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)) }
                 if (a.id == "claude") ApiFreikontingent(vm)
                 if (a.anmeldenNoetig && (a.id == "claude" || a.id == "kimi")) {
@@ -82,6 +94,39 @@ internal fun KontingenteReiter(vm: AppViewModel) {
         // Kimi nennt nach außen kein festes Zeichen für „angemeldet“: Du siehst deine Limits im Fenster und schließt es dann selbst.
         "kimi" -> AnmeldeBrowser("Bei Kimi anmelden, danach schließen", KontingenteFaehigkeit.KIMI_SEITE, googleTauglich = true,
             fertig = { false }, onFertig = { anmelden = null; vm.kontingenteAbfragen(erzwingen = true) })
+    }
+}
+
+/** Ein Einzelabruf aus dem Kopf eines Bereichs. [geholt] = Stand des Anbieters danach, [um] = Ende des Abrufs in Sekunden seit 1970. */
+internal class KontingentLauf(val laeuft: Boolean, val geholt: Long = 0L, val fehler: String? = null, val um: Long = 0L)
+
+/** Das Ergebnis gilt nur, solange kein neuerer Abruf den Anbieter geändert hat: Sonst stünde „Aktualisiert“ neben einer neuen Störung. */
+private fun AppViewModel.laufVon(id: String, a: KontingenteFaehigkeit.Anbieter?): KontingentLauf? =
+    kontingentLaeufe[id]?.takeIf { it.laeuft || (it.geholt == (a?.geholt ?: 0L) && (it.fehler != null || a?.hinweis == null)) }
+
+/** Sitzt links neben dem Auf-/Zuklappschalter und zeigt auch im zugeklappten Bereich, wie der letzte Abruf ausging. */
+@Composable
+private fun AktualisierenKnopf(vm: AppViewModel, id: String, titel: String, a: KontingenteFaehigkeit.Anbieter?) {
+    val f = LocalFarben.current
+    val lauf = vm.laufVon(id, a)
+    Box(Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape).antippen { vm.kontingentAktualisieren(id) }, contentAlignment = Alignment.Center) {
+        when {
+            lauf?.laeuft == true -> CircularProgressIndicator(Modifier.size(20.dp), color = f.primaer, strokeWidth = 2.dp)
+            lauf?.fehler != null -> Icon(Icons.Rounded.Warning, "$titel: Aktualisierung fehlgeschlagen, erneut versuchen", Modifier.size(22.dp), tint = f.gefahr)
+            lauf != null -> Icon(Icons.Rounded.Check, "$titel aktualisiert, erneut aktualisieren", Modifier.size(22.dp), tint = f.primaer)
+            else -> Icon(Icons.Rounded.Refresh, "$titel aktualisieren", Modifier.size(22.dp), tint = f.textLeise)
+        }
+    }
+}
+
+@Composable
+private fun LaufAnzeige(vm: AppViewModel, id: String, a: KontingenteFaehigkeit.Anbieter?) {
+    val f = LocalFarben.current
+    val lauf = vm.laufVon(id, a) ?: return
+    when {
+        lauf.laeuft -> Text("Wird aktualisiert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
+        lauf.fehler != null -> Text(lauf.fehler, color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 6.dp))
+        else -> Text("Aktualisiert: " + KontingenteFaehigkeit.zeitText(lauf.um), color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 6.dp))
     }
 }
 

@@ -22,6 +22,15 @@ final class Kontingente {
     /// Diese Dienste stehen gerade vom Handy in der Liste.
     var vomHandy: Set<String> = []
 
+    /// Einzelabruf aus dem Kopf einer Karte: läuft gerade oder ging so aus.
+    struct Lauf {
+        let laeuft: Bool
+        var erfolg = false
+        var text = ""
+    }
+    var laeufe: [String: Lauf] = [:]
+    private var einzeln = 0
+
     init() {
         if let t = UserDefaults.standard.string(forKey: Self.speicher), let alt = Self.lies(t) { anbieter = alt; ausSpeicher = true }
     }
@@ -29,9 +38,12 @@ final class Kontingente {
     func laden(frisch: Bool = false) async {
         // Ein ausdrücklicher Wunsch wartet die laufende Abfrage ab, statt verloren zu gehen.
         if laedt && !frisch { return }
-        while laedt { try? await Task.sleep(for: .milliseconds(300)) }
+        // Auch laufende Einzelabrufe abwarten: Der Gesamtabruf arbeitet auf seiner eigenen Kopie und würde sie sonst überschreiben.
+        while laedt || einzeln > 0 { try? await Task.sleep(for: .milliseconds(300)) }
         laedt = true; defer { laedt = false }
-        var stand = Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        // Ein neuer Gesamtabruf macht das Ergebnis eines früheren Einzelabrufs hinfällig.
+        if frisch { laeufe = [:] }
+        var stand =Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var hier: [(id: String, titel: String)] = []
         for d in KontingentQuellen.alle {
             if await KontingentQuellen.hierMoeglich(d.id) { hier.append(d) }
@@ -71,6 +83,65 @@ final class Kontingente {
         }
         zeige()
         ausSpeicher = false
+        sichere()
+    }
+
+    /// Fragt nur diesen Anbieter frisch ab und ändert nur seine Karte. Als Erfolg gilt nur ein frischer Stand ohne Hinweis.
+    func aktualisieren(_ id: String) async {
+        if laeufe[id]?.laeuft == true { return }
+        laeufe[id] = Lauf(laeuft: true)
+        einzeln += 1
+        while laedt { try? await Task.sleep(for: .milliseconds(300)) }
+        let fehler = await einzelnHolen(id)
+        einzeln -= 1
+        let f = DateFormatter(); f.dateFormat = "HH:mm"
+        laeufe[id] = Lauf(laeuft: false, erfolg: fehler == nil, text: fehler ?? "Aktualisiert: heute, " + f.string(from: Date()) + " Uhr")
+    }
+
+    private func einzelnHolen(_ id: String) async -> String? {
+        var neu: Anbieter?
+        var fehler: String?
+        var ueberHandy = await !KontingentQuellen.hierMoeglich(id)
+        if !ueberHandy {
+            let titel = KontingentQuellen.alle.first { $0.id == id }?.titel ?? id
+            let a = await KontingentQuellen.lies(id, titel: titel, frisch: true)
+            neu = a
+            fehler = Self.fehlertext(a)
+            // Abgelehnte Anmeldung am Mac: dann doch vom Handy, falls dort eine liegt.
+            ueberHandy = a.anmelden
+        }
+        var ausHandy = false
+        if ueberHandy {
+            let (liste, text) = await Self.vomHandyHolen(frisch: true, ziel: id)
+            if let a = liste?.first(where: { $0.id == id }) {
+                if neu == nil || !a.limits.isEmpty {
+                    neu = a
+                    ausHandy = true
+                    // Nach Fristende schickt das Handy den letzten Stand: Der darf nicht als frisch gelten.
+                    fehler = (JSON.objekt(text)?["aktualisiert"] as? Bool) == true ? Self.fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat nicht rechtzeitig frisch geantwortet."
+                }
+            } else {
+                if neu == nil { fehler = "Aktualisierung fehlgeschlagen: " + (liste != nil || text.isEmpty ? "Das Handy antwortet gerade nicht." : text) }
+                log("fehler", "Kontingent vom Handy nicht abrufbar", wo: "Kontingente", fehler: text)
+            }
+        }
+        if let neu {
+            var stand = Dictionary(anbieter.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+            stand[id] = neu
+            if ausHandy { vomHandy.insert(id) } else { vomHandy.remove(id) }
+            anbieter = KontingentQuellen.alle.compactMap { stand[$0.id] }
+            sichere()
+        }
+        return fehler
+    }
+
+    private static func fehlertext(_ a: Anbieter) -> String? {
+        if a.hinweis.hasPrefix("Ein Limit") { return "Nicht vollständig aktualisiert: " + a.hinweis }
+        if !a.hinweis.isEmpty { return "Aktualisierung fehlgeschlagen: " + a.hinweis.replacingOccurrences(of: "Letzter Stand. ", with: "") }
+        return a.limits.isEmpty ? "Aktualisierung fehlgeschlagen: Der Anbieter nennt keine Limits." : nil
+    }
+
+    private func sichere() {
         let speicherbar: [JSONObjekt] = anbieter.map { a in
             ["id": a.id, "titel": a.titel, "konto": a.konto, "hinweis": a.hinweis, "anmelden": a.anmelden, "stand": a.stand,
              "limits": a.limits.map { l in ["name": l.name, "genutzt": l.genutzt, "resetSatz": l.resetSatz, "resetAm": l.resetAm, "resetSek": l.resetSek, "tempo": l.tempo, "zuSchnell": l.zuSchnell] as JSONObjekt }]
@@ -78,9 +149,10 @@ final class Kontingente {
         UserDefaults.standard.set(JSON.text(["anbieter": speicherbar] as JSONObjekt), forKey: Self.speicher)
     }
 
-    private static func vomHandyHolen(frisch: Bool) async -> (liste: [Anbieter]?, text: String) {
+    private static func vomHandyHolen(frisch: Bool, ziel: String? = nil) async -> (liste: [Anbieter]?, text: String) {
         var argumente: JSONObjekt = ["json": true]
         if frisch { argumente["frisch"] = true }
+        if let ziel { argumente["anbieter"] = ziel }
         let r = await McpKlient.shared.rufe("kontingente_lesen", argumente, sekunden: 85)
         let t = McpKlient.ohneKontextHinweis(r.text)
         return (lies(t), t)
@@ -122,14 +194,34 @@ struct KontingenteAnsicht: View {
     private func karte(_ a: Kontingente.Anbieter) -> some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
-                KartenTitel(symbol: "gauge.with.dots.needle.67percent", titel: a.titel)
+                let lauf = k.laeufe[a.id]
+                HStack(spacing: 10) {
+                    KartenTitel(symbol: "gauge.with.dots.needle.67percent", titel: a.titel)
+                    Spacer()
+                    aktualisierenKnopf(a, lauf)
+                }
+                if let lauf {
+                    if lauf.laeuft { Text("Wird aktualisiert …").font(.jarvis(13)).foregroundStyle(Farbe.text2) }
+                    else { Text(lauf.text).font(.jarvis(13, .semibold)).foregroundStyle(lauf.erfolg ? Farbe.haupt : Farbe.rot).fixedSize(horizontal: false, vertical: true) }
+                }
                 if !a.konto.isEmpty { Text(a.konto).font(.jarvis(12)).foregroundStyle(Farbe.text3) }
                 ForEach(a.limits) { limit($0) }
-                if !a.hinweis.isEmpty {
+                // Nach einem gescheiterten Einzelabruf steht der Grund schon oben; der Weg zur Anmeldung bleibt.
+                if !a.hinweis.isEmpty && (a.anmelden || lauf == nil || lauf?.laeuft == true || lauf?.erfolg == true) {
                     Text(a.hinweis + (a.anmelden ? (k.vomHandy.contains(a.id) ? " Anmelden unter Einstellungen → Konsolen oder auf dem Handy." : " Anmelden unter Einstellungen → Konsolen.") : "")).font(.jarvis(12)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true)
                 }
                 if !a.stand.isEmpty { Text(a.stand).font(.jarvis(11)).foregroundStyle(Farbe.text3) }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func aktualisierenKnopf(_ a: Kontingente.Anbieter, _ lauf: Kontingente.Lauf?) -> some View {
+        if lauf?.laeuft == true {
+            ProgressView().controlSize(.small).frame(width: 26, height: 24)
+        } else {
+            KleinKnopf(symbol: lauf == nil ? "arrow.clockwise" : (lauf?.erfolg == true ? "checkmark" : "exclamationmark.triangle.fill"), hilfe: a.titel + " aktualisieren",
+                       farbe: lauf == nil ? Farbe.text2 : (lauf?.erfolg == true ? Farbe.haupt : Farbe.rot)) { Task { await k.aktualisieren(a.id) } }
         }
     }
 

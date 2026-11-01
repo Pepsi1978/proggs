@@ -76,12 +76,17 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             schema = schema(
                 "frisch" to schalter("true = jetzt neu bei den Anbietern abfragen statt des letzten Stands."),
                 "json" to schalter("true = Ausgabe als JSON für die Mac-Oberfläche."),
+                "anbieter" to text("Nur mit frisch: fragt allein diesen Anbieter neu ab, die anderen bleiben beim letzten Stand.", listOf("claude", "codex", "kimi", "gemini")),
             ),
             nurLesen = true,
         ) { a ->
+            val ziel = a.optString("anbieter").takeIf { a.optBoolean("frisch") && it in listOf("claude", "codex", "kimi", "gemini") }
             // Vor der Frist des Relays antworten: lieber der letzte Stand als ein Fehler, während das Handy noch arbeitet.
-            val s = withTimeoutOrNull(WERKZEUG_FRIST_MS) { stand(context, erzwingen = a.optBoolean("frisch")) } ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
-            Ergebnis(if (a.optBoolean("json")) s.alsJson().toString() else s.text(), fehler = s.anbieter.all { it.limits.isEmpty() })
+            val neu = withTimeoutOrNull(WERKZEUG_FRIST_MS) { if (ziel != null) anbieterAktualisieren(context, ziel) else stand(context, erzwingen = a.optBoolean("frisch")) }
+            val s = neu ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
+            // Der letzte Stand nach Fristende sieht aus wie ein Erfolg: Der gezielte Abruf sagt deshalb ausdrücklich, ob er fertig wurde.
+            val json = s.alsJson().also { if (ziel != null) it.put("ziel", ziel).put("aktualisiert", neu != null) }
+            Ergebnis(if (a.optBoolean("json")) json.toString() else s.text(), fehler = s.anbieter.all { it.limits.isEmpty() })
         },
     )
 
@@ -330,12 +335,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 }
                 laufErzwungen = erzwingen
                 val beginn = System.currentTimeMillis()
-                val abfragen: List<Triple<String, String, suspend () -> Pair<String, List<Limit>>>> = listOf(
-                    Triple("claude", "Claude (Anthropic)") { claude(app) },
-                    Triple("codex", "ChatGPT / Codex (OpenAI)") { codex(app) },
-                    Triple("kimi", "Kimi") { kimi(app) },
-                    Triple("gemini", "Gemini / Antigravity (Google)") { gemini(app) },
-                )
+                val abfragen = abfragen(app)
                 // Nachfassen nach einem Termin: Nur Gestörtes neu holen, der Rest bleibt, sonst öffnete jeder Versuch alle Browserfenster.
                 val nurGestoert = !erzwingen && alt != null && alt.geholt >= letzterTermin(beginn)
                 val liste = coroutineScope {
@@ -348,6 +348,33 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                     }.awaitAll()
                 }
                 val s = Stand(liste, beginn)
+                val gewarnt = warnen(app, s)
+                runCatching { speichern(app, s, gewarnt) }
+                _frisch.value = s
+                s
+            }
+        }
+
+        private fun abfragen(app: Context): List<Triple<String, String, suspend () -> Pair<String, List<Limit>>>> = listOf(
+            Triple("claude", "Claude (Anthropic)") { claude(app) },
+            Triple("codex", "ChatGPT / Codex (OpenAI)") { codex(app) },
+            Triple("kimi", "Kimi") { kimi(app) },
+            Triple("gemini", "Gemini / Antigravity (Google)") { gemini(app) },
+        )
+
+        /**
+         * Fragt nur Anbieter [id] neu ab. Die anderen behalten ihre Zahlen, und der Zeitpunkt des Gesamtabrufs bleibt:
+         * Sonst fielen die Termine um 6 und 18 Uhr für die übrigen Anbieter aus.
+         */
+        suspend fun anbieterAktualisieren(context: Context, id: String): Stand = withContext(Dispatchers.IO) {
+            val app = context.applicationContext
+            sperre.withLock {
+                val alt = gespeichert(app)
+                val abfragen = abfragen(app)
+                val (_, titel, abfrage) = abfragen.first { it.first == id }
+                laufErzwungen = true
+                val neu = anbieterLesen(id, titel, abfrage, alt?.von(id), true)
+                val s = Stand(abfragen.map { (i, t, _) -> if (i == id) neu else alt?.von(i) ?: Anbieter(i, t, "", emptyList(), null, false, 0L) }, alt?.geholt ?: 0L)
                 val gewarnt = warnen(app, s)
                 runCatching { speichern(app, s, gewarnt) }
                 _frisch.value = s

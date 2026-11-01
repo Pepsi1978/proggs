@@ -229,10 +229,11 @@ struct NachrichtAnsicht: View, Equatable {
 struct KleinKnopf: View {
     let symbol: String
     let hilfe: String
+    var farbe: Color = Farbe.text2
     let aktion: () -> Void
     var body: some View {
         Button(action: aktion) {
-            Image(systemName: symbol).font(.system(size: 11, weight: .medium)).foregroundStyle(Farbe.text2)
+            Image(systemName: symbol).font(.system(size: 11, weight: .medium)).foregroundStyle(farbe)
                 .frame(width: 26, height: 24).background(RoundedRectangle(cornerRadius: 7).fill(Farbe.glas(0.06)))
         }
         .buttonStyle(.plain).help(hilfe)

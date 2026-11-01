@@ -24,6 +24,11 @@ public sealed class Kontingente : Beobachtbar
     /// <summary>Diese Dienste stehen gerade vom Handy in der Liste.</summary>
     public HashSet<string> VomHandy { get; private set; } = new();
 
+    /// <summary>Einzelabruf aus dem Kopf einer Karte: läuft gerade oder ging so aus.</summary>
+    public sealed record Lauf(bool Laeuft, bool Erfolg = false, string Text = "");
+    public Dictionary<string, Lauf> Laeufe { get; } = new();
+    private int _einzeln;
+
     public Kontingente()
     {
         if (Vorgaben.Text(Speicher) is { } t && Lies(t) is { } alt) { _anbieter = alt; _ausSpeicher = true; }
@@ -33,8 +38,11 @@ public sealed class Kontingente : Beobachtbar
     {
         // Ein ausdrücklicher Wunsch wartet die laufende Abfrage ab, statt verloren zu gehen.
         if (Laedt && !frisch) return;
-        while (Laedt) await Task.Delay(300);
+        // Auch laufende Einzelabrufe abwarten: Der Gesamtabruf arbeitet auf seiner eigenen Kopie und würde sie sonst überschreiben.
+        while (Laedt || _einzeln > 0) await Task.Delay(300);
         Laedt = true;
+        // Ein neuer Gesamtabruf macht das Ergebnis eines früheren Einzelabrufs hinfällig.
+        if (frisch) Laeufe.Clear();
         try
         {
             var stand = _anbieter.ToDictionary(a => a.Id);
@@ -83,19 +91,93 @@ public sealed class Kontingente : Beobachtbar
             else Fehler = null;
             Zeige();
             AusSpeicher = false;
-            Vorgaben.Setze(Speicher, JSON.Text(new JSONObjekt { ["anbieter"] = Anbieter.Select(a => (object?)new JSONObjekt
-            {
-                ["id"] = a.Id, ["titel"] = a.Titel, ["konto"] = a.Konto, ["hinweis"] = a.Hinweis, ["anmelden"] = a.Anmelden, ["stand"] = a.Stand,
-                ["limits"] = a.Limits.Select(l => (object?)new JSONObjekt { ["name"] = l.Name, ["genutzt"] = l.Genutzt, ["resetSatz"] = l.ResetSatz, ["resetAm"] = l.ResetAm, ["resetSek"] = l.ResetSek, ["tempo"] = l.Tempo, ["zuSchnell"] = l.ZuSchnell }).ToList(),
-            }).ToList() }));
+            Sichere();
         }
         finally { Laedt = false; }
     }
 
-    private static async Task<(List<AnbieterStand>? Liste, string Text)> VomHandyHolen(bool frisch)
+    /// <summary>Fragt nur diesen Anbieter frisch ab und ändert nur seine Karte. Als Erfolg gilt nur ein frischer Stand ohne Hinweis.</summary>
+    public async Task Aktualisieren(string id)
+    {
+        if (Laeufe.TryGetValue(id, out var lauf) && lauf.Laeuft) return;
+        Laeufe[id] = new Lauf(true);
+        Melde();
+        _einzeln++;
+        string? fehler;
+        try
+        {
+            while (Laedt) await Task.Delay(300);
+            fehler = await EinzelnHolen(id);
+        }
+        catch (Exception f)
+        {
+            Log("fehler", $"Kontingent {id} nicht aktualisiert", wo: "Kontingente", fehler: f.Message);
+            fehler = "Aktualisierung fehlgeschlagen: " + f.Message;
+        }
+        finally { _einzeln--; }
+        Laeufe[id] = new Lauf(false, fehler == null, fehler ?? "Aktualisiert: heute, " + DateTime.Now.ToString("HH:mm") + " Uhr");
+        Melde();
+    }
+
+    private async Task<string?> EinzelnHolen(string id)
+    {
+        AnbieterStand? neu = null;
+        string? fehler = null;
+        var ueberHandy = !await KontingentQuellen.HierMoeglich(id);
+        if (!ueberHandy)
+        {
+            neu = await KontingentQuellen.Lies(id, KontingentQuellen.Alle.First(d => d.Id == id).Titel, true);
+            fehler = Fehlertext(neu);
+            // Abgelehnte Anmeldung am Laptop: dann doch vom Handy, falls dort eine liegt.
+            ueberHandy = neu.Anmelden;
+        }
+        var vomHandy = false;
+        if (ueberHandy)
+        {
+            var (liste, text) = await VomHandyHolen(true, id);
+            var a = liste?.FirstOrDefault(x => x.Id == id);
+            if (a == null)
+            {
+                if (neu == null) fehler = "Aktualisierung fehlgeschlagen: " + (liste != null || text.Length == 0 ? "Das Handy antwortet gerade nicht." : text);
+                Log("fehler", "Kontingent vom Handy nicht abrufbar", wo: "Kontingente", fehler: text);
+            }
+            else if (neu == null || a.Limits.Count > 0)
+            {
+                neu = a;
+                vomHandy = true;
+                // Nach Fristende schickt das Handy den letzten Stand: Der darf nicht als frisch gelten.
+                fehler = JSON.Objekt(text)?.Wahr("aktualisiert") == true ? Fehlertext(a) : "Aktualisierung fehlgeschlagen: Das Handy hat nicht rechtzeitig frisch geantwortet.";
+            }
+        }
+        if (neu != null)
+        {
+            var stand = _anbieter.ToDictionary(a => a.Id);
+            stand[id] = neu;
+            if (vomHandy) VomHandy.Add(id); else VomHandy.Remove(id);
+            Anbieter = KontingentQuellen.Alle.Where(d => stand.ContainsKey(d.Id)).Select(d => stand[d.Id]).ToList();
+            Sichere();
+        }
+        return fehler;
+    }
+
+    private static string? Fehlertext(AnbieterStand a)
+    {
+        if (a.Hinweis.StartsWith("Ein Limit")) return "Nicht vollständig aktualisiert: " + a.Hinweis;
+        if (a.Hinweis.Length > 0) return "Aktualisierung fehlgeschlagen: " + a.Hinweis.Replace("Letzter Stand. ", "");
+        return a.Limits.Count == 0 ? "Aktualisierung fehlgeschlagen: Der Anbieter nennt keine Limits." : null;
+    }
+
+    private void Sichere() => Vorgaben.Setze(Speicher, JSON.Text(new JSONObjekt { ["anbieter"] = Anbieter.Select(a => (object?)new JSONObjekt
+    {
+        ["id"] = a.Id, ["titel"] = a.Titel, ["konto"] = a.Konto, ["hinweis"] = a.Hinweis, ["anmelden"] = a.Anmelden, ["stand"] = a.Stand,
+        ["limits"] = a.Limits.Select(l => (object?)new JSONObjekt { ["name"] = l.Name, ["genutzt"] = l.Genutzt, ["resetSatz"] = l.ResetSatz, ["resetAm"] = l.ResetAm, ["resetSek"] = l.ResetSek, ["tempo"] = l.Tempo, ["zuSchnell"] = l.ZuSchnell }).ToList(),
+    }).ToList() }));
+
+    private static async Task<(List<AnbieterStand>? Liste, string Text)> VomHandyHolen(bool frisch, string? ziel = null)
     {
         var argumente = new JSONObjekt { ["json"] = true };
         if (frisch) argumente["frisch"] = true;
+        if (ziel != null) argumente["anbieter"] = ziel;
         var r = await McpKlient.Shared.Rufe("kontingente_lesen", argumente, 85);
         var t = McpKlient.OhneKontextHinweis(r.Text);
         return (Lies(t), t);
@@ -134,12 +216,27 @@ public sealed class KontingenteAnsicht : LebendeAnsicht
 
     private UIElement Karte_(Kontingente.AnbieterStand a)
     {
-        var s = V(10, Titel("gauge.with.dots.needle.67percent", a.Titel));
+        k.Laeufe.TryGetValue(a.Id, out var lauf);
+        var s = V(10, H(10, Titel("gauge.with.dots.needle.67percent", a.Titel), Spacer(), AktualisierenKnopf(a, lauf)));
+        if (lauf != null) VAnfuegen(s, lauf.Laeuft ? T("Wird aktualisiert …", 13, null, Farbe.Text2) : T(lauf.Text, 13, FontWeights.SemiBold, lauf.Erfolg ? Farbe.Haupt : Farbe.Rot), 10);
         if (a.Konto.Length > 0) VAnfuegen(s, T(a.Konto, 12, null, Farbe.Text3), 10);
         foreach (var l in a.Limits) VAnfuegen(s, Limit_(l), 10);
-        if (a.Hinweis.Length > 0) VAnfuegen(s, T(a.Hinweis + (a.Anmelden ? (k.VomHandy.Contains(a.Id) ? " Anmelden unter Einstellungen → Konsolen oder auf dem Handy." : " Anmelden unter Einstellungen → Konsolen.") : ""), 12, null, Farbe.Warnung), 10);
+        // Nach einem gescheiterten Einzelabruf steht der Grund schon oben; der Weg zur Anmeldung bleibt.
+        if (a.Hinweis.Length > 0 && (a.Anmelden || lauf == null || lauf.Laeuft || lauf.Erfolg)) VAnfuegen(s, T(a.Hinweis + (a.Anmelden ? (k.VomHandy.Contains(a.Id) ? " Anmelden unter Einstellungen → Konsolen oder auf dem Handy." : " Anmelden unter Einstellungen → Konsolen.") : ""), 12, null, Farbe.Warnung), 10);
         if (a.Stand.Length > 0) VAnfuegen(s, T(a.Stand, 11, null, Farbe.Text3), 10);
         return Karte(s);
+    }
+
+    private UIElement AktualisierenKnopf(Kontingente.AnbieterStand a, Kontingente.Lauf? lauf)
+    {
+        if (lauf?.Laeuft == true)
+        {
+            var kreis = Drehkreis(14);
+            kreis.HorizontalAlignment = HorizontalAlignment.Center;
+            return new Border { Width = 26, Height = 24, Child = kreis };
+        }
+        var symbol = lauf == null ? "arrow.clockwise" : lauf.Erfolg ? "checkmark" : "exclamationmark.triangle.fill";
+        return new KleinKnopf(symbol, a.Titel + " aktualisieren", () => _ = k.Aktualisieren(a.Id), lauf == null ? null : lauf.Erfolg ? Farbe.Haupt : Farbe.Rot);
     }
 
     /// <summary>Aus dem Speicher: festes Datum statt „heute“, kein Tempo; ein inzwischen abgelaufenes Fenster gilt wieder als frei.</summary>

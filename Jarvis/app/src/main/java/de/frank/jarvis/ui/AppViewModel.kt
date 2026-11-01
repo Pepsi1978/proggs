@@ -3567,6 +3567,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Ein ausdrücklicher Wunsch (Knopf, nach An- oder Abmelden) läuft danach, statt verloren zu gehen.
         if (kontingenteLaedt) { if (erzwingen) kontingenteNochmal = true; return }
         val app = getApplication<android.app.Application>()
+        // Ein neuer Gesamtabruf macht das Ergebnis eines früheren Einzelabrufs hinfällig.
+        if (erzwingen) kontingentLaeufe.keys.filter { kontingentLaeufe[it]?.laeuft == false }.forEach { kontingentLaeufe.remove(it) }
         kontingenteLaedt = true
         viewModelScope.launch {
             try {
@@ -3581,6 +3583,59 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (kontingenteNochmal) { kontingenteNochmal = false; kontingenteAbfragen(erzwingen = true) }
         }
+    }
+
+    /** Laufende und letzte Einzelabrufe der Bereiche, je Anbieter. */
+    internal val kontingentLaeufe = androidx.compose.runtime.mutableStateMapOf<String, KontingentLauf>()
+
+    /** Knopf im Kopf eines Bereichs: fragt nur diesen Anbieter frisch ab, samt der Guthaben, die in seinem Bereich stehen. */
+    fun kontingentAktualisieren(id: String) {
+        if (kontingentLaeufe[id]?.laeuft == true) return
+        val app = getApplication<android.app.Application>()
+        kontingentLaeufe[id] = KontingentLauf(laeuft = true)
+        viewModelScope.launch {
+            val beginn = System.currentTimeMillis()
+            var fehler: String?
+            try {
+                val (neu, guthabenHinweis) = kotlinx.coroutines.coroutineScope {
+                    val guthaben = this.async { kontingentGuthabenFrisch(app, id) }
+                    de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.anbieterAktualisieren(app, id) to guthaben.await()
+                }
+                kontingente = neu
+                val a = neu.von(id)
+                fehler = when {
+                    a == null -> "Aktualisierung fehlgeschlagen: Der Anbieter fehlt im Ergebnis."
+                    a.hinweis != null && a.geholt < beginn -> "Aktualisierung fehlgeschlagen: " + a.hinweis.removePrefix("Letzter Stand. ")
+                    a.hinweis != null -> "Nicht vollständig aktualisiert: " + a.hinweis
+                    a.limits.isEmpty() -> "Aktualisierung fehlgeschlagen: Der Anbieter nennt keine Limits."
+                    guthabenHinweis != null -> "Nicht vollständig aktualisiert: $guthabenHinweis"
+                    else -> null
+                }
+            } catch (f: kotlinx.coroutines.CancellationException) {
+                throw f
+            } catch (f: Exception) {
+                de.frank.jarvis.observability.Logbuch.fehler("Kontingent $id aktualisieren", f)
+                fehler = "Aktualisierung fehlgeschlagen: " + (f.message ?: "unbekannter Fehler.")
+            }
+            kontingentLaeufe[id] = KontingentLauf(false, kontingente?.von(id)?.geholt ?: 0L, fehler, System.currentTimeMillis() / 1000)
+        }
+    }
+
+    /** Das Guthaben im selben Bereich; liefert den Hinweis, wenn es nicht gelesen werden konnte. */
+    private suspend fun kontingentGuthabenFrisch(app: android.app.Application, id: String): String? = when (id) {
+        "claude" -> {
+            anthropicGuthabenLaedt = true
+            try {
+                de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, true).also { anthropicGuthaben = it }.hinweis
+            } finally { anthropicGuthabenLaedt = false }
+        }
+        "gemini" -> {
+            googleGuthabenLaedt = true
+            try {
+                de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.stand(app, true).also { googleGuthaben = it }.hinweis
+            } finally { googleGuthabenLaedt = false }
+        }
+        else -> null
     }
 
     fun kontingentAbmelden(id: String) {
