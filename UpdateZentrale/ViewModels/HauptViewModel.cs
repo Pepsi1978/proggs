@@ -367,10 +367,13 @@ public sealed partial class HauptViewModel : ObservableObject
 
         var grenze = DateTime.Now - StandGueltig;
         // The own tools are always asked again: that costs one shared git pull, and it is the
-        // only way a version that just arrived in the repo shows up without a click.
+        // only way a version that just arrived in the repo shows up without a click. A remembered
+        // "not installed" is asked again too: a program installed outside the app (winget, an agent)
+        // would otherwise keep that card wrong until the stored state expires.
         var faellig = alles
             ? Programme.ToList()
             : Programme.Where(p => p.StandVom is not { } zeit || zeit < grenze
+                                   || p.Zustand == UpdateZustand.NichtInstalliert
                                    || p.Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase)).ToList();
         if (faellig.Count == 0 && !Programme.Any(p => p.UebernahmeOffen))
         {
