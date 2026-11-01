@@ -200,18 +200,21 @@ public sealed class ModellKapsel : LebendeAnsicht
             if (guthaben.AnthropicRest != null || (guthaben.Kosten ?? 0) > 0)
                 teile.Add(T("·", 11, null, Farbe.Text3, 1));
         }
-        if (guthaben.KonsoleGetrennt)
-            teile.Add(H(4, Sy("exclamationmark.triangle.fill", 11, Farbe.Rot), T("Konsole nicht verbunden", 11, FontWeights.Bold, Farbe.Rot, 1)));
         teile.Add(T(einst.ModellWahlAktuell.Name.Replace("Claude ", ""), 12, FontWeights.SemiBold, Farbe.Text2, 1));
         var kapsel = Flaeche(H(5, teile.ToArray()), Farbe.Glas(0.06), 100, 10, 8).KapselForm();
         Button? k = null;
-        k = Klick(kapsel, () => OeffneMenue(k!, Menue()), guthaben.KonsoleGetrennt ? "Anthropic-Konsole nicht verbunden: Kosten und Kostenveränderungen sind deshalb nicht sichtbar." : "Modell, Denkstufe und Guthaben");
-        return k;
+        k = Klick(kapsel, () => OeffneMenue(k!, Menue()), "Modell, Denkstufe und Guthaben");
+        if (!guthaben.KonsoleGetrennt) return k;
+        // Ein eigener Knopf: Der Hinweis führt direkt zur Anmeldung, statt erst im Modell-Menü zu enden.
+        var warnung = Flaeche(H(4, Sy("exclamationmark.triangle.fill", 11, Farbe.Rot), T("Konsole verbinden", 11, FontWeights.Bold, Farbe.Rot, 1)), Farbe.Glas(0.06), 100, 10, 8).KapselForm();
+        var verbinden = Klick(warnung, () => guthaben.AnmeldungOffen = true, "Anthropic-Konsole auf diesem Laptop verbinden. Danach liest Jarvis Guthaben und Kosten direkt, ohne das Handy.");
+        return H(6, verbinden, k);
     }
 
     private List<MenueZeile> Menue()
     {
         var l = new List<MenueZeile>();
+        if (guthaben.PcAbgelaufen || guthaben.KonsoleGetrennt) { l.Add(new MenueZeile("Bei der Anthropic-Konsole anmelden …", () => guthaben.AnmeldungOffen = true)); l.Add(MenueZeile.Trenner); }
         foreach (var m in ModellWahl.Alle) l.Add(new MenueZeile(m.Name, () => einst.Modell = m.Id, false, m.Id == einst.Modell));
         l.Add(MenueZeile.Trenner);
         foreach (var e in new[] { "low", "medium", "high", "xhigh", "max" }) l.Add(new MenueZeile($"Denkstufe {e}", () => einst.Effort = e, false, e == einst.Effort));
@@ -219,7 +222,6 @@ public sealed class ModellKapsel : LebendeAnsicht
         if (guthaben.AnthropicRest is { } r) l.Add(new MenueZeile($"Anthropic: {Guthaben.Betrag(r)} $ übrig"));
         if (guthaben.Kosten is > 0) l.Add(new MenueZeile($"Letzte Aufgabe: {KostenText(guthaben.Kosten.Value)} $ (Listenpreis)"));
         if (guthaben.GoogleRest is { } g) l.Add(new MenueZeile($"Google: {Guthaben.Betrag(g)} {guthaben.GoogleWaehrung} übrig"));
-        if (guthaben.PcAbgelaufen || guthaben.KonsoleGetrennt) l.Add(new MenueZeile("Bei der Anthropic-Konsole anmelden …", () => guthaben.AnmeldungOffen = true));
         l.Add(new MenueZeile("Guthaben ansehen …", () => { EinstellungenAnsicht.StartReiter = "guthaben"; AppSteuerung.Shared.Bereich = Bereich.Einstellungen; }));
         return l;
     }
