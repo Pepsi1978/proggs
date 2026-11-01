@@ -119,11 +119,12 @@ private fun GoogleKarte(vm: AppViewModel) {
                 val seit = g.vorauszahlungSeit.takeIf { it > 0 }?.let { GoogleGuthabenFaehigkeit.datum(it / 1000) }
                 EigenesGeld(
                     when {
+                        g.vorauszahlungVeraltet -> "Gerade nicht lesbar: Das ist der letzte lesbare Betrag, eine Abbuchung seither wäre hier nicht zu sehen."
                         g.vorauszahlungGesunken -> "Gesunken: am ${seit ?: "?"} von ${b(g.vorauszahlungVorher!!)} $w auf ${b(vz)} $w. Hier wurde echtes Geld abgebucht."
                         rest > 0.004 -> "Unverändert" + (seit?.let { " seit $it" } ?: "") + ". Die Gemini-Stimmen laufen über das Guthaben, dein Geld bleibt unangetastet."
                         else -> "Das Guthaben ist aufgebraucht: Ab jetzt zahlt deine Vorauszahlung das Vorlesen."
                     },
-                    ok = !g.vorauszahlungGesunken && rest > 0.004,
+                    ok = !g.vorauszahlungVeraltet && !g.vorauszahlungGesunken && rest > 0.004,
                 )
             } else EigenesGeld(
                 if (rest > 0.004) "Deine Vorauszahlung (echtes Geld) wird erst belastet, wenn dieses Guthaben aufgebraucht ist."

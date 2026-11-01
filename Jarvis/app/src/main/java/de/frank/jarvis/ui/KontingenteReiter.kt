@@ -109,7 +109,7 @@ private fun ApiFreikontingent(vm: AppViewModel) {
     }
 }
 
-/** Freikontingent, Verbrauch und eingezahltes Geld aus AI Studio. Was Google nicht liefert, steht als „Nicht verfügbar“ da, nie als geschätzte Zahl. */
+/** Gutschriften, Verbrauch und eingezahltes Geld aus AI Studio. Was nicht lesbar ist, steht als „Nicht verfügbar“ da, nie als geschätzte Zahl. */
 @Composable
 private fun AiStudioUebersicht(vm: AppViewModel) {
     val f = LocalFarben.current
@@ -117,26 +117,24 @@ private fun AiStudioUebersicht(vm: AppViewModel) {
     val b = GoogleGuthabenFaehigkeit::betrag
     val rest = g?.restEur
     val fehlt = if (vm.googleGuthabenLaedt) "Wird abgefragt …" else "Nicht verfügbar"
-    val keineGutschrift = g != null && rest != null && g.gutschriften.isEmpty()
+    val gutschrift = { wert: (GoogleGuthabenFaehigkeit.Stand) -> String ->
+        when {
+            g == null || rest == null -> fehlt
+            g.gutschriften.isEmpty() -> "Nicht verfügbar: keine laufende Gutschrift gefunden."
+            else -> wert(g) + if (g.abfrageGescheitert) " · letzter Stand" else ""
+        }
+    }
     Unterzeile("Google AI Studio")
-    Wert("Freikontingent verfügbar", when {
-        g == null || rest == null -> fehlt
-        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
-        else -> "${b(rest)} ${g.waehrung} von ${b(g.gewaehrt)} ${g.waehrung}"
-    })
+    Wert("Freikontingent (Google-Gutschriften)", gutschrift { "${b(it.restEur ?: 0.0)} ${it.waehrung} von ${b(it.gewaehrt)} ${it.waehrung} verfügbar" })
     // Google nennt nur noch laufende Gutschriften; Verbrauch aus bereits verfallenen zählt deshalb nicht mit.
-    Wert("Bisher verbraucht (laufende Gutschriften)", when {
-        g == null || rest == null -> fehlt
-        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
-        else -> "${b(g.verbraucht)} ${g.waehrung}"
-    })
+    Wert("Bisher verbraucht (laufende Gutschriften)", gutschrift { "${b(it.verbraucht)} ${it.waehrung}" })
     val eingezahlt = g?.vorauszahlung
     Wert("Selbst eingezahltes Guthaben", when {
         g == null -> fehlt
-        eingezahlt == null -> if (rest == null || vm.googleGuthabenLaedt) fehlt else "Nicht verfügbar: Google hat den Betrag nicht geliefert."
-        g.vorauszahlungGelesen == g.geholt -> "${b(eingezahlt)} ${g.waehrung}"
-        else -> "${b(eingezahlt)} ${g.waehrung} · letzter lesbarer Betrag" +
+        eingezahlt == null -> if (rest == null || vm.googleGuthabenLaedt) fehlt else "Nicht verfügbar: Der Betrag ließ sich nicht lesen."
+        g.vorauszahlungVeraltet -> "${b(eingezahlt)} ${g.waehrung} · letzter lesbarer Betrag" +
             (g.vorauszahlungGelesen.takeIf { it > 0 }?.let { " vom ${GoogleGuthabenFaehigkeit.datum(it / 1000)}" } ?: "")
+        else -> "${b(eingezahlt)} ${g.waehrung}"
     })
     if (g != null && rest != null && g.waehrung != "€") {
         Text("Google führt dieses Konto in ${g.waehrung}. Jarvis rechnet nicht in Euro um, damit keine geschätzten Beträge entstehen.",

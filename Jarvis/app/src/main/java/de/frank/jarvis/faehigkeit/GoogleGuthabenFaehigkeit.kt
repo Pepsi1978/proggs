@@ -80,7 +80,12 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val ausgabenLimit: Double? = null,
         /** Wann (Millisekunden) die Vorauszahlung zuletzt wirklich gelesen wurde; 0 = unbekannt. */
         val vorauszahlungGelesen: Long = 0,
+        /** true, wenn die letzte Abfrage ganz scheiterte und dies der ältere Stand ist. */
+        val abfrageGescheitert: Boolean = false,
     ) {
+        /** true, wenn die Vorauszahlung bei der letzten Abfrage nicht frisch gelesen wurde. */
+        val vorauszahlungVeraltet: Boolean get() = vorauszahlung != null && (abfrageGescheitert || vorauszahlungGelesen < geholt)
+
         val restEur: Double? get() = if (geholt <= 0) null else gutschriften.sumOf { it.rest }
 
         /** true, wenn die Vorauszahlung seit der letzten Änderung kleiner geworden ist: Dann zahlt echtes Geld. */
@@ -117,7 +122,8 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             if (naechste != null) append('.')
             if (vorauszahlung != null) {
                 append(" Eingezahltes echtes Geld (Vorauszahlung): ${betrag(vorauszahlung)} $waehrung")
-                if (vorauszahlungGesunken) append(", gesunken von ${betrag(vorauszahlungVorher!!)} $waehrung am ${datum(vorauszahlungSeit / 1000)}.")
+                if (vorauszahlungVeraltet) append(", letzter lesbarer Betrag, gerade nicht geprüft.")
+                else if (vorauszahlungGesunken) append(", gesunken von ${betrag(vorauszahlungVorher!!)} $waehrung am ${datum(vorauszahlungSeit / 1000)}.")
                 else append(if (vorauszahlungSeit > 0) ", unverändert seit ${datum(vorauszahlungSeit / 1000)}." else ".")
             }
             append(" Die Vorauszahlung wird erst belastet, wenn das Guthaben aufgebraucht ist. ").append(standText()).append('.')
@@ -195,7 +201,8 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                 vorauszahlungVorher = if (j.has("vorauszahlungVorher")) j.getDouble("vorauszahlungVorher") else null,
                 ausgabenMonat = if (j.has("ausgabenMonat")) j.getDouble("ausgabenMonat") else null,
                 ausgabenLimit = if (j.has("ausgabenLimit")) j.getDouble("ausgabenLimit") else null,
-                vorauszahlungGelesen = j.optLong("vorauszahlungGelesen"),
+                // Stände von vor diesem Feld hatten bei „geholt“ zuletzt gelesen.
+                vorauszahlungGelesen = j.optLong("vorauszahlungGelesen", j.optLong("geholt")),
             )
         }
 
@@ -311,14 +318,14 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     val monat = runCatching { ausgaben(ua) }.onFailure { Log.w(TAG, "Ausgaben nicht lesbar", it) }.getOrNull()
                     Stand(gutschriften, waehrung, letzte, letzterBetrag, jetztMs, hinweis, vz, seit, vorher,
                         monat?.first ?: alt?.ausgabenMonat, if (monat != null) monat.second else alt?.ausgabenLimit,
-                        if (neu != null) jetztMs else alt?.vorauszahlungGelesen ?: 0L)
+                        vorauszahlungGelesen = if (neu != null) jetztMs else alt?.vorauszahlungGelesen ?: 0L)
                         .also { schreib(app, it); _frisch.value = it }
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Google-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
                     if (alt != null) Stand(alt.gutschriften, alt.waehrung, alt.letzteGewaehrung, alt.letzterBetrag, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund",
-                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher, alt.ausgabenMonat, alt.ausgabenLimit, alt.vorauszahlungGelesen)
+                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher, alt.ausgabenMonat, alt.ausgabenLimit, alt.vorauszahlungGelesen, abfrageGescheitert = true)
                     else Stand(emptyList(), "€", 0, null, 0, grund)
                 }
             }
