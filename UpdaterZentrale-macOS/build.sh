@@ -55,6 +55,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Pruefstand.swift"
     "$SRC_DIR/Providers/Aktualisierer.swift"
     "$SRC_DIR/Providers/BrewAktualisierer.swift"
+    "$SRC_DIR/Providers/NpmGlobal.swift"
     "$SRC_DIR/Providers/CliAktualisierer.swift"
     "$SRC_DIR/Providers/RepoSkriptAktualisierer.swift"
     "$SRC_DIR/Providers/OpenCodeSitzungAktualisierer.swift"

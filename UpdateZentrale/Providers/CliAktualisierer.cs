@@ -112,6 +112,11 @@ public sealed class CliAktualisierer : IAktualisierer
         if (!File.Exists(exe))
             return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: $"Nicht gefunden: {exe}");
 
+        // Captured before the run: afterwards ExePfadWirksam may already have fallen back to another path.
+        var programmDatei = Pfade.Aufloesen(eintrag.ExePfadWirksam);
+        var npmGlobal = NpmGlobal.Betrifft(eintrag, programmDatei, NpmGlobal.GlobalOrdner);
+        if (npmGlobal && await NpmGlobal.VorabLadenAsync(eintrag, protokoll, abbruch) is { } vorab) return vorab;
+
         // %USERPROFILE% & Co. as in the paths -- the helper scripts under werkzeuge\ are found that way.
         var args = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "update");
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
@@ -155,6 +160,11 @@ public sealed class CliAktualisierer : IAktualisierer
                 exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
             protokoll.Report(lauf.Ausgabe);
         }
+
+        // npm removed the old package and the run ended before the new one arrived.
+        if (npmGlobal && !File.Exists(programmDatei) && await NpmGlobal.WiederherstellenAsync(eintrag, programmDatei, protokoll))
+            return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update abgeschlossen, nachdem npm die Installation unterbrochen hatte.",
+                                     Protokoll: lauf.Ausgabe);
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
         if (lauf.ExitCode != 0)

@@ -11,10 +11,13 @@ namespace UpdateZentrale.Services;
 public static class Programmpruefung
 {
     /// <summary>Null = vollstaendig (oder nichts zu pruefen); sonst was fehlt, als Satz fuer die Meldung.</summary>
-    public static string? Vollstaendig(ProgrammEintrag eintrag)
+    /// <param name="pfadVorLauf">
+    /// Der vor dem Update wirksame Pfad. Fehlt die Datei danach, faellt ExePfadWirksam auf den
+    /// Katalog-Pfad zurueck, und die Meldung naennte einen Ort, an dem das Programm nie lag.
+    /// </param>
+    public static string? Vollstaendig(ProgrammEintrag eintrag, string? pfadVorLauf = null)
     {
-        if (string.IsNullOrWhiteSpace(eintrag.ExePfadWirksam)) return null;
-        var ziel = Pfade.Aufloesen(eintrag.ExePfadWirksam);
+        var ziel = string.IsNullOrWhiteSpace(pfadVorLauf) ? Pfade.Aufloesen(eintrag.ExePfadWirksam) : pfadVorLauf;
         if (string.IsNullOrWhiteSpace(ziel)) return null;
         try
         {

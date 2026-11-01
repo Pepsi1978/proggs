@@ -353,6 +353,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// <summary>The state read before the current update; null until its log header is written.</summary>
     private string? _standVorLauf;
 
+    /// <summary>Der vor dem Lauf wirksame Programmpfad, damit die Vollstaendigkeitspruefung nach dem Lauf denselben Ort prueft.</summary>
+    private string? _pfadVorLauf;
+
     /// <summary>The handover buttons and the automatic handover must not start two sessions for one program.</summary>
     private bool _uebergabeLaeuft;
 
@@ -816,6 +819,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             var kontext = _sammelKontext;
             var kette = new UpdateKette(_aktualisierer, Eintrag, fortschritt, text => StatusText = text, KettenWarten);
             _standVorLauf = null;
+            _pfadVorLauf = Pfade.Aufloesen(Eintrag.ExePfadWirksam);
             var angebotVorher = VerfuegbareVersion;
 
             var (vorher, vorPruefung) = await kette.VorpruefenAsync(abbruch);
@@ -885,11 +889,11 @@ public sealed partial class ProgrammViewModel : ObservableObject
             // Das muss als eigener Befund sichtbar werden, nicht nur als "Zeitlimit".
             // Ein Installer ausserhalb des beendeten Prozessbaums (msiexec im Windows-Installer-Dienst)
             // kopiert womoeglich noch: bis zu einer Minute nachpruefen, bevor "fehlt" gilt.
-            var fehlt = urteil.Ergebnis == LaufErgebnis.Erfolgreich ? null : Programmpruefung.Vollstaendig(Eintrag);
+            var fehlt = urteil.Ergebnis == LaufErgebnis.Erfolgreich ? null : Programmpruefung.Vollstaendig(Eintrag, _pfadVorLauf);
             for (var versuch = 0; fehlt is not null && versuch < 12; versuch++)
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));
-                fehlt = Programmpruefung.Vollstaendig(Eintrag);
+                fehlt = Programmpruefung.Vollstaendig(Eintrag, _pfadVorLauf);
             }
             if (fehlt is not null)
             {
@@ -1151,7 +1155,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             // Thrown by the pre-check: the log needs its header too, or the footer stands alone.
             if (_standVorLauf is null) Protokollierung.LaufBeginnen(Eintrag, befehl, "");
-            var fehlt = Programmpruefung.Vollstaendig(Eintrag);
+            var fehlt = Programmpruefung.Vollstaendig(Eintrag, _pfadVorLauf);
             var nurAbbruch = vomNutzer && fehlt is null;
 
             var bericht = new UpdateBericht

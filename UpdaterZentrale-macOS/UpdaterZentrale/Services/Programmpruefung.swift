@@ -6,9 +6,11 @@ import Foundation
 enum Programmpruefung {
 
     /// Nil = vollstaendig (oder nichts zu pruefen); sonst was fehlt, als Satz fuer die Meldung.
-    static func vollstaendig(_ eintrag: ProgrammEintrag) -> String? {
+    /// `pfadVorLauf`: der vor dem Update wirksame Pfad. Fehlt die Datei danach, faellt exePfadWirksam auf den
+    /// Katalog-Pfad zurueck, und die Meldung naennte einen Ort, an dem das Programm nie lag.
+    static func vollstaendig(_ eintrag: ProgrammEintrag, pfadVorLauf: String? = nil) -> String? {
         let fm = FileManager.default
-        let ziel = eintrag.zielPfad
+        let ziel = pfadVorLauf ?? eintrag.zielPfad
         guard !ziel.istLeer else { return nil }
         guard fm.fileExists(atPath: ziel) else {
             return "\(eintrag.name) fehlt nach dem Update (\(ziel)) – bitte neu installieren."

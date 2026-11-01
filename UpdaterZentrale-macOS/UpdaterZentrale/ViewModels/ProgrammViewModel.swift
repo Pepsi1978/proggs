@@ -496,6 +496,7 @@ final class ProgrammViewModel {
             let kontext = self.sammelKontext
             let marke = AbbruchMarke.aktuell
             let angebotVorher = self.verfuegbareVersion
+            let pfadVorLauf = self.eintrag.zielPfad
             let kette = UpdateKette(aktualisierer, self.eintrag, fortschritt) { self.statusText = $0 }
             let (vorher, vorPruefung) = await kette.vorpruefen()
             Protokollierung.laufBeginnen(self.eintrag, befehl: self.befehlsBeschreibung(),
@@ -572,7 +573,7 @@ final class ProgrammViewModel {
             // Ein abgebrochenes oder gescheitertes Update kann die App halb ersetzt zuruecklassen
             // (alte geloescht, neue nicht fertig verschoben). Das muss als eigener Befund sichtbar werden.
             // Auch bei einer schon vorher kaputten App: der Hinweis zum Neuinstallieren bleibt dann stehen.
-            if ende.ergebnis != .erfolgreich, let fehlt = Programmpruefung.vollstaendig(self.eintrag) {
+            if ende.ergebnis != .erfolgreich, let fehlt = Programmpruefung.vollstaendig(self.eintrag, pfadVorLauf: pfadVorLauf) {
                 fortschritt.berichte("⚠ " + fehlt)
                 ende.ergebnis = .fehlgeschlagen
                 ende.meldung = fehlt + " Vorheriger Befund: " + ende.meldung

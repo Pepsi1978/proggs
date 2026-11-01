@@ -89,6 +89,11 @@ struct CliAktualisierer: Aktualisierer {
             return PruefErgebnis(zustand: .nichtInstalliert, meldung: "Nicht gefunden: \(exe)")
         }
 
+        // Vor dem Lauf festgehalten: danach faellt exePfadWirksam womoeglich schon auf einen anderen Pfad zurueck.
+        let programmDatei = Pfade.aufloesen(eintrag.exePfadWirksam)
+        let npmGlobal = NpmGlobal.betrifft(eintrag, programmDatei)
+        if npmGlobal, let vorab = await NpmGlobal.vorabLaden(eintrag, protokoll) { return vorab }
+
         let argumente = eintrag.updateArgumente ?? "update"
         protokoll.berichte("\((exe as NSString).lastPathComponent) \(argumente)")
 
@@ -109,6 +114,13 @@ struct CliAktualisierer: Aktualisierer {
                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
                                                   arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
             protokoll.berichte(lauf.ausgabe)
+        }
+
+        // npm hat das alte Paket entfernt, und der Lauf endete, bevor das neue da war.
+        if npmGlobal, !FileManager.default.fileExists(atPath: programmDatei),
+           await NpmGlobal.wiederherstellen(eintrag, programmDatei, protokoll) {
+            return PruefErgebnis(zustand: .fertig, meldung: "Update abgeschlossen, nachdem npm die Installation unterbrochen hatte.",
+                                 protokoll: lauf.ausgabe)
         }
 
         if lauf.abgelaufen {
