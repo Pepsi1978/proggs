@@ -17,7 +17,7 @@ Verknüpfungspfeil) oder über Spotlight.
 
 | Bereich | Verhalten |
 |---|---|
-| **Prüfen** | Alle Einträge werden gleichzeitig geprüft; die Kopfzeile zeigt „x von n fertig“. Zeigt installierte Version → verfügbare Version. Jeder Start prüft alle Programme neu: installiert, welche Version, was ist verfügbar. Das gemerkte Ergebnis (`pruefstand.json`) füllt die Karten nur, bis die frische Antwort da ist. |
+| **Prüfen** | Alle Einträge werden gleichzeitig geprüft; die Kopfzeile zeigt „x von n fertig“. Zeigt installierte Version → verfügbare Version. Jeder Start prüft alle Programme neu: installiert, welche Version, was ist verfügbar. Das gemerkte Ergebnis (`pruefstand.json`) füllt die Karten nur, bis ihre Prüfung beginnt; eine gescheiterte Prüfung löscht den letzten klaren Stand nicht. |
 | **Repo-Abgleich** | Vor der Prüfung der eigenen Werkzeuge wird `~/proggs` einmal mit GitHub abgeglichen: `git fetch` und Vorspulen (`--ff-only`), nie ein Merge. Lässt sich das Repo nicht vorspulen, steht das in der Kopfzeile, und die Karten zählen weiter die wartenden Commits. |
 | **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
 | **An CLI übergeben** | Steht auf jeder Karte mit echtem Update. Startet über den OpenLauncher eine neue Claude-Code-Sitzung (Opus 5.5, Minimal, Schnellmodus, Effort High), die das Update samt Katalogeintrag als Auftrag bekommt und vollständig ausführt. Die Auftragsdatei liegt unter `auftraege/update-<id>-….md`. |

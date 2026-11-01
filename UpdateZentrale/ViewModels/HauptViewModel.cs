@@ -353,8 +353,8 @@ public sealed partial class HauptViewModel : ObservableObject
 
     /// <summary>
     /// Every start asks every program again: is it installed, which version, what is available.
-    /// The user relies on this list, so a stored answer only fills the cards until the fresh one is
-    /// in -- it never replaces the check.
+    /// The user relies on this list, so a stored answer only fills the cards until their check
+    /// starts -- it never replaces the check.
     /// </summary>
     private async Task ErstePruefungKernAsync()
     {
@@ -405,7 +405,7 @@ public sealed partial class HauptViewModel : ObservableObject
 
     // ---------------- Prüfung beim Windows-Start ----------------
 
-    /// <summary>Check hidden at Windows logon, so the window opened later already knows everything.</summary>
+    /// <summary>Check hidden at Windows logon; opening the window later checks everything again.</summary>
     public bool BeimStartPruefen
     {
         get => _einstellungen.HintergrundPruefung;
@@ -912,8 +912,15 @@ public sealed partial class HauptViewModel : ObservableObject
 
         var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate && offen.ProgrammIds.Contains(p.Eintrag.Id, StringComparer.OrdinalIgnoreCase)
                                                           && !p.Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase)));
+        // The fresh startup check decides the plan: a program whose check just failed cannot be
+        // part of it, and the user agreed to it -- so it is named instead of dropped silently.
+        var ausgefallen = Programme.Where(p => offen.ProgrammIds.Contains(p.Eintrag.Id, StringComparer.OrdinalIgnoreCase)
+                                               && p.Zustand is UpdateZustand.Fehler or UpdateZustand.Unbekannt)
+                                   .Select(p => p.Name).ToList();
         Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.fortsetzung", plan.Count + " Updates nach dem Selbst-Update fortgesetzt.", offen.SammelId);
         if (plan.Count > 0) await SammelAusfuehrenAsync(plan, offen.SammelId, offen.Versatz, offen.PlanGroesse);
+        if (ausgefallen.Count > 0)
+            KopfStatus += "  ·  Nicht fortgesetzt, Prüfung gescheitert: " + string.Join(", ", ausgefallen);
     }
 
     /// <summary>Batch buttons and "reload" are only usable while nothing at all is running.</summary>

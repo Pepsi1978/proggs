@@ -15,11 +15,11 @@ public sealed class PruefstandEintrag
 
 /// <summary>
 /// The result of the last check per program, kept across starts
-/// (%LOCALAPPDATA%\UpdateZentrale\pruefstand.json). The check that runs hidden at Windows logon
-/// writes it; the window opened later shows it at once instead of checking everything again.
+/// (%LOCALAPPDATA%\UpdateZentrale\pruefstand.json). It only fills the cards for the moment until
+/// the check that every start runs reaches them; it never replaces that check.
 ///
-/// Only clear answers are kept. A failed or unknown check is never stored, so the next start
-/// checks that program again instead of showing an old error as the current state.
+/// Only clear answers are kept. A failed or unknown check is never stored and leaves the last
+/// clear answer in place: a start without network must not wipe a known pending update.
 /// </summary>
 public static class Pruefstand
 {
@@ -37,10 +37,7 @@ public static class Pruefstand
     public static void Merken(string id, PruefErgebnis ergebnis)
     {
         if (ergebnis.Zustand is not (UpdateZustand.Aktuell or UpdateZustand.UpdateVerfuegbar or UpdateZustand.NichtInstalliert))
-        {
-            Vergessen(id);
             return;
-        }
 
         lock (Sperre)
         {
@@ -56,7 +53,7 @@ public static class Pruefstand
         }
     }
 
-    /// <summary>After an update the stored answer is void -- the next start checks that program again.</summary>
+    /// <summary>After an update the stored answer is void.</summary>
     public static void Vergessen(string id)
     {
         lock (Sperre)

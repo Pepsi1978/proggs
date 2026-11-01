@@ -9,11 +9,11 @@ struct PruefstandEintrag: Codable {
 }
 
 /// Das Ergebnis der letzten Pruefung je Programm, ueber Neustarts hinweg
-/// (~/Library/Application Support/UpdaterZentrale/pruefstand.json). Das naechste Oeffnen zeigt es
-/// sofort, statt alles erneut abzufragen. 1:1-Port von Services/Pruefstand.cs.
+/// (~/Library/Application Support/UpdaterZentrale/pruefstand.json). Er fuellt die Karten nur, bis
+/// die Pruefung jedes Starts sie erreicht, und ersetzt sie nie. 1:1-Port von Services/Pruefstand.cs.
 ///
-/// Nur klare Antworten werden gemerkt. Eine fehlgeschlagene oder unbekannte Pruefung nie -- sonst
-/// stuende ein alter Fehler beim naechsten Start als aktueller Zustand da.
+/// Nur klare Antworten werden gemerkt. Eine fehlgeschlagene oder unbekannte Pruefung nie, und sie
+/// laesst die letzte klare Antwort stehen: Ein Start ohne Netz darf kein bekanntes Update loeschen.
 @MainActor
 enum Pruefstand {
     private static var stand: [String: PruefstandEintrag]?
@@ -25,10 +25,7 @@ enum Pruefstand {
     static func lesen(_ id: String) -> PruefstandEintrag? { laden()[id] }
 
     static func merken(_ id: String, _ ergebnis: PruefErgebnis) {
-        guard let name = zustandsName(ergebnis.zustand) else {
-            vergessen(id)
-            return
-        }
+        guard let name = zustandsName(ergebnis.zustand) else { return }
         var alle = laden()
         alle[id] = PruefstandEintrag(zustand: name, installiert: ergebnis.installierteVersion,
                                      verfuegbar: ergebnis.verfuegbareVersion, meldung: ergebnis.meldung, zeit: Date())

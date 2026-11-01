@@ -907,7 +907,7 @@
       "versionsArgumente": "--version",
       "updateArgumente": "upgrade",
       "npmPaket": "bun",
-      "zeitlimitMinuten": 10,
+      "zeitlimitMinuten": 30,
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": false,

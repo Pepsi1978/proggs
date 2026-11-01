@@ -708,10 +708,18 @@ final class HauptViewModel {
         let plan = Sammelplan.planen(programme.filter {
             $0.hatUpdate && ids.contains($0.eintrag.id.lowercased()) && !Sammelplan.istSelbst($0)
         })
+        // Die frische Startpruefung entscheidet ueber den Plan: Ein Programm mit gescheiterter Pruefung
+        // kann nicht dabei sein. Der Nutzer hat ihm zugestimmt, also wird es genannt statt still entfernt.
+        let ausgefallen = programme.filter {
+            ids.contains($0.eintrag.id.lowercased()) && ($0.zustand == .fehler || $0.zustand == .unbekannt)
+        }.map(\.name)
         Diagnose.ereignis(.info, "sammel", "sammel.fortsetzung", "\(plan.count) Updates nach dem Selbst-Update fortgesetzt.")
         if !plan.isEmpty {
             await sammelAusfuehren(plan, sammelId: offen.sammelId, versatz: offen.versatz, planGroesse: offen.planGroesse,
                                    cliBestaetigt: offen.cliBestaetigt)
+        }
+        if !ausgefallen.isEmpty {
+            kopfStatus += "  ·  Nicht fortgesetzt, Prüfung gescheitert: " + ausgefallen.joined(separator: ", ")
         }
     }
 }
