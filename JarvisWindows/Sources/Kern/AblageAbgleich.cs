@@ -35,6 +35,9 @@ public sealed class AblageAbgleich : Beobachtbar
     private bool _bereit;
     /// <summary>Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht.</summary>
     public bool Bereit { get => _bereit; private set => Setze(ref _bereit, value); }
+    private bool _vollstaendig;
+    /// <summary>Diese Kopie hat einmal alle Seiten gesehen. Beim allerersten Abgleich noch nicht: Quittungen kommen sonst nach ihren Erinnerungen.</summary>
+    public bool Vollstaendig { get => _vollstaendig; private set => Setze(ref _vollstaendig, value); }
     private int _ausstehend;
     /// <summary>Dateien, die noch vom Server kommen.</summary>
     public int Ausstehend { get => _ausstehend; private set => Setze(ref _ausstehend, value); }
@@ -206,6 +209,12 @@ public sealed class AblageAbgleich : Beobachtbar
             Log("ablage", $"{liste.Count} Änderung(en) vom Server", wo: "Ablage");
             AllesLaden();
         }
+        if (!Vollstaendig && o.Wahr("mehr") != true)
+        {
+            NeuAufbauen();
+            Vollstaendig = true;
+            SpeichereDocs();
+        }
         return liste.Count;
     }
 
@@ -230,6 +239,8 @@ public sealed class AblageAbgleich : Beobachtbar
         stand = Zahl(o.GetValueOrDefault("stand"));
         instanz = o.Text("instanz") ?? "";
         Bereit = stand > 0;
+        // Ältere Kopien kennen den Merker nicht und sind längst durch.
+        Vollstaendig = stand > 0 && (o.Wahr("vollstaendig") ?? true);
         var geladen = new Dictionary<string, JSONObjekt>();
         if (o.Obj("docs") is { } d)
             foreach (var (k, v) in d)
@@ -245,10 +256,10 @@ public sealed class AblageAbgleich : Beobachtbar
         await Task.Delay(TimeSpan.FromSeconds(1));
         speicherPlan = false;
         var kopie = new Dictionary<string, JSONObjekt>(docs);
-        var (s, inst, datei) = (stand, instanz, DocsDatei);
+        var (s, inst, datei, voll) = (stand, instanz, DocsDatei, Vollstaendig);
         await Task.Run(() =>
         {
-            try { GehirnHilfe.SchreibeAtomar(datei, JSON.Daten(new JSONObjekt { ["stand"] = s, ["docs"] = kopie, ["instanz"] = inst })); } catch { }
+            try { GehirnHilfe.SchreibeAtomar(datei, JSON.Daten(new JSONObjekt { ["stand"] = s, ["docs"] = kopie, ["instanz"] = inst, ["vollstaendig"] = voll })); } catch { }
         });
     }
 
@@ -695,7 +706,15 @@ public sealed class AblageAbgleich : Beobachtbar
     // MARK: Erinnerungen
 
     /// <summary>Neu oder geändert; gilt erst, wenn der Server es angenommen hat.</summary>
-    public Task ErinnerungSpeichern(Erinnerung e) => Haupt.Auf(() => Senden("erinnerung", e.Id, e.AlsJson(), Zeit("erinnerung", e.Id)));
+    public Task ErinnerungSpeichern(Erinnerung e) => Haupt.Auf(() =>
+    {
+        var zeit = Zeit("erinnerung", e.Id);
+        var alt = Erinnerungen.FirstOrDefault(x => x.Id == e.Id);
+        return Senden("erinnerung", e.Id, (alt == null ? e : e.NachAenderung(alt, zeit)).AlsJson(), zeit);
+    });
+
+    /// <summary>Wann eine neue Erinnerung ohne Uhrzeit auslöst; das Handy pflegt den Wert.</summary>
+    public string OhneUhrzeitUm => docs.GetValueOrDefault("ordnung:erinnerung") is { } d && d.Wahr("geloescht") != true && d.Obj("daten")?.Text("ohne_uhrzeit_um") is { } u && u.Trim().Length > 0 ? u.Trim() : "10:00";
 
     public Task ErinnerungLoeschen(string id) => Haupt.Auf(() => Senden("erinnerung", id, new JSONObjekt(), Zeit("erinnerung", id), geloescht: true));
 

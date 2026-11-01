@@ -216,6 +216,7 @@ public sealed class ErinnerungDetail : LebendeAnsicht
         }
         var a = ErinnerungZeit.NeueAusloesung(minuten, u);
         if (e.ZeitVon(a) is not { } z || z <= ErinnerungZeit.Jetzt) { fehler = "Dieser Zeitpunkt ist schon vorbei."; Neu(); return; }
+        if (e.Doppelt(a)) { fehler = "Dieser Zeitpunkt ist schon eingestellt."; Neu(); return; }
         plusOffen = false;
         Aendere(x => x with { Ausloesungen = x.Ausloesungen.Append(a).ToList() });
     }
@@ -256,7 +257,7 @@ public sealed class ErinnerungEditor : UserControl
     private readonly string? id;
     private readonly (string, string, string, string, string, string, bool) ausgang;
     private string text, kurz, zeile, datum, uhrzeit, form;
-    private bool allgemein, speichert, arbeitet;
+    private bool allgemein, speichert, arbeitet, diktatLaeuft;
     private (string, string, string)? vorKi, nachKi;
     private string meldung = "";
     private readonly TextBindung textB, kurzB, zeileB, datumB, uhrzeitB, diktatB;
@@ -312,7 +313,7 @@ public sealed class ErinnerungEditor : UserControl
             Fuell(T(id != null ? "Erinnerung bearbeiten" : "Neue Erinnerung", 24, FontWeights.Bold)),
             Kapsel("xmark", "Schließen", Versuchen),
             Kapsel("square.and.arrow.down.fill", "Speichern", Speichern, hervorgehoben: true));
-        var werkzeuge = H(10, new DiktatKnopf(diktatB), kiPlatz, Spacer());
+        var werkzeuge = H(10, new DiktatKnopf(diktatB, meldeLaeuft: l => diktatLaeuft = l), kiPlatz, Spacer());
         meldungText.Visibility = Visibility.Collapsed;
         var inhaltFeld = Feld(textB, "Woran soll ich dich erinnern? Eintippen oder einsprechen", 17, mehrzeilig: true, fertig: b => feld = b);
         var oben = V(12, kopf, werkzeuge, meldungText, H(16, art, formWahl, Spacer()), terminZeile);
@@ -413,6 +414,8 @@ public sealed class ErinnerungEditor : UserControl
     private async void Speichern()
     {
         if (speichert || arbeitet) return;
+        // Das Gesagte käme sonst erst nach dem Speichern an und ginge verloren.
+        if (diktatLaeuft) { Zeige("Das Diktat läuft noch. Erst beenden, dann speichern."); return; }
         var sauber = text.Trim();
         if (sauber.Length == 0) { Zeige("Der Inhalt fehlt."); return; }
         DateOnly? tag = null;
@@ -441,7 +444,8 @@ public sealed class ErinnerungEditor : UserControl
                 {
                     Text = sauber, Kurz = kurz.Trim().Length > 0 ? kurz.Trim() : ErinnerungZeit.KurzAus(sauber), Zeile = zeile.Trim().Length > 0 ? zeile.Trim() : ErinnerungZeit.ZeileAus(sauber),
                     Datum = tag?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), Uhrzeit = uhr, Form = form, Allgemein = allgemein,
-                    Ausloesungen = !allgemein && alt.Ausloesungen.Count == 0 ? new List<Ausloesung> { ErinnerungZeit.NeueAusloesung(0) } : alt.Ausloesungen,
+                    // Nur beim Wechsel von allgemein zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
+                    Ausloesungen = !allgemein && alt.Allgemein ? new List<Ausloesung> { ErinnerungZeit.NeueAusloesung(0) } : alt.Ausloesungen,
                 };
             }
             await abgleich.ErinnerungSpeichern(e);
@@ -542,6 +546,8 @@ public sealed class ErinnerungFenster : Window
         NichtHauptfenster(this);
         SizeChanged += (_, _) => Setzen();
         Loaded += (_, _) => Setzen();
+        // Von außen geschlossen (Alt+F4, Werkzeug): Der nächste Lauf baut das Banner neu.
+        Closed += (_, _) => { if (ReferenceEquals(fenster, this)) fenster = null; };
     }
 
     private void Setzen()
