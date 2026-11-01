@@ -14,8 +14,14 @@ enum ClaudeUebergabe {
     /// a program that fails again after that repair must reach a new session right away. A click always goes through.
     static let sperrfrist: TimeInterval = 3600
 
-    /// Nie zwei automatische Sitzungen zugleich: sie wuerden dieselben Dateien aendern und auf main pushen.
-    /// Wer spaeter kommt, wartet und wird danach gegen die Sperrfrist geprueft -- verloren geht keiner.
+    /// What a card or the batch line says when the lock kept a failure from a new session.
+    static var sperrHinweis: String {
+        "Dieser Fehler ging in den letzten \(Int(sperrfrist / 60)) Minuten schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung."
+    }
+
+    /// Serialises the launcher starts, so the lock is read after the previous start has marked its
+    /// programs. Sessions for different programs can still run side by side; the task text therefore
+    /// tells them how to share main. Who comes later waits and is then checked against the lock.
     @MainActor private static var automatischLaeuft = false
 
     /// Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".
@@ -52,12 +58,10 @@ enum ClaudeUebergabe {
         for (eintrag, _) in offen { einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date() }
         einstellungen.speichern()
         let (problem, vielleicht) = await startenKern(offen)
-        if problem != nil {
+        // Unclear (the launcher did not answer): the session usually runs anyway, so the mark stays.
+        if problem != nil && !vielleicht {
             for ((eintrag, _), alt) in zip(offen, bisher) {
-                // Unclear (the launcher did not answer): lock only briefly -- if it hangs at a dialog,
-                // the failure soon gets through again.
-                einstellungen.fuer(eintrag.id).automatischUebergebenAm =
-                    vielleicht ? Date().addingTimeInterval(15 * 60 - sperrfrist) : alt
+                einstellungen.fuer(eintrag.id).automatischUebergebenAm = alt
             }
             einstellungen.speichern()
         }
@@ -172,12 +176,16 @@ enum ClaudeUebergabe {
            + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
            + "Kann dieselbe Ursache auch unter Windows auftreten, zieh ~/proggs/UpdateZentrale mit.\n"
         t += "3. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest, damit die Updater-Zentrale aus jedem Fehler lernt. Committe und pushe die Änderungen.\n"
-        t += "4. Führe danach das Update der gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Downloads im Homebrew- bzw. Paket-Cache und lade große Dateien nicht unnötig erneut. "
+        t += "4. Führe danach das Update jeder gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Downloads im Homebrew- bzw. Paket-Cache und lade große Dateien nicht unnötig erneut. "
            + "Wirkt die Reparatur erst in der neu gebauten Updater-Zentrale, führe den reparierten Weg hier selbst aus.\n"
-        t += "5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe.\n"
-        t += "6. Baue als allerletzten Schritt die Updater-Zentrale neu: bash " + Pfade.projektOrdner
-           + "/update-zentrale.sh. Das Skript schließt die laufende Updater-Zentrale und startet die neue Fassung. "
-           + "Hat die Sitzung gar keinen Code geändert, entfallen Review und Neubau.\n\n"
+        t += "5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe. Ohne Codeänderung entfällt das Review.\n"
+        t += "6. Baue als allerletzten Schritt die Updater-Zentrale neu, sobald sich in " + Pfade.projektOrdner + " etwas geändert hat: bash " + Pfade.projektOrdner
+           + "/update-zentrale.sh, mit dem höchsten erlaubten Zeitlimit. Läuft die App, zeigt mir das Skript ein Ja/Nein-Fenster und schließt sie danach. "
+           + "Prüfe danach in ~/Library/Logs/UpdaterZentrale-selbstupdate.log, ob die neue Fassung gestartet ist.\n\n"
+        t += "Regeln für diese Sitzung:\n"
+        t += "- Beende andere laufende Programme nicht ohne Rückfrage. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
+        t += "- Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.\n"
+        t += "- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.\n\n"
         for (eintrag, bericht) in faelle {
             t += faelle.count > 1 ? "\n=== \(bericht.name) ===\n" : ""
             t += "Programm: \(bericht.name) (Id \(eintrag.id), Art \(eintrag.art))\n"
@@ -190,13 +198,27 @@ enum ClaudeUebergabe {
             t += "Meldung: \(bericht.meldung)\n"
             t += "Protokolldatei (vollständig): \(bericht.protokollDatei)\n"
             t += "Weitere Protokolle (Tagesprotokolle, Diagnose-JSONL, verlauf.jsonl): \(Protokollierung.ordner)\n"
+            if eintrag.id.caseInsensitiveCompare(Sammelplan.selbstId) == .orderedSame {
+                t += "Das ist die Updater-Zentrale selbst: Schritt 4 entfällt für sie, ihr Update erledigt Schritt 6, auch ohne Änderung in ihrem Ordner.\n"
+            }
+            if eintrag.beendenVorUpdate {
+                t += "\(eintrag.name) muss fürs Update beendet sein. Läuft es gerade, frag vor dem Beenden nach.\n"
+            }
+            if eintrag.kannCliBeenden {
+                t += "Achtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: \(eintrag.cliRisiko ?? "") "
+                   + "Führe es deshalb erst nach den Schritten 5 und 6 aus und starte es abgekoppelt, damit es auch dann zu Ende läuft, wenn diese Sitzung endet. "
+                   + "Verlangt es geschlossene Terminalfenster, melde das, statt es zu erzwingen.\n"
+            }
 
             // Das Tagesprotokoll teilen sich alle Programme; nur die Zeilen dieses Programms zaehlen.
             // \r-Fortschrittsbalken werden zu eigenen Zeilen, damit keine Riesenzeile den Auszug sprengt.
-            if let inhalt = try? String(contentsOfFile: bericht.protokollDatei, encoding: .utf8) {
+            // Tolerant dekodiert: ungueltige Bytes einer Werkzeug-Ausgabe duerfen den Auszug nicht kosten.
+            if let daten = FileManager.default.contents(atPath: bericht.protokollDatei) {
+                let inhalt = String(decoding: daten, as: UTF8.self)
                 let marke = "[\(eintrag.id)]"
-                let zeilen = inhalt.components(separatedBy: CharacterSet(charactersIn: "\r\n"))
-                    .filter { $0.contains(marke) }
+                let alleZeilen = inhalt.components(separatedBy: CharacterSet(charactersIn: "\r\n"))
+                let eigene = alleZeilen.filter { $0.contains(marke) }
+                let zeilen = eigene.isEmpty ? alleZeilen : eigene
                 var ende: [String] = []
                 var laenge = 0
                 let budget = protokollZeichen / faelle.count

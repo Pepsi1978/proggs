@@ -2,7 +2,7 @@
 # update-zentrale.sh — Selbst-Update der Updater-Zentrale macOS.
 #
 # Die Rueckfrage stellt die App selbst (leeres statusPraefix im Katalog), bevor sie dieses Skript
-# startet. Ablauf (wie update-zentrale.ps1 unter Windows seit 1.3.40):
+# startet. Kommt der Start von aussen und die App laeuft, fragt das Skript selbst. Ablauf (wie update-zentrale.ps1 unter Windows seit 1.3.40):
 #   1. bauen (build.sh) — die laufende App bleibt dabei unberuehrt,
 #   2. einen abgekoppelten Helfer starten (tools/selbstupdate-helfer.sh). Kam das Update aus der App,
 #      uebergibt sie ihre Prozessnummer (--app-pid): sie schreibt Protokoll und Verlauf fertig und
@@ -31,6 +31,19 @@ while [ $# -gt 0 ]; do
         *) echo "Unbekannte Option: $1" >&2; exit 2 ;;
     esac
 done
+
+# Started from outside (a repair session) while the app runs: the app cannot ask, and closing it would
+# abort a running update. Same question as update-zentrale.ps1; without an answer nothing happens.
+if [ -z "$APP_PID" ] && pgrep -f "$PROZESS" >/dev/null 2>&1; then
+    ANTWORT=$(osascript -e 'display dialog "Die Updater-Zentrale wird jetzt neu gebaut, geschlossen und in der neuen Fassung gestartet. Ein dort gerade laufendes Update wird dabei abgebrochen, also erst bestätigen, wenn dort nichts mehr läuft.
+
+Jetzt aktualisieren?" with title "Updater-Zentrale aktualisieren" buttons {"Nein", "Ja"} default button "Nein" giving up after 240' 2>/dev/null || true)
+    case "$ANTWORT" in
+        *"button returned:Ja"*) ;;
+        *"gave up:true"*) echo "UPDATEZENTRALE_UPDATE_STATUS=no-answer"; exit 0 ;;
+        *) echo "UPDATEZENTRALE_UPDATE_STATUS=cancelled"; exit 0 ;;
+    esac
+fi
 
 bash "$PROJECT_DIR/build.sh"
 [ -x "$BUILD_APP/Contents/MacOS/UpdaterZentrale" ] || { echo "Build ohne Programmdatei." >&2; exit 1; }

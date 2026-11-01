@@ -688,6 +688,8 @@ final class HauptViewModel {
                     self.kopfStatus += "  ·  " + problem
                 } else if uebergabe.gestartet {
                     self.kopfStatus += "  ·  Fehler automatisch an Claude Code übergeben."
+                } else {
+                    self.kopfStatus += "  ·  " + ClaudeUebergabe.sperrHinweis
                 }
             }
         }

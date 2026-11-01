@@ -14,7 +14,7 @@ final class ProgrammEinstellung: Codable {
     var fehlerQuittiertBis: Date?
 
     /// Wann zuletzt ein Fehler dieses Programms automatisch an Claude Code ging (Sperrfrist ueber
-    /// Neustarts hinweg). Nur gesetzt, wenn die Sitzung wirklich startete.
+    /// Neustarts hinweg). Schon vor dem Start gesetzt; scheitert er sicher, wird es zurueckgenommen.
     var automatischUebergebenAm: Date?
 
     /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die

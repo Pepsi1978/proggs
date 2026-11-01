@@ -26,7 +26,7 @@ public sealed class ProgrammEinstellung
 
     /// <summary>
     /// Wann zuletzt ein Fehler dieses Programms automatisch an Claude Code ging -- die Sperrfrist
-    /// uebersteht so Neustarts. Nur gesetzt, wenn die Sitzung wirklich startete.
+    /// uebersteht so Neustarts. Schon vor dem Start gesetzt; scheitert er sicher, wird es zurueckgenommen.
     /// </summary>
     public DateTime? AutomatischUebergebenAm { get; set; }
 

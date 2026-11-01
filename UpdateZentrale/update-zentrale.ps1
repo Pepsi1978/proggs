@@ -26,7 +26,7 @@ $helferSkript = Join-Path $projektDir 'werkzeuge\selbstupdate-helfer.ps1'
 $helferLog  = Join-Path $env:LOCALAPPDATA 'UpdateZentrale\logs\selbstupdate.log'
 
 $antwort = (New-Object -ComObject WScript.Shell).Popup(
-    "Die UpdateZentrale wird jetzt neu gebaut, geschlossen und in der neuen Fassung gestartet.`n`nJetzt aktualisieren?",
+    "Die UpdateZentrale wird jetzt neu gebaut, geschlossen und in der neuen Fassung gestartet. Ein dort gerade laufendes Update wird dabei abgebrochen, also erst bestätigen, wenn dort nichts mehr läuft.`n`nJetzt aktualisieren?",
     240, 'UpdateZentrale aktualisieren', 4 + 32 + 4096)
 if ($antwort -eq -1) { Write-Output 'UPDATEZENTRALE_UPDATE_STATUS=no-answer'; exit 0 }
 if ($antwort -ne 6)  { Write-Output 'UPDATEZENTRALE_UPDATE_STATUS=cancelled'; exit 0 }

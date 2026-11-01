@@ -894,6 +894,7 @@ public sealed partial class HauptViewModel : ObservableObject
             if (KopfStatus != zusammenfassung) return;
             if (uebergabe.Problem is not null) KopfStatus += "  ·  " + uebergabe.Problem;
             else if (uebergabe.Gestartet) KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
+            else KopfStatus += "  ·  " + ClaudeUebergabe.SperrHinweis;
         }
     }
 

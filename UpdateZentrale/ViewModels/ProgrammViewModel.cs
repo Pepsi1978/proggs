@@ -294,8 +294,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
         try
         {
             Melde("Übergebe das Problem mit " + Name + " an Claude Code …");
-            Melde(await ClaudeUebergabe.StartenAsync(Eintrag, bericht)
-                  ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal.");
+            var problem = await ClaudeUebergabe.StartenAsync(Eintrag, bericht);
+            if (problem is null)
+            {
+                // The running session covers an automatic hand-over of the same failure too.
+                _einstellungen.Fuer(Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
+                _einstellungen.Speichern();
+            }
+            Melde(problem ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal.");
         }
         finally
         {
@@ -303,7 +309,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
         }
     }
 
-    /// <summary>The two handover buttons of a card must not start two sessions for one program.</summary>
+    /// <summary>The state read before the current update; null until its log header is written.</summary>
+    private string? _standVorLauf;
+
+    /// <summary>The handover buttons and the automatic handover must not start two sessions for one program.</summary>
     private bool _uebergabeLaeuft;
 
     /// <summary>
@@ -354,23 +363,31 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Direkt nach einem Fehlschlag, ohne Klick: hoechstens eine Sitzung je Programm in
-    /// <see cref="ClaudeUebergabe.Sperrfrist"/>, damit ein Dauerfehler keine Kette startet.
+    /// Right after a failure, without a click: at most one session per program within
+    /// <see cref="ClaudeUebergabe.Sperrfrist"/>, so two sessions do not repair the same failure.
     /// </summary>
     private async Task AutomatischUebergebenAsync(UpdateBericht bericht)
     {
+        // Leave the update run first: a dialog in here would keep the card and the app-wide lock busy.
+        await Task.Yield();
+        if (_uebergabeLaeuft) return;
+        _uebergabeLaeuft = true;
         try
         {
             var ergebnis = await ClaudeUebergabe.AutomatischStartenAsync(new[] { (Eintrag, bericht) }, _einstellungen);
             if (ergebnis.Problem is not null) Melde(ergebnis.Problem);
-            else if (ergebnis.Gestartet)
-                Melde("Fehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor.");
             else
-                Melde("Dieser Fehler ging in der letzten Stunde schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung.");
+                StatusText = ergebnis.Gestartet
+                    ? "Fehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
+                    : ClaudeUebergabe.SperrHinweis;
         }
         catch (Exception diagAusnahme)
         {
             Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
+        }
+        finally
+        {
+            _uebergabeLaeuft = false;
         }
     }
 
@@ -643,8 +660,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
         try
         {
             await AktualisierenKernAsync(sammel);
-            // Only a report THIS run wrote: a refused start or an exception before the report
-            // leaves yesterday's verdict in place, and that must not count as this batch's result.
+            // Only a report THIS run wrote: a refused start leaves yesterday's verdict in place, and
+            // that must not count as this batch's result. An exception writes its own failed report.
             return ReferenceEquals(LetzterBericht, vorher) ? null : LetzterBericht;
         }
         finally
@@ -756,9 +773,11 @@ public sealed partial class ProgrammViewModel : ObservableObject
             var uhr = System.Diagnostics.Stopwatch.StartNew();
             var kontext = _sammelKontext;
             var kette = new UpdateKette(_aktualisierer, Eintrag, fortschritt, text => StatusText = text, KettenWarten);
+            _standVorLauf = null;
 
             var (vorher, vorPruefung) = await kette.VorpruefenAsync(abbruch);
             Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
+            _standVorLauf = vorher;
 
             var urteil = UpdateKette.BereitsAktuell(vorher, vorPruefung);
             var liefVorher = false;
@@ -1035,17 +1054,29 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// </summary>
     private void AusnahmeBerichten(Exception ausnahme)
     {
+        // The app is closing: what breaks now is the shutdown, not the update.
+        if (System.Windows.Application.Current?.Dispatcher.HasShutdownStarted == true) return;
         try
         {
             var kontext = _sammelKontext;
+            var befehl = "";
+            try { befehl = BefehlsBeschreibung(); }
+            catch (Exception diagAusnahme) { Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Debug); }
+
+            // Thrown by the pre-check: the log needs its header too, or the footer stands alone.
+            if (_standVorLauf is null) Protokollierung.LaufBeginnen(Eintrag, befehl, "");
+            var fehlt = Programmpruefung.Vollstaendig(Eintrag);
+
             var bericht = new UpdateBericht
             {
                 ProgrammId = Eintrag.Id,
                 Name = Name,
                 Art = Eintrag.Art,
                 Ergebnis = LaufErgebnis.Fehlgeschlagen,
-                Meldung = "Das Update brach mit einer Ausnahme ab: " + ausnahme.GetType().Name + ": " + ausnahme.Message,
-                Befehl = BefehlsBeschreibung(),
+                Meldung = (fehlt is null ? "" : fehlt + " ") + "Das Update brach mit einer Ausnahme ab: " + ausnahme.GetType().Name + ": " + ausnahme.Message,
+                VersionVorher = _standVorLauf ?? "",
+                VersionNachher = UpdateKette.NichtLesbar,
+                Befehl = befehl,
                 Erhoeht = Rechte.IstErhoeht,
                 ExitCode = 1,
                 SammelId = kontext?.Id,

@@ -1,5 +1,6 @@
 using UpdateZentrale.Models;
 using UpdateZentrale.Services;
+using UpdateZentrale.ViewModels;
 using Xunit;
 
 namespace UpdateZentrale.Tests;
@@ -35,6 +36,32 @@ public sealed class ClaudeUebergabeAuftragTests
     }
 
     [Fact]
-    public void Sperrfrist_haelt_einen_erneuten_Fehlschlag_nicht_stundenlang_zurueck()
-        => Assert.True(ClaudeUebergabe.Sperrfrist <= TimeSpan.FromHours(1));
+    public void Auftrag_enthaelt_die_Leitplanken_fuer_jede_Sitzung()
+    {
+        var text = Auftrag();
+
+        Assert.Contains("ohne Administratorrechte", text);
+        Assert.Contains("nicht ohne Rückfrage", text);
+        Assert.Contains("no-answer", text);
+        Assert.Contains("Versionsnummer direkt vor dem Bump", text);
+    }
+
+    [Fact]
+    public void Programm_das_die_Sitzung_beenden_kann_kommt_erst_nach_Review_und_Neubau()
+    {
+        var eintrag = new ProgrammEintrag { Id = "git", Name = "Git", CliRisiko = "Ersetzt git.exe." };
+        var text = ClaudeUebergabe.AuftragText(new[] { (eintrag, new UpdateBericht { Name = "Git", Meldung = "x" }) });
+
+        Assert.Contains("Ersetzt git.exe.", text);
+        Assert.Contains("erst nach den Schritten 5 und 6", text);
+    }
+
+    [Fact]
+    public void Scheitert_die_UpdateZentrale_selbst_erledigt_Schritt_6_ihr_Update()
+    {
+        var eintrag = new ProgrammEintrag { Id = Sammelplan.SelbstId, Name = "UpdateZentrale" };
+        var text = ClaudeUebergabe.AuftragText(new[] { (eintrag, new UpdateBericht { Name = "UpdateZentrale", Meldung = "x" }) });
+
+        Assert.Contains("Schritt 4 entfällt für sie", text);
+    }
 }

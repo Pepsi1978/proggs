@@ -300,7 +300,7 @@ final class ProgrammViewModel {
 
     /// Schickt den gescheiterten Lauf samt Protokoll an eine neue Claude-Code-Sitzung zum Analysieren,
     /// Beheben und Vorbeugen. `automatisch`: direkt nach dem Fehler, ohne Klick -- dann hoechstens
-    /// eine Sitzung je Programm in `ClaudeUebergabe.sperrfrist`, damit ein Dauerfehler keine Kette startet.
+    /// eine Sitzung je Programm in `ClaudeUebergabe.sperrfrist`, damit nicht zwei denselben Fehler reparieren.
     func anClaudeUebergeben(automatisch: Bool = false) async {
         guard !uebergibtAnClaude, let bericht = letzterBericht, bericht.istFehler else { return }
         uebergibtAnClaude = true
@@ -309,6 +309,11 @@ final class ProgrammViewModel {
         let ergebnis = automatisch
             ? await ClaudeUebergabe.automatischStarten([(eintrag, bericht)], einstellungen)
             : ClaudeUebergabe.AutoErgebnis(gestartet: true, problem: await ClaudeUebergabe.starten(eintrag, bericht))
+        if !automatisch && ergebnis.problem == nil {
+            // Die laufende Sitzung deckt auch eine automatische Uebergabe desselben Fehlers ab.
+            einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date()
+            einstellungen.speichern()
+        }
         if let problem = ergebnis.problem {
             statusText = problem
             beiMeldung?(problem)
@@ -316,7 +321,7 @@ final class ProgrammViewModel {
             statusText = (automatisch ? "Fehler automatisch" : "Problem mit \(name)")
                 + " an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
         } else {
-            statusText = "Dieser Fehler ging in der letzten Stunde schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung."
+            statusText = ClaudeUebergabe.sperrHinweis
         }
     }
 

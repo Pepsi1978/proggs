@@ -36,9 +36,14 @@ public static class ClaudeUebergabe
     /// </summary>
     public static readonly TimeSpan Sperrfrist = TimeSpan.FromHours(1);
 
+    /// <summary>What a card or the batch line says when the lock kept a failure from a new session.</summary>
+    public static string SperrHinweis => "Dieser Fehler ging in den letzten " + (int)Sperrfrist.TotalMinutes
+                                         + " Minuten schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung.";
+
     /// <summary>
-    /// Nie zwei automatische Sitzungen zugleich: sie aenderten dieselben Dateien und pushten auf main.
-    /// Wer spaeter kommt, wartet und wird danach gegen die Sperrfrist geprueft -- verloren geht keiner.
+    /// Serialises the launcher starts, so the lock is read after the previous start has marked its
+    /// programs. Sessions for different programs can still run side by side; the task text therefore
+    /// tells them how to share main. Who comes later waits and is then checked against the lock.
     /// </summary>
     private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
@@ -81,13 +86,11 @@ public static class ClaudeUebergabe
             foreach (var f in offen) einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
             einstellungen.Speichern();
             var (problem, vielleicht) = await StartenKernAsync(offen);
-            if (problem is not null)
+            // Unclear (the launcher did not answer): the session usually runs anyway, so the mark stays.
+            if (problem is not null && !vielleicht)
             {
-                // Unclear (the launcher did not answer): lock only briefly -- if it hangs at a dialog,
-                // the failure soon gets through again.
                 for (var i = 0; i < offen.Count; i++)
-                    einstellungen.Fuer(offen[i].Eintrag.Id).AutomatischUebergebenAm =
-                        vielleicht ? DateTime.Now - Sperrfrist + TimeSpan.FromMinutes(15) : bisher[i];
+                    einstellungen.Fuer(offen[i].Eintrag.Id).AutomatischUebergebenAm = bisher[i];
                 einstellungen.Speichern();
             }
             return new AutoErgebnis(problem is null || vielleicht, problem);
@@ -156,6 +159,10 @@ public static class ClaudeUebergabe
         }
     }
 
+    private const string OhneAdminHinweis = "Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.";
+    private const string BeendenHinweis = "Beende andere laufende Programme nicht ohne Rückfrage.";
+    private const string RueckfrageHinweis = "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.";
+
     private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar, string befehl,
                                             bool beendenZugestimmt, bool skriptZugestimmt)
     {
@@ -169,14 +176,13 @@ public static class ClaudeUebergabe
         sb.AppendLine("Gehe so vor:");
         sb.AppendLine("1. Führe das Update über den Weg der UpdateZentrale aus: " + befehl + ". Einzelheiten stehen im Katalogeintrag unten, die Umsetzung in "
                       + Path.Combine(projekt, "Providers") + ". Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
-        sb.AppendLine("2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende. "
-                      + "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.");
+        sb.AppendLine("2. Klemmt dieser Weg: Finde die Ursache und bring das Update auf einem anderen sicheren Weg zu Ende. " + RueckfrageHinweis);
         sb.AppendLine("3. Prüfe am Ende die installierte Version nach und melde das Ergebnis.");
         sb.AppendLine("4. Hat der Weg der UpdateZentrale versagt: Bau die Vorbeugung dauerhaft ein (" + projekt
                       + ", Katalog programs.json) und halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest.");
         sb.AppendLine();
-        sb.AppendLine("Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.");
-        sb.AppendLine("Beende andere laufende Programme nicht ohne Rückfrage.");
+        sb.AppendLine(OhneAdminHinweis);
+        sb.AppendLine(BeendenHinweis);
         if (eintrag.BeendenVorUpdate)
             sb.AppendLine(beendenZugestimmt
                 ? eintrag.Name + " läuft und muss fürs Update beendet werden, dem habe ich beim Klick zugestimmt."
@@ -215,12 +221,18 @@ public static class ClaudeUebergabe
                       + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
                       + "Kann dieselbe Ursache auch unter macOS auftreten, zieh " + Path.Combine(Pfade.RepoWurzel, "UpdaterZentrale-macOS") + " mit.");
         sb.AppendLine("3. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest, damit die UpdateZentrale aus jedem Fehler lernt. Committe und pushe die Änderungen.");
-        sb.AppendLine("4. Führe danach das Update der gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Installer und lade große Dateien nicht unnötig erneut. "
+        sb.AppendLine("4. Führe danach das Update jeder gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Installer und lade große Dateien nicht unnötig erneut. "
                       + "Wirkt die Reparatur erst in der neu gebauten UpdateZentrale, führe den reparierten Weg hier selbst aus.");
-        sb.AppendLine("5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe.");
-        sb.AppendLine("6. Baue als allerletzten Schritt die UpdateZentrale neu: pwsh -File \"" + Path.Combine(projekt, "update-zentrale.ps1")
-                      + "\", mit dem höchsten erlaubten Zeitlimit. Das Skript zeigt mir ein Ja/Nein-Fenster und schließt die laufende UpdateZentrale. "
-                      + "Bei cancelled oder no-answer nicht erneut starten, sondern melden. Hat die Sitzung gar keinen Code geändert, entfallen Review und Neubau.");
+        sb.AppendLine("5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe. Ohne Codeänderung entfällt das Review.");
+        sb.AppendLine("6. Baue als allerletzten Schritt die UpdateZentrale neu, sobald sich in " + projekt + " etwas geändert hat: pwsh -File " + Path.Combine(projekt, "update-zentrale.ps1")
+                      + ", mit dem höchsten erlaubten Zeitlimit. Das Skript zeigt mir ein Ja/Nein-Fenster und schließt die laufende UpdateZentrale. "
+                      + "Prüfe danach in " + Path.Combine(Protokollierung.Ordner, "selbstupdate.log") + ", ob die neue Fassung gestartet ist.");
+        sb.AppendLine();
+        sb.AppendLine("Regeln für diese Sitzung:");
+        sb.AppendLine("- " + OhneAdminHinweis);
+        sb.AppendLine("- " + BeendenHinweis + " Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
+        sb.AppendLine("- " + RueckfrageHinweis);
+        sb.AppendLine("- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.");
         foreach (var (eintrag, bericht) in faelle)
         {
             sb.AppendLine();
@@ -234,6 +246,14 @@ public static class ClaudeUebergabe
             sb.AppendLine("Meldung: " + bericht.Meldung);
             sb.AppendLine("Protokolldatei (vollständig): " + bericht.ProtokollDatei);
             sb.AppendLine("Weitere Protokolle (Tagesprotokolle, Diagnose-JSONL, verlauf.jsonl): " + Protokollierung.Ordner);
+            if (eintrag.Id.Equals(ViewModels.Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine("Das ist die UpdateZentrale selbst: Schritt 4 entfällt für sie, ihr Update erledigt Schritt 6, auch ohne Änderung in ihrem Ordner.");
+            if (eintrag.BeendenVorUpdate)
+                sb.AppendLine(eintrag.Name + " muss fürs Update beendet sein. Läuft es gerade, frag vor dem Beenden nach.");
+            if (eintrag.KannCliBeenden)
+                sb.AppendLine("Achtung, dieses Update kann laufende CLI-Sitzungen beenden, auch diese hier: " + eintrag.CliRisiko
+                              + " Führe es deshalb erst nach den Schritten 5 und 6 aus und starte es abgekoppelt, damit es auch dann zu Ende läuft, wenn diese Sitzung endet. "
+                              + "Verlangt es geschlossene Terminalfenster, melde das, statt es zu erzwingen.");
 
             if (File.Exists(bericht.ProtokollDatei))
             {
