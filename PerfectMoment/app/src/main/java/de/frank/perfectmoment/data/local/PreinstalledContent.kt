@@ -9,14 +9,24 @@ object PreinstalledContent {
     const val ASSUMPTION_BOOST_2_SKILL_NAME = "Annahmenverstärkung 2"
 
     val hooks = listOf(
-        "🌅" to "Wie fühlt sich ein schönes Leben an?",
-        "🕊️" to "Wie fühlt sich ein freies Leben an?",
-        "💪" to "Wie fühlt sich ein fitter Körper an?",
-        "🌙" to "Wie schaffe ich es, dass mein Schlaf immer tiefer wird?",
+        "🌅" to "Warum ist mein Leben so schön?",
+        "🕊️" to "Warum fühlt sich mein Leben so frei an?",
+        "💪" to "Warum fühlt sich mein Körper so fit an?",
+        "🌙" to "Warum ist mein Schlaf so tief?",
         "✨" to "Warum ist das Leben schön?",
-        "🧭" to "Wie schaffe ich es, dass es mir immer gut geht?",
+        "🧭" to "Warum geht es mir immer so gut?",
         "🌲" to "Was macht mich im Wald so ruhig?",
-        "🔮" to "Wie fühlt sich ein Leben ohne Schmerzen an?",
+        "🔮" to "Warum fühlt sich mein Körper so leicht an?",
+    )
+
+    /** Frühere Standardtexte der Aufhänger; selbst geänderte Aufhänger bleiben unberührt. */
+    val legacyHookTexts = listOf(
+        "Wie fühlt sich ein schönes Leben an?" to "Warum ist mein Leben so schön?",
+        "Wie fühlt sich ein freies Leben an?" to "Warum fühlt sich mein Leben so frei an?",
+        "Wie fühlt sich ein fitter Körper an?" to "Warum fühlt sich mein Körper so fit an?",
+        "Wie schaffe ich es, dass mein Schlaf immer tiefer wird?" to "Warum ist mein Schlaf so tief?",
+        "Wie schaffe ich es, dass es mir immer gut geht?" to "Warum geht es mir immer so gut?",
+        "Wie fühlt sich ein Leben ohne Schmerzen an?" to "Warum fühlt sich mein Körper so leicht an?",
     )
 
     // Die Rohtexte gehen durch AbundanceSkillUpgrade; dort stehen die geltenden Fülle-Formulierungen.

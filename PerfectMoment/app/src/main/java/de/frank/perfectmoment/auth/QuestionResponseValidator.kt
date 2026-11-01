@@ -12,6 +12,7 @@ object QuestionResponseValidator {
         rawQuestions: List<String>,
         previousQuestions: Collection<String> = emptyList(),
         excludedQuestions: Collection<String> = emptyList(),
+        enforceAbundance: Boolean = false,
     ): List<CodexQuestion> {
         if (rawQuestions.size != REQUIRED_INPUT_COUNT) {
             throw QuestionValidationException(
@@ -19,12 +20,12 @@ object QuestionResponseValidator {
             )
         }
 
-        val validator = IncrementalQuestionValidator(previousQuestions, excludedQuestions)
+        val validator = IncrementalQuestionValidator(previousQuestions, excludedQuestions, enforceAbundance)
         val accepted = rawQuestions.flatMap(validator::accept)
 
         if (accepted.size < MIN_ACCEPTED_COUNT) {
             throw QuestionValidationException(
-                "Nach dem Entfernen leerer oder doppelter Einträge sind nur ${accepted.size} gültige Fragen übrig.",
+                "Nach dem Entfernen leerer, doppelter oder suchender Einträge sind nur ${accepted.size} gültige Fragen übrig.",
             )
         }
         return accepted
@@ -179,6 +180,7 @@ object QuestionResponseValidator {
 internal class IncrementalQuestionValidator(
     previousQuestions: Collection<String> = emptyList(),
     excludedQuestions: Collection<String> = emptyList(),
+    private val enforceAbundance: Boolean = false,
 ) {
     private val seen = (previousQuestions + excludedQuestions + IntroQuestionPolicy.QUESTION)
         .mapTo(mutableSetOf(), QuestionResponseValidator::normalizeQuestion)
@@ -192,16 +194,34 @@ internal class IncrementalQuestionValidator(
     fun accept(raw: String): List<CodexQuestion> =
         QuestionResponseValidator.splitIntoQuestions(raw).filter { question ->
             val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
-            normalized.isNotEmpty() && !isSeekingGoalQuestion(normalized) && seen.add(normalized)
+            normalized.isNotEmpty() &&
+                !(enforceAbundance && violatesAbundance(question.text)) &&
+                seen.add(normalized)
         }
 }
 
-/** Suchende Zielfragen legen das Ziel in die Zukunft; sie dürfen nie vorgelesen werden. */
-internal fun isSeekingGoalQuestion(normalizedQuestion: String): Boolean =
-    SEEKING_GOAL_QUESTION.containsMatchIn(normalizedQuestion)
+/**
+ * Letzte Sicherung für Skills mit Fülle-Regel: Wie-Fragen nur im Rückblick, keine suchenden Fragen,
+ * nichts in der Zukunft. Bewusst grob; ein zu viel verworfener Eintrag wird durch Nachschub ersetzt.
+ */
+internal fun violatesAbundance(questionText: String): Boolean {
+    val lastSentence = questionText.split(SENTENCE_BREAK).last()
+    val question = QuestionResponseValidator.normalizeQuestion(lastSentence).replace(LEADING_FILLER, "")
+    return when {
+        FUTURE_WORD.containsMatchIn(question) -> true
+        question.startsWith("wie ") -> !RETROSPECTIVE_HOW.containsMatchIn(question)
+        else -> SEEKING_QUESTION.containsMatchIn(question)
+    }
+}
 
-private val SEEKING_GOAL_QUESTION = Regex(
-    "^wie (erreiche|erreichst|erreicht man|schaffe|schaffst|schafft man|kann|kannst|komme|kommst|" +
-        "kommt man|werde|wirst|wird man|finde|findest|findet man|bekomme|bekommst|bekommt man|" +
-        "gelingt|könnte|könntest|sollte|solltest)\\b",
+private val SENTENCE_BREAK = Regex("[.!:;]\\s+")
+private val LEADING_FILLER = Regex("^(und|aber|also|\\d+) ")
+private val FUTURE_WORD = Regex("(^| )(bald|irgendwann|künftig|zukünftig|in zukunft)( |$)")
+private val RETROSPECTIVE_HOW = Regex(
+    "^wie (habe|hab|hast|hat|haben|habt|bin|bist|konnte|konntest|konnten|gelang|kam|kamst|kamen|" +
+        "fand|fandest|ist es (mir|dir|uns|einem))( |$)",
+)
+private val SEEKING_QUESTION = Regex(
+    "^(was|womit|wodurch|wofür|welche[a-z]*( [^ ]+)?|wo|wann) " +
+        "(kann|kannst|könnte|könntest|soll|sollte|solltest|muss|musst|werde|wirst) (ich|du|man|wir)( |$)",
 )

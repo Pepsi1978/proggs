@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -51,6 +51,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     Migration12To13,
                     Migration13To14,
                     Migration14To15,
+                    Migration15To16,
                 )
                     .addCallback(SeedCallback)
                     .build()
@@ -153,24 +154,41 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
         }
 
         private val Migration14To15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) = upgradeSkillsToAbundance(db)
+        }
+
+        private val Migration15To16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                val stored = mutableListOf<Triple<Long, String, String>>()
-                db.query("SELECT id, name, text FROM skills").use { cursor ->
-                    while (cursor.moveToNext()) {
-                        stored += Triple(cursor.getLong(0), cursor.getString(1), cursor.getString(2))
-                    }
+                upgradeSkillsToAbundance(db)
+                PreinstalledContent.legacyHookTexts.forEach { (old, new) ->
+                    db.update(
+                        "hooks",
+                        SQLiteDatabase.CONFLICT_ABORT,
+                        ContentValues().apply { put("text", new) },
+                        "text = ?",
+                        arrayOf(old),
+                    )
                 }
-                stored.forEach { (id, name, text) ->
-                    val upgraded = AbundanceSkillUpgrade.apply(name, text)
-                    if (upgraded != text) {
-                        db.update(
-                            "skills",
-                            SQLiteDatabase.CONFLICT_ABORT,
-                            ContentValues().apply { put("text", upgraded) },
-                            "id = ?",
-                            arrayOf(id),
-                        )
-                    }
+            }
+        }
+
+        private fun upgradeSkillsToAbundance(db: SupportSQLiteDatabase) {
+            val stored = mutableListOf<Triple<Long, String, String>>()
+            db.query("SELECT id, name, text FROM skills").use { cursor ->
+                while (cursor.moveToNext()) {
+                    stored += Triple(cursor.getLong(0), cursor.getString(1), cursor.getString(2))
+                }
+            }
+            stored.forEach { (id, name, text) ->
+                val upgraded = AbundanceSkillUpgrade.apply(name, text)
+                if (upgraded != text) {
+                    db.update(
+                        "skills",
+                        SQLiteDatabase.CONFLICT_ABORT,
+                        ContentValues().apply { put("text", upgraded) },
+                        "id = ?",
+                        arrayOf(id),
+                    )
                 }
             }
         }

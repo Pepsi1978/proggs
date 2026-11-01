@@ -30,6 +30,8 @@ import de.frank.perfectmoment.auth.IntroQuestionPolicy
 import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.auth.SessionPromptDecision
+import de.frank.perfectmoment.auth.violatesAbundance
+import de.frank.perfectmoment.data.local.AbundanceSkillUpgrade
 import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.settings.SecureSettings
 import de.frank.perfectmoment.data.local.QuestionEntity
@@ -1288,10 +1290,12 @@ class AppViewModel(
             } catch (error: Throwable) {
                 emptyList()
             }
-            if (generated.isNotEmpty()) {
-                voiceRecorderQuestions = VoiceSampleScript.script(
-                    generated.map { EmojiParser.parse(it).text },
-                )
+            val enforceAbundance = AbundanceSkillUpgrade.carriesRule(activeSkill?.text.orEmpty())
+            val sampleQuestions = generated
+                .map { EmojiParser.parse(it).text }
+                .filterNot { enforceAbundance && violatesAbundance(it) }
+            if (sampleQuestions.isNotEmpty()) {
+                voiceRecorderQuestions = VoiceSampleScript.script(sampleQuestions)
             }
             voiceRecorderQuestionsLoading = false
         }

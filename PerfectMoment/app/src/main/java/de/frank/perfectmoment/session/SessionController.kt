@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import de.frank.perfectmoment.data.local.AbundanceSkillUpgrade
 import de.frank.perfectmoment.auth.CodexAuthManager
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.CodexQuestionRequest
@@ -94,7 +95,11 @@ class SessionController(
             val requestBase = newQuestionRequest(topic, introContext, entranceQuestion)
             val refillPort = newRefillPort(requestBase, entranceQuestion)
             val persistencePort = newPersistencePort(sessionId)
-            val streamedValidator = IncrementalQuestionValidator(excludedQuestions = listOf(entranceQuestion))
+            val enforceAbundance = AbundanceSkillUpgrade.carriesRule(requestBase.skillText)
+            val streamedValidator = IncrementalQuestionValidator(
+                excludedQuestions = listOf(entranceQuestion),
+                enforceAbundance = enforceAbundance,
+            )
             val streamedQuestions = mutableListOf<Question>()
             val rawInitial = codexAuthManager.generateQuestions(requestBase) { rawQuestion ->
                 streamedValidator.accept(rawQuestion).forEach { parsed ->
@@ -121,6 +126,7 @@ class SessionController(
             val validatedInitial = QuestionResponseValidator.validate(
                 rawInitial,
                 excludedQuestions = listOf(entranceQuestion),
+                enforceAbundance = enforceAbundance,
             )
                 .map { Question(emoji = it.emoji, text = it.text) }
             val streamedTexts = streamedQuestions
@@ -478,6 +484,7 @@ class SessionController(
         val validator = IncrementalQuestionValidator(
             previousQuestions = existing.map(Question::text),
             excludedQuestions = listOf(entranceQuestion),
+            enforceAbundance = AbundanceSkillUpgrade.carriesRule(requestBase.skillText),
         )
         val delivered = mutableListOf<Question>()
         val startedAt = SystemClock.elapsedRealtime()

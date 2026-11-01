@@ -99,10 +99,16 @@ class BackupRepository(
     private suspend fun apply(payload: BackupPayload): Summary {
         restoreVoiceProfiles(payload.voiceProfiles)
         payload.hooks.forEach { database.hookDao().upsertHook(it) }
-        // Ältere Sicherungen tragen noch die Skill-Texte ohne Fülle-Regel.
+        // Nur Sicherungen von vor der Fülle-Regel heben; neuere bleiben originalgetreu, damit eine
+        // bewusste Änderung am Skill das Zurückholen übersteht.
+        val fromBeforeRule = payload.createdAt < AbundanceSkillUpgrade.INTRODUCED_AT_MS
         payload.skills.forEach { skill ->
             database.skillDao().upsertSkill(
-                skill.copy(text = AbundanceSkillUpgrade.apply(skill.name, skill.text)),
+                if (fromBeforeRule) {
+                    skill.copy(text = AbundanceSkillUpgrade.apply(skill.name, skill.text))
+                } else {
+                    skill
+                },
             )
         }
 

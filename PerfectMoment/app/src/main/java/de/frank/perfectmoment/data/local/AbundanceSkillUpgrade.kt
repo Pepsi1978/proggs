@@ -10,10 +10,15 @@ package de.frank.perfectmoment.data.local
 internal object AbundanceSkillUpgrade {
     const val RULE_HEADING = "FÜLLE-REGEL"
 
+    /** 01.11.2026, 21:37 Uhr: Ältere Sicherungen können die Regel noch nicht enthalten. */
+    const val INTRODUCED_AT_MS = 1793565420000L
+    private const val FIRST_RULE_SENTENCE = "Jede einzelne Frage kommt aus der Fülle."
+    private const val CURRENT_RULE_SENTENCE = "Jede einzelne erzeugte Frage kommt aus der Fülle."
+
     val ruleText = """
 $RULE_HEADING (geht allen anderen Stellen dieses Skills vor)
 
-Jede einzelne Frage kommt aus der Fülle. Der gewünschte Zustand ist schon da, das Ziel ist schon erreicht. Gefragt wird, warum es so ist und warum es erreicht wurde, nie, wie man es irgendwann in Zukunft erreichen könnte. Das ist der große Unterschied. Keine Frage hebt einen Mangel hervor, keine sucht einen Weg.
+Jede einzelne erzeugte Frage kommt aus der Fülle. Der gewünschte Zustand ist schon da, das Ziel ist schon erreicht. Gefragt wird, warum es so ist und warum es erreicht wurde, nie, wie man es irgendwann in Zukunft erreichen könnte. Das ist der große Unterschied. Keine Frage hebt einen Mangel hervor, keine sucht einen Weg.
 
 Die stärksten Fragewörter sind Warum, Weshalb und Wieso. Bevorzuge sie: Mindestens die Hälfte aller Fragen beginnt damit.
 „Warum habe ich einen sehr erholsamen Schlaf?“
@@ -63,6 +68,8 @@ Letzte Prüfung jeder einzelnen Frage: Könnte sie auch jemand stellen, dem das 
                 "🫀 Wie habe ich es geschafft, dass mein Herz nach der Anstrengung so schnell ruhig schlägt?",
         ),
         PreinstalledContent.CONSCIOUSNESS_IMAGE_SKILL_NAME to listOf(
+            "Sie erkunden, wie sich der bereits erfüllte Zustand jetzt anfühlt, zeigt, ausdrückt und auf das gesamte Erleben auswirkt." to
+                "Sie erkunden, warum sich der bereits erfüllte Zustand jetzt so gut anfühlt, woran er sich zeigt und wodurch er das gesamte Erleben prägt.",
             "„Wie fühlt sich deine kraftvolle Fitness gerade in deinem Körper an?“" to
                 "„Warum fühlt sich dein Körper gerade so kraftvoll an?“",
             "„Wie prägt deine starke körperliche Verfassung gerade dein Selbstbild?“" to
@@ -91,6 +98,10 @@ Letzte Prüfung jeder einzelnen Frage: Könnte sie auch jemand stellen, dem das 
                 "c) Gefühlsfrage mit dass-Satz — das Sein steht im Nebensatz und gilt damit als Tatsache:\n„Wie fühlt es sich an, dass ich stark bin?“\n„Was für ein Gefühl ist es, dass mein Körper mich trägt?“" to
                 "Eine Frage nach der Art und Weise unterstellt leicht, dass der Zustand noch erreicht werden muss. Deshalb ist nur eine Bauform erlaubt.\n\n" +
                 "Rückblickfrage in der Vergangenheitsform — der Zustand ist schon erreicht, gesucht wird der bereits gegangene Weg:\n„Wie habe ich es erreicht, dass ich mich frei fühle?“\n„Wie habe ich es geschafft, dass ich heute so ruhig bin?“",
+            "Sie erkunden, warum der erfüllte Zustand jetzt gilt, wie tief er sich zeigt, woran er erkennbar ist und wie er das Erleben prägt." to
+                "Sie erkunden, warum der erfüllte Zustand jetzt gilt, woran er erkennbar ist, wodurch er erreicht wurde und warum er das Erleben so prägt.",
+            "- Wie fühlt es sich an, … zu sein (reine Infinitivform ohne dass-Satz, denn sie beschreibt eine allgemeine Möglichkeit statt meines Zustands)" to
+                "- Wie fühlt es sich an, … (jede Wie-Frage im Präsens)\n- Wie tief ist …",
             "- Wieso …\n- Woran merke ich …" to "- Wieso …\n- Wodurch …\n- Woran merke ich …",
             "- Wie tief / wie stark / wie deutlich ist …\n- Wie habe ich es erreicht, dass …\n- Welchen Weg bin ich gegangen, damit …\n- Wie fühlt es sich an, dass ich … bin" to
                 "- Wie habe ich es erreicht, dass …\n- Wie habe ich es geschafft, dass …\n- Welchen Weg bin ich gegangen, damit …",
@@ -128,14 +139,24 @@ Letzte Prüfung jeder einzelnen Frage: Könnte sie auch jemand stellen, dem das 
     internal fun replacedPassages(skillName: String): List<String> =
         replacements[skillName].orEmpty().map { it.first }
 
-    /** Skills unter anderem Namen sind Franks eigene und bleiben unverändert. */
+    fun carriesRule(skillText: String): Boolean = skillText.contains(RULE_HEADING)
+
+    /**
+     * Ein Skill zählt als vorinstalliert über seinen Namen oder, falls umbenannt, über mindestens
+     * zwei alte Passagen. Alle anderen sind Franks eigene und bleiben unverändert.
+     */
     fun apply(skillName: String, text: String): String {
-        val edits = replacements[skillName] ?: return text
-        val replaced = edits.fold(text.replace("\r\n", "\n")) { current, (old, new) ->
+        val normalized = text.replace("\r\n", "\n")
+        val key = skillName.takeIf(replacements::containsKey)
+            ?: replacements.entries.firstOrNull { (_, edits) ->
+                edits.count { (old, _) -> normalized.contains(old) } >= 2
+            }?.key
+            ?: return text
+        val replaced = replacements.getValue(key).fold(normalized) { current, (old, new) ->
             current.replace(old, new)
-        }
+        }.replace(FIRST_RULE_SENTENCE, CURRENT_RULE_SENTENCE)
         if (replaced.contains(RULE_HEADING)) return replaced
-        val anchor = replaced.indexOf(insertBefore.getValue(skillName))
+        val anchor = replaced.indexOf(insertBefore.getValue(key))
         return if (anchor >= 0) {
             replaced.substring(0, anchor) + ruleText + "\n\n" + replaced.substring(anchor)
         } else {

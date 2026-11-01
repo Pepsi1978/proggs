@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class AbundanceSkillUpgradeTest {
     private val skills = mapOf(
@@ -25,11 +26,38 @@ class AbundanceSkillUpgradeTest {
 
     @Test
     fun everyContradictingPassageWasReplaced() {
+        // Die Rohtexte stehen in der Quelldatei: Nur so fällt eine Passage auf, die nie gepasst hat.
+        val source = File("src/main/java/de/frank/perfectmoment/data/local/PreinstalledContent.kt")
+            .readText()
+            .replace("\r\n", "\n")
         skills.forEach { (name, text) ->
             val passages = AbundanceSkillUpgrade.replacedPassages(name)
             assertTrue(passages.isNotEmpty())
-            passages.forEach { assertFalse("$name: $it", text.contains(it)) }
+            passages.forEach {
+                assertTrue("$name passt nicht: $it", source.contains(it))
+                assertFalse("$name: $it", text.contains(it))
+            }
         }
+    }
+
+    @Test
+    fun renamedPreinstalledSkillIsStillUpgraded() {
+        val raw = AbundanceSkillUpgrade.replacedPassages(PreinstalledContent.ASSUMPTION_BOOST_2_SKILL_NAME)
+            .take(2)
+            .joinToString("\n")
+
+        assertTrue(AbundanceSkillUpgrade.carriesRule(AbundanceSkillUpgrade.apply("Annahme 2", raw)))
+    }
+
+    @Test
+    fun firstRuleWordingIsLifted() {
+        val text = PreinstalledContent.assumptionBoostSkillText
+            .replace("Jede einzelne erzeugte Frage", "Jede einzelne Frage")
+
+        assertEquals(
+            PreinstalledContent.assumptionBoostSkillText,
+            AbundanceSkillUpgrade.apply(PreinstalledContent.ASSUMPTION_BOOST_SKILL_NAME, text),
+        )
     }
 
     @Test
@@ -50,11 +78,30 @@ class AbundanceSkillUpgradeTest {
 
     @Test
     fun seekingGoalQuestionsAreDroppedAndAbundantOnesStay() {
-        val validator = IncrementalQuestionValidator()
+        val validator = IncrementalQuestionValidator(enforceAbundance = true)
 
-        assertTrue(validator.accept("🌙 Wie erreiche ich, dass ich einen guten Schlaf habe?").isEmpty())
-        assertTrue(validator.accept("🌙 Wie kannst du besser schlafen?").isEmpty())
-        assertEquals(1, validator.accept("🌙 Wie habe ich es geschafft, dass es mir sehr gut geht?").size)
-        assertEquals(1, validator.accept("🌙 Weshalb fühle ich mich voller Frieden?").size)
+        listOf(
+            "Wie erreiche ich, dass ich einen guten Schlaf habe?",
+            "Wie kannst du besser schlafen?",
+            "Und wie kann ich ruhiger werden?",
+            "1. Wie kann ich ruhiger werden?",
+            "Das Ziel ist klar. Wie erreiche ich es?",
+            "Wie fühlt sich mein Körper an?",
+            "Wie tief ist meine Ruhe?",
+            "Was kann ich für besseren Schlaf tun?",
+            "Warum werde ich bald fit sein?",
+        ).forEach { assertTrue(it, validator.accept("🌙 $it").isEmpty()) }
+
+        listOf(
+            "Wie habe ich es geschafft, dass es mir sehr gut geht?",
+            "Wie habe ich genug Geld zusammenbekommen, um mir das neue Auto zu kaufen?",
+            "Weshalb fühle ich mich voller Frieden?",
+            "Wodurch ist meine Fitness so stark gestiegen?",
+        ).forEach { assertEquals(it, 1, validator.accept("🌙 $it").size) }
+    }
+
+    @Test
+    fun ownSkillsWithoutRuleAreNotFiltered() {
+        assertEquals(1, IncrementalQuestionValidator().accept("🌙 Wie kann ich ruhiger werden?").size)
     }
 }
