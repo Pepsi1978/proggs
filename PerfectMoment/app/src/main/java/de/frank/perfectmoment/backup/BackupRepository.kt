@@ -3,6 +3,7 @@ package de.frank.perfectmoment.backup
 import android.content.Context
 import android.os.Build
 import androidx.room.withTransaction
+import de.frank.perfectmoment.data.local.AbundanceSkillUpgrade
 import de.frank.perfectmoment.data.local.isZieleLeitsaetze
 import de.frank.perfectmoment.data.local.ZIELE_LEITSAETZE_QUELLE
 import de.frank.perfectmoment.data.local.PerfectMomentDatabase
@@ -98,7 +99,12 @@ class BackupRepository(
     private suspend fun apply(payload: BackupPayload): Summary {
         restoreVoiceProfiles(payload.voiceProfiles)
         payload.hooks.forEach { database.hookDao().upsertHook(it) }
-        payload.skills.forEach { database.skillDao().upsertSkill(it) }
+        // Ältere Sicherungen tragen noch die Skill-Texte ohne Fülle-Regel.
+        payload.skills.forEach { skill ->
+            database.skillDao().upsertSkill(
+                skill.copy(text = AbundanceSkillUpgrade.apply(skill.name, skill.text)),
+            )
+        }
 
         var restoredSessions = 0
         payload.sessions.forEach { entry ->

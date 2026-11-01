@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SkillEntity::class,
         HookEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 abstract class PerfectMomentDatabase : RoomDatabase() {
@@ -50,6 +50,7 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
                     Migration11To12,
                     Migration12To13,
                     Migration13To14,
+                    Migration14To15,
                 )
                     .addCallback(SeedCallback)
                     .build()
@@ -148,6 +149,29 @@ abstract class PerfectMomentDatabase : RoomDatabase() {
         private val Migration13To14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE sessions ADD COLUMN resumeQuestionOrder TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val Migration14To15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val stored = mutableListOf<Triple<Long, String, String>>()
+                db.query("SELECT id, name, text FROM skills").use { cursor ->
+                    while (cursor.moveToNext()) {
+                        stored += Triple(cursor.getLong(0), cursor.getString(1), cursor.getString(2))
+                    }
+                }
+                stored.forEach { (id, name, text) ->
+                    val upgraded = AbundanceSkillUpgrade.apply(name, text)
+                    if (upgraded != text) {
+                        db.update(
+                            "skills",
+                            SQLiteDatabase.CONFLICT_ABORT,
+                            ContentValues().apply { put("text", upgraded) },
+                            "id = ?",
+                            arrayOf(id),
+                        )
+                    }
+                }
             }
         }
 

@@ -160,7 +160,7 @@ internal fun codexPerspectiveRewritePayload(
         .put(
             "instructions",
             "Formuliere jede deutsche Frage grammatikalisch natürlich in $target um. Erhalte Bedeutung, " +
-                "Reihenfolge und Anzahl exakt. Ergänze keine Antworten, Erklärungen, Nummern oder Emojis.",
+                "Zeitform, Reihenfolge und Anzahl exakt. Ergänze keine Antworten, Erklärungen, Nummern oder Emojis.",
         )
         .put(
             "input",

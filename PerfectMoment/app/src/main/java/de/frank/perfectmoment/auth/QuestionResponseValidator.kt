@@ -192,6 +192,16 @@ internal class IncrementalQuestionValidator(
     fun accept(raw: String): List<CodexQuestion> =
         QuestionResponseValidator.splitIntoQuestions(raw).filter { question ->
             val normalized = QuestionResponseValidator.normalizeQuestion(question.text)
-            normalized.isNotEmpty() && seen.add(normalized)
+            normalized.isNotEmpty() && !isSeekingGoalQuestion(normalized) && seen.add(normalized)
         }
 }
+
+/** Suchende Zielfragen legen das Ziel in die Zukunft; sie dürfen nie vorgelesen werden. */
+internal fun isSeekingGoalQuestion(normalizedQuestion: String): Boolean =
+    SEEKING_GOAL_QUESTION.containsMatchIn(normalizedQuestion)
+
+private val SEEKING_GOAL_QUESTION = Regex(
+    "^wie (erreiche|erreichst|erreicht man|schaffe|schaffst|schafft man|kann|kannst|komme|kommst|" +
+        "kommt man|werde|wirst|wird man|finde|findest|findet man|bekomme|bekommst|bekommt man|" +
+        "gelingt|könnte|könntest|sollte|solltest)\\b",
+)

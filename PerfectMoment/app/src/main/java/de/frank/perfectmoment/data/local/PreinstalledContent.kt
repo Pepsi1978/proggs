@@ -19,7 +19,8 @@ object PreinstalledContent {
         "🔮" to "Wie fühlt sich ein Leben ohne Schmerzen an?",
     )
 
-    val researchTeamSkillText = """
+    // Die Rohtexte gehen durch AbundanceSkillUpgrade; dort stehen die geltenden Fülle-Formulierungen.
+    val researchTeamSkillText = AbundanceSkillUpgrade.apply(RESEARCH_TEAM_SKILL_NAME, """
 ROLLE & ZIEL
 
 Du bist ein 50-köpfiges interdisziplinäres Forschungsteam aus weltweit führenden
@@ -146,9 +147,9 @@ SICHERHEIT & REALISMUS
   invasiven Maßnahmen oder extremen Experimenten.
 - Deine Fragen sollen zu reflektierten, informierten Entscheidungen führen,
   nicht zu unkritischen Handlungen.
-""".trimIndent()
+""".trimIndent())
 
-    val assumptionQuestionsSkillText = """
+    val assumptionQuestionsSkillText = AbundanceSkillUpgrade.apply(ASSUMPTION_QUESTIONS_SKILL_NAME, """
 Rolle
 
 Du erzeugst Fragen, die das Bewusstsein des Nutzers neu ausrichten.
@@ -248,9 +249,9 @@ Eingabe: Ich möchte eine sehr gute Fitness haben — ein Ziel, also wird es als
 🌄 Woran merke ich beim Aufstehen, dass ich richtig fit bin?
 
 ⚡ Wieso habe ich abends noch so viel Kraft übrig?
-""".trimIndent()
+""".trimIndent())
 
-    val consciousnessImageSkillText = """
+    val consciousnessImageSkillText = AbundanceSkillUpgrade.apply(CONSCIOUSNESS_IMAGE_SKILL_NAME, """
 AUFGABE
 
 Erzeuge aus jeder Eingabe eine zusammenhängende Folge positiver, annahmenverstärkender Fragen.
@@ -498,9 +499,9 @@ Keine Nummerierung.
 Keine abschließende Rückfrage.
 
 Schreibe jede Frage in eine eigene Zeile und beginne sie mit einem inhaltlich passenden Emoji.
-""".trimIndent()
+""".trimIndent())
 
-    val assumptionBoostSkillText = """
+    val assumptionBoostSkillText = AbundanceSkillUpgrade.apply(ASSUMPTION_BOOST_SKILL_NAME, """
 AUFGABE
 
 Erzeuge aus jeder Eingabe eine zusammenhängende Folge positiver, annahmenverstärkender Fragen.
@@ -913,9 +914,9 @@ Keine Nummerierung.
 Keine abschließende Rückfrage.
 
 Schreibe jede Frage in eine eigene Zeile und beginne sie mit einem inhaltlich passenden Emoji.
-""".trimIndent()
+""".trimIndent())
 
-    val assumptionBoost2SkillText = """
+    val assumptionBoost2SkillText = AbundanceSkillUpgrade.apply(ASSUMPTION_BOOST_2_SKILL_NAME, """
 AUFGABE
 
 Erkenne in jeder Eingabe die gewünschte Annahme. Erzeuge daraus 30 Fragen, die diese Annahme als bereits wahr voraussetzen.
@@ -1256,5 +1257,5 @@ Erste Fragen:
 „Woran merke ich gerade, wie ruhig es in mir drin ist?“
 
 Das Problem aus der Eingabe erscheint in keiner einzigen Frage.
-""".trimIndent()
+""".trimIndent())
 }
