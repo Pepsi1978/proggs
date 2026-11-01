@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit
+import de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit
 import de.frank.jarvis.faehigkeit.KontingenteFaehigkeit.Companion.prozent
 import de.frank.jarvis.ui.theme.LocalFarben
@@ -29,13 +30,14 @@ import de.frank.jarvis.ui.theme.LocalFarben
 @Composable
 internal fun KontingenteReiter(vm: AppViewModel) {
     val f = LocalFarben.current
-    LaunchedEffect(Unit) { vm.kontingenteAbfragen(); vm.anthropicGuthabenAbfragen() }
+    LaunchedEffect(Unit) { vm.kontingenteAbfragen(); vm.anthropicGuthabenAbfragen(); vm.googleGuthabenAbfragen() }
     var anmelden by rememberSaveable { mutableStateOf<String?>(null) }
-    Knopf(if (vm.kontingenteLaedt || vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true); vm.anthropicGuthabenAbfragen(erzwingen = true) }
+    Knopf(if (vm.kontingenteLaedt || vm.anthropicGuthabenLaedt || vm.googleGuthabenLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true); vm.anthropicGuthabenAbfragen(erzwingen = true); vm.googleGuthabenAbfragen(erzwingen = true) }
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
         Bereich("Claude", startOffen = true) { ApiFreikontingent(vm) }
+        Bereich("Gemini / Antigravity (Google)", startOffen = true) { AiStudioUebersicht(vm) }
     } else {
         val jetzt = System.currentTimeMillis() / 1000
         stand.anbieter.forEach { a ->
@@ -66,6 +68,7 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                 if ((a.id == "claude" || a.id == "kimi") && (a.limits.isNotEmpty() || (a.anmeldenNoetig && a.hinweis?.contains("lehnt") == true))) {
                     Knopf("Abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kontingentAbmelden(a.id) }
                 }
+                if (a.id == "gemini") AiStudioUebersicht(vm)
             }
         }
     }
@@ -104,4 +107,40 @@ private fun ApiFreikontingent(vm: AppViewModel) {
         g?.hinweis?.let { Text(it, color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
         g?.standText()?.takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
     }
+}
+
+/** Freikontingent, Verbrauch und eingezahltes Geld aus AI Studio. Was Google nicht liefert, steht als „Nicht verfügbar“ da, nie als geschätzte Zahl. */
+@Composable
+private fun AiStudioUebersicht(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val g = vm.googleGuthaben
+    val b = GoogleGuthabenFaehigkeit::betrag
+    val rest = g?.restEur
+    val fehlt = if (vm.googleGuthabenLaedt) "Wird abgefragt …" else "Nicht verfügbar"
+    val keineGutschrift = g != null && rest != null && g.gutschriften.isEmpty()
+    Unterzeile("Google AI Studio")
+    Wert("Freikontingent verfügbar", when {
+        g == null || rest == null -> fehlt
+        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
+        else -> "${b(rest)} ${g.waehrung} von ${b(g.gewaehrt)} ${g.waehrung}"
+    })
+    // Google nennt nur noch laufende Gutschriften; Verbrauch aus bereits verfallenen zählt deshalb nicht mit.
+    Wert("Bisher verbraucht (laufende Gutschriften)", when {
+        g == null || rest == null -> fehlt
+        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
+        else -> "${b(g.verbraucht)} ${g.waehrung}"
+    })
+    val eingezahlt = g?.vorauszahlung
+    Wert("Selbst eingezahltes Guthaben", when {
+        g == null -> fehlt
+        eingezahlt == null -> if (rest == null || vm.googleGuthabenLaedt) fehlt else "Nicht verfügbar: Google hat den Betrag nicht geliefert."
+        g.vorauszahlungGelesen == g.geholt -> "${b(eingezahlt)} ${g.waehrung}"
+        else -> "${b(eingezahlt)} ${g.waehrung} · letzter lesbarer Betrag" +
+            (g.vorauszahlungGelesen.takeIf { it > 0 }?.let { " vom ${GoogleGuthabenFaehigkeit.datum(it / 1000)}" } ?: "")
+    })
+    if (g != null && rest != null && g.waehrung != "€") {
+        Text("Google führt dieses Konto in ${g.waehrung}. Jarvis rechnet nicht in Euro um, damit keine geschätzten Beträge entstehen.",
+            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+    }
+    Fuss(g?.standText().orEmpty(), g?.hinweis, vm.googleGuthabenLaedt) { vm.googleGuthabenAbfragen(erzwingen = true) }
 }

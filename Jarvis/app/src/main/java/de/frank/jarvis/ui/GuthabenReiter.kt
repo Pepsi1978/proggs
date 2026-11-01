@@ -144,45 +144,8 @@ private fun GoogleKarte(vm: AppViewModel) {
             Fuss(g.standText(), g.hinweis, vm.googleGuthabenLaedt) { vm.googleGuthabenAbfragen(erzwingen = true) }
             Knopf("Bei Google abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.googleAbmelden() }
         }
-        AiStudioUebersicht(vm)
     }
     if (anmelden) GoogleAnmeldung(onFertig = { anmelden = false; vm.googleAnmeldungPruefen() })
-}
-
-/** Freikontingent, Verbrauch und eingezahltes Geld aus AI Studio. Was Google nicht liefert, steht als „Nicht verfügbar“ da, nie als geschätzte Zahl. */
-@Composable
-private fun AiStudioUebersicht(vm: AppViewModel) {
-    val f = LocalFarben.current
-    val g = vm.googleGuthaben
-    val b = GoogleGuthabenFaehigkeit::betrag
-    val rest = g?.restEur
-    val fehlt = if (vm.googleGuthabenLaedt) "Wird abgefragt …" else "Nicht verfügbar"
-    val keineGutschrift = g != null && rest != null && g.gutschriften.isEmpty()
-    Unterzeile("Google AI Studio")
-    Wert("Freikontingent verfügbar", when {
-        g == null || rest == null -> fehlt
-        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
-        else -> "${b(rest)} ${g.waehrung} von ${b(g.gewaehrt)} ${g.waehrung}"
-    })
-    // Google nennt nur noch laufende Gutschriften; Verbrauch aus bereits verfallenen zählt deshalb nicht mit.
-    Wert("Bisher verbraucht (laufende Gutschriften)", when {
-        g == null || rest == null -> fehlt
-        keineGutschrift -> "Nicht verfügbar: Google meldet keine laufende Gutschrift."
-        else -> "${b(g.verbraucht)} ${g.waehrung}"
-    })
-    val eingezahlt = g?.vorauszahlung
-    Wert("Selbst eingezahltes Guthaben", when {
-        g == null -> fehlt
-        eingezahlt == null -> if (rest == null || vm.googleGuthabenLaedt) fehlt else "Nicht verfügbar: Google hat den Betrag nicht geliefert."
-        g.vorauszahlungGelesen == g.geholt -> "${b(eingezahlt)} ${g.waehrung}"
-        else -> "${b(eingezahlt)} ${g.waehrung} · letzter lesbarer Betrag" +
-            (g.vorauszahlungGelesen.takeIf { it > 0 }?.let { " vom ${GoogleGuthabenFaehigkeit.datum(it / 1000)}" } ?: "")
-    })
-    if (g != null && rest != null && g.waehrung != "€") {
-        Text("Google führt dieses Konto in ${g.waehrung}. Jarvis rechnet nicht in Euro um, damit keine geschätzten Beträge entstehen.",
-            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-    }
-    Fuss(g?.standText().orEmpty(), null, vm.googleGuthabenLaedt) { vm.googleGuthabenAbfragen(erzwingen = true) }
 }
 
 /** Deutlich, denn ohne die Konsole fällt nicht auf, was Claude-Modelle gerade kosten. Antippen führt zur Anmeldung. */
@@ -232,7 +195,7 @@ internal fun Balken(verbraucht: Float) {
 }
 
 @Composable
-private fun Wert(titel: String, wert: String) {
+internal fun Wert(titel: String, wert: String) {
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(titel, color = f.textLeise, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -252,7 +215,7 @@ private fun EigenesGeld(text: String, ok: Boolean) {
 }
 
 @Composable
-private fun Fuss(stand: String, hinweis: String?, laedt: Boolean, aktualisieren: () -> Unit) {
+internal fun Fuss(stand: String, hinweis: String?, laedt: Boolean, aktualisieren: () -> Unit) {
     val f = LocalFarben.current
     if (hinweis != null) Text(hinweis, color = f.gefahr, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
