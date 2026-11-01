@@ -72,12 +72,16 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val eigenesUsd: Double? = null,
         /** Betrag der jüngsten monatlichen Abo-Gewährung (z. B. 100 $); null = unbekannt. */
         val abobetragUsd: Double? = null,
+        /** Von der jüngsten, noch gültigen Abo-Gewährung verbraucht; null = keine solche Gewährung bekannt (z. B. abgelaufen). */
+        val freiVerbrauchtUsd: Double? = null,
     ) {
         /** Voraussichtlich nächstes Abo-Guthaben: einen Monat nach der letzten Gewährung. */
         val naechstes: java.time.LocalDate? get() = runCatching {
-            var d = OffsetDateTime.parse(gewaehrtAm).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate().plusMonths(1)
-            while (d.isBefore(java.time.LocalDate.now())) d = d.plusMonths(1)
-            d
+            val start = OffsetDateTime.parse(gewaehrtAm).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+            // Immer vom Gewährungstag aus zählen, sonst bleibt ein gekürztes Monatsende (31.01. → 28.02. → 28.03.) hängen.
+            var monate = 1L
+            while (start.plusMonths(monate).isBefore(java.time.LocalDate.now())) monate++
+            start.plusMonths(monate)
         }.getOrNull()
 
         /** Frühestes Verfallsdatum als Datum; null = keins bekannt. */
@@ -85,11 +89,6 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             .recoverCatching { Instant.parse(verfaellt).atZone(ZoneId.systemDefault()).toLocalDate() }.getOrNull()
 
         val verbrauchtUsd: Double? get() = gewaehrtUsd?.let { g -> restUsd?.let { (g - it).coerceAtLeast(0.0) } }
-
-        /** Vom monatlichen Abo-Guthaben verbraucht (eigene Credits zählen nicht); null = nicht ermittelbar. */
-        val freiVerbrauchtUsd: Double? get() = abobetragUsd?.let { abo ->
-            restUsd?.let { r -> eigenesUsd?.let { e -> (abo - (r - e)).coerceIn(0.0, abo) } }
-        }
 
         private fun eur(usd: Double): String = kurs?.let { " (≈ ${betrag(usd * it)} €)" } ?: ""
 
@@ -118,6 +117,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             append(zeile()).append('.')
             if (restUsd != null) {
                 append(" ").append(details()).append('.')
+                freiVerbrauchtUsd?.let { append(" Vom API-Freikontingent verbraucht: ").append(betrag(it)).append(" $ von 100 $.") }
                 kurs?.let { append(" Kurs 1 $ = ").append(String.format(Locale.GERMAN, "%.4f", it)).append(" € (EZB ").append(kursDatum).append(").") }
                 hinweis?.let { append(" ").append(it) }
             }
@@ -262,10 +262,17 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         fun gespeichert(context: Context): Stand? = runCatching {
             val j = JSONObject(datei(context).readText())
             if (!j.has("rest")) return null
+            val abo = if (j.has("abobetrag")) j.getDouble("abobetrag").takeIf { it > 0 } else null
+            // Stand-Dateien älterer Fassungen kennen das Feld noch nicht: bis zur nächsten Abfrage aus dem Gesamtrest genähert.
+            val frei = when {
+                j.has("aboVerbraucht") -> if (j.isNull("aboVerbraucht")) null else j.getDouble("aboVerbraucht")
+                abo != null && j.has("eigenes") -> (abo - (j.getDouble("rest") - j.getDouble("eigenes"))).coerceIn(0.0, abo)
+                else -> null
+            }
             Stand(j.getDouble("rest"), if (j.has("gewaehrt")) j.getDouble("gewaehrt") else null, j.optString("verfaellt"),
                 if (j.has("kurs")) j.getDouble("kurs") else null, j.optString("kursDatum"), j.optLong("geholt"),
                 gewaehrtAm = j.optString("gewaehrtAm"), eigenesUsd = if (j.has("eigenes")) j.getDouble("eigenes") else null,
-                abobetragUsd = if (j.has("abobetrag")) j.getDouble("abobetrag").takeIf { it > 0 } else null)
+                abobetragUsd = abo, freiVerbrauchtUsd = frei)
         }.getOrNull()
 
         /**
@@ -298,6 +305,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     // Selbst gekaufte Credits stehen in „tranches“, das Abo-Guthaben in „promo_tranches“.
                     var eigenes = 0.0
                     var abobetrag = 0.0
+                    var aboVerbraucht: Double? = null
                     listOf("tranches", "promo_tranches").forEach { feld ->
                         val t = c.optJSONArray(feld) ?: return@forEach
                         for (i in 0 until t.length()) {
@@ -308,6 +316,9 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                             if (feld == "promo_tranches" && am != null && (gewaehrtAmI == null || am > gewaehrtAmI)) {
                                 gewaehrtAmI = am
                                 abobetrag = betragAus(p.optJSONObject("granted"), p.optLong("granted_amount_minor_units"))
+                                // Eine abgelaufene Gewährung ist verfallen, nicht verbraucht.
+                                aboVerbraucht = if (ende != null && ende <= jetztI) null
+                                    else (abobetrag - betragAus(p.optJSONObject("remaining"), p.optLong("remaining_amount_minor_units"))).coerceIn(0.0, abobetrag)
                             }
                             if (ende != null && ende <= jetztI) continue
                             val restTranche = betragAus(p.optJSONObject("remaining"), p.optLong("remaining_amount_minor_units"))
@@ -327,21 +338,21 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     if (gewaehrt > 0) j.put("gewaehrt", gewaehrt)
                     kurs?.let { j.put("kurs", it) }
                     val gewaehrtAm = gewaehrtAmI?.toString().orEmpty()
-                    j.put("gewaehrtAm", gewaehrtAm).put("eigenes", eigenes).put("abobetrag", abobetrag)
+                    j.put("gewaehrtAm", gewaehrtAm).put("eigenes", eigenes).put("abobetrag", abobetrag).put("aboVerbraucht", aboVerbraucht ?: JSONObject.NULL)
                     datei(app).writeText(j.toString())
                     Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt, gewaehrtAm = gewaehrtAm, eigenesUsd = eigenes,
-                        abobetragUsd = abobetrag.takeIf { it > 0 }).also { _frisch.value = it }
+                        abobetragUsd = abobetrag.takeIf { it > 0 }, freiVerbrauchtUsd = aboVerbraucht).also { _frisch.value = it }
                 } catch (f: SitzungAbgelehnt) {
                     if (nr != anmeldungNr) return@withLock Stand(null, null, "", null, "", 0, "Die Anmeldung wurde gerade geändert; bitte gleich noch einmal abfragen.")
                     Logbuch.netz("Claude Console lehnt die Anmeldung ab", f.message.orEmpty())
                     ablehnungSetzen(app, true)
-                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Letzter Stand. ${f.message}", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd)
+                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Letzter Stand. ${f.message}", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd, alt.freiVerbrauchtUsd)
                     else Stand(null, null, "", null, "", 0, f.message)
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Anthropic-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
-                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd)
+                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd, alt.freiVerbrauchtUsd)
                     else Stand(null, null, "", null, "", 0, grund)
                 }
             }

@@ -3343,10 +3343,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Verbrauch der Anthropic-API im laufenden Monat gegen den Freibetrag (Einstellungen → Jarvis); null = noch nicht abgefragt. */
     var anthropicGuthaben by mutableStateOf<de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.Stand?>(null); private set
     var anthropicGuthabenLaedt by mutableStateOf(false); private set
+    /** Während einer laufenden Abfrage wurde „neu abfragen“ gedrückt: danach erzwungen nachholen. */
+    private var anthropicGuthabenNochmal = false
 
     /** Zeigt sofort den gespeicherten Stand und fragt frisch nach, wenn er älter als 15 Minuten ist oder [erzwingen]. */
     fun anthropicGuthabenAbfragen(erzwingen: Boolean = false) {
-        if (anthropicGuthabenLaedt) return
+        if (anthropicGuthabenLaedt) { if (erzwingen) anthropicGuthabenNochmal = true; return }
         val app = getApplication<Application>()
         anthropicGuthabenLaedt = true
         viewModelScope.launch {
@@ -3355,6 +3357,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
             anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet(app) }
             anthropicGuthabenLaedt = false
+            if (anthropicGuthabenNochmal) { anthropicGuthabenNochmal = false; anthropicGuthabenAbfragen(erzwingen = true) }
         }
     }
 

@@ -187,7 +187,7 @@ private fun Gross(betrag: String, unter: String) {
 
 /** Verbrauchter Anteil als Balken: hell der Rest, kräftig das Verbrauchte. */
 @Composable
-private fun Balken(verbraucht: Float) {
+internal fun Balken(verbraucht: Float) {
     val f = LocalFarben.current
     Box(Modifier.padding(top = 10.dp, bottom = 6.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.flaecheStark)) {
         Box(Modifier.fillMaxWidth(verbraucht.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.primaer))

@@ -31,10 +31,11 @@ internal fun KontingenteReiter(vm: AppViewModel) {
     val f = LocalFarben.current
     LaunchedEffect(Unit) { vm.kontingenteAbfragen(); vm.anthropicGuthabenAbfragen() }
     var anmelden by rememberSaveable { mutableStateOf<String?>(null) }
-    Knopf(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true); vm.anthropicGuthabenAbfragen(erzwingen = true) }
+    Knopf(if (vm.kontingenteLaedt || vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Jetzt neu abfragen", Modifier.fillMaxWidth(), haupt = false) { vm.kontingenteAbfragen(erzwingen = true); vm.anthropicGuthabenAbfragen(erzwingen = true) }
     val stand = vm.kontingente
     if (stand == null || stand.anbieter.isEmpty()) {
         Text(if (vm.kontingenteLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(4.dp))
+        Bereich("Claude", startOffen = true) { ApiFreikontingent(vm) }
     } else {
         val jetzt = System.currentTimeMillis() / 1000
         stand.anbieter.forEach { a ->
@@ -97,9 +98,8 @@ private fun ApiFreikontingent(vm: AppViewModel) {
             },
             color = if (verbraucht != null) f.text else f.textLeise, fontSize = if (verbraucht != null) 26.sp else 15.sp, fontWeight = if (verbraucht != null) FontWeight.Bold else FontWeight.Normal,
         )
-        Box(Modifier.padding(top = 6.dp, bottom = 6.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.flaecheStark)) {
-            Box(Modifier.fillMaxWidth(((verbraucht ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(f.primaer))
-        }
+        // Ohne Wert kein Balken: Ein leerer sähe wie „nichts verbraucht“ aus.
+        if (verbraucht != null) Balken((verbraucht / 100.0).toFloat())
         Text(g?.naechstes?.let { "Zurücksetzen voraussichtlich " + bis(it) } ?: "Rücksetzzeitpunkt nicht verfügbar", color = f.text, fontSize = 14.sp)
         g?.hinweis?.let { Text(it, color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
         g?.standText()?.takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
