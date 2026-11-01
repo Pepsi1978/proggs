@@ -12,7 +12,8 @@ set -u
 PAKET=de.frank.jarvis
 FENSTER=$PAKET/.ui.InstallFrageDienst
 ANTWORT=/sdcard/Android/data/$PAKET/files/install-antwort.txt
-ZWISCHENLAGER=/data/local/tmp/jarvis-install.apk
+# Je Lauf eine eigene Datei: Parallele Sitzungen überschreiben oder löschen sie sich sonst gegenseitig (INSTALL_PARSE_FAILED_NOT_APK).
+ZWISCHENLAGER=/data/local/tmp/jarvis-install-$$-$RANDOM.apk
 TEIL_IM_APK=assets/freigabe-teil.apk
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
 WARTEZEIT_S=33

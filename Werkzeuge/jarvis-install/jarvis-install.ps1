@@ -12,7 +12,8 @@ param([Parameter(Mandatory)][string]$Apk, [string]$Geraet = "")
 $paket = "de.frank.jarvis"
 $fenster = "$paket/.ui.InstallFrageDienst"
 $antwort = "/sdcard/Android/data/$paket/files/install-antwort.txt"
-$zwischenlager = "/data/local/tmp/jarvis-install.apk"
+# Je Lauf eine eigene Datei: Parallele Sitzungen überschreiben oder löschen sie sich sonst gegenseitig (INSTALL_PARSE_FAILED_NOT_APK).
+$zwischenlager = "/data/local/tmp/jarvis-install-$PID-$(Get-Random).apk"
 $teilImApk = "assets/freigabe-teil.apk"
 $teilDatei = ""
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
