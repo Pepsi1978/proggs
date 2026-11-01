@@ -46,12 +46,19 @@ class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObs
             }
             LockPrompt.UNLOCK_APP -> if (settings.appLockEnabled) _locked.value = false
             LockPrompt.DISABLE_LOCK -> disable()
-            LockPrompt.UNLOCK_KEYS -> if (settings.appLockEnabled) _keysUnlocked.value = true
+            LockPrompt.UNLOCK_KEYS -> if (settings.appLockEnabled && !_locked.value) _keysUnlocked.value = true
             null -> Unit
         }
     }
 
+    /** Eine neu aufgebaute Activity bekommt das Ergebnis der alten Abfrage nicht mehr; sonst bliebe sie ewig offen. */
+    fun cancelPendingPrompt() {
+        pendingPrompt.set(null)
+    }
+
     fun lockKeys() {
+        // Eine noch laufende Abfrage darf die Freigabe danach nicht nachträglich erteilen.
+        pendingPrompt.compareAndSet(LockPrompt.UNLOCK_KEYS, null)
         _keysUnlocked.value = false
     }
 

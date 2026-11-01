@@ -61,6 +61,9 @@ object AnthropicKlient {
     private const val URL = "https://api.anthropic.com/v1/messages"
     private const val FALLBACK_BETA = "server-side-fallback-2026-07-01"
     private const val FEHLER_PREFIX = "Anthropic-Fehler "
+    private const val KLARTEXT_DATEI = "anthropic_zugang_einfach"
+    private const val MINDESTLAENGE_SCHLUESSEL = 20
+    private val KEINE_API_SCHLUESSEL = listOf("sk-ant-oat", "sk-ant-ort", "sk-ant-sid", "sk-ant-admin")
     private val WARTEZEITEN_MS = longArrayOf(1_500, 4_000)
     private val JSON = "application/json; charset=utf-8".toMediaType()
     private val client = OkHttpClient.Builder()
@@ -71,31 +74,55 @@ object AnthropicKlient {
 
     @Volatile private var speicher: SharedPreferences? = null
 
-    /** Null, wenn der Keystore versagt: Dann wird lieber nichts gespeichert als der Schlüssel im Klartext. */
-    private fun speicher(context: Context): SharedPreferences? = speicher ?: synchronized(this) {
-        speicher ?: runCatching {
-            val key = MasterKey.Builder(context.applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-            EncryptedSharedPreferences.create(
-                context.applicationContext, "anthropic_zugang", key,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        }.getOrNull()?.also { speicher = it }
+    @Volatile private var speicherGeprueft = false
+
+    /**
+     * Null, wenn der Keystore versagt: Dann wird lieber nichts gespeichert als der Schlüssel im Klartext.
+     * Das Ergebnis bleibt gemerkt, sonst liefe bei einem defekten Keystore jeder Tastendruck in einen neuen Versuch.
+     */
+    private fun speicher(context: Context): SharedPreferences? {
+        if (speicherGeprueft) return speicher
+        return synchronized(this) {
+            if (!speicherGeprueft) {
+                speicher = runCatching {
+                    val key = MasterKey.Builder(context.applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+                    EncryptedSharedPreferences.create(
+                        context.applicationContext, "anthropic_zugang", key,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                    )
+                }.getOrNull()?.also { klartextUebernehmen(context, it) }
+                speicherGeprueft = true
+            }
+            speicher
+        }
+    }
+
+    /** Frühere Versionen legten bei einem Keystore-Fehler alles im Klartext ab: verschlüsselt übernehmen und löschen. */
+    private fun klartextUebernehmen(context: Context, sicher: SharedPreferences) {
+        runCatching {
+            val app = context.applicationContext
+            val ziel = sicher.edit()
+            app.getSharedPreferences(KLARTEXT_DATEI, Context.MODE_PRIVATE).all.forEach { (name, wert) ->
+                if (wert is String && !sicher.contains(name)) ziel.putString(name, wert)
+            }
+            if (ziel.commit()) app.deleteSharedPreferences(KLARTEXT_DATEI)
+        }
     }
 
     /** Anthropic-API-Schlüssel (sk-ant-…) von platform.claude.com. */
     fun schluessel(context: Context): String = speicher(context)?.getString("api_key", "").orEmpty().trim()
     fun hatSchluessel(context: Context): Boolean = istApiSchluessel(schluessel(context))
     /**
-     * Gesperrt wird nur sicher Unbrauchbares: Abo-Tokens (sk-ant-oat…) gelten nicht als x-api-key, und Zeichen
-     * außerhalb von ASCII lässt OkHttp im Header scheitern, samt Schlüssel in der Fehlermeldung. Das Präfix ist nicht
-     * dokumentiert (Franks Schlüssel beginnt mit sk-ant-user), über alles andere entscheidet deshalb die API.
+     * Nur was nach sk-ant- aussieht, geht an Anthropic, damit nie ein fremdes Geheimnis dorthin gelangt. Das Präfix
+     * danach bleibt offen (sk-ant-api…, Franks sk-ant-user…); ausgeschlossen sind nur bekannte Nicht-API-Zugänge.
+     * Zeichen außerhalb von ASCII ließen OkHttp im Header scheitern, samt Schlüssel in der Fehlermeldung.
      */
     fun istApiSchluessel(wert: String): Boolean =
-        wert.isNotBlank() && !wert.startsWith("sk-ant-oat") && wert.all { it.code in 0x21..0x7E }
-
-    /** Nur für den Hinweis am Eingabefeld, sperrt nichts. */
-    fun wirktWieAnthropicSchluessel(wert: String): Boolean = istApiSchluessel(wert) && wert.startsWith("sk-ant-")
+        wert.length >= MINDESTLAENGE_SCHLUESSEL &&
+            wert.startsWith("sk-ant-") &&
+            KEINE_API_SCHLUESSEL.none(wert::startsWith) &&
+            wert.all { it.code in 0x21..0x7E }
     fun schluesselSpeichern(context: Context, wert: String) {
         speicher(context)?.edit()?.putString("api_key", wert.trim())?.apply()
     }

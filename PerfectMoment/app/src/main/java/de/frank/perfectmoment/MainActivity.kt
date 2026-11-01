@@ -92,6 +92,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fingerprintPrompt = createFingerprintPrompt()
+        container.appLockManager.cancelPendingPrompt()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         microphoneGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
@@ -177,6 +178,12 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Sofort sperren: Der Prozess meldet sein Stopp erst rund 700 ms später, ein schneller App-Wechsel fiele durch.
+        if (!isChangingConfigurations) container.appLockManager.lockKeys()
+    }
+
     override fun onPostResume() {
         super.onPostResume()
         viewModel.leitsaetzeAktualisieren()
@@ -249,6 +256,11 @@ class MainActivity : FragmentActivity() {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 container.appLockManager.finishAuthentication(success = false)
+                // Ein Sensor-Lockout soll erklärt werden, ein eigener Abbruch nicht.
+                val selbstAbgebrochen = errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                    errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                    errorCode == BiometricPrompt.ERROR_CANCELED
+                if (!selbstAbgebrochen) viewModel.showMessage(errString.toString())
             }
 
             override fun onAuthenticationFailed() {

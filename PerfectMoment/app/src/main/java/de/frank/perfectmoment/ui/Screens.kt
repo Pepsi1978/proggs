@@ -427,7 +427,7 @@ fun StartScreen(
             if (!connected) {
                 val brauchtAnthropicKey = viewModel.model.istAnthropic
                 Text(
-                    if (brauchtAnthropicKey) "Bitte zuerst den Anthropic-API-Schlüssel eintragen" else "Bitte zuerst mit ChatGPT verbinden",
+                    if (brauchtAnthropicKey) ANTHROPIC_KEY_FEHLT else "Bitte zuerst mit ChatGPT verbinden",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,
@@ -1793,7 +1793,7 @@ fun SettingsScreen(
                     )
                     if (viewModel.anthropicKeyFalschHinweis) {
                         Text(
-                            "Das sieht nicht nach einem Anthropic-API-Schlüssel aus. Er beginnt mit sk-ant-; Anmelde-Tokens eines Claude-Abos (sk-ant-oat) gehen hier nicht.",
+                            "Das ist kein nutzbarer Anthropic-API-Schlüssel und wird nicht gesendet. Er beginnt mit sk-ant- und enthält keine Sonderzeichen; Anmelde-Tokens eines Claude-Abos gehen hier nicht.",
                             color = colors.warning,
                             fontFamily = Inter,
                             fontSize = 12.sp,
@@ -2037,8 +2037,15 @@ fun ApiKeyLock(
 ) {
     val unlocked by viewModel.apiKeysUnlocked.collectAsStateWithLifecycle()
     val locked = appLockEnabled && !unlocked
-    LaunchedEffect(locked) { if (locked) viewModel.hideApiKeys() }
-    DisposableEffect(Unit) { onDispose { viewModel.lockApiKeys() } }
+    // In beide Richtungen: Auch nach dem Freigeben stehen die Schlüssel zuerst verdeckt da.
+    LaunchedEffect(locked) { viewModel.hideApiKeys() }
+    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    DisposableEffect(Unit) {
+        onDispose {
+            // Auf- und Zuklappen baut die Activity neu auf, das ist kein Verlassen der Einstellungen.
+            if (activity?.isChangingConfigurations != true) viewModel.lockApiKeys()
+        }
+    }
     CompositionLocalProvider(LocalApiKeyUnlock provides unlockApiKeys.takeIf { locked }, content = content)
 }
 

@@ -388,8 +388,7 @@ class AppViewModel(
     var anthropicKey by mutableStateOf(AnthropicKlient.schluessel(appContext))
         private set
     val anthropicKeyNutzbar: Boolean get() = AnthropicKlient.istApiSchluessel(anthropicKey)
-    val anthropicKeyFalschHinweis: Boolean
-        get() = anthropicKey.isNotBlank() && !AnthropicKlient.wirktWieAnthropicSchluessel(anthropicKey)
+    val anthropicKeyFalschHinweis: Boolean get() = anthropicKey.isNotBlank() && !anthropicKeyNutzbar
     var showAnthropicKey by mutableStateOf(false)
         private set
     /** Gesetzt, wenn die Einstellungen bis zum Schlüsselfeld scrollen sollen. */
@@ -1016,8 +1015,13 @@ class AppViewModel(
     }
 
     fun updateAnthropicKey(value: String) {
-        anthropicKey = value.filterNot(Char::isWhitespace)
-        AnthropicKlient.schluesselSpeichern(appContext, anthropicKey)
+        val eingabe = value.filterNot(Char::isWhitespace)
+        AnthropicKlient.schluesselSpeichern(appContext, eingabe)
+        // Zurücklesen statt annehmen: Ohne Keystore wird nichts gespeichert, das Feld darf dann nichts vortäuschen.
+        anthropicKey = AnthropicKlient.schluessel(appContext)
+        if (eingabe.isNotEmpty() && anthropicKey.isEmpty()) {
+            message = "Der sichere Schlüsselspeicher ist nicht verfügbar. Der Schlüssel wurde nicht gespeichert."
+        }
     }
 
     fun toggleAnthropicKeyVisibility() {
