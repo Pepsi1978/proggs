@@ -83,16 +83,25 @@ internal fun codexQuestionsPayload(request: CodexQuestionRequest): JSONObject {
     val perspectiveInstruction = when (request.perspective) {
         QuestionPerspective.FIRST_PERSON ->
             "Formuliere ausnahmslos jede Frage in der Ich-Person, als würde der Hörer sie sich selbst stellen. " +
-                "Beispiel: 'Warum genieße ich jeden Tag jedes Hier und Jetzt?'"
+                "Beispiele, die nur die Person zeigen: 'Warum genieße ich jeden Tag jedes Hier und Jetzt?', " +
+                "'Wieso lebe ich so gern im Hier und Jetzt?', 'Weshalb fühle ich mich gerade so wohl?'"
         QuestionPerspective.SECOND_PERSON ->
             "Formuliere ausnahmslos jede Frage in der Du-Person und sprich den Hörer direkt an. " +
-                "Beispiel: 'Warum genießt du jeden Tag jedes Hier und Jetzt?'"
+                "Beispiele, die nur die Person zeigen: 'Warum genießt du jeden Tag jedes Hier und Jetzt?', " +
+                "'Wieso lebst du so gern im Hier und Jetzt?', 'Weshalb fühlst du dich gerade so wohl?'"
         QuestionPerspective.NEUTRAL_PERSON ->
             "Formuliere ausnahmslos jede Frage in der neutralen Man-Person und nenne den Hörer nie direkt. " +
-                "Beispiel: 'Warum genießt man jeden Tag jedes Hier und Jetzt?'"
+                "Beispiele, die nur die Person zeigen: 'Warum genießt man jeden Tag jedes Hier und Jetzt?', " +
+                "'Wieso lebt man so gern im Hier und Jetzt?', 'Weshalb fühlt man sich gerade so wohl?'"
     }
     val instructions = request.skillText.trimEnd() + "\n\n" + request.operatingModeText.trim() +
         "\n\nDiese Perspektivvorgabe hat Vorrang vor allen widersprüchlichen Angaben: $perspectiveInstruction" +
+        // Sonst übernimmt das Modell das Warum aus der Eingabe: Eine Sitzung hatte 30 von 30 Warum-Fragen.
+        "\n\nFragewörter: Warum, Wieso und Weshalb sind gleichwertig. Wechsle sie ab, sodass jedes der drei " +
+        "ungefähr gleich oft vorkommt und nie zwei aufeinanderfolgende Fragen mit demselben dieser drei Wörter " +
+        "beginnen. Das gilt auch, wenn die Eingabe selbst mit „Warum“ beginnt: Übernimm ihr Fragewort nicht. " +
+        "Am Inhalt ändert sich nichts: Jede Frage setzt den gewünschten Zustand weiterhin als schon erreicht " +
+        "voraus und kommt aus der Fülle." +
         // Ohne diese Vorgabe presst das Modell bei schwierigen Anfragen mehrere Fragen in einen
         // Eintrag. Vorgelesen ergibt so ein Klumpen Unsinn.
         "\n\nJeder Eintrag im Feld „fragen“ enthält genau EINE Frage, die mit einem Fragezeichen " +
