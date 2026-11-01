@@ -194,6 +194,7 @@ Quelle für alle Preise: https://developers.openai.com/api/docs/pricing [offizie
 | `gpt-5.6-terra` | 2,00 | 0,20 | 2,50 | 12,00 | none … max, Std. medium |
 | `gpt-6-sol` | 2,00 | 0,20 | 2,50 | 10,00 | none … max, Std. medium |
 | `gpt-6.1-sol` | 2,00 | 0,10 | 2,50 | 10,00 | low … max (**kein** none/minimal), Std. medium |
+| `gpt-6.1-terra` | 1,00 | 0,05 | 1,25 | 5,00 | low … max (**kein** none/minimal laut Codex-Modellliste, Stand 01.11.2026) |
 | `gpt-5.6-sol` (= `gpt-5.6`) | 4,00 | 0,40 | 5,00 | 20,00 (Aktion bis mind. 21.11.2026) | none … max, Std. medium |
 | `gpt-6-astra` | 10,00 | 1,00 | 12,50 | 50,00 | low … max (**kein** none), Std. unbelegt |
 | `gpt-5.5` | 5,00 | 0,50 | – | 30,00 | – |

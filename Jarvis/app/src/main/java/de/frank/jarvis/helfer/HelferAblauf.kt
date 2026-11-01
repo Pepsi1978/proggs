@@ -68,7 +68,7 @@ object BauStand {
 /** Modelle für die gründliche Recherche. Bewusst ohne Luna und Haiku; nur was die App wirklich anbietet. */
 object RechercheModelle {
     val ERLAUBT = listOf(CodexModel.SOL, CodexModel.ASTRA, CodexModel.TERRA, CodexModel.SONNET, CodexModel.OPUS, CodexModel.FABLE)
-    fun aus(wert: String): CodexModel = if (wert == "gpt-5.6-terra") CodexModel.TERRA else ERLAUBT.firstOrNull { it.apiId == wert } ?: CodexModel.SOL
+    fun aus(wert: String): CodexModel = ERLAUBT.firstOrNull { it.apiId == wert } ?: CodexModel.SOL
 }
 
 /**

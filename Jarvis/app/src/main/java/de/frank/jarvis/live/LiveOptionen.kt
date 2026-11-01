@@ -7,7 +7,7 @@ import java.util.Locale
 /**
  * Alle Einstellungen des Live-Gesprächs an einer Stelle: Einstellungs-Bildschirm, Jarvis' Einstellungs-Katalog und der
  * Aufbau der Sitzung lesen dieselbe Liste. Preise und Werte nach der OpenAI-Doku, Stand 16.10.2026, Modelle und Stimmen
- * Stand 28.10.2026 (developers.openai.com/api/docs/pricing, models/gpt-live-1, guides/live-delegation, guides/realtime-costs,
+ * Stand 28.10.2026, GPT-6.1 Terra Stand 01.11.2026 (developers.openai.com/api/docs/pricing, models/gpt-live-1, guides/live-delegation, guides/realtime-costs,
  * guides/live-conversations, changelog).
  *
  * Zwei Arten von Live-Gespräch: GPT-Live (`gpt-live-1`, eigener Endpunkt, 0,05 $ pro Minute plus Denk-Modell) und die
@@ -47,7 +47,7 @@ object LiveOptionen {
          */
         private fun migriert(id: String, w: String): String {
             if (id == "backend" && w.isNotBlank()) return de.frank.jarvis.auth.CodexModel.fromLabel(w).apiId
-            if (id == "j_modell" && w == "gpt-5.6-terra") return "gpt-6.1-terra"
+            if (id == "j_modell") return de.frank.jarvis.auth.CodexModel.aktuelleId(w)
             if (id != "rt_max" || w.isBlank() || ueber.containsKey(id)) return w
             val neu = when (val n = w.toIntOrNull()) {
                 null -> if (w == "inf") "4000" else w
@@ -79,10 +79,7 @@ object LiveOptionen {
         "gpt-6.1-terra" to Preis(1.00, 0.05, 5.00),
         "gpt-6-astra" to Preis(10.00, 1.00, 50.00),
     )
-    private val BACKEND_NAMEN = mapOf(
-        "gpt-6-luna" to "GPT-6 Luna", "gpt-6.1-sol" to "GPT-6.1 Sol",
-        "gpt-6.1-terra" to "GPT-6.1 Terra", "gpt-6-astra" to "GPT-6 Astra",
-    )
+    private fun backendName(id: String): String = de.frank.jarvis.auth.CodexModel.fromLabel(id).label
     private val BACKEND_TEXT = mapOf(
         "gpt-6-luna" to "Schnell und sehr günstig, von OpenAI als Start empfohlen. Für Gespräche fast immer genug.",
         "gpt-6.1-sol" to "Neueste Sol-Fassung, kein Effort „none“, auch mit Ultrafast.",
@@ -182,8 +179,8 @@ object LiveOptionen {
         "max" to Wahl("max", "Maximal", "Das Gründlichste. Neu, wird eventuell noch abgelehnt."),
     )
     private fun backendEfforts(modell: String): List<String> = when (modell) {
-        "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-astra" -> listOf("low", "medium", "high", "xhigh", "max")
-        else -> listOf("none", "low", "medium", "high", "xhigh", "max")
+        "gpt-6-luna" -> listOf("none", "low", "medium", "high", "xhigh", "max")
+        else -> listOf("low", "medium", "high", "xhigh", "max")
     }
     /** Denkstufe kostet Ausgabe-Tokens: grobe Zusatzmenge je Antwort für die Schätzung. */
     private val EFFORT_TOKENS = mapOf("none" to 0, "minimal" to 100, "low" to 300, "medium" to 1000, "high" to 3000, "xhigh" to 8000, "max" to 15000)
@@ -384,7 +381,7 @@ object LiveOptionen {
             }, gilt = { it.istLive }),
         Option("backend", "Live-Gespräch", "Denk-Modell",
             "Das Modell bei OpenAI, das für GPT-Live nachdenkt und Jarvis fragt. Für Sprache reicht meist das günstigste.",
-            "gpt-6-luna", { BACKENDS.map { (id, p) -> Wahl(id, BACKEND_NAMEN.getValue(id), BACKEND_TEXT.getValue(id), mio(p)) } },
+            "gpt-6-luna", { BACKENDS.map { (id, p) -> Wahl(id, backendName(id), BACKEND_TEXT.getValue(id), mio(p)) } },
             gilt = { it.denktBeiOpenAi }),
         Option("backend_effort", "Live-Gespräch", "Denkstufe des Denk-Modells",
             "Höher = gründlicher, aber teurer und längere Pausen.",
@@ -591,7 +588,7 @@ object LiveOptionen {
         if (!st.istLive) return "$m · Denkstufe " + (alle.first { it.id == "rt_effort" }.takeIf { it.gilt(st) }?.let { o -> o.werte(st).first { it.id == st["rt_effort"] }.titel } ?: "–") +
             " · Stimme " + st["stimme"]
         if (!st.denktBeiOpenAi) return "$m · " + jarvisDenktText(st) + " · Stimme " + st["stimme"]
-        val b = BACKEND_NAMEN.getValue(st["backend"])
+        val b = backendName(st["backend"])
         val e = EFFORTS.getValue(st["backend_effort"]).titel
         val t = alle.first { it.id == "tarif" }.werte(st).first { it.id == st["tarif"] }.titel
         return "$m · denkt mit $b, Stufe $e, Tarif $t · Stimme " + st["stimme"]

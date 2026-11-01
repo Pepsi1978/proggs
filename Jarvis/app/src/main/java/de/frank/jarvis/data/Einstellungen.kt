@@ -234,7 +234,7 @@ class Einstellungen private constructor(context: Context) {
     var helferParallel: Int get() = prefs.getInt("helfer_parallel", 2).coerceIn(1, 5); set(v) = put { putInt("helfer_parallel", v.coerceIn(1, 5)) }
     var helferProTag: Int get() = prefs.getInt("helfer_pro_tag", 10).coerceIn(1, 50); set(v) = put { putInt("helfer_pro_tag", v.coerceIn(1, 50)) }
     /** Modell der gründlichen Recherche im Werkzeugbau (apiId), Vorgabe Sol 6.1 mit High. Kleine Modelle stehen nicht zur Wahl. */
-    var rechercheModell: String get() = s("recherche_modell", "gpt-6.1-sol"); set(v) = put { putString("recherche_modell", v) }
+    var rechercheModell: String get() = CodexModel.aktuelleId(s("recherche_modell", "gpt-6.1-sol")); set(v) = put { putString("recherche_modell", v) }
     var rechercheEffort: String get() = s("recherche_effort", "high"); set(v) = put { putString("recherche_effort", v) }
     var rechercheParallel: Int get() = prefs.getInt("recherche_parallel", 3).coerceIn(1, 7); set(v) = put { putInt("recherche_parallel", v.coerceIn(1, 7)) }
 

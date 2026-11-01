@@ -319,7 +319,7 @@ class SecureSettings(context: Context) : Closeable {
     fun setzeLiveOption(id: String, wert: String) = writeString("liveopt_$id", wert)
 
     var model: String
-        get() = readString(Keys.MODEL, Defaults.MODEL)
+        get() = CodexModel.aktuelleId(readString(Keys.MODEL, Defaults.MODEL))
         set(value) {
             val effort = CodexModel.fromLabel(value).normalizeEffort(ReasoningEffort.fromLabel(reasoning))
             preferences?.edit()?.putString(Keys.MODEL, value)?.putString(Keys.REASONING, effort.apiValue)?.apply()

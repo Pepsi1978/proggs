@@ -27,6 +27,9 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
         effort.takeIf { it in supportedEfforts } ?: ReasoningEffort.MEDIUM
 
     companion object {
+        /** Gespeicherte Kennung eines abgelösten Modells auf den heutigen Eintrag; alle anderen bleiben unverändert. */
+        fun aktuelleId(id: String): String = if (id == "gpt-5.6-terra") TERRA.apiId else id
+
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)
         } ?: when {
