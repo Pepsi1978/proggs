@@ -50,7 +50,8 @@ object ProgrammierAbschluss {
     private val BELEG = Regex(
         """(📦 Committet)|(🔴 Commit fehlgeschlagen)|(⬆️ Gepusht)|(🔴 Push fehlgeschlagen)|(📲 Auf dem Handy installiert(?: \((WLAN|Tunnel|Kabel)\))?)""" +
             """|(🔴 Installation fehlgeschlagen)|(☁️ APK-Update für UpdateStation bereit)|(🔴 APK-Update fehlgeschlagen)""" +
-            """|(?i:\b(committet|gepusht|installiert|apk-update)\*{0,2}\s*:\s*\*{0,2}\s*(ja|nein|fehlgeschlagen)\b([^\n·;]*))""",
+            """|(?i:\b(committet|gepusht|installiert|apk-update)\*{0,2}\s*:\s*\*{0,2}\s*(ja|nein|fehlgeschlagen)\b([^\n·;]*))""" +
+            """|(⏸️ APK-Update ausgesetzt)""",
     )
 
     /**
@@ -77,6 +78,7 @@ object ProgrammierAbschluss {
                     stand[punkt] = s
                     if (punkt == Punkt.INSTALL) weg = if (s == Stand.JA) wegAus(g[12]) ?: weg else null
                 }
+                g[13].isNotEmpty() -> stand[Punkt.APK] = Stand.NEIN
             }
         }
         fun von(p: Punkt) = stand[p] ?: Stand.UNBEKANNT
@@ -129,7 +131,7 @@ object ProgrammierAbschluss {
         })
         append(' ')
         append(satz(f.apk, "Die APK liegt bei UpdateStation bereit.", "Das APK-Update für UpdateStation ist fehlgeschlagen.",
-            "Bei UpdateStation liegt noch keine neue APK.", "Ob eine APK bei UpdateStation bereitliegt, ist nicht bestätigt."))
+            "Bei UpdateStation liegt keine neue APK.", "Ob eine APK bei UpdateStation bereitliegt, ist nicht bestätigt."))
         append("\n\nDen vollständigen Bericht findest du im Chat der Programmier-Session.")
     }
 

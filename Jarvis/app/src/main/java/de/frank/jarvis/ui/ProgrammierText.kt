@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 private val WICHTIG = Regex(
     "(?:Committet|Gepusht|Installiert|APK-Update|Gemergt|Codex-Review|Version)\\s*:\\s*[^\\n,;]+" +
         "|Bau (?:erfolgreich|fehlgeschlagen)|(?:Push|Commit|Installation|APK-Update) fehlgeschlagen" +
-        "|Auf dem Handy installiert|APK-Update für UpdateStation bereit|Advisor wird befragt|Skill [\\w-]+ geladen" +
+        "|Auf dem Handy installiert|APK-Update für UpdateStation bereit|APK-Update ausgesetzt|Advisor wird befragt|Skill [\\w-]+ geladen" +
         "|Dauer seit Start: [^\\n]+|versionCode \\d+|\\bv?\\d+\\.\\d+\\.\\d+\\b|\\b[0-9a-f]{7,12}\\b(?=\\))",
 )
 private val FETT_MARKDOWN = Regex("\\*\\*(.+?)\\*\\*")

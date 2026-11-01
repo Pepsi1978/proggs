@@ -12,6 +12,7 @@ Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 Jarvis nie mit nacktem `adb install` installieren, sondern über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>` (Windows: `.ps1`).
 Es fragt per Overlay nach dem Zeitpunkt (`ui/InstallFrageDienst.kt`), damit eine laufende Aufnahme nicht abbricht; ohne Antwort installiert es nach 30 Sekunden.
 Technischer Schutz: Das Manifest verlangt den Pflicht-Teil `freigabe` (`requiredSplitTypes`). Gradle legt ihn signiert als `assets/freigabe-teil.apk` in die APK; nur jarvis-install und UpdateStation holen ihn heraus und installieren ihn mit. Nacktes `adb install` und `installDebug` scheitern daher mit `INSTALL_FAILED_MISSING_SPLIT`. UpdateStation ist die Rückfallebene für den Notfall: Es installiert den Teil mit, stellt aber bewusst keine Frage.
+Der Drive-Upload ist für Jarvis derzeit ausgesetzt (`driveUploadAusgesetzt` im Skill `apk-update`): Die Rückfallebene zeigt dann nur noch Cloud- und Server-Bauten; `APK_UPDATE_STATUS=ausgesetzt` ist kein Fehler.
 
 ## Live-Gespräch: erst lesen, danach messen
 Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Stille, Echosperre, Fadenprioritäten, Tonweg)

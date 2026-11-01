@@ -251,7 +251,7 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP 'apk-update.log'
           pwsh -NoProfile -File $env:SKRIPT -Projekt $env:PROJEKT -ProggsWurzel $env:GITHUB_WORKSPACE `
-            -UpdatesWurzel (Join-Path $env:RUNNER_TEMP 'Updates') -OhneGeraet 2>&1 | Tee-Object -FilePath $log
+            -UpdatesWurzel (Join-Path $env:RUNNER_TEMP 'Updates') -OhneGeraet -CloudBau 2>&1 | Tee-Object -FilePath $log
           $code = $LASTEXITCODE
           $zeilen = @(Get-Content $log)
           $status = "$(@($zeilen | Where-Object { $_ -like 'APK_UPDATE_STATUS=*' })[-1])" -replace '^APK_UPDATE_STATUS=', ''

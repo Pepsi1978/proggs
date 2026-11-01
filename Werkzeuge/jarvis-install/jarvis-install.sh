@@ -12,8 +12,11 @@ set -u
 PAKET=de.frank.jarvis
 FENSTER=$PAKET/.ui.InstallFrageDienst
 ANTWORT=/sdcard/Android/data/$PAKET/files/install-antwort.txt
-# Je Lauf eine eigene Datei: Parallele Sitzungen überschreiben oder löschen sie sich sonst gegenseitig (INSTALL_PARSE_FAILED_NOT_APK).
-ZWISCHENLAGER=/data/local/tmp/jarvis-install-$$-$RANDOM.apk
+# Am Handy immer nur ein Lauf: Zwischendatei, Antwortdatei und Overlay gibt es dort je nur einmal, auch über mehrere Rechner hinweg.
+SPERRE=/data/local/tmp/jarvis-install.sperre
+SPERRE_FRIST_S=900
+SPERRE_MEIN=""
+ZWISCHENLAGER=/data/local/tmp/jarvis-install.apk
 TEIL_IM_APK=assets/freigabe-teil.apk
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
 WARTEZEIT_S=33
@@ -60,14 +63,37 @@ SERIE=""
 TEIL_DATEI=""
 # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
 aufraeumen() {
-  [ -n "$GERAET" ] || return 0
-  [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
-  handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
+  # Nach einem Verbindungsabriss erst neu verbinden; auf einem anderen Gerät gehört uns dort nichts.
+  [ -n "$SERIE" ] || { [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"; return 0; }
+  if { [ -n "$GERAET" ] || verbinde; } && [ "$(handy getprop ro.serialno)" = "$SERIE" ] && [ -n "$SPERRE_MEIN" ]; then
+    [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
+    handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
+    handy rmdir "$SPERRE" >/dev/null
+  fi
   [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"
 }
 trap aufraeumen EXIT
 trap 'exit 130' INT TERM
 
+nimm_sperre() {
+  local bis alter jetzt
+  bis=$(( $(date +%s) + SPERRE_FRIST_S + 60 ))
+  while [ -n "$(handy mkdir "$SPERRE")" ]; do
+    # Ein abgestürzter Lauf hinterlässt die Sperre: Älter als jeder echte Lauf heißt verwaist.
+    alter=$(handy stat -c %Y "$SPERRE")
+    jetzt=$(handy date +%s)
+    # Gerade freigegeben oder Lesefehler: Dann ist hier nichts verwaist.
+    case "$alter$jetzt" in ''|*[!0-9]*) alter=$jetzt ;; esac
+    case "$jetzt" in ''|*[!0-9]*) alter=0; jetzt=0 ;; esac
+    [ $(( jetzt - alter )) -gt "$SPERRE_FRIST_S" ] && { handy rmdir "$SPERRE" >/dev/null; continue; }
+    [ "$(date +%s)" -ge "$bis" ] && ende fehler "Eine andere Jarvis-Installation blockiert das Handy"
+    [ -z "${SPERRE_GEMELDET:-}" ] && { echo "Eine andere Jarvis-Installation läuft, warte ..."; SPERRE_GEMELDET=1; }
+    sleep 3
+    verbinde || ende fehler "Handy nicht erreichbar"
+  done
+  SPERRE_MEIN=1
+  handy rm -f '/data/local/tmp/jarvis-install*.apk' >/dev/null
+}
 bereite_vor() {
   echo "Lade die APK vorab aufs Handy über $GERAET ..."
   "$ADB_BIN" -s "$GERAET" push "$APK" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "APK ließ sich nicht aufs Handy laden"
@@ -108,6 +134,7 @@ installiere() {
 
 verbinde || ende fehler "Handy nicht erreichbar"
 SERIE=$(handy getprop ro.serialno)
+nimm_sperre
 bereite_vor
 
 KENNUNG="$(date +%s)-$$"

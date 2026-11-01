@@ -36,6 +36,10 @@ param(
     [switch]$Vordergrund,
     # Einen hängenden Upload auch bei unverändertem Stand ersetzen.
     [switch]$UploadErsetzen,
+    # Nur der GitHub-Bau: Er lädt über GitHubs Leitung hoch und ist der einzige Weg von Cloud-Sitzungen aufs Handy, driveUploadAusgesetzt gilt für ihn nicht.
+    [switch]$CloudBau,
+    # Einmalige Veröffentlichung im Notfall, obwohl driveUploadAusgesetzt gesetzt ist.
+    [switch]$TrotzAussetzung,
     # Nur intern: Der eigenständige Upload-Prozess bekommt hier seine Auftragsdatei.
     [string]$UploadAuftrag = ''
 )
@@ -447,16 +451,19 @@ function Pruefe-Ordner([string]$ordner) {
     return $true
 }
 if ($Reparieren) {
+    # Unlesbar darf hier keinen Ordner aufhalten: Dann gilt nichts als ausgesetzt.
+    try { $reparierCfg = Get-Content (Join-Path $skillDir 'projekte.json') -Raw -Encoding utf8 | ConvertFrom-Json } catch { $reparierCfg = $null }
     if (-not (Test-Path $updatesDir -PathType Container)) { Fehler "Update-Ordner $updatesDir fehlt." }
     $ordnerListe = if ($Projekt -eq 'Alle') { @(Get-ChildItem $updatesDir -Directory | ForEach-Object FullName) }
         elseif ($Projekt -match '^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$' -and -not $Projekt.Contains('..') -and (Test-Path (Join-Path $updatesDir $Projekt) -PathType Container)) { @(Join-Path $updatesDir $Projekt) }
         else { Fehler "Update-Ordner für '$Projekt' fehlt." }
     $alleOk = $true
+    $ausgesetzte = 0
     # Gemeinsame Frist: Ein Drive-Ausfall hält den Lauf nicht je Ordner erneut auf.
     $script:gesamtFrist = (Get-Date).AddMinutes($UploadFristMinuten)
     foreach ($o in $ordnerListe) {
         $ordnerName = Split-Path $o -Leaf
-        if ((Get-Content (Join-Path $skillDir 'projekte.json') -Raw -Encoding utf8 | ConvertFrom-Json).projekte.$ordnerName.driveUploadAusgesetzt) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|ausgesetzt"; continue }
+        if ($reparierCfg.projekte.$ordnerName.driveUploadAusgesetzt -and -not $TrotzAussetzung) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|ausgesetzt|Nicht geprüft, der Upload ist ausgesetzt."; $ausgesetzte++; continue }
         if (Lies-Upload-Marker $ordnerName) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|Ein Upload läuft gerade im Hintergrund."; $alleOk = $false; continue }
         $ordnerSperre = Nimm-Sperre $ordnerName
         if (-not $ordnerSperre) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|Ein anderer apk-update-Lauf arbeitet gerade daran."; $alleOk = $false; continue }
@@ -469,7 +476,7 @@ if ($Reparieren) {
         } finally { $ordnerSperre.Dispose() }
     }
     Aufraeumen
-    Write-Host "APK_UPDATE_STATUS=$(if ($alleOk) { 'ok' } else { 'fehler' })"
+    Write-Host "APK_UPDATE_STATUS=$(if (-not $alleOk) { 'fehler' } elseif ($ausgesetzte -eq @($ordnerListe).Count) { 'ausgesetzt' } else { 'ok' })"
     exit $(if ($alleOk) { 0 } else { 1 })
 }
 
@@ -508,29 +515,35 @@ $quellen = @($Projekt) + @([regex]::Matches($gradleText, '\.\./([A-Za-z0-9][A-Za
 # --- Exklusiv pro Projekt: parallele Läufe (andere Sitzungen) dürfen sich nicht überschreiben ---
 $lauf = [guid]::NewGuid().ToString('N').Substring(0, 8)
 $script:sperre = Nimm-Sperre $Projekt
-if (-not $script:sperre) { Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut. Warten und erneut starten." }
+# Per projekte.json ausgesetzt: kein Bau, kein Upload, update.json bleibt beim bisherigen Stand, ein laufender Upload endet.
+$ausgesetzt = $eintrag.driveUploadAusgesetzt -and -not $CloudBau -and -not $TrotzAussetzung
+function Melde-Ausgesetzt {
+    Aufraeumen
+    Write-Host "APK_UPDATE_STATUS=ausgesetzt"
+    Write-Host "APK_UPDATE_HINWEIS=Drive-Upload für $Projekt ist ausgesetzt, nichts gebaut oder hochgeladen. Als 'APK-Update: nein (ausgesetzt)' melden. Wiedereinschalten: driveUploadAusgesetzt in projekte.json auf false. Einmalig im Notfall: -TrotzAussetzung."
+    exit 0
+}
+if (-not $script:sperre) {
+    if ($ausgesetzt) { Melde-Ausgesetzt }
+    Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut. Warten und erneut starten."
+}
 # Ohne laufenden Upload-Prozess können Reste eines abgestürzten weg.
 if (-not (Lies-Upload-Marker $Projekt)) {
     Get-ChildItem $sperrDir -Filter "$($Projekt.ToLowerInvariant()).job-*" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Upload-Marker $Projekt) -Force -ErrorAction SilentlyContinue
 }
+if ($ausgesetzt) {
+    $upload = Lies-Upload-Marker $Projekt
+    if ($upload) {
+        Write-Host "APK_UPDATE_ABGEBROCHEN=Upload von $($upload.apkDatei) beendet, der Drive-Upload für $Projekt ist ausgesetzt"
+        Beende-Upload $upload $Projekt
+    }
+    Melde-Ausgesetzt
+}
 $fehlerDatei = Join-Path $HOME "Library/Logs/apk-update/$Projekt.fehler"
 if (Test-Path -LiteralPath $fehlerDatei) {
     Write-Host "APK_UPDATE_WARNUNG=Der letzte Upload im Hintergrund ist gescheitert: $(Get-Content -LiteralPath $fehlerDatei -Raw -Encoding utf8)"
     Remove-Item -LiteralPath $fehlerDatei -Force -ErrorAction SilentlyContinue
-}
-# Per projekte.json ausgesetzt: kein Bau, kein Upload, update.json bleibt beim bisherigen Stand, ein laufender Upload endet.
-# Der GitHub-Bau bleibt davon frei: Er lädt über GitHubs Leitung hoch und ist der einzige Weg von Cloud-Sitzungen aufs Handy.
-if ($eintrag.driveUploadAusgesetzt -and -not $env:GITHUB_ACTIONS) {
-    $upload = Lies-Upload-Marker $Projekt
-    if ($upload) {
-        Write-Host "APK_UPDATE_ERSETZT=Upload von $($upload.apkDatei) abgebrochen, der Drive-Upload für $Projekt ist ausgesetzt"
-        Beende-Upload $upload $Projekt
-    }
-    Aufraeumen
-    Write-Host "APK_UPDATE_STATUS=ausgesetzt"
-    Write-Host "APK_UPDATE_HINWEIS=Drive-Upload für $Projekt ist ausgesetzt, nichts gebaut oder hochgeladen. Als 'APK-Update: nein (ausgesetzt)' melden. Wiedereinschalten: driveUploadAusgesetzt in projekte.json auf false."
-    exit 0
 }
 # Merkt einen Lauf, der update.json abgelegt, aber Signal und Aufräumen noch nicht erreicht hat.
 $offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"

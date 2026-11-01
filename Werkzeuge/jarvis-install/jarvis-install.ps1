@@ -12,8 +12,11 @@ param([Parameter(Mandatory)][string]$Apk, [string]$Geraet = "")
 $paket = "de.frank.jarvis"
 $fenster = "$paket/.ui.InstallFrageDienst"
 $antwort = "/sdcard/Android/data/$paket/files/install-antwort.txt"
-# Je Lauf eine eigene Datei: Parallele Sitzungen überschreiben oder löschen sie sich sonst gegenseitig (INSTALL_PARSE_FAILED_NOT_APK).
-$zwischenlager = "/data/local/tmp/jarvis-install-$PID-$(Get-Random).apk"
+# Am Handy immer nur ein Lauf: Zwischendatei, Antwortdatei und Overlay gibt es dort je nur einmal, auch über mehrere Rechner hinweg.
+$sperre = "/data/local/tmp/jarvis-install.sperre"
+$sperreFristS = 900
+$sperreMein = $false
+$zwischenlager = "/data/local/tmp/jarvis-install.apk"
 $teilImApk = "assets/freigabe-teil.apk"
 $teilDatei = ""
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
@@ -52,6 +55,22 @@ function Verbinde {
     return [bool]$script:Geraet
 }
 function Handy { (& $adb -s $script:Geraet shell @args 2>&1 | Out-String).Trim() }
+function Nimm-Sperre {
+    $bis = [DateTimeOffset]::Now.ToUnixTimeSeconds() + $sperreFristS + 60
+    $gemeldet = $false
+    while (Handy mkdir $sperre) {
+        # Ein abgestürzter Lauf hinterlässt die Sperre: Älter als jeder echte Lauf heißt verwaist.
+        $alter = 0
+        try { $alter = [long](Handy date +%s) - [long](Handy stat -c %Y $sperre) } catch { }
+        if ($alter -gt $sperreFristS) { Handy rmdir $sperre | Out-Null; continue }
+        if ([DateTimeOffset]::Now.ToUnixTimeSeconds() -ge $bis) { Ende fehler "Eine andere Jarvis-Installation blockiert das Handy" }
+        if (-not $gemeldet) { "Eine andere Jarvis-Installation läuft, warte ..." | Write-Host; $gemeldet = $true }
+        Start-Sleep -Seconds 3
+        if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
+    }
+    $script:sperreMein = $true
+    Handy rm -f "'/data/local/tmp/jarvis-install*.apk'" | Out-Null
+}
 function Installiere {
     if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
     # Nach einem Verbindungsabriss kann die Adresse wechseln (WLAN, Tunnel); die Sitzung gilt aber nur auf diesem Handy.
@@ -68,6 +87,7 @@ function Installiere {
 try {
     if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
     $serie = Handy getprop ro.serialno
+    Nimm-Sperre
 
     "Lade die APK vorab aufs Handy über $Geraet ..."
     & $adb -s $Geraet push $Apk $zwischenlager *> $null
@@ -103,7 +123,7 @@ try {
     $kennung = "$([DateTimeOffset]::Now.ToUnixTimeSeconds())-$PID"
     Handy rm -f $antwort | Out-Null
     $start = Handy am start-foreground-service -n $fenster --es kennung $kennung
-    if ($start -match "Not found") {
+    if ($start -cmatch "Not found") {
         # Die installierte Version kennt das Overlay noch nicht: nur dann ohne Rückfrage.
         "Installierte Jarvis-Version hat das Overlay noch nicht, installiere ohne Rückfrage."
         Installiere
@@ -140,8 +160,10 @@ try {
 finally {
     if ($teilDatei) { Remove-Item $teilDatei -Force -ErrorAction SilentlyContinue }
     # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
-    if ($Geraet) {
+    # Nach einem Verbindungsabriss erst neu verbinden; auf einem anderen Gerät gehört uns dort nichts.
+    if ($sperreMein -and (Verbinde) -and (Handy getprop ro.serialno) -eq $serie) {
         if ($sitzung -and -not $abgeschlossen) { Handy pm install-abandon $sitzung | Out-Null }
         Handy rm -f $zwischenlager $antwort | Out-Null
+        Handy rmdir $sperre | Out-Null
     }
 }
