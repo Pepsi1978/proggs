@@ -10,8 +10,9 @@ enum ClaudeUebergabe {
     /// Protokolls bleibt deshalb kurz; das volle Protokoll steht per Pfad im Auftrag.
     private static let protokollZeichen = 14000
 
-    /// Automatische Uebergaben je Programm hoechstens einmal in dieser Frist (Klick geht immer).
-    static let sperrfrist: TimeInterval = 6 * 3600
+    /// Only keeps a second session from working on the same failure while the first one still runs:
+    /// a program that fails again after that repair must reach a new session right away. A click always goes through.
+    static let sperrfrist: TimeInterval = 3600
 
     /// Nie zwei automatische Sitzungen zugleich: sie wuerden dieselben Dateien aendern und auf main pushen.
     /// Wer spaeter kommt, wartet und wird danach gegen die Sperrfrist geprueft -- verloren geht keiner.
@@ -53,10 +54,10 @@ enum ClaudeUebergabe {
         let (problem, vielleicht) = await startenKern(offen)
         if problem != nil {
             for ((eintrag, _), alt) in zip(offen, bisher) {
-                // Unklar (Launcher antwortete nicht): nur eine Stunde sperren statt sechs -- haengt er
-                // an einem Dialog, kommt der Fehler bald noch einmal an.
+                // Unclear (the launcher did not answer): lock only briefly -- if it hangs at a dialog,
+                // the failure soon gets through again.
                 einstellungen.fuer(eintrag.id).automatischUebergebenAm =
-                    vielleicht ? Date().addingTimeInterval(3600 - sperrfrist) : alt
+                    vielleicht ? Date().addingTimeInterval(15 * 60 - sperrfrist) : alt
             }
             einstellungen.speichern()
         }
@@ -161,15 +162,22 @@ enum ClaudeUebergabe {
         let zeit = DateFormatter()
         zeit.dateFormat = "dd.MM.yyyy, HH:mm:ss"
         var t = "Auftrag von der Updater-Zentrale (macOS): " + (faelle.count == 1 ? "Ein Update ist" : "\(faelle.count) Updates sind")
-           + " fehlgeschlagen. Analysiere die Ursache und behebe das Problem.\n"
+           + " fehlgeschlagen. Finde die Ursache, repariere sie dauerhaft und bring danach das Update zu Ende.\n"
         t += "Das kann am Update-Weg der Updater-Zentrale liegen (" + Pfade.projektOrdner
-           + ", Katalog programs.json) oder am Programm bzw. dessen Update-Skript selbst.\n\n"
-        t += "Gehe so vor:\n"
-        t += "1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln) (bei Bedarf in den Protokolldateien).\n"
-        t += "2. Bring das Update zu Ende. Nutze schon geladene Downloads im Homebrew- bzw. Paket-Cache und lade große Dateien nicht unnötig erneut.\n"
-        t += "3. Sorge dafür, dass dieser Fehler nicht wieder auftritt: Bau die Vorbeugung dauerhaft in die Updater-Zentrale ein "
-           + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall.\n"
-        t += "4. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest, damit die Updater-Zentrale aus jedem Fehler lernt.\n\n"
+           + ", Katalog programs.json) oder am Programm bzw. dessen Update-Skript selbst.\n"
+        t += "REVIEW: ja\n\n"
+        t += "Arbeite diese Schritte automatisch und genau in dieser Reihenfolge ab:\n"
+        t += "1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien).\n"
+        t += "2. Repariere dauerhaft, damit dieser Fehler beim nächsten Mal nicht mehr auftritt: Bau die Vorbeugung in die Updater-Zentrale ein "
+           + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
+           + "Kann dieselbe Ursache auch unter Windows auftreten, zieh ~/proggs/UpdateZentrale mit.\n"
+        t += "3. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest, damit die Updater-Zentrale aus jedem Fehler lernt. Committe und pushe die Änderungen.\n"
+        t += "4. Führe danach das Update der gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Downloads im Homebrew- bzw. Paket-Cache und lade große Dateien nicht unnötig erneut. "
+           + "Wirkt die Reparatur erst in der neu gebauten Updater-Zentrale, führe den reparierten Weg hier selbst aus.\n"
+        t += "5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe.\n"
+        t += "6. Baue als allerletzten Schritt die Updater-Zentrale neu: bash " + Pfade.projektOrdner
+           + "/update-zentrale.sh. Das Skript schließt die laufende Updater-Zentrale und startet die neue Fassung. "
+           + "Hat die Sitzung gar keinen Code geändert, entfallen Review und Neubau.\n\n"
         for (eintrag, bericht) in faelle {
             t += faelle.count > 1 ? "\n=== \(bericht.name) ===\n" : ""
             t += "Programm: \(bericht.name) (Id \(eintrag.id), Art \(eintrag.art))\n"

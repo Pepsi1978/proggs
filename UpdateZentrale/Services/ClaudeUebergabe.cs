@@ -30,8 +30,11 @@ public static class ClaudeUebergabe
     /// </summary>
     private const int ProtokollZeichen = 14000;
 
-    /// <summary>Automatische Uebergaben je Programm hoechstens einmal in dieser Frist (Klick geht immer).</summary>
-    public static readonly TimeSpan Sperrfrist = TimeSpan.FromHours(6);
+    /// <summary>
+    /// Only keeps a second session from working on the same failure while the first one still runs:
+    /// a program that fails again after that repair must reach a new session right away. A click always goes through.
+    /// </summary>
+    public static readonly TimeSpan Sperrfrist = TimeSpan.FromHours(1);
 
     /// <summary>
     /// Nie zwei automatische Sitzungen zugleich: sie aenderten dieselben Dateien und pushten auf main.
@@ -80,11 +83,11 @@ public static class ClaudeUebergabe
             var (problem, vielleicht) = await StartenKernAsync(offen);
             if (problem is not null)
             {
-                // Unklar (Launcher antwortete nicht): nur eine Stunde sperren statt sechs -- haengt er
-                // an einem Dialog, kommt der Fehler bald noch einmal an.
+                // Unclear (the launcher did not answer): lock only briefly -- if it hangs at a dialog,
+                // the failure soon gets through again.
                 for (var i = 0; i < offen.Count; i++)
                     einstellungen.Fuer(offen[i].Eintrag.Id).AutomatischUebergebenAm =
-                        vielleicht ? DateTime.Now - Sperrfrist + TimeSpan.FromHours(1) : bisher[i];
+                        vielleicht ? DateTime.Now - Sperrfrist + TimeSpan.FromMinutes(15) : bisher[i];
                 einstellungen.Speichern();
             }
             return new AutoErgebnis(problem is null || vielleicht, problem);
@@ -196,20 +199,28 @@ public static class ClaudeUebergabe
         return sb.ToString();
     }
 
-    private static string AuftragText(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
+    internal static string AuftragText(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
     {
+        var projekt = Path.Combine(Pfade.RepoWurzel, "UpdateZentrale");
         var sb = new StringBuilder();
         sb.AppendLine("Auftrag von der UpdateZentrale (Windows): " + (faelle.Count == 1 ? "Ein Update ist" : faelle.Count + " Updates sind")
-                      + " fehlgeschlagen. Analysiere die Ursache und behebe das Problem.");
-        sb.AppendLine("Das kann am Update-Weg der UpdateZentrale liegen (" + Path.Combine(Pfade.RepoWurzel, "UpdateZentrale")
+                      + " fehlgeschlagen. Finde die Ursache, repariere sie dauerhaft und bring danach das Update zu Ende.");
+        sb.AppendLine("Das kann am Update-Weg der UpdateZentrale liegen (" + projekt
                       + ", Katalog programs.json) oder am Programm bzw. dessen Update-Skript selbst.");
+        sb.AppendLine("REVIEW: ja");
         sb.AppendLine();
-        sb.AppendLine("Gehe so vor:");
+        sb.AppendLine("Arbeite diese Schritte automatisch und genau in dieser Reihenfolge ab:");
         sb.AppendLine("1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien).");
-        sb.AppendLine("2. Bring das Update zu Ende. Nutze schon geladene Installer und lade große Dateien nicht unnötig erneut.");
-        sb.AppendLine("3. Sorge dafür, dass dieser Fehler nicht wieder auftritt: Bau die Vorbeugung dauerhaft in die UpdateZentrale ein "
-                      + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall.");
-        sb.AppendLine("4. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest, damit die UpdateZentrale aus jedem Fehler lernt.");
+        sb.AppendLine("2. Repariere dauerhaft, damit dieser Fehler beim nächsten Mal nicht mehr auftritt: Bau die Vorbeugung in die UpdateZentrale ein "
+                      + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
+                      + "Kann dieselbe Ursache auch unter macOS auftreten, zieh " + Path.Combine(Pfade.RepoWurzel, "UpdaterZentrale-macOS") + " mit.");
+        sb.AppendLine("3. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest, damit die UpdateZentrale aus jedem Fehler lernt. Committe und pushe die Änderungen.");
+        sb.AppendLine("4. Führe danach das Update der gescheiterten Software zu Ende und prüfe die installierte Version nach. Nutze schon geladene Installer und lade große Dateien nicht unnötig erneut. "
+                      + "Wirkt die Reparatur erst in der neu gebauten UpdateZentrale, führe den reparierten Weg hier selbst aus.");
+        sb.AppendLine("5. Führe danach ohne Rückfrage das Standard-Code-Review über die Änderungen dieser Sitzung aus (Skill /code-review), behebe die Befunde, committe und pushe.");
+        sb.AppendLine("6. Baue als allerletzten Schritt die UpdateZentrale neu: pwsh -File \"" + Path.Combine(projekt, "update-zentrale.ps1")
+                      + "\", mit dem höchsten erlaubten Zeitlimit. Das Skript zeigt mir ein Ja/Nein-Fenster und schließt die laufende UpdateZentrale. "
+                      + "Bei cancelled oder no-answer nicht erneut starten, sondern melden. Hat die Sitzung gar keinen Code geändert, entfallen Review und Neubau.");
         foreach (var (eintrag, bericht) in faelle)
         {
             sb.AppendLine();

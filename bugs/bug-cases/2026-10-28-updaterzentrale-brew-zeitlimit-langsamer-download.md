@@ -24,6 +24,13 @@
 - `Kommandozeile.AusfuehrenAsync(…, lebenszeichen:)`: Das Zeitlimit zählt als Ruhezeit. winget wächst `%TEMP%\WinGet`, der Hersteller-Download per curl wächst die Zieldatei.
 - Einen Vorab-Download gibt es unter Windows nicht. `winget upgrade` nutzt einen vorher mit `winget download` geladenen Installer nicht und würde ihn ein zweites Mal laden.
 
+## Erweiterung der Übergabe (01.11.2026)
+
+- Ablauf der Sitzung jetzt fest: Ursache finden, dauerhaft reparieren, Almanach, Update zu Ende bringen, Standard-Code-Review (`REVIEW: ja`, ohne Rückfrage), UpdateZentrale als allerletzten Schritt neu bauen. Windows und macOS.
+- Die Sperrfrist beträgt nur noch 1 Stunde statt 6: Sie soll nur eine zweite Sitzung auf denselben Fehler verhindern, solange die erste läuft. Scheitert ein Programm nach der Reparatur erneut, muss das schnell wieder an eine Sitzung gehen. Antwortet der Launcher nicht, gelten 15 Minuten.
+- Windows: Ein Update, das mit einer Ausnahme abbrach, schrieb keinen Bericht und erreichte die Übergabe nie. `ProgrammViewModel.AusnahmeBerichten` schließt diese Lücke. Eine gesperrte Übergabe wird auf der Karte gemeldet.
+- Weiter ausgenommen: „nicht verifiziert“ und unter Windows die `LangsamesNetzMeldung`, weil eine Sitzung beides nicht beheben kann.
+
 ## Dateien
 
 - `UpdaterZentrale-macOS/UpdaterZentrale/Services/Kommandozeile.swift`

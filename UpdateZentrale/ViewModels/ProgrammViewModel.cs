@@ -365,6 +365,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
             if (ergebnis.Problem is not null) Melde(ergebnis.Problem);
             else if (ergebnis.Gestartet)
                 Melde("Fehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor.");
+            else
+                Melde("Dieser Fehler ging in der letzten Stunde schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung.");
         }
         catch (Exception diagAusnahme)
         {
@@ -976,6 +978,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         if (IstBeschaeftigt) { Doppelt(art); return; }
         IstBeschaeftigt = true;
+        var berichtBeiStart = LetzterBericht;
 
         using var vorgang = Diagnose.VorgangBeginnen(art, Eintrag, art + " " + Name);
         var fortschritt = new Progress<string>(zeile =>
@@ -1015,6 +1018,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             Protokollierung.Schreiben(Eintrag.Id, "[Ausnahme] " + ex);
             Diagnose.Ausnahme(ex, "karte", art + " " + Eintrag.Id);
             vorgang.Beenden("Ausnahme", ex.GetType().Name + ": " + ex.Message, Schwere.Fehler);
+            if (art == "update" && ReferenceEquals(LetzterBericht, berichtBeiStart)) AusnahmeBerichten(ex);
         }
         finally
         {
@@ -1022,6 +1026,40 @@ public sealed partial class ProgrammViewModel : ObservableObject
             ZustandAktualisieren();
             OnPropertyChanged(nameof(VersionsText));
             OnPropertyChanged(nameof(Protokoll));
+        }
+    }
+
+    /// <summary>
+    /// An update that ended in an exception is a failed update too: without this report it reached
+    /// neither the history nor the automatic hand-over to a session.
+    /// </summary>
+    private void AusnahmeBerichten(Exception ausnahme)
+    {
+        try
+        {
+            var kontext = _sammelKontext;
+            var bericht = new UpdateBericht
+            {
+                ProgrammId = Eintrag.Id,
+                Name = Name,
+                Art = Eintrag.Art,
+                Ergebnis = LaufErgebnis.Fehlgeschlagen,
+                Meldung = "Das Update brach mit einer Ausnahme ab: " + ausnahme.GetType().Name + ": " + ausnahme.Message,
+                Befehl = BefehlsBeschreibung(),
+                Erhoeht = Rechte.IstErhoeht,
+                ExitCode = 1,
+                SammelId = kontext?.Id,
+                SammelPhase = kontext?.Phase,
+                SammelPosition = kontext?.Position
+            };
+            Protokollierung.LaufBeenden(bericht);
+            LetzterBericht = bericht;
+            // Inside a batch the batch hands over all its failures in one session at its end.
+            if (kontext is null && ClaudeUebergabe.AutomatischRelevant(bericht)) _ = AutomatischUebergebenAsync(bericht);
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
         }
     }
 

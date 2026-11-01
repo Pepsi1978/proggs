@@ -316,7 +316,7 @@ final class ProgrammViewModel {
             statusText = (automatisch ? "Fehler automatisch" : "Problem mit \(name)")
                 + " an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
         } else {
-            statusText = "Dieser Fehler ging in den letzten Stunden schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung."
+            statusText = "Dieser Fehler ging in der letzten Stunde schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung."
         }
     }
 
