@@ -48,12 +48,13 @@ public static class ClaudeUebergabe
     private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
     /// <summary>
-    /// Every run the card shows as an error, including "not verified": the tool claimed success but the
-    /// state did not change. Only a line too slow for the tool's own download deadline is no code
-    /// problem and gets no session.
+    /// Every run the card shows as an error, including "not verified", which can also mean a state that
+    /// could not be read: the task tells the session to check that first. Exempt are a run the user
+    /// cancelled, and a line too slow for the tool's own download deadline, which is no code problem.
     /// </summary>
     public static bool AutomatischRelevant(UpdateBericht bericht)
         => bericht.IstFehler
+           && !bericht.OhneAutoUebergabe
            && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal);
 
     /// <param name="Gestartet">Eine Sitzung wurde (vermutlich) gestartet.</param>
@@ -222,7 +223,8 @@ public static class ClaudeUebergabe
         sb.AppendLine("REVIEW: ja");
         sb.AppendLine();
         sb.AppendLine("Arbeite diese Schritte automatisch und genau in dieser Reihenfolge ab:");
-        sb.AppendLine("1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien).");
+        sb.AppendLine("1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien). "
+                      + "Bei „Nicht verifiziert“ prüfe zuerst, ob das Update doch angekommen ist; dann ist nur die Erkennung zu reparieren.");
         sb.AppendLine("2. Repariere dauerhaft, damit dieser Fehler beim nächsten Mal nicht mehr auftritt: Bau die Vorbeugung in die UpdateZentrale ein "
                       + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
                       + "Kann dieselbe Ursache auch unter macOS auftreten, zieh " + Path.Combine(Pfade.RepoWurzel, "UpdaterZentrale-macOS") + " mit.");
@@ -239,7 +241,9 @@ public static class ClaudeUebergabe
         sb.AppendLine("- " + BeendenHinweis + " Eigene Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.");
         sb.AppendLine("- " + RueckfrageHinweis);
         sb.AppendLine("- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.");
-        sb.AppendLine("- Die UpdateZentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (winget, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden.");
+        sb.AppendLine("- Die UpdateZentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (winget, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden. "
+                      + "Schritt 6 schließt die App und bräche so einen Sammellauf ab: Trägt die letzte Zeile von " + Protokollierung.SammelDatei
+                      + " das Ereignis „plan“ oder „fortsetzung“, läuft er noch. Warte dann vor Schritt 6 auf sein Ende, höchstens zwei Stunden.");
         foreach (var (eintrag, bericht) in faelle)
         {
             sb.AppendLine();

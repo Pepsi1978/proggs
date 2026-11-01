@@ -75,6 +75,9 @@ public sealed class UpdateBericht
     public int? SammelPhase { get; set; }
     public int? SammelPosition { get; set; }
 
+    /// <summary>The user cancelled this run and the program is complete: no session starts on its own.</summary>
+    public bool OhneAutoUebergabe { get; set; }
+
     public string ErgebnisText => Ergebnis switch
     {
         LaufErgebnis.Erfolgreich => "Erfolgreich",

@@ -721,6 +721,7 @@ public sealed partial class HauptViewModel : ObservableObject
         // Failures go to a session at once. Only while the own tools and the CLI-critical updates are
         // still ahead do they wait: those steps ask to close all terminals and would end that session.
         var fehlerHalten = plan.Any(s => s.Phase <= Sammelplan.PhaseCli);
+        var uebergabeLaeuft = false;   // what fails during a launcher start goes into the next, shared session
         string? abschlussStatus = null;
         PruefGesamt = Math.Max(plan.Count, 1);
         PruefFertig = 0;
@@ -744,8 +745,13 @@ public sealed partial class HauptViewModel : ObservableObject
 
         void FehlerFreigeben()
         {
-            fehlerHalten = false;
-            if (offeneFehler.Count == 0) return;
+            if (fehlerHalten)
+            {
+                fehlerHalten = false;
+                foreach (var s in plan) s.Programm.AktionsstandMelden();   // a cancelled card's hand-over button may open now
+            }
+            if (uebergabeLaeuft || offeneFehler.Count == 0) return;
+            uebergabeLaeuft = true;
             var faelle = offeneFehler.ToList();
             offeneFehler.Clear();
             _ = FehlerUebergebenAsync(faelle);
@@ -755,9 +761,11 @@ public sealed partial class HauptViewModel : ObservableObject
         async Task FehlerUebergebenAsync(List<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
         {
             string hinweis;
+            var problem = false;
             try
             {
                 var ergebnis = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
+                problem = ergebnis.Problem is not null;
                 hinweis = ergebnis.Problem
                           ?? (ergebnis.Gestartet
                               ? "Fehler von " + string.Join(", ", faelle.Select(f => f.Bericht.Name)) + " automatisch an Claude Code übergeben."
@@ -767,13 +775,20 @@ public sealed partial class HauptViewModel : ObservableObject
             {
                 Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
                 hinweis = "Übergabe an Claude Code fehlgeschlagen: " + diagAusnahme.Message;
+                problem = true;
             }
 
-            if (uebergabeHinweise.Contains(hinweis)) return;
-            uebergabeHinweise.Add(hinweis);
-            if (abschlussStatus is null) Anzeigen();
-            // Something else ran meanwhile: do not falsify its status with this batch's result.
-            else if (KopfStatus == abschlussStatus) KopfStatus = abschlussStatus = abschlussStatus + "  ·  " + hinweis;
+            if (!uebergabeHinweise.Contains(hinweis))
+            {
+                uebergabeHinweise.Add(hinweis);
+                if (abschlussStatus is null) Anzeigen();
+                else if (KopfStatus == abschlussStatus) KopfStatus = abschlussStatus = abschlussStatus + "  ·  " + hinweis;
+                // Something else ran meanwhile: leave its status alone, unless the repair did not start at all.
+                else if (problem) KopfStatus += "  ·  " + hinweis;
+            }
+
+            uebergabeLaeuft = false;
+            if (!fehlerHalten) FehlerFreigeben();
         }
 
         void Abschluss(string ereignis) => Protokollierung.SammellaufSchreiben(new
@@ -800,6 +815,7 @@ public sealed partial class HauptViewModel : ObservableObject
                     offeneFehler.Add((s.Programm.Eintrag, bericht));
                     if (!fehlerHalten) FehlerFreigeben();
                 }
+                if (bericht is { Ergebnis: LaufErgebnis.Abgebrochen }) s.Programm.ImSammelFreigeben(() => !fehlerHalten);
                 return bericht;
             }
             finally
@@ -855,7 +871,12 @@ public sealed partial class HauptViewModel : ObservableObject
                 _einstellungen.Speichern();
             }
 
-            var letzteHaltephase = rest.Where(s => s.Phase <= Sammelplan.PhaseCli).Select(s => s.Phase).DefaultIfEmpty(0).Max();
+            void HalteSchrittFertig(int erledigt)
+            {
+                if (!rest.Any(s => s.Phase > erledigt && s.Phase <= Sammelplan.PhaseCli)) FehlerFreigeben();
+            }
+
+            HalteSchrittFertig(0);   // nothing critical at all, or only the self-update that just ran
             foreach (var phase in rest.GroupBy(s => s.Phase).OrderBy(g => g.Key))
             {
                 var schritte = phase.ToList();
@@ -876,7 +897,7 @@ public sealed partial class HauptViewModel : ObservableObject
                         fertig += schritte.Count;
                         cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen.";
                         Anzeigen();
-                        if (phase.Key >= letzteHaltephase) FehlerFreigeben();
+                        HalteSchrittFertig(phase.Key);
                         continue;
                     }
                 }
@@ -913,7 +934,7 @@ public sealed partial class HauptViewModel : ObservableObject
                     Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.cli_fertig", KopfStatus, sammelId);
                 }
 
-                if (phase.Key >= letzteHaltephase) FehlerFreigeben();
+                HalteSchrittFertig(phase.Key);
             }
 
             var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
@@ -934,6 +955,7 @@ public sealed partial class HauptViewModel : ObservableObject
             // Also after an exception in the batch: what is still held must not get lost with it.
             abschlussStatus = KopfStatus;
             FehlerFreigeben();
+            foreach (var s in plan) s.Programm.ImSammelFreigeben(null);
         }
     }
 

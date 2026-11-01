@@ -130,6 +130,11 @@ final class UpdateKette {
             let ergebnis = await aktualisierer.aktualisieren(eintrag, protokoll)
             arbeitSekunden += Date().timeIntervalSince(arbeitBeginn)
 
+            // Von Hand abgebrochen: der Aufrufer liest den echten Stand nach, kein Nachwarten und kein Folgedurchlauf.
+            if AbbruchMarke.aktuell?.istAbgebrochen == true {
+                return ende(.abgebrochen, "Abgebrochen.", ergebnis)
+            }
+
             if ergebnis.zustand == .abgebrochen {
                 var k = ergebnis
                 k.zustand = .abgebrochen

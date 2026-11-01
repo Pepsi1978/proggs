@@ -26,6 +26,17 @@ keine Claude-Code-Sitzung, und in der Diagnose stand kein einziges `uebergabe`-E
 - Die Übergabe läuft nebenher und hält weder andere Updates noch den Sammelbesitz auf.
 - Jeder automatische Start schreibt `uebergabe/auto.start` in die Diagnose.
 
+## Abbruch per Knopf (1.3.69, 1.0.41)
+
+- Ein Abbruch wird an genau einer Stelle beurteilt (`NachAbbruchAsync`, `nachAbbruch`), egal was ein Anbieter
+  aus dem beendeten Befehl gemacht hat: Der echte Stand wird nachgelesen, ein schon fertiger Installer zählt
+  als erledigt. Von selbst geht danach nur ein unvollständig hinterlassenes Programm an eine Sitzung.
+- Kein Knopf bei Repo-Skripten und Sitzungsstarts: Ein beendetes Skript ließe sein Programm geschlossen oder halb
+  gebaut zurück, und die Mac-Projektregel verbietet das Beenden fremder Skripte.
+- Die Übergabe per Knopf umgeht die Sperre nur im laufenden Sammellauf, nur für dort abgebrochene Karten und erst,
+  wenn keine Phase mehr aussteht, die Terminals schließt.
+- Sitzungen warten vor dem Neubau der App auf das Ende eines laufenden Sammellaufs (Auftragstext, Schritt 6).
+
 ## Vorbeugung
 
 Eine Reaktion auf einen Fehler nie an das Ende eines Laufs hängen, dessen Dauer offen ist. Fehlt in der

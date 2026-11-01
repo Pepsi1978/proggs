@@ -24,9 +24,9 @@ enum ClaudeUebergabe {
     /// tells them how to share main. Who comes later waits and is then checked against the lock.
     @MainActor private static var automatischLaeuft = false
 
-    /// Jeder Lauf, den die Karte als Fehler zeigt, auch "nicht verifiziert": das Werkzeug meldete Erfolg,
-    /// der Stand aenderte sich aber nicht.
-    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.istFehler }
+    /// Jeder Lauf, den die Karte als Fehler zeigt, auch "nicht verifiziert", was auch einen nicht lesbaren
+    /// Stand meinen kann: der Auftrag laesst das zuerst pruefen. Ausgenommen ist ein vom Benutzer abgebrochener Lauf.
+    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.istFehler && !bericht.ohneAutoUebergabe }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
     struct AutoErgebnis { var gestartet = false; var problem: String? }
@@ -174,7 +174,8 @@ enum ClaudeUebergabe {
            + ", Katalog programs.json) oder am Programm bzw. dessen Update-Skript selbst.\n"
         t += "REVIEW: ja\n\n"
         t += "Arbeite diese Schritte automatisch und genau in dieser Reihenfolge ab:\n"
-        t += "1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien).\n"
+        t += "1. Finde die Ursache im Protokoll unten (bei mehreren Fehlern: jeden einzeln, bei Bedarf in den Protokolldateien). "
+           + "Bei „Nicht verifiziert“ prüfe zuerst, ob das Update doch angekommen ist; dann ist nur die Erkennung zu reparieren.\n"
         t += "2. Repariere dauerhaft, damit dieser Fehler beim nächsten Mal nicht mehr auftritt: Bau die Vorbeugung in die Updater-Zentrale ein "
            + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall. "
            + "Kann dieselbe Ursache auch unter Windows auftreten, zieh ~/proggs/UpdateZentrale mit.\n"
@@ -189,7 +190,9 @@ enum ClaudeUebergabe {
         t += "- Beende andere laufende Programme nicht ohne Rückfrage. Eigene Werkzeuge (OpenLauncher, TVO, CVO, Updater-Zentrale) nur über ihre Update-Skripte nach den Regeln der CLAUDE.md.\n"
         t += "- Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.\n"
         t += "- Andere Sitzungen können parallel an diesem Repo arbeiten: Lies die Versionsnummer direkt vor dem Bump frisch und committe nur deine eigenen Pfade.\n"
-        t += "- Die Updater-Zentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (brew, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden.\n\n"
+        t += "- Die Updater-Zentrale kann währenddessen noch weitere Updates ausführen. Meldet dein Update eine Sperre (brew, npm), warte und versuche es erneut, statt fremde Prozesse zu beenden. "
+           + "Schritt 6 schließt die App und bräche so einen Sammellauf ab: Trägt die letzte Zeile von " + Protokollierung.sammelDatei
+           + " das Ereignis „plan“ oder „fortsetzung“, läuft er noch. Warte dann vor Schritt 6 auf sein Ende, höchstens zwei Stunden.\n\n"
         for (eintrag, bericht) in faelle {
             t += faelle.count > 1 ? "\n=== \(bericht.name) ===\n" : ""
             t += "Programm: \(bericht.name) (Id \(eintrag.id), Art \(eintrag.art))\n"

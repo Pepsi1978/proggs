@@ -5,8 +5,6 @@ struct BefehlErgebnis: Sendable {
     let exitCode: Int
     let ausgabe: String
     let abgelaufen: Bool
-    /// Beendet durch den Abbrechen-Knopf; `abgelaufen` ist dann auch gesetzt, die Anbieter behandeln beides gleich.
-    var abgebrochen: Bool = false
 }
 
 /// Der Abbrechen-Knopf einer Karte. Liegt als Task-Local um den ganzen Update-Lauf, damit jeder Aufruf von
@@ -176,7 +174,7 @@ enum Kommandozeile {
         let wurdeAbgebrochen = { abbruch?.istAbgebrochen == true }
         // Schon abgebrochen: kein weiterer Schritt desselben Updates startet mehr.
         if wurdeAbgebrochen() {
-            return BefehlErgebnis(exitCode: -1, ausgabe: "Abgebrochen.", abgelaufen: true, abgebrochen: true)
+            return BefehlErgebnis(exitCode: -1, ausgabe: "Abgebrochen.", abgelaufen: true)
         }
         guard FileManager.default.isExecutableFile(atPath: datei) else {
             return BefehlErgebnis(exitCode: -1,
@@ -255,12 +253,10 @@ enum Kommandozeile {
                 Thread.sleep(forTimeInterval: 0.05)
             }
         }
-        var abgebrochen = false
         if prozess.isRunning && (zeitlimit > 0 || wurdeAbgebrochen()) {
             // Erst freundlich, dann hart -- ein haengender Installer soll die App nicht binden.
             // Der ganze Prozessbaum geht mit: ein Installer-Kind, das weiterlaeuft, hielte
             // sonst das Programm (und die Ausgabe-Pipe) fest.
-            abgebrochen = wurdeAbgebrochen()
             let nachfahren = prozessbaum(prozess.processIdentifier)
             prozess.terminate()
             for pid in nachfahren { kill(pid, SIGTERM) }
@@ -291,8 +287,7 @@ enum Kommandozeile {
 
         return BefehlErgebnis(exitCode: Int(prozess.terminationStatus),
                               ausgabe: saeubern(text),
-                              abgelaufen: abgelaufen,
-                              abgebrochen: abgebrochen)
+                              abgelaufen: abgelaufen)
     }
 
     /// Alle Nachfahren eines Prozesses (Kinder, Enkel …), ermittelt ueber `pgrep -P`.

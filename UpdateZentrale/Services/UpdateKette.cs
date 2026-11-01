@@ -117,6 +117,8 @@ public sealed class UpdateKette
             var arbeit = System.Diagnostics.Stopwatch.StartNew();
             var ergebnis = await _aktualisierer.AktualisierenAsync(_eintrag, _protokoll, abbruch);
             arbeitSekunden += arbeit.Elapsed.TotalSeconds;
+            // Cancelled: the caller reads the real state back, no settling or follow-up pass from here.
+            abbruch.ThrowIfCancellationRequested();
 
             if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
             {

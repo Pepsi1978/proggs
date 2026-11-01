@@ -100,15 +100,34 @@ final class ProgrammViewModel {
     /// Der Benutzer hat das letzte Update dieser Karte abgebrochen; ein neues Update setzt das zurueck.
     private var vomNutzerAbgebrochen = false
 
-    var kannAbbrechen: Bool { abbruchMarke.map { !$0.istAbgebrochen } ?? false }
+    /// Vom Sammellauf gesetzt fuer eine Karte, an der er vorbei ist: darf gerade eine Sitzung starten?
+    private var uebergabeImSammel: (() -> Bool)?
 
-    /// Eine gerade abgebrochene Karte darf auch waehrend des Sammellaufs an eine Sitzung: der Lauf ist
-    /// an ihr vorbei, und oft bricht man genau deshalb ab.
-    var uebergabeNachAbbruch: Bool {
-        vomNutzerAbgebrochen && !istBeschaeftigt && letzterBericht?.ergebnis == .abgebrochen
+    /// Nicht fuer Repo-Skripte und Sitzungsstarts: Skripte fremder Projekte beendet die App nie (CLAUDE.md),
+    /// und eine vom Launcher schon gestartete Sitzung stoppte ohnehin nicht.
+    private var abbruchMoeglich: Bool {
+        let art = eintrag.art.lowercased()
+        return art != "reposkript" && art != "opencodesitzung"
     }
 
-    /// Beendet das laufende Update dieser Karte samt Prozessbaum; das Update bleibt danach offen.
+    var kannAbbrechen: Bool { abbruchMoeglich && (abbruchMarke.map { !$0.istAbgebrochen } ?? false) }
+
+    /// Eine im laufenden Sammellauf abgebrochene Karte darf an eine Sitzung, obwohl er die Sperre haelt: er
+    /// ist an ihr vorbei. Aber erst, wenn keine Phase mehr aussteht, die das Terminal der Sitzung schliesst.
+    private var uebergabeNachAbbruch: Bool {
+        vomNutzerAbgebrochen && !istBeschaeftigt && letzterBericht?.ergebnis == .abgebrochen && uebergabeImSammel?() == true
+    }
+
+    var kannCliKnopf: Bool { (aktionMoeglich || uebergabeNachAbbruch) && !uebergibtAnClaude }
+
+    func imSammelFreigeben(_ erlaubt: (() -> Bool)?) {
+        uebergabeImSammel = erlaubt
+        melden()
+    }
+
+    func aktionsstandMelden() { melden() }
+
+    /// Beendet das laufende Update dieser Karte; danach wird der echte Stand nachgelesen (`nachAbbruch`).
     /// Fragt zuerst, denn ein beendeter Installer kann ein halb ersetztes Programm hinterlassen.
     func updateAbbrechen() {
         guard kannAbbrechen else { return }
@@ -383,8 +402,12 @@ final class ProgrammViewModel {
         }
 
         let eigen: Freigabe
-        if uebergabeNachAbbruch && koordination.belegt {
+        let ohneSperre = uebergabeNachAbbruch && koordination.belegt
+        if ohneSperre {
             eigen = Freigabe(nil)
+            // Ohne Sperre kann der Sammellauf waehrend des Launcher-Starts enden: zuerst vormerken,
+            // damit nichts dieses Update erneut anbietet.
+            uebergabeMerken(Date())
         } else {
             guard let erworben = erwerben(nil, "uebergabe") else { return }
             eigen = erworben
@@ -397,7 +420,11 @@ final class ProgrammViewModel {
                                                                         befehl: befehlsBeschreibung(), beendenZugestimmt: beendenNoetig,
                                                                         skriptZugestimmt: skriptFragen)
         // Ein stummer Launcher hat die Sitzung meist doch gestartet: ein zweiter Klick darf keine weitere starten.
-        if problem == nil || vielleicht { uebergabeMerken(Date()) }
+        if problem == nil || vielleicht {
+            uebergabeMerken(Date())
+        } else if ohneSperre {
+            uebergabeMerken(nil)
+        }
         Diagnose.ereignis(problem == nil ? .info : .warnung, "uebergabe", "update.uebergeben",
                           problem ?? "\(name) an eine CLI-Sitzung übergeben.",
                           ["programm": eintrag.id, "ziel": verfuegbareVersion])
@@ -504,6 +531,7 @@ final class ProgrammViewModel {
 
             var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
             var liefVorher = false
+            var vomUpdateGeschlossen = false
 
             // Schon in der Vorpruefung abgebrochen: keine Frage und kein Beenden mehr.
             if urteil == nil && marke?.istAbgebrochen == true {
@@ -536,12 +564,18 @@ final class ProgrammViewModel {
                         urteil = KettenUrteil(ergebnis: .fehlgeschlagen, meldung: problem,
                                               fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
                                               fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
+                    } else if marke?.istAbgebrochen == true {
+                        // Waehrend des Vorab-Downloads abgebrochen: das Programm bleibt offen.
+                        urteil = KettenUrteil(ergebnis: .abgebrochen, meldung: "Abgebrochen.",
+                                              fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
+                                              fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
                     } else {
                         self.statusText = "Beendet das Programm …"
                         fortschritt.berichte("Beende " + self.eintrag.alleProzesse.joined(separator: ", ")
                                              + (self.eintrag.alleProzesse.isEmpty ? self.name : ""))
                         let beendet = await Prozessdienst.beenden(self.eintrag)
                         if let problem = beendet.problem { fortschritt.berichte(problem) }
+                        vomUpdateGeschlossen = beendet.erfolgreich
                         if !beendet.erfolgreich {
                             karte.zustand = .fehler
                             urteil = KettenUrteil(ergebnis: .fehlgeschlagen,
@@ -557,23 +591,21 @@ final class ProgrammViewModel {
             }
             var ende = urteil!
 
-            // Von Hand abgebrochen: die Anbieter sehen darin ein abgelaufenes Kommando und melden einen Fehler.
-            // Das Update ist aber nur weiter offen, die Karte bietet es (und die CLI-Uebergabe) wieder an.
-            let nutzerAbbruch = marke?.istAbgebrochen == true && ende.ergebnis != .erfolgreich
+            // Die eine Stelle, die einen Abbruch beurteilt: Die Anbieter sehen darin ein abgelaufenes Kommando
+            // und melden einen Fehler. Nur was das Update wirklich erreicht hat, bleibt stehen; der Stand wird nachgelesen.
+            let nutzerAbbruch = marke?.istAbgebrochen == true
+                && (ende.ergebnis == .fehlgeschlagen || ende.ergebnis == .nichtVerifiziert || ende.ergebnis == .abgebrochen)
             if nutzerAbbruch {
-                ende.ergebnis = .abgebrochen
-                ende.meldung = "Vom Nutzer abgebrochen – der Prozessbaum wurde beendet."
-                ende.fingerabdruckNachher = vorher
-                ende.updateLiefDurch = false
-                ende.fuerKarte.zustand = angebotVorher.istLeer ? .abgebrochen : .updateVerfuegbar
-                ende.fuerKarte.verfuegbareVersion = angebotVorher
-                ende.fuerKarte.meldung = "Abgebrochen – das Update ist weiter offen."
+                ende = await self.nachAbbruch(ende, vorher: vorher, vorPruefung: vorPruefung,
+                                              angebotVorher: angebotVorher, fortschritt)
             }
 
             // Ein abgebrochenes oder gescheitertes Update kann die App halb ersetzt zuruecklassen
             // (alte geloescht, neue nicht fertig verschoben). Das muss als eigener Befund sichtbar werden.
             // Auch bei einer schon vorher kaputten App: der Hinweis zum Neuinstallieren bleibt dann stehen.
+            var programmFehlt = false
             if ende.ergebnis != .erfolgreich, let fehlt = Programmpruefung.vollstaendig(self.eintrag, pfadVorLauf: pfadVorLauf) {
+                programmFehlt = true
                 fortschritt.berichte("⚠ " + fehlt)
                 ende.ergebnis = .fehlgeschlagen
                 ende.meldung = fehlt + " Vorheriger Befund: " + ende.meldung
@@ -583,9 +615,9 @@ final class ProgrammViewModel {
 
             // Einmal neu starten, nach der ganzen Kette -- nie zwischen Durchlaeufen, wo ein
             // laufendes Ziel den naechsten Installer blockieren wuerde.
-            // Auch nach einem Abbruch: das Update hat das Programm geschlossen, es soll nicht zu bleiben.
+            // Auch nach einem Abbruch, wenn dieses Update das Programm geschlossen hat: es soll nicht zu bleiben.
             if self.eintrag.neuStartenNachUpdate && liefVorher
-                && (ende.updateLiefDurch || (nutzerAbbruch && ende.ergebnis == .abgebrochen)) {
+                && (ende.updateLiefDurch || (nutzerAbbruch && vomUpdateGeschlossen && !Prozessdienst.laeuft(self.eintrag))) {
                 fortschritt.berichte("Startet \(self.name) neu.")
                 Prozessdienst.starten(self.eintrag)
             }
@@ -605,6 +637,8 @@ final class ProgrammViewModel {
             bericht.dauerSekunden = (dauer * 10).rounded() / 10
             bericht.arbeitSekunden = ende.arbeitSekunden
             bericht.updateAufrufe = ende.updateAufrufe
+            // Nach einem Abbruch geht nur ein unvollstaendig hinterlassenes Programm von selbst an eine Sitzung.
+            bericht.ohneAutoUebergabe = nutzerAbbruch && !programmFehlt
             bericht.sammelId = kontext?.id
             bericht.sammelPhase = kontext?.phase
             bericht.sammelPosition = kontext?.position
@@ -690,6 +724,46 @@ final class ProgrammViewModel {
         default:
             return eintrag.art
         }
+    }
+
+    // MARK: - Abbruch
+
+    /// Was ein abgebrochenes Update wirklich hinterlassen hat, ohne die gesetzte Marke gelesen: Ein schon
+    /// fertiger Installer zaehlt als erledigt, und die Karte zeigt das Angebot der Pruefung statt des Abbruchs.
+    private func nachAbbruch(_ bisher: KettenUrteil, vorher: String, vorPruefung: PruefErgebnis,
+                             angebotVorher: String, _ fortschritt: Fortschritt) async -> KettenUrteil {
+        guard let aktualisierer else { return bisher }
+        statusText = "Abgebrochen – prüft den Stand …"
+        let eintrag = self.eintrag
+        // Ohne Marke: mit ihr startete kein Lese-Kommando mehr.
+        let (stand, jetzt) = await AbbruchMarke.$aktuell.withValue(nil) { () async -> (String, PruefErgebnis) in
+            let gelesen = await aktualisierer.fingerabdruck(eintrag)
+            let pruefung = await aktualisierer.pruefen(eintrag, fortschritt)
+            return (gelesen, pruefung)
+        }
+
+        var urteil = bisher
+        urteil.fingerabdruckNachher = stand.istLeer ? "(nicht lesbar)" : stand
+        var karte = jetzt
+        if jetzt.zustand == .aktuell {
+            let bewegt = !stand.istLeer && !vorher.istLeer && stand != vorher
+            urteil.ergebnis = bewegt ? .erfolgreich : .bereitsAktuell
+            urteil.meldung = bewegt ? "Das Update war beim Abbruch schon durch: \(vorher) → \(stand)"
+                                    : "Abgebrochen, die Prüfung meldet aber den aktuellen Stand."
+            urteil.updateLiefDurch = bewegt
+            karte.meldung = "Auf dem neuesten Stand."
+        } else {
+            let angebot = [jetzt.verfuegbareVersion, vorPruefung.verfuegbareVersion, angebotVorher]
+                .first { !$0.istLeer } ?? ""
+            urteil.ergebnis = .abgebrochen
+            urteil.meldung = "Vom Nutzer abgebrochen."
+            urteil.updateLiefDurch = false
+            karte.zustand = angebot.istLeer ? .abgebrochen : .updateVerfuegbar
+            karte.verfuegbareVersion = angebot
+            karte.meldung = "Abgebrochen – das Update ist weiter offen."
+        }
+        urteil.fuerKarte = karte
+        return urteil
     }
 
     // MARK: - Lauf-Rahmen

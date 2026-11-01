@@ -355,6 +355,9 @@ struct UpdateBericht: Codable {
     var sammelPhase: Int?
     var sammelPosition: Int?
 
+    /// Vom Benutzer abgebrochen und das Programm ist vollstaendig: keine Sitzung von selbst.
+    var ohneAutoUebergabe: Bool = false
+
     var ergebnisText: String {
         switch ergebnis {
         case .erfolgreich: return "Erfolgreich"

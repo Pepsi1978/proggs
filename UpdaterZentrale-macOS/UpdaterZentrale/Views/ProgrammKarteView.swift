@@ -283,7 +283,7 @@ final class ProgrammKarteView: KartenView {
         abbrechenSchalter.isHidden = !modell.kannAbbrechen
 
         cliSchalter.isHidden = !modell.kannAnCliUebergeben
-        cliSchalter.isEnabled = (modell.aktionMoeglich || modell.uebergabeNachAbbruch) && !modell.uebergibtAnClaude
+        cliSchalter.isEnabled = modell.kannCliKnopf
 
         pruefenSchalter.isEnabled = modell.kannPruefen
         startenSchalter.isEnabled = modell.kannStarten

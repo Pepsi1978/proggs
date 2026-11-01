@@ -162,20 +162,44 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// <summary>The user cancelled this card's last update; a new update clears it.</summary>
     private bool _vomNutzerAbgebrochen;
 
-    public bool KannAbbrechen => _updateAbbruch is { IsCancellationRequested: false };
+    /// <summary>Set by the batch for a card it is past; asks whether a session may start right now.</summary>
+    private Func<bool>? _uebergabeImSammel;
 
     /// <summary>
-    /// A card the user just cancelled can go to a session even while the batch still runs: the batch
-    /// is past this card, and the point of cancelling is often to let a session take over.
+    /// Not for repo scripts and session starts: a script killed after closing its program leaves it
+    /// closed or half built, and a session the launcher already started would not stop anyway.
+    /// </summary>
+    private bool AbbruchMoeglich => !Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase)
+                                    && !Eintrag.Art.Equals("opencodesitzung", StringComparison.OrdinalIgnoreCase);
+
+    public bool KannAbbrechen => AbbruchMoeglich && _updateAbbruch is { IsCancellationRequested: false };
+
+    /// <summary>
+    /// A card cancelled inside the running batch can go to a session while that batch still holds the
+    /// lock: the batch is past it. Only once no phase ahead would close the session's terminal.
     /// </summary>
     private bool UebergabeNachAbbruch => _vomNutzerAbgebrochen && !IstBeschaeftigt
-                                         && LetzterBericht is { Ergebnis: LaufErgebnis.Abgebrochen };
+                                         && LetzterBericht is { Ergebnis: LaufErgebnis.Abgebrochen }
+                                         && _uebergabeImSammel?.Invoke() == true;
 
     public bool KannCliKnopf => AktionMoeglich || UebergabeNachAbbruch;
 
+    internal void ImSammelFreigeben(Func<bool>? erlaubt)
+    {
+        _uebergabeImSammel = erlaubt;
+        AktionsstandMelden();
+    }
+
+    /// <summary>The two properties behind the update and hand-over buttons always change together.</summary>
+    internal void AktionsstandMelden()
+    {
+        OnPropertyChanged(nameof(AktionMoeglich));
+        OnPropertyChanged(nameof(KannCliKnopf));
+    }
+
     /// <summary>
-    /// Ends the running update of this card: the process tree goes down and the card shows the update
-    /// as still open. Asks first, because a killed installer can leave a program half replaced.
+    /// Ends the running update of this card; afterwards the real state is read back (see
+    /// <see cref="NachAbbruchAsync"/>). Asks first, because a killed installer can leave a program half replaced.
     /// </summary>
     [RelayCommand]
     private void UpdateAbbrechen()
@@ -192,7 +216,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         StatusText = "Bricht das Update ab …";
         Diagnose.Ereignis(Schwere.Info, "karte", "update.abbruch", Name + ": Update vom Nutzer abgebrochen.", "update",
                           new Dictionary<string, object?> { ["programm"] = Eintrag.Id });
-        // Not Cancel(): its callbacks would end the process tree on the UI thread.
+        // Not Cancel(): the click must not wait for what the cancellation sets in motion.
         _ = abbruch.CancelAsync();
         OnPropertyChanged(nameof(KannAbbrechen));
     }
@@ -204,7 +228,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         void Melden()
         {
-            OnPropertyChanged(nameof(AktionMoeglich)); OnPropertyChanged(nameof(KannCliKnopf));
+            AktionsstandMelden();
             OnPropertyChanged(nameof(KannPruefen));
         }
 
@@ -313,7 +337,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         OnPropertyChanged(nameof(BerichtKurz));
         OnPropertyChanged(nameof(BerichtGrund));
         OnPropertyChanged(nameof(UebernahmeOffen));
-        OnPropertyChanged(nameof(AktionMoeglich)); OnPropertyChanged(nameof(KannCliKnopf));
+        AktionsstandMelden();
         OnPropertyChanged(nameof(AktionsText));
         OnPropertyChanged(nameof(AktionBetont));
         OnPropertyChanged(nameof(KannAnCliUebergeben));
@@ -386,7 +410,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
             return;
 
         Laufbesitz? eigen = null;
-        if (!(UebergabeNachAbbruch && _koordination.Belegt) && !Erwerben(null, out eigen, "uebergabe")) return;
+        var ohneSperre = UebergabeNachAbbruch && _koordination.Belegt;
+        if (!ohneSperre && !Erwerben(null, out eigen, "uebergabe")) return;
+        // Without the lock the batch may end during the launcher start: mark first, so nothing offers this update again.
+        if (ohneSperre) UebergabeMerken(DateTime.Now);
         _uebergabeLaeuft = true;
         try
         {
@@ -395,6 +422,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
                                                                                  BefehlsBeschreibung(), beendenNoetig, skriptFragen);
             // An unanswered launcher usually started the session anyway: a second click must not start another.
             if (problem is null || vielleicht) UebergabeMerken(DateTime.Now);
+            else if (ohneSperre) UebergabeMerken(null);
             Diagnose.Ereignis(problem is null ? Schwere.Info : Schwere.Warnung, "uebergabe", "update.uebergeben",
                               problem ?? Name + " an eine CLI-Sitzung übergeben.", null,
                               new Dictionary<string, object?> { ["programm"] = Eintrag.Id, ["ziel"] = VerfuegbareVersion });
@@ -631,7 +659,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         Diagnose.Ereignis(Schwere.Debug, "karte", "karte.zustand", Name + ": " + value, value.ToString(),
             new Dictionary<string, object?> { ["programm"] = Eintrag.Id });
         OnPropertyChanged(nameof(HatUpdate));
-        OnPropertyChanged(nameof(AktionMoeglich)); OnPropertyChanged(nameof(KannCliKnopf));
+        AktionsstandMelden();
         OnPropertyChanged(nameof(AktionsText));
         OnPropertyChanged(nameof(AktionBetont));
         OnPropertyChanged(nameof(KannAnCliUebergeben));
@@ -640,7 +668,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     partial void OnIstBeschaeftigtChanged(bool value)
     {
-        OnPropertyChanged(nameof(AktionMoeglich)); OnPropertyChanged(nameof(KannCliKnopf));
+        AktionsstandMelden();
         OnPropertyChanged(nameof(KannPruefen));
     }
 
@@ -822,68 +850,77 @@ public sealed partial class ProgrammViewModel : ObservableObject
             _pfadVorLauf = Pfade.Aufloesen(Eintrag.ExePfadWirksam);
             var angebotVorher = VerfuegbareVersion;
 
-            var (vorher, vorPruefung) = await kette.VorpruefenAsync(abbruch);
-            Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
-            _standVorLauf = vorher;
-            abbruch.ThrowIfCancellationRequested();
-
-            var urteil = UpdateKette.BereitsAktuell(vorher, vorPruefung);
+            var vorher = "";
+            PruefErgebnis? vorPruefung = null;
+            KettenUrteil? urteil = null;
             var liefVorher = false;
+            var vomUpdateGeschlossen = false;
 
-            if (urteil is null)
+            try
             {
-                liefVorher = Prozessdienst.Laeuft(Eintrag);
+                var (stand, pruefung) = await kette.VorpruefenAsync(abbruch);
+                vorher = stand;
+                vorPruefung = pruefung;
+                Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
+                _standVorLauf = vorher;
+                abbruch.ThrowIfCancellationRequested();
 
-                // Electron/NSIS installers hang silently while the app is running, so the helper
-                // processes go down too -- but only after the user agreed, and only once per chain.
-                if (Eintrag.BeendenVorUpdate && liefVorher)
+                urteil = UpdateKette.BereitsAktuell(vorher, pruefung);
+
+                if (urteil is null)
                 {
-                    var laufende = Prozessdienst.Laufende(Eintrag).Count;
-                    var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"
-                              + "Zum Aktualisieren muss das Programm beendet werden."
-                              + (Eintrag.NeuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
-                              + "\n\nJetzt beenden und aktualisieren?";
+                    liefVorher = Prozessdienst.Laeuft(Eintrag);
 
-                    if (!Dialoge.Fragen(frage, "Programm beenden?"))
+                    // Electron/NSIS installers hang silently while the app is running, so the helper
+                    // processes go down too -- but only after the user agreed, and only once per chain.
+                    if (Eintrag.BeendenVorUpdate && liefVorher)
                     {
-                        urteil = new KettenUrteil(LaufErgebnis.Abgebrochen, "Abgebrochen – das Programm läuft weiter.",
-                            vorher, vorher, vorPruefung with { Zustand = UpdateZustand.Abgebrochen }, 0, false);
-                    }
-                    else
-                    {
-                        StatusText = "Beendet das Programm …";
-                        fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
-                        var beendet = await Prozessdienst.BeendenAsync(Eintrag, abbruch);
-                        if (beendet.Problem is not null) fortschritt.Report(beendet.Problem);
+                        var laufende = Prozessdienst.Laufende(Eintrag).Count;
+                        var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"
+                                  + "Zum Aktualisieren muss das Programm beendet werden."
+                                  + (Eintrag.NeuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
+                                  + "\n\nJetzt beenden und aktualisieren?";
 
-                        // An installer next to a still running target hangs or half-installs.
-                        if (!beendet.Erfolgreich)
+                        if (!Dialoge.Fragen(frage, "Programm beenden?"))
                         {
-                            var meldung = Name + " ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
-                                          + beendet.Problem;
-                            urteil = new KettenUrteil(LaufErgebnis.Fehlgeschlagen, meldung, vorher, vorher,
-                                vorPruefung with { Zustand = UpdateZustand.Fehler }, 0, false);
+                            urteil = new KettenUrteil(LaufErgebnis.Abgebrochen, "Abgebrochen – das Programm läuft weiter.",
+                                vorher, vorher, pruefung with { Zustand = UpdateZustand.Abgebrochen }, 0, false);
+                        }
+                        else
+                        {
+                            StatusText = "Beendet das Programm …";
+                            fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
+                            // Without the cancel token: it would cut the grace period and kill unsaved work at once.
+                            var beendet = await Prozessdienst.BeendenAsync(Eintrag, CancellationToken.None);
+                            if (beendet.Problem is not null) fortschritt.Report(beendet.Problem);
+                            vomUpdateGeschlossen = beendet.Erfolgreich;
+
+                            // An installer next to a still running target hangs or half-installs.
+                            if (!beendet.Erfolgreich)
+                            {
+                                var meldung = Name + " ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
+                                              + beendet.Problem;
+                                urteil = new KettenUrteil(LaufErgebnis.Fehlgeschlagen, meldung, vorher, vorher,
+                                    pruefung with { Zustand = UpdateZustand.Fehler }, 0, false);
+                            }
                         }
                     }
-                }
 
-                urteil ??= await kette.AusfuehrenAsync(vorher, vorPruefung, abbruch);
+                    urteil ??= await kette.AusfuehrenAsync(vorher, pruefung, abbruch);
+                }
+            }
+            catch (OperationCanceledException) when (abbruch.IsCancellationRequested)
+            {
+                // Cancelled between two commands (a wait, the winget queue): judged below like any other cancel.
+                urteil = null;
             }
 
-            // Cancelled by hand: the update is still pending, so the card keeps offering it (and its
-            // hand-over button) instead of showing a dead "cancelled" state without a version.
-            var nutzerAbbruch = abbruch.IsCancellationRequested && urteil.Ergebnis == LaufErgebnis.Abgebrochen;
-            if (nutzerAbbruch)
-                urteil = urteil with
-                {
-                    Meldung = "Vom Nutzer abgebrochen. " + urteil.Meldung,
-                    FuerKarte = urteil.FuerKarte with
-                    {
-                        Zustand = string.IsNullOrWhiteSpace(angebotVorher) ? UpdateZustand.Abgebrochen : UpdateZustand.UpdateVerfuegbar,
-                        VerfuegbareVersion = angebotVorher,
-                        Meldung = "Abgebrochen – das Update ist weiter offen."
-                    }
-                };
+            // The one place a cancel is judged, whatever a provider made of its killed command: only a
+            // result the update really reached survives it. The state is read back, not assumed.
+            var nutzerAbbruch = abbruch.IsCancellationRequested
+                                && urteil is not { Ergebnis: LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend or LaufErgebnis.BereitsAktuell };
+            if (_standVorLauf is null) Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), "");
+            urteil = nutzerAbbruch ? await NachAbbruchAsync(urteil, vorher, vorPruefung, angebotVorher, fortschritt) : urteil!;
 
             // Ein abgebrochenes oder gescheitertes Update kann die Programmdatei halb ersetzt zuruecklassen.
             // Das muss als eigener Befund sichtbar werden, nicht nur als "Zeitlimit".
@@ -909,9 +946,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             // Restart once, after the whole chain -- never between passes, where a running target
             // would block the next installer.
-            // After a cancel too: the update closed the program, and it should not stay closed.
+            // After a cancel too, if this update closed the program: it should not stay closed.
             if (Eintrag.NeuStartenNachUpdate && liefVorher
-                && (urteil.UpdateLiefDurch || (nutzerAbbruch && urteil.Ergebnis == LaufErgebnis.Abgebrochen)))
+                && (urteil.UpdateLiefDurch || (nutzerAbbruch && vomUpdateGeschlossen && !Prozessdienst.Laeuft(Eintrag))))
             {
                 fortschritt.Report("Startet " + Name + " neu.");
                 Prozessdienst.Starten(Eintrag, AlsAdministrator);
@@ -935,7 +972,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 UpdateAufrufe = urteil.UpdateAufrufe,
                 SammelId = kontext?.Id,
                 SammelPhase = kontext?.Phase,
-                SammelPosition = kontext?.Position
+                SammelPosition = kontext?.Position,
+                // After a cancel only a program left incomplete goes to a session on its own.
+                OhneAutoUebergabe = nutzerAbbruch && fehlt is null
             };
 
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
@@ -948,6 +987,57 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             return urteil.FuerKarte;
         });
+    }
+
+    /// <summary>
+    /// What a cancelled update really left behind, read back without the fired token: an installer
+    /// that had finished counts as done, and the card shows the check's offer, not the cancel.
+    /// </summary>
+    /// <param name="bisher">The chain's verdict; null when the cancel threw between two commands.</param>
+    private async Task<KettenUrteil> NachAbbruchAsync(KettenUrteil? bisher, string vorher, PruefErgebnis? vorPruefung,
+                                                      string angebotVorher, IProgress<string> fortschritt)
+    {
+        StatusText = "Abgebrochen – prüft den Stand …";
+        var stand = "";
+        PruefErgebnis? jetzt = null;
+        try
+        {
+            // Bounded: the winget queue may be held by another card of the batch for a long time.
+            using var frist = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            stand = await _aktualisierer!.FingerabdruckAsync(Eintrag, frist.Token);
+            jetzt = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, frist.Token);
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "karte", Schwere.Info);
+        }
+
+        var nachher = string.IsNullOrWhiteSpace(stand) ? UpdateKette.NichtLesbar : stand;
+        var aufrufe = bisher?.UpdateAufrufe ?? 0;
+        var arbeit = bisher?.ArbeitSekunden ?? 0;
+
+        // A process survived the kill: a failure, and it may still be installing.
+        if (bisher is not null && bisher.Meldung.Contains(Kommandozeile.BaumBleibtText, StringComparison.Ordinal))
+            return bisher with { Ergebnis = LaufErgebnis.Fehlgeschlagen, FingerabdruckNachher = nachher };
+
+        if (jetzt is { Zustand: UpdateZustand.Aktuell })
+        {
+            var bewegt = !string.IsNullOrWhiteSpace(stand) && !string.IsNullOrWhiteSpace(vorher) && stand != vorher;
+            return new KettenUrteil(bewegt ? LaufErgebnis.Erfolgreich : LaufErgebnis.BereitsAktuell,
+                bewegt ? "Das Update war beim Abbruch schon durch: " + vorher + " → " + stand
+                       : "Abgebrochen, die Prüfung meldet aber den aktuellen Stand.",
+                vorher, nachher, jetzt with { Meldung = "Auf dem neuesten Stand." }, aufrufe, bewegt) { ArbeitSekunden = arbeit };
+        }
+
+        var angebot = new[] { jetzt?.VerfuegbareVersion, vorPruefung?.VerfuegbareVersion, angebotVorher }
+                          .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "";
+        var karte = (jetzt ?? vorPruefung ?? new PruefErgebnis(UpdateZustand.Abgebrochen)) with
+        {
+            Zustand = angebot.Length > 0 ? UpdateZustand.UpdateVerfuegbar : UpdateZustand.Abgebrochen,
+            VerfuegbareVersion = angebot,
+            Meldung = "Abgebrochen – das Update ist weiter offen."
+        };
+        return new KettenUrteil(LaufErgebnis.Abgebrochen, "Vom Nutzer abgebrochen.", vorher, nachher, karte, aufrufe, false) { ArbeitSekunden = arbeit };
     }
 
     /// <summary>
@@ -1063,7 +1153,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
         if (IstBeschaeftigt) { Doppelt(art); return; }
         IstBeschaeftigt = true;
         var berichtBeiStart = LetzterBericht;
-        var zustandBeiStart = Zustand;
         if (art == "update")
         {
             _vomNutzerAbgebrochen = false;
@@ -1101,16 +1190,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 _ => Schwere.Info
             });
         }
-        catch (OperationCanceledException ex) when (abbruch is { IsCancellationRequested: true })
-        {
-            // Cancelled between two commands (a wait, the winget queue): no failure, nothing to repair.
-            Zustand = zustandBeiStart;
-            StatusText = "Abgebrochen – das Update ist weiter offen.";
-            Pruefstand.Vergessen(Eintrag.Id);
-            vorgang.Beenden("Abgebrochen", "Vom Nutzer abgebrochen.", Schwere.Warnung);
-            if (ReferenceEquals(LetzterBericht, berichtBeiStart)) AusnahmeBerichten(ex, vomNutzer: true);
-            if (LetzterBericht is { IstFehler: true }) Zustand = UpdateZustand.Fehler;
-        }
         catch (Exception ex)
         {
             Zustand = UpdateZustand.Fehler;
@@ -1141,8 +1220,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// An update that ended in an exception is a failed update too: without this report it reached
     /// neither the history nor the automatic hand-over to a session.
     /// </summary>
-    /// <param name="vomNutzer">Cancelled by hand: only a program left incomplete counts as a failure then.</param>
-    private void AusnahmeBerichten(Exception ausnahme, bool vomNutzer = false)
+    private void AusnahmeBerichten(Exception ausnahme)
     {
         // The app is closing: what breaks now is the shutdown, not the update.
         if (System.Windows.Application.Current?.Dispatcher.HasShutdownStarted == true) return;
@@ -1156,22 +1234,19 @@ public sealed partial class ProgrammViewModel : ObservableObject
             // Thrown by the pre-check: the log needs its header too, or the footer stands alone.
             if (_standVorLauf is null) Protokollierung.LaufBeginnen(Eintrag, befehl, "");
             var fehlt = Programmpruefung.Vollstaendig(Eintrag, _pfadVorLauf);
-            var nurAbbruch = vomNutzer && fehlt is null;
 
             var bericht = new UpdateBericht
             {
                 ProgrammId = Eintrag.Id,
                 Name = Name,
                 Art = Eintrag.Art,
-                Ergebnis = nurAbbruch ? LaufErgebnis.Abgebrochen : LaufErgebnis.Fehlgeschlagen,
-                Meldung = (fehlt is null ? "" : fehlt + " ")
-                          + (vomNutzer ? "Vom Nutzer abgebrochen."
-                                       : "Das Update brach mit einer Ausnahme ab: " + ausnahme.GetType().Name + ": " + ausnahme.Message),
+                Ergebnis = LaufErgebnis.Fehlgeschlagen,
+                Meldung = (fehlt is null ? "" : fehlt + " ") + "Das Update brach mit einer Ausnahme ab: " + ausnahme.GetType().Name + ": " + ausnahme.Message,
                 VersionVorher = _standVorLauf ?? "",
                 VersionNachher = UpdateKette.NichtLesbar,
                 Befehl = befehl,
                 Erhoeht = Rechte.IstErhoeht,
-                ExitCode = nurAbbruch ? 0 : 1,
+                ExitCode = 1,
                 SammelId = kontext?.Id,
                 SammelPhase = kontext?.Phase,
                 SammelPosition = kontext?.Position

@@ -521,6 +521,7 @@ final class HauptViewModel {
         // Fehler gehen sofort an eine Sitzung. Nur solange die eigenen Werkzeuge und die CLI-kritischen
         // Updates noch ausstehen, warten sie: diese Schritte wollen alle Terminals zu und beendeten die Sitzung.
         var fehlerHalten = plan.contains { $0.phase <= Sammelplan.phaseCli }
+        var uebergabeLaeuft = false   // was waehrend eines Launcher-Starts scheitert, kommt in die naechste gemeinsame Sitzung
         var abschlussStatus: String?
         fortschrittGesamt = max(plan.count, 1)
         fortschrittFertig = 0
@@ -542,34 +543,43 @@ final class HauptViewModel {
             laufDetail = laufend.map(\.zeile).joined(separator: "\n")
         }
 
-        func uebergabeMelden(_ hinweis: String) {
-            guard !uebergabeHinweise.contains(hinweis) else { return }
-            uebergabeHinweise.append(hinweis)
-            if let status = abschlussStatus {
-                // Inzwischen lief schon etwas anderes: dessen Status nicht mit diesem Ergebnis verfaelschen.
-                if kopfStatus == status {
-                    kopfStatus = status + "  ·  " + hinweis
-                    abschlussStatus = kopfStatus
+        func uebergabeFertig(_ hinweis: String, problem: Bool) {
+            if !uebergabeHinweise.contains(hinweis) {
+                uebergabeHinweise.append(hinweis)
+                if let status = abschlussStatus {
+                    if kopfStatus == status {
+                        kopfStatus = status + "  ·  " + hinweis
+                        abschlussStatus = kopfStatus
+                    } else if problem {
+                        // Inzwischen lief schon etwas anderes: dessen Status bleibt, ausser die Reparatur startete gar nicht.
+                        kopfStatus += "  ·  " + hinweis
+                    }
+                } else {
+                    anzeigen()
                 }
-            } else {
-                anzeigen()
             }
+            uebergabeLaeuft = false
+            if !fehlerHalten { fehlerFreigeben() }
         }
 
         // Eigene Aufgabe: ein langsamer Launcher haelt weder die anderen Updates noch den Sammelbesitz auf.
         func fehlerFreigeben() {
-            fehlerHalten = false
-            guard !offeneFehler.isEmpty else { return }
+            if fehlerHalten {
+                fehlerHalten = false
+                for s in plan { s.programm.aktionsstandMelden() }   // der CLI-Knopf einer abgebrochenen Karte kann jetzt frei werden
+            }
+            guard !uebergabeLaeuft, !offeneFehler.isEmpty else { return }
+            uebergabeLaeuft = true
             let faelle = offeneFehler
             offeneFehler = []
             Task { @MainActor in
                 let ergebnis = await ClaudeUebergabe.automatischStarten(faelle, self.einstellungen)
                 if let problem = ergebnis.problem {
-                    uebergabeMelden(problem)
+                    uebergabeFertig(problem, problem: true)
                 } else if ergebnis.gestartet {
-                    uebergabeMelden("Fehler von " + faelle.map(\.1.name).joined(separator: ", ") + " automatisch an Claude Code übergeben.")
+                    uebergabeFertig("Fehler von " + faelle.map(\.1.name).joined(separator: ", ") + " automatisch an Claude Code übergeben.", problem: false)
                 } else {
-                    uebergabeMelden(ClaudeUebergabe.sperrHinweis)
+                    uebergabeFertig(ClaudeUebergabe.sperrHinweis, problem: false)
                 }
             }
         }
@@ -595,6 +605,7 @@ final class HauptViewModel {
                 offeneFehler.append((s.programm.eintrag, bericht))
                 if !fehlerHalten { fehlerFreigeben() }
             }
+            if bericht?.ergebnis == .abgebrochen { s.programm.imSammelFreigeben { !fehlerHalten } }
             laufend.removeAll { $0.name == s.programm.name }
             fertig += 1
             anzeigen()
@@ -650,7 +661,11 @@ final class HauptViewModel {
         }
 
         let phasen = Array(Set(rest.map(\.phase))).sorted()
-        let letzteHaltephase = phasen.filter { $0 <= Sammelplan.phaseCli }.max() ?? 0
+        func halteSchrittFertig(_ erledigt: Int) {
+            if !rest.contains(where: { $0.phase > erledigt && $0.phase <= Sammelplan.phaseCli }) { fehlerFreigeben() }
+        }
+
+        halteSchrittFertig(0)   // nichts Kritisches, oder nur das gerade gelaufene Selbst-Update
         for phase in phasen {
             let schritte = rest.filter { $0.phase == phase }
 
@@ -669,7 +684,7 @@ final class HauptViewModel {
                     fertig += schritte.count
                     cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen."
                     anzeigen()
-                    if phase >= letzteHaltephase { fehlerFreigeben() }
+                    halteSchrittFertig(phase)
                     continue
                 }
             }
@@ -706,7 +721,7 @@ final class HauptViewModel {
                 Diagnose.ereignis(.info, "sammel", "sammel.cli_fertig", kopfStatus)
             }
 
-            if phase >= letzteHaltephase { fehlerFreigeben() }
+            halteSchrittFertig(phase)
         }
 
         let fehler = laeufe.filter { ["Fehlgeschlagen", "Nicht verifiziert", "ohne Bericht"].contains($0.ergebnis) }.count
@@ -720,6 +735,7 @@ final class HauptViewModel {
         laeuftSammelvorgang = false
         abschlussStatus = kopfStatus
         fehlerFreigeben()
+        for s in plan { s.programm.imSammelFreigeben(nil) }
         laufDetail = ""
         if nachDauerSortieren { sortierungAnwenden() }
     }

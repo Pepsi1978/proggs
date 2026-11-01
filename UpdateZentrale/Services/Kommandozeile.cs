@@ -164,6 +164,10 @@ public static class Kommandozeile
         Func<Process, bool>? einzelnBeenden,
         Func<long>? lebenszeichen = null)
     {
+        // Already cancelled: never start an installer only to kill it in its first second.
+        if (abbruch.IsCancellationRequested)
+            return new BefehlErgebnis(-1, "[UpdateZentrale] Abgebrochen – nicht gestartet.", false, Abgebrochen: true);
+
         var start = new ProcessStartInfo
         {
             FileName = datei,
@@ -247,7 +251,8 @@ public static class Kommandozeile
 
         try
         {
-            await prozess.WaitForExitAsync(verbund.Token);
+            // Off the UI thread: a cancel or timeout ends the whole process tree in the catch below.
+            await prozess.WaitForExitAsync(verbund.Token).ConfigureAwait(false);
             waechterEnde.Cancel();
             await waechter;
         }
@@ -403,6 +408,8 @@ public static class Kommandozeile
     /// exit code, so a line printed before a timeout ("started") can never turn it into success.
     /// </summary>
     /// <returns>null when the tool ended by itself.</returns>
+    public const string BaumBleibtText = "der Prozessbaum ließ sich nicht vollständig beenden";
+
     public static Models.PruefErgebnis? UnsauberesEnde(BefehlErgebnis lauf)
     {
         if (!lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null) return null;
@@ -410,7 +417,7 @@ public static class Kommandozeile
         var was = lauf.Abgebrochen ? "Abgebrochen" : "Zeitlimit überschritten";
         if (lauf.BeendenProblem is not null)
             return new Models.PruefErgebnis(Models.UpdateZustand.Fehler,
-                Meldung: was + " – der Prozessbaum ließ sich nicht vollständig beenden: " + lauf.BeendenProblem,
+                Meldung: was + " – " + BaumBleibtText + ": " + lauf.BeendenProblem,
                 Protokoll: lauf.Ausgabe);
 
         return lauf.Abgebrochen
