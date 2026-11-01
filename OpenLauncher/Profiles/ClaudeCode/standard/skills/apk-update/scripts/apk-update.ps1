@@ -519,6 +519,12 @@ $script:sperre = Nimm-Sperre $Projekt
 $ausgesetzt = $eintrag.driveUploadAusgesetzt -and -not $CloudBau -and -not $TrotzAussetzung
 function Melde-Ausgesetzt {
     Aufraeumen
+    # Die Aussetzung ist vorübergehend gedacht: Ab 14 Tagen erinnert jeder Lauf daran. Ein Lesefehler darf hier nichts aufhalten.
+    try {
+        $seit = [datetime]::ParseExact("$($eintrag.driveUploadAusgesetztSeit)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+        $tage = [int]((Get-Date).Date - $seit).TotalDays
+        if ($tage -ge 14) { Write-Host "APK_UPDATE_WARNUNG=Der Drive-Upload für $Projekt ist seit $tage Tagen ausgesetzt, UpdateStation veraltet so lange. In der Abschlussmeldung nennen und fragen, ob er wieder eingeschaltet werden soll." }
+    } catch { }
     Write-Host "APK_UPDATE_STATUS=ausgesetzt"
     Write-Host "APK_UPDATE_HINWEIS=Drive-Upload für $Projekt ist ausgesetzt, nichts gebaut oder hochgeladen. Als 'APK-Update: nein (ausgesetzt)' melden. Wiedereinschalten: driveUploadAusgesetzt in projekte.json auf false. Einmalig im Notfall: -TrotzAussetzung."
     exit 0

@@ -135,7 +135,7 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    - `APK_UPDATE_WARNUNG=Der letzte Upload im Hintergrund ist gescheitert: …` → In der Abschlussmeldung nennen. Der aktuelle
      Lauf veröffentlicht trotzdem neu.
    - `APK_UPDATE_STATUS=ausgesetzt` (Exit 0) → Der Drive-Upload dieser App ist per `projekte.json` ausgesetzt (siehe Sonderfälle): nichts gebaut, nichts
-     hochgeladen, ein laufender Upload wurde beendet (`APK_UPDATE_ABGEBROCHEN=…`). Kein Fehler; als „APK-Update: nein (ausgesetzt)“ melden. Die Installation per adb bleibt Pflicht.
+     hochgeladen, ein laufender Upload wurde beendet (`APK_UPDATE_ABGEBROCHEN=…`). Ab 14 Tagen seit `driveUploadAusgesetztSeit` kommt eine `APK_UPDATE_WARNUNG`: in der Abschlussmeldung nennen. Kein Fehler; als „APK-Update: nein (ausgesetzt)“ melden. Die Installation per adb bleibt Pflicht.
    - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
      nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
    - `APK_UPDATE_STATUS=ok` mit `APK_UPDATE_BEREIT=cloud` → Google Drive hat beide Uploads bestätigt.
@@ -233,7 +233,7 @@ und dass die Signatur der APK zur installierten App passt.
 - **Upload aussetzen:** `"driveUploadAusgesetzt": true` am Projekt in `projekte.json` schaltet den Upload vom Mac und vom Windows-PC ab, derzeit nur bei
   **Jarvis** (seit 01.11.2026, Franks Internet zu schwach). Der GitHub-Bau für Cloud- und Server-Sitzungen (`-CloudBau`) lädt weiter hoch: Der Upload läuft
   über GitHub, nur das Vorladen in UpdateStation läuft danach über das Netz des Handys. Solange das Feld gesetzt ist, zeigt UpdateStation vom Rechner aus keine neuen
-  Stände, die Rückfallebene veraltet also. Einmalig im Notfall: `-TrotzAussetzung`. Wiedereinschalten: Feld auf `false`, committen, pushen, Skill einmal
+  Stände, die Rückfallebene veraltet also. Einmalig im Notfall: `-TrotzAussetzung`. Beim Aussetzen `driveUploadAusgesetztSeit` (JJJJ-MM-TT) mit eintragen. Wiedereinschalten: Feld auf `false`, committen, pushen, Skill einmal
   starten; er veröffentlicht dann den aktuellen Stand.
 - **Standard ist Debug** (Franks Vorgabe vom 30.09.2026): Auf dem Handy laufen Debug-Builds, damit
   App-Daten und Logs per adb lesbar sind und Ruckeln sichtbar wird. Release nur, wenn Frank es für
