@@ -497,6 +497,7 @@ $env:Path = $pathEntries -join ';'
 
         try
         {
+            StelleKimiModellSicher(alias, model.Slug);
             if (effort != null) SetKimiEffort(alias, effort);
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
@@ -552,6 +553,28 @@ $env:Path = $pathEntries -join ';'
             log.Error("OpenLauncherService", "LaunchKimiCli", ex, new { model.Slug, workDir, effortLevel });
             throw;
         }
+    }
+
+    /// <summary>
+    /// Das Kimi CLI lehnt Modelle ab, die nicht in seiner config.toml stehen ("is not configured"), etwa K3.1 Pro aus dem Abo.
+    /// Fehlt der Eintrag, entsteht er als Kopie von K3 mit eigener Modellkennung; alles andere bleibt, wie es ist.
+    /// </summary>
+    private static void StelleKimiModellSicher(string alias, string slug)
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".kimi-code", "config.toml");
+        if (!File.Exists(path)) return;
+        var lines = File.ReadAllLines(path).ToList();
+        if (lines.Any(line => line.Trim() == $"[models.\"{alias}\"]")) return;
+        var start = lines.FindIndex(line => line.Trim() == "[models.\"kimi-code/k3\"]");
+        if (start < 0) return;
+        var block = new List<string> { $"[models.\"{alias}\"]" };
+        foreach (var line in lines.Skip(start + 1).TakeWhile(line => !line.TrimStart().StartsWith('[')))
+        {
+            var key = line.Split('=')[0].Trim();
+            block.Add(key == "model" ? $"model = \"{slug}\"" : key == "display_name" ? $"display_name = \"{slug}\"" : line);
+        }
+        lines.InsertRange(start, block);
+        File.WriteAllLines(path, lines);
     }
 
     /// <summary>
@@ -1851,6 +1874,9 @@ if (-not $env:NVIDIA_API_KEY) {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".local", "state", "opencode", "model.json");
     }
+
+    /// <summary>Merkt den Effort für OpenCode, ohne die Provider-Konfiguration anzufassen (Jarvis-Aufträge über OpenRouter).</summary>
+    public void SetzeOpenCodeVariante(string modelString, string? effort) => PatchModelVariantState(modelString, effort);
 
     private static void PatchModelVariantState(string modelString, string? thinkingLevel)
     {

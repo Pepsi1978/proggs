@@ -76,6 +76,8 @@ public static class JarvisAuftrag
                 // OpenRouter braucht in der Oberfläche eine Provider-Wahl; ohne sie routet OpenRouter selbst (kein Patch).
                 var modelString = anbieter.Equals("openrouter", StringComparison.OrdinalIgnoreCase) ? eintrag.ModelString
                     : launcher.ConfigureProvider(eintrag, new Models.ProviderEntry(), Array.Empty<Models.ProviderEntry>(), effort);
+                // Der Effort gilt bei OpenCode nur über den gemerkten Modellzustand: Ohne diesen Schritt fiel er bei OpenRouter still weg.
+                if (anbieter.Equals("openrouter", StringComparison.OrdinalIgnoreCase)) launcher.SetzeOpenCodeVariante(modelString, effort);
                 launcher.Launch(modelString, ordner, effort, sitzung.ConfigPath, modus, useTmux: false,
                     initialPromptFile: datei, jarvisAuftragId: id, title: name);
             }
