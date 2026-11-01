@@ -538,6 +538,7 @@
     {"versionCode": 533, "versionName": "1.8.522", "stand": "01.11.2026, 01:25 Uhr", "notiz": "Guthaben: Im Gemini-Bereich stehen ganz unten unter Google AI Studio jetzt Freikontingent, Verbrauch und selbst eingezahltes Guthaben mit eigenem Aktualisieren-Knopf."},
     {"versionCode": 534, "versionName": "1.8.523", "stand": "01.11.2026, 01:28 Uhr", "notiz": "Jarvis wird vorübergehend nicht mehr nach Google Drive hochgeladen und kommt nur noch über Tunnel oder WLAN aufs Handy."},
     {"versionCode": 535, "versionName": "1.8.524", "stand": "01.11.2026, 01:28 Uhr", "notiz": "Kontingente: Google AI Studio steht jetzt unten im Gemini-Bereich der Kontingente statt im Reiter Guthaben, der wieder wie zuvor aussieht."},
-    {"versionCode": 536, "versionName": "1.8.525", "stand": "01.11.2026, 01:31 Uhr", "notiz": "Google AI Studio und Guthaben: Ein nicht frisch lesbarer Einzahlungsbetrag ist jetzt überall als letzter Betrag gekennzeichnet, und Fehler stehen direkt am Aktualisieren-Knopf."}
+    {"versionCode": 536, "versionName": "1.8.525", "stand": "01.11.2026, 01:31 Uhr", "notiz": "Google AI Studio und Guthaben: Ein nicht frisch lesbarer Einzahlungsbetrag ist jetzt überall als letzter Betrag gekennzeichnet, und Fehler stehen direkt am Aktualisieren-Knopf."},
+    {"versionCode": 537, "versionName": "1.8.526", "stand": "01.11.2026, 01:35 Uhr", "notiz": "Kontingente: Das Google-AI-Studio-Freikontingent steht im Gemini-Bereich jetzt als Balken im selben Stil wie die übrigen Kontingente."}
 ]
 }

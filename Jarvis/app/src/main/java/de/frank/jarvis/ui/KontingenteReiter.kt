@@ -109,36 +109,47 @@ private fun ApiFreikontingent(vm: AppViewModel) {
     }
 }
 
-/** Gutschriften, Verbrauch und eingezahltes Geld aus AI Studio. Was nicht lesbar ist, steht als „Nicht verfügbar“ da, nie als geschätzte Zahl. */
+/** AI-Studio-Freikontingent (Google-Gutschriften) als Balken wie die Limits, darunter das eingezahlte Geld. Was nicht lesbar ist, steht als „nicht verfügbar“ da, nie als geschätzte Zahl. */
 @Composable
 private fun AiStudioUebersicht(vm: AppViewModel) {
     val f = LocalFarben.current
     val g = vm.googleGuthaben
+    val laedt = vm.googleGuthabenLaedt
     val b = GoogleGuthabenFaehigkeit::betrag
     val rest = g?.restEur
-    val fehlt = if (vm.googleGuthabenLaedt) "Wird abgefragt …" else "Nicht verfügbar"
-    val gutschrift = { wert: (GoogleGuthabenFaehigkeit.Stand) -> String ->
-        when {
-            g == null || rest == null -> fehlt
-            g.gutschriften.isEmpty() -> "Nicht verfügbar: keine laufende Gutschrift gefunden."
-            else -> wert(g) + if (g.abfrageGescheitert) " · letzter Stand" else ""
+    // Ohne laufende Gutschrift gibt es keine Summe, auf die sich ein Balken beziehen könnte.
+    val frei = g?.takeIf { rest != null && it.gewaehrt > 0 }
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text("Google-AI-Studio-Freikontingent", color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            when {
+                frei != null -> "${b(frei.verbraucht)} ${frei.waehrung} von ${b(frei.gewaehrt)} ${frei.waehrung} verbraucht"
+                laedt -> "Wird abgefragt …"
+                rest != null -> "Keine laufende Gutschrift gefunden"
+                else -> "Verbrauch nicht verfügbar"
+            },
+            color = if (frei != null) f.text else f.textLeise, fontSize = if (frei != null) 26.sp else 15.sp, fontWeight = if (frei != null) FontWeight.Bold else FontWeight.Normal,
+        )
+        // Ohne Wert kein Balken: Ein leerer sähe wie „nichts verbraucht“ aus.
+        if (frei != null) {
+            Balken((frei.verbraucht / frei.gewaehrt).toFloat())
+            Text("${b(rest ?: 0.0)} ${frei.waehrung} verfügbar" + if (frei.abfrageGescheitert) " · letzter Stand" else "", color = f.text, fontSize = 14.sp)
+            frei.offen.firstOrNull()?.takeIf { it.ende > 0 }?.let {
+                Text("Verfällt als Nächstes: ${b(it.rest)} ${frei.waehrung} am ${GoogleGuthabenFaehigkeit.datum(it.ende)}", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            }
         }
     }
-    Unterzeile("Google AI Studio")
-    Wert("Freikontingent (Google-Gutschriften)", gutschrift { "${b(it.restEur ?: 0.0)} ${it.waehrung} von ${b(it.gewaehrt)} ${it.waehrung} verfügbar" })
-    // Google nennt nur noch laufende Gutschriften; Verbrauch aus bereits verfallenen zählt deshalb nicht mit.
-    Wert("Bisher verbraucht (laufende Gutschriften)", gutschrift { "${b(it.verbraucht)} ${it.waehrung}" })
     val eingezahlt = g?.vorauszahlung
-    Wert("Selbst eingezahltes Guthaben", when {
-        g == null -> fehlt
-        eingezahlt == null -> if (rest == null || vm.googleGuthabenLaedt) fehlt else "Nicht verfügbar: Der Betrag ließ sich nicht lesen."
-        g.vorauszahlungVeraltet -> "${b(eingezahlt)} ${g.waehrung} · letzter lesbarer Betrag" +
-            (g.vorauszahlungGelesen.takeIf { it > 0 }?.let { " vom ${GoogleGuthabenFaehigkeit.datum(it / 1000)}" } ?: "")
-        else -> "${b(eingezahlt)} ${g.waehrung}"
-    })
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text("Selbst eingezahltes Guthaben", color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        if (g != null && eingezahlt != null) {
+            Text("${b(eingezahlt)} ${g.waehrung}", color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            if (g.vorauszahlungVeraltet) Text("Letzter lesbarer Betrag" + (g.vorauszahlungGelesen.takeIf { it > 0 }?.let { " vom ${GoogleGuthabenFaehigkeit.datum(it / 1000)}" } ?: ""), color = f.gefahr, fontSize = 13.sp)
+        } else Text(if (laedt) "Wird abgefragt …" else "Nicht verfügbar", color = f.textLeise, fontSize = 15.sp)
+    }
     if (g != null && rest != null && g.waehrung != "€") {
         Text("Google führt dieses Konto in ${g.waehrung}. Jarvis rechnet nicht in Euro um, damit keine geschätzten Beträge entstehen.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
     }
-    Fuss(g?.standText().orEmpty(), g?.hinweis, vm.googleGuthabenLaedt) { vm.googleGuthabenAbfragen(erzwingen = true) }
+    Fuss(g?.standText().orEmpty(), g?.hinweis, laedt) { vm.googleGuthabenAbfragen(erzwingen = true) }
 }

@@ -196,7 +196,7 @@ internal fun Balken(verbraucht: Float) {
 }
 
 @Composable
-internal fun Wert(titel: String, wert: String) {
+private fun Wert(titel: String, wert: String) {
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(titel, color = f.textLeise, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
