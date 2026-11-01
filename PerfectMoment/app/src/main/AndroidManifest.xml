@@ -19,9 +19,12 @@
         android:name="de.frank.jarvis.permission.BRUECKE"
         android:protectionLevel="signature" />
     <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+    <permission android:name="de.frank.ziele.permission.LEITSAETZE" android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.ziele.permission.LEITSAETZE" />
 
     <!-- Offline-Transkription über Jarvis (Parakeet). -->
     <queries>
+        <provider android:authorities="de.frank.ziele.leitsaetze" />
         <provider android:authorities="de.frank.jarvis.parakeet" />
     </queries>
 

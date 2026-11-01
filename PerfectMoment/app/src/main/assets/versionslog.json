@@ -12,6 +12,7 @@
     {"versionCode": 114, "versionName": "0.1.125", "stand": "22.10.2026, 12:50 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
     {"versionCode": 115, "versionName": "0.1.126", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
     {"versionCode": 116, "versionName": "0.1.127", "stand": "30.10.2026, 11:43 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
-    {"versionCode": 117, "versionName": "0.1.128", "stand": "30.10.2026, 19:34 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
+    {"versionCode": 117, "versionName": "0.1.128", "stand": "30.10.2026, 19:34 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
+    { "versionCode": 118, "versionName": "0.1.129", "stand": "01.11.2026, 19:32 Uhr", "notiz": "Unter Eigene Sessions steht Leitsätze fest ganz oben und übernimmt sämtliche Leitsätze aus Ziele automatisch, einzeln und wortwörtlich, mit den gewohnten Vorlese-Einstellungen." }
   ]
 }

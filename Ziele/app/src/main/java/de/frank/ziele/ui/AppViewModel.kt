@@ -47,6 +47,7 @@ sealed interface Bildschirm {
     data class Detail(val id: Long) : Bildschirm
     data class Bearbeiten(val id: Long?) : Bildschirm
     data class EigeneAufgabe(val zielId: Long) : Bildschirm
+    data class Leitsatz(val zielId: Long) : Bildschirm
     data object Kontext : Bildschirm
     data object Einstellungen : Bildschirm
 }
@@ -54,7 +55,7 @@ sealed interface Bildschirm {
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
 
 /** Wohin der gesprochene Text geht. */
-enum class DiktatZiel { ZIEL, KONTEXT, RUECKMELDUNG, AUFGABE }
+enum class DiktatZiel { ZIEL, KONTEXT, RUECKMELDUNG, AUFGABE, LEITSATZ }
 
 /** Die drei Textfelder vor (original) und nach (korrigiert) der KI-Korrektur. */
 data class KorrekturStand(val original: List<String>, val korrigiert: List<String>)
@@ -93,6 +94,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Was vor der KI-Korrektur dastand — solange es gesetzt ist, wird der Korrektur-Knopf zum Rückgängig-Knopf. */
     var korrektur by mutableStateOf<KorrekturStand?>(null); private set
     private var editorQuelle: Ziel? = null
+    var leitsatzEntwurf by mutableStateOf("")
+    var leitsatzSpeichert by mutableStateOf(false); private set
+
+    fun leitsatzBearbeiten(z: Ziel) {
+        aufnahmeVerwerfen()
+        leitsatzEntwurf = z.leitsatz
+        bildschirm = Bildschirm.Leitsatz(z.id)
+    }
+
+    fun leitsatzSpeichern() {
+        val zielId = (bildschirm as? Bildschirm.Leitsatz)?.zielId ?: return
+        if (aufnahme != Aufnahme.AUS || leitsatzSpeichert) return
+        val text = leitsatzEntwurf
+        leitsatzSpeichert = true
+        viewModelScope.launch {
+            try {
+                repo.leitsatzSpeichern(zielId, text)
+                bildschirm = Bildschirm.Detail(zielId)
+                melde("Leitsatz gespeichert · automatisch in Perfect Moment verfügbar")
+            } catch (c: CancellationException) {
+                throw c
+            } catch (e: Exception) {
+                melde("Leitsatz nicht gespeichert: ${e.message}")
+            } finally {
+                leitsatzSpeichert = false
+            }
+        }
+    }
 
     // ---- Aufnahme ----
     var aufnahme by mutableStateOf(Aufnahme.AUS); private set
@@ -172,6 +201,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             is Bildschirm.Bearbeiten -> { aufnahmeVerwerfen(); bildschirm = b.id?.let { Bildschirm.Detail(it) } ?: Bildschirm.Liste }
             Bildschirm.Kontext -> { aufnahmeVerwerfen(); bildschirm = kontextZurueck }
             is Bildschirm.EigeneAufgabe -> { aufnahmeVerwerfen(); aufgabeKiAbbrechen(); bildschirm = Bildschirm.Detail(b.zielId) }
+            is Bildschirm.Leitsatz -> { if (leitsatzSpeichert) return true; aufnahmeVerwerfen(); bildschirm = Bildschirm.Detail(b.zielId) }
             else -> bildschirm = Bildschirm.Liste
         }
         return true
@@ -656,6 +686,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }
                     wohin == DiktatZiel.AUFGABE -> { aKi = null; aText = (aText.trim() + " " + text).trim() }
+                    wohin == DiktatZiel.LEITSATZ -> { leitsatzEntwurf += (if (leitsatzEntwurf.isEmpty() || leitsatzEntwurf.last().isWhitespace()) "" else " ") + text }
                     wohin == DiktatZiel.RUECKMELDUNG -> diktatZielId?.let { id -> rueckmeldungEntwurf[id] = (rueckmeldungEntwurf[id].orEmpty().trim() + " " + text).trim() }
                     else -> zielOrdnen(text)
                 }

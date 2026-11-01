@@ -1,6 +1,7 @@
 package de.frank.ziele.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import org.json.JSONArray
@@ -61,6 +62,8 @@ data class Ziel(
     val bericht: String = "",
     /** Kurzfassung der Strategie (ein bis drei Sätze) für Karte, Wecker und Vorlesen. */
     val strategie: String = "",
+    /** Franks eigener Leitsatz, unverändert auch in Perfect Moment verfügbar. */
+    @ColumnInfo(defaultValue = "''") val leitsatz: String = "",
     val ausgewertetAm: Long? = null,
     val auswertungModell: String = "",
     val erstellt: Long = System.currentTimeMillis(),

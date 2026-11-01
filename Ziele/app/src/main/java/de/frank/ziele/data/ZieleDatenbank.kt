@@ -32,6 +32,16 @@ interface ZieleDao {
     @Update
     suspend fun speichere(z: Ziel)
 
+    @Query("UPDATE ziele SET leitsatz = :text, geaendert = :jetzt WHERE id = :id")
+    suspend fun leitsatzSpeichern(id: Long, text: String, jetzt: Long): Int
+
+    /** Auswertungen und andere Ziel-Editoren dürfen einen parallel gespeicherten Leitsatz nicht überschreiben. */
+    @Transaction
+    suspend fun speichereOhneLeitsatz(z: Ziel) {
+        val aktuell = ziel(z.id) ?: return
+        speichere(z.copy(leitsatz = aktuell.leitsatz))
+    }
+
     @Delete
     suspend fun loesche(z: Ziel)
 
@@ -116,7 +126,7 @@ interface ZieleDao {
     suspend fun rueckmeldungenVerarbeitet(ids: List<Long>)
 }
 
-@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 5, exportSchema = false)
+@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 6, exportSchema = false)
 abstract class ZieleDatenbank : RoomDatabase() {
     abstract fun dao(): ZieleDao
 }
@@ -154,9 +164,15 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
-/** Einziger Zugang zu den Daten. Jede Änderung meldet Jarvis und dem Wecker ein Signal, damit sie frisch lesen. */
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `ziele` ADD COLUMN `leitsatz` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** Einziger Zugang zu den Daten. Jede Änderung meldet den verbundenen Apps ein Signal. */
 class ZieleRepository private constructor(private val app: Context) {
-    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().dao()
+    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build().dao()
 
     val ziele: Flow<List<Ziel>> = dao.alleZiele()
     val vorschlaege: Flow<List<Vorschlag>> = dao.alleVorschlaege()
@@ -195,7 +211,12 @@ class ZieleRepository private constructor(private val app: Context) {
         return dao.neu(z.copy(rang = rang)).also { signal() }
     }
 
-    suspend fun speichere(z: Ziel) { dao.speichere(z.copy(geaendert = System.currentTimeMillis())); signal() }
+    suspend fun speichere(z: Ziel) { dao.speichereOhneLeitsatz(z.copy(geaendert = System.currentTimeMillis())); signal() }
+
+    suspend fun leitsatzSpeichern(id: Long, text: String) {
+        check(dao.leitsatzSpeichern(id, text, System.currentTimeMillis()) == 1) { "Das Ziel ist nicht mehr vorhanden." }
+        signal()
+    }
 
     suspend fun loesche(z: Ziel) {
         dao.vorschlaegeLoeschen(z.id); dao.abgelehnteLoeschen(z.id); dao.rueckmeldungenLoeschen(z.id); dao.loesche(z); signal()
@@ -215,13 +236,14 @@ class ZieleRepository private constructor(private val app: Context) {
 
     suspend fun reihenfolge(ids: List<Long>) {
         val alle = dao.alleZieleEinmal().associateBy { it.id }
-        ids.forEachIndexed { i, id -> alle[id]?.let { if (it.rang != i) dao.speichere(it.copy(rang = i)) } }
+        ids.forEachIndexed { i, id -> alle[id]?.let { if (it.rang != i) dao.speichereOhneLeitsatz(it.copy(rang = i)) } }
         signal()
     }
 
     private fun signal() {
         runCatching { app.contentResolver.notifyChange(Uri.parse("content://${app.packageName}.jarvis"), null) }
         runCatching { app.contentResolver.notifyChange(Uri.parse("content://${app.packageName}.wecker"), null) }
+        runCatching { app.contentResolver.notifyChange(Uri.parse("content://${app.packageName}.leitsaetze"), null) }
     }
 
     companion object {

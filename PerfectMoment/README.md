@@ -20,3 +20,7 @@ Funktionsspezifikation in `02-PROGRAMMIER-SPEC.md`.
 - optionale vollständige App-Sperre mit BiometricPrompt
 
 API-Schlüssel werden ausschließlich verschlüsselt auf dem Gerät gespeichert.
+
+## Leitsätze aus Ziele
+
+Unter **Verlauf → Eigene Sessions** steht „Leitsätze“ fest an erster Stelle. Die Session übernimmt sämtliche nicht leeren Leitsätze aller Ziele wortwörtlich und zeigt jeden einzeln. Beim App-Start, Zurückkehren, Öffnen der Session und bei Änderungen in Ziele wird automatisch lokal abgeglichen. Vorlesen, Stimme, Pause, Wiederholungen, Dauer und Zufallsfolge funktionieren wie bei eigenen Sessions; die Texte werden in Ziele bearbeitet. Ist Ziele nicht erreichbar, bleibt der letzte Stand mit einem sichtbaren Hinweis erhalten.

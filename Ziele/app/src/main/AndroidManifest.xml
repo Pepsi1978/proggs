@@ -14,6 +14,7 @@
     <permission
         android:name="de.frank.ziele.permission.JARVIS"
         android:protectionLevel="signature" />
+    <permission android:name="de.frank.ziele.permission.LEITSAETZE" android:protectionLevel="signature" />
 
     <!-- Vorschläge in Geniale Aufgaben übernehmen: deren Jarvis-Brücke. Auch hier deklariert, damit die
          Installationsreihenfolge keine Rolle spielt (gleicher Signierschlüssel vorausgesetzt). -->
@@ -69,6 +70,13 @@
             android:exported="true" />
 
         <!-- Brücke zu Jarvis: lesen, schreiben und steuern, durch die Signatur-Erlaubnis geschützt. -->
+        <provider
+            android:name=".bruecke.LeitsaetzeBruecke"
+            android:authorities="de.frank.ziele.leitsaetze"
+            android:exported="true"
+            android:readPermission="de.frank.ziele.permission.LEITSAETZE"
+            android:writePermission="de.frank.ziele.permission.LEITSAETZE" />
+
         <provider
             android:name=".bruecke.JarvisBruecke"
             android:authorities="de.frank.ziele.jarvis"

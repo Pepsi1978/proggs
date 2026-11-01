@@ -5,6 +5,7 @@ import de.frank.perfectmoment.data.local.PerfectMomentDatabase
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
+import de.frank.perfectmoment.data.local.isZieleLeitsaetze
 import de.frank.perfectmoment.session.Question
 import de.frank.perfectmoment.session.SessionConfig
 import de.frank.perfectmoment.session.SessionState
@@ -92,6 +93,11 @@ class RoomSessionRepository(
     ) {
         require(state.questions.isNotEmpty()) { "A session without questions cannot be resumed" }
         database.withTransaction {
+            val aktuell = sessionDao.getSession(sessionId)
+            // Eine laufende Wiedergabe darf nach einem Ziele-Abgleich keine alten Texte zurückschreiben.
+            if (aktuell?.session?.isZieleLeitsaetze == true &&
+                state.questions.any { alt -> aktuell.questions.none { it.id == alt.id && it.text == alt.text } }
+            ) return@withTransaction
             if (!preserveQuestionOrder) {
                 sessionDao.deleteQuestions(sessionId)
                 sessionDao.insertQuestions(

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
+import de.frank.perfectmoment.data.local.isZieleLeitsaetze
 import de.frank.perfectmoment.ui.theme.Inter
 import de.frank.perfectmoment.ui.theme.LocalPmColors
 import de.frank.perfectmoment.ui.theme.PmTextStyles
@@ -59,6 +60,7 @@ fun ReadingSection(
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxWidth().padding(top = 26.dp)) {
         SectionLabel("Eigene Sessions", Modifier.padding(start = 8.dp, bottom = 6.dp), decorated = true)
+        viewModel.leitsaetzeFehler?.let { Text(it, color = colors.text3, fontSize = 13.sp, modifier = Modifier.padding(8.dp)) }
         Text(
             "Sessions mit eigenen Fragen — ohne KI, genau so vorgelesen, wie du sie schreibst.",
             color = colors.text3,
@@ -126,13 +128,14 @@ private fun ReadingRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    "${session.questionCount} Fragen · ${formatSessionDuration(session.durationMin)} · ${session.reps}×",
+                    "${session.questionCount} ${if (session.isZieleLeitsaetze) "Leitsätze · aus Ziele" else "Fragen"} · ${formatSessionDuration(session.durationMin)} · ${session.reps}×",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 5.dp),
                 )
             }
+            if (!session.isZieleLeitsaetze) {
             Icon(
                 Icons.Outlined.DragIndicator,
                 "Zum Sortieren halten und ziehen",
@@ -146,6 +149,7 @@ private fun ReadingRow(
                 tint = colors.text3,
                 modifier = Modifier.size(22.dp).pmClickable(onClick = onDelete),
             )
+            }
         }
     }
 }
@@ -207,7 +211,15 @@ fun ReadingDetailScreen(
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             ) {
                 item {
-                    HistoryTitleCard(
+                    if (detail.session.isZieleLeitsaetze) {
+                        PmCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(20.dp)) {
+                                Text("Leitsätze", color = colors.text1, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                                Text("Automatisch aus allen Zielen. Einsprechen und Bearbeiten in der Ziele-App.", color = colors.text3, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                                viewModel.leitsaetzeFehler?.let { Text(it, color = colors.text3, fontSize = 13.sp) }
+                            }
+                        }
+                    } else HistoryTitleCard(
                         title = viewModel.historyTitleDraft,
                         fallback = AppViewModel.NEW_READING_TITLE,
                         onTitleChange = viewModel::updateHistoryTitle,
@@ -274,13 +286,14 @@ fun ReadingDetailScreen(
                         }
                     }
                     SectionLabel(
-                        "Fragen (${detail.questions.size})",
+                        "${if (detail.session.isZieleLeitsaetze) "Leitsätze" else "Fragen"} (${detail.questions.size})",
                         Modifier.padding(start = 8.dp, top = 26.dp, bottom = 14.dp),
                         decorated = true,
                     )
                     if (detail.questions.isEmpty()) {
                         Text(
-                            "Noch keine Frage. Über das Plus kommt die erste dazu — getippt oder diktiert.",
+                            if (detail.session.isZieleLeitsaetze) "Noch keine Leitsätze. Sprich in einem Ziel deinen Leitsatz ein und speichere ihn — er erscheint hier automatisch."
+                            else "Noch keine Frage. Über das Plus kommt die erste dazu — getippt oder diktiert.",
                             color = colors.text3,
                             fontFamily = Inter,
                             fontSize = 13.sp,
@@ -295,10 +308,10 @@ fun ReadingDetailScreen(
                             .reorderRow(reorder, question.id),
                     ) {
                         PmCard(
-                            Modifier.fillMaxWidth()
-                                .pmClickable(shape = RoundedCornerShape(24.dp), lift = true) {
+                            Modifier.fillMaxWidth().then(if (detail.session.isZieleLeitsaetze) Modifier else
+                                Modifier.pmClickable(shape = RoundedCornerShape(24.dp), lift = true) {
                                     viewModel.openReadingQuestionEditor(question.id, question.text)
-                                },
+                                }),
                             radius = 24,
                         ) {
                             Row(
@@ -313,6 +326,7 @@ fun ReadingDetailScreen(
                                     style = PmTextStyles.question,
                                     modifier = Modifier.weight(1f),
                                 )
+                                if (!detail.session.isZieleLeitsaetze) {
                                 Icon(
                                     Icons.Outlined.DragIndicator,
                                     "Zum Sortieren halten und ziehen",
@@ -330,13 +344,14 @@ fun ReadingDetailScreen(
                                     "Frage löschen",
                                     tint = colors.text3,
                                     modifier = Modifier.size(20.dp)
-                                        .pmClickable { viewModel.deleteReadingQuestion(question.id) },
+                                         .pmClickable { viewModel.deleteReadingQuestion(question.id) },
                                 )
+                                }
                             }
                         }
                     }
                 }
-                item {
+                if (!detail.session.isZieleLeitsaetze) item {
                     Spacer(Modifier.height(4.dp))
                     AddCard("Frage hinzufügen") { viewModel.openReadingQuestionEditor(null) }
                 }

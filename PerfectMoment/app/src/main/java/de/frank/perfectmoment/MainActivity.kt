@@ -177,6 +177,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onPostResume() {
         super.onPostResume()
+        viewModel.leitsaetzeAktualisieren()
         promptUnlock()
         releaseSilenceWithoutSession()
     }

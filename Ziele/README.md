@@ -31,6 +31,7 @@ Gemini 3.8 Flash/Flash-Lite, Azure, eigene Stimme) und Diktat (Groq Whisper) sin
 - **Kontextdatei** (Notizsymbol oben): einsprechen hängt einen datierten Absatz an, tippen ändert direkt. Geht in jede Auswertung,
   dazu Jarvis' Live-Gedächtnis (Schalter in den Einstellungen).
 - **Hell/Dunkel/Automatik** oben rechts, Gold in beiden Modi.
+- **Leitsatz:** Auf der Zielseite unter „Dein Weg“ einsprechen oder tippen, speichern und jederzeit bearbeiten. Perfect Moment liest die Leitsätze aller Ziele wortwörtlich über eine signaturgeschützte Verbindung; Änderungen und Löschungen werden automatisch übernommen.
 - **Einstellungen → Schlüssel aus Jarvis übernehmen:** holt Groq-, Anthropic- und Stimmen-Schlüssel über die Jarvis-Brücke.
 
 ## Brücken

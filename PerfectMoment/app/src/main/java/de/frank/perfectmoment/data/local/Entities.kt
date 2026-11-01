@@ -8,6 +8,11 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 
+/** Dauerhafte Quellenkennung; wird mit den bestehenden Sitzungsdaten auch gesichert. */
+const val ZIELE_LEITSAETZE_QUELLE = "ziele:leitsaetze:v1"
+val SessionEntity.isZieleLeitsaetze: Boolean
+    get() = custom && introContext == ZIELE_LEITSAETZE_QUELLE
+
 @Entity(
     tableName = "sessions",
     indices = [Index(value = ["startedAt"])],

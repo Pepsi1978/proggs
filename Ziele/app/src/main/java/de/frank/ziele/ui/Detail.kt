@@ -131,6 +131,16 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                 Text(z.strategie, color = f.text, fontSize = 15.sp, lineHeight = 22.sp)
             }
         }
+        item {
+            Column(Modifier.fillMaxWidth().glas(f, erhoeht = 1f, toenung = f.primaer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("LEITSATZ", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+                    RundKnopf(Icons.Rounded.Edit, "Leitsatz bearbeiten", f.primaer) { vm.leitsatzBearbeiten(z) }
+                }
+                Text(z.leitsatz.ifBlank { "Deinen Leitsatz einsprechen oder schreiben" }, color = if (z.leitsatz.isBlank()) f.textSchwach else f.text,
+                    fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.fillMaxWidth().antippen { vm.leitsatzBearbeiten(z) })
+            }
+        }
         if (z.bericht.isNotBlank()) item { Bericht(vm, z) }
         if (z.ausgewertetAm != null) item { Gespraech(vm, z, gespraech, laufModus[id] == de.frank.ziele.ki.Auswertung.Modus.RUECKMELDUNG) }
         if (sichtbar.isNotEmpty()) {

@@ -1,6 +1,9 @@
 package de.frank.perfectmoment.ui
 
 import android.content.Context
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +33,8 @@ import de.frank.perfectmoment.data.local.HookEntity
 import de.frank.perfectmoment.data.settings.SecureSettings
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
+import de.frank.perfectmoment.data.local.isZieleLeitsaetze
+import de.frank.perfectmoment.data.repository.LeitsaetzeSync
 import de.frank.perfectmoment.data.local.SessionWithQuestions
 import de.frank.perfectmoment.data.local.SkillEntity
 import de.frank.perfectmoment.data.settings.MAX_REPETITIONS_PER_QUESTION
@@ -147,6 +152,33 @@ class AppViewModel(
     private val container: AppContainer,
 ) : ViewModel() {
     private val appContext = context.applicationContext
+    private val leitsaetzeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) { leitsaetzeAktualisieren() }
+    }
+    var leitsaetzeFehler by mutableStateOf<String?>(null); private set
+    val zeigtLeitsaetze: Boolean get() = historyDetail?.session?.isZieleLeitsaetze == true
+
+    fun leitsaetzeAktualisieren() {
+        viewModelScope.launch { synchronisiereLeitsaetze() }
+    }
+
+    private suspend fun synchronisiereLeitsaetze(): Boolean {
+        return try {
+            container.leitsaetzeSync.aktualisieren()
+            leitsaetzeFehler = null
+            val id = historyDetail?.session?.takeIf { it.isZieleLeitsaetze }?.id
+            if (id != null) {
+                val frisch = sessionRepository.getSession(id)
+                if (historyDetail?.session?.id == id) historyDetail = frisch
+            }
+            true
+        } catch (c: CancellationException) {
+            throw c
+        } catch (e: Exception) {
+            leitsaetzeFehler = "Leitsätze konnten nicht aus Ziele gelesen werden: ${e.message ?: "Verbindung nicht verfügbar"}"
+            false
+        }
+    }
     private val settings = container.settings
     private val contentRepository = container.contentRepository
     private val sessionRepository = container.sessionRepository
@@ -634,6 +666,7 @@ class AppViewModel(
             val order = readingOrder
             return sessions.filter(SessionEntity::custom).sortedWith(
                 compareBy(
+                    { if (it.isZieleLeitsaetze) 0 else 1 },
                     { order.indexOf(it.id).takeIf { place -> place >= 0 } ?: Int.MAX_VALUE },
                     SessionEntity::startedAt,
                 ),
@@ -644,6 +677,7 @@ class AppViewModel(
     fun moveReadingSession(from: Int, to: Int) {
         val current = readingSessions
         if (from !in current.indices || to !in current.indices || from == to) return
+        if (current[from].isZieleLeitsaetze || current[to].isZieleLeitsaetze) return
         readingOrder = current.map(SessionEntity::id).toMutableList().apply { add(to, removeAt(from)) }
     }
 
@@ -654,6 +688,7 @@ class AppViewModel(
     }
 
     init {
+        appContext.contentResolver.registerContentObserver(LeitsaetzeSync.URI, true, leitsaetzeObserver)
         if (ttsProvider == TtsProvider.GOOGLE_CLOUD.id && googleApiKey.isBlank()) {
             ttsProvider = TtsProvider.EDGE.id
             settings.ttsProvider = TtsProvider.EDGE.id
@@ -679,6 +714,7 @@ class AppViewModel(
             }
         }
         viewModelScope.launch {
+            synchronisiereLeitsaetze()
             sessionRepository.observeSessions().collect { sessions = it }
         }
         viewModelScope.launch {
@@ -706,7 +742,7 @@ class AppViewModel(
         sheet = null
         screen = target
         if (target == AppScreen.RAW_DATA) refreshRawData()
-        if (target == AppScreen.HISTORY) backfillSummaries()
+        if (target == AppScreen.HISTORY) { leitsaetzeAktualisieren(); backfillSummaries() }
     }
 
     /**
@@ -1521,6 +1557,7 @@ class AppViewModel(
 
     /** Takes what is typed into the title field of the open history entry. */
     fun updateHistoryTitle(value: String) {
+        if (zeigtLeitsaetze) return
         // A title stays one line — pasted line breaks would tear the history rows apart.
         historyTitleDraft = value.replace(Regex("\\s*\\R\\s*"), " ").take(HISTORY_TITLE_MAX_LENGTH)
     }
@@ -1534,6 +1571,7 @@ class AppViewModel(
      */
     fun commitHistoryTitle() {
         val session = historyDetail?.session ?: return
+        if (session.isZieleLeitsaetze) return
         // Ein Vorlese-Verlauf hat keinen Wunschtext, auf den er zurückfallen könnte — ein leer
         // geräumtes Feld bekäme sonst gar keinen Namen mehr.
         val title = historyTitleDraft.trim().ifBlank {
@@ -1629,6 +1667,7 @@ class AppViewModel(
 
     fun openReadingDetail(id: Long) {
         viewModelScope.launch {
+            if (sessions.any { it.id == id && it.isZieleLeitsaetze }) synchronisiereLeitsaetze()
             historyDetail = sessionRepository.getSession(id)
             historyTitleDraft = historyDetail?.session?.summary.orEmpty()
             historyDetail?.session?.let { session ->
@@ -1672,6 +1711,7 @@ class AppViewModel(
     }
 
     fun openReadingQuestionEditor(questionId: Long?, text: String = "") {
+        if (zeigtLeitsaetze) return
         cancelVoiceInput()
         readingQuestionId = questionId
         readingQuestionText = text
@@ -1698,6 +1738,7 @@ class AppViewModel(
 
     /** Schiebt eine Frage während des Ziehens an ihren neuen Platz. */
     fun moveReadingQuestion(from: Int, to: Int) {
+        if (zeigtLeitsaetze) return
         val detail = historyDetail ?: return
         val current = detail.questions
         if (from !in current.indices || to !in current.indices || from == to) return
@@ -1708,6 +1749,7 @@ class AppViewModel(
 
     /** Hält die gezogene Reihenfolge fest, damit sie beim nächsten Öffnen wieder so dasteht. */
     fun persistReadingQuestionOrder() {
+        if (zeigtLeitsaetze) return
         val detail = historyDetail ?: return
         val sessionId = detail.session.id
         val orderedIds = detail.questions.map(QuestionEntity::id)
@@ -1717,7 +1759,7 @@ class AppViewModel(
 
     /** Die eigenen Sessions, in die die offene Frage kopiert werden kann — ohne die offene selbst. */
     val readingLinkSessions: List<SessionEntity>
-        get() = readingSessions.filterNot { it.id == historyDetail?.session?.id }
+        get() = readingSessions.filterNot { it.id == historyDetail?.session?.id || it.isZieleLeitsaetze }
 
     fun openReadingLinkPicker() {
         readingLinkTargets = emptySet()
@@ -1908,6 +1950,7 @@ class AppViewModel(
     }
 
     fun deleteSession(id: Long) {
+        if (sessions.any { it.id == id && it.isZieleLeitsaetze }) return
         viewModelScope.launch { sessionRepository.deleteSession(id) }
     }
 
@@ -2277,6 +2320,7 @@ class AppViewModel(
     }
 
     override fun onCleared() {
+        appContext.contentResolver.unregisterContentObserver(leitsaetzeObserver)
         cancelVoiceInput()
         sessionStartGeneration++
         sessionStartJob?.cancel()
