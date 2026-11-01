@@ -99,7 +99,7 @@ object HelferKatalog {
     val KENNUNG = Regex("^[a-z0-9][a-z0-9-]{0,39}$")
 
     /** Für Helfer gesperrt: Sie sollen sich keine Rechte erschließen und keine Schutzregeln umgehen können. */
-    private val GESPERRTE_WERKZEUGE = Regex("^(helfer_.*|programm.*|agent_starten|agenten|vorgang_.*|mail_senden|einstellungen|jarvis_merken|jarvis_vergessen|jarvis_langzeitkontext_ersetzen|mac_.*|jarvis_mac_.*|.*_loeschen)$")
+    private val GESPERRTE_WERKZEUGE = Regex("^(helfer_.*|programm.*|agent_starten|agenten|vorgang_.*|mail_senden|einstellungen|jarvis_merken|jarvis_vergessen|jarvis_langzeitkontext_ersetzen|mac_.*|jarvis_mac_.*|jarvis_windows_hp_.*|.*_loeschen)$")
     fun werkzeugGesperrt(name: String) = GESPERRTE_WERKZEUGE.matches(name)
 
     private fun lies(d: File): JSONArray = runCatching { JSONArray(d.readText()) }.getOrDefault(JSONArray())

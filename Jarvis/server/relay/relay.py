@@ -149,7 +149,7 @@ class Relay:
         self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 1000, aelteste fallen weg)
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
-        self.kanal = None            # AgentenKanal: reicht beim Verbinden unquittierte Post nach
+        self.kanaele = []            # AgentenKanal je Rechner: reichen beim Verbinden unquittierte Post nach
         self._lade()
 
     def _lade(self):
@@ -204,8 +204,8 @@ class Relay:
             except (ConnectionError, RuntimeError):
                 self.ausstehend.insert(0, signal)
                 break
-        if self.kanal is not None:
-            await self.kanal.nachreichen(ws)
+        for kanal in self.kanaele:
+            await kanal.nachreichen(ws)
         try:
             async for nachricht in ws:
                 if nachricht.type != WSMsgType.TEXT:
@@ -662,7 +662,8 @@ class PcBruecke:
         # Dritter Platz seit 31.10.2026: der Hostinger-Server (X-Jarvis-Rang: server, OpenLauncherServer/bruecke). Ein Auftrag kommt
         # nur zu ihm, wenn das Handy es mit „server“ erlaubt (zuletzt, mitte, zuerst, nur); aeltere Handys bekommen ihn also nie.
         self.plaetze = {rang: {"zuletzt": 0.0, "rechner": "", "abfragen": {}, "belegt": False} for rang in PLAETZE}
-        self.mac_katalog = False
+        # Plaetze, deren Bruecke modell=katalog kennt (X-Jarvis-Katalog: 1).
+        self.katalog_plaetze: set[str] = set()
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         self.abgeholt = {}           # Auftrag-id -> Auftrag, bis die Quittung da ist (zum Weitergeben, siehe quittung)
         # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
@@ -952,12 +953,13 @@ class PcBruecke:
         """Welche Plaetze diesen Auftrag nehmen duerfen, der erste zuerst."""
         modell = auftrag.get("modell")
         # Sol 6.1 (Codex CLI) kann am Schreibtisch nur der Windows-PC. Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot
-        # (Effort, Profil, Modus, CLI) startet dort nur die Mac-Bruecke: Die Windows-Bruecke kennt diese Felder nicht und
-        # startete sonst still Opus. Opus gehoert dem Vorrangrechner, der andere springt ein.
+        # (Effort, Profil, Modus, CLI) nimmt nur eine Bruecke, die es kennt: Eine aeltere startete sonst still Opus.
+        # Opus und frei gewaehlte Modelle gehoeren dem Vorrangrechner, der andere springt ein.
         if modell == "sol":
             rechner = ["haupt"]
         elif modell == "katalog":
-            rechner = ["ersatz"] if self.mac_katalog else []
+            reihe = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
+            rechner = [r for r in reihe if r in self.katalog_plaetze]
         else:
             rechner = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
         regel = auftrag.get("server")
@@ -1014,9 +1016,12 @@ class PcBruecke:
         if time.monotonic() - self.plaetze[rang]["zuletzt"] >= PC_FRISCH_S:
             log.info("Bruecke verbunden: %s", rang)
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
-        if rang == "ersatz":
-            # Nur eine Mac-Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
-            self.mac_katalog = request.headers.get("X-Jarvis-Katalog") == "1"
+        if rang != "server":
+            # Nur eine Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
+            if request.headers.get("X-Jarvis-Katalog") == "1":
+                self.katalog_plaetze.add(rang)
+            else:
+                self.katalog_plaetze.discard(rang)
         # Voll ausgelastet: fragt weiter ab (bleibt sichtbar), bekommt aber nichts; der Auftrag geht an den naechsten.
         self.plaetze[rang]["belegt"] = request.headers.get("X-Jarvis-Belegt") == "1"
         self._melde_dich(rang, rechner, request)
@@ -1112,7 +1117,7 @@ class PcBruecke:
             # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Sol 6.1); alles andere gilt als opus.
             # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
             # katalog: ein Modell aus dem OpenLauncher-Angebot mit slug, anbieter, effort, profil, modus und cli
-            # (claude, codex, opencode, kimi, antigravity); nur der Mac startet es.
+            # (claude, codex, opencode, kimi, antigravity); es startet nur eine Bruecke, die es kennt.
             katalog = daten.get("modell") == "katalog"
             eintrag = {"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "anhaenge": anhang_liste(daten), "review": bool(daten.get("review")),
                        "nummer": jarvis_id, "modell": "katalog" if katalog else "sol" if daten.get("modell") == "sol" else "opus",
@@ -1379,8 +1384,13 @@ class _Abfrage:
 
 
 class AgentenKanal:
-    def __init__(self, relay: Relay):
+    """Je Rechner eine eigene Instanz: Postfach, Abfragen und Datei getrennt. geraet "mac" behaelt die alten Wege und Signale,
+    "hp" (Jarvis Windows HP) hat eigene Wege unter /geraet/hp, /pc/hp-befehl und /j/<Geheimnis>/hp und traegt im Signal "geraet"."""
+
+    def __init__(self, relay: Relay, geraet: str = "mac"):
         self.relay = relay
+        self.geraet = geraet
+        self.datei = KANAL_DATEI if geraet == "mac" else KANAL_DATEI.with_name(f"agentenkanal-{geraet}.json")
         self.post = {"mac": [], "handy": []}
         self.mac = _Abfrage()
         self.bruecke = _Abfrage()
@@ -1390,17 +1400,17 @@ class AgentenKanal:
         self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
         self.geweckt = 0.0
         try:
-            daten = json.loads(KANAL_DATEI.read_text("utf-8"))
+            daten = json.loads(self.datei.read_text("utf-8"))
             self.post = {"mac": daten.get("mac", []), "handy": daten.get("handy", [])}
         except Exception:
             pass
 
     def _sichere(self) -> None:
         try:
-            KANAL_DATEI.parent.mkdir(parents=True, exist_ok=True)
-            teil = KANAL_DATEI.with_suffix(".teil")
+            self.datei.parent.mkdir(parents=True, exist_ok=True)
+            teil = self.datei.with_suffix(".teil")
             teil.write_text(json.dumps(self.post, ensure_ascii=False), "utf-8")
-            teil.replace(KANAL_DATEI)
+            teil.replace(self.datei)
         except Exception as fehler:
             log.warning("Agentenkanal nicht gesichert: %s", fehler)
 
@@ -1434,6 +1444,12 @@ class AgentenKanal:
         self.start_vorn = bool(self.start_vorn) or vorn
         self.befehl.set()
 
+    def _signal(self, nachricht: dict) -> str:
+        roh = {"signal": "agentenkanal", "nachricht": nachricht}
+        if self.geraet != "mac":
+            roh["geraet"] = self.geraet
+        return json.dumps(roh, ensure_ascii=False)
+
     def _frage_liegt(self) -> bool:
         return not self.mac.da() and any(n["art"] != "info" for n in self.post["mac"])
 
@@ -1443,7 +1459,7 @@ class AgentenKanal:
     async def nachreichen(self, ws) -> None:
         for nachricht in list(self.post["handy"]):
             try:
-                await ws.send_str(json.dumps({"signal": "agentenkanal", "nachricht": nachricht}, ensure_ascii=False))
+                await ws.send_str(self._signal(nachricht))
             except (ConnectionError, RuntimeError):
                 return
 
@@ -1534,7 +1550,7 @@ class AgentenKanal:
         zugestellt = False
         if ws is not None and not ws.closed:
             try:
-                await ws.send_str(json.dumps({"signal": "agentenkanal", "nachricht": nachricht}, ensure_ascii=False))
+                await ws.send_str(self._signal(nachricht))
                 zugestellt = True
             except (ConnectionError, RuntimeError):
                 pass
@@ -1847,7 +1863,8 @@ def app() -> web.Application:
     anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
     anwendung.router.add_post("/geraet/lokal-entfernen", pc.lokal_entfernen)
     kanal = AgentenKanal(relay)
-    relay.kanal = kanal
+    kanal_hp = AgentenKanal(relay, "hp")
+    relay.kanaele = [kanal, kanal_hp]
     anwendung.router.add_post("/geraet/kanal", kanal.handy_sendet)
     anwendung.router.add_post("/geraet/kanal/quittung", kanal.handy_quittiert)
     anwendung.router.add_get("/geraet/kanal/status", kanal.status)
@@ -1856,6 +1873,14 @@ def app() -> web.Application:
     anwendung.router.add_get("/j/{geheimnis}/kanal", kanal.mac_abfrage)
     anwendung.router.add_post("/j/{geheimnis}/kanal", kanal.mac_sendet)
     anwendung.router.add_post("/j/{geheimnis}/kanal/quittung", kanal.mac_quittiert)
+    anwendung.router.add_post("/geraet/hp/kanal", kanal_hp.handy_sendet)
+    anwendung.router.add_post("/geraet/hp/kanal/quittung", kanal_hp.handy_quittiert)
+    anwendung.router.add_get("/geraet/hp/kanal/status", kanal_hp.status)
+    anwendung.router.add_post("/geraet/hp/start", kanal_hp.mac_start)
+    anwendung.router.add_get("/pc/hp-befehl", kanal_hp.bruecke_abfrage)
+    anwendung.router.add_get("/j/{geheimnis}/hp/kanal", kanal_hp.mac_abfrage)
+    anwendung.router.add_post("/j/{geheimnis}/hp/kanal", kanal_hp.mac_sendet)
+    anwendung.router.add_post("/j/{geheimnis}/hp/kanal/quittung", kanal_hp.mac_quittiert)
     ablage = AblageAbgleich(relay)
     anwendung.on_startup.append(ablage.waechter)
     anwendung.router.add_get("/j/{geheimnis}/ablage/aenderungen", ablage.aenderungen)

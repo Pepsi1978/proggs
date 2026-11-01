@@ -132,7 +132,12 @@ object Waechter {
         }
         if (art == "agentenkanal") {
             // Post von Jarvis Mac OS: kann beim Neuverbinden wiederkommen, die Fähigkeit erkennt das an der id.
-            runCatching { Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.MacJarvisFaehigkeit>().firstOrNull()?.empfangen(nachricht.optJSONObject("nachricht")) }
+            runCatching {
+                val alle = Register.alle(app)
+                val ziel = if (nachricht.optString("geraet") == "hp") alle.filterIsInstance<de.frank.jarvis.faehigkeit.WindowsHpJarvisFaehigkeit>().firstOrNull()
+                else alle.filterIsInstance<de.frank.jarvis.faehigkeit.MacJarvisFaehigkeit>().firstOrNull()
+                ziel?.empfangen(nachricht.optJSONObject("nachricht"))
+            }
                 .onFailure { Logbuch.fehler("Signal Agentenkanal", it) }
             return
         }
