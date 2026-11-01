@@ -205,6 +205,8 @@ enum ErinnerungWerkzeuge {
     private static func anlegen(_ a: JSONObjekt) async throws -> WerkzeugErgebnis {
         let text = sauber(a, "text")
         if text.isEmpty { return fehler("Der Inhalt fehlt.") }
+        let form = wert(a, "form")
+        guard form == Erinnerung.formMeldung || form == Erinnerung.formWecker else { return fehler("Frag Frank ausdrücklich „Benachrichtigung oder Wecker?“ und übergib seine Auswahl in form.") }
         var datum: String?
         if gesetzt(a, "datum") {
             guard let d = datumAus(wert(a, "datum")) else { return fehler("„\(wert(a, "datum"))“ ist kein Datum.") }
@@ -216,7 +218,6 @@ enum ErinnerungWerkzeuge {
             uhrzeit = u
         }
         let vorab = vorabAus(wert(a, "vorab_minuten")).map { Erinnerung.neueAusloesung($0) }
-        let form = wert(a, "form") == Erinnerung.formWecker ? Erinnerung.formWecker : Erinnerung.formMeldung
         let e = try await abgleich.erinnerungAnlegen(text: text, zeile: wert(a, "zeile"), kurz: wert(a, "kurz"), datum: datum, uhrzeit: uhrzeit, form: form, vorab: vorab)
         if e.allgemein { return WerkzeugErgebnis(text: "Als allgemeine Erinnerung gespeichert: \(e.zeile). Jarvis meldet sich, wenn es passt.") }
         let zeiten = e.ausloesungen.map { e.vorlaufText($0) }.joined(separator: ", ")

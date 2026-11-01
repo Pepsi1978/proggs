@@ -191,6 +191,8 @@ public static class ErinnerungWerkzeuge
     {
         var text = S(a, "text").Trim();
         if (text.Length == 0) return Fehler("Der Inhalt fehlt.");
+        var form = S(a, "form") is Erinnerung.FormWecker or Erinnerung.FormMeldung ? S(a, "form") : null;
+        if (form == null) return Fehler("Frag Frank ausdrücklich „Benachrichtigung oder Wecker?“ und übergib seine Auswahl in form.");
         DateOnly? datum = null;
         if (Gesetzt(a, "datum"))
         {
@@ -204,7 +206,7 @@ public static class ErinnerungWerkzeuge
             if (uhrzeit == null) return Fehler($"„{S(a, "uhrzeit")}“ ist keine Uhrzeit.");
         }
         var vorab = VorabAus(S(a, "vorab_minuten")).Select(m => ErinnerungZeit.NeueAusloesung(m)).ToList();
-        var e = Neu(text, S(a, "zeile"), S(a, "kurz"), datum, uhrzeit, S(a, "form") == Erinnerung.FormWecker ? Erinnerung.FormWecker : Erinnerung.FormMeldung, vorab);
+        var e = Neu(text, S(a, "zeile"), S(a, "kurz"), datum, uhrzeit, form, vorab);
         await Abgleich.ErinnerungSpeichern(e);
         return Ok(e.Allgemein
             ? $"Als allgemeine Erinnerung gespeichert: {e.Zeile}. Jarvis meldet sich, wenn es passt."

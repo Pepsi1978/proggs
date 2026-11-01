@@ -80,7 +80,7 @@ struct ErinnerungenAnsicht: View {
 
     private func zeile(_ e: Erinnerung, jetzt: Int64) -> some View {
         let vorbei = !allgemein && (e.erledigt != 0 || (e.termin ?? 0) < jetzt)
-        let oben = allgemein ? (e.erledigt != 0 ? "Erledigt" : "Ohne festen Termin") : e.datumAnzeige + (e.erledigt != 0 ? " · erledigt" : "")
+        let oben = allgemein ? (e.erledigt != 0 ? "Erledigt" : "Ohne festen Termin") : e.datumAnzeige + " · " + (e.wecker ? "Wecker" : "Erinnerung") + (e.erledigt != 0 ? " · erledigt" : "")
         return Button { steuerung.erinnerungOffen = e.id } label: {
             GlasKarte(abstand: 14) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -165,7 +165,7 @@ private struct ErinnerungDetailEbene: View {
     private func inhalt(_ e: Erinnerung) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                Text(e.allgemein ? "Ohne festen Termin" : e.datumAnzeige).font(.jarvis(15, .semibold)).foregroundStyle(Farbe.haupt)
+                Text(e.allgemein ? "Ohne festen Termin" : e.datumAnzeige + " · " + (e.wecker ? "Wecker" : "Erinnerung")).font(.jarvis(15, .semibold)).foregroundStyle(Farbe.haupt)
                 Spacer()
                 KapselKnopf(symbol: "xmark", titel: "Schließen") { schliessen() }
             }

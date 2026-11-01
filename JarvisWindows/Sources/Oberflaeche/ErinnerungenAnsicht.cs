@@ -39,7 +39,7 @@ public sealed class ErinnerungenAnsicht : LebendeAnsicht
     private static UIElement Zeile(Erinnerung e, bool allgemein, long jetzt)
     {
         var vorbei = !allgemein && (e.Erledigt != 0 || (e.Termin() ?? 0) < jetzt);
-        var oben = allgemein ? (e.Erledigt != 0 ? "Erledigt" : "Ohne festen Termin") : e.DatumAnzeige() + (e.Erledigt != 0 ? " · erledigt" : "");
+        var oben = allgemein ? (e.Erledigt != 0 ? "Erledigt" : "Ohne festen Termin") : e.DatumAnzeige() + " · " + (e.Wecker ? "Wecker" : "Erinnerung") + (e.Erledigt != 0 ? " · erledigt" : "");
         return Klick(Karte(V(3,
             T(oben, 12, FontWeights.SemiBold, vorbei ? Farbe.Text3 : Farbe.Haupt, 1),
             T(e.Zeile, 15, FontWeights.Medium, vorbei ? Farbe.Text3 : Farbe.Text, 2)), 14), () => ErinnerungDetail.Zeige(e.Id));
@@ -122,7 +122,7 @@ public sealed class ErinnerungDetail : LebendeAnsicht
         g.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var kopf = H(10, Fuell(T(e.Allgemein ? "Ohne festen Termin" : e.DatumAnzeige(), 14, FontWeights.SemiBold, Farbe.Haupt, 1)), Rund("xmark", Schliessen, "Schließen", groesse: 30));
+        var kopf = H(10, Fuell(T(e.Allgemein ? "Ohne festen Termin" : e.DatumAnzeige() + " · " + (e.Wecker ? "Wecker" : "Erinnerung"), 14, FontWeights.SemiBold, Farbe.Haupt, 1)), Rund("xmark", Schliessen, "Schließen", groesse: 30));
         g.Children.Add(kopf);
 
         var inhalt = V(4,
