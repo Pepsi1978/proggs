@@ -1,6 +1,6 @@
 # TVO/CVO: Update scheitert mit „Build-Artefakt passt nicht zum Projekt“ (01.11.2026)
 
-> Behoben in TVO 1.11.35, CVO 2.4.31, rebuild-overlay.ps1 1.8.0, UpdateZentrale 1.3.60, Updater-Zentrale macOS 1.0.32; nach Code-Review nachgeschärft in TVO 1.11.36, CVO 2.4.32, rebuild-overlay.ps1 1.8.1, UpdateZentrale 1.3.62, macOS 1.0.34. Erster Vorfall: 22.10.2026.
+> Behoben in TVO 1.11.35, CVO 2.4.31, rebuild-overlay.ps1 1.8.0, UpdateZentrale 1.3.60, Updater-Zentrale macOS 1.0.32; nach Code-Review nachgeschärft in TVO 1.11.36, CVO 2.4.32, rebuild-overlay.ps1 1.8.1, UpdateZentrale 1.3.63, macOS 1.0.35. Erster Vorfall: 22.10.2026.
 
 ## Symptom
 
