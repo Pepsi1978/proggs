@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -53,7 +54,6 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SaveAs
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Slideshow
 import androidx.compose.material.icons.rounded.TableChart
@@ -122,7 +122,7 @@ private enum class Ansicht(val anzeige: String, val spalten: Int) {
 private enum class Sortierung(val anzeige: String) { NEUESTE("Neueste zuerst"), AELTESTE("Älteste zuerst"), NAME("Name A–Z"), GROESSE("Größte zuerst"), QUELLE("Nach Quelle") }
 
 /**
- * Die Ablage von Jarvis: Texte und Dateien suchen, filtern, ansehen, abspielen, herunterladen, teilen und löschen.
+ * Die Ablage von Jarvis: Texte und Dateien filtern, ansehen, abspielen, herunterladen, teilen und löschen.
  * Antippen öffnet die Vorschau, langes Drücken wählt mehrere Einträge zum gemeinsamen Teilen oder Herunterladen aus.
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -146,7 +146,6 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val geladen by ladeImHintergrund<List<Eintrag>?>(null, stand, laeufe.size, behalten = true) { speicher.eintraege() }
     val alle = geladen.orEmpty()
 
-    var suche by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sortierung by rememberSaveable { mutableStateOf(Sortierung.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageSortierung }?.name ?: Sortierung.NEUESTE.name) }
     var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
@@ -166,30 +165,14 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var offenerAnhang by rememberSaveable { mutableStateOf<String?>(null) }
     var loeschFrage by remember { mutableStateOf<Pair<Eintrag, Anhang?>?>(null) }
 
-    // Volltextsuche im Text der Einträge: nur gelesen, solange gesucht wird, einmal im Hintergrund (gekürzt), nicht je Tastendruck.
-    val suchAktiv = suche.isNotBlank()
-    // Nur Geändertes neu lesen: Sonst läse jede eintreffende Änderung während einer Suche alle Texte wieder.
-    val textCache = remember { HashMap<String, Pair<Long, String>>() }
-    val texte by ladeImHintergrund(emptyMap<String, String>(), alle, suchAktiv) {
-        if (!suchAktiv) emptyMap() else synchronized(textCache) {
-            alle.associate { e ->
-                e.id to (textCache[e.id]?.takeIf { it.first == e.geaendert }?.second ?: speicher.text(e, 200_000).lowercase(Locale.GERMAN).also { textCache[e.id] = e.geaendert to it })
-            }
-        }
-    }
     val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k } }
-    // Filtern und Sortieren abseits des Hauptfadens, kurz entprellt; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
+    // Filtern und Sortieren abseits des Hauptfadens; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
     // null = erste Berechnung läuft noch: Erst danach darf „Nichts gefunden“ oder „Noch nichts abgelegt“ erscheinen.
     var sicht by remember { mutableStateOf<List<Eintrag>?>(null) }
-    LaunchedEffect(geladen, suche, kat, sortierung, texte, quellenWert) {
+    LaunchedEffect(geladen, kat, sortierung, quellenWert) {
         if (geladen == null) return@LaunchedEffect
-        if (suche.isNotBlank()) delay(150)
-        val s = suche.trim().lowercase(Locale.GERMAN)
         sicht = withContext(Dispatchers.Default) {
-            alle.filter { e ->
-                (kat == null || kat in e.kategorien) && (s.isEmpty() || s in e.titel.lowercase(Locale.GERMAN) || (texte[e.id]?.contains(s) == true) ||
-                    e.anhaenge.any { s in it.originalName.lowercase(Locale.GERMAN) || s in it.beschreibung.lowercase(Locale.GERMAN) })
-            }.let { l ->
+            alle.filter { e -> kat == null || kat in e.kategorien }.let { l ->
                 when (Sortierung.valueOf(sortierung)) {
                     Sortierung.NEUESTE -> l.sortedByDescending { it.geaendert }
                     Sortierung.AELTESTE -> l.sortedBy { it.geaendert }
@@ -259,43 +242,35 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Rundknopf(Icons.Rounded.Share, "Ausgewählte teilen") { aktionen.teilen(gewaehlt.flatMap(aktionen::freigaben), gewaehlt.singleOrNull()?.titel); auswahl = emptyList() }
             }
         } else {
-            Text("Ablage", Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-        }
-        // Suche, Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für den Reiter „Prompts“.
-        if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.weight(1f)) {
-                Eingabe(suche, { suche = it }, "Suchen in Titeln, Texten, Dateien", Modifier.fillMaxWidth())
-                if (suche.isEmpty()) Icon(Icons.Rounded.Search, null, tint = f.textSchwach, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp).size(20.dp))
-            }
-            var sortMenue by remember { mutableStateOf(false) }
-            Box {
-                Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
-                Menue(sortMenue, { sortMenue = false }) {
-                    Sortierung.entries.forEach { s ->
-                        WahlPunkt(s.anzeige, s.name == sortierung) { sortierung = s.name; vm.einstellungen.ablageSortierung = s.name.lowercase(); sortMenue = false }
+            // Kopfzeile mit fester Höhe: Die Reiter darunter springen nicht, wenn Prompts und Erinnerung die Knöpfe ausblenden.
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 20.dp, end = 12.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Ablage", Modifier.weight(1f), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                // Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für die Reiter „Prompts“ und „Erinnerung“.
+                if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) {
+                    var sortMenue by remember { mutableStateOf(false) }
+                    Box {
+                        Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
+                        Menue(sortMenue, { sortMenue = false }) {
+                            Sortierung.entries.forEach { s ->
+                                WahlPunkt(s.anzeige, s.name == sortierung) { sortierung = s.name; vm.einstellungen.ablageSortierung = s.name.lowercase(); sortMenue = false }
+                            }
+                            DropdownMenuItem({ Text("Reihenfolge der Quellen …") }, { sortMenue = false; quellenOffen = true })
+                        }
                     }
-                    DropdownMenuItem({ Text("Reihenfolge der Quellen …") }, { sortMenue = false; quellenOffen = true })
+                    var ansichtMenue by remember { mutableStateOf(false) }
+                    Box {
+                        Rundknopf(ansichtSymbol(ansicht), "Ansicht: " + ansicht.anzeige, farbe = f.primaer) { ansichtMenue = true }
+                        Menue(ansichtMenue, { ansichtMenue = false }) {
+                            Ansicht.entries.forEach { a ->
+                                WahlPunkt(a.anzeige, a == ansicht, ansichtSymbol(a)) { vm.einstellungen.ablageAnsicht = a.name.lowercase(); ansichtMenue = false }
+                            }
+                        }
+                    }
                 }
             }
-            var ansichtMenue by remember { mutableStateOf(false) }
-            Box {
-                Rundknopf(ansichtSymbol(ansicht), "Ansicht: " + ansicht.anzeige, farbe = f.primaer) { ansichtMenue = true }
-                Menue(ansichtMenue, { ansichtMenue = false }) {
-                    Ansicht.entries.forEach { a ->
-                        WahlPunkt(a.anzeige, a == ansicht, ansichtSymbol(a)) { vm.einstellungen.ablageAnsicht = a.name.lowercase(); ansichtMenue = false }
-                    }
-                }
-            }
         }
-        val abgleichText = abgleich.hinweis ?: when {
-            abgleich.dateien.isNotEmpty() -> "Überträgt ${abgleich.dateien.size} große Datei(en): „${abgleich.dateien[0].first}“" + (if (abgleich.geladen > 0) " · ${Dateityp.groesse(abgleich.geladen)} von ${Dateityp.groesse(abgleich.dateien[0].second)}" else "")
-            abgleich.laeuft -> "Gleicht ab …"
-            abgleich.zuletzt > 0 -> "Abgeglichen um " + java.text.SimpleDateFormat("HH:mm", Locale.GERMAN).format(java.util.Date(abgleich.zuletzt))
-            else -> null
-        }
-        abgleichText?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = if (abgleich.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        // Alle Bereiche auf einen Blick, umbrechend statt seitlich zu wischen.
-        FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Alle Bereiche auf einen Blick, von Rand zu Rand und umbrechend statt seitlich zu wischen.
+        FlowRow(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // Die Zahlen folgen dem Abgleich: Jede neue Fassung aus einer anderen Jarvis-Version zählt sofort mit.
             val promptStand by de.frank.jarvis.ablage.Prompts.stand.collectAsState()
             val erinnerungStand by de.frank.jarvis.ablage.Erinnerungen.stand.collectAsState()
@@ -304,9 +279,16 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             val zahlen = remember(alle) { Kategorie.entries.associateWith { k -> alle.count { k in it.kategorien } } }
             Chip("Alle ${alle.size}", filter == null) { filter = null }
             Kategorie.entries.forEach { k -> Chip("${k.anzeige} ${zahlen[k] ?: 0}", filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
-            Chip("Prompts $promptZahl", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER; if (filter == PROMPTS_REITER) suche = "" }
-            Chip("Erinnerung $erinnerungZahl", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER; if (filter == ERINNERUNG_REITER) suche = "" }
+            Chip("Prompts $promptZahl", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER }
+            Chip("Erinnerung $erinnerungZahl", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER }
         }
+        val abgleichText = abgleich.hinweis ?: when {
+            abgleich.dateien.isNotEmpty() -> "Überträgt ${abgleich.dateien.size} große Datei(en): „${abgleich.dateien[0].first}“" + (if (abgleich.geladen > 0) " · ${Dateityp.groesse(abgleich.geladen)} von ${Dateityp.groesse(abgleich.dateien[0].second)}" else "")
+            abgleich.laeuft -> "Gleicht ab …"
+            abgleich.zuletzt > 0 -> "Abgeglichen um " + java.text.SimpleDateFormat("HH:mm", Locale.GERMAN).format(java.util.Date(abgleich.zuletzt))
+            else -> null
+        }
+        abgleichText?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 2.dp), color = if (abgleich.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
         if (filter == ERINNERUNG_REITER) { ErinnerungenBereich(vm, Modifier.weight(1f)); return@Column }
@@ -343,7 +325,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Kern(96.dp, f.primaer, aktiv = false)
                     Text(if (alle.isEmpty()) "Noch nichts abgelegt" else "Nichts gefunden", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
                     Text(if (alle.isEmpty()) "Sag in ChatGPT zum Beispiel: „Jarvis, lass recherchieren, wie …“ oder „Erstelle eine Infografik und speichere sie in deiner Ablage.“ Das Ergebnis erscheint hier."
-                        else "Andere Suche oder anderen Filter probieren.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                        else "Anderen Filter probieren.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
             items(sicht.orEmpty(), key = { it.id }) { e ->

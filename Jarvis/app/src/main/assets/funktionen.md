@@ -58,7 +58,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Bestätigung betrifft genau eine Auslösung und liegt als eigenes Dokument `quittung` auf dem Server: andere Geräte verstummen nach dem Abgleich, die übrigen Zeitpunkte bleiben, Bearbeiten bestätigt nichts. Ein verschobener Termin ist eine neue Auslösung.
 - Offline-Stimme am Handy: Kurzfassung wird nach jeder Änderung vorab mit der eingerichteten Stimme erzeugt (`filesDir/erinnerung-stimme`); fehlt die Datei und das Netz, liest die Systemstimme.
 - Allgemeine: höchstens alle 3 Stunden prüft das Handy per Modell gegen Dienst, Schlaf, Termine und Auswertung, ob ein Hinweis passt (höchstens einer je 8 Stunden, dieselbe höchstens einmal in 24 Stunden); im Gespräch spricht Jarvis passende von selbst an (`erwaehnt`).
-- Ablage: Alle Reiter zeigen ihre aktuelle Anzahl, auch Prompts und Erinnerung. Herkunft je Inhalt: Jarvis Handy, Jarvis Mac OS, Jarvis Windows HP.
+- Ablage: Ohne Suchleiste; Sortierung und Ansicht stehen rechts neben der Überschrift, die Reiter direkt darunter. Alle Reiter zeigen ihre aktuelle Anzahl, auch Prompts und Erinnerung. Herkunft je Inhalt: Jarvis Handy, Jarvis Mac OS, Jarvis Windows HP.
 - Einstellungen: Uhrzeit für Termine ohne Uhrzeit (`erinnerung_ohne_uhrzeit`, Vorgabe 10:00), Stimme und Lautstärke unter Benachrichtigungen → Erinnerungen. Im Live-Gedächtnis als Bereich `erinnerungen`, in der Tagesauswertung als eigener Datenabschnitt.
 
 ## Tagesauswertung
