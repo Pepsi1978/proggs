@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.PowerManager
@@ -331,7 +332,11 @@ object ErinnerungStimme {
             // Mehrere zugleich fällige sprechen nacheinander, nicht übereinander.
             reihe.withLock {
                 val f = datei(app, e.kurz) ?: withTimeoutOrNull(12_000L) { runCatching { erzeuge(app, e.kurz) }.getOrNull() }
-                if (f == null || !spiele(f, if (alsWecker) attributeWecker else attributeMeldung)) systemstimme(app, e.kurz)
+                val attribute = if (alsWecker) attributeWecker else attributeMeldung
+                val stream = if (alsWecker) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
+                de.frank.jarvis.speech.Ansage.mitLautstaerke(app, Meldungen.profil(app, Meldungsarten.ERINNERUNG).lautstaerke, stream) {
+                    if (f == null || !spiele(f, attribute)) systemstimme(app, e.kurz, attribute)
+                }
             }
         } finally { runCatching { if (wach.isHeld) wach.release() } }
     }
@@ -352,7 +357,7 @@ object ErinnerungStimme {
         }.onFailure { los(false) }
     }
 
-    private suspend fun systemstimme(app: Context, text: String) {
+    private suspend fun systemstimme(app: Context, text: String, attribute: AudioAttributes) {
         // Erst warten, bis der Dienst bereit ist: Sein Rückruf kann kommen, bevor der Konstruktor zurückgekehrt ist.
         val bereit = kotlinx.coroutines.CompletableDeferred<Int>()
         val tts = TextToSpeech(app) { bereit.complete(it) }
@@ -362,6 +367,7 @@ object ErinnerungStimme {
                 suspendCancellableCoroutine<Unit> { w ->
                     w.invokeOnCancellation { runCatching { tts.stop() } }
                     tts.language = Locale.GERMAN
+                    tts.setAudioAttributes(attribute)
                     tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                         override fun onStart(id: String?) {}
                         override fun onDone(id: String?) { if (w.isActive) w.resume(Unit) }

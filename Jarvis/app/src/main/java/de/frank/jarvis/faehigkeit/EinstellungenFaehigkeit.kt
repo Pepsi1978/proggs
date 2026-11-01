@@ -285,7 +285,7 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { p.stimme }) { p.stimme = it })
             if ((art.vorlesen || art.sprichtImmer) && neu("tempo")) add(auswahl(art.schluessel("tempo"), b, "Tempo für ${art.titel}", "Sprechtempo nur für diese Meldung.",
                 { listOf("0" to "Wie Jarvis") + tempi }, { if (p.tempo <= 0f) "0" else tempoText(p.tempo) }) { p.tempo = it.toFloat() })
-            if ((art.vorlesen || art.sprichtImmer) && neu("lautstaerke")) add(zahl(art.schluessel("lautstaerke"), b, "Lautstärke für ${art.titel}", "Lautstärke beim Vorlesen; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { p.lautstaerke }) { p.lautstaerke = it })
+            if ((art.vorlesen || art.sprichtImmer) && neu("lautstaerke")) add(zahl(art.schluessel("lautstaerke"), b, "Lautstärke für ${art.titel}", "Lautstärke beim Vorlesen: Regler von 20 bis 100 Prozent; 0 = Wie Handy. Bestehende Werte bleiben erhalten.", 0, 100, "Prozent", { p.lautstaerke }) { p.lautstaerke = it })
         }
     }
 
@@ -325,7 +325,7 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { e.ansageStimme }) { e.ansageStimme = it },
             auswahl("ansage_tempo", "Benachrichtigungen: Update-Ansagen", "Tempo der Ansagen", "Sprechtempo nur für die Update-Ansagen.",
                 { listOf("0" to "Wie Jarvis") + tempi }, { if (e.ansageTempo <= 0f) "0" else tempoText(e.ansageTempo) }) { e.ansageTempo = it.toFloat() },
-            zahl("ansage_lautstaerke", "Benachrichtigungen: Update-Ansagen", "Lautstärke der Ansagen", "Lautstärke nur für die Ansage, danach gilt wieder die alte; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.ansageLautstaerke }) { e.ansageLautstaerke = it },
+            zahl("ansage_lautstaerke", "Benachrichtigungen: Update-Ansagen", "Lautstärke der Ansagen", "Regler von 20 bis 100 Prozent nur für die Ansage, danach gilt wieder die alte; 0 = Wie Handy. Bestehende Werte bleiben erhalten.", 0, 100, "Prozent", { e.ansageLautstaerke }) { e.ansageLautstaerke = it },
 
             // ---- Spracheingabe ----
             // Wie die Chips in der Oberfläche: offline lädt das Modell vor, online gibt es den Speicher frei.
@@ -390,7 +390,7 @@ class EinstellungsKatalog(context: Context) {
             // ---- Losfahr-Meldung ----
             schalter("abfahrt_an", "Benachrichtigungen: Losfahren", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; meldungFolgen(de.frank.jarvis.meldung.Meldungsarten.ABFAHRT) },
             schalter("abfahrt_vorlesen", "Benachrichtigungen: Losfahren", "Losfahr-Meldung vorlesen", "Liest die Meldung zusätzlich vor.", { e.abfahrtVorlesen }) { e.abfahrtVorlesen = it },
-            zahl("abfahrt_lautstaerke", "Benachrichtigungen: Losfahren", "Lautstärke der Losfahr-Meldung", "Lautstärke der vorgelesenen Meldung; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
+            zahl("abfahrt_lautstaerke", "Benachrichtigungen: Losfahren", "Lautstärke der Losfahr-Meldung", "Regler von 20 bis 100 Prozent für die vorgelesene Meldung; 0 = Wie Handy. Bestehende Werte bleiben erhalten.", 0, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
             zahl("abfahrt_vorlauf", "Benachrichtigungen: Losfahren", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },
             uhrzeit("erinnerung_ohne_uhrzeit", "Erinnerungen", "Uhrzeit für Erinnerungen ohne Uhrzeit", "Um diese Zeit meldet sich eine neue Erinnerung, die nur ein Datum hat; angezeigt wird trotzdem nur das Datum.", { e.erinnerungOhneUhrzeit }) { e.erinnerungOhneUhrzeit = it },
             uhrzeit("ankunft_nacht", "Losfahr-Meldung", "Ankunft vor dem Nachtdienst", "Wann Frank vor dem Nachtdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftNacht }) { e.ankunftNacht = it; abfahrtNeu() },

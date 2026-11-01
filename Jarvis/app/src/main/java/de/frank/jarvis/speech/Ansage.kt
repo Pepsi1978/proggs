@@ -24,9 +24,35 @@ object Ansage {
 
     // Mehrere Ansagen können sich überlappen: Die Ausgangslautstärke merkt sich nur die erste, zurück stellt erst die letzte.
     private val sperre = Any()
-    private var aktiv = 0
-    private var ausgang = 0
-    private var zuletztGesetzt = 0
+    private class LautstaerkeStand(val ausgang: Int, var zuletztGesetzt: Int, var aktiv: Int = 0)
+    private val lautstaerken = mutableMapOf<Int, LautstaerkeStand>()
+
+    /** Auch lokal gespeicherte Erinnerungen nutzen denselben Schutz; Wecker sprechen auf ihrem eigenen Tonweg. */
+    suspend fun mitLautstaerke(context: Context, prozent: Int, stream: Int = AudioManager.STREAM_MUSIC, sprechen: suspend () -> Unit) {
+        if (prozent <= 0) { sprechen(); return }
+        val ton = context.getSystemService(AudioManager::class.java)
+        val maximum = ton.getStreamMaxVolume(stream)
+        val laut = (maximum * prozent.coerceIn(1, 100) / 100.0).roundToInt().coerceIn(1, maximum.coerceAtLeast(1))
+        synchronized(sperre) {
+            val stand = lautstaerken.getOrPut(stream) { LautstaerkeStand(ton.getStreamVolume(stream), laut) }
+            stand.aktiv++
+            runCatching { ton.setStreamVolume(stream, laut, 0); stand.zuletztGesetzt = ton.getStreamVolume(stream) }
+                .onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
+        }
+        try {
+            sprechen()
+        } finally {
+            synchronized(sperre) {
+                val stand = lautstaerken.getValue(stream)
+                if (--stand.aktiv == 0) {
+                    lautstaerken.remove(stream)
+                    // Eine Änderung mit den Lautstärketasten während des Vorlesens hat Vorrang.
+                    runCatching { if (ton.getStreamVolume(stream) == stand.zuletztGesetzt) ton.setStreamVolume(stream, stand.ausgang, 0) }
+                        .onFailure { Log.w(TAG, "Lautstärke ließ sich nicht zurückstellen", it) }
+                }
+            }
+        }
+    }
 
     /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke, 0 = so laut, wie das Handy steht. */
     fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
@@ -41,41 +67,31 @@ object Ansage {
             // Lange Texte (Agenten-Zusammenfassung) brauchen länger als zwei Minuten: Grenze nach der Textlänge, gut 12 Zeichen je Sekunde.
             val hoechstens = (60_000L + text.length * 80L).coerceIn(110_000L, 10 * 60_000L)
             runCatching { wach.acquire(hoechstens + 10_000L) }
-            val ton = app.getSystemService(AudioManager::class.java)
-            val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val eigen = lautstaerke > 0
-            val laut = (hoechste * lautstaerke / 100.0).roundToInt().coerceIn(1, hoechste)
-            if (eigen) synchronized(sperre) {
-                if (aktiv++ == 0) ausgang = runCatching { ton.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(laut)
-                zuletztGesetzt = laut
-            }
             var quelle = ""
             try {
-                // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
-                if (eigen) runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
-                val vorleser = Vorleser.hole(app, SecureSettings(app))
-                // Das Vorlesen steht wegen einer Rückfrage: Die Ansage kommt obendrauf und nimmt ihm nicht seine Stelle.
-                if (vorleser.einschieben(art)) withTimeoutOrNull(hoechstens) { vorleser.einschub(text, wahl) }
-                else {
-                    // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
-                    quelle = "$art:" + System.currentTimeMillis()
-                    vorleser.sprich(quelle, titel, text, wahl = wahl)
-                    // Steht sie wegen einer Rückfrage, bleiben Lautstärke und Wachhaltung bis zu ihrem Ende.
-                    vorleser.warteAufEnde(quelle, hoechstens) { runCatching { wach.acquire(hoechstens + 10_000L) } }
+                mitLautstaerke(app, lautstaerke) {
+                    try {
+                        val vorleser = Vorleser.hole(app, SecureSettings(app))
+                        // Das Vorlesen steht wegen einer Rückfrage: Die Ansage kommt obendrauf und nimmt ihm nicht seine Stelle.
+                        if (vorleser.einschieben(art)) withTimeoutOrNull(hoechstens) { vorleser.einschub(text, wahl) }
+                        else {
+                            // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
+                            quelle = "$art:" + System.currentTimeMillis()
+                            vorleser.sprich(quelle, titel, text, wahl = wahl)
+                            // Steht sie wegen einer Rückfrage, bleiben Lautstärke und Wachhaltung bis zu ihrem Ende.
+                            vorleser.warteAufEnde(quelle, hoechstens) { runCatching { wach.acquire(hoechstens + 10_000L) } }
+                        }
+                    } catch (abbruch: kotlinx.coroutines.CancellationException) {
+                        // Erst verstummen, dann stellt mitLautstaerke den Tonweg zurück.
+                        runCatching { Vorleser.hole(app, SecureSettings(app)).let { v -> if (quelle.isNotEmpty() && v.stand.value.quelle == quelle) v.stopp() } }
+                        throw abbruch
+                    }
                 }
             } catch (abbruch: kotlinx.coroutines.CancellationException) {
-                // Verworfen, während sie spricht (etwa eine inzwischen beantwortete Rückfrage): Die Stimme verstummt, statt nach dem
-                // Zurückstellen der Lautstärke ohne Wachhaltung weiterzulaufen; der Abbruch geht an den Aufrufer weiter.
-                runCatching { Vorleser.hole(app, SecureSettings(app)).let { v -> if (quelle.isNotEmpty() && v.stand.value.quelle == quelle) v.stopp() } }
                 throw abbruch
             } catch (f: Exception) {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
             } finally {
-                // Erst nach der letzten aktiven Ansage zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
-                val zurueck = if (!eigen) null else synchronized(sperre) { if (--aktiv == 0) ausgang to zuletztGesetzt else null }
-                zurueck?.let { (vorher, gesetzt) ->
-                    runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == gesetzt) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
-                }
                 runCatching { if (wach.isHeld) wach.release() }
             }
         }

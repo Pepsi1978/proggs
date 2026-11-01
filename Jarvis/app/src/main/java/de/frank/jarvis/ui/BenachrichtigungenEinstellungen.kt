@@ -52,6 +52,8 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -69,6 +71,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,6 +86,7 @@ import de.frank.jarvis.ui.theme.Chip
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
+import kotlin.math.roundToInt
 
 /**
  * Einstellungen → Benachrichtigungen: oben der Überblick mit Erlaubnis, Ruhezeit und Sperrbildschirm, darunter jede
@@ -450,10 +455,26 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         }
     }
     Unterzeile("Lautstärke beim Vorlesen")
+    val lautstaerke = p.lautstaerke
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(0, 20, 40, 60, 80, 100).forEach { prozent ->
-            Chip(when (prozent) { 0 -> "Wie Handy"; 100 -> "Maximal"; else -> "$prozent %" }, aktiv = p.lautstaerke == prozent) { p.lautstaerke = prozent }
-        }
+        Chip("Wie Handy", aktiv = lautstaerke == 0) { p.lautstaerke = 0 }
+        Text(if (lautstaerke == 0) "Eigene Lautstärke am Regler wählen" else "$lautstaerke %",
+            color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterVertically))
+    }
+    // Alte Werte (auch unter 20 %) bleiben erhalten, bis Frank selbst am Regler eine neue Wahl trifft.
+    Slider(
+        value = lautstaerke.coerceIn(20, 100).toFloat(),
+        onValueChange = {
+            val neu = it.roundToInt().coerceIn(20, 100)
+            if (neu != p.lautstaerke) p.lautstaerke = neu
+        },
+        valueRange = 20f..100f,
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Vorlese-Lautstärke für ${p.art.titel}" },
+        colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.rand),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("20 %", color = f.textLeise, fontSize = 13.sp)
+        Text("100 %", color = f.textLeise, fontSize = 13.sp)
     }
     Text(if (p.lautstaerke == 0) "Jarvis liest so laut vor, wie die Medienlautstärke gerade steht."
         else "Jarvis stellt die Medienlautstärke nur dafür ein und danach wieder zurück. Ist ein Kopfhörer oder das Auto per Bluetooth verbunden, kommt die Stimme dort.",
