@@ -207,6 +207,9 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         }
     }
 
+    /** Übernimmt eine geänderte Eingabeart in die offene Tastatur, ohne sie zu öffnen. */
+    fun eingabeNeu() = imm.restartInput(this)
+
     private fun taste(name: String) = senden(JSONObject().put("t", "taste").put("k", name))
     private fun text(s: String) { if (s.isNotEmpty()) senden(JSONObject().put("t", "text").put("s", s)) }
 

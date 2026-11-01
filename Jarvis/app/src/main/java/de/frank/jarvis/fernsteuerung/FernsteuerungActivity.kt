@@ -161,14 +161,15 @@ class FernsteuerungActivity : ComponentActivity() {
     }
 
     private fun zustand(j: JSONObject) {
+        val warGesperrt = gesperrt
         gesperrt = j.optBoolean("gesperrt")
-        ansicht.geheim = j.optBoolean("geheim")
-        val feld = j.optBoolean("tastatur")
-        // Tastatur folgt dem Fokus auf dem Mac: Eingabefeld angetippt -> auf, Feld verlassen -> zu.
-        if (feld != tastaturAn && !gesperrt) { tastaturAn = feld; ansicht.tastaturZeigen(feld) }
+        // Die Tastatur öffnet nur der seitliche Knopf; der Fokus auf dem Mac bestimmt lediglich die Eingabeart.
+        val geheim = j.optBoolean("geheim")
+        if (geheim != ansicht.geheim) { ansicht.geheim = geheim; if (tastaturAn) ansicht.eingabeNeu() }
+        // Die Tastatur des Passwortfelds schließt mit dem Entsperren, das Fenster bleibt danach ohne Tastatur.
+        if (warGesperrt && !gesperrt && tastaturAn) { tastaturAn = false; ansicht.tastaturZeigen(false) }
     }
 
-    /** Von Hand: für Eingabefelder, bei denen der Mac den Fokus nicht meldet. */
     private fun tastaturUmschalten() { tastaturAn = !tastaturAn; ansicht.tastaturZeigen(tastaturAn) }
 
     private fun taste(k: String, vararg m: String) =

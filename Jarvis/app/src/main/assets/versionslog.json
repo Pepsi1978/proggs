@@ -540,6 +540,7 @@
     {"versionCode": 535, "versionName": "1.8.524", "stand": "01.11.2026, 01:28 Uhr", "notiz": "Kontingente: Google AI Studio steht jetzt unten im Gemini-Bereich der Kontingente statt im Reiter Guthaben, der wieder wie zuvor aussieht."},
     {"versionCode": 536, "versionName": "1.8.525", "stand": "01.11.2026, 01:31 Uhr", "notiz": "Google AI Studio und Guthaben: Ein nicht frisch lesbarer Einzahlungsbetrag ist jetzt überall als letzter Betrag gekennzeichnet, und Fehler stehen direkt am Aktualisieren-Knopf."},
     {"versionCode": 537, "versionName": "1.8.526", "stand": "01.11.2026, 01:35 Uhr", "notiz": "Kontingente: Das Google-AI-Studio-Freikontingent steht im Gemini-Bereich jetzt als Balken im selben Stil wie die übrigen Kontingente."},
-    {"versionCode": 538, "versionName": "1.8.527", "stand": "01.11.2026, 01:49 Uhr", "notiz": "Der Abschlussbericht nennt das ausgesetzte APK-Update richtig; Cloud- und Server-Bauten von Jarvis kommen weiterhin auch über UpdateStation."}
+    {"versionCode": 538, "versionName": "1.8.527", "stand": "01.11.2026, 01:49 Uhr", "notiz": "Der Abschlussbericht nennt das ausgesetzte APK-Update richtig; Cloud- und Server-Bauten von Jarvis kommen weiterhin auch über UpdateStation."},
+    {"versionCode": 539, "versionName": "1.8.528", "stand": "01.11.2026, 02:03 Uhr", "notiz": "Fernwartung: Das Fenster öffnet immer ohne Tastatur, nur der seitliche Tastatur-Knopf klappt sie aus und wieder ein."}
 ]
 }
