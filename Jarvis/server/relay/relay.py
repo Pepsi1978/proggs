@@ -1362,6 +1362,7 @@ KANAL_FRISCH_S = 40        # laenger offen = die Abfrage haengt (Mac schlaeft), 
 KANAL_NACHLAUF_S = 3       # zwischen zwei Abfragen gilt die Gegenstelle weiter als da
 KANAL_HOECHSTENS = 200     # je Postfach
 KANAL_ALTER_S = 7 * 86_400
+KANAL_WECKT_NICHT = {"info", "antwort", "helfer_katalog"}   # nur Post, die eine Antwort braucht, startet die App: Frank hat sie vielleicht bewusst beendet
 MAC_START_VERSUCHE = 4     # /geraet/mac-start: so oft den Start anfordern. Eine tote Abfrage der Bruecke kann ihn schlucken.
 MAC_START_ABSTAND_S = 8
 MAC_WECKEN_ABSTAND_S = 20  # wie oft die Bruecke die App fuer eine liegende Frage hoechstens startet
@@ -1451,7 +1452,7 @@ class AgentenKanal:
         return json.dumps(roh, ensure_ascii=False)
 
     def _frage_liegt(self) -> bool:
-        return not self.mac.da() and any(n["art"] != "info" for n in self.post["mac"])
+        return not self.mac.da() and any(n["art"] not in KANAL_WECKT_NICHT for n in self.post["mac"])
 
     def _status(self) -> dict:
         return {"mac_app": self.mac.da(), "bruecke": self.bruecke.da(), "offen_an_mac": len(self.post["mac"])}

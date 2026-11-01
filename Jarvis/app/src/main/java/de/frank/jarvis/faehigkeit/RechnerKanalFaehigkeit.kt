@@ -32,12 +32,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Der Agentenkanal zwischen Jarvis am Handy und Jarvis Mac OS: zwei gleichberechtigte Agenten, die sich jederzeit schreiben,
- * solange der Mac verbunden ist. Der Relay hält die Post, bis die Gegenseite sie quittiert ([AgentenKanal] in relay.py); Post vom Mac
- * kommt als Signal über den Tunnel ([empfangen]). Fragen vom Mac beantwortet das Modell des Handys im Hintergrund, als Lauf ohne Frank
- * (lernen=false: kein Merken, keine Programmieraufträge, kein Kanal; Rückfragen stehen in der Antwort). Quittiert wird erst nach der
- * zugestellten Antwort: Stirbt der Prozess mittendrin, kommt die Frage beim nächsten Verbinden wieder. Alles steht im Gespräch
- * „Jarvis Mac OS (Agentenkanal)“, damit Frank mitlesen kann. Mitteilungen melden sich nicht: Die Abstimmung soll Frank nicht unterbrechen.
+ * Der Agentenkanal zwischen Jarvis am Handy und einem Schwester-Agenten auf Franks Rechnern (Jarvis Mac OS, Jarvis Windows HP; was je Rechner
+ * anders ist, steht in [RechnerArt]): zwei gleichberechtigte Agenten, die sich jederzeit schreiben, solange der Rechner verbunden ist. Der Relay
+ * hält die Post, bis die Gegenseite sie quittiert ([AgentenKanal] in relay.py); Post vom Rechner kommt als Signal über den Tunnel ([empfangen]).
+ * Fragen vom Rechner beantwortet das Modell des Handys im Hintergrund, als Lauf ohne Frank (lernen=false: kein Merken, keine Programmieraufträge,
+ * kein Kanal; Rückfragen stehen in der Antwort). Die fertige Antwort liegt auf der Platte, bis sie zugestellt und quittiert ist: Stirbt der Prozess
+ * danach, kommt die Frage beim nächsten Verbinden wieder und wird nicht neu berechnet. Alles steht im Gespräch „<Name> (Agentenkanal)“, damit Frank
+ * mitlesen kann. Mitteilungen melden sich nicht: Die Abstimmung soll Frank nicht unterbrechen. Schlüssel wie mac_app kommen unverändert vom Relay.
  */
 open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt) : Faehigkeit {
     private val app = context.applicationContext
@@ -45,7 +46,8 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val speicher by lazy { app.getSharedPreferences(ziel.speicher, Context.MODE_PRIVATE) }
     private val wartende = ConcurrentHashMap<String, CompletableDeferred<String>>()
-    private val spaete = ConcurrentHashMap<String, (String) -> Unit>()
+    /** Rückruf für eine späte Helfer-Antwort, mit Anlegezeit: Kommt keine mehr, räumt der nächste Aufruf ihn weg. */
+    private val spaete = ConcurrentHashMap<String, Pair<Long, (String) -> Unit>>()
     private val inArbeit = ConcurrentHashMap.newKeySet<String>()
     /** Eine Frage nach der anderen: Das Modell soll nicht parallel zu sich selbst am selben Thema arbeiten. */
     private val reihe = Mutex()
@@ -91,24 +93,31 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
     }
 
     /**
-     * Hört der Mac gerade? Auch die laufende Brücke zählt: Der Relay startet die App dann für jede Anfrage von selbst.
+     * Hört der Rechner gerade? Auch die laufende Brücke zählt: Der Relay startet die App dann für jede Anfrage von selbst.
      * Kurzes Zeitlimit: Die Antwort darf den Katalog nicht aufhalten.
      */
-    suspend fun macErreichbar(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun erreichbar(): Boolean = withContext(Dispatchers.IO) {
         runCatching { antwortJson(anfrage(ziel.kanalWeg + "/status").get().build(), KURZ_HTTP).let { it.optBoolean("mac_app") || it.optBoolean("bruecke") } }.getOrDefault(false)
     }
 
     /**
-     * Anfrage an den Mac ohne Modell ([art] nach JarvisHelfer/README.md): null = keine Antwort in [warteMs]; dann kommt sie später an, wird aber
-     * nie ein zweites Mal ausgeführt (dieselbe Kennung, Quittung, fertige Antwort am Mac). Taucht nicht im Kanalgespräch auf.
+     * Anfrage an den Rechner ohne Modell ([art] nach JarvisHelfer/README.md): null = keine Antwort in [warteMs]; dann kommt sie später an, wird aber
+     * nie ein zweites Mal ausgeführt (dieselbe Kennung, Quittung, fertige Antwort am Rechner). Taucht nicht im Kanalgespräch auf.
+     * [spaet] steht schon vor dem Senden bereit: So geht keine Antwort verloren, die genau beim Ablauf der Frist eintrifft.
      */
     suspend fun helferAnfrage(art: String, inhalt: JSONObject, warteMs: Long, kennung: String = "helfer-" + UUID.randomUUID(), spaet: ((String) -> Unit)? = null): String? {
+        val jetzt = System.currentTimeMillis()
+        spaete.entries.removeIf { jetzt - it.value.first > SPAET_FRIST_MS }
         val wartend = CompletableDeferred<String>().also { wartende[kennung] = it }
+        if (spaet != null) spaete[kennung] = jetzt to spaet
         val ok = withContext(Dispatchers.IO) { runCatching { sende(kennung, art, inhalt.toString(), null, versuche = 2) }.isSuccess }
-        if (!ok) { wartende.remove(kennung); return null }
-        val antwort = try { withTimeoutOrNull(warteMs) { wartend.await() } } finally { wartende.remove(kennung) }
-        if (antwort == null && spaet != null) spaete[kennung] = spaet
-        return antwort
+        if (!ok) { wartende.remove(kennung); spaete.remove(kennung); return null }
+        return try {
+            // Hat [empfangen] den Wartenden schon genommen, ist die Antwort da oder gleich da.
+            withTimeoutOrNull(warteMs) { wartend.await() } ?: if (wartende.remove(kennung) == null) wartend.await() else null
+        } finally {
+            wartende.remove(kennung)
+        }
     }
 
     private fun rumpf(j: JSONObject) = j.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -151,26 +160,26 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
         val kennung = UUID.randomUUID().toString()
         val wartend = CompletableDeferred<String>().takeIf { art != "info" }?.also { wartende[kennung] = it }
         val beginn = System.currentTimeMillis()
-        val stand = withContext(Dispatchers.IO) {
-            runCatching { sende(kennung, art, nachricht, null, versuche = 2) }
-        }.getOrElse { fehler ->
-            wartende.remove(kennung)
-            return Ergebnis("Die Nachricht ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}); nichts wurde zugestellt. Sag Frank das kurz.", fehler = true)
-        }
-        ins(GESPRAECH_JARVIS, "📱", nachricht)
-        if (wartend == null) return Ergebnis("Mitteilung an ${ziel.name} abgelegt." + if (stand.optBoolean("mac_app")) "" else " Der ${ziel.rechner} liest sie, sobald die App läuft.")
-        if (!stand.optBoolean("mac_app") && !stand.optBoolean("bruecke")) {
-            wartende.remove(kennung)
-            return Ergebnis("Der ${ziel.rechner} ist gerade nicht verbunden. Die Nachricht bleibt eingereiht und geht ein, sobald er wieder da ist; die Antwort kommt dann ins Gespräch und als Benachrichtigung. Sag Frank das offen.")
-        }
-        // Abgebrochen (Frank stoppt, Live endet): Die spätere Antwort soll sich melden, nicht einen toten Wartenden treffen.
-        val antwort = try {
-            withTimeoutOrNull((WARTEN_MS - (System.currentTimeMillis() - beginn)).coerceAtLeast(1_000L)) { wartend.await() }
+        // Abgebrochen (Frank stoppt, Live endet), auch schon beim Senden: Die spätere Antwort soll sich melden, nicht einen toten Wartenden treffen.
+        try {
+            val stand = withContext(Dispatchers.IO) {
+                runCatching { sende(kennung, art, nachricht, null, versuche = 2) }
+            }.getOrElse { fehler ->
+                return Ergebnis("Die Nachricht ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}); nichts wurde zugestellt. Sag Frank das kurz.", fehler = true)
+            }
+            ins(GESPRAECH_JARVIS, "📱", nachricht)
+            if (wartend == null) return Ergebnis("Mitteilung an ${ziel.name} abgelegt." + if (stand.optBoolean("mac_app")) "" else " Der ${ziel.rechner} liest sie, sobald die App läuft.")
+            if (!stand.optBoolean("mac_app") && !stand.optBoolean("bruecke")) {
+                return Ergebnis("Der ${ziel.rechner} ist gerade nicht verbunden. Die Nachricht bleibt eingereiht und geht ein, sobald er wieder da ist; die Antwort kommt dann ins Gespräch und als Benachrichtigung. Sag Frank das offen.")
+            }
+            // Hat [empfangen] den Wartenden beim Ablauf der Frist schon genommen, ist die Antwort da oder gleich da.
+            val antwort = withTimeoutOrNull((WARTEN_MS - (System.currentTimeMillis() - beginn)).coerceAtLeast(1_000L)) { wartend.await() }
+                ?: if (wartende.remove(kennung) == null) wartend.await() else null
+            return if (antwort != null) Ergebnis("Antwort von ${ziel.name}:\n$antwort")
+            else Ergebnis("${ziel.name} arbeitet noch (keine Antwort nach einer Minute). Die Antwort kommt von selbst ins Gespräch „${ziel.titel}“ und als Benachrichtigung. Sag Frank das kurz.")
         } finally {
             wartende.remove(kennung)
         }
-        return if (antwort != null) Ergebnis("Antwort von ${ziel.name}:\n$antwort")
-        else Ergebnis("${ziel.name} arbeitet noch (keine Antwort nach einer Minute). Die Antwort kommt von selbst ins Gespräch „${ziel.titel}“ und als Benachrichtigung. Sag Frank das kurz.")
     }
 
     /** Auch beim Wiederholen dieselbe Kennung: Der Relay legt sie nicht doppelt ab. */
@@ -185,7 +194,7 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
         throw letzter ?: IllegalStateException("nicht gesendet")
     }
 
-    /** Post vom Mac (Signal „agentenkanal“ über den Tunnel). Dieselbe Nachricht kann beim Neuverbinden wiederkommen. */
+    /** Post vom Rechner (Signal „agentenkanal“ über den Tunnel). Dieselbe Nachricht kann beim Neuverbinden wiederkommen. */
     fun empfangen(nachricht: JSONObject?) {
         val kennung = nachricht?.optString("id").orEmpty()
         if (kennung.isEmpty()) return
@@ -196,45 +205,78 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
                 val art = nachricht!!.optString("art")
                 val text = nachricht.optString("text")
                 when (art) {
-                    // Der Mac meldet seinen Helferkatalog: nur das Abbild aktualisieren, ohne Modell und ohne Eintrag im Gespräch.
+                    // Der Rechner meldet seinen Helferkatalog: nur das Abbild aktualisieren, ohne Modell und ohne Eintrag im Gespräch.
                     "helfer_katalog" -> if (ziel.helferKatalog) runCatching { JSONObject(text).optJSONArray("helfer")?.let { de.frank.jarvis.helfer.HelferKatalog.macKatalogUebernehmen(app, it) } }
                         .onFailure { Logbuch.fehler("Agentenkanal: Helferkatalog", it) }
                     "antwort" -> if (nachricht.optString("antwort_auf").startsWith("helfer-")) {
                         // Ergebnis ohne Wartenden (der Lauf dauerte länger): nichts wiederholen, nur Bescheid sagen.
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
                         val nachher = spaete.remove(nachricht.optString("antwort_auf"))
-                        if (wartend != null) wartend.complete(text) else if (nachher != null) nachher(text) else melde("Mac-Helfer fertig", runCatching { JSONObject(text).optString("text") }.getOrDefault("").ifEmpty { "Das späte Ergebnis ist da." }.take(300))
+                        if (wartend != null) wartend.complete(text) else if (nachher != null) nachher.second(text) else melde("${ziel.rechner}-Helfer fertig", runCatching { JSONObject(text).optString("text") }.getOrDefault("").ifEmpty { "Das späte Ergebnis ist da." }.take(300))
                     } else {
                         ins(ziel.name, "💻", text)
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
                         if (wartend != null) wartend.complete(text) else melde("Antwort von ${ziel.name}", text)
                     }
                     "info" -> ins(ziel.name, "💻", text)
-                    else -> reihe.withLock { beantworte(kennung, text, nachricht.optLong("zeit")) }
+                    else -> {
+                        val antwort = fertigeAntwort(kennung) ?: reihe.withLock { beantworte(kennung, text, nachricht.optLong("zeit")) }
+                        // Außerhalb der Reihe: Ein kurz fehlender Relay soll die nächsten Fragen nicht aufhalten.
+                        stelleZu(kennung, antwort)
+                    }
                 }
                 merkeErledigt(kennung)
+                vergissAntwort(kennung)
                 quittiere(kennung)
             } catch (fehler: Exception) {
                 if (fehler is kotlinx.coroutines.CancellationException) throw fehler
-                Logbuch.fehler("Agentenkanal: Nachricht vom Mac nicht verarbeitet", fehler)
+                Logbuch.fehler("Agentenkanal: Nachricht von ${ziel.name} nicht verarbeitet", fehler)
             } finally {
                 inArbeit.remove(kennung)
             }
         }
     }
 
-    private suspend fun beantworte(kennung: String, text: String, zeit: Long) {
+    private suspend fun beantworte(kennung: String, text: String, zeit: Long): String {
+        // Während der Lauf wartete, kann eine zweite Zustellung derselben Frage ihn schon erledigt haben.
+        fertigeAntwort(kennung)?.let { return it }
         val verlauf = verlaufText(8)
         ins(ziel.name, "💻", text)
         val antwort = if (zeit > 0 && System.currentTimeMillis() / 1000 - zeit > HOECHSTALTER_S) "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt."
         else denke(text, verlauf)
         ins(GESPRAECH_JARVIS, "📱", antwort)
-        // Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab. Unquittiert käme die Frage erst beim nächsten Verbinden wieder.
+        merkeAntwort(kennung, antwort)
+        return antwort
+    }
+
+    private suspend fun stelleZu(kennung: String, antwort: String) {
+        // Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab. Unquittiert käme die Frage beim nächsten Verbinden wieder; dann geht nur die gesicherte Antwort noch einmal raus.
         repeat(SENDE_RUNDEN) { runde ->
             if (runCatching { sende("antwort-$kennung", "antwort", antwort, kennung, versuche = 3) }.isSuccess) return
             if (runde < SENDE_RUNDEN - 1) delay(60_000L)
         }
         error("Antwort nicht zugestellt")
+    }
+
+    private fun fertigeAntwort(kennung: String): String? =
+        speicher.getString(ANTWORT + kennung, null)?.let { runCatching { JSONObject(it).getString("text") }.getOrNull() }
+
+    /** Synchron auf die Platte: Genau für das Prozessende zwischen Denken und Quittung. Alles, was der Relay nicht mehr nachreichen kann, räumt sich hier mit weg. */
+    @Synchronized
+    private fun merkeAntwort(kennung: String, antwort: String) {
+        val jetzt = System.currentTimeMillis()
+        val aendern = speicher.edit()
+        for ((schluessel, wert) in speicher.all) {
+            if (!schluessel.startsWith(ANTWORT)) continue
+            val zeit = runCatching { JSONObject(wert as String).getLong("zeit") }.getOrDefault(0L)
+            if (jetzt - zeit > SPAET_FRIST_MS) aendern.remove(schluessel)
+        }
+        aendern.putString(ANTWORT + kennung, JSONObject().put("zeit", jetzt).put("text", antwort).toString()).commit()
+    }
+
+    @Synchronized
+    private fun vergissAntwort(kennung: String) {
+        speicher.edit().remove(ANTWORT + kennung).apply()
     }
 
     private suspend fun denke(text: String, verlauf: String): String {
@@ -311,6 +353,9 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
 
     private companion object {
         const val GESPRAECH_JARVIS = "Jarvis"
+        const val ANTWORT = "antwort:"
+        /** So lange hält der Relay Post (KANAL_ALTER_S): Später kommt nichts mehr nach. */
+        const val SPAET_FRIST_MS = 7 * 86_400_000L
         /** Samt Senden unter den 75 s des Relays: Der Aufruf kann auch aus ChatGPT kommen. */
         const val WARTEN_MS = 65_000L
         const val HOECHSTALTER_S = 6 * 3600L

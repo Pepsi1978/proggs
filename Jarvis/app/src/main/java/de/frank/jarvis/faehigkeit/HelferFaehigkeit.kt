@@ -68,7 +68,7 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
             ) { a ->
                 val beginn = System.currentTimeMillis()
                 val treffer = HelferKatalog.suche(app, a.optString("suche"))
-                val macDa = if (treffer.any { it.ort == "mac" }) runCatching { mac().macErreichbar() }.getOrNull() else null
+                val macDa = if (treffer.any { it.ort == "mac" }) runCatching { mac().erreichbar() }.getOrNull() else null
                 val laufend = HelferAblauf.auftraege(app).filter { it.optString("stand") in BauStand.OFFEN }
                 Logbuch.dauer("Helfer: Suche", System.currentTimeMillis() - beginn, "${treffer.size} Treffer")
                 Ergebnis((if (treffer.isEmpty()) "Kein passender Helfer." else treffer.joinToString("\n") { kurz(it, macDa) }) +
@@ -82,7 +82,7 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
                 nurLesen = true,
             ) { a ->
                 val h = HelferKatalog.finde(app, a.optString("kennung")) ?: return@Werkzeug Ergebnis("Diesen Helfer gibt es nicht.", fehler = true)
-                val macDa = if (h.ort == "mac") runCatching { mac().macErreichbar() }.getOrDefault(false) else null
+                val macDa = if (h.ort == "mac") runCatching { mac().erreichbar() }.getOrDefault(false) else null
                 Ergebnis(info(h, macDa))
             },
             Werkzeug(
@@ -253,7 +253,7 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
     }
 
     private suspend fun amMac(h: Helfer, eingabe: JSONObject, gespraech: String): de.frank.jarvis.helfer.HelferErgebnis {
-        if (!mac().macErreichbar()) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac ist gerade nicht erreichbar. Nichts wurde ausgeführt." +
+        if (!mac().erreichbar()) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac ist gerade nicht erreichbar. Nichts wurde ausgeführt." +
             (HelferKatalog.suche(app, h.schlagworte.joinToString(" ")).firstOrNull { it.ort == "handy" && it.einsatzbereit }?.let { " Auf dem Handy gäbe es ${it.kennung}." } ?: ""))
         // In der Ursprungsaufgabe darf ein Mac-Helfer seine vollen zehn Minuten laufen; im Gespräch kommt ein spätes Ergebnis von selbst nach.
         val warten = if (currentCoroutineContext()[HelferAblauf.ImLauf] != null) 640_000L else 65_000L
@@ -265,7 +265,7 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
     suspend fun verwalten(kennung: String, aktion: String): Ergebnis {
         val h = HelferKatalog.finde(app, kennung) ?: return Ergebnis("Diesen Helfer gibt es nicht.", fehler = true)
         if (h.ort == "mac") {
-            if (!mac().macErreichbar()) return Ergebnis("Der Mac ist gerade nicht erreichbar; der Helfer liegt dort und bleibt unverändert.", fehler = true)
+            if (!mac().erreichbar()) return Ergebnis("Der Mac ist gerade nicht erreichbar; der Helfer liegt dort und bleibt unverändert.", fehler = true)
             val j = runCatching { JSONObject(mac().helferAnfrage("helfer_verwalten", JSONObject().put("helfer", kennung).put("aktion", aktion), warteMs = 30_000L).orEmpty()) }.getOrDefault(JSONObject())
             return if (j.optBoolean("ok")) Ergebnis(j.optString("text").ifEmpty { "Am Mac erledigt." }) else Ergebnis(j.optString("fehler").ifEmpty { "Der Mac hat nicht bestätigt." }, fehler = true)
         }

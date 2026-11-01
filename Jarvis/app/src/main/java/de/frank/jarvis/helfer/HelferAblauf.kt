@@ -346,7 +346,7 @@ object HelferAblauf {
         val claude = RechercheModelle.aus(e.rechercheModell).takeIf { it.istAnthropic }?.apiId.orEmpty()
         val macModell = when { "opus" in claude -> "opus"; "fable" in claude -> "fable"; else -> "sonnet" }
         if (ort == "mac") {
-            if (mac(c).macErreichbar()) {
+            if (mac(c).erreichbar()) {
                 val antwort = mac(c).helferAnfrage("cli_recherche", JSONObject().put("frage", fragen.joinToString("\n- ", "- ")).put("anzahl", anzahl).put("modell", macModell), warteMs = 22 * 60_000L)
                 val j = runCatching { JSONObject(antwort.orEmpty()) }.getOrNull()
                 if (j?.optBoolean("ok") == true) return j.optString("text")
@@ -639,7 +639,7 @@ object HelferAblauf {
             neuerStand(c, id, BauStand.PROGRAMMIERUNG, "Das Paket ist zu groß für den Kanal zum Mac")
             return Ergebnis("Das Paket ist größer als der Kanal erlaubt (1 MB). Lege es stattdessen in den Eingangsordner am Mac (README).", fehler = true)
         }
-        if (!mac(c).macErreichbar()) {
+        if (!mac(c).erreichbar()) {
             neuerStand(c, id, BauStand.PROGRAMMIERUNG, "Der Mac ist nicht erreichbar; der Programmierer versucht es später")
             return Ergebnis("Der Mac ist gerade nicht erreichbar, nichts wurde installiert. Lege das Paket in den Eingangsordner, wenn du am Mac arbeitest, sonst registriere später erneut.", fehler = true)
         }

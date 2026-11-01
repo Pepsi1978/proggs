@@ -54,7 +54,7 @@ fun EigeneToolsBereich(vm: AppViewModel) {
     val macListe = remember(stand) { HelferKatalog.macHelfer(c) }
     val bauten = remember(bauStand) { HelferAblauf.auftraege(c) }
     val macDa by produceState<Boolean?>(null, stand) {
-        value = withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Register.alle(c).filterIsInstance<MacJarvisFaehigkeit>().first().macErreichbar() }.getOrDefault(false) }
+        value = withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Register.alle(c).filterIsInstance<MacJarvisFaehigkeit>().first().erreichbar() }.getOrDefault(false) }
     }
     val e = vm.einstellungen
 
