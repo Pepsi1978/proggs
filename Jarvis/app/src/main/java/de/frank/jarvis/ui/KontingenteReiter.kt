@@ -58,13 +58,13 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                 }
                 a.hinweis?.let { Text(it, color = if (a.limits.isEmpty() && !a.anmeldenNoetig) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
                 a.standText().takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)) }
+                if (a.id == "claude") ApiFreikontingent(vm)
                 if (a.anmeldenNoetig && (a.id == "claude" || a.id == "kimi")) {
                     Knopf(when (a.id) { "claude" -> "Bei claude.ai anmelden"; else -> "Bei Kimi anmelden" }, Modifier.padding(top = 10.dp).fillMaxWidth()) { anmelden = a.id }
                 }
                 if ((a.id == "claude" || a.id == "kimi") && (a.limits.isNotEmpty() || (a.anmeldenNoetig && a.hinweis?.contains("lehnt") == true))) {
                     Knopf("Abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kontingentAbmelden(a.id) }
                 }
-                if (a.id == "claude") ApiFreikontingent(vm)
             }
         }
     }
