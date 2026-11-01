@@ -9,6 +9,7 @@ import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.foundation.background
@@ -75,6 +76,8 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     private var ansicht: ComposeView? = null
     private var kennung by mutableStateOf("")
     private var ansage: Job? = null
+    /** Ende der Frist auf der Uhr, die auch im Tiefschlaf weiterläuft; eine neue Anfrage (andere Kennung) beginnt von vorn. */
+    private var fristEnde = 0L
 
     override val lifecycle: Lifecycle get() = lebenszyklus
     override val savedStateRegistry: SavedStateRegistry get() = speicher.savedStateRegistry
@@ -91,6 +94,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         val neueKennung = intent?.getStringExtra(EXTRA_KENNUNG).orEmpty()
         val neueFrage = ansicht == null || neueKennung != kennung
         kennung = neueKennung
+        if (neueFrage) fristEnde = SystemClock.elapsedRealtime() + FRIST_S * 1_000L
         // Ein abgelehnter Vordergrundstart darf nie den Prozess und damit eine laufende Aufnahme mitreißen.
         val gestartet = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -114,12 +118,19 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         return START_NOT_STICKY
     }
 
+    /** Die Restzeit zählt hier das System selbst herunter: Sie bleibt auch sichtbar, wo das Overlay nicht erscheint, etwa auf dem Sperrbildschirm. */
     private fun hinweis(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(KANAL, "Installationsfrage", NotificationManager.IMPORTANCE_LOW))
         return Notification.Builder(this, KANAL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Neue Jarvis-Version wartet auf deine Antwort")
+            .setContentText("Ohne Antwort startet die Installation, wenn die Zeit abgelaufen ist.")
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setWhen(System.currentTimeMillis() + (fristEnde - SystemClock.elapsedRealtime()).coerceAtLeast(0))
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
             .build()
     }
 
@@ -217,12 +228,13 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         val f = LocalFarben.current
         val form = RoundedCornerShape(f.radius)
         var rest by remember { mutableIntStateOf(FRIST_S) }
-        // Eine neue Anfrage (andere Kennung) beginnt die Frist von vorn.
+        // Die Restzeit kommt aus der Uhr statt aus gezählten Schritten: Ein verspäteter Schritt, etwa bei gesperrtem Handy, verfälscht sie sonst dauerhaft.
         LaunchedEffect(kennung) {
-            rest = FRIST_S
-            while (rest > 0) {
-                delay(1_000)
-                rest--
+            while (true) {
+                val bleibt = fristEnde - SystemClock.elapsedRealtime()
+                rest = ((bleibt + 999) / 1_000).toInt().coerceAtLeast(0)
+                if (bleibt <= 0) break
+                delay((bleibt % 1_000).takeIf { it > 0 } ?: 1_000L)
             }
             onFristAbgelaufen()
         }
