@@ -48,18 +48,43 @@ enum class BlasenZustand { MIKROFON, HOERT, FRANK_SPRICHT, WARTET_AUF_ENDE, SCHR
 /**
  * Messlauf über adb, nur für Shell und System (Manifest: Recht DUMP). Startet die Kette wie nach dem Weckwort, mit Text statt Sprache:
  * `adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "Wie spät ist es?"`
- * Mit `--ez ohne_zwischenspeicher true` ohne Zwischenspeicher-Kennung, zum Vergleich. Ergebnis: „Kette Mikrofon“ und „Blase“ im Logbuch.
+ * Ergebnis: „Kette Mikrofon“ und „Blase“ im Logbuch. Nicht, solange Jarvis vorn ist.
  */
 class SprachMesslauf : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val frage = intent.getStringExtra("frage")?.takeIf { it.isNotBlank() } ?: return
-        de.frank.jarvis.auth.CodexZwischenspeicherSchalter.setzen(!intent.getBooleanExtra("ohne_zwischenspeicher", false))
+        // Jarvis ist vorn: Frank arbeitet gerade darin, der Lauf begänne ihm mitten hinein ein neues Gespräch.
+        if (MainActivity.sichtbar) { Logbuch.sprache("Messlauf", "abgelehnt: Jarvis ist vorn"); return }
         AppViewModel.hole(context).sprachMesslauf(context.applicationContext, frage)
     }
 }
 
 object SprachBlase {
     private var ansicht: BlasenAnsicht? = null
+    private val haupt = android.os.Handler(android.os.Looper.getMainLooper())
+    private var neuEingehaengt = 0
+    private var waechterKontext: Context? = null
+
+    /**
+     * Schaut zweimal je Sekunde, ob die Blase noch zeichnet. Android kann das Fenster eines Hintergrund-Prozesses anhalten (etwa bei einem
+     * App-Wechsel); dann stünde sie sichtbar still, obwohl Jarvis arbeitet. Erst anstoßen, hilft das nicht, das Fenster neu einhängen.
+     */
+    private val waechter = object : Runnable {
+        override fun run() {
+            val da = ansicht ?: return
+            val app = waechterKontext ?: return
+            val stand = SystemClock.uptimeMillis() - da.zuletzt
+            val an = app.getSystemService(android.os.PowerManager::class.java)?.isInteractive != false
+            if (an && stand > 1_500 && neuEingehaengt < 5) {
+                neuEingehaengt++
+                Logbuch.sprache("Blase neu eingehängt", "stand $stand ms, Versuch $neuEingehaengt")
+                app.getSystemService(WindowManager::class.java)?.let { wm -> runCatching { wm.removeViewImmediate(da) } }
+                ansicht = null
+                abgleichen(app)
+            } else if (an && stand > 500) da.invalidate()
+            haupt.postDelayed(this, 500)
+        }
+    }
 
     fun darf(context: Context): Boolean = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(context)
 
@@ -96,10 +121,17 @@ object SprachBlase {
                 title = "Jarvis-Sprachblase"
             }
             runCatching { wm.addView(neu, lp) }
-                .onSuccess { ansicht = neu }
+                .onSuccess {
+                    ansicht = neu
+                    waechterKontext = app
+                    haupt.removeCallbacks(waechter)
+                    haupt.postDelayed(waechter, 500)
+                }
                 .onFailure { Logbuch.fehler("Sprachblase ließ sich nicht einblenden", it) }
         } else if (!zeigen && da != null) {
             ansicht = null
+            haupt.removeCallbacks(waechter)
+            neuEingehaengt = 0
             runCatching { wm.removeViewImmediate(da) }
         }
         WiedergabePegel.aktiv = ansicht != null
@@ -119,7 +151,10 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private val zeileMax = 280 * dp
     private val balken = 13
     private val werte = FloatArray(balken)
-    private var zuletzt = SystemClock.uptimeMillis()
+    /** Das letzte gezeichnete Bild; daran erkennt [SprachBlase], ob die Zeichenschleife noch läuft. */
+    var zuletzt = SystemClock.uptimeMillis()
+        private set
+    private var zuletztGezeichnet = false
 
     private val flaeche = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rand = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f * dp; color = (FARBE and 0x00FFFFFF) or (0xD0 shl 24) }
@@ -214,13 +249,16 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         val alt = textBreite
         textBreite = zeileText.measureText(text)
         // Das Fenster nur anpassen, wenn es zu klein wird oder die Phase wechselt; die zählenden Ziffern lassen es nicht zappeln.
-        if (textBreite > alt + 0.5f || (textBreite < alt - 8 * dp)) requestLayout()
+        // Nicht mitten im Zeichnen: Das Fenster misst sich danach neu.
+        if (textBreite > alt + 0.5f || (textBreite < alt - 8 * dp)) post { requestLayout() }
     }
 
     override fun onDraw(canvas: Canvas) {
         val jetzt = SystemClock.uptimeMillis()
         val schritt = ((jetzt - zuletzt).coerceIn(1, 100)) / 1000f
+        if (jetzt - zuletzt > 1_000 && zuletztGezeichnet) Logbuch.sprache("Blase stand still", "Zustand ${zustand.name}", jetzt - zuletzt)
         zuletzt = jetzt
+        zuletztGezeichnet = true
         val t = jetzt / 1000f
         textAktualisieren(jetzt)
 
@@ -294,9 +332,10 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         canvas.drawRoundRect(form, zeileHoehe / 2, zeileHoehe / 2, zeileFlaeche)
         canvas.drawText(text, mitteX, zeileOben + zeileHoehe / 2 - (zeileText.descent() + zeileText.ascent()) / 2, zeileText)
 
-        // Läuft weiter, solange die Blase hängt; endet der Sprachmodus, nimmt [SprachBlase.abgleichen] sie weg.
+        // Läuft weiter, solange die Blase hängt: Hörte die Schleife hier auf, weil Jarvis kurz als sichtbar galt, und blieb die Blase beim
+        // Abgleich doch hängen, stünde sie danach für immer still. Weggenommen wird sie allein über [SprachBlase.abgleichen].
         if (!vm.sprachmodusAktiv || MainActivity.sichtbar) post { SprachBlase.abgleichen(context) }
-        else postInvalidateOnAnimation()
+        if (isAttachedToWindow) postInvalidateOnAnimation()
     }
 
     /** Hin und her über alle Balken, 0 bis balken - 1. */

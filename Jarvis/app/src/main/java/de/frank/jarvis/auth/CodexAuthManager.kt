@@ -101,17 +101,8 @@ internal fun codexChatPayload(
         .put("instructions", instructions.replace(CACHE_TRENNER, "\n\n").trim() + "\n\n" + UMLAUT_HINWEIS)
         .put("input", input)
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
-        .apply { if (CodexZwischenspeicher.an) put("prompt_cache_key", "jarvis-" + model.apiId) }
-}
-
-/** Dieselbe Kennung je Modell: Die große Anweisung landet so möglichst auf demselben Zwischenspeicher, statt jedes Mal neu gelesen zu werden. */
-internal object CodexZwischenspeicher {
-    /** Nur der Messlauf schaltet ihn für einen Vergleich ab. */
-    @Volatile var an = true
-}
-
-object CodexZwischenspeicherSchalter {
-    fun setzen(an: Boolean) { CodexZwischenspeicher.an = an }
+        // Dieselbe Kennung je Modell: Die große Anweisung soll möglichst auf demselben Zwischenspeicher landen (Treffer: „Codex-Zwischenspeicher“ im Logbuch).
+        .put("prompt_cache_key", "jarvis-" + model.apiId)
 }
 
 /**
