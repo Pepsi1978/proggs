@@ -8,7 +8,7 @@ REPO=$ZUHAUSE/proggs
 als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless openjdk-21-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox python3-pip python3-venv pipx build-essential ffmpeg shellcheck shfmt bat fzf tree git-delta
 
 # gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
 install -d -m 0755 /etc/apt/keyrings
@@ -49,7 +49,7 @@ touch "$ZUHAUSE/.profile"
 sed -i '/^# OpenLauncherServer$/,/^# OpenLauncherServer Ende$/d; /^export PATH=.*\.kimi-code\/bin/d; /^export ANDROID_HOME=.*JARVIS_SERVER/d' "$ZUHAUSE/.profile"
 cat >> "$ZUHAUSE/.profile" <<'P'
 # OpenLauncherServer
-export PATH="$HOME/.local/bin:$HOME/.local/node/bin:$HOME/.kimi-code/bin:$HOME/.agy/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.local/node/bin:$HOME/.kimi-code/bin:$HOME/.agy/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/36.0.0:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH"
 export ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="$HOME/android-sdk" NPM_CONFIG_PREFIX="$HOME/.local" TZ=Europe/Berlin JARVIS_SERVER=1 JARVIS_RECHNER=Hostinger-Server
 # OpenLauncherServer Ende
 P
@@ -91,6 +91,10 @@ als 'command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/inst
 for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" || echo "$P nicht installiert"; done
 als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
 als 'npm install -g --silent pnpm@latest chrome-devtools-mcp@latest' || echo "pnpm oder chrome-devtools-mcp nicht installiert"
+als 'npm install -g --silent typescript@latest tsx@latest @biomejs/biome@latest firebase-tools@latest' || echo "TypeScript, tsx, Biome oder Firebase CLI nicht installiert"
+als 'command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh' || echo "uv nicht installiert"
+# Ubuntu nennt bat batcat; Skills und Gewohnheit erwarten bat.
+als 'ln -sf /usr/bin/batcat ~/.local/bin/bat'
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
 # Nur beim ersten Mal (jeder Lauf legt eine Sicherung an); der Mac-Build des Skripts gehört nicht hierher.
 [ -f "$ZUHAUSE/.config/opencode/plugins/work-mode.js" ] || als 'OPENCODE_SKIP_MACFIX=1 bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"

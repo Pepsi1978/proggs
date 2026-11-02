@@ -37,6 +37,14 @@ PROGRAMME = {
                             "installieren": f"{NPM} chrome-devtools-mcp@latest"},
     # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
     "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth token", "installieren": "true"},
+    # Werkzeuge wie in UpdateZentrale/programs.json. Die Firebase-Anmeldung bleibt Franks Entscheidung, darum hier kein Anmelde-Knopf.
+    "node": {"name": "Node.js (LTS)", "befehl": "node", "anmeldung": "", "stand": "", "installieren": "true",
+             "update": "V=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts)][0].version'); [ -n \"$V\" ] && { [ \"$(node --version)\" = \"$V\" ] || curl -fsSL https://nodejs.org/dist/$V/node-$V-linux-x64.tar.xz | tar -xJ --strip-components=1 -C ~/.local/node; }"},
+    "uv": {"name": "uv", "befehl": "uv", "update": "uv self update", "anmeldung": "", "stand": "", "installieren": "curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh"},
+    "typescript": {"name": "TypeScript", "befehl": "tsc", "update": f"{NPM} typescript@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} typescript@latest"},
+    "tsx": {"name": "tsx", "befehl": "tsx", "update": f"{NPM} tsx@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} tsx@latest"},
+    "biome": {"name": "Biome", "befehl": "biome", "update": f"{NPM} @biomejs/biome@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} @biomejs/biome@latest"},
+    "firebase": {"name": "Firebase CLI", "befehl": "firebase", "update": f"{NPM} firebase-tools@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} firebase-tools@latest"},
 }
 
 
@@ -65,7 +73,8 @@ def in_benutzung(schluessel: str, p: dict, alle: list) -> bool:
     """Eine CLI nie unter einer laufenden Sitzung ersetzen. Die Sitzungen nennen ihr CLI; der Prozesstest findet auch die in einem freien Terminal."""
     if any(s.get("cli") == schluessel and s["stand"] != "beendet" for s in alle):
         return True
-    muster = {"codex": "@openai/codex", "opencode": "opencode-ai", "kimi": "@moonshot-ai/kimi-code"}.get(schluessel)
+    # Klammern: Der Text steht auch in der Befehlszeile des bash -c um pgrep. Ohne sie fände sich die Prüfung selbst, und die CLI gälte immer als laufend.
+    muster = {"codex": "[@]openai/codex", "opencode": "[o]pencode-ai", "kimi": "[@]moonshot-ai/kimi-code"}.get(schluessel)
     code, _ = _lauf(f"pgrep -u \"$(id -u)\" -f '(^|/){p['befehl']}( |$)" + (f"|{muster}/" if muster else "") + "' >/dev/null", 10)
     return code == 0
 
