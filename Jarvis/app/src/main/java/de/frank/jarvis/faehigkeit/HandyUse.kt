@@ -23,7 +23,8 @@ object HandyUse {
      * Soll der Auftrag das Handy bedienen? Der Name allein genügt nicht: „Ändere im Skill handy-use die Wartezeit“ ist normale
      * Programmierarbeit und darf in die Cloud.
      */
-    private val BEDIENEN = Regex("(?i)\\b(nutze|nimm|benutze|verwende|mit|über|per)\\b[^.;:\\n]{0,30}\\bhandy[- ]?use\\b(?!-\\p{L})")
+    // \p{L} statt \b: \b behandelt „ü“ je nach Regex-Maschine (JVM, Android) verschieden.
+    private val BEDIENEN = Regex("(?i)(?<!\\p{L})(nutze|nimm|benutze|verwende|mit|über|per)(?!\\p{L})[^.;:\\n]{0,30}(?<!\\p{L})handy[- ]?use(?!\\p{L}|-\\p{L})")
 
     fun verlangt(auftrag: String): Boolean = BEDIENEN.containsMatchIn(auftrag)
 }

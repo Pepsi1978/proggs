@@ -570,6 +570,7 @@
 {"versionCode": 565, "versionName": "1.8.554", "stand": "01.11.2026, 22:07 Uhr", "notiz": "Die OpenLauncher-Auswahl bietet nur noch Kombinationen an, die am Windows-Rechner starten: Argon nur in Antigravity, Ultra nur im Codex CLI, unbekannte Modelle sind ausgeblendet."},
 {"versionCode": 566, "versionName": "1.8.555", "stand": "01.11.2026, 22:11 Uhr", "notiz": "Die OpenLauncher-Auswahl zeigt wieder das volle Angebot des Windows-OpenLauncher, ohne ausgeblendete Modelle oder CLIs."},
 {"versionCode": 567, "versionName": "1.8.556", "stand": "02.11.2026, 13:30 Uhr", "notiz": "Jarvis kennt jetzt Handy-Use und gibt Einstellungen auf dem Handy, die du nicht findest, an die CLI weiter, die sie sucht, prüft und auf Wunsch setzt."},
-{"versionCode": 568, "versionName": "1.8.557", "stand": "02.11.2026, 13:51 Uhr", "notiz": "Handy-Use-Aufträge melden jetzt richtig, wenn kein Rechner bereit ist, statt die Cloud zu nennen, und normale Arbeit am Skill darf wieder in die Cloud."}
+{"versionCode": 568, "versionName": "1.8.557", "stand": "02.11.2026, 13:51 Uhr", "notiz": "Handy-Use-Aufträge melden jetzt richtig, wenn kein Rechner bereit ist, statt die Cloud zu nennen, und normale Arbeit am Skill darf wieder in die Cloud."},
+{"versionCode": 569, "versionName": "1.8.558", "stand": "02.11.2026, 13:55 Uhr", "notiz": "Jarvis erkennt Handy-Use-Aufträge jetzt auch bei „über Handy-Use“ überall gleich zuverlässig."}
 ]
 }
