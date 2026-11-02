@@ -8,7 +8,7 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Symptom:** `adb devices` leer, obwohl Handy im WLAN und gepaart; `adb mdns services` zeigt `_adb-tls-connect`.
 - **Ursache:** Der adb-Server merkt sich keine `adb connect`-Geräte. mDNS-Auto-Connect ist rein ereignisgesteuert (EndpointCreated/Updated) und greift bei schon laufend beworbenen Diensten nach Serverstart nicht zuverlässig – auch nicht mit `ADB_MDNS_AUTO_CONNECT=adb-tls-connect` (selbst gemessen). Ab 37.0.0 ist `libadbmdns` statt openscreen das Standard-Backend.
 - **Versionen:** alle; gemessen mit 37.0.0.
-- **Fix:** Wachhund, der aktiv `adb mdns services` abfragt und verbindet (`adb-wlan.ps1 -Leise`, Aufgabe `adb-wlan-wachhund`). Diagnose: `ADB_TRACE=mdns`, testweise `ADB_MDNS_OPENSCREEN=1`.
+- **Fix:** Wachhund, der aktiv `adb mdns services` abfragt und verbindet (`adb-wlan.ps1 -Leise`, Aufgabe `adb-wlan-wachhund`). Diagnose: `ADB_TRACE=mdns`. `ADB_MDNS_OPENSCREEN` wirkt seit platform-tools 37.0.1 (Juli 2026) nicht mehr, das openscreen-Backend ist entfernt (Nachtrag 02.11.2026, https://developer.android.com/tools/releases/platform-tools, nicht selbst gemessen).
 - **Quelle:** https://android.googlesource.com/platform/packages/modules/adb/+/HEAD/client/transport_mdns.cpp · https://developer.android.com/tools/releases/platform-tools (offiziell)
 
 ## 2. Tote WLAN-Verbindung steht weiter als `device`
