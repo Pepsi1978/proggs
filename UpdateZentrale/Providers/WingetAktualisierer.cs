@@ -275,6 +275,8 @@ public sealed class WingetAktualisierer : IAktualisierer
                 protokoll.Report("Netzfehler beim Download (" + Code(lauf.ExitCode) + ") – Versuch " + versuch + " von "
                                  + NetzVersuche + " in " + (int)pause.TotalSeconds + " s …");
                 await Task.Delay(pause, abbruch);
+                await InstallerInDenCacheLadenAsync(eintrag, lauf.Ausgabe, protokoll, abbruch);
+                abbruch.ThrowIfCancellationRequested();
                 lauf = await Starten();
                 protokoll.Report(lauf.Ausgabe);
             }
@@ -462,6 +464,78 @@ public sealed class WingetAktualisierer : IAktualisierer
     internal static bool NurUeberHersteller(BefehlErgebnis lauf)
         => lauf.Ausgabe.Contains("cannot be upgraded using WinGet", StringComparison.OrdinalIgnoreCase)
            || lauf.Ausgabe.Contains("nicht mit WinGet aktualisiert werden", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly System.Text.RegularExpressions.Regex InstallerUrlMuster =
+        new(@"https?://\S+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static readonly System.Text.RegularExpressions.Regex Sha256Name =
+        new("^[0-9a-f]{64}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>The installer address winget just tried: the last URL of a failed run (language-neutral).</summary>
+    internal static string? InstallerUrl(string ausgabe)
+        => InstallerUrlMuster.Matches(ausgabe).LastOrDefault()?.Value;
+
+    /// <summary>
+    /// The cache file a failed winget run leaves behind: %TEMP%\WinGet\&lt;Id&gt;.&lt;Version&gt;\&lt;sha256&gt;,
+    /// the name being the hash from the manifest. Newest first -- older versions may lie next to it.
+    /// </summary>
+    internal static string? CacheDatei(string wurzel, string? wingetId)
+    {
+        if (string.IsNullOrWhiteSpace(wingetId) || !Directory.Exists(wurzel)) return null;
+        try
+        {
+            return Directory.GetDirectories(wurzel, wingetId + ".*")
+                .SelectMany(Directory.GetFiles)
+                .Where(d => Sha256Name.IsMatch(Path.GetFileName(d)))
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// On some networks winget's two downloaders (Delivery Optimization and WinINet) both report
+    /// "name not resolved" for a host that curl reaches fine (see bugs/bug-cases/2026-11-02-*).
+    /// winget reuses a file at its cache path and checks it against the manifest hash before running
+    /// it ("Found existing installer file ... Verifying file hash"), so curl fills that path and
+    /// winget stays the one that verifies and installs. A wrong file is deleted by winget, never run.
+    /// Best effort: if this fails too, the next winget attempt simply tries by itself.
+    /// </summary>
+    private static async Task InstallerInDenCacheLadenAsync(ProgrammEintrag eintrag, string ausgabe,
+                                                            IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var url = InstallerUrl(ausgabe);
+        var ziel = CacheDatei(Path.Combine(Path.GetTempPath(), "WinGet"), eintrag.WingetId);
+        if (url is null || ziel is null)
+        {
+            protokoll.Report("Kein Download per curl möglich: winget nannte keine Adresse oder keine Cache-Datei.");
+            return;
+        }
+
+        var teil = ziel + ".part";
+        protokoll.Report("Lade den Installer per curl in den winget-Cache: " + url);
+        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-sS -fL --retry 2 -o \"" + teil + "\" \"" + url + "\"",
+            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
+            lebenszeichen: () => File.Exists(teil) ? new FileInfo(teil).Length : 0);
+        try
+        {
+            if (laden.ExitCode == 0 && !laden.Abgelaufen && !laden.Abgebrochen && laden.BeendenProblem is null)
+            {
+                File.Move(teil, ziel, overwrite: true);
+                protokoll.Report("Download fertig, winget prüft die Prüfsumme.");
+                return;
+            }
+            protokoll.Report("curl konnte den Installer auch nicht laden (Code " + laden.ExitCode + "): " + laden.Ausgabe);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            protokoll.Report("Installer ließ sich nicht in den winget-Cache legen: " + ex.Message);
+        }
+        try { File.Delete(teil); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* next run overwrites it */ }
+    }
 
     /// <summary>Attempts of one winget run when only the network failed.</summary>
     internal const int NetzVersuche = 3;

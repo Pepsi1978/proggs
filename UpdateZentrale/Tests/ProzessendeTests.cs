@@ -246,6 +246,27 @@ public sealed class ProzessendeAuswertungTests
         => Assert.Equal(erwartet, WingetAktualisierer.IstNetzfehler(new BefehlErgebnis(code, ausgabe, false)));
 
     [Fact]
+    public void Winget_Installerdaten_kommen_aus_Ausgabe_und_Cache()
+    {
+        Assert.Equal("https://x.example/a-1.exe",
+            WingetAktualisierer.InstallerUrl("Gefunden A [A] Version 1\nDownload läuft https://x.example/a-1.exe\nInternetOpenUrl() failed."));
+        Assert.Null(WingetAktualisierer.InstallerUrl("kein Link"));
+
+        var wurzel = Directory.CreateTempSubdirectory("uz-winget-").FullName;
+        try
+        {
+            var name = new string('a', 64);
+            var ordner = Directory.CreateDirectory(Path.Combine(wurzel, "Foo.Bar.1.2.3")).FullName;
+            Directory.CreateDirectory(Path.Combine(wurzel, "Foo.BarBaz.1.0"));
+            File.WriteAllText(Path.Combine(ordner, "nicht-der-hash"), "");
+            File.WriteAllText(Path.Combine(ordner, name), "");
+            Assert.Equal(Path.Combine(ordner, name), WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar"));
+            Assert.Null(WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar.Fehlt"));
+        }
+        finally { Directory.Delete(wurzel, true); }
+    }
+
+    [Fact]
     public void Winget_Netzfehler_gilt_nicht_bei_abgebrochenem_oder_unsauberem_Lauf()
     {
         Assert.False(WingetAktualisierer.IstNetzfehler(Lauf("InternetOpenUrl() failed.", abgebrochen: true)));
