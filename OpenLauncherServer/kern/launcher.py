@@ -19,6 +19,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import efforts as effort_tabelle  # noqa: E402
+
 HOME = Path.home()
 PROGGS = HOME / "proggs"
 ZUSTAND = HOME / ".openlauncher"
@@ -35,9 +38,11 @@ TMUX = ["tmux", "-L", "jarvis"]
 PROFIL_IDS = ("minimal", "standard", "strict")
 MODUS_IDS = ("frei", "schnell", "normal", "gruendlich")
 CLIS = ("claude", "codex", "opencode", "kimi", "antigravity")
-EFFORTS = {"claude": ["low", "medium", "high", "xhigh", "max"], "codex": ["low", "medium", "high", "xhigh"],
-           "opencode": ["none", "minimal", "low", "medium", "high", "xhigh", "max"], "kimi": ["low", "high", "max"],
+# Was die CLIs annehmen, gleiche Listen wie EFFORTS in OpenLauncherKatalog.kt; was die Liste nicht kennt, ließe starten() still weg.
+EFFORTS = {"claude": ["low", "medium", "high", "xhigh", "max"], "codex": ["low", "medium", "high", "xhigh", "max", "ultra"],
+           "opencode": ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"], "kimi": ["low", "high", "max"],
            "antigravity": ["low", "medium", "high", "xhigh", "max"]}
+NUR_LOKAL = ("lmstudio",)  # läuft auf Franks eigenem Rechner, nicht auf einem Server ohne Grafikkarte
 # 2 vCPU, 8 GB, nebenbei Werft Studio und Second Brain: mehr vertragen die Sitzungen nicht (OpenLauncherServer/PLAN.md).
 MAX_ARBEITEND = 2
 MAX_OFFEN = 4
@@ -351,8 +356,14 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
     opencode_plugin()
     globale_skills()
     q = shlex.quote
-    # Der Slug kann selbst Schrägstriche tragen (openrouter: moonshotai/kimi-k3); der Anbieter gehört immer davor.
-    kennung = modell if not anbieter or modell.startswith(f"{anbieter}/") else f"{anbieter}/{modell}"
+    # Der Slug kann selbst Schrägstriche tragen (openrouter: moonshotai/kimi-k3); der Anbieter gehört immer davor, wie ModelEntry.ModelString.
+    kennung = effort_tabelle.modell_string(anbieter, modell)
+    # OpenCode kennt den Anbieter nvidia nur mit diesem Schlüssel in der Umgebung (BuildNvidiaKeyScript am PC).
+    nvidia = ""
+    if kennung.startswith("nvidia/"):
+        nvidia = '''NVIDIA_API_KEY="$(sed -n 's/^[[:space:]]*NVIDIA_API_KEY[[:space:]]*=[[:space:]]*//p' "$HOME/SK/NvidiaDev/.env" 2>/dev/null | head -1 | tr -d "\\"'\\r")"
+[ -n "$NVIDIA_API_KEY" ] && export NVIDIA_API_KEY || echo "[OpenLauncher] Kein NVIDIA-Schlüssel in ~/SK/NvidiaDev/.env."
+'''
     # Wie patchModelVariantState am Mac: Die Oberfläche von OpenCode kennt --variant nicht, die Stufe steht in ihrem Zustand.
     zustand = HOME / ".local" / "state" / "opencode" / "model.json"
     try:
@@ -368,7 +379,7 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
     profil_datei = ZUSTAND / "opencode-profil.json"
     _schreib(profil_datei, json.dumps({"$schema": "https://opencode.ai/config.json", "mcp": {"chrome-devtools": {"type": "local", "command": ["bash", str(BROWSER_MCP)], "enabled": True},
                                                                                              "chrome-personal": {"enabled": False}}}))
-    return f'''export OPENCODE_CONFIG={q(str(profil_datei))} OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
+    return nvidia + f'''export OPENCODE_CONFIG={q(str(profil_datei))} OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
 mkdir -p "$HOME/.local/share/opencode/log/stderr"
 FEHLER="$HOME/.local/share/opencode/log/stderr/opencode-stderr-$(date +%Y%m%d-%H%M%S)-$$.log"
 if [ -n "$PROMPT" ]; then opencode -m {q(kennung)} --prompt "$PROMPT" 2>"$FEHLER"; else opencode -m {q(kennung)} 2>"$FEHLER"; fi
@@ -441,6 +452,8 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     """Startet eine CLI und liefert den Namen der tmux-Sitzung."""
     if cli not in CLIS:
         raise ValueError(f"Unbekanntes CLI: {cli}")
+    if anbieter.lower() in NUR_LOKAL:
+        raise ValueError("LM-Studio-Modelle laufen nur auf deinem eigenen Rechner, nicht auf dem Hostinger-Server.")
     pruefe_wahl(profil, modus)
     if nummer and not re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer):
         raise ValueError("Ungültige Auftragsnummer")
@@ -696,18 +709,27 @@ def katalog() -> dict:
         standards = json.loads(_lies(PROGGS / "OpenLauncher" / "model-defaults.json") or "{}")
     except ValueError:
         gruppen, standards = [], {}
+    try:
+        gemerkt = json.loads(_lies(PROGGS / "OpenLauncher" / "effort-stufen.json") or "{}")
+    except ValueError:
+        gemerkt = {}
     for gruppe in gruppen:
         anbieter = str(gruppe.get("ProviderId") or gruppe.get("Id") or "").lower()
+        if anbieter in NUR_LOKAL:
+            continue
         verborgen = set(gruppe.get("HiddenModelSlugs") or [])
         for m in gruppe.get("Models") or []:
             slug = m.get("Slug", "")
             if not slug or m.get("IsHidden") or slug in verborgen:
                 continue
             standard = standards.get(f"{anbieter}/{slug}") or {}
+            clis = clis_fuer(anbieter)
             modelle.append({"slug": slug, "name": m.get("DisplayName") or slug, "anbieter": anbieter, "gruppe": gruppe.get("Title") or anbieter,
-                            "clis": clis_fuer(anbieter), "profil": standard.get("ProfileId") or "minimal", "modus": standard.get("WorkModeId") or "schnell",
-                            "effort": standard.get("ThinkingValue") or "high", "cli": standard.get("CliTargetId") or ""})
-    return {"modelle": modelle, "efforts": EFFORTS, "profile": list(PROFIL_IDS), "modi": list(MODUS_IDS)}
+                            "clis": clis, "profil": standard.get("ProfileId") or "minimal", "modus": standard.get("WorkModeId") or "schnell",
+                            "effort": standard.get("ThinkingValue") or "high", "cli": standard.get("CliTargetId") or "",
+                            # Wie der Knopf in Jarvis: je Modell nur die Stufen, die OpenLauncher ihm anbietet.
+                            "efforts": {c: effort_tabelle.fuer_cli(anbieter, slug, c, gemerkt) for c in clis}})
+    return {"modelle": modelle, "profile": list(PROFIL_IDS), "modi": list(MODUS_IDS)}
 
 
 def clis_fuer(anbieter: str) -> list:

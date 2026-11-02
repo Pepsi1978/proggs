@@ -414,7 +414,7 @@ async function ladeLinks() {
 }
 
 // ---- OpenLauncher
-let angebot = { modelle: [], efforts: {} };
+let angebot = { modelle: [] };
 function fuelle(id, werte, namen, wahl) {
   const s = $(id);
   s.replaceChildren();
@@ -430,7 +430,8 @@ function modellGewaehlt() {
   cliGewaehlt(m.effort);
 }
 function cliGewaehlt(wahl) {
-  const efforts = angebot.efforts[$("cli").value] || [];
+  const m = angebot.modelle[Number($("modell").value)];
+  const efforts = (m && m.efforts[$("cli").value]) || [];
   fuelle("effort", efforts, null, typeof wahl === "string" && efforts.includes(wahl) ? wahl : efforts.includes("high") ? "high" : efforts[efforts.length - 1]);
 }
 async function ladeKatalog() {
