@@ -84,7 +84,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Nennt Frank dabei ein Modell (etwa „GPT-6 Astra“, „Kimi K3“), einen Effort, ein Profil, einen Modus oder ein CLI (Claude Code, Codex, OpenCode, Kimi CLI, Antigravity), " +
             "gib genau das in modell, effort, profil, modus und cli mit und lass Fehlendes weg; Jarvis prüft es gegen OpenLauncher und fragt bei Unklarem zurück. " +
-            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch."
+            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch. " + HandyUse.HINWEIS
 
     private val app = context.applicationContext
     private val e get() = Einstellungen.get(app)
@@ -371,7 +371,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "ist unklar, ob er einen neuen Auftrag oder einen Nachtrag will, frag ihn kurz, bevor du etwas startest. " +
                     "„ ; “ (Leerzeichen, Semikolon, Leerzeichen; früher auch „;“ auf eigener Zeile) in Franks Nachrichten trennt seine einzelnen Spracheingaben und löst allein nie einen Auftrag aus. " +
                     "Verlangt Frank ausdrücklich die Übergabe solcher Abschnitte, ist jeder nicht leere Abschnitt eine Aufgabe: alle zusammen in EINEM Aufruf " +
-                    "(eine Sitzung), im Auftrag durch „ ; “ getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
+                    "(eine Sitzung), im Auftrag durch „ ; “ getrennt; ein Trenner am Ende ist keine weitere Aufgabe. " + HandyUse.HINWEIS,
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt. Weglassen, wenn Frank keine nennt."),
                     "auftrag" to text(AUFTRAGS_REGELN),
@@ -462,7 +462,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
                 // programmier_nachtrag: So landeten neue Wünsche ungefragt als Nachtrag in alten Sitzungen. Jetzt ist jeder Aufruf
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).
-                val wahl = zieleFuer(ziel, modell, cli)
+                val wahl = HandyUse.erreichbar(auftrag, zieleFuer(ziel, modell, cli)) { it is PcBruecke }
                 val neu = a.optBoolean("neu")
                 // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
                 // Ruft das Modell nach einem Start mit vorgewähltem Modell in derselben Runde noch einmal auf (auch mit neu=true), gibt es keinen zweiten Auftrag.
@@ -569,7 +569,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
                     // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
                     modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
-                    wahl.isEmpty() -> ausweg(Ergebnis(fehltFuer(modell, cli), fehler = true))
+                    wahl.isEmpty() -> ausweg(Ergebnis(if (HandyUse.verlangt(auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli), fehler = true))
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
@@ -977,8 +977,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> k as Ergebnis
                 }
             } else {
-                val wahl = zieleFuer(w.ziel, modell, cli)
-                if (wahl.isEmpty()) Ergebnis(fehltFuer(modell, cli), fehler = true)
+                val wahl = HandyUse.erreichbar(w.auftrag, zieleFuer(w.ziel, modell, cli)) { it is PcBruecke }
+                if (wahl.isEmpty()) Ergebnis(if (HandyUse.verlangt(w.auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli), fehler = true)
                 else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
             }
         }
