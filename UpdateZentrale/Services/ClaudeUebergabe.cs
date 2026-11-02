@@ -55,7 +55,8 @@ public static class ClaudeUebergabe
     public static bool AutomatischRelevant(UpdateBericht bericht)
         => bericht.IstFehler
            && !bericht.OhneAutoUebergabe
-           && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal);
+           && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal)
+           && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.NetzGestoertMeldung, StringComparison.Ordinal);
 
     /// <param name="Gestartet">Eine Sitzung wurde (vermutlich) gestartet.</param>
     /// <param name="Problem">Warum nicht, oder was unklar blieb; null = alles gut oder nichts zu tun.</param>

@@ -25,8 +25,11 @@ enum ClaudeUebergabe {
     @MainActor private static var automatischLaeuft = false
 
     /// Jeder Lauf, den die Karte als Fehler zeigt, auch "nicht verifiziert", was auch einen nicht lesbaren
-    /// Stand meinen kann: der Auftrag laesst das zuerst pruefen. Ausgenommen ist ein vom Benutzer abgebrochener Lauf.
-    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.istFehler && !bericht.ohneAutoUebergabe }
+    /// Stand meinen kann: der Auftrag laesst das zuerst pruefen. Ausgenommen sind ein vom Benutzer abgebrochener
+    /// Lauf und ein Netz, das ueber alle Versuche gestoert blieb: das kann eine Sitzung nicht reparieren.
+    static func automatischRelevant(_ bericht: UpdateBericht) -> Bool {
+        bericht.istFehler && !bericht.ohneAutoUebergabe && !bericht.meldung.contains(BrewAktualisierer.netzGestoertMeldung)
+    }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
     struct AutoErgebnis { var gestartet = false; var problem: String? }

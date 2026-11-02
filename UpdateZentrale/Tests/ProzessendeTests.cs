@@ -235,6 +235,23 @@ public sealed class ProzessendeAuswertungTests
         Assert.True(WingetAktualisierer.IstNichtsZuTun(new BefehlErgebnis(unchecked((int)0x8A15002B), "", false)));
     }
 
+    [Theory]
+    [InlineData(unchecked((int)0x80072EE7), "", true)] // name not resolved
+    [InlineData(unchecked((int)0x80072EE2), "", true)] // timeout
+    [InlineData(1, "InternetOpenUrl() failed.\n0x80072ee7 : unknown error", true)]
+    [InlineData(unchecked((int)0x8A15002B), "No applicable upgrade found.", false)]
+    [InlineData(unchecked((int)0x8A150101), "", false)]
+    [InlineData(0, "InternetOpenUrl() failed.", false)]
+    public void Winget_Netzfehler_werden_erkannt(int code, string ausgabe, bool erwartet)
+        => Assert.Equal(erwartet, WingetAktualisierer.IstNetzfehler(new BefehlErgebnis(code, ausgabe, false)));
+
+    [Fact]
+    public void Winget_Netzfehler_gilt_nicht_bei_abgebrochenem_oder_unsauberem_Lauf()
+    {
+        Assert.False(WingetAktualisierer.IstNetzfehler(Lauf("InternetOpenUrl() failed.", abgebrochen: true)));
+        Assert.False(WingetAktualisierer.IstNetzfehler(Lauf("InternetOpenUrl() failed.", problem: "x")));
+    }
+
     [Fact]
     public void Sauberes_Ende_ergibt_keinen_Eingriff()
         => Assert.Null(Kommandozeile.UnsauberesEnde(new BefehlErgebnis(0, "ok", false)));

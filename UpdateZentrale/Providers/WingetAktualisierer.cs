@@ -260,16 +260,30 @@ public sealed class WingetAktualisierer : IAktualisierer
         BefehlErgebnis lauf;
         try
         {
-            lauf = await Kommandozeile.AusfuehrenAsync(
+            Task<BefehlErgebnis> Starten() => Kommandozeile.AusfuehrenAsync(
                 Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
                 lebenszeichen: () => DownloadGroesse(eintrag.WingetId));
+
+            lauf = await Starten();
+            protokoll.Report(lauf.Ausgabe);
+
+            // A failed download changed nothing yet; a DNS or connection blip (hotel WLAN, VPN
+            // switching over) is usually gone a little later. See bugs/bug-cases/2026-11-02-*.
+            for (var versuch = 2; versuch <= NetzVersuche && IstNetzfehler(lauf); versuch++)
+            {
+                var pause = NetzPause(versuch);
+                protokoll.Report("Netzfehler beim Download (" + Code(lauf.ExitCode) + ") – Versuch " + versuch + " von "
+                                 + NetzVersuche + " in " + (int)pause.TotalSeconds + " s …");
+                await Task.Delay(pause, abbruch);
+                lauf = await Starten();
+                protokoll.Report(lauf.Ausgabe);
+            }
         }
         finally
         {
             // Also after: a list taken while the installer ran would still show the old version.
             SammelVerwerfen();
         }
-        protokoll.Report(lauf.Ausgabe);
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
 
@@ -305,6 +319,12 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (lauf.ExitCode is InstallationInBenutzung or DateiInBenutzung)
             return new PruefErgebnis(UpdateZustand.Fehler,
                 Meldung: eintrag.Name + " ist gerade in Benutzung – schließen und erneut aktualisieren.",
+                Protokoll: lauf.Ausgabe);
+
+        if (IstNetzfehler(lauf))
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: CliAktualisierer.NetzGestoertMeldung + eintrag.Name + " ließ sich nicht laden (" + Code(lauf.ExitCode) + ", "
+                         + NetzVersuche + " Versuche). Die installierte Version bleibt unverändert – später oder in einem anderen Netz erneut versuchen.",
                 Protokoll: lauf.Ausgabe);
 
         if (lauf.ExitCode != 0)
@@ -442,6 +462,26 @@ public sealed class WingetAktualisierer : IAktualisierer
     internal static bool NurUeberHersteller(BefehlErgebnis lauf)
         => lauf.Ausgabe.Contains("cannot be upgraded using WinGet", StringComparison.OrdinalIgnoreCase)
            || lauf.Ausgabe.Contains("nicht mit WinGet aktualisiert werden", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Attempts of one winget run when only the network failed.</summary>
+    internal const int NetzVersuche = 3;
+
+    /// <summary>Pause before an attempt: DNS blips outlast a few seconds, so the second pause is longer.</summary>
+    internal static Func<int, TimeSpan> NetzPause { get; set; } = versuch => TimeSpan.FromSeconds(versuch == 2 ? 15 : 60);
+
+    /// <summary>
+    /// A failed run that ended by itself with a WinINet error: HRESULT 0x8007xxxx around Win32 12001-12175
+    /// (0x80072EE7 name not resolved, 0x80072EE2 timeout, 0x80072EFD cannot connect, 0x80072EFE aborted),
+    /// or winget's own "InternetOpenUrl() failed" text when the exit code says less.
+    /// </summary>
+    internal static bool IstNetzfehler(BefehlErgebnis lauf)
+    {
+        if (lauf.Abgelaufen || lauf.Abgebrochen || lauf.BeendenProblem is not null || lauf.ExitCode == 0) return false;
+        var code = unchecked((uint)lauf.ExitCode);
+        return (code >= 0x80072EE1 && code <= 0x80072F8F)
+               || lauf.Ausgabe.Contains("InternetOpenUrl() failed", StringComparison.OrdinalIgnoreCase)
+               || lauf.Ausgabe.Contains("InternetReadFile() failed", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>
     internal static bool IstNichtsZuTun(BefehlErgebnis lauf)

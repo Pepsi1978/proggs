@@ -133,9 +133,11 @@ struct BrewAktualisierer: Aktualisierer {
         let auffrischen = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
         if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
         protokoll.berichte("brew fetch --cask \(cask)  (Download vorab, das Programm bleibt offen)")
-        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask],
-                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                                                   lebenszeichen: Self.downloadGroesse)
+        let laden = await Self.mitNetzWiederholung(protokoll) {
+            await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask],
+                                           zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                           lebenszeichen: Self.downloadGroesse)
+        }
         if !laden.ausgabe.istLeer { protokoll.berichte(laden.ausgabe) }
         if laden.abgelaufen {
             return "Download hängt (\(eintrag.zeitlimitMinuten) min ohne Fortschritt) – \(eintrag.name) bleibt offen, nichts geändert."
@@ -202,9 +204,11 @@ struct BrewAktualisierer: Aktualisierer {
             : ["install", "--cask", "--force", cask]
 
         protokoll.berichte("brew " + argumente.joined(separator: " "))
-        let lauf = await Kommandozeile.ausfuehren(
-            Pfade.brew, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-            lebenszeichen: Self.downloadGroesse)
+        let lauf = await Self.mitNetzWiederholung(protokoll) {
+            await Kommandozeile.ausfuehren(
+                Pfade.brew, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                lebenszeichen: Self.downloadGroesse)
+        }
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -306,9 +310,11 @@ struct BrewAktualisierer: Aktualisierer {
         if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
 
         protokoll.berichte("brew upgrade \(formel)")
-        let lauf = await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
-                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                                                  lebenszeichen: Self.downloadGroesse)
+        let lauf = await Self.mitNetzWiederholung(protokoll) {
+            await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
+                                           zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                           lebenszeichen: Self.downloadGroesse)
+        }
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -404,8 +410,10 @@ struct BrewAktualisierer: Aktualisierer {
 
         let zeitlimit = TimeInterval(eintrag.zeitlimitMinuten * 60)
         protokoll.berichte("brew fetch --cask \(cask)")
-        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask], zeitlimit: zeitlimit,
-                                                   lebenszeichen: Self.downloadGroesse)
+        let laden = await Self.mitNetzWiederholung(protokoll) {
+            await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask], zeitlimit: zeitlimit,
+                                           lebenszeichen: Self.downloadGroesse)
+        }
         protokoll.berichte(laden.ausgabe)
         if laden.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit beim Herunterladen überschritten.",
@@ -485,10 +493,52 @@ struct BrewAktualisierer: Aktualisierer {
         return hinweise.contains { ausgabe.localizedCaseInsensitiveContains($0) }
     }
 
+    /// Anfang der Fehlermeldung, wenn das Netz ueber alle Versuche gestoert blieb. Haelt den Fall aus der
+    /// Claude-Uebergabe heraus: eine Sitzung kann ihn nicht reparieren. Gegenstueck: `NetzGestoertMeldung`.
+    static let netzGestoertMeldung = "Netz gestört: "
+
+    private static let netzVersuche = 3
+
+    private static let netzHinweise = ["Could not resolve host", "Temporary failure in name resolution",
+                                       "Network is unreachable", "Failed to connect", "curl: (6)", "curl: (7)",
+                                       "curl: (35)", "curl: (52)", "curl: (56)"]
+
+    private static func nenntNetzfehler(_ ausgabe: String) -> Bool {
+        netzHinweise.contains { ausgabe.localizedCaseInsensitiveContains($0) }
+    }
+
+    /// Ein selbst beendeter Lauf, der das Netz als Grund nennt, und kein Klick auf „Abbrechen“.
+    static func istNetzfehler(_ lauf: BefehlErgebnis) -> Bool {
+        !lauf.abgelaufen && lauf.exitCode != 0 && !(AbbruchMarke.aktuell?.istAbgebrochen ?? false)
+            && nenntNetzfehler(lauf.ausgabe)
+    }
+
+    /// Ein kurzer DNS- oder Verbindungsaussetzer (Hotel-WLAN, VPN-Wechsel) ist meist schnell vorbei; bis
+    /// dahin hat der Lauf nichts geaendert. Windows-Gegenstueck: `WingetAktualisierer.IstNetzfehler`.
+    private static func mitNetzWiederholung(_ protokoll: Fortschritt,
+                                            _ starten: () async -> BefehlErgebnis) async -> BefehlErgebnis {
+        var lauf = await starten()
+        var versuch = 2
+        while versuch <= netzVersuche, istNetzfehler(lauf) {
+            let pause: UInt64 = versuch == 2 ? 15 : 60
+            protokoll.berichte(lauf.ausgabe)
+            protokoll.berichte("Netzfehler beim Download – Versuch \(versuch) von \(netzVersuche) in \(pause) s …")
+            try? await Task.sleep(nanoseconds: pause * 1_000_000_000)
+            // Ein Klick auf „Abbrechen“ in der Pause: `ausfuehren` startet dann nichts mehr und meldet den Abbruch.
+            lauf = await starten()
+            versuch += 1
+        }
+        return lauf
+    }
+
     /// Uebersetzt die haeufigen brew-Fehlschlaege in einen Satz, mit dem der Benutzer etwas
     /// anfangen kann. Das Gegenstueck zu `BrauchtRechte` unter Windows ist hier der Fall, dass
     /// brew nach einem Passwort fragen will -- ohne Terminal kann es das nicht.
     static func fehlergrundText(_ ausgabe: String, exitCode: Int) -> String {
+        if nenntNetzfehler(ausgabe) {
+            return netzGestoertMeldung + "Der Download kam nach \(netzVersuche) Versuchen nicht zustande. "
+                 + "Die installierte Version bleibt unverändert – später oder in einem anderen Netz erneut versuchen."
+        }
         // sudo fragt ueber den Askpass-Helfer der App (Kommandozeile.umgebung) nach dem Passwort.
         // Die drei Ausgaenge des Dialogs lesen sich in der sudo-Ausgabe so:
         if ausgabe.localizedCaseInsensitiveContains("no password was provided")

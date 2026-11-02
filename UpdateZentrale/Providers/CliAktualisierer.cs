@@ -393,6 +393,9 @@ public sealed class CliAktualisierer : IAktualisierer
     /// <summary>Start of the failure text for <see cref="IstDownloadFrist"/>; keeps it out of the Claude handover.</summary>
     public const string LangsamesNetzMeldung = "Download zu langsam: ";
 
+    /// <summary>Start of the failure text when the network stayed down over all attempts; a session cannot repair that either.</summary>
+    public const string NetzGestoertMeldung = "Netz gestört: ";
+
     /// <summary>
     /// The tool's own overall download deadline ran out (Claude Code: ~10 min for ~300 MB). Not a
     /// transient error: on the same slow line every retry burns another full deadline, three
