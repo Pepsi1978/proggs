@@ -32,6 +32,15 @@ Die Reparatur gilt für jede fremde Sperre, die nicht beendet werden darf:
 - **Bewusst nicht:** Prozess beenden oder Aufgabe abschalten. Dafür fehlen die Rechte, und der fertige Download verkürzt das Update.
 - **Bewusst hingenommen:** Während des Wartens hält das Update die globale Laufkoordination wie ein laufendes Update auch. Das VS-Update selbst darf sie bis zu 120 Minuten halten.
 
+## Bewährung im echten Lauf (02.11.2026)
+
+Der Wiederholungslauf in 1.3.77 wartete 43 Minuten auf `BackgroundDownload` (21:28 bis 22:11), danach lief winget 35 Minuten ohne Fehler 5002. Installiert ist 18.11.3 (`vswhere`: 18.11.12328.437). Der Lauf endete mit „Ausstehend“, weil der Installer einen Neustart verlangt.
+
+Zwei Dinge dabei beachten:
+
+- Ein Update, das wartet, ist kein Klemmen: Die Protokollzeile „Warte auf …“ steht bis zum Ende der Sperre allein, und in dieser Zeit keinen zweiten winget-Lauf starten.
+- Die Protokollzeile „Stand nachher“ kann bei „Ausstehend“ noch die alte Version nennen. Maßgeblich sind danach `winget list` und `vswhere`.
+
 ## Vorgehen, wenn es wieder auftritt
 
 ```powershell
