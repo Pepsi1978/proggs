@@ -176,11 +176,13 @@ class JarvisAgent(context: Context) {
         beiTokenlimit: (suspend (Zeitablauf) -> String?)? = null,
         /** Bekommt den ersten fertigen Satz einer Antwort, während das Modell noch schreibt (nur Antworten, nie Werkzeugaufrufe). */
         beiErstemSatz: ((String) -> Unit)? = null,
+        /** Ein Modellschritt beginnt: Es läuft gerade kein Werkzeug (für die Statuszeile der Sprachblase). */
+        beiDenken: () -> Unit = {},
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
-                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit, beiErstemSatz)
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit, beiErstemSatz, beiDenken)
         }
 
     private suspend fun versucheIntern(
@@ -204,6 +206,7 @@ class JarvisAgent(context: Context) {
         beiZeitablauf: (suspend (Zeitablauf) -> String?)?,
         beiTokenlimit: (suspend (Zeitablauf) -> String?)?,
         beiErstemSatz: ((String) -> Unit)?,
+        beiDenken: () -> Unit,
     ): String? {
         if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
@@ -233,7 +236,7 @@ class JarvisAgent(context: Context) {
             else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
-        Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
+        Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen (fest ${festerTeil(faehigkeiten).length}, Gesamtbild ${gesamtbild.length}), Verlauf ${zuege.size} Züge")
         val messen = currentCoroutineContext()[Antwortkette.Marke] != null
         if (messen) Antwortkette.punkt("Kontext")
         // Für den Abschluss bleibt ein Teil der Zeit übrig: Ein langes Werkzeug (Bild, Download) darf nicht das ganze Ergebnis verschlucken.
@@ -273,13 +276,14 @@ class JarvisAgent(context: Context) {
                 val modellBeginn = System.currentTimeMillis()
                 laeuftGerade = MODELL_DENKT
                 laeuftSeit = modellBeginn
+                beiDenken()
                 var erstesZeichen = 0L
                 val strom = beiErstemSatz?.let { AntwortStrom() }
                 val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it }, onDelta = { d ->
-                    if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; if (messen) Antwortkette.punkt("Denken") }
+                    if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; if (messen) Antwortkette.punkt(if (schritte == 1) "Denken" else "Denken $schritte") }
                     strom?.neu(d)?.let { satz -> beiErstemSatz?.invoke(satz) }
                 })
-                if (messen) Antwortkette.punkt("Schreiben")
+                if (messen) Antwortkette.punkt(if (schritte == 1) "Schreiben" else "Schreiben $schritte")
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen, erstes Zeichen nach $erstesZeichen ms")
                 var schritt = lies(roh)
                 var (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
@@ -328,6 +332,7 @@ class JarvisAgent(context: Context) {
                 }
                 laeuftGerade = null
                 letzterSchrittFertig = System.currentTimeMillis()
+                if (messen) Antwortkette.punkt("Werkzeug $schritte (${letztesWerkzeug.take(40)})")
                 zuege += ChatTurn("assistant", schritt.toString())
                 // Nicht ausgeführte Aufrufe (mehr als MAX_AUFRUFE in einem Schritt) ausdrücklich melden, damit das Modell sie nachholt statt sie zu bestätigen.
                 val nichtAusgefuehrt = if (verworfen.isEmpty()) "" else

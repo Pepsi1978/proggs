@@ -101,6 +101,17 @@ internal fun codexChatPayload(
         .put("instructions", instructions.replace(CACHE_TRENNER, "\n\n").trim() + "\n\n" + UMLAUT_HINWEIS)
         .put("input", input)
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
+        .apply { if (CodexZwischenspeicher.an) put("prompt_cache_key", "jarvis-" + model.apiId) }
+}
+
+/** Dieselbe Kennung je Modell: Die große Anweisung landet so möglichst auf demselben Zwischenspeicher, statt jedes Mal neu gelesen zu werden. */
+internal object CodexZwischenspeicher {
+    /** Nur der Messlauf schaltet ihn für einen Vergleich ab. */
+    @Volatile var an = true
+}
+
+object CodexZwischenspeicherSchalter {
+    fun setzen(an: Boolean) { CodexZwischenspeicher.an = an }
 }
 
 /**
@@ -144,7 +155,7 @@ internal fun classifyHttpError(code: Int, body: String) {
 internal fun payloadForAttempt(payload: JSONObject, attempt: Int): JSONObject {
     if (attempt == 0) return payload
     return runCatching {
-        JSONObject(payload.toString()).apply { remove("service_tier") }
+        JSONObject(payload.toString()).apply { remove("service_tier"); remove("prompt_cache_key") }
     }.getOrDefault(payload)
 }
 
@@ -209,6 +220,7 @@ internal class CodexSseAccumulator {
                 response?.optJSONObject("usage")?.let { u ->
                     tokens = u.optLong("total_tokens").takeIf { it > 0 } ?: (u.optLong("input_tokens") + u.optLong("output_tokens"))
                     ausgabeToken = u.optInt("output_tokens")
+                    de.frank.jarvis.observability.Logbuch.sprache("Codex-Zwischenspeicher", "Eingabe ${u.optLong("input_tokens")} Token, davon ${u.optJSONObject("input_tokens_details")?.optLong("cached_tokens") ?: 0L} aus dem Speicher")
                 }
                 null
             }

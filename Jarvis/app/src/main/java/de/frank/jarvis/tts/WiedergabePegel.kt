@@ -3,6 +3,7 @@ package de.frank.jarvis.tts
 import android.media.MediaPlayer
 import android.media.audiofx.Visualizer
 import android.os.SystemClock
+import de.frank.jarvis.observability.Logbuch
 import java.util.WeakHashMap
 import kotlin.math.sqrt
 
@@ -17,6 +18,7 @@ object WiedergabePegel {
     private val messer = WeakHashMap<MediaPlayer, Visualizer>()
     @Volatile private var wert = 0f
     @Volatile private var gemessenUm = 0L
+    @Volatile private var hoechster = 0f
 
     /** Letzter Pegel 0…1, null ohne frische Messung. */
     val pegel: Float? get() = if (SystemClock.uptimeMillis() - gemessenUm < 400) wert else null
@@ -34,16 +36,19 @@ object WiedergabePegel {
                     val rms = sqrt(summe / f.size.coerceAtLeast(1)) / 128.0
                     wert = (sqrt(rms) * 1.5).toFloat().coerceIn(0f, 1f)
                     gemessenUm = SystemClock.uptimeMillis()
+                    if (wert > hoechster) hoechster = wert
                 }
                 override fun onFftDataCapture(vis: Visualizer?, fft: ByteArray?, rate: Int) = Unit
             }, minOf(Visualizer.getMaxCaptureRate(), 20_000), true, false)
             v.enabled = true
             synchronized(messer) { messer[player] = v }
-        }
+        }.onFailure { Logbuch.sprache("Wiedergabepegel", "Messung nicht möglich: ${it.javaClass.simpleName}") }
     }
 
     fun abmelden(player: MediaPlayer?) {
         val v = synchronized(messer) { messer.remove(player) } ?: return
+        Logbuch.sprache("Wiedergabepegel", "höchster Wert ${"%.2f".format(hoechster)}")
+        hoechster = 0f
         runCatching { v.enabled = false; v.release() }
     }
 }

@@ -254,8 +254,12 @@ class Vorleser(
         }
         vorabQuelle = null
         val text = SprechText.fuerStimme(rohText)
+        val rest = nachVorab(text, vorabText)
+        // Beginnt die Antwort wirklich mit dem Satz, läuft seine Erzeugung weiter: Abbrechen und neu anfordern kostete bis zu
+        // 1,2 Sekunden bis zum ersten Ton. Kam er am Ende doch nicht zu Gehör, liest die Fortsetzung ihn nach ([fortsetzen]).
+        if (rest != null && (vorabGesprochen || laufenderJob?.isActive == true)) { fortsetzen(quelle, titel, rest, nachholen = if (vorabGesprochen) null else vorabText); return }
         if (!vorabGesprochen) laufenderJob?.cancel()
-        fortsetzen(quelle, titel, if (vorabGesprochen) nachVorab(text, vorabText) ?: text else text)
+        fortsetzen(quelle, titel, text)
     }
 
     /** Für die angesagte Zustellung: der Text ohne den schon gesprochenen Satz. */
@@ -282,12 +286,15 @@ class Vorleser(
         if (unterbrochen) nachDemHalt.addLast(Danach(quelle, titel, text)) else fortsetzen(quelle, titel, text)
     }
 
-    private fun fortsetzen(quelle: String, titel: String, text: String) {
+    /** [nachholen]: Der vorab begonnene Satz, falls er beim Start noch nicht zu hören war; scheitert er, kommt er vor dem Rest noch einmal. */
+    private fun fortsetzen(quelle: String, titel: String, text: String, nachholen: String? = null) {
         val absaetze = SprechText.absaetze(text)
         if (absaetze.isEmpty()) {
             if (laufenderJob?.isActive != true) raeumeLaufAuf()
             return
         }
+        // vorabQuelle ist schon null: Darum zählt der Vorgänger selbst, ob sein Satz zu hören war.
+        nachholSatzGehoert = nachholen == null
         val vorher = laufenderJob?.takeIf { it.isActive }
         vorgaenger.removeAll { !it.isActive }
         vorher?.let { vorgaenger += it }
@@ -302,10 +309,19 @@ class Vorleser(
         val meinLauf = laufNummer.incrementAndGet()
         starteLauf(meinLauf, text.length, absaetze.size) {
             // Der neue Text wird schon erzeugt, während der Vorgänger noch spricht; abgespielt wird erst danach.
-            if (synthese.kannVorausschauen(null)) pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, vorher)
-            else { vorher?.join(); reihum(absaetze, KURZE_PAUSE_MS) }
+            val nachholenWennNoetig: suspend () -> Unit = {
+                if (nachholen != null && !nachholSatzGehoert) {
+                    Logbuch.sprache("Erster Satz nachgeholt", "${nachholen.length} Zeichen")
+                    pipelineMitVorausschau(SprechText.absaetze(nachholen), KURZE_PAUSE_MS, null)
+                }
+            }
+            if (synthese.kannVorausschauen(null)) pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, vorher, nachholenWennNoetig)
+            else { vorher?.join(); nachholenWennNoetig(); reihum(absaetze, KURZE_PAUSE_MS) }
         }
     }
+
+    /** Ist der vorab begonnene Satz, dessen Rest schon angehängt ist, wirklich zu hören gewesen? */
+    @Volatile private var nachholSatzGehoert = true
 
     /** Der Text hinter [anfang]; verglichen werden nur Buchstaben und Ziffern, Satzzeichen dürfen abweichen. Null, wenn er anders beginnt. */
     private fun nachVorab(text: String, anfang: String): String? {
@@ -325,7 +341,7 @@ class Vorleser(
     private class Auftrag(val text: String, val ergebnis: Deferred<Result<List<File>>>)
 
     /** Alle Anbieter erzeugen vorab (Edge inzwischen auch) — hier greift die Vorausschau. */
-    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long, wahl: StimmWahl?, vorlauf: Job? = null) = coroutineScope {
+    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long, wahl: StimmWahl?, vorlauf: Job? = null, nachVorlauf: (suspend () -> Unit)? = null) = coroutineScope {
         // Je Absatz ein oder (beim ersten) zwei Teile, die ohne Pause hintereinander laufen.
         val inArbeit = HashMap<Int, List<Auftrag>>()
 
@@ -363,6 +379,7 @@ class Vorleser(
         (0..VORAUSSCHAU).forEach(::beauftrage)
 
         vorlauf?.join()
+        nachVorlauf?.invoke()
         var fehlgeschlagen = 0
         absaetze.indices.forEach { index ->
             val teile = inArbeit.remove(index) ?: listOf(erzeuge(absaetze[index]))
@@ -512,6 +529,7 @@ class Vorleser(
     private suspend fun spieleDatei(datei: File) {
         holeFokus()
         if (vorabQuelle != null) vorabGesprochen = true
+        nachholSatzGehoert = true
         if (!ersterTonGemessen) {
             ersterTonGemessen = true
             Logbuch.sprache("Erster Ton", "anbieter=${settings.ttsProvider}", System.currentTimeMillis() - laufBeginn)

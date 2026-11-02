@@ -173,6 +173,15 @@
                 <action android:name="de.frank.jarvis.ANSAGE" />
             </intent-filter>
         </receiver>
+        <!-- Messlauf der Sprachkette über adb: DUMP besitzt nur die Shell und das System, keine andere App. -->
+        <receiver
+            android:name=".ui.SprachMesslauf"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="de.frank.jarvis.SPRACH_MESSLAUF" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
         <receiver android:name=".ablage.ErinnerungEmpfaenger" android:exported="false" />
         <service android:name=".ablage.ErinnerungKlingelDienst" android:exported="false" android:foregroundServiceType="mediaPlayback" />

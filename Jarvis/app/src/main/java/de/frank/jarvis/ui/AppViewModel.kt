@@ -96,6 +96,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val ZUSTELLUNG_WARTEN_MS = 30 * 60_000L
         /** Nach dem Vorlesen im Live-Gespräch: Nachhall und Bluetooth-Strecke abwarten, bevor das Mikrofon wieder offen ist. */
         private const val LIVE_NACHLAUF_MS = 1_500L
+        /** So lange nach dem letzten erkannten Wort zeigt die Sprachblase noch „Du sprichst“. */
+        private const val BLASE_SPRICHT_NOCH_MS = 1_200L
         /** Live: Nach so langer Wartezeit auf Jarvis bekommt das Live-Modell einen Zwischenstand; die Arbeit läuft weiter. */
         private const val LIVE_NACHREICHEN_MS = 10 * 60_000L
         private const val ABGEBROCHEN = "abgebrochen"
@@ -397,7 +399,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // „Maximal“ denkt mehrere Minuten pro Schritt; sonst endete schon der erste Schritt im Zeitlimit.
                     .let { if (einstellungen.denkstufe == ReasoningEffort.MAX) maxOf(it, 15 * 60_000L) else it }
                 var grund: String? = null
-                agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
+                agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, beiDenken = { runde.schritt = "" }, lernen = true, abschluss = true,
                     beiAenderung = { aenderung ->
                         runde.erledigt += aenderung
                         // Programmierauftrag mit Auswahlkarte: Deren fester Wortlaut steht jetzt fest, das Modell muss dafür nicht erst fertig schreiben.
@@ -2299,6 +2301,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     /** [wiederaufnahme] = nach einer Sprachzustellung von selbst wieder zuhören (kein Weckwort-Treffer, nichts zu lernen). */
     fun weckwortStart(fortsetzen: Boolean, wiederaufnahme: Boolean = false, fertig: () -> Unit) {
+        weckwortRufUm = de.frank.jarvis.weckwort.Weckwort.gerufenUm
         de.frank.jarvis.weckwort.Weckwort.uebernommen()
         val grund = when {
             nimmtAuf || schreibtMit || holtMikro -> ""
@@ -2390,9 +2393,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sprachmodusAktiv by mutableStateOf(false); private set
     private var sprachmodusNr = 0
 
-    /** Für die Sprachblase: Wer spricht gerade? */
-    val sprichtFrank: Boolean get() = nimmtAuf
-    val sprichtJarvis: Boolean get() = vorleser.stand.value.zustand == de.frank.jarvis.speech.VorleseZustand.SPRICHT
+    /** Für die Sprachblase: Wann der Weckwort-Dienst gerufen hat (für die Messung), und das Sprechende der laufenden Runde. */
+    private var weckwortRufUm = 0L
+    private var rundeEnde: de.frank.module.transkriptionsmodul.SprechEnde? = null
+    private var rundeBeginn = 0L
+    private var rundeStilleMs = 0L
+
+    /** Was gerade wirklich läuft, nur aus dem vorhandenen Stand gelesen. Die Sprachblase fragt das je Bild ab, also nichts Teures hier. */
+    fun blasenZustand(): BlasenZustand {
+        if (nimmtAuf) {
+            val ende = rundeEnde
+            if (ende == null || !ende.gesprochen) return BlasenZustand.HOERT
+            return if (System.currentTimeMillis() - rundeBeginn - ende.letzteSpracheMs < BLASE_SPRICHT_NOCH_MS) BlasenZustand.FRANK_SPRICHT else BlasenZustand.WARTET_AUF_ENDE
+        }
+        return when (vorleser.stand.value.zustand) {
+            de.frank.jarvis.speech.VorleseZustand.SPRICHT -> BlasenZustand.SPRICHT
+            de.frank.jarvis.speech.VorleseZustand.LAEDT -> BlasenZustand.STIMME
+            de.frank.jarvis.speech.VorleseZustand.PAUSIERT -> BlasenZustand.ANGEHALTEN
+            de.frank.jarvis.speech.VorleseZustand.AUS -> when {
+                schreibtMit -> BlasenZustand.SCHREIBT_MIT
+                denkt -> if (schritt.isNotBlank()) BlasenZustand.WERKZEUG else BlasenZustand.DENKT
+                navigiert -> BlasenZustand.DENKT
+                else -> BlasenZustand.MIKROFON
+            }
+        }
+    }
+
+    /** Wie lange Jarvis nach Franks letztem Wort noch wartet, bevor die eingestellte Stillezeit die Aufnahme beendet. */
+    fun blasenStilleRestMs(): Long {
+        val ende = rundeEnde ?: return 0L
+        return (rundeStilleMs - (System.currentTimeMillis() - rundeBeginn - ende.letzteSpracheMs)).coerceAtLeast(0L)
+    }
+
+    /**
+     * Messlauf von außen (adb, siehe [de.frank.jarvis.ui.SprachMesslauf]): dieselbe Kette wie nach dem Weckwort, nur steht [frage] statt
+     * einer Mitschrift. Mikrofon und Blase laufen echt an; so lassen sich Zeiten und Anzeige ohne gesprochene Frage messen.
+     */
+    fun sprachMesslauf(context: android.content.Context, frage: String) {
+        if (!SprachBlase.sprachmodusStarten(context)) { Logbuch.sprache("Messlauf", "nicht gestartet"); return }
+        viewModelScope.launch {
+            kotlinx.coroutines.withTimeoutOrNull(5_000) { snapshotFlow { nimmtAuf }.first { it } } ?: return@launch
+            kotlinx.coroutines.delay(2_000)
+            if (!nimmtAuf) return@launch
+            schreibtMit = true
+            nimmtAuf = false
+            freihaendig = false
+            de.frank.jarvis.observability.Antwortkette.start(0L)
+            mikro.stop()
+            de.frank.jarvis.audio.AufnahmeDienst.stoppen()
+            de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
+            schreibtMit = false
+            gesprochen = true
+            sende(frage)
+        }
+    }
 
     /**
      * Langes Drücken auf die Sprachblase: Sprachmodus sofort beenden. Aufnahme, offene Antwort und Vorlesen enden, das
@@ -2437,7 +2491,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
         // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
         val start = System.currentTimeMillis()
+        rundeEnde = ende; rundeBeginn = start; rundeStilleMs = stilleMs.toLong()
+        val rufUm = if (erste) weckwortRufUm else 0L
         piep()
+        if (rufUm > 0L) Logbuch.sprache("Kette Weckwort", "Mikrofon ${start - rufUm} · Piepton ${System.currentTimeMillis() - start}", System.currentTimeMillis() - rufUm)
         var lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER
         while (nimmtAuf && lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER) {
             kotlinx.coroutines.delay(50)

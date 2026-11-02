@@ -161,7 +161,9 @@ object Waechter {
             if (jetzt - letzteAnmeldung > 10 * 60_000L) { registriere(app); letzteAnmeldung = jetzt }
             val neuerTag = LocalDate.now() != tag
             val abschnitte = Lagebild.stand.value.abschnitte
-            val faellig = if (neuerTag) Bereich.entries.toList() else Bereich.entries.filter { b -> abschnitte[b]?.let { jetzt - it.stand >= b.abstandMs } ?: true }
+            // Während eines Sprachgesprächs liest der Wächter keine Apps nach (Regel: Sprachmodus vor Hintergrundarbeit); das fällige holt die nächste Runde danach.
+            val sprachePlatz = de.frank.jarvis.speech.GespraechsFokus.sprachmodus
+            val faellig = if (sprachePlatz) emptyList() else if (neuerTag) Bereich.entries.toList() else Bereich.entries.filter { b -> abschnitte[b]?.let { jetzt - it.stand >= b.abstandMs } ?: true }
             if (faellig.isNotEmpty()) {
                 val beginn = System.currentTimeMillis()
                 runCatching { Lagebild.auffrischen(app, faellig, if (neuerTag) "neuer Tag" else "regelmäßig") }
@@ -169,7 +171,7 @@ object Waechter {
                 val ms = System.currentTimeMillis() - beginn
                 if (ms > 5_000 || neuerTag) Logbuch.gedaechtnis("Wächter-Runde", faellig.joinToString(",") { it.kennung }, ms)
             }
-            tag = LocalDate.now()
+            if (!sprachePlatz) tag = LocalDate.now()
             runCatching { Lernlauf.anstossen(app) }.onFailure { Logbuch.fehler("Lernlauf anstoßen", it) }
             // Im eigenen Rahmen: Die Minutenrunde wartet nie auf das Modell.
             bereich.launch { runCatching { de.frank.jarvis.ablage.ErinnerungHinweis.pruefen(app) }.onFailure { Logbuch.fehler("Erinnerungshinweis", it) } }

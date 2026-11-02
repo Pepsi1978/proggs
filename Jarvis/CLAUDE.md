@@ -20,3 +20,6 @@ Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Sti
 Nach der Änderung die Rückfall-Prüfung aus §14.6 durchführen (Logcat-Tag `JarvisLiveRouting`, Grenzwerte gegen die
 Referenzmessung von 1.8.108). Der aktive Live-Sprachmodus hat Vorrang vor Hintergrundarbeit; neue Benachrichtigungen,
 die während eines Gesprächs feuern können, bekommen `setSilent(GespraechsFokus.stilleHinweise)`.
+
+## Sprachkette messen, ohne zu sprechen
+`adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "…"` startet die Kette wie nach dem Weckwort mit Text statt Mitschrift (nur Shell und System dürfen das). Vorher prüfen, dass Jarvis nicht vorn ist: Der Lauf beginnt ein neues Gespräch. Ergebnis im Logbuch: „Kette Mikrofon“, „Kette Weckwort“, „Blase“.
