@@ -2,6 +2,7 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
 import android.content.ClipData;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
@@ -31,7 +32,12 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -39,19 +45,32 @@ import org.json.JSONObject;
  * Laeuft per app_process in der Shell-Rolle auf dem Handy und haelt eine UiAutomation-Verbindung offen.
  * Der Baum wird ohne waitForIdle gelesen: Darum haengt er nicht bei Apps mit Dauer-Animation (uiautomator dump: ~11 s bei Jarvis).
  * Zugriff nur mit dem Token aus einer 0600-Datei, weil jede App den Abstract-Socket erreichen kann. Beendet sich nach Leerlauf selbst.
+ * Jede Verbindung hat einen eigenen Thread, damit ein Ping auch waehrend einer langen Aktion antwortet; Aktionen laufen nacheinander.
  */
 public final class HandyHelper {
-    static final String VERSION = "4";
+    static final String VERSION = "5";
     static final String SOCKET = "handy-helper";
     static final String DIR = "/data/local/tmp/handy";
     static final long LEERLAUF_MS = 20 * 60 * 1000;
+    /** So lange gilt ein Baum als Grundlage fuer Aktionen. Danach kann auf dem Bildschirm alles anders sein. */
+    static final long BAUM_GILT_MS = 2 * 60 * 1000;
     static final int MAX_KNOTEN = 500;
+    static final int MAX_VERBINDUNGEN = 16;
+    static final int LESE_LIMIT_MS = 5000;
+    /** Eingaben ueber sh wuerden den Vordergrund-Schutz umgehen. Das ist eine Sperre gegen Versehen, keine Sicherheitsgrenze. */
+    static final Pattern EINGABE_IN_SH = Pattern.compile(
+            "(^|[;&|(]\\s*)(input|monkey|am\\s+start|am\\s+broadcast|cmd\\s+input|cmd\\s+activity\\s+(start|broadcast))\\b");
 
     static UiAutomation ua;
     static volatile long zuletzt = SystemClock.uptimeMillis();
-    static final List<int[]> punkte = new ArrayList<>();
+    static final Object SPERRE = new Object();
+    static final AtomicInteger offen = new AtomicInteger();
+
+    /** Der zuletzt gezeigte Baum: Nummern beziehen sich nur hierauf; wait und die Textsuche aendern ihn nicht. */
     static final List<AccessibilityNodeInfo> knoten = new ArrayList<>();
+    static final List<int[]> punkte = new ArrayList<>();
     static String erwartet;
+    static long baumZeit;
 
     public static void main(String[] args) {
         // AccessibilityInteractionClient braucht den Haupt-Looper, ohne ihn stuerzt der Prozess beim Verbinden ab.
@@ -64,8 +83,8 @@ public final class HandyHelper {
 
     static void dienen() throws Exception {
         LocalServerSocket server = new LocalServerSocket(SOCKET);
-        String token = tokenSchreiben();
         verbinden();
+        byte[] soll = tokenSchreiben().getBytes(StandardCharsets.UTF_8);
         Thread w = new Thread(() -> {
             while (true) {
                 SystemClock.sleep(30000);
@@ -77,9 +96,18 @@ public final class HandyHelper {
         });
         w.setDaemon(true);
         w.start();
-        byte[] soll = token.getBytes(StandardCharsets.UTF_8);
         while (true) {
-            try (LocalSocket s = server.accept()) { sitzung(s, soll); } catch (Throwable t) { t.printStackTrace(); }
+            LocalSocket s = server.accept();
+            if (offen.incrementAndGet() > MAX_VERBINDUNGEN) {
+                offen.decrementAndGet();
+                try { s.close(); } catch (Exception ignored) { }
+                continue;
+            }
+            Thread t = new Thread(() -> {
+                try (LocalSocket sk = s) { sitzung(sk, soll); } catch (Throwable x) { x.printStackTrace(); } finally { offen.decrementAndGet(); }
+            });
+            t.setDaemon(true);
+            t.start();
         }
     }
 
@@ -120,6 +148,7 @@ public final class HandyHelper {
     }
 
     static void sitzung(LocalSocket s, byte[] soll) throws Exception {
+        s.setSoTimeout(LESE_LIMIT_MS);
         BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
         OutputStream o = s.getOutputStream();
         String zeile = r.readLine();
@@ -129,44 +158,53 @@ public final class HandyHelper {
         if (!MessageDigest.isEqual(soll, req.optString("token").getBytes(StandardCharsets.UTF_8))) {
             antwort.put("ok", false).put("fehler", "token");
         } else {
-            zuletzt = SystemClock.uptimeMillis();
             JSONArray cmds = req.getJSONArray("cmds");
-            JSONArray erg = new JSONArray();
-            boolean ok = true;
-            for (int i = 0; i < cmds.length() && ok; i++) {
-                JSONObject c = cmds.getJSONObject(i);
-                JSONObject e = new JSONObject();
-                long t0 = SystemClock.uptimeMillis();
-                try {
-                    ausfuehren(c, e, req.optBoolean("frei"));
-                } catch (Throwable t) {
-                    Throwable u = t.getCause() != null ? t.getCause() : t;
-                    e.put("fehler", u.getClass().getSimpleName() + ": " + u.getMessage());
-                }
-                if (e.has("fehler")) ok = false;
-                e.put("c", c.optString("c")).put("ms", SystemClock.uptimeMillis() - t0);
-                erg.put(e);
+            zuletzt = SystemClock.uptimeMillis();
+            if (cmds.length() == 1 && "ping".equals(cmds.getJSONObject(0).optString("c"))) {
+                antwort.put("ok", true).put("ergebnisse", new JSONArray().put(new JSONObject().put("c", "ping").put("version", VERSION)));
+            } else {
+                synchronized (SPERRE) { abarbeiten(cmds, req.optBoolean("frei"), antwort); }
             }
-            antwort.put("ok", ok).put("ergebnisse", erg);
             zuletzt = SystemClock.uptimeMillis();
         }
         o.write((antwort.toString() + "\n").getBytes(StandardCharsets.UTF_8));
         o.flush();
     }
 
+    static void abarbeiten(JSONArray cmds, boolean frei, JSONObject antwort) throws Exception {
+        JSONArray erg = new JSONArray();
+        boolean ok = true;
+        for (int i = 0; i < cmds.length() && ok; i++) {
+            JSONObject c = cmds.getJSONObject(i);
+            JSONObject e = new JSONObject();
+            long t0 = SystemClock.uptimeMillis();
+            try {
+                ausfuehren(c, e, frei);
+            } catch (Throwable t) {
+                Throwable u = t.getCause() != null ? t.getCause() : t;
+                e.put("fehler", u.getMessage() != null ? u.getMessage() : u.getClass().getSimpleName());
+            }
+            if (e.has("fehler")) ok = false;
+            e.put("c", c.optString("c")).put("ms", SystemClock.uptimeMillis() - t0);
+            erg.put(e);
+        }
+        antwort.put("ok", ok).put("ergebnisse", erg);
+    }
+
     static void ausfuehren(JSONObject c, JSONObject e, boolean frei) throws Exception {
         String art = c.getString("c");
         switch (art) {
-            case "ping": e.put("version", VERSION); return;
             case "tree": baum(c, e); return;
             case "shot": bild(c, e); return;
             case "wait": warten(c, e); return;
-            case "sh": e.put("aus", shell(c.getString("cmd"), c.optLong("timeout", 30000))); return;
+            case "wake": taste(KeyEvent.KEYCODE_WAKEUP); return; // Absichtlich ohne Schutz: Das Display ist dann ja aus.
+            case "sh": lesen(c, e, frei); return;
             default: break;
         }
         vordergrundPruefen(frei);
         switch (art) {
             case "pruefe": break;
+            case "start": starten(c, e); break;
             case "scroll": rollen(c.getString("richtung"), c.optDouble("anteil", 0.6)); break;
             case "tap": tippen(c, 0); break;
             case "long": tippen(c, c.optLong("dauer", 700)); break;
@@ -181,9 +219,10 @@ public final class HandyHelper {
     /** Stoppt, wenn nicht mehr die App vorn ist, die der letzte Baum gezeigt hat: Dann bedient gerade jemand anderes das Handy. */
     static void vordergrundPruefen(boolean frei) {
         if (frei) return;
-        if (erwartet == null) throw new IllegalStateException("erst tree aufrufen: Vordergrund unbekannt");
-        String jetzt = vordergrund();
-        if (!erwartet.equals(jetzt)) throw new IllegalStateException("VORDERGRUND_GEWECHSELT erwartet=" + erwartet + " jetzt=" + jetzt);
+        if (erwartet == null) throw new IllegalStateException("erst tree aufrufen: Vordergrund unbekannt oder nicht lesbar");
+        if (SystemClock.uptimeMillis() - baumZeit > BAUM_GILT_MS) throw new IllegalStateException("BAUM_ZU_ALT: erst tree aufrufen");
+        String jetzt = paket(wurzel());
+        if (!erwartet.equals(jetzt)) throw new IllegalStateException("VORDERGRUND_GEWECHSELT erwartet=" + erwartet + " jetzt=" + jetzt + " (erst tree aufrufen)");
     }
 
     static AccessibilityNodeInfo wurzel() {
@@ -195,36 +234,40 @@ public final class HandyHelper {
         return null;
     }
 
-    static String vordergrund() {
-        AccessibilityNodeInfo r = wurzel();
+    static String paket(AccessibilityNodeInfo r) {
         return r == null || r.getPackageName() == null ? "?" : r.getPackageName().toString();
     }
 
     static void baum(JSONObject c, JSONObject e) throws Exception {
-        punkte.clear();
-        knoten.clear();
+        List<AccessibilityNodeInfo> neu = new ArrayList<>();
+        List<int[]> pkt = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
-        String fg = vordergrund();
+        AccessibilityNodeInfo r = wurzel();
         if (c.optBoolean("alle")) {
             for (AccessibilityWindowInfo w : ua.getWindows()) {
-                AccessibilityNodeInfo r = w.getRoot();
-                if (r == null) continue;
-                sb.append("# Fenster ").append(r.getPackageName()).append(w.isActive() ? " (aktiv)" : "").append('\n');
-                ablaufen(r, sb);
+                AccessibilityNodeInfo fr = w.getRoot();
+                if (fr == null) continue;
+                sb.append("# Fenster ").append(fr.getPackageName()).append(w.isActive() ? " (aktiv)" : "").append('\n');
+                ablaufen(fr, neu, pkt, sb);
             }
-        } else {
-            AccessibilityNodeInfo r = wurzel();
-            if (r != null) ablaufen(r, sb);
+        } else if (r != null) {
+            ablaufen(r, neu, pkt, sb);
         }
-        erwartet = fg;
+        knoten.clear(); knoten.addAll(neu);
+        punkte.clear(); punkte.addAll(pkt);
+        String fg = paket(r);
+        erwartet = "?".equals(fg) ? null : fg;
+        baumZeit = SystemClock.uptimeMillis();
         e.put("paket", fg).put("baum", sb.toString());
     }
 
-    static void ablaufen(AccessibilityNodeInfo wurzel, StringBuilder sb) {
+    /** Sammelt die relevanten Knoten unter [wurzel]; [sb] darf null sein. Das Limit gilt je Fenster, eine Kuerzung wird angezeigt. */
+    static void ablaufen(AccessibilityNodeInfo wurzel, List<AccessibilityNodeInfo> liste, List<int[]> pkt, StringBuilder sb) {
         ArrayDeque<AccessibilityNodeInfo> stapel = new ArrayDeque<>();
         stapel.push(wurzel);
         Rect b = new Rect();
-        while (!stapel.isEmpty() && knoten.size() < MAX_KNOTEN) {
+        int ende = liste.size() + MAX_KNOTEN;
+        while (!stapel.isEmpty() && liste.size() < ende) {
             AccessibilityNodeInfo n = stapel.pop();
             for (int i = n.getChildCount() - 1; i >= 0; i--) {
                 AccessibilityNodeInfo k = n.getChild(i);
@@ -237,9 +280,10 @@ public final class HandyHelper {
             if (!bedienbar && leer(t) && leer(d)) continue;
             n.getBoundsInScreen(b);
             if (b.width() <= 0 || b.height() <= 0) continue;
-            int nr = knoten.size();
-            knoten.add(n);
-            punkte.add(new int[] { b.centerX(), b.centerY() });
+            int nr = liste.size();
+            liste.add(n);
+            pkt.add(new int[] { b.centerX(), b.centerY() });
+            if (sb == null) continue;
             sb.append(nr).append(' ').append(kurz(n.getClassName()));
             if (!leer(t)) sb.append(" \"").append(eineZeile(t)).append('"');
             if (!leer(d) && (leer(t) || !d.toString().contentEquals(t))) sb.append(" d=\"").append(eineZeile(d)).append('"');
@@ -258,24 +302,29 @@ public final class HandyHelper {
             if (f.length() > 0) sb.append(' ').append(f);
             sb.append('\n');
         }
+        if (sb != null && !stapel.isEmpty()) sb.append("… gekürzt nach ").append(MAX_KNOTEN).append(" Elementen\n");
     }
 
     static boolean leer(CharSequence s) { return s == null || s.toString().trim().isEmpty(); }
     static String kurz(CharSequence k) { if (k == null) return "?"; String s = k.toString(); return s.substring(s.lastIndexOf('.') + 1); }
     static String eineZeile(CharSequence s) { String z = s.toString().replace('\n', ' ').replace("\"", "'"); return z.length() > 160 ? z.substring(0, 160) + "…" : z; }
+    static String kleinText(AccessibilityNodeInfo n) { return n.isPassword() || n.getText() == null ? "" : n.getText().toString().toLowerCase(); }
+    static String kleinBeschr(AccessibilityNodeInfo n) { return n.getContentDescription() == null ? "" : n.getContentDescription().toString().toLowerCase(); }
 
     static void bild(JSONObject c, JSONObject e) throws Exception {
         Bitmap b = ua.takeScreenshot();
-        if (b == null) throw new IllegalStateException("kein Bild (Display aus oder geschuetzt)");
+        if (b == null) throw new IllegalStateException("kein Bild (Display aus oder geschützt)");
         Bitmap sw = b.copy(Bitmap.Config.ARGB_8888, false);
-        int kante = c.optInt("kante", 1024);
+        int kante = Math.max(64, c.optInt("kante", 1024));
         int lang = Math.max(sw.getWidth(), sw.getHeight());
         double f = Math.min(1.0, kante / (double) lang);
-        Bitmap kl = f < 1 ? Bitmap.createScaledBitmap(sw, (int) (sw.getWidth() * f), (int) (sw.getHeight() * f), true) : sw;
+        Bitmap kl = f < 1 ? Bitmap.createScaledBitmap(sw, Math.max(1, (int) (sw.getWidth() * f)), Math.max(1, (int) (sw.getHeight() * f)), true) : sw;
         boolean schwarz = true;
-        for (int y = kl.getHeight() / 8; y < kl.getHeight() && schwarz; y += kl.getHeight() / 8) {
-            for (int x = kl.getWidth() / 8; x < kl.getWidth(); x += kl.getWidth() / 8) {
-                if ((kl.getPixel(x, y) & 0xFFFFFF) > 0x101010) { schwarz = false; break; }
+        int sx = Math.max(1, kl.getWidth() / 8), sy = Math.max(1, kl.getHeight() / 8);
+        for (int y = sy / 2; y < kl.getHeight() && schwarz; y += sy) {
+            for (int x = sx / 2; x < kl.getWidth(); x += sx) {
+                int p = kl.getPixel(x, y);
+                if (Color.red(p) > 16 || Color.green(p) > 16 || Color.blue(p) > 16) { schwarz = false; break; }
             }
         }
         ByteArrayOutputStream o = new ByteArrayOutputStream(128 * 1024);
@@ -284,72 +333,109 @@ public final class HandyHelper {
                 .put("jpg", Base64.encodeToString(o.toByteArray(), Base64.NO_WRAP));
     }
 
-    /** Bis der Baum zweimal gleich ist oder die Obergrenze erreicht ist; ersetzt feste Pausen. */
+    /** Bis der Baum zweimal gleich ist oder die Obergrenze erreicht ist; ersetzt feste Pausen. Laesst den gezeigten Baum und seine Nummern unberuehrt. */
     static void warten(JSONObject c, JSONObject e) throws Exception {
         long grenze = SystemClock.uptimeMillis() + c.optLong("max", 2000);
         if (c.has("paket")) {
             String soll = c.getString("paket");
             while (SystemClock.uptimeMillis() < grenze) {
-                if (soll.equals(vordergrund())) { erwartet = soll; return; }
+                if (soll.equals(paket(wurzel()))) { erwartet = soll; baumZeit = SystemClock.uptimeMillis(); return; }
                 SystemClock.sleep(50);
             }
-            e.put("fehler", "App kam nicht nach vorn: " + soll + ", vorn ist " + vordergrund());
+            e.put("fehler", "App kam nicht nach vorn: " + soll + ", vorn ist " + paket(wurzel()));
             return;
         }
-        String gesucht = c.optString("text", "");
+        String gesucht = c.optString("text", "").toLowerCase();
         int vorher = Integer.MIN_VALUE;
-        int gleich = 0;
         SystemClock.sleep(c.optLong("min", 80));
         while (SystemClock.uptimeMillis() < grenze) {
             StringBuilder sb = new StringBuilder();
-            punkte.clear();
-            knoten.clear();
+            List<AccessibilityNodeInfo> liste = new ArrayList<>();
             AccessibilityNodeInfo r = wurzel();
-            if (r != null) ablaufen(r, sb);
+            if (r != null) ablaufen(r, liste, new ArrayList<>(), sb);
             if (!gesucht.isEmpty()) {
-                if (sb.toString().toLowerCase().contains(gesucht.toLowerCase())) { e.put("gefunden", true); return; }
+                for (AccessibilityNodeInfo n : liste) {
+                    if (kleinText(n).contains(gesucht) || kleinBeschr(n).contains(gesucht)) { e.put("gefunden", true); return; }
+                }
             } else {
                 int h = sb.toString().hashCode();
                 // Ein leerer Baum zaehlt nie als ruhig: Direkt nach dem App-Start ist das Fenster noch nicht gefuellt.
-                if (h == vorher && sb.length() > 0 && ++gleich >= 1) { e.put("ruhig", true); return; }
-                if (h != vorher) gleich = 0;
+                if (h == vorher && sb.length() > 0) { e.put("ruhig", true); return; }
                 vorher = h;
             }
             SystemClock.sleep(90);
         }
-        if (!gesucht.isEmpty()) e.put("fehler", "nicht gefunden: " + gesucht); else e.put("ruhig", false);
+        if (!gesucht.isEmpty()) e.put("fehler", "nicht gefunden: " + c.optString("text")); else e.put("ruhig", false);
     }
 
-    /** Ziel: x+y, nr aus dem letzten Baum oder Text (frisch gesucht, erster Treffer, bevorzugt bedienbar). */
+    /** Ziel: x+y, Nummer aus dem letzten Baum oder Text (frisch gesucht). */
     static int[] ziel(JSONObject c) throws Exception {
         if (c.has("x")) return new int[] { c.getInt("x"), c.getInt("y") };
-        if (c.has("nr")) {
-            int n = c.getInt("nr");
-            if (n < 0 || n >= punkte.size()) throw new IllegalArgumentException("Nummer " + n + " nicht im letzten Baum");
-            return punkte.get(n);
+        if (c.has("nr")) return nummer(c.getInt("nr"));
+        return sucheText(c.getString("suche"));
+    }
+
+    /** Eine Nummer gilt nur, solange das Element noch an seiner Stelle liegt: In derselben App kann sich der Bildschirm geaendert haben. */
+    static int[] nummer(int n) {
+        if (n < 0 || n >= punkte.size()) throw new IllegalArgumentException("Nummer " + n + " nicht im letzten Baum");
+        AccessibilityNodeInfo k = knoten.get(n);
+        Rect b = new Rect();
+        if (!k.refresh() || !k.isVisibleToUser()) throw new IllegalStateException("ELEMENT_VERAENDERT: Nummer " + n + " ist weg (erst tree aufrufen)");
+        k.getBoundsInScreen(b);
+        int[] p = punkte.get(n);
+        if (Math.abs(b.centerX() - p[0]) > 8 || Math.abs(b.centerY() - p[1]) > 8) {
+            throw new IllegalStateException("ELEMENT_VERAENDERT: Nummer " + n + " liegt woanders (erst tree aufrufen)");
         }
-        int[] p = sucheText(c.getString("suche"));
-        if (p == null) throw new IllegalStateException("nicht gefunden: " + c.getString("suche"));
         return p;
     }
 
-    static int[] sucheText(String s) {
-        AccessibilityNodeInfo r = wurzel();
-        if (r == null) return null;
-        StringBuilder egal = new StringBuilder();
-        punkte.clear();
-        knoten.clear();
-        ablaufen(r, egal);
-        String t = s.toLowerCase();
-        int[] genau = null, teil = null;
-        for (int i = 0; i < knoten.size(); i++) {
-            AccessibilityNodeInfo n = knoten.get(i);
-            String a = n.getText() == null ? "" : n.getText().toString().toLowerCase();
-            String b = n.getContentDescription() == null ? "" : n.getContentDescription().toString().toLowerCase();
-            if (a.equals(t) || b.equals(t)) { if (genau == null) genau = punkte.get(i); }
-            else if ((a.contains(t) || b.contains(t)) && teil == null) teil = punkte.get(i);
+    static boolean bedienbar(AccessibilityNodeInfo n) {
+        AccessibilityNodeInfo a = n;
+        for (int i = 0; i < 4 && a != null; i++) {
+            if (a.isClickable() || a.isCheckable() || a.isEditable()) return true;
+            a = a.getParent();
         }
-        return genau != null ? genau : teil;
+        return false;
+    }
+
+    /**
+     * Sucht in allen Fenstern. Genauer Treffer vor Teiltreffer, bedienbar vor nur sichtbar.
+     * Mehrere verschiedene Teiltreffer sind ein Fehler: Aus „Aus“ darf nie still „Ausschalten“ werden.
+     */
+    static int[] sucheText(String s) {
+        List<AccessibilityNodeInfo> liste = new ArrayList<>();
+        List<int[]> pkt = new ArrayList<>();
+        AccessibilityNodeInfo aktiv = wurzel();
+        if (aktiv != null) ablaufen(aktiv, liste, pkt, null);
+        for (AccessibilityWindowInfo w : ua.getWindows()) {
+            AccessibilityNodeInfo r = w.isActive() ? null : w.getRoot();
+            if (r != null) ablaufen(r, liste, pkt, null);
+        }
+        String t = s.toLowerCase();
+        int[] genau = null, genauBedienbar = null, teilBedienbar = null, teil = null;
+        Set<String> teile = new LinkedHashSet<>();
+        for (int i = 0; i < liste.size(); i++) {
+            AccessibilityNodeInfo n = liste.get(i);
+            String a = kleinText(n), b = kleinBeschr(n);
+            boolean bd = bedienbar(n);
+            if (a.equals(t) || b.equals(t)) {
+                if (genau == null) genau = pkt.get(i);
+                if (bd && genauBedienbar == null) genauBedienbar = pkt.get(i);
+            } else if (a.contains(t) || b.contains(t)) {
+                teile.add(a.contains(t) ? a : b);
+                if (teil == null) teil = pkt.get(i);
+                if (bd && teilBedienbar == null) teilBedienbar = pkt.get(i);
+            }
+        }
+        if (genauBedienbar != null) return genauBedienbar;
+        if (genau != null) return genau;
+        if (teile.size() > 1) {
+            List<String> kurzliste = new ArrayList<>(teile);
+            throw new IllegalStateException("mehrdeutig: " + s + " passt auf " + kurzliste.subList(0, Math.min(5, kurzliste.size())) + " (genauer Text oder Nummer)");
+        }
+        if (teilBedienbar != null) return teilBedienbar;
+        if (teil != null) return teil;
+        throw new IllegalStateException("nicht gefunden: " + s);
     }
 
     static void tippen(JSONObject c, long dauer) throws Exception {
@@ -388,37 +474,46 @@ public final class HandyHelper {
         beruehren(MotionEvent.ACTION_UP, t, SystemClock.uptimeMillis(), x2, y2);
     }
 
-    static void beruehren(int aktion, long down, long jetzt, float x, float y) {
-        MotionEvent m = MotionEvent.obtain(down, jetzt, aktion, x, y, 0);
-        m.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        spritzen(m);
-        m.recycle();
-    }
-
-    static void kneifen(int x, int y, int von, int bis, long dauer) {
-        MotionEvent.PointerProperties[] pp = new MotionEvent.PointerProperties[2];
-        MotionEvent.PointerCoords[] pc = new MotionEvent.PointerCoords[2];
-        for (int i = 0; i < 2; i++) {
+    static MotionEvent.PointerProperties[] finger(int n) {
+        MotionEvent.PointerProperties[] pp = new MotionEvent.PointerProperties[n];
+        for (int i = 0; i < n; i++) {
             pp[i] = new MotionEvent.PointerProperties();
             pp[i].id = i;
             pp[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
-            pc[i] = new MotionEvent.PointerCoords();
-            pc[i].pressure = 1;
-            pc[i].size = 1;
         }
+        return pp;
+    }
+
+    static MotionEvent.PointerCoords punkt() {
+        MotionEvent.PointerCoords p = new MotionEvent.PointerCoords();
+        p.pressure = 1;
+        p.size = 1;
+        return p;
+    }
+
+    static void beruehren(int aktion, long down, long jetzt, float x, float y) {
+        MotionEvent.PointerCoords p = punkt();
+        p.x = x;
+        p.y = y;
+        ereignis(down, jetzt, aktion, 1, finger(1), new MotionEvent.PointerCoords[] { p });
+    }
+
+    static void kneifen(int x, int y, int von, int bis, long dauer) {
+        MotionEvent.PointerProperties[] pp = finger(2);
+        MotionEvent.PointerCoords[] pc = { punkt(), punkt() };
         long t = SystemClock.uptimeMillis();
         setzen(pc, x, y, von);
-        zwei(t, t, MotionEvent.ACTION_DOWN, 1, pp, pc);
-        zwei(t, t, MotionEvent.ACTION_POINTER_DOWN | (1 << MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2, pp, pc);
+        ereignis(t, t, MotionEvent.ACTION_DOWN, 1, pp, pc);
+        ereignis(t, t, MotionEvent.ACTION_POINTER_DOWN | (1 << MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2, pp, pc);
         int schritte = Math.max(8, (int) (dauer / 10));
         for (int i = 1; i <= schritte; i++) {
             SystemClock.sleep(dauer / schritte);
             setzen(pc, x, y, von + (bis - von) * i / schritte);
-            zwei(t, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, 2, pp, pc);
+            ereignis(t, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, 2, pp, pc);
         }
         long e = SystemClock.uptimeMillis();
-        zwei(t, e, MotionEvent.ACTION_POINTER_UP | (1 << MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2, pp, pc);
-        zwei(t, e, MotionEvent.ACTION_UP, 1, pp, pc);
+        ereignis(t, e, MotionEvent.ACTION_POINTER_UP | (1 << MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2, pp, pc);
+        ereignis(t, e, MotionEvent.ACTION_UP, 1, pp, pc);
     }
 
     static void setzen(MotionEvent.PointerCoords[] pc, int x, int y, int r) {
@@ -426,7 +521,7 @@ public final class HandyHelper {
         pc[1].x = x + r; pc[1].y = y;
     }
 
-    static void zwei(long down, long jetzt, int aktion, int n, MotionEvent.PointerProperties[] pp, MotionEvent.PointerCoords[] pc) {
+    static void ereignis(long down, long jetzt, int aktion, int n, MotionEvent.PointerProperties[] pp, MotionEvent.PointerCoords[] pc) {
         MotionEvent m = MotionEvent.obtain(down, jetzt, aktion, n, pp, pc, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
         spritzen(m);
         m.recycle();
@@ -447,17 +542,23 @@ public final class HandyHelper {
         if (!ua.injectInputEvent(ev, false)) throw new IllegalStateException("Eingabe abgelehnt");
     }
 
-    /** Umlaute und Emojis: direkt ins Feld (ACTION_SET_TEXT), sonst Zwischenablage + Einfuegen. */
+    /**
+     * Umlaute und Emojis: direkt ins Feld (ACTION_SET_TEXT). Ohne genanntes Feld ist die Zwischenablage der Rueckfall, etwa bei WebViews.
+     * Ist ein Feld genannt und passt es nicht, ist das ein Fehler: Sonst landete der Text in irgendeinem anderen Feld.
+     */
     static void text(JSONObject c, JSONObject e) throws Exception {
         String s = c.getString("s");
-        AccessibilityNodeInfo r = wurzel();
+        boolean genannt = c.has("nr");
         AccessibilityNodeInfo feld = null;
-        if (c.has("nr")) {
+        if (genannt) {
             int n = c.getInt("nr");
-            if (n >= 0 && n < knoten.size()) feld = knoten.get(n);
-            if (feld != null) feld.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-        } else if (r != null) {
-            feld = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            nummer(n);
+            feld = knoten.get(n);
+            if (!feld.isEditable()) throw new IllegalStateException("Nummer " + n + " ist kein Eingabefeld");
+            feld.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+        } else {
+            AccessibilityNodeInfo r = wurzel();
+            if (r != null) feld = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         }
         if (feld != null && feld.isEditable()) {
             String neu = s;
@@ -465,6 +566,7 @@ public final class HandyHelper {
             Bundle b = new Bundle();
             b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, neu);
             if (feld.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b)) { e.put("weg", "feld"); return; }
+            if (genannt) throw new IllegalStateException("Das Feld hat den Text abgelehnt");
         }
         zwischenablage(s);
         taste(KeyEvent.KEYCODE_PASTE);
@@ -492,7 +594,34 @@ public final class HandyHelper {
         throw new IllegalStateException("setPrimaryClip fehlt");
     }
 
-    static String shell(String cmd, long timeout) throws Exception {
+    /** sh: zum Lesen und fuer Einstellungen. Eingaben laufen ueber die geschuetzten Befehle. */
+    static void lesen(JSONObject c, JSONObject e, boolean frei) throws Exception {
+        String cmd = c.getString("cmd");
+        if (!frei && EINGABE_IN_SH.matcher(cmd).find()) {
+            e.put("fehler", "Eingaben nicht über sh: tap, text, key, open, url oder start nehmen, dort greift der Vordergrund-Schutz");
+            return;
+        }
+        Ergebnis r = shell(cmd, c.optLong("timeout", 30000));
+        e.put("aus", r.aus);
+        if (r.zeitlimit) e.put("fehler", "Zeitlimit: Befehl abgebrochen, Ausgabe unvollständig");
+        else if (r.rc != 0) e.put("rc", r.rc);
+    }
+
+    /** Geschuetzter App- oder Seitenstart. */
+    static void starten(JSONObject c, JSONObject e) throws Exception {
+        Ergebnis r = shell(c.getString("cmd"), 15000);
+        if (r.zeitlimit || r.rc != 0 || r.aus.contains("Error:") || r.aus.contains("No activities found")) {
+            e.put("fehler", "Start fehlgeschlagen: " + r.aus.trim());
+        }
+    }
+
+    static final class Ergebnis {
+        String aus = "";
+        int rc = -1;
+        boolean zeitlimit;
+    }
+
+    static Ergebnis shell(String cmd, long timeout) throws Exception {
         Process p = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start();
         ByteArrayOutputStream o = new ByteArrayOutputStream();
         Thread leser = new Thread(() -> {
@@ -502,11 +631,17 @@ public final class HandyHelper {
                 while ((n = in.read(b)) > 0) o.write(b, 0, n);
             } catch (Exception ignored) { }
         });
+        leser.setDaemon(true);
         leser.start();
-        long ende = SystemClock.uptimeMillis() + timeout;
-        while (p.isAlive() && SystemClock.uptimeMillis() < ende) SystemClock.sleep(5);
-        if (p.isAlive()) p.destroyForcibly();
+        Ergebnis r = new Ergebnis();
+        if (p.waitFor(timeout, TimeUnit.MILLISECONDS)) {
+            r.rc = p.exitValue();
+        } else {
+            r.zeitlimit = true;
+            p.destroyForcibly();
+        }
         leser.join(300);
-        return o.toString("UTF-8");
+        r.aus = o.toString("UTF-8");
+        return r;
     }
 }

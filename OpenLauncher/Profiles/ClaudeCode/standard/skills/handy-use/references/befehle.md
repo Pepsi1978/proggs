@@ -1,6 +1,6 @@
 # Befehle auf dem Handy (Shell ohne Root)
 
-Stand 02.11.2026, Galaxy Fold 8 (SM-F971B), Android 17, One UI 9. Aufruf: `H sh "<befehl>"`. Mehrere in einem `sh` mit `;` sparen Zeit. „Ungeprüft“ heißt: nur aus der Hilfe oder einer Quelle, auf dem Gerät noch nicht ausgeführt, also Ergebnis nachlesen.
+Stand 02.11.2026, Galaxy Fold 8 (SM-F971B), Android 17, One UI 9. Lesen und Einstellungen: `H sh "<befehl>"`. Alles, was etwas öffnet (`am start ...`), läuft geschützt als `H start ...`, Eingaben als `H tap`, `H text`, `H key`. Mehrere in einem `sh` mit `;` sparen Zeit. „Ungeprüft“ heißt: nur aus der Hilfe oder einer Quelle, auf dem Gerät noch nicht ausgeführt, also Ergebnis nachlesen.
 
 `cmd`, `dumpsys` und `settings` brauchen 45–75 ms, `content query` etwa 1 s. `svc wifi`, `svc data`, `svc bluetooth`, `media` und `cmd clipboard` gibt es hier nicht mehr.
 
@@ -10,10 +10,10 @@ Stand 02.11.2026, Galaxy Fold 8 (SM-F971B), Android 17, One UI 9. Aufruf: `H sh 
 settings list system|secure|global | grep -i <wort>     Schlüssel suchen, schnellster Weg
 settings get <namespace> <schluessel>
 settings put <namespace> <schluessel> <wert>            danach neu lesen; vorher alten Wert notieren
-am start -a android.settings.<SEITE>                    Seite direkt öffnen, dann tree
+H start -a android.settings.<SEITE>                     Seite direkt öffnen, liefert den Baum
 ```
 
-Seiten: `SETTINGS`, `WIFI_SETTINGS`, `BLUETOOTH_SETTINGS`, `DISPLAY_SETTINGS`, `SOUND_SETTINGS`, `LOCATION_SOURCE_SETTINGS`, `BATTERY_SAVER_SETTINGS`, `APPLICATION_SETTINGS`, `APP_NOTIFICATION_SETTINGS`, `DATA_ROAMING_SETTINGS`, `ACCESSIBILITY_SETTINGS`, `DATE_SETTINGS`, `LOCALE_SETTINGS`, `SECURITY_SETTINGS`. Einzelne App: `am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:<paket>`.
+Seiten: `SETTINGS`, `WIFI_SETTINGS`, `BLUETOOTH_SETTINGS`, `DISPLAY_SETTINGS`, `SOUND_SETTINGS`, `LOCATION_SOURCE_SETTINGS`, `BATTERY_SAVER_SETTINGS`, `APPLICATION_SETTINGS`, `APP_NOTIFICATION_SETTINGS`, `DATA_ROAMING_SETTINGS`, `ACCESSIBILITY_SETTINGS`, `DATE_SETTINGS`, `LOCALE_SETTINGS`, `SECURITY_SETTINGS`. Einzelne App: `H start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:<paket>`.
 
 Einstellung ohne bekannten Schlüssel: Seite öffnen, in der App die Suche nutzen (`H tap`, `H text`), Treffer antippen, im `tree` den Schalter `[an]`/`[aus]` lesen. Samsung-eigene Schalter stehen oft nur in der Oberfläche.
 
@@ -47,10 +47,10 @@ cmd media_session dispatch play-pause|next|previous|stop
 ```
 cmd package list packages -3                   Dritt-Apps, ohne -3 alle
 cmd package resolve-activity --brief -a android.intent.action.VIEW -d <url>      Ziel vor dem Start prüfen
-monkey -p <paket> -c android.intent.category.LAUNCHER 1        Start ohne Activity-Namen (das macht H open)
-am start -a android.intent.action.VIEW -d <url>
-am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "Text"     Teilen, Auswahl per Tippen
-am start -a android.intent.action.SET_ALARM --ei android.intent.extra.alarm.HOUR 7 --ei android.intent.extra.alarm.MINUTES 30      ungeprüft
+H open <paket>                                            Start ohne Activity-Namen
+H url <adresse>
+H start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "Text"     Teilen, Auswahl per Tippen
+H start -a android.intent.action.SET_ALARM --ei android.intent.extra.alarm.HOUR 7 --ei android.intent.extra.alarm.MINUTES 30      ungeprüft
 pm grant <paket> <recht>    pm revoke <paket> <recht>     cmd appops get <paket>         Rechte: nur nach Franks Ja
 cmd role get-role-holders android.app.role.SMS            Standard-Apps
 ```
