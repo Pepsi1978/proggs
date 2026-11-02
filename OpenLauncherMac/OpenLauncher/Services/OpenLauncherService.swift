@@ -408,7 +408,8 @@ final class OpenLauncherService {
         # geht dieselbe Sitzung interaktiv weiter (-c), damit Frank am Mac nachschauen kann.
         kimiResume=()
         if [ -n "$PROMPT" ]; then
-            "$KIMI" --auto -m "$ALIAS" -p "$PROMPT"
+            # Ohne --auto: -p laeuft ohnehin ohne Rueckfragen, und Kimi 2.4 bricht bei beiden zusammen sofort ab.
+            "$KIMI" -m "$ALIAS" -p "$PROMPT"
             kimiResume=(-c)
         fi
         attempt=0

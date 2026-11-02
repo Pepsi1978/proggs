@@ -630,7 +630,8 @@ try {
         do {
             $promptVersuch++
             $promptStart = Get-Date
-            & $kimiPath --auto -m {{PowerShellLiteral(alias)}} -p $jarvisPrompt
+            # Ohne --auto: -p laeuft ohnehin ohne Rueckfragen, und Kimi 2.4 bricht bei beiden zusammen sofort ab.
+            & $kimiPath -m {{PowerShellLiteral(alias)}} -p $jarvisPrompt
             $promptExit = $LASTEXITCODE
             $promptSchnell = ((Get-Date) - $promptStart).TotalSeconds -lt 5
             if ($promptSchnell -and $promptVersuch -lt 3) { Start-Sleep -Milliseconds 1000 }
