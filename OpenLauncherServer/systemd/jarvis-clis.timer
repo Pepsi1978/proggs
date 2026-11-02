@@ -2,9 +2,9 @@
 Description=Programmier-Software täglich um 4:30 Uhr aktualisieren, Übersprungenes stündlich nachholen
 
 [Timer]
-OnCalendar=*-*-* 04:30:00 Europe/Berlin
+# Jede Stunde, auch um 4:30 Uhr. Ob alles oder nur Offenes dran ist, entscheidet tageslauf() in kern/clis.py.
 OnCalendar=*-*-* *:30:00 Europe/Berlin
-AccuracySec=1min
+AccuracySec=1s
 Persistent=true
 
 [Install]

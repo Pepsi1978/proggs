@@ -29,6 +29,7 @@ SKRIPTE = ZUSTAND / "start"
 PROFILE = PROGGS / "OpenLauncher" / "Profiles"
 HOOK = PROGGS / "Jarvis" / "werkzeuge" / "pc-bruecke" / "jarvis_hook.py"
 ZUSATZ = PROGGS / "OpenLauncherServer" / "server-zusatz.md"
+CODEX_ZUHAUSE = ZUSTAND / "codex-home"
 BROWSER_START = PROGGS / "OpenLauncherServer" / "browser" / "start.sh"
 BROWSER_MCP = PROGGS / "OpenLauncherServer" / "browser" / "mcp.sh"
 BROWSER_FREI_S = 1800  # so lange ohne Verbindung läuft der Browser weiter, danach gibt er seinen Speicher frei
@@ -252,7 +253,7 @@ def agents_aktivieren(profil: str, modus: str) -> None:
 
 def codex_zuhause() -> Path:
     """Eigenes Zuhause wie am Mac: keine globale AGENTS.md, keine Plugins, als MCP-Server die Browser-Steuerung (Jarvis und Second Brain trägt mcp_anbindung.py ein, darum nur für den Benutzer lesbar). Die Anmeldung liegt ebenfalls hier."""
-    zuhause = ZUSTAND / "codex-home"
+    zuhause = CODEX_ZUHAUSE
     zuhause.mkdir(parents=True, exist_ok=True)
     _schreib(zuhause / "AGENTS.md", "")
     konfig = zuhause / "config.toml"
@@ -292,7 +293,8 @@ KOPF = """#!/bin/bash
 export TZ=Europe/Berlin LANG=C.UTF-8 LC_ALL=C.UTF-8 TERM=xterm-256color COLORTERM=truecolor
 export JARVIS_SERVER=1 JARVIS_RECHNER={rechner} OL_SITZUNG={name}
 export PATH="{pfad}:$PATH"
-export ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="$HOME/android-sdk"
+# Ohne das Präfix landete npm install -g im Node-Ordner, den das tägliche Update austauscht.
+export ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="$HOME/android-sdk" NPM_CONFIG_PREFIX="$HOME/.local"
 export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
 unset NO_COLOR FORCE_COLOR CLICOLOR CLICOLOR_FORCE AI_AGENT GIT_TERMINAL_PROMPT JARVIS_AUFTRAG_ID JARVIS_CLI JARVIS_ELTERN_PID
 printf '\\033]0;%s\\a' {titel}
@@ -498,14 +500,14 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     """Startet eine CLI und liefert den Namen der tmux-Sitzung."""
     if cli not in CLIS:
         raise ValueError(f"Unbekanntes CLI: {cli}")
-    # Beim Start statt nur im Timer: Eine neue Jarvis-Adresse oder ein neues Profil gilt so sofort. Hier, nicht oben im Modul: mcp_anbindung importiert launcher.
-    import mcp_anbindung
-    mcp_anbindung.anbinden()
     anbieter = anbieter.lower()
     pruefe_anbieter(anbieter)
     pruefe_wahl(profil, modus)
     if nummer and not re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer):
         raise ValueError("Ungültige Auftragsnummer")
+    # Beim Start statt nur im Timer: Eine neue Jarvis-Adresse oder ein neues Profil gilt so sofort. Hier, nicht oben im Modul: mcp_anbindung importiert launcher.
+    import mcp_anbindung
+    mcp_anbindung.anbinden(cli, profil)
     # Wie am Mac: Was das CLI nicht kennt, entfällt, und das Modell nimmt seine Standardstufe.
     effort = effort if effort in EFFORTS[cli] else ""
     # OpenCode legte sonst eine Stufe ab, die das Modell gar nicht hat (die Brücke setzt ohne Angabe high).

@@ -5,12 +5,14 @@ set -euo pipefail
 BENUTZER=jarvis
 ZUHAUSE=/home/$BENUTZER
 REPO=$ZUHAUSE/proggs
-als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
+als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/.kimi-code/bin:$ZUHAUSE/.agy/bin:$ZUHAUSE/android-sdk/platform-tools:$ZUHAUSE/android-sdk/build-tools/36.0.0:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless openjdk-21-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox
-# Eigener Aufruf: Fehlt eines dieser Werkzeuge in den Paketquellen, darf das die Einrichtung nicht stoppen.
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-venv pipx build-essential cmake ninja-build ffmpeg shellcheck shfmt bat fzf tree git-delta || echo "Zusatzwerkzeuge unvollständig"
+# Einzeln: Fehlt eines dieser Werkzeuge in den Paketquellen, darf das weder die anderen noch die Einrichtung aufhalten.
+for P in python3-pip python3-venv pipx build-essential cmake ninja-build ffmpeg shellcheck shfmt bat fzf tree git-delta; do
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$P" || echo "$P nicht installiert"
+done
 
 # gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
 install -d -m 0755 /etc/apt/keyrings
@@ -39,12 +41,6 @@ fi
 id "$BENUTZER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$BENUTZER"
 gpasswd -d "$BENUTZER" docker >/dev/null 2>&1 || true
 chmod 750 "$ZUHAUSE"
-
-# Node.js LTS im Benutzerordner: Ubuntus Paket ist zu alt für die CLIs.
-if [ ! -x "$ZUHAUSE/.local/node/bin/node" ]; then
-  V=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts)][0].version')
-  als "mkdir -p ~/.local/node ~/.local/bin && curl -fsSL https://nodejs.org/dist/$V/node-$V-linux-x64.tar.xz | tar -xJ --strip-components=1 -C ~/.local/node"
-fi
 
 # PATH und Zeitzone für jede Shell des Benutzers; der Block wird bei jedem Lauf erneuert.
 touch "$ZUHAUSE/.profile"
@@ -90,15 +86,10 @@ als "git -C $REPO pull --ff-only --quiet" || true
 
 # CLIs und Dienste
 als "mkdir -p ~/.openlauncher/sitzungen ~/.openlauncher/start ~/.local/bin"
-als 'command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | bash'
-als 'command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/install.sh | bash' || echo "Antigravity CLI nicht installiert"
-for P in @openai/codex opencode-ai; do als "npm install -g --silent $P@latest" || echo "$P nicht installiert"; done
-als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest' || echo "Kimi Code nicht installiert"
-als 'npm install -g --silent pnpm@latest chrome-devtools-mcp@latest' || echo "pnpm oder chrome-devtools-mcp nicht installiert"
-als 'npm install -g --silent typescript@latest tsx@latest @biomejs/biome@latest firebase-tools@latest' || echo "TypeScript, tsx, Biome oder Firebase CLI nicht installiert"
-als 'command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh' || echo "uv nicht installiert"
-# Trivy, lazygit, Rclone, Bun und Deno installiert clis.py selbst, wenn sie fehlen (jarvis-clis.timer).
-als "NPM_CONFIG_PREFIX=\$HOME/.local python3 $REPO/OpenLauncherServer/kern/clis.py aktualisieren >/dev/null" || echo "CLI-Updates unvollständig"
+# Node.js LTS im Benutzerordner: Ubuntus Paket ist zu alt für die CLIs.
+[ -x "$ZUHAUSE/.local/node/bin/node" ] || als "bash $REPO/OpenLauncherServer/kern/node_aktualisieren.sh"
+# Die übrigen Programme stehen in kern/clis.py. Nur Fehlendes: Aktualisieren ist Sache des Timers, er ersetzt nichts unter laufenden Sitzungen.
+als "python3 $REPO/OpenLauncherServer/kern/clis.py fehlende >/dev/null" || echo "Installation der CLIs unvollständig"
 # Ubuntu nennt bat batcat; Skills und Gewohnheit erwarten bat.
 als 'ln -sf /usr/bin/batcat ~/.local/bin/bat'
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
@@ -114,6 +105,8 @@ fi
 # Jarvis und Second Brain in allen CLIs; die Jarvis-Adresse kommt aus ~/SK.
 als "python3 $REPO/OpenLauncherServer/kern/mcp_anbindung.py" || echo "MCP-Anbindung unvollständig"
 
+# Als Kopie, die root gehört: Aus dem Repo des Benutzers jarvis führte root sonst jede lokale Änderung aus.
+install -o root -g root -m 755 "$REPO/OpenLauncherServer/systemd/jarvis-pakete-aktualisieren.sh" /usr/local/sbin/jarvis-pakete-aktualisieren
 install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
 if command -v ufw >/dev/null; then ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null; else echo "ufw fehlt: Port 8090 auf wg0 selbst freigeben"; fi

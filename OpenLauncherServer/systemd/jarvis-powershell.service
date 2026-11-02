@@ -1,19 +1,8 @@
 [Unit]
-Description=Systempakete für das Programmieren aktualisieren; Chrome, .NET, Java und PowerShell nur, solange sie nicht laufen
+Description=Systempakete für das Programmieren aktualisieren (täglich ab 4:30 Uhr, sonst nur Übersprungenes)
 
 [Service]
 Type=oneshot
-Environment=DEBIAN_FRONTEND=noninteractive
-# Kein Neustart von Diensten durch needrestart: Er könnte jarvis-tmux treffen und damit alle Sitzungen beenden.
-Environment=NEEDRESTART_SUSPEND=1
-# Ein gestörtes Paketarchiv darf die übrigen Updates nicht aufhalten.
-ExecStart=-/usr/bin/apt-get update -qq
-ExecStart=-/usr/bin/apt-get install -y -qq --only-upgrade gh
-# tmux fehlt bewusst: Eine neue Fassung spräche nicht mehr mit dem laufenden tmux-Server aller Sitzungen.
-ExecStart=-/usr/bin/apt-get install -y -qq --only-upgrade git git-lfs jq ripgrep unzip curl wget python3-aiohttp python3-pip python3-venv pipx gcc g++ make cmake ninja-build ffmpeg shellcheck shfmt bat fzf tree git-delta xvfb x11vnc novnc openbox
-ExecStart=-/bin/sh -c 'pgrep -x chrome >/dev/null || apt-get install -y -qq --only-upgrade google-chrome-stable'
-ExecStart=-/bin/sh -c 'pgrep -x dotnet >/dev/null || apt-get install -y -qq --only-upgrade dotnet-sdk-8.0 dotnet-sdk-10.0'
-ExecStart=-/bin/sh -c 'pgrep -x java >/dev/null || apt-get install -y -qq --only-upgrade openjdk-17-jdk-headless openjdk-21-jdk-headless'
-ExecStart=-/bin/sh -c 'pgrep -x pwsh >/dev/null || apt-get install -y -qq --only-upgrade powershell'
-TimeoutStartSec=1800
+ExecStart=/usr/local/sbin/jarvis-pakete-aktualisieren
+TimeoutStartSec=3000
 Nice=10

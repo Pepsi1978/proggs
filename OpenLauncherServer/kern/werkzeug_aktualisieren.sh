@@ -18,8 +18,14 @@ neueste() {
 case "${1:-}" in
   trivy)
     V=$(neueste aquasecurity/trivy)
-    if [ "v$(trivy --version 2>/dev/null | awk 'NR==1 {print $2}')" != "$V" ]; then
-      curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$ZIEL"
+    NUMMER=${V#v}
+    if [ "$(trivy --version 2>/dev/null | awk 'NR==1 {print $2}')" != "$NUMMER" ]; then
+      D="trivy_${NUMMER}_Linux-64bit.tar.gz"
+      curl -fsSLO "https://github.com/aquasecurity/trivy/releases/download/$V/$D"
+      curl -fsSLO "https://github.com/aquasecurity/trivy/releases/download/$V/trivy_${NUMMER}_checksums.txt"
+      grep "  $D\$" "trivy_${NUMMER}_checksums.txt" | sha256sum -c --quiet -
+      tar -xzf "$D" trivy
+      install -m 755 trivy "$ZIEL/trivy"
     fi
     ;;
   lazygit)

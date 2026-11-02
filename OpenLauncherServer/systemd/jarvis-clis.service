@@ -7,5 +7,6 @@ User=jarvis
 WorkingDirectory=/home/jarvis/proggs
 Environment=HOME=/home/jarvis TZ=Europe/Berlin
 ExecStart=/usr/bin/python3 /home/jarvis/proggs/OpenLauncherServer/kern/clis.py taeglich
+# Reicht das nicht, macht der nächste Stundenlauf beim Rest weiter: Jedes Programm wird sofort gespeichert.
 TimeoutStartSec=3000
 Nice=10

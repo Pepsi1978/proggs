@@ -1,9 +1,10 @@
 [Unit]
-Description=Systempakete für das Programmieren täglich um 4:30 Uhr aktualisieren
+Description=Systempakete täglich um 4:30 Uhr aktualisieren, Übersprungenes stündlich nachholen
 
 [Timer]
-OnCalendar=*-*-* 04:30:00 Europe/Berlin
-AccuracySec=1min
+# Jede Stunde, auch um 4:30 Uhr. Ob alles oder nur Offenes dran ist, entscheidet das Skript.
+OnCalendar=*-*-* *:30:00 Europe/Berlin
+AccuracySec=1s
 Persistent=true
 
 [Install]

@@ -8,7 +8,7 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 | Brücke zum Jarvis-Relay (`X-Jarvis-Rang: server`) | `bruecke/server_bruecke.py` | `jarvis-server-bruecke.service` |
 | Server-Konsole (nur im Tunnel, `http://10.8.0.1:8090`) | `web/` | `jarvis-konsole.service` |
 | Programmier-Software täglich um 4:30 Uhr Berliner Zeit aktualisieren: CLIs, Browser-Steuerung, Node, npm-Werkzeuge, uv, Android SDK, Trivy, lazygit, Rclone, Bun und Deno. Was gerade läuft oder scheitert, holt der Timer stündlich nach | `kern/clis.py` | `jarvis-clis.timer` |
-| Systempakete täglich um 4:30 Uhr: gh, Chrome, .NET, Java, PowerShell, git, CMake, Ninja, ffmpeg und weitere. tmux nie, sonst passt die Fassung nicht mehr zum laufenden Server | `systemd/jarvis-powershell.service` | `jarvis-powershell.timer` |
+| Systempakete täglich um 4:30 Uhr: gh, Chrome, .NET, Java, PowerShell, git, CMake, Ninja, ffmpeg und weitere. tmux nie, sonst passt die Fassung nicht mehr zum laufenden Server | `systemd/jarvis-pakete-aktualisieren.sh` (als Kopie in `/usr/local/sbin`) | `jarvis-powershell.timer` |
 | Repo vorspulen alle 5 Minuten; Dienste starten bei neuer Fassung selbst neu | `kern/launcher.py abgleich` | `jarvis-repo.timer` |
 | Tmux ohne Präfix (`tmux.conf`, beim Konsolenstart auch im laufenden tmux gesetzt), damit Strg+B bei der CLI ankommt | `kern/launcher.py tmux_praefix_aus` | Konsole |
 | tmux mit Speicher- und CPU-Deckel | `systemd/jarvis-tmux.service` | enthält alle Sitzungen |
