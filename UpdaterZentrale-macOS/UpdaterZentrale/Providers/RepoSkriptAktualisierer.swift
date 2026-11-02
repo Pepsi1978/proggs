@@ -119,14 +119,15 @@ struct RepoSkriptAktualisierer: Aktualisierer {
         // boete dasselbe Update endlos an. Nur Fast-Forward, wie der Launcher selbst.
         if let ordner = eintrag.repoOrdner, !ordner.istLeer,
            let neu = await Self.hinterstand(ordner, protokoll), neu > 0 {
-            protokoll.berichte("git pull --ff-only (\(neu) neue Commit(s) für \(ordner))")
-            let zug = await Kommandozeile.ausfuehren("/usr/bin/git", ["pull", "--ff-only", "--quiet"],
-                                                     zeitlimit: 180, arbeitsverzeichnis: Pfade.repoWurzel)
+            // hinterstand hat gerade geholt, ein pull taete nur noch dieses Vorspulen; anders als ein
+            // pull haengt es nicht an der pull.rebase-Einstellung des Rechners.
+            protokoll.berichte("git merge --ff-only (\(neu) neue Commit(s) für \(ordner))")
+            let zug = await RepoAbgleich.vorspulen(Pfade.repoWurzel, autostash: true, protokoll: protokoll)
             protokoll.berichte(zug.ausgabe)
             if zug.abgelaufen || zug.exitCode != 0 {
                 return PruefErgebnis(zustand: .fehler,
-                                     meldung: "git pull --ff-only ist fehlgeschlagen (lokale Änderungen oder abweichender Verlauf) – "
-                                            + "das Repo muss erst von Hand abgeglichen werden. Das Update-Skript wurde nicht gestartet.",
+                                     meldung: "Das Repo ließ sich nicht vorspulen (\(RepoAbgleich.vorspulGrund(zug.ausgabe))). "
+                                            + "Das Update-Skript wurde nicht gestartet.",
                                      protokoll: zug.ausgabe)
             }
         }

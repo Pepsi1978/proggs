@@ -89,13 +89,15 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             protokoll.Report("Git-Stand unbekannt, aber lokal liegt neuerer Quellcode – das Skript baut den vorhandenen Checkout.");
         if (hinterstand > 0)
         {
-            protokoll.Report("git pull --ff-only (" + hinterstand + " neue Commit(s) für " + eintrag.RepoOrdner + ")");
-            var zug = await Kommandozeile.AusfuehrenAsync("git", "pull --ff-only", TimeSpan.FromMinutes(3), Pfade.RepoWurzel, abbruch);
+            // HinterstandAsync has just fetched, so a merge is all a pull would still do. Unlike a
+            // pull it does not depend on the machine's pull.rebase setting.
+            protokoll.Report("git merge --ff-only (" + hinterstand + " neue Commit(s) für " + eintrag.RepoOrdner + ")");
+            var zug = await RepoAbgleich.VorspulenAsync(Pfade.RepoWurzel, autostash: true, protokoll, abbruch);
             protokoll.Report(zug.Ausgabe);
             if (zug.ExitCode != 0)
                 return new PruefErgebnis(UpdateZustand.Fehler,
-                    Meldung: "git pull --ff-only ist fehlgeschlagen (lokale Änderungen oder abweichender Verlauf) – "
-                             + "das Repo muss erst von Hand abgeglichen werden. Das Update-Skript wurde nicht gestartet.",
+                    Meldung: "Das Repo ließ sich nicht vorspulen (" + RepoAbgleich.VorspulGrund(zug.Ausgabe) + "). "
+                             + "Das Update-Skript wurde nicht gestartet.",
                     Protokoll: zug.Ausgabe);
         }
 

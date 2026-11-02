@@ -53,9 +53,10 @@ public static class Kommandozeile
         string? arbeitsverzeichnis = null,
         CancellationToken abbruch = default,
         bool alsAufrufer = false,
-        Func<long>? lebenszeichen = null)
+        Func<long>? lebenszeichen = null,
+        IReadOnlyDictionary<string, string>? zusatzUmgebung = null)
         => AusfuehrenInternAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer,
-                                 lebenszeichen: lebenszeichen);
+                                 lebenszeichen: lebenszeichen, zusatzUmgebung: zusatzUmgebung);
 
     /// <summary>Obergrenze eines Laufs mit Ruhezeit, egal wie viel er noch tut.</summary>
     public static readonly TimeSpan Hoechstdauer = TimeSpan.FromHours(8);
@@ -71,7 +72,8 @@ public static class Kommandozeile
         bool alsAufrufer = false,
         Action<Process>? baumBeenden = null,
         Func<Process, bool>? einzelnBeenden = null,
-        Func<long>? lebenszeichen = null)
+        Func<long>? lebenszeichen = null,
+        IReadOnlyDictionary<string, string>? zusatzUmgebung = null)
     {
         // Every external command of the app passes here, so this is where it is recorded -- with
         // the ambient operation (see Diagnose), whichever provider or feature started it.
@@ -91,7 +93,7 @@ public static class Kommandozeile
         try
         {
             var lauf = await AusfuehrenKernAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer,
-                baumBeenden, einzelnBeenden, lebenszeichen);
+                baumBeenden, einzelnBeenden, lebenszeichen, zusatzUmgebung);
             BefehlEnde(befehlId, datei, lauf, uhr);
             return lauf;
         }
@@ -162,7 +164,8 @@ public static class Kommandozeile
         bool alsAufrufer,
         Action<Process>? baumBeenden,
         Func<Process, bool>? einzelnBeenden,
-        Func<long>? lebenszeichen = null)
+        Func<long>? lebenszeichen = null,
+        IReadOnlyDictionary<string, string>? zusatzUmgebung = null)
     {
         // Already cancelled: never start an installer only to kill it in its first second.
         if (abbruch.IsCancellationRequested)
@@ -184,6 +187,8 @@ public static class Kommandozeile
         if (alsAufrufer) start.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
 
         FrischeUmgebung(start.Environment);
+        if (zusatzUmgebung is not null)
+            foreach (var (name, wert) in zusatzUmgebung) start.Environment[name] = wert;
 
         // npm shims (claude.cmd, codex.cmd) run on node, which tries a host's IPv6 addresses
         // first. On a network whose IPv6 goes nowhere their own "update" then fails to reach the

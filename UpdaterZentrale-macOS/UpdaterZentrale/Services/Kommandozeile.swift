@@ -147,8 +147,9 @@ enum Kommandozeile {
                            zeitlimit: TimeInterval,
                            arbeitsverzeichnis: String? = nil,
                            lebenszeichen: (@Sendable () -> Int64)? = nil,
-                           hoechstdauer: TimeInterval = 8 * 3600) async -> BefehlErgebnis {
-        let umwelt = umgebung
+                           hoechstdauer: TimeInterval = 8 * 3600,
+                           zusatzUmgebung: [String: String] = [:]) async -> BefehlErgebnis {
+        let umwelt = umgebung.merging(zusatzUmgebung) { _, neu in neu }
         // Hier gelesen: Task-Locals kommen auf dem Dispatch-Thread unten nicht an.
         let abbruch = AbbruchMarke.aktuell
         return await withCheckedContinuation { fortsetzung in
