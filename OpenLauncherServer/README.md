@@ -7,12 +7,13 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 | Launcher-Kern (Profile, Modi, Startskripte, Sitzungen) | `kern/launcher.py` | Bibliothek und `launcher.py starten/liste/schliessen/abgleich` |
 | Brücke zum Jarvis-Relay (`X-Jarvis-Rang: server`) | `bruecke/server_bruecke.py` | `jarvis-server-bruecke.service` |
 | Server-Konsole (nur im Tunnel, `http://10.8.0.1:8090`) | `web/` | `jarvis-konsole.service` |
-| CLI-Updates alle 3 Stunden, nur wenn die CLI nicht läuft | `kern/clis.py` | `jarvis-clis.timer` |
+| Programmier-Software täglich um 4:30 Uhr Berliner Zeit aktualisieren: CLIs, Browser-Steuerung, Node, npm-Werkzeuge, uv, Android SDK. Was gerade läuft oder scheitert, holt der Timer stündlich nach | `kern/clis.py` | `jarvis-clis.timer` |
+| Systempakete täglich um 4:30 Uhr: gh, Chrome, .NET, Java, PowerShell, git, ffmpeg und weitere. tmux nie, sonst passt die Fassung nicht mehr zum laufenden Server | `systemd/jarvis-powershell.service` | `jarvis-powershell.timer` |
 | Repo vorspulen alle 5 Minuten; Dienste starten bei neuer Fassung selbst neu | `kern/launcher.py abgleich` | `jarvis-repo.timer` |
 | Tmux ohne Präfix (`tmux.conf`, beim Konsolenstart auch im laufenden tmux gesetzt), damit Strg+B bei der CLI ankommt | `kern/launcher.py tmux_praefix_aus` | Konsole |
 | tmux mit Speicher- und CPU-Deckel | `systemd/jarvis-tmux.service` | enthält alle Sitzungen |
 | Jarvis und Second Brain in allen CLIs (Adresse aus `~/SK`, nie im Repo) | `kern/mcp_anbindung.py` | jeder Sitzungsstart, `installieren.sh` und `jarvis-clis.timer` |
-| Node.js aktuell halten, automatisch nur innerhalb der Hauptversion; einen Wechsel der Hauptversion selbst anstoßen und Kimi danach neu installieren | `kern/node_aktualisieren.sh` | `jarvis-clis.timer` |
+| Node.js auf der neuesten LTS halten; nach einem Wechsel der Hauptversion wird Kimi neu installiert | `kern/node_aktualisieren.sh` | `jarvis-clis.timer` |
 | Regeln für Sitzungen auf dem Server (gehen dem Profil vor) | `server-zusatz.md` | wird an Profil und Modus gehängt |
 
 **Einrichten:** Vom Mac `~/SK/Jarvis/relay.properties`, `~/SK/Jarvis/plugin-url.txt`, `~/SK/Jarvis/fernsteuerung-token.txt` und `~/SK/Android/debug-shared.keystore` und `~/SK/NvidiaDev/.env` und `~/SK/ClaudeCodeOpenRouter/openrouter.key` an dieselbe Stelle unter `/home/jarvis/SK/` kopieren (also `/home/jarvis/SK/NvidiaDev/.env`), aus der `auth.json` von OpenCode die API-Einträge für OpenRouter, Google und OpenCode Go in die des Servers übernehmen (sonst scheitern Modelle dieser Anbieter erst beim Start; LM Studio läuft nur am eigenen Rechner), dann `installieren.sh` als root ausführen (beliebig oft ausführbar). Meldet es `DEPLOY_KEY_FEHLT`, den genannten Schlüssel mit `gh repo deploy-key add --allow-write` eintragen und neu starten. Danach in der Konsole unter System anmelden.

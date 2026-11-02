@@ -1,9 +1,10 @@
 [Unit]
-Description=CLIs alle 3 Stunden aktualisieren
+Description=Programmier-Software täglich um 4:30 Uhr aktualisieren, Übersprungenes stündlich nachholen
 
 [Timer]
-OnBootSec=10min
-OnUnitActiveSec=3h
+OnCalendar=*-*-* 04:30:00 Europe/Berlin
+OnCalendar=*-*-* *:30:00 Europe/Berlin
+AccuracySec=1min
 Persistent=true
 
 [Install]

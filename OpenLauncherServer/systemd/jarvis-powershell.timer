@@ -1,9 +1,9 @@
 [Unit]
-Description=PowerShell alle 3 Stunden aktualisieren
+Description=Systempakete für das Programmieren täglich um 4:30 Uhr aktualisieren
 
 [Timer]
-OnBootSec=15min
-OnUnitActiveSec=3h
+OnCalendar=*-*-* 04:30:00 Europe/Berlin
+AccuracySec=1min
 Persistent=true
 
 [Install]

@@ -1,6 +1,6 @@
-"""CLIs auf dem Hostinger-Server: Versionen lesen, aktualisieren, Anmeldestände prüfen. Läuft alle 3 Stunden (jarvis-clis.timer).
+"""CLIs auf dem Hostinger-Server: Versionen lesen, aktualisieren, Anmeldestände prüfen. Täglich um 4:30 Uhr Berliner Zeit wird alles aktualisiert; stündlich holt der Timer nach, was übersprungen wurde oder scheiterte (jarvis-clis.timer).
 
-Eine CLI, die gerade läuft, wird nicht angefasst; sie kommt beim nächsten Lauf dran. Ergebnis: ~/.openlauncher/cli-status.json,
+Eine CLI, die gerade läuft, wird nicht angefasst; sie kommt beim nächsten Lauf dran (Merker „offen“). Ergebnis: ~/.openlauncher/cli-status.json,
 angezeigt im Reiter System der Konsole. Update-Wege wie in UpdaterZentrale-macOS/programs.json.
 """
 from __future__ import annotations
@@ -32,6 +32,8 @@ def npm_update(paket: str) -> str:
 
 
 PROGRAMME = {
+    # Node zuerst: Die npm-Programme danach laufen so schon mit der neuen Fassung.
+    "node": {"name": "Node.js (LTS)", "befehl": "node", "anmeldung": "", "stand": "", "update": f"bash {KERN}/node_aktualisieren.sh", "installieren": f"bash {KERN}/node_aktualisieren.sh"},
     "claude": {"name": "Claude Code", "befehl": "claude", "update": "claude update", "anmeldung": "claude auth login",
                "stand": "claude auth status --json", "installieren": "curl -fsSL https://claude.ai/install.sh | bash"},
     "codex": {"name": "Codex CLI", "befehl": "codex", "update": npm_update("@openai/codex"), "anmeldung": "codex login --device-auth",
@@ -47,7 +49,10 @@ PROGRAMME = {
     # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
     "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth token", "installieren": "true"},
     # Werkzeuge wie in UpdateZentrale/programs.json. Die Firebase-Anmeldung bleibt Franks Entscheidung, darum hier kein Anmelde-Knopf.
-    "node": {"name": "Node.js (LTS)", "befehl": "node", "anmeldung": "", "stand": "", "update": f"bash {KERN}/node_aktualisieren.sh", "installieren": f"bash {KERN}/node_aktualisieren.sh"},
+    "pnpm": {"name": "pnpm", "befehl": "pnpm", "update": npm_update("pnpm"), "anmeldung": "", "stand": "", "installieren": f"{NPM} pnpm@latest"},
+    # Nicht neben einem Gradle-Bau: Er liest die Werkzeuge, die hier ersetzt würden. build-tools 36.0.0 (apksigner) bleibt daneben liegen.
+    "android-sdk": {"name": "Android SDK", "befehl": "sdkmanager", "sekunden": 900, "anmeldung": "", "stand": "", "installieren": "true",
+                    "update": "if pgrep -f '[G]radleDaemon' >/dev/null; then echo 'Gradle-Bau läuft'; exit 1; fi; yes | sdkmanager --licenses >/dev/null 2>&1; sdkmanager --update"},
     "uv": {"name": "uv", "befehl": "uv", "update": "uv self update", "anmeldung": "", "stand": "", "installieren": "curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh"},
     "typescript": {"name": "TypeScript", "befehl": "tsc", "update": npm_update("typescript"), "anmeldung": "", "stand": "", "installieren": f"{NPM} typescript@latest"},
     "tsx": {"name": "tsx", "befehl": "tsx", "update": npm_update("tsx"), "anmeldung": "", "stand": "", "installieren": f"{NPM} tsx@latest"},
@@ -101,27 +106,34 @@ def anmeldung(schluessel: str, p: dict) -> str:
     return "unbekannt" if pfade[schluessel].exists() else "abgemeldet"
 
 
-def status_schreiben(aktualisieren: bool) -> dict:
-    alt = {}
+def _stand() -> dict:
     try:
-        alt = json.loads(STATUS.read_text("utf-8")).get("programme", {})
+        return json.loads(STATUS.read_text("utf-8"))
     except (OSError, ValueError):
-        pass
+        return {}
+
+
+def status_schreiben(aktualisieren: bool, nur_offene: bool = False, tageslauf: str = "") -> dict:
+    stand = _stand()
+    alt = stand.get("programme", {})
     programme = {}
     alle = launcher.sitzungen()
     for schluessel, p in PROGRAMME.items():
         # Beim Auffrischen des Reiters System reicht für Werkzeuge ohne Anmeldung der letzte Stand: Jede Abfrage startet einen Prozess, auch neben einem Android-Bau.
-        vorher = alt.get(schluessel, {}).get("version", "") if not aktualisieren and not p["anmeldung"] else ""
+        anstehend = aktualisieren and (not nur_offene or alt.get(schluessel, {}).get("offen", False))
+        vorher = alt.get(schluessel, {}).get("version", "") if not anstehend and not p["anmeldung"] else ""
         vorher = vorher or version(p)
-        eintrag = {"name": p["name"], "version": vorher, "zuletzt": alt.get(schluessel, {}).get("zuletzt", ""), "meldung": alt.get(schluessel, {}).get("meldung", "")}
-        if aktualisieren:
+        eintrag = {"name": p["name"], "version": vorher, "zuletzt": alt.get(schluessel, {}).get("zuletzt", ""), "meldung": alt.get(schluessel, {}).get("meldung", ""), "offen": alt.get(schluessel, {}).get("offen", False)}
+        if anstehend:
             jetzt = time.strftime("%d.%m.%Y %H:%M")
             if in_benutzung(schluessel, p, alle):
                 eintrag["meldung"] = f"{jetzt}: läuft gerade, beim nächsten Lauf"
+                eintrag["offen"] = True
             else:
                 code, aus = _lauf(p["update"] if vorher else p["installieren"], p.get("sekunden", 300))
                 eintrag["version"] = version(p)
                 eintrag["zuletzt"] = jetzt
+                eintrag["offen"] = code != 0 or not eintrag["version"]
                 if code != 0:
                     eintrag["meldung"] = f"{jetzt}: fehlgeschlagen: {aus[-200:]}"
                 elif not eintrag["version"]:
@@ -134,9 +146,19 @@ def status_schreiben(aktualisieren: bool) -> dict:
         eintrag["anmeldbar"] = bool(p["anmeldung"])
         programme[schluessel] = eintrag
     code, pwsh = _lauf("pwsh --version", 20)
-    daten = {"programme": programme, "powershell": pwsh if code == 0 else "", "geprueft": time.strftime("%d.%m.%Y %H:%M")}
+    daten = {"programme": programme, "powershell": pwsh if code == 0 else "", "geprueft": time.strftime("%d.%m.%Y %H:%M"), "tageslauf": tageslauf or stand.get("tageslauf", "")}
     launcher._schreib(STATUS, json.dumps(daten, ensure_ascii=False, indent=1))
     return daten
+
+
+def tageslauf() -> None:
+    """Der erste Lauf eines Tages ab 4:30 Uhr aktualisiert alles, auch wenn der Server um 4:30 Uhr aus war. Danach holt jede Stunde nur das Offene nach."""
+    stand = _stand()
+    heute = time.strftime("%Y-%m-%d")
+    if stand.get("tageslauf") != heute and time.strftime("%H:%M") >= "04:30":
+        status_schreiben(True, tageslauf=heute)
+    elif any(e.get("offen") for e in stand.get("programme", {}).values()):
+        status_schreiben(True, nur_offene=True)
 
 
 if __name__ == "__main__":
@@ -145,4 +167,7 @@ if __name__ == "__main__":
     # Vor den Updates: Ein Abbruch oder das Dienst-Zeitlimit darf die Anbindung nicht mitreißen.
     import mcp_anbindung
     mcp_anbindung.anbinden()
-    print(json.dumps(status_schreiben("aktualisieren" in sys.argv), ensure_ascii=False, indent=1))
+    if "taeglich" in sys.argv:
+        tageslauf()
+    else:
+        print(json.dumps(status_schreiben("aktualisieren" in sys.argv), ensure_ascii=False, indent=1))
