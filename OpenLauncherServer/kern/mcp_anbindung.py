@@ -45,7 +45,8 @@ def codex(adressen: dict[str, str]) -> None:
     text = launcher._lies(konfig)
     fehlt = [n for n in adressen if f"[mcp_servers.{n}]" not in text]
     if fehlt:
-        launcher._schreib(konfig, text.rstrip("\n") + "".join(f'\n\n[mcp_servers.{n}]\nurl = "{adressen[n]}"\n' for n in fehlt))
+        launcher._schreib(konfig, text.rstrip("\n") + "".join(f'\n\n[mcp_servers.{n}]\nurl = "{adressen[n]}"\n' for n in fehlt), 0o600)
+    konfig.chmod(0o600)  # Die Jarvis-Adresse ist ein Geheimnis.
 
 
 def kimi(adressen: dict[str, str]) -> None:

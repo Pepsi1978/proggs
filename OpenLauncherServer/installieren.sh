@@ -95,6 +95,8 @@ als 'npm install -g --silent typescript@latest tsx@latest @biomejs/biome@latest 
 als 'command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh' || echo "uv nicht installiert"
 # Ubuntu nennt bat batcat; Skills und Gewohnheit erwarten bat.
 als 'ln -sf /usr/bin/batcat ~/.local/bin/bat'
+# apksigner für die Signatur-Rotation: ~/.local/bin steht auch im PATH der Sitzungen.
+als 'ln -sf ~/android-sdk/build-tools/36.0.0/apksigner ~/.local/bin/apksigner'
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
 # Nur beim ersten Mal (jeder Lauf legt eine Sicherung an); der Mac-Build des Skripts gehört nicht hierher.
 [ -f "$ZUHAUSE/.config/opencode/plugins/work-mode.js" ] || als 'OPENCODE_SKIP_MACFIX=1 bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"
