@@ -398,7 +398,8 @@ def _kimi_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
         _kimi_effort(alias, effort)
     q = shlex.quote
     # Kimi kennt keine erste Nachricht für die Oberfläche, nur -p (ein Durchlauf); danach geht dieselbe Sitzung interaktiv weiter.
-    return f'''if [ -n "$PROMPT" ]; then kimi --auto -m {q(alias)} -p "$PROMPT"; kimi --auto -m {q(alias)} -c; else kimi --auto -m {q(alias)}; fi
+    # -p läuft ohnehin ohne Rückfragen; zusammen mit --auto bricht Kimi ab seit 2.4 mit „Cannot combine --prompt with --auto“ ab, der Auftrag käme nie an.
+    return f'''if [ -n "$PROMPT" ]; then kimi -m {q(alias)} -p "$PROMPT"; kimi --auto -m {q(alias)} -c; else kimi --auto -m {q(alias)}; fi
 '''
 
 
