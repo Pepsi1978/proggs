@@ -377,8 +377,12 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
     _schreib(zustand, json.dumps(daten, ensure_ascii=False))
     # Auch OpenCode nutzt den einen Browser des Servers, nie einen eigenen je Sitzung.
     profil_datei = ZUSTAND / "opencode-profil.json"
-    _schreib(profil_datei, json.dumps({"$schema": "https://opencode.ai/config.json", "mcp": {"chrome-devtools": {"type": "local", "command": ["bash", str(BROWSER_MCP)], "enabled": True},
-                                                                                             "chrome-personal": {"enabled": False}}}))
+    konfig = {"$schema": "https://opencode.ai/config.json", "mcp": {"chrome-devtools": {"type": "local", "command": ["bash", str(BROWSER_MCP)], "enabled": True},
+                                                                    "chrome-personal": {"enabled": False}}}
+    # Wie PatchDirectModel am PC: Was nicht im Katalog von OpenCode steht, bräche sonst als unbekanntes Modell ab. OpenCode führt den Eintrag mit seinem Katalog zusammen.
+    if anbieter.lower() in ("nvidia", "openrouter", "google", "opencode") and kennung.startswith(f"{anbieter}/"):
+        konfig["provider"] = {anbieter: {"models": {kennung[len(anbieter) + 1:]: {"name": modell}}}}
+    _schreib(profil_datei, json.dumps(konfig))
     return nvidia + f'''export OPENCODE_CONFIG={q(str(profil_datei))} OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
 mkdir -p "$HOME/.local/share/opencode/log/stderr"
 FEHLER="$HOME/.local/share/opencode/log/stderr/opencode-stderr-$(date +%Y%m%d-%H%M%S)-$$.log"

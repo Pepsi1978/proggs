@@ -242,7 +242,7 @@ def main() -> int:
         return 0
     schreib("Brücke gestartet")
     threading.Thread(target=fortschritt_faden, daemon=True).start()
-    dateien = [Path(__file__), Path(launcher.__file__)]
+    dateien = [Path(__file__), Path(launcher.__file__), Path(launcher.effort_tabelle.__file__)]
     stand = [d.stat().st_mtime for d in dateien]
     pause, geprueft = 2, False
     letzter_scan = 0.0

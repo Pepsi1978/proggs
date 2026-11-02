@@ -407,7 +407,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
 async def neu_laden_bei_aenderung(_: web.Application):
     """Neue Fassung aus dem Repo: beenden, systemd startet neu."""
     # Auch die Seiten: Ihre gepackten Fassungen entstehen beim Start, eine geänderte app.js käme sonst nie an.
-    dateien = [Path(__file__), Path(launcher.__file__), Path(clis.__file__), Path(agy_kontingent.__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
+    dateien = [Path(__file__), Path(launcher.__file__), Path(launcher.effort_tabelle.__file__), Path(clis.__file__), Path(agy_kontingent.__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
     stand = [d.stat().st_mtime for d in dateien]
 
     async def wache():
