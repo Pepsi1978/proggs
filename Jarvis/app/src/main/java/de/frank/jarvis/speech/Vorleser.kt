@@ -226,6 +226,8 @@ class Vorleser(
     private var vorabText = ""
     /** Erst wenn der Satz wirklich zu hören war, darf er aus der ganzen Antwort wegfallen. */
     private var vorabGesprochen = false
+    /** Je Vorab-Satz ein eigenes Zeichen: Eine später angehängte Meldung darf es dem wartenden Lauf nicht überschreiben. */
+    @Volatile private var vorabGehoert: java.util.concurrent.atomic.AtomicBoolean? = null
     /** Fremdes Vorlesen oder eine andere App hat den Satz abgelöst, nicht Frank: Die Antwort kommt dann trotzdem. */
     private var vorabVerdraengt: String? = null
     /** Die noch sprechenden Vorgänger, während die Fortsetzung schon läuft: Ein Stopp muss alle beenden. */
@@ -239,6 +241,7 @@ class Vorleser(
         vorabQuelle = quelle
         vorabText = SprechText.fuerStimme(satz)
         vorabGesprochen = false
+        vorabGehoert = java.util.concurrent.atomic.AtomicBoolean(false)
         vorabVerdraengt = null
         return true
     }
@@ -257,7 +260,10 @@ class Vorleser(
         val rest = nachVorab(text, vorabText)
         // Beginnt die Antwort wirklich mit dem Satz, läuft seine Erzeugung weiter: Abbrechen und neu anfordern kostete bis zu
         // 1,2 Sekunden bis zum ersten Ton. Kam er am Ende doch nicht zu Gehör, liest die Fortsetzung ihn nach ([fortsetzen]).
-        if (rest != null && (vorabGesprochen || laufenderJob?.isActive == true)) { fortsetzen(quelle, titel, rest, nachholen = if (vorabGesprochen) null else vorabText); return }
+        if (rest != null && (vorabGesprochen || laufenderJob?.isActive == true)) {
+            fortsetzen(quelle, titel, rest, nachholen = if (vorabGesprochen) null else vorabText, gehoert = vorabGehoert)
+            return
+        }
         if (!vorabGesprochen) laufenderJob?.cancel()
         fortsetzen(quelle, titel, text)
     }
@@ -287,14 +293,13 @@ class Vorleser(
     }
 
     /** [nachholen]: Der vorab begonnene Satz, falls er beim Start noch nicht zu hören war; scheitert er, kommt er vor dem Rest noch einmal. */
-    private fun fortsetzen(quelle: String, titel: String, text: String, nachholen: String? = null) {
+    private fun fortsetzen(quelle: String, titel: String, text: String, nachholen: String? = null, gehoert: java.util.concurrent.atomic.AtomicBoolean? = null) {
         val absaetze = SprechText.absaetze(text)
-        if (absaetze.isEmpty()) {
+        // Ohne Rest und ohne etwas nachzuholen ist nichts zu tun. Ist die Antwort nur der vorab begonnene Satz, wartet dieser Lauf trotzdem auf ihn.
+        if (absaetze.isEmpty() && nachholen == null) {
             if (laufenderJob?.isActive != true) raeumeLaufAuf()
             return
         }
-        // vorabQuelle ist schon null: Darum zählt der Vorgänger selbst, ob sein Satz zu hören war.
-        nachholSatzGehoert = nachholen == null
         val vorher = laufenderJob?.takeIf { it.isActive }
         vorgaenger.removeAll { !it.isActive }
         vorher?.let { vorgaenger += it }
@@ -310,18 +315,26 @@ class Vorleser(
         starteLauf(meinLauf, text.length, absaetze.size) {
             // Der neue Text wird schon erzeugt, während der Vorgänger noch spricht; abgespielt wird erst danach.
             val nachholenWennNoetig: suspend () -> Unit = {
-                if (nachholen != null && !nachholSatzGehoert) {
+                if (nachholen != null && gehoert?.get() != true) {
                     Logbuch.sprache("Erster Satz nachgeholt", "${nachholen.length} Zeichen")
-                    pipelineMitVorausschau(SprechText.absaetze(nachholen), KURZE_PAUSE_MS, null)
+                    // Scheitert er noch einmal, kommt wenigstens der fertige Rest; nur ohne Rest bleibt der Fehler sichtbar.
+                    try {
+                        pipelineMitVorausschau(SprechText.absaetze(nachholen), KURZE_PAUSE_MS, null)
+                    } catch (abbruch: CancellationException) {
+                        throw abbruch
+                    } catch (fehler: Exception) {
+                        Logbuch.fehler("Erster Satz nicht nachholbar", fehler)
+                        if (absaetze.isEmpty()) throw fehler
+                    }
                 }
             }
-            if (synthese.kannVorausschauen(null)) pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, vorher, nachholenWennNoetig)
-            else { vorher?.join(); nachholenWennNoetig(); reihum(absaetze, KURZE_PAUSE_MS) }
+            when {
+                absaetze.isEmpty() -> { vorher?.join(); nachholenWennNoetig() }
+                synthese.kannVorausschauen(null) -> pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, vorher, nachholenWennNoetig)
+                else -> { vorher?.join(); nachholenWennNoetig(); reihum(absaetze, KURZE_PAUSE_MS) }
+            }
         }
     }
-
-    /** Ist der vorab begonnene Satz, dessen Rest schon angehängt ist, wirklich zu hören gewesen? */
-    @Volatile private var nachholSatzGehoert = true
 
     /** Der Text hinter [anfang]; verglichen werden nur Buchstaben und Ziffern, Satzzeichen dürfen abweichen. Null, wenn er anders beginnt. */
     private fun nachVorab(text: String, anfang: String): String? {
@@ -529,7 +542,7 @@ class Vorleser(
     private suspend fun spieleDatei(datei: File) {
         holeFokus()
         if (vorabQuelle != null) vorabGesprochen = true
-        nachholSatzGehoert = true
+        vorabGehoert?.set(true)
         if (!ersterTonGemessen) {
             ersterTonGemessen = true
             Logbuch.sprache("Erster Ton", "anbieter=${settings.ttsProvider}", System.currentTimeMillis() - laufBeginn)

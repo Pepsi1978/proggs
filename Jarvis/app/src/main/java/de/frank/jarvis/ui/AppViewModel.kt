@@ -2419,6 +2419,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Für die Sprachblase: true = die Spracherkennung rechnet mit; dann bewegt nur erkannte Stimme die Blase, kein Lüfter. */
+    val blasenMitStimmerkennung: Boolean get() = mikro.sprachRahmen != null
+
     /** Wie lange Jarvis nach Franks letztem Wort noch wartet, bevor die eingestellte Stillezeit die Aufnahme beendet. */
     fun blasenStilleRestMs(): Long {
         val ende = rundeEnde ?: return 0L
@@ -2430,23 +2433,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * einer Mitschrift. Mikrofon und Blase laufen echt an; so lassen sich Zeiten und Anzeige ohne gesprochene Frage messen.
      */
     fun sprachMesslauf(context: android.content.Context, frage: String) {
+        // Nie in ein laufendes Gespräch hinein: Franks Aufnahme und seine Worte gingen sonst verloren.
+        if (nimmtAuf || schreibtMit || holtMikro || sprachmodusAktiv || denkt) { Logbuch.sprache("Messlauf", "abgelehnt: Sprachgespräch läuft"); return }
         if (!SprachBlase.sprachmodusStarten(context)) { Logbuch.sprache("Messlauf", "nicht gestartet"); return }
         viewModelScope.launch {
             kotlinx.coroutines.withTimeoutOrNull(5_000) { snapshotFlow { nimmtAuf }.first { it } } ?: return@launch
             kotlinx.coroutines.delay(2_000)
             if (!nimmtAuf) return@launch
-            schreibtMit = true
-            nimmtAuf = false
-            freihaendig = false
-            de.frank.jarvis.observability.Antwortkette.start(0L)
-            mikro.stop()
-            de.frank.jarvis.audio.AufnahmeDienst.stoppen()
-            de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
-            schreibtMit = false
-            gesprochen = true
-            sende(frage)
+            messFrage = frage
+            aufnahmeBeenden(freigeben = false)
         }
     }
+
+    /** Vom Messlauf: steht statt der Mitschrift als gesprochene Frage; alles andere läuft wie nach einer echten Aufnahme. */
+    private var messFrage: String? = null
 
     /**
      * Langes Drücken auf die Sprachblase: Sprachmodus sofort beenden. Aufnahme, offene Antwort und Vorlesen enden, das
@@ -2498,7 +2498,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER
         while (nimmtAuf && lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER) {
             kotlinx.coroutines.delay(50)
-            lage = ende.neu(pegel.value, System.currentTimeMillis() - start, mikro.sprachRahmen)
+            val seit = System.currentTimeMillis() - start
+            // Außerhalb der App zählt nur Stimme (Silero): Lädt sie noch, nicht dem Pegel glauben, sonst gälte ein Lüfter im Auto als Sprechen.
+            // Nach 5 Sekunden ohne sie gilt wieder der Pegel, damit eine hängende Spracherkennung die Frage nicht verschluckt.
+            if (!gespraechInApp && mikro.sprachErkennungLaedt && seit < 5_000) continue
+            lage = ende.neu(pegel.value, seit, mikro.sprachRahmen)
         }
         freihaendig = false
         when {
@@ -2510,6 +2514,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             else -> {
                 schlussStilleMs = System.currentTimeMillis() - start - ende.letzteSpracheMs
+                // Zeigt nach einer Fahrt, ob ein Geräusch die Aufnahme offen hielt: Sprachanteil laut Silero, Grundpegel und Art der Erkennung.
+                Logbuch.sprache("Aufnahme-Ende", "Erkennung ${if (mikro.sprachRahmen != null) "Silero" else "Pegel"}, Stimme ${(mikro.sprachRahmen ?: 0L) * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms von ${System.currentTimeMillis() - start} ms, Pegel zuletzt ${"%.2f".format(pegel.value)}")
                 aufnahmeBeenden(freigeben = false)
             }
         }
@@ -2557,7 +2563,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
                 // Offline gewählt: nur auf dem Handy, nie still über Groq; fehlt das Modell, kommt ein Fehler.
-                val text = if (sprache.transkriptionLokal) {
+                val messText = messFrage
+                messFrage = null
+                val text = if (messText != null) messText else if (sprache.transkriptionLokal) {
                     de.frank.jarvis.speech.ParakeetLokal.run {
                         transkribiere(getApplication(), wav, stimmhaft, sprache.filterStilleVorabAn, if (sprache.woerterbuchAn) hotwords(de.frank.module.transkriptionsmodul.GroqTranscriber.begriffe(sprache.woerterbuchBegriffe)) else "")
                     }.trim()

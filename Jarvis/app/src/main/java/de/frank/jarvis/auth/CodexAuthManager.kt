@@ -84,6 +84,8 @@ internal fun codexChatPayload(
     turns: List<ChatTurn>,
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
+    /** Nur der Chat: Seine große Anweisung soll möglichst auf demselben Zwischenspeicher landen (Treffer: „Codex-Zwischenspeicher“ im Logbuch). */
+    cacheKennung: String? = null,
 ): JSONObject {
     val input = JSONArray()
     turns.forEach { turn ->
@@ -101,8 +103,7 @@ internal fun codexChatPayload(
         .put("instructions", instructions.replace(CACHE_TRENNER, "\n\n").trim() + "\n\n" + UMLAUT_HINWEIS)
         .put("input", input)
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
-        // Dieselbe Kennung je Modell: Die große Anweisung soll möglichst auf demselben Zwischenspeicher landen (Treffer: „Codex-Zwischenspeicher“ im Logbuch).
-        .put("prompt_cache_key", "jarvis-" + model.apiId)
+        .apply { cacheKennung?.let { put("prompt_cache_key", it) } }
 }
 
 /**
@@ -146,7 +147,7 @@ internal fun classifyHttpError(code: Int, body: String) {
 internal fun payloadForAttempt(payload: JSONObject, attempt: Int): JSONObject {
     if (attempt == 0) return payload
     return runCatching {
-        JSONObject(payload.toString()).apply { remove("service_tier"); remove("prompt_cache_key") }
+        JSONObject(payload.toString()).apply { remove("service_tier") }
     }.getOrDefault(payload)
 }
 
@@ -358,7 +359,7 @@ class CodexAuthManager(context: Context) {
         }
         try {
             if (model.istAnthropic) requestAnthropic(instructions, turns, model, reasoningEffort, onDelta, onUsage)
-            else requestCodexAccumulated(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta).also { onUsage(it.ausgabeToken) }.result()
+            else requestCodexAccumulated(codexChatPayload(instructions, turns, model, reasoningEffort, "jarvis-chat-" + model.apiId), onDelta).also { onUsage(it.ausgabeToken) }.result()
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)

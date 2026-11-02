@@ -1,8 +1,9 @@
 package de.frank.jarvis.ui
 
 import android.annotation.SuppressLint
-import android.content.Context
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.LinearGradient
@@ -11,10 +12,14 @@ import android.graphics.PixelFormat
 import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.TextPaint
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.GestureDetector
 import android.view.HapticFeedbackConstants
@@ -31,24 +36,13 @@ import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * Die schwebende Sprachblase: „Hey Jarvis“ aus einer anderen App öffnet Jarvis nicht, das Gespräch läuft im Hintergrund
- * und oben mittig zeigt eine kleine Blase (etwa 2 × 0,7 cm) ein Pegel-Spektrum. Immer in Orange, unabhängig von Tag,
- * Nacht und Design (Franks Wunsch): sprechen Frank oder Jarvis, zittert das Spektrum nach dem Pegel, dazwischen eine
- * ruhige Welle: Jarvis hört noch zu. Jede Phase hat ihre eigene Bewegung ([BlasenZustand]), und eine kleine Zeile darunter sagt in Worten, was gerade läuft.
- *
- * Sichtbar genau dann, wenn der Sprachmodus läuft und Jarvis nicht vorn ist ([abgleichen] an Start, Ende, onStart und
- * onStop der Activity). Das Fenster nimmt nie den Fokus; nur die Blase selbst ist berührbar: Antippen öffnet Jarvis,
- * langes Drücken oder Wegwischen nach oben beendet den Sprachmodus. Gezeichnet mit dem Canvas statt Compose: leicht,
- * damit Spracherkennung und Ausgabe nichts davon merken.
- */
 /** Was Jarvis gerade tut, aus dem echten Stand gelesen ([AppViewModel.blasenZustand]). */
 enum class BlasenZustand { MIKROFON, HOERT, FRANK_SPRICHT, WARTET_AUF_ENDE, SCHREIBT_MIT, DENKT, WERKZEUG, STIMME, SPRICHT, ANGEHALTEN }
 
 /**
  * Messlauf über adb, nur für Shell und System (Manifest: Recht DUMP). Startet die Kette wie nach dem Weckwort, mit Text statt Sprache:
  * `adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "Wie spät ist es?"`
- * Ergebnis: „Kette Mikrofon“ und „Blase“ im Logbuch. Nicht, solange Jarvis vorn ist.
+ * Ergebnis: „Kette Mikrofon“ und „Blase“ im Logbuch. Nicht, solange Jarvis vorn ist oder schon ein Sprachgespräch läuft.
  */
 class SprachMesslauf : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -59,29 +53,58 @@ class SprachMesslauf : BroadcastReceiver() {
     }
 }
 
+/**
+ * Die schwebende Sprachblase: „Hey Jarvis“ aus einer anderen App öffnet Jarvis nicht, das Gespräch läuft im Hintergrund
+ * und oben mittig zeigt eine kleine Blase (etwa 2 × 0,7 cm) ein Pegel-Spektrum. Immer in Orange, unabhängig von Tag,
+ * Nacht und Design (Franks Wunsch). Jede Phase hat ihre eigene Bewegung ([BlasenZustand]), und eine kleine Zeile darunter
+ * sagt in Worten, was gerade läuft.
+ *
+ * Sichtbar genau dann, wenn der Sprachmodus läuft und Jarvis nicht vorn ist ([abgleichen] an Start, Ende, onStart und
+ * onStop der Activity). Die Fenster nehmen nie den Fokus; nur die Blase selbst ist berührbar: Antippen öffnet Jarvis,
+ * langes Drücken oder Wegwischen nach oben beendet den Sprachmodus. Die Statuszeile liegt in einem eigenen Fenster, das
+ * Berührungen an die App darunter durchlässt. Gezeichnet mit dem Canvas statt Compose: leicht, damit Spracherkennung und
+ * Ausgabe nichts davon merken.
+ */
 object SprachBlase {
     private var ansicht: BlasenAnsicht? = null
-    private val haupt = android.os.Handler(android.os.Looper.getMainLooper())
+    private var zeile: StatusZeile? = null
+    private val haupt = Handler(Looper.getMainLooper())
     private var neuEingehaengt = 0
+    private var letztesEinhaengen = 0L
+    private var bedienbarSeit = 0L
     private var waechterKontext: Context? = null
+
+    // Hier statt in der Ansicht: Neu eingehängt zählen Statuszeile und Logbuch sonst wieder bei null.
+    internal var zustand = BlasenZustand.MIKROFON
+    internal var zustandSeit = 0L
 
     /**
      * Schaut zweimal je Sekunde, ob die Blase noch zeichnet. Android kann das Fenster eines Hintergrund-Prozesses anhalten (etwa bei einem
      * App-Wechsel); dann stünde sie sichtbar still, obwohl Jarvis arbeitet. Erst anstoßen, hilft das nicht, das Fenster neu einhängen.
+     * Über dem Sperrbildschirm und kurz nach dem Einschalten zeichnet sie zu Recht nicht: Das zählt nicht als Stillstand.
      */
     private val waechter = object : Runnable {
         override fun run() {
             val da = ansicht ?: return
             val app = waechterKontext ?: return
-            val stand = SystemClock.uptimeMillis() - da.zuletzt
-            val an = app.getSystemService(android.os.PowerManager::class.java)?.isInteractive != false
-            if (an && stand > 1_500 && neuEingehaengt < 5) {
+            val jetzt = SystemClock.uptimeMillis()
+            val stand = jetzt - da.zuletzt
+            val bedienbar = app.getSystemService(PowerManager::class.java)?.isInteractive != false &&
+                app.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked != true
+            if (!bedienbar) bedienbarSeit = jetzt
+            // Länger sauber gezeichnet: Der nächste Halter hat wieder alle Versuche.
+            if (stand < 300 && jetzt - letztesEinhaengen > 15_000) neuEingehaengt = 0
+            if (bedienbar && jetzt - bedienbarSeit > 3_000 && stand > 1_500 && neuEingehaengt < 5) {
                 neuEingehaengt++
+                letztesEinhaengen = jetzt
                 Logbuch.sprache("Blase neu eingehängt", "stand $stand ms, Versuch $neuEingehaengt")
-                app.getSystemService(WindowManager::class.java)?.let { wm -> runCatching { wm.removeViewImmediate(da) } }
-                ansicht = null
+                val wm = app.getSystemService(WindowManager::class.java)
+                entfernen(wm)
+                // Plant den Wächter selbst neu ein, wenn die Blase wieder hängt.
                 abgleichen(app)
-            } else if (an && stand > 500) da.invalidate()
+                return
+            }
+            if (bedienbar && stand > 500) da.invalidate()
             haupt.postDelayed(this, 500)
         }
     }
@@ -94,8 +117,23 @@ object SprachBlase {
         vm.weckwortStart(fortsetzen = false) {}
         if (!vm.sprachmodusAktiv) return false
         Logbuch.sprache("Sprachblase", "Hey Jarvis außerhalb der App")
+        neuEingehaengt = 0
+        // Neues Gespräch: Die Dauer im Logbuch und der Sekundenzähler beginnen frisch.
+        zustandSeit = 0L
         abgleichen(context)
         return true
+    }
+
+    private fun entfernen(wm: WindowManager?) {
+        val blase = ansicht
+        val text = zeile
+        ansicht = null
+        zeile = null
+        haupt.removeCallbacks(waechter)
+        if (wm != null) {
+            if (blase != null) runCatching { wm.removeViewImmediate(blase) }
+            if (text != null) runCatching { wm.removeViewImmediate(text) }
+        }
     }
 
     /** Zeigt oder entfernt die Blase nach dem aktuellen Stand. Nur auf dem Hauptfaden. */
@@ -104,51 +142,91 @@ object SprachBlase {
         val vm = AppViewModel.hole(app)
         val zeigen = vm.sprachmodusAktiv && !MainActivity.sichtbar && darf(app)
         val wm = app.getSystemService(WindowManager::class.java) ?: return
-        val da = ansicht
-        if (zeigen && da == null) {
-            val neu = BlasenAnsicht(app, vm)
+        if (zeigen && ansicht == null) {
             val dp = app.resources.displayMetrics.density
-            val lp = WindowManager.LayoutParams(
+            fun fenster(flags: Int, name: String, abstand: Float) = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                flags,
                 PixelFormat.TRANSLUCENT,
             ).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 // Ohne FLAG_LAYOUT_IN_SCREEN legt Android das Fenster unter Statusleiste und Kamera; hier nur etwas Luft.
-                y = (6 * dp).toInt()
-                title = "Jarvis-Sprachblase"
+                y = (abstand * dp).toInt()
+                title = name
             }
-            runCatching { wm.addView(neu, lp) }
+            val nichtFokus = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            val text = StatusZeile(app)
+            val neu = BlasenAnsicht(app, vm, text)
+            runCatching { wm.addView(neu, fenster(nichtFokus, "Jarvis-Sprachblase", 6f)) }
                 .onSuccess {
                     ansicht = neu
+                    // Die Zeile ist nur zum Lesen: Berührungen gehen durch sie hindurch an die App darunter.
+                    runCatching { wm.addView(text, fenster(nichtFokus or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, "Jarvis-Statuszeile", 6f + BlasenAnsicht.HOEHE_DP + 4f)) }
+                        .onSuccess { zeile = text }
+                        .onFailure { Logbuch.fehler("Statuszeile ließ sich nicht einblenden", it) }
                     waechterKontext = app
+                    bedienbarSeit = SystemClock.uptimeMillis()
                     haupt.removeCallbacks(waechter)
                     haupt.postDelayed(waechter, 500)
                 }
                 .onFailure { Logbuch.fehler("Sprachblase ließ sich nicht einblenden", it) }
-        } else if (!zeigen && da != null) {
-            ansicht = null
-            haupt.removeCallbacks(waechter)
+        } else if (!zeigen && ansicht != null) {
             neuEingehaengt = 0
-            runCatching { wm.removeViewImmediate(da) }
+            entfernen(wm)
         }
+        if (!zeigen) neuEingehaengt = 0
         WiedergabePegel.aktiv = ansicht != null
     }
 }
 
+/** Die Zeile unter der Blase: zeichnet nur, wenn sich ihr Wortlaut ändert, nicht je Bild. */
 @SuppressLint("ViewConstructor")
-private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : View(context) {
+private class StatusZeile(context: Context) : View(context) {
+    private val dp = resources.displayMetrics.density
+    private val rand = 11 * dp
+    private val flaeche = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xF2140E08.toInt() }
+    private val schrift = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFE9D6.toInt()
+        // applyDimension kennt auch die nichtlineare Schriftskalierung ab Android 14.
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12.5f, resources.displayMetrics)
+        textAlign = Paint.Align.CENTER
+    }
+    // Aus der Schrift berechnet: Bei großer Systemschrift wächst die Zeile mit, statt den Text abzuschneiden.
+    private val zeilenHoehe = max(24 * dp, schrift.fontMetrics.let { it.descent - it.ascent } + 8 * dp)
+    private val maxBreite = 300 * dp
+    private val form = RectF()
+    private var text = ""
+    private var breite = 0f
+
+    fun setze(neu: String) {
+        val gekuerzt = TextUtils.ellipsize(neu, schrift, maxBreite - 2 * rand, TextUtils.TruncateAt.END).toString()
+        if (gekuerzt == text) return
+        text = gekuerzt
+        val alt = breite
+        breite = schrift.measureText(text)
+        // Die zählenden Ziffern lassen das Fenster nicht zappeln: neu messen nur bei spürbar anderer Breite.
+        if (breite > alt + 0.5f || breite < alt - 8 * dp) requestLayout()
+        invalidate()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) =
+        setMeasuredDimension((breite + 2 * rand).toInt() + 1, zeilenHoehe.toInt() + 1)
+
+    override fun onDraw(canvas: Canvas) {
+        form.set(0f, 0f, width.toFloat(), zeilenHoehe)
+        canvas.drawRoundRect(form, zeilenHoehe / 2, zeilenHoehe / 2, flaeche)
+        canvas.drawText(text, width / 2f, zeilenHoehe / 2 - (schrift.descent() + schrift.ascent()) / 2, schrift)
+    }
+}
+
+@SuppressLint("ViewConstructor")
+private class BlasenAnsicht(context: Context, private val vm: AppViewModel, private val zeile: StatusZeile) : View(context) {
     private val dp = resources.displayMetrics.density
     // 2 cm × 0,7 cm: 160 dp je Zoll / 2,54 ≈ 63 dp je Zentimeter.
     private val breite = (126 * dp).toInt()
-    private val hoehe = (44 * dp).toInt()
-    // Die Statuszeile unter der Blase; das Fenster wächst nur so weit wie ihr Text, damit es nichts Fremdes verdeckt.
-    private val zeileAbstand = 4 * dp
-    private val zeileHoehe = 24 * dp
-    private val zeileRand = 11 * dp
-    private val zeileMax = 280 * dp
+    private val hoehe = (HOEHE_DP * dp).toInt()
     private val balken = 13
     private val werte = FloatArray(balken)
     /** Das letzte gezeichnete Bild; daran erkennt [SprachBlase], ob die Zeichenschleife noch läuft. */
@@ -160,23 +238,15 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private val rand = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f * dp; color = (FARBE and 0x00FFFFFF) or (0xD0 shl 24) }
     private val glanz = Paint(Paint.ANTI_ALIAS_FLAG)
     private val strich = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; strokeWidth = 3.2f * dp }
-    private val zeileFlaeche = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xF2140E08.toInt() }
-    private val zeileText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFFE9D6.toInt()
-        textSize = 12.5f * resources.displayMetrics.scaledDensity
-        textAlign = Paint.Align.CENTER
-    }
     private val form = RectF()
-    private var strichHoehe = 0f
+    private val maxHoehe get() = hoehe * 0.7f
 
-    private var zustand = vm.blasenZustand()
-    private var zustandSeit = SystemClock.uptimeMillis()
     private var textStand = -1
     private var textSchritt = ""
-    private var text = ""
-    private var textBreite = 0f
-    /** Kam in dieser Wiedergabe schon ein echter Messwert? Dann sind Pausen echte Pausen; sonst misst der Visualizer nichts und die Ersatzbewegung läuft. */
+    private var letzterRoh = ""
+    /** Kam in dieser Wiedergabe gerade ein echter Messwert? Dann sind Pausen echte Pausen; sonst läuft die Ersatzbewegung. */
     private var wiedergabeGemessen = false
+    private var tonZuletzt = 0L
 
     private val gesten = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
@@ -192,12 +262,14 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         textAktualisieren(SystemClock.uptimeMillis())
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) =
-        setMeasuredDimension(maxOf(breite, (textBreite + 2 * zeileRand).toInt() + 1), hoehe + (zeileAbstand + zeileHoehe).toInt() + 1)
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) = setMeasuredDimension(breite, hoehe)
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        flaeche.shader = LinearGradient(0f, 0f, 0f, hoehe.toFloat(), 0xF2241A10.toInt(), 0xF20E0A06.toInt(), Shader.TileMode.CLAMP)
-        glanz.shader = LinearGradient(0f, 0f, 0f, hoehe * 0.5f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+        flaeche.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), 0xF2241A10.toInt(), 0xF20E0A06.toInt(), Shader.TileMode.CLAMP)
+        glanz.shader = LinearGradient(0f, 0f, 0f, h * 0.5f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+        val mitte = h / 2f
+        // Nur hier: In onDraw entstünden 60 bis 120 Shader je Sekunde neben dem Live-Ton.
+        strich.shader = LinearGradient(0f, mitte - maxHoehe / 2, 0f, mitte + maxHoehe / 2, aufhellen(FARBE), FARBE, Shader.TileMode.MIRROR)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -218,15 +290,17 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     /** Der Wortlaut ändert sich nur bei einem Wechsel oder einmal je Sekunde; dazwischen entsteht hier kein neuer Text. */
     private fun textAktualisieren(jetzt: Long) {
         val neu = vm.blasenZustand()
-        if (neu != zustand) {
-            Logbuch.sprache("Blase", "${zustand.name} → ${neu.name}", jetzt - zustandSeit)
-            zustand = neu
-            zustandSeit = jetzt
+        if (SprachBlase.zustandSeit == 0L) SprachBlase.zustandSeit = jetzt
+        if (neu != SprachBlase.zustand) {
+            Logbuch.sprache("Blase", "${SprachBlase.zustand.name} → ${neu.name}", jetzt - SprachBlase.zustandSeit)
+            SprachBlase.zustand = neu
+            SprachBlase.zustandSeit = jetzt
             wiedergabeGemessen = false
             textStand = -1
         }
+        val zustand = SprachBlase.zustand
         val schritt = if (zustand == BlasenZustand.WERKZEUG) vm.schritt else ""
-        val sekunden = if (zustand == BlasenZustand.WARTET_AUF_ENDE) ceil(vm.blasenStilleRestMs() / 1000f).toInt() else ((jetzt - zustandSeit) / 1000).toInt()
+        val sekunden = if (zustand == BlasenZustand.WARTET_AUF_ENDE) ceil(vm.blasenStilleRestMs() / 1000f).toInt() else ((jetzt - SprachBlase.zustandSeit) / 1000).toInt()
         if (sekunden == textStand && schritt == textSchritt) return
         textStand = sekunden
         textSchritt = schritt
@@ -244,30 +318,25 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
             BlasenZustand.SPRICHT -> "Jarvis spricht"
             BlasenZustand.ANGEHALTEN -> "Jarvis wartet auf dich"
         }
-        text = TextUtils.ellipsize(roh, zeileText, zeileMax - 2 * zeileRand, TextUtils.TruncateAt.END).toString()
-        contentDescription = "$text. Antippen öffnet Jarvis, lang drücken beendet den Sprachmodus."
-        val alt = textBreite
-        textBreite = zeileText.measureText(text)
-        // Das Fenster nur anpassen, wenn es zu klein wird oder die Phase wechselt; die zählenden Ziffern lassen es nicht zappeln.
-        // Nicht mitten im Zeichnen: Das Fenster misst sich danach neu.
-        if (textBreite > alt + 0.5f || (textBreite < alt - 8 * dp)) post { requestLayout() }
+        if (roh == letzterRoh) return
+        letzterRoh = roh
+        zeile.setze(roh)
+        contentDescription = "$roh. Antippen öffnet Jarvis, lang drücken beendet den Sprachmodus."
     }
 
     override fun onDraw(canvas: Canvas) {
         val jetzt = SystemClock.uptimeMillis()
         val schritt = ((jetzt - zuletzt).coerceIn(1, 100)) / 1000f
-        if (jetzt - zuletzt > 1_000 && zuletztGezeichnet) Logbuch.sprache("Blase stand still", "Zustand ${zustand.name}", jetzt - zuletzt)
+        if (jetzt - zuletzt > 1_000 && zuletztGezeichnet) Logbuch.sprache("Blase stand still", "Zustand ${SprachBlase.zustand.name}", jetzt - zuletzt)
         zuletzt = jetzt
         zuletztGezeichnet = true
         val t = jetzt / 1000f
         textAktualisieren(jetzt)
+        val zustand = SprachBlase.zustand
 
-        val w = breite.toFloat()
-        val h = hoehe.toFloat()
+        val w = width.toFloat()
+        val h = height.toFloat()
         val r = h / 2f
-        val links = (width - breite) / 2f
-        canvas.save()
-        canvas.translate(links, 0f)
         form.set(rand.strokeWidth / 2, rand.strokeWidth / 2, w - rand.strokeWidth / 2, h - rand.strokeWidth / 2)
         canvas.drawRoundRect(form, r, r, flaeche)
         canvas.drawRoundRect(form, r, r, glanz)
@@ -275,44 +344,60 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
 
         val abstand = 5.6f * dp
         val start = w / 2 - abstand * (balken - 1) / 2
-        val maxHoehe = h * 0.7f
         val mitte = h / 2
-        // Neuer Verlauf nur bei anderer Höhe: sonst entstünden 60 bis 120 Shader je Sekunde neben dem Live-Ton.
-        if (maxHoehe != strichHoehe) {
-            strichHoehe = maxHoehe
-            strich.shader = LinearGradient(0f, mitte - maxHoehe / 2, 0f, mitte + maxHoehe / 2, aufhellen(FARBE), FARBE, Shader.TileMode.MIRROR)
-        }
 
         // Der Mikrofonpegel ist in normaler Handhaltung klein: gespreizt und über dem Grundrauschen, sonst sähe man nur Punkte.
         val mikro = ((vm.pegel.value - 0.03f) / 0.45f).coerceIn(0f, 1f).let { sqrt(it) }
+        // Ohne erkannte Stimme bleibt die Welle ruhig: Lüfter und Fahrgeräusch im Auto dürfen nicht nach Zuhören mit Sprache aussehen.
+        val nebenbei = if (vm.blasenMitStimmerkennung) 0f else mikro
         // Echter Ton, wenn der Visualizer ihn liefert. Bleibt er stumm (etwa auf manchen Samsung-Tonwegen), die Ersatzbewegung statt Stillstand.
         val ton = if (zustand == BlasenZustand.SPRICHT) WiedergabePegel.pegel else null
-        if (ton != null && ton > 0.05f) wiedergabeGemessen = true
-        val tonPegel = when {
-            wiedergabeGemessen -> ton ?: 0f
-            else -> 0.5f + 0.3f * sin(t * 9f) * sin(t * 3.7f)
+        if (ton != null) {
+            tonZuletzt = jetzt
+            if (ton > 0.05f) wiedergabeGemessen = true
+        } else if (jetzt - tonZuletzt > 1_000) {
+            // Der Visualizer entsteht je Absatz neu und kann einzeln scheitern.
+            wiedergabeGemessen = false
+        }
+        val tonPegel = if (wiedergabeGemessen) ton ?: 0f else 0.5f + 0.3f * sin(t * 9f) * sin(t * 3.7f)
+        val halb = (balken - 1) / 2f
+        val lauf = when (zustand) {
+            BlasenZustand.SCHREIBT_MIT -> wippe(t * 5.2f)
+            BlasenZustand.WERKZEUG -> wippe(t * 3.6f)
+            BlasenZustand.STIMME -> wippe(t * 4.2f) / (balken - 1) * halb
+            else -> wippe(t * 2.6f)
         }
         for (i in 0 until balken) {
-            val lage = (i - (balken - 1) / 2f) / ((balken - 1) / 2f)
+            val lage = (i - halb) / halb
             val huelle = 1f - 0.55f * lage * lage
             // Jeder Balken mit eigener Phase: das Spektrum zittert nach dem Pegel, nicht alle gleich.
             val zittern = 0.6f + 0.4f * sin(t * (7f + i * 1.3f) + i * 2.1f)
-            var deckkraft = 255
-            val ziel = when (zustand) {
-                // Zuhören: große, ruhige Welle; das Mikrofon schwingt schon mit, bevor die Spracherkennung anschlägt.
-                BlasenZustand.HOERT -> maxOf(0.24f + 0.16f * sin(t * 3f - i * 0.6f), mikro * huelle * zittern)
-                // Frank spricht: das Spektrum folgt seiner Stimme und ist immer deutlich höher als beim Warten.
-                BlasenZustand.FRANK_SPRICHT -> maxOf(0.34f, mikro) * huelle * zittern * 1.15f
-                // Nach dem letzten Wort: nur noch ein langsames Atmen, gedimmt.
-                BlasenZustand.WARTET_AUF_ENDE -> { deckkraft = 170; maxOf(0.14f + 0.08f * sin(t * 1.8f), mikro * huelle * zittern) }
-                // Verarbeitung: ein wandernder Lichtpunkt statt eines Spektrums; jede Phase in ihrem eigenen Lauf.
-                BlasenZustand.SCHREIBT_MIT -> { val g = puls(i, wippe(t * 5.2f), 1.3f); deckkraft = 90 + (165 * g).toInt(); 0.12f + 0.62f * g }
-                BlasenZustand.DENKT, BlasenZustand.MIKROFON -> { val g = puls(i, wippe(t * 2.6f), 1.8f); deckkraft = 90 + (165 * g).toInt(); 0.12f + 0.78f * g }
-                BlasenZustand.WERKZEUG -> { val p = wippe(t * 3.6f); val g = maxOf(puls(i, p, 1.2f), puls(i, balken - 1 - p, 1.2f)); deckkraft = 90 + (165 * g).toInt(); 0.12f + 0.72f * g }
-                BlasenZustand.STIMME -> { val halb = (balken - 1) / 2f; val g = maxOf(puls(i, halb + wippe(t * 4.2f) / (balken - 1) * halb, 1.2f), puls(i, halb - wippe(t * 4.2f) / (balken - 1) * halb, 1.2f)); deckkraft = 90 + (165 * g).toInt(); 0.12f + 0.8f * g }
-                // Jarvis spricht: vom Ton getriebene Balken, nach der Mitte hin am höchsten.
-                BlasenZustand.SPRICHT -> if (tonPegel > 0.02f) (tonPegel * 1.3f).coerceAtMost(1f) * huelle * zittern else 0.1f
-                BlasenZustand.ANGEHALTEN -> { deckkraft = 130; 0.14f }
+            // Verarbeitung: ein wandernder Lichtpunkt statt eines Spektrums; jede Phase in ihrem eigenen Lauf.
+            val licht = when (zustand) {
+                BlasenZustand.SCHREIBT_MIT -> puls(i, lauf, 1.3f)
+                BlasenZustand.DENKT, BlasenZustand.MIKROFON -> puls(i, lauf, 1.8f)
+                BlasenZustand.WERKZEUG -> maxOf(puls(i, lauf, 1.2f), puls(i, balken - 1 - lauf, 1.2f))
+                BlasenZustand.STIMME -> maxOf(puls(i, halb + lauf, 1.2f), puls(i, halb - lauf, 1.2f))
+                else -> -1f
+            }
+            val ziel: Float
+            val deckkraft: Int
+            if (licht >= 0f) {
+                ziel = 0.12f + 0.74f * licht
+                deckkraft = 90 + (165 * licht).toInt()
+            } else {
+                deckkraft = when (zustand) { BlasenZustand.WARTET_AUF_ENDE -> 170; BlasenZustand.ANGEHALTEN -> 130; else -> 255 }
+                ziel = when (zustand) {
+                    // Zuhören: große, ruhige Welle; ohne Spracherkennung schwingt der Pegel mit.
+                    BlasenZustand.HOERT -> maxOf(0.24f + 0.16f * sin(t * 3f - i * 0.6f), nebenbei * huelle * zittern)
+                    // Frank spricht: das Spektrum folgt seiner Stimme und ist immer deutlich höher als beim Warten.
+                    BlasenZustand.FRANK_SPRICHT -> maxOf(0.34f, mikro) * huelle * zittern * 1.15f
+                    // Nach dem letzten Wort: nur noch ein langsames Atmen, gedimmt.
+                    BlasenZustand.WARTET_AUF_ENDE -> maxOf(0.14f + 0.08f * sin(t * 1.8f), nebenbei * huelle * zittern)
+                    // Jarvis spricht: vom Ton getriebene Balken, nach der Mitte hin am höchsten.
+                    BlasenZustand.SPRICHT -> if (tonPegel > 0.02f) (tonPegel * 1.3f).coerceAtMost(1f) * huelle * zittern else 0.1f
+                    else -> 0.14f
+                }
             }
             val alt = werte[i]
             val tempo = if (ziel > alt) 22f else 9f
@@ -322,15 +407,6 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
             strich.alpha = deckkraft
             canvas.drawLine(x, mitte - hb / 2 + strich.strokeWidth / 2, x, mitte + hb / 2 - strich.strokeWidth / 2, strich)
         }
-        canvas.restore()
-
-        // Die Statuszeile: dieselbe dunkle Fläche wie die Blase, damit sie über jeder App lesbar bleibt.
-        val zeileOben = h + zeileAbstand
-        val halbe = textBreite / 2 + zeileRand
-        val mitteX = width / 2f
-        form.set(mitteX - halbe, zeileOben, mitteX + halbe, zeileOben + zeileHoehe)
-        canvas.drawRoundRect(form, zeileHoehe / 2, zeileHoehe / 2, zeileFlaeche)
-        canvas.drawText(text, mitteX, zeileOben + zeileHoehe / 2 - (zeileText.descent() + zeileText.ascent()) / 2, zeileText)
 
         // Läuft weiter, solange die Blase hängt: Hörte die Schleife hier auf, weil Jarvis kurz als sichtbar galt, und blieb die Blase beim
         // Abgleich doch hängen, stünde sie danach für immer still. Weggenommen wird sie allein über [SprachBlase.abgleichen].
@@ -353,6 +429,7 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private fun aufhellen(c: Int) = mische(c, 0xFFFFB000.toInt(), 0.45f) // zu Gelb-Orange statt Weiß: bleibt satt
 
     companion object {
+        const val HOEHE_DP = 44f
         // Immer leuchtendes, knalliges Orange (#FF6D00), in jeder Phase (Franks Wunsch).
         private const val FARBE = 0xFFFF6D00.toInt()
     }

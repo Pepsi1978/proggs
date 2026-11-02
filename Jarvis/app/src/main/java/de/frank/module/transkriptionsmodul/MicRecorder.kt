@@ -85,6 +85,10 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
      */
     val sprachRahmen: Long? get() = zeitachse?.sprachRahmen
 
+    /** Die Spracherkennung kommt gleich, rechnet aber noch nicht mit. Wer nur Stimme zählen will (Lüfter im Auto), wartet so lange, statt dem Pegel zu glauben. */
+    val sprachErkennungLaedt: Boolean get() = vadWartet && zeitachse == null
+    @Volatile private var vadWartet = false
+
     /** Nach [stop]: je 32-ms-Rahmen, ob die Aufnahme dort nach Stimme klang; null ohne Spracherkennung. */
     var letzteStimmhaft: BooleanArray? = null
         private set
@@ -215,6 +219,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
             /** So viele Bytes der Aufnahme hat die Zeitachse schon gesehen. */
             var achseStand = 0
             var vadMoeglich = sampleRate == SAMPLE_RATE
+            vadWartet = vadMoeglich
             try {
                 while (isActive && recording.get()) {
                     val read = activeRecorder.read(
@@ -243,6 +248,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                                     // holt die Zeitachse unten portionsweise nach, damit sie genau zur WAV-Datei passt.
                                     if (gesamt - read > MAX_NACHREICHEN_BYTES) {
                                         vadMoeglich = false
+                                            vadWartet = false
                                     } else {
                                         achse = try {
                                             modell.zuruecksetzen()
@@ -250,12 +256,14 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                                         } catch (error: Throwable) {
                                             logger.warning("Silero VAD failed, falling back to level: ${error.message}")
                                             vadMoeglich = false
+                                            vadWartet = false
                                             null
                                         }
                                         achseStand = 0
                                     }
                                 } else if (vadFehlgeschlagen) {
                                     vadMoeglich = false
+                                            vadWartet = false
                                 }
                             }
                             achse?.let { a ->
@@ -277,6 +285,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                                     logger.warning("Silero VAD failed, falling back to level: ${error.message}")
                                     achse = null
                                     vadMoeglich = false
+                                            vadWartet = false
                                     zeitachse = null
                                 }
                             }

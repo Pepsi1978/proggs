@@ -22,4 +22,4 @@ Referenzmessung von 1.8.108). Der aktive Live-Sprachmodus hat Vorrang vor Hinter
 die während eines Gesprächs feuern können, bekommen `setSilent(GespraechsFokus.stilleHinweise)`.
 
 ## Sprachkette messen, ohne zu sprechen
-`adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "…"` startet die Kette wie nach dem Weckwort mit Text statt Mitschrift (nur Shell und System dürfen das). Vorher prüfen, dass Jarvis nicht vorn ist: Der Lauf beginnt ein neues Gespräch. Ergebnis im Logbuch: „Kette Mikrofon“, „Kette Weckwort“, „Blase“.
+`adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "…"` startet die Kette wie nach dem Weckwort mit Text statt Mitschrift (nur Shell und System dürfen das). Der Lauf beginnt ein neues Gespräch und spricht laut, also vorher fragen; ist Jarvis vorn oder läuft schon ein Sprachgespräch, lehnt er ab. Ergebnis im Logbuch: „Kette Mikrofon“, „Kette Weckwort“, „Blase“.
