@@ -191,6 +191,13 @@ public sealed class ProgrammEintrag
     /// <summary>How long an update waits for <see cref="WarteAufProzesse"/> before it gives up.</summary>
     public int WarteMinuten { get; set; } = 90;
 
+    /// <summary>
+    /// Regex on a failed run's output that means "a blocker collided": that run is repeated once
+    /// after waiting. A process that merely happens to run is no evidence -- a killed installer may
+    /// still be working, and repeating would start a second one next to it.
+    /// </summary>
+    public string? SperrFehlerMuster { get; set; }
+
     public string? Hinweis { get; set; }
 
     /// <summary>Text of the "pending" band instead of the default "restart the program" wording.</summary>

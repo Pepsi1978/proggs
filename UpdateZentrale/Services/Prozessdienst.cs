@@ -21,6 +21,22 @@ public sealed record BeendenErgebnis(int Gefunden, IReadOnlyList<ProzessInfo> No
 /// </summary>
 public static class Prozessdienst
 {
+    /// <summary>Whether any process of that name runs, whoever owns it. Unknown counts as no.</summary>
+    public static bool LaeuftNachName(string name)
+    {
+        try
+        {
+            var treffer = Process.GetProcessesByName(name);
+            foreach (var prozess in treffer) prozess.Dispose();
+            return treffer.Length > 0;
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "prozess", Schwere.Warnung);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Snapshot of the entry's live processes. Every Process object created here is disposed
     /// before returning; callers get values only, so no handle ownership leaks out.

@@ -869,11 +869,16 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
                 if (urteil is null)
                 {
+                    // Before the kill question: the program must not stay closed for the whole wait.
+                    if (await kette.SperreAbwartenAsync(abbruch) is { } gesperrt)
+                        urteil = new KettenUrteil(LaufErgebnis.Fehlgeschlagen, gesperrt, vorher, vorher,
+                            pruefung with { Zustand = UpdateZustand.Fehler, Meldung = gesperrt }, 0, false);
+
                     liefVorher = Prozessdienst.Laeuft(Eintrag);
 
                     // Electron/NSIS installers hang silently while the app is running, so the helper
                     // processes go down too -- but only after the user agreed, and only once per chain.
-                    if (Eintrag.BeendenVorUpdate && liefVorher)
+                    if (urteil is null && Eintrag.BeendenVorUpdate && liefVorher)
                     {
                         var laufende = Prozessdienst.Laufende(Eintrag).Count;
                         var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"

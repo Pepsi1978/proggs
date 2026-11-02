@@ -127,16 +127,7 @@ public static class RepoAbgleich
         => !gitLaeuft && jetztUtc - sperreZeitUtc >= SperreMindestalter;
 
     private static bool GitProzessLaeuft()
-    {
-        foreach (var name in new[] { "git", "git-lfs" })
-        {
-            var prozesse = System.Diagnostics.Process.GetProcessesByName(name);
-            var gefunden = prozesse.Length > 0;
-            foreach (var p in prozesse) p.Dispose();
-            if (gefunden) return true;
-        }
-        return false;
-    }
+        => Prozessdienst.LaeuftNachName("git") || Prozessdienst.LaeuftNachName("git-lfs");
 
     /// <summary>
     /// A running git gets a minute to finish. An orphaned lock is removed, because every later git

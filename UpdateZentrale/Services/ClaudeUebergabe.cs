@@ -50,11 +50,13 @@ public static class ClaudeUebergabe
     /// <summary>
     /// Every run the card shows as an error, including "not verified", which can also mean a state that
     /// could not be read: the task tells the session to check that first. Exempt are a run the user
-    /// cancelled, and a line too slow for the tool's own download deadline, which is no code problem.
+    /// cancelled, a line too slow for the tool's own download deadline, and a vendor task that keeps
+    /// blocking the update past its wait: none of them is a code problem.
     /// </summary>
     public static bool AutomatischRelevant(UpdateBericht bericht)
         => bericht.IstFehler
            && !bericht.OhneAutoUebergabe
+           && !(bericht.Meldung ?? "").StartsWith(FremdeSperre.LimitMeldungPraefix, StringComparison.Ordinal)
            && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal)
            && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.NetzGestoertMeldung, StringComparison.Ordinal);
 

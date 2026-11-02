@@ -25,10 +25,12 @@ Error 0x80131500: ... Der Ordner ... Installer ... ist durch ein anderes Program
 Die Reparatur gilt für jede fremde Sperre, die nicht beendet werden darf:
 
 - **Katalogfeld `warteAufProzesse`** (dazu `warteMinuten`, Vorgabe 90): Prozessnamen, auf die ein Update wartet. Abgleich nur über den Namen, weil ein SYSTEM-Prozess seinen Pfad vor einem normalen Benutzer verbirgt.
-- **`Services/FremdeSperre` in `UpdateKette`:** Prüft vor jedem Durchlauf alle 30 Sekunden, für alle Update-Arten. Die Karte zeigt „Wartet auf …“. Nach dem Limit meldet das Update den Prozess als Grund und beendet ihn nie.
-- **Ein zweiter Versuch:** Scheitert ein Lauf, während die Sperre läuft (die Aufgabe kann mitten im Lauf starten), wartet die Kette und versucht es einmal neu.
-- **vs2026** trägt `"warteAufProzesse": ["BackgroundDownload"]`.
+- **`Services/FremdeSperre` in `UpdateKette`:** Prüft vor jedem Durchlauf alle 30 Sekunden, für alle Update-Arten. Die Karte zeigt „Wartet auf …“. Die Karte wartet schon vor der Beenden-Frage, damit kein Programm während der Wartezeit geschlossen bleibt. Eine ganze Kette teilt sich ein Zeitbudget.
+- **Nach dem Limit:** Das Update meldet den Prozess als Grund und beendet ihn nie. Diese Meldung startet keine automatische Reparatursitzung, weil es kein Code-Fehler ist.
+- **Ein zweiter Versuch:** Katalogfeld `sperrFehlerMuster` (hier `\b5002\b`). Nennt die Ausgabe den Zusammenstoß (die Aufgabe kann mitten im Lauf starten), wartet die Kette und versucht es genau einmal neu. Ein zufällig laufender Prozess allein reicht nicht: Ein abgewürgter Installer könnte noch arbeiten, und ein zweiter liefe daneben.
+- **vs2026 und vs2022-buildtools** tragen beide Felder, denn beide nutzen denselben Installer-Ordner.
 - **Bewusst nicht:** Prozess beenden oder Aufgabe abschalten. Dafür fehlen die Rechte, und der fertige Download verkürzt das Update.
+- **Bewusst hingenommen:** Während des Wartens hält das Update die globale Laufkoordination wie ein laufendes Update auch. Das VS-Update selbst darf sie bis zu 120 Minuten halten.
 
 ## Vorgehen, wenn es wieder auftritt
 

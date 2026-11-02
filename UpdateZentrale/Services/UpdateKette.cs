@@ -36,7 +36,8 @@ public sealed record KettenUrteil(
 /// one, ends the chain after this pass -- the same update command is never repeated.</item>
 /// <item>No progress → stop at once, the same command is not repeated. Failure, cancel and a
 /// staged update (ErstNachNeustart) end the chain immediately. A check that fails or is unknown
-/// is never success.</item>
+/// is never success. The one exception: a failure whose output names a foreign blocker's collision
+/// (catalog: sperrFehlerMuster) runs once more after the blocker ended.</item>
 /// </list>
 /// The component writes no log file; the caller writes exactly one header and one footer.
 /// </summary>
@@ -54,6 +55,11 @@ public sealed class UpdateKette
     public TimeSpan AbschlussLesegrenze { get; init; } = TimeSpan.FromSeconds(20);
 
     internal const string NichtLesbar = "(nicht lesbar)";
+
+    /// <summary>Test seam: the blocking processes running now.</summary>
+    internal Func<IReadOnlyList<string>>? SperrLaufende { get; init; }
+
+    private TimeSpan _gewartet;
 
     public UpdateKette(IAktualisierer aktualisierer, ProgrammEintrag eintrag, IProgress<string> protokoll,
                        Action<string>? status = null, Func<TimeSpan, CancellationToken, Task>? warten = null)
@@ -85,6 +91,25 @@ public sealed class UpdateKette
                 fingerabdruck, fingerabdruck, vor with { Meldung = "Auf dem neuesten Stand." }, 0, false)
             : null;
 
+    /// <summary>
+    /// Waits for foreign blockers; null = free. Public so the caller can wait BEFORE it closes the
+    /// program: it must not stay closed for the whole wait. One budget for the whole chain.
+    /// </summary>
+    public async Task<string?> SperreAbwartenAsync(CancellationToken abbruch)
+    {
+        var uhr = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            return await FremdeSperre.AbwartenAsync(_eintrag, _protokoll, _status,
+                TimeSpan.FromMinutes(_eintrag.WarteMinuten) - _gewartet,
+                SperrLaufende ?? (() => FremdeSperre.Laufende(_eintrag.WarteAufProzesse)), _warten, abbruch);
+        }
+        finally
+        {
+            _gewartet += uhr.Elapsed;
+        }
+    }
+
     public async Task<KettenUrteil> AusfuehrenAsync(string fingerabdruckStart, PruefErgebnis vor, CancellationToken abbruch)
     {
         var uebergaenge = new List<string>();
@@ -96,14 +121,16 @@ public sealed class UpdateKette
         var standNach = fingerabdruckStart;
         var arbeitSekunden = 0.0;   // time inside the provider's update calls only
 
-        var sperrWiederholt = false;
+        PruefErgebnis? sperrFehler = null;
 
         for (var durchlauf = 1; durchlauf <= MaxDurchlaeufe; durchlauf++)
         {
-            if (await FremdeSperre.AbwartenAsync(_eintrag, _protokoll, _status, abbruch) is { } gesperrt)
+            if (await SperreAbwartenAsync(abbruch) is { } gesperrt)
             {
                 standNach = await StandNachAbschlussAsync();
-                return Ende(LaufErgebnis.Fehlgeschlagen, gesperrt, new PruefErgebnis(UpdateZustand.Fehler, Meldung: gesperrt));
+                var meldung = sperrFehler is null ? gesperrt : gesperrt + " Vorheriger Fehler: " + sperrFehler.Meldung;
+                return Ende(LaufErgebnis.Fehlgeschlagen, meldung,
+                    (sperrFehler ?? new PruefErgebnis(UpdateZustand.Fehler)) with { Meldung = meldung });
             }
 
             if (durchlauf > 1)
@@ -136,11 +163,10 @@ public sealed class UpdateKette
             if (ergebnis.Zustand is UpdateZustand.Fehler or UpdateZustand.NichtInstalliert)
             {
                 // The blocker started while the installer was running: once more after it ended.
-                if (ergebnis.Zustand == UpdateZustand.Fehler && !sperrWiederholt
-                    && FremdeSperre.Laufende(_eintrag.WarteAufProzesse).Count > 0)
+                if (sperrFehler is null && FremdeSperre.IstSperrFehler(_eintrag, ergebnis))
                 {
-                    sperrWiederholt = true;
-                    _protokoll.Report("Fehlgeschlagen, während ein sperrender Prozess lief – neuer Versuch, sobald er beendet ist.");
+                    sperrFehler = ergebnis;
+                    _protokoll.Report("Das Update ist an einem sperrenden Prozess gescheitert – ein neuer Versuch, sobald er beendet ist.");
                     durchlauf--;
                     continue;
                 }
