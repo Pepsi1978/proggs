@@ -19,8 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import efforts as effort_tabelle  # noqa: E402
+import efforts as effort_tabelle
 
 HOME = Path.home()
 PROGGS = HOME / "proggs"
@@ -351,18 +350,47 @@ if [ -n "$PROMPT" ]; then codex {argumente} "$PROMPT"; else codex {argumente}; f
 '''
 
 
-def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus: str) -> str:
+def pruefe_anbieter(anbieter: str) -> None:
+    """Vor dem Aufräumen aufrufen: Für einen Auftrag, der hier nie startet, darf keine offene Sitzung weichen."""
+    if anbieter.lower() in NUR_LOKAL:
+        raise ValueError("LM-Studio-Modelle laufen nur auf deinem eigenen Rechner, nicht auf dem Hostinger-Server.")
+
+
+def _gemerkte_stufen() -> dict:
+    try:
+        gemerkt = json.loads(_lies(PROGGS / "OpenLauncher" / "effort-stufen.json") or "{}")
+    except ValueError:
+        return {}
+    return gemerkt if isinstance(gemerkt, dict) else {}
+
+
+def _anzeigename(anbieter: str, slug: str) -> str:
+    try:
+        gruppen = json.loads(_lies(PROGGS / "OpenLauncher" / "models.json") or "[]")
+    except ValueError:
+        return slug
+    for gruppe in gruppen:
+        for m in gruppe.get("Models") or []:
+            if m.get("Slug") == slug and str(m.get("ProviderId", "")).lower() == anbieter:
+                return m.get("DisplayName") or slug
+    return slug
+
+
+def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus: str, name: str) -> str:
     agents_aktivieren(profil, modus)
     opencode_plugin()
     globale_skills()
     q = shlex.quote
     # Der Slug kann selbst Schrägstriche tragen (openrouter: moonshotai/kimi-k3); der Anbieter gehört immer davor, wie ModelEntry.ModelString.
     kennung = effort_tabelle.modell_string(anbieter, modell)
-    # OpenCode kennt den Anbieter nvidia nur mit diesem Schlüssel in der Umgebung (BuildNvidiaKeyScript am PC).
+    if anbieter:
+        kennung = f"{anbieter}/{kennung.split('/', 1)[1]}"
+    # OpenCode kennt den Anbieter nvidia nur mit diesem Schlüssel in der Umgebung (BuildNvidiaKeyScript am PC: letzte Zeile, ohne Rand und Anführungszeichen).
     nvidia = ""
-    if kennung.startswith("nvidia/"):
-        nvidia = '''NVIDIA_API_KEY="$(sed -n 's/^[[:space:]]*NVIDIA_API_KEY[[:space:]]*=[[:space:]]*//p' "$HOME/SK/NvidiaDev/.env" 2>/dev/null | head -1 | tr -d "\\"'\\r")"
-[ -n "$NVIDIA_API_KEY" ] && export NVIDIA_API_KEY || echo "[OpenLauncher] Kein NVIDIA-Schlüssel in ~/SK/NvidiaDev/.env."
+    if anbieter == "nvidia":
+        nvidia = '''NVIDIA_WERT="$(sed -n 's/^[[:space:]]*NVIDIA_API_KEY[[:space:]]*=[[:space:]]*//p' "$HOME/SK/NvidiaDev/.env" 2>/dev/null | tail -1 | tr -d "\\"'\\r" | sed 's/[[:space:]]*$//')"
+[ -n "$NVIDIA_WERT" ] && export NVIDIA_API_KEY="$NVIDIA_WERT"
+[ -n "${NVIDIA_API_KEY:-}" ] || { echo "[OpenLauncher] Kein NVIDIA-Schlüssel in ~/SK/NvidiaDev/.env, OpenCode kennt den Anbieter dann nicht."; sleep 5; }
 '''
     # Wie patchModelVariantState am Mac: Die Oberfläche von OpenCode kennt --variant nicht, die Stufe steht in ihrem Zustand.
     zustand = HOME / ".local" / "state" / "opencode" / "model.json"
@@ -376,12 +404,18 @@ def _opencode_rumpf(modell: str, anbieter: str, effort: str, profil: str, modus:
         daten.setdefault("variant", {}).pop(kennung, None)
     _schreib(zustand, json.dumps(daten, ensure_ascii=False))
     # Auch OpenCode nutzt den einen Browser des Servers, nie einen eigenen je Sitzung.
-    profil_datei = ZUSTAND / "opencode-profil.json"
+    # Je Sitzung eine Datei: Parallele Starts überschrieben sich sonst den Modelleintrag.
+    profil_datei = SKRIPTE / f"opencode-{name}.json"
     konfig = {"$schema": "https://opencode.ai/config.json", "mcp": {"chrome-devtools": {"type": "local", "command": ["bash", str(BROWSER_MCP)], "enabled": True},
                                                                     "chrome-personal": {"enabled": False}}}
     # Wie PatchDirectModel am PC: Was nicht im Katalog von OpenCode steht, bräche sonst als unbekanntes Modell ab. OpenCode führt den Eintrag mit seinem Katalog zusammen.
-    if anbieter.lower() in ("nvidia", "openrouter", "google", "opencode") and kennung.startswith(f"{anbieter}/"):
-        konfig["provider"] = {anbieter: {"models": {kennung[len(anbieter) + 1:]: {"name": modell}}}}
+    if anbieter:
+        lokal = kennung.split("/", 1)[1]
+        eintrag = {"models": {lokal: {"name": _anzeigename(anbieter, modell)}}}
+        # Die Whitelist der globalen Konfiguration blendet sonst jedes dort nicht genannte OpenAI-Modell aus.
+        if anbieter == "openai" and f'"{lokal}"' not in _lies(HOME / ".config" / "opencode" / "opencode.jsonc"):
+            eintrag["whitelist"] = [lokal]
+        konfig["provider"] = {anbieter: eintrag}
     _schreib(profil_datei, json.dumps(konfig))
     return nvidia + f'''export OPENCODE_CONFIG={q(str(profil_datei))} OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 OPENLAUNCHER_MODEL={q(kennung)} OPENLAUNCHER_SOURCE=OpenLauncher OPENLAUNCHER_WORK_MODE={q(modus)}
 mkdir -p "$HOME/.local/share/opencode/log/stderr"
@@ -398,8 +432,15 @@ def _kimi_rumpf(modell: str, effort: str, profil: str, modus: str) -> str:
         _kimi_effort(alias, effort)
     q = shlex.quote
     # Kimi kennt keine erste Nachricht für die Oberfläche, nur -p (ein Durchlauf); danach geht dieselbe Sitzung interaktiv weiter.
-    # -p läuft ohnehin ohne Rückfragen; zusammen mit --auto bricht Kimi ab seit 2.4 mit „Cannot combine --prompt with --auto“ ab, der Auftrag käme nie an.
-    return f'''if [ -n "$PROMPT" ]; then kimi -m {q(alias)} -p "$PROMPT"; kimi --auto -m {q(alias)} -c; else kimi --auto -m {q(alias)}; fi
+    # -p läuft ohnehin ohne Rückfragen; zusammen mit --auto bricht Kimi seit 2.4 mit „Cannot combine --prompt with --auto“ ab, der Auftrag käme nie an.
+    # Weiter genau mit der Kennung dieses Laufs: -c nähme die neueste Sitzung im Ordner, also womöglich die eines parallelen Auftrags.
+    return f'''if [ -n "$PROMPT" ]; then
+  AUSGABE="$(mktemp)"
+  kimi -m {q(alias)} -p "$PROMPT" 2>&1 | tee "$AUSGABE"
+  FORT="$(sed -n 's/.*kimi -r \\(session_[A-Za-z0-9_-]*\\).*/\\1/p' "$AUSGABE" | tail -1)"
+  rm -f "$AUSGABE"
+  if [ -n "$FORT" ]; then kimi --auto -m {q(alias)} -r "$FORT"; else echo "[OpenLauncher] Der Kimi-Lauf hat keine Sitzung hinterlassen, es startet eine neue."; kimi --auto -m {q(alias)}; fi
+else kimi --auto -m {q(alias)}; fi
 '''
 
 
@@ -439,7 +480,7 @@ def _sitzungsname(titel: str) -> str:
 
 
 def _sitzungsdateien(name: str) -> list:
-    return [SITZUNGEN / f"{name}{endung}" for endung in (".json", ".fertig", ".aktiv", ".ruhe", ".werkzeug")] + [SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt"]
+    return [SITZUNGEN / f"{name}{endung}" for endung in (".json", ".fertig", ".aktiv", ".ruhe", ".werkzeug")] + [SKRIPTE / f"start-{name}.sh", SKRIPTE / f"auftrag-{name}.txt", SKRIPTE / f"opencode-{name}.json"]
 
 
 def _tmux_starten(name: str, skript: Path) -> None:
@@ -457,13 +498,16 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     """Startet eine CLI und liefert den Namen der tmux-Sitzung."""
     if cli not in CLIS:
         raise ValueError(f"Unbekanntes CLI: {cli}")
-    if anbieter.lower() in NUR_LOKAL:
-        raise ValueError("LM-Studio-Modelle laufen nur auf deinem eigenen Rechner, nicht auf dem Hostinger-Server.")
+    anbieter = anbieter.lower()
+    pruefe_anbieter(anbieter)
     pruefe_wahl(profil, modus)
     if nummer and not re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer):
         raise ValueError("Ungültige Auftragsnummer")
     # Wie am Mac: Was das CLI nicht kennt, entfällt, und das Modell nimmt seine Standardstufe.
     effort = effort if effort in EFFORTS[cli] else ""
+    # OpenCode legte sonst eine Stufe ab, die das Modell gar nicht hat (die Brücke setzt ohne Angabe high).
+    if cli == "opencode" and anbieter and effort not in effort_tabelle.fuer_cli(anbieter, modell, cli, _gemerkte_stufen()):
+        effort = ""
     aufraeumen()
     repo_abgleich()
     titel = titel or f"{cli}: {modell}"
@@ -479,7 +523,7 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     elif cli == "codex":
         rumpf = _codex_rumpf(modell, effort, profil, modus)
     elif cli == "opencode":
-        rumpf = _opencode_rumpf(modell, anbieter, effort, profil, modus)
+        rumpf = _opencode_rumpf(modell, anbieter, effort, profil, modus, name)
     elif cli == "kimi":
         rumpf = _kimi_rumpf(modell, effort, profil, modus)
     else:
@@ -714,10 +758,7 @@ def katalog() -> dict:
         standards = json.loads(_lies(PROGGS / "OpenLauncher" / "model-defaults.json") or "{}")
     except ValueError:
         gruppen, standards = [], {}
-    try:
-        gemerkt = json.loads(_lies(PROGGS / "OpenLauncher" / "effort-stufen.json") or "{}")
-    except ValueError:
-        gemerkt = {}
+    gemerkt = _gemerkte_stufen()
     for gruppe in gruppen:
         anbieter = str(gruppe.get("ProviderId") or gruppe.get("Id") or "").lower()
         if anbieter in NUR_LOKAL:
@@ -727,13 +768,13 @@ def katalog() -> dict:
             slug = m.get("Slug", "")
             if not slug or m.get("IsHidden") or slug in verborgen:
                 continue
-            standard = standards.get(f"{anbieter}/{slug}") or {}
+            standard = standards.get(effort_tabelle.modell_string(anbieter, slug)) or {}
             clis = clis_fuer(anbieter)
             modelle.append({"slug": slug, "name": m.get("DisplayName") or slug, "anbieter": anbieter, "gruppe": gruppe.get("Title") or anbieter,
                             "clis": clis, "profil": standard.get("ProfileId") or "minimal", "modus": standard.get("WorkModeId") or "schnell",
                             "effort": standard.get("ThinkingValue") or "high", "cli": standard.get("CliTargetId") or "",
-                            # Wie der Knopf in Jarvis: je Modell nur die Stufen, die OpenLauncher ihm anbietet.
-                            "efforts": {c: effort_tabelle.fuer_cli(anbieter, slug, c, gemerkt) for c in clis}})
+                            # Wie der Knopf in Jarvis: je Modell nur die Stufen, die OpenLauncher ihm anbietet, und davon nur, was starten() auch weitergibt.
+                            "efforts": {c: [e for e in effort_tabelle.fuer_cli(anbieter, slug, c, gemerkt) if e in EFFORTS[c]] for c in clis}})
     return {"modelle": modelle, "profile": list(PROFIL_IDS), "modi": list(MODUS_IDS)}
 
 

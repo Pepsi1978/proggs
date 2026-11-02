@@ -1,6 +1,6 @@
 """Effort-Stufen je Modell für die Server-Konsole: dieselbe Tabelle wie Jarvis/.../faehigkeit/OpenLauncherEfforts.kt (Vorlage: OpenCodeVariantCatalog.GetLauncherLevels).
 
-Ändert sich die Tabelle dort, muss sie hier mit.
+Ändert sich die Tabelle dort, muss sie hier mit. Einzige Abweichung vom PC: Claude Opus 5.5 kennt Windows nur aus seinem gemerkten Stand.
 """
 from __future__ import annotations
 
@@ -31,25 +31,31 @@ def _anthropic(roh: str) -> list:
     return BREIT if s == "claude-opus-4-5" else []
 
 
-def _openai(s: str) -> list:
+def _gpt(s: str, codex_sonst: list) -> list | None:
+    """Die gemeinsamen GPT-Regeln von direktem OpenAI und OpenRouter; None: Der Aufrufer entscheidet über den Rest."""
     if s in SOL_FAMILIE:
         return AKTUELL
     if s == "gpt-6-luna":
         return LUNA
-    if "-mini" in s or "-nano" in s:
-        return []
     if "-chat" in s:
         return ["medium"]
     if "pro" in s:
         return ["medium", "high", "xhigh"] if "gpt-5." in s else ["high"]
     if "codex" in s:
-        return GPT52 if any(v in s for v in ("gpt-5.3", "gpt-5.4", "gpt-5.5")) else BREIT
+        return GPT52 if any(v in s for v in ("gpt-5.3", "gpt-5.4", "gpt-5.5")) else codex_sonst
     if s.startswith("gpt-6"):
         return GPT52
     if s.startswith("gpt-5.1"):
         return ["none", "low", "medium", "high"]
-    if s.startswith("gpt-5."):
-        return GPT52
+    return GPT52 if s.startswith("gpt-5.") else None
+
+
+def _openai(s: str) -> list:
+    if s not in SOL_FAMILIE and s != "gpt-6-luna" and ("-mini" in s or "-nano" in s):
+        return []
+    stufe = _gpt(s, BREIT)
+    if stufe is not None:
+        return stufe
     return ["minimal", "low", "medium", "high"] if s.startswith("gpt-5") else []
 
 
@@ -76,24 +82,8 @@ def _glm52(s: str) -> bool:
 
 
 def _openai_kompatibel(kennung: str) -> list:
-    s = kennung.removeprefix("openai/")
-    if s in SOL_FAMILIE:
-        return AKTUELL
-    if s == "gpt-6-luna":
-        return LUNA
-    if "-chat" in s:
-        return ["medium"]
-    if "pro" in s:
-        return ["medium", "high", "xhigh"] if "gpt-5." in s else ["high"]
-    if "codex" in s:
-        return GPT52 if any(v in s for v in ("gpt-5.3", "gpt-5.4", "gpt-5.5")) else ["low", "medium", "high", "xhigh"]
-    if s.startswith("gpt-6"):
-        return GPT52
-    if s.startswith("gpt-5.1"):
-        return ["none", "low", "medium", "high"]
-    if s.startswith("gpt-5."):
-        return GPT52
-    return ["none", "minimal", "low", "medium", "high", "xhigh"]
+    stufe = _gpt(kennung.removeprefix("openai/"), ["low", "medium", "high", "xhigh"])
+    return stufe if stufe is not None else ["none", "minimal", "low", "medium", "high", "xhigh"]
 
 
 def _openrouter(s: str) -> list:
@@ -103,15 +93,7 @@ def _openrouter(s: str) -> list:
         return []
     if _glm52(s):
         return ["high", "xhigh"]
-    if "grok-3-mini" in s:
-        return ["low", "high"]
-    if s.startswith("openai/") or "gpt" in s:
-        return _openai_kompatibel(s)
-    if "minimax" in s or "grok" in s:
-        return []
-    if any(t in s for t in ("deepseek-chat", "deepseek-reasoner", "deepseek-r1", "deepseek-v3", "glm", "kimi", "k2p", "qwen", "big-pickle")):
-        return []
-    return BREIT
+    return _openai_kompatibel(s) if s.startswith("openai/") or "gpt" in s else BREIT
 
 
 def stufen(anbieter: str, slug_roh: str) -> list:
@@ -145,6 +127,7 @@ def fuer_cli(anbieter: str, slug: str, cli: str, gemerkt: dict) -> list:
         return stufen(anbieter, slug)
     schluessel = modell_string(anbieter, slug)
     wert = gemerkt.get(f"{schluessel} [{'claude-code' if cli == 'claude' else cli}]")
-    if wert is None:
+    # Der Stand ohne CLI-Zusatz gehört zum Zugang über OpenCode; für Codex gilt er nicht (MainViewModel am PC).
+    if wert is None and cli != "codex":
         wert = gemerkt.get(schluessel)
-    return wert if wert is not None else stufen(anbieter, slug)
+    return wert if isinstance(wert, list) else stufen(anbieter, slug)

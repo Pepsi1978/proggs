@@ -154,6 +154,7 @@ def starte(auftrag: dict, w: dict) -> str:
 def bearbeite(auftrag: dict, zugang: dict) -> None:
     w = wahl(auftrag)
     try:
+        launcher.pruefe_anbieter(w["anbieter"])
         if launcher.belegt():
             raise RuntimeError("Der Hostinger-Server ist gerade ausgelastet.")
         # Nicht angemeldet: sicher nicht gestartet, also darf der nächste Rechner oder die Cloud übernehmen. Der Server läuft unbeaufsichtigt;
@@ -242,7 +243,7 @@ def main() -> int:
         return 0
     schreib("Brücke gestartet")
     threading.Thread(target=fortschritt_faden, daemon=True).start()
-    dateien = [Path(__file__), Path(launcher.__file__), Path(launcher.effort_tabelle.__file__)]
+    dateien = [Path(__file__), *sorted(Path(launcher.__file__).parent.glob("*.py"))]
     stand = [d.stat().st_mtime for d in dateien]
     pause, geprueft = 2, False
     letzter_scan = 0.0
