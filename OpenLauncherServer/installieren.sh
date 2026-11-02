@@ -105,6 +105,9 @@ if ! command -v pwsh >/dev/null; then
   rm -f /tmp/ms.deb
 fi
 
+# Jarvis und Second Brain in allen CLIs; die Jarvis-Adresse kommt aus ~/SK.
+als "python3 $REPO/OpenLauncherServer/kern/mcp_anbindung.py" || echo "MCP-Anbindung unvollständig"
+
 install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
 if command -v ufw >/dev/null; then ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null; else echo "ufw fehlt: Port 8090 auf wg0 selbst freigeben"; fi

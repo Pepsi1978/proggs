@@ -131,3 +131,5 @@ if __name__ == "__main__":
     os.environ["TZ"] = "Europe/Berlin"
     time.tzset()
     print(json.dumps(status_schreiben("aktualisieren" in sys.argv), ensure_ascii=False, indent=1))
+    import mcp_anbindung  # Nach den Updates: Eine neu installierte CLI bekommt ihre MCP-Server so spätestens beim nächsten Lauf.
+    mcp_anbindung.anbinden()

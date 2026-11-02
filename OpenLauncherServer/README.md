@@ -11,6 +11,7 @@ Programmieraufträge von Jarvis auf dem Hostinger-Server: dieselben CLIs, Modell
 | Repo vorspulen alle 5 Minuten; Dienste starten bei neuer Fassung selbst neu | `kern/launcher.py abgleich` | `jarvis-repo.timer` |
 | Tmux ohne Präfix (`tmux.conf`, beim Konsolenstart auch im laufenden tmux gesetzt), damit Strg+B bei der CLI ankommt | `kern/launcher.py tmux_praefix_aus` | Konsole |
 | tmux mit Speicher- und CPU-Deckel | `systemd/jarvis-tmux.service` | enthält alle Sitzungen |
+| Jarvis und Second Brain in allen CLIs (Adresse aus `~/SK`, nie im Repo) | `kern/mcp_anbindung.py` | `installieren.sh` und `jarvis-clis.timer` |
 | Regeln für Sitzungen auf dem Server (gehen dem Profil vor) | `server-zusatz.md` | wird an Profil und Modus gehängt |
 
 **Einrichten:** Vom Mac `~/SK/Jarvis/relay.properties`, `~/SK/Jarvis/plugin-url.txt`, `~/SK/Jarvis/fernsteuerung-token.txt` und `~/SK/Android/debug-shared.keystore` und `~/SK/NvidiaDev/.env` an dieselbe Stelle unter `/home/jarvis/SK/` kopieren (also `/home/jarvis/SK/NvidiaDev/.env`), aus der `auth.json` von OpenCode die API-Einträge für OpenRouter, Google und OpenCode Go in die des Servers übernehmen (sonst scheitern Modelle dieser Anbieter erst beim Start; LM Studio läuft nur am eigenen Rechner), dann `installieren.sh` als root ausführen (beliebig oft ausführbar). Meldet es `DEPLOY_KEY_FEHLT`, den genannten Schlüssel mit `gh repo deploy-key add --allow-write` eintragen und neu starten. Danach in der Konsole unter System anmelden.
