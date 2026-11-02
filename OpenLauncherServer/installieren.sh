@@ -8,7 +8,9 @@ REPO=$ZUHAUSE/proggs
 als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.local" PATH="$ZUHAUSE/.local/bin:$ZUHAUSE/.local/node/bin:$ZUHAUSE/android-sdk/cmdline-tools/latest/bin:$ZUHAUSE/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin" bash -c "cd ~; $1"; }
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless openjdk-21-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox python3-pip python3-venv pipx build-essential ffmpeg shellcheck shfmt bat fzf tree git-delta
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless openjdk-21-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox
+# Eigener Aufruf: Fehlt eines dieser Werkzeuge in den Paketquellen, darf das die Einrichtung nicht stoppen.
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-venv pipx build-essential ffmpeg shellcheck shfmt bat fzf tree git-delta || echo "Zusatzwerkzeuge unvollständig"
 
 # gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
 install -d -m 0755 /etc/apt/keyrings
@@ -60,6 +62,8 @@ if [ ! -x "$ZUHAUSE/android-sdk/platform-tools/adb" ]; then
   als 'mkdir -p ~/android-sdk/cmdline-tools && cd ~/android-sdk/cmdline-tools && curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip && unzip -qo tools.zip && rm -rf latest && mv cmdline-tools latest && rm tools.zip'
   als 'yes | sdkmanager --licenses >/dev/null 2>&1 || true; sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null'
 fi
+# apksigner für die Signatur-Rotation; launcher.PFADE zeigt auf genau diese Fassung.
+[ -x "$ZUHAUSE/android-sdk/build-tools/36.0.0/apksigner" ] || als 'sdkmanager "build-tools;36.0.0" >/dev/null' || echo "build-tools 36.0.0 nicht installiert"
 als 'mkdir -p ~/.gradle ~/.android && cat > ~/.gradle/gradle.properties <<G
 # Auf den Server begrenzt (2 vCPU, Speicherdeckel in jarvis-tmux.service).
 org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8
@@ -95,8 +99,6 @@ als 'npm install -g --silent typescript@latest tsx@latest @biomejs/biome@latest 
 als 'command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh' || echo "uv nicht installiert"
 # Ubuntu nennt bat batcat; Skills und Gewohnheit erwarten bat.
 als 'ln -sf /usr/bin/batcat ~/.local/bin/bat'
-# apksigner für die Signatur-Rotation: ~/.local/bin steht auch im PATH der Sitzungen.
-als 'ln -sf ~/android-sdk/build-tools/36.0.0/apksigner ~/.local/bin/apksigner'
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
 # Nur beim ersten Mal (jeder Lauf legt eine Sicherung an); der Mac-Build des Skripts gehört nicht hierher.
 [ -f "$ZUHAUSE/.config/opencode/plugins/work-mode.js" ] || als 'OPENCODE_SKIP_MACFIX=1 bash ~/proggs/opencode-setup/install.sh' || echo "OpenCode-Setup unvollständig"

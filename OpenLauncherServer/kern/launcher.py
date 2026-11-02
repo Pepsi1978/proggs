@@ -52,7 +52,7 @@ FREI_ZU_S = 24 * 3600  # freie PowerShells: Eine vergessene hielte sonst das Pow
 INTERN = ("basis", "browser")  # tmux-Sitzungen des Dienstes, nie zum Anzeigen oder Schließen
 NAME = re.compile(r"[A-Za-z0-9._-]{1,80}")
 # Einzige Liste der Werkzeugpfade für Startskripte und CLI-Updates (installieren.sh führt für die eigene Shell dieselben).
-PFADE = ".local/bin .local/node/bin .kimi-code/bin .agy/bin android-sdk/platform-tools android-sdk/cmdline-tools/latest/bin".split()
+PFADE = ".local/bin .local/node/bin .kimi-code/bin .agy/bin android-sdk/platform-tools android-sdk/build-tools/36.0.0 android-sdk/cmdline-tools/latest/bin".split()
 
 
 def _lies(pfad: Path) -> str:
@@ -251,15 +251,15 @@ def agents_aktivieren(profil: str, modus: str) -> None:
 
 
 def codex_zuhause() -> Path:
-    """Eigenes Zuhause wie am Mac: keine globale AGENTS.md, keine Plugins, als einziger MCP-Server die Browser-Steuerung. Die Anmeldung liegt ebenfalls hier."""
+    """Eigenes Zuhause wie am Mac: keine globale AGENTS.md, keine Plugins, als MCP-Server die Browser-Steuerung (Jarvis und Second Brain trägt mcp_anbindung.py ein, darum nur für den Benutzer lesbar). Die Anmeldung liegt ebenfalls hier."""
     zuhause = ZUSTAND / "codex-home"
     zuhause.mkdir(parents=True, exist_ok=True)
     _schreib(zuhause / "AGENTS.md", "")
     konfig = zuhause / "config.toml"
     if not konfig.exists():
-        _schreib(konfig, f'# Von OpenLauncher Server angelegt. Codex ergänzt hier selbst seine Vertrauensstufen.\n\n[projects."{PROGGS}"]\ntrust_level = "trusted"\n')
+        _schreib(konfig, f'# Von OpenLauncher Server angelegt. Codex ergänzt hier selbst seine Vertrauensstufen.\n\n[projects."{PROGGS}"]\ntrust_level = "trusted"\n', 0o600)
     if "mcp_servers.chrome-devtools" not in _lies(konfig):
-        _schreib(konfig, _lies(konfig).rstrip("\n") + f'\n\n[mcp_servers.chrome-devtools]\ncommand = "bash"\nargs = ["{BROWSER_MCP}"]\n')
+        _schreib(konfig, _lies(konfig).rstrip("\n") + f'\n\n[mcp_servers.chrome-devtools]\ncommand = "bash"\nargs = ["{BROWSER_MCP}"]\n', 0o600)
     globale_skills()
     return zuhause
 
@@ -498,6 +498,9 @@ def starten(cli: str, modell: str, anbieter: str = "", effort: str = "high", pro
     """Startet eine CLI und liefert den Namen der tmux-Sitzung."""
     if cli not in CLIS:
         raise ValueError(f"Unbekanntes CLI: {cli}")
+    # Beim Start statt nur im Timer: Eine neue Jarvis-Adresse oder ein neues Profil gilt so sofort. Hier, nicht oben im Modul: mcp_anbindung importiert launcher.
+    import mcp_anbindung
+    mcp_anbindung.anbinden()
     anbieter = anbieter.lower()
     pruefe_anbieter(anbieter)
     pruefe_wahl(profil, modus)

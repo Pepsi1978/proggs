@@ -18,33 +18,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import launcher  # noqa: E402
 
 HOME = Path.home()
+KERN = Path(__file__).resolve().parent
 STATUS = launcher.ZUSTAND / "cli-status.json"
 UMGEBUNG = dict(os.environ, PATH=":".join([f"{HOME}/{p}" for p in launcher.PFADE] + [os.environ.get("PATH", "")]),
                 CLAUDE_CONFIG_DIR=str(launcher.claude_ordner("minimal")), CODEX_HOME=str(launcher.ZUSTAND / "codex-home"), NPM_CONFIG_PREFIX=f"{HOME}/.local")
 NPM = "npm install -g"
+
+
+def npm_update(paket: str) -> str:
+    """Nur bei neuer Version installieren: Ein Lauf ohne Änderung kostet so kaum etwas, und das Zeitlimit trifft npm nicht mitten im Austausch."""
+    return (f"""[ "$(npm ls -g {paket} --depth=0 --json 2>/dev/null | jq -r '.dependencies["{paket}"].version // empty')" = "$(npm view {paket} version 2>/dev/null)" ] """
+            f"|| {NPM} {paket}@latest")
+
+
 PROGRAMME = {
     "claude": {"name": "Claude Code", "befehl": "claude", "update": "claude update", "anmeldung": "claude auth login",
                "stand": "claude auth status --json", "installieren": "curl -fsSL https://claude.ai/install.sh | bash"},
-    "codex": {"name": "Codex CLI", "befehl": "codex", "update": f"{NPM} @openai/codex@latest", "anmeldung": "codex login --device-auth",
+    "codex": {"name": "Codex CLI", "befehl": "codex", "update": npm_update("@openai/codex"), "anmeldung": "codex login --device-auth",
               "stand": "codex login status", "installieren": f"{NPM} @openai/codex@latest"},
-    "opencode": {"name": "OpenCode", "befehl": "opencode", "update": f"{NPM} opencode-ai@latest", "anmeldung": "opencode auth login",
+    "opencode": {"name": "OpenCode", "befehl": "opencode", "update": npm_update("opencode-ai"), "anmeldung": "opencode auth login",
                  "stand": "opencode auth list", "installieren": f"{NPM} opencode-ai@latest"},
     "kimi": {"name": "Kimi Code", "befehl": "kimi", "update": f"kimi update --yes || {NPM} --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest",
              "anmeldung": "kimi login", "stand": "", "installieren": f"{NPM} --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest"},
     "antigravity": {"name": "Antigravity CLI", "befehl": "agy", "update": "agy update", "anmeldung": "agy", "stand": "",
                     "installieren": "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
-    "chrome-devtools-mcp": {"name": "Browser-Steuerung", "befehl": "chrome-devtools-mcp", "update": f"{NPM} chrome-devtools-mcp@latest", "anmeldung": "", "stand": "",
+    "chrome-devtools-mcp": {"name": "Browser-Steuerung", "befehl": "chrome-devtools-mcp", "update": npm_update("chrome-devtools-mcp"), "anmeldung": "", "stand": "",
                             "installieren": f"{NPM} chrome-devtools-mcp@latest"},
     # gh kommt aus dem Paketarchiv (jarvis-powershell.timer); hier zählen Version und Anmeldung.
     "gh": {"name": "GitHub CLI", "befehl": "gh", "update": "true", "anmeldung": "gh auth login -h github.com -p https -w", "stand": "gh auth token", "installieren": "true"},
     # Werkzeuge wie in UpdateZentrale/programs.json. Die Firebase-Anmeldung bleibt Franks Entscheidung, darum hier kein Anmelde-Knopf.
-    "node": {"name": "Node.js (LTS)", "befehl": "node", "anmeldung": "", "stand": "", "installieren": "true",
-             "update": "V=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts)][0].version'); [ -n \"$V\" ] && { [ \"$(node --version)\" = \"$V\" ] || curl -fsSL https://nodejs.org/dist/$V/node-$V-linux-x64.tar.xz | tar -xJ --strip-components=1 -C ~/.local/node; }"},
+    "node": {"name": "Node.js (LTS)", "befehl": "node", "anmeldung": "", "stand": "", "update": f"bash {KERN}/node_aktualisieren.sh", "installieren": f"bash {KERN}/node_aktualisieren.sh"},
     "uv": {"name": "uv", "befehl": "uv", "update": "uv self update", "anmeldung": "", "stand": "", "installieren": "curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh"},
-    "typescript": {"name": "TypeScript", "befehl": "tsc", "update": f"{NPM} typescript@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} typescript@latest"},
-    "tsx": {"name": "tsx", "befehl": "tsx", "update": f"{NPM} tsx@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} tsx@latest"},
-    "biome": {"name": "Biome", "befehl": "biome", "update": f"{NPM} @biomejs/biome@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} @biomejs/biome@latest"},
-    "firebase": {"name": "Firebase CLI", "befehl": "firebase", "update": f"{NPM} firebase-tools@latest", "anmeldung": "", "stand": "", "installieren": f"{NPM} firebase-tools@latest"},
+    "typescript": {"name": "TypeScript", "befehl": "tsc", "update": npm_update("typescript"), "anmeldung": "", "stand": "", "installieren": f"{NPM} typescript@latest"},
+    "tsx": {"name": "tsx", "befehl": "tsx", "update": npm_update("tsx"), "anmeldung": "", "stand": "", "installieren": f"{NPM} tsx@latest"},
+    "biome": {"name": "Biome", "befehl": "biome", "update": npm_update("@biomejs/biome"), "anmeldung": "", "stand": "", "installieren": f"{NPM} @biomejs/biome@latest"},
+    "firebase": {"name": "Firebase CLI", "befehl": "firebase", "update": npm_update("firebase-tools"), "sekunden": 900, "anmeldung": "", "stand": "", "installieren": f"{NPM} firebase-tools@latest"},
 }
 
 
@@ -102,18 +110,22 @@ def status_schreiben(aktualisieren: bool) -> dict:
     programme = {}
     alle = launcher.sitzungen()
     for schluessel, p in PROGRAMME.items():
-        vorher = version(p)
+        # Beim Auffrischen des Reiters System reicht für Werkzeuge ohne Anmeldung der letzte Stand: Jede Abfrage startet einen Prozess, auch neben einem Android-Bau.
+        vorher = alt.get(schluessel, {}).get("version", "") if not aktualisieren and not p["anmeldung"] else ""
+        vorher = vorher or version(p)
         eintrag = {"name": p["name"], "version": vorher, "zuletzt": alt.get(schluessel, {}).get("zuletzt", ""), "meldung": alt.get(schluessel, {}).get("meldung", "")}
         if aktualisieren:
             jetzt = time.strftime("%d.%m.%Y %H:%M")
             if in_benutzung(schluessel, p, alle):
                 eintrag["meldung"] = f"{jetzt}: läuft gerade, beim nächsten Lauf"
             else:
-                code, aus = _lauf(p["update"] if vorher else p["installieren"])
+                code, aus = _lauf(p["update"] if vorher else p["installieren"], p.get("sekunden", 300))
                 eintrag["version"] = version(p)
                 eintrag["zuletzt"] = jetzt
                 if code != 0:
                     eintrag["meldung"] = f"{jetzt}: fehlgeschlagen: {aus[-200:]}"
+                elif not eintrag["version"]:
+                    eintrag["meldung"] = f"{jetzt}: fehlgeschlagen: nicht installiert"
                 elif eintrag["version"] != vorher:
                     eintrag["meldung"] = f"{jetzt}: aktualisiert von {vorher or 'nichts'} auf {eintrag['version']}"
                 else:
@@ -130,6 +142,7 @@ def status_schreiben(aktualisieren: bool) -> dict:
 if __name__ == "__main__":
     os.environ["TZ"] = "Europe/Berlin"
     time.tzset()
-    print(json.dumps(status_schreiben("aktualisieren" in sys.argv), ensure_ascii=False, indent=1))
-    import mcp_anbindung  # Nach den Updates: Eine neu installierte CLI bekommt ihre MCP-Server so spätestens beim nächsten Lauf.
+    # Vor den Updates: Ein Abbruch oder das Dienst-Zeitlimit darf die Anbindung nicht mitreißen.
+    import mcp_anbindung
     mcp_anbindung.anbinden()
+    print(json.dumps(status_schreiben("aktualisieren" in sys.argv), ensure_ascii=False, indent=1))
