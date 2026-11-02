@@ -28,7 +28,7 @@ enum ClaudeUebergabe {
     /// Stand meinen kann: der Auftrag laesst das zuerst pruefen. Ausgenommen sind ein vom Benutzer abgebrochener
     /// Lauf und ein Netz, das ueber alle Versuche gestoert blieb: das kann eine Sitzung nicht reparieren.
     static func automatischRelevant(_ bericht: UpdateBericht) -> Bool {
-        bericht.istFehler && !bericht.ohneAutoUebergabe && !bericht.meldung.contains(BrewAktualisierer.netzGestoertMeldung)
+        bericht.istFehler && !bericht.ohneAutoUebergabe && !bericht.meldung.hasPrefix(BrewAktualisierer.netzGestoertMeldung)
     }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.

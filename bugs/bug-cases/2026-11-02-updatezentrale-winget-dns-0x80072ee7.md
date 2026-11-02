@@ -17,11 +17,11 @@ Im Sammellauf endete `winget upgrade --id Microsoft.DotNet.SDK.10` nach 6 Sekund
 
 ## Behebung
 
-- `WingetAktualisierer.IstNetzfehler`: erkennt die WinINet-HRESULTs `0x80072EE1` bis `0x80072F8F` sowie den Text `InternetOpenUrl() failed` und `InternetReadFile() failed`, aber nicht bei Abbruch, Zeitlimit oder unsauberem Prozessende.
+- `WingetAktualisierer.IstNetzfehler`: erkennt die WinINet-HRESULTs `0x80072EE1` bis `0x80072F8F` am Exit-Code, nicht am Text (die Wörter können von einem überstandenen Quellen-Abruf stammen), und nicht bei Abbruch, Zeitlimit oder unsauberem Prozessende.
 - `AktualisierenAsync`: bis zu 3 Versuche mit 15 und 60 Sekunden Pause. Der fehlgeschlagene Download hatte noch nichts verändert, die Wiederholung ist also gefahrlos.
 - `InstallerInDenCacheLadenAsync`: Vor jeder Wiederholung lädt curl den Installer auf den Cache-Pfad von winget, `%TEMP%\WinGet\<Id>.<Version>\<sha256>`. Adresse und Hash stammen aus dem gescheiterten Lauf (Ausgabe und Dateiname). winget meldet dann `Found existing installer file … Verifying file hash`, prüft gegen das Manifest und installiert. Eine falsche Datei löscht winget, statt sie auszuführen. Das korrigiert die ältere Angabe im Fall vom 28.10.: `winget upgrade` nutzt zwar keinen `winget download`-Ordner, aber diesen Cache-Pfad.
 - Bleibt das Netz über alle Versuche gestört, beginnt die Meldung mit `Netz gestört: ` (`CliAktualisierer.NetzGestoertMeldung`). `ClaudeUebergabe.AutomatischRelevant` lässt diese Meldung aus, denn eine Sitzung kann das Netz nicht reparieren.
-- macOS: dieselbe Fehlerart gibt es bei brew (`curl: (6) Could not resolve host`). `BrewAktualisierer.mitNetzWiederholung` umschließt `brew fetch` und `brew upgrade`/`brew install` mit denselben Versuchen, `fehlergrundText` und `ClaudeUebergabe.automatischRelevant` entsprechen Windows.
+- macOS: dieselbe Fehlerart gibt es bei brew (`curl: (6) Could not resolve host`). `BrewAktualisierer.mitNetzWiederholung` umschließt die Downloads mit denselben Versuchen: `brew fetch` bei Casks und Formeln (`--deps`), dazu `brew upgrade --cask`/`install --cask`. `brew upgrade <formel>` wird nicht wiederholt, weil es Abhängigkeiten schon erneuert haben kann. Geprüft wird nur das Ende der Ausgabe und erst nach den genaueren Gründen, damit eine frühe Mirror-Zeile nichts überstimmt. Auf einem Mac noch nicht gebaut oder getestet.
 
 ## Erkennen
 

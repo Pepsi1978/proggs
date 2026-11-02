@@ -375,10 +375,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         var ziel = Path.Combine(ordner.FullName, eintrag.Id + "-" + version + ".exe");
         protokoll.Report("Lade den Installer direkt vom Hersteller: " + url);
 
-        // curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.
-        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -sS -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
-            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
-            lebenszeichen: () => File.Exists(ziel) ? new FileInfo(ziel).Length : 0);
+        var laden = await CurlLadenAsync(url, ziel, eintrag, abbruch);
         if (Kommandozeile.UnsauberesEnde(laden) is { } unsauber) return unsauber;
         if (laden.ExitCode != 0 || !File.Exists(ziel))
             return new PruefErgebnis(UpdateZustand.Fehler,
@@ -465,27 +462,52 @@ public sealed class WingetAktualisierer : IAktualisierer
         => lauf.Ausgabe.Contains("cannot be upgraded using WinGet", StringComparison.OrdinalIgnoreCase)
            || lauf.Ausgabe.Contains("nicht mit WinGet aktualisiert werden", StringComparison.OrdinalIgnoreCase);
 
-    private static readonly System.Text.RegularExpressions.Regex InstallerUrlMuster =
-        new(@"https?://\S+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    // A line ending in a URL, not behind a label such as "License: https://...".
+    private static readonly System.Text.RegularExpressions.Regex DownloadZeile =
+        new(@"(?<!:)\s(https?://\S+)\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     private static readonly System.Text.RegularExpressions.Regex Sha256Name =
         new("^[0-9a-f]{64}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-    /// <summary>The installer address winget just tried: the last URL of a failed run (language-neutral).</summary>
-    internal static string? InstallerUrl(string ausgabe)
-        => InstallerUrlMuster.Matches(ausgabe).LastOrDefault()?.Value;
+    /// <summary>
+    /// What this package's failed run tried to fetch, language-neutral: the version behind "[Id] Version x"
+    /// and the first download line after it. Dependencies have their own "[Id]" line before it, so
+    /// their installers do not count. Null when the run ended before the download.
+    /// </summary>
+    internal static (string Version, string Url)? DownloadAngaben(string ausgabe, string? wingetId)
+    {
+        if (string.IsNullOrWhiteSpace(wingetId)) return null;
+        var kopf = new System.Text.RegularExpressions.Regex(
+            @"\[" + System.Text.RegularExpressions.Regex.Escape(wingetId) + @"\]\s+\S+\s+(\S+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        string? version = null;
+        foreach (var zeile in ausgabe.Replace("\r", "").Split('\n'))
+        {
+            if (version is null)
+            {
+                var treffer = kopf.Match(zeile);
+                if (treffer.Success) version = treffer.Groups[1].Value;
+                continue;
+            }
+            var download = DownloadZeile.Match(zeile);
+            if (download.Success) return (version, download.Groups[1].Value);
+        }
+        return null;
+    }
 
     /// <summary>
     /// The cache file a failed winget run leaves behind: %TEMP%\WinGet\&lt;Id&gt;.&lt;Version&gt;\&lt;sha256&gt;,
-    /// the name being the hash from the manifest. Newest first -- older versions may lie next to it.
+    /// the name being the hash from the manifest. Exactly this folder: a wildcard would also match
+    /// other packages ("Foo.Bar" and "Foo.Bar.Insiders").
     /// </summary>
-    internal static string? CacheDatei(string wurzel, string? wingetId)
+    internal static string? CacheDatei(string wurzel, string wingetId, string version)
     {
-        if (string.IsNullOrWhiteSpace(wingetId) || !Directory.Exists(wurzel)) return null;
+        var ordner = Path.Combine(wurzel, wingetId + "." + version);
+        if (!Directory.Exists(ordner)) return null;
         try
         {
-            return Directory.GetDirectories(wurzel, wingetId + ".*")
-                .SelectMany(Directory.GetFiles)
+            return Directory.GetFiles(ordner)
                 .Where(d => Sha256Name.IsMatch(Path.GetFileName(d)))
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
@@ -507,19 +529,18 @@ public sealed class WingetAktualisierer : IAktualisierer
     private static async Task InstallerInDenCacheLadenAsync(ProgrammEintrag eintrag, string ausgabe,
                                                             IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var url = InstallerUrl(ausgabe);
-        var ziel = CacheDatei(Path.Combine(Path.GetTempPath(), "WinGet"), eintrag.WingetId);
-        if (url is null || ziel is null)
+        var angaben = DownloadAngaben(ausgabe, eintrag.WingetId);
+        var ziel = angaben is { } a ? CacheDatei(Path.Combine(Path.GetTempPath(), "WinGet"), eintrag.WingetId!, a.Version) : null;
+        if (angaben is null || ziel is null)
         {
             protokoll.Report("Kein Download per curl möglich: winget nannte keine Adresse oder keine Cache-Datei.");
             return;
         }
 
         var teil = ziel + ".part";
+        var url = angaben.Value.Url;
         protokoll.Report("Lade den Installer per curl in den winget-Cache: " + url);
-        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-sS -fL --retry 2 -o \"" + teil + "\" \"" + url + "\"",
-            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
-            lebenszeichen: () => File.Exists(teil) ? new FileInfo(teil).Length : 0);
+        var laden = await CurlLadenAsync(url, teil, eintrag, abbruch);
         try
         {
             if (laden.ExitCode == 0 && !laden.Abgelaufen && !laden.Abgebrochen && laden.BeendenProblem is null)
@@ -537,6 +558,12 @@ public sealed class WingetAktualisierer : IAktualisierer
         try { File.Delete(teil); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* next run overwrites it */ }
     }
 
+    /// <summary>curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.</summary>
+    private static Task<BefehlErgebnis> CurlLadenAsync(string url, string ziel, ProgrammEintrag eintrag, CancellationToken abbruch)
+        => Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -sS -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
+            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
+            lebenszeichen: () => File.Exists(ziel) ? new FileInfo(ziel).Length : 0);
+
     /// <summary>Attempts of one winget run when only the network failed.</summary>
     internal const int NetzVersuche = 3;
 
@@ -545,16 +572,15 @@ public sealed class WingetAktualisierer : IAktualisierer
 
     /// <summary>
     /// A failed run that ended by itself with a WinINet error: HRESULT 0x8007xxxx around Win32 12001-12175
-    /// (0x80072EE7 name not resolved, 0x80072EE2 timeout, 0x80072EFD cannot connect, 0x80072EFE aborted),
-    /// or winget's own "InternetOpenUrl() failed" text when the exit code says less.
+    /// (0x80072EE7 name not resolved, 0x80072EE2 timeout, 0x80072EFD cannot connect, 0x80072EFE aborted).
+    /// Only the exit code counts (measured: winget ends with the HRESULT itself): the same words in the
+    /// output may come from a source refresh that winget survived, before an installer failed differently.
     /// </summary>
     internal static bool IstNetzfehler(BefehlErgebnis lauf)
     {
-        if (lauf.Abgelaufen || lauf.Abgebrochen || lauf.BeendenProblem is not null || lauf.ExitCode == 0) return false;
+        if (lauf.Abgelaufen || lauf.Abgebrochen || lauf.BeendenProblem is not null) return false;
         var code = unchecked((uint)lauf.ExitCode);
-        return (code >= 0x80072EE1 && code <= 0x80072F8F)
-               || lauf.Ausgabe.Contains("InternetOpenUrl() failed", StringComparison.OrdinalIgnoreCase)
-               || lauf.Ausgabe.Contains("InternetReadFile() failed", StringComparison.OrdinalIgnoreCase);
+        return code >= 0x80072EE1 && code <= 0x80072F8F;
     }
 
     /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>

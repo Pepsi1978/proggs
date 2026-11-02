@@ -143,7 +143,10 @@ struct BrewAktualisierer: Aktualisierer {
             return "Download hängt (\(eintrag.zeitlimitMinuten) min ohne Fortschritt) – \(eintrag.name) bleibt offen, nichts geändert."
         }
         if laden.exitCode != 0 {
-            return "Download fehlgeschlagen – \(eintrag.name) bleibt offen, nichts geändert. " + fehlergrund(laden.ausgabe, exitCode: laden.exitCode)
+            let grund = fehlergrund(laden.ausgabe, exitCode: laden.exitCode)
+            // Die Meldung muss mit dem Netz-Anfang beginnen, sonst geht der Fall an Claude (automatischRelevant).
+            if grund.hasPrefix(Self.netzGestoertMeldung) { return grund }
+            return "Download fehlgeschlagen – \(eintrag.name) bleibt offen, nichts geändert. " + grund
         }
         return nil
     }
@@ -309,12 +312,24 @@ struct BrewAktualisierer: Aktualisierer {
         let auffrischen = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
         if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
 
-        protokoll.berichte("brew upgrade \(formel)")
-        let lauf = await Self.mitNetzWiederholung(protokoll) {
-            await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
+        // Nur der Download wird wiederholt: `brew upgrade X` kann Abhaengigkeiten schon erneuert haben, bevor
+        // es scheitert. `brew fetch --deps` aendert nichts, das upgrade danach installiert aus dem Cache.
+        protokoll.berichte("brew fetch --deps \(formel)")
+        let laden = await Self.mitNetzWiederholung(protokoll) {
+            await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--deps", formel],
                                            zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
                                            lebenszeichen: Self.downloadGroesse)
         }
+        if !laden.ausgabe.istLeer { protokoll.berichte(laden.ausgabe) }
+        if Self.istNetzfehler(laden) {
+            return PruefErgebnis(zustand: .fehler, meldung: fehlergrund(laden.ausgabe, exitCode: laden.exitCode),
+                                 protokoll: laden.ausgabe)
+        }
+
+        protokoll.berichte("brew upgrade \(formel)")
+        let lauf = await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
+                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                  lebenszeichen: Self.downloadGroesse)
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -503,8 +518,10 @@ struct BrewAktualisierer: Aktualisierer {
                                        "Network is unreachable", "Failed to connect", "curl: (6)", "curl: (7)",
                                        "curl: (35)", "curl: (52)", "curl: (56)"]
 
+    /// Nur das Ende der Ausgabe: ein Mirror, auf den brew frueh ausgewichen ist, ist kein Grund des Scheiterns.
     private static func nenntNetzfehler(_ ausgabe: String) -> Bool {
-        netzHinweise.contains { ausgabe.localizedCaseInsensitiveContains($0) }
+        let ende = ausgabe.split(separator: "\n").suffix(8).joined(separator: "\n")
+        return netzHinweise.contains { ende.localizedCaseInsensitiveContains($0) }
     }
 
     /// Ein selbst beendeter Lauf, der das Netz als Grund nennt, und kein Klick auf „Abbrechen“.
@@ -523,8 +540,11 @@ struct BrewAktualisierer: Aktualisierer {
             let pause: UInt64 = versuch == 2 ? 15 : 60
             protokoll.berichte(lauf.ausgabe)
             protokoll.berichte("Netzfehler beim Download – Versuch \(versuch) von \(netzVersuche) in \(pause) s …")
-            try? await Task.sleep(nanoseconds: pause * 1_000_000_000)
-            // Ein Klick auf „Abbrechen“ in der Pause: `ausfuehren` startet dann nichts mehr und meldet den Abbruch.
+            // In Sekundenschritten: ein Klick auf „Abbrechen“ wartet die Pause nicht ab. `ausfuehren` startet
+            // danach nichts mehr und meldet den Abbruch.
+            for _ in 0..<pause where !(AbbruchMarke.aktuell?.istAbgebrochen ?? false) {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
             lauf = await starten()
             versuch += 1
         }
@@ -535,10 +555,6 @@ struct BrewAktualisierer: Aktualisierer {
     /// anfangen kann. Das Gegenstueck zu `BrauchtRechte` unter Windows ist hier der Fall, dass
     /// brew nach einem Passwort fragen will -- ohne Terminal kann es das nicht.
     static func fehlergrundText(_ ausgabe: String, exitCode: Int) -> String {
-        if nenntNetzfehler(ausgabe) {
-            return netzGestoertMeldung + "Der Download kam nach \(netzVersuche) Versuchen nicht zustande. "
-                 + "Die installierte Version bleibt unverändert – später oder in einem anderen Netz erneut versuchen."
-        }
         // sudo fragt ueber den Askpass-Helfer der App (Kommandozeile.umgebung) nach dem Passwort.
         // Die drei Ausgaenge des Dialogs lesen sich in der sudo-Ausgabe so:
         if ausgabe.localizedCaseInsensitiveContains("no password was provided")
@@ -573,6 +589,11 @@ struct BrewAktualisierer: Aktualisierer {
         if ausgabe.localizedCaseInsensitiveContains("still running")
             || ausgabe.localizedCaseInsensitiveContains("quit the application") {
             return "Das Programm läuft noch und muss für das Update beendet werden."
+        }
+        // Zuletzt: die genaueren Gruende oben duerfen nicht hinter einer Netzzeile verschwinden.
+        if nenntNetzfehler(ausgabe) {
+            return netzGestoertMeldung + "Der Download kam nach \(netzVersuche) Versuchen nicht zustande – "
+                 + "später oder in einem anderen Netz erneut versuchen."
         }
         return "Homebrew endete mit Code \(exitCode)."
     }

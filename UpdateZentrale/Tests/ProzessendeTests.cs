@@ -238,7 +238,7 @@ public sealed class ProzessendeAuswertungTests
     [Theory]
     [InlineData(unchecked((int)0x80072EE7), "", true)] // name not resolved
     [InlineData(unchecked((int)0x80072EE2), "", true)] // timeout
-    [InlineData(1, "InternetOpenUrl() failed.\n0x80072ee7 : unknown error", true)]
+    [InlineData(1, "InternetOpenUrl() failed.\n0x80072ee7 : unknown error", false)]
     [InlineData(unchecked((int)0x8A15002B), "No applicable upgrade found.", false)]
     [InlineData(unchecked((int)0x8A150101), "", false)]
     [InlineData(0, "InternetOpenUrl() failed.", false)]
@@ -248,20 +248,24 @@ public sealed class ProzessendeAuswertungTests
     [Fact]
     public void Winget_Installerdaten_kommen_aus_Ausgabe_und_Cache()
     {
-        Assert.Equal("https://x.example/a-1.exe",
-            WingetAktualisierer.InstallerUrl("Gefunden A [A] Version 1\nDownload läuft https://x.example/a-1.exe\nInternetOpenUrl() failed."));
-        Assert.Null(WingetAktualisierer.InstallerUrl("kein Link"));
+        const string ausgabe = "Gefunden Abh [Abh] Version 9\r\nDownload läuft https://x.example/abh-9.exe\r\n"
+                               + "Gefunden A SDK 1.0 [A.B] Version 1.2.3\r\nLizenz: https://x.example/lizenz\r\n"
+                               + "Download läuft https://x.example/a-1.exe\r\nInternetOpenUrl() failed.";
+        Assert.Equal(("1.2.3", "https://x.example/a-1.exe"), WingetAktualisierer.DownloadAngaben(ausgabe, "A.B"));
+        Assert.Null(WingetAktualisierer.DownloadAngaben("Gefunden A [A.B] Version 1\nLizenz: https://x.example/l", "A.B"));
+        Assert.Null(WingetAktualisierer.DownloadAngaben("Download läuft https://x.example/a.exe", "A.B"));
 
         var wurzel = Directory.CreateTempSubdirectory("uz-winget-").FullName;
         try
         {
             var name = new string('a', 64);
             var ordner = Directory.CreateDirectory(Path.Combine(wurzel, "Foo.Bar.1.2.3")).FullName;
-            Directory.CreateDirectory(Path.Combine(wurzel, "Foo.BarBaz.1.0"));
+            var fremd = Directory.CreateDirectory(Path.Combine(wurzel, "Foo.Bar.Baz.1.2.3")).FullName;
+            File.WriteAllText(Path.Combine(fremd, new string('b', 64)), "");
             File.WriteAllText(Path.Combine(ordner, "nicht-der-hash"), "");
             File.WriteAllText(Path.Combine(ordner, name), "");
-            Assert.Equal(Path.Combine(ordner, name), WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar"));
-            Assert.Null(WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar.Fehlt"));
+            Assert.Equal(Path.Combine(ordner, name), WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar", "1.2.3"));
+            Assert.Null(WingetAktualisierer.CacheDatei(wurzel, "Foo.Bar", "9.9"));
         }
         finally { Directory.Delete(wurzel, true); }
     }
@@ -269,8 +273,10 @@ public sealed class ProzessendeAuswertungTests
     [Fact]
     public void Winget_Netzfehler_gilt_nicht_bei_abgebrochenem_oder_unsauberem_Lauf()
     {
-        Assert.False(WingetAktualisierer.IstNetzfehler(Lauf("InternetOpenUrl() failed.", abgebrochen: true)));
-        Assert.False(WingetAktualisierer.IstNetzfehler(Lauf("InternetOpenUrl() failed.", problem: "x")));
+        var code = unchecked((int)0x80072EE7);
+        Assert.False(WingetAktualisierer.IstNetzfehler(new BefehlErgebnis(code, "", true)));
+        Assert.False(WingetAktualisierer.IstNetzfehler(new BefehlErgebnis(code, "", false) { Abgebrochen = true }));
+        Assert.False(WingetAktualisierer.IstNetzfehler(new BefehlErgebnis(code, "", false) { BeendenProblem = "x" }));
     }
 
     [Fact]
