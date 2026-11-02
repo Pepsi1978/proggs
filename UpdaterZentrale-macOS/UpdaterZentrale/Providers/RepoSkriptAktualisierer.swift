@@ -122,11 +122,11 @@ struct RepoSkriptAktualisierer: Aktualisierer {
             // hinterstand hat gerade geholt, ein pull taete nur noch dieses Vorspulen; anders als ein
             // pull haengt es nicht an der pull.rebase-Einstellung des Rechners.
             protokoll.berichte("git merge --ff-only (\(neu) neue Commit(s) für \(ordner))")
-            let zug = await RepoAbgleich.vorspulen(Pfade.repoWurzel, autostash: true, protokoll: protokoll)
+            let zug = await RepoAbgleich.vorspulen(Pfade.repoWurzel, nutzerStart: true, protokoll: protokoll)
             protokoll.berichte(zug.ausgabe)
             if zug.abgelaufen || zug.exitCode != 0 {
                 return PruefErgebnis(zustand: .fehler,
-                                     meldung: "Das Repo ließ sich nicht vorspulen (\(RepoAbgleich.vorspulGrund(zug.ausgabe))). "
+                                     meldung: "Das Repo ließ sich nicht vorspulen (\(RepoAbgleich.vorspulGrund(zug))). "
                                             + "Das Update-Skript wurde nicht gestartet.",
                                      protokoll: zug.ausgabe)
             }

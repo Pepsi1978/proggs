@@ -73,7 +73,9 @@ reserve_voice_overlay_deployment() {
             fi
 
             # 404: Das Overlay lebt, kennt den Endpunkt aber nicht (aeltere Fassung), es haengt nicht.
-            if [[ "$(curl --silent --output /dev/null --max-time 2 --write-out '%{http_code}' -X POST "http://127.0.0.1:${port}/deployment/prepare" 2>/dev/null)" == "404" ]]; then
+            # Das 404 allein genuegt nicht, auch ein fremdes Programm saehe so aus; Beweis ist /autoenter/status.
+            if [[ "$(curl --silent --output /dev/null --max-time 2 --write-out '%{http_code}' -X POST "http://127.0.0.1:${port}/deployment/prepare" 2>/dev/null)" == "404" ]] \
+               && [[ "$(curl --fail --silent --max-time 2 "http://127.0.0.1:${port}/autoenter/status" 2>/dev/null)" == *'"on"'* ]]; then
                 echo "$process_name kennt den Aufnahme-Schutz nicht (Port ${port} antwortet mit 404) — eine aeltere Fassung."
                 echo "Es gibt nichts zu reservieren. Build faehrt ohne Reservierung fort."
                 return 1

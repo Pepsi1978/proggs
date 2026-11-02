@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.1.1 - 02.11.2026, 21:01 Uhr
+# Version 1.1.2 - 02.11.2026, 21:13 Uhr
 
 <#
     AUFNAHME-SCHUTZ VOR DEM DEPLOYMENT
@@ -40,6 +40,12 @@
 function Test-VoiceOverlayEndpointUnbekannt {
     param([Parameter(Mandatory)]$Fehler)
     try { return [int]$Fehler.Exception.Response.StatusCode -eq 404 }
+    catch { return $false }
+}
+
+function Test-VoiceOverlayAntwortet {
+    param([Parameter(Mandatory)][int]$Port, [Parameter(Mandatory)][scriptblock]$Request)
+    try { return $null -ne (& $Request $Port 'identity').on }
     catch { return $false }
 }
 
@@ -93,6 +99,9 @@ function Enter-VoiceOverlayDeploymentWindow {
             param($requestPort, $action)
             if ($action -eq 'status') {
                 Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:$requestPort/recording/status" `
+                    -TimeoutSec 2 -ErrorAction Stop
+            } elseif ($action -eq 'identity') {
+                Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:$requestPort/autoenter/status" `
                     -TimeoutSec 2 -ErrorAction Stop
             } else {
                 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$requestPort/deployment/$action" `
@@ -152,8 +161,10 @@ function Enter-VoiceOverlayDeploymentWindow {
             catch {
                 # 404: Das Overlay lebt und antwortet, kennt den Endpunkt aber nicht
                 # (Fassung vor dem Aufnahme-Schutz). Es haengt nicht, und warten
-                # aendert nichts daran (Vorfall 02.11.2026).
-                if (Test-VoiceOverlayEndpointUnbekannt $_) {
+                # aendert nichts daran (Vorfall 02.11.2026). Das 404 allein genuegt nicht:
+                # auch ein fremdes Programm auf dem Port saehe so aus, und ein aufnehmendes
+                # Overlay wuerde dann beendet. Beweis ist der Endpunkt, den jede Fassung kennt.
+                if ((Test-VoiceOverlayEndpointUnbekannt $_) -and (Test-VoiceOverlayAntwortet -Port $Port -Request $Request)) {
                     Write-Host "  $ProcessName kennt den Aufnahme-Schutz nicht (Port $Port antwortet mit 404) — eine aeltere Fassung." -ForegroundColor Yellow
                     Write-Host "  Es gibt nichts zu reservieren. Deployment faehrt ohne Reservierung fort." -ForegroundColor Green
                     return $false

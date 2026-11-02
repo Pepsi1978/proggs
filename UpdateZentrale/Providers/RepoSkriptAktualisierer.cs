@@ -92,11 +92,12 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             // HinterstandAsync has just fetched, so a merge is all a pull would still do. Unlike a
             // pull it does not depend on the machine's pull.rebase setting.
             protokoll.Report("git merge --ff-only (" + hinterstand + " neue Commit(s) für " + eintrag.RepoOrdner + ")");
-            var zug = await RepoAbgleich.VorspulenAsync(Pfade.RepoWurzel, autostash: true, protokoll, abbruch);
+            var zug = await RepoAbgleich.VorspulenAsync(Pfade.RepoWurzel, nutzerStart: true, protokoll, abbruch);
             protokoll.Report(zug.Ausgabe);
+            if (Kommandozeile.UnsauberesEnde(zug) is { } unsauber) return unsauber;
             if (zug.ExitCode != 0)
                 return new PruefErgebnis(UpdateZustand.Fehler,
-                    Meldung: "Das Repo ließ sich nicht vorspulen (" + RepoAbgleich.VorspulGrund(zug.Ausgabe) + "). "
+                    Meldung: "Das Repo ließ sich nicht vorspulen (" + RepoAbgleich.VorspulGrund(zug) + "). "
                              + "Das Update-Skript wurde nicht gestartet.",
                     Protokoll: zug.Ausgabe);
         }

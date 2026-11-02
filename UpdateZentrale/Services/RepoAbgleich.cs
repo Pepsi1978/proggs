@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 
 namespace UpdateZentrale.Services;
 
@@ -51,10 +52,10 @@ public static class RepoAbgleich
 
             // Fast-forward only: with local changes in the way or a diverged history git refuses
             // and changes nothing. The cards then still count the commits that are waiting.
-            var ziehen = await VorspulenAsync(repoWurzel, autostash: false);
+            var ziehen = await VorspulenAsync(repoWurzel, nutzerStart: false);
             if (ziehen.Abgelaufen || ziehen.ExitCode != 0)
                 return Melden(new AbgleichErgebnis(true, false,
-                    "Repo ließ sich nicht vorspulen (" + VorspulGrund(ziehen.Ausgabe) + "): "
+                    "Repo ließ sich nicht vorspulen (" + VorspulGrund(ziehen) + "): "
                     + Kurz(ziehen.Ausgabe), DateTime.Now));
 
             return Melden(new AbgleichErgebnis(true, true, "Repo ist auf dem Stand von origin.", DateTime.Now));
@@ -76,34 +77,50 @@ public static class RepoAbgleich
     internal static readonly TimeSpan SperreMindestalter = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Fast-forwards the checkout to its upstream and repairs what an earlier, killed run left
-    /// behind: a stale index.lock and a checkout that reached the new state while HEAD did not.
+    /// Fast-forwards the checkout to its upstream. An orphaned index.lock is always removed. What
+    /// touches the index or moves local changes aside runs only for an update the user started:
+    /// the check before it also runs unattended, while parallel sessions have files staged.
     /// </summary>
-    /// <param name="autostash">
-    /// Moves uncommitted changes aside for the fast-forward. Only for an update the user started;
-    /// the check before it never stashes.
+    /// <param name="nutzerStart">
+    /// A refused fast-forward may first be finished as a killed run, then retried with autostash.
+    /// In that order: an autostash on a half-finished run would stash thousands of pseudo-changes.
     /// </param>
     /// <param name="gitLaeuft">Test seam: is a git process alive on this machine?</param>
-    internal static async Task<BefehlErgebnis> VorspulenAsync(string repoWurzel, bool autostash,
+    internal static async Task<BefehlErgebnis> VorspulenAsync(string repoWurzel, bool nutzerStart,
         IProgress<string>? protokoll = null, CancellationToken abbruch = default, Func<bool>? gitLaeuft = null)
     {
         await SperreFreimachenAsync(repoWurzel, protokoll, abbruch, gitLaeuft ?? GitProzessLaeuft);
 
-        var zug = await Kommandozeile.AusfuehrenAsync("git",
-            "merge --ff-only --quiet " + (autostash ? "--autostash " : "") + "@{u}",
+        var zug = await Kommandozeile.AusfuehrenAsync("git", "merge --ff-only --quiet @{u}",
             VorspulZeitlimit, repoWurzel, abbruch);
-        if (zug.ExitCode == 0 || zug.Abgelaufen || zug.Abgebrochen) return zug;
+        if (zug.ExitCode == 0 || zug.Abgelaufen || zug.Abgebrochen || !nutzerStart
+            || zug.Ausgabe.Contains("index.lock", StringComparison.OrdinalIgnoreCase))
+            return zug;
 
-        return await HalbesVorspulenVollendenAsync(repoWurzel, protokoll, abbruch)
-            ? new BefehlErgebnis(0, "Abgebrochenes Vorspulen vollendet.", false)
-            : zug;
+        if (await HalbesVorspulenVollendenAsync(repoWurzel, protokoll, abbruch) is { } repariert) return repariert;
+
+        var mitStash = await Kommandozeile.AusfuehrenAsync("git", "merge --ff-only --quiet --autostash @{u}",
+            VorspulZeitlimit, repoWurzel, abbruch);
+        // git reports success here: the tree is at the upstream, the local changes wait in the stash.
+        return mitStash.ExitCode == 0 && mitStash.Ausgabe.Contains(StashKonflikt, StringComparison.OrdinalIgnoreCase)
+            ? mitStash with { ExitCode = 1 }
+            : mitStash;
     }
 
+    private const string StashKonflikt = "safe in the stash";
+
     /// <summary>The real reason for a refused fast-forward, not a guess at the usual one.</summary>
-    internal static string VorspulGrund(string ausgabe)
-        => (ausgabe ?? "").Contains("index.lock", StringComparison.OrdinalIgnoreCase)
+    internal static string VorspulGrund(BefehlErgebnis lauf)
+    {
+        if (lauf.Abgebrochen) return "abgebrochen";
+        if (lauf.Abgelaufen) return "Zeitlimit überschritten";
+        var ausgabe = lauf.Ausgabe ?? "";
+        if (ausgabe.Contains(StashKonflikt, StringComparison.OrdinalIgnoreCase))
+            return "lokale Änderungen kollidieren mit den neuen Commits, sie liegen jetzt im Git-Stash";
+        return ausgabe.Contains("index.lock", StringComparison.OrdinalIgnoreCase)
             ? "Git-Sperre .git/index.lock: ein anderer Git-Prozess läuft, oder ein abgebrochener hat sie hinterlassen"
             : "lokale Änderungen oder abweichender Verlauf";
+    }
 
     /// <summary>Git keeps its process alive as long as it holds the lock, also during a commit hook.</summary>
     internal static bool SperreVerwaist(DateTime sperreZeitUtc, DateTime jetztUtc, bool gitLaeuft)
@@ -138,7 +155,7 @@ public static class RepoAbgleich
                 if (SperreVerwaist(File.GetLastWriteTimeUtc(sperre), DateTime.UtcNow, gitLaeuft()))
                 {
                     File.Delete(sperre);
-                    Berichten(protokoll, Schwere.Warnung, "repo.sperre", "Verwaiste Git-Sperre .git/index.lock entfernt.");
+                    Berichten(protokoll, "repo.sperre", "Verwaiste Git-Sperre .git/index.lock entfernt.");
                     return;
                 }
                 if (DateTime.UtcNow >= bis) return;
@@ -156,76 +173,116 @@ public static class RepoAbgleich
         }
     }
 
-    /// <summary>
-    /// The working tree holds the upstream state, HEAD and the index still the old one. Git writes
-    /// the files first and moves HEAD last, so a run killed in between leaves exactly that, and git
-    /// then refuses every further fast-forward because of the "local changes" it left itself.
-    /// </summary>
-    internal static bool IstHalbesVorspulen(int abweichungZuHead, int abweichungZuUpstream)
-        => abweichungZuHead >= 50 && abweichungZuUpstream * 10 <= abweichungZuHead;
+    /// <summary>Below this nothing tells a killed run from ordinary local work, and autostash copes.</summary>
+    private const int HalbMindestens = 10;
 
     /// <summary>
-    /// Finishes such a run with reset --mixed: it moves HEAD and the index and leaves every file in
-    /// the working tree alone, so uncommitted changes survive. Files git had not written yet are
-    /// the only ones taken from the upstream.
+    /// Git writes the files first and moves HEAD last, so a run killed in between leaves files that
+    /// match the upstream while differing from HEAD. Nobody produces those by hand in numbers.
     /// </summary>
-    private static async Task<bool> HalbesVorspulenVollendenAsync(string repoWurzel, IProgress<string>? protokoll,
-                                                                  CancellationToken abbruch)
+    /// <param name="geschrieben">Differs from HEAD, matches the upstream: written by the killed run.</param>
+    /// <param name="eigeneArbeit">Differs from both: real local work.</param>
+    internal static bool IstHalbesVorspulen(int geschrieben, int eigeneArbeit)
+        => geschrieben >= HalbMindestens && geschrieben > eigeneArbeit;
+
+    /// <summary>
+    /// Finishes a killed fast-forward at any point it died. Each file counts by what it holds:
+    /// a file still equal to HEAD was simply not written yet and is taken from the upstream, and a
+    /// file differing from both is local work and stays. HEAD moves last, so a failure on the way
+    /// leaves the state in which the next run tries again.
+    /// </summary>
+    /// <returns>Null when this is no killed fast-forward; otherwise the outcome of the repair.</returns>
+    private static async Task<BefehlErgebnis?> HalbesVorspulenVollendenAsync(string repoWurzel, IProgress<string>? protokoll,
+                                                                            CancellationToken abbruch)
     {
         var limit = TimeSpan.FromMinutes(5);
-        var vorfahr = await Kommandozeile.AusfuehrenAsync("git", "merge-base --is-ancestor HEAD @{u}", limit, repoWurzel, abbruch);
-        if (vorfahr.ExitCode != 0) return false;
 
-        var zuHead = await Kommandozeile.AusfuehrenAsync("git", "status --porcelain --no-renames -uno", limit, repoWurzel, abbruch);
-        if (zuHead.ExitCode != 0) return false;
+        var vorfahr = await Kommandozeile.AusfuehrenAsync("git", "merge-base --is-ancestor HEAD @{u}", limit, repoWurzel, abbruch);
+        if (vorfahr.ExitCode != 0) return null;
+
+        // Something staged belongs to a parallel session, and a reset would take it out of the index.
+        var vorgemerkt = await Kommandozeile.AusfuehrenAsync("git", "diff --cached --quiet", limit, repoWurzel, abbruch);
+        if (vorgemerkt.ExitCode != 0) return null;
+
+        const string nurPfade = "-c core.quotePath=false -c core.safecrlf=false diff --name-only";
+        var zuHead = await Kommandozeile.AusfuehrenAsync("git", nurPfade, limit, repoWurzel, abbruch);
+        if (zuHead.ExitCode != 0) return null;
+        var geaendert = Pfade(zuHead.Ausgabe);
+        if (geaendert.Count < HalbMindestens) return null;
 
         // A separate index compares the working tree with the upstream without touching the real one.
         var tempIndex = Path.Combine(Path.GetTempPath(), "updatezentrale-index-" + Guid.NewGuid().ToString("N"));
         var umgebung = new Dictionary<string, string> { ["GIT_INDEX_FILE"] = tempIndex };
-        BefehlErgebnis zuUpstream;
+        HashSet<string> zuUpstream;
         try
         {
             var lesen = await Kommandozeile.AusfuehrenAsync("git", "read-tree @{u}", limit, repoWurzel, abbruch, zusatzUmgebung: umgebung);
-            if (lesen.ExitCode != 0) return false;
-            zuUpstream = await Kommandozeile.AusfuehrenAsync("git", "-c core.quotePath=false status --porcelain --no-renames -uno",
-                limit, repoWurzel, abbruch, zusatzUmgebung: umgebung);
-            if (zuUpstream.ExitCode != 0) return false;
+            if (lesen.ExitCode != 0) return null;
+            var vergleich = await Kommandozeile.AusfuehrenAsync("git", nurPfade, limit, repoWurzel, abbruch, zusatzUmgebung: umgebung);
+            if (vergleich.ExitCode != 0) return null;
+            zuUpstream = Pfade(vergleich.Ausgabe);
         }
         finally
         {
-            foreach (var datei in new[] { tempIndex, tempIndex + ".lock" })
-                try { File.Delete(datei); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Diagnose.Gefangen(ex, "repo", Schwere.Debug); }
+            DateienLoeschen(tempIndex, tempIndex + ".lock");
         }
 
-        // Second column: working tree against the upstream. "AD": new upstream file not on disk yet.
-        var abweichend = Zeilen(zuUpstream.Ausgabe).Where(z => z.Length > 3 && z[1] != ' ').ToList();
-        if (!IstHalbesVorspulen(Zeilen(zuHead.Ausgabe).Count, abweichend.Count)) return false;
+        var eigeneArbeit = geaendert.Count(zuUpstream.Contains);
+        if (!IstHalbesVorspulen(geaendert.Count - eigeneArbeit, eigeneArbeit)) return null;
+
+        var nachholen = zuUpstream
+            .Where(p => !geaendert.Contains(p) || !File.Exists(Path.Combine(repoWurzel, p)))
+            .ToList();
+        if (nachholen.Count > 0)
+        {
+            var liste = Path.Combine(Path.GetTempPath(), "updatezentrale-pfade-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                await File.WriteAllLinesAsync(liste, nachholen, new UTF8Encoding(false), abbruch);
+                var holen = await Kommandozeile.AusfuehrenAsync("git", "checkout @{u} --pathspec-from-file=\"" + liste + "\"",
+                    VorspulZeitlimit, repoWurzel, abbruch);
+                if (holen.ExitCode != 0) return holen;
+            }
+            finally
+            {
+                DateienLoeschen(liste);
+            }
+        }
+
+        // Removed upstream, untouched here: the killed run simply had not got to it yet.
+        var entfernt = await Kommandozeile.AusfuehrenAsync("git", "-c core.quotePath=false diff --name-only --diff-filter=D HEAD @{u}",
+            limit, repoWurzel, abbruch);
+        if (entfernt.ExitCode == 0)
+            DateienLoeschen(Pfade(entfernt.Ausgabe).Where(p => !geaendert.Contains(p))
+                                                   .Select(p => Path.Combine(repoWurzel, p)).ToArray());
 
         var zurueck = await Kommandozeile.AusfuehrenAsync("git", "reset -q --mixed @{u}", VorspulZeitlimit, repoWurzel, abbruch);
-        if (zurueck.ExitCode != 0) return false;
-        Berichten(protokoll, Schwere.Warnung, "repo.halbes-vorspulen",
-            "Abgebrochenes Vorspulen vollendet: HEAD und Index auf den Stand von origin gesetzt, Arbeitsbaum unverändert.");
+        if (zurueck.ExitCode != 0) return zurueck;
 
-        var fehlend = abweichend.Where(z => z.StartsWith("AD ", StringComparison.Ordinal))
-                                .Select(z => "\"" + z[3..].Trim().Trim('"') + "\"").ToList();
-        // One call per file: LFS blobs may take long, and a failure only concerns that one file.
-        foreach (var pfad in fehlend)
-        {
-            var holen = await Kommandozeile.AusfuehrenAsync("git", "checkout @{u} -- " + pfad, VorspulZeitlimit, repoWurzel, abbruch);
-            if (holen.ExitCode != 0)
-                Berichten(protokoll, Schwere.Warnung, "repo.halbes-vorspulen", "Datei fehlt weiter: " + pfad + " – " + Kurz(holen.Ausgabe));
-        }
-        return true;
+        var meldung = "Abgebrochenes Vorspulen vollendet: HEAD und Index auf den Stand von origin gesetzt, "
+                      + nachholen.Count + " Datei(en) nachgeholt, " + eigeneArbeit + " lokale Änderung(en) behalten.";
+        Berichten(protokoll, "repo.halbes-vorspulen", meldung);
+        return new BefehlErgebnis(0, meldung, false);
     }
 
-    private static List<string> Zeilen(string text)
-        => (text ?? "").Split('\n').Select(z => z.TrimEnd('\r')).Where(z => z.Length > 0).ToList();
+    /// <summary>The output also carries stderr; only lines that cannot be git's own messages are paths.</summary>
+    private static HashSet<string> Pfade(string ausgabe)
+        => (ausgabe ?? "").Split('\n').Select(z => z.Trim().Trim('"'))
+            .Where(z => z.Length > 0 && !z.StartsWith("warning: ", StringComparison.Ordinal)
+                        && !z.StartsWith("hint: ", StringComparison.Ordinal))
+            .ToHashSet(StringComparer.Ordinal);
 
-    private static void Berichten(IProgress<string>? protokoll, Schwere schwere, string typ, string meldung)
+    private static void DateienLoeschen(params string[] dateien)
+    {
+        foreach (var datei in dateien)
+            try { File.Delete(datei); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Diagnose.Gefangen(ex, "repo", Schwere.Debug); }
+    }
+
+    private static void Berichten(IProgress<string>? protokoll, string typ, string meldung)
     {
         protokoll?.Report(meldung);
-        Diagnose.Ereignis(schwere, "repo", typ, meldung);
+        Diagnose.Ereignis(Schwere.Warnung, "repo", typ, meldung);
     }
 
     private static AbgleichErgebnis Melden(AbgleichErgebnis ergebnis)

@@ -83,12 +83,31 @@ $alteFassung = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Po
     -ProcessProbe { $true } `
     -PortProbe { $true } `
     -Request {
+        param($port, $action)
+        if ($action -eq 'identity') { return [pscustomobject]@{ on = $true } }
         $fehler = [System.Exception]::new('404')
         $fehler | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 404 })
         throw $fehler
     }
 Assert-True (-not $alteFassung) 'Eine Fassung ohne Schutz-Endpunkt darf keine Reservierung vortaeuschen.'
 Assert-True (((Get-Date) - $start404).TotalSeconds -lt 2) 'Ein 404 ist kein Haenger und darf nicht auf die Karenzzeit warten.'
+
+# 404 von einem Fremden auf dem Port: Das koennte ein aufnehmendes Overlay verdecken, also fail-closed.
+$fremdAbgebrochen = $false
+try {
+    Enter-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 `
+        -TimeoutSeconds 30 -PollMilliseconds 10 -UnreadableGraceSeconds 0 `
+        -ProcessProbe { $true } `
+        -PortProbe { $true } `
+        -Request {
+            $fehler = [System.Exception]::new('404')
+            $fehler | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 404 })
+            throw $fehler
+        } | Out-Null
+} catch {
+    $fremdAbgebrochen = $_.Exception.Message -like '*sicher abgebrochen*'
+}
+Assert-True $fremdAbgebrochen 'Ein 404 ohne Lebenszeichen des Overlays muss fail-closed abbrechen.'
 
 $released = $false
 Exit-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 -Reserved $true `
@@ -100,4 +119,4 @@ Exit-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 -Reserved $
     }
 Assert-True $released 'Eine gehaltene Reservierung muss freigegeben werden.'
 
-Write-Host 'voice-overlay-deploy-guard: 10 Tests bestanden.' -ForegroundColor Green
+Write-Host 'voice-overlay-deploy-guard: 11 Tests bestanden.' -ForegroundColor Green

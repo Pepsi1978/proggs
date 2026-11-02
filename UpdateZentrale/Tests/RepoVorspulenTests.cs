@@ -7,7 +7,7 @@ namespace UpdateZentrale.Tests;
 
 /// <summary>
 /// Real git, throwaway repos. Rebuilds what a killed fast-forward leaves behind: the working tree
-/// on the upstream state, HEAD and index on the old one, and an orphaned index.lock.
+/// partly on the upstream state, HEAD and index on the old one, and an orphaned index.lock.
 /// </summary>
 public sealed class RepoVorspulenTests : IDisposable
 {
@@ -54,13 +54,17 @@ public sealed class RepoVorspulenTests : IDisposable
         Git(arbeit, "config user.name t");
         Git(arbeit, "checkout -b main");
         for (var i = 0; i < DateienAnzahl; i++) File.WriteAllText(Path.Combine(arbeit, "d" + i + ".txt"), "alt");
+        File.WriteAllText(Path.Combine(arbeit, "geht-weg.txt"), "alt");
         Git(arbeit, "add -A");
         Git(arbeit, "commit -m eins");
         Git(arbeit, "push -u origin main");
         Git(_wurzel, "clone origin.git klon");
+        Git(klon, "config user.email t@t");
+        Git(klon, "config user.name t");
         for (var i = 0; i < DateienAnzahl; i++) File.WriteAllText(Path.Combine(arbeit, "d" + i + ".txt"), "neu");
         File.WriteAllText(Path.Combine(arbeit, "kam-an.txt"), "neu");
         File.WriteAllText(Path.Combine(arbeit, "fehlt.txt"), "neu");
+        File.Delete(Path.Combine(arbeit, "geht-weg.txt"));
         Git(arbeit, "add -A");
         Git(arbeit, "commit -m zwei");
         Git(arbeit, "push");
@@ -68,9 +72,10 @@ public sealed class RepoVorspulenTests : IDisposable
         return (klon, arbeit);
     }
 
-    private static void HalbVorspulen(string klon, string arbeit)
+    /// <summary>The killed run got as far as file <paramref name="bis"/>.</summary>
+    private static void HalbVorspulen(string klon, string arbeit, int bis)
     {
-        for (var i = 0; i < DateienAnzahl; i++) File.Copy(Path.Combine(arbeit, "d" + i + ".txt"), Path.Combine(klon, "d" + i + ".txt"), true);
+        for (var i = 0; i < bis; i++) File.Copy(Path.Combine(arbeit, "d" + i + ".txt"), Path.Combine(klon, "d" + i + ".txt"), true);
         File.Copy(Path.Combine(arbeit, "kam-an.txt"), Path.Combine(klon, "kam-an.txt"));
     }
 
@@ -82,16 +87,18 @@ public sealed class RepoVorspulenTests : IDisposable
         return sperre;
     }
 
-    [Fact]
-    public async Task Abgebrochenes_Vorspulen_wird_vollendet_und_lokale_Aenderungen_bleiben()
+    [Theory]
+    [InlineData(DateienAnzahl)]
+    [InlineData(25)]    // killed early: most files still hold the old content
+    public async Task Abgebrochenes_Vorspulen_wird_vollendet_und_lokale_Aenderungen_bleiben(int bis)
     {
         var (klon, arbeit) = Aufbauen();
-        HalbVorspulen(klon, arbeit);
+        HalbVorspulen(klon, arbeit, bis);
         File.WriteAllText(Path.Combine(klon, "d0.txt"), "lokal");
         File.WriteAllText(Path.Combine(klon, "eigen.txt"), "lokal");
         var sperre = SperreAnlegen(klon, TimeSpan.FromMinutes(30));
 
-        var lauf = await RepoAbgleich.VorspulenAsync(klon, autostash: false, gitLaeuft: () => false);
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: true, gitLaeuft: () => false);
 
         Assert.Equal(0, lauf.ExitCode);
         Assert.False(File.Exists(sperre));
@@ -99,7 +106,41 @@ public sealed class RepoVorspulenTests : IDisposable
         Assert.Equal("lokal", File.ReadAllText(Path.Combine(klon, "d0.txt")));
         Assert.Equal("lokal", File.ReadAllText(Path.Combine(klon, "eigen.txt")));
         Assert.Equal("neu", File.ReadAllText(Path.Combine(klon, "fehlt.txt")));
+        Assert.Equal("neu", File.ReadAllText(Path.Combine(klon, "d" + (DateienAnzahl - 1) + ".txt")));
+        Assert.False(File.Exists(Path.Combine(klon, "geht-weg.txt")));
         Assert.Equal("M d0.txt", Git(klon, "status --porcelain -uno"));
+        Assert.Empty(Git(klon, "stash list"));
+    }
+
+    [Fact]
+    public async Task Die_Pruefung_setzt_nichts_zurueck_und_nimmt_nur_die_Sperre_weg()
+    {
+        var (klon, arbeit) = Aufbauen();
+        var vorher = Git(klon, "rev-parse HEAD");
+        HalbVorspulen(klon, arbeit, DateienAnzahl);
+        var sperre = SperreAnlegen(klon, TimeSpan.FromMinutes(30));
+
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: false, gitLaeuft: () => false);
+
+        Assert.NotEqual(0, lauf.ExitCode);
+        Assert.False(File.Exists(sperre));
+        Assert.Equal(vorher, Git(klon, "rev-parse HEAD"));
+    }
+
+    [Fact]
+    public async Task Vorgemerkte_Dateien_verhindern_die_Reparatur()
+    {
+        var (klon, arbeit) = Aufbauen();
+        HalbVorspulen(klon, arbeit, DateienAnzahl);
+        File.WriteAllText(Path.Combine(klon, "vorgemerkt.txt"), "lokal");
+        Git(klon, "add vorgemerkt.txt");
+        // Blocks the autostash fallback too, so the test sees only what the repair decided.
+        File.WriteAllText(Path.Combine(klon, "fehlt.txt"), "lokal");
+
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: true, gitLaeuft: () => false);
+
+        Assert.Contains("vorgemerkt.txt", Git(klon, "diff --cached --name-only"));
+        Assert.DoesNotContain("Abgebrochenes Vorspulen", lauf.Ausgabe);
     }
 
     [Fact]
@@ -109,7 +150,7 @@ public sealed class RepoVorspulenTests : IDisposable
         var vorher = Git(klon, "rev-parse HEAD");
         File.WriteAllText(Path.Combine(klon, "d0.txt"), "lokal");
 
-        var lauf = await RepoAbgleich.VorspulenAsync(klon, autostash: false, gitLaeuft: () => false);
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: false, gitLaeuft: () => false);
 
         Assert.NotEqual(0, lauf.ExitCode);
         Assert.Equal(vorher, Git(klon, "rev-parse HEAD"));
@@ -117,17 +158,30 @@ public sealed class RepoVorspulenTests : IDisposable
     }
 
     [Fact]
-    public async Task Autostash_spult_trotz_lokaler_Aenderung_vor()
+    public async Task Nutzerstart_spult_mit_Autostash_trotz_lokaler_Aenderung_vor()
     {
         var (klon, _) = Aufbauen();
         File.WriteAllText(Path.Combine(klon, "eigen.txt"), "lokal");
         Git(klon, "add eigen.txt");
 
-        var lauf = await RepoAbgleich.VorspulenAsync(klon, autostash: true, gitLaeuft: () => false);
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: true, gitLaeuft: () => false);
 
         Assert.Equal(0, lauf.ExitCode);
         Assert.Equal(Git(klon, "rev-parse origin/main"), Git(klon, "rev-parse HEAD"));
         Assert.Equal("lokal", File.ReadAllText(Path.Combine(klon, "eigen.txt")));
+    }
+
+    [Fact]
+    public async Task Kollidierender_Autostash_gilt_als_Fehler_und_nennt_den_Stash()
+    {
+        var (klon, _) = Aufbauen();
+        File.WriteAllText(Path.Combine(klon, "d0.txt"), "lokal");
+
+        var lauf = await RepoAbgleich.VorspulenAsync(klon, nutzerStart: true, gitLaeuft: () => false);
+
+        Assert.NotEqual(0, lauf.ExitCode);
+        Assert.Contains("Stash", RepoAbgleich.VorspulGrund(lauf));
+        Assert.NotEmpty(Git(klon, "stash list"));
     }
 
     [Theory]
@@ -142,15 +196,16 @@ public sealed class RepoVorspulenTests : IDisposable
 
     [Theory]
     [InlineData(3307, 6, true)]     // the real case of 02.11.2026
-    [InlineData(49, 0, false)]      // too little to tell it from ordinary local work
-    [InlineData(100, 11, false)]
-    public void Halbes_Vorspulen_verlangt_eine_klare_Mehrheit(int zuHead, int zuUpstream, bool erwartet)
-        => Assert.Equal(erwartet, RepoAbgleich.IstHalbesVorspulen(zuHead, zuUpstream));
+    [InlineData(9, 0, false)]       // too little to tell it from ordinary local work
+    [InlineData(100, 100, false)]   // as much own work as written files: leave it to a human
+    public void Halbes_Vorspulen_verlangt_eine_klare_Mehrheit(int geschrieben, int eigeneArbeit, bool erwartet)
+        => Assert.Equal(erwartet, RepoAbgleich.IstHalbesVorspulen(geschrieben, eigeneArbeit));
 
-    [Fact]
-    public void Der_Grund_nennt_die_Sperre_statt_lokaler_Aenderungen()
-    {
-        Assert.Contains("index.lock", RepoAbgleich.VorspulGrund("error: Unable to create '.git/index.lock': File exists."));
-        Assert.Contains("lokale Änderungen", RepoAbgleich.VorspulGrund("error: Your local changes would be overwritten"));
-    }
+    [Theory]
+    [InlineData("error: Unable to create '.git/index.lock': File exists.", false, false, "index.lock")]
+    [InlineData("error: Your local changes would be overwritten", false, false, "lokale Änderungen")]
+    [InlineData("error: Your local changes would be overwritten", true, false, "Zeitlimit")]
+    [InlineData("error: Your local changes would be overwritten", false, true, "abgebrochen")]
+    public void Der_Grund_nennt_die_wahre_Ursache(string ausgabe, bool abgelaufen, bool abgebrochen, string erwartet)
+        => Assert.Contains(erwartet, RepoAbgleich.VorspulGrund(new BefehlErgebnis(1, ausgabe, abgelaufen, Abgebrochen: abgebrochen)));
 }

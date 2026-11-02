@@ -2,7 +2,7 @@ import Foundation
 
 /// Gegenstueck zu RepoSync.cs: gleicht vor jedem CLI-Start das Repo ~/proggs mit GitHub ab. Profile, Regeln
 /// und Skills kommen aus dem Repo; ohne Abgleich startete eine Sitzung mit dem veralteten Stand dieses Rechners.
-/// Bewusst nur Fast-Forward (`git pull --ff-only`): nie ein Merge, nie ein Konflikt, und noch nicht committete
+/// Bewusst nur Fast-Forward (`git fetch` plus `git merge --ff-only`): nie ein echter Merge, nie ein Konflikt, und noch nicht committete
 /// Aenderungen paralleler Sitzungen bleiben unangetastet. Geht das nicht, wird trotzdem gestartet.
 enum RepoSync {
     struct Result {
@@ -22,12 +22,22 @@ enum RepoSync {
         env["GIT_TERMINAL_PROMPT"] = "0"
 
         let before = Shell.run(git, ["-C", repo, "rev-parse", "HEAD"], environment: env, timeout: 5)
-        let pull = Shell.run(git, ["-C", repo, "pull", "--ff-only", "--no-rebase", "--quiet"],
-                             environment: env, timeout: 20)
-        guard pull.finished else {
-            log.warn("RepoSync", "pull", "git pull nach 20 s abgebrochen")
+        let fetch = Shell.run(git, ["-C", repo, "fetch", "--quiet"], environment: env, timeout: 20)
+        guard fetch.finished else {
+            log.warn("RepoSync", "pull", "git fetch nach 20 s abgebrochen")
             return Result(ok: false, message: "Zeitüberschreitung nach 20 s (offline?)")
         }
+        guard fetch.exitCode == 0 else {
+            let reason = fetch.stderr.split(separator: "\n").first.map { String($0).trimmingCharacters(in: .whitespaces) }
+                ?? "unbekannter Fehler"
+            log.warn("RepoSync", "pull", "git fetch fehlgeschlagen: \(reason)")
+            return Result(ok: false, message: reason)
+        }
+        // Der Fetch darf sterben, das Vorspulen nicht: git schreibt erst die Dateien und setzt HEAD zuletzt.
+        // Ein Abbruch dazwischen hinterlaesst eine verwaiste index.lock und tausende Scheinaenderungen.
+        // Timeout 0: Bei grossem Rueckstand wartet der CLI-Start, statt auf einem halben Stand loszulaufen.
+        let pull = Shell.run(git, ["-C", repo, "merge", "--ff-only", "--quiet", "@{u}"],
+                             environment: env, timeout: 0)
         guard pull.exitCode == 0 else {
             let reason = pull.stderr.split(separator: "\n").first.map { String($0).trimmingCharacters(in: .whitespaces) }
                 ?? "unbekannter Fehler"
@@ -59,7 +69,8 @@ enum RepoSync {
         let commit = Shell.run(git, ["-C", repo, "commit", "--quiet", "-m", commitMessage, "--", filePath],
                                environment: env, timeout: 20)
         guard commit.exitCode == 0 else { return Result(ok: false, message: firstLine(commit.stderr)) }
-        let pull = Shell.run(git, ["-C", repo, "pull", "--rebase", "--autostash", "--quiet"], environment: env, timeout: 20)
+        // Timeout 0: Ein abgebrochener Rebase mit Autostash hinterliesse das Repo mitten in der Arbeit.
+        let pull = Shell.run(git, ["-C", repo, "pull", "--rebase", "--autostash", "--quiet"], environment: env, timeout: 0)
         guard pull.finished, pull.exitCode == 0 else {
             return Result(ok: false, message: "committet, aber Abgleich fehlgeschlagen: " + firstLine(pull.stderr))
         }
