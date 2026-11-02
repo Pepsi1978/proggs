@@ -631,13 +631,17 @@ try {
             $promptVersuch++
             $promptStart = Get-Date
             # Ohne --auto: -p laeuft ohnehin ohne Rueckfragen, und Kimi 2.4 bricht bei beiden zusammen sofort ab.
-            & $kimiPath -m {{PowerShellLiteral(alias)}} -p $jarvisPrompt
+            # Mitlesen fuer die Sitzungskennung am Ende der Ausgabe.
+            & $kimiPath -m {{PowerShellLiteral(alias)}} -p $jarvisPrompt 2>&1 | Tee-Object -Variable promptAusgabe
             $promptExit = $LASTEXITCODE
-            $promptSchnell = ((Get-Date) - $promptStart).TotalSeconds -lt 5
-            if ($promptSchnell -and $promptVersuch -lt 3) { Start-Sleep -Milliseconds 1000 }
-        } while ($promptSchnell -and $promptVersuch -lt 3)
-        if ($promptExit -eq 0 -and -not $promptSchnell) {
-            $kimiResume = @('-c')
+            # Ein schneller Lauf mit Exit 0 ist ein erledigter kurzer Auftrag: Eine Wiederholung fuehrte ihn doppelt aus. Neu versucht wird nur ein Sofort-Abbruch.
+            $promptSofortAbbruch = $promptExit -ne 0 -and ((Get-Date) - $promptStart).TotalSeconds -lt 5
+            if ($promptSofortAbbruch -and $promptVersuch -lt 3) { Start-Sleep -Milliseconds 1000 }
+        } while ($promptSofortAbbruch -and $promptVersuch -lt 3)
+        if ($promptExit -eq 0) {
+            # Genau diese Sitzung fortsetzen: -c naehme die neueste im Ordner, also womoeglich die eines parallelen Auftrags. Nur wenn Kimi keine nennt, bleibt -c.
+            $promptSitzung = [regex]::Matches(($promptAusgabe | Out-String), 'kimi -r (\S+)') | Select-Object -Last 1
+            $kimiResume = if ($promptSitzung) { @('-S', $promptSitzung.Groups[1].Value) } else { @('-c') }
         } elseif ($jarvisAuftragId) {
             python (Join-Path $HOME 'proggs\Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py') melde fehler "Kimi konnte den Auftrag nicht ausfuehren (Exit-Code $promptExit), er ist nicht erledigt. Bitte am PC nachsehen, vielleicht fehlt die Anmeldung."
         }

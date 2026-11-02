@@ -409,8 +409,17 @@ final class OpenLauncherService {
         kimiResume=()
         if [ -n "$PROMPT" ]; then
             # Ohne --auto: -p laeuft ohnehin ohne Rueckfragen, und Kimi 2.4 bricht bei beiden zusammen sofort ab.
-            "$KIMI" -m "$ALIAS" -p "$PROMPT"
-            kimiResume=(-c)
+            # tee liest die Sitzungskennung mit: -c naehme die neueste Sitzung im Ordner, also womoeglich die eines parallelen Auftrags.
+            promptAusgabe="$(mktemp)"
+            "$KIMI" -m "$ALIAS" -p "$PROMPT" 2>&1 | tee "$promptAusgabe"
+            promptExit=${PIPESTATUS[0]}
+            promptSitzung="$(tail -20 "$promptAusgabe" | sed -n 's/.*kimi -r \\([^[:space:]]*\\).*/\\1/p' | tail -1)"
+            rm -f "$promptAusgabe"
+            if [ "$promptExit" = 0 ]; then
+                if [ -n "$promptSitzung" ]; then kimiResume=(-S "$promptSitzung"); else kimiResume=(-c); fi
+            elif [ -n "${JARVIS_AUFTRAG_ID:-}" ]; then
+                python3 "$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py" melde fehler "Kimi konnte den Auftrag nicht ausfuehren (Exit-Code $promptExit), er ist nicht erledigt. Bitte am Mac nachsehen, vielleicht fehlt die Anmeldung."
+            fi
         fi
         attempt=0
         while true; do
