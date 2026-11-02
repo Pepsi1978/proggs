@@ -75,6 +75,21 @@ $reservedWithPort = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay
 Assert-True $reservedWithPort 'Ein antwortendes Overlay muss weiterhin reservieren.'
 Assert-True ($portProbeCalls -eq 0) 'Der Port darf nur geprueft werden, wenn kein Endpunkt antwortet.'
 
+# Port offen und 404 auf beiden Endpunkten = aeltere Fassung, kein Haenger
+# (Vorfall 02.11.2026: ein TVO vom Juni blockierte sein eigenes Update).
+$start404 = Get-Date
+$alteFassung = Enter-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 `
+    -TimeoutSeconds 30 -PollMilliseconds 10 -UnreadableGraceSeconds 20 `
+    -ProcessProbe { $true } `
+    -PortProbe { $true } `
+    -Request {
+        $fehler = [System.Exception]::new('404')
+        $fehler | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 404 })
+        throw $fehler
+    }
+Assert-True (-not $alteFassung) 'Eine Fassung ohne Schutz-Endpunkt darf keine Reservierung vortaeuschen.'
+Assert-True (((Get-Date) - $start404).TotalSeconds -lt 2) 'Ein 404 ist kein Haenger und darf nicht auf die Karenzzeit warten.'
+
 $released = $false
 Exit-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 -Reserved $true `
     -ProcessProbe { $true } `
@@ -85,4 +100,4 @@ Exit-VoiceOverlayDeploymentWindow -ProcessName 'TestOverlay' -Port 1 -Reserved $
     }
 Assert-True $released 'Eine gehaltene Reservierung muss freigegeben werden.'
 
-Write-Host 'voice-overlay-deploy-guard: 9 Tests bestanden.' -ForegroundColor Green
+Write-Host 'voice-overlay-deploy-guard: 10 Tests bestanden.' -ForegroundColor Green

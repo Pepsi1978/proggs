@@ -19,13 +19,23 @@ if ((Test-Path -LiteralPath $exePath) -and -not ($env:OVERLAY_REBUILD_FREIGABE -
     exit 3
 }
 
-# SDK-Pfad setzen (User-Installation hat Vorrang)
+# SDK waehlen: die Installation mit dem neuesten SDK, denn sie baut auch aeltere Ziele.
+# Die User-Installation gewinnt nur bei Gleichstand. Hatte sie fest Vorrang, scheiterte der
+# Build, sobald dort ein aelteres SDK lag als das Projekt braucht (Vorfall 02.11.2026).
+function Get-NeuestesDotnetSdk([string]$Programm) {
+    try {
+        $neuestes = & $Programm --list-sdks 2>$null |
+            ForEach-Object { try { [version]($_ -split '[ -]')[0] } catch { $null } } |
+            Where-Object { $_ } | Sort-Object -Descending | Select-Object -First 1
+        if ($neuestes) { return $neuestes }
+    } catch { }
+    return [version]'0.0'
+}
 $sdkDotnet = Join-Path $env:USERPROFILE ".dotnet\dotnet.exe"
-if (Test-Path $sdkDotnet) {
+$dotnet = "dotnet"
+if ((Test-Path $sdkDotnet) -and (Get-NeuestesDotnetSdk $sdkDotnet) -ge (Get-NeuestesDotnetSdk "dotnet")) {
     $env:DOTNET_ROOT = Join-Path $env:USERPROFILE ".dotnet"
     $dotnet = $sdkDotnet
-} else {
-    $dotnet = "dotnet"
 }
 
 try {

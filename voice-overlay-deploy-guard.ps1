@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.1.0 - 30.08.2026, 11:54 Uhr
+# Version 1.1.1 - 02.11.2026, 21:01 Uhr
 
 <#
     AUFNAHME-SCHUTZ VOR DEM DEPLOYMENT
@@ -29,7 +29,19 @@
         Das Overlay laeuft und sollte antworten, tut es aber nicht — es
         haengt. Nur hier ist fail-closed richtig, und auch hier nach
         Sekunden statt nach Minuten.
+
+      LISTENER DA, ANTWORTET MIT 404
+        Das Overlay laeuft, kennt den Endpunkt aber nicht. Das ist eine
+        aeltere Fassung wie im ersten Fall, kein Haenger. Ein reiner Port-Test
+        haelt sie fuer haengend und blockiert so genau das Update, das sie
+        ablaesen wuerde.
 #>
+
+function Test-VoiceOverlayEndpointUnbekannt {
+    param([Parameter(Mandatory)]$Fehler)
+    try { return [int]$Fehler.Exception.Response.StatusCode -eq 404 }
+    catch { return $false }
+}
 
 function Enter-VoiceOverlayDeploymentWindow {
     [CmdletBinding()]
@@ -138,6 +150,15 @@ function Enter-VoiceOverlayDeploymentWindow {
                 }
             }
             catch {
+                # 404: Das Overlay lebt und antwortet, kennt den Endpunkt aber nicht
+                # (Fassung vor dem Aufnahme-Schutz). Es haengt nicht, und warten
+                # aendert nichts daran (Vorfall 02.11.2026).
+                if (Test-VoiceOverlayEndpointUnbekannt $_) {
+                    Write-Host "  $ProcessName kennt den Aufnahme-Schutz nicht (Port $Port antwortet mit 404) — eine aeltere Fassung." -ForegroundColor Yellow
+                    Write-Host "  Es gibt nichts zu reservieren. Deployment faehrt ohne Reservierung fort." -ForegroundColor Green
+                    return $false
+                }
+
                 # Weder der neue noch der alte Endpunkt antwortet. Jetzt
                 # entscheidet der Port, welcher der beiden Faelle vorliegt —
                 # siehe Kopf der Datei. Ohne diese Unterscheidung endete hier

@@ -1,6 +1,6 @@
 # UpdateZentrale: Abgebrochenes Vorspulen blockiert das Repo und alle Repo-Updates (02.11.2026)
 
-> Behoben in UpdateZentrale 1.3.71 und Updater-Zentrale macOS 1.0.43. Geschwisterfall: `2026-11-01-updatezentrale-npm-kill-zerstoert-cli.md`.
+> Behoben in UpdateZentrale 1.3.72 und Updater-Zentrale macOS 1.0.44. Geschwisterfall: `2026-11-01-updatezentrale-npm-kill-zerstoert-cli.md`.
 
 ## Symptom
 
@@ -37,6 +37,13 @@ Remove-Item Env:GIT_INDEX_FILE, "$env:TEMP\vergleich-index"
 ```
 
 Sind das nur wenige Pfade: Prüfen, dass kein Git-Prozess läuft, `.git/index.lock` löschen und `git reset --mixed origin/main` ausführen. Nie `reset --hard` oder `pull --autostash`: Das erste verwirft lokale Arbeit, das zweite stasht tausende Scheinänderungen.
+
+## Dahinter lagen zwei weitere Fehler
+
+Beide kamen erst zum Vorschein, als das Repo wieder stand. Sie betrafen jedes Update von einem sehr alten Stand aus.
+
+- **CVO: falsches SDK.** `ClaudeVoiceOverlay-Windows/publish.ps1` gab `~/.dotnet` fest den Vorrang. Dort liegt nur SDK 8.0.418, das Projekt braucht .NET 10: `NETSDK1045`. Jetzt gewinnt die Installation mit dem neuesten SDK, `~/.dotnet` nur bei Gleichstand.
+- **TVO: alte Fassung galt als hängend.** Das laufende TVO vom Juni kennt die Endpunkte `/deployment/prepare` und `/recording/status` noch nicht und antwortet mit 404, `/autoenter/status` antwortet normal. `voice-overlay-deploy-guard.ps1` wertete jede Fehlantwort bei offenem Port als Hänger und brach ab. So blockierte die alte Fassung genau das Update, das sie ablösen sollte. Ein 404 zählt jetzt wie „kein Schutz angeboten“, in `.ps1` und `.sh`. Ein echter Hänger (keine Antwort) bricht weiter fail-closed ab.
 
 ## Offen
 

@@ -72,6 +72,13 @@ reserve_voice_overlay_deployment() {
                 return 1
             fi
 
+            # 404: Das Overlay lebt, kennt den Endpunkt aber nicht (aeltere Fassung), es haengt nicht.
+            if [[ "$(curl --silent --output /dev/null --max-time 2 --write-out '%{http_code}' -X POST "http://127.0.0.1:${port}/deployment/prepare" 2>/dev/null)" == "404" ]]; then
+                echo "$process_name kennt den Aufnahme-Schutz nicht (Port ${port} antwortet mit 404) — eine aeltere Fassung."
+                echo "Es gibt nichts zu reservieren. Build faehrt ohne Reservierung fort."
+                return 1
+            fi
+
             if (( unreadable_since < 0 )); then
                 unreadable_since=$SECONDS
                 echo "$process_name lauscht auf Port ${port}, antwortet aber nicht. Warte bis zu ${unreadable_grace_seconds}s auf eine Antwort..."
