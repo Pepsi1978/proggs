@@ -79,6 +79,12 @@
 - **Fix:** Bildschirminhalt nur als Daten, Bestätigung vor wirksamen Aktionen.
 - **Quelle:** extern, Studien in `best-practices/android/handy-use.md` §6.
 
+## 15. `\b` vor Umlauten wirkt auf der Test-JVM anders
+- **Symptom:** `\büber\b` findet „über“ im JVM-Unit-Test nicht, der Test ist rot.
+- **Ursache:** Auf der JVM zählt `ü` dabei nicht als Wortzeichen; auf Android arbeitet eine andere Regex-Maschine, das Verhalten dort ist nicht geprüft.
+- **Fix:** `(?<!\p{L})über(?!\p{L})`, wirkt auf beiden gleich.
+- **Quelle:** eigene Messung 02.11.2026 (Jarvis, `HandyUseTest`).
+
 ## 14. Gradle: „Java home supplied is invalid“ nach JDK-Update
 - **Symptom:** Jeder Bau scheitert sofort, `org.gradle.java.home` zeigt auf `jdk-21.0.12.101-hotspot`.
 - **Ursache:** Das JDK-Update ersetzt den Ordner, `~/.gradle/gradle.properties` bleibt auf dem alten Pfad.

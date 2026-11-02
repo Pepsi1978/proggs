@@ -1,7 +1,7 @@
 # Android-Handy per adb durch eine KI-CLI bedienen — Volltext
 
 **Stand:** 02.11.2026
-**Versionsanker:** adb / platform-tools 37.0.1 · Galaxy Z Fold 8 (SM-F971B), Android 17 (API 37), One UI 9.0 · scrcpy 5.0.1 · Skill `handy-use` (Helfer-Version 4)
+**Versionsanker:** adb / platform-tools 37.0.1 · Galaxy Z Fold 8 (SM-F971B), Android 17 (API 37), One UI 9.0 · scrcpy 5.0.1 · Skill `handy-use` (Helfer-Version 5)
 **Kurzcheck:** `handy-use-kurzcheck.md` · **Bugs:** `bugs/android/handy-use.md` · Verwandt: `adb-wlan-debugging.md`, `emulator-foldable.md`
 
 Markierung: `gemessen` = am 02.11.2026 am Fold 8 über WLAN-adb, `offiziell` = Google/AOSP/Anthropic, `extern` = Dritte, nicht geprüft.
@@ -28,6 +28,8 @@ Warum so schnell: Der Baum kommt ohne `waitForIdle` (das hängt bis zum Zeitlimi
 - `new UiAutomation(Looper, new UiAutomationConnection())` plus `connect(FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)` per Reflection. Vorher `Looper.prepareMainLooper()` im Hauptthread, die Arbeit läuft in einem eigenen Thread.
 - Rechte der Shell reichen für `injectInputEvent`, `takeScreenshot` und den Baum. Es wird keine App installiert.
 - Abstract-Socket: Jede App auf dem Handy kann ihn erreichen. Darum Pflicht: zufälliges Token in Datei `0600` in einem Ordner `0700`, Vergleich mit `MessageDigest.isEqual`. Beendet sich nach 20 Minuten ohne Aufruf, denn offene UiAutomation hält Accessibility für das ganze System an.
+- Jede Verbindung bekommt einen eigenen Thread mit Lese-Zeitlimit, Aktionen laufen unter einer Sperre nacheinander. So antwortet der Ping auch während einer langen Aktion, und ein zweiter Aufrufer beendet einen beschäftigten Helfer nicht fälschlich. Zugangsdaten am Rechner liegen in `~/.cache/handy-use` (`0700`/`0600`), nie im gemeinsamen Temp-Ordner.
+- Nummern aus dem Baum prüfen vor dem Tippen per `refresh()`, ob das Element noch an seiner Stelle liegt. Der Vordergrund-Schutz allein sieht Wechsel innerhalb einer App nicht.
 - Ereignisse mit `injectInputEvent(ev, false)`: `true` wartet auf die App je Ereignis, aus einem 250-ms-Wischer wurden im Emulator 1,6 s.
 
 ## §3 Agentenschleife
