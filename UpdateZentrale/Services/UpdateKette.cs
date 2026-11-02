@@ -96,8 +96,16 @@ public sealed class UpdateKette
         var standNach = fingerabdruckStart;
         var arbeitSekunden = 0.0;   // time inside the provider's update calls only
 
+        var sperrWiederholt = false;
+
         for (var durchlauf = 1; durchlauf <= MaxDurchlaeufe; durchlauf++)
         {
+            if (await FremdeSperre.AbwartenAsync(_eintrag, _protokoll, _status, abbruch) is { } gesperrt)
+            {
+                standNach = await StandNachAbschlussAsync();
+                return Ende(LaufErgebnis.Fehlgeschlagen, gesperrt, new PruefErgebnis(UpdateZustand.Fehler, Meldung: gesperrt));
+            }
+
             if (durchlauf > 1)
             {
                 var hinweis = "Folgeupdate " + durchlauf + " von " + MaxDurchlaeufe
@@ -127,6 +135,16 @@ public sealed class UpdateKette
             }
             if (ergebnis.Zustand is UpdateZustand.Fehler or UpdateZustand.NichtInstalliert)
             {
+                // The blocker started while the installer was running: once more after it ended.
+                if (ergebnis.Zustand == UpdateZustand.Fehler && !sperrWiederholt
+                    && FremdeSperre.Laufende(_eintrag.WarteAufProzesse).Count > 0)
+                {
+                    sperrWiederholt = true;
+                    _protokoll.Report("Fehlgeschlagen, während ein sperrender Prozess lief – neuer Versuch, sobald er beendet ist.");
+                    durchlauf--;
+                    continue;
+                }
+
                 standNach = await StandNachAbschlussAsync();
                 return Ende(LaufErgebnis.Fehlgeschlagen, Text(ergebnis.Meldung, "Das Update ist fehlgeschlagen."),
                     ergebnis with { Zustand = UpdateZustand.Fehler });

@@ -796,7 +796,10 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Großes Update, kann lange dauern. Visual Studio vorher schließen. Für Programme unter „Program Files“ fragt Windows nach Administratorrechten, außer die UpdateZentrale läuft schon als Administrator.",
+      "warteAufProzesse": [
+        "BackgroundDownload"
+      ],
+      "hinweis": "Großes Update, kann lange dauern. Visual Studio vorher schließen. Lädt Visual Studio gerade selbst im Hintergrund (BackgroundDownload), wartet das Update darauf. Für Programme unter „Program Files“ fragt Windows nach Administratorrechten, außer die UpdateZentrale läuft schon als Administrator.",
       "akzent": "#865FC5"
     },
     {

@@ -182,6 +182,15 @@ public sealed class ProgrammEintrag
     public bool BeendenVorUpdate { get; set; }
     public bool NeuStartenNachUpdate { get; set; }
 
+    /// <summary>
+    /// Foreign processes that hold this update's files and must not be ended (a vendor's SYSTEM
+    /// task). Unlike <see cref="HelferProzesse"/> the update waits for them; matched by name only.
+    /// </summary>
+    public List<string> WarteAufProzesse { get; set; } = new();
+
+    /// <summary>How long an update waits for <see cref="WarteAufProzesse"/> before it gives up.</summary>
+    public int WarteMinuten { get; set; } = 90;
+
     public string? Hinweis { get; set; }
 
     /// <summary>Text of the "pending" band instead of the default "restart the program" wording.</summary>
