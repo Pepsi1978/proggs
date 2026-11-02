@@ -15,14 +15,15 @@ object HandyUse {
         "sonst findet und meldet sie nur. Das ist die einzige Ausnahme von „keine Lösungswege“. Jarvis' eigene Einstellungen bleiben beim Werkzeug einstellungen, und Termine, Aufgaben und Mails bei deinen Werkzeugen. " +
         "Nie für Banking, PIN, Passwörter oder Codes. Handy-Use läuft nur am Mac, am Windows-PC und auf dem Hostinger-Server, nicht in der Cloud."
 
-    const val KEIN_RECHNER = "Der Handy-Use-Auftrag ist nicht gestartet: Er braucht den Mac, den Windows-PC oder den Hostinger-Server, weil die Cloud das Handy nicht erreicht. Gerade ist keiner davon bereit."
+    const val KEIN_RECHNER = "Der Handy-Use-Auftrag ist nicht gestartet: Weder der Mac noch der Windows-PC noch der Hostinger-Server nehmen ihn gerade an, und die Cloud erreicht das Handy nicht."
 
-    private val SKILL = Regex("(?i)\\bhandy[- ]?use\\b")
+    const val NICHT_IN_CLOUD = "Der Handy-Use-Auftrag ist nicht gestartet: Die Cloud erreicht das Handy nicht. Er läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server."
 
-    /** Verlangt [auftrag] den Skill? */
-    fun verlangt(auftrag: String): Boolean = SKILL.containsMatchIn(auftrag)
+    /**
+     * Soll der Auftrag das Handy bedienen? Der Name allein genügt nicht: „Ändere im Skill handy-use die Wartezeit“ ist normale
+     * Programmierarbeit und darf in die Cloud.
+     */
+    private val BEDIENEN = Regex("(?i)\\b(nutze|nimm|benutze|verwende|mit|über|per)\\b[^.;:\\n]{0,30}\\bhandy[- ]?use\\b(?!-\\p{L})")
 
-    /** Für einen Handy-Use-Auftrag bleiben aus [ziele] nur die, die das Handy erreichen ([istRechner]); sonst alle unverändert. */
-    fun <Z> erreichbar(auftrag: String, ziele: List<Z>, istRechner: (Z) -> Boolean): List<Z> =
-        if (verlangt(auftrag)) ziele.filter(istRechner) else ziele
+    fun verlangt(auftrag: String): Boolean = BEDIENEN.containsMatchIn(auftrag)
 }

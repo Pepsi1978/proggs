@@ -84,7 +84,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Nennt Frank dabei ein Modell (etwa „GPT-6 Astra“, „Kimi K3“), einen Effort, ein Profil, einen Modus oder ein CLI (Claude Code, Codex, OpenCode, Kimi CLI, Antigravity), " +
             "gib genau das in modell, effort, profil, modus und cli mit und lass Fehlendes weg; Jarvis prüft es gegen OpenLauncher und fragt bei Unklarem zurück. " +
-            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch. " + HandyUse.HINWEIS
+            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch."
 
     private val app = context.applicationContext
     private val e get() = Einstellungen.get(app)
@@ -462,7 +462,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
                 // programmier_nachtrag: So landeten neue Wünsche ungefragt als Nachtrag in alten Sitzungen. Jetzt ist jeder Aufruf
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).
-                val wahl = HandyUse.erreichbar(auftrag, zieleFuer(ziel, modell, cli)) { it is PcBruecke }
+                val wahl = zieleFuerAuftrag(auftrag, ziel, modell, cli)
                 val neu = a.optBoolean("neu")
                 // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
                 // Ruft das Modell nach einem Start mit vorgewähltem Modell in derselben Runde noch einmal auf (auch mit neu=true), gibt es keinen zweiten Auftrag.
@@ -531,6 +531,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     knopf != null -> schonPerKnopfGestartet(knopf)
                     katalog is Ergebnis && vorwahl == null -> katalog
                     freieAngabe != null && katalog is Ergebnis -> ausweg(katalog)
+                    HandyUse.verlangt(auftrag) && ziel == "cloud" -> ausweg(Ergebnis(HandyUse.NICHT_IN_CLOUD, fehler = true))
                     freieAngabe != null && ziel == "cloud" ->
                         ausweg(Ergebnis("${freieAngabe.modell} ist nicht gestartet: Die OpenLauncher-Auswahl läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     // Für diese Modelle gibt es keinen Weg außerhalb des Angebots: nie still als Opus starten.
@@ -569,7 +570,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
                     // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
                     modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
-                    wahl.isEmpty() -> ausweg(Ergebnis(if (HandyUse.verlangt(auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli), fehler = true))
+                    wahl.isEmpty() -> ausweg(Ergebnis(fehltFuerAuftrag(auftrag, modell, cli), fehler = true))
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa(ziel) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty(), anhaenge = anhangPfade()))
@@ -672,6 +673,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         ziel == "cloud" -> ziele.filterIsInstance<CloudRoutine>()
         else -> ziele
     }.filter { it.bereit() }
+
+    /** Wie [zieleFuer]; ein Handy-Use-Auftrag bleibt bei den Rechnern, weil die Cloud das Handy nicht erreicht. */
+    private fun zieleFuerAuftrag(auftrag: String, ziel: String, modell: String, cli: String = ""): List<ProgrammierZiel> =
+        zieleFuer(ziel, modell, cli).let { w -> if (HandyUse.verlangt(auftrag)) w.filterIsInstance<PcBruecke>() else w }
+
+    private fun fehltFuerAuftrag(auftrag: String, modell: String, cli: String = "") =
+        if (HandyUse.verlangt(auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli)
 
     /**
      * Fragt gerade ein Rechner ab, der Sol nimmt (Windows-PC oder freier Hostinger-Server, je nach [ziel])? Ist nur der Mac da, startet Opus
@@ -977,8 +985,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> k as Ergebnis
                 }
             } else {
-                val wahl = HandyUse.erreichbar(w.auftrag, zieleFuer(w.ziel, modell, cli)) { it is PcBruecke }
-                if (wahl.isEmpty()) Ergebnis(if (HandyUse.verlangt(w.auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli), fehler = true)
+                val wahl = zieleFuerAuftrag(w.auftrag, w.ziel, modell, cli)
+                if (wahl.isEmpty()) Ergebnis(fehltFuerAuftrag(w.auftrag, modell, cli), fehler = true)
                 else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
             }
         }
@@ -1150,6 +1158,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
                     "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
             } catch (fehler: Exception) {
+                // Die Meldungen der Brücke empfehlen teils die Cloud, die für Handy-Use nicht in Frage kommt.
+                if (HandyUse.verlangt(auftrag)) return Ergebnis(HandyUse.KEIN_RECHNER, fehler = true)
                 return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
             }
             // Erst jetzt, nach dem gelungenen Start: Bei „nicht erreichbar“ bliebe sonst eine leere Session zurück.
@@ -1166,6 +1176,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 (if (start.link.isNotEmpty()) " Link zur Sitzung: ${start.link}" else "") +
                 (if (uebersprungen.isEmpty()) "" else " (${uebersprungen.joinToString(" ")})"))
         }
+        // „Der PC ist nicht an, deshalb die Cloud“ stimmte hier nicht: Die Cloud ist für Handy-Use gesperrt.
+        if (HandyUse.verlangt(auftrag)) return Ergebnis(HandyUse.KEIN_RECHNER, fehler = true)
         return Ergebnis("Der Auftrag ist nicht gestartet: ${uebersprungen.joinToString(" ")}", fehler = true)
     }
 
