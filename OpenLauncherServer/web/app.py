@@ -407,13 +407,13 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
 async def neu_laden_bei_aenderung(_: web.Application):
     """Neue Fassung aus dem Repo: beenden, systemd startet neu."""
     # Auch die Seiten: Ihre gepackten Fassungen entstehen beim Start, eine geänderte app.js käme sonst nie an.
-    dateien = [Path(__file__), *sorted(Path(launcher.__file__).parent.glob("*.py"))] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
-    stand = [d.stat().st_mtime for d in dateien]
+    dateien = [Path(__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
+    stand = launcher.quellstand(dateien)
 
     async def wache():
         while True:
             await asyncio.sleep(30)
-            if [d.stat().st_mtime for d in dateien] != stand:
+            if launcher.quellstand(dateien) != stand:
                 os._exit(0)
 
     aufgabe = asyncio.create_task(wache())

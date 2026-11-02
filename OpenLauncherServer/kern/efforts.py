@@ -121,13 +121,19 @@ def modell_string(anbieter: str, slug: str) -> str:
     return slug if anbieter.lower() != "nvidia" and slug.lower().startswith(f"{anbieter.lower()}/") else f"{anbieter}/{slug}"
 
 
+def lokaler_slug(anbieter: str, slug: str) -> str:
+    """Der Name des Modells innerhalb seines Anbieters, also das, was bei OpenCode hinter „anbieter/“ steht."""
+    return modell_string(anbieter, slug).split("/", 1)[1]
+
+
 def fuer_cli(anbieter: str, slug: str, cli: str, gemerkt: dict) -> list:
     """Was die Konsole für dieses Modell in diesem CLI anbietet: der am PC gemerkte Stand (effort-stufen.json), sonst die Tabelle; aktuelle OpenAI-Modelle immer die Tabelle."""
     if immer_fest(anbieter, slug):
         return stufen(anbieter, slug)
     schluessel = modell_string(anbieter, slug)
     wert = gemerkt.get(f"{schluessel} [{'claude-code' if cli == 'claude' else cli}]")
-    # Der Stand ohne CLI-Zusatz gehört zum Zugang über OpenCode; für Codex gilt er nicht (MainViewModel am PC).
-    if wert is None and cli != "codex":
+    # Der Stand ohne CLI-Zusatz gehört zum Zugang über OpenCode; für die eigenen CLIs der Anbieter gilt er nicht (MainViewModel am PC).
+    if wert is None and cli == "opencode":
         wert = gemerkt.get(schluessel)
-    return wert if isinstance(wert, list) else stufen(anbieter, slug)
+    # Ein leerer Stand sagt nichts über das Modell (etwa eine gescheiterte Abfrage am PC) und nimmt ihm nicht die Stufen der Tabelle.
+    return wert if isinstance(wert, list) and wert else stufen(anbieter, slug)

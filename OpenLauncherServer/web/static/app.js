@@ -431,7 +431,8 @@ function modellGewaehlt() {
 }
 function cliGewaehlt(wahl) {
   const m = angebot.modelle[Number($("modell").value)];
-  const efforts = (m && m.efforts[$("cli").value]) || [];
+  // Während eines Updates kann der Server noch den Katalog der alten Fassung liefern, ohne efforts je Modell.
+  const efforts = (m && m.efforts && m.efforts[$("cli").value]) || [];
   fuelle("effort", efforts, null, typeof wahl === "string" && efforts.includes(wahl) ? wahl : efforts.includes("high") ? "high" : efforts[efforts.length - 1]);
 }
 async function ladeKatalog() {

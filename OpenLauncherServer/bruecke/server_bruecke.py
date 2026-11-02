@@ -154,7 +154,7 @@ def starte(auftrag: dict, w: dict) -> str:
 def bearbeite(auftrag: dict, zugang: dict) -> None:
     w = wahl(auftrag)
     try:
-        launcher.pruefe_anbieter(w["anbieter"])
+        launcher.pruefe_start(w["cli"], w["anbieter"], w["profil"], w["modus"])
         if launcher.belegt():
             raise RuntimeError("Der Hostinger-Server ist gerade ausgelastet.")
         # Nicht angemeldet: sicher nicht gestartet, also darf der nächste Rechner oder die Cloud übernehmen. Der Server läuft unbeaufsichtigt;
@@ -243,14 +243,13 @@ def main() -> int:
         return 0
     schreib("Brücke gestartet")
     threading.Thread(target=fortschritt_faden, daemon=True).start()
-    dateien = [Path(__file__), *sorted(Path(launcher.__file__).parent.glob("*.py"))]
-    stand = [d.stat().st_mtime for d in dateien]
+    stand = launcher.quellstand([Path(__file__)])
     pause, geprueft = 2, False
     letzter_scan = 0.0
     while True:
         try:
             # Neue Fassung (git pull): beenden, systemd startet die neue.
-            if [d.stat().st_mtime for d in dateien] != stand:
+            if launcher.quellstand([Path(__file__)]) != stand:
                 schreib("Neue Fassung, Neustart")
                 return 0
             zugang = lies_zugang()
