@@ -53,6 +53,16 @@ PROGRAMME = {
     # Nicht neben einem Gradle-Bau: Er liest die Werkzeuge, die hier ersetzt würden. build-tools 36.0.0 (apksigner) bleibt daneben liegen.
     "android-sdk": {"name": "Android SDK", "befehl": "sdkmanager", "sekunden": 900, "anmeldung": "", "stand": "", "installieren": "true",
                     "update": "if pgrep -f '[G]radleDaemon' >/dev/null; then echo 'Gradle-Bau läuft'; exit 1; fi; yes | sdkmanager --licenses >/dev/null 2>&1; sdkmanager --update"},
+    "trivy": {"name": "Trivy", "befehl": "trivy", "update": f"bash {KERN}/werkzeug_aktualisieren.sh trivy", "anmeldung": "", "stand": "", "installieren": f"bash {KERN}/werkzeug_aktualisieren.sh trivy"},
+    "lazygit": {"name": "lazygit", "befehl": "lazygit", "update": f"bash {KERN}/werkzeug_aktualisieren.sh lazygit", "anmeldung": "", "stand": "", "installieren": f"bash {KERN}/werkzeug_aktualisieren.sh lazygit"},
+    "rclone": {"name": "Rclone", "befehl": "rclone", "update": f"bash {KERN}/werkzeug_aktualisieren.sh rclone", "anmeldung": "", "stand": "", "installieren": f"bash {KERN}/werkzeug_aktualisieren.sh rclone"},
+    "bun": {"name": "Bun", "befehl": "bun", "update": "bun upgrade", "anmeldung": "", "stand": "",
+            "installieren": "curl -fsSL https://bun.com/install | SHELL=/bin/sh BUN_INSTALL=$HOME/.local bash"},
+    "deno": {"name": "Deno", "befehl": "deno", "update": "deno upgrade", "anmeldung": "", "stand": "",
+             "installieren": "curl -fsSL https://deno.land/install.sh | DENO_INSTALL=$HOME/.local sh -s -- --yes --no-modify-path"},
+    # CMake und Ninja kommen aus dem Paketarchiv (jarvis-powershell.timer); hier zählt die Version.
+    "cmake": {"name": "CMake", "befehl": "cmake", "update": "true", "anmeldung": "", "stand": "", "installieren": "true"},
+    "ninja": {"name": "Ninja", "befehl": "ninja", "update": "true", "anmeldung": "", "stand": "", "installieren": "true"},
     "uv": {"name": "uv", "befehl": "uv", "update": "uv self update", "anmeldung": "", "stand": "", "installieren": "curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh"},
     "typescript": {"name": "TypeScript", "befehl": "tsc", "update": npm_update("typescript"), "anmeldung": "", "stand": "", "installieren": f"{NPM} typescript@latest"},
     "tsx": {"name": "tsx", "befehl": "tsx", "update": npm_update("tsx"), "anmeldung": "", "stand": "", "installieren": f"{NPM} tsx@latest"},

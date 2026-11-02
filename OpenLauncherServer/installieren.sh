@@ -10,7 +10,7 @@ als() { sudo -u "$BENUTZER" -H env HOME="$ZUHAUSE" NPM_CONFIG_PREFIX="$ZUHAUSE/.
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux git git-lfs jq ripgrep unzip curl python3-aiohttp openjdk-17-jdk-headless openjdk-21-jdk-headless wget libatomic1 gnupg dotnet-sdk-8.0 dotnet-sdk-10.0 xvfb x11vnc novnc openbox
 # Eigener Aufruf: Fehlt eines dieser Werkzeuge in den Paketquellen, darf das die Einrichtung nicht stoppen.
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-venv pipx build-essential ffmpeg shellcheck shfmt bat fzf tree git-delta || echo "Zusatzwerkzeuge unvollständig"
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-venv pipx build-essential cmake ninja-build ffmpeg shellcheck shfmt bat fzf tree git-delta || echo "Zusatzwerkzeuge unvollständig"
 
 # gh und Chrome aus den Paketarchiven der Hersteller (Ubuntus gh ist Jahre alt, Chrome gibt es dort gar nicht).
 install -d -m 0755 /etc/apt/keyrings
@@ -97,6 +97,8 @@ als 'npm install -g --silent --allow-scripts=@moonshot-ai/kimi-code,node-pty @mo
 als 'npm install -g --silent pnpm@latest chrome-devtools-mcp@latest' || echo "pnpm oder chrome-devtools-mcp nicht installiert"
 als 'npm install -g --silent typescript@latest tsx@latest @biomejs/biome@latest firebase-tools@latest' || echo "TypeScript, tsx, Biome oder Firebase CLI nicht installiert"
 als 'command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh' || echo "uv nicht installiert"
+# Trivy, lazygit, Rclone, Bun und Deno installiert clis.py selbst, wenn sie fehlen (jarvis-clis.timer).
+als "NPM_CONFIG_PREFIX=\$HOME/.local python3 $REPO/OpenLauncherServer/kern/clis.py aktualisieren >/dev/null" || echo "CLI-Updates unvollständig"
 # Ubuntu nennt bat batcat; Skills und Gewohnheit erwarten bat.
 als 'ln -sf /usr/bin/batcat ~/.local/bin/bat'
 # Dieselbe OpenCode-Umgebung wie an den Rechnern; Schlüssel, die hier bewusst fehlen, meldet das Skript nur.
