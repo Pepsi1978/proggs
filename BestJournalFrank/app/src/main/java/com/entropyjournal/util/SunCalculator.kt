@@ -27,13 +27,13 @@ object SunCalculator {
     /**
      * Asymmetric twilight calculation:
      * - Morning (dark→light): Civil twilight at 96° — switch to light when dawn begins
-     * - Evening (light→dark): Nautical twilight at 102° — switch to dark when truly dark
+     * - Evening (light→dark): Sunset at 90.833° — switch to dark when dusk begins
      */
     fun calculate(latitude: Double, longitude: Double): SunTimes? {
         return try {
             val cal = Calendar.getInstance()
             val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
-            val tzOffset = TimeZone.getDefault().rawOffset / 3600000.0
+            val tzOffset = TimeZone.getDefault().getOffset(cal.timeInMillis) / 3600000.0
 
             val gamma = 2.0 * Math.PI / 365.0 * (dayOfYear - 1)
 
@@ -48,8 +48,8 @@ object SunCalculator {
             val cosHaMorning = (cos(zenithMorning) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
             if (cosHaMorning > 1.0 || cosHaMorning < -1.0) return null
 
-            // Evening: nautical twilight (102°) — dark mode when truly dark
-            val zenithEvening = Math.toRadians(102.0)
+            // Evening: sunset (90.833°) — dark mode when dusk begins
+            val zenithEvening = Math.toRadians(90.833)
             val cosHaEvening = (cos(zenithEvening) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
             if (cosHaEvening > 1.0 || cosHaEvening < -1.0) return null
 

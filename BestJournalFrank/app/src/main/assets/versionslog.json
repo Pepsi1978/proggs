@@ -12,6 +12,7 @@
     {"versionCode": 164, "versionName": "0.23.11", "stand": "30.10.2026, 11:45 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
     {"versionCode": 165, "versionName": "0.23.12", "stand": "30.10.2026, 19:01 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 166, "versionName": "0.23.13", "stand": "30.10.2026, 20:22 Uhr", "notiz": "Die Whisper-Modelle für die Spracherkennung sind wieder in der App enthalten."},
-    {"versionCode": 167, "versionName": "0.23.14", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 167, "versionName": "0.23.14", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 168, "versionName": "0.23.15", "stand": "03.11.2026, 16:46 Uhr", "notiz": "Auch der Sonnenmodus nach Standort schaltet jetzt schon bei Sonnenuntergang auf dunkel, rechnet die Sommerzeit richtig und wechselt bei offener App von selbst."}
 ]
 }

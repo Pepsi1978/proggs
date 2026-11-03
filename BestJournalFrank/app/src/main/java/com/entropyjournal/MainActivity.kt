@@ -86,6 +86,17 @@ class MainActivity : FragmentActivity() {
                     }
                 )
             }
+            // Standort-Sonnenmodus jede Minute neu prüfen, damit er auch bei offener App zur Dämmerung umschaltet.
+            androidx.compose.runtime.LaunchedEffect(followSun.value) {
+                while (followSun.value) {
+                    try {
+                        val lat = encryptedPrefs.getFloat(Constants.PREF_LATITUDE, 0f).toDouble()
+                        val lon = encryptedPrefs.getFloat(Constants.PREF_LONGITUDE, 0f).toDouble()
+                        if (lat != 0.0 && lon != 0.0) sunDark.value = SunCalculator.isDarkNow(lat, lon)
+                    } catch (_: Exception) {}
+                    kotlinx.coroutines.delay(60_000L)
+                }
+            }
             // Der gespeicherte Wert "System folgen" bedeutet seit der Sonnen-Automatik: nach der Sonne in Neuenhagen.
             val automatikDunkel = sonneDunkel(followSystem.value)
 
