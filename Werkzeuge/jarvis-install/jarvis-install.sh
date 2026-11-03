@@ -30,7 +30,7 @@ ende() { echo "JARVIS_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1
 APK=""; GERAET=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    -s) GERAET="${2:-}"; shift 2 ;;
+    -s) GERAET="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
     *) APK="$1"; shift ;;
   esac
 done
@@ -58,9 +58,6 @@ verbinde() {
   [ -n "$GERAET" ]
 }
 handy() { "$ADB_BIN" -s "$GERAET" shell "$@" 2>&1 | tr -d '\r'; }
-# Über den langsamen Tunnel spart lz4 rund ein Sechstel der Übertragungszeit (unkomprimierte .so und Dex-Daten).
-# Ältere adb ohne -z: einfach ohne Kompression.
-schiebe() { "$ADB_BIN" -s "$GERAET" push -z lz4 "$1" "$2" >/dev/null 2>&1 || "$ADB_BIN" -s "$GERAET" push "$1" "$2" >/dev/null 2>&1; }
 
 SITZUNG=""
 ABGESCHLOSSEN=""
@@ -117,7 +114,7 @@ bereite_vor() {
   handy rm -f "$ZWISCHENLAGER" >/dev/null
   echo "$ausgabe" | grep -q '^Success' || ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
   if [ -n "$TEIL_DATEI" ]; then
-    schiebe "$TEIL_DATEI" "$ZWISCHENLAGER" || ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden"
+    _delta_voll "$ADB_BIN" "$GERAET" "$TEIL_DATEI" "$ZWISCHENLAGER" || ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden"
     ausgabe=$(handy pm install-write -S "$teil_groesse" "$SITZUNG" freigabe.apk "$ZWISCHENLAGER")
     handy rm -f "$ZWISCHENLAGER" >/dev/null
     echo "$ausgabe" | grep -q '^Success' || ende fehler "Pflicht-Teil ließ sich nicht in die Sitzung schreiben: $ausgabe"
@@ -132,6 +129,7 @@ installiere() {
   echo "$ausgabe" | tail -1
   if echo "$ausgabe" | grep -q '^Success'; then
     ABGESCHLOSSEN=1
+    delta_merken "$APK" "$PAKET"
     ende installiert "$GERAET"
   fi
   ende fehler "Installation gescheitert: $(echo "$ausgabe" | tail -1)"

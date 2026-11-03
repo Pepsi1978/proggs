@@ -1,18 +1,20 @@
-// Nur auf Franks Hostinger-Server: Das Handy (Galaxy Fold 8) kann ausschließlich arm64-v8a (ro.product.cpu.abilist).
-// Alle anderen ABIs (armeabi-v7a, x86, x86_64) wären reine Last im Tunnel (~1,2 MB/s); bei Jarvis allein ~31 MB.
-// Liegt bewusst außerhalb des Repos: Cloud-Bau und PCs bauen unverändert alle ABIs.
-// Abschalten für einen Bau: -PalleAbis=true
+// Nur auf Franks Hostinger-Server (installieren.sh legt diese Datei nach ~/.gradle/init.d):
+// Das Handy (Galaxy Fold 8) kann ausschließlich arm64-v8a (ro.product.cpu.abilist). Alle anderen ABIs wären reine
+// Last im Tunnel (~1 MB/s); bei Jarvis allein ~31 MB. Gilt nur für Debug-Varianten; Release, Cloud-Bau und PCs
+// packen unverändert alle ABIs. Abschalten für einen Bau: -PalleAbis=true
 allprojects {
     plugins.withId('com.android.application') {
         if (project.findProperty('alleAbis') == 'true') return
         def komponenten = project.extensions.findByName('androidComponents')
         if (komponenten == null) return
-        komponenten.finalizeDsl { android ->
-            def filter = android.defaultConfig.ndk.abiFilters
-            if (filter.isEmpty() || filter.contains('arm64-v8a')) {
-                filter.clear()
-                filter.add('arm64-v8a')
+        try {
+            komponenten.onVariants(komponenten.selector().withBuildType('debug')) { variante ->
+                variante.packaging.jniLibs.excludes.addAll(
+                    ['/lib/armeabi-v7a/**', '/lib/armeabi/**', '/lib/x86/**', '/lib/x86_64/**',
+                     '/lib/mips/**', '/lib/mips64/**', '/lib/riscv64/**'])
             }
+        } catch (Throwable t) {
+            project.logger.warn("nur-arm64.gradle übersprungen: ${t.message}")
         }
     }
 }

@@ -11,13 +11,12 @@ Letzte Zeile auf stdout: DELTA <patch-bytes> <neu-bytes> <operationen>
 import hashlib, os, struct, sys, zipfile
 
 
-def datenbereiche(pfad):
-    """(Daten-Start, Länge, Schlüssel) je Eintrag; Schlüssel = Inhalt der komprimierten Bytes."""
+def datenbereiche(pfad, daten):
+    """(Daten-Start, Länge, Schlüssel) je Eintrag; Schlüssel = Inhalt der komprimierten Bytes (aus `daten`)."""
     erg = []
-    with zipfile.ZipFile(pfad) as z, open(pfad, 'rb') as f:
+    with zipfile.ZipFile(pfad) as z:
         for info in z.infolist():
-            f.seek(info.header_offset)
-            kopf = f.read(30)
+            kopf = daten[info.header_offset:info.header_offset + 30]
             if kopf[:4] != b'PK\x03\x04':
                 raise ValueError('kaputter lokaler Kopf: ' + info.filename)
             n, e = struct.unpack('<HH', kopf[26:30])
@@ -25,8 +24,7 @@ def datenbereiche(pfad):
             laenge = info.compress_size
             if laenge < 4096:
                 continue  # kleine Einträge lohnen keinen eigenen dd-Aufruf
-            f.seek(start)
-            h = hashlib.sha256(f.read(laenge)).digest()
+            h = hashlib.sha256(memoryview(daten)[start:start + laenge]).digest()
             erg.append((start, laenge, h))
     return erg
 
@@ -34,15 +32,15 @@ def datenbereiche(pfad):
 def main():
     alt, neu, aus = sys.argv[1:4]
     os.makedirs(aus, exist_ok=True)
-    alt_index = {}
-    for start, laenge, h in datenbereiche(alt):
-        alt_index.setdefault((laenge, h), start)
     with open(neu, 'rb') as f:
         neu_bytes = f.read()
     with open(alt, 'rb') as f:
         alt_bytes = f.read()
+    alt_index = {}
+    for start, laenge, h in datenbereiche(alt, alt_bytes):
+        alt_index.setdefault((laenge, h), start)
     # Kopier-Abschnitte (neu_start, länge, alt_start), nach Position in der neuen APK.
-    kopien = sorted((s, l, alt_index[(l, h)]) for s, l, h in datenbereiche(neu) if (l, h) in alt_index)
+    kopien = sorted((s, l, alt_index[(l, h)]) for s, l, h in datenbereiche(neu, neu_bytes) if (l, h) in alt_index)
     ops = []  # ('c', alt_start, länge) oder ('l', patch_start, länge)
     patch = bytearray()
     pos = 0

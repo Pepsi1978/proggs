@@ -72,7 +72,8 @@ org.gradle.caching=true
 G'
 # Nur arm64-v8a packen: Das Fold 8 kann nichts anderes, der Rest wäre reine Last im Tunnel (Jarvis: 138 → 107 MB).
 install -o "$BENUTZER" -g "$BENUTZER" -d "$ZUHAUSE/.gradle/init.d"
-[ -f "$(dirname "$0")/gradle/nur-arm64.gradle" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 644 "$(dirname "$0")/gradle/nur-arm64.gradle" "$ZUHAUSE/.gradle/init.d/nur-arm64.gradle"
+ARM64="$REPO/OpenLauncherServer/gradle/nur-arm64.gradle"; [ -f "$ARM64" ] || ARM64="$(dirname "$0")/gradle/nur-arm64.gradle"
+if [ -f "$ARM64" ]; then install -o "$BENUTZER" -g "$BENUTZER" -m 644 "$ARM64" "$ZUHAUSE/.gradle/init.d/nur-arm64.gradle"; else echo "nur-arm64.gradle nicht gefunden, Server baut alle ABIs"; fi
 [ -f "$ZUHAUSE/SK/Android/debug-shared.keystore" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 600 "$ZUHAUSE/SK/Android/debug-shared.keystore" "$ZUHAUSE/.android/debug.keystore"
 
 # Repo über einen eigenen Schreibschlüssel (Deploy-Key, gilt nur für dieses Repo). LFS-Dateien nur bei Bedarf holen.

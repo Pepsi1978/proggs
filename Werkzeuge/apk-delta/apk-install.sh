@@ -12,7 +12,7 @@ ende() { echo "APK_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; e
 APK=""; GERAET=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    -s) GERAET="${2:-}"; shift 2 ;;
+    -s) GERAET="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
     *) APK="$1"; shift ;;
   esac
 done
@@ -29,9 +29,15 @@ waehle_geraet() {
   [ -n "$netz" ] && { echo "$netz"; return; }
   "$ADB_BIN" devices | awk 'NR>1 && $2=="device" {print $1; exit}'
 }
+netzgeraet() { "$ADB_BIN" devices | awk '$2=="device" && $1 ~ /:[0-9]+$/ {print $1; exit}'; }
 if [ -z "$GERAET" ] || [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" != device ]; then
-  GERAET=$(waehle_geraet)
-  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" >/dev/null 2>&1; GERAET=$(waehle_geraet); }
+  # Regel 18: erst WLAN/Tunnel, ohne Netzverbindung einmal adb-wlan.sh, Kabel nur als Notnagel.
+  GERAET=$(netzgeraet)
+  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" >/dev/null 2>&1; GERAET=$(netzgeraet); }
+  if [ -z "$GERAET" ]; then
+    GERAET=$(waehle_geraet)
+    [ -n "$GERAET" ] && echo "WLAN/Tunnel nicht erreichbar, auch adb-wlan.sh half nicht: installiere per Kabel ($GERAET)."
+  fi
 fi
 [ -n "$GERAET" ] || ende fehler "Handy nicht erreichbar"
 
@@ -39,17 +45,21 @@ fi
 AAPT2=$(ls -d "${ANDROID_HOME:-$HOME/android-sdk}"/build-tools/*/aapt2 "$HOME/Library/Android/sdk"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
 PAKET=""
 [ -n "$AAPT2" ] && PAKET=$("$AAPT2" dump packagename "$APK" 2>/dev/null | head -1)
+[ "$PAKET" = de.frank.jarvis ] && exec "$HIER/../jarvis-install/jarvis-install.sh" "$APK" -s "$GERAET"
 if [ -z "$PAKET" ]; then
+  echo "Paketname nicht lesbar (aapt2 fehlt?), installiere ohne Delta per adb install."
   AUSGABE=$("$ADB_BIN" -s "$GERAET" install -r "$APK" 2>&1)
   echo "$AUSGABE" | tail -1
   echo "$AUSGABE" | grep -q '^Success' && ende installiert "$GERAET"
   ende fehler "$(echo "$AUSGABE" | tail -1)"
 fi
 
-ZIEL=/data/local/tmp/apk-install-$PAKET.apk
+ZIEL=/data/local/tmp/apk-install-$PAKET-$$.apk
+trap '"$ADB_BIN" -s "$GERAET" shell rm -f "$ZIEL" >/dev/null 2>&1' EXIT
+trap 'exit 130' INT TERM
 delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZIEL" "$PAKET" || ende fehler "APK ließ sich nicht aufs Handy laden"
 AUSGABE=$("$ADB_BIN" -s "$GERAET" shell pm install -r "$ZIEL" 2>&1 | tr -d '\r')
 "$ADB_BIN" -s "$GERAET" shell rm -f "$ZIEL" >/dev/null 2>&1
 echo "$AUSGABE" | tail -1
-echo "$AUSGABE" | grep -q '^Success' && ende installiert "$GERAET"
+echo "$AUSGABE" | grep -q '^Success' && { delta_merken "$APK" "$PAKET"; ende installiert "$GERAET"; }
 ende fehler "$(echo "$AUSGABE" | tail -1)"
