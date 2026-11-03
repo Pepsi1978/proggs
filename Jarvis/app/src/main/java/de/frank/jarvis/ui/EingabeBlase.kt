@@ -650,7 +650,7 @@ private fun FernwartungsSymbol() {
             }
         }
     }) {
-        // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
+        // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün und orange leuchten zusätzlich.
         // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau mit drehendem Ring: das Tippen ist angekommen.
         val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) LIVE_ORANGE else f.erfolg; false -> f.gefahr; null -> f.textLeise }
         if (sucht) androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = f.primaer, strokeWidth = 2.5.dp)
