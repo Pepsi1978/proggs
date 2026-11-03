@@ -267,6 +267,18 @@ function Pruefe-Git-Stand {
     if ($LASTEXITCODE -ne 0 -or -not $mainStand) { Fehler "origin/main ist nicht verfügbar. Erst den Hauptbranch von origin abrufen." }
     $lokalStand = git -C $proggs rev-parse HEAD 2>$null
     if ($LASTEXITCODE -ne 0 -or -not $lokalStand) { Fehler "Lokaler HEAD konnte nicht ermittelt werden." }
+    # Cloud-Bau: Kam während des Laufs ein neuer Push auf main, der diese App nicht berührt, gilt der Stand weiter.
+    # Sonst ginge die App verloren: Der neuere Lauf baut nur die Apps, die sein eigener Push geändert hat.
+    if ($CloudBau -and $lokalStand -ne $mainStand) {
+        git -C $proggs merge-base --is-ancestor $lokalStand $mainStand 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $geaendert = @(git -C $proggs diff --name-only $lokalStand $mainStand -- @quellen 2>$null)
+            if ($LASTEXITCODE -eq 0 -and $geaendert.Count -eq 0) {
+                Write-Host "origin/main ist während des Baus weitergerückt, ohne $Projekt zu ändern: der gebaute Stand bleibt gültig."
+                return
+            }
+        }
+    }
     if ($lokalStand -ne $mainStand) { Fehler "Der gebaute HEAD ist nicht origin/main. Erst den aktuellen main-Stand abgleichen und per Fast Forward nach main pushen (git push origin HEAD:main)." }
 }
 
