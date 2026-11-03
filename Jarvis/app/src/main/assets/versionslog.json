@@ -580,6 +580,7 @@
 {"versionCode": 575, "versionName": "1.8.564", "stand": "03.11.2026, 15:00 Uhr", "notiz": "Jede Anzeige, was Jarvis gerade tut, bleibt mindestens zwei Sekunden stehen, damit du sie mitlesen kannst."},
 {"versionCode": 576, "versionName": "1.8.565", "stand": "03.11.2026, 15:10 Uhr", "notiz": "Laufende Hintergrund-Agenten stehen im Chat als orange Zeile mit ihrem aktuellen Schritt; bei mehreren klappt ein Tipp die Liste aller Agenten auf."},
 {"versionCode": 577, "versionName": "1.8.566", "stand": "03.11.2026, 16:01 Uhr", "notiz": "Das seitliche Fernwartungssymbol leuchtet orange statt grün, wenn nur der Hostinger-Server und weder Mac noch Windows-PC erreichbar ist."},
-{"versionCode": 578, "versionName": "1.8.567", "stand": "03.11.2026, 16:07 Uhr", "notiz": "Die Beschreibung der Fernwartungsfarben ist präzisiert: Orange ersetzt dort die bisherige Akzentfarbe, wenn nur der Hostinger-Server erreichbar ist."}
+{"versionCode": 578, "versionName": "1.8.567", "stand": "03.11.2026, 16:07 Uhr", "notiz": "Die Beschreibung der Fernwartungsfarben ist präzisiert: Orange ersetzt dort die bisherige Akzentfarbe, wenn nur der Hostinger-Server erreichbar ist."},
+{"versionCode": 579, "versionName": "1.8.568", "stand": "03.11.2026, 16:28 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus, berechnet für Berlin."}
 ]
 }

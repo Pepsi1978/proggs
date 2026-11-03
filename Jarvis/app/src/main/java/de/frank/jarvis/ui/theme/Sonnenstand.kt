@@ -5,15 +5,15 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** Wechselzeiten für Neuenhagen bei Berlin, offline berechnet (Sonnenaufgangsgleichung): hell ab Sonnenaufgang, dunkel ab dem Ende der bürgerlichen Dämmerung. */
+/** Wechselzeiten für Berlin, offline berechnet (Sonnenaufgangsgleichung): hell ab Beginn der bürgerlichen Morgendämmerung, dunkel ab Sonnenuntergang (Beginn der Abenddämmerung). */
 object Sonnenstand {
-    private const val BREITE = 52.529
-    private const val LAENGE = 13.689
+    private const val BREITE = 52.520
+    private const val LAENGE = 13.405
     private const val TAG_MS = 86_400_000L
-    private const val HOEHE_AUFGANG = -0.833
-    private const val HOEHE_DUNKEL = -6.0
+    private const val HOEHE_HELL = -6.0
+    private const val HOEHE_DUNKEL = -0.833
 
-    /** Beginn von Hell und Dunkel als Epochen-Millisekunden. Beide liegen in Neuenhagen stets auf demselben UTC-Tag. */
+    /** Beginn von Hell und Dunkel als Epochen-Millisekunden. Beide liegen in Berlin stets auf demselben UTC-Tag. */
     private fun aufUndUntergang(utcTag: Long): Pair<Long, Long> {
         val j = utcTag - 10957 - LAENGE / 360
         val m = 357.5291 + 0.98560028 * j
@@ -23,7 +23,7 @@ object Sonnenstand {
         val sinDekl = sinG(laenge) * sinG(23.4397)
         val cosDekl = sqrt(1 - sinDekl * sinDekl)
         fun stundenwinkel(hoehe: Double) = Math.toDegrees(acos((sinG(hoehe) - sinG(BREITE) * sinDekl) / (cos(Math.toRadians(BREITE)) * cosDekl)))
-        return zeit(mittag - stundenwinkel(HOEHE_AUFGANG) / 360) to zeit(mittag + stundenwinkel(HOEHE_DUNKEL) / 360)
+        return zeit(mittag - stundenwinkel(HOEHE_HELL) / 360) to zeit(mittag + stundenwinkel(HOEHE_DUNKEL) / 360)
     }
 
     private fun sinG(grad: Double) = sin(Math.toRadians(grad))
