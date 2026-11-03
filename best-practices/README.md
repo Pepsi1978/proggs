@@ -109,6 +109,10 @@ best-practices/
 
 [PCIe-Grafikkarten: Volltext](desktop/pcie-grafikkarten.md) · [Kurzcheck](desktop/pcie-grafikkarten-kurzcheck.md). Maximalfähigkeit und aktive Verbindung, Lastvergleich, exakte MSI-DDR4-BIOS-Zuordnung.
 
+## Laptop-Helligkeit diagnostizieren (03.11.2026)
+
+[Laptop-Helligkeit: Volltext](desktop/laptop-helligkeit-asus-nvidia.md) · [Kurzcheck](desktop/laptop-helligkeit-asus-nvidia-kurzcheck.md). Helligkeitspfad in Windows, BIOS-Vergleich, GPU-Modus-Gegenprobe und sichere Reihenfolge für ASUS ROG mit NVIDIA.
+
 ## Windows-CLIs über WSL/tmux (22.09.2026)
 
 [WSL/tmux: Volltext](desktop/openlauncher-windows-tmux.md) · [Kurzcheck](desktop/openlauncher-windows-tmux-kurzcheck.md). Getrennte Argumente, Instanz-Interop für Panes, Halteprozess, CIM-Bestätigung, kontrollierte Wiederholung.
