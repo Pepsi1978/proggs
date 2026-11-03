@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -315,6 +316,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             else vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
                 Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
             } }
+            item(key = "agenten") { AgentenZeile() }
         }
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = 2.dp))
         }
@@ -629,6 +631,62 @@ private fun Kopierknopf(vm: AppViewModel, text: String, was: String) {
         )
     }
 }
+
+/** Hält einen wechselnden Text mindestens [ANZEIGE_MIN_MS] sichtbar; kommt in der Zeit mehrmals Neues, zählt nur das Neueste. */
+@Composable
+private fun gehalten(text: String): String {
+    var gezeigt by remember { mutableStateOf(text) }
+    var seit by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(text) {
+        if (gezeigt == text) return@LaunchedEffect
+        val rest = AppViewModel.ANZEIGE_MIN_MS - (System.currentTimeMillis() - seit)
+        if (rest > 0) kotlinx.coroutines.delay(rest)
+        gezeigt = text
+        seit = System.currentTimeMillis()
+    }
+    return gezeigt
+}
+
+/** Was ein Hintergrund-Agent gerade tut, als Satz („Recherche sucht im Internet“), aus seinem echten Schritt. */
+private fun agentSatz(l: de.frank.jarvis.agent.AgentenLauf): String =
+    l.agent + " " + when { l.wartet != null -> "wartet auf deine Entscheidung"; l.schritt.isBlank() -> "arbeitet"; else -> l.schritt }
+
+/**
+ * Laufen Agenten im Hintergrund, steht unter der Tätigkeitszeile eine schlichte Zeile in Claude-Orange ohne Leuchtkern:
+ * „Agent: Recherche sucht im Internet“. Bei mehreren ein „+1“ mit wandernden Punkten; Antippen klappt die Liste aller Agenten
+ * auf (je bis zwei Zeilen), erneutes Antippen irgendwo darin klappt sie wieder zu.
+ */
+@Composable
+private fun AgentenZeile() {
+    val agenten by de.frank.jarvis.agent.Agenten.laeufe.collectAsState()
+    if (agenten.isEmpty()) return
+    var offen by remember { mutableStateOf(false) }
+    val mehrere = agenten.size > 1
+    if (!mehrere) offen = false
+    val saetze = agenten.map { l -> androidx.compose.runtime.key(l.id) { gehalten(agentSatz(l)) } }
+    val modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
+        .let { m -> if (mehrere) m.clickable { offen = !offen } else m }
+    if (offen) {
+        Column(modifier) {
+            saetze.forEachIndexed { i, satz ->
+                Text("Agent ${i + 1}: $satz", color = CLAUDE_ORANGE, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 1.dp))
+            }
+        }
+        return
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text((if (mehrere) "Agenten: " else "Agent: ") + saetze.first(), color = CLAUDE_ORANGE, fontSize = 13.sp, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        if (mehrere) {
+            var bild by remember { mutableStateOf(0) }
+            LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(300); bild = (bild + 1) % AGENTEN_PUNKTE.size } }
+            Text("  +${agenten.size - 1} " + AGENTEN_PUNKTE[bild], color = CLAUDE_ORANGE, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+private val AGENTEN_PUNKTE = listOf("•  ", "•• ", "•••", " ••", "  •", "   ")
 
 /** Was Jarvis gerade tut, mit kleinem Leuchtkern; ab 5 Sekunden zählt die Zeile mit, damit ein Hänger sichtbar wird. */
 @Composable
