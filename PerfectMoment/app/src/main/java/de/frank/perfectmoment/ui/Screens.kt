@@ -1819,7 +1819,7 @@ fun SettingsScreen(
                     Segment("Automatisch", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
                 }
                 Text(
-                    "Automatisch nach der Sonne: hell ab Sonnenaufgang, dunkel ab Ende der Dämmerung.",
+                    "Automatisch nach der Sonne: hell ab Beginn der Morgendämmerung, dunkel ab Sonnenuntergang.",
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 13.sp,

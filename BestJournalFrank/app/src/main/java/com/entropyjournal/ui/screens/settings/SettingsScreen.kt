@@ -889,7 +889,7 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "Hell ab Sonnenaufgang, dunkel nach der Dämmerung",
+                                        "Hell ab Beginn der Morgendämmerung, dunkel ab Sonnenuntergang",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

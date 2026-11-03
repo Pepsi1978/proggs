@@ -880,7 +880,7 @@ private fun denktiefeHinweis(tiefe: Denktiefe): String = when (tiefe) {
 private fun themeHinweis(modus: ThemeModus): String = when (modus) {
     ThemeModus.HELL -> "immer hell"
     ThemeModus.DUNKEL -> "immer dunkel"
-    ThemeModus.AUTOMATISCH -> "automatisch nach der Sonne: dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang"
+    ThemeModus.AUTOMATISCH -> "automatisch nach der Sonne: dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung"
 }
 
 private val FILTER_TEXTE = listOf(

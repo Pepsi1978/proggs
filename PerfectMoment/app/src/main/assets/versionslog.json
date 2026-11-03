@@ -23,6 +23,7 @@
     { "versionCode": 125, "versionName": "0.1.136", "stand": "01.11.2026, 22:07 Uhr", "notiz": "Bei eingeschaltetem Fingerabdruckschutz bleiben alle API-Schlüssel verdeckt und gesperrt, bis du sie per Fingerabdruck freigibst; auch das Ausschalten des Schutzes verlangt den Fingerabdruck. Ein ungewöhnlicher Anthropic-Schlüssel wird nur noch mit einem Hinweis markiert, nicht mehr gesperrt." },
     { "versionCode": 126, "versionName": "0.1.137", "stand": "01.11.2026, 22:13 Uhr", "notiz": "Review-Feinschliff: Fremde Schlüssel werden nicht mehr an Anthropic gesendet, freigegebene Schlüssel sperren sich beim App-Wechsel sofort und stehen nach der Freigabe zunächst verdeckt da, und alte Klartext-Reste werden verschlüsselt übernommen." },
     { "versionCode": 127, "versionName": "0.1.138", "stand": "01.11.2026, 22:39 Uhr", "notiz": "Die erzeugten Fragen wechseln jetzt zwischen Warum, Wieso und Weshalb, auch wenn deine Eingabe mit Warum beginnt, und bleiben dabei ganz aus der Fülle formuliert." },
-    { "versionCode": 128, "versionName": "0.1.139", "stand": "01.11.2026, 22:43 Uhr", "notiz": "Warum, Wieso und Weshalb beginnen jetzt höchstens die Hälfte der Fragen, die übrigen nutzen viele andere Fragewörter wie Was, Woran, Wodurch oder Wofür und bleiben ganz aus der Fülle formuliert." }
-  ]
+    { "versionCode": 128, "versionName": "0.1.139", "stand": "01.11.2026, 22:43 Uhr", "notiz": "Warum, Wieso und Weshalb beginnen jetzt höchstens die Hälfte der Fragen, die übrigen nutzen viele andere Fragewörter wie Was, Woran, Wodurch oder Wofür und bleiben ganz aus der Fülle formuliert." },
+    {"versionCode": 129, "versionName": "0.1.140", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+]
 }

@@ -9,6 +9,7 @@
     {"versionCode": 33, "versionName": "1.0.32", "stand": "14.10.2026, 08:03 Uhr", "notiz": "Checklisten und Eingabe-Fenster lassen sich am Griff nach unten wegwischen; die Buttons unten sitzen sichtbar über der Gestenleiste"},
     {"versionCode": 34, "versionName": "1.0.33", "stand": "14.10.2026, 08:06 Uhr", "notiz": "Die Navigationsleiste unten ist jetzt fest und undurchsichtig, darunter scheint kein Text mehr durch"},
     {"versionCode": 35, "versionName": "1.0.34", "stand": "14.10.2026, 08:20 Uhr", "notiz": "Interne Aufräumarbeiten: gleiche Regeltexte überall, flüssigere Anzeige durch weniger Neuberechnungen"},
-    {"versionCode": 36, "versionName": "1.0.35", "stand": "30.10.2026, 19:12 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
-  ]
+    {"versionCode": 36, "versionName": "1.0.35", "stand": "30.10.2026, 19:12 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
+    {"versionCode": 37, "versionName": "1.0.36", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+]
 }

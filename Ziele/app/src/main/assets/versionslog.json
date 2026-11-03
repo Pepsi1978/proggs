@@ -40,6 +40,7 @@
     {"versionCode": 35, "versionName": "1.0.34", "stand": "30.10.2026, 10:59 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
     {"versionCode": 36, "versionName": "1.0.35", "stand": "30.10.2026, 19:38 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     { "versionCode": 37, "versionName": "1.0.36", "stand": "01.11.2026, 19:32 Uhr", "notiz": "Je Ziel einen eigenen Leitsatz einsprechen, speichern und bearbeiten; alle Leitsätze werden automatisch und wortwörtlich mit Perfect Moment verbunden." },
-    { "versionCode": 38, "versionName": "1.0.37", "stand": "01.11.2026, 19:42 Uhr", "notiz": "Review-Feinschliff: Abgebrochene Diktate und verspätete Mikrofon-Freigaben können keinen anderen Leitsatz oder eine neue Aufnahme mehr verändern." }
-  ]
+    { "versionCode": 38, "versionName": "1.0.37", "stand": "01.11.2026, 19:42 Uhr", "notiz": "Review-Feinschliff: Abgebrochene Diktate und verspätete Mikrofon-Freigaben können keinen anderen Leitsatz oder eine neue Aufnahme mehr verändern." },
+    {"versionCode": 39, "versionName": "1.0.38", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+]
 }

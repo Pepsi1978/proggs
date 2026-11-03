@@ -33,8 +33,8 @@ import androidx.compose.ui.unit.dp
  * ohne Aufziehen, ohne Kreis, der sich ausbreitet.
  *
  * Ist `automatik` an, wählt die Sonne in Neuenhagen (nicht das System) zwischen der hellen und
- * der dunklen Fassung der gewählten Farbwelt: dunkel ab Ende der bürgerlichen Dämmerung, hell
- * ab Sonnenaufgang.
+ * der dunklen Fassung der gewählten Farbwelt: dunkel ab Sonnenuntergang, hell
+ * ab Beginn der bürgerlichen Morgendämmerung.
  */
 @Composable
 fun GedankenspeicherTheme(

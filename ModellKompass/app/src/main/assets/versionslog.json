@@ -6,6 +6,7 @@
     { "versionCode": 2, "versionName": "1.0.1", "stand": "08.10.2026, 15:42 Uhr", "notiz": "Die Recherche sucht jetzt für die RTX 5090 mit 32 GB Grafikspeicher statt für die RTX 3090; auch der Grafikspeicher-Balken rechnet mit 32 GB." },
     { "versionCode": 3, "versionName": "1.0.2", "stand": "15.10.2026, 14:34 Uhr", "notiz": "Die Bereichskarten zeigen statt der Symbole in orangen Kästchen große, dezente Hintergrundzeichnungen, und das Punktmuster im Hintergrund ist verschwunden." },
     {"versionCode": 4, "versionName": "1.0.3", "stand": "22.10.2026, 13:00 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe, Websuche und eigenem API-Schlüssel wie in Jarvis."},
-    {"versionCode": 5, "versionName": "1.0.4", "stand": "30.10.2026, 19:30 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
-  ]
+    {"versionCode": 5, "versionName": "1.0.4", "stand": "30.10.2026, 19:30 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
+    {"versionCode": 6, "versionName": "1.0.5", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+]
 }

@@ -46,6 +46,7 @@
     {"versionCode": 42, "versionName": "1.10.31", "stand": "22.10.2026, 15:05 Uhr", "notiz": "Mit Claude Opus erscheinen keine cite-Quellenmarkierungen mehr in den Nachrichtentexten, weder in der Anzeige noch beim Vorlesen; der Text dazwischen bleibt vollständig."},
     {"versionCode": 43, "versionName": "1.10.32", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
     {"versionCode": 44, "versionName": "1.10.33", "stand": "30.10.2026, 11:43 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
-    {"versionCode": 45, "versionName": "1.10.34", "stand": "30.10.2026, 19:31 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
-  ]
+    {"versionCode": 45, "versionName": "1.10.34", "stand": "30.10.2026, 19:31 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
+    {"versionCode": 46, "versionName": "1.10.35", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+]
 }

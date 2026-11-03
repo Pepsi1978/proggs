@@ -190,7 +190,7 @@ fun EinstellungenBildschirm(
                     Column(Modifier.weight(1f)) {
                         Text("Automatisch nach der Sonne", style = schrift.einstellung, color = farben.textMittel)
                         Text(
-                            "Dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen. Gewählt wird die helle oder dunkle Fassung der Farbwelt, die oben markiert ist.",
+                            "Dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung in Neuenhagen. Gewählt wird die helle oder dunkle Fassung der Farbwelt, die oben markiert ist.",
                             style = schrift.einstellungErklaerung,
                             color = farben.textSchwach,
                         )

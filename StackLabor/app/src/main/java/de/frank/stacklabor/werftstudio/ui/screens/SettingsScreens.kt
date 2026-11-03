@@ -626,7 +626,7 @@ private fun settingSelection(state: StackLaborUiState, id: String?): SettingSele
     "appearance" -> SettingSelection(
         id, "Erscheinungsbild", appearanceLabel(state.appearance),
         listOf("Automatisch nach der Sonne", "Hell", "Dunkel"),
-        hint = "Automatisch: dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen.",
+        hint = "Automatisch: dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung in Neuenhagen.",
     )
     "tts-provider" -> SettingSelection(id, "Anbieter", state.ttsProviderLabel, TtsAnbieter.entries.map { it.label() })
     "tts-voice" -> SettingSelection(

@@ -196,7 +196,7 @@ private val Schrift = Typography(
 
 /**
  * Automatisch folgt der Sonne in Neuenhagen (offline, ohne Standortrechte), nicht dem System:
- * hell ab Sonnenaufgang, dunkel ab Ende der bürgerlichen Dämmerung. Jede Minute prüfen, nur solange die App sichtbar ist.
+ * hell ab Beginn der bürgerlichen Morgendämmerung, dunkel ab Sonnenuntergang. Jede Minute prüfen, nur solange die App sichtbar ist.
  * Einzige Quelle für „Ist es dunkel?“ im Automatikmodus; sie gehört vor Theme und Systemleisten.
  */
 @Composable

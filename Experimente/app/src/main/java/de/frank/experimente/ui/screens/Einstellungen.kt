@@ -643,7 +643,7 @@ fun Einstellungen(modell: AppViewModel) {
         }
         item("erscheinung-hinweis") {
             Text(
-                text = "Automatisch nach der Sonne: dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen.",
+                text = "Automatisch nach der Sonne: dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung in Neuenhagen.",
                 style = schriften.fliesstextKlein,
                 color = farben.gedaempft,
                 modifier = Modifier.padding(top = 10.dp),

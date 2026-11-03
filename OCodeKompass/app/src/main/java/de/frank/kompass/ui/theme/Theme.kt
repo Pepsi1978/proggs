@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
-/** Die drei Erscheinungsbild-Modi. Voreinstellung ist `AUTOMATISCH`: hell ab Sonnenaufgang, dunkel ab Ende der bürgerlichen Dämmerung in Neuenhagen. */
+/** Die drei Erscheinungsbild-Modi. Voreinstellung ist `AUTOMATISCH`: hell ab Beginn der bürgerlichen Morgendämmerung, dunkel ab Sonnenuntergang in Neuenhagen. */
 enum class ThemeModus(val id: String, val label: String) {
     HELL("hell", "Hell"),
     DUNKEL("dunkel", "Dunkel"),
