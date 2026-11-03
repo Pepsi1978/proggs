@@ -66,9 +66,13 @@ org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8
 org.gradle.workers.max=2
 org.gradle.parallel=false
 kotlin.daemon.jvmargs=-Xmx1536m
-org.gradle.daemon.idletimeout=300000
+# 15 Minuten (Franks Freigabe 03.11.2026): Zwischen zwei Bauten einer Sitzung vergehen meist mehr als 5 Minuten; kalt dauert ein Bau 2 bis 4-mal so lang.
+org.gradle.daemon.idletimeout=900000
 org.gradle.caching=true
 G'
+# Nur arm64-v8a packen: Das Fold 8 kann nichts anderes, der Rest wäre reine Last im Tunnel (Jarvis: 138 → 107 MB).
+install -o "$BENUTZER" -g "$BENUTZER" -d "$ZUHAUSE/.gradle/init.d"
+[ -f "$(dirname "$0")/gradle/nur-arm64.gradle" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 644 "$(dirname "$0")/gradle/nur-arm64.gradle" "$ZUHAUSE/.gradle/init.d/nur-arm64.gradle"
 [ -f "$ZUHAUSE/SK/Android/debug-shared.keystore" ] && install -o "$BENUTZER" -g "$BENUTZER" -m 600 "$ZUHAUSE/SK/Android/debug-shared.keystore" "$ZUHAUSE/.android/debug.keystore"
 
 # Repo über einen eigenen Schreibschlüssel (Deploy-Key, gilt nur für dieses Repo). LFS-Dateien nur bei Bedarf holen.

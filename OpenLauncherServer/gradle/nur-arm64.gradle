@@ -1,0 +1,18 @@
+// Nur auf Franks Hostinger-Server: Das Handy (Galaxy Fold 8) kann ausschließlich arm64-v8a (ro.product.cpu.abilist).
+// Alle anderen ABIs (armeabi-v7a, x86, x86_64) wären reine Last im Tunnel (~1,2 MB/s); bei Jarvis allein ~31 MB.
+// Liegt bewusst außerhalb des Repos: Cloud-Bau und PCs bauen unverändert alle ABIs.
+// Abschalten für einen Bau: -PalleAbis=true
+allprojects {
+    plugins.withId('com.android.application') {
+        if (project.findProperty('alleAbis') == 'true') return
+        def komponenten = project.extensions.findByName('androidComponents')
+        if (komponenten == null) return
+        komponenten.finalizeDsl { android ->
+            def filter = android.defaultConfig.ndk.abiFilters
+            if (filter.isEmpty() || filter.contains('arm64-v8a')) {
+                filter.clear()
+                filter.add('arm64-v8a')
+            }
+        }
+    }
+}

@@ -22,6 +22,8 @@ TEIL_IM_APK=assets/freigabe-teil.apk
 WARTEZEIT_S=33
 MELDEFRIST_S=20
 WLAN_SKRIPT="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/adb-wlan.sh"
+# Delta-Übertragung: nur geänderte Einträge durch den Tunnel, Rest aus der installierten APK am Handy.
+source "$(cd "$(dirname "$0")/.." && pwd)/apk-delta/delta-push.sh"
 
 ende() { echo "JARVIS_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; exit 0; }
 
@@ -56,6 +58,9 @@ verbinde() {
   [ -n "$GERAET" ]
 }
 handy() { "$ADB_BIN" -s "$GERAET" shell "$@" 2>&1 | tr -d '\r'; }
+# Über den langsamen Tunnel spart lz4 rund ein Sechstel der Übertragungszeit (unkomprimierte .so und Dex-Daten).
+# Ältere adb ohne -z: einfach ohne Kompression.
+schiebe() { "$ADB_BIN" -s "$GERAET" push -z lz4 "$1" "$2" >/dev/null 2>&1 || "$ADB_BIN" -s "$GERAET" push "$1" "$2" >/dev/null 2>&1; }
 
 SITZUNG=""
 ABGESCHLOSSEN=""
@@ -96,7 +101,7 @@ nimm_sperre() {
 }
 bereite_vor() {
   echo "Lade die APK vorab aufs Handy über $GERAET ..."
-  "$ADB_BIN" -s "$GERAET" push "$APK" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "APK ließ sich nicht aufs Handy laden"
+  delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" "$PAKET" || ende fehler "APK ließ sich nicht aufs Handy laden"
   local groesse ausgabe teil_groesse=0
   groesse=$(wc -c < "$APK" | tr -d ' ')
   # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.
@@ -112,7 +117,7 @@ bereite_vor() {
   handy rm -f "$ZWISCHENLAGER" >/dev/null
   echo "$ausgabe" | grep -q '^Success' || ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
   if [ -n "$TEIL_DATEI" ]; then
-    "$ADB_BIN" -s "$GERAET" push "$TEIL_DATEI" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden"
+    schiebe "$TEIL_DATEI" "$ZWISCHENLAGER" || ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden"
     ausgabe=$(handy pm install-write -S "$teil_groesse" "$SITZUNG" freigabe.apk "$ZWISCHENLAGER")
     handy rm -f "$ZWISCHENLAGER" >/dev/null
     echo "$ausgabe" | grep -q '^Success' || ende fehler "Pflicht-Teil ließ sich nicht in die Sitzung schreiben: $ausgabe"

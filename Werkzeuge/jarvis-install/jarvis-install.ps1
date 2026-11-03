@@ -90,7 +90,9 @@ try {
     Nimm-Sperre
 
     "Lade die APK vorab aufs Handy über $Geraet ..."
-    & $adb -s $Geraet push $Apk $zwischenlager *> $null
+    # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
+    & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null
+    if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     if ($LASTEXITCODE -ne 0) { Ende fehler "APK ließ sich nicht aufs Handy laden" }
     $groesse = (Get-Item $Apk).Length
     # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.
@@ -113,7 +115,8 @@ try {
     Handy rm -f $zwischenlager | Out-Null
     if ($ausgabe -notmatch "(?m)^Success") { Ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe" }
     if ($teilDatei) {
-        & $adb -s $Geraet push $teilDatei $zwischenlager *> $null
+        & $adb -s $Geraet push -z lz4 $teilDatei $zwischenlager *> $null
+        if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $teilDatei $zwischenlager *> $null }
         if ($LASTEXITCODE -ne 0) { Ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden" }
         $ausgabe = Handy pm install-write -S $teilGroesse $sitzung freigabe.apk $zwischenlager
         Handy rm -f $zwischenlager | Out-Null
