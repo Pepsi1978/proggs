@@ -252,7 +252,7 @@ object Tagesauswertung {
                 // „Maximal“ denkt mehrere Minuten pro Schritt: dann mehr Zeit, sonst endet der Lauf als reiner Datenbericht.
                 val zeitlimit = if (einstellungen.denkstufe == de.frank.jarvis.auth.ReasoningEffort.MAX) 12 * 60_000L else 5 * 60_000L
                 kotlinx.coroutines.withContext(zaehler) {
-                    JarvisAgent(app).versuche(auftrag(daten, profil), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
+                    JarvisAgent(app).versuche(auftrag(daten, profil), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt(de.frank.jarvis.agent.Taetigkeit.satz(it)) })
                 }
             } catch (e: CancellationException) {
                 throw e

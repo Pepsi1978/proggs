@@ -501,7 +501,8 @@ class JarvisAgent(context: Context) {
         // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
         val argumente = (aufruf.optJSONObject("argumente") ?: JSONObject()).ohneNull()
         val titel = werkzeug?.titel ?: name
-        beiSchritt(titel)
+        // Was Jarvis gerade tut, in Worten aus der Tätigkeits-Bibliothek („schaut in die Aufgaben“); das Protokoll behält den Titel.
+        beiSchritt(Taetigkeit.werkzeug(name, titel, argumente))
         if (werkzeug == null) return Triple(titel, "FEHLER: Das Werkzeug $name gibt es nicht.", emptyList())
         // Werkzeuge dürfen hier auf lange Arbeit warten (Bild, Download); Dateien ohne Titel gehören zum Agenten-Eintrag.
         // Sie lesen Dateien und Kalender: deshalb auf IO, nie auf dem Hauptfaden.

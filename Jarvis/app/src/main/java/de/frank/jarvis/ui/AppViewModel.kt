@@ -219,13 +219,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val denkt: Boolean get() = sitzungId?.let { laufende.containsKey(it) } == true
     /** Was Jarvis im offenen Gespräch gerade tut („Aufgaben lesen“), solange er arbeitet. */
     val schritt: String get() = sitzungId?.let { laufende[it]?.schritt }.orEmpty()
-    /**
-     * Leuchtkern „Jarvis denkt“ unter der letzten Nachricht: nicht beim Absenden eines Programmierauftrags (Plus → „Programmierer“),
-     * das Arbeitssymbol dort gehört nur Programmier-Sitzungen, die wirklich arbeiten.
-     */
-    val denktSichtbar: Boolean get() = sitzungId?.let { id -> laufende[id] }?.let { r ->
-        gespraech.getOrNull(r.frage)?.let { !(it.vonMir && ProgrammiererVorlage.aktiv(it.text)) } ?: true
-    } == true
+    /** Leuchtkern mit Tätigkeitszeile unter der letzten Nachricht: sofort nach dem Absenden, auch vor einer Programmierübergabe. */
+    val denktSichtbar: Boolean get() = denkt
+    /** Wann die Runde im offenen Gespräch begann (für die mitlaufenden Sekunden); 0 = keine. */
+    val rundeSeit: Long get() = sitzungId?.let { laufende[it]?.beginn } ?: 0L
+    /** Die Tätigkeitszeile: Warten auf Frank, das laufende Werkzeug oder „Jarvis denkt“ (Bibliothek [de.frank.jarvis.agent.Taetigkeit]). */
+    val taetigkeit: String get() {
+        val r = sitzungId?.let { laufende[it] } ?: return de.frank.jarvis.agent.Taetigkeit.DENKT
+        if (tokenlimitFrage != null) return de.frank.jarvis.agent.Taetigkeit.WARTET_AUF_DICH
+        if (r.schritt.isNotBlank()) return de.frank.jarvis.agent.Taetigkeit.satz(r.schritt)
+        val programmierer = gespraech.getOrNull(r.frage)?.let { it.vonMir && ProgrammiererVorlage.aktiv(it.text) } == true
+        return if (programmierer && r.erledigt.isEmpty()) de.frank.jarvis.agent.Taetigkeit.PROGRAMMIERAUFTRAG else de.frank.jarvis.agent.Taetigkeit.DENKT
+    }
+    /** Kurz nach dem Ende einer Runde: Ergebnis (Fertig, übergeben, fehlgeschlagen) je Gespräch, verschwindet nach wenigen Sekunden. */
+    class Abschluss(val text: String, val fehler: Boolean)
+    val abschluss = androidx.compose.runtime.mutableStateMapOf<String, Abschluss>()
 
     // ---- ChatGPT-Anmeldung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set
@@ -368,6 +376,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Im Gesprächsmodus gesprochen und mit Vorlesen: Diese Runde (und jeder Agent, den sie startet) trägt den Sprachursprung.
         val ursprung = if (vorlesen && weckwortLauf?.isActive == true) SprachUrsprung(SprachModus.WECKWORT, id) else null
         val runde = Runde(id, frage, ursprung)
+        abschluss.remove(id)
         laufende[id] = runde
         // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
         // kommen dessen Meldungen in genau dieses Gespräch, auch wenn inzwischen andere Gespräche arbeiten.
@@ -598,10 +607,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
     // [karte]: Ansage einer Auswahlkarte, die diese Runde gestellt hat (siehe ProgrammierFaehigkeit.wahlInRunde).
+    /** Zeigt wenige Sekunden lang, wie die Runde endete; eine neue Runde im selben Gespräch löscht die Zeile sofort. */
+    private fun abschlussZeigen(runde: Runde, fehler: Boolean, wartetAufWahl: Boolean) {
+        val uebergeben = synchronized(runde.erledigt) { runde.erledigt.any { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
+        val a = Abschluss(de.frank.jarvis.agent.Taetigkeit.abschluss(fehler, uebergeben, wartetAufWahl, (System.currentTimeMillis() - runde.beginn) / 1000), fehler)
+        abschluss[runde.sitzung] = a
+        viewModelScope.launch { kotlinx.coroutines.delay(if (fehler) 8_000 else 4_000); if (abschluss[runde.sitzung] === a) abschluss.remove(runde.sitzung) }
+    }
+
     private fun rundeFertig(runde: Runde, antwort: String, art: String, vorlesen: Boolean, karte: String? = null) {
         // Schon abgebrochen (oder das Gespräch gelöscht): nichts mehr anhängen.
         if (laufende[runde.sitzung] !== runde) return
         laufende.remove(runde.sitzung)
+        abschlussZeigen(runde, art == "fehler", !karte.isNullOrBlank())
         // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
         // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut; nach einem schnellen Tipp nichts (leer) bzw. nur eine Folgefrage. Hat die Runde
         // daneben noch etwas anderes erledigt (Timer, Aufgabe …), bleibt die Antwort des Modells stehen.
@@ -2290,7 +2308,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sprachStatus(liestVor: Boolean): String? = when {
         nimmtAuf -> if (freihaendig) "Ich höre zu …" else "Ich höre zu … tippe zum Senden"
         schreibtMit -> "Schreibe mit …"
-        denkt -> "Jarvis denkt nach …"
+        denkt -> "$taetigkeit …"
         liestVor -> "Jarvis antwortet …"
         else -> null
     }

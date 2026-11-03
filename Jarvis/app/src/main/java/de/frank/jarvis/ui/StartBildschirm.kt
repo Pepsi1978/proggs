@@ -311,12 +311,10 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
-            if (vm.denktSichtbar) item(key = "denkt") {
-                Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Kern(30.dp, f.primaer, aktiv = true)
-                    Text(vm.schritt.ifEmpty { "Jarvis denkt" } + " …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
-                }
-            }
+            if (vm.denktSichtbar) item(key = "denkt") { TaetigkeitsZeile(vm) }
+            else vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
+                Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+            } }
         }
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = 2.dp))
         }
@@ -637,6 +635,21 @@ private fun Kopierknopf(vm: AppViewModel, text: String, was: String) {
  * Symbol wie im Terminal, dazu der letzte Schritt und wie lange die letzte Aktivität her ist. Kommt lange nichts mehr (über
  * drei Minuten), wird die Zeit rot: Dann lohnt ein Blick in die Sitzung. Endet der Zug oder wartet sie auf Frank, verschwindet es.
  */
+/** Was Jarvis gerade tut, mit kleinem Leuchtkern; ab 5 Sekunden zählt die Zeile mit, damit ein Hänger sichtbar wird. */
+@Composable
+private fun TaetigkeitsZeile(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val seit = vm.rundeSeit
+    var jetzt by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(seit) { while (true) { jetzt = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
+    val sekunden = if (seit > 0) ((jetzt - seit) / 1_000).coerceAtLeast(0) else 0
+    Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Kern(30.dp, f.primaer, aktiv = true)
+        Text(vm.taetigkeit + (if (sekunden >= 5) " · $sekunden s" else " …"), color = f.textLeise, fontSize = 14.sp, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp))
+    }
+}
+
 @Composable
 private fun ProgrammierAktivitaet(vm: AppViewModel) {
     val f = LocalFarben.current

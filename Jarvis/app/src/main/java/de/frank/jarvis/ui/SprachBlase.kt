@@ -299,7 +299,7 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel, priv
             textStand = -1
         }
         val zustand = SprachBlase.zustand
-        val schritt = if (zustand == BlasenZustand.WERKZEUG) vm.schritt else ""
+        val schritt = if (zustand == BlasenZustand.WERKZEUG) vm.taetigkeit else ""
         val sekunden = if (zustand == BlasenZustand.WARTET_AUF_ENDE) ceil(vm.blasenStilleRestMs() / 1000f).toInt() else ((jetzt - SprachBlase.zustandSeit) / 1000).toInt()
         if (sekunden == textStand && schritt == textSchritt) return
         textStand = sekunden
@@ -313,7 +313,7 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel, priv
             BlasenZustand.WARTET_AUF_ENDE -> "Jarvis wartet, ob du weitersprichst · $sekunden s"
             BlasenZustand.SCHREIBT_MIT -> "Jarvis schreibt mit$dauer"
             BlasenZustand.DENKT -> "Jarvis denkt nach$dauer"
-            BlasenZustand.WERKZEUG -> "Jarvis: $schritt$dauer"
+            BlasenZustand.WERKZEUG -> "$schritt$dauer"
             BlasenZustand.STIMME -> "Jarvis bereitet die Stimme vor$dauer"
             BlasenZustand.SPRICHT -> "Jarvis spricht"
             BlasenZustand.ANGEHALTEN -> "Jarvis wartet auf dich"
