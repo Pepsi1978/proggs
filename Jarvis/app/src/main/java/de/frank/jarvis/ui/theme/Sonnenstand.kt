@@ -10,11 +10,13 @@ object Sonnenstand {
     private const val BREITE = 52.520
     private const val LAENGE = 13.405
     private const val TAG_MS = 86_400_000L
+    /** Absichtlich ungleich: hell schon ab Beginn der bürgerlichen Morgendämmerung (Sonne 6° unter dem Horizont). */
     private const val HOEHE_HELL = -6.0
+    /** Dunkel schon ab Sonnenuntergang (Oberrand am Horizont, mit Refraktion), also zu Beginn der Abenddämmerung. */
     private const val HOEHE_DUNKEL = -0.833
 
     /** Beginn von Hell und Dunkel als Epochen-Millisekunden. Beide liegen in Berlin stets auf demselben UTC-Tag. */
-    private fun aufUndUntergang(utcTag: Long): Pair<Long, Long> {
+    private fun hellUndDunkelBeginn(utcTag: Long): Pair<Long, Long> {
         val j = utcTag - 10957 - LAENGE / 360
         val m = 357.5291 + 0.98560028 * j
         val c = 1.9148 * sinG(m) + 0.02 * sinG(2 * m) + 0.0003 * sinG(3 * m)
@@ -32,7 +34,7 @@ object Sonnenstand {
     private fun zeit(j2000: Double) = ((j2000 + 10957.5) * TAG_MS).toLong()
 
     fun istDunkel(jetzt: Long = System.currentTimeMillis()): Boolean {
-        val (auf, unter) = aufUndUntergang(Math.floorDiv(jetzt, TAG_MS))
-        return jetzt < auf || jetzt >= unter
+        val (hell, dunkel) = hellUndDunkelBeginn(Math.floorDiv(jetzt, TAG_MS))
+        return jetzt < hell || jetzt >= dunkel
     }
 }
