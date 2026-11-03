@@ -1,8 +1,11 @@
 package de.frank.aufgaben.erinnerung
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
@@ -61,12 +64,18 @@ class ErinnerungsDienst : Service() {
     private data class Auftrag(val aufgabe: Aufgabe, val wann: String, val anzahl: Int = Ansage.ANZAHL) {
         val id: Long get() = aufgabe.id
         val wecker: Boolean get() = aufgabe.alsWecker
-        /** Darf trotz „Nicht stören“ klingen: ausdrücklicher Wecker oder das selbst gestartete Fokus-Ende. */
-        val trotzRuhe: Boolean get() = wecker || id == Fokus.ID
     }
 
     /** Bei „Nicht stören“ bleibt eine normale Erinnerung still (nur die Benachrichtigung erscheint). */
-    private fun still(a: Auftrag): Boolean = !a.trotzRuhe && Lautsprecher.ruheAktiv(this)
+    private fun still(a: Auftrag): Boolean = a.id != Fokus.ID && Lautsprecher.stillHalten(this, a.wecker)
+
+    /** Wird „Nicht stören“ während einer normalen Erinnerung eingeschaltet: sofort verstummen. */
+    private val ruheEmpfaenger = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val a = aktuell ?: return
+            if (still(a)) weiter(a, entfernen = false)
+        }
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val warteschlange = ArrayDeque<Auftrag>()
@@ -85,6 +94,9 @@ class ErinnerungsDienst : Service() {
     override fun onCreate() {
         super.onCreate()
         instanz = this
+        runCatching {
+            ContextCompat.registerReceiver(this, ruheEmpfaenger, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -158,16 +170,16 @@ class ErinnerungsDienst : Service() {
 
     private fun starte(a: Auftrag) {
         aktuell = a
+        // „Nicht stören“ aktiv: gar nicht erst abspielen (kein Wake-Lock, keine Lautstärke); Benachrichtigung bleibt.
+        if (still(a)) { weiter(a, entfernen = false); return }
         val e = Einstellungen.get(this)
         val grenze = if (a.wecker) WECKER_MAX_MS else HINWEIS_MAX_MS
         wake?.let { if (it.isHeld) it.release() }
         wake = getSystemService(PowerManager::class.java)
             ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:erinnerung")
             ?.apply { acquire(grenze + 60_000L) }
-        if (!still(a)) {
-            fokusAnfordern(a.wecker)
-            if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
-        }
+        fokusAnfordern(a.wecker)
+        if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
         val laufend = scope.launch {
             try {
                 withTimeoutOrNull(grenze) { ablauf(a, e) }
@@ -185,8 +197,6 @@ class ErinnerungsDienst : Service() {
     }
 
     private suspend fun ablauf(a: Auftrag, e: Einstellungen) {
-        // „Nicht stören“ aktiv: keine Vibration, kein Ton, kein Vorlesen – die Benachrichtigung bleibt stehen.
-        if (still(a)) return
         val tonAttribute = Lautsprecher.attribute(sprache = false)
         val attribute = Lautsprecher.attribute(sprache = true)
         if (e.vibration) runCatching {
@@ -200,7 +210,7 @@ class ErinnerungsDienst : Service() {
             if (a.aufgabe.vorlesen && text.isNotBlank()) {
                 delay(1_000)
                 for (i in 0 until a.anzahl) {
-                    // Wird „Nicht stören“ während des Vorlesens eingeschaltet, sofort verstummen.
+                    // Rückfall zum [ruheEmpfaenger]: vor jedem Satz erneut prüfen.
                     if (still(a)) return
                     val datei = dateien.getOrNull(i % dateien.size.coerceAtLeast(1))
                     if (datei != null) spiele(datei, null, e.lautstaerke, attribute, SATZ_MAX_MS, verstaerken = true)
@@ -365,6 +375,7 @@ class ErinnerungsDienst : Service() {
 
     override fun onDestroy() {
         if (instanz === this) instanz = null
+        runCatching { unregisterReceiver(ruheEmpfaenger) }
         stille()
         runCatching { geraeteStimme?.shutdown() }
         geraeteStimme = null

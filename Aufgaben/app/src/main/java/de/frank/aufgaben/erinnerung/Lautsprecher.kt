@@ -34,6 +34,13 @@ object Lautsprecher {
         f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
     }.getOrDefault(false)
 
+    /**
+     * Die eine Regel für alle Wege: Eine Aufgaben-Erinnerung bleibt still, wenn „Nicht stören“ aktiv ist
+     * und sie nicht ausdrücklich als Wecker eingeschaltet wurde. Bewusst streng (auch bei „Nur Priorität“
+     * mit erlaubten Erinnerungen und bei Modi wie Fahren), damit kein Schlaf mehr gestört wird.
+     */
+    fun stillHalten(context: Context, alsWecker: Boolean): Boolean = !alsWecker && ruheAktiv(context)
+
     fun attribute(sprache: Boolean): AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ALARM)
         .setContentType(if (sprache) AudioAttributes.CONTENT_TYPE_SPEECH else AudioAttributes.CONTENT_TYPE_SONIFICATION)

@@ -39,6 +39,10 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   stoppt Wegwischen ebenfalls).
   Abspielen im Vordergrund-Dienst `ErinnerungsDienst`, Wecker per `setAlarmClock`. Ohne fertige
   Dateien spricht die Android-Stimme des Geräts.
+  **Nicht stören / Schlafmodus:** Ist ein Ruhefilter aktiv (`currentInterruptionFilter` ≠ ALL), bleiben
+  normale Erinnerungen still (nur Benachrichtigung, kein Ton, Vorlesen, Vibration); schaltet man ihn während
+  des Vorlesens ein, verstummt es sofort. Nur Erinnerungen mit **Als Wecker** (und das Fokus-Ende) klingen
+  trotzdem. Regel an einer Stelle: `Lautsprecher.stillHalten`.
 - **Bereiche ohne Aufgaben** sind zugeklappt; Löschen im Editor fragt vorher nach.
 - **Vorlesen** (Edge, Google Chirp 3 HD, eigene Qwen-Stimme) für einzelne Aufgaben und den ganzen Tag.
 - **Widget „Aufgaben · Heute“**: um 0 Uhr werden die Morgen-Aufgaben automatisch zu Heute.
