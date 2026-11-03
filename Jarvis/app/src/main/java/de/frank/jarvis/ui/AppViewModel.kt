@@ -98,6 +98,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val LIVE_NACHLAUF_MS = 1_500L
         /** So lange nach dem letzten erkannten Wort zeigt die Sprachblase noch „Du sprichst“. */
         private const val BLASE_SPRICHT_NOCH_MS = 1_200L
+        /** Mindestdauer einer Tätigkeitszeile, damit Frank sie mitlesen kann (Franks Vorgabe: zwei Sekunden). */
+        const val ANZEIGE_MIN_MS = 2_000L
         /** Live: Nach so langer Wartezeit auf Jarvis bekommt das Live-Modell einen Zwischenstand; die Arbeit läuft weiter. */
         private const val LIVE_NACHREICHEN_MS = 10 * 60_000L
         private const val ABGEBROCHEN = "abgebrochen"
@@ -181,6 +183,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var schritt by mutableStateOf("")
         /** Das Tokenlimit-Fenster dieser Runde wartet auf Franks Entscheidung. */
         var wartet by mutableStateOf(false)
+        /** Der angezeigte Schritt: bleibt mindestens [ANZEIGE_MIN_MS] stehen, damit Frank ihn lesen kann; dazwischen zählt nur der neueste. */
+        var anzeige by mutableStateOf("")
+            private set
+        private var anzeigeSeit = beginn
+        private var anzeigeJob: Job? = null
+
+        @Synchronized fun zeige(neu: String) {
+            schritt = neu
+            anzeigeJob?.cancel()
+            val rest = ANZEIGE_MIN_MS - (System.currentTimeMillis() - anzeigeSeit)
+            anzeigeJob = viewModelScope.launch(Dispatchers.Main) {
+                if (rest > 0) kotlinx.coroutines.delay(rest)
+                if (anzeige != neu) { anzeige = neu; anzeigeSeit = System.currentTimeMillis() }
+            }
+        }
         lateinit var job: Job
         val erledigt: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
         /** Tokens aller Modellanfragen dieser Runde; läuft im Koroutinen-Kontext mit. */
@@ -227,7 +244,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val taetigkeit: String get() {
         val r = sitzungId?.let { laufende[it] } ?: return de.frank.jarvis.agent.Taetigkeit.DENKT
         if (r.wartet) return de.frank.jarvis.agent.Taetigkeit.WARTET_AUF_DICH
-        if (r.schritt.isNotBlank()) return de.frank.jarvis.agent.Taetigkeit.satz(r.schritt)
+        if (r.anzeige.isNotBlank()) return de.frank.jarvis.agent.Taetigkeit.satz(r.anzeige)
         return if (r.programmierer && r.erledigt.isEmpty()) de.frank.jarvis.agent.Taetigkeit.PROGRAMMIERAUFTRAG else de.frank.jarvis.agent.Taetigkeit.DENKT
     }
     /** Kurz nach dem Ende einer Runde: Ergebnis (Fertig, übergeben, fehlgeschlagen) je Gespräch, verschwindet nach wenigen Sekunden. */
@@ -407,7 +424,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // „Maximal“ denkt mehrere Minuten pro Schritt; sonst endete schon der erste Schritt im Zeitlimit.
                     .let { if (einstellungen.denkstufe == ReasoningEffort.MAX) maxOf(it, 15 * 60_000L) else it }
                 var grund: String? = null
-                agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, beiDenken = { runde.schritt = "" }, lernen = true, abschluss = true,
+                agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.zeige(it) }, beiDenken = { runde.zeige("") }, lernen = true, abschluss = true,
                     beiAenderung = { aenderung ->
                         runde.erledigt += aenderung
                         // Programmierauftrag mit Auswahlkarte: Deren fester Wortlaut steht jetzt fest, das Modell muss dafür nicht erst fertig schreiben.
