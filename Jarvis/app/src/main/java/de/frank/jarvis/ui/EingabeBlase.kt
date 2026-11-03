@@ -604,7 +604,7 @@ internal fun wahlOptionen(kontext: String): List<Pair<String, String>> {
 }
 
 /**
- * Fernwartung: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner hat in der letzten Minute geantwortet
+ * Fernwartung: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = Mac oder Windows-PC hat in der letzten Minute geantwortet, orange = nur der Hostinger-Server
  * (Fernwartungs-Dienst im Tunnel), rot = keiner; geprüft wird in der Leiste (JarvisApp). Beim Antippen zählt nur, wer gerade wirklich
  * antwortet (RechnerStatus.schnell liefert das ungeglättet).
  */
@@ -626,7 +626,7 @@ private fun FernwartungsSymbol() {
         }
     }
     val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
-    // Grün heißt weiter: Ein Bildschirm ist erreichbar. Nur die immer laufende Server-Konsole färbt das Symbol in der Akzentfarbe.
+    // Grün heißt weiter: Mac oder Windows-PC ist erreichbar. Antwortet nur der Hostinger-Server, leuchtet das Symbol im Orange des Live-Knopfs.
     val nurKonsole = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.let { da -> da.isNotEmpty() && da.all { it.konsole } } == true
     val bereich = androidx.compose.runtime.rememberCoroutineScope()
     val sucht = start != null
@@ -652,7 +652,7 @@ private fun FernwartungsSymbol() {
     }) {
         // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
         // Während Jarvis prüft, welche Rechner antworten (bis etwa 13 s mit zweitem Versuch), grau mit drehendem Ring: das Tippen ist angekommen.
-        val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) f.primaer else f.erfolg; false -> f.gefahr; null -> f.textLeise }
+        val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> if (nurKonsole) LIVE_ORANGE else f.erfolg; false -> f.gefahr; null -> f.textLeise }
         if (sucht) androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = f.primaer, strokeWidth = 2.5.dp)
         Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(24.dp).drawBehind {
             if (rechnerDa == true && !sucht) drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), Color.Transparent)), radius = size.minDimension * 1.1f)
