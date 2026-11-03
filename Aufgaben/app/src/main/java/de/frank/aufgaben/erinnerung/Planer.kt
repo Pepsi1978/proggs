@@ -185,6 +185,8 @@ object Planer {
                 val e = Einstellungen.get(context)
                 kanalAnlegen(context)
                 runCatching { NotificationManagerCompat.from(context).notify(id.toInt(), benachrichtigung(context, a, wann(a), imDienst = false)) }
+                // „Nicht stören“ aktiv und kein Wecker: nur die Benachrichtigung, ohne Ton und Vibration.
+                if (!a.alsWecker && Lautsprecher.ruheAktiv(context)) { fertig(); return@launch }
                 if (e.vibration) runCatching {
                     context.getSystemService(Vibrator::class.java)
                         ?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 180, 120, 260), -1))
@@ -213,6 +215,11 @@ class ErinnerungsEmpfaenger : BroadcastReceiver() {
             if (a == null || a.erledigt) { ergebnis.finish(); return@launch }
             Planer.kanalAnlegen(context)
             val e = Einstellungen.get(context)
+            // „Nicht stören“ / Schlafmodus: normale Erinnerungen nur als stille Benachrichtigung, kein Dienst.
+            if (!a.alsWecker && Lautsprecher.ruheAktiv(context)) {
+                runCatching { NotificationManagerCompat.from(context).notify(id.toInt(), Planer.benachrichtigung(context, a, Planer.wann(a), imDienst = false)) }
+                ergebnis.finish(); return@launch
+            }
             // Vorlesen, Wecker und eigene MP3s (länger als ein kurzer Ton) laufen im Vordergrund-Dienst.
             if (a.vorlesen || a.alsWecker || e.ton.startsWith("datei:")) {
                 val gestartet = try {

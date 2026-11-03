@@ -52,6 +52,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  *   ist bewusst „ongoing“; wo Android 14+ sie trotzdem wegwischen lässt, stoppt der deleteIntent den Wecker.
  * Fehlen die Dateien (z. B. offline erstellt), spricht die Android-Stimme des Geräts.
  * Kommt während einer Erinnerung die nächste, wartet sie, bis die laufende vorbei ist.
+ * Bei „Nicht stören“ / Schlafmodus bleiben normale Erinnerungen still (nur Benachrichtigung); nur
+ * ausdrücklich als Wecker eingeschaltete Erinnerungen klingen dann ([Lautsprecher.ruheAktiv]).
  * Alles läuft über den Wecker-Kanal und den eingebauten Lautsprecher, auch bei Lautlos und Bluetooth ([Lautsprecher]).
  */
 class ErinnerungsDienst : Service() {
@@ -59,7 +61,12 @@ class ErinnerungsDienst : Service() {
     private data class Auftrag(val aufgabe: Aufgabe, val wann: String, val anzahl: Int = Ansage.ANZAHL) {
         val id: Long get() = aufgabe.id
         val wecker: Boolean get() = aufgabe.alsWecker
+        /** Darf trotz „Nicht stören“ klingen: ausdrücklicher Wecker oder das selbst gestartete Fokus-Ende. */
+        val trotzRuhe: Boolean get() = wecker || id == Fokus.ID
     }
+
+    /** Bei „Nicht stören“ bleibt eine normale Erinnerung still (nur die Benachrichtigung erscheint). */
+    private fun still(a: Auftrag): Boolean = !a.trotzRuhe && Lautsprecher.ruheAktiv(this)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val warteschlange = ArrayDeque<Auftrag>()
@@ -157,8 +164,10 @@ class ErinnerungsDienst : Service() {
         wake = getSystemService(PowerManager::class.java)
             ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:erinnerung")
             ?.apply { acquire(grenze + 60_000L) }
-        fokusAnfordern(a.wecker)
-        if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
+        if (!still(a)) {
+            fokusAnfordern(a.wecker)
+            if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
+        }
         val laufend = scope.launch {
             try {
                 withTimeoutOrNull(grenze) { ablauf(a, e) }
@@ -176,6 +185,8 @@ class ErinnerungsDienst : Service() {
     }
 
     private suspend fun ablauf(a: Auftrag, e: Einstellungen) {
+        // „Nicht stören“ aktiv: keine Vibration, kein Ton, kein Vorlesen – die Benachrichtigung bleibt stehen.
+        if (still(a)) return
         val tonAttribute = Lautsprecher.attribute(sprache = false)
         val attribute = Lautsprecher.attribute(sprache = true)
         if (e.vibration) runCatching {
@@ -184,10 +195,13 @@ class ErinnerungsDienst : Service() {
         val dateien = if (a.aufgabe.vorlesen) withContext(Dispatchers.IO) { Ansage.dateien(this@ErinnerungsDienst, a.aufgabe) } else emptyList()
         val text = Ansage.text(a.aufgabe)
         do {
+            if (still(a)) return
             spiele(null, e.ton, e.lautstaerke, tonAttribute, TON_MAX_MS, verstaerken = false)
             if (a.aufgabe.vorlesen && text.isNotBlank()) {
                 delay(1_000)
                 for (i in 0 until a.anzahl) {
+                    // Wird „Nicht stören“ während des Vorlesens eingeschaltet, sofort verstummen.
+                    if (still(a)) return
                     val datei = dateien.getOrNull(i % dateien.size.coerceAtLeast(1))
                     if (datei != null) spiele(datei, null, e.lautstaerke, attribute, SATZ_MAX_MS, verstaerken = true)
                     else geraetSpricht(text, e.lautstaerke, attribute)

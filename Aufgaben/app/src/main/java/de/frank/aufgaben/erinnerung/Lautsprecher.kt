@@ -1,5 +1,6 @@
 package de.frank.aufgaben.erinnerung
 
+import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
@@ -11,7 +12,8 @@ import android.util.Log
 /**
  * Erinnerungen müssen hörbar sein, egal wie das Handy gerade steht. Deshalb:
  * - Wecker-Kanal statt Benachrichtigungs-Kanal: Der klingt auch im Lautlos- und Vibrationsmodus und
- *   bei „Nicht stören“ (Wecker sind dort standardmäßig erlaubt).
+ *   bei „Nicht stören“ (Wecker sind dort standardmäßig erlaubt). Normale Erinnerungen prüfen vorher
+ *   [ruheAktiv] und bleiben bei „Nicht stören“ still; nur Wecker-Erinnerungen klingen dann.
  * - Immer der eingebaute Lautsprecher, auch wenn Bluetooth verbunden ist (z. B. ein ausgeschaltetes
  *   oder auf eine andere Quelle gestelltes Autoradio, das den Ton sonst verschluckt).
  * - Steht die Wecker-Lautstärke auf 0, wird sie für die Erinnerung kurz angehoben und danach zurückgesetzt.
@@ -20,6 +22,17 @@ object Lautsprecher {
     private const val TAG = "Lautsprecher"
     /** Mindestanteil der Wecker-Lautstärke, wenn sie ganz unten steht. */
     private const val MINDEST_ANTEIL = 0.6f
+
+    /**
+     * „Nicht stören“ bzw. ein Schlaf-/Ruhemodus ist aktiv (jeder Filter außer „Alle zulassen“).
+     * Normale Aufgaben-Erinnerungen bleiben dann still: kein Ton, kein Vorlesen, keine Vibration.
+     * Nur ausdrücklich als Wecker eingeschaltete Erinnerungen (und das Ende des Fokus-Timers) klingen trotzdem.
+     */
+    fun ruheAktiv(context: Context): Boolean = runCatching {
+        val f = context.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
+            ?: NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+        f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+    }.getOrDefault(false)
 
     fun attribute(sprache: Boolean): AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ALARM)
