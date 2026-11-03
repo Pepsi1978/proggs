@@ -8,6 +8,12 @@ Folgeaktionen wie in der Oberfläche (Dienst abgleichen, Zeitplan neu stellen, W
 Nur so kann Frank sie per Sprache abfragen („Was hast du beim Vorlesen für Einstellungen?“) und umstellen.
 Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 
+## Tätigkeitsanzeige für neue Werkzeuge und Apps
+Was Jarvis gerade tut, steht im Chat, in der Sprachblase und bei Agenten als kurzer Satz aus `agent/Taetigkeit.kt`.
+Neue Werkzeuge und Apps erscheinen dort von selbst (nach App und Art: „schaut in …“, „arbeitet in …“, „löscht etwas in …“).
+Passt das nicht gut, bekommt das neue Werkzeug im selben Commit `taetigkeit = "…"` (ohne Subjekt, für Menschen lesbar,
+kein Werkzeugname: „stellt einen Wecker“). Nur echte Tätigkeiten, keine erfundenen Zwischenschritte.
+
 ## Installation aufs Handy nur über das Skript
 Jarvis nie mit nacktem `adb install` installieren, sondern über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>` (Windows: `.ps1`).
 Es fragt per Overlay nach dem Zeitpunkt (`ui/InstallFrageDienst.kt`), damit eine laufende Aufnahme nicht abbricht; ohne Antwort installiert es nach 30 Sekunden.

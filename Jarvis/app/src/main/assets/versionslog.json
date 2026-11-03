@@ -575,6 +575,7 @@
 {"versionCode": 570, "versionName": "1.8.559", "stand": "02.11.2026, 16:59 Uhr", "notiz": "Die Sprachblase außerhalb der App zeigt jede Phase mit eigener Animation und einer Statuszeile, und die Antwort beginnt schneller."},
 {"versionCode": 571, "versionName": "1.8.560", "stand": "02.11.2026, 17:17 Uhr", "notiz": "Die Sprachblase friert nicht mehr ein und bewegt sich zuverlässig, auch wenn du in einer anderen App bist."},
 {"versionCode": 572, "versionName": "1.8.561", "stand": "02.11.2026, 17:35 Uhr", "notiz": "Außerhalb der App zählt nur noch erkannte Stimme, nicht Lüfter oder Fahrgeräusch, und die Statuszeile lässt Berührungen an die App darunter durch."},
-{"versionCode": 573, "versionName": "1.8.562", "stand": "03.11.2026, 14:45 Uhr", "notiz": "Nach jedem Absenden zeigt Jarvis sofort, was er gerade wirklich tut, etwa „schaut in die Erinnerungen“ oder „übergibt den Auftrag an den Programmierer“, und danach kurz, ob es geklappt hat."}
+{"versionCode": 573, "versionName": "1.8.562", "stand": "03.11.2026, 14:45 Uhr", "notiz": "Nach jedem Absenden zeigt Jarvis sofort, was er gerade wirklich tut, etwa „schaut in die Erinnerungen“ oder „übergibt den Auftrag an den Programmierer“, und danach kurz, ob es geklappt hat."},
+{"versionCode": 574, "versionName": "1.8.563", "stand": "03.11.2026, 14:53 Uhr", "notiz": "Auch neue Werkzeuge, Helfer und Apps zeigen ohne Nacharbeit lesbar an, in welchem Bereich Jarvis gerade arbeitet, etwa „schaut in Geniale Aufgaben“, und ein selbst gestoppter Auftrag gilt nicht mehr als Fehler."}
 ]
 }

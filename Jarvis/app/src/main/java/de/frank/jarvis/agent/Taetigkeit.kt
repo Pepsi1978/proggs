@@ -1,5 +1,8 @@
 package de.frank.jarvis.agent
 
+import android.content.Context
+import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.faehigkeit.Werkzeug
 import org.json.JSONObject
 
 /**
@@ -19,32 +22,79 @@ object Taetigkeit {
     /** „Jarvis“ + Werkzeug-Satz; leer = [DENKT]. */
     fun satz(schritt: String): String = if (schritt.isBlank()) DENKT else "Jarvis $schritt"
 
-    /** Abschluss einer Runde nach [sekunden]: Fehler, offene Auswahlkarte, Übergabe oder Erfolg. */
-    fun abschluss(fehler: Boolean, uebergeben: Boolean, wartetAufWahl: Boolean, sekunden: Long): String = when {
-        fehler -> "Fehlgeschlagen nach $sekunden s"
-        wartetAufWahl -> "Programmierauftrag wartet auf deine Auswahl"
-        uebergeben -> "An den Programmierer übergeben nach $sekunden s"
-        else -> "Fertig nach $sekunden s"
+    /** Wie eine Runde endete. [FEHLER] ist der einzige rot angezeigte Ausgang. */
+    enum class Ende { FERTIG, UEBERGEBEN, WARTET_AUF_WAHL, ABGEBROCHEN, FEHLER }
+
+    /** Abschlusszeile einer Runde nach [sekunden]. */
+    fun abschluss(ende: Ende, sekunden: Long): String = when (ende) {
+        Ende.FEHLER -> "Fehlgeschlagen nach ${dauer(sekunden)}"
+        Ende.WARTET_AUF_WAHL -> "Programmierauftrag wartet auf deine Auswahl"
+        Ende.UEBERGEBEN -> "An den Programmierer übergeben nach ${dauer(sekunden)}"
+        Ende.ABGEBROCHEN -> "Abgebrochen nach ${dauer(sekunden)}"
+        Ende.FERTIG -> "Fertig nach ${dauer(sekunden)}"
     }
 
-    /** Der Satz zu einem Werkzeugaufruf; unbekannte Werkzeuge bekommen eine Beschreibung nach ihrer Art, sonst ihren Titel. */
-    fun werkzeug(name: String, titel: String, argumente: JSONObject = JSONObject()): String {
+    /** Laufzeit wie im Terminal: „42 s“, „4 min 12 s“, „1 h 3 min“. */
+    fun dauer(sekunden: Long): String {
+        val s = sekunden.coerceAtLeast(0)
+        return when {
+            s < 60 -> "$s s"
+            s < 3600 -> "${s / 60} min ${s % 60} s"
+            else -> "${s / 3600} h ${(s % 3600) / 60} min"
+        }
+    }
+
+    /** Titel der Werkzeuge, die Arbeit an den Programmierer weitergeben (so stehen sie in den Änderungen einer Runde). */
+    val UEBERGABE_TITEL = listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL,
+        "Nachtrag zu einem bestehenden Programmierauftrag", "Rückfrage einer Programmier-Sitzung beantworten")
+
+    /**
+     * Der Satz zu einem Werkzeugaufruf. Reihenfolge: eigener Satz des Werkzeugs ([Werkzeug.taetigkeit]), diese Bibliothek, sonst von
+     * selbst aus App und Art (nur lesend: „schaut in Geniale Aufgaben“, löschend, sonst „arbeitet in …“). So zeigt jedes neue Werkzeug
+     * und jede neue App ohne Nacharbeit, in welchem Bereich Jarvis gerade arbeitet.
+     */
+    fun werkzeug(context: Context, werkzeug: Werkzeug?, name: String, argumente: JSONObject = JSONObject()): String {
+        werkzeug?.taetigkeit?.takeIf { it.isNotBlank() }?.let { return it }
         WERKZEUGE[name]?.let { return it }
-        return when (name) {
-            "jarvis_merken" -> when (argumente.optString("art")) {
+        when (name) {
+            "jarvis_merken" -> return when (argumente.optString("art").trim().lowercase()) {
                 "regel", "programmierregel", "stil" -> "ändert seine eigenen Regeln"
                 "ziel" -> "merkt sich ein Ziel"
                 "entscheidung" -> "merkt sich deine Entscheidung"
                 else -> "merkt sich etwas"
             }
-            "jarvis_vergessen" -> if (argumente.optString("art") in setOf("regel", "programmierregel", "stil")) "streicht eine eigene Regel" else "vergisst etwas Gemerktes"
-            else -> when {
-                name.endsWith("_lesen") || name.endsWith("_suchen") || name.endsWith("_info") -> "schaut nach: $titel"
-                name.endsWith("_loeschen") -> "löscht: $titel"
-                name.endsWith("_speichern") || name.endsWith("_anlegen") || name.endsWith("_aendern") || name.endsWith("_setzen") -> "trägt ein: $titel"
-                else -> "nutzt: $titel"
-            }
+            "jarvis_vergessen" -> return if (argumente.optString("art").trim().lowercase() in REGELARTEN) "streicht eine eigene Regel" else "vergisst etwas Gemerktes"
+            "helfer_ausfuehren" -> return argumente.optString("kennung").takeIf { it.isNotBlank() }?.let { "benutzt den Helfer „$it“" } ?: "benutzt einen Helfer"
         }
+        return automatisch(bereich(context, name), werkzeug, name)
+    }
+
+    /** Ohne eigenen Satz: App und Art des Werkzeugs; ganz ohne App der Titel. */
+    internal fun automatisch(bereich: String?, werkzeug: Werkzeug?, name: String): String {
+        val loescht = werkzeug?.loeschend == true || name.endsWith("_loeschen")
+        val liest = werkzeug?.nurLesen == true || name.endsWith("_lesen") || name.endsWith("_suchen")
+        if (bereich.isNullOrBlank()) {
+            val titel = werkzeug?.titel ?: name.replace('_', ' ')
+            return when { loescht -> "löscht: $titel"; liest -> "schaut nach: $titel"; else -> "nutzt: $titel" }
+        }
+        // „Mac bedienen“ → „bedient den Mac“, statt „arbeitet in Mac bedienen“.
+        if (bereich.endsWith(" bedienen")) return "bedient " + bereich.removeSuffix(" bedienen")
+        return when { loescht -> "löscht etwas in $bereich"; liest -> "schaut in $bereich"; else -> "arbeitet in $bereich" }
+    }
+
+    private val REGELARTEN = setOf("regel", "programmierregel", "stil")
+
+    /** Werkzeugname → Name der App ([Faehigkeit.name]); neu aufgebaut, wenn ein Name fehlt (neue Helfer), höchstens einmal je Minute. */
+    @Volatile private var bereiche: Map<String, String> = emptyMap()
+    @Volatile private var bereicheStand = 0L
+
+    private fun bereich(context: Context, name: String): String? {
+        bereiche[name]?.let { return it }
+        val jetzt = System.currentTimeMillis()
+        if (jetzt - bereicheStand < 60_000) return null
+        bereicheStand = jetzt
+        bereiche = runCatching { Register.alle(context).flatMap { f -> f.werkzeuge.map { it.name to f.name } }.toMap() }.getOrDefault(bereiche)
+        return bereiche[name]
     }
 
     private val WERKZEUGE = mapOf(
@@ -150,7 +200,6 @@ object Taetigkeit {
         "vorgang_fortsetzen" to "setzt einen Hintergrundauftrag fort",
         "helfer_suchen" to "sucht einen passenden Helfer",
         "helfer_info" to "schaut sich einen Helfer an",
-        "helfer_ausfuehren" to "benutzt einen Helfer",
         "helfer_bauen" to "lässt einen Helfer bauen",
         "helfer_registrieren" to "registriert einen Helfer",
         "helfer_verwalten" to "verwaltet die Helfer",

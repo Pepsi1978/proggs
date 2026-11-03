@@ -176,9 +176,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * [erledigt], was schreibende Werkzeuge in dieser Runde schon geändert haben.
      */
     /** [ursprung] = Frank hat die Frage im Gesprächsmodus gesprochen (mit Vorlesen); dann wird eine späte Antwort zugestellt. */
-    inner class Runde(val sitzung: String, val frage: Int, val ursprung: SprachUrsprung? = null) {
+    inner class Runde(val sitzung: String, val frage: Int, val ursprung: SprachUrsprung? = null, val programmierer: Boolean = false) {
         val beginn = System.currentTimeMillis()
         var schritt by mutableStateOf("")
+        /** Das Tokenlimit-Fenster dieser Runde wartet auf Franks Entscheidung. */
+        var wartet by mutableStateOf(false)
         lateinit var job: Job
         val erledigt: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
         /** Tokens aller Modellanfragen dieser Runde; läuft im Koroutinen-Kontext mit. */
@@ -219,17 +221,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val denkt: Boolean get() = sitzungId?.let { laufende.containsKey(it) } == true
     /** Was Jarvis im offenen Gespräch gerade tut („Aufgaben lesen“), solange er arbeitet. */
     val schritt: String get() = sitzungId?.let { laufende[it]?.schritt }.orEmpty()
-    /** Leuchtkern mit Tätigkeitszeile unter der letzten Nachricht: sofort nach dem Absenden, auch vor einer Programmierübergabe. */
-    val denktSichtbar: Boolean get() = denkt
     /** Wann die Runde im offenen Gespräch begann (für die mitlaufenden Sekunden); 0 = keine. */
     val rundeSeit: Long get() = sitzungId?.let { laufende[it]?.beginn } ?: 0L
     /** Die Tätigkeitszeile: Warten auf Frank, das laufende Werkzeug oder „Jarvis denkt“ (Bibliothek [de.frank.jarvis.agent.Taetigkeit]). */
     val taetigkeit: String get() {
         val r = sitzungId?.let { laufende[it] } ?: return de.frank.jarvis.agent.Taetigkeit.DENKT
-        if (tokenlimitFrage != null) return de.frank.jarvis.agent.Taetigkeit.WARTET_AUF_DICH
+        if (r.wartet) return de.frank.jarvis.agent.Taetigkeit.WARTET_AUF_DICH
         if (r.schritt.isNotBlank()) return de.frank.jarvis.agent.Taetigkeit.satz(r.schritt)
-        val programmierer = gespraech.getOrNull(r.frage)?.let { it.vonMir && ProgrammiererVorlage.aktiv(it.text) } == true
-        return if (programmierer && r.erledigt.isEmpty()) de.frank.jarvis.agent.Taetigkeit.PROGRAMMIERAUFTRAG else de.frank.jarvis.agent.Taetigkeit.DENKT
+        return if (r.programmierer && r.erledigt.isEmpty()) de.frank.jarvis.agent.Taetigkeit.PROGRAMMIERAUFTRAG else de.frank.jarvis.agent.Taetigkeit.DENKT
     }
     /** Kurz nach dem Ende einer Runde: Ergebnis (Fertig, übergeben, fehlgeschlagen) je Gespräch, verschwindet nach wenigen Sekunden. */
     class Abschluss(val text: String, val fehler: Boolean)
@@ -375,7 +374,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (hinweis.startsWith(ProgrammiererVorlage.HINWEIS)) de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.vorwahlGesendet(id, text)
         // Im Gesprächsmodus gesprochen und mit Vorlesen: Diese Runde (und jeder Agent, den sie startet) trägt den Sprachursprung.
         val ursprung = if (vorlesen && weckwortLauf?.isActive == true) SprachUrsprung(SprachModus.WECKWORT, id) else null
-        val runde = Runde(id, frage, ursprung)
+        val runde = Runde(id, frage, ursprung, ProgrammiererVorlage.aktiv(text))
         abschluss.remove(id)
         laufende[id] = runde
         // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
@@ -415,7 +414,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         if (vorlesen && aenderung.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL)) viewModelScope.launch { karteVorab(runde) }
                     }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },
                     beiErstemSatz = if (!vorlesen) null else { satz -> viewModelScope.launch { ersterSatzVorab(runde, satz) } },
-                    beiTokenlimit = { stand -> if (tokenlimitFragen(stand)) null else "Tokenlimit von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} erreicht, von Frank abgebrochen" })
+                    beiTokenlimit = { stand -> runde.wartet = true; if (try { tokenlimitFragen(stand) } finally { runde.wartet = false }) null else "Tokenlimit von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} erreicht, von Frank abgebrochen" })
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText(grund)).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
@@ -605,21 +604,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
-    // [karte]: Ansage einer Auswahlkarte, die diese Runde gestellt hat (siehe ProgrammierFaehigkeit.wahlInRunde).
     /** Zeigt wenige Sekunden lang, wie die Runde endete; eine neue Runde im selben Gespräch löscht die Zeile sofort. */
-    private fun abschlussZeigen(runde: Runde, fehler: Boolean, wartetAufWahl: Boolean) {
-        val uebergeben = synchronized(runde.erledigt) { runde.erledigt.any { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
-        val a = Abschluss(de.frank.jarvis.agent.Taetigkeit.abschluss(fehler, uebergeben, wartetAufWahl, (System.currentTimeMillis() - runde.beginn) / 1000), fehler)
+    private fun abschlussZeigen(runde: Runde, ende: de.frank.jarvis.agent.Taetigkeit.Ende) {
+        val fehler = ende == de.frank.jarvis.agent.Taetigkeit.Ende.FEHLER
+        val a = Abschluss(de.frank.jarvis.agent.Taetigkeit.abschluss(ende, (System.currentTimeMillis() - runde.beginn) / 1000), fehler)
         abschluss[runde.sitzung] = a
         viewModelScope.launch { kotlinx.coroutines.delay(if (fehler) 8_000 else 4_000); if (abschluss[runde.sitzung] === a) abschluss.remove(runde.sitzung) }
     }
 
+    /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
+    // [karte]: Ansage einer Auswahlkarte, die diese Runde gestellt hat (siehe ProgrammierFaehigkeit.wahlInRunde).
     private fun rundeFertig(runde: Runde, antwort: String, art: String, vorlesen: Boolean, karte: String? = null) {
         // Schon abgebrochen (oder das Gespräch gelöscht): nichts mehr anhängen.
         if (laufende[runde.sitzung] !== runde) return
         laufende.remove(runde.sitzung)
-        abschlussZeigen(runde, art == "fehler", !karte.isNullOrBlank())
+        abschlussZeigen(runde, when {
+            // Von Frank selbst im Tokenlimit-Fenster beendet: kein Fehler.
+            art == "fehler" && antwort.contains("von Frank abgebrochen") -> de.frank.jarvis.agent.Taetigkeit.Ende.ABGEBROCHEN
+            art == "fehler" -> de.frank.jarvis.agent.Taetigkeit.Ende.FEHLER
+            !karte.isNullOrBlank() -> de.frank.jarvis.agent.Taetigkeit.Ende.WARTET_AUF_WAHL
+            synchronized(runde.erledigt) { runde.erledigt.any { e -> de.frank.jarvis.agent.Taetigkeit.UEBERGABE_TITEL.any(e::startsWith) } } -> de.frank.jarvis.agent.Taetigkeit.Ende.UEBERGEBEN
+            else -> de.frank.jarvis.agent.Taetigkeit.Ende.FERTIG
+        })
         // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
         // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut; nach einem schnellen Tipp nichts (leer) bzw. nur eine Folgefrage. Hat die Runde
         // daneben noch etwas anderes erledigt (Timer, Aufgabe …), bleibt die Antwort des Modells stehen.
@@ -2430,7 +2436,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             de.frank.jarvis.speech.VorleseZustand.PAUSIERT -> BlasenZustand.ANGEHALTEN
             de.frank.jarvis.speech.VorleseZustand.AUS -> when {
                 schreibtMit -> BlasenZustand.SCHREIBT_MIT
-                denkt -> if (schritt.isNotBlank()) BlasenZustand.WERKZEUG else BlasenZustand.DENKT
+                denkt -> if (taetigkeit != de.frank.jarvis.agent.Taetigkeit.DENKT) BlasenZustand.WERKZEUG else BlasenZustand.DENKT
                 navigiert -> BlasenZustand.DENKT
                 else -> BlasenZustand.MIKROFON
             }
@@ -3048,12 +3054,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runde.vorab?.let(vorleser::vorabAbbrechen)
         // Die Frage bleibt als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
         frageAbgebrochen(runde)
+        abschlussZeigen(runde, de.frank.jarvis.agent.Taetigkeit.Ende.ABGEBROCHEN)
         // Der Wächter in der Anfrage schließt die Verbindung, sobald die Koroutine abgebrochen wird: nur diese eine Antwort.
         runde.job.cancel()
     }
 
     /** Bricht die Antwort eines beliebigen Gesprächs ab (beim Löschen), ohne den Verlauf anzufassen. */
     private fun rundeAbbrechen(id: String) {
+        abschluss.remove(id)
         laufende.remove(id)?.let { r -> r.vorab?.let(vorleser::vorabAbbrechen); r.job.cancel() }
     }
 

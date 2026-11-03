@@ -27,6 +27,11 @@ class Werkzeug(
     val loeschend: Boolean = false,
     /** Zusätzliche Angaben für ChatGPT im Werkzeug-Verzeichnis (`_meta`), etwa `openai/fileParams` für Dateieingaben. */
     val meta: JSONObject? = null,
+    /**
+     * Was Frank währenddessen liest, ohne Subjekt („stellt einen Wecker“). Optional: Ohne Angabe ordnet
+     * [de.frank.jarvis.agent.Taetigkeit] das Werkzeug selbst nach seiner App und Art ein, ein neues Werkzeug zeigt also immer etwas Lesbares.
+     */
+    val taetigkeit: String? = null,
     val ausfuehren: suspend (JSONObject) -> Ergebnis,
 )
 
@@ -74,7 +79,7 @@ object Register {
 fun Werkzeug.als(
     name: String = this.name, titel: String = this.titel, beschreibung: String = this.beschreibung, schema: JSONObject = this.schema,
     nurLesen: Boolean = this.nurLesen, loeschend: Boolean = this.loeschend, ausfuehren: (suspend (JSONObject) -> Ergebnis)? = null,
-): Werkzeug = Werkzeug(name, titel, beschreibung, schema, nurLesen, loeschend, meta, ausfuehren ?: this.ausfuehren)
+): Werkzeug = Werkzeug(name, titel, beschreibung, schema, nurLesen, loeschend, meta, taetigkeit, ausfuehren ?: this.ausfuehren)
 
 /** Kopie eines Schemas mit zusätzlichen Feldern; [pflicht] ersetzt die Pflichtfelder, wenn angegeben. */
 fun JSONObject.mit(vararg felder: Pair<String, JSONObject>, pflicht: List<String>? = null): JSONObject = JSONObject(toString()).also { kopie ->
