@@ -138,14 +138,20 @@ class AlarmService : Service() {
         val token = generation
         loop?.cancel()
         playback?.close(); playback = null
-        showForeground(alarm, quiet)
+        // Jedes Klingeln (auch nach dem Schlummern) bekommt eine frisch gepostete Benachrichtigung unter neuer Id:
+        // eine bloße Aktualisierung derselben Id alarmiert wegen setOnlyAlertOnce nicht und löst kein Vollbild aus.
+        showForeground(alarm, quiet, fresh = !quiet)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
+        if (!quiet) openAlarmScreen()
         if (alarm.vibrate) vibrateAsAlarm()
         // Lautstärke sofort setzen, bevor irgendetwas klingt: ohne Anschwellen gleich die eingestellte volle Lautstärke.
         setVolume(if (alarm.fadeSeconds == 0) alarm.volume else (alarm.volume * .05f).roundToInt().coerceAtLeast(1))
         loop = scope.launch {
             val start = System.currentTimeMillis()
+            var lastCheck = start
             while (isActive) {
+                // Wächter: verschwindet die Klingel-Benachrichtigung (weggewischt, vom System verworfen), sofort neu posten.
+                if (!quiet && System.currentTimeMillis() - lastCheck >= 5_000) { lastCheck = System.currentTimeMillis(); ensureNotificationVisible(alarm) }
                 val fraction = if (alarm.fadeSeconds == 0) 1f else
                     ((System.currentTimeMillis() - start).toFloat() / (alarm.fadeSeconds * 1000)).coerceIn(.05f, 1f)
                 setVolume((alarm.volume * fraction).roundToInt().coerceAtLeast(1))
@@ -267,14 +273,39 @@ class AlarmService : Service() {
      * Real alarms and the silent button test use different notification ids: a real alarm arriving during a
      * test gets a fresh notification and therefore its full-screen alert despite setOnlyAlertOnce.
      */
-    private fun showForeground(alarm: Alarm?, quietMode: Boolean) {
-        val id = if (quietMode) TEST_NOTIFICATION else NOTIFICATION
+    private fun showForeground(alarm: Alarm?, quietMode: Boolean, fresh: Boolean = false) {
+        val id = when {
+            quietMode -> TEST_NOTIFICATION
+            fresh -> if (foregroundId == NOTIFICATION) NOTIFICATION_ALT else NOTIFICATION
+            foregroundId == NOTIFICATION_ALT -> NOTIFICATION_ALT
+            else -> NOTIFICATION
+        }
         val manager = getSystemService(NotificationManager::class.java)
         if (id == foregroundId) { manager.notify(id, notification(alarm, quietMode)); return }
         androidx.core.app.ServiceCompat.startForeground(this, id, notification(alarm, quietMode),
             if (android.os.Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
         if (foregroundId != 0) manager.cancel(foregroundId)
         foregroundId = id
+    }
+
+    /** Prüft, ob die Klingel-Benachrichtigung noch angezeigt wird, und postet sie sonst neu mit vollem Alarm. */
+    private fun ensureNotificationVisible(alarm: Alarm) {
+        if (current?.id != alarm.id || foregroundId == 0) return
+        val visible = runCatching { getSystemService(NotificationManager::class.java).activeNotifications.any { it.id == foregroundId } }.getOrDefault(true)
+        if (!visible) {
+            trace("notification missing, repost ring=$ringId")
+            runCatching { showForeground(current, quiet, fresh = true) }
+            openAlarmScreen()
+        }
+    }
+
+    /**
+     * Öffnet den Weckbildschirm zusätzlich direkt. Android erlaubt das aus dem Hintergrund nicht immer; dann bleibt
+     * das Vollbild der frischen Benachrichtigung der Weg. Ein bereits offener Bildschirm (singleTask) wird nur nach vorn geholt.
+     */
+    private fun openAlarmScreen() {
+        runCatching { startActivity(Intent(this, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { trace("open screen failed ${it.javaClass.simpleName}") }
     }
 
     private fun notification(alarm: Alarm?, quietMode: Boolean): Notification {
@@ -292,6 +323,7 @@ class AlarmService : Service() {
             })
             NotificationCompat.Builder(this, CHANNEL).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setFullScreenIntent(open, true)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         }
         builder.setSmallIcon(R.drawable.ic_wecker)
             .setContentTitle(alarm?.name ?: "Genialer Wecker").setContentText("Zum Wecker öffnen")
@@ -332,6 +364,8 @@ class AlarmService : Service() {
         @Synchronized internal fun wasStopped(entry: RingEntry) = stopped[entry.id] == entry.at
         const val CHANNEL = "alarm_ring_v1"
         const val NOTIFICATION = 1001
+        /** Wechsel-Id: jedes neue Klingeln postet seine Benachrichtigung frisch statt die alte nur zu aktualisieren. */
+        const val NOTIFICATION_ALT = 1004
         const val TEST_CHANNEL = "alarm_test_v1"
         const val TEST_NOTIFICATION = 1003
         val attributes: AudioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
