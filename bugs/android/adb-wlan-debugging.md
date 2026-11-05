@@ -70,3 +70,11 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Ursache:** Client-/AP-Isolation, Gäste-WLAN, blockiertes Multicast (UDP 5353); Windows-Firewall-Regel fehlt für die benutzte adb.exe.
 - **Fix:** Anderes Netz oder Mesh-VPN (Tailscale/ZeroTier) mit fester IP; Firewall-Regel für die SDK-adb prüfen.
 - **Quelle:** https://tailscale.com/compare/zerotier · https://keystoneintegration.us/blog/multicast-mdns-igmp-home-network/ (extern)
+
+## 12. Logcat über WLAN/Tunnel hängt bis zum Zeitlimit (Exit 144)
+- **Symptom:** `adb logcat -d | grep …` über den Tunnel endet nach Minuten im Zeitlimit; kein einziger Treffer kommt an.
+- **Ursache 1:** Der ganze Puffer (main/system/crash, oft zig MB) wird übertragen und erst am Rechner gefiltert.
+- **Ursache 2:** `logcat -T '<zeit>'` ohne `-d` beendet sich auf diesem Gerät nicht, sondern wartet auf neue Zeilen.
+- **Ursache 3 (Exit 144):** `pkill -f "logcat -d"` traf auch die eigene Shell, deren Befehlszeile das Muster enthielt.
+- **Fix:** Immer `Werkzeuge/logcat/logcat-lesen.sh` nutzen: filtert auf dem Handy (Zeitfenster, `--pid`, Tags, Muster, `tail`), immer mit `-d`, harte Zeitgrenze, Statuszeile `LOGCAT_STATUS`. Antwort in unter 1 s statt Zeitlimit. Hintergrundaufgaben nur mit TaskStop beenden, nie `pkill -f` mit einem Muster, das in der eigenen Befehlszeile steht.
+- **Quelle:** eigene Messung 05.11.2026 (Fold 8 über 10.8.0.7:5555)

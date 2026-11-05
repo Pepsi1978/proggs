@@ -71,3 +71,10 @@ Fall: Handy in keinem WLAN, in einem anderen Netz oder in einem WLAN, das Gerät
 - VPS leitet Peer-zu-Peer weiter: `ufw route allow in on wg0 out on wg0` (ip_forward war durch Docker schon 1, FORWARD-Policy DROP). Split-Tunnel bleibt: nur 10.8.0.x läuft durchs VPN.
 - `adb-wlan.ps1` Schritt 3b: `adb connect 10.8.0.7:5555` (überschreibbar per `~/.adb-wlan-tunnel-ip`). Ist das Handy wieder im Heim-WLAN per mDNS auffindbar, wird auf WLAN umgestiegen und die Tunnelverbindung getrennt (nie zwei Einträge für dasselbe Handy).
 - Grenzen: Port 5555 überlebt keinen Handy-Neustart (dann erst wieder im Heim-WLAN). Android erlaubt nur ein VPN – Windscribe o. Ä. schaltet WireGuard ab. Eigene Apps (Cortex, EntropieReductor) nutzen einen vorhandenen Tunnel statt eines eigenen. Entwickleroption „Zeitüberschreitung der ADB-Autorisierung deaktivieren“ an, sonst verfällt die PC-Freigabe nach 7 Tagen ohne Nutzung.
+
+## Logcat lesen (seit 05.11.2026)
+Nur über `Werkzeuge/logcat/logcat-lesen.sh`, nie `adb logcat -d | grep` am Rechner:
+- `--tags "TagA,TagB"` (alles andere `*:S`), `--muster "regex"` (grep auf dem Handy), `--paket <pkg>` (`--pid`, nur wenn die App läuft), `--minuten N` (Standard 60), `--zeilen N` (Standard 300), `--puffer crash` für Abstürze.
+- Gefiltert wird auf dem Handy, übertragen nur das Ergebnis; harte Zeitgrenze (`--zeitlimit`, Standard 60 s), letzte Zeile `LOGCAT_STATUS=ok|leer|zeitlimit|fehler`.
+- `leer` bei langem Zeitfenster heißt meist: Puffer schon überschrieben. Für Fehler, die Stunden zurückliegen, braucht die App ein eigenes Diagnoseprotokoll (Datei), Logcat reicht dann nicht.
+

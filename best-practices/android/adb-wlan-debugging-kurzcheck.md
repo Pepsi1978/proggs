@@ -9,3 +9,4 @@ Volltext: `best-practices/android/adb-wlan-debugging.md` · Bugs: `bugs/android/
 - UpdateStation: `pm grant WRITE_SECURE_SETTINGS` + `cmd deviceidle whitelist +de.frank.updatestation` (Skript macht beides stündlich).
 - Einschalten per App: WorkManager + WLAN mit IPv4, nachlesen, max. 5 Wiederholungen, einmal pro `networkHandle`.
 - Fremdes WLAN: einmal „Immer zulassen“; Firmennetz mit Isolation → Tailscale/ZeroTier.
+- Logcat nur über `Werkzeuge/logcat/logcat-lesen.sh` (filtert auf dem Handy, < 1 s, `LOGCAT_STATUS`); nie `adb logcat -d | grep` über den Tunnel, nie `logcat -T` ohne `-d`.

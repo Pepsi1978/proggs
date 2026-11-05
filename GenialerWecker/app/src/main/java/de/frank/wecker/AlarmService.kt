@@ -43,6 +43,10 @@ class AlarmService : Service() {
     private var current: Alarm? = null
     private var originalVolume = -1
     private var loop: Job? = null
+    /** Wächter der Klingel-Benachrichtigung; eigene Coroutine, unabhängig vom Lautstärke-Anschwellen. */
+    private var watchdog: Job? = null
+    /** True, sobald die aktuelle Vordergrund-Benachrichtigung schon ein Klingeln gezeigt hat. */
+    private var foregroundShowsRing = false
     private var generation = 0
     private var test = false
     private var fallbackFailures = 0
@@ -136,22 +140,26 @@ class AlarmService : Service() {
         fallbackFailures = 0
         generation++
         val token = generation
-        loop?.cancel()
+        loop?.cancel(); watchdog?.cancel()
         playback?.close(); playback = null
-        // Jedes Klingeln (auch nach dem Schlummern) bekommt eine frisch gepostete Benachrichtigung unter neuer Id:
-        // eine bloße Aktualisierung derselben Id alarmiert wegen setOnlyAlertOnce nicht und löst kein Vollbild aus.
-        showForeground(alarm, quiet, fresh = !quiet)
+        // Zeigt die Vordergrund-Benachrichtigung schon ein früheres Klingeln (Dienst lief weiter), bekommt dieses Klingeln
+        // eine frisch gepostete unter der Wechsel-Id: eine bloße Aktualisierung alarmiert wegen setOnlyAlertOnce nicht und
+        // Android startet das Vollbild nur für neu hinzugefügte Benachrichtigungen. Ein frisch gestarteter Dienst hat seine
+        // Benachrichtigung gerade erst gepostet (mit Vollbild); dort genügt die Aktualisierung, ohne doppelten Alarm.
+        showForeground(alarm, quiet, fresh = !quiet && foregroundShowsRing)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
-        if (!quiet) openAlarmScreen()
+        if (!quiet) {
+            // Einmal je Klingeln direkt öffnen; Android verwirft den Start aus dem Hintergrund evtl. still, dann trägt das Vollbild.
+            openAlarmScreen()
+            val ring = ringId
+            watchdog = scope.launch { while (isActive) { delay(5_000); ensureNotificationVisible(ring) } }
+        }
         if (alarm.vibrate) vibrateAsAlarm()
         // Lautstärke sofort setzen, bevor irgendetwas klingt: ohne Anschwellen gleich die eingestellte volle Lautstärke.
         setVolume(if (alarm.fadeSeconds == 0) alarm.volume else (alarm.volume * .05f).roundToInt().coerceAtLeast(1))
         loop = scope.launch {
             val start = System.currentTimeMillis()
-            var lastCheck = start
             while (isActive) {
-                // Wächter: verschwindet die Klingel-Benachrichtigung (weggewischt, vom System verworfen), sofort neu posten.
-                if (!quiet && System.currentTimeMillis() - lastCheck >= 5_000) { lastCheck = System.currentTimeMillis(); ensureNotificationVisible(alarm) }
                 val fraction = if (alarm.fadeSeconds == 0) 1f else
                     ((System.currentTimeMillis() - start).toFloat() / (alarm.fadeSeconds * 1000)).coerceIn(.05f, 1f)
                 setVolume((alarm.volume * fraction).roundToInt().coerceAtLeast(1))
@@ -246,7 +254,7 @@ class AlarmService : Service() {
             }
         }
         generation++
-        loop?.cancel()
+        loop?.cancel(); watchdog?.cancel()
         playback?.close(); playback = null
         getSystemService(Vibrator::class.java).cancel()
         AlarmRinging.cancelFallback(this)
@@ -272,6 +280,9 @@ class AlarmService : Service() {
     /**
      * Real alarms and the silent button test use different notification ids: a real alarm arriving during a
      * test gets a fresh notification and therefore its full-screen alert despite setOnlyAlertOnce.
+     * [fresh] wechselt bewusst zwischen [NOTIFICATION] und [NOTIFICATION_ALT] und entfernt die alte: so wird ein neues
+     * Klingeln im weiterlaufenden Dienst (nach dem Schlummern) als neue Benachrichtigung mit Alarm und Vollbild gepostet.
+     * Nicht auf eine einzige Id zurückbauen, sonst bleibt ein erneutes Klingeln ohne sichtbare Benachrichtigung.
      */
     private fun showForeground(alarm: Alarm?, quietMode: Boolean, fresh: Boolean = false) {
         val id = when {
@@ -281,7 +292,8 @@ class AlarmService : Service() {
             else -> NOTIFICATION
         }
         val manager = getSystemService(NotificationManager::class.java)
-        if (id == foregroundId) { manager.notify(id, notification(alarm, quietMode)); return }
+        if (id == foregroundId) { manager.notify(id, notification(alarm, quietMode)); if (alarm != null) foregroundShowsRing = true; return }
+        foregroundShowsRing = alarm != null
         androidx.core.app.ServiceCompat.startForeground(this, id, notification(alarm, quietMode),
             if (android.os.Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
         if (foregroundId != 0) manager.cancel(foregroundId)
@@ -289,14 +301,22 @@ class AlarmService : Service() {
     }
 
     /** Prüft, ob die Klingel-Benachrichtigung noch angezeigt wird, und postet sie sonst neu mit vollem Alarm. */
-    private fun ensureNotificationVisible(alarm: Alarm) {
-        if (current?.id != alarm.id || foregroundId == 0) return
-        val visible = runCatching { getSystemService(NotificationManager::class.java).activeNotifications.any { it.id == foregroundId } }.getOrDefault(true)
-        if (!visible) {
-            trace("notification missing, repost ring=$ringId")
-            runCatching { showForeground(current, quiet, fresh = true) }
-            openAlarmScreen()
-        }
+    private var reposted = 0L
+    /**
+     * Prüft, ob die Klingel-Benachrichtigung noch angezeigt wird (z. B. ab Android 14 weggewischt), und postet sie sonst
+     * neu mit vollem Alarm. Öffnet bewusst keinen Bildschirm: das würde eine offene Kamera der Foto-Aufgabe schließen.
+     * Sind Benachrichtigungen oder der Kanal gesperrt, kann nichts erscheinen; dann wird nicht endlos neu gepostet.
+     */
+    private fun ensureNotificationVisible(ring: Long) {
+        if (ring != ringId || current == null || quiet || foregroundId == 0) return
+        val manager = getSystemService(NotificationManager::class.java)
+        val possible = runCatching { manager.areNotificationsEnabled() && manager.getNotificationChannel(CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE }.getOrDefault(false)
+        if (!possible) return
+        val visible = runCatching { manager.activeNotifications.any { it.id == foregroundId && it.tag == null } }.getOrDefault(true)
+        if (visible) return
+        // Nur einmal je Klingeln protokollieren, damit der kleine Diagnosepuffer die echten Ereignisse behält.
+        if (reposted != ring) { reposted = ring; trace("notification missing, repost ring=$ring") }
+        runCatching { showForeground(current, quiet, fresh = true) }
     }
 
     /**
@@ -304,8 +324,9 @@ class AlarmService : Service() {
      * das Vollbild der frischen Benachrichtigung der Weg. Ein bereits offener Bildschirm (singleTask) wird nur nach vorn geholt.
      */
     private fun openAlarmScreen() {
+        // Ein ausbleibender Fehler heißt nicht, dass der Bildschirm offen ist: Android verwirft blockierte Starts meist still.
         runCatching { startActivity(Intent(this, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            .onFailure { trace("open screen failed ${it.javaClass.simpleName}") }
+            .onFailure { trace("open screen rejected ${it.javaClass.simpleName}") }
     }
 
     private fun notification(alarm: Alarm?, quietMode: Boolean): Notification {
@@ -323,7 +344,6 @@ class AlarmService : Service() {
             })
             NotificationCompat.Builder(this, CHANNEL).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setFullScreenIntent(open, true)
-                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         }
         builder.setSmallIcon(R.drawable.ic_wecker)
             .setContentTitle(alarm?.name ?: "Genialer Wecker").setContentText("Zum Wecker öffnen")
