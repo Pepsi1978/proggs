@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using UpdateZentrale.Models;
@@ -155,7 +155,7 @@ public sealed class CliAktualisierer : IAktualisierer
         // seconds later goes through -- which is exactly what a second click used to do by hand.
         // With a manifest fallback the tool's own downloader is not tried again: it stalled on the
         // route it picks itself (IPv6), every further attempt costs minutes for the same result.
-        for (var versuch = 2; versuch <= 3 && !eintrag.ErsatzDownload && IstNetzfehler(lauf); versuch++)
+        for (var versuch = 2; versuch <= 3 && IstNetzfehler(lauf) && !(eintrag.ErsatzDownload && IstDownloadAbbruch(lauf)); versuch++)
         {
             protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
             await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
@@ -182,8 +182,8 @@ public sealed class CliAktualisierer : IAktualisierer
 
         // The tool's own download failed (or the run hung): fetch the file named in the manifest
         // ourselves, IPv4 first. Not while another run of the tool still holds its update lock.
-        if (eintrag.ErsatzDownload && !npmGlobal && !lauf.Abgebrochen && !IstUpdateSperre(lauf)
-            && (lauf.Abgelaufen || lauf.ExitCode != 0)
+        if (eintrag.ErsatzDownload && !npmGlobal && !lauf.Abgebrochen && lauf.BeendenProblem is null && !IstUpdateSperre(lauf)
+            && (lauf.Abgelaufen || IstDownloadAbbruch(lauf) || IstDownloadFrist(lauf))
             && Prozesspfad.GleicheDatei(exe, programmDatei)
             && await ErsatzDownloadAsync(eintrag, programmDatei, protokoll, abbruch) is { } ersatz)
             return ersatz with { Protokoll = lauf.Ausgabe + Environment.NewLine + ersatz.Protokoll };
@@ -394,11 +394,17 @@ public sealed class CliAktualisierer : IAktualisierer
         "eai_again", "timed out", "timeout", "fetch failed", "socket hang up", "connection",
         // Go tools (agy) and the localized Winsock text -- "Download interrupted: ... wsarecv: Ein
         // Verbindungsversuch ist fehlgeschlagen" matched none of the English words above.
-        "download interrupted", "wsarecv", "wsasend", "while reading body", "verbindung"
+        "download interrupted", "wsarecv", "wsasend", "while reading body", "verbindungsversuch"
     };
 
+    /// <summary>The tool's own download broke off mid-transfer (Go: agy). Only then the manifest fallback pays off.</summary>
+    internal static bool IstDownloadAbbruch(BefehlErgebnis lauf)
+        => lauf.ExitCode != 0
+           && new[] { "download interrupted", "while reading body", "wsarecv", "deadline exceeded", "connection reset" }
+               .Any(h => lauf.Ausgabe.Contains(h, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Download link and hash from an auto-updater manifest; null when one of them is missing.</summary>
-    internal static (string Url, string Algorithmus, string Pruefsumme)? ManifestAuswerten(string json)
+    internal static (string Version, string Url, string Algorithmus, string Pruefsumme)? ManifestAuswerten(string json)
     {
         try
         {
@@ -409,9 +415,10 @@ public sealed class CliAktualisierer : IAktualisierer
                 ? feld.GetString() : null;
 
             var url = Text("url");
-            if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return null;
-            if (Text("sha512") is { Length: 128 } sha512) return (url, "SHA512", sha512.ToLowerInvariant());
-            if (Text("sha256") is { Length: 64 } sha256) return (url, "SHA256", sha256.ToLowerInvariant());
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var adresse) || adresse.Scheme != Uri.UriSchemeHttps) return null;
+            if (Text("version") is not { Length: > 0 } version) return null;
+            if (Text("sha512") is { Length: 128 } sha512) return (version, url, "SHA512", sha512.ToLowerInvariant());
+            if (Text("sha256") is { Length: 64 } sha256) return (version, url, "SHA256", sha256.ToLowerInvariant());
             return null;   // never install a file that cannot be checked
         }
         catch (System.Text.Json.JsonException)
@@ -432,7 +439,7 @@ public sealed class CliAktualisierer : IAktualisierer
         if (string.IsNullOrWhiteSpace(eintrag.VersionsUrl)) return null;
         protokoll.Report("Eigener Download gescheitert – die UpdateZentrale lädt die neue Version selbst (IPv4) …");
 
-        (string Url, string Algorithmus, string Pruefsumme)? manifest;
+        (string Version, string Url, string Algorithmus, string Pruefsumme)? manifest;
         try
         {
             using var antwort = await Netzdienst.HolenAsync(Netz, eintrag.VersionsUrl, abbruch);
@@ -461,6 +468,22 @@ public sealed class CliAktualisierer : IAktualisierer
         }
 
         var ordner = Path.GetDirectoryName(exe)!;
+
+        // Only something really newer: a cached manifest must never put an older version in place.
+        var vorher = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente ?? "--version", TimeSpan.FromMinutes(2),
+                                                         ordner, abbruch: abbruch, alsAufrufer: true);
+        var installiert = vorher.ExitCode == 0 && !vorher.Abgelaufen ? VersionAus(vorher.Ausgabe, eintrag.VersionsMuster) : "";
+        if (string.IsNullOrWhiteSpace(installiert) || Vergleiche(m.Version, installiert) <= 0)
+        {
+            protokoll.Report("Manifest nennt " + m.Version + ", installiert ist "
+                             + (string.IsNullOrWhiteSpace(installiert) ? "unbekannt" : installiert) + " – kein Ersatzdownload.");
+            return null;
+        }
+
+        // Leftovers of earlier swaps that a session held open back then.
+        foreach (var rest in Directory.EnumerateFiles(ordner, Path.GetFileName(exe) + ".alt*"))
+            try { File.Delete(rest); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* still in use */ }
+
         var neu = exe + ".download";
         var alt = exe + ".alt";
         try

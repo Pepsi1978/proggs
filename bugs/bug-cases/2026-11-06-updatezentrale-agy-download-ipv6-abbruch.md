@@ -1,6 +1,6 @@
 # UpdateZentrale: `agy update` bricht seinen Download über IPv6 ab (06.11.2026)
 
-> Behoben in UpdateZentrale 1.3.78 und Updater-Zentrale macOS 1.0.47 (macOS ungebaut, ungetestet).
+> Behoben in UpdateZentrale 1.3.78 und Updater-Zentrale macOS 1.0.47 (macOS ungebaut, ungetestet), nach dem Code-Review geschärft in 1.3.79 / 1.0.48.
 > Der Ersatzweg ist am echten Fall bestätigt: 1.5.2 per `curl -4` geladen, SHA-512 passte zum Manifest, `agy --version` danach 1.5.2.
 
 ## Symptom
@@ -27,6 +27,15 @@ Schon am 28.10.2026 scheiterte derselbe Download mit `context deadline exceeded 
 - Mit `ersatzDownload` wiederholt die Zentrale den eigenen Download des Werkzeugs nicht mehr, sondern geht sofort auf den IPv4-Weg.
 - `NetzHinweise` ergänzt um `download interrupted`, `wsarecv`, `wsasend`, `while reading body`, `verbindung` — für alle CLI-Einträge ohne Manifest greift damit wenigstens die Wiederholung.
 - `programs.json` (Windows und macOS): `antigravity-cli` trägt `"ersatzDownload": true`.
+
+## Schärfung nach dem Code-Review (1.3.79 / 1.0.48)
+
+- Der Ersatzweg greift nur bei Download-Abbruch (`download interrupted`, `while reading body`, `wsarecv`, `deadline exceeded`, `connection reset`), eigener Download-Frist oder Zeitlimit, nie bei anderen Fehlern, nie nach Abbruch durch den Nutzer und nie, wenn sich der alte Prozessbaum nicht beenden ließ (`BeendenProblem`).
+- Das Manifest muss `version` nennen, und die muss echt neuer sein als die installierte. Ein veraltetes CDN-Manifest kann so nie ein Downgrade einsetzen.
+- Kurze Netzfehler beim Abruf der Release-Liste werden weiter dreimal wiederholt; nur ein abgerissener Download geht sofort auf den IPv4-Weg.
+- `verbindung` war als Netzhinweis zu breit, jetzt nur `verbindungsversuch` (Winsock-Text).
+- Reste `<exe>.alt*` früherer Tauschvorgänge räumt jeder neue Lauf weg.
+- macOS: Manifest auch per `curl -4` (nicht URLSession), Symlinks werden aufgelöst und ihr Ziel ersetzt, Prüfsumme per CryptoKit, Abbruch-Marke wird geachtet.
 
 ## Erkennen
 

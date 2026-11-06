@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import CryptoKit
 
 /// Kommandozeilen-Werkzeuge, die sich selbst aktualisieren ("claude update", "codex update"). 1:1-Port von Providers/CliAktualisierer.cs.
 ///
@@ -130,7 +131,8 @@ struct CliAktualisierer: Aktualisierer {
         // Eigener Download gescheitert oder haengengeblieben: die Datei aus dem Manifest selbst laden
         // (IPv4 zuerst). Nicht, solange ein anderer Lauf des Werkzeugs seine Update-Sperre haelt.
         if eintrag.ersatzDownload, !npmGlobal, !Self.istUpdateSperre(lauf),
-           lauf.abgelaufen || lauf.exitCode != 0,
+           AbbruchMarke.aktuell?.istAbgebrochen != true,
+           lauf.abgelaufen || Self.istDownloadAbbruch(lauf),
            Self.gleicheDatei(exe, programmDatei),
            let ersatz = await Self.ersatzDownload(eintrag, programmDatei, protokoll) {
             return PruefErgebnis(zustand: ersatz.zustand, meldung: ersatz.meldung,
@@ -290,31 +292,57 @@ struct CliAktualisierer: Aktualisierer {
         return String(text[r])
     }
 
-    /// Fragt die Version direkt per HTTPS ab statt ueber "npm view": das braucht weder node noch
-    /// ein bestimmtes Arbeitsverzeichnis (der npm-Shim sucht seine Module relativ zum
-    /// Arbeitsverzeichnis und bricht sonst mit MODULE_NOT_FOUND ab). `json` liest das Feld "version"
-    /// der npm-Registry, sonst zaehlt die erste Versionsnummer im Klartext.
-    /// Download-Adresse und Pruefsumme aus einem Auto-Updater-Manifest; nil, wenn eins fehlt.
-    static func manifestAuswerten(_ daten: Data) -> (url: String, algorithmus: String, pruefsumme: String)? {
+    /// Hinweise, dass der eigene Download des Werkzeugs abriss (Go: agy). Nur dann lohnt der Ersatzweg.
+    static let downloadAbbruchHinweise = ["download interrupted", "while reading body", "wsarecv", "connection reset",
+                                          "timed out", "timeout", "deadline exceeded", "network is unreachable"]
+
+    static func istDownloadAbbruch(_ lauf: BefehlErgebnis) -> Bool {
+        lauf.exitCode != 0 && downloadAbbruchHinweise.contains { lauf.ausgabe.lowercased().contains($0) }
+    }
+
+    /// Version, Download-Adresse und Pruefsumme aus einem Auto-Updater-Manifest; nil, wenn eins fehlt.
+    static func manifestAuswerten(_ daten: Data) -> (version: String, url: String, algorithmus: String, pruefsumme: String)? {
         guard let objekt = (try? JSONSerialization.jsonObject(with: daten)) as? [String: Any],
-              let url = objekt["url"] as? String, url.lowercased().hasPrefix("https://") else { return nil }
-        if let sha = objekt["sha512"] as? String, sha.count == 128 { return (url, "sha512", sha.lowercased()) }
-        if let sha = objekt["sha256"] as? String, sha.count == 64 { return (url, "sha256", sha.lowercased()) }
+              let url = objekt["url"] as? String, url.lowercased().hasPrefix("https://"),
+              let version = objekt["version"] as? String, !version.istLeer else { return nil }
+        if let sha = objekt["sha512"] as? String, sha.count == 128 { return (version, url, "sha512", sha.lowercased()) }
+        if let sha = objekt["sha256"] as? String, sha.count == 64 { return (version, url, "sha256", sha.lowercased()) }
         return nil   // nie eine Datei einsetzen, die sich nicht pruefen laesst
+    }
+
+    private static func pruefsumme(_ pfad: String, _ algorithmus: String) -> String? {
+        guard let daten = try? Data(contentsOf: URL(fileURLWithPath: pfad), options: .mappedIfSafe) else { return nil }
+        let summe: [UInt8] = algorithmus == "sha512" ? Array(SHA512.hash(data: daten)) : Array(SHA256.hash(data: daten))
+        return summe.map { String(format: "%02x", $0) }.joined()
     }
 
     /// Laedt die Programmdatei aus dem Manifest per curl -4, prueft die Pruefsumme und setzt sie ein:
     /// die alte Datei wird umbenannt, die neue an ihren Platz gelegt, und "--version" muss antworten,
-    /// sonst kommt die alte zurueck. nil, wenn es kein brauchbares Manifest gibt.
-    static func ersatzDownload(_ eintrag: ProgrammEintrag, _ exe: String,
+    /// sonst kommt die alte zurueck. Ein Symlink (nativer Installer) wird aufgeloest, ersetzt wird sein
+    /// Ziel. nil, wenn es kein brauchbares Manifest oder keine neuere Version gibt.
+    static func ersatzDownload(_ eintrag: ProgrammEintrag, _ programm: String,
                                _ protokoll: Fortschritt) async -> PruefErgebnis? {
-        guard let adresse = eintrag.versionsUrl, let manifestUrl = URL(string: adresse) else { return nil }
+        guard let adresse = eintrag.versionsUrl, !adresse.istLeer else { return nil }
+        if AbbruchMarke.aktuell?.istAbgebrochen == true { return nil }
+        let exe = (programm as NSString).resolvingSymlinksInPath
         protokoll.berichte("Eigener Download gescheitert – die UpdaterZentrale lädt die neue Version selbst (IPv4) …")
-        var anfrage = URLRequest(url: manifestUrl)
-        anfrage.timeoutInterval = 30
-        guard let antwort = try? await URLSession.shared.data(for: anfrage),
-              let m = manifestAuswerten(antwort.0) else {
-            protokoll.berichte("Das Manifest nennt keine Download-Adresse mit Prüfsumme.")
+
+        // Auch das Manifest per curl -4: URLSession nimmt die IPv6-Route, an der der Download gerade riss.
+        let abruf = await Kommandozeile.ausfuehren("/usr/bin/curl", ["-4", "-sS", "-fL", "--max-time", "30", adresse], zeitlimit: 60)
+        if abruf.abgelaufen || abruf.exitCode != 0 {
+            protokoll.berichte("Manifest nicht lesbar (curl Code \(abruf.exitCode)): \(abruf.ausgabe)")
+            return nil
+        }
+        guard let m = manifestAuswerten(Data(abruf.ausgabe.utf8)) else {
+            protokoll.berichte("Das Manifest nennt keine Version mit Download-Adresse und Prüfsumme.")
+            return nil
+        }
+
+        // Nur echt Neueres: ein gecachtes Manifest darf nie eine aeltere Version einsetzen.
+        let vorher = await Kommandozeile.ausfuehren(exe, eintrag.versionsArgumente ?? "--version", zeitlimit: 120)
+        let installiert = versionAus(vorher.ausgabe, eintrag.versionsMuster)
+        guard !installiert.istLeer, Versionen.istNeuer(m.version, als: installiert) else {
+            protokoll.berichte("Manifest nennt \(m.version), installiert ist \(installiert.istLeer ? "unbekannt" : installiert) – kein Ersatzdownload.")
             return nil
         }
 
@@ -325,16 +353,16 @@ struct CliAktualisierer: Aktualisierer {
         let laden = await Kommandozeile.ausfuehren("/usr/bin/curl", ["-4", "-sS", "-fL", "--retry", "2", "-o", neu, m.url],
                                                    zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
                                                    lebenszeichen: { (try? FileManager.default.attributesOfItem(atPath: neu)[.size] as? Int64) ?? 0 })
+        if AbbruchMarke.aktuell?.istAbgebrochen == true {
+            return PruefErgebnis(zustand: .fehler, meldung: "Abgebrochen.", protokoll: laden.ausgabe)
+        }
         guard laden.exitCode == 0, !laden.abgelaufen, fm.fileExists(atPath: neu) else {
             return PruefErgebnis(zustand: .fehler,
                                  meldung: "Auch der Ersatzdownload per IPv4 scheiterte (curl Code \(laden.exitCode)).",
                                  protokoll: laden.ausgabe)
         }
 
-        let summe = await Kommandozeile.ausfuehren("/usr/bin/shasum", ["-a", m.algorithmus == "sha512" ? "512" : "256", neu],
-                                                   zeitlimit: 300)
-        let ist = summe.ausgabe.split(separator: " ").first.map { String($0).lowercased() } ?? ""
-        guard summe.exitCode == 0, ist == m.pruefsumme else {
+        guard pruefsumme(neu, m.algorithmus) == m.pruefsumme else {
             return PruefErgebnis(zustand: .fehler,
                                  meldung: "Ersatzdownload verworfen: die \(m.algorithmus.uppercased())-Prüfsumme passt nicht zum Manifest.")
         }
@@ -352,12 +380,12 @@ struct CliAktualisierer: Aktualisierer {
             let dateien = (fm.enumerator(atPath: ordner)?.allObjects as? [String] ?? [])
                 .filter { var istOrdner: ObjCBool = false
                           return fm.fileExists(atPath: ordner + "/" + $0, isDirectory: &istOrdner) && !istOrdner.boolValue }
-            let name = (exe as NSString).lastPathComponent
+            let namen = [(exe as NSString).lastPathComponent, (programm as NSString).lastPathComponent]
             guard entpacken.exitCode == 0,
-                  let treffer = dateien.first(where: { ($0 as NSString).lastPathComponent == name })
+                  let treffer = dateien.first(where: { namen.contains(($0 as NSString).lastPathComponent) })
                                 ?? (dateien.count == 1 ? dateien[0] : nil) else {
                 return PruefErgebnis(zustand: .fehler,
-                                     meldung: "Ersatzdownload: im Archiv fand sich keine Datei \(name).",
+                                     meldung: "Ersatzdownload: im Archiv fand sich keine Datei \(namen[0]).",
                                      protokoll: entpacken.ausgabe + "\n" + dateien.joined(separator: "\n"))
             }
             try? fm.removeItem(atPath: neu)
@@ -388,6 +416,10 @@ struct CliAktualisierer: Aktualisierer {
         return PruefErgebnis(zustand: .fertig, meldung: "Update per Ersatzdownload (IPv4) abgeschlossen.", protokoll: probe.ausgabe)
     }
 
+    /// Fragt die Version direkt per HTTPS ab statt ueber "npm view": das braucht weder node noch
+    /// ein bestimmtes Arbeitsverzeichnis (der npm-Shim sucht seine Module relativ zum
+    /// Arbeitsverzeichnis und bricht sonst mit MODULE_NOT_FOUND ab). `json` liest das Feld "version"
+    /// der npm-Registry, sonst zaehlt die erste Versionsnummer im Klartext.
     static func netzVersion(_ adresse: String, json: Bool, _ protokoll: Fortschritt,
                             muster: String? = nil) async -> (version: String?, problem: String?) {
         guard let url = URL(string: adresse) else {
