@@ -89,6 +89,7 @@
       "versionsArgumente": "--version",
       "updateArgumente": "update",
       "versionsUrl": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/windows_amd64.json",
+      "ersatzDownload": true,
       "zeitlimitMinuten": 15,
       "prozesse": [
         "agy"

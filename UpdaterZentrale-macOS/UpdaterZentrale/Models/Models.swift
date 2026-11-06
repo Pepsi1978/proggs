@@ -140,6 +140,11 @@ struct ProgrammEintrag: Codable {
     /// Dasselbe fuer die Antwort von `versionsUrl`.
     var versionsUrlMuster: String?
 
+    /// `versionsUrl` ist ein JSON-Manifest mit "url" und "sha512"/"sha256" der Programmdatei
+    /// (Antigravity). Scheitert der eigene Download des Werkzeugs, laedt die Zentrale die Datei per
+    /// curl -4 selbst, prueft die Pruefsumme und tauscht sie aus.
+    var ersatzDownload = false
+
     /// Warum dieses Update eine laufende CLI-Sitzung (Claude Code, Codex, ein Terminalfenster)
     /// beenden kann. Gesetzt = die Karte traegt ein ⚠, und das Update laeuft nur ueber den eigenen
     /// Knopf "⚠ CLI-kritische Updates installieren", nie mit den unkritischen.
@@ -194,7 +199,7 @@ struct ProgrammEintrag: Codable {
         case prozesse, helferProzesse, beendenVorUpdate, neuStartenNachUpdate
         case hinweis, akzent
         case uebernahmeText, hauptversionNurPerKlick, dauerSchaetzungSekunden, zuletzt, parallel, nach,
-             versionsMuster, versionsUrlMuster, cliRisiko
+             versionsMuster, versionsUrlMuster, cliRisiko, ersatzDownload
     }
 
     init(from decoder: Decoder) throws {
@@ -248,6 +253,7 @@ struct ProgrammEintrag: Codable {
         versionsMuster = try? c.decode(String.self, forKey: .versionsMuster)
         versionsUrlMuster = try? c.decode(String.self, forKey: .versionsUrlMuster)
         cliRisiko = try? c.decode(String.self, forKey: .cliRisiko)
+        ersatzDownload = (try? c.decode(Bool.self, forKey: .ersatzDownload)) ?? false
     }
 }
 

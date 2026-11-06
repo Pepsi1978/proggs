@@ -559,7 +559,7 @@ public sealed class WingetAktualisierer : IAktualisierer
     }
 
     /// <summary>curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.</summary>
-    private static Task<BefehlErgebnis> CurlLadenAsync(string url, string ziel, ProgrammEintrag eintrag, CancellationToken abbruch)
+    internal static Task<BefehlErgebnis> CurlLadenAsync(string url, string ziel, ProgrammEintrag eintrag, CancellationToken abbruch)
         => Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -sS -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
             lebenszeichen: () => File.Exists(ziel) ? new FileInfo(ziel).Length : 0);

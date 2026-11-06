@@ -127,6 +127,16 @@ struct CliAktualisierer: Aktualisierer {
                                  protokoll: lauf.ausgabe)
         }
 
+        // Eigener Download gescheitert oder haengengeblieben: die Datei aus dem Manifest selbst laden
+        // (IPv4 zuerst). Nicht, solange ein anderer Lauf des Werkzeugs seine Update-Sperre haelt.
+        if eintrag.ersatzDownload, !npmGlobal, !Self.istUpdateSperre(lauf),
+           lauf.abgelaufen || lauf.exitCode != 0,
+           Self.gleicheDatei(exe, programmDatei),
+           let ersatz = await Self.ersatzDownload(eintrag, programmDatei, protokoll) {
+            return PruefErgebnis(zustand: ersatz.zustand, meldung: ersatz.meldung,
+                                 protokoll: lauf.ausgabe + "\n" + ersatz.protokoll)
+        }
+
         if lauf.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
         }
@@ -284,6 +294,100 @@ struct CliAktualisierer: Aktualisierer {
     /// ein bestimmtes Arbeitsverzeichnis (der npm-Shim sucht seine Module relativ zum
     /// Arbeitsverzeichnis und bricht sonst mit MODULE_NOT_FOUND ab). `json` liest das Feld "version"
     /// der npm-Registry, sonst zaehlt die erste Versionsnummer im Klartext.
+    /// Download-Adresse und Pruefsumme aus einem Auto-Updater-Manifest; nil, wenn eins fehlt.
+    static func manifestAuswerten(_ daten: Data) -> (url: String, algorithmus: String, pruefsumme: String)? {
+        guard let objekt = (try? JSONSerialization.jsonObject(with: daten)) as? [String: Any],
+              let url = objekt["url"] as? String, url.lowercased().hasPrefix("https://") else { return nil }
+        if let sha = objekt["sha512"] as? String, sha.count == 128 { return (url, "sha512", sha.lowercased()) }
+        if let sha = objekt["sha256"] as? String, sha.count == 64 { return (url, "sha256", sha.lowercased()) }
+        return nil   // nie eine Datei einsetzen, die sich nicht pruefen laesst
+    }
+
+    /// Laedt die Programmdatei aus dem Manifest per curl -4, prueft die Pruefsumme und setzt sie ein:
+    /// die alte Datei wird umbenannt, die neue an ihren Platz gelegt, und "--version" muss antworten,
+    /// sonst kommt die alte zurueck. nil, wenn es kein brauchbares Manifest gibt.
+    static func ersatzDownload(_ eintrag: ProgrammEintrag, _ exe: String,
+                               _ protokoll: Fortschritt) async -> PruefErgebnis? {
+        guard let adresse = eintrag.versionsUrl, let manifestUrl = URL(string: adresse) else { return nil }
+        protokoll.berichte("Eigener Download gescheitert – die UpdaterZentrale lädt die neue Version selbst (IPv4) …")
+        var anfrage = URLRequest(url: manifestUrl)
+        anfrage.timeoutInterval = 30
+        guard let antwort = try? await URLSession.shared.data(for: anfrage),
+              let m = manifestAuswerten(antwort.0) else {
+            protokoll.berichte("Das Manifest nennt keine Download-Adresse mit Prüfsumme.")
+            return nil
+        }
+
+        let fm = FileManager.default
+        let neu = exe + ".download", alt = exe + ".alt"
+        defer { try? fm.removeItem(atPath: neu) }
+        protokoll.berichte("Lade \(m.url)")
+        let laden = await Kommandozeile.ausfuehren("/usr/bin/curl", ["-4", "-sS", "-fL", "--retry", "2", "-o", neu, m.url],
+                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                   lebenszeichen: { (try? FileManager.default.attributesOfItem(atPath: neu)[.size] as? Int64) ?? 0 })
+        guard laden.exitCode == 0, !laden.abgelaufen, fm.fileExists(atPath: neu) else {
+            return PruefErgebnis(zustand: .fehler,
+                                 meldung: "Auch der Ersatzdownload per IPv4 scheiterte (curl Code \(laden.exitCode)).",
+                                 protokoll: laden.ausgabe)
+        }
+
+        let summe = await Kommandozeile.ausfuehren("/usr/bin/shasum", ["-a", m.algorithmus == "sha512" ? "512" : "256", neu],
+                                                   zeitlimit: 300)
+        let ist = summe.ausgabe.split(separator: " ").first.map { String($0).lowercased() } ?? ""
+        guard summe.exitCode == 0, ist == m.pruefsumme else {
+            return PruefErgebnis(zustand: .fehler,
+                                 meldung: "Ersatzdownload verworfen: die \(m.algorithmus.uppercased())-Prüfsumme passt nicht zum Manifest.")
+        }
+        protokoll.berichte("\(m.algorithmus.uppercased())-Prüfsumme stimmt.")
+
+        // Das macOS-Manifest liefert ein Archiv (cli_mac_arm64.tar.gz): auspacken und die Programmdatei
+        // gleichen Namens nehmen, sonst die einzige Datei darin.
+        let pfad = m.url.lowercased().split(separator: "?").first.map(String.init) ?? ""
+        if pfad.hasSuffix(".tar.gz") || pfad.hasSuffix(".tgz") {
+            let ordner = exe + ".entpackt"
+            defer { try? fm.removeItem(atPath: ordner) }
+            try? fm.removeItem(atPath: ordner)
+            try? fm.createDirectory(atPath: ordner, withIntermediateDirectories: true)
+            let entpacken = await Kommandozeile.ausfuehren("/usr/bin/tar", ["-xzf", neu, "-C", ordner], zeitlimit: 300)
+            let dateien = (fm.enumerator(atPath: ordner)?.allObjects as? [String] ?? [])
+                .filter { var istOrdner: ObjCBool = false
+                          return fm.fileExists(atPath: ordner + "/" + $0, isDirectory: &istOrdner) && !istOrdner.boolValue }
+            let name = (exe as NSString).lastPathComponent
+            guard entpacken.exitCode == 0,
+                  let treffer = dateien.first(where: { ($0 as NSString).lastPathComponent == name })
+                                ?? (dateien.count == 1 ? dateien[0] : nil) else {
+                return PruefErgebnis(zustand: .fehler,
+                                     meldung: "Ersatzdownload: im Archiv fand sich keine Datei \(name).",
+                                     protokoll: entpacken.ausgabe + "\n" + dateien.joined(separator: "\n"))
+            }
+            try? fm.removeItem(atPath: neu)
+            do { try fm.moveItem(atPath: ordner + "/" + treffer, toPath: neu) } catch {
+                return PruefErgebnis(zustand: .fehler, meldung: "Ersatzdownload ließ sich nicht auspacken: \(error.localizedDescription)")
+            }
+        }
+
+        do {
+            try? fm.removeItem(atPath: alt)
+            try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: neu)
+            try fm.moveItem(atPath: exe, toPath: alt)
+            do { try fm.moveItem(atPath: neu, toPath: exe) } catch { try? fm.moveItem(atPath: alt, toPath: exe); throw error }
+        } catch {
+            return PruefErgebnis(zustand: .fehler, meldung: "Ersatzdownload ließ sich nicht einsetzen: \(error.localizedDescription)")
+        }
+
+        let probe = await Kommandozeile.ausfuehren(exe, eintrag.versionsArgumente ?? "--version", zeitlimit: 120)
+        if probe.abgelaufen || probe.exitCode != 0 {
+            try? fm.removeItem(atPath: exe)
+            try? fm.moveItem(atPath: alt, toPath: exe)
+            return PruefErgebnis(zustand: .fehler,
+                                 meldung: "Die geladene Version startete nicht (Code \(probe.exitCode)) – die alte bleibt installiert.",
+                                 protokoll: probe.ausgabe)
+        }
+        try? fm.removeItem(atPath: alt)
+        protokoll.berichte("Neue Datei eingesetzt: \(probe.ausgabe.trimmingCharacters(in: .whitespacesAndNewlines))")
+        return PruefErgebnis(zustand: .fertig, meldung: "Update per Ersatzdownload (IPv4) abgeschlossen.", protokoll: probe.ausgabe)
+    }
+
     static func netzVersion(_ adresse: String, json: Bool, _ protokoll: Fortschritt,
                             muster: String? = nil) async -> (version: String?, problem: String?) {
         guard let url = URL(string: adresse) else {

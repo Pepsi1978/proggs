@@ -153,7 +153,9 @@ public sealed class CliAktualisierer : IAktualisierer
         // The tools fetch their own release list. When that one request fails ("Unable to fetch
         // latest version from npm registry") nothing was changed yet, and a second attempt a few
         // seconds later goes through -- which is exactly what a second click used to do by hand.
-        for (var versuch = 2; versuch <= 3 && IstNetzfehler(lauf); versuch++)
+        // With a manifest fallback the tool's own downloader is not tried again: it stalled on the
+        // route it picks itself (IPv6), every further attempt costs minutes for the same result.
+        for (var versuch = 2; versuch <= 3 && !eintrag.ErsatzDownload && IstNetzfehler(lauf); versuch++)
         {
             protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
             await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
@@ -177,6 +179,14 @@ public sealed class CliAktualisierer : IAktualisierer
         if (zerstoert && lauf.BeendenProblem is null && await NpmGlobal.WiederherstellenAsync(eintrag, programmDatei, protokoll))
             return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update abgeschlossen, nachdem npm die Installation unterbrochen hatte.",
                                      Protokoll: lauf.Ausgabe);
+
+        // The tool's own download failed (or the run hung): fetch the file named in the manifest
+        // ourselves, IPv4 first. Not while another run of the tool still holds its update lock.
+        if (eintrag.ErsatzDownload && !npmGlobal && !lauf.Abgebrochen && !IstUpdateSperre(lauf)
+            && (lauf.Abgelaufen || lauf.ExitCode != 0)
+            && Prozesspfad.GleicheDatei(exe, programmDatei)
+            && await ErsatzDownloadAsync(eintrag, programmDatei, protokoll, abbruch) is { } ersatz)
+            return ersatz with { Protokoll = lauf.Ausgabe + Environment.NewLine + ersatz.Protokoll };
 
         // Only while it is true: "stays usable" must not stand over a removed package.
         if (IstDownloadFrist(lauf) && !zerstoert)
@@ -381,8 +391,146 @@ public sealed class CliAktualisierer : IAktualisierer
     private static readonly string[] NetzHinweise =
     {
         "unable to fetch", "failed to check for updates", "network", "etimedout", "econnreset", "enotfound",
-        "eai_again", "timed out", "timeout", "fetch failed", "socket hang up", "connection"
+        "eai_again", "timed out", "timeout", "fetch failed", "socket hang up", "connection",
+        // Go tools (agy) and the localized Winsock text -- "Download interrupted: ... wsarecv: Ein
+        // Verbindungsversuch ist fehlgeschlagen" matched none of the English words above.
+        "download interrupted", "wsarecv", "wsasend", "while reading body", "verbindung"
     };
+
+    /// <summary>Download link and hash from an auto-updater manifest; null when one of them is missing.</summary>
+    internal static (string Url, string Algorithmus, string Pruefsumme)? ManifestAuswerten(string json)
+    {
+        try
+        {
+            using var dokument = System.Text.Json.JsonDocument.Parse(json);
+            var wurzel = dokument.RootElement;
+            if (wurzel.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+            string? Text(string name) => wurzel.TryGetProperty(name, out var feld) && feld.ValueKind == System.Text.Json.JsonValueKind.String
+                ? feld.GetString() : null;
+
+            var url = Text("url");
+            if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return null;
+            if (Text("sha512") is { Length: 128 } sha512) return (url, "SHA512", sha512.ToLowerInvariant());
+            if (Text("sha256") is { Length: 64 } sha256) return (url, "SHA256", sha256.ToLowerInvariant());
+            return null;   // never install a file that cannot be checked
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Fetches the program file named in the manifest with curl -4, checks its hash and swaps it in:
+    /// the old exe is renamed (Windows allows that while a session still runs it), the new one moved
+    /// to its place, and "--version" must answer -- otherwise the old file comes back.
+    /// </summary>
+    /// <returns>null when the fallback could not even start (no manifest), so the normal failure path reports.</returns>
+    private static async Task<PruefErgebnis?> ErsatzDownloadAsync(ProgrammEintrag eintrag, string exe, IProgress<string> protokoll,
+                                                                  CancellationToken abbruch)
+    {
+        if (string.IsNullOrWhiteSpace(eintrag.VersionsUrl)) return null;
+        protokoll.Report("Eigener Download gescheitert – die UpdateZentrale lädt die neue Version selbst (IPv4) …");
+
+        (string Url, string Algorithmus, string Pruefsumme)? manifest;
+        try
+        {
+            using var antwort = await Netzdienst.HolenAsync(Netz, eintrag.VersionsUrl, abbruch);
+            manifest = antwort.IsSuccessStatusCode ? ManifestAuswerten(await antwort.Content.ReadAsStringAsync(abbruch)) : null;
+        }
+        catch (OperationCanceledException) when (abbruch.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            protokoll.Report("Manifest nicht lesbar: " + ex.Message);
+            return null;
+        }
+        if (manifest is not { } m)
+        {
+            protokoll.Report("Das Manifest nennt keine Download-Adresse mit Prüfsumme.");
+            return null;
+        }
+
+        // Only a ready program file is swapped in; an archive (macOS gets a .tar.gz) would need unpacking.
+        if (!string.Equals(Path.GetExtension(new Uri(m.Url).AbsolutePath), Path.GetExtension(exe), StringComparison.OrdinalIgnoreCase))
+        {
+            protokoll.Report("Das Manifest nennt keine fertige Programmdatei: " + m.Url);
+            return null;
+        }
+
+        var ordner = Path.GetDirectoryName(exe)!;
+        var neu = exe + ".download";
+        var alt = exe + ".alt";
+        try
+        {
+            protokoll.Report("Lade " + m.Url);
+            var laden = await WingetAktualisierer.CurlLadenAsync(m.Url, neu, eintrag, abbruch);
+            if (laden.ExitCode != 0 || laden.Abgelaufen || laden.Abgebrochen || laden.BeendenProblem is not null || !File.Exists(neu))
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: NetzGestoertMeldung + "Auch der Ersatzdownload per IPv4 scheiterte (curl Code " + laden.ExitCode + ").",
+                    Protokoll: laden.Ausgabe);
+
+            string ist;
+            await using (var datei = File.OpenRead(neu))
+                ist = Convert.ToHexString(m.Algorithmus == "SHA512"
+                    ? await System.Security.Cryptography.SHA512.HashDataAsync(datei, abbruch)
+                    : await System.Security.Cryptography.SHA256.HashDataAsync(datei, abbruch)).ToLowerInvariant();
+            if (ist != m.Pruefsumme)
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: "Ersatzdownload verworfen: die " + m.Algorithmus + "-Prüfsumme passt nicht zum Manifest.");
+            protokoll.Report(m.Algorithmus + "-Prüfsumme stimmt.");
+
+            // A leftover from the previous swap may still be locked by a running session.
+            if (File.Exists(alt))
+            {
+                try { File.Delete(alt); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    alt = exe + ".alt-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+                }
+            }
+            File.Move(exe, alt);
+            try
+            {
+                File.Move(neu, exe);
+            }
+            catch
+            {
+                File.Move(alt, exe);
+                throw;
+            }
+
+            var probe = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente ?? "--version", TimeSpan.FromMinutes(2),
+                                                            ordner, abbruch: abbruch, alsAufrufer: true);
+            if (probe.Abgelaufen || probe.ExitCode != 0)
+            {
+                File.Move(exe, neu, overwrite: true);
+                File.Move(alt, exe);
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: "Die geladene Version startete nicht (Code " + probe.ExitCode + ") – die alte bleibt installiert.",
+                    Protokoll: probe.Ausgabe);
+            }
+            protokoll.Report("Neue Datei eingesetzt: " + probe.Ausgabe.Trim());
+            try { File.Delete(alt); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* a running session still uses it */ }
+            return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update per Ersatzdownload (IPv4) abgeschlossen.",
+                                     Protokoll: probe.Ausgabe);
+        }
+        catch (OperationCanceledException) when (abbruch.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Ersatzdownload ließ sich nicht einsetzen: " + ex.Message);
+        }
+        finally
+        {
+            try { if (File.Exists(neu)) File.Delete(neu); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* next run overwrites it */ }
+        }
+    }
 
     /// <summary>A failed run that ended by itself and names the network as the reason.</summary>
     internal static bool IstNetzfehler(BefehlErgebnis lauf)

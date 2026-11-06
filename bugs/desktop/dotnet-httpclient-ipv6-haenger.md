@@ -47,3 +47,4 @@ Systemänderung mit Nebenwirkungen. Das Programm muss mit einem halben IPv6 umge
 - `UpdateZentrale/Services/Netzdienst.cs`, `Providers/CliAktualisierer.cs`,
   `Providers/WingetAktualisierer.cs`, `Services/Kommandozeile.cs` (v1.3.17)
 - Protokoll des Vorfalls: `%LOCALAPPDATA%\UpdateZentrale\logs\updates-2026-10-08.log`, 12:50–12:55
+- Fremdprozess (Go, `agy update`): Download bricht über IPv6 ab, Zentrale lädt per `curl -4` aus dem Manifest nach — `bugs/bug-cases/2026-11-06-updatezentrale-agy-download-ipv6-abbruch.md`.

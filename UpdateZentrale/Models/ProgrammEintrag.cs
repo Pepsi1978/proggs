@@ -246,6 +246,14 @@ public sealed class ProgrammEintrag
     public string? VersionsUrlMuster { get; set; }
 
     /// <summary>
+    /// <see cref="VersionsUrl"/> is a JSON manifest with "url" and "sha512"/"sha256" of the program
+    /// file itself (Antigravity's auto-updater). When the tool's own update fails, the app fetches
+    /// that file by IPv4 with curl, checks the hash and swaps the exe -- the tool's own downloader
+    /// picks IPv6 by itself and stalls on this network ("download interrupted").
+    /// </summary>
+    public bool ErsatzDownload { get; set; }
+
+    /// <summary>
     /// Why this update can end a running CLI session (Claude Code, Codex, a terminal window).
     /// Set = the card is marked, and "install all" holds it back for a second step that runs
     /// only once the CLIs are closed.
