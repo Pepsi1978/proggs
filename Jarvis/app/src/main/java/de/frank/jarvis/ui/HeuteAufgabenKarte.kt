@@ -47,6 +47,7 @@ import de.frank.jarvis.ui.theme.glas
 import de.frank.jarvis.ui.theme.knopf3d
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,37 +91,58 @@ private object HeuteAufgabenStand {
     /** „Aufgaben morgen“: standardmäßig zu, öffnet nur auf ausdrückliches Antippen; gelesen wird erst beim Öffnen. */
     var morgenOffen by mutableStateOf(false)
     var morgen by mutableStateOf<List<HeuteAufgabe>?>(null)
+    /** Gesamtzahl laut Geniale Aufgaben (kann über dem Leselimit liegen). */
+    var morgenAnzahl by mutableIntStateOf(0)
     var morgenFehler by mutableStateOf<String?>(null)
     val morgenLesung = AtomicInteger()
+
+    /** Öffnen zeigt nie einen alten Stand (auch nicht den von gestern): Liste und Fehler leeren, die Karte liest dann frisch. */
+    fun morgenUmschalten() {
+        if (!morgenOffen) { morgen = null; morgenFehler = null }
+        morgenOffen = !morgenOffen
+    }
 }
 
-/** Die offenen Aufgaben von morgen (tägliche auf morgen projiziert), wie in Geniale Aufgaben unter „Morgen“. */
-private suspend fun morgenLesen(context: android.content.Context) {
-    val s = HeuteAufgabenStand
-    val nummer = s.morgenLesung.incrementAndGet()
-    val (liste, problem) = try {
-        AppBruecke.unterbrechbar<Pair<List<HeuteAufgabe>?, String?>> {
-            val r =AppBruecke.rufe(context, "Geniale Aufgaben", AufgabenFaehigkeit.BRUECKE, "lesen", JSONObject().put("bereich", "morgen").put("limit", 200), lesend = true)
-            r.optString("fehler").takeIf { it.isNotEmpty() }?.let { return@unterbrechbar null to it }
-            val a = r.optJSONArray("aufgaben")
-            (0 until (a?.length() ?: 0)).map { i ->
-                val o = a!!.getJSONObject(i)
-                HeuteAufgabe(
-                    id = o.optLong("id"), titel = o.optString("titel").ifBlank { o.optString("text") },
-                    uhrzeit = if (o.isNull("uhrzeit")) null else o.optString("uhrzeit"),
-                    prioritaet = o.optString("prioritaet"), erledigt = false, ueberfaellig = false,
-                    taeglich = o.optString("wiederholung") == "TAEGLICH",
-                )
-            } to null
-        }
+/** Leselimit je Bereich über die Brücke. */
+private const val LIMIT = 200
+
+/** Eine Aufgabe, wie die Brücke von Geniale Aufgaben sie liefert. */
+private fun aufgabeAus(o: JSONObject) = HeuteAufgabe(
+    id = o.optLong("id"), titel = o.optString("titel").ifBlank { o.optString("text") },
+    uhrzeit = if (o.isNull("uhrzeit")) null else o.optString("uhrzeit"),
+    prioritaet = o.optString("prioritaet"), erledigt = o.optBoolean("erledigt"),
+    ueberfaellig = o.optBoolean("ueberfaellig"), taeglich = o.optString("wiederholung") == "TAEGLICH",
+)
+
+private fun JSONArray?.aufgaben(): List<HeuteAufgabe> = (0 until (this?.length() ?: 0)).map { aufgabeAus(this!!.getJSONObject(it)) }
+
+/**
+ * Liest über die Brücke (abbrechbar, sie blockiert sonst bis zum Zeitlimit) und liefert Ergebnis oder Fehlertext. Nur die
+ * zuletzt begonnene Lesung desselben Zählers zählt; ältere, die später fertig werden, liefern null.
+ */
+private suspend fun <T> lesung(zaehler: AtomicInteger, laden: () -> Pair<T?, String?>): Pair<T?, String?>? {
+    val nummer = zaehler.incrementAndGet()
+    val ergebnis = try {
+        AppBruecke.unterbrechbar(laden)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         null to (e.message ?: "Geniale Aufgaben antwortet nicht.")
     }
-    if (nummer != s.morgenLesung.get()) return
-    if (liste == null) { s.morgenFehler = problem; return }
+    return if (nummer == zaehler.get()) ergebnis else null
+}
+
+/** Die offenen Aufgaben von morgen (tägliche auf morgen projiziert), wie in Geniale Aufgaben unter „Morgen“. */
+private suspend fun morgenLesen(context: android.content.Context) {
+    val s = HeuteAufgabenStand
+    val (antwort, problem) = lesung<JSONObject>(s.morgenLesung) {
+        val r = AppBruecke.rufe(context, "Geniale Aufgaben", AufgabenFaehigkeit.BRUECKE, "lesen", JSONObject().put("bereich", "morgen").put("limit", LIMIT), lesend = true)
+        r.optString("fehler").takeIf { it.isNotEmpty() }?.let { null to it } ?: (r to null)
+    } ?: return
+    if (antwort == null) { s.morgenFehler = problem; return }
+    val liste = antwort.optJSONArray("aufgaben").aufgaben().filter { !it.erledigt }
     s.morgen = sortiere(liste)
+    s.morgenAnzahl = maxOf(antwort.optInt("anzahl", liste.size), liste.size)
     s.morgenFehler = null
 }
 
@@ -131,25 +153,12 @@ private suspend fun morgenLesen(context: android.content.Context) {
  */
 private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>?, String?> {
     val bruecke = AufgabenFaehigkeit.BRUECKE
-    val offen = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "heute").put("limit", 200), lesend = true)
+    val offen = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "heute").put("limit", LIMIT), lesend = true)
     offen.optString("fehler").takeIf { it.isNotEmpty() }?.let { return null to it }
-    val amTag = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "tag").put("datum", LocalDate.now().toString()).put("limit", 200), lesend = true)
+    val amTag = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "tag").put("datum", LocalDate.now().toString()).put("limit", LIMIT), lesend = true)
     amTag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return null to it }
     val nachId = LinkedHashMap<Long, HeuteAufgabe>()
-    fun uebernimm(liste: JSONArray?) {
-        for (i in 0 until (liste?.length() ?: 0)) {
-            val a = liste!!.getJSONObject(i)
-            val id = a.optLong("id")
-            nachId[id] = HeuteAufgabe(
-                id = id, titel = a.optString("titel").ifBlank { a.optString("text") },
-                uhrzeit = if (a.isNull("uhrzeit")) null else a.optString("uhrzeit"),
-                prioritaet = a.optString("prioritaet"), erledigt = a.optBoolean("erledigt"),
-                ueberfaellig = a.optBoolean("ueberfaellig"), taeglich = a.optString("wiederholung") == "TAEGLICH",
-            )
-        }
-    }
-    uebernimm(offen.optJSONArray("aufgaben"))
-    uebernimm(amTag.optJSONArray("aufgaben"))
+    (offen.optJSONArray("aufgaben").aufgaben() + amTag.optJSONArray("aufgaben").aufgaben()).forEach { nachId[it.id] = it }
     return nachId.values.toList() to null
 }
 
@@ -172,15 +181,7 @@ private fun sortiere(liste: List<HeuteAufgabe>): List<HeuteAufgabe> {
 /** Liest den Stand neu; nur die zuletzt begonnene Lesung setzt ihn. Abbrechbar (die Brücke blockiert sonst bis zum Zeitlimit). */
 private suspend fun neuLesen(context: android.content.Context) {
     val s = HeuteAufgabenStand
-    val nummer = s.lesung.incrementAndGet()
-    val (liste, problem) = try {
-        AppBruecke.unterbrechbar { ladeHeute(context) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        null to (e.message ?: "Geniale Aufgaben antwortet nicht.")
-    }
-    if (nummer != s.lesung.get()) return
+    val (liste, problem) = lesung(s.lesung) { ladeHeute(context) } ?: return
     if (liste == null) { s.fehler = problem; return }
     val heute = LocalDate.now().toString()
     if (s.abgehaktTag != heute) { s.abgehakt.clear(); s.abgehaktTag = heute }
@@ -208,10 +209,13 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
     LaunchedEffect(anstoss) {
         if (anstoss == 0) return@LaunchedEffect
         if (anstoss > 1) delay(300)
-        neuLesen(context)
-        if (s.morgenOffen) morgenLesen(context)
+        // Beide Bereiche unabhängig voneinander; beim ersten Anstoß liest „morgen“ schon der Effekt darunter.
+        coroutineScope {
+            launch { neuLesen(context) }
+            if (s.morgenOffen && anstoss > 1) launch { morgenLesen(context) }
+        }
     }
-    // Beim Aufklappen frisch lesen.
+    // Beim Aufklappen und beim Erscheinen der Karte mit offenem Bereich frisch lesen.
     LaunchedEffect(s.morgenOffen) { if (s.morgenOffen) morgenLesen(context) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { anstoss++; onPauseOrDispose { } }
     DisposableEffect(Unit) {
@@ -229,6 +233,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
             val jetzt = LocalDateTime.now()
             val mitternacht = jetzt.toLocalDate().plusDays(1).atStartOfDay().plusSeconds(5)
             delay(java.time.Duration.between(jetzt, mitternacht).toMillis().coerceAtLeast(1_000))
+            // Die Morgen-Liste von gestern ist jetzt die von heute: nicht mehr zeigen, bis frisch gelesen ist.
+            s.morgen = null
             anstoss++
         }
     }
@@ -254,6 +260,9 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
             else if (ziel && a.ueberfaellig) s.abgehakt[a.id] = a.copy(erledigt = true)
             else if (!ziel) s.abgehakt.remove(a.id)
             // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nicht kurz zurück.
+            // Abhaken einer wiederkehrenden Aufgabe legt in Geniale Aufgaben die nächste an (oft für morgen): auch „morgen“
+            // neu lesen, denn die Meldung der Aufgaben-App wird gerade als eigene Änderung übergangen.
+            if (s.morgenOffen) launch { morgenLesen(context) }
             try { neuLesen(context) } finally { s.unterwegs.remove(a.id) }
         }
     }
@@ -294,13 +303,13 @@ private fun MorgenBereich() {
     val fehler = s.morgenFehler
     Row(
         Modifier.fillMaxWidth().padding(top = 10.dp)
-            .antippen { s.morgenOffen = !s.morgenOffen }
+            .antippen { s.morgenUmschalten() }
             .semantics(mergeDescendants = true) { stateDescription = if (s.morgenOffen) "aufgeklappt" else "zugeklappt" }
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Aufgaben morgen", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        if (s.morgenOffen && liste != null) Text("${liste.size}", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
+        if (s.morgenOffen && liste != null) Text("${s.morgenAnzahl}",color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
         Icon(
             if (s.morgenOffen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null,
             tint = f.primaer, modifier = Modifier.size(24.dp),
@@ -318,16 +327,20 @@ private fun MorgenBereich() {
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
                         Box(Modifier.padding(top = 7.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                            val zusatz = listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
-                            if (zusatz.isNotEmpty()) Text(zusatz, color = f.textLeise, fontSize = 13.sp)
+                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                            zusatz(a).takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textLeise, fontSize = 13.sp) }
                         }
                     }
                 }
             }
+            if (s.morgenAnzahl > liste.size) Text("Weitere ${s.morgenAnzahl - liste.size} nur in Geniale Aufgaben.", color = f.textLeise, fontSize = 13.sp)
         }
     }
 }
+
+/** Uhrzeit, „überfällig“ (nur offen) und „täglich“ unter dem Titel, gleich für heute und morgen. */
+private fun zusatz(a: HeuteAufgabe): String =
+    listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
 
 @Composable
 private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
@@ -348,7 +361,7 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
                 a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
-            val zusatz = listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
+            val zusatz = zusatz(a)
             if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp)
         }
     }
