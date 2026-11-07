@@ -55,6 +55,8 @@ fun Modifier.glas(
     fuellung: Color = farben.flaeche,
     rand: Boolean = true,
     toenung: Color? = null,
+    /** Zusätzlicher farbiger Rand (z. B. Bereichsfarbe), über der hellen Glaskante. */
+    randFarbe: Color? = null,
 ): Modifier = drawWithCache {
     val r = radius.toPx().coerceAtMost(size.minDimension / 2)
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
@@ -105,6 +107,7 @@ fun Modifier.glas(
         tonVerlauf?.let { drawPath(form, it) }
         drawPath(form, glanz)
         if (rand) drawPath(form, kante, style = Stroke(1.dp.toPx()))
+        randFarbe?.let { drawPath(form, it, style = Stroke(1.5.dp.toPx())) }
     }
 }
 
