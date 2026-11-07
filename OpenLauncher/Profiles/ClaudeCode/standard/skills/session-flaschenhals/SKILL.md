@@ -61,8 +61,10 @@ Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzei
 ## 5. Funktionserhalt und Abschluss
 
 - Geänderte Skripte einmal ausführen (mindestens Syntaxprüfung), Diff lesen: nichts entfernt, nichts geschluckt.
-- Commit nur mit Pfaden (parallele Sitzungen!). Hat eine Datei fremde Änderungen (oft `MEMORY.md`),
-  nur den eigenen Teil per `git apply --cached` vormerken. Nachricht: `session-flaschenhals: <maßnahme>`.
+- Nur eigene Dateien vormerken (parallele Sitzungen!). Hat eine Datei fremde Änderungen (oft `MEMORY.md`),
+  nur den eigenen Teil vormerken (`git hash-object -w` + `git update-index --cacheinfo`) und dann
+  **`git commit` ohne Pfadangabe** — mit Pfaden nimmt git die ganze Arbeitskopie der Datei mit.
+  Vorher `git diff --cached --name-only` prüfen. Nachricht: `session-flaschenhals: <maßnahme>`.
   Kein Versions-Bump (Skills/Memory haben keine Version). `git pull --rebase`, dann push.
 
 ## 6. Bericht (höchstens 8 Zeilen)
