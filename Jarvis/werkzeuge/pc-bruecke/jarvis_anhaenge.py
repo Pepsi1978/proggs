@@ -151,9 +151,13 @@ def _claude_vorn(tty: str) -> bool:
     return False
 
 
-def _warte_nach(bilder: int) -> None:
+def _pause_nach(bilder: int) -> float:
     # Claude Code liest die Bilder nach dem Einfügen ein; ein zu frühes Enter schickte die Eingabe ohne sie ab.
-    time.sleep(min(1.0 + 0.5 * bilder, 6.0))
+    return min(1.0 + 0.5 * bilder, 6.0)
+
+
+def _warte_nach(bilder: int) -> None:
+    time.sleep(_pause_nach(bilder))
 
 
 def _tmux(vorspann: str, pfade: list[Path]) -> bool:
@@ -238,6 +242,14 @@ def _mac(vorspann: str, pfade: list[Path]) -> bool:
 
 def _windows(vorspann: str, pfade: list[Path], claude_pid: int) -> bool:
     """Schreibt die Eingabe als Tastenereignisse in die Konsole des Claude-Prozesses (WriteConsoleInputW)."""
+    text, bilder = eingabe_fuer(pfade, vorspann)
+    return konsole_tippen(claude_pid, [(text, _pause_nach(bilder)), ("\r", 0)])
+
+
+def konsole_tippen(claude_pid: int, schritte: list[tuple[str, float]]) -> bool:
+    """Tippt nacheinander jeden Text als Tastenereignisse in die Konsole des Claude-Prozesses und wartet danach die genannten
+    Sekunden. ESC (\\x1b) und Enter (\\r) gehen mit ihrem Tastencode raus. False, wenn die Konsole nicht erreichbar ist. Ohne
+    Schritte nur die Probe, ob das Einspeisen hier ginge."""
     import ctypes
     from ctypes import wintypes
 
@@ -273,7 +285,7 @@ def _windows(vorspann: str, pfade: list[Path], claude_pid: int) -> bool:
                     r.EventType = 1
                     r.Event.KeyEvent.bKeyDown = unten
                     r.Event.KeyEvent.wRepeatCount = 1
-                    r.Event.KeyEvent.wVirtualKeyCode = 0x0D if z == "\r" else 0
+                    r.Event.KeyEvent.wVirtualKeyCode = {"\r": 0x0D, "\x1b": 0x1B}.get(z, 0)
                     r.Event.KeyEvent.UnicodeChar = z
             offen, zeiger = len(reihe), 0
             while offen > 0:
@@ -284,10 +296,11 @@ def _windows(vorspann: str, pfade: list[Path], claude_pid: int) -> bool:
                 offen -= geschrieben.value
 
     try:
-        text, bilder = eingabe_fuer(pfade, vorspann)
-        tippe(text)
-        _warte_nach(bilder)
-        tippe("\r")
+        for text, pause in schritte:
+            if text:
+                tippe(text)
+            if pause:
+                time.sleep(pause)
         return True
     finally:
         k32.CloseHandle(griff)
