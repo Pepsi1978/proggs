@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,6 +87,41 @@ private object HeuteAufgabenStand {
     val lesung = AtomicInteger()
     /** Bis wann Meldungen der Aufgaben-App von Jarvis' eigenem Abhaken stammen (die Karte hat dann schon neu gelesen). */
     @Volatile var eigeneAenderungBis = 0L
+    /** „Aufgaben morgen“: standardmäßig zu, öffnet nur auf ausdrückliches Antippen; gelesen wird erst beim Öffnen. */
+    var morgenOffen by mutableStateOf(false)
+    var morgen by mutableStateOf<List<HeuteAufgabe>?>(null)
+    var morgenFehler by mutableStateOf<String?>(null)
+    val morgenLesung = AtomicInteger()
+}
+
+/** Die offenen Aufgaben von morgen (tägliche auf morgen projiziert), wie in Geniale Aufgaben unter „Morgen“. */
+private suspend fun morgenLesen(context: android.content.Context) {
+    val s = HeuteAufgabenStand
+    val nummer = s.morgenLesung.incrementAndGet()
+    val (liste, problem) = try {
+        AppBruecke.unterbrechbar<Pair<List<HeuteAufgabe>?, String?>> {
+            val r =AppBruecke.rufe(context, "Geniale Aufgaben", AufgabenFaehigkeit.BRUECKE, "lesen", JSONObject().put("bereich", "morgen").put("limit", 200), lesend = true)
+            r.optString("fehler").takeIf { it.isNotEmpty() }?.let { return@unterbrechbar null to it }
+            val a = r.optJSONArray("aufgaben")
+            (0 until (a?.length() ?: 0)).map { i ->
+                val o = a!!.getJSONObject(i)
+                HeuteAufgabe(
+                    id = o.optLong("id"), titel = o.optString("titel").ifBlank { o.optString("text") },
+                    uhrzeit = if (o.isNull("uhrzeit")) null else o.optString("uhrzeit"),
+                    prioritaet = o.optString("prioritaet"), erledigt = false, ueberfaellig = false,
+                    taeglich = o.optString("wiederholung") == "TAEGLICH",
+                )
+            } to null
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null to (e.message ?: "Geniale Aufgaben antwortet nicht.")
+    }
+    if (nummer != s.morgenLesung.get()) return
+    if (liste == null) { s.morgenFehler = problem; return }
+    s.morgen = sortiere(liste)
+    s.morgenFehler = null
 }
 
 /**
@@ -172,7 +209,10 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
         if (anstoss == 0) return@LaunchedEffect
         if (anstoss > 1) delay(300)
         neuLesen(context)
+        if (s.morgenOffen) morgenLesen(context)
     }
+    // Beim Aufklappen frisch lesen.
+    LaunchedEffect(s.morgenOffen) { if (s.morgenOffen) morgenLesen(context) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { anstoss++; onPauseOrDispose { } }
     DisposableEffect(Unit) {
         val beobachter = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -240,6 +280,51 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
                 Modifier.padding(top = 4.dp).antippen { s.alleZeigen = !s.alleZeigen },
                 color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             )
+        }
+        MorgenBereich()
+    }
+}
+
+/** Aufklappbarer Bereich „Aufgaben morgen“ unter den heutigen: zu bis zum Antippen, zeigt dann alle offenen von morgen. */
+@Composable
+private fun MorgenBereich() {
+    val f = LocalFarben.current
+    val s = HeuteAufgabenStand
+    val liste = s.morgen
+    val fehler = s.morgenFehler
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp)
+            .antippen { s.morgenOffen = !s.morgenOffen }
+            .semantics(mergeDescendants = true) { stateDescription = if (s.morgenOffen) "aufgeklappt" else "zugeklappt" }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Aufgaben morgen", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        if (s.morgenOffen && liste != null) Text("${liste.size}", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
+        Icon(
+            if (s.morgenOffen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null,
+            tint = f.primaer, modifier = Modifier.size(24.dp),
+        )
+    }
+    if (!s.morgenOffen) return
+    when {
+        liste == null && fehler != null -> Text(fehler, color = f.gefahr, fontSize = 14.sp)
+        liste == null -> Text("Wird gelesen …", color = f.textLeise, fontSize = 14.sp)
+        liste.isEmpty() -> Text("Für morgen steht nichts an." + (if (fehler != null) " · $fehler" else ""), color = f.textLeise, fontSize = 14.sp)
+        else -> {
+            if (fehler != null) Text(fehler, color = f.gefahr, fontSize = 14.sp)
+            liste.forEach { a ->
+                androidx.compose.runtime.key("morgen_${a.id}") {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
+                        Box(Modifier.padding(top = 7.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            val zusatz = listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
+                            if (zusatz.isNotEmpty()) Text(zusatz, color = f.textLeise, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
         }
     }
 }
