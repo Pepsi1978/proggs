@@ -92,7 +92,10 @@ class ZiehZustand {
     var scrolleUm: (Float) -> Unit = {}
 
     /** Maße der Leisten vor dem Ziehstart (kompakte Ansicht), damit das Loslassen genau zurückrechnen kann. */
-    private var vorZiehen: Map<Long, LeistenMass>? = null
+    private var vorZiehen: HashMap<Long, LeistenMass>? = null
+
+    /** true, solange die Liste wegen des Fingers in der Randzone automatisch scrollt. */
+    var randScrollt = false
 
     /** Zuletzt auf eine Zeitleiste abgelegter Termin; die Liste hält ihn kurz an seiner Ablagestelle fest. */
     var ablage: Ablage? = null
@@ -109,10 +112,21 @@ class ZiehZustand {
 
     fun leiste(tag: Long): LeistenMass? = leisten[tag]
 
-    fun registriere(schluessel: String, bereich: Rect, ziel: Ziel) { ziele[schluessel] = bereich to ziel }
+    fun registriere(schluessel: String, bereich: Rect, ziel: Ziel) {
+        val alt = ziele[schluessel]?.first
+        ziele[schluessel] = bereich to ziel
+        // Verschiebt sich ein Ziel während des Ziehens (z. B. ein Bereich klappt auf), gilt das neue Ziel unter dem Finger sofort.
+        if (aufgabe != null && alt != bereich) aktualisiere()
+    }
 
-    /** Meldet eine Zeitleiste mit ihrer Fensterlage an (aus onGloballyPositioned) und rechnet sie in Inhaltslage um. */
-    fun registriereLeiste(tag: Long, links: Float, rechts: Float, startImFenster: Float, stundePx: Float, lueckePx: Float, band: Zeitband) {
+    /**
+     * Meldet eine Zeitleiste mit ihrer Fensterlage an (aus onGloballyPositioned) und rechnet sie in Inhaltslage um.
+     * [rueckBand] ist das Band, das die Leiste nach dem Ziehen wieder zeigt: Taucht sie erst während des Ziehens auf
+     * (Bereich klappt auf), rechnet [spanneZurueck] damit den Rücksprung beim Loslassen aus.
+     */
+    fun registriereLeiste(tag: Long, links: Float, rechts: Float, startImFenster: Float, stundePx: Float, lueckePx: Float, band: Zeitband, rueckBand: Zeitband = band) {
+        val vor = vorZiehen
+        if (aufgabe != null && vor != null && tag !in vor) vor[tag] = LeistenMass(links, rechts, startImFenster + scrollWert(), stundePx, lueckePx, rueckBand)
         leisten[tag] = LeistenMass(links, rechts, startImFenster + scrollWert(), stundePx, lueckePx, band)
         // Ändert sich die Leiste während des Ziehens (z. B. Spanne beim Ziehstart), gilt die neue Uhrzeit sofort.
         if (aufgabe != null) aktualisiere()
@@ -246,6 +260,7 @@ class ZiehZustand {
 
     private fun zuruecksetzen() {
         aufgabe = null
+        randScrollt = false
         hoverZiel = null
         hoverZeit = null
         letztesEnde = System.currentTimeMillis()

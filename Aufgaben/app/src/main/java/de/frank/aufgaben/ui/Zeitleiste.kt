@@ -109,13 +109,13 @@ fun Zeitleiste(
         // Sichtbar genau dann, wenn die Einstellung an ist — nie abhängig vom Ziehen: Eine Höhenänderung über der Leiste
         // beim Ziehstart kennt der Ausgleich in ZiehZustand nicht, die Leiste spränge unter dem Finger.
         if (luecken || auto) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(ganz.vonMin, ganz.bisMin), ganz.vonMin, ganz.bisMin, onGanzerTag)
-        Leiste(tag, termine, istHeute, jetzt, zustand, band, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
+        Leiste(tag, termine, istHeute, jetzt, zustand, band, if ((luecken || auto) && ganzerTag) ganz else kompakt, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
     }
 }
 
 @Composable
 private fun Leiste(
-    tag: Long, termine: List<Aufgabe>, istHeute: Boolean, jetzt: Int, zustand: ZiehZustand, band: Zeitband, onLuecke: (() -> Unit)?,
+    tag: Long, termine: List<Aufgabe>, istHeute: Boolean, jetzt: Int, zustand: ZiehZustand, band: Zeitband, rueckBand: Zeitband, onLuecke: (() -> Unit)?,
     onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit,
 ) {
     val f = LocalFarben.current
@@ -154,7 +154,7 @@ private fun Leiste(
                 // Ungeschnittene Lage (positionInRoot + size), nicht boundsInRoot: Das ist am Scrollrand abgeschnitten, die
                 // Nulllinie läge sonst am Bildrand und die Uhrzeit spränge. ZiehZustand rechnet sie in Inhaltslage um.
                 val p = c.positionInRoot()
-                zustand.registriereLeiste(tag, p.x, p.x + c.size.width, p.y + obenPx, stundePx, lueckePx, band)
+                zustand.registriereLeiste(tag, p.x, p.x + c.size.width, p.y + obenPx, stundePx, lueckePx, band, rueckBand)
             },
     ) {
         val breite = maxWidth

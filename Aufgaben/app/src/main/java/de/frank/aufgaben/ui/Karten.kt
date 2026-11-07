@@ -193,7 +193,8 @@ fun Sektion(
     zustand: ZiehZustand,
     ziel: Ziel,
     untertitel: String? = null,
-    startOffen: Boolean = true,
+    /** Nur „Heute“ startet offen; alle anderen Bereiche sind anfangs zu (außer während der Suche, wenn sie Treffer haben). */
+    startOffen: Boolean = false,
     /** Ohne Aufgaben bleibt der Bereich zugeklappt, bis man ihn selbst aufklappt. */
     leer: Boolean = false,
     /** Aus während der Suche: Ein leeres Suchergebnis soll die eigene Auf-/Zuklapp-Wahl nicht verwerfen. */
@@ -203,22 +204,31 @@ fun Sektion(
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
-    // 0 = automatisch (offen, sobald etwas drin ist), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
+    // 0 = automatisch (startOffen bzw. während der Suche offen, wenn etwas drin ist; leer immer zu),
+    // 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
     var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
     // Wird der Bereich leer, gilt wieder die Automatik: leer heißt zugeklappt.
     LaunchedEffect(leer, automatik) { if (leer && automatik) wahl = 0 }
-    val offen = when (wahl) { 1 -> true; 2 -> false; else -> startOffen && !leer }
-    val schwebt = zustand.hoverZiel == "sek_$schluessel"
-    // Schwebt eine gezogene Aufgabe zwei Sekunden über dem geschlossenen Bereich, klappt er auf: Danach lässt sie sich
-    // darin an der gewünschten Stelle (auch auf einer Uhrzeit der Zeitleiste) ablegen. Bleibt danach offen.
+    // Während der Suche (automatik aus) zeigen alle Bereiche mit Treffern diese offen an.
+    val offen = when (wahl) { 1 -> true; 2 -> false; else -> (startOffen || !automatik) && !leer }
+    val zielSchluessel = "sek_$schluessel"
+    val schwebt = zustand.hoverZiel == zielSchluessel
+    // Schwebt eine gezogene Aufgabe zwei Sekunden ruhig über dem geschlossenen Bereich, klappt er auf und bleibt offen.
+    // Danach lässt sie sich darin ablegen, bei Tagen mit Zeitleiste auch auf eine Uhrzeit. Solange die Liste am Rand
+    // automatisch scrollt, zählt die Wartezeit nicht (sonst klappte am Listenende der letzte Bereich ungewollt auf).
     val haptikAuf = LocalHapticFeedback.current
     LaunchedEffect(schwebt, offen) {
-        if (schwebt && !offen && zustand.aufgabe != null) {
-            delay(2000)
-            if (zustand.aufgabe != null && zustand.hoverZiel == "sek_$schluessel") {
+        if (!schwebt || offen || zustand.aufgabe == null) return@LaunchedEffect
+        var ruhigSeit = System.currentTimeMillis()
+        while (zustand.aufgabe != null && zustand.hoverZiel == zielSchluessel) {
+            val nun = System.currentTimeMillis()
+            if (zustand.randScrollt) ruhigSeit = nun
+            if (nun - ruhigSeit >= 2000) {
                 wahl = 1
                 haptikAuf.performHapticFeedback(HapticFeedbackType.LongPress)
+                break
             }
+            delay(50)
         }
     }
     val rand by animateColorAsState(if (schwebt) farbe else Color.Transparent, label = "rand")
@@ -229,7 +239,7 @@ fun Sektion(
             .padding(horizontal = 14.dp, vertical = 7.dp)
             .einblenden(verzoegerung)
             .graphicsLayer { scaleX = hub; scaleY = hub }
-            .ablageZiel(zustand, "sek_$schluessel", ziel)
+            .ablageZiel(zustand, zielSchluessel, ziel)
             .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe)
             .then(if (schwebt) Modifier.glas(f, erhoeht = 0f, fuellung = rand.copy(alpha = 0.12f)) else Modifier)
             // Beim Ziehen ohne Größenanimation: ZiehZustand gleicht den Spannenwechsel der Zeitleiste im selben Frame per
