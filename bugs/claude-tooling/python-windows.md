@@ -624,6 +624,20 @@ oder das Sonderzeichen vorab in eine normale (Nicht-Raw-)Variable legen und eins
 
 ---
 
+## 10. Claude-Code-Werkzeuge und Python
+
+### 10.1 Langes `python - <<'EOF'` im Bash-Werkzeug → `unexpected EOF while looking for matching '`  ⭐ WIEDERKEHREND
+**Symptom:** `Exit code 2 … /usr/bin/bash: -c: line N: unexpected EOF while looking for matching ''`,
+obwohl das Heredoc mit `'EOF'` gequotet und korrekt beendet ist.
+**Beleg:** Skill `session-flaschenhals`, 40 Sitzungen bis 07.11.2026 (Windows, Git Bash): 6 von 27
+Heredocs mit mehr als 30 Zeilen scheiterten, 0 von 76 kürzeren. Dreifach-Anführungszeichen allein
+erklären es nicht (auch ohne `'''` gescheitert). Genaue Ursache im Werkzeug-Wrapper offen.
+**Fix:** Skripte über ~30 Zeilen mit dem Write-Werkzeug als Datei in den Scratchpad legen und
+`python -X utf8 <datei>` ausführen. Kostet nichts extra und vermeidet das erneute Ausgeben.
+**Wirkungsprüfung:** Maßnahme M1 in `skills/session-flaschenhals/massnahmen.json`.
+
+---
+
 ## Pflicht-Checkliste vor Python-Arbeit auf Windows
 - [ ] Diese Datei gelesen, Stand-Datum gegen `python --version` abgeglichen (3.13.13)?
 - [ ] JEDES `open()` mit `encoding='utf-8'` (Lesen evtl. `utf-8-sig`)?

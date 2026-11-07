@@ -4,15 +4,37 @@
 - [GenialeIdeen per installSchnell](genialeideen-install-schnell.md) — Debug-Build ruckelt, immer den schnellen Build installieren
 - [OpenLauncher-Update fragt immer](openlauncher-update-dialog-immer.md) — nie -Force, höchstes Zeitlimit, auf Klick warten
 - [Fenster-Aktivierung: Erfolg nur mit IsIconic](aktivierung-erfolg-nur-mit-isiconic.md) — activated=true ohne sichtbares Fenster heisst: die Erfolgspruefung ist falsch
-- [Dieser Rechner: abweichende Installationswege](dieser-rechner-installationswege.md) — npm-CLIs, LM Studio in Program Files, kein Stream Deck
+- [Dieser Rechner: abweichende Installationswege](dieser-rechner-installationswege.md) — npm-CLIs, LM Studio in Program Files, Stream Deck per winget
 - [Synced-Plugins abschalten](synced-plugins-abschalten.md) — Schlüssel "name@synced": false in enabledPlugins
 - [Profilregeln kommen aus sources/](profilregeln-aus-sources-generiert.md) — fehlende Regel = veraltetes Repo oder Session vor dem Pull, kein Launcher-Problem
 - [MW2 DLSS-Override eingerichtet](mw2-dlss-override-eingerichtet.md) — Treiberprofil + NVPI-Ort, nach Treiber-Clean-Install einrichten.ps1 erneut
 - [Commit nur mit Pfaden](commit-nur-mit-pfaden.md) — parallele Sitzungen haben Dateien im Index vorgemerkt, nacktes git commit nimmt sie mit
 - [DLSS-5-Mod installiert](dlss5-mod-installiert.md) — Grafikfragen: erst Recherchen/dlss5-grafik/README.md; Mod in 5 SP-Spielen, Cyberpunk verifiziert
+- [Tunnel-Install langsam = Heim-WLAN](tunnel-install-langsam-heim-wlan.md) — 10.8.0.7 hängt: Netz des Handys prüfen, im Hotspot „Borussia Dortmund“ direkt per LAN-IP installieren
 - [WLAN-adb selbstheilend](adb-wlan-selbstheilend.md) — bei Ausfall erst Log + Wachhund-Aufgabe prüfen, TLS-Port nie speichern
 - [Android-Cloud-Bau: rclone](android-cloud-bau-rclone.md) — Konfig in SK\rclone, eigener Google-OAuth-Client (Projekt update-upload, In Produktion) seit 27.09.2026
 - [Codex-Mails kommen über Participating](github-codex-mails-participating.md) — Grund author, Unwatch reicht nicht; E-Mail bei Participating seit 27.09.2026 aus
 - [NewsKompass als Release installieren](newskompass-release-installieren.md) — Debug ruckelt, die Release-APK aus dem apk-update installieren
 - [ChatGPT-Abo 100 €](chatgpt-abo-100-euro.md) — kein Pro 500, daher kein Ultrafast per OAuth
 - [Gestartetes Programm erbt Agenten-Pipe](gestartetes-programm-erbt-agenten-pipe.md) — "started" gemeldet, Tool wartet bis Timeout: Handle-Vererbung beim Start
+- [HTML immer in Chrome öffnen](html-immer-in-chrome-oeffnen.md) — erzeugte HTML-Dateien sofort lokal per Start-Process chrome starten
+- [KI-Agenten-Kurs angefangen](ki-agenten-kurs-angefangen.md) — teach-Arbeitsplatz ist ~/proggs/Lernen/ki-agenten, dort zuerst lesen
+- [KimiKompass angefangen](kimikompass-angefangen.md) — Weitermachen nach KimiKompass/WEITERMACHEN.md
+- [Epigenetik angefangen](epigenetik-angefangen.md) — ungetestetes Grundgerüst, Weitermachen nach Epigenetik/WEITERMACHEN.md
+- [HTTP-Timeouts und totes IPv6](http-timeouts-fallback-wartezeit.md) — Abfragen scheitern mit genau dem Zeitlimit: erst curl -4 gegen -6 messen, IPv4 zuerst verbinden
+- [Handy nicht blind fernsteuern](handy-nicht-blind-fernsteuern.md) — vor adb-Eingaben prüfen, welche App vorn ist
+- [Explorer-Blinkschutz](explorer-blinkschutz.md) — Symbole blinken: Wächter-Log prüfen, Ursache leerer UserChoice-Schattenschlüssel in der privaten Registry einer Store-App
+- [Claude Desktop: Store-Pfade](claude-desktop-store-pfade.md) — Konfiguration unter Packages\Claude_pzs8sxrjxfjjc, Protokolle unter %LOCALAPPDATA%\Claude\logs, Jarvis per mcp-remote
+- [Jarvis: Relay und ChatGPT-Plugin](jarvis-relay-und-chatgpt-plugin.md) — Hostinger-Relay, Plugin über „Benutzerdefinierten MCP-Server", keine Fremdanbieter-Konten
+- [Biomarker-Abgleich: Stand je Quelle](biomarker-abgleich-stand-je-quelle.md) — Werte alt: Diagnose-Protokoll per adb, Whoop-Token nach Netzabriss verbraucht = neu anmelden
+- [Fold 8 im Explorer per Link zu Windows](link-zu-windows-explorer.md) — läuft lokal übers WLAN; App nie force-stoppen, Start per StartUpActivity
+- [Jarvis-PC-Brücke neu starten](jarvis-pc-bruecke-neustart.md) — Stop-ScheduledTask allein verwaist pwsh; Token-Rollen und Handy-Zugang per Skript
+- [Azure-Speech-Schlüssel](azure-speech-schluessel.md) — „baue Azure ein“: Schlüssel + Region aus SK\Azure\azure-speech.json
+- [Jarvis-Rückfrage: nie stehen bleiben](jarvis-rueckfrage-nie-stehen-bleiben.md) — Frage sofort am PC und in Jarvis, beide 5 min; danach entscheidet die KI selbst (auch Review); Frage-Warter im hook.log
+- [Parallele Sitzung nimmt Dateien mit](parallele-sitzung-nimmt-dateien-mit.md) — neue Pakete zuerst committen, dann Aufrufstellen umstellen; Löschungen nach dem Commit prüfen
+- [KI-Briefing: Push im Prompt](ki-briefing-push-im-prompt.md) — Aufgaben-Push kommt nie am Handy an, Prompt ruft PushNotification selbst; nur über claude.ai bearbeiten
+- [Windows-Fernwartung zugeklappt](windows-fernwartung-zugeklappt.md) — kein Bild = Anzeige aus, wecken; Parsec VDD als Notweg, Sperre/Neustart bleiben Grenze
+- [Anthropic-Schlüssel: Präfix](anthropic-schluessel-praefix.md) — Franks Schlüssel beginnt mit sk-ant-user; nie auf sk-ant-api prüfen
+- [Hostinger-Server: Rolle](hostinger-server-rolle.md) — Rückfallziel ohne erreichbaren Rechner, Hauptzweck Android bauen und per Tunnel installieren
+- [Fehler an Anthropic = GitHub-Issue](fehler-an-anthropic-als-github-issue.md) — sofort gh issue create in anthropics/claude-code, /feedback ist gesperrt
+- [Lange Skripte per Write](lange-skripte-per-write.md) — über ~30 Zeilen nie als Bash-Heredoc (22 % brechen mit unexpected EOF), Datei in den Scratchpad schreiben und ausführen

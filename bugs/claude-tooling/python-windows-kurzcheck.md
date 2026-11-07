@@ -27,6 +27,7 @@
 | 13 | `re.sub`-Replacement | NIE Raw-String mit `\U`-Escape mischen — Lambda nutzen | §9.1 |
 | 14 | Fremdcode ohne `encoding=` | Notbremse `PYTHONUTF8=1` / `python -X utf8` | §1.3 |
 | 15 | `python`/`pip` auf Windows | `py -3` + `python -m pip` (nicht MS-Store-Stub) | §6.1 |
+| 16 | Skript > 30 Zeilen im Bash-Werkzeug | Nie als Heredoc: per Write in den Scratchpad, dann ausführen | §10.1 |
 
 ---
 
