@@ -1,5 +1,7 @@
 package de.frank.aufgaben.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
 import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -132,12 +134,19 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     AnimatedVisibility(text != null, modifier, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
         Row(
             Modifier.navigationBarsPadding().padding(start = 16.dp, end = 104.dp, bottom = 26.dp).fillMaxWidth()
-                .glas(f, 18.dp, 2f, f.flaecheStark).padding(horizontal = 16.dp, vertical = 12.dp),
+                .background(f.hgUnten, androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                .glas(f, 18.dp, 2f, f.flaecheStark).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
+                .heightIn(min = 40.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(vm.meldung.orEmpty(), color = f.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(vm.meldung.orEmpty(), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
             vm.rueckgaengig?.let { r ->
-                Text("Rückgängig", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.antippen { r(); vm.meldungWeg() }.padding(start = 12.dp))
+                Text(
+                    "Rückgängig", color = f.aufPrimaer, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp)
+                        .background(f.primaer, androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                        .antippen { r(); vm.meldungWeg() }.padding(horizontal = 16.dp, vertical = 10.dp),
+                )
             }
         }
     }
