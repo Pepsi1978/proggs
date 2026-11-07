@@ -8,6 +8,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -41,9 +42,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,6 +104,9 @@ fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
     }
 }
 
+/** Dunkle Schrift und Symbole auf hellen Farben (auch das helle Gelb mit Helligkeit ~0,48), sonst weiße. */
+fun aufFarbe(farbe: Color): Color = if (farbe.luminance() > 0.4f) Color.Black.copy(alpha = 0.85f) else Color.White
+
 @Composable
 fun Checkkreis(erledigt: Boolean, farbe: Color, groesse: Int = 26, aktion: () -> Unit) {
     val f = LocalFarben.current
@@ -123,7 +129,7 @@ fun Checkkreis(erledigt: Boolean, farbe: Color, groesse: Int = 26, aktion: () ->
                     lineTo(r * 0.88f, r * 1.35f)
                     lineTo(r * (0.88f + 0.62f * fort), r * (1.35f - 0.72f * fort))
                 }
-                drawPath(p, if (farbe.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else if (f.dunkel) f.aufPrimaer else Color.White, style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(p, if (farbe.luminance() > 0.4f) aufFarbe(farbe) else if (f.dunkel) f.aufPrimaer else Color.White, style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round))
             }
         }
     }
@@ -207,27 +213,34 @@ fun Sektion(
     zustand: ZiehZustand,
     ziel: Ziel,
     untertitel: String? = null,
-    /** Ohne Treffer: Während der Suche bleibt der Bereich dann zugeklappt; sonst sind alle Bereiche offen, auch leere. */
+    /** Ohne Treffer: Während der Suche bleibt der Bereich dann zugeklappt; sonst sind alle Bereiche offen, auch leere (außer [startZu]). */
     leer: Boolean = false,
     /** Aus während der Suche: Ein leeres Suchergebnis soll die eigene Auf-/Zuklapp-Wahl nicht verwerfen. */
     automatik: Boolean = true,
     verzoegerung: Int = 0,
     /** Sattere Farbe für Kopfband, Rahmen und Leiste (Prioritätsbereiche). */
     kraeftig: Boolean = false,
-    /** Kopfband mit Streifenmuster pulsiert sanft (Bereich Heute). */
+    /** Kopfband mit dicken Streifen, das wie ein Herzschlag pulsiert (Bereich Heute). */
     puls: Boolean = false,
     /** Bereich ist standardmäßig zugeklappt (Erledigt); während der Suche klappt er bei Treffern auf. */
     startZu: Boolean = false,
+    /** Auf-/Zuklapp-Wahl von außen, damit sie erhalten bleibt, wenn der Bereich zeitweise nicht angezeigt wird. */
+    wahlZustand: MutableIntState? = null,
     aktionen: @Composable RowScope.() -> Unit = {},
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
     // Herzschlag: zwei kräftige Schläge kurz hintereinander („bumm-bumm“), danach eine kurze Pause.
-    // Nur mit eingeschalteter Bewegung (Einstellung „Bewegung“).
-    val pulsWert = if (puls && LocalBewegung.current) rememberInfiniteTransition(label = "heutePuls").animateFloat(
+    // Nur mit eingeschalteter Bewegung (Einstellung „Bewegung“) und laufenden Systemanimationen; sonst steht das Band
+    // in voller Stärke still (bei Animationsfaktor 0 bliebe der Puls sonst auf seinem schwächsten Wert stehen).
+    val kontext = LocalContext.current
+    val systemAnimationen = remember {
+        android.provider.Settings.Global.getFloat(kontext.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+    }
+    val pulsWert = if (puls && LocalBewegung.current && systemAnimationen) rememberInfiniteTransition(label = "heutePuls").animateFloat(
         0f, 0f,
         infiniteRepeatable(
-            androidx.compose.animation.core.keyframes {
+            keyframes {
                 durationMillis = 1100
                 0f at 0
                 1f at 90 using FastOutSlowInEasing
@@ -239,16 +252,15 @@ fun Sektion(
         ),
         label = "pulsWert",
     ) else null
-    // Gleichbleibende Lese-Funktion, damit das Kopfband seine Pfade nicht bei jeder Neuzusammensetzung neu baut.
-    val pulsLeser: (() -> Float)? = remember(pulsWert) { pulsWert?.let { w -> { w.value } } }
-    // Auf hellen Bereichsfarben (Gelb) dunkle Symbole, sonst weiße.
-    val aufFarbe = if (farbe.luminance() > 0.5f) Color.Black.copy(alpha = 0.85f) else Color.White
-    // Startet ein Bereich zugeklappt (Erledigt), bleibt er im Automatikmodus zu, bis man ihn selbst aufklappt.
-    // 0 = automatisch (beim Start sind alle Bereiche offen, auch leere, damit man überall hineinziehen kann;
-    // während der Suche nur die mit Treffern), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
-    var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
+    val pulsLeser: (() -> Float)? = pulsWert?.let { w -> { w.value } }
+    val aufFarbe = aufFarbe(farbe)
+    // 0 = automatisch (beim Start sind alle Bereiche offen, auch leere, damit man überall hineinziehen kann; mit [startZu]
+    // zugeklappt; während der Suche nur die mit Treffern), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
+    val eigeneWahl = rememberSaveable(schluessel) { mutableIntStateOf(0) }
+    var wahl by (wahlZustand ?: eigeneWahl)
     // Startet die Suche, gilt wieder die Automatik: Auch selbst zugeklappte Bereiche zeigen ihre Treffer.
-    LaunchedEffect(automatik) { if (!automatik) wahl = 0 }
+    // Ein selbst aufgeklappter Bereich, der von sich aus zu wäre ([startZu]), bleibt dabei offen.
+    LaunchedEffect(automatik) { if (!automatik && !(startZu && wahl == 1)) wahl = 0 }
     val offen = when (wahl) { 1 -> true; 2 -> false; else -> if (startZu) !automatik && !leer else automatik || !leer }
     // Kopfband-Ecken und Trennlinie folgen dem Auf-/Zuklappen des Inhalts, statt sofort umzuspringen.
     val offenAnteil = animateFloatAsState(if (offen) 1f else 0f, label = "kopfOffen")
@@ -289,7 +301,7 @@ fun Sektion(
             .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, pulsLeser) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, puls, pulsLeser) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {
@@ -300,7 +312,7 @@ fun Sektion(
                     Text(titel, color = f.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                     if (anzahl > 0) Box(
                         Modifier.padding(start = 8.dp).glas(f, 99.dp, 0f, farbe.copy(alpha = 0.92f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp),
-                    ) { Text("$anzahl", color = if (farbe.luminance() > 0.45f) Color.Black.copy(alpha = 0.85f) else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("$anzahl", color = aufFarbe(farbe), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 }
                 if (untertitel != null) Text(untertitel, color = f.text.copy(alpha = 0.78f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
@@ -332,7 +344,8 @@ fun Sektion(
  * Aufgeklappt ([offen] = 1) sind nur die oberen Ecken rund und eine farbige Linie trennt den Kopf vom Inhalt.
  * Pfade und Verläufe liegen im Zeichen-Cache und werden nur bei neuer Größe oder während des Klappens neu gebaut.
  */
-private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, puls: (() -> Float)?, offen: () -> Float): Modifier = drawWithCache {
+/** [herz]: Stil des Herzschlag-Bands (dicke, satte Streifen), auch wenn [puls] still steht (keine Bewegung). */
+private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, herz: Boolean, puls: (() -> Float)?, offen: () -> Float): Modifier = drawWithCache {
     val anteil = offen()
     val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
     val unten = CornerRadius(r * (1f - anteil))
@@ -344,10 +357,10 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, puls: 
         if (kraeftig) listOf(farbe.copy(alpha = if (f.dunkel) 0.62f else 0.55f), farbe.copy(alpha = if (f.dunkel) 0.36f else 0.30f))
         else listOf(farbe.copy(alpha = if (f.dunkel) 0.46f else 0.34f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)),
     )
-    val streifenFarbe = farbe.copy(alpha = if (puls != null) (if (f.dunkel) 0.62f else 0.55f) else if (kraeftig) (if (f.dunkel) 0.34f else 0.30f) else if (f.dunkel) 0.16f else 0.13f)
+    val streifenFarbe = farbe.copy(alpha = if (herz) (if (f.dunkel) 0.62f else 0.55f) else if (kraeftig) (if (f.dunkel) 0.34f else 0.30f) else if (f.dunkel) 0.16f else 0.13f)
     // Puls (Heute): deutlich dickere Striche, damit der Herzschlag klar sichtbar ist.
-    val abstand = (if (puls != null) 22 else 16).dp.toPx()
-    val breite = (if (puls != null) 10 else 5).dp.toPx()
+    val abstand = (if (herz) 22 else 16).dp.toPx()
+    val breite = (if (herz) 10 else 5).dp.toPx()
     val h = size.height
     val streifen = Path().apply {
         var x = -h
@@ -358,13 +371,15 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, puls: 
     }
     val linie = farbe.copy(alpha = 0.7f * anteil)
     val linieDicke = 2.dp.toPx()
+    // Herzschlag-Rand: einmal angelegt; doppelt so breit, weil nur die innere Hälfte (innerhalb der Form) sichtbar ist.
+    val herzRand = Stroke(width = 6.dp.toPx())
     onDrawBehind {
         // Puls (Heute): Fläche und Streifenmuster atmen gemeinsam; gelesen nur hier, also ohne Neuaufbau der Pfade.
         val p = puls?.invoke()
         drawPath(form, band, alpha = if (p == null) 1f else 0.4f + 0.6f * p)
         clipPath(form) { drawPath(streifen, streifenFarbe, alpha = if (p == null) 1f else 0.12f + 0.88f * p) }
-        // Herzschlag: kräftig aufleuchtender Rand bei jedem Schlag.
-        if (p != null && p > 0.01f) drawPath(form, farbe, alpha = p, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx() * (0.5f + p)))
+        // Herzschlag: kräftig aufleuchtender Rand bei jedem Schlag, auf die Form beschnitten (kein Überstand nach außen).
+        if (p != null && p > 0.01f) clipPath(form) { drawPath(form, farbe, alpha = p, style = herzRand) }
         if (anteil > 0f) drawLine(linie, Offset(0f, h), Offset(size.width, h), linieDicke)
     }
 }

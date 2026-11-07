@@ -57,6 +57,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -144,6 +145,8 @@ fun ListeBildschirm(vm: AppViewModel) {
     val heute = vm.heute
     var suche by rememberSaveable { mutableStateOf("") }
     var sucheOffen by rememberSaveable { mutableStateOf(false) }
+    // Auf-/Zuklapp-Wahl für „Erledigt“ hier gehalten, weil der Bereich bei leerer Liste ganz verschwindet.
+    val erledigtWahl = rememberSaveable { mutableIntStateOf(0) }
     val b = remember(alle, heute, suche) { Bereiche(alle, heute, suche, vm.archivierteSerieTage()) }
     val scroll = rememberScrollState()
     val zustand = remember { ZiehZustand() }
@@ -324,7 +327,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
                 "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
-                untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(), startZu = true,
+                untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(), startZu = true, wahlZustand = erledigtWahl,
                 aktionen = { KalenderKnopf(vm, f.erfolg); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
             ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             Spacer(Modifier.height(140.dp))
@@ -397,7 +400,7 @@ private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zust
     var offen by rememberSaveable(erste.zielId) { mutableStateOf(true) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            Modifier.fillMaxWidth().glas(f, 16.dp, 0.9f, f.tertiaer.copy(alpha = 0.14f)).antippen(haptik = false) { offen = !offen }
+            Modifier.fillMaxWidth().glas(f, 16.dp, 0.9f, ZIELE_BLAU.copy(alpha = 0.14f)).antippen(haptik = false) { offen = !offen }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -406,8 +409,8 @@ private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zust
                 erste.zielTitel.ifBlank { "Ziel" }, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
             )
-            Box(Modifier.glas(f, 99.dp, 0f, f.tertiaer.copy(alpha = 0.18f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp)) {
-                Text("${liste.size}", color = f.tertiaer, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.glas(f, 99.dp, 0f, ZIELE_BLAU.copy(alpha = 0.18f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp)) {
+                Text("${liste.size}", color = ZIELE_BLAU, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.padding(start = 6.dp))
         }
@@ -620,7 +623,7 @@ private fun AblageChip(zustand: ZiehZustand, schluessel: String, icon: ImageVect
         horizontalArrangement = Arrangement.Center,
     ) {
         // Auf hellen Farben (Gelb) dunkle Schrift, sonst weiße.
-        val auf = if (farbe.luminance() > 0.5f) Color.Black.copy(alpha = 0.85f) else Color.White
+        val auf = aufFarbe(farbe)
         Icon(icon, null, tint = if (aktiv) auf else farbe, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
         Text(text, color = if (aktiv) auf else f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
