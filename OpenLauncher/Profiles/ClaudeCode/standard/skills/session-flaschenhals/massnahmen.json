@@ -5,7 +5,7 @@
       "id": "M1",
       "titel": "Lange Skripte per Write statt als Bash-Heredoc",
       "datum": "2026-11-07T14:31",
-      "status": "aktiv",
+      "status": "wirkt",
       "plattform": ["windows"],
       "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts.",
       "ort": [
