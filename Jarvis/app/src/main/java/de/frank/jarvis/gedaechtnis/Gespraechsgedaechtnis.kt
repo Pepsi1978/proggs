@@ -237,6 +237,12 @@ object Gespraechsgedaechtnis {
      */
     internal fun lerneRegel(app: Context, satz: String, id: Int?): Pair<String?, String>? {
         if (satz.length !in 12..400) return null
+        // Ein Lernlauf erzeugt keine Rechte und macht nichts Situatives dauerhaft: Erlaubnisse (mit belegtem Geltungsbereich)
+        // legt nur Frank selbst über jarvis_merken oder die App an.
+        if (de.frank.jarvis.faehigkeit.Merkdatei.istErlaubnis(satz) || de.frank.jarvis.faehigkeit.Merkdatei.situativ(satz) != null) {
+            Protokoll.melde(Quelle.JARVIS, "Nicht gelernt", "Erlaubnis oder situativ, nicht als dauerhafte Regel übernommen (Gespräch): $satz", ok = false)
+            return null
+        }
         val alle = Regeln.alle(app)
         if (alle.any { it.text.equals(satz, ignoreCase = true) }) return null
         val alt = id?.let { i -> alle.firstOrNull { it.id == i } }

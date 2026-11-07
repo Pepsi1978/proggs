@@ -23,8 +23,36 @@ import org.json.JSONObject
  * selbst (Einstellungen, jarvis_merken) oder aus der Zeit vor der Herkunftskennung; „Gespräch“ oder „Tagebuch“ = von einem
  * Lernlauf angelegt. Nur gelernte Einträge darf ein Lernlauf von sich aus wieder entfernen.
  */
-data class Regel(val id: Int, val text: String, val stand: String, val quelle: String = "") {
+data class Regel(
+    val id: Int, val text: String, val stand: String, val quelle: String = "",
+    /** Belegter Geltungsbereich (App, Aufgabe, Situation); leer = allgemeine Arbeitsweise, nie eine Handlungsfreigabe. */
+    val geltung: String = "",
+    /** Letzter Gültigkeitstag (TT.MM.JJJJ); leer = unbefristet. Abgelaufene Einträge stehen nicht mehr im Kontext. */
+    val bis: String = "",
+    /** Wo und wobei Frank es gesagt hat (z. B. „Programmierauftrag Jarvis“). */
+    val anlass: String = "",
+) {
     val gelernt: Boolean get() = quelle.isNotEmpty()
+
+    /** Klingt nach einer Erlaubnis, etwas ohne Rückfrage zu tun. */
+    val erlaubnis: Boolean get() = Merkdatei.istErlaubnis(text)
+
+    /** true = [bis] liegt vor [heute]. */
+    fun abgelaufen(heute: LocalDate = LocalDate.now()): Boolean = Merkdatei.tag(bis)?.isBefore(heute) == true
+
+    /** Geltung, Frist und Herkunft als Zusatz hinter dem Text; leer, wenn nichts davon gesetzt ist. */
+    fun zusatz(mitErlaubnisPruefung: Boolean = true): String {
+        val teile = buildList {
+            if (mitErlaubnisPruefung && erlaubnis) add(
+                if (geltung.isNotEmpty()) "ERLAUBNIS nur hierfür: $geltung"
+                else "Erlaubnis mit unklarem Geltungsbereich: keine pauschale Freigabe, außerhalb des ursprünglichen Falls vorher kurz fragen",
+            ) else if (geltung.isNotEmpty()) add("gilt nur: $geltung")
+            if (bis.isNotEmpty()) add(if (abgelaufen()) "abgelaufen seit $bis, gilt nicht mehr" else "bis $bis")
+            if (anlass.isNotEmpty()) add("Anlass: $anlass")
+            if (gelernt) add("gelernt aus $quelle")
+        }
+        return if (teile.isEmpty()) "" else " (" + teile.joinToString("; ") + ")"
+    }
 }
 
 /**
@@ -100,7 +128,7 @@ open class Merkdatei(
             val liste = json.getJSONArray("regeln")
             // Ein einzelner kaputter Eintrag kostet nur sich selbst, nicht die ganze Datei.
             val eintraege = (0 until liste.length()).mapNotNull { i ->
-                liste.optJSONObject(i)?.let { r -> Regel(r.optInt("id", 0), r.optString("text").trim(), r.optString("stand"), r.optString("quelle")) }?.takeIf { it.id > 0 && it.text.isNotEmpty() }
+                liste.optJSONObject(i)?.let { r -> Regel(r.optInt("id", 0), r.optString("text").trim(), r.optString("stand"), r.optString("quelle"), r.optString("geltung"), r.optString("bis"), r.optString("anlass")) }?.takeIf { it.id > 0 && it.text.isNotEmpty() }
             }
             Stand(eintraege, maxOf(json.optInt("naechsteId", 0), (eintraege.maxOfOrNull { it.id } ?: 0) + 1))
         } catch (e: Exception) {
@@ -155,7 +183,12 @@ open class Merkdatei(
         if (vorher.defekt != null) return false
         val naechste = maxOf(vorher.naechsteId, (eintraege.maxOfOrNull { it.id } ?: 0) + 1)
         val inhalt = JSONObject().put("format", 1).put("naechsteId", naechste)
-            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand).apply { if (it.quelle.isNotEmpty()) put("quelle", it.quelle) } })).toString(2)
+            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand).apply {
+                if (it.quelle.isNotEmpty()) put("quelle", it.quelle)
+                if (it.geltung.isNotEmpty()) put("geltung", it.geltung)
+                if (it.bis.isNotEmpty()) put("bis", it.bis)
+                if (it.anlass.isNotEmpty()) put("anlass", it.anlass)
+            } })).toString(2)
         val f = datei(context)
         val atomar = AtomicFile(f)
         val aus = try { atomar.startWrite() } catch (e: Exception) { Logbuch.fehler("Merkdatei schreiben", e, dateiname); return false }
@@ -191,10 +224,11 @@ open class Merkdatei(
      * Legt einen Eintrag an oder ersetzt mit [id] den Text eines vorhandenen. id 0 oder kleiner = neu anlegen.
      * [quelle] = Lernlauf, der ihn anlegt („Gespräch“, „Tagebuch“); leer = Frank selbst. Ersetzt ein Lernlauf einen Eintrag
      * von Frank, bleibt er Franks Eintrag; ersetzt Frank einen gelernten, gilt er als von Frank bestätigt.
+     * [geltung], [bis] und [anlass]: null = beim Ersetzen die bisherigen behalten (bei neuen leer), sonst setzen.
      * null = diese id gibt es nicht, die Datei ist voll oder defekt (siehe [defekt]).
      */
     @Synchronized
-    fun speichere(context: Context, text: String, id: Int? = null, quelle: String = ""): Regel? {
+    fun speichere(context: Context, text: String, id: Int? = null, quelle: String = "", geltung: String? = null, bis: String? = null, anlass: String? = null): Regel? {
         val vorher = lies(context)
         if (vorher.defekt != null) return null
         val bisher = vorher.eintraege
@@ -203,10 +237,10 @@ open class Merkdatei(
         val nummer = id?.takeIf { it > 0 }
         val eintrag = if (nummer != null) {
             val alt = bisher.firstOrNull { it.id == nummer } ?: return null
-            Regel(nummer, sauber, heute(), if (alt.gelernt) quelle else "")
+            Regel(nummer, sauber, heute(), if (alt.gelernt) quelle else "", geltung?.trim() ?: alt.geltung, bis?.trim() ?: alt.bis, anlass?.trim() ?: alt.anlass)
         } else {
             if (bisher.size >= hoechstens) return null
-            Regel(vorher.naechsteId, sauber, heute(), quelle)
+            Regel(vorher.naechsteId, sauber, heute(), quelle, geltung?.trim().orEmpty(), bis?.trim().orEmpty(), anlass?.trim().orEmpty())
         }
         val neu = if (nummer != null) bisher.map { if (it.id == nummer) eintrag else it } else bisher + eintrag
         return if (schreibe(context, vorher, neu)) eintrag else null
@@ -222,7 +256,7 @@ open class Merkdatei(
         if (vorher.defekt != null) return null
         val alt = vorher.eintraege.firstOrNull { it.id == id } ?: return null
         if (alt.text != saeubere(erwartet)) return null
-        val eintrag = Regel(id, saeubere(neu), heute(), alt.quelle)
+        val eintrag = alt.copy(text = saeubere(neu), stand = heute())
         return if (schreibe(context, vorher, vorher.eintraege.map { if (it.id == id) eintrag else it })) eintrag else null
     }
 
@@ -263,10 +297,13 @@ open class Merkdatei(
 
     fun suche(context: Context, wort: String): List<Regel> = wort.trim().lowercase(Locale.GERMAN).let { w -> alle(context).filter { w in it.text.lowercase(Locale.GERMAN) } }
 
-    fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}" }
+    fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}${it.zusatz(pruefeErlaubnis)}" }
 
     /** Vorsatz vor den ids im Kontext; leer bei den Dateien, die über jarvis_merken mit ihrer id bearbeitet werden. */
     protected open val kennzeichen: String = ""
+
+    /** false nur bei der Symbiose: Ihr Text ist 1:1 bei ChatGPT hinterlegt und darf durch keinen Zusatz von der Kopie abweichen. */
+    protected open val pruefeErlaubnis: Boolean = true
 
     /** Die Überschrift des Blocks; eine Datei kann sie aus ihren Einträgen ableiten (Stand, Fassung). */
     protected open fun kopfText(eintraege: List<Regel>): String = kopf
@@ -277,7 +314,8 @@ open class Merkdatei(
         val kopf = kopfText(s.eintraege)
         s.defekt?.let { return "$kopf\nGEDÄCHTNIS-DATEI DEFEKT: $it Sag Frank das.\n" }
         val hinweis = neuBegonnen?.let { "GEDÄCHTNIS-DATEI ZURÜCKGESETZT: $it Frühere Einträge stehen nur noch in der Sicherung. Sag Frank das.\n" }.orEmpty()
-        val eintraege = s.eintraege.takeIf { it.isNotEmpty() }?.let { liste(it) + "\n" }.orEmpty()
+        // Abgelaufene Einträge gelten nicht mehr und stehen deshalb nicht im Kontext (in jarvis_gemerktes_lesen schon, als abgelaufen).
+        val eintraege = s.eintraege.filter { !it.abgelaufen() }.takeIf { it.isNotEmpty() }?.let { liste(it) + "\n" }.orEmpty()
         return if (hinweis.isEmpty() && eintraege.isEmpty()) "" else "$kopf\n$hinweis$eintraege"
     }
 
@@ -307,6 +345,28 @@ open class Merkdatei(
             return (x intersect y).size.toDouble() / (x union y).size
         }
 
+        /** Formulierungen, mit denen ein Eintrag Jarvis erlaubt, etwas ohne Rückfrage zu tun. */
+        private val ERLAUBNIS = Regex(
+            "ohne (vorherige |weitere |jede |meine )?(rückfrage|nachfrage|bestätigung|freigabe|rücksprache|erlaubnis|zustimmung)|ohne (zu |nachzu|mich zu )fragen|" +
+                "\\bungefragt\\b|nicht (mehr |erst |vorher )?(nach|rück)?(zu)?fragen|frag(e|st)? (mich |du )?(nicht|nie) (mehr |erst |vorher )?|\\bdu darfst\\b|\\bdarfst du\\b|freigegeben|pauschal erlaubt|einfach (machen|ausführen|löschen|senden|schicken)",
+        )
+
+        /** Wörter, die eine Aussage an die Situation binden („hier“, „jetzt“, „diesmal“). */
+        private val SITUATIV = Regex("\\b(hier|jetzt|heute|diesmal|dieses mal|gerade|momentan|vorerst|vorläufig|fürs erste|in diesem (fall|auftrag|gespräch|chat)|bei diesem auftrag|bei dieser aufgabe)\\b")
+
+        /** Dauerhafte Festlegungen, die ein Situationswort enthalten („ab jetzt“), zählen nicht als situativ. */
+        private val DAUERHAFT = Regex("\\b(ab jetzt|ab sofort|ab heute|von jetzt an|von heute an|bis jetzt|bis heute)\\b")
+
+        fun istErlaubnis(text: String): Boolean = ERLAUBNIS.containsMatchIn(text.lowercase(Locale.GERMAN))
+
+        /** Das Situationswort, das [text] an den Moment bindet, oder null. */
+        fun situativ(text: String): String? = SITUATIV.find(DAUERHAFT.replace(text.lowercase(Locale.GERMAN), " "))?.value
+
+        /** Datum aus TT.MM.JJJJ oder JJJJ-MM-TT; null bei leer oder unlesbar. */
+        fun tag(text: String): LocalDate? = text.trim().takeIf { it.isNotEmpty() }?.let { t ->
+            runCatching { LocalDate.parse(t, DateTimeFormatter.ofPattern("dd.MM.yyyy")) }.getOrNull() ?: runCatching { LocalDate.parse(t) }.getOrNull()
+        }
+
         /** Gleich bis auf Leerraum, Groß/Klein und Satzzeichen am Ende: eine Wiederholung desselben Eintrags. */
         fun gleich(a: String, b: String): Boolean {
             fun n(t: String) = t.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim().trimEnd('.', '!', '?', ' ')
@@ -324,19 +384,24 @@ open class Merkdatei(
 /** Die Regeldatei: was Frank dauerhaft vorgibt („in Zukunft immer …“). */
 object Regeln : Merkdatei(
     "regeln.json", 40,
-    "FRANKS REGELN (von Frank selbst festgelegt; sie gelten immer und gehen allgemeinen Vorgaben vor, wo sie ihnen widersprechen; nicht ungefragt vorlesen, nur einhalten):",
+    "FRANKS REGELN (von Frank selbst festgelegt; jede gilt in dem Umfang, den sie nennt, und geht dort allgemeinen Vorgaben vor; ein Zusatz „gilt nur“ oder „bis“ " +
+        "begrenzt sie auf diese App, Aufgabe, Situation oder Frist. Regeln beschreiben, wie du arbeitest; eine Erlaubnis, etwas ohne Rückfrage zu tun, gilt nur, wo sie ausdrücklich " +
+        "mit Geltungsbereich steht, nie darüber hinaus und nie für andere Apps; ohne belegten Bereich ist sie keine pauschale Freigabe. Nicht ungefragt vorlesen, nur einhalten):",
 )
+
+/** Hängt an die Überschriften der Dateien, die Wissen statt Anweisungen tragen. */
+private const val KEINE_RECHTE = " Daraus leitest du keine Erlaubnis ab, etwas ohne Rückfrage zu tun."
 
 /** Die Ziele-Datei: was Frank erreichen will. Eigener Bereich, damit Jarvis Vorschläge und Deutungen daran messen kann. */
 object Ziele : Merkdatei(
     "ziele.json", 40,
-    "FRANKS ZIELE (was er erreichen will; miss Deutungen und Vorschläge daran, wo es passt; nicht ungefragt aufzählen):",
+    "FRANKS ZIELE (was er erreichen will; miss Deutungen und Vorschläge daran, wo es passt; nicht ungefragt aufzählen.$KEINE_RECHTE):",
 )
 
 /** Die Datei über Frank: was Jarvis über ihn erfahren hat (Vorlieben, Besitz, Daten, was ihm wichtig ist). */
 object UeberFrank : Merkdatei(
     "ueber_frank.json", 120,
-    "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; beziehe es von dir aus ein, wo es passt; nicht ungefragt aufzählen):",
+    "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; Vorlieben und Tatsachen, beziehe sie von dir aus ein, wo es passt; nicht ungefragt aufzählen.$KEINE_RECHTE):",
 )
 
 /**
@@ -359,7 +424,7 @@ object Programmierregeln : Merkdatei(
  */
 object StilRegeln : Merkdatei(
     "stil.json", 40,
-    "FRANKS ANTWORT-STIL (aus seinen Daumen-Bewertungen gelernt und von ihm bearbeitbar; gilt für Form, Länge, Gliederung und Ton deiner Antworten und geht den allgemeinen Formatvorgaben vor; nicht ungefragt vorlesen):",
+    "FRANKS ANTWORT-STIL (aus seinen Daumen-Bewertungen gelernt und von ihm bearbeitbar; gilt für Form, Länge, Gliederung und Ton deiner Antworten und geht den allgemeinen Formatvorgaben vor; nicht ungefragt vorlesen.$KEINE_RECHTE):",
 )
 
 /**
@@ -368,7 +433,7 @@ object StilRegeln : Merkdatei(
  */
 object Entscheidungen : Merkdatei(
     "entscheidungen.json", 80,
-    "FRANKS ENTSCHEIDUNGEN (von Frank ausdrücklich getroffen, mit Datum; gelten, bis er sie ändert; frühere Entscheidungen gezielt mit gedaechtnis_suchen; nicht ungefragt aufzählen):",
+    "FRANKS ENTSCHEIDUNGEN (von Frank ausdrücklich getroffen, mit Datum; gelten, bis er sie ändert; frühere Entscheidungen gezielt mit gedaechtnis_suchen; nicht ungefragt aufzählen.$KEINE_RECHTE):",
 )
 
 /** Die Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
@@ -439,6 +504,8 @@ object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
 
     /** Ids als [S1], [S2] …: nie zu verwechseln mit den ids von FRANKS REGELN, die jarvis_merken ändert. */
     override val kennzeichen: String = "S"
+
+    override val pruefeErlaubnis: Boolean = false
 
     /** Der Text für ChatGPT aus gegebenen Einträgen (ohne Dateizugriff, etwa für die Oberfläche). */
     fun text(eintraege: List<Regel>): String = titel(eintraege) + "\n" + liste(eintraege)
@@ -564,6 +631,10 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "Halte die Dateien wahr: Gehört Neues zu einem vorhandenen Eintrag oder widerspricht es ihm (notiert ist „geht bei Regen nicht laufen“, jetzt sagt er „im Regen laufen ist doch gut, das mache ich öfter“), " +
             "ersetze diesen Eintrag über seine id, statt einen zweiten anzulegen; was gar nicht mehr gilt (Ziel erreicht, Auto verkauft), löschst du. " +
             "Nichts Flüchtiges merken (Stimmung von heute, einmalige Wünsche, einzelne Termine). " +
+            "GELTUNG: Situatives („hier ohne Rückfrage“, „jetzt schnell“, „diesmal direkt“) gilt nur für diesen Moment und wird nie zur dauerhaften oder appübergreifenden Regel. " +
+            "Gilt etwas nur für eine App, Aufgabe oder Situation oder nur bis zu einem Tag, gib das als geltung und bis mit, so eng wie Frank es gesagt hat; nie weiter. " +
+            "Trenne Vorlieben (info, stil) von Erlaubnissen: Erlaubnisse, etwas ohne Rückfrage zu tun, gibt es nur als regel mit geltung, und aus Vorlieben, Zielen, Entscheidungen oder Erinnerungen leitest du nie zusätzliche Rechte ab. " +
+            "Ein alter Eintrag mit dem Zusatz „unklarer Geltungsbereich“ ist keine pauschale Freigabe: Außerhalb seines erkennbaren Falls fragst du vorher kurz. " +
             "Hängt ein Eintrag an einem Begriff aus einer von Franks Apps, dessen genauen Wert du nicht kennst (er will „eine grüne Erholung bei Whoop“: ab wie viel Prozent ist sie grün?), " +
             "schlag den Wert zuerst mit repo_lesen im Code der App nach und trag ihn mit ein („… also mindestens so viel Prozent“). Findest du ihn nicht, merk dir den Eintrag in Franks Worten. " +
             "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE, WAS JARVIS ÜBER FRANK WEISS, FRANKS PROGRAMMIERREGELN und FRANKS ANTWORT-STIL: Regeln und Stil hältst du ein, Ziele und Wissen beziehst du von dir aus ein, " +
@@ -573,6 +644,35 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override fun stoerung(): String? = null
 
     private val arten = Merkart.entries.map { it.kennung }
+
+    /**
+     * Situatives darf nicht zur dauerhaften Erlaubnis werden: Eine Erlaubnis („ohne Rückfrage …“) braucht einen belegten
+     * Geltungsbereich und gehört nur in die Regeln; ein Situationswort („hier“, „jetzt“, „diesmal“) ohne Geltung oder Frist
+     * heißt meist Flüchtiges. null = in Ordnung. Rein und ohne Dateizugriff (auch für die Tests).
+     */
+    internal fun pruefeGeltung(art: Merkart, text: String, a: JSONObject): Ergebnis? {
+        val begrenzt = a.gesetzt("geltung") || Merkdatei.tag(a.optString("bis")) != null
+        if (a.gesetzt("bis") && Merkdatei.tag(a.optString("bis")) == null)
+            return Ergebnis("Nicht gemerkt: bis „${a.optString("bis")}“ ist kein Datum. Gib es als TT.MM.JJJJ an.", fehler = true)
+        val regelArt = art == Merkart.REGEL || art == Merkart.PROGRAMMIERREGEL
+        if (Merkdatei.istErlaubnis(text)) {
+            if (!regelArt) return Ergebnis(
+                "Nicht gemerkt: Das klingt nach einer Erlaubnis, etwas ohne Rückfrage zu tun. Aus ${art.wort}en folgen keine Rechte. " +
+                    "Meint Frank wirklich eine Erlaubnis, lege sie als regel mit geltung an; eine bloße Vorliebe formuliere ohne Erlaubnis.", fehler = true,
+            )
+            if (!a.gesetzt("geltung")) return Ergebnis(
+                "Nicht gemerkt: Eine Erlaubnis ohne Rückfrage braucht ihren belegten Geltungsbereich (App, Aufgabe oder Situation, ggf. bis). " +
+                    "Steht der Umfang im Gespräch, rufe jarvis_merken mit geltung (und bis) erneut auf, so eng wie Frank es gesagt hat. " +
+                    "Meinte er nur diesen Moment („hier“, „jetzt“, „diesmal“), merke nichts und handle nur jetzt so. Sonst frag ihn kurz, wofür es gelten soll.", fehler = true,
+            )
+        }
+        val wort = Merkdatei.situativ(text)
+        if (wort != null && !begrenzt && (regelArt || art == Merkart.STIL)) return Ergebnis(
+            "Nicht gemerkt: „$wort“ bindet das an die Situation. Meinte Frank nur diesen Moment, merke nichts und handle nur jetzt so. " +
+                "Gilt es dauerhaft für einen Bereich, rufe jarvis_merken mit geltung (und ggf. bis) erneut auf; gilt es wirklich überall, formuliere es ohne „$wort“.", fehler = true,
+        )
+        return null
+    }
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
@@ -597,6 +697,9 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
                 "quelle" to text("frank (Vorgabe) = Frank hat es selbst gesagt oder ausdrücklich bestätigt; vorschlag = eigener Vorschlag oder Deutung von dir, den Frank noch nicht bestätigt hat (wird dann nicht gemerkt).", listOf("frank", "vorschlag")),
                 "neu_erzwingen" to schalter("Nur nach dem Hinweis „sehr ähnlicher Eintrag“: true = trotzdem als eigenen Eintrag anlegen, weil es wirklich etwas anderes ist."),
+                "geltung" to text("Nur wenn belegt: wofür der Eintrag gilt, so eng wie Frank es gesagt hat (App, Aufgabe, Situation), z. B. „nur Programmieraufträge an Jarvis“. Pflicht bei Erlaubnissen („ohne Rückfrage …“). Leer = allgemein."),
+                "bis" to text("Nur bei zeitlicher Begrenzung: letzter Gültigkeitstag TT.MM.JJJJ."),
+                "anlass" to text("Wo und wobei Frank es gesagt hat, kurz (z. B. „Gespräch über Wecker“)."),
                 pflicht = listOf("art", "text"),
             ),
             nurLesen = false,
@@ -611,6 +714,14 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nicht gemerkt: Das ist ein Vorschlag, keine Angabe von Frank. Frag ihn kurz („Soll ich mir merken, dass …?“) und rufe jarvis_merken erst nach seinem Ja mit quelle frank auf. " +
                     "Eine offene Überlegung ohne Beschluss gehört mit idee_speichern in Geniale Ideen, nicht ins Gedächtnis und nicht als Aufgabe.", fehler = true,
             )
+            // Beim Umformulieren bleibt der bisherige Geltungsbereich, auch wenn das Modell ihn nicht mitschickt.
+            val pruefung = JSONObject(a.toString()).apply {
+                nummer?.let { n -> art.datei.alle(context).firstOrNull { it.id == n } }?.let { alt ->
+                    if (!a.gesetzt("geltung") && alt.geltung.isNotEmpty()) put("geltung", alt.geltung)
+                    if (!a.gesetzt("bis") && alt.bis.isNotEmpty()) put("bis", alt.bis)
+                }
+            }
+            pruefeGeltung(art, inhalt, pruefung)?.let { return@Werkzeug it }
             art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gemerkt. $it Sag Frank das.", fehler = true) }
             val laenge = inhalt.replace(Regex("\\s+"), " ").length
             if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf etwa ${Merkdatei.ZEICHEN} Zeichen zusammen und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
@@ -626,7 +737,12 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                         "Ist es wirklich etwas anderes, rufe es noch einmal mit neu_erzwingen true auf.", fehler = true,
                 )
             }
-            val eintrag = art.datei.speichere(context, inhalt, nummer)
+            val eintrag = art.datei.speichere(
+                context, inhalt, nummer,
+                geltung = a.optString("geltung").takeIf { a.gesetzt("geltung") },
+                bis = Merkdatei.tag(a.optString("bis"))?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                anlass = a.optString("anlass").takeIf { a.gesetzt("anlass") },
+            )
                 ?: return@Werkzeug Ergebnis(
                     art.datei.defekt(context)?.let { "Nicht gemerkt. $it Sag Frank das." } ?: when {
                         nummer != null && art.datei.alle(context).none { it.id == nummer } -> "Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht. Lies nach mit jarvis_gemerktes_lesen."
@@ -635,7 +751,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                     },
                     fehler = true,
                 )
-            Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}\n" +
+            Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}${eintrag.zusatz()}\n" +
                 "BESTÄTIGE ES FRANK JETZT: ${art.bestaetigung} So kann er sofort berichtigen. Berichtigt er, rufe jarvis_merken mit art ${art.kennung}, id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
                 "Alle Einträge dieser Art jetzt:\n" + art.datei.liste(art.datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche ihn mit jarvis_vergessen.")
         },

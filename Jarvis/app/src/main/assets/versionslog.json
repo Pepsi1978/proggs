@@ -585,6 +585,7 @@
 {"versionCode": 580, "versionName": "1.8.569", "stand": "03.11.2026, 16:33 Uhr", "notiz": "Jarvis beschreibt den Automatikmodus jetzt richtig: dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung in Berlin."},
 {"versionCode": 581, "versionName": "1.8.570", "stand": "07.11.2026, 14:19 Uhr", "notiz": "Bei der Frage, ob deine Rechner erreichbar sind, sagt Jarvis jetzt auch, ob der Tunnel zu Windows-PC, Mac und Server lebt, also ob die Fernwartung klappt."},
 {"versionCode": 582, "versionName": "1.8.571", "stand": "07.11.2026, 14:25 Uhr", "notiz": "Die Tunnel-Auskunft ist jetzt schnell, nutzt die Prüfung des Fernwartungs-Symbols und unterscheidet, ob der Tunnel tot oder nur der Fernwartungsdienst aus ist."},
-{"versionCode": 583, "versionName": "1.8.572", "stand": "07.11.2026, 15:08 Uhr", "notiz": "Die Bereichskacheln im Live-Gedächtnis zeigen keine grauen Vierecke mehr an den abgerundeten Ecken."}
+{"versionCode": 583, "versionName": "1.8.572", "stand": "07.11.2026, 15:08 Uhr", "notiz": "Die Bereichskacheln im Live-Gedächtnis zeigen keine grauen Vierecke mehr an den abgerundeten Ecken."},
+{"versionCode": 584, "versionName": "1.8.573", "stand": "07.11.2026, 15:32 Uhr", "notiz": "Jarvis merkt sich Regeln mit ihrem Geltungsbereich und ihrer Frist, macht aus „hier“ oder „jetzt“ keine dauerhaften Freigaben und leitet aus Vorlieben und Gelerntem keine Rechte mehr ab."}
 ]
 }

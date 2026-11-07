@@ -137,6 +137,8 @@ object Lernen {
             val satz = treffer.groupValues[3].trim().trimEnd('“', '”', '"', '«').trim()
             val id = treffer.groupValues[2].toIntOrNull()?.takeIf { it > 0 && !istZiel && datei.alle(app).any { r -> r.id == it } }
             if (satz.length !in 12..300 || !satz.startsWith("Frank") || datei.alle(app).any { normal(it.text) == normal(satz) }) return@mapNotNull null
+            // Aus gelernten Infos und Zielen folgen keine Rechte: nichts übernehmen, das nach einer Erlaubnis ohne Rückfrage klingt.
+            if (Merkdatei.istErlaubnis(satz)) return@mapNotNull null
             val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i } }
             val neu = datei.speichere(app, satz, id, quelle)
             if (neu == null) { Protokoll.melde(Quelle.JARVIS, if (datei.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt ($quelle): $satz", ok = false); return@mapNotNull null }
