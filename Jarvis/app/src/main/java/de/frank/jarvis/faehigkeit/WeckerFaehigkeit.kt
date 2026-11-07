@@ -92,18 +92,24 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
                         letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
                         return@Werkzeug Ergebnis(antwort.optString("fehler") + " " + UNKLAR, fehler = true)
                     }
-                    antwort.fehlerOder { "Wecker gestellt: " + satz(it.getJSONObject("wecker")) + planung(it) }.also {
+                    pruefe(antwort, a, neu = true, lesen = null) { "Wecker gestellt: " + satz(it) + planung(antwort, it) }.also {
+                        // Angenommen, aber nicht bestätigt: wie beim Zeitlimit sperren, damit ein Wiederholungsversuch nicht doppelt stellt.
                         if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                        else if (antwort.optString("fehler").isEmpty()) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
                     }
                 }
             }
             mitWecker(a) { id ->
                 val felder = JSONObject(a.toString()).apply { remove("suche"); remove("naechsten_auslassen"); put("id", id) }
                 when {
-                    a.optBoolean("naechsten_auslassen") -> rufe("auslassen", JSONObject().put("id", id)).fehlerOder { "Nächster Termin ausgelassen: " + satz(it.getJSONObject("wecker")) }
+                    a.optBoolean("naechsten_auslassen") -> rufe("auslassen", JSONObject().put("id", id)).let { antwort ->
+                        pruefe(antwort, JSONObject(), neu = false, lesen = id, extra = { w -> if (w.optString("ausgelassen_bis").isBlank()) "nächster Termin: nicht als ausgelassen gemeldet" else null }) { "Nächster Termin ausgelassen: " + satz(it) }
+                    }
                     // Nur an oder aus: der schlanke Weg, der den Rest unberührt lässt.
-                    a.has("aktiv") && felder.length() == 2 -> rufe("schalten", felder).fehlerOder { (if (a.optBoolean("aktiv")) "Eingeschaltet: " else "Ausgeschaltet: ") + satz(it.getJSONObject("wecker")) }
-                    else -> rufe("stellen", felder).fehlerOder { "Wecker geändert: " + satz(it.getJSONObject("wecker")) + planung(it) }
+                    a.has("aktiv") && felder.length() == 2 -> rufe("schalten", felder).let { antwort ->
+                        pruefe(antwort, a, neu = false, lesen = id) { (if (a.optBoolean("aktiv")) "Eingeschaltet: " else "Ausgeschaltet: ") + satz(it) }
+                    }
+                    else -> rufe("stellen", felder).let { antwort -> pruefe(antwort, a, neu = false, lesen = id) { "Wecker geändert: " + satz(it) + planung(antwort, it) } }
                 }
             }
         },
@@ -114,7 +120,11 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
             schema = schema("id" to text("id des Weckers aus wecker_lesen."), "suche" to text("Statt id: Wort aus dem Namen des Weckers.")),
             nurLesen = false,
             loeschend = true,
-        ) { a -> mitWecker(a) { id -> rufe("loeschen", JSONObject().put("id", id)).fehlerOder { "Gelöscht: Wecker „${it.getJSONObject("geloescht").optString("name")}“." } } },
+        ) { a ->
+            mitWecker(a) { id ->
+                Ergebnispruefung.pruefe(rufe("loeschen", JSONObject().put("id", id)), "geloescht", emptyList(), "wecker_lesen") { "Gelöscht: Wecker „${it.optString("name")}“." }
+            }
+        },
     )
 
     /** Der Dienst an dem Tag, an dem der Wecker als Nächstes klingelt – damit auffällt, wenn Wecker und Dienst nicht zusammenpassen. */
@@ -125,9 +135,27 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         return "\nMITGEDACHT (nur erwähnen, wenn Wecker und Tag nicht zusammenpassen): Am Tag des nächsten Klingelns gilt: ${lage.dienstText}."
     }
 
-    private fun planung(antwort: JSONObject): String = dienstDazu(antwort) +
-        (if (!antwort.optBoolean("geplant", true)) " ACHTUNG: gespeichert, aber nicht geplant – in der Wecker-App nachsehen." else "") +
-            antwort.optString("hinweis").takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
+    /** Dienst am Tag des nächsten Klingelns und der Hinweis der App. Ob der Wecker geplant ist, prüft [pruefe]. */
+    private fun planung(antwort: JSONObject, wecker: JSONObject): String = dienstDazu(JSONObject().put("wecker", wecker)) +
+        antwort.optString("hinweis").takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
+
+    /**
+     * Ergebnisprüfung ([Ergebnispruefung]): bestätigt nur, was die App mit dem gemeldeten Wecker zurückgibt (Uhrzeit, Name, an/aus,
+     * eingeschaltet auch wirklich geplant). [lesen] = id zum gezielten Nachlesen bei unklarer Antwort; null = kein Nachlesen (neuer Wecker
+     * ohne id, dort sperrt [letzteAnlage] Wiederholungen).
+     */
+    private suspend fun pruefe(antwort: JSONObject, a: JSONObject, neu: Boolean, lesen: String?, extra: (JSONObject) -> String? = { null }, gut: (JSONObject) -> String): Ergebnis {
+        val soll = listOf(
+            Ergebnispruefung.Soll("uhrzeit", if (a.gesetzt("uhrzeit")) Ergebnispruefung.uhrzeit(a.optString("uhrzeit")) else null, "Uhrzeit"),
+            Ergebnispruefung.Soll("name", a.optString("name").takeIf { a.gesetzt("name") }, "Name"),
+            // Ein neuer Wecker ist eingeschaltet, wenn nichts anderes verlangt ist.
+            Ergebnispruefung.Soll("aktiv", if (a.has("aktiv")) a.optBoolean("aktiv").toString() else if (neu) "true" else null, "Eingeschaltet"),
+        )
+        val nachlesen: (suspend () -> JSONObject?)? = lesen?.let { id -> suspend { rufe("lesen", JSONObject()).optJSONArray("wecker")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) }.firstOrNull { it.optString("id") == id } } } }
+        return Ergebnispruefung.pruefe(antwort, "wecker", soll, "wecker_lesen", nachlesen, extra = { w ->
+            extra(w) ?: if (w.optBoolean("aktiv") && !antwort.optBoolean("geplant", true)) "eingeschaltet, aber nicht im System geplant (klingelt womöglich nicht; in der Wecker-App nachsehen)" else null
+        }, gut = gut)
+    }
 
     private suspend fun mitWecker(a: JSONObject, dann: suspend (String) -> Ergebnis): Ergebnis {
         if (a.idGesetzt()) return dann(a.optString("id").trim())

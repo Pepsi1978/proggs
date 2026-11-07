@@ -53,8 +53,9 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> {
                         val erledigt = sauber.optBoolean("erledigt", true)
                         mitAufgabe(sauber, nurOffene = erledigt) { id ->
-                            val geaendert = rufe("aendern", JSONObject(sauber.toString()).put("id", id).apply { remove("suche"); remove("erledigt") })
-                                .fehlerOder { "Geändert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }
+                            val geaendert = pruefe(rufe("aendern", JSONObject(sauber.toString()).put("id", id).apply { remove("suche"); remove("erledigt") }), sauber, id) {
+                                "Geändert: " + satz(it) + mitgedacht(it)
+                            }
                             if (geaendert.fehler) return@mitAufgabe geaendert
                             val abgehakt = erledige(id, erledigt)
                             Ergebnis(geaendert.text + "\n" + abgehakt.text, abgehakt.fehler)
@@ -128,8 +129,10 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
                     letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
                     return@Werkzeug Ergebnis(antwort.optString("fehler") + " " + UNKLAR, fehler = true)
                 }
-                antwort.fehlerOder { "Gespeichert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }.also {
+                pruefe(antwort, a, null) { "Gespeichert: " + satz(it) + mitgedacht(it) }.also {
+                    // Angenommen, aber nicht bestätigt: wie beim Zeitlimit sperren, damit ein Wiederholungsversuch nicht doppelt anlegt.
                     if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                    else if (antwort.optString("fehler").isEmpty()) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
                 }
             }
         },
@@ -158,8 +161,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             mitAufgabe(a, nurOffene = true) { id ->
-                rufe("aendern", JSONObject(a.toString()).put("id", id).apply { remove("suche") })
-                    .fehlerOder { "Geändert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }
+                pruefe(rufe("aendern", JSONObject(a.toString()).put("id", id).apply { remove("suche") }), a, id) { "Geändert: " + satz(it) + mitgedacht(it) }
             }
         },
         Werkzeug(
@@ -190,18 +192,36 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
             loeschend = true,
         ) { a ->
             mitAufgabe(a, nurOffene = false) { id ->
-                rufe("loeschen", JSONObject().put("id", id)).fehlerOder { "Gelöscht: „${it.getJSONObject("geloescht").optString("titel")}“." }
+                Ergebnispruefung.pruefe(rufe("loeschen", JSONObject().put("id", id)), "geloescht", emptyList(), "aufgaben_lesen") { "Gelöscht: „${it.optString("titel")}“." }
             }
         },
     )
 
     /** Hakt eine Aufgabe ab oder öffnet sie wieder. */
-    private suspend fun erledige(id: Long, erledigt: Boolean): Ergebnis =
-        rufe("erledigen", JSONObject().put("id", id).put("erledigt", erledigt)).fehlerOder {
-            val titel = it.getJSONObject("aufgabe").optString("titel")
-            val folge = it.optJSONObject("naechste_wiederholung")?.let { n -> " Nächster Termin der Wiederholung: ${n.optString("tag_anzeige")}." }.orEmpty()
-            (if (erledigt) "Erledigt: „$titel“." else "Wieder offen: „$titel“.") + folge
+    private suspend fun erledige(id: Long, erledigt: Boolean): Ergebnis {
+        val antwort = rufe("erledigen", JSONObject().put("id", id).put("erledigt", erledigt))
+        return pruefe(antwort, JSONObject().put("erledigt", erledigt), id) {
+            val folge = antwort.optJSONObject("naechste_wiederholung")?.let { n -> " Nächster Termin der Wiederholung: ${n.optString("tag_anzeige")}." }.orEmpty()
+            (if (erledigt) "Erledigt: „${it.optString("titel")}“." else "Wieder offen: „${it.optString("titel")}“.") + folge
         }
+    }
+
+    /**
+     * Ergebnisprüfung ([Ergebnispruefung]): bestätigt nur, was die App mit der gemeldeten Aufgabe zurückgibt (Tag, Uhrzeit, Text,
+     * erledigt; die Priorität nicht, weil die App „später“ mit Tag selbst auf „mittel“ hebt). [id] = gezielt nachlesen bei unklarer Antwort; null = kein Nachlesen (neue Aufgabe, dort sperrt [letzteAnlage]).
+     */
+    private suspend fun pruefe(antwort: JSONObject, a: JSONObject, id: Long?, gut: (JSONObject) -> String): Ergebnis {
+        val soll = listOf(
+            Ergebnispruefung.Soll("datum", if (a.has("datum")) Ergebnispruefung.datum(a.optString("datum")) else null, "Tag"),
+            Ergebnispruefung.Soll("uhrzeit", if (a.has("uhrzeit")) Ergebnispruefung.uhrzeit(a.optString("uhrzeit")) else null, "Uhrzeit"),
+            Ergebnispruefung.Soll("text", a.optString("text").trim().takeIf { a.gesetzt("text") }, "Text"),
+            Ergebnispruefung.Soll("erledigt", if (a.has("erledigt")) a.optBoolean("erledigt").toString() else null, "Erledigt"),
+        )
+        val nachlesen: (suspend () -> JSONObject?)? = id?.let { n ->
+            suspend { rufe("lesen", JSONObject().put("bereich", "alle")).optJSONArray("aufgaben")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) }.firstOrNull { it.optLong("id") == n } } }
+        }
+        return Ergebnispruefung.pruefe(antwort, "aufgabe", soll, "aufgaben_lesen", nachlesen, gut = gut)
+    }
 
     /** Bestimmt die gemeinte Aufgabe über id oder Suchwort. Mehrere Treffer → Rückfrage statt Raten. id 0 zählt als nicht angegeben. */
     private suspend fun mitAufgabe(a: JSONObject, nurOffene: Boolean, dann: suspend (Long) -> Ergebnis): Ergebnis {
