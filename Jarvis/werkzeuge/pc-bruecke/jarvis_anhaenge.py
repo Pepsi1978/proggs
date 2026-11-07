@@ -34,6 +34,7 @@ ERWAEHNEN = {".pdf", ".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".
              ".ini", ".conf", ".cfg", ".sql", ".sh", ".ps1", ".cs", ".swift", ".gradle", ".properties", ".srt", ".vtt"}
 SHA = re.compile(r"^[0-9a-f]{64}$")
 ESC = "\x1b"
+TASTEN = {"\r": 0x0D, ESC: 0x1B}   # Zeichen mit eigenem Tastencode beim Tippen in die Windows-Konsole
 
 
 def sicherer_name(name: str, nummer: int) -> str:
@@ -285,7 +286,8 @@ def konsole_tippen(claude_pid: int, schritte: list[tuple[str, float]]) -> bool:
                     r.EventType = 1
                     r.Event.KeyEvent.bKeyDown = unten
                     r.Event.KeyEvent.wRepeatCount = 1
-                    r.Event.KeyEvent.wVirtualKeyCode = {"\r": 0x0D, "\x1b": 0x1B}.get(z, 0)
+                    # ESC nur allein als Taste; in Einfüge-Markern (ESC[200~) wie bisher als reines Zeichen.
+                    r.Event.KeyEvent.wVirtualKeyCode = TASTEN.get(z, 0) if z == "\r" or len(einheiten) == 1 else 0
                     r.Event.KeyEvent.UnicodeChar = z
             offen, zeiger = len(reihe), 0
             while offen > 0:

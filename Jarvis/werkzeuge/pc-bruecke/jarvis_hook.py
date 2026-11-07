@@ -14,10 +14,12 @@ post, puls, frage, stop und warte mit derselben Eingabe auf (Werkzeugnamen wie b
          Läuft async. Neue Zwischentexte der KI (aus dem Transkript) gehen sofort als eigene Meldung raus, dazu Advisor,
          Skills und Agenten; geänderte Dateien, Bau, Commit/Push und adb install werden gedrosselt:
          höchstens eine Meldung je DROSSEL_S, Fehler sofort. Lesen und Suchen meldet niemand (anderer Matcher).
-  frage  PreToolUse (AskUserQuestion): schickt Fragen und Optionen an Jarvis, wartet bis FRAGE_WARTEN_S auf Franks Antwort
-         und gibt sie an Claude zurück. Tippt Frank in Jarvis „In der Claude-App beantworten“, gibt der Hook frei, und der
+  frage  PreToolUse (AskUserQuestion): schickt Fragen und Optionen an Jarvis. Windows-Terminal (Vorgabe vom 07.11.2026): Der
+         Hook antwortet sofort mit „ask“ (Dialog am Rechner sofort, Frist im Fragetext), der abgekoppelte frage-warter holt
+         Franks Antwort aus Jarvis und tippt sie ein; nach FRAGE_WARTEN_S tippt er „selbst entscheiden“ (auch beim Review).
+         Sonst (Server, OpenCode, macOS) wie folgt: wartet bis FRAGE_WARTEN_S auf Franks Antwort und gibt sie an Claude zurück. Tippt Frank in Jarvis „In der Claude-App beantworten“, gibt der Hook frei, und der
          normale Dialog erscheint (auch per Remote Control). Kommt bis zum Ablauf keine Antwort oder ist Jarvis nicht
-         erreichbar, antwortet der Hook selbst (ohne_antwort: Review = Nein, sonst selbst entscheiden), denn ein offener
+         erreichbar, antwortet der Hook selbst (ohne_antwort: selbst entscheiden, auch über ein Review), denn ein offener
          Dialog ließe die Sitzung stehen (Franks Vorgabe vom 23.10.2026: nie). Solange der Hook wartet, zeigt die
          Claude-App „Running PreToolUse hooks 1 of 2“ und nimmt keine Antwort an: Claude Code öffnet seinen Dialog erst nach dem Hook.
          Jeder Ausgang geht als stand „frage_status“ an Jarvis (beantwortet, am_pc, erledigt), damit die Frage dort
@@ -752,7 +754,7 @@ def claude_pid() -> int:
 def frage_offen() -> bool:
     """Steht die Sitzung an einer Rückfrage? Dann ist die Eingabe ein Auswahldialog, und ein Enter wählte dort eine Option."""
     try:
-        return any(v.get("status") in ("am_pc", "jarvis") for v in (lies_zustand().get("fragen") or {}).values())
+        return any(v.get("status") in ("am_pc", "jarvis", "warter", "tippt") for v in (lies_zustand().get("fragen") or {}).values())
     except Exception:
         return True
 
@@ -1333,8 +1335,9 @@ def antwort_text(antwort) -> str:
     return str(antwort or "")[:2000]
 
 
-def merke_frage(tool_use_id: str, frage_id: str, status: str, ausgang: str = "", text: str = "") -> None:
-    """Welche frage_id zu welchem AskUserQuestion-Aufruf gehört und wo sie steht (jarvis, am_pc): post meldet dann den Ausgang."""
+def merke_frage(tool_use_id: str, frage_id: str, status: str, ausgang: str = "", text: str = "") -> bool:
+    """Welche frage_id zu welchem AskUserQuestion-Aufruf gehört und wo sie steht (jarvis, am_pc, warter = Dialog offen und
+    Frage-Warter wartet, tippt = er tippt gerade): post meldet dann den Ausgang. False, wenn die Sperre belegt war."""
     try:
         with Sperre():
             z = lies_zustand()
@@ -1342,15 +1345,17 @@ def merke_frage(tool_use_id: str, frage_id: str, status: str, ausgang: str = "",
             fragen[tool_use_id or frage_id] = {"frage_id": frage_id, "status": status, "ausgang": ausgang, "text": text}
             z["fragen"] = dict(list(fragen.items())[-20:])
             schreib_zustand(z)
+            return True
     except SperreBelegt as fehler:
         schreib(f"merke_frage: {fehler}")
+        return False
 
 
 def offene_am_pc(z: dict, tool_use_id: str | None = None) -> list[tuple[str, dict]]:
     """Fragen, die am Rechner offen sind; mit [tool_use_id] nur diese (auch eine, die noch in Jarvis wartete). Nimmt sie aus
-    dem Zustand (einmal melden). Ohne [tool_use_id] nie eine, auf die der Frage-Hook gerade noch wartet."""
+    dem Zustand (einmal melden). Ohne [tool_use_id] nie eine, auf die der Frage-Hook oder der Frage-Warter gerade noch wartet."""
     fragen = z.get("fragen") or {}
-    erlaubt = ("am_pc", "jarvis") if tool_use_id else ("am_pc",)
+    erlaubt = ("am_pc", "jarvis", "warter") if tool_use_id else ("am_pc",)
     treffer = [(k, v) for k, v in fragen.items() if v.get("status") in erlaubt and (tool_use_id is None or k == tool_use_id)]
     for k, _ in treffer:
         fragen.pop(k, None)
@@ -1360,7 +1365,7 @@ def offene_am_pc(z: dict, tool_use_id: str | None = None) -> list[tuple[str, dic
 def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
     """
     Antwort an Franks Stelle, wenn keine kam: Die Sitzung darf nie an einem offenen Dialog stehen bleiben (Vorgabe vom
-    23.10.2026). Eine Review-Frage gilt als „Nein“, jede andere bekommt die Anweisung, selbst zu entscheiden und weiterzuarbeiten.
+    23.10.2026). Jede Frage bekommt die Anweisung, selbst zu entscheiden und weiterzuarbeiten, die Review-Frage seit 07.11.2026 auch.
     Als updatedInput, damit es auch das OpenCode-Plugin übernimmt (das wertet nur answers aus).
     """
     antworten = {}
@@ -1394,7 +1399,7 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
 def weiter_ohne_antwort(grund: str) -> str:
     """Anweisung an die Sitzung, wenn eine freie Rückfrage am Zugende ohne Antwort blieb (Stop-Hook, decision block)."""
     return (f"{grund}: Frank hat auf deine Frage nicht geantwortet. Halte das fest und frag nicht erneut. Geht es um das Angebot "
-            "eines Code-Reviews, gilt Nein. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende "
+            "eines Code-Reviews, entscheide selbst, ob es sinnvoll ist (klein und risikoarm: nein). Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende "
             "den Zug mit einem Satz. Sonst überlege selbst die bestmögliche Lösung, baue sie ein, arbeite weiter und nenne die "
             "Entscheidung in der Abschlussmeldung.")
 
@@ -1402,7 +1407,8 @@ def weiter_ohne_antwort(grund: str) -> str:
 def frage_konsole() -> int:
     """PID des Claude-Prozesses, in dessen Konsole der Frage-Warter tippen kann (Windows, Claude Code im Terminal), sonst 0.
     Ohne Konsole (Server, OpenCode, macOS, tmux) wartet der Hook wie bisher selbst."""
-    if os.name != "nt" or FREMDE_CLI or os.environ.get("JARVIS_SERVER"):
+    # Nur die Terminal-CLI liest Tastenereignisse aus ihrer Konsole (nicht IDE, Desktop-App, SDK).
+    if os.name != "nt" or FREMDE_CLI or os.environ.get("JARVIS_SERVER") or os.environ.get("CLAUDE_CODE_ENTRYPOINT", "cli") != "cli":
         return 0
     pid = claude_pid()
     if not pid:
@@ -1438,31 +1444,50 @@ def starte_frage_warter(daten: dict) -> bool:
     return False
 
 
-def frage_noch_offen(tool_use_id: str, transkript: str, pid: int) -> bool:
-    """Steht der Dialog noch? Nein, sobald post ihn erledigt hat, das Transkript ein Ergebnis zu ihm hat oder Claude beendet ist."""
-    try:
-        eintrag = (lies_zustand().get("fragen") or {}).get(tool_use_id)
-    except Exception:
-        eintrag = {"status": "am_pc"}
-    if not eintrag or eintrag.get("status") != "am_pc":
-        return False
-    if tool_use_id and transkript:
+class DialogBlick:
+    """Steht der Dialog noch? Nein, sobald post ihn erledigt hat, das Transkript ein Ergebnis zu ihm hat (am Rechner beantwortet
+    oder mit ESC abgelehnt) oder Claude beendet ist. Liest vom Transkript nur, was seit dem Stellen der Frage dazukam."""
+
+    def __init__(self, schluessel: str, tool_use_id: str, transkript: str, pid: int, start: str):
+        self.schluessel, self.tool_use_id, self.transkript, self.pid, self.start = schluessel, tool_use_id, transkript, pid, start
+        self.marke = f'"tool_use_id":"{tool_use_id}"'.encode()
         try:
-            with open(transkript, "rb") as f:
-                f.seek(max(0, os.fstat(f.fileno()).st_size - 2_000_000))
-                if f'"tool_use_id":"{tool_use_id}"'.encode() in f.read():
-                    return False
+            self.ab = max(0, os.path.getsize(transkript) - 4096) if transkript else 0
         except OSError:
-            pass
-    try:
-        return pid in _windows_prozesse()
-    except Exception:
-        return True
+            self.ab = 0
+
+    def offen(self) -> bool:
+        try:
+            eintrag = (lies_zustand().get("fragen") or {}).get(self.schluessel)
+        except Exception:
+            eintrag = {"status": "warter"}
+        if not eintrag or eintrag.get("status") != "warter":
+            return False
+        if self.tool_use_id and self.transkript:
+            try:
+                with open(self.transkript, "rb") as f:
+                    f.seek(self.ab)
+                    neu = f.read()
+                if self.marke in neu:
+                    return False
+                self.ab += max(0, len(neu) - len(self.marke))
+            except OSError:
+                pass
+        return lebt(self.pid, self.start)
+
+
+def antwort_aus_jarvis(antwort: dict, fragen: list) -> dict:
+    """Franks Antworten aus Jarvis je Frage; nur Freitext (Sprache) gilt für jede Frage."""
+    antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items() if str(v).strip()}
+    zusatz = str(antwort.get("text", "")).strip()
+    if zusatz and not antworten:
+        antworten = {str(f.get("question", "")): zusatz for f in fragen if isinstance(f, dict)}
+    return antworten
 
 
 def frage_warter(pfad: str) -> int:
     """Abgekoppelt neben dem offenen Dialog: holt Franks Antwort aus Jarvis bis zur Frist und tippt sie in die Sitzung (ESC schließt
-    den Dialog, danach die Antwort als Eingabe). Nach Ablauf tippt er die Anweisung, selbst zu entscheiden (ohne_antwort)."""
+    den Dialog, danach die Antwort als eingefügter Text und Enter). Nach Ablauf tippt er die Anweisung, selbst zu entscheiden."""
     global LOKAL
     try:
         d = json.loads(Path(pfad).read_text(encoding="utf-8"))
@@ -1474,14 +1499,16 @@ def frage_warter(pfad: str) -> int:
     LOKAL = bool(d.get("lokal"))
     LOKAL_INFO.update(d.get("lokal_info") or {})
     frage_id, tool_use_id, pid = str(d["frage_id"]), str(d.get("tool_use_id") or ""), int(d["claude_pid"])
-    ein, fragen, transkript = d.get("ein") or {}, d.get("fragen") or [], str(d.get("transkript") or "")
+    schluessel = tool_use_id or frage_id
+    ein, fragen = d.get("ein") or {}, d.get("fragen") or []
+    blick = DialogBlick(schluessel, tool_use_id, str(d.get("transkript") or ""), pid, str(d.get("claude_start") or ""))
     # Die Frist zählt nach der lokalen Uhr: Auch ohne Relay schließt der Dialog nach fünf Minuten.
     ende = time.monotonic() + max(0.0, float(d["frist"]) - time.time())
     zuletzt_neu = time.monotonic()
     jarvis_zu = False
     antwort = None
     while time.monotonic() < ende:
-        if not frage_noch_offen(tool_use_id, transkript, pid):
+        if not blick.offen():
             schreib(f"Frage-Warter {frage_id}: am Rechner beantwortet oder Sitzung beendet")
             return 0
         if jarvis_zu:
@@ -1490,17 +1517,24 @@ def frage_warter(pfad: str) -> int:
         try:
             code, daten = rufe("/pc/antwort?frage_id=" + urllib.parse.quote(frage_id), zeitlimit=8)
         except Exception as fehler:
-            if not isinstance(fehler, (TimeoutError, socket.timeout)):
+            if not isinstance(fehler, (TimeoutError, socket.timeout)) and "timed out" not in str(fehler):
                 schreib(f"Frage-Warter: Antwort abholen: {fehler}")
                 time.sleep(3)
             continue
-        if code == 200 and not daten.get("freigeben"):
-            antwort = daten
-            break
-        if code == 200 or code == 410:
-            # „In der Claude-App beantworten“ oder in Jarvis ohne Antwort geschlossen: Der Dialog am Rechner bleibt bis zur Frist.
-            if code == 200:
-                frage_status(frage_id, "am_pc", grund="freigegeben")
+        if code == 200 and daten.get("freigeben"):
+            # „In der Claude-App beantworten“: Frank will am Rechner antworten, der Dialog bleibt ohne Frist (wie bisher).
+            schreib(f"Frage-Warter {frage_id}: in Jarvis an den Rechner übergeben")
+            merke_frage(schluessel, frage_id, "am_pc")
+            frage_status(frage_id, "am_pc", grund="freigegeben")
+            return 0
+        if code == 200:
+            if antwort_aus_jarvis(daten, fragen):
+                antwort = daten
+                break
+            time.sleep(3)
+            continue
+        if code == 410:
+            # In Jarvis ohne Antwort geschlossen: Der Dialog am Rechner bleibt bis zur Frist.
             jarvis_zu = True
             continue
         if code == 404 and time.monotonic() - zuletzt_neu >= 30:
@@ -1512,37 +1546,45 @@ def frage_warter(pfad: str) -> int:
                 schreib(f"Frage-Warter: erneut melden: {fehler}")
         if code != 204:
             time.sleep(3)
-    if not frage_noch_offen(tool_use_id, transkript, pid):
-        schreib(f"Frage-Warter {frage_id}: am Rechner beantwortet oder Sitzung beendet")
-        return 0
     minuten = max(1, round(FRAGE_WARTEN_S / 60))
     if antwort:
-        antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items()}
-        zusatz = str(antwort.get("text", "")).strip()
-        if zusatz and not antworten:
-            antworten = {str(f.get("question", "")): zusatz for f in fragen if isinstance(f, dict)}
+        antworten = antwort_aus_jarvis(antwort, fragen)
         text = "; ".join(antworten.values())
-        eingabe = ("Antwort von Frank über Jarvis (Handy) auf deine Rückfrage: "
+        jarvis_selbst = bool(re.search(r"\((automatisch von Jarvis|von Jarvis entschieden)", text))
+        eingabe = (("Entscheidung von Jarvis (automatisch, nicht von Frank) zu deiner Rückfrage: " if jarvis_selbst else
+                    "Antwort von Frank über Jarvis (Handy) auf deine Rückfrage: ")
                    + " | ".join(f"„{k}“ → {v}" for k, v in antworten.items()) + ". Arbeite damit weiter, ohne erneut zu fragen.")
     else:
+        jarvis_selbst = False
         grund = f"Frank hat in {minuten} Minuten weder am Rechner noch in Jarvis geantwortet"
         antworten = ohne_antwort(ein, fragen, grund)["hookSpecificOutput"]["updatedInput"]["answers"]
         text = "; ".join(antworten.values())
         eingabe = "Rückfrage ohne Antwort: " + " | ".join(f"„{k}“ → {v}" for k, v in antworten.items())
-    # Vor dem Tippen vermerken: post meldet die Frage dann nicht noch einmal als am Rechner beantwortet.
-    merke_frage(tool_use_id, frage_id, "beantwortet")
     import jarvis_anhaenge
-    # Einzeilig: Ein Zeilenumbruch schickte die Eingabe vorzeitig ab. Die Pause nach ESC trennt es von den folgenden Zeichen.
-    eingabe = " ".join(eingabe.split())
+    # Einzeilig und als Bracketed Paste: kein vorzeitiges Enter, „@“ oder „/“ öffnen keine Vorschläge. Die Pause nach ESC trennt
+    # es von den folgenden Zeichen, die vor dem Enter lässt Claude Code das Einfügen fertig verarbeiten.
+    eingabe = jarvis_anhaenge._sauber(" ".join(eingabe.split()))
+    # Direkt davor noch einmal prüfen und als „tippt“ vermerken: Ein ESC ohne Dialog bräche die laufende Arbeit ab, und
+    # ein Nachtrag-Warter tippt nicht dazwischen (frage_offen).
+    if not blick.offen() or not merke_frage(schluessel, frage_id, "tippt"):
+        schreib(f"Frage-Warter {frage_id}: Dialog nicht mehr offen oder Zustand gesperrt, nichts getippt")
+        return 0
     try:
-        ok = jarvis_anhaenge.konsole_tippen(pid, [("\x1b", 1.5), (eingabe, 0.8), ("\r", 0)])
+        ok = jarvis_anhaenge.konsole_tippen(pid, [("\x1b", 1.5), (f"\x1b[200~{eingabe}\x1b[201~", max(1.2, len(eingabe) / 400)), ("\r", 0)])
     except Exception as fehler:
         schreib(f"Frage-Warter: Tippen: {type(fehler).__name__}: {fehler}")
         ok = False
     schreib(f"Frage-Warter {frage_id}: {'Antwort aus Jarvis' if antwort else 'abgelaufen'}, in die Sitzung getippt: {ok}")
+    if not ok:
+        # Der Dialog steht weiter: In Jarvis als „am Rechner beantworten“ zeigen, nie als beantwortet.
+        merke_frage(schluessel, frage_id, "am_pc")
+        frage_status(frage_id, "am_pc", grund="tippen_fehlgeschlagen")
+        melde_still("laeuft", "⚠️ Die Antwort ließ sich nicht in die Sitzung tippen: Die Rückfrage wartet am Rechner.")
+        return 0
+    merke_frage(schluessel, frage_id, "beantwortet")
     if antwort:
         frage_status(frage_id, "beantwortet", antwort=text)
-        melde_still("laeuft", "💬 Antwort von Frank: " + text)
+        melde_still("laeuft", ("🤖 Entscheidung von Jarvis: " if jarvis_selbst else "💬 Antwort von Frank: ") + text)
     else:
         frage_status(frage_id, "erledigt", antwort=text, grund="abgelaufen")
         melde_still("laeuft", f"⏱️ Keine Antwort in {minuten} Minuten, die Sitzung entscheidet selbst und arbeitet weiter.")
@@ -1600,9 +1642,9 @@ def frage(eingabe: dict) -> None:
     # Kommt die Antwort in Jarvis, tippt er sie in die Sitzung; nach Ablauf tippt er die Anweisung, selbst zu entscheiden.
     # Antwortet Frank am Rechner, meldet post das an Jarvis, und die Frage verschwindet dort.
     pid = frage_konsole()
-    if pid:
-        merke_frage(tool_use_id, frage_id, "am_pc")
+    if pid and merke_frage(tool_use_id, frage_id, "warter"):
         if starte_frage_warter({"frage_id": frage_id, "tool_use_id": tool_use_id, "frist": daten["bis"], "claude_pid": pid,
+                                "claude_start": startzeit(pid) or "",
                                 "fragen": fragen, "ein": ein, "kurz": kurz, "melde_daten": daten, "auftrag": AUFTRAG, "lokal": LOKAL,
                                 "lokal_info": LOKAL_INFO, "transkript": str(eingabe.get("transcript_path") or "")}):
             schreib(f"Rückfrage am Rechner und in Jarvis offen bis {time.strftime('%H:%M:%S', time.localtime(daten['bis']))}, Frage-Warter läuft")
@@ -1633,7 +1675,7 @@ def frage(eingabe: dict) -> None:
         return
     if not antwort:
         # Abgelaufen: Früher öffnete jetzt der Dialog am Rechner und die Sitzung stand, bis jemand dort antwortete
-        # (Vorfälle 22./23.10.2026). Jetzt gilt: kein Review, sonst selbst entscheiden und weiterarbeiten.
+        # (Vorfälle 22./23.10.2026). Jetzt gilt: selbst entscheiden (auch über ein Review) und weiterarbeiten.
         schreib("Keine Antwort über Jarvis (abgelaufen): Sitzung entscheidet selbst und arbeitet weiter")
         ausgabe = ohne_antwort(ein, fragen, grund)
         text = "; ".join(ausgabe["hookSpecificOutput"]["updatedInput"]["answers"].values())
