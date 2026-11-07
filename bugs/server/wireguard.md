@@ -77,6 +77,18 @@ Datei nach `/etc/wireguard/wg0.conf`, dann `systemctl enable --now wg-quick@wg0`
 
 ---
 
+## 8. Windows: Dienst läuft, Tunnel tot (07.11.2026, live beobachtet)
+
+**Signal:** `Get-Service WireGuardTunnel$<name>` = Running, IP 10.8.0.x ist am Adapter, aber Ping auf 10.8.0.1 läuft ins Leere; am Server zeigt `wg show` für den Peer „latest handshake: 29 minutes ago“. Folge bei uns: Jarvis-Fernwartung sah nur den Hostinger-Server (Symbol orange), weil die Programmier-Brücke nicht über den Tunnel läuft und den PC trotzdem als „erreichbar“ meldet.
+
+**Fix:** `Restart-Service` (Adminrechte). Automatisch in `second-brain-server/windows/wg-drive-reconnect.ps1` (Aufgabe WG-Drive-Reconnect, erhöht, alle 5 Min):
+- `wg.exe show <tunnel> dump` statt zwei Einzelaufrufen: ein Schnappschuss, Server-Peer über AllowedIPs (10.8.0.1/32 bzw. 10.8.0.0/24) wählen.
+- Schwelle 300 s: Rekey alle 120 s plus Wiederholversuche, kurze Aussetzer heilt WireGuard selbst.
+- Bremsen gegen Endlos-Neustarts bei kaputtem Server (wg0 aus, Schlüssel neu, UDP 51820 zu, Host pingt aber noch): nicht in den ersten 5 Min nach Dienststart, höchstens 1× je 30 Min (Zeitstempel in `%LOCALAPPDATA%\wg-tunnel-neustart.txt`).
+- „Online“ = Ping ODER TCP 443 auf den Endpunkt-Host: ICMP ist nicht in jedem Netz erlaubt, sonst greift der Fix nie.
+- Nach dem Neustart bis 30 s auf den Handshake warten, sonst scheitert das Laufwerks-Mapping direkt danach am noch toten Tunnel.
+- Grenze: Ob UDP 51820 wirklich durchkommt, prüft Ping/TCP nicht; die 30-Min-Bremse begrenzt den Schaden. macOS hat diesen Wächter noch nicht.
+
 ## Quellen (Stand 2026-06-19)
 - wireguard.com/quickstart (Konfig-Grundlagen, NAT-Traversal/Keepalive)
 - wiki.archlinux.org/title/WireGuard (Keys, AllowedIPs, Routing, systemd, Forwarding nur für Full-Tunnel)

@@ -50,22 +50,61 @@ try {
         Log "WireGuard-Dienst war $($s.Status) -> Recovery gesetzt + gestartet"
     } else {
         # 2b) Dienst "Running" heisst NICHT, dass der Tunnel lebt (2026-11-07: Dienst lief, letzter Handshake
-        # 29 Min alt, 10.8.0.1 tot -> Jarvis sah den Windows-PC nicht, nur den Server). Mit Keepalive 25 s
-        # erneuert ein lebender Tunnel den Handshake etwa alle 2 Min. Ist er aelter als 180 s (oder nie),
-        # Dienst neu starten - aber nur, wenn der Endpunkt im Internet erreichbar ist (sonst offline, Neustart sinnlos).
+        # 32 Min alt, 10.8.0.1 tot -> Jarvis sah den Windows-PC nicht, nur den Server). Mit Keepalive 15-25 s
+        # erneuert ein lebender Tunnel den Handshake etwa alle 2 Min; kurze Aussetzer heilt WireGuard selbst.
+        # Darum erst ab 300 s ohne Handshake neu starten, nie in den ersten 5 Min nach Dienststart, hoechstens
+        # einmal je 30 Min (Bremse gegen Endlos-Neustarts, wenn der Server selbst kaputt ist), und nur wenn der
+        # Server-Host ueberhaupt erreichbar ist (Ping ODER TCP 443, ICMP ist nicht ueberall erlaubt).
         $wg = Join-Path $env:ProgramFiles 'WireGuard\wg.exe'
+        if (-not (Test-Path $wg)) { $wg = (Get-Command wg.exe -ErrorAction SilentlyContinue).Source }
         $tunnel = $svc -replace '^WireGuardTunnel\$', ''
-        if (Test-Path $wg) {
-            $hs = (& $wg show $tunnel latest-handshakes 2>$null | Select-Object -First 1) -split '\s+'
-            $alter = if ($hs.Count -ge 2 -and [long]$hs[1] -gt 0) { [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [long]$hs[1] } else { -1 }
-            if ($alter -lt 0 -or $alter -gt 180) {
-                $ep = ((& $wg show $tunnel endpoints 2>$null | Select-Object -First 1) -split '\s+')[1]
-                $epHost = if ($ep) { $ep -replace ':\d+$', '' -replace '^\[|\]$', '' } else { $null }
-                if ($epHost -and (Test-Connection -ComputerName $epHost -Count 2 -Quiet -ErrorAction SilentlyContinue)) {
-                    Restart-Service -Name $svc -Force -ErrorAction SilentlyContinue
-                    Log "Tunnel tot (letzter Handshake vor $alter s, Endpunkt $epHost erreichbar) -> $svc neu gestartet"
-                } else {
-                    Log "Tunnel ohne Handshake ($alter s), Endpunkt '$epHost' nicht erreichbar -> offline, kein Neustart"
+        $bremse = Join-Path $env:LOCALAPPDATA 'wg-tunnel-neustart.txt'
+        if (-not $wg) {
+            Log 'wg.exe nicht gefunden -> Tunnel-Lebenspruefung uebersprungen'
+        } else {
+            # dump: Zeile 1 = Interface, danach je Peer: key, psk, endpoint, allowed-ips, latest-handshake, rx, tx, keepalive.
+            $peers = @(& $wg show $tunnel dump 2>$null | Select-Object -Skip 1 | ForEach-Object { ,($_ -split "`t") } | Where-Object { $_.Count -ge 5 })
+            # Der Server-Peer ist der mit 10.8.0.1 bzw. dem ganzen Tunnelnetz in AllowedIPs; sonst der erste.
+            $peer = $peers | Where-Object { $_[3] -match '10\.8\.0\.(1/32|0/24)' } | Select-Object -First 1
+            if (-not $peer) { $peer = $peers | Select-Object -First 1 }
+            $hsZeit = 0L
+            if (-not $peer -or -not [long]::TryParse($peer[4], [ref]$hsZeit)) {
+                Log "wg show $tunnel dump lieferte nichts Auswertbares -> Tunnel-Lebenspruefung uebersprungen"
+            } else {
+                $alter = if ($hsZeit -gt 0) { [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $hsZeit } else { -1 }
+                $dienstPid = (Get-CimInstance Win32_Service -Filter "Name='$($svc -replace "'", "''")'").ProcessId
+                $dienstStart = (Get-Process -Id $dienstPid -ErrorAction SilentlyContinue).StartTime
+                $dienstFrisch = $dienstStart -and ((Get-Date) - $dienstStart).TotalSeconds -lt 300
+                $letzter = $null
+                if (Test-Path $bremse) { try { $letzter = [datetime]::Parse((Get-Content $bremse -Raw).Trim()) } catch {} }
+                $gebremst = $letzter -and ((Get-Date) - $letzter).TotalMinutes -lt 30
+                if (($alter -lt 0 -or $alter -gt 300) -and -not $dienstFrisch) {
+                    $epHost = if ($peer[2] -and $peer[2] -ne '(none)') { $peer[2] -replace ':\d+$', '' -replace '^\[|\]$', '' } else { $null }
+                    $online = $false
+                    if ($epHost) {
+                        $online = Test-Connection -ComputerName $epHost -Count 2 -Quiet -ErrorAction SilentlyContinue
+                        if (-not $online) {
+                            $c = New-Object Net.Sockets.TcpClient
+                            try { $online = $c.ConnectAsync($epHost, 443).Wait(3000) -and $c.Connected } catch {} finally { $c.Close() }
+                        }
+                    }
+                    $grund = if ($alter -lt 0) { 'noch nie' } else { "vor $alter s" }
+                    if (-not $online) {
+                        Log "Tunnel ohne Handshake ($grund), Server '$epHost' nicht erreichbar -> offline, kein Neustart"
+                    } elseif ($gebremst) {
+                        Log "Tunnel ohne Handshake ($grund), letzter Neustart erst $($letzter.ToString('HH:mm')) -> gebremst, kein Neustart"
+                    } else {
+                        (Get-Date).ToString('o') | Out-File -FilePath $bremse -Encoding ascii
+                        Restart-Service -Name $svc -Force -ErrorAction SilentlyContinue
+                        # Auf den ersten Handshake warten, sonst scheitert das Laufwerks-Mapping unten am toten Tunnel.
+                        $neu = 0L
+                        for ($i = 0; $i -lt 15 -and $neu -le 0; $i++) {
+                            Start-Sleep -Seconds 2
+                            $z = @(& $wg show $tunnel latest-handshakes 2>$null | ForEach-Object { ,($_ -split '\s+') } | Where-Object { $_[0] -eq $peer[0] })
+                            if ($z) { [void][long]::TryParse($z[0][1], [ref]$neu) }
+                        }
+                        Log ("Tunnel tot (letzter Handshake $grund, Server $epHost erreichbar) -> $svc neu gestartet, " + $(if ($neu -gt 0) { 'Handshake wieder da' } else { 'nach 30 s noch kein Handshake' }))
+                    }
                 }
             }
         }
