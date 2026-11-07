@@ -43,8 +43,8 @@ Lokale Sitzungen (am Rechner direkt gestartet, nicht über Jarvis): Die Claude-C
 Sitzung python jarvis_hook.py lokal <art> auf. In Jarvis-Sitzungen (JARVIS_AUFTRAG_ID gesetzt) und ohne interaktive CLI
 (claude -p, SDK) endet das sofort. Sonst bekommt die Sitzung eine feste Nummer aus ihrer session_id (lokale_nummer, gleich
 auch nach --resume) und meldet wie ein Jarvis-Auftrag, mit dem Feld „lokal“ (Name, Ordner, Rechner, Claude-App-Link).
-Abweichungen: Eine Auswahlfrage (frage) geht immer an Jarvis; berührt Frank am Rechner nach FRAGE_SCHONFRIST_S Tastatur
-oder Maus, und nach Ablauf, erscheint der normale Dialog am Rechner, nie eine Antwort an Franks Stelle. Stop läuft
+Abweichungen: Eine Auswahlfrage (frage) steht zugleich am Rechner und in Jarvis (siehe frage); nach Ablauf entscheidet
+die Sitzung selbst, auch lokal (Vorgabe vom 07.11.2026). Stop läuft
 async: Eine freie Rückfrage am Zugende wartet nicht, Franks Antwort in Jarvis kommt als Nachtrag über den Warter. prompt
 (UserPromptSubmit) zeigt in Jarvis, was am Rechner eingegeben wurde. Entfernt Frank die Sitzung in Jarvis, antwortet der
 Relay „entfernt“: Die Marke entfernt-<Nummer> lässt danach jeden Hook still enden; die Sitzung selbst läuft weiter.
@@ -1404,21 +1404,32 @@ def weiter_ohne_antwort(grund: str) -> str:
             "Entscheidung in der Abschlussmeldung.")
 
 
-def frage_konsole() -> int:
-    """PID des Claude-Prozesses, in dessen Konsole der Frage-Warter tippen kann (Windows, Claude Code im Terminal), sonst 0.
-    Ohne Konsole (Server, OpenCode, macOS, tmux) wartet der Hook wie bisher selbst."""
-    # Nur die Terminal-CLI liest Tastenereignisse aus ihrer Konsole (nicht IDE, Desktop-App, SDK).
-    if os.name != "nt" or FREMDE_CLI or os.environ.get("JARVIS_SERVER") or os.environ.get("CLAUDE_CODE_ENTRYPOINT", "cli") != "cli":
-        return 0
+def frage_ziel() -> dict:
+    """Wohin der Frage-Warter tippen kann: {"art": "konsole", "pid"} (Windows, Claude Code im Terminal) oder {"art": "tmux",
+    "bereich", "pid"} (macOS/Linux in tmux), sonst {}. Ohne Ziel (Server, OpenCode, Terminal.app ohne tmux: „do script“ kann
+    kein einzelnes ESC senden) wartet der Hook selbst."""
+    # Nur die Terminal-CLI liest Tastenereignisse (nicht IDE, Desktop-App, SDK).
+    if FREMDE_CLI or os.environ.get("JARVIS_SERVER") or os.environ.get("CLAUDE_CODE_ENTRYPOINT", "cli") != "cli":
+        return {}
     pid = claude_pid()
     if not pid:
-        return 0
+        return {}
     try:
         import jarvis_anhaenge
-        return pid if jarvis_anhaenge.konsole_tippen(pid, []) else 0
+        if os.name == "nt":
+            return {"art": "konsole", "pid": pid} if jarvis_anhaenge.konsole_tippen(pid, []) else {}
+        bereich = jarvis_anhaenge.tmux_bereich()
+        return {"art": "tmux", "bereich": bereich, "pid": pid} if bereich else {}
     except Exception as fehler:
-        schreib(f"Konsole für die Rückfrage: {type(fehler).__name__}: {fehler}")
-        return 0
+        schreib(f"Ziel für die Rückfrage: {type(fehler).__name__}: {fehler}")
+        return {}
+
+
+def tippe_ins_ziel(ziel: dict, schritte: list[tuple[str, float]]) -> bool:
+    import jarvis_anhaenge
+    if ziel.get("art") == "tmux":
+        return jarvis_anhaenge.tmux_tippen(str(ziel.get("bereich", "")), schritte)
+    return jarvis_anhaenge.konsole_tippen(int(ziel.get("pid") or 0), schritte)
 
 
 def starte_frage_warter(daten: dict) -> bool:
@@ -1432,6 +1443,15 @@ def starte_frage_warter(daten: dict) -> bool:
         schreib(f"Frage-Warter: {fehler}")
         return False
     befehl = [sys.executable, str(Path(__file__).resolve()), "frage-warter", str(datei)]
+    if os.name != "nt":
+        try:
+            subprocess.Popen(befehl, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             close_fds=True, start_new_session=True, cwd=str(ORDNER))
+            return True
+        except OSError as fehler:
+            schreib(f"Frage-Warter starten: {fehler}")
+            datei.unlink(missing_ok=True)
+            return False
     flags = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     for f in (flags | 0x01000000, flags):   # zuerst mit CREATE_BREAKAWAY_FROM_JOB, falls der Job das erlaubt
         try:
@@ -1570,7 +1590,7 @@ def frage_warter(pfad: str) -> int:
         schreib(f"Frage-Warter {frage_id}: Dialog nicht mehr offen oder Zustand gesperrt, nichts getippt")
         return 0
     try:
-        ok = jarvis_anhaenge.konsole_tippen(pid, [("\x1b", 1.5), (f"\x1b[200~{eingabe}\x1b[201~", max(1.2, len(eingabe) / 400)), ("\r", 0)])
+        ok = tippe_ins_ziel(d.get("ziel") or {"art": "konsole", "pid": pid}, [("\x1b", 1.5), (f"\x1b[200~{eingabe}\x1b[201~", max(1.2, len(eingabe) / 400)), ("\r", 0)])
     except Exception as fehler:
         schreib(f"Frage-Warter: Tippen: {type(fehler).__name__}: {fehler}")
         ok = False
@@ -1619,15 +1639,7 @@ def frage(eingabe: dict) -> None:
     daten = {"frage_id": frage_id, "fragen": fragen, "bis": int(time.time() + FRAGE_WARTEN_S), "tool_use_id": tool_use_id}
     # Franks Vorgabe vom 24.10.2026: Auch eine am Rechner gestartete Sitzung schickt ihre Rückfrage immer als Ja/Nein-Fenster an
     # Jarvis, wie ein Jarvis-Auftrag (früher nur eine stille Zeile „Rückfrage am PC“, sobald er in den letzten fünf Minuten am
-    # Rechner etwas getippt hatte). Der Dialog am Rechner kommt, sobald er dort nach einer kurzen Schonfrist Tastatur oder Maus
-    # berührt, nach Ablauf der Frist oder mit „In der Claude-App beantworten“.
-    gestellt = time.monotonic()
-
-    def am_rechner() -> bool:
-        # Die Schonfrist fängt Eingaben ab, die beim Erscheinen der Frage noch liefen (Diktat, Tippen in einem anderen Fenster).
-        frei = time.monotonic() - gestellt - FRAGE_SCHONFRIST_S
-        return frei > 0 and pc_ruhe_s() < min(10, frei)
-
+    # Rechner etwas getippt hatte).
     if not melde_sicher("frage", "❓ " + kurz, daten) or (LOKAL and ist_entfernt()):
         if LOKAL:
             # Eine am Rechner gestartete Sitzung entscheidet nie an Franks Stelle: Der Dialog erscheint dort.
@@ -1641,10 +1653,11 @@ def frage(eingabe: dict) -> None:
     # lang. Darum wartet der Hook nicht mehr (Claude Code öffnet den Dialog erst nach ihm), sondern ein abgekoppelter Frage-Warter:
     # Kommt die Antwort in Jarvis, tippt er sie in die Sitzung; nach Ablauf tippt er die Anweisung, selbst zu entscheiden.
     # Antwortet Frank am Rechner, meldet post das an Jarvis, und die Frage verschwindet dort.
-    pid = frage_konsole()
+    ziel = frage_ziel()
+    pid = int(ziel.get("pid") or 0)
     if pid and merke_frage(tool_use_id, frage_id, "warter"):
         if starte_frage_warter({"frage_id": frage_id, "tool_use_id": tool_use_id, "frist": daten["bis"], "claude_pid": pid,
-                                "claude_start": startzeit(pid) or "",
+                                "claude_start": startzeit(pid) or "", "ziel": ziel,
                                 "fragen": fragen, "ein": ein, "kurz": kurz, "melde_daten": daten, "auftrag": AUFTRAG, "lokal": LOKAL,
                                 "lokal_info": LOKAL_INFO, "transkript": str(eingabe.get("transcript_path") or "")}):
             schreib(f"Rückfrage am Rechner und in Jarvis offen bis {time.strftime('%H:%M:%S', time.localtime(daten['bis']))}, Frage-Warter läuft")
@@ -1657,14 +1670,17 @@ def frage(eingabe: dict) -> None:
                                                                 "updatedInput": {**ein, "questions": neu}}}))
             return
     merke_frage(tool_use_id, frage_id, "jarvis")
-    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten), am_pc=am_rechner if LOKAL else None)
-    if antwort and antwort.get("geschlossen"):
+    # Ohne Ziel zum Tippen wartet der Hook selbst. Seit 07.11.2026 schließt eine Eingabe am Rechner die Frage in Jarvis nicht mehr
+    # vorzeitig (sie bleibt die vollen fünf Minuten), und nach Ablauf entscheidet auch eine lokale Sitzung selbst.
+    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten), am_pc=(lambda: False) if LOKAL else None)
+    geschlossen = bool(antwort and antwort.get("geschlossen"))
+    if geschlossen:
         antwort = None
         grund = "Die Rückfrage wurde in Jarvis ohne Antwort geschlossen"
     else:
         grund = f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet"
-    if LOKAL and not antwort:
-        # Lokal nie selbst entscheiden: abgelaufen oder in Jarvis geschlossen, dann steht der Dialog am Rechner.
+    if LOKAL and geschlossen:
+        # In Jarvis geschlossen: Frank antwortet lieber am Rechner, dort steht dann der Dialog.
         antwort = {"freigeben": True, "abgelaufen": True}
     if antwort and antwort.get("freigeben"):
         # Frank hat in Jarvis „In der Claude-App beantworten“ getippt (oder sitzt wieder am Rechner): der normale Dialog erscheint.

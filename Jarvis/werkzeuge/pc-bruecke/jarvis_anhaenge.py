@@ -161,6 +161,45 @@ def _warte_nach(bilder: int) -> None:
     time.sleep(_pause_nach(bilder))
 
 
+def tmux_bereich() -> str:
+    """Der tmux-Bereich dieser Sitzung, wenn Claude Code darin im Vordergrund läuft (macOS/Linux mit tmux), sonst leer."""
+    bereich, programm = os.environ.get("TMUX_PANE", ""), shutil.which("tmux")
+    if not bereich or not programm:
+        return ""
+    try:
+        tty = subprocess.run([programm, "display-message", "-p", "-t", bereich, "#{pane_tty}"], check=True, capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+        return bereich if tty and _claude_vorn(tty) else ""
+    except Exception:
+        return ""
+
+
+def tmux_tippen(bereich: str, schritte: list[tuple[str, float]]) -> bool:
+    """Wie konsole_tippen, nur für tmux: ESC und Enter als Tasten, ein Text in ESC[200~ … ESC[201~ als Einfügen (paste-buffer -p),
+    alles andere wörtlich. False, wenn Claude Code dort nicht mehr im Vordergrund läuft."""
+    programm = shutil.which("tmux")
+    if not programm or tmux_bereich() != bereich:
+        return False
+
+    def t(*a) -> None:
+        subprocess.run([programm, *a], check=True, capture_output=True, text=True, timeout=10)
+
+    puffer = f"jarvis-{os.getpid()}"
+    for text, pause in schritte:
+        if text == ESC:
+            t("send-keys", "-t", bereich, "Escape")
+        elif text == "\r":
+            t("send-keys", "-t", bereich, "Enter")
+        elif text.startswith(f"{ESC}[200~") and text.endswith(f"{ESC}[201~"):
+            t("set-buffer", "-b", puffer, "--", text[6:-6])
+            t("paste-buffer", "-p", "-d", "-b", puffer, "-t", bereich)
+        elif text:
+            t("send-keys", "-t", bereich, "-l", text)
+        if pause:
+            time.sleep(pause)
+    return True
+
+
 def _tmux(vorspann: str, pfade: list[Path]) -> bool:
     bereich = os.environ.get("TMUX_PANE", "")
     programm = shutil.which("tmux")
