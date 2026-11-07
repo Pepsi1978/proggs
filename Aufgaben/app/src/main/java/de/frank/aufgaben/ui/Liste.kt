@@ -261,8 +261,8 @@ fun ListeBildschirm(vm: AppViewModel) {
                 aktionen = { KalenderKnopf(vm, f.primaer); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
-                b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand, rechts = true) }
-                b.heuteErledigt.forEach { a -> Karte(vm, a, heute, zustand, rechts = true) }
+                b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
+                b.heuteErledigt.forEach { a -> Karte(vm, a, heute, zustand) }
                 Zeitleiste(
                     heute, b.heuteTermine, true, zustand, leisteVon, leisteBis, leisteAuto, leisteLuecken, heuteGanz, { heuteGanz = it },
                     { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) },
@@ -276,7 +276,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 aktionen = { KalenderKnopf(vm, f.sekundaer); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
-                b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand, rechts = true) }
+                b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
                 Zeitleiste(
                     heute + 1, b.morgenTermine, false, zustand, leisteVon, leisteBis, leisteAuto, leisteLuecken, morgenGanz, { morgenGanz = it },
                     { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) },
@@ -373,12 +373,12 @@ fun ListeBildschirm(vm: AppViewModel) {
 }
 
 @Composable
-private fun Karte(vm: AppViewModel, a: Aufgabe, heute: Long, zustand: ZiehZustand, zeigeDatum: Boolean = false, rechts: Boolean = false) {
+private fun Karte(vm: AppViewModel, a: Aufgabe, heute: Long, zustand: ZiehZustand, zeigeDatum: Boolean = false) {
     val hervor = vm.hervorgehoben == a.id
     LaunchedEffect(hervor) { if (hervor) { delay(2200); vm.hervorgehoben = null } }
     androidx.compose.runtime.key(a.id) {
         Box(Modifier.einblenden()) {
-            AufgabeKarte(a, heute, zustand, zeigeDatum = zeigeDatum, hervorheben = hervor, rechts = rechts, onTipp = { vm.oeffne(a.id) }, onErledigt = { vm.erledigen(a, !a.erledigt) })
+            AufgabeKarte(a, heute, zustand, zeigeDatum = zeigeDatum, hervorheben = hervor, onTipp = { vm.oeffne(a.id) }, onErledigt = { vm.erledigen(a, !a.erledigt) })
         }
     }
 }
