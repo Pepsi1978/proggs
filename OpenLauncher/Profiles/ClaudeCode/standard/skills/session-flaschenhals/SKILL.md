@@ -20,6 +20,8 @@ Budget: Ziel unter 3 min und unter 15k Tokens. Nichts Neues gefunden → nach Sc
 python -X utf8 "<skills>/session-flaschenhals/analyse.py" <sitzungs-id>     # diese Sitzung
 python -X utf8 "<skills>/session-flaschenhals/analyse.py" --letzte=15       # Vergleich + Wirkung
 ```
+Mac und Hostinger-Server: `python3` statt `python`. Ablauf überall gleich; das Skript findet den
+Profilordner selbst (`CLAUDE_CONFIG_DIR`, Server `~/.openlauncher/claude/minimal`).
 Sitzungs-ID = die UUID im Scratchpad-Pfad. Das Skript liest nur, braucht ~1 s und gibt < 1k Tokens aus.
 Andere CLIs (Codex, OpenCode) ohne eigenen Claude-Verlauf: nur den Vergleich laufen lassen und die
 eigene Sitzung aus dem Gedächtnis nach denselben Kriterien einordnen.
@@ -56,7 +58,8 @@ nur als Vorschlag berichtet.
 
 Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzeit per Befehl), `beleg`
 (Zahlen), `ort`, `fehler_regex`/`aufruf_regex` (+ `werkzeug`, `min_zeilen`) für die Wirkungsprüfung,
-`pruefung`, `ruecknahme`, `kosten`. Ohne prüfbare Regex keine Maßnahme.
+`pruefung`, `ruecknahme`, `kosten`, `plattform` (nur wo die Ursache auftritt: `windows`/`mac`/`linux`;
+weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur seine eigenen Verläufe.
 
 ## 5. Funktionserhalt und Abschluss
 
@@ -66,6 +69,7 @@ Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzei
   **`git commit` ohne Pfadangabe** — mit Pfaden nimmt git die ganze Arbeitskopie der Datei mit.
   Vorher `git diff --cached --name-only` prüfen. Nachricht: `session-flaschenhals: <maßnahme>`.
   Kein Versions-Bump (Skills/Memory haben keine Version). `git pull --rebase`, dann push.
+  Nur Versioniertes committen: Das Windows-Gedächtnis liegt im Repo, Mac- und Server-Gedächtnis nur lokal.
 
 ## 6. Bericht (höchstens 8 Zeilen)
 

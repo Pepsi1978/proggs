@@ -24,10 +24,22 @@ def _konfig():
     """Aktiver Claude-Code-Profilordner; in Codex/OpenCode fehlt die Variable -> OpenLauncher-Profil."""
     home = os.path.expanduser("~")
     kand = [os.environ.get("CLAUDE_CONFIG_DIR", ""),
-            os.path.join(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "minimal"),
-            os.path.join(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCodeMac", "minimal"),
+            os.path.join(home, ".openlauncher", "claude", "minimal"),  # Hostinger-Server
+            os.path.join(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "minimal"),  # Windows
+            os.path.join(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCodeMac", "minimal"),  # Mac
             os.path.join(home, ".claude")]
-    return next((k for k in kand if k and os.path.isdir(os.path.join(k, "projects"))), kand[-1])
+
+    def hat_verlaeufe(k):
+        p = os.path.join(k, "projects")
+        try:
+            return any(f.endswith(".jsonl") for d in os.listdir(p) if os.path.isdir(os.path.join(p, d))
+                       for f in os.listdir(os.path.join(p, d)))
+        except OSError:
+            return False
+    return next((k for k in kand if k and hat_verlaeufe(k)), kand[-1])
+
+
+PLATTFORM = "windows" if sys.platform.startswith("win") else ("mac" if sys.platform == "darwin" else "linux")
 
 
 KONFIG = _konfig()
@@ -48,7 +60,9 @@ def alle_verlaeufe():
 def massnahmen():
     try:
         with open(os.path.join(HIER, "massnahmen.json"), encoding="utf-8") as f:
-            return json.load(f).get("massnahmen", [])
+            liste = json.load(f).get("massnahmen", [])
+        # Massnahmen gelten je Rechner: ohne "plattform" ueberall, sonst nur dort (windows/mac/linux)
+        return [m for m in liste if PLATTFORM in m.get("plattform", [PLATTFORM])]
     except Exception as e:  # kaputte oder fehlende Liste darf die Analyse nicht stoppen
         print(f"(Hinweis: massnahmen.json nicht lesbar: {e})", file=sys.stderr)
         return []

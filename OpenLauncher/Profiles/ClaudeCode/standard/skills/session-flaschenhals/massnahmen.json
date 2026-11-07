@@ -1,11 +1,12 @@
 {
-  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. status: aktiv | wirkt | wirkungslos | zurueckgenommen.",
+  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. plattform (windows/mac/linux, fehlt = alle): nur dort wird gemessen und gehandelt. status: aktiv | wirkt | wirkungslos | zurueckgenommen.",
   "massnahmen": [
     {
       "id": "M1",
       "titel": "Lange Skripte per Write statt als Bash-Heredoc",
       "datum": "2026-11-07T14:31",
       "status": "aktiv",
+      "plattform": ["windows"],
       "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts.",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/MEMORY.md (eine Zeile)",
