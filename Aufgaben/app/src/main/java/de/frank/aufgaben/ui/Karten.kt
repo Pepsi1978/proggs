@@ -4,6 +4,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -207,10 +212,17 @@ fun Sektion(
     /** Aus während der Suche: Ein leeres Suchergebnis soll die eigene Auf-/Zuklapp-Wahl nicht verwerfen. */
     automatik: Boolean = true,
     verzoegerung: Int = 0,
+    /** Sattere Farbe für Kopfband, Rahmen und Leiste (Prioritätsbereiche). */
+    kraeftig: Boolean = false,
+    /** Kopfband mit Streifenmuster pulsiert sanft (Bereich Heute). */
+    puls: Boolean = false,
     aktionen: @Composable RowScope.() -> Unit = {},
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
+    val pulsWert = if (puls) rememberInfiniteTransition(label = "heutePuls").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulsWert",
+    ) else null
     // 0 = automatisch (beim Start sind alle Bereiche offen, auch leere, damit man überall hineinziehen kann;
     // während der Suche nur die mit Treffern), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
     var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
@@ -249,14 +261,14 @@ fun Sektion(
             .graphicsLayer { scaleX = hub; scaleY = hub }
             .ablageZiel(zustand, zielSchluessel, ziel)
             // Farbiger Rahmen in der Bereichsfarbe grenzt die Bereiche klar voneinander ab.
-            .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe, randFarbe = farbe.copy(alpha = if (f.dunkel) 0.55f else 0.45f))
+            .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe, randFarbe = farbe.copy(alpha = if (kraeftig) 0.9f else if (f.dunkel) 0.55f else 0.45f))
             .then(if (schwebt) Modifier.glas(f, erhoeht = 0f, fuellung = rand.copy(alpha = 0.12f)) else Modifier)
             // Beim Ziehen ohne Größenanimation: ZiehZustand gleicht den Spannenwechsel der Zeitleiste im selben Frame per
             // Scroll aus; eine nachfedernde Höhe ließe den Inhalt erst springen und dann zurückdriften.
             .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().kopfBand(f, farbe) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, pulsWert?.let { w -> { w.value } }) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {
@@ -299,17 +311,19 @@ fun Sektion(
  * Aufgeklappt ([offen] = 1) sind nur die oberen Ecken rund und eine farbige Linie trennt den Kopf vom Inhalt.
  * Pfade und Verläufe liegen im Zeichen-Cache und werden nur bei neuer Größe oder während des Klappens neu gebaut.
  */
-private fun Modifier.kopfBand(f: Farben, farbe: Color, offen: () -> Float): Modifier = drawWithCache {
+private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, puls: (() -> Float)?, offen: () -> Float): Modifier = drawWithCache {
     val anteil = offen()
     val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
     val unten = CornerRadius(r * (1f - anteil))
     val form = Path().apply {
         addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r), CornerRadius(r), unten, unten))
     }
+    // Kräftig (Prioritäten): deutlich sattere Fläche und Streifen, damit Rot, Gelb und Grün klar unterscheidbar sind.
     val band = Brush.horizontalGradient(
-        listOf(farbe.copy(alpha = if (f.dunkel) 0.46f else 0.34f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)),
+        if (kraeftig) listOf(farbe.copy(alpha = if (f.dunkel) 0.62f else 0.55f), farbe.copy(alpha = if (f.dunkel) 0.36f else 0.30f))
+        else listOf(farbe.copy(alpha = if (f.dunkel) 0.46f else 0.34f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)),
     )
-    val streifenFarbe = farbe.copy(alpha = if (f.dunkel) 0.16f else 0.13f)
+    val streifenFarbe = farbe.copy(alpha = if (kraeftig || puls != null) (if (f.dunkel) 0.34f else 0.30f) else if (f.dunkel) 0.16f else 0.13f)
     val abstand = 16.dp.toPx()
     val breite = 5.dp.toPx()
     val h = size.height
@@ -323,8 +337,10 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, offen: () -> Float): Modi
     val linie = farbe.copy(alpha = 0.7f * anteil)
     val linieDicke = 2.dp.toPx()
     onDrawBehind {
-        drawPath(form, band)
-        clipPath(form) { drawPath(streifen, streifenFarbe) }
+        // Puls (Heute): Fläche und Streifenmuster atmen gemeinsam; gelesen nur hier, also ohne Neuaufbau der Pfade.
+        val p = puls?.invoke()
+        drawPath(form, band, alpha = if (p == null) 1f else 0.6f + 0.4f * p)
+        clipPath(form) { drawPath(streifen, streifenFarbe, alpha = if (p == null) 1f else 0.25f + 0.75f * p) }
         if (anteil > 0f) drawLine(linie, Offset(0f, h), Offset(size.width, h), linieDicke)
     }
 }

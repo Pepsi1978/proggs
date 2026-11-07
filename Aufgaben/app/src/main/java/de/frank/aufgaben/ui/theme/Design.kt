@@ -64,11 +64,11 @@ data class Farben(
     val erfolg: Color,
     val radius: Dp,
 ) {
-    /** Prioritäten als Abstufungen der Designfarbe statt als Regenbogen. */
+    /** Prioritäten als klare Ampel: Hoch rot, Mittel gelb, Gering grün; Später bleibt neutral. */
     fun prio(p: Prioritaet): Color = when (p) {
-        Prioritaet.HOCH -> primaer
-        Prioritaet.MITTEL -> androidx.compose.ui.graphics.lerp(primaer, textLeise, 0.38f)
-        Prioritaet.GERING -> androidx.compose.ui.graphics.lerp(primaer, textSchwach, 0.7f)
+        Prioritaet.HOCH -> if (dunkel) Color(0xFFFF5449) else Color(0xFFE02B20)
+        Prioritaet.MITTEL -> if (dunkel) Color(0xFFFFD233) else Color(0xFFE8B000)
+        Prioritaet.GERING -> if (dunkel) Color(0xFF4FD866) else Color(0xFF239B3C)
         Prioritaet.SPAETER -> textSchwach
     }
 }

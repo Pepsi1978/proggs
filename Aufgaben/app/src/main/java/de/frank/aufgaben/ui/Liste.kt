@@ -117,7 +117,9 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String) {
     val nachZiel: List<List<Aufgabe>> = gefiltert.filter { !it.erledigt && it.zielId != null }
         .sortedBy { it.erstellt }.groupBy { it.zielId }.values.toList()
     val demnaechst = gefiltert.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }.sortedWith(compareBy({ it.tag }, { it.minuten ?: -1 }))
-    val erledigt = gefiltert.filter { it.erledigt && it.tag != heute }.sortedByDescending { it.erledigtAm ?: 0 }.take(40)
+    // Nur die letzten 30 Tage; ältere löscht das Aufräumen beim Start und um Mitternacht endgültig.
+    private val erledigtGrenze = System.currentTimeMillis() - de.frank.aufgaben.data.ERLEDIGT_TAGE * 24L * 60 * 60 * 1000
+    val erledigt = gefiltert.filter { it.erledigt && it.tag != heute && (it.erledigtAm ?: Long.MAX_VALUE) >= erledigtGrenze }.sortedByDescending { it.erledigtAm ?: 0 }
     val heuteGesamt = alle.map { it.aufHeute(heute) }.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
     val heuteFertig = alle.count { it.tag == heute && it.erledigt }
 
@@ -254,7 +256,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Heute ----
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
-                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40,
+                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, puls = true,
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
                 leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
@@ -295,6 +297,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 Sektion(
                     p.name, p.anzeige, info[p]!!.first, farbe, liste.size, zustand, Ziel.Prio(p),
                     untertitel = info[p]!!.second, verzoegerung = 120 + i * 40, leer = liste.isEmpty(), automatik = suche.isBlank(),
+                    kraeftig = p != Prioritaet.SPAETER,
                     aktionen = { KalenderKnopf(vm, farbe); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")

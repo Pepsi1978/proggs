@@ -139,6 +139,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             while (true) {
+                // Beim Start und nach jedem Tageswechsel: erledigte Aufgaben älter als 30 Tage endgültig löschen.
+                runCatching { repo.alteErledigteAufraeumen() }
                 val bisMitternacht = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - System.currentTimeMillis()
                 delay(bisMitternacht.coerceIn(1_000, 60 * 60_000L) + 500)
                 tagPruefen()

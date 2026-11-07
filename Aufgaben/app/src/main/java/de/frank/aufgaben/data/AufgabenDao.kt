@@ -46,6 +46,10 @@ interface AufgabenDao {
 
     @Delete
     suspend fun loesche(aufgabe: Aufgabe)
+
+    /** Erledigte Aufgaben, die vor [grenze] abgehakt wurden; offene bleiben immer. */
+    @Query("SELECT * FROM aufgaben WHERE erledigt = 1 AND erledigtAm IS NOT NULL AND erledigtAm < :grenze")
+    suspend fun erledigtVor(grenze: Long): List<Aufgabe>
 }
 
 @Database(

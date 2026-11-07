@@ -63,7 +63,6 @@ fun rememberSzenenZeit(): State<Long> {
 fun Hintergrund(modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val zeit = rememberSzenenZeit()
-    val sterne = remember { List(70) { Triple(Math.random().toFloat(), Math.random().toFloat(), Math.random().toFloat()) } }
     Canvas(modifier) {
         val t = zeit.value / 1000f
         drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
@@ -75,20 +74,6 @@ fun Hintergrund(modifier: Modifier = Modifier) {
         wolke(f.blob1, w * (0.2f + 0.12f * sin(t * 0.13f)), h * (0.12f + 0.06f * cos(t * 0.11f)), w * 0.75f)
         wolke(f.blob2, w * (0.9f + 0.1f * cos(t * 0.09f)), h * (0.42f + 0.08f * sin(t * 0.07f)), w * 0.7f)
         wolke(f.blob3, w * (0.25f + 0.15f * sin(t * 0.06f + 1f)), h * (0.85f + 0.05f * cos(t * 0.1f)), w * 0.8f)
-        when (f.design) {
-            Design.KOSMOS, Design.AURORA -> if (f.dunkel || f.design == Design.KOSMOS) sterne.forEachIndexed { i, (x, y, s) ->
-                val funkeln = 0.35f + 0.65f * ((sin(t * (0.6f + s) + i) + 1f) / 2f)
-                drawCircle(Color.White.copy(alpha = (if (f.dunkel) 0.8f else 0.5f) * funkeln * s), 0.6f + s * 1.8f, Offset(x * w, y * h))
-            }
-            Design.GARTEN -> sterne.take(26).forEachIndexed { i, (x, y, s) ->
-                val yy = ((y * h - t * (8f + s * 14f)) % h + h) % h
-                val xx = x * w + sin(t * 0.5f + i) * 14f
-                drawCircle(f.primaer.copy(alpha = 0.18f), 2f + s * 3f, Offset(xx, yy))
-            }
-            Design.ORANGE -> sterne.take(18).forEachIndexed { i, (x, y, s) ->
-                val yy = ((y * h - t * (5f + s * 8f)) % h + h) % h
-                drawCircle(Brush.radialGradient(listOf(f.primaer.copy(alpha = if (f.dunkel) 0.16f else 0.12f), Color.Transparent), Offset(x * w, yy), 18f + s * 30f), 18f + s * 30f, Offset(x * w, yy))
-            }
-        }
+        // Keine Punkte, Sterne oder Blasen mehr: Sie lenkten von den Bereichen ab.
     }
 }

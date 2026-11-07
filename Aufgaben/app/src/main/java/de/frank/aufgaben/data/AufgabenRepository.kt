@@ -83,6 +83,15 @@ class AufgabenRepository private constructor(context: Context) {
         return folge
     }
 
+    /** Löscht erledigte Aufgaben endgültig, die vor mehr als 30 Tagen abgehakt wurden. Offene bleiben unberührt. */
+    suspend fun alteErledigteAufraeumen() {
+        val grenze = System.currentTimeMillis() - ERLEDIGT_TAGE * 24L * 60 * 60 * 1000
+        val alt = dao.erledigtVor(grenze)
+        if (alt.isEmpty()) return
+        alt.forEach { dao.loesche(it) }
+        geaendert()
+    }
+
     /** Stellt eine gelöschte Aufgabe mit derselben ID wieder her (Rückgängig). */
     suspend fun wiederherstellen(aufgabe: Aufgabe) {
         dao.neu(aufgabe)
@@ -108,3 +117,6 @@ class AufgabenRepository private constructor(context: Context) {
         }
     }
 }
+
+/** So viele Tage bleiben erledigte Aufgaben sichtbar; danach werden sie endgültig gelöscht. */
+const val ERLEDIGT_TAGE = 30
