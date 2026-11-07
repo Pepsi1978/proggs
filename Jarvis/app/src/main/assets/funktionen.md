@@ -73,7 +73,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Ablage-Explorer der Mac-App: technische Werkzeuge `ablage_struktur` und `ablage_datei`, in keiner Werkzeugliste.
 
 - Merkdateien, bei jeder Antwort vor Augen: Zusammenarbeit mit ChatGPT (Symbiose), Regeln, Ziele, Über Frank, Programmierregeln (nur für Jarvis, gehen nie an den Programmierer), Stil, Entscheidungen. `jarvis_merken`, `jarvis_vergessen`, `jarvis_gemerktes_lesen`; in der App ansehen, bearbeiten, einsprechen, KI-Korrektur, Rückgängig.
-- Live-Gedächtnis: 18 Bereiche aus allen Apps (Gemerktes, Dienst, Kalender, Aufgaben, Wecker, Stack-Labor, Gespräche, Biodaten, Tagesauswertung, Ideen, Trainings, Wetter, 10-Tage-Rückblick, Ablage, E-Mail, Wissen, Tagebuch); ändert sich etwas in einer App, wird der Bereich nach Sekunden neu gelesen.
+- Live-Gedächtnis: 18 Bereiche aus allen Apps (Gemerktes, Dienst, Kalender, Aufgaben, Wecker, Stack-Labor, Gespräche, Biodaten, Tagesauswertung, Ideen, Trainings, Wetter, 10-Tage-Rückblick, Ablage, E-Mail, Wissen, Tagebuch); ändert sich etwas in einer App, wird der Bereich nach Sekunden neu gelesen; jede Bereichskachel klappt per Antippen weich auf (Inhalt, „Diesen Bereich neu lesen“), ihr Glasschatten bleibt dabei rund.
 - `gedaechtnis_suchen`: Suche über alles, auch weit zurück (Tagebuch, Gespräche, Notizen, Gemerktes, Ideen, Ablage, frühere Auswertungen).
 - Lernen: aus ruhenden Gesprächen nach 10 Minuten und aus dem Tagebuch; prüft Gemerktes etwa alle 6 Stunden, Programmierwünsche dabei gegen den Code. Abschaltbar.
 - Diese Funktionsübersicht: `funktionen_lesen`, nur bei Bedarf, nicht im Live-Gedächtnis; pflegt sich nach installierten Updates aus dem Versionslog.

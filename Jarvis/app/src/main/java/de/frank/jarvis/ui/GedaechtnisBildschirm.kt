@@ -155,7 +155,8 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
             items(Bereich.entries.toList(), key = { "b-" + it.kennung }) { b ->
                 val a = stand.abschnitte[b]
                 val auf = offenerBereich == b
-                Karte(Modifier.animateContentSize().antippen { offenerBereich = if (auf) null else b }) {
+                // animateContentSize schneidet rechteckig ab: außen gesetzt, kappte es den Glasschatten zu grauen Ecken.
+                Karte(Modifier.antippen { offenerBereich = if (auf) null else b }) { Column(Modifier.fillMaxWidth().animateContentSize()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(b.titel, Modifier.weight(1f), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         if (b in stand.laeuft) Kern(22.dp, f.primaer, aktiv = true)
@@ -175,7 +176,7 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
                         )
                         Knopf("Diesen Bereich neu lesen", Modifier.padding(top = 8.dp).fillMaxWidth(), Icons.Rounded.Refresh, haupt = false) { Lagebild.anstossen(app, listOf(b), "von Hand aufgefrischt") }
                     }
-                }
+                } }
             }
 
             item(key = "notizen-titel") { Abschnitt("Aus Gesprächen gemerkt") }
