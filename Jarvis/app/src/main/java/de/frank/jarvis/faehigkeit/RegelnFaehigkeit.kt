@@ -299,6 +299,9 @@ open class Merkdatei(
 
     fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}${it.zusatz(pruefeErlaubnis)}" }
 
+    /** Nur id und Text, ohne Zusatz: für Lern-Modelle, die neue Sätze schreiben und den Zusatz sonst mit abschrieben. */
+    fun listeRoh(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}" }
+
     /** Vorsatz vor den ids im Kontext; leer bei den Dateien, die über jarvis_merken mit ihrer id bearbeitet werden. */
     protected open val kennzeichen: String = ""
 
@@ -345,11 +348,23 @@ open class Merkdatei(
             return (x intersect y).size.toDouble() / (x union y).size
         }
 
-        /** Formulierungen, mit denen ein Eintrag Jarvis erlaubt, etwas ohne Rückfrage zu tun. */
+        /**
+         * Formulierungen, mit denen ein Eintrag Jarvis erlaubt, etwas ohne Rückfrage zu tun. Eine Verneinung kurz davor oder danach
+         * („nie ohne Rückfrage löschen“, „du darfst nie …“) macht daraus eine Schutzregel, keine Erlaubnis ([VERBOT]).
+         */
         private val ERLAUBNIS = Regex(
             "ohne (vorherige |weitere |jede |meine )?(rückfrage|nachfrage|bestätigung|freigabe|rücksprache|erlaubnis|zustimmung)|ohne (zu |nachzu|mich zu )fragen|" +
-                "nicht (mehr |erst |vorher )?(nach|rück)?(zu)?fragen|frag(e|st)? (mich |du )?(nicht|nie) (mehr |erst |vorher )?|\\bdu darfst\\b|\\bdarfst du\\b|freigegeben|pauschal erlaubt|einfach (machen|ausführen|löschen|senden|schicken)",
+                "\\bdu darfst\\b|\\bdarfst du\\b|freigegeben|pauschal erlaubt|einfach (machen|ausführen|löschen|senden|schicken)",
         )
+
+        /** „Frag nicht nach“, „nicht nachfragen“: tragen die Verneinung selbst und erlauben immer, nicht zu fragen. */
+        private val NICHT_FRAGEN = Regex("\\bnicht (mehr |erst |vorher )?(nach|rück)?(zu)?fragen|\\bfrag(e|st)? (mich |du )?(nicht|nie) (mehr |erst |vorher )?")
+
+        /** Verneinung im selben Satzteil wie ein [ERLAUBNIS]-Treffer: dann ist es ein Verbot. */
+        private val VERBOT = Regex("\\b(nie|niemals|nicht|nimmer|keine?n?|keinesfalls)\\b")
+
+        /** Zeichen, dass eine Aussage trotz Situationswort dauerhaft gemeint ist („immer“, „wenn …“, „künftig“). */
+        private val DAUER_SIGNAL = Regex("\\b(immer|stets|jedes ?mal|grundsätzlich|generell|künftig|zukünftig|in zukunft|von nun an|wenn|sobald|jeden|jede)\\b")
 
         /** Wörter, die eine Aussage an die Situation binden („hier“, „jetzt“, „diesmal“). */
         private val SITUATIV = Regex("\\b(hier|jetzt|heute|diesmal|dieses mal|gerade|momentan|vorerst|vorläufig|fürs erste|in diesem (fall|auftrag|gespräch|chat)|bei diesem auftrag|bei dieser aufgabe)\\b")
@@ -357,10 +372,23 @@ open class Merkdatei(
         /** Dauerhafte Festlegungen, die ein Situationswort enthalten („ab jetzt“), zählen nicht als situativ. */
         private val DAUERHAFT = Regex("\\b(ab jetzt|ab sofort|ab heute|von jetzt an|von heute an|bis jetzt|bis heute)\\b")
 
-        fun istErlaubnis(text: String): Boolean = ERLAUBNIS.containsMatchIn(text.lowercase(Locale.GERMAN))
+        fun istErlaubnis(text: String): Boolean {
+            val t = text.lowercase(Locale.GERMAN)
+            if (NICHT_FRAGEN.containsMatchIn(t)) return true
+            // Ein Treffer zählt nur ohne Verneinung im selben Satzteil kurz davor oder danach.
+            return ERLAUBNIS.findAll(t).any { m ->
+                val vor = t.substring(maxOf(0, m.range.first - 30), m.range.first).substringAfterLast(',').substringAfterLast('.')
+                val nach = t.substring(m.range.last + 1, minOf(t.length, m.range.last + 21)).substringBefore(',').substringBefore('.')
+                !VERBOT.containsMatchIn(vor) && !VERBOT.containsMatchIn(nach)
+            }
+        }
 
-        /** Das Situationswort, das [text] an den Moment bindet, oder null. */
-        fun situativ(text: String): String? = SITUATIV.find(DAUERHAFT.replace(text.lowercase(Locale.GERMAN), " "))?.value
+        /** Das Situationswort, das [text] an den Moment bindet, oder null (auch, wenn [DAUER_SIGNAL] es dauerhaft macht). */
+        fun situativ(text: String): String? {
+            val t = DAUERHAFT.replace(text.lowercase(Locale.GERMAN), " ")
+            if (DAUER_SIGNAL.containsMatchIn(t)) return null
+            return SITUATIV.find(t)?.value
+        }
 
         /** Datum aus TT.MM.JJJJ oder JJJJ-MM-TT; null bei leer oder unlesbar. */
         fun tag(text: String): LocalDate? = text.trim().takeIf { it.isNotEmpty() }?.let { t ->
@@ -645,34 +673,6 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
 
     private val arten = Merkart.entries.map { it.kennung }
 
-    /**
-     * Situatives darf nicht zur dauerhaften Erlaubnis werden: Eine Erlaubnis („ohne Rückfrage …“) braucht einen belegten
-     * Geltungsbereich und gehört nur in die Regeln; ein Situationswort („hier“, „jetzt“, „diesmal“) ohne Geltung oder Frist
-     * heißt meist Flüchtiges. null = in Ordnung. Rein und ohne Dateizugriff (auch für die Tests).
-     */
-    internal fun pruefeGeltung(art: Merkart, text: String, a: JSONObject): Ergebnis? {
-        val begrenzt = a.gesetzt("geltung") || Merkdatei.tag(a.optString("bis")) != null
-        if (a.gesetzt("bis") && Merkdatei.tag(a.optString("bis")) == null)
-            return Ergebnis("Nicht gemerkt: bis „${a.optString("bis")}“ ist kein Datum. Gib es als TT.MM.JJJJ an.", fehler = true)
-        val regelArt = art == Merkart.REGEL || art == Merkart.PROGRAMMIERREGEL
-        if (Merkdatei.istErlaubnis(text)) {
-            if (!regelArt) return Ergebnis(
-                "Nicht gemerkt: Das klingt nach einer Erlaubnis, etwas ohne Rückfrage zu tun. Aus ${art.wort}en folgen keine Rechte. " +
-                    "Meint Frank wirklich eine Erlaubnis, lege sie als regel mit geltung an; eine bloße Vorliebe formuliere ohne Erlaubnis.", fehler = true,
-            )
-            if (!a.gesetzt("geltung")) return Ergebnis(
-                "Nicht gemerkt: Eine Erlaubnis ohne Rückfrage braucht ihren belegten Geltungsbereich (App, Aufgabe oder Situation, ggf. bis). " +
-                    "Steht der Umfang im Gespräch, rufe jarvis_merken mit geltung (und bis) erneut auf, so eng wie Frank es gesagt hat. " +
-                    "Meinte er nur diesen Moment („hier“, „jetzt“, „diesmal“), merke nichts und handle nur jetzt so. Sonst frag ihn kurz, wofür es gelten soll.", fehler = true,
-            )
-        }
-        val wort = Merkdatei.situativ(text)
-        if (wort != null && !begrenzt && (regelArt || art == Merkart.STIL)) return Ergebnis(
-            "Nicht gemerkt: „$wort“ bindet das an die Situation. Meinte Frank nur diesen Moment, merke nichts und handle nur jetzt so. " +
-                "Gilt es dauerhaft für einen Bereich, rufe jarvis_merken mit geltung (und ggf. bis) erneut auf; gilt es wirklich überall, formuliere es ohne „$wort“.", fehler = true,
-        )
-        return null
-    }
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
@@ -697,8 +697,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
                 "quelle" to text("frank (Vorgabe) = Frank hat es selbst gesagt oder ausdrücklich bestätigt; vorschlag = eigener Vorschlag oder Deutung von dir, den Frank noch nicht bestätigt hat (wird dann nicht gemerkt).", listOf("frank", "vorschlag")),
                 "neu_erzwingen" to schalter("Nur nach dem Hinweis „sehr ähnlicher Eintrag“: true = trotzdem als eigenen Eintrag anlegen, weil es wirklich etwas anderes ist."),
-                "geltung" to text("Nur wenn belegt: wofür der Eintrag gilt, so eng wie Frank es gesagt hat (App, Aufgabe, Situation), z. B. „nur Programmieraufträge an Jarvis“. Pflicht bei Erlaubnissen („ohne Rückfrage …“). Leer = allgemein."),
-                "bis" to text("Nur bei zeitlicher Begrenzung: letzter Gültigkeitstag TT.MM.JJJJ."),
+                "geltung" to text("Nur wenn belegt: wofür der Eintrag gilt, so eng wie Frank es gesagt hat (App, Aufgabe, Situation), z. B. „nur Programmieraufträge an Jarvis“. Pflicht bei Erlaubnissen („ohne Rückfrage …“). Weglassen = unverändert bzw. allgemein; „$GELTUNG_AUFHEBEN“ hebt einen Geltungsbereich auf."),
+                "bis" to text("Nur bei zeitlicher Begrenzung: letzter Gültigkeitstag TT.MM.JJJJ (nicht in der Vergangenheit). „$BIS_AUFHEBEN“ hebt eine Frist auf."),
                 "anlass" to text("Wo und wobei Frank es gesagt hat, kurz (z. B. „Gespräch über Wecker“)."),
                 pflicht = listOf("art", "text"),
             ),
@@ -714,10 +714,11 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nicht gemerkt: Das ist ein Vorschlag, keine Angabe von Frank. Frag ihn kurz („Soll ich mir merken, dass …?“) und rufe jarvis_merken erst nach seinem Ja mit quelle frank auf. " +
                     "Eine offene Überlegung ohne Beschluss gehört mit idee_speichern in Geniale Ideen, nicht ins Gedächtnis und nicht als Aufgabe.", fehler = true,
             )
-            // Beim Umformulieren bleibt der bisherige Geltungsbereich, auch wenn das Modell ihn nicht mitschickt.
+            // Beim Umformulieren bleibt der bisherige Geltungsbereich, auch wenn das Modell ihn nicht mitschickt; geprüft wird, was danach gilt.
             val pruefung = JSONObject(a.toString()).apply {
                 nummer?.let { n -> art.datei.alle(context).firstOrNull { it.id == n } }?.let { alt ->
                     if (!a.gesetzt("geltung") && alt.geltung.isNotEmpty()) put("geltung", alt.geltung)
+                    // Auch eine abgelaufene Frist bliebe stehen; die Prüfung meldet das, dann gibt das Modell ein neues bis oder „unbefristet“ mit.
                     if (!a.gesetzt("bis") && alt.bis.isNotEmpty()) put("bis", alt.bis)
                 }
             }
@@ -726,7 +727,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             val laenge = inhalt.replace(Regex("\\s+"), " ").length
             if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf etwa ${Merkdatei.ZEICHEN} Zeichen zusammen und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
             if (nummer == null) {
-                val vorhanden = art.datei.alle(context)
+                // Abgelaufene Einträge gelten nicht mehr: Sagt Frank dasselbe neu, entsteht ein neuer, gültiger Eintrag.
+                val vorhanden = art.datei.alle(context).filter { !it.abgelaufen() }
                 // Dieselbe Angabe noch einmal (Wiederholung nach Verbindungsabbruch, oder Frank sagt es erneut): nichts doppelt anlegen.
                 vorhanden.firstOrNull { Merkdatei.gleich(it.text, inhalt) }?.let { return@Werkzeug Ergebnis("War schon gemerkt, nichts doppelt angelegt: [${it.id}] ${it.text}") }
                 // Sehr ähnlich: meist eine Korrektur oder neue Fassung desselben Eintrags. Ohne neu_erzwingen nicht anlegen.
@@ -739,8 +741,9 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val eintrag = art.datei.speichere(
                 context, inhalt, nummer,
-                geltung = a.optString("geltung").takeIf { a.gesetzt("geltung") },
-                bis = Merkdatei.tag(a.optString("bis"))?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                // Leer = unverändert; „allgemein“ und „unbefristet“ heben Geltung und Frist ausdrücklich auf.
+                geltung = a.optString("geltung").trim().takeIf { a.gesetzt("geltung") }?.let { if (it.equals(GELTUNG_AUFHEBEN, true)) "" else it },
+                bis = a.optString("bis").trim().takeIf { a.gesetzt("bis") }?.let { if (it.equals(BIS_AUFHEBEN, true)) "" else Merkdatei.tag(it)?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) },
                 anlass = a.optString("anlass").takeIf { a.gesetzt("anlass") },
             )
                 ?: return@Werkzeug Ergebnis(
@@ -835,4 +838,42 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             })
         },
     )
+}
+
+/** So hebt jarvis_merken einen Geltungsbereich oder eine Frist wieder auf (ein leeres Feld heißt dagegen „unverändert“). */
+internal const val GELTUNG_AUFHEBEN = "allgemein"
+internal const val BIS_AUFHEBEN = "unbefristet"
+
+/**
+ * Situatives darf nicht zur dauerhaften Erlaubnis werden: Eine Erlaubnis („ohne Rückfrage …“) braucht einen belegten
+ * Geltungsbereich und gehört nur in die Regeln; ein Situationswort („hier“, „jetzt“, „diesmal“) ohne Geltung oder Frist
+ * heißt meist Flüchtiges. [a] trägt geltung und bis, wie sie nach dem Speichern gelten. null = in Ordnung. Rein, ohne Dateizugriff.
+ */
+internal fun pruefeGeltung(art: Merkart, text: String, a: JSONObject, heute: LocalDate = LocalDate.now()): Ergebnis? {
+    val bisText = a.optString("bis").trim()
+    val bis = Merkdatei.tag(bisText)
+    if (bisText.isNotEmpty() && !bisText.equals(BIS_AUFHEBEN, true) && bis == null)
+        return Ergebnis("Nicht gemerkt: bis „$bisText“ ist kein Datum. Gib es als TT.MM.JJJJ an (oder „$BIS_AUFHEBEN“, um die Frist aufzuheben).", fehler = true)
+    if (bis != null && bis.isBefore(heute))
+        return Ergebnis("Nicht gemerkt: bis ${bis.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))} liegt in der Vergangenheit, der Eintrag gälte nie. Frag Frank kurz nach dem gemeinten Tag.", fehler = true)
+    val geltung = a.optString("geltung").trim().takeIf { it.isNotEmpty() && !it.equals(GELTUNG_AUFHEBEN, true) }
+    val begrenzt = geltung != null || bis != null
+    val regelArt = art == Merkart.REGEL || art == Merkart.PROGRAMMIERREGEL
+    if (Merkdatei.istErlaubnis(text)) {
+        if (!regelArt) return Ergebnis(
+            "Nicht gemerkt: Das klingt nach einer Erlaubnis, etwas ohne Rückfrage zu tun. Aus Vorlieben, Zielen, Notizen, Stil oder Entscheidungen folgen keine Rechte. " +
+                "Meint Frank wirklich eine Erlaubnis, lege sie als regel mit geltung an; eine bloße Vorliebe formuliere ohne Erlaubnis.", fehler = true,
+        )
+        if (geltung == null) return Ergebnis(
+            "Nicht gemerkt: Eine Erlaubnis ohne Rückfrage braucht ihren belegten Geltungsbereich (App, Aufgabe oder Situation, ggf. bis). " +
+                "Steht der Umfang im Gespräch, rufe jarvis_merken mit geltung (und bis) erneut auf, so eng wie Frank es gesagt hat. " +
+                "Meinte er nur diesen Moment („hier“, „jetzt“, „diesmal“), merke nichts und handle nur jetzt so. Sonst frag ihn kurz, wofür es gelten soll.", fehler = true,
+        )
+    }
+    val wort = Merkdatei.situativ(text)
+    if (wort != null && !begrenzt && (regelArt || art == Merkart.STIL)) return Ergebnis(
+        "Nicht gemerkt: „$wort“ bindet das an die Situation. Meinte Frank nur diesen Moment, merke nichts und handle nur jetzt so. " +
+            "Gilt es dauerhaft für einen Bereich, rufe jarvis_merken mit geltung (und ggf. bis) erneut auf; gilt es wirklich überall, formuliere es ohne „$wort“.", fehler = true,
+    )
+    return null
 }

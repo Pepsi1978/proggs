@@ -421,7 +421,7 @@ object Lernlauf {
         val kopf = buildString {
             append("HEUTE: ").append(LocalDate.now()).append("\n\n")
             append("SCHON GEMERKT (Kennung in eckigen Klammern, Herkunft in runden):\n")
-            append("REGELN (nur Zusammenhang, du änderst oder entfernst sie nie):\n").append(Regeln.liste(Regeln.alle(app)).ifEmpty { "(keine)" })
+            append("REGELN (nur Zusammenhang, du änderst oder entfernst sie nie):\n").append(Regeln.listeRoh(Regeln.alle(app)).ifEmpty { "(keine)" })
             append("\n\nZIELE:\n").append(ziele.joinToString("\n") { "[Z${it.id}] (${herkunft(it)}, Stand ${it.stand}) ${it.text}" }.ifEmpty { "(keine)" })
             append("\n\nINFOS:\n").append(infos.joinToString("\n") { "[I${it.id}] (${herkunft(it)}, Stand ${it.stand}) ${it.text}" }.ifEmpty { "(keine)" })
             append("\n\nNOTIZEN (alle aus Gesprächen gelernt):\n").append(notizen.joinToString("\n") { "[N${it.id}] ${it.text} (bis ${Gespraechsgedaechtnis.gueltigBis(it)}, notiert ${Gespraechsgedaechtnis.datum(it.erstellt)})" }.ifEmpty { "(keine)" })

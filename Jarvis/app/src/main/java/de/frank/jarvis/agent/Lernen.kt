@@ -56,7 +56,7 @@ object Lernen {
                 if (t.length <= EINGABE_ZEICHEN) t else "### " + t.takeLast(EINGABE_ZEICHEN).substringAfter("\n### ", t.takeLast(EINGABE_ZEICHEN)).removePrefix("### ")
             }
             if (eintraege.isNotBlank()) {
-                val bekannt = "ZIELE (art ziel):\n" + Ziele.liste(Ziele.alle(app)).ifEmpty { "(noch nichts)" } + "\n\nINFOS (art info):\n" + UeberFrank.liste(UeberFrank.alle(app)).ifEmpty { "(noch nichts)" }
+                val bekannt = "ZIELE (art ziel):\n" + Ziele.listeRoh(Ziele.alle(app)).ifEmpty { "(noch nichts)" } + "\n\nINFOS (art info):\n" + UeberFrank.listeRoh(UeberFrank.alle(app)).ifEmpty { "(noch nichts)" }
                 val antwort = frage(LERNEN, "SCHON GEMERKT:\n$bekannt\n\nTAGEBUCH SEIT ${ab}:\n$eintraege", 70_000L)
                 if (antwort != null) {
                     val gelernt = uebernimm(app, antwort, "Tagebuch")

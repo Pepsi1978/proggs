@@ -14,8 +14,11 @@ import org.json.JSONObject
  * - Unbestätigt oder abweichend: Ergebnis mit fehler=true und klarem Hinweis, nicht blind erneut auszuführen.
  */
 object Ergebnispruefung {
-    /** Angeforderter Wert eines Feldes: [feld] im Objekt der App, [soll] normalisiert, [wort] für Frank. */
-    data class Soll(val feld: String, val soll: String?, val wort: String)
+    /**
+     * Angeforderter Wert eines Feldes: [feld] im Objekt der App, [soll] normalisiert, [wort] für Frank.
+     * [pruefbar] = false für das gemeldete Objekt, wenn die App dieses Feld bewusst anders meldet (etwa tägliche Aufgaben mit heutigem Tag).
+     */
+    data class Soll(val feld: String, val soll: String?, val wort: String, val pruefbar: (JSONObject) -> Boolean = { true })
 
     /** Gleichbedeutende Schreibweisen angleichen: Groß/Klein, Leerraum, Uhrzeit „7:30“ = „07:30“, JSON-null = leer. */
     fun normal(wert: Any?): String {
@@ -44,7 +47,7 @@ object Ergebnispruefung {
     }
 
     /** Abweichungen zwischen Angefordertem und dem, was die App meldet; leer = bestätigt. Felder mit soll null werden nicht geprüft. */
-    fun abweichungen(soll: List<Soll>, ist: JSONObject): List<String> = soll.filter { it.soll != null }.mapNotNull { s ->
+    fun abweichungen(soll: List<Soll>, ist: JSONObject): List<String> = soll.filter { it.soll != null && it.pruefbar(ist) }.mapNotNull { s ->
         val gemeldet = if (ist.has(s.feld)) normal(ist.opt(s.feld)) else return@mapNotNull "${s.wort}: nicht zurückgemeldet"
         if (gemeldet == normal(s.soll)) null else "${s.wort}: angefordert „${s.soll.orEmpty().ifEmpty { "ohne" }}“, gemeldet „${gemeldet.ifEmpty { "ohne" }}“"
     }
@@ -52,7 +55,8 @@ object Ergebnispruefung {
     /**
      * Prüft die Antwort einer schreibenden Brückenmethode. [objekt] = Schlüssel des gemeldeten Objekts („wecker“, „aufgabe“),
      * [lesen] = Name des Lese-Werkzeugs für Frank und Modell, [nachlesen] = gezielte Abfrage des aktuellen Zustands (nur bei Bedarf),
-     * [extra] = zusätzliche Abweichung aus dem Objekt (etwa „nicht geplant“), [gut] = Text für den bestätigten Zustand.
+     * [extra] = zusätzliche Abweichung aus dem Objekt (etwa „nicht geplant“), [neu] = die Aktion legt etwas an (dann ist es bei einer
+     * Abweichung schon gespeichert und wird korrigiert, nie neu angelegt), [gut] = Text für den bestätigten Zustand.
      */
     suspend fun pruefe(
         antwort: JSONObject,
@@ -61,6 +65,7 @@ object Ergebnispruefung {
         lesen: String,
         nachlesen: (suspend () -> JSONObject?)? = null,
         extra: (JSONObject) -> String? = { null },
+        neu: Boolean = false,
         gut: (JSONObject) -> String,
     ): Ergebnis {
         val fehler = antwort.optString("fehler")
@@ -69,7 +74,10 @@ object Ergebnispruefung {
         if (fehler.isNotEmpty() && !zeitlimit) return Ergebnis(fehler, fehler = true)
         val gemeldet = if (zeitlimit) null else antwort.optJSONObject(objekt)
         // Unklar (Zeitlimit oder Antwort ohne Zustand): genau einmal gezielt nachlesen, nie die Änderung wiederholen.
-        val ist = gemeldet ?: nachlesen?.let { runCatching { it() }.getOrNull() }
+        val ist = gemeldet ?: nachlesen?.let { lies ->
+            // Ein Abbruch (Frank unterbricht) geht weiter nach oben, nur echte Lesefehler zählen als „nicht nachlesbar“.
+            try { lies() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        }
             ?: return Ergebnis(
                 (if (zeitlimit) "$fehler " else "") + "NICHT BESTÄTIGT: Die App hat keinen Zustand zurückgemeldet, ob die Änderung angekommen ist, ist offen. " +
                     "Nicht erneut ausführen; Frank sagen, dass es unbestätigt ist, und bei Bedarf mit $lesen nachsehen.", fehler = true,
@@ -79,9 +87,15 @@ object Ergebnispruefung {
         if (abweichend.isEmpty()) return Ergebnis(gut(ist) + nachgelesen)
         return Ergebnis(
             "NICHT BESTÄTIGT: " + abweichend.joinToString("; ") + ". Stand laut App: " + gut(ist) +
-                " Nicht blind erneut ausführen; Frank die Abweichung in einem Satz nennen und fragen, ob du es noch einmal versuchen sollst.", fehler = true,
+                if (neu) " Der Eintrag ist schon gespeichert: nicht noch einmal anlegen; Frank die Abweichung in einem Satz nennen und ihn bei Bedarf über seine id ändern."
+                else " Nicht blind erneut ausführen; Frank die Abweichung in einem Satz nennen und fragen, ob du es noch einmal versuchen sollst.",
+            fehler = true,
         )
     }
+
+    /** Das Objekt mit dieser id aus einer Liste der App (für die gezielte Zustandsabfrage); null = nicht dabei. */
+    fun nachId(liste: org.json.JSONArray?, id: String): JSONObject? =
+        liste?.let { l -> (0 until l.length()).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("id") == id } }
 
     private val UHRZEIT = Regex("(\\d{1,2}):(\\d{2})")
     private val ZEIT_EINGABE = Regex("(\\d{1,2})(?:[:.](\\d{2}))?")

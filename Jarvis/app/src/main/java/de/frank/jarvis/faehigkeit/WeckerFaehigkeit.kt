@@ -94,7 +94,8 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     pruefe(antwort, a, neu = true, lesen = null) { "Wecker gestellt: " + satz(it) + planung(antwort, it) }.also {
                         // Angenommen, aber nicht bestätigt: wie beim Zeitlimit sperren, damit ein Wiederholungsversuch nicht doppelt stellt.
-                        if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                        // Gemeldet (auch mit Abweichung) = sicher gespeichert; ohne Meldung unklar.
+                        if (!it.fehler || antwort.optJSONObject("wecker") != null) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
                         else if (antwort.optString("fehler").isEmpty()) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
                     }
                 }
@@ -147,14 +148,15 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun pruefe(antwort: JSONObject, a: JSONObject, neu: Boolean, lesen: String?, extra: (JSONObject) -> String? = { null }, gut: (JSONObject) -> String): Ergebnis {
         val soll = listOf(
             Ergebnispruefung.Soll("uhrzeit", if (a.gesetzt("uhrzeit")) Ergebnispruefung.uhrzeit(a.optString("uhrzeit")) else null, "Uhrzeit"),
-            Ergebnispruefung.Soll("name", a.optString("name").takeIf { a.gesetzt("name") }, "Name"),
+            // Die App kürzt Namen auf 60 Zeichen.
+            Ergebnispruefung.Soll("name", a.optString("name").trim().take(60).takeIf { a.gesetzt("name") }, "Name"),
             // Ein neuer Wecker ist eingeschaltet, wenn nichts anderes verlangt ist.
             Ergebnispruefung.Soll("aktiv", if (a.has("aktiv")) a.optBoolean("aktiv").toString() else if (neu) "true" else null, "Eingeschaltet"),
         )
-        val nachlesen: (suspend () -> JSONObject?)? = lesen?.let { id -> suspend { rufe("lesen", JSONObject()).optJSONArray("wecker")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) }.firstOrNull { it.optString("id") == id } } } }
+        val nachlesen: (suspend () -> JSONObject?)? = lesen?.let { id -> suspend { Ergebnispruefung.nachId(rufe("lesen", JSONObject()).optJSONArray("wecker"), id) } }
         return Ergebnispruefung.pruefe(antwort, "wecker", soll, "wecker_lesen", nachlesen, extra = { w ->
             extra(w) ?: if (w.optBoolean("aktiv") && !antwort.optBoolean("geplant", true)) "eingeschaltet, aber nicht im System geplant (klingelt womöglich nicht; in der Wecker-App nachsehen)" else null
-        }, gut = gut)
+        }, neu = neu, gut = gut)
     }
 
     private suspend fun mitWecker(a: JSONObject, dann: suspend (String) -> Ergebnis): Ergebnis {

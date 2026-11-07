@@ -23,6 +23,8 @@ object Stil {
     private const val HOECHSTENS_REGELN = 20
     /** Eine Regel darf bis zu etwa zehn Zeilen lang sein. */
     private const val REGEL_ZEICHEN = 900
+    /** Herkunft der aus Daumen-Bewertungen gelernten Stilregeln (zählen damit als gelernt, nicht als Franks eigene Angabe). */
+    private const val QUELLE = "Bewertungen"
 
     private fun ordner(context: Context) = File(context.filesDir, "stil").apply { mkdirs() }
     private fun datei(context: Context) = File(ordner(context), "bewertungen.jsonl")
@@ -85,14 +87,15 @@ object Stil {
                 val o = a.optJSONObject(i) ?: continue
                 val id = o.optInt("id", -1)
                 val text = o.optString("text").trim()
-                if (id >= 0 && text.isNotEmpty() && vorhanden.any { it.id == id } && StilRegeln.speichere(context, text.take(REGEL_ZEICHEN), id) != null) geaendert++
+                // Aus Bewertungen folgen keine Rechte: nichts übernehmen, das nach einer Erlaubnis ohne Rückfrage klingt.
+                if (id >= 0 && text.isNotEmpty() && !de.frank.jarvis.faehigkeit.Merkdatei.istErlaubnis(text) && vorhanden.any { it.id == id } && StilRegeln.speichere(context, text.take(REGEL_ZEICHEN), id, QUELLE) != null) geaendert++
             }
         }
         j.optJSONArray("neu")?.let { a ->
             for (i in 0 until a.length()) {
                 val text = a.optString(i).trim()
-                if (text.isEmpty() || StilRegeln.alle(context).size >= HOECHSTENS_REGELN || StilRegeln.voll(context)) continue
-                if (StilRegeln.speichere(context, text.take(REGEL_ZEICHEN)) != null) neu++
+                if (text.isEmpty() || de.frank.jarvis.faehigkeit.Merkdatei.istErlaubnis(text) || StilRegeln.alle(context).size >= HOECHSTENS_REGELN || StilRegeln.voll(context)) continue
+                if (StilRegeln.speichere(context, text.take(REGEL_ZEICHEN), quelle = QUELLE) != null) neu++
             }
         }
         stand(context).writeText(zeilen.size.toString())

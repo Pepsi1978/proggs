@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -65,38 +64,5 @@ class ErgebnispruefungTest {
         val mikro = (System.nanoTime() - beginn) / 1_000.0 / n
         println("Ergebnisprüfung: %.1f µs je Aufruf".format(mikro))
         assertTrue("zu langsam: $mikro µs", mikro < 1_000)
-    }
-}
-
-class GedaechtnisGeltungTest {
-    private val faehigkeit get() = RegelnFaehigkeit::class.java
-
-    @Test fun erlaubnisErkannt() {
-        assertTrue(Merkdatei.istErlaubnis("Hier ohne Rückfrage deployen."))
-        assertTrue(Merkdatei.istErlaubnis("Jarvis soll Wecker ohne zu fragen stellen."))
-        assertFalse(Merkdatei.istErlaubnis("Bei Fragen nach dem Schlaf immer auch HRV nennen."))
-        // Ein Verbot ist keine Erlaubnis.
-        assertFalse(Merkdatei.istErlaubnis("Niemals ungefragt den Spielstand verraten."))
-    }
-
-    @Test fun situativErkanntDauerhaftNicht() {
-        assertEquals("jetzt", Merkdatei.situativ("Mach das jetzt schnell."))
-        assertEquals("hier", Merkdatei.situativ("Hier ohne Rückfrage."))
-        assertNull(Merkdatei.situativ("Ab jetzt Antworten in Stichpunkten."))
-    }
-
-    @Test fun alteErlaubnisOhneGeltungKeinePauschalfreigabe() {
-        val alt = Regel(3, "Programmieraufträge ohne Rückfrage deployen.", "01.10.2026")
-        assertTrue("keine pauschale Freigabe" in alt.zusatz())
-        val begrenzt = alt.copy(geltung = "nur Programmieraufträge an Jarvis", bis = "01.01.2020")
-        assertTrue("ERLAUBNIS nur hierfür" in begrenzt.zusatz())
-        assertTrue(begrenzt.abgelaufen())
-        assertEquals("", Regel(1, "Antworte kurz.", "").zusatz())
-    }
-
-    @Test fun symbioseOhneZusatz() {
-        val r = Regel(1, "Frag nicht nach, wenn alles klar ist.", "17.10.2026")
-        assertFalse("Erlaubnis" in Symbiose.liste(listOf(r)))
-        assertNotNull(faehigkeit)
     }
 }

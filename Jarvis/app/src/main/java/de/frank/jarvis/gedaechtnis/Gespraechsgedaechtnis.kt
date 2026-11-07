@@ -240,7 +240,8 @@ object Gespraechsgedaechtnis {
         // Ein Lernlauf erzeugt keine Rechte und macht nichts Situatives dauerhaft: Erlaubnisse (mit belegtem Geltungsbereich)
         // legt nur Frank selbst über jarvis_merken oder die App an.
         if (de.frank.jarvis.faehigkeit.Merkdatei.istErlaubnis(satz) || de.frank.jarvis.faehigkeit.Merkdatei.situativ(satz) != null) {
-            Protokoll.melde(Quelle.JARVIS, "Nicht gelernt", "Erlaubnis oder situativ, nicht als dauerhafte Regel übernommen (Gespräch): $satz", ok = false)
+            // Kein Fehler, nur ein bewusst verworfener Vorschlag: ins Logbuch, nicht ins Protokoll (dort stehen echte Speicherfehler).
+            de.frank.jarvis.observability.Logbuch.gedaechtnis("Nicht als Regel gelernt (Erlaubnis oder situativ)", satz.take(200))
             return null
         }
         val alle = Regeln.alle(app)
