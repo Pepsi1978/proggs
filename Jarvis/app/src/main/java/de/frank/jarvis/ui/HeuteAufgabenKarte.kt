@@ -197,8 +197,9 @@ private suspend fun neuLesen(context: android.content.Context) {
  * sie wieder), und zwar in Geniale Aufgaben selbst; danach liest die Karte den Stand neu. Ändert sich in der Aufgaben-App etwas,
  * meldet sie das über ihre Brücke, die Karte liest dann ebenfalls neu, ebenso bei jeder Rückkehr in Jarvis und um Mitternacht.
  */
+/** [griff]: Titel und Zählerzeile, an denen sich die ganze Karte auf dem Startbildschirm verschieben lässt. */
 @Composable
-fun HeuteAufgabenKarte(vm: AppViewModel) {
+fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
     val s = HeuteAufgabenStand
@@ -271,6 +272,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
         val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
+        Column(griff.fillMaxWidth()) {
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
@@ -281,6 +283,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
             },
             color = if (fehler != null) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
         )
+        }
         if (anzeige != null) {
             val zeigen = if (s.alleZeigen || anzeige.size <= SICHTBAR) anzeige else anzeige.take(SICHTBAR)
             zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a) { umschalten(a) } } }

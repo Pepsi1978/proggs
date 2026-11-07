@@ -22,9 +22,12 @@ private val RECHNER = listOf("mac", "windows", "server")
 /**
  * Die großen Bereiche des Startbildschirms in ihrer Grundreihenfolge (Kennungen für [Einstellungen.startReihenfolge]).
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
- * und lässt sich wie die anderen verschieben. Die Reihenfolge hier nie umstellen: Sie ergibt die festen Schlüssel der Liste.
+ * und lässt sich wie die anderen verschieben.
  */
 val START_BEREICHE = listOf("auswertung", "schnellstart", "heute_aufgaben")
+
+/** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {

@@ -81,6 +81,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.key
 import de.frank.jarvis.ui.theme.LocalBewegung
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.semantics.customActions
 import de.frank.module.draganddrop.reorderHandle
 import de.frank.module.draganddrop.reorderItem
 import de.frank.module.draganddrop.reorderViewport
@@ -106,12 +108,13 @@ import kotlinx.coroutines.launch
 /** Die Schritte, deren Stand erst die Prüfung der angebundenen Apps zeigt. */
 private val APP_SCHRITTE = setOf("Geniale Aufgaben", "Kalender", "Geniale Ideen", "Tagebuch", "Genialer Wecker", "Entropie Reductor")
 
-/** Feste Listenschlüssel: die Einrichtungskarte und je Startbereich sein Platz in [de.frank.jarvis.data.START_BEREICHE] plus eins. */
-private const val EINRICHTUNG_KEY = 0L
-private fun bereichKey(bereich: String): Long = de.frank.jarvis.data.START_BEREICHE.indexOf(bereich) + 1L
-
-/** Höhe des unsichtbaren Griffs oben in jedem Startbereich: Titel und Unterzeile, nicht der Inhalt darunter. */
-private val GRIFF_HOEHE = 60.dp
+/**
+ * Feste Listenschlüssel: die Einrichtungskarte, ein Platzhalter für sie in der Reihenfolge des Moduls (gleicht nie einem
+ * echten Schlüssel) und je Startbereich ein Schlüssel aus seiner Kennung, unabhängig von ihrem Platz in der Liste (immer ab 1000).
+ */
+private const val EINRICHTUNG_KEY = -2L
+private const val PLATZHALTER_KEY = -1L
+private fun bereichKey(bereich: String): Long = (bereich.hashCode().toLong() and 0xFFFFFFFFL) + 1_000L
 
 /** Ein Schritt der Einrichtung: erledigt oder mit einem Knopf, der genau dorthin führt. */
 private class Schritt(val titel: String, val text: String, val fertig: Boolean, val knopf: String, val aktion: () -> Unit)
@@ -130,13 +133,31 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     // Die großen Bereiche (Tagesauswertung, Schnellstart, heutige Aufgaben …) lassen sich an ihrer Titelzeile lange drücken
     // und verschieben (Modul M1.2); die Reihenfolge steht in den Einstellungen und gilt auch nach einem Neustart.
-    var reihe by remember { mutableStateOf(vm.einstellungen.startReihenfolge) }
+    val gespeicherteReihe = vm.einstellungen.startReihenfolge
+    var reihe by remember { mutableStateOf(gespeicherteReihe) }
     val zustand = de.frank.module.draganddrop.rememberReorderState(liste, "start")
+    // Per Sprache umgestellt (Einstellung start_reihenfolge): übernehmen, aber nie mitten in einem Ziehen.
+    LaunchedEffect(gespeicherteReihe) { if (!zustand.dragging) reihe = gespeicherteReihe }
     val reduziert = !LocalBewegung.current
     de.frank.module.draganddrop.ReorderAutoScroll(zustand)
     val haptik = androidx.compose.ui.platform.LocalHapticFeedback.current
-    LaunchedEffect(zustand.dragging) {
-        if (zustand.dragging) haptik.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    // Im eigenen Fluss statt als Schlüssel: Beginn und Ende des Ziehens bauen so nicht den ganzen Bildschirm neu auf.
+    LaunchedEffect(zustand) {
+        androidx.compose.runtime.snapshotFlow { zustand.draggedId.takeIf { zustand.dragging } }.collect { id ->
+            if (id == null) return@collect
+            haptik.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+            // Aufgeklappt kann die Tagesauswertung höher als der Bildschirm sein; dann könnte sie dem Finger nicht folgen.
+            if (id == bereichKey("auswertung")) auswertungOffen = false
+        }
+    }
+    /** Für TalkBack: verschiebt [bereich] um einen Platz und speichert sofort. */
+    fun bereichVerschieben(bereich: String, schritt: Int): Boolean {
+        val von = reihe.indexOf(bereich)
+        val nach = von + schritt
+        if (von < 0 || nach !in reihe.indices) return false
+        reihe = reihe.toMutableList().apply { add(nach, removeAt(von)) }
+        vm.einstellungen.startReihenfolge = reihe
+        return true
     }
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
@@ -235,15 +256,19 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         val vonUnten = vm.gespraech.isNotEmpty()
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         // Vor den Bereichen steht nur die Einrichtungskarte; sie bleibt fest oben, die Bereiche ordnen sich darunter.
-        val vorne = if (offen > 0) 1 else 0
+        // Als State gelesen: Das Modul behält die Lambdas für die ganze Geste, die Karte kann aber mitten im Ziehen kommen oder gehen.
+        val vorne = rememberUpdatedState(if (offen > 0) 1 else 0)
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben).reorderViewport(
                 state = zustand,
-                order = { (if (vorne > 0) listOf(EINRICHTUNG_KEY) else emptyList()) + reihe.map(::bereichKey) },
+                // Für die Einrichtungskarte steht ein Platzhalter, der nie ihrem Schlüssel gleicht: So zählt sie für das Modul
+                // nicht als Tauschnachbar, die Bereiche können nicht über sie gezogen werden.
+                order = { List(vorne.value) { PLATZHALTER_KEY } + reihe.map(::bereichKey) },
                 onMove = { von, nach ->
-                    if (von >= vorne && nach >= vorne) reihe = reihe.toMutableList().apply { add(nach - vorne, removeAt(von - vorne)) }
+                    val v = vorne.value
+                    if (von >= v && nach >= v) reihe = reihe.toMutableList().apply { add(nach - v, removeAt(von - v)) }
                 },
-                onDrop = { vm.einstellungen.startReihenfolge = reihe },
+                onDrop = { if (reihe != vm.einstellungen.startReihenfolge) vm.einstellungen.startReihenfolge = reihe },
                 reducedMotion = reduziert,
             ), state = liste,
             // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
@@ -259,11 +284,19 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
             if (vm.gespraech.isEmpty()) items(reihe, key = ::bereichKey) { bereich ->
+              // Griff ist nur der Titel samt Unterzeile jeder Karte (wächst mit der Schriftgröße); Knöpfe daneben und der
+              // Inhalt darunter bleiben frei. Mit TalkBack verschieben eigene Aktionen den Bereich nach oben oder unten.
+              val griff = reorderHandle(zustand, bereichKey(bereich)).semantics {
+                  customActions = listOf(
+                      androidx.compose.ui.semantics.CustomAccessibilityAction("Bereich nach oben verschieben") { bereichVerschieben(bereich, -1) },
+                      androidx.compose.ui.semantics.CustomAccessibilityAction("Bereich nach unten verschieben") { bereichVerschieben(bereich, 1) },
+                  )
+              }
               Box(reorderItem(zustand, bereichKey(bereich), reduziert)) {
                 when (bereich) {
                 "auswertung" -> Karte {
                     Row(verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f)) {
+                        Column(Modifier.weight(1f).then(griff)) {
                             Text("Tagesauswertung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             val neueste = auswertung.neueste
                             Text(
@@ -340,12 +373,11 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
                 // Schnellstart für Franks eigene Apps und die heutigen Aufgaben aus Geniale Aufgaben zum Abhaken.
                 // Das Live-Gedächtnis steht in den Einstellungen (Reiter Jarvis, Bereich „Jarvis' Gedächtnis“).
-                "schnellstart" -> SchnellstartBereich(vm)
-                "heute_aufgaben" -> HeuteAufgabenKarte(vm)
+                "schnellstart" -> SchnellstartBereich(vm, griff)
+                "heute_aufgaben" -> HeuteAufgabenKarte(vm, griff)
+                // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
+                else -> Unit
                 }
-                // Griff: die Titelzeile der Karte, unsichtbar über ihr. Kurz tippen geht durch zu den Knöpfen darunter,
-                // lange drücken und ziehen verschiebt den ganzen Bereich. Die App-Symbole des Schnellstarts liegen darunter.
-                Box(Modifier.fillMaxWidth().height(GRIFF_HOEHE).then(reorderHandle(zustand, bereichKey(bereich))))
               }
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }

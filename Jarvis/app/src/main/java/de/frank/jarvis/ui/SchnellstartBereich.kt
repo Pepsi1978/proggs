@@ -176,8 +176,9 @@ private class ZiehMerker {
  * Der runde Plus-Knopf bietet alle übrigen installierten eigenen Apps an.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+/** [griff]: Titel und Unterzeile, an denen sich der ganze Bereich auf dem Startbildschirm verschieben lässt. */
 @Composable
-fun SchnellstartBereich(vm: AppViewModel) {
+fun SchnellstartBereich(vm: AppViewModel, griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val haptik = LocalHapticFeedback.current
@@ -271,7 +272,7 @@ fun SchnellstartBereich(vm: AppViewModel) {
 
     Karte {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).then(griff)) {
                 Text("Schnellstart", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     if (bearbeiten) "Ziehen zum Umordnen, nach unten zum Entfernen" else "Deine Apps mit einem Tipp öffnen",
