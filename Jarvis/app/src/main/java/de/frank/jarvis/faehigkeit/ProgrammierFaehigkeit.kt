@@ -127,14 +127,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "$pc ${tunnel.await()} $cloud $sol"
     }
 
-    /** Lebt der WireGuard-Tunnel zu jedem Rechner? Geprüft vom Handy aus wie die Fernwartung (Fernziel.pruefen). */
-    private suspend fun tunnelZustand(): String = runCatching {
-        val p = de.frank.jarvis.fernsteuerung.Fernziel.pruefen(3000)
-        if (p.none { it.ok }) return@runCatching "Tunnel: vom Handy aus antwortet keiner (auch nicht der Hostinger-Server), also ist der WireGuard-Tunnel am Handy aus oder das Netz weg; Fernwartung nicht möglich."
-        "Tunnel (Fernwartung vom Handy aus): " + p.joinToString("; ") { z ->
-            z.ziel.nominativ + if (z.ok) " antwortet" else " antwortet nicht" + if (z.ziel.konsole) "" else " (Tunnel dieses Rechners tot oder Fernwartungsdienst aus)"
+    /**
+     * Lebt der WireGuard-Tunnel zu jedem Rechner? Nimmt die Prüfung des Fernwartungs-Symbols (RechnerStatus, zwischengespeichert,
+     * nie doppelt) und wartet höchstens 2,5 s: jarvis_status gibt dem ganzen Programmier-Teil nur 5 s.
+     */
+    private suspend fun tunnelZustand(): String {
+        val lage = try { de.frank.jarvis.fernsteuerung.RechnerStatus.lage(2_500) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { return "Tunnel: Prüfung gescheitert (${e.message ?: e.javaClass.simpleName})." }
+            ?: return "Tunnel: Prüfung läuft noch (ein Rechner antwortet langsam oder ist aus), in ein paar Sekunden erneut fragen."
+        if (lage.none { it.tunnelDa }) return "Tunnel: vom Handy aus reagiert keiner, auch nicht der Hostinger-Server. Entweder ist WireGuard am Handy aus, " +
+            "das Handy hat kein Netz oder WireGuard auf dem Hostinger-Server ist gestört; Fernwartung nicht möglich."
+        return "Tunnel (vom Handy aus geprüft, Grundlage der Fernwartung): " + lage.joinToString("; ") { p ->
+            val wer = p.ziel.nominativ.replaceFirstChar { it.lowercase() }
+            val dienst = if (p.ziel.konsole) "die Server-Konsole" else "der Fernwartungsdienst"
+            when {
+                p.ok -> "$wer: Tunnel lebt"
+                p.tunnelDa -> "$wer: Tunnel lebt, aber $dienst antwortet nicht"
+                else -> "$wer: keine Antwort im Tunnel (aus, im Standby oder sein Tunnel ist tot)"
+            }
         } + ". Erreichbar über den Server heißt nicht, dass der Tunnel lebt."
-    }.getOrElse { "Tunnel: Prüfung gescheitert (${it.message ?: it.javaClass.simpleName})." }
+    }
 
     /** Franks Reihenfolge aus den Einstellungen für den Relay: „mac“ oder „windows“ zuerst. */
     private fun vorrang() = if (e.macZuerst) "mac" else "windows"

@@ -34,7 +34,7 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
                     // Im Tunnel geht gelegentlich ein einzelner Verbindungsversuch verloren: einmal nachfassen.
                     val erst = bereit(z, z.port, wartezeitMs)
                     if (erst.ok) erst
-                    else bereit(z, z.port, 4000).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
+                    else bereit(z, z.port, 4000).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}", tunnelDa = it.tunnelDa || erst.tunnelDa) }
                 }
             }.map { it.await() }
         }
@@ -47,7 +47,7 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
          */
         private suspend fun bereit(z: Fernziel, port: Int, wartezeitMs: Int): Pruefung = withContext(Dispatchers.IO) {
             val beginn = System.currentTimeMillis()
-            fun ergebnis(ok: Boolean, grund: String) = Pruefung(z, ok, grund, System.currentTimeMillis() - beginn)
+            fun ergebnis(ok: Boolean, grund: String, tunnelDa: Boolean = true) = Pruefung(z, ok, grund, System.currentTimeMillis() - beginn, tunnelDa)
             try {
                 Socket().use { s ->
                     s.connect(InetSocketAddress(z.adresse, port), wartezeitMs)
@@ -58,13 +58,21 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
                     } catch (_: SocketTimeoutException) { ergebnis(true, "Dienst wartet auf Anmeldung") }
                 }
             } catch (_: SocketTimeoutException) {
-                ergebnis(false, "Verbindungsaufbau nach $wartezeitMs ms ohne Antwort (Tunnel-Paket verloren, Rechner schläft oder aus)")
+                ergebnis(false, "Verbindungsaufbau nach $wartezeitMs ms ohne Antwort (Tunnel-Paket verloren, Rechner schläft oder aus)", tunnelDa = false)
+            } catch (e: java.net.ConnectException) {
+                // „Verbindung abgelehnt“ kam vom Rechner selbst zurück: Der Tunnel lebt, nur der Dienst lauscht nicht.
+                // Ohne Route oder Netz (ENETUNREACH, EHOSTUNREACH) meldet Android dagegen eine NoRouteToHostException bzw. ConnectException mit diesem Text.
+                val ohneWeg = e.message.orEmpty().contains("unreachable", ignoreCase = true)
+                ergebnis(false, "${e.javaClass.simpleName}: ${e.message.orEmpty()}", tunnelDa = !ohneWeg)
             } catch (e: Exception) {
-                ergebnis(false, "${e.javaClass.simpleName}: ${e.message.orEmpty()}")
+                ergebnis(false, "${e.javaClass.simpleName}: ${e.message.orEmpty()}", tunnelDa = false)
             }
         }
     }
 }
 
-/** Ergebnis einer Erreichbarkeitsprüfung: [grund] und [ms] landen bei Fehlschlägen im Logbuch. */
-data class Pruefung(val ziel: Fernziel, val ok: Boolean, val grund: String, val ms: Long)
+/**
+ * Ergebnis einer Erreichbarkeitsprüfung: [grund] und [ms] landen bei Fehlschlägen im Logbuch.
+ * [tunnelDa]: Der Rechner hat im Tunnel überhaupt reagiert (auch mit Ablehnen oder sofortigem Schließen), nur der Dienst fehlt dann.
+ */
+data class Pruefung(val ziel: Fernziel, val ok: Boolean, val grund: String, val ms: Long, val tunnelDa: Boolean = ok)

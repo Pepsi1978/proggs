@@ -7,6 +7,8 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Fernwartungszustand für das Symbol unten rechts: welche Rechner der Fernwartungs-Dienst im Tunnel gerade wirklich
@@ -42,6 +44,18 @@ object RechnerStatus {
     @Volatile private var geprueftAm = 0L
     /** Wer bei der letzten Prüfung wirklich geantwortet hat, ungeglättet. */
     @Volatile private var zuletztGeantwortet = emptyList<Fernziel>()
+    /** Die letzte Prüfung vollständig (mit Grund und ob der Tunnel lebt), für pc_status. */
+    @Volatile private var letztePruefung = emptyList<Pruefung>()
+
+    /**
+     * Für pc_status: Die Prüfung der Leiste (alle 10 s, solange Jarvis vorn ist) ist keine [FRISCH_MS] alt, dann gilt sie;
+     * sonst eine neue, auf die höchstens [maxMs] gewartet wird (null = noch nicht fertig). Die Prüfung selbst läuft im eigenen
+     * Bereich weiter und füllt das Symbol, darum bricht das Warten sie nicht ab und nichts wird doppelt geprüft.
+     */
+    suspend fun lage(maxMs: Long): List<Pruefung>? {
+        if (letztePruefung.isNotEmpty() && System.currentTimeMillis() - geprueftAm < FRISCH_MS) return letztePruefung
+        return withTimeoutOrNull(maxMs) { withContext(Dispatchers.Main) { pruefen() }; letztePruefung }
+    }
 
     /**
      * Für das Antippen: Liegt die letzte Prüfung (alle 10 s, solange Jarvis vorn ist) keine [FRISCH_MS] zurück und hat jemand geantwortet, gilt ihr
@@ -86,6 +100,7 @@ object RechnerStatus {
         erreichbar.value = anzeige
         geprueftAm = System.currentTimeMillis()
         zuletztGeantwortet = ergebnisse.filter { it.ok }.map { it.ziel }
+        letztePruefung = ergebnisse
         return ergebnisse.filter { it.ok }.map { it.ziel }
     }
 

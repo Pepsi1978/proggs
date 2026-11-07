@@ -583,6 +583,7 @@
 {"versionCode": 578, "versionName": "1.8.567", "stand": "03.11.2026, 16:07 Uhr", "notiz": "Die Beschreibung der Fernwartungsfarben ist präzisiert: Orange ersetzt dort die bisherige Akzentfarbe, wenn nur der Hostinger-Server erreichbar ist."},
 {"versionCode": 579, "versionName": "1.8.568", "stand": "03.11.2026, 16:28 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus, berechnet für Berlin."},
 {"versionCode": 580, "versionName": "1.8.569", "stand": "03.11.2026, 16:33 Uhr", "notiz": "Jarvis beschreibt den Automatikmodus jetzt richtig: dunkel ab Sonnenuntergang, hell ab Beginn der Morgendämmerung in Berlin."},
-{"versionCode": 581, "versionName": "1.8.570", "stand": "07.11.2026, 14:19 Uhr", "notiz": "Bei der Frage, ob deine Rechner erreichbar sind, sagt Jarvis jetzt auch, ob der Tunnel zu Windows-PC, Mac und Server lebt, also ob die Fernwartung klappt."}
+{"versionCode": 581, "versionName": "1.8.570", "stand": "07.11.2026, 14:19 Uhr", "notiz": "Bei der Frage, ob deine Rechner erreichbar sind, sagt Jarvis jetzt auch, ob der Tunnel zu Windows-PC, Mac und Server lebt, also ob die Fernwartung klappt."},
+{"versionCode": 582, "versionName": "1.8.571", "stand": "07.11.2026, 14:25 Uhr", "notiz": "Die Tunnel-Auskunft ist jetzt schnell, nutzt die Prüfung des Fernwartungs-Symbols und unterscheidet, ob der Tunnel tot oder nur der Fernwartungsdienst aus ist."}
 ]
 }
