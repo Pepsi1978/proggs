@@ -353,10 +353,11 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
             .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
-        verticalAlignment = Alignment.CenterVertically,
+        // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe des Titels, nicht mittig zwischen Titel und Zusatzzeile.
+        verticalAlignment = Alignment.Top,
     ) {
         // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
-        Column(Modifier.weight(1f).padding(end = 12.dp), horizontalAlignment = Alignment.End) {
+        Column(Modifier.weight(1f).padding(end = 12.dp, top = 4.dp), horizontalAlignment = Alignment.End) {
             Text(
                 a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
