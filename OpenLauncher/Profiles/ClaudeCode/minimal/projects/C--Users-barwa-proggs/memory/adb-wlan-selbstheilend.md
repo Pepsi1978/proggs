@@ -5,14 +5,24 @@ metadata:
   node_type: memory
   type: project
   originSessionId: adb57b23-b7a9-40f3-845e-f88ed3b5ff1a
-  modified: 2026-09-23T18:07:12.819Z
+  modified: 2026-11-07T13:54:23.041Z
 ---
 
 WLAN-adb zum Handy fiel nach PC-Neustart aus (23.09.2026). Root Cause: neuer adb-Server verbindet nichts von selbst (mDNS-Auto-Connect ist ereignisgesteuert); altes adb-wlan.ps1 kannte ohne Kabel nur gespeicherte IP + Port 5555 (beides flüchtig). TLS-Port von "Debugging über WLAN" wechselt bei jedem adbd-Neustart.
 
-Fix: adb-wlan.ps1/.sh (mDNS, Serial-Bindung, Lebenszeichen, TLS→5555, Pflege über WLAN), UpdateStation ≥1.0.11 (WorkManager setzt adb_wifi_enabled bei WLAN mit IP, prüft nach), Aufgabe `adb-wlan-wachhund` (Anmeldung, Netzbeitritt, alle 2 Min), eine SDK-adb für alles (PATH + Benutzervariable ADB). Details: best-practices/android/adb-wlan-debugging.md, bugs/android/adb-wlan-debugging.md.
+Fix:
+- adb-wlan.ps1/.sh: mDNS, Serial-Bindung, Lebenszeichen, TLS→5555, Pflege über WLAN.
+- UpdateStation ≥1.0.11: WorkManager setzt adb_wifi_enabled bei WLAN mit IP, prüft nach.
+- Aufgabe `adb-wlan-wachhund` (Anmeldung, Netzbeitritt, alle 2 Min).
+- Eine SDK-adb für alles (PATH + Benutzervariable ADB).
+- Seit 02.10.2026 Schritt 6 "Direktverbindung": Windows-Hotspot (192.168.137.x), wenn das Handy in keinem oder einem abgeschotteten WLAN ist (öffentliches WLAN). Hotspot ist auf dem Handy gespeichert und vertraut. "Public WiFi SMB" hat Auto-Verbinden aus.
+
+Details: best-practices/android/adb-wlan-debugging.md, bugs/android/adb-wlan-debugging.md.
 
 **Why:** Nutzer will über Wochen ohne Kabel installieren, auch nach Neustarts beider Geräte.
-**How to apply:** WLAN-adb weg → erst `%LOCALAPPDATA%\adb-wlan\adb-wlan.log` und `Get-ScheduledTask adb-wlan-wachhund` prüfen. Nie TLS-Port speichern, im Wachhund nie kill-server. Auf dem Handy nie `registerNetworkCallback(…, PendingIntent)` als Trigger (Android 17 räumt ihn nach ~5 s ab; Neu-Anmelden im Empfänger = Endlosschleife 760/s) — nach jeder Hintergrund-Logik CPU per `adb shell top -b -n 1` prüfen.
 
-Seit 02.10.2026 Schritt 6 "Direktverbindung": Windows-Hotspot (192.168.137.x), wenn das Handy in keinem oder einem abgeschotteten WLAN ist (öffentliches WLAN). Der Hotspot ist auf dem Handy gespeichert und vertraut. "Public WiFi SMB" hat Auto-Verbinden aus. Falle: adb-mDNS sieht nur Netze vom Serverstart.
+**How to apply:**
+- WLAN-adb weg → erst `%LOCALAPPDATA%\adb-wlan\adb-wlan.log` und `Get-ScheduledTask adb-wlan-wachhund` prüfen.
+- Nie TLS-Port speichern, im Wachhund nie kill-server.
+- Auf dem Handy nie `registerNetworkCallback(…, PendingIntent)` als Trigger (Android 17 räumt ihn nach ~5 s ab; Neu-Anmelden im Empfänger = Endlosschleife 760/s). Nach jeder Hintergrund-Logik CPU per `adb shell top -b -n 1` prüfen.
+- Falle: adb-mDNS sieht nur Netze vom Serverstart.

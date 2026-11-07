@@ -8,8 +8,8 @@ metadata:
   modified: 2026-10-14T11:26:24.322Z
 ---
 
-GenialeIdeen hat einen eigenen Build-Typ `schnell` (in `GenialeIdeen/app/build.gradle.kts`: `initWith(release)`, signiert mit dem Debug-Key). Installiert wird per `gradlew assembleSchnell` und die APK aus `app/build/outputs/apk/schnell/`.
+GenialeIdeen hat den Build-Typ `schnell` (`GenialeIdeen/app/build.gradle.kts`: `initWith(release)`, signiert mit dem Debug-Key). Installieren: `gradlew assembleSchnell`, APK aus `app/build/outputs/apk/schnell/`.
 
 **Why:** Der Debug-Build ruckelt spürbar; Frank will auf dem Handy die flüssige Fassung.
 
-**How to apply:** Nach Änderungen an GenialeIdeen `assembleSchnell` bauen und diese APK per WLAN installieren; apk-update läuft davon unabhängig über sein Skript. Siehe [[adb-wlan-selbstheilend]].
+**How to apply:** Nach Änderungen an GenialeIdeen `assembleSchnell` bauen und diese APK per WLAN installieren; apk-update läuft unabhängig davon über sein Skript. Siehe [[adb-wlan-selbstheilend]].

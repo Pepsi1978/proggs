@@ -8,9 +8,9 @@ metadata:
   modified: 2026-09-27T10:27:06.425Z
 ---
 
-Der Android-Cloud-Bau (`.github/workflows/android-cloud-build.yml`, eingerichtet 26.09.2026) lädt über rclone-Remote `gdrive` (Scope drive, Konto barwandt@gmail.com) nach `Dokumente/Updates/<Projekt>`. Lokale Konfig: `C:\Users\barwa\SK\rclone\gdrive.conf`; als Secret `RCLONE_CONFIG` im Environment `android-signing`.
+Android-Cloud-Bau (`.github/workflows/android-cloud-build.yml`, seit 26.09.2026) lädt über rclone-Remote `gdrive` (Scope drive, Konto barwandt@gmail.com) nach `Dokumente/Updates/<Projekt>`. Lokale Konfig: `C:\Users\barwa\SK\rclone\gdrive.conf`; als Secret `RCLONE_CONFIG` im Environment `android-signing`.
 
-Seit 27.09.2026 mit **eigenem OAuth-Client** statt der geteilten rclone-client_id: Google-Cloud-Projekt `update-upload` („Update-Upload“), Client-Typ Desktop, Daten in `SK\rclone\google-oauth-client.txt`. Die App steht auf **In Produktion** (sonst läuft der Refresh-Token nach 7 Tagen ab). Pflicht-Links im Branding zeigen auf `https://pepsi1978.github.io/proggs/update-upload/` (Repo `docs/update-upload/index.html`, Domain `pepsi1978.github.io` autorisiert). Alte Konfig als Rückfall: `SK\rclone\gdrive.alt-geteilte-kennung.conf`.
+Seit 27.09.2026 **eigener OAuth-Client** statt geteilter rclone-client_id: Google-Cloud-Projekt `update-upload` („Update-Upload“), Client-Typ Desktop, Daten in `SK\rclone\google-oauth-client.txt`. App steht auf **In Produktion** (sonst Refresh-Token nach 7 Tagen abgelaufen). Pflicht-Links im Branding: `https://pepsi1978.github.io/proggs/update-upload/` (Repo `docs/update-upload/index.html`, Domain `pepsi1978.github.io` autorisiert). Alte Konfig als Rückfall: `SK\rclone\gdrive.alt-geteilte-kennung.conf`.
 
-**Why:** Die geteilte rclone-client_id wird 2026 abgeschaltet; im Test-Modus würde der Upload nach 7 Tagen still ausfallen.
-**How to apply:** Scheitert „Drive-Ordner holen“ mit Auth-Fehler: `rclone config reconnect gdrive: --config $HOME\SK\rclone\gdrive.conf` (Browser-Freigabe, Warnung „App nicht überprüft“ → Erweitert), dann `gh secret set RCLONE_CONFIG --env android-signing < gdrive.conf`. Nie „Zurück zum Test“ klicken.
+**Why:** Geteilte rclone-client_id wird 2026 abgeschaltet; im Test-Modus fiele der Upload nach 7 Tagen still aus.
+**How to apply:** „Drive-Ordner holen“ scheitert mit Auth-Fehler → `rclone config reconnect gdrive: --config $HOME\SK\rclone\gdrive.conf` (Browser-Freigabe, Warnung „App nicht überprüft“ → Erweitert), dann `gh secret set RCLONE_CONFIG --env android-signing < gdrive.conf`. Nie „Zurück zum Test“ klicken.

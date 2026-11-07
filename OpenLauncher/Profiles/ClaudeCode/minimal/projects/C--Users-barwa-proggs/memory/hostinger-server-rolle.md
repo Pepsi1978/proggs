@@ -8,9 +8,7 @@ metadata:
   modified: 2026-11-02T11:18:13.446Z
 ---
 
-Jarvis steuert zuerst die Rechner an. Der Hostinger-Server bekommt einen Auftrag erst, wenn kein anderer Programmierer erreichbar ist. Windows und Mac sind dann also nicht verfügbar.
-
-Hauptzweck des Servers: Apps bauen, im Repo sichern und Android-Apps über den adb-Tunnel direkt aufs Handy installieren, ob das Handy im WLAN oder im Mobilnetz ist.
+Jarvis steuert zuerst die Rechner an; der Hostinger-Server bekommt einen Auftrag nur, wenn kein anderer Programmierer erreichbar ist (Windows und Mac dann nicht verfügbar). Hauptzweck: Apps bauen, im Repo sichern, Android-Apps über den adb-Tunnel direkt aufs Handy installieren – ob Handy im WLAN oder Mobilnetz.
 
 **Why:** Frank hat das am 02.11.2026 klargestellt, nachdem ich Weiterleitung und Nachinstallation auf andere Rechner vorgeschlagen hatte.
 

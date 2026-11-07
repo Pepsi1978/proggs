@@ -8,10 +8,13 @@ metadata:
   modified: 2026-10-08T14:20:50.680Z
 ---
 
-Am 08.10.2026 habe ich per `adb shell input` einen Tipp, einen Testtext und zweimal „Zurück" ans Handy geschickt, während Frank dort gerade im Browser die ChatGPT-Anmeldung machte. Die Eingaben landeten in seinem Browser.
+Vor jeder adb-Eingabe (`adb shell input`, auch `am start`) prüfen, dass die erwartete App vorn ist.
 
-**Why:** Frank bedient das Handy während einer Sitzung oft selbst. Installieren, Logcat und Screenshots stören nicht, Eingaben schon.
+**Why:** 08.10.2026: Tipp, Testtext und zweimal „Zurück" per `adb shell input` landeten in Franks Browser, wo er gerade die ChatGPT-Anmeldung machte. Nachtrag 08.10.2026: Jarvis per `am start` geöffnet, obwohl `dumpsys window` unmittelbar davor ChatGPT im Vordergrund zeigte. Frank bedient das Handy während einer Sitzung oft selbst; Installieren, Logcat und Screenshots stören nicht, Eingaben schon.
 
-**How to apply:** Vor jeder Eingabe per adb mit `uiautomator dump` oder `dumpsys window` prüfen, dass die erwartete App vorn ist, und nach jedem Schritt erneut. Liefert die Suche nach einem Bedienelement nichts, sofort abbrechen, statt weiterzutippen. Besser: einen Test wählen, der ohne Bedienung auskommt (z. B. Aufruf von außen über den Server). Meine Deutung: Im Zweifel Frank bitten, den Schritt selbst zu tippen.
-
-Nachtrag 08.10.2026: Auch `am start` zählt. Ich habe Jarvis geöffnet, obwohl `dumpsys window` unmittelbar davor ChatGPT im Vordergrund zeigte. Zeigt die Prüfung eine fremde App, den Schritt lassen und Frank bitten, die App selbst zu öffnen.
+**How to apply:**
+- Vor jeder Eingabe und nach jedem Schritt erneut per `uiautomator dump` oder `dumpsys window` prüfen.
+- Zeigt die Prüfung eine fremde App: Schritt lassen, Frank bitten, die App selbst zu öffnen.
+- Findet die Suche ein Bedienelement nicht: sofort abbrechen, nicht weitertippen.
+- Besser: Test ohne Bedienung wählen (z. B. Aufruf von außen über den Server).
+- Meine Deutung: im Zweifel Frank bitten, den Schritt selbst zu tippen.

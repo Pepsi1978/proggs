@@ -8,7 +8,7 @@ metadata:
   modified: 2026-09-27T16:39:35.783Z
 ---
 
-Cloud-Sitzungen öffnen PRs unter dem Konto Pepsi1978, deshalb ist Frank Autor jedes PR-Threads (Benachrichtigungsgrund `author`). Das Repo nicht zu beobachten („Unwatch“) stoppt diese Mails NICHT. Am 27.09.2026 wurde unter github.com/settings/notifications „Participating, @mentions and custom“ auf nur „on GitHub“ gestellt (E-Mail aus).
+Cloud-Sitzungen öffnen PRs unter dem Konto Pepsi1978 → Frank ist Autor jedes PR-Threads (Grund `author`); „Unwatch“ stoppt diese Mails NICHT. Am 27.09.2026 unter github.com/settings/notifications „Participating, @mentions and custom“ auf nur „on GitHub“ gestellt (E-Mail aus).
 
-**Why:** Der erste Abschaltversuch (Repo nicht mehr beobachten) wirkte nicht, die Codex-Mails kamen weiter.
-**How to apply:** Kommen trotzdem wieder PR- oder Codex-Mails, zuerst diese Einstellung prüfen; Codex-Review selbst NICHT abschalten, apk-update-cloud braucht es.
+**Why:** Erster Versuch (Repo nicht mehr beobachten) wirkte nicht, Codex-Mails kamen weiter.
+**How to apply:** Kommen wieder PR- oder Codex-Mails, zuerst diese Einstellung prüfen; Codex-Review selbst NICHT abschalten, apk-update-cloud braucht es.

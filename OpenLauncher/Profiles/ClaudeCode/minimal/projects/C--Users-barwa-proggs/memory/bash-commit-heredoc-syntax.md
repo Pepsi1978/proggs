@@ -5,15 +5,12 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 9fd40b29-2cd9-4d33-a8a8-8c92992cac2c
+  modified: 2026-11-07T13:54:57.323Z
 ---
 
-Beim Committen über das **Bash-Tool** (Git Bash) darf für mehrzeilige Commit-Messages
-NICHT die PowerShell-Here-String-Syntax `git commit -m @'...'@` verwendet werden — im
-Bash-Tool ist `@` kein Sonderzeichen, sondern landet als **literales `@ ` am Anfang des
-Commit-Titels**.
+Im **Bash-Tool** (Git Bash) für mehrzeilige Commit-Messages NIE die PowerShell-Here-String-Syntax `git commit -m @'...'@`: `@` ist dort kein Sonderzeichen und landet als **literales `@ ` am Anfang des Commit-Titels**.
 
-**Why:** In dieser Session ist der Fehler ZWEIMAL passiert (Commits `9f1cfe1a7` und
-`7106e5a1b`), weil das PowerShell- und das Bash-Tool unterschiedliche Heredoc-Syntax haben.
+**Why:** Zweimal passiert (Commits `9f1cfe1a7` und `7106e5a1b`), weil PowerShell- und Bash-Tool unterschiedliche Heredoc-Syntax haben.
 
 **How to apply:** Im Bash-Tool immer `git commit -F-` mit echtem Shell-Heredoc:
 ```
@@ -23,5 +20,4 @@ Titelzeile
 Body ...
 EOF
 ```
-Im **PowerShell-Tool** dagegen ist `@'...'@` korrekt. Also: Syntax am aktiven Tool
-ausrichten. Verwandt: [[repo-branch-und-sync-setup]] (Force-Push auf shared main vermeiden).
+Im **PowerShell-Tool** ist `@'...'@` korrekt. Syntax am aktiven Tool ausrichten. Verwandt: [[repo-branch-und-sync-setup]] (Force-Push auf shared main vermeiden).
