@@ -388,7 +388,7 @@ private fun Karte(vm: AppViewModel, a: Aufgabe, heute: Long, zustand: ZiehZustan
 private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zustand: ZiehZustand) {
     val f = LocalFarben.current
     val erste = liste.first()
-    var offen by rememberSaveable(erste.zielId) { mutableStateOf(false) }
+    var offen by rememberSaveable(erste.zielId) { mutableStateOf(true) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier.fillMaxWidth().glas(f, 16.dp, 0.9f, f.tertiaer.copy(alpha = 0.14f)).antippen(haptik = false) { offen = !offen }

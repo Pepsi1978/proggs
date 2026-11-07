@@ -44,7 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -193,7 +202,7 @@ fun Sektion(
     zustand: ZiehZustand,
     ziel: Ziel,
     untertitel: String? = null,
-    /** Nur „Heute“ startet offen; alle anderen Bereiche sind anfangs zu (außer während der Suche, wenn sie Treffer haben). */
+    /** Ohne Wirkung mehr: Alle Bereiche starten offen. */
     startOffen: Boolean = false,
     /** Ohne Aufgaben bleibt der Bereich zugeklappt, bis man ihn selbst aufklappt. */
     leer: Boolean = false,
@@ -204,13 +213,10 @@ fun Sektion(
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
-    // 0 = automatisch (startOffen bzw. während der Suche offen, wenn etwas drin ist; leer immer zu),
-    // 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
+    // 0 = automatisch (beim Start sind alle Bereiche offen, auch leere, damit man überall hineinziehen kann;
+    // während der Suche nur die mit Treffern), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
     var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
-    // Wird der Bereich leer, gilt wieder die Automatik: leer heißt zugeklappt.
-    LaunchedEffect(leer, automatik) { if (leer && automatik) wahl = 0 }
-    // Während der Suche (automatik aus) zeigen alle Bereiche mit Treffern diese offen an.
-    val offen = when (wahl) { 1 -> true; 2 -> false; else -> (startOffen || !automatik) && !leer }
+    val offen = when (wahl) { 1 -> true; 2 -> false; else -> automatik || !leer }
     val zielSchluessel = "sek_$schluessel"
     val schwebt = zustand.hoverZiel == zielSchluessel
     // Schwebt eine gezogene Aufgabe zwei Sekunden ruhig über dem geschlossenen Bereich, klappt er auf und bleibt offen.
@@ -236,18 +242,20 @@ fun Sektion(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 7.dp)
+            .padding(horizontal = 14.dp, vertical = 11.dp)
             .einblenden(verzoegerung)
             .graphicsLayer { scaleX = hub; scaleY = hub }
             .ablageZiel(zustand, zielSchluessel, ziel)
             .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe)
+            // Farbiger Rahmen in der Bereichsfarbe grenzt die Bereiche klar voneinander ab.
+            .border(1.5.dp, farbe.copy(alpha = if (f.dunkel) 0.55f else 0.45f), RoundedCornerShape(f.radius))
             .then(if (schwebt) Modifier.glas(f, erhoeht = 0f, fuellung = rand.copy(alpha = 0.12f)) else Modifier)
             // Beim Ziehen ohne Größenanimation: ZiehZustand gleicht den Spannenwechsel der Zeitleiste im selben Frame per
             // Scroll aus; eine nachfedernde Höhe ließe den Inhalt erst springen und dann zurückdriften.
             .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().kopfBand(farbe, offen).antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {
@@ -257,19 +265,62 @@ fun Sektion(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(titel, color = f.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                     if (anzahl > 0) Box(
-                        Modifier.padding(start = 8.dp).glas(f, 99.dp, 0f, farbe.copy(alpha = 0.18f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp),
-                    ) { Text("$anzahl", color = farbe, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        Modifier.padding(start = 8.dp).glas(f, 99.dp, 0f, farbe.copy(alpha = 0.92f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp),
+                    ) { Text("$anzahl", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 }
-                if (untertitel != null) Text(untertitel, color = f.textLeise, fontSize = 12.sp)
+                if (untertitel != null) Text(untertitel, color = f.text.copy(alpha = 0.78f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
             aktionen()
             val dreh by animateFloatAsState(if (offen) 0f else -90f, label = "pfeil")
-            Icon(Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.graphicsLayer { rotationZ = dreh })
+            Icon(Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.text, modifier = Modifier.graphicsLayer { rotationZ = dreh })
         }
         AnimatedVisibility(offen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) {
-            Column(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier.fillMaxWidth()
+                    // Farbige Leiste links verbindet den Inhalt sichtbar mit seiner Überschrift.
+                    .drawBehind {
+                        drawRoundRect(
+                            farbe.copy(alpha = 0.75f), topLeft = Offset(4.dp.toPx(), 10.dp.toPx()),
+                            size = Size(3.5.dp.toPx(), (size.height - 22.dp.toPx()).coerceAtLeast(0f)), cornerRadius = CornerRadius(2.dp.toPx()),
+                        )
+                    }
+                    .padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 inhalt()
             }
+        }
+    }
+}
+
+/**
+ * Kräftig gefärbtes Kopfband eines Bereichs mit diagonalem Streifenmuster in der Bereichsfarbe.
+ * Aufgeklappt sind nur die oberen Ecken rund und eine farbige Linie trennt den Kopf vom Inhalt.
+ */
+private fun Modifier.kopfBand(farbe: Color, offen: Boolean): Modifier = composed {
+    val f = LocalFarben.current
+    drawWithCache {
+        val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
+        val unten = if (offen) CornerRadius.Zero else CornerRadius(r)
+        val form = Path().apply {
+            addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r), CornerRadius(r), unten, unten))
+        }
+        val band = Brush.horizontalGradient(
+            listOf(farbe.copy(alpha = if (f.dunkel) 0.46f else 0.34f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)),
+        )
+        val streifen = farbe.copy(alpha = if (f.dunkel) 0.16f else 0.13f)
+        val abstand = 16.dp.toPx()
+        val breite = 5.dp.toPx()
+        onDrawBehind {
+            drawPath(form, band)
+            clipPath(form) {
+                var x = -size.height
+                while (x < size.width) {
+                    drawLine(streifen, Offset(x, size.height), Offset(x + size.height, 0f), breite)
+                    x += abstand
+                }
+            }
+            if (offen) drawLine(farbe.copy(alpha = 0.7f), Offset(0f, size.height), Offset(size.width, size.height), 2.dp.toPx())
         }
     }
 }

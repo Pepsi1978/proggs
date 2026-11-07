@@ -60,6 +60,7 @@
     {"versionCode": 56, "versionName": "1.0.55", "stand": "07.11.2026, 16:10 Uhr", "notiz": "Nur der Bereich Heute ist anfangs aufgeklappt; hält man eine gezogene Aufgabe zwei Sekunden über einem geschlossenen Bereich, klappt er auf und sie lässt sich darin ablegen, auch auf einer Uhrzeit."},
     {"versionCode": 57, "versionName": "1.0.56", "stand": "07.11.2026, 16:14 Uhr", "notiz": "Die Suche klappt Bereiche mit Treffern wieder auf, Bereiche klappen beim Randscrollen nicht mehr ungewollt auf, und nach dem Ablegen auf eine Uhrzeit in einem gerade aufgeklappten Bereich springt die Liste nicht mehr."},
     {"versionCode": 58, "versionName": "1.0.57", "stand": "07.11.2026, 20:24 Uhr", "notiz": "In den Bereichen Heute und Morgen stehen Aufgabentexte und Abhakkreise jetzt rechts, damit sie sich einhändig mit dem rechten Daumen besser erreichen lassen."},
-    {"versionCode": 59, "versionName": "1.0.58", "stand": "07.11.2026, 20:27 Uhr", "notiz": "Die rechte Ausrichtung in Heute und Morgen ist wieder zurückgenommen; Aufgaben und Abhakkreise stehen wie vorher links."}
+    {"versionCode": 59, "versionName": "1.0.58", "stand": "07.11.2026, 20:27 Uhr", "notiz": "Die rechte Ausrichtung in Heute und Morgen ist wieder zurückgenommen; Aufgaben und Abhakkreise stehen wie vorher links."},
+    {"versionCode": 60, "versionName": "1.0.59", "stand": "07.11.2026, 22:18 Uhr", "notiz": "Beim Start sind alle Bereiche aufgeklappt, und jeder Bereich hat ein kräftig gefärbtes, gestreiftes Kopfband, einen farbigen Rahmen und eine Farbleiste am Inhalt, damit man sofort sieht, was wohin gehört."}
 ]
 }
