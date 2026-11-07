@@ -635,6 +635,9 @@ erklären es nicht (auch ohne `'''` gescheitert). Genaue Ursache im Werkzeug-Wra
 **Fix:** Skripte über ~30 Zeilen mit dem Write-Werkzeug als Datei in den Scratchpad legen und
 `python -X utf8 <datei>` ausführen. Kostet nichts extra und vermeidet das erneute Ausgeben.
 **Wirkungsprüfung:** Maßnahme M1 in `skills/session-flaschenhals/massnahmen.json`.
+**Verwandte Stellen geprüft (gleiche 40 Sitzungen):** lange `python -c` im Bash-Werkzeug 3/3 ok;
+PowerShell-Here-Strings `@'…'@` nur kurze (44 ok, 4 Fehler aus anderen Gründen), lange kamen nicht
+vor; lange Bash-Befehle ohne Heredoc kamen nicht vor. Kein weiterer Befund.
 
 ---
 

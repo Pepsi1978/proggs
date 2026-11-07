@@ -29,7 +29,7 @@ eigene Sitzung aus dem Gedächtnis nach denselben Kriterien einordnen.
 - Zeit kommt in drei Töpfe: **Werkzeug** (Befehle, Builds), **Modell** (Denken/Schreiben),
   **Frank/Ruhe** (Antwortzeit, Pausen, Hintergrund). Frank/Ruhe ist nie ein Befund gegen den Agenten.
 - **Wiederkehrend** = gleiche Fehlerklasse, langsame Befehlsklasse oder Doppelarbeit in **≥ 2 Sitzungen**
-  des Vergleichs. Nur das ist ein Kandidat für eine Maßnahme.
+  (die aktuelle mitgezählt; der Vergleich lässt sie weg, also beide Ausgaben zusammen lesen). Nur das ist ein Kandidat für eine Maßnahme.
 - **Einmalig** = nur hier aufgetreten → im Bericht nennen, nichts bauen (Direktive 3: Abstraktion erst
   ab zwei echten Fällen). Normale Entwicklungsarbeit (roter Build, der gefixt wurde) ist kein Befund.
 - Vor jeder Maßnahme die Ursache belegen: Kommandos hinter dem Befund ansehen (`--json` liefert sie)
