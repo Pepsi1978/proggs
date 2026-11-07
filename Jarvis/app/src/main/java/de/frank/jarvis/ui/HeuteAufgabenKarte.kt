@@ -1,7 +1,6 @@
 package de.frank.jarvis.ui
 
 import android.database.ContentObserver
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.layout.Box
@@ -22,14 +21,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -37,11 +34,16 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import de.frank.jarvis.faehigkeit.AppBruecke
+import de.frank.jarvis.faehigkeit.AufgabenFaehigkeit
+import de.frank.jarvis.faehigkeit.Ergebnis
+import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import de.frank.jarvis.ui.theme.knopf3d
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -50,8 +52,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalDateTime
-
-private val AUFGABEN_BRUECKE: Uri = Uri.parse("content://de.frank.aufgaben.jarvis")
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Eine Aufgabe des heutigen Bestands, so wie Geniale Aufgaben sie meldet. */
 private data class HeuteAufgabe(
@@ -61,17 +62,41 @@ private data class HeuteAufgabe(
 
 private val PRIO_RANG = listOf("HOCH", "MITTEL", "GERING", "SPAETER")
 
+/** Ab so vielen Aufgaben klappt die Karte den Rest ein („Alle zeigen“), damit der Startbildschirm nicht endlos wird. */
+private const val SICHTBAR = 25
+
+/**
+ * Stand der Karte außerhalb der Komposition: Sie liegt in einer LazyColumn und verliert sonst beim Wegscrollen alles
+ * (auch ein laufendes Abhaken). Lebt so lange wie der App-Prozess.
+ */
+private object HeuteAufgabenStand {
+    var aufgaben by mutableStateOf<List<HeuteAufgabe>?>(null)
+    var fehler by mutableStateOf<String?>(null)
+    var alleZeigen by mutableStateOf(false)
+    /** Während Jarvis eine Zeile umstellt, gilt dort der gewünschte Stand (kein Zurückspringen beim Neulesen). */
+    val unterwegs = mutableStateMapOf<Long, Boolean>()
+    /**
+     * Heute in Jarvis abgehakte Überfällige: Geniale Aufgaben führt sie danach nur noch unter „Erledigt“ (ihr Tag liegt vor
+     * heute), hier bleiben sie bis Mitternacht als erledigt stehen, damit ein versehentlicher Tipp rückgängig zu machen ist.
+     */
+    val abgehakt = mutableStateMapOf<Long, HeuteAufgabe>()
+    var abgehaktTag = ""
+    /** Nur die zuletzt begonnene Lesung darf den Stand setzen; ältere, die später fertig werden, verfallen. */
+    val lesung = AtomicInteger()
+    /** Bis wann Meldungen der Aufgaben-App von Jarvis' eigenem Abhaken stammen (die Karte hat dann schon neu gelesen). */
+    @Volatile var eigeneAenderungBis = 0L
+}
+
 /**
  * Der heutige Bestand aus Geniale Aufgaben, wie dort unter „Heute“: offen Überfälliges und Heutiges (tägliche auf heute
  * projiziert) plus alles, was heute schon erledigt wurde. Zwei Lesungen über die Brücke: „heute“ (offen bis heute) und
- * „tag“ mit dem heutigen Datum (enthält auch die heute erledigten). Reihenfolge wie in der App: ohne Uhrzeit nach Priorität,
- * dann Termine nach Uhrzeit, erledigte ohne Uhrzeit zuletzt.
+ * „tag“ mit dem heutigen Datum (enthält auch die heute erledigten).
  */
 private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>?, String?> {
-    val heute = LocalDate.now().toString()
-    val offen = AppBruecke.rufe(context, "Geniale Aufgaben", AUFGABEN_BRUECKE, "lesen", JSONObject().put("bereich", "heute").put("limit", 200), lesend = true)
+    val bruecke = AufgabenFaehigkeit.BRUECKE
+    val offen = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "heute").put("limit", 200), lesend = true)
     offen.optString("fehler").takeIf { it.isNotEmpty() }?.let { return null to it }
-    val amTag = AppBruecke.rufe(context, "Geniale Aufgaben", AUFGABEN_BRUECKE, "lesen", JSONObject().put("bereich", "tag").put("datum", heute).put("limit", 200), lesend = true)
+    val amTag = AppBruecke.rufe(context, "Geniale Aufgaben", bruecke, "lesen", JSONObject().put("bereich", "tag").put("datum", LocalDate.now().toString()).put("limit", 200), lesend = true)
     amTag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return null to it }
     val nachId = LinkedHashMap<Long, HeuteAufgabe>()
     fun uebernimm(liste: JSONArray?) {
@@ -88,11 +113,45 @@ private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>
     }
     uebernimm(offen.optJSONArray("aufgaben"))
     uebernimm(amTag.optJSONArray("aufgaben"))
+    return nachId.values.toList() to null
+}
+
+/**
+ * Reihenfolge wie in Geniale Aufgaben: offene ohne Termin von heute (auch überfällige mit Uhrzeit) nach Priorität, dann die
+ * heutigen Termine nach Uhrzeit, zuletzt die erledigten ohne heutigen Termin.
+ */
+private fun sortiere(liste: List<HeuteAufgabe>): List<HeuteAufgabe> {
     val rang = { a: HeuteAufgabe -> PRIO_RANG.indexOf(a.prioritaet).let { if (it < 0) PRIO_RANG.size else it } }
-    val sortiert = nachId.values.sortedWith(
-        compareBy<HeuteAufgabe>({ if (it.uhrzeit != null) 1 else if (it.erledigt) 2 else 0 }, { it.uhrzeit ?: "" }, { rang(it) }),
-    )
-    return sortiert to null
+    val gruppe = { a: HeuteAufgabe ->
+        when {
+            a.uhrzeit != null && !a.ueberfaellig -> 1
+            a.erledigt -> 2
+            else -> 0
+        }
+    }
+    return liste.sortedWith(compareBy<HeuteAufgabe>({ gruppe(it) }, { if (gruppe(it) == 1) it.uhrzeit else "" }, { rang(it) }))
+}
+
+/** Liest den Stand neu; nur die zuletzt begonnene Lesung setzt ihn. Abbrechbar (die Brücke blockiert sonst bis zum Zeitlimit). */
+private suspend fun neuLesen(context: android.content.Context) {
+    val s = HeuteAufgabenStand
+    val nummer = s.lesung.incrementAndGet()
+    val (liste, problem) = try {
+        AppBruecke.unterbrechbar { ladeHeute(context) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null to (e.message ?: "Geniale Aufgaben antwortet nicht.")
+    }
+    if (nummer != s.lesung.get()) return
+    if (liste == null) { s.fehler = problem; return }
+    val heute = LocalDate.now().toString()
+    if (s.abgehaktTag != heute) { s.abgehakt.clear(); s.abgehaktTag = heute }
+    // Abgehakte Überfällige, die in der App wieder offen sind, stehen wieder normal in der Liste.
+    liste.forEach { a -> if (a.id in s.abgehakt) s.abgehakt.remove(a.id) }
+    val ids = liste.map { it.id }.toSet()
+    s.aufgaben = sortiere(liste + s.abgehakt.values.filter { it.id !in ids })
+    s.fehler = null
 }
 
 /**
@@ -104,26 +163,24 @@ private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>
 fun HeuteAufgabenKarte(vm: AppViewModel) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
-    val scope = rememberCoroutineScope()
-    var aufgaben by remember { mutableStateOf<List<HeuteAufgabe>?>(null) }
-    var fehler by remember { mutableStateOf<String?>(null) }
+    val s = HeuteAufgabenStand
     var anstoss by remember { mutableIntStateOf(0) }
-    // Während Jarvis eine Zeile in Geniale Aufgaben umstellt, gilt dort der gewünschte Stand (kein Zurückspringen beim Neulesen).
-    val unterwegs = remember { mutableStateMapOf<Long, Boolean>() }
 
-    // Neu lesen: kurz gebündelt, denn Änderungen in der Aufgaben-App kommen oft mehrfach hintereinander.
+    // Der Rückkehr-Effekt feuert auch beim ersten Erscheinen (die App ist dann schon vorn): Er löst die erste Lesung aus.
+    // Weitere Anstöße kurz gebündelt, denn Änderungen in der Aufgaben-App kommen oft mehrfach hintereinander.
     LaunchedEffect(anstoss) {
-        if (anstoss > 0) delay(300)
-        val (liste, f2) = withContext(Dispatchers.IO) { runCatching { ladeHeute(context) }.getOrElse { null to (it.message ?: "Geniale Aufgaben antwortet nicht.") } }
-        if (liste != null) aufgaben = liste
-        fehler = f2
+        if (anstoss == 0) return@LaunchedEffect
+        if (anstoss > 1) delay(300)
+        neuLesen(context)
     }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { anstoss++; onPauseOrDispose { } }
     DisposableEffect(Unit) {
         val beobachter = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) { anstoss++ }
+            override fun onChange(selfChange: Boolean) {
+                if (System.currentTimeMillis() > s.eigeneAenderungBis) anstoss++
+            }
         }
-        runCatching { context.contentResolver.registerContentObserver(AUFGABEN_BRUECKE, true, beobachter) }
+        runCatching { context.contentResolver.registerContentObserver(AufgabenFaehigkeit.BRUECKE, true, beobachter) }
         onDispose { runCatching { context.contentResolver.unregisterContentObserver(beobachter) } }
     }
     // Um Mitternacht beginnt ein neuer Tag: neu lesen.
@@ -137,43 +194,53 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
     }
 
     fun umschalten(a: HeuteAufgabe) {
-        if (a.id in unterwegs) return
+        if (a.id in s.unterwegs) return
         val ziel = !a.erledigt
-        unterwegs[a.id] = ziel
-        scope.launch {
-            val antwort = withContext(Dispatchers.IO) {
-                runCatching {
-                    AppBruecke.unterbrechbar {
-                        AppBruecke.rufe(context, "Geniale Aufgaben", AUFGABEN_BRUECKE, "erledigen", JSONObject().put("id", a.id).put("erledigt", ziel), lesend = false)
-                    }
-                }.getOrElse { JSONObject().put("fehler", it.message ?: "Geniale Aufgaben antwortet nicht.") }
+        s.unterwegs[a.id] = ziel
+        // Im ViewModel, nicht in der Karte: Scrollt Frank sie weg, läuft das Abhaken trotzdem zu Ende.
+        vm.viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                try {
+                    Register.alle(context).filterIsInstance<AufgabenFaehigkeit>().first().abhaken(a.id, ziel)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Ergebnis(e.message ?: "Geniale Aufgaben antwortet nicht.", fehler = true)
+                }
             }
-            val problem = antwort.optString("fehler")
-            if (problem.isNotEmpty()) vm.meldung = "Nicht umgestellt: $problem"
-            else runCatching { de.frank.jarvis.gedaechtnis.Lagebild.nachAktion(context, "aufgabe_aendern", "Jarvis") }
-            // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nie kurz zurück.
-            val (liste, f2) = withContext(Dispatchers.IO) { runCatching { ladeHeute(context) }.getOrElse { null to null } }
-            if (liste != null) aufgaben = liste
-            if (f2 != null) fehler = f2
-            unterwegs.remove(a.id)
+            // Die Aufgaben-App meldet die eigene Änderung gleich noch einmal; die Karte liest ohnehin selbst neu.
+            s.eigeneAenderungBis = System.currentTimeMillis() + 2_000
+            if (r.fehler) vm.meldung = "Nicht sicher umgestellt: ${r.text}"
+            else if (ziel && a.ueberfaellig) s.abgehakt[a.id] = a.copy(erledigt = true)
+            else if (!ziel) s.abgehakt.remove(a.id)
+            // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nicht kurz zurück.
+            try { neuLesen(context) } finally { s.unterwegs.remove(a.id) }
         }
     }
 
-    val liste = aufgaben
     Karte {
-        val anzeige = liste?.map { a -> unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
+        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
         val fertig = anzeige?.count { it.erledigt } ?: 0
+        val fehler = s.fehler
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
-                anzeige == null && fehler != null -> fehler!!
+                anzeige == null && fehler != null -> fehler
                 anzeige == null -> "Wird gelesen …"
-                anzeige.isEmpty() -> "Für heute steht nichts an."
+                anzeige.isEmpty() -> "Für heute steht nichts an." + (if (fehler != null) " · $fehler" else "")
                 else -> "$fertig von ${anzeige.size} erledigt" + (if (fehler != null) " · $fehler" else "")
             },
             color = if (fehler != null) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
         )
-        anzeige?.forEach { a -> AufgabenZeile(a) { umschalten(a) } }
+        if (anzeige != null) {
+            val zeigen = if (s.alleZeigen || anzeige.size <= SICHTBAR) anzeige else anzeige.take(SICHTBAR)
+            zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a) { umschalten(a) } } }
+            if (anzeige.size > SICHTBAR) Text(
+                if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
+                Modifier.padding(top = 4.dp).antippen { s.alleZeigen = !s.alleZeigen },
+                color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
@@ -181,8 +248,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel) {
 private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
     val f = LocalFarben.current
     Row(
-        Modifier.fillMaxWidth().antippen(aktion = umschalten).padding(vertical = 6.dp)
-            .semantics { role = Role.Checkbox; stateDescription = if (a.erledigt) "erledigt" else "offen" },
+        Modifier.fillMaxWidth().antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
+            .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

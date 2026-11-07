@@ -202,6 +202,9 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
         },
     )
 
+    /** Für die Heute-Karte auf dem Startbildschirm: abhaken oder wieder öffnen, mit derselben Ergebnisprüfung wie die Werkzeuge. */
+    suspend fun abhaken(id: Long, erledigt: Boolean): Ergebnis = erledige(id, erledigt)
+
     /** Hakt eine Aufgabe ab oder öffnet sie wieder. */
     private suspend fun erledige(id: Long, erledigt: Boolean): Ergebnis {
         val antwort = rufe("erledigen", JSONObject().put("id", id).put("erledigt", erledigt))
@@ -308,6 +311,6 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
 
     companion object {
         private val LESEND = setOf("lesen", "info")
-        private val BRUECKE: Uri = Uri.parse("content://de.frank.aufgaben.jarvis")
+        internal val BRUECKE: Uri =Uri.parse("content://de.frank.aufgaben.jarvis")
     }
 }

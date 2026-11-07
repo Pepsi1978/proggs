@@ -65,13 +65,38 @@ import de.frank.jarvis.ui.theme.Chip
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.glas
 
+/** Lesestelle der Einstellungen, solange eine von dort geöffnete Vollbildansicht davorliegt. */
+private object EinstellungenLesestelle { var wert = 0 }
+
+/** Statuszeile des Live-Gedächtnisses, eigenständig: Ändert sich das Lagebild, wird nur diese Zeile neu gezeichnet. */
+@Composable
+private fun LiveGedaechtnisStand() {
+    val f = LocalFarben.current
+    val lagebild by de.frank.jarvis.gedaechtnis.Lagebild.stand.collectAsState()
+    val neu = lagebild.neuigkeiten.count { System.currentTimeMillis() - it.zeit < 24 * 3_600_000L }
+    val gestoert = lagebild.abschnitte.count { it.value.fehler.isNotEmpty() }
+    Text(
+        "${lagebild.abschnitte.size} Bereiche aus allen Apps bereit" + (if (neu > 0) " · $neu Neuigkeiten heute" else "") +
+            (if (gestoert > 0) " · $gestoert gestört" else "") + (if (lagebild.laeuft.isNotEmpty()) " · liest gerade …" else ""),
+        color = if (gestoert > 0) f.gefahr else f.textSchwach, fontSize = 13.sp,
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: ComponentActivity) {
     val f = LocalFarben.current
     val e = vm.einstellungen
+    // Öffnet Frank von hier eine Vollbildansicht (Live-Gedächtnis, Funktionsübersicht, Merkliste), verschwindet dieser Bildschirm
+    // aus der Komposition. Die Lesestelle wird dann gemerkt, damit Zurück wieder genau dort landet; sonst beginnt er oben.
+    val scroll = rememberScrollState(EinstellungenLesestelle.wert)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            EinstellungenLesestelle.wert = if (GedaechtnisAnsicht.offen || FunktionenAnsicht.offen || vm.merkOffen != null) scroll.value else 0
+        }
+    }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text("Einstellungen", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
@@ -210,16 +235,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     }
                     Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
                 }
-                // Früher eine Karte auf dem Startbildschirm; zurück aus der Ansicht führt wieder hierher.
+                // Früher eine Karte auf dem Startbildschirm; zurück aus der Ansicht führt wieder an diese Stelle.
                 Unterzeile("Live-Gedächtnis")
-                val lagebild by de.frank.jarvis.gedaechtnis.Lagebild.stand.collectAsState()
-                val neu = lagebild.neuigkeiten.count { System.currentTimeMillis() - it.zeit < 24 * 3_600_000L }
-                val gestoert = lagebild.abschnitte.count { it.value.fehler.isNotEmpty() }
-                Text(
-                    "${lagebild.abschnitte.size} Bereiche aus allen Apps bereit" + (if (neu > 0) " · $neu Neuigkeiten heute" else "") +
-                        (if (gestoert > 0) " · $gestoert gestört" else "") + (if (lagebild.laeuft.isNotEmpty()) " · liest gerade …" else ""),
-                    color = if (gestoert > 0) f.gefahr else f.textSchwach, fontSize = 13.sp,
-                )
+                LiveGedaechtnisStand()
                 Knopf("Live-Gedächtnis ansehen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { GedaechtnisAnsicht.offen = true }
                 Unterzeile("Funktionsübersicht")
                 Text("Was Jarvis in der installierten Version kann, knapp nach Bereichen. Jarvis liest sie nur bei Bedarf (auch in ChatGPT und ohne GitHub), nicht bei jeder Antwort, und pflegt sie nach jedem Update selbst.", color = f.textSchwach, fontSize = 13.sp)
