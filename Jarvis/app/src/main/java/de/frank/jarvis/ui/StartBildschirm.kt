@@ -307,37 +307,10 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                 }
             }
-            // Schnellstart für Franks eigene Apps: zwischen Tagesauswertung und Live-Gedächtnis.
+            // Schnellstart für Franks eigene Apps, direkt darunter die heutigen Aufgaben aus Geniale Aufgaben zum Abhaken.
+            // Das Live-Gedächtnis steht in den Einstellungen (Reiter Jarvis, Bereich „Jarvis' Gedächtnis“).
             if (vm.gespraech.isEmpty()) item(key = "schnellstart") { SchnellstartBereich(vm) }
-            if (vm.gespraech.isEmpty()) item(key = "gedaechtnis") {
-                val lagebild by de.frank.jarvis.gedaechtnis.Lagebild.stand.collectAsState()
-                Karte(Modifier.antippen { GedaechtnisAnsicht.offen = true }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Live-Gedächtnis", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            val neu = lagebild.neuigkeiten.count { System.currentTimeMillis() - it.zeit < 24 * 3_600_000L }
-                            val fehler = lagebild.abschnitte.count { it.value.fehler.isNotEmpty() }
-                            Text(
-                                "${lagebild.abschnitte.size} Bereiche aus allen Apps bereit" + (if (neu > 0) " · $neu Neuigkeiten heute" else "") +
-                                    (if (fehler > 0) " · $fehler gestört" else "") + (if (lagebild.laeuft.isNotEmpty()) " · liest gerade …" else ""),
-                                color = if (fehler > 0) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                        Text("Ansehen", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-            if (vm.gespraech.isEmpty()) item(key = "vorschlaege") {
-                Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    Text("Frag mich etwas", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
-                    Text("Hier schreibst du direkt mit Jarvis. Nach rechts wischen zeigt deine gespeicherten Gespräche. In ChatGPT sagst du einfach „Jarvis, …“.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 12.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Was steht heute an?", "Wie sind meine Biowerte heute?", "Wann habe ich wieder frei?", "Welche Aufgaben sind überfällig?").forEach { frage ->
-                            Chip(frage, aktiv = false) { vm.sende(frage) }
-                        }
-                    }
-                }
-            }
+            if (vm.gespraech.isEmpty()) item(key = "heute_aufgaben") { HeuteAufgabenKarte(vm) }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
             if (vm.denkt) item(key = "denkt") { TaetigkeitsZeile(vm) }
