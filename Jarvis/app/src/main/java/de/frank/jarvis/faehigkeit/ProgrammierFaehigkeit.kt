@@ -104,6 +104,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Cloud-Routine eingerichtet ist. Steht auch in jarvis_status.
      */
     suspend fun zustand(): String = withContext(Dispatchers.IO) {
+        // Parallel zur Server-Abfrage: Die Brücken melden sich übers Internet beim Server, das sagt nichts über den Tunnel.
+        // 07.11.2026: Windows-PC „erreichbar“, aber sein WireGuard-Tunnel war tot, die Fernwartung sah nur den Server.
+        val tunnel = async { tunnelZustand() }
         val pc = if (e.serverToken.isBlank()) "PC: unbekannt, Jarvis ist nicht mit seinem Server verbunden." else runCatching {
             STATUS_HTTP.newCall(pcAnfrage()).execute().use { antwort ->
                 if (!antwort.isSuccessful) return@use "PC: unbekannt, der Jarvis-Server antwortet mit HTTP ${antwort.code}."
@@ -121,8 +124,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
         val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
             else "Sol 6.1 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
-        "$pc $cloud $sol"
+        "$pc ${tunnel.await()} $cloud $sol"
     }
+
+    /** Lebt der WireGuard-Tunnel zu jedem Rechner? Geprüft vom Handy aus wie die Fernwartung (Fernziel.pruefen). */
+    private suspend fun tunnelZustand(): String = runCatching {
+        val p = de.frank.jarvis.fernsteuerung.Fernziel.pruefen(3000)
+        if (p.none { it.ok }) return@runCatching "Tunnel: vom Handy aus antwortet keiner (auch nicht der Hostinger-Server), also ist der WireGuard-Tunnel am Handy aus oder das Netz weg; Fernwartung nicht möglich."
+        "Tunnel (Fernwartung vom Handy aus): " + p.joinToString("; ") { z ->
+            z.ziel.nominativ + if (z.ok) " antwortet" else " antwortet nicht" + if (z.ziel.konsole) "" else " (Tunnel dieses Rechners tot oder Fernwartungsdienst aus)"
+        } + ". Erreichbar über den Server heißt nicht, dass der Tunnel lebt."
+    }.getOrElse { "Tunnel: Prüfung gescheitert (${it.message ?: it.javaClass.simpleName})." }
 
     /** Franks Reihenfolge aus den Einstellungen für den Relay: „mac“ oder „windows“ zuerst. */
     private fun vorrang() = if (e.macZuerst) "mac" else "windows"
@@ -212,7 +224,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "pc_status",
                 titel = "Sind Franks Windows-PC und Mac erreichbar und bei Claude angemeldet?",
                 beschreibung = "Jarvis: prüft jetzt einzeln, ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (beide Brücken melden sich beim Jarvis-Server), " +
-                    "wann sich jeder zuletzt gemeldet hat, ob Claude Code dort angemeldet ist (getrennt: nicht angemeldet, abgelaufen, gültig bestätigt durch eine Sitzung, nur Anmeldedaten " +
+                    "wann sich jeder zuletzt gemeldet hat, ob der WireGuard-Tunnel zu Windows-PC, Mac und Hostinger-Server lebt (vom Handy aus geprüft, Grundlage der Fernwartung), ob Claude Code dort angemeldet ist (getrennt: nicht angemeldet, abgelaufen, gültig bestätigt durch eine Sitzung, nur Anmeldedaten " +
                     "vorhanden oder unbekannt, je mit Prüfzeit), wohin der nächste Auftrag ginge und ob der Cloud-Weg eingerichtet ist. Erreichbar heißt nicht angemeldet; sag Frank nie " +
                     "„angemeldet“, wenn hier nur „Anmeldedaten liegen vor“ oder „unbekannt“ steht. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, „Ist mein Mac online?“, " +
                     "„Bin ich bei Claude angemeldet?“, „Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
