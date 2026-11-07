@@ -75,6 +75,8 @@ class GedaechtnisGeltungTest {
         assertTrue(Merkdatei.istErlaubnis("Hier ohne Rückfrage deployen."))
         assertTrue(Merkdatei.istErlaubnis("Jarvis soll Wecker ohne zu fragen stellen."))
         assertFalse(Merkdatei.istErlaubnis("Bei Fragen nach dem Schlaf immer auch HRV nennen."))
+        // Ein Verbot ist keine Erlaubnis.
+        assertFalse(Merkdatei.istErlaubnis("Niemals ungefragt den Spielstand verraten."))
     }
 
     @Test fun situativErkanntDauerhaftNicht() {

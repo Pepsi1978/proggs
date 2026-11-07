@@ -348,7 +348,7 @@ open class Merkdatei(
         /** Formulierungen, mit denen ein Eintrag Jarvis erlaubt, etwas ohne Rückfrage zu tun. */
         private val ERLAUBNIS = Regex(
             "ohne (vorherige |weitere |jede |meine )?(rückfrage|nachfrage|bestätigung|freigabe|rücksprache|erlaubnis|zustimmung)|ohne (zu |nachzu|mich zu )fragen|" +
-                "\\bungefragt\\b|nicht (mehr |erst |vorher )?(nach|rück)?(zu)?fragen|frag(e|st)? (mich |du )?(nicht|nie) (mehr |erst |vorher )?|\\bdu darfst\\b|\\bdarfst du\\b|freigegeben|pauschal erlaubt|einfach (machen|ausführen|löschen|senden|schicken)",
+                "nicht (mehr |erst |vorher )?(nach|rück)?(zu)?fragen|frag(e|st)? (mich |du )?(nicht|nie) (mehr |erst |vorher )?|\\bdu darfst\\b|\\bdarfst du\\b|freigegeben|pauschal erlaubt|einfach (machen|ausführen|löschen|senden|schicken)",
         )
 
         /** Wörter, die eine Aussage an die Situation binden („hier“, „jetzt“, „diesmal“). */

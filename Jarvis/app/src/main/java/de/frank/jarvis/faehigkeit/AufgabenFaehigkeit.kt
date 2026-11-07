@@ -53,7 +53,9 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> {
                         val erledigt = sauber.optBoolean("erledigt", true)
                         mitAufgabe(sauber, nurOffene = erledigt) { id ->
-                            val geaendert = pruefe(rufe("aendern", JSONObject(sauber.toString()).put("id", id).apply { remove("suche"); remove("erledigt") }), sauber, id) {
+                            // Ohne erledigt: Das Abhaken folgt erst danach und wird dort geprüft.
+                            val aenderung = JSONObject(sauber.toString()).apply { remove("suche"); remove("erledigt") }
+                            val geaendert = pruefe(rufe("aendern", JSONObject(aenderung.toString()).put("id", id)), aenderung, id) {
                                 "Geändert: " + satz(it) + mitgedacht(it)
                             }
                             if (geaendert.fehler) return@mitAufgabe geaendert
