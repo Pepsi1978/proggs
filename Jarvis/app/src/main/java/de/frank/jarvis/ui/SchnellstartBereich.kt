@@ -69,8 +69,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.State
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
@@ -153,10 +158,15 @@ class AppEintrag(val paket: String, val name: String, val symbol: ImageBitmap)
 
 /** Leichtes Wackeln im Bearbeitungszustand; läuft nur, solange es gebraucht wird. */
 @Composable
-private fun wackelWinkel(): Float {
-    val wackeln = rememberInfiniteTransition(label = "wackeln")
-    val winkel by wackeln.animateFloat(-2.6f, 2.6f, infiniteRepeatable(tween(130), RepeatMode.Reverse), label = "winkel")
-    return winkel
+private fun wackelWinkel(): State<Float> =
+    // Als State zurück, gelesen erst im graphicsLayer: so zeichnet nur die Ebene neu, ohne Recomposition je Bild.
+    rememberInfiniteTransition(label = "wackeln").animateFloat(-2.6f, 2.6f, infiniteRepeatable(tween(130), RepeatMode.Reverse), label = "winkel")
+
+/** Merker zwischen Zieh- und Layout-Rückrufen; kein State, weil keine Oberfläche davon abhängt. */
+private class ZiehMerker {
+    var umgeordnet = false
+    var wartetAufLayout = false
+    var griff = Offset.Zero
 }
 
 /**
@@ -178,7 +188,8 @@ fun SchnellstartBereich(vm: AppViewModel) {
     // Bei jeder Rückkehr in die App neu abgleichen: frisch installierte Apps erscheinen, deinstallierte verschwinden, neue Symbole kommen.
     var rueckkehr by remember { mutableIntStateOf(0) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { rueckkehr++; onPauseOrDispose { } }
-    LaunchedEffect(pakete.toList(), rueckkehr) {
+    // Nach der Menge, nicht der Reihenfolge: Umordnen lädt keine Symbole neu.
+    LaunchedEffect(pakete.toSet(), rueckkehr) {
         val liste = pakete.toList()
         val frisch = withContext(Dispatchers.IO) { liste.mapNotNull { Schnellstart.eintrag(context, it) }.associateBy { it.paket } }
         Schnellstart.symbole.value = Schnellstart.symbole.value.filterKeys { it !in liste } + frisch
@@ -186,40 +197,48 @@ fun SchnellstartBereich(vm: AppViewModel) {
     var bearbeiten by rememberSaveable { mutableStateOf(false) }
     var auswahlOffen by rememberSaveable { mutableStateOf(false) }
     var ziehend by remember { mutableStateOf<String?>(null) }
-    var versatz by remember { mutableStateOf(Offset.Zero) }
-    var ziehMitte by remember { mutableStateOf(Offset.Zero) }
+    // Fingerposition absolut (Wurzelkoordinaten) und aktuelle Layout-Ecke des gezogenen Symbols. Die Verschiebung wird daraus
+    // abgeleitet (finger − griff − ziehEcke): Layout-Sprünge (Tausch, Kopfzeile, Scrollen) trennen Finger und Symbol nie.
+    var finger by remember { mutableStateOf(Offset.Zero) }
+    var ziehEcke by remember { mutableStateOf(Offset.Zero) }
     var zone by remember { mutableStateOf(Rect.Zero) }
     val verschwindend = remember { mutableStateListOf<String>() }
     var neu by remember { mutableStateOf<String?>(null) }
-    // Umordnen: Lage jedes Symbols (ohne Zieh-Versatz, aus dem letzten Layout). Nach einem Platzwechsel wird erst wieder
-    // getauscht, wenn das neue Layout die Lagen aufgefrischt hat; sonst würde das Symbol sofort zurückspringen.
+    // Ungeschnittene Lage jedes Symbols aus dem letzten Layout. Nach einem Platzwechsel wird erst wieder getauscht, wenn das
+    // neue Layout da ist; sonst würde das Symbol mit veralteten Lagen sofort zurückspringen.
     val lagen = remember { mutableMapOf<String, Rect>() }
-    var umgeordnet by remember { mutableStateOf(false) }
-    var wartetAufLayout by remember { mutableStateOf(false) }
+    val merker = remember { ZiehMerker() }
+    val zoneRand = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
+    fun ueberZoneBei(p: Offset) = zone != Rect.Zero && zone.inflate(zoneRand).contains(p)
 
-    /** Rückt das gezogene Symbol live an den Platz unter dem Finger; es bleibt dabei unter dem Finger. */
-    fun umordnen(paket: String) {
-        if (wartetAufLayout) return
-        val finger = ziehMitte + versatz
+    fun reihenfolgeSpeichern() = Schnellstart.speichern(context, pakete.filter { it !in verschwindend })
+
+    /** Setzt [paket] innerhalb der sichtbaren Symbole an Stelle [nach]; nicht installierte oder verschwindende behalten ihre Stelle. */
+    fun verschieben(paket: String, nach: Int): Boolean {
         val reihe = pakete.filter { it in eintraege && it !in verschwindend }
         val von = reihe.indexOf(paket)
-        val nach = reihe.indexOfFirst { p -> p != paket && lagen[p]?.contains(finger) == true }
-        if (von < 0 || nach < 0) return
-        val zielMitte = lagen[reihe[nach]]?.center ?: return
-        val neuReihe = reihe.toMutableList().apply { add(nach, removeAt(von)) }
-        // Nicht installierte oder gerade verschwindende Apps behalten ihre Stelle, nur die sichtbaren wechseln die Plätze.
-        val iter = neuReihe.iterator()
+        if (von < 0 || nach !in reihe.indices || nach == von) return false
+        val iter = reihe.toMutableList().apply { add(nach, removeAt(von)) }.iterator()
         val ganz = pakete.map { if (it in eintraege && it !in verschwindend) iter.next() else it }
         pakete.clear(); pakete.addAll(ganz)
-        ziehMitte = zielMitte
-        versatz = finger - zielMitte
-        umgeordnet = true
-        wartetAufLayout = true
+        return true
+    }
+
+    /** Rückt das gezogene Symbol live an den Platz unter dem Finger. Getroffen wird nur der Kern des Ziels (Hysterese). */
+    fun umordnen(paket: String) {
+        if (merker.wartetAufLayout) return
+        val reihe = pakete.filter { it in eintraege && it !in verschwindend }
+        val nach = reihe.indexOfFirst { p ->
+            val r = lagen[p]
+            p != paket && r != null && r.deflate(minOf(r.width, r.height) * 0.2f).contains(finger)
+        }
+        if (nach < 0 || !verschieben(paket, nach)) return
+        merker.umgeordnet = true
+        merker.wartetAufLayout = true
         haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
-    val ueberZone by remember {
-        derivedStateOf { ziehend != null && zone != Rect.Zero && zone.inflate(12f).contains(ziehMitte + versatz) }
-    }
+
+    val ueberZone by remember { derivedStateOf { ziehend != null && ueberZoneBei(finger) } }
     LaunchedEffect(ueberZone) { if (ueberZone) haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
     LaunchedEffect(bearbeiten) { if (!bearbeiten) zone = Rect.Zero }
     val sichtbar = pakete.filter { it in eintraege && it !in verschwindend }
@@ -229,12 +248,22 @@ fun SchnellstartBereich(vm: AppViewModel) {
     fun entfernen(paket: String) {
         if (paket in verschwindend) return
         verschwindend.add(paket)
-        Schnellstart.speichern(context, pakete.filter { it != paket })
+        reihenfolgeSpeichern() // ohne alle gerade verschwindenden
         scope.launch {
             delay(230)
             pakete.remove(paket)
             verschwindend.remove(paket)
         }
+    }
+    fun ziehenBeenden(paket: String, abgelegt: Boolean) {
+        if (ziehend != paket) return
+        if (abgelegt && ueberZoneBei(finger)) {
+            haptik.performHapticFeedback(HapticFeedbackType.LongPress)
+            entfernen(paket)
+        } else if (merker.umgeordnet) reihenfolgeSpeichern() // auch abgebrochen bleibt die gezeigte Reihenfolge
+        merker.umgeordnet = false
+        merker.wartetAufLayout = false
+        ziehend = null
     }
     fun starten(e: AppEintrag) {
         if (!Schnellstart.starten(context, e.paket)) vm.meldung = "${e.name} ließ sich nicht starten."
@@ -251,55 +280,48 @@ fun SchnellstartBereich(vm: AppViewModel) {
             }
             AnimatedVisibility(bearbeiten, enter = fadeIn(), exit = fadeOut()) {
                 Text(
-                    "Fertig", Modifier.clip(RoundedCornerShape(14.dp)).antippen { bearbeiten = false }.padding(horizontal = 10.dp, vertical = 6.dp),
+                    "Fertig", Modifier.clip(RoundedCornerShape(14.dp)).antippen { if (ziehend == null) bearbeiten = false }.padding(horizontal = 10.dp, vertical = 6.dp),
                     color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                 )
             }
         }
         Spacer(Modifier.height(14.dp))
-        val winkel = if (bearbeiten && bewegung) wackelWinkel() else 0f
+        val winkel = if (bearbeiten && bewegung) wackelWinkel() else null
         FlowRow(
             // Beim Ziehen liegt die ganze Reihe über dem Löschbereich, damit das Symbol sichtbar darüber schwebt.
             Modifier.fillMaxWidth().zIndex(if (ziehend != null) 1f else 0f),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            pakete.forEachIndexed { index, paket ->
-                val e = eintraege[paket] ?: return@forEachIndexed
+            pakete.forEach { paket ->
+                val e = eintraege[paket] ?: return@forEach
                 androidx.compose.runtime.key(paket) {
                     val ziehtMich = ziehend == paket
                     val aktuell by rememberUpdatedState(e)
                     val imBearbeiten by rememberUpdatedState(bearbeiten)
                     val gehtWeg = paket in verschwindend
                     val gehtWegAktuell by rememberUpdatedState(gehtWeg)
-                    // Mitte des Symbols ohne Neuaufbau mitführen (kein State: ändert sich bei jedem Scrollschritt).
-                    val mitte = remember { arrayOf(Offset.Zero) }
+                    androidx.compose.runtime.DisposableEffect(paket) { onDispose { lagen.remove(paket) } }
                     // Erscheinen (neu hinzugefügt) und Verschwinden (entfernt) federn weich.
                     val auftritt = remember { Animatable(if (neu == paket) 0f else 1f) }
                     LaunchedEffect(Unit) { if (auftritt.value < 1f) auftritt.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow)) }
                     val weg by animateFloatAsState(if (gehtWeg) 0f else 1f, tween(220), label = "weg")
                     val gross by animateFloatAsState(if (ziehtMich) (if (ueberZone) 0.86f else 1.14f) else 1f, spring(dampingRatio = 0.6f), label = "gross")
-                    // Jedes zweite Symbol wackelt gegenläufig, damit es lebendig und nicht mechanisch wirkt.
-                    val phase = if (index % 2 == 0) 1f else -1f
+                    // Etwa jedes zweite Symbol wackelt gegenläufig; fest am Paket, damit Umordnen die Richtung nicht umwirft.
+                    val phase = if ((paket.hashCode() and 1) == 0) 1f else -1f
                     Column(
                         Modifier.width(76.dp)
                             .zIndex(if (ziehtMich) 1f else 0f)
                             // Lage und Gesten vor Verschiebung, Skalierung und Wackeln: so laufen Finger und Symbol genau gleich.
                             .onGloballyPositioned {
-                                val b = it.boundsInRoot()
-                                val c = b.center
-                                mitte[0] = c
-                                lagen[paket] = b
-                                if (ziehend == paket) {
-                                    // Nach einem Platzwechsel bleibt der Finger, wo er ist: Versatz an die neue Lage anpassen.
-                                    if (wartetAufLayout) { versatz = ziehMitte + versatz - c; wartetAufLayout = false }
-                                    // Scrollt die Liste während des Ziehens, wandert der Bezugspunkt mit (wie der Löschbereich).
-                                    ziehMitte = c
-                                }
+                                // Ungeschnitten (nicht boundsInRoot): auch halb aus dem Bild gescrollte Symbole behalten ihre echte Lage.
+                                val ecke = it.positionInRoot()
+                                lagen[paket] = Rect(ecke, it.size.toSize())
+                                if (ziehend == paket) { ziehEcke = ecke; merker.wartetAufLayout = false }
                             }
                             .pointerInput(paket) {
                                 detectTapGestures {
-                                    if (gehtWegAktuell) return@detectTapGestures
+                                    if (gehtWegAktuell || ziehend != null) return@detectTapGestures
                                     if (imBearbeiten) bearbeiten = false else starten(aktuell)
                                 }
                             }
@@ -307,47 +329,53 @@ fun SchnellstartBereich(vm: AppViewModel) {
                                 // Immer erst nach langem Drücken: So bleibt der Startbildschirm über den Symbolen scrollbar,
                                 // und der Bearbeitungszustand startet die Geste nicht mitten im Ziehen neu.
                                 detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        if (gehtWegAktuell) return@detectDragGesturesAfterLongPress
-                                        versatz = Offset.Zero
-                                        ziehMitte = mitte[0]
-                                        umgeordnet = false
-                                        wartetAufLayout = false
+                                    onDragStart = { start ->
+                                        // Läuft schon ein Ziehen (zweiter Finger), übernimmt dieses es nicht.
+                                        if (gehtWegAktuell || ziehend != null) return@detectDragGesturesAfterLongPress
+                                        val ecke = lagen[paket]?.topLeft ?: return@detectDragGesturesAfterLongPress
+                                        merker.griff = start
+                                        merker.umgeordnet = false
+                                        merker.wartetAufLayout = false
+                                        ziehEcke = ecke
+                                        finger = ecke + start
                                         ziehend = paket
                                         haptik.performHapticFeedback(HapticFeedbackType.LongPress)
                                         bearbeiten = true
                                     },
-                                    onDragEnd = {
-                                        if (ziehend == paket && zone != Rect.Zero && zone.inflate(12f).contains(ziehMitte + versatz)) {
-                                            haptik.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            entfernen(paket)
-                                        } else if (ziehend == paket && umgeordnet) Schnellstart.speichern(context, pakete.toList())
-                                        if (ziehend == paket) { ziehend = null; versatz = Offset.Zero; umgeordnet = false }
-                                    },
-                                    onDragCancel = {
-                                        // Auch abgebrochen bleibt die schon gezeigte Reihenfolge stehen und wird gespeichert.
-                                        if (ziehend == paket && umgeordnet) Schnellstart.speichern(context, pakete.toList())
-                                        if (ziehend == paket) { ziehend = null; versatz = Offset.Zero; umgeordnet = false }
-                                    },
+                                    onDragEnd = { ziehenBeenden(paket, abgelegt = true) },
+                                    onDragCancel = { ziehenBeenden(paket, abgelegt = false) },
                                     onDrag = { c, d ->
                                         if (ziehend == paket) {
-                                            c.consume(); versatz += d
-                                            if (!(zone != Rect.Zero && zone.inflate(12f).contains(ziehMitte + versatz))) umordnen(paket)
+                                            c.consume(); finger += d
+                                            if (!ueberZoneBei(finger)) umordnen(paket)
                                         }
                                     },
                                 )
                             }
                             .graphicsLayer {
-                                translationX = if (ziehtMich) versatz.x else 0f
-                                translationY = if (ziehtMich) versatz.y else 0f
+                                if (ziehtMich) {
+                                    val v = finger - merker.griff - ziehEcke
+                                    translationX = v.x; translationY = v.y
+                                } else { translationX = 0f; translationY = 0f }
                                 val s = auftritt.value * weg * gross
                                 scaleX = s; scaleY = s
                                 alpha = (auftritt.value * weg).coerceIn(0f, 1f)
-                                rotationZ = if (!ziehtMich) winkel * phase else 0f
+                                rotationZ = if (!ziehtMich) (winkel?.value ?: 0f) * phase else 0f
                             }
                             .semantics(mergeDescendants = true) {
                                 role = Role.Button
                                 onClick("${e.name} öffnen") { starten(aktuell); true }
+                                // Umordnen auch mit TalkBack, wo Ziehen nach langem Drücken nicht geht.
+                                customActions = listOf(
+                                    CustomAccessibilityAction("Nach vorn verschieben") {
+                                        val i = pakete.filter { it in eintraege && it !in verschwindend }.indexOf(paket)
+                                        verschieben(paket, i - 1).also { if (it) reihenfolgeSpeichern() }
+                                    },
+                                    CustomAccessibilityAction("Nach hinten verschieben") {
+                                        val i = pakete.filter { it in eintraege && it !in verschwindend }.indexOf(paket)
+                                        verschieben(paket, i + 1).also { if (it) reihenfolgeSpeichern() }
+                                    },
+                                )
                             },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -385,7 +413,8 @@ fun SchnellstartBereich(vm: AppViewModel) {
             Row(
                 Modifier.padding(top = 16.dp).fillMaxWidth().height(64.dp)
                     // Gemessen vor dem Aufblähen: die Trefferfläche hängt nicht vom Schwebezustand ab.
-                    .onGloballyPositioned { zone = it.boundsInRoot() }
+                    // Nur im Bearbeitungszustand: die Ausblende-Animation schreibt keine veraltete Fläche zurück.
+                    .onGloballyPositioned { if (bearbeiten) zone = it.boundsInRoot() }
                     .graphicsLayer { scaleX = zoneGross; scaleY = zoneGross }
                     .clip(RoundedCornerShape(20.dp)).background(hg)
                     .border(1.5.dp, randFarbe, RoundedCornerShape(20.dp)),
