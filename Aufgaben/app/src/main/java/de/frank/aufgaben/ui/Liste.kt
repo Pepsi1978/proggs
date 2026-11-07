@@ -16,6 +16,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.min
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -157,33 +160,43 @@ fun ListeBildschirm(vm: AppViewModel) {
 
     // Randscrollen während des Ziehens, auch bei stillstehendem Finger.
     val zieht = zustand.aufgabe != null
+    val statusOben = WindowInsets.statusBars.getTop(dichte)
+    val navUnten = WindowInsets.navigationBars.getBottom(dichte)
     LaunchedEffect(zieht) {
         if (!zieht) return@LaunchedEffect
         // Zone innerhalb der Ablageleisten, in der das Scrollen sanft beginnt; zur Bildschirmkante hin wird es stetig
         // schneller bis zum Höchsttempo direkt an der Kante (auch über den Leisten, dort nie Stillstand).
-        val zone = with(dichte) { 120.dp.toPx() }
+        val zoneMax = with(dichte) { 120.dp.toPx() }
+        // Ruhige Mitte, die auch bei kleinem Fenster (Querformat, geteilter Bildschirm) frei vom Scrollen bleibt.
+        val mitteMin = with(dichte) { 80.dp.toPx() }
         val tempo = with(dichte) { 1000.dp.toPx() }
-        // Kleiner Abstand zur echten Kante, damit das Höchsttempo mit dem Finger auch erreichbar ist.
-        val kantenRand = with(dichte) { 18.dp.toPx() }
+        // Kleiner Abstand zur Kante (über Status- und Navigationsleiste), damit das Höchsttempo erreichbar ist.
+        val kantenRand = with(dichte) { 14.dp.toPx() }
         var letzte = 0L
         var v = 0f // geglättetes Tempo in px/s
         while (true) {
             withFrameNanos { n ->
+                // Nach dem Loslassen keinen Rest-Schritt mehr scrollen, bevor der Effekt beendet wird.
+                if (zustand.aufgabe == null) { v = 0f; return@withFrameNanos }
                 val dt = if (letzte == 0L) 0f else ((n - letzte) / 1e9f).coerceAtMost(0.032f)
                 letzte = n
                 if (dt <= 0f) return@withFrameNanos
+                val zone = min(zoneMax, ((zustand.scrollUnten - zustand.scrollOben - mitteMin) / 2f).coerceAtLeast(0f))
                 val s = staerkeAmRand(
                     zustand.finger.value.y,
                     zustand.kanteOben + kantenRand, zustand.scrollOben + zone,
                     zustand.scrollUnten - zone, zustand.kanteUnten - kantenRand,
                 )
-                // Weicher Übergang zwischen den Geschwindigkeiten statt Sprüngen (Zeitkonstante ~90 ms).
-                v += (s * tempo - v) * (1f - kotlin.math.exp(-dt / 0.09f))
-                if (s == 0f && kotlin.math.abs(v) < 4f) v = 0f
+                val ziel = s * tempo
+                // Weich beschleunigen (~90 ms), aber schnell abbremsen und umkehren (~35 ms): Bleibt der Finger stehen,
+                // läuft die Liste nicht unter ihm weiter.
+                val bremst = ziel * v < 0f || abs(ziel) < abs(v)
+                v += (ziel - v) * (1f - exp(-dt / if (bremst) 0.035f else 0.09f))
+                if (s == 0f && abs(v) < 20f) v = 0f
                 if (v != 0f) {
                     val bewegt = scroll.dispatchRawDelta(v * dt)
-                    if (bewegt == 0f && s == 0f) v = 0f
-                    zustand.aktualisiere()
+                    if (bewegt == 0f) v = 0f // Listenende erreicht: kein Leerlauf bei jedem Frame
+                    else zustand.aktualisiere()
                 }
             }
         }
@@ -214,7 +227,7 @@ fun ListeBildschirm(vm: AppViewModel) {
     Box(Modifier.fillMaxSize().onGloballyPositioned {
         val r = it.boundsInRoot()
         zustand.ursprung = it.positionInRoot()
-        if (!zieht) { zustand.kanteOben = r.top; zustand.kanteUnten = r.bottom; zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
+        if (!zieht) { zustand.kanteOben = r.top + statusOben; zustand.kanteUnten = r.bottom - navUnten; zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
