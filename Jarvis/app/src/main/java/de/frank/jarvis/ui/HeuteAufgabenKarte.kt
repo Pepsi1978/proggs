@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -353,21 +355,31 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
             .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
-        // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe des Titels, nicht mittig zwischen Titel und Zusatzzeile.
+        // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, nicht mittig zwischen Titel und Zusatzzeile.
         verticalAlignment = Alignment.Top,
     ) {
+        // Mitte des Kreises = optische Mitte der ersten Textzeile (Grundlinie minus halbe Versalhöhe),
+        // gemessen an der echten Schrift, damit es auch bei anderer Schriftgröße passt.
+        val dichte = LocalDensity.current
+        val halbKreis = with(dichte) { 14.dp.toPx() }
+        var textMitte by remember { mutableFloatStateOf(halbKreis) }
+        val versatz = textMitte - halbKreis
         // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
-        Column(Modifier.weight(1f).padding(end = 12.dp, top = 4.dp), horizontalAlignment = Alignment.End) {
+        Column(
+            Modifier.weight(1f).padding(end = 12.dp, top = with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }),
+            horizontalAlignment = Alignment.End,
+        ) {
             Text(
                 a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.End,
+                onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
             )
             val zusatz = zusatz(a)
             if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End)
         }
         Box(
-            Modifier.size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f)),
+            Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f)),
             contentAlignment = Alignment.Center,
         ) {
             if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp))

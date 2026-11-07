@@ -603,6 +603,7 @@
 {"versionCode": 598, "versionName": "1.8.587", "stand": "07.11.2026, 20:11 Uhr", "notiz": "Die Bereiche des Startbildschirms lassen sich per langem Druck auf ihre Titelzeile frei verschieben, die Reihenfolge bleibt dauerhaft erhalten."},
 {"versionCode": 599, "versionName": "1.8.588", "stand": "07.11.2026, 20:17 Uhr", "notiz": "Startbereiche zieht man nur noch am Titel, Knöpfe daneben reagieren normal, die Reihenfolge lässt sich auch per Sprache und mit TalkBack ändern."},
     {"versionCode": 600, "versionName": "1.8.589", "stand": "07.11.2026, 20:28 Uhr", "notiz": "Die Aufgaben heute und morgen auf dem Startbildschirm stehen jetzt rechtsbündig mit dem Abhakfeld ganz rechts, gut erreichbar mit dem rechten Daumen."},
-    {"versionCode": 601, "versionName": "1.8.590", "stand": "07.11.2026, 20:31 Uhr", "notiz": "Das Abhakfeld einer heutigen Aufgabe sitzt direkt neben dem Titel, auch wenn darunter noch eine Zusatzzeile wie täglich steht."}
+    {"versionCode": 601, "versionName": "1.8.590", "stand": "07.11.2026, 20:31 Uhr", "notiz": "Das Abhakfeld einer heutigen Aufgabe sitzt direkt neben dem Titel, auch wenn darunter noch eine Zusatzzeile wie täglich steht."},
+    {"versionCode": 602, "versionName": "1.8.591", "stand": "07.11.2026, 20:33 Uhr", "notiz": "Die Mitte des Abhakkreises liegt jetzt genau auf der Mittellinie der ersten Textzeile der Aufgabe."}
 ]
 }
