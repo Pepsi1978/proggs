@@ -137,6 +137,9 @@ def _sauber(text: str) -> str:
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", text.replace("\r\n", "\n"))
 
 
+sauber = _sauber   # öffentlich für den Frage-Warter im Hook
+
+
 def _kopf(vorspann: str) -> str:
     # Ein mehrzeiliger Text ginge getippt beim ersten Zeilenumbruch ab; eingefügt bleibt er ein Teil dieser einen Eingabe.
     return f"{ESC}[200~{vorspann}{ESC}[201~ " if _mehrzeilig(vorspann) else vorspann
@@ -147,7 +150,8 @@ def _claude_vorn(tty: str) -> bool:
     aus = subprocess.run(["ps", "-t", tty.removeprefix("/dev/"), "-o", "stat=,args="], capture_output=True, text=True, timeout=5).stdout
     for zeile in aus.splitlines():
         teile = zeile.split(None, 1)
-        if len(teile) == 2 and "+" in teile[0] and re.match(r"^(\S*/)?claude(\s|$)", teile[1]):
+        # Auch „node …/bin/claude“ (npm-Installation).
+        if len(teile) == 2 and "+" in teile[0] and re.match(r"^(\S*/)?(node\s+\S*/)?claude(\s|$)", teile[1]):
             return True
     return False
 
