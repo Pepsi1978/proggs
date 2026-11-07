@@ -159,16 +159,30 @@ fun ListeBildschirm(vm: AppViewModel) {
     val zieht = zustand.aufgabe != null
     LaunchedEffect(zieht) {
         if (!zieht) return@LaunchedEffect
-        val zone = with(dichte) { 90.dp.toPx() }
-        val tempo = with(dichte) { 620.dp.toPx() }
+        // Zone innerhalb der Ablageleisten, in der das Scrollen sanft beginnt; zur Bildschirmkante hin wird es stetig
+        // schneller bis zum Höchsttempo direkt an der Kante (auch über den Leisten, dort nie Stillstand).
+        val zone = with(dichte) { 120.dp.toPx() }
+        val tempo = with(dichte) { 1000.dp.toPx() }
+        // Kleiner Abstand zur echten Kante, damit das Höchsttempo mit dem Finger auch erreichbar ist.
+        val kantenRand = with(dichte) { 18.dp.toPx() }
         var letzte = 0L
+        var v = 0f // geglättetes Tempo in px/s
         while (true) {
             withFrameNanos { n ->
                 val dt = if (letzte == 0L) 0f else ((n - letzte) / 1e9f).coerceAtMost(0.032f)
                 letzte = n
-                val s = staerkeAmRand(zustand.finger.value.y, zustand.scrollOben, zustand.scrollUnten, zone)
-                if (s != 0f && dt > 0f) {
-                    scroll.dispatchRawDelta(s * tempo * dt)
+                if (dt <= 0f) return@withFrameNanos
+                val s = staerkeAmRand(
+                    zustand.finger.value.y,
+                    zustand.kanteOben + kantenRand, zustand.scrollOben + zone,
+                    zustand.scrollUnten - zone, zustand.kanteUnten - kantenRand,
+                )
+                // Weicher Übergang zwischen den Geschwindigkeiten statt Sprüngen (Zeitkonstante ~90 ms).
+                v += (s * tempo - v) * (1f - kotlin.math.exp(-dt / 0.09f))
+                if (s == 0f && kotlin.math.abs(v) < 4f) v = 0f
+                if (v != 0f) {
+                    val bewegt = scroll.dispatchRawDelta(v * dt)
+                    if (bewegt == 0f && s == 0f) v = 0f
                     zustand.aktualisiere()
                 }
             }
@@ -200,7 +214,7 @@ fun ListeBildschirm(vm: AppViewModel) {
     Box(Modifier.fillMaxSize().onGloballyPositioned {
         val r = it.boundsInRoot()
         zustand.ursprung = it.positionInRoot()
-        if (!zieht) { zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
+        if (!zieht) { zustand.kanteOben = r.top; zustand.kanteUnten = r.bottom; zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))

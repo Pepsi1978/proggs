@@ -72,6 +72,10 @@ class ZiehZustand {
     var scrollOben = 0f
     var scrollUnten = 0f
 
+    /** Obere und untere Kante der Liste im Fenster: Dort scrollt es am schnellsten. */
+    var kanteOben = 0f
+    var kanteUnten = 0f
+
     /** Aktueller Scrollstand der Liste in px — live, also schon nach dispatchRawDelta und vor dem nächsten Layout. */
     var scrollWert: () -> Float = { 0f }
 
@@ -279,8 +283,16 @@ fun Modifier.ablageZiel(zustand: ZiehZustand, schluessel: String, ziel: Ziel): M
     return onGloballyPositioned { zustand.registriere(schluessel, it.boundsInRoot(), z) }
 }
 
-internal fun staerkeAmRand(y: Float, oben: Float, unten: Float, zone: Float): Float = when {
-    y in oben..(oben + zone) -> -(1f - (y - oben) / zone)
-    y in (unten - zone)..unten -> (y - (unten - zone)) / zone
-    else -> 0f
-}.let { it * abs(it) }
+/**
+ * Stärke des Randscrollens (−1 … 1): In der Mitte 0, ab [innenOben] bzw. [innenUnten] wächst sie stetig bis zur
+ * jeweiligen Bildschirmkante, wo sie ihr Maximum erreicht — auch über den Ablageleisten, nie ein Stillstand am Rand.
+ * Die Kurve beginnt sanft und steigt zur Kante hin am stärksten.
+ */
+internal fun staerkeAmRand(y: Float, kanteOben: Float, innenOben: Float, innenUnten: Float, kanteUnten: Float): Float {
+    fun kurve(t: Float) = t.coerceIn(0f, 1f).let { 0.08f * it + 0.92f * it * it }
+    return when {
+        y < innenOben -> -kurve((innenOben - y) / (innenOben - kanteOben).coerceAtLeast(1f))
+        y > innenUnten -> kurve((y - innenUnten) / (kanteUnten - innenUnten).coerceAtLeast(1f))
+        else -> 0f
+    }
+}

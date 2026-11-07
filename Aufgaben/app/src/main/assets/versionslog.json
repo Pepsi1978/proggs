@@ -54,6 +54,7 @@
     {"versionCode": 50, "versionName": "1.0.49", "stand": "30.10.2026, 19:00 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 51, "versionName": "1.0.50", "stand": "03.11.2026, 14:35 Uhr", "notiz": "Bei aktivem Nicht stören oder Schlafmodus bleiben normale Aufgaben-Erinnerungen still, ohne Vorlesen, Ton und Vibration; nur ausdrücklich als Wecker eingeschaltete Erinnerungen klingen weiterhin."},
     {"versionCode": 52, "versionName": "1.0.51", "stand": "03.11.2026, 14:48 Uhr", "notiz": "Wird Nicht stören während einer vorgelesenen Erinnerung eingeschaltet, verstummt sie sofort; der Hinweis in den Einstellungen beschreibt das neue Verhalten."},
-    {"versionCode": 53, "versionName": "1.0.52", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 53, "versionName": "1.0.52", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 54, "versionName": "1.0.53", "stand": "07.11.2026, 16:03 Uhr", "notiz": "Beim Ziehen einer Aufgabe scrollt die Liste umso schneller, je näher der Finger dem oberen oder unteren Bildschirmrand kommt, direkt an der Kante am schnellsten, weich und ohne Stillstand über den Ablageleisten."}
 ]
 }
