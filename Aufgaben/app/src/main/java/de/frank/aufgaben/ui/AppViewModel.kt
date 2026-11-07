@@ -139,14 +139,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             while (true) {
-                // Beim Start und nach jedem Tageswechsel: erledigte Aufgaben älter als 30 Tage endgültig löschen.
-                runCatching { repo.alteErledigteAufraeumen() }
                 val bisMitternacht = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - System.currentTimeMillis()
                 delay(bisMitternacht.coerceIn(1_000, 60 * 60_000L) + 500)
+                val vorher = heute
                 tagPruefen()
+                // Nach jedem Tageswechsel: erledigte Aufgaben älter als 30 Tage endgültig löschen (beim Start erledigt das Repository).
+                if (heute != vorher) repo.aufraeumenSicher()
             }
         }
     }
+
+    /** Tage gelöschter erledigter Aufgaben, damit die Serie über 30 Tage hinaus weiterzählt. */
+    fun archivierteSerieTage(): Set<Long> = repo.archivierteSerieTage()
 
     fun tagPruefen() {
         val jetzt = Tage.heute()

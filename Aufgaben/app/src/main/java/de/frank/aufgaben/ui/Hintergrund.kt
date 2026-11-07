@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import de.frank.aufgaben.ui.theme.Design
 import de.frank.aufgaben.ui.theme.LocalBewegung
 import de.frank.aufgaben.ui.theme.LocalFarben
 import kotlin.math.cos
@@ -58,7 +57,7 @@ fun rememberSzenenZeit(): State<Long> {
     return zeit
 }
 
-/** Bewegter Hintergrund: weiche Farbwolken plus die Partikel des Designs. */
+/** Bewegter Hintergrund: nur weiche Farbwolken, bewusst ohne Punkte, Sterne oder Blasen. */
 @Composable
 fun Hintergrund(modifier: Modifier = Modifier) {
     val f = LocalFarben.current
@@ -74,6 +73,5 @@ fun Hintergrund(modifier: Modifier = Modifier) {
         wolke(f.blob1, w * (0.2f + 0.12f * sin(t * 0.13f)), h * (0.12f + 0.06f * cos(t * 0.11f)), w * 0.75f)
         wolke(f.blob2, w * (0.9f + 0.1f * cos(t * 0.09f)), h * (0.42f + 0.08f * sin(t * 0.07f)), w * 0.7f)
         wolke(f.blob3, w * (0.25f + 0.15f * sin(t * 0.06f + 1f)), h * (0.85f + 0.05f * cos(t * 0.1f)), w * 0.8f)
-        // Keine Punkte, Sterne oder Blasen mehr: Sie lenkten von den Bereichen ab.
     }
 }

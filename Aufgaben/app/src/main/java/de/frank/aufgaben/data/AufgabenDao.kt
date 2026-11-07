@@ -50,6 +50,14 @@ interface AufgabenDao {
     /** Erledigte Aufgaben, die vor [grenze] abgehakt wurden; offene bleiben immer. */
     @Query("SELECT * FROM aufgaben WHERE erledigt = 1 AND erledigtAm IS NOT NULL AND erledigtAm < :grenze")
     suspend fun erledigtVor(grenze: Long): List<Aufgabe>
+
+    /** Erledigte ohne Zeitpunkt (Altbestand) bekommen [jetzt], damit auch sie nach 30 Tagen verschwinden. */
+    @Query("UPDATE aufgaben SET erledigtAm = :jetzt WHERE erledigt = 1 AND erledigtAm IS NULL")
+    suspend fun erledigtOhneZeitDatieren(jetzt: Long): Int
+
+    /** Löscht in einem Schritt; prüft erledigt erneut, damit eine inzwischen wieder geöffnete Aufgabe bleibt. */
+    @Query("DELETE FROM aufgaben WHERE erledigt = 1 AND erledigtAm IS NOT NULL AND erledigtAm < :grenze")
+    suspend fun loescheErledigtVor(grenze: Long): Int
 }
 
 @Database(

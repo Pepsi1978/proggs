@@ -63,6 +63,7 @@
     {"versionCode": 59, "versionName": "1.0.58", "stand": "07.11.2026, 20:27 Uhr", "notiz": "Die rechte Ausrichtung in Heute und Morgen ist wieder zurückgenommen; Aufgaben und Abhakkreise stehen wie vorher links."},
     {"versionCode": 60, "versionName": "1.0.59", "stand": "07.11.2026, 22:18 Uhr", "notiz": "Beim Start sind alle Bereiche aufgeklappt, und jeder Bereich hat ein kräftig gefärbtes, gestreiftes Kopfband, einen farbigen Rahmen und eine Farbleiste am Inhalt, damit man sofort sieht, was wohin gehört."},
     {"versionCode": 61, "versionName": "1.0.60", "stand": "07.11.2026, 22:23 Uhr", "notiz": "Die Suche zeigt Treffer auch in zugeklappten Bereichen, die Zahl im Bereichskopf ist auf jeder Farbe gut lesbar, und das Kopfband klappt weich mit dem Inhalt auf und zu."},
-    {"versionCode": 62, "versionName": "1.0.61", "stand": "07.11.2026, 22:33 Uhr", "notiz": "Hoch ist jetzt rot, Mittel gelb und Gering grün mit kräftigen Streifen, das Kopfband von Heute pulsiert, die Punkte im Hintergrund sind weg, und erledigte Aufgaben bleiben 30 Tage sichtbar, ältere werden automatisch gelöscht."}
+    {"versionCode": 62, "versionName": "1.0.61", "stand": "07.11.2026, 22:33 Uhr", "notiz": "Hoch ist jetzt rot, Mittel gelb und Gering grün mit kräftigen Streifen, das Kopfband von Heute pulsiert, die Punkte im Hintergrund sind weg, und erledigte Aufgaben bleiben 30 Tage sichtbar, ältere werden automatisch gelöscht."},
+    {"versionCode": 63, "versionName": "1.0.62", "stand": "07.11.2026, 22:39 Uhr", "notiz": "Erledigt ist beim Start zugeklappt, Ziele sind blau, Heute pulsiert jetzt kräftig wie ein Herzschlag mit dickeren Streifen, dazu bessere Lesbarkeit auf Gelb und die Erfolgsserie zählt auch über 30 Tage weiter."}
 ]
 }

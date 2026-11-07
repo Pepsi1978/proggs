@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.positionInRoot
@@ -87,6 +88,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.aufgaben.data.Aufgabe
 import de.frank.aufgaben.data.Prioritaet
 import de.frank.aufgaben.data.Tage
+import de.frank.aufgaben.data.erledigtGrenze
 import de.frank.aufgaben.ui.theme.Design
 import de.frank.aufgaben.ui.theme.Farben
 import de.frank.aufgaben.ui.theme.LocalFarben
@@ -99,7 +101,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.delay
 
 /** Alle Bereiche aus der Gesamtliste, datumsbasiert berechnet. */
-class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String) {
+class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String, archivTage: Set<Long> = emptySet()) {
     private val gefiltert = if (suche.isBlank()) alle else alle.filter {
         it.titel.contains(suche, true) || it.text.contains(suche, true)
     }
@@ -118,15 +120,16 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String) {
         .sortedBy { it.erstellt }.groupBy { it.zielId }.values.toList()
     val demnaechst = gefiltert.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }.sortedWith(compareBy({ it.tag }, { it.minuten ?: -1 }))
     // Nur die letzten 30 Tage; ältere löscht das Aufräumen beim Start und um Mitternacht endgültig.
-    private val erledigtGrenze = System.currentTimeMillis() - de.frank.aufgaben.data.ERLEDIGT_TAGE * 24L * 60 * 60 * 1000
-    val erledigt = gefiltert.filter { it.erledigt && it.tag != heute && (it.erledigtAm ?: Long.MAX_VALUE) >= erledigtGrenze }.sortedByDescending { it.erledigtAm ?: 0 }
+    private val grenze = erledigtGrenze()
+    val erledigt = gefiltert.filter { it.erledigt && it.tag != heute && (it.erledigtAm ?: Long.MAX_VALUE) >= grenze }.sortedByDescending { it.erledigtAm ?: 0 }
     val heuteGesamt = alle.map { it.aufHeute(heute) }.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
     val heuteFertig = alle.count { it.tag == heute && it.erledigt }
 
     /** Tage in Folge (bis heute oder gestern) mit mindestens einer erledigten Aufgabe. */
     val serie: Int = run {
         val zone = ZoneId.systemDefault()
-        val tage = alle.mapNotNull { it.erledigtAm }.map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate().toEpochDay() }.toSet()
+        // Dazu die Tage bereits gelöschter erledigter Aufgaben, sonst endete die Serie nach 30 Tagen.
+        val tage = alle.mapNotNull { it.erledigtAm }.map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate().toEpochDay() }.toSet() + archivTage
         var d = if (heute in tage) heute else heute - 1
         var n = 0
         while (d in tage) { n++; d-- }
@@ -141,7 +144,7 @@ fun ListeBildschirm(vm: AppViewModel) {
     val heute = vm.heute
     var suche by rememberSaveable { mutableStateOf("") }
     var sucheOffen by rememberSaveable { mutableStateOf(false) }
-    val b = remember(alle, heute, suche) { Bereiche(alle, heute, suche) }
+    val b = remember(alle, heute, suche) { Bereiche(alle, heute, suche, vm.archivierteSerieTage()) }
     val scroll = rememberScrollState()
     val zustand = remember { ZiehZustand() }
     zustand.beiAblage = { a, z -> vm.verschiebe(a, z) }
@@ -307,7 +310,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Ziele: je Ziel ein Knopf, darunter eingerückt seine Aufgaben ----
             val zielAufgaben = b.nachZiel.flatten()
             Sektion(
-                "ziele", "Ziele", Icons.Rounded.Flag, f.tertiaer, b.nachZiel.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
+                "ziele", "Ziele", Icons.Rounded.Flag, ZIELE_BLAU, b.nachZiel.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Aufgaben aus deinen Zielen", verzoegerung = 280, leer = b.nachZiel.isEmpty(), automatik = suche.isBlank(),
                 aktionen = { VorlesenKnopf(vm, "bereich_ziele") { vm.bereichVorlesen("ziele", "Ziele", zielAufgaben, mitDatum = true) } },
             ) {
@@ -321,7 +324,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
                 "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
-                untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(),
+                untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(), startZu = true,
                 aktionen = { KalenderKnopf(vm, f.erfolg); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
             ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             Spacer(Modifier.height(140.dp))
@@ -616,10 +619,15 @@ private fun AblageChip(zustand: ZiehZustand, schluessel: String, icon: ImageVect
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = if (aktiv) Color.White else farbe, modifier = Modifier.size(16.dp))
+        // Auf hellen Farben (Gelb) dunkle Schrift, sonst weiße.
+        val auf = if (farbe.luminance() > 0.5f) Color.Black.copy(alpha = 0.85f) else Color.White
+        Icon(icon, null, tint = if (aktiv) auf else farbe, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(text, color = if (aktiv) Color.White else f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(text, color = if (aktiv) auf else f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
 internal fun farbeFuerPrio(f: Farben, p: Prioritaet) = f.prio(p)
+
+/** Klares Blau für den Bereich „Ziele“, unabhängig vom Design. */
+private val ZIELE_BLAU = Color(0xFF2F7DF6)

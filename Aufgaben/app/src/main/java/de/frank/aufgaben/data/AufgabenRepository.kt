@@ -85,12 +85,40 @@ class AufgabenRepository private constructor(context: Context) {
 
     /** Löscht erledigte Aufgaben endgültig, die vor mehr als 30 Tagen abgehakt wurden. Offene bleiben unberührt. */
     suspend fun alteErledigteAufraeumen() {
-        val grenze = System.currentTimeMillis() - ERLEDIGT_TAGE * 24L * 60 * 60 * 1000
+        val jetzt = System.currentTimeMillis()
+        val datiert = dao.erledigtOhneZeitDatieren(jetzt)
+        val grenze = erledigtGrenze(jetzt)
         val alt = dao.erledigtVor(grenze)
-        if (alt.isEmpty()) return
-        alt.forEach { dao.loesche(it) }
-        geaendert()
+        if (alt.isNotEmpty()) {
+            // Die Tage der Serie bleiben erhalten, auch wenn die Aufgaben selbst verschwinden.
+            serieTageMerken(alt.mapNotNull { it.erledigtAm })
+            alt.forEach { Planer.storniere(app, it.id); ErinnerungsDienst.stoppe(app, it.id) }
+            dao.loescheErledigtVor(grenze)
+        }
+        if (datiert > 0 || alt.isNotEmpty()) geaendert()
     }
+
+    private val serieSpeicher by lazy { app.getSharedPreferences("aufgaben_serie", Context.MODE_PRIVATE) }
+
+    /** Tage (Epoch-Day) mit erledigten Aufgaben, deren Zeilen schon gelöscht wurden; nur für die Serie. */
+    fun archivierteSerieTage(): Set<Long> =
+        serieSpeicher.getStringSet("tage", emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
+
+    private fun serieTageMerken(zeitpunkte: List<Long>) {
+        val zone = java.time.ZoneId.systemDefault()
+        val neu = zeitpunkte.map { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate().toEpochDay().toString() }
+        serieSpeicher.edit().putStringSet("tage", serieSpeicher.getStringSet("tage", emptySet()).orEmpty() + neu).apply()
+    }
+
+    /** Aufräumen mit Protokoll statt stillem Verschlucken; ein Abbruch der Coroutine wird weitergereicht. */
+    suspend fun aufraeumenSicher() {
+        try { alteErledigteAufraeumen() }
+        catch (c: kotlinx.coroutines.CancellationException) { throw c }
+        catch (e: Exception) { android.util.Log.w("Aufgaben", "Aufräumen alter erledigter Aufgaben fehlgeschlagen", e) }
+    }
+
+    // Einmal je Prozessstart, auch wenn nur Widget, Erinnerung oder die Jarvis-Brücke die App weckt.
+    init { nebenbei.launch { aufraeumenSicher() } }
 
     /** Stellt eine gelöschte Aufgabe mit derselben ID wieder her (Rückgängig). */
     suspend fun wiederherstellen(aufgabe: Aufgabe) {
@@ -120,3 +148,6 @@ class AufgabenRepository private constructor(context: Context) {
 
 /** So viele Tage bleiben erledigte Aufgaben sichtbar; danach werden sie endgültig gelöscht. */
 const val ERLEDIGT_TAGE = 30
+
+/** Gemeinsame Grenze für Anzeige und Aufräumen: Was davor erledigt wurde, ist älter als [ERLEDIGT_TAGE] Tage. */
+fun erledigtGrenze(jetzt: Long = System.currentTimeMillis()): Long = jetzt - java.util.concurrent.TimeUnit.DAYS.toMillis(ERLEDIGT_TAGE.toLong())
