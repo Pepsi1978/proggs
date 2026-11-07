@@ -68,6 +68,7 @@ import de.frank.aufgaben.ui.theme.LocalFarben
 import de.frank.aufgaben.ui.theme.antippen
 import de.frank.aufgaben.ui.theme.glas
 import de.frank.aufgaben.ui.theme.knopf3d
+import kotlinx.coroutines.delay
 
 /** Einblenden beim ersten Erscheinen: kippt leicht aus der Tiefe nach vorn. */
 fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
@@ -208,6 +209,18 @@ fun Sektion(
     LaunchedEffect(leer, automatik) { if (leer && automatik) wahl = 0 }
     val offen = when (wahl) { 1 -> true; 2 -> false; else -> startOffen && !leer }
     val schwebt = zustand.hoverZiel == "sek_$schluessel"
+    // Schwebt eine gezogene Aufgabe zwei Sekunden über dem geschlossenen Bereich, klappt er auf: Danach lässt sie sich
+    // darin an der gewünschten Stelle (auch auf einer Uhrzeit der Zeitleiste) ablegen. Bleibt danach offen.
+    val haptikAuf = LocalHapticFeedback.current
+    LaunchedEffect(schwebt, offen) {
+        if (schwebt && !offen && zustand.aufgabe != null) {
+            delay(2000)
+            if (zustand.aufgabe != null && zustand.hoverZiel == "sek_$schluessel") {
+                wahl = 1
+                haptikAuf.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+        }
+    }
     val rand by animateColorAsState(if (schwebt) farbe else Color.Transparent, label = "rand")
     val hub by animateFloatAsState(if (schwebt) 1.015f else 1f, spring(dampingRatio = 0.6f), label = "hub")
     Column(

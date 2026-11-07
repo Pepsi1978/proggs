@@ -253,7 +253,8 @@ fun ListeBildschirm(vm: AppViewModel) {
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40,
-                leer = b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
+                // Heute ist als einziger Bereich von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste).
+                leer = false, automatik = suche.isBlank(),
                 aktionen = { KalenderKnopf(vm, f.primaer); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
@@ -267,7 +268,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Morgen ----
             Sektion(
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
-                Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80,
+                Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), startOffen = false, verzoegerung = 80,
                 leer = b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty(), automatik = suche.isBlank(),
                 aktionen = { KalenderKnopf(vm, f.sekundaer); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
@@ -290,7 +291,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 val farbe = if (p == Prioritaet.SPAETER) f.textLeise else f.prio(p)
                 Sektion(
                     p.name, p.anzeige, info[p]!!.first, farbe, liste.size, zustand, Ziel.Prio(p),
-                    untertitel = info[p]!!.second, verzoegerung = 120 + i * 40, leer = liste.isEmpty(), automatik = suche.isBlank(),
+                    untertitel = info[p]!!.second, startOffen = false, verzoegerung = 120 + i * 40, leer = liste.isEmpty(), automatik = suche.isBlank(),
                     aktionen = { KalenderKnopf(vm, farbe); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
@@ -301,7 +302,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             val zielAufgaben = b.nachZiel.flatten()
             Sektion(
                 "ziele", "Ziele", Icons.Rounded.Flag, f.tertiaer, b.nachZiel.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
-                untertitel = "Aufgaben aus deinen Zielen", verzoegerung = 280, leer = b.nachZiel.isEmpty(), automatik = suche.isBlank(),
+                untertitel = "Aufgaben aus deinen Zielen", startOffen = false, verzoegerung = 280, leer = b.nachZiel.isEmpty(), automatik = suche.isBlank(),
                 aktionen = { VorlesenKnopf(vm, "bereich_ziele") { vm.bereichVorlesen("ziele", "Ziele", zielAufgaben, mitDatum = true) } },
             ) {
                 if (b.nachZiel.isEmpty()) LeerHinweis(Icons.Rounded.Flag, "Noch keine Aufgaben aus der App Ziele. Übernimm dort eine Aufgabe mit dem Plus.")
@@ -309,7 +310,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             }
             if (b.demnaechst.isNotEmpty()) Sektion(
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
-                untertitel = "Nach morgen geplant", verzoegerung = 300,
+                untertitel = "Nach morgen geplant", startOffen = false, verzoegerung = 300,
                 aktionen = { KalenderKnopf(vm, f.tertiaer); VorlesenKnopf(vm, "bereich_demnaechst") { vm.bereichVorlesen("demnaechst", "Demnächst", b.demnaechst, mitDatum = true) } },
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
