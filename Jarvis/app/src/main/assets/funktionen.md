@@ -66,6 +66,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 - Schreibt Jarvis selbst im Hintergrund (stündlich oder alle 2–6 Stunden, auf Wunsch Pause im Schlaf nach Dienstplan): Rückblick, Aktuell, Ausblick aus allen Apps. Ohne Modell nur Datenbericht. Archiv der früheren Auswertungen ist durchsuchbar.
 - Ausführlichkeit am Zahnrad der Karte (auch per Sprache, Kennung `auswertung_profil`): Kurz (Schnellprofil, etwa ein Viertel, kurze Stichpunkte), Normal (gleicher Inhalt verdichtet, etwa die Hälfte), Gründlich (bisheriger Umfang, Vorgabe); dauerhaft gespeichert, gilt ab der nächsten Auswertung, die Kartenzeile nennt das Profil.
+- Karte auf dem Startbildschirm (ab 1.8.581): zugeklappt nur die erste Textzeile mit „…“ und darunter „Ganz lesen“ (mehr Platz für den Schnellstart); „Ganz lesen“ oder Antippen des Texts klappt die ganze Auswertung auf, „Weniger zeigen“ wieder zu.
 - Vorlesesteuerung der Karte: Lautsprecher startet, dann rechts Pause/Weiter (setzt an derselben Stelle fort), links Stopp; Stopp und Ende stellen den Lautsprecher wieder her.
 
 ## Gedächtnis

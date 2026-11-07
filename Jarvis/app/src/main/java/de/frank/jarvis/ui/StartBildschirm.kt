@@ -273,11 +273,12 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     auswertung.neueste?.let { neueste ->
                         Text(
                             if (neueste.mitKi) neueste.text else neueste.text + "\n\n" + neueste.daten,
-                            Modifier.padding(top = 12.dp).fillMaxWidth().antippen(haptik = false) { auswertungOffen = !auswertungOffen },
+                            Modifier.padding(top = if (auswertungOffen) 12.dp else 6.dp).fillMaxWidth().antippen(haptik = false) { auswertungOffen = !auswertungOffen },
                             color = f.text, fontSize = 15.sp, lineHeight = 21.sp,
-                            maxLines = if (auswertungOffen) Int.MAX_VALUE else 5, overflow = TextOverflow.Ellipsis,
+                            // Zugeklappt nur die erste Zeile mit „…“, damit der Schnellstart darunter mehr Platz hat.
+                            maxLines = if (auswertungOffen) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
                         )
-                        Text(if (auswertungOffen) "Weniger zeigen" else "Ganz lesen", Modifier.padding(top = 6.dp).antippen { auswertungOffen = !auswertungOffen }, color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (auswertungOffen) "Weniger zeigen" else "Ganz lesen", Modifier.padding(top = 4.dp).antippen { auswertungOffen = !auswertungOffen }, color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

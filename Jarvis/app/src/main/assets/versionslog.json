@@ -593,6 +593,7 @@
 {"versionCode": 588, "versionName": "1.8.577", "stand": "07.11.2026, 16:06 Uhr", "notiz": "Neuer Schnellstart auf dem Startbildschirm: eigene Apps per Tipp öffnen, über Plus hinzufügen und per langem Drücken und Ziehen in den Löschbereich wieder herausnehmen."},
 {"versionCode": 589, "versionName": "1.8.578", "stand": "07.11.2026, 16:14 Uhr", "notiz": "Unten ersetzt der Knopf Programmierung den Reiter Aktivität und öffnet direkt die Liste der Programmier-Sessions mit blinkendem Punkt, wenn eine läuft; die Aktivität steht jetzt in den Einstellungen."},
 {"versionCode": 590, "versionName": "1.8.579", "stand": "07.11.2026, 16:27 Uhr", "notiz": "Der Schnellstart lässt sich per langem Drücken und Ziehen umordnen, Ziehen und Entfernen laufen flüssiger und genauer, neu installierte Apps werden erkannt und das Wackeln kostet außerhalb der Bearbeitung keinen Akku mehr."},
-{"versionCode": 591, "versionName": "1.8.580", "stand": "07.11.2026, 16:38 Uhr", "notiz": "Beim Umordnen im Schnellstart bleibt das Symbol genau unter dem Finger, springt nicht mehr hin und her, ein zweiter Finger stört nicht und mit TalkBack lassen sich Verknüpfungen nach vorn oder hinten verschieben."}
+{"versionCode": 591, "versionName": "1.8.580", "stand": "07.11.2026, 16:38 Uhr", "notiz": "Beim Umordnen im Schnellstart bleibt das Symbol genau unter dem Finger, springt nicht mehr hin und her, ein zweiter Finger stört nicht und mit TalkBack lassen sich Verknüpfungen nach vorn oder hinten verschieben."},
+{"versionCode": 592, "versionName": "1.8.581", "stand": "07.11.2026, 16:41 Uhr", "notiz": "Die Tagesauswertung auf dem Startbildschirm zeigt zugeklappt nur noch die erste Zeile mit drei Punkten und darunter „Ganz lesen“, damit der Schnellstart mehr Platz hat."}
 ]
 }
