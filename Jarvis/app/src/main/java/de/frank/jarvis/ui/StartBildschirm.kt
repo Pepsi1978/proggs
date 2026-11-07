@@ -81,6 +81,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.key
 import de.frank.jarvis.ui.theme.LocalBewegung
+import de.frank.module.draganddrop.reorderHandle
+import de.frank.module.draganddrop.reorderItem
+import de.frank.module.draganddrop.reorderViewport
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +106,13 @@ import kotlinx.coroutines.launch
 /** Die Schritte, deren Stand erst die Prüfung der angebundenen Apps zeigt. */
 private val APP_SCHRITTE = setOf("Geniale Aufgaben", "Kalender", "Geniale Ideen", "Tagebuch", "Genialer Wecker", "Entropie Reductor")
 
+/** Feste Listenschlüssel: die Einrichtungskarte und je Startbereich sein Platz in [de.frank.jarvis.data.START_BEREICHE] plus eins. */
+private const val EINRICHTUNG_KEY = 0L
+private fun bereichKey(bereich: String): Long = de.frank.jarvis.data.START_BEREICHE.indexOf(bereich) + 1L
+
+/** Höhe des unsichtbaren Griffs oben in jedem Startbereich: Titel und Unterzeile, nicht der Inhalt darunter. */
+private val GRIFF_HOEHE = 60.dp
+
 /** Ein Schritt der Einrichtung: erledigt oder mit einem Knopf, der genau dorthin führt. */
 private class Schritt(val titel: String, val text: String, val fertig: Boolean, val knopf: String, val aktion: () -> Unit)
 
@@ -118,6 +128,16 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     var profilWahlOffen by rememberSaveable { mutableStateOf(false) }
     val liste = rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // Die großen Bereiche (Tagesauswertung, Schnellstart, heutige Aufgaben …) lassen sich an ihrer Titelzeile lange drücken
+    // und verschieben (Modul M1.2); die Reihenfolge steht in den Einstellungen und gilt auch nach einem Neustart.
+    var reihe by remember { mutableStateOf(vm.einstellungen.startReihenfolge) }
+    val zustand = de.frank.module.draganddrop.rememberReorderState(liste, "start")
+    val reduziert = !LocalBewegung.current
+    de.frank.module.draganddrop.ReorderAutoScroll(zustand)
+    val haptik = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(zustand.dragging) {
+        if (zustand.dragging) haptik.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    }
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
 
@@ -214,22 +234,34 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // halbe Liste und schoben das Ende sonst nach oben (rechts hält SCHWEBE_FREI_RECHTS den Text von ihnen frei).
         val vonUnten = vm.gespraech.isNotEmpty()
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
+        // Vor den Bereichen steht nur die Einrichtungskarte; sie bleibt fest oben, die Bereiche ordnen sich darunter.
+        val vorne = if (offen > 0) 1 else 0
         LazyColumn(
-            Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
+            Modifier.fillMaxSize().nestedScroll(nachOben).reorderViewport(
+                state = zustand,
+                order = { (if (vorne > 0) listOf(EINRICHTUNG_KEY) else emptyList()) + reihe.map(::bereichKey) },
+                onMove = { von, nach ->
+                    if (von >= vorne && nach >= vorne) reihe = reihe.toMutableList().apply { add(nach - vorne, removeAt(von - vorne)) }
+                },
+                onDrop = { vm.einstellungen.startReihenfolge = reihe },
+                reducedMotion = reduziert,
+            ), state = liste,
             // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
             // auch im Live-Gespräch, damit beim Starten und Beenden nichts neu umbricht und die Lesestelle springt.
             contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) mitte else 8.dp + schweber),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(10.dp, Alignment.Bottom) else Arrangement.spacedBy(10.dp),
         ) {
-            if (offen > 0) item(key = "einrichtung") {
+            if (offen > 0) item(key = EINRICHTUNG_KEY) {
                 Karte(toenung = f.primaer) {
                     Text("Einrichtung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Noch $offen von ${schritte.size} Schritten, dann hört Jarvis auf dein Wort.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
                     schritte.forEachIndexed { i, s -> SchrittZeile(i + 1, s) }
                 }
             }
-            if (vm.gespraech.isEmpty()) item(key = "auswertung") {
-                Karte {
+            if (vm.gespraech.isEmpty()) items(reihe, key = ::bereichKey) { bereich ->
+              Box(reorderItem(zustand, bereichKey(bereich), reduziert)) {
+                when (bereich) {
+                "auswertung" -> Karte {
                     Row(verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f)) {
                             Text("Tagesauswertung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -297,7 +329,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 if (!auswertungOffen) auswertungOffen = true
                                 else {
                                     // Beim Zuklappen schrumpft die Karte stark; liegt ihr Anfang über dem Bildschirm, zurück an ihren Anfang.
-                                    val karte = liste.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "auswertung" }
+                                    val karte = liste.layoutInfo.visibleItemsInfo.firstOrNull { it.key == bereichKey("auswertung") }
                                     auswertungOffen = false
                                     if (karte != null && karte.offset < 0) scope.launch { liste.scrollToItem(karte.index) }
                                 }
@@ -306,11 +338,16 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                         )
                     }
                 }
+                // Schnellstart für Franks eigene Apps und die heutigen Aufgaben aus Geniale Aufgaben zum Abhaken.
+                // Das Live-Gedächtnis steht in den Einstellungen (Reiter Jarvis, Bereich „Jarvis' Gedächtnis“).
+                "schnellstart" -> SchnellstartBereich(vm)
+                "heute_aufgaben" -> HeuteAufgabenKarte(vm)
+                }
+                // Griff: die Titelzeile der Karte, unsichtbar über ihr. Kurz tippen geht durch zu den Knöpfen darunter,
+                // lange drücken und ziehen verschiebt den ganzen Bereich. Die App-Symbole des Schnellstarts liegen darunter.
+                Box(Modifier.fillMaxWidth().height(GRIFF_HOEHE).then(reorderHandle(zustand, bereichKey(bereich))))
+              }
             }
-            // Schnellstart für Franks eigene Apps, direkt darunter die heutigen Aufgaben aus Geniale Aufgaben zum Abhaken.
-            // Das Live-Gedächtnis steht in den Einstellungen (Reiter Jarvis, Bereich „Jarvis' Gedächtnis“).
-            if (vm.gespraech.isEmpty()) item(key = "schnellstart") { SchnellstartBereich(vm) }
-            if (vm.gespraech.isEmpty()) item(key = "heute_aufgaben") { HeuteAufgabenKarte(vm) }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
             if (vm.denkt) item(key = "denkt") { TaetigkeitsZeile(vm) }
