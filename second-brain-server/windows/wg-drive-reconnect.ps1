@@ -48,6 +48,27 @@ try {
         & sc.exe failure $svc reset= 86400 actions= restart/5000/restart/30000/restart/60000 2>$null | Out-Null
         Start-Service -Name $svc -ErrorAction SilentlyContinue
         Log "WireGuard-Dienst war $($s.Status) -> Recovery gesetzt + gestartet"
+    } else {
+        # 2b) Dienst "Running" heisst NICHT, dass der Tunnel lebt (2026-11-07: Dienst lief, letzter Handshake
+        # 29 Min alt, 10.8.0.1 tot -> Jarvis sah den Windows-PC nicht, nur den Server). Mit Keepalive 25 s
+        # erneuert ein lebender Tunnel den Handshake etwa alle 2 Min. Ist er aelter als 180 s (oder nie),
+        # Dienst neu starten - aber nur, wenn der Endpunkt im Internet erreichbar ist (sonst offline, Neustart sinnlos).
+        $wg = Join-Path $env:ProgramFiles 'WireGuard\wg.exe'
+        $tunnel = $svc -replace '^WireGuardTunnel\$', ''
+        if (Test-Path $wg) {
+            $hs = (& $wg show $tunnel latest-handshakes 2>$null | Select-Object -First 1) -split '\s+'
+            $alter = if ($hs.Count -ge 2 -and [long]$hs[1] -gt 0) { [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [long]$hs[1] } else { -1 }
+            if ($alter -lt 0 -or $alter -gt 180) {
+                $ep = ((& $wg show $tunnel endpoints 2>$null | Select-Object -First 1) -split '\s+')[1]
+                $epHost = if ($ep) { $ep -replace ':\d+$', '' -replace '^\[|\]$', '' } else { $null }
+                if ($epHost -and (Test-Connection -ComputerName $epHost -Count 2 -Quiet -ErrorAction SilentlyContinue)) {
+                    Restart-Service -Name $svc -Force -ErrorAction SilentlyContinue
+                    Log "Tunnel tot (letzter Handshake vor $alter s, Endpunkt $epHost erreichbar) -> $svc neu gestartet"
+                } else {
+                    Log "Tunnel ohne Handshake ($alter s), Endpunkt '$epHost' nicht erreichbar -> offline, kein Neustart"
+                }
+            }
+        }
     }
 } catch { Log "WireGuard-Dienst nicht zugaenglich: $($_.Exception.Message)" }
 
