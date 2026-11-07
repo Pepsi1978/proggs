@@ -69,6 +69,11 @@
         <provider android:authorities="de.frank.genialerwecker.jarvis" />
         <provider android:authorities="de.frank.epigenetik.jarvis" />
         <provider android:authorities="de.frank.stacklabor.werftstudio.jarvis" />
+        <!-- Schnellstart auf dem Startbildschirm: Franks eigene startbare Apps finden und öffnen. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <!-- isSplitRequired und requiredSplitTypes: Ohne den Teil „freigabe“ lehnt Android jede Installation ab

@@ -281,6 +281,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                 }
             }
+            // Schnellstart für Franks eigene Apps: zwischen Tagesauswertung und Live-Gedächtnis.
+            if (vm.gespraech.isEmpty()) item(key = "schnellstart") { SchnellstartBereich(vm) }
             if (vm.gespraech.isEmpty()) item(key = "gedaechtnis") {
                 val lagebild by de.frank.jarvis.gedaechtnis.Lagebild.stand.collectAsState()
                 Karte(Modifier.antippen { GedaechtnisAnsicht.offen = true }) {
