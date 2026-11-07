@@ -117,6 +117,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
     var profilWahlOffen by rememberSaveable { mutableStateOf(false) }
     val liste = rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
 
@@ -271,14 +272,38 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                     if (profilWahlOffen) AuswertungsProfilWahl(vm) { profilWahlOffen = false }
                     auswertung.neueste?.let { neueste ->
+                        if (auswertungOffen) {
+                            Text(
+                                if (neueste.mitKi) neueste.text else neueste.text + "\n\n" + neueste.daten,
+                                Modifier.padding(top = 8.dp).fillMaxWidth(),
+                                color = f.text, fontSize = 15.sp, lineHeight = 21.sp,
+                            )
+                        } else {
+                            // Zugeklappt nur die erste Zeile mit „…“, damit der Schnellstart darunter mehr Platz hat. Umbrüche werden zu
+                            // Leerzeichen, damit die Punkte auch nach einem kurzen ersten Absatz erscheinen. Beim reinen Datenbericht
+                            // steht statt des Standardhinweises die letzte Deutung von heute, sonst der Anfang der Daten.
+                            val zeile = (if (neueste.mitKi) neueste.text
+                                else neueste.text.substringAfter("geändert haben):\n", "").ifBlank { neueste.daten })
+                                .replace(Regex("\\s+"), " ").trim()
+                            Text(
+                                zeile,
+                                Modifier.padding(top = 8.dp).fillMaxWidth().antippen(haptik = false) { auswertungOffen = true },
+                                color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         Text(
-                            if (neueste.mitKi) neueste.text else neueste.text + "\n\n" + neueste.daten,
-                            Modifier.padding(top = if (auswertungOffen) 12.dp else 6.dp).fillMaxWidth().antippen(haptik = false) { auswertungOffen = !auswertungOffen },
-                            color = f.text, fontSize = 15.sp, lineHeight = 21.sp,
-                            // Zugeklappt nur die erste Zeile mit „…“, damit der Schnellstart darunter mehr Platz hat.
-                            maxLines = if (auswertungOffen) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+                            if (auswertungOffen) "Weniger zeigen" else "Ganz lesen",
+                            Modifier.padding(top = 4.dp).antippen {
+                                if (!auswertungOffen) auswertungOffen = true
+                                else {
+                                    // Beim Zuklappen schrumpft die Karte stark; liegt ihr Anfang über dem Bildschirm, zurück an ihren Anfang.
+                                    val karte = liste.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "auswertung" }
+                                    auswertungOffen = false
+                                    if (karte != null && karte.offset < 0) scope.launch { liste.scrollToItem(karte.index) }
+                                }
+                            },
+                            color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         )
-                        Text(if (auswertungOffen) "Weniger zeigen" else "Ganz lesen", Modifier.padding(top = 4.dp).antippen { auswertungOffen = !auswertungOffen }, color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
