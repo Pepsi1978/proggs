@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -132,6 +133,8 @@ fun AufgabeKarte(
     zeigeDatum: Boolean = false,
     schwebend: Boolean = false,
     hervorheben: Boolean = false,
+    /** Gespiegelt für den rechten Daumen: Text rechtsbündig, Abhakkreis ganz rechts (Bereiche Heute und Morgen). */
+    rechts: Boolean = false,
     onTipp: () -> Unit,
     onErledigt: () -> Unit,
 ) {
@@ -146,11 +149,16 @@ fun AufgabeKarte(
     if (zustand != null && !schwebend) basis = basis.ziehbar(a, zustand)
     Row(
         basis.antippen(haptik = false) { if (zustand == null || zustand.tippErlaubt()) onTipp() }
-            .padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = if (rechts) 10.dp else 4.dp, end = if (rechts) 4.dp else 10.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkkreis(a.erledigt, prio, aktion = onErledigt)
-        Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+        if (rechts) {
+            if (zustand != null && !schwebend) Icon(Icons.Rounded.DragIndicator, "Lang drücken und ziehen", tint = f.textSchwach, modifier = Modifier.padding(end = 6.dp).size(20.dp))
+            if (a.prio != Prioritaet.SPAETER && a.tag != null) {
+                Box(Modifier.padding(end = 6.dp).size(width = 6.dp, height = 26.dp).knopf3d(prio, prio.copy(alpha = 0.7f), 3.dp, f.dunkel))
+            }
+        } else Checkkreis(a.erledigt, prio, aktion = onErledigt)
+        Column(Modifier.weight(1f).padding(vertical = 4.dp), horizontalAlignment = if (rechts) Alignment.End else Alignment.Start) {
             Text(
                 a.titel,
                 color = f.text,
@@ -158,13 +166,14 @@ fun AufgabeKarte(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = if (rechts) TextAlign.End else TextAlign.Start,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null,
             )
             val schritte = a.schritte
             val ueberfaellig = a.ueberfaellig(heute)
             val zeigtMerkmale = a.minuten != null || a.erinnerung || a.wdh != Wiederholung.KEINE || schritte.isNotEmpty() || ueberfaellig || zeigeDatum
             if (a.text.isNotBlank() && a.text != a.titel) {
-                Text(a.text, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                Text(a.text, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = if (rechts) TextAlign.End else TextAlign.Start, modifier = Modifier.padding(top = 2.dp))
             }
             if (zeigtMerkmale) Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (ueberfaellig) Merkmal(null, "überfällig · ${Tage.datum(a.tag!!)}", f.gefahr)
@@ -175,10 +184,14 @@ fun AufgabeKarte(
                 if (schritte.isNotEmpty()) Merkmal(Icons.Rounded.Checklist, "${schritte.count { it.erledigt }}/${schritte.size}", f.textLeise)
             }
         }
-        if (a.prio != Prioritaet.SPAETER && a.tag != null) {
-            Box(Modifier.padding(start = 6.dp).size(width = 6.dp, height = 26.dp).knopf3d(prio, prio.copy(alpha = 0.7f), 3.dp, f.dunkel))
+        if (rechts) {
+            Checkkreis(a.erledigt, prio, aktion = onErledigt)
+        } else {
+            if (a.prio != Prioritaet.SPAETER && a.tag != null) {
+                Box(Modifier.padding(start = 6.dp).size(width = 6.dp, height = 26.dp).knopf3d(prio, prio.copy(alpha = 0.7f), 3.dp, f.dunkel))
+            }
+            if (zustand != null && !schwebend) Icon(Icons.Rounded.DragIndicator, "Lang drücken und ziehen", tint = f.textSchwach, modifier = Modifier.padding(start = 6.dp).size(20.dp))
         }
-        if (zustand != null && !schwebend) Icon(Icons.Rounded.DragIndicator, "Lang drücken und ziehen", tint = f.textSchwach, modifier = Modifier.padding(start = 6.dp).size(20.dp))
     }
 }
 

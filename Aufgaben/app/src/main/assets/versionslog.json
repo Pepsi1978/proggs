@@ -58,6 +58,7 @@
     {"versionCode": 54, "versionName": "1.0.53", "stand": "07.11.2026, 16:03 Uhr", "notiz": "Beim Ziehen einer Aufgabe scrollt die Liste umso schneller, je näher der Finger dem oberen oder unteren Bildschirmrand kommt, direkt an der Kante am schnellsten, weich und ohne Stillstand über den Ablageleisten."},
     {"versionCode": 55, "versionName": "1.0.54", "stand": "07.11.2026, 16:07 Uhr", "notiz": "Das Randscrollen beim Ziehen bremst sofort ab, wenn der Finger die Randzone verlässt, ruckt nach dem Loslassen nicht mehr nach und behält auch in kleinen Fenstern eine ruhige Mitte."},
     {"versionCode": 56, "versionName": "1.0.55", "stand": "07.11.2026, 16:10 Uhr", "notiz": "Nur der Bereich Heute ist anfangs aufgeklappt; hält man eine gezogene Aufgabe zwei Sekunden über einem geschlossenen Bereich, klappt er auf und sie lässt sich darin ablegen, auch auf einer Uhrzeit."},
-    {"versionCode": 57, "versionName": "1.0.56", "stand": "07.11.2026, 16:14 Uhr", "notiz": "Die Suche klappt Bereiche mit Treffern wieder auf, Bereiche klappen beim Randscrollen nicht mehr ungewollt auf, und nach dem Ablegen auf eine Uhrzeit in einem gerade aufgeklappten Bereich springt die Liste nicht mehr."}
+    {"versionCode": 57, "versionName": "1.0.56", "stand": "07.11.2026, 16:14 Uhr", "notiz": "Die Suche klappt Bereiche mit Treffern wieder auf, Bereiche klappen beim Randscrollen nicht mehr ungewollt auf, und nach dem Ablegen auf eine Uhrzeit in einem gerade aufgeklappten Bereich springt die Liste nicht mehr."},
+    {"versionCode": 58, "versionName": "1.0.57", "stand": "07.11.2026, 20:24 Uhr", "notiz": "In den Bereichen Heute und Morgen stehen Aufgabentexte und Abhakkreise jetzt rechts, damit sie sich einhändig mit dem rechten Daumen besser erreichen lassen."}
 ]
 }
