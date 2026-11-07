@@ -102,6 +102,16 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     LaunchedEffect(schublade.isOpen, vm.sitzungProjekt, offenProgrammierung) {
         if (!schublade.isOpen) { reiter = reiterFuer(offenProgrammierung, vm.sitzungProjekt); projektOffen = vm.sitzungProjekt.ifEmpty { null } }
     }
+    // Programmierung-Knopf unten: Leiste direkt auf dem gewünschten Reiter öffnen. Das Öffnen läuft im eigenen Scope,
+    // weil das Zurücksetzen des Wunsches diesen Effekt neu startet.
+    val wunsch = LeistenWunsch.reiter
+    LaunchedEffect(wunsch) {
+        if (wunsch != null) {
+            reiter = wunsch
+            LeistenWunsch.reiter = null
+            raum.launch { schublade.open() }
+        }
+    }
     // Zurück in der App (etwa nach einem Gespräch über die Sprachblase): eine geschlossene Leiste, die mitten in ihrer
     // Animation angehalten wurde, ganz hinausschieben, damit kein Streifen am Rand stehen bleibt.
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
@@ -198,10 +208,7 @@ private fun Leiste(
     BackHandler(enabled = offen && projekt != null) { projektOeffnen(null) }
     // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
-    // Alle 30 s neu gezählt, damit eine verstummte Sitzung (Terminal geschlossen) von selbst herausfällt.
-    var takt by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(programmiert) { while (true) { kotlinx.coroutines.delay(30_000); takt = System.currentTimeMillis() } }
-    val arbeitende = remember(programmiert, takt) { programmiert.filterValues { it.arbeitetJetzt(takt) }.keys }
+    val arbeitende = arbeitendeProgrammierungen()
     // Reiter mit mindestens einer arbeitenden Session, unabhängig vom gewählten Reiter: dort blinkt ein oranger Punkt.
     val aktiveReiter = aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
@@ -455,24 +462,40 @@ private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: B
                 Text(text, Modifier.padding(start = 6.dp), color = farbe, fontSize = 16.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        if (arbeitet) {
-            // Blinkt nur bei offener Leiste: Geschlossen bleibt sie komponiert, der Takt soll dann nicht weiterlaufen.
-            val sichtbar = if (blinken) {
-                val takt = androidx.compose.animation.core.rememberInfiniteTransition(label = "reiterPunkt")
-                takt.animateFloat(
-                    1f, 0.2f,
-                    androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600), androidx.compose.animation.core.RepeatMode.Reverse),
-                    label = "reiterPunktAlpha",
-                ).value
-            } else 1f
-            Box(
-                Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp).size(10.dp)
-                    .graphicsLayer { alpha = sichtbar }
-                    .clip(androidx.compose.foundation.shape.CircleShape).background(CLAUDE_ORANGE),
-            )
-        }
+        // Blinkt nur bei offener Leiste: Geschlossen bleibt sie komponiert, der Takt soll dann nicht weiterlaufen.
+        if (arbeitet) ArbeitsPunkt(Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp), blinken)
     }
 }
+
+/** Der blinkende orange Punkt „hier arbeitet eine Session“: in den Reitern der Seitenleiste und am Programmierung-Knopf unten. */
+@Composable
+internal fun ArbeitsPunkt(modifier: Modifier = Modifier, blinken: Boolean = true) {
+    val sichtbar = if (blinken) {
+        val takt = androidx.compose.animation.core.rememberInfiniteTransition(label = "reiterPunkt")
+        takt.animateFloat(
+            1f, 0.2f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600), androidx.compose.animation.core.RepeatMode.Reverse),
+            label = "reiterPunktAlpha",
+        ).value
+    } else 1f
+    Box(
+        modifier.size(10.dp)
+            .graphicsLayer { alpha = sichtbar }
+            .clip(androidx.compose.foundation.shape.CircleShape).background(CLAUDE_ORANGE),
+    )
+}
+
+/** Gerade arbeitende Programmier-Sitzungen (Claude Code); alle 30 s neu gezählt, damit eine verstummte Sitzung von selbst herausfällt. */
+@Composable
+internal fun arbeitendeProgrammierungen(): Set<String> {
+    val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
+    var takt by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(programmiert) { while (true) { kotlinx.coroutines.delay(30_000); takt = System.currentTimeMillis() } }
+    return remember(programmiert, takt) { programmiert.filterValues { it.arbeitetJetzt(takt) }.keys }
+}
+
+/** Wunsch, die Seitenleiste direkt auf einem Reiter zu öffnen (Programmierung-Knopf in der unteren Leiste). */
+internal object LeistenWunsch { var reiter by mutableStateOf<LeistenReiter?>(null) }
 
 /**
  * Die Reiter, in denen gerade mindestens eine der [arbeitende] Sessions arbeitet, nach derselben Zuordnung wie die Listen:

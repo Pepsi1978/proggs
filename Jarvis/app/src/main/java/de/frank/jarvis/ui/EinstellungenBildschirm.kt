@@ -101,6 +101,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         // Auf dem Reiter „Stimme“ ganz oben. Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
         if (reiter == "stimme") StillezeitKarte(vm)
 
+        // Die vollständige Aktivitätsansicht (früher eigener Reiter unten); zurück führt wieder hierher.
+        if (reiter == "jarvis") Knopf("Aktivität ansehen", Modifier.fillMaxWidth(), haupt = false) { vm.reiter = Reiter.AKTIVITAET }
+
         if (reiter == "jarvis") {
             // ---------------------------------------------------------------- Kopf
             Bereich("Jarvis' Kopf") {

@@ -39,6 +39,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -219,7 +223,24 @@ private fun Leiste(vm: AppViewModel) {
                 if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Reiter.entries.filter { it != Reiter.EINSTELLUNGEN }.forEach { reiterKnopf(it) }
+        reiterKnopf(Reiter.JARVIS)
+        reiterKnopf(Reiter.ABLAGE)
+        // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der
+        // Programmier-Sessions. Arbeitet eine, blinkt derselbe orange Punkt wie am Reiter „Programmierung“ in der Leiste.
+        val arbeitende = arbeitendeProgrammierungen()
+        val projektIds = remember(vm.projekte) { vm.projekte.map { it.id }.toSet() }
+        val programmiertGerade = LeistenReiter.PROGRAMMIERUNG in
+            aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
+        Box(
+            Modifier.weight(1f).height(50.dp).antippen { vm.reiter = Reiter.JARVIS; LeistenWunsch.reiter = LeistenReiter.PROGRAMMIERUNG }
+                .semantics { contentDescription = "Programmierung" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box {
+                Icon(Icons.Rounded.Code, null, tint = f.textLeise, modifier = Modifier.size(20.dp))
+                if (programmiertGerade) ArbeitsPunkt(Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-5).dp))
+            }
+        }
         // Die Fernwartung selbst steht im Schwebestapel (FernwartungsSymbol). Ihre Farbe wird weiter hier in allen Reitern geprüft:
         // alle 10 s, solange Jarvis vorn ist, damit sie beim Zurückkehren und Aufklappen sofort stimmt und das Logbuch lückenlos bleibt.
         val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current

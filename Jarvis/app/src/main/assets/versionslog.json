@@ -590,6 +590,7 @@
 {"versionCode": 585, "versionName": "1.8.574", "stand": "07.11.2026, 15:32 Uhr", "notiz": "Beim Stellen von Weckern und Ändern von Aufgaben meldet Jarvis nur noch Erledigt, wenn die App den neuen Stand bestätigt, und nennt sonst verständlich, was unbestätigt ist."},
 {"versionCode": 586, "versionName": "1.8.575", "stand": "07.11.2026, 15:34 Uhr", "notiz": "Ändern und Abhaken einer Aufgabe im selben Auftrag wird wieder bestätigt, und Verbote wie „nie ungefragt“ gelten im Gedächtnis nicht mehr als Erlaubnis."},
 {"versionCode": 587, "versionName": "1.8.576", "stand": "07.11.2026, 15:49 Uhr", "notiz": "Schutzregeln wie „nie ohne Rückfrage löschen“ und dauerhafte Regeln mit „heute“ werden wieder gemerkt, neu angelegte Wecker und Aufgaben mit Abweichung werden nie doppelt angelegt, und Geltung oder Frist lassen sich wieder aufheben."},
-{"versionCode": 588, "versionName": "1.8.577", "stand": "07.11.2026, 16:06 Uhr", "notiz": "Neuer Schnellstart auf dem Startbildschirm: eigene Apps per Tipp öffnen, über Plus hinzufügen und per langem Drücken und Ziehen in den Löschbereich wieder herausnehmen."}
+{"versionCode": 588, "versionName": "1.8.577", "stand": "07.11.2026, 16:06 Uhr", "notiz": "Neuer Schnellstart auf dem Startbildschirm: eigene Apps per Tipp öffnen, über Plus hinzufügen und per langem Drücken und Ziehen in den Löschbereich wieder herausnehmen."},
+{"versionCode": 589, "versionName": "1.8.578", "stand": "07.11.2026, 16:14 Uhr", "notiz": "Unten ersetzt der Knopf Programmierung den Reiter Aktivität und öffnet direkt die Liste der Programmier-Sessions mit blinkendem Punkt, wenn eine läuft; die Aktivität steht jetzt in den Einstellungen."}
 ]
 }
