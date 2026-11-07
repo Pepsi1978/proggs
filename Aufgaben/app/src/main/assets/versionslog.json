@@ -66,6 +66,7 @@
     {"versionCode": 62, "versionName": "1.0.61", "stand": "07.11.2026, 22:33 Uhr", "notiz": "Hoch ist jetzt rot, Mittel gelb und Gering grün mit kräftigen Streifen, das Kopfband von Heute pulsiert, die Punkte im Hintergrund sind weg, und erledigte Aufgaben bleiben 30 Tage sichtbar, ältere werden automatisch gelöscht."},
     {"versionCode": 63, "versionName": "1.0.62", "stand": "07.11.2026, 22:39 Uhr", "notiz": "Erledigt ist beim Start zugeklappt, Ziele sind blau, Heute pulsiert jetzt kräftig wie ein Herzschlag mit dickeren Streifen, dazu bessere Lesbarkeit auf Gelb und die Erfolgsserie zählt auch über 30 Tage weiter."},
     {"versionCode": 64, "versionName": "1.0.63", "stand": "07.11.2026, 22:44 Uhr", "notiz": "Bessere Lesbarkeit auf Gelb, Heute bleibt auch ohne Bewegung kräftig gestreift, die Ziele-Gruppen sind ebenfalls blau, und ein aufgeklappter Erledigt-Bereich bleibt nach einer Suche offen."},
-    {"versionCode": 65, "versionName": "1.0.64", "stand": "07.11.2026, 22:53 Uhr", "notiz": "Die Bestätigung nach dem Abhaken hat jetzt einen deckenden Hintergrund, gut lesbare Schrift und einen deutlichen Rückgängig-Knopf."}
+    {"versionCode": 65, "versionName": "1.0.64", "stand": "07.11.2026, 22:53 Uhr", "notiz": "Die Bestätigung nach dem Abhaken hat jetzt einen deckenden Hintergrund, gut lesbare Schrift und einen deutlichen Rückgängig-Knopf."},
+    {"versionCode": 66, "versionName": "1.0.65", "stand": "07.11.2026, 23:05 Uhr", "notiz": "Nach dem Abhaken erscheint unten keine Rückgängig-Leiste mehr; die übrigen Meldungen sind deckend und der Rückgängig-Knopf beim Löschen ist kontrastreicher und sicher gegen Doppeltippen."}
 ]
 }

@@ -76,6 +76,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var bildschirm by mutableStateOf<Bildschirm>(Bildschirm.Liste); private set
     var meldung by mutableStateOf<String?>(null); private set
     var rueckgaengig by mutableStateOf<(() -> Unit)?>(null); private set
+    /** Zählt jede Meldung, damit auch eine gleichlautende ihren Zeitgeber neu startet. */
+    var meldungNr by mutableStateOf(0); private set
     var konfetti by mutableIntStateOf(0); private set
     var hervorgehoben by mutableStateOf<Long?>(null)
 
@@ -182,6 +184,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun melde(text: String, undo: (() -> Unit)? = null) {
         meldung = text
         rueckgaengig = undo
+        meldungNr++
     }
 
     fun meldungWeg() { meldung = null; rueckgaengig = null }
@@ -419,16 +422,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            val folge = repo.setzeErledigt(a, erledigt)
-            if (erledigt) {
-                konfetti++
-                melde("„${a.titel}“ erledigt" + (folge?.tag?.let { " · nächstes Mal ${Tage.datum(it)}" } ?: "")) {
-                    viewModelScope.launch {
-                        folge?.let { repo.loesche(it) }
-                        repo.eine(a.id)?.let { repo.setzeErledigt(it, false) }
-                    }
-                }
-            }
+            repo.setzeErledigt(a, erledigt)
+            // Keine Leiste unten: Rückgängig geht durch erneutes Tippen auf den Haken.
+            if (erledigt) konfetti++
         }
     }
 

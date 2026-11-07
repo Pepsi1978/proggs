@@ -1,10 +1,11 @@
 package de.frank.aufgaben.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.heightIn
 import android.app.Activity
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -126,26 +127,39 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
     }
 }
 
+/** Hält die zuletzt gezeigte Meldung fest, damit sie beim Ausblenden nicht leer wird. */
+private class MeldungsAnzeige { var text = ""; var mitRueckgaengig = false }
+
 @Composable
 private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     val f = LocalFarben.current
     val text = vm.meldung
-    LaunchedEffect(text) { if (text != null) { delay(if (vm.rueckgaengig != null) 5000 else 2600); vm.meldungWeg() } }
+    val nr = vm.meldungNr
+    LaunchedEffect(nr, text) { if (text != null) { delay(if (vm.rueckgaengig != null) 5000 else 2600); vm.meldungWeg() } }
+    val halter = remember { MeldungsAnzeige() }
+    if (text != null) { halter.text = text; halter.mitRueckgaengig = vm.rueckgaengig != null }
+    val anzeigeText = text ?: halter.text
+    val mitRueckgaengig = if (text != null) vm.rueckgaengig != null else halter.mitRueckgaengig
+    // Hell: dunklerer Akzent, damit die weiße Schrift auch auf Orange genug Kontrast hat.
+    val knopfFarbe = if (f.dunkel) f.primaer else f.tertiaer
     AnimatedVisibility(text != null, modifier, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
         Row(
             Modifier.navigationBarsPadding().padding(start = 16.dp, end = 104.dp, bottom = 26.dp).fillMaxWidth()
-                .background(f.hgUnten, androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-                .glas(f, 18.dp, 2f, f.flaecheStark).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
-                .heightIn(min = 40.dp),
+                // Deckende Unterlage: das Glas allein ist im Dunkeln fast durchsichtig.
+                .background(f.hgUnten, RoundedCornerShape(18.dp))
+                .glas(f, 18.dp, 2f, f.flaecheStark).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(vm.meldung.orEmpty(), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
-            vm.rueckgaengig?.let { r ->
+            Text(anzeigeText, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+            if (mitRueckgaengig) {
                 Text(
                     "Rückgängig", color = f.aufPrimaer, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 12.dp)
-                        .background(f.primaer, androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
-                        .antippen { r(); vm.meldungWeg() }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        .knopf3d(knopfFarbe, knopfFarbe, 99.dp, f.dunkel)
+                        // Erst abräumen, dann ausführen: ein zweites Tippen findet nichts mehr vor.
+                        .antippen { val r = vm.rueckgaengig; vm.meldungWeg(); r?.invoke() }
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                 )
             }
         }
