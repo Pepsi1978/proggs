@@ -1,8 +1,7 @@
-- [OpenLauncher nur per Update-Skript bauen](openlauncher-nur-update-skript.md) — kein dotnet build von Hand, kein manuelles Schliessen erbitten
+- [OpenLauncher nur per Update-Skript](openlauncher-deploy-update-skript.md) — kein dotnet build von Hand, nie -Force, höchstes Zeitlimit, auf Klick warten
 - [Aktiver Config-Ordner ist das OpenLauncher-Profil](aktiver-config-ordner-openlauncher-profil.md) — Settings liegen NICHT in ~/.claude
 - [advisorModel braucht den Alias, keine Modell-ID](advisormodel-alias-statt-modell-id.md) — claude-fable-5-1 schaltet den Advisor still ab
 - [GenialeIdeen per installSchnell](genialeideen-install-schnell.md) — Debug-Build ruckelt, immer den schnellen Build installieren
-- [OpenLauncher-Update fragt immer](openlauncher-update-dialog-immer.md) — nie -Force, höchstes Zeitlimit, auf Klick warten
 - [Fenster-Aktivierung: Erfolg nur mit IsIconic](aktivierung-erfolg-nur-mit-isiconic.md) — activated=true ohne sichtbares Fenster heisst: die Erfolgspruefung ist falsch
 - [Dieser Rechner: abweichende Installationswege](dieser-rechner-installationswege.md) — npm-CLIs, LM Studio in Program Files, Stream Deck per winget
 - [Synced-Plugins abschalten](synced-plugins-abschalten.md) — Schlüssel "name@synced": false in enabledPlugins
@@ -38,3 +37,4 @@
 - [Hostinger-Server: Rolle](hostinger-server-rolle.md) — Rückfallziel ohne erreichbaren Rechner, Hauptzweck Android bauen und per Tunnel installieren
 - [Fehler an Anthropic = GitHub-Issue](fehler-an-anthropic-als-github-issue.md) — sofort gh issue create in anthropics/claude-code, /feedback ist gesperrt
 - [Lange Skripte per Write](lange-skripte-per-write.md) — über ~30 Zeilen nie als Bash-Heredoc (22 % brechen mit unexpected EOF), Datei in den Scratchpad schreiben und ausführen
+- Einzelthemen ohne eigene Zeile, nur bei Bedarf lesen: apps-nie-aus-claude-shell-starten, bash-commit-heredoc-syntax, bauweise-ohne-spec-pipeline, claude-profile-architektur-launcher, compose-fussleiste-verdraengt, deploy-guard-port-unterscheidung, gedankenspeicher-logikfehler-jagd, kompass-doku-luecke-zweite-quelle, modul-bibliothek, opencode-fast-priority-tier-wirkungslos, opus5-leitplanken, overlay-tooltips-app-weit-gesperrt, perfectmoment-version-bump-pflicht, repo-branch-und-sync-setup, vto-mikrofon-fehlt-stummer-klick
