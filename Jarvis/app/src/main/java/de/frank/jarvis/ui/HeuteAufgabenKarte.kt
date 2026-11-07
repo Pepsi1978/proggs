@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -327,12 +328,13 @@ private fun MorgenBereich() {
             if (fehler != null) Text(fehler, color = f.gefahr, fontSize = 14.sp)
             liste.forEach { a ->
                 androidx.compose.runtime.key("morgen_${a.id}") {
+                    // Rechtsbündig mit Punkt ganz rechts, passend zu den heutigen Aufgaben (rechter Daumen).
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.padding(top = 7.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
-                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis)
-                            zusatz(a).takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textLeise, fontSize = 13.sp) }
+                        Column(Modifier.weight(1f).padding(end = 12.dp), horizontalAlignment = Alignment.End) {
+                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+                            zusatz(a).takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End) }
                         }
+                        Box(Modifier.padding(top = 7.dp, end = 10.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
                     }
                 }
             }
@@ -353,19 +355,21 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
             .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
+        Column(Modifier.weight(1f).padding(end = 12.dp), horizontalAlignment = Alignment.End) {
+            Text(
+                a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+            )
+            val zusatz = zusatz(a)
+            if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End)
+        }
         Box(
             Modifier.size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f)),
             contentAlignment = Alignment.Center,
         ) {
             if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp))
-        }
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(
-                a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            val zusatz = zusatz(a)
-            if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp)
         }
     }
 }

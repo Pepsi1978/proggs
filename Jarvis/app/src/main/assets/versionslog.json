@@ -601,6 +601,7 @@
 {"versionCode": 596, "versionName": "1.8.585", "stand": "07.11.2026, 18:24 Uhr", "notiz": "Unter den heutigen Aufgaben auf dem Startbildschirm klappt der neue Bereich „Aufgaben morgen“ beim Antippen alle Aufgaben von morgen auf und beim erneuten Antippen wieder zu."},
 {"versionCode": 597, "versionName": "1.8.586", "stand": "07.11.2026, 18:28 Uhr", "notiz": "„Aufgaben morgen“ zeigt beim Öffnen nie einen alten Stand, aktualisiert sich nach dem Abhaken wiederkehrender Aufgaben und nennt die genaue Anzahl."},
 {"versionCode": 598, "versionName": "1.8.587", "stand": "07.11.2026, 20:11 Uhr", "notiz": "Die Bereiche des Startbildschirms lassen sich per langem Druck auf ihre Titelzeile frei verschieben, die Reihenfolge bleibt dauerhaft erhalten."},
-{"versionCode": 599, "versionName": "1.8.588", "stand": "07.11.2026, 20:17 Uhr", "notiz": "Startbereiche zieht man nur noch am Titel, Knöpfe daneben reagieren normal, die Reihenfolge lässt sich auch per Sprache und mit TalkBack ändern."}
+{"versionCode": 599, "versionName": "1.8.588", "stand": "07.11.2026, 20:17 Uhr", "notiz": "Startbereiche zieht man nur noch am Titel, Knöpfe daneben reagieren normal, die Reihenfolge lässt sich auch per Sprache und mit TalkBack ändern."},
+    {"versionCode": 600, "versionName": "1.8.589", "stand": "07.11.2026, 20:28 Uhr", "notiz": "Die Aufgaben heute und morgen auf dem Startbildschirm stehen jetzt rechtsbündig mit dem Abhakfeld ganz rechts, gut erreichbar mit dem rechten Daumen."}
 ]
 }
