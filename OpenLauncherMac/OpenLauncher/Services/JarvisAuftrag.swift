@@ -29,6 +29,10 @@ enum JarvisAuftrag {
             guard FileManager.default.fileExists(atPath: datei) else {
                 throw LauncherError.message("Auftragsdatei fehlt: \(datei)")
             }
+            // Wie der Startknopf: erst das Repo mit GitHub abgleichen, sonst arbeitet der Auftrag mit veralteten Profilen,
+            // Regeln, Skills und Hooks dieses Rechners. Scheitert es, wird trotzdem gestartet.
+            let sync = RepoSync.pull()
+            if !sync.ok { Logger.shared.warn("JarvisAuftrag", "verarbeite", "Repo-Abgleich: \(sync.message)") }
             let profil = wert("--profil", "minimal")
             let modus = wert("--modus", "schnell")
             let modell = wert("--modell", "claude-opus-5-5[1m]")

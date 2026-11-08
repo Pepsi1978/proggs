@@ -36,6 +36,10 @@ public static class JarvisAuftrag
         {
             var datei = stelle + 1 < args.Length ? args[stelle + 1] : "";
             if (!File.Exists(datei)) throw new FileNotFoundException("Auftragsdatei fehlt", datei);
+            // Wie der Startknopf: erst das Repo mit GitHub abgleichen, sonst arbeitet der Auftrag mit veralteten Profilen,
+            // Regeln, Skills und Hooks dieses Rechners. Task.Run: kein Deadlock auf einem UI-Kontext. Scheitert es, wird trotzdem gestartet.
+            var sync = Task.Run(RepoSync.PullAsync).GetAwaiter().GetResult();
+            if (!sync.Ok) log.Warn("JarvisAuftrag", "Verarbeite", $"Repo-Abgleich: {sync.Message}");
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var profil = Wert("--profil", "minimal");
             var modus = Wert("--modus", "schnell");
