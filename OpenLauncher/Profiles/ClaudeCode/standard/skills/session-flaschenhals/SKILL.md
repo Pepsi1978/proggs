@@ -12,7 +12,8 @@ Messender Rückblick auf Basis des JSONL-Verlaufs. Ergänzt `selbstbeobachtung` 
 Ziel: künftige ähnliche Aufgaben schneller, bei gleicher Qualität. Läuft **nach** allem anderen
 (Abschlussmeldung, Review-Frage erledigt), **stellt keine Fragen**, ändert **keinen App-Code**.
 
-Budget: Ziel unter 3 min und unter 15k Tokens. Nichts Neues gefunden → nach Schritt 3 mit einer Zeile enden.
+Budget: Ziel unter 3 min und unter 15k Tokens. Nichts Neues gefunden und keine Sofort-Korrektur (Schritt 2)
+→ nach Schritt 3 mit einer Zeile enden.
 
 ## 1. Messen
 
@@ -34,6 +35,12 @@ eigene Sitzung aus dem Gedächtnis nach denselben Kriterien einordnen.
   (die aktuelle mitgezählt; der Vergleich lässt sie weg, also beide Ausgaben zusammen lesen). Nur das ist ein Kandidat für eine Maßnahme.
 - **Einmalig** = nur hier aufgetreten → im Bericht nennen, nichts bauen (Direktive 3: Abstraktion erst
   ab zwei echten Fällen). Normale Entwicklungsarbeit (roter Build, der gefixt wurde) ist kein Befund.
+- **Ausnahme Sofort-Korrektur** (gilt auch bei einmaligen Fehlern): Lag der Fehler an einer **fehlenden
+  oder falschen Angabe** in einer Datei, die nur bei Bedarf gelesen wird (Skill-Anleitung, Almanach, Best
+  Practice) — typisch falscher Pfad, Datei- oder Parametername, „nicht gefunden“ —, dann die Angabe dort
+  sofort ergänzen oder berichtigen: höchstens 2 Zeilen, nur die Tatsache, keine neue Regel, kein
+  Eintrag in `massnahmen.json`, kein MEMORY.md. Richtigen Wert vorher belegen (Glob/Grep), nicht raten.
+  Commit wie in Schritt 5 (`session-flaschenhals: <ort> berichtigt`). Zählt nicht zum Limit aus Schritt 4.
 - Vor jeder Maßnahme die Ursache belegen: Kommandos hinter dem Befund ansehen (`--json` liefert sie)
   und gegenprüfen, wie oft dasselbe Muster **ohne** Fehler lief. Ohne klaren Unterschied: keine Maßnahme.
 
