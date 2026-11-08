@@ -606,6 +606,7 @@
     {"versionCode": 601, "versionName": "1.8.590", "stand": "07.11.2026, 20:31 Uhr", "notiz": "Das Abhakfeld einer heutigen Aufgabe sitzt direkt neben dem Titel, auch wenn darunter noch eine Zusatzzeile wie täglich steht."},
     {"versionCode": 602, "versionName": "1.8.591", "stand": "07.11.2026, 20:33 Uhr", "notiz": "Die Mitte des Abhakkreises liegt jetzt genau auf der Mittellinie der ersten Textzeile der Aufgabe."},
     {"versionCode": 603, "versionName": "1.8.592", "stand": "08.11.2026, 12:51 Uhr", "notiz": "Die offenen Abhakfelder der Aufgaben haben im Hellmodus einen kräftigen Ring und sind dadurch deutlich zu erkennen."},
-    {"versionCode": 604, "versionName": "1.8.593", "stand": "08.11.2026, 13:17 Uhr", "notiz": "Programmier-Sessions, die älter als zehn Tage sind, verschwinden automatisch aus der Seitenleiste, und die Liste scrollt flüssiger."}
+    {"versionCode": 604, "versionName": "1.8.593", "stand": "08.11.2026, 13:17 Uhr", "notiz": "Programmier-Sessions, die älter als zehn Tage sind, verschwinden automatisch aus der Seitenleiste, und die Liste scrollt flüssiger."},
+    {"versionCode": 605, "versionName": "1.8.594", "stand": "08.11.2026, 13:21 Uhr", "notiz": "Gespräche älter als 30 Tage liegen jetzt im Archiv unter Einstellungen, und per langem Drücken markierst du Gespräche als Favoriten mit goldenem Stern, die immer in der Leiste bleiben."}
 ]
 }

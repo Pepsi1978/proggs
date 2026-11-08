@@ -14,7 +14,14 @@ import org.json.JSONObject
  */
 /** [auftragStart]: wann der erste Programmierauftrag dieses Gesprächs abgeschickt wurde (0 = unbekannt); einmal gesetzt, bleibt er. */
 data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "", val programmierung: Boolean = false,
-                   val auftragStart: Long = 0L)
+                   val auftragStart: Long = 0L, val favorit: Boolean = false)
+
+/** So lange steht ein normales Gespräch unter „Gespräche“; danach liegt es im Archiv (Einstellungen → Archiv), Favoriten ausgenommen. */
+const val GESPRAECHE_ARCHIV_MS = 30L * 24 * 60 * 60 * 1000
+
+/** Archiviert: normales Gespräch ohne Projekt und ohne Stern, seit über 30 Tagen unverändert. Weiterführen holt es zurück. */
+fun Sitzung.archiviert(jetzt: Long = System.currentTimeMillis()): Boolean =
+    !programmierung && projekt.isEmpty() && !favorit && geaendert in 1 until jetzt - GESPRAECHE_ARCHIV_MS
 
 /**
  * Eine Nachricht im Speicher: von Frank oder von Jarvis. [art]: „antwort“ (normal), „fehler“ (Fehlermeldung statt
@@ -76,7 +83,7 @@ object Gespraeche {
 
     private fun sitzungAus(j: JSONObject, id: String = j.getString("id")) =
         Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"), istProgrammierung(j),
-            j.optLong("auftragStart"))
+            j.optLong("auftragStart"), j.optBoolean("favorit"))
 
     /**
      * Alle Gespräche, das zuletzt geführte zuerst. [mitAuftrag]: Gespräche, denen das Auftragsbuch einen Programmierauftrag
@@ -168,6 +175,7 @@ object Gespraeche {
                     .apply { if (programmierung || alt?.optBoolean("programmierung") == true) put("programmierung", true) }
                     // Der Start des ersten Auftrags bleibt bei jedem Speichern stehen.
                     .apply { alt?.optLong("auftragStart")?.takeIf { it > 0 }?.let { put("auftragStart", it) } }
+                    .apply { if (alt?.optBoolean("favorit") == true) put("favorit", true) }
                     .put("nachrichten", JSONArray().apply {
                         nachrichten.forEach { n ->
                             put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
@@ -182,8 +190,20 @@ object Gespraeche {
                     })
                 if (!json.optBoolean("programmierung") && istProgrammierung(json)) json.put("programmierung", true)
                 schreiben(d, json)
-                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"))
+                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"), json.optBoolean("favorit"))
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
+        }
+    }
+
+    /** Setzt oder entfernt den goldenen Stern: Favoriten bleiben in der Leiste, werden nie archiviert und nie automatisch entfernt. */
+    fun favoritSetzen(context: Context, id: String, an: Boolean) {
+        synchronized(sperre) {
+            runCatching {
+                val d = datei(context, id)
+                val j = lies(d)
+                if (an) j.put("favorit", true) else j.remove("favorit")
+                schreiben(d, j)
+            }.onFailure { Log.w(TAG, "Favorit nicht gesetzt", it) }
         }
     }
 

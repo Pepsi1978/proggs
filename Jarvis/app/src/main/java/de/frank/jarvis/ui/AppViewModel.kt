@@ -3155,12 +3155,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Räumt den Reiter „Programmierung“ auf: Programmier-Sessions ohne Projekt, die seit über zehn Tagen ruhen, verschwinden
-     * aus Jarvis, genau wie beim Löschen von Hand. Normale Gespräche, Projekte und alles in [schonen] bleiben; auf den
+     * aus Jarvis, genau wie beim Löschen von Hand. Normale Gespräche, Projekte, Favoriten und alles in [schonen] bleiben; auf den
      * Programmierrechnern wird nichts gelöscht, eine dort gestartete Sitzung läuft unberührt weiter.
      */
     private fun alteProgrammierungAufraeumen(liste: List<de.frank.jarvis.data.Sitzung>, schonen: Set<String>): List<de.frank.jarvis.data.Sitzung> {
         val grenze = System.currentTimeMillis() - PROGRAMMIERUNG_AUFBEWAHREN_MS
-        val alt = liste.filter { it.programmierung && it.projekt.isEmpty() && it.geaendert in 1 until grenze && it.id !in schonen }
+        val alt = liste.filter { it.programmierung && it.projekt.isEmpty() && !it.favorit && it.geaendert in 1 until grenze && it.id !in schonen }
         if (alt.isEmpty()) return liste
         alt.forEach { s ->
             runCatching {
@@ -3539,6 +3539,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         navigationen++
         antwort?.invoke(text)
         if (vorlesen && einstellungen.antwortenVorlesen) sprichRunde("navigation:" + System.currentTimeMillis(), text)
+    }
+
+    /** Goldener Stern an oder aus: sofort in der Liste, die Datei im Hintergrund. */
+    fun sitzungFavorit(id: String, an: Boolean) {
+        sitzungen = sitzungen.map { if (it.id == id) it.copy(favorit = an) else it }
+        viewModelScope.launch { sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.favoritSetzen(getApplication(), id, an) } } }
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {

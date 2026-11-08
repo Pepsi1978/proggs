@@ -111,7 +111,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "archiv" to "Archiv", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
@@ -120,6 +120,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "guthaben") GuthabenReiter(vm)
         if (reiter == "kontingente") KontingenteReiter(vm)
+        if (reiter == "archiv") ArchivReiter(vm)
         if (reiter == "tools") EigeneToolsBereich(vm)
         if (reiter == "konten") KontenBereich(vm)
 

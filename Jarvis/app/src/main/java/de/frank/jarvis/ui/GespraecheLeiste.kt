@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.data.Sitzung
+import de.frank.jarvis.data.archiviert
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
@@ -197,7 +199,8 @@ private fun Leiste(
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
     var projektNeu by remember { mutableStateOf(false) }
     val projektIds = remember(vm.projekte) { vm.projekte.map { it.id }.toSet() }
-    val listen = remember(vm.sitzungen, projektIds) { aufteilen(vm.sitzungen, projektIds) }
+    // Gespräche über 30 Tage liegen im Archiv (Einstellungen → Archiv); das gerade offene bleibt sichtbar.
+    val listen = remember(vm.sitzungen, projektIds, vm.sitzungId) { aufteilen(vm.sitzungen, projektIds, System.currentTimeMillis(), vm.sitzungId) }
     val normale = listen.gespraeche
     val anzahlJe = remember(vm.sitzungen) { vm.sitzungen.groupingBy { it.projekt }.eachCount() }
     val gruppen = remember(normale) { gruppiert(normale) }
@@ -255,7 +258,7 @@ private fun Leiste(
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
                 }
-                if (imProjekt.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+                if (imProjekt.isNotEmpty()) Text("Lange drücken: Favorit, umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
                 Knopf("Neues Gespräch im Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment) { aufNeuImProjekt(projekt.id) }
             } else if (projekte) {
                 // Eigener Bereich, getrennt von den Gesprächen: die Projekte, darunter in Daumennähe immer „Neues Projekt“.
@@ -310,7 +313,7 @@ private fun Leiste(
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
                 }
-                if (!auftraege || liste.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+                if (!auftraege || liste.isNotEmpty()) Text("Lange drücken: Favorit, umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
                 // Unter „Gespräche“ und „Programmierung“ kein Knopf: Neues entsteht über eine normale Session oder den Programmierer.
             }
             // Drei Reiter unten, in Daumennähe: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
@@ -332,6 +335,10 @@ private fun Leiste(
             title = { Text(s.titel.ifBlank { "Gespräch" }, maxLines = 2, overflow = TextOverflow.Ellipsis) },
             text = {
                 Column {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { vm.sitzungFavorit(s.id, !s.favorit); bearbeiten = null }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Star, null, tint = FAVORIT_GOLD)
+                        Text(if (s.favorit) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen", Modifier.padding(start = 12.dp), color = f.text, fontSize = 16.sp)
+                    }
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { umbenennen = s; bearbeiten = null }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Edit, null, tint = f.primaer)
                         Text("Umbenennen", Modifier.padding(start = 12.dp), color = f.text, fontSize = 16.sp)
@@ -414,6 +421,7 @@ private fun SitzungEintrag(
         if (vomPc) Text("💻 Gestartet auf dem PC", Modifier.padding(bottom = 2.dp), color = PC_LILA, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             val titel = if (vomPc) s.titel.removePrefix(de.frank.jarvis.faehigkeit.ProgrammierChat.LOKAL_TITEL) else s.titel
+            if (s.favorit) Icon(Icons.Rounded.Star, "Favorit", tint = FAVORIT_GOLD, modifier = Modifier.padding(end = 6.dp).size(18.dp))
             Text(titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
             // Jarvis antwortet oder recherchiert selbst: sein pulsierender Leuchtkern.
             if (denkt) Kern(22.dp, f.primaer, aktiv = true, modifier = Modifier.padding(start = 8.dp))
@@ -531,6 +539,9 @@ private fun lokaleGespraeche(vm: AppViewModel): Set<String> {
     return remember(vm.sitzungen) { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleGespraeche(context) }
 }
 
+/** Der goldene Stern der Favoriten: Sie bleiben in der Leiste und werden weder archiviert noch automatisch entfernt. */
+internal val FAVORIT_GOLD = androidx.compose.ui.graphics.Color(0xFFF5B301)
+
 /** Die drei Bereiche der Gesprächsleiste. */
 internal enum class LeistenReiter { GESPRAECHE, PROGRAMMIERUNG, PROJEKTE }
 
@@ -549,8 +560,9 @@ internal data class LeistenListen(val gespraeche: List<Sitzung>, val programmier
  * stehen nur in dessen Bereich; eines mit unbekanntem Projekt (Datei verloren) bleibt unter „Gespräche“, damit es nirgends verschwindet.
  * Programmiergespräche stehen fest nach Startzeit, die zuletzt gestartete oben: Neue Meldungen in einer Session verschieben nichts.
  */
-internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>) = LeistenListen(
-    gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) },
+internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>, jetzt: Long = 0L, offen: String? = null) = LeistenListen(
+    // [jetzt] > 0: archivierte Gespräche (über 30 Tage, ohne Stern) fehlen hier; sie stehen unter Einstellungen → Archiv.
+    gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) && (jetzt == 0L || it.id == offen || !it.archiviert(jetzt)) },
     // Gleicher Start (alte Dateien ohne Zeitpunkte): nach Anlage und id, nie nach der letzten Änderung.
     programmierung = sitzungen.filter { it.programmierung }.sortedWith(compareByDescending(::startzeit).thenByDescending { it.erstellt }.thenByDescending { it.id }),
 )

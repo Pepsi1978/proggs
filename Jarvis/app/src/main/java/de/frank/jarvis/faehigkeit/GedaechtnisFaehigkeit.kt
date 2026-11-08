@@ -4,6 +4,7 @@ import android.content.Context
 import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.data.Gespraeche
+import de.frank.jarvis.data.archiviert
 import de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis
 import de.frank.jarvis.gedaechtnis.Lagebild
 import de.frank.jarvis.observability.Logbuch
@@ -31,7 +32,8 @@ class GedaechtnisFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Das Gesamtbild enthält die letzten 10 Tage vollständig und Älteres nur verdichtet. Fragt Frank gezielt nach etwas Älterem oder einem Thema über längere Zeit, " +
             "suche mit gedaechtnis_suchen (ein bis drei treffende Wörter, bei Bedarf mit Zeitraum oder nur in bestimmten Quellen) und lies Treffer danach bei Bedarf im Volltext " +
-            "mit tagebuch_lesen, ideen_lesen oder ablage_lesen. Sag ehrlich, wenn nichts gefunden wurde."
+            "mit tagebuch_lesen, ideen_lesen oder ablage_lesen. Sag ehrlich, wenn nichts gefunden wurde. " +
+            "Sagt Frank „schau ins Archiv“ oder „im Archiv“, suche mit quellen archiv: Das sind seine Gespräche mit Jarvis, die älter als 30 Tage sind (Einstellungen → Archiv)."
 
     override fun stoerung(): String? = null
 
@@ -44,7 +46,7 @@ class GedaechtnisFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nutze es für Fragen nach Älterem oder nach einem Thema („Wann war ich zuletzt angeln?“, „Was hatte ich zu meinem Schwindel geschrieben?“, „Haben wir schon mal über den RAV4 gesprochen?“).",
             schema = schema(
                 "suche" to text("Ein bis drei Wörter, die alle vorkommen müssen (Groß- und Kleinschreibung egal). In Anführungszeichen = genau diese Wortgruppe."),
-                "quellen" to textListe("Nur diese Quellen: tagebuch, gespraeche, notizen, gemerkt, ideen, ablage, auswertungen. Weglassen = alle."),
+                "quellen" to textListe("Nur diese Quellen: tagebuch, gespraeche, archiv (nur archivierte Gespräche, älter als 30 Tage), notizen, gemerkt, ideen, ablage, auswertungen. Weglassen = alle."),
                 "von" to text("Optional: frühester Tag JJJJ-MM-TT."),
                 "bis" to text("Optional: spätester Tag JJJJ-MM-TT."),
                 "hoechstens" to zahl("Höchstzahl Treffer je Quelle (Vorgabe 8, höchstens 30)."),
@@ -95,17 +97,18 @@ class GedaechtnisFaehigkeit(private val context: Context) : Faehigkeit {
                 treffer.joinToString("\n") { (tag, ausschnitt) -> "- " + t.lang(tag) + ": " + ausschnitt } +
                 (if (monate.isNotEmpty()) (if (treffer.isNotEmpty()) "\n" else "") + monate.joinToString("\n") { (m, ausschnitt) -> "- Monat $m (verdichtet): $ausschnitt" } else "")
         }
-        if (will("gespraeche")) {
+        val nurArchiv = "archiv" in quellen && "gespraeche" !in quellen
+        if (will("gespraeche") || nurArchiv) {
             val ordner = File(context.filesDir, "gespraeche")
             val treffer = ordner.listFiles { f -> f.name.endsWith(".json") }.orEmpty().sortedByDescending { it.lastModified() }.asSequence()
                 .mapNotNull { f -> Gespraeche.laden(context, f.name.removeSuffix(".json")) }
-                .filter { (s, _) -> imZeitraum(tag(s.geaendert)) }
+                .filter { (s, _) -> imZeitraum(tag(s.geaendert)) && (!nurArchiv || s.archiviert()) }
                 .mapNotNull { (s, nachrichten) ->
                     val passend = nachrichten.filter { it.art != "fehler" && passt(it.text) }
                     if (passend.isEmpty() && !passt(s.titel)) null
-                    else "- „${s.titel}“ (${zeit(s.geaendert)}): " + passend.take(2).joinToString(" | ") { (if (it.vonMir) "Frank: " else "Jarvis: ") + TagebuchFaehigkeit.ausschnitt(it.text, woerter.first(), 160) }
+                    else "- „${s.titel}“ (${zeit(s.geaendert)}${if (s.archiviert()) ", im Archiv" else ""}): " + passend.take(2).joinToString(" | ") { (if (it.vonMir) "Frank: " else "Jarvis: ") + TagebuchFaehigkeit.ausschnitt(it.text, woerter.first(), 160) }
                 }.take(n).toList()
-            if (treffer.isNotEmpty()) bloecke += "GESPRÄCHE MIT JARVIS:\n" + treffer.joinToString("\n")
+            if (treffer.isNotEmpty()) bloecke += (if (nurArchiv) "ARCHIV DER GESPRÄCHE:\n" else "GESPRÄCHE MIT JARVIS:\n") + treffer.joinToString("\n")
         }
         if (will("notizen")) {
             val treffer = Gespraechsgedaechtnis.alleNotizen(context).filter { passt(it.text) }.sortedByDescending { it.erstellt }.take(n)
