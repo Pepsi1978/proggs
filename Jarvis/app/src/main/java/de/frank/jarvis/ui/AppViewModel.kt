@@ -3128,10 +3128,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sitzungenLaden() {
+        // Geschont werden das offene Gespräch und alles, woran gerade gearbeitet wird (Claude-Code-Sitzung oder Jarvis selbst).
+        val schonen = buildSet {
+            sitzungId?.let { add(it) }
+            vorherigeSitzung?.let { add(it) }
+            addAll(laufende.keys)
+            addAll(de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.value.filterValues { it.arbeitetJetzt() }.keys)
+        }
         viewModelScope.launch {
             sitzungen = sicherung.withLock {
-                withContext(Dispatchers.IO) { alleSitzungen() }
+                withContext(Dispatchers.IO) { alteProgrammierungAufraeumen(alleSitzungen(), schonen) }
             }
+            navigationsAuswahl?.let { n -> val ids = sitzungen.mapTo(HashSet()) { it.id }; if (n.any { it.sitzung.id !in ids }) navigationsAuswahl = null }
             projekte = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.alle(getApplication()) }
             // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
             if (!modellBereit) return@launch
@@ -3143,6 +3151,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 kiTitelBilden(s.id, stand)
             }
         }
+    }
+
+    /**
+     * Räumt den Reiter „Programmierung“ auf: Programmier-Sessions ohne Projekt, die seit über zehn Tagen ruhen, verschwinden
+     * aus Jarvis, genau wie beim Löschen von Hand. Normale Gespräche, Projekte und alles in [schonen] bleiben; auf den
+     * Programmierrechnern wird nichts gelöscht, eine dort gestartete Sitzung läuft unberührt weiter.
+     */
+    private fun alteProgrammierungAufraeumen(liste: List<de.frank.jarvis.data.Sitzung>, schonen: Set<String>): List<de.frank.jarvis.data.Sitzung> {
+        val grenze = System.currentTimeMillis() - PROGRAMMIERUNG_AUFBEWAHREN_MS
+        val alt = liste.filter { it.programmierung && it.projekt.isEmpty() && it.geaendert in 1 until grenze && it.id !in schonen }
+        if (alt.isEmpty()) return liste
+        alt.forEach { s ->
+            runCatching {
+                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleEntfernen(getApplication(), s.id)
+                de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), s.id)
+            }
+        }
+        Logbuch.system("Alte Programmier-Sessions entfernt", "${alt.size} älter als zehn Tage (nur in Jarvis)")
+        val weg = alt.mapTo(HashSet()) { it.id }
+        return liste.filter { it.id !in weg }
     }
 
     /** [kuerzenUm]: so viele Nachrichten hat Frank eben bewusst entfernt; sonst überschreibt ein kürzerer Stand die Datei nie. */
@@ -4159,3 +4187,6 @@ private const val TITEL_AUFTRAG =
         "Fasse in höchstens sieben Wörtern auf Deutsch zusammen, worum es geht; meist trifft es Franks erstes Anliegen, " +
         "hat sich das Gespräch verlagert, das Hauptthema. Klar und konkret wie ein Betreff, keine Anführungszeichen, " +
         "kein Punkt am Ende, keine Einleitung. Antworte nur mit der Überschrift."
+
+/** So lange bleibt eine ruhende Programmier-Session im Reiter „Programmierung“, danach räumt Jarvis sie weg. */
+private const val PROGRAMMIERUNG_AUFBEWAHREN_MS = 10L * 24 * 60 * 60 * 1000

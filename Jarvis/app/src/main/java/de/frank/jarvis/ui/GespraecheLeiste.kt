@@ -209,6 +209,8 @@ private fun Leiste(
     // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
     val arbeitende = arbeitendeProgrammierungen()
+    // Einmal je Liste statt in jedem Eintrag: Sonst liest jeder beim Scrollen neu sichtbare Eintrag das Auftragsbuch (Ruckeln).
+    val lokale = lokaleGespraeche(vm)
     // Reiter mit mindestens einer arbeitenden Session, unabhängig vom gewählten Reiter: dort blinkt ein oranger Punkt.
     val aktiveReiter = aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
@@ -245,7 +247,7 @@ private fun Leiste(
                 }
                 // Neueste Session unten, über dem Knopf; ältere darüber.
                 LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)) {
-                    items(imProjekt, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
+                    items(imProjekt, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, lokale, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
                 }
                 if (imProjekt.isEmpty()) {
                     Text(
@@ -294,7 +296,7 @@ private fun Leiste(
                 key(reiter) {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)) {
                         (if (auftraege) programmierGruppen else gruppen).forEach { (gruppe, eintraege) ->
-                            items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
+                            items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, lokale, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
                             item(key = "g:$gruppe") {
                                 Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
                             }
@@ -390,7 +392,7 @@ private fun Leiste(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SitzungEintrag(
-    vm: AppViewModel, s: Sitzung, arbeitende: Set<String>, programmiert: Map<String, de.frank.jarvis.faehigkeit.ProgrammierChat.Aktivitaet>, zeichen: String,
+    vm: AppViewModel, s: Sitzung, arbeitende: Set<String>, lokale: Set<String>, programmiert: Map<String, de.frank.jarvis.faehigkeit.ProgrammierChat.Aktivitaet>, zeichen: String,
     aufWahl: () -> Unit, langDruck: () -> Unit,
 ) {
     val f = LocalFarben.current
@@ -407,7 +409,7 @@ private fun SitzungEintrag(
         val codet = s.id in arbeitende
         val denkt = vm.laufende.containsKey(s.id)
         // Am PC direkt gestartet (nicht über Jarvis): Kennzeichen „Gestartet auf dem PC“ und alles in Lila statt Orange.
-        val vomPc = s.programmierung && (s.id in lokaleGespraeche(vm) || de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel))
+        val vomPc = s.programmierung && (s.id in lokale || de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel))
         val claudeFarbe = if (vomPc) PC_LILA else CLAUDE_ORANGE
         if (vomPc) Text("💻 Gestartet auf dem PC", Modifier.padding(bottom = 2.dp), color = PC_LILA, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
