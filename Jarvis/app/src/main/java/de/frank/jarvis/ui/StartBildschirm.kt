@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
@@ -129,7 +128,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val auswertung by Tagesauswertung.stand.collectAsState()
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
     var profilWahlOffen by rememberSaveable { mutableStateOf(false) }
-    val liste = rememberLazyListState()
+    // Je Session ein eigener Listenstand: Eine neue oder gewechselte Session beginnt so ganz oben statt an der Lesestelle der vorigen.
+    val liste = rememberSaveable(vm.sitzungId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) { androidx.compose.foundation.lazy.LazyListState() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     // Die großen Bereiche (Tagesauswertung, Schnellstart, heutige Aufgaben …) lassen sich an ihrer Titelzeile lange drücken
     // und verschieben (Modul M1.2); die Reihenfolge steht in den Einstellungen und gilt auch nach einem Neustart.
@@ -228,12 +228,12 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 try { liste.scrollBy(100_000f) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
             }
     }
-    // Leere Session (neu geöffnet oder gewechselt): Die Bereiche beginnen ganz oben. Sonst behielt die Liste die Lesestelle des
-    // vorigen Gesprächs und stand beim untersten Bereich. Läuft nur beim Wechsel, Franks eigenes Scrollen danach bleibt frei.
-    LaunchedEffect(vm.sitzungId, vm.gespraech.isEmpty()) {
-        if (vm.gespraech.isEmpty()) liste.scrollToItem(0)
+    // Gespräch in derselben Session geleert: Die Bereiche beginnen ebenfalls oben. Nur beim Wechsel, nie mitten im Ziehen;
+    // Franks eigenes Scrollen danach bleibt frei.
+    LaunchedEffect(liste, vm.gespraech.isEmpty()) {
+        if (vm.gespraech.isEmpty() && !zustand.dragging && liste.firstVisibleItemIndex > 0) liste.scrollToItem(0)
     }
-    LaunchedEffect(vm.gespraech.size, vm.denkt) {
+    LaunchedEffect(liste, vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
         if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
         // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.

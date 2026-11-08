@@ -122,6 +122,8 @@ class Einstellungen private constructor(context: Context) {
             }
             putBoolean("erinnerung_profile_getrennt", true)
         }.apply()
+        // Franks Wunsch ab 1.8.596: „Heute“ einmalig ganz nach oben, auch über einer früher gezogenen Reihe; danach gilt wieder seine.
+        if (!roh.getBoolean("start_heute_zuerst_umgestellt", false)) roh.edit().remove("start_reihenfolge").putBoolean("start_heute_zuerst_umgestellt", true).apply()
         // Freibetrag der früheren Guthaben-Abfrage (bis 1.8.221); den gewährten Betrag nennt jetzt Anthropic selbst.
         if (roh.contains("anthropic_freibetrag")) roh.edit().remove("anthropic_freibetrag").apply()
         // Gestört: Zugangsdaten, die eine ältere Fassung im Klartext-Ersatz abgelegt hat, für diese Sitzung übernehmen und
@@ -404,10 +406,8 @@ class Einstellungen private constructor(context: Context) {
     var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }
     /** Von Frank per Ziehen gewählte Reihenfolge der Startbildschirm-Bereiche; neue Bereiche hängen sich hinten an. */
     var startReihenfolge: List<String>
-        // Bis Frank selbst umordnet, steht „Heute“ ganz oben (Franks Wunsch ab 1.8.596), auch über einer früher gespeicherten Reihe.
-        get() = ((if (prefs.getBoolean("start_heute_oben", false)) emptyList() else listOf("heute_aufgaben")) +
-            (prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE } + START_BEREICHE).distinct()
-        set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")); putBoolean("start_heute_oben", true) }
+        get() = ((prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE } + START_BEREICHE).distinct()
+        set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")) }
     // ---- Programmieren am Rechner ----
     /** Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026). */
     var rechnerReihenfolge: List<String>

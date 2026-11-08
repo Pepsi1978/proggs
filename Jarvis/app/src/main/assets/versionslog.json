@@ -609,6 +609,7 @@
     {"versionCode": 604, "versionName": "1.8.593", "stand": "08.11.2026, 13:17 Uhr", "notiz": "Programmier-Sessions, die älter als zehn Tage sind, verschwinden automatisch aus der Seitenleiste, und die Liste scrollt flüssiger."},
     {"versionCode": 605, "versionName": "1.8.594", "stand": "08.11.2026, 13:21 Uhr", "notiz": "Gespräche älter als 30 Tage liegen jetzt im Archiv unter Einstellungen, und per langem Drücken markierst du Gespräche als Favoriten mit goldenem Stern, die immer in der Leiste bleiben."},
     {"versionCode": 606, "versionName": "1.8.595", "stand": "08.11.2026, 13:28 Uhr", "notiz": "Alte Programmier-Sessions wandern nach zehn Tagen ins Archiv statt gelöscht zu werden, eine neue Meldung holt sie zurück, und die Leiste scrollt ruhiger."},
-    {"versionCode": 607, "versionName": "1.8.596", "stand": "08.11.2026, 13:57 Uhr", "notiz": "Jede Session beginnt beim Öffnen ganz oben mit den heutigen Aufgaben, die anderen Bereiche liegen darunter."}
+    {"versionCode": 607, "versionName": "1.8.596", "stand": "08.11.2026, 13:57 Uhr", "notiz": "Eine neue oder leere Session beginnt beim Öffnen ganz oben, und die heutigen Aufgaben stehen jetzt als erster Bereich über Tagesauswertung und Schnellstart."},
+    {"versionCode": 608, "versionName": "1.8.597", "stand": "08.11.2026, 14:03 Uhr", "notiz": "Jede Session merkt sich ihre eigene Scrollposition, ein Wechsel springt nicht mehr in den untersten Bereich, auch nicht beim Umordnen."}
 ]
 }
