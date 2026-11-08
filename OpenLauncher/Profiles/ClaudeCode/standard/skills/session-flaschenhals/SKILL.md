@@ -82,6 +82,15 @@ weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur
   Vorher `git diff --cached --name-only` prüfen. Nachricht: `session-flaschenhals: <maßnahme>`.
   Kein Versions-Bump (Skills/Memory haben keine Version). `git pull --rebase`, dann push.
   Nur Versioniertes committen: Das Windows-Gedächtnis liegt im Repo, Mac- und Server-Gedächtnis nur lokal.
+- **Überall wirksam:** Jede Maßnahme muss auf Windows, macOS und dem Hostinger-Server in allen OpenLauncher-Profilen
+  (minimal, standard, strict) und für jedes Modell greifen, außer die Ursache gibt es nur auf einer Plattform (`plattform`). Dafür:
+  - einen Hook in alle sechs `settings.json` (`ClaudeCode/*`, `ClaudeCodeMac/*`; der Server erzeugt seine aus `ClaudeCodeMac`) eintragen;
+  - Skriptvarianten (`.py`, `.sh`, `.ps1`) gleich ziehen;
+  - Gedächtnis-Zeilen in eine Bedarfsdatei im Repo legen statt nur ins Windows-`MEMORY.md`.
+  
+  Nach dem Push den Server prüfen: `ssh root@168.231.83.205 cat /home/jarvis/.openlauncher/repo-status.json` muss `"ok": true` zeigen. Mac und Server
+  ziehen den Stand von selbst (Mac beim CLI-Start, Server alle 5 Minuten). Codex und OpenCode kennen keine Claude-Hooks: Dort gilt nur, was in
+  Skills und Skripten steht. Das gehört in den Bericht.
 
 ## 6. Bericht (höchstens 8 Zeilen)
 
