@@ -73,9 +73,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -230,9 +227,8 @@ private fun Konfetti(ausloeser: Int) {
 private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
     val alle by vm.aufgaben.collectAsState()
     val a = id?.let { i -> alle.firstOrNull { it.id == i } }
-    // Bildschirm bleibt an, Status- und Navigationsleiste verschwinden (Wischen holt sie kurz zurück).
-    val view = LocalView.current
     // Status- und Navigationsleiste blendet FokusLeisten aus und ein, hier bleibt nur der Bildschirm an.
+    val view = LocalView.current
     DisposableEffect(view) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
@@ -242,7 +238,7 @@ private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
     BoxWithConstraints(
         Modifier.fillMaxSize().displayCutoutPadding()
             .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility.only(WindowInsetsSides.Top))
-            .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility.only(WindowInsetsSides.Bottom))
+            .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         if (maxWidth > maxHeight && maxHeight < 560.dp) {
