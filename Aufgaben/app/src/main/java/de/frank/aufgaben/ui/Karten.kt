@@ -5,6 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -412,7 +413,9 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, satt: 
 /** Deckender Grund unter dem Glas (Bereich Heute): Die Fläche wirkt nicht durchsichtig, der Lichthof bleibt außen. */
 private fun Modifier.deckendeFlaeche(f: Farben): Modifier = drawWithCache {
     val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
-    val grund = f.flaeche.copy(alpha = 1f)
+    // Hell: deckendes Weiß wie bisher. Dunkel: Die Glasfarbe ist ein fast durchsichtiges Weiß; deckend gemacht wäre sie
+    // reines Weiß. Deshalb dort das Glas über dem dunklen Hintergrund verrechnet, so bleibt die Fläche dunkel und deckend.
+    val grund = if (f.dunkel) f.flaeche.compositeOver(f.hgUnten) else f.flaeche.copy(alpha = 1f)
     onDrawBehind { drawRoundRect(grund, cornerRadius = CornerRadius(r)) }
 }
 
