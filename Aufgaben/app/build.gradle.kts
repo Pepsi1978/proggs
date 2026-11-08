@@ -41,11 +41,6 @@ android {
     }
 
     buildTypes {
-        // Der Debug-Build ist der, der aufs Handy kommt (adb und UpdateStation). Nicht debuggbar, damit ART den Code
-        // vorkompiliert statt ihn zu interpretieren: sonst ruckeln Szene und Einblenden direkt nach dem Start stark.
-        debug {
-            isDebuggable = false
-        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -53,6 +48,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+        // Die Fassung fürs Handy (adb und UpdateStation, siehe apk-update/projekte.json): wie release mit R8, aber mit
+        // dem gemeinsamen Debug-Schlüssel. Ein debuggbarer Build läuft unter ART interpretiert statt vorkompiliert,
+        // dann ruckeln Szene und Einblenden direkt nach dem Start stark. Debug bleibt zum Debuggen unverändert.
+        create("schnell") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -99,6 +102,7 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
     implementation(libs.glance.appwidget)
-    // Übergibt die mitgelieferten Startprofile von Compose an ART, auch bei Installation über UpdateStation.
-    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    // Kommt schon über Compose mit; hier auf 1.4.1 angehoben. Wirkt nur in nicht debuggbaren Builds (schnell, release):
+    // übergibt die Startprofile nach dem ersten Start an ART, das sie später im Leerlauf vorkompiliert.
+    implementation(libs.profileinstaller)
 }

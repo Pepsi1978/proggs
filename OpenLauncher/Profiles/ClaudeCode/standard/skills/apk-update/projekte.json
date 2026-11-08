@@ -34,6 +34,12 @@
     "FisetinBegleiter": {
       "paket": "de.frank.fisetinbegleiter"
     },
+    "Aufgaben": {
+      "gradleTask": "assembleSchnell",
+      "apkOrdner": "schnell",
+      "paket": "de.frank.aufgaben",
+      "notiz": "Seit 08.11.2026 Variante 'schnell' (wie Release mit R8, gemeinsamer Debug-Key): Franks Auftrag, die Szene beim Start ruckelfrei aufklappen zu lassen; der debuggbare Debug-Build ruckelt beim Kaltstart stark."
+    },
     "Gedankenspeicher": {
       "paket": "de.frank.gedankenspeicher"
     },

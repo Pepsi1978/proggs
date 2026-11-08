@@ -53,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -91,16 +92,38 @@ import de.frank.aufgaben.ui.theme.glas
 import de.frank.aufgaben.ui.theme.knopf3d
 import kotlinx.coroutines.delay
 
+/** Einmal je App-Start gesetzt, sobald die Bilder nach dem Kaltstart wieder gleichmäßig kommen. */
+private var startRuhig = false
+
+/**
+ * Wartet nur beim App-Start, bis drei Bilder in Folge pünktlich kamen (höchstens 60 Bilder): Die zeitbasierte Feder
+ * springt sonst über die langen Startbilder (Datenbank, erste Messung, erstes Zeichnen) und das Aufklappen ruckelt.
+ * Später erscheinende Karten starten sofort. Ein einzelnes langes Bild danach lässt die Feder weiterhin springen.
+ */
+private suspend fun warteAufRuhigenStart() {
+    var letzte = 0L
+    var ruhige = 0
+    var bilder = 0
+    while (!startRuhig && ruhige < 3 && bilder < 60) {
+        withFrameNanos { t ->
+            if (letzte != 0L) ruhige = if (t - letzte < 25_000_000L) ruhige + 1 else 0
+            letzte = t
+        }
+        bilder++
+    }
+    startRuhig = true
+}
+
 /** Einblenden beim ersten Erscheinen: kippt leicht aus der Tiefe nach vorn. */
 fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
     val bewegung = LocalBewegung.current
     val a = remember { Animatable(if (bewegung) 0f else 1f) }
     LaunchedEffect(Unit) {
         if (bewegung) {
-            // Erst nach den ersten, schweren Frames beginnen (Kaltstart, Datenbank, erste Messung): Sonst springt die
-            // zeitbasierte Feder über die langen Frames hinweg und das Aufklappen ruckelt.
-            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-            kotlinx.coroutines.delay(verzoegerung.toLong()); a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f)) }
+            warteAufRuhigenStart()
+            delay(verzoegerung.toLong())
+            a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f))
+        }
     }
     graphicsLayer {
         val v = a.value
