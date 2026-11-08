@@ -102,7 +102,11 @@ def repo_abgleich() -> dict:
     """Spult vor. Die aktive AGENTS.md bleibt unberührt, denn sie ist im Repo ignoriert. Das Ergebnis steht im Reiter System, ein Fehlschlag
     verhindert keinen Start."""
     try:
-        ergebnis = subprocess.run(["git", "-C", str(PROGGS), "pull", "--ff-only", "--quiet"], capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL)
+        # Wie OpenLauncher Windows/Mac: fetch plus merge --ff-only. Ein "pull" rebased hier (pull.rebase) und scheitert an jeder
+        # offenen Änderung, etwa der von Claude Code umsortierten .claude/settings.local.json; dann blieb das Repo stehen.
+        ergebnis = subprocess.run(["git", "-C", str(PROGGS), "fetch", "--quiet"], capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL)
+        if ergebnis.returncode == 0:
+            ergebnis = subprocess.run(["git", "-C", str(PROGGS), "merge", "--ff-only", "--quiet", "@{u}"], capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL)
         stand = {"ok": ergebnis.returncode == 0, "meldung": ergebnis.stderr.strip()[-300:]}
     except (subprocess.TimeoutExpired, OSError) as fehler:
         stand = {"ok": False, "meldung": str(fehler)[-300:]}
