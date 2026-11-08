@@ -96,7 +96,11 @@ fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
     val bewegung = LocalBewegung.current
     val a = remember { Animatable(if (bewegung) 0f else 1f) }
     LaunchedEffect(Unit) {
-        if (bewegung) { kotlinx.coroutines.delay(verzoegerung.toLong()); a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f)) }
+        if (bewegung) {
+            // Erst nach den ersten, schweren Frames beginnen (Kaltstart, Datenbank, erste Messung): Sonst springt die
+            // zeitbasierte Feder über die langen Frames hinweg und das Aufklappen ruckelt.
+            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+            kotlinx.coroutines.delay(verzoegerung.toLong()); a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f)) }
     }
     graphicsLayer {
         val v = a.value

@@ -41,6 +41,11 @@ android {
     }
 
     buildTypes {
+        // Der Debug-Build ist der, der aufs Handy kommt (adb und UpdateStation). Nicht debuggbar, damit ART den Code
+        // vorkompiliert statt ihn zu interpretieren: sonst ruckeln Szene und Einblenden direkt nach dem Start stark.
+        debug {
+            isDebuggable = false
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -94,4 +99,6 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
     implementation(libs.glance.appwidget)
+    // Übergibt die mitgelieferten Startprofile von Compose an ART, auch bei Installation über UpdateStation.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 }
