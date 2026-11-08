@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -169,18 +170,18 @@ private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>
 
 /**
  * Reihenfolge wie in Geniale Aufgaben: offene ohne Termin von heute (auch überfällige mit Uhrzeit) nach Priorität, dann die
- * heutigen Termine nach Uhrzeit, zuletzt die erledigten ohne heutigen Termin.
+ * heutigen Termine nach Uhrzeit, zuletzt alle erledigten (auch mit Termin) unter den offenen, ebenfalls nach Uhrzeit.
  */
 private fun sortiere(liste: List<HeuteAufgabe>): List<HeuteAufgabe> {
     val rang = { a: HeuteAufgabe -> PRIO_RANG.indexOf(a.prioritaet).let { if (it < 0) PRIO_RANG.size else it } }
     val gruppe = { a: HeuteAufgabe ->
         when {
-            a.uhrzeit != null && !a.ueberfaellig -> 1
             a.erledigt -> 2
+            a.uhrzeit != null && !a.ueberfaellig -> 1
             else -> 0
         }
     }
-    return liste.sortedWith(compareBy<HeuteAufgabe>({ gruppe(it) }, { if (gruppe(it) == 1) it.uhrzeit else "" }, { rang(it) }))
+    return liste.sortedWith(compareBy<HeuteAufgabe>({ gruppe(it) }, { if (gruppe(it) != 0) it.uhrzeit ?: "" else "" }, { rang(it) }))
 }
 
 /** Liest den Stand neu; nur die zuletzt begonnene Lesung setzt ihn. Abbrechbar (die Brücke blockiert sonst bis zum Zeitlimit). */
@@ -274,7 +275,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
     }
 
     Karte {
-        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
+        // Sofort neu sortiert: Ein frisch abgehakter Eintrag rutscht schon beim Tipp unter die offenen.
+        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }?.let(::sortiere)
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
         Column(griff.fillMaxWidth()) {
@@ -355,7 +357,8 @@ private fun zusatz(a: HeuteAufgabe): String =
 private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
     val f = LocalFarben.current
     Row(
-        Modifier.fillMaxWidth().antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
+        // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend.
+        Modifier.fillMaxWidth().alpha(if (a.erledigt) 0.5f else 1f).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
             .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
         // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, nicht mittig zwischen Titel und Zusatzzeile.
         verticalAlignment = Alignment.Top,
