@@ -2,6 +2,7 @@ package de.frank.aufgaben.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.lerp
@@ -115,14 +116,15 @@ private suspend fun warteAufRuhigenStart() {
 }
 
 /** Einblenden beim ersten Erscheinen: kippt leicht aus der Tiefe nach vorn. */
-fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
+/** [dauer] > 0: gleichmäßig über so viele Millisekunden statt mit der schnellen Feder (Szene und Heute beim Start). */
+fun Modifier.einblenden(verzoegerung: Int = 0, dauer: Int = 0): Modifier = composed {
     val bewegung = LocalBewegung.current
     val a = remember { Animatable(if (bewegung) 0f else 1f) }
     LaunchedEffect(Unit) {
         if (bewegung) {
             warteAufRuhigenStart()
             delay(verzoegerung.toLong())
-            a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f))
+            a.animateTo(1f, if (dauer > 0) tween(dauer, easing = FastOutSlowInEasing) else spring(dampingRatio = 0.8f, stiffness = 180f))
         }
     }
     graphicsLayer {
@@ -249,6 +251,8 @@ fun Sektion(
     /** Aus während der Suche: Ein leeres Suchergebnis soll die eigene Auf-/Zuklapp-Wahl nicht verwerfen. */
     automatik: Boolean = true,
     verzoegerung: Int = 0,
+    /** > 0: Einblenden beim Start gleichmäßig über so viele Millisekunden (Heute), sonst schnelle Feder. */
+    einblendDauer: Int = 0,
     /** Sattere Farbe für Kopfband, Rahmen und Leiste (Prioritätsbereiche). */
     kraeftig: Boolean = false,
     /** Bereich glüht nach außen und ist so als etwas Besonderes hervorgehoben (Bereiche Heute und Morgen). */
@@ -312,7 +316,7 @@ fun Sektion(
             .fillMaxWidth()
             // Heute bekommt oben und unten mehr Luft, damit der Lichthof frei abstrahlen kann.
             .padding(horizontal = 14.dp, vertical = if (leuchten) 18.dp else 11.dp)
-            .einblenden(verzoegerung)
+            .einblenden(verzoegerung, einblendDauer)
             .graphicsLayer { scaleX = hub; scaleY = hub }
             .ablageZiel(zustand, zielSchluessel, ziel)
             .then(if (leuchten) Modifier.lichtHof(f, farbe, atemLeser).deckendeFlaeche(f) else Modifier)

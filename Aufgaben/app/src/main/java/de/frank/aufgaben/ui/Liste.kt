@@ -265,7 +265,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             AnimatedVisibility(sucheOffen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) { Suchfeld(suche) { suche = it } }
             if (szeneZeigen && !sucheOffen) {
                 AufgabenSzene(
-                    Modifier.padding(horizontal = 14.dp, vertical = 6.dp).einblenden()
+                    Modifier.padding(horizontal = 14.dp, vertical = 6.dp).einblenden(dauer = 750)
                         .graphicsLayer {
                             val s = scroll.value.toFloat()
                             translationY = s * 0.35f
@@ -283,7 +283,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Heute ----
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
-                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, leuchten = true, dunklesBand = true,
+                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, einblendDauer = 750, leuchten = true, dunklesBand = true,
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
                 leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
