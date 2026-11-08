@@ -176,7 +176,7 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
 }
 
 /**
- * Fokus blendet Status- und Navigationsleiste aus (Wischen holt sie kurz zurück). Beim Zurückgehen kommen sie sofort
+ * Fokus blendet Status- und Navigationsleiste aus; ein Wisch vom Rand geht direkt zurück. Beim Zurückgehen kommen sie sofort
  * wieder, schon zu Beginn des Übergangs und nicht erst, wenn der Fokus-Bildschirm ganz verschwunden ist. Die übrigen
  * Bildschirme rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
  */
@@ -187,7 +187,9 @@ private fun FokusLeisten(fokus: Boolean) {
         val fenster = (view.context as? Activity)?.window ?: return@LaunchedEffect
         val leisten = WindowCompat.getInsetsController(fenster, view)
         if (fokus) {
-            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            // Nicht „zeigen beim Wischen“: Dort holte die erste Zurück-Geste nur die Leisten hervor und erst die zweite
+            // ging zurück. So wirkt die Zurück-Geste sofort, ohne die Statusleiste einzublenden.
+            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             leisten.hide(WindowInsetsCompat.Type.systemBars())
         } else leisten.show(WindowInsetsCompat.Type.systemBars())
     }

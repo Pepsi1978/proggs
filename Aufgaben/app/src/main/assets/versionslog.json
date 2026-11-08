@@ -74,6 +74,7 @@
     {"versionCode": 70, "versionName": "1.0.69", "stand": "08.11.2026, 12:26 Uhr", "notiz": "Auch der Morgen-Bereich glüht jetzt wie eine Sonne nach außen, in seiner eigenen Farbe und mit deckender Fläche."},
     {"versionCode": 71, "versionName": "1.0.70", "stand": "08.11.2026, 12:31 Uhr", "notiz": "Kalender- und Lautsprecherknopf sind in allen Designs einheitlich grau ohne Umrandung und rücken ein Stück nach links, damit der Aufklapp-Pfeil frei bedienbar ist."},
     {"versionCode": 72, "versionName": "1.0.71", "stand": "08.11.2026, 12:34 Uhr", "notiz": "Der Plus-Knopf sitzt etwas tiefer und ist kleiner, und der Fokus-Knopf steht jetzt unten links daneben statt oben in der Kopfzeile."},
-    {"versionCode": 73, "versionName": "1.0.72", "stand": "08.11.2026, 12:55 Uhr", "notiz": "Scrollen, Abhaken und lange Erledigt-Listen laufen deutlich flüssiger, und die Rückkehr aus dem Fokus-Timer gleitet ohne Ruckeln zurück."}
+    {"versionCode": 73, "versionName": "1.0.72", "stand": "08.11.2026, 12:55 Uhr", "notiz": "Scrollen, Abhaken und lange Erledigt-Listen laufen deutlich flüssiger, und die Rückkehr aus dem Fokus-Timer gleitet ohne Ruckeln zurück."},
+    {"versionCode": 74, "versionName": "1.0.73", "stand": "08.11.2026, 12:58 Uhr", "notiz": "Im Fokus-Timer führt ein einziger Wisch zurück zur Liste, ohne dass vorher die Statusleiste erscheint."}
 ]
 }
