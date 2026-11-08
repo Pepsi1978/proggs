@@ -24,7 +24,7 @@ private val RECHNER = listOf("mac", "windows", "server")
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
  * und lässt sich wie die anderen verschieben.
  */
-val START_BEREICHE = listOf("auswertung", "schnellstart", "heute_aufgaben")
+val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
 val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben")
@@ -404,8 +404,10 @@ class Einstellungen private constructor(context: Context) {
     var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }
     /** Von Frank per Ziehen gewählte Reihenfolge der Startbildschirm-Bereiche; neue Bereiche hängen sich hinten an. */
     var startReihenfolge: List<String>
-        get() = ((prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE } + START_BEREICHE).distinct()
-        set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")) }
+        // Bis Frank selbst umordnet, steht „Heute“ ganz oben (Franks Wunsch ab 1.8.596), auch über einer früher gespeicherten Reihe.
+        get() = ((if (prefs.getBoolean("start_heute_oben", false)) emptyList() else listOf("heute_aufgaben")) +
+            (prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE } + START_BEREICHE).distinct()
+        set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")); putBoolean("start_heute_oben", true) }
     // ---- Programmieren am Rechner ----
     /** Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026). */
     var rechnerReihenfolge: List<String>

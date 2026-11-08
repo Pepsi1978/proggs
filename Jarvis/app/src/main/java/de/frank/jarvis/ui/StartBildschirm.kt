@@ -228,6 +228,11 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 try { liste.scrollBy(100_000f) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
             }
     }
+    // Leere Session (neu geöffnet oder gewechselt): Die Bereiche beginnen ganz oben. Sonst behielt die Liste die Lesestelle des
+    // vorigen Gesprächs und stand beim untersten Bereich. Läuft nur beim Wechsel, Franks eigenes Scrollen danach bleibt frei.
+    LaunchedEffect(vm.sitzungId, vm.gespraech.isEmpty()) {
+        if (vm.gespraech.isEmpty()) liste.scrollToItem(0)
+    }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
         if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
