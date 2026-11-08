@@ -980,6 +980,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         try { tippVerarbeiten(wahlId, w, wert) } finally { tippInArbeit -= wahlId }
     }
 
+    /**
+     * Franks gesprochene Wahl ([wahlPerSprache]) wie ein Tipp, ohne Umweg über das Modell: genau ein Start, keine neue Karte.
+     * Liefert den Satz zum Vorlesen: die Folgefrage, den Fehlstart samt erneuter Frage oder die kurze Bestätigung.
+     */
+    suspend fun wahlPerSpracheTreffen(wahlId: String, wert: String): String {
+        val vorher = offeneWahlen[wahlId]
+        Logbuch.system("Modellwahl per Sprache", "$wahlId: $wert")
+        modellGewaehlt(wahlId, wert)
+        val folge = karten.entries.firstOrNull { it.value.vorgaenger == wahlId && wahlStand.value[it.key] == WAHL_OFFEN }
+        return when {
+            folge != null -> folge.value.frage
+            wahlStand.value[wahlId] == WAHL_OFFEN -> "Das hat nicht geklappt, der Grund steht im Chat. " + karten[wahlId]?.frage.orEmpty()
+            vorher?.stufe == STUFE_CLI -> "Okay, der Auftrag startet mit ${modellName(MODELL_SOL, wert)}."
+            else -> "Okay, der Auftrag startet mit ${modellName(wert, vorher?.cli.orEmpty())}."
+        }
+    }
+
     private suspend fun tippVerarbeiten(wahlId: String, w: OffeneWahl, wert: String) {
         val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext) +
             ProgrammierChat.AuftragsAnhaenge(w.anhaenge.map { de.frank.jarvis.data.Anhang(it) })
@@ -3012,9 +3029,39 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         internal fun modellAusAntwort(worte: String?): String {
             val t = worte?.trim()?.lowercase(Locale.ROOT).orEmpty()
             if (t.isEmpty() || t.length > 60) return ""
-            val opus = Regex("\\bopus\\b").containsMatchIn(t)
+            val opus = OPUS_GEHOERT.containsMatchIn(t)
             val sol = Regex("\\bsol\\b").containsMatchIn(t)
             return when { opus && !sol -> MODELL_OPUS; sol && !opus -> MODELL_SOL; else -> "" }
+        }
+
+        /** „Opus“ samt typischer Hörfehler der Mitschrift („Oppos 5.5“, „Opos“, „Oppus“, „Ohpus“, „Obus“). */
+        private val OPUS_GEHOERT = Regex("\\b(?:oh?[\\s-]?[pb]{1,2}(?:u|o|ou)s{1,2})\\b")
+
+        /**
+         * Franks gesprochene kurze Antwort auf die offene Modell- oder CLI-Frage in [gespraech] (etwa „Opus 5.5“ über das Weckwort
+         * außerhalb der App): Karten-Id und Knopfwert der neuesten offenen Karte dieser Stufe, sonst null. Gilt dann wie der Tipp.
+         */
+        // [neuesGespraech]: Frank antwortet nach erneutem „Hey Jarvis“ (etwa auf die Erinnerung nach 30 Sekunden); außerhalb der App
+        // beginnt damit ein neues Gespräch. Dann gilt die zuletzt gestellte, noch frische Frage aus dem vorigen Gespräch.
+        fun wahlPerSprache(gespraech: String, worte: String, neuesGespraech: Boolean = false): Pair<String, String>? {
+            if (gespraech.isEmpty()) return null
+            val t = DiktatTrenner.auftrag(worte).trim().lowercase(Locale.ROOT)
+            if (t.isEmpty() || t.length > 60 || Regex("\\b(nicht|kein|keins|keine|ohne|statt|anstatt)\\b").containsMatchIn(t)) return null
+            val jetzt = System.currentTimeMillis()
+            val offen = offeneWahlen.entries.filter { it.value.stufe in listOf(STUFE_MODELL, STUFE_CLI) &&
+                wahlStand.value[it.key] == WAHL_OFFEN && karten.containsKey(it.key) && it.key !in tippInArbeit && jetzt - it.value.seit < VORWAHL_FOLGE_MS }
+            val (id, w) = (offen.filter { it.value.gespraech == gespraech }.maxByOrNull { it.value.seit }
+                ?: offen.takeIf { neuesGespraech }?.filter { it.key in frischeWahlen.value && jetzt - it.value.seit < KNOPF_FRIST_MS }?.maxByOrNull { it.value.seit })
+                ?.toPair() ?: return null
+            val wert = when (w.stufe) {
+                STUFE_CLI -> when {
+                    Regex("open\\s*-?\\s*code").containsMatchIn(t) -> CLI_OPENCODE
+                    Regex("\\bcodex\\b|\\bco[dt]ecs\\b|\\bkodex\\b").containsMatchIn(t) -> CLI_CODEX
+                    else -> ""
+                }
+                else -> modellAusAntwort(t).ifEmpty { festesModellAusAntwort(t) }
+            }
+            return if (wert.isEmpty()) null else id to wert
         }
 
         /** Franks kurze Antwort nennt genau Kimi K3.1 Pro oder Gemini 4 Argon: dessen Knopfwert, sonst leer. Ein anderes Kimi („Kimi K3“) zählt nicht. */
@@ -3032,7 +3079,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val ZUSATZ_FELDER = listOf("effort", "profil", "modus")
 
         /** Nennt Frank selbst ein Modell (Opus, Sol oder GPT)? Nur dann gilt ein vom Modell eingesetztes modell ohne Knöpfe. */
-        internal fun modellGenannt(worte: String): Boolean = Regex("\\b(opus|sol|gpt)\\b").containsMatchIn(worte.lowercase(Locale.ROOT))
+        internal fun modellGenannt(worte: String): Boolean = worte.lowercase(Locale.ROOT).let { Regex("\\b(sol|gpt)\\b").containsMatchIn(it) || OPUS_GEHOERT.containsMatchIn(it) }
 
         private const val WAHL_PREFS = "jarvis_auswahlkarten"
         @Volatile private var wahlenGeladen = false
