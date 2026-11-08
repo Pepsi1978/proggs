@@ -340,6 +340,7 @@ class Einstellungen private constructor(context: Context) {
     var ansageLautstaerke: Int get() = prefs.getInt("ansage_lautstaerke", 100).coerceIn(0, 100); set(v) = put { putInt("ansage_lautstaerke", v.coerceIn(0, 100)) }
     var adresseZuhause: String get() = s("adresse_zuhause", "Niederheidenstraße 42, 15366 Neuenhagen bei Berlin"); set(v) = put { putString("adresse_zuhause", v.trim()) }
     var adresseArbeit: String get() = s("adresse_arbeit", "Bodestraße 1-3, 10178 Berlin"); set(v) = put { putString("adresse_arbeit", v.trim()) }
+    var adressePapa: String get() = s("adresse_papa", "Müggelspreeweg 18, 12589 Berlin-Rahnsdorf"); set(v) = put { putString("adresse_papa", v.trim()) }
     /** Gewünschte Ankunft auf Arbeit als HH:MM, je Dienstart. */
     var ankunftNacht: String get() = s("ankunft_nacht", "17:00"); set(v) = put { putString("ankunft_nacht", v) }
     var ankunftTag: String get() = s("ankunft_tag", "05:00"); set(v) = put { putString("ankunft_tag", v) }

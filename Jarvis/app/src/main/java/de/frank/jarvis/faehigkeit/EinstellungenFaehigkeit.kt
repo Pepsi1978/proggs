@@ -410,6 +410,8 @@ class EinstellungsKatalog(context: Context) {
                 "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adresseZuhause }) { e.adresseZuhause = it; abfahrtNeu() },
             freitext("adresse_arbeit","Losfahr-Meldung", "Adresse Arbeit", "Wohin die Losfahr-Meldung vor dem Dienst rechnet.",
                 "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adresseArbeit }) { e.adresseArbeit = it; abfahrtNeu() },
+            freitext("adresse_papa","Losfahr-Meldung", "Adresse Papa", "Ziel für „zu Papa“ bei Navigation und Fahrzeit.",
+                "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adressePapa }) { e.adressePapa = it },
 
             // ---- Programmieren am Rechner ----
             auswahl("rechner_reihenfolge", "Programmieren am Rechner", "Welcher Rechner zuerst",

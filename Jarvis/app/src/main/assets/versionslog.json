@@ -611,6 +611,7 @@
     {"versionCode": 606, "versionName": "1.8.595", "stand": "08.11.2026, 13:28 Uhr", "notiz": "Alte Programmier-Sessions wandern nach zehn Tagen ins Archiv statt gelöscht zu werden, eine neue Meldung holt sie zurück, und die Leiste scrollt ruhiger."},
     {"versionCode": 607, "versionName": "1.8.596", "stand": "08.11.2026, 13:57 Uhr", "notiz": "Eine neue oder leere Session beginnt beim Öffnen ganz oben, und die heutigen Aufgaben stehen jetzt als erster Bereich über Tagesauswertung und Schnellstart."},
     {"versionCode": 608, "versionName": "1.8.597", "stand": "08.11.2026, 14:03 Uhr", "notiz": "Jede Session merkt sich ihre eigene Scrollposition, ein Wechsel springt nicht mehr in den untersten Bereich, auch nicht beim Umordnen."},
-    {"versionCode": 609, "versionName": "1.8.598", "stand": "08.11.2026, 14:03 Uhr", "notiz": "Abgehakte Aufgaben rutschen sofort unter die offenen und werden dezent ausgegraut, offene stehen immer oben."}
+    {"versionCode": 609, "versionName": "1.8.598", "stand": "08.11.2026, 14:03 Uhr", "notiz": "Abgehakte Aufgaben rutschen sofort unter die offenen und werden dezent ausgegraut, offene stehen immer oben."},
+    {"versionCode": 610, "versionName": "1.8.599", "stand": "08.11.2026, 17:55 Uhr", "notiz": "Jarvis öffnet per Sprache jede installierte App und startet in Google Maps sofort die Navigation, auch nach Hause, zur Arbeit und zu Papa."}
 ]
 }

@@ -31,14 +31,8 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = if (e.mapsSchluessel.isBlank()) "Der Google-Maps-Schlüssel fehlt. In Jarvis unter Einstellungen → Pünktlich losfahren eintragen." else null
 
-    /** „arbeit“ und „zuhause“ sind Franks gespeicherte Adressen, alles andere eine Adresse oder ein Ort. */
-    private fun benannt(text: String): String? = text.trim().lowercase(Locale.GERMAN).let {
-        when {
-            it in setOf("arbeit", "auf arbeit", "zur arbeit", "dienst", "museumsinsel") -> e.adresseArbeit
-            it in setOf("zuhause", "zu hause", "nach hause", "heim", "wohnung") -> e.adresseZuhause
-            else -> null
-        }
-    }
+    /** „arbeit“, „zuhause“ und „papa“ sind Franks gespeicherte Adressen, alles andere eine Adresse oder ein Ort. */
+    private fun benannt(text: String): String? = Orte.benannt(context, text)
 
     /** Gemeinsamer Uhrzeit-Leser: „21:00“ bleibt 21 Uhr (früher wurde daraus 2 Uhr nachts). */
     private fun zeit(text: String): LocalTime? = Mitdenken.uhrzeitMinuten(text)?.let { LocalTime.of(it / 60, it % 60) }
