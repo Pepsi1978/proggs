@@ -224,8 +224,10 @@ fun Sektion(
     verzoegerung: Int = 0,
     /** Sattere Farbe für Kopfband, Rahmen und Leiste (Prioritätsbereiche). */
     kraeftig: Boolean = false,
-    /** Ganze Fläche leuchtet als etwas Besonderes hervorgehoben (Bereich Heute). */
+    /** Bereich glüht nach außen und ist so als etwas Besonderes hervorgehoben (Bereiche Heute und Morgen). */
     leuchten: Boolean = false,
+    /** Kräftigeres, dunkleres Kopfband mit ruhigen Streifen (Bereich Heute). */
+    dunklesBand: Boolean = false,
     /** Bereich ist standardmäßig zugeklappt (Erledigt); während der Suche klappt er bei Treffern auf. */
     startZu: Boolean = false,
     /** Auf-/Zuklapp-Wahl von außen, damit sie erhalten bleibt, wenn der Bereich zeitweise nicht angezeigt wird. */
@@ -295,7 +297,7 @@ fun Sektion(
             .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, satt = leuchten) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, satt = dunklesBand) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {

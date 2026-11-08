@@ -262,7 +262,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Heute ----
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
-                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, leuchten = true,
+                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, leuchten = true, dunklesBand = true,
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
                 leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
@@ -279,7 +279,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Morgen ----
             Sektion(
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
-                Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80,
+                Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80, leuchten = true,
                 leer = b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty(), automatik = suche.isBlank(),
                 aktionen = { KalenderKnopf(vm, f.sekundaer); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
