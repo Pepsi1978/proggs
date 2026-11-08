@@ -77,6 +77,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.derivedStateOf
@@ -112,7 +115,9 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.bildschirm,
                 transitionSpec = {
                     val vor = targetState != Bildschirm.Liste
-                    if (vor) (slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 420f)) { it / 3 } + fadeIn(tween(220)) + scaleIn(initialScale = 0.96f))
+                    // Fokus nur weich überblenden, ohne Schieben und Skalieren: Die Uhr bleibt beim Öffnen und Zurückwischen ruhig.
+                    if (targetState is Bildschirm.Fokus || initialState is Bildschirm.Fokus) fadeIn(tween(220)).togetherWith(fadeOut(tween(180)))
+                    else if (vor) (slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 420f)) { it / 3 } + fadeIn(tween(220)) + scaleIn(initialScale = 0.96f))
                         .togetherWith(fadeOut(tween(160)) + scaleOut(targetScale = 0.97f))
                     else (fadeIn(tween(220)) + scaleIn(initialScale = 0.97f))
                         .togetherWith(slideOutHorizontally(tween(220)) { it / 3 } + fadeOut(tween(180)))
@@ -178,7 +183,7 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
 /**
  * Fokus blendet Status- und Navigationsleiste aus; ein Wisch vom Rand geht direkt zurück. Beim Zurückgehen kommen sie sofort
  * wieder, schon zu Beginn des Übergangs und nicht erst, wenn der Fokus-Bildschirm ganz verschwunden ist. Die übrigen
- * Bildschirme rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
+ * Bildschirme und der Fokus selbst rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
  */
 @Composable
 private fun FokusLeisten(fokus: Boolean) {
@@ -220,6 +225,7 @@ private fun Konfetti(ausloeser: Int) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
     val alle by vm.aufgaben.collectAsState()
@@ -231,17 +237,12 @@ private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
     }
-    // Beim Zurückgehen kommen die Leisten schon während des Ausblendens wieder; der Fokus-Bildschirm behält dabei seine
-    // Ränder, damit er nicht noch im Ausblenden nach unten rutscht.
-    val dichte = LocalDensity.current
-    val aktiv = vm.bildschirm is Bildschirm.Fokus
-    val oben = WindowInsets.statusBars.getTop(dichte)
-    val unten = WindowInsets.navigationBars.getBottom(dichte)
-    val raender = remember { intArrayOf(oben, unten) }
-    if (aktiv) { raender[0] = oben; raender[1] = unten }
+    // Ränder immer in Leistenhöhe, egal ob die Leisten gerade sichtbar sind: Beim Aus- und Einblenden ändert sich so
+    // weder der Platz noch die Größe der Uhr, Öffnen und Zurückwischen bleiben ruhig.
     BoxWithConstraints(
         Modifier.fillMaxSize().displayCutoutPadding()
-            .padding(top = with(dichte) { raender[0].toDp() }, bottom = with(dichte) { raender[1].toDp() })
+            .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility.only(WindowInsetsSides.Top))
+            .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         if (maxWidth > maxHeight && maxHeight < 560.dp) {
