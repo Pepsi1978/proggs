@@ -2,7 +2,8 @@
 name: session-flaschenhals
 description: >
   Wertet als allerletzter Schritt einer Programmiersitzung deren echten Verlauf aus (Wartezeiten, Fehler,
-  Doppelarbeit) und setzt nur belegte, wiederkehrende Beschleunigungen selbst um. Läuft ohne Rückfragen.
+  Doppelarbeit) und setzt jede belegte, knappe Beschleunigung selbst um, auch nach einmaligen Fehlern, solange
+  sie das System nicht durch zusätzlichen Kontext verlangsamt. Läuft ohne Rückfragen.
   Auch auf Zuruf: "Sitzung auswerten", "Flaschenhälse", "warum hat das so lange gedauert".
 ---
 
@@ -31,18 +32,21 @@ eigene Sitzung aus dem Gedächtnis nach denselben Kriterien einordnen.
 
 - Zeit kommt in drei Töpfe: **Werkzeug** (Befehle, Builds), **Modell** (Denken/Schreiben),
   **Frank/Ruhe** (Antwortzeit, Pausen, Hintergrund). Frank/Ruhe ist nie ein Befund gegen den Agenten.
-- **Wiederkehrend** = gleiche Fehlerklasse, langsame Befehlsklasse oder Doppelarbeit in **≥ 2 Sitzungen**
-  (die aktuelle mitgezählt; der Vergleich lässt sie weg, also beide Ausgaben zusammen lesen). Nur das ist ein Kandidat für eine Maßnahme.
-- **Einmalig** = nur hier aufgetreten → im Bericht nennen, nichts bauen (Direktive 3: Abstraktion erst
-  ab zwei echten Fällen). Normale Entwicklungsarbeit (roter Build, der gefixt wurde) ist kein Befund.
-- **Ausnahme Sofort-Korrektur** (gilt auch bei einmaligen Fehlern): Lag der Fehler an einer **fehlenden
-  oder falschen Angabe** in einer Datei, die nur bei Bedarf gelesen wird (Skill-Anleitung, Almanach, Best
-  Practice) — typisch falscher Pfad, Datei- oder Parametername, „nicht gefunden“ —, dann die Angabe dort
-  sofort ergänzen oder berichtigen: höchstens 2 Zeilen, nur die Tatsache, keine neue Regel, kein
-  Eintrag in `massnahmen.json`, kein MEMORY.md. Richtigen Wert vorher belegen (Glob/Grep), nicht raten.
-  Commit wie in Schritt 5 (`session-flaschenhals: <ort> berichtigt`). Zählt nicht zum Limit aus Schritt 4.
+- **Grundsatz (Frank, 08.11.2026): Netto-Zeitgewinn entscheidet, nicht die Häufigkeit.** Jeder Fehler,
+  jeder vermeidbar langsame Befehl und jede Doppelarbeit, die Agent-Zeit gekostet hat, ist ein Kandidat —
+  **auch einmalig**. Umsetzen, wenn eine knappe Maßnahme ihn künftig verhindert und das System dadurch
+  nirgends langsamer wird. Normale Entwicklungsarbeit (roter Build, der gefixt wurde) ist kein Befund.
+- **Kontext-Kosten sind die Grenze.** Was in jeder Sitzung mitgeladen wird (MEMORY.md, Hook-Ausgaben),
+  kostet bei jeder Sitzung; was nur bei Bedarf gelesen wird (Skill-Anleitung, Almanach, Best Practice,
+  Skript), kostet fast nichts. Daher: **einmalig** → nur Hebel 1 und 2 aus Schritt 4, knapp (Faustregel ≤ 3
+  Zeilen je Stelle); **wiederkehrend** (≥ 2 Sitzungen, aktuelle mitgezählt; Vergleich lässt sie weg) →
+  zusätzlich Hebel 3 erlaubt. Nie lange Abschnitte, nie neue Pflichtlektüre.
+- **Sofort-Korrektur:** Fehlende oder falsche Angabe (Pfad, Datei- oder Parametername, „nicht gefunden“)
+  in einer Bedarfsdatei → dort sofort berichtigen, nur die Tatsache, kein `massnahmen.json`-Eintrag,
+  zählt nicht zum Limit aus Schritt 4. Commit-Nachricht `session-flaschenhals: <ort> berichtigt`.
 - Vor jeder Maßnahme die Ursache belegen: Kommandos hinter dem Befund ansehen (`--json` liefert sie)
-  und gegenprüfen, wie oft dasselbe Muster **ohne** Fehler lief. Ohne klaren Unterschied: keine Maßnahme.
+  und gegenprüfen, wie oft dasselbe Muster **ohne** Fehler lief. Den richtigen Wert belegen (Glob/Grep),
+  nicht raten. Ohne klare Ursache: keine Maßnahme.
 
 ## 3. Bekannte Maßnahmen prüfen (`massnahmen.json`)
 
@@ -52,14 +56,15 @@ Der Vergleich zeigt je Maßnahme vorher/nachher (Sitzungen mit Treffer, Fehler, 
 - Muster läuft nachher wieder häufig **ohne** Fehler (Ursache upstream behoben) → `überholt`:
   Kontextzeile laut `ruecknahme` entfernen. So wächst die Pflichtlektüre nicht.
 
-## 4. Umsetzen (höchstens 2 Maßnahmen je Lauf, je ≤ 3 Dateien)
+## 4. Umsetzen (höchstens 3 Maßnahmen je Lauf, je ≤ 3 Dateien; Sofort-Korrekturen zählen nicht mit)
 
 Ursache nach Direktive 3 (`claude-code-setup/docs/rules/resilient-bugfixing.md`): 5×Warum, verwandte
 Stellen, Funktionserhalt. Hebel in dieser Reihenfolge, der erste passende gewinnt:
 1. **Ursache im Werkzeug/Skript beheben** (Skill, Hook, Werkzeuge/…) — kostet keinen Kontext.
 2. **Vorhandene Stelle ergänzen**, die nur bei Bedarf gelesen wird: passender Skill, Almanach unter
    `bugs/`, Best Practice.
-3. **Eine Zeile** im `MEMORY.md` des aktiven Profils (≤ 200 Zeichen, Detail in eigener Memory-Datei).
+3. **Eine Zeile** im `MEMORY.md` des aktiven Profils (≤ 200 Zeichen, Detail in eigener Memory-Datei),
+   nur bei wiederkehrenden Befunden und nur, wenn Hebel 1 und 2 nicht greifen.
 Nie: neue Profilregeln, CLAUDE.md/AGENTS.md ändern, App-Code ändern, neue Pflicht-Lesedateien. Das wird
 nur als Vorschlag berichtet.
 
