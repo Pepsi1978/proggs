@@ -337,7 +337,14 @@ fun ListeBildschirm(vm: AppViewModel) {
         // Keine Kopfleiste beim Scrollen: Die Aufgaben nutzen die ganze Höhe (Hell/Dunkel und Vorlesen stehen oben in der Liste).
 
         // Schwebendes Plus
-        Plus(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 22.dp, bottom = 24.dp), sichtbar = !zieht) { vm.neueAufgabe(mitMikro = true) }
+        // Links daneben der Fokus-Knopf (früher oben in der Kopfzeile), ohne Leuchtring.
+        Row(
+            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 22.dp, bottom = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FokusUnten(sichtbar = !zieht) { vm.fokusStarten(null) }
+            Plus(Modifier, sichtbar = !zieht) { vm.neueAufgabe(mitMikro = true) }
+        }
 
         // Zeitlinie und Geisterblock: in derselben Ebene und aus derselben Höhe wie die gezogene Karte (siehe unten).
         if (zieht) ZeitVorschau(zustand)
@@ -432,8 +439,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     // gleich groß, rechtsbündig zur rechten Kante der Szene (14 dp Rand). Auf schmalen Bildschirmen schrumpfen die Knöpfe.
     BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
         val titelBreite = 98.dp
-        val fokusPlus = 8.dp
-        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 7) / 7).coerceIn(28.dp, 44.dp)
+        val g = ((maxWidth - titelBreite - 6.dp * 6) / 6).coerceIn(28.dp, 44.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             // „Geniale“ klein, „Aufgaben“ groß: Das Hauptwort der App trägt den Titel.
             Column(Modifier.weight(1f).padding(start = 2.dp)) {
@@ -444,13 +450,6 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
                 )
             }
             Fortschritt(b.heuteFertig, b.heuteGesamt, g)
-            // Fokus etwas größer und farbig gefüllt, damit er sich von den übrigen Knöpfen abhebt.
-            Box(
-                Modifier.size(g + fokusPlus).knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel).antippen { vm.fokusStarten(null) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = Color.White, modifier = Modifier.size((g + fokusPlus) * 0.62f))
-            }
             RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", g, sucheUmschalten)
             RundKnopf(Icons.Rounded.Palette, "Design wechseln", g) {
                 val alle = Design.entries
@@ -541,7 +540,7 @@ private fun Plus(modifier: Modifier, sichtbar: Boolean, aktion: () -> Unit) {
     val p by puls.animateFloat(0f, 1f, infiniteRepeatable(tween(2200), RepeatMode.Restart), label = "p")
     val skala by animateFloatAsState(if (sichtbar) 1f else 0f, spring(dampingRatio = 0.6f), label = "plus")
     Box(
-        modifier.size(72.dp).graphicsLayer { scaleX = skala; scaleY = skala; alpha = skala; compositingStrategy = CompositingStrategy.ModulateAlpha }
+        modifier.size(60.dp).graphicsLayer { scaleX = skala; scaleY = skala; alpha = skala; compositingStrategy = CompositingStrategy.ModulateAlpha }
             .drawBehind {
                 val r = size.minDimension / 2
                 drawCircle(f.primaer.copy(alpha = 0.35f * (1f - p)), r * (1f + 0.45f * p))
@@ -550,7 +549,22 @@ private fun Plus(modifier: Modifier, sichtbar: Boolean, aktion: () -> Unit) {
             .antippen(aktion = aktion),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Rounded.Add, "Neue Aufgabe einsprechen", tint = Color.White, modifier = Modifier.size(38.dp))
+        Icon(Icons.Rounded.Add, "Neue Aufgabe einsprechen", tint = Color.White, modifier = Modifier.size(32.dp))
+    }
+}
+
+/** Fokus-Timer unten links neben dem Plus: farbig gefüllt wie bisher, aber ohne Leuchtring. */
+@Composable
+private fun FokusUnten(sichtbar: Boolean, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    val skala by animateFloatAsState(if (sichtbar) 1f else 0f, spring(dampingRatio = 0.6f), label = "fokus")
+    Box(
+        Modifier.size(52.dp).graphicsLayer { scaleX = skala; scaleY = skala; alpha = skala; compositingStrategy = CompositingStrategy.ModulateAlpha }
+            .knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel)
+            .antippen(aktion = aktion),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = Color.White, modifier = Modifier.size(30.dp))
     }
 }
 
