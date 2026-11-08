@@ -3,7 +3,9 @@ package de.frank.jarvis.ui
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -379,7 +381,9 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
             if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End)
         }
         Box(
-            Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f)),
+            Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
+                // Hellmodus: weißes Glas auf heller Karte verschwindet fast, ein kräftiger Ring macht das Abhakfeld klar erkennbar.
+                if (f.dunkel) Modifier else Modifier.border(2.dp, f.textLeise.copy(alpha = 0.75f), CircleShape))),
             contentAlignment = Alignment.Center,
         ) {
             if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp))
