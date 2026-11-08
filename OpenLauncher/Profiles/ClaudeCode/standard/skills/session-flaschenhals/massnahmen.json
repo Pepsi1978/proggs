@@ -75,6 +75,22 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen.",
       "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 entfernen.",
       "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
+    },
+    {
+      "id": "M5",
+      "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
+      "datum": "2026-11-08T23:19",
+      "status": "aktiv",
+      "beleg": "Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew",
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026).",
+      "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
+      "kosten": "kein Kontext"
     }
   ]
 }
