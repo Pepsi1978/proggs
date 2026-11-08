@@ -56,6 +56,25 @@
       "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew nennen -> wirkt.",
       "ruecknahme": "Die drei Zeilen 'versionslog.json in davor' in bau_ohne_bump entfernen.",
       "kosten": "kein Kontext"
+    },
+    {
+      "id": "M4",
+      "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
+      "datum": "2026-11-08T18:30",
+      "status": "aktiv",
+      "plattform": [
+        "windows"
+      ],
+      "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit.",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "jarvis-install\\.ps1",
+      "fehler_regex": "APK ließ sich nicht aufs Handy laden",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen.",
+      "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 entfernen.",
+      "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
     }
   ]
 }

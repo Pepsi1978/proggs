@@ -93,6 +93,12 @@ try {
     # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
     & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null
     if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
+    if ($LASTEXITCODE -ne 0) {
+        # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben Handy.
+        & pwsh -NoProfile -File $wlanSkript *> $null
+        $script:Geraet = Waehle-Geraet
+        if ($Geraet -and (Handy getprop ro.serialno) -eq $serie) { "Neuer Versuch über $Geraet ..."; & $adb -s $Geraet push $Apk $zwischenlager *> $null }
+    }
     if ($LASTEXITCODE -ne 0) { Ende fehler "APK ließ sich nicht aufs Handy laden" }
     $groesse = (Get-Item $Apk).Length
     # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.
