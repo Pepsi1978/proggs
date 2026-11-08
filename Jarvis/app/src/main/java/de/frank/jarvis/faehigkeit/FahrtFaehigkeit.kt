@@ -32,7 +32,7 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
     override fun stoerung(): String? = if (e.mapsSchluessel.isBlank()) "Der Google-Maps-Schlüssel fehlt. In Jarvis unter Einstellungen → Pünktlich losfahren eintragen." else null
 
     /** „arbeit“, „zuhause“ und „papa“ sind Franks gespeicherte Adressen, alles andere eine Adresse oder ein Ort. */
-    private fun benannt(text: String): String? = Orte.benannt(context, text)
+    private fun benannt(text: String): String? = de.frank.jarvis.fahrt.Orte.benannt(context, text)
 
     /** Gemeinsamer Uhrzeit-Leser: „21:00“ bleibt 21 Uhr (früher wurde daraus 2 Uhr nachts). */
     private fun zeit(text: String): LocalTime? = Mitdenken.uhrzeitMinuten(text)?.let { LocalTime.of(it / 60, it % 60) }
@@ -44,12 +44,12 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "fahrzeit_lesen",
             titel = "Fahrzeit mit Verkehr",
-            beschreibung = "Jarvis: Fahrzeit mit dem Auto über Google Maps mit aktuellem Verkehr, Stau und Sperrungen. ziel ist „arbeit“, „zuhause“ oder eine beliebige Adresse bzw. ein Ort. " +
+            beschreibung = "Jarvis: Fahrzeit mit dem Auto über Google Maps mit aktuellem Verkehr, Stau und Sperrungen. ziel ist „arbeit“, „zuhause“, „papa“ oder eine beliebige Adresse bzw. ein Ort. " +
                 "Ohne start gilt Franks aktueller Standort (ersatzweise sein Zuhause). Mit ankunft (HH:MM) kommt zusätzlich, wann er losfahren muss; mit abfahrt (HH:MM) die Fahrzeit zu dieser Abfahrtszeit. " +
                 "Beispiele: „Wie lange brauche ich jetzt zur Arbeit?“ → ziel arbeit. „Wann muss ich los, um um 17 Uhr auf Arbeit zu sein?“ → ziel arbeit, ankunft 17:00. " +
                 "Die Antwort nennt außerdem den Stand der Losfahr-Meldung für den nächsten Dienst.",
             schema = schema(
-                "ziel" to text("„arbeit“, „zuhause“ oder eine Adresse bzw. ein Ort, zum Beispiel „Alexanderplatz, Berlin“."),
+                "ziel" to text("„arbeit“, „zuhause“, „papa“ oder eine Adresse bzw. ein Ort, zum Beispiel „Alexanderplatz, Berlin“."),
                 "start" to text("Nur wenn Frank einen anderen Start nennt: „zuhause“, „arbeit“ oder eine Adresse. Weglassen = aktueller Standort."),
                 "ankunft" to text("Gewünschte Ankunft HH:MM, wenn Frank wissen will, wann er losfahren muss."),
                 "abfahrt" to text("Geplante Abfahrt HH:MM, wenn er zu einer bestimmten Zeit losfahren will."),
@@ -78,7 +78,7 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     private suspend fun fahrzeit(a: JSONObject): String {
-        val zielText = a.optString("ziel").trim().ifEmpty { throw RoutenFehler("Wohin soll es gehen? Nenne „arbeit“, „zuhause“ oder eine Adresse.") }
+        val zielText = a.optString("ziel").trim().ifEmpty { throw RoutenFehler("Wohin soll es gehen? Nenne „arbeit“, „zuhause“, „papa“ oder eine Adresse.") }
         val ziel = benannt(zielText) ?: zielText
         val startText = a.optString("start").trim()
         val vomStandort = startText.isEmpty() || startText.lowercase(Locale.GERMAN) in setOf("standort", "hier", "aktueller standort", "aktuell")

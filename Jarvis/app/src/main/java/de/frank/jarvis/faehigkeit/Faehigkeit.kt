@@ -50,6 +50,8 @@ interface Faehigkeit {
     fun stoerung(): String?
     /** false = nur für Jarvis selbst und seine Agenten, nicht als Werkzeug in ChatGPT. */
     val imPlugin: Boolean get() = true
+    /** true = nur im Gespräch mit Frank (eigener Chat, Sprache), nie in Hintergrund-Agenten. */
+    val nurImGespraech: Boolean get() = false
 }
 
 object Register {

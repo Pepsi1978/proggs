@@ -70,6 +70,7 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         sichtbar = true
+        geteilt = isInMultiWindowMode
         de.frank.jarvis.ui.SprachBlase.abgleichen(this)
         vm.sichtbarMerken(true)
         // Die Rückkehr aus dem Hintergrund zeigt denselben Bildschirm samt Gespräch wie beim Verlassen (Franks Wunsch vom
@@ -104,6 +105,11 @@ class MainActivity : FragmentActivity() {
         if (!isChangingConfigurations) vm.sichtbarMerken(false)
         if (!vm.gesperrt) vm.zuletztSichtbar = System.currentTimeMillis()
         super.onStop()
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        geteilt = isInMultiWindowMode
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -258,7 +264,11 @@ class MainActivity : FragmentActivity() {
 
     companion object {
         /** Ist Jarvis gerade sichtbar (zwischen onStart und onStop)? Liest der Weckwort-Dienst, bevor er die App öffnet. */
-        @Volatile var sichtbar = false; private set
+        private val sichtbarStand = kotlinx.coroutines.flow.MutableStateFlow(false)
+        val sichtbarFluss: kotlinx.coroutines.flow.StateFlow<Boolean> get() = sichtbarStand
+        var sichtbar: Boolean get() = sichtbarStand.value; private set(v) { sichtbarStand.value = v }
+        /** Läuft Jarvis im geteilten Bildschirm oder als Pop-up? Dann bleibt es beim Öffnen anderer Apps sichtbar. */
+        @Volatile var geteilt = false; private set
         private const val KAMERA_ZIEL = "kamera_ziel"
     }
 

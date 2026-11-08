@@ -72,14 +72,18 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
         if (adressenOffen) {
             var zuhause by rememberSaveable { mutableStateOf(e.adresseZuhause) }
             var arbeit by rememberSaveable { mutableStateOf(e.adresseArbeit) }
+            var papa by rememberSaveable { mutableStateOf(e.adressePapa) }
             Unterzeile("Zuhause")
             Eingabe(zuhause, { zuhause = it }, "Straße Hausnummer, PLZ Ort", Modifier.fillMaxWidth())
             Unterzeile("Arbeit")
             Eingabe(arbeit, { arbeit = it }, "Straße Hausnummer, PLZ Ort", Modifier.fillMaxWidth())
-            if (zuhause.trim() != e.adresseZuhause || arbeit.trim() != e.adresseArbeit) {
+            Unterzeile("Papa (für „Navigiere mich zu Papa“)")
+            Eingabe(papa, { papa = it }, "Straße Hausnummer, PLZ Ort", Modifier.fillMaxWidth())
+            if (zuhause.trim() != e.adresseZuhause || arbeit.trim() != e.adresseArbeit || papa.trim() != e.adressePapa) {
                 Knopf("Adressen speichern", Modifier.padding(top = 10.dp).fillMaxWidth()) {
                     if (zuhause.isNotBlank()) e.adresseZuhause = zuhause
                     if (arbeit.isNotBlank()) e.adresseArbeit = arbeit
+                    if (papa.isNotBlank()) e.adressePapa = papa
                     vm.abfahrtGeaendert()
                     vm.meldung = "Adressen gespeichert."
                 }

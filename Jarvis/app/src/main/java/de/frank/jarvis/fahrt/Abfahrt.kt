@@ -305,7 +305,7 @@ object Abfahrt {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), unveraenderlich))
         if (navigation) {
-            val ziel = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(e.adresseArbeit) + "&mode=d")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val ziel = Navigation.intent(e.adresseArbeit).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             bauer.addAction(R.drawable.ic_stat_jarvis, "Navigation starten", PendingIntent.getActivity(context, 81, ziel, unveraenderlich))
             bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL).apply { tag?.let { putExtra(EXTRA_TAG, it.toString()) } }, unveraenderlich))
         }

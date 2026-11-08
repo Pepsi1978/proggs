@@ -305,7 +305,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         akkuFrei = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
         weckwortMikro = de.frank.jarvis.weckwort.WeckwortDienst.mikrofonErlaubt(app)
-        ueberlagernErlaubt = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app)
+        ueberlagernErlaubt = de.frank.jarvis.Hintergrundstart.ueberlagernErlaubt(app)
         val jetzt = System.currentTimeMillis()
         if (!sofort && (lageJob?.isActive == true || jetzt - lageZuletzt < LAGE_ABSTAND_MS)) return
         lageZuletzt = jetzt

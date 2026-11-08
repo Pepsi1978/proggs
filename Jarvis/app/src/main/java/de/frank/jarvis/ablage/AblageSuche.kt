@@ -70,7 +70,7 @@ object AblageSuche {
     }
 
     /** Levenshtein-Abstand mit Abbruch: Größer als [grenze] heißt „passt nicht“. */
-    private fun abstand(a: String, b: String, grenze: Int): Int {
+    fun abstand(a: String, b: String, grenze: Int): Int {
         if (abs(a.length - b.length) > grenze) return grenze + 1
         var vorher = IntArray(b.length + 1) { it }
         var zeile = IntArray(b.length + 1)

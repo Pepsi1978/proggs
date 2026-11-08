@@ -2059,7 +2059,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Geht das Vollbild auf? Sonst sieht Frank die Rückfrage nur als Benachrichtigung. */
     private fun rueckfrageVollbildMoeglich(eintrag: JSONObject) = eintrag.optString("gespraech").isNotEmpty() &&
-        (android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar)
+        (de.frank.jarvis.Hintergrundstart.darf(app))
 
     /** Nur dann hält eine Rückfrage das Vorlesen an: Ohne Vollbild und ohne Ansage (ausgeschaltet, Ruhezeit) bräche es ohne erkennbaren Grund ab. */
     private fun rueckfrageErreichtFrank(eintrag: JSONObject) =
@@ -2077,7 +2077,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val gespraech = eintrag.optString("gespraech")
         val frageId = frage.optString("frage_id")
         if (gespraech.isNotEmpty() && frageId.isNotEmpty()) {
-            val darf = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar
+            val darf = de.frank.jarvis.Hintergrundstart.darf(app)
             if (darf) {
                 val absicht = Intent(app, de.frank.jarvis.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     .putExtra(EXTRA_GESPRAECH, gespraech).putExtra(EXTRA_RUECKFRAGE, frageId)

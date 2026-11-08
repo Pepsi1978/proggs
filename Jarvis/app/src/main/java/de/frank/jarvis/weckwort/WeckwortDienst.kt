@@ -529,7 +529,7 @@ class WeckwortDienst : Service() {
             if (gestartet) return
         }
         val absicht = rufAbsicht()
-        val direkt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
+        val direkt = de.frank.jarvis.Hintergrundstart.ueberlagernErlaubt(this)
         if (direkt) {
             runCatching { startActivity(absicht) }.onFailure {
                 Log.w(TAG, "Jarvis ließ sich nicht öffnen", it)
@@ -556,7 +556,7 @@ class WeckwortDienst : Service() {
         val profil = Meldungen.profil(this, Meldungsarten.RUF)
         if (!profil.an) return
         val tippen = PendingIntent.getActivity(this, 31, absicht, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val darfDirekt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
+        val darfDirekt = de.frank.jarvis.Hintergrundstart.ueberlagernErlaubt(this)
         val text = if (darfDirekt) "Tippen, um mit Jarvis zu sprechen."
         else "Tippen, um mit Jarvis zu sprechen. Für die Sprachblase über anderen Apps bei Jarvis „Über anderen Apps einblenden“ erlauben."
         val meldung = NotificationCompat.Builder(this, KANAL_RUF)
