@@ -41,9 +41,10 @@ fun rememberVorne(): Boolean {
  * gezeichnet wird so allein diese Ebene, nie die ganze Oberfläche.
  */
 @Composable
-fun rememberSzenenZeit(): State<Long> {
+fun rememberSzenenZeit(pausiert: Boolean = false): State<Long> {
     val zeit = remember { mutableLongStateOf(0L) }
-    val aktiv = rememberVorne() && LocalBewegung.current
+    // Pausiert (z. B. aus dem Bild gescrollt) läuft die Zeit nicht weiter und setzt danach genau dort fort.
+    val aktiv = rememberVorne() && LocalBewegung.current && !pausiert
     if (aktiv) LaunchedEffect(Unit) {
         var start = -1L
         var letzte = 0L

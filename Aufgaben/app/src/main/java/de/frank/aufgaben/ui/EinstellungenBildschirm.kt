@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package de.frank.aufgaben.ui
 
 import android.app.Activity
@@ -57,6 +59,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,7 +108,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         if (uri != null) vm.eigenenTonWaehlen(uri)
     }
     Column(Modifier.fillMaxSize().imePadding()) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Text("Einstellungen", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
@@ -325,7 +330,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     "Aufgaben ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Stand ${BuildConfig.VERSION_BUMPED_AT}",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
-                Spacer(Modifier.navigationBarsPadding().height(24.dp))
+                Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).height(24.dp))
             }
         }
     }

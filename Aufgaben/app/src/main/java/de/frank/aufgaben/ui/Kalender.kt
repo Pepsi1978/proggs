@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package de.frank.aufgaben.ui
 
 import androidx.compose.animation.AnimatedContent
@@ -44,6 +46,9 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -115,7 +120,7 @@ private fun KalenderUebersicht(vm: AppViewModel, heute: Long, start: Long, proTa
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
         Kopfzeile(
             zurueck = { vm.zurueck() }, zurueckText = "Zurück zu den Aufgaben",
             oben = "Kalender", titel = "$vonText – $bisText",
@@ -182,7 +187,7 @@ private fun KalenderUebersicht(vm: AppViewModel, heute: Long, start: Long, proTa
             Text("Tipp auf einen Tag zeigt seine Aufgaben.", color = f.textLeise, fontSize = 12.sp)
         }
         Spacer(Modifier.height(24.dp))
-        Spacer(Modifier.navigationBarsPadding())
+        Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility))
     }
 }
 
@@ -279,7 +284,7 @@ private fun TagesUebersicht(vm: AppViewModel, tag: Long, heute: Long, start: Lon
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
         Kopfzeile(
             zurueck = { vm.zurueck() }, zurueckText = "Zurück zum Kalender",
             oben = relativ, titel = Tage.langesDatum(tag), obenFarbe = if (tag == heute) f.primaer else f.textLeise,
@@ -332,7 +337,7 @@ private fun TagesUebersicht(vm: AppViewModel, tag: Long, heute: Long, start: Lon
             }
         }
         Spacer(Modifier.height(24.dp))
-        Spacer(Modifier.navigationBarsPadding())
+        Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility))
     }
 }
 

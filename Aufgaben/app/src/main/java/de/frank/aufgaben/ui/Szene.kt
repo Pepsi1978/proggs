@@ -52,10 +52,10 @@ private fun ablauf(d: Design) = when (d) {
 
 /** Die animierte Szene oben: für jedes Design eine eigene Geschichte mit eigenem Blickwinkel. */
 @Composable
-fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") erledigtAnteil: Float) {
+fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") erledigtAnteil: Float, pausiert: Boolean = false) {
     val f = LocalFarben.current
     val bewegung = LocalBewegung.current
-    val zeit = rememberSzenenZeit()
+    val zeit = rememberSzenenZeit(pausiert)
     val schrift = rememberTextMeasurer()
     val a = remember(f.design) { ablauf(f.design) }
     // Die Szene bleibt auch im Dunkelmodus hell wie im Hellmodus, nur unter einem leichten Schleier etwas gedämpft.

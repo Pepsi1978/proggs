@@ -73,6 +73,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -121,6 +128,7 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
                     Bildschirm.Kalender -> KalenderBildschirm(vm)
                 }
             }
+            FokusLeisten(vm.bildschirm is Bildschirm.Fokus)
             Konfetti(vm.konfetti)
             Meldung(vm, Modifier.align(Alignment.BottomCenter))
         }
@@ -130,6 +138,7 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
 /** Hält die zuletzt gezeigte Meldung fest, damit sie beim Ausblenden nicht leer wird. */
 private class MeldungsAnzeige { var text = ""; var mitRueckgaengig = false }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     val f = LocalFarben.current
@@ -144,7 +153,7 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     val knopfFarbe = if (f.dunkel) f.primaer else f.tertiaer
     AnimatedVisibility(text != null, modifier, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
         Row(
-            Modifier.navigationBarsPadding().padding(start = 16.dp, end = 104.dp, bottom = 26.dp).fillMaxWidth()
+            Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(start = 16.dp, end = 104.dp, bottom = 26.dp).fillMaxWidth()
                 // Deckende Unterlage: das Glas allein ist im Dunkeln fast durchsichtig.
                 .background(f.hgUnten, RoundedCornerShape(18.dp))
                 .glas(f, 18.dp, 2f, f.flaecheStark).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
@@ -166,6 +175,24 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     }
 }
 
+/**
+ * Fokus blendet Status- und Navigationsleiste aus (Wischen holt sie kurz zurück). Beim Zurückgehen kommen sie sofort
+ * wieder, schon zu Beginn des Übergangs und nicht erst, wenn der Fokus-Bildschirm ganz verschwunden ist. Die übrigen
+ * Bildschirme rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
+ */
+@Composable
+private fun FokusLeisten(fokus: Boolean) {
+    val view = LocalView.current
+    LaunchedEffect(fokus) {
+        val fenster = (view.context as? Activity)?.window ?: return@LaunchedEffect
+        val leisten = WindowCompat.getInsetsController(fenster, view)
+        if (fokus) {
+            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            leisten.hide(WindowInsetsCompat.Type.systemBars())
+        } else leisten.show(WindowInsetsCompat.Type.systemBars())
+    }
+}
+
 /** Konfetti bei jeder erledigten Aufgabe. */
 @Composable
 private fun Konfetti(ausloeser: Int) {
@@ -174,9 +201,11 @@ private fun Konfetti(ausloeser: Int) {
     LaunchedEffect(ausloeser) {
         if (ausloeser > 0) { fort.snapTo(0f); fort.animateTo(1f, tween(1700, easing = LinearEasing)) }
     }
-    if (fort.value < 1f) Canvas(Modifier.fillMaxSize()) {
+    // Fortschritt nur im Zeichenblock lesen: Pro Bild wird allein die Konfetti-Ebene neu gezeichnet, ohne Neuaufbau.
+    val laeuft by remember { derivedStateOf { fort.value < 1f } }
+    val farben = remember(f) { listOf(f.primaer, f.sekundaer, f.tertiaer, Color.White, f.primaer.copy(alpha = 0.6f)) }
+    if (laeuft) Canvas(Modifier.fillMaxSize()) {
         val t = fort.value
-        val farben = listOf(f.primaer, f.sekundaer, f.tertiaer, Color.White, f.primaer.copy(alpha = 0.6f))
         for (i in 0 until 70) {
             val wkl = (i * 47f) * PI.toFloat() / 180f
             val v = size.height * (0.5f + (i % 7) * 0.07f)
@@ -195,18 +224,24 @@ private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
     val a = id?.let { i -> alle.firstOrNull { it.id == i } }
     // Bildschirm bleibt an, Status- und Navigationsleiste verschwinden (Wischen holt sie kurz zurück).
     val view = LocalView.current
+    // Status- und Navigationsleiste blendet FokusLeisten aus und ein, hier bleibt nur der Bildschirm an.
     DisposableEffect(view) {
         view.keepScreenOn = true
-        val fenster = (view.context as? Activity)?.window
-        val leisten = fenster?.let { WindowCompat.getInsetsController(it, view) }
-        leisten?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        leisten?.hide(WindowInsetsCompat.Type.systemBars())
-        onDispose {
-            view.keepScreenOn = false
-            leisten?.show(WindowInsetsCompat.Type.systemBars())
-        }
+        onDispose { view.keepScreenOn = false }
     }
-    BoxWithConstraints(Modifier.fillMaxSize().displayCutoutPadding().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
+    // Beim Zurückgehen kommen die Leisten schon während des Ausblendens wieder; der Fokus-Bildschirm behält dabei seine
+    // Ränder, damit er nicht noch im Ausblenden nach unten rutscht.
+    val dichte = LocalDensity.current
+    val aktiv = vm.bildschirm is Bildschirm.Fokus
+    val oben = WindowInsets.statusBars.getTop(dichte)
+    val unten = WindowInsets.navigationBars.getBottom(dichte)
+    val raender = remember { intArrayOf(oben, unten) }
+    if (aktiv) { raender[0] = oben; raender[1] = unten }
+    BoxWithConstraints(
+        Modifier.fillMaxSize().displayCutoutPadding()
+            .padding(top = with(dichte) { raender[0].toDp() }, bottom = with(dichte) { raender[1].toDp() })
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
         if (maxWidth > maxHeight && maxHeight < 560.dp) {
             // Querformat: Uhr links, Zeitwahl rechts, damit Schnellwahl und Regler immer erreichbar bleiben.
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {

@@ -36,6 +36,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -60,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,6 +142,7 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String, archivTage: Set<
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ListeBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
@@ -149,6 +154,21 @@ fun ListeBildschirm(vm: AppViewModel) {
     val erledigtWahl = rememberSaveable { mutableIntStateOf(0) }
     val b = remember(alle, heute, suche) { Bereiche(alle, heute, suche, vm.archivierteSerieTage()) }
     val scroll = rememberScrollState()
+    // Erledigt zeigt anfangs nur die neuesten Einträge; nahe am Listenende lädt er automatisch weitere nach.
+    var erledigtZeigen by rememberSaveable { mutableIntStateOf(ERLEDIGT_STUECK) }
+    // Offen wie in Sektion (startZu): selbst aufgeklappt oder während der Suche (mit Treffern, sonst fehlt der Bereich).
+    val erledigtOffen = erledigtWahl.intValue == 1 || (erledigtWahl.intValue == 0 && suche.isNotBlank())
+    val erledigtAnzahl by rememberUpdatedState(b.erledigt.size)
+    val erledigtOffenAktuell by rememberUpdatedState(erledigtOffen)
+    LaunchedEffect(erledigtOffen) { if (!erledigtOffen) erledigtZeigen = ERLEDIGT_STUECK }
+    LaunchedEffect(scroll) {
+        androidx.compose.runtime.snapshotFlow { Triple(scroll.maxValue - scroll.value, erledigtZeigen, erledigtOffenAktuell) }.collect { (rest, zeigen, offen) ->
+            // Passt der Rest schon auf den Bildschirm, kommt gleich das nächste Stück (maxValue ändert sich mit dem neuen Inhalt).
+            if (offen && rest < NACHLADEN_PX && zeigen < erledigtAnzahl) erledigtZeigen = zeigen + ERLEDIGT_STUECK
+        }
+    }
+    // Ganz aus dem Bild gescrollt: Die Szene hält an, statt unsichtbar weiterzuzeichnen.
+    val szeneWeg by remember { androidx.compose.runtime.derivedStateOf { scroll.value > 900 } }
     val zustand = remember { ZiehZustand() }
     zustand.beiAblage = { a, z -> vm.verschiebe(a, z) }
     val dichte = LocalDensity.current
@@ -168,8 +188,8 @@ fun ListeBildschirm(vm: AppViewModel) {
 
     // Randscrollen während des Ziehens, auch bei stillstehendem Finger.
     val zieht = zustand.aufgabe != null
-    val statusOben = WindowInsets.statusBars.getTop(dichte)
-    val navUnten = WindowInsets.navigationBars.getBottom(dichte)
+    val statusOben = WindowInsets.statusBarsIgnoringVisibility.getTop(dichte)
+    val navUnten = WindowInsets.navigationBarsIgnoringVisibility.getBottom(dichte)
     LaunchedEffect(zieht) {
         if (!zieht) return@LaunchedEffect
         // Zone innerhalb der Ablageleisten, in der das Scrollen sanft beginnt; zur Bildschirmkante hin wird es stetig
@@ -240,7 +260,7 @@ fun ListeBildschirm(vm: AppViewModel) {
         if (!zieht) { zustand.kanteOben = r.top + statusOben; zustand.kanteUnten = r.bottom - navUnten; zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
-            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
             Kopf(vm, b, sucheOffen, { sucheOffen = !sucheOffen; if (!sucheOffen) suche = "" })
             AnimatedVisibility(sucheOffen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) { Suchfeld(suche) { suche = it } }
             if (szeneZeigen && !sucheOffen) {
@@ -256,6 +276,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                             compositingStrategy = CompositingStrategy.ModulateAlpha
                         },
                     erledigtAnteil = if (b.heuteGesamt == 0) 0f else b.heuteFertig / b.heuteGesamt.toFloat(),
+                    pausiert = szeneWeg,
                 )
             }
 
@@ -269,8 +290,8 @@ fun ListeBildschirm(vm: AppViewModel) {
                 aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
-                b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
-                b.heuteErledigt.forEach { a -> Karte(vm, a, heute, zustand) }
+                b.heuteOffen.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
+                b.heuteErledigt.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
                 Zeitleiste(
                     heute, b.heuteTermine, true, zustand, leisteVon, leisteBis, leisteAuto, leisteLuecken, heuteGanz, { heuteGanz = it },
                     { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) },
@@ -284,7 +305,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
-                b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
+                b.morgenOffen.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
                 Zeitleiste(
                     heute + 1, b.morgenTermine, false, zustand, leisteVon, leisteBis, leisteAuto, leisteLuecken, morgenGanz, { morgenGanz = it },
                     { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) },
@@ -307,7 +328,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                     aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
-                    liste.forEach { a -> Karte(vm, a, heute, zustand) }
+                    liste.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
                 }
             }
             // ---- Ziele: je Ziel ein Knopf, darunter eingerückt seine Aufgaben ----
@@ -324,14 +345,18 @@ fun ListeBildschirm(vm: AppViewModel) {
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Nach morgen geplant", verzoegerung = 300, automatik = suche.isBlank(),
                 aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_demnaechst") { vm.bereichVorlesen("demnaechst", "Demnächst", b.demnaechst, mitDatum = true) } },
-            ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
+            ) { b.demnaechst.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand, zeigeDatum = true) } } }
             if (b.erledigt.isNotEmpty()) Sektion(
                 "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
                 untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(), startZu = true, wahlZustand = erledigtWahl,
                 aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
-            ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
+            ) {
+                // Stückweise: Erst die neuesten Einträge, weitere kommen beim Scrollen zum Listenende von selbst dazu.
+                // So bleibt der Bereich auch mit Hunderten erledigter Aufgaben beim Aufklappen und Scrollen flüssig.
+                b.erledigt.take(erledigtZeigen).forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand, zeigeDatum = true) } }
+            }
             Spacer(Modifier.height(140.dp))
-            Spacer(Modifier.navigationBarsPadding())
+            Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility))
         }
 
         // Keine Kopfleiste beim Scrollen: Die Aufgaben nutzen die ganze Höhe (Hell/Dunkel und Vorlesen stehen oben in der Liste).
@@ -339,7 +364,7 @@ fun ListeBildschirm(vm: AppViewModel) {
         // Schwebendes Plus
         // Links daneben der Fokus-Knopf (früher oben in der Kopfzeile), ohne Leuchtring.
         Row(
-            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 22.dp, bottom = 5.dp),
+            Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(end = 22.dp, bottom = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically,
         ) {
             FokusUnten(sichtbar = !zieht) { vm.fokusStarten(null) }
@@ -407,7 +432,7 @@ private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zust
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.padding(start = 6.dp))
         }
         if (offen) Column(Modifier.fillMaxWidth().padding(start = 22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            liste.map { it.aufHeute(heute) }.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = a.tag != null) }
+            liste.map { it.aufHeute(heute) }.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand, zeigeDatum = a.tag != null) } }
         }
     }
 }
@@ -568,11 +593,12 @@ private fun FokusUnten(sichtbar: Boolean, aktion: () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun AblageOben(zustand: ZiehZustand, heute: Long) {
     val f = LocalFarben.current
     Column(
-        Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).statusBarsPadding().padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -596,11 +622,12 @@ private fun AblageOben(zustand: ZiehZustand, heute: Long) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun AblageUnten(zustand: ZiehZustand) {
     val f = LocalFarben.current
     Row(
-        Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).navigationBarsPadding().padding(10.dp),
+        Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         AblageChip(zustand, "chip_erledigt", Icons.Rounded.TaskAlt, "Erledigt", f.erfolg, Ziel.Erledigt, Modifier.weight(1f), hoch = 50)
@@ -632,3 +659,9 @@ internal fun farbeFuerPrio(f: Farben, p: Prioritaet) = f.prio(p)
 
 /** Klares Blau für den Bereich „Ziele“, unabhängig vom Design. */
 private val ZIELE_BLAU = Color(0xFF2F7DF6)
+
+/** So viele erledigte Aufgaben kommen je Stück dazu. */
+private const val ERLEDIGT_STUECK = 30
+
+/** Ab diesem Abstand zum Listenende (in Pixeln) wird das nächste Stück erledigter Aufgaben gezeigt. */
+private const val NACHLADEN_PX = 2500

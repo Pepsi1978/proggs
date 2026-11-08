@@ -17,6 +17,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntSize
@@ -274,12 +275,16 @@ class ZiehZustand {
 fun Modifier.ziehbar(a: Aufgabe, zustand: ZiehZustand): Modifier = composed {
     val aktuell by rememberUpdatedState(a)
     val haptik = LocalHapticFeedback.current
-    var pos by remember { mutableStateOf(Offset.Zero) }
-    var groesse by remember { mutableStateOf(IntSize.Zero) }
-    onGloballyPositioned { pos = it.positionInRoot(); groesse = it.size }
+    // Nur die Lage-Koordinaten merken (ohne Zustand, ohne Rückruf bei jedem Scroll-Bild); die Fensterlage wird erst beim
+    // Ziehstart ausgerechnet. Früher meldete jede Karte bei jedem Bild ihre Lage, das bremste lange Listen beim Scrollen.
+    val lage = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
+    onPlaced { lage[0] = it }
         .pointerInput(a.id) {
             detectDragGesturesAfterLongPress(
                 onDragStart = { lokal ->
+                    val k = lage[0]
+                    val pos = if (k != null && k.isAttached) k.positionInRoot() else Offset.Zero
+                    val groesse = k?.size ?: IntSize.Zero
                     haptik.performHapticFeedback(HapticFeedbackType.LongPress)
                     zustand.start(aktuell, pos + lokal, lokal, groesse)
                 },
