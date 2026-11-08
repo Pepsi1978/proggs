@@ -21,7 +21,8 @@ class AppStartFaehigkeit(private val context: Context) : Faehigkeit {
         "„Starte/Öffne App X“ → app_starten mit dem genannten Namen. „Starte Maps und navigiere mich zu …“, „Navigiere mich nach Hause“ → nur navigation_starten " +
             "(startet die Navigation sofort, kein zusätzliches app_starten). Beides führst du selbst aus: nie programmieren, Handy-Use, einen Agenten oder einen Rechner dafür. " +
             "Jarvis Mac OS und Jarvis Windows HP bleiben bei ihren eigenen Start-Werkzeugen. Nur wenn das Werkzeug MEHRDEUTIG meldet, fragst du mit den genannten Kandidaten nach. " +
-            "Bestätige danach kurz und ehrlich, was geöffnet wurde, oder nenne den Fehler."
+            "Navigation nie mit fahrzeit_lesen verbinden, außer Frank fragt ausdrücklich nach der Fahrzeit. Unklare Ziele (Personen oder Orte ohne gespeicherte Adresse wie „zu Mama“, " +
+            "„zum Arzt“, unvollständige Adressen) nicht raten, sondern kurz nachfragen. Melde Frank genau den Stand, den das Werkzeug nennt: „geöffnet“ nur, wenn es das bestätigt."
 
     override fun stoerung(): String? = null
 
@@ -49,7 +50,7 @@ class AppStartFaehigkeit(private val context: Context) : Faehigkeit {
 
     private class Kandidat(val paket: String, val name: String, val schluessel: String)
 
-    private fun appStarten(gesagt: String): Ergebnis {
+    private suspend fun appStarten(gesagt: String): Ergebnis {
         val gesucht = schluessel(gesagt.replace(Regex("(?i)(?<!\\p{L})(die|der|das|app)(?!\\p{L})"), " "))
         if (gesucht.isBlank()) return Ergebnis("Kein App-Name angegeben. Frag Frank, welche App er öffnen will.", fehler = true)
         val alle = startbare()
@@ -61,28 +62,36 @@ class AppStartFaehigkeit(private val context: Context) : Faehigkeit {
             else -> treffer[0].let { k ->
                 val intent = context.packageManager.getLaunchIntentForPackage(k.paket)
                     ?: return Ergebnis("„${k.name}“ lässt sich nicht starten.", fehler = true)
-                if (oeffnen(intent)) Ergebnis("„${k.name}“ ist geöffnet." + hintergrundHinweis())
-                else Ergebnis("„${k.name}“ ließ sich nicht öffnen.", fehler = true)
+                oeffnen(intent, "„${k.name}“", "„${k.name}“ ist jetzt vorn geöffnet.")
             }
         }
     }
 
-    private fun navigieren(gesagt: String): Ergebnis {
+    private suspend fun navigieren(gesagt: String): Ergebnis {
         val ziel = Orte.benannt(context, gesagt) ?: gesagt.trim()
         if (ziel.isBlank()) return Ergebnis("Kein Ziel angegeben. Frag Frank, wohin er navigiert werden will.", fehler = true)
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=${Uri.encode(ziel)}&mode=d")).setPackage(MAPS)
         if (context.packageManager.getLaunchIntentForPackage(MAPS) == null) return Ergebnis("Google Maps ist auf dem Handy nicht installiert oder deaktiviert.", fehler = true)
-        return if (oeffnen(intent)) Ergebnis("Google Maps startet die Autonavigation vom aktuellen Standort nach $ziel." + hintergrundHinweis())
-        else Ergebnis("Google Maps ließ sich für die Navigation nach $ziel nicht öffnen.", fehler = true)
+        return oeffnen(intent, "Google Maps für die Navigation nach $ziel", "Google Maps ist vorn und startet die Autonavigation vom aktuellen Standort nach $ziel.")
     }
 
-    private fun oeffnen(intent: Intent): Boolean = try {
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
-    } catch (_: ActivityNotFoundException) { false } catch (_: SecurityException) { false }
-
-    /** Aus dem Hintergrund darf Android Apps nur mit „Über anderen Apps einblenden“ öffnen; fehlt das, ehrlich sagen. */
-    private fun hintergrundHinweis(): String = if (Settings.canDrawOverlays(context)) "" else
-        " Hinweis: Jarvis darf nicht „Über anderen Apps einblenden“. Lief Jarvis gerade im Hintergrund, kann Android das Öffnen blockiert haben."
+    /**
+     * Öffnet und meldet nur, was feststeht. Aus dem Hintergrund verwirft Android den Start ohne Fehler, wenn Jarvis nicht
+     * „Über anderen Apps einblenden“ darf: dann gar nicht erst versuchen. War Jarvis vorn, bestätigt sein Verschwinden das Öffnen;
+     * aus dem Hintergrund sieht Jarvis die andere App nicht und sagt das auch so.
+     */
+    private suspend fun oeffnen(intent: Intent, was: String, bestaetigt: String): Ergebnis {
+        val vorn = de.frank.jarvis.MainActivity.sichtbar
+        if (!vorn && android.os.Build.VERSION.SDK_INT >= 29 && !Settings.canDrawOverlays(context))
+            return Ergebnis("$was ist nicht geöffnet: Jarvis läuft im Hintergrund und darf nicht „Über anderen Apps einblenden“, darum blockiert Android das Öffnen. " +
+                "Frank kann es in Jarvis unter Einrichtung erlauben oder Jarvis vorher öffnen.", fehler = true)
+        try { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (_: ActivityNotFoundException) { return Ergebnis("$was ließ sich nicht öffnen: Android kennt kein passendes Ziel.", fehler = true) }
+        catch (e: SecurityException) { return Ergebnis("$was ließ sich nicht öffnen: ${e.message ?: "Android hat es verweigert"}.", fehler = true) }
+        if (!vorn) return Ergebnis("Startbefehl für $was ist gegeben. Jarvis lief im Hintergrund und kann nicht sehen, ob es vorn ist; sag Frank genau das.")
+        repeat(25) { kotlinx.coroutines.delay(100); if (!de.frank.jarvis.MainActivity.sichtbar) return Ergebnis(bestaetigt) }
+        return Ergebnis("$was ist nicht bestätigt geöffnet: Jarvis ist nach 2,5 Sekunden noch vorn.", fehler = true)
+    }
 
     private fun startbare(): List<Kandidat> {
         val pm = context.packageManager

@@ -213,7 +213,7 @@ class JarvisAgent(context: Context) {
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
         // Den Mac und den Windows-PC bedient nur das Gespräch mit Frank, nie ein Hintergrundlauf ohne sein Zuschauen.
         // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.
-        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "mac" && it.id != "windows")) }
+        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "appstart" && it.id != "mac" && it.id != "windows")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else if (!lernen && it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.imHintergrund() else it }
             // Ein Agent-Helfer bekommt nur die Werkzeuge aus seinem Steckbrief.
