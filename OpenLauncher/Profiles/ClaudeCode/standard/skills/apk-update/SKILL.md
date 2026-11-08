@@ -81,7 +81,8 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    pwsh -NoProfile -File ~/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1 -Projekt <Projekt>
    ```
    Das Skript
-   - liest `projekte.json` (Gradle-Task, APK-Ordner, erwartetes Paket),
+   - liest `projekte.json` (Gradle-Task, APK-Ordner, erwartetes Paket; liegt direkt im Skill-Ordner
+     `apk-update/projekte.json`, nicht unter `scripts/`),
    - liest den **Versionslog** `<Projekt>/app/src/main/assets/versionslog.json` (siehe unten) —
      sein letzter Eintrag ist die Version, die gebaut wird,
    - prüft den Projektnamen (nur Buchstaben, Ziffern, `_ . -`, Ordner direkt unter `~/proggs`)
