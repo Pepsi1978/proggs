@@ -40,6 +40,22 @@
       "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Guard echte Fälle fälschlich, Muster im Hook schärfen.",
       "ruecknahme": "Hook-Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
       "kosten": "kein Kontext; ~50 ms je Bash-Aufruf"
+    },
+    {
+      "id": "M3",
+      "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken",
+      "datum": "2026-11-08T18:29",
+      "status": "aktiv",
+      "beleg": "Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "versionslog\\.json[\\s\\S]*gradlew",
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew nennen -> wirkt.",
+      "ruecknahme": "Die drei Zeilen 'versionslog.json in davor' in bau_ohne_bump entfernen.",
+      "kosten": "kein Kontext"
     }
   ]
 }

@@ -76,6 +76,9 @@ def bau_ohne_bump(cmd, cwd):
         if not BAU_AUFGABE.search(m.group(2)):
             continue
         davor = cmd[:m.start()]
+        # Derselbe Befehl schreibt den Versionslog vor dem Bau (Bump und Bau in einem Aufruf): kein Bau ohne Bump.
+        if 'versionslog.json' in davor:
+            continue
         basis = cwd
         for c in CD.finditer(davor):
             basis = pfad(c.group(1) or c.group(2) or c.group(3), basis)
