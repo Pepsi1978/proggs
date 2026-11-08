@@ -615,6 +615,7 @@
     {"versionCode": 610, "versionName": "1.8.599", "stand": "08.11.2026, 17:55 Uhr", "notiz": "Jarvis öffnet per Sprache jede installierte App und startet in Google Maps sofort die Navigation, auch nach Hause, zur Arbeit und zu Papa."},
     {"versionCode": 611, "versionName": "1.8.600", "stand": "08.11.2026, 18:14 Uhr", "notiz": "Jarvis meldet beim Öffnen von Apps und beim Navigationsstart nur noch, was wirklich bestätigt ist, und fragt bei unklaren Zielen nach."},
     {"versionCode": 612, "versionName": "1.8.601", "stand": "08.11.2026, 18:23 Uhr", "notiz": "App-Start erkennt Namen wie „Google Maps“ sicherer, fragt bei Unsicherheit nach, meldet ehrlicher, ob eine App wirklich vorn ist, und Papas Adresse lässt sich unter Pünktlich losfahren ändern."},
-    {"versionCode": 613, "versionName": "1.8.602", "stand": "08.11.2026, 18:26 Uhr", "notiz": "Sagst du auf die Modellfrage über das Weckwort „Opus“ (auch als „Oppos“ verstanden), Sol, Kimi oder Argon, startet der wartende Auftrag sofort genau einmal mit diesem Modell, ohne erneute Frage."}
+    {"versionCode": 613, "versionName": "1.8.602", "stand": "08.11.2026, 18:26 Uhr", "notiz": "Sagst du auf die Modellfrage über das Weckwort „Opus“ (auch als „Oppos“ verstanden), Sol, Kimi oder Argon, startet der wartende Auftrag sofort genau einmal mit diesem Modell, ohne erneute Frage."},
+    {"versionCode": 614, "versionName": "1.8.603", "stand": "08.11.2026, 18:38 Uhr", "notiz": "Deine Antwort auf Modell-, CLI- und Review-Fragen erkennt Jarvis jetzt nach dem Klang, auch mit Schreibfehlern der Mitschrift, aber nur als reine Antwort, und meldet ehrlich, ob der Auftrag wirklich läuft."}
 ]
 }

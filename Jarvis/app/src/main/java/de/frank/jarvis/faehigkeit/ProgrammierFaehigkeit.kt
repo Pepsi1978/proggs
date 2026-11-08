@@ -839,8 +839,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
         // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
+        // Eine kurze Antwort, die nach keinem Modell klingt (Mitschrift unklar), ist keine neue Runde: die offene Modellfrage bleibt, keine zweite gleiche.
         offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS &&
-            (runde.isEmpty() || it.value.runde == runde) }?.let { (id, alt) ->
+            (runde.isEmpty() || it.value.runde == runde || (it.value.stufe == STUFE_MODELL && runde.length <= 60)) }?.let { (id, alt) ->
             val neuGefasst = alt.copy(app = appName, auftrag = auftrag, anhaenge = anhangPfade().ifEmpty { alt.anhaenge })
             offeneWahlen[id] = neuGefasst
             // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
@@ -970,30 +971,41 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Gespräch und die Knöpfe sind wieder offen (Frank kann das andere Modell nehmen, ohne den Auftrag neu zu sagen).
      * Ein unklarer Start (Zeitüberschreitung) bleibt gewählt: Er läuft womöglich.
      */
-    suspend fun modellGewaehlt(wahlId: String, wert: String) {
-        val w = offeneWahlen.remove(wahlId) ?: return
+    /** false = die Karte war nicht mehr offen (schon getippt, geschlossen): nichts gestartet. */
+    suspend fun modellGewaehlt(wahlId: String, wert: String): Boolean {
+        val w = offeneWahlen.remove(wahlId) ?: return false
         erinnerungen.remove(wahlId)?.cancel()
         wahlStand.update { it + (wahlId to wert) }
         wahlenSichern(app)
         // Bis Folgekarte bzw. Start feststehen, wartet [wahlInRunde] mit seiner Ansage.
         tippInArbeit += wahlId
         try { tippVerarbeiten(wahlId, w, wert) } finally { tippInArbeit -= wahlId }
+        return true
     }
 
     /**
      * Franks gesprochene Wahl ([wahlPerSprache]) wie ein Tipp, ohne Umweg über das Modell: genau ein Start, keine neue Karte.
-     * Liefert den Satz zum Vorlesen: die Folgefrage, den Fehlstart samt erneuter Frage oder die kurze Bestätigung.
+     * Liefert den Satz zum Vorlesen: die Folgefrage, den Fehlstart samt erneuter Frage, einen unklaren Start oder die kurze
+     * Bestätigung. [sprachGespraech]: wo Frank gesprochen hat; seine Antwort auf eine Folgefrage gehört dann auch dorthin.
      */
-    suspend fun wahlPerSpracheTreffen(wahlId: String, wert: String): String {
+    suspend fun wahlPerSpracheTreffen(wahlId: String, wert: String, sprachGespraech: String): String {
         val vorher = offeneWahlen[wahlId]
         Logbuch.system("Modellwahl per Sprache", "$wahlId: $wert")
-        modellGewaehlt(wahlId, wert)
+        tippErgebnisse.remove(wahlId)
+        if (vorher == null || !modellGewaehlt(wahlId, wert)) return "Diese Auswahl ist schon erledigt; es startet nichts Neues."
         val folge = karten.entries.firstOrNull { it.value.vorgaenger == wahlId && wahlStand.value[it.key] == WAHL_OFFEN }
+        if (folge != null && sprachGespraech.isNotEmpty()) sprachGespraeche[folge.key] = sprachGespraech
+        val e = tippErgebnisse.remove(wahlId)
+        val name = when (vorher.stufe) {
+            STUFE_CLI -> "Sol 6.1 im " + (if (wert == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI")
+            STUFE_MODELL -> ProgrammiererVorlage.katalogName(wert) ?: if (wert == MODELL_SOL) "Sol 6.1" else "Opus 5.5"
+            else -> modellName(vorher.modell, vorher.cli)
+        }
         return when {
             folge != null -> folge.value.frage
-            wahlStand.value[wahlId] == WAHL_OFFEN -> "Das hat nicht geklappt, der Grund steht im Chat. " + karten[wahlId]?.frage.orEmpty()
-            vorher?.stufe == STUFE_CLI -> "Okay, der Auftrag startet mit ${modellName(MODELL_SOL, wert)}."
-            else -> "Okay, der Auftrag startet mit ${modellName(wert, vorher?.cli.orEmpty())}."
+            e != null && e.text.startsWith("Unklar") -> "Der Start mit $name ist unklar, er läuft womöglich; Näheres steht im Chat."
+            wahlStand.value[wahlId] == WAHL_OFFEN || e?.fehler == true -> "Das hat nicht geklappt, der Grund steht im Chat. " + karten[wahlId]?.frage.orEmpty()
+            else -> "Okay, der Auftrag läuft mit $name."
         }
     }
 
@@ -1032,6 +1044,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
             }
         }
+        tippErgebnisse[wahlId] = ergebnis
         // Gestartet (oder unklar, läuft womöglich): Ein erneuter Aufruf aus diesem Gespräch fragt nicht noch einmal (siehe knopfStartIn).
         if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) {
             val start = KnopfStart(nummer, w.app, modell, cli, w.runde)
@@ -3031,38 +3044,45 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (t.isEmpty() || t.length > 60) return ""
             val opus = OPUS_GEHOERT.containsMatchIn(t)
             val sol = Regex("\\bsol\\b").containsMatchIn(t)
-            return when { opus && !sol -> MODELL_OPUS; sol && !opus -> MODELL_SOL; else -> "" }
+            // Sonst nach dem Klang: Frank spricht ein, die Mitschrift schreibt das Modell oft falsch.
+            return when { opus && !sol -> MODELL_OPUS; sol && !opus -> MODELL_SOL; opus && sol -> ""
+                else -> ModellGehoert.modell(t).takeIf { it == MODELL_OPUS || it == MODELL_SOL }.orEmpty() }
         }
 
         /** „Opus“ samt typischer Hörfehler der Mitschrift („Oppos 5.5“, „Opos“, „Oppus“, „Ohpus“, „Obus“). */
-        private val OPUS_GEHOERT = Regex("\\b(?:oh?[\\s-]?[pb]{1,2}(?:u|o|ou)s{1,2})\\b")
+        private val OPUS_GEHOERT = Regex("\\boh?p{1,2}(?:u|o|ou)s{1,2}\\b")
 
         /**
-         * Franks gesprochene kurze Antwort auf die offene Modell- oder CLI-Frage in [gespraech] (etwa „Opus 5.5“ über das Weckwort
-         * außerhalb der App): Karten-Id und Knopfwert der neuesten offenen Karte dieser Stufe, sonst null. Gilt dann wie der Tipp.
+         * Franks Antwort auf eine offene Auswahlfrage (Modell, CLI, Review), etwa „Opus 5.5“ über das Weckwort außerhalb der App:
+         * Karten-Id und Knopfwert der neuesten offenen Karte, sonst null. Gilt dann wie der Tipp. Nur eine reine Antwort zählt
+         * ([ModellGehoert.antwort]), nach dem Klang, damit Hörfehler der Mitschrift („Oppos 5.5“) nicht zu einer zweiten Frage führen.
+         * Hat das Gespräch [gespraech] selbst keine Karte (außerhalb der App beginnt mit jedem „Hey Jarvis“ ein neues, etwa nach der
+         * Erinnerung), gilt die zuletzt gestellte Frage, wenn sie höchstens [KNOPF_FRIST_MS] alt ist.
          */
-        // [neuesGespraech]: Frank antwortet nach erneutem „Hey Jarvis“ (etwa auf die Erinnerung nach 30 Sekunden); außerhalb der App
-        // beginnt damit ein neues Gespräch. Dann gilt die zuletzt gestellte, noch frische Frage aus dem vorigen Gespräch.
-        fun wahlPerSprache(gespraech: String, worte: String, neuesGespraech: Boolean = false): Pair<String, String>? {
-            if (gespraech.isEmpty()) return null
-            val t = DiktatTrenner.auftrag(worte).trim().lowercase(Locale.ROOT)
-            if (t.isEmpty() || t.length > 60 || Regex("\\b(nicht|kein|keins|keine|ohne|statt|anstatt)\\b").containsMatchIn(t)) return null
+        fun wahlPerSprache(gespraech: String, worte: String): Pair<String, String>? {
+            val t = DiktatTrenner.auftrag(worte).trim()
+            if (t.isEmpty() || t.length > 60) return null
             val jetzt = System.currentTimeMillis()
-            val offen = offeneWahlen.entries.filter { it.value.stufe in listOf(STUFE_MODELL, STUFE_CLI) &&
-                wahlStand.value[it.key] == WAHL_OFFEN && karten.containsKey(it.key) && it.key !in tippInArbeit && jetzt - it.value.seit < VORWAHL_FOLGE_MS }
-            val (id, w) = (offen.filter { it.value.gespraech == gespraech }.maxByOrNull { it.value.seit }
-                ?: offen.takeIf { neuesGespraech }?.filter { it.key in frischeWahlen.value && jetzt - it.value.seit < KNOPF_FRIST_MS }?.maxByOrNull { it.value.seit })
-                ?.toPair() ?: return null
-            val wert = when (w.stufe) {
-                STUFE_CLI -> when {
-                    Regex("open\\s*-?\\s*code").containsMatchIn(t) -> CLI_OPENCODE
-                    Regex("\\bcodex\\b|\\bco[dt]ecs\\b|\\bkodex\\b").containsMatchIn(t) -> CLI_CODEX
-                    else -> ""
-                }
-                else -> modellAusAntwort(t).ifEmpty { festesModellAusAntwort(t) }
-            }
+            val stand = wahlStand.value
+            val offen = karten.entries.filter { (id, k) -> stand[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit && jetzt - k.zeit < VORWAHL_FOLGE_MS }
+            // Eigene Karten: im Gespräch selbst oder als Folgefrage einer Sprachwahl aus diesem Gespräch.
+            val eigene = if (gespraech.isEmpty()) emptyList() else offen.filter { it.value.gespraech == gespraech || sprachGespraeche[it.key] == gespraech }
+            val ohneKarte = gespraech.isEmpty() || (karten.values.none { it.gespraech == gespraech } && gespraech !in sprachGespraeche.values)
+            val (id, _) = (eigene.maxByOrNull { it.value.zeit }
+                ?: offen.takeIf { ohneKarte }?.filter { jetzt - it.value.zeit < KNOPF_FRIST_MS && offeneWahlen[it.key]?.stufe == STUFE_MODELL }
+                    ?.maxByOrNull { it.value.zeit })?.toPair() ?: return null
+            val w = offeneWahlen[id] ?: return null
+            val wert = ModellGehoert.antwort(t, w.stufe)
             return if (wert.isEmpty()) null else id to wert
         }
+
+        /** Folgekarte einer Sprachwahl → das Gespräch, in dem Frank gesprochen hat (es kann ein anderes sein als das der Karte). */
+        private val sprachGespraeche = java.util.concurrent.ConcurrentHashMap<String, String>()
+        /** Ergebnis des letzten Starts je Karte, nur für die Ansage nach einer Sprachwahl. */
+        private val tippErgebnisse = java.util.concurrent.ConcurrentHashMap<String, Ergebnis>()
+
+        /** Vor der ersten Sprachwahl nach einem Kaltstart: die gesicherten Karten laden. */
+        fun wahlenBereit(context: Context) = wahlenLaden(context)
 
         /** Franks kurze Antwort nennt genau Kimi K3.1 Pro oder Gemini 4 Argon: dessen Knopfwert, sonst leer. Ein anderes Kimi („Kimi K3“) zählt nicht. */
         internal fun festesModellAusAntwort(worte: String?): String {
@@ -3071,7 +3091,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 t.isEmpty() || t.length > 60 -> ""
                 KIMI_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_KIMI
                 ARGON_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_ARGON
-                else -> ""
+                else -> ModellGehoert.modell(t).takeIf { it == ProgrammiererVorlage.MODELL_KIMI || it == ProgrammiererVorlage.MODELL_ARGON }.orEmpty()
             }
         }
         private val KIMI_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*kimi(?:\\s*k?\\s*3[.,]1)?(?:\\s*pro)?(?:\\s+bitte)?")
@@ -3079,7 +3099,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val ZUSATZ_FELDER = listOf("effort", "profil", "modus")
 
         /** Nennt Frank selbst ein Modell (Opus, Sol oder GPT)? Nur dann gilt ein vom Modell eingesetztes modell ohne Knöpfe. */
-        internal fun modellGenannt(worte: String): Boolean = worte.lowercase(Locale.ROOT).let { Regex("\\b(sol|gpt)\\b").containsMatchIn(it) || OPUS_GEHOERT.containsMatchIn(it) }
+        internal fun modellGenannt(worte: String): Boolean = worte.lowercase(Locale.ROOT).let { Regex("\\b(sol|gpt)\\b").containsMatchIn(it) || OPUS_GEHOERT.containsMatchIn(it) || ModellGehoert.modell(it).let { m -> m == MODELL_OPUS || m == MODELL_SOL } }
 
         private const val WAHL_PREFS = "jarvis_auswahlkarten"
         @Volatile private var wahlenGeladen = false

@@ -350,13 +350,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (anhaenge.isEmpty() && !programmierer && navigieren(text, vorlesen)) return true
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
-        // Gesprochene kurze Antwort auf die offene Modell- oder CLI-Frage („Opus 5.5“, auch als „Oppos 5.5“ gehört), etwa über das
-        // Weckwort außerhalb der App: gilt wie der Tipp auf den Knopf, ohne Umweg über das Modell. So startet genau ein Auftrag,
-        // und es entsteht weder eine zweite Modellfrage noch ein doppelter Auftrag. Getippte Antworten bleiben beim bisherigen Weg.
-        if (vorlesen && anhaenge.isEmpty() && !programmierer) {
-            val id = sitzungId
-            val treffer = id?.let { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlPerSprache(it, text, neuesGespraech = gespraech.none { n -> n.vonMir }) }
-            if (id != null && treffer != null) { sprachWahl(id, text, treffer.first, treffer.second, antwortLaut); return true }
+        // Reine Antwort auf eine offene Auswahlfrage (Modell, CLI, Review), nach dem Klang erkannt („Opus 5.5“, auch als „Oppos 5.5“
+        // mitgeschrieben), etwa über das Weckwort außerhalb der App: gilt wie der Tipp auf den Knopf, ohne Umweg über das Modell.
+        // So startet genau ein Auftrag, ohne zweite gleiche Frage. Frank spricht fast immer ein, deshalb für jede Eingabe.
+        if (anhaenge.isEmpty() && !programmierer) {
+            de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlenBereit(getApplication())
+            val treffer = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlPerSprache(sitzungId.orEmpty(), text)
+            if (treffer != null) { sprachWahl(text, treffer.first, treffer.second, antwortLaut); return true }
         }
         if (denkt) return false
         if (!modellBereit) {
@@ -2416,7 +2416,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (runde == 0 && !wiederaufnahme) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
                     // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist. Ohne feste Pausen:
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
-                    snapshotFlow { schreibtMit || denkt || navigiert }.first { !it }
+                    snapshotFlow { schreibtMit || denkt || navigiert || sprachWahlen > 0 }.first { !it }
                     vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
                     // Ausdrücklich beendet: Schluss, auch wenn inzwischen eine Antwort aus dem Hintergrund (Programmierauftrag) ankam.
                     if (sprachsitzungBeendet) break
@@ -3036,24 +3036,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Franks gesprochene Modell- oder CLI-Wahl (siehe [sende]): steht als Frage und Antwort im Gespräch, die Antwort wird vorgelesen. */
-    private fun sprachWahl(sitzung: String, text: String, wahlId: String, wert: String, laut: Boolean) {
+    private fun sprachWahl(text: String, wahlId: String, wert: String, laut: Boolean) {
         gespraech += Nachricht(true, text)
         sitzungSichern()
         eingabeKompakt = true
+        // Erst nach dem Sichern hat ein neues Gespräch seine Kennung.
+        val sitzung = sitzungId.orEmpty()
         val karteIn = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraechDerKarte(wahlId)
         if (karteIn.isNotEmpty() && vorleser.stand.value.quelle?.startsWith("$WAHL_QUELLE$karteIn:") == true) vorleser.stopp()
         // Der Gesprächsmodus wartet darauf wie auf eine Antwort und hört danach weiter zu (etwa für die CLI-Frage nach Sol).
-        navigiert = true
+        sprachWahlen++
         viewModelScope.launch {
             try {
                 val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
-                val satz = (runCatching { faehigkeit?.wahlPerSpracheTreffen(wahlId, wert) }.getOrElse { it.message ?: "Der Auftrag ließ sich nicht starten." })
-                    ?: "Programmieren ist gerade nicht verfügbar."
+                val satz = try { faehigkeit?.wahlPerSpracheTreffen(wahlId, wert, sitzung) ?: "Programmieren ist gerade nicht verfügbar." }
+                    catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Modellwahl per Sprache", e); "Der Auftrag ließ sich nicht starten: ${e.message}" }
                 if (sitzungId == sitzung) { gespraech += Nachricht(false, satz); sitzungSichern() }
-                if (laut) sprichRunde("modellwahl:" + System.currentTimeMillis(), satz)
-            } finally { navigiert = false }
+                // Läuft in diesem Gespräch noch die Runde, die die Karte gestellt hat, sagt sie die Folgefrage selbst.
+                if (laut && laufende[sitzung] == null) sprichRunde("modellwahl:" + System.currentTimeMillis(), satz)
+            } finally { sprachWahlen-- }
         }
     }
+
+    /** Laufende Sprachwahlen; der Gesprächsmodus wartet darauf wie auf eine Antwort. */
+    private var sprachWahlen by mutableStateOf(0)
 
     /** Knopf „Opus 5.5“ oder „Sol 6.1“ vor einem Programmierauftrag am Rechner: startet ihn mit diesem Modell. */
     // Auch „Codex CLI“/„OpenCode CLI“ und „Ja“/„Nein“ zum Review: [modell] ist der Wert des getippten Knopfs.
