@@ -313,6 +313,9 @@ fun Sektion(
                 if (untertitel != null) Text(untertitel, color = f.text.copy(alpha = 0.78f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
             aktionen()
+            // Rund ein halber Zentimeter Luft zwischen Kalender/Lautsprecher und dem Pfeil, damit das Aufklappen
+            // den Lautsprecher nicht versehentlich auslöst; die Lücke gehört zur Kopfzeile und klappt selbst auf.
+            Spacer(Modifier.width(30.dp))
             val dreh by animateFloatAsState(if (offen) 0f else -90f, label = "pfeil")
             Icon(Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.text, modifier = Modifier.graphicsLayer { rotationZ = dreh })
         }

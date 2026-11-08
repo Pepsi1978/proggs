@@ -266,7 +266,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
                 leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
-                aktionen = { KalenderKnopf(vm, f.primaer); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
+                aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
                 b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -281,7 +281,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
                 Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80, leuchten = true,
                 leer = b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty(), automatik = suche.isBlank(),
-                aktionen = { KalenderKnopf(vm, f.sekundaer); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
+                aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
                 b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -304,7 +304,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                     p.name, p.anzeige, info[p]!!.first, farbe, liste.size, zustand, Ziel.Prio(p),
                     untertitel = info[p]!!.second, verzoegerung = 120 + i * 40, leer = liste.isEmpty(), automatik = suche.isBlank(),
                     kraeftig = p != Prioritaet.SPAETER,
-                    aktionen = { KalenderKnopf(vm, farbe); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
+                    aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
                     liste.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -323,12 +323,12 @@ fun ListeBildschirm(vm: AppViewModel) {
             if (b.demnaechst.isNotEmpty()) Sektion(
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Nach morgen geplant", verzoegerung = 300, automatik = suche.isBlank(),
-                aktionen = { KalenderKnopf(vm, f.tertiaer); VorlesenKnopf(vm, "bereich_demnaechst") { vm.bereichVorlesen("demnaechst", "Demnächst", b.demnaechst, mitDatum = true) } },
+                aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_demnaechst") { vm.bereichVorlesen("demnaechst", "Demnächst", b.demnaechst, mitDatum = true) } },
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
                 "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
                 untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", verzoegerung = 340, automatik = suche.isBlank(), startZu = true, wahlZustand = erledigtWahl,
-                aktionen = { KalenderKnopf(vm, f.erfolg); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
+                aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
             ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             Spacer(Modifier.height(140.dp))
             Spacer(Modifier.navigationBarsPadding())
@@ -407,12 +407,11 @@ private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zust
 
 /** Öffnet den Vier-Wochen-Kalender; sitzt in jedem Bereich direkt vor dem Lautsprecher. */
 @Composable
-private fun KalenderKnopf(vm: AppViewModel, farbe: Color) {
+private fun KalenderKnopf(vm: AppViewModel) {
     val f = LocalFarben.current
-    Box(Modifier.size(44.dp).antippen { vm.kalenderOeffnen() }, contentAlignment = Alignment.Center) {
-        Box(Modifier.size(34.dp).glas(f, 99.dp, 0.5f, farbe.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.CalendarMonth, "Kalender öffnen", tint = farbe, modifier = Modifier.size(20.dp))
-        }
+    // Gleiches Grau wie der Lautsprecher und ohne Umrandung, damit beide Knöpfe in jedem Design einheitlich wirken.
+    Box(Modifier.size(40.dp).antippen { vm.kalenderOeffnen() }, contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.CalendarMonth, "Kalender öffnen", tint = f.textLeise)
     }
 }
 
