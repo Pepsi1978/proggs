@@ -199,7 +199,7 @@ private fun Leiste(
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
     var projektNeu by remember { mutableStateOf(false) }
     val projektIds = remember(vm.projekte) { vm.projekte.map { it.id }.toSet() }
-    // Gespräche über 30 Tage liegen im Archiv (Einstellungen → Archiv); das gerade offene bleibt sichtbar.
+    // Gespräche über 30 Tage und Programmier-Sessions über 10 Tage liegen im Archiv (Einstellungen → Archiv); das offene bleibt sichtbar.
     val listen = remember(vm.sitzungen, projektIds, vm.sitzungId) { aufteilen(vm.sitzungen, projektIds, System.currentTimeMillis(), vm.sitzungId) }
     val normale = listen.gespraeche
     val anzahlJe = remember(vm.sitzungen) { vm.sitzungen.groupingBy { it.projekt }.eachCount() }
@@ -308,7 +308,8 @@ private fun Leiste(
                 }
                 if (liste.isEmpty()) {
                     Text(
-                        if (auftraege) "Noch keine Programmieraufträge. Jeder Auftrag an den Programmierer landet mit seinem Gespräch von selbst hier."
+                        if (auftraege) (if (vm.sitzungen.any { it.programmierung }) "Hier stehen die Programmier-Sessions der letzten 10 Tage. Ältere findest du unter Einstellungen → Archiv." else "Noch keine Programmieraufträge. Jeder Auftrag an den Programmierer landet mit seinem Gespräch von selbst hier.")
+                        else if (vm.sitzungen.any { !it.programmierung }) "Hier stehen die Gespräche der letzten 30 Tage. Ältere findest du unter Einstellungen → Archiv."
                         else "Noch keine gespeicherten Gespräche. Jedes Gespräch mit Jarvis landet von selbst hier, auch die mit „Hey Jarvis“.",
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
@@ -410,7 +411,7 @@ private fun SitzungEintrag(
             .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, fuellung = f.primaer.copy(alpha = 0.22f), rand = false, toenung = f.primaer)
                 .border(2.dp, f.primaer, RoundedCornerShape(14.dp)) else Modifier)
             .semantics { selected = gewaehlt }
-            .combinedClickable(onClick = aufWahl, onLongClick = langDruck, onClickLabel = "Öffnen", onLongClickLabel = "Umbenennen oder löschen")
+            .combinedClickable(onClick = aufWahl, onLongClick = langDruck, onClickLabel = "Öffnen", onLongClickLabel = "Favorit, umbenennen oder löschen")
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         val codet = s.id in arbeitende
@@ -534,10 +535,7 @@ internal fun aktiveReiter(
 /** Gespräche der am PC gestarteten Sitzungen (Auftragsbuch), je Gesprächsliste einmal gelesen: Lila bleibt auch nach dem Umbenennen.
  * [vm] kommt mit, denn viewModel() legte ein zweites AppViewModel an der Activity an, das den Live-Empfänger der Programmier-Meldungen an sich zog. */
 @Composable
-private fun lokaleGespraeche(vm: AppViewModel): Set<String> {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    return remember(vm.sitzungen) { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleGespraeche(context) }
-}
+private fun lokaleGespraeche(vm: AppViewModel): Set<String> = vm.lokaleGespraeche
 
 /** Der goldene Stern der Favoriten: Sie bleiben in der Leiste und werden weder archiviert noch automatisch entfernt. */
 internal val FAVORIT_GOLD = androidx.compose.ui.graphics.Color(0xFFF5B301)
@@ -560,12 +558,15 @@ internal data class LeistenListen(val gespraeche: List<Sitzung>, val programmier
  * stehen nur in dessen Bereich; eines mit unbekanntem Projekt (Datei verloren) bleibt unter „Gespräche“, damit es nirgends verschwindet.
  * Programmiergespräche stehen fest nach Startzeit, die zuletzt gestartete oben: Neue Meldungen in einer Session verschieben nichts.
  */
-internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>, jetzt: Long = 0L, offen: String? = null) = LeistenListen(
-    // [jetzt] > 0: archivierte Gespräche (über 30 Tage, ohne Stern) fehlen hier; sie stehen unter Einstellungen → Archiv.
-    gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) && (jetzt == 0L || it.id == offen || !it.archiviert(jetzt)) },
+internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>, jetzt: Long, offen: String? = null): LeistenListen {
+    // Archivierte (ohne Stern: Gespräche über 30 Tage, Programmier-Sessions über 10 Tage) fehlen hier; sie stehen unter Einstellungen → Archiv.
+    val sichtbar = sitzungen.filter { it.id == offen || !it.archiviert(jetzt, projektIds) }
+    return LeistenListen(
+    gespraeche = sichtbar.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) },
     // Gleicher Start (alte Dateien ohne Zeitpunkte): nach Anlage und id, nie nach der letzten Änderung.
-    programmierung = sitzungen.filter { it.programmierung }.sortedWith(compareByDescending(::startzeit).thenByDescending { it.erstellt }.thenByDescending { it.id }),
-)
+    programmierung = sichtbar.filter { it.programmierung }.sortedWith(compareByDescending(::startzeit).thenByDescending { it.erstellt }.thenByDescending { it.id }),
+    )
+}
 
 /** Start einer Programmier-Session: der erste Auftrag, sonst die Anlage des Gesprächs. Neue Meldungen ändern ihn nicht. */
 internal fun startzeit(s: Sitzung): Long = s.auftragStart.takeIf { it > 0 } ?: s.erstellt

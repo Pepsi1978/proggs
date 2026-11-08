@@ -22,7 +22,7 @@ import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 
 /**
- * Einstellungen → Archiv: normale Gespräche, die seit über 30 Tagen ruhen (ohne Stern). Antippen öffnet das Gespräch;
+ * Einstellungen → Archiv: Gespräche über 30 Tage und Programmier-Sessions über 10 Tage (ohne Stern). Antippen öffnet das Gespräch;
  * wer darin weiterschreibt, holt es zurück in die Leiste. Jarvis durchsucht das Archiv mit gedaechtnis_suchen (Quelle „archiv“).
  */
 @Composable
@@ -31,11 +31,14 @@ internal fun ArchivReiter(vm: AppViewModel) {
     var suche by remember { mutableStateOf("") }
     // Seitenweise: Die Einstellungen scrollen als Ganzes, hunderte Einträge auf einmal würden ruckeln.
     var zeigen by remember { mutableIntStateOf(50) }
-    val archiv = remember(vm.sitzungen) { val jetzt = System.currentTimeMillis(); vm.sitzungen.filter { it.archiviert(jetzt) } }
+    val projektIds = remember(vm.projekte) { vm.projekte.mapTo(HashSet()) { it.id } }
+    // Das offene Gespräch steht in der Leiste, nicht zugleich hier.
+    val archiv = remember(vm.sitzungen, projektIds, vm.sitzungId) { val jetzt = System.currentTimeMillis(); vm.sitzungen.filter { it.id != vm.sitzungId && it.archiviert(jetzt, projektIds) } }
     val treffer = remember(archiv, suche) { if (suche.isBlank()) archiv else archiv.filter { it.titel.contains(suche.trim(), ignoreCase = true) } }
     Bereich("Archiv der Gespräche", aufklappbar = false) {
         Text(
-            "Gespräche, die älter als 30 Tage sind, stehen hier statt in der Seitenleiste. Favoriten mit Stern bleiben immer in der Leiste. " +
+            "Gespräche, die älter als 30 Tage sind, und Programmier-Sessions, die älter als 10 Tage sind, stehen hier statt in der Seitenleiste. " +
+                "Favoriten mit Stern bleiben immer in der Leiste, und eine neue Nachricht oder Meldung holt ein Gespräch zurück. " +
                 "Sag zum Beispiel „Schau mal ins Archiv, findest du etwas über …“, dann sucht Jarvis darin.",
             color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
         )
@@ -49,7 +52,7 @@ internal fun ArchivReiter(vm: AppViewModel) {
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                 ) {
                     Text(s.titel.ifBlank { "Gespräch" }, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten", color = f.textLeise, fontSize = 12.sp)
+                    Text((if (s.programmierung) "Programmierung · " else "") + zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten", color = f.textLeise, fontSize = 12.sp)
                 }
             }
         }

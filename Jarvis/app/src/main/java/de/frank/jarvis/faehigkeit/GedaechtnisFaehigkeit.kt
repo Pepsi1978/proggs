@@ -46,7 +46,7 @@ class GedaechtnisFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nutze es für Fragen nach Älterem oder nach einem Thema („Wann war ich zuletzt angeln?“, „Was hatte ich zu meinem Schwindel geschrieben?“, „Haben wir schon mal über den RAV4 gesprochen?“).",
             schema = schema(
                 "suche" to text("Ein bis drei Wörter, die alle vorkommen müssen (Groß- und Kleinschreibung egal). In Anführungszeichen = genau diese Wortgruppe."),
-                "quellen" to textListe("Nur diese Quellen: tagebuch, gespraeche, archiv (nur archivierte Gespräche, älter als 30 Tage), notizen, gemerkt, ideen, ablage, auswertungen. Weglassen = alle."),
+                "quellen" to textListe("Nur diese Quellen: tagebuch, gespraeche, archiv (nur archivierte Gespräche: älter als 30 Tage, Programmier-Sessions älter als 10 Tage), notizen, gemerkt, ideen, ablage, auswertungen. Weglassen = alle."),
                 "von" to text("Optional: frühester Tag JJJJ-MM-TT."),
                 "bis" to text("Optional: spätester Tag JJJJ-MM-TT."),
                 "hoechstens" to zahl("Höchstzahl Treffer je Quelle (Vorgabe 8, höchstens 30)."),
@@ -99,14 +99,16 @@ class GedaechtnisFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val nurArchiv = "archiv" in quellen && "gespraeche" !in quellen
         if (will("gespraeche") || nurArchiv) {
+            val jetzt = System.currentTimeMillis()
+            val projektIds = runCatching { de.frank.jarvis.data.Projekte.alle(context).mapTo(HashSet()) { it.id } }.getOrDefault(emptySet<String>())
             val ordner = File(context.filesDir, "gespraeche")
             val treffer = ordner.listFiles { f -> f.name.endsWith(".json") }.orEmpty().sortedByDescending { it.lastModified() }.asSequence()
                 .mapNotNull { f -> Gespraeche.laden(context, f.name.removeSuffix(".json")) }
-                .filter { (s, _) -> imZeitraum(tag(s.geaendert)) && (!nurArchiv || s.archiviert()) }
+                .filter { (s, _) -> imZeitraum(tag(s.geaendert)) && (!nurArchiv || s.archiviert(jetzt, projektIds)) }
                 .mapNotNull { (s, nachrichten) ->
                     val passend = nachrichten.filter { it.art != "fehler" && passt(it.text) }
                     if (passend.isEmpty() && !passt(s.titel)) null
-                    else "- „${s.titel}“ (${zeit(s.geaendert)}${if (s.archiviert()) ", im Archiv" else ""}): " + passend.take(2).joinToString(" | ") { (if (it.vonMir) "Frank: " else "Jarvis: ") + TagebuchFaehigkeit.ausschnitt(it.text, woerter.first(), 160) }
+                    else "- „${s.titel}“ (${zeit(s.geaendert)}${if (s.archiviert(jetzt, projektIds)) ", im Archiv" else ""}): " + passend.take(2).joinToString(" | ") { (if (it.vonMir) "Frank: " else "Jarvis: ") + TagebuchFaehigkeit.ausschnitt(it.text, woerter.first(), 160) }
                 }.take(n).toList()
             if (treffer.isNotEmpty()) bloecke += (if (nurArchiv) "ARCHIV DER GESPRÄCHE:\n" else "GESPRÄCHE MIT JARVIS:\n") + treffer.joinToString("\n")
         }

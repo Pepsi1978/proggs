@@ -19,9 +19,16 @@ data class Sitzung(val id: String, val titel: String, val erstellt: Long, val ge
 /** So lange steht ein normales Gespräch unter „Gespräche“; danach liegt es im Archiv (Einstellungen → Archiv), Favoriten ausgenommen. */
 const val GESPRAECHE_ARCHIV_MS = 30L * 24 * 60 * 60 * 1000
 
-/** Archiviert: normales Gespräch ohne Projekt und ohne Stern, seit über 30 Tagen unverändert. Weiterführen holt es zurück. */
-fun Sitzung.archiviert(jetzt: Long = System.currentTimeMillis()): Boolean =
-    !programmierung && projekt.isEmpty() && !favorit && geaendert in 1 until jetzt - GESPRAECHE_ARCHIV_MS
+/** So lange steht eine ruhende Programmier-Session unter „Programmierung“; danach liegt sie ebenfalls im Archiv. */
+const val PROGRAMMIERUNG_ARCHIV_MS = 10L * 24 * 60 * 60 * 1000
+
+/**
+ * Archiviert: ohne Stern und seit 30 Tagen (Programmier-Session: 10 Tagen) unverändert; nicht in einem bekannten Projekt
+ * ([projektIds]; dort bleibt alles). Nichts wird gelöscht: Weiterschreiben, eine neue Meldung oder ein Bericht holt es zurück.
+ */
+fun Sitzung.archiviert(jetzt: Long, projektIds: Set<String>): Boolean =
+    !favorit && (projekt.isEmpty() || projekt !in projektIds) &&
+        geaendert in 1 until jetzt - (if (programmierung) PROGRAMMIERUNG_ARCHIV_MS else GESPRAECHE_ARCHIV_MS)
 
 /**
  * Eine Nachricht im Speicher: von Frank oder von Jarvis. [art]: „antwort“ (normal), „fehler“ (Fehlermeldung statt
@@ -202,7 +209,10 @@ object Gespraeche {
                 val d = datei(context, id)
                 val j = lies(d)
                 if (an) j.put("favorit", true) else j.remove("favorit")
+                // Der Stern ist keine Änderung am Gespräch: Die Gedächtnissuche sortiert nach Dateizeit und soll es nicht vorziehen.
+                val zeit = d.lastModified()
                 schreiben(d, j)
+                if (zeit > 0) d.setLastModified(zeit)
             }.onFailure { Log.w(TAG, "Favorit nicht gesetzt", it) }
         }
     }

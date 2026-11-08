@@ -3105,6 +3105,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sitzungProjekt by mutableStateOf(""); private set
     /** Neues, noch ungespeichertes Gespräch über „Programmierer“ begonnen: gehört in den Reiter „Programmierung“. Gilt bis zum ersten Speichern. */
     var sitzungProgrammierung by mutableStateOf(false); private set
+    /** Gespräche der am PC direkt gestarteten Sitzungen (lila Kennzeichen), mit der Liste auf IO geladen. */
+    var lokaleGespraeche by mutableStateOf<Set<String>>(emptySet()); private set
 
     /** Speichern, Umbenennen, Löschen und Neueinlesen der Gespräche der Reihe nach: Kein älterer Stand überholt einen neueren. */
     private val sicherung = Mutex()
@@ -3128,18 +3130,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sitzungenLaden() {
-        // Geschont werden das offene Gespräch und alles, woran gerade gearbeitet wird (Claude-Code-Sitzung oder Jarvis selbst).
-        val schonen = buildSet {
-            sitzungId?.let { add(it) }
-            vorherigeSitzung?.let { add(it) }
-            addAll(laufende.keys)
-            addAll(de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.value.filterValues { it.arbeitetJetzt() }.keys)
-        }
         viewModelScope.launch {
             sitzungen = sicherung.withLock {
-                withContext(Dispatchers.IO) { alteProgrammierungAufraeumen(alleSitzungen(), schonen) }
+                withContext(Dispatchers.IO) { alleSitzungen() }
             }
-            navigationsAuswahl?.let { n -> val ids = sitzungen.mapTo(HashSet()) { it.id }; if (n.any { it.sitzung.id !in ids }) navigationsAuswahl = null }
+            // Am PC gestartete Sitzungen: einmal je Laden auf IO, nicht beim Zeichnen der Leiste auf dem Hauptfaden.
+            lokaleGespraeche = withContext(Dispatchers.IO) { runCatching { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleGespraeche(getApplication()) }.getOrDefault(emptySet()) }
             projekte = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.alle(getApplication()) }
             // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
             if (!modellBereit) return@launch
@@ -3151,26 +3147,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 kiTitelBilden(s.id, stand)
             }
         }
-    }
-
-    /**
-     * Räumt den Reiter „Programmierung“ auf: Programmier-Sessions ohne Projekt, die seit über zehn Tagen ruhen, verschwinden
-     * aus Jarvis, genau wie beim Löschen von Hand. Normale Gespräche, Projekte, Favoriten und alles in [schonen] bleiben; auf den
-     * Programmierrechnern wird nichts gelöscht, eine dort gestartete Sitzung läuft unberührt weiter.
-     */
-    private fun alteProgrammierungAufraeumen(liste: List<de.frank.jarvis.data.Sitzung>, schonen: Set<String>): List<de.frank.jarvis.data.Sitzung> {
-        val grenze = System.currentTimeMillis() - PROGRAMMIERUNG_AUFBEWAHREN_MS
-        val alt = liste.filter { it.programmierung && it.projekt.isEmpty() && !it.favorit && it.geaendert in 1 until grenze && it.id !in schonen }
-        if (alt.isEmpty()) return liste
-        alt.forEach { s ->
-            runCatching {
-                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleEntfernen(getApplication(), s.id)
-                de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), s.id)
-            }
-        }
-        Logbuch.system("Alte Programmier-Sessions entfernt", "${alt.size} älter als zehn Tage (nur in Jarvis)")
-        val weg = alt.mapTo(HashSet()) { it.id }
-        return liste.filter { it.id !in weg }
     }
 
     /** [kuerzenUm]: so viele Nachrichten hat Frank eben bewusst entfernt; sonst überschreibt ein kürzerer Stand die Datei nie. */
@@ -3544,7 +3520,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Goldener Stern an oder aus: sofort in der Liste, die Datei im Hintergrund. */
     fun sitzungFavorit(id: String, an: Boolean) {
         sitzungen = sitzungen.map { if (it.id == id) it.copy(favorit = an) else it }
-        viewModelScope.launch { sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.favoritSetzen(getApplication(), id, an) } } }
+        viewModelScope.launch {
+            sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.favoritSetzen(getApplication(), id, an) } }
+            // Ein Speichern oder Neueinlesen, das vor dem Stern in der Warteschlange stand, hat ihn mit dem alten Stand überschrieben.
+            sitzungen = sitzungen.map { if (it.id == id) it.copy(favorit = an) else it }
+        }
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {
@@ -4193,6 +4173,3 @@ private const val TITEL_AUFTRAG =
         "Fasse in höchstens sieben Wörtern auf Deutsch zusammen, worum es geht; meist trifft es Franks erstes Anliegen, " +
         "hat sich das Gespräch verlagert, das Hauptthema. Klar und konkret wie ein Betreff, keine Anführungszeichen, " +
         "kein Punkt am Ende, keine Einleitung. Antworte nur mit der Überschrift."
-
-/** So lange bleibt eine ruhende Programmier-Session im Reiter „Programmierung“, danach räumt Jarvis sie weg. */
-private const val PROGRAMMIERUNG_AUFBEWAHREN_MS = 10L * 24 * 60 * 60 * 1000
