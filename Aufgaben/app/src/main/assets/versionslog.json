@@ -81,6 +81,7 @@
     {"versionCode": 77, "versionName": "1.0.76", "stand": "08.11.2026, 13:23 Uhr", "notiz": "Die App startet flüssiger: Die Szene oben klappt direkt nach dem Öffnen ruhig und ohne Ruckeln auf."},
     {"versionCode": 78, "versionName": "1.0.77", "stand": "08.11.2026, 13:30 Uhr", "notiz": "Die App kommt jetzt als schnelle, optimierte Fassung aufs Handy, und neu erscheinende Karten klappen ohne Verzögerung auf."},
     {"versionCode": 79, "versionName": "1.0.78", "stand": "08.11.2026, 13:49 Uhr", "notiz": "Beim App-Start klappen der obere Bereich und Heute jetzt ruhiger und gut sichtbar auf."},
-    {"versionCode": 80, "versionName": "1.0.79", "stand": "08.11.2026, 23:08 Uhr", "notiz": "Im Dunkelmodus sind Heute und Morgen in allen Designs wieder dunkel, Aufgaben und Abhakkreise sind klar lesbar."}
+    {"versionCode": 80, "versionName": "1.0.79", "stand": "08.11.2026, 23:08 Uhr", "notiz": "Im Dunkelmodus sind Heute und Morgen in allen Designs wieder dunkel, Aufgaben und Abhakkreise sind klar lesbar."},
+    {"versionCode": 81, "versionName": "1.0.80", "stand": "08.11.2026, 23:18 Uhr", "notiz": "Im Dunkelmodus passen Heute und Morgen jetzt farblich genau zum Hintergrund dahinter."}
 ]
 }

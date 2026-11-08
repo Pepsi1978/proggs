@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -64,6 +65,13 @@ data class Farben(
     val erfolg: Color,
     val radius: Dp,
 ) {
+    /**
+     * Deckende Fläche unter dem Glas (Bereiche Heute und Morgen). Hell: deckendes Weiß. Dunkel: Die Glasfarbe ist ein
+     * fast durchsichtiges Weiß und wäre deckend gemacht reines Weiß, deshalb über dem oberen Hintergrund verrechnet,
+     * auf dem die Bereiche liegen.
+     */
+    val flaecheDeckend: Color get() = if (dunkel) flaeche.compositeOver(hgOben) else flaeche.copy(alpha = 1f)
+
     /** Prioritäten als klare Ampel: Hoch rot, Mittel gelb, Gering grün; Später bleibt neutral. */
     fun prio(p: Prioritaet): Color = when (p) {
         Prioritaet.HOCH -> if (dunkel) Color(0xFFFF5449) else Color(0xFFE02B20)
