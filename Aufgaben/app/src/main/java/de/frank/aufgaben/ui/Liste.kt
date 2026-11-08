@@ -334,22 +334,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             Spacer(Modifier.navigationBarsPadding())
         }
 
-        // Kopfleiste, die beim Scrollen zu Glas wird
-        val kopfSichtbar by remember { androidx.compose.runtime.derivedStateOf { scroll.value > with(dichte) { 180.dp.toPx() } } }
-        AnimatedVisibility(kopfSichtbar && !zieht, enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-            Row(
-                Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 1.2f, fuellung = f.flaecheStark).statusBarsPadding().padding(horizontal = 18.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Aufgaben", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("${b.heuteFertig}/${b.heuteGesamt} heute", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                // Hell/Dunkel und Vorlesen bleiben auch beim Scrollen oben erreichbar.
-                Spacer(Modifier.width(10.dp))
-                ModusKnopf(vm, 38.dp)
-                Spacer(Modifier.width(6.dp))
-                RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, if (vm.sprichtId == "alle") "Vorlesen stoppen" else "Alle Aufgaben vorlesen", 38.dp) { vm.alleVorlesen(b) }
-            }
-        }
+        // Keine Kopfleiste beim Scrollen: Die Aufgaben nutzen die ganze Höhe (Hell/Dunkel und Vorlesen stehen oben in der Liste).
 
         // Schwebendes Plus
         Plus(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 22.dp, bottom = 24.dp), sichtbar = !zieht) { vm.neueAufgabe(mitMikro = true) }
