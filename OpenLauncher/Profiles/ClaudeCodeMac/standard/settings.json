@@ -11,6 +11,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash \"$HOME/proggs/claude-code-setup/hooks/build-ablauf-guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
             "command": "bash \"$HOME/proggs/claude-code-setup/hooks/emulator-start-guard.sh\"",
             "timeout": 5
           }
