@@ -43,18 +43,18 @@
     },
     {
       "id": "M3",
-      "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken",
+      "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken, wenn der Befehl den Versionslog wirklich schreibt",
       "datum": "2026-11-08T18:29",
       "status": "aktiv",
       "beleg": "Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf.",
       "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
+        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN, bau_ohne_bump)"
       ],
       "werkzeug": "PowerShell",
       "aufruf_regex": "versionslog\\.json[\\s\\S]*gradlew",
       "fehler_regex": "STOPP - erst die Version bumpen",
-      "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew nennen -> wirkt.",
-      "ruecknahme": "Die drei Zeilen 'versionslog.json in davor' in bau_ohne_bump entfernen.",
+      "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft).",
+      "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
       "kosten": "kein Kontext"
     },
     {
