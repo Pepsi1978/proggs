@@ -262,7 +262,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             // ---- Heute ----
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
-                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, puls = true,
+                Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, leuchten = true,
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
                 leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
