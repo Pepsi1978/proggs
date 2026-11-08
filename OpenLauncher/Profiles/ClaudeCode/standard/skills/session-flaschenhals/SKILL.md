@@ -86,7 +86,11 @@ weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur
   (minimal, standard, strict) und für jedes Modell greifen, außer die Ursache gibt es nur auf einer Plattform (`plattform`). Dafür:
   - einen Hook in alle sechs `settings.json` (`ClaudeCode/*`, `ClaudeCodeMac/*`; der Server erzeugt seine aus `ClaudeCodeMac`) eintragen;
   - Skriptvarianten (`.py`, `.sh`, `.ps1`) gleich ziehen;
-  - Gedächtnis-Zeilen in eine Bedarfsdatei im Repo legen statt nur ins Windows-`MEMORY.md`.
+  - Gedächtnis-Zeilen in eine Bedarfsdatei im Repo legen statt nur ins Windows-`MEMORY.md`. Am Mac und auf dem Server nie
+    nur ins lokale Gedächtnis schreiben: Das wird nicht abgeglichen, die anderen Rechner würden den Fehler wiederholen.
+  - Alles, was nur im Repo liegt (Skills, Hooks, Skripte, Almanache, `massnahmen.json`), holen sich alle drei Rechner von selbst:
+    vor jedem CLI-Start (Startknopf und Jarvis-Auftrag) und auf dem Server zusätzlich alle 5 Minuten.
+  - Liegt die Ursache in einem Launcher (`OpenLauncher`, `OpenLauncherMac`, `OpenLauncherServer`), alle drei angleichen.
   
   Nach dem Push den Server prüfen: `ssh root@168.231.83.205 cat /home/jarvis/.openlauncher/repo-status.json` muss `"ok": true` zeigen. Mac und Server
   ziehen den Stand von selbst (Mac beim CLI-Start, Server alle 5 Minuten). Codex und OpenCode kennen keine Claude-Hooks: Dort gilt nur, was in
