@@ -68,6 +68,7 @@
     {"versionCode": 64, "versionName": "1.0.63", "stand": "07.11.2026, 22:44 Uhr", "notiz": "Bessere Lesbarkeit auf Gelb, Heute bleibt auch ohne Bewegung kräftig gestreift, die Ziele-Gruppen sind ebenfalls blau, und ein aufgeklappter Erledigt-Bereich bleibt nach einer Suche offen."},
     {"versionCode": 65, "versionName": "1.0.64", "stand": "07.11.2026, 22:53 Uhr", "notiz": "Die Bestätigung nach dem Abhaken hat jetzt einen deckenden Hintergrund, gut lesbare Schrift und einen deutlichen Rückgängig-Knopf."},
     {"versionCode": 66, "versionName": "1.0.65", "stand": "07.11.2026, 23:05 Uhr", "notiz": "Nach dem Abhaken erscheint unten keine Rückgängig-Leiste mehr; die übrigen Meldungen sind deckend und der Rückgängig-Knopf beim Löschen ist kontrastreicher und sicher gegen Doppeltippen."},
-    {"versionCode": 67, "versionName": "1.0.66", "stand": "08.11.2026, 12:17 Uhr", "notiz": "Der ganze Heute-Bereich leuchtet jetzt mit einem ruhig atmenden Lichthof, wanderndem Licht und umlaufendem Lichtrand statt der Herzschlag-Animation."}
+    {"versionCode": 67, "versionName": "1.0.66", "stand": "08.11.2026, 12:17 Uhr", "notiz": "Der ganze Heute-Bereich leuchtet jetzt mit einem ruhig atmenden Lichthof, wanderndem Licht und umlaufendem Lichtrand statt der Herzschlag-Animation."},
+    {"versionCode": 68, "versionName": "1.0.67", "stand": "08.11.2026, 12:22 Uhr", "notiz": "Der Heute-Bereich glüht jetzt kräftig wie eine Sonne nach außen, seine Fläche ist deckend und die Streifen im Kopf sind ruhig in dunklerem Orange."}
 ]
 }

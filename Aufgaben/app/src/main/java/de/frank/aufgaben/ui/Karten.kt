@@ -4,8 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -236,17 +234,16 @@ fun Sektion(
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
-    // Leuchten (Heute): ruhig atmender Lichthof um die ganze Fläche, wanderndes Licht darin und ein umlaufender Lichtrand.
-    // Nur mit eingeschalteter Bewegung (Einstellung „Bewegung“) und laufenden Systemanimationen; sonst leuchtet der Bereich still.
+    // Leuchten (Heute): der ganze Bereich glüht nach außen wie eine Sonne; die Fläche selbst bleibt deckend und ruhig.
+    // Nur der Lichthof atmet langsam, mit eingeschalteter Bewegung (Einstellung „Bewegung“) und laufenden Systemanimationen;
+    // sonst glüht der Bereich still.
     val kontext = LocalContext.current
     val systemAnimationen = remember {
         android.provider.Settings.Global.getFloat(kontext.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
     }
     val bewegt = leuchten && LocalBewegung.current && systemAnimationen
     val lichtLauf = if (bewegt) rememberInfiniteTransition(label = "heuteLicht") else null
-    val drehung = lichtLauf?.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "lichtDreh")
     val atem = lichtLauf?.animateFloat(0f, 1f, infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Restart), label = "lichtAtem")
-    val drehLeser: () -> Float = { drehung?.value ?: 35f }
     val atemLeser: () -> Float = { atem?.value ?: 0.25f }
     val aufFarbe = aufFarbe(farbe)
     // 0 = automatisch (beim Start sind alle Bereiche offen, auch leere, damit man überall hineinziehen kann; mit [startZu]
@@ -284,21 +281,21 @@ fun Sektion(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 11.dp)
+            // Heute bekommt oben und unten mehr Luft, damit der Lichthof frei abstrahlen kann.
+            .padding(horizontal = 14.dp, vertical = if (leuchten) 18.dp else 11.dp)
             .einblenden(verzoegerung)
             .graphicsLayer { scaleX = hub; scaleY = hub }
             .ablageZiel(zustand, zielSchluessel, ziel)
-            .then(if (leuchten) Modifier.lichtHof(f, farbe, atemLeser) else Modifier)
+            .then(if (leuchten) Modifier.lichtHof(f, farbe, atemLeser).deckendeFlaeche(f) else Modifier)
             // Farbiger Rahmen in der Bereichsfarbe grenzt die Bereiche klar voneinander ab.
-            .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe, randFarbe = farbe.copy(alpha = if (kraeftig) 0.9f else if (f.dunkel) 0.55f else 0.45f))
-            .then(if (leuchten) Modifier.lichtGlanz(f, farbe, drehLeser, atemLeser) else Modifier)
+            .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe, randFarbe = farbe.copy(alpha = if (kraeftig || leuchten) 0.9f else if (f.dunkel) 0.55f else 0.45f))
             .then(if (schwebt) Modifier.glas(f, erhoeht = 0f, fuellung = rand.copy(alpha = 0.12f)) else Modifier)
             // Beim Ziehen ohne Größenanimation: ZiehZustand gleicht den Spannenwechsel der Zeitleiste im selben Frame per
             // Scroll aus; eine nachfedernde Höhe ließe den Inhalt erst springen und dann zurückdriften.
             .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().kopfBand(f, farbe, kraeftig, satt = leuchten) { offenAnteil.value }.antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {
@@ -341,7 +338,8 @@ fun Sektion(
  * Aufgeklappt ([offen] = 1) sind nur die oberen Ecken rund und eine farbige Linie trennt den Kopf vom Inhalt.
  * Pfade und Verläufe liegen im Zeichen-Cache und werden nur bei neuer Größe oder während des Klappens neu gebaut.
  */
-private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, offen: () -> Float): Modifier = drawWithCache {
+/** [satt]: kräftigeres, dunkleres Band in der Bereichsfarbe mit deutlichen, ruhigen Streifen (Bereich Heute). */
+private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, satt: Boolean = false, offen: () -> Float): Modifier = drawWithCache {
     val anteil = offen()
     val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
     val unten = CornerRadius(r * (1f - anteil))
@@ -349,11 +347,13 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, offen:
         addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r), CornerRadius(r), unten, unten))
     }
     // Kräftig (Prioritäten): deutlich sattere Fläche und Streifen, damit Rot, Gelb und Grün klar unterscheidbar sind.
+    val dunkler = lerp(farbe, Color.Black, 0.14f)
     val band = Brush.horizontalGradient(
-        if (kraeftig) listOf(farbe.copy(alpha = if (f.dunkel) 0.62f else 0.55f), farbe.copy(alpha = if (f.dunkel) 0.36f else 0.30f))
+        if (satt) listOf(dunkler.copy(alpha = if (f.dunkel) 0.72f else 0.62f), dunkler.copy(alpha = if (f.dunkel) 0.46f else 0.38f))
+        else if (kraeftig) listOf(farbe.copy(alpha = if (f.dunkel) 0.62f else 0.55f), farbe.copy(alpha = if (f.dunkel) 0.36f else 0.30f))
         else listOf(farbe.copy(alpha = if (f.dunkel) 0.46f else 0.34f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)),
     )
-    val streifenFarbe = farbe.copy(alpha = if (kraeftig) (if (f.dunkel) 0.34f else 0.30f) else if (f.dunkel) 0.16f else 0.13f)
+    val streifenFarbe = if (satt) dunkler.copy(alpha = if (f.dunkel) 0.42f else 0.36f) else farbe.copy(alpha = if (kraeftig) (if (f.dunkel) 0.34f else 0.30f) else if (f.dunkel) 0.16f else 0.13f)
     val abstand = 16.dp.toPx()
     val breite = 5.dp.toPx()
     val h = size.height
@@ -373,85 +373,56 @@ private fun Modifier.kopfBand(f: Farben, farbe: Color, kraeftig: Boolean, offen:
     }
 }
 
+/** Deckender Grund unter dem Glas (Bereich Heute): Die Fläche wirkt nicht durchsichtig, der Lichthof bleibt außen. */
+private fun Modifier.deckendeFlaeche(f: Farben): Modifier = drawWithCache {
+    val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
+    val grund = f.flaeche.copy(alpha = 1f)
+    onDrawBehind { drawRoundRect(grund, cornerRadius = CornerRadius(r)) }
+}
+
 /**
- * Lichthof um die ganze Fläche (Bereich Heute): weich verwischtes Leuchten in der Bereichsfarbe, nur außerhalb der Form,
- * damit die Glasfläche darunter klar bleibt. [atem] läuft 0..1 und lässt das Leuchten langsam an- und abschwellen.
- * Gelesen wird [atem] nur beim Zeichnen: kein Neuaufbau der Oberfläche, nur neues Zeichnen.
+ * Sonnenhafter Lichthof um die ganze Fläche (Bereich Heute): ein heller, enger Glutsaum direkt an der Kante und
+ * ein weiter, warmer Schein, der weit nach außen abstrahlt. Gezeichnet wird nur außerhalb der Form, damit die
+ * Fläche darunter klar und deckend bleibt. [atem] läuft 0..1 und lässt den Schein langsam an- und abschwellen;
+ * gelesen wird er nur beim Zeichnen, also ohne Neuaufbau der Oberfläche.
  */
 private fun Modifier.lichtHof(f: Farben, farbe: Color, atem: () -> Float): Modifier = drawWithCache {
     val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
-    val weite = 13.dp.toPx()
-    val stark = if (f.dunkel) 0.75f else 0.55f
+    val weit = 24.dp.toPx()
+    val eng = 7.dp.toPx()
+    val glut = lerp(farbe, Color(0xFFFFE08A), 0.45f)
     val unscharf = android.os.Build.VERSION.SDK_INT >= 28
-    val pinsel = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+    fun pinsel(radius: Float) = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         style = android.graphics.Paint.Style.FILL
-        if (unscharf) maskFilter = android.graphics.BlurMaskFilter(weite, android.graphics.BlurMaskFilter.Blur.NORMAL)
+        if (unscharf) maskFilter = android.graphics.BlurMaskFilter(radius, android.graphics.BlurMaskFilter.Blur.NORMAL)
     }
+    val schein = pinsel(weit)
+    val saum = pinsel(eng)
     // Ältere Android-Versionen verwischen nicht hardwarebeschleunigt: dort gestufte Ringe statt Unschärfe.
-    val ringe = 9
-    val ringBreite = weite / ringe
+    val ringe = 12
+    val ringBreite = weit / ringe
     onDrawBehind {
         val welle = 0.5f - 0.5f * kotlin.math.cos(atem() * 2f * Math.PI.toFloat())
-        val a = stark * (0.55f + 0.45f * welle)
         clipPath(form, ClipOp.Difference) {
             if (unscharf) {
-                pinsel.color = farbe.copy(alpha = a).toArgb()
-                val aus = weite * 0.15f
-                drawIntoCanvas { it.nativeCanvas.drawRoundRect(-aus, -aus, size.width + aus, size.height + aus, r + aus, r + aus, pinsel) }
+                drawIntoCanvas { c ->
+                    val n = c.nativeCanvas
+                    val aus = weit * 0.35f
+                    schein.color = farbe.copy(alpha = 0.78f + 0.22f * welle).toArgb()
+                    n.drawRoundRect(-aus, -aus, size.width + aus, size.height + aus, r + aus, r + aus, schein)
+                    saum.color = glut.copy(alpha = 0.95f).toArgb()
+                    n.drawRoundRect(-eng * 0.3f, -eng * 0.3f, size.width + eng * 0.3f, size.height + eng * 0.3f, r, r, saum)
+                }
             } else {
                 for (i in 0 until ringe) {
                     val d = ringBreite * (i + 0.5f)
+                    val nah = 1f - i / ringe.toFloat()
                     drawRoundRect(
-                        farbe.copy(alpha = a * 0.35f * (1f - i / ringe.toFloat())), Offset(-d, -d), Size(size.width + 2 * d, size.height + 2 * d),
+                        lerp(farbe, glut, nah * nah).copy(alpha = (0.55f + 0.2f * welle) * nah), Offset(-d, -d), Size(size.width + 2 * d, size.height + 2 * d),
                         CornerRadius(r + d), style = Stroke(ringBreite),
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Leuchten innerhalb der Fläche (Bereich Heute), über dem Glas und unter dem Inhalt: zwei weiche Lichtflecken wandern
- * langsam über die ganze Fläche, dazu ein innerer Schimmer am Rand und ein Lichtrand, dessen hellste Stelle ruhig umläuft.
- */
-private fun Modifier.lichtGlanz(f: Farben, farbe: Color, drehung: () -> Float, atem: () -> Float): Modifier = drawWithCache {
-    val r = f.radius.toPx().coerceAtMost(size.minDimension / 2)
-    val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
-    val randBreite = 2.5.dp.toPx()
-    val innen = Path().apply {
-        addRoundRect(RoundRect(randBreite, randBreite, size.width - randBreite, size.height - randBreite, CornerRadius((r - randBreite).coerceAtLeast(0f))))
-    }
-    val gross = kotlin.math.max(size.width, size.height)
-    val diagonale = kotlin.math.sqrt(size.width * size.width + size.height * size.height)
-    val hell = lerp(farbe, Color.White, 0.55f)
-    val fleckA = Brush.radialGradient(listOf(farbe.copy(alpha = if (f.dunkel) 0.30f else 0.22f), Color.Transparent), Offset.Zero, gross * 0.7f)
-    val fleckB = Brush.radialGradient(listOf(hell.copy(alpha = if (f.dunkel) 0.16f else 0.30f), Color.Transparent), Offset.Zero, gross * 0.5f)
-    val schimmer = Brush.verticalGradient(listOf(farbe.copy(alpha = if (f.dunkel) 0.28f else 0.20f), farbe.copy(alpha = 0.06f), farbe.copy(alpha = if (f.dunkel) 0.20f else 0.14f)))
-    val schimmerStrich = Stroke(width = 16.dp.toPx())
-    val lauf = Brush.sweepGradient(
-        0f to farbe.copy(alpha = 0.25f), 0.18f to farbe.copy(alpha = 0.55f), 0.25f to hell, 0.32f to farbe.copy(alpha = 0.55f),
-        0.5f to farbe.copy(alpha = 0.25f), 0.68f to farbe.copy(alpha = 0.45f), 0.75f to hell.copy(alpha = 0.8f), 0.82f to farbe.copy(alpha = 0.45f),
-        1f to farbe.copy(alpha = 0.25f),
-        center = Offset.Zero,
-    )
-    val mitte = Offset(size.width / 2, size.height / 2)
-    onDrawBehind {
-        val t = atem() * 2f * Math.PI.toFloat()
-        clipPath(form) {
-            // Wanderndes Licht: zwei Flecken auf gegenläufigen Ellipsenbahnen, so dass die ganze Fläche lebendig leuchtet.
-            translate(size.width * (0.5f + 0.38f * kotlin.math.cos(t)), size.height * (0.5f + 0.42f * kotlin.math.sin(t))) {
-                drawCircle(fleckA, gross * 0.7f, Offset.Zero)
-            }
-            translate(size.width * (0.5f - 0.40f * kotlin.math.cos(t + 1.2f)), size.height * (0.5f - 0.38f * kotlin.math.sin(t + 1.2f))) {
-                drawCircle(fleckB, gross * 0.5f, Offset.Zero)
-            }
-            // Innerer Schimmer entlang des Rands (nur die innere Hälfte des Strichs ist sichtbar).
-            drawPath(form, schimmer, style = schimmerStrich)
-            // Umlaufender Lichtrand: Ring zwischen Form und eingerückter Form, darin ein drehender Verlauf.
-            clipPath(innen, ClipOp.Difference) {
-                translate(mitte.x, mitte.y) { rotate(drehung(), Offset.Zero) { drawCircle(lauf, diagonale, Offset.Zero) } }
             }
         }
     }
