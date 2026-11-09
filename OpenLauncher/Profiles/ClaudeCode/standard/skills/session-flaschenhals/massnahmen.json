@@ -4,23 +4,24 @@
     {
       "id": "M1",
       "titel": "Lange Skripte per Write statt als Bash-Heredoc",
-      "datum": "2026-11-07T14:31",
-      "status": "wirkt",
+      "datum": "2026-11-09T15:07",
+      "status": "aktiv",
       "plattform": [
         "windows"
       ],
-      "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts.",
+      "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts. Nachtrag 09.11.2026: trotz Gedächtniszeile erneut 1 Fehlschlag (Sitzung 4f767562, 60-Zeilen-Heredoc) -> Hook build-ablauf-guard.py blockt jetzt Bash-Heredocs ab 30 Zeilen unter Windows.",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/MEMORY.md (eine Zeile)",
         "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md",
-        "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Zeile 16"
+        "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Zeile 16",
+        "claude-code-setup/hooks/build-ablauf-guard.py (Heredoc-Sperre)"
       ],
       "werkzeug": "Bash",
       "aufruf_regex": "<<\\s*['\"]?[A-Za-z_]+['\"]?",
       "min_zeilen": 31,
       "fehler_regex": "unexpected EOF while looking for matching",
       "pruefung": "Nach 10 weiteren Sitzungen: Fehler M1 nachher = 0 und lange Heredocs nachher deutlich seltener -> status wirkt. Kommen weiter Fehler -> wirkungslos, Ursache neu prüfen.",
-      "ruecknahme": "MEMORY.md-Zeile und lange-skripte-per-write.md löschen, Almanach-Abschnitt bleibt als Wissen.",
+      "ruecknahme": "MEMORY.md-Zeile und lange-skripte-per-write.md löschen, Almanach-Abschnitt bleibt als Wissen. Heredoc-Block in build-ablauf-guard.py entfernen.",
       "kosten": "eine Zeile (~45 Tokens) in jeder Sitzung"
     },
     {
