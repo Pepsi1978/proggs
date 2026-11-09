@@ -313,7 +313,9 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                 }
                 // Wiederholung
                 Block("Wiederholung") {
-                    ChipReihe { Wiederholung.entries.forEach { w -> Chip(w.anzeige, vm.eWdh == w) { vm.eWdh = w } } }
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Wiederholung.entries.forEach { w -> Chip(w.anzeige, vm.eWdh == w, modifier = Modifier.fillMaxWidth()) { vm.eWdh = w } }
+                    }
                     if (vm.eWdh == Wiederholung.ALLE_X_TAGE) TagesAbstand(vm)
                 }
                 // Checkliste
