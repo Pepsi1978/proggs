@@ -47,6 +47,9 @@ HINWEIS_KILL = (
 )
 
 
+HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]+['\"]?")
+
+
 def verweigern(grund):
     sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
                                  "permissionDecision": "deny", "permissionDecisionReason": grund}}))
@@ -174,6 +177,14 @@ def main():
             app, dateien = b
             liste = ', '.join(dateien[:6]) + (f' (+{len(dateien) - 6})' if len(dateien) > 6 else '')
             verweigern(HINWEIS_BUMP.format(app=app, log='app/src/main/assets/versionslog.json', dateien=liste))
+            return
+    except Exception:
+        pass
+    try:
+        # Windows-Bash: Heredocs über 30 Zeilen scheitern oft mit "unexpected EOF" (Maßnahme M1, Almanach python-windows §10.1).
+        if os.name == 'nt' and d.get('tool_name') == 'Bash' and HEREDOC.search(cmd) and cmd.count('\n') >= 30:
+            verweigern("STOPP – langes Bash-Heredoc (>30 Zeilen) scheitert unter Windows oft mit 'unexpected EOF'.\n"
+                       "Skript per Write in den Scratchpad legen und dann mit python/pwsh <pfad> ausführen.")
             return
     except Exception:
         pass
