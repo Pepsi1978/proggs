@@ -13,3 +13,5 @@ Windows-Fenster-Fehler ("Klick auf die Taskleiste zeigt kein Fenster"): `GetFore
 - Läuft die App noch: ZUERST live messen (EnumWindows über die PID: `IsIconic`, Rect, Cloaked, Foreground-HWND), bevor irgendetwas neu gestartet wird – der Zustand ist Minuten später weg. Danach Laufzeitlog gegen die Messung stellen.
 - Annahmen über Shell-Nachrichten (etwa "die Shell sendet beim Taskleisten-Klick kein SC_RESTORE") verfallen mit dem Windows-Build, am Log gegenprüfen.
 - Siehe `bugs`-Eintrag vom 20.09.2026 und `OpenLauncher/tests/window-activation-source-guard.ps1`.
+
+**Nachtrag 30.09.2026:** Neuer Fall ohne jede Logzeile: minimiert + systemweit KEIN Vordergrundfenster (`GetForegroundWindow()=0`). Taskleisten-Klick lieferte kein SC_RESTORE; ein direkt gesendetes `PostMessage(SC_RESTORE)` stellte sofort her. Messskript immer mit `SetProcessDPIAware` (sonst -16000 statt -32000). Ab 1.24.80 schreibt der WndProc alle Aktivierungsnachrichten mit (Ringpuffer im Fehlerlog) — beim nächsten Mal zuerst `TraceActivationMessage`-Zeilen im Log lesen. Almanach `bugs/desktop/dotnet-csharp.md` §5.9.

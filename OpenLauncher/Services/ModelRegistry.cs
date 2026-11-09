@@ -161,6 +161,7 @@ public sealed class ModelRegistry
         catch (Exception ex)
         {
             Logger.Instance.Warn("ModelRegistry", "Load", $"Laden fehlgeschlagen, Defaults: {ex.Message}");
+            BackupBrokenFile();
         }
 
         reg.Groups = CreateDefaults();
@@ -187,6 +188,26 @@ public sealed class ModelRegistry
         catch (Exception ex)
         {
             Logger.Instance.Warn("ModelRegistry", "MigrateLegacyFile", $"Uebernahme fehlgeschlagen: {ex.Message}", new { LegacyFilePath, FilePath });
+        }
+    }
+
+    /// <summary>
+    /// Eine nicht lesbare models.json (z. B. Git-Konfliktmarker nach einem Update) wird gleich durch
+    /// die Defaults ueberschrieben — Modell-Liste, Reihenfolge und Hidden-State waeren verloren.
+    /// Vorher eine Kopie ablegen, damit sich der Stand wiederherstellen laesst.
+    /// </summary>
+    private static void BackupBrokenFile()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return;
+            var backup = FilePath + ".defekt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            File.Copy(FilePath, backup, overwrite: true);
+            Logger.Instance.Warn("ModelRegistry", "BackupBrokenFile", "Defekte Modell-Liste gesichert", new { backup });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "BackupBrokenFile", $"Sicherung fehlgeschlagen: {ex.Message}");
         }
     }
 

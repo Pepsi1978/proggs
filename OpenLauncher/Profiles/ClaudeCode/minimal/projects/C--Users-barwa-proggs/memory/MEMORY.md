@@ -27,7 +27,10 @@
 - [Fernsteuern](handy-nicht-blind-fernsteuern.md): vor adb-Eingaben Vordergrund-App prüfen
 - [Link zu Windows](link-zu-windows-explorer.md): nie force-stoppen, Start per StartUpActivity
 - [Cloud-Bau](android-cloud-bau-rclone.md): rclone-Konfig in SK\rclone, eigener OAuth-Client
-- Debug ruckelt: [GenialeIdeen](genialeideen-install-schnell.md) installSchnell, [NewsKompass](newskompass-release-installieren.md) Release-APK
+- [Android immer Debug](android-immer-debug.md): apk-update-Standard assembleDebug, keine Release-/schnell-Ausnahmen (außer BestJournal Play)
+- [Gradle-Cache](gradle-config-cache-versionslog.md): apk-update „Build veraltet?“ → .gradle/configuration-cache löschen
+- [apk-update](apk-update-nicht-aus-git-bash.md): nicht aus Git Bash starten (sonst „origin/main nicht verfügbar“), PowerShell-Tool nehmen
+- [Overlay-Version](overlay-informationalversion-mitziehen.md): TVO/CVO-csproj nur Version bumpen, InformationalVersion nie von Hand
 - [Hostinger](hostinger-server-rolle.md): nur Rückfall ohne Rechner; Android bauen + Tunnel-Install
 
 ## Jarvis, Rechner, Projekte

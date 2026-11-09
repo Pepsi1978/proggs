@@ -102,12 +102,45 @@ public static class RepoAbgleich
         var mitStash = await Kommandozeile.AusfuehrenAsync("git", "merge --ff-only --quiet --autostash @{u}",
             VorspulZeitlimit, repoWurzel, abbruch);
         // git reports success here: the tree is at the upstream, the local changes wait in the stash.
-        return mitStash.ExitCode == 0 && mitStash.Ausgabe.Contains(StashKonflikt, StringComparison.OrdinalIgnoreCase)
-            ? mitStash with { ExitCode = 1 }
-            : mitStash;
+        if (mitStash.ExitCode == 0 && mitStash.Ausgabe.Contains(StashKonflikt, StringComparison.OrdinalIgnoreCase))
+        {
+            await LaufzeitdateienEntkonfliktenAsync(repoWurzel, protokoll, abbruch);
+            return mitStash with { ExitCode = 1 };
+        }
+        return mitStash;
     }
 
     private const string StashKonflikt = "safe in the stash";
+
+    /// <summary>
+    /// Files the OpenLauncher rewrites at runtime (models.json) and that are versioned at the same time.
+    /// A collision with the autostash leaves conflict markers in them; the launcher cannot parse that,
+    /// falls back to its defaults and overwrites the user's model list (hidden models, order, providers).
+    /// </summary>
+    private static readonly string[] Laufzeitdateien = ["models.json"];
+
+    /// <summary>
+    /// After a colliding autostash the user's own state of a runtime file wins: take the stash side
+    /// ("theirs" while applying a stash) and unstage it. The other conflicted files keep their markers.
+    /// </summary>
+    private static async Task LaufzeitdateienEntkonfliktenAsync(string repoWurzel, IProgress<string>? protokoll,
+                                                                CancellationToken abbruch)
+    {
+        var limit = TimeSpan.FromMinutes(2);
+        var offen = await Kommandozeile.AusfuehrenAsync("git", "diff --name-only --diff-filter=U", limit, repoWurzel, abbruch);
+        if (offen.ExitCode != 0) return;
+
+        foreach (var zeile in offen.Ausgabe.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var datei = Path.GetFileName(zeile);
+            if (!Laufzeitdateien.Contains(datei, StringComparer.OrdinalIgnoreCase)) continue;
+
+            var lokal = await Kommandozeile.AusfuehrenAsync("git", $"checkout --theirs -- \"{zeile}\"", limit, repoWurzel, abbruch);
+            if (lokal.ExitCode != 0) continue;
+            await Kommandozeile.AusfuehrenAsync("git", $"reset --quiet -- \"{zeile}\"", limit, repoWurzel, abbruch);
+            Berichten(protokoll, "repo.laufzeitdatei", $"{zeile}: Konflikt mit dem Autostash, der lokale Stand bleibt erhalten.");
+        }
+    }
 
     /// <summary>The real reason for a refused fast-forward, not a guess at the usual one.</summary>
     internal static string VorspulGrund(BefehlErgebnis lauf)
