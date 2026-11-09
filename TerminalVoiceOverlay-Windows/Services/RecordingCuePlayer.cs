@@ -20,6 +20,8 @@ namespace TerminalVoiceOverlay.Services
         // silence forever) kept Windows reporting an active audio stream, blocked
         // sleep and kept Bluetooth headsets awake.
         private const int IdleCloseMs = 4000;
+        /// <summary>Laengster Ton (Fehler, 370 ms) plus Ausgabelatenz: so lange klingt ein Ton noch nach.</summary>
+        private const int CueTailMs = 500;
         private WaveOutEvent? _output;
         private BufferedWaveProvider? _buffer;
         private bool _playbackHealthy;
@@ -63,7 +65,7 @@ namespace TerminalVoiceOverlay.Services
         // Parakeet-Rechnung liessen den Ton am Ende rattern (09.11.2026).
         public void PlayStop() => Play(_stopPcm, "stop", freshDevice: true);
 
-        public void PlayError() => Play(_errorPcm, "error");
+        public void PlayError() => Play(_errorPcm, "error", freshDevice: true);
 
         private void Play(byte[] pcm, string cue, bool freshDevice = false)
         {
@@ -73,7 +75,8 @@ namespace TerminalVoiceOverlay.Services
                 {
                     if (_disposed) return;
 
-                    if (freshDevice) DisposeOutput();
+                    // Nicht, solange der vorige Ton noch klingt (schnelles Start/Stopp): sonst hart abgeschnitten.
+                    if (freshDevice && Environment.TickCount64 - _lastUseTicks > CueTailMs) DisposeOutput();
                     EnsureOutput();
 
                     _buffer!.ClearBuffer();
