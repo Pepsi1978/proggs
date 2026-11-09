@@ -237,6 +237,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setzeTag(tag: Long?) {
+        // Eine feste Erinnerung wandert mit der Aufgabe (z. B. bleibt „zwei Tage vorher“ zwei Tage vorher).
+        eErinnerungAm = Tage.amVerschieben(eErinnerungAm, eTag, tag)
         eTag = tag
         if (tag != null && ePrio == Prioritaet.SPAETER) ePrio = Prioritaet.MITTEL
         if (tag == null) eMinuten = null
@@ -263,6 +265,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 textVorKorrektur = quelle
                 korrekturFassungen = korrekturFassungen + besser
                 eText = besser
+                eCursor = -1
             } catch (c: CancellationException) {
                 throw c
             } catch (e: Throwable) {
@@ -277,6 +280,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun korrekturZuruecknehmen() {
         val original = textVorKorrektur ?: return
         eText = original
+        eCursor = -1
         textVorKorrektur = null
     }
 
@@ -424,7 +428,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val vorlesen = if (minuten != null && a.minuten == null) einstellungen.vorlesenStandard else a.vorlesen
                     // Täglich: Ziehen ändert nur die Uhrzeit, kein Tag fällt dadurch weg. Früher anfangen geht.
                     val tag = if (a.laeuftTaeglich) minOf(maxOf(zeile.tag ?: heute, heute), ziel.tag) else ziel.tag
-                    repo.speichere(zeile.copy(tag = tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && (minuten != null || zeile.erinnerungAm != null), vorlauf = vorlauf, vorlesen = vorlesen))
+                    val am = Tage.amVerschieben(zeile.erinnerungAm, zeile.tag, tag)
+                    repo.speichere(zeile.copy(tag = tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && (minuten != null || am != null), vorlauf = vorlauf, vorlesen = vorlesen, erinnerungAm = am))
                     if (minuten != null) hinweiseAnfragen()
                 }
                 is Ziel.Prio -> if (a.laeuftTaeglich) {

@@ -113,7 +113,7 @@ object Ansage {
     private suspend fun durchlauf(app: Context) {
         val heute = Tage.heute()
         val offen = AufgabenRepository.get(app).alleEinmal().filter { braucht(it, heute) }
-            .sortedBy { Tage.millis(it.tag!!, it.minuten!!) }
+            .sortedBy { a -> a.erinnerungAm ?: a.tag?.let { t -> a.minuten?.let { Tage.millis(t, it) } } ?: Long.MAX_VALUE }
         offen.forEach { a ->
             try {
                 bereite(app, a)

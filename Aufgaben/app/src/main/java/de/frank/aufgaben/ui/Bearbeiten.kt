@@ -218,6 +218,10 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                         }
                     }
                 }
+                if (!neu && vm.aufnahme != Aufnahme.AUS) Text(
+                    if (vm.aufnahme == Aufnahme.LAEUFT) "Ich höre zu … zum Beenden den roten Knopf tippen" else "Wird transkribiert …",
+                    color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp),
+                )
                 // Großes Mikrofon nur beim Anlegen; beim Bearbeiten spricht man über den runden Knopf am Textfeld.
                 if (neu) Mikrofon(vm)
                 // Erkannter Vorschlag
@@ -419,11 +423,14 @@ private fun ErinnerungsZeit(vm: AppViewModel) {
             ?: (vm.eTag?.let { LocalDate.ofEpochDay(it) } ?: LocalDate.now()).atTime(m / 60, m % 60)
         DatePickerDialog(context, { _, j, mo, t ->
             TimePickerDialog(context, { _, h, mi ->
-                vm.eErinnerungAm = LocalDate.of(j, mo + 1, t).atTime(h, mi).atZone(zone).toInstant().toEpochMilli()
-                vm.hinweiseAnfragen()
+                val wahl = LocalDate.of(j, mo + 1, t).atTime(h, mi).atZone(zone).toInstant().toEpochMilli()
+                if (wahl <= System.currentTimeMillis()) vm.melde("Dieser Zeitpunkt ist schon vorbei – bitte einen späteren wählen.")
+                else { vm.eErinnerungAm = wahl; vm.hinweiseAnfragen() }
             }, basis.hour, basis.minute, true).show()
-        }, basis.year, basis.monthValue - 1, basis.dayOfMonth).show()
+        }, basis.year, basis.monthValue - 1, basis.dayOfMonth).apply { datePicker.minDate = System.currentTimeMillis() - 1000 }.show()
     }
+    // Erinnerung eingeschaltet, aber weder Uhrzeit noch Zeitpunkt: gleich „Am …“ anbieten.
+    LaunchedEffect(Unit) { if (vm.eErinnerungAm == null && vm.eMinuten == null) amWaehlen() }
     ChipReihe {
         Chip("Vorlauf", am == null, icon = Icons.Rounded.Schedule) {
             if (vm.eMinuten == null) vm.melde("Für einen Vorlauf zuerst eine Uhrzeit setzen – oder „Am …“ wählen.") else vm.eErinnerungAm = null
@@ -436,9 +443,10 @@ private fun ErinnerungsZeit(vm: AppViewModel) {
             Text("Ohne Uhrzeit gibt es keinen Vorlauf. Wähle „Am …“ für Datum und Uhrzeit der Erinnerung.", color = f.textLeise, fontSize = 12.sp)
         } else {
             val v = vm.eVorlauf.coerceIn(0, 60)
+            val echt = vm.eVorlauf.coerceAtLeast(0)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (v == 0) "Pünktlich" else "$v Min. vorher", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("um ${Tage.zeit(((min - v) % 1440 + 1440) % 1440)} Uhr", color = f.textLeise, fontSize = 13.sp)
+                Text(if (echt == 0) "Pünktlich" else "$echt Min. vorher", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("um ${Tage.zeit(((min - echt) % 1440 + 1440) % 1440)} Uhr", color = f.textLeise, fontSize = 13.sp)
             }
             Slider(
                 value = v.toFloat(),
@@ -480,7 +488,7 @@ private fun ErinnerungsZeit(vm: AppViewModel) {
 @Composable
 private fun TagesAbstand(vm: AppViewModel) {
     val f = LocalFarben.current
-    var eingabe by remember { mutableStateOf(vm.eWdhTage.toString()) }
+    var eingabe by remember(vm.eId) { mutableStateOf(vm.eWdhTage.toString()) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Alle", color = f.text, fontSize = 16.sp)
         Box(Modifier.padding(horizontal = 10.dp).width(72.dp).glas(f, 12.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -499,7 +507,11 @@ private fun TagesAbstand(vm: AppViewModel) {
         Text(if (vm.eWdhTage == 1) "Tag" else "Tage", color = f.text, fontSize = 16.sp)
     }
     ChipReihe { listOf(2, 3, 10, 14, 21, 25, 28, 30, 45, 60, 90).forEach { d -> Chip("$d", vm.eWdhTage == d) { vm.eWdhTage = d; eingabe = d.toString() } } }
-    Text("Nach dem Erledigen kommt die Aufgabe ${vm.eWdhTage} ${if (vm.eWdhTage == 1) "Tag" else "Tage"} später wieder, gezählt ab ihrem Tag.", color = f.textLeise, fontSize = 12.sp)
+    Text(
+        if (eingabe.isEmpty()) "Bitte eine Zahl eintragen – sonst bleibt es bei ${vm.eWdhTage} ${if (vm.eWdhTage == 1) "Tag" else "Tagen"}."
+        else "Nach dem Erledigen kommt die Aufgabe ${vm.eWdhTage} ${if (vm.eWdhTage == 1) "Tag" else "Tage"} nach ihrem Tag wieder (war er schon vorbei, ab gestern gezählt).",
+        color = if (eingabe.isEmpty()) f.gefahr else f.textLeise, fontSize = 12.sp,
+    )
 }
 
 @Composable

@@ -72,7 +72,7 @@ class AufgabenRepository private constructor(context: Context) {
             val basis = if (taeglich) tagJetzt ?: heute else maxOf(aufgabe.tag ?: heute, heute - 1)
             Tage.naechster(basis, aufgabe.wdh, aufgabe.wdhTage)?.let { naechster ->
                 // Eine feste Erinnerung wandert mit: gleicher Abstand zum neuen Tag wie zum alten.
-                val am = aufgabe.erinnerungAm?.let { m -> aufgabe.tag?.let { t -> m + (naechster - t) * 86_400_000L } }
+                val am = Tage.amVerschieben(aufgabe.erinnerungAm, aufgabe.tag ?: basis, naechster)
                 val neu = aufgabe.copy(
                     id = 0, tag = naechster, erinnerungAm = am, folgeVon = aufgabe.id, erledigt = false, erledigtAm = null,
                     erstellt = System.currentTimeMillis(), geaendert = System.currentTimeMillis(),

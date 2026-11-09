@@ -45,6 +45,15 @@ object Tage {
     fun naechsteMitternacht(): Long = LocalDate.now().plusDays(1)
         .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+    /**
+     * Verschiebt eine feste Erinnerung ([am], Millisekunden) um so viele Tage, wie die Aufgabe von [von] nach [nach]
+     * wandert. Rechnet in Ortszeit, damit 08:00 auch über eine Zeitumstellung hinweg 08:00 bleibt.
+     */
+    fun amVerschieben(am: Long?, von: Long?, nach: Long?): Long? {
+        if (am == null || von == null || nach == null || von == nach) return am
+        return java.time.Instant.ofEpochMilli(am).atZone(ZoneId.systemDefault()).plusDays(nach - von).toInstant().toEpochMilli()
+    }
+
     /** Nächster Tag einer Wiederholung ab [tag]. */
     fun naechster(tag: Long, wdh: Wiederholung, tage: Int = 0): Long? {
         val d = LocalDate.ofEpochDay(tag)

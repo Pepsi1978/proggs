@@ -78,7 +78,16 @@ object Planer {
             // Täglich: Ist der Zeitpunkt heute vorbei, gilt schon der von morgen.
             var tag = a.aufHeute(heute).tag
             if (a.laeuftTaeglich && tag == heute && min != null && Tage.millis(heute, min) - a.vorlauf * 60_000L <= jetzt) tag = heute + 1
-            val am = a.erinnerungAm
+            var am = a.erinnerungAm
+            // Täglich und noch offen: Der feste Zeitpunkt gilt jeden Tag zur selben Uhrzeit, bis die Aufgabe erledigt ist.
+            if (am != null && a.laeuftTaeglich && am <= jetzt) {
+                val zone = java.time.ZoneId.systemDefault()
+                var z = java.time.Instant.ofEpochMilli(am).atZone(zone)
+                val tage = java.time.temporal.ChronoUnit.DAYS.between(z.toLocalDate(), java.time.LocalDate.now(zone))
+                z = z.plusDays(tage)
+                if (z.toInstant().toEpochMilli() <= jetzt) z = z.plusDays(1)
+                am = z.toInstant().toEpochMilli()
+            }
             val zeit = am ?: if (tag != null && min != null) Tage.millis(tag, min) - a.vorlauf * 60_000L else 0L
             // Fester Zeitpunkt („Am“): gilt unabhängig von Tag und Uhrzeit der Aufgabe, auch Tage im Voraus.
             val faellig = if (am != null) true else tag != null && min != null && tag in heute..heute + 1

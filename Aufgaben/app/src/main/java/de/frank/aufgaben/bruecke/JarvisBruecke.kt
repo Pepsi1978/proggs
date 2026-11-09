@@ -115,6 +115,7 @@ class JarvisBruecke : ContentProvider() {
                     erinnerung = a.optBoolean("erinnerung", true) && minuten != null,
                     vorlauf = a.optInt("vorlauf", einstellungen.vorlaufStandard).coerceIn(0, 24 * 60),
                     wiederholung = wdhAus(a.optString("wiederholung")).name,
+                    wdhTage = if (wdhAus(a.optString("wiederholung")) == Wiederholung.ALLE_X_TAGE) a.optInt("wdh_tage", 30).coerceIn(1, 999) else 0,
                     vorlesen = a.optBoolean("vorlesen", true),
                     alsWecker = a.optBoolean("als_wecker", false),
                     schritteJson = Aufgabe.schritteAlsJson(schritte),
@@ -149,6 +150,9 @@ class JarvisBruecke : ContentProvider() {
                     neuerTermin -> true
                     else -> alt.erinnerung
                 }
+                // Feste Erinnerung: wandert mit dem Datum; neue Uhrzeit oder neuer Vorlauf ersetzen sie durch den Vorlauf.
+                val am = if (a.has("uhrzeit") || a.has("vorlauf")) null else Tage.amVerschieben(alt.erinnerungAm, alt.tag, tag)
+                val wdhNeu = if (a.has("wiederholung")) wdhAus(a.optString("wiederholung")) else alt.wdh
                 val text = if (a.has("text")) a.optString("text").trim() else alt.text
                 val titelNeu = a.optString("titel").trim()
                 val neu = alt.copy(
@@ -159,7 +163,14 @@ class JarvisBruecke : ContentProvider() {
                     tag = tag,
                     minuten = minuten,
                     dauer = if (a.has("dauer")) a.optInt("dauer", alt.dauer).coerceIn(5, 24 * 60) else alt.dauer,
-                    erinnerung = erinnerung && (minuten != null || alt.erinnerungAm != null),
+                    erinnerung = erinnerung && (minuten != null || am != null),
+                    erinnerungAm = am,
+                    wdhTage = when {
+                        wdhNeu != Wiederholung.ALLE_X_TAGE -> 0
+                        a.has("wdh_tage") -> a.optInt("wdh_tage", 30).coerceIn(1, 999)
+                        alt.wdhTage > 0 -> alt.wdhTage
+                        else -> 30
+                    },
                     vorlauf = when {
                         a.has("vorlauf") -> a.optInt("vorlauf", alt.vorlauf).coerceIn(0, 24 * 60)
                         neuerTermin -> einstellungen.vorlaufStandard
@@ -171,7 +182,7 @@ class JarvisBruecke : ContentProvider() {
                         else -> alt.vorlesen
                     },
                     alsWecker = if (a.has("als_wecker")) a.optBoolean("als_wecker") else alt.alsWecker,
-                    wiederholung = if (a.has("wiederholung")) wdhAus(a.optString("wiederholung")).name else alt.wiederholung,
+                    wiederholung = wdhNeu.name,
                     schritteJson = if (a.has("schritte")) Aufgabe.schritteAlsJson(schritteAus(a.optJSONArray("schritte"))) else alt.schritteJson,
                     zielId = if (a.has("ziel_id")) a.optLong("ziel_id", -1).takeIf { it >= 0 } else alt.zielId,
                     zielTitel = if (a.has("ziel_titel")) a.optString("ziel_titel").trim() else alt.zielTitel,
@@ -233,6 +244,8 @@ class JarvisBruecke : ContentProvider() {
         .put("vorlesen", a.vorlesen)
         .put("als_wecker", a.alsWecker)
         .put("wiederholung", a.wdh.name)
+        .put("wdh_tage", if (a.wdh == Wiederholung.ALLE_X_TAGE) a.wdhTage else JSONObject.NULL)
+        .put("erinnerung_am", a.erinnerungAm?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime().toString() } ?: JSONObject.NULL)
         .put("erledigt", a.erledigt)
         .put("ueberfaellig", a.ueberfaellig(heute))
         .put("schritte", JSONArray(a.schritte.map { JSONObject().put("text", it.text).put("erledigt", it.erledigt) }))
@@ -265,6 +278,7 @@ class JarvisBruecke : ContentProvider() {
         "werktags" -> Wiederholung.WERKTAGS
         "woechentlich", "wöchentlich" -> Wiederholung.WOECHENTLICH
         "monatlich" -> Wiederholung.MONATLICH
+        "alle_x_tage", "alle x tage", "tage", "intervall" -> Wiederholung.ALLE_X_TAGE
         else -> Wiederholung.KEINE
     }
 
