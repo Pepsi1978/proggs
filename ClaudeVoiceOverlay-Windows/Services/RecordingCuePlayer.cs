@@ -20,8 +20,13 @@ namespace ClaudeVoiceOverlay.Services
         // silence forever) kept Windows reporting an active audio stream, blocked
         // sleep and kept Bluetooth headsets awake.
         private const int IdleCloseMs = 4000;
-        /// <summary>Laengster Ton (Fehler, 370 ms) plus Ausgabelatenz: so lange klingt ein Ton noch nach.</summary>
-        private const int CueTailMs = 500;
+        // Ende des zuletzt eingereihten Tons. Parakeet wartet darauf: Seine 4 Rechen-Threads liessen
+        // sonst bei kurzen Diktaten den Wiedergabe-Thread aushungern, der Stopp-Ton ratterte (09.11.2026).
+        private static long s_cueEndsAtTicks;
+
+        /// <summary>Millisekunden, bis der zuletzt gespielte Ton verklungen ist (0 = keiner laeuft).</summary>
+        public static int RemainingCueMs()
+            => (int)Math.Max(0, System.Threading.Interlocked.Read(ref s_cueEndsAtTicks) - Environment.TickCount64);
         private WaveOutEvent? _output;
         private BufferedWaveProvider? _buffer;
         private bool _playbackHealthy;
@@ -60,14 +65,11 @@ namespace ClaudeVoiceOverlay.Services
 
         public void PlayStart() => Play(_startPcm, "start");
 
-        // Stopp-Ton immer auf frisch geoeffnetem Geraet: Bei kurzen Aufnahmen lief sonst noch der
-        // Stream vom Start-Ton, und das Abschalten des Mikrofons plus die sofort startende
-        // Parakeet-Rechnung liessen den Ton am Ende rattern (09.11.2026).
-        public void PlayStop() => Play(_stopPcm, "stop", freshDevice: true);
+        public void PlayStop() => Play(_stopPcm, "stop");
 
-        public void PlayError() => Play(_errorPcm, "error", freshDevice: true);
+        public void PlayError() => Play(_errorPcm, "error");
 
-        private void Play(byte[] pcm, string cue, bool freshDevice = false)
+        private void Play(byte[] pcm, string cue)
         {
             try
             {
@@ -75,12 +77,13 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     if (_disposed) return;
 
-                    // Nicht, solange der vorige Ton noch klingt (schnelles Start/Stopp): sonst hart abgeschnitten.
-                    if (freshDevice && Environment.TickCount64 - _lastUseTicks > CueTailMs) DisposeOutput();
                     EnsureOutput();
 
                     _buffer!.ClearBuffer();
                     _buffer.AddSamples(pcm, 0, pcm.Length);
+                    long pcmMs = pcm.Length / sizeof(short) * 1000L / SampleRate;
+                    System.Threading.Interlocked.Exchange(ref s_cueEndsAtTicks,
+                        Environment.TickCount64 + DesiredLatencyMs + pcmMs + 50);
                     ArmIdleClose();
                 }
 

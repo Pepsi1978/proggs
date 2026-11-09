@@ -107,6 +107,9 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     var r = LoadIfNeeded();
                     var samples = ReadSamples(wavFilePath);
+                    // Erst rechnen, wenn der Stopp-Ton verklungen ist: Die volle CPU-Last liess ihn sonst rattern.
+                    var cueWaitMs = RecordingCuePlayer.RemainingCueMs();
+                    if (cueWaitMs > 0) Thread.Sleep(cueWaitMs);
                     // Je Aufnahme frisch gelesen: Aenderungen in den Einstellungen wirken sofort, ohne neu zu laden.
                     var hotwords = _hotwordsAvailable ? ParakeetVocabularySetting.Hotwords() : string.Empty;
                     var sw = Stopwatch.StartNew();
@@ -121,7 +124,7 @@ namespace ClaudeVoiceOverlay.Services
                     }
                     DiagLog.Write("STT", "parakeet_decode",
                         ("audio_ms", samples.Length * 1000L / SampleRate), ("ms", sw.ElapsedMilliseconds),
-                        ("hotwords", hotwords.Length == 0 ? 0 : hotwords.Split('/').Length));
+                        ("hotwords", hotwords.Length == 0 ? 0 : hotwords.Split('/').Length), ("cue_wait_ms", cueWaitMs));
                     ScheduleUnload();
                     return string.Join(" ", parts);
                 }).ConfigureAwait(false);

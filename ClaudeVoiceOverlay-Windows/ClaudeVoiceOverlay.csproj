@@ -22,7 +22,7 @@
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
     <!-- Bump only Version. InformationalVersion and its timestamp derive from it at build time;
          a second hand-kept value made rebuild-overlay.ps1 fail after the overlay had stopped. -->
-    <Version>2.4.35</Version>
+    <Version>2.4.36</Version>
     <VersionStand>$([System.DateTime]::Now.ToString('dd.MM.yyyy, HH:mm')) Uhr</VersionStand>
     <InformationalVersion>$(Version) ($(VersionStand))</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
