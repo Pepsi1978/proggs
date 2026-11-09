@@ -26,7 +26,9 @@ enum class Wiederholung(val anzeige: String) {
     TAEGLICH("Täglich"),
     WERKTAGS("Werktags"),
     WOECHENTLICH("Wöchentlich"),
-    MONATLICH("Monatlich");
+    MONATLICH("Monatlich"),
+    /** Fester Tagesabstand, z. B. alle 25 Tage; der Abstand steht in [Aufgabe.wdhTage]. */
+    ALLE_X_TAGE("Alle X Tage");
 
     companion object {
         fun von(name: String?): Wiederholung = entries.firstOrNull { it.name == name } ?: KEINE
@@ -81,9 +83,16 @@ data class Aufgabe(
     @ColumnInfo(defaultValue = "") val zielSymbol: String = "",
     /** Bei Wiederholungen: id der Aufgabe, durch deren Erledigen diese Folge entstanden ist. */
     val folgeVon: Long? = null,
+    /** Abstand in Tagen bei [Wiederholung.ALLE_X_TAGE]. */
+    @ColumnInfo(defaultValue = "0") val wdhTage: Int = 0,
+    /** Erinnerung zu einem festen Zeitpunkt (Millisekunden), unabhängig vom Aufgabenzeitpunkt; null = Vorlauf zur Uhrzeit. */
+    val erinnerungAm: Long? = null,
 ) {
     val prio: Prioritaet get() = Prioritaet.von(prioritaet)
     val wdh: Wiederholung get() = Wiederholung.von(wiederholung)
+    val wdhAnzeige: String get() = if (wdh == Wiederholung.ALLE_X_TAGE) "Alle ${wdhTage.coerceAtLeast(1)} Tage" else wdh.anzeige
+    /** Erinnerung zu einem festen Zeitpunkt statt mit Vorlauf vor der Uhrzeit. */
+    val erinnertAm: Boolean get() = erinnerungAm != null
 
     /** Offen und täglich: steht an jedem Tag ab heute (bzw. ab ihrem Tag, falls der später liegt) und wird nie überfällig. */
     val laeuftTaeglich: Boolean get() = !erledigt && wdh == Wiederholung.TAEGLICH

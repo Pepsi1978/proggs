@@ -52,6 +52,8 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -76,6 +78,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,7 +95,12 @@ import de.frank.aufgaben.ui.theme.LocalFarben
 import de.frank.aufgaben.ui.theme.antippen
 import de.frank.aufgaben.ui.theme.glas
 import de.frank.aufgaben.ui.theme.knopf3d
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable
@@ -176,8 +187,15 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                             if (vm.aufnahme == Aufnahme.LAEUFT) "Ich höre zu …" else "Sprich oder schreibe deine Aufgabe …",
                             color = f.textSchwach, fontSize = 17.sp,
                         )
+                        // Eigener Feldzustand für den Cursor: Diktat landet dort, wo man gerade tippt.
+                        var feld by remember { mutableStateOf(TextFieldValue(vm.eText, TextRange(vm.eText.length))) }
+                        if (feld.text != vm.eText) feld = TextFieldValue(vm.eText, TextRange(vm.eText.length))
                         BasicTextField(
-                            vm.eText, vm::textGeaendert,
+                            feld, { neu ->
+                                feld = neu
+                                vm.eCursor = neu.selection.end
+                                if (neu.text != vm.eText) vm.textGeaendert(neu.text)
+                            },
                             textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 25.sp),
                             cursorBrush = SolidColor(f.primaer),
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -186,6 +204,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                     }
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         val zurueck = vm.textVorKorrektur != null
+                        MikroRund(vm)
                         AktionsKnopf(
                             if (zurueck) Icons.AutoMirrored.Rounded.Undo else Icons.Rounded.AutoFixHigh,
                             if (zurueck) "Zurück" else "KI-Korrektur",
@@ -199,8 +218,8 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                         }
                     }
                 }
-                // Mikrofon
-                Mikrofon(vm)
+                // Großes Mikrofon nur beim Anlegen; beim Bearbeiten spricht man über den runden Knopf am Textfeld.
+                if (neu) Mikrofon(vm)
                 // Erkannter Vorschlag
                 AnimatedVisibility(vm.eVorschlag != null) {
                     val v = vm.eVorschlag
@@ -256,7 +275,8 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                     }
                 }
                 // Erinnerung
-                AnimatedVisibility(vm.eMinuten != null) {
+                // Immer sichtbar: Mit „Am …“ erinnert die App auch an Aufgaben ohne Uhrzeit.
+                run {
                     Block("Erinnerung") {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer)
@@ -264,9 +284,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                             Switch(vm.eErinnerung, { vm.eErinnerung = it; if (it) vm.hinweiseAnfragen() }, colors = SwitchDefaults.colors(checkedTrackColor = f.primaer))
                         }
                         if (vm.eErinnerung) {
-                            ChipReihe {
-                                listOf(0, 5, 10, 15, 30, 60).forEach { v -> Chip(if (v == 0) "Pünktlich" else "$v Min. vorher", vm.eVorlauf == v) { vm.eVorlauf = v } }
-                            }
+                            ErinnerungsZeit(vm)
                             Schalter("Aufgabe vorlesen (6 Fassungen, auch offline)", vm.eVorlesen) { vm.eVorlesen = it }
                             if (vm.eVorlesen) {
                                 val vorlesetext = vm.eText.trim().ifBlank { vm.eTitel.trim() }
@@ -292,6 +310,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                 // Wiederholung
                 Block("Wiederholung") {
                     ChipReihe { Wiederholung.entries.forEach { w -> Chip(w.anzeige, vm.eWdh == w) { vm.eWdh = w } } }
+                    if (vm.eWdh == Wiederholung.ALLE_X_TAGE) TagesAbstand(vm)
                 }
                 // Checkliste
                 Block("Checkliste") {
@@ -368,6 +387,119 @@ private fun Mikrofon(vm: AppViewModel) {
             color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp),
         )
     }
+}
+
+/** Runder Knopf links neben „KI-Korrektur“: startet und beendet das Einsprechen ins Textfeld. */
+@Composable
+private fun MikroRund(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val laeuft = vm.aufnahme == Aufnahme.LAEUFT
+    val verarbeitet = vm.aufnahme == Aufnahme.VERARBEITET
+    Box(
+        Modifier.size(44.dp).knopf3d(if (laeuft) f.gefahr else f.primaer, f.sekundaer, 99.dp, f.dunkel).antippen { vm.mikroTippen() },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (verarbeitet) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+        else Icon(if (laeuft) Icons.Rounded.Stop else Icons.Rounded.Mic, if (laeuft) "Aufnahme beenden" else "Einsprechen", tint = Color.White, modifier = Modifier.size(22.dp))
+    }
+}
+
+private val amFormat = DateTimeFormatter.ofPattern("EE, dd.MM. 'um' HH:mm 'Uhr'", Locale.GERMAN)
+
+/** Vorlauf per Schieberegler (0–60 Min.) oder fester Zeitpunkt „Am …“. */
+@Composable
+private fun ErinnerungsZeit(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val context = LocalContext.current
+    val am = vm.eErinnerungAm
+    fun amWaehlen() {
+        val zone = ZoneId.systemDefault()
+        val m = vm.eMinuten ?: (9 * 60)
+        val basis = am?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDateTime() }
+            ?: (vm.eTag?.let { LocalDate.ofEpochDay(it) } ?: LocalDate.now()).atTime(m / 60, m % 60)
+        DatePickerDialog(context, { _, j, mo, t ->
+            TimePickerDialog(context, { _, h, mi ->
+                vm.eErinnerungAm = LocalDate.of(j, mo + 1, t).atTime(h, mi).atZone(zone).toInstant().toEpochMilli()
+                vm.hinweiseAnfragen()
+            }, basis.hour, basis.minute, true).show()
+        }, basis.year, basis.monthValue - 1, basis.dayOfMonth).show()
+    }
+    ChipReihe {
+        Chip("Vorlauf", am == null, icon = Icons.Rounded.Schedule) {
+            if (vm.eMinuten == null) vm.melde("Für einen Vorlauf zuerst eine Uhrzeit setzen – oder „Am …“ wählen.") else vm.eErinnerungAm = null
+        }
+        Chip(am?.let { "Am " + Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(amFormat) } ?: "Am …", am != null, icon = Icons.Rounded.CalendarMonth, farbe = f.tertiaer) { amWaehlen() }
+    }
+    if (am == null) {
+        val min = vm.eMinuten
+        if (min == null) {
+            Text("Ohne Uhrzeit gibt es keinen Vorlauf. Wähle „Am …“ für Datum und Uhrzeit der Erinnerung.", color = f.textLeise, fontSize = 12.sp)
+        } else {
+            val v = vm.eVorlauf.coerceIn(0, 60)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (v == 0) "Pünktlich" else "$v Min. vorher", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("um ${Tage.zeit(((min - v) % 1440 + 1440) % 1440)} Uhr", color = f.textLeise, fontSize = 13.sp)
+            }
+            Slider(
+                value = v.toFloat(),
+                onValueChange = { vm.eVorlauf = it.roundToInt().coerceIn(0, 60) },
+                valueRange = 0f..60f,
+                steps = 59,
+                colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent),
+            )
+            Row(Modifier.fillMaxWidth()) {
+                Text("0", color = f.textSchwach, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text("30", color = f.textSchwach, fontSize = 11.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("60 Min.", color = f.textSchwach, fontSize = 11.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+            }
+        }
+    } else {
+        val vorbei = am <= System.currentTimeMillis()
+        val tag = vm.eTag
+        val min = vm.eMinuten
+        val abstand = if (tag != null && min != null) {
+            val diffMin = ((Tage.millis(tag, min) - am) / 60_000L).toInt()
+            when {
+                diffMin == 0 -> "genau zum Termin"
+                diffMin < 0 -> "nach dem Termin"
+                diffMin % 1440 == 0 -> "${diffMin / 1440} ${if (diffMin == 1440) "Tag" else "Tage"} vor der Aufgabe"
+                diffMin < 60 -> "$diffMin Min. vor der Aufgabe"
+                diffMin < 1440 -> "${diffMin / 60} Std.${if (diffMin % 60 > 0) " ${diffMin % 60} Min." else ""} vor der Aufgabe"
+                else -> "%.1f Tage vor der Aufgabe".format(Locale.GERMAN, diffMin / 1440f)
+            }
+        } else null
+        Text(
+            if (vorbei) "Dieser Zeitpunkt liegt in der Vergangenheit – bitte neu wählen."
+            else listOfNotNull("Erinnerung zu diesem Zeitpunkt, unabhängig von der Aufgabe", abstand).joinToString(" · "),
+            color = if (vorbei) f.gefahr else f.textLeise, fontSize = 12.sp,
+        )
+    }
+}
+
+/** Eingabe für „Alle X Tage“: freie Zahl plus Schnellwahl. */
+@Composable
+private fun TagesAbstand(vm: AppViewModel) {
+    val f = LocalFarben.current
+    var eingabe by remember { mutableStateOf(vm.eWdhTage.toString()) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Alle", color = f.text, fontSize = 16.sp)
+        Box(Modifier.padding(horizontal = 10.dp).width(72.dp).glas(f, 12.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 8.dp)) {
+            BasicTextField(
+                eingabe, { neu ->
+                    val ziffern = neu.filter { it.isDigit() }.take(3)
+                    eingabe = ziffern
+                    ziffern.toIntOrNull()?.takeIf { it >= 1 }?.let { vm.eWdhTage = it }
+                },
+                textStyle = TextStyle(color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                cursorBrush = SolidColor(f.primaer), singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Text(if (vm.eWdhTage == 1) "Tag" else "Tage", color = f.text, fontSize = 16.sp)
+    }
+    ChipReihe { listOf(2, 3, 10, 14, 21, 25, 28, 30, 45, 60, 90).forEach { d -> Chip("$d", vm.eWdhTage == d) { vm.eWdhTage = d; eingabe = d.toString() } } }
+    Text("Nach dem Erledigen kommt die Aufgabe ${vm.eWdhTage} ${if (vm.eWdhTage == 1) "Tag" else "Tage"} später wieder, gezählt ab ihrem Tag.", color = f.textLeise, fontSize = 12.sp)
 }
 
 @Composable

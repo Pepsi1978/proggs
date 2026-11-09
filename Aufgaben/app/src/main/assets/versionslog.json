@@ -85,6 +85,7 @@
     {"versionCode": 81, "versionName": "1.0.80", "stand": "08.11.2026, 23:18 Uhr", "notiz": "Im Dunkelmodus passen Heute und Morgen jetzt farblich genau zum Hintergrund dahinter."},
     {"versionCode": 82, "versionName": "1.0.81", "stand": "09.11.2026, 14:26 Uhr", "notiz": "Aufgaben mit Wecker zeigen ein Weckersymbol; beim Ziehen ist die obere Leiste deckend, dort folgt eine kleine Blase dem Daumen und jedes Ziel vibriert einmal beim Erreichen."},
     {"versionCode": 83, "versionName": "1.0.82", "stand": "09.11.2026, 14:33 Uhr", "notiz": "Die Blase beim Ziehen in die obere Leiste schwebt jetzt gut einen halben Zentimeter neben dem Daumen und bleibt so sichtbar."},
-    {"versionCode": 84, "versionName": "1.0.83", "stand": "09.11.2026, 14:36 Uhr", "notiz": "Beim Ziehen zählt keine Uhrzeit mehr, die unter der oberen Leiste verdeckt ist, und die Leiste hat denselben deckenden Grund wie Heute und Morgen."}
+    {"versionCode": 84, "versionName": "1.0.83", "stand": "09.11.2026, 14:36 Uhr", "notiz": "Beim Ziehen zählt keine Uhrzeit mehr, die unter der oberen Leiste verdeckt ist, und die Leiste hat denselben deckenden Grund wie Heute und Morgen."},
+    {"versionCode": 85, "versionName": "1.0.84", "stand": "09.11.2026, 14:55 Uhr", "notiz": "Im Editor spricht man über den runden Knopf neben KI-Korrektur direkt ins Textfeld, Wiederholung kann alle X Tage sein und die Erinnerung hat einen Schieberegler von 0 bis 60 Minuten oder einen festen Zeitpunkt „Am …“."}
 ]
 }

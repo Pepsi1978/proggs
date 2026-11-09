@@ -70,9 +70,11 @@ class AufgabenRepository private constructor(context: Context) {
         var folge: Aufgabe? = null
         if (erledigt && aufgabe.wdh != Wiederholung.KEINE) {
             val basis = if (taeglich) tagJetzt ?: heute else maxOf(aufgabe.tag ?: heute, heute - 1)
-            Tage.naechster(basis, aufgabe.wdh)?.let { naechster ->
+            Tage.naechster(basis, aufgabe.wdh, aufgabe.wdhTage)?.let { naechster ->
+                // Eine feste Erinnerung wandert mit: gleicher Abstand zum neuen Tag wie zum alten.
+                val am = aufgabe.erinnerungAm?.let { m -> aufgabe.tag?.let { t -> m + (naechster - t) * 86_400_000L } }
                 val neu = aufgabe.copy(
-                    id = 0, tag = naechster, folgeVon = aufgabe.id, erledigt = false, erledigtAm = null,
+                    id = 0, tag = naechster, erinnerungAm = am, folgeVon = aufgabe.id, erledigt = false, erledigtAm = null,
                     erstellt = System.currentTimeMillis(), geaendert = System.currentTimeMillis(),
                     schritteJson = Aufgabe.schritteAlsJson(aufgabe.schritte.map { it.copy(erledigt = false) }),
                 )

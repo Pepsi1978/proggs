@@ -94,6 +94,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var eVorlesen by mutableStateOf(true)
     var eAlsWecker by mutableStateOf(false)
     var eWdh by mutableStateOf(Wiederholung.KEINE)
+    var eWdhTage by mutableIntStateOf(30)
+    /** Fester Erinnerungszeitpunkt (Millisekunden); null = Vorlauf vor der Uhrzeit. */
+    var eErinnerungAm by mutableStateOf<Long?>(null)
+    /** Cursor im Aufgabentext: Diktat wird dort eingefügt. */
+    var eCursor by mutableIntStateOf(-1)
     val eSchritte = mutableStateListOf<Schritt>()
     var eVorschlag by mutableStateOf<Erkennung.Vorschlag?>(null)
     var textVorKorrektur by mutableStateOf<String?>(null); private set
@@ -196,6 +201,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nachEditor = zurueckZu
         eId = null; eTitel = ""; eText = ""; ePrio = Prioritaet.SPAETER; eTag = tag; eMinuten = null
         eDauer = 30; eErinnerung = false; eVorlauf = einstellungen.vorlaufStandard; eWdh = Wiederholung.KEINE
+        eWdhTage = 30; eErinnerungAm = null; eCursor = -1
         eVorlesen = einstellungen.vorlesenStandard; eAlsWecker = false
         eSchritte.clear(); eVorschlag = null; textVorKorrektur = null; korrekturFassungen = emptyList()
         bildschirm = Bildschirm.Bearbeiten(null)
@@ -209,6 +215,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nachEditor = zurueckZu
             eId = a.id; eTitel = a.titel; eText = a.text; ePrio = a.prio; eTag = a.aufHeute(heute).tag; eMinuten = a.minuten
             eDauer = a.dauer; eErinnerung = a.erinnerung; eVorlauf = a.vorlauf; eWdh = a.wdh
+            eWdhTage = if (a.wdhTage > 0) a.wdhTage else 30; eErinnerungAm = a.erinnerungAm; eCursor = -1
             eVorlesen = a.vorlesen; eAlsWecker = a.alsWecker
             eSchritte.clear(); eSchritte.addAll(a.schritte)
             eVorschlag = null; textVorKorrektur = null; korrekturFassungen = emptyList()
@@ -303,7 +310,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val basis = editorQuelle ?: Aufgabe(titel = titel)
         val neu = basis.copy(
             titel = titel, text = text, prioritaet = prio.name, tag = eTag, minuten = if (eTag == null) null else eMinuten,
-            dauer = eDauer, erinnerung = eErinnerung && eMinuten != null, vorlauf = eVorlauf, wiederholung = eWdh.name,
+            dauer = eDauer, erinnerung = eErinnerung && (eMinuten != null || eErinnerungAm != null), vorlauf = eVorlauf, wiederholung = eWdh.name,
+            wdhTage = if (eWdh == Wiederholung.ALLE_X_TAGE) eWdhTage.coerceIn(1, 999) else 0,
+            erinnerungAm = if (eErinnerung) eErinnerungAm else null,
             vorlesen = eVorlesen, alsWecker = eAlsWecker,
             titelVonKi = if (kiTitel) false else basis.titelVonKi && titelEingabe == basis.titel,
             schritteJson = Aufgabe.schritteAlsJson(eSchritte.filter { it.text.isNotBlank() }),
@@ -370,7 +379,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (text.isBlank()) {
                     melde("Keine Sprache erkannt.")
                 } else {
-                    eText = if (eText.isBlank()) text else eText.trimEnd() + " " + text
+                    eText = einfuegen(eText, text, eCursor)
+                    eCursor = -1
                     textVorKorrektur = null
                     korrekturFassungen = emptyList()
                     val v = Erkennung.erkenne(eText)
@@ -388,6 +398,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Fügt Diktat an der Cursorstelle ein (sonst ans Ende), mit passenden Leerzeichen. */
+    private fun einfuegen(alt: String, neu: String, cursor: Int): String {
+        if (alt.isBlank()) return neu
+        val pos = if (cursor in 0 until alt.length) cursor else return alt.trimEnd() + " " + neu
+        val vor = alt.substring(0, pos)
+        val nach = alt.substring(pos)
+        val links = if (vor.isEmpty() || vor.last().isWhitespace()) "" else " "
+        val rechts = if (nach.isEmpty() || nach.first().isWhitespace()) "" else " "
+        return vor + links + neu + rechts + nach
+    }
+
     // ================= Liste =================
 
     fun verschiebe(a: Aufgabe, ziel: Ziel) {
@@ -403,7 +424,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val vorlesen = if (minuten != null && a.minuten == null) einstellungen.vorlesenStandard else a.vorlesen
                     // Täglich: Ziehen ändert nur die Uhrzeit, kein Tag fällt dadurch weg. Früher anfangen geht.
                     val tag = if (a.laeuftTaeglich) minOf(maxOf(zeile.tag ?: heute, heute), ziel.tag) else ziel.tag
-                    repo.speichere(zeile.copy(tag = tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && minuten != null, vorlauf = vorlauf, vorlesen = vorlesen))
+                    repo.speichere(zeile.copy(tag = tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && (minuten != null || zeile.erinnerungAm != null), vorlauf = vorlauf, vorlesen = vorlesen))
                     if (minuten != null) hinweiseAnfragen()
                 }
                 is Ziel.Prio -> if (a.laeuftTaeglich) {
@@ -510,7 +531,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     a.aufHeute(heute).tag?.let { t -> append("Geplant für ${Tage.datum(t)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}. ") }
                     append("Priorität ${a.prio.anzeige}. ")
                     append("Dauer etwa ${a.dauer} Minuten. ")
-                    if (a.wdh != Wiederholung.KEINE) append("Wiederholung ${a.wdh.anzeige}. ")
+                    if (a.wdh != Wiederholung.KEINE) append("Wiederholung ${a.wdhAnzeige}. ")
                     if (a.text.isNotBlank() && a.text.trim() != a.titel.trim()) append(a.text.trim().let { if (it.last() in ".!?") it else "$it." }).append(' ')
                     val schritte = a.schritte
                     if (schritte.isNotEmpty()) {

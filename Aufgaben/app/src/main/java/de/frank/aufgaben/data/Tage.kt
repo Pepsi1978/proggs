@@ -46,13 +46,14 @@ object Tage {
         .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     /** Nächster Tag einer Wiederholung ab [tag]. */
-    fun naechster(tag: Long, wdh: Wiederholung): Long? {
+    fun naechster(tag: Long, wdh: Wiederholung, tage: Int = 0): Long? {
         val d = LocalDate.ofEpochDay(tag)
         return when (wdh) {
             Wiederholung.KEINE -> null
             Wiederholung.TAEGLICH -> d.plusDays(1).toEpochDay()
             Wiederholung.WOECHENTLICH -> d.plusWeeks(1).toEpochDay()
             Wiederholung.MONATLICH -> d.plusMonths(1).toEpochDay()
+            Wiederholung.ALLE_X_TAGE -> d.plusDays(tage.coerceAtLeast(1).toLong()).toEpochDay()
             Wiederholung.WERKTAGS -> {
                 var n = d.plusDays(1)
                 while (n.dayOfWeek == DayOfWeek.SATURDAY || n.dayOfWeek == DayOfWeek.SUNDAY) n = n.plusDays(1)

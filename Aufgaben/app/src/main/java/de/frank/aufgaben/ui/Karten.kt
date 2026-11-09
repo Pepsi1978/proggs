@@ -225,8 +225,8 @@ fun AufgabeKarte(
                 else if (zeigeDatum && a.tag != null) Merkmal(null, Tage.datum(a.tag), f.primaer)
                 a.minuten?.let { Merkmal(Icons.Rounded.Schedule, Tage.zeit(it), f.primaer) }
                 // Als Wecker eingestellt: Weckersymbol statt Glocke, damit man sieht, dass der Alarm ausgeschaltet werden muss.
-                if (a.erinnerung && a.minuten != null) Merkmal(if (a.alsWecker) Icons.Rounded.Alarm else Icons.Rounded.NotificationsActive,if (a.vorlauf > 0) "−${a.vorlauf}′" else "", f.sekundaer)
-                if (a.wdh != Wiederholung.KEINE) Merkmal(Icons.Rounded.Repeat, a.wdh.anzeige, f.tertiaer)
+                if (a.erinnerung && (a.minuten != null || a.erinnertAm)) Merkmal(if (a.alsWecker) Icons.Rounded.Alarm else Icons.Rounded.NotificationsActive,if (a.erinnertAm) "" else if (a.vorlauf > 0) "−${a.vorlauf}′" else "", f.sekundaer)
+                if (a.wdh != Wiederholung.KEINE) Merkmal(Icons.Rounded.Repeat, a.wdhAnzeige, f.tertiaer)
                 if (schritte.isNotEmpty()) Merkmal(Icons.Rounded.Checklist, "${schritte.count { it.erledigt }}/${schritte.size}", f.textLeise)
             }
         }

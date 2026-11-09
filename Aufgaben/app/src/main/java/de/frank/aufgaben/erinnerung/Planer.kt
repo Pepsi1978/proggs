@@ -78,8 +78,11 @@ object Planer {
             // Täglich: Ist der Zeitpunkt heute vorbei, gilt schon der von morgen.
             var tag = a.aufHeute(heute).tag
             if (a.laeuftTaeglich && tag == heute && min != null && Tage.millis(heute, min) - a.vorlauf * 60_000L <= jetzt) tag = heute + 1
-            val zeit = if (tag != null && min != null) Tage.millis(tag, min) - a.vorlauf * 60_000L else 0L
-            if (!a.erledigt && a.erinnerung && tag != null && min != null && tag in heute..heute + 1 && zeit > jetzt) {
+            val am = a.erinnerungAm
+            val zeit = am ?: if (tag != null && min != null) Tage.millis(tag, min) - a.vorlauf * 60_000L else 0L
+            // Fester Zeitpunkt („Am“): gilt unabhängig von Tag und Uhrzeit der Aufgabe, auch Tage im Voraus.
+            val faellig = if (am != null) true else tag != null && min != null && tag in heute..heute + 1
+            if (!a.erledigt && a.erinnerung && faellig && zeit > jetzt) {
                 if (a.alsWecker) stelleWecker(app, zeit, pi, a.id) else stelle(app, zeit, pi)
             } else {
                 alarmManager(app).cancel(pi)
@@ -127,6 +130,11 @@ object Planer {
     /** Text unter dem Titel: „Jetzt · 09:00 Uhr“ bzw. „in 10 Minuten · 09:00 Uhr“. */
     fun wann(a: Aufgabe): String {
         val zeit = a.minuten?.let { Tage.zeit(it) }.orEmpty()
+        if (a.erinnertAm) return when {
+            a.tag != null && a.minuten != null -> "Termin: ${Tage.datum(a.tag)} · $zeit Uhr"
+            a.tag != null -> "Termin: ${Tage.datum(a.tag)}"
+            else -> "Erinnerung"
+        }
         return if (a.vorlauf > 0 && a.minuten != null) "in ${a.vorlauf} Minuten · $zeit Uhr" else "Jetzt · $zeit Uhr"
     }
 

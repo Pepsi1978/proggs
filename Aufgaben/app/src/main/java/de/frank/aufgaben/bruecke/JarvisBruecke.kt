@@ -159,7 +159,7 @@ class JarvisBruecke : ContentProvider() {
                     tag = tag,
                     minuten = minuten,
                     dauer = if (a.has("dauer")) a.optInt("dauer", alt.dauer).coerceIn(5, 24 * 60) else alt.dauer,
-                    erinnerung = erinnerung && minuten != null,
+                    erinnerung = erinnerung && (minuten != null || alt.erinnerungAm != null),
                     vorlauf = when {
                         a.has("vorlauf") -> a.optInt("vorlauf", alt.vorlauf).coerceIn(0, 24 * 60)
                         neuerTermin -> einstellungen.vorlaufStandard
