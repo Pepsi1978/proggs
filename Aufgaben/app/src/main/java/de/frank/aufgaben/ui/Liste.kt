@@ -392,12 +392,23 @@ fun ListeBildschirm(vm: AppViewModel) {
             // In der oberen Leiste: Statt der großen Karte folgt eine kleine Blase mit Aufgabensymbol dem Daumen.
             if (zustand.inObenLeiste) {
                 val farbe = if (a.prio == Prioritaet.SPAETER) f.primaer else f.prio(a.prio)
+                val schirmBreite = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
                 Box(
                     Modifier.size(BLASE).graphicsLayer {
+                        // Gut 0,5 cm neben dem Daumenrand, schräg links oben (rechter Daumen kommt von rechts unten), damit man
+                        // sieht, dass die Aufgabe noch gehalten wird. Am linken Rand weicht sie nach rechts oben aus, oben zur Seite.
                         val r = BLASE.toPx() / 2
-                        translationX = zustand.finger.value.x - zustand.ursprung.x - r
-                        // Etwas über dem Daumen, damit sie nicht verdeckt ist.
-                        translationY = zustand.finger.value.y - zustand.ursprung.y - r - 34.dp.toPx()
+                        val abstand = BLASE_ABSTAND.toPx()
+                        val rand = 4.dp.toPx()
+                        val fx = zustand.finger.value.x - zustand.ursprung.x
+                        val fy = zustand.finger.value.y - zustand.ursprung.y
+                        val schraeg = abstand * 0.7071f
+                        val dy = maxOf(-schraeg, -(fy - r - rand))
+                        val dxBetrag = kotlin.math.sqrt(maxOf(schraeg * schraeg, abstand * abstand - dy * dy))
+                        val links = fx - dxBetrag
+                        val x = if (links - r >= rand) links else fx + dxBetrag
+                        translationX = x.coerceIn(r + rand, schirmBreite.toPx() - r - rand) - r
+                        translationY = fy + dy - r
                     }.knopf3d(farbe, farbe.copy(alpha = 0.8f), 99.dp, f.dunkel),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Checklist, a.titel, tint = aufFarbe(farbe), modifier = Modifier.size(22.dp)) }
@@ -687,6 +698,9 @@ private val ZIELE_BLAU = Color(0xFF2F7DF6)
 
 /** Größe der Blase, die in der oberen Ablageleiste statt der Karte dem Daumen folgt. */
 private val BLASE = 44.dp
+
+/** Abstand Blasenmitte zum Berührungspunkt: halbe Daumenbreite (~0,8 cm) + 0,5 cm Luft + halbe Blase. */
+private val BLASE_ABSTAND = 108.dp
 
 /** So viele erledigte Aufgaben kommen je Stück dazu. */
 private const val ERLEDIGT_STUECK = 30
