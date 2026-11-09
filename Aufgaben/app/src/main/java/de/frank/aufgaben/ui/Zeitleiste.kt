@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material.icons.rounded.UnfoldMore
@@ -381,13 +382,17 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
     ) {
         Box(Modifier.width(5.dp).fillMaxSize().knopf3d(farbe, farbe.copy(alpha = 0.7f), 3.dp, f.dunkel))
         Column(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 4.dp)) {
-            Text(
-                a.titel, color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textDecoration = if (a.erledigt) TextDecoration.LineThrough else null,
-            )
+            // Als Wecker eingestellt: Weckersymbol direkt neben dem Titel (auch in kurzen Blöcken sichtbar).
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    a.titel, color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
+                )
+                if (a.erinnerung && a.alsWecker) Icon(Icons.Rounded.Alarm, "Wecker", tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(14.dp))
+            }
             Row {
                 Text("${Tage.zeit(a.minuten ?: 0)}–${Tage.zeit(ende % (24 * 60))}", color = f.textLeise, fontSize = 11.sp)
-                if (a.erinnerung) Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(12.dp))
+                if (a.erinnerung && !a.alsWecker) Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(12.dp))
             }
         }
         Box(Modifier.size(34.dp).antippen(haptik = true, aktion = onErledigt), contentAlignment = Alignment.Center) {

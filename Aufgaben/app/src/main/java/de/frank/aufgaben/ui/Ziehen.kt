@@ -62,6 +62,11 @@ class ZiehZustand {
     /** Tag und Minuten, wenn die Karte über einer Zeitleiste schwebt. */
     var hoverZeit by mutableStateOf<Pair<Long, Int>?>(null); private set
 
+    /** Fensterlage der oberen Ablageleiste während des Ziehens. */
+    var obenLeiste: Rect? = null
+    /** Finger liegt in der oberen Ablageleiste: Statt der Karte folgt dann nur eine kleine Blase dem Daumen. */
+    var inObenLeiste by mutableStateOf(false); private set
+
     private val ziele = HashMap<String, Pair<Rect, Ziel>>()
     private val leisten = HashMap<Long, LeistenMass>()
     private var bewegt = false
@@ -186,9 +191,13 @@ class ZiehZustand {
     fun aktualisiere() {
         if (aufgabe == null) return
         val p = finger.value
+        val oben = obenLeiste?.contains(p) == true
+        if (inObenLeiste != oben) inObenLeiste = oben
         // Ablage-Chips haben Vorrang, dann die Zeitleisten, dann die Bereiche.
         val chip = ziele.entries.firstOrNull { it.key.startsWith("chip_") && it.value.first.contains(p) }
         if (chip != null) { setze(chip.key, null); return }
+        // In der oberen Leiste zählen nur ihre Chips: Bereiche und Zeitleisten dahinter sind verdeckt.
+        if (oben) { setze(null, null); return }
         // Eine Uhrzeit gilt nur, solange die Linie auf dem Zeitband liegt (nicht im Rand darüber oder darunter): Sonst
         // liefe die Karte weiter, während die Uhrzeit am Bandende stehen bliebe — Linie, Marke und Landeplatz wichen ab.
         val s = scrollWert()
@@ -264,6 +273,8 @@ class ZiehZustand {
         randScrollt = false
         hoverZiel = null
         hoverZeit = null
+        inObenLeiste = false
+        obenLeiste = null
         letztesEnde = System.currentTimeMillis()
     }
 

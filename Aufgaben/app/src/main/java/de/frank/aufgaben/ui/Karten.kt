@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
@@ -223,7 +224,8 @@ fun AufgabeKarte(
                 if (ueberfaellig) Merkmal(null, "überfällig · ${Tage.datum(a.tag!!)}", f.gefahr)
                 else if (zeigeDatum && a.tag != null) Merkmal(null, Tage.datum(a.tag), f.primaer)
                 a.minuten?.let { Merkmal(Icons.Rounded.Schedule, Tage.zeit(it), f.primaer) }
-                if (a.erinnerung && a.minuten != null) Merkmal(Icons.Rounded.NotificationsActive, if (a.vorlauf > 0) "−${a.vorlauf}′" else "", f.sekundaer)
+                // Als Wecker eingestellt: Weckersymbol statt Glocke, damit man sieht, dass der Alarm ausgeschaltet werden muss.
+                if (a.erinnerung && a.minuten != null) Merkmal(if (a.alsWecker) Icons.Rounded.Alarm else Icons.Rounded.NotificationsActive,if (a.vorlauf > 0) "−${a.vorlauf}′" else "", f.sekundaer)
                 if (a.wdh != Wiederholung.KEINE) Merkmal(Icons.Rounded.Repeat, a.wdh.anzeige, f.tertiaer)
                 if (schritte.isNotEmpty()) Merkmal(Icons.Rounded.Checklist, "${schritte.count { it.erledigt }}/${schritte.size}", f.textLeise)
             }

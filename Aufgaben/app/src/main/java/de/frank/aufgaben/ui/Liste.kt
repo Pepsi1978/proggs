@@ -1,5 +1,10 @@
 package de.frank.aufgaben.ui
 
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -384,7 +389,19 @@ fun ListeBildschirm(vm: AppViewModel) {
         // Die gezogene Karte folgt dem Finger — gerade, in Originalgröße, gelesen nur in der Zeichenebene.
         zustand.aufgabe?.let { a ->
             val breite = with(dichte) { zustand.groesse.width.toDp() }
-            Box(
+            // In der oberen Leiste: Statt der großen Karte folgt eine kleine Blase mit Aufgabensymbol dem Daumen.
+            if (zustand.inObenLeiste) {
+                val farbe = if (a.prio == Prioritaet.SPAETER) f.primaer else f.prio(a.prio)
+                Box(
+                    Modifier.size(BLASE).graphicsLayer {
+                        val r = BLASE.toPx() / 2
+                        translationX = zustand.finger.value.x - zustand.ursprung.x - r
+                        // Etwas über dem Daumen, damit sie nicht verdeckt ist.
+                        translationY = zustand.finger.value.y - zustand.ursprung.y - r - 34.dp.toPx()
+                    }.knopf3d(farbe, farbe.copy(alpha = 0.8f), 99.dp, f.dunkel),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Checklist, a.titel, tint = aufFarbe(farbe), modifier = Modifier.size(22.dp)) }
+            } else Box(
                 Modifier.width(breite).graphicsLayer {
                     translationX = zustand.finger.value.x - zustand.griff.x - zustand.ursprung.x
                     // Gleiche Quelle wie die Zeitlinie: linieY() + linieAbstand = Kartenoberkante, Linie also genau 1 mm darüber.
@@ -393,7 +410,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) {
                 AufgabeKarte(a.copy(minuten = zustand.hoverZeit?.second ?: a.minuten), heute, zustand, schwebend = true, onTipp = {}, onErledigt = {})
             }
-            ZeitMarke(zustand)
+            if (!zustand.inObenLeiste) ZeitMarke(zustand)
         }
     }
 }
@@ -597,8 +614,13 @@ private fun FokusUnten(sichtbar: Boolean, aktion: () -> Unit) {
 @Composable
 private fun AblageOben(zustand: ZiehZustand, heute: Long) {
     val f = LocalFarben.current
+    // Vollständig deckend: Darunter scheint die Liste nicht mehr durch.
+    val deckend = f.flaecheStark.compositeOver(f.hgOben.copy(alpha = 1f))
     Column(
-        Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth()
+            .onGloballyPositioned { zustand.obenLeiste = it.boundsInRoot() }
+            .background(deckend)
+            .glas(f, radius = 0.dp, erhoeht = 2f, fuellung = deckend).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -639,6 +661,9 @@ private fun AblageUnten(zustand: ZiehZustand) {
 private fun AblageChip(zustand: ZiehZustand, schluessel: String, icon: ImageVector, text: String, farbe: Color, ziel: Ziel, modifier: Modifier, hoch: Int = 46) {
     val f = LocalFarben.current
     val aktiv = zustand.hoverZiel == schluessel
+    // Beim Eintritt einmal kurz vibrieren, nicht fortlaufend während des Verweilens.
+    val haptik = LocalHapticFeedback.current
+    LaunchedEffect(aktiv) { if (aktiv && zustand.aufgabe != null) haptik.performHapticFeedback(HapticFeedbackType.LongPress) }
     val skala by animateFloatAsState(if (aktiv) 1.08f else 1f, spring(dampingRatio = 0.5f, stiffness = 500f), label = "chip")
     Row(
         modifier.height(hoch.dp).ablageZiel(zustand, schluessel, ziel)
@@ -659,6 +684,9 @@ internal fun farbeFuerPrio(f: Farben, p: Prioritaet) = f.prio(p)
 
 /** Klares Blau für den Bereich „Ziele“, unabhängig vom Design. */
 private val ZIELE_BLAU = Color(0xFF2F7DF6)
+
+/** Größe der Blase, die in der oberen Ablageleiste statt der Karte dem Daumen folgt. */
+private val BLASE = 44.dp
 
 /** So viele erledigte Aufgaben kommen je Stück dazu. */
 private const val ERLEDIGT_STUECK = 30
