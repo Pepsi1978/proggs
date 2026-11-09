@@ -17,3 +17,4 @@
 | 4 | nicht-interaktiv | Batch-API → 50 % Rabatt | 7. Batch-API |
 | 5 | Stale Context | gezielt `/clear`; keinen Ballast mitschleppen | 5. Kontext-Management |
 | 6 | Teams/Workflows | 3–4x teurer — nur bei echtem Kommunikationsbedarf | 6. Kosten-Oekonomie |
+| 7 | Dateivergleich TVO/CVO u. a. | `diff -q --strip-trailing-cr` (oder `git diff --no-index --stat`) statt vollem `diff`: CRLF/LF-Unterschied gibt sonst die ganze Datei aus (17k Zeichen, 09.11.2026) | — |
