@@ -63,7 +63,14 @@ class ZiehZustand {
     var hoverZeit by mutableStateOf<Pair<Long, Int>?>(null); private set
 
     /** Fensterlage der oberen Ablageleiste während des Ziehens. */
-    var obenLeiste: Rect? = null
+    var obenLeiste: Rect? = null; private set
+
+    /** Die obere Leiste meldet ihre Lage (auch während sie hereingleitet): Das Ziel unter dem stillen Finger gilt sofort neu. */
+    fun meldeObenLeiste(bereich: Rect) {
+        if (obenLeiste == bereich) return
+        obenLeiste = bereich
+        if (aufgabe != null) aktualisiere()
+    }
     /** Finger liegt in der oberen Ablageleiste: Statt der Karte folgt dann nur eine kleine Blase dem Daumen. */
     var inObenLeiste by mutableStateOf(false); private set
 
@@ -202,7 +209,9 @@ class ZiehZustand {
         // liefe die Karte weiter, während die Uhrzeit am Bandende stehen bliebe — Linie, Marke und Landeplatz wichen ab.
         val s = scrollWert()
         val y = linieY()
-        val leiste = leisten.entries.firstOrNull { (_, m) ->
+        // Liegt die Zeitlinie unter der deckenden oberen Leiste, ist die Zeitleiste dort verdeckt und zählt nicht.
+        val linieVerdeckt = obenLeiste?.let { y < it.bottom } == true
+        val leiste = if (linieVerdeckt) null else leisten.entries.firstOrNull { (_, m) ->
             val start = m.startImInhalt - s
             val rand = 7.5f / 60f * m.stundePx // halber Rasterschritt: erste und letzte Viertelstunde voll erreichbar
             p.x >= m.links && p.x < m.rechts && y >= start - rand && y <= start + m.bandPx + rand

@@ -386,7 +386,18 @@ fun ListeBildschirm(vm: AppViewModel) {
         AnimatedVisibility(zieht, Modifier.align(Alignment.BottomCenter), enter = fadeIn(tween(120)) + slideInVertically { it / 2 }, exit = fadeOut(tween(120))) {
             AblageUnten(zustand)
         }
-        // Die gezogene Karte folgt dem Finger — gerade, in Originalgröße, gelesen nur in der Zeichenebene.
+        SchwebendeKarte(zustand, heute)
+    }
+}
+
+/**
+ * Die gezogene Karte folgt dem Finger — gerade, in Originalgröße, gelesen nur in der Zeichenebene. Eigene Composable,
+ * damit der Wechsel Karte/Blase an der oberen Leiste nur diesen Teil neu aufbaut, nicht den ganzen Listenbildschirm.
+ */
+@Composable
+private fun SchwebendeKarte(zustand: ZiehZustand, heute: Long) {
+    val f = LocalFarben.current
+    val dichte = LocalDensity.current
         zustand.aufgabe?.let { a ->
             val breite = with(dichte) { zustand.groesse.width.toDp() }
             // In der oberen Leiste: Statt der großen Karte folgt eine kleine Blase mit Aufgabensymbol dem Daumen.
@@ -423,7 +434,6 @@ fun ListeBildschirm(vm: AppViewModel) {
             }
             if (!zustand.inObenLeiste) ZeitMarke(zustand)
         }
-    }
 }
 
 @Composable
@@ -626,12 +636,12 @@ private fun FokusUnten(sichtbar: Boolean, aktion: () -> Unit) {
 private fun AblageOben(zustand: ZiehZustand, heute: Long) {
     val f = LocalFarben.current
     // Vollständig deckend: Darunter scheint die Liste nicht mehr durch.
-    val deckend = f.flaecheStark.compositeOver(f.hgOben.copy(alpha = 1f))
+    // Gleicher deckender Grund wie Heute und Morgen (zentral in Farben); das Glas liegt wie bisher darüber.
     Column(
         Modifier.fillMaxWidth()
-            .onGloballyPositioned { zustand.obenLeiste = it.boundsInRoot() }
-            .background(deckend)
-            .glas(f, radius = 0.dp, erhoeht = 2f, fuellung = deckend).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
+            .onGloballyPositioned { zustand.meldeObenLeiste(it.boundsInRoot()) }
+            .background(f.flaecheDeckend)
+            .glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
