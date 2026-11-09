@@ -91,6 +91,22 @@
       "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026).",
       "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
       "kosten": "kein Kontext"
+    },
+    {
+      "id": "M6",
+      "titel": "Bau-Hook: adb-Installation nur auf eine Adresse, die adb devices gerade meldet",
+      "datum": "2026-11-09T14:40",
+      "status": "aktiv",
+      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (ADB_INSTALL)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "adb(\\.exe)?\\s.*-s\\s+\\S+\\s+install",
+      "fehler_regex": "device '[^']+' not found",
+      "pruefung": "Nach 10 Sitzungen kein 'device ... not found' bei adb install -> wirkt. Mehrkosten gemessen ~45 ms nur bei Installationsbefehlen.",
+      "ruecknahme": "adb_ziel_fehlt-Aufruf in main() entfernen.",
+      "kosten": "kein Kontext, ~45 ms je adb install"
     }
   ]
 }

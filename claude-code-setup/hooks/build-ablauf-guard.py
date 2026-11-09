@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# build-ablauf-guard: PreToolUse-Blocker fuer zwei Fehler im Programmierablauf (Bash und PowerShell).
+# build-ablauf-guard: PreToolUse-Blocker fuer drei Fehler im Programmierablauf (Bash und PowerShell); 3) siehe ADB_INSTALL.
 #
 # 1) Android-Bau VOR dem Versions-Bump: gradlew assemble*/install*/bundle* in einer App mit
 #    app/src/main/assets/versionslog.json, deren Arbeitskopie Aenderungen hat, der Versionslog aber
@@ -107,6 +107,47 @@ def bau_ohne_bump(cmd, cwd):
     return None
 
 
+# 3) adb-Installation auf eine geratene Adresse: "adb -s <ziel> install", obwohl <ziel> gerade nicht in
+#    "adb devices" steht (09.11.2026, Sitzung 406cc1b7: Tunnel 10.8.0.7 angenommen, verbunden war 192.168.0.197).
+#    Kostet nur bei Installationsbefehlen ein "adb devices" (~30 ms), nie einen Extra-Durchlauf bei richtiger Adresse.
+ADB_INSTALL = re.compile(r'\badb(?:\.exe)?["\']?\s+(?:[^;&|\n]*?\s)?-s\s+["\']?([\w.:-]+)["\']?\s+(?:[^;&|\n]*?\s)?install(?:-multiple)?\b', re.IGNORECASE)
+HINWEIS_ADB = (
+    "STOPP - {ziel} ist gerade nicht verbunden.\n\n"
+    "adb devices meldet: {geraete}.\n"
+    "Installiere mit genau der Adresse, die dort steht (adb -s <Adresse> install ...). "
+    "Steht dort kein WLAN-Gerät: erst Werkzeuge/adb-wlan/adb-wlan.ps1 ausführen (Regel 18).\n\n"
+    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+)
+
+
+def adb_pfad():
+    import shutil
+    kandidaten = [os.environ.get('ADB'), shutil.which('adb')]
+    for sdk in (os.environ.get('ANDROID_HOME'), os.environ.get('ANDROID_SDK_ROOT'),
+                os.path.join(os.environ.get('LOCALAPPDATA') or '', 'Android', 'Sdk'),
+                os.path.expanduser('~/Library/Android/sdk'), os.path.expanduser('~/Android/Sdk')):
+        if sdk:
+            kandidaten.append(os.path.join(sdk, 'platform-tools', 'adb.exe' if os.name == 'nt' else 'adb'))
+    return next((k for k in kandidaten if k and os.path.isfile(k)), None)
+
+
+def adb_ziel_fehlt(cmd):
+    m = ADB_INSTALL.search(cmd)
+    if not m or re.search(r'[$%`{]', m.group(1)):
+        return None  # keine Installation oder Adresse aus Variable: nicht prüfbar
+    # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
+    adb = adb_pfad()
+    if not adb:
+        return None
+    r = subprocess.run([adb, 'devices'], capture_output=True, text=True, timeout=6)
+    if r.returncode != 0:
+        return None
+    geraete = [z.split()[0] for z in r.stdout.splitlines()[1:] if len(z.split()) >= 2 and z.split()[1] == 'device']
+    if m.group(1) in geraete:
+        return None
+    return m.group(1), ', '.join(geraete) or 'kein Gerät'
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -133,6 +174,13 @@ def main():
             app, dateien = b
             liste = ', '.join(dateien[:6]) + (f' (+{len(dateien) - 6})' if len(dateien) > 6 else '')
             verweigern(HINWEIS_BUMP.format(app=app, log='app/src/main/assets/versionslog.json', dateien=liste))
+            return
+    except Exception:
+        pass
+    try:
+        a = adb_ziel_fehlt(cmd)
+        if a:
+            verweigern(HINWEIS_ADB.format(ziel=a[0], geraete=a[1]))
     except Exception:
         pass
 
