@@ -58,11 +58,14 @@ namespace ClaudeVoiceOverlay.Services
 
         public void PlayStart() => Play(_startPcm, "start");
 
-        public void PlayStop() => Play(_stopPcm, "stop");
+        // Stopp-Ton immer auf frisch geoeffnetem Geraet: Bei kurzen Aufnahmen lief sonst noch der
+        // Stream vom Start-Ton, und das Abschalten des Mikrofons plus die sofort startende
+        // Parakeet-Rechnung liessen den Ton am Ende rattern (09.11.2026).
+        public void PlayStop() => Play(_stopPcm, "stop", freshDevice: true);
 
         public void PlayError() => Play(_errorPcm, "error");
 
-        private void Play(byte[] pcm, string cue)
+        private void Play(byte[] pcm, string cue, bool freshDevice = false)
         {
             try
             {
@@ -70,6 +73,7 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     if (_disposed) return;
 
+                    if (freshDevice) DisposeOutput();
                     EnsureOutput();
 
                     _buffer!.ClearBuffer();
