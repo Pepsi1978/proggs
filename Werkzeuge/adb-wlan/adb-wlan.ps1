@@ -6,16 +6,39 @@
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte im selben
 # Netz werden nie angesprochen.
 # -Leise: für den Wachhund (Aufgabenplanung), schreibt nur ins Log und startet den adb-Server nie neu.
+# -Geraet: handy (Vorgabe), tablet oder alle. Die Geräte stehen mit fester Seriennummer in geraete.json
+#   (Fold 8 = handy, Tab S9 = tablet); so verdrängt ein angestecktes Tablet nie das Handy und umgekehrt.
+#   Jedes Gerät hat eigene Merkdateien (letzte IP) und eine eigene Tunnel-Adresse.
 # Einrichtung/Hintergrund: best-practices/android/adb-wlan-debugging.md
-param([switch]$Leise)
+param([switch]$Leise, [string]$Geraet = "handy")
+
+$GeraeteDatei = Join-Path $PSScriptRoot "geraete.json"
+$Register = if (Test-Path $GeraeteDatei) { Get-Content $GeraeteDatei -Raw -Encoding utf8 | ConvertFrom-Json } else { [pscustomobject]@{} }
+if ($Geraet -eq "alle") {
+    # Wachhund: jedes eingetragene Gerät nacheinander; der Rückgabewert richtet sich nach dem Handy.
+    $code = 0
+    foreach ($n in @($Register.PSObject.Properties.Name)) {
+        & $PSCommandPath -Leise:$Leise -Geraet $n
+        if ($n -eq "handy") { $code = $LASTEXITCODE }
+    }
+    exit $code
+}
+$Eintrag = $Register.$Geraet
+if (-not $Eintrag -and $Geraet -ne "handy") { Write-Host "FEHLER: Gerät '$Geraet' steht nicht in $GeraeteDatei."; exit 1 }
+$Zusatz = if ($Geraet -eq "handy") { "" } else { "-$Geraet" }
+# Feste Seriennummer aus geraete.json; die Nummern der anderen eingetragenen Geräte gelten nie als dieses Gerät.
+$FestSerial = if ($Eintrag) { "$($Eintrag.serial)".Trim() } else { "" }
+$FremdeSerials = @($Register.PSObject.Properties | Where-Object { $_.Name -ne $Geraet } | ForEach-Object { "$($_.Value.serial)".Trim() } | Where-Object { $_ })
 
 $Port = 5555
-$State = Join-Path $env:USERPROFILE ".adb-wlan-last-ip"
+$State = Join-Path $env:USERPROFILE ".adb-wlan$Zusatz-last-ip"
 $SerialDatei = Join-Path $env:USERPROFILE ".adb-wlan-serial"
-# WireGuard-Adresse des Handys im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1).
-# Überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus).
+# WireGuard-Adresse des Geräts im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1): Handy 10.8.0.7, Tablet 10.8.0.8.
+# Fürs Handy überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus).
 $TunnelDatei = Join-Path $env:USERPROFILE ".adb-wlan-tunnel-ip"
-$TunnelIp = if (Test-Path $TunnelDatei) { (Get-Content $TunnelDatei -Raw).Trim() } else { "10.8.0.7" }
+$TunnelIp = if ($Geraet -eq "handy" -and (Test-Path $TunnelDatei)) { (Get-Content $TunnelDatei -Raw).Trim() }
+    elseif ($Eintrag -and $Eintrag.tunnelIp) { "$($Eintrag.tunnelIp)".Trim() }
+    elseif ($Geraet -eq "handy") { "10.8.0.7" } else { "" }
 $LogDir = Join-Path $env:LOCALAPPDATA "adb-wlan"
 $Log = Join-Path $LogDir "adb-wlan.log"
 New-Item -ItemType Directory -Force $LogDir | Out-Null
@@ -26,7 +49,8 @@ $Adb = @($env:ADB, (Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.
 if (-not $Adb) { Write-Host "FEHLER: adb nicht gefunden (weder `$env:ADB noch Android-SDK noch PATH)."; exit 1 }
 
 function Melde($text) {
-    $zeile = "{0} {1}" -f (Get-Date -Format "dd.MM.yyyy HH:mm:ss"), $text
+    if ($Zusatz) { $text = "[$Geraet] $text" }
+    $zeile ="{0} {1}" -f (Get-Date -Format "dd.MM.yyyy HH:mm:ss"), $text
     try { Add-Content -Path $Log -Value $zeile -Encoding utf8 } catch { }
     if (-not $Leise) { Write-Host $text }
 }
@@ -59,8 +83,12 @@ function Geraete {
 }
 
 function Ist-Netz($serial) { $serial -match ":\d+$" -or $serial -match "_adb-tls-connect" }
-function Usb-Geraet { Geraete | Where-Object { $_.Zustand -eq "device" -and -not (Ist-Netz $_.Serial) -and $_.Serial -notmatch "^emulator-" } | Select-Object -First 1 }
-function Bekannte-Serial { if (Test-Path $SerialDatei) { (Get-Content $SerialDatei -Raw).Trim() } }
+# Per Kabel zählt nur das Zielgerät: mit fester Nummer genau dieses, sonst (neues Handy) jedes nicht anders eingetragene.
+function Usb-Geraet {
+    Geraete | Where-Object { $_.Zustand -eq "device" -and -not (Ist-Netz $_.Serial) -and $_.Serial -notmatch "^emulator-" } |
+        Where-Object { if ($FestSerial) { $_.Serial -eq $FestSerial } else { $FremdeSerials -notcontains $_.Serial } } | Select-Object -First 1
+}
+function Bekannte-Serial { if ($FestSerial) { return $FestSerial }; if (Test-Path $SerialDatei) { (Get-Content $SerialDatei -Raw).Trim() } }
 
 # $true, wenn das Gerät antwortet UND (falls bekannt) unser Handy ist
 function Ist-Unser-Handy($serial) {
@@ -84,6 +112,8 @@ function Verbinde($ziel) {
         $z = (Geraete | Where-Object { $_.Serial -eq $ziel }).Zustand
         if ($z -eq "device") {
             if (Ist-Unser-Handy $ziel) { return $true }
+            # Das andere eingetragene Gerät (Handy bzw. Tablet) sitzt dort zu Recht: verbunden lassen.
+            if ($FremdeSerials -contains (AdbZeit "-s $ziel shell getprop ro.serialno")) { Melde "$ziel ist ein anderes eingetragenes Gerät – bleibt verbunden"; return $false }
             Melde "$ziel ist nicht das gemerkte Handy – getrennt"
             & $Adb disconnect $ziel 2>&1 | Out-Null; return $false
         }
@@ -96,7 +126,7 @@ function Verbinde($ziel) {
 # Handy-Seite dauerhaft vorbereiten (über Kabel ODER WLAN, höchstens stündlich):
 # Berechtigung für UpdateStation (schaltet WLAN-Debugging nach Neustart ein) und Ausnahme von der
 # Doze-Drosselung, damit ihre Aufgabe nach dem Boot nicht verzögert wird. Idempotent.
-$PflegeDatei = Join-Path $LogDir "letzte-pflege"
+$PflegeDatei = Join-Path $LogDir "letzte-pflege$Zusatz"
 function Pflege($serial, [switch]$Sofort) {
     if (-not $Sofort -and (Test-Path $PflegeDatei) -and ((Get-Date) - (Get-Item $PflegeDatei).LastWriteTime).TotalMinutes -lt 60) { return }
     $pk = "de.frank.updatestation"
@@ -137,7 +167,7 @@ function Mdns-Verbinden {
 # Braucht kein externes WLAN. Das Handy kennt den Hotspot (in Pflege gespeichert, je PC ein eigener)
 # und tritt ihm von selbst bei, wenn es in keinem anderen WLAN ist. Nur Windows PowerShell 5.1 (WinRT).
 $HotspotMarke = Join-Path $LogDir "hotspot-von-uns"          # nur einen selbst gestarteten Hotspot abschalten
-$HotspotEingerichtet = Join-Path $LogDir "hotspot-auf-handy"  # Prüfsumme von SSID+Passwort auf dem Handy
+$HotspotEingerichtet = Join-Path $LogDir "hotspot-auf-handy$Zusatz"  # Prüfsumme von SSID+Passwort auf dem Handy
 $script:Tm = $null
 function Hotspot-Manager {
     if ($script:Tm) { return $script:Tm }
@@ -375,7 +405,7 @@ try {
     if ($usb) {
         $s = $usb.Serial
         $id = AdbZeit "-s $s shell getprop ro.serialno"
-        if ($id) { Set-Content -Path $SerialDatei -Value $id -Encoding ascii }
+        if ($id -and -not $FestSerial) { Set-Content -Path $SerialDatei -Value $id -Encoding ascii }
         Pflege $s -Sofort
         if ((AdbZeit "-s $s shell settings get global adb_wifi_enabled") -ne "1") {
             AdbZeit "-s $s shell settings put global adb_wifi_enabled 1" | Out-Null
@@ -450,10 +480,17 @@ try {
     if (-not @(Netz-Verbunden)) { Direktverbindung | Out-Null }
 
     $fertig = @(Netz-Verbunden)
+    # Ein Zweitgerät ist oft einfach aus: Der Wachhund meldet das nur beim Wechsel, nicht alle zwei Minuten.
+    $WegMarke = Join-Path $LogDir "nicht-erreichbar$Zusatz"
     if ($fertig) {
+        Remove-Item $WegMarke -ErrorAction SilentlyContinue
         Pflege $fertig[0].Serial
         if (-not $Leise) { & $Adb devices -l }
         exit 0
+    }
+    if ($Leise -and $Zusatz) {
+        if (-not (Test-Path $WegMarke)) { Melde "nicht erreichbar (aus, anderes Netz oder WLAN-Debugging aus)"; Set-Content -Path $WegMarke -Value (Get-Date -Format o) -Encoding ascii }
+        exit 1
     }
     Melde ("FEHLER: Handy per WLAN nicht gefunden. Prüfen: Handy im selben WLAN? 'Debugging über WLAN' an? " +
         "Sonst einmal Kabel anstecken und dieses Skript erneut ausführen.")

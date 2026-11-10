@@ -7,7 +7,7 @@ $Skript = Join-Path $PSScriptRoot "adb-wlan.ps1"
 
 # conhost --headless: kein aufblitzendes Fenster alle 5 Minuten
 $Aktion = New-ScheduledTaskAction -Execute "conhost.exe" `
-    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$Skript`" -Leise"
+    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$Skript`" -Leise -Geraet alle"
 
 $Anmeldung = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 $Anmeldung.Delay = "PT1M"   # WLAN ist direkt nach der Anmeldung oft noch nicht da

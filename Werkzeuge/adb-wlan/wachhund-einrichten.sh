@@ -20,6 +20,8 @@ cat > "$PLIST" <<PLIST
         <string>/bin/bash</string>
         <string>$HIER/adb-wlan.sh</string>
         <string>--leise</string>
+        <string>--geraet</string>
+        <string>alle</string>
     </array>
     <key>RunAtLoad</key><true/>
     <key>StartInterval</key><integer>120</integer>

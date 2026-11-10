@@ -5,7 +5,9 @@
 # Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
 # Jarvis verlangt seinen Pflicht-Teil (assets/freigabe-teil.apk in der APK): Nacktes adb install lehnt Android deshalb
 # mit INSTALL_FAILED_MISSING_SPLIT ab, nur dieses Skript und UpdateStation installieren ihn mit und stellen die Frage.
-# Aufruf: jarvis-install.sh <apk> [-s <gerät>]
+# Aufruf: jarvis-install.sh <apk> [--ziel handy|tablet] [-s <adb-Adresse>]
+# --ziel wählt das Gerät über seine feste Seriennummer aus Werkzeuge/adb-wlan/geraete.json (Vorgabe handy = Fold 8,
+# tablet = Tab S9 „Jarvis Tablet“). Sind beide verbunden, landet die APK nie auf dem falschen Gerät.
 # Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
 set -u
@@ -27,33 +29,45 @@ source "$(cd "$(dirname "$0")/.." && pwd)/apk-delta/delta-push.sh"
 
 ende() { echo "JARVIS_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; exit 0; }
 
-APK=""; GERAET=""
+APK=""; GERAET=""; ZIEL=handy
 while [ $# -gt 0 ]; do
   case "$1" in
     -s) GERAET="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
+    --ziel) ZIEL="${2:-handy}"; shift; [ $# -gt 0 ] && shift ;;
     *) APK="$1"; shift ;;
   esac
 done
 [ -f "$APK" ] || ende fehler "APK nicht gefunden: $APK"
+# Feste Seriennummer des Zielgeräts: Ohne sie (Datei fehlt, altes Repo) gilt wie früher das erste verbundene Gerät.
+GERAETE_DATEI="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/geraete.json"
+ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null)
+if [ -z "$ZIEL_SERIE" ] && { [ -f "$GERAETE_DATEI" ] || [ "$ZIEL" != handy ]; }; then ende fehler "Ziel '$ZIEL' steht nicht in $GERAETE_DATEI"; fi
 
 for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB_BIN="$K"; break; }
 done
 [ -n "${ADB_BIN:-}" ] || ende fehler "adb nicht gefunden"
 
-# WLAN oder Tunnel (IP:Port) vor Kabel; ohne Verbindung einmal das WLAN-Werkzeug fragen.
+ist_ziel() {
+  [ -z "$ZIEL_SERIE" ] && return 0
+  [ "$("$ADB_BIN" -s "$1" shell getprop ro.serialno 2>/dev/null | tr -d '[:space:]')" = "$ZIEL_SERIE" ]
+}
+# WLAN oder Tunnel (IP:Port) vor Kabel; ohne Verbindung einmal das WLAN-Werkzeug fragen. Nur das Zielgerät zählt.
 waehle_geraet() {
-  local netz
-  netz=$("$ADB_BIN" devices | awk '$2=="device" && $1 ~ /:[0-9]+$/ {print $1; exit}')
-  [ -n "$netz" ] && { echo "$netz"; return; }
-  "$ADB_BIN" devices | awk 'NR>1 && $2=="device" {print $1; exit}'
+  local s kabel=""
+  for s in $("$ADB_BIN" devices | awk 'NR>1 && $2=="device" {print $1}'); do
+    ist_ziel "$s" </dev/null || continue
+    case "$s" in *:[0-9]*) echo "$s"; return ;; esac
+    [ -z "$kabel" ] && kabel="$s"
+  done
+  [ -n "$kabel" ] && echo "$kabel"
 }
 verbinde() {
-  if [ -n "$GERAET" ] && [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" = device ]; then return 0; fi
+  if [ -n "$GERAET" ] && [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" = device ] && ist_ziel "$GERAET"; then return 0; fi
   GERAET=""
   GERAET=$(waehle_geraet)
   [ -n "$GERAET" ] && return 0
-  "$WLAN_SKRIPT" >/dev/null 2>&1
+  "$WLAN_SKRIPT" --geraet "$ZIEL" >/dev/null 2>&1
   GERAET=$(waehle_geraet)
   [ -n "$GERAET" ]
 }

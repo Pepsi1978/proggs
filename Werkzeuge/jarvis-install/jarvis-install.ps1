@@ -4,10 +4,12 @@
 # Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
 # Jarvis verlangt seinen Pflicht-Teil (assets/freigabe-teil.apk in der APK): Nacktes adb install lehnt Android deshalb
 # mit INSTALL_FAILED_MISSING_SPLIT ab, nur dieses Skript und UpdateStation installieren ihn mit und stellen die Frage.
-# Aufruf: jarvis-install.ps1 <apk> [-Geraet <gerät>]
+# Aufruf: jarvis-install.ps1 <apk> [-Ziel handy|tablet] [-Geraet <adb-Adresse>]
+# -Ziel wählt das Gerät über seine feste Seriennummer aus Werkzeuge/adb-wlan/geraete.json (Vorgabe handy = Fold 8,
+# tablet = Tab S9 „Jarvis Tablet“). Sind beide verbunden, landet die APK nie auf dem falschen Gerät.
 # Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
-param([Parameter(Mandatory)][string]$Apk, [string]$Geraet = "")
+param([Parameter(Mandatory)][string]$Apk, [string]$Geraet = "", [string]$Ziel = "handy")
 
 $paket = "de.frank.jarvis"
 $fenster = "$paket/.ui.InstallFrageDienst"
@@ -38,19 +40,33 @@ $adb = @($env:ADB, "$env:ANDROID_HOME\platform-tools\adb.exe", "$env:LOCALAPPDAT
     Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if (-not $adb) { Ende fehler "adb nicht gefunden" }
 
-# WLAN oder Tunnel (IP:Port) vor Kabel; ohne Verbindung einmal das WLAN-Werkzeug fragen.
+# Feste Seriennummer des Zielgeräts: Ohne sie (Datei fehlt, altes Repo) gilt wie früher das erste verbundene Gerät.
+$geraeteDatei = Join-Path (Split-Path $PSScriptRoot) "adb-wlan\geraete.json"
+$zielSerie = ""
+if (Test-Path $geraeteDatei) {
+    $register = Get-Content $geraeteDatei -Raw -Encoding utf8 | ConvertFrom-Json
+    if (-not $register.$Ziel) { Ende fehler "Ziel '$Ziel' steht nicht in $geraeteDatei" }
+    $zielSerie = "$($register.$Ziel.serial)".Trim()
+}
+elseif ($Ziel -ne "handy") { Ende fehler "geraete.json fehlt, Ziel '$Ziel' unbekannt" }
+
+function Ist-Ziel([string]$adresse) {
+    if (-not $zielSerie) { return $true }
+    return ((& $adb -s $adresse shell getprop ro.serialno 2>$null | Out-String).Trim() -eq $zielSerie)
+}
+# WLAN oder Tunnel (IP:Port) vor Kabel; ohne Verbindung einmal das WLAN-Werkzeug fragen. Nur das Zielgerät zählt.
 function Waehle-Geraet {
-    $bereit = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match "\sdevice$" } | ForEach-Object { ($_ -split "\s+")[0] }
+    $bereit = @(& $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match "\sdevice$" } | ForEach-Object { ($_ -split "\s+")[0] } | Where-Object { Ist-Ziel $_ })
     $netz = $bereit | Where-Object { $_ -match ":\d+$" } | Select-Object -First 1
     if ($netz) { return $netz }
     return $bereit | Select-Object -First 1
 }
 function Verbinde {
-    if ($script:Geraet -and (& $adb -s $script:Geraet get-state 2>$null) -eq "device") { return $true }
+    if ($script:Geraet -and (& $adb -s $script:Geraet get-state 2>$null) -eq "device" -and (Ist-Ziel $script:Geraet)) { return $true }
     $script:Geraet = ""
     $script:Geraet = Waehle-Geraet
     if ($script:Geraet) { return $true }
-    & pwsh -NoProfile -File $wlanSkript *> $null
+    & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
     $script:Geraet = Waehle-Geraet
     return [bool]$script:Geraet
 }
@@ -95,7 +111,7 @@ try {
     if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     if ($LASTEXITCODE -ne 0) {
         # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben Handy.
-        & pwsh -NoProfile -File $wlanSkript *> $null
+        & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
         $script:Geraet = Waehle-Geraet
         if ($Geraet -and (Handy getprop ro.serialno) -eq $serie) { "Neuer Versuch über $Geraet ..."; & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     }

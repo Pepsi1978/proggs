@@ -1,0 +1,14 @@
+{
+  "handy": {
+    "serial": "R3GL7073MLM",
+    "modell": "SM-F971B",
+    "name": "Galaxy Fold 8 (Jarvis Smartphone)",
+    "tunnelIp": "10.8.0.7"
+  },
+  "tablet": {
+    "serial": "R52W800205N",
+    "modell": "SM-X716B",
+    "name": "Galaxy Tab S9 (Jarvis Tablet)",
+    "tunnelIp": "10.8.0.8"
+  }
+}

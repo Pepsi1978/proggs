@@ -6,18 +6,48 @@
 # Ohne Kabel wird nach einem Handy-Neustart Port 5555 über "Debugging über WLAN" (TLS) wiederhergestellt.
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte werden nie angesprochen.
 # --leise: für den Wachhund (launchd), schreibt nur ins Log und startet den adb-Server nie neu.
+# --geraet handy|tablet|alle (Vorgabe handy): Die Geräte stehen mit fester Seriennummer in geraete.json
+#   (Fold 8 = handy, Tab S9 = tablet); so verdrängt ein angestecktes Tablet nie das Handy und umgekehrt.
 # Einrichtung/Hintergrund: best-practices/android/adb-wlan-debugging.md
 set -u
+LEISE=0; GERAET=handy
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --leise) LEISE=1 ;;
+    --geraet) GERAET="${2:-handy}"; [ $# -gt 1 ] && shift ;;
+  esac
+  shift
+done
+GERAETE_DATEI="$(cd "$(dirname "$0")" && pwd)/geraete.json"
+# reg <gerät> <feld>: liest ein Feld aus geraete.json (ein Feld je Zeile, wie im Repo abgelegt)
+reg() {
+  awk -v g="\"$1\":" -v f="\"$2\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1==f {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null
+}
+reg_namen() { awk '/^  "[a-z0-9]+": *\{/ {gsub(/[":]/,"",$1); print $1}' "$GERAETE_DATEI" 2>/dev/null; }
+if [ "$GERAET" = "alle" ]; then
+  # Wachhund: jedes eingetragene Gerät nacheinander; der Rückgabewert richtet sich nach dem Handy.
+  CODE=0
+  for N in $(reg_namen); do
+    if [ $LEISE -eq 1 ]; then bash "$0" --leise --geraet "$N"; else bash "$0" --geraet "$N"; fi
+    R=$?; [ "$N" = handy ] && CODE=$R
+  done
+  exit $CODE
+fi
+FEST_SERIAL=$(reg "$GERAET" serial)
+if [ -z "$FEST_SERIAL" ] && [ "$GERAET" != handy ]; then echo "FEHLER: Gerät '$GERAET' steht nicht in $GERAETE_DATEI."; exit 1; fi
+# Seriennummern der anderen eingetragenen Geräte: gelten nie als dieses Gerät.
+FREMDE_SERIALS=$(for N in $(reg_namen); do [ "$N" != "$GERAET" ] && reg "$N" serial; done)
+ZUSATZ=""; [ "$GERAET" != handy ] && ZUSATZ="-$GERAET"
 PORT=5555
-STATE="$HOME/.adb-wlan-last-ip"
+STATE="$HOME/.adb-wlan${ZUSATZ}-last-ip"
 SERIAL_DATEI="$HOME/.adb-wlan-serial"
-# WireGuard-Adresse des Handys im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1).
-# Überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus), dieselbe Datei wie unter Windows.
+# WireGuard-Adresse des Geräts im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1): Handy 10.8.0.7, Tablet 10.8.0.8.
+# Fürs Handy überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus), dieselbe Datei wie unter Windows.
 TUNNEL_DATEI="$HOME/.adb-wlan-tunnel-ip"
-if [ -f "$TUNNEL_DATEI" ]; then TUNNEL_IP=$(tr -d '[:space:]' <"$TUNNEL_DATEI"); else TUNNEL_IP="10.8.0.7"; fi
+if [ "$GERAET" = handy ] && [ -f "$TUNNEL_DATEI" ]; then TUNNEL_IP=$(tr -d '[:space:]' <"$TUNNEL_DATEI")
+else TUNNEL_IP=$(reg "$GERAET" tunnelIp); [ -z "$TUNNEL_IP" ] && [ "$GERAET" = handy ] && TUNNEL_IP="10.8.0.7"; fi
 LOGDIR="$HOME/Library/Logs/adb-wlan"; mkdir -p "$LOGDIR" 2>/dev/null || LOGDIR="$HOME"
 LOG="$LOGDIR/adb-wlan.log"
-LEISE=0; [ "${1:-}" = "--leise" ] && LEISE=1
 
 # Immer dieselbe adb wie Gradle (SDK): verschiedene adb-Versionen beenden sich gegenseitig
 # den Server, und dabei gehen alle WLAN-Verbindungen verloren.
@@ -27,7 +57,10 @@ done
 [ -z "${ADB_BIN:-}" ] && { echo "FEHLER: adb nicht gefunden (weder \$ADB noch Android-SDK noch PATH)."; exit 1; }
 adb() { "$ADB_BIN" "$@"; }
 
-melde() { echo "$(date '+%d.%m.%Y %H:%M:%S') $*" >> "$LOG"; [ $LEISE -eq 0 ] && echo "$*"; return 0; }
+melde() {
+  local t="$*"; [ -n "$ZUSATZ" ] && t="[$GERAET] $t"
+  echo "$(date '+%d.%m.%Y %H:%M:%S') $t" >> "$LOG"; [ $LEISE -eq 0 ] && echo "$t"; return 0
+}
 
 # adb mit Zeitlimit (macOS hat kein "timeout"): adbzeit <sekunden> <adb-argumente…>
 adbzeit() {
@@ -40,8 +73,15 @@ adbzeit() {
 }
 
 ist_netz() { case "$1" in *:[0-9]*|*_adb-tls-connect*) return 0;; esac; return 1; }
-bekannte_serial() { tr -d '[:space:]' <"$SERIAL_DATEI" 2>/dev/null; }
-usb_geraet() { adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 !~ /:[0-9]+$/ && $1 !~ /_adb-tls-connect/ && $1 !~ /^emulator-/ {print $1; exit}'; }
+bekannte_serial() { if [ -n "$FEST_SERIAL" ]; then echo "$FEST_SERIAL"; else tr -d '[:space:]' <"$SERIAL_DATEI" 2>/dev/null; fi; }
+ist_fremd() { [ -n "$1" ] && echo "$FREMDE_SERIALS" | grep -qxF "$1"; }
+# Per Kabel zählt nur das Zielgerät: mit fester Nummer genau dieses, sonst (neues Handy) jedes nicht anders eingetragene.
+usb_geraet() {
+  adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 !~ /:[0-9]+$/ && $1 !~ /_adb-tls-connect/ && $1 !~ /^emulator-/ {print $1}' | while read -r s; do
+    if [ -n "$FEST_SERIAL" ]; then [ "$s" = "$FEST_SERIAL" ] || continue; else ist_fremd "$s" && continue; fi
+    echo "$s"; break
+  done
+}
 
 # 0, wenn das Gerät antwortet UND (falls bekannt) unser Handy ist
 ist_unser_handy() {
@@ -69,6 +109,8 @@ verbinde() {
       ist_unser_handy "$1" && return 0
       sleep 2; ist_unser_handy "$1" && return 0
       sleep 3; ist_unser_handy "$1" && return 0
+      # Das andere eingetragene Gerät (Handy bzw. Tablet) sitzt dort zu Recht: verbunden lassen.
+      if ist_fremd "$(adbzeit 8 -s "$1" shell getprop ro.serialno | tr -d '[:space:]')"; then melde "$1 ist ein anderes eingetragenes Gerät – bleibt verbunden"; return 1; fi
       melde "$1 ist nicht das gemerkte Handy – getrennt"; adb disconnect "$1" >/dev/null 2>&1; return 1
     fi
     [ "$z" = "unauthorized" ] && [ $i -eq 1 ] && melde "HINWEIS: Auf dem Handy 'Debugging zulassen' bestätigen (Haken 'Immer zulassen')."
@@ -82,7 +124,7 @@ merke_ip() { [ -n "$1" ] && [ "$1" != "$TUNNEL_IP" ] && echo "$1" > "$STATE"; re
 
 # Handy-Seite dauerhaft vorbereiten (über Kabel ODER WLAN, höchstens stündlich; $2=sofort erzwingt):
 # Berechtigung für UpdateStation + Ausnahme von der Doze-Drosselung. Idempotent.
-PFLEGE_DATEI="$HOME/.adb-wlan-letzte-pflege"
+PFLEGE_DATEI="$HOME/.adb-wlan${ZUSATZ}-letzte-pflege"
 pflege() {
   if [ "${2:-}" != "sofort" ] && [ -n "$(find "$PFLEGE_DATEI" -mmin -60 2>/dev/null)" ]; then return 0; fi
   local pk=de.frank.updatestation
@@ -169,7 +211,7 @@ done
 USB=$(usb_geraet)
 if [ -n "$USB" ]; then
   ID=$(adbzeit 8 -s "$USB" shell getprop ro.serialno | tr -d '[:space:]')
-  [ -n "$ID" ] && echo "$ID" > "$SERIAL_DATEI"
+  [ -n "$ID" ] && [ -z "$FEST_SERIAL" ] && echo "$ID" > "$SERIAL_DATEI"
   pflege "$USB" sofort
   [ "$(adbzeit 8 -s "$USB" shell settings get global adb_wifi_enabled | tr -d '[:space:]')" = "1" ] || \
     adbzeit 8 -s "$USB" shell settings put global adb_wifi_enabled 1 >/dev/null
@@ -237,10 +279,17 @@ for RUNDE in 1 2; do
 done
 
 FERTIG=$(netz_verbunden | head -1)
+# Ein Zweitgerät ist oft einfach aus: Der Wachhund meldet das nur beim Wechsel, nicht alle zwei Minuten.
+WEG_MARKE="$HOME/.adb-wlan${ZUSATZ}-nicht-erreichbar"
 if [ -n "$FERTIG" ]; then
+  rm -f "$WEG_MARKE"
   pflege "$FERTIG"
   [ $LEISE -eq 0 ] && adb devices -l
   exit 0
+fi
+if [ $LEISE -eq 1 ] && [ -n "$ZUSATZ" ]; then
+  [ -f "$WEG_MARKE" ] || { melde "nicht erreichbar (aus, anderes Netz oder WLAN-Debugging aus)"; touch "$WEG_MARKE"; }
+  exit 1
 fi
 melde "FEHLER: Handy per WLAN nicht gefunden. Prüfen: Handy im selben WLAN? 'Debugging über WLAN' an? Sonst einmal Kabel anstecken und dieses Skript erneut ausführen."
 [ $LEISE -eq 0 ] && adb devices -l
