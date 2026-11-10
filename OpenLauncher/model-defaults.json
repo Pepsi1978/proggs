@@ -5,7 +5,7 @@
     "ThinkingValue": "high",
     "CliTargetId": ""
   },
-  "anthropic/claude-fable-5-1[1m]": {
+  "anthropic/claude-fable-5-2[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
     "ThinkingValue": "high",

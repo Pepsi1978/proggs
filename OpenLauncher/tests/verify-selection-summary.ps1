@@ -48,16 +48,16 @@ function Choose([string]$field, [string]$name) {
     $state.Set($field, $entry)
 }
 Assert-Summary 'Modell wählen.'
-Choose SelectedModel 'Claude Fable 5.1'
+Choose SelectedModel 'Claude Fable 5.2'
 Choose SelectedProfile 'Standard'
 Choose SelectedWorkMode 'Freimodus'
 $state.Set('ThinkingTitle', 'EFFORT')
 Choose SelectedThinkingOption 'High'
-Assert-Summary 'Claude Fable 5.1 · Profil Standard · Modus Freimodus · Effort High'
+Assert-Summary 'Claude Fable 5.2 · Profil Standard · Modus Freimodus · Effort High'
 $state.Set('StatusText', 'Profil Standard ausgewählt.')
-Assert-Summary 'Claude Fable 5.1 · Profil Standard · Modus Freimodus · Effort High'
+Assert-Summary 'Claude Fable 5.2 · Profil Standard · Modus Freimodus · Effort High'
 Choose SelectedProfile 'Minimal'
-Assert-Summary 'Claude Fable 5.1 · Profil Minimal · Modus Freimodus · Effort High'
+Assert-Summary 'Claude Fable 5.2 · Profil Minimal · Modus Freimodus · Effort High'
 Choose SelectedModel 'GPT 6 Astra'
 $state.Set('HasCliChoice', $true)
 $state.Set('ThinkingTitle', 'THINKING')

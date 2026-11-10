@@ -10,8 +10,8 @@
         "IsUserDefined": true,
         "ProviderId": "anthropic",
         "ProviderName": "Anthropic",
-        "Slug": "claude-fable-5-1[1m]",
-        "DisplayName": "Claude Fable 5.1",
+        "Slug": "claude-fable-5-2[1m]",
+        "DisplayName": "Claude Fable 5.2",
         "IsHidden": false
       },
       {
@@ -50,6 +50,7 @@
       "claude-sonnet-5[1m]",
       "claude-opus-4-8[1m]",
       "claude-fable-5-1[1m]",
+      "claude-fable-5-2[1m]",
       "claude-sonnet-5-5[1m]",
       "claude-haiku-5-5"
     ],
