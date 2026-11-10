@@ -162,7 +162,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
 
-    val schritte = listOf(
+    val schritte = listOfNotNull(
         Schritt("Mit ChatGPT verbinden", "Gibt Jarvis sein eigenes Denken. Einmal anmelden, fertig.", vm.kiVerbunden, "Verbinden") { vm.reiter = Reiter.EINSTELLUNGEN; vm.kiVerbinden() },
         Schritt("Geniale Aufgaben", vm.aufgabenStoerung ?: "Angebunden: lesen und schreiben.", vm.aufgabenGeprueft && vm.aufgabenStoerung == null, "Prüfen") { vm.lagePruefen() },
         Schritt("Kalender", vm.stoerungen["kalender"]?.let { "Damit Jarvis Termine und Dienstplan kennt, braucht er den Zugriff auf deinen Kalender." } ?: "Angebunden: Termine und Dienstplan lesen.", vm.aufgabenGeprueft && vm.stoerungen["kalender"] == null, "Erlauben") { vm.kalenderAnfragen() },
@@ -176,7 +176,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             if (tunnel.stufe == TunnelStufe.FEHLER) tunnel.meldung else if (de.frank.jarvis.data.Geraet.istTablet) "Jarvis verbindet sich von selbst mit deinem Server: für Programmieraufträge und den Abgleich mit dem Handy." else "Jarvis verbindet sich von selbst mit deinem Server und ist dann für ChatGPT erreichbar.",
             tunnel.stufe == TunnelStufe.ONLINE, "Ansehen",
         ) { vm.reiter = Reiter.EINSTELLUNGEN },
-        Schritt("Plugin in ChatGPT eintragen", "Adresse kopieren und in ChatGPT als eigenen Konnektor „Jarvis“ anlegen.", pluginGenutzt, "Anleitung") { vm.reiter = Reiter.EINSTELLUNGEN },
+        // Das ChatGPT-Plugin gibt es nur für das Handy (Franks Vorgabe vom 10.11.2026): Auf dem Tablet entfällt der Schritt.
+        if (de.frank.jarvis.data.Geraet.istTablet) null else Schritt("Plugin in ChatGPT eintragen", "Adresse kopieren und in ChatGPT als eigenen Konnektor „Jarvis“ anlegen.", pluginGenutzt, "Anleitung") { vm.reiter = Reiter.EINSTELLUNGEN },
         Schritt(
             "Hey Jarvis",
             when {
@@ -188,8 +189,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         Schritt("Im Hintergrund wach bleiben", "Damit Jarvis auch bei gesperrtem Handy antwortet.", vm.akkuFrei, "Erlauben") {
             runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${activity.packageName}"))) }
         },
-    // Das ChatGPT-Plugin gibt es nur für das Handy (Franks Vorgabe vom 10.11.2026): Auf dem Tablet entfällt der Schritt.
-    ).filter { !de.frank.jarvis.data.Geraet.istTablet || it.titel != "Plugin in ChatGPT eintragen" }
+    )
     // Solange die Prüfung der angebundenen Apps läuft, zählen sie nicht als offen: sonst blitzt die Karte beim Start kurz auf.
     val offen = schritte.count { !it.fertig && (vm.aufgabenGeprueft || it.titel !in APP_SCHRITTE) }
 

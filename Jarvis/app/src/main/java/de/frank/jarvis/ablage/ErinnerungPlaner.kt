@@ -107,12 +107,15 @@ object ErinnerungPlaner {
 
     private fun benutzt(app: Context) = app.getSystemService(PowerManager::class.java).isInteractive && !app.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
-    /** Name des Geräts, das jetzt dran ist. Ohne Server, ohne Netz oder bei einer unlesbaren Antwort: dieses Handy. */
+    /**
+     * Name des Geräts, das jetzt dran ist. Ohne Server oder ohne Netz: dieses Gerät selbst (Handy wie Tablet). Lieber erscheint eine
+     * Erinnerung dann auf beiden als auf keinem; nur eine leere Antwort des Servers meint wie bisher das Handy.
+     */
     private fun ziel(app: Context): String = runCatching {
         val e = Einstellungen.get(app)
         val url = "https://${e.serverHost}/j/${e.geheimnis}/ablage/anwesenheit".toHttpUrl().newBuilder().addQueryParameter("geraet", AblageQuellen.DIESES).addQueryParameter("aktiv", if (benutzt(app)) "1" else "0").build()
-        netz.newCall(Request.Builder().url(url).build()).execute().use { r -> if (r.isSuccessful) JSONObject(r.body?.string().orEmpty()).optString("ziel").ifBlank { AblageQuellen.HANDY } else AblageQuellen.HANDY }
-    }.getOrDefault(AblageQuellen.HANDY)
+        netz.newCall(Request.Builder().url(url).build()).execute().use { r -> if (r.isSuccessful) JSONObject(r.body?.string().orEmpty()).optString("ziel").ifBlank { AblageQuellen.HANDY } else AblageQuellen.DIESES }
+    }.getOrDefault(AblageQuellen.DIESES)
 
     private fun gezeigt(app: Context): Set<String> = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet("gezeigt", emptySet()).orEmpty()
     private fun setzeGezeigt(app: Context, s: Set<String>) { app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet("gezeigt", s).apply() }

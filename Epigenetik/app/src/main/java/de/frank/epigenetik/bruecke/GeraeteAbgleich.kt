@@ -79,7 +79,11 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
     private fun schemaListe() = JSONObject().apply { datenbanken.forEach { put(it, schema(dbDatei(it))) } }
 
     /** Prüfsumme über den Inhalt aller Tabellen und Zusatzdateien: gleich bei gleichem Inhalt, egal wie die Datei aufgebaut ist. */
+    /** Zeilen aller gezählten Tabellen beim letzten [inhalt]: 0 heißt leerer Stand (frisch installiert, Daten gelöscht). */
+    private var zeilen = 0L
+
     private fun inhalt(dbs: Map<String, File>): String {
+        zeilen = 0L
         val md = MessageDigest.getInstance("SHA-256")
         fun text(s: String) { val b = s.toByteArray(); md.update(b.size.toString().toByteArray()); md.update(0); md.update(b) }
         for ((name, datei) in dbs.toSortedMap()) {
@@ -95,6 +99,7 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
                     .use { c -> while (c.moveToNext()) c.getString(0).let { n -> if (volltext.none { v -> n == v || n.startsWith(v + "_") }) tabellen += n } }
                 for (t in tabellen) {
                     text("t:$t")
+                    db.rawQuery("SELECT count(*) FROM \"$t\"", null).use { c -> if (c.moveToFirst()) zeilen += c.getLong(0) }
                     db.rawQuery("SELECT * FROM \"$t\" ORDER BY rowid", null).use { c ->
                         text(c.columnNames.joinToString(","))
                         while (c.moveToNext()) for (i in 0 until c.columnCount) when (c.getType(i)) {
@@ -141,14 +146,14 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
             ZipOutputStream(teil.outputStream().buffered()).use { zip ->
                 fun eintrag(pfad: String, daten: () -> Unit) { zip.putNextEntry(ZipEntry(pfad).apply { time = 0 }); daten(); zip.closeEntry() }
                 eintrag("meta.json") {
-                    zip.write(JSONObject().put("paket", ctx.packageName).put("version", appVersion()).put("schema", schemaListe()).put("inhalt", summe)
+                    zip.write(JSONObject().put("paket", ctx.packageName).put("version", appVersion()).put("schema", schemaListe()).put("inhalt", summe).put("zeilen", zeilen)
                         .put("datenbanken", JSONArray(datenbanken)).put("dateien", JSONArray(dateien)).toString().toByteArray())
                 }
                 for ((name, kopie) in kopien) if (kopie.exists()) eintrag("db/$name") { kopie.inputStream().use { it.copyTo(zip) } }
                 for (rel in dateien) File(ctx.filesDir, rel).takeIf { it.isFile }?.let { f -> eintrag("datei/$rel") { f.inputStream().use { it.copyTo(zip) } } }
             }
             if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "Paket ließ sich nicht ablegen" } }
-            return JSONObject().put("inhalt", summe).put("sha256", sha256(ziel)).put("groesse", ziel.length()).put("schema", schemaListe()).put("version", appVersion())
+            return JSONObject().put("inhalt", summe).put("zeilen", zeilen).put("sha256", sha256(ziel)).put("groesse", ziel.length()).put("schema", schemaListe()).put("version", appVersion())
                 .put("stempel", stand().getString("stempel"))
         } finally {
             arbeit.deleteRecursively()
@@ -172,6 +177,9 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
                     val neu = schema(probe)
                     val eigen = schema(dbDatei(name))
                     // Ein neueres Schema kann diese App-Fassung nicht lesen: erst die App aktualisieren, dann abgleichen.
+                    // Noch keine eigene Datenbank zum Vergleich (App hier nie geöffnet): Dann entscheidet die App-Fassung. Eine ältere App
+                    // nähme sonst ein neueres Schema an und stürzte beim Öffnen ab.
+                    if (eigen == 0 && meta.optLong("version") > appVersion()) return fehler("Der Stand des anderen Geräts stammt von einer neueren App-Fassung, und hier gibt es noch keine Datenbank zum Vergleich. Bitte die App hier aktualisieren.").put("app_zu_alt", true)
                     if (eigen in 1 until neu) return fehler("Der Stand des anderen Geräts stammt von einer neueren App-Fassung (Schema $neu, hier $eigen). Bitte die App hier aktualisieren.").put("app_zu_alt", true)
                     // Lesbar und mit Tabellen: Die Übertragung ist über die Prüfsumme gesichert, und Jarvis vergleicht nach dem Einspielen den Inhalt.
                     // Kein quick_check: Bei Volltext-Tabellen (FTS) meldet er auf einer nur lesbaren Kopie Fehler, obwohl die Datenbank heil ist.
@@ -245,13 +253,10 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
             return md.digest().joinToString("") { "%02x".format(it) }
         }
 
-        /** True, wenn in diesem Prozess gerade ein Stand des anderen Geräts eingespielt wurde (zum Neuplanen von Erinnerungen und Widgets). */
-        @Volatile var geradeUebernommen = false
-            private set
-
         /**
          * Beim Prozessstart, bevor irgendetwas die Datenbank öffnet (im onCreate der Brücke): spielt ein bereitliegendes Paket ein.
-         * Erst vollständig in Nachbardateien entpacken, dann umbenennen: Bricht es mittendrin ab, bleibt der alte Stand ganz.
+         * Erst vollständig in Nachbardateien entpacken, dann umbenennen (das ersetzt die alte Datei in einem Zug, ohne sie vorher zu
+         * löschen). Bricht es mittendrin ab, bleibt das Paket liegen und der nächste Start spielt es vollständig neu ein.
          */
         @Synchronized
         fun wendeAn(ctx: Context): Boolean {
@@ -259,6 +264,7 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
             if (!bereit.exists()) return false
             return try {
                 val neu = mutableListOf<Pair<File, File>>()
+                val weg = mutableListOf<File>()
                 ZipFile(bereit).use { zip ->
                     for (e in zip.entries()) {
                         val ziel = when {
@@ -271,14 +277,18 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
                         zip.getInputStream(e).use { ein -> teil.outputStream().use { ein.copyTo(it) } }
                         neu += teil to ziel
                     }
+                    // Zusatzdateien, die es drüben nicht (mehr) gibt, fallen auch hier weg: Sonst stimmte der Inhalt nach dem Einspielen nie überein.
+                    zip.getEntry("meta.json")?.let { m -> JSONObject(zip.getInputStream(m).readBytes().toString(Charsets.UTF_8)).optJSONArray("dateien") }?.let { a ->
+                        for (i in 0 until a.length()) a.optString(i).takeIf { it.isNotEmpty() && !it.contains("..") && zip.getEntry("datei/$it") == null }?.let { weg += File(ctx.filesDir, it) }
+                    }
                 }
                 for ((teil, ziel) in neu) {
-                    if (ziel.parentFile == ctx.getDatabasePath("x").parentFile) listOf("-wal", "-shm", "-journal").forEach { File(ziel.path + it).delete() }
-                    ziel.delete()
                     check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" }
+                    // Das WAL der alten Datenbank gehört nicht zur neuen: weg damit, bevor sie jemand öffnet.
+                    if (ziel.parentFile == ctx.getDatabasePath("x").parentFile) listOf("-wal", "-shm", "-journal").forEach { File(ziel.path + it).delete() }
                 }
+                weg.forEach { it.delete() }
                 bereit.delete()
-                geradeUebernommen = true
                 Log.i(TAG, "Stand des anderen Geräts eingespielt (${neu.size} Dateien)")
                 true
             } catch (e: Exception) {

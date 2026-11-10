@@ -585,10 +585,10 @@ Stand 10.11.2026 (ab 1.8.604/1.8.605). Dieselbe APK läuft auf dem Handy (Galaxy
 - **Installieren:** `Werkzeuge/jarvis-install/jarvis-install.ps1 <apk> -Ziel tablet` (Mac/Server: `--ziel tablet`). Die Geräte stehen
   mit Seriennummer und Tunnel-Adresse in `Werkzeuge/adb-wlan/geraete.json` (Handy 10.8.0.7, Tablet 10.8.0.8, WireGuard-Datei
   `~/SK/second-brain/wireguard/tab-s9.conf`). Jede Jarvis-Version kommt auf beide Geräte.
-- **Erstbefüllung:** `werkzeuge/tablet-einrichten.sh` (Git Bash oder Mac): Rechte, Einstellungs-Umzug (`data/Umzug.kt`: alle Schalter
+- **Einrichten:** `werkzeuge/tablet-einrichten.sh` (Git Bash oder Mac): Rechte und Einstellungs-Umzug (`data/Umzug.kt`: alle Schalter
   und Schlüssel per run-as von Gerät zu Gerät, nie über den Rechner; ohne Plugin-Geheimnis, ChatGPT-Anmeldung und
-  Anthropic-Sitzungen), Jarvis' Gedächtnis und Gespräche, Daten der angebundenen Apps. Richtung immer Handy → Tablet,
-  vorhandene Tablet-Daten nur mit `--ueberschreiben`.
+  Anthropic-Sitzungen; dazu `files/fernsteuerung-token.txt`). Daten kopiert das Skript nicht: Gedächtnis, Gespräche und App-Daten
+  holt sich das Tablet über den Abgleich selbst. Das ChatGPT-Plugin gibt es nur am Handy, am Tablet ist es ausgeblendet.
 - **Auf dem Tablet aus (Vorgabe):** Tagesauswertung, Lernen, Losfahr-Meldung, Weckwort (`Umzug.TABLET_AUS`): Das Handy bleibt die eine
   Quelle für Franks Gedächtnis, und auf „Hey Jarvis“ antwortet nur ein Gerät.
 - **Laufender Abgleich der Apps** (`abgleich/GeraeteAbgleich.kt`, Gegenstück `bruecke/GeraeteAbgleich.kt` in Aufgaben, Ziele,
@@ -598,7 +598,10 @@ Stand 10.11.2026 (ab 1.8.604/1.8.605). Dieselbe APK läuft auf dem Handy (Galaxy
   in den Geräteabgleich-Speicher des Servers (`/j/<Geheimnis>/abgleich/…`, eigene Datenbank `/data/geraeteabgleich`, Signal
   „geraeteabgleich“) und spielt den jüngeren Stand des anderen Geräts ein. Regeln: ganzer Stand, jüngster gewinnt; Erstquelle ist das
   Handy (ein Gerät ohne abgeglichenen Stand lädt nichts hoch, außer es ist das Handy); verglichen wird die Prüfsumme über die
-  Tabelleninhalte; ein neueres Schema am anderen Gerät sperrt den Abgleich der App, bis sie hier aktualisiert ist. Zustand:
+  Tabelleninhalte (Volltext-Tabellen zählen nicht); ein leerer Stand (App neu installiert, Daten gelöscht) geht nie hoch, Jarvis holt
+  dann den Stand des Servers zurück; haben beide geändert, entscheidet, wann Jarvis die Änderung bemerkt hat (`lokal_seit`), nicht die
+  Dateizeit; ein neueres Schema am anderen Gerät sperrt den Abgleich der App, bis sie hier aktualisiert ist oder dort Neues kommt.
+  Abgelöste Pakete hält der Server drei Tage. Bekannte Grenze: Das Einspielen startet die App neu, auch wenn sie gerade offen ist. Zustand:
   `files/geraeteabgleich.json`, Logbuch-Ereignis „Geräteabgleich <App>“. Deshalb die fünf Apps immer auf beide Geräte installieren.
 - **Laufender Abgleich von Jarvis' Gedächtnis und Gesprächen** (`abgleich/GedaechtnisAbgleich.kt`, ab 1.8.606): je Datei ein Dokument
   (Arten `gedaechtnis`, `gespraech`) im selben Server-Speicher, etwa im Minutentakt und sofort auf das Signal. Je Datei gewinnt die

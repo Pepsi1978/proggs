@@ -1534,7 +1534,9 @@ class AgentenKanal:
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
             self.post = {"mac": daten.get("mac", []), "handy": daten.get("handy", [])}
-            self.absender = {n["id"]: n["von"] for n in self.post["mac"] if n.get("von")}
+            # Auch fuer schon quittierte Nachrichten: Die Antwort des Rechners kann nach einem Neustart des Relays kommen.
+            self.absender = {str(k): str(v) for k, v in (daten.get("absender") or {}).items()}
+            self.absender.update({n["id"]: n["von"] for n in self.post["mac"] if n.get("von")})
         except Exception:
             pass
 
@@ -1542,7 +1544,7 @@ class AgentenKanal:
         try:
             self.datei.parent.mkdir(parents=True, exist_ok=True)
             teil = self.datei.with_suffix(".teil")
-            teil.write_text(json.dumps(self.post, ensure_ascii=False), "utf-8")
+            teil.write_text(json.dumps(dict(self.post, absender=self.absender), ensure_ascii=False), "utf-8")
             teil.replace(self.datei)
         except Exception as fehler:
             log.warning("Agentenkanal nicht gesichert: %s", fehler)
@@ -1622,6 +1624,7 @@ class AgentenKanal:
             self.absender[nachricht["id"]] = nachricht["von"]
             for alt in list(self.absender)[:-500]:
                 del self.absender[alt]
+            self._sichere()
         self.eingang_mac.set()
         if self._frage_liegt():
             self.geweckt = time.monotonic()
@@ -1761,14 +1764,18 @@ ABLAGE_SEITE_BYTES = 2 * 1024 * 1024
 # (je App ein Dokument, der ganze Export als Blob). Gleiche Regeln wie die Ablage: juengste Fassung gewinnt, Grabsteine.
 ABGLEICH_ORDNER = Path(os.environ.get("JARVIS_ABGLEICH", "/data/geraeteabgleich"))
 ABGLEICH_ARTEN = {"gedaechtnis", "gespraech", "appdaten", "stand"}
+# Abgeloeste Pakete liegen hier nur kurz: Jede Aenderung in einer App laedt deren ganzen Stand neu hoch, 30 Tage wie in der Ablage
+# fuellten den kleinen Server. Der Rueckfall liegt ohnehin auf den Geraeten.
+ABGLEICH_FRIST_S = 3 * 86_400
 
 
 class AblageAbgleich:
     """Zwei Instanzen: die gemeinsame Ablage aller Jarvis-Versionen (Vorgabe) und der Geraeteabgleich zwischen Handy und Tablet
     (eigener Ordner, eigene Arten, eigenes Signal, Wege unter /j/<Geheimnis>/abgleich): Die Rechner-Versionen sehen dessen Dokumente nie."""
 
-    def __init__(self, relay: Relay, ordner: Path = ABLAGE_ORDNER, arten=ABLAGE_ARTEN, signal: str = "ablage"):
+    def __init__(self, relay: Relay, ordner: Path = ABLAGE_ORDNER, arten=ABLAGE_ARTEN, signal: str = "ablage", frist_s: int = ABLAGE_FRIST_S):
         self.relay = relay
+        self.frist_s = frist_s
         self.ordner = ordner
         self.arten = arten
         self.signal = signal
@@ -1816,7 +1823,7 @@ class AblageAbgleich:
         shas = [daten.get("text_sha")] + [a.get("sha256") for a in daten.get("anhaenge") or [] if isinstance(a, dict)]
         return [s for s in shas if isinstance(s, str) and s]
 
-    def _melden(self, von: str, stand: int) -> None:
+    def _melden(self, von: str, stand: int, art: str = "") -> None:
         """Alle anderen Versionen wecken, nie die Quelle selbst."""
         rest = []
         for name, warten in self.warter:
@@ -1827,7 +1834,8 @@ class AblageAbgleich:
         self.warter = rest
         # Handy und Tablet haengen an der WebSocket statt am Long-Polling: Signal an alle ausser der Quelle.
         # Wer gerade nicht verbunden ist, gleicht beim naechsten Verbinden ohnehin ab.
-        _im_hintergrund(self.relay.an_alle({"signal": self.signal, "stand": stand}, ausser=self.relay.zu_ablage_name(von)))
+        # Die Art reist mit: Der Geraeteabgleich hat zwei Schleifen (App-Daten, Gedaechtnis), geweckt wird nur die betroffene.
+        _im_hintergrund(self.relay.an_alle({"signal": self.signal, "stand": stand, "art": art}, ausser=self.relay.zu_ablage_name(von)))
 
     async def aenderungen(self, request: web.Request) -> web.Response:
         if not self.relay.passt(request.match_info["geheimnis"]):
@@ -1919,7 +1927,7 @@ class AblageAbgleich:
                         (art, kennung, json.dumps({} if geloescht else daten, ensure_ascii=False), geaendert, int(geloescht), von, stand))
         self.db.commit()
         log.info("Ablage: %s %s von %s, Stand %s%s", art, kennung, von, stand, " (geloescht)" if geloescht else "")
-        self._melden(von, stand)
+        self._melden(von, stand, art)
         return web.json_response({"uebernommen": True, "stand": stand})
 
     async def blob_ablegen(self, request: web.Request) -> web.Response:
@@ -1945,7 +1953,7 @@ class AblageAbgleich:
                 benutzt.update(self._dateien(json.loads(daten)))
         finally:
             verbindung.close()
-        grenze = time.time() - ABLAGE_FRIST_S
+        grenze = time.time() - self.frist_s
         weg = 0
         for datei in self.blobs.iterdir():
             try:
@@ -2064,7 +2072,7 @@ def app() -> web.Application:
     anwendung.router.add_put("/j/{geheimnis}/ablage/doc/{art}/{id}", ablage.doc)
     anwendung.router.add_put("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_ablegen)
     anwendung.router.add_get("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_holen)
-    abgleich = AblageAbgleich(relay, ABGLEICH_ORDNER, ABGLEICH_ARTEN, "geraeteabgleich")
+    abgleich = AblageAbgleich(relay, ABGLEICH_ORDNER, ABGLEICH_ARTEN, "geraeteabgleich", ABGLEICH_FRIST_S)
     anwendung.on_startup.append(abgleich.waechter)
     anwendung.router.add_get("/j/{geheimnis}/abgleich/aenderungen", abgleich.aenderungen)
     anwendung.router.add_put("/j/{geheimnis}/abgleich/doc/{art}/{id}", abgleich.doc)

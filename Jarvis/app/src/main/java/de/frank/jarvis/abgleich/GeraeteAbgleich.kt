@@ -47,8 +47,10 @@ import java.util.concurrent.TimeUnit
  *   Handy ist: Sonst überschriebe ein frisch installiertes, leeres Tablet den echten Stand.
  * - **Hochgeladen wird nur neuer Inhalt.** Verglichen wird die Prüfsumme über die Tabelleninhalte, nicht die Datei. Ein
  *   eingespielter Stand gilt als abgeglichen und geht nie zurück (kein Hin und Her).
- * - **Haben beide Geräte seit dem letzten Abgleich geändert**, gewinnt die jüngere Änderung; der unterlegene Stand bleibt auf
- *   seinem Gerät als Rückfall liegen (das macht die App vor jedem Einspielen) und steht im Logbuch.
+ * - **Haben beide Geräte seit dem letzten Abgleich geändert**, gewinnt die jüngere Änderung (maßgeblich ist, wann Jarvis die
+ *   Änderung bemerkt hat, nicht die Dateizeit); der unterlegene Stand bleibt auf seinem Gerät als Rückfall liegen (das macht die
+ *   App vor jedem Einspielen) und steht im Logbuch.
+ * - **Ein leerer Stand geht nie hoch.** Ist die App hier leer (neu installiert, Daten gelöscht), holt Jarvis den Stand des Servers zurück.
  * - **Passt die App-Fassung nicht** (das andere Gerät hat ein neueres Datenbank-Schema), wird weder eingespielt noch
  *   hochgeladen, bis die App hier aktualisiert ist.
  * - Nie während eines Sprachgesprächs (Sprachmodus vor Hintergrundarbeit).
@@ -127,20 +129,39 @@ object GeraeteAbgleich {
     private fun runde(app: Context) {
         val e = Einstellungen.get(app)
         if (!e.geraeteAbgleichAn || e.serverHost.isBlank() || e.serverToken.isBlank()) return
-        if (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) return
+        if (pause()) return
         val basisAdresse = "https://${e.serverHost}/j/${e.geheimnis}/abgleich"
         val z = lade(app)
         val apps = z.obj("apps")
+        // 0. Änderungen hier bemerken, auch ohne Netz. Wann Jarvis sie bemerkt hat (`lokal_seit`), entscheidet später, welcher Stand der
+        //    jüngere ist. Die Dateizeit der Datenbank taugt dafür nicht: Export und Einspielen des Abgleichs verschieben sie selbst.
+        val staende = HashMap<String, JSONObject>()
+        for (a in APPS) {
+            val stand = rufe(app, a, "abgleich_stand") ?: continue     // App nicht installiert
+            staende[a.kennung] = stand
+            val s = apps.obj(a.kennung)
+            val stempel = stand.optString("stempel")
+            if (stempel.isNotEmpty() && stempel != s.optString("gesehen")) s.put("gesehen", stempel).put("lokal_seit", System.currentTimeMillis())
+        }
         // 1. Was liegt am Server Neues? Ohne Netz bleibt alles, wie es ist; lokale Änderungen gehen beim nächsten Mal hoch.
         try { hole(basisAdresse, z, apps) } catch (x: IOException) { return } finally { sichere(app, z) }
         // 2. Je App: einspielen, hochladen oder nichts tun.
         for (a in APPS) {
-            try { gleiche(app, basisAdresse, a, apps.obj(a.kennung)) }
+            if (pause()) return
+            val stand = staende[a.kennung] ?: continue
+            try { gleiche(app, basisAdresse, a, apps.obj(a.kennung), stand) }
             catch (x: IOException) { /* Netz weg: nächste Runde */ }
+            catch (x: Abgelehnt) { melde(a, x.message ?: "vom Server abgelehnt", fehler = true) }
             catch (x: Exception) { Logbuch.fehler("Geräteabgleich ${a.name}", x) }
             sichere(app, z)
         }
     }
+
+    /** Der Server oder die Prüfsumme hat etwas abgelehnt (kein Netzfehler): steht im Logbuch, statt still als „Netz weg“ zu enden. */
+    private class Abgelehnt(text: String) : Exception(text)
+
+    /** Im Sprachgespräch ruht der Abgleich, auch zwischen zwei Apps und vor dem Einspielen (Sprachmodus vor Hintergrundarbeit). */
+    private fun pause() = de.frank.jarvis.speech.GespraechsFokus.sprachmodus
 
     private fun hole(basis: String, z: JSONObject, apps: JSONObject) {
         while (true) {
@@ -170,40 +191,57 @@ object GeraeteAbgleich {
         }
     }
 
-    private fun gleiche(app: Context, basis: String, a: App, s: JSONObject) {
-        val stand = rufe(app, a, "abgleich_stand") ?: return          // App nicht installiert
+    /** Was Jarvis zuletzt für diese App gesehen hat: Stand hier, Stand am Server, App-Fassung. Unverändert heißt nichts zu tun, ohne Export. */
+    private fun ruheMarke(stempel: String, fern: JSONObject?, version: Long) = "$stempel|${fern?.optString("inhalt").orEmpty()}|$version"
+
+    private fun gleiche(app: Context, basis: String, a: App, s: JSONObject, stand: JSONObject) {
         val stempel = stand.optString("stempel")
         if (stempel.isEmpty()) { melde(a, "Die App kennt den Abgleich noch nicht (ältere Fassung)."); return }
         val fern = s.optJSONObject("fern")
         val basisInhalt = s.optString("basis")
-        // Nichts Neues, weder hier noch dort: der häufigste Fall, ohne Export.
-        if (stempel == s.optString("stempel") && basisInhalt.isNotEmpty() && (fern == null || fern.optString("inhalt") == basisInhalt)) return
+        val version = stand.optLong("version")
+        // Nichts Neues, weder hier noch am Server noch an der App-Fassung: der häufigste Fall, ohne Export. Gilt auch für Wartezustände
+        // (Tablet wartet auf das Handy, App gesperrt), sonst liefe dort jede Runde ein voller Export ins Leere.
+        if (s.optString("ruhe") == ruheMarke(stempel, fern, version)) return
         val export = rufe(app, a, "abgleich_export") ?: return
         val lokal = export.optString("inhalt")
         if (lokal.isEmpty()) { melde(a, "Export gescheitert: ${export.optString("fehler")}", fehler = true); return }
+        // Der Export selbst verschiebt die Dateizeiten (Checkpoint): Das ist keine Änderung von Frank.
+        val nachher = export.optString("stempel")
+        s.put("gesehen", nachher)
+        fun ruhen() { s.put("ruhe", ruheMarke(nachher, fern, version)) }
         if (fern != null && fern.optString("inhalt") == lokal) {
-            s.put("basis", lokal).put("stempel", export.optString("stempel")).remove("gesperrt")
+            s.put("basis", lokal).put("stempel", nachher)
+            s.remove("gesperrt"); s.remove("gesperrt_bei")
+            ruhen()
             melde(a, "abgeglichen")
             return
         }
+        val leer = export.optLong("zeilen", -1L) == 0L
         val lokalGeaendert = basisInhalt.isEmpty() || lokal != basisInhalt
-        val lokalZeit = stand.optLong("geaendert_um", System.currentTimeMillis())
+        val lokalZeit = s.optLong("lokal_seit", System.currentTimeMillis())
         when {
+            // Hier ist die App leer (neu installiert, Daten gelöscht), es gab aber schon einen Stand: Ein leerer Stand geht nie hoch,
+            // sonst wären die Daten auf beiden Geräten weg. Stattdessen kommt der Stand des Servers zurück.
+            leer && fern != null -> { melde(a, "Die App ist hier leer; der Stand von ${fern.optString("von")} wird zurückgeholt."); einspielen(app, basis, a, s, fern, version) }
+            leer -> { if (basisInhalt.isNotEmpty()) melde(a, "Die App ist hier leer und der Server hat keinen Stand: nichts hochgeladen.", fehler = true); ruhen() }
             fern == null -> {
-                if (basisInhalt.isEmpty() && Geraet.istTablet) { melde(a, "wartet auf den ersten Stand vom Handy"); return }
+                if (basisInhalt.isEmpty() && Geraet.istTablet) { melde(a, "wartet auf den ersten Stand vom Handy"); ruhen(); return }
                 hochladen(app, basis, a, s, export, lokalZeit, null)
             }
-            !lokalGeaendert -> einspielen(app, basis, a, s, fern)
-            basisInhalt.isEmpty() -> if (Geraet.istTablet) einspielen(app, basis, a, s, fern) else hochladen(app, basis, a, s, export, lokalZeit, fern)
+            // Gesperrt und seither nichts Neues vom anderen Gerät und keine neue App-Fassung hier: nicht jede Runde neu versuchen.
+            s.optBoolean("gesperrt") && s.optString("gesperrt_bei") == "${fern.optString("inhalt")}|$version" -> ruhen()
+            !lokalGeaendert -> einspielen(app, basis, a, s, fern, version)
+            basisInhalt.isEmpty() -> if (Geraet.istTablet) einspielen(app, basis, a, s, fern, version) else hochladen(app, basis, a, s, export, lokalZeit, fern)
             fern.optString("inhalt") == basisInhalt -> hochladen(app, basis, a, s, export, lokalZeit, fern)   // nur hier geändert
             // Beide Seiten haben seit dem letzten Abgleich geändert: Die jüngere Änderung gewinnt.
             lokalZeit > fern.optLong("geaendert") -> {
-                Logbuch.system("Geräteabgleich ${a.name}", "Beide Geräte haben geändert; der Stand dieses Geräts ist jünger und gilt. Der andere bleibt dort als Rückfall liegen.")
+                melde(a, "Beide Geräte haben geändert; der Stand dieses Geräts ist jünger und gilt. Der andere bleibt dort als Rückfall liegen.")
                 hochladen(app, basis, a, s, export, lokalZeit, fern)
             }
             else -> {
-                Logbuch.system("Geräteabgleich ${a.name}", "Beide Geräte haben geändert; der Stand von ${fern.optString("von")} ist jünger und gilt. Der Stand dieses Geräts bleibt als Rückfall in der App liegen.")
-                einspielen(app, basis, a, s, fern)
+                melde(a, "Beide Geräte haben geändert; der Stand von ${fern.optString("von")} ist jünger und gilt. Der Stand dieses Geräts bleibt als Rückfall in der App liegen.")
+                einspielen(app, basis, a, s, fern, version)
             }
         }
     }
@@ -219,7 +257,7 @@ object GeraeteAbgleich {
             }
             if (sha256(paket) != sha) { melde(a, "Das Paket der App passt nicht zu seiner Prüfsumme.", fehler = true); return }
             netz.newCall(Request.Builder().url("$basis/blob/$sha").put(paket.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Paket hochladen: ${r.code}")
+                if (!r.isSuccessful) throw Abgelehnt("Paket hochladen: Server antwortet ${r.code}")
             }
             // Auch bei falsch gehender Uhr muss ein Stand, der auf dem des Servers aufbaut, diesen ablösen.
             val geaendert = maxOf(lokalZeit, (fern?.optLong("geaendert") ?: 0L) + 1)
@@ -227,16 +265,22 @@ object GeraeteAbgleich {
                 .put("schema", export.optJSONObject("schema") ?: JSONObject()).put("version", export.optLong("version"))
             val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", false).put("von", Geraet.ablageName).toString()
             val antwort = netz.newCall(Request.Builder().url("$basis/doc/$ART/${a.kennung}").put(rumpf.toRequestBody(JSON)).build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Stand melden: ${r.code}")
+                if (!r.isSuccessful) throw Abgelehnt("Stand melden: Server antwortet ${r.code}")
                 JSONObject(r.body?.string().orEmpty())
             }
             if (antwort.optBoolean("uebernommen")) {
-                s.put("basis", export.optString("inhalt")).put("stempel", export.optString("stempel"))
-                s.put("fern", JSONObject().put("inhalt", export.optString("inhalt")).put("sha", sha).put("geaendert", geaendert).put("von", Geraet.ablageName).put("groesse", paket.length()))
+                val neuFern = JSONObject().put("inhalt", export.optString("inhalt")).put("sha", sha).put("geaendert", geaendert).put("von", Geraet.ablageName).put("groesse", paket.length())
+                s.put("basis", export.optString("inhalt")).put("stempel", export.optString("stempel")).put("gesehen", export.optString("stempel"))
+                s.put("fern", neuFern).put("ruhe", ruheMarke(export.optString("stempel"), neuFern, export.optLong("version")))
                 gemeldet.remove(a.kennung)
                 Logbuch.system("Geräteabgleich ${a.name}", "Stand hochgeladen (${paket.length() / 1024} KB)")
             } else {
-                // Der Server hat inzwischen einen jüngeren Stand: gleich noch einmal, dann mit ihm.
+                // Der Server hat inzwischen einen jüngeren Stand und gibt ihn gleich mit: Die nächste Runde entscheidet mit ihm.
+                antwort.optJSONObject("doc")?.let { d ->
+                    val daten = d.optJSONObject("daten") ?: JSONObject()
+                    if (!d.optBoolean("geloescht") && daten.optString("inhalt").isNotEmpty()) s.put("fern", JSONObject().put("inhalt", daten.optString("inhalt"))
+                        .put("sha", daten.optString("text_sha")).put("geaendert", d.optLong("geaendert")).put("von", "dem anderen Gerät").put("groesse", daten.optLong("groesse")))
+                }
                 anstossen()
             }
         } finally {
@@ -244,21 +288,25 @@ object GeraeteAbgleich {
         }
     }
 
-    private fun einspielen(app: Context, basis: String, a: App, s: JSONObject, fern: JSONObject) {
+    private fun einspielen(app: Context, basis: String, a: App, s: JSONObject, fern: JSONObject, version: Long) {
+        // Das Einspielen beendet die App und startet sie neu: nie in ein beginnendes Sprachgespräch hinein.
+        if (pause()) return
         val sha = fern.optString("sha")
+        val sperre = "${fern.optString("inhalt")}|$version"
         val paket = File(app.cacheDir, "abgleich-${a.kennung}-fern.zip")
         try {
             netz.newCall(Request.Builder().url("$basis/blob/$sha").build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Paket holen: ${r.code}")
+                if (!r.isSuccessful) throw Abgelehnt("Paket holen: Server antwortet ${r.code}")
                 paket.outputStream().use { aus -> r.body!!.byteStream().copyTo(aus) }
             }
-            if (sha256(paket) != sha) throw IOException("Paket beschädigt angekommen")
+            if (sha256(paket) != sha) throw Abgelehnt("Das Paket von ${fern.optString("von")} kam beschädigt an.")
             (app.contentResolver.openFileDescriptor(a.adresse.buildUpon().path("/abgleich/import").build(), "w") ?: throw IOException("Paket nicht ablegbar")).use { pfd ->
                 java.io.FileOutputStream(pfd.fileDescriptor).use { aus -> paket.inputStream().use { it.copyTo(aus) } }
             }
             val antwort = rufe(app, a, "abgleich_import", JSONObject().put("sha256", sha))
             if (antwort?.optBoolean("ok") != true) {
-                if (antwort?.optBoolean("app_zu_alt") == true) s.put("gesperrt", true)
+                // Bis das andere Gerät etwas Neues hochlädt oder die App hier aktualisiert ist, lohnt kein neuer Versuch.
+                if (antwort?.optBoolean("app_zu_alt") == true) s.put("gesperrt", true).put("gesperrt_bei", sperre)
                 melde(a, "Einspielen abgelehnt: ${antwort?.optString("fehler") ?: "keine Antwort der App"}", fehler = true)
                 return
             }
@@ -273,11 +321,13 @@ object GeraeteAbgleich {
             }
             if (neu == null || neu.optString("inhalt") != fern.optString("inhalt")) {
                 // Nicht hochladen: Was jetzt in der App steht, ist weder der alte noch sicher der neue Stand.
-                s.put("gesperrt", true)
+                s.put("gesperrt", true).put("gesperrt_bei", sperre)
                 melde(a, "Nach dem Einspielen stimmt der Inhalt nicht mit dem Stand von ${fern.optString("von")} überein. Abgleich für diese App angehalten.", fehler = true)
                 return
             }
-            s.put("basis", fern.optString("inhalt")).put("stempel", neu.optString("stempel")).remove("gesperrt")
+            s.put("basis", fern.optString("inhalt")).put("stempel", neu.optString("stempel")).put("gesehen", neu.optString("stempel"))
+                .put("ruhe", ruheMarke(neu.optString("stempel"), fern, neu.optLong("version", version)))
+            s.remove("gesperrt"); s.remove("gesperrt_bei")
             gemeldet.remove(a.kennung)
             Logbuch.system("Geräteabgleich ${a.name}", "Stand von ${fern.optString("von")} eingespielt (${paket.length() / 1024} KB)")
             if (a.bereiche.isNotEmpty()) bereich.launch { runCatching { Lagebild.auffrischen(app, a.bereiche, "Abgleich ${a.name}") } }

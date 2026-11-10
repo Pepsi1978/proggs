@@ -66,7 +66,8 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", "agenten", ordner = true, endung = ".json", loeschbar = true),
         Quelle("gespraech", "gespraeche", ordner = true, endung = ".json", loeschbar = true),
         // Bilder und Dateien in Gesprächen: Die Nachrichten nennen sie mit ihrem Pfad, der auf beiden Geräten gleich lautet.
-        Quelle("gedaechtnis", "gespraeche/anhaenge", ordner = true),
+        // Löschbar: Mit einem Gespräch verschwinden auch seine Anhänge, sonst blieben ihre Dateien für immer am Server.
+        Quelle("gedaechtnis", "gespraeche/anhaenge", ordner = true, loeschbar = true),
         )
     }
 
@@ -113,7 +114,10 @@ object GedaechtnisAbgleich {
     /** Kennung des Dokuments am Server (nur Buchstaben, Ziffern, _ und -); der echte Pfad steht im Dokument. */
     private fun kennung(pfad: String): String {
         val glatt = pfad.replace(Regex("[^A-Za-z0-9_-]"), "_")
-        return if (glatt.length <= 64) glatt else glatt.take(40) + "_" + sha256(pfad.toByteArray()).take(23)
+        // Namen mit Leerzeichen oder Umlauten (Anhänge) bekommen ein Stück Prüfsumme dazu: „bild 1.jpg“ und „bild_1.jpg“ fielen sonst
+        // auf dieselbe Kennung, und nur eine der beiden Dateien käme drüben an.
+        val eindeutig = pfad.all { it.isLetterOrDigit() && it.code < 128 || it in "_-./" }
+        return if (eindeutig && glatt.length <= 64) glatt else glatt.take(40) + "_" + sha256(pfad.toByteArray()).take(23)
     }
 
     /** Die Quelle, zu der ein Pfad gehört, oder null: Nur Pfade abgeglichener Stellen werden je geschrieben oder gelöscht. */
@@ -180,7 +184,8 @@ object GedaechtnisAbgleich {
             for ((ordner, pfade) in geloescht.groupBy { quelleZu(it)!!.pfad }) {
                 val bekannt = dateien.keys().asSequence().count { quelleZu(it)?.pfad == ordner && dateien.optJSONObject(it)?.optString("basis").orEmpty().isNotEmpty() }
                 if (pfade.size > 20 && pfade.size * 2 > bekannt) {
-                    Logbuch.fehler("Gedächtnis-Abgleich", null, "$ordner: ${pfade.size} von $bekannt Dateien fehlen plötzlich. Nichts als gelöscht gemeldet.")
+                    val text = "$ordner: ${pfade.size} von $bekannt Dateien fehlen plötzlich. Nichts als gelöscht gemeldet; auf dem anderen Gerät bleiben sie stehen."
+                    if (gemeldet.put("massen:$ordner", text) != text) Logbuch.fehler("Gedächtnis-Abgleich", null, text)
                     continue
                 }
                 for (pfad in pfade) jeDatei(pfad) { meldeGeloescht(basis, pfad, dateien.getJSONObject(pfad)); hochgeladen++ }
@@ -189,6 +194,7 @@ object GedaechtnisAbgleich {
             // Netz weg: Der Rest folgt in der nächsten Runde.
         } finally {
             sichere(app, z)
+            raeumeRueckfall(app)
             if (eingespielt.size + hochgeladen > 0) Logbuch.system("Gedächtnis-Abgleich", "${eingespielt.size} übernommen, $hochgeladen hochgeladen")
             if (eingespielt.isNotEmpty()) runCatching { nachEinspielen(app, eingespielt) }
         }
@@ -223,8 +229,13 @@ object GedaechtnisAbgleich {
                 JSONObject(r.body?.string().orEmpty())
             }
             val neuaufbau = antwort.optBoolean("neuaufbau")
-            if (!neuaufbau && z.optString("instanz").isNotEmpty() && z.optString("instanz") != antwort.optString("instanz") && z.optLong("stand") != 0L) {
-                // Der Speicher am Server wurde neu aufgesetzt: von vorn lesen. Der eigene abgeglichene Stand bleibt gültig.
+            val andereInstanz = z.optString("instanz").isNotEmpty() && z.optString("instanz") != antwort.optString("instanz")
+            if (neuaufbau || andereInstanz) {
+                // Der Speicher am Server wurde neu aufgesetzt: Was dort lag, ist weg. Die gemerkten Server-Fassungen verwerfen, dann lädt
+                // jedes Gerät seinen abgeglichenen Stand wieder hoch (ladeHoch: am Server unbekannt). Der eigene Stand bleibt gültig.
+                for (k in dateien.keys()) dateien.optJSONObject(k)?.let { it.remove("fern"); it.remove("marke"); it.remove("entschieden") }
+            }
+            if (!neuaufbau && andereInstanz && z.optLong("stand") != 0L) {
                 z.put("stand", 0).put("instanz", antwort.optString("instanz"))
                 continue
             }
@@ -252,13 +263,18 @@ object GedaechtnisAbgleich {
         val quelle = quelleZu(pfad) ?: return false
         val datei = File(app.filesDir, pfad)
         val gemerkt = s.optString("basis")
+        // Ein Gespräch, das hier inzwischen zu einem Programmierauftrag gehört, bleibt diesem Gerät: weder überschreiben noch löschen
+        // (ladeHoch lädt es ab da auch nicht mehr hoch).
+        if (quelle.art == "gespraech" && datei.isFile && de.frank.jarvis.data.Gespraeche.istProgrammierDatei(datei)) return false
         val lokal = if (datei.isFile) sha256(datei) else ""
         val lokalGeaendert = lokal != gemerkt
+        // Bewertet und bewusst behalten: Erst dann darf ladeHoch die fremde Fassung ablösen (siehe dort).
+        fun behalten(): Boolean { s.put("entschieden", fernMarke(fern)); return false }
         if (fern.optBoolean("weg")) {
             if (!quelle.loeschbar || !datei.isFile) { s.put("basis", "").put("weg", true); return false }
             // Hier seither geändert und jünger als das Löschen drüben: behalten, die nächste Runde lädt es wieder hoch.
-            if (lokalGeaendert && gemerkt.isNotEmpty() && datei.lastModified() > fern.optLong("geaendert")) return false
-            if (gemerkt.isEmpty() && !Geraet.istTablet) return false
+            if (lokalGeaendert && gemerkt.isNotEmpty() && datei.lastModified() > fern.optLong("geaendert")) return behalten()
+            if (gemerkt.isEmpty() && !Geraet.istTablet) return behalten()
             rueckfall(app, pfad, datei)
             loesche(app, quelle, datei)
             s.put("basis", "").put("weg", true)
@@ -273,7 +289,7 @@ object GedaechtnisAbgleich {
             gemerkt.isEmpty() -> Geraet.istTablet                     // erster Kontakt: Das Handy ist die Erstquelle
             else -> datei.lastModified() <= fern.optLong("geaendert")  // beide geändert: die jüngere Änderung gewinnt
         }
-        if (!nimmFern) return false
+        if (!nimmFern) return behalten()
         val neu = File(app.cacheDir, "gedaechtnis-fern.teil")
         try {
             netz.newCall(Request.Builder().url("$basis/blob/$fernSha").build()).execute().use { r ->
@@ -283,8 +299,9 @@ object GedaechtnisAbgleich {
             if (sha256(neu) != fernSha) throw Abgelehnt("Datei beschädigt angekommen")
             // Vor jedem fremden Überschreiben bleibt die hiesige Fassung als Rückfall liegen, nicht nur im Konflikt: Käme vom anderen
             // Gerät eine beschädigte oder leer neu begonnene Datei mit jüngerer Zeit, wäre der gute Stand sonst ersatzlos weg.
-            if (datei.isFile) rueckfall(app, pfad, datei)
-            if (datei.isFile && lokalGeaendert && gemerkt.isNotEmpty()) {
+            val konflikt = datei.isFile && lokalGeaendert && gemerkt.isNotEmpty()
+            if (datei.isFile) rueckfall(app, pfad, datei, immer = konflikt)
+            if (konflikt) {
                 Logbuch.system("Gedächtnis-Abgleich", "$pfad: beide Geräte haben geändert, die Fassung von ${fern.optString("von")} ist jünger und gilt; die hiesige liegt unter $RUECKFALL")
             }
             schreibe(app, quelle, datei, neu, fern.optLong("geaendert"))
@@ -308,12 +325,16 @@ object GedaechtnisAbgleich {
             return false
         }
         val sha = sha256(datei)
-        if (sha == s.optString("basis")) { s.put("marke", marke); return false }
         val fern = s.optJSONObject("fern")
+        // Abgeglichen und am Server bekannt: nichts zu tun. Kennt der Server die Datei nicht (mehr), etwa nach einem neu aufgesetzten
+        // Speicher, geht sie unten wieder hoch.
+        if (sha == s.optString("basis") && fern != null) { s.put("marke", marke); return false }
         if (fern != null && !fern.optBoolean("weg") && fern.optString("sha") == sha) { s.put("basis", sha).put("marke", marke).put("weg", false); return false }
-        // Eine fremde Fassung, die [uebernimm] bewusst nicht genommen hat (die hiesige ist jünger oder dies ist das Handy beim ersten
-        // Kontakt), wird abgelöst. Steht sie noch aus (gerade erst gemeldet), wartet der Upload auf die nächste Runde.
-        if (fern != null && !fern.optBoolean("weg") && s.optString("basis").isEmpty() && Geraet.istTablet) return false
+        // Eine fremde Fassung wird nur abgelöst, wenn [uebernimm] sie bewertet und bewusst nicht genommen hat (die hiesige ist jünger,
+        // oder dies ist das Handy beim ersten Kontakt). Steht die Bewertung noch aus (das Gespräch ist gerade offen, der Download
+        // scheiterte, die Fassung kam eben erst), wartet der Upload: Sonst gewönne eine ältere Fassung nur, weil sie zuerst hochlud.
+        val ausstehend = fern != null && (if (fern.optBoolean("weg")) !s.optBoolean("weg") else fern.optString("sha") != s.optString("basis"))
+        if (ausstehend && s.optString("entschieden") != fernMarke(fern!!)) return false
         netz.newCall(Request.Builder().url("$basis/blob/$sha").put(datei.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use { r ->
             if (!r.isSuccessful) throw Abgelehnt("Datei hochladen: Server ${r.code}")
         }
@@ -326,11 +347,22 @@ object GedaechtnisAbgleich {
             if (!r.isSuccessful) throw Abgelehnt("Fassung melden: Server ${r.code}")
             JSONObject(r.body?.string().orEmpty())
         }
-        if (!antwort.optBoolean("uebernommen")) { anstossen(); return false }   // der Server hat inzwischen eine jüngere Fassung
+        if (!antwort.optBoolean("uebernommen")) {
+            // Der Server hat eine jüngere Fassung und gibt sie mit (auch einen Grabstein, den hole() keinem Pfad zuordnen konnte): als
+            // fremde Fassung merken. Die nächste reguläre Runde bewertet sie; kein sofortiges Wiederholen im Sekundentakt.
+            val d = antwort.optJSONObject("doc") ?: return false
+            s.put("fern", JSONObject().put("sha", d.optJSONObject("daten")?.optString("text_sha").orEmpty()).put("geaendert", d.optLong("geaendert"))
+                .put("weg", d.optBoolean("geloescht")).put("von", "dem anderen Gerät"))
+            s.remove("entschieden")
+            return false
+        }
         s.put("basis", sha).put("marke", marke).put("weg", false)
         s.put("fern", JSONObject().put("sha", sha).put("geaendert", geaendert).put("weg", false).put("von", Geraet.ablageName))
         return true
     }
+
+    /** Woran [uebernimm] und [ladeHoch] eine bestimmte fremde Fassung wiedererkennen. */
+    private fun fernMarke(fern: JSONObject) = if (fern.optBoolean("weg")) "weg:${fern.optLong("geaendert")}" else fern.optString("sha")
 
     private fun meldeGeloescht(basis: String, pfad: String, s: JSONObject) {
         val quelle = quelleZu(pfad) ?: return
@@ -389,13 +421,32 @@ object GedaechtnisAbgleich {
         if (quelle.art == "gespraech") de.frank.jarvis.data.Gespraeche.loeschen(app, datei.name.removeSuffix(".json")) else datei.delete()
     }
 
-    private fun rueckfall(app: Context, pfad: String, datei: File) {
+    /** Wann je Datei zuletzt eine Rückfallkopie entstand (nur im Speicher): Ein langes Gespräch am anderen Gerät kopierte sonst bei jeder Nachricht. */
+    private val rueckfallZuletzt = HashMap<String, Long>()
+
+    /**
+     * Legt die hiesige Fassung beiseite, bevor der Abgleich sie überschreibt oder löscht. [immer] = Konflikt oder Löschung: dann stets;
+     * sonst je Datei höchstens alle zehn Minuten. Nicht für Dateien, die nie geändert, nur angelegt und entfernt werden (Anhänge,
+     * Auswertungen, Tagebuch-Fassungen): Dort gibt es keinen eigenen Stand zu verlieren.
+     */
+    private fun rueckfall(app: Context, pfad: String, datei: File, immer: Boolean = true) {
+        if (pfad.startsWith("gespraeche/anhaenge/") || pfad.startsWith("tagesauswertung") || pfad.startsWith("tagebuch_")) return
+        val jetzt = System.currentTimeMillis()
+        if (!immer && jetzt - (rueckfallZuletzt[pfad] ?: 0L) < 10 * 60_000L) return
         runCatching {
             val ordner = File(app.filesDir, RUECKFALL).apply { mkdirs() }
-            datei.copyTo(File(ordner, "${System.currentTimeMillis()}-${pfad.replace('/', '_')}"), overwrite = true)
-            // Reichlich: Beim ersten Kontakt übernimmt das Tablet viele Dateien auf einmal. Nach 30 Tagen fällt Altes weg.
+            datei.copyTo(File(ordner, "$jetzt-${pfad.replace('/', '_')}"), overwrite = true)
+            rueckfallZuletzt[pfad] = jetzt
+        }
+    }
+
+    /** Einmal je Runde: höchstens 500 Rückfallkopien, nach 30 Tagen fällt Altes weg. */
+    private fun raeumeRueckfall(app: Context) {
+        runCatching {
+            val liste = File(app.filesDir, RUECKFALL).listFiles() ?: return
+            if (liste.isEmpty()) return
             val grenze = System.currentTimeMillis() - 30 * 86_400_000L
-            ordner.listFiles()?.sortedByDescending { it.name }?.forEachIndexed { i, f -> if (i >= 500 || f.lastModified() < grenze) f.delete() }
+            liste.sortedByDescending { it.name }.forEachIndexed { i, f -> if (i >= 500 || f.lastModified() < grenze) f.delete() }
         }
     }
 

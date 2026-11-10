@@ -126,8 +126,10 @@ object Waechter {
         }
         if (art == "geraeteabgleich") {
             // Das andere Gerät (Handy bzw. Tablet) hat einen neuen Stand einer angebundenen App hochgeladen.
-            de.frank.jarvis.abgleich.GeraeteAbgleich.anstossen()
-            de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
+            // Das Signal nennt die Art des Dokuments: Nur die betroffene Schleife läuft an (ohne Art, älterer Server: beide).
+            val dokument = nachricht.optString("art")
+            if (dokument.isEmpty() || dokument == "appdaten") de.frank.jarvis.abgleich.GeraeteAbgleich.anstossen()
+            if (dokument != "appdaten") de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             return
         }
         if (art == "programmieren") {

@@ -103,6 +103,11 @@ function Installiere {
     Ende fehler "Installation gescheitert: $ausgabe"
 }
 
+# Eine ausdrücklich genannte Adresse muss zum Ziel passen: Sonst landete die APK stillschweigend auf dem anderen Gerät.
+if ($Geraet -and $zielSerie -and (& $adb -s $Geraet get-state 2>$null) -eq "device" -and -not (Ist-Ziel $Geraet)) {
+    Ende fehler "Die Adresse $Geraet gehört laut geraete.json nicht zum Ziel '$Ziel'. Das gemeinte Gerät mit -Ziel handy oder -Ziel tablet nennen."
+}
+
 try {
     if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
     $serie = Handy getprop ro.serialno

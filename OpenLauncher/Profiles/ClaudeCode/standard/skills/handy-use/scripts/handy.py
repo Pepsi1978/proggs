@@ -87,6 +87,15 @@ def ziel_serial():
         return ""
 
 
+def tunnel_adresse():
+    """Tunnel-Adresse des Zielgeräts aus geraete.json (Handy 10.8.0.7, Tablet 10.8.0.8); ohne Datei die des Handys."""
+    try:
+        register = json.loads((Path.home() / "proggs" / "Werkzeuge" / "adb-wlan" / "geraete.json").read_text("utf-8"))
+        return str(register[ziel_geraet()]["tunnelIp"]).strip() + ":5555"
+    except Exception:
+        return TUNNEL
+
+
 def wlan_skript():
     w = Path.home() / "proggs" / "Werkzeuge" / "adb-wlan"
     befehl = (["powershell", "-ExecutionPolicy", "Bypass", "-File", str(w / "adb-wlan.ps1")] if os.name == "nt" else ["bash", str(w / "adb-wlan.sh")])
@@ -115,7 +124,7 @@ def geraet_suchen():
     if s:
         return s
     if os.environ.get("JARVIS_SERVER") == "1":
-        adb("connect", TUNNEL, timeout=15)
+        adb("connect", tunnel_adresse(), timeout=15)
     else:
         wlan_skript()
     s = wahl()

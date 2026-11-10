@@ -194,8 +194,10 @@ trap aufraeumen EXIT
 
 adb start-server >/dev/null 2>&1
 
-# Neuer Mac: Wachhund (LaunchAgent) beim ersten Aufruf selbst einrichten
-if [ $LEISE -eq 0 ] && [ ! -f "$HOME/Library/LaunchAgents/de.frank.adb-wlan.wachhund.plist" ]; then
+# Neuer Mac: Wachhund (LaunchAgent) beim ersten Aufruf selbst einrichten. Auch ein schon eingerichteter, der noch nur das Handy
+# kennt (ohne „--geraet alle“), wird einmal neu eingerichtet. Nur am Mac (launchd).
+WACHHUND_DATEI="$HOME/Library/LaunchAgents/de.frank.adb-wlan.wachhund.plist"
+if [ $LEISE -eq 0 ] && [ "$(uname -s)" = Darwin ] && { [ ! -f "$WACHHUND_DATEI" ] || ! grep -q '<string>alle</string>' "$WACHHUND_DATEI"; }; then
   bash "$(cd "$(dirname "$0")" && pwd)/wachhund-einrichten.sh" >/dev/null 2>&1 && melde "Wachhund de.frank.adb-wlan.wachhund eingerichtet"
 fi
 
@@ -270,7 +272,8 @@ for RUNDE in 1 2; do
   fi
 
   # 5. Einmal adb-Server neu starten (macOS: "No route to host"). Nie im Wachhund.
-  if [ "$RUNDE" = 1 ] && [ $LEISE -eq 0 ]; then
+  #    Auch nie für ein Zweitgerät: Das Tablet ist oft einfach aus, und der Neustart trennte dann grundlos das Handy.
+  if [ "$RUNDE" = 1 ] && [ $LEISE -eq 0 ] && [ -z "$ZUSATZ" ]; then
     melde "Keine Verbindung – starte adb-Server neu und versuche es erneut"
     adb kill-server; adb start-server >/dev/null 2>&1; sleep 3
   else

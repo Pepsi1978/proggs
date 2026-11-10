@@ -19,19 +19,24 @@ $ErrorActionPreference = 'Stop'
 $paket = 'de.frank.jarvis'
 $adb = if ($env:ADB) { $env:ADB } else { 'adb' }
 
-# Gerät wählen: WLAN (IP:5555) vor Kabel.
-$geraete = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } | ForEach-Object { ($_ -split '\t')[0] }
-if (-not $geraete) {
-    Write-Host 'Kein Handy verbunden. Versuche WLAN-Verbindung ...'
-    powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\adb-wlan.ps1" -Geraet $Ziel | Out-Null
-    $geraete = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } | ForEach-Object { ($_ -split '\t')[0] }
-}
-# Handy und Tablet können gleichzeitig verbunden sein: -Ziel wählt über die feste Seriennummer aus geraete.json.
+# Gerät wählen: WLAN (IP:5555) vor Kabel. Handy und Tablet können gleichzeitig verbunden sein: -Ziel wählt über die feste
+# Seriennummer aus geraete.json. Ist das gemeinte Gerät nicht dabei (auch wenn das andere verbunden ist), einmal verbinden lassen.
 $geraeteDatei = "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\geraete.json"
+$serie = ''
 if (Test-Path $geraeteDatei) {
     $serie = "$((Get-Content $geraeteDatei -Raw -Encoding utf8 | ConvertFrom-Json).$Ziel.serial)".Trim()
     if (-not $serie) { throw "Ziel '$Ziel' steht nicht in $geraeteDatei." }
-    $geraete = @($geraete | Where-Object { ((& $adb -s $_ shell getprop ro.serialno 2>$null) | Out-String).Trim() -eq $serie })
+}
+function Finde-Geraete {
+    $alle = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } | ForEach-Object { ($_ -split '\t')[0] }
+    if (-not $serie) { return @($alle) }
+    return @($alle | Where-Object { ((& $adb -s $_ shell getprop ro.serialno 2>$null) | Out-String).Trim() -eq $serie })
+}
+$geraete = Finde-Geraete
+if (-not $geraete) {
+    Write-Host "Gerät '$Ziel' nicht verbunden. Versuche WLAN-Verbindung ..."
+    powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\adb-wlan.ps1" -Geraet $Ziel | Out-Null
+    $geraete = Finde-Geraete
 }
 $geraet = ($geraete | Where-Object { $_ -match ':\d+$' } | Select-Object -First 1)
 if (-not $geraet) { $geraet = $geraete | Select-Object -First 1 }

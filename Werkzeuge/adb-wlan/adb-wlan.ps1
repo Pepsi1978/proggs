@@ -385,8 +385,10 @@ catch [System.Threading.AbandonedMutexException] { }
 try {
     Server-Start
 
-    # Neuer Rechner: Wachhund beim ersten Aufruf selbst einrichten (Skript liegt im Repo, gilt für jeden PC)
-    if (-not $Leise -and -not (Get-ScheduledTask -TaskName "adb-wlan-wachhund" -ErrorAction SilentlyContinue)) {
+    # Neuer Rechner: Wachhund beim ersten Aufruf selbst einrichten (Skript liegt im Repo, gilt für jeden PC).
+    # Auch ein schon eingerichteter, der noch nur das Handy kennt (ohne „-Geraet alle“), wird einmal neu eingerichtet.
+    $wachhund = Get-ScheduledTask -TaskName "adb-wlan-wachhund" -ErrorAction SilentlyContinue
+    if (-not $Leise -and (-not $wachhund -or "$($wachhund.Actions.Arguments)" -notmatch "-Geraet alle")) {
         & (Join-Path $PSScriptRoot "wachhund-einrichten.ps1")
     }
 
@@ -469,7 +471,8 @@ try {
 
         # 5. Einmal adb-Server neu starten (hilft bei "No route to host" / verklemmtem Server).
         #    Nie im Wachhund: ein Neustart würde andere Sitzungen und Emulatoren trennen.
-        if ($runde -eq 1 -and -not $Leise) {
+        #    Auch nie für ein Zweitgerät: Das Tablet ist oft einfach aus, und der Neustart trennte dann grundlos das Handy.
+        if ($runde -eq 1 -and -not $Leise -and -not $Zusatz) {
             Melde "Keine Verbindung – starte adb-Server neu und versuche es erneut"
             Server-Neustart; Start-Sleep 3
         } else { break }
@@ -477,7 +480,8 @@ try {
 
     # 6. Direktverbindung über den PC-Hotspot: Handy in keinem WLAN, in einem anderen Netz
     #    oder in einem Netz, das Geräte voneinander abschottet (öffentliches WLAN).
-    if (-not @(Netz-Verbunden)) { Direktverbindung | Out-Null }
+    #    Nur fürs Handy: Für ein ausgeschaltetes Tablet schaltete das den PC-Hotspot ein und wartete 90 Sekunden.
+    if (-not $Zusatz -and -not @(Netz-Verbunden)) { Direktverbindung | Out-Null }
 
     $fertig = @(Netz-Verbunden)
     # Ein Zweitgerät ist oft einfach aus: Der Wachhund meldet das nur beim Wechsel, nicht alle zwei Minuten.

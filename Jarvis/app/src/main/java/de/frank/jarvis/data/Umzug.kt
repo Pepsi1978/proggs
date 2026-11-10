@@ -39,7 +39,8 @@ object Umzug {
     /**
      * Auf dem Tablet aus, auch wenn sie am Handy an sind: Die stündliche Tagesauswertung und das Lernen schreiben Franks
      * Gedächtnis (das Handy bleibt dafür die eine Quelle, das Tablet bekommt es über den Abgleich), die Losfahr-Meldung
-     * verbraucht Routen-Kontingent, und auf „Hey Jarvis“ antworteten sonst beide Geräte zugleich. Frank kann jedes wieder einschalten.
+     * verbraucht Routen-Kontingent, und auf „Hey Jarvis“ antworteten sonst beide Geräte zugleich. Frank kann jedes wieder einschalten;
+     * ein späterer Umzug lässt seine Wahl stehen.
      */
     val TABLET_AUS = listOf("auswertung_an", "auswertung_lernen", "abfahrt_an", "weckwort_an")
 
@@ -93,7 +94,11 @@ object Umzug {
             var anzahl = 0
             for (name in SPEICHER) {
                 val werte = alles.optJSONObject(name) ?: continue
-                val e = speicher(c, name).edit()
+                val hier = speicher(c, name)
+                // Die vier Tablet-Schalter gehören diesem Gerät: Beim ersten Umzug aus, bei jedem späteren (etwa für einen neuen Schlüssel)
+                // bleibt, was Frank hier inzwischen eingestellt hat.
+                val eigene = if (name == Einstellungen.NAME && Geraet.istTablet) TABLET_AUS.associateWith { k -> if (hier.contains(k)) hier.getBoolean(k, false) else false } else emptyMap()
+                val e = hier.edit()
                 for (k in werte.keys()) {
                     if (!zieht(k)) continue
                     val eintrag = werte.optJSONObject(k) ?: continue
@@ -108,7 +113,7 @@ object Umzug {
                     }
                     anzahl++
                 }
-                if (name == Einstellungen.NAME && Geraet.istTablet) TABLET_AUS.forEach { e.putBoolean(it, false) }
+                eigene.forEach { (k, v) -> e.putBoolean(k, v) }
                 // commit statt apply: Die Datei wird gleich gelöscht, die Werte müssen vorher sicher auf der Platte stehen.
                 check(e.commit()) { "Speicher $name ließ sich nicht schreiben" }
             }

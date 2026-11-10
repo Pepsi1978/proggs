@@ -152,6 +152,10 @@ installiere() {
   ende fehler "Installation gescheitert: $(echo "$ausgabe" | tail -1)"
 }
 
+# Eine ausdrücklich genannte Adresse muss zum Ziel passen: Sonst landete die APK stillschweigend auf dem anderen Gerät.
+if [ -n "$GERAET" ] && [ -n "$ZIEL_SERIE" ] && [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" = device ] && ! ist_ziel "$GERAET"; then
+  ende fehler "Die Adresse $GERAET gehört laut geraete.json nicht zum Ziel '$ZIEL'. Das gemeinte Gerät mit --ziel handy oder --ziel tablet nennen."
+fi
 verbinde || ende fehler "Handy nicht erreichbar"
 SERIE=$(handy getprop ro.serialno)
 nimm_sperre
