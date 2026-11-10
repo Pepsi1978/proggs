@@ -9,6 +9,7 @@
     {"versionCode": 5, "versionName": "1.0.4", "stand": "22.10.2026, 12:59 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Websuche und eigenem API-Schlüssel wie in Jarvis."},
     {"versionCode": 6, "versionName": "1.0.5", "stand": "30.10.2026, 11:39 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
     {"versionCode": 7, "versionName": "1.0.6", "stand": "30.10.2026, 19:11 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
-    {"versionCode": 8, "versionName": "1.0.7", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 8, "versionName": "1.0.7", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 9, "versionName": "1.0.8", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Recherchen gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."}
 ]
 }

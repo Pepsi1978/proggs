@@ -572,3 +572,33 @@ Stand 17.10.2026 (OpenLauncherMac 1.24.39). Voraussetzung: `~/SK/Jarvis/` (`rela
 - **apk-update:** dasselbe `apk-update.ps1` mit `pwsh`; der Drive-Ordner wird unter `~/Library/CloudStorage/GoogleDrive-*/Meine Ablage/Dokumente/Updates` gefunden.
 - **Ruhezustand:** Schläft der Mac (beim MacBook Air immer bei zugeklapptem Deckel ohne externen Bildschirm), fragt die Brücke nicht ab
   und Aufträge gehen an den PC oder in die Cloud; gewollt.
+
+## Jarvis Tablet (zweites Gerät) und Geräteabgleich
+
+Stand 10.11.2026 (ab 1.8.604/1.8.605). Dieselbe APK läuft auf dem Handy (Galaxy Fold 8, „Jarvis“) und auf dem Galaxy Tab S9
+(„Jarvis Tablet“). Welches Gerät es ist, entscheidet `data/Geraet.kt` am Modell (SM-X…/SM-T…/SM-P… = Tablet), nie an der Breite.
+
+- **Server:** Jedes Gerät meldet sich mit `X-Jarvis-Geraet` (handy/tablet; ohne Kopfzeile = Handy) und hat eigene Verbindung,
+  eigenes Geheimnis (eigene Plugin-Adresse) und eigene Warteschlangen (`Geraet` in `server/relay/relay.py`, Zustand in
+  `/data/zustand.json` unter `geraete`). Ein Gerät mit dem Geheimnis eines anderen wird mit 409 abgewiesen. Meldungen eines
+  Programmierauftrags gehen an das Gerät, das ihn gestellt hat (`/data/auftrag-geraete.json`), am Rechner gestartete Sitzungen an alle.
+- **Installieren:** `Werkzeuge/jarvis-install/jarvis-install.ps1 <apk> -Ziel tablet` (Mac/Server: `--ziel tablet`). Die Geräte stehen
+  mit Seriennummer und Tunnel-Adresse in `Werkzeuge/adb-wlan/geraete.json` (Handy 10.8.0.7, Tablet 10.8.0.8, WireGuard-Datei
+  `~/SK/second-brain/wireguard/tab-s9.conf`). Jede Jarvis-Version kommt auf beide Geräte.
+- **Erstbefüllung:** `werkzeuge/tablet-einrichten.sh` (Git Bash oder Mac): Rechte, Einstellungs-Umzug (`data/Umzug.kt`: alle Schalter
+  und Schlüssel per run-as von Gerät zu Gerät, nie über den Rechner; ohne Plugin-Geheimnis, ChatGPT-Anmeldung und
+  Anthropic-Sitzungen), Jarvis' Gedächtnis und Gespräche, Daten der angebundenen Apps. Richtung immer Handy → Tablet,
+  vorhandene Tablet-Daten nur mit `--ueberschreiben`.
+- **Auf dem Tablet aus (Vorgabe):** Tagesauswertung, Lernen, Losfahr-Meldung, Weckwort (`Umzug.TABLET_AUS`): Das Handy bleibt die eine
+  Quelle für Franks Gedächtnis, und auf „Hey Jarvis“ antwortet nur ein Gerät.
+- **Laufender Abgleich der Apps** (`abgleich/GeraeteAbgleich.kt`, Gegenstück `bruecke/GeraeteAbgleich.kt` in Aufgaben, Ziele,
+  Geniale Ideen, Epigenetik, Stack-Labor; in allen Apps dieselbe Datei): Die App gibt über die Brücke ihren ganzen Stand als Paket
+  heraus (`abgleich_stand`, `abgleich_export`, `openFile …/abgleich/export`) und spielt eines ein (`…/abgleich/import`,
+  `abgleich_import`; Rückfall unter `files/abgleich-rueckfall/`, eingespielt beim nächsten Prozessstart). Jarvis lädt neue Stände
+  in den Geräteabgleich-Speicher des Servers (`/j/<Geheimnis>/abgleich/…`, eigene Datenbank `/data/geraeteabgleich`, Signal
+  „geraeteabgleich“) und spielt den jüngeren Stand des anderen Geräts ein. Regeln: ganzer Stand, jüngster gewinnt; Erstquelle ist das
+  Handy (ein Gerät ohne abgeglichenen Stand lädt nichts hoch, außer es ist das Handy); verglichen wird die Prüfsumme über die
+  Tabelleninhalte; ein neueres Schema am anderen Gerät sperrt den Abgleich der App, bis sie hier aktualisiert ist. Zustand:
+  `files/geraeteabgleich.json`, Logbuch-Ereignis „Geräteabgleich <App>“. Deshalb die fünf Apps immer auf beide Geräte installieren.
+- **Noch offen:** Jarvis' eigene Gespräche und Merkdateien gleichen sich noch nicht laufend ab (nur Erstbefüllung), Genialer Wecker
+  wird nicht abgeglichen (soll nicht auf beiden Geräten klingeln), Entropie Reductor nutzt seinen eigenen Drive-Abgleich.

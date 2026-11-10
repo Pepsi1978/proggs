@@ -19,6 +19,16 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Schwester-Agent Jarvis Windows HP auf Franks HP-Laptop mit eigenem Kanal, in beide Richtungen: `jarvis_windows_hp_starten`, `jarvis_windows_hp_sprechen` (`frage` für Aufträge und Gespräch, `stand`, `begutachten`, `info`), `jarvis_windows_hp_lesen`; Mitschrift im Gespräch „Jarvis Windows HP (Agentenkanal)“.
 - Der Mac fragt von sich aus ebenso; das Handy-Modell antwortet im Hintergrund. Der Relay hält die Post bis zur Quittung, eine Frage startet die Mac-App von selbst, eine Mitteilung nicht und meldet sich auch nicht am Handy. Nur Gespräche mit Frank haben den Kanal, Hintergrund-Agenten nicht.
 
+## Jarvis Tablet und Geräteabgleich
+
+- Dieselbe App läuft auf dem Handy („Jarvis“) und auf dem Galaxy Tab S9 („Jarvis Tablet“); erkannt am Gerätemodell. Beide sind gleichzeitig am Server angemeldet, jedes mit eigener Plugin-Adresse; `jarvis_status` nennt, welches Gerät antwortet.
+- Programmieraufträge gehen von beiden Geräten an Mac, Windows-PC oder Server; Meldungen und Rückfragen kommen auf dem Gerät an, das den Auftrag gestellt hat, am Rechner gestartete Sitzungen erscheinen auf beiden.
+- Abgleich der angebundenen Apps (Aufgaben, Ziele, Geniale Ideen, Epigenetik, Stack-Labor): Jarvis hält sie über den eigenen Server auf beiden Geräten gleich, meist binnen Sekunden nach einer Änderung. Es gilt immer der ganze, jüngere Stand; haben beide Geräte ohne Verbindung geändert, gewinnt die jüngere Änderung, der andere Stand bleibt in der App als Rückfall liegen (Logbuch nennt es). Schalter „Abgleich zwischen Handy und Tablet“ (`geraeteabgleich_an`), nur per Sprache oder Werkzeug.
+- Ablage, Prompts und Erinnerungen gleichen sich wie mit Mac und Windows ab; eine fällige Erinnerung erscheint auf dem Gerät, das Frank gerade benutzt.
+- Auf dem Tablet standardmäßig aus (einschaltbar): Tagesauswertung, Lernen aus Tagebuch und Gesprächen, Losfahr-Meldung, „Hey Jarvis“. Entropie Reductor gleicht selbst über Google Drive ab.
+- Noch nicht abgeglichen: Jarvis' eigene Gespräche und Merkdateien (einmalig vom Handy übernommen), Genialer Wecker (klingelt nur am Handy), die ChatGPT-Anmeldung je Gerät.
+- Einrichtung und Nachziehen am Rechner: `werkzeuge/tablet-einrichten.sh` (Einstellungen und Schlüssel, Gedächtnis, App-Daten vom Handy aufs Tablet).
+
 ## Angebundene Apps
 
 - Geniale Aufgaben: `aufgaben_lesen`, `aufgabe_anlegen`, `aufgabe_aendern` (auch abhaken), `aufgabe_loeschen`.

@@ -37,9 +37,16 @@ import org.json.JSONObject
  * kontext_lesen, kontext_ergaenzen, kontext_ersetzen, einstellungen.
  */
 class JarvisBruecke : ContentProvider() {
-    override fun onCreate(): Boolean = true
+    /** Abgleich mit Franks anderem Gerät (Handy ↔ Tablet) über Jarvis, siehe [GeraeteAbgleich]. */
+    private val abgleich by lazy { GeraeteAbgleich(context!!.applicationContext, listOf("ziele.db"), listOf("kontext.txt")) }
+
+    // Ein bereitliegender Stand des anderen Geräts wird hier eingespielt, bevor irgendetwas die Datenbank öffnet.
+    override fun onCreate(): Boolean { context?.let { GeraeteAbgleich.wendeAn(it.applicationContext) }; return true }
+
+    override fun openFile(uri: Uri, mode: String): android.os.ParcelFileDescriptor = abgleich.oeffne(uri, mode)
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        abgleich.rufe(method, extras)?.let { return it }
         val antwort = runCatching {
             val anfrage = extras?.getString("json")?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
             runBlocking(Dispatchers.IO) { verarbeite(method, anfrage) }

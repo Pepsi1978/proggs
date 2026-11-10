@@ -124,6 +124,11 @@ object Waechter {
             de.frank.jarvis.ablage.AblageSync.anstossen()
             return
         }
+        if (art == "geraeteabgleich") {
+            // Das andere Gerät (Handy bzw. Tablet) hat einen neuen Stand einer angebundenen App hochgeladen.
+            de.frank.jarvis.abgleich.GeraeteAbgleich.anstossen()
+            return
+        }
         if (art == "programmieren") {
             // Fortschritt oder Rückfrage einer Programmier-Sitzung am PC (Hook über den Relay): Benachrichtigung und Gespräch.
             runCatching { Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.meldungVomServer(nachricht) }

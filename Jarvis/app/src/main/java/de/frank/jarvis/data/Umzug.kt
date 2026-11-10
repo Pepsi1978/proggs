@@ -33,7 +33,7 @@ object Umzug {
     private const val EXPORT = "umzug-export.json"
     private const val IMPORT = "umzug.json"
     private val SPEICHER = listOf(Einstellungen.NAME, SecureSettings.STORE_NAME, "jarvis_konten")
-    private val NIE = setOf("geheimnis", "abfahrt_zustand", "chat_gpt_connected_at", "claude_ai_sitzung", "anthropic_console_sitzung", "letzte_sicherung")
+    private val NIE = setOf("geheimnis", "geraeteabgleich_an", "abfahrt_zustand", "chat_gpt_connected_at", "claude_ai_sitzung", "anthropic_console_sitzung", "letzte_sicherung")
     private val NIE_VORSILBE = listOf("routen_zaehler", "liveopt_")
 
     /**

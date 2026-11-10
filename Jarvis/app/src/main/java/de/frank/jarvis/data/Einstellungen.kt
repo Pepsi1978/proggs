@@ -263,6 +263,9 @@ class Einstellungen private constructor(context: Context) {
     var rechercheEffort: String get() = s("recherche_effort", "high"); set(v) = put { putString("recherche_effort", v) }
     var rechercheParallel: Int get() = prefs.getInt("recherche_parallel", 3).coerceIn(1, 7); set(v) = put { putInt("recherche_parallel", v.coerceIn(1, 7)) }
 
+    /** Hält die Daten der angebundenen Apps zwischen Handy und Tablet gleich (siehe abgleich/GeraeteAbgleich.kt). */
+    var geraeteAbgleichAn: Boolean get() = prefs.getBoolean("geraeteabgleich_an", true); set(v) { put { putBoolean("geraeteabgleich_an", v) }; if (v) de.frank.jarvis.abgleich.GeraeteAbgleich.anstossen() }
+
     /** Der Dienst läuft, sobald die App einmal geöffnet wurde; hier lässt er sich abschalten. */
     var dienstAn: Boolean get() = prefs.getBoolean("dienst_an", true); set(v) = put { putBoolean("dienst_an", v) }
 

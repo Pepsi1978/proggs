@@ -88,6 +88,7 @@
     {"versionCode": 84, "versionName": "1.0.83", "stand": "09.11.2026, 14:36 Uhr", "notiz": "Beim Ziehen zählt keine Uhrzeit mehr, die unter der oberen Leiste verdeckt ist, und die Leiste hat denselben deckenden Grund wie Heute und Morgen."},
     {"versionCode": 85, "versionName": "1.0.84", "stand": "09.11.2026, 14:55 Uhr", "notiz": "Im Editor spricht man über den runden Knopf neben KI-Korrektur direkt ins Textfeld, Wiederholung kann alle X Tage sein und die Erinnerung hat einen Schieberegler von 0 bis 60 Minuten oder einen festen Zeitpunkt „Am …“."},
     {"versionCode": 86, "versionName": "1.0.85", "stand": "09.11.2026, 15:03 Uhr", "notiz": "Feste Erinnerungen wandern beim Verschieben und Wiederholen mit, bleiben über die Zeitumstellung pünktlich, tägliche erinnern jeden Tag, und Jarvis kennt Alle X Tage und den festen Zeitpunkt."},
-    {"versionCode": 87, "versionName": "1.0.86", "stand": "09.11.2026, 16:03 Uhr", "notiz": "Die Wiederholungsarten im Editor stehen jetzt untereinander, statt seitlich geschoben werden zu müssen."}
+    {"versionCode": 87, "versionName": "1.0.86", "stand": "09.11.2026, 16:03 Uhr", "notiz": "Die Wiederholungsarten im Editor stehen jetzt untereinander, statt seitlich geschoben werden zu müssen."},
+    {"versionCode": 88, "versionName": "1.0.87", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Aufgaben gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."}
 ]
 }
