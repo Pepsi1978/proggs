@@ -134,6 +134,7 @@ object Abfahrt {
         // Während einer Prüfung stellt sie den Wecker am Ende selbst.
         if (laeuft.get()) return
         wecker.cancel(absicht)
+        meldungZurueckziehenWennEntfallen(app)
         val e = Einstellungen.get(app)
         if (!e.abfahrtAn || e.mapsSchluessel.isBlank()) return
         val jetzt = ZonedDateTime.now()
@@ -252,6 +253,23 @@ object Abfahrt {
         // Das Vorlesen gehört dem Hauptfaden; still() selbst läuft im Empfänger abseits davon (stelle() liest den Kalender).
         android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { Vorleser.aktuell()?.stopp() } }
         stelle(app)
+    }
+
+    /**
+     * Ist der Dienst einer schon gezeigten Meldung inzwischen entfallen (etwa nachträglich K, X, F oder U eingetragen),
+     * Meldung und wartendes Vorlesen zurückziehen und den Dienst als erledigt ablegen.
+     */
+    private fun meldungZurueckziehenWennEntfallen(app: Context) {
+        val z = runCatching { Zustand(JSONObject(Einstellungen.get(app).abfahrtZustand)) }.getOrNull() ?: return
+        if (!z.gemeldet || z.erledigt) return
+        val tag = runCatching { LocalDate.parse(z.tag) }.getOrNull() ?: return
+        val schichten = Register.alle(app).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.schichten(tag, 1) ?: return
+        if (schichten.containsKey(tag)) return
+        z.erledigt = true
+        sichere(app, z)
+        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.ABFAHRT)
+        app.getSystemService(NotificationManager::class.java).cancel(HINWEIS_ID)
+        Logbuch.aktion("Abfahrt zurückgezogen", "Dienst $tag entfällt laut Kalender")
     }
 
     private fun melde(context: Context, f: Fahrt, route: Route, abfahrt: ZonedDateTime, jetzt: ZonedDateTime, veraltet: Boolean) {

@@ -622,6 +622,7 @@
     {"versionCode": 617, "versionName": "1.8.606", "stand": "10.11.2026, 16:00 Uhr", "notiz": "Jarvis' Gedächtnis und deine Gespräche gleichen sich jetzt laufend zwischen Handy und Tablet ab (Regeln, Ziele, Entscheidungen, Langzeitkontext, Tagesauswertungen, Gespräche samt Anhängen), und nach einer Installation startet Jarvis sofort wieder von selbst."},
     {"versionCode": 618, "versionName": "1.8.607", "stand": "10.11.2026, 16:05 Uhr", "notiz": "Der Abgleich deines Gedächtnisses zwischen Handy und Tablet bewahrt jetzt jede überschriebene oder gelöschte Fassung 30 Tage als Rückfall auf und ruht sofort, sobald du mit Jarvis sprichst."},
     {"versionCode": 619, "versionName": "1.8.608", "stand": "10.11.2026, 16:07 Uhr", "notiz": "Ein ganztägiger Kalendereintrag K heißt jetzt krankgeschrieben: Der Dienst des Tages entfällt wie bei frei oder Urlaub, samt Abfahrtsmeldung, Schlafplanung und Tagesauswertung."},
-    {"versionCode": 620, "versionName": "1.8.609", "stand": "10.11.2026, 16:17 Uhr", "notiz": "Auf dem Tablet gibt es den Schritt „Plugin in ChatGPT eintragen“ und die Plugin-Adresse nicht mehr: Das ChatGPT-Plugin läuft nur über das Handy."}
+    {"versionCode": 620, "versionName": "1.8.609", "stand": "10.11.2026, 16:17 Uhr", "notiz": "Auf dem Tablet gibt es den Schritt „Plugin in ChatGPT eintragen“ und die Plugin-Adresse nicht mehr: Das ChatGPT-Plugin läuft nur über das Handy."},
+    {"versionCode": 620, "versionName": "1.8.609", "stand": "10.11.2026, 16:22 Uhr", "notiz": "Krankheitstage nach Review nachgeschärft: Eine schon gezeigte Abfahrtsmeldung verschwindet, sobald ein K eingetragen wird, und an K-Tagen plant Jarvis Erholung statt Erledigungen ein."}
 ]
 }

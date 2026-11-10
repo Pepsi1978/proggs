@@ -41,7 +41,8 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Franks Kalender enthält seine Termine und seinen Dienstplan als Ganztagstermine. Die Regeln: „Nacht 1“ bis „Nacht 4“ sind Nachtdienste " +
             "(Nacht 1 ist die erste, Nacht 4 die letzte eines Blocks), Abfahrt etwa 16:15 Uhr, er ist am nächsten Morgen gegen 5:50 Uhr zu Hause. „Tag 1“ bis „Tag 4“ sind Tagdienste, " +
-            "Abfahrt etwa 4:30 Uhr, zu Hause gegen 18:15 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub, bei „K“ ist er krankgeschrieben: Der Dienst entfällt dann, auch wenn er noch im Kalender steht, samt Abfahrt und dienstbezogenen Weckern. " +
+            "Abfahrt etwa 4:30 Uhr, zu Hause gegen 18:15 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub, bei „K“ ist er krankgeschrieben: Der Dienst entfällt dann, auch wenn er noch im Kalender steht; dann keine Abfahrtszeit ansagen und keine dienstbezogenen Wecker vorschlagen oder stellen " +
+            "(persönliche Wecker in Genialer Wecker bleiben, wie Frank sie gestellt hat). An einem K-Tag hat Erholung Vorrang. " +
             "Tage ohne Diensteintrag sind frei. Die Werkzeuge werten das bereits aus; verlasse dich auf die Zeile „Dienst“. " +
             "Weitere Einträge: „Hausmüll“ und „Gelbe Tonne“ (Abholung), „Geb. <Name>“ (Geburtstag), Spiele von Union und Dortmund. " +
             "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“, „U“ oder „K“ als Ganztagstermin macht den Tag zum freien Tag, Urlaubstag bzw. Krankheitstag " +
@@ -184,7 +185,8 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
                         fakten += "Abfahrt etwa $ABFAHRT_NACHT Uhr, Dienst über Nacht"
                     }
                     else -> {
-                        if (!nachNacht) fakten += "tagsüber frei verfügbar" else fakten += "frei verfügbar ab etwa 15 Uhr"
+                        if (heuteD.frei == KRANK) fakten += "krankgeschrieben: kein Dienst, keine Abfahrt, keine dienstbezogenen Wecker; Erholung hat Vorrang, keine Erledigungen einplanen"
+                        else if (!nachNacht) fakten += "tagsüber frei verfügbar" else fakten += "frei verfügbar ab etwa 15 Uhr"
                         if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) fakten += "Schlafengehen gegen 20 Uhr, weil morgen Tagdienst ist (Aufstehen 4:00 Uhr); nach 20 Uhr nichts mehr einplanen"
                         if (morgen.arbeitet && morgen.art == Dienst.Art.NACHT) fakten += "morgen beginnt ein Nachtdienst-Block: Vorbereitungen dafür heute erledigen"
                     }
@@ -323,7 +325,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
 
         val folge = when (titel.lowercase(Locale.GERMAN)) {
             "x", "f" -> if (beginn == null) " Damit gilt der Tag als frei" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
-            "k" -> if (beginn == null) " Damit gilt der Tag als krankgeschrieben, ohne Dienst, Abfahrtsmeldung und Dienstwecker" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
+            "k" -> if (beginn == null) " Damit gilt der Tag als krankgeschrieben, ohne Dienst und Abfahrtsmeldung" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
             "u" -> if (beginn == null) " Damit gilt der Tag als Urlaub" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
             else -> mitgedacht
         }
@@ -557,7 +559,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             val naechsterDienst = dienste.entries.firstOrNull { it.value.arbeitet && !it.key.isBefore(heute) }
             // Frei „wieder“ heißt: der erste freie Tag NACH dem nächsten Dienst. Arbeitet Frank im Zeitraum gar nicht, der erste freie Tag.
             val naechsterFrei = dienste.entries.firstOrNull { !it.value.arbeitet && !it.key.isBefore(naechsterDienst?.key ?: heute) }
-            dienste[heute]?.let { append("Heute: ").append(if (it.arbeitet) name(it) else if (it.frei == KRANK) KRANK else "frei").append(".\n") }
+            dienste[heute]?.let { append("Heute: ").append(if (it.arbeitet) name(it) else it.frei ?: "frei").append(".\n") }
             append("Nächster Dienst: ").append(naechsterDienst?.let { kurz(it.key, heute) + ", " + name(it.value) } ?: "keiner im Zeitraum").append(".\n")
             if (naechsterFrei != null) {
                 // Länge des freien Blocks ab dem ersten freien Tag.
@@ -566,7 +568,9 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
                 if (!dienste.entries.any { it.key.isAfter(naechsterFrei.key) && it.value.arbeitet }) append(" (mindestens, bis zum Ende des Zeitraums)")
                 append(".\n")
             }
-            append("Arbeitstage im Zeitraum: ").append(dienste.values.count { it.arbeitet }).append(", freie Tage: ").append(dienste.values.count { !it.arbeitet }).append(".")
+            append("Arbeitstage im Zeitraum: ").append(dienste.values.count { it.arbeitet }).append(", freie Tage: ").append(dienste.values.count { !it.arbeitet })
+            dienste.values.count { it.frei == KRANK }.takeIf { it > 0 }?.let { append(", davon krankgeschrieben: ").append(it) }
+            append(".")
         }.trim()
     }
 
