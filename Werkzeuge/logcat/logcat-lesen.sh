@@ -25,6 +25,7 @@ while [ $# -gt 0 ]; do
     --zeilen) ZEILEN="$2"; shift 2;;
     --puffer) PUFFER="$2"; shift 2;;
     --serial) SERIAL="$2"; shift 2;;
+    --geraet) ZIEL="$2"; shift 2;;
     --zeitlimit) LIMIT="$2"; shift 2;;
     -h|--help) sed -n 2,18p "$0"; exit 0;;
     *) echo "Unbekannter Schalter: $1"; echo "LOGCAT_STATUS=fehler (Aufruf)"; exit 2;;
@@ -33,11 +34,19 @@ done
 case "$MINUTEN$ZEILEN$LIMIT" in *[!0-9]*) echo "LOGCAT_STATUS=fehler (--minuten/--zeilen/--zeitlimit nur Zahlen)"; exit 2;; esac
 HIER="$(cd "$(dirname "$0")" && pwd)"
 
-# Gerät wählen: WLAN/Tunnel (IP:5555) vor Kabel; sonst einmal verbinden.
-waehle() { adb devices 2>/dev/null | awk 'NR>1 && $2=="device"{print $1}' | sort -t: -k2 -r | head -1; }
+# Gerät wählen: WLAN/Tunnel (IP:5555) vor Kabel; sonst einmal verbinden. Handy und Tablet können gleichzeitig verbunden
+# sein: --geraet handy|tablet (Vorgabe handy) wählt über die feste Seriennummer aus adb-wlan/geraete.json.
+ZIEL="${ZIEL:-handy}"
+ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/../adb-wlan/geraete.json" 2>/dev/null)
+waehle() {
+  local s
+  for s in $(adb devices 2>/dev/null | awk 'NR>1 && $2=="device"{print $1}' | sort -t: -k2 -r); do
+    if [ -z "$ZIEL_SERIE" ] || [ "$(adb -s "$s" shell getprop ro.serialno 2>/dev/null </dev/null | tr -d '[:space:]')" = "$ZIEL_SERIE" ]; then echo "$s"; return; fi
+  done
+}
 if [ -z "$SERIAL" ]; then
-  SERIAL="$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 ~ /:5555$/ {print $1; exit}')"
-  [ -z "$SERIAL" ] && { timeout 60 bash "$HIER/../adb-wlan/adb-wlan.sh" >/dev/null 2>&1; SERIAL="$(waehle)"; }
+  SERIAL="$(waehle)"
+  [ -z "$SERIAL" ] && { timeout 60 bash "$HIER/../adb-wlan/adb-wlan.sh" --geraet "$ZIEL" >/dev/null 2>&1; SERIAL="$(waehle)"; }
 fi
 [ -z "$SERIAL" ] && { echo "LOGCAT_STATUS=fehler (kein Handy erreichbar)"; exit 1; }
 

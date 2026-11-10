@@ -73,17 +73,42 @@ def adb(*args, serial=None, timeout=30):
     return (r.stdout + r.stderr).decode("utf-8", "replace").strip()
 
 
+def ziel_geraet():
+    """Welches Gerät gemeint ist: handy (Vorgabe, Fold 8) oder tablet (Tab S9), wählbar über die Umgebungsvariable HANDY_GERAET."""
+    return os.environ.get("HANDY_GERAET", "handy").strip().lower() or "handy"
+
+
+def ziel_serial():
+    """Feste Seriennummer des Zielgeräts aus Werkzeuge/adb-wlan/geraete.json; leer = Datei fehlt, dann zählt wie früher jedes Gerät."""
+    try:
+        register = json.loads((Path.home() / "proggs" / "Werkzeuge" / "adb-wlan" / "geraete.json").read_text("utf-8"))
+        return str(register[ziel_geraet()]["serial"]).strip()
+    except Exception:
+        return ""
+
+
 def wlan_skript():
     w = Path.home() / "proggs" / "Werkzeuge" / "adb-wlan"
     befehl = (["powershell", "-ExecutionPolicy", "Bypass", "-File", str(w / "adb-wlan.ps1")] if os.name == "nt" else ["bash", str(w / "adb-wlan.sh")])
     if Path(befehl[-1]).exists():
+        befehl += ["-Geraet" if os.name == "nt" else "--geraet", ziel_geraet()]
         subprocess.run(befehl, timeout=180, stdin=subprocess.DEVNULL, capture_output=True, creationflags=OHNE_FENSTER)
 
 
 def geraet_suchen():
     """Sucht das Handy unter den verbundenen Geräten und baut die Verbindung sonst selbst neu auf (Regel 18)."""
+    soll = ziel_serial()
+
+    def ist_ziel(s):
+        try:
+            return not soll or adb("shell", "getprop", "ro.serialno", serial=s, timeout=8).strip() == soll
+        except subprocess.TimeoutExpired:
+            return False
+
     def wahl():
         g = [z.split()[0] for z in adb("devices").splitlines()[1:] if z.strip().endswith("device") and not z.startswith("emulator-")]
+        # Handy und Tablet können gleichzeitig verbunden sein: Nur das Gerät mit der eingetragenen Seriennummer zählt.
+        g = [s for s in g if ist_ziel(s)]
         netz = [s for s in g if ":" in s or "_adb-tls" in s]
         return (netz or g or [None])[0]
     s = wahl()

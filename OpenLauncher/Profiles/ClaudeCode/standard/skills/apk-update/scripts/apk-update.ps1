@@ -634,6 +634,12 @@ if (-not $OhneGeraet) {
     if (-not $adb) { $adb = 'adb' }
     try {
         $geraete = @(& $adb devices 2>$null | Select-String '^(\S+)\s+device$' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+        # Handy und Tablet können gleichzeitig verbunden sein: Gemeint ist das Handy (feste Seriennummer aus geraete.json).
+        $geraeteDatei = Join-Path $proggs 'Werkzeuge\adb-wlan\geraete.json'
+        if (Test-Path $geraeteDatei) {
+            $handySerie = "$((Get-Content $geraeteDatei -Raw -Encoding utf8 | ConvertFrom-Json).handy.serial)".Trim()
+            if ($handySerie) { $geraete = @($geraete | Where-Object { ((& $adb -s $_ shell getprop ro.serialno 2>$null) | Out-String).Trim() -eq $handySerie }) }
+        }
         $geraet = ($geraete | Where-Object { $_ -match ':' } | Select-Object -First 1)
         if (-not $geraet) { $geraet = $geraete | Select-Object -First 1 }
         if ($geraet) {
