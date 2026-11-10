@@ -108,6 +108,23 @@
       "pruefung": "Nach 10 Sitzungen kein 'device ... not found' bei adb install -> wirkt. Mehrkosten gemessen ~45 ms nur bei Installationsbefehlen.",
       "ruecknahme": "adb_ziel_fehlt-Aufruf in main() entfernen.",
       "kosten": "kein Kontext, ~45 ms je adb install"
+    },
+    {
+      "id": "M7",
+      "titel": "Versionslog-Eintrag per Skript statt handgesetzter Nummer",
+      "datum": "2026-11-10T16:33",
+      "status": "aktiv",
+      "beleg": "Sitzung b4be088d: versionCode 620 von Hand gesetzt, eine parallele Sitzung hatte 620 schon vergeben; Build rot, aber im selben Befehl committet und gepusht, Korrektur-Commit nötig (~2 min).",
+      "ort": [
+        "Werkzeuge/versionslog/eintrag.py",
+        "skills/apk-update/SKILL.md (Abschnitt Versionslog)"
+      ],
+      "fehler_regex": "letzte versionCode \\(\\d+\\) muss größer sein",
+      "aufruf_regex": "versionslog",
+      "werkzeug": "PowerShell",
+      "pruefung": "fehler_regex zählt rote Builds wegen doppelter versionCode; nachher 0 erwartet.",
+      "ruecknahme": "eintrag.py löschen und die drei Zeilen im apk-update-SKILL.md entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei (Skill) und Skript"
     }
   ]
 }
