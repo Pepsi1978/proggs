@@ -22,8 +22,11 @@ adresse() {
   done
   [ -n "$kabel" ] && echo "$kabel"
 }
-GUT=0; SCHLECHT=0
-for G in handy tablet; do
+# Beide Geräte gleichzeitig: Die Installationen laufen über getrennte Verbindungen und halbieren so die Wartezeit
+# (gemessen 10.11.2026: fünf APKs nacheinander auf beide Geräte 3 bis 6 Minuten).
+ein_geraet() {
+  local G=$1; shift
+  local GUT=0 SCHLECHT=0 A APK AUS
   A=$(adresse "$(serie $G)")
   if [ -z "$A" ]; then
     # Einmal neu verbinden lassen (WLAN, Tunnel), dann erneut suchen.
@@ -31,13 +34,25 @@ for G in handy tablet; do
     else powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$HIER/adb-wlan.ps1" 2>/dev/null || echo "$HIER/adb-wlan.ps1")" -Geraet $G >/dev/null 2>&1; fi
     A=$(adresse "$(serie $G)")
   fi
-  if [ -z "$A" ]; then echo "$G: nicht erreichbar"; SCHLECHT=$((SCHLECHT + $#)); continue; fi
+  if [ -z "$A" ]; then echo "$G: nicht erreichbar"; echo "ZAEHLER 0 $#"; return; fi
   for APK in "$@"; do
     AUS=$("$ADB" -s "$A" install -r "$APK" </dev/null 2>&1 | tr -d '\r' | tail -1)
     echo "$G ($A): $(basename "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$APK")")")")")")") → $AUS"
     case "$AUS" in Success*) GUT=$((GUT + 1)) ;; *) SCHLECHT=$((SCHLECHT + 1)) ;; esac
   done
+  echo "ZAEHLER $GUT $SCHLECHT"
+}
+ZWISCHEN=$(mktemp -d)
+for G in handy tablet; do ein_geraet $G "$@" > "$ZWISCHEN/$G" 2>&1 & done
+wait
+GUT=0; SCHLECHT=0
+for G in handy tablet; do
+  grep -v '^ZAEHLER ' "$ZWISCHEN/$G"
+  Z=$(grep '^ZAEHLER ' "$ZWISCHEN/$G" | tail -1)
+  # Ohne Zählerzeile ist der Lauf für dieses Gerät abgebrochen: alles als nicht installiert werten.
+  if [ -n "$Z" ]; then GUT=$((GUT + $(echo "$Z" | cut -d' ' -f2))); SCHLECHT=$((SCHLECHT + $(echo "$Z" | cut -d' ' -f3))); else SCHLECHT=$((SCHLECHT + $#)); fi
 done
+rm -rf "$ZWISCHEN"
 if [ $SCHLECHT -eq 0 ]; then echo "AUF_BEIDE_STATUS=fertig"; exit 0; fi
 if [ $GUT -gt 0 ]; then echo "AUF_BEIDE_STATUS=teilweise ($SCHLECHT nicht installiert)"; exit 1; fi
 echo "AUF_BEIDE_STATUS=fehler"; exit 1
