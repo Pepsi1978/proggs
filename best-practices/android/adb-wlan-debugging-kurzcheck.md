@@ -10,3 +10,4 @@ Volltext: `best-practices/android/adb-wlan-debugging.md` · Bugs: `bugs/android/
 - Einschalten per App: WorkManager + WLAN mit IPv4, nachlesen, max. 5 Wiederholungen, einmal pro `networkHandle`.
 - Fremdes WLAN: einmal „Immer zulassen“; Firmennetz mit Isolation → Tailscale/ZeroTier.
 - Logcat nur über `Werkzeuge/logcat/logcat-lesen.sh` (filtert auf dem Handy, < 1 s, `LOGCAT_STATUS`); nie `adb logcat -d | grep` über den Tunnel, nie `logcat -T` ohne `-d`.
+- Zwei Geräte (Handy, Tablet): feste Seriennummern in `Werkzeuge/adb-wlan/geraete.json`; Skripte wählen über `-Geraet`/`-Ziel`/`--geraet`, ohne Angabe das Handy; nie das erste Gerät aus `adb devices` (Bug 13). Tunnel: Handy `10.8.0.7`, Tablet `10.8.0.8`.

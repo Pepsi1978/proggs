@@ -78,3 +78,9 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Ursache 3 (Exit 144):** `pkill -f "logcat -d"` traf auch die eigene Shell, deren Befehlszeile das Muster enthielt.
 - **Fix:** Immer `Werkzeuge/logcat/logcat-lesen.sh` nutzen: filtert auf dem Handy (Zeitfenster, `--pid`, Tags, Muster, `tail`), immer mit `-d`, harte Zeitgrenze, Statuszeile `LOGCAT_STATUS`. Antwort in unter 1 s statt Zeitlimit. Hintergrundaufgaben nur mit TaskStop beenden, nie `pkill -f` mit einem Muster, das in der eigenen Befehlszeile steht.
 - **Quelle:** eigene Messung 05.11.2026 (Fold 8 über 10.8.0.7:5555)
+
+## 13. Zweites Gerät am Kabel verdrängt das Handy (Tablet angesteckt, Handy „nicht das gemerkte Handy“)
+- **Symptom:** Nach dem Anstecken des Tablets trennt der Wachhund das Handy (`… ist nicht das gemerkte Handy – getrennt`), verbindet stattdessen das Tablet, und jedes Skript, das „das erste Netzgerät“ nimmt, trifft das Tablet.
+- **Ursache:** `adb-wlan` merkte sich die Seriennummer des Geräts am Kabel als „unser Handy“ (`~/.adb-wlan-serial`); jedes angesteckte Gerät überschrieb sie.
+- **Fix:** Feste Zuordnung in `Werkzeuge/adb-wlan/geraete.json` (handy, tablet, je Seriennummer und Tunnel-Adresse). `adb-wlan` läuft je Gerät (`-Geraet handy|tablet|alle`, Wachhund mit `alle`), eigene Merkdateien je Gerät; `jarvis-install -Ziel`, `logcat-lesen --geraet`, `handy.py` (`HANDY_GERAET`), `apk-update` und `logbuch-holen -Ziel` wählen über `getprop ro.serialno`. Nie „das erste Gerät aus adb devices“ nehmen.
+- **Quelle:** eigene Messung 10.11.2026 (Fold 8 R3GL7073MLM, Tab S9 R52W800205N)
