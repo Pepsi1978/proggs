@@ -96,6 +96,11 @@ if will umzug; then
   ANGEKOMMEN=$(t run-as $JARVIS sh -c "'wc -c < files/umzug.json 2>/dev/null'" | tr -d '[:space:]')
   [ "$ANGEKOMMEN" = "$GROESSE" ] || { t run-as $JARVIS rm -f files/umzug.json >/dev/null; ende fehler "Umzugsdatei kam unvollständig an ($ANGEKOMMEN statt $GROESSE Bytes)"; }
   echo "  $GROESSE Bytes übergeben; das Tablet übernimmt sie beim nächsten Start von Jarvis"
+  # Zugang zur Fernsteuerung der Rechner (Mac-/Windows-Bildschirm, Server-Konsole): liegt als Datei im App-Speicher, nicht in den Einstellungen.
+  if [ -n "$(h run-as $JARVIS sh -c "'ls files/fernsteuerung-token.txt 2>/dev/null'")" ]; then
+    "$ADB" -s "$H" exec-out run-as $JARVIS cat files/fernsteuerung-token.txt </dev/null | "$ADB" -s "$T" exec-in run-as $JARVIS sh -c 'cat > files/fernsteuerung-token.txt'
+    echo "  Fernsteuerungs-Zugang übergeben (die Rechner erscheinen am Tablet, sobald dort WireGuard läuft)"
+  fi
 fi
 
 if will gedaechtnis; then

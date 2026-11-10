@@ -389,7 +389,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "konten") {
             // ---------------------------------------------------------------- Plugin
-            Bereich("ChatGPT-Plugin") {
+            // Das ChatGPT-Plugin gibt es nur für das Handy (Franks Vorgabe vom 10.11.2026): Auf dem Tablet bleibt hier nur die Server-Verbindung.
+            val tablet = de.frank.jarvis.data.Geraet.istTablet
+            Bereich(if (tablet) "Verbindung zum Server" else "ChatGPT-Plugin") {
                 val (stand, farbe) = when (tunnel.stufe) {
                     TunnelStufe.ONLINE -> "Online" to f.erfolg
                     TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
@@ -398,10 +400,10 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     TunnelStufe.AUS -> "Aus" to f.textLeise
                 }
                 Zeile("Verbindung zum Server", stand, farbe)
-                Text("Jarvis hält von sich aus eine Verbindung zu deinem Server. ChatGPT ruft den Server an, der reicht den Aufruf ans Handy weiter.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(if (tablet) "Jarvis hält von sich aus eine Verbindung zu deinem Server: für Programmieraufträge an deine Rechner und den Abgleich mit dem Handy. Das ChatGPT-Plugin läuft nur über das Handy." else "Jarvis hält von sich aus eine Verbindung zu deinem Server. ChatGPT ruft den Server an, der reicht den Aufruf ans Handy weiter.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
                 val adresse = vm.pluginAdresse
-                if (adresse.isNotEmpty()) {
+                if (adresse.isNotEmpty() && !tablet) {
                     Unterzeile("Plugin-Adresse für ChatGPT")
                     Text(adresse, Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(14.dp), color = f.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
                     Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -428,13 +430,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.serverSpeichern(host, token) }
                 }
         
-                Text("So kommt Jarvis in ChatGPT", Modifier.padding(top = 18.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                listOf(
+                if (!tablet) Text("So kommt Jarvis in ChatGPT", Modifier.padding(top = 18.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                (if (tablet) emptyList() else listOf(
                     "Warten, bis oben „Online“ steht. Dann die Plugin-Adresse kopieren oder an den PC teilen.",
                     "Am PC chatgpt.com öffnen: Einstellungen → Apps und Konnektoren → Erweitert → Entwicklermodus einschalten.",
                     "Dort „Erstellen“ wählen: Name „Jarvis“, als MCP-Server-URL die Plugin-Adresse, Authentifizierung „Keine“. Bestätigen.",
                     "Im Chat oder im Sprachmodus sagen: „Jarvis, was steht heute an?“ Der erste Aufruf erscheint hier unter Aktivität.",
-                ).forEachIndexed { i, text ->
+                )).forEachIndexed { i, text ->
                     Row(Modifier.padding(top = 10.dp)) {
                         Box(Modifier.size(24.dp).glas(f, 12.dp, erhoeht = 0.2f), contentAlignment = Alignment.Center) { Text("${i + 1}", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                         Text(text, Modifier.padding(start = 10.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp)
@@ -622,9 +624,11 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Text("Schwer", color = f.textLeise, fontSize = 13.sp)
                 }
                 Text("Leicht: ein kurzer Wisch von links nach rechts öffnet die Gesprächsleiste. Schwer: nur ein deutlich längerer Wisch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-                Unterzeile("Sicherheit")
-                Knopf("Plugin-Adresse erneuern", Modifier.fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.adresseErneuern() }
-                Text("Macht die bisherige Adresse ungültig. Danach in ChatGPT neu eintragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                if (!de.frank.jarvis.data.Geraet.istTablet) {
+                    Unterzeile("Sicherheit")
+                    Knopf("Plugin-Adresse erneuern", Modifier.fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.adresseErneuern() }
+                    Text("Macht die bisherige Adresse ungültig. Danach in ChatGPT neu eintragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                }
             }
         }
 
