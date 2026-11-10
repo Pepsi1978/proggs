@@ -201,7 +201,7 @@ class McpServer(context: Context) {
                 }
                 append("Jarvis selbst: ").append(eigene.joinToString(", ") { w -> w.titel }).append('\n')
             }
-            Ergebnis("Jarvis ist bereit (Version ${BuildConfig.VERSION_NAME}, Integration v${Integration.VERSION}). Auf dem Handy ist es $jetzt. " +(if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." +
+            Ergebnis("${de.frank.jarvis.data.Geraet.name} ist bereit (Version ${BuildConfig.VERSION_NAME}, Integration v${Integration.VERSION}). Auf dem ${de.frank.jarvis.data.Geraet.wort} ist es $jetzt. " +(if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." +
                 (if (programmieren.isEmpty()) "" else " $programmieren") + funktionen)
         },
     )
@@ -233,7 +233,7 @@ class McpServer(context: Context) {
             "initialize" -> ergebnis(id, JSONObject()
                 .put("protocolVersion", parameter.optString("protocolVersion").takeIf { it in VERSIONEN } ?: VERSIONEN.first())
                 .put("capabilities", JSONObject().put("tools", JSONObject().put("listChanged", false)).put("resources", JSONObject()))
-                .put("serverInfo", JSONObject().put("name", "Jarvis").put("title", "Jarvis").put("version", "${BuildConfig.VERSION_NAME} (Integration v${Integration.VERSION})"))
+                .put("serverInfo", JSONObject().put("name", de.frank.jarvis.data.Geraet.name).put("title", de.frank.jarvis.data.Geraet.name).put("version", "${BuildConfig.VERSION_NAME} (Integration v${Integration.VERSION})"))
                 .put("instructions", anleitung()))
             "ping" -> ergebnis(id, JSONObject())
             "tools/list" -> ergebnis(id, JSONObject().put("tools", JSONArray(alleWerkzeuge().map(::beschreibe))))
@@ -361,7 +361,7 @@ class McpServer(context: Context) {
         .apply { w.meta?.let { put("_meta", it) } }
 
     private fun anleitung(): String = buildString {
-        append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
+        append("Dies ist ${de.frank.jarvis.data.Geraet.name}, Franks persönlicher Assistent auf seinem ${de.frank.jarvis.data.Geraet.wort}. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
         append("oder Erinnerungen, nutze diese Werkzeuge. „Erinnere mich …“ gehört nur zu erinnerung_speichern, nie zusätzlich als Aufgabe oder Termin. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
         // Die versionierten Grundregeln stehen vorn: Manche Programme kürzen die Anleitung, der Anfang kommt immer an.

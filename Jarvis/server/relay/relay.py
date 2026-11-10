@@ -45,6 +45,12 @@ Geheimnis ihrer MCP-Adresse ab (GET /j/<Geheimnis>/kanal, Long-Polling) und brau
 startet die Mac-Bruecke sie (GET /pc/mac-befehl, Long-Polling): auf Franks Wunsch (/geraet/mac-start) und bei einer Frage an den Mac,
 nicht bei einer blossen Mitteilung: Die holt sie beim naechsten Start ab, und Frank kann die App bewusst beendet haben.
 
+Zehnte Aufgabe: mehrere Jarvis-Geraete (Handy, Tablet). Jedes meldet sich mit der Kopfzeile X-Jarvis-Geraet und hat eigene
+Verbindung, eigenes Geheimnis (eigene Plugin-Adresse) und eigene Warteschlangen; ohne Kopfzeile ist es das Handy. Meldungen eines
+Programmierauftrags gehen an das Geraet, das ihn gestellt hat (/data/auftrag-geraete.json), am Rechner gestartete Sitzungen an alle.
+Der Geraeteabgleich (/j/<Geheimnis>/abgleich/..., /data/geraeteabgleich) haelt Jarvis' Gedaechtnis und die Daten der angebundenen
+Apps auf Handy und Tablet gleich; er nutzt dieselbe Technik wie die Ablage, die Rechner-Versionen sehen ihn nicht.
+
 Neunte Aufgabe: die gemeinsame Ablage aller Jarvis-Versionen (Klasse AblageAbgleich). Einträge, Prompts und ihre Reihenfolge liegen als
 Dokumente mit fortlaufendem Stand in /data/ablage/ablage.db, Dateien und Texte nach ihrem SHA-256 unter /data/ablage/blobs. Jede Version
 meldet sich mit dem Geheimnis ihrer MCP-Adresse (/j/<Geheimnis>/ablage/...) und ihrem Namen („Jarvis Handy“, „Jarvis Mac OS“, „Jarvis Windows“).
@@ -138,74 +144,191 @@ def darf_signal(request: web.Request) -> bool:
     return darf_pc(request) or darf_handy(request)
 
 
-class Relay:
-    def __init__(self):
-        self.geheimnis = ""          # zuletzt vom Handy gemeldetes Geheimnis
+# Mehrere Jarvis-Geraete (seit dem Tablet): Jedes meldet sich mit der Kopfzeile X-Jarvis-Geraet („handy“, „tablet“).
+# Fehlt sie (aelteres APK), ist es das Handy: Fuer das Handy aendert sich dadurch nichts.
+GERAET_KENNUNG = re.compile(r"^[a-z0-9_-]{1,20}$")
+HAUPTGERAET = "handy"
+GERAETE_HOECHSTENS = 6
+AUFTRAG_GERAETE = ZUSTAND.with_name("auftrag-geraete.json")
+AUFTRAG_GERAETE_ALTER_S = 60 * 86_400
+ALLE_GERAETE = "*"
+
+
+def geraet_kennung(request: web.Request) -> str:
+    wert = request.headers.get("X-Jarvis-Geraet", "").strip().lower()
+    return wert if GERAET_KENNUNG.match(wert) else HAUPTGERAET
+
+
+class Geraet:
+    """Ein Jarvis-Geraet am Relay: eigene Verbindung, eigenes Geheimnis (eigene Plugin-Adresse), eigene Warteschlangen."""
+
+    def __init__(self, kennung: str):
+        self.kennung = kennung
+        self.geheimnis = ""          # zuletzt von diesem Geraet gemeldetes Geheimnis
         self.gemerkt = {}            # Methode -> result-Objekt
         self.ws = None
-        # Signale, die ohne verbundenes Handy kamen (hoechstens 20): gehen beim naechsten Verbinden raus. Eine Liste statt
+        # Signale, die ohne verbundenes Geraet kamen (hoechstens 20): gehen beim naechsten Verbinden raus. Eine Liste statt
         # eines Platzes: Zwei apk-update-Laeufe im Funkloch verloren sonst das Signal des ersten.
         self.ausstehend = []
-        self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 1000, aelteste fallen weg)
-        self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
+        self.meldungen = []          # Programmier-Meldungen ohne Verbindung (hoechstens 1000, aelteste fallen weg)
         self.da = asyncio.Event()
+
+    @property
+    def name(self) -> str:
+        return "Handy" if self.kennung == HAUPTGERAET else self.kennung.capitalize()
+
+    @property
+    def ablage_name(self) -> str:
+        """Unter diesem Namen meldet sich das Geraet in der gemeinsamen Ablage: „Jarvis Handy“, „Jarvis Tablet“."""
+        return "Jarvis " + self.name
+
+    def verbunden(self) -> bool:
+        return self.ws is not None and not self.ws.closed
+
+    async def sende(self, daten: dict) -> bool:
+        ws = self.ws
+        if ws is None or ws.closed:
+            return False
+        try:
+            await ws.send_str(json.dumps(daten, ensure_ascii=False))
+            return True
+        except (ConnectionError, RuntimeError):
+            return False
+
+
+class Relay:
+    def __init__(self):
+        self.geraete = {HAUPTGERAET: Geraet(HAUPTGERAET)}
+        self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.kanaele = []            # AgentenKanal je Rechner: reichen beim Verbinden unquittierte Post nach
+        # Welches Geraet einen Programmierauftrag gestellt hat: Dorthin gehen seine Meldungen und Rueckfragen.
+        # AUFTRAG_ID -> [Kennung oder "*" (am Rechner gestartete Sitzung: alle Geraete), Zeit]
+        self.auftrag_geraet = {}
         self._lade()
+
+    # Das Handy unter den bisherigen Namen: Tagebuch, Agentenkanal und Ablage fragen wie bisher nach relay.ws.
+    @property
+    def handy(self) -> Geraet:
+        return self.geraete[HAUPTGERAET]
+
+    @property
+    def ws(self):
+        return self.handy.ws
 
     def _lade(self):
         try:
             daten = json.loads(ZUSTAND.read_text("utf-8"))
-            self.geheimnis = daten.get("geheimnis", "")
-            self.gemerkt = daten.get("gemerkt", {})
+            self.handy.geheimnis = daten.get("geheimnis", "")
+            self.handy.gemerkt = daten.get("gemerkt", {})
+            for kennung, stand in (daten.get("geraete") or {}).items():
+                if GERAET_KENNUNG.match(kennung) and kennung != HAUPTGERAET and isinstance(stand, dict):
+                    geraet = self.geraete.setdefault(kennung, Geraet(kennung))
+                    geraet.geheimnis = stand.get("geheimnis", "")
+                    geraet.gemerkt = stand.get("gemerkt", {})
+        except Exception:
+            pass
+        try:
+            grenze = time.time() - AUFTRAG_GERAETE_ALTER_S
+            self.auftrag_geraet = {k: v for k, v in json.loads(AUFTRAG_GERAETE.read_text("utf-8")).items()
+                                   if isinstance(v, list) and len(v) == 2 and v[1] > grenze}
         except Exception:
             pass
 
     def _sichere(self):
         try:
             ZUSTAND.parent.mkdir(parents=True, exist_ok=True)
-            ZUSTAND.write_text(json.dumps({"geheimnis": self.geheimnis, "gemerkt": self.gemerkt}), "utf-8")
+            # Das Handy bleibt im alten Format oben: Eine aeltere relay.py liest die Datei unveraendert.
+            weitere = {k: {"geheimnis": g.geheimnis, "gemerkt": g.gemerkt} for k, g in self.geraete.items() if k != HAUPTGERAET}
+            ZUSTAND.write_text(json.dumps({"geheimnis": self.handy.geheimnis, "gemerkt": self.handy.gemerkt, "geraete": weitere}), "utf-8")
         except Exception as fehler:
             log.warning("Zustand nicht gesichert: %s", fehler)
 
-    def passt(self, geheimnis: str) -> bool:
-        return len(self.geheimnis) >= 32 and hmac.compare_digest(geheimnis.encode(), self.geheimnis.encode())
+    def zu_geheimnis(self, geheimnis: str):
+        """Das Geraet, dem dieses Geheimnis gehoert, sonst None."""
+        for geraet in self.geraete.values():
+            if len(geraet.geheimnis) >= 32 and hmac.compare_digest(geheimnis.encode(), geraet.geheimnis.encode()):
+                return geraet
+        return None
 
-    # ---------------------------------------------------------------- Handy
+    def passt(self, geheimnis: str) -> bool:
+        return self.zu_geheimnis(geheimnis) is not None
+
+    def zu_ablage_name(self, name: str):
+        return next((g for g in self.geraete.values() if g.ablage_name == name), None)
+
+    def auftrag_merken(self, auftrag_id: str, kennung: str) -> None:
+        auftrag_id = auftrag_id.strip().upper()
+        if not auftrag_id or (self.auftrag_geraet.get(auftrag_id) or [None])[0] == kennung:
+            return
+        self.auftrag_geraet[auftrag_id] = [kennung, int(time.time())]
+        try:
+            grenze = time.time() - AUFTRAG_GERAETE_ALTER_S
+            self.auftrag_geraet = {k: v for k, v in self.auftrag_geraet.items() if v[1] > grenze}
+            teil = AUFTRAG_GERAETE.with_suffix(".teil")
+            teil.write_text(json.dumps(self.auftrag_geraet), "utf-8")
+            teil.replace(AUFTRAG_GERAETE)
+        except Exception as fehler:
+            log.warning("Auftrag-Geraete nicht gesichert: %s", fehler)
+
+    def _ziele(self, daten: dict) -> list:
+        """Wohin eine Programmier-Meldung geht: an das Geraet, das den Auftrag gestellt hat. Am Rechner direkt gestartete
+        Sitzungen (Feld „lokal“) gehoeren keinem Geraet und erscheinen auf allen; alles Unbekannte geht wie bisher ans Handy."""
+        auftrag_id = str(daten.get("auftrag_id") or "").strip().upper()
+        if isinstance(daten.get("lokal"), dict) and auftrag_id not in self.auftrag_geraet:
+            self.auftrag_merken(auftrag_id, ALLE_GERAETE)
+        kennung = (self.auftrag_geraet.get(auftrag_id) or [HAUPTGERAET])[0]
+        if kennung == ALLE_GERAETE:
+            return list(self.geraete.values())
+        return [self.geraete.get(kennung) or self.handy]
+
+    # ---------------------------------------------------------------- Handy und Tablet
 
     async def geraet(self, request: web.Request) -> web.StreamResponse:
         geheimnis = request.headers.get("X-Jarvis-Geheimnis", "")
         if not darf_handy(request) or len(geheimnis) < 32:
             return web.Response(status=404, text="Not found")
+        kennung = geraet_kennung(request)
+        geraet = self.geraete.get(kennung)
+        if geraet is None and len(self.geraete) >= GERAETE_HOECHSTENS:
+            return web.Response(status=404, text="Not found")
+        # Ein Geheimnis gehoert genau einem Geraet. Meldet ein zweites dasselbe (kopierte App-Daten), bliebe unklar, wen ein
+        # Aufruf meint, und beide wuerfen sich gegenseitig hinaus: abweisen, bis es ein eigenes hat.
+        inhaber = self.zu_geheimnis(geheimnis)
+        if inhaber is not None and inhaber.kennung != kennung:
+            log.warning("%s meldet das Geheimnis von %s: abgewiesen", kennung, inhaber.kennung)
+            return web.Response(status=409, text="Geheimnis gehoert einem anderen Geraet")
+        if geraet is None:
+            geraet = self.geraete[kennung] = Geraet(kennung)
         ws = web.WebSocketResponse(heartbeat=20, max_msg_size=MAX_RUMPF * 2)
         await ws.prepare(request)
-        alt = self.ws
-        self.ws = ws
+        alt = geraet.ws
+        geraet.ws = ws
         if alt is not None and not alt.closed:
             # Im Hintergrund: Haengt die alte Verbindung am toten Netz, wartete close() bis zu 10 s auf die Gegenstelle,
             # und so lange laege die neue (mit den nachgereichten Antworten) ungelesen.
             _im_hintergrund(alt.close())
-        if geheimnis != self.geheimnis:
-            self.geheimnis, self.gemerkt = geheimnis, {}
+        if geheimnis != geraet.geheimnis:
+            geraet.geheimnis, geraet.gemerkt = geheimnis, {}
             self._sichere()
-        self.da.set()
-        log.info("Handy verbunden")
-        while self.meldungen:
-            meldung = self.meldungen.pop(0)
+        geraet.da.set()
+        log.info("%s verbunden", geraet.name)
+        while geraet.meldungen:
+            meldung = geraet.meldungen.pop(0)
             try:
                 await ws.send_str(json.dumps(meldung))
             except (ConnectionError, RuntimeError):
-                self.meldungen.insert(0, meldung)
+                geraet.meldungen.insert(0, meldung)
                 break
-        while self.ausstehend:
-            signal = self.ausstehend.pop(0)
+        while geraet.ausstehend:
+            signal = geraet.ausstehend.pop(0)
             try:
                 await ws.send_str(json.dumps(signal))
-                log.info("Ausstehendes Signal %s nachgereicht", signal.get("signal"))
+                log.info("Ausstehendes Signal %s nachgereicht (%s)", signal.get("signal"), geraet.name)
             except (ConnectionError, RuntimeError):
-                self.ausstehend.insert(0, signal)
+                geraet.ausstehend.insert(0, signal)
                 break
         for kanal in self.kanaele:
-            await kanal.nachreichen(ws)
+            await kanal.nachreichen(ws, kennung)
         try:
             async for nachricht in ws:
                 if nachricht.type != WSMsgType.TEXT:
@@ -219,17 +342,17 @@ class Relay:
                 if eintrag is not None and not eintrag[0].done():
                     eintrag[0].set_result(daten.get("antwort"))
         finally:
-            if self.ws is ws:
-                self.ws = None
-                self.da.clear()
-                log.info("Handy getrennt")
-                _im_hintergrund(self._nach_trennung(ws))
+            if geraet.ws is ws:
+                geraet.ws = None
+                geraet.da.clear()
+                log.info("%s getrennt", geraet.name)
+                _im_hintergrund(self._nach_trennung(ws, geraet))
         return ws
 
-    async def _nach_trennung(self, alt) -> None:
-        """Kommt das Handy nicht bald zurueck, warten offene Aufrufe nicht stur bis zum Zeitlimit."""
+    async def _nach_trennung(self, alt, geraet: Geraet) -> None:
+        """Kommt das Geraet nicht bald zurueck, warten offene Aufrufe nicht stur bis zum Zeitlimit."""
         try:
-            await asyncio.wait_for(self.da.wait(), NACH_TRENNUNG_S)
+            await asyncio.wait_for(geraet.da.wait(), NACH_TRENNUNG_S)
             return  # wieder da: Die Antworten kommen ueber die neue Verbindung
         except asyncio.TimeoutError:
             pass
@@ -237,8 +360,16 @@ class Relay:
             if ws is alt and not wartend.done():
                 wartend.set_result(_UNKLAR)
 
+    async def an_alle(self, daten: dict, ausser: Geraet | None = None) -> None:
+        """Ein Signal ohne Warteschlange an alle gerade verbundenen Geraete (Tagebuch, Ablage): Wer fehlt, gleicht beim Verbinden ohnehin ab."""
+        for geraet in list(self.geraete.values()):
+            if geraet is not ausser:
+                await geraet.sende(daten)
+
     async def signal(self, request: web.Request) -> web.Response:
-        """Ein Signal von aussen (z. B. "update" vom apk-update-Skript am PC) sofort ans Handy weiterreichen."""
+        """Ein Signal von aussen (z. B. "update" vom apk-update-Skript am PC) sofort weiterreichen: mit dem Feld "geraet" nur an
+        dieses Geraet, sonst an alle (ohne Verbindung in dessen Warteschlange). "zugestellt" meint wie bisher das Handy,
+        bei einem benannten Geraet dieses."""
         if not darf_signal(request):
             return web.Response(status=404, text="Not found")
         try:
@@ -246,39 +377,38 @@ class Relay:
             assert isinstance(daten, dict) and isinstance(daten.get("signal"), str) and daten["signal"]
         except Exception:
             return web.Response(status=400, text="Signal fehlt")
-        ws = self.ws
-        if ws is not None and not ws.closed:
-            try:
-                await ws.send_str(json.dumps(daten))
-                log.info("Signal %s ans Handy", daten["signal"])
-                return web.json_response({"zugestellt": True})
-            except (ConnectionError, RuntimeError):
-                pass
-        self.ausstehend.append(daten)
-        del self.ausstehend[:-20]
-        log.info("Signal %s gemerkt: Handy nicht verbunden", daten["signal"])
-        return web.json_response({"zugestellt": False})
+        benannt = self.geraete.get(str(daten.get("geraet") or ""))
+        je_geraet = {}
+        for geraet in ([benannt] if benannt is not None else list(self.geraete.values())):
+            je_geraet[geraet.kennung] = await geraet.sende(daten)
+            if je_geraet[geraet.kennung]:
+                log.info("Signal %s ans %s", daten["signal"], geraet.name)
+            else:
+                geraet.ausstehend.append(daten)
+                del geraet.ausstehend[:-20]
+                log.info("Signal %s gemerkt: %s nicht verbunden", daten["signal"], geraet.name)
+        return web.json_response({"zugestellt": je_geraet[(benannt or self.handy).kennung], "geraete": je_geraet})
 
     async def programmier_meldung(self, daten: dict) -> bool:
-        """Reicht eine Programmier-Meldung ans Handy; ohne Handy kommt sie in die Warteschlange. True = sofort zugestellt."""
-        ws = self.ws
-        if ws is not None and not ws.closed:
-            try:
-                await ws.send_str(json.dumps(daten))
-                return True
-            except (ConnectionError, RuntimeError):
-                pass
-        # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
-        if daten.get("stand") != "puls":
-            self.meldungen.append(daten)
-            # 1000 statt 100: Eine am PC gestartete Sitzung soll auch nach längerer Funkstille des Handys komplett in Jarvis stehen.
-            del self.meldungen[:-1000]
-        return False
+        """Reicht eine Programmier-Meldung an das Geraet des Auftrags (siehe _ziele); ohne Verbindung kommt sie in dessen
+        Warteschlange. True = mindestens einem Geraet sofort zugestellt."""
+        zugestellt = False
+        for geraet in self._ziele(daten):
+            if await geraet.sende(daten):
+                zugestellt = True
+            # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
+            elif daten.get("stand") != "puls":
+                geraet.meldungen.append(daten)
+                # 1000 statt 100: Eine am PC gestartete Sitzung soll auch nach längerer Funkstille komplett in Jarvis stehen.
+                del geraet.meldungen[:-1000]
+        return zugestellt
 
     # ---------------------------------------------------------------- ChatGPT
 
     async def mcp(self, request: web.Request) -> web.Response:
-        if not self.passt(request.match_info["geheimnis"]):
+        # Das Geheimnis der Adresse bestimmt das Geraet: Jedes hat seine eigene Plugin-Adresse.
+        geraet = self.zu_geheimnis(request.match_info["geheimnis"])
+        if geraet is None:
             return web.Response(status=404, text="Not found")
         if request.method != "POST":
             return web.Response(status=405, text="Method not allowed", headers={"Allow": "POST"})
@@ -301,16 +431,16 @@ class Relay:
         if isinstance(anfrage, list) and anfrage and all(isinstance(x, dict) and x.get("id") is None for x in anfrage):
             return web.Response(status=202)
         # Ping prueft nur, ob der Dienst lebt: bei verbundenem Handy sofort antworten.
-        if methode == "ping" and self.ws is not None and not self.ws.closed:
+        if methode == "ping" and geraet.verbunden():
             return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": {}})
 
-        if self.ws is None:
+        if geraet.ws is None:
             try:
-                await asyncio.wait_for(self.da.wait(), WARTE_AUF_HANDY_S)
+                await asyncio.wait_for(geraet.da.wait(), WARTE_AUF_HANDY_S)
             except asyncio.TimeoutError:
-                return self._ohne_handy(einzeln, methode)
+                return self._ohne_handy(einzeln, methode, geraet)
 
-        antwort = await self._frage_handy(rumpf)
+        antwort = await self._frage_handy(rumpf, geraet)
         if antwort is _UNKLAR and methode == "tools/call":
             # Nicht "nichts geaendert" melden: Der Auftrag kam an, ein blindes Wiederholen legte Termine, Ideen oder Mails doppelt an.
             log.warning("Antwort des Handys blieb aus (%s)", (einzeln.get("params") or {}).get("name", ""))
@@ -320,28 +450,28 @@ class Relay:
             return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
                                "result": {"content": [{"type": "text", "text": text}], "isError": True}})
         if antwort is _KEINE or antwort is _UNKLAR:
-            return self._ohne_handy(einzeln, methode)
+            return self._ohne_handy(einzeln, methode, geraet)
         if antwort is None:                      # reine Benachrichtigung
             return web.Response(status=202)
         if methode in MERKBAR:
             try:
                 ergebnis = json.loads(antwort).get("result")
-                if ergebnis is not None and self.gemerkt.get(methode) != ergebnis:
-                    self.gemerkt[methode] = ergebnis
+                if ergebnis is not None and geraet.gemerkt.get(methode) != ergebnis:
+                    geraet.gemerkt[methode] = ergebnis
                     self._sichere()
             except ValueError:
                 pass
         return web.Response(text=antwort, content_type="application/json")
 
-    async def _frage_handy(self, rumpf: str):
-        ws = self.ws
+    async def _frage_handy(self, rumpf: str, geraet: Geraet):
+        ws = geraet.ws
         if ws is None or ws.closed:
             # Die Verbindung schliesst gerade: kurz auf die neue warten (das Handy verbindet sich nach wenigen Sekunden neu).
             schleife = asyncio.get_running_loop()
             frist = schleife.time() + WARTE_AUF_HANDY_S
             while (ws is None or ws.closed) and schleife.time() < frist:
                 await asyncio.sleep(0.25)
-                ws = self.ws
+                ws = geraet.ws
             if ws is None or ws.closed:
                 return _KEINE
         nummer = uuid.uuid4().hex
@@ -359,17 +489,17 @@ class Relay:
         finally:
             self.offen.pop(nummer, None)
 
-    def _ohne_handy(self, einzeln, methode: str) -> web.Response:
+    def _ohne_handy(self, einzeln, methode: str, geraet: Geraet) -> web.Response:
         if einzeln is None:
             return web.Response(status=503, text="Handy nicht erreichbar")
         if einzeln.get("id") is None:
             return web.Response(status=202)
-        if methode in self.gemerkt:
-            return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": self.gemerkt[methode]})
+        if methode in geraet.gemerkt:
+            return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": geraet.gemerkt[methode]})
         if methode == "ping":
             return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": {}})
         if methode == "tools/call":
-            text = ("Jarvis ist gerade nicht erreichbar: Franks Handy hat keine Verbindung. "
+            text = (f"Jarvis ist gerade nicht erreichbar: Franks {geraet.name} hat keine Verbindung. "
                     "Nichts wurde geändert. Sage das Frank und bitte ihn, es gleich noch einmal zu versuchen.")
             return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
                                "result": {"content": [{"type": "text", "text": text}], "isError": True}})
@@ -404,8 +534,7 @@ class Tagebuch:
         while True:
             try:
                 await asyncio.sleep(TAGEBUCH_ABSTAND_S + 1)
-                ws = relay.ws
-                if ws is None or ws.closed:
+                if not any(g.verbunden() for g in relay.geraete.values()):
                     continue
                 await self.hole()
                 neu = self._fingerabdruck()
@@ -413,11 +542,10 @@ class Tagebuch:
                     self.fingerabdruck = neu
                     continue
                 # hole() kann bis zu 90 s dauern: Inzwischen kann sich das Handy neu verbunden haben, also neu lesen.
-                ws = relay.ws
-                if ws is None or ws.closed:
+                if not any(g.verbunden() for g in relay.geraete.values()):
                     continue  # alten Fingerabdruck stehen lassen: Die naechste Runde meldet die Aenderung
-                await ws.send_str(json.dumps({"signal": "tagebuch"}))
-                log.info("Tagebuch geaendert: Signal ans Handy")
+                await relay.an_alle({"signal": "tagebuch"})
+                log.info("Tagebuch geaendert: Signal an die Geraete")
                 self.fingerabdruck = neu
             except asyncio.CancelledError:
                 raise
@@ -1110,6 +1238,8 @@ class PcBruecke:
             return web.json_response({"pc": False, "mac": False}, status=409)
         nummer = uuid.uuid4().hex
         jarvis_id = str(daten.get("nummer", ""))[:20]
+        # Meldungen und Rueckfragen dieser Sitzung gehen an das Geraet, das den Auftrag stellt (Handy oder Tablet).
+        self.relay.auftrag_merken(jarvis_id, geraet_kennung(request))
         wartend = asyncio.get_running_loop().create_future()
         self.quittungen[nummer] = wartend
         spaeter = False
@@ -1393,6 +1523,7 @@ class AgentenKanal:
         self.geraet = geraet
         self.datei = KANAL_DATEI if geraet == "mac" else KANAL_DATEI.with_name(f"agentenkanal-{geraet}.json")
         self.post = {"mac": [], "handy": []}
+        self.absender = {}                   # Nachrichten-id -> Geraet, das sie dem Rechner geschrieben hat (nur wenn nicht das Handy)
         self.mac = _Abfrage()
         self.bruecke = _Abfrage()
         self.eingang_mac = asyncio.Event()
@@ -1403,6 +1534,7 @@ class AgentenKanal:
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
             self.post = {"mac": daten.get("mac", []), "handy": daten.get("handy", [])}
+            self.absender = {n["id"]: n["von"] for n in self.post["mac"] if n.get("von")}
         except Exception:
             pass
 
@@ -1428,6 +1560,11 @@ class AgentenKanal:
         nachricht = {"id": kennung, "art": str(daten.get("art") or "info"), "text": text, "zeit": int(time.time())}
         if isinstance(daten.get("antwort_auf"), str):
             nachricht["antwort_auf"] = daten["antwort_auf"]
+        # Mehrere Jarvis-Geraete: „von“ nennt das Geraet, das dem Rechner schreibt (fehlt = Handy), „an“ das Geraet, an das
+        # die Antwort des Rechners geht (fehlt = Handy). Beides reist nur im Postfach mit.
+        for feld in ("von", "an"):
+            if isinstance(daten.get(feld), str) and daten[feld] != HAUPTGERAET and GERAET_KENNUNG.match(daten[feld]):
+                nachricht[feld] = daten[feld]
         grenze = time.time() - KANAL_ALTER_S
         postfach[:] = [n for n in postfach if n["zeit"] > grenze][-(KANAL_HOECHSTENS - 1):] + [nachricht]
         self._sichere()
@@ -1457,8 +1594,10 @@ class AgentenKanal:
     def _status(self) -> dict:
         return {"mac_app": self.mac.da(), "bruecke": self.bruecke.da(), "offen_an_mac": len(self.post["mac"])}
 
-    async def nachreichen(self, ws) -> None:
+    async def nachreichen(self, ws, kennung: str = HAUPTGERAET) -> None:
         for nachricht in list(self.post["handy"]):
+            if nachricht.get("an", HAUPTGERAET) != kennung:
+                continue
             try:
                 await ws.send_str(self._signal(nachricht))
             except (ConnectionError, RuntimeError):
@@ -1470,11 +1609,19 @@ class AgentenKanal:
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         try:
-            nachricht = self._ablegen("mac", await request.json())
+            daten = await request.json()
+            daten.pop("an", None)
+            daten["von"] = geraet_kennung(request)
+            nachricht = self._ablegen("mac", daten)
         except Exception:
             nachricht = None
         if nachricht is None:
             return web.Response(status=400, text="Nachricht unvollstaendig")
+        # Die Antwort des Rechners auf diese Nachricht geht an dasselbe Geraet zurueck.
+        if nachricht.get("von"):
+            self.absender[nachricht["id"]] = nachricht["von"]
+            for alt in list(self.absender)[:-500]:
+                del self.absender[alt]
         self.eingang_mac.set()
         if self._frage_liegt():
             self.geweckt = time.monotonic()
@@ -1542,13 +1689,18 @@ class AgentenKanal:
         if not self.relay.passt(request.match_info["geheimnis"]):
             return web.Response(status=404, text="Not found")
         try:
-            nachricht = self._ablegen("handy", await request.json())
+            daten = await request.json()
+            daten.pop("von", None)
+            # Antwort auf die Nachricht eines Tablets: dorthin zurueck. Alles andere geht wie bisher ans Handy.
+            daten["an"] = self.absender.get(str(daten.get("antwort_auf") or ""), HAUPTGERAET)
+            nachricht = self._ablegen("handy", daten)
         except Exception:
             nachricht = None
         if nachricht is None:
             return web.Response(status=400, text="Nachricht unvollstaendig")
-        ws = self.relay.ws
+        ziel = self.relay.geraete.get(nachricht.get("an", HAUPTGERAET)) or self.relay.handy
         zugestellt = False
+        ws = ziel.ws
         if ws is not None and not ws.closed:
             try:
                 await ws.send_str(self._signal(nachricht))
@@ -1605,14 +1757,24 @@ ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
 ABLAGE_SEITE = 500                    # hoechstens so viele Dokumente und Bytes je Antwort: Der Dienst teilt sich Event-Loop und 128 MB mit MCP und Tunnel
 ABLAGE_SEITE_BYTES = 2 * 1024 * 1024
+# Geraeteabgleich Handy <-> Tablet: Jarvis' eigenes Gedaechtnis (Merkdateien, Gespraeche) und die Daten der angebundenen Apps
+# (je App ein Dokument, der ganze Export als Blob). Gleiche Regeln wie die Ablage: juengste Fassung gewinnt, Grabsteine.
+ABGLEICH_ORDNER = Path(os.environ.get("JARVIS_ABGLEICH", "/data/geraeteabgleich"))
+ABGLEICH_ARTEN = {"gedaechtnis", "gespraech", "appdaten", "stand"}
 
 
 class AblageAbgleich:
-    def __init__(self, relay: Relay):
+    """Zwei Instanzen: die gemeinsame Ablage aller Jarvis-Versionen (Vorgabe) und der Geraeteabgleich zwischen Handy und Tablet
+    (eigener Ordner, eigene Arten, eigenes Signal, Wege unter /j/<Geheimnis>/abgleich): Die Rechner-Versionen sehen dessen Dokumente nie."""
+
+    def __init__(self, relay: Relay, ordner: Path = ABLAGE_ORDNER, arten=ABLAGE_ARTEN, signal: str = "ablage"):
         self.relay = relay
-        self.blobs = ABLAGE_ORDNER / "blobs"
+        self.ordner = ordner
+        self.arten = arten
+        self.signal = signal
+        self.blobs = ordner / "blobs"
         self.blobs.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(ABLAGE_ORDNER / "ablage.db")
+        self.db = sqlite3.connect(ordner / "ablage.db")
         self.db.execute("PRAGMA journal_mode=WAL")
         # Kein fsync je Dokument im Event-Loop. Bei einem Stromausfall gingen nur die letzten Aenderungen verloren, und die senden die Geraete dann neu.
         self.db.execute("PRAGMA synchronous=NORMAL")
@@ -1637,7 +1799,8 @@ class AblageAbgleich:
             self.anwesend[geraet] = jetzt
         frisch = {n: z for n, z in self.anwesend.items() if jetzt - z <= ANWESEND_FRIST_MS}
         # Eindeutig, auch wenn zwei Geraete in derselben Minute benutzt wurden: Ein gerade bedienter Rechner geht vor, das Handy liegt dann meist nur daneben.
-        rechner = {n: z for n, z in frisch.items() if n != ABLAGE_HANDY and jetzt - z <= ANWESEND_KURZ_MS}
+        mobil = {g.ablage_name for g in self.relay.geraete.values()}   # Handy und Tablet zaehlen nicht als Rechner
+        rechner = {n: z for n, z in frisch.items() if n not in mobil and jetzt - z <= ANWESEND_KURZ_MS}
         ziel = max(rechner, key=rechner.get) if rechner else (max(frisch, key=frisch.get) if frisch else ABLAGE_HANDY)
         return web.json_response({"ziel": ziel, "geraete": frisch}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
@@ -1662,14 +1825,9 @@ class AblageAbgleich:
             elif not warten.done():
                 warten.set_result(True)
         self.warter = rest
-        ws = self.relay.ws
-        if von != ABLAGE_HANDY and ws is not None and not ws.closed:
-            async def senden():
-                try:
-                    await ws.send_str(json.dumps({"signal": "ablage", "stand": stand}))
-                except (ConnectionError, RuntimeError):
-                    pass  # Beim naechsten Verbinden gleicht das Handy ohnehin ab.
-            _im_hintergrund(senden())
+        # Handy und Tablet haengen an der WebSocket statt am Long-Polling: Signal an alle ausser der Quelle.
+        # Wer gerade nicht verbunden ist, gleicht beim naechsten Verbinden ohnehin ab.
+        _im_hintergrund(self.relay.an_alle({"signal": self.signal, "stand": stand}, ausser=self.relay.zu_ablage_name(von)))
 
     async def aenderungen(self, request: web.Request) -> web.Response:
         if not self.relay.passt(request.match_info["geheimnis"]):
@@ -1717,7 +1875,7 @@ class AblageAbgleich:
         art, kennung = request.match_info["art"], request.match_info["id"]
         if not self.relay.passt(request.match_info["geheimnis"]):
             return web.Response(status=404, text="Not found")
-        if art not in ABLAGE_ARTEN or not ABLAGE_ID.match(kennung):
+        if art not in self.arten or not ABLAGE_ID.match(kennung):
             return web.Response(status=400, text="Art oder Kennung ungueltig")
         try:
             rumpf = await request.json()
@@ -1780,7 +1938,7 @@ class AblageAbgleich:
 
     def aufraeumen(self) -> None:
         # Laeuft im eigenen Faden, deshalb eine eigene Verbindung: Alle Dokumente zu parsen, hielte sonst den Event-Loop an.
-        verbindung = sqlite3.connect(ABLAGE_ORDNER / "ablage.db")
+        verbindung = sqlite3.connect(self.ordner / "ablage.db")
         try:
             benutzt = set()
             for (daten,) in verbindung.execute("SELECT daten FROM docs WHERE geloescht = 0"):
@@ -1906,6 +2064,12 @@ def app() -> web.Application:
     anwendung.router.add_put("/j/{geheimnis}/ablage/doc/{art}/{id}", ablage.doc)
     anwendung.router.add_put("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_ablegen)
     anwendung.router.add_get("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_holen)
+    abgleich = AblageAbgleich(relay, ABGLEICH_ORDNER, ABGLEICH_ARTEN, "geraeteabgleich")
+    anwendung.on_startup.append(abgleich.waechter)
+    anwendung.router.add_get("/j/{geheimnis}/abgleich/aenderungen", abgleich.aenderungen)
+    anwendung.router.add_put("/j/{geheimnis}/abgleich/doc/{art}/{id}", abgleich.doc)
+    anwendung.router.add_put("/j/{geheimnis}/abgleich/blob/{sha}", abgleich.blob_ablegen)
+    anwendung.router.add_get("/j/{geheimnis}/abgleich/blob/{sha}", abgleich.blob_holen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

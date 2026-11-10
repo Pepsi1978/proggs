@@ -100,7 +100,7 @@ object DriveFreigabe {
                 val zugang = JSONObject().put("access_token", tausch.optString("access_token")).put("token_type", "Bearer").put("refresh_token", dauerhaft)
                     .put("expiry", Instant.now().plusSeconds(tausch.optLong("expires_in", 3600)).toString())
                 client.newCall(
-                    Request.Builder().url("https://${e.serverHost}/geraet/drive-zugang").header("X-Jarvis-Token", e.serverToken)
+                    Request.Builder().url("https://${e.serverHost}/geraet/drive-zugang").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                         .post(JSONObject().put("token", zugang).toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build(),
                 ).execute().use { antwort -> check(antwort.isSuccessful) { "Der Server hat den Zugang nicht angenommen (${antwort.code})." } }
                 true to "Berechtigung erneuert. Das Tagebuch wird wieder gelesen."

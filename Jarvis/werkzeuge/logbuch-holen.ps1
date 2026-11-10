@@ -13,7 +13,7 @@
 .PARAMETER Tage
     Nur die letzten N Tage holen (Vorgabe: alle vorhandenen, höchstens 14).
 #>
-param([int]$Tage = 14)
+param([int]$Tage = 14, [string]$Ziel = 'handy')
 
 $ErrorActionPreference = 'Stop'
 $paket = 'de.frank.jarvis'
@@ -23,12 +23,19 @@ $adb = if ($env:ADB) { $env:ADB } else { 'adb' }
 $geraete = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } | ForEach-Object { ($_ -split '\t')[0] }
 if (-not $geraete) {
     Write-Host 'Kein Handy verbunden. Versuche WLAN-Verbindung ...'
-    powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\adb-wlan.ps1" | Out-Null
+    powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\adb-wlan.ps1" -Geraet $Ziel | Out-Null
     $geraete = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } | ForEach-Object { ($_ -split '\t')[0] }
+}
+# Handy und Tablet können gleichzeitig verbunden sein: -Ziel wählt über die feste Seriennummer aus geraete.json.
+$geraeteDatei = "$env:USERPROFILE\proggs\Werkzeuge\adb-wlan\geraete.json"
+if (Test-Path $geraeteDatei) {
+    $serie = "$((Get-Content $geraeteDatei -Raw -Encoding utf8 | ConvertFrom-Json).$Ziel.serial)".Trim()
+    if (-not $serie) { throw "Ziel '$Ziel' steht nicht in $geraeteDatei." }
+    $geraete = @($geraete | Where-Object { ((& $adb -s $_ shell getprop ro.serialno 2>$null) | Out-String).Trim() -eq $serie })
 }
 $geraet = ($geraete | Where-Object { $_ -match ':\d+$' } | Select-Object -First 1)
 if (-not $geraet) { $geraet = $geraete | Select-Object -First 1 }
-if (-not $geraet) { throw 'Kein Handy erreichbar (weder WLAN noch Kabel).' }
+if (-not $geraet) { throw "Kein Gerät '$Ziel' erreichbar (weder WLAN noch Kabel)." }
 
 $ziel = Join-Path $PSScriptRoot ("..\logs\" + (Get-Date -Format 'yyyy-MM-dd_HHmm'))
 New-Item -ItemType Directory -Force $ziel | Out-Null

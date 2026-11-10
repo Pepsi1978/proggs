@@ -325,7 +325,7 @@ class Einstellungen private constructor(context: Context) {
         get() = s("maps_schluessel", "")
         set(v) = putGeheim("maps_schluessel", v.trim())
     /** An Arbeitstagen rechtzeitig vor der nötigen Abfahrt melden. */
-    var abfahrtAn: Boolean get() = prefs.getBoolean("abfahrt_an", true); set(v) = put { putBoolean("abfahrt_an", v) }
+    var abfahrtAn: Boolean get() = prefs.getBoolean("abfahrt_an", !Geraet.istTablet); set(v) = put { putBoolean("abfahrt_an", v) }
     var abfahrtVorlesen: Boolean get() = prefs.getBoolean("abfahrt_vorlesen", true); set(v) = put { putBoolean("abfahrt_vorlesen", v) }
     /** Lautstärke der vorgelesenen Losfahr-Meldung in Prozent der höchsten Medienlautstärke. */
     var abfahrtLautstaerke: Int get() = prefs.getInt("abfahrt_lautstaerke", 100).coerceIn(0, 100); set(v) = put { putInt("abfahrt_lautstaerke", v.coerceIn(0, 100)) }
@@ -353,13 +353,13 @@ class Einstellungen private constructor(context: Context) {
     var routenZaehler: Int get() = prefs.getInt("routen_zaehler", 0); set(v) = put { putInt("routen_zaehler", v) }
 
     // ---- Tagesauswertung ----
-    var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }
+    var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", !Geraet.istTablet); set(v) = put { putBoolean("auswertung_an", v) }
     /** Abstand der Läufe in Stunden (1 = jede volle Stunde). */
     var auswertungAbstand: Int get() = prefs.getInt("auswertung_abstand", 1).coerceIn(1, 12); set(v) = put { putInt("auswertung_abstand", v) }
     /** Ruhen, solange Frank laut Dienstplan schläft (vor Tagdienst 20 bis 4 Uhr, nach Nachtdienst 6 bis 15 Uhr). */
     var auswertungSchlafpause: Boolean get() = prefs.getBoolean("auswertung_schlafpause", true); set(v) = put { putBoolean("auswertung_schlafpause", v) }
     /** Nach der Auswertung aus dem Tagebuch lernen: alte Monate verdichten, neue Tatsachen über Frank notieren. */
-    var auswertungLernen: Boolean get() = prefs.getBoolean("auswertung_lernen", true); set(v) = put { putBoolean("auswertung_lernen", v) }
+    var auswertungLernen: Boolean get() = prefs.getBoolean("auswertung_lernen", !Geraet.istTablet); set(v) = put { putBoolean("auswertung_lernen", v) }
     /** Tag (JJJJ-MM-TT), an dem Jarvis zuletzt Tatsachen aus dem Tagebuch gelernt hat. */
     var lernlaufTag: String get() = s("lernlauf_tag", ""); set(v) = put { putString("lernlauf_tag", v) }
     /** Der neueste Tagebuchtag, den der Lernlauf schon gelesen hat (ISO); der nächste Lauf beginnt einen Tag davor. */
@@ -389,7 +389,7 @@ class Einstellungen private constructor(context: Context) {
     /** Dasselbe für das Weckwort außerhalb der App (App im Hintergrund oder Bildschirm aus). */
     var stilleAussenMs: Int get() = prefs.getInt("weckwort_stille_aussen_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_AUSSEN_MAX_MS); set(v) = put { putInt("weckwort_stille_aussen_ms", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
-    var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", true); set(v) = put { putBoolean("weckwort_an", v) }
+    var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", !Geraet.istTablet); set(v) = put { putBoolean("weckwort_an", v) }
     /** niedrig | normal | hoch | sehr_hoch: wie leicht „Hey Jarvis“ anspringt und wie großzügig die Stimmerkennung urteilt. */
     var weckwortEmpfindlichkeit: String get() = s("weckwort_empfindlichkeit", "normal"); set(v) = put { putString("weckwort_empfindlichkeit", v) }
     /** Ab diesem Wert (0 bis 1) gilt „Hey Jarvis“ als erkannt. */

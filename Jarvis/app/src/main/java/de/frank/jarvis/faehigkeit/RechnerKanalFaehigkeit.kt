@@ -122,7 +122,7 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
 
     private fun rumpf(j: JSONObject) = j.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
-    private fun anfrage(pfad: String) = Request.Builder().url("https://${e.serverHost}$pfad").header("X-Jarvis-Token", e.serverToken)
+    private fun anfrage(pfad: String) = Request.Builder().url("https://${e.serverHost}$pfad").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
 
     private fun antwortJson(anfrage: Request, http: OkHttpClient = HTTP): JSONObject =
         http.newCall(anfrage).execute().use { r ->

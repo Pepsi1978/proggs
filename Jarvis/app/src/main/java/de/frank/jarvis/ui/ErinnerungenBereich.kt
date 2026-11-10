@@ -183,7 +183,7 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                 val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz, e.wecker) } }
                 val vorlesen = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungen.erinnerungsArt(e.wecker)).vorlesen
                 Text(if (!vorlesen) "Vorlesen ist für diese Erinnerungsform ausgeschaltet." else if (bereit) "Sprachausgabe liegt offline bereit." else "Sprachausgabe wird erzeugt, sobald Netz da ist.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-                Text("Von ${e.quelle.ifBlank { "Jarvis Handy" }}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                Text("Von ${e.quelle.ifBlank { de.frank.jarvis.ablage.AblageQuellen.HANDY }}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
             }
             if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) { bereich.launch(Dispatchers.IO) { Erinnerungen.loesche(app, e.id) } }

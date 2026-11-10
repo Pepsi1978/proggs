@@ -67,10 +67,13 @@ class AblageFehler(meldung: String) : Exception(meldung)
  */
 object AblageQuellen {
     const val HANDY = "Jarvis Handy"
+    const val TABLET = "Jarvis Tablet"
+    /** Diese Installation selbst: auf dem Handy „Jarvis Handy“, auf dem Tablet „Jarvis Tablet“ (siehe [de.frank.jarvis.data.Geraet]). */
+    val DIESES: String get() = de.frank.jarvis.data.Geraet.ablageName
     const val MAC = "Jarvis Mac OS"
     /** Genau der Name, den die App auf dem HP-Laptop als Quelle sendet (AppInfo.Name). */
     const val WINDOWS = "Jarvis Windows HP"
-    private val kurz = linkedMapOf("handy" to HANDY, "mac" to MAC, "windows" to WINDOWS)
+    private val kurz = linkedMapOf("handy" to HANDY, "tablet" to TABLET, "mac" to MAC, "windows" to WINDOWS)
     private val gemerkt = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
     /** Ein Aufruf wird in Minuten fertig; länger gemerkt träfe es einen späteren Eintrag gleichen Titels vom Handy. */
@@ -78,7 +81,7 @@ object AblageQuellen {
 
     fun merke(titel: String, quelle: String) { gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)] = quelle.trim().take(40) to System.currentTimeMillis() }
 
-    fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < MERKEN_MS }?.first ?: HANDY
+    fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < MERKEN_MS }?.first ?: DIESES
 
     /** Die gespeicherte Reihenfolge, zum Beispiel „handy,mac,windows“, als Namen; Fehlendes kommt hinten dazu. */
     fun ordnung(wert: String): List<String> = (wert.split(',').mapNotNull { kurz[it.trim()] } + kurz.values).distinct()

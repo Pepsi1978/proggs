@@ -107,7 +107,7 @@ object Prompts {
         val s = lies(c)
         if (s.defekt) return null
         val jetzt = System.currentTimeMillis()
-        val neu = Prompt(s.liste.size + 1, sauber, jetzt, quelle = AblageQuellen.HANDY, geaendert = jetzt)
+        val neu = Prompt(s.liste.size + 1, sauber, jetzt, quelle = AblageQuellen.DIESES, geaendert = jetzt)
         return neu.takeIf { schreibe(c, s.liste + neu) }
     }
 

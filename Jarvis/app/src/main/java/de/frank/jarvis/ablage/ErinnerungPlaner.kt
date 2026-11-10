@@ -110,7 +110,7 @@ object ErinnerungPlaner {
     /** Name des Geräts, das jetzt dran ist. Ohne Server, ohne Netz oder bei einer unlesbaren Antwort: dieses Handy. */
     private fun ziel(app: Context): String = runCatching {
         val e = Einstellungen.get(app)
-        val url = "https://${e.serverHost}/j/${e.geheimnis}/ablage/anwesenheit".toHttpUrl().newBuilder().addQueryParameter("geraet", AblageQuellen.HANDY).addQueryParameter("aktiv", if (benutzt(app)) "1" else "0").build()
+        val url = "https://${e.serverHost}/j/${e.geheimnis}/ablage/anwesenheit".toHttpUrl().newBuilder().addQueryParameter("geraet", AblageQuellen.DIESES).addQueryParameter("aktiv", if (benutzt(app)) "1" else "0").build()
         netz.newCall(Request.Builder().url(url).build()).execute().use { r -> if (r.isSuccessful) JSONObject(r.body?.string().orEmpty()).optString("ziel").ifBlank { AblageQuellen.HANDY } else AblageQuellen.HANDY }
     }.getOrDefault(AblageQuellen.HANDY)
 
@@ -142,7 +142,7 @@ object ErinnerungPlaner {
         var warten = faellig.any { it.quittung !in schon && it.erinnerung.wecker && live }
         val jetztGezeigt = HashSet<String>()
         if (neu.isNotEmpty()) {
-            if (!abgleichPause && ziel(app) == AblageQuellen.HANDY) {
+            if (!abgleichPause && ziel(app) == AblageQuellen.DIESES) {
                 neu.forEach { zeige(app, it); jetztGezeigt += it.quittung }
                 schon = schon + jetztGezeigt
             } else warten = true

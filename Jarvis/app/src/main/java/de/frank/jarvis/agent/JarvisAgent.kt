@@ -600,7 +600,7 @@ class JarvisAgent(context: Context) {
     private fun festerTeil(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>): String =
         FESTE_TEILE.getOrPut(faehigkeiten.joinToString(",") { it.id }) {
             buildString {
-                append("Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy. Du sprichst Frank mit „du“ an, antwortest so kurz, wie es die Frage erlaubt, ")
+                append("Du bist Jarvis, Franks persönlicher Assistent auf seinem ${de.frank.jarvis.data.Geraet.wort}. Du sprichst Frank mit „du“ an, antwortest so kurz, wie es die Frage erlaubt, ")
                 append("klar und freundlich in gutem Deutsch, ohne ids.\n")
                 append("FORMAT (die App zeigt leichtes Markdown schön an, beim Vorlesen fällt es weg): Eine kurze Antwort bleibt ein oder zwei Sätze ohne Formatierung. ")
                 append("Längeres gliederst du: kurze Absätze mit Leerzeile dazwischen; ab drei Punkten Stichpunkte mit „- “; bei längeren Antworten mit mehreren Teilen je Teil eine kleine Überschrift mit „### “; ")

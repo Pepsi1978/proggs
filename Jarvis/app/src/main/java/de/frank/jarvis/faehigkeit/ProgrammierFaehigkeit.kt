@@ -223,7 +223,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("sitzungen") } }.getOrNull()
     }
 
-    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}&server=${e.serverPlatz}").header("X-Jarvis-Token", e.serverToken).build()
+    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}&server=${e.serverPlatz}").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()
 
     private fun zeitspanne(sekunden: Int): String = when {
         sekunden < 120 -> "$sekunden Sekunden"
@@ -1120,7 +1120,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun einenAnhangHochladen(d: de.frank.jarvis.data.UebertragDatei): String {
         val adresse = "https://${e.serverHost}/geraet/anhang/${d.sha}"
         try {
-            aufruf(Request.Builder().url(adresse).head().header("X-Jarvis-Token", e.serverToken).build()).use { a ->
+            aufruf(Request.Builder().url(adresse).head().header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()).use { a ->
                 if (a.isSuccessful) a.header("X-Anhang-Zugriff")?.let { return it }
             }
         } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (_: Exception) { }
@@ -1129,7 +1129,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (versuch > 0) kotlinx.coroutines.delay(1000L * versuch)
             var endgueltig = false
             try {
-                aufruf(Request.Builder().url(adresse).header("X-Jarvis-Token", e.serverToken)
+                aufruf(Request.Builder().url(adresse).header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                     .put(d.datei.asRequestBody("application/octet-stream".toMediaType())).build()).use { a ->
                     if (a.isSuccessful) return JSONObject(a.body?.string().orEmpty()).optString("zugriff")
                     grund = "HTTP ${a.code}"
@@ -1424,7 +1424,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun fragenAbgleichen() = withContext(Dispatchers.IO) {
         if (e.serverHost.isBlank() || e.serverToken.isBlank()) return@withContext
-        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/fragen").header("X-Jarvis-Token", e.serverToken).get().build()
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/fragen").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).get().build()
         val liste = runCatching {
             HTTP.newCall(anfrage).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONArray("fragen") }
         }.getOrNull() ?: return@withContext
@@ -1619,7 +1619,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun anSitzung(id: String, nummer: String, text: String, anhaenge: JSONArray = JSONArray()): JSONObject = withContext(Dispatchers.IO) {
         val rumpf = JSONObject().put("auftrag_id", id).put("nachtrag_id", nummer).put("text", text)
         if (anhaenge.length() > 0) rumpf.put("anhaenge", anhaenge)
-        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/nachtrag").header("X-Jarvis-Token", e.serverToken)
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/nachtrag").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
             .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
         HTTP.newCall(anfrage).execute().use { a ->
             if (!a.isSuccessful) throw IllegalStateException("HTTP ${a.code} vom Jarvis-Server")
@@ -1949,7 +1949,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Ohne Antworttext: Der steht erst an der Rückfrage, wenn der Server sie angenommen hat (sonst zeigte sie nach einem
         // Fehler oder einer früher angenommenen Antwort einen Text, der nie ankam).
         stand(RueckfrageStand.SENDET, antwort = "")
-        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/antwort").header("X-Jarvis-Token", e.serverToken)
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/antwort").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
             .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
         val (code, roh) = runCatching { HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() } }.getOrElse { fehler ->
             val grund = "Keine Verbindung zum Jarvis-Server (${fehler.message ?: fehler.javaClass.simpleName}). Die Antwort ist nicht angekommen; erneut senden."
@@ -2664,7 +2664,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (w.cli == CLI_ANTIGRAVITY && review) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.umfang?.takeIf { it.isNotEmpty() }?.let { rumpf.put("review_umfang", it) }
             }
             kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste?.takeIf { it.length() > 0 }?.let { rumpf.put("anhaenge", it) }
-            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
+            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
                 HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() }
@@ -2883,7 +2883,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (e.serverHost.isBlank() || e.serverToken.isBlank()) return
             kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                 runCatching {
-                    val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/lokal-entfernen").header("X-Jarvis-Token", e.serverToken)
+                    val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/lokal-entfernen").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                         .post(JSONObject().put("auftrag_id", id).toString().toRequestBody("application/json".toMediaType())).build()
                     HTTP.newCall(anfrage).execute().use { if (!it.isSuccessful) throw IllegalStateException("HTTP ${it.code}") }
                 }.onFailure { Logbuch.system("Entfernen nicht beim Server", "$id: ${it.message ?: it.javaClass.simpleName}") }

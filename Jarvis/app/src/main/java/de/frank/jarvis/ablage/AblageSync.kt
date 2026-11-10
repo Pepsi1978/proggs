@@ -752,7 +752,7 @@ object AblageSync {
 
     /** Sendet ein Dokument; fehlen dem Server dazu Dateien, kommen sie zuerst hoch. */
     private fun put(basis: String, art: String, id: String, daten: JSONObject, geaendert: Long, geloescht: Boolean = false, inhalte: Map<String, File> = emptyMap()): PutErgebnis {
-        val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", geloescht).put("von", AblageQuellen.HANDY).toString()
+        val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", geloescht).put("von", AblageQuellen.DIESES).toString()
         fun versuch() = schnell.newCall(Request.Builder().url("$basis/doc/$art/$id").put(rumpf.toRequestBody(json)).build()).execute()
         // Nur was der Inhalt selbst verschuldet, ist endgültig. 404 kann ein laufendes Ausrollen sein, 408 und 429 der Proxy.
         fun ablehnung(code: Int): IOException = if (code == 400 || code == 413) DauerFehler("Server antwortet mit $code") else IOException("Server antwortet mit $code")

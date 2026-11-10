@@ -202,7 +202,7 @@ object Erinnerungen {
         val jetzt = System.currentTimeMillis()
         val allgemein = datum == null
         val ausl = if (allgemein) emptyList() else vorab.ifEmpty { listOf(neueAusloesung(0)) }
-        val e = Erinnerung(neueId(), allgemein, zeile.trim().ifEmpty { zeileAus(sauber) }, kurz.trim().ifEmpty { kurzAus(sauber) }, sauber, datum, uhrzeit, ohneUhrzeitUm, form, ausl, quelle = AblageQuellen.HANDY, erstellt = jetzt, geaendert = jetzt)
+        val e = Erinnerung(neueId(), allgemein, zeile.trim().ifEmpty { zeileAus(sauber) }, kurz.trim().ifEmpty { kurzAus(sauber) }, sauber, datum, uhrzeit, ohneUhrzeitUm, form, ausl, quelle = AblageQuellen.DIESES, erstellt = jetzt, geaendert = jetzt)
         return e.takeIf { schreibe(c, Stand(s.liste + e, s.quittungen, s.geloescht)) }
     }
 
@@ -227,7 +227,7 @@ object Erinnerungen {
 
     /** Bestätigt genau eine Auslösung. Die übrigen geplanten Auslösungen bleiben. */
     @Synchronized
-    fun bestaetige(c: Context, f: Faellig, von: String = AblageQuellen.HANDY): Boolean {
+    fun bestaetige(c: Context, f: Faellig, von: String = AblageQuellen.DIESES): Boolean {
         val s = lies(c)
         if (f.quittung in s.quittungen) return true
         return schreibe(c, Stand(s.liste, s.quittungen + (f.quittung to Quittung(f.quittung, System.currentTimeMillis(), von, f.erinnerung.id)), s.geloescht))

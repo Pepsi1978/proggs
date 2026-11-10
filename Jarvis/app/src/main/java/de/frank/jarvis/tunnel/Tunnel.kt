@@ -102,7 +102,7 @@ object Tunnel {
                 val ende = Channel<String>(Channel.CONFLATED)
                 val anfrage = Request.Builder()
                     .url("wss://$host/geraet/ws")
-                    .header("X-Jarvis-Token", token)
+                    .header("X-Jarvis-Token", token).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                     .header("X-Jarvis-Geheimnis", geheimnis)
                     .build()
                 val ws = client.newWebSocket(anfrage, object : WebSocketListener() {

@@ -62,7 +62,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private suspend fun synchronisiereGesperrt(tage: Int): Int? = withContext(Dispatchers.IO) {
         runCatching {
-            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/tagebuch?tage=$tage").header("X-Jarvis-Token", e.serverToken).build()
+            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/tagebuch?tage=$tage").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()
             val antwort = CLIENT.newCall(anfrage).execute().use { a ->
                 check(a.isSuccessful) { "Server antwortet mit ${a.code}" }
                 JSONObject(a.body?.string().orEmpty())
