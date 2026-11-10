@@ -31,6 +31,7 @@ import org.json.JSONObject
  *  - „Tag 1“ bis „Tag 4“ = Tagdienst, Abfahrt etwa 4:30 Uhr
  *  - „X“ oder „F“ am selben Tag = freier Tag, der Dienst entfällt (der Diensteintrag bleibt stehen)
  *  - „U“ am selben Tag = Urlaub, der Dienst entfällt
+ *  - „K“ am selben Tag = krankgeschrieben, der Dienst entfällt samt Abfahrtsmeldung (geht X, F und U vor)
  *  - kein Diensteintrag = frei
  */
 class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
@@ -40,10 +41,10 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Franks Kalender enthält seine Termine und seinen Dienstplan als Ganztagstermine. Die Regeln: „Nacht 1“ bis „Nacht 4“ sind Nachtdienste " +
             "(Nacht 1 ist die erste, Nacht 4 die letzte eines Blocks), Abfahrt etwa 16:15 Uhr, er ist am nächsten Morgen gegen 5:50 Uhr zu Hause. „Tag 1“ bis „Tag 4“ sind Tagdienste, " +
-            "Abfahrt etwa 4:30 Uhr, zu Hause gegen 18:15 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub: Der Dienst entfällt dann, auch wenn er noch im Kalender steht. " +
+            "Abfahrt etwa 4:30 Uhr, zu Hause gegen 18:15 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub, bei „K“ ist er krankgeschrieben: Der Dienst entfällt dann, auch wenn er noch im Kalender steht, samt Abfahrt und dienstbezogenen Weckern. " +
             "Tage ohne Diensteintrag sind frei. Die Werkzeuge werten das bereits aus; verlasse dich auf die Zeile „Dienst“. " +
             "Weitere Einträge: „Hausmüll“ und „Gelbe Tonne“ (Abholung), „Geb. <Name>“ (Geburtstag), Spiele von Union und Dortmund. " +
-            "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“ oder „U“ als Ganztagstermin macht den Tag zum freien Tag bzw. Urlaubstag " +
+            "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“, „U“ oder „K“ als Ganztagstermin macht den Tag zum freien Tag, Urlaubstag bzw. Krankheitstag " +
             "(für X nimmt Frank Blau; ohne Farbangabe übernimmt Jarvis die Farbe seiner bisherigen Einträge gleichen Namens). " +
             "Termine gehören in den Kalender, Dinge zum Erledigen in Geniale Aufgaben. „Erinnere mich …“ gehört nur zu erinnerung_speichern, außer Frank verlangt ausdrücklich einen Termin oder eine Aufgabe."
 
@@ -73,7 +74,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "dienstplan_lesen",
             titel = "Dienstplan lesen",
-            beschreibung = "Jarvis: wertet Franks Dienstplan aus dem Kalender aus: je Tag Nachtdienst, Tagdienst, frei oder Urlaub mit der Abfahrtszeit, dazu der nächste Dienst " +
+            beschreibung = "Jarvis: wertet Franks Dienstplan aus dem Kalender aus: je Tag Nachtdienst, Tagdienst, frei, Urlaub oder krankgeschrieben mit der Abfahrtszeit, dazu der nächste Dienst " +
                 "und die nächsten freien Tage. Nutze es für „Muss ich morgen arbeiten?“, „Wann habe ich wieder frei?“, „Wann muss ich heute los?“, „Wie sieht meine Woche aus?“. " +
                 "Ohne Angaben kommen heute und die nächsten 14 Tage.",
             schema = schema(
@@ -87,9 +88,9 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             titel = "Termin eintragen",
             beschreibung = "Jarvis: trägt einen Termin in Franks Google-Kalender ein. Ganztägig (ohne uhrzeit) oder mit Uhrzeit, auch über mehrere Tage, auf Wunsch mit Farbe. " +
                 "Beispiele: „Trag am 12. Januar 2027 ganztägig ein X in Blau ein“ → titel X, datum 2027-01-12, farbe blau. „Zahnarzt am Dienstag um 10 Uhr, eine Stunde“ → titel, datum, uhrzeit, dauer. " +
-                "Ein Ganztagstermin „X“ oder „F“ heißt: an dem Tag hat Frank frei; „U“ heißt Urlaub. Ist das Jahr nicht genannt und nicht eindeutig, frage nach.",
+                "Ein Ganztagstermin „X“ oder „F“ heißt: an dem Tag hat Frank frei; „U“ heißt Urlaub; „K“ heißt krankgeschrieben. Ist das Jahr nicht genannt und nicht eindeutig, frage nach.",
             schema = schema(
-                "titel" to text("Titel des Termins, zum Beispiel X, U, Zahnarzt, Geb. Mietzi."),
+                "titel" to text("Titel des Termins, zum Beispiel X, U, K, Zahnarzt, Geb. Mietzi."),
                 "datum" to text("Tag: heute, morgen, uebermorgen oder JJJJ-MM-TT."),
                 "uhrzeit" to text("Beginn als HH:MM. Weglassen = ganztägiger Termin."),
                 "dauer" to zahl("Dauer in Minuten bei einem Termin mit Uhrzeit (Vorgabe 60)."),
@@ -140,7 +141,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
 
     private class Termin(val titel: String, val ganztags: Boolean, val von: LocalTime?, val bis: LocalTime?, val ort: String, val kalender: String)
 
-    /** Der Dienst eines Tages, schon mit X, F und U verrechnet. */
+    /** Der Dienst eines Tages, schon mit X, F, U und K verrechnet. */
     private class Dienst(val art: Art, val nummer: Int, val frei: String?) {
         enum class Art { NACHT, TAG, KEINER }
         val arbeitet: Boolean get() = art != Art.KEINER && frei == null
@@ -231,14 +232,14 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     private class Ziel(val id: Long, val name: String, val konto: String, val kontoArt: String)
 
     /**
-     * Der Kalender, in dem Franks Dienste stehen — dorthin gehören auch X, F und U. Gibt es keinen solchen Eintrag,
+     * Der Kalender, in dem Franks Dienste stehen — dorthin gehören auch X, F, U und K. Gibt es keinen solchen Eintrag,
      * der Hauptkalender des Google-Kontos.
      */
     private fun ziel(): Ziel {
         var kalenderId: Long? = null
         context.contentResolver.query(
             CalendarContract.Events.CONTENT_URI, arrayOf(CalendarContract.Events.CALENDAR_ID),
-            "${CalendarContract.Events.DELETED} = 0 AND lower(${CalendarContract.Events.TITLE}) IN ('x','u','f','nacht 1','tag 1')", null, "${CalendarContract.Events.DTSTART} DESC",
+            "${CalendarContract.Events.DELETED} = 0 AND lower(${CalendarContract.Events.TITLE}) IN ('x','u','f','k','nacht 1','tag 1')", null, "${CalendarContract.Events.DTSTART} DESC",
         )?.use { c -> if (c.moveToFirst()) kalenderId = c.getLong(0) }
         val spalten = arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, CalendarContract.Calendars.ACCOUNT_NAME, CalendarContract.Calendars.ACCOUNT_TYPE)
         val schreibbar = "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ${CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR}"
@@ -322,6 +323,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
 
         val folge = when (titel.lowercase(Locale.GERMAN)) {
             "x", "f" -> if (beginn == null) " Damit gilt der Tag als frei" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
+            "k" -> if (beginn == null) " Damit gilt der Tag als krankgeschrieben, ohne Dienst, Abfahrtsmeldung und Dienstwecker" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
             "u" -> if (beginn == null) " Damit gilt der Tag als Urlaub" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
             else -> mitgedacht
         }
@@ -400,7 +402,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     }.getOrNull()
 
     /**
-     * Die Arbeitstage ab [von] für [tage] Tage, mit X, F und U verrechnet: je Tag "nacht" oder "tag" samt Dienstname.
+     * Die Arbeitstage ab [von] für [tage] Tage, mit X, F, U und K verrechnet: je Tag "nacht" oder "tag" samt Dienstname.
      * Freie Tage fehlen in der Karte. null, wenn der Kalender nicht lesbar ist.
      */
     fun schichten(von: LocalDate, tage: Int): Map<LocalDate, Pair<String, String>>? = if (!erlaubt) null else runCatching {
@@ -468,14 +470,15 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             }
             when (titel) {
                 "x", "f" -> if (frei == null) frei = "frei (${titel.uppercase()})"
-                "u" -> frei = "Urlaub (U)"
+                "u" -> if (frei != KRANK) frei = "Urlaub (U)"
+                "k" -> frei = KRANK
             }
         }
         return Dienst(art, nummer, frei)
     }
 
     private fun istDienstzeichen(t: Termin): Boolean =
-        t.ganztags && t.titel.trim().lowercase(Locale.GERMAN).let { DIENST.matches(it) || it in setOf("x", "f", "u") }
+        t.ganztags && t.titel.trim().lowercase(Locale.GERMAN).let { DIENST.matches(it) || it in setOf("x", "f", "u", "k") }
 
     /** [vortag] = Dienst des Tages davor: Nach einem Nachtdienst kommt Frank erst am Morgen nach Hause. */
     private fun dienstSatz(d: Dienst, vortag: Dienst? = null): String {
@@ -554,7 +557,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             val naechsterDienst = dienste.entries.firstOrNull { it.value.arbeitet && !it.key.isBefore(heute) }
             // Frei „wieder“ heißt: der erste freie Tag NACH dem nächsten Dienst. Arbeitet Frank im Zeitraum gar nicht, der erste freie Tag.
             val naechsterFrei = dienste.entries.firstOrNull { !it.value.arbeitet && !it.key.isBefore(naechsterDienst?.key ?: heute) }
-            dienste[heute]?.let { append("Heute: ").append(if (it.arbeitet) name(it) else "frei").append(".\n") }
+            dienste[heute]?.let { append("Heute: ").append(if (it.arbeitet) name(it) else if (it.frei == KRANK) KRANK else "frei").append(".\n") }
             append("Nächster Dienst: ").append(naechsterDienst?.let { kurz(it.key, heute) + ", " + name(it.value) } ?: "keiner im Zeitraum").append(".\n")
             if (naechsterFrei != null) {
                 // Länge des freien Blocks ab dem ersten freien Tag.
@@ -587,6 +590,8 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
 
     companion object {
         private val DIENST = Regex("(nacht|tag)\\s*([1-4])")
+        /** Ganztagstermin „K“: krankgeschrieben, hebt den Dienst auf wie X, F und U und geht ihnen vor. */
+        private const val KRANK = "krankgeschrieben (K)"
         private const val ABFAHRT_NACHT = "16:15"
         private const val ABFAHRT_TAG = "4:30"
         /** Wann Frank nach dem Dienst wieder zu Hause ist (seine Angabe vom 08.10.2026). */

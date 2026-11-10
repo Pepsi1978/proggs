@@ -39,7 +39,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Entropie Reductor, nur lesen: `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf` (ohne Messgrößen = Katalog), `trainings_lesen`; `biomarker_aktualisieren` stößt den Abgleich an. Vor dem Lesen holt Jarvis frische Daten, wenn sie älter als 30 Minuten sind.
 - Stack-Labor: `stacks_lesen`, `stack_mittel_setzen`, `stack_speichern`, `mittel_speichern`; `stacklabor_loeschen` nur mit Bestätigung. Agenten und Tagesauswertung lesen nur.
 - Epigenetik: `epigenetik_lesen` (Auswertung, startet fehlende Recherchen, wartet bis 50 s), `epigenetik_recherchieren`, `epigenetik_schalter`, `epigenetik_uebersicht`.
-- Kalender des Handys (alle synchronisierten): `kalender_lesen`, `dienstplan_lesen` (ausgewerteter Schichtplan), `kalender_eintragen` (ganztägig oder mit Uhrzeit, Farbe), `kalender_loeschen`.
+- Kalender des Handys (alle synchronisierten): `kalender_lesen`, `dienstplan_lesen` (ausgewerteter Schichtplan; ganztägig X/F = frei, U = Urlaub, K = krankgeschrieben: Dienst, Abfahrtsmeldung und Schlafpause nach Dienst entfallen), `kalender_eintragen` (ganztägig oder mit Uhrzeit, Farbe), `kalender_loeschen`.
 - Tagebuch (über den Server aus Google Drive): `tagebuch_lesen` für Tag, Zeitraum oder Suchwort. Nur lesen.
 - Wissens-Datenbank: `wissen_lesen` (Inhaltsverzeichnis, Datei, Suche).
 - Gmail: `mail_lesen` (mit nr vollständig), `mail_senden` (ohne Empfänger an Frank; nur erlaubte Empfänger).

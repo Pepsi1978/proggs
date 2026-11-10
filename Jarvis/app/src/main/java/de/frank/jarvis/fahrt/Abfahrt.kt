@@ -42,7 +42,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
- * Pünktlich losfahren: An jedem Arbeitstag laut Dienstplan (Tag 1–4, Nacht 1–4, ohne X, F, U) fragt Jarvis die Fahrzeit
+ * Pünktlich losfahren: An jedem Arbeitstag laut Dienstplan (Tag 1–4, Nacht 1–4, ohne X, F, U und K) fragt Jarvis die Fahrzeit
  * zur Arbeit mit Verkehr ab und meldet sich einige Minuten vor der nötigen Abfahrt, mit Benachrichtigung und Stimme.
  *
  * Ablauf je Dienst: Vorprüfung zweieinhalb Stunden vor der gewünschten Ankunft (Google rechnet mit dem erwarteten

@@ -39,7 +39,7 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
         val bereit = e.abfahrtAn && e.mapsSchluessel.isNotBlank()
         Zeile("Losfahr-Meldung", if (!e.abfahrtAn) "Aus" else if (e.mapsSchluessel.isBlank()) "Schlüssel fehlt" else "An", if (bereit) f.erfolg else if (e.abfahrtAn) f.gefahr else f.textLeise)
         Text(vm.abfahrtStatus.ifEmpty { "Stand wird geladen …" }, color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
-        Text("An Arbeitstagen laut Kalender (Tag 1–4, Nacht 1–4, ohne X, F und U) fragt Jarvis bei Google Maps die Fahrzeit mit Verkehr ab und meldet sich rechtzeitig vor der Abfahrt. " +
+        Text("An Arbeitstagen laut Kalender (Tag 1–4, Nacht 1–4, ohne X, F, U und K) fragt Jarvis bei Google Maps die Fahrzeit mit Verkehr ab und meldet sich rechtzeitig vor der Abfahrt. " +
             "Ein- und ausschalten, Vorlauf, Ton, Wecker, Vorlesen, Stimme und Lautstärke: Einstellungen → Benachrichtigungen → Losfahren.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
         Knopf(if (vm.fahrzeitLaeuft) "Frage Google Maps …" else "Fahrzeit zur Arbeit jetzt prüfen", Modifier.padding(top = 14.dp).fillMaxWidth()) { vm.fahrzeitPruefen("arbeit") }
