@@ -16,6 +16,7 @@
     {"versionCode": 67, "versionName": "0.3.49", "stand": "30.10.2026, 11:44 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
     {"versionCode": 68, "versionName": "0.3.50", "stand": "30.10.2026, 19:35 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 69, "versionName": "0.3.51", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
-    {"versionCode": 70, "versionName": "0.3.52", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Stacks und Mittel gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."}
+    {"versionCode": 70, "versionName": "0.3.52", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Stacks und Mittel gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."},
+    {"versionCode": 71, "versionName": "0.3.53", "stand": "10.11.2026, 15:36 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet nimmt jetzt auch Stände mit Volltextsuche zuverlässig an."}
 ]
 }

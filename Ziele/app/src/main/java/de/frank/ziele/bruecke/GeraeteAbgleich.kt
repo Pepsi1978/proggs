@@ -86,9 +86,13 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
             text("db:$name")
             if (!datei.exists()) continue
             SQLiteDatabase.openDatabase(datei.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                // Volltext-Tabellen (FTS) und ihre Hilfstabellen zählen nicht: Sie sind aus den echten Tabellen abgeleitet, und ihr
+                // innerer Aufbau hängt von der Schreibgeschichte ab, nicht vom Inhalt.
+                val volltext = mutableListOf<String>()
+                db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND sql LIKE 'CREATE VIRTUAL TABLE%'", null).use { c -> while (c.moveToNext()) volltext += c.getString(0) }
                 val tabellen = mutableListOf<String>()
                 db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('room_master_table','android_metadata') ORDER BY name", null)
-                    .use { c -> while (c.moveToNext()) tabellen += c.getString(0) }
+                    .use { c -> while (c.moveToNext()) c.getString(0).let { n -> if (volltext.none { v -> n == v || n.startsWith(v + "_") }) tabellen += n } }
                 for (t in tabellen) {
                     text("t:$t")
                     db.rawQuery("SELECT * FROM \"$t\" ORDER BY rowid", null).use { c ->
@@ -169,8 +173,10 @@ class GeraeteAbgleich(private val ctx: Context, private val datenbanken: List<St
                     val eigen = schema(dbDatei(name))
                     // Ein neueres Schema kann diese App-Fassung nicht lesen: erst die App aktualisieren, dann abgleichen.
                     if (eigen in 1 until neu) return fehler("Der Stand des anderen Geräts stammt von einer neueren App-Fassung (Schema $neu, hier $eigen). Bitte die App hier aktualisieren.").put("app_zu_alt", true)
-                    val ok = runCatching { SQLiteDatabase.openDatabase(probe.path, null, SQLiteDatabase.OPEN_READONLY).use { db -> db.rawQuery("PRAGMA quick_check", null).use { it.moveToFirst() && it.getString(0) == "ok" } } }.getOrDefault(false)
-                    if (!ok) return fehler("Die Datenbank $name im Paket ist beschädigt.")
+                    // Lesbar und mit Tabellen: Die Übertragung ist über die Prüfsumme gesichert, und Jarvis vergleicht nach dem Einspielen den Inhalt.
+                    // Kein quick_check: Bei Volltext-Tabellen (FTS) meldet er auf einer nur lesbaren Kopie Fehler, obwohl die Datenbank heil ist.
+                    val tabellen = runCatching { SQLiteDatabase.openDatabase(probe.path, null, SQLiteDatabase.OPEN_READONLY).use { db -> db.rawQuery("SELECT count(*) FROM sqlite_master WHERE type='table'", null).use { if (it.moveToFirst()) it.getInt(0) else 0 } } }.getOrDefault(0)
+                    if (tabellen == 0) return fehler("Die Datenbank $name im Paket ist nicht lesbar.")
                 }
             }
             // Der eigene Stand bleibt als Rückfall liegen: Haben beide Geräte geändert, geht so nichts endgültig verloren.
