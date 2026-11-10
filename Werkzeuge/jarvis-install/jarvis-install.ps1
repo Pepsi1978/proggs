@@ -95,6 +95,9 @@ function Installiere {
     $ausgabe
     if ($ausgabe -match "(?m)^Success") {
         $script:abgeschlossen = $true
+        # Samsung startet Jarvis nach dem Update nicht immer von selbst (war die App vorn, fehlten Dienst und Verbindung bis zum
+        # nächsten Öffnen): den Prozess wecken. Ältere Fassungen kennen die Aktion nicht, dann passiert nichts.
+        Handy am broadcast -a de.frank.jarvis.AUFWACHEN -p $paket | Out-Null
         Ende installiert $script:Geraet
     }
     Ende fehler "Installation gescheitert: $ausgabe"

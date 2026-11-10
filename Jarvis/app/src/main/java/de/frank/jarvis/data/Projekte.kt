@@ -17,6 +17,9 @@ object Projekte {
 
     private fun datei(context: Context) = File(context.applicationContext.filesDir, "projekte.json")
 
+    /** Für den Geräteabgleich: die Datei unter derselben Sperre ersetzen wie jedes andere Schreiben. */
+    fun <T> vonAussen(block: () -> T): T = synchronized(sperre) { block() }
+
     /** Alle Projekte, das neueste zuerst. */
     fun alle(context: Context): List<Projekt> = synchronized(sperre) { runCatching { lies(context) }.getOrDefault(emptyList()) }.sortedByDescending { it.erstellt }
 

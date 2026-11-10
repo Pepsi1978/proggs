@@ -130,6 +130,12 @@ object Umzug {
 class UmzugEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext
+        // Aufwachen nach einer Installation per adb (jarvis-install): Samsung überspringt MY_PACKAGE_REPLACED, wenn Jarvis beim Update
+        // vorn war, und der Prozess bliebe bis zum nächsten Öffnen aus. Der Prozessstart selbst stellt den Dienst sicher (JarvisApplication).
+        if (intent.action == "de.frank.jarvis.AUFWACHEN") {
+            runCatching { de.frank.jarvis.dienst.JarvisDienst.abgleichen(app) }
+            return
+        }
         val wartend = goAsync()
         Thread {
             try {

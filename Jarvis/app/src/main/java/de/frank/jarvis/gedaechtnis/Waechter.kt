@@ -127,6 +127,7 @@ object Waechter {
         if (art == "geraeteabgleich") {
             // Das andere Gerät (Handy bzw. Tablet) hat einen neuen Stand einer angebundenen App hochgeladen.
             de.frank.jarvis.abgleich.GeraeteAbgleich.anstossen()
+            de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             return
         }
         if (art == "programmieren") {

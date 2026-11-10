@@ -87,6 +87,17 @@ object Tagesauswertung {
     }
 
     /**
+     * Für den Geräteabgleich: Im Ordner liegen Fassungen vom anderen Gerät (das Tablet schreibt selbst keine Auswertung).
+     * Den Stand im Speicher verwerfen und neu von der Platte lesen; nicht, während hier gerade eine Auswertung läuft.
+     */
+    fun neuEinlesen(context: Context) {
+        if (sperre.isLocked || _stand.value.laeuft) return
+        synchronized(this) { endgueltig = null; gedeutet = null; gedeutetGeprueft = false }
+        _stand.update { it.copy(neueste = null) }
+        neueste(context)
+    }
+
+    /**
      * Die neueste Fassung (auch eine vorläufige). Aus dem Speicher, sonst von der Platte: Eine beschädigte oder halb
      * geschriebene Datei wird übersprungen, dann gilt die nächstältere.
      */

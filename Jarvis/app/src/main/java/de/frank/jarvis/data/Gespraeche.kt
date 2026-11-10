@@ -47,6 +47,12 @@ object Gespraeche {
     /** Speichern, Umbenennen und Löschen nacheinander: Zwei Sicherungen desselben Gesprächs dürfen sich nie überholen. */
     private val sperre = Any()
 
+    /** Für den Geräteabgleich: eine Gesprächsdatei unter derselben Sperre ersetzen wie jedes andere Schreiben. */
+    fun <T> vonAussen(block: () -> T): T = synchronized(sperre) { block() }
+
+    /** Für den Geräteabgleich: Gehört diese Gesprächsdatei zu einem Programmierauftrag? Unlesbar zählt als ja (wird dann nicht abgeglichen). */
+    fun istProgrammierDatei(d: File): Boolean = runCatching { istProgrammierung(synchronized(sperre) { lies(d) }) }.getOrDefault(true)
+
     private fun ordner(context: Context) = File(context.applicationContext.filesDir, "gespraeche").apply { mkdirs() }
     private fun datei(context: Context, id: String) = File(ordner(context), "$id.json")
 

@@ -2984,8 +2984,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Der Geräteabgleich hat Gespräche oder Projekte vom anderen Gerät eingespielt: Seitenleiste neu lesen. Vor init, sonst wäre er dort noch leer. */
+    private val gespraecheVomAbgleich: () -> Unit = { sitzungenLaden() }
+
     init {
         de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = programmierEmpfaenger
+        de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen = gespraecheVomAbgleich
         de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = programmierAendern
         de.frank.jarvis.faehigkeit.Sprachsession.beenden = sprachsessionBeenden
     }
@@ -3085,6 +3089,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Das Aufnahme-Signal gehört zu diesem ViewModel: Endet es mitten in einer Aufnahme, blieben Ansagen sonst für immer still.
         de.frank.jarvis.speech.GespraechsFokus.aufnahme = false
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
+        if (de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen === gespraecheVomAbgleich) de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.aendern === programmierAendern) de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
         live?.beenden()

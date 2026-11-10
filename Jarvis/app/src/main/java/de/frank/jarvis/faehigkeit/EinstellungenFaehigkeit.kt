@@ -441,7 +441,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("auswertung_lernen", "Tagesauswertung", "Aus Tagebuch und Gesprächen lernen", "Verdichtet alte Monate, notiert neue Tatsachen über Frank aus Tagebuch und Gesprächen und prüft und räumt das Gelernte etwa alle sechs Stunden auf (Bericht unter Live-Gedächtnis).", { e.auswertungLernen }) { e.auswertungLernen = it; de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(context) },
 
             // ---- Geräte ----
-            schalter("geraeteabgleich_an", "Geräte", "Abgleich zwischen Handy und Tablet", "Hält Aufgaben, Ziele, Ideen, Epigenetik-Recherchen und Stack-Labor auf Handy und Tablet gleich: Der jüngere Stand gilt auf beiden Geräten. Aus = jedes Gerät behält seinen eigenen Stand.", { e.geraeteAbgleichAn }) { e.geraeteAbgleichAn = it },
+            schalter("geraeteabgleich_an", "Geräte", "Abgleich zwischen Handy und Tablet", "Hält Aufgaben, Ziele, Ideen, Epigenetik-Recherchen und Stack-Labor sowie Jarvis' Gedächtnis und Gespräche auf Handy und Tablet gleich: Der jüngere Stand gilt auf beiden Geräten. Aus = jedes Gerät behält seinen eigenen Stand.", { e.geraeteAbgleichAn }) { e.geraeteAbgleichAn = it },
 
             // ---- Timer ----
             schalter("timer_wecker", "Benachrichtigungen: Timer", "Timer klingelt wie ein Wecker", "An = Wecker bis zum Ausschalten, aus = normale Benachrichtigung. Ton und Vorlesen sind unabhängig davon einstellbar.", { e.timerWecker }) { e.timerWecker = it },

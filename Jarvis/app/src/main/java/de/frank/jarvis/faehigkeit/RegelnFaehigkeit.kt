@@ -77,6 +77,21 @@ open class Merkdatei(
 ) {
     private fun datei(context: Context) = File(context.applicationContext.filesDir, dateiname)
 
+    /** Name der Datei unter filesDir (für den Geräteabgleich). */
+    val name: String get() = dateiname
+
+    /**
+     * Für den Geräteabgleich: [block] setzt die Fassung des anderen Geräts an den Platz der Datei, unter derselben Sperre wie
+     * jedes eigene Lesen und Schreiben. Danach gilt sie wie selbst geschrieben: Plugin und Oberfläche lesen neu.
+     */
+    @Synchronized
+    fun vonAussen(block: () -> Unit) {
+        block()
+        zwischen = null
+        zuletztGeaendert = System.currentTimeMillis()
+        _stand.update { it + 1 }
+    }
+
     /** Inhalt der Datei. [defekt] = vorhanden, aber nicht lesbar (Grund), dann wird nichts geschrieben. */
     private class Stand(val eintraege: List<Regel>, val naechsteId: Int, val defekt: String? = null)
 
@@ -408,6 +423,9 @@ open class Merkdatei(
         val stand: StateFlow<Long> = _stand.asStateFlow()
     }
 }
+
+/** Alle Merkdateien, für den Geräteabgleich zwischen Handy und Tablet. */
+fun merkdateien(): List<Merkdatei> = listOf(Regeln, Ziele, UeberFrank, Programmierregeln, StilRegeln, Entscheidungen, Symbiose)
 
 /** Die Regeldatei: was Frank dauerhaft vorgibt („in Zukunft immer …“). */
 object Regeln : Merkdatei(

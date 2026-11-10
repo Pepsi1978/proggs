@@ -26,7 +26,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Abgleich der angebundenen Apps (Aufgaben, Ziele, Geniale Ideen, Epigenetik, Stack-Labor): Jarvis hält sie über den eigenen Server auf beiden Geräten gleich, meist binnen Sekunden nach einer Änderung. Es gilt immer der ganze, jüngere Stand; haben beide Geräte ohne Verbindung geändert, gewinnt die jüngere Änderung, der andere Stand bleibt in der App als Rückfall liegen (Logbuch nennt es). Schalter „Abgleich zwischen Handy und Tablet“ (`geraeteabgleich_an`), nur per Sprache oder Werkzeug.
 - Ablage, Prompts und Erinnerungen gleichen sich wie mit Mac und Windows ab; eine fällige Erinnerung erscheint auf dem Gerät, das Frank gerade benutzt.
 - Auf dem Tablet standardmäßig aus (einschaltbar): Tagesauswertung, Lernen aus Tagebuch und Gesprächen, Losfahr-Meldung, „Hey Jarvis“. Entropie Reductor gleicht selbst über Google Drive ab.
-- Noch nicht abgeglichen: Jarvis' eigene Gespräche und Merkdateien (einmalig vom Handy übernommen), Genialer Wecker (klingelt nur am Handy), die ChatGPT-Anmeldung je Gerät.
+- Abgleich von Jarvis' Gedächtnis und Gesprächen: Regeln, Ziele, „Über Frank“, Entscheidungen, Stil- und Programmierregeln, Symbiose, Langzeitkontext, Gesprächsnotizen, Projekte, Agenten, Tagebuch-Kurzfassungen, Tagesauswertungen (das Tablet zeigt die des Handys) und alle Gespräche samt Anhängen, je Datei gewinnt die jüngste Fassung, etwa im Minutentakt. Ausgenommen: Programmier-Gespräche (bleiben je Gerät), das gerade offene Gespräch (kommt nach dem Wechsel), Lernberichte, Funktionsübersicht und laufende Vorgänge.
+- Nicht abgeglichen: Genialer Wecker (klingelt nur am Handy), die ChatGPT-Anmeldung je Gerät.
 - Einrichtung und Nachziehen am Rechner: `werkzeuge/tablet-einrichten.sh` (Einstellungen und Schlüssel, Gedächtnis, App-Daten vom Handy aufs Tablet).
 
 ## Angebundene Apps

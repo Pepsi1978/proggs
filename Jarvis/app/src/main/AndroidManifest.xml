@@ -194,6 +194,8 @@
             android:permission="android.permission.DUMP">
             <intent-filter>
                 <action android:name="de.frank.jarvis.EINSTELLUNGEN_UMZUG" />
+                <!-- Nach einer Installation per adb: weckt nur den Prozess, damit Dienst und Verbindung sofort wieder laufen. -->
+                <action android:name="de.frank.jarvis.AUFWACHEN" />
             </intent-filter>
         </receiver>
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />

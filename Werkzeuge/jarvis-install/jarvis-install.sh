@@ -144,6 +144,9 @@ installiere() {
   if echo "$ausgabe" | grep -q '^Success'; then
     ABGESCHLOSSEN=1
     delta_merken "$APK" "$PAKET"
+    # Samsung startet Jarvis nach dem Update nicht immer von selbst (war die App vorn, fehlten Dienst und Verbindung bis zum
+    # nächsten Öffnen): den Prozess wecken. Ältere Fassungen kennen die Aktion nicht, dann passiert nichts.
+    handy am broadcast -a de.frank.jarvis.AUFWACHEN -p "$PAKET" >/dev/null
     ende installiert "$GERAET"
   fi
   ende fehler "Installation gescheitert: $(echo "$ausgabe" | tail -1)"

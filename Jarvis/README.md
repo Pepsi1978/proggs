@@ -600,5 +600,15 @@ Stand 10.11.2026 (ab 1.8.604/1.8.605). Dieselbe APK läuft auf dem Handy (Galaxy
   Handy (ein Gerät ohne abgeglichenen Stand lädt nichts hoch, außer es ist das Handy); verglichen wird die Prüfsumme über die
   Tabelleninhalte; ein neueres Schema am anderen Gerät sperrt den Abgleich der App, bis sie hier aktualisiert ist. Zustand:
   `files/geraeteabgleich.json`, Logbuch-Ereignis „Geräteabgleich <App>“. Deshalb die fünf Apps immer auf beide Geräte installieren.
-- **Noch offen:** Jarvis' eigene Gespräche und Merkdateien gleichen sich noch nicht laufend ab (nur Erstbefüllung), Genialer Wecker
-  wird nicht abgeglichen (soll nicht auf beiden Geräten klingeln), Entropie Reductor nutzt seinen eigenen Drive-Abgleich.
+- **Laufender Abgleich von Jarvis' Gedächtnis und Gesprächen** (`abgleich/GedaechtnisAbgleich.kt`, ab 1.8.606): je Datei ein Dokument
+  (Arten `gedaechtnis`, `gespraech`) im selben Server-Speicher, etwa im Minutentakt und sofort auf das Signal. Je Datei gewinnt die
+  jüngste Fassung; beim ersten Kontakt behält das Handy seine, das Tablet übernimmt; die unterlegene Fassung liegt unter
+  `files/abgleich-rueckfall/`. Abgeglichen: alle Merkdateien (`merkdateien()`), `langzeitkontext.txt`, `gespraechsnotizen.json`,
+  `projekte.json`, `agenten/`, `tagebuch_kurz/`, `tagebuch_verdichtet/`, `tagesauswertung/` (+ `_archiv`), `gespraeche/*.json` und
+  `gespraeche/anhaenge/`. Geschrieben wird unter der Sperre des jeweiligen Speichers (`vonAussen`), nie als `.new`, eine `.bak` wird
+  vorher entfernt (AtomicFile spielte sie sonst zurück). Nicht abgeglichen, mit Grund im Kopf von `QUELLEN`: Programmier-Gespräche
+  (hängen am Auftragsbuch des Geräts), das gerade offene Gespräch (kommt nach dem Wechsel), Lernlauf-Dateien, `funktionen/`,
+  `vorgaenge.json`, Protokolle. Löschungen nur bei Gesprächen, Agenten und alten Auswertungen; verschwindet der größere Teil eines
+  Ordners auf einen Schlag, wird nichts als gelöscht gemeldet. Zustand `files/gedaechtnis-abgleich.json`, Logbuch „Gedächtnis-Abgleich“.
+- **Noch offen:** Genialer Wecker wird nicht abgeglichen (soll nicht auf beiden Geräten klingeln), Entropie Reductor nutzt seinen
+  eigenen Drive-Abgleich, Programmier-Gespräche und die ChatGPT-Anmeldung bleiben je Gerät.
