@@ -34,7 +34,8 @@ import java.util.concurrent.TimeUnit
  * Je Datei ein Dokument im Geräteabgleich-Speicher des Servers (Art „gedaechtnis“ bzw. „gespraech“), der Inhalt als Datei nach
  * seiner Prüfsumme. Regeln:
  * - **Je Datei gewinnt die jüngste Fassung.** Hat nur ein Gerät seit dem letzten Abgleich geändert, gilt dessen Fassung; haben
- *   beide geändert, die mit der jüngeren Änderungszeit, die unterlegene bleibt unter `abgleich-rueckfall/` liegen (die letzten 30).
+ *   beide geändert, die mit der jüngeren Änderungszeit. Jede Fassung, die der Abgleich hier überschreibt oder löscht, bleibt 30 Tage
+ *   unter `abgleich-rueckfall/` liegen (höchstens 500).
  * - **Erster Kontakt:** Kennt ein Gerät eine Datei noch nicht als abgeglichen und der Server hat eine andere Fassung, übernimmt
  *   das Tablet die des Servers, das Handy behält seine und lädt sie hoch (das Handy ist die Erstquelle).
  * - **Löschen** gibt es nur bei Gesprächen: Ein hier gelöschtes Gespräch wird als gelöscht gemeldet und verschwindet auch drüben.
@@ -158,13 +159,15 @@ object GedaechtnisAbgleich {
                 val fern = s.optJSONObject("fern") ?: continue
                 val offen = if (fern.optBoolean("weg")) !s.optBoolean("weg") else fern.optString("sha") != s.optString("basis")
                 if (!offen || istOffen(app, pfad)) continue
-                if (uebernimm(app, basis, pfad, s)) eingespielt += pfad
+                if (pause()) return
+                jeDatei(pfad) { if (uebernimm(app, basis, pfad, s)) eingespielt += pfad }
             }
             // 3. Eigene Änderungen und Löschungen hochladen. Zwischendurch sichern: Der erste Lauf lädt ein paar hundert Dateien.
             val unlesbar = HashSet<String>()
             val lokal = lokaleDateien(app, unlesbar)
             for ((pfad, datei) in lokal) {
-                if (ladeHoch(basis, pfad, datei, dateien.obj(pfad)) && ++hochgeladen % 25 == 0) sichere(app, z)
+                if (pause()) return
+                jeDatei(pfad) { if (ladeHoch(basis, pfad, datei, dateien.obj(pfad)) && ++hochgeladen % 25 == 0) sichere(app, z) }
             }
             // Hier gelöscht: abgeglichen gewesen, jetzt nicht mehr da. Nie aus einem Ordner, der sich nicht lesen ließ.
             val geloescht = dateien.keys().asSequence().toList().filter { pfad ->
@@ -180,16 +183,36 @@ object GedaechtnisAbgleich {
                     Logbuch.fehler("Gedächtnis-Abgleich", null, "$ordner: ${pfade.size} von $bekannt Dateien fehlen plötzlich. Nichts als gelöscht gemeldet.")
                     continue
                 }
-                for (pfad in pfade) { meldeGeloescht(basis, pfad, dateien.getJSONObject(pfad)); hochgeladen++ }
+                for (pfad in pfade) jeDatei(pfad) { meldeGeloescht(basis, pfad, dateien.getJSONObject(pfad)); hochgeladen++ }
             }
         } catch (x: IOException) {
             // Netz weg: Der Rest folgt in der nächsten Runde.
         } finally {
             sichere(app, z)
+            if (eingespielt.size + hochgeladen > 0) Logbuch.system("Gedächtnis-Abgleich", "${eingespielt.size} übernommen, $hochgeladen hochgeladen")
+            if (eingespielt.isNotEmpty()) runCatching { nachEinspielen(app, eingespielt) }
         }
-        if (eingespielt.size + hochgeladen > 0) Logbuch.system("Gedächtnis-Abgleich", "${eingespielt.size} übernommen, $hochgeladen hochgeladen")
-        if (eingespielt.isNotEmpty()) nachEinspielen(app, eingespielt)
     }
+
+    /** Der Server hat eine einzelne Datei abgelehnt (kein Netzfehler): Die Runde geht mit den übrigen weiter. */
+    private class Abgelehnt(text: String) : Exception(text)
+
+    /** Im Sprachgespräch ruht der Abgleich sofort, auch mitten im ersten großen Lauf (Sprachmodus vor Hintergrundarbeit). */
+    private fun pause() = de.frank.jarvis.speech.GespraechsFokus.sprachmodus
+
+    /** Eine Datei nach der anderen: Scheitert eine am Server oder an der Platte, kommen die übrigen trotzdem dran. Ein Netzfehler beendet die Runde. */
+    private inline fun jeDatei(pfad: String, block: () -> Unit) {
+        try {
+            block()
+            gemeldet.remove(pfad)
+        } catch (x: IOException) {
+            throw x
+        } catch (x: Exception) {
+            val text = x.message ?: x.javaClass.simpleName
+            if (gemeldet.put(pfad, text) != text) Logbuch.fehler("Gedächtnis-Abgleich", null, "$pfad: $text")
+        }
+    }
+    private val gemeldet = HashMap<String, String>()
 
     /** Liest die Änderungen seit dem letzten Stand und merkt je Datei die Fassung des Servers (`fern`). */
     private fun hole(basis: String, z: JSONObject, dateien: JSONObject) {
@@ -236,7 +259,7 @@ object GedaechtnisAbgleich {
             // Hier seither geändert und jünger als das Löschen drüben: behalten, die nächste Runde lädt es wieder hoch.
             if (lokalGeaendert && gemerkt.isNotEmpty() && datei.lastModified() > fern.optLong("geaendert")) return false
             if (gemerkt.isEmpty() && !Geraet.istTablet) return false
-            if (lokalGeaendert) rueckfall(app, pfad, datei)
+            rueckfall(app, pfad, datei)
             loesche(app, quelle, datei)
             s.put("basis", "").put("weg", true)
             return true
@@ -254,12 +277,14 @@ object GedaechtnisAbgleich {
         val neu = File(app.cacheDir, "gedaechtnis-fern.teil")
         try {
             netz.newCall(Request.Builder().url("$basis/blob/$fernSha").build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Datei holen: ${r.code}")
+                if (!r.isSuccessful) throw Abgelehnt("Datei holen: Server ${r.code}")
                 neu.outputStream().use { aus -> r.body!!.byteStream().copyTo(aus) }
             }
-            if (sha256(neu) != fernSha) throw IOException("Datei beschädigt angekommen")
+            if (sha256(neu) != fernSha) throw Abgelehnt("Datei beschädigt angekommen")
+            // Vor jedem fremden Überschreiben bleibt die hiesige Fassung als Rückfall liegen, nicht nur im Konflikt: Käme vom anderen
+            // Gerät eine beschädigte oder leer neu begonnene Datei mit jüngerer Zeit, wäre der gute Stand sonst ersatzlos weg.
+            if (datei.isFile) rueckfall(app, pfad, datei)
             if (datei.isFile && lokalGeaendert && gemerkt.isNotEmpty()) {
-                rueckfall(app, pfad, datei)
                 Logbuch.system("Gedächtnis-Abgleich", "$pfad: beide Geräte haben geändert, die Fassung von ${fern.optString("von")} ist jünger und gilt; die hiesige liegt unter $RUECKFALL")
             }
             schreibe(app, quelle, datei, neu, fern.optLong("geaendert"))
@@ -290,7 +315,7 @@ object GedaechtnisAbgleich {
         // Kontakt), wird abgelöst. Steht sie noch aus (gerade erst gemeldet), wartet der Upload auf die nächste Runde.
         if (fern != null && !fern.optBoolean("weg") && s.optString("basis").isEmpty() && Geraet.istTablet) return false
         netz.newCall(Request.Builder().url("$basis/blob/$sha").put(datei.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use { r ->
-            if (!r.isSuccessful) throw IOException("Datei hochladen: ${r.code}")
+            if (!r.isSuccessful) throw Abgelehnt("Datei hochladen: Server ${r.code}")
         }
         // Die Datei kann sich während des Hochladens geändert haben: Dann passt die Prüfsumme am Server nicht, die nächste Runde lädt neu.
         val geaendert = maxOf(datei.lastModified(), (fern?.optLong("geaendert") ?: 0L) + 1)
@@ -298,7 +323,7 @@ object GedaechtnisAbgleich {
         val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", false).put("von", Geraet.ablageName).toString()
         val antwort = netz.newCall(Request.Builder().url("$basis/doc/${quelle.art}/${kennung(pfad)}").put(rumpf.toRequestBody(JSON)).build()).execute().use { r ->
             if (r.code == 409) return false   // Datei am Server (noch) nicht vollständig: nächste Runde
-            if (!r.isSuccessful) throw IOException("Fassung melden: ${r.code}")
+            if (!r.isSuccessful) throw Abgelehnt("Fassung melden: Server ${r.code}")
             JSONObject(r.body?.string().orEmpty())
         }
         if (!antwort.optBoolean("uebernommen")) { anstossen(); return false }   // der Server hat inzwischen eine jüngere Fassung
@@ -312,7 +337,7 @@ object GedaechtnisAbgleich {
         val geaendert = maxOf(System.currentTimeMillis(), (s.optJSONObject("fern")?.optLong("geaendert") ?: 0L) + 1)
         val rumpf = JSONObject().put("daten", JSONObject()).put("geaendert", geaendert).put("geloescht", true).put("von", Geraet.ablageName).toString()
         netz.newCall(Request.Builder().url("$basis/doc/${quelle.art}/${kennung(pfad)}").put(rumpf.toRequestBody(JSON)).build()).execute().use { r ->
-            if (!r.isSuccessful) throw IOException("Löschen melden: ${r.code}")
+            if (!r.isSuccessful) throw Abgelehnt("Löschen melden: Server ${r.code}")
         }
         s.put("basis", "").put("weg", true).put("fern", JSONObject().put("sha", "").put("geaendert", geaendert).put("weg", true).put("von", Geraet.ablageName))
     }
@@ -368,7 +393,9 @@ object GedaechtnisAbgleich {
         runCatching {
             val ordner = File(app.filesDir, RUECKFALL).apply { mkdirs() }
             datei.copyTo(File(ordner, "${System.currentTimeMillis()}-${pfad.replace('/', '_')}"), overwrite = true)
-            ordner.listFiles()?.sortedByDescending { it.name }?.drop(30)?.forEach { it.delete() }
+            // Reichlich: Beim ersten Kontakt übernimmt das Tablet viele Dateien auf einmal. Nach 30 Tagen fällt Altes weg.
+            val grenze = System.currentTimeMillis() - 30 * 86_400_000L
+            ordner.listFiles()?.sortedByDescending { it.name }?.forEachIndexed { i, f -> if (i >= 500 || f.lastModified() < grenze) f.delete() }
         }
     }
 
