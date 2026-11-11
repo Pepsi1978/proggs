@@ -86,6 +86,9 @@ def bau_ohne_bump(cmd, cwd):
         # Nur echtes Schreiben zählt; bloßes Lesen (cat, Get-Content) vor dem Bau bleibt geblockt.
         if 'versionslog.json' in davor and SCHREIBEN.search(davor):
             continue
+        # Das Werkzeug Werkzeuge/versionslog/eintrag.py hängt den Eintrag selbst an (M13).
+        if re.search(r'versionslog[\\/]+eintrag\.py', davor, re.IGNORECASE):
+            continue
         basis = cwd
         for c in CD.finditer(davor):
             basis = pfad(c.group(1) or c.group(2) or c.group(3), basis)

@@ -205,6 +205,22 @@
    "pruefung": "Nach 10 Sitzungen ohne diesen Parserfehler -> wirkt.",
    "ruecknahme": "Absatz PowerShell aus lange-skripte-per-write.md und den Zusatz in der MEMORY.md-Zeile entfernen.",
    "kosten": "rund 60 Zeichen Dauerkontext in einer vorhandenen MEMORY.md-Zeile"
+  },
+  {
+   "id": "M13",
+   "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
+   "datum": "2026-11-11T17:43",
+   "status": "aktiv",
+   "beleg": "Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf.",
+   "ort": [
+    "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
+   ],
+   "werkzeug": "PowerShell",
+   "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py.*gradlew",
+   "fehler_regex": "erst die Version bumpen, dann bauen",
+   "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt.",
+   "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
+   "kosten": "kein Dauerkontext"
   }
  ]
 }
