@@ -92,6 +92,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -141,7 +142,7 @@ object Plugins {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
+fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp = 0.dp) {
     val f = LocalFarben.current
     var plusOffen by remember { mutableStateOf(false) }
     var pluginsOffen by remember { mutableStateOf(false) }
@@ -174,7 +175,17 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         append(name)
     }
 
-    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
+    // Über sich lässt die Blase [platzOben] frei (den verdichteten Symbolstapel), aber nie weniger als ihre festen Teile brauchen:
+    // Rand, Konsolenwarnung, Anhänge, Knopfzeile und eine Zeile Text. Darüber hinaus wird nur das Textfeld kürzer und scrollt in sich.
+    val blaseMindest = 12.dp + (if (konsole == false) 56.dp else 0.dp) + (if (vm.anhaenge.isNotEmpty()) 76.dp else 0.dp) +
+        (if (vm.eingabeKompakt) 56.dp else 102.dp)
+    val begrenzt = Modifier.layout { messbar, c ->
+        val max = if (!c.hasBoundedHeight || platzOben <= 0.dp) c.maxHeight
+        else (c.maxHeight - platzOben.roundToPx()).coerceAtLeast(blaseMindest.roundToPx()).coerceIn(c.minHeight, c.maxHeight)
+        val p = messbar.measure(c.copy(maxHeight = max))
+        layout(p.width, p.height) { p.place(0, 0) }
+    }
+    Column(modifier.then(begrenzt).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
         if (vm.liveAktiv) { LiveLeiste(vm); return@Column }
 
         if (konsole == false) KonsolenWarnung(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) { konsoleAnmelden = true }
@@ -234,8 +245,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         // Rechts oben ein fester Platz: mit Text der Papierkorb (leert die ganze Blase), gleich danach „Rückgängig“.
         // Immer gleich breit und hoch, damit die Blase beim ersten Zeichen und beim Leeren nicht springt.
         val leerbar = vm.entwurf.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit
-        // Ist die Blase begrenzt (StartBildschirm lässt dem Symbolstapel seinen Mindestplatz), wird nur das Textfeld kürzer und
-        // scrollt in sich; Anhänge und die Knopfzeile werden zuerst gemessen und bleiben ganz.
+        // Ist die Blase begrenzt (siehe blaseMindest), wird nur das Textfeld kürzer und scrollt in sich; Anhänge und die
+        // Knopfzeile werden zuerst gemessen und bleiben ganz.
         if (!kompakt) Row(Modifier.weight(1f, fill = false).fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
             Box(Modifier.weight(1f).padding(top = 10.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
@@ -447,8 +458,18 @@ val TEXTENDE_UNTEN = SCHWEBE_UNTEN + SCHWEBE_ABSTAND * 2 + SCHWEBE_GROESSE + 8.d
 /** Abstand zwischen den Einträgen der Gesprächsliste. */
 val LISTEN_ABSTAND = 10.dp
 
-/** Mindestplatz des verdichteten Stapels; so viel lässt die Eingabeblase über sich frei, auch bei sehr langem Text. */
-val SCHWEBE_MINDEST = schwebeHoehe(nachtrag = true, stufe = 2) + SCHWEBE_UNTEN
+/** Ob der Papierkorb „Gespräch löschen“ im Stapel steht; eine Quelle für Stapel, Höhe und Stufe. */
+val AppViewModel.gespraechLoeschbar: Boolean get() = gespraech.isNotEmpty() || sitzungId != null
+
+/**
+ * Platz, den die Eingabeblase über sich freilässt, auch bei sehr langem Text: der verdichtete Stapel (Neue Session, Nachtrag,
+ * Programmierer, Pfeil), eingeklappt nur der Pfeil, im Live-Gespräch nichts.
+ */
+fun schwebeMindest(vm: AppViewModel): Dp = when {
+    vm.liveAktiv -> 0.dp
+    vm.schweberEingeklappt -> SCHWEBE_LUECKE + SCHWEBE_UNTEN
+    else -> schwebeHoehe(vm.nachtragMoeglich, stufe = 2) + SCHWEBE_UNTEN
+}
 
 /** Die dichteste Stufe, bei der der Stapel ganz in [verfuegbar] passt (0, solange die Höhe noch nicht gemessen ist). */
 fun schwebeStufe(verfuegbar: androidx.compose.ui.unit.Dp, nachtrag: Boolean, papierkorb: Boolean): Int {
@@ -489,7 +510,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
         // Neue Session, Nachtrag und Programmierer immer sichtbar bleiben.
         val voll = stufe < 2
         val modus = vm.einstellungen.modus
-        if (voll) SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
+        if (voll) {
+        SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
             vm.einstellungen.modus = neu
             vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" }
@@ -497,11 +519,12 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
             Icon(when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
                 null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
         }
-        if (voll) Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        }
         // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
         // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
         var loeschenZiel by remember { mutableStateOf<String?>(null) }
-        if (voll && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) {
+        if (voll && vm.gespraechLoeschbar) {
             SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
                 Icon(Icons.Rounded.Delete, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
             }
@@ -537,7 +560,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
         // Zwischen den übrigen Symbolen und den Programmier-Symbolen (Fernwartung, Nachtrag, Programmierer) bleibt immer genau ein Platz frei,
         // egal ob Papierkorb oder Nachtrag gerade zu sehen sind.
         if (stufe < 1) Spacer(Modifier.height(SCHWEBE_FREIPLATZ))
-        if (voll) {
+        // Bei Stufe 2 nur unsichtbar und ohne Platz, nicht entfernt: Ein laufender Start und eine offene Rechnerauswahl bleiben erhalten.
+        Column(if (voll) Modifier else Modifier.layout { messbar, c -> messbar.measure(c); layout(0, 0) {} }) {
             FernwartungsSymbol()
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }

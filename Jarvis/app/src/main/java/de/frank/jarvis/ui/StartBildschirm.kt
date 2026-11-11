@@ -16,12 +16,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -217,9 +217,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val dichte = androidx.compose.ui.platform.LocalDensity.current
     var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     // Wird der Platz über der Blase knapp (lange Eingabe, Tastatur, Querformat), verdichtet sich der Symbolstapel, statt unten abgeschnitten zu werden.
-    val papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null
-    val schwebStufe = schwebeStufe(with(dichte) { listenHoehe.toDp() }, vm.nachtragMoeglich, papierkorb)
-    val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb, schwebStufe) + 10.dp
+    val schwebStufe = schwebeStufe(with(dichte) { listenHoehe.toDp() }, vm.nachtragMoeglich, vm.gespraechLoeschbar)
+    // Das Listenpolster bleibt bei voller Stapelhöhe: Wechselt die Stufe beim Tippen, springt die Liste nicht.
+    val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, vm.gespraechLoeschbar) + 10.dp
     // Ganz unten angekommen, egal wie: wieder mitlesen.
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
@@ -264,11 +264,6 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // (Franks Wunsch vom 11.11.2026); rechts hält SCHWEBE_FREI_RECHTS den Text von den Symbolen frei.
         val mitte = TEXTENDE_UNTEN
         val vonUnten = vm.gespraech.isNotEmpty()
-        // Liste samt Symbolstapel und Eingabeblase teilen sich den Rest. Die Blase darf höchstens so hoch werden, dass der verdichtete
-        // Stapel (Neue Session, Nachtrag, Programmierer, Pfeil) darüber ganz Platz hat; bei langem Text scrollt nur ihr Textfeld.
-        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-        val blaseMax = (maxHeight - SCHWEBE_MINDEST).coerceAtLeast(120.dp)
-        Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         // Vor den Bereichen steht nur die Einrichtungskarte; sie bleibt fest oben, die Bereiche ordnen sich darunter.
         // Als State gelesen: Das Modul behält die Lambdas für die ganze Geste, die Karte kann aber mitten im Ziehen kommen oder gehen.
@@ -417,12 +412,14 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN), schwebStufe)
+        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
+            // Ungebunden gemessen und unten verankert: Reicht der Platz selbst für die dichteste Stufe nicht (oder für ein Bild, bis die
+            // Stufe nachzieht), ragt der Stapel nach oben über die Liste, statt Programmierer und Pfeil unten abzuschneiden.
+            .wrapContentHeight(Alignment.Bottom, unbounded = true), schwebStufe)
         }
-        // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch.
-        EingabeBlase(vm, Modifier.heightIn(max = blaseMax))
-        }
-        }
+        // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch. Sie lässt über sich den Platz
+        // des verdichteten Symbolstapels frei; bei langem Text scrollt nur ihr Textfeld.
+        EingabeBlase(vm, platzOben = schwebeMindest(vm))
     }
 }
 
