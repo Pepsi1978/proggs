@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 // Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
@@ -58,6 +60,12 @@ android {
         buildConfigField("String", "RELAY_HOST", "\"${relay.getProperty("host", "")}\"")
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
         buildConfigField("String", "ROUTINE_URL", "\"${routine.getProperty("url", "")}\"")
+
+        // Biomarker (aus Entropie Reductor übernommen): Whoop meldet sich über AppAuth mit derselben Redirect-Adresse zurück,
+        // die bei Whoop eingetragen ist (de.frank.entropyreducer://oauth/whoop/callback). Entropie Reductor gibt sie bei der Übergabe ab.
+        manifestPlaceholders["appAuthRedirectScheme"] = "de.frank.entropyreducer"
+        // Satellitenkarte im Trainings-Detail: Schlüssel aus ~/SK, nie im Git.
+        manifestPlaceholders["mapsApiKey"] = File(System.getProperty("user.home"), "SK/EntropieReductor/maps-api-key.txt").takeIf { it.exists() }?.readText()?.trim().orEmpty()
 
         // „Hey Jarvis“ rechnet mit ONNX Runtime (native Bibliotheken); nur die Handy-Architekturen mitnehmen.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
@@ -155,6 +163,8 @@ androidComponents {
     }
 }
 
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
 kotlin {
     compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
 }
@@ -175,6 +185,20 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
 
     implementation(libs.okhttp)
+    // Biomarker-Bereich (aus Entropie Reductor): eigene Datenbank, Whoop/Oura-Schnittstellen, Health Connect, Karten.
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.retrofit)
+    implementation(libs.okhttp.logging)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.converter)
+    implementation(libs.datastore.preferences)
+    implementation(libs.appauth)
+    implementation(libs.reorderable)
+    implementation(libs.health.connect.client)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
     implementation(libs.security.crypto)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)

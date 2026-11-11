@@ -188,6 +188,7 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null) weckwortPruefen(intent, neu = true)
         if (savedInstanceState == null) rueckfragePruefen(intent)
         if (savedInstanceState == null) erinnerungPruefen(intent)
+        if (savedInstanceState == null) biomarkerPruefen(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -196,6 +197,14 @@ class MainActivity : FragmentActivity() {
         weckwortPruefen(intent, neu = false)
         rueckfragePruefen(intent)
         erinnerungPruefen(intent)
+        biomarkerPruefen(intent)
+    }
+
+    /** Tipp auf die Biomarker-Meldung (etwa „Whoop neu anmelden“): den Biomarker-Bereich öffnen. */
+    private fun biomarkerPruefen(intent: Intent?) {
+        if (intent?.getBooleanExtra(de.frank.jarvis.bio.BioModul.EXTRA_OEFFNEN, false) != true) return
+        intent.removeExtra(de.frank.jarvis.bio.BioModul.EXTRA_OEFFNEN)
+        de.frank.jarvis.bio.presentation.BioAnsicht.oeffnen(this)
     }
 
     /** Tipp auf die Benachrichtigung einer Rückfrage: ihr Gespräch öffnen und die Frage im Vollbild zeigen. */

@@ -98,7 +98,7 @@ class McpServer(context: Context) {
         Werkzeug(
             name = "tagesauswertung_lesen",
             titel = "Tagesauswertung lesen",
-            beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis schreibt sie selbst im Hintergrund neu, in der Regel jede Stunde (außer wenn Frank schläft), aus allen angebundenen Apps: " +
+            beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis schreibt sie selbst im Hintergrund neu, in der Regel zweimal am Tag (außer wenn Frank schläft), aus allen angebundenen Apps und mit unmittelbar davor frisch abgerufenen Biodaten: " +
                 "AKTUELL als ausführlicher Hauptteil (was für ein Tag heute ist, Termine, Biodaten im Vergleich und bezogen auf den Dienst, " +
                 "Wetter, Aufgaben, Einschätzung, Empfehlungen, passende Ideen), dazu kurz RÜCKBLICK (was den heutigen Zustand erklärt) und AUSBLICK (das Wichtigste der nächsten Tage). " +
                 "Für Einzelheiten zu vergangenen Tagen den Datenanhang (mit_daten) nutzen. Die offenen Aufgaben werden bei jedem Abruf zusätzlich frisch angehängt. " +

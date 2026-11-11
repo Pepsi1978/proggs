@@ -238,21 +238,32 @@ object Tagesauswertung {
             fun schritt(text: String) { _stand.value = _stand.value.copy(laeuft = true, schritt = text) }
             val einstellungen = Einstellungen.get(app)
             val alle = Register.alle(app)
-            // Wetter, Tagebuch und Wissen hängen nicht voneinander ab: gleichzeitig holen, gewartet wird nur auf die langsamste Quelle.
-            // Biodaten werden NICHT abgeglichen (Frank-Wunsch 2026-10-15): Entropie Reductor holt sie selbst, Jarvis liest
-            // nur den dort gespeicherten Stand. Jeder Whoop-Abruf kostet einen Token-Tausch und damit ein Risiko für die Anmeldung.
-            schritt("Wetter, Tagebuch und Wissen holen")
+            // Wetter, Tagebuch, Wissen und Biodaten hängen nicht voneinander ab: gleichzeitig holen, gewartet wird nur auf die
+            // langsamste Quelle. Biodaten (Franks Vorgabe vom 11.11.2026): unmittelbar vor jeder Auswertung alle Quellen abrufen
+            // und frisch berechnete Werte abwarten, höchstens die eingestellte Wartezeit (BioAbruf.vorTagesauswertung). Die
+            // Wiederholung nach einem Modellausfall nutzt den Abruf des ausgefallenen Laufs weiter, wenn er frisch ist.
+            schritt("Biodaten, Wetter, Tagebuch und Wissen holen")
+            var bioZeile = ""
             coroutineScope {
                 listOf(
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
+                    async(Dispatchers.IO) {
+                        bioZeile = ohneAbbruch {
+                            val letzter = de.frank.jarvis.bio.BioAbruf.stand.value.bericht
+                            if (anlass == Zeitplan.ANLASS_WIEDERHOLUNG && letzter != null && System.currentTimeMillis() - letzter.versuchMs < 40 * 60_000L)
+                                "Biodaten: Abruf von " + zeitKurzText(letzter.versuchMs) + " Uhr (für den ausgefallenen Lauf) weiter genutzt: " + letzter.kurzfassung()
+                            else de.frank.jarvis.bio.BioAbruf.vorTagesauswertung(app)
+                        } ?: "Biodaten: Abruf vor der Auswertung gescheitert; es gilt der gespeicherte Stand (Datum je Wert beachten)."
+                        Unit
+                    },
                 ).awaitAll()
             }
-            Logbuch.dauer("Tagesauswertung: Quellen geholt", System.currentTimeMillis() - beginn, "Biodaten aus dem gespeicherten Stand")
+            Logbuch.dauer("Tagesauswertung: Quellen geholt", System.currentTimeMillis() - beginn, bioZeile.take(200))
 
             schritt("Daten zusammentragen")
-            val daten = sammle(app)
+            val daten = sammle(app, bioZeile)
 
             val deuten = einstellungen.auswertungDeutung
             val profil = einstellungen.auswertungProfil
@@ -326,7 +337,10 @@ object Tagesauswertung {
      * abgefragt und danach in fester Reihenfolge zusammengesetzt: Der Text bleibt gleich, die Wartezeit ist die der
      * langsamsten Quelle statt der Summe.
      */
-    private suspend fun sammle(app: Context): String = coroutineScope {
+    private fun zeitKurzText(ms: Long): String = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+
+    /** [bioZeile]: wie die Biodaten zustande kamen (Abruf direkt davor, mit Ergebnis je Quelle), sonst der gespeicherte Stand. */
+    private suspend fun sammle(app: Context, bioZeile: String = ""): String = coroutineScope {
         val alle = Register.alle(app)
         val kalender = alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()
         val biomarker = alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
@@ -354,7 +368,8 @@ object Tagesauswertung {
 
         buildString {
             append("STAND: ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append('\n')
-            append("Biodaten: gespeicherter Stand aus Entropie Reductor, das selbst abgleicht. Wie alt die Whoop-Daten sind, steht bei den Biomarkern (Zeile „Whoop-Stand“); Belastung und Energie von heute sind Zwischenstände mit dieser Uhrzeit. Steht dort „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung.").append("\n\n")
+            append(bioZeile.ifEmpty { "Biodaten: gespeicherter Stand ohne neuen Abruf." }).append(' ')
+            append("Wie alt die Whoop-Daten sind, steht bei den Biomarkern (Zeile „Whoop-Stand“); Belastung und Energie von heute sind Zwischenstände mit dieser Uhrzeit. Steht dort „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung, mit Quelle und Datum. „Hinweis“-Zeilen (etwa die Waage ohne WLAN) nur kurz bei den Körperwerten nennen. Werte ohne neue Messung nie als von heute ausgeben, sondern mit ihrem Datum.").append("\n\n")
 
             append("== RAHMEN DER NÄCHSTEN TAGE (fest gerechnet, verbindlich) ==\n")
             append(rahmen.await()).append("\n\n")

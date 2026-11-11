@@ -15,20 +15,21 @@ import org.json.JSONObject
  */
 class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "biomarker"
-    override val name = "Entropie Reductor · Biomarker"
+    override val name = "Biomarker"
     override val beschreibung = "Erholung, Schlaf, HRV, Körperwerte und Trainings lesen und mit den letzten Wochen und Monaten vergleichen."
     override val hinweise =
-        "Entropie Reductor sammelt Franks Biomarker: vom Whoop-Band (Erholung, HRV, Ruhepuls, Schlaf mit Phasen, Hauttemperatur, Belastung), " +
-            "vom Oura-Ring (Readiness, Schlafscore, Resilienz), von der Waage (Gewicht, Körperfett, Muskelmasse und weitere) und seine Trainings (Läufe mit Pace, Puls, VO2max). " +
+        "Jarvis führt Franks Biomarker selbst (früher in Entropie Reductor, jetzt im Biomarker-Bereich von Jarvis): vom Whoop-Band (Erholung, HRV, Ruhepuls, Schlaf mit Phasen, Hauttemperatur, Belastung), " +
+            "vom Oura-Ring (Readiness, Schlafscore, Resilienz), von der Waage über Zepp (Gewicht, Körperfett, Muskelmasse und weitere) und seine Trainings über Health Connect (Läufe mit Pace, Puls, VO2max). " +
             "Für Fragen wie „Wie sind meine Werte heute?“ oder „Vergleiche mit den letzten Wochen“ nimm biomarker_auswertung: Es liefert den aktuellen Wert, " +
             "die Durchschnitte und eine Einordnung fertig gerechnet. Nenne beim Antworten zuerst das Wichtigste (was auffällig besser oder schlechter ist), " +
-            "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. Die Daten sind nur lesbar. Du stellst keine medizinischen Diagnosen. " +
-            "WICHTIG: Beginnt eine Antwort dieser Werkzeuge mit „ACHTUNG“, dann ist der Datenabruf gestört (zum Beispiel eine abgelaufene Whoop-Anmeldung) " +
+            "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. Messwerte sind nur lesbar: Du änderst, ergänzt oder erfindest nie Messwerte. Du stellst keine medizinischen Diagnosen. " +
+            "WICHTIG: Beginnt eine Antwort dieser Werkzeuge mit „ACHTUNG“, dann ist der Abruf einer Quelle gestört (zum Beispiel eine abgelaufene Whoop-Anmeldung) " +
             "oder eine Quelle liefert seit Tagen nichts Neues. Sag Frank das von dir aus und ZUERST: welche Quelle betroffen ist, seit wann, und was er tun muss. " +
-            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum. Entropie Reductor holt die Daten selbst: Oura, Waage und Health Connect laufend, " +
-            "Whoop sparsam, sobald ein neuer Schlaf fertig berechnet sein kann (Schlaf und Erholung ändern sich danach nicht mehr). Belastung und Energie von heute sind Zwischenstände; nenne ihre Uhrzeit. " +
-            "Jarvis liest nur. biomarker_aktualisieren nur, wenn Frank ausdrücklich um frische Daten bittet, nie von dir aus."
-
+            "Zeilen mit „Hinweis“ (etwa die Waage, die zu Hause ohne WLAN nicht liefert) nennst du nur, wenn es um diese Werte geht. " +
+            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum; „abgerufen, keine neue Messung“ heißt: der Abruf klappte, aber es gibt nichts Neueres. " +
+            "Frische Daten holt Jarvis nur in drei Fällen: beim Öffnen des Biomarker-Bereichs, vor jeder Tagesauswertung und auf Franks ausdrücklichen Wunsch. " +
+            "biomarker_aktualisieren also nur, wenn Frank ausdrücklich um frische Daten bittet, nie von dir aus. Belastung und Energie von heute sind Zwischenstände; nenne ihre Uhrzeit. " +
+            "Die Einstellungen des Biomarker-Bereichs (Quellen an oder pausiert, Wartezeit vor der Auswertung, Vergleichszeitraum, ausgelassene Messgrößen) liest und ändert das Werkzeug einstellungen, Bereich Biomarker."
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
     /**
@@ -84,7 +85,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "biomarker_auswertung",
             titel = "Biomarker auswerten",
-            beschreibung = "Jarvis: wertet Franks Biomarker aus Entropie Reductor aus. Vergleicht den aktuellen Wert jeder Messgröße mit dem Durchschnitt der Tage davor " +
+            beschreibung = "Jarvis: wertet Franks Biomarker aus dem Biomarker-Bereich von Jarvis aus. Vergleicht den aktuellen Wert jeder Messgröße mit dem Durchschnitt der Tage davor " +
                 "(Vorgabe 30 Tage), nennt zusätzlich die Schnitte der letzten 7, 30 und 90 Tage, die Abweichung und eine Einordnung (besser, schlechter oder im üblichen Bereich). " +
                 "Das erste Werkzeug für „Wie sind meine Biodaten heute?“, „Vergleiche mit den letzten Wochen oder Monaten“, „Wie ist meine Erholung?“, „Hat sich mein Schlaf verschlechtert?“. " +
                 "Antwortet sofort, weil auf dem Handy gerechnet wird.",
@@ -98,7 +99,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "biomarker_tag",
             titel = "Biomarker eines Tages",
-            beschreibung = "Jarvis: liest ALLE Biomarker-Werte eines einzelnen Tages aus Entropie Reductor (Whoop, Oura, Waage) samt den Trainings dieses Tages. " +
+            beschreibung = "Jarvis: liest ALLE Biomarker-Werte eines einzelnen Tages (Whoop, Oura, Waage) samt den Trainings dieses Tages. " +
                 "Nutze es für „Wie war mein Schlaf heute Nacht?“, „Was waren meine Werte am 3. Oktober?“. Ohne Datum kommt der neueste Tag mit Daten.",
             schema = schema("datum" to text("heute, gestern, vorgestern oder JJJJ-MM-TT. Weglassen = neuester Tag mit Daten.")),
             nurLesen = true,
@@ -106,12 +107,13 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "biomarker_aktualisieren",
             titel = "Biomarker aktualisieren",
-            beschreibung = "Jarvis: lässt Entropie Reductor jetzt frische Daten von Whoop, Oura, Waage und Health Connect holen und meldet den Zustand jeder Quelle: " +
-                "ob der Abruf geklappt hat, welcher Fehler auftrat (zum Beispiel abgelaufene Anmeldung) und bis zu welchem Tag Daten vorliegen. " +
+            beschreibung = "Jarvis: holt jetzt frische Daten von Whoop, Oura, Waage und Health Connect und meldet den Zustand jeder Quelle: " +
+                "ob der Abruf geklappt hat, ob er neue Messwerte brachte oder nichts Neues, welcher Fehler auftrat (zum Beispiel abgelaufene Anmeldung) und bis zu welchem Tag Daten vorliegen. " +
                 "Nur wenn Frank ausdrücklich darum bittet („Aktualisiere meine Biodaten“, „Hol frische Werte“), nie von dir aus: " +
-                "Entropie Reductor gleicht selbst im Hintergrund ab, und jeder Abruf belastet die Whoop-Anmeldung. " +
+                "Jarvis holt sonst nur beim Öffnen des Biomarker-Bereichs und vor jeder Tagesauswertung, und jeder Abruf belastet die Whoop-Anmeldung. " +
                 "Für „Warum sind meine Werte alt?“ oder „Funktioniert der Abruf von Whoop?“ genügt ein Lesewerkzeug, dessen Antwort den Zustand der Quellen enthält. " +
-                "Whoop fragt Entropie Reductor dabei nur, wenn es dort etwas Neues geben kann und der letzte Versuch mindestens 10 Minuten her ist; sonst bleibt der gespeicherte Stand. Dauert bis zu einer Minute. Ändert keine Daten von Frank.",
+                "Whoop wird dabei nur gefragt, wenn der letzte Versuch mindestens 10 Minuten her ist; sonst bleibt der gespeicherte Stand. Dauert bis zu einer Minute. Ändert keine Messwerte.",
+            taetigkeit = "holt frische Biodaten",
             schema = schema(),
             nurLesen = true,
         ) { _ ->
@@ -126,14 +128,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
                         for (i in 0 until quellen.length()) {
                             val q = quellen.getJSONObject(i)
                             append("- ").append(q.optString("name")).append(": ")
-                            append(
-                                when {
-                                    q.isNull("verbunden") -> "Zustand unbekannt"
-                                    !q.optBoolean("verbunden") -> "nicht eingerichtet"
-                                    q.optBoolean("abruf_ok") -> "Abruf in Ordnung"
-                                    else -> "Abruf gescheitert (" + q.optString("fehler") + ")"
-                                },
-                            )
+                            append(quelleZustand(q))
                             append(if (q.isNull("neueste_daten")) ", keine Daten" else ", neueste Daten vom " + q.optString("neueste_daten"))
                             append('\n')
                         }
@@ -144,7 +139,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "biomarker_verlauf",
             titel = "Biomarker-Verlauf",
-            beschreibung = "Jarvis: liest den zeitlichen Verlauf einzelner Messgrößen aus Entropie Reductor, tageweise oder als Wochen- bzw. Monatsdurchschnitt. " +
+            beschreibung = "Jarvis: liest den zeitlichen Verlauf einzelner Messgrößen, tageweise oder als Wochen- bzw. Monatsdurchschnitt. " +
                 "Nutze es für Entwicklungen über längere Zeit („Wie hat sich mein Gewicht seit Juli entwickelt?“, „HRV der letzten drei Monate“). " +
                 "Für lange Zeiträume aufloesung woche oder monat wählen, damit die Antwort kurz bleibt.",
             schema = schema(
@@ -159,7 +154,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "trainings_lesen",
             titel = "Trainings lesen",
-            beschreibung = "Jarvis: listet Franks Trainings aus Entropie Reductor (Läufe und andere Sportarten) mit Datum, Distanz, Dauer, Durchschnitts- und Maximalpace, " +
+            beschreibung = "Jarvis: listet Franks Trainings (Läufe und andere Sportarten) mit Datum, Distanz, Dauer, Durchschnitts- und Maximalpace, " +
                 "Durchschnitts- und Maximalpuls, Kalorien und VO2max, dazu die Summen des Zeitraums. Vorgabe: die letzten 90 Tage.",
             schema = schema(
                 "von" to text("Erster Tag JJJJ-MM-TT."),
@@ -172,7 +167,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "training_details",
             titel = "Training im Detail",
-            beschreibung = "Jarvis: liest ein einzelnes Training aus Entropie Reductor mit allen Werten und den Kilometer-Abschnitten. Die id stammt aus der Trainingsliste.",
+            beschreibung = "Jarvis: liest ein einzelnes Training mit allen Werten und den Kilometer-Abschnitten. Die id stammt aus der Trainingsliste.",
             schema = schema("id" to text("id des Trainings aus trainings_lesen."), pflicht = listOf("id")),
             nurLesen = true,
         ) { a ->
@@ -184,7 +179,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "biomarker_katalog",
             titel = "Biomarker-Katalog",
-            beschreibung = "Jarvis: nennt alle Messgrößen, die Entropie Reductor führt, mit Einheit, Quelle und dem Zeitraum, für den Daten vorliegen. " +
+            beschreibung = "Jarvis: nennt alle Messgrößen, die der Biomarker-Bereich führt, mit Einheit, Quelle und dem Zeitraum, für den Daten vorliegen. " +
                 "Nutze es, wenn Frank fragt, welche Daten es gibt oder seit wann.",
             schema = schema(),
             nurLesen = true,
@@ -192,7 +187,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             lies("katalog", a).fehlerOder { antwort ->
                 val liste = antwort.getJSONArray("metriken")
                 buildString {
-                    append("Heute ist ").append(antwort.optString("heute")).append(". Messgrößen in Entropie Reductor:\n")
+                    append("Heute ist ").append(antwort.optString("heute")).append(". Messgrößen im Biomarker-Bereich:\n")
                     for (i in 0 until liste.length()) {
                         val m = liste.getJSONObject(i)
                         append("- ").append(m.optString("id")).append(": ").append(m.optString("name")).append(" [").append(m.optString("einheit")).append(", ").append(m.optString("quelle")).append("] ")
@@ -312,12 +307,16 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     // ---------------------------------------------------------------- Brücke
 
     private suspend fun rufe(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
-        AppBruecke.unterbrechbar { ohneAusgelassene(rufeDirekt(methode, ohneAusgelassene(anfrage), lesend)) }
+        if (eigen()) ohneAusgelassene(auswertung.rufe(methode, ohneAusgelassene(anfrage)))
+        else AppBruecke.unterbrechbar { ohneAusgelassene(rufeDirekt(methode, ohneAusgelassene(anfrage), lesend)) }
 
     /**
      * Frank braucht die Sauerstoffsättigung nicht: Sie wird weder angefragt noch weitergegeben, auch nicht in den Tageswerten,
      * im Katalog oder in der Tagesauswertung.
      */
+    /** Messgrößen, die Jarvis nie abruft oder auswertet (Einstellung bio_ausgelassen, Vorgabe Sauerstoffsättigung). */
+    private val ausgelassen: Set<String> get() = de.frank.jarvis.data.Einstellungen.get(context).bioAusgelasseneMenge
+
     private fun ohneAusgelassene(o: JSONObject): JSONObject {
         listOf("metriken", "werte", "reihen").forEach { feld ->
             val liste = o.optJSONArray(feld) ?: return@forEach
@@ -325,7 +324,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             for (i in 0 until liste.length()) {
                 val e = liste.opt(i)
                 val id = (e as? JSONObject)?.optString("id") ?: e as? String
-                if (id !in AUSGELASSEN) gefiltert.put(e)
+                if (id !in ausgelassen) gefiltert.put(e)
             }
             o.put(feld, gefiltert)
         }
@@ -346,18 +345,39 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private fun standText(antwort: JSONObject): String {
         val stand = antwort.optJSONObject("stand") ?: return ""
-        val whoop = whoopText(stand)
+        val whoop = whoopText(stand) + quellenText(stand) + (stand.optJSONArray("hinweise")?.let { h -> (0 until h.length()).joinToString("") { "Hinweis: " + h.optString(it) + "\n" } } ?: "")
         val probleme = stand.optJSONArray("probleme") ?: return whoop
         if (probleme.length() == 0) return whoop
         // ACHTUNG bleibt der Anfang der Antwort: darauf reagiert das Modell laut Hinweis zuerst.
         return buildString {
-            append("ACHTUNG, der Datenabruf in Entropie Reductor ist gestört. Sag Frank das zuerst und von dir aus:\n")
+            append("ACHTUNG, der Abruf einer Biomarker-Quelle ist gestört. Sag Frank das zuerst und von dir aus:\n")
             for (i in 0 until probleme.length()) append("- ").append(probleme.optString(i)).append('\n')
-            if (stand.optBoolean("eingriff_noetig")) append("Das behebt sich nicht von selbst: Frank muss es in Entropie Reductor erledigen.\n")
+            if (stand.optBoolean("eingriff_noetig")) append("Das behebt sich nicht von selbst: Frank muss es selbst erledigen (Biomarker-Bereich → Einstellungen).\n")
             if (!stand.isNull("letzter_abgleich")) append("Letzter Abgleich: ").append(stand.optString("letzter_abgleich").replace('T', ' ')).append(" Uhr.\n")
             append(whoop)
             append("Die folgenden Werte sind der letzte bekannte Stand; nenne bei alten Werten ihr Datum.\n\n")
         }
+    }
+
+    /** Je Quelle eine kurze Angabe zum letzten Abruf: neue Werte, nichts Neues, nicht gefragt, pausiert, neueste Messung. */
+    private fun quellenText(stand: JSONObject): String {
+        val quellen = stand.optJSONArray("quellen") ?: return ""
+        if (stand.isNull("letzter_abgleich")) return ""
+        return "Letzter Abruf " + stand.optString("letzter_abgleich").replace('T', ' ') + " Uhr: " + (0 until quellen.length()).joinToString("; ") { i ->
+            val q = quellen.getJSONObject(i)
+            q.optString("name") + " " + quelleZustand(q) + (if (q.isNull("neueste_daten")) "" else ", neueste Daten vom " + q.optString("neueste_daten"))
+        } + ".\n"
+    }
+
+    private fun quelleZustand(q: JSONObject): String = when {
+        q.optBoolean("pausiert") -> "pausiert"
+        q.isNull("verbunden") -> "Zustand unbekannt"
+        !q.optBoolean("verbunden") -> "nicht eingerichtet"
+        q.has("gefragt") && !q.isNull("gefragt") && !q.optBoolean("gefragt") -> "diesmal nicht gefragt" + (q.optString("nicht_gefragt_grund").takeIf { it.isNotEmpty() && it != "null" }?.let { " ($it)" } ?: "")
+        !q.optBoolean("abruf_ok") -> "Abruf gescheitert (" + q.optString("fehler") + ")"
+        q.optBoolean("neue_werte") -> "abgerufen, neue Werte"
+        q.has("neue_werte") && !q.isNull("neue_werte") -> "abgerufen, keine neue Messung"
+        else -> "Abruf in Ordnung"
     }
 
     /** Datenalter der Whoop-Werte ehrlich nennen (seit 2026-10-15 liefert die Brücke es unter stand.whoop). */
@@ -375,8 +395,17 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /**
+     * Seit der Übernahme (oder auf dem Tablet, das den Stand des Handys spiegelt) rechnet Jarvis selbst ([BioAuswertung]).
+     * Bis dahin bleibt Entropie Reductor über seine Brücke der Lesepfad, damit nie zwei Apps zugleich den Whoop-Zugang nutzen.
+     */
+    private fun eigen(): Boolean = de.frank.jarvis.data.Geraet.istTablet || de.frank.jarvis.data.Einstellungen.get(context).bioUebernommenMs > 0L
+
+    private val auswertung by lazy { de.frank.jarvis.bio.BioAuswertung(context) }
+
     private fun rufeDirekt(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
-        AppBruecke.rufe(context, "Entropie Reductor", BRUECKEN, methode, anfrage, lesend = lesend)
+        if (eigen()) kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) { auswertung.rufe(methode, anfrage) }
+        else AppBruecke.rufe(context, "Entropie Reductor", BRUECKEN, methode, anfrage, lesend = lesend)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -389,8 +418,6 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         private val LESEND = setOf("katalog", "tag", "auswertung", "verlauf", "trainings", "training")
         /** Was das Live-Gedächtnis im Vergleich zeigt: Franks vier Kerngrößen und was Schlaf und Erholung einordnet. */
         private val LIVE_METRIKEN = listOf("erholung", "hrv", "ruhepuls", "vo2max", "tiefschlaf_prozent", "tiefschlaf_min", "schlafdauer", "wach_min", "schlafdefizit_min", "oura_temperaturabweichung", "gewicht")
-        /** Messgrößen, die Jarvis nie abruft oder auswertet. */
-        private val AUSGELASSEN = setOf("spo2")
         private val BRUECKEN = listOf(
             Uri.parse("content://de.frank.entropyreducer.debug.jarvis"),
             Uri.parse("content://de.frank.entropyreducer.jarvis"),

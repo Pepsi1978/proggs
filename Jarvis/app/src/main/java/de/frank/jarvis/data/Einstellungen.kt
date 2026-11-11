@@ -24,10 +24,10 @@ private val RECHNER = listOf("mac", "windows", "server")
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
  * und lässt sich wie die anderen verschieben.
  */
-val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart")
+val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
-val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben")
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
@@ -375,6 +375,33 @@ class Einstellungen private constructor(context: Context) {
     var auswertungProfil: String
         get() = prefs.getString("auswertung_profil", AUSWERTUNG_GRUENDLICH)?.takeIf { it in AUSWERTUNG_PROFILE.map { p -> p.first } } ?: AUSWERTUNG_GRUENDLICH
         set(v) = put { putString("auswertung_profil", v) }
+    /**
+     * Höchstens so viele automatische Tagesauswertungen je Kalendertag (Franks Vorgabe vom 11.11.2026: zwei), 0 = unbegrenzt.
+     * Zwischen zwei Läufen liegt mindestens der eingestellte Abstand. Ausdrücklich angestoßene Auswertungen zählen nicht mit.
+     */
+    var auswertungProTag: Int get() = prefs.getInt("auswertung_pro_tag", 2).coerceIn(0, 12); set(v) = put { putInt("auswertung_pro_tag", v) }
+
+    // ---- Biomarker (in Jarvis integriert, früher Entropie Reductor) ----
+    /** Quelle abrufen: whoop, oura, waage, training. Pausiert = nicht gefragt, keine Störungsmeldung. */
+    fun bioQuelleAn(quelle: String): Boolean = prefs.getBoolean("bio_${quelle}_an", true)
+    fun setzeBioQuelleAn(quelle: String, an: Boolean) = put { putBoolean("bio_${quelle}_an", an) }
+    /** Beim Öffnen des Biomarker-Bereichs einmal frische Daten holen. */
+    var bioAbrufBeimOeffnen: Boolean get() = prefs.getBoolean("bio_abruf_oeffnen", true); set(v) = put { putBoolean("bio_abruf_oeffnen", v) }
+    /** Vor jeder Tagesauswertung erst alle Quellen abrufen. */
+    var bioAbrufVorAuswertung: Boolean get() = prefs.getBoolean("bio_abruf_auswertung", true); set(v) = put { putBoolean("bio_abruf_auswertung", v) }
+    /** Höchstens so lange (Sekunden) wartet die Tagesauswertung auf den Abruf; danach beginnt sie mit dem gekennzeichneten Stand. */
+    var bioWartezeit: Int get() = prefs.getInt("bio_wartezeit", 150).coerceIn(30, 300); set(v) = put { putInt("bio_wartezeit", v) }
+    /** Ist der neueste Whoop-Schlaf noch nicht fertig berechnet, innerhalb der Wartezeit noch einmal nachfragen. */
+    var bioSchlafAbwarten: Boolean get() = prefs.getBoolean("bio_schlaf_abwarten", true); set(v) = put { putBoolean("bio_schlaf_abwarten", v) }
+    /** Vergleichszeitraum der Auswertung in Tagen, wenn nichts anderes verlangt wird. */
+    var bioVergleichTage: Int get() = prefs.getInt("bio_vergleich_tage", 30).coerceIn(7, 365); set(v) = put { putInt("bio_vergleich_tage", v) }
+    /** Ab so vielen Tagen ohne neue Werte gilt Band oder Ring als nicht abgeglichen (Hinweis an Frank). */
+    var bioVeraltetTage: Int get() = prefs.getInt("bio_veraltet_tage", 2).coerceIn(1, 14); set(v) = put { putInt("bio_veraltet_tage", v) }
+    /** Messgrößen, die Jarvis nie abruft, nennt oder auswertet (Kennungen mit Komma; Vorgabe: Sauerstoffsättigung). */
+    var bioAusgelassen: String get() = s("bio_ausgelassen", "spo2"); set(v) = put { putString("bio_ausgelassen", v) }
+    val bioAusgelasseneMenge: Set<String> get() = bioAusgelassen.split(',', ';', ' ').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+    /** Übernahme aus Entropie Reductor: 0 = noch nicht, sonst Zeitpunkt (ms) der abgeschlossenen Übernahme. */
+    var bioUebernommenMs: Long get() = prefs.getLong("bio_uebernommen_ms", 0L); set(v) = put { putLong("bio_uebernommen_ms", v) }
 
     // ---- Sperre und Vorlesen ----
     /** App nur nach Fingerabdruck (oder Gerätesperre) öffnen. Das Plugin arbeitet unabhängig davon. */

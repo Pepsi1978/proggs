@@ -45,13 +45,13 @@ object Zeitplan {
     val naechsterLauf: StateFlow<LocalDateTime?> = _naechsterLauf.asStateFlow()
 
     /** Zwischenspeicher je Minute und Einstellung: Prüfer (Kalender-Abfrage) und nächster Lauf. */
-    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean)
+    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean, val proTag: Int)
     @Volatile private var prueferSpeicher: Pair<Schluessel, (LocalDateTime) -> Boolean>? = null
     @Volatile private var naechsterSpeicher: Pair<Pair<Schluessel, LocalDateTime>, LocalDateTime?>? = null
 
     private fun schluessel(context: Context): Schluessel {
         val e = Einstellungen.get(context)
-        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause)
+        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag)
     }
 
     /** Vergisst die zwischengespeicherten Rechnungen, etwa nach einer Änderung der Einstellungen oder der Uhrzeit. */
@@ -67,7 +67,24 @@ object Zeitplan {
         val schlaeft: (LocalDateTime) -> Boolean = (if (k.schlafpause) Register.alle(context).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.schlafzeiten() else null) ?: { false }
         val abstand = k.abstand
         // Nach dem Schlaf zählt die erste Stunde auch dann, wenn sie nicht in den Abstand fällt (15 Uhr nach dem Nachtdienst).
-        val p: (LocalDateTime) -> Boolean = { t -> !schlaeft(t) && (t.hour % abstand == 0 || schlaeft(t.minusHours(1))) }
+        val kandidat: (LocalDateTime) -> Boolean = { t -> !schlaeft(t) && (t.hour % abstand == 0 || schlaeft(t.minusHours(1))) }
+        // Höchstens [proTag] Läufe je Kalendertag (Franks Vorgabe vom 11.11.2026: zwei), der Reihe nach und je mindestens
+        // [abstand] Stunden nach dem vorigen angenommenen Lauf desselben Tages: sonst ergäben „erste Stunde nach dem Schlaf“
+        // und das Raster zwei Läufe direkt hintereinander (11 und 12 Uhr). Hier gerechnet, damit der nächste Lauf und der
+        // letzte fällige (veraltet, Nachholen) dasselbe sagen.
+        val tage = java.util.concurrent.ConcurrentHashMap<java.time.LocalDate, Set<Int>>()
+        fun angenommen(tag: java.time.LocalDate): Set<Int> = tage.getOrPut(tag) {
+            val stunden = mutableListOf<Int>()
+            for (h in 0..23) {
+                val t = tag.atTime(h, 0)
+                if (!kandidat(t)) continue
+                if (stunden.isNotEmpty() && h - stunden.last() < abstand) continue
+                stunden += h
+                if (k.proTag in 1..stunden.size) break
+            }
+            stunden.toSet()
+        }
+        val p: (LocalDateTime) -> Boolean = { t -> t.minute == 0 && t.hour in angenommen(t.toLocalDate()) }
         prueferSpeicher = k to p
         return p
     }

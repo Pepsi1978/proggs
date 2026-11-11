@@ -106,7 +106,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Die Schritte, deren Stand erst die Prüfung der angebundenen Apps zeigt. */
-private val APP_SCHRITTE = setOf("Geniale Aufgaben", "Kalender", "Geniale Ideen", "Tagebuch", "Genialer Wecker", "Entropie Reductor")
+private val APP_SCHRITTE = setOf("Geniale Aufgaben", "Kalender", "Geniale Ideen", "Tagebuch", "Genialer Wecker", "Biomarker")
 
 /**
  * Feste Listenschlüssel: die Einrichtungskarte, ein Platzhalter für sie in der Reihenfolge des Moduls (gleicht nie einem
@@ -170,7 +170,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         Schritt("Geniale Ideen", vm.stoerungen["ideen"] ?: "Angebunden: lesen und schreiben.", vm.aufgabenGeprueft && vm.stoerungen["ideen"] == null, "Prüfen") { vm.lagePruefen() },
         Schritt("Tagebuch", vm.stoerungen["tagebuch"] ?: "Angebunden: Einträge aus Drive lesen.", vm.aufgabenGeprueft && vm.stoerungen["tagebuch"] == null, "Prüfen") { vm.lagePruefen() },
         Schritt("Genialer Wecker", vm.stoerungen["wecker"] ?: "Angebunden: Wecker lesen und stellen.", vm.aufgabenGeprueft && vm.stoerungen["wecker"] == null, "Prüfen") { vm.lagePruefen() },
-        Schritt("Entropie Reductor", vm.stoerungen["biomarker"] ?: "Angebunden: Biomarker lesen.", vm.aufgabenGeprueft && vm.stoerungen["biomarker"] == null, "Prüfen") { vm.lagePruefen() },
+        Schritt("Biomarker", vm.stoerungen["biomarker"] ?: "In Jarvis: Whoop, Oura, Waage und Trainings.", vm.aufgabenGeprueft && vm.stoerungen["biomarker"] == null, "Prüfen") { vm.lagePruefen() },
         Schritt("Epigenetik", vm.stoerungen["epigenetik"] ?: "Angebunden: Auswertungen lesen und Recherchen starten.", vm.aufgabenGeprueft && vm.stoerungen["epigenetik"] == null, "Prüfen") { vm.lagePruefen() },
         Schritt(
             "Verbindung zum Server",
@@ -382,6 +382,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 // Das Live-Gedächtnis steht in den Einstellungen (Reiter Jarvis, Bereich „Jarvis' Gedächtnis“).
                 "schnellstart" -> SchnellstartBereich(vm, griff)
                 "heute_aufgaben" -> HeuteAufgabenKarte(vm, griff)
+                // Eigener Einstieg in den Biomarker-Bereich (Whoop, Oura, Waage, Trainings), nur gespeicherter Stand.
+                "biomarker" -> BiomarkerStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

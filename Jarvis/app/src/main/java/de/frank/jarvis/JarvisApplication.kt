@@ -17,6 +17,8 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         super.onCreate()
         // Das Logbuch schreibt ab dem ersten Augenblick mit, auch Abstürze der Oberfläche ohne laufenden Dienst.
         de.frank.jarvis.observability.Logbuch.starte(this)
+        // Biomarker-Bereich: nur einrichten, gebaut wird alles erst beim ersten Zugriff.
+        de.frank.jarvis.bio.BioModul.einrichten(this)
         // Einstellungs-Umzug vom anderen Gerät (Handy → Tablet): vor allem anderen, damit Dienst und Tunnel gleich mit den neuen Werten starten.
         de.frank.jarvis.data.Umzug.uebernimm(this)
         JarvisDienst.kanalAnlegen(this)

@@ -64,6 +64,11 @@ class BackgroundScheduler @Inject constructor(
      * gleicht die App beim Oeffnen ab, und Jarvis stoesst vor dem Lesen selbst einen Abgleich an.
      */
     fun ensureBiomarkerSyncJob() {
+        // An Jarvis übergeben (11.11.2026): kein Hintergrund-Abgleich mehr, ein geplanter wird abbestellt.
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben(context)) {
+            runCatching { wm.cancelUniqueWork(BiomarkerSyncWorker.UNIQUE_NAME_PERIODIC) }
+            return
+        }
         runCatching {
             wm.enqueueUniquePeriodicWork(
                 BiomarkerSyncWorker.UNIQUE_NAME_PERIODIC,

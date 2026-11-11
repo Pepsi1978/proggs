@@ -71,6 +71,7 @@ constructor(
     private val zeppBodyRepository: ZeppBodyRepository,
     private val appSettings: AppSettings,
     @ApplicationScope private val applicationScope: CoroutineScope,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) {
     private val driveMutex = Mutex()
     private val apiMutex = Mutex()
@@ -234,10 +235,15 @@ constructor(
         )
     }
 
+    /** Wartet auf einen gerade laufenden Abgleich (vor der Übergabe an Jarvis). */
+    suspend fun warteAufAbgleich() = apiMutex.withLock { }
+
     private suspend fun fuehreApiSyncAus(reason: String, anlass: WhoopAbrufPlan.Anlass): ApiSyncBericht {
         Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
+        // An Jarvis übergeben (11.11.2026): keine Biomarker-Quelle mehr abfragen, nur noch den Kalender.
+        val abgegeben = de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben(context)
         val vorher = letzterStand()
-        val whoopVerbunden = oauth.loadWhoopAuthState().isAuthorized
+        val whoopVerbunden = !abgegeben && oauth.loadWhoopAuthState().isAuthorized
         // Frank-Wunsch 2026-10-15: Whoop nur, wenn es etwas Neues geben kann (neuer Schlaf moeglich, neuester
         // Schlaf noch nicht fertig) — jeder Abruf kostet einen Token-Refresh, und jeder Refresh, dessen Antwort
         // verloren geht, kostet die Anmeldung. Die Regeln stehen in WhoopAbrufPlan; die anderen Quellen laufen
@@ -270,15 +276,16 @@ constructor(
             if (whoopEntscheidung == null) "Whoop nicht verbunden"
             else "Whoop ${if (whoopAbfragen) "abfragen" else "uebersprungen"} ($anlass): ${whoopEntscheidung.grund}",
         )
-        val ouraVerbunden = oura.isTokenConfigured()
+        val ouraVerbunden = !abgegeben && oura.isTokenConfigured()
         val kalenderVerbunden = secrets.calendarAccountEmail != null
         val ergebnisse = coroutineScope {
-            val bodyDeferred = async { quelle { runCatchingCancellable { zeppBodyRepository.syncToCache() } } }
+            val bodyDeferred = async { if (abgegeben) null else quelle { runCatchingCancellable { zeppBodyRepository.syncToCache() } } }
             val whoopDeferred = async { if (whoopAbfragen) quelle { whoop.syncLastDays(365) } else null }
             val ouraDeferred =
                 async { if (ouraVerbunden) quelle { oura.syncLastDays(365).map { it.values.sum() } } else null }
             val trainingDeferred =
                 async {
+                    if (abgegeben) return@async null
                     // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
                     // Frank-Wunsch 2026-09-30: einmal ALLE Trainings (gesamter Verlauf) auf die
                     // Polar-Werte umstellen, danach wieder nur die letzten 30 Tage.

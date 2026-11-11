@@ -193,6 +193,7 @@ fun BiomarkerHostScreen(
 
         // Frank-Wunsch 2026-05-22 Phase 2: Box-Wrapper damit MicCaptureActions
         // ueber dem Grid als Overlay schweben kann (Alignment.BottomCenter).
+        val anJarvis = de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben(androidx.compose.ui.platform.LocalContext.current)
         androidx.compose.foundation.layout.Box(
             modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding)
         ) {
@@ -213,6 +214,17 @@ fun BiomarkerHostScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Seit 11.11.2026 führt Jarvis die Biomarker: Hier steht nur noch der Stand der Übergabe, nichts wird mehr abgerufen.
+                if (anJarvis) {
+                    item("hdr_jarvis", span = { GridItemSpan(2) }) {
+                        androidx.compose.material3.Text(
+                            "Die Biomarker laufen jetzt in Jarvis (Startbildschirm → Biomarker). Entropie Reductor ruft nichts mehr ab; " +
+                                "die Werte hier sind der Stand der Übergabe.",
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
                 item("hdr_sync", span = { GridItemSpan(2) }) {
                     // Frank-Wunsch 2026-05-09: kleine Info-Zeile direkt unter dem
                     // Header die zeigt wann zuletzt erfolgreich mit Whoop synchronisiert

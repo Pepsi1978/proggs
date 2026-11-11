@@ -225,6 +225,9 @@ constructor(
     }
 
     suspend fun handleWhoopAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben(context)) {
+            return Result.failure(IllegalStateException("Die Biomarker laufen jetzt in Jarvis. Whoop bitte dort anmelden (Biomarker → Einstellungen)."))
+        }
         Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop: handleAuthResult — clientSecret-vorhanden=${clientSecret != null}")
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
@@ -313,7 +316,15 @@ constructor(
         // Das WARTEN auf die Sperre bleibt abbrechbar; nur der Teil mit der Sperre laeuft sicher zu Ende.
         whoopRefreshMutex.withLock { withContext(NonCancellable) { freshWhoopAccessTokenGesperrt() } }
 
+    /** Wartet, bis ein gerade laufender Whoop-Refresh fertig und gespeichert ist (vor der Übergabe an Jarvis). */
+    suspend fun warteAufWhoopRefresh() = whoopRefreshMutex.withLock { }
+
     private suspend fun freshWhoopAccessTokenGesperrt(): String? {
+        // An Jarvis übergeben: hier nie mehr einen Token tauschen (Jarvis hält jetzt den einzigen gültigen Refresh-Token).
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben(context)) {
+            Diag.i(DiagnosticArea.OAUTH, TAG, "Whoop: an Jarvis übergeben, kein Token-Refresh in Entropie Reductor")
+            return null
+        }
         val state = loadWhoopAuthState()
         if (!state.isAuthorized) {
             Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")

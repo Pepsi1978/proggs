@@ -116,6 +116,13 @@ class JarvisDienst : Service() {
         de.frank.jarvis.abgleich.GeraeteAbgleich.starte(this)
         // Jarvis' eigenes Gedächtnis und die Gespräche ebenso.
         de.frank.jarvis.abgleich.GedaechtnisAbgleich.starte(this)
+        // Biomarker: einmalige Übernahme aus Entropie Reductor (nur Handy, bis sie gelungen ist) und Spiegel fürs Tablet.
+        // Kein Abruf: Frische Daten holt allein BioAbruf (Bereich öffnen, ausdrücklicher Wunsch, vor der Tagesauswertung).
+        bereich.launch {
+            kotlinx.coroutines.delay(20_000)   // Verbindung und Gedächtnis haben beim Start Vorrang.
+            if (de.frank.jarvis.bio.BioUebernahme.noetig(app)) runCatching { de.frank.jarvis.bio.BioUebernahme.starte(app) }.onFailure { Logbuch.fehler("Biomarker-Übernahme", it) }
+            de.frank.jarvis.bio.BioSpiegel.starte(app)
+        }
         // Die erste Meldung des Rückrufs ist nur die Bestandsaufnahme: kein Abriss wegen eines Netzes aus einem früheren Dienstlauf.
         Tunnel.netzVergessen()
         runCatching { getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netz) }

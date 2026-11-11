@@ -68,6 +68,81 @@ class JarvisBruecke : ContentProvider() {
         fun datenbank(): AppDatabase
 
         fun abgleich(): ForegroundSyncManager
+
+        fun oauth(): de.frank.entropyreducer.data.remote.oauth.OAuthService
+
+        fun geheim(): de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+
+        fun einstellungen(): de.frank.entropyreducer.data.settings.AppSettings
+
+        fun karten(): de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
+
+        fun planer(): de.frank.entropyreducer.workers.BackgroundScheduler
+    }
+
+    // ---------------------------------------------------------------- Übergabe an Jarvis (11.11.2026)
+
+    /**
+     * Schritt 1 der Übergabe: einfrieren (ab jetzt kein Whoop-Token-Tausch und kein Biomarker-Abruf mehr hier), auf einen
+     * laufenden Abgleich und einen laufenden Whoop-Refresh warten, die Datenbank auf die Platte schreiben (WAL-Checkpoint) und
+     * Zugangsdaten samt Abrufständen herausgeben. Die Datenbank selbst holt Jarvis danach über [openFile] (Pfad „datenbank“).
+     * Wiederholbar: Ein zweiter Aufruf liefert denselben, eingefrorenen Stand.
+     */
+    private suspend fun uebergabeVorbereiten(ctx: android.content.Context): JSONObject {
+        val z = EntryPointAccessors.fromApplication(ctx, Zugang::class.java)
+        BiomarkerUebergabe.einfrieren(ctx)
+        runCatching { z.planer().ensureBiomarkerSyncJob() }   // bestellt den 30-Minuten-Abgleich ab
+        withTimeoutOrNull(150_000L) { z.abgleich().warteAufAbgleich() }
+        withTimeoutOrNull(60_000L) { z.oauth().warteAufWhoopRefresh() }
+        val g = z.geheim()
+        // Hängt noch eine Refresh-Antwort, wäre der Whoop-Zugang hier unsicher: dann lieber nicht übergeben.
+        if (g.whoopRefreshUnterwegsSeitMs > 0L && System.currentTimeMillis() - g.whoopRefreshUnterwegsSeitMs < 120_000L) {
+            BiomarkerUebergabe.zurueck(ctx)
+            return fehler("Gerade läuft noch eine Whoop-Anmeldung. Bitte in einer Minute erneut versuchen.")
+        }
+        runCatching { z.datenbank().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() } }
+        val e = z.einstellungen()
+        return JSONObject()
+            .put("version", 1)
+            .put("geheim", JSONObject()
+                .put("whoop_client_id", g.whoopClientId ?: JSONObject.NULL)
+                .put("whoop_client_secret", g.whoopClientSecret ?: JSONObject.NULL)
+                .put("whoop_auth_state_json", g.whoopAuthStateJson ?: JSONObject.NULL)
+                .put("whoop_access_token", g.whoopAccessToken ?: JSONObject.NULL)
+                .put("whoop_refresh_token", g.whoopRefreshToken ?: JSONObject.NULL)
+                .put("whoop_expiry", g.whoopTokenExpiryEpochSec)
+                .put("whoop_reauth_since_ms", g.whoopReauthSinceMs)
+                .put("whoop_reauth_probe_ms", g.whoopReauthProbeMs)
+                .put("whoop_refresh_unterwegs_seit_ms", g.whoopRefreshUnterwegsSeitMs)
+                .put("oura_personal_access_token", g.ouraPersonalAccessToken ?: JSONObject.NULL)
+                .put("oura_last_sync_ms", g.ouraLastSyncEpochMs))
+            .put("einstellungen", JSONObject()
+                .put("last_whoop_sync_ms", e.lastWhoopSyncMsFlow.first())
+                .put("last_whoop_gap_fill_ms", e.lastWhoopGapFillMsFlow.first())
+                .put("last_whoop_attempt_ms", e.lastWhoopAttemptMsFlow.first())
+                .put("last_oura_sync_ms", e.lastOuraSyncMsFlow.first())
+                .put("last_amazfit_sync_ms", e.lastAmazfitSyncMsFlow.first())
+                .put("last_zepp_body_sync_ms", e.lastZeppBodySyncMsFlow.first())
+                .put("last_refresh_footer_text", e.lastRefreshFooterFlow.first())
+                .put("last_refresh_footer_at_ms", e.lastRefreshFooterAtMsFlow.first())
+                .put("whoop_luecken_geprueft_bis", e.whoopLueckenGeprueftBisFlow.first())
+                .put("biomarker_sync_status_json", e.biomarkerSyncStatusFlow.first())
+                .put("whoop_abruf_stand_json", e.whoopAbrufStandFlow.first().alsJson())
+                .put("polar_full_resync_v1_done", e.isPolarFullResyncV1Done())
+                .put("deleted_workout_starts", JSONArray(e.getDeletedWorkoutStarts().map { it.toString() })))
+            .put("karten_reihenfolge", JSONArray(z.karten().rawSavedOrder.first()))
+            .put("zeilen", JSONObject().apply {
+                val db = z.datenbank().openHelper.readableDatabase
+                UEBERGABE_TABELLEN.forEach { t -> runCatching { db.query("SELECT COUNT(*) FROM $t").use { c -> c.moveToFirst(); put(t, c.getLong(0)) } } }
+            })
+    }
+
+    /** Die Datenbankdatei für Jarvis, nur lesend und nur über die Signatur-Erlaubnis erreichbar. */
+    override fun openFile(uri: Uri, mode: String): android.os.ParcelFileDescriptor? {
+        val ctx = context?.applicationContext ?: return null
+        if (uri.lastPathSegment != "datenbank" || mode != "r" || !BiomarkerUebergabe.abgegeben(ctx)) return null
+        val datei = ctx.getDatabasePath("entropy_reducer.db")
+        return android.os.ParcelFileDescriptor.open(datei, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
     /** Eine Messgröße. [richtung]: +1 = höher ist besser, -1 = niedriger ist besser, 0 = ohne Wertung. */
@@ -137,6 +212,11 @@ class JarvisBruecke : ContentProvider() {
         "hauttemperatur", "atemfrequenz", "tagesbelastung", "gewicht", "koerperfett", "vo2max",
     )
 
+    private val UEBERGABE_TABELLEN = listOf(
+        "biomarker_snapshots", "whoop_workouts", "amazfit_daily", "amazfit_workouts", "oura_daily_readiness", "oura_daily_sleep",
+        "oura_daily_activity", "oura_daily_resilience", "oura_sleep_detail", "oura_personal_info", "hc_value_cache",
+    )
+
     /** Werte, die sich über den Tag aufsummieren und erst am Tagesende feststehen. */
     private val TAGESSUMMEN = listOf("tagesbelastung", "energie_kcal", "schritte", "oura_aktivitaet")
 
@@ -155,7 +235,14 @@ class JarvisBruecke : ContentProvider() {
         val db = EntryPointAccessors.fromApplication(ctx, Zugang::class.java).datenbank()
         val heute = LocalDate.now()
         return when (methode) {
+            "uebergabe_vorbereiten" -> uebergabeVorbereiten(ctx)
+            "uebergabe_bestaetigen" -> { BiomarkerUebergabe.bestaetigen(ctx); JSONObject().put("ok", true) }
+            "uebergabe_zurueck" -> { BiomarkerUebergabe.zurueck(ctx); JSONObject().put("ok", !BiomarkerUebergabe.abgegeben(ctx)) }
+            "uebergabe_stand" -> JSONObject().put("abgegeben", BiomarkerUebergabe.abgegeben(ctx)).put("bestaetigt", BiomarkerUebergabe.bestaetigt(ctx))
+
             "abgleich" -> {
+                // Nach der Übergabe holt Entropie Reductor nichts mehr: Jarvis ruft selbst ab.
+                if (BiomarkerUebergabe.abgegeben(ctx)) return fehler("Die Biomarker laufen jetzt in Jarvis; Entropie Reductor ruft nichts mehr ab.")
                 val start = System.currentTimeMillis()
                 val abgleich = EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich()
                 // max_alter_min: nur abgleichen, wenn der letzte Versuch älter ist — so kann Jarvis vor
