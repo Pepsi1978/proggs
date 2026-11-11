@@ -1,7 +1,7 @@
 ## Arbeitsweise
 - [Commit](commit-nur-mit-pfaden.md): fremde Änderungen in der Datei → eigenen Teil vormerken, `git commit` ohne Pfade
 - [Parallele Sitzungen](parallele-sitzung-nimmt-dateien-mit.md): neue Pakete zuerst committen; Löschungen danach prüfen
-- [Lange Skripte](lange-skripte-per-write.md): >30 Zeilen nie als Bash-Heredoc, per Write in den Scratchpad
+- [Lange Skripte](lange-skripte-per-write.md): >30 Zeilen nie als Bash-Heredoc, per Write in den Scratchpad; PowerShell: „“ brechen jeden Befehl → Edit/Write
 - [Rückfrage](jarvis-rueckfrage-nie-stehen-bleiben.md): PC + Jarvis je 5 min, dann selbst entscheiden (auch Review)
 - [HTML](html-immer-in-chrome-oeffnen.md): sofort per Start-Process chrome öffnen
 - [Fehler an Anthropic](fehler-an-anthropic-als-github-issue.md): `gh issue create` in anthropics/claude-code, /feedback gesperrt

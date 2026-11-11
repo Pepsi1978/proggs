@@ -185,6 +185,26 @@
       "pruefung": "Nach 10 Sitzungen mit Ersetzskripten kein AssertionError mehr -> wirkt.",
       "ruecknahme": "Letzten Absatz aus lange-skripte-per-write.md entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
-    }
-  ]
+    },
+  {
+   "id": "M12",
+   "titel": "PowerShell: deutsche Anführungszeichen nie in Befehlen, per Edit/Write",
+   "datum": "2026-11-11T16:58",
+   "status": "aktiv",
+   "plattform": [
+    "windows"
+   ],
+   "beleg": "Sitzung e52f3b2f: 2 PowerShell-Aufrufe mit U+201E/U+201C scheiterten am Parser (~1 min plus Umweg); in 2 von 40 Sitzungen.",
+   "ort": [
+    "memory/lange-skripte-per-write.md (Absatz PowerShell)",
+    "memory/MEMORY.md (Zeile Lange Skripte)"
+   ],
+   "werkzeug": "PowerShell",
+   "aufruf_regex": "[„“]",
+   "fehler_regex": "Unerwartetes Token .„|Fehlender Eigenschaftsname nach Verweisoperator",
+   "pruefung": "Nach 10 Sitzungen ohne diesen Parserfehler -> wirkt.",
+   "ruecknahme": "Absatz PowerShell aus lange-skripte-per-write.md und den Zusatz in der MEMORY.md-Zeile entfernen.",
+   "kosten": "rund 60 Zeichen Dauerkontext in einer vorhandenen MEMORY.md-Zeile"
+  }
+ ]
 }
