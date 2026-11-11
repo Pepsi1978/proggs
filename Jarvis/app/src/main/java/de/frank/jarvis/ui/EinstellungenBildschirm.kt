@@ -470,16 +470,18 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
 
                 Unterzeile("Startzeit")
-                var startzeit by remember { mutableStateOf(e.auswertungStart) }
+                var startzeit by remember(e.auswertungStart) { mutableStateOf(e.auswertungStart) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("$startzeit Uhr", aktiv = true) { uhrWaehlen(activity, startzeit) { neu -> startzeit = neu; vm.auswertungStart(neu) } }
                 }
                 Text("Ab dieser Uhrzeit rechnet Jarvis den Abstand weiter, auch über Mitternacht: 18:00 und alle 12 Stunden ergibt 18 und 6 Uhr.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
                 Unterzeile("Höchstens pro Tag")
-                var proTag by remember { mutableStateOf(e.auswertungProTag) }
+                var proTag by remember(e.auswertungProTag) { mutableStateOf(e.auswertungProTag) }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0, 1, 2, 3, 4, 6).forEach { n ->
+                    // Nur sinnvolle Höchstzahlen (mehr als Läufe je Tag ändert nichts), der aktuelle Wert immer mit.
+                    val moeglich = (24 + e.auswertungAbstand - 1) / e.auswertungAbstand
+                    (listOf(0, 1, 2, 3, 4, 6).filter { it <= moeglich } + proTag).distinct().sorted().forEach { n ->
                         Chip(if (n == 0) "Alle" else "$n", aktiv = proTag == n) { proTag = n; vm.auswertungProTag(n) }
                     }
                 }

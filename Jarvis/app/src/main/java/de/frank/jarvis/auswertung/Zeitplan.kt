@@ -20,9 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Die Tagesauswertungs-Synchronisation: Jarvis schreibt die Tagesauswertung zu jeder vollen Stunde neu (oder im
- * eingestellten Abstand). Solange Frank laut Dienstplan schläft, ruht sie; die erste volle Stunde nach dem Schlaf
- * läuft immer. Es ist immer genau ein Wecker gestellt: der nächste. Nach jedem Lauf, beim Start der App, nach dem
+ * Die Tagesauswertungs-Synchronisation: Jarvis schreibt die Tagesauswertung im eingestellten Abstand ab der Startzeit neu
+ * (18:00 und alle 12 Stunden = 18 und 6 Uhr). Läufe, in die laut Dienstplan Schlaf fällt, entfallen; einen Extra-Lauf nach
+ * dem Aufwachen gibt es nicht mehr. Es ist immer genau ein Wecker gestellt: der nächste. Nach jedem Lauf, beim Start der App, nach dem
  * Einschalten des Handys und nach einer Zeit- oder Zeitzonenänderung wird neu gestellt. Der Wecker ist exakt und
  * geht auch im Stromsparmodus des Geräts.
  *
@@ -74,14 +74,21 @@ object Zeitplan {
         val k = schluessel(context)
         prueferSpeicher?.let { (alt, p) -> if (alt == k) return p }
         val schlaeft: (LocalDateTime) -> Boolean = (if (k.schlafpause) Register.alle(context).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.schlafzeiten() else null) ?: { false }
-        val schritt = k.abstand.coerceIn(1, 24) * 60
-        // In der Reihenfolge ab der Startzeit; bei einem Abstand, der 24 nicht teilt, beginnt das Raster jeden Tag neu an der Startzeit.
-        val raster = (0 until (1440 + schritt - 1) / schritt).map { (k.start + it * schritt) % 1440 }.distinct()
+        val schritt = k.abstand.coerceIn(1, 24) * 60L
+        // Fester Anker (Ortszeit, ohne Sommerzeitsprung gerechnet): So läuft das Raster auch bei Abständen, die 24 nicht teilen
+        // (5, 7 Stunden), lückenlos über Mitternacht weiter. Bei 1, 2, 3, 4, 6 und 12 Stunden liegt es jeden Tag gleich.
+        val anker = java.time.LocalDate.of(2026, 1, 1).atTime(k.start / 60, k.start % 60)
         val tage = java.util.concurrent.ConcurrentHashMap<java.time.LocalDate, List<Int>>()
         val p: (java.time.LocalDate) -> List<Int> = { tag ->
             tage.getOrPut(tag) {
-                val wach = raster.filter { m -> !schlaeft(tag.atTime(m / 60, m % 60)) }
-                (if (k.proTag > 0) wach.take(k.proTag) else wach).sorted()
+                val beginn = tag.atStartOfDay()
+                val abAnker = ChronoUnit.MINUTES.between(anker, beginn)
+                var t = anker.plusMinutes(Math.floorDiv(abAnker + schritt - 1, schritt) * schritt)
+                val raster = mutableListOf<Int>()
+                while (t.toLocalDate() == tag) { raster += t.hour * 60 + t.minute; t = t.plusMinutes(schritt) }
+                // Für die Höchstzahl in der Reihenfolge ab der Startzeit gezählt (18:00, dann 6:00), danach nach Uhrzeit sortiert.
+                val reihe = raster.sortedBy { (it - k.start + 1440) % 1440 }.filter { m -> !schlaeft(tag.atTime(m / 60, m % 60)) }
+                (if (k.proTag > 0) reihe.take(k.proTag) else reihe).sorted()
             }
         }
         prueferSpeicher = k to p

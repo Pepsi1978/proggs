@@ -16,6 +16,9 @@ import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.AEADBadTagException
 
+/** Gültige Uhrzeit HH:MM (00:00 bis 23:59). */
+private val UHRZEIT_HHMM = Regex("""([01]\d|2[0-3]):[0-5]\d""")
+
 /** Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]). */
 private val RECHNER = listOf("mac", "windows", "server")
 
@@ -387,10 +390,10 @@ class Einstellungen private constructor(context: Context) {
      * = 6 und 18 Uhr). Ohne gespeicherten Wert gilt die bisherige früheste Stunde.
      */
     var auswertungStart: String
-        get() = prefs.getString("auswertung_start", null)?.takeIf { Regex("""\d{2}:\d{2}""").matches(it) } ?: String.format(java.util.Locale.GERMAN, "%02d:00", auswertungFrueheste)
-        set(v) = put { putString("auswertung_start", v) }
-    /** [auswertungStart] als Minuten seit Mitternacht. */
-    val auswertungStartMinuten: Int get() = auswertungStart.split(":").let { ((it[0].toIntOrNull() ?: 10) * 60 + (it[1].toIntOrNull() ?: 0)).coerceIn(0, 1439) }
+        get() = prefs.getString("auswertung_start", null)?.takeIf { UHRZEIT_HHMM.matches(it) } ?: String.format(java.util.Locale.GERMAN, "%02d:00", auswertungFrueheste)
+        set(v) { require(UHRZEIT_HHMM.matches(v)) { "Startzeit „$v“ ist keine Uhrzeit HH:MM." }; put { putString("auswertung_start", v) } }
+    /** [auswertungStart] als Minuten seit Mitternacht (der Getter liefert immer eine gültige Uhrzeit). */
+    val auswertungStartMinuten: Int get() = auswertungStart.let { it.substring(0, 2).toInt() * 60 + it.substring(3, 5).toInt() }
 
     // ---- Biomarker (in Jarvis integriert, früher Entropie Reductor) ----
     /** Quelle abrufen: whoop, oura, waage, training. Pausiert = nicht gefragt, keine Störungsmeldung. */
