@@ -234,7 +234,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         // Rechts oben ein fester Platz: mit Text der Papierkorb (leert die ganze Blase), gleich danach „Rückgängig“.
         // Immer gleich breit und hoch, damit die Blase beim ersten Zeichen und beim Leeren nicht springt.
         val leerbar = vm.entwurf.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit
-        if (!kompakt) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
+        // Ist die Blase begrenzt (StartBildschirm lässt dem Symbolstapel seinen Mindestplatz), wird nur das Textfeld kürzer und
+        // scrollt in sich; Anhänge und die Knopfzeile werden zuerst gemessen und bleiben ganz.
+        if (!kompakt) Row(Modifier.weight(1f, fill = false).fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
             Box(Modifier.weight(1f).padding(top = 10.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
                 BasicTextField(
@@ -422,12 +424,27 @@ val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2 - SCHWEBE_VERSATZ
 /** Rechter Rand der Gesprächsliste: unverändert bis zur alten linken Kante der Symbolspalte und etwa ein Millimeter Luft (1 mm ≈ 6 dp). */
 val SCHWEBE_FREI_RECHTS = SCHWEBE_RECHTS + SCHWEBE_VERSATZ + SCHWEBE_GROESSE + 6.dp
 
-/** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
-fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
+/**
+ * Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. [stufe] verdichtet ihn bei wenig Platz:
+ * 0 = voll, 1 = ohne den freien Platz, 2 = nur Neue Session, Nachtrag, Programmierer und Pfeil.
+ */
+fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false, stufe: Int = 0): androidx.compose.ui.unit.Dp {
     // Hell/Dunkel, Neue Session, Fernwartung, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
     // und der freie Platz zwischen den übrigen Symbolen und den Programmier-Symbolen.
-    val anzahl = 4 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
-    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_FREIPLATZ + SCHWEBE_LUECKE
+    val anzahl = (if (stufe >= 2) 2 else 4 + (if (papierkorb) 1 else 0)) + (if (nachtrag) 1 else 0)
+    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + (if (stufe >= 1) 0.dp else SCHWEBE_FREIPLATZ) + SCHWEBE_LUECKE
+}
+
+/** Abstand des Stapels zur Eingabeblase (StartBildschirm). */
+val SCHWEBE_UNTEN = 2.dp
+
+/** Mindestplatz des verdichteten Stapels; so viel lässt die Eingabeblase über sich frei, auch bei sehr langem Text. */
+val SCHWEBE_MINDEST = schwebeHoehe(nachtrag = true, stufe = 2) + SCHWEBE_UNTEN
+
+/** Die dichteste Stufe, bei der der Stapel ganz in [verfuegbar] passt (0, solange die Höhe noch nicht gemessen ist). */
+fun schwebeStufe(verfuegbar: androidx.compose.ui.unit.Dp, nachtrag: Boolean, papierkorb: Boolean): Int {
+    if (verfuegbar <= 0.dp) return 0
+    return (0..1).firstOrNull { schwebeHoehe(nachtrag, papierkorb, it) + SCHWEBE_UNTEN <= verfuegbar } ?: 2
 }
 
 /**
@@ -438,7 +455,7 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compo
  * leicht schimmernder, durchscheinender Grund.
  */
 @Composable
-fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
+fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: Int = 0) {
     val f = LocalFarben.current
     // Nur die frische Frage zum gerade abgeschickten Auftrag (siehe ProgrammierFaehigkeit.frischeWahlen), und solange Frank nicht
     // schon den nächsten Entwurf schreibt. Alte, liegengebliebene Wahlen zeigen unten keine Knöpfe.
@@ -459,8 +476,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         ) {
         Column(horizontalAlignment = Alignment.End) {
         // Hell → Automatisch (nach der Sonne, gespeichert als „system“) → Dunkel → Hell, ganz oben im Stapel. Das Symbol zeigt den aktuellen Modus.
+        // Bei wenig Platz (Stufe 2, siehe schwebeStufe) fallen Hell/Dunkel, Papierkorb und Fernwartung weg, damit
+        // Neue Session, Nachtrag und Programmierer immer sichtbar bleiben.
+        val voll = stufe < 2
         val modus = vm.einstellungen.modus
-        SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
+        if (voll) SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
             vm.einstellungen.modus = neu
             vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" }
@@ -468,11 +488,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             Icon(when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
                 null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
         }
-        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        if (voll) Spacer(Modifier.height(SCHWEBE_ABSTAND))
         // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
         // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
         var loeschenZiel by remember { mutableStateOf<String?>(null) }
-        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
+        if (voll && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) {
             SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
                 Icon(Icons.Rounded.Delete, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
             }
@@ -507,9 +527,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         ) }
         // Zwischen den übrigen Symbolen und den Programmier-Symbolen (Fernwartung, Nachtrag, Programmierer) bleibt immer genau ein Platz frei,
         // egal ob Papierkorb oder Nachtrag gerade zu sehen sind.
-        Spacer(Modifier.height(SCHWEBE_FREIPLATZ))
-        FernwartungsSymbol()
-        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        if (stufe < 1) Spacer(Modifier.height(SCHWEBE_FREIPLATZ))
+        if (voll) {
+            FernwartungsSymbol()
+            Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        }
         if (vm.nachtragMoeglich) {
             SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
                 Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
