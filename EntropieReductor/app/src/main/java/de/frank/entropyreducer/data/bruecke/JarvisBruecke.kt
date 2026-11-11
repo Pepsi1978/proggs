@@ -100,7 +100,10 @@ class JarvisBruecke : ContentProvider() {
             BiomarkerUebergabe.zurueck(ctx)
             return fehler("Gerade läuft noch eine Whoop-Anmeldung. Bitte in einer Minute erneut versuchen.")
         }
-        runCatching { z.datenbank().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() } }
+        // Ein fester Schnappschuss (VACUUM INTO): Jarvis kopiert und zählt genau diesen Stand, auch wenn Entropie Reductor danach
+        // noch etwas schreibt (Aufräumen beim Start).
+        val schnappschuss = schnappschussDatei(ctx).apply { delete() }
+        z.datenbank().openHelper.writableDatabase.execSQL("VACUUM INTO ?", arrayOf<Any>(schnappschuss.absolutePath))
         val e = z.einstellungen()
         return JSONObject()
             .put("version", 1)
@@ -132,16 +135,19 @@ class JarvisBruecke : ContentProvider() {
                 .put("deleted_workout_starts", JSONArray(e.getDeletedWorkoutStarts().map { it.toString() })))
             .put("karten_reihenfolge", JSONArray(z.karten().rawSavedOrder.first()))
             .put("zeilen", JSONObject().apply {
-                val db = z.datenbank().openHelper.readableDatabase
-                UEBERGABE_TABELLEN.forEach { t -> runCatching { db.query("SELECT COUNT(*) FROM $t").use { c -> c.moveToFirst(); put(t, c.getLong(0)) } } }
+                android.database.sqlite.SQLiteDatabase.openDatabase(schnappschuss.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY).use { db ->
+                    UEBERGABE_TABELLEN.forEach { t -> runCatching { db.rawQuery("SELECT COUNT(*) FROM $t", null).use { c -> c.moveToFirst(); put(t, c.getLong(0)) } } }
+                }
             })
     }
 
-    /** Die Datenbankdatei für Jarvis, nur lesend und nur über die Signatur-Erlaubnis erreichbar. */
+    private fun schnappschussDatei(ctx: android.content.Context) = java.io.File(ctx.cacheDir, "jarvis_uebergabe.db")
+
+    /** Der Schnappschuss der Übergabe für Jarvis, nur lesend und nur über die Signatur-Erlaubnis erreichbar. */
     override fun openFile(uri: Uri, mode: String): android.os.ParcelFileDescriptor? {
         val ctx = context?.applicationContext ?: return null
         if (uri.lastPathSegment != "datenbank" || mode != "r" || !BiomarkerUebergabe.abgegeben(ctx)) return null
-        val datei = ctx.getDatabasePath("entropy_reducer.db")
+        val datei = schnappschussDatei(ctx).takeIf { it.exists() } ?: return null
         return android.os.ParcelFileDescriptor.open(datei, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
@@ -236,7 +242,9 @@ class JarvisBruecke : ContentProvider() {
         val heute = LocalDate.now()
         return when (methode) {
             "uebergabe_vorbereiten" -> uebergabeVorbereiten(ctx)
-            "uebergabe_bestaetigen" -> { BiomarkerUebergabe.bestaetigen(ctx); JSONObject().put("ok", true) }
+            "uebergabe_bestaetigen" -> { BiomarkerUebergabe.bestaetigen(ctx); schnappschussDatei(ctx).delete(); JSONObject().put("ok", true) }
+            // Tablet: Dort übernimmt Jarvis keine Daten (es spiegelt das Handy), Entropie Reductor soll aber ebenfalls nichts mehr abrufen.
+            "uebergabe_nur_einfrieren" -> { BiomarkerUebergabe.einfrieren(ctx); runCatching { EntryPointAccessors.fromApplication(ctx, Zugang::class.java).planer().ensureBiomarkerSyncJob() }; BiomarkerUebergabe.bestaetigen(ctx); JSONObject().put("ok", true) }
             "uebergabe_zurueck" -> { BiomarkerUebergabe.zurueck(ctx); JSONObject().put("ok", !BiomarkerUebergabe.abgegeben(ctx)) }
             "uebergabe_stand" -> JSONObject().put("abgegeben", BiomarkerUebergabe.abgegeben(ctx)).put("bestaetigt", BiomarkerUebergabe.bestaetigt(ctx))
 

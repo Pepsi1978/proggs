@@ -45,13 +45,13 @@ object Zeitplan {
     val naechsterLauf: StateFlow<LocalDateTime?> = _naechsterLauf.asStateFlow()
 
     /** Zwischenspeicher je Minute und Einstellung: Prüfer (Kalender-Abfrage) und nächster Lauf. */
-    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean, val proTag: Int)
+    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean, val proTag: Int, val frueheste: Int)
     @Volatile private var prueferSpeicher: Pair<Schluessel, (LocalDateTime) -> Boolean>? = null
     @Volatile private var naechsterSpeicher: Pair<Pair<Schluessel, LocalDateTime>, LocalDateTime?>? = null
 
     private fun schluessel(context: Context): Schluessel {
         val e = Einstellungen.get(context)
-        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag)
+        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag, e.auswertungFrueheste)
     }
 
     /** Vergisst die zwischengespeicherten Rechnungen, etwa nach einer Änderung der Einstellungen oder der Uhrzeit. */
@@ -74,13 +74,18 @@ object Zeitplan {
         // letzte fällige (veraltet, Nachholen) dasselbe sagen.
         val tage = java.util.concurrent.ConcurrentHashMap<java.time.LocalDate, Set<Int>>()
         fun angenommen(tag: java.time.LocalDate): Set<Int> = tage.getOrPut(tag) {
+            if (k.proTag == 0) return@getOrPut (0..23).filter { kandidat(tag.atTime(it, 0)) }.toSet()
+            // Gezählt wird ab dem Aufwachen: Der erste Lauf ist die erste wache Stunde nach dem Schlaf laut Dienstplan, sonst die
+            // erste wache Stunde ab [Schluessel.frueheste] (freier Tag ohne Schlafzeit). Jeder weitere folgt [abstand] Stunden später
+            // (schläft Frank dann, die nächste wache Stunde). Tagdienst (Schlaf 20–4): 4 und 10 Uhr; Nachtdienst (Schlaf 6–15):
+            // 15 und 21 Uhr; freier Tag: 10 und 16 Uhr.
+            val wach: (Int) -> Boolean = { h -> !schlaeft(tag.atTime(h, 0)) }
             val stunden = mutableListOf<Int>()
-            for (h in 0..23) {
-                val t = tag.atTime(h, 0)
-                if (!kandidat(t)) continue
-                if (stunden.isNotEmpty() && h - stunden.last() < abstand) continue
+            var h = (0..23).firstOrNull { wach(it) && (schlaeft(tag.atTime(it, 0).minusHours(1)) || it >= k.frueheste) } ?: return@getOrPut emptySet()
+            while (h <= 23 && stunden.size < k.proTag) {
                 stunden += h
-                if (k.proTag in 1..stunden.size) break
+                h += abstand
+                while (h <= 23 && !wach(h)) h++
             }
             stunden.toSet()
         }

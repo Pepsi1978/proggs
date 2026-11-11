@@ -59,13 +59,15 @@ object BioUebernahme {
                     val abweichend = AppDatabase.TABELLEN.filter { t -> erwartet.has(t) && erwartet.optLong(t) != gezaehlt[t] }
                     check(abweichend.isEmpty()) { "Zeilenzahl weicht ab: " + abweichend.joinToString { "$it ${gezaehlt[it]} statt ${erwartet.optLong(it)}" } }
                 } finally {
-                    kopie.delete(); File(kopie.path + "-journal").delete()
+                    listOf("", "-journal", "-wal", "-shm").forEach { File(kopie.path + it).delete() }
                 }
-                paket.optJSONObject("geheim")?.let { if (!BioModul.geheim.hatZugang) BioModul.geheim.uebernimm(it) }
+                vergleiche(app, adresse)
+                // Zugangsdaten erst nach bestandenem Vergleich, und solange die Übernahme nicht gilt, immer die frischen aus
+                // Entropie Reductor: Ein früherer, gescheiterter Versuch darf keinen inzwischen verbrauchten Whoop-Token hinterlassen.
+                paket.optJSONObject("geheim")?.let { BioModul.geheim.uebernimm(it) }
                 paket.optJSONObject("einstellungen")?.let { BioModul.einstellungen.uebernimm(it) }
                 paket.optJSONArray("karten_reihenfolge")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
                     ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
-                vergleiche(app, adresse)
             } catch (e: Exception) {
                 rufe(app, adresse, "uebergabe_zurueck")
                 Logbuch.fehler("Biomarker-Übernahme", e)
@@ -95,7 +97,9 @@ object BioUebernahme {
                     val gemeinsam = spalten("er", t).let { er -> spalten("main", t).filter { it in er } }
                     if (gemeinsam.isEmpty()) return@forEach
                     val liste = gemeinsam.joinToString(", ") { "`$it`" }
-                    db.execSQL("INSERT OR REPLACE INTO main.`$t` ($liste) SELECT $liste FROM er.`$t`")
+                    // Erst leeren: Reste eines früheren Versuchs dürfen die Zählung nicht verfälschen (vor der Übernahme gehört hier nichts Jarvis).
+                    db.execSQL("DELETE FROM main.`$t`")
+                    db.execSQL("INSERT INTO main.`$t` ($liste) SELECT $liste FROM er.`$t`")
                 }
                 db.setTransactionSuccessful()
             } finally {

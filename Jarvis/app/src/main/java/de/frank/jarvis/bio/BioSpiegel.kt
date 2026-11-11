@@ -51,7 +51,26 @@ object BioSpiegel {
     /** Beim Start des Dienstes: Das Handy lädt einen noch nicht gespiegelten Stand hoch, das Tablet holt den neuesten. */
     fun starte(context: Context) {
         val app = context.applicationContext
-        if (Geraet.istTablet) BioModul.bereich.launch { holen(app) } else geaendert(app, "Start")
+        if (Geraet.istTablet) BioModul.bereich.launch { einfrierenAufDemTablet(app); holen(app) } else geaendert(app, "Start")
+    }
+
+    /**
+     * Tablet: Ist dort Entropie Reductor installiert, soll es ebenfalls nichts mehr abrufen und keinen Whoop-Token mehr tauschen
+     * (sonst gäbe es zwei Whoop-Abrufer). Einmalig, sobald seine Fassung die Übergabe kennt.
+     */
+    private fun einfrierenAufDemTablet(app: Context) {
+        val p = prefs(app)
+        if (p.getBoolean("er_eingefroren", false)) return
+        for (adresse in listOf("content://de.frank.entropyreducer.jarvis", "content://de.frank.entropyreducer.debug.jarvis")) {
+            val antwort = runCatching {
+                app.contentResolver.call(Uri.parse(adresse), "uebergabe_nur_einfrieren", null, android.os.Bundle())?.getString("json")?.let(::JSONObject)
+            }.getOrNull() ?: continue
+            if (antwort.optBoolean("ok")) {
+                p.edit().putBoolean("er_eingefroren", true).apply()
+                Logbuch.system("Biomarker", "Entropie Reductor auf dem Tablet ruft keine Biomarker mehr ab")
+            }
+            return
+        }
     }
 
     /** Daten haben sich geändert (nur Handy): gesammelt nach einer kurzen Pause hochladen. */
@@ -116,6 +135,12 @@ object BioSpiegel {
                     if (!r.isSuccessful) throw IOException("Server ${r.code}")
                     JSONObject(r.body?.string().orEmpty())
                 }
+                // Neu aufgesetzter Speicher am Server: Der gemerkte Zeiger gilt nicht mehr, von vorn lesen.
+                val instanz = antwort.optString("instanz")
+                if (seit != 0L && (antwort.optBoolean("neuaufbau") || (p.getString("instanz", "").orEmpty().isNotEmpty() && p.getString("instanz", "") != instanz))) {
+                    seit = 0L; p.edit().putString("instanz", instanz).putString("eingespielt", "").apply(); continue
+                }
+                p.edit().putString("instanz", instanz).apply()
                 val docs = antwort.optJSONArray("docs")
                 for (i in 0 until (docs?.length() ?: 0)) {
                     val d = docs!!.getJSONObject(i)

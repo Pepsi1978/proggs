@@ -380,6 +380,8 @@ class Einstellungen private constructor(context: Context) {
      * Zwischen zwei Läufen liegt mindestens der eingestellte Abstand. Ausdrücklich angestoßene Auswertungen zählen nicht mit.
      */
     var auswertungProTag: Int get() = prefs.getInt("auswertung_pro_tag", 2).coerceIn(0, 12); set(v) = put { putInt("auswertung_pro_tag", v) }
+    /** Erste Stunde des Tages für den ersten automatischen Lauf, wenn der Dienstplan keine Schlafzeit nennt (freier Tag). */
+    var auswertungFrueheste: Int get() = prefs.getInt("auswertung_frueheste", 10).coerceIn(0, 23); set(v) = put { putInt("auswertung_frueheste", v) }
 
     // ---- Biomarker (in Jarvis integriert, früher Entropie Reductor) ----
     /** Quelle abrufen: whoop, oura, waage, training. Pausiert = nicht gefragt, keine Störungsmeldung. */

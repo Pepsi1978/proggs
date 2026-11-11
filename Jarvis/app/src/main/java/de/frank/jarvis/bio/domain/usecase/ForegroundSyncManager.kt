@@ -226,9 +226,11 @@ class ForegroundSyncManager(
         val grenzTag = java.time.LocalDate.now().minusDays(10).toString()
         fun zeile(sql: String): List<String> = db.query(sql).use { c -> if (c.moveToFirst()) (0 until c.columnCount).map { c.getString(it) ?: "" } else emptyList() }
         fun ms(text: String?): Long = text?.toDoubleOrNull()?.toLong() ?: 0L
-        val wh = zeile("SELECT COUNT(*), MAX(capturedAt), TOTAL(recoveryScore), TOTAL(hrvMs), TOTAL(restingHeartRate), TOTAL(sleepTotalMinutes), TOTAL(dayStrain) FROM biomarker_snapshots WHERE capturedAt >= $grenze")
+        // Nur abgeschlossene Messungen (Schlaf, Erholung, HRV, Ruhepuls, Readiness, Schlafscore): Belastung, Energie, Schritte und
+        // der Aktivitätsscore wachsen über den Tag und würden sonst jeden Abruf als „neu“ melden.
+        val wh = zeile("SELECT COUNT(*), MAX(capturedAt), TOTAL(recoveryScore), TOTAL(hrvMs), TOTAL(restingHeartRate), TOTAL(sleepTotalMinutes), TOTAL(sleepDeepMinutes) FROM biomarker_snapshots WHERE capturedAt >= $grenze")
         val whNeu = zeile("SELECT MAX(capturedAt) FROM biomarker_snapshots").firstOrNull()
-        val ou = zeile("SELECT (SELECT COUNT(*) || ':' || TOTAL(score) FROM oura_daily_readiness WHERE day >= '$grenzTag'), (SELECT COUNT(*) || ':' || TOTAL(score) FROM oura_daily_sleep WHERE day >= '$grenzTag'), (SELECT COUNT(*) || ':' || TOTAL(score) || ':' || TOTAL(steps) FROM oura_daily_activity WHERE day >= '$grenzTag'), (SELECT COUNT(*) FROM oura_sleep_detail WHERE day >= '$grenzTag')")
+        val ou = zeile("SELECT (SELECT COUNT(*) || ':' || TOTAL(score) FROM oura_daily_readiness WHERE day >= '$grenzTag'), (SELECT COUNT(*) || ':' || TOTAL(score) FROM oura_daily_sleep WHERE day >= '$grenzTag'), (SELECT COUNT(*) FROM oura_daily_resilience WHERE day >= '$grenzTag'), (SELECT COUNT(*) FROM oura_sleep_detail WHERE day >= '$grenzTag')")
         val ouNeu = zeile("SELECT MAX(day) FROM oura_daily_readiness").firstOrNull()
         val wa = zeile("SELECT COUNT(*), MAX(timestampMs), TOTAL(value) FROM hc_value_cache WHERE metric LIKE 'zepp_%'")
         val tr = zeile("SELECT COUNT(*), MAX(startMs), TOTAL(COALESCE(distanceMeters, 0)) FROM amazfit_workouts")

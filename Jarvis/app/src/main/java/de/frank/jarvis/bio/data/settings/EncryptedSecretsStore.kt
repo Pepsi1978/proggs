@@ -100,10 +100,10 @@ class EncryptedSecretsStore(context: Context) {
     /** Ist schon ein Zugang da? Dann überschreibt eine erneute Übernahme nichts (der Whoop-Token könnte hier schon getauscht sein). */
     val hatZugang: Boolean get() = !whoopAuthStateJson.isNullOrBlank() || !ouraPersonalAccessToken.isNullOrBlank()
 
-    /** Übernahme aus Entropie Reductor: genau die Biomarker-Schlüssel, in einem Schreibvorgang (commit). */
+    /** Übernahme aus Entropie Reductor: genau die Biomarker-Schlüssel, in einem Schreibvorgang (commit). Fehlt ein Wert dort, wird er hier entfernt. */
     fun uebernimm(werte: org.json.JSONObject) {
         val e = prefs.edit()
-        TEXT.forEach { k -> if (werte.has(k) && !werte.isNull(k)) e.putString(k, werte.getString(k)) }
+        TEXT.forEach { k -> if (werte.has(k) && !werte.isNull(k)) e.putString(k, werte.getString(k)) else e.remove(k) }
         LANG.forEach { k -> if (werte.has(k)) e.putLong(k, werte.optLong(k)) }
         e.commit()
     }
