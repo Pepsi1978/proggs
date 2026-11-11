@@ -80,8 +80,11 @@ class TasksBridge(private val context: Context) {
         }
 
         /** Weckzeit des Weckers in Minuten ab Mitternacht, die Grenze für [nachWeckzeit]. */
+        /** Beim Sonnenwecker die Minute des Termins, der auch den Klingeltag bestimmt (nextAt, sonst neu berechnet). */
         fun weckMinute(alarm: Alarm): Int = if (alarm.sunMode.isBlank()) alarm.hour * 60 + alarm.minute
-            else alarm.timeLabel.split(':').let { it[0].toInt() * 60 + it[1].toInt() }
+            else alarm.nextAt.takeIf { it > System.currentTimeMillis() }
+                ?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).let { z -> z.hour * 60 + z.minute } }
+                ?: alarm.sonnenMinute() ?: (alarm.hour * 60 + alarm.minute)
 
         /**
          * Ob eine Aufgabe noch vorgelesen wird: ohne Grenze, ohne Uhrzeit ([minuten] < 0) oder überfällig aus einem früheren

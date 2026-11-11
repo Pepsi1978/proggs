@@ -72,14 +72,22 @@ object SchlafPlan {
      * Ob ein anderer aktiver Wecker mit Schlafdauer und Erinnerung schon während der geplanten Schlafzeit klingelt. Dann ist
      * dessen frühere Weckzeit die tatsächlich nächste, und nur seine Erinnerung zählt für diese Nacht.
      */
-    fun verdeckt(v: Vorkommen, andere: List<Alarm>, anderAn: (Alarm) -> Boolean, zone: ZoneId = ZoneId.systemDefault()): Boolean =
-        andere.any { a -> a.id != v.alarmId && a.sleepMinutes > 0 && anderAn(a) && wakeTimes(a, zone).any { w -> w > v.bedtime && w < v.wakeAt } }
+    /**
+     * [zaehlt] entscheidet, ob die Erinnerung des verdeckenden Termins wirklich kommt oder kam (noch in der Zukunft oder schon
+     * zugestellt). Ein Wecker, dessen Erinnerung verpasst wurde (z. B. spät angelegt), verschluckt die andere nicht.
+     * [zeiten] liefert die Weckzeiten je Wecker, damit ein Durchlauf sie nur einmal berechnet.
+     */
+    fun verdeckt(v: Vorkommen, andere: List<Alarm>, anderAn: (Alarm) -> Boolean, zone: ZoneId = ZoneId.systemDefault(),
+        zaehlt: (Alarm, Vorkommen) -> Boolean = { _, _ -> true }, zeiten: (Alarm) -> List<Long> = { wakeTimes(it, zone) }): Boolean =
+        andere.any { a -> a.id != v.alarmId && a.sleepMinutes > 0 && anderAn(a) &&
+            zeiten(a).any { w -> w > v.bedtime && w < v.wakeAt && zaehlt(a, Vorkommen(a.id, w, a.sleepMinutes)) } }
 
     /** First occurrence whose reminder still lies in the future; a missed reminder is never caught up. */
     fun next(alarm: Alarm, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES,
-        andere: List<Alarm> = emptyList(), anderAn: (Alarm) -> Boolean = { true }): Vorkommen? =
+        andere: List<Alarm> = emptyList(), anderAn: (Alarm) -> Boolean = { true },
+        zaehlt: (Alarm, Vorkommen) -> Boolean = { _, _ -> true }, zeiten: (Alarm) -> List<Long> = { wakeTimes(it, zone) }): Vorkommen? =
         if (!enabledSetting) null else leadMs(leadMinutes).let { lead ->
-            occurrences(alarm, zone).firstOrNull { it.trigger(lead) > now && !verdeckt(it, andere, anderAn, zone) }
+            occurrences(alarm, zone).firstOrNull { it.trigger(lead) > now && !verdeckt(it, andere, anderAn, zone, zaehlt, zeiten) }
         }
 
     /**
@@ -91,7 +99,9 @@ object SchlafPlan {
     fun gueltig(alarm: Alarm?, wakeAt: Long, sleepMinutes: Int, now: Long, enabledSetting: Boolean,
         zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES): Vorkommen? {
         if (alarm == null || !enabledSetting || alarm.sleepMinutes != sleepMinutes) return null
-        if (wakeAt !in wakeTimes(alarm, zone)) return null
+        // Sonnenwecker: eine leicht andere Ortung kann die Minute verschieben; zwei Minuten Spielraum verwerfen die Erinnerung nicht.
+        val zeiten = wakeTimes(alarm, zone)
+        if (wakeAt !in zeiten && (alarm.sunMode.isBlank() || zeiten.none { kotlin.math.abs(it - wakeAt) <= 2 * 60_000L })) return null
         val occurrence = Vorkommen(alarm.id, wakeAt, sleepMinutes)
         val lead = leadMs(leadMinutes)
         // Nur ohne Vorlauf greift die Karenz, und nie über die Weckzeit hinaus.
@@ -291,19 +301,38 @@ object SchlafErinnerung {
     fun sync(context: Context, alarmId: String) = synchronized(lock) {
         // Jeder Wecker kann die Erinnerung eines anderen verdecken (frühere Weckzeit in dessen Schlafzeit), deshalb alle planen.
         val alle = try { AlarmStore.get(context).all() } catch (e: Exception) { Log.w(TAG, "Wecker unlesbar", e); emptyList() }
-        planeEinen(context, alarmId, alle)
-        alle.filter { it.id != alarmId }.forEach { planeEinen(context, it.id, alle) }
+        val durchlauf = Durchlauf(context, alle)
+        planeEinen(context, alarmId, durchlauf)
+        alle.filter { it.id != alarmId }.forEach { planeEinen(context, it.id, durchlauf) }
         abgleichen(context, excludeId = null)
         SchlafAnsage.vorbereitenAnstossen(context)
     }
 
-    private fun planeEinen(context: Context, alarmId: String, alle: List<Alarm>) {
+    /** Ein Planungsdurchlauf: Weckzeiten je Wecker nur einmal berechnet, Zustellmarken einmal gelesen. */
+    private class Durchlauf(context: Context, val alle: List<Alarm>) {
+        val now = System.currentTimeMillis()
+        val global = enabled(context)
+        private val lead = leadMinutes(context)
+        private val zeitenCache = mutableMapOf<String, List<Long>>()
+        private val marken = try { SchlafPlan.Marken.parse(prefs(context).getString(MARKS_KEY, null)) } catch (e: Exception) { SchlafPlan.Marken(emptyMap()) }
+        fun zeiten(a: Alarm) = zeitenCache.getOrPut(a.id) { SchlafPlan.wakeTimes(a) }
+        /** Die Erinnerung des verdeckenden Termins kommt noch oder ist schon zugestellt worden. */
+        fun zaehlt(a: Alarm, o: SchlafPlan.Vorkommen) = o.trigger(SchlafPlan.leadMs(SchlafPlan.vorlauf(a, lead))) > now || marken.enthaelt(o)
+        fun naechstes(a: Alarm) = SchlafPlan.next(a, now, SchlafPlan.an(a, global), leadMinutes = SchlafPlan.vorlauf(a, lead),
+            andere = alle, anderAn = { SchlafPlan.an(it, global) }, zaehlt = ::zaehlt, zeiten = ::zeiten)
+    }
+
+    /** Für die Vorbereitung der Ansage: genau die Vorkommen, die gerade geplant werden. */
+    fun geplanteVorkommen(context: Context): List<SchlafPlan.Vorkommen> = synchronized(lock) {
+        val d = Durchlauf(context, AlarmStore.get(context).all())
+        d.alle.mapNotNull { d.naechstes(it) }
+    }
+
+    private fun planeEinen(context: Context, alarmId: String, durchlauf: Durchlauf) {
         try {
-            val current = alle.find { it.id == alarmId }
+            val current = durchlauf.alle.find { it.id == alarmId }
             val vorlauf = SchlafPlan.vorlauf(current, leadMinutes(context))
-            val global = enabled(context)
-            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), SchlafPlan.an(it, global), leadMinutes = vorlauf,
-                andere = alle, anderAn = { a -> SchlafPlan.an(a, global) }) }
+            val occurrence = current?.let { durchlauf.naechstes(it) }
             if (occurrence == null) cancelPlan(context, alarmId)
             else {
                 val manager = context.getSystemService(AlarmManager::class.java)
@@ -330,7 +359,8 @@ object SchlafErinnerung {
     fun syncAll(context: Context) = synchronized(lock) {
         try {
             val alarms = AlarmStore.get(context).all()
-            alarms.forEach { planeEinen(context, it.id, alarms) }
+            val durchlauf = Durchlauf(context, alarms)
+            alarms.forEach { planeEinen(context, it.id, durchlauf) }
             SchlafAnsage.vorbereitenAnstossen(context)
             // Status of alarms that no longer exist is dropped.
             val ids = alarms.map { it.id }.toSet()
@@ -401,8 +431,6 @@ object SchlafErinnerung {
                 val eigener = store.get(alarmId)
                 val occurrence = SchlafPlan.gueltig(eigener, wakeAt, sleepMinutes, now, SchlafPlan.an(eigener, setting),
                     leadMinutes = SchlafPlan.vorlauf(eigener, leadMinutes(context))) ?: return false
-                // Inzwischen klingelt ein anderer Wecker früher in dieser Schlafzeit: dessen Erinnerung gilt, diese entfällt.
-                if (SchlafPlan.verdeckt(occurrence, store.all(), { SchlafPlan.an(it, setting) })) return false
                 val marks = SchlafPlan.Marken.parse(store.prefs.getString(MARKS_KEY, null)).bereinigt(now)
                 val memoryKey = "${occurrence.group}|${occurrence.key}"
                 if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return false

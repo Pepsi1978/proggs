@@ -84,11 +84,16 @@ data class Alarm(
     /** Versatz zum Sonnenzeitpunkt in Minuten (−60 bis +90), nur mit [sunMode]. */
     val sunOffsetMinutes: Int = 0,
 ) {
-    /** Feste Uhrzeit oder, beim Sonnenwecker, die Uhrzeit des nächsten Termins. */
+    /**
+     * Feste Uhrzeit oder, beim Sonnenwecker, die frisch berechnete Uhrzeit des nächsten Termins. Bewusst nicht das
+     * gespeicherte nextAt: Im Editor ist es nach einem Wechsel von Sonnenzeitpunkt oder Versatz noch veraltet.
+     */
     val timeLabel: String get() = if (sunMode.isBlank()) "%02d:%02d".format(hour, minute) else
-        (nextAt.takeIf { it > System.currentTimeMillis() } ?: runCatching { AlarmTime.next(this) }.getOrDefault(0L))
-            .takeIf { it > 0 }?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).let { z -> "%02d:%02d".format(z.hour, z.minute) } }
-            ?: "%02d:%02d".format(hour, minute)
+        sonnenMinute()?.let { "%02d:%02d".format(it / 60, it % 60) } ?: "%02d:%02d".format(hour, minute)
+
+    /** Minute ab Mitternacht des nächsten Sonnentermins, null ohne berechenbaren Termin. */
+    fun sonnenMinute(): Int? = runCatching { AlarmTime.nextRespectingSkip(this) }.getOrDefault(0L).takeIf { it > 0 }
+        ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).let { z -> z.hour * 60 + z.minute } }
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT || it == Step.TASKS }
     val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0 || repeatUnit.isNotBlank()
     /** Monate zwischen zwei Terminen bei monatlicher oder jährlicher Wiederholung, sonst 0. */

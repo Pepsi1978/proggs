@@ -2001,7 +2001,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 // Wechsel auf einen anderen Wecker offen bleibt.
                 var zeitWahlOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
                 if (zeitWahlOffen) ZeitWahlDialog(
-                    stunde = alarm.hour, minute = alarm.minute,
+                    // Beim Sonnenwecker startet die Wahl bei der aktuell berechneten Uhrzeit.
+                    stunde = (alarm.sonnenMinute()?.takeIf { alarm.sunMode.isNotBlank() } ?: (alarm.hour * 60 + alarm.minute)) / 60,
+                    minute = (alarm.sonnenMinute()?.takeIf { alarm.sunMode.isNotBlank() } ?: (alarm.hour * 60 + alarm.minute)) % 60,
                     aufAbbruch = { zeitWahlOffen = false },
                     // Eine feste Uhrzeit wählen beendet das Wecken nach der Sonne.
                     aufWahl = { stunde, minute -> zeitWahlOffen = false; vm.change(alarm.copy(hour = stunde, minute = minute, sunMode = "")) },
@@ -3317,7 +3319,10 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
 @Composable
 private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
     Toggle("Nach der Sonne wecken (täglich angepasst)", alarm.sunMode.isNotBlank()) { an ->
-        change(alarm.copy(sunMode = if (an) SonnenWecker.STANDARD.id else "", sunOffsetMinutes = if (an) alarm.sunOffsetMinutes else 0))
+        if (an) change(alarm.copy(sunMode = SonnenWecker.STANDARD.id))
+        // Beim Ausschalten bleibt die zuletzt berechnete Sonnen-Uhrzeit als feste Weckzeit stehen, statt still auf die alte zu springen.
+        else { val m = alarm.sonnenMinute() ?: (alarm.hour * 60 + alarm.minute)
+            change(alarm.copy(sunMode = "", sunOffsetMinutes = 0, hour = m / 60, minute = m % 60)) }
     }
     if (alarm.sunMode.isBlank()) return
     val ereignis = SonnenWecker.Ereignis.von(alarm.sunMode) ?: SonnenWecker.STANDARD

@@ -15,8 +15,7 @@ import kotlin.math.sqrt
  * Ergebnis immer auf die volle Minute abgerundet, damit Planung, Schlafenszeit und Erinnerung deterministisch bleiben.
  */
 object SonnenWecker {
-    /** Für Texte ohne Kontext; die Rechnung nimmt den Standort aus [SonnenOrt]. */
-    const val ORT = "deinem Standort"
+
     private const val TAG_MS = 86_400_000L
     const val VERSATZ_MIN = -60
     const val VERSATZ_MAX = 90
@@ -35,7 +34,6 @@ object SonnenWecker {
 
     val STANDARD = Ereignis.AUFGANG
 
-    fun aktiv(alarm: Alarm): Boolean = alarm.sunMode.isNotBlank()
 
     /**
      * Zeitpunkt, zu dem die Sonne am Ortsdatum [tag] (in [zone]) morgens die Höhe [hoehe] erreicht, am Ort [ort];
@@ -74,8 +72,10 @@ object SonnenWecker {
     /** Weckzeitpunkt am Ortsdatum [tag]: Sonnenzeitpunkt plus Versatz, auf die Minute abgerundet. */
     fun weckzeit(alarm: Alarm, tag: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Instant {
         val ereignis = Ereignis.von(alarm.sunMode) ?: STANDARD
-        val roh = zeitpunkt(tag, ereignis.hoehe, SonnenOrt.aktuell(zone), zone)
-            // Rückfall (kommt hier nicht vor): die feste Uhrzeit des Weckers.
+        val ort = SonnenOrt.aktuell(zone)
+        // Hohe Breiten: erreicht die Sonne die gewählte Höhe nicht (Polartag, Polarnacht, Mittsommer), gilt der Sonnenaufgang;
+        // gibt es auch den nicht, die zuletzt gezeigte feste Uhrzeit.
+        val roh = zeitpunkt(tag, ereignis.hoehe, ort, zone) ?: zeitpunkt(tag, Ereignis.AUFGANG.hoehe, ort, zone)
             ?: return tag.atTime(alarm.hour, alarm.minute).atZone(zone).toInstant()
         val mitVersatz = roh + alarm.sunOffsetMinutes * 60_000L
         return Instant.ofEpochMilli(Math.floorDiv(mitVersatz, 60_000L) * 60_000L)

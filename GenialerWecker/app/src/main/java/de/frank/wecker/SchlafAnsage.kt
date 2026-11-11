@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
@@ -103,10 +104,11 @@ object SchlafAnsage {
     fun text(bedtime: Long, ausloesung: Long, eintraege: List<Eintrag>, zone: ZoneId = ZoneId.systemDefault()): String {
         val sortiert = eintraege.sortedBy { it.wakeAt }
         val minuten = ((bedtime - ausloesung) / 60_000L).toInt()
-        val bett = uhr(bedtime, zone).let { if (tag(bedtime, ausloesung, zone) == "heute") it else "${tag(bedtime, ausloesung, zone)} $it" }
-        val erster = sortiert.firstOrNull() ?: return "Schlafenszeit-Erinnerung. Um $bett solltest du schlafen gehen."
-        val anfang = if (minuten <= 0) "Schlafenszeit-Erinnerung. Jetzt, um $bett, ist deine Schlafenszeit."
-            else "Schlafenszeit-Erinnerung. In $minuten Minuten, um $bett, solltest du schlafen gehen"
+        // „um 22 Uhr“, nach Mitternacht „morgen um 0 Uhr 5“.
+        val bett = tag(bedtime, ausloesung, zone).let { t -> if (t == "heute") "um ${uhr(bedtime, zone)}" else "$t um ${uhr(bedtime, zone)}" }
+        val erster = sortiert.firstOrNull() ?: return "Schlafenszeit-Erinnerung. ${bett.replaceFirstChar { it.uppercase() }} solltest du schlafen gehen."
+        val anfang = if (minuten <= 0) "Schlafenszeit-Erinnerung. Jetzt, $bett, ist deine Schlafenszeit."
+            else "Schlafenszeit-Erinnerung. In $minuten Minuten, $bett, solltest du schlafen gehen"
         fun weck(e: Eintrag) = "${tag(e.wakeAt, ausloesung, zone)} um ${uhr(e.wakeAt, zone)}" + (e.sonne?.let { ", $it" } ?: "")
         return if (sortiert.size == 1) {
             (if (minuten <= 0) "$anfang So bekommst du ${dauer(erster.sleepMinutes)} Schlaf." else "$anfang, damit du ${dauer(erster.sleepMinutes)} Schlaf bekommst.") +
@@ -142,44 +144,52 @@ object SchlafAnsage {
 
     private fun cache(context: Context): JSONObject = runCatching { JSONObject(prefs(context).getString(CACHE_KEY, "{}") ?: "{}") }.getOrDefault(JSONObject())
 
-    /** Die vorbereitete Datei zu diesem Text mit der aktuell gewählten Stimme, sonst null. */
-    fun datei(context: Context, settings: SecureSettings, text: String): File? =
-        cache(context).optString(schluessel(stimme(context, settings), text)).takeIf { it.isNotBlank() }?.let(::File)?.takeIf { it.length() > 44 }
+    /**
+     * Die vorbereitete Datei zu diesem Text mit der aktuell gewählten Stimme, sonst null. Eine Edge-Notfalldatei zählt
+     * beim Abspielen ([auchErsatz]) immer, beim Vorbereiten nur 15 Minuten lang; danach wird die gewählte Stimme erneut versucht.
+     */
+    fun datei(context: Context, settings: SecureSettings, text: String, auchErsatz: Boolean = false): File? {
+        val eintrag = cache(context).optString(schluessel(stimme(context, settings), text)).takeIf { it.isNotBlank() } ?: return null
+        val teile = eintrag.split('|')
+        val datei = File(teile[0]).takeIf { it.length() > 44 } ?: return null
+        val ersatzSeit = teile.getOrNull(1)?.toLongOrNull()
+        return if (ersatzSeit == null || auchErsatz || System.currentTimeMillis() - ersatzSeit < 15 * 60_000L) datei else null
+    }
 
-    /** Erzeugt die Datei mit der gewählten Stimme, bei Fehlern mit der Edge-Notfallstimme, und merkt sie. */
-    suspend fun rendern(context: Context, settings: SecureSettings, text: String): File {
-        datei(context, settings, text)?.let { return it }
+    private val renderSperre = kotlinx.coroutines.sync.Mutex()
+
+    /** Erzeugt die Datei mit der gewählten Stimme, bei Fehlern mit der Edge-Notfallstimme, und merkt sie. Nie zweimal gleichzeitig. */
+    suspend fun rendern(context: Context, settings: SecureSettings, text: String): File = renderSperre.withLock {
+        datei(context, settings, text)?.let { return@withLock it }
         val stimme = stimme(context, settings)
+        var ersatz = false
         val file = try { SpeechPreparation(context, settings) { stimme }.audio(text) }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 Log.w(TAG, "Gewählte Stimme fehlgeschlagen, Edge-Notfallstimme", e)
+                ersatz = true
                 SpeechPreparation(context, settings) { stimme.edgeFallback() }.audio(text)
             }
         synchronized(this) {
             val c = cache(context)
-            c.put(schluessel(stimme, text), file.absolutePath)
+            c.put(schluessel(stimme, text), if (ersatz) "${file.absolutePath}|${System.currentTimeMillis()}" else file.absolutePath)
             // Höchstens zehn Einträge; ältere Dateien werden entfernt.
             val keys = c.keys().asSequence().toList()
-            if (keys.size > 10) keys.take(keys.size - 10).forEach { k -> c.optString(k).takeIf { it != file.absolutePath }?.let { File(it).delete() }; c.remove(k) }
+            if (keys.size > 10) keys.take(keys.size - 10).forEach { k -> c.optString(k).substringBefore('|').takeIf { it != file.absolutePath }?.let { File(it).delete() }; c.remove(k) }
             prefs(context).edit().putString(CACHE_KEY, c.toString()).apply()
         }
-        return file
+        file
     }
+
 
     /** Bereitet die Ansage für jede geplante Erinnerung vor. Wirft nur bei echten Fehlern (für den Wiederholversuch). */
     suspend fun vorbereiten(context: Context, settings: SecureSettings) {
-        if (!SchlafErinnerung.enabled(context)) return
-        val alle = AlarmStore.get(context).all()
-        val global = SchlafErinnerung.enabled(context)
-        val now = System.currentTimeMillis()
+        // Kein Abbruch bei ausgeschaltetem globalem Schalter: ein Wecker kann seine Erinnerung selbst einschalten.
         var fehler: Exception? = null
-        alle.forEach { a ->
-            val v = SchlafPlan.next(a, now, SchlafPlan.an(a, global), leadMinutes = SchlafPlan.vorlauf(a, SchlafErinnerung.leadMinutes(context)),
-                andere = alle, anderAn = { SchlafPlan.an(it, global) }) ?: return@forEach
-            try { rendern(context, settings, textFuer(context, a.id, v.wakeAt, v.sleepMinutes)) }
+        SchlafErinnerung.geplanteVorkommen(context).forEach { v ->
+            try { rendern(context, settings, textFuer(context, v.alarmId, v.wakeAt, v.sleepMinutes)) }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { Log.w(TAG, "Ansage nicht vorbereitet für ${a.id}", e); fehler = e }
+            catch (e: Exception) { Log.w(TAG, "Ansage nicht vorbereitet für ${v.alarmId}", e); fehler = e }
         }
         fehler?.let { throw it }
     }
@@ -217,13 +227,7 @@ object SchlafAnsage {
 
     /** „Ansage testen“: die echte Ansage des nächsten Termins, sonst ein Beispiel; einmal. */
     fun testen(context: Context) {
-        val alle = AlarmStore.get(context).all()
-        val global = SchlafErinnerung.enabled(context)
-        val now = System.currentTimeMillis()
-        val naechste = alle.mapNotNull { a ->
-            SchlafPlan.next(a, now, SchlafPlan.an(a, true), leadMinutes = SchlafPlan.vorlauf(a, SchlafErinnerung.leadMinutes(context)),
-                andere = alle, anderAn = { SchlafPlan.an(it, global) })
-        }.minByOrNull { it.wakeAt }
+        val naechste = SchlafErinnerung.geplanteVorkommen(context).minByOrNull { it.wakeAt }
         val text = naechste?.let { textFuer(context, it.alarmId, it.wakeAt, it.sleepMinutes) }
             ?: "Schlafenszeit-Erinnerung. In 30 Minuten, um 22 Uhr, solltest du schlafen gehen, damit du 9 Stunden Schlaf bekommst. Geweckt wirst du morgen um 7 Uhr."
         abspielen(context, text, art(context) == ART_WECKER, runden = 1)
@@ -281,37 +285,65 @@ class SchlafAnsageService : Service() {
             SchlafTon.spielen(applicationContext); stopSelf(); return START_NOT_STICKY
         }
         text.value = ansage
+        // Ein neuer Start ersetzt den laufenden Ablauf. Nur der jeweils aktuelle Ablauf beendet am Ende den Dienst,
+        // sonst würde das verspätete finally des abgebrochenen alten Ablaufs den neuen gleich wieder stoppen.
         job?.cancel()
-        job = scope.launch {
-            try { ablauf(ansage, runden) } finally { beenden() }
+        var eigener: Job? = null
+        eigener = scope.launch {
+            try { ablauf(ansage, runden) } finally { if (job === eigener) beenden() }
         }
+        job = eigener
         return START_NOT_STICKY
     }
 
     private suspend fun ablauf(ansage: String, runden: Int) {
-        val (datei, tempo) = withContext(Dispatchers.IO) {
-            SecureSettings(applicationContext).use { settings ->
-                val stimme = SchlafAnsage.stimme(applicationContext, settings)
-                (SchlafAnsage.datei(applicationContext, settings, ansage)
-                    ?: withTimeoutOrNull(45_000) { runCatching { SchlafAnsage.rendern(applicationContext, settings, ansage) }.getOrNull() }) to stimme.playbackSpeed
-            }
-        }
         val audio = getSystemService(AudioManager::class.java)
-        val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-        if (Build.VERSION.SDK_INT >= 26) {
-            fokus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attribute).build()
-            runCatching { audio.requestAudioFocus(fokus!!) }
-        }
+        // Nur einmal je Dienstlauf merken: ein zweiter Start darf die schon angehobene Lautstärke nicht als „vorher“ speichern.
         runCatching {
-            vorherLautstaerke = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+            if (vorherLautstaerke < 0) vorherLautstaerke = audio.getStreamVolume(AudioManager.STREAM_ALARM)
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
             audio.setStreamVolume(AudioManager.STREAM_ALARM, (max * SchlafTon.lautstaerke(this) / 100f).roundToInt().coerceIn(1, max), 0)
         }
+        val tonUri = Uri.parse(SchlafTon.gewaehlt(this).ifBlank { SchlafTon.standardUri() })
+        var datei: File? = null
+        var tempo = 1f
         for (runde in 1..runden) {
-            spiele(Uri.parse(SchlafTon.gewaehlt(this).ifBlank { SchlafTon.standardUri() }), 8_000, 1f)
-            if (datei != null) { delay(300); spiele(Uri.fromFile(datei), 180_000, tempo) }
+            fokusHolen(audio)
+            // Der Ton klingt sofort; erst danach wird eine fehlende Ansage notfalls live erzeugt.
+            spiele(tonUri, 8_000, 1f)
+            if (runde == 1) {
+                val (d, t) = ansageDatei(ansage)
+                datei = d; tempo = t
+            }
+            datei?.let { delay(300); spiele(Uri.fromFile(it), 180_000, tempo) }
+            fokusAbgeben(audio)
             if (runde < runden) delay(PAUSE_MS)
         }
+    }
+
+    /** Vorbereitete Datei, sonst live erzeugt (höchstens 45 s). Vor der ersten Entsperrung gibt es keine Schlüssel: dann nur der Ton. */
+    private suspend fun ansageDatei(ansage: String): Pair<File?, Float> = withContext(Dispatchers.IO) {
+        if (!getSystemService(UserManager::class.java).isUserUnlocked) return@withContext null to 1f
+        runCatching {
+            SecureSettings(applicationContext).use { settings ->
+                val stimme = SchlafAnsage.stimme(applicationContext, settings)
+                (SchlafAnsage.datei(applicationContext, settings, ansage, auchErsatz = true)
+                    ?: withTimeoutOrNull(45_000) { runCatching { SchlafAnsage.rendern(applicationContext, settings, ansage) }.getOrNull() }) to stimme.playbackSpeed
+            }
+        }.getOrElse { Log.w("WeckerSchlafAnsage", "Ansage nicht verfügbar", it); null to 1f }
+    }
+
+    /** Kurzzeitiger Audiofokus nur während Ton und Ansage einer Runde; in den Pausen läuft Video oder Musik weiter. */
+    private fun fokusHolen(audio: AudioManager) {
+        if (Build.VERSION.SDK_INT < 26 || fokus != null) return
+        fokus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).build()
+        runCatching { audio.requestAudioFocus(fokus!!) }
+    }
+
+    private fun fokusAbgeben(audio: AudioManager) {
+        if (Build.VERSION.SDK_INT >= 26) fokus?.let { runCatching { audio.abandonAudioFocusRequest(it) } }
+        fokus = null
     }
 
     private suspend fun spiele(uri: Uri, hoechstens: Long, tempo: Float) {
@@ -331,7 +363,8 @@ class SchlafAnsageService : Service() {
                     mp.setOnErrorListener { _, _, _ -> fertig(); true }
                     mp.prepareAsync()
                 } catch (e: Exception) { Log.w("WeckerSchlafAnsage", "Nicht abspielbar: $uri", e); fertig() }
-                cont.invokeOnCancellation { runCatching { mp.stop() } }
+                // Auch beim Abbruch (neuer Start) freigeben, damit kein alter Player weiterläuft.
+                cont.invokeOnCancellation { runCatching { mp.stop() }; runCatching { mp.release() }; if (player === mp) player = null }
             }
         }
         player?.let { runCatching { it.stop() }; runCatching { it.release() } }
@@ -344,8 +377,7 @@ class SchlafAnsageService : Service() {
         player = null
         val audio = getSystemService(AudioManager::class.java)
         if (vorherLautstaerke >= 0) { runCatching { audio.setStreamVolume(AudioManager.STREAM_ALARM, vorherLautstaerke, 0) }; vorherLautstaerke = -1 }
-        if (Build.VERSION.SDK_INT >= 26) fokus?.let { runCatching { audio.abandonAudioFocusRequest(it) } }
-        fokus = null
+        fokusAbgeben(audio)
         text.value = ""
         runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
         stopSelf()
@@ -365,7 +397,8 @@ class SchlafAnsageService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(this, if (wecker) KANAL_WECKER else KANAL_LEISE).setSmallIcon(R.drawable.ic_wecker)
             .setContentTitle(if (wecker) "Schlafenszeit" else "Schlafenszeit-Ansage").setContentText(ansage)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(ansage)).setOngoing(true).setSilent(true)
+            // Kein setSilent: es würde den Vollbild-Intent unterdrücken. Beide Kanäle sind ohnehin ohne Ton.
+            .setStyle(NotificationCompat.BigTextStyle().bigText(ansage)).setOngoing(true).setOnlyAlertOnce(true)
             .setCategory(if (wecker) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setPriority(if (wecker) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
