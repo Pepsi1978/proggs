@@ -56,13 +56,14 @@ fun Modifier.glas(
     rand: Boolean = true,
     toenung: Color? = null,
     /**
-     * Ohne Angabe laufen Verlauf und Glanz über die ganze Höhe: Eine hohe Fläche wirkt dann heller als eine kurze. Mit Angabe enden
-     * sie spätestens nach dieser Höhe (Glanz nach 45 % davon), so wirken Karten jeder Höhe gleich (Startbildschirm).
+     * Ohne Angabe laufen Verlauf und Glanz über die ganze Höhe: Eine hohe Fläche wirkt dann heller als eine kurze. Mit Angabe laufen
+     * sie über genau diese Höhe (Glanz über 45 % davon), auch bei kürzeren Flächen; so wirken Karten jeder Höhe gleich.
      */
     verlaufHoehe: Dp? = null,
 ): Modifier = drawWithCache {
     val r = radius.toPx().coerceAtMost(size.minDimension / 2)
-    val verlaufEnde = verlaufHoehe?.let { minOf(size.height, it.toPx()) } ?: size.height
+    // Fest, auch bei kürzeren Flächen (nicht auf deren Höhe gekürzt): Dann wirken alle Karten oben gleich, darunter bleibt der Endton.
+    val verlaufEnde = verlaufHoehe?.toPx() ?: size.height
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
     val schattenFarbe = if (farben.dunkel) Color.Black else farben.schatten
     val stufen = 7
@@ -74,11 +75,12 @@ fun Modifier.glas(
         ),
         endY = verlaufEnde,
     )
-    val tonVerlauf = toenung?.let { Brush.linearGradient(listOf(it.copy(alpha = 0.16f), Color.Transparent), Offset.Zero, Offset(size.width * 0.9f, size.height)) }
+    val tonVerlauf = toenung?.let { Brush.linearGradient(listOf(it.copy(alpha = 0.16f), Color.Transparent), Offset.Zero, Offset(size.width * 0.9f, verlaufEnde)) }
     val kante = Brush.verticalGradient(
         0f to Color.White.copy(alpha = if (farben.dunkel) 0.34f else 0.95f),
         0.5f to Color.White.copy(alpha = if (farben.dunkel) 0.08f else 0.35f),
         1f to Color.White.copy(alpha = if (farben.dunkel) 0.03f else 0.2f),
+        endY = verlaufEnde,
     )
     val glanz = Brush.verticalGradient(
         0f to Color.White.copy(alpha = if (farben.dunkel) 0.10f else 0.45f),

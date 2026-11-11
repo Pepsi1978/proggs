@@ -165,6 +165,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     }
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
+    // Biomarker-Werte schon mit dem Startbildschirm lesen, nicht erst mit ihrer Karte: Sonst kommt sie beim ersten Hinscrollen
+    // leer herein, wächst und schiebt die Bereiche darunter weg.
+    if ("biomarker" in reihe) BiomarkerStartVorladen()
 
     val schritte = listOfNotNull(
         Schritt("Mit ChatGPT verbinden", "Gibt Jarvis sein eigenes Denken. Einmal anmelden, fertig.", vm.kiVerbunden, "Verbinden") { vm.reiter = Reiter.EINSTELLUNGEN; vm.kiVerbinden() },

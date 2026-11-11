@@ -34,19 +34,69 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (leer = heute), Einordnung. */
+/** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (ISO, wie gemeldet), Einordnung. */
 private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String)
 
 /**
  * Stand der Karte außerhalb der Komposition: Sie liegt in der LazyColumn des Startbildschirms. Mit `remember` war sie nach dem
  * Wegscrollen leer, erschien beim Zurückscrollen erst klein und wuchs dann, sobald die Werte gelesen waren; das schob die
- * Bereiche darunter ruckartig nach unten. So hat sie beim Wiedererscheinen sofort ihre volle Höhe.
+ * Bereiche darunter ruckartig nach unten. Gelesen wird schon mit dem Startbildschirm ([BiomarkerStartVorladen]), nicht erst
+ * mit der Karte: So hat sie auch beim ersten Erscheinen ihre volle Höhe, und Zurückscrollen liest nicht jedes Mal neu.
  */
 private object BiomarkerStartStand {
     var zeilen by mutableStateOf<List<BioZeile>>(emptyList())
     var stand by mutableStateOf("")
     var probleme by mutableStateOf<List<String>>(emptyList())
+    /** Ergebnis der Übernahme aus Entropie Reductor; überlebt das Wegscrollen wie die Werte. */
+    var uebernahme by mutableStateOf("")
+    /** Nur die zuletzt begonnene Lesung darf den Stand setzen. */
+    val lesung = java.util.concurrent.atomic.AtomicInteger()
 }
+
+/** „Letzter Abruf 11.11. 16:58 Uhr“ aus `2026-11-11T16:58…`; ein anderes Format erscheint unverändert statt abzustürzen. */
+private fun abrufText(roh: String): String = runCatching {
+    val t = roh.replace('T', ' ').drop(5)
+    "${t.substring(3, 5)}.${t.substring(0, 2)}. ${t.substring(6, 11)}"
+}.getOrElse { roh } + " Uhr"
+
+/**
+ * Liest den Stand der Biomarker-Karte, solange der Startbildschirm offen ist, unabhängig davon, ob die Karte gerade sichtbar ist:
+ * beim Öffnen, nach jedem Abruf und nach der Übernahme. Steht nur einmal im Startbildschirm.
+ */
+@Composable
+fun BiomarkerStartVorladen() {
+    val context = LocalContext.current.applicationContext
+    val abruf by BioAbruf.stand.collectAsState()
+    val s = BiomarkerStartStand
+    val bereit = BioAbruf.bereit(context)
+    LaunchedEffect(abruf.bericht, abruf.laeuft, bereit, s.uebernahme) {
+        if (!bereit) return@LaunchedEffect
+        val nummer = s.lesung.incrementAndGet()
+        val antwort = withContext(Dispatchers.IO) {
+            runCatching {
+                BioAuswertung(context).rufe("auswertung", JSONObject().put("tage", 30).put("metriken", JSONArray(listOf("erholung", "hrv", "ruhepuls", "tiefschlaf_prozent", "schlafdauer", "vo2max"))))
+            }.getOrNull()
+        } ?: return@LaunchedEffect
+        if (nummer != s.lesung.get()) return@LaunchedEffect
+        val liste = antwort.optJSONArray("metriken") ?: JSONArray()
+        s.zeilen = (0 until liste.length()).map { i ->
+            val m = liste.getJSONObject(i)
+            val wert = if (m.isNull("aktuell")) "–" else m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
+            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum"), m.optString("einordnung"))
+        }
+        val st = antwort.optJSONObject("stand")
+        s.stand = when {
+            Geraet.istTablet -> de.frank.jarvis.bio.BioSpiegel.standText(context)
+            st == null || st.isNull("letzter_abgleich") -> "Noch kein Abruf in Jarvis"
+            else -> "Letzter Abruf " + abrufText(st.optString("letzter_abgleich"))
+        }
+        s.probleme = (st?.optJSONArray("probleme") ?: JSONArray()).let { p -> (0 until p.length()).map { p.optString(it) } }
+    }
+}
+
+/** Datum hinter dem Wert („· 10.11.“), nur wenn die Messung nicht von heute ist; bei der Anzeige geprüft, also auch nach Mitternacht richtig. */
+private fun datumZusatz(datum: String): String =
+    if (datum.length < 10 || datum == java.time.LocalDate.now().toString()) "" else " · ${datum.substring(8, 10)}.${datum.substring(5, 7)}."
 
 /**
  * Eigener Einstieg in den Biomarker-Bereich auf dem Startbildschirm: Franks Kerngrößen (Erholung, HRV, Ruhepuls,
@@ -57,36 +107,13 @@ private object BiomarkerStartStand {
 fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
-    val scope = rememberCoroutineScope()
     val abruf by BioAbruf.stand.collectAsState()
-    var zeilen by BiomarkerStartStand::zeilen
-    var stand by BiomarkerStartStand::stand
-    var probleme by BiomarkerStartStand::probleme
-    var uebernahme by remember { mutableStateOf("") }
+    val s = BiomarkerStartStand
+    val zeilen = s.zeilen
+    val stand = s.stand
+    val probleme = s.probleme
+    val uebernahme = s.uebernahme
     val bereit = BioAbruf.bereit(context)
-
-    LaunchedEffect(abruf.bericht, abruf.laeuft, bereit) {
-        if (!bereit) return@LaunchedEffect
-        val antwort = withContext(Dispatchers.IO) {
-            runCatching {
-                BioAuswertung(context).rufe("auswertung", JSONObject().put("tage", 30).put("metriken", JSONArray(listOf("erholung", "hrv", "ruhepuls", "tiefschlaf_prozent", "schlafdauer", "vo2max"))))
-            }.getOrNull()
-        } ?: return@LaunchedEffect
-        val heute = antwort.optString("heute")
-        val liste = antwort.optJSONArray("metriken") ?: JSONArray()
-        zeilen = (0 until liste.length()).map { i ->
-            val m = liste.getJSONObject(i)
-            val wert = m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
-            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum").takeIf { it != heute }.orEmpty(), m.optString("einordnung"))
-        }
-        val s = antwort.optJSONObject("stand")
-        stand = when {
-            Geraet.istTablet -> de.frank.jarvis.bio.BioSpiegel.standText(context)
-            s == null || s.isNull("letzter_abgleich") -> "Noch kein Abruf in Jarvis"
-            else -> "Letzter Abruf " + s.optString("letzter_abgleich").replace('T', ' ').drop(5).let { "${it.substring(3, 5)}.${it.substring(0, 2)}. ${it.substring(6)}" } + " Uhr"
-        }
-        probleme = (s?.optJSONArray("probleme") ?: JSONArray()).let { p -> (0 until p.length()).map { p.optString(it) } }
-    }
 
     // Die ganze Karte ist der Griff (langer Druck, dann ziehen), wie Frank es für alle Startbereiche erwartet; der Knopf bleibt antippbar.
     Karte(modifier = griff) {
@@ -104,7 +131,8 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
             }
             Knopf(if (bereit) "Öffnen" else "Übernehmen") {
                 if (bereit) BioAnsicht.oeffnen(context)
-                else { uebernahme = "Übernimmt …"; scope.launch { uebernahme = de.frank.jarvis.bio.BioModul.bereich.async { BioUebernahme.starte(context) }.await() } }
+                // Im Modulbereich, nicht in der Karte: Scrollt Frank sie weg, läuft die Übernahme trotzdem zu Ende.
+                else if (s.uebernahme != "Übernimmt …") { s.uebernahme = "Übernimmt …"; de.frank.jarvis.bio.BioModul.bereich.launch { s.uebernahme = BioUebernahme.starte(context) } }
             }
         }
         if (uebernahme.isNotEmpty()) Text(uebernahme, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
@@ -114,7 +142,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
             zeilen.forEach { z ->
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                     Text(z.name, color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                    Text(z.wert + (if (z.datum.isNotEmpty()) " · ${z.datum.drop(8)}.${z.datum.substring(5, 7)}." else ""), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(z.wert + datumZusatz(z.datum), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
                 if (z.einordnung.contains("besser") || z.einordnung.contains("schlechter")) {
                     Text(z.einordnung, color = if (z.einordnung.contains("besser")) f.erfolg else f.gefahr, fontSize = 13.sp)

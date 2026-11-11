@@ -638,6 +638,7 @@
     {"versionCode": 633, "versionName": "1.8.622", "stand": "11.11.2026, 16:44 Uhr", "notiz": "Nach einem gründlichen Review bleiben Plus, Mikrofon und Senden bei wenig Platz immer ganz, das Programmier-Symbol wird nie mehr unten abgeschnitten, ein laufender Fernwartungsstart bricht beim Verdichten nicht mehr ab und eingeklappt bekommt die Eingabe mehr Platz."},
     {"versionCode": 634, "versionName": "1.8.623", "stand": "11.11.2026, 16:48 Uhr", "notiz": "Die offene Modell- oder CLI-Auswahl neben dem Programmier-Symbol verdeckt das Gesprächsende nicht mehr, die Höhe richtet sich nach der echten Lage des Symbols, und die Statuszeilen haben wieder ihren Abstand."},
     {"versionCode": 635, "versionName": "1.8.624", "stand": "11.11.2026, 17:13 Uhr", "notiz": "Der Startbildschirm springt beim Scrollen über Biomarker und heutige Aufgaben nicht mehr, und alle Bereichskarten haben dieselbe Hintergrundwirkung."},
-    {"versionCode": 636, "versionName": "1.8.625", "stand": "11.11.2026, 17:20 Uhr", "notiz": "Die Tagesauswertungs-Synchronisation lässt sich auch alle 12 Stunden stellen und rechnet ab einer frei wählbaren Startzeit, dazu die Höchstzahl pro Tag."}
+    {"versionCode": 636, "versionName": "1.8.625", "stand": "11.11.2026, 17:20 Uhr", "notiz": "Die Tagesauswertungs-Synchronisation lässt sich auch alle 12 Stunden stellen und rechnet ab einer frei wählbaren Startzeit, dazu die Höchstzahl pro Tag."},
+    {"versionCode": 637, "versionName": "1.8.626", "stand": "11.11.2026, 17:28 Uhr", "notiz": "Die Biomarker-Karte erscheint auf dem Startbildschirm auch beim ersten Hinscrollen ohne Sprung, und alle Karten haben oben denselben Verlauf, egal wie kurz sie sind."}
 ]
 }
