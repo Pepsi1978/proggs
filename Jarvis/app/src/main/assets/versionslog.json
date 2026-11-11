@@ -628,6 +628,7 @@
     {"versionCode": 623, "versionName": "1.8.612", "stand": "11.11.2026, 14:06 Uhr", "notiz": "Die laufende Statusanzeige mit Tätigkeit und Animation steht im Gespräch jetzt fest im unteren Viertel des Chatfensters, auf Handy und Tablet, und bleibt beim Scrollen immer sichtbar."},
     {"versionCode": 624, "versionName": "1.8.613", "stand": "11.11.2026, 14:21 Uhr", "notiz": "Die Statusanzeige im Gespräch rückt bei offener Tastatur tiefer statt über den gerade gelesenen Text, und Wischen auf ihr scrollt den Chat."},
     {"versionCode": 625, "versionName": "1.8.614", "stand": "11.11.2026, 14:38 Uhr", "notiz": "Der Biomarker-Bereich ist jetzt in Jarvis: eigene Karte auf dem Startbildschirm, alle Karten, Verläufe und Trainings, Whoop, Oura, Waage und Health Connect direkt abgerufen, nur beim Öffnen, auf Wunsch und vor jeder Tagesauswertung, die höchstens zweimal am Tag automatisch läuft."},
-    {"versionCode": 626, "versionName": "1.8.615", "stand": "11.11.2026, 14:49 Uhr", "notiz": "Die Biomarker-Übernahme ist robuster, die zwei automatischen Tagesauswertungen zählen ab dem Aufwachen, und ein Abruf meldet nur noch dann neue Werte, wenn wirklich eine neue Messung da ist."}
+    {"versionCode": 626, "versionName": "1.8.615", "stand": "11.11.2026, 14:49 Uhr", "notiz": "Die Biomarker-Übernahme ist robuster, die zwei automatischen Tagesauswertungen zählen ab dem Aufwachen, und ein Abruf meldet nur noch dann neue Werte, wenn wirklich eine neue Messung da ist."},
+    {"versionCode": 627, "versionName": "1.8.616", "stand": "11.11.2026, 15:02 Uhr", "notiz": "Die Übernahme der Biomarker aus Entropie Reductor kopiert die Daten jetzt ohne Umweg über die laufende Datenbankverbindung und meldet jeden Lesefehler im Logbuch."}
 ]
 }

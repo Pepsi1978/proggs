@@ -178,31 +178,7 @@ object BioSpiegel {
         }
     }
 
-    /** Ersetzt alle Biomarker-Tabellen durch den Stand des Handys, in einer Transaktion. */
-    private fun ersetze(datei: File) {
-        val db = BioModul.datenbank.openHelper.writableDatabase
-        fun spalten(schema: String, t: String): List<String> =
-            db.query("PRAGMA $schema.table_info($t)").use { c -> buildList { while (c.moveToNext()) add(c.getString(c.getColumnIndexOrThrow("name"))) } }
-        db.execSQL("ATTACH DATABASE ? AS fern", arrayOf(datei.absolutePath))
-        try {
-            db.beginTransaction()
-            try {
-                AppDatabase.TABELLEN.forEach { t ->
-                    val gemeinsam = spalten("fern", t).let { f -> spalten("main", t).filter { it in f } }
-                    if (gemeinsam.isEmpty()) return@forEach
-                    val liste = gemeinsam.joinToString(", ") { "`$it`" }
-                    db.execSQL("DELETE FROM main.`$t`")
-                    db.execSQL("INSERT INTO main.`$t` ($liste) SELECT $liste FROM fern.`$t`")
-                }
-                db.setTransactionSuccessful()
-            } finally {
-                db.endTransaction()
-            }
-        } finally {
-            db.execSQL("DETACH DATABASE fern")
-        }
-        BioModul.datenbank.invalidationTracker.refreshVersionsAsync()
-    }
+    private fun ersetze(datei: File) { BioTabellenKopie.kopiere(datei) }
 
     /** Für das Tablet: von wann der eingespielte Stand des Handys ist. */
     fun standText(context: Context): String {

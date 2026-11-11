@@ -123,7 +123,11 @@ class BioAuswertung(context: Context) {
 
     /** Führt eine Methode aus; Fehler kommen als `{"fehler": …}` zurück, nie als Ausnahme. */
     suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject =
-        runCatching { verarbeite(methode, anfrage) }.getOrElse { f -> if (f is kotlinx.coroutines.CancellationException) throw f else fehler(f.message ?: f.javaClass.simpleName) }
+        runCatching { verarbeite(methode, anfrage) }.getOrElse { f ->
+            if (f is kotlinx.coroutines.CancellationException) throw f
+            de.frank.jarvis.observability.Logbuch.fehler("Biomarker-Auswertung $methode", f)
+            fehler("Biomarker nicht lesbar: " + (f.message ?: f.javaClass.simpleName))
+        }
 
     private suspend fun verarbeite(methode: String, a: JSONObject): JSONObject {
         BioModul.einrichten(app)

@@ -83,40 +83,14 @@ object BioUebernahme {
         }
     }
 
-    /** Kopiert alle Biomarker-Tabellen spaltengenau (nur Spalten, die beide Seiten kennen) und gibt die Zeilenzahlen danach zurück. */
-    private fun kopiere(kopie: File): Map<String, Long> {
-        val db = BioModul.datenbank.openHelper.writableDatabase
-        fun spalten(schema: String, tabelle: String): List<String> =
-            db.query("PRAGMA $schema.table_info($tabelle)").use { c -> buildList { while (c.moveToNext()) add(c.getString(c.getColumnIndexOrThrow("name"))) } }
-        // ATTACH geht nicht in einer Transaktion; das Kopieren selbst läuft danach in einer.
-        db.execSQL("ATTACH DATABASE ? AS er", arrayOf(kopie.absolutePath))
-        try {
-            db.beginTransaction()
-            try {
-                AppDatabase.TABELLEN.forEach { t ->
-                    val gemeinsam = spalten("er", t).let { er -> spalten("main", t).filter { it in er } }
-                    if (gemeinsam.isEmpty()) return@forEach
-                    val liste = gemeinsam.joinToString(", ") { "`$it`" }
-                    // Erst leeren: Reste eines früheren Versuchs dürfen die Zählung nicht verfälschen (vor der Übernahme gehört hier nichts Jarvis).
-                    db.execSQL("DELETE FROM main.`$t`")
-                    db.execSQL("INSERT INTO main.`$t` ($liste) SELECT $liste FROM er.`$t`")
-                }
-                db.setTransactionSuccessful()
-            } finally {
-                db.endTransaction()
-            }
-        } finally {
-            db.execSQL("DETACH DATABASE er")
-        }
-        BioModul.datenbank.invalidationTracker.refreshVersionsAsync()
-        return AppDatabase.TABELLEN.associateWith { t -> db.query("SELECT COUNT(*) FROM `$t`").use { c -> c.moveToFirst(); c.getLong(0) } }
-    }
+    private fun kopiere(kopie: File): Map<String, Long> = BioTabellenKopie.kopiere(kopie)
 
     /** Rechnet Jarvis dasselbe wie Entropie Reductor? Katalog (Tage, von, bis je Messgröße) und der neueste Tag müssen gleich sein. */
     private suspend fun vergleiche(app: Context, adresse: Uri) {
         val eigen = BioAuswertung(app)
         val altK = rufe(app, adresse, "katalog") ?: error("Vergleich: Katalog aus Entropie Reductor fehlt")
         val neuK = eigen.rufe("katalog", JSONObject())
+        neuK.optString("fehler").takeIf { it.isNotEmpty() }?.let { error("Jarvis' eigene Rechnung scheitert: $it") }
         fun karte(o: JSONObject): Map<String, String> = (o.optJSONArray("metriken") ?: JSONArray()).let { a ->
             (0 until a.length()).associate { i -> a.getJSONObject(i).let { m -> m.optString("id") to "${m.optInt("tage")} ${m.optString("von")} ${m.optString("bis")}" } }
         }
