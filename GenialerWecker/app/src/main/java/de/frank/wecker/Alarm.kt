@@ -79,8 +79,16 @@ data class Alarm(
     val ideasRepeats: Int = 0,
     /** Wie oft der Aufgaben-Block am Stück vorgelesen wird (0 und 1 = einmal, höchstens 6, je Lesung eine andere Variante). */
     val tasksRepeats: Int = 0,
+    /** "" = feste Uhrzeit (hour/minute); sonst Kennung eines [SonnenWecker.Ereignis]: Weckzeit folgt täglich der Sonne. */
+    val sunMode: String = "",
+    /** Versatz zum Sonnenzeitpunkt in Minuten (−60 bis +90), nur mit [sunMode]. */
+    val sunOffsetMinutes: Int = 0,
 ) {
-    val timeLabel: String get() = "%02d:%02d".format(hour, minute)
+    /** Feste Uhrzeit oder, beim Sonnenwecker, die Uhrzeit des nächsten Termins. */
+    val timeLabel: String get() = if (sunMode.isBlank()) "%02d:%02d".format(hour, minute) else
+        (nextAt.takeIf { it > System.currentTimeMillis() } ?: runCatching { AlarmTime.next(this) }.getOrDefault(0L))
+            .takeIf { it > 0 }?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).let { z -> "%02d:%02d".format(z.hour, z.minute) } }
+            ?: "%02d:%02d".format(hour, minute)
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT || it == Step.TASKS }
     val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0 || repeatUnit.isNotBlank()
     /** Monate zwischen zwei Terminen bei monatlicher oder jährlicher Wiederholung, sonst 0. */
@@ -114,6 +122,8 @@ data class Alarm(
         require(intervalDays == 0 || startDate.isNotBlank()) { "Wähle den ersten Schichttag." }
         require(startDate.isBlank() || days.isEmpty()) { "Wähle entweder Wochentage oder einen Datumsplan." }
         if (startDate.isNotBlank()) LocalDate.parse(startDate)
+        require(sunMode.isBlank() || SonnenWecker.Ereignis.von(sunMode) != null) { "Unbekannter Sonnenzeitpunkt." }
+        require(sunOffsetMinutes in SonnenWecker.VERSATZ_MIN..SonnenWecker.VERSATZ_MAX) { "Der Versatz zur Sonne muss zwischen −60 und +90 Minuten liegen." }
         require(Schlaf.valid(sleepMinutes)) { "Die Schlafdauer muss zwischen 30 Minuten und 24 Stunden liegen." }
         require(volume in 1..100) { "Die Wecklautstärke muss größer als null sein." }
         require(speechRate == null || speechRate in .5f..2f) { "Das Sprechtempo muss zwischen 0,5× und 2× liegen." }
@@ -145,6 +155,7 @@ data class Alarm(
         put("skippedThrough", skippedThrough)
         put("repeatUnit", repeatUnit); put("repeatEvery", repeatEvery)
         put("ideasRepeats", ideasRepeats); put("tasksRepeats", tasksRepeats)
+        put("sunMode", sunMode); put("sunOffsetMinutes", sunOffsetMinutes)
     }
     companion object {
         const val MONTHLY = "month"
@@ -198,6 +209,9 @@ data class Alarm(
             repeatEvery = j.optInt("repeatEvery", 0),
             ideasRepeats = j.optInt("ideasRepeats", 0).coerceIn(0, MAX_REPEATS),
             tasksRepeats = j.optInt("tasksRepeats", 0).coerceIn(0, MAX_REPEATS),
+            // Ältere Einträge haben kein Feld: feste Uhrzeit wie bisher; Unbekanntes fällt ebenso auf die feste Uhrzeit zurück.
+            sunMode = j.optString("sunMode", "").takeIf { it.isBlank() || SonnenWecker.Ereignis.von(it) != null } ?: "",
+            sunOffsetMinutes = j.optInt("sunOffsetMinutes", 0).coerceIn(SonnenWecker.VERSATZ_MIN, SonnenWecker.VERSATZ_MAX),
         )
     }
 }
@@ -225,6 +239,11 @@ object AlarmTime {
         return if (Instant.ofEpochMilli(kandidat).atZone(zone).toLocalDate().isAfter(ende)) 0L else kandidat
     }
 
+    /** Weckzeitpunkt an einem Ortsdatum: feste Wanduhrzeit oder, beim Sonnenwecker, der Sonnenzeitpunkt dieses Tages. */
+    fun zeitAm(alarm: Alarm, day: LocalDate, zone: ZoneId): Instant =
+        if (alarm.sunMode.isNotBlank()) SonnenWecker.weckzeit(alarm, day, zone)
+        else day.atTime(LocalTime.of(alarm.hour, alarm.minute)).atZone(zone).toInstant()
+
     private fun nextOhneEnde(alarm: Alarm, now: Instant, zone: ZoneId): Long {
         val today = now.atZone(zone).toLocalDate()
         if (alarm.startDate.isNotBlank()) {
@@ -238,27 +257,26 @@ object AlarmTime {
                 return (start..start + 2).asSequence()
                     .map { step -> first.plusMonths(step * months) }
                     .filter { !it.isBefore(first) }
-                    .map { it.atTime(alarm.hour, alarm.minute).atZone(zone).toInstant() }
+                    .map { zeitAm(alarm, it, zone) }
                     .first { it > now }.toEpochMilli()
             }
             if (alarm.intervalDays == 0) {
-                val once = first.atTime(alarm.hour, alarm.minute).atZone(zone).toInstant()
+                val once = zeitAm(alarm, first, zone)
                 require(once > now) { "Diese Weckzeit liegt in der Vergangenheit. Wähle ein späteres Datum oder eine spätere Uhrzeit." }
                 return once.toEpochMilli()
             }
             val elapsed = java.time.temporal.ChronoUnit.DAYS.between(first, today).coerceAtLeast(0)
             val cycles = elapsed / alarm.intervalDays
             return (cycles..cycles + 2).asSequence().map { cycle ->
-                first.plusDays(cycle * alarm.intervalDays).atTime(alarm.hour, alarm.minute).atZone(zone).toInstant()
+                zeitAm(alarm, first.plusDays(cycle * alarm.intervalDays), zone)
             }.first { it > now }.toEpochMilli()
         }
         return (0L..8L).asSequence().flatMap { offset ->
             val day: LocalDate = today.plusDays(offset)
             if (alarm.days.isNotEmpty() && day.dayOfWeek.value !in alarm.days) emptySequence()
             else {
-                val local = day.atTime(LocalTime.of(alarm.hour, alarm.minute))
                 // Pro Kalendertag genau einmal; eine zurückgestellte Stunde weckt nicht doppelt.
-                sequenceOf(local.atZone(zone).toInstant())
+                sequenceOf(zeitAm(alarm, day, zone))
             }
         }.filter { it > now }.minOrNull()!!.toEpochMilli()
     }

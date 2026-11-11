@@ -61,7 +61,8 @@ class JarvisBruecke : ContentProvider() {
                 if (a.has("name")) w = w.copy(name = a.optString("name").trim().take(60).ifEmpty { basis.name })
                 if (a.has("uhrzeit")) {
                     val treffer = Regex("^\\s*([01]?\\d|2[0-3])[:.]([0-5]\\d)").find(a.optString("uhrzeit")) ?: return fehler("Uhrzeit nicht verstanden: ${a.optString("uhrzeit")}. Format HH:MM.")
-                    w = w.copy(hour = treffer.groupValues[1].toInt(), minute = treffer.groupValues[2].toInt())
+                    // Eine feste Uhrzeit beendet einen Sonnenwecker.
+                    w = w.copy(hour = treffer.groupValues[1].toInt(), minute = treffer.groupValues[2].toInt(), sunMode = "", sunOffsetMinutes = 0)
                 } else if (alt == null) return fehler("Für einen neuen Wecker fehlt die Uhrzeit.")
 
                 // Wiederholung: Wird eine der Angaben gemacht, ersetzt sie den bisherigen Rhythmus vollständig.
@@ -137,6 +138,7 @@ class JarvisBruecke : ContentProvider() {
         .put("id", w.id)
         .put("name", w.name)
         .put("uhrzeit", w.timeLabel)
+        .put("weckzeit_nach_sonne", if (w.sunMode.isBlank()) JSONObject.NULL else "${SonnenWecker.bezeichnung(w)} am Standort des Handys, täglich angepasst")
         .put("aktiv", w.enabled)
         .put("naechstes_klingeln", if (w.enabled && w.nextAt > 0) Instant.ofEpochMilli(w.nextAt).atZone(ZoneId.systemDefault()).toLocalDateTime().toString().take(16) else JSONObject.NULL)
         .put("wiederholung", wiederholung(w))

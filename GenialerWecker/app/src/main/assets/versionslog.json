@@ -35,6 +35,7 @@
     {"versionCode": 120, "versionName": "1.1.125", "stand": "30.10.2026, 19:19 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 121, "versionName": "1.1.126", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
     {"versionCode": 122, "versionName": "1.1.127", "stand": "05.11.2026, 15:54 Uhr", "notiz": "Jedes erneute Klingeln nach dem Schlummern zeigt wieder zuverlässig die Weckbenachrichtigung und den Vollbild-Weckbildschirm, auch beim letzten Klingeln; verschwindet die Benachrichtigung, kommt sie sofort wieder."},
-    {"versionCode": 123, "versionName": "1.1.128", "stand": "05.11.2026, 16:03 Uhr", "notiz": "Feinschliff am Weckfix: kein doppelter Alarm beim Start, eine weggewischte Benachrichtigung kommt zurück, ohne die Kamera der Foto-Aufgabe zu schließen."}
+    {"versionCode": 123, "versionName": "1.1.128", "stand": "05.11.2026, 16:03 Uhr", "notiz": "Feinschliff am Weckfix: kein doppelter Alarm beim Start, eine weggewischte Benachrichtigung kommt zurück, ohne die Kamera der Foto-Aufgabe zu schließen."},
+    {"versionCode": 124, "versionName": "1.1.129", "stand": "11.11.2026, 16:26 Uhr", "notiz": "Neu: Wecker können nach der Sonne wecken, etwa zum Sonnenaufgang am aktuellen Standort in der automatischen Zeitzone, und passen ihre Weckzeit täglich an."}
 ]
 }

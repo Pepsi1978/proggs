@@ -80,7 +80,8 @@ class TasksBridge(private val context: Context) {
         }
 
         /** Weckzeit des Weckers in Minuten ab Mitternacht, die Grenze für [nachWeckzeit]. */
-        fun weckMinute(alarm: Alarm): Int = alarm.hour * 60 + alarm.minute
+        fun weckMinute(alarm: Alarm): Int = if (alarm.sunMode.isBlank()) alarm.hour * 60 + alarm.minute
+            else alarm.timeLabel.split(':').let { it[0].toInt() * 60 + it[1].toInt() }
 
         /**
          * Ob eine Aufgabe noch vorgelesen wird: ohne Grenze, ohne Uhrzeit ([minuten] < 0) oder überfällig aus einem früheren

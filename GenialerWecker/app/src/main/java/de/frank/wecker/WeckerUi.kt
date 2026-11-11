@@ -2003,12 +2003,14 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 if (zeitWahlOffen) ZeitWahlDialog(
                     stunde = alarm.hour, minute = alarm.minute,
                     aufAbbruch = { zeitWahlOffen = false },
-                    aufWahl = { stunde, minute -> zeitWahlOffen = false; vm.change(alarm.copy(hour = stunde, minute = minute)) },
+                    // Eine feste Uhrzeit wählen beendet das Wecken nach der Sonne.
+                    aufWahl = { stunde, minute -> zeitWahlOffen = false; vm.change(alarm.copy(hour = stunde, minute = minute, sunMode = "")) },
                 )
                 val pickTime = { zeitWahlOffen = true }
                 Text(alarm.timeLabel, Modifier.weight(1f).clickable(onClickLabel = "Uhrzeit ändern", onClick = pickTime), fontSize = 52.sp, fontFamily = zahlSchrift(), fontWeight = zahlGewicht(), color = LocalGold.current.primaer)
-                GoldKnopf("Uhrzeit ändern", pickTime)
+                GoldKnopf(if (alarm.sunMode.isBlank()) "Uhrzeit ändern" else "Feste Uhrzeit", pickTime)
             }
+            SonnenWahl(alarm, vm::change)
             Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth())
             SchlafdauerEingabe(alarm, vm::change)
             // Die Wiederholung gehört zur Weckzeit — hier sieht man sofort, dass der Wecker auch täglich klingeln kann.
@@ -2464,7 +2466,10 @@ fun terminAnzeige(now: Long, target: Long, zone: ZoneId = ZoneId.systemDefault()
 
 fun formatAt(time: Long): String = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
 fun dayLabel(days: Set<Int>): String = if (days.isEmpty()) "Einmalig" else if (days.size == 7) "Täglich" else if (days == setOf(1, 2, 3, 4, 5)) "Mo–Fr" else days.sorted().joinToString(" · ") { listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")[it - 1] }
-fun scheduleLabel(alarm: Alarm): String = when {
+fun scheduleLabel(alarm: Alarm): String = rhythmusLabel(alarm) +
+    if (alarm.sunMode.isBlank()) "" else " · ☀ ${SonnenWecker.bezeichnung(alarm)}"
+
+private fun rhythmusLabel(alarm: Alarm): String = when {
     alarm.repeatUnit == Alarm.MONTHLY -> {
         val day = java.time.LocalDate.parse(alarm.startDate).dayOfMonth
         (if (alarm.repeatEvery <= 1) "Monatlich am $day." else "Alle ${alarm.repeatEvery} Monate am $day.") +
@@ -3291,6 +3296,50 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
     Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Kein Tracking.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
     if (sleep > 0) SchlafErinnerungProWecker(alarm, change)
+}
+
+/**
+ * Wecken nach der Sonne: Schalter, Sonnenzeitpunkt mit Erklärung, Versatz und Vorschau der nächsten Tage.
+ * Die Weckzeit passt sich damit täglich an; feste Uhrzeit, Wiederholung und Ablauf bleiben wie gewählt.
+ */
+@Composable
+private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
+    Toggle("Nach der Sonne wecken (täglich angepasst)", alarm.sunMode.isNotBlank()) { an ->
+        change(alarm.copy(sunMode = if (an) SonnenWecker.STANDARD.id else "", sunOffsetMinutes = if (an) alarm.sunOffsetMinutes else 0))
+    }
+    if (alarm.sunMode.isBlank()) return
+    val ereignis = SonnenWecker.Ereignis.von(alarm.sunMode) ?: SonnenWecker.STANDARD
+    Choice("Sonnenzeitpunkt", ereignis.id, SonnenWecker.Ereignis.entries.map {
+        it.id to (if (it == SonnenWecker.STANDARD) "${it.titel} · Empfehlung" else it.titel)
+    }) { change(alarm.copy(sunMode = it)) }
+    Text(ereignis.erklaerung, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
+    var versatz by remember(alarm.id, alarm.sunOffsetMinutes) { mutableIntStateOf(alarm.sunOffsetMinutes) }
+    Text(when {
+        versatz == 0 -> "Genau zum Zeitpunkt"
+        versatz > 0 -> "$versatz Min. danach"
+        else -> "${-versatz} Min. davor"
+    }, style = MaterialTheme.typography.labelLarge, color = LocalGold.current.primaer)
+    Regler3D(versatz.toFloat(), { versatz = (it / 5f).roundToInt() * 5 },
+        Modifier.semantics { contentDescription = "Versatz zum Sonnenzeitpunkt"; stateDescription = "$versatz Minuten" },
+        bereich = SonnenWecker.VERSATZ_MIN.toFloat()..SonnenWecker.VERSATZ_MAX.toFloat(),
+        stufen = (SonnenWecker.VERSATZ_MAX - SonnenWecker.VERSATZ_MIN) / 5 - 1,
+        aufAenderungFertig = { change(alarm.copy(sunOffsetMinutes = versatz)) })
+    val context = LocalContext.current
+    var ortStand by remember { mutableIntStateOf(0) }
+    val freigabe = rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
+        SonnenOrt.aktualisiere(context); SonnenOrt.neuPlanen(context); ortStand++
+    }
+    LaunchedEffect(Unit) { SonnenOrt.aktualisiere(context); ortStand++ }
+    val heute = remember(rememberNow(60_000) / 3_600_000) { java.time.LocalDate.now() }
+    val vorschau = remember(alarm.sunMode, versatz, heute, ortStand) { SonnenWecker.vorschau(alarm.copy(sunOffsetMinutes = versatz), heute.plusDays(1)) }
+    Text("Nächste Tage: " + vorschau.joinToString(" · ") { (tag, uhr) ->
+        "${tag.format(DateTimeFormatter.ofPattern("EE dd.MM.", java.util.Locale.GERMAN))} $uhr" },
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
+    Text(remember(ortStand) { SonnenOrt.beschreibung(context) }, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    if (!remember(ortStand) { SonnenOrt.erlaubt(context) })
+        StillerKnopf("Ungefähren Standort erlauben", { freigabe.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }, hervorgehoben = true)
+    Text("Wiederholung, Schlafdauer und Schlafenszeit-Erinnerung richten sich automatisch nach der jeweils berechneten Weckzeit.",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
 }
 
 /**

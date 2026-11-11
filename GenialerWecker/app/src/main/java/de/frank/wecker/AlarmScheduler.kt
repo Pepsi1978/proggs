@@ -269,6 +269,8 @@ class AlarmReceiver : BroadcastReceiver() {
 
 class RestoreReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Neue Zeitzone (Reise): Standort für den Sonnenwecker zuerst auffrischen.
+        if (intent.action == Intent.ACTION_TIMEZONE_CHANGED) runCatching { SonnenOrt.aktualisiere(context) }
         AlarmScheduler(context).restore(intent.action == Intent.ACTION_TIME_CHANGED || intent.action == Intent.ACTION_TIMEZONE_CHANGED)
     }
 }
