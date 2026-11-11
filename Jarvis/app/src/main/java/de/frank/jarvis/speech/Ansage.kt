@@ -140,12 +140,18 @@ object Ansage {
 }
 
 /**
- * Nimmt Ansagen anderer eigener Apps an (z. B. UpdateStation: „Ein Update von … ist bereit“). Geschützt durch die
- * Signatur-Erlaubnis BRUECKE: Nur Apps mit Franks Schlüssel dürfen Jarvis sprechen lassen.
+ * Nimmt Ansagen anderer eigener Apps an (z. B. UpdateStation: „Ein Update von … ist bereit“). Nur Apps mit Franks Schlüssel
+ * dürfen Jarvis sprechen lassen. Geprüft wird im Code über die mitgeschickte Absender-Kennung (Absender setzt
+ * `BroadcastOptions.setShareIdentityEnabled`, ab Android 14), nicht über die geteilte Erlaubnis BRUECKE (Almanach §2.12).
  */
 class AnsageEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != AKTION) return
+        val absender = if (android.os.Build.VERSION.SDK_INT >= 34) sentFromUid else -1
+        if (absender == -1 || !de.frank.jarvis.faehigkeit.BrueckenSchutz.eigeneSignatur(context, absender)) {
+            Logbuch.fehler("Ansage abgelehnt", null, "Absender ohne Franks Schlüssel oder ohne Kennung (uid $absender)")
+            return
+        }
         val text = intent.getStringExtra(EXTRA_TEXT)?.take(500)?.takeIf { it.isNotBlank() } ?: return
         val titel = intent.getStringExtra(EXTRA_TITEL)?.take(80) ?: "Jarvis"
         Logbuch.sprache("Ansage von $titel", text.take(120))

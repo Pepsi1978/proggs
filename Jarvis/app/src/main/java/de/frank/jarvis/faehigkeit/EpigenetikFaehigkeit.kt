@@ -5,7 +5,7 @@ import android.net.Uri
 import org.json.JSONObject
 
 /**
- * Anbindung an Franks App „Epigenetik“ (de.frank.epigenetik) über deren Jarvis-Brücke (Signatur-Erlaubnis).
+ * Anbindung an Franks App „Epigenetik“ (de.frank.epigenetik) über deren Jarvis-Brücke (Signaturprüfung im Code).
  *
  * Die App recherchiert mit ChatGPT und Websuche, welche epigenetischen Wirkungen Nahrungsergänzungsmittel,
  * Nahrung und Verhalten haben (Gene, Enzyme, Signalwege aus einem festen Schalter-Vokabular), und umgekehrt,

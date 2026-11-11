@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Anbindung an „Genialer Wecker“ (de.frank.genialerwecker) über dessen Jarvis-Brücke (Signatur-Erlaubnis):
+ * Anbindung an „Genialer Wecker“ (de.frank.genialerwecker) über dessen Jarvis-Brücke (Signaturprüfung im Code):
  * Wecker lesen, stellen, ändern, schalten, den nächsten Termin auslassen und löschen.
  */
 class WeckerFaehigkeit(private val context: Context) : Faehigkeit {

@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Live-Gespräch über Bluetooth-Freisprechen (startBluetoothSco) bis Android 11 -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <!-- Victron-Solarbatterie (Instant Readout): nur Werbepakete mithören, nie ein Standort daraus. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Fahrzeit vom aktuellen Standort (Google Routes API). „Immer“, weil Jarvis im Hintergrund und für ChatGPT arbeitet. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -216,8 +218,7 @@
         <!-- Ansagen eigener Apps (UpdateStation): nur mit Franks Signatur. -->
         <receiver
             android:name=".speech.AnsageEmpfaenger"
-            android:exported="true"
-            android:permission="de.frank.jarvis.permission.BRUECKE">
+            android:exported="true">
             <intent-filter>
                 <action android:name="de.frank.jarvis.ANSAGE" />
             </intent-filter>

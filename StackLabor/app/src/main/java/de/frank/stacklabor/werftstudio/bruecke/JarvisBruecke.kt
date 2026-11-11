@@ -14,8 +14,8 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
 /**
- * Brücke zur App „Jarvis“ (de.frank.jarvis): Stacks und Mittel lesen UND bearbeiten. Geschützt durch die
- * Signatur-Erlaubnis `de.frank.jarvis.permission.BRUECKE`, also nur für Apps mit demselben Signierschlüssel.
+ * Brücke zur App „Jarvis“ (de.frank.jarvis): Stacks und Mittel lesen UND bearbeiten. Nur Apps mit demselben
+ * Signierschlüssel kommen durch; die Prüfung steht im Code ([nurEigeneSignatur]), nicht als Erlaubnis im Manifest.
  *
  * Aufruf: `ContentResolver.call(content://de.frank.stacklabor.werftstudio.jarvis, methode, null, Bundle("json" → Anfrage))`,
  * Antwort im Bundle unter "json". Fachliche Fehler kommen als `{"fehler": "..."}` zurück.

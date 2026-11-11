@@ -115,7 +115,12 @@ object Waechter {
                 .putExtra("projekt", nachricht.optString("projekt"))
                 .putExtra("paket", nachricht.optString("paket"))
                 .putExtra("versionCode", nachricht.optLong("versionCode"))
-            runCatching { app.sendBroadcast(wecken) }.onFailure { Logbuch.fehler("Signal Update an UpdateStation", it) }
+            // Mit Absender-Kennung: UpdateStation prüft daran Franks Schlüssel (statt über die geteilte Erlaubnis BRUECKE).
+            runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= 34)
+                    app.sendBroadcast(wecken, null, android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+                else app.sendBroadcast(wecken)
+            }.onFailure { Logbuch.fehler("Signal Update an UpdateStation", it) }
             Logbuch.netz("Signal Update", "${nachricht.optString("projekt")} vc ${nachricht.optLong("versionCode")} an UpdateStation")
             return
         }

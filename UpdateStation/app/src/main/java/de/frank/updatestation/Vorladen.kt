@@ -104,6 +104,11 @@ object Vorladen {
         val ansage = Intent("de.frank.jarvis.ANSAGE").setPackage("de.frank.jarvis")
             .putExtra("titel", "UpdateStation")
             .putExtra("text", text)
-        runCatching { context.sendBroadcast(ansage) }.onFailure { Log.w(TAG, "Ansage an Jarvis nicht möglich", it) }
+        // Mit Absender-Kennung: Jarvis prüft daran Franks Schlüssel (statt über die geteilte Erlaubnis BRUECKE).
+        runCatching {
+            if (android.os.Build.VERSION.SDK_INT >= 34)
+                context.sendBroadcast(ansage, null, android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+            else context.sendBroadcast(ansage)
+        }.onFailure { Log.w(TAG, "Ansage an Jarvis nicht möglich", it) }
     }
 }

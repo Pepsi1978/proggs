@@ -1,15 +1,13 @@
 package de.frank.jarvis.speech
 
 import android.content.ContentProvider
-import android.os.Process
-import android.os.Binder
-import android.content.pm.PackageManager
 import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import de.frank.jarvis.data.settings.SecureSettings
+import de.frank.jarvis.faehigkeit.nurEigeneSignatur
 import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +23,7 @@ import kotlinx.coroutines.runBlocking
  * für andere Apps unerreichbar in Jarvis, und jede App bräuchte sonst 670 MB Speicher und Arbeitsspeicher: Darum schickt eine
  * App ihre Aufnahme als Dateideskriptor (Binder trägt nur rund 1 MB) samt eigener Wortliste, Jarvis rechnet und gibt den Text zurück.
  *
- * Nur Apps mit Franks Signaturschlüssel kommen an diese Schnittstelle (`de.frank.jarvis.permission.BRUECKE`).
+ * Nur Apps mit Franks Signaturschlüssel kommen an diese Schnittstelle ([nurEigeneSignatur], Prüfung im Code).
  */
 class ParakeetBruecke : ContentProvider() {
     override fun onCreate() = true
@@ -96,15 +94,4 @@ class ParakeetBruecke : ContentProvider() {
         val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         @Volatile var freigabe: Job? = null
     }
-}
-
-/**
- * Nur Apps mit Franks Signierschlüssel kommen durch. Die Prüfung steht hier im Code und nicht als `android:permission`
- * am Provider: Die geteilte Erlaubnis `de.frank.jarvis.permission.BRUECKE` gehört im System der App, die sie zuerst
- * deklariert hat, und verschwindet mit deren Deinstallation; dann wären alle Brücken zu (11.11.2026, Entropy Reducer).
- */
-private fun ContentProvider.nurEigeneSignatur() {
-    val pm = context?.packageManager ?: throw SecurityException("App nicht bereit.")
-    if (pm.checkSignatures(Binder.getCallingUid(), Process.myUid()) != PackageManager.SIGNATURE_MATCH)
-        throw SecurityException("Nur Apps mit demselben Signierschlüssel.")
 }

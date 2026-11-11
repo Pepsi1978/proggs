@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Anbindung an „Geniale Ideen“ (de.frank.genialeideen) über deren Jarvis-Brücke (Signatur-Erlaubnis):
+ * Anbindung an „Geniale Ideen“ (de.frank.genialeideen) über deren Jarvis-Brücke (Signaturprüfung im Code):
  * Ideen lesen (auch wie die Reiter und die Seitenleiste der App), neue anlegen (die App glättet Text und Titel mit ihrer KI),
  * ändern, annehmen, als umgesetzt markieren, löschen; Kurzfassung lesen, mit KI neu erzeugen und zurücknehmen.
  */

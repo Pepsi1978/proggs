@@ -5,7 +5,7 @@ import android.net.Uri
 import org.json.JSONObject
 
 /**
- * Anbindung an „Stack-Labor“ (de.frank.stacklabor.werftstudio) über dessen Jarvis-Brücke (Signatur-Erlaubnis): Franks
+ * Anbindung an „Stack-Labor“ (de.frank.stacklabor.werftstudio) über dessen Jarvis-Brücke (Signaturprüfung im Code): Franks
  * Nahrungsergänzungs-Stacks lesen und bearbeiten. Die Fachlogik (Namen auflösen, Dosis prüfen, Doppel-Schutz, Sperre,
  * Bestätigung beim Löschen, Nachlesen nach jeder Änderung) liegt in der App (`bruecke/JarvisStackDienst.kt`); die Brücke
  * liefert fertige Texte. Lesende und schreibende Werkzeuge sind getrennt, Löschen hat ein eigenes Werkzeug.

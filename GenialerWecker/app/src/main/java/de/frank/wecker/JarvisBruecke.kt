@@ -16,8 +16,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Brücke zur App „Jarvis“ (de.frank.jarvis): Wecker lesen UND stellen. Geschützt durch die Signatur-Erlaubnis
- * `de.frank.jarvis.permission.BRUECKE` — nur Apps mit demselben Signierschlüssel kommen durch.
+ * Brücke zur App „Jarvis“ (de.frank.jarvis): Wecker lesen UND stellen. Nur Apps mit demselben Signierschlüssel
+ * kommen durch; die Prüfung steht im Code ([nurEigeneSignatur]), nicht als Erlaubnis im Manifest.
  *
  * Aufruf: `ContentResolver.call(content://de.frank.genialerwecker.jarvis, methode, null, Bundle("json" → Anfrage))`,
  * Antwort im Bundle unter "json". Fachliche Fehler kommen als `{"fehler": "..."}` zurück.

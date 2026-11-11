@@ -21,11 +21,19 @@ import java.util.concurrent.TimeUnit
 /**
  * Echtzeit-Signal von Jarvis: Der Server meldet eine neu veröffentlichte APK (apk-update am PC), Jarvis reicht es
  * über seine ohnehin offene Serververbindung hierher weiter. Kein eigenes Abfragen im Hintergrund nötig.
- * Geschützt durch Jarvis' Signatur-Erlaubnis BRUECKE.
+ * Nur von Apps mit Franks Schlüssel: geprüft im Code über die mitgeschickte Absender-Kennung (Jarvis setzt
+ * `BroadcastOptions.setShareIdentityEnabled`, ab Android 14), nicht über die geteilte Erlaubnis BRUECKE. Die verschwindet
+ * mit der Deinstallation der App, der sie gehört (Almanach `bugs/android/android-platform.md` §2.12).
  */
 class SignalEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != AKTION) return
+        val absender = if (android.os.Build.VERSION.SDK_INT >= 34) sentFromUid else -1
+        if (absender == -1 || (absender != android.os.Process.myUid() &&
+                context.packageManager.checkSignatures(absender, android.os.Process.myUid()) != android.content.pm.PackageManager.SIGNATURE_MATCH)) {
+            Log.w(TAG, "Update-Signal abgelehnt: Absender ohne Franks Schlüssel oder ohne Kennung (uid $absender)")
+            return
+        }
         val paket = intent.getStringExtra("paket")
         val vc = intent.getLongExtra("versionCode", 0L)
         Log.i(TAG, "Update-Signal: ${intent.getStringExtra("projekt")} $paket vc $vc")

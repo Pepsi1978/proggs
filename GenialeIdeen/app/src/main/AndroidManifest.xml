@@ -81,7 +81,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/dateien" />
         </provider>
-        <!-- Brücke zu Jarvis: Ideen lesen und schreiben, durch die Signatur-Erlaubnis geschützt. -->
+        <!-- Brücke zu Jarvis: Ideen lesen und schreiben; die Signatur prüft JarvisBruecke im Code. -->
         <provider
             android:name=".bridge.JarvisBruecke"
             android:authorities="de.frank.genialeideen.jarvis"

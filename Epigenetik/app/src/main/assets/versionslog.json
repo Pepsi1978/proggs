@@ -13,6 +13,7 @@
     {"versionCode": 9, "versionName": "1.0.8", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Recherchen gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."},
     {"versionCode": 10, "versionName": "1.0.9", "stand": "10.11.2026, 15:36 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet nimmt jetzt auch Stände mit Volltextsuche zuverlässig an."},
     {"versionCode": 11, "versionName": "1.0.10", "stand": "10.11.2026, 17:06 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet spielt Stände jetzt in einem Zug ein, räumt entfallene Zusatzdateien mit auf und nimmt kein Paket einer neueren App-Fassung an, solange die App hier älter ist."},
-    {"versionCode": 12, "versionName": "1.0.11", "stand": "11.11.2026, 17:56 Uhr", "notiz": "Die Jarvis-Brücke prüft den Signierschlüssel jetzt selbst, damit sie nach dem Deinstallieren einer anderen App nicht mehr den Zugriff verweigert."}
+    {"versionCode": 12, "versionName": "1.0.11", "stand": "11.11.2026, 17:56 Uhr", "notiz": "Die Jarvis-Brücke prüft den Signierschlüssel jetzt selbst, damit sie nach dem Deinstallieren einer anderen App nicht mehr den Zugriff verweigert."},
+    {"versionCode": 13, "versionName": "1.0.12", "stand": "11.11.2026, 18:11 Uhr", "notiz": "Kommentare zur Brücken-Signaturprüfung korrigiert."}
 ]
 }

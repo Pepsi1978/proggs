@@ -35,6 +35,7 @@
     {"versionCode": 31, "versionName": "1.0.30", "stand": "30.10.2026, 13:41 Uhr", "notiz": "Vor jeder Jarvis-Installation öffnet UpdateStation jetzt das goldene Overlay von Jarvis mit Sofort oder 1 bis 5 Minuten und installiert Jarvis mit seinem Pflicht-Teil"},
     {"versionCode": 32, "versionName": "1.0.31", "stand": "30.10.2026, 14:11 Uhr", "notiz": "UpdateStation installiert Jarvis wieder direkt beim Tippen auf Aktualisieren, ohne Zeitfenster; es bleibt die Rückfallebene für den Notfall"},
     {"versionCode": 33, "versionName": "1.0.32", "stand": "30.10.2026, 19:36 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
-    {"versionCode": 34, "versionName": "1.0.33", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 34, "versionName": "1.0.33", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 35, "versionName": "1.0.34", "stand": "11.11.2026, 18:11 Uhr", "notiz": "Update-Signal und Ansagen über Jarvis funktionieren auch dann, wenn eine andere App deinstalliert wurde."}
 ]
 }

@@ -269,7 +269,9 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **Diagnose:** `adb shell "dumpsys package | grep -A1 'Permission \[<X>'"` → kein Treffer = Permission weg; `sourcePackage=` zeigt den aktuellen Besitzer (Tablet: `de.frank.aufgaben`, also gleiche Falle). Schlüssel per `dumpsys package <paket> | grep signatures` vergleichen.
 - **Sofort-FIX:** Irgendeine Deklarierer-App neu installieren (`install -r`, kein Datenverlust), am besten Jarvis → sie wird neue Besitzerin, Android gewährt die Permission sofort wieder allen anfordernden Apps.
 - **Dauer-FIX (umgesetzt in Jarvis, Geniale Ideen, Genialer Wecker, Epigenetik, Stack-Labor):** Provider ohne `android:permission`, stattdessen in jedem Einstieg mit Daten (`call`, `openFile`) `packageManager.checkSignatures(Binder.getCallingUid(), Process.myUid()) == SIGNATURE_MATCH`, sonst `SecurityException`. Die `<permission>`/`<uses-permission>`-Zeilen bleiben stehen (Receivers und ältere Apps hängen noch daran; nimmt man sie dem aktuellen Besitzer, fällt die Permission sofort für alle weg).
-- **Rest-Risiko:** Exportierte Receivers mit `android:permission` (Jarvis `AnsageEmpfaenger`, UpdateStation `SignalEmpfaenger`) hängen weiter an der geteilten Permission.
+- **Receivers (umgesetzt in Jarvis `AnsageEmpfaenger`, UpdateStation `SignalEmpfaenger`):** kein `android:permission`; der Absender schickt `sendBroadcast(intent, null, BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())`, der Empfänger prüft `sentFromUid` (ab API 34, sonst ablehnen) mit `checkSignatures`.
+- **Diagnose in Jarvis (`AppBruecke.verweigert`):** zuerst fremder Schlüssel (Text der Brücke oder `checkSignatures`), „Erlaubnis fehlt“ nur bei einem `Permission Denial` des Systems, sonst den Text der Exception nennen. `SecurityException("App nicht bereit.")` zählt als nicht bereit (zweiter Versuch).
+- **Rest-Risiko:** EntropieReductor (am Handy deinstalliert) prüft noch per Manifest; `aufgaben.permission.JARVIS`/`ziele.permission.JARVIS` haben nur zwei Deklarierer (Jarvis und Ziel-App), fällt eine weg, fehlt die Brücke ohnehin.
 
 ---
 

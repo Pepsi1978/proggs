@@ -72,14 +72,18 @@ object AppBruecke {
      * zuerst deklariert hat, und verschwindet mit deren Deinstallation (11.11.2026: Entropy Reducer). Neuere Brücken
      * prüfen die Signatur deshalb selbst im Code; ältere Fassungen hängen noch an der Erlaubnis.
      */
-    private fun verweigert(context: Context, app: String, adresse: Uri): String {
+    private fun verweigert(context: Context, app: String, adresse: Uri, grund: String): String {
         val pm = context.packageManager
-        if (runCatching { pm.getPermissionInfo("de.frank.jarvis.permission.BRUECKE", 0) }.isFailure)
-            return "$app verweigert den Zugriff: Die Brücken-Erlaubnis fehlt im System, weil die App deinstalliert wurde, der sie gehörte. Jarvis einmal neu installieren, dann geht es wieder; ein Update von $app beseitigt die Abhängigkeit dauerhaft."
         val paket = runCatching { pm.resolveContentProvider(adresse.authority.orEmpty(), 0)?.packageName }.getOrNull()
-        if (paket != null && pm.checkSignatures(context.packageName, paket) != android.content.pm.PackageManager.SIGNATURE_MATCH)
+        val fremd = grund == BrueckenSchutz.FREMDER_SCHLUESSEL ||
+            (paket != null && pm.checkSignatures(context.packageName, paket) != android.content.pm.PackageManager.SIGNATURE_MATCH)
+        if (fremd)
             return "$app verweigert den Zugriff: $app ist mit einem anderen Schlüssel signiert als Jarvis. $app mit dem gemeinsamen Schlüssel neu installieren (nicht deinstallieren)."
-        return "$app verweigert den Zugriff, obwohl Schlüssel und Erlaubnis stimmen. Jarvis einmal neu installieren."
+        // Nur das System meldet „Permission Denial“: Dann hängt eine ältere Fassung von $app noch an der geteilten Erlaubnis.
+        val erlaubnisWeg = runCatching { pm.getPermissionInfo("de.frank.jarvis.permission.BRUECKE", 0) }.isFailure
+        if (grund.startsWith("Permission Denial") && erlaubnisWeg)
+            return "$app verweigert den Zugriff: Die Brücken-Erlaubnis fehlt im System, weil die App deinstalliert wurde, der sie gehörte. Jarvis einmal neu installieren, dann geht es wieder; ein Update von $app beseitigt die Abhängigkeit dauerhaft."
+        return "$app verweigert den Zugriff: ${grund.ifBlank { "ohne Begründung" }.take(200)}"
     }
 
     private fun rufeEinmal(context: Context, app: String, adressen: List<Uri>, methode: String, anfrage: JSONObject, grenze: Long, lesend: Boolean): JSONObject {
@@ -114,8 +118,10 @@ object AppBruecke {
             } catch (_: KeineBruecke) {
                 // null: Unter dieser Adresse ist keine Brücke installiert.
             } catch (e: SecurityException) {
+                // Die Brücke hatte noch keinen Kontext: wie „App nicht bereit.“ behandeln, dann greift der zweite Versuch.
+                if (e.message == NICHT_BEREIT) return fehler(NICHT_BEREIT)
                 Logbuch.fehler("Brücke $app.$methode verweigert", e)
-                return fehler(verweigert(context, app, adresse))
+                return fehler(verweigert(context, app, adresse, e.message.orEmpty()))
             } catch (_: IllegalArgumentException) {
                 // Diese Variante kennt die Brücke nicht: nächste Adresse versuchen.
             } catch (_: InterruptedException) {

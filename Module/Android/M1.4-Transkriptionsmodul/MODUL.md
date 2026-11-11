@@ -149,10 +149,14 @@ eigener Wortliste an den `ParakeetBruecke`-Provider in Jarvis; dort liegt das Mo
 Manifest der App (nur bei Franks gemeinsamem Signaturschlüssel möglich):
 
 ```xml
-<permission android:name="de.frank.jarvis.permission.BRUECKE" android:protectionLevel="signature" />
-<uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 <queries><provider android:authorities="de.frank.jarvis.parakeet" /></queries>
 ```
+
+Seit Jarvis 1.8.629 prüft `ParakeetBruecke` den Signierschlüssel des Aufrufers selbst. Neue Apps deklarieren deshalb
+**kein** `<permission … BRUECKE>` mehr: Jede weitere Deklarierin kann Besitzerin der geteilten Erlaubnis werden, und mit
+ihrer Deinstallation verschwindet die Erlaubnis für alle (Almanach `bugs/android/android-platform.md` §2.12). Bestehende
+Apps behalten ihre Zeilen, weil ältere Fassungen noch daran hängen. `KEINE_ERLAUBNIS` bedeutet jetzt: anderer Schlüssel
+als Jarvis; der Text in `ParakeetUeberJarvis.kt` („nach Jarvis noch einmal installieren“) wird mit der nächsten Modulversion angepasst.
 
 An jeder Transkriptionsstelle: `if (ParakeetUeberJarvis.gewaehlt(context)) ParakeetUeberJarvis.transkribiere(context, wav) else …`.
 Prüfungen auf einen fehlenden Groq-Schlüssel gelten dann nicht. Kein stiller Rückfall auf Groq. Beim Aufnahmestart optional `vorwaermen`.

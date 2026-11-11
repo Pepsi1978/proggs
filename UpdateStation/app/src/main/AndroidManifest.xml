@@ -43,8 +43,7 @@
         <!-- Echtzeit-Signal „neue APK“ vom Server, weitergereicht von Jarvis. -->
         <receiver
             android:name=".SignalEmpfaenger"
-            android:exported="true"
-            android:permission="de.frank.jarvis.permission.BRUECKE">
+            android:exported="true">
             <intent-filter>
                 <action android:name="de.frank.updatestation.UPDATE_SIGNAL" />
             </intent-filter>

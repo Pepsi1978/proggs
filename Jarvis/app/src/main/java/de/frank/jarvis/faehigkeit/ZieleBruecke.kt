@@ -1,9 +1,6 @@
 package de.frank.jarvis.faehigkeit
 
 import android.content.ContentProvider
-import android.os.Process
-import android.os.Binder
-import android.content.pm.PackageManager
 import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
@@ -15,7 +12,7 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
 /**
- * Brücke von der App „Ziele“ (de.frank.ziele) zu Jarvis, geschützt durch `de.frank.jarvis.permission.BRUECKE` (Signatur).
+ * Brücke von der App „Ziele“ (de.frank.ziele) zu Jarvis, nur für Apps mit Franks Schlüssel ([nurEigeneSignatur]).
  * Adresse `content://de.frank.jarvis.ziele`, Aufruf mit `call` und Bundle "json" hin und zurück, wie bei den anderen Brücken.
  *
  * - `kontext`: der kurze Startkontext aus dem Live-Gedächtnis (Regeln, Ziele, Wissen über Frank, Dienst, Tageslage).
@@ -60,15 +57,4 @@ class ZieleBruecke : ContentProvider() {
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = 0
-}
-
-/**
- * Nur Apps mit Franks Signierschlüssel kommen durch. Die Prüfung steht hier im Code und nicht als `android:permission`
- * am Provider: Die geteilte Erlaubnis `de.frank.jarvis.permission.BRUECKE` gehört im System der App, die sie zuerst
- * deklariert hat, und verschwindet mit deren Deinstallation; dann wären alle Brücken zu (11.11.2026, Entropy Reducer).
- */
-private fun ContentProvider.nurEigeneSignatur() {
-    val pm = context?.packageManager ?: throw SecurityException("App nicht bereit.")
-    if (pm.checkSignatures(Binder.getCallingUid(), Process.myUid()) != PackageManager.SIGNATURE_MATCH)
-        throw SecurityException("Nur Apps mit demselben Signierschlüssel.")
 }
