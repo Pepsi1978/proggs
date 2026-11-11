@@ -171,6 +171,20 @@
       "pruefung": "Nach 10 Sitzungen: kein ATTACH auf Rooms Verbindung mehr in neuem Code, kein Übernahme-Abbruch wegen leerer Room-Rechnung -> wirkt.",
       "ruecknahme": "Zeile 23 aus dem Room-Kurzcheck entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    },
+    {
+      "id": "M11",
+      "titel": "Python-Ersetzskripte: CRLF vor dem Suchen normalisieren",
+      "datum": "2026-11-11T16:48",
+      "status": "aktiv",
+      "beleg": "Sitzung 9d83ba1b: mehrzeiliges str.replace auf EingabeBlase.kt (CRLF) scheiterte mit AssertionError, danach zerlegte ein sed-Flicken das Skript; ~2 min und 5 Aufrufe.",
+      "ort": ["memory/lange-skripte-per-write.md (letzter Absatz)"],
+      "werkzeug": "Bash",
+      "aufruf_regex": "newline=''",
+      "fehler_regex": "AssertionError",
+      "pruefung": "Nach 10 Sitzungen mit Ersetzskripten kein AssertionError mehr -> wirkt.",
+      "ruecknahme": "Letzten Absatz aus lange-skripte-per-write.md entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
     }
   ]
 }
