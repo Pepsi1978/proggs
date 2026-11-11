@@ -299,3 +299,5 @@ cd ~\proggs\UpdateZentrale
 dotnet build -c Release
 pwsh -File .\create_shortcut.ps1
 ```
+
+Läuft die UpdateZentrale, sperrt sie `bin\Release\…\UpdateZentrale.exe` (MSB3021). Ein Probebau geht dann nur in einen eigenen Ordner, etwa `dotnet build -c Release -o $env:TEMP\uz-build-check`. Die neue Fassung kommt nur über `update-zentrale.ps1` auf den Rechner.
