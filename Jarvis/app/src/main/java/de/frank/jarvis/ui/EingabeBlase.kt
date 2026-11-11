@@ -438,6 +438,15 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false, stufe: Int = 0)
 /** Abstand des Stapels zur Eingabeblase (StartBildschirm). */
 val SCHWEBE_UNTEN = 2.dp
 
+/**
+ * Abstand des Gesprächsendes zur Unterkante der Liste: Die letzte Zeile (etwa 21 dp hoch) steht mittig neben dem
+ * Programmier-Symbol, das über dem Klapp-Pfeil sitzt (Abstand unten, Pfeil, zwei Zwischenräume).
+ */
+val TEXTENDE_UNTEN = SCHWEBE_UNTEN + SCHWEBE_ABSTAND * 2 + SCHWEBE_GROESSE + 8.dp
+
+/** Abstand zwischen den Einträgen der Gesprächsliste. */
+val LISTEN_ABSTAND = 10.dp
+
 /** Mindestplatz des verdichteten Stapels; so viel lässt die Eingabeblase über sich frei, auch bei sehr langem Text. */
 val SCHWEBE_MINDEST = schwebeHoehe(nachtrag = true, stufe = 2) + SCHWEBE_UNTEN
 

@@ -66,7 +66,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.ui.layout.layout
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -212,9 +212,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
     }
-    // Mitlesen mittig (Franks Wunsch, gerade auf dem aufgeklappten Fold): Ohne eigenes Scrollen steht das Ende des Gesprächs,
-    // also das, was gerade hereinkommt, in der Bildschirmmitte. Dafür bekommt die Liste unten eine halbe Listenhöhe Polster
-    // und stapelt kurze Gespräche von unten: Ganz unten angekommen, endet der Text genau in der Mitte, darüber steht der Rest.
+    // Mitlesen: Ohne eigenes Scrollen steht das Ende des Gesprächs, also das, was gerade hereinkommt, auf Höhe des
+    // Programmier-Symbols ([TEXTENDE_UNTEN]); kurze Gespräche stapeln sich von unten, darüber steht der Rest.
     val dichte = androidx.compose.ui.platform.LocalDensity.current
     var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     // Wird der Platz über der Blase knapp (lange Eingabe, Tastatur, Querformat), verdichtet sich der Symbolstapel, statt unten abgeschnitten zu werden.
@@ -225,7 +224,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
     }
-    // Beim Mitlesen bleibt das Ende in der Mitte, auch wenn die letzte Nachricht wächst, darunter die Abschlusszeile erscheint oder
+    // Beim Mitlesen bleibt das Ende auf dieser Höhe, auch wenn die letzte Nachricht wächst, darunter die Abschlusszeile erscheint oder
     // das Handy auf- oder zugeklappt wird. Greift Frank selbst ein (Finger, laufende Animation), wartet das.
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { folgenZustand.value && vm.gespraech.isNotEmpty() && !liste.isScrollInProgress && liste.canScrollForward }
@@ -261,9 +260,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
-        val mitte = if (vm.gespraech.isEmpty()) 0.dp else with(dichte) { (listenHoehe / 2).toDp() }
-        // Im Gespräch genau eine halbe Listenhöhe, nicht mehr: Die schwebenden Knöpfe rechts sind im Querformat höher als die
-        // halbe Liste und schoben das Ende sonst nach oben (rechts hält SCHWEBE_FREI_RECHTS den Text von ihnen frei).
+        // Im Gespräch endet der Inhalt (letztes Wort oder laufender Stand) auf Höhe des Programmier-Symbols unter der Fernwartung
+        // (Franks Wunsch vom 11.11.2026); rechts hält SCHWEBE_FREI_RECHTS den Text von den Symbolen frei.
+        val mitte = TEXTENDE_UNTEN
         val vonUnten = vm.gespraech.isNotEmpty()
         // Liste samt Symbolstapel und Eingabeblase teilen sich den Rest. Die Blase darf höchstens so hoch werden, dass der verdichtete
         // Stapel (Neue Session, Nachtrag, Programmierer, Pfeil) darüber ganz Platz hat; bei langem Text scrollt nur ihr Textfeld.
@@ -289,8 +288,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             ), state = liste,
             // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
             // auch im Live-Gespräch, damit beim Starten und Beenden nichts neu umbricht und die Lesestelle springt.
-            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) mitte else 8.dp + schweber),
-            verticalArrangement = if (vonUnten) Arrangement.spacedBy(10.dp, Alignment.Bottom) else Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) mitte - LISTEN_ABSTAND else 8.dp + schweber),
+            verticalArrangement = if (vonUnten) Arrangement.spacedBy(LISTEN_ABSTAND, Alignment.Bottom) else Arrangement.spacedBy(LISTEN_ABSTAND),
         ) {
             if (offen > 0) item(key = EINRICHTUNG_KEY) {
                 Karte(toenung = f.primaer) {
@@ -399,38 +398,23 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
               }
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
-            // Ohne Gespräch steht der laufende Stand wie bisher in der Liste; im Gespräch schwebt er fest im unteren Viertel (unten).
-            if (!vonUnten) {
-                item(key = "programmiert") { ProgrammierAktivitaet(vm) }
-                if (vm.denkt) item(key = "denkt") { TaetigkeitsZeile(vm) }
-            }
-            if (!vm.denkt) vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
-                Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
-            } }
-            if (!vonUnten) item(key = "agenten") { AgentenZeile() }
-        }
-        // Laufender Stand im Gespräch (Franks Wunsch vom 11.11.2026): Tätigkeit samt Leuchtkern, Arbeitssymbol der Programmier-Sitzung
-        // und Agenten stehen fest im unteren Drittel bis unteren Viertel des Chatfensters, unabhängig vom Scrollen, rechts frei
-        // neben der Spalte der schwebenden Symbole. Die Unterkante liegt ein Viertel der Listenhöhe über der Eingabe; ist der Stand
-        // dafür zu hoch (Tastatur offen, Querformat), rückt er nach unten, damit er nicht über die Lesemitte ([mitte]) ragt, wo der
-        // Text beim Mitlesen endet. Wischen auf dem Stand scrollt die Liste dahinter (auch über die Mitlese-Erkennung [nachOben]).
-        // Der eigene Grund hält ihn lesbar, wenn Frank Text darunter durchschiebt.
-        if (vonUnten) {
-            var statusHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-            val viertel = mitte / 2
-            val frei = mitte - with(dichte) { statusHoehe.toDp() }
-            Column(
-                Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                    .padding(start = 12.dp, end = SCHWEBE_FREI_RECHTS, bottom = minOf(viertel, frei).coerceAtLeast(0.dp))
-                    .onSizeChanged { statusHoehe = it.height }
-                    .nestedScroll(nachOben)
-                    .scrollable(liste, androidx.compose.foundation.gestures.Orientation.Vertical, reverseDirection = true)
-                    .background(f.hgUnten.copy(alpha = 0.88f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                    .padding(horizontal = 4.dp),
-            ) {
-            ProgrammierAktivitaet(vm)
-                if (vm.denkt) TaetigkeitsZeile(vm)
-                AgentenZeile()
+            // Laufender Stand (Tätigkeit samt Leuchtkern, Arbeitssymbol der Programmier-Sitzung, Abschluss, Agenten) gehört zum
+            // Gesprächsinhalt (Franks Wunsch vom 11.11.2026): kein eigener Grund, keine feste Zeile, er scrollt mit dem Text.
+            // Ein einziger Eintrag: Leer steht er mit Höhe 0 genau auf dem Textende (das Polster unten ist um den Listenabstand
+            // kürzer); sichtbar holt er diesen Abstand unten nach, damit auch seine letzte Zeile auf derselben Höhe endet.
+            item(key = "stand") {
+                Column(Modifier.fillMaxWidth().layout { messbar, grenzen ->
+                    val p = messbar.measure(grenzen)
+                    val extra = if (vonUnten && p.height > 0) LISTEN_ABSTAND.roundToPx() else 0
+                    layout(p.width, p.height + extra) { p.place(0, 0) }
+                }) {
+                    ProgrammierAktivitaet(vm)
+                    if (vm.denkt) TaetigkeitsZeile(vm)
+                    else vm.sitzungId?.let { vm.abschluss[it] }?.let { a ->
+                        Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+                    }
+                    AgentenZeile()
+                }
             }
         }
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN), schwebStufe)
