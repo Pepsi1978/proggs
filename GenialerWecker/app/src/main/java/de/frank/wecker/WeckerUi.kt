@@ -253,7 +253,8 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                             }
                         } } ?: Box(Modifier.fillMaxSize())
                         "settings" -> SettingsPage(vm, activity)
-                        else -> AlarmList(alarms, vm,
+                        // Nur die Anzeige ist nach Uhrzeit sortiert (früh bis spät); gespeichert bleibt die Liste unverändert.
+                        else -> AlarmList(remember(alarms) { alarms.sortedWith(compareBy<Alarm>({ it.hour }, { it.minute }, { it.name }, { it.id })) }, vm,
                             onNew = { openDraft { vm.newAlarm() } },
                             onEdit = { alarm -> if (draft?.id == alarm.id) page = "edit" else openDraft { vm.edit(alarm) } }, onDelete = { delete = it },
                             onSettings = { settingsFrom = "alarms"; page = "settings" },
