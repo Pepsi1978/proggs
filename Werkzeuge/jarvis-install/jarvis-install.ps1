@@ -100,7 +100,7 @@ function Installiere {
     if ($ausgabe -match "(?m)^Success") {
         $script:abgeschlossen = $true
         # Diese APK ist jetzt die Basis am Gerät: fürs nächste Delta merken.
-        if (Test-Path $gitBash) { & $gitBash -c "source '$deltaSh' && delta_merken '$apkUnix' '$paket'" *> $null }
+        if (Test-Path $gitBash) { & $gitBash -c "export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'; source '$deltaSh' && delta_merken '$apkUnix' '$paket'" *> $null }
         # Samsung startet Jarvis nach dem Update nicht immer von selbst (war die App vorn, fehlten Dienst und Verbindung bis zum
         # nächsten Öffnen): den Prozess wecken. Ältere Fassungen kennen die Aktion nicht, dann passiert nichts.
         Handy am broadcast -a de.frank.jarvis.AUFWACHEN -p $paket | Out-Null
@@ -139,7 +139,8 @@ try {
 
     "Lade die APK vorab aufs Handy über $Geraet ..."
     $global:LASTEXITCODE = 1
-    if (Test-Path $gitBash) { & $gitBash -c "source '$deltaSh' && delta_push '$($adb.Replace('\', '/'))' '$Geraet' '$apkUnix' '$zwischenlager' '$paket'" | Write-Host }
+    # MSYS_NO_PATHCONV: Sonst macht Git Bash aus /data/local/tmp/… beim Aufruf von adb.exe „C:/Program Files/Git/data/local/tmp/…“.
+    if (Test-Path $gitBash) { & $gitBash -c "export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'; source '$deltaSh' && delta_push '$($adb.Replace('\', '/'))' '$Geraet' '$apkUnix' '$zwischenlager' '$paket'" | Write-Host }
     # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
     if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null }
     if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
