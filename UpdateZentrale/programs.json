@@ -177,7 +177,7 @@
       "neuStartenNachUpdate": false,
       "hinweis": "Offene PowerShell-Fenster bleiben offen. Sind Dateien in Benutzung, schließt Windows das Update beim nächsten PC-Neustart ab.",
       "akzent": "#2671BE",
-      "wingetName": "PowerShell",
+      "wingetName": "PowerShell 7-x64",
       "wingetUpdatePerInstall": true,
       "wingetInstallerTyp": "wix"
     },

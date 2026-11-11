@@ -47,8 +47,121 @@ public sealed class WingetAktualisierer : IAktualisierer
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
         var lauf = await ListeAsync(eintrag, protokoll, abbruch);
-        return ListeAuswerten(lauf, eintrag.WingetId ?? "", HierVorhanden(eintrag));
+        var ergebnis = ListeAuswerten(lauf, eintrag.WingetId ?? "", HierVorhanden(eintrag));
+        return ergebnis.Zustand == UpdateZustand.UpdateVerfuegbar && !string.IsNullOrWhiteSpace(eintrag.WingetInstallerTyp)
+            ? await AngebotMitInstallerTypAsync(eintrag, ergebnis, protokoll, abbruch)
+            : ergebnis;
     }
+
+    // ---------------- Festgelegter Installer-Typ ----------------
+
+    /// <summary>Versions of the walk below the offer; each one costs a "winget show".</summary>
+    internal const int TypSucheTiefe = 4;
+
+    /// <summary>(id|type|version) -> that version has an installer of that type. Manifests of a version rarely change.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _typCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// "winget list" offers the newest version whatever its installer types. With a pinned type
+    /// (PowerShell: wix) winget installs the newest version that HAS that type -- PowerShell 7.7.0
+    /// ships only as MSIX, so the install brought 7.6.10 and the list still offered 7.7.0: an
+    /// endless "update available" that every pass would force-reinstall. The offer becomes the
+    /// newest version with the pinned type (walking down from the offer to the installed version);
+    /// when that is the installed one, the card is current. Any unreadable answer keeps the
+    /// list's offer -- an error never turns into "current". See bugs/bug-cases/2026-11-11-*.
+    /// </summary>
+    private static async Task<PruefErgebnis> AngebotMitInstallerTypAsync(ProgrammEintrag eintrag, PruefErgebnis ergebnis,
+                                                                        IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var typ = eintrag.WingetInstallerTyp!.Trim();
+        var installiert = OhneOperator(ergebnis.InstallierteVersion);
+        var angebot = ergebnis.VerfuegbareVersion;
+
+        var hatTyp = await HatInstallerTypAsync(eintrag, angebot, typ, protokoll, abbruch);
+        if (hatTyp != false) return ergebnis;
+
+        var versionen = await ShowAsync(eintrag, "--versions", protokoll, abbruch);
+        if (versionen is null) return ergebnis;
+
+        var kandidaten = VersionenLesen(versionen)
+            .Where(v => CliAktualisierer.Vergleiche(v, angebot) < 0 && CliAktualisierer.Vergleiche(v, installiert) > 0)
+            .OrderByDescending(v => v, Comparer<string>.Create(CliAktualisierer.Vergleiche))
+            .Take(TypSucheTiefe);
+        foreach (var v in kandidaten)
+        {
+            var treffer = await HatInstallerTypAsync(eintrag, v, typ, protokoll, abbruch);
+            if (treffer is null) return ergebnis;
+            if (treffer == true)
+                return ergebnis with
+                {
+                    VerfuegbareVersion = v,
+                    Meldung = $"Neue Version {v} verfügbar ({angebot} gibt es nicht als {typ})."
+                };
+        }
+
+        // Nothing between installed and offer has the type (or the walk was capped): only "current"
+        // when the walk covered every version in between.
+        var alleGeprueft = VersionenLesen(versionen)
+            .Count(v => CliAktualisierer.Vergleiche(v, angebot) < 0 && CliAktualisierer.Vergleiche(v, installiert) > 0) <= TypSucheTiefe;
+        if (!alleGeprueft) return ergebnis;
+
+        protokoll.Report($"{angebot} hat keinen Installer vom Typ {typ} – {installiert} ist die neueste Fassung dieses Typs.");
+        return ergebnis with
+        {
+            Zustand = UpdateZustand.Aktuell,
+            VerfuegbareVersion = "",
+            Meldung = $"Auf dem neuesten Stand ({angebot} gibt es nur ohne {typ}-Installer)."
+        };
+    }
+
+    /// <summary>True/false from a readable "winget show"; null when the answer is not trustworthy.</summary>
+    private static async Task<bool?> HatInstallerTypAsync(ProgrammEintrag eintrag, string version, string typ,
+                                                         IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var schluessel = eintrag.WingetId + "|" + typ + "|" + version;
+        if (_typCache.TryGetValue(schluessel, out var bekannt)) return bekannt;
+
+        var ausgabe = await ShowAsync(eintrag, "--version " + version + " --installer-type " + typ, protokoll, abbruch);
+        if (ausgabe is null) return null;
+        var hat = HatInstaller(ausgabe);
+        _typCache[schluessel] = hat;
+        return hat;
+    }
+
+    /// <summary>"winget show" for the package; null on timeout, failure or a missing version header.</summary>
+    private static async Task<string?> ShowAsync(ProgrammEintrag eintrag, string zusatz, IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var args = $"show --id {eintrag.WingetId} --exact {zusatz} --disable-interactivity --accept-source-agreements" + QuellArgument(eintrag);
+        await Reihe.WaitAsync(abbruch);
+        try
+        {
+            protokoll.Report("winget " + args);
+            var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            protokoll.Report(lauf.Ausgabe);
+            var lesbar = !lauf.Abgelaufen && lauf.ExitCode == 0
+                         && lauf.Ausgabe.Contains("[" + eintrag.WingetId + "]", StringComparison.OrdinalIgnoreCase);
+            return lesbar ? lauf.Ausgabe : null;
+        }
+        finally
+        {
+            Reihe.Release();
+        }
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex HashMuster =
+        new(@"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Language-neutral: a selected installer always prints its SHA256; "no applicable installer"
+    /// is localized text and exit code 0 (measured, winget 1.29).
+    /// </summary>
+    internal static bool HatInstaller(string showAusgabe) => HashMuster.IsMatch(showAusgabe);
+
+    /// <summary>The version rows of "winget show --versions": lines that are a version number and nothing else.</summary>
+    internal static List<string> VersionenLesen(string ausgabe)
+        => ausgabe.Replace("\r", "").Split('\n').Select(z => z.Trim())
+            .Where(z => System.Text.RegularExpressions.Regex.IsMatch(z, @"^\d+(\.\d+)+$"))
+            .ToList();
 
     /// <summary>
     /// How winget is told which package: by id, or -- for packages winget only correlates by
