@@ -27,6 +27,7 @@ import de.frank.jarvis.bio.BioUebernahme
 import de.frank.jarvis.bio.presentation.BioAnsicht
 import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.ui.theme.LocalFarben
+import de.frank.jarvis.ui.theme.antippen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -115,8 +116,9 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     val uebernahme = s.uebernahme
     val bereit = BioAbruf.bereit(context)
 
-    // Die ganze Karte ist der Griff (langer Druck, dann ziehen), wie Frank es für alle Startbereiche erwartet; der Knopf bleibt antippbar.
-    Karte(modifier = griff) {
+    // Die ganze Karte ist der Griff (langer Druck, dann ziehen), wie Frank es für alle Startbereiche erwartet. Ein Tippen irgendwo auf
+    // die Karte öffnet den Biomarker-Bereich (Franks Wunsch vom 11.11.2026, ohne eigenen Öffnen-Knopf).
+    Karte(modifier = if (bereit) griff.antippen { BioAnsicht.oeffnen(context) } else griff) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("Biomarker", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -129,10 +131,10 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                     color = if (abruf.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Knopf(if (bereit) "Öffnen" else "Übernehmen") {
-                if (bereit) BioAnsicht.oeffnen(context)
+            // Nur solange die Übernahme aus Entropie Reductor aussteht; danach öffnet das Tippen auf die Karte den Bereich.
+            if (!bereit) Knopf("Übernehmen") {
                 // Im Modulbereich, nicht in der Karte: Scrollt Frank sie weg, läuft die Übernahme trotzdem zu Ende.
-                else if (s.uebernahme != "Übernimmt …") { s.uebernahme = "Übernimmt …"; de.frank.jarvis.bio.BioModul.bereich.launch { s.uebernahme = BioUebernahme.starte(context) } }
+                if (s.uebernahme != "Übernimmt …") { s.uebernahme = "Übernimmt …"; de.frank.jarvis.bio.BioModul.bereich.launch { s.uebernahme = BioUebernahme.starte(context) } }
             }
         }
         if (uebernahme.isNotEmpty()) Text(uebernahme, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))

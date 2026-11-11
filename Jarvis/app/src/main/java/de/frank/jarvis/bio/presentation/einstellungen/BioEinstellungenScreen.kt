@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -84,8 +85,29 @@ fun BioEinstellungenScreen(onBack: () -> Unit) {
     }
 }
 
+/**
+ * Die Biomarker-Einstellungen als Reiter „Biomarker“ in Jarvis' Einstellungen (Franks Vorgabe vom 11.11.2026: alle Einstellungen
+ * gehören in den Einstellungsbereich). Ohne eigene Scrollliste, weil der Einstellungsbildschirm selbst scrollt.
+ */
 @Composable
-private fun ZugangsKarten(modifier: Modifier) {
+fun BioEinstellungenInhalt(modifier: Modifier = Modifier) {
+    de.frank.jarvis.bio.presentation.theme.BioThema {
+        val cosmos = LocalCosmos.current
+        if (Geraet.istTablet) {
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Text("Zugänge und Abruf laufen auf dem Handy. Das Tablet zeigt nur den Spiegel der Biodaten des Handys.", color = cosmos.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                }
+                BioFachEinstellungen(Modifier.fillMaxWidth())
+            }
+        } else {
+            ZugangsKarten(modifier, alsListe = false)
+        }
+    }
+}
+
+@Composable
+private fun ZugangsKarten(modifier: Modifier, alsListe: Boolean = true) {
     val app = LocalContext.current.applicationContext
     BioModul.einrichten(app)
     val oauthVm: OAuthViewModel = viewModel(key = "bio-oauth") {
@@ -99,28 +121,23 @@ private fun ZugangsKarten(modifier: Modifier) {
     val ouraState by ouraVm.state.collectAsStateWithLifecycle()
     val hcState by hcVm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    // Als eigene Seite mit eigener Scrollleiste, im Einstellungsbildschirm ohne (der scrollt selbst).
+    val basis = if (alsListe) modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp) else modifier
+    Column(basis, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         val breite = Modifier.widthIn(max = 720.dp).fillMaxWidth()
-        item {
-            Text(
-                "Zugänge zu Whoop, Oura, Health Connect und der Polar-Historie. Die Schlüssel liegen verschlüsselt auf diesem Gerät.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = cosmos.textSecondary,
-                modifier = breite,
-            )
-        }
-        item { BioFachEinstellungen(breite) }
-        item { ReloadAllDataCard(breite, onReload = oauthVm::reloadAllData, message = oauthState.message) }
-        item { PolarOAuthCard(breite) }
-        item { WhoopOAuthCard(breite, oauthVm, oauthState) }
-        item { OuraApiCard(breite, ouraVm, ouraState) }
-        item { HealthConnectApiCard(breite, hcVm, hcState) }
-        item { Spacer(Modifier.height(40.dp)) }
+        Text(
+            "Zugänge zu Whoop, Oura, Health Connect und der Polar-Historie. Die Schlüssel liegen verschlüsselt auf diesem Gerät und gehen nie an den Server oder an ein Modell.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = cosmos.textSecondary,
+            modifier = breite,
+        )
+        WhoopOAuthCard(breite, oauthVm, oauthState)
+        OuraApiCard(breite, ouraVm, ouraState)
+        HealthConnectApiCard(breite, hcVm, hcState)
+        BioFachEinstellungen(breite)
+        PolarOAuthCard(breite)
+        ReloadAllDataCard(breite, onReload = oauthVm::reloadAllData, message = oauthState.message)
+        if (alsListe) Spacer(Modifier.height(40.dp))
     }
 }
 

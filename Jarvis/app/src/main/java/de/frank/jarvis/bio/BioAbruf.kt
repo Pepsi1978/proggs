@@ -23,7 +23,7 @@ data class BioAbrufStand(val laeuft: Boolean = false, val anlass: String = "", v
 /**
  * Die EINZIGEN Auslöser für frische Biomarker (Franks Vorgabe vom 11.11.2026). Es gibt keinen Hintergrund-Abgleich, keinen
  * Abruf durch bloßes Lesen, durch das Live-Gedächtnis oder durch den Wächter:
- *  1. [beimOeffnen]: einmal, wenn Frank den Biomarker-Bereich betritt;
+ *  1. (entfallen am 11.11.2026: beim Öffnen des Bereichs wird nichts mehr abgerufen);
  *  2. [manuell]: auf ausdrücklichen Wunsch (Knopf im Bereich, „Aktualisiere meine Biodaten“ per Sprache oder Text);
  *  3. [vorTagesauswertung]: unmittelbar vor jeder Tagesauswertung, mit begrenzter Wartezeit.
  * Alle drei laufen durch [BioModul.sync]; wer dazukommt, wartet auf den laufenden Abgleich statt einen zweiten zu starten.
@@ -38,13 +38,6 @@ object BioAbruf {
 
     /** Ein Abruf darf erst laufen, wenn die Daten in Jarvis liegen (sonst bliebe der Whoop-Zugang in Entropie Reductor). */
     fun bereit(context: Context): Boolean = Geraet.istTablet || Einstellungen.get(context).bioUebernommenMs > 0L
-
-    /** Auslöser 1: Frank betritt den Biomarker-Bereich. Der Aufrufer sorgt dafür, dass es je Betreten nur einmal geschieht. */
-    fun beimOeffnen(context: Context) {
-        val app = context.applicationContext
-        if (!Einstellungen.get(app).bioAbrufBeimOeffnen) return
-        starte(app, "Biomarker-Bereich geöffnet", WhoopAbrufPlan.Anlass.VORDERGRUND)
-    }
 
     /** Auslöser 2: ausdrücklicher Wunsch (Knopf, Sprache). Whoop wird gefragt, sofern der letzte Versuch nicht ganz frisch ist. */
     fun manuell(context: Context, wer: String): Deferred<ApiSyncBericht?> =

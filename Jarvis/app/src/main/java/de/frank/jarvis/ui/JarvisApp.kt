@@ -113,6 +113,15 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             GespraecheSchublade(vm, schublade, wischen) {
             Box(Modifier.fillMaxSize()) {
             // Biomarker-Bereich als Vollbild über die ganze Breite (Kartenraster auf Fold und Tablet), statt der Spalte.
+            // Zahnrad im Biomarker-Bereich: Die Einstellungen liegen in Jarvis' Einstellungen, Reiter „Biomarker“.
+            androidx.compose.runtime.LaunchedEffect(de.frank.jarvis.bio.presentation.BioAnsicht.zuEinstellungen) {
+                if (!de.frank.jarvis.bio.presentation.BioAnsicht.zuEinstellungen) return@LaunchedEffect
+                de.frank.jarvis.bio.presentation.BioAnsicht.zuEinstellungen = false
+                de.frank.jarvis.bio.presentation.BioAnsicht.schliessen()
+                vm.einstellungsVerlauf = emptyList()
+                vm.einstellungsReiter = "biomarker"
+                vm.reiter = Reiter.EINSTELLUNGEN
+            }
             if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else

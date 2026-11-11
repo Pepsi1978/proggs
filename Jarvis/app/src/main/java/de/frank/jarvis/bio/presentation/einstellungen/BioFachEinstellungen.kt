@@ -36,7 +36,7 @@ fun BioFachEinstellungen(modifier: Modifier) {
     val cosmos = LocalCosmos.current
     val katalog = remember { EinstellungsKatalog(app) }
     val eintraege = remember {
-        katalog.eintraege.filter { it.bereich == "Biomarker" || it.kennung in setOf("auswertung_pro_tag", "auswertung_frueheste", "auswertung_abstand") }
+        katalog.eintraege.filter { it.bereich == "Biomarker" || it.kennung in setOf("auswertung_pro_tag", "auswertung_start", "auswertung_abstand") }
     }
     // Nach jeder Änderung neu lesen.
     var stand by remember { mutableIntStateOf(0) }
@@ -49,7 +49,7 @@ fun BioFachEinstellungen(modifier: Modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Abruf und Auswertung", color = cosmos.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                "Frische Daten holt Jarvis nur beim Öffnen dieses Bereichs, auf ausdrücklichen Wunsch und vor jeder Tagesauswertung. Alles hier lässt sich auch per Sprache ändern.",
+                "Frische Daten holt Jarvis nur über den Aktualisieren-Knopf im Biomarker-Bereich, auf Wunsch per Sprache und vor jeder Tagesauswertung. Alles hier lässt sich auch per Sprache ändern.",
                 color = cosmos.textSecondary, style = MaterialTheme.typography.bodySmall,
             )
             eintraege.forEach { e ->

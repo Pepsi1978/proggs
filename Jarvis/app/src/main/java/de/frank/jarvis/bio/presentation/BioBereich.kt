@@ -65,7 +65,8 @@ object BioAnsicht {
         offen = true
         oeffnungen++
         BioModul.einrichten(context)
-        BioAbruf.beimOeffnen(context)
+        // Kein Abruf beim Öffnen mehr (Franks Vorgabe vom 11.11.2026): frisch geholt wird nur über den Aktualisieren-Knopf oben,
+        // per Sprache und vor jeder Tagesauswertung. Der Bereich zeigt den gespeicherten Stand mit Uhrzeit je Quelle.
     }
 
     fun schliessen() {
@@ -76,6 +77,14 @@ object BioAnsicht {
     fun zeige(seite: BioSeite) {
         if (stapel.lastOrNull() != seite) stapel.add(seite)
     }
+
+    /**
+     * Das Zahnrad: Die Biomarker-Einstellungen liegen in Jarvis' Einstellungen (Reiter „Biomarker“), wie alle Einstellungen.
+     * JarvisApp beobachtet [zuEinstellungen], schließt den Bereich und öffnet dort den Reiter.
+     */
+    var zuEinstellungen by mutableStateOf(false)
+
+    fun einstellungenOeffnen() { zuEinstellungen = true }
 
     /** Eine Seite zurück; auf der Übersicht schließt es den Bereich. */
     fun zurueck() {
@@ -98,7 +107,7 @@ fun BioBereich(modifier: Modifier = Modifier) {
                 when (seite) {
                     BioSeite.Uebersicht -> BiomarkerHostScreen(
                         onClose = BioAnsicht::schliessen,
-                        onOpenSettings = { BioAnsicht.zeige(BioSeite.Einstellungen) },
+                        onOpenSettings = { BioAnsicht.einstellungenOeffnen() },
                         onOpenMetricDetail = { BioAnsicht.zeige(BioSeite.MetrikDetail(it)) },
                         onOpenTrainingDetail = { BioAnsicht.zeige(BioSeite.TrainingDetail(it)) },
                         onOpenAllTrainings = { BioAnsicht.zeige(BioSeite.Trainings) },

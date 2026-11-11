@@ -27,7 +27,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             "oder eine Quelle liefert seit Tagen nichts Neues. Sag Frank das von dir aus und ZUERST: welche Quelle betroffen ist, seit wann, und was er tun muss. " +
             "Zeilen mit „Hinweis“ (etwa die Waage, die zu Hause ohne WLAN nicht liefert) nennst du nur, wenn es um diese Werte geht. " +
             "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum; „abgerufen, keine neue Messung“ heißt: der Abruf klappte, aber es gibt nichts Neueres. " +
-            "Frische Daten holt Jarvis nur in drei Fällen: beim Öffnen des Biomarker-Bereichs, vor jeder Tagesauswertung und auf Franks ausdrücklichen Wunsch. " +
+            "Frische Daten holt Jarvis nur in zwei Fällen: vor jeder Tagesauswertung und auf Franks ausdrücklichen Wunsch (Aktualisieren-Knopf im Biomarker-Bereich oder per Sprache); das Öffnen des Bereichs ruft nichts ab. " +
             "biomarker_aktualisieren also nur, wenn Frank ausdrücklich um frische Daten bittet, nie von dir aus. Belastung und Energie von heute sind Zwischenstände; nenne ihre Uhrzeit. " +
             "Die Einstellungen des Biomarker-Bereichs (Quellen an oder pausiert, Wartezeit vor der Auswertung, Vergleichszeitraum, ausgelassene Messgrößen) liest und ändert das Werkzeug einstellungen, Bereich Biomarker."
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
@@ -110,7 +110,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             beschreibung = "Jarvis: holt jetzt frische Daten von Whoop, Oura, Waage und Health Connect und meldet den Zustand jeder Quelle: " +
                 "ob der Abruf geklappt hat, ob er neue Messwerte brachte oder nichts Neues, welcher Fehler auftrat (zum Beispiel abgelaufene Anmeldung) und bis zu welchem Tag Daten vorliegen. " +
                 "Nur wenn Frank ausdrücklich darum bittet („Aktualisiere meine Biodaten“, „Hol frische Werte“), nie von dir aus: " +
-                "Jarvis holt sonst nur beim Öffnen des Biomarker-Bereichs und vor jeder Tagesauswertung, und jeder Abruf belastet die Whoop-Anmeldung. " +
+                "Jarvis holt sonst nur vor jeder Tagesauswertung, und jeder Abruf belastet die Whoop-Anmeldung. " +
                 "Für „Warum sind meine Werte alt?“ oder „Funktioniert der Abruf von Whoop?“ genügt ein Lesewerkzeug, dessen Antwort den Zustand der Quellen enthält. " +
                 "Whoop wird dabei nur gefragt, wenn der letzte Versuch mindestens 10 Minuten her ist; sonst bleibt der gespeicherte Stand. Dauert bis zu einer Minute. Ändert keine Messwerte.",
             taetigkeit = "holt frische Biodaten",

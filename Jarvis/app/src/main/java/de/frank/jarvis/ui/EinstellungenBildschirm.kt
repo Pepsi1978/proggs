@@ -111,7 +111,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "archiv" to "Archiv", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "biomarker" to "Biomarker", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "archiv" to "Archiv", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
@@ -123,6 +123,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         if (reiter == "archiv") ArchivReiter(vm)
         if (reiter == "tools") EigeneToolsBereich(vm)
         if (reiter == "konten") KontenBereich(vm)
+        // Biomarker (aus Entropie Reductor in Jarvis integriert): Zugänge zu Whoop, Oura, Health Connect, Polar-Import und alle Abruf-Einstellungen.
+        if (reiter == "biomarker") de.frank.jarvis.bio.presentation.einstellungen.BioEinstellungenInhalt(Modifier.fillMaxWidth())
 
         // Auf dem Reiter „Stimme“ ganz oben. Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
         if (reiter == "stimme") StillezeitKarte(vm)
