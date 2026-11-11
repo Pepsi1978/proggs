@@ -76,9 +76,10 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
         probleme = (s?.optJSONArray("probleme") ?: JSONArray()).let { p -> (0 until p.length()).map { p.optString(it) } }
     }
 
-    Karte {
+    // Die ganze Karte ist der Griff (langer Druck, dann ziehen), wie Frank es für alle Startbereiche erwartet; der Knopf bleibt antippbar.
+    Karte(modifier = griff) {
         Row(verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f).then(griff)) {
+            Column(Modifier.weight(1f)) {
                 Text("Biomarker", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     when {
