@@ -220,6 +220,8 @@ constructor(
     }
 
     suspend fun handleWhoopAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
+        // Nur das Handy hält den Whoop-Zugang: Eine Anmeldung auf dem Tablet machte es zum zweiten Abrufer.
+        if (de.frank.jarvis.data.Geraet.istTablet) return Result.failure(IllegalStateException("Whoop wird auf dem Handy angemeldet; das Tablet zeigt dessen Stand."))
         Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop: handleAuthResult — clientSecret-vorhanden=${clientSecret != null}")
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)

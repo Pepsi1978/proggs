@@ -121,6 +121,7 @@ class JarvisDienst : Service() {
         bereich.launch {
             kotlinx.coroutines.delay(20_000)   // Verbindung und Gedächtnis haben beim Start Vorrang.
             if (de.frank.jarvis.bio.BioUebernahme.noetig(app)) runCatching { de.frank.jarvis.bio.BioUebernahme.starte(app) }.onFailure { Logbuch.fehler("Biomarker-Übernahme", it) }
+            de.frank.jarvis.bio.BioUebernahme.nachholen(app)
             de.frank.jarvis.bio.BioSpiegel.starte(app)
         }
         // Die erste Meldung des Rückrufs ist nur die Bestandsaufnahme: kein Abriss wegen eines Netzes aus einem früheren Dienstlauf.

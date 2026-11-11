@@ -124,6 +124,8 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         rescuedData = InitialDataMigrator.readOldDataPreHilt(this)
 
         super.onCreate()
+        // Übergabe an Jarvis: Die Datenquellen lesen den Merker ohne eigenen Context.
+        de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.einrichten(this)
         lastSystemNightMode = resources.configuration.uiMode and AndroidConfiguration.UI_MODE_NIGHT_MASK
 
         // Logging-Vereinheitlichung 2026-06-12: ab hier laufen ALLE Diag.x()-Aufrufe der App

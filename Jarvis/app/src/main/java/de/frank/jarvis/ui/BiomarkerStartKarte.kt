@@ -28,6 +28,7 @@ import de.frank.jarvis.bio.presentation.BioAnsicht
 import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.ui.theme.LocalFarben
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -92,7 +93,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
             }
             Knopf(if (bereit) "Öffnen" else "Übernehmen") {
                 if (bereit) BioAnsicht.oeffnen(context)
-                else scope.launch { uebernahme = "Übernimmt …"; uebernahme = BioUebernahme.starte(context) }
+                else { uebernahme = "Übernimmt …"; scope.launch { uebernahme = de.frank.jarvis.bio.BioModul.bereich.async { BioUebernahme.starte(context) }.await() } }
             }
         }
         if (uebernahme.isNotEmpty()) Text(uebernahme, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))

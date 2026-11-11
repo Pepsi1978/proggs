@@ -32,6 +32,7 @@ import org.json.JSONObject
 object BioUebernahme {
     private val ADRESSEN = listOf(Uri.parse("content://de.frank.entropyreducer.jarvis"), Uri.parse("content://de.frank.entropyreducer.debug.jarvis"))
     private val sperre = Mutex()
+    private val ER_PAKETE = listOf("de.frank.entropyreducer", "de.frank.entropyreducer.debug")
 
     fun noetig(context: Context): Boolean = !Geraet.istTablet && Einstellungen.get(context).bioUebernommenMs == 0L
 
@@ -42,13 +43,61 @@ object BioUebernahme {
         if (!sperre.tryLock()) return@withContext "Die Übernahme läuft bereits."
         try {
             BioModul.einrichten(app)
-            val adresse = ADRESSEN.firstOrNull { rufe(app, it, "uebergabe_stand") != null }
-                ?: return@withContext melde("Entropie Reductor ist nicht installiert oder antwortet nicht; Jarvis beginnt ohne alte Daten nicht von selbst.", fehler = true)
-            if (rufe(app, adresse, "uebergabe_stand")?.has("abgegeben") != true) {
-                return@withContext melde("Entropie Reductor ist zu alt für die Übergabe (mindestens 0.29.28 nötig).", fehler = true)
+            // Gar kein Entropie Reductor installiert (neues Handy, App entfernt): Jarvis beginnt mit leerem Bereich, statt nie abzurufen.
+            if (ER_PAKETE.none { p -> runCatching { app.packageManager.getPackageInfo(p, 0) }.isSuccess }) {
+                Einstellungen.get(app).bioUebernommenMs = System.currentTimeMillis()
+                return@withContext melde("Kein Entropie Reductor installiert: Jarvis führt die Biomarker ab jetzt ohne alte Daten; Zugänge unter Biomarker → Einstellungen eintragen.")
             }
-            val paket = rufe(app, adresse, "uebergabe_vorbereiten") ?: return@withContext melde("Entropie Reductor hat die Übergabe nicht beantwortet.", fehler = true)
-            paket.optString("fehler").takeIf { it.isNotEmpty() }?.let { return@withContext melde("Übergabe noch nicht möglich: $it", fehler = true) }
+            val (adresse, stand) = ADRESSEN.firstNotNullOfOrNull { a -> rufe(app, a, "uebergabe_stand")?.let { a to it } }
+                ?: return@withContext melde("Entropie Reductor antwortet gerade nicht; die Übernahme folgt beim nächsten Start.", fehler = true)
+            if (!stand.has("abgegeben")) {
+                return@withContext melde("Entropie Reductor ist zu alt für die Übergabe (mindestens 0.29.29 nötig).", fehler = true)
+            }
+            // Zwei Versuche: Schreibt Entropie Reductor zwischen Schnappschuss und Vergleich noch etwas (Aufräumen beim Start),
+            // passt der Vergleich beim zweiten, frischen Schnappschuss.
+            var letzterFehler: Exception? = null
+            for (versuch in 1..2) {
+                letzterFehler = versuche(app, adresse) ?: break
+            }
+            letzterFehler?.let { e ->
+                Logbuch.fehler("Biomarker-Übernahme", e)
+                return@withContext melde("Übernahme abgebrochen, Entropie Reductor führt die Biomarker weiter: ${e.message ?: e.javaClass.simpleName}", fehler = true)
+            }
+            Einstellungen.get(app).bioUebernommenMs = System.currentTimeMillis()
+            bestaetigen(app)
+            BioSpiegel.geaendert(app, "Übernahme aus Entropie Reductor")
+            BioAbruf.neuGelesen(app)
+            melde("Biomarker aus Entropie Reductor übernommen: alle Tabellen, Whoop- und Oura-Zugang, Abrufstände und Kartenreihenfolge. Ab jetzt ruft Jarvis selbst ab.")
+        } finally {
+            sperre.unlock()
+        }
+    }
+
+    /**
+     * Entropie Reductor gibt die Whoop-Rückmeldeadresse ab und löscht seinen Schnappschuss. Bis das bestätigt ist, wird es bei
+     * jedem Start erneut versucht ([nachholen]).
+     */
+    private fun bestaetigen(app: Context) {
+        val ok = ADRESSEN.any { a -> rufe(app, a, "uebergabe_bestaetigen")?.optBoolean("ok") == true }
+        app.getSharedPreferences("bio_uebernahme", Context.MODE_PRIVATE).edit().putBoolean("bestaetigt", ok).apply()
+    }
+
+    /** Beim Start: eine früher nicht angekommene Bestätigung nachholen (nur Handy, nur nach der Übernahme). */
+    fun nachholen(context: Context) {
+        val app = context.applicationContext
+        if (Geraet.istTablet || Einstellungen.get(app).bioUebernommenMs == 0L) return
+        if (app.getSharedPreferences("bio_uebernahme", Context.MODE_PRIVATE).getBoolean("bestaetigt", true)) return
+        bestaetigen(app)
+    }
+
+    /** Ein Versuch: einfrieren, kopieren, zählen, vergleichen, Zugänge übernehmen. Null = gelungen, sonst der Fehler (Entropie Reductor ist dann wieder aufgetaut). */
+    private suspend fun versuche(app: Context, adresse: Uri): Exception? {
+            val paket = rufe(app, adresse, "uebergabe_vorbereiten")
+            if (paket == null || paket.optString("fehler").isNotEmpty()) {
+                // Entropie Reductor könnte schon eingefroren sein: auftauen, damit nicht keine App mehr abruft.
+                rufe(app, adresse, "uebergabe_zurueck")
+                return IllegalStateException("Übergabe noch nicht möglich: " + (paket?.optString("fehler") ?: "keine Antwort von Entropie Reductor"))
+            }
             try {
                 val kopie = File(app.cacheDir, "er_uebernahme.db")
                 try {
@@ -68,19 +117,15 @@ object BioUebernahme {
                 paket.optJSONObject("einstellungen")?.let { BioModul.einstellungen.uebernimm(it) }
                 paket.optJSONArray("karten_reihenfolge")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
                     ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Abgebrochen (Dienst beendet): Entropie Reductor wieder auftauen und den Abbruch weiterreichen.
+                withContext(kotlinx.coroutines.NonCancellable) { rufe(app, adresse, "uebergabe_zurueck") }
+                throw e
             } catch (e: Exception) {
                 rufe(app, adresse, "uebergabe_zurueck")
-                Logbuch.fehler("Biomarker-Übernahme", e)
-                return@withContext melde("Übernahme abgebrochen, Entropie Reductor führt die Biomarker weiter: ${e.message ?: e.javaClass.simpleName}", fehler = true)
+                return e
             }
-            Einstellungen.get(app).bioUebernommenMs = System.currentTimeMillis()
-            rufe(app, adresse, "uebergabe_bestaetigen")
-            BioSpiegel.geaendert(app, "Übernahme aus Entropie Reductor")
-            BioAbruf.neuGelesen(app)
-            melde("Biomarker aus Entropie Reductor übernommen: alle Tabellen, Whoop- und Oura-Zugang, Abrufstände und Kartenreihenfolge. Ab jetzt ruft Jarvis selbst ab.")
-        } finally {
-            sperre.unlock()
-        }
+            return null
     }
 
     private fun kopiere(kopie: File): Map<String, Long> = BioTabellenKopie.kopiere(kopie)

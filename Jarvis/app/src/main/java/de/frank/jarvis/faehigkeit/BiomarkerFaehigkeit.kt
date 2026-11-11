@@ -318,6 +318,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     private val ausgelassen: Set<String> get() = de.frank.jarvis.data.Einstellungen.get(context).bioAusgelasseneMenge
 
     private fun ohneAusgelassene(o: JSONObject): JSONObject {
+        val ausgelassen = ausgelassen   // einmal lesen, nicht je Eintrag
         listOf("metriken", "werte", "reihen").forEach { feld ->
             val liste = o.optJSONArray(feld) ?: return@forEach
             val gefiltert = JSONArray()

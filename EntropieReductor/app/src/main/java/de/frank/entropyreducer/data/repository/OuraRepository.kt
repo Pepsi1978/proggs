@@ -146,6 +146,7 @@ class OuraRepository @Inject constructor(
      * (REPLACE-onConflict).
      */
     suspend fun syncLastDays(days: Int = 365): Result<Map<String, Int>> = runCatchingCancellable {
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben()) throw de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.gesperrt()
         val token = secrets.ouraPersonalAccessToken
             ?: throw IllegalStateException("Kein Oura-Token. Bitte unter Einstellungen → API einen Personal Access Token eintragen.")
         val auth = "Bearer $token"

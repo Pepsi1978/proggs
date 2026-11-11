@@ -360,6 +360,7 @@ constructor(
      * fehlt oder alle Sessions schon in der DB sind).
      */
     suspend fun mergeFromHealthConnect(days: Int = 30): Int {
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben()) return 0
         if (!healthConnect.isAvailable()) {
             Diag.d(DiagnosticArea.AMAZFIT, TAG, "Health Connect nicht verfuegbar — kein Workout-Merge")
             return 0

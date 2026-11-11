@@ -85,7 +85,7 @@ object BioSpiegel {
                 while (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) delay(30_000)
                 // Ohne Netz (unterwegs, Tunnel weg) bis zu dreimal im Abstand von fünf Minuten neu versuchen.
                 for (versuch in 1..4) {
-                    val fehler = runCatching { hochladen(app) }.exceptionOrNull() ?: break
+                    val fehler = try { hochladen(app); null } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (e: Exception) { e } ?: break
                     if (fehler !is IOException) { Logbuch.fehler("Biomarker-Spiegel", fehler, grund); break }
                     if (versuch == 4) { Logbuch.fehler("Biomarker-Spiegel", fehler, "$grund: nach vier Versuchen kein Netz, nächster Anstoß holt es nach"); break }
                     delay(5 * 60_000L)
@@ -94,95 +94,136 @@ object BioSpiegel {
         }
     }
 
+    /** Der Stand, der neben den Messwerten mitreist: Abrufbericht, Whoop-Stand, letzte Abrufe je Quelle, Fußzeile. Nie Zugänge. */
+    private suspend fun standJson(): JSONObject {
+        val e = BioModul.einstellungen
+        return JSONObject()
+            .put("biomarker_sync_status_json", e.biomarkerSyncStatusFlow.first())
+            .put("whoop_abruf_stand_json", e.whoopAbrufStandFlow.first().alsJson())
+            .put("last_whoop_sync_ms", e.lastWhoopSyncMsFlow.first())
+            .put("last_oura_sync_ms", e.lastOuraSyncMsFlow.first())
+            .put("last_amazfit_sync_ms", e.lastAmazfitSyncMsFlow.first())
+            .put("last_zepp_body_sync_ms", e.lastZeppBodySyncMsFlow.first())
+            .put("whoop_luecken_geprueft_bis", e.whoopLueckenGeprueftBisFlow.first())
+            .put("last_refresh_footer_text", e.lastRefreshFooterFlow.first())
+            .put("last_refresh_footer_at_ms", e.lastRefreshFooterAtMsFlow.first())
+    }
+
+    /** Billiger Fingerabdruck der Datenbank (Zeilen und neueste Zeitstempel je Tabelle), damit nicht jeder Anstoß einen ganzen Schnappschuss baut. */
+    private fun dbMarke(): String = runCatching {
+        val db = BioModul.datenbank.openHelper.readableDatabase
+        AppDatabase.TABELLEN.joinToString("|") { t -> db.query("SELECT COUNT(*), TOTAL(rowid) FROM `$t`").use { c -> c.moveToFirst(); "${c.getLong(0)}:${c.getDouble(1)}" } } +
+            "|" + db.query("SELECT TOTAL(capturedAt) FROM biomarker_snapshots").use { c -> c.moveToFirst(); c.getDouble(0).toString() } +
+            "|" + db.query("SELECT TOTAL(COALESCE(distanceMeters,0)) + TOTAL(COALESCE(calories,0)) FROM amazfit_workouts").use { c -> c.moveToFirst(); c.getDouble(0).toString() }
+    }.getOrDefault(System.currentTimeMillis().toString())
+
     private suspend fun hochladen(app: Context) = sperre.withLock {
         val basis = basis(app) ?: return@withLock
+        val p = prefs(app)
+        val stand = standJson()
+        val karten = org.json.JSONArray(BioModul.kartenReihenfolge.rawSavedOrder.first())
+        val marke = dbMarke() + "#" + sha256Text(stand.toString() + karten.toString())
+        if (p.getString("marke", "") == marke) return@withLock
         val datei = File(app.cacheDir, "bio_spiegel.db")
         try {
             datei.delete()
             BioModul.datenbank.openHelper.writableDatabase.execSQL("VACUUM INTO ?", arrayOf(datei.absolutePath))
             val sha = sha256(datei)
-            if (prefs(app).getString("hochgeladen", "") == sha) return@withLock
-            netz.newCall(Request.Builder().url("$basis/blob/$sha").put(datei.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Spiegel hochladen: Server ${r.code}")
+            // Messwerte unverändert: kein neuer Blob, aber ein geänderter Abrufstand (etwa eine abgelaufene Anmeldung) geht trotzdem rüber.
+            if (p.getString("hochgeladen", "") != sha) {
+                netz.newCall(Request.Builder().url("$basis/blob/$sha").put(datei.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use { r ->
+                    if (!r.isSuccessful) throw IOException("Spiegel hochladen: Server ${r.code}")
+                }
             }
-            val e = BioModul.einstellungen
-            val stand = JSONObject()
-                .put("biomarker_sync_status_json", e.biomarkerSyncStatusFlow.first())
-                .put("whoop_abruf_stand_json", e.whoopAbrufStandFlow.first().alsJson())
-                .put("last_whoop_sync_ms", e.lastWhoopSyncMsFlow.first())
-                .put("last_refresh_footer_text", e.lastRefreshFooterFlow.first())
-                .put("last_refresh_footer_at_ms", e.lastRefreshFooterAtMsFlow.first())
-            val karten = org.json.JSONArray(BioModul.kartenReihenfolge.rawSavedOrder.first())
-            val daten = JSONObject().put("text_sha", sha).put("inhalt", sha).put("groesse", datei.length()).put("version", 1)
+            val inhalt = sha256Text(sha + stand.toString() + karten.toString())
+            val daten = JSONObject().put("text_sha", sha).put("inhalt", inhalt).put("groesse", datei.length()).put("version", 1)
                 .put("stand", stand).put("karten", karten).put("zeit", System.currentTimeMillis())
             val rumpf = JSONObject().put("daten", daten).put("geaendert", System.currentTimeMillis()).put("geloescht", false).put("von", Geraet.ablageName).toString()
             netz.newCall(Request.Builder().url("$basis/doc/$ART/$ID").put(rumpf.toRequestBody(JSON)).build()).execute().use { r ->
                 if (!r.isSuccessful) throw IOException("Spiegel melden: Server ${r.code}")
             }
-            prefs(app).edit().putString("hochgeladen", sha).apply()
+            p.edit().putString("hochgeladen", sha).putString("marke", marke).apply()
             Logbuch.system("Biomarker-Spiegel", "Stand fürs Tablet hochgeladen (${datei.length() / 1024} KB)")
         } finally {
             datei.delete()
         }
     }
 
-    /** Tablet: den neuesten Stand des Handys holen und einspielen. Ohne Netz bleibt der vorige Stand, mit seinem Datum. */
-    suspend fun holen(context: Context) = sperre.withLock {
-        val app = context.applicationContext
+    /** Tablet: den neuesten Stand des Handys holen und einspielen. Ohne Netz bleibt der vorige Stand, mit seinem Datum. Wirft nie. */
+    suspend fun holen(context: Context) {
+        try {
+            holenGesperrt(context.applicationContext)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            // Netz weg: nächster Auslöser.
+        } catch (e: Exception) {
+            // Kaputter Stand, anderes Schema, unerwartete Antwort: im Logbuch, aber nie ein Absturz von Jarvis.
+            Logbuch.fehler("Biomarker-Spiegel", e, "Stand vom Handy nicht eingespielt")
+        }
+    }
+
+    private suspend fun holenGesperrt(app: Context) = sperre.withLock {
         if (!Geraet.istTablet) return@withLock
         val basis = basis(app) ?: return@withLock
         BioModul.einrichten(app)
         val p = prefs(app)
         var seit = p.getLong("seit", 0L)
         var neu: JSONObject? = null
-        try {
-            while (true) {
-                val antwort = netz.newCall(Request.Builder().url("$basis/aenderungen?seit=$seit&geraet=${Uri.encode(Geraet.ablageName)}").build()).execute().use { r ->
-                    if (!r.isSuccessful) throw IOException("Server ${r.code}")
-                    JSONObject(r.body?.string().orEmpty())
-                }
-                // Neu aufgesetzter Speicher am Server: Der gemerkte Zeiger gilt nicht mehr, von vorn lesen.
-                val instanz = antwort.optString("instanz")
-                if (seit != 0L && (antwort.optBoolean("neuaufbau") || (p.getString("instanz", "").orEmpty().isNotEmpty() && p.getString("instanz", "") != instanz))) {
-                    seit = 0L; p.edit().putString("instanz", instanz).putString("eingespielt", "").apply(); continue
-                }
-                p.edit().putString("instanz", instanz).apply()
-                val docs = antwort.optJSONArray("docs")
-                for (i in 0 until (docs?.length() ?: 0)) {
-                    val d = docs!!.getJSONObject(i)
-                    if (d.optString("art") == ART && d.optString("id") == ID && !d.optBoolean("geloescht")) neu = d
-                }
-                seit = antwort.optLong("stand")
-                if (!antwort.optBoolean("mehr")) break
+        var runden = 0
+        while (runden++ < 200) {
+            val antwort = netz.newCall(Request.Builder().url("$basis/aenderungen?seit=$seit&geraet=${Uri.encode(Geraet.ablageName)}").build()).execute().use { r ->
+                if (!r.isSuccessful) throw IOException("Server ${r.code}")
+                JSONObject(r.body?.string().orEmpty())
             }
-        } catch (e: IOException) {
-            return@withLock
+            // Neu aufgesetzter Speicher am Server: Der gemerkte Zeiger gilt nicht mehr, von vorn lesen.
+            val instanz = antwort.optString("instanz")
+            if (seit != 0L && (antwort.optBoolean("neuaufbau") || (p.getString("instanz", "").orEmpty().isNotEmpty() && p.getString("instanz", "") != instanz))) {
+                seit = 0L; p.edit().putString("instanz", instanz).putString("eingespielt", "").putString("eingespielt_db", "").apply(); continue
+            }
+            p.edit().putString("instanz", instanz).apply()
+            val docs = antwort.optJSONArray("docs")
+            for (i in 0 until (docs?.length() ?: 0)) {
+                val d = docs!!.getJSONObject(i)
+                if (d.optString("art") == ART && d.optString("id") == ID && !d.optBoolean("geloescht")) neu = d
+            }
+            val weiter = antwort.optLong("stand")
+            // Kein Fortschritt trotz „mehr“: abbrechen statt endlos zu fragen.
+            if (!antwort.optBoolean("mehr") || weiter == seit) { seit = weiter; break }
+            seit = weiter
         }
         val doc = neu ?: run { p.edit().putLong("seit", seit).apply(); return@withLock }
         val daten = doc.optJSONObject("daten") ?: return@withLock
         val sha = daten.optString("text_sha")
-        if (sha.isEmpty() || sha == p.getString("eingespielt", "")) { p.edit().putLong("seit", seit).apply(); return@withLock }
+        val inhalt = daten.optString("inhalt").ifEmpty { sha }
+        if (sha.isEmpty() || inhalt == p.getString("eingespielt", "")) { p.edit().putLong("seit", seit).apply(); return@withLock }
         while (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) delay(30_000)
-        val datei = File(app.cacheDir, "bio_spiegel_fern.db")
-        try {
-            netz.newCall(Request.Builder().url("$basis/blob/$sha").build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Spiegel holen: Server ${r.code}")
-                datei.outputStream().use { aus -> r.body!!.byteStream().copyTo(aus) }
+        // Messwerte nur neu einspielen, wenn sich die Datenbank geändert hat; der Abrufstand kommt immer mit.
+        if (sha != p.getString("eingespielt_db", "")) {
+            val datei = File(app.cacheDir, "bio_spiegel_fern.db")
+            try {
+                netz.newCall(Request.Builder().url("$basis/blob/$sha").build()).execute().use { r ->
+                    if (!r.isSuccessful) throw IOException("Spiegel holen: Server ${r.code}")
+                    val koerper = r.body ?: throw IOException("Spiegel holen: leere Antwort")
+                    datei.outputStream().use { aus -> koerper.byteStream().copyTo(aus) }
+                }
+                if (sha256(datei) != sha) { Logbuch.fehler("Biomarker-Spiegel", null, "Der Stand vom Handy kam beschädigt an."); return@withLock }
+                ersetze(datei)
+                p.edit().putString("eingespielt_db", sha).apply()
+                Logbuch.system("Biomarker-Spiegel", "Stand vom Handy eingespielt (${datei.length() / 1024} KB)")
+            } finally {
+                datei.delete()
             }
-            if (sha256(datei) != sha) { Logbuch.fehler("Biomarker-Spiegel", null, "Der Stand vom Handy kam beschädigt an."); return@withLock }
-            ersetze(datei)
-            daten.optJSONObject("stand")?.let { BioModul.einstellungen.uebernimm(it) }
-            daten.optJSONArray("karten")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
-                ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
-            p.edit().putString("eingespielt", sha).putLong("seit", seit).putLong("zeit", daten.optLong("zeit")).putString("von", doc.optString("von")).apply()
-            BioAbruf.neuGelesen(app)
-            Logbuch.system("Biomarker-Spiegel", "Stand vom Handy eingespielt (${datei.length() / 1024} KB)")
-        } catch (e: IOException) {
-            // Netz weg: nächster Auslöser.
-        } finally {
-            datei.delete()
         }
+        daten.optJSONObject("stand")?.let { BioModul.einstellungen.uebernimm(it) }
+        BioModul.sync.vergiss()
+        daten.optJSONArray("karten")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
+            ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
+        p.edit().putString("eingespielt", inhalt).putLong("seit", seit).putLong("zeit", daten.optLong("zeit")).putString("von", doc.optString("von")).apply()
+        BioAbruf.neuGelesen(app)
     }
+
+    private fun sha256Text(t: String): String = MessageDigest.getInstance("SHA-256").digest(t.toByteArray()).joinToString("") { "%02x".format(it) }
 
     private fun ersetze(datei: File) { BioTabellenKopie.kopiere(datei) }
 

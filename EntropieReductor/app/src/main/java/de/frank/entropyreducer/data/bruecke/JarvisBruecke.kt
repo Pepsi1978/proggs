@@ -245,7 +245,13 @@ class JarvisBruecke : ContentProvider() {
             "uebergabe_bestaetigen" -> { BiomarkerUebergabe.bestaetigen(ctx); schnappschussDatei(ctx).delete(); JSONObject().put("ok", true) }
             // Tablet: Dort übernimmt Jarvis keine Daten (es spiegelt das Handy), Entropie Reductor soll aber ebenfalls nichts mehr abrufen.
             "uebergabe_nur_einfrieren" -> { BiomarkerUebergabe.einfrieren(ctx); runCatching { EntryPointAccessors.fromApplication(ctx, Zugang::class.java).planer().ensureBiomarkerSyncJob() }; BiomarkerUebergabe.bestaetigen(ctx); JSONObject().put("ok", true) }
-            "uebergabe_zurueck" -> { BiomarkerUebergabe.zurueck(ctx); JSONObject().put("ok", !BiomarkerUebergabe.abgegeben(ctx)) }
+            "uebergabe_zurueck" -> {
+                BiomarkerUebergabe.zurueck(ctx)
+                schnappschussDatei(ctx).delete()
+                // Wieder wie vorher: den beim Einfrieren abbestellten Hintergrund-Abgleich neu planen.
+                if (!BiomarkerUebergabe.abgegeben(ctx)) runCatching { EntryPointAccessors.fromApplication(ctx, Zugang::class.java).planer().ensureBiomarkerSyncJob() }
+                JSONObject().put("ok", !BiomarkerUebergabe.abgegeben(ctx))
+            }
             "uebergabe_stand" -> JSONObject().put("abgegeben", BiomarkerUebergabe.abgegeben(ctx)).put("bestaetigt", BiomarkerUebergabe.bestaetigt(ctx))
 
             "abgleich" -> {

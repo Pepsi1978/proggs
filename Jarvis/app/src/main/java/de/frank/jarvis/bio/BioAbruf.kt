@@ -58,8 +58,8 @@ object BioAbruf {
             val bericht = if (Geraet.istTablet) { BioSpiegel.holen(app); null } else BioModul.sync.syncApisNow(anlass, art)
             _stand.update { BioAbrufStand(false, anlass, bericht ?: it.bericht) }
             if (bericht != null) Logbuch.system("Biomarker abgerufen", "$anlass: ${bericht.kurzfassung()}")
-            // Das Live-Gedächtnis liest die neuen Werte (nur lesen, kein weiterer Abruf).
-            neuGelesen(app)
+            // Das Live-Gedächtnis liest die neuen Werte (nur lesen, kein weiterer Abruf). Auf dem Tablet macht das der Spiegel selbst, wenn etwas Neues kam.
+            if (bericht != null) neuGelesen(app)
             // Neuer Stand: auch fürs Tablet spiegeln (nur Handy, nur wenn sich die Datenbank wirklich geändert hat).
             if (bericht != null) BioSpiegel.geaendert(app, anlass)
             bericht
@@ -92,6 +92,9 @@ object BioAbruf {
             return "Biodaten: Der Abruf war nach ${e.bioWartezeit} Sekunden nicht fertig; die Werte unten sind der zuvor gespeicherte Stand (Datum je Wert beachten)."
         }
         if (Geraet.istTablet) return "Biodaten: Stand vom Handy (" + BioSpiegel.standText(app) + ")."
+        if (bericht == null) {
+            return "Biodaten: Der Abruf vor der Auswertung ist gescheitert (siehe Logbuch); die Werte unten sind der zuvor gespeicherte Stand (Datum je Wert beachten)."
+        }
         // Frisch berechnete Werte abwarten: Whoop rechnet Schlaf und Erholung oft noch Minuten nach dem Aufwachen.
         // Die Nachfrage geht nur an Whoop und kurz nach dem ersten Abruf: Der Zugangs-Token ist dann noch gültig, es wird also
         // kein Refresh-Token getauscht (der Grund für die Mindestabstände der Whoop-Steuerung).
@@ -100,7 +103,8 @@ object BioAbruf {
             while (nachgefragt < 2 && !schlafFertig() && System.currentTimeMillis() + NACHFRAGE_ABSTAND_MS + 20_000L < frist) {
                 nachgefragt++
                 delay(NACHFRAGE_ABSTAND_MS)
-                withTimeoutOrNull(frist - System.currentTimeMillis()) { runCatching { BioModul.whoop.syncLastDays(3) } } ?: break
+                // syncLastDays liefert ein Result und wirft nicht; null heißt hier allein: Wartezeit vorbei.
+                withTimeoutOrNull(frist - System.currentTimeMillis()) { BioModul.whoop.syncLastDays(3) } ?: break
             }
             if (nachgefragt > 0) BioModul.abgleich.requestSync("Whoop: Schlaf nachgefragt")
         }

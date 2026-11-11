@@ -25,6 +25,7 @@
     {"versionCode": 361, "versionName": "0.29.26", "stand": "30.10.2026, 19:03 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 362, "versionName": "0.29.27", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
     {"versionCode": 363, "versionName": "0.29.28", "stand": "11.11.2026, 14:24 Uhr", "notiz": "Der Biomarker-Bereich kann an Jarvis übergeben werden: Danach ruft Entropie Reductor Whoop, Oura, Waage und Trainings nicht mehr selbst ab, und der Biomarker-Reiter zeigt einen Hinweis auf Jarvis."},
-    {"versionCode": 364, "versionName": "0.29.29", "stand": "11.11.2026, 14:49 Uhr", "notiz": "Die Übergabe der Biomarker an Jarvis arbeitet mit einem festen Schnappschuss der Daten und lässt sich auf dem Tablet auch ohne Datenübernahme einfrieren."}
+    {"versionCode": 364, "versionName": "0.29.29", "stand": "11.11.2026, 14:49 Uhr", "notiz": "Die Übergabe der Biomarker an Jarvis arbeitet mit einem festen Schnappschuss der Daten und lässt sich auf dem Tablet auch ohne Datenübernahme einfrieren."},
+    {"versionCode": 365, "versionName": "0.29.30", "stand": "11.11.2026, 16:04 Uhr", "notiz": "Nach der Übergabe an Jarvis rufen auch die einzelnen Knöpfe keine Biomarker mehr ab, und eine gescheiterte Übergabe stellt den Hintergrund-Abgleich wieder her."}
 ]
 }

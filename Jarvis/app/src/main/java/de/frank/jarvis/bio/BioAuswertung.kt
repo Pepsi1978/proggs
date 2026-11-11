@@ -139,8 +139,12 @@ class BioAuswertung(context: Context) {
             "abgleich" -> {
                 val start = System.currentTimeMillis()
                 val laeuft = BioAbruf.manuell(ctx, a.optString("wer").ifEmpty { "Jarvis auf ausdrücklichen Wunsch" })
-                val fertig = withTimeoutOrNull(a.optLong("warte_ms", 90_000L).coerceIn(3_000L, 120_000L)) { laeuft.await(); true } ?: false
-                JSONObject().put("fertig", fertig).put("abgeglichen", fertig)
+                val bericht = withTimeoutOrNull(a.optLong("warte_ms", 90_000L).coerceIn(3_000L, 120_000L)) { laeuft.await() }
+                val fertig = laeuft.isCompleted
+                // Tablet: kein eigener Abruf, nur der Stand des Handys. Sonst zählt nur ein echtes Ergebnis als „abgeglichen“.
+                if (de.frank.jarvis.data.Geraet.istTablet) return fehler("Auf dem Tablet ruft Jarvis nicht selbst ab, es gilt der Stand vom Handy: " + BioSpiegel.standText(ctx) + ". Frische Werte holt das Handy.")
+                if (fertig && bericht == null) return fehler("Der Abruf ist gescheitert oder noch nicht möglich (Logbuch). Es gilt der gespeicherte Stand mit Datum je Wert.")
+                JSONObject().put("fertig", fertig).put("abgeglichen", bericht != null)
                     .put("dauer_ms", System.currentTimeMillis() - start)
                     .put("stand", stand(ctx, ladeReihen(db, ohneLaufendenTag = false)))
             }

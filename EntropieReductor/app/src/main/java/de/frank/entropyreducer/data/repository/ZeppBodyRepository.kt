@@ -67,6 +67,7 @@ class ZeppBodyRepository @Inject constructor(
     }
 
     suspend fun syncToCache(): Int = mutex.withLock {
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben()) throw de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.gesperrt()
         mutableStatus.value = mutableStatus.value.copy(isLoading = true, error = null)
         try {
             check(isAvailable()) { "Zepp ist nicht installiert oder die direkte Schnittstelle fehlt." }

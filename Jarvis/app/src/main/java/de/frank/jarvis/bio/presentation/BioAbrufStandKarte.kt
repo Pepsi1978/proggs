@@ -36,7 +36,7 @@ fun BioAbrufStandKarte(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val stand by BioAbruf.stand.collectAsStateWithLifecycle()
     val bericht by produceState<ApiSyncBericht?>(stand.bericht, stand.laeuft, stand.bericht) {
-        value = stand.bericht ?: if (Geraet.istTablet) null else runCatching { BioModul.sync.letzterStand() }.getOrNull()
+        value = if (Geraet.istTablet) runCatching { BioModul.sync.letzterStand() }.getOrNull() else stand.bericht ?: runCatching { BioModul.sync.letzterStand() }.getOrNull()
     }
     GlassCard(modifier = modifier.fillMaxWidth(), contentPadding = 12.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {

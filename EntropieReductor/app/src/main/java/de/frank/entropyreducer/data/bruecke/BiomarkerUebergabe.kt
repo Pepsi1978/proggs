@@ -18,7 +18,18 @@ object BiomarkerUebergabe {
     private const val ABGEGEBEN = "abgegeben_ms"
     private const val BESTAETIGT = "bestaetigt_ms"
 
-    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = context.applicationContext.also { app = it }.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+
+    @Volatile private var app: Context? = null
+
+    /** Beim Start der App (EntropyReducerApp.onCreate), damit auch Klassen ohne Context den Merker lesen können. */
+    fun einrichten(context: Context) { app = context.applicationContext }
+
+    /** Für die Datenquellen (Zepp, Oura, Whoop, Health Connect): nach der Übergabe nie mehr abrufen, auch nicht per Knopf. */
+    fun abgegeben(): Boolean = app?.let { abgegeben(it) } ?: false
+
+    /** Fehler für einen gesperrten Abruf. */
+    fun gesperrt() = IllegalStateException("Die Biomarker laufen jetzt in Jarvis; Entropie Reductor ruft nichts mehr ab.")
 
     /** true = Jarvis führt die Biomarker; hier wird nichts mehr abgerufen und kein Whoop-Token getauscht. */
     fun abgegeben(context: Context): Boolean = prefs(context).getLong(ABGEGEBEN, 0L) > 0L

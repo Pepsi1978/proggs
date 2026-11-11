@@ -83,6 +83,7 @@ constructor(
         syncMutex.withLock { syncIntern(days) }
 
     private suspend fun syncIntern(days: Int): Result<Int> {
+        if (de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.abgegeben()) return Result.failure(de.frank.entropyreducer.data.bruecke.BiomarkerUebergabe.gesperrt())
         val versuchMs = System.currentTimeMillis()
         val vorher = settings.whoopAbrufStandFlow.first()
         if (vorher.gesperrtBisMs > versuchMs) {

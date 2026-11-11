@@ -68,9 +68,12 @@ class ForegroundSyncManager(
         anlass: WhoopAbrufPlan.Anlass = WhoopAbrufPlan.Anlass.VORDERGRUND,
     ): ApiSyncBericht {
         val angefragtMs = System.currentTimeMillis()
+        // Lief beim Anfragen schon ein Abruf, ist dessen Ergebnis frisch genug, auch für einen ausdrücklichen Wunsch
+        // (Tagesauswertung und Knopf gleichzeitig): sonst liefe direkt danach ein zweiter, voller Abruf.
+        val lief = apiMutex.isLocked
         return apiMutex.withLock {
             val frisch = letzterBericht?.takeIf {
-                it.versuchMs >= angefragtMs && anlass != WhoopAbrufPlan.Anlass.AUSDRUECKLICH && rang(letzterAnlass) >= rang(anlass)
+                it.versuchMs >= angefragtMs && (lief || (anlass != WhoopAbrufPlan.Anlass.AUSDRUECKLICH && rang(letzterAnlass) >= rang(anlass)))
             }
             if (frisch != null) {
                 Diag.i(DiagnosticArea.APP, "BioAbgleich", "Abgleich ($reason): Ergebnis des gerade beendeten Laufs übernommen")
@@ -111,6 +114,9 @@ class ForegroundSyncManager(
             .maxOrNull() ?: 0L
     }.getOrDefault(0L)
 
+    /** Den zwischengespeicherten Bericht vergessen (das Tablet hat einen neuen Stand vom Handy eingespielt). */
+    fun vergiss() { letzterBericht = null }
+
     /** Ergebnis des letzten Abgleichs (auch aus einem früheren Prozess), null = noch nie gelaufen. */
     suspend fun letzterStand(): ApiSyncBericht? {
         val gespeichert = letzterBericht
@@ -126,7 +132,10 @@ class ForegroundSyncManager(
     private suspend fun fuehreApiSyncAus(reason: String, anlass: WhoopAbrufPlan.Anlass): ApiSyncBericht {
         Diag.i(DiagnosticArea.APP, "BioAbgleich", "Abgleich START ($reason)")
         val vorher = letzterStand()
-        val fingerVorher = fingerabdruecke()
+        // Dasselbe Zeitfenster vor und nach dem Abruf: Sonst zählte eine Zeile, die währenddessen herausfällt, als neu.
+        val fensterMs = System.currentTimeMillis() - 10L * 86_400_000L
+        val fensterTag = java.time.LocalDate.now().minusDays(10).toString()
+        val fingerVorher = fingerabdruecke(fensterMs, fensterTag)
         val whoopVerbunden = aktiv(QUELLE_WHOOP) && oauth.loadWhoopAuthState().isAuthorized
         val letzterWhoopOkMs = appSettings.lastWhoopSyncMsFlow.first()
         val whoopReauth = oauth.whoopNeedsReauth()
@@ -161,7 +170,7 @@ class ForegroundSyncManager(
             listOf(wh.await(), ou.await(), body.await(), tr.await())
         }
         val jetzt = System.currentTimeMillis()
-        val fingerNachher = fingerabdruecke()
+        val fingerNachher = fingerabdruecke(fensterMs, fensterTag)
 
         fun stand(id: String, name: String, ergebnis: Result<Int>?, bisherOkMs: Long, pausiert: Boolean = !aktiv(id)): QuellenStand {
             val fehler = ergebnis?.exceptionOrNull()
@@ -220,10 +229,8 @@ class ForegroundSyncManager(
      * Je Quelle ein Fingerabdruck der jüngsten Daten (ändert sich nur, wenn neue oder geänderte Messwerte ankamen) und der
      * Zeitpunkt der neuesten Messung. Abrufzeiten fließen bewusst nicht ein: Ein Abruf ohne neue Messung bleibt gleich.
      */
-    private fun fingerabdruecke(): Map<String, Pair<String, Long>> = runCatching {
+    private fun fingerabdruecke(grenze: Long, grenzTag: String): Map<String, Pair<String, Long>> = runCatching {
         val db = datenbank().openHelper.readableDatabase
-        val grenze = System.currentTimeMillis() - 10L * 86_400_000L
-        val grenzTag = java.time.LocalDate.now().minusDays(10).toString()
         fun zeile(sql: String): List<String> = db.query(sql).use { c -> if (c.moveToFirst()) (0 until c.columnCount).map { c.getString(it) ?: "" } else emptyList() }
         fun ms(text: String?): Long = text?.toDoubleOrNull()?.toLong() ?: 0L
         // Nur abgeschlossene Messungen (Schlaf, Erholung, HRV, Ruhepuls, Readiness, Schlafscore): Belastung, Energie, Schritte und

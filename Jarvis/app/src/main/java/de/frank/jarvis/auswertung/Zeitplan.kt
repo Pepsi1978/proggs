@@ -54,6 +54,8 @@ object Zeitplan {
         return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag, e.auswertungFrueheste)
     }
 
+    @Volatile private var planGeloggt: java.time.LocalDate? = null
+
     /** Vergisst die zwischengespeicherten Rechnungen, etwa nach einer Änderung der Einstellungen oder der Uhrzeit. */
     fun vergiss() {
         prueferSpeicher = null
@@ -81,7 +83,10 @@ object Zeitplan {
             // 15 und 21 Uhr; freier Tag: 10 und 16 Uhr.
             val wach: (Int) -> Boolean = { h -> !schlaeft(tag.atTime(h, 0)) }
             val stunden = mutableListOf<Int>()
-            var h = (0..23).firstOrNull { wach(it) && (schlaeft(tag.atTime(it, 0).minusHours(1)) || it >= k.frueheste) } ?: return@getOrPut emptySet()
+            // Als Aufwachen zählt nur das Ende eines richtigen Schlafs (mindestens vier Stunden), kein kurzer Block oder ein Schlaf,
+            // der genau um Mitternacht endet und sonst einen Lauf um 0 Uhr ergäbe.
+            fun aufgewacht(h: Int) = h >= 1 && (1..4).all { schlaeft(tag.atTime(h, 0).minusHours(it.toLong())) }
+            var h = (0..23).firstOrNull { wach(it) && (aufgewacht(it) || it >= k.frueheste) } ?: return@getOrPut emptySet()
             while (h <= 23 && stunden.size < k.proTag) {
                 stunden += h
                 h += abstand
@@ -101,7 +106,9 @@ object Zeitplan {
         val start = ab.truncatedTo(ChronoUnit.HOURS).plusHours(1)
         naechsterSpeicher?.let { (schl, wert) -> if (schl.first == k && schl.second == start) return wert }
         val faellig = pruefer(context)
-        val wert = (0L until 48L).map { start.plusHours(it) }.firstOrNull(faellig) ?: start
+        // Ohne Treffer in drei Tagen (etwa ein Dienstplan, der durchgehend Schlaf zeigt) kein Lauf außerhalb des Plans; neu gerechnet
+        // wird bei jedem Start, nach Änderungen an Dienstplan, Uhrzeit oder Einstellungen.
+        val wert = (0L until 72L).map { start.plusHours(it) }.firstOrNull(faellig)
         naechsterSpeicher = (k to start) to wert
         return wert
     }
@@ -123,8 +130,9 @@ object Zeitplan {
         wecker.cancel(absicht)
         val wann = naechster(app)
         _naechsterLauf.value = wann
-        // Für die Prüfung: die geplanten Läufe der nächsten 16 Tage (ein Schichtzyklus), nur im Logcat.
-        runCatching {
+        // Für die Prüfung: die geplanten Läufe der nächsten 16 Tage (ein Schichtzyklus), nur im Logcat und höchstens einmal je Tag.
+        if (planGeloggt != java.time.LocalDate.now()) runCatching {
+            planGeloggt = java.time.LocalDate.now()
             val p = pruefer(app)
             val heute = java.time.LocalDate.now()
             Log.i(TAG, "Plan 16 Tage: " + (0L until 16L).joinToString(" | ") { d -> val tag = heute.plusDays(d); "$tag " + (0..23).filter { p(tag.atTime(it, 0)) }.joinToString(",") })
