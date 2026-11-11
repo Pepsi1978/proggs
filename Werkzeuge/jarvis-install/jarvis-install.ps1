@@ -39,6 +39,10 @@ if (-not (Test-Path $Apk)) { Ende fehler "APK nicht gefunden: $Apk" }
 $adb = @($env:ADB, "$env:ANDROID_HOME\platform-tools\adb.exe", "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe", (Get-Command adb -ErrorAction SilentlyContinue).Source) |
     Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if (-not $adb) { Ende fehler "adb nicht gefunden" }
+# Delta wie am Mac (Werkzeuge/apk-delta, braucht Git Bash mit python3): nur geänderte Einträge statt 136 MB über die Leitung.
+$gitBash = "C:\Program Files\Git\bin\bash.exe"
+$deltaSh = (Join-Path (Split-Path $PSScriptRoot) "apk-delta\delta-push.sh").Replace('\', '/')
+$apkUnix = (Resolve-Path $Apk).Path.Replace('\', '/')
 
 # Feste Seriennummer des Zielgeräts: Ohne sie (Datei fehlt, altes Repo) gilt wie früher das erste verbundene Gerät.
 $geraeteDatei = Join-Path (Split-Path $PSScriptRoot) "adb-wlan\geraete.json"
@@ -95,6 +99,8 @@ function Installiere {
     $ausgabe
     if ($ausgabe -match "(?m)^Success") {
         $script:abgeschlossen = $true
+        # Diese APK ist jetzt die Basis am Gerät: fürs nächste Delta merken.
+        if (Test-Path $gitBash) { & $gitBash -c "source '$deltaSh' && delta_merken '$apkUnix' '$paket'" *> $null }
         # Samsung startet Jarvis nach dem Update nicht immer von selbst (war die App vorn, fehlten Dienst und Verbindung bis zum
         # nächsten Öffnen): den Prozess wecken. Ältere Fassungen kennen die Aktion nicht, dann passiert nichts.
         Handy am broadcast -a de.frank.jarvis.AUFWACHEN -p $paket | Out-Null
@@ -122,11 +128,20 @@ try {
         if ($apkCode -gt 0 -and $amGeraet -gt $apkCode) {
             Ende fehler "Am Gerät ist schon versionCode $amGeraet, die APK hat erst $apkCode (vermutlich hat eine parallele Sitzung installiert): Stand holen, Version anheben, neu bauen"
         }
+        # Liegt auf origin/main schon eine neuere Fassung (parallele Sitzung baut und installiert sie), wäre das Hochladen vergeudet.
+        $repo = Split-Path (Split-Path $PSScriptRoot)
+        git -C $repo fetch -q origin main 2>$null
+        $mainCode = 0; try { $mainCode = [int]((git -C $repo show origin/main:Jarvis/app/src/main/assets/versionslog.json 2>$null | Out-String | ConvertFrom-Json).eintraege[-1].versionCode) } catch { }
+        if ($apkCode -gt 0 -and $mainCode -gt $apkCode) {
+            Ende fehler "Auf origin/main liegt schon Jarvis versionCode $mainCode, die APK hat erst $apkCode (parallele Sitzung): nicht hochladen; Stand holen und neu bauen oder die andere Sitzung installieren lassen"
+        }
     }
 
     "Lade die APK vorab aufs Handy über $Geraet ..."
+    $global:LASTEXITCODE = 1
+    if (Test-Path $gitBash) { & $gitBash -c "source '$deltaSh' && delta_push '$($adb.Replace('\', '/'))' '$Geraet' '$apkUnix' '$zwischenlager' '$paket'" | Write-Host }
     # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
-    & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null
+    if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null }
     if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     if ($LASTEXITCODE -ne 0) {
         # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben Handy.

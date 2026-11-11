@@ -120,6 +120,13 @@ if [ -n "$AAPT2" ]; then
   if [ -n "$APK_CODE" ] && [ -n "$AM_GERAET" ] && [ "$AM_GERAET" -gt "$APK_CODE" ]; then
     ende fehler "Am Gerät ist schon versionCode $AM_GERAET, die APK hat erst $APK_CODE (vermutlich hat eine parallele Sitzung installiert): Stand holen, Version anheben, neu bauen"
   fi
+  # Liegt auf origin/main schon eine neuere Fassung (parallele Sitzung baut und installiert sie), wäre das Hochladen vergeudet.
+  REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+  git -C "$REPO" fetch -q origin main 2>/dev/null
+  MAIN_CODE="$(git -C "$REPO" show origin/main:Jarvis/app/src/main/assets/versionslog.json 2>/dev/null | grep -o '"versionCode": *[0-9]*' | tail -1 | grep -o '[0-9]*$')"
+  if [ -n "$APK_CODE" ] && [ -n "$MAIN_CODE" ] && [ "$MAIN_CODE" -gt "$APK_CODE" ]; then
+    ende fehler "Auf origin/main liegt schon Jarvis versionCode $MAIN_CODE, die APK hat erst $APK_CODE (parallele Sitzung): nicht hochladen; Stand holen und neu bauen oder die andere Sitzung installieren lassen"
+  fi
 fi
 
 echo "Lade die APK vorab aufs Handy über $GERAET ..."

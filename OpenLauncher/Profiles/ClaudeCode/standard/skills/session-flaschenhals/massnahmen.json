@@ -261,6 +261,40 @@
       "pruefung": "Nach 10 Sitzungen: diese Parserfehler seltener -> wirkt; sonst Hebel 1 (Hook-Warnung) prüfen.",
       "ruecknahme": "Absatz PowerShell-Fallen aus der Memory-Datei entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    },
+    {
+      "id": "M16",
+      "titel": "jarvis-install (Windows): Delta-Upload wie am Mac und Abbruch, wenn origin/main schon einen neueren Jarvis hat",
+      "datum": "2026-11-11T18:53",
+      "status": "aktiv",
+      "beleg": "Sitzung db10fa32: 136-MB-Jarvis-APK mit 0,43 MB/s (zwei Sitzungen luden parallel über dasselbe 2,4-GHz-WLAN), zwei Warteläufe à 10 min ins Zeitlimit; der Tablet-Upload (1.8.630) war vergeudet, weil proggs-35 schon 1.8.631 gebaut und installiert hatte.",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (delta_push/delta_merken über Git Bash, origin/main-Prüfung)",
+        "Werkzeuge/jarvis-install/jarvis-install.sh (origin/main-Prüfung)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "jarvis-install\\.ps1",
+      "fehler_regex": "moved to the background|did not complete within",
+      "min_zeilen": 1,
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: keine 10-min-Warteläufe mehr, Ausgabe 'Delta übertragen' erscheint -> wirkt.",
+      "ruecknahme": "In jarvis-install.ps1 die Zeilen mit gitBash/deltaSh/apkUnix und den origin/main-Block entfernen; in jarvis-install.sh den origin/main-Block.",
+      "kosten": "kein Kontext; je Lauf ein git fetch (~1 s)"
+    },
+    {
+      "id": "M17",
+      "titel": "Nie ganze Ordner vormerken (git add <ordner>), nur einzelne Dateien",
+      "datum": "2026-11-11T18:53",
+      "status": "aktiv",
+      "beleg": "Sitzung db10fa32: git add Jarvis/.../faehigkeit nahm VictronFaehigkeit.kt + Faehigkeit.kt einer parallelen Sitzung in Commit af845ca08 mit.",
+      "ort": [
+        "minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "git add -- ",
+      "fehler_regex": "VORMERKUNG_FREMD",
+      "pruefung": "Nach 10 Sitzungen keine Meldung fremder Dateien im eigenen Commit -> wirkt.",
+      "ruecknahme": "Die Zeile 'Nie einen Ordner vormerken' aus der Memory-Datei entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
     }
   ]
 }

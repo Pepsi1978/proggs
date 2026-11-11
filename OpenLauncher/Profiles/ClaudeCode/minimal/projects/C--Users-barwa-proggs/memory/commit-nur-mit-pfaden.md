@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: b7db77d8-d4f1-438f-b516-b06f24346713
-  modified: 2026-11-07T13:55:37.143Z
+  modified: 2026-11-11T17:53:31.859Z
 ---
 
 Im gemeinsamen Repo `~/proggs` laufen oft mehrere Sitzungen gleichzeitig. Nacktes `git commit -a` oder ein Commit nach fremdem `git add` nimmt deren vorgemerkte Dateien mit.
@@ -14,6 +14,7 @@ Im gemeinsamen Repo `~/proggs` laufen oft mehrere Sitzungen gleichzeitig. Nackte
 
 **How to apply:**
 - Datei ohne fremde Änderungen: `git commit -- <pfade>` ist richtig.
+- Nie einen Ordner vormerken (`git add <ordner>`), nur einzelne Dateien: Am 11.11.2026 nahm `git add Jarvis/…/faehigkeit` die halbfertige `VictronFaehigkeit.kt` einer parallelen Sitzung mit.
 - Datei mit fremden Änderungen: nur den eigenen Teil vormerken (`git hash-object -w` + `git update-index --cacheinfo`), `git diff --cached --name-only` prüfen, dann `git commit` **ohne** Pfade.
 
 Verwandt: [[parallele-sitzung-nimmt-dateien-mit]].
