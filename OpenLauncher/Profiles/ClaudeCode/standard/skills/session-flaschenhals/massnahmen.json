@@ -155,6 +155,22 @@
    "pruefung": "Fehlbauten mit Unresolved reference in Dateien, die die Sitzung nicht geändert hat, sollten nachher seltener sein; Treffer in eigenen Dateien sind normale Entwicklung.",
    "ruecknahme": "Den Punkt zum Worktree-Bau aus der Memory-Datei entfernen.",
    "kosten": "kein Dauerkontext, nur Bedarfsdatei"
-  }
- ]
+  },
+    {
+      "id": "M10",
+      "titel": "Room: fremde DB-Datei ohne ATTACH auf Rooms Verbindung kopieren",
+      "datum": "2026-11-11T16:17",
+      "status": "aktiv",
+      "beleg": "Sitzung 6fc10676: Biomarker-Übernahme per ATTACH auf Rooms openHelper; danach lieferte Rooms eigene Rechnung nichts ('Rechnung weicht ab … gegen null'), ein zusätzlicher Bau-, Commit- und Installationsdurchlauf (~15 min).",
+      "ort": [
+        "bugs/android/room-kurzcheck.md Zeile 23"
+      ],
+      "werkzeug": "Write",
+      "aufruf_regex": "ATTACH DATABASE",
+      "fehler_regex": "Rechnung weicht ab",
+      "pruefung": "Nach 10 Sitzungen: kein ATTACH auf Rooms Verbindung mehr in neuem Code, kein Übernahme-Abbruch wegen leerer Room-Rechnung -> wirkt.",
+      "ruecknahme": "Zeile 23 aus dem Room-Kurzcheck entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    }
+  ]
 }

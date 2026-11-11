@@ -34,4 +34,5 @@
 | 19 | Build: `KSP apoption does not match \S+=\S+: room.schemaLocation` | Leerzeichen im Pfad! Schema-/Projektpfad ohne Leerzeichen (macOS-Falle) | BLD2 |
 | 20 | Nach 2.6→2.7-Upgrade neue Compile-Fehler (Nullability, abstrakte DAO-`val`) | Kotlin-Codegen ist ab 2.7.0 Default: DAO-Properties → Funktionen, Collections non-null | V1 |
 | 21 | KSP laeuft nicht / `is too old for kotlin` | KSP-Praefix = Kotlin-Version exakt (2.1.0 ↔ `2.1.0-1.0.29`) | V2 |
+| 23 | Fremde DB-Datei in die Room-DB kopieren (Übernahme, Spiegel) | Kein `ATTACH` über Rooms `openHelper` (Android schaltet dabei WAL ab, Room-Lesen danach leer/fehlerhaft): Quelle getrennt mit `SQLiteDatabase.openDatabase(READ_ONLY)` lesen, per `insert` in einer Transaktion schreiben | X |
 | 22 | Du jagst einen Bug, der evtl. schon gefixt ist | Fix-Status-Tabelle unten lesen: 2.7.0 → mind. **2.7.2** patchen; viele Fixes erst in **2.8.x** | §Fix-Status |
