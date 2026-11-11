@@ -1,6 +1,6 @@
 # UpdateZentrale: festgelegter winget-Installer-Typ fehlt in der neuen Version (11.11.2026)
 
-> Behoben in UpdateZentrale 1.3.82. macOS ist nicht betroffen, denn brew kennt keinen festgelegten Installer-Typ.
+> Behoben in UpdateZentrale 1.3.82, nach dem Review geschärft in 1.3.83. macOS ist nicht betroffen, denn brew kennt keinen festgelegten Installer-Typ.
 
 ## Symptom
 
@@ -17,11 +17,12 @@ PowerShell 7 (`wingetInstallerTyp: wix`) endete im Sammellauf mit „Nicht verif
 ## Behebung
 
 - `WingetAktualisierer.AngebotMitInstallerTypAsync`: Ist `wingetInstallerTyp` gesetzt und meldet die Liste ein Update, prüft die UpdateZentrale das angebotene Paket per `winget show … --version <Angebot> --installer-type <Typ>` (über den Hash, `HatInstaller`).
-  - Fehlt der Typ, geht sie `winget show --versions` von oben nach unten durch, höchstens 4 Versionen zwischen der installierten Fassung und dem Angebot. Die neueste Version mit diesem Typ wird das Angebot.
+  - Fehlt der Typ, geht sie alle Versionen aus `winget show --versions` zwischen der installierten Fassung und dem Angebot von oben nach unten durch (höchstens 25, sonst bleibt das Angebot der Liste). Die erste Version mit diesem Typ wird das Angebot. Damit wird auch ein neuer 7.6.x-LTS-Patch unter mehreren reinen MSIX-Versionen gefunden.
   - Ist keine neuere Version mit diesem Typ zu finden, steht die Karte auf „Aktuell“ mit dem Hinweis „7.7.0.0 gibt es nur ohne wix-Installer“.
   - Ist eine Antwort unlesbar (Zeitlimit, Exit ≠ 0, kein `[Id]`), bleibt das Angebot der Liste. Ein Fehler wird nie zu „aktuell“.
-  - Die Ergebnisse werden je Id, Typ und Version im Prozess zwischengespeichert. Die Aufrufe laufen in derselben winget-Reihe wie die Listen.
-- Katalog: `wingetName` von `PowerShell` auf `PowerShell 7-x64` geändert. Neben dem MSI liegt ein MSIX-Paket `Microsoft.PowerShell 7.6.9.0`, und der alte Name traf beide Zeilen. Kommt das MSIX auf 7.7, hätte die MSI-Karte sonst 7.7 als installiert gelesen.
+  - Der Hash zählt nur als eingerückte Zeile `<Feld>: <64 Hex>` im letzten Abschnitt der Ausgabe, dem Installer-Abschnitt. Ein Hash in den Versionshinweisen täuscht so keinen Installer vor.
+  - Die `winget show`-Antworten (Typprüfungen und Versionsliste) gelten 6 Stunden, Schlüssel ist der komplette Aufruf samt Quelle. Danach wird neu gefragt, falls Microsoft ein Manifest nachträglich um ein MSI ergänzt. Die Aufrufe laufen in derselben winget-Reihe wie die Listen.
+- Katalog: `wingetName` von `PowerShell` auf `PowerShell 7-` geändert. Das trifft die MSI-Anzeigenamen `PowerShell 7-x64`, `-x86` und `-arm64`, aber nicht das MSIX-Paket `PowerShell` (`Microsoft.PowerShell 7.6.9.0`), das hier zusätzlich neben dem MSI liegt. Der alte Name traf beide Zeilen. Kommt das MSIX auf 7.7, hätte die MSI-Karte sonst 7.7 als installiert gelesen.
 
 ## Erkennen
 

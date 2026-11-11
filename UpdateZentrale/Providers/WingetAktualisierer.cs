@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UpdateZentrale.Models;
 using UpdateZentrale.Services;
 
@@ -55,11 +55,19 @@ public sealed class WingetAktualisierer : IAktualisierer
 
     // ---------------- Festgelegter Installer-Typ ----------------
 
-    /// <summary>Versions of the walk below the offer; each one costs a "winget show".</summary>
-    internal const int TypSucheTiefe = 4;
+    /// <summary>
+    /// Upper bound of the walk below the offer. Each version costs one "winget show" the first
+    /// time only (cached), so the bound is generous: a whole release line without the pinned type
+    /// (PowerShell 7.7.x as MSIX only) must not bring back the endless offer.
+    /// </summary>
+    internal const int TypSucheTiefe = 25;
 
-    /// <summary>(id|type|version) -> that version has an installer of that type. Manifests of a version rarely change.</summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _typCache = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>How long a "winget show" answer counts -- a manifest may be republished with an added installer.</summary>
+    internal static TimeSpan TypCacheGueltig { get; set; } = TimeSpan.FromHours(6);
+
+    /// <summary>(source|id|what) -> answer and time. Holds the type probes and the version lists.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Ausgabe, DateTime Zeit)> _showCache
+        = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// "winget list" offers the newest version whatever its installer types. With a pinned type
@@ -83,11 +91,14 @@ public sealed class WingetAktualisierer : IAktualisierer
         var versionen = await ShowAsync(eintrag, "--versions", protokoll, abbruch);
         if (versionen is null) return ergebnis;
 
-        var kandidaten = VersionenLesen(versionen)
+        var dazwischen = VersionenLesen(versionen)
             .Where(v => CliAktualisierer.Vergleiche(v, angebot) < 0 && CliAktualisierer.Vergleiche(v, installiert) > 0)
             .OrderByDescending(v => v, Comparer<string>.Create(CliAktualisierer.Vergleiche))
-            .Take(TypSucheTiefe);
-        foreach (var v in kandidaten)
+            .ToList();
+        // "Current" needs every version in between checked; past the bound the list's offer stays.
+        if (dazwischen.Count > TypSucheTiefe) return ergebnis;
+
+        foreach (var v in dazwischen)
         {
             var treffer = await HatInstallerTypAsync(eintrag, v, typ, protokoll, abbruch);
             if (treffer is null) return ergebnis;
@@ -98,12 +109,6 @@ public sealed class WingetAktualisierer : IAktualisierer
                     Meldung = $"Neue Version {v} verfügbar ({angebot} gibt es nicht als {typ})."
                 };
         }
-
-        // Nothing between installed and offer has the type (or the walk was capped): only "current"
-        // when the walk covered every version in between.
-        var alleGeprueft = VersionenLesen(versionen)
-            .Count(v => CliAktualisierer.Vergleiche(v, angebot) < 0 && CliAktualisierer.Vergleiche(v, installiert) > 0) <= TypSucheTiefe;
-        if (!alleGeprueft) return ergebnis;
 
         protokoll.Report($"{angebot} hat keinen Installer vom Typ {typ} – {installiert} ist die neueste Fassung dieses Typs.");
         return ergebnis with
@@ -117,30 +122,30 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// <summary>True/false from a readable "winget show"; null when the answer is not trustworthy.</summary>
     private static async Task<bool?> HatInstallerTypAsync(ProgrammEintrag eintrag, string version, string typ,
                                                          IProgress<string> protokoll, CancellationToken abbruch)
-    {
-        var schluessel = eintrag.WingetId + "|" + typ + "|" + version;
-        if (_typCache.TryGetValue(schluessel, out var bekannt)) return bekannt;
+        => await ShowAsync(eintrag, "--version " + version + " --installer-type " + typ, protokoll, abbruch) is { } ausgabe
+            ? HatInstaller(ausgabe)
+            : null;
 
-        var ausgabe = await ShowAsync(eintrag, "--version " + version + " --installer-type " + typ, protokoll, abbruch);
-        if (ausgabe is null) return null;
-        var hat = HatInstaller(ausgabe);
-        _typCache[schluessel] = hat;
-        return hat;
-    }
-
-    /// <summary>"winget show" for the package; null on timeout, failure or a missing version header.</summary>
+    /// <summary>
+    /// "winget show" for the package, cached for <see cref="TypCacheGueltig"/>; null on timeout,
+    /// failure or a missing "[Id]" header (never cached). Runs inside <see cref="Reihe"/>.
+    /// </summary>
     private static async Task<string?> ShowAsync(ProgrammEintrag eintrag, string zusatz, IProgress<string> protokoll, CancellationToken abbruch)
     {
         var args = $"show --id {eintrag.WingetId} --exact {zusatz} --disable-interactivity --accept-source-agreements" + QuellArgument(eintrag);
+        if (_showCache.TryGetValue(args, out var alt) && DateTime.UtcNow - alt.Zeit < TypCacheGueltig) return alt.Ausgabe;
+
         await Reihe.WaitAsync(abbruch);
         try
         {
             protokoll.Report("winget " + args);
             var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(2), abbruch: abbruch);
             protokoll.Report(lauf.Ausgabe);
-            var lesbar = !lauf.Abgelaufen && lauf.ExitCode == 0
-                         && lauf.Ausgabe.Contains("[" + eintrag.WingetId + "]", StringComparison.OrdinalIgnoreCase);
-            return lesbar ? lauf.Ausgabe : null;
+            if (lauf.Abgelaufen || lauf.ExitCode != 0
+                || !lauf.Ausgabe.Contains("[" + eintrag.WingetId + "]", StringComparison.OrdinalIgnoreCase))
+                return null;
+            _showCache[args] = (lauf.Ausgabe, DateTime.UtcNow);
+            return lauf.Ausgabe;
         }
         finally
         {
@@ -148,20 +153,31 @@ public sealed class WingetAktualisierer : IAktualisierer
         }
     }
 
-    private static readonly System.Text.RegularExpressions.Regex HashMuster =
-        new(@"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    private static readonly System.Text.RegularExpressions.Regex HashZeile =
+        new(@"^\s+[^:\r\n]+:\s*[0-9a-f]{64}\s*$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    private static readonly System.Text.RegularExpressions.Regex Abschnitt =
+        new(@"^\S[^\r\n]*:\s*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    private static readonly System.Text.RegularExpressions.Regex VersionsZeile = new(@"^\d+(\.\d+)+$");
 
     /// <summary>
-    /// Language-neutral: a selected installer always prints its SHA256; "no applicable installer"
-    /// is localized text and exit code 0 (measured, winget 1.29).
+    /// Language-neutral: a selected installer prints "  &lt;label&gt;: &lt;sha256&gt;" in the installer
+    /// section, the last top-level heading of "winget show"; "no applicable installer" is localized
+    /// text with exit code 0 (measured, winget 1.29). Only that last section counts, so a hash in
+    /// the release notes cannot pass for an installer.
     /// </summary>
-    internal static bool HatInstaller(string showAusgabe) => HashMuster.IsMatch(showAusgabe);
+    internal static bool HatInstaller(string showAusgabe)
+    {
+        var abschnitte = Abschnitt.Matches(showAusgabe);
+        if (abschnitte.Count == 0) return false;
+        return HashZeile.IsMatch(showAusgabe[abschnitte[^1].Index..]);
+    }
 
     /// <summary>The version rows of "winget show --versions": lines that are a version number and nothing else.</summary>
     internal static List<string> VersionenLesen(string ausgabe)
-        => ausgabe.Replace("\r", "").Split('\n').Select(z => z.Trim())
-            .Where(z => System.Text.RegularExpressions.Regex.IsMatch(z, @"^\d+(\.\d+)+$"))
-            .ToList();
+        => ausgabe.Replace("\r", "").Split('\n').Select(z => z.Trim()).Where(z => VersionsZeile.IsMatch(z)).ToList();
 
     /// <summary>
     /// How winget is told which package: by id, or -- for packages winget only correlates by

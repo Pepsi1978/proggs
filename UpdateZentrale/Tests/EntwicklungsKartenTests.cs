@@ -189,7 +189,7 @@ public sealed class EntwicklungsKartenTests
         }
 
         var ps = alle.Single(e => e.Id == "powershell");
-        Assert.Equal("PowerShell 7-x64", ps.WingetName);
+        Assert.Equal("PowerShell 7-", ps.WingetName);
         Assert.True(ps.WingetUpdatePerInstall);
         Assert.Equal("wix", ps.WingetInstallerTyp);
         Assert.False(ps.IstPaketApp);
