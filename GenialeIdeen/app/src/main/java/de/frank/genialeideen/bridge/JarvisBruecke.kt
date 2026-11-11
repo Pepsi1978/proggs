@@ -1,6 +1,9 @@
 package de.frank.genialeideen.bridge
 
 import android.content.ContentProvider
+import android.os.Process
+import android.os.Binder
+import android.content.pm.PackageManager
 import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
@@ -46,9 +49,13 @@ class JarvisBruecke : ContentProvider() {
     // Ein bereitliegender Stand des anderen Geräts wird hier eingespielt, bevor irgendetwas die Datenbank öffnet.
     override fun onCreate(): Boolean { context?.let { GeraeteAbgleich.wendeAn(it.applicationContext) }; return true }
 
-    override fun openFile(uri: Uri, mode: String): android.os.ParcelFileDescriptor = abgleich.oeffne(uri, mode)
+    override fun openFile(uri: Uri, mode: String): android.os.ParcelFileDescriptor {
+        nurEigeneSignatur()
+        return abgleich.oeffne(uri, mode)
+    }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        nurEigeneSignatur()
         abgleich.rufe(method, extras)?.let { return it }
         val beginn = SystemClock.elapsedRealtime()
         val antwort = runCatching {
@@ -223,4 +230,15 @@ class JarvisBruecke : ContentProvider() {
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = 0
+}
+
+/**
+ * Nur Apps mit Franks Signierschlüssel kommen durch. Die Prüfung steht hier im Code und nicht als `android:permission`
+ * am Provider: Die geteilte Erlaubnis `de.frank.jarvis.permission.BRUECKE` gehört im System der App, die sie zuerst
+ * deklariert hat, und verschwindet mit deren Deinstallation; dann wären alle Brücken zu (11.11.2026, Entropy Reducer).
+ */
+private fun ContentProvider.nurEigeneSignatur() {
+    val pm = context?.packageManager ?: throw SecurityException("App nicht bereit.")
+    if (pm.checkSignatures(Binder.getCallingUid(), Process.myUid()) != PackageManager.SIGNATURE_MATCH)
+        throw SecurityException("Nur Apps mit demselben Signierschlüssel.")
 }

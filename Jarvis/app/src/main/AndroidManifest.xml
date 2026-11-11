@@ -259,8 +259,7 @@
         <provider
             android:name=".faehigkeit.ZieleBruecke"
             android:authorities="de.frank.jarvis.ziele"
-            android:exported="true"
-            android:permission="de.frank.jarvis.permission.BRUECKE" />
+            android:exported="true" />
         <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -288,8 +287,7 @@
         <provider
             android:name=".speech.ParakeetBruecke"
             android:authorities="de.frank.jarvis.parakeet"
-            android:exported="true"
-            android:permission="de.frank.jarvis.permission.BRUECKE" />
+            android:exported="true" />
 
             <!-- Biomarker: Satellitenkarte im Trainings-Detail (Schlüssel aus ~/SK beim Bau). -->
         <meta-data android:name="com.google.android.geo.API_KEY" android:value="${mapsApiKey}" />

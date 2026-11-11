@@ -96,7 +96,6 @@
         <service android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync" tools:node="merge" />
         <!-- Brücke zu Jarvis: Wecker lesen und stellen, durch die Signatur-Erlaubnis geschützt. -->
-        <provider android:name="de.frank.wecker.JarvisBruecke" android:authorities="de.frank.genialerwecker.jarvis"
-            android:permission="de.frank.jarvis.permission.BRUECKE" android:exported="true" />
+        <provider android:name="de.frank.wecker.JarvisBruecke" android:authorities="de.frank.genialerwecker.jarvis" android:exported="true" />
     </application>
 </manifest>

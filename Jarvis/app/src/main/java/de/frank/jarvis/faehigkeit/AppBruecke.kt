@@ -66,6 +66,22 @@ object AppBruecke {
         if (ms >= 2_000) Logbuch.dauer("Brücke $app.$methode", ms)
     }
 
+    /**
+     * Sagt, warum eine Brücke den Zugriff verweigert, statt pauschal den Schlüssel zu verdächtigen. Häufigste Ursache war
+     * nicht der Schlüssel: Die geteilte Erlaubnis `de.frank.jarvis.permission.BRUECKE` gehört im System der App, die sie
+     * zuerst deklariert hat, und verschwindet mit deren Deinstallation (11.11.2026: Entropy Reducer). Neuere Brücken
+     * prüfen die Signatur deshalb selbst im Code; ältere Fassungen hängen noch an der Erlaubnis.
+     */
+    private fun verweigert(context: Context, app: String, adresse: Uri): String {
+        val pm = context.packageManager
+        if (runCatching { pm.getPermissionInfo("de.frank.jarvis.permission.BRUECKE", 0) }.isFailure)
+            return "$app verweigert den Zugriff: Die Brücken-Erlaubnis fehlt im System, weil die App deinstalliert wurde, der sie gehörte. Jarvis einmal neu installieren, dann geht es wieder; ein Update von $app beseitigt die Abhängigkeit dauerhaft."
+        val paket = runCatching { pm.resolveContentProvider(adresse.authority.orEmpty(), 0)?.packageName }.getOrNull()
+        if (paket != null && pm.checkSignatures(context.packageName, paket) != android.content.pm.PackageManager.SIGNATURE_MATCH)
+            return "$app verweigert den Zugriff: $app ist mit einem anderen Schlüssel signiert als Jarvis. $app mit dem gemeinsamen Schlüssel neu installieren (nicht deinstallieren)."
+        return "$app verweigert den Zugriff, obwohl Schlüssel und Erlaubnis stimmen. Jarvis einmal neu installieren."
+    }
+
     private fun rufeEinmal(context: Context, app: String, adressen: List<Uri>, methode: String, anfrage: JSONObject, grenze: Long, lesend: Boolean): JSONObject {
         var letzter = fehler("$app ist nicht installiert oder zu alt (die Jarvis-Brücke fehlt).")
         for (adresse in adressen) {
@@ -97,8 +113,9 @@ object AppBruecke {
                 return antwort?.getString("json")?.let(::JSONObject) ?: fehler("$app hat nicht geantwortet.").put(VORUEBERGEHEND, true)
             } catch (_: KeineBruecke) {
                 // null: Unter dieser Adresse ist keine Brücke installiert.
-            } catch (_: SecurityException) {
-                return fehler("$app verweigert den Zugriff. Beide Apps müssen mit demselben Schlüssel signiert sein; danach Jarvis neu installieren.")
+            } catch (e: SecurityException) {
+                Logbuch.fehler("Brücke $app.$methode verweigert", e)
+                return fehler(verweigert(context, app, adresse))
             } catch (_: IllegalArgumentException) {
                 // Diese Variante kennt die Brücke nicht: nächste Adresse versuchen.
             } catch (_: InterruptedException) {

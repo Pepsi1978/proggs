@@ -16,6 +16,15 @@ Stand: 27.09.2026 19:15 (Ausnahme GenialerWeckerAndroid ergänzt; vorher 10.09.2
 - Alle anderen Apps verwenden den gemeinsamen Debug-Key.
 - Sync zwischen Rechnern: `Y:\Keystores\Android\` (Kopie von `~/SK/Android/`).
 
+## Brücken zwischen eigenen Apps: Signatur im Code prüfen
+
+Ein exportierter Provider für Franks andere Apps bekommt kein `android:permission` mit einer geteilten Signatur-Erlaubnis,
+sondern prüft in jedem Einstieg mit Daten (`call`, `openFile`, sonst auch `query`/`insert`/…):
+`packageManager.checkSignatures(Binder.getCallingUid(), Process.myUid()) == PackageManager.SIGNATURE_MATCH`, sonst `SecurityException`.
+Grund: Eine von vielen Apps deklarierte Erlaubnis gehört nur der zuerst installierten und verschwindet mit deren
+Deinstallation für alle (11.11.2026, Almanach `bugs/android/android-platform.md` §2.12). Meldet eine Brücke
+„verweigert den Zugriff“, zuerst prüfen, ob die Erlaubnis noch registriert ist, bevor man den Schlüssel verdächtigt.
+
 ## `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: nie deinstallieren
 
 Deinstallieren löscht die App-Daten. Stattdessen den Signierschlüssel per APK-Signature-Scheme-v3-Rotation

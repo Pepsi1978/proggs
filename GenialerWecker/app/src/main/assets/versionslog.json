@@ -40,6 +40,7 @@
     {"versionCode": 125, "versionName": "1.1.130", "stand": "11.11.2026, 16:42 Uhr", "notiz": "Die Schlafenszeit-Erinnerung wird jetzt laut vorgelesen, mit wählbarer Stimme wie Gemini 3.8 Flash-Lite, als Benachrichtigung oder als Wecker, und nennt Schlafenszeit und die nächste tatsächliche Weckzeit."},
     {"versionCode": 126, "versionName": "1.1.131", "stand": "11.11.2026, 16:56 Uhr", "notiz": "Feinschliff nach dem Review: Wecker-Ansage zeigt das Vollbild, Nochmal anhören bricht nicht mehr ab, Ton auch vor dem ersten Entsperren, Sonnenwecker folgt einem Ortswechsel zuverlässig."},
     {"versionCode": 127, "versionName": "1.1.132", "stand": "11.11.2026, 17:01 Uhr", "notiz": "Die Weckerliste ist jetzt nach Uhrzeit sortiert, von früh bis spät, und neue oder geänderte Wecker sortieren sich automatisch ein."},
-    {"versionCode": 128, "versionName": "1.1.133", "stand": "11.11.2026, 17:13 Uhr", "notiz": "Die Weckerliste sortiert Sonnenwecker nach ihrer tatsächlichen Uhrzeit ein und ordnet gleiche Uhrzeiten alphabetisch mit Umlauten."}
+    {"versionCode": 128, "versionName": "1.1.133", "stand": "11.11.2026, 17:13 Uhr", "notiz": "Die Weckerliste sortiert Sonnenwecker nach ihrer tatsächlichen Uhrzeit ein und ordnet gleiche Uhrzeiten alphabetisch mit Umlauten."},
+    {"versionCode": 129, "versionName": "1.1.134", "stand": "11.11.2026, 17:56 Uhr", "notiz": "Die Jarvis-Brücke prüft den Signierschlüssel jetzt selbst, damit sie nach dem Deinstallieren einer anderen App nicht mehr den Zugriff verweigert."}
 ]
 }

@@ -1,6 +1,9 @@
 package de.frank.jarvis.speech
 
 import android.content.ContentProvider
+import android.os.Process
+import android.os.Binder
+import android.content.pm.PackageManager
 import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
@@ -28,6 +31,7 @@ class ParakeetBruecke : ContentProvider() {
     override fun onCreate() = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        nurEigeneSignatur()
         val context = context ?: return fehler("Jarvis ist nicht bereit.")
         return runCatching {
             when (method) {
@@ -92,4 +96,15 @@ class ParakeetBruecke : ContentProvider() {
         val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         @Volatile var freigabe: Job? = null
     }
+}
+
+/**
+ * Nur Apps mit Franks Signierschlüssel kommen durch. Die Prüfung steht hier im Code und nicht als `android:permission`
+ * am Provider: Die geteilte Erlaubnis `de.frank.jarvis.permission.BRUECKE` gehört im System der App, die sie zuerst
+ * deklariert hat, und verschwindet mit deren Deinstallation; dann wären alle Brücken zu (11.11.2026, Entropy Reducer).
+ */
+private fun ContentProvider.nurEigeneSignatur() {
+    val pm = context?.packageManager ?: throw SecurityException("App nicht bereit.")
+    if (pm.checkSignatures(Binder.getCallingUid(), Process.myUid()) != PackageManager.SIGNATURE_MATCH)
+        throw SecurityException("Nur Apps mit demselben Signierschlüssel.")
 }

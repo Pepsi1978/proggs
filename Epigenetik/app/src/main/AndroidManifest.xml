@@ -60,7 +60,6 @@
         <provider
             android:name=".bruecke.JarvisBruecke"
             android:authorities="de.frank.epigenetik.jarvis"
-            android:permission="de.frank.jarvis.permission.BRUECKE"
             android:exported="true" />
     </application>
 </manifest>

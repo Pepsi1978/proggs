@@ -27,6 +27,7 @@
 | 13 | State nach Hintergrund-Kill weg | ViewModel ueberlebt nicht Process Death → `SavedStateHandle`/Persistenz | §1.5, §1.6 |
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 | 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
+| 15a | Alle Brücken-Provider plötzlich `Permission Denial`, Schlüssel stimmen | Geteilte Signatur-Permission weg (Besitzer-App deinstalliert): eine Deklarierer-App `install -r`; Provider prüfen Signatur im Code statt per `android:permission` | §2.12 |
 | 16 | `EncryptedSharedPreferences` — Crash in `onCreate` nach Geraetewechsel (`AEADBadTagException`, Keystore -30) | `create()` in try/catch + Prefs & Masterkey-Alias loeschen und neu anlegen; Prefs-Datei aus BEIDEN Backup-XMLs ausschliessen | §7.4 |
 | 17 | Alarm-Vollbild schließt per Zurück-Geste (targetSdk 36) | Eigener `OnBackInvokedCallback`/`BackHandler` | §10.1 |
 | 18 | onnxruntime/sherpa-onnx `.so` 16-KB-Warnung | sherpa-onnx ≥ 1.12.36; jede `.so` einzeln prüfen | §10.2 |

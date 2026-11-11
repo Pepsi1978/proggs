@@ -85,7 +85,6 @@
         <provider
             android:name=".bridge.JarvisBruecke"
             android:authorities="de.frank.genialeideen.jarvis"
-            android:permission="de.frank.jarvis.permission.BRUECKE"
             android:exported="true" />
     </application>
 </manifest>
