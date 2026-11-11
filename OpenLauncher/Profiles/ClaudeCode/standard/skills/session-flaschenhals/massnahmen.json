@@ -141,6 +141,20 @@
    "pruefung": "aufruf_regex zählt die Läufe; fehler_regex zählt Läufe, bei denen ein Gerät nicht bedient wurde. Laufzeit je Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs).",
    "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
    "kosten": "kein Dauerkontext, nur das Skript"
+  },
+  {
+   "id": "M9",
+   "titel": "Fremde halbfertige App-Änderungen: sofort im Worktree bauen",
+   "datum": "2026-11-11T14:28",
+   "status": "aktiv",
+   "beleg": "Sitzung 2f166e55: Jarvis-Bau im Arbeitsbaum scheiterte zweimal (2.2 min + 76 s) an der unfertigen Biomarker-Integration einer Parallelsitzung (?? bio/, M build.gradle.kts); im Worktree danach grün.",
+   "ort": ["OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md"],
+   "fehler_regex": "Unresolved reference",
+   "aufruf_regex": "gradlew(\\.bat)? assemble",
+   "werkzeug": "PowerShell",
+   "pruefung": "Fehlbauten mit Unresolved reference in Dateien, die die Sitzung nicht geändert hat, sollten nachher seltener sein; Treffer in eigenen Dateien sind normale Entwicklung.",
+   "ruecknahme": "Den Punkt zum Worktree-Bau aus der Memory-Datei entfernen.",
+   "kosten": "kein Dauerkontext, nur Bedarfsdatei"
   }
  ]
 }
