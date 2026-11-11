@@ -387,12 +387,27 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
               }
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
-            item(key = "programmiert") { ProgrammierAktivitaet(vm) }
-            if (vm.denkt) item(key = "denkt") { TaetigkeitsZeile(vm) }
+            // Ohne Gespräch steht der laufende Stand wie bisher in der Liste; im Gespräch schwebt er fest im unteren Viertel (unten).
+            if (!vonUnten) item(key = "programmiert") { ProgrammierAktivitaet(vm) }
+            if (vm.denkt) { if (!vonUnten) item(key = "denkt") { TaetigkeitsZeile(vm) } }
             else vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
                 Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
             } }
-            item(key = "agenten") { AgentenZeile() }
+            if (!vonUnten) item(key = "agenten") { AgentenZeile() }
+        }
+        // Laufender Stand im Gespräch (Franks Wunsch vom 11.11.2026): Tätigkeit samt Leuchtkern, Arbeitssymbol der Programmier-Sitzung
+        // und Agenten stehen fest im unteren Drittel bis unteren Viertel des Chatfensters, unabhängig vom Scrollen. Die Unterkante
+        // liegt ein Viertel der Listenhöhe über der Eingabe, rechts bleibt die Spalte der schwebenden Symbole frei; so verdeckt
+        // nichts den Stand. Der eigene Grund hält ihn lesbar, wenn Frank Text darunter durchschiebt.
+        if (vonUnten) Column(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                .padding(start = 12.dp, end = SCHWEBE_FREI_RECHTS, bottom = with(dichte) { (listenHoehe / 4).toDp() })
+                .background(f.hgUnten.copy(alpha = 0.88f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .padding(horizontal = 4.dp),
+        ) {
+            ProgrammierAktivitaet(vm)
+            if (vm.denkt) TaetigkeitsZeile(vm)
+            AgentenZeile()
         }
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = 2.dp))
         }
