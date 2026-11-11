@@ -113,6 +113,17 @@ try {
     $serie = Handy getprop ro.serialno
     Nimm-Sperre
 
+    # Vor dem minutenlangen Hochladen: Ist am Gerät schon eine neuere Fassung (eine parallele Sitzung hat installiert), lehnt
+    # Android am Ende mit INSTALL_FAILED_VERSION_DOWNGRADE ab. Dann sofort mit klarem Hinweis abbrechen.
+    $aapt2 = Get-ChildItem "$env:LOCALAPPDATA\Android\Sdk\build-tools\*\aapt2.exe", "$env:ANDROID_HOME\build-tools\*\aapt2.exe" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+    if ($aapt2) {
+        $apkCode = 0; if ((& $aapt2.FullName dump badging $Apk 2>$null | Select-Object -First 1) -match "versionCode='(\d+)'") { $apkCode = [int]$Matches[1] }
+        $amGeraet = 0; if ((Handy dumpsys package $paket) -match "versionCode=(\d+)") { $amGeraet = [int]$Matches[1] }
+        if ($apkCode -gt 0 -and $amGeraet -gt $apkCode) {
+            Ende fehler "Am Gerät ist schon versionCode $amGeraet, die APK hat erst $apkCode (vermutlich hat eine parallele Sitzung installiert): Stand holen, Version anheben, neu bauen"
+        }
+    }
+
     "Lade die APK vorab aufs Handy über $Geraet ..."
     # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
     & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null

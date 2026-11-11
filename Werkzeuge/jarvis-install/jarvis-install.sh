@@ -111,7 +111,18 @@ nimm_sperre() {
   handy rm -f '/data/local/tmp/jarvis-install*.apk' >/dev/null
 }
 bereite_vor() {
-  echo "Lade die APK vorab aufs Handy über $GERAET ..."
+  # Vor dem minutenlangen Hochladen: Ist am Gerät schon eine neuere Fassung (parallele Sitzung), lehnte Android am Ende mit
+# INSTALL_FAILED_VERSION_DOWNGRADE ab. Dann sofort mit klarem Hinweis abbrechen.
+AAPT2="$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/build-tools/*/aapt2 "$HOME/Android/Sdk"/build-tools/*/aapt2 2>/dev/null | sort | tail -1)"
+if [ -n "$AAPT2" ]; then
+  APK_CODE="$("$AAPT2" dump badging "$APK" 2>/dev/null | head -1 | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")"
+  AM_GERAET="$(handy dumpsys package de.frank.jarvis | sed -n 's/.*versionCode=\([0-9]*\).*/\1/p' | head -1)"
+  if [ -n "$APK_CODE" ] && [ -n "$AM_GERAET" ] && [ "$AM_GERAET" -gt "$APK_CODE" ]; then
+    ende fehler "Am Gerät ist schon versionCode $AM_GERAET, die APK hat erst $APK_CODE (vermutlich hat eine parallele Sitzung installiert): Stand holen, Version anheben, neu bauen"
+  fi
+fi
+
+echo "Lade die APK vorab aufs Handy über $GERAET ..."
   delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" "$PAKET" || ende fehler "APK ließ sich nicht aufs Handy laden"
   local groesse ausgabe teil_groesse=0
   groesse=$(wc -c < "$APK" | tr -d ' ')

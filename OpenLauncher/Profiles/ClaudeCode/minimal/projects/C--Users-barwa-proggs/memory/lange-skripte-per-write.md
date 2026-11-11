@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: b7db77d8-d4f1-438f-b516-b06f24346713
-  modified: 2026-11-11T15:49:09.617Z
+  modified: 2026-11-11T16:53:00.424Z
 ---
 
 Lange Skripte (Python, Shell, über ~30 Zeilen) nicht als `python - <<'EOF' … EOF` im Bash-Werkzeug schicken, sondern per Write als Datei in den Scratchpad, dann `python -X utf8 <datei>`.
@@ -17,3 +17,5 @@ Lange Skripte (Python, Shell, über ~30 Zeilen) nicht als `python - <<'EOF' … 
 **Ersetzskripte:** Kotlin-Dateien im Repo haben oft CRLF. Nach dem Lesen CRLF in LF umwandeln (`chr(13) + chr(10)` → `chr(10)`, nie per sed oder printf einsetzen), beim Schreiben zurückwandeln, sonst scheitert jeder mehrzeilige Treffer (Sitzung 9d83ba1b, ~2 min).
 
 **PowerShell und deutsche Anführungszeichen:** PowerShell behandelt die Zeichen U+201E und U+201C (deutsche Anführungszeichen) wie normale doppelte Anführungszeichen. Steht so ein Zeichen in einem Befehl oder in einem doppelt oder einfach gequoteten String, bricht der Parser ab („Unerwartetes Token“ bzw. „Fehlender Eigenschaftsname nach Verweisoperator“). Code mit deutschen Anführungszeichen deshalb per Edit/Write ändern, in Suchmustern `\u201e` schreiben (Sitzung e52f3b2f, 2 Fehlschläge).
+
+**PowerShell-Fallen (Sitzung 6fc10676, 5 Fehlschläge):** In doppelt gequoteten Strings `"$var:"` als `"${var}:"` schreiben. Hilfsfunktionen nie `R`, `H`, `r` nennen (eingebaute Aliase, `R` = Invoke-History). Text mit `$`-Zeichen oder deutschen Anführungszeichen (Gradle `$projectDir`, Doku-Sätze) immer per Edit/Write, nie im Befehl. Mehrzeilige `.Replace()` scheitern still an CRLF: Treffer prüfen oder Edit nehmen.
