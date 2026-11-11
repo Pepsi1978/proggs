@@ -1,161 +1,163 @@
 {
- "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. plattform (windows/mac/linux, fehlt = alle): nur dort wird gemessen und gehandelt. status: aktiv | wirkt | wirkungslos | zurueckgenommen.",
- "massnahmen": [
-  {
-   "id": "M1",
-   "titel": "Lange Skripte per Write statt als Bash-Heredoc",
-   "datum": "2026-11-09T15:07",
-   "status": "aktiv",
-   "plattform": [
-    "windows"
-   ],
-   "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts. Nachtrag 09.11.2026: trotz Gedächtniszeile erneut 1 Fehlschlag (Sitzung 4f767562, 60-Zeilen-Heredoc) -> Hook build-ablauf-guard.py blockt jetzt Bash-Heredocs ab 30 Zeilen unter Windows.",
-   "ort": [
-    "minimal/projects/C--Users-barwa-proggs/memory/MEMORY.md (eine Zeile)",
-    "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md",
-    "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Zeile 16",
-    "claude-code-setup/hooks/build-ablauf-guard.py (Heredoc-Sperre)"
-   ],
-   "werkzeug": "Bash",
-   "aufruf_regex": "<<\\s*['\"]?[A-Za-z_]+['\"]?",
-   "min_zeilen": 31,
-   "fehler_regex": "unexpected EOF while looking for matching",
-   "pruefung": "Nach 10 weiteren Sitzungen: Fehler M1 nachher = 0 und lange Heredocs nachher deutlich seltener -> status wirkt. Kommen weiter Fehler -> wirkungslos, Ursache neu prüfen.",
-   "ruecknahme": "MEMORY.md-Zeile und lange-skripte-per-write.md löschen, Almanach-Abschnitt bleibt als Wissen. Heredoc-Block in build-ablauf-guard.py entfernen.",
-   "kosten": "eine Zeile (~45 Tokens) in jeder Sitzung"
-  },
-  {
-   "id": "M2",
-   "titel": "Hook build-ablauf-guard: kein Bau vor dem Versions-Bump, kein pkill -f auf die eigene Shell",
-   "datum": "2026-11-08T13:06",
-   "status": "aktiv",
-   "beleg": "Sitzung 3429c693 (Server, 08.11.2026): Bau vor dem Versionslog-Eintrag gestartet, beim Abbrechen per pkill -f \"gradlew assembleDebug\" die eigene Shell beendet (Exit 144). Auf Franks Wunsch trotz Einzelfall auf allen Systemen abgesichert.",
-   "ort": [
-    "claude-code-setup/hooks/build-ablauf-guard.py (+ .sh, .ps1)",
-    "OpenLauncher/Profiles/ClaudeCode/{minimal,standard,strict}/settings.json",
-    "OpenLauncher/Profiles/ClaudeCodeMac/{minimal,standard,strict}/settings.json (auch Quelle des Servers)"
-   ],
-   "werkzeug": "Bash",
-   "aufruf_regex": "\\b(pkill|pgrep)\\s+-\\w*f",
-   "fehler_regex": "Exit code 144",
-   "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Guard echte Fälle fälschlich, Muster im Hook schärfen.",
-   "ruecknahme": "Hook-Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
-   "kosten": "kein Kontext; ~50 ms je Bash-Aufruf"
-  },
-  {
-   "id": "M3",
-   "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken, wenn der Befehl den Versionslog wirklich schreibt",
-   "datum": "2026-11-08T18:29",
-   "status": "aktiv",
-   "beleg": "Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf.",
-   "ort": [
-    "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN, bau_ohne_bump)"
-   ],
-   "werkzeug": "PowerShell",
-   "aufruf_regex": "versionslog\\.json[\\s\\S]*gradlew",
-   "fehler_regex": "STOPP - erst die Version bumpen",
-   "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft).",
-   "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
-   "kosten": "kein Kontext"
-  },
-  {
-   "id": "M4",
-   "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
-   "datum": "2026-11-08T18:30",
-   "status": "wirkt",
-   "plattform": [
-    "windows"
-   ],
-   "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit.",
-   "ort": [
-    "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)"
-   ],
-   "werkzeug": "PowerShell",
-   "aufruf_regex": "jarvis-install\\.ps1",
-   "fehler_regex": "APK ließ sich nicht aufs Handy laden",
-   "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen.",
-   "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 entfernen.",
-   "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
-  },
-  {
-   "id": "M5",
-   "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
-   "datum": "2026-11-08T23:19",
-   "status": "aktiv",
-   "beleg": "Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf.",
-   "ort": [
-    "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN)"
-   ],
-   "werkzeug": "Bash",
-   "aufruf_regex": "versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew",
-   "fehler_regex": "STOPP - erst die Version bumpen",
-   "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026).",
-   "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
-   "kosten": "kein Kontext"
-  },
-  {
-   "id": "M6",
-   "titel": "Bau-Hook: adb-Installation nur auf eine Adresse, die adb devices gerade meldet",
-   "datum": "2026-11-09T14:40",
-   "status": "aktiv",
-   "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf.",
-   "ort": [
-    "claude-code-setup/hooks/build-ablauf-guard.py (ADB_INSTALL)"
-   ],
-   "werkzeug": "PowerShell",
-   "aufruf_regex": "adb(\\.exe)?\\s.*-s\\s+\\S+\\s+install",
-   "fehler_regex": "device '[^']+' not found",
-   "pruefung": "Nach 10 Sitzungen kein 'device ... not found' bei adb install -> wirkt. Mehrkosten gemessen ~45 ms nur bei Installationsbefehlen.",
-   "ruecknahme": "adb_ziel_fehlt-Aufruf in main() entfernen.",
-   "kosten": "kein Kontext, ~45 ms je adb install"
-  },
-  {
-   "id": "M7",
-   "titel": "Versionslog-Eintrag per Skript statt handgesetzter Nummer",
-   "datum": "2026-11-10T16:33",
-   "status": "aktiv",
-   "beleg": "Sitzung b4be088d: versionCode 620 von Hand gesetzt, eine parallele Sitzung hatte 620 schon vergeben; Build rot, aber im selben Befehl committet und gepusht, Korrektur-Commit nötig (~2 min).",
-   "ort": [
-    "Werkzeuge/versionslog/eintrag.py",
-    "skills/apk-update/SKILL.md (Abschnitt Versionslog)"
-   ],
-   "fehler_regex": "letzte versionCode \\(\\d+\\) muss größer sein",
-   "aufruf_regex": "versionslog",
-   "werkzeug": "PowerShell",
-   "pruefung": "fehler_regex zählt rote Builds wegen doppelter versionCode; nachher 0 erwartet.",
-   "ruecknahme": "eintrag.py löschen und die drei Zeilen im apk-update-SKILL.md entfernen.",
-   "kosten": "kein Dauerkontext, nur Bedarfsdatei (Skill) und Skript"
-  },
-  {
-   "id": "M8",
-   "titel": "auf-beide.sh installiert auf Handy und Tablet gleichzeitig",
-   "datum": "2026-11-10T17:21",
-   "status": "aktiv",
-   "beleg": "Sitzung 966a4cf2: fünf APKs nacheinander auf zwei Geräte dauerten 6.2, 3.5 und 2.9 min je Lauf (Werkzeugzeit); nach der Änderung eine APK auf beide in 40 s.",
-   "ort": [
-    "Werkzeuge/adb-wlan/auf-beide.sh"
-   ],
-   "fehler_regex": "AUF_BEIDE_STATUS=(teilweise|fehler)",
-   "aufruf_regex": "auf-beide\\.sh",
-   "werkzeug": "Bash",
-   "pruefung": "aufruf_regex zählt die Läufe; fehler_regex zählt Läufe, bei denen ein Gerät nicht bedient wurde. Laufzeit je Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs).",
-   "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
-   "kosten": "kein Dauerkontext, nur das Skript"
-  },
-  {
-   "id": "M9",
-   "titel": "Fremde halbfertige App-Änderungen: sofort im Worktree bauen",
-   "datum": "2026-11-11T14:28",
-   "status": "aktiv",
-   "beleg": "Sitzung 2f166e55: Jarvis-Bau im Arbeitsbaum scheiterte zweimal (2.2 min + 76 s) an der unfertigen Biomarker-Integration einer Parallelsitzung (?? bio/, M build.gradle.kts); im Worktree danach grün.",
-   "ort": ["OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md"],
-   "fehler_regex": "Unresolved reference",
-   "aufruf_regex": "gradlew(\\.bat)? assemble",
-   "werkzeug": "PowerShell",
-   "pruefung": "Fehlbauten mit Unresolved reference in Dateien, die die Sitzung nicht geändert hat, sollten nachher seltener sein; Treffer in eigenen Dateien sind normale Entwicklung.",
-   "ruecknahme": "Den Punkt zum Worktree-Bau aus der Memory-Datei entfernen.",
-   "kosten": "kein Dauerkontext, nur Bedarfsdatei"
-  },
+  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. plattform (windows/mac/linux, fehlt = alle): nur dort wird gemessen und gehandelt. status: aktiv | wirkt | wirkungslos | zurueckgenommen.",
+  "massnahmen": [
+    {
+      "id": "M1",
+      "titel": "Lange Skripte per Write statt als Bash-Heredoc",
+      "datum": "2026-11-09T15:07",
+      "status": "aktiv",
+      "plattform": [
+        "windows"
+      ],
+      "beleg": "40 Sitzungen bis 07.11.2026: 6 von 27 Bash-Heredocs mit mehr als 30 Zeilen scheiterten mit 'unexpected EOF while looking for matching', 0 von 76 kürzeren; betroffen 6 verschiedene Sitzungen. Jeder Fehlschlag kostete 4-41 s (meist ~30 s) plus das erneute Ausgeben des ganzen Skripts. Nachtrag 09.11.2026: trotz Gedächtniszeile erneut 1 Fehlschlag (Sitzung 4f767562, 60-Zeilen-Heredoc) -> Hook build-ablauf-guard.py blockt jetzt Bash-Heredocs ab 30 Zeilen unter Windows.",
+      "ort": [
+        "minimal/projects/C--Users-barwa-proggs/memory/MEMORY.md (eine Zeile)",
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md",
+        "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Zeile 16",
+        "claude-code-setup/hooks/build-ablauf-guard.py (Heredoc-Sperre)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "<<\\s*['\"]?[A-Za-z_]+['\"]?",
+      "min_zeilen": 31,
+      "fehler_regex": "unexpected EOF while looking for matching",
+      "pruefung": "Nach 10 weiteren Sitzungen: Fehler M1 nachher = 0 und lange Heredocs nachher deutlich seltener -> status wirkt. Kommen weiter Fehler -> wirkungslos, Ursache neu prüfen.",
+      "ruecknahme": "MEMORY.md-Zeile und lange-skripte-per-write.md löschen, Almanach-Abschnitt bleibt als Wissen. Heredoc-Block in build-ablauf-guard.py entfernen.",
+      "kosten": "eine Zeile (~45 Tokens) in jeder Sitzung"
+    },
+    {
+      "id": "M2",
+      "titel": "Hook build-ablauf-guard: kein Bau vor dem Versions-Bump, kein pkill -f auf die eigene Shell",
+      "datum": "2026-11-08T13:06",
+      "status": "aktiv",
+      "beleg": "Sitzung 3429c693 (Server, 08.11.2026): Bau vor dem Versionslog-Eintrag gestartet, beim Abbrechen per pkill -f \"gradlew assembleDebug\" die eigene Shell beendet (Exit 144). Auf Franks Wunsch trotz Einzelfall auf allen Systemen abgesichert.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (+ .sh, .ps1)",
+        "OpenLauncher/Profiles/ClaudeCode/{minimal,standard,strict}/settings.json",
+        "OpenLauncher/Profiles/ClaudeCodeMac/{minimal,standard,strict}/settings.json (auch Quelle des Servers)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "\\b(pkill|pgrep)\\s+-\\w*f",
+      "fehler_regex": "Exit code 144",
+      "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Guard echte Fälle fälschlich, Muster im Hook schärfen.",
+      "ruecknahme": "Hook-Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
+      "kosten": "kein Kontext; ~50 ms je Bash-Aufruf"
+    },
+    {
+      "id": "M3",
+      "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken, wenn der Befehl den Versionslog wirklich schreibt",
+      "datum": "2026-11-08T18:29",
+      "status": "aktiv",
+      "beleg": "Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN, bau_ohne_bump)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "versionslog\\.json[\\s\\S]*gradlew",
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft).",
+      "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
+      "kosten": "kein Kontext"
+    },
+    {
+      "id": "M4",
+      "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
+      "datum": "2026-11-08T18:30",
+      "status": "wirkt",
+      "plattform": [
+        "windows"
+      ],
+      "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit.",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "jarvis-install\\.ps1",
+      "fehler_regex": "APK ließ sich nicht aufs Handy laden",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen.",
+      "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 entfernen.",
+      "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
+    },
+    {
+      "id": "M5",
+      "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
+      "datum": "2026-11-08T23:19",
+      "status": "aktiv",
+      "beleg": "Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew",
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026).",
+      "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
+      "kosten": "kein Kontext"
+    },
+    {
+      "id": "M6",
+      "titel": "Bau-Hook: adb-Installation nur auf eine Adresse, die adb devices gerade meldet",
+      "datum": "2026-11-09T14:40",
+      "status": "aktiv",
+      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (ADB_INSTALL)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "adb(\\.exe)?\\s.*-s\\s+\\S+\\s+install",
+      "fehler_regex": "device '[^']+' not found",
+      "pruefung": "Nach 10 Sitzungen kein 'device ... not found' bei adb install -> wirkt. Mehrkosten gemessen ~45 ms nur bei Installationsbefehlen.",
+      "ruecknahme": "adb_ziel_fehlt-Aufruf in main() entfernen.",
+      "kosten": "kein Kontext, ~45 ms je adb install"
+    },
+    {
+      "id": "M7",
+      "titel": "Versionslog-Eintrag per Skript statt handgesetzter Nummer",
+      "datum": "2026-11-10T16:33",
+      "status": "aktiv",
+      "beleg": "Sitzung b4be088d: versionCode 620 von Hand gesetzt, eine parallele Sitzung hatte 620 schon vergeben; Build rot, aber im selben Befehl committet und gepusht, Korrektur-Commit nötig (~2 min).",
+      "ort": [
+        "Werkzeuge/versionslog/eintrag.py",
+        "skills/apk-update/SKILL.md (Abschnitt Versionslog)"
+      ],
+      "fehler_regex": "letzte versionCode \\(\\d+\\) muss größer sein",
+      "aufruf_regex": "versionslog",
+      "werkzeug": "PowerShell",
+      "pruefung": "fehler_regex zählt rote Builds wegen doppelter versionCode; nachher 0 erwartet.",
+      "ruecknahme": "eintrag.py löschen und die drei Zeilen im apk-update-SKILL.md entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei (Skill) und Skript"
+    },
+    {
+      "id": "M8",
+      "titel": "auf-beide.sh installiert auf Handy und Tablet gleichzeitig",
+      "datum": "2026-11-10T17:21",
+      "status": "aktiv",
+      "beleg": "Sitzung 966a4cf2: fünf APKs nacheinander auf zwei Geräte dauerten 6.2, 3.5 und 2.9 min je Lauf (Werkzeugzeit); nach der Änderung eine APK auf beide in 40 s.",
+      "ort": [
+        "Werkzeuge/adb-wlan/auf-beide.sh"
+      ],
+      "fehler_regex": "AUF_BEIDE_STATUS=(teilweise|fehler)",
+      "aufruf_regex": "auf-beide\\.sh",
+      "werkzeug": "Bash",
+      "pruefung": "aufruf_regex zählt die Läufe; fehler_regex zählt Läufe, bei denen ein Gerät nicht bedient wurde. Laufzeit je Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs).",
+      "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
+      "kosten": "kein Dauerkontext, nur das Skript"
+    },
+    {
+      "id": "M9",
+      "titel": "Fremde halbfertige App-Änderungen: sofort im Worktree bauen",
+      "datum": "2026-11-11T14:28",
+      "status": "aktiv",
+      "beleg": "Sitzung 2f166e55: Jarvis-Bau im Arbeitsbaum scheiterte zweimal (2.2 min + 76 s) an der unfertigen Biomarker-Integration einer Parallelsitzung (?? bio/, M build.gradle.kts); im Worktree danach grün.",
+      "ort": [
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md"
+      ],
+      "fehler_regex": "Unresolved reference",
+      "aufruf_regex": "gradlew(\\.bat)? assemble",
+      "werkzeug": "PowerShell",
+      "pruefung": "Fehlbauten mit Unresolved reference in Dateien, die die Sitzung nicht geändert hat, sollten nachher seltener sein; Treffer in eigenen Dateien sind normale Entwicklung.",
+      "ruecknahme": "Den Punkt zum Worktree-Bau aus der Memory-Datei entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    },
     {
       "id": "M10",
       "titel": "Room: fremde DB-Datei ohne ATTACH auf Rooms Verbindung kopieren",
@@ -178,7 +180,9 @@
       "datum": "2026-11-11T16:48",
       "status": "aktiv",
       "beleg": "Sitzung 9d83ba1b: mehrzeiliges str.replace auf EingabeBlase.kt (CRLF) scheiterte mit AssertionError, danach zerlegte ein sed-Flicken das Skript; ~2 min und 5 Aufrufe.",
-      "ort": ["memory/lange-skripte-per-write.md (letzter Absatz)"],
+      "ort": [
+        "memory/lange-skripte-per-write.md (letzter Absatz)"
+      ],
       "werkzeug": "Bash",
       "aufruf_regex": "newline=''",
       "fehler_regex": "AssertionError",
@@ -186,41 +190,77 @@
       "ruecknahme": "Letzten Absatz aus lange-skripte-per-write.md entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
     },
-  {
-   "id": "M12",
-   "titel": "PowerShell: deutsche Anführungszeichen nie in Befehlen, per Edit/Write",
-   "datum": "2026-11-11T16:58",
-   "status": "aktiv",
-   "plattform": [
-    "windows"
-   ],
-   "beleg": "Sitzung e52f3b2f: 2 PowerShell-Aufrufe mit U+201E/U+201C scheiterten am Parser (~1 min plus Umweg); in 2 von 40 Sitzungen.",
-   "ort": [
-    "memory/lange-skripte-per-write.md (Absatz PowerShell)",
-    "memory/MEMORY.md (Zeile Lange Skripte)"
-   ],
-   "werkzeug": "PowerShell",
-   "aufruf_regex": "[„“]",
-   "fehler_regex": "Unerwartetes Token .„|Fehlender Eigenschaftsname nach Verweisoperator",
-   "pruefung": "Nach 10 Sitzungen ohne diesen Parserfehler -> wirkt.",
-   "ruecknahme": "Absatz PowerShell aus lange-skripte-per-write.md und den Zusatz in der MEMORY.md-Zeile entfernen.",
-   "kosten": "rund 60 Zeichen Dauerkontext in einer vorhandenen MEMORY.md-Zeile"
-  },
-  {
-   "id": "M13",
-   "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
-   "datum": "2026-11-11T17:43",
-   "status": "aktiv",
-   "beleg": "Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf.",
-   "ort": [
-    "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
-   ],
-   "werkzeug": "PowerShell",
-   "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py.*gradlew",
-   "fehler_regex": "erst die Version bumpen, dann bauen",
-   "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt.",
-   "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
-   "kosten": "kein Dauerkontext"
-  }
- ]
+    {
+      "id": "M12",
+      "titel": "PowerShell: deutsche Anführungszeichen nie in Befehlen, per Edit/Write",
+      "datum": "2026-11-11T16:58",
+      "status": "aktiv",
+      "plattform": [
+        "windows"
+      ],
+      "beleg": "Sitzung e52f3b2f: 2 PowerShell-Aufrufe mit U+201E/U+201C scheiterten am Parser (~1 min plus Umweg); in 2 von 40 Sitzungen.",
+      "ort": [
+        "memory/lange-skripte-per-write.md (Absatz PowerShell)",
+        "memory/MEMORY.md (Zeile Lange Skripte)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "[„“]",
+      "fehler_regex": "Unerwartetes Token .„|Fehlender Eigenschaftsname nach Verweisoperator",
+      "pruefung": "Nach 10 Sitzungen ohne diesen Parserfehler -> wirkt.",
+      "ruecknahme": "Absatz PowerShell aus lange-skripte-per-write.md und den Zusatz in der MEMORY.md-Zeile entfernen.",
+      "kosten": "rund 60 Zeichen Dauerkontext in einer vorhandenen MEMORY.md-Zeile"
+    },
+    {
+      "id": "M13",
+      "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
+      "datum": "2026-11-11T17:43",
+      "status": "aktiv",
+      "beleg": "Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf.",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py.*gradlew",
+      "fehler_regex": "erst die Version bumpen, dann bauen",
+      "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt.",
+      "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
+      "kosten": "kein Dauerkontext"
+    },
+    {
+      "id": "M14",
+      "titel": "jarvis-install bricht vor dem Hochladen ab, wenn am Gerät schon eine neuere Fassung ist",
+      "datum": "2026-11-11T17:52",
+      "status": "aktiv",
+      "beleg": "Sitzung 6fc10676: 140-MB-APK (versionCode 638) über WLAN hochgeladen und gefragt, dann INSTALL_FAILED_VERSION_DOWNGRADE, weil eine parallele Sitzung schon 639 installiert hatte (~4 min).",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Versionsprüfung vor dem Hochladen)",
+        "Werkzeuge/jarvis-install/jarvis-install.sh (dasselbe)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "jarvis-install\\.(ps1|sh)",
+      "fehler_regex": "INSTALL_FAILED_VERSION_DOWNGRADE",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: kein INSTALL_FAILED_VERSION_DOWNGRADE mehr, stattdessen sofort 'Am Gerät ist schon versionCode' -> wirkt.",
+      "ruecknahme": "Den Block 'Vor dem minutenlangen Hochladen' in beiden Skripten entfernen.",
+      "kosten": "kein Kontext, ~1 s (aapt2 dump badging + dumpsys) je Installation"
+    },
+    {
+      "id": "M15",
+      "titel": "PowerShell-Fallen: $var: in Strings, Alias-Namen für Hilfsfunktionen, $-Text per Edit (ergänzt M12)",
+      "datum": "2026-11-11T17:52",
+      "status": "aktiv",
+      "plattform": [
+        "windows"
+      ],
+      "beleg": "Sitzung 6fc10676: 5 Fehlschläge (Invoke-Expression 'Variablenverweis ungültig', ')' fehlt, Funktion R = Invoke-History, stille CRLF-Nichttreffer), je 1-2 min Nacharbeit.",
+      "ort": [
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz PowerShell-Fallen, nur Windows-Gedächtnis)"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "\\.Replace\\(|function \\w\\(",
+      "fehler_regex": "Variablenverweis ist ungültig|Invoke-History|fehlt im Methodenaufruf",
+      "pruefung": "Nach 10 Sitzungen: diese Parserfehler seltener -> wirkt; sonst Hebel 1 (Hook-Warnung) prüfen.",
+      "ruecknahme": "Absatz PowerShell-Fallen aus der Memory-Datei entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    }
+  ]
 }
