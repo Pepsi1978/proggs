@@ -210,6 +210,10 @@ class PreparationWorker(context: Context, parameters: WorkerParameters) : Corout
                 catch (e: CancellationException) { throw e }
                 catch (e: Exception) { failed = true; android.util.Log.w("WeckerTts", "Hintergrundvorbereitung fehlgeschlagen", e) }
             }
+            // Die Schlafenszeit-Ansage folgt so auch einer geänderten Standardstimme.
+            try { SchlafAnsage.vorbereiten(applicationContext, settings) }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { failed = true; android.util.Log.w("WeckerTts", "Schlafenszeit-Ansage nicht vorbereitet", e) }
         }
         return if (failed && runAttemptCount < 3) Result.retry() else Result.success()
     }

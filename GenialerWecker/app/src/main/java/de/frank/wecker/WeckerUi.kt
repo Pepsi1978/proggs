@@ -2193,6 +2193,12 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val error by vm.voiceLoadError.collectAsStateWithLifecycle()
     val defaults = remember(revision) { de.frank.genialeideen.speech.SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
+    val available = stimmAuswahl(vm, voices)
+    AlarmSpeechEditorRest(vm, alarm, defaults, effective, available, busy, recording, loading, error)
+}
+
+/** Alle wählbaren Stimmen als „anbieter|stimme“ → Anzeige, Favoriten mit Stern oben; geteilt von Wecker-Editor und Schlafenszeit-Ansage. */
+fun stimmAuswahl(vm: WeckerViewModel, voices: List<de.frank.genialeideen.tts.ClonedVoice>): List<Pair<String, String>> {
     val availableRoh = voices.map {
         "${TtsProvider.QWEN_CLONE.id}|${it.id}" to "${vm.settings.qwenVoiceNames[it.id] ?: it.name} · Meine Stimmen"
     } + ModellKatalog.STIMMEN.map {
@@ -2210,8 +2216,14 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     }
     // Favoriten (in den Einstellungen per Stern oder langem Drücken markiert) stehen oben, mit Stern.
     val favoriten = vm.settings.favoriteTtsVoices
-    val available = availableRoh.sortedByDescending { it.first.substringAfter('|') in favoriten }
+    return availableRoh.sortedByDescending { it.first.substringAfter('|') in favoriten }
         .map { (id, name) -> if (id.substringAfter('|') in favoriten) id to "★ $name" else id to name }
+}
+
+@Composable
+private fun AlarmSpeechEditorRest(vm: WeckerViewModel, alarm: Alarm, defaults: de.frank.genialeideen.speech.SyntheseStimme,
+    effective: de.frank.genialeideen.speech.SyntheseStimme, available: List<Pair<String, String>>,
+    busy: String, recording: Boolean, loading: Boolean, error: String) {
     val defaultId = when (defaults.ttsProvider) {
         TtsProvider.GOOGLE_CLOUD.id -> defaults.googleTtsVoice
         TtsProvider.QWEN_CLONE.id -> defaults.qwenTtsVoiceId
@@ -3379,6 +3391,10 @@ private fun SchlafErinnerungProWecker(alarm: Alarm, change: (Alarm) -> Unit) {
         vorlauf == 0 -> "Um ${erinnerung.second} Uhr kommt die Schlaferinnerung – genau zur Schlafenszeit."
         else -> "Um ${erinnerung.first} Uhr kommt die Schlaferinnerung – $vorlauf Minuten vor der Schlafenszeit um ${erinnerung.second} Uhr."
     }, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    // Genau der Text, der vorgelesen wird (bei mehreren Weckern zur selben Schlafenszeit werden sie zusammengefasst).
+    val ansage = remember(alarm, vorlauf, minute / 60_000) { SchlafAnsage.vorschau(alarm, vorlauf) }
+    if (ansage != null) Text("Ansage: „${ansage.removePrefix("Schlafenszeit-Erinnerung. ")}“",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
 }
 
 /** What saving will do: switched on, and the term it will then ring. Not a claim that it is already planned. */

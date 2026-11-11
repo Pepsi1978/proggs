@@ -65,6 +65,12 @@
         <receiver android:name="de.frank.wecker.AlarmActionReceiver" android:exported="false" android:directBootAware="true" />
         <receiver android:name="de.frank.wecker.TestSnoozeReceiver" android:exported="false" />
         <receiver android:name="de.frank.wecker.SchlafErinnerungReceiver" android:exported="false" android:directBootAware="true" />
+        <!-- Vorgelesene Schlafenszeit-Erinnerung: Dienst für die Wiedergabe, Vollbild für die Art „Wecker“. -->
+        <service android:name="de.frank.wecker.SchlafAnsageService" android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+        <activity android:name="de.frank.wecker.SchlafAnsageActivity" android:exported="false"
+            android:theme="@style/Theme.Wecker.Alarm" android:showWhenLocked="true" android:turnScreenOn="true"
+            android:launchMode="singleTask" android:excludeFromRecents="true" />
         <receiver android:name="de.frank.wecker.IdeasChangedReceiver" android:exported="true"
             android:permission="de.frank.genialeideen.permission.WECKER" />
         <!-- Änderungsmeldung der App „Aufgaben“ (ohne Berechtigung gesendet); stößt nur die Audio-Vorbereitung an. -->

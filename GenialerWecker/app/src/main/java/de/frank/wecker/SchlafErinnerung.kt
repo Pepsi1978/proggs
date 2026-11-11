@@ -68,9 +68,19 @@ object SchlafPlan {
 
     private fun occurrences(alarm: Alarm, zone: ZoneId) = wakeTimes(alarm, zone).asSequence().map { Vorkommen(alarm.id, it, alarm.sleepMinutes) }
 
+    /**
+     * Ob ein anderer aktiver Wecker mit Schlafdauer und Erinnerung schon während der geplanten Schlafzeit klingelt. Dann ist
+     * dessen frühere Weckzeit die tatsächlich nächste, und nur seine Erinnerung zählt für diese Nacht.
+     */
+    fun verdeckt(v: Vorkommen, andere: List<Alarm>, anderAn: (Alarm) -> Boolean, zone: ZoneId = ZoneId.systemDefault()): Boolean =
+        andere.any { a -> a.id != v.alarmId && a.sleepMinutes > 0 && anderAn(a) && wakeTimes(a, zone).any { w -> w > v.bedtime && w < v.wakeAt } }
+
     /** First occurrence whose reminder still lies in the future; a missed reminder is never caught up. */
-    fun next(alarm: Alarm, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES): Vorkommen? =
-        if (!enabledSetting) null else leadMs(leadMinutes).let { lead -> occurrences(alarm, zone).firstOrNull { it.trigger(lead) > now } }
+    fun next(alarm: Alarm, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES,
+        andere: List<Alarm> = emptyList(), anderAn: (Alarm) -> Boolean = { true }): Vorkommen? =
+        if (!enabledSetting) null else leadMs(leadMinutes).let { lead ->
+            occurrences(alarm, zone).firstOrNull { it.trigger(lead) > now && !verdeckt(it, andere, anderAn, zone) }
+        }
 
     /**
      * A delivery is shown only if its fingerprint is still planned and now lies between reminder and bedtime,
@@ -279,10 +289,21 @@ object SchlafErinnerung {
 
     /** Wie oben, aber nur mit der Kennung: der Stand wird ohnehin frisch gelesen. */
     fun sync(context: Context, alarmId: String) = synchronized(lock) {
+        // Jeder Wecker kann die Erinnerung eines anderen verdecken (frühere Weckzeit in dessen Schlafzeit), deshalb alle planen.
+        val alle = try { AlarmStore.get(context).all() } catch (e: Exception) { Log.w(TAG, "Wecker unlesbar", e); emptyList() }
+        planeEinen(context, alarmId, alle)
+        alle.filter { it.id != alarmId }.forEach { planeEinen(context, it.id, alle) }
+        abgleichen(context, excludeId = null)
+        SchlafAnsage.vorbereitenAnstossen(context)
+    }
+
+    private fun planeEinen(context: Context, alarmId: String, alle: List<Alarm>) {
         try {
-            val current = AlarmStore.get(context).get(alarmId)
+            val current = alle.find { it.id == alarmId }
             val vorlauf = SchlafPlan.vorlauf(current, leadMinutes(context))
-            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), SchlafPlan.an(it, enabled(context)), leadMinutes = vorlauf) }
+            val global = enabled(context)
+            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), SchlafPlan.an(it, global), leadMinutes = vorlauf,
+                andere = alle, anderAn = { a -> SchlafPlan.an(a, global) }) }
             if (occurrence == null) cancelPlan(context, alarmId)
             else {
                 val manager = context.getSystemService(AlarmManager::class.java)
@@ -297,7 +318,6 @@ object SchlafErinnerung {
             Log.w(TAG, "Erinnerung nicht geplant für ${alarmId}", e)
             setPlanIssue(context, alarmId, "Schlafenszeit-Erinnerung nicht geplant (${e.javaClass.simpleName}).")
         }
-        abgleichen(context, excludeId = null)
     }
 
     /** Alarm deleted or cancelled: remove its plan and take it out of visible groups. */
@@ -310,7 +330,8 @@ object SchlafErinnerung {
     fun syncAll(context: Context) = synchronized(lock) {
         try {
             val alarms = AlarmStore.get(context).all()
-            alarms.forEach { sync(context, it) }
+            alarms.forEach { planeEinen(context, it.id, alarms) }
+            SchlafAnsage.vorbereitenAnstossen(context)
             // Status of alarms that no longer exist is dropped.
             val ids = alarms.map { it.id }.toSet()
             planIssues(context).keys.filter { it !in ids }.forEach { setPlanIssue(context, it, null) }
@@ -380,6 +401,8 @@ object SchlafErinnerung {
                 val eigener = store.get(alarmId)
                 val occurrence = SchlafPlan.gueltig(eigener, wakeAt, sleepMinutes, now, SchlafPlan.an(eigener, setting),
                     leadMinutes = SchlafPlan.vorlauf(eigener, leadMinutes(context))) ?: return false
+                // Inzwischen klingelt ein anderer Wecker früher in dieser Schlafzeit: dessen Erinnerung gilt, diese entfällt.
+                if (SchlafPlan.verdeckt(occurrence, store.all(), { SchlafPlan.an(it, setting) })) return false
                 val marks = SchlafPlan.Marken.parse(store.prefs.getString(MARKS_KEY, null)).bereinigt(now)
                 val memoryKey = "${occurrence.group}|${occurrence.key}"
                 if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return false
@@ -425,11 +448,13 @@ object SchlafErinnerung {
 class SchlafErinnerungReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
-        val klingeln = SchlafErinnerung.deliver(context, id, intent.getLongExtra("wakeAt", 0), intent.getIntExtra("sleep", 0))
-        // Bei „Nicht stören“ bleibt die Erinnerung stumm; sonst klingt der gewählte Ton in der gewählten Lautstärke.
-        if (klingeln && !SchlafTon.nichtStoerenAktiv(context)) {
+        val wakeAt = intent.getLongExtra("wakeAt", 0)
+        val sleep = intent.getIntExtra("sleep", 0)
+        val klingeln = SchlafErinnerung.deliver(context, id, wakeAt, sleep)
+        // Ton und vorgelesene Ansage im eigenen Dienst. Art „Benachrichtigung“ bleibt bei „Nicht stören“ stumm, Art „Wecker“ nicht.
+        if (klingeln) {
             val auftrag = goAsync()
-            SchlafTon.spielen(context.applicationContext) { runCatching { auftrag.finish() } }
+            SchlafAnsage.starten(context.applicationContext, id, wakeAt, sleep) { runCatching { auftrag.finish() } }
         }
     }
 }

@@ -561,6 +561,7 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                 })
             Text("0 Minuten erinnert genau zur Schlafenszeit. Ausgeschaltet wird die Erinnerung allein über den Schalter.",
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+            SchlafAnsageWahl(vm)
             SchlafTonWahl()
             when (blocked) {
                 "app" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -588,6 +589,36 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
     }
 }
 
+
+/**
+ * Die vorgelesene Ansage der Schlafenszeit-Erinnerung: Art (Benachrichtigung oder Wecker) und Stimme, dazu ein Test.
+ * Die Ansage erklärt, wann du schlafen gehen solltest und wann und von welchem Wecker du geweckt wirst.
+ */
+@Composable
+private fun SchlafAnsageWahl(vm: WeckerViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var art by remember { mutableStateOf(SchlafAnsage.art(context)) }
+    var stimme by remember { mutableStateOf(SchlafAnsage.stimmWahl(context)) }
+    val voices by vm.clonedVoices.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadVoices() }
+    HorizontalDivider(color = LocalGold.current.rahmen)
+    Choice("Art der Erinnerung", art, listOf(
+        SchlafAnsage.ART_BENACHRICHTIGUNG to "Benachrichtigung mit Ansage",
+        SchlafAnsage.ART_WECKER to "Wecker mit Ansage (Vollbild, bis „Verstanden“)",
+    )) { art = it; SchlafAnsage.setArt(context, it) }
+    Text(if (art == SchlafAnsage.ART_WECKER)
+        "Wie ein Wecker: Vollbild auf dem Sperrbildschirm, Ton und Ansage wiederholen sich alle 30 Sekunden (höchstens fünfmal), bis du „Verstanden“ tippst. Klingt auch bei „Nicht stören“."
+        else "Benachrichtigung, danach Ton und die laut vorgelesene Ansage. Ein laufendes Video pausiert kurz. Bei „Nicht stören“ bleibt sie stumm.",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    val optionen = listOf("" to "Standardstimme aus den Einstellungen") + stimmAuswahl(vm, voices)
+    Choice("Stimme der Ansage", stimme, optionen) { stimme = it; SchlafAnsage.setStimmWahl(context, it) }
+    Text("Zum Beispiel Gemini 3.8 Flash-Lite. Die Ansage wird vorab vorbereitet und klingt deshalb auch ohne Netz; fällt die Stimme aus, spricht die Edge-Stimme.",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GoldKnopf("Ansage testen", { runCatching { SchlafAnsage.testen(context) }.onFailure { vm.message.value = "Die Ansage konnte nicht gestartet werden (${it.javaClass.simpleName})." } })
+        StillerKnopf("Ansage stoppen", { SchlafAnsage.stoppen(context) })
+    }
+}
 
 /**
  * Klingelton und Lautstärke der Schlafenszeit-Erinnerung. Die Liste zeigt die Standard-Töne des
