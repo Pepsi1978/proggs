@@ -123,6 +123,12 @@ object Zeitplan {
         wecker.cancel(absicht)
         val wann = naechster(app)
         _naechsterLauf.value = wann
+        // Für die Prüfung: die geplanten Läufe der nächsten 16 Tage (ein Schichtzyklus), nur im Logcat.
+        runCatching {
+            val p = pruefer(app)
+            val heute = java.time.LocalDate.now()
+            Log.i(TAG, "Plan 16 Tage: " + (0L until 16L).joinToString(" | ") { d -> val tag = heute.plusDays(d); "$tag " + (0..23).filter { p(tag.atTime(it, 0)) }.joinToString(",") })
+        }
         if (wann == null) return
         val millis = wann.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         runCatching {

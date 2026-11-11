@@ -61,14 +61,14 @@ import de.frank.jarvis.data.Geraet
 fun BioEinstellungenScreen(onBack: () -> Unit) {
     val cosmos = LocalCosmos.current
     CosmosScaffold(
-        title = "Biomarker-Zugänge",
+        title = "Biomarker-Einstellungen",
         navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary) }
         },
         compactHeader = true,
     ) { padding ->
         if (Geraet.istTablet) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Text(
                         "Zugänge und Abruf laufen auf dem Handy. Das Tablet zeigt nur den Spiegel der Biodaten des Handys.",
@@ -76,6 +76,7 @@ fun BioEinstellungenScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+                BioFachEinstellungen(Modifier.fillMaxWidth())
             }
             return@CosmosScaffold
         }
@@ -113,6 +114,7 @@ private fun ZugangsKarten(modifier: Modifier) {
                 modifier = breite,
             )
         }
+        item { BioFachEinstellungen(breite) }
         item { ReloadAllDataCard(breite, onReload = oauthVm::reloadAllData, message = oauthState.message) }
         item { PolarOAuthCard(breite) }
         item { WhoopOAuthCard(breite, oauthVm, oauthState) }

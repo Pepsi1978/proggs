@@ -83,7 +83,13 @@ object BioSpiegel {
             anstehend = BioModul.bereich.launch {
                 delay(15_000)
                 while (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) delay(30_000)
-                runCatching { hochladen(app) }.onFailure { if (it !is IOException) Logbuch.fehler("Biomarker-Spiegel", it, grund) }
+                // Ohne Netz (unterwegs, Tunnel weg) bis zu dreimal im Abstand von fünf Minuten neu versuchen.
+                for (versuch in 1..4) {
+                    val fehler = runCatching { hochladen(app) }.exceptionOrNull() ?: break
+                    if (fehler !is IOException) { Logbuch.fehler("Biomarker-Spiegel", fehler, grund); break }
+                    if (versuch == 4) { Logbuch.fehler("Biomarker-Spiegel", fehler, "$grund: nach vier Versuchen kein Netz, nächster Anstoß holt es nach"); break }
+                    delay(5 * 60_000L)
+                }
             }
         }
     }

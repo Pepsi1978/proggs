@@ -60,6 +60,8 @@ object BioAbruf {
             if (bericht != null) Logbuch.system("Biomarker abgerufen", "$anlass: ${bericht.kurzfassung()}")
             // Das Live-Gedächtnis liest die neuen Werte (nur lesen, kein weiterer Abruf).
             neuGelesen(app)
+            // Neuer Stand: auch fürs Tablet spiegeln (nur Handy, nur wenn sich die Datenbank wirklich geändert hat).
+            if (bericht != null) BioSpiegel.geaendert(app, anlass)
             bericht
         } catch (e: CancellationException) {
             throw e
