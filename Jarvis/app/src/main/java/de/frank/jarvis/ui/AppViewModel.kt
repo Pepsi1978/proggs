@@ -4091,6 +4091,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun auswertungAbstand(stunden: Int) { einstellungen.auswertungAbstand = stunden; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
+    fun auswertungStart(hhmm: String) { einstellungen.auswertungStart = hhmm; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
+    fun auswertungProTag(n: Int) { einstellungen.auswertungProTag = n; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
     fun auswertungSchlafpause(an: Boolean) { einstellungen.auswertungSchlafpause = an; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
     fun auswertungDeutung(an: Boolean) { einstellungen.auswertungDeutung = an }
     fun auswertungProfil(id: String) {

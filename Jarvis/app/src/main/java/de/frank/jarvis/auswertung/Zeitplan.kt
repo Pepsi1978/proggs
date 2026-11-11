@@ -38,20 +38,20 @@ object Zeitplan {
     private const val WIEDERHOLEN_NACH_MS = 15 * 60_000L
 
     /** Wählbare Abstände in Stunden. */
-    val ABSTAENDE = listOf(1, 2, 3, 4, 6)
+    val ABSTAENDE = listOf(1, 2, 3, 4, 6, 12)
 
     /** Der zuletzt gestellte nächste Lauf: Die Oberfläche liest ihn, statt den Kalender neu abzufragen. */
     private val _naechsterLauf = MutableStateFlow<LocalDateTime?>(null)
     val naechsterLauf: StateFlow<LocalDateTime?> = _naechsterLauf.asStateFlow()
 
     /** Zwischenspeicher je Minute und Einstellung: Prüfer (Kalender-Abfrage) und nächster Lauf. */
-    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean, val proTag: Int, val frueheste: Int)
-    @Volatile private var prueferSpeicher: Pair<Schluessel, (LocalDateTime) -> Boolean>? = null
+    private data class Schluessel(val minute: Long, val an: Boolean, val abstand: Int, val schlafpause: Boolean, val proTag: Int, val start: Int)
+    @Volatile private var prueferSpeicher: Pair<Schluessel, (java.time.LocalDate) -> List<Int>>? = null
     @Volatile private var naechsterSpeicher: Pair<Pair<Schluessel, LocalDateTime>, LocalDateTime?>? = null
 
     private fun schluessel(context: Context): Schluessel {
         val e = Einstellungen.get(context)
-        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag, e.auswertungFrueheste)
+        return Schluessel(System.currentTimeMillis() / 60_000L, e.auswertungAn, e.auswertungAbstand, e.auswertungSchlafpause, e.auswertungProTag, e.auswertungStartMinuten)
     }
 
     @Volatile private var planGeloggt: java.time.LocalDate? = null
@@ -62,53 +62,43 @@ object Zeitplan {
         naechsterSpeicher = null
     }
 
-    /** Prüft für eine volle Stunde, ob dann ein Lauf ansteht. Die Kalender-Abfrage wird höchstens einmal je Minute gemacht. */
-    private fun pruefer(context: Context): (LocalDateTime) -> Boolean {
+    /**
+     * Liefert für einen Kalendertag die geplanten Läufe als Minuten seit Mitternacht, aufsteigend. Die Kalender-Abfrage wird
+     * höchstens einmal je Minute gemacht.
+     *
+     * Raster (Franks Vorgabe vom 11.11.2026): Startzeit + k × Abstand, über Mitternacht weiter (18:00 und alle 12 Stunden =
+     * 18 und 6 Uhr; 7:30 und alle 2 Stunden = 7:30, 9:30, …, 5:30). Läufe, in denen Frank laut Dienstplan schläft, fallen weg.
+     * Höchstens [Schluessel.proTag] Läufe je Kalendertag (0 = alle), gezählt ab der Startzeit.
+     */
+    private fun pruefer(context: Context): (java.time.LocalDate) -> List<Int> {
         val k = schluessel(context)
         prueferSpeicher?.let { (alt, p) -> if (alt == k) return p }
         val schlaeft: (LocalDateTime) -> Boolean = (if (k.schlafpause) Register.alle(context).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.schlafzeiten() else null) ?: { false }
-        val abstand = k.abstand
-        // Nach dem Schlaf zählt die erste Stunde auch dann, wenn sie nicht in den Abstand fällt (15 Uhr nach dem Nachtdienst).
-        val kandidat: (LocalDateTime) -> Boolean = { t -> !schlaeft(t) && (t.hour % abstand == 0 || schlaeft(t.minusHours(1))) }
-        // Höchstens [proTag] Läufe je Kalendertag (Franks Vorgabe vom 11.11.2026: zwei), der Reihe nach und je mindestens
-        // [abstand] Stunden nach dem vorigen angenommenen Lauf desselben Tages: sonst ergäben „erste Stunde nach dem Schlaf“
-        // und das Raster zwei Läufe direkt hintereinander (11 und 12 Uhr). Hier gerechnet, damit der nächste Lauf und der
-        // letzte fällige (veraltet, Nachholen) dasselbe sagen.
-        val tage = java.util.concurrent.ConcurrentHashMap<java.time.LocalDate, Set<Int>>()
-        fun angenommen(tag: java.time.LocalDate): Set<Int> = tage.getOrPut(tag) {
-            if (k.proTag == 0) return@getOrPut (0..23).filter { kandidat(tag.atTime(it, 0)) }.toSet()
-            // Gezählt wird ab dem Aufwachen: Der erste Lauf ist die erste wache Stunde nach dem Schlaf laut Dienstplan, sonst die
-            // erste wache Stunde ab [Schluessel.frueheste] (freier Tag ohne Schlafzeit). Jeder weitere folgt [abstand] Stunden später
-            // (schläft Frank dann, die nächste wache Stunde). Tagdienst (Schlaf 20–4): 4 und 10 Uhr; Nachtdienst (Schlaf 6–15):
-            // 15 und 21 Uhr; freier Tag: 10 und 16 Uhr.
-            val wach: (Int) -> Boolean = { h -> !schlaeft(tag.atTime(h, 0)) }
-            val stunden = mutableListOf<Int>()
-            // Als Aufwachen zählt nur das Ende eines richtigen Schlafs (mindestens vier Stunden), kein kurzer Block oder ein Schlaf,
-            // der genau um Mitternacht endet und sonst einen Lauf um 0 Uhr ergäbe.
-            fun aufgewacht(h: Int) = h >= 1 && (1..4).all { schlaeft(tag.atTime(h, 0).minusHours(it.toLong())) }
-            var h = (0..23).firstOrNull { wach(it) && (aufgewacht(it) || it >= k.frueheste) } ?: return@getOrPut emptySet()
-            while (h <= 23 && stunden.size < k.proTag) {
-                stunden += h
-                h += abstand
-                while (h <= 23 && !wach(h)) h++
+        val schritt = k.abstand.coerceIn(1, 24) * 60
+        // In der Reihenfolge ab der Startzeit; bei einem Abstand, der 24 nicht teilt, beginnt das Raster jeden Tag neu an der Startzeit.
+        val raster = (0 until (1440 + schritt - 1) / schritt).map { (k.start + it * schritt) % 1440 }.distinct()
+        val tage = java.util.concurrent.ConcurrentHashMap<java.time.LocalDate, List<Int>>()
+        val p: (java.time.LocalDate) -> List<Int> = { tag ->
+            tage.getOrPut(tag) {
+                val wach = raster.filter { m -> !schlaeft(tag.atTime(m / 60, m % 60)) }
+                (if (k.proTag > 0) wach.take(k.proTag) else wach).sorted()
             }
-            stunden.toSet()
         }
-        val p: (LocalDateTime) -> Boolean = { t -> t.minute == 0 && t.hour in angenommen(t.toLocalDate()) }
         prueferSpeicher = k to p
         return p
     }
 
-    /** Nächster Lauf ab jetzt, oder null, wenn die Synchronisation aus ist. Je Minute zwischengespeichert. */
+    /** Nächster Lauf nach [ab], oder null, wenn die Synchronisation aus ist. Je Minute zwischengespeichert. */
     fun naechster(context: Context, ab: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
         val k = schluessel(context)
         if (!k.an) return null
-        val start = ab.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+        val start = ab.truncatedTo(ChronoUnit.MINUTES)
         naechsterSpeicher?.let { (schl, wert) -> if (schl.first == k && schl.second == start) return wert }
-        val faellig = pruefer(context)
-        // Ohne Treffer in drei Tagen (etwa ein Dienstplan, der durchgehend Schlaf zeigt) kein Lauf außerhalb des Plans; neu gerechnet
+        val plan = pruefer(context)
+        // Ohne Treffer in vier Tagen (etwa ein Dienstplan, der durchgehend Schlaf zeigt) kein Lauf außerhalb des Plans; neu gerechnet
         // wird bei jedem Start, nach Änderungen an Dienstplan, Uhrzeit oder Einstellungen.
-        val wert = (0L until 72L).map { start.plusHours(it) }.firstOrNull(faellig)
+        val wert = (0L until 4L).asSequence().flatMap { d -> val tag = start.toLocalDate().plusDays(d); plan(tag).asSequence().map { tag.atTime(it / 60, it % 60) } }
+            .firstOrNull { it.isAfter(start) }
         naechsterSpeicher = (k to start) to wert
         return wert
     }
@@ -116,9 +106,10 @@ object Zeitplan {
     /** Der letzte geplante Lauf, der schon hätte stattfinden sollen (höchstens einen Tag zurück). */
     fun letzterFaelliger(context: Context, jetzt: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
         if (!Einstellungen.get(context).auswertungAn) return null
-        val faellig = pruefer(context)
-        val start = jetzt.truncatedTo(ChronoUnit.HOURS)
-        return (0L until 24L).map { start.minusHours(it) }.firstOrNull(faellig)
+        val plan = pruefer(context)
+        val heute = jetzt.toLocalDate()
+        return listOf(heute.minusDays(1), heute).flatMap { tag -> plan(tag).map { tag.atTime(it / 60, it % 60) } }
+            .filter { !it.isAfter(jetzt) && it.isAfter(jetzt.minusDays(1)) }.maxOrNull()
     }
 
     fun stelle(context: Context) {
@@ -135,7 +126,7 @@ object Zeitplan {
             planGeloggt = java.time.LocalDate.now()
             val p = pruefer(app)
             val heute = java.time.LocalDate.now()
-            Log.i(TAG, "Plan 16 Tage: " + (0L until 16L).joinToString(" | ") { d -> val tag = heute.plusDays(d); "$tag " + (0..23).filter { p(tag.atTime(it, 0)) }.joinToString(",") })
+            Log.i(TAG, "Plan 16 Tage: " + (0L until 16L).joinToString(" | ") { d -> val tag = heute.plusDays(d); "$tag " + p(tag).joinToString(",") { String.format(java.util.Locale.GERMAN, "%02d:%02d", it / 60, it % 60) } })
         }
         if (wann == null) return
         val millis = wann.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()

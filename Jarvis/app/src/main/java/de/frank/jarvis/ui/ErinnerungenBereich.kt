@@ -242,7 +242,7 @@ private fun AusloesungWahl(e: Erinnerung, schliessen: () -> Unit, fertig: (Auslo
     }
 }
 
-private fun uhrWaehlen(context: android.content.Context, von: String, fertig: (String) -> Unit) {
+internal fun uhrWaehlen(context: android.content.Context, von: String, fertig: (String) -> Unit) {
     val (h, m) = von.split(":").let { (it.getOrNull(0)?.toIntOrNull() ?: 10) to (it.getOrNull(1)?.toIntOrNull() ?: 0) }
     TimePickerDialog(context, { _, a, b -> fertig(String.format(Locale.GERMAN, "%02d:%02d", a, b)) }, h, m, true).show()
 }

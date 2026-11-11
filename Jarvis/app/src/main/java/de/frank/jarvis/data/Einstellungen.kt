@@ -382,6 +382,15 @@ class Einstellungen private constructor(context: Context) {
     var auswertungProTag: Int get() = prefs.getInt("auswertung_pro_tag", 2).coerceIn(0, 12); set(v) = put { putInt("auswertung_pro_tag", v) }
     /** Erste Stunde des Tages für den ersten automatischen Lauf, wenn der Dienstplan keine Schlafzeit nennt (freier Tag). */
     var auswertungFrueheste: Int get() = prefs.getInt("auswertung_frueheste", 10).coerceIn(0, 23); set(v) = put { putInt("auswertung_frueheste", v) }
+    /**
+     * Startzeit des Rasters als HH:MM: Die automatischen Läufe liegen auf Startzeit + k × Abstand (18:00 und alle 12 Stunden
+     * = 6 und 18 Uhr). Ohne gespeicherten Wert gilt die bisherige früheste Stunde.
+     */
+    var auswertungStart: String
+        get() = prefs.getString("auswertung_start", null)?.takeIf { Regex("""\d{2}:\d{2}""").matches(it) } ?: String.format(java.util.Locale.GERMAN, "%02d:00", auswertungFrueheste)
+        set(v) = put { putString("auswertung_start", v) }
+    /** [auswertungStart] als Minuten seit Mitternacht. */
+    val auswertungStartMinuten: Int get() = auswertungStart.split(":").let { ((it[0].toIntOrNull() ?: 10) * 60 + (it[1].toIntOrNull() ?: 0)).coerceIn(0, 1439) }
 
     // ---- Biomarker (in Jarvis integriert, früher Entropie Reductor) ----
     /** Quelle abrufen: whoop, oura, waage, training. Pausiert = nicht gefragt, keine Störungsmeldung. */
