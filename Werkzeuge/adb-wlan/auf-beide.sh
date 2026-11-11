@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Installiert eine APK auf Handy UND Tablet (jeweils über die feste Seriennummer aus geraete.json, Netz vor Kabel).
-# Standardweg für jede App-Installation (Regel 18): Was fürs Handy gilt, gilt genauso fürs Tablet, UpdateStation ist nur
-# der Rückweg. Die abgeglichenen Apps brauchen ohnehin auf beiden Geräten dieselbe Fassung. Nicht für Jarvis selbst
-# (dafür jarvis-install mit --ziel). Windows: aus Git Bash starten.
+# Standardweg für jede App-Installation (Profilregel „Android-Installation über WLAN“): Was fürs Handy gilt, gilt
+# genauso fürs Tablet, UpdateStation ist nur der Rückweg. Die abgeglichenen Apps brauchen ohnehin auf beiden Geräten
+# dieselbe Fassung. Nicht für Jarvis selbst (dafür jarvis-install mit --ziel); Jarvis-APKs werden abgelehnt.
+# Windows: mit Git Bash starten ("C:\Program Files\Git\bin\bash.exe"), nie mit WSL-bash.
 # Aufruf: auf-beide.sh <apk> [<apk> …]     Ein nicht erreichbares Gerät wird gemeldet, das andere trotzdem bedient.
 # Letzte Zeile AUF_BEIDE_STATUS: fertig (alle Installationen gelungen), teilweise oder fehler.
 set -u
@@ -13,6 +14,12 @@ for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Androi
 done
 [ -n "${ADB:-}" ] || { echo "AUF_BEIDE_STATUS=fehler (adb nicht gefunden)"; exit 1; }
 [ $# -gt 0 ] || { echo "AUF_BEIDE_STATUS=fehler (keine APK genannt)"; exit 2; }
+for APK in "$@"; do
+  case "$APK" in
+    */Jarvis/app/*|*\\Jarvis\\app\\*|*[Jj]arvis*.apk) echo "AUF_BEIDE_STATUS=fehler (Jarvis nie hierüber, sondern mit jarvis-install und Ziel handy/tablet: $APK)"; exit 2 ;;
+  esac
+  [ -f "$APK" ] || { echo "AUF_BEIDE_STATUS=fehler (APK fehlt: $APK)"; exit 2; }
+done
 serie() { awk -v g="\"$1\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/geraete.json"; }
 adresse() {
   local s kabel=""
@@ -23,28 +30,42 @@ adresse() {
   done
   [ -n "$kabel" ] && echo "$kabel"
 }
+# Projektname aus dem Pfad (…/<Projekt>/app/build/…), sonst der Dateiname.
+bezeichnung() {
+  local p="${1//\\//}"
+  case "$p" in */app/build/*) p="${p%%/app/build/*}"; echo "${p##*/}" ;; *) basename "$p" ;; esac
+}
+# Erst ALLE Adressen klären und fehlende Geräte nacheinander neu verbinden: adb-wlan kann den adb-Server neu starten
+# und würde sonst eine parallel laufende Installation auf dem anderen Gerät abbrechen.
+for G in handy tablet; do
+  if [ -z "$(adresse "$(serie $G)")" ]; then
+    if [ -f "$HIER/adb-wlan.sh" ] && [ "$(uname -s | cut -c1-5)" != "MINGW" ] && [ "$(uname -s | cut -c1-4)" != "MSYS" ]; then bash "$HIER/adb-wlan.sh" --geraet $G >/dev/null 2>&1
+    else powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$HIER/adb-wlan.ps1" 2>/dev/null || echo "$HIER/adb-wlan.ps1")" -Geraet $G >/dev/null 2>&1; fi
+  fi
+done
+# Nach den Neuverbindungen alle Adressen frisch lesen (ein Server-Neustart kann auch das erste Gerät neu verbunden haben).
+ADR_handy=$(adresse "$(serie handy)")
+ADR_tablet=$(adresse "$(serie tablet)")
 # Beide Geräte gleichzeitig: Die Installationen laufen über getrennte Verbindungen und halbieren so die Wartezeit
 # (gemessen 10.11.2026: fünf APKs nacheinander auf beide Geräte 3 bis 6 Minuten).
 ein_geraet() {
-  local G=$1; shift
-  local GUT=0 SCHLECHT=0 A APK AUS
-  A=$(adresse "$(serie $G)")
-  if [ -z "$A" ]; then
-    # Einmal neu verbinden lassen (WLAN, Tunnel), dann erneut suchen.
-    if [ -f "$HIER/adb-wlan.sh" ] && [ "$(uname -s | cut -c1-5)" != "MINGW" ] && [ "$(uname -s | cut -c1-4)" != "MSYS" ]; then bash "$HIER/adb-wlan.sh" --geraet $G >/dev/null 2>&1
-    else powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$HIER/adb-wlan.ps1" 2>/dev/null || echo "$HIER/adb-wlan.ps1")" -Geraet $G >/dev/null 2>&1; fi
-    A=$(adresse "$(serie $G)")
-  fi
+  local G=$1 A=$2; shift 2
+  local GUT=0 SCHLECHT=0 APK AUS
   if [ -z "$A" ]; then echo "$G: nicht erreichbar"; echo "ZAEHLER 0 $#"; return; fi
   for APK in "$@"; do
     AUS=$("$ADB" -s "$A" install -r "$APK" </dev/null 2>&1 | tr -d '\r' | tail -1)
-    echo "$G ($A): $(basename "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$APK")")")")")")") → $AUS"
-    case "$AUS" in Success*) GUT=$((GUT + 1)) ;; *) SCHLECHT=$((SCHLECHT + 1)) ;; esac
+    echo "$G ($A): $(bezeichnung "$APK") → $AUS"
+    case "$AUS" in
+      Success*) GUT=$((GUT + 1)) ;;
+      *INSTALL_FAILED_UPDATE_INCOMPATIBLE*) SCHLECHT=$((SCHLECHT + 1)); echo "$G: andere Signatur installiert – NIE deinstallieren (Datenverlust), siehe best-practices/android/debug-signing.md" ;;
+      *) SCHLECHT=$((SCHLECHT + 1)) ;;
+    esac
   done
   echo "ZAEHLER $GUT $SCHLECHT"
 }
 ZWISCHEN=$(mktemp -d)
-for G in handy tablet; do ein_geraet $G "$@" > "$ZWISCHEN/$G" 2>&1 & done
+ein_geraet handy "$ADR_handy" "$@" > "$ZWISCHEN/handy" 2>&1 &
+ein_geraet tablet "$ADR_tablet" "$@" > "$ZWISCHEN/tablet" 2>&1 &
 wait
 GUT=0; SCHLECHT=0
 for G in handy tablet; do
