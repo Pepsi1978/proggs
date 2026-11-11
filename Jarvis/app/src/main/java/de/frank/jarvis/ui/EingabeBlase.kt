@@ -1,5 +1,7 @@
 package de.frank.jarvis.ui
 
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -449,11 +451,14 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false, stufe: Int = 0)
 /** Abstand des Stapels zur Eingabeblase (StartBildschirm). */
 val SCHWEBE_UNTEN = 2.dp
 
+/** Das Gesprächsende steht so weit über der Unterkante des Programmier-Symbols: Eine Textzeile (etwa 21 dp) sitzt dann mittig daneben. */
+val TEXTENDE_UEBER_SYMBOL = 8.dp
+
 /**
- * Abstand des Gesprächsendes zur Unterkante der Liste: Die letzte Zeile (etwa 21 dp hoch) steht mittig neben dem
- * Programmier-Symbol, das über dem Klapp-Pfeil sitzt (Abstand unten, Pfeil, zwei Zwischenräume).
+ * Rückfall, bis die Lage des Programmier-Symbols gemessen ist (StartBildschirm misst sie): sein Abstand zur Unterkante der
+ * Liste (Abstand unten, Pfeil, zwei Zwischenräume) plus [TEXTENDE_UEBER_SYMBOL].
  */
-val TEXTENDE_UNTEN = SCHWEBE_UNTEN + SCHWEBE_ABSTAND * 2 + SCHWEBE_GROESSE + 8.dp
+val TEXTENDE_UNTEN = SCHWEBE_UNTEN + SCHWEBE_ABSTAND * 2 + SCHWEBE_GROESSE + TEXTENDE_UEBER_SYMBOL
 
 /** Abstand zwischen den Einträgen der Gesprächsliste. */
 val LISTEN_ABSTAND = 10.dp
@@ -485,7 +490,11 @@ fun schwebeStufe(verfuegbar: androidx.compose.ui.unit.Dp, nachtrag: Boolean, pap
  * leicht schimmernder, durchscheinender Grund.
  */
 @Composable
-fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: Int = 0) {
+fun ProgrammierSchweber(
+    vm: AppViewModel, modifier: Modifier = Modifier, stufe: Int = 0,
+    // Lage im Fenster (Pixel ab oben) für das Gesprächsende: Unterkante des Programmier-Symbols und Oberkante der offenen Auswahl (-1 = keine).
+    symbolUnten: (Float) -> Unit = {}, auswahlOben: (Float) -> Unit = {},
+) {
     val f = LocalFarben.current
     // Nur die frische Frage zum gerade abgeschickten Auftrag (siehe ProgrammierFaehigkeit.frischeWahlen), und solange Frank nicht
     // schon den nächsten Entwurf schreibt. Alte, liegengebliebene Wahlen zeigen unten keine Knöpfe.
@@ -497,6 +506,10 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
     }
     // Kommt eine Karte zu einem laufenden Auftrag, darf die offene Modellwahl ihre Knöpfe nicht verdecken.
     LaunchedEffect(karte?.kontext) { if (karte != null) vm.programmierVorwahlSchliessen() }
+    val auswahlDa = karte != null || vm.programmierVorwahlOffen
+    LaunchedEffect(auswahlDa) { if (!auswahlDa) auswahlOben(-1f) }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { auswahlOben(-1f) } }
+    val auswahlMessen = Modifier.onGloballyPositioned { if (auswahlDa) auswahlOben(it.positionInRoot().y) }
     Column(modifier, horizontalAlignment = Alignment.End) {
         // Eingeklappt verschwindet der ganze Stapel nach unten in den Pfeil; die Liste behält ihren Abstand, der Chat springt nicht.
         androidx.compose.animation.AnimatedVisibility(
@@ -573,11 +586,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
         }
         // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.onGloballyPositioned { if (!vm.schweberEingeklappt) symbolUnten(it.positionInRoot().y + it.size.height) }, verticalAlignment = Alignment.CenterVertically) {
             // Eingeklappt verschwinden sie hier sofort; dann stehen sie allein über dem Pfeil (siehe unten), nie doppelt.
             if (!vm.schweberEingeklappt && (karte != null || vm.programmierVorwahlOffen)) {
                 // Mehrzeilige Auswahl wächst nach oben, ohne den Symbolstapel zu verschieben.
-                Box(Modifier.height(SCHWEBE_GROESSE).wrapContentHeight(Alignment.Bottom, unbounded = true)) { OffeneAuswahl(vm, karte) }
+                Box(Modifier.height(SCHWEBE_GROESSE).wrapContentHeight(Alignment.Bottom, unbounded = true)) { Box(auswahlMessen) { OffeneAuswahl(vm, karte) } }
                 Spacer(Modifier.width(8.dp))
             }
             SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }) {
@@ -593,7 +606,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier, stufe: 
             enter = androidx.compose.animation.fadeIn(tween(150, delayMillis = 150)),
             exit = androidx.compose.animation.ExitTransition.None,
         ) {
-            OffeneAuswahl(vm, karte)
+            Box(auswahlMessen) { OffeneAuswahl(vm, karte) }
         }
         // Unter „Programmierer“ in der freien Bubble: Pfeil ohne Kreis und Grund, grau wie der Papierkorb. Nach unten = einklappen,
         // nach oben = wieder aufklappen. Er bleibt an seiner Stelle, die übrigen Symbole stehen ausgeklappt so hoch wie früher.

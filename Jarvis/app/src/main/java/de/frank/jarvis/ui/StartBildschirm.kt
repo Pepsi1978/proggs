@@ -55,6 +55,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -212,8 +214,6 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
     }
-    // Mitlesen: Ohne eigenes Scrollen steht das Ende des Gesprächs, also das, was gerade hereinkommt, auf Höhe des
-    // Programmier-Symbols ([TEXTENDE_UNTEN]); kurze Gespräche stapeln sich von unten, darüber steht der Rest.
     val dichte = androidx.compose.ui.platform.LocalDensity.current
     var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     // Wird der Platz über der Blase knapp (lange Eingabe, Tastatur, Querformat), verdichtet sich der Symbolstapel, statt unten abgeschnitten zu werden.
@@ -258,13 +258,21 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         LaeuftGerade(vm)
         // Die Stoppuhr erscheint nur, wenn Frank sie über Jarvis startet, und bleibt bis zum Zurücksetzen.
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-        // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
-        // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
-        // Im Gespräch endet der Inhalt (letztes Wort oder laufender Stand) auf Höhe des Programmier-Symbols unter der Fernwartung
-        // (Franks Wunsch vom 11.11.2026); rechts hält SCHWEBE_FREI_RECHTS den Text von den Symbolen frei.
-        val mitte = TEXTENDE_UNTEN
+        // Mitlesen (Franks Wunsch vom 11.11.2026): Ohne eigenes Scrollen endet das Gespräch, also das, was gerade hereinkommt
+        // (letztes Wort oder laufender Stand), auf Höhe des Programmier-Symbols unter der Fernwartung; kurze Gespräche stapeln sich
+        // von unten. Gemessen an der echten Lage des Symbols; steht links daneben eine offene Auswahl, endet der Text über ihr,
+        // damit die Knöpfe ihn nicht verdecken. Ist das Symbol weg (eingeklappt, Live), bleibt der letzte Wert: nichts springt.
+        // Rechts hält SCHWEBE_FREI_RECHTS den Text von den Symbolen frei.
         val vonUnten = vm.gespraech.isNotEmpty()
-        Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
+        var listeUnten by remember { androidx.compose.runtime.mutableFloatStateOf(-1f) }
+        var symbolUnten by remember { androidx.compose.runtime.mutableFloatStateOf(-1f) }
+        var auswahlOben by remember { androidx.compose.runtime.mutableFloatStateOf(-1f) }
+        val textende = with(dichte) {
+            val amSymbol = if (listeUnten < 0f || symbolUnten < 0f) TEXTENDE_UNTEN else (listeUnten - symbolUnten).coerceAtLeast(0f).toDp() + TEXTENDE_UEBER_SYMBOL
+            if (!vm.liveAktiv && auswahlOben >= 0f && listeUnten >= 0f) maxOf(amSymbol, (listeUnten - auswahlOben).toDp() + 8.dp) else amSymbol
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }
+            .onGloballyPositioned { listeUnten = it.positionInRoot().y + it.size.height }) {
         // Vor den Bereichen steht nur die Einrichtungskarte; sie bleibt fest oben, die Bereiche ordnen sich darunter.
         // Als State gelesen: Das Modul behält die Lambdas für die ganze Geste, die Karte kann aber mitten im Ziehen kommen oder gehen.
         val vorne = rememberUpdatedState(if (offen > 0) 1 else 0)
@@ -283,7 +291,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             ), state = liste,
             // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
             // auch im Live-Gespräch, damit beim Starten und Beenden nichts neu umbricht und die Lesestelle springt.
-            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) mitte - LISTEN_ABSTAND else 8.dp + schweber),
+            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) textende - LISTEN_ABSTAND else 8.dp + schweber),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(LISTEN_ABSTAND, Alignment.Bottom) else Arrangement.spacedBy(LISTEN_ABSTAND),
         ) {
             if (offen > 0) item(key = EINRICHTUNG_KEY) {
@@ -397,12 +405,13 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             // Gesprächsinhalt (Franks Wunsch vom 11.11.2026): kein eigener Grund, keine feste Zeile, er scrollt mit dem Text.
             // Ein einziger Eintrag: Leer steht er mit Höhe 0 genau auf dem Textende (das Polster unten ist um den Listenabstand
             // kürzer); sichtbar holt er diesen Abstand unten nach, damit auch seine letzte Zeile auf derselben Höhe endet.
+            // Seine Zeilen halten untereinander den Listenabstand wie früher als eigene Einträge (leere Zeilen zählen nicht).
             item(key = "stand") {
                 Column(Modifier.fillMaxWidth().layout { messbar, grenzen ->
                     val p = messbar.measure(grenzen)
                     val extra = if (vonUnten && p.height > 0) LISTEN_ABSTAND.roundToPx() else 0
                     layout(p.width, p.height + extra) { p.place(0, 0) }
-                }) {
+                }, verticalArrangement = Arrangement.spacedBy(LISTEN_ABSTAND)) {
                     ProgrammierAktivitaet(vm)
                     if (vm.denkt) TaetigkeitsZeile(vm)
                     else vm.sitzungId?.let { vm.abschluss[it] }?.let { a ->
@@ -415,7 +424,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
             // Ungebunden gemessen und unten verankert: Reicht der Platz selbst für die dichteste Stufe nicht (oder für ein Bild, bis die
             // Stufe nachzieht), ragt der Stapel nach oben über die Liste, statt Programmierer und Pfeil unten abzuschneiden.
-            .wrapContentHeight(Alignment.Bottom, unbounded = true), schwebStufe)
+            .wrapContentHeight(Alignment.Bottom, unbounded = true), schwebStufe,
+            symbolUnten = { symbolUnten = it }, auswahlOben = { auswahlOben = it })
         }
         // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch. Sie lässt über sich den Platz
         // des verdichteten Symbolstapels frei; bei langem Text scrollt nur ihr Textfeld.
