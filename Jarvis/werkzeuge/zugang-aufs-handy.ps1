@@ -87,6 +87,15 @@ try {
     $angekommen = (& $adb -s $Geraet shell "run-as $paket stat -c %s files/zugang.json" 2>$null | Out-String).Trim()
     if ($angekommen -ne "$laenge") { throw "files/zugang.json fehlt oder ist unvollständig auf dem Handy (erwartet $laenge Byte, gefunden '$angekommen')." }
     Write-Output "Zugang übertragen ($($werte.Keys -join ', ')). Jarvis übernimmt ihn beim nächsten Start und löscht die Datei."
+
+    # Victron-Schlüssel (Solarbatterie, faehigkeit/VictronFaehigkeit.kt): bleibt als files/victron.json im privaten Speicher liegen.
+    $victron = Join-Path $sk 'Victron\victron.json'
+    if (Test-Path -LiteralPath $victron -PathType Leaf) {
+        $befehl = "run-as $paket sh -c 'mkdir -p files && umask 077 && cat > files/victron.json'"
+        $p = Start-Process -FilePath $adb -ArgumentList @('-s', $Geraet, 'exec-in', "`"$befehl`"") -RedirectStandardInput $victron -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -ne 0) { throw "Victron-Schlüssel nicht übertragen (adb Code $($p.ExitCode))." }
+        Write-Output 'Victron-Schlüssel übertragen.'
+    }
 } finally {
     Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
 }

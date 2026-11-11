@@ -401,6 +401,9 @@ $pause = 2
 # Am PC direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess, endet nach Sekunden).
 $scanner = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_lokal.py')
 $letzterScan = [DateTime]::MinValue
+# Victron-Anlage (Batterie, Laderegler) per Bluetooth: jede Minute ein kurzer Scan, der Stand geht an den Relay (jarvis_victron.py).
+$victron = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_victron.py')
+$letzterVictron = [DateTime]::MinValue
 # Neue Fassung dieses Skripts (git pull): beenden, die Aufgabenplanung startet binnen einer Minute die neue.
 $eigenerStand = (Get-Item -LiteralPath $PSCommandPath).LastWriteTimeUtc
 while ($true) {
@@ -410,6 +413,11 @@ while ($true) {
             $letzterScan = Get-Date
             try { Start-Process -FilePath 'python' -ArgumentList @("`"$scanner`"", 'scan') -WindowStyle Hidden | Out-Null }
             catch { Schreib "Scanner nicht gestartet: $($_.Exception.Message)" }
+        }
+        if (((Get-Date) - $letzterVictron).TotalSeconds -ge 60 -and (Test-Path -LiteralPath (Join-Path $env:USERPROFILE 'SK\Victron\victron.json'))) {
+            $letzterVictron = Get-Date
+            try { Start-Process -FilePath 'python' -ArgumentList @("`"$victron`"") -WindowStyle Hidden | Out-Null }
+            catch { Schreib "Victron nicht gestartet: $($_.Exception.Message)" }
         }
         $zugang = Lies-Zugang
         Pruefe-Anmeldung-Hintergrund

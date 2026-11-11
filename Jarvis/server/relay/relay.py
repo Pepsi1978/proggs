@@ -1769,6 +1769,48 @@ ABGLEICH_ARTEN = {"gedaechtnis", "gespraech", "appdaten", "stand"}
 ABGLEICH_FRIST_S = 3 * 86_400
 
 
+VICTRON_DATEI = ZUSTAND.with_name("victron.json")
+VICTRON_MAX = 8_192
+
+
+class VictronStand:
+    """Letzter Stand von Franks Victron-Anlage, den ein Rechner in Bluetooth-Reichweite meldet (jarvis_victron.py).
+    POST /pc/victron (Rolle pc) legt ihn ab, GET /geraet/victron (Rolle handy) liefert ihn mit Alter in Sekunden."""
+
+    def __init__(self):
+        try:
+            self.stand = json.loads(VICTRON_DATEI.read_text("utf-8"))
+        except Exception:
+            self.stand = None
+
+    async def melden(self, request: web.Request) -> web.Response:
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        roh = await request.read()
+        if len(roh) > VICTRON_MAX:
+            return web.Response(status=413, text="zu gross")
+        try:
+            stand = json.loads(roh.decode("utf-8"))
+            if not isinstance(stand, dict) or not isinstance(stand.get("geraete"), list):
+                raise ValueError("geraete fehlt")
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        stand["empfangen"] = int(time.time())
+        self.stand = stand
+        try:
+            VICTRON_DATEI.write_text(json.dumps(stand, ensure_ascii=False), "utf-8")
+        except Exception as fehler:
+            log.warning("victron.json nicht geschrieben: %s", fehler)
+        return web.json_response({"ok": True})
+
+    async def holen(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        if not self.stand:
+            return web.json_response({"geraete": [], "alter_s": None})
+        return web.json_response({**self.stand, "alter_s": int(time.time()) - int(self.stand.get("empfangen", 0))})
+
+
 class AblageAbgleich:
     """Zwei Instanzen: die gemeinsame Ablage aller Jarvis-Versionen (Vorgabe) und der Geraeteabgleich zwischen Handy und Tablet
     (eigener Ordner, eigene Arten, eigenes Signal, Wege unter /j/<Geheimnis>/abgleich): Die Rechner-Versionen sehen dessen Dokumente nie."""
@@ -2078,6 +2120,9 @@ def app() -> web.Application:
     anwendung.router.add_put("/j/{geheimnis}/abgleich/doc/{art}/{id}", abgleich.doc)
     anwendung.router.add_put("/j/{geheimnis}/abgleich/blob/{sha}", abgleich.blob_ablegen)
     anwendung.router.add_get("/j/{geheimnis}/abgleich/blob/{sha}", abgleich.blob_holen)
+    victron = VictronStand()
+    anwendung.router.add_post("/pc/victron", victron.melden)
+    anwendung.router.add_get("/geraet/victron", victron.holen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)
