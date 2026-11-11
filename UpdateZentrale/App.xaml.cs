@@ -81,7 +81,7 @@ public partial class App : Application
     {
         _gezeigt = true;
         fenster.Show();
-        if (fenster.WindowState == WindowState.Minimized) fenster.WindowState = WindowState.Normal;
+        if (fenster.WindowState == WindowState.Minimized) fenster.WindowState = WindowState.Maximized;
         fenster.Activate();
         // A window shown from the background does not get the foreground by Activate alone.
         fenster.Topmost = true;

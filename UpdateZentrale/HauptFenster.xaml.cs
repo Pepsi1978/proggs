@@ -16,7 +16,10 @@ public partial class HauptFenster : Window
 
         SourceInitialized += (_, _) =>
         {
+            // Erst die Normalgröße passend setzen (gilt beim Wiederherstellen), dann maximiert starten:
+            // Die UpdateZentrale nimmt beim Start immer den ganzen Bildschirm ein.
             AnBildschirmAnpassen();
+            WindowState = WindowState.Maximized;
             TitelleisteAnpassen();
         };
         Darstellung.Gewechselt += (_, _) => TitelleisteAnpassen();
