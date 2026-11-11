@@ -62,7 +62,7 @@
    "id": "M4",
    "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
    "datum": "2026-11-08T18:30",
-   "status": "aktiv",
+   "status": "wirkt",
    "plattform": [
     "windows"
    ],
