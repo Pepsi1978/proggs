@@ -295,6 +295,23 @@
       "pruefung": "Nach 10 Sitzungen keine Meldung fremder Dateien im eigenen Commit -> wirkt.",
       "ruecknahme": "Die Zeile 'Nie einen Ordner vormerken' aus der Memory-Datei entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+    },
+    {
+      "id": "M18",
+      "titel": "jarvis-install: Git-Bash-Aufrufe ohne Pfadumwandlung (MSYS_NO_PATHCONV)",
+      "datum": "2026-11-11T19:15",
+      "status": "aktiv",
+      "beleg": "Sitzung 0abaeb31: adb push nach \"C:/Program Files/Git/data/local/tmp/jarvis-install.apk\" statt /data/local/tmp, Installation hing ueber 10 min.",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "jarvis-install\\.ps1",
+      "fehler_regex": "Program Files/Git/data/local",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install kein umgewandelter Pfad mehr -> wirkt.",
+      "ruecknahme": "export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL=* aus den zwei Git-Bash-Aufrufen entfernen.",
+      "kosten": "kein Kontext, nur Skript",
+      "plattform": "windows"
     }
   ]
 }

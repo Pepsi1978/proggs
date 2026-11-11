@@ -21,7 +21,7 @@
 | 7 | `print()`/`logging` + Emoji | `sys.stdout.reconfigure(encoding='utf-8')` / `FileHandler(encoding=)` | §1.4 |
 | 8 | Pfad im Python-Code | NIE `/c/Users/...` — `pathlib`/`expanduser`, Backslash als Raw | §3.1 |
 | 9 | Backslash-Pfad-Literal | Raw-String `r"..."` oder `/` (sonst `\U`/`\n`-Escape) | §3.2 |
-| 10 | generierte Text-/JSON-Datei | `newline='\n'` (sonst CRLF auf Windows) | §4.2 |
+| 10 | generierte Text-/JSON-Datei | `newline='\n'` (sonst CRLF auf Windows); Kopfdatei für `curl -H @datei` per `write_bytes`, sonst `\r` im Header → HTTP 400 | §4.2 |
 | 11 | CSV schreiben | `open(..., newline='')` (sonst Leerzeilen) | §4.1 |
 | 12 | parallele Schreiber | `filelock` + atomar (kein `fcntl`/`msvcrt` direkt) | §5.8 |
 | 13 | `re.sub`-Replacement | NIE Raw-String mit `\U`-Escape mischen — Lambda nutzen | §9.1 |
