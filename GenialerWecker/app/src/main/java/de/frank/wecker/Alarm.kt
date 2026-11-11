@@ -166,6 +166,18 @@ data class Alarm(
         const val MONTHLY = "month"
         const val YEARLY = "year"
         const val MAX_REPEATS = VoiceVariations.COUNT
+        private val namensFolge = java.text.Collator.getInstance(java.util.Locale.GERMAN)
+
+        /**
+         * Anzeigereihenfolge der Weckerliste: nach der sichtbaren Uhrzeit von früh bis spät (beim Sonnenwecker die
+         * berechnete Sonnenzeit), gleiche Zeit nach Name in deutscher Sortierung, zuletzt nach id. Ändert nichts am Speicher.
+         */
+        fun nachUhrzeit(alarms: List<Alarm>): List<Alarm> = alarms
+            .map { a -> a to (if (a.sunMode.isBlank()) null else a.sonnenMinute()) }
+            .sortedWith(compareBy<Pair<Alarm, Int?>> { it.second ?: (it.first.hour * 60 + it.first.minute) }
+                .thenComparator { x, y -> namensFolge.compare(x.first.name, y.first.name) }
+                .thenBy { it.first.id })
+            .map { it.first }
         /**
          * Reads an entry. The new monthly/yearly fields are checked strictly: an unknown unit, a missing or unreadable
          * start date, a conflicting combination or an out-of-range interval make this entry invalid. It is then rejected,

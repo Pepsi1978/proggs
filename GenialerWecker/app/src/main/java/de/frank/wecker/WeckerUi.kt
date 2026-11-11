@@ -253,8 +253,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                             }
                         } } ?: Box(Modifier.fillMaxSize())
                         "settings" -> SettingsPage(vm, activity)
-                        // Nur die Anzeige ist nach Uhrzeit sortiert (früh bis spät); gespeichert bleibt die Liste unverändert.
-                        else -> AlarmList(remember(alarms) { alarms.sortedWith(compareBy<Alarm>({ it.hour }, { it.minute }, { it.name }, { it.id })) }, vm,
+                        else -> AlarmList(alarms, vm,
                             onNew = { openDraft { vm.newAlarm() } },
                             onEdit = { alarm -> if (draft?.id == alarm.id) page = "edit" else openDraft { vm.edit(alarm) } }, onDelete = { delete = it },
                             onSettings = { settingsFrom = "alarms"; page = "settings" },
@@ -333,7 +332,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
 }
 
 @Composable
-private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Unit, onEdit: (Alarm) -> Unit,
+private fun AlarmList(gespeichert: List<Alarm>, vm: WeckerViewModel, onNew: () -> Unit, onEdit: (Alarm) -> Unit,
     onDelete: (Alarm) -> Unit, onSettings: () -> Unit, openDraft: Alarm?, onResumeDraft: () -> Unit) {
     val gold = LocalGold.current
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
@@ -343,6 +342,11 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
         save = { it.value.toList() }, restore = { mutableStateOf(it.toSet()) })) { mutableStateOf(emptySet<String>()) }
     val issues by vm.store.issues.collectAsState()
     val now = rememberNow(60_000)
+    // Nur die Anzeige ist nach Uhrzeit sortiert (früh bis spät); gespeichert bleibt die Reihenfolge unverändert.
+    // Mit jeder Minute neu, damit Sonnenwecker mit wandernder Uhrzeit an der richtigen Stelle bleiben.
+    val alarms = remember(gespeichert, now) { Alarm.nachUhrzeit(gespeichert) }
+    // Der Sprung nach dem Speichern sucht die Karte in der aktuellen Liste, nicht in der beim Start des Effekts.
+    val aktuelleListe by androidx.compose.runtime.rememberUpdatedState(alarms)
     val nextRegular = alarms.mapNotNull { alarm -> alarm.nextAt.takeIf { alarm.enabled && it > now } }.minOrNull()
     val nextSnooze = alarms.mapNotNull { alarm -> alarm.snoozeUntil.takeIf { it > now } }.minOrNull()
     val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
@@ -368,7 +372,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     LaunchedEffect(saved, resumed, reducedMotion) {
         val event = saved ?: return@LaunchedEffect
         if (!resumed) return@LaunchedEffect
-        val alarmIndex = alarms.indexOfFirst { it.id == event.id }
+        val alarmIndex = aktuelleListe.indexOfFirst { it.id == event.id }
         if (alarmIndex >= 0) {
             // Der Kopf ist seit der Fixierung KEIN Listeneintrag mehr — früher stand hier deshalb
             // eine 2 (Kopf + Bereitschaft). Jetzt zählt nur noch die Bereitschaftskarte, die

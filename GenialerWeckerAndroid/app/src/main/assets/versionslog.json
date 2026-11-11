@@ -58,6 +58,7 @@
     {"versionCode": 54, "versionName": "1.0.53", "stand": "15.10.2026, 15:46 Uhr", "notiz": "Morgenruhe: Wecker-Status, Weckbereitschaft und die Knöpfe zum Anlegen und Öffnen stehen jetzt rechts neben Datum und Uhrzeit statt in einer eigenen Zeile darunter."},
     {"versionCode": 55, "versionName": "1.0.54", "stand": "30.10.2026, 19:23 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 56, "versionName": "1.0.55", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
-    {"versionCode": 57, "versionName": "1.0.56", "stand": "11.11.2026, 17:01 Uhr", "notiz": "Die Weckerliste ist jetzt nach Uhrzeit sortiert, von früh bis spät, und neue oder geänderte Wecker sortieren sich automatisch ein."}
+    {"versionCode": 57, "versionName": "1.0.56", "stand": "11.11.2026, 17:01 Uhr", "notiz": "Die Weckerliste ist jetzt nach Uhrzeit sortiert, von früh bis spät, und neue oder geänderte Wecker sortieren sich automatisch ein."},
+    {"versionCode": 58, "versionName": "1.0.57", "stand": "11.11.2026, 17:13 Uhr", "notiz": "Gleiche Uhrzeiten in der Weckerliste werden jetzt alphabetisch mit Umlauten geordnet."}
 ]
 }

@@ -143,6 +143,16 @@ data class Alarm(
         put("repeatUnit", repeatUnit); put("repeatEvery", repeatEvery)
     }
     companion object {
+        private val namensFolge = java.text.Collator.getInstance(java.util.Locale.GERMAN)
+
+        /**
+         * Anzeigereihenfolge der Weckerliste: nach Uhrzeit von früh bis spät, gleiche Zeit nach Name in deutscher
+         * Sortierung, zuletzt nach id. Ändert nichts am Speicher.
+         */
+        fun nachUhrzeit(alarms: List<Alarm>): List<Alarm> = alarms.sortedWith(
+            compareBy<Alarm> { it.hour * 60 + it.minute }
+                .thenComparator { x, y -> namensFolge.compare(x.name, y.name) }
+                .thenBy { it.id })
         const val MONTHLY = "month"
         const val YEARLY = "year"
         /**
