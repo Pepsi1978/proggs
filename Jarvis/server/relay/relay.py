@@ -1793,12 +1793,24 @@ class VictronStand:
             stand = json.loads(roh.decode("utf-8"))
             if not isinstance(stand, dict) or not isinstance(stand.get("geraete"), list):
                 raise ValueError("geraete fehlt")
+            neu = [g for g in stand["geraete"] if isinstance(g, dict) and isinstance(g.get("art"), str) and isinstance(g.get("zeit"), int)]
         except Exception:
             return web.Response(status=400, text="ungueltig")
-        stand["empfangen"] = int(time.time())
-        self.stand = stand
+        # Je Art zusammenführen: Ein Scan, der nur ein Gerät fand, löscht den letzten Wert des anderen nicht.
+        alt = {g.get("art"): g for g in (self.stand or {}).get("geraete", []) if isinstance(g, dict)}
+        for g in neu:
+            if g["zeit"] >= alt.get(g["art"], {}).get("zeit", -1):
+                alt[g["art"]] = g
+        self.stand = {"geraete": list(alt.values()), "empfangen": int(time.time())}
+        inhalt = json.dumps(self.stand, ensure_ascii=False)
+
+        def schreiben():
+            zwischen = VICTRON_DATEI.with_suffix(".neu")
+            zwischen.write_text(inhalt, "utf-8")
+            os.replace(zwischen, VICTRON_DATEI)
+
         try:
-            VICTRON_DATEI.write_text(json.dumps(stand, ensure_ascii=False), "utf-8")
+            await asyncio.to_thread(schreiben)
         except Exception as fehler:
             log.warning("victron.json nicht geschrieben: %s", fehler)
         return web.json_response({"ok": True})

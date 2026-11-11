@@ -94,6 +94,9 @@ try {
         $befehl = "run-as $paket sh -c 'mkdir -p files && umask 077 && cat > files/victron.json'"
         $p = Start-Process -FilePath $adb -ArgumentList @('-s', $Geraet, 'exec-in', "`"$befehl`"") -RedirectStandardInput $victron -NoNewWindow -Wait -PassThru
         if ($p.ExitCode -ne 0) { throw "Victron-Schlüssel nicht übertragen (adb Code $($p.ExitCode))." }
+        $soll = (Get-Item -LiteralPath $victron).Length
+        $ist = (& $adb -s $Geraet shell "run-as $paket stat -c %s files/victron.json" 2>$null | Out-String).Trim()
+        if ($ist -ne "$soll") { throw "files/victron.json fehlt oder ist unvollständig (erwartet $soll Byte, gefunden '$ist')." }
         Write-Output 'Victron-Schlüssel übertragen.'
     }
 } finally {

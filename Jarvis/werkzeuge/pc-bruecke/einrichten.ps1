@@ -9,6 +9,9 @@ if (-not $pwsh) { $pwsh = (Get-Command powershell.exe).Source }
 # Zugleich hängt die Brücke so an keinem Terminal-Fenster: Unter Windows 11 landete die versteckte Konsole sonst in
 # Windows Terminal und wurde mit dessen Fenster beendet (0xC000013A, 15.10.2026).
 $conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
+# Victron-Solarbatterie per Bluetooth (jarvis_victron.py) braucht bleak und cryptography.
+& python -m pip install --quiet --disable-pip-version-check bleak cryptography
+if ($LASTEXITCODE -ne 0) { Write-Warning 'bleak/cryptography nicht installiert: Die Solarbatterie wird vom Rechner nicht gemeldet.' }
 $aktion = New-ScheduledTaskAction -Execute $conhost -Argument "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$skript`""
 $ausloeser = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 # Wächter: jede Minute erneut starten. Läuft die Brücke schon, beendet sich die neue sofort (Sperre im Skript).

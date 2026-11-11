@@ -398,6 +398,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "heute_aufgaben" -> HeuteAufgabenKarte(vm, griff)
                 // Eigener Einstieg in den Biomarker-Bereich (Whoop, Oura, Waage, Trainings), nur gespeicherter Stand.
                 "biomarker" -> BiomarkerStartKarte(griff)
+                // Victron-Solarbatterie (BMV-712) und Laderegler (MPPT): letzter Stand, Aktualisieren liest frisch.
+                "victron" -> VictronStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

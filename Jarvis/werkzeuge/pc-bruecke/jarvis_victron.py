@@ -10,6 +10,7 @@ Aufruf:  python jarvis_victron.py          einmal scannen (bis 12 s) und melden 
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -25,9 +26,33 @@ LADEZUSTAND = {0: "aus", 1: "Schwachlast", 2: "Fehler", 3: "Bulk", 4: "Absorptio
                9: "Wechselrichter", 11: "Netzteil", 245: "Start", 247: "Ausgleich", 252: "extern gesteuert"}
 
 
+PROTOKOLL = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "JarvisPcBruecke" / "victron.log"
+
+
+def protokoll(text: str) -> None:
+    """Fehler landen hier statt im Nichts (die Brücke startet das Skript unsichtbar). Hält höchstens etwa 200 KB."""
+    try:
+        PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
+        if PROTOKOLL.exists() and PROTOKOLL.stat().st_size > 200_000:
+            PROTOKOLL.write_text("", "utf-8")
+        with PROTOKOLL.open("a", encoding="utf-8") as d:
+            d.write(time.strftime("%Y-%m-%d %H:%M:%S ") + text + "\n")
+    except Exception:
+        pass
+
+
 def lade_geraete() -> dict:
     daten = json.loads((SK / "Victron" / "victron.json").read_text("utf-8"))
-    return {g["mac"].replace(":", "").lower(): g for g in daten["geraete"]}
+    geraete = {}
+    for g in daten["geraete"]:
+        try:
+            schluessel = bytes.fromhex(g["schluessel"])
+            if len(schluessel) != 16:
+                raise ValueError("Schlüssel nicht 16 Byte")
+            geraete[g["mac"].replace(":", "").lower()] = {**g, "schluessel_roh": schluessel}
+        except Exception as fehler:
+            protokoll(f"Eintrag {g.get('name', '?')} unbrauchbar: {fehler}")
+    return geraete
 
 
 def entschluesseln(daten: bytes, schluessel: bytes) -> bytes | None:
@@ -64,7 +89,8 @@ def auswerten(art: int, d: bytes) -> dict | None:
         return {"art": "batteriemonitor",
                 "ladezustand_prozent": None if soc == 0x3FF else soc / 10,
                 "spannung_v": None if spannung == 0x7FFF else spannung / 100,
-                "strom_a": None if strom == -0x200000 else round(strom / 1000, 3),
+                # Ungültig ist wie bei 0x7FFF der größte positive Wert des 22-Bit-Felds.
+                "strom_a": None if strom == 0x1FFFFF else round(strom / 1000, 3),
                 "verbraucht_ah": None if verbraucht == 0xFFFFF else -verbraucht / 10,
                 "restlaufzeit_min": None if rest == 0xFFFF else rest}
     return None
@@ -80,8 +106,12 @@ async def scannen(geraete: dict, sekunden: float = 12.0) -> dict:
         g = geraete.get(mac)
         if roh is None or g is None:
             return
-        klar = entschluesseln(bytes(roh), bytes.fromhex(g["schluessel"]))
-        werte = auswerten(roh[4], klar) if klar else None
+        try:
+            klar = entschluesseln(bytes(roh), g["schluessel_roh"])
+            werte = auswerten(roh[4], klar) if klar else None
+        except Exception as fehler:
+            protokoll(f"Paket von {g['name']} unlesbar: {fehler}")
+            return
         if werte:
             werte["name"] = g["name"]
             werte["zeit"] = int(time.time())
@@ -115,19 +145,27 @@ def melden(stand: dict) -> None:
         kopf.write_bytes(f"X-Jarvis-Token: {token}\nContent-Type: application/json; charset=utf-8\n".encode())
         rumpf = Path(ordner) / "rumpf.json"
         rumpf.write_text(json.dumps(stand, ensure_ascii=False), "utf-8")
-        subprocess.run(["curl.exe", "-4", "-s", "-S", "--max-time", "15", "-o", "NUL", "-H", f"@{kopf}", "-X", "POST",
+        subprocess.run(["curl.exe", "-4", "-s", "-S", "--fail", "--max-time", "15", "-o", "NUL", "-H", f"@{kopf}", "-X", "POST",
                         "--data-binary", f"@{rumpf}", f"https://{host}/pc/victron"], check=True, creationflags=0x08000000)
 
 
 def main() -> None:
     geraete = lade_geraete()
-    gefunden = asyncio.run(scannen(geraete))
+    try:
+        gefunden = asyncio.run(scannen(geraete))
+    except Exception as fehler:
+        protokoll(f"Bluetooth-Scan gescheitert: {fehler!r}")
+        raise
     stand = {"geraete": list(gefunden.values()), "quelle": "PC", "zeit": int(time.time())}
     if len(sys.argv) > 1 and sys.argv[1] == "zeigen":
         print(json.dumps(stand, ensure_ascii=False, indent=2))
         return
     if gefunden:
-        melden(stand)
+        try:
+            melden(stand)
+        except Exception as fehler:
+            protokoll(f"Meldung an den Relay gescheitert: {fehler!r}")
+            raise
 
 
 if __name__ == "__main__":
