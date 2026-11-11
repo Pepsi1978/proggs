@@ -65,6 +65,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.scrollable
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -220,7 +221,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
     }
-    // Beim Mitlesen bleibt das Ende in der Mitte, auch wenn die letzte Nachricht wächst, darunter der Arbeitsstand läuft oder
+    // Beim Mitlesen bleibt das Ende in der Mitte, auch wenn die letzte Nachricht wächst, darunter die Abschlusszeile erscheint oder
     // das Handy auf- oder zugeklappt wird. Greift Frank selbst ein (Finger, laufende Animation), wartet das.
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { folgenZustand.value && vm.gespraech.isNotEmpty() && !liste.isScrollInProgress && liste.canScrollForward }
@@ -234,7 +235,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     LaunchedEffect(liste, vm.gespraech.isEmpty()) {
         if (vm.gespraech.isEmpty() && !zustand.dragging && liste.firstVisibleItemIndex > 0) liste.scrollToItem(0)
     }
-    LaunchedEffect(liste, vm.gespraech.size, vm.denkt) {
+    LaunchedEffect(liste, vm.gespraech.size) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
         if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
         // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
@@ -388,26 +389,38 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             // Ohne Gespräch steht der laufende Stand wie bisher in der Liste; im Gespräch schwebt er fest im unteren Viertel (unten).
-            if (!vonUnten) item(key = "programmiert") { ProgrammierAktivitaet(vm) }
-            if (vm.denkt) { if (!vonUnten) item(key = "denkt") { TaetigkeitsZeile(vm) } }
-            else vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
+            if (!vonUnten) {
+                item(key = "programmiert") { ProgrammierAktivitaet(vm) }
+                if (vm.denkt) item(key = "denkt") { TaetigkeitsZeile(vm) }
+            }
+            if (!vm.denkt) vm.sitzungId?.let { vm.abschluss[it] }?.let { a -> item(key = "abschluss") {
                 Text((if (a.fehler) "✕ " else "✓ ") + a.text, color = if (a.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
             } }
             if (!vonUnten) item(key = "agenten") { AgentenZeile() }
         }
         // Laufender Stand im Gespräch (Franks Wunsch vom 11.11.2026): Tätigkeit samt Leuchtkern, Arbeitssymbol der Programmier-Sitzung
-        // und Agenten stehen fest im unteren Drittel bis unteren Viertel des Chatfensters, unabhängig vom Scrollen. Die Unterkante
-        // liegt ein Viertel der Listenhöhe über der Eingabe, rechts bleibt die Spalte der schwebenden Symbole frei; so verdeckt
-        // nichts den Stand. Der eigene Grund hält ihn lesbar, wenn Frank Text darunter durchschiebt.
-        if (vonUnten) Column(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                .padding(start = 12.dp, end = SCHWEBE_FREI_RECHTS, bottom = with(dichte) { (listenHoehe / 4).toDp() })
-                .background(f.hgUnten.copy(alpha = 0.88f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                .padding(horizontal = 4.dp),
-        ) {
+        // und Agenten stehen fest im unteren Drittel bis unteren Viertel des Chatfensters, unabhängig vom Scrollen, rechts frei
+        // neben der Spalte der schwebenden Symbole. Die Unterkante liegt ein Viertel der Listenhöhe über der Eingabe; ist der Stand
+        // dafür zu hoch (Tastatur offen, Querformat), rückt er nach unten, damit er nicht über die Lesemitte ([mitte]) ragt, wo der
+        // Text beim Mitlesen endet. Wischen auf dem Stand scrollt die Liste dahinter (auch über die Mitlese-Erkennung [nachOben]).
+        // Der eigene Grund hält ihn lesbar, wenn Frank Text darunter durchschiebt.
+        if (vonUnten) {
+            var statusHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+            val viertel = mitte / 2
+            val frei = mitte - with(dichte) { statusHoehe.toDp() }
+            Column(
+                Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                    .padding(start = 12.dp, end = SCHWEBE_FREI_RECHTS, bottom = minOf(viertel, frei).coerceAtLeast(0.dp))
+                    .onSizeChanged { statusHoehe = it.height }
+                    .nestedScroll(nachOben)
+                    .scrollable(liste, androidx.compose.foundation.gestures.Orientation.Vertical, reverseDirection = true)
+                    .background(f.hgUnten.copy(alpha = 0.88f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                    .padding(horizontal = 4.dp),
+            ) {
             ProgrammierAktivitaet(vm)
-            if (vm.denkt) TaetigkeitsZeile(vm)
-            AgentenZeile()
+                if (vm.denkt) TaetigkeitsZeile(vm)
+                AgentenZeile()
+            }
         }
         if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = 2.dp))
         }
