@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Installiert eine APK auf Handy UND Tablet (jeweils über die feste Seriennummer aus geraete.json, Netz vor Kabel).
-# Für die Apps, deren Daten Jarvis zwischen den Geräten abgleicht (Aufgaben, Ziele, Geniale Ideen, Epigenetik, Stack-Labor):
-# Der Abgleich braucht auf beiden Geräten dieselbe Fassung. Nicht für Jarvis selbst (dafür jarvis-install mit --ziel).
+# Standardweg für jede App-Installation (Regel 18): Was fürs Handy gilt, gilt genauso fürs Tablet, UpdateStation ist nur
+# der Rückweg. Die abgeglichenen Apps brauchen ohnehin auf beiden Geräten dieselbe Fassung. Nicht für Jarvis selbst
+# (dafür jarvis-install mit --ziel). Windows: aus Git Bash starten.
 # Aufruf: auf-beide.sh <apk> [<apk> …]     Ein nicht erreichbares Gerät wird gemeldet, das andere trotzdem bedient.
 # Letzte Zeile AUF_BEIDE_STATUS: fertig (alle Installationen gelungen), teilweise oder fehler.
 set -u
