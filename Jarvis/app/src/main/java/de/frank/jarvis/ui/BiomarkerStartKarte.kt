@@ -38,6 +38,17 @@ import org.json.JSONObject
 private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String)
 
 /**
+ * Stand der Karte außerhalb der Komposition: Sie liegt in der LazyColumn des Startbildschirms. Mit `remember` war sie nach dem
+ * Wegscrollen leer, erschien beim Zurückscrollen erst klein und wuchs dann, sobald die Werte gelesen waren; das schob die
+ * Bereiche darunter ruckartig nach unten. So hat sie beim Wiedererscheinen sofort ihre volle Höhe.
+ */
+private object BiomarkerStartStand {
+    var zeilen by mutableStateOf<List<BioZeile>>(emptyList())
+    var stand by mutableStateOf("")
+    var probleme by mutableStateOf<List<String>>(emptyList())
+}
+
+/**
  * Eigener Einstieg in den Biomarker-Bereich auf dem Startbildschirm: Franks Kerngrößen (Erholung, HRV, Ruhepuls,
  * Tiefschlafanteil, Schlaf, VO2max) mit Datum und Einordnung und der Zustand der Quellen beim letzten Abruf.
  * Die Karte LIEST nur den gespeicherten Stand; frisch abgerufen wird erst beim Öffnen des Bereichs.
@@ -48,9 +59,9 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val abruf by BioAbruf.stand.collectAsState()
-    var zeilen by remember { mutableStateOf<List<BioZeile>>(emptyList()) }
-    var stand by remember { mutableStateOf("") }
-    var probleme by remember { mutableStateOf<List<String>>(emptyList()) }
+    var zeilen by BiomarkerStartStand::zeilen
+    var stand by BiomarkerStartStand::stand
+    var probleme by BiomarkerStartStand::probleme
     var uebernahme by remember { mutableStateOf("") }
     val bereit = BioAbruf.bereit(context)
 

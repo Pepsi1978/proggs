@@ -55,8 +55,14 @@ fun Modifier.glas(
     fuellung: Color = farben.flaeche,
     rand: Boolean = true,
     toenung: Color? = null,
+    /**
+     * Ohne Angabe laufen Verlauf und Glanz über die ganze Höhe: Eine hohe Fläche wirkt dann heller als eine kurze. Mit Angabe enden
+     * sie spätestens nach dieser Höhe (Glanz nach 45 % davon), so wirken Karten jeder Höhe gleich (Startbildschirm).
+     */
+    verlaufHoehe: Dp? = null,
 ): Modifier = drawWithCache {
     val r = radius.toPx().coerceAtMost(size.minDimension / 2)
+    val verlaufEnde = verlaufHoehe?.let { minOf(size.height, it.toPx()) } ?: size.height
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
     val schattenFarbe = if (farben.dunkel) Color.Black else farben.schatten
     val stufen = 7
@@ -66,6 +72,7 @@ fun Modifier.glas(
             fuellung.copy(alpha = (fuellung.alpha * 1.15f).coerceAtMost(1f)),
             fuellung.copy(alpha = fuellung.alpha * 0.82f),
         ),
+        endY = verlaufEnde,
     )
     val tonVerlauf = toenung?.let { Brush.linearGradient(listOf(it.copy(alpha = 0.16f), Color.Transparent), Offset.Zero, Offset(size.width * 0.9f, size.height)) }
     val kante = Brush.verticalGradient(
@@ -76,7 +83,7 @@ fun Modifier.glas(
     val glanz = Brush.verticalGradient(
         0f to Color.White.copy(alpha = if (farben.dunkel) 0.10f else 0.45f),
         0.45f to Color.Transparent,
-        endY = size.height,
+        endY = verlaufEnde,
     )
     // Kreisrunde Knöpfe bekommen keine Licht-/Schattenrichtung: Ein nach unten versetzter Schatten
     // und eine helle Oberkante ließen den Kreis oben wie abgeschnitten wirken.

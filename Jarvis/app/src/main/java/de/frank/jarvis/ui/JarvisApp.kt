@@ -323,10 +323,14 @@ private fun DrawScope.kernZeichnen(farbe: Color, winkel: Float, p: Float) {
     drawCircle(Brush.radialGradient(listOf(Color.White, farbe, farbe.copy(alpha = 0f)), center, r * 0.34f * p), r * 0.34f * p)
 }
 
+/** Höhe, über die Verlauf und Glanz einer Karte laufen; etwa eine zugeklappte Tagesauswertung, deren Wirkung so bleibt. */
+private val KARTEN_VERLAUF = 160.dp
+
 @Composable
 fun Karte(modifier: Modifier = Modifier, toenung: Color? = null, inhalt: @Composable ColumnScope.() -> Unit) {
     val f = LocalFarben.current
-    Column(modifier.fillMaxWidth().glas(f, toenung = toenung).padding(18.dp), content = inhalt)
+    // Feste Verlaufshöhe: Kurze und lange Karten (Biomarker, heutige Aufgaben …) haben dieselbe Hintergrundwirkung.
+    Column(modifier.fillMaxWidth().glas(f, toenung = toenung, verlaufHoehe = KARTEN_VERLAUF).padding(18.dp), content = inhalt)
 }
 
 /** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt (oder offen mit [startOffen]); mit [aufklappbar] = false immer offen. */
