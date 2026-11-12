@@ -113,7 +113,13 @@ object Listen {
 
     private fun ordner(app: Context) = File(app.filesDir, ORDNER).apply { mkdirs() }
 
-    fun neueId(): Long = System.currentTimeMillis() * 1000 + Random.nextInt(1000)
+    private val letzteId = java.util.concurrent.atomic.AtomicLong(0)
+
+    /** Zeitbasiert mit Zufall (Handy und Tablet vergeben unabhängig), hier im Prozess streng steigend: mehrere Einträge in derselben Millisekunde kollidieren nie. */
+    fun neueId(): Long {
+        val vorschlag = System.currentTimeMillis() * 1000 + Random.nextInt(1000)
+        return letzteId.updateAndGet { maxOf(it + 1, vorschlag) }
+    }
 
     /** Lädt beim ersten Gebrauch. Listen entstehen nur auf Wunsch (App, Sprache); „Füge … meiner Einkaufsliste hinzu“ legt sie bei Bedarf an. */
     fun sicher(context: Context): ListenStand {
@@ -179,14 +185,18 @@ object Listen {
         val app = context.applicationContext
         sicher(app)
         val ergebnis: T
+        val geaendert: Boolean
         synchronized(sperre) {
             val s = Schreiber()
             ergebnis = s.block()
+            geaendert = s.listenNeu.isNotEmpty() || s.eintraegeNeu.isNotEmpty()
             val jetzt = System.currentTimeMillis()
             s.listenNeu.values.forEach { l -> val n = l.copy(geaendert = jetzt); listen[n.id] = n; atomar(datei(app, n), listeJson(n).toString()) }
             s.eintraegeNeu.values.forEach { e -> val n = e.copy(geaendert = jetzt); eintraege[n.id] = n; atomar(datei(app, n), eintragJson(n).toString()) }
-            veroeffentlichen()
+            if (geaendert) veroeffentlichen()
         }
+        // Nichts geändert (etwa ein Dialog nur angesehen): kein Widget, kein Abgleich, kein Gedächtnis.
+        if (!geaendert) return ergebnis
         ListenWidget.aktualisieren(app)
         runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
         gedaechtnisAuffrischen(app, "Listen geändert")
@@ -199,14 +209,32 @@ object Listen {
         fun liste(id: Long): Liste? = listenNeu[id] ?: listen[id]?.takeIf { !it.geloescht }
         fun eintrag(id: Long): Eintrag? = eintraegeNeu[id] ?: eintraege[id]?.takeIf { !it.geloescht }
         fun alleEintraege(liste: Long): List<Eintrag> = (eintraege.values.filter { it.liste == liste && it.id !in eintraegeNeu } + eintraegeNeu.values.filter { it.liste == liste }).filter { !it.geloescht }
-        fun setze(l: Liste) { listenNeu[l.id] = l }
-        fun setze(e: Eintrag) { eintraegeNeu[e.id] = e }
+        /** Nur echte Änderungen zählen: Ein unverändert gespeicherter Stand bekäme sonst eine neue Zeit und schlüge im Abgleich jüngere Änderungen des anderen Geräts. */
+        fun setze(l: Liste) { if (listen[l.id]?.copy(geaendert = 0) != l.copy(geaendert = 0)) listenNeu[l.id] = l else listenNeu.remove(l.id) }
+        fun setze(e: Eintrag) { if (eintraege[e.id]?.copy(geaendert = 0) != e.copy(geaendert = 0)) eintraegeNeu[e.id] = e else eintraegeNeu.remove(e.id) }
+        /** Alle Unterpunkte (rekursiv); geschützt gegen Kreise, die über den Abgleich entstehen können. */
         fun nachkommen(id: Long, liste: Long): List<Eintrag> {
-            val alle = alleEintraege(liste)
+            val alle = alleEintraege(liste).groupBy { it.eltern }
             val aus = ArrayList<Eintrag>()
-            fun sammle(v: Long) { alle.filter { it.eltern == v }.forEach { aus += it; sammle(it.id) } }
+            val gesehen = HashSet<Long>().apply { add(id) }
+            fun sammle(v: Long) { alle[v].orEmpty().forEach { if (gesehen.add(it.id)) { aus += it; sammle(it.id) } } }
             sammle(id)
             return aus
+        }
+        /** Oberpunkte von unten nach oben, höchstens bis zur obersten Ebene; ein Kreis bricht ab. */
+        fun vorfahren(e: Eintrag): List<Eintrag> {
+            val aus = ArrayList<Eintrag>()
+            val gesehen = HashSet<Long>().apply { add(e.id) }
+            var v = e.eltern
+            while (v != 0L && gesehen.add(v)) { val p = eintrag(v)?.takeIf { it.liste == e.liste } ?: break; aus += p; v = p.eltern }
+            return aus
+        }
+        fun tiefe(e: Eintrag) = vorfahren(e).size
+        fun hoehe(id: Long, liste: Long): Int {
+            val alle = alleEintraege(liste).groupBy { it.eltern }
+            val gesehen = HashSet<Long>()
+            fun h(v: Long): Int = if (!gesehen.add(v)) 0 else alle[v].orEmpty().maxOfOrNull { 1 + h(it.id) } ?: 0
+            return h(id)
         }
     }
 
@@ -215,7 +243,7 @@ object Listen {
     fun listeAnlegen(context: Context, name: String, art: String = ListenArt.SONSTIGES.kennung, farbe: Int = -1): Liste = schreibe(context) {
         val pos = (listen.values.filter { !it.geloescht }.maxOfOrNull { it.pos } ?: 0.0) + 1.0
         val a = ListenArt.von(art)
-        Liste(neueId(), name.trim(), a.kennung, if (farbe >= 0) farbe else (listen.size % FARBEN), pos = pos,
+        Liste(neueId(), name.trim(), a.kennung, if (farbe >= 0) farbe else (listen.values.count { !it.geloescht } % FARBEN), pos = pos,
             erledigteZeigen = true).also { setze(it) }
     }
 
@@ -244,8 +272,9 @@ object Listen {
     ): Eintrag? = schreibe(context) {
         if (abschnitt.isNotBlank()) liste(liste)?.let { l -> if (abschnitt.trim() !in l.abschnitte) setze(l.copy(abschnitte = l.abschnitte + abschnitt.trim())) }
         if (liste(liste) == null) return@schreibe null
-        val tiefe = generateSequence(eltern.takeIf { it != 0L }?.let { eintrag(it) }) { e -> e.eltern.takeIf { it != 0L }?.let { eintrag(it) } }.count()
-        val vater = if (tiefe > MAX_TIEFE) eintrag(eltern)?.eltern ?: 0L else eltern
+        // Oberpunkt nur aus derselben Liste; der neue Eintrag läge sonst verwaist oben.
+        val oben = eltern.takeIf { it != 0L }?.let { eintrag(it) }?.takeIf { it.liste == liste }
+        val vater = when { oben == null -> 0L; tiefe(oben) + 1 > MAX_TIEFE -> oben.eltern; else -> oben.id }
         val geschwister = alleEintraege(liste).filter { it.eltern == vater }
         val pos = (geschwister.maxOfOrNull { it.pos } ?: 0.0) + 1.0
         Eintrag(neueId(), liste, titel.trim(), vater, notiz.trim(), prioritaet.coerceIn(0, 3), faellig, tags.map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }, pos = pos,
@@ -267,15 +296,12 @@ object Listen {
         if (erledigt) {
             nachkommen(id, e.liste).filter { !it.erledigt }.forEach { setze(it.copy(erledigt = true, erledigtAm = jetzt)) }
             // Wie TickTick: Sind alle Unterpunkte erledigt, ist es auch der Oberpunkt.
-            var v = e.eltern
-            while (v != 0L) {
-                val p = eintrag(v) ?: break
-                if (p.erledigt || alleEintraege(e.liste).any { it.eltern == v && !it.erledigt }) break
-                setze(p.copy(erledigt = true, erledigtAm = jetzt)); v = p.eltern
+            for (p in vorfahren(e)) {
+                if (p.erledigt || alleEintraege(e.liste).any { it.eltern == p.id && !it.erledigt }) break
+                setze(p.copy(erledigt = true, erledigtAm = jetzt))
             }
         } else {
-            var v = e.eltern
-            while (v != 0L) { val p = eintrag(v) ?: break; if (p.erledigt) setze(p.copy(erledigt = false, erledigtAm = 0L)); v = p.eltern }
+            vorfahren(e).forEach { p -> if (p.erledigt) setze(p.copy(erledigt = false, erledigtAm = 0L)) }
         }
         eintrag(id)
     }
@@ -309,6 +335,11 @@ object Listen {
     fun einhaengen(context: Context, id: Long, eltern: Long): Eintrag? = schreibe(context) {
         val e = eintrag(id) ?: return@schreibe null
         if (eltern == id || (eltern != 0L && nachkommen(id, e.liste).any { it.id == eltern })) return@schreibe null
+        if (eltern != 0L) {
+            // Nur in derselben Liste und nicht tiefer als fünf Ebenen (samt eigener Unterpunkte).
+            val p = eintrag(eltern)?.takeIf { it.liste == e.liste } ?: return@schreibe null
+            if (tiefe(p) + 1 + hoehe(id, e.liste) > MAX_TIEFE) return@schreibe null
+        }
         val pos = (alleEintraege(e.liste).filter { it.eltern == eltern }.maxOfOrNull { it.pos } ?: 0.0) + 1.0
         setze(e.copy(eltern = eltern, pos = pos))
         eintrag(id)
@@ -316,6 +347,8 @@ object Listen {
 
     /** Eigene Reihenfolge: [ids] sind Geschwister in der neuen Reihenfolge. */
     fun ordnen(context: Context, ids: List<Long>) = schreibe(context) {
+        // Unverändert (Griff losgelassen ohne Platzwechsel): nichts schreiben.
+        if (ids.mapNotNull { eintrag(it) }.zipWithNext().all { (a, b) -> a.pos < b.pos }) return@schreibe
         ids.forEachIndexed { i, id -> eintrag(id)?.let { if (it.pos != i + 1.0) setze(it.copy(pos = i + 1.0)) } }
     }
 
@@ -362,12 +395,22 @@ object Listen {
     fun ansicht(stand: ListenStand, liste: Liste, erledigteZeigen: Boolean? = null, gruppen: Boolean = true): List<Zeile> {
         val alle = stand.eintraegeVon(liste.id)
         val ids = alle.map { it.id }.toSet()
-        // Unterpunkte, deren Oberpunkt fehlt (gelöscht auf dem anderen Gerät), rücken nach oben statt zu verschwinden.
-        val kinder = alle.groupBy { if (it.eltern != 0L && it.eltern in ids) it.eltern else 0L }
+        val nachId = alle.associateBy { it.id }
+        // Erreicht die Kette der Oberpunkte die oberste Ebene? Ein Kreis (über den Abgleich entstanden) oder ein fehlender Oberpunkt
+        // (auf dem anderen Gerät gelöscht) zählt als oben: Der Eintrag rückt nach oben, statt zu verschwinden oder hängen zu bleiben.
+        fun erreichtOben(e: Eintrag): Boolean {
+            val gesehen = HashSet<Long>().apply { add(e.id) }
+            var v = e.eltern
+            while (v != 0L) { if (!gesehen.add(v)) return false; v = nachId[v]?.eltern ?: return false }
+            return true
+        }
+        val kinder = alle.groupBy { if (it.eltern != 0L && it.eltern in ids && erreichtOben(it)) it.eltern else 0L }
         val vgl = vergleicher(Sortierung.von(liste.sortierung))
         val zeigen = erledigteZeigen ?: liste.erledigteZeigen
         val aus = ArrayList<Zeile>()
+        val gezeigt = HashSet<Long>()
         fun zeile(e: Eintrag, tiefe: Int) {
+            if (!gezeigt.add(e.id)) return
             val k = kinder[e.id].orEmpty()
             aus += Zeile(e, tiefe, k.count { it.erledigt }, k.size)
             // Unterpunkte: offene zuerst, dann erledigte (nur wenn erledigte gezeigt werden).
@@ -379,8 +422,9 @@ object Listen {
         when (if (gruppen) Gruppierung.von(liste.gruppierung) else Gruppierung.KEINE) {
             Gruppierung.KEINE -> offen.forEach { zeile(it, 0) }
             Gruppierung.ABSCHNITT -> {
-                val reihe = liste.abschnitte
-                offen.groupBy { it.abschnitt.takeIf { a -> a in reihe }.orEmpty() }.toSortedMap(compareBy { a -> if (a.isEmpty()) -1 else reihe.indexOf(a) }).forEach { (a, l) ->
+                // Abschnitte, die an Einträgen stehen, aber nicht mehr in der Liste (umbenannt, entfernt), bleiben eigene Gruppen am Ende.
+                val reihe = liste.abschnitte + offen.map { it.abschnitt }.filter { it.isNotEmpty() && it !in liste.abschnitte }.distinct().sortedWith(kollator)
+                offen.groupBy { it.abschnitt }.toSortedMap(compareBy { a -> if (a.isEmpty()) -1 else reihe.indexOf(a) }).forEach { (a, l) ->
                     aus += Zeile(kopf = a.ifEmpty { "Ohne Abschnitt" }, kopfAnzahl = l.size); l.forEach { zeile(it, 0) }
                 }
             }
@@ -395,7 +439,8 @@ object Listen {
                 aus += Zeile(kopf = g.second, kopfAnzahl = l.size); l.forEach { zeile(it, 0) }
             }
             Gruppierung.TAG -> {
-                val mit = offen.flatMap { e -> e.tags.ifEmpty { listOf("") }.map { it to e } }.groupBy({ it.first }, { it.second })
+                // Jeder Eintrag steht genau einmal, unter seinem ersten Tag (doppelte Zeilen brächen Liste und Widget).
+                val mit = offen.groupBy { e -> e.tags.minWithOrNull(kollator).orEmpty() }
                 mit.toSortedMap { a, b -> when { a == b -> 0; a.isEmpty() -> 1; b.isEmpty() -> -1; else -> kollator.compare(a, b) } }.forEach { (t, l) ->
                     aus += Zeile(kopf = if (t.isEmpty()) "Ohne Tag" else "#$t", kopfAnzahl = l.size); l.forEach { zeile(it, 0) }
                 }
@@ -420,9 +465,10 @@ object Listen {
 
     private val FUELL = Regex("\\b(meine[rnms]?|die|der|das|den|dem|zur|zum|auf|in|liste|listen)\\b")
 
-    fun glatt(text: String): String = text.lowercase(Locale.GERMAN)
-        .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace("liste", " ").replace(FUELL, " ").replace(Regex("\\s+"), " ").trim()
+    fun glatt(text: String): String = java.text.Normalizer.normalize(
+        text.lowercase(Locale.GERMAN).replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss"), java.text.Normalizer.Form.NFD,
+    ).replace(Regex("\\p{M}+"), "")
+        .replace(Regex("[^\\p{L}\\p{N} ]"), " ").replace("liste", " ").replace(FUELL, " ").replace(Regex("\\s+"), " ").trim()
 
     /** Wörter, an denen die Art einer Liste erkennbar ist („Einkaufsliste“ → Einkauf). */
     private val ART_WOERTER = mapOf(
@@ -445,22 +491,37 @@ object Listen {
         fun ergebnis(l: List<Liste>) = when (l.size) { 0 -> null; 1 -> Treffer.Eine(l[0]); else -> Treffer.Mehrere(l) }
         ergebnis(alle.filter { glatt(it.name) == g })?.let { return it }
         ergebnis(alle.filter { glatt(it.name).replace(" ", "") == g.replace(" ", "") })?.let { return it }
-        ergebnis(alle.filter { val n = glatt(it.name); n.isNotEmpty() && (n.contains(g) || g.contains(n)) })?.let { return it }
+        // Teilwort: der gesagte Name steckt im Listennamen, oder der Listenname ist ein ganzes Wort des Gesagten („Geschenkideen“ trifft nicht „Ideen“).
+        ergebnis(alle.filter { val n = glatt(it.name); n.isNotEmpty() && (n.contains(g) || wortTeil(g, n)) })?.let { return it }
         artAusName(name)?.let { art -> ergebnis(alle.filter { it.art == art.kennung })?.let { return it } }
         return Treffer.Keine
     }
 
-    /** Findet einen Eintrag einer Liste nach Kennung oder Titel (gleicher Titel vor Teilwort; offene vor erledigten). */
-    fun findeEintrag(stand: ListenStand, liste: Long, text: String): List<Eintrag> {
+    private fun wortTeil(gesagt: String, name: String) = " $gesagt ".contains(" $name ")
+
+    /**
+     * Findet einen Eintrag einer Liste nach Kennung oder Titel: gleicher Titel vor Teilwort (mindestens drei Zeichen; ein kurzer Titel
+     * wie „Ei“ trifft nur als ganzes Wort, nie in „Reis“). Mehrere Treffer: offene zuerst, mit [erledigteZuerst] (wieder öffnen) erledigte.
+     */
+    fun findeEintrag(stand: ListenStand, liste: Long, text: String, erledigteZuerst: Boolean = false): List<Eintrag> {
         val alle = stand.eintraegeVon(liste)
         text.trim().toLongOrNull()?.let { id -> alle.firstOrNull { it.id == id }?.let { return listOf(it) } }
-        val g = glatt(text).replace(" ", "")
+        val w = glatt(text)
+        val g = w.replace(" ", "")
         if (g.isEmpty()) return emptyList()
         fun n(e: Eintrag) = glatt(e.titel).replace(" ", "")
         val gleich = alle.filter { n(it) == g }
-        val teil = gleich.ifEmpty { alle.filter { n(it).isNotEmpty() && (n(it).contains(g) || g.contains(n(it))) } }
-        return teil.sortedBy { it.erledigt }.let { l -> if (l.any { !it.erledigt } && l.size > 1) l.filter { !it.erledigt } else l }
+        val teil = gleich.ifEmpty { alle.filter { n(it).isNotEmpty() && ((g.length >= 3 && n(it).contains(g)) || wortTeil(w, glatt(it.titel))) } }
+        val bevorzugt = teil.filter { it.erledigt == erledigteZuerst }
+        return if (teil.size > 1 && bevorzugt.isNotEmpty()) bevorzugt else teil
     }
+
+    /** Fälligkeit kurz für App und Widget: heute, morgen, gestern oder „12.11.“. */
+    fun datumKurz(iso: String): String = runCatching {
+        val d = LocalDate.parse(iso)
+        val heute = LocalDate.now()
+        when (d) { heute -> "heute"; heute.plusDays(1) -> "morgen"; heute.minusDays(1) -> "gestern"; else -> "%d.%d.".format(d.dayOfMonth, d.monthValue) }
+    }.getOrDefault(iso)
 
     /** Schnelleingabe wie in TickTick: „Milch !hoch #kühl“ → Titel „Milch“, Priorität hoch, Tag „kühl“ (!1 bis !3 oder Wort). */
     data class Schnell(val titel: String, val prioritaet: Int, val tags: List<String>)

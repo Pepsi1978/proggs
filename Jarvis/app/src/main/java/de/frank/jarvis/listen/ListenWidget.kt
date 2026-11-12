@@ -26,7 +26,7 @@ import de.frank.jarvis.observability.Logbuch
  */
 class ListenWidgetEmpfaenger : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { ListenWidget.zeichne(context, manager, it) }
+        ids.forEach { runCatching { ListenWidget.zeichne(context, manager, it) }.onFailure { Logbuch.fehler("Listen-Widget", it) } }
     }
 
     override fun onDeleted(context: Context, ids: IntArray) {
@@ -37,6 +37,12 @@ class ListenWidgetEmpfaenger : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ListenWidget.AKTION) { super.onReceive(context, intent); return }
+        // Dateien schreiben und Widgets zeichnen nicht im Hauptfaden: goAsync hält den Empfänger am Leben, bis es fertig ist.
+        val fertig = goAsync()
+        Thread({ try { verarbeite(context, intent) } finally { fertig.finish() } }, "listen-widget").start()
+    }
+
+    private fun verarbeite(context: Context, intent: Intent) {
         val widget = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         val app = context.applicationContext
         val p = ListenWidget.prefs(app)
@@ -44,8 +50,9 @@ class ListenWidgetEmpfaenger : AppWidgetProvider() {
             when (intent.getStringExtra(ListenWidget.WAS)) {
                 "abhaken" -> {
                     val id = intent.getLongExtra(ListenWidget.EINTRAG, 0L)
-                    val e = Listen.sicher(app).eintraege.firstOrNull { it.id == id } ?: return@runCatching
-                    Listen.abhaken(app, id, !e.erledigt)   // aktualisiert alle Widgets selbst
+                    Listen.sicher(app).eintraege.firstOrNull { it.id == id } ?: return@runCatching
+                    // Der Zielzustand kommt aus der Zeile, die Frank gesehen hat: Ein noch nicht neu gezeichnetes Widget kehrt sonst das Abhaken um.
+                    Listen.abhaken(app, id, intent.getBooleanExtra(ListenWidget.ERLEDIGT, true))   // aktualisiert alle Widgets selbst
                     return
                 }
                 "wahl" -> p.edit().putBoolean("wahl_$widget", !p.getBoolean("wahl_$widget", false)).apply()
@@ -69,6 +76,10 @@ object ListenWidget {
     const val WAS = "was"
     const val EINTRAG = "eintrag"
     const val LISTE = "liste"
+    const val ERLEDIGT = "erledigt"
+    /** Höchstens so viele Zeilen (sonst sprengt eine lange Liste das Binder-Limit); Erledigte zählen dabei höchstens 30. */
+    private const val MAX_ZEILEN = 150
+    private const val MAX_ERLEDIGTE = 30
     /** Für MainActivity: diese Liste öffnen (Long); mit [EXTRA_NEU] gleich zum Eintippen. */
     const val EXTRA_OEFFNEN = "de.frank.jarvis.LISTE_OEFFNEN"
     const val EXTRA_NEU = "de.frank.jarvis.LISTE_NEU"
@@ -144,7 +155,10 @@ object ListenWidget {
                 }
                 v.setTextViewText(R.id.widget_leer, "Noch keine Liste. Tippen, um Jarvis zu öffnen.")
             } else {
-                Listen.ansicht(stand, liste).forEachIndexed { i, z ->
+                val alleZeilen = Listen.ansicht(stand, liste)
+                val ersteErledigte = alleZeilen.indexOfFirst { it.kopf == "Erledigt" }
+                val zeilen = (if (ersteErledigte < 0) alleZeilen else alleZeilen.take(ersteErledigte + 1 + MAX_ERLEDIGTE)).take(MAX_ZEILEN)
+                zeilen.forEachIndexed { i, z ->
                     val e = z.eintrag
                     if (e == null) {
                         val k = RemoteViews(app.packageName, R.layout.widget_listen_kopf)
@@ -159,14 +173,14 @@ object ListenWidget {
                         r.setInt(R.id.zeile_haken, "setColorFilter", if (e.erledigt) ERFOLG else PRIO[e.prioritaet.coerceIn(0, 3)])
                         val info = buildList {
                             if (z.kinderGesamt > 0) add("${z.kinderErledigt}/${z.kinderGesamt}")
-                            if (e.faellig.length >= 10) add(e.faellig.substring(8, 10) + "." + e.faellig.substring(5, 7) + ".")
+                            if (e.faellig.isNotEmpty()) add(Listen.datumKurz(e.faellig))
                             if (e.angeheftet) add("📌")
                         }.joinToString("  ")
                         r.setTextViewText(R.id.zeile_info, info)
                         r.setTextColor(R.id.zeile_info, LEISE)
                         val dp = app.resources.displayMetrics.density
                         r.setViewPadding(R.id.zeile, ((10 + 22 * z.tiefe) * dp).toInt(), (7 * dp).toInt(), (10 * dp).toInt(), (7 * dp).toInt())
-                        r.setOnClickFillInIntent(R.id.zeile, Intent().putExtra(WAS, "abhaken").putExtra(EINTRAG, e.id))
+                        r.setOnClickFillInIntent(R.id.zeile, Intent().putExtra(WAS, "abhaken").putExtra(EINTRAG, e.id).putExtra(ERLEDIGT, !e.erledigt))
                         b.addItem(e.id, r)
                     }
                 }

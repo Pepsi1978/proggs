@@ -79,8 +79,8 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private fun eintragFinden(l: Liste, text: String): Pair<Eintrag?, Ergebnis?> {
-        val t = Listen.findeEintrag(stand(), l.id, text)
+    private fun eintragFinden(l: Liste, text: String, erledigteZuerst: Boolean = false): Pair<Eintrag?, Ergebnis?> {
+        val t = Listen.findeEintrag(stand(), l.id, text, erledigteZuerst)
         return when {
             t.size == 1 -> t[0] to null
             t.isEmpty() -> null to Ergebnis("Auf „${l.name}“ steht nichts wie „$text“.", fehler = true)
@@ -122,7 +122,7 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                 "(fehlt die Liste ganz, legt Jarvis sie an). „Setz Milch und Brot auf die Einkaufsliste“ → eintraege [„Milch“, „Brot“]. " +
                 "Unterpunkt: „Füge bei Grillen Kohle hinzu“ → hinzufuegen mit unter „Grillen“. „Hake Brot ab“ → abhaken (eintrag „Brot“). " +
                 "„Brot doch nicht erledigt“ → wieder_oeffnen. „Mach Milch wichtig“ → aendern mit prioritaet hoch. „Streich Brot von der Liste“ → loeschen. " +
-                "„Schieb Kohle auf die Packliste“ → verschieben mit ziel_liste. „Heft Milch oben an“ → aendern mit angeheftet true. " +
+                "„Schieb Kohle auf die Packliste“ → verschieben mit ziel_liste. „Heft Milch oben an“ → aendern mit angeheftet an. Nur Felder mitschicken, die sich ändern sollen; „ohne“ leert Notiz, Tags, Fälligkeit oder Abschnitt. " +
                 "Ist liste nicht angegeben und gibt es nur eine Liste, gilt diese. Meldet das Werkzeug mehrere passende Listen oder Einträge, frag Frank kurz nach.",
             schema = schema(
                 "aktion" to text("hinzufuegen, abhaken, wieder_oeffnen, aendern, loeschen oder verschieben.", listOf("hinzufuegen", "abhaken", "wieder_oeffnen", "aendern", "loeschen", "verschieben")),
@@ -131,11 +131,11 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                 "eintrag" to text("Bei abhaken, wieder_oeffnen, aendern, loeschen, verschieben: der vorhandene Eintrag (Titel oder id)."),
                 "unter" to text("Optional beim Hinzufügen und Ändern: Titel oder id des Oberpunkts, unter den die Einträge als Unterpunkte kommen; „oben“ = oberste Ebene."),
                 "prioritaet" to text("Optional: keine, niedrig, mittel oder hoch.", listOf("keine", "niedrig", "mittel", "hoch")),
-                "notiz" to text("Optional: Notiz zum Eintrag."),
+                "notiz" to text("Optional: Notiz zum Eintrag; „ohne“ löscht sie."),
                 "faellig" to text("Optional: Fälligkeit JJJJ-MM-TT, heute, morgen oder ohne."),
-                "tags" to textListe("Optional: Tags ohne #."),
+                "tags" to textListe("Optional: Tags ohne #; [„ohne“] löscht alle."),
                 "abschnitt" to text("Optional: Abschnitt innerhalb der Liste (etwa „Drogerie“); „ohne“ entfernt ihn."),
-                "angeheftet" to schalter("Optional beim Ändern: oben anheften (true) oder lösen (false)."),
+                "angeheftet" to text("Nur wenn Frank es verlangt: an = oben anheften, aus = lösen.", listOf("an", "aus")),
                 "neuer_titel" to text("Beim Ändern: neuer Titel."),
                 "ziel_liste" to text("Beim Verschieben: Name der Zielliste."),
             ),
@@ -167,6 +167,8 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun prioAus(a: JSONObject): Int? = if (a.gesetzt("prioritaet")) Prioritaet.von(a.optString("prioritaet")) else null
     private fun faelligAus(a: JSONObject): String? = if (a.gesetzt("faellig")) Ergebnispruefung.datum(a.optString("faellig")) else null
+    /** „ohne“ in beliebiger Schreibweise (auch „#ohne“, „keine“): ausdrücklich leeren. */
+    private fun ohne(text: String) = text.trim().removePrefix("#").lowercase() in setOf("ohne", "keine", "keiner", "leer")
 
     private fun eintragAusfuehren(a: JSONObject): Ergebnis {
         val aktion = a.optString("aktion")
@@ -177,6 +179,8 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
             1 -> s.listen[0].name
             else -> return Ergebnis("Welche Liste ist gemeint? Vorhanden: ${s.listen.joinToString { "„${it.name}“" }}. Frag Frank kurz.", fehler = true)
         }
+        // Ein Datum, das sich nicht lesen lässt, nie still weglassen: Frank verließe sich sonst darauf.
+        if (a.gesetzt("faellig") && faelligAus(a) == null) return Ergebnis("Das Datum „${a.optString("faellig")}“ verstehe ich nicht; bitte als JJJJ-MM-TT, heute, morgen oder ohne angeben.", fehler = true)
         val (l, fehler) = liste(name, anlegen = aktion == "hinzufuegen")
         if (fehler != null) return fehler
         l!!
@@ -196,7 +200,7 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                 if (f != null) return f
                 val neu = titel.mapNotNull { t ->
                     Listen.hinzufuegen(context, l.id, t, vater, prioAus(a) ?: 0, a.optString("notiz").takeIf { a.gesetzt("notiz") }.orEmpty(),
-                        faelligAus(a).orEmpty(), a.liste("tags"), a.optString("abschnitt").takeIf { a.gesetzt("abschnitt") && it != "ohne" }.orEmpty())
+                        faelligAus(a).orEmpty(), a.liste("tags"), a.optString("abschnitt").trim().takeIf { a.gesetzt("abschnitt") && !ohne(it) }.orEmpty())
                 }
                 val wer = neu.joinToString(", ") { it.titel }
                 val unter = if (vater != 0L) " als Unterpunkt von „${stand().eintraege.firstOrNull { it.id == vater }?.titel}“" else ""
@@ -208,7 +212,7 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                 if (namen.isEmpty()) return Ergebnis("Welcher Eintrag ist gemeint?", fehler = true)
                 val erledigt = ArrayList<String>()
                 for (n in namen) {
-                    val (e, f) = eintragFinden(l, n)
+                    val (e, f) = eintragFinden(l, n, erledigteZuerst = aktion == "wieder_oeffnen")
                     if (f != null) return if (erledigt.isEmpty()) f else Ergebnis("Erledigt: ${erledigt.joinToString()}. Dann: ${f.text}", fehler = true)
                     when (aktion) {
                         "abhaken" -> Listen.abhaken(context, e!!.id, true)
@@ -234,14 +238,14 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                         titel = a.optString("neuer_titel").takeIf { a.gesetzt("neuer_titel") }?.trim() ?: x.titel,
                         prioritaet = prioAus(a) ?: x.prioritaet,
                         // Leere Felder, die das Modell nur mitschickt, ändern nichts: „ohne“ löscht ausdrücklich.
-                        notiz = if (a.gesetzt("notiz")) a.optString("notiz").trim().takeIf { it != "ohne" }.orEmpty() else x.notiz,
+                        notiz = if (a.gesetzt("notiz")) a.optString("notiz").trim().takeIf { !ohne(it) }.orEmpty() else x.notiz,
                         faellig = faelligAus(a) ?: x.faellig,
-                        tags = a.liste("tags").takeIf { it.isNotEmpty() }?.let { t -> if (t == listOf("ohne")) emptyList() else t.map { it.removePrefix("#") } } ?: x.tags,
-                        abschnitt = if (a.gesetzt("abschnitt")) a.optString("abschnitt").takeIf { it != "ohne" }.orEmpty() else x.abschnitt,
-                        angeheftet = if (a.has("angeheftet")) a.optBoolean("angeheftet") else x.angeheftet,
+                        tags = a.liste("tags").takeIf { it.isNotEmpty() }?.let { t -> if (t.all(::ohne)) emptyList() else t.map { it.removePrefix("#") } } ?: x.tags,
+                        abschnitt = if (a.gesetzt("abschnitt") && x.eltern == 0L) a.optString("abschnitt").trim().takeIf { !ohne(it) }.orEmpty() else x.abschnitt,
+                        angeheftet = when (a.optString("angeheftet").trim().lowercase()) { "an", "true", "ja" -> true; "aus", "false", "nein" -> false; else -> x.angeheftet },
                     )
                 }
-                if (a.gesetzt("abschnitt") && a.optString("abschnitt") != "ohne") Listen.listeAendern(context, l.id) { x ->
+                if (a.gesetzt("abschnitt") && !ohne(a.optString("abschnitt"))) Listen.listeAendern(context, l.id) { x ->
                     if (a.optString("abschnitt").trim() in x.abschnitte) x else x.copy(abschnitte = x.abschnitte + a.optString("abschnitt").trim())
                 }
                 Ergebnis("„${n?.titel}“ auf „${l.name}“ geändert (Priorität ${Prioritaet.name(n?.prioritaet ?: 0)}${n?.faellig?.takeIf { it.isNotEmpty() }?.let { ", fällig $it" }.orEmpty()}).")
@@ -249,9 +253,11 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
             "verschieben" -> {
                 val (e, f) = eintragFinden(l, a.optString("eintrag"))
                 if (f != null) return f
+                if (!a.gesetzt("ziel_liste")) return Ergebnis("In welche Liste soll „${e!!.titel}“?", fehler = true)
                 val (z, f2) = liste(a.optString("ziel_liste"), anlegen = false)
                 if (f2 != null) return f2
-                Listen.verschieben(context, e!!.id, z!!.id)
+                if (z!!.id == l.id) return Ergebnis("„${e!!.titel}“ steht schon auf „${l.name}“.", fehler = true)
+                Listen.verschieben(context, e!!.id, z.id) ?: return Ergebnis("„${e.titel}“ ließ sich nicht verschieben.", fehler = true)
                 Ergebnis("„${e.titel}“ von „${l.name}“ nach „${z.name}“ verschoben.")
             }
             else -> Ergebnis("Unbekannte Aktion „$aktion“.", fehler = true)
@@ -268,6 +274,8 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
             val l = Listen.listeAnlegen(context, name.replaceFirstChar { it.uppercase() }, art.kennung)
             return Ergebnis("Liste „${l.name}“ (${art.anzeige}) angelegt; im Widget wählbar.")
         }
+        // Löschen nur mit ausdrücklichem Namen: Ein leerer Name träfe sonst die einzige Liste.
+        if (aktion == "loeschen" && Listen.glatt(a.optString("name")).isEmpty()) return Ergebnis("Welche Liste soll gelöscht werden? Bitte den Namen nennen.", fehler = true)
         val (l, fehler) = liste(a.optString("name"), anlegen = false)
         if (fehler != null) return fehler
         l!!
@@ -300,7 +308,9 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                 Ergebnis("„${l.name}“ ist jetzt eine ${art.anzeige}-Liste.")
             }
             "abschnitte" -> {
-                val neu = a.liste("abschnitte")
+                // Ohne Angabe nur lesen: Ein fehlendes Feld darf nie alle Abschnitte entfernen; leeren mit [„ohne“].
+                if (!a.has("abschnitte")) return Ergebnis(if (l.abschnitte.isEmpty()) "„${l.name}“ hat keine Abschnitte." else "Abschnitte von „${l.name}“: ${l.abschnitte.joinToString()}.")
+                val neu = a.liste("abschnitte").filterNot(::ohne).map { it.trim() }.distinct()
                 Listen.listeAendern(context, l.id) { it.copy(abschnitte = neu) }
                 Ergebnis(if (neu.isEmpty()) "Abschnitte von „${l.name}“ entfernt." else "Abschnitte von „${l.name}“: ${neu.joinToString()}.")
             }

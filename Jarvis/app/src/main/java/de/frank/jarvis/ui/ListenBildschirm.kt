@@ -191,7 +191,8 @@ private fun bloecke(zeilen: List<Zeile>, manuell: Boolean): List<ListenBlock> {
     zeilen.forEachIndexed { i, z ->
         when {
             z.kopf != null -> { erledigtTeil = z.kopf == "Erledigt"; aus += ListenBlock(-1L - i, listOf(z), false) }
-            z.tiefe == 0 -> aus += ListenBlock(z.eintrag!!.id, listOf(z), manuell && !erledigtTeil && !z.eintrag.erledigt)
+            // Angeheftete stehen immer oben und lassen sich nicht unter andere ziehen (sie sprängen sonst zurück).
+            z.tiefe == 0 -> aus += ListenBlock(z.eintrag!!.id, listOf(z), manuell && !erledigtTeil && !z.eintrag.erledigt && !z.eintrag.angeheftet)
             aus.isNotEmpty() -> aus[aus.lastIndex] = aus.last().copy(zeilen = aus.last().zeilen + z)
         }
     }
@@ -209,8 +210,9 @@ private fun androidx.compose.foundation.layout.ColumnScope.ListeAnsehen(l: Liste
     var sortMenue by remember { mutableStateOf(false) }
     var einstellen by remember { mutableStateOf(false) }
     var loeschenFrage by remember { mutableStateOf(false) }
-    var bearbeite by remember { mutableStateOf<Long?>(null) }
-    var unter by remember { mutableStateOf<Eintrag?>(null) }
+    // An die Liste gebunden: Wechselt das Widget die offene Liste, gilt kein Oberpunkt oder Dialog der vorigen weiter.
+    var bearbeite by remember(l.id) { mutableStateOf<Long?>(null) }
+    var unter by remember(l.id) { mutableStateOf<Eintrag?>(null) }
     var eingabe by rememberSaveable(l.id) { mutableStateOf("") }
     val fokus = remember { FocusRequester() }
 
@@ -303,7 +305,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.ListeAnsehen(l: Liste
 
     bearbeite?.let { id ->
         val e = stand.eintraege.firstOrNull { it.id == id }
-        if (e == null) bearbeite = null
+        if (e == null) LaunchedEffect(id) { bearbeite = null }
         else EintragDialog(e, l, stand.listen, beiUnterpunkt = { unter = e; bearbeite = null; runCatching { fokus.requestFocus() } }) { bearbeite = null }
     }
     if (einstellen) ListeDialog(l) { einstellen = false }
@@ -359,11 +361,7 @@ private fun EintragZeile(z: Zeile, griff: Modifier?, antippen: () -> Unit) {
     }
 }
 
-private fun datumKurz(iso: String): String = runCatching {
-    val d = java.time.LocalDate.parse(iso)
-    val heute = java.time.LocalDate.now()
-    when (d) { heute -> "heute"; heute.plusDays(1) -> "morgen"; heute.minusDays(1) -> "gestern"; else -> "%d.%d.".format(d.dayOfMonth, d.monthValue) }
-}.getOrDefault(iso)
+private fun datumKurz(iso: String): String = Listen.datumKurz(iso)
 
 // ---------------------------------------------------------------- Dialoge
 
@@ -391,13 +389,14 @@ private fun EintragDialog(e: Eintrag, l: Liste, listen: List<Liste>, beiUnterpun
     var abschnitt by remember(e.id) { mutableStateOf(e.abschnitt) }
     var angeheftet by remember(e.id) { mutableStateOf(e.angeheftet) }
     var verschieben by remember { mutableStateOf(false) }
-    fun speichern() {
+    fun uebernehmen() {
         val neuTags = tags.split(Regex("[\\s,]+")).map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }
         if (abschnitt.isNotBlank() && abschnitt.trim() !in l.abschnitte) Listen.listeAendern(context, l.id) { it.copy(abschnitte = it.abschnitte + abschnitt.trim()) }
         Listen.aendern(context, e.id) { it.copy(titel = titel.trim().ifEmpty { it.titel }, notiz = notiz.trim(), prioritaet = prio, faellig = faellig, tags = neuTags,
             abschnitt = if (e.eltern == 0L) abschnitt.trim() else it.abschnitt, angeheftet = angeheftet) }
-        schliessen()
     }
+    // Schreibt nur, was sich wirklich geändert hat (der Speicher vergleicht): bloßes Ansehen ändert nichts am Abgleich.
+    fun speichern() { uebernehmen(); schliessen() }
     AlertDialog(
         onDismissRequest = { speichern() }, containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
         title = { Text("Eintrag") },
@@ -433,11 +432,11 @@ private fun EintragDialog(e: Eintrag, l: Liste, listen: List<Liste>, beiUnterpun
                 item {
                     FlowRow {
                         Chip("+ Unterpunkt", false) { speichern(); beiUnterpunkt() }
-                        if (e.eltern != 0L) Chip("Auf oberste Ebene", false) { Listen.einhaengen(context, e.id, 0L); schliessen() }
+                        if (e.eltern != 0L) Chip("Auf oberste Ebene", false) { uebernehmen(); Listen.einhaengen(context, e.id, 0L); schliessen() }
                         if (listen.size > 1) Chip("Verschieben …", verschieben) { verschieben = !verschieben }
                     }
                     if (verschieben) FlowRow(Modifier.padding(top = 4.dp)) {
-                        listen.filter { it.id != l.id }.forEach { z -> Chip("${ListenArt.von(z.art).symbol} ${z.name}", false) { Listen.verschieben(context, e.id, z.id); schliessen() } }
+                        listen.filter { it.id != l.id }.forEach { z -> Chip("${ListenArt.von(z.art).symbol} ${z.name}", false) { uebernehmen(); Listen.verschieben(context, e.id, z.id); schliessen() } }
                     }
                 }
             }
