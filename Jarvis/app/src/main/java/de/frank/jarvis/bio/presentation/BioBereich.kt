@@ -56,8 +56,8 @@ object BioAnsicht {
     val stapel = mutableStateListOf<BioSeite>()
 
     /**
-     * Betritt den Bereich. Nur hier wird der Abruf beim Öffnen ausgelöst (Auslöser 1 in [BioAbruf]), genau einmal je Betreten:
-     * Ist der Bereich schon offen, passiert nichts.
+     * Betritt den Bereich, genau einmal je Betreten (ist er schon offen, passiert nichts). Kein Abruf bei den Quellen; auf dem
+     * Tablet nur die sofortige Nachschau nach einem neueren Stand vom Handy.
      */
     fun oeffnen(context: Context) {
         if (offen) return

@@ -37,5 +37,19 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         // Dienst bei jedem Prozessstart sicherstellen: Samsung überspringt MY_PACKAGE_REPLACED, wenn Jarvis
         // beim Update vorn war. Dann fehlten Tunnel und Update-Signale bis zum nächsten Öffnen.
         JarvisDienst.abgleichen(this)
+        // Tablet: Kommt Jarvis nach vorn (keine Activity sichtbar → eine sichtbar), sofort nach einem neuen Biomarker-Stand vom
+        // Handy schauen, unabhängig davon, welcher Bildschirm oder welche Startkarte gerade gezeigt wird.
+        if (de.frank.jarvis.data.Geraet.istTablet) registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var sichtbar = 0
+            override fun onActivityStarted(activity: android.app.Activity) {
+                if (sichtbar++ == 0) de.frank.jarvis.bio.BioSpiegel.jetztNachschauen(this@JarvisApplication)
+            }
+            override fun onActivityStopped(activity: android.app.Activity) { if (sichtbar > 0) sichtbar-- }
+            override fun onActivityCreated(activity: android.app.Activity, zustand: android.os.Bundle?) {}
+            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityPaused(activity: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, zustand: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        })
     }
 }

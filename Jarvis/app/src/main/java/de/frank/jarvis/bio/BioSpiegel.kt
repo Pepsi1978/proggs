@@ -12,8 +12,14 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import de.frank.jarvis.speech.GespraechsFokus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,8 +43,8 @@ object BioSpiegel {
     private const val ID = "biomarker"
     private val sperre = Mutex()
     /** Tablet: zählt jedes Einspielen eines neuen Handy-Stands, damit offene Anzeigen (Startkarte, Abrufstand) sofort neu lesen. */
-    private val _eingespielt = kotlinx.coroutines.flow.MutableStateFlow(0)
-    val eingespielt: kotlinx.coroutines.flow.StateFlow<Int> = _eingespielt
+    private val _eingespielt = MutableStateFlow(0)
+    val eingespielt: StateFlow<Int> = _eingespielt
     private var anstehend: Job? = null
     private val netz by lazy { OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).build() }
     private val JSON = "application/json".toMediaType()
@@ -51,15 +57,20 @@ object BioSpiegel {
         return "https://${e.serverHost}/j/${e.geheimnis}/abgleich"
     }
 
-    /** Tablet: die ständige Nachschau, ob das Handy einen neuen Stand hochgeladen hat. */
+    /** Tablet: die ständige Nachschau, ob das Handy einen neuen Stand hochgeladen hat. Läuft, solange der Jarvis-Dienst läuft. */
     private var nachschau: Job? = null
+    /** Anstöße für eine sofortige Nachschau; mehrere kurz hintereinander (Öffnen, Auf- und Zuklappen) ergeben genau eine. */
+    private val anstoss = Channel<Unit>(Channel.CONFLATED)
     /** Abstand der Nachschau auf dem Tablet. Die Frage an den Server ist billig; die Datenbank kommt nur, wenn sie sich geändert hat. */
     private const val NACHSCHAU_MS = 5 * 60_000L
+    /** Ein Stand, der beschädigt ankam oder sich nicht einspielen ließ, wird so lange nicht erneut geladen (außer das Handy lädt neu hoch). */
+    private const val FEHL_PAUSE_MS = 60 * 60_000L
 
     /**
      * Beim Start des Dienstes: Das Handy lädt einen noch nicht gespiegelten Stand hoch. Das Tablet holt den neuesten und schaut
-     * danach alle fünf Minuten nach, damit jede Aktualisierung am Handy (Knopf, Sprache, 9 und 21 Uhr) von selbst ankommt, auch
-     * wenn auf dem Tablet niemand etwas antippt und dort keine eigene Tagesauswertung läuft.
+     * danach alle fünf Minuten nach (und sofort bei [jetztNachschauen]), damit jede Aktualisierung am Handy (Knopf, Sprache,
+     * 9 und 21 Uhr) von selbst ankommt, auch wenn auf dem Tablet niemand etwas antippt und dort keine eigene Tagesauswertung
+     * läuft. Während eines Sprachgesprächs ruht die Nachschau.
      */
     fun starte(context: Context) {
         val app = context.applicationContext
@@ -68,19 +79,28 @@ object BioSpiegel {
             if (nachschau?.isActive == true) return
             nachschau = BioModul.bereich.launch {
                 einfrierenAufDemTablet(app)
-                while (true) {
-                    holen(app)
-                    delay(NACHSCHAU_MS)
+                while (isActive) {
+                    if (!GespraechsFokus.sprachmodus) holen(app)
+                    withTimeoutOrNull(NACHSCHAU_MS) { anstoss.receive() }
                 }
             }
         }
     }
 
-    /** Tablet: sofort nachschauen (etwa beim Öffnen des Biomarker-Bereichs). Ruft nie selbst bei den Quellen ab. */
+    /** Dienst beendet: keine Nachschau mehr im Hintergrund. */
+    fun stoppe() {
+        synchronized(this) { nachschau?.cancel(); nachschau = null }
+    }
+
+    /** Tablet: sofort nachschauen (Jarvis kommt nach vorn, Biomarker-Bereich geöffnet). Ruft nie selbst bei den Quellen ab. */
     fun jetztNachschauen(context: Context) {
         if (!Geraet.istTablet) return
-        val app = context.applicationContext
-        BioModul.bereich.launch { holen(app) }
+        anstoss.trySend(Unit)
+        // Ohne laufenden Dienst (gerade gestartet oder beendet) einmal direkt, außer während eines Sprachgesprächs.
+        if (nachschau?.isActive != true && !GespraechsFokus.sprachmodus) {
+            val app = context.applicationContext
+            BioModul.bereich.launch { holen(app) }
+        }
     }
 
     /**
@@ -182,18 +202,33 @@ object BioSpiegel {
     suspend fun holen(context: Context) {
         try {
             holenGesperrt(context.applicationContext)
+            gemeldet = null
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: IOException) {
             // Netz weg: die nächste Nachschau holt es nach. Einmal je Ausfall ins Logbuch, damit ein hängender Spiegel auffällt.
-            if (!netzFehlerGemeldet) { netzFehlerGemeldet = true; Logbuch.system("Biomarker-Spiegel", "Stand vom Handy gerade nicht erreichbar: ${e.message}") }
+            melde("netz:${e.message}") { Logbuch.system("Biomarker-Spiegel", "Stand vom Handy gerade nicht erreichbar: ${e.message}") }
         } catch (e: Exception) {
-            // Kaputter Stand, anderes Schema, unerwartete Antwort: im Logbuch, aber nie ein Absturz von Jarvis.
-            Logbuch.fehler("Biomarker-Spiegel", e, "Stand vom Handy nicht eingespielt")
+            // Kaputter Stand, anderes Schema, abgewiesene Anmeldung, unerwartete Antwort: im Logbuch (einmal je Ursache),
+            // aber nie ein Absturz von Jarvis.
+            melde("fehler:${e.javaClass.simpleName}:${e.message}") { Logbuch.fehler("Biomarker-Spiegel", e, "Stand vom Handy nicht eingespielt") }
         }
     }
 
-    @Volatile private var netzFehlerGemeldet = false
+    /** Zuletzt ins Logbuch geschriebene Ursache; dieselbe erscheint bei der Fünf-Minuten-Nachschau nicht jedes Mal neu. */
+    @Volatile private var gemeldet: String? = null
+
+    private inline fun melde(ursache: String, schreibe: () -> Unit) {
+        if (gemeldet == ursache) return
+        gemeldet = ursache
+        schreibe()
+    }
+
+    /** Antwort des Servers prüfen: Netzprobleme bleiben IOException (stilles Nachholen), eine Abweisung ist ein echter Fehler. */
+    private fun pruefe(code: Int, was: String): Nothing {
+        if (code == 401 || code == 403 || code == 404) throw IllegalStateException("$was: Server $code")
+        throw IOException("$was: Server $code")
+    }
 
     private suspend fun holenGesperrt(app: Context) = sperre.withLock {
         if (!Geraet.istTablet) return@withLock
@@ -205,14 +240,13 @@ object BioSpiegel {
         var runden = 0
         while (runden++ < 200) {
             val antwort = netz.newCall(Request.Builder().url("$basis/aenderungen?seit=$seit&geraet=${Uri.encode(Geraet.ablageName)}").build()).execute().use { r ->
-                if (!r.isSuccessful) throw IOException("Server ${r.code}")
+                if (!r.isSuccessful) pruefe(r.code, "Änderungen")
                 JSONObject(r.body?.string().orEmpty())
             }
-            netzFehlerGemeldet = false
             // Neu aufgesetzter Speicher am Server: Der gemerkte Zeiger gilt nicht mehr, von vorn lesen.
             val instanz = antwort.optString("instanz")
             if (seit != 0L && (antwort.optBoolean("neuaufbau") || (p.getString("instanz", "").orEmpty().isNotEmpty() && p.getString("instanz", "") != instanz))) {
-                seit = 0L; p.edit().putString("instanz", instanz).putString("eingespielt", "").putString("eingespielt_db", "").apply(); continue
+                seit = 0L; p.edit().putString("instanz", instanz).putString("eingespielt", "").putString("eingespielt_db", "").remove("offen").remove("fehl_sha").apply(); continue
             }
             p.edit().putString("instanz", instanz).apply()
             val docs = antwort.optJSONArray("docs")
@@ -225,24 +259,36 @@ object BioSpiegel {
             if (!antwort.optBoolean("mehr") || weiter == seit) { seit = weiter; break }
             seit = weiter
         }
-        val doc = neu ?: run { p.edit().putLong("seit", seit).apply(); return@withLock }
-        val daten = doc.optJSONObject("daten") ?: return@withLock
+        // Den Zeiger immer weiterschieben, damit keine Runde den Rückstand erneut liest. Ein gefundener, noch nicht eingespielter
+        // Stand bleibt als „offen“ gemerkt und wird bei der nächsten Runde weiterversucht, auch wenn der Server ihn nicht mehr meldet.
+        val zeiger = p.edit().putLong("seit", seit)
+        neu?.let { zeiger.putString("offen", it.toString()) }
+        zeiger.apply()
+        val doc = neu ?: p.getString("offen", null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return@withLock
+        val daten = doc.optJSONObject("daten") ?: run { p.edit().remove("offen").apply(); return@withLock }
         val sha = daten.optString("text_sha")
         val inhalt = daten.optString("inhalt").ifEmpty { sha }
-        if (sha.isEmpty() || inhalt == p.getString("eingespielt", "")) { p.edit().putLong("seit", seit).apply(); return@withLock }
-        while (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) delay(30_000)
+        if (sha.isEmpty() || inhalt == p.getString("eingespielt", "")) { p.edit().remove("offen").apply(); return@withLock }
+        while (GespraechsFokus.sprachmodus) delay(30_000)
         // Messwerte nur neu einspielen, wenn sich die Datenbank geändert hat; der Abrufstand kommt immer mit.
         if (sha != p.getString("eingespielt_db", "")) {
+            // Derselbe Stand scheiterte eben schon (beschädigt, anderes Schema): nicht alle fünf Minuten die ganze Datenbank laden.
+            if (sha == p.getString("fehl_sha", "") && System.currentTimeMillis() - p.getLong("fehl_ms", 0L) < FEHL_PAUSE_MS) return@withLock
             val datei = File(app.cacheDir, "bio_spiegel_fern.db")
             try {
                 netz.newCall(Request.Builder().url("$basis/blob/$sha").build()).execute().use { r ->
-                    if (!r.isSuccessful) throw IOException("Spiegel holen: Server ${r.code}")
+                    if (!r.isSuccessful) pruefe(r.code, "Spiegel holen")
                     val koerper = r.body ?: throw IOException("Spiegel holen: leere Antwort")
                     datei.outputStream().use { aus -> koerper.byteStream().copyTo(aus) }
                 }
-                if (sha256(datei) != sha) { Logbuch.fehler("Biomarker-Spiegel", null, "Der Stand vom Handy kam beschädigt an."); return@withLock }
-                ersetze(datei)
-                p.edit().putString("eingespielt_db", sha).apply()
+                try {
+                    if (sha256(datei) != sha) throw IllegalStateException("Der Stand vom Handy kam beschädigt an.")
+                    ersetze(datei)
+                } catch (e: Exception) {
+                    p.edit().putString("fehl_sha", sha).putLong("fehl_ms", System.currentTimeMillis()).apply()
+                    throw e
+                }
+                p.edit().putString("eingespielt_db", sha).remove("fehl_sha").apply()
                 Logbuch.system("Biomarker-Spiegel", "Stand vom Handy eingespielt (${datei.length() / 1024} KB)")
             } finally {
                 datei.delete()
@@ -252,7 +298,7 @@ object BioSpiegel {
         BioModul.sync.vergiss()
         daten.optJSONArray("karten")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
             ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
-        p.edit().putString("eingespielt", inhalt).putLong("seit", seit).putLong("zeit", daten.optLong("zeit")).putString("von", doc.optString("von")).apply()
+        p.edit().putString("eingespielt", inhalt).remove("offen").putLong("zeit", daten.optLong("zeit")).putString("von", doc.optString("von")).apply()
         _eingespielt.value++
         BioAbruf.neuGelesen(app)
     }

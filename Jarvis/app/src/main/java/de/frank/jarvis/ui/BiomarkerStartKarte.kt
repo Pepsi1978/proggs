@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.bio.BioAbruf
 import de.frank.jarvis.bio.BioAuswertung
+import de.frank.jarvis.bio.BioSpiegel
 import de.frank.jarvis.bio.BioUebernahme
 import de.frank.jarvis.bio.presentation.BioAnsicht
 import de.frank.jarvis.data.Geraet
@@ -70,19 +71,12 @@ fun BiomarkerStartVorladen() {
     val abruf by BioAbruf.stand.collectAsState()
     val s = BiomarkerStartStand
     val bereit = BioAbruf.bereit(context)
-    // Tablet: Jedes Einspielen eines neuen Handy-Stands liest die Karte neu, und jedes Zurückholen von Jarvis nach vorn schaut
-    // sofort nach, statt bis zur nächsten Fünf-Minuten-Nachschau zu warten.
-    val spiegel by de.frank.jarvis.bio.BioSpiegel.eingespielt.collectAsState()
-    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(lebenszyklus) {
-        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, ereignis ->
-            if (ereignis == androidx.lifecycle.Lifecycle.Event.ON_START) de.frank.jarvis.bio.BioSpiegel.jetztNachschauen(context)
-        }
-        lebenszyklus.lifecycle.addObserver(beobachter)
-        onDispose { lebenszyklus.lifecycle.removeObserver(beobachter) }
-    }
+    // Tablet: Jedes Einspielen eines neuen Handy-Stands liest die Karte neu (die Nachschau selbst hängt an der App, nicht an dieser Karte).
+    val spiegel by BioSpiegel.eingespielt.collectAsState()
     LaunchedEffect(abruf.bericht, abruf.laeuft, bereit, s.uebernahme, spiegel) {
         if (!bereit) return@LaunchedEffect
+        // Der Datenstand des Spiegels gilt auch dann, wenn das Lesen der Werte unten einmal scheitert.
+        if (Geraet.istTablet) s.stand = BioSpiegel.standText(context)
         val nummer = s.lesung.incrementAndGet()
         val antwort = withContext(Dispatchers.IO) {
             runCatching {
@@ -98,7 +92,7 @@ fun BiomarkerStartVorladen() {
         }
         val st = antwort.optJSONObject("stand")
         s.stand = when {
-            Geraet.istTablet -> de.frank.jarvis.bio.BioSpiegel.standText(context)
+            Geraet.istTablet -> BioSpiegel.standText(context)
             st == null || st.isNull("letzter_abgleich") -> "Noch kein Abruf in Jarvis"
             else -> "Letzter Abruf " + abrufText(st.optString("letzter_abgleich"))
         }
@@ -113,7 +107,7 @@ private fun datumZusatz(datum: String): String =
 /**
  * Eigener Einstieg in den Biomarker-Bereich auf dem Startbildschirm: Franks Kerngrößen (Erholung, HRV, Ruhepuls,
  * Tiefschlafanteil, Schlaf, VO2max) mit Datum und Einordnung und der Zustand der Quellen beim letzten Abruf.
- * Die Karte LIEST nur den gespeicherten Stand; frisch abgerufen wird erst beim Öffnen des Bereichs.
+ * Die Karte LIEST nur den gespeicherten Stand; frisch abgerufen wird über den Aktualisieren-Knopf, per Sprache und vor jeder Tagesauswertung (Tablet: Spiegel des Handys).
  */
 @Composable
 fun BiomarkerStartKarte(griff: Modifier = Modifier) {
