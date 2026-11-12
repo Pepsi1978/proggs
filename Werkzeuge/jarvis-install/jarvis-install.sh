@@ -81,7 +81,8 @@ TEIL_DATEI=""
 aufraeumen() {
   # Nach einem Verbindungsabriss erst neu verbinden; auf einem anderen Gerät gehört uns dort nichts.
   [ -n "$SERIE" ] || { [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"; return 0; }
-  if { [ -n "$GERAET" ] || verbinde; } && [ "$(handy getprop ro.serialno)" = "$SERIE" ] && [ -n "$SPERRE_MEIN" ]; then
+  # verbinde prüft die bisherige Adresse selbst und wechselt nur, wenn sie nicht mehr antwortet (sonst bliebe die Sperre liegen).
+  if [ -n "${SPERRE_MEIN:-}" ] && verbinde && [ "$(handy getprop ro.serialno)" = "$SERIE" ]; then
     [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
     handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
     handy rmdir "$SPERRE" >/dev/null
@@ -130,7 +131,20 @@ if [ -n "$AAPT2" ]; then
 fi
 
 echo "Lade die APK vorab aufs Handy über $GERAET ..."
-  delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" "$PAKET" || ende fehler "APK ließ sich nicht aufs Handy laden"
+  if ! delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" "$PAKET"; then
+    # Hängender Tunnel: Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; zweiter Versuch nur über eine andere Adresse
+    # am selben Gerät (dieselbe hängende Leitung bliebe bis zum Zeitlimit stehen). Wie jarvis-install.ps1 (M4).
+    local alte="$GERAET"
+    "$WLAN_SKRIPT" --geraet "$ZIEL" >/dev/null 2>&1
+    GERAET=$(waehle_geraet)
+    if [ -n "$GERAET" ] && [ "$GERAET" != "$alte" ] && [ "$(handy getprop ro.serialno)" = "$SERIE" ]; then
+      echo "Neuer Versuch über $GERAET ..."
+      _delta_voll "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" || ende fehler "APK ließ sich nicht aufs Handy laden"
+    else
+      GERAET="$alte"
+      ende fehler "APK ließ sich nicht aufs Handy laden"
+    fi
+  fi
   local groesse ausgabe teil_groesse=0
   groesse=$(wc -c < "$APK" | tr -d ' ')
   # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.

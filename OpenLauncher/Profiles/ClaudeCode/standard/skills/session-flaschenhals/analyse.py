@@ -57,7 +57,18 @@ def alle_verlaeufe():
             for f in os.listdir(os.path.join(PROJEKTE, d)) if f.endswith(".jsonl")]
 
 
+_MASSNAHMEN = None
+
+
 def massnahmen():
+    """Einmal je Lauf laden (bei --letzte=40 sonst 41-mal); Einträge ohne id werden übergangen."""
+    global _MASSNAHMEN
+    if _MASSNAHMEN is None:
+        _MASSNAHMEN = [m for m in _massnahmen_laden() if m.get("id")]
+    return _MASSNAHMEN
+
+
+def _massnahmen_laden():
     try:
         with open(os.path.join(HIER, "massnahmen.json"), encoding="utf-8") as f:
             liste = json.load(f).get("massnahmen", [])
@@ -208,7 +219,8 @@ def analysiere(pfad):
                 a["fehlertext"] = re.sub(r"\s+", " ", txt)[:120] if a["fehler"] else ""
                 a["fehlerklasse"] = fehlerklasse(txt[:600]) if a["fehler"] else ""
                 # Anfang und Ende: Gradle & Co. melden den eigentlichen Fehler oft weit hinten (M7, M9, M19).
-                a["fehlerroh"] = (txt if len(txt) <= 4000 else txt[:1000] + "\n…\n" + txt[-3000:]) if a["fehler"] else ""
+                a["roh"] = txt if len(txt) <= 4000 else txt[:1000] + "\n…\n" + txt[-3000:]
+                a["fehlerroh"] = a["roh"] if a["fehler"] else ""
                 if a["name"] in MENSCH_WERKZEUGE:
                     mensch_s += max(0.0, t - a["start"])
                 letzte_zeit, letzte_art = t, "ergebnis"
@@ -317,8 +329,13 @@ def analysiere(pfad):
             return bool(ar.search(roh)) and roh.count("\n") + 1 >= mn.get("min_zeilen", 0)
         # fehler_am_aufruf: nur Fehler genau der Aufrufe zählen, die auf aufruf_regex passen. Sonst zählt z. B. jede
         # berechtigte Bump-Sperre des Hooks als Fehler gegen alle Ausnahmen (M3, M5, M13, M23), die denselben Text haben.
-        n_f = sum(1 for a in fehler if fr and fr.search(a.get("fehlerroh", ""))
-                  and (not mn.get("fehler_am_aufruf") or passt(a)))
+        # Ohne aufruf_regex gibt es nichts zu koppeln (sonst stünde still 0 F da).
+        gekoppelt = bool(mn.get("fehler_am_aufruf") and ar)
+        # auch_ohne_fehlerstatus: Zeitlimit-Meldungen ("did not complete within … moved to the background") tragen
+        # is_error=False; solche Maßnahmen (M16) durchsuchen deshalb alle Ergebnisse ihrer Aufrufe.
+        quelle = [aufrufe[i] for i in reihenfolge] if mn.get("auch_ohne_fehlerstatus") else fehler
+        feld = "roh" if mn.get("auch_ohne_fehlerstatus") else "fehlerroh"
+        n_f = sum(1 for a in quelle if fr and fr.search(a.get(feld, "")) and (not gekoppelt or passt(a)))
         n_a = sum(1 for i in reihenfolge if passt(aufrufe[i]))
         m_treffer[mn["id"]] = (n_f, n_a)
     return {
@@ -402,28 +419,30 @@ def vergleich(berichte, top):
     z.append("\n## Wirkung der Maßnahmen (Sitzungen mit Treffer / Fehler / Aufrufe)")
     liste = massnahmen()
     for mn in liste:
-        stichtag = None
-        for form in ("%Y-%m-%dT%H:%M", "%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M Uhr"):  # ISO oder Profilregel-6-Format
-            try:
-                stichtag = datetime.strptime(str(mn.get("datum", "")).strip(), form).timestamp()
-                break
-            except ValueError:
-                pass
-        if stichtag is None:
-            try:
-                stichtag = datetime.fromisoformat(str(mn.get("datum", ""))).timestamp()
-            except ValueError:
-                z.append(f"- {mn.get('id', '?')} DATUM UNLESBAR ({mn.get('datum')!r}): nicht gemessen, in massnahmen.json berichtigen")
-                continue
+        titel = str(mn.get("titel", ""))[:50]
         if mn.get("messbar") is False:
-            z.append(f"- {mn['id']} [{mn.get('status', '?')}] nicht automatisch messbar  | {mn['titel'][:50]}")
+            z.append(f"- {mn.get('id', '?')} [{mn.get('status', '?')}] nicht automatisch messbar  | {titel}")
+            continue
+        stichtag = None
+        datum = str(mn.get("datum", "")).strip()
+        try:
+            stichtag = datetime.fromisoformat(datum).timestamp()  # ISO, Vorgabe in SKILL.md
+        except ValueError:
+            for form in ("%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M Uhr"):  # Profilregel-6-Format
+                try:
+                    stichtag = datetime.strptime(datum, form).timestamp()
+                    break
+                except ValueError:
+                    pass
+        if stichtag is None:
+            z.append(f"- {mn.get('id', '?')} DATUM UNLESBAR ({datum!r}): nicht gemessen, in massnahmen.json berichtigen")
             continue
         def summe(teil):
             t = [r["massnahmen"].get(mn["id"], (0, 0)) for r in teil]
             return f"{sum(1 for x in t if any(x))}/{len(teil)} Sitz., {sum(x[0] for x in t)} F, {sum(x[1] for x in t)} A"
         vor = [r for r in berichte if r["beginn"] < stichtag]
         nach = [r for r in berichte if r["beginn"] >= stichtag]
-        z.append(f"- {mn['id']} [{mn.get('status', '?')}] vorher {summe(vor)} · nachher {summe(nach)}  | {mn['titel'][:50]}")
+        z.append(f"- {mn.get('id', '?')} [{mn.get('status', '?')}] vorher {summe(vor)} · nachher {summe(nach)}  | {titel}")
     if not liste:
         z.append("- keine Maßnahmen eingetragen")
     eigen = [r["eigen_s"] for r in berichte if r["eigen_s"]]

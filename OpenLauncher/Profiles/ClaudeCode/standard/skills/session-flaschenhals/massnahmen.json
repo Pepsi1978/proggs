@@ -1,5 +1,5 @@
 {
-  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. datum: ISO yyyy-MM-ddTHH:mm (Get-Date -Format yyyy-MM-ddTHH:mm). werkzeug: ein Name oder 'Bash|PowerShell' (Mac/Server bauen mit Bash). fehler_am_aufruf: true = nur Fehler genau der Aufrufe zaehlen, die auf aufruf_regex passen (Pflicht, wenn fehler_regex eine Hook-Meldung ist, die auch andere Massnahmen ausloesen). messbar: false = keine automatische Bewertung, nur von Hand pruefen. plattform: Liste (windows/mac/linux, fehlt = alle). status: aktiv | wirkt | wirkungslos | ueberholt | zurueckgenommen.",
+  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. datum: ISO yyyy-MM-ddTHH:mm (Get-Date -Format yyyy-MM-ddTHH:mm). werkzeug: ein Name oder 'Bash|PowerShell' (Mac/Server bauen mit Bash). fehler_am_aufruf: true = nur Fehler genau der Aufrufe zaehlen, die auf aufruf_regex passen (Pflicht, wenn fehler_regex eine Hook-Meldung ist, die auch andere Massnahmen ausloesen). auch_ohne_fehlerstatus: true = fehler_regex in allen Ergebnissen der passenden Aufrufe suchen (Zeitlimit-Meldungen tragen is_error=False). messbar: false = keine automatische Bewertung, nur von Hand pruefen. plattform: Liste (windows/mac/linux, fehlt = alle). status: aktiv | wirkt | wirkungslos | ueberholt | zurueckgenommen.",
   "massnahmen": [
     {
       "id": "M1",
@@ -31,8 +31,8 @@
       "status": "aktiv",
       "beleg": "Sitzung 3429c693 (Server, 08.11.2026): Bau vor dem Versionslog-Eintrag gestartet, beim Abbrechen per pkill -f \"gradlew assembleDebug\" die eigene Shell beendet (Exit 144). Auf Franks Wunsch trotz Einzelfall auf allen Systemen abgesichert.",
       "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (+ .sh, .ps1)",
-        "OpenLauncher/Profiles/ClaudeCode/{minimal,standard,strict}/settings.json",
+        "claude-code-setup/hooks/build-ablauf-guard.py (+ .sh fuer Mac/Server, .ps1 nur noch Rueckfall)",
+        "OpenLauncher/Profiles/ClaudeCode/{minimal,standard,strict}/settings.json (python -X utf8 direkt)",
         "OpenLauncher/Profiles/ClaudeCodeMac/{minimal,standard,strict}/settings.json (auch Quelle des Servers)"
       ],
       "werkzeug": "Bash",
@@ -40,7 +40,7 @@
       "fehler_regex": "Exit code 144",
       "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Guard echte Fälle fälschlich, Muster im Hook schärfen.",
       "ruecknahme": "Hook-Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
-      "kosten": "kein Kontext; Wrapper pwsh -> python gemessen 300-450 ms je Bash/PowerShell-Aufruf (12.11.2026)"
+      "kosten": "kein Kontext; je Bash/PowerShell-Aufruf unter Windows ~100 ms (python direkt aus settings.json, gemessen 12.11.2026; vorher pwsh-Wrapper ~360 ms)"
     },
     {
       "id": "M3",
@@ -52,7 +52,7 @@
         "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN, bau_ohne_bump)"
       ],
       "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "versionslog\\.json[\\s\\S]*gradlew",
+      "aufruf_regex": "(WriteAllText|Set-Content|Add-Content|Out-File|sed\\s+-i|\\btee\\b|write_text|json\\.dump|>>?)[^\\n]*versionslog\\.json[\\s\\S]*gradlew|versionslog\\.json[^\\n]*(WriteAllText|Set-Content|Out-File)[\\s\\S]*gradlew",
       "fehler_regex": "STOPP - erst die Version bumpen",
       "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft).",
       "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
@@ -100,7 +100,7 @@
       "titel": "Bau-Hook: adb-Installation nur auf eine Adresse, die adb devices gerade meldet (adb connect/adb-wlan im selben Befehl davor ausgenommen)",
       "datum": "2026-11-09T14:40",
       "status": "aktiv",
-      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf.",
+      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf. Review 12.11.2026: alle Installationen im Befehl werden geprueft, Ausnahme nur fuer echten adb-wlan-Lauf oder adb connect auf genau diese Adresse.",
       "ort": [
         "claude-code-setup/hooks/build-ablauf-guard.py (ADB_INSTALL)"
       ],
@@ -140,7 +140,7 @@
       ],
       "fehler_regex": "AUF_BEIDE_STATUS=(teilweise|fehler)",
       "aufruf_regex": "auf-beide\\.sh",
-      "werkzeug": "Bash",
+      "werkzeug": "Bash|PowerShell",
       "pruefung": "aufruf_regex zählt die Läufe; fehler_regex zählt Läufe, bei denen ein Gerät nicht bedient wurde. Laufzeit je Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs).",
       "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
       "kosten": "kein Dauerkontext, nur das Skript"
@@ -223,7 +223,7 @@
         "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
       ],
       "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py.*gradlew",
+      "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py[\\s\\S]*gradlew",
       "fehler_regex": "erst die Version bumpen, dann bauen",
       "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt.",
       "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
@@ -240,7 +240,7 @@
         "Werkzeuge/jarvis-install/jarvis-install.ps1 (Versionsprüfung vor dem Hochladen)",
         "Werkzeuge/jarvis-install/jarvis-install.sh (dasselbe)"
       ],
-      "werkzeug": "PowerShell",
+      "werkzeug": "Bash|PowerShell",
       "aufruf_regex": "jarvis-install\\.(ps1|sh)",
       "fehler_regex": "INSTALL_FAILED_VERSION_DOWNGRADE",
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: kein INSTALL_FAILED_VERSION_DOWNGRADE mehr, stattdessen sofort 'Am Gerät ist schon versionCode' -> wirkt.",
@@ -283,7 +283,8 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: keine 10-min-Warteläufe mehr, Ausgabe 'Delta übertragen' erscheint -> wirkt.",
       "ruecknahme": "In jarvis-install.ps1 die Zeilen mit gitBash/deltaSh/apkUnix und den origin/main-Block entfernen; in jarvis-install.sh den origin/main-Block.",
       "kosten": "kein Kontext; je Lauf ein git fetch (~1 s)",
-      "fehler_am_aufruf": true
+      "fehler_am_aufruf": true,
+      "auch_ohne_fehlerstatus": true
     },
     {
       "id": "M17",
@@ -339,7 +340,7 @@
     },
     {
       "id": "M20",
-      "titel": "Bau-Hook: nicht blocken, wenn der Versionslog juenger als die neueste APK ist (Bump schon committet); ohne APK gilt die Grundregel",
+      "titel": "Bau-Hook: nicht blocken, wenn ein eigener, noch nicht gepushter Bump-Commit juenger als die neueste APK ist; per Pull geholter fremder Bump und fehlende APK zaehlen nicht",
       "datum": "2026-11-12T11:06",
       "status": "aktiv",
       "beleg": "Sitzung a56e3dee: 2 Fehlblocks nach committetem Bump 1.8.639 wegen fremder Dateien (Einstellungen.kt, HeuteAufgabenKarte.kt), Notaus nötig",
@@ -350,7 +351,7 @@
       "aufruf_regex": "gradlew(\\.bat)?\\s+assemble",
       "fehler_regex": "STOPP - erst die Version bumpen",
       "pruefung": "Nicht automatisch messbar: aufruf_regex trifft jeden Bau, jede berechtigte Bump-Sperre zaehlte als Fehler. Von Hand: Fehlblock nach committetem Bump bleibt in den naechsten 10 Sitzungen aus. Hook-Test 12.11.2026: APK aelter als Log -> frei, APK juenger -> Sperre, keine APK -> Sperre.",
-      "ruecknahme": "Block mit apk-mtime-Vergleich (glob outputs/apk/**) in bau_ohne_bump entfernen",
+      "ruecknahme": "Aufruf von eigener_bump_ungebaut in bau_ohne_bump und die Funktion entfernen",
       "kosten": "ein stat je Bau-Befehl, kein Kontext",
       "messbar": false
     },
@@ -388,7 +389,7 @@
     },
     {
       "id": "M23",
-      "titel": "Bau-Hook: git pull vor dem Bau im selben Befehl nicht als Bau ohne Bump blocken",
+      "titel": "Bau-Hook: git pull vor dem Bau im selben Befehl nicht als Bau ohne Bump blocken (nur echter git-pull-Aufruf, nicht 'pull' in Texten)",
       "datum": "2026-11-12T11:14",
       "status": "aktiv",
       "beleg": "Sitzung ea31bf4c: 1 Fehlalarm, parallele Sitzung hatte gebumpt, Pull und Bau in einem Befehl, Umweg über Notaus-Flag",
@@ -396,7 +397,7 @@
         "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
       ],
       "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "git[^;&|\n]*pull[^\n]*gradlew",
+      "aufruf_regex": "(^|[;&|\\n({]\\s*)git(\\s+-[Cc]\\s+\\S+)*\\s+pull\\b[\\s\\S]*gradlew",
       "fehler_regex": "erst die Version bumpen",
       "pruefung": "kein Bump-Fehlalarm bei Pull+Bau in den nächsten 10 Sitzungen",
       "ruecknahme": "git-pull-Zeile in bau_ohne_bump entfernen",

@@ -140,16 +140,21 @@ try {
     "Lade die APK vorab aufs Handy über $Geraet ..."
     $global:LASTEXITCODE = 1
     # MSYS_NO_PATHCONV: Sonst macht Git Bash aus /data/local/tmp/… beim Aufruf von adb.exe „C:/Program Files/Git/data/local/tmp/…“.
+    # delta_push überträgt bei fehlendem Delta schon selbst die ganze APK (lz4, dann ohne): Ohne Git Bash hier dasselbe.
     if (Test-Path $gitBash) { & $gitBash -c "export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'; source '$deltaSh' && delta_push '$($adb.Replace('\', '/'))' '$Geraet' '$apkUnix' '$zwischenlager' '$paket'" | Write-Host }
-    # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
-    if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null }
-    if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
+    else {
+        # lz4 spart über den Tunnel rund ein Sechstel der Übertragung; ältere adb ohne -z: ohne Kompression.
+        & $adb -s $Geraet push -z lz4 $Apk $zwischenlager *> $null
+        if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
+    }
     if ($LASTEXITCODE -ne 0) {
-        # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben Handy.
+        # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben
+        # Handy, aber nur über eine andere Adresse (dieselbe hängende Leitung bliebe bis zum Zeitlimit stehen).
+        $alteAdresse = $Geraet
         & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
         $script:Geraet = Waehle-Geraet
         # pwsh, adb devices und getprop setzen LASTEXITCODE auf 0: Ohne zweiten Push muss er wieder als gescheitert gelten.
-        $selbesHandy = $Geraet -and (Handy getprop ro.serialno) -eq $serie
+        $selbesHandy = $Geraet -and $Geraet -ne $alteAdresse -and (Handy getprop ro.serialno) -eq $serie
         $global:LASTEXITCODE = 1
         if ($selbesHandy) { "Neuer Versuch über $Geraet ..."; & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     }

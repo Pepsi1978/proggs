@@ -17,10 +17,19 @@ def main() -> int:
         print('Aufruf: eintrag.py <App-Ordner> "<Notiz>"', file=sys.stderr)
         return 2
     datei = pathlib.Path(sys.argv[1]) / "app/src/main/assets/versionslog.json"
-    text = datei.read_text(encoding="utf-8")
-    letzter = json.loads(text)["eintraege"][-1]
+    # utf-8-sig: Eine von einem Editor mit BOM gespeicherte Datei bleibt lesbar; geschrieben wird ohne BOM (Profilregel 19).
+    text = datei.read_text(encoding="utf-8-sig")
+    eintraege = json.loads(text).get("eintraege") or []
+    if not eintraege:
+        print(f"VERSIONSLOG_FEHLER: {datei} hat keine Einträge; den ersten Eintrag von Hand anlegen", file=sys.stderr)
+        return 3
+    letzter = eintraege[-1]
     teile = str(letzter["versionName"]).split(".")
-    teile[-1] = str(int(teile[-1]) + 1)
+    m = re.match(r"(\d+)(.*)", teile[-1])
+    if not m:
+        print(f"VERSIONSLOG_FEHLER: versionName {letzter['versionName']!r} endet nicht auf eine Zahl", file=sys.stderr)
+        return 3
+    teile[-1] = str(int(m.group(1)) + 1)  # Zusatz wie "-beta" fällt beim neuen Eintrag weg
     eintrag = {
         "versionCode": int(letzter["versionCode"]) + 1,
         "versionName": ".".join(teile),

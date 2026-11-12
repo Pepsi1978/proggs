@@ -73,6 +73,7 @@ Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzei
 `Get-Date -Format yyyy-MM-ddTHH:mm` bzw. `date +%Y-%m-%dT%H:%M`), `beleg` (Zahlen), `ort` (Liste),
 `fehler_regex`/`aufruf_regex` (+ `werkzeug`, bei Bau/Git `Bash|PowerShell`, `min_zeilen`) für die Wirkungsprüfung,
 `fehler_am_aufruf: true`, wenn `fehler_regex` eine Hook-Meldung ist, die auch andere Fälle auslösen,
+`auch_ohne_fehlerstatus: true` für Zeitlimit-Meldungen (tragen kein `is_error`),
 `pruefung`, `ruecknahme`, `kosten`, `plattform` (Liste, nur wo die Ursache auftritt: `windows`/`mac`/`linux`;
 weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur seine eigenen Verläufe.
 **Gegenprüfung:** Vor dem Eintragen die Maßnahmen an derselben Stelle (Hook, Skript, Bedarfsdatei) und die

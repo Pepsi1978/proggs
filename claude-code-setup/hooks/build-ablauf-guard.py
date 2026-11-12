@@ -61,6 +61,7 @@ def pfad(p, basis):
 
 
 def selbstmord(cmd):
+    cmd = ohne_heredoc(cmd)
     for m in PKILL.finditer(cmd):
         schalter = m.group(2) or ''
         if not re.search(r'\s-\w*f|--full', schalter):
@@ -77,7 +78,46 @@ def selbstmord(cmd):
     return None
 
 
+GIT_PULL = re.compile(r'(?:^|[;&|\n({]\s*)git(?:\s+-[Cc]\s+(?:"[^"]*"|\'[^\']*\'|\S+))*\s+pull\b')
+
+
+def eigener_bump_ungebaut(basis, log):
+    import glob
+    zeiten = []
+    for a in glob.glob(os.path.join(basis, 'app', 'build', 'outputs', 'apk', '**', '*.apk'), recursive=True):
+        try:
+            zeiten.append(os.path.getmtime(a))
+        except OSError:
+            pass  # parallel gelöscht (clean): zählt wie fehlend
+    if not zeiten or os.path.getmtime(log) <= max(zeiten):
+        return False
+    r = subprocess.run(['git', '-C', basis, 'log', '--format=%h', 'origin/main..HEAD', '--', log],
+                       capture_output=True, text=True, timeout=5)
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+
+def ohne_heredoc(cmd):
+    """Heredoc-Inhalte entfernen, die cat/tee nur in eine Datei schreiben: Dieser Text wird nicht ausgeführt.
+    Heredocs an python/bash/sh bleiben (sie laufen, und ihr Text steht in der Befehlszeile der Shell)."""
+    teile, rest = [], cmd
+    while True:
+        m = re.search(r"<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?[^\n]*\n", rest)
+        if not m:
+            return ''.join(teile) + rest
+        ende = re.search(r'(?m)^\s*' + re.escape(m.group(1)) + r'\s*$', rest[m.end():])
+        zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.start()]
+        if not ende or not re.search(r'\b(cat|tee)\b', zeile):
+            teile.append(rest[:m.end()])
+            rest = rest[m.end():]
+            if not ende:
+                return ''.join(teile) + rest
+            continue
+        teile.append(rest[:m.end()])
+        rest = rest[m.end() + ende.end():]
+
+
 def bau_ohne_bump(cmd, cwd):
+    cmd = ohne_heredoc(cmd)  # Skripttext, den cat/tee nur in eine Datei schreibt, ist kein Bau
     for m in BAU.finditer(cmd):
         if not BAU_AUFGABE.search(m.group(2)):
             continue
@@ -90,7 +130,8 @@ def bau_ohne_bump(cmd, cwd):
         if re.search(r'versionslog[\\/]+eintrag\.py', davor, re.IGNORECASE):
             continue
         # git pull vor dem Bau im selben Befehl: Der Pull bringt den Bump einer parallelen Sitzung erst während des Befehls (M23).
-        if re.search(r'\bgit\b[^;&|\n]*\bpull\b', davor):
+        # Nur ein echter git-pull-Aufruf am Befehlsanfang zählt, nicht "pull" in einer Commit-Nachricht.
+        if GIT_PULL.search(davor):
             continue
         basis = cwd
         for c in CD.finditer(davor):
@@ -112,12 +153,11 @@ def bau_ohne_bump(cmd, cwd):
             continue
         if any(z.replace('\\', '/').endswith('assets/versionslog.json') for z in zeilen):
             continue
-        # Bump schon committet und noch nicht gebaut (Versionslog jünger als die letzte APK): Der Bau bekommt die neue
-        # versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026, Sitzung a56e3dee, M20).
-        # Fehlt jede APK (frischer Worktree, nach clean), gilt wieder die Grundregel: erst bumpen, dann bauen.
-        import glob
-        apks = glob.glob(os.path.join(basis, 'app', 'build', 'outputs', 'apk', '**', '*.apk'), recursive=True)
-        if apks and os.path.getmtime(log) > max(os.path.getmtime(a) for a in apks):
+        # Eigener Bump schon committet (noch nicht gepusht) und noch nicht gebaut (Versionslog jünger als die neueste APK):
+        # Der Bau bekommt die neue versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026,
+        # Sitzung a56e3dee, M20). Ein per git pull geholter fremder Bump zählt nicht (er liegt schon auf origin/main), und
+        # fehlt jede APK (frischer Worktree, nach clean), gilt die Grundregel: erst bumpen, dann bauen.
+        if eigener_bump_ungebaut(basis, log):
             continue
         return os.path.basename(basis), zeilen
     return None
@@ -147,25 +187,31 @@ def adb_pfad():
     return next((k for k in kandidaten if k and os.path.isfile(k)), None)
 
 
+# Das WLAN-Werkzeug wird wirklich ausgeführt (nicht nur geraete.json daneben gelesen).
+ADB_WLAN_LAUF = re.compile(r'(?:-File\s+|\bbash\s+|&\s*|^|[;&|\n(]\s*)["\']?[^\s;&|"\']*adb-wlan\.(?:ps1|sh)\b', re.IGNORECASE)
+
+
 def adb_ziel_fehlt(cmd):
-    m = ADB_INSTALL.search(cmd)
-    if not m or re.search(r'[$%`{]', m.group(1)):
-        return None  # keine Installation oder Adresse aus Variable: nicht prüfbar
-    # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
-    # adb connect auf genau diese Adresse oder das WLAN-Werkzeug davor verbinden aber erst im Befehl: nicht vorab prüfbar.
-    davor = cmd[:m.start()]
-    if re.search(r'adb-wlan|\bconnect\s+["\']?' + re.escape(m.group(1)), davor):
-        return None
-    adb = adb_pfad()
-    if not adb:
-        return None
-    r = subprocess.run([adb, 'devices'], capture_output=True, text=True, timeout=6)
-    if r.returncode != 0:
-        return None
-    geraete = [z.split()[0] for z in r.stdout.splitlines()[1:] if len(z.split()) >= 2 and z.split()[1] == 'device']
-    if m.group(1) in geraete:
-        return None
-    return m.group(1), ', '.join(geraete) or 'kein Gerät'
+    geraete = None
+    for m in ADB_INSTALL.finditer(cmd):
+        if re.search(r'[$%`{]', m.group(1)):
+            continue  # Adresse aus Variable: nicht prüfbar
+        # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
+        # adb connect auf genau diese Adresse oder ein Lauf des WLAN-Werkzeugs davor verbinden erst im Befehl: nicht prüfbar.
+        davor = cmd[:m.start()]
+        if ADB_WLAN_LAUF.search(davor) or re.search(r'\bconnect\s+["\']?' + re.escape(m.group(1)) + r'(?![\w.:])', davor):
+            continue
+        if geraete is None:
+            adb = adb_pfad()
+            if not adb:
+                return None
+            r = subprocess.run([adb, 'devices'], capture_output=True, text=True, timeout=6)
+            if r.returncode != 0:
+                return None
+            geraete = [z.split()[0] for z in r.stdout.splitlines()[1:] if len(z.split()) >= 2 and z.split()[1] == 'device']
+        if m.group(1) not in geraete:
+            return m.group(1), ', '.join(geraete) or 'kein Gerät'
+    return None
 
 
 def main():

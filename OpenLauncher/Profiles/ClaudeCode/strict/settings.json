@@ -166,7 +166,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/proggs/claude-code-setup/hooks/build-ablauf-guard.ps1\"",
+            "command": "python -X utf8 \"$USERPROFILE/proggs/claude-code-setup/hooks/build-ablauf-guard.py\"",
             "timeout": 10
           }
         ]
