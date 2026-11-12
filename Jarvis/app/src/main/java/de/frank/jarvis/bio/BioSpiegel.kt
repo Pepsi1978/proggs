@@ -36,6 +36,9 @@ object BioSpiegel {
     private const val ART = "appdaten"
     private const val ID = "biomarker"
     private val sperre = Mutex()
+    /** Tablet: zählt jedes Einspielen eines neuen Handy-Stands, damit offene Anzeigen (Startkarte, Abrufstand) sofort neu lesen. */
+    private val _eingespielt = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val eingespielt: kotlinx.coroutines.flow.StateFlow<Int> = _eingespielt
     private var anstehend: Job? = null
     private val netz by lazy { OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).build() }
     private val JSON = "application/json".toMediaType()
@@ -250,6 +253,7 @@ object BioSpiegel {
         daten.optJSONArray("karten")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() } }
             ?.takeIf { it.isNotEmpty() }?.let { BioModul.kartenReihenfolge.saveOrder(it) }
         p.edit().putString("eingespielt", inhalt).putLong("seit", seit).putLong("zeit", daten.optLong("zeit")).putString("von", doc.optString("von")).apply()
+        _eingespielt.value++
         BioAbruf.neuGelesen(app)
     }
 

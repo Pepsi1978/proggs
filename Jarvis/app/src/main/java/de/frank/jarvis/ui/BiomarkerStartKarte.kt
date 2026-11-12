@@ -70,7 +70,18 @@ fun BiomarkerStartVorladen() {
     val abruf by BioAbruf.stand.collectAsState()
     val s = BiomarkerStartStand
     val bereit = BioAbruf.bereit(context)
-    LaunchedEffect(abruf.bericht, abruf.laeuft, bereit, s.uebernahme) {
+    // Tablet: Jedes Einspielen eines neuen Handy-Stands liest die Karte neu, und jedes Zurückholen von Jarvis nach vorn schaut
+    // sofort nach, statt bis zur nächsten Fünf-Minuten-Nachschau zu warten.
+    val spiegel by de.frank.jarvis.bio.BioSpiegel.eingespielt.collectAsState()
+    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lebenszyklus) {
+        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, ereignis ->
+            if (ereignis == androidx.lifecycle.Lifecycle.Event.ON_START) de.frank.jarvis.bio.BioSpiegel.jetztNachschauen(context)
+        }
+        lebenszyklus.lifecycle.addObserver(beobachter)
+        onDispose { lebenszyklus.lifecycle.removeObserver(beobachter) }
+    }
+    LaunchedEffect(abruf.bericht, abruf.laeuft, bereit, s.uebernahme, spiegel) {
         if (!bereit) return@LaunchedEffect
         val nummer = s.lesung.incrementAndGet()
         val antwort = withContext(Dispatchers.IO) {
