@@ -291,7 +291,7 @@ public sealed class GuthabenAnsicht : LebendeAnsicht
         }
         VAnfuegen(s, Karte_("Claude-Modelle (Anthropic)", "brain", "Bezahlt Jarvis' Kopf, wenn du ein Claude-Modell gewählt hast.",
             g.AnthropicRest, g.AnthropicGewaehrt, "$", g.Kurs, g.AnthropicText, g.AnthropicHinweis, fussAnthropic), 18);
-        VAnfuegen(s, Karte_("Gemini-Stimmen (Google AI Studio)", "waveform", "Bezahlt das Vorlesen mit Gemini-TTS und das Live-Gespräch mit Gemini auf dem bezahlten Schlüssel.",
+        VAnfuegen(s, Karte_("Gemini-Stimmen (Google AI Studio)", "waveform", "Bezahlt das Vorlesen mit Gemini-TTS auf dem bezahlten Schlüssel.",
             g.GoogleRest, g.GoogleGewaehrt, g.GoogleWaehrung, null, g.GoogleText, g.GoogleHinweis, null), 18);
         VAnfuegen(s, H(10, Kapsel("arrow.clockwise", "Jetzt neu abfragen", async () => await g.Laden(frisch: true), hervorgehoben: true), g.Laedt ? Drehkreis() : null, Spacer()), 18);
         if (g.Kosten is > 0)

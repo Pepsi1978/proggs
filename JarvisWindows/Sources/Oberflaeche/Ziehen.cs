@@ -12,6 +12,8 @@ namespace JarvisWindows;
 public static class Ziehen
 {
     private const double Schwelle = 8;
+    /// <summary>Liegen Zieh-Flächen ineinander (Kacheln in einer Karte), gewinnt die innerste unter dem Zeiger: Das Drücken tunnelt von außen nach innen, die letzte setzt sich.</summary>
+    private static Panel? tiefste;
 
     public static void Ordnen(Panel panel, Action<List<string>> gespeichert)
     {
@@ -24,10 +26,12 @@ public static class Ziehen
             if (e.OriginalSource is DependencyObject q && (IstEingabe(q))) return;
             kandidat = KindUnter(panel, e.OriginalSource as DependencyObject);
             start = e.GetPosition(panel);
+            if (kandidat != null) tiefste = panel;
         };
         panel.PreviewMouseMove += (_, e) =>
         {
             if (kandidat == null || e.LeftButton != MouseButtonState.Pressed) { if (gezogen == null) kandidat = null; return; }
+            if (gezogen == null && !ReferenceEquals(tiefste, panel)) return;
             var p = e.GetPosition(panel);
             if (gezogen == null)
             {
@@ -45,6 +49,17 @@ public static class Ziehen
             var von = panel.Children.IndexOf(gezogen);
             var nach = panel.Children.IndexOf(ziel);
             if (von < 0 || nach < 0) return;
+            // Erst tauschen, wenn der Zeiger die Mitte des Ziels in Zugrichtung überschritten hat: Sonst läge er nach dem Tausch einer kleinen
+            // Karte mit einer großen noch in der großen und tauschte sie beim nächsten Bewegen zurück (Flackern). In einer Zeile zählt die Breite.
+            if (ziel is FrameworkElement zf && gezogen is FrameworkElement gf)
+            {
+                var zr = new Rect(zf.TranslatePoint(new Point(0, 0), panel), new Size(zf.ActualWidth, zf.ActualHeight));
+                var gr = new Rect(gf.TranslatePoint(new Point(0, 0), panel), new Size(gf.ActualWidth, gf.ActualHeight));
+                var gleicheZeile = Math.Abs(zr.Top - gr.Top) < Math.Min(zr.Height, gr.Height) / 2;
+                var mitte = gleicheZeile ? zr.Left + zr.Width / 2 : zr.Top + zr.Height / 2;
+                var lage = gleicheZeile ? p.X : p.Y;
+                if (nach > von ? lage < mitte : lage > mitte) return;
+            }
             panel.Children.RemoveAt(von);
             panel.Children.Insert(nach, gezogen);
             e.Handled = true;
@@ -52,10 +67,12 @@ public static class Ziehen
         void Ende()
         {
             kandidat = null;
+            if (ReferenceEquals(tiefste, panel) && gezogen == null) tiefste = null;
             if (gezogen == null) return;
             gezogen.Opacity = 1;
             Panel.SetZIndex(gezogen, 0);
             gezogen = null;
+            if (ReferenceEquals(tiefste, panel)) tiefste = null;
             Mouse.OverrideCursor = null;
             if (panel.IsMouseCaptured) panel.ReleaseMouseCapture();
             var neu = Reihe(panel);

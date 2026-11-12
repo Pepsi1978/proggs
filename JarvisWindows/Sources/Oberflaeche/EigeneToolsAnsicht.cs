@@ -178,8 +178,8 @@ public sealed class KontenListe : LebendeAnsicht
     {
         var s = V(14,
             Eintrag("anthropic", "Anthropic (Claude)", "Meldet Jarvis bei den Claude-Modellen an. Wird für Chat und Lernen mit Claude verwendet.", "Jarvis' Kopf", Bindung(z => z.Anthropic, (z, v) => z.Anthropic = v)),
-            Eintrag("openai", "OpenAI (Live, GPT)", "Meldet Jarvis bei der OpenAI-Plattform an. Wird für das Live-Gespräch und GPT ohne ChatGPT-Anmeldung verwendet.", "Live-Gespräch, Jarvis' Kopf", Bindung(z => z.Openai, (z, v) => z.Openai = v)),
-            Eintrag("gemini", "Gemini (Live)", "Meldet Jarvis bei Google AI Studio an. Wird für das Live-Gespräch mit Gemini verwendet.", "Live-Gespräch", Bindung(z => z.Gemini, (z, v) => z.Gemini = v)),
+            Eintrag("openai", "OpenAI (GPT)", "Meldet Jarvis bei der OpenAI-Plattform an. Wird für GPT ohne ChatGPT-Anmeldung verwendet.", "Jarvis' Kopf", Bindung(z => z.Openai, (z, v) => z.Openai = v)),
+            Eintrag("gemini", "Gemini", "Meldet Jarvis bei Google AI Studio an. Wird für die Gemini-Stimmen beim Vorlesen verwendet.", "Vorlesen (Gemini-TTS)", Bindung(z => z.Gemini, (z, v) => z.Gemini = v)),
             Eintrag("groq", "Groq (Whisper)", "Meldet Jarvis bei Groq an. Wird für die Umwandlung von Sprache in Text verwendet.", "Spracheingabe", Bindung(z => z.Groq, (z, v) => z.Groq = v)),
             Eintrag("google", "Google Cloud (Chirp 3 HD)", "Meldet Jarvis bei Google Cloud an. Wird für die Vorlesestimmen Chirp 3 HD verwendet.", "Vorlesen", VorleseBindung(z => z.Google, (z, v) => z.Google = v)),
             Eintrag("gemini_tts_frei", "Gemini TTS kostenlos", "Schlüssel eines Projekts ohne Abrechnung. Wird zuerst für die Gemini-Vorlesestimmen verwendet.", "Vorlesen", VorleseBindung(z => z.GeminiFrei, (z, v) => z.GeminiFrei = v)),

@@ -815,7 +815,7 @@ public sealed class KonsolenAnsicht : LebendeAnsicht
                 await g.Laden(frisch: true);
             }) : null), 18);
         var googleHier = WebSitzungen.Angemeldet("google");
-        VAnfuegen(s, Zeile("waveform", "Google AI Studio", "Guthaben der Gemini-Stimmen und des Live-Gesprächs.", Stufe(googleHier, g.GoogleAbgelaufen, g.GoogleRest != null),
+        VAnfuegen(s, Zeile("waveform", "Google AI Studio", "Guthaben der Gemini-Stimmen.", Stufe(googleHier, g.GoogleAbgelaufen, g.GoogleRest != null),
             Kapsel("link", googleHier ? "Neu anmelden" : "Anmelden", () => KonsolenAnmeldung.Zeige("google", "Bei Google anmelden", "Google lässt die Anmeldung in eingebetteten Browsern nicht immer zu. Dann bleibt der Stand vom Handy.", GoogleSitzung.LoginURL, async () => { Neu(); await g.Laden(frisch: true); }), hervorgehoben: !googleHier),
             googleHier ? Kapsel("xmark", "Abmelden", async () =>
             {

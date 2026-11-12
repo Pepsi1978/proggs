@@ -232,7 +232,8 @@ public sealed class ListenSpeicher : Beobachtbar
                     try { await Task.Delay(TimeSpan.FromSeconds(30), runde.Token); } catch (OperationCanceledException) { }
                     continue;
                 }
-                if (offen.Count > 0) await Hochladen();
+                // Erst den Stand des Servers sehen: Was dort inzwischen jünger ist, gewinnt, bevor Offenes hochgeht.
+                if (offen.Count > 0) { await Holen(0, runde.Token); await Hochladen(); }
                 var n = await Holen(25, runde.Token);
                 fehlerFolge = 0;
                 Fehler = null;
@@ -280,8 +281,8 @@ public sealed class ListenSpeicher : Beobachtbar
                 Log("listen", "Abgleich-Speicher neu aufgesetzt, lese von vorn", wo: "Listen");
                 instanz = i;
                 stand = 0;
+                // Das Handy lädt als Erstquelle seinen Stand neu hoch; der Laptop drückt seine Kopie nicht mit frischer Zeit darüber.
                 fern.Clear();
-                foreach (var p in AlleLokalenPfade()) offen.Add(p);
                 continue;
             }
             if (i.Length > 0) instanz = i;
@@ -385,7 +386,8 @@ public sealed class ListenSpeicher : Beobachtbar
                     if (c is < 200 or >= 300) throw new IOException($"Listen-Datei hochladen: Server {c}");
                 }
                 var vorher = fern.TryGetValue(pfad, out var f) ? f.Geaendert : 0;
-                var geaendert = Math.Max(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), vorher + 1);
+                // Zeit der Änderung, nicht des Hochladens: Eine offline gemachte ältere Änderung darf eine jüngere vom Handy nicht schlagen.
+                var geaendert = Math.Max(LokalGeaendert(pfad), vorher + 1);
                 var rumpf = new JSONObjekt
                 {
                     ["daten"] = new JSONObjekt { ["pfad"] = pfad, ["text_sha"] = sha, ["groesse"] = (long)daten.Length },

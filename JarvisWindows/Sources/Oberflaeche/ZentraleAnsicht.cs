@@ -189,13 +189,18 @@ public sealed class ZentraleAnsicht : Decorator
     private UIElement PcKarte()
     {
         var gitter = new AdaptivGitter { Minimum = 190, Abstand = 10 };
-        void Kachel(string symbol, string titel, Brush farbe, Action a) => gitter.Children.Add(new WinKachel(symbol, titel, farbe, a));
+        var kacheln = new List<WinKachel>();
+        void Kachel(string symbol, string titel, Brush farbe, Action a) => kacheln.Add(new WinKachel(symbol, titel, farbe, a) { Tag = titel });
         Kachel("terminal.fill", "Programmier-Session", Farbe.Haupt, () => { steuerung.NeuesGespraech(); steuerung.Entwurf = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: "; });
         Kachel("arrow.triangle.2.circlepath", "Updates prüfen", Farbe.Gruen, () => { steuerung.Gespraech = null; steuerung.Sende("Prüfe in der Updater-Zentrale, welche Programme auf dem PC ein Update brauchen, und sag mir das Ergebnis."); });
         Kachel("eye.fill", "Bildschirm ansehen", Farbe.Gold, () => { steuerung.Gespraech = null; steuerung.Sende("Schau dir meinen Bildschirm an und sag mir kurz, was du siehst."); });
         Kachel("gauge.with.dots.needle.67percent", "PC-Status", Farbe.Warnung, () => { steuerung.Gespraech = null; steuerung.Sende("Wie geht es meinem PC? Kurzer Status."); });
         Kachel("bubble.left.and.bubble.right.fill", "ChatGPT öffnen", Farbe.Gruen, () => Starte(() => Shell.Pwsh("$a = Get-StartApps | Where-Object Name -like 'ChatGPT*' | Select-Object -First 1; if ($a) { Start-Process \"shell:AppsFolder\\$($a.AppID)\" } else { Start-Process 'https://chatgpt.com' }")));
         Kachel("square.stack.3d.up.fill", "OpenLauncher", Farbe.Haupt, OpenLauncherStarten);
+        // Auch die Kacheln lassen sich per Drag & Drop umsortieren; neue kommen hinten dazu.
+        var reihe = (Vorgaben.Text("zentrale.pc.reihenfolge") ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries).ToList();
+        foreach (var k in kacheln.OrderBy(k => reihe.IndexOf((string)k.Tag) is var i && i >= 0 ? i : int.MaxValue)) gitter.Children.Add(k);
+        Ziehen.Ordnen(gitter, ids => Vorgaben.Setze("zentrale.pc.reihenfolge", string.Join("|", ids)));
         return new GlasKarte(V(14, new KartenTitel("macbook", "Am PC", Farbe.Kupfer), gitter));
     }
 

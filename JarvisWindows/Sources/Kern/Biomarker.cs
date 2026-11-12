@@ -23,8 +23,8 @@ public sealed class BioDaten : Beobachtbar
     {
         new("erholung", "Erholung", "Erholung"), new("hrv", "HRV", "Erholung"), new("ruhepuls", "Ruhepuls", "Erholung"), new("vo2max", "VO2max", "Erholung"),
         new("schlafdauer", "Schlafzeit", "Schlaf"), new("schlafperformance", "Schlafperformance", "Schlaf"), new("tiefschlaf_prozent", "Tiefschlaf %", "Schlaf"), new("rem_prozent", "REM %", "Schlaf"),
-        new("wach_min", "Wachzeit", "Schlaf"), new("erholsamer_schlaf_prozent", "Erholsamer Schlaf", "Schlaf"), new("schlafeffizienz", "Schlafeffizienz", "Schlaf"),
-        new("schlafkonsistenz", "Schlafkonsistenz", "Schlaf"), new("schlafdefizit_min", "Schlafdefizit", "Schlaf"),
+        new("wach_min", "Wachzeit im Bett", "Schlaf"), new("erholsamer_schlaf_prozent", "Erholsamer Schlaf", "Schlaf"), new("schlafeffizienz", "Schlafeffizienz", "Schlaf"),
+        new("schlafkonsistenz", "Schlafregelmäßigkeit", "Schlaf"), new("schlafdefizit_min", "Schlafdefizit", "Schlaf"),
         new("tagesbelastung", "Tagesbelastung", "Aktivität"), new("energie_kcal", "Energie", "Aktivität"), new("schritte", "Schritte", "Aktivität"),
         new("atemfrequenz", "Atemfrequenz", "Körper"), new("hauttemperatur", "Hauttemperatur", "Körper"),
         new("oura_readiness", "Readiness (Oura)", "Oura"), new("oura_schlafscore", "Schlafscore (Oura)", "Oura"), new("oura_resilienz", "Resilienz (Oura)", "Oura"), new("oura_aktivitaet", "Aktivität (Oura)", "Oura"),
@@ -57,6 +57,8 @@ public sealed class BioDaten : Beobachtbar
 
     private readonly string datei = Path.Combine(Pfade.Unterstuetzung, "biomarker.json");
     private readonly Dictionary<string, string> verlaufRoh = new();
+    /// <summary>Kennung → genauer Name laut Katalog des Handys.</summary>
+    private readonly Dictionary<string, string> katalogNamen = new();
 
     private BioDaten() { LadeSpeicher(); }
 
@@ -67,6 +69,7 @@ public sealed class BioDaten : Beobachtbar
             if (JSON.Objekt(File.ReadAllBytes(datei)) is not { } o) return;
             if (o.Ganz("zeit") is { } z) Zuletzt = DateTimeOffset.FromUnixTimeMilliseconds(z).LocalDateTime;
             if (o.Obj("verlauf") is { } v) foreach (var (k, w) in v) if (w is string s) verlaufRoh[k] = s;
+            if (o.Obj("katalog") is { } kn) foreach (var (k, w) in kn) if (w is string s2) katalogNamen[k] = s2;
             Uebernimm(o.Text("auswertung"));
             TagText = o.Text("tag");
             TagDatum = o.Text("tag_datum") ?? "";
@@ -80,6 +83,7 @@ public sealed class BioDaten : Beobachtbar
         {
             ["tage"] = (long)Tage, ["zeit"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), ["auswertung"] = AuswertungText, ["tag"] = TagText, ["tag_datum"] = TagDatum,
             ["verlauf"] = verlaufRoh.ToDictionary(kv => kv.Key, kv => (object?)kv.Value),
+            ["katalog"] = katalogNamen.ToDictionary(kv => kv.Key, kv => (object?)kv.Value),
         };
         var ziel = datei;
         Task.Run(() => { try { File.WriteAllText(ziel + ".teil", JSON.Text(o)); File.Move(ziel + ".teil", ziel, true); } catch { } });
@@ -101,7 +105,11 @@ public sealed class BioDaten : Beobachtbar
             {
                 ["metriken"] = teil.Cast<object?>().ToList(), ["von"] = von, ["bis"] = bis.ToString("yyyy-MM-dd"), ["aufloesung"] = Tage > 120 ? "woche" : "tag",
             })).ToList();
-            await Task.WhenAll(stuecke.Append(auswertung));
+            // Der Katalog nennt je Kennung den genauen Namen, mit dem Auswertung und Verlauf die Größe schreiben.
+            var katalog = katalogNamen.Count == 0 ? McpKlient.Shared.Text("biomarker_verlauf", new JSONObjekt()) : Task.FromResult<string?>(null);
+            await Task.WhenAll(stuecke.Append(auswertung).Append(katalog));
+            if (katalog.Result is { } kt)
+                foreach (Match km in Regex.Matches(kt, @"^- ([a-z0-9_]+): (.+?) \[", RegexOptions.Multiline)) katalogNamen[km.Groups[1].Value] = km.Groups[2].Value.Trim();
             var a = auswertung.Result;
             if (a == null && stuecke.All(s => s.Result == null))
             {
@@ -216,22 +224,24 @@ public sealed class BioDaten : Beobachtbar
     {
         BioVerlauf? verlauf = null;
         // Der Verlauf wird über den Namen gefunden; den Namen kennt das Handy, nicht der Laptop: erst exakter Treffer in der Auswertung, sonst Teilwort.
-        var wert = Werte.FirstOrDefault(w => Passt(w.Name, g));
+        katalogNamen.TryGetValue(g.Id, out var genau);
+        bool P(string name) => genau != null ? name.Equals(genau, StringComparison.OrdinalIgnoreCase) : Passt(name, g);
+        var wert = Werte.FirstOrDefault(w => P(w.Name));
         if (wert != null) Verlaeufe.TryGetValue(wert.Name, out verlauf);
-        verlauf ??= Verlaeufe.Values.FirstOrDefault(v => Passt(v.Name, g));
+        verlauf ??= Verlaeufe.Values.FirstOrDefault(v => P(v.Name));
         return (wert, verlauf);
     }
 
     private static readonly Dictionary<string, string[]> Namen = new()
     {
         ["erholung"] = new[] { "Erholung (Recovery)", "Erholung" }, ["hrv"] = new[] { "HRV" }, ["ruhepuls"] = new[] { "Ruhepuls" }, ["vo2max"] = new[] { "VO2max" },
-        ["schlafdauer"] = new[] { "Schlafzeit", "Schlafdauer" }, ["schlafperformance"] = new[] { "Schlafperformance" }, ["tiefschlaf_prozent"] = new[] { "Tiefschlaf %", "Tiefschlafanteil", "Tiefschlaf (Anteil)" },
-        ["rem_prozent"] = new[] { "REM %", "REM-Anteil", "REM-Schlaf (Anteil)" }, ["wach_min"] = new[] { "Wachzeit", "Wach" }, ["erholsamer_schlaf_prozent"] = new[] { "Erholsamer Schlaf (Tief + REM)", "Erholsamer Schlaf" },
-        ["schlafeffizienz"] = new[] { "Schlafeffizienz" }, ["schlafkonsistenz"] = new[] { "Schlafkonsistenz" }, ["schlafdefizit_min"] = new[] { "Schlafdefizit" },
-        ["tagesbelastung"] = new[] { "Tagesbelastung (Strain)", "Tagesbelastung" }, ["energie_kcal"] = new[] { "Energie", "Energieverbrauch" }, ["schritte"] = new[] { "Schritte" },
+        ["schlafdauer"] = new[] { "Schlafzeit", "Schlafdauer" }, ["schlafperformance"] = new[] { "Schlafperformance" }, ["tiefschlaf_prozent"] = new[] { "Tiefschlaf-Anteil" },
+        ["rem_prozent"] = new[] { "REM-Anteil" }, ["wach_min"] = new[] { "Wachzeit im Bett" }, ["erholsamer_schlaf_prozent"] = new[] { "Erholsamer Schlaf (Tief + REM)", "Erholsamer Schlaf" },
+        ["schlafeffizienz"] = new[] { "Schlafeffizienz" }, ["schlafkonsistenz"] = new[] { "Schlafregelmäßigkeit" }, ["schlafdefizit_min"] = new[] { "Schlafdefizit" },
+        ["tagesbelastung"] = new[] { "Tagesbelastung (Strain)", "Tagesbelastung" }, ["energie_kcal"] = new[] { "Energieumsatz" }, ["schritte"] = new[] { "Schritte" },
         ["atemfrequenz"] = new[] { "Atemfrequenz" }, ["hauttemperatur"] = new[] { "Hauttemperatur" },
         ["oura_readiness"] = new[] { "Readiness" }, ["oura_schlafscore"] = new[] { "Schlafscore" }, ["oura_resilienz"] = new[] { "Resilienz" }, ["oura_aktivitaet"] = new[] { "Aktivitätsscore", "Aktivität" },
-        ["gewicht"] = new[] { "Gewicht" }, ["koerperfett"] = new[] { "Körperfett" }, ["muskelmasse"] = new[] { "Muskelmasse" }, ["viszeralfett"] = new[] { "Viszeralfett" }, ["bmi"] = new[] { "BMI" }, ["wasseranteil"] = new[] { "Wasseranteil", "Körperwasser" },
+        ["gewicht"] = new[] { "Gewicht" }, ["koerperfett"] = new[] { "Körperfett" }, ["muskelmasse"] = new[] { "Muskelmasse" }, ["viszeralfett"] = new[] { "Viszerales Fett" }, ["bmi"] = new[] { "BMI" }, ["wasseranteil"] = new[] { "Wasseranteil", "Körperwasser" },
     };
 
     private static bool Passt(string name, BioGroesse g)

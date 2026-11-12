@@ -153,7 +153,7 @@ public sealed class Verdichter : Beobachtbar
                 if (a < 0 || z <= a || JSON.Objekt(antwort[a..(z + 1)]) is not { } o) return null;
                 var alt = b.Eintraege.ToDictionary(e => e.Id, e => e.Text);
                 var neu = o.Objekte("eintraege").Where(e => e.Ganz("id") is { } id && alt.ContainsKey(id) && (e.Text("text") ?? "").Trim().Length > 0)
-                    .Select(e => new Neufassung(e.Ganz("id")!.Value, alt[e.Ganz("id")!.Value], e.Text("text")!.Trim())).Where(n => n.Neu != OhneZusatz(n.Alt)).ToList();
+                    .Select(e => new Neufassung(e.Ganz("id")!.Value, alt[e.Ganz("id")!.Value], MitWoertlichemZusatz(alt[e.Ganz("id")!.Value], e.Text("text")!.Trim()))).Where(n => n.Neu != OhneZusatz(n.Alt)).ToList();
                 var weg = o.Objekte("zusammenlegen").Where(e => e.Ganz("id") is { } id && e.Ganz("in") is { } ziel && id != ziel && alt.ContainsKey(id) && neu.Any(n => n.Id == ziel))
                     .Select(e => new Zusammen(e.Ganz("id")!.Value, e.Ganz("in")!.Value, alt[e.Ganz("id")!.Value])).ToList();
                 return neu.Count + weg.Count == 0 ? null : new Vorschlag(b.Art, b.Titel, neu, weg);
@@ -186,6 +186,13 @@ public sealed class Verdichter : Beobachtbar
     }
 
     public void Verwerfen(Vorschlag v) => Vorschlaege = Vorschlaege.Where(x => x != v).ToList();
+
+    /// <summary>„(gelernt am Laptop)“ und „(gelernt am Mac)“ stehen wörtlich im Text (die Rechner schreiben sie so): Sie bleiben an der Neufassung.</summary>
+    private static string MitWoertlichemZusatz(string alt, string neu)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(alt, @"\(gelernt am (Laptop|Mac)\)\s*$");
+        return m.Success && !neu.EndsWith(m.Value.Trim(), StringComparison.Ordinal) ? neu + " " + m.Value.Trim() : neu;
+    }
 
     private static string OhneZusatz(string t) => System.Text.RegularExpressions.Regex.Replace(t, @"\s*\((gelernt|gilt nur|Anlass)[^)]*\)\s*$", "").Trim();
 
