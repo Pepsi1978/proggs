@@ -369,14 +369,15 @@ fun ZeitMarke(zustand: ZiehZustand) {
 
 @Composable
 private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, onErledigt: () -> Unit) {
-    val f = LocalFarben.current
-    val farbe = if (a.erledigt) erledigtGrau(f) else f.prio(a.prio)
+    // Erledigt: ganzer Block in der grauen Farbfassung (Fläche, Leiste, Text, Symbole).
+    val f = LocalFarben.current.let { if (a.erledigt) it.erledigt() else it }
+    val farbe = f.prio(a.prio)
     val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
     val ende = (a.minuten ?: 0) + a.dauer
     Row(
         Modifier.fillMaxSize()
-            .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.55f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
-            .glas(f, radius = 12.dp, erhoeht = 1f, fuellung = if (a.erledigt) erledigtFlaeche(f) else f.flaecheStark, toenung = farbe)
+            .graphicsLayer { alpha = if (gezogen) 0.25f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
+            .glas(f, radius = 12.dp, erhoeht = 1f, fuellung = f.flaecheStark, toenung = farbe)
             .ziehbar(a, zustand)
             .antippen(haptik = false) { if (zustand.tippErlaubt()) onTipp() },
     ) {
@@ -385,7 +386,7 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
             // Als Wecker eingestellt: Weckersymbol direkt neben dem Titel (auch in kurzen Blöcken sichtbar).
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    a.titel, color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
                 )
                 if (a.erinnerung && a.alsWecker) Icon(Icons.Rounded.Alarm, "Wecker", tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(14.dp))

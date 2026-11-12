@@ -64,7 +64,25 @@ data class Farben(
     val gefahr: Color,
     val erfolg: Color,
     val radius: Dp,
+    /** Ausgegraute Fassung (erledigte Aufgaben): auch [prio] liefert dann Grau. */
+    val ausgegraut: Boolean = false,
 ) {
+    /**
+     * Fassung für erledigte Aufgaben: Fläche, alle Akzente, Prioritäten und Text neutral grau, mit lesbarem Kontrast
+     * (Text etwa 4,5 : 1). Gilt für jedes Design, hell und dunkel; wer sie nutzt, färbt alles darin automatisch grau.
+     */
+    fun erledigt(): Farben {
+        val grau = if (dunkel) Color(0xFF8A8A90) else Color(0xFF8E8E94)
+        val flaecheGrau = if (dunkel) Color(0xE6404046) else Color(0xFFD3D3D7)
+        return copy(
+            flaeche = flaecheGrau, flaecheStark = flaecheGrau,
+            text = if (dunkel) Color(0xFFB4B4BA) else Color(0xFF55555B),
+            textLeise = if (dunkel) Color(0xFF96969C) else Color(0xFF6E6E74),
+            textSchwach = grau, primaer = grau, sekundaer = grau, tertiaer = grau, gefahr = grau, erfolg = grau,
+            ausgegraut = true,
+        )
+    }
+
     /**
      * Deckende Fläche unter dem Glas (Bereiche Heute und Morgen). Hell: deckendes Weiß. Dunkel: Die Glasfarbe ist ein
      * fast durchsichtiges Weiß und wäre deckend gemacht reines Weiß, deshalb über dem oberen Hintergrund verrechnet,
@@ -73,7 +91,7 @@ data class Farben(
     val flaecheDeckend: Color get() = if (dunkel) flaeche.compositeOver(hgOben) else flaeche.copy(alpha = 1f)
 
     /** Prioritäten als klare Ampel: Hoch rot, Mittel gelb, Gering grün; Später bleibt neutral. */
-    fun prio(p: Prioritaet): Color = when (p) {
+    fun prio(p: Prioritaet): Color = if (ausgegraut) textSchwach else when (p) {
         Prioritaet.HOCH -> if (dunkel) Color(0xFFFF5449) else Color(0xFFE02B20)
         Prioritaet.MITTEL -> if (dunkel) Color(0xFFFFD233) else Color(0xFFE8B000)
         Prioritaet.GERING -> if (dunkel) Color(0xFF4FD866) else Color(0xFF239B3C)

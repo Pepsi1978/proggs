@@ -205,10 +205,12 @@ class HeuteWidget : GlanceAppWidget() {
             a.prio == Prioritaet.MITTEL -> R.drawable.punkt_mittel
             else -> R.drawable.punkt_gering
         }
-        val haken = if (vorbei) R.drawable.ic_widget_haken_vorbei else R.drawable.ic_widget_haken
+        // Erledigt: Zeile wie vergangene Termine ganz grau (Hintergrund, Haken, Zeit, Text).
+        val grau = vorbei || a.erledigt
+        val haken = if (grau) R.drawable.ic_widget_haken_vorbei else R.drawable.ic_widget_haken
         Column(GlanceModifier.fillMaxWidth().padding(bottom = 4.dp)) {
             Row(
-                GlanceModifier.fillMaxWidth().background(ImageProvider(if (vorbei || a.erledigt) R.drawable.widget_zeile_vorbei else R.drawable.widget_zeile)).cornerRadius(12.dp)
+                GlanceModifier.fillMaxWidth().background(ImageProvider(if (grau) R.drawable.widget_zeile_vorbei else R.drawable.widget_zeile)).cornerRadius(12.dp)
                     .padding(horizontal = 10.dp, vertical = 7.dp)
                     .clickable(
                         actionStartActivity(
@@ -222,14 +224,14 @@ class HeuteWidget : GlanceAppWidget() {
                 Image(ImageProvider(if (a.erledigt) haken else punkt), null, GlanceModifier.size(11.dp))
                 Spacer(GlanceModifier.width(8.dp))
                 if (zeigeZeit && a.minuten != null) {
-                    Text(Tage.zeit(a.minuten), style = TextStyle(color = if (vorbei) f.vorbei else f.leise, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+                    Text(Tage.zeit(a.minuten), style = TextStyle(color = if (grau) f.vorbei else f.leise, fontSize = 12.sp, fontWeight = FontWeight.Medium))
                     Spacer(GlanceModifier.width(6.dp))
                 }
                 Text(
                     a.titel + if ((a.tag ?: heute) < heute) "  · überfällig" else "",
                     maxLines = 1,
                     style = TextStyle(
-                        color = when { vorbei -> f.vorbei; a.erledigt -> f.leise; else -> f.text }, fontSize = 13.sp,
+                        color = if (grau) f.vorbei else f.text, fontSize = 13.sp,
                         textDecoration = if (a.erledigt) TextDecoration.LineThrough else TextDecoration.None,
                     ),
                 )
