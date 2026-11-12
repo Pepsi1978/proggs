@@ -109,6 +109,11 @@ def bau_ohne_bump(cmd, cwd):
             continue
         if any(z.replace('\\', '/').endswith('assets/versionslog.json') for z in zeilen):
             continue
+        # Bump schon committet und noch nicht gebaut (Versionslog jünger als die letzte APK): Der Bau bekommt die neue
+        # versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026, Sitzung a56e3dee, M20).
+        apk = os.path.join(basis, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
+        if not os.path.isfile(apk) or os.path.getmtime(log) > os.path.getmtime(apk):
+            continue
         return os.path.basename(basis), zeilen
     return None
 

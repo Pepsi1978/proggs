@@ -328,6 +328,20 @@
       "pruefung": "Nach 10 Sitzungen mit Kotlin-Builds kein 'Unclosed comment' mehr -> wirkt.",
       "ruecknahme": "Zeile 14 im Kotlin-Kurzcheck entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei"
+    },
+    {
+      "id": "M20",
+      "titel": "Bau-Hook: nicht blocken, wenn der Versionslog jünger als die letzte APK ist (Bump schon committet, offene Dateien von paralleler Sitzung)",
+      "datum": "12.11.2026 11:06",
+      "status": "aktiv",
+      "beleg": "Sitzung a56e3dee: 2 Fehlblocks nach committetem Bump 1.8.639 wegen fremder Dateien (Einstellungen.kt, HeuteAufgabenKarte.kt), Notaus nötig",
+      "ort": "claude-code-setup/hooks/build-ablauf-guard.py",
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "gradlew(\\.bat)?\\s+assemble",
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "pruefung": "Fehlblock nach committetem Bump bleibt in den nächsten 10 Sitzungen aus",
+      "ruecknahme": "Block mit apk-mtime-Vergleich in bau_ohne_bump entfernen",
+      "kosten": "ein stat je Bau-Befehl, kein Kontext"
     }
   ]
 }
