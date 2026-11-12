@@ -228,7 +228,9 @@ public sealed class ListenSpeicher : Beobachtbar
             {
                 if (!Einstellungen.Shared.ListenAbgleichAn)
                 {
-                    Fehler = "Der Listen-Abgleich ist ausgeschaltet (Einstellungen → Zentrale & Bereiche); Änderungen bleiben am Laptop, bis er wieder an ist.";
+                    // Ohne Abgleich gilt die Kopie am Laptop als bereit: Sonst stünde bei einer leeren Kopie für immer „Abgleich läuft“.
+                    if (!Bereit) Bereit = true;
+                    Fehler ="Der Listen-Abgleich ist ausgeschaltet (Einstellungen → Zentrale & Bereiche); Änderungen bleiben am Laptop, bis er wieder an ist.";
                     try { await Task.Delay(TimeSpan.FromSeconds(30), runde.Token); } catch (OperationCanceledException) { }
                     continue;
                 }
@@ -303,7 +305,7 @@ public sealed class ListenSpeicher : Beobachtbar
                 if (lokal == sha) { offen.Remove(pfad); continue; }
                 // Hier geändert und noch nicht oben: Die jüngere Änderung gewinnt.
                 if (offen.Contains(pfad) && LokalGeaendert(pfad) > geaendert) continue;
-                if (await HoleDatei(basis, pfad, sha)) { offen.Remove(pfad); gesamt++; }
+                if (await HoleDatei(basis, pfad, sha, geaendert)) { offen.Remove(pfad); gesamt++; }
             }
             var weiter = o.Ganz("stand") ?? stand;
             var mehr = o.Wahr("mehr") == true && weiter != stand;
@@ -319,14 +321,16 @@ public sealed class ListenSpeicher : Beobachtbar
 
     private static bool PfadOk(string pfad) => Regex.IsMatch(pfad, @"^listen/[le]_\d{1,20}\.json$");
 
-    private IEnumerable<string> AlleLokalenPfade() =>
-        listen.Keys.Select(id => $"{Ordner}/l_{id}.json").Concat(eintraege.Keys.Select(id => $"{Ordner}/e_{id}.json")).ToList();
 
     private string LokalDatei(string pfad) => Path.Combine(wurzel, pfad.Replace('/', Path.DirectorySeparatorChar));
 
+    /// <summary>Prüfsumme je Pfad, mitgeführt bei jedem Schreiben: Der Abgleich liest dafür nicht jede Datei neu (Hauptfaden).</summary>
+    private readonly Dictionary<string, string> shaMerker = new();
+
     private string LokalSha(string pfad)
     {
-        try { return Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(LokalDatei(pfad)))); } catch { return ""; }
+        if (shaMerker.TryGetValue(pfad, out var s)) return s;
+        try { return shaMerker[pfad] = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(LokalDatei(pfad)))); } catch { return ""; }
     }
 
     private long LokalGeaendert(string pfad)
@@ -335,7 +339,8 @@ public sealed class ListenSpeicher : Beobachtbar
         return pfad.Contains("/l_") ? (listen.TryGetValue(id, out var l) ? l.Geaendert : 0) : (eintraege.TryGetValue(id, out var e) ? e.Geaendert : 0);
     }
 
-    private async Task<bool> HoleDatei(string basis, string pfad, string sha)
+    /// <param name="fernGeaendert">Zeit der fremden Fassung: Hat Frank hier während des Ladens jünger geändert, bleibt seine Fassung.</param>
+    private async Task<bool> HoleDatei(string basis, string pfad, string sha, long fernGeaendert)
     {
         using var req = Anfrage(HttpMethod.Get, $"{basis}/blob/{sha}");
         var (code, daten) = await GehirnNetz.Anfrage(req, 30);
@@ -343,7 +348,10 @@ public sealed class ListenSpeicher : Beobachtbar
         if (code != 200) throw new IOException($"Datei holen: Server {code}");
         if (Convert.ToHexStringLower(SHA256.HashData(daten)) != sha) { Log("fehler", $"{pfad} kam beschädigt an", wo: "Listen"); return false; }
         if (JSON.Objekt(daten) is not { } o) return false;
-        await Task.Run(() => Atomar(LokalDatei(pfad), daten));
+        // Ab hier ohne await bis zum Übernehmen: Eine Änderung von Frank dazwischen ist nicht mehr möglich, eine davor wird hier erkannt.
+        if (offen.Contains(pfad) && LokalGeaendert(pfad) > fernGeaendert) return false;
+        Atomar(LokalDatei(pfad), daten);
+        shaMerker[pfad] = sha;
         Uebernimm(o);
         return true;
     }
@@ -385,9 +393,17 @@ public sealed class ListenSpeicher : Beobachtbar
                     var (c, _) = await GehirnNetz.Anfrage(req, 30);
                     if (c is < 200 or >= 300) throw new IOException($"Listen-Datei hochladen: Server {c}");
                 }
-                var vorher = fern.TryGetValue(pfad, out var f) ? f.Geaendert : 0;
+                var vorher = fern.TryGetValue(pfad, out var f) ? f : ("", 0L);
                 // Zeit der Änderung, nicht des Hochladens: Eine offline gemachte ältere Änderung darf eine jüngere vom Handy nicht schlagen.
-                var geaendert = Math.Max(LokalGeaendert(pfad), vorher + 1);
+                var geaendert = LokalGeaendert(pfad);
+                if (vorher.Item2 >= geaendert && vorher.Item1 != sha)
+                {
+                    // Drüben liegt eine jüngere Fassung als Franks Änderung hier: Sie gilt, wie am Handy.
+                    offen.Remove(pfad);
+                    if (vorher.Item1.Length > 0) await HoleDatei(basis, pfad, vorher.Item1, vorher.Item2);
+                    continue;
+                }
+                geaendert = Math.Max(geaendert, vorher.Item2 + 1);
                 var rumpf = new JSONObjekt
                 {
                     ["daten"] = new JSONObjekt { ["pfad"] = pfad, ["text_sha"] = sha, ["groesse"] = (long)daten.Length },
@@ -399,20 +415,32 @@ public sealed class ListenSpeicher : Beobachtbar
                 if (code == 409) continue;   // Datei am Server noch nicht vollständig: nächste Runde
                 if (code is < 200 or >= 300) throw new IOException($"Listen-Fassung melden: Server {code}");
                 var antwort = JSON.Objekt(antwortDaten) ?? new();
+                // Hat Frank während des Hochladens noch einmal geändert, bleibt der Pfad offen: Die neue Fassung geht in der nächsten Runde hoch.
+                var unveraendert = LokalSha(pfad) == sha;
                 if (antwort.Wahr("uebernommen") == true)
                 {
                     fern[pfad] = (sha, geaendert);
-                    offen.Remove(pfad);
+                    if (unveraendert) offen.Remove(pfad);
                     continue;
                 }
                 // Drüben ist eine jüngere Fassung: Sie gilt (wie am Handy), die hiesige Änderung weicht.
-                offen.Remove(pfad);
                 if (antwort.Obj("doc") is { } d && d.Obj("daten") is { } w && w.Text("text_sha") is { Length: > 0 } fs)
                 {
-                    fern[pfad] = (fs, d.Ganz("geaendert") ?? 0);
-                    await HoleDatei(basis, pfad, fs);
-                    Meldung = "Eine Änderung kam zeitgleich von einem anderen Gerät; dessen jüngere Fassung gilt.";
-                    Aenderung++;
+                    var fg = d.Ganz("geaendert") ?? 0;
+                    fern[pfad] = (fs, fg);
+                    if (unveraendert) offen.Remove(pfad);
+                    if (await HoleDatei(basis, pfad, fs, fg))
+                    {
+                        Meldung = "Eine Änderung kam zeitgleich von einem anderen Gerät; dessen jüngere Fassung gilt.";
+                        Aenderung++;
+                    }
+                }
+                else
+                {
+                    // Abgelehnt ohne verwertbare Fassung: einmal alles vom Server neu lesen, damit der Laptop nicht dauerhaft abweicht.
+                    offen.Remove(pfad);
+                    fern.Remove(pfad);
+                    stand = 0;
                 }
             }
         }
@@ -519,8 +547,8 @@ public sealed class ListenSpeicher : Beobachtbar
         Ausstehend = offen.Count;
         Aenderung++;
         ZustandSpeichern();
-        // Gleich hoch, nicht erst nach dem nächsten Long-Poll.
-        Ui.Starte(async () => { try { await Hochladen(); } catch (Exception ex) { Log("listen", "Listen-Upload wartet", wo: "Listen", fehler: ex.Message); } });
+        // Gleich abgleichen, nicht erst nach dem nächsten Long-Poll: Die Schleife holt zuerst den Stand des Servers und lädt dann hoch.
+        JetztAbgleichen();
         return ergebnis;
     }
 
@@ -529,6 +557,7 @@ public sealed class ListenSpeicher : Beobachtbar
         o["geaendert"] = jetzt;
         var daten = JSON.Daten(o);
         Atomar(LokalDatei(pfad), daten);
+        shaMerker[pfad] = Convert.ToHexStringLower(SHA256.HashData(daten));
         Uebernimm(o);
         offen.Add(pfad);
     }

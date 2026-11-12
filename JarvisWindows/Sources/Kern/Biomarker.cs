@@ -57,6 +57,7 @@ public sealed class BioDaten : Beobachtbar
 
     private readonly string datei = Path.Combine(Pfade.Unterstuetzung, "biomarker.json");
     private readonly Dictionary<string, string> verlaufRoh = new();
+    private static readonly object speicherSchloss = new();
     /// <summary>Kennung → genauer Name laut Katalog des Handys.</summary>
     private readonly Dictionary<string, string> katalogNamen = new();
 
@@ -86,14 +87,17 @@ public sealed class BioDaten : Beobachtbar
             ["katalog"] = katalogNamen.ToDictionary(kv => kv.Key, kv => (object?)kv.Value),
         };
         var ziel = datei;
-        Task.Run(() => { try { File.WriteAllText(ziel + ".teil", JSON.Text(o)); File.Move(ziel + ".teil", ziel, true); } catch { } });
+        var text = JSON.Text(o);
+        // Nacheinander: Zwei Speicherungen kurz hintereinander (Tag und Auswertung) schrieben sonst gleichzeitig in dieselbe Zwischendatei.
+        Task.Run(() => { lock (speicherSchloss) { try { File.WriteAllText(ziel + ".teil", text); File.Move(ziel + ".teil", ziel, true); } catch { } } });
     }
 
     /// <summary>Liest Auswertung und Verläufe vom Handy. Ohne erzwingen höchstens alle fünf Minuten (Öffnen des Bereichs).</summary>
     public async Task Laden(bool erzwingen = false, int? tage = null)
     {
-        if (Laedt) return;
-        if (tage is { } t && t != Tage) { Tage = t; erzwingen = true; if (Einstellungen.Shared.BiomarkerTage != t) Einstellungen.Shared.BiomarkerTage = t; }
+        // Der Zeitraum gilt sofort, auch wenn gerade geladen wird: Dann folgt nach dem laufenden Abruf einer mit dem neuen Zeitraum.
+        if (tage is { } t && t != Tage) { Tage = t; erzwingen = true; if (Einstellungen.Shared.BiomarkerTage != t) Einstellungen.Shared.BiomarkerTage = t; Stand++; }
+        if (Laedt) { if (erzwingen) nochmal = true; return; }
         if (!erzwingen && Zuletzt is { } z && (DateTime.Now - z).TotalMinutes < 5 && Werte.Count > 0) return;
         Laedt = true;
         try
@@ -103,7 +107,7 @@ public sealed class BioDaten : Beobachtbar
             var auswertung = McpKlient.Shared.Text("biomarker_auswertung", new JSONObjekt { ["tage"] = (long)Tage, ["metriken"] = Groessen.Select(g => (object?)g.Id).ToList() });
             var stuecke = Groessen.Select(g => g.Id).Chunk(5).Select(teil => McpKlient.Shared.Text("biomarker_verlauf", new JSONObjekt
             {
-                ["metriken"] = teil.Cast<object?>().ToList(), ["von"] = von, ["bis"] = bis.ToString("yyyy-MM-dd"), ["aufloesung"] = Tage > 120 ? "woche" : "tag",
+                ["metriken"] = teil.Cast<object?>().ToList(), ["von"] = von, ["bis"] = bis.ToString("yyyy-MM-dd"), ["aufloesung"] = "tag",
             })).ToList();
             // Der Katalog nennt je Kennung den genauen Namen, mit dem Auswertung und Verlauf die Größe schreiben.
             var katalog = katalogNamen.Count == 0 ? McpKlient.Shared.Text("biomarker_verlauf", new JSONObjekt()) : Task.FromResult<string?>(null);
@@ -127,8 +131,14 @@ public sealed class BioDaten : Beobachtbar
             Zuletzt = DateTime.Now;
             Speichern();
         }
-        finally { Laedt = false; }
+        finally
+        {
+            Laedt = false;
+            if (nochmal) { nochmal = false; _ = Laden(erzwingen: true); }
+        }
     }
+
+    private bool nochmal;
 
     public async Task TagLaden(string datum)
     {
@@ -178,7 +188,7 @@ public sealed class BioDaten : Beobachtbar
             if (dm.Success) { wert = dm.Groups[1].Value; datum = dm.Groups[2].Value; }
             werte.Add(new BioWert(m.Groups[1].Value.Trim(), m.Groups[2].Value.Trim(), wert,
                 Regex.Match(rest, @"→\s*([^;]+)").Groups[1].Value.Trim(),
-                Regex.Match(rest, @"Schnitt davor ([^,;]+)") is { Success: true } s ? s.Groups[1].Value.Trim() : null,
+                Regex.Match(rest, @"Schnitt davor (-?\d[\d.]*(?:,\d+)?)") is { Success: true } s ? s.Groups[1].Value.Trim() : null,
                 Regex.Match(rest, @"Schnitte 7/30/90 Tage: ([^;]+)") is { Success: true } s2 ? s2.Groups[1].Value.Trim() : null,
                 Regex.Match(rest, @"\[höher ist (besser|schlechter|neutral)\]") is { Success: true } r ? r.Groups[1].Value : "neutral", datum));
         }
@@ -204,7 +214,7 @@ public sealed class BioDaten : Beobachtbar
         {
             var m = Regex.Match(zeilen[i], @"^(.+?) \[([^,\]]*), ([^\]]+)\](.*):$");
             if (!m.Success) continue;
-            var schnitt = Regex.Match(m.Groups[4].Value, @"Schnitt (-?[\d.,]+)") is { Success: true } s ? Zahl(s.Groups[1].Value) : null;
+            var schnitt = Regex.Match(m.Groups[4].Value, @"Schnitt (-?\d[\d.]*(?:,\d+)?)") is { Success: true } s ? Zahl(s.Groups[1].Value) : null;
             var punkte = new List<(DateTime, double)>();
             foreach (var teil in zeilen[i + 1].Split(';'))
             {
@@ -337,7 +347,8 @@ public sealed class SolarDaten : Beobachtbar
         get
         {
             if (Stand == null) return Fehler ?? "Noch kein Stand";
-            var zeit = Stand.Objekte("geraete").Select(g => g.Ganz("zeit") ?? 0).DefaultIfEmpty(0).Max();
+            // Wie am Handy der älteste Stand der Geräte: Ein veralteter Laderegler darf sich nicht hinter einem frischen Batteriewert verstecken.
+            var zeit = Stand.Objekte("geraete").Select(g => g.Ganz("zeit") ?? 0).Where(z => z > 0).DefaultIfEmpty(0).Min();
             var quelle = Stand.Text("quelle") ?? "";
             if (zeit <= 0) return quelle;
             var uhr = DateTimeOffset.FromUnixTimeSeconds(zeit).LocalDateTime;

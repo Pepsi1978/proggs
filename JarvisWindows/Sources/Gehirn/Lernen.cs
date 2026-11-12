@@ -116,6 +116,9 @@ public sealed class Verdichter : Beobachtbar
 
     private bool _laeuft;
     public bool Laeuft { get => _laeuft; private set => Setze(ref _laeuft, value); }
+    private bool _uebernimmt;
+    /// <summary>Eigene Sperre fürs Übernehmen: Ein laufendes Vorschlagen verschluckt den Klick sonst still.</summary>
+    public bool Uebernimmt { get => _uebernimmt; private set => Setze(ref _uebernimmt, value); }
     private string? _meldung;
     public string? Meldung { get => _meldung; private set => Setze(ref _meldung, value); }
     private List<Vorschlag> _vorschlaege = new();
@@ -135,13 +138,13 @@ public sealed class Verdichter : Beobachtbar
             var bloecke = Bloecke(McpKlient.OhneKontextHinweis(text));
             var aufgaben = bloecke.Where(b => b.Eintraege.Count > 1).Select(async b =>
             {
-                var liste = string.Join("\n", b.Eintraege.Select(e => $"[{e.Id}] {e.Text}"));
+                var liste = string.Join("\n", b.Eintraege.Select(e => $"[{e.Id}] {OhneZusatz(e.Text)}"));
                 var prompt = $$"""
                 Gemerkte Einträge der Art „{{b.Art}}“ aus Jarvis' Gedächtnis:
                 {{liste}}
 
                 Schreibe zu lang geratene Einträge knapper und lege echte Dubletten (gleiches Thema) zusammen. Schreibregel: {{Merkregel.Knapp}}
-                Klammerzusätze wie „(gelernt …)“, „(gilt nur …)“ oder „(Anlass …)“ sind Herkunftsangaben, die Jarvis selbst führt: nicht in die Neufassung übernehmen und nicht verändern.
+                Herkunft, Geltung, Erlaubnisse, Fristen und Anlass führt Jarvis selbst getrennt vom Text und bleiben erhalten: keine solchen Klammerzusätze in die Neufassung schreiben.
                 Inhalt nie ändern, nichts hinzuerfinden, nichts weglassen, was das Verhalten beeinflusst. Unveränderte Einträge nicht nennen.
                 Antworte nur mit JSON: {"eintraege":[{"id":1,"text":"Neufassung"}],"zusammenlegen":[{"id":5,"in":1}]}
                 Bei zusammenlegen steht der Inhalt von id danach in der Neufassung von in (die dann in eintraege stehen muss). Ist nichts zu tun: {"eintraege":[],"zusammenlegen":[]}
@@ -153,7 +156,7 @@ public sealed class Verdichter : Beobachtbar
                 if (a < 0 || z <= a || JSON.Objekt(antwort[a..(z + 1)]) is not { } o) return null;
                 var alt = b.Eintraege.ToDictionary(e => e.Id, e => e.Text);
                 var neu = o.Objekte("eintraege").Where(e => e.Ganz("id") is { } id && alt.ContainsKey(id) && (e.Text("text") ?? "").Trim().Length > 0)
-                    .Select(e => new Neufassung(e.Ganz("id")!.Value, alt[e.Ganz("id")!.Value], MitWoertlichemZusatz(alt[e.Ganz("id")!.Value], e.Text("text")!.Trim()))).Where(n => n.Neu != OhneZusatz(n.Alt)).ToList();
+                    .Select(e => new Neufassung(e.Ganz("id")!.Value, alt[e.Ganz("id")!.Value], MitWoertlichemZusatz(alt[e.Ganz("id")!.Value], e.Text("text")!.Trim()))).Where(n => OhneZusatz(n.Neu) != OhneZusatz(n.Alt)).ToList();
                 var weg = o.Objekte("zusammenlegen").Where(e => e.Ganz("id") is { } id && e.Ganz("in") is { } ziel && id != ziel && alt.ContainsKey(id) && neu.Any(n => n.Id == ziel))
                     .Select(e => new Zusammen(e.Ganz("id")!.Value, e.Ganz("in")!.Value, alt[e.Ganz("id")!.Value])).ToList();
                 return neu.Count + weg.Count == 0 ? null : new Vorschlag(b.Art, b.Titel, neu, weg);
@@ -168,8 +171,8 @@ public sealed class Verdichter : Beobachtbar
     /// <summary>Übernimmt einen Vorschlag am Handy (jarvis_gemerktes_verdichten).</summary>
     public async Task Uebernehmen(Vorschlag v)
     {
-        if (Laeuft) return;
-        Laeuft = true;
+        if (Uebernimmt) { Meldung = "Eine Übernahme läuft noch, gleich noch einmal."; return; }
+        Uebernimmt = true;
         try
         {
             var r = await McpKlient.Shared.Rufe("jarvis_gemerktes_verdichten", new JSONObjekt
@@ -182,7 +185,7 @@ public sealed class Verdichter : Beobachtbar
             Log("gedaechtnis", $"Gemerktes verdichtet ({v.Art})", wo: "Gedächtnis", fehler: r.Fehler ? r.Text : null);
             if (!r.Fehler) Vorschlaege = Vorschlaege.Where(x => x != v).ToList();
         }
-        finally { Laeuft = false; }
+        finally { Uebernimmt = false; }
     }
 
     public void Verwerfen(Vorschlag v) => Vorschlaege = Vorschlaege.Where(x => x != v).ToList();
@@ -190,11 +193,18 @@ public sealed class Verdichter : Beobachtbar
     /// <summary>„(gelernt am Laptop)“ und „(gelernt am Mac)“ stehen wörtlich im Text (die Rechner schreiben sie so): Sie bleiben an der Neufassung.</summary>
     private static string MitWoertlichemZusatz(string alt, string neu)
     {
-        var m = System.Text.RegularExpressions.Regex.Match(alt, @"\(gelernt am (Laptop|Mac)\)\s*$");
+        var m = System.Text.RegularExpressions.Regex.Match(alt, @"\(gelernt am (Laptop|Mac)\)");
         return m.Success && !neu.EndsWith(m.Value.Trim(), StringComparison.Ordinal) ? neu + " " + m.Value.Trim() : neu;
     }
 
-    private static string OhneZusatz(string t) => System.Text.RegularExpressions.Regex.Replace(t, @"\s*\((gelernt|gilt nur|Anlass)[^)]*\)\s*$", "").Trim();
+    /// <summary>Text ohne die Zusätze, die Jarvis selbst führt (Herkunft, Geltung, Erlaubnis, Frist): hinten angehängte Klammern mit diesen Anfängen, auch mehrere.</summary>
+    private static string OhneZusatz(string t)
+    {
+        var muster = new System.Text.RegularExpressions.Regex(@"\s*\((gelernt|gilt nur|Anlass|ERLAUBNIS|Erlaubnis|bis |abgelaufen)[^()]*(\([^()]*\)[^()]*)*\)\s*$");
+        string vorher;
+        do { vorher = t; t = muster.Replace(t, "").TrimEnd(); } while (t != vorher);
+        return t.Trim();
+    }
 
     private sealed record Block(string Art, string Titel, List<(long Id, string Text)> Eintraege);
 

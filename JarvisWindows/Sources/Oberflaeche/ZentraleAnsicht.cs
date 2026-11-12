@@ -108,7 +108,11 @@ public sealed class ZentraleAnsicht : Decorator
         foreach (var id in Reihenfolge(karten.Keys).Where(k => !aus.Contains(k))) stapel.Children.Add(new Decorator { Child = karten[id](), Tag = id });
         Ziehen.Ordnen(stapel, ids =>
         {
-            Einstellungen.Shared.ZentraleReihenfolge = string.Join(",", ids);
+            // Ausgeblendete Karten behalten ihren Platz: an ihrer bisherigen Stelle wieder einsetzen.
+            var alt = Reihenfolge(karten.Keys);
+            var neu = new List<string>(ids);
+            for (var i = 0; i < alt.Count; i++) if (!neu.Contains(alt[i])) neu.Insert(Math.Min(i, neu.Count), alt[i]);
+            Einstellungen.Shared.ZentraleReihenfolge = string.Join(",", neu);
             Log("oberflaeche", "Zentrale umsortiert: " + string.Join(", ", ids), wo: "Zentrale");
         });
         var v = V(20, new ZugangsHinweis(), stapel, Tx("Karten lassen sich per Drag & Drop verschieben.", 11, null, Farbe.Text3).Mittig());

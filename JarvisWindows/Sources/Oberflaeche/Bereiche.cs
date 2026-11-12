@@ -180,7 +180,7 @@ public sealed class GedaechtnisAnsicht : Decorator
                 s.Children.Add(Box(block, Farbe.Glas(0.04), 12, 14, 12));
             }
             return s;
-        }, new[] { nameof(Verdichter.Laeuft), nameof(Verdichter.Meldung), nameof(Verdichter.Vorschlaege) }, v), untertitel: "Knapper fassen und Dubletten zusammenlegen, mit Vorschau");
+        }, new[] { nameof(Verdichter.Laeuft), nameof(Verdichter.Uebernimmt), nameof(Verdichter.Meldung), nameof(Verdichter.Vorschlaege) }, v), untertitel: "Knapper fassen und Dubletten zusammenlegen, mit Vorschau");
     }
 
     private UIElement RegelnKarte()

@@ -86,17 +86,22 @@ public static class Ziehen
 
     private static bool IstEingabe(DependencyObject q)
     {
-        for (var d = q; d != null; d = VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d))
+        for (var d = q; d != null; d = Eltern(d))
             if (d is TextBoxBase or ScrollBar or PasswordBox or ComboBox) return true;
         return false;
     }
+
+    /// <summary>Eltern im Baum. Text-Teile (Run, Hyperlink im MarkdownText) sind keine Visuals: VisualTreeHelper würfe dort, sie hängen nur logisch.</summary>
+    private static DependencyObject? Eltern(DependencyObject d) => d is Visual or System.Windows.Media.Media3D.Visual3D
+        ? VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d)
+        : d is FrameworkContentElement fce ? fce.Parent : LogicalTreeHelper.GetParent(d);
 
     /// <summary>Das direkte Kind des Panels, in dem das Element liegt.</summary>
     private static UIElement? KindUnter(Panel panel, DependencyObject? d)
     {
         while (d != null)
         {
-            var eltern = VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d);
+            var eltern = Eltern(d);
             if (ReferenceEquals(eltern, panel)) return d as FrameworkElement is { Tag: string } f ? f : null;
             d = eltern;
         }

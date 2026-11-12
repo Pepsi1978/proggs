@@ -33,15 +33,31 @@ public sealed class ListenAnsicht : UserControl
         eingabe = new TextFeld("Eintrag hinzufügen … (Enter; !hoch, #tag)", 14, absenden: Hinzufuegen);
         eingabeRahmen = Box(H(10, Sym.Bild("plus", 13, Farbe.Haupt), eingabe.Fuell()), Farbe.Glas(0.05), 12, 12, 10, Farbe.Glas(0.08));
         Content = V(16, kacheln, status, kopf, unterHinweis, eingabeRahmen, zeilen);
+        // Tippt Frank gerade im Kopf oder in einer Zeile, wartet der Neuaufbau, bis das Feld den Fokus abgibt: Sonst speicherte das verschwindende Feld den halben Text.
+        kopf.LostKeyboardFocus += (_, _) => NachholenWennFrei();
+        zeilen.LostKeyboardFocus += (_, _) => NachholenWennFrei();
         Loaded += (_, _) => { speicher.PropertyChanged += Geaendert; Bauen(); };
         Unloaded += (_, _) => speicher.PropertyChanged -= Geaendert;
     }
 
     private void Geaendert(object? s, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ListenSpeicher.Aenderung) or nameof(ListenSpeicher.Bereit)) Bauen();
+        if (e.PropertyName is nameof(ListenSpeicher.Aenderung) or nameof(ListenSpeicher.Bereit))
+        {
+            if (kopf.IsKeyboardFocusWithin || zeilen.IsKeyboardFocusWithin) { aufschub = true; BaueKacheln(); BaueStatus(); return; }
+            Bauen();
+        }
         else if (e.PropertyName is nameof(ListenSpeicher.Fehler) or nameof(ListenSpeicher.Meldung) or nameof(ListenSpeicher.Ausstehend)) BaueStatus();
     }
+
+    private bool aufschub;
+
+    private void NachholenWennFrei() => Spaeter(() =>
+    {
+        if (!aufschub || kopf.IsKeyboardFocusWithin || zeilen.IsKeyboardFocusWithin) return;
+        aufschub = false;
+        Bauen();
+    });
 
     private Liste? Aktuell
     {
@@ -97,6 +113,8 @@ public sealed class ListenAnsicht : UserControl
             var art = ArtAusName(name);
             var l = speicher.ListeAnlegen(name, art);
             gewaehlt = l.Id;
+            unterVon = 0; bearbeite = 0; loeschenFrage = false;
+            Bauen();
             Log("listen", $"Liste angelegt: {name}", wo: "Ablage/Listen");
         });
         kacheln.Children.Add(Box(neu, Farbe.Glas(0.03), 14, 12, 18, Farbe.Glas(0.08)));
@@ -191,7 +209,7 @@ public sealed class ListenAnsicht : UserControl
         if (l == null) return;
         var ansicht = speicher.Ansicht(l);
         if (ansicht.Count == 0) { zeilen.Children.Add(Tx("Die Liste ist leer.", 13, null, Farbe.Text3).Rand(4, 8, 0, 0)); return; }
-        foreach (var z in ansicht) zeilen.Children.Add(z.Eintrag == null ? KopfZeile(l, z) : EintragZeile(z));
+        foreach (var z in ansicht) zeilen.Children.Add(z.Eintrag == null ? KopfZeile(l, z) : EintragZeile(l, z));
     }
 
     private UIElement KopfZeile(Liste l, ListenZeile z)
@@ -205,7 +223,7 @@ public sealed class ListenAnsicht : UserControl
         return Box(t, null).Klick(() => { abschnittWahl = abschnittWahl == echt ? "" : echt; BaueZeilen(); }).Hilfe("Antippen: neue Einträge kommen in diesen Abschnitt");
     }
 
-    private UIElement EintragZeile(ListenZeile z)
+    private UIElement EintragZeile(Liste liste, ListenZeile z)
     {
         var e = z.Eintrag!;
         var id = e.Id;
@@ -245,7 +263,7 @@ public sealed class ListenAnsicht : UserControl
             if (e.Faellig.Length > 0) zusatz.Add(Tx(ListenArten.DatumKurz(e.Faellig), 11, FontWeights.SemiBold, Farbe.Gold));
             foreach (var tag in e.Tags) zusatz.Add(Tx("#" + tag, 11, null, Farbe.Haupt));
             if (z.KinderGesamt > 0) zusatz.Add(Tx($"{z.KinderErledigt}/{z.KinderGesamt}", 11, null, Farbe.Text3));
-            if (e.Abschnitt.Length > 0 && Aktuell?.Gruppierung != "abschnitt") zusatz.Add(Tx(e.Abschnitt, 11, null, Farbe.Text3));
+            if (e.Abschnitt.Length > 0 && liste.Gruppierung != "abschnitt") zusatz.Add(Tx(e.Abschnitt, 11, null, Farbe.Text3));
             var notiz = e.Notiz.Length > 0 ? Tx(e.Notiz, 12, null, Farbe.Text2, zeilen: 2) : null;
             titel = V(3, t, zusatz.Count > 0 ? H(8, zusatz.Append(Spacer()).ToArray()) : null, notiz);
         }
