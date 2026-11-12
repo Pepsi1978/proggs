@@ -89,6 +89,9 @@ def bau_ohne_bump(cmd, cwd):
         # Das Werkzeug Werkzeuge/versionslog/eintrag.py hängt den Eintrag selbst an (M13).
         if re.search(r'versionslog[\\/]+eintrag\.py', davor, re.IGNORECASE):
             continue
+        # git pull vor dem Bau im selben Befehl: Der Pull bringt den Bump einer parallelen Sitzung erst während des Befehls (M23).
+        if re.search(r'\bgit\b[^;&|\n]*\bpull\b', davor):
+            continue
         basis = cwd
         for c in CD.finditer(davor):
             basis = pfad(c.group(1) or c.group(2) or c.group(3), basis)

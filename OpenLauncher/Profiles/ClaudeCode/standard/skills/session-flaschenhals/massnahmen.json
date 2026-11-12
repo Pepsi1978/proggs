@@ -370,6 +370,22 @@
       "pruefung": "höchstens 1 solcher Fehler je Sitzung in den nächsten 10 Sitzungen",
       "ruecknahme": "Letzten Punkt in jarvis-tablet-zweites-geraet.md entfernen",
       "kosten": "eine Zeile in einer Bedarfsdatei"
+    },
+    {
+      "id": "M23",
+      "titel": "Bau-Hook: git pull vor dem Bau im selben Befehl nicht als Bau ohne Bump blocken",
+      "datum": "12.11.2026 11:14",
+      "status": "aktiv",
+      "beleg": "Sitzung ea31bf4c: 1 Fehlalarm, parallele Sitzung hatte gebumpt, Pull und Bau in einem Befehl, Umweg über Notaus-Flag",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "git[^;&|\n]*pull[^\n]*gradlew",
+      "fehler_regex": "erst die Version bumpen",
+      "pruefung": "kein Bump-Fehlalarm bei Pull+Bau in den nächsten 10 Sitzungen",
+      "ruecknahme": "git-pull-Zeile in bau_ohne_bump entfernen",
+      "kosten": "keine (Hook-Logik)"
     }
   ]
 }
