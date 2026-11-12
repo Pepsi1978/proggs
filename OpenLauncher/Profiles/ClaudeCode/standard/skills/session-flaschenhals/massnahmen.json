@@ -375,8 +375,8 @@
       "id": "M22",
       "titel": "programmier_fortschritt bei Tablet-Auftrag nicht wiederholen",
       "datum": "2026-11-12T11:10",
-      "status": "aktiv",
-      "beleg": "Sitzung 3e1741cc: 4× „Unbekannte auftrag_id“, Auftrag kam vom Tablet, MCP antwortet vom Handy",
+      "status": "wirkungslos",
+      "beleg": "Sitzung 3e1741cc: 4× „Unbekannte auftrag_id“, Auftrag kam vom Tablet, MCP antwortet vom Handy Nachtrag 12.11.2026 (Sitzung 39a41959): erneut 5x 'Unbekannte auftrag_id', obwohl der Auftrag vom Handy kam und der MCP vom Handy antwortete und jarvis_status 'zuletzt bestaetigt durch Auftrag 3GMJF' zeigte: Ursache ist nicht das Tablet. Vorschlag an Frank: ProgrammierFaehigkeit sollte Auftraege, die nur der Server kennt, annehmen (App-Code, nicht durch diesen Skill).",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/jarvis-tablet-zweites-geraet.md (letzter Punkt)"
       ],
