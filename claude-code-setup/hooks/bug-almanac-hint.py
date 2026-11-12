@@ -31,6 +31,7 @@ AREAS = {
     "desktop/voice-pipeline":       ("Voice-Pipeline",      ["voice pipeline", "endpointing", "barge-in", "wachfenster", "vad-"]),
     "desktop/laptop-helligkeit-asus-nvidia": ("Laptop-Helligkeit (ASUS/NVIDIA)", ["display helligkeit", "display-helligkeit", "displayhelligkeit", "bildschirm helligkeit", "bildschirm-helligkeit", "bildschirmhelligkeit", "helligkeitsregelung", "helligkeitsregler", "helligkeitstasten", "helligkeits-tasten", "wmimonitorbrightness", "g834jz", "laptop backlight", "laptop-backlight"]),
     "android/jetpack-compose":      ("Jetpack Compose",      ["jetpack compose", "recomposition", "@composable", "compose state", "remembersaveable"]),
+    "android/app-widgets":          ("App-Widgets",          ["app widget", "app-widget", "appwidget", "homescreen widget", "homescreen-widget", "startbildschirm widget", "startbildschirm-widget", "listen widget", "listen-widget", "remoteviews", "remote views", "remote-views", "remotecollectionitems", "glance widget", "glance-widget", "appwidgetprovider"]),
     "android/room":                 ("Room-DB",              ["room database", "room dao", "room entity", "@dao", "@entity", "roomdatabase"]),
     "android-build/r8":             ("R8/ProGuard",          ["proguard", "keep rule", "r8 minify", "minifyenabled", "shrinkresources"]),
     "android/firebase-billing":     ("Firebase Billing",     ["firebase billing", "play billing", "in-app purchase", "paywall", "billingclient"]),

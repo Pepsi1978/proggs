@@ -233,9 +233,10 @@ class ListenFaehigkeit(private val context: Context) : Faehigkeit {
                     x.copy(
                         titel = a.optString("neuer_titel").takeIf { a.gesetzt("neuer_titel") }?.trim() ?: x.titel,
                         prioritaet = prioAus(a) ?: x.prioritaet,
-                        notiz = if (a.has("notiz")) a.optString("notiz").trim().takeIf { it != "ohne" }.orEmpty() else x.notiz,
+                        // Leere Felder, die das Modell nur mitschickt, ändern nichts: „ohne“ löscht ausdrücklich.
+                        notiz = if (a.gesetzt("notiz")) a.optString("notiz").trim().takeIf { it != "ohne" }.orEmpty() else x.notiz,
                         faellig = faelligAus(a) ?: x.faellig,
-                        tags = if (a.has("tags")) a.liste("tags").map { it.removePrefix("#") } else x.tags,
+                        tags = a.liste("tags").takeIf { it.isNotEmpty() }?.let { t -> if (t == listOf("ohne")) emptyList() else t.map { it.removePrefix("#") } } ?: x.tags,
                         abschnitt = if (a.gesetzt("abschnitt")) a.optString("abschnitt").takeIf { it != "ohne" }.orEmpty() else x.abschnitt,
                         angeheftet = if (a.has("angeheftet")) a.optBoolean("angeheftet") else x.angeheftet,
                     )
