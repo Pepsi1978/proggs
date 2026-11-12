@@ -510,6 +510,9 @@ public sealed class Einstellungen : Beobachtbar
     public bool Vollzugriff { get => _vollzugriff; set => Merke(ref _vollzugriff, value); }
     private bool _lernenAn = Vorgaben.Wahr("lernenAn", true);
     public bool LernenAn { get => _lernenAn; set => Merke(ref _lernenAn, value); }
+    private string _zentraleReihenfolge = Vorgaben.Text("zentraleReihenfolge") ?? "";
+    /// <summary>Reihenfolge der Karten in der Zentrale, Kennungen mit Komma; leer = Werks-Reihenfolge.</summary>
+    public string ZentraleReihenfolge { get => _zentraleReihenfolge; set => Merke(ref _zentraleReihenfolge, value); }
     private bool _globalesKuerzel = Vorgaben.Wahr("globalesKuerzel", true);
     public bool GlobalesKuerzel { get => _globalesKuerzel; set => Merke(ref _globalesKuerzel, value); }
 

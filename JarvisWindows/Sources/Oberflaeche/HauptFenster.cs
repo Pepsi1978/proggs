@@ -212,6 +212,7 @@ public sealed class HauptFenster : Window
         {
             Bereich.Start => new StartAnsicht(),
             Bereich.Zentrale => new ZentraleAnsicht(),
+            Bereich.Biomarker => new BiomarkerAnsicht(),
             Bereich.Ablage => new AblageAnsicht(),
             Bereich.Gespraech => s.Gespraech is { } g ? new ChatAnsicht(g) : new StartAnsicht(),
             _ => new EinstellungenAnsicht(),
@@ -322,9 +323,8 @@ public sealed class Seitenleiste : Decorator
         var bereiche = new Reaktiv(() =>
         {
             var v = V(2, startKnopf.Parent == null ? startKnopf : Abgeloest(startKnopf));
-            foreach (var b in new[] { Bereich.Zentrale, Bereich.Ablage, Bereich.Einstellungen })
+            foreach (var b in new[] { Bereich.Zentrale, Bereich.Biomarker, Bereich.Ablage, Bereich.Einstellungen })
                 v.Children.Add(new LeistenEintrag(b.Symbol, b.Titel, steuerung.Bereich == b, () => steuerung.Bereich = b));
-            // Der Rückweg zu einem laufenden Gespräch; gestartet wird Live aus der Startblase.
             return v;
         }, new[] { nameof(AppSteuerung.Bereich) }, steuerung);
 

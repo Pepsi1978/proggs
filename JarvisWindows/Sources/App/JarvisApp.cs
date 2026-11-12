@@ -127,6 +127,7 @@ public static class JarvisApp
         Ui.Starte(async () => { _ = await CodexAnmeldung.Shared.Angemeldet(); });
         Task.Run(() => AblageLader.Aufraeumen());
         AblageAbgleich.Shared.Hochfahren();
+        ListenSpeicher.Shared.Hochfahren();
         ErinnerungPlaner.Shared.Starten();
         BotschaftenAnlegen();
         SymbolAnlegen();

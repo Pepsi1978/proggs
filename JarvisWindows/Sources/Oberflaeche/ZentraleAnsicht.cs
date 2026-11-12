@@ -92,14 +92,44 @@ public sealed class ZentraleAnsicht : Decorator
 
     public ZentraleAnsicht()
     {
-        var v = V(20, new ZugangsHinweis(), PcKarte(),
-            new Reaktiv(AuswertungsKarte, new[] { nameof(ZentraleDaten.Auswertung), nameof(ZentraleDaten.Laedt), "Stand" }, daten, melder),
-            ListenKarte("checklist", "Aufgaben heute", Farbe.Gruen, () => daten.Aufgaben, nameof(ZentraleDaten.Aufgaben)),
-            ListenKarte("calendar", "Termine", Farbe.Gold, () => daten.Termine, nameof(ZentraleDaten.Termine)),
-            ListenKarte("cloud.sun.fill", "Wetter", Farbe.Warnung, () => daten.Wetter, nameof(ZentraleDaten.Wetter)));
+        var karten = new Dictionary<string, Func<UIElement>>
+        {
+            ["pc"] = PcKarte,
+            ["auswertung"] = () => new Reaktiv(AuswertungsKarte, new[] { nameof(ZentraleDaten.Auswertung), nameof(ZentraleDaten.Laedt), "Stand" }, daten, melder),
+            ["biomarker"] = BiomarkerKarte.Bauen,
+            ["solar"] = SolarKarte.Bauen,
+            ["aufgaben"] = () => ListenKarte("checklist", "Aufgaben heute", Farbe.Gruen, () => daten.Aufgaben, nameof(ZentraleDaten.Aufgaben)),
+            ["termine"] = () => ListenKarte("calendar", "Termine", Farbe.Gold, () => daten.Termine, nameof(ZentraleDaten.Termine)),
+            ["wetter"] = () => ListenKarte("cloud.sun.fill", "Wetter", Farbe.Warnung, () => daten.Wetter, nameof(ZentraleDaten.Wetter)),
+        };
+        // Wie die Startbereiche am Handy (Modul M1.2): jede Karte an der ganzen Fläche greifen und verschieben; die Reihenfolge bleibt gespeichert.
+        var stapel = V(20);
+        foreach (var id in Reihenfolge(karten.Keys)) stapel.Children.Add(new Decorator { Child = karten[id](), Tag = id });
+        Ziehen.Ordnen(stapel, ids =>
+        {
+            Einstellungen.Shared.ZentraleReihenfolge = string.Join(",", ids);
+            Log("oberflaeche", "Zentrale umsortiert: " + string.Join(", ", ids), wo: "Zentrale");
+        });
+        var v = V(20, new ZugangsHinweis(), stapel, Tx("Karten lassen sich per Drag & Drop verschieben.", 11, null, Farbe.Text3).Mittig());
         v.Margin = new Thickness(28, 26, 28, 26);
         Child = new Scroller(v);
-        Loaded += (_, _) => daten.Vorladen();
+        Loaded += (_, _) =>
+        {
+            daten.Vorladen();
+            Starte(() => BioDaten.Shared.Laden());
+            // Wie am Handy einmal je App-Start von selbst, danach per Knopf oder im eingestellten Takt.
+            if (!SolarDaten.Shared.AutomatischGelesen) { SolarDaten.Shared.AutomatischGelesen = true; Starte(SolarDaten.Shared.Lesen); }
+        };
+    }
+
+    /// <summary>Die Werks-Reihenfolge wie am Handy oben die Lage, darunter Biomarker und Solarbatterie; neue Karten kommen hinten dazu.</summary>
+    public static readonly string[] Werk = { "pc", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter" };
+
+    public static List<string> Reihenfolge(IEnumerable<string> vorhanden)
+    {
+        var da = vorhanden.ToList();
+        var gespeichert = Einstellungen.Shared.ZentraleReihenfolge.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(da.Contains).Distinct().ToList();
+        return gespeichert.Concat(Werk.Where(da.Contains).Where(x => !gespeichert.Contains(x))).Concat(da.Where(x => !gespeichert.Contains(x) && !Werk.Contains(x))).ToList();
     }
 
     private UIElement AuswertungsKarte()

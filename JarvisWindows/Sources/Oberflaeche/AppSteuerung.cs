@@ -5,7 +5,7 @@ using System.Windows.Interop;
 
 namespace JarvisWindows;
 
-public enum Bereich { Start, Zentrale, Ablage, Gespraech, Einstellungen }
+public enum Bereich { Start, Zentrale, Biomarker, Ablage, Gespraech, Einstellungen }
 
 public static class BereichInfo
 {
@@ -13,11 +13,11 @@ public static class BereichInfo
     {
         public string Titel => b switch
         {
-            Bereich.Start => "Start", Bereich.Zentrale => "Zentrale", Bereich.Ablage => "Ablage", Bereich.Gespraech => "Gespräch", _ => "Einstellungen",
+            Bereich.Start => "Start", Bereich.Zentrale => "Zentrale", Bereich.Biomarker => "Biomarker", Bereich.Ablage => "Ablage", Bereich.Gespraech => "Gespräch", _ => "Einstellungen",
         };
         public string Symbol => b switch
         {
-            Bereich.Start => "house.fill", Bereich.Zentrale => "sparkles", Bereich.Ablage => "tray.full.fill", Bereich.Gespraech => "bubble.left.and.text.bubble.right.fill", _ => "gearshape.fill",
+            Bereich.Start => "house.fill", Bereich.Zentrale => "sparkles", Bereich.Biomarker => "bolt.heart.fill", Bereich.Ablage => "tray.full.fill", Bereich.Gespraech => "bubble.left.and.text.bubble.right.fill", _ => "gearshape.fill",
         };
     }
 }

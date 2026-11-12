@@ -146,6 +146,7 @@ public sealed class GedaechtnisAnsicht : Decorator
             new KlappKarte("doc.plaintext.fill", "Langzeitkontext", Farbe.Warnung, () => new LangzeitkontextEditor(), untertitel: "Deine Textdatei für Jarvis, auf PC und Handy gleich"),
             new KlappKarte("bookmark.fill", "Gemerktes", Farbe.Gold, () => LaderInhalt(gemerkt, "Neu laden", () => Starte(() => gemerkt.Laden("jarvis_gemerktes_lesen"))),
                 offenGeaendert: an => { gemerktOffen = an; if (an) Starte(() => gemerkt.Laden("jarvis_gemerktes_lesen")); }),
+            VerdichtenKarte(),
             liveKarte,
             new KlappKarte("macbook", "Funktionsübersicht am PC", Farbe.Haupt, () => new MarkdownText(Pfade.Mitgeliefert("funktionen"), 13), untertitel: "Was Jarvis am Rechner kann, aus dem Repo"),
             handyKarte,
@@ -154,6 +155,32 @@ public sealed class GedaechtnisAnsicht : Decorator
         v.Margin = new Thickness(36);
         Child = new Scroller(v);
         Unloaded += (_, _) => { liveUhr?.Cancel(); liveUhr = null; };
+    }
+
+    /// <summary>Gedächtnis konsolidieren nach der Regel „so knapp wie möglich, so vollständig wie nötig“, wie jarvis_gemerktes_verdichten am Handy:
+    /// erst Vorschläge mit Alt und Neu, geändert wird nur, was Frank übernimmt.</summary>
+    private UIElement VerdichtenKarte()
+    {
+        var v = Verdichter.Shared;
+        return new KlappKarte("sparkles", "Gedächtnis verdichten", Farbe.Gruen, () => new Reaktiv(() =>
+        {
+            var s = V(12,
+                Tx("Regel: " + Merkregel.Knapp, 12, null, Farbe.Text2),
+                H(8, new KapselKnopf("sparkles", v.Laeuft ? "Rechnet …" : "Vorschläge erstellen", () => Starte(v.Vorschlagen), hervorgehoben: true), v.Laeuft ? new Spinner(16) : null, Spacer()));
+            if (v.Meldung is { } m) s.Children.Add(Tx(m, 12, null, Farbe.Text2));
+            foreach (var vs in v.Vorschlaege)
+            {
+                var block = V(8, Tx($"{vs.Titel}: {vs.Neu.Count} Neufassung(en), {vs.Weg.Count} zusammengelegt", 13, FontWeights.SemiBold, Farbe.Haupt));
+                foreach (var n in vs.Neu)
+                    block.Children.Add(V(2, Tx($"[{n.Id}] vorher: {n.Alt}", 12, null, Farbe.Text3), Tx($"neu: {n.Neu}", 12, FontWeights.Medium, Farbe.Text)));
+                foreach (var w in vs.Weg)
+                    block.Children.Add(Tx($"[{w.Id}] geht auf in [{w.In}]: {w.Alt}", 12, null, Farbe.Warnung));
+                block.Children.Add(H(8, new KapselKnopf("checkmark", "Übernehmen", () => Starte(() => v.Uebernehmen(vs)), hervorgehoben: true),
+                    new KapselKnopf("xmark", "Verwerfen", () => v.Verwerfen(vs)), Spacer()));
+                s.Children.Add(Box(block, Farbe.Glas(0.04), 12, 14, 12));
+            }
+            return s;
+        }, new[] { nameof(Verdichter.Laeuft), nameof(Verdichter.Meldung), nameof(Verdichter.Vorschlaege) }, v), untertitel: "Knapper fassen und Dubletten zusammenlegen, mit Vorschau");
     }
 
     private UIElement RegelnKarte()

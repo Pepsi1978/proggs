@@ -106,19 +106,19 @@ public sealed class QuellenListe : UserControl
 }
 
 /// <summary>Ein Ordner des Explorers, wie die Filter der Handy-Ablage; PDFs und Recherchen sind eigene Bereiche.</summary>
-public enum AblageBereich { Bilder, Pdfs, Prompts, Erinnerung, Recherchen, Texte, Dokumente, Tabellen, Praesentationen, Audio, Video, Sonstige }
+public enum AblageBereich { Bilder, Pdfs, Prompts, Erinnerung, Listen, Recherchen, Texte, Dokumente, Tabellen, Praesentationen, Audio, Video, Sonstige }
 
 public static class AblageBereichMehr
 {
     public static string Titel(this AblageBereich b) => b switch
     {
-        AblageBereich.Bilder => "Bilder", AblageBereich.Pdfs => "PDFs", AblageBereich.Prompts => "Prompts", AblageBereich.Erinnerung => "Erinnerung", AblageBereich.Recherchen => "Recherchen", AblageBereich.Texte => "Texte",
+        AblageBereich.Bilder => "Bilder", AblageBereich.Pdfs => "PDFs", AblageBereich.Prompts => "Prompts", AblageBereich.Erinnerung => "Erinnerung", AblageBereich.Listen => "Listen", AblageBereich.Recherchen => "Recherchen", AblageBereich.Texte => "Texte",
         AblageBereich.Dokumente => "Dokumente", AblageBereich.Tabellen => "Tabellen", AblageBereich.Praesentationen => "Präsentationen", AblageBereich.Audio => "Audio",
         AblageBereich.Video => "Video", _ => "Sonstige",
     };
     public static string Symbol(this AblageBereich b) => b switch
     {
-        AblageBereich.Bilder => "photo.fill", AblageBereich.Pdfs => "doc.richtext.fill", AblageBereich.Prompts => "bolt.fill", AblageBereich.Erinnerung => "bell.fill", AblageBereich.Recherchen => "magnifyingglass.circle.fill",
+        AblageBereich.Bilder => "photo.fill", AblageBereich.Pdfs => "doc.richtext.fill", AblageBereich.Prompts => "bolt.fill", AblageBereich.Erinnerung => "bell.fill", AblageBereich.Listen => "checklist", AblageBereich.Recherchen => "magnifyingglass.circle.fill",
         AblageBereich.Texte => "doc.text.fill", AblageBereich.Dokumente => "doc.fill", AblageBereich.Tabellen => "tablecells.fill", AblageBereich.Praesentationen => "rectangle.on.rectangle.angled",
         AblageBereich.Audio => "waveform", AblageBereich.Video => "film.fill", _ => "archivebox.fill",
     };
@@ -126,7 +126,7 @@ public static class AblageBereichMehr
     {
         AblageBereich.Bilder or AblageBereich.Video => Farbe.Kupfer,
         AblageBereich.Pdfs or AblageBereich.Audio => Farbe.Warnung,
-        AblageBereich.Prompts or AblageBereich.Tabellen => Farbe.Gruen,
+        AblageBereich.Prompts or AblageBereich.Tabellen or AblageBereich.Listen => Farbe.Gruen,
         AblageBereich.Recherchen or AblageBereich.Praesentationen or AblageBereich.Erinnerung => Farbe.Gold,
         _ => Farbe.Haupt,
     };
@@ -156,6 +156,7 @@ public sealed class AblageDaten : Beobachtbar
         }
         if (b == AblageBereich.Prompts) return Quelle.Prompts.Count;
         if (b == AblageBereich.Erinnerung) return Quelle.Erinnerungen.Count;
+        if (b == AblageBereich.Listen) return ListenSpeicher.Shared.OffenGesamt;
         return zaehler.TryGetValue(b, out var n) ? n : 0;
     }
     public IEnumerable<AblageEintrag> Eintraege => Quelle.Eintraege;
@@ -196,7 +197,7 @@ public sealed class AblageDaten : Beobachtbar
         {
             switch (b)
             {
-                case AblageBereich.Prompts or AblageBereich.Erinnerung: break;
+                case AblageBereich.Prompts or AblageBereich.Erinnerung or AblageBereich.Listen: break;
                 case AblageBereich.Recherchen:
                     if (e.Recherche) r.Add(new AblageElement(e, null));
                     break;
@@ -404,6 +405,7 @@ public sealed class AblageAnsicht : UserControl
     private readonly DispatcherTimer listenUhr = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private PromptsAnsicht? prompts;
     private ErinnerungenAnsicht? erinnerungen;
+    private ListenAnsicht? listenAnsicht;
     private NeuerTextEintrag? neuerText;
 
     public AblageAnsicht()
@@ -542,6 +544,7 @@ public sealed class AblageAnsicht : UserControl
         if (inhalt.Content is StackPanel alt && neuerText != null) alt.Children.Remove(neuerText);
         if (bereich == AblageBereich.Prompts) { inhalt.Content = prompts ??= new PromptsAnsicht(); return; }
         if (bereich == AblageBereich.Erinnerung) { inhalt.Content = erinnerungen ??= new ErinnerungenAnsicht(); return; }
+        if (bereich == AblageBereich.Listen) { inhalt.Content = listenAnsicht ??= new ListenAnsicht(); return; }
         var liste = Sortiert(daten.Elemente(bereich, suche));
         var s = new StackPanel();
         if (bereich == AblageBereich.Texte) VAnfuegen(s, neuerText ??= new NeuerTextEintrag(t => daten.Meldung = t), 18);
