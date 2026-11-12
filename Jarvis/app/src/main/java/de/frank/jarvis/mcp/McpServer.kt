@@ -405,7 +405,7 @@ class McpServer(context: Context) {
          */
         private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         /** Die Werkzeuge des Gedächtnisses geben ihre Einträge selbst zurück; ihnen liegt der Kontext nicht noch einmal bei. */
-        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen")
+        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_verdichten", "jarvis_gemerktes_lesen", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen")
         /** Technische Werkzeuge der Mac-Oberfläche: in keiner Werkzeugliste, nicht im Protokoll, ohne Nachträge. */
         private val TECHNISCH = setOf("ablage_struktur", "ablage_datei")
         /**
@@ -415,7 +415,7 @@ class McpServer(context: Context) {
          */
         private val GESCHUETZT = setOf(
             "aufgabe_anlegen", "aufgabe_aendern", "aufgabe_loeschen", "kalender_eintragen", "kalender_loeschen", "idee_speichern", "idee_loeschen",
-            "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "in_ablage_uebernehmen", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
+            "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "in_ablage_uebernehmen", "jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_verdichten", "wecker_stellen", "wecker_loeschen",
             "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
         )
         private val schutz = Wiederholschutz()

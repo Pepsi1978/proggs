@@ -22,7 +22,8 @@ object Stil {
     const val AB = 1
     private const val HOECHSTENS_REGELN = 20
     /** Eine Regel darf bis zu etwa zehn Zeilen lang sein. */
-    private const val REGEL_ZEICHEN = 400
+    /** Nur Notbremse gegen ausufernde Antworten; die Vorgabe an das Modell (400) steht im Auftrag. */
+    private const val REGEL_ZEICHEN = 900
     /** Herkunft der aus Daumen-Bewertungen gelernten Stilregeln (zählen damit als gelernt, nicht als Franks eigene Angabe). */
     private const val QUELLE = "Bewertungen"
 

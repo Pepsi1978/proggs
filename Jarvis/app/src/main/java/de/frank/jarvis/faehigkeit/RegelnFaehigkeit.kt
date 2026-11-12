@@ -48,9 +48,10 @@ data class Regel(
                 else "Erlaubnis mit unklarem Geltungsbereich: keine pauschale Freigabe, außerhalb des ursprünglichen Falls vorher kurz fragen",
             ) else if (geltung.isNotEmpty()) add("gilt nur: $geltung")
             if (bis.isNotEmpty()) add(if (abgelaufen()) "abgelaufen seit $bis, gilt nicht mehr" else "bis $bis")
-            // Anlass und Herkunft nur beim Lesen und Pflegen (jarvis_gemerktes_lesen), nicht im Live-Gedächtnis: Sie ändern kein Verhalten.
+            // Der Anlass steht nur beim Lesen und Pflegen (jarvis_gemerktes_lesen). Gelerntes bleibt auch im Kontext erkennbar, knapp als „gelernt“:
+            // Es ist nicht Franks ausdrückliche Vorgabe und begründet keine Rechte.
             if (mitHerkunft && anlass.isNotEmpty()) add("Anlass: $anlass")
-            if (mitHerkunft && gelernt) add("gelernt aus $quelle")
+            if (gelernt) add(if (mitHerkunft) "gelernt aus $quelle" else "gelernt")
         }
         return if (teile.isEmpty()) "" else " (" + teile.joinToString("; ") + ")"
     }
@@ -312,13 +313,27 @@ open class Merkdatei(
      * [weg] löscht zusammengelegte Dubletten. Liefert die Zahl der geänderten Einträge; null = unbekannte id, Datei defekt oder nicht geschrieben.
      */
     @Synchronized
-    fun verdichte(context: Context, texte: Map<Int, String>, weg: Set<Int>): Int? {
+    fun verdichte(context: Context, texte: Map<Int, String>, weg: Map<Int, Int>): String? {
         val vorher = lies(context)
-        if (vorher.defekt != null) return null
-        val ids = vorher.eintraege.map { it.id }.toSet()
-        if (!ids.containsAll(texte.keys) || !ids.containsAll(weg)) return null
-        val neu = vorher.eintraege.filter { it.id !in weg }.map { r -> texte[r.id]?.let { r.copy(text = saeubere(it)) } ?: r }
-        return if (schreibe(context, vorher, neu)) texte.size + weg.size else null
+        if (vorher.defekt != null) return "Datei defekt: ${vorher.defekt}"
+        val alle = vorher.eintraege.associateBy { it.id }
+        (texte.keys + weg.keys + weg.values).firstOrNull { it !in alle }?.let { return "Die id $it gibt es nicht." }
+        val vonFrank = mutableSetOf<Int>()
+        for ((quelle, ziel) in weg) {
+            val a = alle.getValue(quelle)
+            val z = alle.getValue(ziel)
+            if (ziel in weg) return "id $ziel wird selbst zusammengelegt und kann kein Ziel sein."
+            if (ziel !in texte) return "id $ziel braucht eine Neufassung in eintraege, die den Inhalt von $quelle enthält."
+            // Geltung und Frist dürfen beim Zusammenlegen nicht verloren gehen oder sich ändern.
+            if (a.geltung != z.geltung || a.bis != z.bis) return "id $quelle und $ziel haben verschiedene Geltung oder Frist; nicht zusammenlegen."
+            // Franks eigener Inhalt macht das Ziel zu Franks Eintrag, sonst gälte er als gelernt und der Lernlauf dürfte ihn entfernen.
+            if (!a.gelernt) vonFrank += ziel
+        }
+        val neu = vorher.eintraege.filter { it.id !in weg }.map { r ->
+            val t = texte[r.id] ?: return@map r
+            r.copy(text = saeubere(t), stand = heute(), quelle = if (r.id in vonFrank) "" else r.quelle)
+        }
+        return if (schreibe(context, vorher, neu)) null else "Die Datei ließ sich nicht schreiben."
     }
 
     /** Stellt einen früheren Stand wieder her (Rückgängig in der App). Der id-Zähler sinkt dabei nie. */
@@ -354,8 +369,6 @@ open class Merkdatei(
     }
 
     companion object {
-        /** Länge, die die Modelle für einen Eintrag höchstens anstreben sollen (je Art enger: [Merkart.zeichen]). */
-        const val ZEICHEN = 300
         /** Höchstlänge über das Werkzeug; längere Texte meldet jarvis_merken zurück, statt sie still zu kürzen. */
         const val LAENGSTENS = 600
 
@@ -363,9 +376,12 @@ open class Merkdatei(
          * DIE Schreibregel für alles, was ins Live-Gedächtnis fließt (Merkdateien, Lernläufe, KI-Korrektur, Tagebuch-Verdichtung).
          * Jeder Schreib-Prompt setzt genau diese Konstante ein, nie eine eigene Formulierung (Jarvis/CLAUDE.md).
          */
-        const val KNAPP = "So knapp wie möglich, so vollständig wie nötig: Ein fremdes Modell muss den Eintrag ohne Vorwissen richtig verstehen. " +
+        const val KNAPP_TEXT = "So knapp wie möglich, so vollständig wie nötig: Ein fremdes Modell muss den Text ohne Vorwissen richtig verstehen. " +
             "Behalte Namen, Zahlen, Daten, Fristen, Geltung, Auslöser, Ausnahmen und Vorbehalte („laut Frank“, „nicht verifiziert“). " +
-            "Streiche Füllwörter, Wiederholungen, Beispiele, Begründungen ohne Einfluss auf das Verhalten und alles, was schon in einem anderen Eintrag steht. Ein Thema je Eintrag."
+            "Streiche Füllwörter, Wiederholungen, Beispiele, Begründungen ohne Einfluss auf das Verhalten und alles, was schon anderswo steht."
+
+        /** [KNAPP_TEXT] für einzelne Gedächtniseinträge; Zusammenfassungen mehrerer Punkte (Tagebuch) nehmen [KNAPP_TEXT]. */
+        const val KNAPP = "$KNAPP_TEXT Ein Thema je Eintrag."
         /** Sicherung gegen ausufernde Diktate; erst darüber wird (an einer Satzgrenze) gekürzt. */
         private const val HARTE_GRENZE = 4000
         /** Ab diesem Anteil gemeinsamer Wörter gilt ein neuer Eintrag als mögliche Dublette oder Korrektur eines alten. */
@@ -493,7 +509,7 @@ object Programmierregeln : Merkdatei(
  */
 object StilRegeln : Merkdatei(
     "stil.json", 40,
-    "FRANKS ANTWORT-STIL (Form, Länge, Gliederung, Ton deiner Antworten; geht allgemeinen Formatvorgaben vor; nicht vorlesen$KEINE_RECHTE):",
+    "FRANKS ANTWORT-STIL (teils aus Daumen-Bewertungen gelernt; Form, Länge, Gliederung, Ton deiner Antworten; geht allgemeinen Formatvorgaben vor; nicht vorlesen$KEINE_RECHTE):",
 )
 
 /**
@@ -803,7 +819,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 )
             Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}${eintrag.zusatz()}\n" +
                 "BESTÄTIGE ES FRANK JETZT: ${art.bestaetigung} So kann er sofort berichtigen. Berichtigt er, rufe jarvis_merken mit art ${art.kennung}, id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
-                "Sagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen (ids im Kontext oder in jarvis_gemerktes_lesen), lösche ihn mit jarvis_vergessen.")
+                "Alle Einträge dieser Art jetzt:\n" + art.datei.listeRoh(art.datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche ihn mit jarvis_vergessen.")
         },
         Werkzeug(
             name = "jarvis_vergessen",
@@ -841,23 +857,48 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "Herkunft, Geltung, Frist und Anlass bleiben. Vorher jarvis_gemerktes_lesen. Schreibregel: ${Merkdatei.KNAPP}",
             schema = schema(
                 "art" to text(arten.joinToString(", ") + ".", arten),
-                "eintraege" to JSONObject().put("type", "array").put("description", "Neufassungen: je Objekt id und text.")
-                    .put("items", JSONObject().put("type", "object").put("properties", JSONObject().put("id", JSONObject().put("type", "integer")).put("text", JSONObject().put("type", "string")))),
-                "loeschen" to JSONObject().put("type", "array").put("description", "ids, deren Inhalt in einen anderen Eintrag übernommen wurde.").put("items", JSONObject().put("type", "integer")),
+                "eintraege" to objektListe("Neufassungen.", schema("id" to zahl("id des Eintrags."), "text" to text("Neuer, knapperer Text."), pflicht = listOf("id", "text"))),
+                "zusammenlegen" to objektListe("Dubletten: Inhalt von id steht jetzt in der Neufassung von in; id wird gelöscht.",
+                    schema("id" to zahl("Eintrag, der wegfällt."), "in" to zahl("Eintrag, der den Inhalt übernimmt (mit Neufassung in eintraege)."), pflicht = listOf("id", "in"))),
                 pflicht = listOf("art"),
             ),
             nurLesen = false,
+            loeschend = true,
         ) { a ->
+            fun fehler(t: String) = Ergebnis("Nichts geändert: $t", fehler = true)
             val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: " + arten.joinToString(", ") + ".", fehler = true)
-            val liste = a.optJSONArray("eintraege")
-            val texte = buildMap { if (liste != null) for (i in 0 until liste.length()) liste.optJSONObject(i)?.let { put(it.optInt("id"), it.optString("text").trim()) } }
-            val weg = buildSet { a.optJSONArray("loeschen")?.let { l -> for (i in 0 until l.length()) add(l.optInt(i)) } }
-            texte.entries.firstOrNull { it.value.length < 10 || it.value.length > Merkdatei.LAENGSTENS }?.let {
-                return@Werkzeug Ergebnis("Nichts geändert: Text zu id ${it.key} ist leer oder länger als ${Merkdatei.LAENGSTENS} Zeichen.", fehler = true)
+            val texte = mutableMapOf<Int, String>()
+            a.optJSONArray("eintraege")?.let { l ->
+                for (i in 0 until l.length()) {
+                    val o = l.optJSONObject(i) ?: return@Werkzeug fehler("Eintrag ${i + 1} ist kein Objekt.")
+                    val id = o.optInt("id", 0).takeIf { it > 0 } ?: return@Werkzeug fehler("Eintrag ${i + 1} ohne gültige id.")
+                    if (id in texte) return@Werkzeug fehler("id $id steht doppelt in eintraege.")
+                    texte[id] = o.optString("text").replace(Regex("\\s+"), " ").trim()
+                }
             }
-            if (texte.keys.any { it in weg }) return@Werkzeug Ergebnis("Nichts geändert: eine id steht in eintraege und loeschen.", fehler = true)
-            art.datei.verdichte(context, texte, weg)?.let { Ergebnis("${it} Einträge der Art ${art.kennung} verdichtet (${texte.size} neu gefasst, ${weg.size} zusammengelegt).") }
-                ?: Ergebnis("Nichts geändert: unbekannte id oder Datei nicht schreibbar. Lies nach mit jarvis_gemerktes_lesen.", fehler = true)
+            val weg = mutableMapOf<Int, Int>()
+            a.optJSONArray("zusammenlegen")?.let { l ->
+                for (i in 0 until l.length()) {
+                    val o = l.optJSONObject(i) ?: return@Werkzeug fehler("zusammenlegen ${i + 1} ist kein Objekt.")
+                    val id = o.optInt("id", 0).takeIf { it > 0 } ?: return@Werkzeug fehler("zusammenlegen ${i + 1} ohne gültige id.")
+                    val ziel = o.optInt("in", 0).takeIf { it > 0 && it != id } ?: return@Werkzeug fehler("zusammenlegen ${i + 1} ohne gültiges in.")
+                    if (id in weg || id in texte) return@Werkzeug fehler("id $id steht doppelt.")
+                    weg[id] = ziel
+                }
+            }
+            if (texte.isEmpty() && weg.isEmpty()) return@Werkzeug fehler("keine Neufassung und nichts zusammenzulegen.")
+            val bisher = art.datei.alle(context).associateBy { it.id }
+            for ((id, t) in texte) {
+                if (t.length < 10 || t.length > Merkdatei.LAENGSTENS) return@Werkzeug fehler("Text zu id $id ist leer oder länger als ${Merkdatei.LAENGSTENS} Zeichen.")
+                // Ohne Zusammenlegen darf ein Eintrag beim Verdichten nicht wachsen.
+                val alt = bisher[id]
+                if (alt != null && id !in weg.values && t.length > maxOf(alt.text.length, art.zeichen)) return@Werkzeug fehler("id $id würde länger statt knapper.")
+                // Dieselben Schutzprüfungen wie jarvis_merken, mit Geltung und Frist des Eintrags.
+                val pruefung = JSONObject().put("geltung", alt?.geltung.orEmpty()).put("bis", alt?.bis.orEmpty().takeIf { alt?.abgelaufen() != true }.orEmpty())
+                pruefeGeltung(art, t, pruefung)?.let { return@Werkzeug Ergebnis("Nichts geändert (id $id): ${it.text}", fehler = true) }
+            }
+            art.datei.verdichte(context, texte, weg)?.let { return@Werkzeug fehler("$it Lies nach mit jarvis_gemerktes_lesen.") }
+            Ergebnis("Art ${art.kennung} verdichtet: ${texte.size} neu gefasst, ${weg.size} zusammengelegt.")
         },
         Werkzeug(
             name = "jarvis_langzeitkontext_lesen",

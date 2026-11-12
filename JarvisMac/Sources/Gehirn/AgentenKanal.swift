@@ -16,7 +16,7 @@ final class AgentenKanal {
     private static let warteSekunden = 60.0
     private static let zeitlimit = 600.0
     private static let hoechstalter = 6.0 * 3600
-    private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
+    private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_verdichten", "jarvis_langzeitkontext_ersetzen", "mail_senden",
                                                 "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog",
                                                 // Fremde Texte im Kanal lösen keine Helfer aus; ansehen (suchen, info) bleibt erlaubt.
                                                 "mac_helfer_ausfuehren", "mac_helfer_verwalten", "mac_helfer_bauen",

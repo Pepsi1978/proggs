@@ -153,7 +153,7 @@ object Lernen {
 
     /** Kürzt an der letzten Satzgrenze innerhalb der Grenze. */
     private fun kuerze(text: String, grenze: Int): String = text.trim().let { t ->
-        if (t.length <= grenze) t else t.take(grenze).let { k -> (k.lastIndexOfAny(charArrayOf('.', '!', '?')) + 1).takeIf { it > grenze / 2 }?.let { k.substring(0, it) } ?: k }
+        if (t.length <= grenze) t else t.take(grenze).let { k -> (k.lastIndexOfAny(charArrayOf('.', '!', '?', ';')) + 1).takeIf { it > grenze / 2 }?.let { k.substring(0, it) } ?: k }
     }
 
     private const val MONAT_ZEICHEN = 900
@@ -163,11 +163,11 @@ object Lernen {
     private val VERDICHTEN =
         "Du verdichtest Franks Tagebuch eines Monats zu einem Gedächtnis für seinen Assistenten Jarvis. Schreibe in höchstens $MONAT_ZEICHEN Zeichen, knapp im Telegrammstil, Punkte durch Semikolons getrennt, " +
             "was in diesem Monat für Frank wichtig war: was er gemacht und erlebt hat, woran er gearbeitet hat, Gesundheit und Training, Menschen, wiederkehrende Themen, Entscheidungen " +
-            "und besondere Ereignisse mit Datum. Nur was in den Einträgen steht, sachlich und ohne Wertung. " + Merkdatei.KNAPP + " Antworte nur mit diesem Text."
+            "und besondere Ereignisse mit Datum. Nur was in den Einträgen steht, sachlich und ohne Wertung. " + Merkdatei.KNAPP_TEXT + " Antworte nur mit diesem Text."
 
     private const val TAGESKURZ =
         "Du schreibst für Franks Assistenten Jarvis je Tagebucheintrag eine Kurzfassung in Stichpunkten: höchstens 280 Zeichen je Tag, die wichtigsten Punkte durch Semikolons getrennt " +
-            "(was Frank gemacht und erlebt hat, Menschen, Gesundheit, Training, Arbeit an Projekten, Entscheidungen), sachlich, nur was im Eintrag steht. " + Merkdatei.KNAPP + " " +
+            "(was Frank gemacht und erlebt hat, Menschen, Gesundheit, Training, Arbeit an Projekten, Entscheidungen), sachlich, nur was im Eintrag steht. " + Merkdatei.KNAPP_TEXT + " " +
             "Antworte je Tag mit genau einer Zeile in der Form JJJJ-MM-TT: Stichpunkt; Stichpunkt; Stichpunkt – sonst nichts."
 
     /** „ZIEL: Satz“, „INFO: Satz“ oder mit id zum Ersetzen „INFO 4: Satz“. */
@@ -179,7 +179,7 @@ object Lernen {
             "Finde höchstens drei Dinge, die das Gedächtnis besser machen: ein neues ZIEL (was Frank erreichen will und im Tagebuch eindeutig so sagt), eine neue INFO (dauerhafte Tatsache: " +
             "Vorlieben und Abneigungen, was ihm wichtig ist, Besitz, Gewohnheiten, Menschen in seinem Leben, Gesundheitliches von Dauer) oder eine vorhandene INFO, die das Tagebuch überholt " +
             "oder widerlegt hat. Ziele ersetzt du nie. Nicht: was er an einem einzelnen Tag gemacht hat, Stimmungen, einzelne Termine, Vermutungen. Im Zweifel nichts. " +
-            Merkdatei.KNAPP + " Höchstens 250 Zeichen je Satz. " +
+            Merkdatei.KNAPP + " Höchstens 200 Zeichen je INFO, 250 je ZIEL. " +
             "Antworte je Ding mit einer Zeile ohne Anführungszeichen und ohne Aufzählungszeichen, der Satz in der dritten Person und mit Frank beginnend, zum Beispiel:\n" +
             "ZIEL: Frank will …\nINFO: Frank …\nINFO 7: Frank … (ersetzt den Eintrag mit id 7)\n" +
             "Gibt es nichts, antworte nur mit dem Wort KEINE."

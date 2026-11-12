@@ -32,7 +32,7 @@ public sealed class AgentenKanal
     private const double Hoechstalter = 6.0 * 3600;
     private static readonly HashSet<string> Gesperrt = new()
     {
-        "jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
+        "jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_verdichten", "jarvis_langzeitkontext_ersetzen", "mail_senden",
         "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "windows_dialog",
         // Aufträge vom Handy bedienen den Laptop voll (Computer Use, PowerShell, Terminal, CLI), ändern aber nicht Jarvis' eigene Einstellungen und schreiben nicht in ChatGPT.
         "windows_einstellungen", "chatgpt_app",
