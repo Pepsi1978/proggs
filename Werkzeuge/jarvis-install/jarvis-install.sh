@@ -132,12 +132,12 @@ fi
 
 echo "Lade die APK vorab aufs Handy über $GERAET ..."
   if ! delta_push "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" "$PAKET"; then
-    # Hängender Tunnel: Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; zweiter Versuch nur über eine andere Adresse
-    # am selben Gerät (dieselbe hängende Leitung bliebe bis zum Zeitlimit stehen). Wie jarvis-install.ps1 (M4).
+    # Hängender Tunnel: Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben Gerät.
+    # Wie jarvis-install.ps1 (M4).
     local alte="$GERAET"
     "$WLAN_SKRIPT" --geraet "$ZIEL" >/dev/null 2>&1
     GERAET=$(waehle_geraet)
-    if [ -n "$GERAET" ] && [ "$GERAET" != "$alte" ] && [ "$(handy getprop ro.serialno)" = "$SERIE" ]; then
+    if [ -n "$GERAET" ] && [ "$(handy getprop ro.serialno)" = "$SERIE" ]; then
       echo "Neuer Versuch über $GERAET ..."
       _delta_voll "$ADB_BIN" "$GERAET" "$APK" "$ZWISCHENLAGER" || ende fehler "APK ließ sich nicht aufs Handy laden"
     else

@@ -91,9 +91,15 @@ def eigener_bump_ungebaut(basis, log):
             pass  # parallel gelöscht (clean): zählt wie fehlend
     if not zeiten or os.path.getmtime(log) <= max(zeiten):
         return False
-    r = subprocess.run(['git', '-C', basis, 'log', '--format=%h', 'origin/main..HEAD', '--', log],
-                       capture_output=True, text=True, timeout=5)
-    return r.returncode == 0 and bool(r.stdout.strip())
+    # Eigener Commit, auch schon gepusht (Sitzung a56e3dee: commit, pull --rebase, push, dann Bau): Er steht im Reflog als
+    # "commit:" bzw. nach dem Rebase als "rebase (pick):". Ein per pull/merge geholter Bump steht dort nur als Fast-Forward.
+    r = subprocess.run(['git', '-C', basis, 'log', '-1', '--format=%H', '--', log], capture_output=True, text=True, timeout=5)
+    bump = r.stdout.strip()
+    if r.returncode != 0 or not bump:
+        return False
+    r = subprocess.run(['git', '-C', basis, 'reflog', '-n', '200', '--format=%H %gs'], capture_output=True, text=True, timeout=5)
+    return any(z.startswith(bump + ' ') and re.match(r'(commit|rebase[^:]*\((pick|continue|reword|edit)\))', z[len(bump) + 1:])
+               for z in r.stdout.splitlines())
 
 
 def ohne_heredoc(cmd):
@@ -153,10 +159,11 @@ def bau_ohne_bump(cmd, cwd):
             continue
         if any(z.replace('\\', '/').endswith('assets/versionslog.json') for z in zeilen):
             continue
-        # Eigener Bump schon committet (noch nicht gepusht) und noch nicht gebaut (Versionslog jünger als die neueste APK):
-        # Der Bau bekommt die neue versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026,
-        # Sitzung a56e3dee, M20). Ein per git pull geholter fremder Bump zählt nicht (er liegt schon auf origin/main), und
-        # fehlt jede APK (frischer Worktree, nach clean), gilt die Grundregel: erst bumpen, dann bauen.
+        # Bump in diesem Repo committet und noch nicht gebaut (Versionslog jünger als die neueste APK): Der Bau bekommt die
+        # neue versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026, Sitzung a56e3dee, M20).
+        # Ein per git pull/merge geholter fremder Bump zählt nicht, und fehlt jede APK (frischer Worktree, nach clean), gilt
+        # die Grundregel: erst bumpen, dann bauen. Grenze: Den Commit einer parallelen Sitzung im selben Repo erkennt der
+        # Reflog nicht als fremd.
         if eigener_bump_ungebaut(basis, log):
             continue
         return os.path.basename(basis), zeilen

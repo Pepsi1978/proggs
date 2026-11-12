@@ -64,18 +64,16 @@
       "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
       "datum": "2026-11-08T18:30",
       "status": "wirkt",
-      "plattform": [
-        "windows"
-      ],
       "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit. Korrektur 12.11.2026: Im Zweitversuch setzten pwsh/adb devices LASTEXITCODE auf 0, ohne Gerät lief das Skript ohne Upload weiter; jetzt gilt der Zweitversuch ohne Push als gescheitert.",
       "ort": [
-        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)"
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)",
+        "Werkzeuge/jarvis-install/jarvis-install.sh (dasselbe, seit 12.11.2026)"
       ],
-      "werkzeug": "PowerShell",
-      "aufruf_regex": "jarvis-install\\.ps1",
+      "werkzeug": "Bash|PowerShell",
+      "aufruf_regex": "jarvis-install\\.(ps1|sh)",
       "fehler_regex": "APK ließ sich nicht aufs Handy laden",
-      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen.",
-      "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 entfernen.",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen. Die .sh-Fassung (Mac/Server) ist seit 12.11.2026 neu: dort erst nach 10 eigenen Sitzungen bewerten.",
+      "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 und jarvis-install.sh entfernen.",
       "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
     },
     {
@@ -173,9 +171,10 @@
       "werkzeug": "Write",
       "aufruf_regex": "ATTACH DATABASE",
       "fehler_regex": "Rechnung weicht ab",
-      "pruefung": "Nach 10 Sitzungen: kein ATTACH auf Rooms Verbindung mehr in neuem Code, kein Übernahme-Abbruch wegen leerer Room-Rechnung -> wirkt.",
+      "pruefung": "Nicht automatisch messbar: 'Rechnung weicht ab' steht im App-Log, nicht als Werkzeugfehler. Von Hand: kein neues ATTACH auf Rooms Verbindung (git grep 'ATTACH DATABASE' im App-Code) -> wirkt.",
       "ruecknahme": "Zeile 23 aus dem Room-Kurzcheck entfernen.",
-      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei",
+      "messbar": false
     },
     {
       "id": "M11",
@@ -340,7 +339,7 @@
     },
     {
       "id": "M20",
-      "titel": "Bau-Hook: nicht blocken, wenn ein eigener, noch nicht gepushter Bump-Commit juenger als die neueste APK ist; per Pull geholter fremder Bump und fehlende APK zaehlen nicht",
+      "titel": "Bau-Hook: nicht blocken, wenn der Bump in diesem Repo committet (Reflog commit/rebase-pick, auch schon gepusht) und juenger als die neueste APK ist; per Pull geholter Bump und fehlende APK zaehlen nicht",
       "datum": "2026-11-12T11:06",
       "status": "aktiv",
       "beleg": "Sitzung a56e3dee: 2 Fehlblocks nach committetem Bump 1.8.639 wegen fremder Dateien (Einstellungen.kt, HeuteAufgabenKarte.kt), Notaus nötig",
@@ -350,7 +349,7 @@
       "werkzeug": "Bash|PowerShell",
       "aufruf_regex": "gradlew(\\.bat)?\\s+assemble",
       "fehler_regex": "STOPP - erst die Version bumpen",
-      "pruefung": "Nicht automatisch messbar: aufruf_regex trifft jeden Bau, jede berechtigte Bump-Sperre zaehlte als Fehler. Von Hand: Fehlblock nach committetem Bump bleibt in den naechsten 10 Sitzungen aus. Hook-Test 12.11.2026: APK aelter als Log -> frei, APK juenger -> Sperre, keine APK -> Sperre.",
+      "pruefung": "Nicht automatisch messbar: aufruf_regex trifft jeden Bau, jede berechtigte Bump-Sperre zaehlte als Fehler. Von Hand: Fehlblock nach committetem Bump bleibt in den naechsten 10 Sitzungen aus. Hook-Test 12.11.2026: eigener Bump-Commit -> frei, Fast-Forward-Bump -> Sperre, APK juenger als Log -> Sperre, keine APK -> Sperre. Grenze: Bump-Commit einer parallelen Sitzung im selben Repo gilt als eigener.",
       "ruecknahme": "Aufruf von eigener_bump_ungebaut in bau_ohne_bump und die Funktion entfernen",
       "kosten": "ein stat je Bau-Befehl, kein Kontext",
       "messbar": false

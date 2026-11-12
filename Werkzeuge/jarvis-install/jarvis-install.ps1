@@ -148,13 +148,12 @@ try {
         if ($LASTEXITCODE -ne 0) { & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     }
     if ($LASTEXITCODE -ne 0) {
-        # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN; dann ein zweiter Versuch am selben
-        # Handy, aber nur über eine andere Adresse (dieselbe hängende Leitung bliebe bis zum Zeitlimit stehen).
-        $alteAdresse = $Geraet
+        # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN (belegt 11.11.2026: zweiter Versuch
+        # über 192.168.0.197 gelungen); dann ein zweiter Versuch am selben Handy.
         & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
         $script:Geraet = Waehle-Geraet
         # pwsh, adb devices und getprop setzen LASTEXITCODE auf 0: Ohne zweiten Push muss er wieder als gescheitert gelten.
-        $selbesHandy = $Geraet -and $Geraet -ne $alteAdresse -and (Handy getprop ro.serialno) -eq $serie
+        $selbesHandy = $Geraet -and (Handy getprop ro.serialno) -eq $serie
         $global:LASTEXITCODE = 1
         if ($selbesHandy) { "Neuer Versuch über $Geraet ..."; & $adb -s $Geraet push $Apk $zwischenlager *> $null }
     }
