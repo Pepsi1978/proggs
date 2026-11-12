@@ -402,6 +402,25 @@
       "ruecknahme": "git-pull-Zeile in bau_ohne_bump entfernen",
       "kosten": "keine (Hook-Logik)",
       "fehler_am_aufruf": true
+    },
+    {
+      "id": "M24",
+      "titel": "PowerShell: [IO.File] mit absoluten Pfaden, Variablennamen ohne Groß-/Kleinkollision",
+      "datum": "2026-11-12T14:32",
+      "beleg": "Sitzung 3320ad98: 1 Fehlschlag mit 19k Zeichen Fehlerausgabe ([IO.File] relativ gegen Prozess-Verzeichnis), 1 Fehlschlag durch $B/$b-Kollision; Wiederholung kostete je ~1 min",
+      "ort": [
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz PowerShell-Fallen)"
+      ],
+      "werkzeug": "PowerShell",
+      "fehler_regex": "Could not find a part of the path|Syntax für den Dateinamen, Verzeichnisnamen",
+      "aufruf_regex": "\\[IO\\.File\\]::",
+      "pruefung": "Fehler mit [IO.File] und falschem Pfad in späteren Sitzungen zählen",
+      "ruecknahme": "Satz 'Sitzung 3320ad98 …' aus dem Absatz PowerShell-Fallen entfernen",
+      "kosten": "eine Zeile in einer Bedarfsdatei",
+      "plattform": [
+        "windows"
+      ],
+      "status": "aktiv"
     }
   ]
 }
