@@ -3,7 +3,22 @@ package de.frank.jarvis.ui
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector2D
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.round
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
@@ -74,6 +89,30 @@ private val PRIO_RANG = listOf("HOCH", "MITTEL", "GERING", "SPAETER")
 /** Ab so vielen Aufgaben klappt die Karte den Rest ein („Alle zeigen“), damit der Startbildschirm nicht endlos wird. */
 private const val SICHTBAR = 25
 
+/** So lange bleibt eine abgehakte Aufgabe an ihrem Platz, bevor sie zu den erledigten gleitet. */
+private const val HALTEN_MS = 1_000L
+
+/** Dauer des Gleitens an den neuen Platz. */
+private const val GLEITEN_MS = 450
+
+/**
+ * Lässt eine Zeile weich an ihren neuen Platz in der Spalte gleiten, statt zu springen (die Karte ist eine normale Spalte
+ * in einer LazyColumn, daher kein animateItem). Die Zeile muss über key() an ihre Aufgabe gebunden sein.
+ */
+private fun Modifier.gleitend(): Modifier = composed {
+    val scope = rememberCoroutineScope()
+    var ziel by remember { mutableStateOf(IntOffset.Zero) }
+    var platziert by remember { mutableStateOf(false) }
+    var anim by remember { mutableStateOf<Animatable<IntOffset, AnimationVector2D>?>(null) }
+    onPlaced { ziel = it.positionInParent().round(); platziert = true }.offset {
+        // Vor der ersten echten Platzierung nichts animieren, sonst flöge die Zeile beim Erscheinen von oben herein.
+        if (!platziert) return@offset IntOffset.Zero
+        val a = anim ?: Animatable(ziel, IntOffset.VectorConverter).also { anim = it }
+        if (a.targetValue != ziel) scope.launch { a.animateTo(ziel, tween(GLEITEN_MS, easing = FastOutSlowInEasing)) }
+        a.value - ziel
+    }
+}
+
 /**
  * Stand der Karte außerhalb der Komposition: Sie liegt in einer LazyColumn und verliert sonst beim Wegscrollen alles
  * (auch ein laufendes Abhaken). Lebt so lange wie der App-Prozess.
@@ -84,6 +123,11 @@ private object HeuteAufgabenStand {
     var alleZeigen by mutableStateOf(false)
     /** Während Jarvis eine Zeile umstellt, gilt dort der gewünschte Stand (kein Zurückspringen beim Neulesen). */
     val unterwegs = mutableStateMapOf<Long, Boolean>()
+    /**
+     * Frisch abgehakte Zeilen: Haken und Durchstreichen sind schon zu sehen, einsortiert wird die Zeile aber noch als offen,
+     * bis [HALTEN_MS] um sind; erst dann gleitet sie zu den erledigten. Wert = Kennung des Tipps (ein neuer Tipp ersetzt ihn).
+     */
+    val halten = mutableStateMapOf<Long, Long>()
     /**
      * Heute in Jarvis abgehakte Überfällige: Geniale Aufgaben führt sie danach nur noch unter „Erledigt“ (ihr Tag liegt vor
      * heute), hier bleiben sie bis Mitternacht als erledigt stehen, damit ein versehentlicher Tipp rückgängig zu machen ist.
@@ -250,6 +294,13 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
         if (a.id in s.unterwegs) return
         val ziel = !a.erledigt
         s.unterwegs[a.id] = ziel
+        s.halten.remove(a.id)
+        // Abhaken: erst Haken und Durchstreichen am alten Platz zeigen, nach HALTEN_MS weich nach unten.
+        if (ziel) {
+            val tipp = System.nanoTime()
+            s.halten[a.id] = tipp
+            vm.viewModelScope.launch { delay(HALTEN_MS); if (s.halten[a.id] == tipp) s.halten.remove(a.id) }
+        }
         // Im ViewModel, nicht in der Karte: Scrollt Frank sie weg, läuft das Abhaken trotzdem zu Ende.
         vm.viewModelScope.launch {
             val r = withContext(Dispatchers.IO) {
@@ -275,8 +326,11 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
     }
 
     Karte {
-        // Sofort neu sortiert: Ein frisch abgehakter Eintrag rutscht schon beim Tipp unter die offenen.
-        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }?.let(::sortiere)
+        // Haken sofort sichtbar; einsortiert wird eine frisch abgehakte Zeile erst nach HALTEN_MS (bis dahin als offen).
+        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }?.let { liste ->
+            val nachId = liste.associateBy { it.id }
+            sortiere(liste.map { a -> if (a.id in s.halten) a.copy(erledigt = false) else a }).map { nachId.getValue(it.id) }
+        }
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
         Column(griff.fillMaxWidth()) {
@@ -356,9 +410,15 @@ private fun zusatz(a: HeuteAufgabe): String =
 @Composable
 private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
     val f = LocalFarben.current
+    // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Beim Abhaken erst kurz kräftig (Haken gut
+    // sichtbar), dann während des Gleitens ausgrauen; beim Wiederöffnen sofort zurück.
+    val deckung by animateFloatAsState(
+        if (a.erledigt) 0.5f else 1f,
+        if (a.erledigt) tween(GLEITEN_MS, delayMillis = HALTEN_MS.toInt()) else tween(200), label = "deckung",
+    )
+    val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
     Row(
-        // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend.
-        Modifier.fillMaxWidth().alpha(if (a.erledigt) 0.5f else 1f).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
+        Modifier.gleitend().fillMaxWidth().alpha(deckung).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
             .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
         // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, nicht mittig zwischen Titel und Zusatzzeile.
         verticalAlignment = Alignment.Top,
@@ -389,7 +449,7 @@ private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
                 if (f.dunkel) Modifier else Modifier.border(2.dp, f.textLeise.copy(alpha = 0.75f), CircleShape))),
             contentAlignment = Alignment.Center,
         ) {
-            if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp))
+            if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp).scale(haken))
         }
     }
 }
