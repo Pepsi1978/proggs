@@ -41,6 +41,23 @@ public sealed class ProgrammEintrag
     public bool WingetUpdatePerInstall { get; set; }
 
     /// <summary>
+    /// Start of the DisplayName in the Windows uninstall list (ARP) for a package winget cannot
+    /// correlate at all: neither by id nor by name. The Windows SDK installed by Visual Studio
+    /// (10.1.26100.9457) is newer than every winget manifest, so no ProductCode matches and
+    /// "winget list/upgrade --id" answer 0x8A150014. With this set the check reads the installed
+    /// version from the registry and compares it with the newest winget version; the update then
+    /// runs as "winget install" -- and only when the registry version is provably older.
+    /// </summary>
+    public string? ArpName { get; set; }
+
+    /// <summary>
+    /// Index of the first version component that counts when comparing the ARP version with the
+    /// winget version (default 0 = all). The SDK registers 10.1.26100.x, winget names 10.0.26100.x:
+    /// with 2 only "26100.x" is compared, so the 10.1 vs 10.0 prefix cannot make it current forever.
+    /// </summary>
+    public int ArpVergleichAb { get; set; }
+
+    /// <summary>
     /// Pins the installer type of the update run ("wix" = MSI). Without it winget picks the
     /// manifest's preferred one -- for PowerShell the MSIX bundle, which landed beside the MSI
     /// install as a second PowerShell instead of replacing it.

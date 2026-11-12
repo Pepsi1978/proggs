@@ -92,6 +92,20 @@ public sealed class UpdateKette
             : null;
 
     /// <summary>
+    /// "winget upgrade" on a package winget itself calls not installed can only end in 0x8A150014
+    /// (Windows SDK, 12.11.2026): the chain ends before the call, with the way out in the message.
+    /// Only for winget's upgrade verb -- a repo script legitimately builds what is "not built yet".
+    /// </summary>
+    public static KettenUrteil? WingetNichtInstalliert(ProgrammEintrag eintrag, string fingerabdruck, PruefErgebnis vor)
+        => vor.Zustand == UpdateZustand.NichtInstalliert && !eintrag.WingetUpdatePerInstall
+           && string.Equals(eintrag.Art, "winget", StringComparison.OrdinalIgnoreCase)
+            ? new KettenUrteil(LaufErgebnis.Abgebrochen,
+                "Nicht installiert – winget kann nur aktualisieren, was es als installiert erkennt; es wurde nichts ausgeführt. "
+                + "Ist das Programm doch installiert, im Katalog „arpName“ (Deinstallationsliste) oder „wingetName“ setzen.",
+                fingerabdruck, fingerabdruck, vor, 0, false)
+            : null;
+
+    /// <summary>
     /// Waits for foreign blockers; null = free. Public so the caller can wait BEFORE it closes the
     /// program: it must not stay closed for the whole wait. One budget for the whole chain.
     /// </summary>

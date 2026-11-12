@@ -865,7 +865,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 _standVorLauf = vorher;
                 abbruch.ThrowIfCancellationRequested();
 
-                urteil = UpdateKette.BereitsAktuell(vorher, pruefung);
+                urteil = UpdateKette.BereitsAktuell(vorher, pruefung)
+                         ?? UpdateKette.WingetNichtInstalliert(Eintrag, vorher, pruefung);
 
                 if (urteil is null)
                 {

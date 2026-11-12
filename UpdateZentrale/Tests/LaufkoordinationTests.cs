@@ -240,6 +240,48 @@ public sealed class ProviderZustandTests
         => Assert.Equal(UpdateZustand.NichtInstalliert, WingetAktualisierer.ListeAuswerten(
             Lauf("No installed package found matching input criteria.", WingetAktualisierer.KeinPaketGefunden), "X.Y").Zustand);
 
+    // ---- ARP-Rückfall (Windows SDK, 12.11.2026) ----
+    [Fact] public void Arp_Vergleich_ab_Komponente_2_ignoriert_10_1_gegen_10_0()
+    {
+        Assert.Equal("26100.9999", WingetAktualisierer.VersionAb("10.0.26100.9999", 2));
+        Assert.Equal(1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.7705", 2)));
+        Assert.Equal(-1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9999", 2)));
+        Assert.Equal(0, WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9457", 2));
+        Assert.Equal(1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9999", 0)));
+    }
+
+    [Fact] public void Arp_Version_nimmt_hoechste_mit_passendem_Namensanfang()
+    {
+        var alt = WingetAktualisierer.ArpEintraege;
+        try
+        {
+            WingetAktualisierer.ArpEintraege = () => new[]
+            {
+                ("Windows Software Development Kit - Windows 10.0.22621.755", "10.1.22621.755"),
+                ("Windows Software Development Kit - Windows 10.0.26100.4188", "10.1.26100.4188"),
+                ("Windows Software Development Kit - Windows 10.0.26100.9457", "10.1.26100.9457"),
+                ("Windows SDK Desktop Tools x64", "10.1.26100.9999"),
+            };
+            Assert.Equal("10.1.26100.9457", WingetAktualisierer.ArpVersion("Windows Software Development Kit - Windows 10.0.26100"));
+            Assert.Equal("", WingetAktualisierer.ArpVersion("Gibt es nicht"));
+        }
+        finally { WingetAktualisierer.ArpEintraege = alt; }
+    }
+
+    [Fact] public void Show_Version_wird_gelesen()
+        => Assert.Equal("10.0.26100.7705", WingetAktualisierer.NeuesteVersion(
+            "Gefunden Windows Software Development Kit [Microsoft.WindowsSDK.10.0.26100]\nVersion: 10.0.26100.7705\nHerausgeber: Microsoft"));
+
+    [Fact] public void Upgrade_auf_nicht_installiertes_winget_Paket_wird_nicht_gestartet()
+    {
+        var eintrag = new ProgrammEintrag { Id = "x", Art = "winget", WingetId = "X.Y" };
+        var u = UpdateKette.WingetNichtInstalliert(eintrag, "", new PruefErgebnis(UpdateZustand.NichtInstalliert));
+        Assert.NotNull(u);
+        Assert.Equal(0, u!.UpdateAufrufe);
+        Assert.Null(UpdateKette.WingetNichtInstalliert(new ProgrammEintrag { Id = "r", Art = "reposkript" }, "",
+            new PruefErgebnis(UpdateZustand.NichtInstalliert)));
+    }
+
     [Fact] public void Winget_sauberer_Lauf_ohne_Zeile_ist_Unbekannt()
         => Assert.Equal(UpdateZustand.Unbekannt, WingetAktualisierer.ListeAuswerten(Lauf("irgendwas anderes"), "Anthropic.Claude").Zustand);
 

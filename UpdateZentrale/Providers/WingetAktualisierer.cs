@@ -48,9 +48,100 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         var lauf = await ListeAsync(eintrag, protokoll, abbruch);
         var ergebnis = ListeAuswerten(lauf, eintrag.WingetId ?? "", HierVorhanden(eintrag));
+        if (ergebnis.Zustand is UpdateZustand.NichtInstalliert or UpdateZustand.Unbekannt
+            && !string.IsNullOrWhiteSpace(eintrag.ArpName))
+            return await ArpPruefenAsync(eintrag, ergebnis, protokoll, abbruch);
         return ergebnis.Zustand == UpdateZustand.UpdateVerfuegbar && !string.IsNullOrWhiteSpace(eintrag.WingetInstallerTyp)
             ? await AngebotMitInstallerTypAsync(eintrag, ergebnis, protokoll, abbruch)
             : ergebnis;
+    }
+
+    // ---------------- Rückfall auf die Windows-Deinstallationsliste (ARP) ----------------
+
+    /// <summary>Test seam: DisplayName/DisplayVersion pairs of the uninstall list.</summary>
+    internal static Func<IEnumerable<(string Name, string Version)>> ArpEintraege { get; set; } = ArpAusRegistry;
+
+    /// <summary>HKLM 64 + 32 bit and HKCU; unreadable keys are skipped.</summary>
+    private static IEnumerable<(string Name, string Version)> ArpAusRegistry()
+    {
+        const string pfad = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+        var wurzeln = new[]
+        {
+            (Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64),
+            (Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry32),
+            (Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Default),
+        };
+        var liste = new List<(string, string)>();
+        foreach (var (hive, ansicht) in wurzeln)
+        {
+            try
+            {
+                using var basis = Microsoft.Win32.RegistryKey.OpenBaseKey(hive, ansicht);
+                using var uninstall = basis.OpenSubKey(pfad);
+                if (uninstall is null) continue;
+                foreach (var name in uninstall.GetSubKeyNames())
+                {
+                    try
+                    {
+                        using var k = uninstall.OpenSubKey(name);
+                        if (k?.GetValue("DisplayName") is string anzeige && k.GetValue("DisplayVersion") is string version)
+                            liste.Add((anzeige, version));
+                    }
+                    catch (Exception ex) when (ex is System.Security.SecurityException or IOException or UnauthorizedAccessException) { }
+                }
+            }
+            catch (Exception ex) when (ex is System.Security.SecurityException or IOException or UnauthorizedAccessException) { }
+        }
+        return liste;
+    }
+
+    /// <summary>The highest ARP version whose DisplayName starts with <paramref name="arpName"/>; "" when none.</summary>
+    internal static string ArpVersion(string arpName)
+        => ArpEintraege()
+            .Where(e => e.Name.StartsWith(arpName.Trim(), StringComparison.OrdinalIgnoreCase) && VersionsZeile.IsMatch(e.Version.Trim()))
+            .Select(e => e.Version.Trim())
+            .OrderByDescending(v => v, Comparer<string>.Create(CliAktualisierer.Vergleiche))
+            .FirstOrDefault() ?? "";
+
+    /// <summary>Compares from component <paramref name="ab"/> on (see <see cref="ProgrammEintrag.ArpVergleichAb"/>).</summary>
+    internal static int ArpVergleiche(string installiert, string angebot, int ab)
+        => CliAktualisierer.Vergleiche(VersionAb(installiert, ab), VersionAb(angebot, ab));
+
+    /// <summary>The version from component <paramref name="ab"/> on; unchanged for 0 or when too short.</summary>
+    internal static string VersionAb(string version, int ab)
+    {
+        var teile = version.Split('.');
+        return ab <= 0 || ab >= teile.Length ? version : string.Join(".", teile.Skip(ab));
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex ShowVersion =
+        new(@"^Version:\s*(\d+(?:\.\d+)+)\s*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    /// <summary>The newest version "winget show" names ("Version:" in German and English); null when unreadable.</summary>
+    internal static string? NeuesteVersion(string? showAusgabe)
+        => showAusgabe is null ? null : ShowVersion.Match(showAusgabe) is { Success: true } m ? m.Groups[1].Value : null;
+
+    /// <summary>
+    /// winget cannot correlate the package: the registry says what is installed, "winget show"
+    /// what is offered. Unreadable answers never become "current" -- they stay "unknown".
+    /// </summary>
+    private static async Task<PruefErgebnis> ArpPruefenAsync(ProgrammEintrag eintrag, PruefErgebnis winget,
+                                                            IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var installiert = ArpVersion(eintrag.ArpName!);
+        if (installiert.Length == 0) return winget;
+        protokoll.Report("winget ordnet das Paket nicht zu – Deinstallationsliste: „" + eintrag.ArpName!.Trim() + "“ " + installiert);
+
+        var angebot = NeuesteVersion(await ShowAsync(eintrag, "", protokoll, abbruch));
+        if (angebot is null)
+            return new PruefErgebnis(UpdateZustand.Unbekannt, installiert,
+                Meldung: "Installiert (" + installiert + "), die winget-Version war nicht lesbar – siehe Protokoll.", Protokoll: winget.Protokoll);
+
+        return ArpVergleiche(installiert, angebot, eintrag.ArpVergleichAb) >= 0
+            ? new PruefErgebnis(UpdateZustand.Aktuell, installiert, "",
+                "Auf dem neuesten Stand (" + installiert + ", winget bietet " + angebot + ").", winget.Protokoll)
+            : new PruefErgebnis(UpdateZustand.UpdateVerfuegbar, installiert, angebot,
+                $"Neue Version {angebot} verfügbar.", winget.Protokoll);
     }
 
     // ---------------- Festgelegter Installer-Typ ----------------
@@ -189,10 +280,12 @@ public sealed class WingetAktualisierer : IAktualisierer
             : $"--name \"{eintrag.WingetName.Trim()}\"";
 
     /// <summary>Verb and package selection of the update run -- see <see cref="ProgrammEintrag.WingetUpdatePerInstall"/>.</summary>
-    internal static string UpdateBefehl(ProgrammEintrag eintrag)
+    internal static string UpdateBefehl(ProgrammEintrag eintrag, bool perArp = false)
         => (eintrag.WingetUpdatePerInstall
                ? $"install --id {eintrag.WingetId} --exact --force"
-               : "upgrade " + Auswahl(eintrag))
+               : perArp
+                   ? $"install --id {eintrag.WingetId} --exact"
+                   : "upgrade " + Auswahl(eintrag))
            + (string.IsNullOrWhiteSpace(eintrag.WingetInstallerTyp) ? "" : " --installer-type " + eintrag.WingetInstallerTyp.Trim());
 
     /// <summary>Something on this machine says the program is there, whatever winget answers.</summary>
@@ -381,7 +474,24 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (!File.Exists(Pfade.Winget))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
-        var args = UpdateBefehl(eintrag) + " --silent --disable-interactivity "
+        // "upgrade" can only answer 0x8A150014 for a package winget does not correlate. With an ARP
+        // name the registry decides: current = nothing to do, older = "install", unreadable = stop.
+        var perArp = false;
+        if (!string.IsNullOrWhiteSpace(eintrag.ArpName))
+        {
+            var winget = ListeAuswerten(await ListeAsync(eintrag, protokoll, abbruch), eintrag.WingetId ?? "", HierVorhanden(eintrag));
+            if (winget.Zustand is UpdateZustand.NichtInstalliert or UpdateZustand.Unbekannt)
+            {
+                var arp = await ArpPruefenAsync(eintrag, winget, protokoll, abbruch);
+                if (arp.Zustand == UpdateZustand.Aktuell)
+                    return arp with { Meldung = "War bereits aktuell – kein Update nötig. " + arp.Meldung };
+                if (arp.Zustand != UpdateZustand.UpdateVerfuegbar)
+                    return arp with { Zustand = UpdateZustand.Fehler, Meldung = "Installierte Version nicht sicher lesbar – nichts installiert. " + arp.Meldung };
+                perArp = true;
+            }
+        }
+
+        var args = UpdateBefehl(eintrag, perArp) + " --silent --disable-interactivity "
                  + "--accept-source-agreements --accept-package-agreements" + QuellArgument(eintrag);
         protokoll.Report($"winget {args}");
 
@@ -559,6 +669,8 @@ public sealed class WingetAktualisierer : IAktualisierer
         SammelVerwerfen();
         var lauf = await ListeAsync(eintrag, null, abbruch, sammelNutzen: false);
         var (wert, problem) = ListenFingerabdruck(lauf, eintrag.WingetId ?? "");
+        if (problem is not null && !string.IsNullOrWhiteSpace(eintrag.ArpName) && ArpVersion(eintrag.ArpName) is { Length: > 0 } arp)
+            return arp;
         if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
         return wert;
     }

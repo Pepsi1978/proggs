@@ -969,6 +969,8 @@
       "beschreibung": "Windows-SDK für C++- und WinRT-Builds.",
       "art": "winget",
       "wingetId": "Microsoft.WindowsSDK.10.0.26100",
+      "arpName": "Windows Software Development Kit - Windows 10.0.26100",
+      "arpVergleichAb": 2,
       "exePfad": "",
       "zeitlimitMinuten": 45,
       "prozesse": [],
