@@ -53,7 +53,7 @@ public sealed class BioDaten : Beobachtbar
     public string? AbrufMeldung { get => _abrufMeldung; private set => Setze(ref _abrufMeldung, value); }
     private int _stand;
     public int Stand { get => _stand; private set => Setze(ref _stand, value); }
-    public int Tage { get; private set; } = 30;
+    public int Tage { get; private set; } = Einstellungen.Shared.BiomarkerTage is 7 or 30 or 90 ? Einstellungen.Shared.BiomarkerTage : 30;
 
     private readonly string datei = Path.Combine(Pfade.Unterstuetzung, "biomarker.json");
     private readonly Dictionary<string, string> verlaufRoh = new();
@@ -65,7 +65,6 @@ public sealed class BioDaten : Beobachtbar
         try
         {
             if (JSON.Objekt(File.ReadAllBytes(datei)) is not { } o) return;
-            Tage = (int)(o.Ganz("tage") ?? 30);
             if (o.Ganz("zeit") is { } z) Zuletzt = DateTimeOffset.FromUnixTimeMilliseconds(z).LocalDateTime;
             if (o.Obj("verlauf") is { } v) foreach (var (k, w) in v) if (w is string s) verlaufRoh[k] = s;
             Uebernimm(o.Text("auswertung"));
@@ -90,7 +89,7 @@ public sealed class BioDaten : Beobachtbar
     public async Task Laden(bool erzwingen = false, int? tage = null)
     {
         if (Laedt) return;
-        if (tage is { } t && t != Tage) { Tage = t; erzwingen = true; }
+        if (tage is { } t && t != Tage) { Tage = t; erzwingen = true; if (Einstellungen.Shared.BiomarkerTage != t) Einstellungen.Shared.BiomarkerTage = t; }
         if (!erzwingen && Zuletzt is { } z && (DateTime.Now - z).TotalMinutes < 5 && Werte.Count > 0) return;
         Laedt = true;
         try

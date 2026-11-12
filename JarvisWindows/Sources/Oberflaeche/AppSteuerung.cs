@@ -163,6 +163,16 @@ public sealed class AppSteuerung : Beobachtbar
                 await Task.Delay(TimeSpan.FromMinutes(4));
             }
         });
+        // Solarbatterie im eingestellten Takt (0 = nur Start und Knopf), nie während eines Sprachgesprächs.
+        Ui.Starte(async () =>
+        {
+            while (true)
+            {
+                var m = Einstellungen.Shared.SolarTaktMinuten;
+                await Task.Delay(TimeSpan.FromMinutes(m > 0 ? m : 1));
+                if (m > 0 && Einstellungen.Shared.SolarTaktMinuten == m && SprachSchleife.Shared.Zustand == SprachZustand.Aus && HandyVerbunden) await SolarDaten.Shared.Lesen();
+            }
+        });
         // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
         Ui.Starte(async () => { if (await ConsoleSitzung.AltbestandUebernehmen()) await Guthaben.Shared.Laden(frisch: true); });
         Ui.Starte(async () =>

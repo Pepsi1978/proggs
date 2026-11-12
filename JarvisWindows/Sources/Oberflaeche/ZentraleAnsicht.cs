@@ -104,7 +104,8 @@ public sealed class ZentraleAnsicht : Decorator
         };
         // Wie die Startbereiche am Handy (Modul M1.2): jede Karte an der ganzen Fläche greifen und verschieben; die Reihenfolge bleibt gespeichert.
         var stapel = V(20);
-        foreach (var id in Reihenfolge(karten.Keys)) stapel.Children.Add(new Decorator { Child = karten[id](), Tag = id });
+        var aus = Einstellungen.Shared.ZentraleAusgeblendet.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var id in Reihenfolge(karten.Keys).Where(k => !aus.Contains(k))) stapel.Children.Add(new Decorator { Child = karten[id](), Tag = id });
         Ziehen.Ordnen(stapel, ids =>
         {
             Einstellungen.Shared.ZentraleReihenfolge = string.Join(",", ids);
@@ -116,9 +117,9 @@ public sealed class ZentraleAnsicht : Decorator
         Loaded += (_, _) =>
         {
             daten.Vorladen();
-            Starte(() => BioDaten.Shared.Laden());
+            if (Einstellungen.Shared.BiomarkerBeimStart && !aus.Contains("biomarker")) Starte(() => BioDaten.Shared.Laden());
             // Wie am Handy einmal je App-Start von selbst, danach per Knopf oder im eingestellten Takt.
-            if (!SolarDaten.Shared.AutomatischGelesen) { SolarDaten.Shared.AutomatischGelesen = true; Starte(SolarDaten.Shared.Lesen); }
+            if (Einstellungen.Shared.SolarBeimStart && !aus.Contains("solar") && !SolarDaten.Shared.AutomatischGelesen) { SolarDaten.Shared.AutomatischGelesen = true; Starte(SolarDaten.Shared.Lesen); }
         };
     }
 

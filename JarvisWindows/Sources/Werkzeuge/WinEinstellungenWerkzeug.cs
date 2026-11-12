@@ -134,6 +134,45 @@ public static class WinEinstellungsKatalog
                     e.GlobalesKuerzel = b;
                     if (b) AppSteuerung.Shared.KuerzelRegistrieren(); else AppSteuerung.Shared.KuerzelAbmelden();
                 })),
+                new("zentrale_reihenfolge", "Zentrale & Bereiche", "Reihenfolge der Zentrale", "Reihenfolge der Karten in der Zentrale (per Drag & Drop oder hier); „zuruecksetzen“ stellt die Werks-Reihenfolge her.",
+                    string.Join(", ", BereicheEinstellungen.ZentraleKarten.Select(k => k.Id)) + " (mit Komma) oder zuruecksetzen",
+                    () => string.Join(", ", ZentraleAnsicht.Reihenfolge(BereicheEinstellungen.ZentraleKarten.Select(k => k.Id))), w =>
+                {
+                    if (w.Trim().ToLowerInvariant() is "zuruecksetzen" or "zurücksetzen" or "werk") { e.ZentraleReihenfolge = ""; return null; }
+                    var ids = w.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => x.ToLowerInvariant()).ToList();
+                    var fremd = ids.Where(x => BereicheEinstellungen.ZentraleKarten.All(k => k.Id != x)).ToList();
+                    if (fremd.Count > 0) return "Unbekannte Karte: " + string.Join(", ", fremd) + ". Erlaubt: " + string.Join(", ", BereicheEinstellungen.ZentraleKarten.Select(k => k.Id));
+                    e.ZentraleReihenfolge = string.Join(",", ids.Distinct());
+                    return null;
+                }),
+                new("zentrale_ausgeblendet", "Zentrale & Bereiche", "Ausgeblendete Karten der Zentrale", "Diese Karten erscheinen nicht in der Zentrale; leer bzw. „keine“ zeigt alle.",
+                    string.Join(", ", BereicheEinstellungen.ZentraleKarten.Select(k => k.Id)) + " (mit Komma) oder keine", () => e.ZentraleAusgeblendet.Length == 0 ? "keine" : e.ZentraleAusgeblendet, w =>
+                {
+                    var ids = w.Trim().ToLowerInvariant() is "keine" or "" ? new List<string>() : w.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => x.ToLowerInvariant()).ToList();
+                    var fremd = ids.Where(x => BereicheEinstellungen.ZentraleKarten.All(k => k.Id != x)).ToList();
+                    if (fremd.Count > 0) return "Unbekannte Karte: " + string.Join(", ", fremd);
+                    e.ZentraleAusgeblendet = string.Join(",", ids.Distinct());
+                    return null;
+                }),
+                new("listen_abgleich", "Zentrale & Bereiche", "Listen mit Handy und Tablet abgleichen", "Ablage → Listen gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Laptop.", "an | aus",
+                    () => AnAus(e.ListenAbgleichAn), w => Schalte(w, b => { e.ListenAbgleichAn = b; ListenSpeicher.Shared.JetztAbgleichen(); })),
+                new("biomarker_zeitraum", "Zentrale & Bereiche", "Biomarker-Zeitraum", "Vergleich und Verlauf im Biomarker-Bereich in Tagen.", "7 | 30 | 90", () => e.BiomarkerTage.ToString(), w =>
+                {
+                    if (!int.TryParse(w.Trim(), out var t) || t is not (7 or 30 or 90)) return "Erlaubt: 7, 30 oder 90";
+                    e.BiomarkerTage = t;
+                    Ui.Starte(() => BioDaten.Shared.Laden(tage: t));
+                    return null;
+                }),
+                new("biomarker_beim_start", "Zentrale & Bereiche", "Biomarker beim Öffnen der Zentrale lesen", "Liest die Biomarker vom Handy, wenn die Zentrale aufgeht (höchstens alle fünf Minuten, nie direkt bei den Quellen).", "an | aus",
+                    () => AnAus(e.BiomarkerBeimStart), w => Schalte(w, b => e.BiomarkerBeimStart = b)),
+                new("solar_beim_start", "Zentrale & Bereiche", "Solarbatterie beim Start lesen", "Liest die Solarbatterie einmal je App-Start, sobald die Zentrale aufgeht.", "an | aus",
+                    () => AnAus(e.SolarBeimStart), w => Schalte(w, b => e.SolarBeimStart = b)),
+                new("solar_takt", "Zentrale & Bereiche", "Solarbatterie regelmäßig lesen", "Zusätzlich alle so vielen Minuten, solange Jarvis läuft; 0 = nur beim Start und per Knopf.", "0 | 5 | 15 | 30 | 60", () => e.SolarTaktMinuten.ToString(), w =>
+                {
+                    if (!int.TryParse(w.Trim(), out var m) || m is not (0 or 5 or 15 or 30 or 60)) return "Erlaubt: 0, 5, 15, 30 oder 60";
+                    e.SolarTaktMinuten = m;
+                    return null;
+                }),
                 new("darstellung", "Darstellung", "Darstellung", "Hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin.", "hell | automatik | dunkel", () => d.Modus.ToString().ToLowerInvariant(), w =>
                 {
                     switch (w.ToLowerInvariant())
@@ -157,7 +196,7 @@ public static partial class WinWerkzeuge
     {
         new LokalesWerkzeug(new WerkzeugDefinition(
             "windows_einstellungen",
-            "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am PC: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
+            "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am PC: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Zentrale (Reihenfolge, ausgeblendete Karten), Listen-Abgleich, Biomarker (Zeitraum, beim Start), Solarbatterie (beim Start, Takt), Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
             new JSONObjekt
             {
                 ["type"] = "object",

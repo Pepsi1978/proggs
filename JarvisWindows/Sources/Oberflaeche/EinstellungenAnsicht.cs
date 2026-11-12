@@ -17,7 +17,7 @@ public sealed class EinstellungenAnsicht : UserControl
 
     private static readonly (string Id, string Titel, string Symbol)[] ReiterListe =
     {
-        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
+        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"), ("bereiche", "Zentrale & Bereiche", "sparkles"),
         ("windows", "Windows & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
@@ -71,6 +71,7 @@ public sealed class EinstellungenAnsicht : UserControl
             "konsolen" => new KonsolenAnsicht(),
             "stimme" => Stimme_(),
             "sprache" => V(18, Sprache(), new TranskriptionsEinstellungenAnsicht()),
+            "bereiche" => new BereicheEinstellungen(),
             "windows" => new WinRechteAnsicht(),
             "tools" => new EigeneToolsAnsicht(),
             "konten" => new KontenAnsicht(),

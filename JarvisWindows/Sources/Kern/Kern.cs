@@ -513,6 +513,24 @@ public sealed class Einstellungen : Beobachtbar
     private string _zentraleReihenfolge = Vorgaben.Text("zentraleReihenfolge") ?? "";
     /// <summary>Reihenfolge der Karten in der Zentrale, Kennungen mit Komma; leer = Werks-Reihenfolge.</summary>
     public string ZentraleReihenfolge { get => _zentraleReihenfolge; set => Merke(ref _zentraleReihenfolge, value); }
+    private string _zentraleAusgeblendet = Vorgaben.Text("zentraleAusgeblendet") ?? "";
+    /// <summary>Karten der Zentrale, die nicht erscheinen sollen, Kennungen mit Komma.</summary>
+    public string ZentraleAusgeblendet { get => _zentraleAusgeblendet; set => Merke(ref _zentraleAusgeblendet, value); }
+    private bool _listenAbgleichAn = Vorgaben.Wahr("listenAbgleichAn", true);
+    /// <summary>Listen mit Handy und Tablet abgleichen; aus = der Laptop zeigt und ändert nur seine Kopie, nichts geht hoch.</summary>
+    public bool ListenAbgleichAn { get => _listenAbgleichAn; set => Merke(ref _listenAbgleichAn, value); }
+    private int _biomarkerTage = Vorgaben.Ganz("biomarkerTage", 30);
+    /// <summary>Vergleichszeitraum und Verlauf im Biomarker-Bereich: 7, 30 oder 90 Tage.</summary>
+    public int BiomarkerTage { get => _biomarkerTage; set => Merke(ref _biomarkerTage, value); }
+    private bool _biomarkerBeimStart = Vorgaben.Wahr("biomarkerBeimStart", true);
+    /// <summary>Beim Öffnen der Zentrale die Biomarker vom Handy lesen (höchstens alle fünf Minuten; ruft nie selbst bei den Quellen ab).</summary>
+    public bool BiomarkerBeimStart { get => _biomarkerBeimStart; set => Merke(ref _biomarkerBeimStart, value); }
+    private bool _solarBeimStart = Vorgaben.Wahr("solarBeimStart", true);
+    /// <summary>Solarbatterie einmal je App-Start von selbst lesen, wenn die Zentrale aufgeht (wie am Handy).</summary>
+    public bool SolarBeimStart { get => _solarBeimStart; set => Merke(ref _solarBeimStart, value); }
+    private int _solarTaktMinuten = Vorgaben.Ganz("solarTaktMinuten", 0);
+    /// <summary>Solarbatterie zusätzlich alle so vielen Minuten lesen, 0 = nur beim Start und per Knopf.</summary>
+    public int SolarTaktMinuten { get => _solarTaktMinuten; set => Merke(ref _solarTaktMinuten, value); }
     private bool _globalesKuerzel = Vorgaben.Wahr("globalesKuerzel", true);
     public bool GlobalesKuerzel { get => _globalesKuerzel; set => Merke(ref _globalesKuerzel, value); }
 

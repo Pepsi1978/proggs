@@ -226,6 +226,12 @@ public sealed class ListenSpeicher : Beobachtbar
             var beginn = DateTime.Now;
             try
             {
+                if (!Einstellungen.Shared.ListenAbgleichAn)
+                {
+                    Fehler = "Der Listen-Abgleich ist ausgeschaltet (Einstellungen → Zentrale & Bereiche); Änderungen bleiben am Laptop, bis er wieder an ist.";
+                    try { await Task.Delay(TimeSpan.FromSeconds(30), runde.Token); } catch (OperationCanceledException) { }
+                    continue;
+                }
                 if (offen.Count > 0) await Hochladen();
                 var n = await Holen(25, runde.Token);
                 fehlerFolge = 0;
@@ -360,7 +366,7 @@ public sealed class ListenSpeicher : Beobachtbar
     /// <summary>Lädt alle hier geänderten Dateien hoch. Abgelehnt heißt: drüben liegt eine jüngere Fassung, sie gilt und kommt gleich mit.</summary>
     private async Task Hochladen()
     {
-        if (hochladenLaeuft) return;
+        if (hochladenLaeuft || !Einstellungen.Shared.ListenAbgleichAn) return;
         var basis = Basis;
         if (basis == null) return;
         hochladenLaeuft = true;
