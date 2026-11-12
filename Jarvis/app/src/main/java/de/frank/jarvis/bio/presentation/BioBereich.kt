@@ -67,6 +67,8 @@ object BioAnsicht {
         BioModul.einrichten(context)
         // Kein Abruf beim Öffnen mehr (Franks Vorgabe vom 11.11.2026): frisch geholt wird nur über den Aktualisieren-Knopf oben,
         // per Sprache und vor jeder Tagesauswertung. Der Bereich zeigt den gespeicherten Stand mit Uhrzeit je Quelle.
+        // Das Tablet ruft nie selbst ab, schaut aber sofort nach, ob das Handy inzwischen einen neueren Stand hochgeladen hat.
+        de.frank.jarvis.bio.BioSpiegel.jetztNachschauen(context)
     }
 
     fun schliessen() {

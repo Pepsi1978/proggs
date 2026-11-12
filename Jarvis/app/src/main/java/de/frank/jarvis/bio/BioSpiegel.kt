@@ -28,8 +28,8 @@ import org.json.JSONObject
  * `appdaten/biomarker`, die Datenbank als Datei nach ihrer Prüfsumme).
  *
  * Nur in EINE Richtung: Das Handy ist der einzige Abrufer (der Whoop-Zugang verträgt nur einen, Zepp und Health Connect gibt es
- * nur dort) und lädt nach jeder Änderung einen Schnappschuss hoch; das Tablet spielt ihn ein, wenn einer seiner Auslöser
- * feuert (Biomarker-Bereich öffnen, Aktualisieren, Tagesauswertung) und beim Start. Zugangsdaten reisen nie mit, nur Messwerte,
+ * nur dort) und lädt nach jeder Änderung einen Schnappschuss hoch; das Tablet schaut alle fünf Minuten nach und spielt ihn ein, zusätzlich bei seinen Auslösern
+ * (Biomarker-Bereich öffnen, Aktualisieren, Tagesauswertung) und beim Start. Zugangsdaten reisen nie mit, nur Messwerte,
  * Abrufstand und Kartenreihenfolge. Nie während eines Sprachgesprächs.
  */
 object BioSpiegel {
@@ -48,10 +48,36 @@ object BioSpiegel {
         return "https://${e.serverHost}/j/${e.geheimnis}/abgleich"
     }
 
-    /** Beim Start des Dienstes: Das Handy lädt einen noch nicht gespiegelten Stand hoch, das Tablet holt den neuesten. */
+    /** Tablet: die ständige Nachschau, ob das Handy einen neuen Stand hochgeladen hat. */
+    private var nachschau: Job? = null
+    /** Abstand der Nachschau auf dem Tablet. Die Frage an den Server ist billig; die Datenbank kommt nur, wenn sie sich geändert hat. */
+    private const val NACHSCHAU_MS = 5 * 60_000L
+
+    /**
+     * Beim Start des Dienstes: Das Handy lädt einen noch nicht gespiegelten Stand hoch. Das Tablet holt den neuesten und schaut
+     * danach alle fünf Minuten nach, damit jede Aktualisierung am Handy (Knopf, Sprache, 9 und 21 Uhr) von selbst ankommt, auch
+     * wenn auf dem Tablet niemand etwas antippt und dort keine eigene Tagesauswertung läuft.
+     */
     fun starte(context: Context) {
         val app = context.applicationContext
-        if (Geraet.istTablet) BioModul.bereich.launch { einfrierenAufDemTablet(app); holen(app) } else geaendert(app, "Start")
+        if (!Geraet.istTablet) { geaendert(app, "Start"); return }
+        synchronized(this) {
+            if (nachschau?.isActive == true) return
+            nachschau = BioModul.bereich.launch {
+                einfrierenAufDemTablet(app)
+                while (true) {
+                    holen(app)
+                    delay(NACHSCHAU_MS)
+                }
+            }
+        }
+    }
+
+    /** Tablet: sofort nachschauen (etwa beim Öffnen des Biomarker-Bereichs). Ruft nie selbst bei den Quellen ab. */
+    fun jetztNachschauen(context: Context) {
+        if (!Geraet.istTablet) return
+        val app = context.applicationContext
+        BioModul.bereich.launch { holen(app) }
     }
 
     /**
@@ -156,12 +182,15 @@ object BioSpiegel {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: IOException) {
-            // Netz weg: nächster Auslöser.
+            // Netz weg: die nächste Nachschau holt es nach. Einmal je Ausfall ins Logbuch, damit ein hängender Spiegel auffällt.
+            if (!netzFehlerGemeldet) { netzFehlerGemeldet = true; Logbuch.system("Biomarker-Spiegel", "Stand vom Handy gerade nicht erreichbar: ${e.message}") }
         } catch (e: Exception) {
             // Kaputter Stand, anderes Schema, unerwartete Antwort: im Logbuch, aber nie ein Absturz von Jarvis.
             Logbuch.fehler("Biomarker-Spiegel", e, "Stand vom Handy nicht eingespielt")
         }
     }
+
+    @Volatile private var netzFehlerGemeldet = false
 
     private suspend fun holenGesperrt(app: Context) = sperre.withLock {
         if (!Geraet.istTablet) return@withLock
@@ -176,6 +205,7 @@ object BioSpiegel {
                 if (!r.isSuccessful) throw IOException("Server ${r.code}")
                 JSONObject(r.body?.string().orEmpty())
             }
+            netzFehlerGemeldet = false
             // Neu aufgesetzter Speicher am Server: Der gemerkte Zeiger gilt nicht mehr, von vorn lesen.
             val instanz = antwort.optString("instanz")
             if (seit != 0L && (antwort.optBoolean("neuaufbau") || (p.getString("instanz", "").orEmpty().isNotEmpty() && p.getString("instanz", "") != instanz))) {
