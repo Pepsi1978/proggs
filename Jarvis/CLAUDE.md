@@ -8,6 +8,13 @@ Folgeaktionen wie in der Oberfläche (Dienst abgleichen, Zeitplan neu stellen, W
 Nur so kann Frank sie per Sprache abfragen („Was hast du beim Vorlesen für Einstellungen?“) und umstellen.
 Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 
+## Live-Gedächtnis knapp halten
+Regel für alles, was in `jarvis_kontext`, die Plugin-Anleitung, eine Merkdatei oder einen Lernlauf fließt: so knapp wie möglich, so vollständig wie nötig,
+damit ein fremdes Modell es ohne Vorwissen richtig versteht. Der Wortlaut steht einmal in `Merkdatei.KNAPP` (`faehigkeit/RegelnFaehigkeit.kt`);
+jeder Prompt, der Gedächtnistext schreibt, setzt genau diese Konstante ein, nie eine eigene Formulierung. Neue Bereiche im Live-Gedächtnis:
+Überschrift höchstens 120 Zeichen, Inhalt ohne Doppelungen (was ein Werkzeug oder anderer Bereich schon liefert, nur verweisen), Kurzkontext gedeckelt.
+Herkunft und Anlass von Einträgen stehen nur in `jarvis_gemerktes_lesen`, nicht im Kontext. Bestehende Einträge verdichtet `jarvis_gemerktes_verdichten`.
+
 ## Tätigkeitsanzeige für neue Werkzeuge und Apps
 Was Jarvis gerade tut, steht im Chat, in der Sprachblase und bei Agenten als kurzer Satz aus `agent/Taetigkeit.kt`.
 Neue Werkzeuge und Apps erscheinen dort von selbst (nach App und Art: „schaut in …“, „arbeitet in …“, „löscht etwas in …“).

@@ -41,15 +41,16 @@ data class Regel(
     fun abgelaufen(heute: LocalDate = LocalDate.now()): Boolean = Merkdatei.tag(bis)?.isBefore(heute) == true
 
     /** Geltung, Frist und Herkunft als Zusatz hinter dem Text; leer, wenn nichts davon gesetzt ist. */
-    fun zusatz(mitErlaubnisPruefung: Boolean = true): String {
+    fun zusatz(mitErlaubnisPruefung: Boolean = true, mitHerkunft: Boolean = true): String {
         val teile = buildList {
             if (mitErlaubnisPruefung && erlaubnis) add(
                 if (geltung.isNotEmpty()) "ERLAUBNIS nur hierfür: $geltung"
                 else "Erlaubnis mit unklarem Geltungsbereich: keine pauschale Freigabe, außerhalb des ursprünglichen Falls vorher kurz fragen",
             ) else if (geltung.isNotEmpty()) add("gilt nur: $geltung")
             if (bis.isNotEmpty()) add(if (abgelaufen()) "abgelaufen seit $bis, gilt nicht mehr" else "bis $bis")
-            if (anlass.isNotEmpty()) add("Anlass: $anlass")
-            if (gelernt) add("gelernt aus $quelle")
+            // Anlass und Herkunft nur beim Lesen und Pflegen (jarvis_gemerktes_lesen), nicht im Live-Gedächtnis: Sie ändern kein Verhalten.
+            if (mitHerkunft && anlass.isNotEmpty()) add("Anlass: $anlass")
+            if (mitHerkunft && gelernt) add("gelernt aus $quelle")
         }
         return if (teile.isEmpty()) "" else " (" + teile.joinToString("; ") + ")"
     }
@@ -306,13 +307,28 @@ open class Merkdatei(
         return if (schreibe(context, vorher, vorher.eintraege - weg)) weg else null
     }
 
+    /**
+     * Verdichtet mehrere Einträge in einem Schreibvorgang: [texte] ersetzt den Text (Herkunft, Stand, Geltung, Frist und Anlass bleiben),
+     * [weg] löscht zusammengelegte Dubletten. Liefert die Zahl der geänderten Einträge; null = unbekannte id, Datei defekt oder nicht geschrieben.
+     */
+    @Synchronized
+    fun verdichte(context: Context, texte: Map<Int, String>, weg: Set<Int>): Int? {
+        val vorher = lies(context)
+        if (vorher.defekt != null) return null
+        val ids = vorher.eintraege.map { it.id }.toSet()
+        if (!ids.containsAll(texte.keys) || !ids.containsAll(weg)) return null
+        val neu = vorher.eintraege.filter { it.id !in weg }.map { r -> texte[r.id]?.let { r.copy(text = saeubere(it)) } ?: r }
+        return if (schreibe(context, vorher, neu)) texte.size + weg.size else null
+    }
+
     /** Stellt einen früheren Stand wieder her (Rückgängig in der App). Der id-Zähler sinkt dabei nie. */
     @Synchronized
     fun setze(context: Context, eintraege: List<Regel>): Boolean = schreibe(context, lies(context), eintraege)
 
     fun suche(context: Context, wort: String): List<Regel> = wort.trim().lowercase(Locale.GERMAN).let { w -> alle(context).filter { w in it.text.lowercase(Locale.GERMAN) } }
 
-    fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}${it.zusatz(pruefeErlaubnis)}" }
+    fun liste(eintraege: List<Regel>, mitHerkunft: Boolean = true): String =
+        eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}${it.zusatz(pruefeErlaubnis, mitHerkunft)}" }
 
     /** Nur id und Text, ohne Zusatz: für Lern-Modelle, die neue Sätze schreiben und den Zusatz sonst mit abschrieben. */
     fun listeRoh(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}" }
@@ -333,15 +349,23 @@ open class Merkdatei(
         s.defekt?.let { return "$kopf\nGEDÄCHTNIS-DATEI DEFEKT: $it Sag Frank das.\n" }
         val hinweis = neuBegonnen?.let { "GEDÄCHTNIS-DATEI ZURÜCKGESETZT: $it Frühere Einträge stehen nur noch in der Sicherung. Sag Frank das.\n" }.orEmpty()
         // Abgelaufene Einträge gelten nicht mehr und stehen deshalb nicht im Kontext (in jarvis_gemerktes_lesen schon, als abgelaufen).
-        val eintraege = s.eintraege.filter { !it.abgelaufen() }.takeIf { it.isNotEmpty() }?.let { liste(it) + "\n" }.orEmpty()
+        val eintraege = s.eintraege.filter { !it.abgelaufen() }.takeIf { it.isNotEmpty() }?.let { liste(it, mitHerkunft = false) + "\n" }.orEmpty()
         return if (hinweis.isEmpty() && eintraege.isEmpty()) "" else "$kopf\n$hinweis$eintraege"
     }
 
     companion object {
-        /** Länge, die die Modelle für einen Eintrag anstreben sollen. */
-        const val ZEICHEN = 400
+        /** Länge, die die Modelle für einen Eintrag höchstens anstreben sollen (je Art enger: [Merkart.zeichen]). */
+        const val ZEICHEN = 300
         /** Höchstlänge über das Werkzeug; längere Texte meldet jarvis_merken zurück, statt sie still zu kürzen. */
-        const val LAENGSTENS = 1500
+        const val LAENGSTENS = 600
+
+        /**
+         * DIE Schreibregel für alles, was ins Live-Gedächtnis fließt (Merkdateien, Lernläufe, KI-Korrektur, Tagebuch-Verdichtung).
+         * Jeder Schreib-Prompt setzt genau diese Konstante ein, nie eine eigene Formulierung (Jarvis/CLAUDE.md).
+         */
+        const val KNAPP = "So knapp wie möglich, so vollständig wie nötig: Ein fremdes Modell muss den Eintrag ohne Vorwissen richtig verstehen. " +
+            "Behalte Namen, Zahlen, Daten, Fristen, Geltung, Auslöser, Ausnahmen und Vorbehalte („laut Frank“, „nicht verifiziert“). " +
+            "Streiche Füllwörter, Wiederholungen, Beispiele, Begründungen ohne Einfluss auf das Verhalten und alles, was schon in einem anderen Eintrag steht. Ein Thema je Eintrag."
         /** Sicherung gegen ausufernde Diktate; erst darüber wird (an einer Satzgrenze) gekürzt. */
         private const val HARTE_GRENZE = 4000
         /** Ab diesem Anteil gemeinsamer Wörter gilt ein neuer Eintrag als mögliche Dublette oder Korrektur eines alten. */
@@ -430,24 +454,23 @@ fun merkdateien(): List<Merkdatei> = listOf(Regeln, Ziele, UeberFrank, Programmi
 /** Die Regeldatei: was Frank dauerhaft vorgibt („in Zukunft immer …“). */
 object Regeln : Merkdatei(
     "regeln.json", 40,
-    "FRANKS REGELN (von Frank selbst festgelegt; jede gilt in dem Umfang, den sie nennt, und geht dort allgemeinen Vorgaben vor; ein Zusatz „gilt nur“ oder „bis“ " +
-        "begrenzt sie auf diese App, Aufgabe, Situation oder Frist. Regeln beschreiben, wie du arbeitest; eine Erlaubnis, etwas ohne Rückfrage zu tun, gilt nur, wo sie ausdrücklich " +
-        "mit Geltungsbereich steht, nie darüber hinaus und nie für andere Apps; ohne belegten Bereich ist sie keine pauschale Freigabe. Nicht ungefragt vorlesen, nur einhalten):",
+    "FRANKS REGELN (von Frank; einhalten, nicht vorlesen; gehen allgemeinen Vorgaben vor; „gilt nur“/„bis“ begrenzt eine Regel; " +
+        "Erlaubnis ohne Rückfrage nur im genannten Geltungsbereich, nie pauschal oder für andere Apps):",
 )
 
 /** Hängt an die Überschriften der Dateien, die Wissen statt Anweisungen tragen. */
-private const val KEINE_RECHTE = " Daraus leitest du keine Erlaubnis ab, etwas ohne Rückfrage zu tun."
+private const val KEINE_RECHTE = "; keine Erlaubnis daraus ableiten"
 
 /** Die Ziele-Datei: was Frank erreichen will. Eigener Bereich, damit Jarvis Vorschläge und Deutungen daran messen kann. */
 object Ziele : Merkdatei(
     "ziele.json", 40,
-    "FRANKS ZIELE (was er erreichen will; miss Deutungen und Vorschläge daran, wo es passt; nicht ungefragt aufzählen.$KEINE_RECHTE):",
+    "FRANKS ZIELE (Vorschläge daran messen; nicht ungefragt aufzählen$KEINE_RECHTE):",
 )
 
 /** Die Datei über Frank: was Jarvis über ihn erfahren hat (Vorlieben, Besitz, Daten, was ihm wichtig ist). */
 object UeberFrank : Merkdatei(
     "ueber_frank.json", 120,
-    "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; Vorlieben und Tatsachen, beziehe sie von dir aus ein, wo es passt; nicht ungefragt aufzählen.$KEINE_RECHTE):",
+    "WAS JARVIS ÜBER FRANK WEISS (Franks Angaben; von dir aus einbeziehen, wo es passt; nicht ungefragt aufzählen$KEINE_RECHTE):",
 )
 
 /**
@@ -460,8 +483,8 @@ object UeberFrank : Merkdatei(
  */
 object Programmierregeln : Merkdatei(
     "programmierregeln.json", 40,
-    "FRANKS PROGRAMMIERREGELN (von Frank selbst festgelegt; ausschließlich Kontext für Jarvis: wie du Programmieraufträge steuerst, formulierst " +
-        "und den Programmierer instruierst; nutze sie dafür, schicke den Regeltext aber nie an Programmierer, Programmier-Sitzungen oder PC/Mac mit; nicht ungefragt vorlesen):",
+    "FRANKS PROGRAMMIERREGELN (nur für dich: so steuerst und formulierst du Programmieraufträge; Regeltext nie an Programmierer, " +
+        "Programmier-Sitzungen oder PC/Mac mitschicken; nicht vorlesen):",
 )
 
 /**
@@ -470,7 +493,7 @@ object Programmierregeln : Merkdatei(
  */
 object StilRegeln : Merkdatei(
     "stil.json", 40,
-    "FRANKS ANTWORT-STIL (aus seinen Daumen-Bewertungen gelernt und von ihm bearbeitbar; gilt für Form, Länge, Gliederung und Ton deiner Antworten und geht den allgemeinen Formatvorgaben vor; nicht ungefragt vorlesen.$KEINE_RECHTE):",
+    "FRANKS ANTWORT-STIL (Form, Länge, Gliederung, Ton deiner Antworten; geht allgemeinen Formatvorgaben vor; nicht vorlesen$KEINE_RECHTE):",
 )
 
 /**
@@ -479,40 +502,46 @@ object StilRegeln : Merkdatei(
  */
 object Entscheidungen : Merkdatei(
     "entscheidungen.json", 80,
-    "FRANKS ENTSCHEIDUNGEN (von Frank ausdrücklich getroffen, mit Datum; gelten, bis er sie ändert; frühere Entscheidungen gezielt mit gedaechtnis_suchen; nicht ungefragt aufzählen.$KEINE_RECHTE):",
+    "FRANKS ENTSCHEIDUNGEN (gelten, bis Frank sie ändert; Ältere mit gedaechtnis_suchen; nicht ungefragt aufzählen$KEINE_RECHTE):",
 )
 
 /** Die Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
-enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String) {
+enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String, val zeichen: Int) {
     REGEL(
         "regel", Regeln, "Regel",
-        "eine vollständige, für sich allein verständliche Anweisung an Jarvis in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist („Bei Fragen nach dem Schlaf immer auch HRV, Ruhepuls und Schlafdauer nennen.“)",
+        "Anweisung an Jarvis, für sich verständlich: wann sie gilt, was zu tun ist („Bei Schlaffragen immer HRV, Ruhepuls und Schlafdauer nennen.“)",
         "Sag ihm in ein bis zwei Sätzen, was du dir gemerkt hast und wie du es künftig machst (zum Beispiel „Okay, ich habe mir gemerkt: … In Zukunft mache ich das so.“).",
+        300,
     ),
     ZIEL(
         "ziel", Ziele, "Ziel",
-        "ein kurzer Satz über das, was Frank erreichen will, mit seinen Zahlen und Fristen, wenn er welche nennt („Frank will seine VO2max steigern.“, „Frank will seinen Ruhepuls senken.“)",
+        "„Frank will …“ mit seinen Zahlen und Fristen („Frank will seine VO2max steigern.“)",
         "Sag ihm in einem Satz, welches Ziel du dir gemerkt hast, und beantworte dann, worum es ihm eigentlich ging.",
+        250,
     ),
     INFO(
         "info", UeberFrank, "Notiz",
-        "ein kurzer, für sich allein verständlicher Satz über Frank in der dritten Person, mit den genauen Namen und Zahlen, die er genannt hat („Frank fährt einen Toyota C-HR.“, „Frank geht bei Regen nicht gern im Wald laufen.“)",
+        "Satz über Frank in der dritten Person, mit seinen genauen Namen und Zahlen („Frank fährt einen Toyota C-HR.“)",
         "Sag ihm in einem kurzen Satz, was du dir über ihn notiert hast, ohne daraus ein Thema zu machen, und beantworte dann, worum es ihm eigentlich ging.",
+        200,
     ),
     PROGRAMMIERREGEL(
         "programmierregel", Programmierregeln, "Programmierregel",
-        "eine vollständige, für sich allein verständliche Anweisung an Jarvis in ein bis zwei Sätzen, wie er mit Programmieraufträgen umgeht oder den Programmierer instruiert: wann sie gilt und was dann zu tun ist („Bei Aufträgen an Android-Apps im Auftrag immer die Paketkennung nennen.“)",
+        "Anweisung an Jarvis, wie er Programmieraufträge steuert oder den Programmierer instruiert: wann sie gilt, was zu tun ist („Bei Android-Aufträgen immer die Paketkennung nennen.“)",
         "Sag ihm in ein bis zwei Sätzen, welche Programmierregel du dir gemerkt hast; du richtest künftige Programmieraufträge danach aus, ohne den Regeltext an den Programmierer zu schicken.",
+        300,
     ),
     STIL(
         "stil", StilRegeln, "Stilregel",
-        "eine kurze Anweisung, wie deine Antworten aussehen sollen: Länge, Gliederung, Ton oder Symbole („Bei Statusmeldungen jede Sache in eine eigene Zeile mit ✅ davor.“, „Antworten zu Biowerten mit kleiner Überschrift je Messgröße.“)",
+        "Anweisung zu Länge, Gliederung, Ton oder Symbolen deiner Antworten („Statusmeldungen: je Sache eine Zeile mit ✅.“)",
         "Sag ihm in einem Satz, welche Stilregel du dir gemerkt hast; ab jetzt antwortest du so.",
+        300,
     ),
     ENTSCHEIDUNG(
         "entscheidung", Entscheidungen, "Entscheidung",
-        "ein für sich allein verständlicher Satz, was Frank ausdrücklich entschieden hat, worum es geht und mit Datum, wenn es zählt („Frank hat am 17.10.2026 entschieden, ChatGPT als Gesprächsoberfläche zu nutzen und Jarvis als Gedächtnis im Hintergrund.“)",
+        "„Frank hat am TT.MM.JJJJ entschieden, …“: was, worum es geht, Datum, wenn es zählt",
         "Sag ihm in einem Satz, welche Entscheidung du festgehalten hast.",
+        300,
     );
 
     companion object {
@@ -710,8 +739,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nicht für Flüchtiges (Stimmung von heute, einmalige Wünsche, einzelne Termine). Jarvis hat alles Gemerkte danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen.",
             schema = schema(
                 "art" to text(arten.joinToString(", ") + ".", arten),
-                "text" to text("Der Eintrag, in Franks Sinn formuliert, Hörfehler der Spracherkennung bereinigt, höchstens ${Merkdatei.ZEICHEN} Zeichen. " +
-                    Merkart.entries.joinToString(" ") { "Bei ${it.kennung}: ${it.textHinweis}." }),
+                "text" to text("Der Eintrag in Franks Sinn, Hörfehler bereinigt. ${Merkdatei.KNAPP} " +
+                    Merkart.entries.joinToString(" ") { "${it.kennung} (höchstens ${it.zeichen} Zeichen): ${it.textHinweis}." }),
                 "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
                 "quelle" to text("frank (Vorgabe) = Frank hat es selbst gesagt oder ausdrücklich bestätigt; vorschlag = eigener Vorschlag oder Deutung von dir, den Frank noch nicht bestätigt hat (wird dann nicht gemerkt).", listOf("frank", "vorschlag")),
                 "neu_erzwingen" to schalter("Nur nach dem Hinweis „sehr ähnlicher Eintrag“: true = trotzdem als eigenen Eintrag anlegen, weil es wirklich etwas anderes ist."),
@@ -743,7 +772,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             pruefeGeltung(art, inhalt, pruefung)?.let { return@Werkzeug it }
             art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gemerkt. $it Sag Frank das.", fehler = true) }
             val laenge = inhalt.replace(Regex("\\s+"), " ").length
-            if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf etwa ${Merkdatei.ZEICHEN} Zeichen zusammen und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
+            if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf höchstens ${art.zeichen} Zeichen zusammen (${Merkdatei.KNAPP}) und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
             if (nummer == null) {
                 // Abgelaufene Einträge gelten nicht mehr: Sagt Frank dasselbe neu, entsteht ein neuer, gültiger Eintrag.
                 val vorhanden = art.datei.alle(context).filter { !it.abgelaufen() }
@@ -774,7 +803,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 )
             Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}${eintrag.zusatz()}\n" +
                 "BESTÄTIGE ES FRANK JETZT: ${art.bestaetigung} So kann er sofort berichtigen. Berichtigt er, rufe jarvis_merken mit art ${art.kennung}, id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
-                "Alle Einträge dieser Art jetzt:\n" + art.datei.liste(art.datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche ihn mit jarvis_vergessen.")
+                "Sagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen (ids im Kontext oder in jarvis_gemerktes_lesen), lösche ihn mit jarvis_vergessen.")
         },
         Werkzeug(
             name = "jarvis_vergessen",
@@ -804,6 +833,31 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gelöscht. $it Sag Frank das.", fehler = true) }
             art.datei.loesche(context, nummer)?.let { Ergebnis("${art.wort} gelöscht: „${it.text}“. Sag Frank in einem Satz, was du gestrichen hast.") }
                 ?: Ergebnis("Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht.", fehler = true)
+        },
+        Werkzeug(
+            name = "jarvis_gemerktes_verdichten",
+            titel = "Gemerktes verdichten",
+            beschreibung = "Jarvis: schreibt mehrere Einträge einer Art auf einmal knapper und legt Dubletten zusammen, nur auf Franks ausdrücklichen Wunsch. " +
+                "Herkunft, Geltung, Frist und Anlass bleiben. Vorher jarvis_gemerktes_lesen. Schreibregel: ${Merkdatei.KNAPP}",
+            schema = schema(
+                "art" to text(arten.joinToString(", ") + ".", arten),
+                "eintraege" to JSONObject().put("type", "array").put("description", "Neufassungen: je Objekt id und text.")
+                    .put("items", JSONObject().put("type", "object").put("properties", JSONObject().put("id", JSONObject().put("type", "integer")).put("text", JSONObject().put("type", "string")))),
+                "loeschen" to JSONObject().put("type", "array").put("description", "ids, deren Inhalt in einen anderen Eintrag übernommen wurde.").put("items", JSONObject().put("type", "integer")),
+                pflicht = listOf("art"),
+            ),
+            nurLesen = false,
+        ) { a ->
+            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: " + arten.joinToString(", ") + ".", fehler = true)
+            val liste = a.optJSONArray("eintraege")
+            val texte = buildMap { if (liste != null) for (i in 0 until liste.length()) liste.optJSONObject(i)?.let { put(it.optInt("id"), it.optString("text").trim()) } }
+            val weg = buildSet { a.optJSONArray("loeschen")?.let { l -> for (i in 0 until l.length()) add(l.optInt(i)) } }
+            texte.entries.firstOrNull { it.value.length < 10 || it.value.length > Merkdatei.LAENGSTENS }?.let {
+                return@Werkzeug Ergebnis("Nichts geändert: Text zu id ${it.key} ist leer oder länger als ${Merkdatei.LAENGSTENS} Zeichen.", fehler = true)
+            }
+            if (texte.keys.any { it in weg }) return@Werkzeug Ergebnis("Nichts geändert: eine id steht in eintraege und loeschen.", fehler = true)
+            art.datei.verdichte(context, texte, weg)?.let { Ergebnis("${it} Einträge der Art ${art.kennung} verdichtet (${texte.size} neu gefasst, ${weg.size} zusammengelegt).") }
+                ?: Ergebnis("Nichts geändert: unbekannte id oder Datei nicht schreibbar. Lies nach mit jarvis_gemerktes_lesen.", fehler = true)
         },
         Werkzeug(
             name = "jarvis_langzeitkontext_lesen",

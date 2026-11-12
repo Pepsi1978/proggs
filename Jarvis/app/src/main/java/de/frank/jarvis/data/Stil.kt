@@ -22,7 +22,7 @@ object Stil {
     const val AB = 1
     private const val HOECHSTENS_REGELN = 20
     /** Eine Regel darf bis zu etwa zehn Zeilen lang sein. */
-    private const val REGEL_ZEICHEN = 900
+    private const val REGEL_ZEICHEN = 400
     /** Herkunft der aus Daumen-Bewertungen gelernten Stilregeln (zählen damit als gelernt, nicht als Franks eigene Angabe). */
     private const val QUELLE = "Bewertungen"
 
@@ -68,7 +68,7 @@ object Stil {
             "den optischen Stil (Länge, Absätze, Stichpunkte, Überschriften, Fettdruck, Symbole und wo sie stehen, Reihenfolge) und den inhaltlichen Stil " +
             "(Art und Weise: wie direkt, wie ausführlich erklärt, mit Empfehlung oder ohne, Einordnung, Beispiele, Zahlen, Ton). " +
             "Bei GUT: was genau an dieser Antwort gut war, als Regel für ähnliche Fragen. Bei SCHLECHT: was künftig anders sein soll. Keine Fakten über Frank, keine Themen-Inhalte.\n" +
-            "Jede Regel ist kurz und knapp, sagt aber genug, dass Jarvis sie ohne weiteres Wissen anwenden kann (höchstens etwa zehn Zeilen, meist deutlich weniger). " +
+            "Jede Regel: " + de.frank.jarvis.faehigkeit.Merkdatei.KNAPP + " Höchstens 400 Zeichen. " +
             "Wenn sinnvoll, nenne, wofür sie gilt („Bei Statusmeldungen …“, „Bei Fragen zu Biowerten …“). Auf Deutsch mit echten Umlauten. " +
             "Gehört das Neue zu einer vorhandenen Regel oder präzisiert sie, ändere diese über aendern, statt eine zweite anzulegen.\n" +
             "VORHANDENE STILREGELN (mit id; teils von Frank selbst geschrieben, die änderst du nur, wenn die Bewertungen klar dagegen sprechen):\n" +

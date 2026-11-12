@@ -841,7 +841,7 @@ REGEL: …                      → NUR wenn Frank ausdrücklich festlegt, wie J
 NOTIZ: … (bis JJJJ-MM-TT)      → etwas Kurzlebiges, das Jarvis in den nächsten Tagen wissen sollte: ein Vorhaben („Frank will am Freitag laufen gehen“), eine Zusage von Jarvis, ein offenes Thema, eine Entscheidung. Mit Datum, bis wann es zählt (höchstens 30 Tage).
 ERLEDIGT N4: Grund            → die Notiz [N4] ist laut Franks Worten erledigt, überholt oder ihr Anlass ist vorbei; Grund in wenigen Worten.
 
-Höchstens sechs Zeilen ZIEL, INFO, REGEL und NOTIZ zusammen. Nicht: Smalltalk, einzelne Fragen ohne Bezug zu Frank, Stimmungen, was schon gemerkt ist (auch nicht in anderen Worten), Vermutungen. Im Zweifel nichts. Sätze in der dritten Person, mit den genauen Namen, Zahlen und Daten, die Frank genannt hat.
+Höchstens sechs Zeilen ZIEL, INFO, REGEL und NOTIZ zusammen. Nicht: Smalltalk, einzelne Fragen ohne Bezug zu Frank, Stimmungen, was schon gemerkt ist (auch nicht in anderen Worten), Vermutungen. Im Zweifel nichts. Sätze in der dritten Person, mit den genauen Namen, Zahlen und Daten, die Frank genannt hat. ${Merkdatei.KNAPP}
 Gibt es nichts, antworte nur mit KEINE.
 """.trim()
 

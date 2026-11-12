@@ -3777,27 +3777,27 @@ private const val REGEL_KORREKTUR =
         "Jarvis bekommt die Regel danach bei jeder Antwort als Anweisung beigelegt und muss sie ohne weiteres Wissen verstehen. " +
         "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an Jarvis: wann sie gilt und was dann zu tun ist. " +
         "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
-        "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
+        "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). ${Merkdatei.KNAPP} Höchstens 300 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel der Zusammenarbeit mit ChatGPT. */
 private const val SYMBIOSE_KORREKTUR =
     "Du formulierst eine Regel für die Zusammenarbeit zwischen ChatGPT Live (der Sprachmodus der ChatGPT-App) und Franks Assistenten-App Jarvis um. Sie steht in ChatGPTs benutzerdefinierten Anweisungen " +
         "und spricht ChatGPT mit „du“ an, Frank spricht als „ich“. Beginne mit einem Stichwort und Doppelpunkt (zum Beispiel „Termine:“). Behalte jeden inhaltlichen Punkt und genannte Werkzeugnamen genau, " +
-        "füge nichts hinzu. Lass Füllwörter weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. Antworte nur mit der Regel, ohne Anführungszeichen und ohne Erklärung."
+        "füge nichts hinzu. Lass Füllwörter weg und berichtige Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 300 Zeichen. Antworte nur mit der Regel, ohne Anführungszeichen und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Entscheidung. */
 private const val ENTSCHEIDUNG_KORREKTUR =
     "Du formulierst eine Entscheidung, die Frank getroffen hat, zu einem klaren, für sich allein verständlichen Satz in der dritten Person um („Frank hat entschieden, …“), mit Datum, wenn er eines nennt. " +
         "Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um; mach aus einer Überlegung keinen Beschluss. " +
-        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 300 Zeichen. " +
         "Antworte nur mit dem Satz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Stilregel. */
 private const val STIL_KORREKTUR =
     "Du formulierst eine Vorgabe von Frank, wie die Antworten seines Assistenten Jarvis aussehen sollen (Länge, Gliederung, Ton, Symbole), zu einer klaren Stilregel um. " +
         "Jarvis bekommt sie bei jeder Antwort beigelegt und muss sie ohne weiteres Wissen verstehen. Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um. " +
-        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 300 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Programmierregel. */
@@ -3806,7 +3806,7 @@ private const val PROGRAMMIERREGEL_KORREKTUR =
         "Jarvis nutzt die Regel danach als eigenen Kontext, um Programmieraufträge zu steuern und den Programmierer passend zu instruieren, und muss sie ohne weiteres Wissen verstehen. " +
         "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung: wann sie gilt und was dann zu tun ist. " +
         "Behalte jeden inhaltlichen Punkt, jeden Namen, jeden Pfad und jeden genannten Wert genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
-        "und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
+        "und berichtige Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 300 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur eines einzelnen Ziels. */
@@ -3815,7 +3815,7 @@ private const val ZIEL_KORREKTUR =
         "Jarvis misst seine Vorschläge künftig daran und muss das Ziel ohne weiteres Wissen verstehen. " +
         "Schreibe es in gutem Deutsch als kurzen Satz in der dritten Person, der mit „Frank will“ oder „Frank möchte“ beginnt (bei mehreren Zielen höchstens drei Sätze). " +
         "Behalte jede genannte Zahl und Frist genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter und Wiederholungen weg " +
-        "und berichtige offensichtliche Hörfehler der Spracherkennung. Höchstens 300 Zeichen. " +
+        "und berichtige offensichtliche Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 250 Zeichen. " +
         "Antworte nur mit dem Ziel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Notiz über Frank. */
@@ -3824,7 +3824,7 @@ private const val INFO_KORREKTUR =
         "Jarvis hat die Notiz danach bei jeder Antwort vor Augen und muss sie ohne weiteres Wissen verstehen. " +
         "Schreibe sie in gutem Deutsch als kurzen, für sich allein verständlichen Satz über Frank in der dritten Person (bei mehreren Angaben höchstens drei Sätze). " +
         "Behalte jede Tatsache, jeden Namen und jede Zahl genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
-        "und berichtige offensichtliche Hörfehler der Spracherkennung. Höchstens 300 Zeichen. " +
+        "und berichtige offensichtliche Hörfehler der Spracherkennung. ${Merkdatei.KNAPP} Höchstens 200 Zeichen. " +
         "Antworte nur mit der Notiz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag für die Überschrift eines Gesprächs in der Seitenleiste. */
