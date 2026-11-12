@@ -65,6 +65,27 @@ das ist weniger Aufwand als 5+ gescheiterte Glance-Workarounds.
 - **Tooling:** Tag-Massenersetzungen (`<View>`→`<ImageView>`) mit Python `re.sub(r'<View(\s)', r'<ImageView\1', s)`
   — `sed` greift bei mehrzeiligen Tags nicht.
 
+## 4. Interaktive Listen-Widgets ab Android 12 (Stand 12.11.2026, API 31–36, offiziell)
+
+Erprobt im Jarvis-Listen-Widget (1.8.638, Galaxy Tab S9 mit Nova Launcher und Fold 8, Android 16):
+- **`RemoteViews.RemoteCollectionItems` statt `RemoteViewsService`** (API 31+). Das Intent-`setRemoteAdapter(int, Intent)` ist ab API 35 veraltet.
+  Builder mit `setHasStableIds(true)` und `setViewTypeCount(<Zahl der Zeilenlayouts>)`. Die Zeilen reisen mit dem `updateAppWidget` mit,
+  dadurch entfällt `notifyAppWidgetViewDataChanged`, und jede Änderung aus der App steht sofort im Widget. Nur für überschaubare Mengen gedacht.
+- **Klicks in Zeilen:** ein `setPendingIntentTemplate` (Broadcast an den eigenen Provider, **explizites** Intent, `FLAG_MUTABLE`) plus
+  `setOnClickFillInIntent` je Zeile. Feste Action im Template, die Art des Klicks als Extra, denn ein Fill-in überschreibt keine gesetzte Action.
+- **Abhaken robust ohne CompoundButton:** Die ganze Zeile ist der Klick, der Haken ist ein `ImageView` (Kreis/Haken, Farbe per `setColorFilter`).
+  Damit greift die Toggle-Falle aus §2 nicht, weil der Zustand nur in der App liegt und jedes Rendern ihn neu zeichnet. Eine Alternative ist
+  `setOnCheckedChangeResponse` (API 31), dann aber bei jedem Rendern `setCompoundButtonChecked`.
+- **Auswahl im Widget selbst** (etwa welche Liste): Zustand je `appWidgetId` in SharedPreferences, in `onDeleted` löschen. Ein Tipp auf die
+  Kopfzeile schaltet die Sammlung auf eine Auswahlliste um, ein Tipp auf einen Eintrag wählt und schaltet zurück. Das geht ohne Konfigurations-Activity.
+- **Durchgestrichen:** `SpannableString` mit `StrikethroughSpan` in `setTextViewText`; der Span überlebt das Parcel.
+- **Einrückung:** `setViewPadding` je Zeile statt eigener Layouts je Tiefe.
+- **App-Daten und Widget aus einem Schreibpfad:** Jede Änderung (Oberfläche, Sprache, Widget, Abgleich) geht durch eine Funktion, die Datei,
+  StateFlow und `ListenWidget.aktualisieren()` (alle IDs über `getAppWidgetIds(ComponentName)`) in einem Zug erledigt.
+- **Aus der App anheften:** `AppWidgetManager.requestPinAppWidget(ComponentName, null, null)`. Nova Launcher zeigt dafür einen eigenen Dialog.
+- Quellen: developer.android.com/develop/ui/views/appwidgets/collections · /reference/android/widget/RemoteViews ·
+  /about/versions/14/behavior-changes-14 · /develop/ui/views/appwidgets/advanced
+
 ---
 
 ## 🔗 Bezugs-Tabelle: Best-Practice ↔ Bug-Abschnitt
@@ -74,6 +95,7 @@ das ist weniger Aufwand als 5+ gescheiterte Glance-Workarounds.
 | §1 Entscheidung Glance vs. klassisch + 3-Iterationen | §1, §2, §3 |
 | §2 Glance richtig (provideGlance, SizeMode, itemId, State, Toggle) | §2, §6, §7, §8 |
 | §3 Klassische RemoteViews | §4, §5 |
+| §4 Interaktive Listen-Widgets ab Android 12 | §9 |
 
 ## Quellen
 - developer.android.com/develop/ui/compose/glance/build-ui · /jetpack/androidx/releases/glance

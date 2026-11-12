@@ -101,6 +101,20 @@
 **FIX:** Daten in `provideGlance()` (vor `provideContent {}`) laden, Ergebnis in den Content geben. State persistent ueber `GlanceStateDefinition`/Repository, in-Widget-State via `remember { mutableStateOf() }` + `rememberCoroutineScope()` fuer async.
 **Quelle:** developer.android.com/develop/ui/compose/glance/build-ui.
 
+## 9. Interaktive Sammlungs-Widgets ab Android 12 bis 16: Fallen (Stand 12.11.2026)
+- **Veränderliches Template-PendingIntent wirft eine Exception oder der Tipp bleibt stumm.** Ab targetSdk 34 (Android 14+) verbietet Android
+  veränderliche PendingIntents mit implizitem Intent. **FIX:** `Intent(context, Provider::class.java)` bzw. `setPackage(...)`, dazu `FLAG_MUTABLE`.
+  Quelle: developer.android.com/about/versions/14/behavior-changes-14.
+- **Checkbox im Widget zeigt nach Ziehen oder Skalieren den falschen Zustand.** Das Widget ist zustandslos. **FIX:** bei jedem Rendern
+  `setCompoundButtonChecked` aufrufen, oder einen `ImageView`-Haken plus Zeilenklick nehmen (Best-Practice §4).
+- **`partiallyUpdateAppWidget` wirkt nicht.** Es wird ignoriert, solange das Widget noch kein vollständiges `updateAppWidget` bekommen hat.
+  **FIX:** zuerst vollständig aktualisieren. Quelle: developer.android.com/develop/ui/views/appwidgets/advanced.
+- **Bitmap-Budget ab Android 17 (API 37):** etwa `6 × Breite × Höhe` Bytes je Widget, partielle Bildwechsel sammeln sich im Cache an.
+  **FIX:** Bitmaps verkleinern und beim Bildwechsel vollständig aktualisieren.
+- **Fill-in-Intent setzt keine Action:** Hat das Template eine Action, bleibt sie stehen. **FIX:** feste Action im Template, die Unterscheidung als Extra.
+- **Klassenname `Block` in Compose kollidiert:** In Jarvis gab es schon `ui/AntwortText.kt: class Block`. Das führte zu „Redeclaration“ und vielen
+  Folgefehlern. **FIX:** private Hilfsklassen in großen Paketen eindeutig benennen.
+
 ---
 
 ## Quellen (Stand 2026-06-19)

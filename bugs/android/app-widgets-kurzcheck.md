@@ -17,3 +17,4 @@
 | 7 | LazyColumn **verliert Scrollposition** / langsam bei Update (A12+) | `items(itemId = { ... })` setzen | §7 |
 | 8 | DB-/Netzwerk-Arbeit fuers Widget | In `provideGlance()` laden (laeuft im WorkManager-Worker), NICHT im Composable; `provideContent {}` nur fuer UI | §8 |
 | 9 | `<View>`-Tags per `sed` ersetzen schlaegt fehl (mehrzeilig) | `sed` arbeitet zeilenweise → Python `re.sub(r'<View(\s)', r'<ImageView\1', s)` | §5 |
+| 10 | Tipp in Sammlungs-Widget stumm/Exception (targetSdk 34+) | Template-Intent **explizit** + `FLAG_MUTABLE`; feste Action, Klickart als Extra; Checkbox-Zustand bei jedem Rendern setzen | §9 |

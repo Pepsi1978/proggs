@@ -16,3 +16,4 @@
 | 6 | Glance-Groessen | `SizeMode.Responsive` (Android 12+) mit konkreten `DpSize`-Buckets statt `Exact` (Performance). |
 | 7 | Glance-Liste | `items(itemId = {…})` fuer Scrollposition + Performance (A12+). |
 | 8 | Ressourcen/Farben | **Resource-IDs** an Glance geben (`ImageProvider(R.drawable…)`, `background(R.color…)`) statt aufgeloester Werte → kleinere RemoteViews + dynamische Ressourcen. |
+| 9 | Interaktive Liste (abhaken, Auswahl im Widget), API 31+ | **`RemoteCollectionItems`** statt RemoteViewsService (sofort sichtbar, kein `notifyAppWidgetViewDataChanged`); Zeilenklick über explizites `FLAG_MUTABLE`-Template + Fill-in; Haken als `ImageView`; Auswahl je `appWidgetId` in Prefs, Kopfzeile schaltet auf Auswahlliste (Volltext §4). |
