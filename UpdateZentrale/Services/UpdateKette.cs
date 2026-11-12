@@ -101,7 +101,9 @@ public sealed class UpdateKette
            && string.Equals(eintrag.Art, "winget", StringComparison.OrdinalIgnoreCase)
             ? new KettenUrteil(LaufErgebnis.Abgebrochen,
                 "Nicht installiert – winget kann nur aktualisieren, was es als installiert erkennt; es wurde nichts ausgeführt. "
-                + "Ist das Programm doch installiert, im Katalog „arpName“ (Deinstallationsliste) oder „wingetName“ setzen.",
+                + (string.IsNullOrWhiteSpace(eintrag.ArpName)
+                    ? "Ist das Programm doch installiert, im Katalog „arpName“ (Deinstallationsliste) oder „wingetName“ setzen."
+                    : "Auch die Deinstallationsliste hat keinen Eintrag „" + eintrag.ArpName.Trim() + "“ – deinstalliert oder umbenannt?"),
                 fingerabdruck, fingerabdruck, vor, 0, false)
             : null;
 
@@ -126,6 +128,9 @@ public sealed class UpdateKette
 
     public async Task<KettenUrteil> AusfuehrenAsync(string fingerabdruckStart, PruefErgebnis vor, CancellationToken abbruch)
     {
+        // Every caller of the chain, not only the card click: no upgrade on "not installed".
+        if (WingetNichtInstalliert(_eintrag, fingerabdruckStart, vor) is { } nichtInstalliert) return nichtInstalliert;
+
         var uebergaenge = new List<string>();
         var angebot = vor.VerfuegbareVersion;
         var standVor = fingerabdruckStart;

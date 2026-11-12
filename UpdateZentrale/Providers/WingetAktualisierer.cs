@@ -48,8 +48,7 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         var lauf = await ListeAsync(eintrag, protokoll, abbruch);
         var ergebnis = ListeAuswerten(lauf, eintrag.WingetId ?? "", HierVorhanden(eintrag));
-        if (ergebnis.Zustand is UpdateZustand.NichtInstalliert or UpdateZustand.Unbekannt
-            && !string.IsNullOrWhiteSpace(eintrag.ArpName))
+        if (ArpZustaendig(eintrag, ergebnis))
             return await ArpPruefenAsync(eintrag, ergebnis, protokoll, abbruch);
         return ergebnis.Zustand == UpdateZustand.UpdateVerfuegbar && !string.IsNullOrWhiteSpace(eintrag.WingetInstallerTyp)
             ? await AngebotMitInstallerTypAsync(eintrag, ergebnis, protokoll, abbruch)
@@ -58,11 +57,20 @@ public sealed class WingetAktualisierer : IAktualisierer
 
     // ---------------- Rückfall auf die Windows-Deinstallationsliste (ARP) ----------------
 
-    /// <summary>Test seam: DisplayName/DisplayVersion pairs of the uninstall list.</summary>
-    internal static Func<IEnumerable<(string Name, string Version)>> ArpEintraege { get; set; } = ArpAusRegistry;
+    /// <summary>
+    /// The registry decides whenever winget gave no package row: not found, unreadable or a
+    /// failed list. A failed list must not slip through to "upgrade" (which can only end in
+    /// 0x8A150014 for such a package); when ARP finds nothing either, winget's answer stays.
+    /// </summary>
+    private static bool ArpZustaendig(ProgrammEintrag eintrag, PruefErgebnis winget)
+        => !string.IsNullOrWhiteSpace(eintrag.ArpName)
+           && winget.Zustand is UpdateZustand.NichtInstalliert or UpdateZustand.Unbekannt or UpdateZustand.Fehler;
 
-    /// <summary>HKLM 64 + 32 bit and HKCU; unreadable keys are skipped.</summary>
-    private static IEnumerable<(string Name, string Version)> ArpAusRegistry()
+    /// <summary>Test seam: DisplayName/DisplayVersion pairs of the uninstall list whose name starts with the prefix.</summary>
+    internal static Func<string, IEnumerable<(string Name, string Version)>> ArpEintraege { get; set; } = ArpAusRegistry;
+
+    /// <summary>HKLM 64 + 32 bit and HKCU, filtered by name while walking; unreadable keys are skipped.</summary>
+    private static IEnumerable<(string Name, string Version)> ArpAusRegistry(string praefix)
     {
         const string pfad = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
         var wurzeln = new[]
@@ -84,7 +92,9 @@ public sealed class WingetAktualisierer : IAktualisierer
                     try
                     {
                         using var k = uninstall.OpenSubKey(name);
-                        if (k?.GetValue("DisplayName") is string anzeige && k.GetValue("DisplayVersion") is string version)
+                        if (k?.GetValue("DisplayName") is string anzeige
+                            && anzeige.StartsWith(praefix, StringComparison.OrdinalIgnoreCase)
+                            && k.GetValue("DisplayVersion") is string version)
                             liste.Add((anzeige, version));
                     }
                     catch (Exception ex) when (ex is System.Security.SecurityException or IOException or UnauthorizedAccessException) { }
@@ -95,17 +105,34 @@ public sealed class WingetAktualisierer : IAktualisierer
         return liste;
     }
 
-    /// <summary>The highest ARP version whose DisplayName starts with <paramref name="arpName"/>; "" when none.</summary>
-    internal static string ArpVersion(string arpName)
-        => ArpEintraege()
-            .Where(e => e.Name.StartsWith(arpName.Trim(), StringComparison.OrdinalIgnoreCase) && VersionsZeile.IsMatch(e.Version.Trim()))
+    /// <summary>
+    /// The highest ARP version whose DisplayName starts with the entry's arpName, ranked with the
+    /// same compare as the check (<see cref="ProgrammEintrag.ArpVergleichAb"/>); "" when none.
+    /// </summary>
+    internal static string ArpVersion(ProgrammEintrag eintrag)
+    {
+        var praefix = eintrag.ArpName?.Trim() ?? "";
+        if (praefix.Length == 0) return "";
+        return ArpEintraege(praefix)
+            .Where(e => e.Name.StartsWith(praefix, StringComparison.OrdinalIgnoreCase) && VersionsZeile.IsMatch(e.Version.Trim()))
             .Select(e => e.Version.Trim())
-            .OrderByDescending(v => v, Comparer<string>.Create(CliAktualisierer.Vergleiche))
+            .OrderByDescending(v => v, Comparer<string>.Create((a, b) => ArpVergleiche(a, b, eintrag.ArpVergleichAb)))
             .FirstOrDefault() ?? "";
+    }
 
-    /// <summary>Compares from component <paramref name="ab"/> on (see <see cref="ProgrammEintrag.ArpVergleichAb"/>).</summary>
+    /// <summary>The registry walk off the calling (UI) thread.</summary>
+    private static Task<string> ArpVersionAsync(ProgrammEintrag eintrag) => Task.Run(() => ArpVersion(eintrag));
+
+    /// <summary>
+    /// Compares from component <paramref name="ab"/> on (see <see cref="ProgrammEintrag.ArpVergleichAb"/>).
+    /// When either side is too short to cut, both are compared whole -- never two different positions.
+    /// </summary>
     internal static int ArpVergleiche(string installiert, string angebot, int ab)
-        => CliAktualisierer.Vergleiche(VersionAb(installiert, ab), VersionAb(angebot, ab));
+    {
+        if (ab <= 0 || installiert.Split('.').Length <= ab || angebot.Split('.').Length <= ab)
+            return CliAktualisierer.Vergleiche(installiert, angebot);
+        return CliAktualisierer.Vergleiche(VersionAb(installiert, ab), VersionAb(angebot, ab));
+    }
 
     /// <summary>The version from component <paramref name="ab"/> on; unchanged for 0 or when too short.</summary>
     internal static string VersionAb(string version, int ab)
@@ -128,8 +155,12 @@ public sealed class WingetAktualisierer : IAktualisierer
     private static async Task<PruefErgebnis> ArpPruefenAsync(ProgrammEintrag eintrag, PruefErgebnis winget,
                                                             IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var installiert = ArpVersion(eintrag.ArpName!);
-        if (installiert.Length == 0) return winget;
+        var installiert = await ArpVersionAsync(eintrag);
+        if (installiert.Length == 0)
+        {
+            protokoll.Report("Kein Eintrag „" + eintrag.ArpName!.Trim() + "“ in der Deinstallationsliste.");
+            return winget;
+        }
         protokoll.Report("winget ordnet das Paket nicht zu – Deinstallationsliste: „" + eintrag.ArpName!.Trim() + "“ " + installiert);
 
         var angebot = NeuesteVersion(await ShowAsync(eintrag, "", protokoll, abbruch));
@@ -141,7 +172,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             ? new PruefErgebnis(UpdateZustand.Aktuell, installiert, "",
                 "Auf dem neuesten Stand (" + installiert + ", winget bietet " + angebot + ").", winget.Protokoll)
             : new PruefErgebnis(UpdateZustand.UpdateVerfuegbar, installiert, angebot,
-                $"Neue Version {angebot} verfügbar.", winget.Protokoll);
+                $"Neue Version {angebot} verfügbar (installiert {installiert}).", winget.Protokoll);
     }
 
     // ---------------- Festgelegter Installer-Typ ----------------
@@ -480,7 +511,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (!string.IsNullOrWhiteSpace(eintrag.ArpName))
         {
             var winget = ListeAuswerten(await ListeAsync(eintrag, protokoll, abbruch), eintrag.WingetId ?? "", HierVorhanden(eintrag));
-            if (winget.Zustand is UpdateZustand.NichtInstalliert or UpdateZustand.Unbekannt)
+            if (ArpZustaendig(eintrag, winget))
             {
                 var arp = await ArpPruefenAsync(eintrag, winget, protokoll, abbruch);
                 if (arp.Zustand == UpdateZustand.Aktuell)
@@ -662,6 +693,11 @@ public sealed class WingetAktualisierer : IAktualisierer
             return appx.Version;
         }
 
+        // One scheme for every fingerprint of the chain: ARP writes 10.1.x where winget writes
+        // 10.0.x, so mixing the two would look like movement although nothing changed.
+        if (!string.IsNullOrWhiteSpace(eintrag.ArpName) && await ArpVersionAsync(eintrag) is { Length: > 0 } arp)
+            return arp;
+
         if (!File.Exists(Pfade.Winget)) return "";
 
         // A fingerprint marks a moment of an update chain (before, settle polls): the check that
@@ -669,8 +705,6 @@ public sealed class WingetAktualisierer : IAktualisierer
         SammelVerwerfen();
         var lauf = await ListeAsync(eintrag, null, abbruch, sammelNutzen: false);
         var (wert, problem) = ListenFingerabdruck(lauf, eintrag.WingetId ?? "");
-        if (problem is not null && !string.IsNullOrWhiteSpace(eintrag.ArpName) && ArpVersion(eintrag.ArpName) is { Length: > 0 } arp)
-            return arp;
         if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
         return wert;
     }

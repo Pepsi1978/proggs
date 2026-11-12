@@ -1,6 +1,6 @@
 # UpdateZentrale: winget ordnet ein installiertes Paket nicht zu, `upgrade` endet mit 0x8A150014 (12.11.2026)
 
-> Behoben in UpdateZentrale 1.3.84. macOS ist nicht betroffen: brew kennt keine Zuordnung über die Deinstallationsliste, und die macOS-Kette prüft nur über `brew list`.
+> Behoben in UpdateZentrale 1.3.84, nach dem Review geschärft in 1.3.85 (Rückfall auch bei fehlgeschlagener Liste, Fingerabdruck immer im ARP-Schema, Rangfolge mit demselben Vergleich, Registry-Lesen abseits des UI-Threads, Sperre auch in UpdateKette.AusfuehrenAsync). macOS ist nicht betroffen: brew kennt keine Zuordnung über die Deinstallationsliste, und die macOS-Kette prüft nur über `brew list`.
 
 ## Symptom
 

@@ -248,6 +248,7 @@ public sealed class ProviderZustandTests
         Assert.Equal(-1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9999", 2)));
         Assert.Equal(0, WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9457", 2));
         Assert.Equal(1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0.26100.9999", 0)));
+        Assert.Equal(1, Math.Sign(WingetAktualisierer.ArpVergleiche("10.1.26100.9457", "10.0", 2)));
     }
 
     [Fact] public void Arp_Version_nimmt_hoechste_mit_passendem_Namensanfang()
@@ -255,15 +256,17 @@ public sealed class ProviderZustandTests
         var alt = WingetAktualisierer.ArpEintraege;
         try
         {
-            WingetAktualisierer.ArpEintraege = () => new[]
+            WingetAktualisierer.ArpEintraege = _ => new[]
             {
                 ("Windows Software Development Kit - Windows 10.0.22621.755", "10.1.22621.755"),
-                ("Windows Software Development Kit - Windows 10.0.26100.4188", "10.1.26100.4188"),
+                ("Windows Software Development Kit - Windows 10.0.26100.4188", "10.2.26100.4188"),
                 ("Windows Software Development Kit - Windows 10.0.26100.9457", "10.1.26100.9457"),
                 ("Windows SDK Desktop Tools x64", "10.1.26100.9999"),
             };
-            Assert.Equal("10.1.26100.9457", WingetAktualisierer.ArpVersion("Windows Software Development Kit - Windows 10.0.26100"));
-            Assert.Equal("", WingetAktualisierer.ArpVersion("Gibt es nicht"));
+            // 10.2.26100.4188 ranks below 9457: only Build.Revision counts (arpVergleichAb 2).
+            var sdk = new ProgrammEintrag { Id = "s", ArpName = "Windows Software Development Kit - Windows 10.0.26100", ArpVergleichAb = 2 };
+            Assert.Equal("10.1.26100.9457", WingetAktualisierer.ArpVersion(sdk));
+            Assert.Equal("", WingetAktualisierer.ArpVersion(new ProgrammEintrag { Id = "n", ArpName = "Gibt es nicht" }));
         }
         finally { WingetAktualisierer.ArpEintraege = alt; }
     }
