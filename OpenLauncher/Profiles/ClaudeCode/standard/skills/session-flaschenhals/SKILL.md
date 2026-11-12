@@ -55,6 +55,7 @@ Der Vergleich zeigt je Maßnahme vorher/nachher (Sitzungen mit Treffer, Fehler, 
 - Fehler kommen nachher weiter → `wirkungslos`: Ursache neu prüfen oder laut `ruecknahme` zurücknehmen.
 - Muster läuft nachher wieder häufig **ohne** Fehler (Ursache upstream behoben) → `überholt`:
   Kontextzeile laut `ruecknahme` entfernen. So wächst die Pflichtlektüre nicht.
+- `messbar: false` → nie automatisch bewerten, nur laut `pruefung` von Hand. `DATUM UNLESBAR` → Datum berichtigen.
 
 ## 4. Umsetzen (höchstens 3 Maßnahmen je Lauf, je ≤ 3 Dateien; Sofort-Korrekturen zählen nicht mit)
 
@@ -68,10 +69,16 @@ Stellen, Funktionserhalt. Hebel in dieser Reihenfolge, der erste passende gewinn
 Nie: neue Profilregeln, CLAUDE.md/AGENTS.md ändern, App-Code ändern, neue Pflicht-Lesedateien. Das wird
 nur als Vorschlag berichtet.
 
-Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzeit per Befehl), `beleg`
-(Zahlen), `ort`, `fehler_regex`/`aufruf_regex` (+ `werkzeug`, `min_zeilen`) für die Wirkungsprüfung,
-`pruefung`, `ruecknahme`, `kosten`, `plattform` (nur wo die Ursache auftritt: `windows`/`mac`/`linux`;
+Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzeit per Befehl,
+`Get-Date -Format yyyy-MM-ddTHH:mm` bzw. `date +%Y-%m-%dT%H:%M`), `beleg` (Zahlen), `ort` (Liste),
+`fehler_regex`/`aufruf_regex` (+ `werkzeug`, bei Bau/Git `Bash|PowerShell`, `min_zeilen`) für die Wirkungsprüfung,
+`fehler_am_aufruf: true`, wenn `fehler_regex` eine Hook-Meldung ist, die auch andere Fälle auslösen,
+`pruefung`, `ruecknahme`, `kosten`, `plattform` (Liste, nur wo die Ursache auftritt: `windows`/`mac`/`linux`;
 weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur seine eigenen Verläufe.
+**Gegenprüfung:** Vor dem Eintragen die Maßnahmen an derselben Stelle (Hook, Skript, Bedarfsdatei) und die
+Profilregeln lesen. Eine neue Ausnahme darf die Grundregel nicht aushebeln, ein neuer Ablauf keinem Hook
+widersprechen (12.11.2026: M21 bumpte nach dem Bau, gegen M2/M16). Hook-Änderung: `py_compile` und je eine
+Testeingabe, die weiter blocken muss und eine, die frei sein muss (Hook ist fail-open, ein Fehler schaltet ihn stumm).
 
 ## 5. Funktionserhalt und Abschluss
 

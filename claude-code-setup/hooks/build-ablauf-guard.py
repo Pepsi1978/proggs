@@ -114,8 +114,10 @@ def bau_ohne_bump(cmd, cwd):
             continue
         # Bump schon committet und noch nicht gebaut (Versionslog jünger als die letzte APK): Der Bau bekommt die neue
         # versionCode; offene Dateien stammen dann meist von einer parallelen Sitzung (12.11.2026, Sitzung a56e3dee, M20).
-        apk = os.path.join(basis, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
-        if not os.path.isfile(apk) or os.path.getmtime(log) > os.path.getmtime(apk):
+        # Fehlt jede APK (frischer Worktree, nach clean), gilt wieder die Grundregel: erst bumpen, dann bauen.
+        import glob
+        apks = glob.glob(os.path.join(basis, 'app', 'build', 'outputs', 'apk', '**', '*.apk'), recursive=True)
+        if apks and os.path.getmtime(log) > max(os.path.getmtime(a) for a in apks):
             continue
         return os.path.basename(basis), zeilen
     return None
@@ -150,6 +152,10 @@ def adb_ziel_fehlt(cmd):
     if not m or re.search(r'[$%`{]', m.group(1)):
         return None  # keine Installation oder Adresse aus Variable: nicht prüfbar
     # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
+    # adb connect auf genau diese Adresse oder das WLAN-Werkzeug davor verbinden aber erst im Befehl: nicht vorab prüfbar.
+    davor = cmd[:m.start()]
+    if re.search(r'adb-wlan|\bconnect\s+["\']?' + re.escape(m.group(1)), davor):
+        return None
     adb = adb_pfad()
     if not adb:
         return None

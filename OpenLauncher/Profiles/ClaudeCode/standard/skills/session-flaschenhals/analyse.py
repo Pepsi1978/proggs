@@ -61,8 +61,11 @@ def massnahmen():
     try:
         with open(os.path.join(HIER, "massnahmen.json"), encoding="utf-8") as f:
             liste = json.load(f).get("massnahmen", [])
-        # Massnahmen gelten je Rechner: ohne "plattform" ueberall, sonst nur dort (windows/mac/linux)
-        return [m for m in liste if PLATTFORM in m.get("plattform", [PLATTFORM])]
+        # Massnahmen gelten je Rechner: ohne "plattform" ueberall, sonst nur dort (windows/mac/linux); Text oder Liste
+        def plattformen(m):
+            p = m.get("plattform", [PLATTFORM])
+            return [p] if isinstance(p, str) else p
+        return [m for m in liste if PLATTFORM in plattformen(m)]
     except Exception as e:  # kaputte oder fehlende Liste darf die Analyse nicht stoppen
         print(f"(Hinweis: massnahmen.json nicht lesbar: {e})", file=sys.stderr)
         return []
@@ -204,7 +207,8 @@ def analysiere(pfad):
                 a["ausgabe"] = len(txt)
                 a["fehlertext"] = re.sub(r"\s+", " ", txt)[:120] if a["fehler"] else ""
                 a["fehlerklasse"] = fehlerklasse(txt[:600]) if a["fehler"] else ""
-                a["fehlerroh"] = txt[:600] if a["fehler"] else ""
+                # Anfang und Ende: Gradle & Co. melden den eigentlichen Fehler oft weit hinten (M7, M9, M19).
+                a["fehlerroh"] = (txt if len(txt) <= 4000 else txt[:1000] + "\n…\n" + txt[-3000:]) if a["fehler"] else ""
                 if a["name"] in MENSCH_WERKZEUGE:
                     mensch_s += max(0.0, t - a["start"])
                 letzte_zeit, letzte_art = t, "ergebnis"
@@ -303,15 +307,19 @@ def analysiere(pfad):
             ar = re.compile(mn["aufruf_regex"]) if mn.get("aufruf_regex") else None
         except re.error:
             continue
-        n_f = sum(1 for a in fehler if fr and fr.search(a.get("fehlerroh", "")))
-        n_a = 0
-        for i in reihenfolge:
-            a = aufrufe[i]
-            if not ar or (mn.get("werkzeug") and a["name"] != mn["werkzeug"]):
-                continue
+        wz = mn.get("werkzeug")
+        wz = set(wz) if isinstance(wz, list) else set(wz.split("|")) if wz else None  # "Bash|PowerShell" = beide
+
+        def passt(a):
+            if not ar or (wz and a["name"] not in wz):
+                return False
             roh = str(a["eingabe"].get("command") or json.dumps(a["eingabe"], ensure_ascii=False))
-            if ar.search(roh) and roh.count("\n") + 1 >= mn.get("min_zeilen", 0):
-                n_a += 1
+            return bool(ar.search(roh)) and roh.count("\n") + 1 >= mn.get("min_zeilen", 0)
+        # fehler_am_aufruf: nur Fehler genau der Aufrufe zählen, die auf aufruf_regex passen. Sonst zählt z. B. jede
+        # berechtigte Bump-Sperre des Hooks als Fehler gegen alle Ausnahmen (M3, M5, M13, M23), die denselben Text haben.
+        n_f = sum(1 for a in fehler if fr and fr.search(a.get("fehlerroh", ""))
+                  and (not mn.get("fehler_am_aufruf") or passt(a)))
+        n_a = sum(1 for i in reihenfolge if passt(aufrufe[i]))
         m_treffer[mn["id"]] = (n_f, n_a)
     return {
         "datei": pfad, "auftrag": erste_prompt, "gesamt_s": gesamt, "beginn": min(zeiten) if zeiten else 0,
@@ -394,9 +402,21 @@ def vergleich(berichte, top):
     z.append("\n## Wirkung der Maßnahmen (Sitzungen mit Treffer / Fehler / Aufrufe)")
     liste = massnahmen()
     for mn in liste:
-        try:
-            stichtag = datetime.fromisoformat(mn["datum"]).timestamp()
-        except Exception:
+        stichtag = None
+        for form in ("%Y-%m-%dT%H:%M", "%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M Uhr"):  # ISO oder Profilregel-6-Format
+            try:
+                stichtag = datetime.strptime(str(mn.get("datum", "")).strip(), form).timestamp()
+                break
+            except ValueError:
+                pass
+        if stichtag is None:
+            try:
+                stichtag = datetime.fromisoformat(str(mn.get("datum", ""))).timestamp()
+            except ValueError:
+                z.append(f"- {mn.get('id', '?')} DATUM UNLESBAR ({mn.get('datum')!r}): nicht gemessen, in massnahmen.json berichtigen")
+                continue
+        if mn.get("messbar") is False:
+            z.append(f"- {mn['id']} [{mn.get('status', '?')}] nicht automatisch messbar  | {mn['titel'][:50]}")
             continue
         def summe(teil):
             t = [r["massnahmen"].get(mn["id"], (0, 0)) for r in teil]
