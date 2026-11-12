@@ -20,6 +20,8 @@ for APK in "$@"; do
   esac
   [ -f "$APK" ] || { echo "AUF_BEIDE_STATUS=fehler (APK fehlt: $APK)"; exit 2; }
 done
+# Git Bash: /c/…-Pfade erreichen adb.exe sonst teils unverwandelt („failed to stat /c/…“), daher in Windows-Form.
+if command -v cygpath >/dev/null 2>&1; then N=(); for APK in "$@"; do N+=("$(cygpath -m "$APK")"); done; set -- "${N[@]}"; fi
 serie() { awk -v g="\"$1\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/geraete.json"; }
 adresse() {
   local s kabel=""

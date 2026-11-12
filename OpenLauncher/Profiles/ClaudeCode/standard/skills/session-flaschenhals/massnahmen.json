@@ -421,6 +421,25 @@
         "windows"
       ],
       "status": "aktiv"
+    },
+    {
+      "id": "M25",
+      "titel": "auf-beide.sh: APK-Pfade per cygpath in Windows-Form für adb.exe",
+      "datum": "2026-11-12T16:38",
+      "status": "aktiv",
+      "beleg": "Sitzung 1eff1b6b: Aufruf aus PowerShell über Git Bash mit /c/…-Pfad scheiterte auf beiden Geräten mit „failed to stat /c/…“, Neuversuch mit C:/…-Pfad lief.",
+      "ort": [
+        "Werkzeuge/adb-wlan/auf-beide.sh"
+      ],
+      "fehler_regex": "failed to stat /[a-z]/",
+      "aufruf_regex": "auf-beide\\.sh",
+      "werkzeug": "Bash|PowerShell",
+      "plattform": [
+        "windows"
+      ],
+      "pruefung": "fehler_regex zählt Läufe, in denen adb.exe einen unverwandelten /c/-Pfad bekam.",
+      "ruecknahme": "In auf-beide.sh die cygpath-Zeile nach der APK-Prüfschleife entfernen.",
+      "kosten": "kein Dauerkontext, nur das Skript"
     }
   ]
 }
