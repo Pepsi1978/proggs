@@ -25,3 +25,4 @@
 | 11 | Compose-Build-Konflikt | Compose-Compiler ist Gradle-Plugin, `composeOptions` entfernen | §10.2 |
 | 12 | JVM-Target inkonsistent | `kotlin { jvmToolchain(17) }` statt source/targetCompatibility | §10.4 |
 | 13 | `x in concurrentHashMap` bricht den Build (KT-18053, ruft containsValue) | `map.containsKey(x)` schreiben | – |
+| 14 | `Unclosed comment` / `Missing '}'` am Dateiende | `/*` in KDoc oder Kommentar (etwa `files/x/*.pcm`) öffnet einen verschachtelten Kommentar: Pfad ohne `/*` schreiben | – |

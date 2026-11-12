@@ -312,6 +312,22 @@
       "ruecknahme": "export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL=* aus den zwei Git-Bash-Aufrufen entfernen.",
       "kosten": "kein Kontext, nur Skript",
       "plattform": "windows"
+    },
+    {
+      "id": "M19",
+      "titel": "Kotlin: /* in KDoc öffnet verschachtelten Kommentar (Unclosed comment)",
+      "datum": "2026-11-12T10:53",
+      "status": "aktiv",
+      "beleg": "Sitzung c46c6c99: KDoc mit `files/stimmproben/*.pcm` brach den Build (Unclosed comment, Missing '}'), ein Bauzyklus von etwa 50 s verloren.",
+      "ort": [
+        "bugs/android/kotlin-kurzcheck.md"
+      ],
+      "werkzeug": "PowerShell",
+      "aufruf_regex": "gradlew(\\.bat)? assemble",
+      "fehler_regex": "Unclosed comment",
+      "pruefung": "Nach 10 Sitzungen mit Kotlin-Builds kein 'Unclosed comment' mehr -> wirkt.",
+      "ruecknahme": "Zeile 14 im Kotlin-Kurzcheck entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei"
     }
   ]
 }
