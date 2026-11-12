@@ -140,7 +140,7 @@ object Plugins {
 /**
  * Die Eingabeblase wie in der ChatGPT-App: oben das Textfeld („Mit Jarvis arbeiten“, die Tastatur kommt nur über den
  * Tastaturbutton oder beim Hineintippen), darunter Plus-Menü, Modell und Aufwand, das Diktier-Mikrofon und rechts die orange Live-Blase,
- * die zum Senden-Pfeil wird, sobald Text oder ein Anhang da ist. Während eines Live-Gesprächs zeigt sie dessen Leiste.
+ * die zum Senden-Pfeil wird, sobald Text oder ein Anhang da ist. Die Live-Blase startet den Live-Modus (Gesprächsschleife wie nach „Hey Jarvis“).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,8 +188,6 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
         layout(p.width, p.height) { p.place(0, 0) }
     }
     Column(modifier.then(begrenzt).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
-        if (vm.liveAktiv) { LiveLeiste(vm); return@Column }
-
         if (konsole == false) KonsolenWarnung(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) { konsoleAnmelden = true }
 
         if (vm.anhaenge.isNotEmpty()) {
@@ -326,8 +324,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
             when {
                 vm.denkt -> RundBlase(f.text, Icons.Rounded.Stop, "Abbrechen", f.hgOben) { vm.abbrechen() }
                 sendbar -> RundBlase(f.text, Icons.Rounded.ArrowUpward, "Senden", f.hgOben) { vm.entwurfSenden() }
-                else -> Box(Modifier.size(48.dp).clip(CircleShape).background(LIVE_ORANGE).antippen { vm.liveTippen() }, contentAlignment = Alignment.Center) {
-                    Wellen(Color.White, Modifier.size(24.dp))
+                // Live-Knopf: startet die Gesprächsschleife (wie „Hey Jarvis“ in der App); läuft sie, beendet ein Tipp sie.
+                else -> Box(Modifier.size(48.dp).clip(CircleShape).background(LIVE_ORANGE).antippen { vm.liveTippen() }
+                    .semantics { contentDescription = if (vm.sprachmodusAktiv) "Live-Modus beenden" else "Live-Modus starten" }, contentAlignment = Alignment.Center) {
+                    Wellen(Color.White, Modifier.size(24.dp), bewegt = vm.sprachmodusAktiv)
                 }
             }
         }
@@ -468,10 +468,9 @@ val AppViewModel.gespraechLoeschbar: Boolean get() = gespraech.isNotEmpty() || s
 
 /**
  * Platz, den die Eingabeblase über sich freilässt, auch bei sehr langem Text: der verdichtete Stapel (Neue Session, Nachtrag,
- * Programmierer, Pfeil), eingeklappt nur der Pfeil, im Live-Gespräch nichts.
+ * Programmierer, Pfeil), eingeklappt nur der Pfeil.
  */
 fun schwebeMindest(vm: AppViewModel): Dp = when {
-    vm.liveAktiv -> 0.dp
     vm.schweberEingeklappt -> SCHWEBE_LUECKE + SCHWEBE_UNTEN
     else -> schwebeHoehe(vm.nachtragMoeglich, stufe = 2) + SCHWEBE_UNTEN
 }
@@ -795,7 +794,7 @@ private fun MenueZeile(icon: ImageVector, titel: String, farbe: Color? = null, a
     }
 }
 
-/** Das Symbol der Live-Blase: kleiner, großer, mittlerer und kleiner Strich. [pegel] lässt sie im Gespräch mitschwingen. */
+/** Das Symbol des Live-Knopfs: kleiner, großer, mittlerer und kleiner Strich. [bewegt] lässt es im laufenden Live-Modus schwingen. */
 @Composable
 fun Wellen(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f, bewegt: Boolean = false) {
     val anim = if (bewegt) rememberInfiniteTransition(label = "wellen").animateFloat(0.75f, 1f, infiniteRepeatable(tween(520), RepeatMode.Reverse), label = "w").value else 1f
@@ -807,54 +806,6 @@ fun Wellen(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f, beweg
             val faktor = if (bewegt) (anim * (0.55f + pegel * 0.9f) * (if (i % 2 == 0) 1f else 1.1f)).coerceIn(0.3f, 1.25f) else 1f
             val hh = (size.height * h * faktor).coerceAtMost(size.height)
             drawRoundRect(farbe, Offset(i * (breite + abstand), (size.height - hh) / 2f), Size(breite, hh), CornerRadius(breite / 2f))
-        }
-    }
-}
-
-/** Aufnahmeanzeige im Live-Gespräch: fünf senkrechte Striche, die versetzt auf und ab schwingen; [pegel] verstärkt den Ausschlag. */
-@Composable
-private fun AudioStriche(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f) {
-    val phase by rememberInfiniteTransition(label = "striche").animateFloat(0f, (2 * Math.PI).toFloat(),
-        infiniteRepeatable(tween(900, easing = LinearEasing)), label = "p")
-    Canvas(modifier) {
-        val anzahl = 5
-        val breite = size.width / 9f
-        val abstand = (size.width - breite * anzahl) / (anzahl - 1)
-        val ausschlag = 0.45f + pegel.coerceIn(0f, 1f) * 0.55f
-        for (i in 0 until anzahl) {
-            val welle = (kotlin.math.sin(phase + i * 1.3f) + 1f) / 2f
-            val hh = size.height * (0.25f + 0.75f * welle * ausschlag)
-            drawRoundRect(farbe, Offset(i * (breite + abstand), (size.height - hh) / 2f), Size(breite, hh), CornerRadius(breite / 2f))
-        }
-    }
-}
-
-/** Die Leiste während eines Live-Gesprächs: schwingende Blase, Status, stumm schalten und beenden. */
-@Composable
-private fun LiveLeiste(vm: AppViewModel) {
-    val f = LocalFarben.current
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Antippen unterbricht Jarvis: im Medienton mit Echosperre der einzige Weg, sonst eine Abkürzung zum Dazwischenreden.
-        Box(Modifier.size(52.dp).clip(CircleShape).background(LIVE_ORANGE).antippen { vm.liveUnterbrechen() }, contentAlignment = Alignment.Center) {
-            Wellen(Color.White, Modifier.size(26.dp), pegel = vm.livePegel, bewegt = true)
-        }
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text("Live mit Jarvis", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(if (vm.liveStumm) "Stumm geschaltet (kostet weiter)" else vm.liveStatus, color = f.textLeise, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            // Welcher Tonweg und welches Mikrofon gerade wirklich laufen (Medienton oder Freisprechen).
-            if (vm.liveAudioweg.isNotEmpty()) Text(vm.liveAudioweg, color = f.textLeise, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            // Dieses Gespräch / alle Live-Gespräche seit dem Zurücksetzen (Einstellungen → Live-Gespräch).
-            Text("ca. " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKosten) + " / gesamt " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKostenGesamt),
-                color = LIVE_ORANGE, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Box(Modifier.size(46.dp).clip(CircleShape).background(if (vm.liveStumm) f.text else f.flaeche).antippen { vm.liveStummSchalten() }, contentAlignment = Alignment.Center) {
-            Icon(if (vm.liveStumm) Icons.Rounded.MicOff else Icons.Rounded.Mic, if (vm.liveStumm) "Mikrofon an" else "Stumm schalten", tint = if (vm.liveStumm) f.hgOben else f.text, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.width(8.dp))
-        // Rote Fläche mit schwingenden Audiostrichen statt Telefonhörer; Antippen beendet das Gespräch wie bisher.
-        Box(Modifier.size(46.dp).clip(CircleShape).background(f.gefahr).antippen { vm.liveBeenden() }
-            .semantics { contentDescription = "Live-Gespräch beenden" }, contentAlignment = Alignment.Center) {
-            AudioStriche(Color.White, Modifier.size(26.dp, 22.dp), pegel = vm.livePegel)
         }
     }
 }

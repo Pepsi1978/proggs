@@ -276,16 +276,6 @@ class SecureSettings(context: Context) : Closeable {
 
     // ---- KI (Baustein O) ----
 
-    /** Gemini-Schlüssel aus AI Studio, Projekt ohne Abrechnung (kostenloses Kontingent); für Gemini Live. */
-    var geminiApiKey: String
-        get() = readString(Keys.GEMINI_API_KEY, "")
-        set(value) = writeString(Keys.GEMINI_API_KEY, value)
-
-    /** Gemini-Schlüssel aus einem AI-Studio-Projekt mit Abrechnung; Ersatz, wenn das kostenlose Kontingent erschöpft ist. */
-    var geminiApiKeyBezahlt: String
-        get() = readString(Keys.GEMINI_API_KEY_BEZAHLT, "")
-        set(value) = writeString(Keys.GEMINI_API_KEY_BEZAHLT, value)
-
     /** Anthropic-API-Schlüssel (sk-ant-…) von platform.claude.com; damit denkt Jarvis mit einem Claude-Modell. */
     var anthropicApiKey: String
         get() = readString(Keys.ANTHROPIC_API_KEY, "")
@@ -305,18 +295,6 @@ class SecureSettings(context: Context) : Closeable {
     var anthropicConsoleAbgelehnt: Boolean
         get() = readString(Keys.ANTHROPIC_CONSOLE_ABGELEHNT, "") == "1"
         set(value) = writeString(Keys.ANTHROPIC_CONSOLE_ABGELEHNT, if (value) "1" else "")
-
-    // ---- Live-Gespräch (OpenAI Realtime) ----
-
-    /** Eigener OpenAI-Plattform-Schlüssel (sk-…) für das Live-Gespräch; das ChatGPT-Abo reicht dafür nicht. */
-    var openAiApiKey: String
-        get() = readString(Keys.OPENAI_API_KEY, "")
-        set(value) = writeString(Keys.OPENAI_API_KEY, value)
-
-    /** Eine Einstellung des Live-Gesprächs (Liste in [de.frank.jarvis.live.LiveOptionen]); leer = Standard. */
-    fun liveOption(id: String): String = readString("liveopt_$id", "")
-
-    fun setzeLiveOption(id: String, wert: String) = writeString("liveopt_$id", wert)
 
     var model: String
         get() = CodexModel.aktuelleId(readString(Keys.MODEL, Defaults.MODEL))
@@ -407,9 +385,6 @@ class SecureSettings(context: Context) : Closeable {
         const val TRANSCRIPTION_LOCAL = "transcription_local"
         const val VOCABULARY_ENABLED = "vocabulary_enabled"
         const val VOCABULARY_TERMS = "vocabulary_terms"
-        const val GEMINI_API_KEY = "gemini_api_key"
-        const val GEMINI_API_KEY_BEZAHLT = "gemini_api_key_bezahlt"
-        const val OPENAI_API_KEY = "openai_api_key"
         const val ANTHROPIC_API_KEY = "anthropic_api_key"
         const val ANTHROPIC_CONSOLE_SITZUNG = "anthropic_console_sitzung"
         const val CLAUDE_AI_SITZUNG = "claude_ai_sitzung"

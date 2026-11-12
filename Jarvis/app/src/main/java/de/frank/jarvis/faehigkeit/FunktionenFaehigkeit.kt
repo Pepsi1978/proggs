@@ -246,7 +246,6 @@ object Funktionen {
     }
 
     private fun hindernis(app: Context, agent: JarvisAgent): String? {
-        if (de.frank.jarvis.live.LiveGespraech.aktiv) return "ein Live-Gespräch läuft"
         if (!agent.verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
         val netz = runCatching {
             val cm = app.getSystemService(ConnectivityManager::class.java)
@@ -311,19 +310,7 @@ object Funktionen {
                 val e = Einstellungen.get(app)
                 // Feste, niedrige Denkstufe: Die Aufgabe ist klein, und Franks Chat-Einstellung soll sie nicht über das Zeitlimit treiben.
                 val stufe = e.modell.normalizeEffort(ReasoningEffort.LOW)
-                // Das Live-Gespräch hat Vorrang: Beginnt eines, bricht die Pflege ab und bleibt fällig.
-                var live = false
-                val roh = withTimeoutOrNull(PFLEGE_MS) {
-                    coroutineScope {
-                        val anfrage = async { agent.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, stufe) }
-                        while (!anfrage.isCompleted) {
-                            if (de.frank.jarvis.live.LiveGespraech.aktiv) { live = true; anfrage.cancel(); break }
-                            delay(1_000L)
-                        }
-                        if (live) null else anfrage.await()
-                    }
-                }
-                if (live) return@withContext melde("Pflege abgebrochen: ein Live-Gespräch hat begonnen; der nächste Anlauf holt es nach.")
+                val roh = withTimeoutOrNull(PFLEGE_MS) { agent.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, stufe) }
                 if (roh == null) return@withContext melde("Pflege nicht rechtzeitig fertig; der nächste Anlauf holt es nach.")
                 val antwort = jsonAus(roh) ?: return@withContext melde("Pflege lieferte kein lesbares Ergebnis; die Übersicht bleibt unverändert.")
                 ergebnis = melde(abschliessen(app, bis, Funktionsdatei.operationen(antwort), teil, "Pflege ($ausloeser)"))

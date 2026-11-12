@@ -94,26 +94,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
         /** So lange wartet eine Zustellung höchstens auf einen Moment, in dem nichts anderes spricht oder zuhört. */
         private const val ZUSTELLUNG_WARTEN_MS = 30 * 60_000L
-        /** Nach dem Vorlesen im Live-Gespräch: Nachhall und Bluetooth-Strecke abwarten, bevor das Mikrofon wieder offen ist. */
-        private const val LIVE_NACHLAUF_MS = 1_500L
         /** So lange nach dem letzten erkannten Wort zeigt die Sprachblase noch „Du sprichst“. */
         private const val BLASE_SPRICHT_NOCH_MS = 1_200L
         /** Mindestdauer einer Tätigkeitszeile, damit Frank sie mitlesen kann (Franks Vorgabe: zwei Sekunden). */
         const val ANZEIGE_MIN_MS = 2_000L
-        /** Live: Nach so langer Wartezeit auf Jarvis bekommt das Live-Modell einen Zwischenstand; die Arbeit läuft weiter. */
-        private const val LIVE_NACHREICHEN_MS = 10 * 60_000L
         private const val ABGEBROCHEN = "abgebrochen"
         /** Quelle beim Vorleser: „gespraech:“ davor gibt kurze Pausen und exklusiven Tonfokus wie bei Gesprächsantworten. */
         private const val ZUSTELL_QUELLE = "gespraech:zustellung:"
         /** Vorlesen der festen Frage einer Auswahlkarte; ein Tipp auf die Karte hält es an. */
         private const val WAHL_QUELLE = "gespraech:auswahl:"
-        /** Im Live-Gespräch wird erst vorgelesen, wenn so lange niemand gesprochen hat. */
-        private const val LIVE_RUHIG_MS = 4_000L
-        private const val LIVE_DAUERT =
-            "Das dauert noch etwas. Ich sage dir die Antwort, sobald sie da ist, auch wenn unser Gespräch bis dahin endet. Sie steht dann auch im Chat."
-        private const val LIVE_WIEDER =
-            "Frank hat eben das Ergebnis seiner Anfrage von Jarvis vorgelesen bekommen. Frag ihn auf Deutsch in höchstens einem kurzen Satz, " +
-                "ob er dazu noch etwas wissen möchte, dann hör zu. Wiederhole das Ergebnis nicht. Es lautete: "
     }
 
     val einstellungen = Einstellungen.get(app)
@@ -332,8 +321,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gesprochen = false
         programmierVorwahlOffen = false
         // Ob die Antwort laut wird: gesprochene Frage (Hey Jarvis, Gesprächsmodus) oder eingesprochen und von Hand gesendet.
-        // Nie im Live-Gespräch, das spricht selbst.
-        val antwortLaut = !liveAktiv && ((vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen))
+        val antwortLaut = (vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen)
         val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) ANHANG_PLATZHALTER else "" }
         if (text.isEmpty()) return false
         // Nur der Vorspann aus dem Plus-Menü „Programmierer“, ohne Aufgabe dahinter und ohne Anhang: kein Auftrag, der Text bleibt in der Blase.
@@ -1196,306 +1184,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- Live-Gespräch (OpenAI Realtime) ----
+    // ---- Live-Modus: dieselbe Gesprächsschleife wie nach „Hey Jarvis“ in der geöffneten App, gestartet über den Live-Knopf ----
 
-    var liveAktiv by mutableStateOf(false); private set
-    var liveStatus by mutableStateOf(""); private set
-    /** Tonweg, Ausgabegerät und Mikrofon, wie das System sie im Live-Gespräch tatsächlich nutzt. */
-    var liveAudioweg by mutableStateOf(""); private set
-    var livePegel by androidx.compose.runtime.mutableFloatStateOf(0f); private set
-    var liveStumm by mutableStateOf(false); private set
-    /** Was das laufende (oder zuletzt beendete) Live-Gespräch bisher gekostet hat, in USD. */
-    var liveKosten by mutableStateOf(0.0); private set
-    /** Summe aller Live-Gespräche seit dem letzten Zurücksetzen (Einstellungen → Live-Gespräch). */
-    var liveKostenBuch by mutableStateOf(de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())); private set
-    /**
-     * Kosten je Gespräch (Start-Kennung), die noch nicht im [liveKostenBuch] stecken. Je Gespräch ein Eintrag: Endet eins
-     * und das nächste startet, bevor das erste verbucht ist, fällt das erste nicht aus der Summe.
-     */
-    private val liveUnverbucht = androidx.compose.runtime.mutableStateMapOf<Int, Double>()
-    /** Gesamtkosten aller Live-Gespräche seit dem Zurücksetzen, laufende genau einmal eingerechnet (Live-Leiste). */
-    val liveKostenGesamt get() = liveKostenBuch.gesamtUsd + liveUnverbucht.values.sum()
-    fun liveKostenZuruecksetzen() {
-        liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.zuruecksetzen(getApplication<android.app.Application>())
-        meldung = "Kostenzählung des Live-Gesprächs zurückgesetzt."
-    }
+    /** Fragt die Mikrofon-Erlaubnis (MainActivity) und ruft danach [liveKnopfErlaubt]. */
     var liveMikroAnfragen: () -> Unit = {}
-    private var live: de.frank.jarvis.live.LiveGespraech? = null
-    /** Zählt Live-Starts: Ein verspäteter Start oder das Ende einer alten Verbindung darf eine neuere nicht anfassen. */
-    private var liveStand = 0
 
-    /** Tipp auf die orange Blase: Live-Gespräch starten oder beenden. */
+    /** Tipp auf den Live-Knopf: Live-Modus starten oder, wenn er läuft, beenden (wie langes Drücken der Sprachblase). */
     fun liveTippen() {
-        when {
-            liveAktiv -> liveBeenden()
-            liveSchluessel().first.isBlank() -> {
-                meldung = if (de.frank.jarvis.live.LiveOptionen.Stand(sprache).istGemini)
-                    "Für Gemini Live bitte zuerst einen Gemini-Schlüssel aus AI Studio unter Einstellungen → Stimme eintragen."
-                else "Für das Live-Gespräch bitte zuerst den OpenAI-API-Schlüssel unter Einstellungen → Stimme eintragen."
-                einstellungsReiter = "stimme"
-                reiter = Reiter.EINSTELLUNGEN
-            }
-            else -> liveMikroAnfragen()
-        }
+        if (sprachmodusAktiv) sprachmodusBeenden() else liveMikroAnfragen()
     }
 
-    /**
-     * Schlüssel für das eingestellte Live-Modell und (nur Gemini) der bezahlte Ersatz, falls das kostenlose Kontingent ausgeht.
-     * „Erst kostenlos, dann bezahlt“ nimmt den bezahlten allein, wenn kein kostenloser eingetragen ist.
-     */
-    fun liveSchluessel(st: de.frank.jarvis.live.LiveOptionen.Stand = de.frank.jarvis.live.LiveOptionen.Stand(sprache)): Pair<String, String> {
-        if (!st.istGemini) return sprache.openAiApiKey to ""
-        val frei = sprache.geminiApiKey
-        val bezahlt = sprache.geminiApiKeyBezahlt
-        return when (st["g_schluessel"]) {
-            "frei" -> frei to ""
-            "bezahlt" -> bezahlt to ""
-            else -> if (frei.isNotBlank()) frei to bezahlt else bezahlt to ""
-        }
-    }
-
-    /** [begruessung] = eigener Auftakt statt der Begrüßung (Wiederaufnahme nach einer Sprachzustellung). */
-    fun liveErlaubt(erlaubt: Boolean, begruessung: String? = null) {
+    /** Mit Mikrofon-Erlaubnis: die Gesprächsschleife zuhören, antworten, vorlesen, wieder zuhören, bis sie endet. */
+    fun liveKnopfErlaubt(erlaubt: Boolean) {
         if (!erlaubt) { meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
-        if (liveAktiv) return
-        // Eine laufende Aufnahme oder der Gesprächsmodus endet zuerst ganz (Dienst stoppen, Mikrofon freigeben), erst dann
-        // holt das Live-Gespräch das Mikrofon; sonst stoppte das verspätete Aufräumen den Dienst des Live-Gesprächs.
-        val aufraeumen = if (nimmtAuf || holtMikro || weckwortLauf?.isActive == true) aufnahmeVerwerfen() else null
-        vorleser.stopp()
-        liveAktiv = true
-        liveStumm = false
-        liveStatus = "Verbinde …"
-        liveAudioweg = ""
-        val stand = ++liveStand
-        // Sofort, nicht erst nach dem Mikrofon: Sonst zeigt die Leiste kurz die Zahlen des letzten Gesprächs.
-        liveKosten = 0.0
-        liveUnverbucht[stand] = 0.0
-        viewModelScope.launch {
-            aufraeumen?.join()
-            de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
-            // Ein neuerer Start gehört das Mikrofon schon: nichts freigeben, nichts starten. Wurde das Gespräch dagegen beendet,
-            // während das Aufräumen noch lief (liveStand zählt auch das Ende), hält niemand mehr das Mikrofon: freigeben,
-            // sonst bliebe „Hey Jarvis“ taub.
-            if (stand != liveStand) { liveUnverbucht.remove(stand); if (!liveAktiv && !nimmtAuf && !holtMikro && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
-            if (!liveAktiv) { liveUnverbucht.remove(stand); de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
-            de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
-            // Wie im Gesprächsmodus: Andere Apps bleiben leise, sonst hört das Mikrofon die Musik und das Live-Gespräch antwortet darauf.
-            de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
-            val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand) block() } }
-            val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
-            val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
-            val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
-            live = de.frank.jarvis.live.LiveGespraech(
-                getApplication(), liveSchluessel(optionen).first, optionen, liveAnweisung(optionen.istLive, optionen.istGemini && optionen.jarvisDirekt), bisher,
-                beiStatus = { s -> haupt { liveStatus = s } },
-                beiPegel = { p -> livePegel = p },
-                beiAudioweg = { a -> haupt { liveAudioweg = a } },
-                beiNutzerText = { t -> haupt { liveNachricht(Nachricht(true, t)) } },
-                beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
-                beiWerkzeug = { id, auftrag, hinweis -> haupt { liveWerkzeug(id, auftrag, hinweis) } },
-                // Die abgerechnete Dauer kommt bei GPT-Live erst nach dem Ende: auch dann noch übernehmen.
-                beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) {
-                    if (stand == liveStand || !liveAktiv) liveKosten = k
-                    // Nach dem Verbuchen nicht wieder aufnehmen: Dann steckt das Gespräch schon im Buch.
-                    if (liveUnverbucht.containsKey(stand)) liveUnverbucht[stand] = k
-                } },
-                // Jedes Gespräch genau einmal ins dauerhafte Kostenbuch, auch wenn inzwischen ein neues läuft.
-                beiAbrechnung = { a ->
-                    de.frank.jarvis.live.LiveKostenBuch.buchen(getApplication<android.app.Application>(), a)
-                    // Frisch lesen: Ein Zurücksetzen dazwischen darf nicht vom alten Stand überschrieben werden.
-                    // Im selben Schritt als verbucht markieren, damit die Live-Leiste das Gespräch nie doppelt zählt.
-                    viewModelScope.launch(Dispatchers.Main) {
-                        liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())
-                        liveUnverbucht.remove(stand)
-                    }
-                },
-                beiFehler = { m -> haupt { meldung = m } },
-                beiEnde = { haupt { liveAufraeumen() } },
-                ersatzSchluessel = liveSchluessel(optionen).second,
-                schluesselGratis = optionen.istGemini && optionen["g_schluessel"] != "bezahlt" && liveSchluessel(optionen).first == sprache.geminiApiKey,
-                begruessung = begruessung ?: de.frank.jarvis.live.LiveGespraech.BEGRUESSUNG,
-            ).also { it.start() }
-        }
+        if (sprachmodusAktiv) return
+        weckwortStart(fortsetzen = true, perKnopf = true) {}
     }
-
-    /** Welche Stimme gerade ihre Hörprobe holt (für die Sanduhr am Knopf). */
-    var stimmProbeLaedt by mutableStateOf<String?>(null); private set
 
     /** Favoriten-Stimmen als `art_stimme`: mit Stern ganz oben in der Liste. */
-    var stimmFavoriten by mutableStateOf(de.frank.jarvis.live.StimmProbe.favoriten(app)); private set
+    var stimmFavoriten by mutableStateOf(de.frank.jarvis.tts.StimmFavoriten.favoriten(app)); private set
 
     /** Langes Drücken auf eine Stimme: Stern an oder wieder aus. */
     fun stimmFavoritUmschalten(art: String, stimme: String, titel: String) {
-        stimmFavoriten = de.frank.jarvis.live.StimmProbe.favoritUmschalten(getApplication(), art, stimme)
-        meldung = if (de.frank.jarvis.live.StimmProbe.favoritSchluessel(art, stimme) in stimmFavoriten) "★ $titel ist jetzt Favorit." else "$titel ist kein Favorit mehr."
-    }
-
-    /** Spielt die deutsche Hörprobe einer Live-Stimme; die erste je Stimme kommt einmalig von OpenAI. */
-    fun stimmProbe(art: String, stimme: String) {
-        if (liveAktiv) { meldung = "Während des Live-Gesprächs gibt es keine Hörprobe."; return }
-        if (stimmProbeLaedt != null) return
-        val neu = !de.frank.jarvis.live.StimmProbe.vorhanden(getApplication(), art, stimme)
-        if (neu) { stimmProbeLaedt = stimme; meldung = "Hörprobe für $stimme wird einmalig erzeugt …" }
-        viewModelScope.launch {
-            // Wirft das Abspielen (etwa AudioTrack nicht verfügbar), darf weder die App abstürzen noch die Sanduhr hängen bleiben.
-            val fehler = try {
-                de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), liveSchluessel().first, art, stimme, liveSchluessel().second)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Logbuch.fehler("Hörprobe", e)
-                "Die Hörprobe ließ sich nicht abspielen."
-            } finally {
-                stimmProbeLaedt = null
-            }
-            if (fehler != null) meldung = fehler
-        }
-    }
-
-    fun liveStummSchalten() { liveStumm = !liveStumm; live?.stumm = liveStumm }
-
-    /** Antippen der Live-Blase: Jarvis verstummt sofort und hört wieder zu. */
-    fun liveUnterbrechen() {
-        // Liest Jarvis gerade ein spätes Ergebnis ins Live-Gespräch (Live-Mikrofon stumm), beendet das Antippen dieses Vorlesen.
-        if (vorleser.stand.value.quelle?.startsWith(ZUSTELL_QUELLE) == true) vorleser.stopp() else live?.unterbrechen()
-    }
-
-    /** Nur von Frank (Knopf, Blase, „Gespräch beenden“): bewusstes Ende, später fertige Ergebnisse kommen dann nur in den Chat. */
-    fun liveBeenden() {
-        if (liveAktiv) SprachZustellung.bewusstBeendet(getApplication(), "Live-Gespräch von Frank beendet")
-        live?.beenden() ?: liveAufraeumen()
-    }
-
-    private fun liveAufraeumen() {
-        if (!liveAktiv) return
-        liveStand++
-        liveAktiv = false
-        live = null
-        livePegel = 0f
-        liveStatus = ""
-        liveAudioweg = ""
-        de.frank.jarvis.audio.AufnahmeDienst.stoppen()
-        de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
-        de.frank.jarvis.speech.GespraechsFokus.freigeben()
-        viewModelScope.launch {
-            // Kurz warten: GPT-Live meldet die endgültige Dauer erst nach dem Schließen.
-            kotlinx.coroutines.delay(2_500)
-            if (!liveAktiv && liveKosten > 0) meldung = "Live-Gespräch beendet · ca. " + de.frank.jarvis.live.LiveOptionen.usdText(liveKosten)
-        }
-    }
-
-    /** Franks letzte Äußerung im Live-Gespräch, im Wortlaut: Ersatz, falls das Modell einen Sessionbefehl beim Delegieren umformuliert. */
-    private var liveAeusserung: String? = null
-
-    private fun liveNachricht(n: Nachricht) {
-        if (n.vonMir) liveAeusserung = n.text
-        gespraech += n
-        sitzungSichern()
-        // „Bitte das Gespräch beenden“: in der App erkannt, ohne Modell. Das Live-Modell bestätigt sonst oft nur, ohne zu delegieren.
-        if (n.vonMir && liveAktiv && SprachBefehle.istLiveEnde(n.text)) liveSprachEnde("gesagt: " + n.text)
-    }
-
-    /**
-     * Frank will das Live-Gespräch beenden: Verbindung, Mikrofon und Hörer sofort zu, danach eine kurze Bestätigung vom
-     * Vorleser. Das Mikrofon öffnet danach nicht von selbst; Gespräch, Agenten und Programmieraufträge laufen weiter.
-     */
-    private fun liveSprachEnde(anlass: String) {
-        if (!liveAktiv) return
-        sprachsitzungBeendet = true
-        Logbuch.sprache("Live-Gespräch beendet", anlass)
-        liveBeenden()
-        // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal hielte das Vorlesen an, statt zu sprechen.
-        vorleser.sprich("live-ende:" + System.currentTimeMillis(), "Jarvis", "Okay, Live-Gespräch beendet.")
-    }
-
-    /**
-     * Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen.
-     * Gemini „Jarvis direkt“: [auftrag] sind Franks erkannte Worte (von der Weiche), [hinweis] die Begleitumstände für Jarvis.
-     */
-    private fun liveWerkzeug(callId: String, auftrag: String, hinweis: String = "") {
-        val sitzung = live
-        // Genau einmal verbrauchen: Eine alte Äußerung darf nie an einem späteren Werkzeugaufruf hängen.
-        val aeusserung = liveAeusserung
-        liveAeusserung = null
-        // Gesprächsende vor allem anderen und ohne Modell: Die Antwort des Agenten ginge sonst nur als Bestätigung zurück.
-        if (listOfNotNull(auftrag, aeusserung).any { SprachBefehle.istLiveEnde(it) }) { liveSprachEnde("Werkzeugaufruf: $auftrag"); return }
-        // Sessionwechsel laufen wie im Mikrofonpfad über [navigieren]: in der App, ohne Modell, nie als Programmierauftrag.
-        val befehl = GespraechsNavigation.liveBefehl(auftrag, aeusserung, navigationsAuswahl)
-        if (befehl != null) {
-            if (navigiert) { if (live === sitzung) sitzung?.ergebnis(callId, "Moment, ich wechsle gerade die Session.", navigation = true); return }
-            if (navigieren(befehl, vorlesen = false) { t -> if (live === sitzung) sitzung?.ergebnis(callId, t, navigation = true) }) return
-        }
-        // Wie im Mikrofonpfad: Die Rückfrage „Welche Session meinst du?“ gilt nur für die nächste Äußerung.
-        navigationsAuswahl = null
-        // „Jarvis direkt“: Modell und Denkstufe aus den Live-Einstellungen; hohe Stufen bekommen mehr Zeit.
-        val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
-        val nurStimme = optionen.istGemini && optionen.jarvisDirekt
-        // Gemini „Jarvis direkt“: Franks Worte stehen schon im Auftrag. Im Verlauf stünden sie sonst ein zweites Mal, als
-        // „unbeantwortet, nur bei Bezug darauf eingehen“ markiert; frühere Beiträge ohne gehörte Antwort bleiben drin.
-        var bis = gespraech.size
-        if (nurStimme) while (bis > 0 && gespraech[bis - 1].vonMir && gespraech[bis - 1].text.isNotBlank() && auftrag.contains(gespraech[bis - 1].text.trim())) bis--
-        val verlauf = verlaufFuersModell(bis)
-        val modell = de.frank.jarvis.live.LiveOptionen.jarvisModell(optionen)
-        val denkstufe = de.frank.jarvis.live.LiveOptionen.jarvisDenkstufe(optionen)
-        // Die Stufe, die wirklich ans Modell geht: „Wie im Chat“ zählt mit, und ein Modell ohne die Stufe fällt wie in der Anfrage zurück.
-        val wirksameStufe = if (!optionen.jarvisDirekt) null
-            else (modell ?: einstellungen.modell).normalizeEffort(denkstufe ?: einstellungen.denkstufe)
-        val zeitlimit = if (wirksameStufe != null && wirksameStufe >= de.frank.jarvis.auth.ReasoningEffort.HIGH) 120_000L else 60_000L
-        // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
-        val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
-        // Live: die Mitschrift von Franks Äußerung für die Nachtrags-Prüfung (unsicher, daher nicht streng).
-        val angebot = letzteRueckfrage(gespraech)
-        val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false, angebot = angebot) } ?: kotlin.coroutines.EmptyCoroutineContext
-        // Im Live-Gespräch gefragt: Antworten und Agenten dieser Frage tragen den Sprachursprung (Zustellung nach dem Gesprächsende).
-        val herkunft = sitzungId.orEmpty()
-        val ursprung = SprachUrsprung(SprachModus.LIVE, herkunft)
-        val beginn = System.currentTimeMillis()
-        viewModelScope.launch(kennung + worte + ursprung) {
-            val ersatz = if (nurStimme) "Jarvis konnte gerade nicht antworten, wegen eines Fehlers. Bitte frag gleich noch einmal."
-                else "Das konnte ich gerade nicht nachschlagen."
-            // Die Arbeit selbst darf länger dauern als die Geduld des Live-Modells: Sie läuft weiter, das Modell bekommt nach dem
-            // Zeitlimit einen Zwischenstand, und die echte Antwort wird später zugestellt (Chat und Stimme), nie verworfen.
-            // Hat die Antwort nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), gilt nur deren fester Wortlaut, nach einem
-            // schnellen Tipp keine Bestätigung, nur eine Folgefrage (wie im Chat, siehe rundeFertig).
-            val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
-            var karte: String? = null
-            val arbeit = async {
-                runCatching {
-                    // Live (jarvis_fragen): fest 8 Schritte, unabhängig von Franks Chat-Schrittlimit.
-                    agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." } + (if (hinweis.isNotBlank()) "\n\n$hinweis" else ""), verlauf,
-                        lernen = true, abschluss = true, zeitlimitMs = LIVE_NACHREICHEN_MS, beiAenderung = { erledigt += it },
-                        maxSchritte = JarvisAgent.STANDARD_SCHRITTE, modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
-                }.onFailure { if (it is CancellationException) throw it; Logbuch.fehler("Live: Antwort von Jarvis", it) }.getOrNull()
-                    ?.also { a ->
-                        val nurAuftrag = synchronized(erledigt) { erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
-                        if (nurAuftrag) karte = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(herkunft, beginn)
-                    }
-            }
-            val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.also {
-                Logbuch.sprache("Live: Denken bis Ergebnis", "${it.length} Zeichen", System.currentTimeMillis() - beginn)
-            }?.let { a ->
-                karte?.let {
-                    if (it.isBlank()) "Frank hat schon gewählt, der Programmierauftrag startet. Bestätige die Auswahl nicht, nenne kein Modell und stell keine Rückfrage; sag höchstens „Okay“."
-                    else "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“"
-                } ?: a
-            }
-            // Nur an dieselbe, noch laufende Verbindung: Eine neue kennt diese Kennung nicht.
-            // Kommt sie dort nicht an (Gemini hat den Aufruf abgebrochen, Verbindung weg), wird sie unten zugestellt.
-            if (rechtzeitig != null && live === sitzung && sitzung != null && sitzung.ergebnis(callId, rechtzeitig)) return@launch
-            if (rechtzeitig == null) {
-                Logbuch.sprache("Live: Antwort dauert", "nach ${zeitlimit / 1000} s Zwischenstand an das Live-Modell, die Antwort wird nachgereicht")
-                if (live === sitzung) sitzung?.ergebnis(callId, LIVE_DAUERT)
-            }
-            val roh = rechtzeitig ?: arbeit.await()
-            // Die Karte steht schon im Chat: nachgereicht wird dann nur ihr Wortlaut, ohne zweite Blase.
-            // Leere Karte: schon getippt, der Auftrag läuft; nachgereicht wird dann nichts.
-            if (karte?.isBlank() == true) return@launch
-            val antwort = karte ?: roh ?: "Die Antwort auf deine Frage ist leider nicht zustande gekommen. Details unter Aktivität."
-            // Zu spät für das Live-Modell (Gespräch beendet, gewechselt oder Zwischenstand gegeben): in den Chat und hörbar zustellen.
-            Logbuch.sprache("Live: Antwort nachgereicht", "${antwort.length} Zeichen, Gespräch ${if (live === sitzung) "läuft noch" else "beendet"}")
-            if (herkunft.isNotEmpty() && karte == null) de.frank.jarvis.faehigkeit.ProgrammierChat.poste(getApplication(), herkunft, antwort, "antwort")
-            sprachZustellen(Zustellung("live:$callId:${ursprung.seit}", SprachModus.LIVE, herkunft, ursprung.seit, "Frank, die Antwort auf deine Frage ist jetzt da.", antwort))
-        }
+        stimmFavoriten = de.frank.jarvis.tts.StimmFavoriten.favoritUmschalten(getApplication(), art, stimme)
+        meldung = if (de.frank.jarvis.tts.StimmFavoriten.favoritSchluessel(art, stimme) in stimmFavoriten) "★ $titel ist jetzt Favorit." else "$titel ist kein Favorit mehr."
     }
 
     // ---- Sprachzustellung: späte Antworten auf gesprochen begonnene Anfragen ----
@@ -1536,8 +1248,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         fun ausgang() = SprachZustellung.ausgang(app, z.modus, z.begonnen, z.ruhe)
         ausgang().takeIf { it != SprachZustellung.Ausgang.SPRECHEN }?.let { Logbuch.sprache("Sprachzustellung", "${z.schluessel}: ${it.text}"); return }
-        // Erst in einem freien Moment: Frank spricht nicht, Jarvis liest nichts anderes vor, kein Gesprächsmodus läuft,
-        // ein Live-Gespräch ist gerade still. So überlappt nichts und mehrere Ergebnisse kommen der Reihe nach.
+        // Erst in einem freien Moment: Frank spricht nicht, Jarvis liest nichts anderes vor, kein Gesprächsmodus läuft.
+        // So überlappt nichts und mehrere Ergebnisse kommen der Reihe nach.
         val frei = kotlinx.coroutines.withTimeoutOrNull(ZUSTELLUNG_WARTEN_MS) { while (!zustellungFrei()) kotlinx.coroutines.delay(2_000); true }
         if (frei != true) {
             Logbuch.sprache("Sprachzustellung abgelaufen", "${z.schluessel}: ${ZUSTELLUNG_WARTEN_MS / 60_000} Minuten kein freier Moment, nur im Chat")
@@ -1546,18 +1258,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Während des Wartens bewusst beendet oder Vorlesen abgeschaltet: dann still.
         ausgang().takeIf { it != SprachZustellung.Ausgang.SPRECHEN }?.let { Logbuch.sprache("Sprachzustellung", "${z.schluessel}: ${it.text}"); return }
-        val sitzung = live
-        if (liveAktiv && sitzung != null) { imLiveVorlesen(sitzung, z); return }
         val hindernis = wiederaufnahmeHindernis(z)
         // Wird gleich wieder zugehört, gehört der Bildschirm dem Gespräch der Anfrage (nur, wenn es ein anderes ist).
         if (hindernis == null && z.gespraech.isNotEmpty() && sitzungId != z.gespraech && !sitzungLaden(z.gespraech))
             Logbuch.sprache("Sprachzustellung", "${z.schluessel}: Gespräch ließ sich nicht öffnen")
-        // Live-Anfrage, aber Live verbindet nicht neu (Schalter aus, „Nie“, kein Schlüssel): offen sagen, dass es im Sprachmodus weitergeht.
-        val liveWeg = if (z.modus == SprachModus.LIVE) liveWeg() else null
-        val liveHinweis = liveWeg?.hinweis?.takeIf { hindernis == null && zustellungenOffen <= 1 }?.let { "$it Ich höre jetzt im normalen Sprachmodus zu." }
         Logbuch.sprache("Sprachzustellung", "${z.schluessel}: wird vorgelesen" + (hindernis?.let { ", danach kein Mikrofon: $it" }
-            ?: if (liveHinweis != null) ", Live nicht neu verbunden (${liveWeg?.name}), danach Gesprächsmodus" else ", danach ${z.modus.anzeige} wieder offen"))
-        val text = z.ansage + "\n\n" + z.text + ((hindernis ?: liveHinweis)?.let { "\n\n$it" } ?: "")
+            ?: ", danach ${z.modus.anzeige} wieder offen"))
+        val text = z.ansage + "\n\n" + z.text + (hindernis?.let { "\n\n$it" } ?: "")
         vorlesenUndWarten(ZUSTELL_QUELLE + System.currentTimeMillis(), text)?.let { grund ->
             // Gestoppt (Frank, ein anderes Vorlesen) ist kein Fehler, heißt aber: nicht von selbst wieder zuhören.
             Logbuch.sprache("Sprachzustellung", "${z.schluessel}: nicht zu Ende vorgelesen ($grund)")
@@ -1571,11 +1278,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         wiederaufnehmen(z)
     }
 
-    /** Nichts anderes spricht oder hört gerade zu; im Live-Gespräch: still seit ein paar Sekunden, kein offener Aufruf. */
+    /** Nichts anderes spricht oder hört gerade zu. */
     private fun zustellungFrei(): Boolean =
         !nimmtAuf && !holtMikro && !schreibtMit && !navigiert && weckwortLauf?.isActive != true &&
-            vorleser.stand.value.zustand == de.frank.jarvis.speech.VorleseZustand.AUS &&
-            (!liveAktiv || live?.ruhig(LIVE_RUHIG_MS) == true)
+            vorleser.stand.value.zustand == de.frank.jarvis.speech.VorleseZustand.AUS
 
     /**
      * Warum nach dem Vorlesen nicht wieder zugehört werden kann, als Satz zum Vorlesen; null = es geht. Android gibt das Mikrofon
@@ -1588,58 +1294,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 "Zum Weiterreden öffne Jarvis, das Mikrofon ist für Jarvis nicht freigegeben."
             !de.frank.jarvis.MainActivity.sichtbar && !de.frank.jarvis.weckwort.WeckwortDienst.imVordergrund ->
                 "Wenn du weiterreden willst, öffne Jarvis. Ohne Hey Jarvis darf ich das Mikrofon im Hintergrund nicht von selbst öffnen."
-            z.modus == SprachModus.LIVE && liveWiederTauglich() -> null
             transkriptionFehlt() != null || !modellBereit -> "Zum Weiterreden öffne Jarvis."
             else -> null
         }
     }
 
-    /** Öffnet nach dem Vorlesen den Sprachweg, aus dem die Anfrage kam: Live neu verbinden oder den Gesprächsmodus. */
+    /** Öffnet nach dem Vorlesen wieder den Gesprächsmodus (Live-Modus). */
     private fun wiederaufnehmen(z: Zustellung) {
         val app = getApplication<Application>()
-        if (z.modus == SprachModus.LIVE && liveWiederTauglich()) {
-            Logbuch.sprache("Sprachzustellung", "${z.schluessel}: Live-Gespräch wieder aufgenommen")
-            liveErlaubt(true, begruessung = LIVE_WIEDER + z.text.take(1500))
-            return
-        }
         Logbuch.sprache("Sprachzustellung", "${z.schluessel}: Gesprächsmodus wieder aufgenommen")
         weckwortStart(fortsetzen = true, wiederaufnahme = true) {}
         SprachBlase.abgleichen(app)
-    }
-
-    /**
-     * Live darf von selbst neu verbinden, wenn Frank das erlaubt („Live nach einem Ergebnis automatisch neu verbinden“), ein
-     * Schlüssel da ist und das Gespräch bei Stille wieder endet: Mit „Nie“ liefe eine von Jarvis geöffnete, bezahlte Verbindung
-     * unbegrenzt weiter. Sonst geht es im Gesprächsmodus weiter. Ein bewusstes Ende prüft [zustelle] vorher.
-     */
-    private fun liveWeg(): SprachZustellung.LiveWeg {
-        val st = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
-        return SprachZustellung.liveWeg(st[de.frank.jarvis.live.LiveOptionen.NACH_ERGEBNIS] == "an", liveSchluessel().first.isNotBlank(),
-            st["stille_ende"].toIntOrNull() ?: 0)
-    }
-
-    private fun liveWiederTauglich(): Boolean = liveWeg() == SprachZustellung.LiveWeg.NEU_VERBINDEN
-
-    /**
-     * Mitten im Live-Gespräch (still, kein offener Aufruf): Live-Mikrofon kurz stumm, Jarvis liest mit seiner Stimme vor, danach hört
-     * Live wie vorher weiter. Ein von Frank stumm geschaltetes Mikrofon bleibt stumm. Das Stille-Ende zählt das Vorlesen als Gespräch.
-     */
-    private suspend fun imLiveVorlesen(sitzung: de.frank.jarvis.live.LiveGespraech, z: Zustellung) {
-        Logbuch.sprache("Sprachzustellung", "${z.schluessel}: wird im laufenden Live-Gespräch vorgelesen")
-        sitzung.stumm = true
-        val halter = viewModelScope.launch { while (true) { sitzung.wachHalten(); kotlinx.coroutines.delay(5_000) } }
-        try {
-            vorlesenUndWarten(ZUSTELL_QUELLE + System.currentTimeMillis(), z.ansage + "\n\n" + z.text)?.let { grund ->
-                Logbuch.sprache("Sprachzustellung", "${z.schluessel}: im Live-Gespräch nicht zu Ende vorgelesen ($grund)")
-                if (grund != ABGEBROCHEN) meldung = "Das Ergebnis ließ sich nicht vorlesen ($grund); es steht im Chat."
-            }
-            sitzung.kontextNachtragen(z.text)
-            kotlinx.coroutines.delay(LIVE_NACHLAUF_MS)
-        } finally {
-            halter.cancel()
-            sitzung.wachHalten()
-            if (live === sitzung) sitzung.stumm = liveStumm
-        }
     }
 
     /** Liest [text] und wartet, bis er zu Ende ist. null = zu Ende gesprochen, sonst warum nicht (Fehler, Zeitgrenze, [ABGEBROCHEN]). */
@@ -1647,7 +1312,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorleser.sprich(quelle, "Jarvis", text)
         if (vorleser.stand.value.quelle != quelle) return vorleser.stand.value.fehler ?: "nicht begonnen"
         val ende = vorleser.warteAufEnde(quelle, vorleseDauer(text)) ?: run {
-            // Nicht weiterlesen lassen, während der Aufrufer das Live-Mikrofon öffnet und die Wachsperre freigibt.
+            // Nicht weiterlesen lassen, während der Aufrufer das Mikrofon öffnet und die Wachsperre freigibt.
             if (vorleser.stand.value.quelle == quelle) vorleser.stopp()
             return "Zeitgrenze"
         }
@@ -1661,54 +1326,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Obergrenze fürs Vorlesen nach der Textlänge (gut 12 Zeichen je Sekunde, dazu Zeit für die Stimme aus dem Netz). */
     private fun vorleseDauer(text: String): Long = (60_000L + text.length * 100L).coerceIn(120_000L, 60 * 60_000L)
-
-    /**
-     * Anweisung für das Sprachmodell. GPT-Live delegiert, Realtime und Gemini rufen das Werkzeug selbst.
-     * [nurStimme]: Gemini mit „Jarvis direkt“ ist nur die Stimme; die Weiche ([de.frank.jarvis.live.JarvisWeiche]) gibt jeden Beitrag an Jarvis.
-     */
-    private fun liveAnweisung(gptLive: Boolean, nurStimme: Boolean = false): String =
-        if (nurStimme) "# Rolle\nDu bist die Stimme von Jarvis, Franks persönlichem Assistenten auf seinem Handy, im Live-Sprachgespräch. " +
-            "Inhaltlich antwortet immer Jarvis: Die App gibt jeden Beitrag von Frank an Jarvis weiter. Hörbar sind Jarvis' Antworten in deinen Worten " +
-            "und kurze neutrale Signale; eigene Sachantworten bleiben stumm.\n" +
-            "# Sprache\nSprich immer Deutsch. Natürlich, warm und flüssig: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
-            "# Franks Beiträge\nAuf alles, was Frank sagt, auch Smalltalk, ein Danke oder eine bloße Mitteilung, rufst du sofort jarvis_fragen mit seinen Worten auf. " +
-            "Antworte nie selbst inhaltlich, auch nicht, wenn du die Antwort zu wissen glaubst. Davor darfst du höchstens ein kurzes neutrales Signal sagen, nur eines von: " +
-            de.frank.jarvis.live.JarvisWeiche.SIGNALE.joinToString(", ") { "„$it“" } + ". Oft passt gar keins. Nie zweimal dasselbe hintereinander, " +
-            "kein Ja oder Nein, keine Wartefloskeln wiederholen und nichts von der Antwort vorwegnehmen.\n" +
-            "# Antworten von Jarvis\nDas Ergebnis von jarvis_fragen und jede Nachricht, die mit „" + de.frank.jarvis.live.JarvisWeiche.MARKE.trim() + "“ beginnt, ist Jarvis' Antwort an Frank. " +
-            "Sprich sie sofort, ohne die Markierung und ohne Einleitung wie „Jarvis sagt“. Du musst sie nicht wörtlich vorlesen: Formuliere ihren Kern natürlich " +
-            "wie im Gespräch und verbinde ihn gern mit einem kurzen Übergang wie „Also“ oder „Schau mal“. Alle Fakten, Zahlen, Namen, Zeiten, Einschränkungen, Unsicherheiten, " +
-            "Rückfragen und Bestätigungen bleiben dabei genau erhalten. Füge keine eigenen Fakten, Ratschläge oder Bewertungen hinzu, und bestätige nur, was Jarvis bestätigt. " +
-            "Auf eine solche Nachricht rufst du nie jarvis_fragen auf.\n" +
-            "# Ausnahme\nNur die kurze Begrüßung zu Beginn sprichst du selbst.\n" +
-            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf. Eine unterbrochene Antwort setzt du nicht von dir aus fort; will Frank den Rest hören, kommt er von Jarvis.\n" +
-            "# Regeln\nErfinde nie Daten. Behaupte nie selbst, etwas erledigt, eine Session gewechselt oder das Gespräch beendet zu haben; das sagt nur Jarvis.\n" +
-            "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
-        else
-        "# Rolle\nDu bist Jarvis, Franks persönlicher Assistent auf seinem ${de.frank.jarvis.data.Geraet.wort}, im Live-Sprachgespräch.\n" +
-            "# Sprache\nSprich immer Deutsch, auch wenn Frank kurz Englisch spricht. Natürlich, warm und knapp wie ein guter Gesprächspartner: kurze Sätze, " +
-            "keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
-            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein. Lass ihm Denkpausen.\n" +
-            (if (gptLive) "# Nachschlagen\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, " +
-                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen) und für aktuelle Fragen aus dem Internet delegierst du, bevor du antwortest; Jarvis sucht dann direkt. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
-                "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
-                "delegierst du das ebenfalls mit seinen genauen Worten; auch seine Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
-                "Behaupte nie selbst, gewechselt zu haben.\n"
-            else "# Werkzeug\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
-                "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen) und für aktuelle Fragen aus dem Internet rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest; " +
-                "Jarvis sucht dann direkt. " +
-                "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
-                "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
-                "rufst du jarvis_fragen mit seinen genauen Worten auf; auch mit seiner Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
-                "Behaupte nie selbst, gewechselt zu haben.\n") +
-            "# Beenden\nWill Frank das Gespräch beenden, etwa „Gespräch beenden“, „Beende das Live-Gespräch“ oder „Leg auf“, " +
-                (if (gptLive) "delegierst du das sofort mit seinen genauen Worten" else "rufst du sofort jarvis_fragen mit seinen genauen Worten auf") +
-                ". Jarvis schließt dann die Verbindung selbst. Sag vorher höchstens „Okay“ und behaupte nie selbst, das Gespräch sei beendet.\n" +
-            "# Regeln\nErfinde nie Daten. Melde etwas erst als erledigt, wenn das Ergebnis da ist.\n" +
-            // Franks Antwort-Stil (aus seinen Bewertungen) gilt auch im Gespräch, soweit er zum Sprechen passt.
-            de.frank.jarvis.faehigkeit.StilRegeln.alle(getApplication()).takeIf { it.isNotEmpty() }
-                ?.joinToString("\n", "# Franks Stil (gilt, soweit es zum Sprechen passt)\n", "\n") { "- " + it.text }.orEmpty() +
-            "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
     /** Der Symbiose-Text genau so, wie er in ChatGPT eingetragen wird (Überschrift mit Stand und Fassung, dann die Regeln). */
     fun symbioseText(): String = de.frank.jarvis.faehigkeit.Symbiose.fuerChatGpt(getApplication())
@@ -2326,13 +1943,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val sprachsessionBeenden: () -> Boolean = {
         sprachsitzungBeendet = true
         val lief = weckwortLauf?.isActive == true
-        // Im Live-Gespräch beendet dasselbe Werkzeug die Live-Verbindung: Sonst bestätigte das Modell nur und der Hörer bliebe offen.
-        val liveLief = liveAktiv
         // Nur ein wirklich beendetes Sprachgespräch ist ein bewusstes Ende (nicht ChatGPT über MCP ohne laufende Sitzung).
-        if (lief || liveLief) SprachZustellung.bewusstBeendet(getApplication(), "Werkzeug sprachsession_beenden")
-        if (liveLief) viewModelScope.launch(Dispatchers.Main) { liveSprachEnde("per Werkzeug") }
-        else Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
-        lief || liveLief
+        if (lief) SprachZustellung.bewusstBeendet(getApplication(), "Werkzeug sprachsession_beenden")
+        Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
+        lief
     }
 
     /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */
@@ -2348,14 +1962,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * „Hey Jarvis“ wurde erkannt: aufnehmen, piepen (ab jetzt sprechen), nach der Frage von selbst abschicken und
      * die Antwort vorlesen. [fertig] läuft, wenn alles vorbei ist (die Antwort ist zu Ende gesprochen).
      */
-    /** [wiederaufnahme] = nach einer Sprachzustellung von selbst wieder zuhören (kein Weckwort-Treffer, nichts zu lernen). */
-    fun weckwortStart(fortsetzen: Boolean, wiederaufnahme: Boolean = false, fertig: () -> Unit) {
-        weckwortRufUm = de.frank.jarvis.weckwort.Weckwort.gerufenUm
-        de.frank.jarvis.weckwort.Weckwort.uebernommen()
+    /**
+     * [wiederaufnahme] = nach einer Sprachzustellung von selbst wieder zuhören (kein Weckwort-Treffer, nichts zu lernen).
+     * [perKnopf] = über den Live-Knopf gestartet: dieselbe Schleife, nur ohne Weckwort-Treffer (kein Fehlalarm, kein Weckwort-Protokoll).
+     */
+    fun weckwortStart(fortsetzen: Boolean, wiederaufnahme: Boolean = false, perKnopf: Boolean = false, fertig: () -> Unit) {
+        weckwortRufUm = if (perKnopf) 0L else de.frank.jarvis.weckwort.Weckwort.gerufenUm
+        if (!perKnopf) de.frank.jarvis.weckwort.Weckwort.uebernommen()
         val grund = when {
             nimmtAuf || schreibtMit || holtMikro -> ""
-            transkriptionFehlt() != null -> if (sprache.transkriptionLokal) "Für „Hey Jarvis“ bitte zuerst das Offline-Modell herunterladen." else "Für „Hey Jarvis“ bitte zuerst den Groq-Schlüssel eintragen."
-            !modellBereit -> "Für „Hey Jarvis“ bitte zuerst ${zuerstVerbinden()}."
+            transkriptionFehlt() != null -> if (sprache.transkriptionLokal) "Für ${startName(perKnopf)} bitte zuerst das Offline-Modell herunterladen." else "Für ${startName(perKnopf)} bitte zuerst den Groq-Schlüssel eintragen."
+            !modellBereit -> "Für ${startName(perKnopf)} bitte zuerst ${zuerstVerbinden()}."
             else -> null
         }
         if (grund != null) {
@@ -2382,8 +1999,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
         // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
         sprachsitzungBeendet = false
-        val treffer = if (wiederaufnahme) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
-        if (!wiederaufnahme) de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
+        // Ohne Weckwort (Wiederaufnahme, Live-Knopf) gibt es keinen Treffer, aus dem das Stimmprofil lernen könnte.
+        val ohneWeckwort = wiederaufnahme || perKnopf
+        val treffer = if (ohneWeckwort) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
+        if (!ohneWeckwort) de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
         // Eine Wiederaufnahme übergibt immer fortsetzen = true und ändert nichts daran, wo das Gespräch begann.
         if (!wiederaufnahme) gespraechInApp = fortsetzen
@@ -2407,13 +2026,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (ergebnis == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT) {
                         // Gleich nach „Hey Jarvis“ nichts gesagt: Das war wohl ein Fehlalarm, das Stimmprofil lernt ihn.
                         // Nicht, wenn nur das Mikrofon nicht starten wollte: Das sagt nichts über den Klang.
-                        if (runde == 0 && !mikroFehlte && !wiederaufnahme) {
+                        if (runde == 0 && !mikroFehlte && !ohneWeckwort) {
                             de.frank.jarvis.weckwort.Stimmprofil.fehlalarm(treffer)
                             de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "nichts")
                         }
                         break
                     }
-                    if (runde == 0 && !wiederaufnahme) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
+                    if (runde == 0 && !ohneWeckwort) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
                     // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist. Ohne feste Pausen:
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
                     snapshotFlow { schreibtMit || denkt || navigiert || sprachWahlen > 0 }.first { !it }
@@ -2438,7 +2057,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Läuft der Sprachmodus von „Hey Jarvis“ (Gesprächsmodus)? Danach richtet sich die Sprachblase. */
+    private fun startName(perKnopf: Boolean) = if (perKnopf) "den Live-Modus" else "„Hey Jarvis“"
+
+    /** Läuft der Sprachmodus von „Hey Jarvis“ bzw. der Live-Modus (Gesprächsmodus)? Danach richtet sich die Sprachblase. */
     var sprachmodusAktiv by mutableStateOf(false); private set
     private var sprachmodusNr = 0
 
@@ -2889,8 +2510,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rueckfrageOffen = (gespraech ?: return) to frageId
     }
 
-    /** Läuft eine Aufnahme, ein Gesprächsmodus oder ein Live-Gespräch? Dann wechselt eine Rückfrage nie das Gespräch. */
-    private fun sprachwegAktiv() = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true || de.frank.jarvis.live.LiveGespraech.aktiv
+    /** Läuft eine Aufnahme oder der Gesprächsmodus (Live-Modus)? Dann wechselt eine Rückfrage nie das Gespräch. */
+    private fun sprachwegAktiv() = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
 
     fun rueckfrageSchliessen() {
         antwortAufnahmeBeenden()
@@ -3092,11 +2713,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen === gespraecheVomAbgleich) de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.aendern === programmierAendern) de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
-        live?.beenden()
-        // Das Aufräumen des Live-Gesprächs liefe über den schon beendeten viewModelScope: Mikrofon hier direkt freigeben.
-        if (nimmtAuf || holtMikro || liveAktiv) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
-        // Ebenso den Audiofokus von Diktat und Live-Gespräch: Sonst blieben andere Apps pausiert.
-        if (nimmtAuf || holtMikro || liveAktiv || weckwortLauf?.isActive == true) de.frank.jarvis.speech.GespraechsFokus.freigeben()
+        // Das Aufräumen liefe über den schon beendeten viewModelScope: Mikrofon hier direkt freigeben.
+        if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        // Ebenso den Audiofokus von Diktat und Gesprächsmodus: Sonst blieben andere Apps pausiert.
+        if (nimmtAuf || holtMikro || weckwortLauf?.isActive == true) de.frank.jarvis.speech.GespraechsFokus.freigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         groq?.shutdown()
@@ -3547,7 +3167,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Bestätigung eines Wechsels: oben eingeblendet und, wenn gesprochen gefragt, vorgelesen. Nie ins Gespräch geschrieben.
-     * Aus dem Live-Gespräch geht sie über [antwort] an das Live-Modell, das sie selbst spricht.
      */
     private fun navigiertMelden(text: String, vorlesen: Boolean, antwort: ((String) -> Unit)? = null) {
         meldung = text

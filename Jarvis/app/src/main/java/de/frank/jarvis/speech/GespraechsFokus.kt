@@ -25,7 +25,7 @@ object GespraechsFokus {
      * Ein Gespräch läuft (Gesprächsmodus oder Live): Jarvis' eigene Hinweise kommen dann ohne Ton. Ein Hinweiston
      * pausiert sonst den Vorleser und läuft im Live-Gespräch über die Stimme (Regel: Sprachmodus vor Hintergrundarbeit).
      */
-    val stilleHinweise: Boolean get() = anfrage != null || de.frank.jarvis.live.LiveGespraech.aktiv
+    val stilleHinweise: Boolean get() = anfrage != null
 
     /**
      * Eine Sprachaufnahme läuft (Diktat, Antwort auf eine Rückfrage, Gesprächsmodus): Ansagen und Hinweistöne warten, sonst

@@ -7,17 +7,17 @@ import kotlin.coroutines.CoroutineContext
 
 /** Der Sprachweg, in dem Frank eine Anfrage begonnen hat. Die [kennung] steht dauerhaft im Vorgangsbuch. */
 enum class SprachModus(val kennung: String, val anzeige: String) {
-    WECKWORT("weckwort", "Hey Jarvis"),
-    LIVE("live", "Live-Gespräch");
+    WECKWORT("weckwort", "Hey Jarvis");
 
     companion object {
-        fun aus(kennung: String?): SprachModus? = entries.firstOrNull { it.kennung == kennung }
+        /** Vorgänge aus dem entfernten alten Live-Gespräch („live“) gehen im Live-Modus (Gesprächsschleife) weiter. */
+        fun aus(kennung: String?): SprachModus? = if (kennung == "live") WECKWORT else entries.firstOrNull { it.kennung == kennung }
     }
 }
 
 /**
- * Läuft im Koroutinen-Kontext einer Runde mit, die Frank gesprochen begonnen hat (Gesprächsmodus mit eingeschaltetem Vorlesen
- * oder Live-Gespräch). Startet Jarvis darin einen Agenten, erbt der Vorgang den Sprachursprung von selbst; das hängt nicht am
+ * Läuft im Koroutinen-Kontext einer Runde mit, die Frank gesprochen begonnen hat (Gesprächsmodus bzw. Live-Modus mit eingeschaltetem
+ * Vorlesen). Startet Jarvis darin einen Agenten, erbt der Vorgang den Sprachursprung von selbst; das hängt nicht am
  * Modellparameter `vorlesen` von agent_starten. [seit] = Beginn der Anfrage, für den Abgleich mit einem bewussten Ende.
  */
 class SprachUrsprung(val modus: SprachModus, val gespraech: String, val seit: Long = System.currentTimeMillis()) :
@@ -79,30 +79,8 @@ object SprachZustellung {
     fun ausgang(context: Context, modus: SprachModus, begonnen: Long, ruhe: de.frank.jarvis.meldung.Meldungsart?): Ausgang {
         val app = context.applicationContext
         return entscheide(begonnen, beendetUm(app),
-            vorlesenAn = modus == SprachModus.LIVE || de.frank.jarvis.data.Einstellungen.get(app).antwortenVorlesen,
-            ruhe = ruhe != null && !de.frank.jarvis.live.LiveGespraech.aktiv && de.frank.jarvis.meldung.Meldungen.inRuhe(app, ruhe))
-    }
-
-    /**
-     * Wie es nach der Zustellung an eine Live-Anfrage weitergeht, deren Gespräch inzwischen beendet ist. [hinweis] sagt Jarvis
-     * nach dem Ergebnis, wenn Live nicht neu verbindet; es geht dann im normalen Sprachmodus weiter (sofern das Mikrofon darf).
-     */
-    enum class LiveWeg(val hinweis: String?) {
-        NEU_VERBINDEN(null),
-        SCHALTER_AUS("Live verbinde ich nach deiner Einstellung nicht von selbst neu."),
-        KEIN_SCHLUESSEL("Live kann ich nicht neu verbinden, der Schlüssel fehlt."),
-        STILLE_NIE("Live verbinde ich nicht von selbst neu, weil es bei „Bei Stille beenden: Nie“ unbegrenzt weiterliefe."),
-    }
-
-    /**
-     * Rein und prüfbar: [schalterAn] = „Live nach einem Ergebnis automatisch neu verbinden“, [stilleMinuten] = „Bei Stille beenden“
-     * (0 = Nie). Ein bewusst beendetes Gespräch öffnet nie wieder (das prüft der Aufrufer vorher, unabhängig vom Schalter).
-     */
-    fun liveWeg(schalterAn: Boolean, schluesselDa: Boolean, stilleMinuten: Int): LiveWeg = when {
-        !schalterAn -> LiveWeg.SCHALTER_AUS
-        !schluesselDa -> LiveWeg.KEIN_SCHLUESSEL
-        stilleMinuten <= 0 -> LiveWeg.STILLE_NIE
-        else -> LiveWeg.NEU_VERBINDEN
+            vorlesenAn = de.frank.jarvis.data.Einstellungen.get(app).antwortenVorlesen,
+            ruhe = ruhe != null && de.frank.jarvis.meldung.Meldungen.inRuhe(app, ruhe))
     }
 
     /** Frank hat das Sprachgespräch bewusst beendet: Was bis jetzt begonnen hat, wird später nicht mehr vorgelesen. */

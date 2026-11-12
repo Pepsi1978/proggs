@@ -17,7 +17,7 @@ class SprachsessionFaehigkeit : Faehigkeit {
     override val name = "Sprachsession"
     override val beschreibung = "Beendet die laufende Sprachsession: Nach der nächsten Antwort öffnet Jarvis das Mikrofon nicht mehr von selbst."
     override val hinweise =
-        "Will Frank die Sprachsession, das Live-Gespräch, den Gesprächsmodus oder das Zuhören beenden oder das Mikrofon schließen, auch frei formuliert " +
+        "Will Frank die Sprachsession, den Live-Modus, den Gesprächsmodus oder das Zuhören beenden oder das Mikrofon schließen, auch frei formuliert " +
             "(„bitte beenden jetzt“, „hör auf zuzuhören“, „mach das Mikro aus“, „das war's für jetzt“), rufe sprachsession_beenden auf und " +
             "bestätige danach in einem kurzen Satz, etwa „Okay, Sprachsession beendet.“. Erst das Werkzeug schließt das Mikrofon: " +
             "Behaupte nie ohne diesen Aufruf, die Session sei beendet, und sag nie, Frank müsse das Mikrofon selbst ausschalten. " +
@@ -26,7 +26,7 @@ class SprachsessionFaehigkeit : Faehigkeit {
     override fun stoerung(): String? = null
 
     /**
-     * Auch im Plugin: Spricht Frank mit ChatGPT, kann eine gleichzeitig offene Sprachsession von Jarvis (Mikrofon, Live-Gespräch)
+     * Auch im Plugin: Spricht Frank mit ChatGPT, kann eine gleichzeitig offene Sprachsession von Jarvis (Mikrofon, Live-Modus)
      * stören; ChatGPT kann sie dann auf Franks Wunsch schließen.
      */
     override val imPlugin: Boolean get() = true
@@ -35,8 +35,8 @@ class SprachsessionFaehigkeit : Faehigkeit {
         Werkzeug(
             name = "sprachsession_beenden",
             titel = "Sprachsession beenden",
-            beschreibung = "Jarvis: beendet die laufende Sprachsession auf dem Handy, auch ein laufendes Live-Gespräch samt Verbindung. Nach deiner Antwort piept es nicht mehr und das Mikrofon " +
-                "bleibt zu, bis Frank Jarvis wieder ausdrücklich aufruft. Gespräch und Aufträge bleiben unberührt. Aus ChatGPT: wenn Frank Jarvis' eigenes Zuhören oder Live-Gespräch " +
+            beschreibung = "Jarvis: beendet die laufende Sprachsession (den Live-Modus) auf dem Handy. Nach deiner Antwort piept es nicht mehr und das Mikrofon " +
+                "bleibt zu, bis Frank Jarvis wieder ausdrücklich aufruft. Gespräch und Aufträge bleiben unberührt. Aus ChatGPT: wenn Frank Jarvis' eigenes Zuhören oder den Live-Modus " +
                 "auf dem Handy beenden will, etwa weil er gerade mit ChatGPT spricht.",
             schema = schema(),
             // Ändert keine Daten: kein Eintrag im Live-Gedächtnis, keine „Erledigt“-Notiz.

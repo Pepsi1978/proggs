@@ -391,7 +391,7 @@ object Meldungen {
             // Steht das Vorlesen wegen einer Rückfrage (auch eine Antwort im Gesprächsmodus), kommt ihre Ansage sofort. Im Live-Gespräch steht es nie.
             val rueckfrage = art === Meldungsarten.RUECKFRAGE
             while (GespraechsFokus.stilleHinweise && !(rueckfrage && de.frank.jarvis.speech.Vorleser.aktuell()?.unterbrochen == true))
-                delay(if (rueckfrage && !de.frank.jarvis.live.LiveGespraech.aktiv) 250L else 2_000L)
+                delay(if (rueckfrage) 250L else 2_000L)
             true
         }
         if (frei != true) return

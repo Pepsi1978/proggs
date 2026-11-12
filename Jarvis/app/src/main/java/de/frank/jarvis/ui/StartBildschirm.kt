@@ -222,7 +222,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     // Wird der Platz über der Blase knapp (lange Eingabe, Tastatur, Querformat), verdichtet sich der Symbolstapel, statt unten abgeschnitten zu werden.
     val schwebStufe = schwebeStufe(with(dichte) { listenHoehe.toDp() }, vm.nachtragMoeglich, vm.gespraechLoeschbar)
     // Das Listenpolster bleibt bei voller Stapelhöhe: Wechselt die Stufe beim Tippen, springt die Liste nicht.
-    val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, vm.gespraechLoeschbar) + 10.dp
+    val schweber = schwebeHoehe(vm.nachtragMoeglich, vm.gespraechLoeschbar) + 10.dp
     // Ganz unten angekommen, egal wie: wieder mitlesen.
     LaunchedEffect(liste, folgenZustand) {
         androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
@@ -272,7 +272,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         var auswahlOben by remember { androidx.compose.runtime.mutableFloatStateOf(-1f) }
         val textende = with(dichte) {
             val amSymbol = if (listeUnten < 0f || symbolUnten < 0f) TEXTENDE_UNTEN else (listeUnten - symbolUnten).coerceAtLeast(0f).toDp() + TEXTENDE_UEBER_SYMBOL
-            if (!vm.liveAktiv && auswahlOben >= 0f && listeUnten >= 0f) maxOf(amSymbol, (listeUnten - auswahlOben).toDp() + 8.dp) else amSymbol
+            if (auswahlOben >= 0f && listeUnten >= 0f) maxOf(amSymbol, (listeUnten - auswahlOben).toDp() + 8.dp) else amSymbol
         }
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }
             .onGloballyPositioned { listeUnten = it.positionInRoot().y + it.size.height }) {
@@ -426,7 +426,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
+        ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
             // Ungebunden gemessen und unten verankert: Reicht der Platz selbst für die dichteste Stufe nicht (oder für ein Bild, bis die
             // Stufe nachzieht), ragt der Stapel nach oben über die Liste, statt Programmierer und Pfeil unten abzuschneiden.
             .wrapContentHeight(Alignment.Bottom, unbounded = true), schwebStufe,

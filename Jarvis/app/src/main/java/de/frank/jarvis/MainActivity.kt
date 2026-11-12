@@ -40,7 +40,7 @@ class MainActivity : FragmentActivity() {
     private val standortImmerErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
 
     private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.mikrofonErlaubt(it) }
-    private val liveErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.liveErlaubt(it) }
+    private val liveErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.liveKnopfErlaubt(it) }
 
     /** Plus-Menü der Eingabeblase: Foto aufnehmen, Fotos wählen, Dateien wählen. Die Kamera schreibt in den Cache (FileProvider). */
     private val kamera = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok -> vm.kameraZiel?.takeIf { ok }?.let { vm.anhangHinzu(listOf(it)) } }
@@ -149,7 +149,7 @@ class MainActivity : FragmentActivity() {
             else mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
         }
         vm.liveMikroAnfragen = {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.liveErlaubt(true)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.liveKnopfErlaubt(true)
             else liveErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
         }
         vm.kameraAnfragen = {

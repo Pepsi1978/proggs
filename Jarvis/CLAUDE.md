@@ -20,12 +20,10 @@ Es fragt per Overlay nach dem Zeitpunkt (`ui/InstallFrageDienst.kt`), damit eine
 Technischer Schutz: Das Manifest verlangt den Pflicht-Teil `freigabe` (`requiredSplitTypes`). Gradle legt ihn signiert als `assets/freigabe-teil.apk` in die APK; nur jarvis-install und UpdateStation holen ihn heraus und installieren ihn mit. Nacktes `adb install` und `installDebug` scheitern daher mit `INSTALL_FAILED_MISSING_SPLIT`. UpdateStation ist die Rückfallebene für den Notfall: Es installiert den Teil mit, stellt aber bewusst keine Frage.
 Der Drive-Upload ist für Jarvis derzeit ausgesetzt (`driveUploadAusgesetzt` im Skill `apk-update`): Die Rückfallebene zeigt dann nur noch Cloud- und Server-Bauten; `APK_UPDATE_STATUS=ausgesetzt` ist kein Fehler.
 
-## Live-Gespräch: erst lesen, danach messen
-Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Stille, Echosperre, Fadenprioritäten, Tonweg)
-`best-practices/apis/openai-live-realtime.md` §14 lesen: Ursachen der früheren Abhacker, bewährte Werte, offene Punkte.
-Nach der Änderung die Rückfall-Prüfung aus §14.6 durchführen (Logcat-Tag `JarvisLiveRouting`, Grenzwerte gegen die
-Referenzmessung von 1.8.108). Der aktive Live-Sprachmodus hat Vorrang vor Hintergrundarbeit; neue Benachrichtigungen,
-die während eines Gesprächs feuern können, bekommen `setSilent(GespraechsFokus.stilleHinweise)`.
+## Live-Modus
+Der Live-Knopf (orange Blase unten rechts) startet dieselbe Gesprächsschleife wie „Hey Jarvis“ in der geöffneten App
+(`AppViewModel.weckwortStart(perKnopf = true)`): zuhören, antworten, vorlesen, wieder zuhören. Es gibt keine zweite
+Gesprächsvariante mehr; das frühere Echtzeit-Live-Gespräch (OpenAI/Gemini, Paket `live/`) ist entfernt (1.8.633).
 
 ## Sprachkette messen, ohne zu sprechen
 `adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "…"` startet die Kette wie nach dem Weckwort mit Text statt Mitschrift (nur Shell und System dürfen das). Der Lauf beginnt ein neues Gespräch und spricht laut, also vorher fragen; ist Jarvis vorn oder läuft schon ein Sprachgespräch, lehnt er ab. Ergebnis im Logbuch: „Kette Mikrofon“, „Kette Weckwort“, „Blase“.

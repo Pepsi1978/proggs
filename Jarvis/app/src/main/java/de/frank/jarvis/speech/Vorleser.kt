@@ -646,7 +646,7 @@ class Vorleser(
      */
     fun anhalten(kennung: String, bisSekunden: Long = 0L) = haupt.post {
         val stand = _stand.value
-        if (stand.zustand == VorleseZustand.AUS || stand.quelle?.startsWith(rueckfrageQuelle) == true || de.frank.jarvis.live.LiveGespraech.aktiv) return@post
+        if (stand.zustand == VorleseZustand.AUS || stand.quelle?.startsWith(rueckfrageQuelle) == true) return@post
         rueckfrageHalt.remove(kennung)?.let { fristWecker?.cancel(it) }
         val ablauf = android.app.AlarmManager.OnAlarmListener { freigeben(kennung) }
         rueckfrageHalt[kennung] = ablauf

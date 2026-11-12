@@ -46,9 +46,6 @@ object KontenRegister {
             KontoEintrag(id, titel, "$was $wozu", dienst, true, wozu.removeSuffix("."), lies, schreib)
         return listOf(
             k("anthropic", "Anthropic", "Meldet Jarvis bei den Claude-Modellen an.", "Wird im Chat verwendet, wenn du Claude als Kopf wählst.", "platform.claude.com", { s.anthropicApiKey }) { s.anthropicApiKey = it },
-            k("openai", "OpenAI", "Öffnet die OpenAI-Plattform mit eigener Abrechnung.", "Wird für das Live-Gespräch verwendet.", "platform.openai.com", { s.openAiApiKey }) { s.openAiApiKey = it },
-            k("gemini_frei", "Gemini kostenlos", "Öffnet Google AI Studio ohne Abrechnung.", "Wird für Gemini Live verwendet.", "aistudio.google.com", { s.geminiApiKey }) { s.geminiApiKey = it },
-            k("gemini_bezahlt", "Gemini bezahlt", "Öffnet Google AI Studio mit Abrechnung.", "Wird für Gemini Live verwendet, wenn das kostenlose Kontingent aufgebraucht ist.", "aistudio.google.com", { s.geminiApiKeyBezahlt }) { s.geminiApiKeyBezahlt = it },
             k("gemini_tts_frei", "Gemini-Stimme kostenlos", "Erzeugt Sprache mit den Gemini-Stimmen ohne Abrechnung.", "Wird zum Vorlesen verwendet.", "aistudio.google.com", { s.geminiTtsKeyFrei }) { s.geminiTtsKeyFrei = it },
             k("gemini_tts_bezahlt", "Gemini-Stimme bezahlt", "Erzeugt Sprache mit den Gemini-Stimmen mit Abrechnung.", "Wird zum Vorlesen verwendet, je nach deiner Schlüsselwahl.", "aistudio.google.com", { s.geminiTtsKeyBezahlt }) { s.geminiTtsKeyBezahlt = it },
             k("google_tts", "Google Cloud Sprache", "Erzeugt Sprache mit den Chirp-Stimmen von Google.", "Wird zum Vorlesen und als Rückfallstimme verwendet.", "console.cloud.google.com", { s.googleTtsApiKey }) { s.googleTtsApiKey = it },

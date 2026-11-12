@@ -153,7 +153,7 @@ data class Lernbericht(
  *
  * Automatik: Der Wächter (alle zehn Minuten, solange der Dienst läuft), der Lauf nach jeder Tagesauswertung und ein
  * eigener Wecker etwa alle sechs Stunden stoßen [automatisch] an. Nie zwei Läufe gleichzeitig (eine Sperre für alle
- * Auslöser); nicht während eines Live-Gesprächs, ohne Netz, im Stromsparmodus oder bei schwachem Akku ohne Ladegerät.
+ * Auslöser); nicht während eines Sprachgesprächs, ohne Netz, im Stromsparmodus oder bei schwachem Akku ohne Ladegerät.
  */
 object Lernlauf {
     const val LAEUFT = "laeuft"
@@ -259,7 +259,6 @@ object Lernlauf {
 
     /** Was einen automatischen Lauf gerade verhindert, oder null. */
     private fun hindernis(app: Context): String? {
-        if (de.frank.jarvis.live.LiveGespraech.aktiv) return "ein Live-Gespräch lief"
         if (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) return "ein Sprachgespräch lief"
         if (!JarvisAgent(app).verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
         if (!netzDa(app)) return "kein Netz"
@@ -581,7 +580,6 @@ object Lernlauf {
             val frisch = alt != null && jetzt - alt.optLong("zeit") < frische(alt.optString("stand"), ausloeser)
             val urteil = if (frisch) alt!! else {
                 if (geprueft >= hoechstens) { s.hinweise += "„${kurz(p.text)}“ wird beim nächsten Lauf im Code geprüft (höchstens $hoechstens Prüfungen je Lauf)."; continue }
-                if (ausloeser == AUTOMATISCH && de.frank.jarvis.live.LiveGespraech.aktiv) { s.hinweise += "Codeprüfung angehalten, weil ein Live-Gespräch begann; der Rest folgt beim nächsten Lauf."; break }
                 schritt("prüft im Code (${i + 1} von ${liste.size}): ${kurz(p.wunsch.ifEmpty { p.text })}")
                 geprueft++
                 val u = runCatching { pruefe(app, agent, e, p, auftraege) }.getOrElse {

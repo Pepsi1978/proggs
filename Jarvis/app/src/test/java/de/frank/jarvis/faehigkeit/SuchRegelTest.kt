@@ -158,9 +158,6 @@ class SuchRegelTest {
         assertTrue(Integration.REGELN.contains("außer der Regel WEBSUCHE STATT AGENT"))
         // Eigener Chat, klassischer Sprachmodus und Live über jarvis_fragen: fester Teil der Anweisung des Jarvis-Agenten.
         assertTrue(quellen.filterKeys { it.endsWith("JarvisAgent.kt") }.values.single().contains("SuchRegel.REGEL"))
-        // Live-Denk-Modell und Live-Sprachmodelle schicken aktuelle Fragen an Jarvis.
-        assertTrue(quellen.filterKeys { it.endsWith("LiveGespraech.kt") }.values.single().contains("Recherche-Agenten startet er nur"))
-        assertTrue(quellen.filterKeys { it.endsWith("AppViewModel.kt") }.values.single().contains("für aktuelle Fragen aus dem Internet"))
     }
 
     @Test fun unveraenderteAlteSymbioseRegelWirdErsetztFranksFassungNicht() {

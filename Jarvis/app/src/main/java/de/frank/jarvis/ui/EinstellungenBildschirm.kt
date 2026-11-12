@@ -196,7 +196,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Text("So viele Token (Denken samt Text) darf eine Aufgabe im Chat oder ein Agent verbrauchen, bei allen Modellen. Ist es erreicht, fragt Jarvis in einem Fenster: " +
                     "Weiter gibt der Aufgabe noch einmal ${Einstellungen.tokenlimitLabel(e.tokenlimit)}, Abbrechen schreibt einen Zwischenstand. Ein einzelner Schritt kann das Limit etwas überschreiten. " +
-                    "Die Tagesauswertung und das Live-Gespräch sind ausgenommen, dort kann niemand antworten.",
+                    "Die Tagesauswertung ist ausgenommen, dort kann niemand antworten.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
@@ -205,7 +205,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             // ---------------------------------------------------------------- Gedächtnis
             Bereich("Jarvis' Gedächtnis") {
                 androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-                Text("Sieben Dateien, die Jarvis bei jeder Antwort, im Live-Gedächtnis, im Live-Gespräch und für ChatGPT vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln sind nur für Jarvis selbst: Er steuert damit Programmieraufträge, schickt ihren Text aber nie an den Programmierer, auch nicht über das Live-Gedächtnis; die Zusammenarbeit mit ChatGPT steht zusätzlich 1:1 in ChatGPT. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                Text("Sieben Dateien, die Jarvis bei jeder Antwort, im Live-Gedächtnis, im Live-Modus und für ChatGPT vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln sind nur für Jarvis selbst: Er steuert damit Programmieraufträge, schickt ihren Text aber nie an den Programmierer, auch nicht über das Live-Gedächtnis; die Zusammenarbeit mit ChatGPT steht zusätzlich 1:1 in ChatGPT. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
                 listOf(
                     Triple(vm.symbioseListe, "Zusammenarbeit mit ChatGPT", "wie ChatGPT Live und Jarvis zusammenarbeiten, nach Wichtigkeit"),
                     Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),

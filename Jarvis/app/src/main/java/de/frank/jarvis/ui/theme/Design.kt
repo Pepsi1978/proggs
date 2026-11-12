@@ -25,7 +25,6 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import de.frank.jarvis.live.LiveGespraech
 import kotlinx.coroutines.delay
 
 /** Farben im selben Aufbau wie in Geniale Aufgaben, damit die Glas-Bausteine unverändert passen. */
@@ -87,14 +86,14 @@ val LocalBewegung = staticCompositionLocalOf { true }
 
 @Composable
 fun JarvisTheme(modus: String, design: String = "blau", inhalt: @Composable () -> Unit) {
-    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar. Im Live-Gespräch wartet der Wechsel bis zu dessen Ende.
+    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar.
     var sonneDunkel by remember(modus) { mutableStateOf(Sonnenstand.istDunkel()) }
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lebenszyklus, modus) {
         if (modus == "hell" || modus == "dunkel") return@LaunchedEffect
         lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                if (!LiveGespraech.aktiv) sonneDunkel = Sonnenstand.istDunkel()
+                sonneDunkel = Sonnenstand.istDunkel()
                 delay(60_000L)
             }
         }
