@@ -342,6 +342,34 @@
       "pruefung": "Fehlblock nach committetem Bump bleibt in den nächsten 10 Sitzungen aus",
       "ruecknahme": "Block mit apk-mtime-Vergleich in bau_ohne_bump entfernen",
       "kosten": "ein stat je Bau-Befehl, kein Kontext"
+    },
+    {
+      "id": "M21",
+      "titel": "Worktree-Bau neben paralleler Jarvis-Sitzung: Versionseintrag erst nach Rebase, Konfliktmarker vor Commit suchen",
+      "datum": "12.11.2026 11:10",
+      "status": "aktiv",
+      "beleg": "Sitzung 3e1741cc: 3 Rebase-Konflikte in versionslog.json (je Neubau ~2-4 min), 1 Konfliktmarker in funktionen.md mitcommittet, eigener Korrektur-Commit",
+      "ort": "memory/parallele-sitzung-nimmt-dateien-mit.md",
+      "werkzeug": "Bash",
+      "aufruf_regex": "git rebase",
+      "fehler_regex": "CONFLICT \\(content\\): Merge conflict in .*versionslog\\.json",
+      "pruefung": "Versionslog-Konflikte beim Rebase bleiben in den nächsten 10 Sitzungen mit Worktree-Bau aus",
+      "ruecknahme": "Letzten Punkt in parallele-sitzung-nimmt-dateien-mit.md entfernen",
+      "kosten": "eine Zeile in einer Bedarfsdatei"
+    },
+    {
+      "id": "M22",
+      "titel": "programmier_fortschritt bei Tablet-Auftrag nicht wiederholen",
+      "datum": "12.11.2026 11:10",
+      "status": "aktiv",
+      "beleg": "Sitzung 3e1741cc: 4× „Unbekannte auftrag_id“, Auftrag kam vom Tablet, MCP antwortet vom Handy",
+      "ort": "memory/jarvis-tablet-zweites-geraet.md",
+      "werkzeug": "mcp__jarvis__programmier_fortschritt",
+      "aufruf_regex": "auftrag_id",
+      "fehler_regex": "Unbekannte auftrag_id",
+      "pruefung": "höchstens 1 solcher Fehler je Sitzung in den nächsten 10 Sitzungen",
+      "ruecknahme": "Letzten Punkt in jarvis-tablet-zweites-geraet.md entfernen",
+      "kosten": "eine Zeile in einer Bedarfsdatei"
     }
   ]
 }
