@@ -654,6 +654,7 @@
     {"versionCode": 649, "versionName": "1.8.638", "stand": "12.11.2026, 10:54 Uhr", "notiz": "Neue Listen nach dem Vorbild von TickTick: beliebig viele Listen mit Unterpunkten, Prioritäten, Abschnitten, Sortierung und Gruppierung, per Sprache verwaltbar, im Live-Gedächtnis, mit Handy und Tablet abgeglichen und mit einem Widget, in dem du die Liste wählst und Einträge abhakst."},
     {"versionCode": 650, "versionName": "1.8.639", "stand": "12.11.2026, 10:58 Uhr", "notiz": "Das Verdichten des Gedächtnisses prüft jetzt Erlaubnisse, Geltung und Herkunft wie beim Merken, gelernte Einträge bleiben im Kontext als gelernt erkennbar, und Helfer oder fremde Aufträge können das Gedächtnis darüber nicht ändern."},
     {"versionCode": 651, "versionName": "1.8.640", "stand": "12.11.2026, 11:01 Uhr", "notiz": "Abhaken unter Heute in Geniale Aufgaben ist sanfter: Erst erscheint der Haken und der Text wird durchgestrichen, die Aufgabe bleibt eine Sekunde an ihrem Platz und gleitet dann weich nach unten zu den erledigten."},
-    {"versionCode": 652, "versionName": "1.8.641", "stand": "12.11.2026, 11:03 Uhr", "notiz": "Der Biomarker-Abgleich zum Tablet ruht während Sprachgesprächen, lädt einen beschädigten Stand nicht dauernd neu und schreibt wiederkehrende Fehler nur einmal ins Logbuch."}
+    {"versionCode": 652, "versionName": "1.8.641", "stand": "12.11.2026, 11:03 Uhr", "notiz": "Der Biomarker-Abgleich zum Tablet ruht während Sprachgesprächen, lädt einen beschädigten Stand nicht dauernd neu und schreibt wiederkehrende Fehler nur einmal ins Logbuch."},
+    {"versionCode": 653, "versionName": "1.8.642", "stand": "12.11.2026, 11:04 Uhr", "notiz": "Die Funktionsübersicht zum Biomarker-Abgleich ist wieder sauber lesbar."}
 ]
 }
