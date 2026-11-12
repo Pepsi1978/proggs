@@ -18,7 +18,7 @@ public sealed class EinstellungenAnsicht : UserControl
     private static readonly (string Id, string Titel, string Symbol)[] ReiterListe =
     {
         ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
-        ("live", "Live-Gespräch", "waveform"), ("windows", "Windows & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
+        ("windows", "Windows & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
     };
@@ -71,7 +71,6 @@ public sealed class EinstellungenAnsicht : UserControl
             "konsolen" => new KonsolenAnsicht(),
             "stimme" => Stimme_(),
             "sprache" => V(18, Sprache(), new TranskriptionsEinstellungenAnsicht()),
-            "live" => new LiveKarte(),
             "windows" => new WinRechteAnsicht(),
             "tools" => new EigeneToolsAnsicht(),
             "konten" => new KontenAnsicht(),
@@ -163,49 +162,17 @@ internal sealed class SpracheKarte : UserControl
                 if (an) Weckwort.Shared.Starten(); else Weckwort.Shared.Stoppen();
             })), o: 6, u: 6),
             EinstellungenAnsicht.Zeile("Weckwort", "z. B. „Hey Jarvis“ oder „Okay Computer“.", wortFeld),
-            EinstellungenAnsicht.Zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist: 1 bis 15, auch mit Komma. Gilt auch für Strg+Alt+J, nicht im Live-Modus.",
+            EinstellungenAnsicht.Zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist: 1 bis 15, auch mit Komma. Gilt auch für Strg+Alt+J und den Live-Knopf.",
                 new StillezeitFeld(() => einst.StilleInAppSek, v => einst.StilleInAppSek = v)),
             EinstellungenAnsicht.Zeile("Stillezeit außerhalb der App", "Dasselbe in allen anderen Fällen: Das Gespräch begann im Hintergrund (Fenster zu oder andere App vorn) oder Jarvis ist nicht mehr vorn.",
                 new StillezeitFeld(() => einst.StilleAussenSek, v => einst.StilleAussenSek = v)),
-            EinstellungenAnsicht.Zeile("Tastenkürzel", "Strg+Alt+J überall: sprechen · Strg+Alt+K: Jarvis öffnen · im Fenster Strg+D sprechen, Strg+L Live, Strg+N neues Gespräch.",
+            EinstellungenAnsicht.Zeile("Tastenkürzel", "Strg+Alt+J überall: sprechen · Strg+Alt+K: Jarvis öffnen · im Fenster Strg+D sprechen, Strg+L Live-Modus, Strg+N neues Gespräch.",
                 new Schalter(() => einst.GlobalesKuerzel, an =>
                 {
                     einst.GlobalesKuerzel = an;
                     if (an) AppSteuerung.Shared.KuerzelRegistrieren(); else AppSteuerung.Shared.KuerzelAbmelden();
                 })),
             H(8, punkt, lauscht, Spacer())));
-    }
-}
-
-/// <summary>Karte „Live-Gespräch“: Anbieter und Modell schalten die Listen darunter um.</summary>
-internal sealed class LiveKarte : LebendeAnsicht
-{
-    private readonly Einstellungen einst = Einstellungen.Shared;
-
-    public LiveKarte() { Beobachte(einst, nameof(Einstellungen.LiveAnbieter), nameof(Einstellungen.LiveModellOpenAI)); }
-
-    protected override UIElement Baue()
-    {
-        var stilleEnde = new List<(int, string)>();
-        foreach (var (minuten, name) in LiveOptionen.StilleEnde) stilleEnde.Add((minuten, name));
-        var s = V(8,
-            Titel("waveform", "Live-Gespräch"),
-            EinstellungenAnsicht.Zeile("Anbieter", "Gleichzeitig zuhören und sprechen, mit deinen eigenen API-Schlüsseln.",
-                Segment(new[] { ("openai", "OpenAI"), ("gemini", "Gemini") }, () => einst.LiveAnbieter, v => einst.LiveAnbieter = v)),
-            EinstellungenAnsicht.Zeile("Bei Stille beenden", "Beendet das Live-Gespräch, wenn so lange niemand spricht. GPT-Live kostet auch bei Stille weiter.",
-                Auswahl(stilleEnde, () => einst.LiveStilleMinuten, v => einst.LiveStilleMinuten = v, 260)));
-        if (einst.LiveAnbieter == "gemini")
-        {
-            VAnfuegen(s, EinstellungenAnsicht.Zeile("Gemini-Modell", "", Auswahl(LiveOptionen.GeminiModelle.Select(m => (m.Id, m.Name)), () => einst.LiveModellGemini, v => einst.LiveModellGemini = v, 260)), 8);
-            VAnfuegen(s, EinstellungenAnsicht.Zeile("Gemini-Stimme", "", Auswahl(LiveOptionen.GeminiStimmen.Select(m => (m.Id, $"{m.Id} – {m.Name}")), () => einst.LiveStimmeGemini, v => einst.LiveStimmeGemini = v, 260)), 8);
-        }
-        else
-        {
-            VAnfuegen(s, EinstellungenAnsicht.Zeile("OpenAI-Modell", "", Auswahl(LiveOptionen.OpenAIModelle.Select(m => (m.Id, m.Name)), () => einst.LiveModellOpenAI, v => einst.LiveModellOpenAI = v, 260)), 8);
-            var stimmen = einst.LiveModellOpenAI == "gpt-live-1" ? LiveOptionen.LiveStimmen : LiveOptionen.RealtimeStimmen;
-            VAnfuegen(s, EinstellungenAnsicht.Zeile("OpenAI-Stimme", "", Auswahl(stimmen.Select(m => (m.Id, m.Name)), () => einst.LiveStimmeOpenAI, v => einst.LiveStimmeOpenAI = v, 260)), 8);
-        }
-        return Karte(s);
     }
 }
 

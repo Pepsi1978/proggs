@@ -221,7 +221,7 @@ public sealed class ErinnerungPlaner : Beobachtbar
     // MARK: Stimme und Ton
 
     /// <summary>Ein laufendes Gespräch, Live, eine Aufnahme oder eine andere Ansage wird abgewartet: Sprich würde sie sonst abschneiden.</summary>
-    private bool StimmeBelegt() => LiveGespraech.Shared.Aktiv || SprachSchleife.Shared.Zustand != SprachZustand.Aus || Diktat.Shared.Aktiv || Stimme.Shared.Spricht || sprichtFuer != null;
+    private bool StimmeBelegt() => SprachSchleife.Shared.Zustand != SprachZustand.Aus || Diktat.Shared.Aktiv || Stimme.Shared.Spricht || sprichtFuer != null;
 
     private async Task Vorlesen(string text, CancellationTokenSource ab)
     {

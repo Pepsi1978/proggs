@@ -15,4 +15,4 @@ Eigener Kanal beim Relay neben dem des Macs: `/j/<Geheimnis>/hp/kanal` (App), `/
 Nur im Tresor (`Sources/Kern/Tresor.cs`, DPAPI), beim ersten Start aus `~/SK` übernommen. Nie ins Git, nie im Klartext.
 
 ## Farben, Live, Funktionsdatei
-Wie in `JarvisMac/CLAUDE.md`: Farben nur über `Farbe`, vor Änderungen an `Sources/Live` `best-practices/apis/openai-live-realtime.md` §14 lesen, `funktionen.md` nach jeder Änderung nachziehen.
+Wie in `JarvisMac/CLAUDE.md`: Farben nur über `Farbe`, `funktionen.md` nach jeder Änderung nachziehen. Der Live-Knopf startet die Gesprächsschleife von „Hey Jarvis“ (`AppSteuerung.Live`) wie am Handy seit 1.8.633; das Echtzeit-Live-Gespräch (`Sources/Live`) ist entfernt.

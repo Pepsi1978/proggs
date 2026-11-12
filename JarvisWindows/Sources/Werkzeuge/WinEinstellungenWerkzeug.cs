@@ -41,7 +41,6 @@ public static class WinEinstellungsKatalog
             var v = VorleseEinstellungen.Shared;
             var d = DesignStand.Shared;
             var tk = TranskriptionsEinstellungen.Shared;
-            string Stille() => string.Join(", ", LiveOptionen.StilleEnde.Select(x => x.Minuten.ToString()));
             return new List<Eintrag>
             {
                 new("modell", "Jarvis' Kopf", "Modell", "Welches Modell am PC denkt.", string.Join(" | ", ModellWahl.Alle.Select(m => m.Id)), () => e.Modell, w =>
@@ -107,8 +106,8 @@ public static class WinEinstellungsKatalog
                     e.WeckwortAn = b;
                     if (b) Weckwort.Shared.Starten(); else Weckwort.Shared.Stoppen();
                 })),
-                Stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist, per Weckwort oder Strg+Alt+J; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.", () => e.StilleInAppSek, s => e.StilleInAppSek = s),
-                Stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon in allen anderen Fällen (Gespräch im Hintergrund begonnen, Jarvis nicht mehr vorn oder Bildschirm gesperrt), per Weckwort oder Strg+Alt+J; nicht im Live-Modus.", () => e.StilleAussenSek, s => e.StilleAussenSek = s),
+                Stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist, per Weckwort, Strg+Alt+J oder Live-Knopf. Sagt Frank nur „die Stillezeit“, ist diese gemeint.", () => e.StilleInAppSek, s => e.StilleInAppSek = s),
+                Stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon in allen anderen Fällen (Gespräch im Hintergrund begonnen, Jarvis nicht mehr vorn oder Bildschirm gesperrt), per Weckwort, Strg+Alt+J oder Live-Knopf.", () => e.StilleAussenSek, s => e.StilleAussenSek = s),
                 new("weckwort", "Sprache", "Weckwort-Phrase", "z. B. „Hey Jarvis“ oder „Okay Computer“.", "Text", () => e.Weckwort, w =>
                 {
                     if (w.Length == 0) return "Leer geht nicht";
@@ -135,22 +134,6 @@ public static class WinEinstellungsKatalog
                     e.GlobalesKuerzel = b;
                     if (b) AppSteuerung.Shared.KuerzelRegistrieren(); else AppSteuerung.Shared.KuerzelAbmelden();
                 })),
-                new("live_anbieter", "Live-Gespräch", "Live-Anbieter", "OpenAI oder Gemini.", "openai | gemini", () => e.LiveAnbieter, w =>
-                {
-                    if (w is not ("openai" or "gemini")) return "openai oder gemini";
-                    e.LiveAnbieter = w;
-                    return null;
-                }),
-                new("live_stille_ende", "Live-Gespräch", "Bei Stille beenden", "Beendet das Live-Gespräch nach so vielen Minuten Stille; 0 = nie.", string.Join(" | ", LiveOptionen.StilleEnde.Select(x => x.Minuten.ToString())), () => e.LiveStilleMinuten.ToString(), w =>
-                {
-                    if (!int.TryParse(w, out var m) || !LiveOptionen.StilleEnde.Any(x => x.Minuten == m)) return "Erlaubt: " + Stille();
-                    e.LiveStilleMinuten = m;
-                    return null;
-                }),
-                new("live_modell_openai", "Live-Gespräch", "OpenAI-Live-Modell", "", string.Join(" | ", LiveOptionen.OpenAIModelle.Select(x => x.Id)), () => e.LiveModellOpenAI, w => LiveWahl.Setze(LiveOptionen.OpenAIModelle.Select(x => x.Id), w, v => e.LiveModellOpenAI = v)),
-                new("live_stimme_openai", "Live-Gespräch", "OpenAI-Live-Stimme", "", string.Join(" | ", LiveOptionen.LiveStimmen.Select(x => x.Id)), () => e.LiveStimmeOpenAI, w => LiveWahl.Setze(LiveOptionen.LiveStimmen.Select(x => x.Id), w, v => e.LiveStimmeOpenAI = v)),
-                new("live_modell_gemini", "Live-Gespräch", "Gemini-Live-Modell", "", string.Join(" | ", LiveOptionen.GeminiModelle.Select(x => x.Id)), () => e.LiveModellGemini, w => LiveWahl.Setze(LiveOptionen.GeminiModelle.Select(x => x.Id), w, v => e.LiveModellGemini = v)),
-                new("live_stimme_gemini", "Live-Gespräch", "Gemini-Live-Stimme", "", string.Join(" | ", LiveOptionen.GeminiStimmen.Select(x => x.Id)), () => e.LiveStimmeGemini, w => LiveWahl.Setze(LiveOptionen.GeminiStimmen.Select(x => x.Id), w, v => e.LiveStimmeGemini = v)),
                 new("darstellung", "Darstellung", "Darstellung", "Hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin.", "hell | automatik | dunkel", () => d.Modus.ToString().ToLowerInvariant(), w =>
                 {
                     switch (w.ToLowerInvariant())
@@ -168,25 +151,13 @@ public static class WinEinstellungsKatalog
     }
 }
 
-/// <summary>Ein Tippfehler darf nicht dauerhaft gespeichert werden: Das Live-Gespräch scheiterte sonst bei jedem Start.</summary>
-internal static class LiveWahl
-{
-    public static string? Setze(IEnumerable<string> erlaubt, string wert, Action<string> setzen)
-    {
-        var liste = erlaubt.ToList();
-        if (!liste.Contains(wert)) return "Erlaubt: " + string.Join(", ", liste);
-        setzen(wert);
-        return null;
-    }
-}
-
 public static partial class WinWerkzeuge
 {
     public static readonly IReadOnlyList<LokalesWerkzeug> Weitere = new[]
     {
         new LokalesWerkzeug(new WerkzeugDefinition(
             "windows_einstellungen",
-            "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am PC: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
+            "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am PC: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
             new JSONObjekt
             {
                 ["type"] = "object",

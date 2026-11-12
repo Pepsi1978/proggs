@@ -214,7 +214,6 @@ public sealed class HauptFenster : Window
             Bereich.Zentrale => new ZentraleAnsicht(),
             Bereich.Ablage => new AblageAnsicht(),
             Bereich.Gespraech => s.Gespraech is { } g ? new ChatAnsicht(g) : new StartAnsicht(),
-            Bereich.Live => new LiveAnsicht(),
             _ => new EinstellungenAnsicht(),
         };
         bereichPlatz.Child = neu;
@@ -326,9 +325,8 @@ public sealed class Seitenleiste : Decorator
             foreach (var b in new[] { Bereich.Zentrale, Bereich.Ablage, Bereich.Einstellungen })
                 v.Children.Add(new LeistenEintrag(b.Symbol, b.Titel, steuerung.Bereich == b, () => steuerung.Bereich = b));
             // Der Rückweg zu einem laufenden Gespräch; gestartet wird Live aus der Startblase.
-            if (LiveGespraech.Shared.Aktiv) v.Children.Add(new LeistenEintrag(Bereich.Live.Symbol, "Live läuft", steuerung.Bereich == Bereich.Live, () => steuerung.Bereich = Bereich.Live));
             return v;
-        }, new[] { nameof(AppSteuerung.Bereich), nameof(LiveGespraech.Zustand) }, steuerung, LiveGespraech.Shared);
+        }, new[] { nameof(AppSteuerung.Bereich) }, steuerung);
 
         var suchFeld = new TextFeld("Gespräche durchsuchen", 13, text: suche, schreiben: t => { suche = t; gezeigtBis = Seite; ListeVormerken(); });
         var sucheBox = Box(H(8, Sym.Bild("magnifyingglass", 13, Farbe.Text3), suchFeld.Fuell()), Farbe.Glas(0.05), 12, 12, 9);

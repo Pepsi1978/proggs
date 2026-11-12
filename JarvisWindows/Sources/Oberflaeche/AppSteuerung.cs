@@ -5,7 +5,7 @@ using System.Windows.Interop;
 
 namespace JarvisWindows;
 
-public enum Bereich { Start, Zentrale, Ablage, Gespraech, Live, Einstellungen }
+public enum Bereich { Start, Zentrale, Ablage, Gespraech, Einstellungen }
 
 public static class BereichInfo
 {
@@ -13,11 +13,11 @@ public static class BereichInfo
     {
         public string Titel => b switch
         {
-            Bereich.Start => "Start", Bereich.Zentrale => "Zentrale", Bereich.Ablage => "Ablage", Bereich.Gespraech => "Gespräch", Bereich.Live => "Live", _ => "Einstellungen",
+            Bereich.Start => "Start", Bereich.Zentrale => "Zentrale", Bereich.Ablage => "Ablage", Bereich.Gespraech => "Gespräch", _ => "Einstellungen",
         };
         public string Symbol => b switch
         {
-            Bereich.Start => "house.fill", Bereich.Zentrale => "sparkles", Bereich.Ablage => "tray.full.fill", Bereich.Gespraech => "bubble.left.and.text.bubble.right.fill", Bereich.Live => "waveform", _ => "gearshape.fill",
+            Bereich.Start => "house.fill", Bereich.Zentrale => "sparkles", Bereich.Ablage => "tray.full.fill", Bereich.Gespraech => "bubble.left.and.text.bubble.right.fill", _ => "gearshape.fill",
         };
     }
 }
@@ -169,7 +169,7 @@ public sealed class AppSteuerung : Beobachtbar
         {
             while (true)
             {
-                if (!(HandyVerbunden || ConsoleSitzung.Angemeldet) || LiveGespraech.Shared.Aktiv) { await Task.Delay(TimeSpan.FromSeconds(30)); continue; }
+                if (!(HandyVerbunden || ConsoleSitzung.Angemeldet) || SprachSchleife.Shared.Zustand != SprachZustand.Aus) { await Task.Delay(TimeSpan.FromSeconds(30)); continue; }
                 await Guthaben.Shared.Laden();
                 await Task.Delay(TimeSpan.FromSeconds(900));
             }
@@ -403,20 +403,18 @@ public sealed class AppSteuerung : Beobachtbar
 
     public void Sprechen() => KuerzelSprechen();
 
+    /// <summary>Live-Knopf wie am Handy (`AppViewModel.liveTippen`): startet dieselbe Gesprächsschleife wie „Hey Jarvis“ in der geöffneten App
+    /// (zuhören, antworten, vorlesen, wieder zuhören); läuft sie, beendet ein Klick sie. Ein zweites Echtzeit-Gespräch gibt es nicht mehr.</summary>
     public void Live()
     {
-        if (LiveGespraech.Shared.Aktiv) { LiveGespraech.Shared.Beenden(); return; }
-        var g = Gespraech ?? GespraechsSpeicher.Shared.Neu();
+        if (SprachSchleife.Shared.Zustand != SprachZustand.Aus) { SprachSchleife.Shared.Beenden(); Log("sprache", "Live-Modus per Knopf beendet"); return; }
+        Log("sprache", "Live-Modus per Knopf gestartet");
+        _ = McpKlient.Shared.KontextVorladen();
+        GehirnNetz.Vorwaermen();
+        var g = Bereich == Bereich.Gespraech ? (Gespraech ?? GespraechsSpeicher.Shared.Neu()) : EntwurfOderNeu();
         Gespraech = g;
-        Bereich = Bereich.Live;
-        LiveGespraech.Shared.Starten(g);
-    }
-
-    /// <summary>Knopf „Live“ in der Blase: öffnet nur den Live-Bildschirm, gestartet wird dort. Vom Start aus ein neues Gespräch, aus einem Gespräch dieses.</summary>
-    public void LiveOeffnen(Gespraech? g)
-    {
-        if (!LiveGespraech.Shared.Aktiv) Gespraech = g;
-        Bereich = Bereich.Live;
+        Bereich = Bereich.Gespraech;
+        SprachSchleife.Shared.Starten(g, inApp: true);
     }
 
     public void FensterZeigen() => Haupt.Post(() =>
@@ -458,7 +456,7 @@ public sealed class AppSteuerung : Beobachtbar
     /// <summary>„Hey Jarvis“: wie am Handy. Ist Jarvis vorn, geht das offene Gespräch weiter, sonst beginnt ein neues im Hintergrund mit der Pille.</summary>
     public void WeckwortErkannt()
     {
-        if (LiveGespraech.Shared.Aktiv || SprachSchleife.Shared.Zustand != SprachZustand.Aus) return;
+        if (SprachSchleife.Shared.Zustand != SprachZustand.Aus) return;
         Log("sprache", "Weckwort erkannt");
         SprachgespraechStarten();
     }
@@ -481,8 +479,8 @@ public sealed class AppSteuerung : Beobachtbar
 
     // MARK: Sprachpille
 
-    /// <summary>Sichtbar, solange Live läuft, und im Gesprächsmodus, wenn Jarvis nicht vorn ist.</summary>
-    public void PilleAbgleichen() => Haupt.Post(() => pille.Setze(LiveGespraech.Shared.Aktiv || (SprachSchleife.Shared.Zustand != SprachZustand.Aus && !FensterVorn)));
+    /// <summary>Sichtbar im Gesprächsmodus, wenn Jarvis nicht vorn ist.</summary>
+    public void PilleAbgleichen() => Haupt.Post(() => pille.Setze(SprachSchleife.Shared.Zustand != SprachZustand.Aus && !FensterVorn));
 
     /// <summary>Damit die Pille nicht auf dem Bildschirmfoto landet, das sie gerade angestoßen hat.</summary>
     public Task PilleFuerAufnahme(bool ausblenden) => Haupt.Auf(() => pille.FuerAufnahme(ausblenden));
@@ -490,8 +488,7 @@ public sealed class AppSteuerung : Beobachtbar
     /// <summary>Klick auf die Pille: öffnet Jarvis mit dem laufenden Gespräch.</summary>
     public void PilleOeffnen()
     {
-        if (LiveGespraech.Shared.Aktiv) Bereich = Bereich.Live;
-        else if (SprachSchleife.Shared.Gespraech is { } g) { Gespraech = g; Bereich = Bereich.Gespraech; }
+        if (SprachSchleife.Shared.Gespraech is { } g) { Gespraech = g; Bereich = Bereich.Gespraech; }
         FensterZeigen();
     }
 
@@ -556,7 +553,6 @@ public sealed class AppSteuerung : Beobachtbar
     public void KuerzelSprechen()
     {
         if (SprachSchleife.Shared.Zustand != SprachZustand.Aus) { SprachSchleife.Shared.Beenden(); return; }
-        if (LiveGespraech.Shared.Aktiv) return;
         SprachgespraechStarten();
     }
 }

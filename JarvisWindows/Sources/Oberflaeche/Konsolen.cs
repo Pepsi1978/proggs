@@ -220,7 +220,7 @@ public static class KontingentQuellen
     private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
     private static long Jetzt => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-    public static bool GespraechLaeuft => SprachSchleife.Shared.Zustand != SprachZustand.Aus || LiveGespraech.Shared.Aktiv;
+    public static bool GespraechLaeuft => SprachSchleife.Shared.Zustand != SprachZustand.Aus;
 
     private static DateTime ZeitIn(long s) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeSeconds(s), Berlin).DateTime;
 

@@ -330,7 +330,7 @@ public sealed class Logbuch : Beobachtbar
 
     private static string Ort(string art) => art switch
     {
-        "gehirn" => "Gehirn", "sprache" => "Sprache", "live" => "Live-Gespräch", "werkzeug" => "Werkzeuge", _ => "App",
+        "gehirn" => "Gehirn", "sprache" => "Sprache", "werkzeug" => "Werkzeuge", _ => "App",
     };
 
     private void Aufraeumen()
@@ -369,7 +369,7 @@ public sealed record ModellWahl(string Id, string Name, Anbieter Anbieter)
         new("claude-opus-5-5", "Claude Opus 5.5", Anbieter.Anthropic),
         new("claude-sonnet-5-5", "Claude Sonnet 5.5", Anbieter.Anthropic),
         new("claude-haiku-5-5", "Claude Haiku 5.5", Anbieter.Anthropic),
-        new("claude-fable-5-1", "Claude Fable 5.1", Anbieter.Anthropic),
+        new("claude-fable-5-2", "Claude Fable 5.2", Anbieter.Anthropic),
         new("gpt-6-astra", "GPT-6 Astra", Anbieter.Openai),
         new("gpt-6.1-sol", "GPT-6.1 Sol", Anbieter.Openai),
         new("gpt-6-luna", "GPT-6 Luna", Anbieter.Openai),
@@ -377,7 +377,7 @@ public sealed record ModellWahl(string Id, string Name, Anbieter Anbieter)
     };
     public static IEnumerable<ModellWahl> FuerRecherche => Alle.Where(m => !m.Id.Contains("luna") && !m.Id.Contains("haiku"));
     public static ModellWahl Zu(string id) => Alle.FirstOrDefault(m => m.Id == id) ?? Alle[0];
-    public static string Aktuell(string id) => id == "gpt-5.6-terra" ? "gpt-6.1-terra" : id;
+    public static string Aktuell(string id) => id switch { "gpt-5.6-terra" => "gpt-6.1-terra", "claude-fable-5-1" => "claude-fable-5-2", _ => id };
 }
 
 /// <summary>Einfacher Ersatz für UserDefaults: eine JSON-Datei, schreibt verzögert. Auch für die Vorlese-Einstellungen und alles andere, was UserDefaults nutzte.</summary>
@@ -483,27 +483,13 @@ public sealed class Einstellungen : Beobachtbar
     private string _transkription = Vorgaben.Text("transkription") ?? (ParakeetLocalClient.IsInstalled ? "parakeet" : "groq");
     /// <summary>parakeet | groq | windows (die Mac-Fassung hat statt windows apple).</summary>
     public string Transkription { get => _transkription; set => Merke(ref _transkription, value); }
-    private string _liveAnbieter = Vorgaben.Text("liveAnbieter") ?? "openai";
-    public string LiveAnbieter { get => _liveAnbieter; set => Merke(ref _liveAnbieter, value); }
-    private string _liveStimmeOpenAI = Vorgaben.Text("liveStimmeOpenAI") ?? "flitz";
-    public string LiveStimmeOpenAI { get => _liveStimmeOpenAI; set => Merke(ref _liveStimmeOpenAI, value); }
-    private string _liveStimmeGemini = Vorgaben.Text("liveStimmeGemini") ?? "Charon";
-    public string LiveStimmeGemini { get => _liveStimmeGemini; set => Merke(ref _liveStimmeGemini, value); }
-    private string _liveModellOpenAI = Vorgaben.Text("liveModellOpenAI") ?? "gpt-live-1";
-    public string LiveModellOpenAI { get => _liveModellOpenAI; set => Merke(ref _liveModellOpenAI, value); }
-    private string _liveModellGemini = Vorgaben.Text("liveModellGemini") ?? "gemini-3.8-live";
-    public string LiveModellGemini { get => _liveModellGemini; set => Merke(ref _liveModellGemini, value); }
-    private int _liveStilleMinuten = Vorgaben.Ganz("liveStilleMinuten", 5);
-    /// <summary>Live-Gespräch endet nach so vielen Minuten Stille, 0 = nie.</summary>
-    public int LiveStilleMinuten { get => _liveStilleMinuten; set => Merke(ref _liveStilleMinuten, value); }
-
     public const double StilleMin = 1.0, StilleMax = 15.0, StilleStandard = 4.5;
     private static double StilleGeladen(string k) => Math.Clamp(Vorgaben.Zahl(k, StilleStandard), StilleMin, StilleMax);
     private double _stilleInAppSek = StilleGeladen("stilleInAppSek");
     /// <summary>Stille nach dem letzten Wort in Sekunden, bis das Mikrofon schließt, bei Jarvis vorn.</summary>
     public double StilleInAppSek { get => _stilleInAppSek; set => Merke(ref _stilleInAppSek, value); }
     private double _stilleAussenSek = StilleGeladen("stilleAussenSek");
-    /// <summary>Dasselbe im Hintergrund, per Weckwort oder Kürzel (nicht Live).</summary>
+    /// <summary>Dasselbe im Hintergrund, per Weckwort, Kürzel oder Live-Knopf.</summary>
     public double StilleAussenSek { get => _stilleAussenSek; set => Merke(ref _stilleAussenSek, value); }
 
     /// <summary>Sekunden aus Text („2,5“, „2.5 Sekunden“, „Maximum“). null bei allem anderen, auch anderer Einheit: „2 Minuten“ darf nie still 2 Sekunden werden.</summary>
@@ -529,7 +515,6 @@ public sealed class Einstellungen : Beobachtbar
 
     private Einstellungen()
     {
-        if (!Vorgaben.Hat("liveAnbieter") && _zugang.Openai.Length == 0 && _zugang.Gemini.Length > 0) _liveAnbieter = "gemini";
     }
 
     /// <summary>Hat Jarvis überhaupt einen Kopf? (Claude-Schlüssel, ChatGPT-Anmeldung oder OpenAI-Schlüssel)</summary>

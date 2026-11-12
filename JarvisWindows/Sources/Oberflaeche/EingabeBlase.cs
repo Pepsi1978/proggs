@@ -66,7 +66,7 @@ public sealed class EingabeBlase : Decorator
         frei = new Border { Background = Farbe.Klar, Height = 34 }.Fuell();
         frei.Klick(Umschalten);
         var untereZeile = H(10, PlusMenue(), frei, new ModellKapsel(), DiktatKnopfBauen(),
-            new Reaktiv(RechterKnopf, new[] { nameof(AppSteuerung.EingabeText), nameof(AppSteuerung.Anhang), nameof(AppSteuerung.Fragen), nameof(AppSteuerung.GespraechInhalt), nameof(LiveGespraech.Zustand) }, steuerung, LiveGespraech.Shared));
+            new Reaktiv(RechterKnopf, new[] { nameof(AppSteuerung.EingabeText), nameof(AppSteuerung.Anhang), nameof(AppSteuerung.Fragen), nameof(AppSteuerung.GespraechInhalt), nameof(SprachSchleife.Zustand) }, steuerung, SprachSchleife.Shared));
 
         kapsel = new Border
         {
@@ -258,13 +258,13 @@ public sealed class EingabeBlase : Decorator
             return new RundKnopf("stop.fill", () => steuerung.Abbrechen(gespraech), hilfe: "Abbrechen", aktiv: true, farbe: Farbe.Haupt);
         if (HatText || steuerung.Anhang != null)
             return new RundKnopf("arrow.up", Senden, hilfe: "Senden", aktiv: true, farbe: Farbe.Haupt);
-        var an = LiveGespraech.Shared.Aktiv;
-        var farbe = an ? Farbe.Schwarz : Farbe.Text;
+        // Live-Knopf wie am Handy: die orange Kugel startet die Gesprächsschleife wie „Hey Jarvis“; läuft sie, beendet ein Klick sie.
+        var an = SprachSchleife.Shared.Zustand != SprachZustand.Aus;
         return new Border
         {
-            Height = 34, Padding = new Thickness(12, 0, 12, 0), CornerRadius = new CornerRadius(17), Background = an ? Farbe.Gold : Farbe.Glas(0.07), BorderBrush = Farbe.Glas(0.10), BorderThickness = new Thickness(1),
-            Child = H(5, Sym.Bild("waveform", 12, farbe), Tx("Live", 12, FontWeights.SemiBold, farbe)),
-        }.Klick(() => steuerung.LiveOeffnen(gespraech)).Hilfe("Live-Bildschirm öffnen (Strg+L startet direkt)");
+            Width = 34, Height = 34, CornerRadius = new CornerRadius(17), Background = Farbe.LiveOrange,
+            Child = Sym.Bild(an ? "stop.fill" : "waveform", 14, Farbe.Schwarz),
+        }.Klick(steuerung.Live).Hilfe(an ? "Live-Modus beenden" : "Live-Modus starten (Strg+L): zuhören, antworten, vorlesen, wieder zuhören");
     }
 
     private void Senden()

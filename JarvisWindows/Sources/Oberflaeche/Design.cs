@@ -44,6 +44,8 @@ public static class Farbe
     public static Brush Kupfer => D ? KupferD : KupferH;
     public static Brush Gruen => D ? GruenD : GruenH;
     public static Brush Warnung => D ? WarnungD : WarnungH;
+    /// <summary>Das Orange der Live-Blase wie am Handy (EingabeBlase.kt LIVE_ORANGE, 0xF0876A), hell und dunkel gleich.</summary>
+    public static Brush LiveOrange { get; } = S(0xF0 / 255.0, 0x87 / 255.0, 0x6A / 255.0);
     public static Brush Rot => D ? RotD : RotH;
     public static Brush Text => D ? TextD : TextH;
     public static Brush Text2 => D ? Text2D : Text2H;
@@ -552,7 +554,6 @@ public sealed class JarvisHintergrund : Canvas
                 angemeldet = true;
                 AppSteuerung.Shared.PropertyChanged += Geaendert;
                 SprachSchleife.Shared.PropertyChanged += Geaendert;
-                LiveGespraech.Shared.PropertyChanged += Geaendert;
             }
             Abgleich();
             Bewege();
@@ -563,7 +564,6 @@ public sealed class JarvisHintergrund : Canvas
             uhr.Stop();
             AppSteuerung.Shared.PropertyChanged -= Geaendert;
             SprachSchleife.Shared.PropertyChanged -= Geaendert;
-            LiveGespraech.Shared.PropertyChanged -= Geaendert;
         };
     }
 
@@ -571,7 +571,7 @@ public sealed class JarvisHintergrund : Canvas
 
     private void Abgleich()
     {
-        var bewegt = AppSteuerung.Shared.AppVorn && SprachSchleife.Shared.Zustand == SprachZustand.Aus && !LiveGespraech.Shared.Aktiv;
+        var bewegt = AppSteuerung.Shared.AppVorn && SprachSchleife.Shared.Zustand == SprachZustand.Aus;
         if (bewegt) uhr.Start(); else uhr.Stop();
     }
 
@@ -908,7 +908,7 @@ public sealed class KugelLive : JarvisKugel
     }
 }
 
-/// <summary>Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife, Live, reines Vorlesen).</summary>
+/// <summary>Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife samt Live-Modus, reines Vorlesen).</summary>
 public static class KugelStand
 {
     public static JarvisKugel.KugelZustand Zustand
@@ -916,17 +916,16 @@ public static class KugelStand
         get
         {
             var schleife = SprachSchleife.Shared.Zustand;
-            var live = LiveGespraech.Shared.Zustand;
-            if (Stimme.Shared.Spricht || schleife == SprachZustand.Spricht || live == LiveZustand.Spricht) return JarvisKugel.KugelZustand.Spricht;
-            if (schleife == SprachZustand.Denkt || live == LiveZustand.Denkt) return JarvisKugel.KugelZustand.Denkt;
-            if (schleife == SprachZustand.Hoert || live == LiveZustand.Hoert) return JarvisKugel.KugelZustand.Hoert;
+            if (Stimme.Shared.Spricht || schleife == SprachZustand.Spricht) return JarvisKugel.KugelZustand.Spricht;
+            if (schleife == SprachZustand.Denkt) return JarvisKugel.KugelZustand.Denkt;
+            if (schleife == SprachZustand.Hoert) return JarvisKugel.KugelZustand.Hoert;
             return JarvisKugel.KugelZustand.Ruhe;
         }
     }
     public static float Pegel => Zustand switch
     {
-        JarvisKugel.KugelZustand.Spricht => Math.Max(Stimme.Shared.Pegel, LiveGespraech.Shared.PegelAus),
-        JarvisKugel.KugelZustand.Hoert => Math.Max(Diktat.Shared.Pegel, LiveGespraech.Shared.PegelEin),
+        JarvisKugel.KugelZustand.Spricht => Stimme.Shared.Pegel,
+        JarvisKugel.KugelZustand.Hoert => Diktat.Shared.Pegel,
         _ => 0,
     };
 }

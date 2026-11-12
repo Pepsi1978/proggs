@@ -212,13 +212,14 @@ public sealed class ModellAntwort
     public int CacheSchreib1hTokens { get; set; }
 }
 
-/// <summary>Listenpreise der Claude-API in Dollar je Million Tokens (Stand 06.10.2026). Cache schreiben = 1,25 × Eingabe (5 Minuten) oder 2 × (1 Stunde). Websuche ist nicht enthalten.</summary>
+/// <summary>Listenpreise der Claude-API in Dollar je Million Tokens (Stand 12.11.2026). Cache schreiben = 1,25 × Eingabe (5 Minuten) oder 2 × (1 Stunde). Websuche ist nicht enthalten.</summary>
 public static class ClaudePreis
 {
     private static readonly Dictionary<string, (double ein, double aus, double cacheLesen)> Tabelle = new()
     {
         ["claude-opus-5-5"] = (4, 20, 0.20),
         ["claude-sonnet-5-5"] = (2, 10, 0.20),
+        ["claude-fable-5-2"] = (8, 40, 0.20),
         ["claude-fable-5-1"] = (10, 50, 0.25),
         ["claude-haiku-5-5"] = (0.10, 0.50, 0.01),
     };
@@ -285,7 +286,7 @@ public sealed class AnthropicKlient : ModellAnbieter
         req.Headers.TryAddWithoutValidation("x-api-key", schluessel);
         req.Headers.TryAddWithoutValidation("anthropic-version", "2026-10-21");
 
-        var mitFallback = modell is "claude-opus-5-5" or "claude-sonnet-5-5" or "claude-fable-5-1";
+        var mitFallback = modell is "claude-opus-5-5" or "claude-sonnet-5-5" or "claude-fable-5-2" or "claude-fable-5-1";
         if (mitFallback) req.Headers.TryAddWithoutValidation("anthropic-beta", "server-side-fallback-2026-07-01");
 
         // Prompt-Cache: tools → system → messages. Stabiles zuerst, Haltepunkte am letzten Werkzeug und an den Systemteilen.

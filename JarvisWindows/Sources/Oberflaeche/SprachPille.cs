@@ -10,7 +10,7 @@ namespace JarvisWindows;
 
 /// <summary>Die schwebende Sprachpille, wie die Sprachblase am Handy (SprachBlase.kt): „Hey Jarvis“ aus einem anderen Programm öffnet Jarvis nicht, das Gespräch
 /// läuft im Hintergrund, und oben mittig zeigt eine kleine Pille ein Pegel-Spektrum in Orange. Sprechen Frank oder Jarvis, zittert es nach dem Pegel,
-/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, das X, langes Drücken, Rechtsklick oder Ziehen nach oben beendet das Gespräch; auch während Live.
+/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, das X, langes Drücken, Rechtsklick oder Ziehen nach oben beendet das Gespräch; auch im Live-Modus.
 /// Nimmt nie den Fokus, erscheint nicht auf Bildschirmfotos und zeichnet direkt: leicht, damit Spracherkennung und Ausgabe nichts davon merken.</summary>
 public sealed class SprachPille
 {
@@ -202,12 +202,7 @@ internal sealed class PillenAnsicht : FrameworkElement
         langDruck?.Cancel();
         startPunkt = null;
         if (IsMouseCaptured) ReleaseMouseCapture();
-        if (LiveGespraech.Shared.Aktiv)
-        {
-            Log("live", "Beenden über die Sprachpille", wo: "Sprachpille");
-            LiveGespraech.Shared.Beenden();
-            return;
-        }
+
         Log("sprache", "Sprachsitzung beendet", wo: "Sprachpille");
         SprachSchleife.Shared.Beenden();
     }
@@ -221,9 +216,8 @@ internal sealed class PillenAnsicht : FrameworkElement
         zuletzt = jetzt;
         var t = jetzt;
 
-        var live = LiveGespraech.Shared;
         var frank = SprachSchleife.Shared.Zustand == SprachZustand.Hoert && Diktat.Shared.Aktiv && !Diktat.Shared.SchreibtMit;
-        double pegel = live.Aktiv ? KugelStand.Pegel : (frank ? Diktat.Shared.Pegel : (Stimme.Shared.Spricht ? Stimme.Shared.Pegel : 0));
+        double pegel = frank ? Diktat.Shared.Pegel : (Stimme.Shared.Spricht ? Stimme.Shared.Pegel : 0);
 
         double w = Breite, h = Hoehe;
         var form = new RectangleGeometry(new Rect(0.5, 0.5, w - 1, h - 1), h / 2 - 0.5, h / 2 - 0.5);
