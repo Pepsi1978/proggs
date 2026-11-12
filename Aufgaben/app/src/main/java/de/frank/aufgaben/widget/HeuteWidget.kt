@@ -208,7 +208,7 @@ class HeuteWidget : GlanceAppWidget() {
         val haken = if (vorbei) R.drawable.ic_widget_haken_vorbei else R.drawable.ic_widget_haken
         Column(GlanceModifier.fillMaxWidth().padding(bottom = 4.dp)) {
             Row(
-                GlanceModifier.fillMaxWidth().background(ImageProvider(if (vorbei) R.drawable.widget_zeile_vorbei else R.drawable.widget_zeile)).cornerRadius(12.dp)
+                GlanceModifier.fillMaxWidth().background(ImageProvider(if (vorbei || a.erledigt) R.drawable.widget_zeile_vorbei else R.drawable.widget_zeile)).cornerRadius(12.dp)
                     .padding(horizontal = 10.dp, vertical = 7.dp)
                     .clickable(
                         actionStartActivity(

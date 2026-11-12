@@ -177,6 +177,12 @@ private fun Merkmal(icon: ImageVector?, text: String, farbe: Color) {
     }
 }
 
+/** Neutrales Grau für erledigte Aufgaben (Hell- und Dunkelmodus). */
+fun erledigtGrau(f: Farben): Color = if (f.dunkel) Color(0xFF8A8A90) else Color(0xFF9A9AA0)
+
+/** Graue Kartenfläche für erledigte Aufgaben. */
+fun erledigtFlaeche(f: Farben): Color = if (f.dunkel) Color(0xFF3C3C42).copy(alpha = 0.85f) else Color(0xFFC9C9CE).copy(alpha = 0.85f)
+
 /** Eine Aufgabe als Glaskarte. */
 @Composable
 fun AufgabeKarte(
@@ -190,13 +196,15 @@ fun AufgabeKarte(
     onErledigt: () -> Unit,
 ) {
     val f = LocalFarben.current
-    val prio = f.prio(a.prio)
+    // Erledigt: ganze Karte grau (Fläche, Tönung, Prioritätsfarbe, Text), damit man es auf einen Blick sieht.
+    val grau = a.erledigt && !schwebend
+    val prio = if (grau) erledigtGrau(f) else f.prio(a.prio)
     val gezogen = zustand?.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true && !schwebend
     val glow by animateFloatAsState(if (hervorheben) 1f else 0f, tween(600), label = "glow")
     var basis = Modifier
         .fillMaxWidth()
         .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.62f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
-        .glas(f, radius = f.radius * 0.72f, erhoeht = if (schwebend) 2.6f else 0.9f, fuellung = if (schwebend) f.flaecheStark else f.flaeche, toenung = if (glow > 0f) f.primaer else prio)
+        .glas(f, radius = f.radius * 0.72f, erhoeht = if (schwebend) 2.6f else 0.9f, fuellung = if (schwebend) f.flaecheStark else if (grau) erledigtFlaeche(f) else f.flaeche, toenung = if (glow > 0f) f.primaer else prio)
     if (zustand != null && !schwebend) basis = basis.ziehbar(a, zustand)
     Row(
         basis.antippen(haptik = false) { if (zustand == null || zustand.tippErlaubt()) onTipp() }
@@ -207,7 +215,7 @@ fun AufgabeKarte(
         Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
             Text(
                 a.titel,
-                color = f.text,
+                color = if (grau) f.textLeise else f.text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,

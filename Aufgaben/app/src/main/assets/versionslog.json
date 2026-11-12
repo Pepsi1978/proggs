@@ -91,6 +91,7 @@
     {"versionCode": 87, "versionName": "1.0.86", "stand": "09.11.2026, 16:03 Uhr", "notiz": "Die Wiederholungsarten im Editor stehen jetzt untereinander, statt seitlich geschoben werden zu müssen."},
     {"versionCode": 88, "versionName": "1.0.87", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Aufgaben gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."},
     {"versionCode": 89, "versionName": "1.0.88", "stand": "10.11.2026, 15:36 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet nimmt jetzt auch Stände mit Volltextsuche zuverlässig an."},
-    {"versionCode": 90, "versionName": "1.0.89", "stand": "10.11.2026, 17:06 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet spielt Stände jetzt in einem Zug ein, räumt entfallene Zusatzdateien mit auf und nimmt kein Paket einer neueren App-Fassung an, solange die App hier älter ist."}
+    {"versionCode": 90, "versionName": "1.0.89", "stand": "10.11.2026, 17:06 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet spielt Stände jetzt in einem Zug ein, räumt entfallene Zusatzdateien mit auf und nimmt kein Paket einer neueren App-Fassung an, solange die App hier älter ist."},
+    {"versionCode": 91, "versionName": "1.0.90", "stand": "12.11.2026, 16:29 Uhr", "notiz": "Erledigte Aufgaben sind jetzt in allen Ansichten samt Hintergrund ausgegraut und auf einen Blick erkennbar."}
 ]
 }

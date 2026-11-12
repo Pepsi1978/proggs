@@ -18,6 +18,8 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
 - **Bereiche:** Heute, Morgen, Hoch, Mittel, Gering, Später (Eingang für alles Neue), dazu
   Demnächst und Erledigt. In Heute/Morgen sortiert nach Priorität (Hoch oben), dort gibt es kein
   „Später“ — beim Verschieben in einen Tag wird aus „Später“ „Mittel“.
+- **Erledigte Aufgaben** sind in allen Ansichten (Listen, Zeitleiste, Kalender-Tag, Widget) ganz ausgegraut,
+  Fläche, Prioritätsfarbe und Text, im Hell- und Dunkelmodus; sie stehen unter den offenen.
 - **Drag & Drop:** Karte lang drücken und ziehen. Oben erscheinen Ziele (Heute, Morgen,
   Übermorgen, Hoch, Mittel, Gering, Später), unten Erledigt und Löschen. Über der **Zeitleiste
   (5–22 Uhr)** zeigt links eine Uhrzeit mit, die dem Finger folgt (15-Minuten-Schritte);
