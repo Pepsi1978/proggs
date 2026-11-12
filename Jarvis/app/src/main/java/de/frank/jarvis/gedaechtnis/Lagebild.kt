@@ -65,10 +65,11 @@ enum class Bereich(
     TERMINE("termine", "Kalender", "TERMINE 14 TAGE (mit Dienst je Tag)", 30 * 60_000L, true, true, 4_000L, Regex("^\\s+- ")),
     AUFGABEN("aufgaben", "Geniale Aufgaben", "AUFGABEN (Geniale Aufgaben)", 30 * 60_000L, true, true, 5_000L),
     ERINNERUNGEN("erinnerungen", "Erinnerungen", "ERINNERUNGEN (passende von dir aus ansprechen; alle mit erinnerungen_lesen)", 15 * 60_000L, true, true, 3_000L),
+    LISTEN("listen", "Listen", "LISTEN (offene Einträge je Liste, Unterpunkte eingerückt; alles mit listen_lesen)", 15 * 60_000L, true, true, 2_000L),
     WECKER("wecker", "Genialer Wecker", "WECKER (Genialer Wecker)", 30 * 60_000L, true, true, 4_000L),
     STACKS(
         "stacks", "Stack-Labor",
-        "STACKS (Stack-Labor: GEPLANTE Nahrungsergänzung; nur aktive Mittel zählen, INAKTIV = aus; ein Stack belegt keine Einnahme; alles mit stacks_lesen)",
+        "STACKS (GEPLANTE Nahrungsergänzung; nur aktive Mittel, INAKTIV = aus; belegt keine Einnahme; alles mit stacks_lesen)",
         30 * 60_000L, true, true, 5_000L,
     ),
     GESPRAECHE("gespraeche", "Gespräche mit Jarvis", "GESPRÄCHE MIT JARVIS (was Frank zuletzt beschäftigt hat)", 15 * 60_000L, true, false, 3_000L),
@@ -340,6 +341,7 @@ object Lagebild {
         "aufgaben" -> listOf(Bereich.AUFGABEN)
         "ideen" -> listOf(Bereich.IDEEN)
         "erinnerungen" -> listOf(Bereich.ERINNERUNGEN)
+        "listen" -> listOf(Bereich.LISTEN)
         "ziele" -> listOf(Bereich.ZIELE)
         "wecker" -> listOf(Bereich.WECKER)
         "stacklabor" -> listOf(Bereich.STACKS)
@@ -382,6 +384,7 @@ object Lagebild {
                     }
             }
             Bereich.ERINNERUNGEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.ErinnerungenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
+            Bereich.LISTEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.ListenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.WECKER -> alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick(mitJetzt = false) ?: "NICHT VERFÜGBAR"
             Bereich.STACKS -> alle.filterIsInstance<StackLaborFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.GESPRAECHE -> Gespraechsgedaechtnis.kurzzeit(app)
@@ -456,7 +459,7 @@ object Lagebild {
             if (trenner == null) append(", Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN)))
             append(".\n")
             append("Dein Hintergrund für jede Frage, live aus Franks Apps; [Stand …] je Bereich. Beziehe von dir aus ein, was die Antwort besser macht (Dienst, Schlaf, Erholung, Wetter, Aufgaben, Ideen, Tagebuch); ")
-            append("Unpassendes weglassen, nie ungefragt aufzählen. Frage nach dem Sinnvollsten: ein bis drei Vorschläge mit kurzem Grund, wichtigster zuerst.\n")
+            append("Unpassendes weglassen, nie ungefragt aufzählen. Fragt Frank, was jetzt am sinnvollsten ist: ein bis drei Vorschläge aus seiner Lage mit kurzem Grund, wichtigster zuerst.\n")
             append("KONTEXTREGEL: 10 Tage vollständig, Älteres verdichtet. Älteres oder ein bestimmtes Thema mit gedaechtnis_suchen oder dem App-Werkzeug; nach eigener Änderung oder für Messwerte von gerade eben die App frisch lesen.\n\n")
         }
         val neu = neuigkeitenSeit(System.currentTimeMillis() - 24 * 3_600_000L)
@@ -651,7 +654,7 @@ object Lagebild {
     private const val MONATE_MINDESTENS = 3_000
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
-        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.ERINNERUNGEN to 1_500, Bereich.WECKER to 700,
+        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.ERINNERUNGEN to 1_500, Bereich.LISTEN to 1_500, Bereich.WECKER to 700,
         Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 2_600, Bereich.WETTER to 900,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */

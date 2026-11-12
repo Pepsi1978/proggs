@@ -189,6 +189,7 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null) rueckfragePruefen(intent)
         if (savedInstanceState == null) erinnerungPruefen(intent)
         if (savedInstanceState == null) biomarkerPruefen(intent)
+        if (savedInstanceState == null) listePruefen(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -198,6 +199,17 @@ class MainActivity : FragmentActivity() {
         rueckfragePruefen(intent)
         erinnerungPruefen(intent)
         biomarkerPruefen(intent)
+        listePruefen(intent)
+    }
+
+    /** Tipp im Listen-Widget (Liste oder „+“): die Liste in Jarvis öffnen, mit „+“ gleich zum Eintippen. */
+    private fun listePruefen(intent: Intent?) {
+        if (intent?.hasExtra(de.frank.jarvis.listen.ListenWidget.EXTRA_OEFFNEN) != true) return
+        val liste = intent.getLongExtra(de.frank.jarvis.listen.ListenWidget.EXTRA_OEFFNEN, 0L)
+        val neu = intent.getBooleanExtra(de.frank.jarvis.listen.ListenWidget.EXTRA_NEU, false)
+        intent.removeExtra(de.frank.jarvis.listen.ListenWidget.EXTRA_OEFFNEN)
+        intent.removeExtra(de.frank.jarvis.listen.ListenWidget.EXTRA_NEU)
+        de.frank.jarvis.ui.ListenAnsicht.oeffnen(liste, neu)
     }
 
     /** Tipp auf die Biomarker-Meldung (etwa „Whoop neu anmelden“): den Biomarker-Bereich öffnen. */

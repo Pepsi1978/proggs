@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Jarvis</string>
+    <string name="widget_listen_beschreibung">Deine Jarvis-Listen: Liste wählen, Einträge samt Unterpunkten sehen und abhaken.</string>
     <color name="start_hintergrund">#FF05080F</color>
     <style name="Theme.Jarvis" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/start_hintergrund</item>

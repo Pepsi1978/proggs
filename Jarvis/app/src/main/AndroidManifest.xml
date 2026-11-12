@@ -210,6 +210,13 @@
             </intent-filter>
         </receiver>
 
+        <!-- Listen-Widget: Listenwahl, Abhaken und Blättern laufen als ausdrücklich adressierte Broadcasts an diesen Empfänger. -->
+        <receiver android:name=".listen.ListenWidgetEmpfaenger" android:exported="false" android:label="Jarvis Listen">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_listen_info" />
+        </receiver>
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
         <receiver android:name=".gedaechtnis.LernEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />

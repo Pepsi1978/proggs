@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Hält Jarvis' eigenes Gedächtnis und seine Gespräche auf Franks Geräten gleich (Handy ↔ Tablet): die Merkdateien (Regeln, Ziele,
  * „Über Frank“, Entscheidungen, Symbiose), Langzeitkontext, Tagebuch-Kurzfassungen, Tagesauswertungen und jedes Gespräch als eigene
- * Datei. Ablage, Prompts und Erinnerungen laufen über [de.frank.jarvis.ablage.AblageSync], die Daten der angebundenen Apps über
+ * Datei, außerdem Franks Listen (`listen/`). Ablage, Prompts und Erinnerungen laufen über [de.frank.jarvis.ablage.AblageSync], die Daten der angebundenen Apps über
  * [GeraeteAbgleich]; abgeleitete Stände (Lagebild, Wetter, Kontingente) liest jedes Gerät selbst.
  *
  * Je Datei ein Dokument im Geräteabgleich-Speicher des Servers (Art „gedaechtnis“ bzw. „gespraech“), der Inhalt als Datei nach
@@ -68,6 +68,8 @@ object GedaechtnisAbgleich {
         // Bilder und Dateien in Gesprächen: Die Nachrichten nennen sie mit ihrem Pfad, der auf beiden Geräten gleich lautet.
         // Löschbar: Mit einem Gespräch verschwinden auch seine Anhänge, sonst blieben ihre Dateien für immer am Server.
         Quelle("gedaechtnis", "gespraeche/anhaenge", ordner = true, loeschbar = true),
+        // Franks Listen: je Liste und Eintrag eine Datei, gelöscht wird nur als Grabstein in der Datei (nie die Datei selbst).
+        Quelle("gedaechtnis", de.frank.jarvis.listen.Listen.ORDNER, ordner = true, endung = ".json"),
         )
     }
 
@@ -395,6 +397,7 @@ object GedaechtnisAbgleich {
             quelle.pfad == "projekte.json" -> de.frank.jarvis.data.Projekte.vonAussen(schreiben)
             quelle.pfad == "langzeitkontext.txt" -> synchronized(de.frank.jarvis.gedaechtnis.Langzeitkontext) { schreiben() }
             quelle.pfad == "gespraechsnotizen.json" -> synchronized(de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis) { schreiben() }
+            quelle.pfad == de.frank.jarvis.listen.Listen.ORDNER -> de.frank.jarvis.listen.Listen.vonAussen(schreiben)
             else -> schreiben()
         }
     }
@@ -415,6 +418,8 @@ object GedaechtnisAbgleich {
         }
         if (bereiche.isNotEmpty()) runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, bereiche, "Geräteabgleich") }
         if (pfade.any { it.startsWith("gespraeche/") || it == "projekte.json" }) runCatching { beiGespraechen?.invoke() }
+        // Listen: neu einlesen, damit Oberfläche und Widget hier sofort den Stand des anderen Geräts zeigen.
+        if (pfade.any { it.startsWith(de.frank.jarvis.listen.Listen.ORDNER + "/") }) runCatching { de.frank.jarvis.listen.Listen.neuLaden(app) }
     }
 
     private fun loesche(app: Context, quelle: Quelle, datei: File) {

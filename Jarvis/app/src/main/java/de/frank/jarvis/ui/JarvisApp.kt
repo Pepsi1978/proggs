@@ -39,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.semantics.contentDescription
@@ -109,7 +110,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.neuesGespraech() }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
-            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen
+            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen
             GespraecheSchublade(vm, schublade, wischen) {
             Box(Modifier.fillMaxSize()) {
             // Biomarker-Bereich als Vollbild über die ganze Breite (Kartenraster auf Fold und Tablet), statt der Spalte.
@@ -122,7 +123,10 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.einstellungsReiter = "biomarker"
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
-            if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
+            if (!vm.gesperrt && ListenAnsicht.offen) {
+                // Listen im Vollbild über die ganze Breite (wie der Biomarker-Bereich), geöffnet über die Leiste oder das Widget.
+                ListenBildschirm(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
+            } else if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else
             // Auf dem aufgeklappten Fold bleibt der Inhalt eine gut lesbare Spalte in der Mitte.
@@ -238,6 +242,11 @@ private fun Leiste(vm: AppViewModel) {
         }
         reiterKnopf(Reiter.JARVIS)
         reiterKnopf(Reiter.ABLAGE)
+        // Listen (Einkaufsliste, Packliste …): öffnet das Listen-Vollbild, ohne den Reiter zu wechseln.
+        Box(
+            Modifier.weight(1f).height(50.dp).antippen { ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" },
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Rounded.Checklist, null, tint = f.textLeise, modifier = Modifier.size(20.dp)) }
         // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der
         // Programmier-Sessions. Arbeitet eine, blinkt derselbe orange Punkt wie am Reiter „Programmierung“ in der Leiste.
         val arbeitende = arbeitendeProgrammierungen()

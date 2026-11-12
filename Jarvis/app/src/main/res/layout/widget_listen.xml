@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Listen-Widget: nur Klassen, die RemoteViews erlaubt (kein <View>). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_listen_grund"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:id="@+id/widget_kopf"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="@drawable/widget_listen_knopf"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:id="@+id/widget_titel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#EAF4FC"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Listen" />
+
+            <TextView
+                android:id="@+id/widget_unter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#A9BED6"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_zurueck"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/widget_listen_knopf"
+            android:gravity="center"
+            android:text="‹"
+            android:textColor="#EAF4FC"
+            android:textSize="22sp"
+            android:contentDescription="Vorherige Liste" />
+
+        <TextView
+            android:id="@+id/widget_vor"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/widget_listen_knopf"
+            android:gravity="center"
+            android:text="›"
+            android:textColor="#EAF4FC"
+            android:textSize="22sp"
+            android:contentDescription="Nächste Liste" />
+
+        <TextView
+            android:id="@+id/widget_neu"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/widget_listen_plus"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="#021018"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:contentDescription="Eintrag hinzufügen" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp">
+
+        <ListView
+            android:id="@+id/widget_liste"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:scrollbars="none" />
+
+        <TextView
+            android:id="@+id/widget_leer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:padding="16dp"
+            android:textColor="#A9BED6"
+            android:textSize="14sp"
+            android:text="Leer" />
+    </FrameLayout>
+</LinearLayout>
