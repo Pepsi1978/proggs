@@ -11,12 +11,18 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.composed
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.unit.Constraints
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.SupervisorJob
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.round
 import androidx.compose.foundation.layout.Box
@@ -97,19 +103,36 @@ private const val GLEITEN_MS = 450
 
 /**
  * Lässt eine Zeile weich an ihren neuen Platz in der Spalte gleiten, statt zu springen (die Karte ist eine normale Spalte
- * in einer LazyColumn, daher kein animateItem). Die Zeile muss über key() an ihre Aufgabe gebunden sein.
+ * in einer LazyColumn, daher kein animateItem). Die Zeile muss über key() an ihre Aufgabe gebunden sein. Der neue Platz
+ * wird beim Platzieren selbst gelesen (nicht erst nach onPlaced), so steht die Zeile nie ein Bild lang schon am Ziel.
  */
-private fun Modifier.gleitend(): Modifier = composed {
-    val scope = rememberCoroutineScope()
-    var ziel by remember { mutableStateOf(IntOffset.Zero) }
-    var platziert by remember { mutableStateOf(false) }
-    var anim by remember { mutableStateOf<Animatable<IntOffset, AnimationVector2D>?>(null) }
-    onPlaced { ziel = it.positionInParent().round(); platziert = true }.offset {
-        // Vor der ersten echten Platzierung nichts animieren, sonst flöge die Zeile beim Erscheinen von oben herein.
-        if (!platziert) return@offset IntOffset.Zero
-        val a = anim ?: Animatable(ziel, IntOffset.VectorConverter).also { anim = it }
-        if (a.targetValue != ziel) scope.launch { a.animateTo(ziel, tween(GLEITEN_MS, easing = FastOutSlowInEasing)) }
-        a.value - ziel
+private fun Modifier.gleitend(): Modifier = this then GleitElement
+
+private data object GleitElement : ModifierNodeElement<GleitKnoten>() {
+    override fun create() = GleitKnoten()
+    override fun update(node: GleitKnoten) {}
+}
+
+private class GleitKnoten : Modifier.Node(), LayoutModifierNode {
+    private var anim: Animatable<IntOffset, AnimationVector2D>? = null
+    private var letztesZiel: IntOffset? = null
+
+    override fun onDetach() { anim = null; letztesZiel = null }
+
+    override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        val p = measurable.measure(constraints)
+        return layout(p.width, p.height) {
+            val ziel = coordinates?.positionInParent()?.round()
+            if (ziel == null || isLookingAhead) { p.place(0, 0); return@layout }
+            // Erste Platzierung: ohne Animation an den Platz, sonst flöge die Zeile beim Erscheinen herein.
+            val a = anim ?: Animatable(ziel, IntOffset.VectorConverter).also { anim = it; letztesZiel = ziel }
+            if (ziel != letztesZiel) {
+                letztesZiel = ziel
+                coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { a.animateTo(ziel, tween(GLEITEN_MS, easing = FastOutSlowInEasing)) }
+            }
+            val versatz = a.value - ziel
+            p.place(versatz.x, versatz.y)
+        }
     }
 }
 
@@ -128,6 +151,11 @@ private object HeuteAufgabenStand {
      * bis [HALTEN_MS] um sind; erst dann gleitet sie zu den erledigten. Wert = Kennung des Tipps (ein neuer Tipp ersetzt ihn).
      */
     val halten = mutableStateMapOf<Long, Long>()
+    /**
+     * Lebt so lange wie der Prozess: Abhaken und Halte-Zeit laufen auch zu Ende, wenn Frank die App per Zurück schließt
+     * (im ViewModel blieben sonst halten/unterwegs für immer stehen und die Zeile wäre gesperrt).
+     */
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     /**
      * Heute in Jarvis abgehakte Überfällige: Geniale Aufgaben führt sie danach nur noch unter „Erledigt“ (ihr Tag liegt vor
      * heute), hier bleiben sie bis Mitternacht als erledigt stehen, damit ein versehentlicher Tipp rückgängig zu machen ist.
@@ -216,11 +244,11 @@ private fun ladeHeute(context: android.content.Context): Pair<List<HeuteAufgabe>
  * Reihenfolge wie in Geniale Aufgaben: offene ohne Termin von heute (auch überfällige mit Uhrzeit) nach Priorität, dann die
  * heutigen Termine nach Uhrzeit, zuletzt alle erledigten (auch mit Termin) unter den offenen, ebenfalls nach Uhrzeit.
  */
-private fun sortiere(liste: List<HeuteAufgabe>): List<HeuteAufgabe> {
+private fun sortiere(liste: List<HeuteAufgabe>, erledigt: (HeuteAufgabe) -> Boolean = { it.erledigt }): List<HeuteAufgabe> {
     val rang = { a: HeuteAufgabe -> PRIO_RANG.indexOf(a.prioritaet).let { if (it < 0) PRIO_RANG.size else it } }
     val gruppe = { a: HeuteAufgabe ->
         when {
-            a.erledigt -> 2
+            erledigt(a) -> 2
             a.uhrzeit != null && !a.ueberfaellig -> 1
             else -> 0
         }
@@ -291,46 +319,59 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
     }
 
     fun umschalten(a: HeuteAufgabe) {
-        if (a.id in s.unterwegs) return
+        // a ist der angezeigte Stand (bei laufender Umstellung schon der gewünschte): Ein zweiter Tipp kehrt ihn um.
         val ziel = !a.erledigt
+        val laeuft = a.id in s.unterwegs
         s.unterwegs[a.id] = ziel
         s.halten.remove(a.id)
         // Abhaken: erst Haken und Durchstreichen am alten Platz zeigen, nach HALTEN_MS weich nach unten.
         if (ziel) {
             val tipp = System.nanoTime()
             s.halten[a.id] = tipp
-            vm.viewModelScope.launch { delay(HALTEN_MS); if (s.halten[a.id] == tipp) s.halten.remove(a.id) }
+            s.scope.launch { delay(HALTEN_MS); if (s.halten[a.id] == tipp) s.halten.remove(a.id) }
         }
-        // Im ViewModel, nicht in der Karte: Scrollt Frank sie weg, läuft das Abhaken trotzdem zu Ende.
-        vm.viewModelScope.launch {
-            val r = withContext(Dispatchers.IO) {
-                try {
-                    Register.alle(context).filterIsInstance<AufgabenFaehigkeit>().first().abhaken(a.id, ziel)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Ergebnis(e.message ?: "Geniale Aufgaben antwortet nicht.", fehler = true)
+        // Läuft schon eine Umstellung, übernimmt sie den neuen Wunsch, sobald die Aufgaben-App geantwortet hat.
+        if (laeuft) return
+        // Im Prozess, nicht in der Karte oder im ViewModel: Scrollt Frank sie weg oder schließt die App, läuft es zu Ende.
+        s.scope.launch {
+            try {
+                var gesetzt = ziel
+                var r: Ergebnis
+                while (true) {
+                    val nach = gesetzt
+                    r = withContext(Dispatchers.IO) {
+                        try {
+                            Register.alle(context).filterIsInstance<AufgabenFaehigkeit>().first().abhaken(a.id, nach)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Ergebnis(e.message ?: "Geniale Aufgaben antwortet nicht.", fehler = true)
+                        }
+                    }
+                    // Die Aufgaben-App meldet die eigene Änderung gleich noch einmal; die Karte liest ohnehin selbst neu.
+                    s.eigeneAenderungBis = System.currentTimeMillis() + 2_000
+                    val gewuenscht = s.unterwegs[a.id] ?: gesetzt
+                    if (r.fehler || gewuenscht == gesetzt) break
+                    gesetzt = gewuenscht
                 }
+                if (r.fehler) { vm.meldung = "Nicht sicher umgestellt: ${r.text}"; s.halten.remove(a.id) }
+                else if (gesetzt && a.ueberfaellig) s.abgehakt[a.id] = a.copy(erledigt = true)
+                else if (!gesetzt) s.abgehakt.remove(a.id)
+                // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nicht kurz zurück.
+                // Abhaken einer wiederkehrenden Aufgabe legt in Geniale Aufgaben die nächste an (oft für morgen): auch „morgen“
+                // neu lesen, denn die Meldung der Aufgaben-App wird gerade als eigene Änderung übergangen.
+                if (s.morgenOffen) launch { morgenLesen(context) }
+                neuLesen(context)
+            } finally {
+                s.unterwegs.remove(a.id)
             }
-            // Die Aufgaben-App meldet die eigene Änderung gleich noch einmal; die Karte liest ohnehin selbst neu.
-            s.eigeneAenderungBis = System.currentTimeMillis() + 2_000
-            if (r.fehler) vm.meldung = "Nicht sicher umgestellt: ${r.text}"
-            else if (ziel && a.ueberfaellig) s.abgehakt[a.id] = a.copy(erledigt = true)
-            else if (!ziel) s.abgehakt.remove(a.id)
-            // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nicht kurz zurück.
-            // Abhaken einer wiederkehrenden Aufgabe legt in Geniale Aufgaben die nächste an (oft für morgen): auch „morgen“
-            // neu lesen, denn die Meldung der Aufgaben-App wird gerade als eigene Änderung übergangen.
-            if (s.morgenOffen) launch { morgenLesen(context) }
-            try { neuLesen(context) } finally { s.unterwegs.remove(a.id) }
         }
     }
 
     Karte {
         // Haken sofort sichtbar; einsortiert wird eine frisch abgehakte Zeile erst nach HALTEN_MS (bis dahin als offen).
-        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }?.let { liste ->
-            val nachId = liste.associateBy { it.id }
-            sortiere(liste.map { a -> if (a.id in s.halten) a.copy(erledigt = false) else a }).map { nachId.getValue(it.id) }
-        }
+        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
+            ?.let { liste -> sortiere(liste) { it.erledigt && it.id !in s.halten } }
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
         Column(griff.fillMaxWidth()) {
@@ -347,7 +388,11 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
         }
         if (anzeige != null) {
             val zeigen = if (s.alleZeigen || anzeige.size <= SICHTBAR) anzeige else anzeige.take(SICHTBAR)
-            zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a) { umschalten(a) } } }
+            // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
+            // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
+            Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten) { umschalten(a) } } }
+            }
             if (anzeige.size > SICHTBAR) Text(
                 if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
                 Modifier.padding(top = 4.dp).antippen { s.alleZeigen = !s.alleZeigen },
@@ -408,14 +453,11 @@ private fun zusatz(a: HeuteAufgabe): String =
     listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
 
 @Composable
-private fun AufgabenZeile(a: HeuteAufgabe, umschalten: () -> Unit) {
+private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> Unit) {
     val f = LocalFarben.current
-    // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Beim Abhaken erst kurz kräftig (Haken gut
-    // sichtbar), dann während des Gleitens ausgrauen; beim Wiederöffnen sofort zurück.
-    val deckung by animateFloatAsState(
-        if (a.erledigt) 0.5f else 1f,
-        if (a.erledigt) tween(GLEITEN_MS, delayMillis = HALTEN_MS.toInt()) else tween(200), label = "deckung",
-    )
+    // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Während der Halte-Zeit [gehalten] bleibt die
+    // frisch abgehakte Zeile kräftig (Haken gut sichtbar) und graut erst beim Gleiten aus, im Takt mit der Bewegung.
+    val deckung by animateFloatAsState(if (a.erledigt && !gehalten) 0.5f else 1f, tween(GLEITEN_MS), label = "deckung")
     val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
     Row(
         Modifier.gleitend().fillMaxWidth().alpha(deckung).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
