@@ -1191,7 +1191,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Tipp auf den Live-Knopf: Live-Modus starten oder, wenn er läuft, beenden (wie langes Drücken der Sprachblase). */
     fun liveTippen() {
-        if (sprachmodusAktiv) sprachmodusBeenden() else liveMikroAnfragen()
+        when {
+            sprachmodusAktiv -> sprachmodusBeenden("Live-Knopf")
+            // Diktat oder Mitschrift laufen noch: nichts still verschlucken, sondern sagen, was zuerst nötig ist.
+            nimmtAuf || schreibtMit || holtMikro -> meldung = "Erst die laufende Aufnahme beenden, dann startet der Live-Modus."
+            else -> liveMikroAnfragen()
+        }
     }
 
     /** Mit Mikrofon-Erlaubnis: die Gesprächsschleife zuhören, antworten, vorlesen, wieder zuhören, bis sie endet. */
@@ -1203,6 +1208,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Favoriten-Stimmen als `art_stimme`: mit Stern ganz oben in der Liste. */
     var stimmFavoriten by mutableStateOf(de.frank.jarvis.tts.StimmFavoriten.favoriten(app)); private set
+
+    // Hörproben des entfernten alten Live-Gesprächs liegen sonst für immer im App-Speicher.
+    init { viewModelScope.launch(Dispatchers.IO) { de.frank.jarvis.tts.StimmFavoriten.altlastenEntfernen(app) } }
 
     /** Langes Drücken auf eine Stimme: Stern an oder wieder aus. */
     fun stimmFavoritUmschalten(art: String, stimme: String, titel: String) {
@@ -2007,6 +2015,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Eine Wiederaufnahme übergibt immer fortsetzen = true und ändert nichts daran, wo das Gespräch begann.
         if (!wiederaufnahme) gespraechInApp = fortsetzen
         val nr = ++sprachmodusNr
+        // Über den Knopf gibt es keinen Weckwort-Dienst, der das Mikrofon im Vordergrund hält (etwa am Tablet ohne „Hey Jarvis“):
+        // Der eigene Mikrofon-Dienst hält es auch nach einem App-Wechsel oder bei gesperrtem Bildschirm.
+        if (perKnopf) de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
         sprachmodusAktiv = true
         de.frank.jarvis.speech.GespraechsFokus.sprachmodus = true
         weckwortLauf = viewModelScope.launch {
@@ -2049,6 +2060,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 de.frank.jarvis.speech.GespraechsFokus.freigeben()
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                if (perKnopf && sprachmodusNr == nr && !nimmtAuf && !holtMikro) de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
                 if (sprachmodusNr == nr) { sprachmodusAktiv = false; de.frank.jarvis.speech.GespraechsFokus.sprachmodus = false }
                 fertig()
@@ -2122,10 +2134,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Langes Drücken auf die Sprachblase: Sprachmodus sofort beenden. Aufnahme, offene Antwort und Vorlesen enden, das
      * Mikrofon öffnet nicht mehr von selbst. Das Gespräch bleibt gespeichert.
      */
-    fun sprachmodusBeenden() {
+    fun sprachmodusBeenden(anlass: String = "Sprachblase lang gedrückt") {
         sprachsitzungBeendet = true
-        SprachZustellung.bewusstBeendet(getApplication(), "Sprachblase lang gedrückt")
-        Logbuch.sprache("Sprachsitzung beendet", "Sprachblase lang gedrückt")
+        SprachZustellung.bewusstBeendet(getApplication(), anlass)
+        Logbuch.sprache("Sprachsitzung beendet", anlass)
         aufnahmeVerwerfen()
         abbrechen()
         vorleser.stopp()

@@ -22,4 +22,9 @@ object StimmFavoriten {
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putStringSet(SCHLUESSEL, neu).apply()
         return neu
     }
+
+    /** Hörproben des entfernten alten Live-Gesprächs (PCM-Dateien im Ordner `files/stimmproben`): niemand liest sie mehr. */
+    fun altlastenEntfernen(context: Context) {
+        runCatching { java.io.File(context.filesDir, "stimmproben").takeIf { it.isDirectory }?.deleteRecursively() }
+    }
 }

@@ -246,6 +246,7 @@ object Funktionen {
     }
 
     private fun hindernis(app: Context, agent: JarvisAgent): String? {
+        if (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) return "ein Sprachgespräch (Live-Modus) läuft"
         if (!agent.verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
         val netz = runCatching {
             val cm = app.getSystemService(ConnectivityManager::class.java)
@@ -271,7 +272,7 @@ object Funktionen {
     /**
      * Arbeitet die neu installierten Versionen ein. Das Modell schlägt nur Operationen vor; [Funktionsdatei.wende]
      * setzt sie verankert um. Hat Frank währenddessen gespeichert, werden die Operationen auf seine Fassung angewandt
-     * (eine verschwundene Ankerzeile greift dann nicht). Ohne Anmeldung, Netz oder während eines Live-Gesprächs bleibt
+     * (eine verschwundene Ankerzeile greift dann nicht). Ohne Anmeldung, Netz oder während eines Sprachgesprächs (Live-Modus) bleibt
      * es fällig; der Kopf von funktionen_lesen zeigt solange die offenen Versionen.
      */
     suspend fun pflege(c: Context, ausloeser: String): String = withContext(Dispatchers.IO) {
@@ -310,7 +311,19 @@ object Funktionen {
                 val e = Einstellungen.get(app)
                 // Feste, niedrige Denkstufe: Die Aufgabe ist klein, und Franks Chat-Einstellung soll sie nicht über das Zeitlimit treiben.
                 val stufe = e.modell.normalizeEffort(ReasoningEffort.LOW)
-                val roh = withTimeoutOrNull(PFLEGE_MS) { agent.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, stufe) }
+                // Das Sprachgespräch (Live-Modus) hat Vorrang: Beginnt eines, bricht die Pflege ab und bleibt fällig.
+                var sprache = false
+                val roh = withTimeoutOrNull(PFLEGE_MS) {
+                    coroutineScope {
+                        val anfrage = async { agent.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, stufe) }
+                        while (!anfrage.isCompleted) {
+                            if (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) { sprache = true; anfrage.cancel(); break }
+                            delay(1_000L)
+                        }
+                        if (sprache) null else anfrage.await()
+                    }
+                }
+                if (sprache) return@withContext melde("Pflege abgebrochen: ein Sprachgespräch hat begonnen; der nächste Anlauf holt es nach.")
                 if (roh == null) return@withContext melde("Pflege nicht rechtzeitig fertig; der nächste Anlauf holt es nach.")
                 val antwort = jsonAus(roh) ?: return@withContext melde("Pflege lieferte kein lesbares Ergebnis; die Übersicht bleibt unverändert.")
                 ergebnis = melde(abschliessen(app, bis, Funktionsdatei.operationen(antwort), teil, "Pflege ($ausloeser)"))
@@ -376,7 +389,7 @@ class FunktionenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "funktionen_lesen",
             titel = "Funktionsübersicht lesen",
             beschreibung = "Jarvis: liest die Funktionsübersicht von Jarvis: was die installierte App tatsächlich kann, knapp nach Bereichen (Werkzeuge, angebundene Apps, Sprache, " +
-                "Live-Gespräch, Agenten, Gedächtnis, Programmierübergabe, Oberfläche) mit wichtigen Grenzen. Liegt auf dem Handy und geht auch ohne GitHub. Der Kopf nennt den " +
+                "Live-Modus, Agenten, Gedächtnis, Programmierübergabe, Oberfläche) mit wichtigen Grenzen. Liegt auf dem Handy und geht auch ohne GitHub. Der Kopf nennt den " +
                 "geprüften Versionsstand, die installierte Version und installierte, aber noch nicht eingearbeitete Versionen. Nutze es ZUERST bei „Kann Jarvis …?“, " +
                 "„Welche Funktionen hast du?“, „Was fehlt dir noch?“, „Gibt es das schon?“ und bevor du einen Programmierauftrag für eine neue Funktion vorschlägst oder GitHub " +
                 "nach vorhandenen Funktionen durchsuchst. Was hier nicht steht, ist nicht nachweislich fehlend; geplante oder nur beauftragte Funktionen stehen nicht drin. " +

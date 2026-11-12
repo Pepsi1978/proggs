@@ -35,6 +35,8 @@ object Umzug {
     private val SPEICHER = listOf(Einstellungen.NAME, SecureSettings.STORE_NAME, "jarvis_konten")
     private val NIE = setOf("geheimnis", "geraeteabgleich_an", "abfahrt_zustand", "chat_gpt_connected_at", "claude_ai_sitzung", "anthropic_console_sitzung", "letzte_sicherung")
     private val NIE_VORSILBE = listOf("routen_zaehler", "liveopt_")
+    /** Schlüssel des entfernten alten Live-Gesprächs: Sie gehen nicht mehr auf ein anderes Gerät. */
+    private val NIE_ALT = setOf("openai_api_key", "gemini_api_key", "gemini_api_key_bezahlt")
 
     /**
      * Auf dem Tablet aus, auch wenn sie am Handy an sind: Die stündliche Tagesauswertung und das Lernen schreiben Franks
@@ -49,7 +51,7 @@ object Umzug {
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    private fun zieht(schluessel: String) = schluessel !in NIE && NIE_VORSILBE.none { schluessel.startsWith(it) }
+    private fun zieht(schluessel: String) = schluessel !in NIE && schluessel !in NIE_ALT && NIE_VORSILBE.none { schluessel.startsWith(it) }
 
     /** Schreibt alle umziehenden Werte nach `files/umzug-export.json`; liefert ihre Anzahl. */
     fun exportiere(c: Context): Int {

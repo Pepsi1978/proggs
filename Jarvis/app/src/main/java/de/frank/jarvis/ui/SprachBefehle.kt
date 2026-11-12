@@ -91,7 +91,7 @@ object SprachBefehle {
     private val ZUSAMMEN = listOf(
         "sprach session" to "sprachsession", "voice session" to "sprachsession", "sprach sitzung" to "sprachsitzung",
         "sprach modus" to "sprachmodus", "gesprächs modus" to "gesprächsmodus", "sprach schleife" to "sprachschleife",
-        "live gespräch" to "livegespräch", "live session" to "livesession", "live modus" to "livemodus", "live verbindung" to "liveverbindung",
+        "live gespräch" to "livegespräch", "live session" to "livesession", "live modus" to "livemodus",
         "live sitzung" to "livesession",
     )
 

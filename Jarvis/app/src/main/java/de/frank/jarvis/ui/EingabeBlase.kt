@@ -61,7 +61,6 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Stop

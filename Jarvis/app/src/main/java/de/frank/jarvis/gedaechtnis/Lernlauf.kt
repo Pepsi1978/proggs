@@ -580,6 +580,7 @@ object Lernlauf {
             val frisch = alt != null && jetzt - alt.optLong("zeit") < frische(alt.optString("stand"), ausloeser)
             val urteil = if (frisch) alt!! else {
                 if (geprueft >= hoechstens) { s.hinweise += "„${kurz(p.text)}“ wird beim nächsten Lauf im Code geprüft (höchstens $hoechstens Prüfungen je Lauf)."; continue }
+                if (ausloeser == AUTOMATISCH && de.frank.jarvis.speech.GespraechsFokus.sprachmodus) { s.hinweise += "Codeprüfung angehalten, weil ein Sprachgespräch begann; der Rest folgt beim nächsten Lauf."; break }
                 schritt("prüft im Code (${i + 1} von ${liste.size}): ${kurz(p.wunsch.ifEmpty { p.text })}")
                 geprueft++
                 val u = runCatching { pruefe(app, agent, e, p, auftraege) }.getOrElse {
