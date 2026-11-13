@@ -525,6 +525,26 @@
       "pruefung": "Nach 10 Sitzungen mit ~/.openlauncher im Befehl: keine Blockade ohne echten Launcher-Bezug; dotnet build/Stop-Process auf OpenLauncher blocken weiter",
       "ruecknahme": "-cnotmatch wieder zu -notmatch (ps1) und grep -q wieder zu grep -qi (sh)",
       "kosten": "keine (nur Mustervergleich im Hook)"
+    },
+    {
+      "id": "M31",
+      "titel": "Mac: Argumentlisten in zsh als Array statt String-Variable",
+      "datum": "2026-11-13T22:38",
+      "beleg": "Sitzung ef033cc3: 2 Fehlaufrufe (ssh $K, git add $F), je ein Wiederholaufruf; zsh zerlegt $VAR nicht",
+      "ort": [
+        "bugs/desktop/macos-zsh-wortaufteilung.md",
+        "bugs/README.md"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "Identity file [^ ]+ -o |(Pfadspezifikation|pathspec) '[^']+ [^']+' (stimmt mit keinen|did not match)",
+      "aufruf_regex": "(ssh|scp|git add) \\$[A-Za-z_]+",
+      "fehler_am_aufruf": false,
+      "plattform": [
+        "mac"
+      ],
+      "pruefung": "Nach 10 Mac-Sitzungen: keine Treffer von fehler_regex",
+      "ruecknahme": "Almanach-Datei und README-Zeile löschen, Eintrag entfernen",
+      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
     }
   ]
 }
