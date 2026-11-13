@@ -1,0 +1,26 @@
+# 16 – Verzeichnis von Verarbeitungstätigkeiten (Entwurf, Art. 30 DSGVO)
+
+**Verantwortlicher:** Frank Barwandt (Barwandt Digital Labs), c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, dev.app.support@gmail.com · **DSB:** [nach Bestellung eintragen] · **Stand:** Entwurf 04.09.2026 aus Prüfstand Commit `01b200085a7067123e5e21aba8021bc9193033a6`, Branch `main` · **Modell:** Claude Fable 5.1
+**Beweisklassen:** [T] technisch bestätigt · [D] dokumentierte Anbieteraussage · [R] rechtliche Bewertung · [U] ungeklärte externe Tatsache
+
+Begriffe: *VT* = Verarbeitungstätigkeit. Die Ausnahme nach Art. 30 Abs. 5 greift nicht (besondere Kategorien, nicht nur gelegentlich).
+
+| Nr. | VT | Zwecke | Betroffene | Datenkategorien | Empfänger | Drittland/Garantie | Löschfrist | TOM (Auswahl) | Rechtsgrundlage |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Lokale Tagebuchführung in der App | Bereitstellung des digitalen Produkts | Nutzer | Tagebuchtexte, Nachträge, Stimmungswert, Kategorien, Fotos/Videos, Einstellungen (Art. 9 möglich) | keine (Gerät des Nutzers) | – | bis Löschung durch Nutzer/Deinstallation | Android-Sandbox, optionale Biometrie-Sperre, verschlüsselte Prefs | Art. 6 Abs. 1 lit. b; Art. 9 Abs. 2 lit. a (soweit Nutzer sensible Inhalte einträgt – Haushaltsnähe) [R] |
+| 2 | Cloud-Transkription | Umwandlung Sprache→Text | Nutzer | Sprachaufnahme, Sprachcode, IP | Groq, Inc. (USA) als Auftragsverarbeiter [U: DPA] | USA – SCC [U]; ZDR [U] | Gerät: sofort; Groq ≤30 Tage | TLS, Löschung nach Verarbeitung, Consent-Gate (nach DS-001-Fix) | Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a, Art. 46 |
+| 3 | KI-Analyse, Rückblicke, Zusammenfassung, Textverbesserung | Auswertung/Aufbereitung der Einträge | Nutzer | Tagebuchtexte (alle Einträge/Zeitraum), Nutzer-Prompts, Analyseergebnisse, IP, App-Check-Token | Google LLC / Google Ireland (Gemini Developer API via Firebase) als Auftragsverarbeiter [U: DPA] | USA – DPF (Google LLC) + SCC [U] | Google: zeitlich begrenzt (Missbrauch); Gerät: bis Löschung | TLS, App Check, Consent-Gate (nach DS-002-Fix), Diagnoseverbote im Prompt | Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a, Art. 45/46 |
+| 4 | Vorlesefunktion | Text→Sprache | Nutzer | Textausschnitte/Einträge, Stimme, IP | Microsoft (Consumer-Endpunkt, kein Vertrag) – Dritter | USA – Art. 49 Abs. 1 lit. a | unbekannt | TLS, Gate mit Risikohinweis | Art. 6 Abs. 1 lit. a, Art. 49 Abs. 1 lit. a (bis Umstellung auf On-Device) |
+| 5 | Cloud-Backup | Sicherung/Wiederherstellung | Nutzer | komplette Tagebuch-DB, Fotos/Videos, Custom-Analysen | Google (Drive appDataFolder des Nutzerkontos) | USA/EU – DPF/SCC [U] | bis Löschung durch Nutzer | TLS, Google-Verschlüsselung at rest, In-App-Löschung | Art. 6 Abs. 1 lit. a |
+| 6 | Android-System-Backup | Gerätesicherung (Betriebssystem) | Nutzer | Tagebuch-DB, Klartext-Prefs | Google (Gerätekonto) | wie 5 | bis Deaktivierung | Backup-Regeln (Ausschlüsse) | Nutzer-Geräteeinstellung (Art. 6 Abs. 1 lit. a) |
+| 7 | Google-Anmeldung (lokal) | Zugang zu Drive/Gmail-Berechtigungen | Nutzer | E-Mail, Name, Avatar-URL, OAuth-Token | keine (lokal); Google für Token | – | bis Abmeldung/Kontolöschung | verschlüsselte Prefs | Art. 6 Abs. 1 lit. b |
+| 8 | Nutzungsanalyse (Opt-in) | Produktverbesserung | Nutzer | Ereignisse ohne Inhalte, Geräte-/App-Daten, Instance-ID, gekürzte IP, (Werbe-ID bis GP-001-Fix) | Google (Firebase Analytics) | USA – DPF/SCC [U] | 14 Monate [U] | SDK deaktiviert bis Consent | Art. 6 Abs. 1 lit. a; § 25 Abs. 1 TDDDG |
+| 9 | Missbrauchsschutz und Konfiguration | App Check, Remote Config, Installations-ID | Nutzer | Integritäts-Token, Installations-ID, App-Version | Google (Firebase) | USA – DPF/SCC [U] | laut Google | – | Art. 6 Abs. 1 lit. f; § 25 Abs. 2 Nr. 2 TDDDG |
+| 10 | In-App-Käufe und Kaufstatus-Prüfung | Vertragserfüllung, Betrugsschutz | Käufer | Purchase-Token, Produkt-ID, Preis, Kaufstatus | Google Play (Google Commerce Ltd.); eigene Cloud Function (europe-west1) → Google Play Developer API | EU (Function); Google | Function-Logs ≤30 Tage; Kaufdaten bei Google | Secret-Verwaltung, App Check (nach SEC-003) | Art. 6 Abs. 1 lit. b, f |
+| 11 | Feedback, KI-Meldung, Widerruf per E-Mail | Support, Rechtsausübung, Meldung | Nutzer | E-Mail-Adresse, Freitext, ggf. Kaufangaben | Entwickler-Postfach (Gmail); Google (Transport) | USA (Gmail) – DPF/SCC [U] | 24 Monate | Zugriffsschutz Postfach | Art. 6 Abs. 1 lit. a, f, c (Widerruf) |
+| 12 | In-App-Bewertung | Nutzerfeedback | Nutzer | App-Version, Paketname | Google Play | – | – | – | Art. 6 Abs. 1 lit. f |
+| 13 | Website (nach Umzug) | Bereitstellung der Rechtstexte | Besucher | IP, Zeit, URL, User-Agent (Serverlogs) | Hostinger (Hoster) [U] | EU? [U] | laut Hoster [U] | HTTPS, keine Cookies | Art. 6 Abs. 1 lit. f |
+
+**Allgemeine TOM (Art. 32):** TLS erzwungen; Android-Sandbox; verschlüsselte Einstellungen; optionale Biometrie-Sperre; R8-Obfuskation; App Check (Play Integrity); Löschfunktionen in-App; Backup-Ausschlüsse; geplante Verbesserungen: Groq-Proxy, Log-Bereinigung, Function-App-Check.
+
+**Betroffenenrechte:** Auskunft/Portabilität über PDF-Export und Drive-Backup; Löschung in-App; Widerruf in Einstellungen; E-Mail-Kanal (30 Tage). Identifizierung durch den Verantwortlichen nicht möglich (Art. 11).
