@@ -27,7 +27,8 @@ import org.json.JSONObject
  * Nur Lesen über die offizielle Cloud-API v1.1 (GET /devices, GET /devices/{id}/status), signiert mit Token und Secret aus
  * Einstellungen → Konten und APIs (HMAC-SHA256 über Token + Zeit + Nonce, Base64, Großbuchstaben).
  * Messwerte bewusst ohne Zwischenspeicher: Ist der Hub oder ein Sensor offline (Status 161/171) oder liefert er keine Werte, meldet Jarvis das
- * statt alter Werte. Nur die Geräteliste (Namen und Kennungen) bleibt eine Stunde im Speicher. Die Cloud nennt keine eigene Messzeit; als Zeit gilt der Abruf.
+ * statt alter Werte. Nur die Geräteliste (Namen und Kennungen) bleibt bis zu eine Stunde im Speicher; nach einem Sensorproblem wird sie verworfen,
+ * und fehlt in ihr ein gesuchter oder erwarteter Name (umbenannt), holt der Abruf sie einmal frisch (höchstens einmal je Minute). Die Cloud nennt keine eigene Messzeit; als Zeit gilt der Abruf.
  */
 class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "switchbot"
@@ -36,7 +37,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Fragt Frank nach Temperatur oder Luftfeuchtigkeit in seiner Wohnung, auf dem Balkon, im Wohn- oder Schlafzimmer („Wie warm ist es im Schlafzimmer?“), " +
             "nutze raumklima_lesen. Nenne je Sensor Name, Temperatur, Luftfeuchtigkeit und die Abrufzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
-            "sag das genau so und nenne für ihn keine Werte. Für das Wetter draußen bleibt wetter_lesen zuständig."
+            "sag das genau so und nenne für ihn keine Werte. Steht ein Raum unter nicht_im_konto, gibt es im SwitchBot-Konto keinen Sensor mit diesem Namen: " +
+            "sag das und rate keine Werte (ähnlich benannte Sensoren nennen, z. B. Tippfehler). Für das Wetter draußen bleibt wetter_lesen zuständig."
 
     private val s get() = SecureSettings.get(context)
 
@@ -61,22 +63,31 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     /** Geräteliste (nur Namen und Kennungen, keine Messwerte) mit Abrufzeit. */
     @Volatile private var liste: Pair<Long, List<JSONObject>>? = null
 
-    private fun sensorListe(): List<JSONObject> {
-        liste?.takeIf { System.currentTimeMillis() - it.first < LISTE_GILT_MS }?.let { return it.second }
+    /** Geräteliste aus dem Speicher (höchstens [LISTE_GILT_MS] alt) oder frisch; [frisch] erzwingt den Abruf. Zweiter Wert: kam aus dem Speicher. */
+    private fun sensorListe(frisch: Boolean = false): Pair<List<JSONObject>, Boolean> {
+        if (!frisch) liste?.takeIf { System.currentTimeMillis() - it.first < LISTE_GILT_MS }?.let { return it.second to true }
         val geraete = anfrage("/v1.1/devices").optJSONObject("body")?.optJSONArray("deviceList") ?: JSONArray()
         val sensoren = (0 until geraete.length()).mapNotNull { geraete.optJSONObject(it) }.filter { SENSORTYP.containsMatchIn(it.optString("deviceType")) }
         if (sensoren.isNotEmpty()) liste = System.currentTimeMillis() to sensoren
-        return sensoren
+        return sensoren to false
     }
+
+    private fun List<JSONObject>.ohne(namen: List<String>) = namen.filter { n -> none { it.optString("deviceName").contains(n, ignoreCase = true) } }
 
     /** Frisch lesen (Werkzeug und Startkarte „Raumklima“); [Ergebnis.struktur] trägt je Sensor Werte oder „problem“. */
     suspend fun abrufen(nur: String = ""): Ergebnis = withContext(Dispatchers.IO) {
         stoerung()?.let { return@withContext Ergebnis(it, fehler = true) }
         val alle = try {
-            sensorListe()
+            val (gespeichert, ausSpeicher) = sensorListe()
+            // Umbenannt? Fehlt in einer gespeicherten Liste ein gesuchter oder erwarteter Name, im selben Abruf einmal frisch holen.
+            // Nur wenn die Liste älter als eine Minute ist: Fehlt ein Name dauerhaft, bleibt der Speicher sonst wirkungslos.
+            val zuAlt = System.currentTimeMillis() - (liste?.first ?: 0L) > NEU_HOLEN_AB_MS
+            val vermisst = if (nur.isNotEmpty()) gespeichert.ohne(listOf(nur)) else gespeichert.ohne(ERWARTET)
+            if (ausSpeicher && zuAlt && vermisst.isNotEmpty()) sensorListe(frisch = true).first else gespeichert
         } catch (e: Problem) {
             return@withContext Ergebnis(e.message ?: "SwitchBot antwortet nicht.", fehler = true)
         }
+        val genutzt = liste
         if (alle.isEmpty()) return@withContext Ergebnis(
             "In deinem SwitchBot-Konto ist kein Thermo-Hygrometer zu sehen. Prüfe in der SwitchBot-App, ob die Sensoren mit dem Hub verbunden sind und bei jedem der Cloud-Dienst eingeschaltet ist.", fehler = true)
         // „alle“, „Wohnung“ o. Ä. passt auf keinen Namen: dann alle statt eines Fehlers.
@@ -89,9 +100,11 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
             }.awaitAll()
         }
-        val fehlend = if (einzeln) emptyList() else ERWARTET.filter { name -> sensoren.none { it.name.contains(name, ignoreCase = true) } }
-        // Ein Problem oder ein fehlender Name kann an einer veralteten Liste liegen (umbenannt, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
-        if (sensoren.any { it.problem != null } || fehlend.isNotEmpty()) liste = null
+        // Ein Problem kann an einer veralteten Liste liegen (Gerät getauscht, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
+        // Nur die hier benutzte Liste verwerfen, nie eine, die ein paralleler Abruf gerade frisch abgelegt hat.
+        if (sensoren.any { it.problem != null }) synchronized(this@SwitchbotFaehigkeit) { if (liste === genutzt) liste = null }
+        // Fehlt ein erwarteter Raum, steht er nur für das Sprachmodell in der Struktur, nicht als eigene Zeile auf der Karte (Frank, 13.11.2026).
+        val fehlend = if (einzeln) emptyList() else alle.ohne(ERWARTET)
         val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}"
@@ -104,8 +117,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 if (z.problem != null) put("problem", z.problem)
                 else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.batterie?.let { put("batterie_prozent", it) } }
             }
-        }))
-        Ergebnis(text, fehler = sensoren.all { it.problem != null }, struktur = struktur)
+        })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)) }
+        Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)
     }
 
     private fun lesen(g: JSONObject): Sensor {
@@ -182,9 +195,10 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** Thermo-Hygrometer: Meter, MeterPlus, MeterPro, WoIOSensor (Außensensor). Hubs zählen nicht als Sensor. */
         private val SENSORTYP = Regex("meter|iosensor", RegexOption.IGNORE_CASE)
-        /** Franks Sensoren laut ihm (Auftrag 13.11.2026); fehlt einer in der Liste, wird sie beim nächsten Abruf frisch geholt (keine eigene Zeile, Frank 13.11.2026). */
+        /** Franks Sensoren laut ihm (Auftrag 13.11.2026); fehlt einer in der gespeicherten Liste, holt der Abruf sie frisch. */
         private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer")
         private const val LISTE_GILT_MS = 60 * 60 * 1000L
+        private const val NEU_HOLEN_AB_MS = 60 * 1000L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private fun JSONObject.wert(k: String): Double? = if (has(k) && !isNull(k)) optDouble(k).takeIf { !it.isNaN() } else null
