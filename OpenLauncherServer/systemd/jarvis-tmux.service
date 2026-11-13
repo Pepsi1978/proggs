@@ -1,5 +1,5 @@
 [Unit]
-Description=tmux-Server aller CLI-Sitzungen (Speicher- und CPU-Deckel schützen Relay und Second Brain)
+Description=tmux-Server aller CLI-Sitzungen (Speicherdeckel 7 GB und CPU-Deckel schützen Relay und Second Brain)
 After=network-online.target
 
 [Service]
@@ -11,8 +11,9 @@ ExecStart=/usr/bin/tmux -L jarvis -f /home/jarvis/proggs/OpenLauncherServer/syst
 ExecStop=/usr/bin/tmux -L jarvis kill-server
 Restart=always
 RestartSec=5
-MemoryHigh=4500M
-MemoryMax=5500M
+# 7 GB (Franks Vorgabe 13.11.2026, nach dem Entfernen von Werft Studio): ab 6,5 GB bremst der Kernel, bei 7 GB ist Schluss.
+MemoryHigh=6500M
+MemoryMax=7000M
 CPUQuota=170%
 OOMPolicy=continue
 Nice=5

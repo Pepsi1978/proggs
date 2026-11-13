@@ -90,8 +90,8 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
   als 24 Stunden, wird er unter der Bau-Sperre beendet (samt Kotlin-Daemon) und frisch gestartet. So gibt es keine
   „verwitterten“ Daemons nach Wochen Laufzeit.
 - Speicher: Gradle-Daemon ≈ 2,25 GB, Kotlin-Daemon 0,8–1,5 GB. Beide liegen im cgroup von `jarvis-tmux.service`
-  (MemoryHigh 4,5 GB, MemoryMax 5,5 GB) zusammen mit den Sitzungen. Neben einem warmen Daemon passt eine Sitzung bequem,
-  zwei werden eng. Den Deckel kann nur root ändern.
+  (seit 13.11.2026 MemoryHigh 6,5 GB, MemoryMax 7 GB; vorher 4,5/5,5 GB) zusammen mit den Sitzungen. Den Deckel
+  kann nur root ändern (`systemctl set-property jarvis-tmux.service …`, ohne tmux-Neustart).
 
 ## 6. Weitere Hebel (nicht umgesetzt, Franks Entscheidung)
 
