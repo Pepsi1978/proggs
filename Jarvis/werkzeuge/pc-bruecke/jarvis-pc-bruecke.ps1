@@ -192,6 +192,8 @@ function Antigravity-ReviewZeile($auftrag) {
 function Starte-Sitzung($auftrag) {
     $app = ($auftrag.app -replace '[^\p{L}\p{N} ._-]', '').Trim()
     if (-not $app) { $app = 'App' }
+    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (Wachhund-Aufgabe, läuft im Hintergrund).
+    try { Start-ScheduledTask -TaskName 'adb-wlan-wachhund' -ErrorAction Stop } catch {}
     $name = "Jarvis: $app"
     # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.1, Minimal, Schnellmodus, Effort High).
     $sol = "$($auftrag.modell)" -eq 'sol'

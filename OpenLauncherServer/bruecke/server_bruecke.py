@@ -141,6 +141,14 @@ def starte(auftrag: dict, w: dict) -> str:
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"],
                                                                                                        w["cli"] == "claude" and bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer)))}
+    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (sonst erst beim nächsten Minutenlauf
+    # des Wachhunds); läuft im Hintergrund, bis die Sitzung installieren will, ist die Verbindung meist längst da.
+    try:
+        subprocess.Popen(["bash", str(Path(__file__).resolve().parents[2] / "Werkzeuge" / "adb-wlan" / "adb-wlan.sh"), "--leise", "--geraet", "alle"],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                         env={**os.environ, "ANDROID_HOME": os.environ.get("ANDROID_HOME") or str(Path.home() / "android-sdk")})
+    except Exception:
+        pass
     # Die genannte App sofort vorbauen: Während die Sitzung liest und ändert, wird der Gradle-Daemon warm und der build-Ordner aktuell.
     try:
         subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "kern" / "vorwaermen.py"), "start", "--app", app, "--immer"],

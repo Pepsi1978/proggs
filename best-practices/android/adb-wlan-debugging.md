@@ -78,3 +78,10 @@ Nur über `Werkzeuge/logcat/logcat-lesen.sh`, nie `adb logcat -d | grep` am Rech
 - Gefiltert wird auf dem Handy, übertragen nur das Ergebnis; harte Zeitgrenze (`--zeitlimit`, Standard 60 s), letzte Zeile `LOGCAT_STATUS=ok|leer|zeitlimit|fehler`.
 - `leer` bei langem Zeitfenster heißt meist: Puffer schon überschrieben. Für Fehler, die Stunden zurückliegen, braucht die App ein eigenes Diagnoseprotokoll (Datei), Logcat reicht dann nicht.
 
+
+## Neustart ohne PC: Server-Wachhund mit Tunnel-TLS-Suche (13.11.2026)
+- Nach einem Geräte-Neustart lauscht adbd nur noch auf dem zufälligen TLS-Port von „Debugging über WLAN“ (UpdateStation schaltet es im WLAN ein). mDNS reicht nicht durch WireGuard.
+- `adb-wlan.sh` Schritt 3c: `tls-port-suche.py <tunnel-ip>` prüft 32768–60999 parallel (~8 s, nur wenn 5555 sofort abweist = Gerät da), verbindet per TLS und stellt mit `adb tcpip 5555` Port 5555 wieder her. Gemessen: TLS-Handshake über den Tunnel klappt mit dem freigegebenen Schlüssel.
+- Alle Rechner (PC, Mac, Server) nutzen denselben adb-Schlüssel (`SK/Android/adb-schluessel`), damit kein Gerät eine neue Freigabe braucht.
+- Server: `jarvis-adb-wachhund.timer` jede Minute (`KillMode=process`, sonst stirbt ein dabei gestarteter adb-Server samt allen Verbindungen). Jeder Jarvis-Auftrag (Server, Mac, Windows) stößt den Wachhund zusätzlich sofort an.
+- Grenze: Ohne WLAN (nur Mobilfunk) schaltet Android „Debugging über WLAN“ nicht ein; dann geht es erst wieder, sobald das Gerät in einem WLAN ist.

@@ -180,6 +180,21 @@ tunnel_umsteigen() {
   return 0
 }
 
+# Über den Tunnel den TLS-Port von „Debugging über WLAN“ suchen (tls-port-suche.py) und Port 5555 zurückholen. 0 = verbunden.
+tunnel_tls_verbinden() {
+  local py p ports
+  for py in python3 python; do command -v "$py" >/dev/null 2>&1 && "$py" -c "import asyncio" >/dev/null 2>&1 && break; py=""; done
+  [ -z "$py" ] && return 1
+  ports=$("$py" "$(cd "$(dirname "$0")" && pwd)/tls-port-suche.py" "$TUNNEL_IP" 2>/dev/null | tr -d '\r') || return 1
+  [ -z "$ports" ] && return 1
+  melde "Tunnel $TUNNEL_IP: Port $PORT zu, offene Ports $(echo $ports) – suche WLAN-Debugging (TLS)"
+  for p in $ports; do
+    if verbinde "$TUNNEL_IP:$p"; then stabilisiere "$TUNNEL_IP:$p" "$TUNNEL_IP" && return 0; fi
+    adb disconnect "$TUNNEL_IP:$p" >/dev/null 2>&1
+  done
+  return 1
+}
+
 # Parallele Aufrufe nicht gegeneinander laufen lassen
 LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
 for _ in $(seq 1 90); do mkdir "$LOCK" 2>/dev/null && break; sleep 1; done
@@ -263,6 +278,11 @@ for RUNDE in 1 2; do
     tunnel_umsteigen
     break
   fi
+
+  # 3c. Gerät neu gestartet: Im Tunnel ist nur noch „Debugging über WLAN“ (TLS) auf einem Zufallsport offen
+  #     (UpdateStation schaltet es nach dem Start im WLAN ein). mDNS reicht nicht durch den Tunnel, deshalb
+  #     Ports direkt suchen, per TLS verbinden und Port 5555 wiederherstellen. So klappt es auch ohne PC (Server-Wachhund).
+  if [ -n "$TUNNEL_IP" ] && tunnel_tls_verbinden; then break; fi
 
   # 4. Kabel
   USB=$(usb_geraet)

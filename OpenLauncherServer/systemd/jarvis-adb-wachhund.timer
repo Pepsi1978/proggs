@@ -1,0 +1,10 @@
+[Unit]
+Description=Handy und Tablet jede Minute prüfen und nach einem Neustart wieder verbinden
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
