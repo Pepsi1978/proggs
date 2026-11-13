@@ -109,3 +109,23 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
   das alle CLIs auf dem Server lesen.
 - Prüfen nach dem Übertragen: Während eines Sitzungsbaus muss `flock -n ~/.openlauncher/vorwaermen/gradle-bau.lock true`
   scheitern.
+
+## 8. Windows-PC (umgesetzt 13.11.2026, Mac folgt mit demselben Skript)
+
+Dasselbe Grundproblem gilt am PC: Nach vielen Commits auf Server, Mac oder in der Cloud passt der `build`-Ordner nicht mehr.
+Umgesetzt in `Werkzeuge/vorwaermen/` (Python, plattformneutral; Einrichtung `einrichten.ps1`):
+
+| Server-Maßnahme | PC |
+|---|---|
+| Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen`: Anmeldung (+2 min) und alle 10 min, `fetch` + `merge --ff-only` wie `RepoSync.cs`, dann Vorbau |
+| Auftragsstart-Vorbau | PC-Brücke `Starte-Sitzung` startet `vorwaermen.py lauf --app <App> --immer` |
+| Daemon 24 h warm | `org.gradle.daemon.idletimeout=86400000` in `~/.gradle/gradle.properties`; fehlt ein Daemon, startet ein Jarvis-Bau ihn |
+| Bau-Sperre über Hook | Kein Windows-Hook: Das Skript setzt aus, solange irgendein Gradle-Client läuft (`gradle-wrapper.jar` in der Befehlszeile), überspringt Apps mit offenen Änderungen und Apps mit Commit jünger als 10 min |
+| Apps vom Handy | Pakete von **allen** verbundenen Geräten (Handy + Tablet), keine Ausschlussliste (am PC bauen auch Wecker und BestJournal) |
+| `nur-arm64`, `workers.max=2`, cgroup, M26 | nicht übernommen: Emulator ist x86_64, PC hat 8 Kerne/31 GB; Vorbau nur mit `--max-workers=<Kerne/2>` |
+| — | Im Akkubetrieb kein Vorwärmen |
+
+- Daemons sind am PC **nicht** für alle Apps gemeinsam: verschiedene `org.gradle.jvmargs` (2048m/4096m/Metaspace) ergeben je
+  einen eigenen Daemon. Der Jarvis-Bau wärmt also nur die 4096m-Gruppe; die anderen wärmt der Vorbau der App selbst.
+- Ersten Lauf nie aus einer Agenten-Shell starten (`Start-ScheduledTask Vorwaermen`), sonst erbt der Daemon die Pipe.
+- Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaermen/vorwaermen.py stand`.
