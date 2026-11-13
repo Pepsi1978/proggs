@@ -146,7 +146,7 @@ def starte(auftrag: dict, w: dict) -> str:
     try:
         subprocess.Popen(["bash", str(Path(__file__).resolve().parents[2] / "Werkzeuge" / "adb-wlan" / "adb-wlan.sh"), "--leise", "--geraet", "alle"],
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-                         env={**os.environ, "ANDROID_HOME": os.environ.get("ANDROID_HOME") or str(Path.home() / "android-sdk")})
+                         env={**os.environ, "ANDROID_HOME": os.environ.get("ANDROID_HOME") or str(Path.home() / "android-sdk"), "ADB_WLAN_NUR_TUNNEL": "1"})
     except Exception:
         pass
     # Die genannte App sofort vorbauen: Während die Sitzung liest und ändert, wird der Gradle-Daemon warm und der build-Ordner aktuell.

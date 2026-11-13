@@ -18,6 +18,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+# Linux = Hostinger-Server: kein Heim-WLAN in Reichweite, nur der Tunnel (überschreibbar per ADB_WLAN_NUR_TUNNEL=0).
+[ -z "${ADB_WLAN_NUR_TUNNEL:-}" ] && [ "$(uname -s)" = Linux ] && ADB_WLAN_NUR_TUNNEL=1
 GERAETE_DATEI="$(cd "$(dirname "$0")" && pwd)/geraete.json"
 # reg <gerät> <feld>: liest ein Feld aus geraete.json (ein Feld je Zeile, wie im Repo abgelegt)
 reg() {
@@ -249,6 +251,8 @@ for RUNDE in 1 2; do
   if [ -n "$NETZ" ]; then
     # Nur über den WireGuard-Tunnel verbunden: im Heim-WLAN direkt ist schneller -> umsteigen
     if [ -n "$TUNNEL_IP" ] && [ -z "$(echo "$NETZ" | grep -vxF "$TUNNEL_IP:$PORT")" ]; then
+      # Server (ADB_WLAN_NUR_TUNNEL=1): kein Heim-WLAN in Reichweite, der Tunnel ist dort der einzige Weg.
+      [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] && break
       if mdns_verbinden; then
         adb disconnect "$TUNNEL_IP:$PORT" >/dev/null 2>&1
         melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
@@ -263,19 +267,19 @@ for RUNDE in 1 2; do
     break
   fi
 
-  # 2. mDNS
-  mdns_verbinden && break
+  # 2. mDNS (nicht auf dem Server: dort gibt es kein Heim-WLAN)
+  [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] || { mdns_verbinden && break; }
 
   # 3. Zuletzt bekannte IP
   LETZTE=$(tr -d '[:space:]' <"$STATE" 2>/dev/null)
-  [ -n "$LETZTE" ] && verbinde "$LETZTE:$PORT" && break
+  [ -n "$LETZTE" ] && [ "${ADB_WLAN_NUR_TUNNEL:-0}" != 1 ] && verbinde "$LETZTE:$PORT" && break
 
   # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
   #     Braucht WireGuard an auf Mac und Handy und Port 5555 (seit dem letzten Handy-Neustart).
   #     Danach nach der aktuellen WLAN-Adresse fragen: Ist das Handy im selben Netz, geht es direkt weiter (viel schneller).
   if [ -n "$TUNNEL_IP" ] && verbinde "$TUNNEL_IP:$PORT"; then
     melde "Verbunden über WireGuard-Tunnel $TUNNEL_IP:$PORT"
-    tunnel_umsteigen
+    [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] || tunnel_umsteigen
     break
   fi
 
