@@ -16,14 +16,16 @@ const dauer = (s) => s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` 
 const TERM_SCHRIFT = '"Roboto Mono","Noto Sans Mono","Droid Sans Mono","DejaVu Sans Mono","Cascadia Mono",Menlo,Consolas,monospace';
 const uhrzeit = (d) => d.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
 // Auf hellem Grund sind Gelb, Türkis und Hellgrau der Original-Paletten oft unter 3:1: xterm dunkelt sie dann selbst ab.
+// Auf Dunkel 3: Einige Original-Paletten (Tokyo Night, One Dark, Dracula) legen ANSI-Schwarz fast auf den Hintergrund.
 function termThema(s) {
-  const d = s.design || { term: { background: "#000000" } };
-  return { theme: { ...d.term }, minimumContrastRatio: s.aktiv === "hell" ? 4.5 : 1 };
+  const d = s.design || Thema.designs.find((x) => x.id === "klassisch") || { term: {} };
+  return { theme: { ...d.term }, minimumContrastRatio: s.aktiv === "hell" ? 4.5 : 3 };
 }
+const termSchluessel = (s) => `${s.design && s.design.id}/${s.aktiv}`;
 let termDesign = null;
 function themaAnwenden(s = Thema.anwenden()) {
   // xterm übernimmt ein neues Thema nur als neues Objekt, darum nur bei echtem Wechsel und immer frisch kopiert.
-  const schluessel = `${s.design && s.design.id}/${s.aktiv}`;
+  const schluessel = termSchluessel(s);
   if (term && termDesign !== schluessel) { const t = termThema(s); term.options.theme = t.theme; term.options.minimumContrastRatio = t.minimumContrastRatio; termDesign = schluessel; }
   if (seite !== "system") return;
   const naechster = s.wahl !== "auto" ? "" : s.aktiv === "hell" ? ` Dunkles Design ab ${uhrzeit(s.unter)} Uhr.` : ` Helles Design ab Sonnenaufgang.`;
@@ -37,6 +39,7 @@ function vorschau(art) {
   if (!d) return;
   const t = d.term, ui = d.ui;
   ziel.style.background = t.background;
+  ziel.style.fontFamily = TERM_SCHRIFT;
   ziel.style.color = t.foreground || "#ffffff";
   ziel.style.borderColor = ui.rand;
   const teil = (text, farbe, fett) => { const e = element("span", "", text); if (farbe) e.style.color = farbe; if (fett) e.style.fontWeight = "700"; return e; };
@@ -125,7 +128,7 @@ function aufbauen() {
   if (term) return;
   // Eigene Schriftliste: xterms Vorgabe „courier“ wird auf Android zu Cutive Mono, einer sehr breiten Schreibmaschinenschrift.
   term = new Terminal({ fontSize: 13, fontFamily: TERM_SCHRIFT, scrollback: 5000, cursorBlink: true, convertEol: false, ...termThema(Thema.anwenden()) });
-  termDesign = null;
+  termDesign = termSchluessel(Thema.anwenden());
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open($("xterm"));

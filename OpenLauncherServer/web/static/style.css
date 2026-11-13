@@ -1,5 +1,6 @@
+/* Rückfall ohne Design; die Farben setzt sonst index.html aus window.DESIGNS. */
 :root { color-scheme:dark; --grund:#10131a; --flaeche:#1a1f2b; --rand:#2b3241; --text:#e6e9ef; --leise:#97a0b3; --akzent:#6ea8fe; --auf-akzent:#0b1220; --gut:#4cc38a; --warn:#e0b252; --gefahr:#f0716b; --term:#000; --schatten:0 0 3px #000, 0 0 3px #000; }
-:root[data-thema="hell"] { color-scheme:light; --grund:#eef1f6; --flaeche:#ffffff; --rand:#cfd6e2; --text:#1b2230; --leise:#566074; --akzent:#2f6fd6; --auf-akzent:#ffffff; --gut:#1d955e; --warn:#a8760f; --gefahr:#cc3a33; --term:#ffffff; --schatten:0 0 3px #fff, 0 0 3px #fff; }
+:root[data-thema="hell"] { color-scheme:light; --schatten:0 0 3px #fff, 0 0 3px #fff; }
 * { box-sizing:border-box; }
 html,body { overscroll-behavior:none; overflow:hidden; height:100%; margin:0; background:var(--grund); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
 body { display:flex; flex-direction:column; height:100dvh; }
@@ -65,4 +66,4 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #stimme-meldung { max-width:50vw; padding:8px 12px; border-radius:10px; background:color-mix(in srgb, var(--flaeche) 93%, transparent); font-size:14px; }
 #stimme-meldung[hidden] { display:none; }
 .punkt.keine { background:var(--gut); }
-.vorschau { margin:-4px 0 14px; padding:8px 10px; border:1px solid var(--rand); border-radius:8px; font:13px/1.5 "Roboto Mono","Noto Sans Mono","Droid Sans Mono",Menlo,Consolas,monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vorschau { margin:-4px 0 14px; padding:8px 10px; border:1px solid var(--rand); border-radius:8px; font-size:13px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
