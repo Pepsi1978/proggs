@@ -66,8 +66,9 @@ org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8
 org.gradle.workers.max=2
 org.gradle.parallel=false
 kotlin.daemon.jvmargs=-Xmx1536m
-# 15 Minuten (Franks Freigabe 03.11.2026): Zwischen zwei Bauten einer Sitzung vergehen meist mehr als 5 Minuten; kalt dauert ein Bau 2 bis 4-mal so lang.
-org.gradle.daemon.idletimeout=900000
+# 24 Stunden (Franks Freigabe 13.11.2026): Der Daemon bleibt rund um die Uhr warm; vorwaermen.py startet ihn nach 24 Stunden
+# frisch neu und startet ihn, falls er fehlt. Kalt kostet ein Bau 1 bis 1,75 Minuten mehr.
+org.gradle.daemon.idletimeout=86400000
 org.gradle.caching=true
 G'
 # Nur arm64-v8a packen: Das Fold 8 kann nichts anderes, der Rest wäre reine Last im Tunnel (Jarvis: 138 → 107 MB).

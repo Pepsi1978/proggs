@@ -195,7 +195,41 @@ def lauf() -> int:
             baue(app, hash_, stand)
             stand = lies_stand()
             time.sleep(3)  # einer wartenden Sitzung die Sperre lassen
+        if not ARGS.app and not pausiert():
+            daemon_pflege(lies_stand())
     return 0
+
+
+def gradle_daemons() -> list:
+    """(pid, Sekunden seit Start) aller Gradle-Daemons dieses Benutzers."""
+    aus = subprocess.run(["ps", "-u", str(os.getuid()), "-o", "pid=,etimes=,args="], capture_output=True, text=True).stdout
+    return [(int(z.split()[0]), int(z.split()[1])) for z in aus.splitlines() if "org.gradle.launcher.daemon.bootstrap.GradleDaemon" in z]
+
+
+def daemon_pflege(stand: dict) -> None:
+    """Hält den Gradle-Daemon rund um die Uhr warm: fehlt er, wird er per Jarvis-Bau gestartet; ist er älter als 24 Stunden,
+    wird er unter der Bau-Sperre beendet und frisch gestartet (Frank, 13.11.2026: lange Laufzeiten sollen nicht verwittern)."""
+    daemons = gradle_daemons()
+    alt = [p for p, sek in daemons if sek > 24 * 3600]
+    if daemons and not alt:
+        return
+    if alt:
+        with open(BAU_SPERRE, "a+") as sperre:
+            fcntl.flock(sperre, fcntl.LOCK_EX)
+            subprocess.run(["bash", "gradlew", "--stop", "-q"], cwd=PROGGS / "Jarvis", capture_output=True, timeout=120)
+            aus = subprocess.run(["ps", "-u", str(os.getuid()), "-o", "pid=,args="], capture_output=True, text=True).stdout
+            for z in aus.splitlines():
+                if "org.jetbrains.kotlin.daemon.KotlinCompileDaemon" in z:
+                    try:
+                        os.kill(int(z.split()[0]), 15)
+                    except OSError:
+                        pass
+        log("Gradle-Daemon nach 24 Stunden beendet, starte ihn frisch")
+    else:
+        log("Kein Gradle-Daemon aktiv, starte ihn")
+    ARGS.immer = True
+    baue("Jarvis", git("rev-parse", "HEAD:Jarvis"), stand)
+    ARGS.immer = False
 
 
 def start() -> int:
