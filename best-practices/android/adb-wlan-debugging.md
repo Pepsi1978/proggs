@@ -85,3 +85,5 @@ Nur über `Werkzeuge/logcat/logcat-lesen.sh`, nie `adb logcat -d | grep` am Rech
 - Alle Rechner (PC, Mac, Server) nutzen denselben adb-Schlüssel (`SK/Android/adb-schluessel`), damit kein Gerät eine neue Freigabe braucht.
 - Server: `jarvis-adb-wachhund.timer` jede Minute (`KillMode=process`, sonst stirbt ein dabei gestarteter adb-Server samt allen Verbindungen). Jeder Jarvis-Auftrag (Server, Mac, Windows) stößt den Wachhund zusätzlich sofort an.
 - Grenze: Ohne WLAN (nur Mobilfunk) schaltet Android „Debugging über WLAN“ nicht ein; dann geht es erst wieder, sobald das Gerät in einem WLAN ist.
+- Falle: Direkt nach der Portsuche scheitert `adb connect` auf den TLS-Port („failed to connect“), Sekunden später klappt es → 5 s warten, bis zu 3 Runden. Gemessen: Server holte 5555 am Tablet allein in ~45 s zurück.
+- Installation bei gesperrtem Gerät (Bildschirm aus, „Dozing“) klappt per adb ohne Eingriff am Gerät (gemessen 13.11.2026 am Tab S9 über den Tunnel).

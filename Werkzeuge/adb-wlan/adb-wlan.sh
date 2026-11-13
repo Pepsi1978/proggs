@@ -190,9 +190,15 @@ tunnel_tls_verbinden() {
   ports=$("$py" "$(cd "$(dirname "$0")" && pwd)/tls-port-suche.py" "$TUNNEL_IP" 2>/dev/null | tr -d '\r') || return 1
   [ -z "$ports" ] && return 1
   melde "Tunnel $TUNNEL_IP: Port $PORT zu, offene Ports $(echo $ports) – suche WLAN-Debugging (TLS)"
-  for p in $ports; do
-    if verbinde "$TUNNEL_IP:$p"; then stabilisiere "$TUNNEL_IP:$p" "$TUNNEL_IP" && return 0; fi
-    adb disconnect "$TUNNEL_IP:$p" >/dev/null 2>&1
+  # Die Suche selbst lässt adbd kurz hängen (offene Probe-Verbindung ohne TLS): erst kurz warten, dann je Port mehrfach versuchen
+  # (gemessen 13.11.2026: direkt nach der Suche „failed to connect“, eine Minute später sofort verbunden).
+  local runde
+  for runde in 1 2 3; do
+    sleep 5
+    for p in $ports; do
+      if verbinde "$TUNNEL_IP:$p"; then stabilisiere "$TUNNEL_IP:$p" "$TUNNEL_IP" && return 0; fi
+      adb disconnect "$TUNNEL_IP:$p" >/dev/null 2>&1
+    done
   done
   return 1
 }
@@ -271,7 +277,7 @@ for RUNDE in 1 2; do
   [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] || { mdns_verbinden && break; }
 
   # 3. Zuletzt bekannte IP
-  LETZTE=$(tr -d '[:space:]' <"$STATE" 2>/dev/null)
+  LETZTE=$(tr -d '[:space:]' 2>/dev/null <"$STATE")
   [ -n "$LETZTE" ] && [ "${ADB_WLAN_NUR_TUNNEL:-0}" != 1 ] && verbinde "$LETZTE:$PORT" && break
 
   # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
@@ -314,6 +320,8 @@ for RUNDE in 1 2; do
 done
 
 FERTIG=$(netz_verbunden | head -1)
+# Direkt nach „adb tcpip“ antwortet die erste Shell über den Tunnel manchmal erst nach Sekunden: einmal nachfassen.
+[ -z "$FERTIG" ] && { sleep 4; FERTIG=$(netz_verbunden | head -1); }
 # Ein Zweitgerät ist oft einfach aus: Der Wachhund meldet das nur beim Wechsel, nicht alle zwei Minuten.
 WEG_MARKE="$HOME/.adb-wlan${ZUSATZ}-nicht-erreichbar"
 if [ -n "$FERTIG" ]; then
