@@ -11,7 +11,15 @@ struct PromptEintrag: Identifiable, Hashable {
     var erstellt: Int64 = 0
     /// Die Jarvis-Version, von der der Prompt stammt.
     var quelle = ""
+    /// Letzte Änderung laut Abgleich; 0 = unbekannt.
+    var geaendert: Int64 = 0
     var id: Int64 { erstellt != 0 ? erstellt : Int64(nummer) }
+    /// „ · geändert 13.11.2026, 20:15 Uhr“ nach einer Änderung (wie am Handy), sonst der Anlagezeitpunkt.
+    var zeitText: String {
+        let g = ErinnerungZeit.gespeichert(geaendert)
+        if geaendert - erstellt > 60_000, !g.isEmpty { return " · geändert " + String(g.dropFirst(3)) }
+        return ErinnerungZeit.gespeichert(erstellt)
+    }
 }
 
 /// Eigene Ansicht, damit Tippen im Entwurf nicht jedes Mal die ganze Prompt-Liste neu auswertet.
@@ -83,7 +91,7 @@ struct PromptsAnsicht: View {
                             Text("\(p.nummer)").font(.jarvis(18, .heavy)).foregroundStyle(Farbe.akzent).frame(width: 30)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(p.titel.isEmpty ? "Prompt \(p.nummer)" : p.titel).font(.jarvis(14, .semibold))
-                                Text("Von \(p.quelle)\(ErinnerungZeit.gespeichert(p.erstellt))").font(.jarvis(11)).foregroundStyle(Farbe.text3).lineLimit(1)
+                                Text("Von \(p.quelle)\(p.zeitText)").font(.jarvis(11)).foregroundStyle(Farbe.text3).lineLimit(1)
                                 Text(p.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(offen?.id == p.id ? nil : 2).textSelection(.enabled)
                             }
                             Spacer()

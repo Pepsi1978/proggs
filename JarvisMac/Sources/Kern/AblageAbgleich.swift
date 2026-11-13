@@ -743,7 +743,7 @@ final class AblageAbgleich {
                 neu.append(AblageEintrag(id: id, titel: w["titel"] as? String ?? "", geaendert: Date(timeIntervalSince1970: Double(Self.zahl(d["geaendert"])) / 1000), hatText: sha != nil,
                                          recherche: w["recherche"] as? Bool ?? false, dateien: dateien, textSha: sha, textGroesse: Int(Self.zahl(w["text_groesse"])), quelle: Self.quellenName(w["quelle"])))
             case "prompt":
-                ps.append(PromptEintrag(nummer: 0, titel: w["titel"] as? String ?? "", text: w["text"] as? String ?? "", erstellt: Int64(id) ?? 0, quelle: Self.quellenName(w["quelle"])))
+                ps.append(PromptEintrag(nummer: 0, titel: w["titel"] as? String ?? "", text: w["text"] as? String ?? "", erstellt: Int64(id) ?? 0, quelle: Self.quellenName(w["quelle"]), geaendert: Self.zahl(d["geaendert"])))
             case "erinnerung":
                 ers.append(Erinnerung.aus(id: id, w, geaendert: Self.zahl(d["geaendert"])))
             case "quittung":

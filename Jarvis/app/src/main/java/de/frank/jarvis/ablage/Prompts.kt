@@ -17,8 +17,10 @@ import java.io.FileNotFoundException
 data class Prompt(val nummer: Int, val text: String, val erstellt: Long, val titel: String = "", val quelle: String = "", val geaendert: Long = 0L) {
     /** Leer = aus der Zeit vor dem Abgleich, also vom Handy. */
     val quelleName: String get() = quelle.ifBlank { AblageQuellen.HANDY }
-    /** Quelle mit Anlagezeitpunkt für die Anzeige. */
-    val herkunftText: String get() = Herkunft.text(quelleName, erstellt)
+    /** Wurde der Text nach dem Anlegen geändert? Eine Minute Spielraum für Titel und Abgleich direkt nach dem Speichern. */
+    val wurdeGeaendert: Boolean get() = geaendert - erstellt > 60_000L
+    /** Quelle mit Zeitpunkt für die Anzeige: nach einer Änderung „geändert“ mit deren Zeit, sonst die Anlage. So sieht Frank sofort, ob ein Prompt frisch ist. */
+    val herkunftText: String get() = if (wurdeGeaendert) Herkunft.text(quelleName, geaendert).replaceFirst(" · ", " · geändert ") else Herkunft.text(quelleName, erstellt)
 }
 
 /**

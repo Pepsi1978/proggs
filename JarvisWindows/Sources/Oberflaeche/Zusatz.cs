@@ -24,6 +24,11 @@ public sealed record PromptEintrag
     /// <summary>Die Jarvis-Version, von der der Prompt stammt.</summary>
     public string Quelle { get; set; } = "";
     public long Id => Erstellt != 0 ? Erstellt : Nummer;
+    /// <summary>Letzte Änderung laut Abgleich; 0 = unbekannt.</summary>
+    public long Geaendert { get; init; }
+    /// <summary>„ · geändert 13.11.2026, 20:15 Uhr“ nach einer Änderung (wie am Handy), sonst der Anlagezeitpunkt.</summary>
+    public string ZeitText => Geaendert - Erstellt > 60_000 && ErinnerungZeit.Gespeichert(Geaendert) is { Length: > 0 } g
+        ? " · geändert " + g[3..] : ErinnerungZeit.Gespeichert(Erstellt);
 }
 
 /// <summary>Eigene Ansicht, damit Tippen im Entwurf nicht jedes Mal die ganze Prompt-Liste neu auswertet.</summary>
@@ -128,7 +133,7 @@ public sealed class PromptsAnsicht : LebendeAnsicht
         nummer.TextAlignment = TextAlignment.Center;
         var oben = Klick(HOben(8, nummer, Fuell(V(4,
             T(p.Titel.Length == 0 ? $"Prompt {p.Nummer}" : p.Titel, 14, FontWeights.SemiBold),
-            T($"Von {p.Quelle}{ErinnerungZeit.Gespeichert(p.Erstellt)}", 11, null, Farbe.Text3, 1),
+            T($"Von {p.Quelle}{p.ZeitText}", 11, null, Farbe.Text3, 1),
             text))), () => { offen = offen?.Id == p.Id ? null : p; Neu(); });
         return Karte(V(8, oben, H(8,
             Spacer(),

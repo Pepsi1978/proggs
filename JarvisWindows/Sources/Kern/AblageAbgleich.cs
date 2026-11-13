@@ -906,7 +906,7 @@ public sealed class AblageAbgleich : Beobachtbar
     private void NeuAufbauen()
     {
         var neu = new List<AblageEintrag>();
-        var ps = new List<(string titel, string text, long erstellt, string quelle)>();
+        var ps = new List<(string titel, string text, long erstellt, string quelle, long geaendert)>();
         var erinnerungen = new List<Erinnerung>();
         var quittungen = new Dictionary<string, Quittung>();
         foreach (var d in docs.Values)
@@ -927,7 +927,7 @@ public sealed class AblageAbgleich : Beobachtbar
                         w.Wahr("recherche") ?? false, dateien, sha, (int)Zahl(w.GetValueOrDefault("text_groesse")), QuellenName(w.GetValueOrDefault("quelle"))));
                     break;
                 case "prompt":
-                    ps.Add((w.Text("titel") ?? "", w.Text("text") ?? "", long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var e) ? e : 0, QuellenName(w.GetValueOrDefault("quelle"))));
+                    ps.Add((w.Text("titel") ?? "", w.Text("text") ?? "", long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var e) ? e : 0, QuellenName(w.GetValueOrDefault("quelle")), Zahl(d.GetValueOrDefault("geaendert"))));
                     break;
                 case "erinnerung":
                     erinnerungen.Add(Erinnerung.Aus(id, w, Zahl(d.GetValueOrDefault("geaendert"))));
@@ -946,7 +946,7 @@ public sealed class AblageAbgleich : Beobachtbar
         var sortiert = ps.OrderBy(p => platz.TryGetValue(p.erstellt, out var x) ? 0 : 1)
             .ThenBy(p => platz.TryGetValue(p.erstellt, out var x) ? x : 0)
             .ThenBy(p => p.erstellt)
-            .Select((p, i) => new PromptEintrag(i + 1, p.titel, p.text, p.erstellt, p.quelle));
+            .Select((p, i) => new PromptEintrag(i + 1, p.titel, p.text, p.erstellt, p.quelle) { Geaendert = p.geaendert });
         Eintraege = new ObservableCollection<AblageEintrag>(neu.OrderByDescending(e => e.Geaendert));
         Prompts = new ObservableCollection<PromptEintrag>(sortiert);
         AufbauStand += 1;
