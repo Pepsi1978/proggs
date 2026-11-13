@@ -12,51 +12,23 @@ const PROFIL_NAME = { minimal: "Minimal", standard: "Standard", strict: "Strikt"
 const element = (art, klasse, text) => { const e = document.createElement(art); if (klasse) e.className = klasse; if (text !== undefined) e.textContent = text; return e; };
 const dauer = (s) => s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} h`;
 
-// ---- Darstellung: hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin
+// ---- Darstellung: Wahl und Sonnenstand stehen in index.html (window.Thema), hier nur Terminal und Anzeige
 const TERM_SCHRIFT = '"Roboto Mono","Noto Sans Mono","Droid Sans Mono","DejaVu Sans Mono","Cascadia Mono",Menlo,Consolas,monospace';
-const BERLIN = { breite: 52.52, laenge: 13.405 };
 const TERM_HELL = {
   background: "#ffffff", foreground: "#1f2328", cursor: "#1f2328", cursorAccent: "#ffffff", selectionBackground: "#b6d6fd",
   black: "#24292f", red: "#cf222e", green: "#116329", yellow: "#7d4e00", blue: "#0969da", magenta: "#8250df", cyan: "#1b7c83", white: "#6e7781",
   brightBlack: "#57606a", brightRed: "#a40e26", brightGreen: "#1a7f37", brightYellow: "#633c01", brightBlue: "#218bff", brightMagenta: "#a475f9", brightCyan: "#3192aa", brightWhite: "#8c959f",
 };
-let themaWahl = "auto";
-try { themaWahl = localStorage.getItem("thema") || "auto"; } catch { /* nur Komfort */ }
-// Sonnenstand nach der Sonnenaufgangsgleichung (NOAA, genau auf wenige Minuten); Rückgabe als absolute Zeitpunkte.
-function sonnenzeiten(tag) {
-  const rad = Math.PI / 180;
-  const mittag = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 12);
-  const n = Math.round(mittag.getTime() / 864e5 + 2440587.5 - 2451545.0008);
-  const j = n - BERLIN.laenge / 360;
-  const m = (357.5291 + 0.98560028 * j) % 360;
-  const c = 1.9148 * Math.sin(m * rad) + 0.02 * Math.sin(2 * m * rad) + 0.0003 * Math.sin(3 * m * rad);
-  const l = (m + c + 180 + 102.9372) % 360;
-  const transit = 2451545 + j + 0.0053 * Math.sin(m * rad) - 0.0069 * Math.sin(2 * l * rad);
-  const dekl = Math.asin(Math.sin(l * rad) * Math.sin(23.4397 * rad));
-  const w = Math.acos((Math.sin(-0.833 * rad) - Math.sin(BERLIN.breite * rad) * Math.sin(dekl)) / (Math.cos(BERLIN.breite * rad) * Math.cos(dekl))) / rad;
-  const datum = (jd) => new Date((jd - 2440587.5) * 864e5);
-  return { auf: datum(transit - w / 360), unter: datum(transit + w / 360) };
-}
 const uhrzeit = (d) => d.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
-function aktivesThema() {
-  if (themaWahl === "hell" || themaWahl === "dunkel") return themaWahl;
-  const jetzt = new Date(), { auf, unter } = sonnenzeiten(jetzt);
-  return jetzt >= auf && jetzt < unter ? "hell" : "dunkel";
-}
-function termThema() {
-  return aktivesThema() === "hell"
+function termThema(aktiv = document.documentElement.dataset.thema) {
+  return aktiv === "hell"
     ? { theme: TERM_HELL, minimumContrastRatio: 4.5 }
     : { theme: { background: "#000000" }, minimumContrastRatio: 1 };
 }
-function themaAnwenden() {
-  const thema = aktivesThema();
-  if (document.documentElement.dataset.thema !== thema) {
-    document.documentElement.dataset.thema = thema;
-    if (term) { const t = termThema(); term.options.theme = t.theme; term.options.minimumContrastRatio = t.minimumContrastRatio; }
-  }
-  const { auf, unter } = sonnenzeiten(new Date());
-  const info = $("thema-info");
-  if (info) info.textContent = `Heute in Berlin: Sonnenaufgang ${uhrzeit(auf)} Uhr, Sonnenuntergang ${uhrzeit(unter)} Uhr. Aktiv: ${thema === "hell" ? "Hell" : "Dunkel"}.`;
+function themaAnwenden(s = Thema.anwenden()) {
+  const t = termThema(s.aktiv);
+  if (term && term.options.minimumContrastRatio !== t.minimumContrastRatio) { term.options.theme = t.theme; term.options.minimumContrastRatio = t.minimumContrastRatio; }
+  if (seite === "system") $("thema-info").textContent = `Heute in Berlin: Sonnenaufgang ${uhrzeit(s.auf)} Uhr, Sonnenuntergang ${uhrzeit(s.unter)} Uhr. Aktiv: ${s.aktiv === "hell" ? "Hell" : "Dunkel"}.`;
 }
 
 // ---- Reiter
@@ -71,7 +43,7 @@ function zeige(name) {
   document.querySelectorAll(".seite").forEach((s) => s.classList.toggle("an", s.id === name));
   if (name === "terminal") { setTimeout(passen, 30); }
   if (name === "sitzungen") ladeSitzungen();
-  if (name === "system") ladeSystem();
+  if (name === "system") { ladeSystem(); themaAnwenden(); }
   if (name === "browser") browserOeffnen(); else browserLoesen();
   if (name !== "terminal") aufnahmeAbbrechen();
 }
@@ -532,7 +504,9 @@ function browserLoesen() {
   bild.removeAttribute("src");
 }
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) { browserLoesen(); aufnahmeAbbrechen(); } else if (seite === "browser") browserOeffnen();
+  if (document.hidden) { browserLoesen(); aufnahmeAbbrechen(); return; }
+  themaAnwenden();
+  if (seite === "browser") browserOeffnen();
 });
 
 // ---- Sprache (TVO): Nur in Jarvis, das Handy nimmt auf und wandelt um. Erscheint von selbst, sobald ein Terminal offen ist, wie das Overlay an den Rechnern.
@@ -613,16 +587,9 @@ $("update").addEventListener("click", async () => { const { name } = await api("
 
 // Fehlgeschlagene Knöpfe und Abrufe sichtbar machen, statt dass beim Tippen nichts geschieht.
 window.addEventListener("unhandledrejection", (e) => { const m = $("auslastung"); m.textContent = `Fehler: ${e.reason && e.reason.message || e.reason}`; zeige("sitzungen"); });
-// Erst hier: themaAnwenden() liest „term“, das weiter oben mit let angelegt wird.
-themaAnwenden();
-$("thema-wahl").value = themaWahl;
-$("thema-wahl").addEventListener("change", (e) => {
-  themaWahl = e.target.value;
-  try { localStorage.setItem("thema", themaWahl); } catch { /* nur Komfort */ }
-  themaAnwenden();
-});
+$("thema-wahl").value = Thema.wahl();
+$("thema-wahl").addEventListener("change", (e) => themaAnwenden(Thema.waehlen(e.target.value)));
 setInterval(themaAnwenden, 60000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) themaAnwenden(); });
 ladeSitzungen();
 ladeKatalog();
 setInterval(() => { if (seite === "sitzungen") ladeSitzungen(); else if (seite === "terminal") ladeLinks(); else if (seite === "system") ladeSystem(); }, 4000);

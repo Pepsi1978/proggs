@@ -6,6 +6,42 @@
 <title>Server-Konsole</title>
 <link rel="stylesheet" href="/static/xterm.css?v=5.5.0">
 <link rel="stylesheet" href="/static/style.css">
+<script>
+// Thema vor dem ersten Zeichnen setzen: Sonst blitzt die Seite bei Hell erst dunkel auf. app.js nutzt window.Thema weiter.
+(() => {
+  const ERLAUBT = ["auto", "hell", "dunkel"];
+  const BREITE = 52.52, LAENGE = 13.405, rad = Math.PI / 180;
+  let wahl = "auto";
+  try { const w = localStorage.getItem("thema"); if (ERLAUBT.includes(w)) wahl = w; } catch { /* nur Komfort */ }
+  // Sonnenaufgangsgleichung (NOAA, auf wenige Minuten genau) für den Berliner Kalendertag, egal in welcher Zeitzone das Gerät steht.
+  function sonne(jetzt) {
+    const [j0, m0, t0] = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(jetzt).split("-").map(Number);
+    const n = Math.round(Date.UTC(j0, m0 - 1, t0, 12) / 864e5 + 2440587.5 - 2451545.0008);
+    const j = n - LAENGE / 360;
+    const m = (357.5291 + 0.98560028 * j) % 360;
+    const c = 1.9148 * Math.sin(m * rad) + 0.02 * Math.sin(2 * m * rad) + 0.0003 * Math.sin(3 * m * rad);
+    const l = (m + c + 180 + 102.9372) % 360;
+    const transit = 2451545 + j + 0.0053 * Math.sin(m * rad) - 0.0069 * Math.sin(2 * l * rad);
+    const dekl = Math.asin(Math.sin(l * rad) * Math.sin(23.4397 * rad));
+    const w = Math.acos((Math.sin(-0.833 * rad) - Math.sin(BREITE * rad) * Math.sin(dekl)) / (Math.cos(BREITE * rad) * Math.cos(dekl))) / rad;
+    const datum = (jd) => new Date((jd - 2440587.5) * 864e5);
+    return { auf: datum(transit - w / 360), unter: datum(transit + w / 360) };
+  }
+  function stand() {
+    const jetzt = new Date(), s = sonne(jetzt);
+    const aktiv = wahl !== "auto" ? wahl : jetzt >= s.auf && jetzt < s.unter ? "hell" : "dunkel";
+    return { wahl, aktiv, auf: s.auf, unter: s.unter };
+  }
+  function anwenden() { const s = stand(); document.documentElement.dataset.thema = s.aktiv; return s; }
+  function waehlen(neu) {
+    wahl = ERLAUBT.includes(neu) ? neu : "auto";
+    try { localStorage.setItem("thema", wahl); } catch { /* nur Komfort */ }
+    return anwenden();
+  }
+  window.Thema = { anwenden, waehlen, wahl: () => wahl };
+  anwenden();
+})();
+</script>
 </head>
 <body>
 <nav id="reiter">
