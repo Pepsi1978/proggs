@@ -239,14 +239,46 @@ def ordner_zu(name: str) -> str:
     return ""
 
 
-def java_befehlszeilen():
-    """Befehlszeilen aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann gilt: lieber nicht bauen)."""
+def java_prozesse():
+    """(pid, Sekunden seit Start, Befehlszeile) aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann: nicht bauen)."""
     if WINDOWS:
         e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
-                 "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { $_.CommandLine }"], timeout=60)
+                 "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { "
+                 "'{0}|{1}|{2}' -f $_.ProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
     else:
-        e = run(["ps", "-u", str(os.getuid()), "-o", "args="], timeout=20)
-    return [z for z in e.stdout.splitlines() if z.strip()] if e.returncode == 0 else None
+        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,etimes=,args="], timeout=20)
+    if e.returncode != 0:
+        return None
+    liste = []
+    for z in e.stdout.splitlines():
+        teile = z.split("|", 2) if WINDOWS else z.split(None, 2)
+        if len(teile) == 3 and teile[0].strip().isdigit() and teile[1].strip().isdigit():
+            liste.append((int(teile[0]), int(teile[1]), teile[2]))
+    return liste
+
+
+def java_befehlszeilen():
+    p = java_prozesse()
+    return None if p is None else [z for _, _, z in p]
+
+
+# cod.exe, cod22-cod.exe, cod24.exe …, aber nie codex.exe (Codex CLI).
+SPIEL_EXE = re.compile(r"^(cod|cod\d\d\S*|modernwarfare\S*|blackops\S*|warzone\S*)\.exe$", re.I)
+
+
+def spiel_laeuft() -> bool:
+    """Steam-Spiel aktiv (Steam setzt RunningAppID) oder ein Call-of-Duty-Prozess: dann volle Leistung fürs Spiel."""
+    if not WINDOWS:
+        return False
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as k:
+            if int(winreg.QueryValueEx(k, "RunningAppID")[0] or 0) != 0:
+                return True
+    except OSError:
+        pass
+    aus = run(["tasklist", "/fo", "csv", "/nh"], timeout=30).stdout
+    return any(SPIEL_EXE.match(z.split('","')[0].strip('"')) for z in aus.splitlines() if z)
 
 
 def fremder_bau_laeuft() -> bool:
@@ -334,26 +366,56 @@ def baue(app: str) -> bool:
     return ok
 
 
-def daemon_warm() -> None:
-    """Kein Gradle-Daemon aktiv (Rechnerstart, JDK-Update): per Jarvis-Bau einen starten. Lebensdauer 24 h Leerlauf steht in
-    ~/.gradle/gradle.properties (einrichten.ps1)."""
-    if not (PROGGS / "Jarvis" / "gradlew").is_file() or git("status", "--porcelain", "--", "Jarvis"):
+def daemon_app() -> str:
+    """App, deren Bau den gemeinsamen Daemon (Jarvis-Einstellungen) startet: Jarvis, sonst eine saubere App mit denselben jvmargs."""
+    ziel = jvmargs("Jarvis")
+    kandidaten = ["Jarvis"] + [d.name for d in sorted(PROGGS.iterdir()) if d.name != "Jarvis" and (d / "gradlew").is_file()
+                               and (d / "app" / "build.gradle.kts").is_file() and jvmargs(d.name) == ziel]
+    for app in kandidaten:
+        if (PROGGS / app / "gradlew").is_file() and not git("status", "--porcelain", "--", app) \
+                and time.time() - commitzeit(app) >= RUHE_NACH_COMMIT:
+            return app
+    return ""
+
+
+def daemon_pflege() -> None:
+    """Wie am Server (Frank, 13.11.2026): Der Gradle-Daemon läuft ab dem Windows-Start (Anmelde-Auslöser) rund um die Uhr.
+    Fehlt er, startet ihn ein Bau; ist er älter als 24 Stunden, wird er unter der Bau-Sperre beendet (samt Kotlin-Daemon) und
+    frisch gestartet. Leerlauf-Grenze 24 h steht in ~/.gradle/gradle.properties (einrichten.ps1)."""
+    prozesse = java_prozesse()
+    if prozesse is None:
         return
-    if time.time() - commitzeit("Jarvis") < RUHE_NACH_COMMIT:
+    daemons = [(pid, alter) for pid, alter, z in prozesse if "GradleDaemon" in z]
+    alt = [pid for pid, alter in daemons if alter > 24 * 3600]
+    if daemons and not alt:
         return
-    zeilen = java_befehlszeilen()
-    if zeilen is None or any("GradleDaemon" in z for z in zeilen):
+    app = daemon_app()
+    if not app:
         return
-    log("Kein Gradle-Daemon aktiv, starte ihn mit einem Jarvis-Bau")
+    if alt:
+        with Sperre(BAU_SPERRE):
+            if fremder_bau_laeuft():
+                return
+            stop = (["cmd", "/c", "gradlew.bat"] if WINDOWS else ["bash", "gradlew"]) + ["--stop", "-q"]
+            run(stop, cwd=PROGGS / app, timeout=120)
+            for pid, _, z in java_prozesse() or []:
+                if "KotlinCompileDaemon" in z or ("GradleDaemon" in z and pid in alt):
+                    try:
+                        os.kill(pid, 15)
+                    except OSError:
+                        pass
+        log("Gradle-Daemon nach 24 Stunden beendet, starte ihn frisch")
+    else:
+        log(f"Kein Gradle-Daemon aktiv, starte ihn mit einem {app}-Bau")
     ARGS.immer = True
-    baue("Jarvis")
+    baue(app)
     ARGS.immer = False
 
 
 def lauf() -> int:
     einzeln = LAUF_SPERRE if not ARGS.app else ORDNER / f"lauf-{ARGS.app}.lock"
     with Sperre(einzeln, warten=0) as frei:
-        if not frei or akkubetrieb():
+        if not frei or akkubetrieb() or spiel_laeuft():
             return 0
         if ARGS.app:
             baue(ARGS.app)
@@ -369,13 +431,13 @@ def lauf() -> int:
                 continue  # eine Sitzung arbeitet daran
             if jetzt - commitzeit(app) < RUHE_NACH_COMMIT:
                 continue  # frisch committet: die Sitzung baut und installiert gleich selbst
-            if pausiert() or fremder_bau_laeuft():
-                log("Pause: eine Sitzung baut, Vorwärmen setzt beim nächsten Lauf fort")
+            if pausiert() or fremder_bau_laeuft() or spiel_laeuft():
+                log("Pause: eine Sitzung baut oder ein Spiel läuft, Vorwärmen setzt beim nächsten Lauf fort")
                 return 0
             baue(app)
             stand = lies_stand()
-        if not pausiert() and not fremder_bau_laeuft():
-            daemon_warm()
+        if not pausiert() and not fremder_bau_laeuft() and not spiel_laeuft():
+            daemon_pflege()
     return 0
 
 

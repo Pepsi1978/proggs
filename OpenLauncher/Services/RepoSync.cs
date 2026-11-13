@@ -62,6 +62,7 @@ public static class RepoSync
             var after = await RunGitAsync(repo, TimeSpan.FromSeconds(5), "rev-parse", "HEAD");
             var message = before.Output == after.Output ? "Repo war aktuell" : "Repo aktualisiert";
             log.Info("RepoSync", "PullAsync", message, new { before = before.Output, after = after.Output });
+            if (before.Output != after.Output) StarteVorwaermen();
             return new Result(true, message);
         }
         catch (Exception ex)
@@ -98,6 +99,26 @@ public static class RepoSync
         {
             log.Error("RepoSync", "CommitAndPushFileAsync", ex, new { filePath });
             return new Result(false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Neuer Stand vom Repo: die Aufgabe "Vorwaermen" (Werkzeuge/vorwaermen) sofort anstoßen, statt bis zu 10 Minuten
+    /// auf ihren Takt zu warten. Sie baut die geänderten Apps vor; der Sitzungsbau wartet per Hook darauf.
+    /// Über die Aufgabenplanung, damit kein Langläufer Handles des Launchers erbt.
+    /// </summary>
+    private static void StarteVorwaermen()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            var psi = new ProcessStartInfo("schtasks") { UseShellExecute = false, CreateNoWindow = true };
+            foreach (var a in new[] { "/run", "/tn", "Vorwaermen" }) psi.ArgumentList.Add(a);
+            Process.Start(psi)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("RepoSync", "StarteVorwaermen", ex.Message);
         }
     }
 

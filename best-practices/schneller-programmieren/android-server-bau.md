@@ -119,7 +119,9 @@ Umgesetzt in `Werkzeuge/vorwaermen/` (Python, plattformneutral; Einrichtung `ein
 |---|---|
 | Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen`: Anmeldung (+2 min) und alle 10 min, `fetch` + `merge --ff-only` wie `RepoSync.cs`, dann Vorbau |
 | Auftragsstart-Vorbau | PC-Brücke `Starte-Sitzung` startet `vorwaermen.py lauf --app <App> --immer` |
-| Daemon 24 h warm | `org.gradle.daemon.idletimeout=86400000` in `~/.gradle/gradle.properties`; fehlt ein Daemon, startet ein Jarvis-Bau ihn |
+| Daemon 24 h warm | `org.gradle.daemon.idletimeout=86400000` in `~/.gradle/gradle.properties`; Anmelde-Auslöser nach 30 s startet ihn gleich nach dem Windows-Start (Jarvis-Bau, sonst eine saubere App mit denselben jvmargs); älter als 24 h → unter der Bau-Sperre `--stop` + Kotlin-Daemon beenden und frisch starten (`daemon_pflege`, wie am Server) |
+| Repo-Abgleich beim CLI-Start | OpenLauncher `RepoSync.PullAsync` stößt nach einem neuen Stand `schtasks /run /tn Vorwaermen` an (ab 1.24.121) |
+| — | Kein Vorbau, solange ein Steam-Spiel läuft (`HKCU\Software\Valve\Steam\RunningAppID` ≠ 0) oder ein Call-of-Duty-Prozess (`cod.exe`, `cod24…`; Muster nie `cod*`, das trifft `codex.exe`) |
 | Bau-Sperre über Hook | `build-ablauf-guard.py` setzt unter Windows `python …/vorwaermen.py warte;` vor jeden Gradle-Bau (Bash und PowerShell), `apk-update.ps1` ruft es selbst: pausiert 20 min, wartet auf einen laufenden Vorbau. Zusätzlich setzt das Skript aus, solange ein Gradle-Client läuft (`gradle-wrapper.jar` in der Befehlszeile), und überspringt Apps mit offenen Änderungen oder Commit jünger als 10 min |
 | Ausgaben | Nie über Pipes (Temp-Datei): Ein dabei gestarteter Daemon oder adb-Server erbte sonst die Pipe, und unter Windows hängt `subprocess.run` dann auch nach dem Zeitlimit |
 | Apps vom Handy | Pakete von **allen** verbundenen Geräten (Handy + Tablet), keine Ausschlussliste (am PC bauen auch Wecker und BestJournal) |

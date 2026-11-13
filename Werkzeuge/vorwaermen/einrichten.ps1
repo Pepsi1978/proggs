@@ -1,6 +1,6 @@
 # Richtet das Vorwärmen am Windows-PC ein (mehrfach ausführbar):
 # 1. Gradle-Daemon bleibt 24 Stunden im Leerlauf warm (~/.gradle/gradle.properties, wie am Server).
-# 2. Aufgabe "Vorwaermen" in der Aufgabenplanung: bei der Anmeldung (2 min verzögert) und alle 10 Minuten.
+# 2. Aufgabe "Vorwaermen" in der Aufgabenplanung: bei der Anmeldung (30 s verzögert, startet den Daemon) und alle 10 Minuten.
 #    Jeder Lauf spult das Repo vor (nur Fast-Forward) und baut geänderte Apps von Handy/Tablet nach.
 # Danach den ersten Lauf mit Start-ScheduledTask anstoßen, nicht aus einer Agenten-Shell (Pipe-Vererbung).
 $ErrorActionPreference = 'Stop'
@@ -19,7 +19,7 @@ $skript = Join-Path $PSScriptRoot 'vorwaermen.py'
 
 $aktion = New-ScheduledTaskAction -Execute $pyw -Argument "`"$skript`" lauf"
 $anmeldung = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
-$anmeldung.Delay = 'PT2M'
+$anmeldung.Delay = 'PT30S'  # Daemon gleich nach dem Windows-Start (Frank, 13.11.2026)
 $takt = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 10)
 $einst = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
