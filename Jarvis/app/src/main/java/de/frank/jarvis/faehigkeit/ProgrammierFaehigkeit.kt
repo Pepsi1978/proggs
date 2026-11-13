@@ -122,7 +122,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }.getOrElse { "PC: unbekannt, der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName})." }
         val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
-        val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
+        val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: am Mac, wenn er an ist (Codex CLI oder OpenCode), sonst Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
             else "Sol 6.1 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
         "$pc ${tunnel.await()} $cloud $sol"
     }
@@ -707,8 +707,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (HandyUse.verlangt(auftrag)) HandyUse.KEIN_RECHNER else fehltFuer(modell, cli)
 
     /**
-     * Fragt gerade ein Rechner ab, der Sol nimmt (Windows-PC oder freier Hostinger-Server, je nach [ziel])? Ist nur der Mac da, startet Opus
-     * wie bisher ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
+     * Fragt gerade ein Rechner ab, der Sol nimmt (Windows-PC, Mac mit Sol-fähiger Brücke oder freier Hostinger-Server, je nach [ziel])?
+     * Ist nur ein Mac ohne Sol da, startet Opus wie bisher ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
      */
     private suspend fun rechnerDa(ziel: String): Boolean = withContext(Dispatchers.IO) {
         runCatching {
@@ -718,6 +718,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { r ->
                     r.optBoolean("da") && when (r.optString("rang")) {
                         "haupt" -> ziel != "server"
+                        // Der Mac nimmt Sol, wenn seine Brücke es dem Relay meldet (Codex CLI oder OpenCode, seit 13.11.2026).
+                        "ersatz" -> ziel != "server" && r.optBoolean("sol") && !r.optBoolean("belegt")
                         "server" -> ziel != "pc" && !r.optBoolean("belegt")
                         else -> false
                     }

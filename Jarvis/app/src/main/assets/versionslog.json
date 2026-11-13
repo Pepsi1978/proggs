@@ -678,6 +678,7 @@
     {"versionCode": 673, "versionName": "1.8.662", "stand": "13.11.2026, 20:14 Uhr", "notiz": "Alle Knöpfe der Staubsauger-Karte sind jetzt gleich groß."},
     {"versionCode": 674, "versionName": "1.8.663", "stand": "13.11.2026, 20:17 Uhr", "notiz": "Ältere Prompts ohne gespeicherte Zeit zeigen kein falsches Datum mehr, die Zeile mit Gerät und Zeit bleibt einzeilig."},
     {"versionCode": 675, "versionName": "1.8.664", "stand": "13.11.2026, 20:20 Uhr", "notiz": "Geänderte Prompts zeigen „geändert“ mit Datum und Uhrzeit der letzten Änderung statt der Anlagezeit, auf Handy, Tablet, PC und Mac."},
-    {"versionCode": 676, "versionName": "1.8.665", "stand": "13.11.2026, 20:23 Uhr", "notiz": "Alle Symbole der Staubsauger-Knöpfe stehen auf derselben Höhe, auch bei Reinigen und Zur Station."}
+    {"versionCode": 676, "versionName": "1.8.665", "stand": "13.11.2026, 20:23 Uhr", "notiz": "Alle Symbole der Staubsauger-Knöpfe stehen auf derselben Höhe, auch bei Reinigen und Zur Station."},
+    {"versionCode": 677, "versionName": "1.8.666", "stand": "13.11.2026, 21:51 Uhr", "notiz": "Sol 6.1 lässt sich auch starten, wenn nur der Mac an ist: Jarvis erkennt den Sol-fähigen Mac und bietet Sol dann wie beim Windows-PC an."}
 ]
 }

@@ -1473,7 +1473,9 @@ class PcBruecke:
         for rang, platz in self.plaetze.items():
             if platz["zuletzt"]:
                 rechner.append({"rechner": platz["rechner"], "rang": rang, "da": jetzt - platz["zuletzt"] < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - platz["zuletzt"]),
-                                "belegt": platz["belegt"]})
+                                "belegt": platz["belegt"],
+                                # Kann diese Bruecke Sol 6.1 selbst starten (Mac ab 13.11.2026 per X-Jarvis-Sol)? Der Windows-PC immer.
+                                "sol": rang == "haupt" or jetzt - self.sol_zuletzt.get(rang, -PC_FRISCH_S) < PC_FRISCH_S})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
         # ?vorrang=windows: Franks Reihenfolge aus der App (Standard Mac zuerst).
         # ?server=zuletzt|mitte|zuerst|nur: Franks Wahl fuer den Server (ohne Angabe wie bisher nur Mac und Windows).
