@@ -96,7 +96,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}"
             else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.batterie?.let { ", Batterie $it %" } ?: "")
-        } + fehlend.map { "- $it: nicht in deinem SwitchBot-Konto gefunden (Name in der SwitchBot-App prüfen)." }
+        }
         val vorweg = if (nur.isNotEmpty() && !einzeln) "Einen Sensor „$nur“ gibt es nicht, hier alle.\n" else ""
         val text = vorweg + "Abgerufen um $uhr Uhr aus der SwitchBot-Cloud (sie nennt keine eigene Messzeit):\n" + zeilen.joinToString("\n")
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
@@ -104,7 +104,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 if (z.problem != null) put("problem", z.problem)
                 else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.batterie?.let { put("batterie_prozent", it) } }
             }
-        } + fehlend.map { JSONObject().put("name", it).put("problem", "nicht im SwitchBot-Konto gefunden") }))
+        }))
         Ergebnis(text, fehler = sensoren.all { it.problem != null }, struktur = struktur)
     }
 
@@ -182,7 +182,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** Thermo-Hygrometer: Meter, MeterPlus, MeterPro, WoIOSensor (Außensensor). Hubs zählen nicht als Sensor. */
         private val SENSORTYP = Regex("meter|iosensor", RegexOption.IGNORE_CASE)
-        /** Franks Sensoren laut ihm (Auftrag 13.11.2026); fehlt einer in der Cloud, sagt Jarvis das ausdrücklich. */
+        /** Franks Sensoren laut ihm (Auftrag 13.11.2026); fehlt einer in der Liste, wird sie beim nächsten Abruf frisch geholt (keine eigene Zeile, Frank 13.11.2026). */
         private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer")
         private const val LISTE_GILT_MS = 60 * 60 * 1000L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
