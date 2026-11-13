@@ -248,7 +248,7 @@ struct GuthabenAnsicht: View {
                     .buttonStyle(.plain).foregroundStyle(Farbe.haupt).pointerStyle(.link)
                 }
             }
-            karte(titel: "Gemini-Stimmen (Google AI Studio)", symbol: "waveform", erklaerung: "Bezahlt das Vorlesen mit Gemini-TTS und das Live-Gespräch mit Gemini auf dem bezahlten Schlüssel.",
+            karte(titel: "Gemini-Stimmen (Google AI Studio)", symbol: "waveform", erklaerung: "Bezahlt das Vorlesen mit Gemini-TTS auf dem bezahlten Schlüssel.",
                   rest: g.googleRest, gewaehrt: g.googleGewaehrt, einheit: g.googleWaehrung, umrechnung: nil, text: g.googleText, hinweis: g.googleHinweis) { EmptyView() }
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "arrow.clockwise", titel: "Jetzt neu abfragen", hervorgehoben: true) { Task { await g.laden(frisch: true) } }

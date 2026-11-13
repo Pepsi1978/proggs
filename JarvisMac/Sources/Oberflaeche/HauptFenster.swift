@@ -16,7 +16,7 @@ struct HauptFenster: View {
                 case .ablage: AblageAnsicht()
                 case .gespraech:
                     if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { StartAnsicht() }
-                case .live: LiveAnsicht()
+                case .biomarker: BiomarkerAnsicht()
                 case .einstellungen: EinstellungenAnsicht()
                 }
             }
@@ -58,7 +58,7 @@ struct HauptFenster: View {
     }
 }
 
-/// Fenster-Tastenkürzel: ⌘N und ⌘1 Start mit neuem Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘2 Zentrale, ⌘3 Ablage.
+/// Fenster-Tastenkürzel: ⌘N und ⌘1 Start mit neuem Gespräch, ⌘L Live-Modus, ⌘D Sprechen, ⌘, Einstellungen, ⌘2 Zentrale, ⌘3 Ablage.
 private struct TastenKuerzel: View {
     @State private var steuerung = AppSteuerung.shared
     var body: some View {
@@ -85,7 +85,6 @@ struct Seitenleiste: View {
     @State private var projekte = Projekte.shared
     @State private var neuesProjekt = ""
     @State private var design = DesignStand.shared
-    @State private var live = LiveGespraech.shared
 
     private var gefiltert: [Gespraech] {
         let basis: [Gespraech]
@@ -139,12 +138,8 @@ struct Seitenleiste: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 4)
-                ForEach([Bereich.zentrale, .ablage, .einstellungen]) { b in
+                ForEach([Bereich.zentrale, .biomarker, .ablage, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
-                }
-                // Der Rückweg zu einem laufenden Gespräch; gestartet wird Live aus der Startblase.
-                if live.aktiv {
-                    LeistenEintrag(symbol: Bereich.live.symbol, titel: "Live läuft", aktiv: steuerung.bereich == .live) { steuerung.bereich = .live }
                 }
             }
 

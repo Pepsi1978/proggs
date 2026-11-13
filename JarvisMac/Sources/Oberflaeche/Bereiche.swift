@@ -1,86 +1,6 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Live
-
-struct LiveAnsicht: View {
-    @State private var live = LiveGespraech.shared
-    @State private var einst = Einstellungen.shared
-    @State private var steuerung = AppSteuerung.shared
-
-    private var kugel: JarvisKugel.KugelZustand {
-        switch live.zustand {
-        case .aus, .verbindet: return .ruhe
-        case .hoert: return .hoert
-        case .denkt: return .denkt
-        case .spricht: return .spricht
-        }
-    }
-
-    private var statusText: String {
-        switch live.zustand {
-        case .aus: return "Live-Gespräch starten"
-        case .verbindet: return "Verbinde …"
-        case .hoert: return "Ich höre dir zu"
-        case .denkt: return "Jarvis arbeitet daran …"
-        case .spricht: return "Jarvis spricht"
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 26) {
-            Spacer(minLength: 20)
-            Button { steuerung.live() } label: {
-                JarvisKugel(pegel: live.zustand == .spricht ? live.pegelAus : live.pegelEin, zustand: kugel, groesse: 260)
-            }
-            .buttonStyle(.plain)
-            .padding(.vertical, 30)
-            VStack(spacing: 8) {
-                Text(statusText).font(.jarvis(26, .bold))
-                Text(live.aktiv ? "Sprich einfach – du kannst mich jederzeit unterbrechen." :
-                        "Gleichzeitig zuhören und sprechen über \(einst.liveAnbieter == "gemini" ? "Gemini Live" : "OpenAI GPT-Live").")
-                    .font(.jarvis(14)).foregroundStyle(Farbe.text2)
-                if let f = live.fehler { Text(f).font(.jarvis(13, .medium)).foregroundStyle(Farbe.rot) }
-            }
-            HStack(spacing: 12) {
-                if live.aktiv {
-                    KapselKnopf(symbol: "stop.fill", titel: "Gespräch beenden", hervorgehoben: true) { live.beenden() }
-                } else {
-                    KapselKnopf(symbol: "waveform", titel: "Live starten", hervorgehoben: true) { steuerung.live() }
-                    Picker("", selection: $einst.liveAnbieter) {
-                        Text("OpenAI GPT-Live").tag("openai")
-                        Text("Gemini Live").tag("gemini")
-                    }
-                    .pickerStyle(.segmented).frame(width: 260)
-                }
-            }
-            if !live.mitschrift.isEmpty {
-                ScrollViewReader { l in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(live.mitschrift) { z in
-                                HStack(alignment: .top, spacing: 10) {
-                                    Text(z.vonFrank ? "Du" : "Jarvis").font(.jarvis(12, .bold))
-                                        .foregroundStyle(z.vonFrank ? Farbe.gruen : Farbe.haupt).frame(width: 50, alignment: .trailing)
-                                    Text(z.text).font(.jarvis(14)).foregroundStyle(Farbe.text).textSelection(.enabled)
-                                }
-                                .id(z.id)
-                            }
-                        }
-                        .padding(20)
-                    }
-                    .frame(maxWidth: 760, maxHeight: 260)
-                    .background(RoundedRectangle(cornerRadius: 20).fill(Farbe.glas(0.04)))
-                    .onChange(of: live.mitschrift.count) { _, _ in if let id = live.mitschrift.last?.id { l.scrollTo(id) } }
-                }
-            }
-            Spacer(minLength: 20)
-        }
-        .padding(30)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
 // MARK: - Werkzeug-Text-Bereich (Ablage, Gedächtnis, Aktivität am Handy)
 
 @MainActor @Observable
@@ -162,6 +82,8 @@ struct GedaechtnisAnsicht: View {
     @State private var handyOffen = false
     @State private var wissenOffen = false
     @State private var regelnOffen = false
+    @State private var verdichtenOffen = false
+    @State private var verdichter = Verdichter.shared
     @State private var regeln = ""
 
     var body: some View {
@@ -202,6 +124,11 @@ struct GedaechtnisAnsicht: View {
                         RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 28) { Task { await gemerkt.laden("jarvis_gemerktes_lesen") } }
                     }
                     MarkdownText(text: gemerkt.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                // Gedächtnis konsolidieren nach der Regel „so knapp wie möglich, so vollständig wie nötig“, wie jarvis_gemerktes_verdichten am Handy:
+                // erst Vorschläge mit Alt und Neu, geändert wird nur, was Frank übernimmt.
+                KlappKarte(symbol: "sparkles", titel: "Gedächtnis verdichten", farbe: Farbe.gruen, untertitel: "Knapper fassen und Dubletten zusammenlegen, mit Vorschau", offen: $verdichtenOffen) {
+                    verdichtenInhalt
                 }
                 KlappKarte(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.haupt,
                            untertitel: liveWeg ? "Handy nicht erreichbar, letzter Stand" + (liveStand.map { " \($0.formatted(date: .omitted, time: .shortened))" } ?? "")
@@ -245,6 +172,40 @@ struct GedaechtnisAnsicht: View {
             while !Task.isCancelled {
                 await liveLaden()
                 try? await Task.sleep(for: .seconds(60))
+            }
+        }
+    }
+
+    private var verdichtenInhalt: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Regel: " + Merkregel.knapp).font(.jarvis(12)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                KapselKnopf(symbol: "sparkles", titel: verdichter.laeuft ? "Rechnet …" : "Vorschläge erstellen", hervorgehoben: true) { Task { await verdichter.vorschlagen() } }
+                if verdichter.laeuft { ProgressView().controlSize(.small) }
+                Spacer()
+            }
+            if let m = verdichter.meldung { Text(m).font(.jarvis(12)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true) }
+            ForEach(verdichter.vorschlaege) { vs in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(vs.titel): \(vs.neu.count) Neufassung(en), \(vs.weg.count) zusammengelegt").font(.jarvis(13, .semibold)).foregroundStyle(Farbe.haupt)
+                    ForEach(vs.neu, id: \.self) { n in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("[\(n.id)] vorher: \(n.alt)").font(.jarvis(12)).foregroundStyle(Farbe.text3)
+                            Text("neu: \(n.neu)").font(.jarvis(12, .medium)).foregroundStyle(Farbe.text)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    ForEach(vs.weg, id: \.self) { w in
+                        Text("[\(w.id)] geht auf in [\(w.in_)]: \(w.alt)").font(.jarvis(12)).foregroundStyle(Farbe.warnung).fixedSize(horizontal: false, vertical: true)
+                    }
+                    HStack(spacing: 8) {
+                        KapselKnopf(symbol: "checkmark", titel: "Übernehmen", hervorgehoben: true) { Task { await verdichter.uebernehmen(vs) } }
+                        KapselKnopf(symbol: "xmark", titel: "Verwerfen") { verdichter.verwerfen(vs) }
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Farbe.glas(0.04)))
             }
         }
     }

@@ -31,6 +31,16 @@ enum MacEinstellungsKatalog {
         }
     }
 
+    /// Kennungen aus „a, b, c“, klein geschrieben.
+    private static func liste(_ w: String) -> [String] {
+        w.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+    }
+
+    private static func ohneDoppel(_ ids: [String]) -> [String] {
+        var gesehen = Set<String>()
+        return ids.filter { gesehen.insert($0).inserted }
+    }
+
     static var alle: [Eintrag] {
         let e = Einstellungen.shared
         let v = VorleseEinstellungen.shared
@@ -44,6 +54,11 @@ enum MacEinstellungsKatalog {
                     werte: "low | medium | high | xhigh | max", lesen: { e.effort }) { v in
                 guard ["low", "medium", "high", "xhigh", "max"].contains(v) else { return "Erlaubt: low, medium, high, xhigh, max" }
                 e.effort = v; return nil
+            },
+            Eintrag(kennung: "sprach_denkstufe", bereich: "Jarvis' Kopf", titel: "Denkstufe beim Sprechen", beschreibung: "Wie gründlich das Modell bei gesprochenen Fragen nachdenkt; niedriger heißt schnellere Antwort.",
+                    werte: "low | medium | high | xhigh | max", lesen: { e.sprachEffort }) { v in
+                guard ["low", "medium", "high", "xhigh", "max"].contains(v) else { return "Erlaubt: low, medium, high, xhigh, max" }
+                e.sprachEffort = v; return nil
             },
             Eintrag(kennung: "schrittlimit", bereich: "Jarvis' Kopf", titel: "Schrittlimit", beschreibung: "Werkzeugschritte je Anfrage, 0 = unbegrenzt.",
                     werte: "0–200", lesen: { "\(e.schrittLimit)" }) { v in
@@ -93,8 +108,8 @@ enum MacEinstellungsKatalog {
                 guard let b = wahr(v) else { return "an oder aus" }
                 e.weckwortAn = b; b ? Weckwort.shared.starten() : Weckwort.shared.stoppen(); return nil
             },
-            stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist, per Weckwort oder ⌥⌘J; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.", \.stilleInAppSek),
-            stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon in allen anderen Fällen (Gespräch im Hintergrund begonnen, Jarvis nicht mehr vorn oder Bildschirm gesperrt), per Weckwort oder ⌥⌘J; nicht im Live-Modus.", \.stilleAussenSek),
+            stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist, per Weckwort, ⌥⌘J oder Live-Knopf. Sagt Frank nur „die Stillezeit“, ist diese gemeint.", \.stilleInAppSek),
+            stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon in allen anderen Fällen (Gespräch im Hintergrund begonnen, Jarvis nicht mehr vorn oder Bildschirm gesperrt), per Weckwort, ⌥⌘J oder Live-Knopf.", \.stilleAussenSek),
             Eintrag(kennung: "weckwort", bereich: "Sprache", titel: "Weckwort-Phrase", beschreibung: "z. B. „Hey Jarvis“ oder „Okay Computer“.",
                     werte: "Text", lesen: { e.weckwort }) { v in
                 guard !v.isEmpty else { return "Leer geht nicht" }
@@ -120,23 +135,49 @@ enum MacEinstellungsKatalog {
                 guard let b = wahr(v) else { return "an oder aus" }
                 e.globalesKuerzel = b; b ? AppSteuerung.shared.kuerzelRegistrieren() : AppSteuerung.shared.kuerzelAbmelden(); return nil
             },
-            Eintrag(kennung: "live_anbieter", bereich: "Live-Gespräch", titel: "Live-Anbieter", beschreibung: "OpenAI oder Gemini.",
-                    werte: "openai | gemini", lesen: { e.liveAnbieter }) { v in
-                guard ["openai", "gemini"].contains(v) else { return "openai oder gemini" }; e.liveAnbieter = v; return nil
+            Eintrag(kennung: "zentrale_reihenfolge", bereich: "Zentrale & Bereiche", titel: "Reihenfolge der Zentrale", beschreibung: "Reihenfolge der Karten in der Zentrale (per Drag & Drop oder hier); „zuruecksetzen“ stellt die Werks-Reihenfolge her.",
+                    werte: BereicheEinstellungen.zentraleKarten.map(\.id).joined(separator: ", ") + " (mit Komma) oder zuruecksetzen",
+                    lesen: { ZentraleAnsicht.reihenfolge(BereicheEinstellungen.zentraleKarten.map(\.id)).joined(separator: ", ") }) { w in
+                if ["zuruecksetzen", "zurücksetzen", "werk"].contains(w.trimmingCharacters(in: .whitespaces).lowercased()) { e.zentraleReihenfolge = ""; return nil }
+                let ids = liste(w)
+                let fremd = ids.filter { id in !BereicheEinstellungen.zentraleKarten.contains { $0.id == id } }
+                if !fremd.isEmpty { return "Unbekannte Karte: " + fremd.joined(separator: ", ") + ". Erlaubt: " + BereicheEinstellungen.zentraleKarten.map(\.id).joined(separator: ", ") }
+                e.zentraleReihenfolge = ohneDoppel(ids).joined(separator: ","); return nil
             },
-            Eintrag(kennung: "live_stille_ende", bereich: "Live-Gespräch", titel: "Bei Stille beenden", beschreibung: "Beendet das Live-Gespräch nach so vielen Minuten Stille; 0 = nie.",
-                    werte: LiveOptionen.stilleEnde.map { String($0.minuten) }.joined(separator: " | "), lesen: { String(e.liveStilleMinuten) }) { v in
-                guard let m = Int(v), LiveOptionen.stilleEnde.contains(where: { $0.minuten == m }) else { return "Erlaubt: " + LiveOptionen.stilleEnde.map { String($0.minuten) }.joined(separator: ", ") }
-                e.liveStilleMinuten = m; return nil
+            Eintrag(kennung: "zentrale_ausgeblendet", bereich: "Zentrale & Bereiche", titel: "Ausgeblendete Karten der Zentrale", beschreibung: "Diese Karten erscheinen nicht in der Zentrale; leer bzw. „keine“ zeigt alle.",
+                    werte: BereicheEinstellungen.zentraleKarten.map(\.id).joined(separator: ", ") + " (mit Komma) oder keine",
+                    lesen: { e.zentraleAusgeblendet.isEmpty ? "keine" : e.zentraleAusgeblendet }) { w in
+                let t = w.trimmingCharacters(in: .whitespaces).lowercased()
+                let ids = t == "keine" || t.isEmpty ? [] : liste(w)
+                let fremd = ids.filter { id in !BereicheEinstellungen.zentraleKarten.contains { $0.id == id } }
+                if !fremd.isEmpty { return "Unbekannte Karte: " + fremd.joined(separator: ", ") }
+                e.zentraleAusgeblendet = ohneDoppel(ids).joined(separator: ","); return nil
             },
-            Eintrag(kennung: "live_modell_openai", bereich: "Live-Gespräch", titel: "OpenAI-Live-Modell", beschreibung: "",
-                    werte: LiveOptionen.openAIModelle.map(\.id).joined(separator: " | "), lesen: { e.liveModellOpenAI }) { v in e.liveModellOpenAI = v; return nil },
-            Eintrag(kennung: "live_stimme_openai", bereich: "Live-Gespräch", titel: "OpenAI-Live-Stimme", beschreibung: "",
-                    werte: LiveOptionen.liveStimmen.map(\.id).joined(separator: " | "), lesen: { e.liveStimmeOpenAI }) { v in e.liveStimmeOpenAI = v; return nil },
-            Eintrag(kennung: "live_modell_gemini", bereich: "Live-Gespräch", titel: "Gemini-Live-Modell", beschreibung: "",
-                    werte: LiveOptionen.geminiModelle.map(\.id).joined(separator: " | "), lesen: { e.liveModellGemini }) { v in e.liveModellGemini = v; return nil },
-            Eintrag(kennung: "live_stimme_gemini", bereich: "Live-Gespräch", titel: "Gemini-Live-Stimme", beschreibung: "",
-                    werte: LiveOptionen.geminiStimmen.map(\.id).joined(separator: " | "), lesen: { e.liveStimmeGemini }) { v in e.liveStimmeGemini = v; return nil },
+            Eintrag(kennung: "listen_abgleich", bereich: "Zentrale & Bereiche", titel: "Listen mit Handy und Tablet abgleichen", beschreibung: "Ablage → Listen gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Mac.",
+                    werte: "an | aus", lesen: { e.listenAbgleichAn ? "an" : "aus" }) { v in
+                guard let b = wahr(v) else { return "an oder aus" }
+                e.listenAbgleichAn = b; ListenSpeicher.shared.jetztAbgleichen(); return nil
+            },
+            Eintrag(kennung: "biomarker_zeitraum", bereich: "Zentrale & Bereiche", titel: "Biomarker-Zeitraum", beschreibung: "Vergleich und Verlauf im Biomarker-Bereich in Tagen.",
+                    werte: "7 | 30 | 90", lesen: { String(e.biomarkerTage) }) { v in
+                guard let t = Int(v.trimmingCharacters(in: .whitespaces)), [7, 30, 90].contains(t) else { return "Erlaubt: 7, 30 oder 90" }
+                e.biomarkerTage = t
+                Task { await BioDaten.shared.laden(tage: t) }
+                return nil
+            },
+            Eintrag(kennung: "biomarker_beim_start", bereich: "Zentrale & Bereiche", titel: "Biomarker beim Öffnen der Zentrale lesen", beschreibung: "Liest die Biomarker vom Handy, wenn die Zentrale aufgeht (höchstens alle fünf Minuten, nie direkt bei den Quellen).",
+                    werte: "an | aus", lesen: { e.biomarkerBeimStart ? "an" : "aus" }) { v in
+                guard let b = wahr(v) else { return "an oder aus" }; e.biomarkerBeimStart = b; return nil
+            },
+            Eintrag(kennung: "solar_beim_start", bereich: "Zentrale & Bereiche", titel: "Solarbatterie beim Start lesen", beschreibung: "Liest die Solarbatterie einmal je App-Start, sobald die Zentrale aufgeht.",
+                    werte: "an | aus", lesen: { e.solarBeimStart ? "an" : "aus" }) { v in
+                guard let b = wahr(v) else { return "an oder aus" }; e.solarBeimStart = b; return nil
+            },
+            Eintrag(kennung: "solar_takt", bereich: "Zentrale & Bereiche", titel: "Solarbatterie regelmäßig lesen", beschreibung: "Zusätzlich alle so vielen Minuten, solange Jarvis läuft; 0 = nur beim Start und per Knopf.",
+                    werte: "0 | 5 | 15 | 30 | 60", lesen: { String(e.solarTaktMinuten) }) { v in
+                guard let m = Int(v.trimmingCharacters(in: .whitespaces)), [0, 5, 15, 30, 60].contains(m) else { return "Erlaubt: 0, 5, 15, 30 oder 60" }
+                e.solarTaktMinuten = m; return nil
+            },
             Eintrag(kennung: "darstellung", bereich: "Darstellung", titel: "Darstellung", beschreibung: "Hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin.",
                     werte: "hell | automatik | dunkel", lesen: { DesignStand.shared.modus.rawValue }) { v in
                 guard let m = DesignStand.Modus(rawValue: v.lowercased()) else { return "hell, automatik oder dunkel" }
@@ -155,7 +196,7 @@ extension MacWerkzeuge {
     static let weitere: [LokalesWerkzeug] = [
         LokalesWerkzeug(definition: WerkzeugDefinition(
             name: "mac_einstellungen",
-            beschreibung: "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
+            beschreibung: "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Denkstufe beim Sprechen, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Zentrale (Reihenfolge, ausgeblendete Karten), Listen-Abgleich, Biomarker (Zeitraum, beim Start), Solarbatterie (beim Start, Takt), Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
             schema: ["type": "object", "properties": [
                 "aktion": ["type": "string", "enum": ["lesen", "aendern"]],
                 "bereich": ["type": "string", "description": "optional: nur dieser Bereich"],

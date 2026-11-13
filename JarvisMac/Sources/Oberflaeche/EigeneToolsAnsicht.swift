@@ -176,8 +176,8 @@ struct KontenListe: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             eintrag("anthropic", "Anthropic (Claude)", "Meldet Jarvis bei den Claude-Modellen an. Wird für Chat und Lernen mit Claude verwendet.", "Jarvis' Kopf", $einst.zugang.anthropic)
-            eintrag("openai", "OpenAI (Live, GPT)", "Meldet Jarvis bei der OpenAI-Plattform an. Wird für das Live-Gespräch und GPT ohne ChatGPT-Anmeldung verwendet.", "Live-Gespräch, Jarvis' Kopf", $einst.zugang.openai)
-            eintrag("gemini", "Gemini (Live)", "Meldet Jarvis bei Google AI Studio an. Wird für das Live-Gespräch mit Gemini verwendet.", "Live-Gespräch", $einst.zugang.gemini)
+            eintrag("openai", "OpenAI (GPT)", "Meldet Jarvis bei der OpenAI-Plattform an. Wird für GPT ohne ChatGPT-Anmeldung verwendet.", "Jarvis' Kopf", $einst.zugang.openai)
+            eintrag("gemini", "Gemini", "Meldet Jarvis bei Google AI Studio an. Wird für die Gemini-Stimmen beim Vorlesen verwendet.", "Vorlesen (Gemini-TTS)", $einst.zugang.gemini)
             eintrag("groq", "Groq (Whisper)", "Meldet Jarvis bei Groq an. Wird für die Umwandlung von Sprache in Text verwendet.", "Spracheingabe", $einst.zugang.groq)
             eintrag("google", "Google Cloud (Chirp 3 HD)", "Meldet Jarvis bei Google Cloud an. Wird für die Vorlesestimmen Chirp 3 HD verwendet.", "Vorlesen", $stimmen.zugang.google)
             eintrag("gemini_tts_frei", "Gemini TTS kostenlos", "Schlüssel eines Projekts ohne Abrechnung. Wird zuerst für die Gemini-Vorlesestimmen verwendet.", "Vorlesen", $stimmen.zugang.geminiFrei)

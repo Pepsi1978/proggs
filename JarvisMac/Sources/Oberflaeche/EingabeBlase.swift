@@ -2,14 +2,13 @@ import AppKit
 import SwiftUI
 
 /// Die Sprechblase unten, auf dem Startbildschirm und im Gespräch gleich und wie am Handy: eingeklappt nur die untere Zeile mit Plus, Modell, Mikrofon und genau einem Knopf
-/// (Abbrechen, solange Jarvis arbeitet, der Pfeil, sobald Text oder ein Anhang da ist, sonst Live). Der freie Platz oder das Mikrofon öffnet sie nach oben, ein weiterer Druck
+/// (Abbrechen, solange Jarvis arbeitet, der Pfeil, sobald Text oder ein Anhang da ist, sonst die orange Live-Kugel). Der freie Platz oder das Mikrofon öffnet sie nach oben, ein weiterer Druck
 /// verkleinert sie wieder; mit Text bleibt sie offen und zeigt den Papierkorb. Ohne [gespraech] (Startbildschirm) beginnt das Absenden ein neues Gespräch.
 struct EingabeBlase: View {
     let gespraech: Gespraech?
     @Binding var anhang: Data?
     @State private var steuerung = AppSteuerung.shared
     @State private var schleife = SprachSchleife.shared
-    @State private var live = LiveGespraech.shared
     @State private var diktat = Diktat.shared
     @State private var diktiert = false
     @State private var diktatFehler = ""
@@ -151,19 +150,17 @@ struct EingabeBlase: View {
         } else if hatText || anhang != nil {
             RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: true, farbe: Farbe.haupt) { senden() }
         } else {
-            Button { steuerung.liveOeffnen(in: gespraech) } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "waveform").font(.system(size: 12, weight: .semibold))
-                    Text("Live").font(.jarvis(12, .semibold))
-                }
-                .foregroundStyle(live.aktiv ? Color.black : Farbe.text)
-                .padding(.horizontal, 12).frame(height: 34)
-                .background(Capsule().fill(live.aktiv ? AnyShapeStyle(Farbe.gold) : AnyShapeStyle(Farbe.glas(0.07))))
-                .overlay(Capsule().strokeBorder(Farbe.glas(0.10)))
-                .contentShape(Capsule())
+            // Live-Knopf wie am Handy: die orange Kugel startet die Gesprächsschleife wie „Hey Jarvis“; läuft sie, beendet ein Klick sie.
+            let an = schleife.zustand != .aus
+            Button { steuerung.live() } label: {
+                Image(systemName: an ? "stop.fill" : "waveform").font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Farbe.aufOrange)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Farbe.liveOrange))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain).fixedSize()
-            .help("Live-Bildschirm öffnen (⌘L startet direkt)")
+            .help(an ? "Live-Modus beenden" : "Live-Modus starten (⌘L): zuhören, antworten, vorlesen, wieder zuhören")
         }
     }
 

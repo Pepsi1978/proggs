@@ -6,8 +6,8 @@ struct EinstellungenAnsicht: View {
     @MainActor static var startReiter = "gehirn"
 
     private let reiterListe: [(String, String, String)] = [
-        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
-        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
+        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("kontingente", "Kontingente", "gauge.with.dots.needle.67percent"), ("konsolen", "Konsolen", "person.badge.key.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"), ("bereiche", "Zentrale & Bereiche", "sparkles"),
+        ("mac", "Mac & Rechte", "macbook"), ("tools", "Eigene Tools", "wrench.and.screwdriver.fill"), ("konten", "Konten und APIs", "key.fill"),
         ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
         ("ueber", "Über", "info.circle.fill"),
     ]
@@ -38,7 +38,7 @@ struct EinstellungenAnsicht: View {
                             case "konsolen": KonsolenAnsicht()
                             case "stimme": stimme
                             case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
-                            case "live": live
+                            case "bereiche": BereicheEinstellungen()
                             case "mac": MacRechteAnsicht()
                             case "tools": EigeneToolsAnsicht()
                             case "konten": KontenAnsicht()
@@ -85,6 +85,14 @@ struct EinstellungenAnsicht: View {
                     StufenWahl(stufen: ["low", "medium", "high", "xhigh", "max"], wahl: $einst.effort)
                 }
                 .padding(.vertical, 6)
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Denkstufe beim Sprechen").font(.jarvis(14, .semibold))
+                        Text("Gilt für gesprochene Fragen. Niedriger = Jarvis antwortet schneller, das Modell bleibt gleich.").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    }
+                    StufenWahl(stufen: ["low", "medium", "high", "xhigh", "max"], wahl: $einst.sprachEffort)
+                }
+                .padding(.vertical, 6)
                 zeile("Schrittlimit je Anfrage", "Wie viele Werkzeugschritte Jarvis höchstens am Stück macht (0 = unbegrenzt).") {
                     Stepper("\(einst.schrittLimit)", value: $einst.schrittLimit, in: 0...200, step: 10).frame(width: 120)
                 }
@@ -119,51 +127,19 @@ struct EinstellungenAnsicht: View {
                     TextField("", text: $einst.weckwort).textFieldStyle(.roundedBorder).frame(width: 200)
                         .onSubmit { Weckwort.shared.stoppen(); if einst.weckwortAn { Weckwort.shared.starten() } }
                 }
-                zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist: 1 bis 15, auch mit Komma. Gilt auch für ⌥⌘J, nicht im Live-Modus.") {
+                zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist: 1 bis 15, auch mit Komma. Gilt auch für ⌥⌘J und den Live-Knopf.") {
                     StillezeitFeld(sekunden: $einst.stilleInAppSek)
                 }
                 zeile("Stillezeit außerhalb der App", "Dasselbe in allen anderen Fällen: Das Gespräch begann im Hintergrund (Fenster zu oder andere App vorn) oder Jarvis ist nicht mehr vorn.") {
                     StillezeitFeld(sekunden: $einst.stilleAussenSek)
                 }
-                zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
+                zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live-Modus, ⌘N neues Gespräch.") {
                     Toggle("", isOn: $einst.globalesKuerzel).toggleStyle(.switch)
                         .onChange(of: einst.globalesKuerzel) { _, an in an ? AppSteuerung.shared.kuerzelRegistrieren() : AppSteuerung.shared.kuerzelAbmelden() }
                 }
                 HStack(spacing: 8) {
                     Circle().fill(Weckwort.shared.lauscht ? Farbe.gruen : Farbe.text3).frame(width: 8, height: 8)
                     Text(Weckwort.shared.lauscht ? "Weckwort lauscht gerade" : "Weckwort lauscht nicht").font(.jarvis(12)).foregroundStyle(Farbe.text2)
-                }
-            }
-        }
-    }
-
-    private var live: some View {
-        GlasKarte {
-            VStack(alignment: .leading, spacing: 8) {
-                KartenTitel(symbol: "waveform", titel: "Live-Gespräch")
-                zeile("Anbieter", "Gleichzeitig zuhören und sprechen, mit deinen eigenen API-Schlüsseln.") {
-                    Picker("", selection: $einst.liveAnbieter) { Text("OpenAI").tag("openai"); Text("Gemini").tag("gemini") }
-                        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 200)
-                }
-                zeile("Bei Stille beenden", "Beendet das Live-Gespräch, wenn so lange niemand spricht. GPT-Live kostet auch bei Stille weiter.") {
-                    Picker("", selection: $einst.liveStilleMinuten) { ForEach(LiveOptionen.stilleEnde, id: \.minuten) { Text($0.name).tag($0.minuten) } }.labelsHidden().frame(maxWidth: 260)
-                }
-                if einst.liveAnbieter == "gemini" {
-                    zeile("Gemini-Modell") {
-                        Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                    }
-                    zeile("Gemini-Stimme") {
-                        Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                    }
-                } else {
-                    zeile("OpenAI-Modell") {
-                        Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
-                    }
-                    zeile("OpenAI-Stimme") {
-                        Picker("", selection: $einst.liveStimmeOpenAI) {
-                            ForEach(einst.liveModellOpenAI == "gpt-live-1" ? LiveOptionen.liveStimmen : LiveOptionen.realtimeStimmen, id: \.id) { Text($0.name).tag($0.id) }
-                        }.labelsHidden().frame(maxWidth: 260)
-                    }
                 }
             }
         }

@@ -68,22 +68,81 @@ struct ZentraleAnsicht: View {
         }
     }
 
+    @State private var einst = Einstellungen.shared
+    @State private var reihe: [String] = []
+    @State private var ziehen = ZiehZustand()
+    @State private var kachelReihe: [String] = []
+    @State private var kachelZiehen = ZiehZustand()
+
+    /// Die Werks-Reihenfolge wie am Handy oben die Lage, darunter Biomarker und Solarbatterie; neue Karten kommen hinten dazu.
+    static let werk = ["mac", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter"]
+
+    static func reihenfolge(_ vorhanden: [String]) -> [String] {
+        var gespeichert: [String] = []
+        for id in Einstellungen.shared.zentraleReihenfolge.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) })
+            where vorhanden.contains(id) && !gespeichert.contains(id) { gespeichert.append(id) }
+        return gespeichert + werk.filter { vorhanden.contains($0) && !gespeichert.contains($0) } + vorhanden.filter { !gespeichert.contains($0) && !werk.contains($0) }
+    }
+
+    private var ausgeblendet: [String] {
+        einst.zentraleAusgeblendet.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private func reiheAbgleichen() {
+        let aus = ausgeblendet
+        reihe = Self.reihenfolge(Self.werk).filter { !aus.contains($0) }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 ZugangsHinweis()
-                macKarte
-                auswertungsKarte
-                listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
-                listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
-                listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)
+                // Wie die Startbereiche am Handy (Modul M1.2): jede Karte an der ganzen Fläche greifen und verschieben; die Reihenfolge bleibt gespeichert.
+                VStack(spacing: 20) {
+                    ForEach(reihe, id: \.self) { id in
+                        karte(id).ziehbar(id, reihe: $reihe, zustand: ziehen)
+                    }
+                }
+                .ziehStapel(ziehen) { ids in
+                    // Ausgeblendete Karten behalten ihren Platz: an ihrer bisherigen Stelle wieder einsetzen.
+                    let alt = Self.reihenfolge(Self.werk)
+                    var neu = ids
+                    for (i, id) in alt.enumerated() where !neu.contains(id) { neu.insert(id, at: min(i, neu.count)) }
+                    einst.zentraleReihenfolge = neu.joined(separator: ",")
+                    log("oberflaeche", "Zentrale umsortiert: " + ids.joined(separator: ", "), wo: "Zentrale")
+                }
+                Text("Karten lassen sich per Drag & Drop verschieben.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 26)
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.never)
-        .onAppear { daten.vorladen() }
+        .onAppear {
+            reiheAbgleichen()
+            daten.vorladen()
+            let aus = ausgeblendet
+            if einst.biomarkerBeimStart && !aus.contains("biomarker") { Task { await BioDaten.shared.laden() } }
+            // Wie am Handy einmal je App-Start von selbst, danach per Knopf oder im eingestellten Takt.
+            if einst.solarBeimStart && !aus.contains("solar") && !SolarDaten.shared.automatischGelesen {
+                SolarDaten.shared.automatischGelesen = true
+                Task { await SolarDaten.shared.lesen() }
+            }
+        }
+        .onChange(of: einst.zentraleReihenfolge) { _, _ in if ziehen.gezogen == nil { reiheAbgleichen() } }
+        .onChange(of: einst.zentraleAusgeblendet) { _, _ in reiheAbgleichen() }
+    }
+
+    @ViewBuilder private func karte(_ id: String) -> some View {
+        switch id {
+        case "mac": macKarte
+        case "auswertung": auswertungsKarte
+        case "biomarker": BiomarkerKarte()
+        case "solar": SolarKarte()
+        case "aufgaben": listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
+        case "termine": listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
+        default: listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)
+        }
     }
 
     static var datumZeile: String {
@@ -157,31 +216,52 @@ struct ZentraleAnsicht: View {
         return s
     }
 
+    private static let kacheln: [(symbol: String, titel: String)] = [
+        ("terminal.fill", "Programmier-Session"), ("arrow.triangle.2.circlepath", "Updates prüfen"), ("eye.fill", "Bildschirm ansehen"),
+        ("gauge.with.dots.needle.67percent", "Mac-Status"), ("bubble.left.and.bubble.right.fill", "ChatGPT öffnen"), ("square.stack.3d.up.fill", "OpenLauncher"),
+    ]
+
+    @ViewBuilder private func kachel(_ titel: String) -> some View {
+        let symbol = Self.kacheln.first { $0.titel == titel }?.symbol ?? "square"
+        switch titel {
+        case "Programmier-Session":
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.haupt) {
+                steuerung.neuesGespraech(); steuerung.entwurf = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: "
+            }
+        case "Updates prüfen":
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.gruen) {
+                steuerung.gespraech = nil; steuerung.sende("Prüfe in der Updater-Zentrale, welche Programme auf dem Mac ein Update brauchen, und sag mir das Ergebnis.")
+            }
+        case "Bildschirm ansehen":
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.gold) {
+                steuerung.gespraech = nil; steuerung.sende("Schau dir meinen Bildschirm an und sag mir kurz, was du siehst.")
+            }
+        case "Mac-Status":
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.warnung) {
+                steuerung.gespraech = nil; steuerung.sende("Wie geht es meinem Mac? Kurzer Status.")
+            }
+        case "ChatGPT öffnen":
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.gruen) { Task { _ = await Shell.zsh("open -a ChatGPT") } }
+        default:
+            MacKachel(symbol: symbol, titel: titel, farbe: Farbe.haupt) { Task { _ = await Shell.zsh("open -a OpenLauncher") } }
+        }
+    }
+
     private var macKarte: some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 14) {
                 KartenTitel(symbol: "macbook", titel: "Am Mac", farbe: Farbe.kupfer)
+                // Auch die Kacheln lassen sich per Drag & Drop umsortieren; neue kommen hinten dazu.
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
-                    MacKachel(symbol: "terminal.fill", titel: "Programmier-Session", farbe: Farbe.haupt) {
-                        steuerung.neuesGespraech(); steuerung.entwurf = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: "
-                    }
-                    MacKachel(symbol: "arrow.triangle.2.circlepath", titel: "Updates prüfen", farbe: Farbe.gruen) {
-                        steuerung.gespraech = nil; steuerung.sende("Prüfe in der Updater-Zentrale, welche Programme auf dem Mac ein Update brauchen, und sag mir das Ergebnis.")
-                    }
-                    MacKachel(symbol: "eye.fill", titel: "Bildschirm ansehen", farbe: Farbe.gold) {
-                        steuerung.gespraech = nil; steuerung.sende("Schau dir meinen Bildschirm an und sag mir kurz, was du siehst.")
-                    }
-                    MacKachel(symbol: "gauge.with.dots.needle.67percent", titel: "Mac-Status", farbe: Farbe.warnung) {
-                        steuerung.gespraech = nil; steuerung.sende("Wie geht es meinem Mac? Kurzer Status.")
-                    }
-                    MacKachel(symbol: "bubble.left.and.bubble.right.fill", titel: "ChatGPT öffnen", farbe: Farbe.gruen) {
-                        Task { _ = await Shell.zsh("open -a ChatGPT") }
-                    }
-                    MacKachel(symbol: "square.stack.3d.up.fill", titel: "OpenLauncher", farbe: Farbe.haupt) {
-                        Task { _ = await Shell.zsh("open -a OpenLauncher") }
-                    }
+                    ForEach(kachelReihe, id: \.self) { t in kachel(t).ziehbar(t, reihe: $kachelReihe, zustand: kachelZiehen, art: .url) }
                 }
+                .ziehStapel(kachelZiehen, art: .url) { ids in UserDefaults.standard.set(ids.joined(separator: "|"), forKey: "zentrale.mac.reihenfolge") }
             }
+        }
+        .onAppear {
+            let gespeichert = (UserDefaults.standard.string(forKey: "zentrale.mac.reihenfolge") ?? "").split(separator: "|").map(String.init)
+            let alle = Self.kacheln.map(\.titel)
+            kachelReihe = gespeichert.filter { alle.contains($0) } + alle.filter { !gespeichert.contains($0) }
         }
     }
 }
@@ -219,19 +299,19 @@ struct MacKachel: View {
     let aktion: () -> Void
     @State private var schwebt = false
     var body: some View {
-        Button { log("oberflaeche", "Funktionsboard: \(titel) gestartet", wo: "Zentrale/Am Mac"); aktion() } label: {
-            HStack(spacing: 10) {
-                Image(systemName: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(farbe)
-                    .frame(width: 34, height: 34).background(RoundedRectangle(cornerRadius: 10).fill(farbe.opacity(0.13)))
-                Text(titel).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text).lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.glas(schwebt ? 0.09 : 0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Farbe.glas(schwebt ? 0.14 : 0.06)))
-            .scaleEffect(schwebt ? 1.015 : 1)
+        // Kein Button: Er schluckte das Drücken, und die Kachel ließe sich nicht per Drag & Drop verschieben.
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(farbe)
+                .frame(width: 34, height: 34).background(RoundedRectangle(cornerRadius: 10).fill(farbe.opacity(0.13)))
+            Text(titel).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text).lineLimit(1)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.glas(schwebt ? 0.09 : 0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Farbe.glas(schwebt ? 0.14 : 0.06)))
+        .scaleEffect(schwebt ? 1.015 : 1)
+        .contentShape(Rectangle())
+        .onTapGesture { log("oberflaeche", "Funktionsboard: \(titel) gestartet", wo: "Zentrale/Am Mac"); aktion() }
         .onHover { schwebt = $0 }
         .animation(.spring(duration: 0.25), value: schwebt)
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Großer Startbildschirm: Kugel und Begrüßung, Schnell-Tags, unten die Blase mit Modell, Kosten und dem Knopf für den Live-Bildschirm.
+/// Großer Startbildschirm: Kugel und Begrüßung, Schnell-Tags, unten die Blase mit Modell, Kosten und der orangen Live-Kugel für den Live-Modus.
 /// Die Tagesauswertung steht nur in der Zentrale (die Daten werden hier schon vorgeladen); alles Weitere liegt unter Einstellungen.
 struct StartAnsicht: View {
     @State private var daten = ZentraleDaten.shared

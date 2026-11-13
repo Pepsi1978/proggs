@@ -27,15 +27,18 @@ bash build.sh install   # bauen, nach /Applications/Jarvis.app, starten
   Neues, `Lernen.swift` gibt nach 10 Minuten Ruhe neue Angaben aus Mac-Gesprächen zurück.
 - **Mac-Werkzeuge** (`Sources/Werkzeuge`): Shell, AppleScript, Programme, Tastatur, Bildschirm, Dateien, Terminal, OpenLauncher
   (`--jarvis-auftrag`), Updater-Zentrale, ChatGPT-App. Neue Mac-Werkzeuge dort ergänzen und in `funktionen.md` eintragen.
-- **Sprache** (`Sources/Sprache`), **Live** (`Sources/Live`), **Oberfläche** (`Sources/Oberflaeche`).
+- **Sprache** (`Sources/Sprache`), **Oberfläche** (`Sources/Oberflaeche`).
 - Zugangsschlüssel nur verschlüsselt in `~/Library/Application Support/JarvisMac/Tresor` (`Sources/Kern/Tresor.swift`, Secure Enclave), beim ersten Start aus `~/SK` übernommen. Nie ins Git, nie im Klartext. Keine Keychain: Sie sperrt bei lokaler Signatur fremde Programme nicht aus (getestet).
 - Logbuch: `Application Support/JarvisMac/Logbuch/JJJJ-MM-TT.jsonl`, höchstens 30 Tage. Neue Abläufe mit `log(art, was, wo:, werkzeug:, ergebnis:, fehler:, dauerMs:)` eintragen.
 
-## Live-Gespräch
-Vor Änderungen an `Sources/Live` `best-practices/apis/openai-live-realtime.md` §14 lesen (wie bei der Android-App).
+## Live-Modus
+Der Live-Knopf startet die Gesprächsschleife von „Hey Jarvis“ (`AppSteuerung.live()`) wie am Handy seit 1.8.633; das Echtzeit-Live-Gespräch (`Sources/Live`) ist entfernt.
 
 ## Funktionsdatei
 `funktionen.md` nach jeder Änderung knapp nachziehen: nur tatsächlich Eingebautes. `jarvis-wissen.md` beschreibt die Handy-Reiter, die CLI-Zusammenarbeit und die Regeln für ChatGPT Live; `build.sh` legt dazu die aktuelle `Jarvis/app/src/main/assets/funktionen.md` als `handy-funktionen.md` ins Bundle.
 
 ## Farben
 Nur über `Farbe` und `DesignStand` (Hell, Automatik, Dunkel), keine festen Weiß- oder Schwarztöne für Flächen: `Farbe.glas(a)` und `Farbe.tiefe(a)` passen sich an. Nicht in `Canvas`-Blöcken lesen, sondern davor. Einzige Ausnahme: die Sprachpille (`SprachPille.swift`) bleibt wie am Handy in jedem Design dunkel mit Orange.
+
+## Gleichstand mit Windows (dauerhafte Regel)
+Jede neue Funktion von JarvisWindows, der PC-Brücke (`Jarvis/werkzeuge/pc-bruecke`) oder des Vorwärmens (`Werkzeuge/vorwaermen`) bekommt sofort, im selben Auftrag, ihr Mac-Gegenstück: hier in JarvisMac, in `jarvis_pc_bruecke.py` oder per LaunchAgent (`einrichten.sh`). Der Mac muss den Windows-PC jederzeit voll ersetzen können.

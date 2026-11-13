@@ -67,7 +67,7 @@ struct QuellenListe: View {
 
 /// Ein Ordner des Explorers, wie die Filter der Handy-Ablage; PDFs und Recherchen sind eigene Bereiche.
 enum AblageBereich: String, CaseIterable, Identifiable {
-    case bilder, pdfs, prompts, erinnerung, recherchen, texte, dokumente, tabellen, praesentationen, audio, video, sonstige
+    case bilder, pdfs, prompts, erinnerung, listen, recherchen, texte, dokumente, tabellen, praesentationen, audio, video, sonstige
     var id: String { rawValue }
     var titel: String {
         switch self {
@@ -75,6 +75,7 @@ enum AblageBereich: String, CaseIterable, Identifiable {
         case .pdfs: return "PDFs"
         case .prompts: return "Prompts"
         case .erinnerung: return "Erinnerung"
+        case .listen: return "Listen"
         case .recherchen: return "Recherchen"
         case .texte: return "Texte"
         case .dokumente: return "Dokumente"
@@ -91,6 +92,7 @@ enum AblageBereich: String, CaseIterable, Identifiable {
         case .pdfs: return "doc.richtext.fill"
         case .prompts: return "bolt.fill"
         case .erinnerung: return "bell.fill"
+        case .listen: return "checklist"
         case .recherchen: return "magnifyingglass.circle.fill"
         case .texte: return "doc.text.fill"
         case .dokumente: return "doc.fill"
@@ -105,7 +107,7 @@ enum AblageBereich: String, CaseIterable, Identifiable {
         switch self {
         case .bilder, .video: return Farbe.kupfer
         case .pdfs, .audio: return Farbe.warnung
-        case .prompts, .tabellen: return Farbe.gruen
+        case .prompts, .tabellen, .listen: return Farbe.gruen
         case .recherchen, .praesentationen, .erinnerung: return Farbe.gold
         default: return Farbe.haupt
         }
@@ -130,6 +132,7 @@ final class AblageDaten {
     func anzahl(_ b: AblageBereich) -> Int {
         if b == .prompts { return quelle.prompts.count }
         if b == .erinnerung { return quelle.erinnerungen.count }
+        if b == .listen { return ListenSpeicher.shared.offenGesamt }
         if zaehlerStand != quelle.aufbauStand {
             zaehlerStand = quelle.aufbauStand
             zaehler = Dictionary(uniqueKeysWithValues: AblageBereich.allCases.map { ($0, elemente($0, suche: "").count) })
@@ -171,7 +174,7 @@ final class AblageDaten {
         var r: [AblageElement] = []
         for e in eintraege {
             switch b {
-            case .prompts, .erinnerung: break
+            case .prompts, .erinnerung, .listen: break
             case .recherchen:
                 if e.recherche { r.append(AblageElement(eintrag: e, datei: nil)) }
             case .texte:
@@ -349,6 +352,8 @@ struct AblageAnsicht: View {
             PromptsAnsicht()
         } else if bereich == .erinnerung {
             ErinnerungenAnsicht()
+        } else if bereich == .listen {
+            ListenAnsicht()
         } else {
             let liste = sortiert(daten.elemente(bereich, suche: suche))
             if bereich == .texte { NeuerTextEintrag(meldung: $daten.meldung) }

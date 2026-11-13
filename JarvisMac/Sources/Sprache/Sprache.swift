@@ -3,7 +3,7 @@ import AVFoundation
 import Foundation
 import Observation
 
-// SCHNITTSTELLE (fest): Oberfläche und Live nutzen genau diese Typen und Mitglieder.
+// SCHNITTSTELLE (fest): Die Oberfläche nutzt genau diese Typen und Mitglieder.
 
 // MARK: - Stimme (Vorlesen)
 
@@ -101,19 +101,55 @@ import Observation
         return s
     }
 
-    /// Erzeugt die Stücke (zwei im Voraus) und spielt sie lückenlos. Gibt die Stücke zurück, die keine Stimme erzeugen konnte.
-    private func sprichKette(_ stuecke: [String], stand: VorleseStand, generation meine: Int) async -> [String] {
-        let s: AVAudioPlayerNode
-        do { s = try bereiteEngine() } catch {
-            log("fehler", "Vorlesen: Audioausgabe nicht startbar (\(error.localizedDescription))")
-            return stuecke
+    /// Beginnt eine Ausgabe, die während der Modellantwort wächst: Der erste Satz klingt schon, während das Modell noch schreibt.
+    /// `beiErsterTon` läuft, sobald wirklich etwas zu hören ist.
+    func strom(beiErsterTon: (() -> Void)? = nil, stimme sonder: String? = nil) -> VorleseStrom {
+        stopp()
+        generation += 1
+        let meine = generation
+        let s = VorleseStrom { [weak self] in
+            // Stoppt nur, solange dieser Strom noch der aktuelle ist: Ein später Abbruch darf keine neue Antwort abschneiden.
+            if self?.generation == meine { self?.stopp() }
         }
-        geplant = 0; gespielt = 0
+        let quelle = s.stuecke
+        s.lauf = Task { [weak self] in
+            guard let self else { return }
+            Weckwort.shared.pausieren()
+            defer { Weckwort.shared.fortsetzen() }
+            defer { if generation == meine { spricht = false; pegel = 0 } }
+            let stand = VorleseEinstellungen.shared.stand(sonderStimme: sonder)
+            var erster = false
+            @MainActor func ton() { if !erster { erster = true; spricht = true; beiErsterTon?() } }
+            if stand.anbieter == .system {
+                for await stueck in quelle {
+                    guard generation == meine else { return }
+                    ton()
+                    await sprichSystem(stueck, tempo: stand.tempo(.system), generation: meine)
+                }
+                return
+            }
+            let rest = await sprichKette(quelle, stand: stand, generation: meine, beiErsterTon: ton)
+            guard generation == meine, !rest.isEmpty else { return }
+            log("fehler", "Vorlesen: Stimmen oder Wiedergabe gescheitert – Rückfall auf die Systemstimme")
+            ton()
+            await sprichSystem(rest.joined(separator: " "), tempo: stand.tempo(.system), generation: meine)
+        }
+        return s
+    }
+
+    /// Hält die Stücke einer Kette, die laufenden Synthesen und wie weit der Strom schon gelesen ist.
+    @MainActor private final class KettenLauf {
+        var stuecke: [String] = []
+        var fertig = false
+        var aktuell = 0
         var aufgaben: [Int: Task<AVAudioPCMBuffer?, Never>] = [:]
+        let stand: VorleseStand
+        let format: AVAudioFormat
+        init(stand: VorleseStand, format: AVAudioFormat) { self.stand = stand; self.format = format }
+
         func sichere(_ i: Int) {
             guard i < stuecke.count, aufgaben[i] == nil else { return }
-            let text = stuecke[i]
-            let fmt = format
+            let text = stuecke[i], fmt = format, stand = stand
             aufgaben[i] = Task.detached {
                 do {
                     let (ton, anbieter) = try await VorleseSynthese.synthetisiere(text, stand)
@@ -126,14 +162,52 @@ import Observation
                 }
             }
         }
+        func abbrechen() { aufgaben.values.forEach { $0.cancel() } }
+    }
+
+    private func sprichKette(_ stuecke: [String], stand: VorleseStand, generation meine: Int) async -> [String] {
+        let (quelle, zufluss) = AsyncStream.makeStream(of: String.self)
+        for s in stuecke { zufluss.yield(s) }
+        zufluss.finish()
+        return await sprichKette(quelle, stand: stand, generation: meine, beiErsterTon: {})
+    }
+
+    /// Erzeugt die Stücke (zwei im Voraus) und spielt sie lückenlos, auch während der Strom noch wächst. Gibt die Stücke zurück, die keine Stimme erzeugen konnte.
+    private func sprichKette(_ quelle: AsyncStream<String>, stand: VorleseStand, generation meine: Int, beiErsterTon: @escaping () -> Void) async -> [String] {
+        let k = KettenLauf(stand: stand, format: format)
+        let leser = Task { @MainActor in
+            for await stueck in quelle {
+                k.stuecke.append(stueck)
+                if k.stuecke.count - 1 <= k.aktuell + 2 { k.sichere(k.stuecke.count - 1) }
+            }
+            k.fertig = true
+        }
+        defer { leser.cancel() }
+        /// Wartet auf das Ende des Stroms und gibt alles ab i zurück (für die Systemstimme).
+        func restAb(_ i: Int) async -> [String] {
+            while !k.fertig && generation == meine { try? await Task.sleep(for: .milliseconds(30)) }
+            return i < k.stuecke.count ? Array(k.stuecke[i...]) : []
+        }
+        let s: AVAudioPlayerNode
+        do { s = try bereiteEngine() } catch {
+            log("fehler", "Vorlesen: Audioausgabe nicht startbar (\(error.localizedDescription))")
+            return await restAb(0)
+        }
+        geplant = 0; gespielt = 0
         var rest: [String] = []
-        for i in 0..<stuecke.count {
-            sichere(i); sichere(i + 1); sichere(i + 2)
-            let puffer = await aufgaben[i]?.value
-            guard generation == meine else { aufgaben.values.forEach { $0.cancel() }; return [] }
+        var i = 0
+        while true {
+            // Auf das nächste Stück warten, solange das Modell noch schreibt.
+            while k.stuecke.count <= i && !k.fertig && generation == meine { try? await Task.sleep(for: .milliseconds(30)) }
+            guard generation == meine else { k.abbrechen(); return [] }
+            guard i < k.stuecke.count else { break }
+            k.aktuell = i
+            k.sichere(i); k.sichere(i + 1); k.sichere(i + 2)
+            let puffer = await k.aufgaben[i]?.value
+            guard generation == meine else { k.abbrechen(); return [] }
             guard let puffer else {
-                rest = Array(stuecke[i...])
-                aufgaben.values.forEach { $0.cancel() }
+                k.abbrechen()
+                rest = await restAb(i)
                 break
             }
             geplant += 1
@@ -145,14 +219,16 @@ import Observation
                 // play() kann ohne Tonlauf Sekunden warten und dann eine Ausnahme werfen: nicht auf dem Hauptfaden.
                 // Danach übernimmt der Rückfall des Aufrufers den Rest, die Engine wird nicht wiederverwendet.
                 let ausnahme = await Task.detached { JarvisSpielen(s) }.value
-                guard generation == meine else { aufgaben.values.forEach { $0.cancel() }; return [] }
+                guard generation == meine else { k.abbrechen(); return [] }
                 if let ausnahme {
                     log("fehler", "Vorlesen: Wiedergabe nicht startbar (\(ausnahme.localizedDescription))")
                     engine?.stop(); engine = nil; spieler = nil
-                    aufgaben.values.forEach { $0.cancel() }
-                    return Array(stuecke[i...])
+                    k.abbrechen()
+                    return await restAb(i)
                 }
             }
+            beiErsterTon()
+            i += 1
         }
         // Warten, bis alles geplante gespielt ist.
         while generation == meine && gespielt < geplant {
@@ -430,7 +506,7 @@ import Observation
         Task { await stoppeIntern() }
     }
 
-    /// Kurz anhalten, solange Diktat, Vorlesen oder Live das Mikrofon brauchen.
+    /// Kurz anhalten, solange Diktat oder Vorlesen das Mikrofon brauchen.
     func pausieren() {
         pausen += 1
         if lauscht || startet { Task { await stoppeIntern() } }
@@ -625,11 +701,14 @@ import Observation
                 break
             }
             zustand = .denkt
-            let antwort = await JarvisAgent.shared.frage(text, in: g, gesprochen: true)
-            guard lauf == meiner, !Task.isCancelled else { break }
-            if Einstellungen.shared.vorlesen && !antwort.isEmpty {
-                zustand = .spricht
-                await Stimme.shared.sprich(antwort)
+            // Satzweise, während das Modell noch schreibt: Der erste Ton kommt nach dem ersten Satz, nicht nach der ganzen Antwort.
+            let strom: VorleseStrom? = Einstellungen.shared.vorlesen
+                ? Stimme.shared.strom(beiErsterTon: { [weak self] in if self?.lauf == meiner { self?.zustand = .spricht } })
+                : nil
+            let antwort = await JarvisAgent.shared.frage(text, in: g, gesprochen: true, onText: strom.map { s in { s.text($0) } })
+            guard lauf == meiner, !Task.isCancelled else { strom?.abbrechen(); break }
+            if let strom {
+                await strom.ende(antwort)
                 guard lauf == meiner, !Task.isCancelled else { break }
             }
             if g.nachrichten.last(where: { $0.rolle == .jarvis })?.schritte.contains(where: { $0.werkzeug == "sprachsession_beenden" }) == true { break }

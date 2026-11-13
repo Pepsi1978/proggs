@@ -183,7 +183,7 @@ enum KontingentQuellen {
     private static let woche: Int64 = 7 * 86400
     private static let berlin = TimeZone(identifier: "Europe/Berlin") ?? .current
 
-    static var gespraechLaeuft: Bool { SprachSchleife.shared.zustand != .aus || LiveGespraech.shared.aktiv }
+    static var gespraechLaeuft: Bool { SprachSchleife.shared.zustand != .aus }
 
     private static var jetzt: Int64 { Int64(Date().timeIntervalSince1970) }
 
@@ -769,7 +769,7 @@ struct KonsolenAnsicht: View {
                     }
                 }
             }
-            karte("waveform", "Google AI Studio", "Guthaben der Gemini-Stimmen und des Live-Gesprächs.", stufe(googleHier, g.googleAbgelaufen, g.googleRest != nil)) {
+            karte("waveform", "Google AI Studio", "Guthaben der Gemini-Stimmen.", stufe(googleHier, g.googleAbgelaufen, g.googleRest != nil)) {
                 KapselKnopf(symbol: "link", titel: googleHier ? "Neu anmelden" : "Anmelden", hervorgehoben: !googleHier) {
                     offen = KonsolenDienst(id: "google", titel: "Bei Google anmelden", hinweis: "Google lässt die Anmeldung in eingebetteten Browsern nicht immer zu. Dann bleibt der Stand vom Handy.", start: GoogleSitzung.loginURL)
                 }

@@ -135,7 +135,7 @@ struct Zugang: Codable, Equatable {
 struct LogEintrag: Identifiable, Codable {
     var id = UUID()
     var zeit = Date()
-    var art: String      // fehler, werkzeug, gehirn, sprache, live, system, oberflaeche, gespraech, einstellung, tresor, ablage, gedaechtnis
+    var art: String      // fehler, werkzeug, gehirn, sprache, system, oberflaeche, gespraech, einstellung, tresor, ablage, gedaechtnis
     var text: String     // Was ist passiert
     var wo: String? = nil          // In welchem Bereich
     var werkzeug: String? = nil    // Eingesetztes Werkzeug
@@ -214,7 +214,6 @@ final class Logbuch {
         switch art {
         case "gehirn": return "Gehirn"
         case "sprache": return "Sprache"
-        case "live": return "Live-Gespräch"
         case "werkzeug": return "Werkzeuge"
         default: return "App"
         }
@@ -254,7 +253,7 @@ struct ModellWahl: Identifiable, Hashable {
         .init(id: "claude-opus-5-5", name: "Claude Opus 5.5", anbieter: .anthropic),
         .init(id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", anbieter: .anthropic),
         .init(id: "claude-haiku-5-5", name: "Claude Haiku 5.5", anbieter: .anthropic),
-        .init(id: "claude-fable-5-1", name: "Claude Fable 5.1", anbieter: .anthropic),
+        .init(id: "claude-fable-5-2", name: "Claude Fable 5.2", anbieter: .anthropic),
         .init(id: "gpt-6-astra", name: "GPT-6 Astra", anbieter: .openai),
         .init(id: "gpt-6.1-sol", name: "GPT-6.1 Sol", anbieter: .openai),
         .init(id: "gpt-6-luna", name: "GPT-6 Luna", anbieter: .openai),
@@ -264,7 +263,13 @@ struct ModellWahl: Identifiable, Hashable {
     static var fuerRecherche: [ModellWahl] { alle.filter { !$0.id.contains("luna") && !$0.id.contains("haiku") } }
     static func zu(_ id: String) -> ModellWahl { alle.first { $0.id == id } ?? alle[0] }
     /// Abgelöste Modelle: Wer das alte gewählt hatte, bekommt den Nachfolger statt des ersten Eintrags der Liste.
-    static func aktuell(_ id: String) -> String { id == "gpt-5.6-terra" ? "gpt-6.1-terra" : id }
+    static func aktuell(_ id: String) -> String {
+        switch id {
+        case "gpt-5.6-terra": return "gpt-6.1-terra"
+        case "claude-fable-5-1": return "claude-fable-5-2"
+        default: return id
+        }
+    }
 }
 
 @MainActor @Observable
@@ -287,6 +292,8 @@ final class Einstellungen {
 
     var modell: String { didSet { d.set(modell, forKey: "modell"); Logbuch.shared.einstellung("modell", "\(modell)", wo: "Einstellungen") } }
     var effort: String { didSet { d.set(effort, forKey: "effort"); Logbuch.shared.einstellung("effort", "\(effort)", wo: "Einstellungen") } }
+    /// Denkstufe für gesprochene Fragen: Kurze Antworten fürs Vorlesen brauchen keine lange Denkzeit vor dem ersten Wort. Das Modell bleibt dasselbe.
+    var sprachEffort: String { didSet { d.set(sprachEffort, forKey: "sprachEffort"); Logbuch.shared.einstellung("sprachEffort", sprachEffort, wo: "Einstellungen") } }
     var schrittLimit: Int { didSet { d.set(schrittLimit, forKey: "schrittLimit"); Logbuch.shared.einstellung("schrittLimit", "\(schrittLimit)", wo: "Einstellungen") } }
     var vorlesen: Bool { didSet { d.set(vorlesen, forKey: "vorlesen"); Logbuch.shared.einstellung("vorlesen", "\(vorlesen)", wo: "Einstellungen") } }
     var stimme: String { didSet { d.set(stimme, forKey: "stimme"); Logbuch.shared.einstellung("stimme", "\(stimme)", wo: "Einstellungen") } }
@@ -294,14 +301,7 @@ final class Einstellungen {
     var weckwortAn: Bool { didSet { d.set(weckwortAn, forKey: "weckwortAn"); Logbuch.shared.einstellung("weckwortAn", "\(weckwortAn)", wo: "Einstellungen") } }
     var weckwort: String { didSet { d.set(weckwort, forKey: "weckwort"); Logbuch.shared.einstellung("weckwort", "\(weckwort)", wo: "Einstellungen") } }
     var transkription: String { didSet { d.set(transkription, forKey: "transkription"); Logbuch.shared.einstellung("transkription", "\(transkription)", wo: "Einstellungen") } }   // apple | groq
-    var liveAnbieter: String { didSet { d.set(liveAnbieter, forKey: "liveAnbieter"); Logbuch.shared.einstellung("liveAnbieter", "\(liveAnbieter)", wo: "Einstellungen") } }     // openai | gemini
-    var liveStimmeOpenAI: String { didSet { d.set(liveStimmeOpenAI, forKey: "liveStimmeOpenAI"); Logbuch.shared.einstellung("liveStimmeOpenAI", "\(liveStimmeOpenAI)", wo: "Einstellungen") } }
-    var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini"); Logbuch.shared.einstellung("liveStimmeGemini", "\(liveStimmeGemini)", wo: "Einstellungen") } }
-    var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); Logbuch.shared.einstellung("liveModellOpenAI", "\(liveModellOpenAI)", wo: "Einstellungen") } }
-    var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); Logbuch.shared.einstellung("liveModellGemini", "\(liveModellGemini)", wo: "Einstellungen") } }
-    /// Live-Gespräch endet nach so vielen Minuten Stille, 0 = nie.
-    var liveStilleMinuten: Int { didSet { d.set(liveStilleMinuten, forKey: "liveStilleMinuten"); Logbuch.shared.einstellung("liveStilleMinuten", "\(liveStilleMinuten)", wo: "Einstellungen") } }
-    /// Stille nach dem letzten Wort in Sekunden, bis das Mikrofon schließt: Gespräch bei Jarvis vorn bzw. im Hintergrund, per Weckwort oder Kürzel (nicht Live).
+    /// Stille nach dem letzten Wort in Sekunden, bis das Mikrofon schließt: Gespräch bei Jarvis vorn bzw. im Hintergrund, per Weckwort, Kürzel oder Live-Knopf.
     var stilleInAppSek: Double { didSet { d.set(stilleInAppSek, forKey: "stilleInAppSek"); Logbuch.shared.einstellung("stilleInAppSek", "\(stilleInAppSek)", wo: "Einstellungen") } }
     var stilleAussenSek: Double { didSet { d.set(stilleAussenSek, forKey: "stilleAussenSek"); Logbuch.shared.einstellung("stilleAussenSek", "\(stilleAussenSek)", wo: "Einstellungen") } }
     static let stilleBereich = 1.0...15.0
@@ -329,6 +329,20 @@ final class Einstellungen {
     var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); Logbuch.shared.einstellung("vollzugriff", "\(vollzugriff)", wo: "Einstellungen") } }
     var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); Logbuch.shared.einstellung("lernenAn", "\(lernenAn)", wo: "Einstellungen") } }
     var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); Logbuch.shared.einstellung("globalesKuerzel", "\(globalesKuerzel)", wo: "Einstellungen") } }
+    /// Reihenfolge der Karten in der Zentrale, Kennungen mit Komma; leer = Werks-Reihenfolge.
+    var zentraleReihenfolge: String { didSet { d.set(zentraleReihenfolge, forKey: "zentraleReihenfolge"); Logbuch.shared.einstellung("zentraleReihenfolge", zentraleReihenfolge, wo: "Einstellungen") } }
+    /// Karten der Zentrale, die nicht erscheinen sollen, Kennungen mit Komma.
+    var zentraleAusgeblendet: String { didSet { d.set(zentraleAusgeblendet, forKey: "zentraleAusgeblendet"); Logbuch.shared.einstellung("zentraleAusgeblendet", zentraleAusgeblendet, wo: "Einstellungen") } }
+    /// Listen mit Handy und Tablet abgleichen; aus = der Mac zeigt und ändert nur seine Kopie, nichts geht hoch.
+    var listenAbgleichAn: Bool { didSet { d.set(listenAbgleichAn, forKey: "listenAbgleichAn"); Logbuch.shared.einstellung("listenAbgleichAn", "\(listenAbgleichAn)", wo: "Einstellungen") } }
+    /// Vergleichszeitraum und Verlauf im Biomarker-Bereich: 7, 30 oder 90 Tage.
+    var biomarkerTage: Int { didSet { d.set(biomarkerTage, forKey: "biomarkerTage"); Logbuch.shared.einstellung("biomarkerTage", "\(biomarkerTage)", wo: "Einstellungen") } }
+    /// Beim Öffnen der Zentrale die Biomarker vom Handy lesen (höchstens alle fünf Minuten; ruft nie selbst bei den Quellen ab).
+    var biomarkerBeimStart: Bool { didSet { d.set(biomarkerBeimStart, forKey: "biomarkerBeimStart"); Logbuch.shared.einstellung("biomarkerBeimStart", "\(biomarkerBeimStart)", wo: "Einstellungen") } }
+    /// Solarbatterie einmal je App-Start von selbst lesen, wenn die Zentrale aufgeht (wie am Handy).
+    var solarBeimStart: Bool { didSet { d.set(solarBeimStart, forKey: "solarBeimStart"); Logbuch.shared.einstellung("solarBeimStart", "\(solarBeimStart)", wo: "Einstellungen") } }
+    /// Solarbatterie zusätzlich alle so vielen Minuten lesen, 0 = nur beim Start und per Knopf.
+    var solarTaktMinuten: Int { didSet { d.set(solarTaktMinuten, forKey: "solarTaktMinuten"); Logbuch.shared.einstellung("solarTaktMinuten", "\(solarTaktMinuten)", wo: "Einstellungen") } }
 
     init() {
         let d = UserDefaults.standard
@@ -339,6 +353,7 @@ final class Einstellungen {
         rechercheEffort = s("rechercheEffort", "high")
         modell = ModellWahl.aktuell(s("modell", "claude-opus-5-5"))
         effort = s("effort", "medium")
+        sprachEffort = s("sprachEffort", "low")
         schrittLimit = d.object(forKey: "schrittLimit") as? Int ?? 40
         vorlesen = b("vorlesen", true)
         stimme = s("stimme", "de-DE-Chirp3-HD-Charon")
@@ -346,18 +361,18 @@ final class Einstellungen {
         weckwortAn = b("weckwortAn", true)
         weckwort = s("weckwort", "Hey Jarvis")
         transkription = s("transkription", "apple")
-        liveAnbieter = s("liveAnbieter", "openai")
-        liveStimmeOpenAI = s("liveStimmeOpenAI", "flitz")
-        liveStimmeGemini = s("liveStimmeGemini", "Charon")
-        liveModellOpenAI = s("liveModellOpenAI", "gpt-live-1")
-        liveModellGemini = s("liveModellGemini", "gemini-3.8-live")
-        liveStilleMinuten = d.object(forKey: "liveStilleMinuten") as? Int ?? 5
         stilleInAppSek = Self.stilleGeladen(d, "stilleInAppSek")
         stilleAussenSek = Self.stilleGeladen(d, "stilleAussenSek")
         vollzugriff = b("vollzugriff", true)
         lernenAn = b("lernenAn", true)
         globalesKuerzel = b("globalesKuerzel", true)
-        if d.string(forKey: "liveAnbieter") == nil && zugang.openai.isEmpty && !zugang.gemini.isEmpty { liveAnbieter = "gemini" }
+        zentraleReihenfolge = s("zentraleReihenfolge", "")
+        zentraleAusgeblendet = s("zentraleAusgeblendet", "")
+        listenAbgleichAn = b("listenAbgleichAn", true)
+        biomarkerTage = d.object(forKey: "biomarkerTage") as? Int ?? 30
+        biomarkerBeimStart = b("biomarkerBeimStart", true)
+        solarBeimStart = b("solarBeimStart", true)
+        solarTaktMinuten = d.object(forKey: "solarTaktMinuten") as? Int ?? 0
     }
 
     /// Hat Jarvis überhaupt einen Kopf? (Claude-Schlüssel, ChatGPT-Anmeldung oder OpenAI-Schlüssel)

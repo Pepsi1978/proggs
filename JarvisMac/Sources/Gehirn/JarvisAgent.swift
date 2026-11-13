@@ -140,7 +140,7 @@ final class JarvisAgent {
         let alleWerkzeuge = (lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) && !McpKlient.nurFuerOberflaeche.contains($0.name) }).filter { !ohneWerkzeuge.contains($0.name) && nurWerkzeuge?.contains($0.name) != false }
         let system = await systemTeile(g: g)
         let (a, modell) = await anbieter()
-        let effort = e.effort
+        let effort = gesprochen ? e.sprachEffort : e.effort
         let limit = e.schrittLimit
         let istClaude = a is AnthropicKlient
         var kosten = 0.0

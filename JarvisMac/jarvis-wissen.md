@@ -7,7 +7,7 @@ Was Jarvis am Rechner über die Handy-App und die Zusammenarbeit mit dem CLI wis
 - Einstellungen: Jarvis, Guthaben (Anthropic, Google), Kontingente (Limits von Claude, ChatGPT/Codex, Kimi, Gemini), Benachrichtigungen, Stimme, Alltag und Timer, Konten und Apps, System.
 - Seitenleiste: Gespräche, Programmierung, Projekte; oranger Punkt, wenn dort gearbeitet wird.
 - Gedächtnis-Ansicht und Merklisten: Live-Gedächtnis mit Bereichen, Langzeitkontext, Funktionsübersicht, Regeln, Ziele, Über Frank, Programmierregeln, Stil, Entscheidungen, Zusammenarbeit mit ChatGPT.
-- Der Reiter Live-Gespräch ist am Mac eigenständig und zählt hier nicht dazu.
+- Der Live-Knopf startet am Mac wie am Handy die Gesprächsschleife von „Hey Jarvis“; ein eigenes Echtzeit-Live-Gespräch gibt es nicht mehr.
 
 ## Zusammenarbeit mit dem CLI
 - Das Repo liegt am Mac unter ~/proggs, dort gibt es keine Grenzen wie bei der GitHub-Anbindung des Handys. repo_lesen liest es direkt.
@@ -23,6 +23,6 @@ Was Jarvis am Rechner über die Handy-App und die Zusammenarbeit mit dem CLI wis
 - Fehlt eine Fähigkeit, zuerst suchen (`mac_helfer_suchen`, `helfer_suchen`), dann bauen lassen (`mac_helfer_bauen`), danach Franks eigentliche Aufgabe damit erledigen. Handy und Mac führen je einen eigenen Katalog; das Handy kennt die Mac-Helfer über den Kanal. Bau-Vorschrift: JarvisHelfer/README.md.
 
 ## Live-Gespräch über ChatGPT Live
-- Heute läuft ChatGPT Live in der ChatGPT-App und spricht Jarvis über MCP an. Die Mac-App hat diese Anbindung noch nicht; ihr eigenes Live-Gespräch läuft über die API.
+- Heute läuft ChatGPT Live in der ChatGPT-App und spricht Jarvis über MCP an. Die Mac-App hat diese Anbindung noch nicht.
 - Die Regeln dafür sind der Block SYMBIOSE CHATGPT LIVE ⇄ JARVIS in den Vorgaben des Handy-Jarvis. Nur Frank ändert sie, in der App, nie über jarvis_merken oder jarvis_vergessen.
 - Wird ChatGPT Live an die Mac-App angebunden, gelten diese Regeln unverändert: Zu Beginn jarvis_kontext, erledigt ist nur, was ein Werkzeug bestätigt, Aktuelles sofort selbst suchen und ohne Quellen antworten, Agenten nur auf ausdrücklichen Wunsch.

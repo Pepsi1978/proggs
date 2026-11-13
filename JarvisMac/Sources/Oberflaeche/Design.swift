@@ -12,6 +12,10 @@ enum Farbe {
     static var gruen: Color { d ? c(0.30, 0.92, 0.58) : c(0.09, 0.58, 0.30) }
     static var warnung: Color { d ? c(1.0, 0.82, 0.28) : c(0.70, 0.42, 0.0) }
     static var rot: Color { d ? c(1.0, 0.36, 0.40) : c(0.80, 0.15, 0.17) }
+    /// Das Orange der Live-Blase wie am Handy (EingabeBlase.kt LIVE_ORANGE, 0xF0876A), hell und dunkel gleich.
+    static var liveOrange: Color { c(0xF0 / 255.0, 0x87 / 255.0, 0x6A / 255.0) }
+    /// Schrift und Zeichen auf Orange-Flächen (Akzent, Live-Kugel): in jedem Design dunkel.
+    static var aufOrange: Color { Color.black }
     static var text: Color { d ? Color.white.opacity(0.94) : Color.black.opacity(0.88) }
     static var text2: Color { d ? Color.white.opacity(0.62) : Color.black.opacity(0.62) }
     static var text3: Color { d ? Color.white.opacity(0.38) : Color.black.opacity(0.42) }
@@ -38,8 +42,8 @@ struct JarvisHintergrund: View {
         let flecken: [(Color, Double, Double, Double)] = [
             (Farbe.haupt, 0.10, 0.07, 0.0), (Farbe.gold, 0.07, 0.05, 2.1), (Farbe.kupfer, 0.06, 0.04, 4.2),
         ]
-        // Die Flecken wandern langsam: Zehn Bilder je Sekunde genügen. Im Hintergrund und während Sprache und Live steht der Verlauf ganz still.
-        let bewegt = AppSteuerung.shared.appVorn && SprachSchleife.shared.zustand == .aus && !LiveGespraech.shared.aktiv
+        // Die Flecken wandern langsam: Zehn Bilder je Sekunde genügen. Im Hintergrund und während Sprache und Live-Modus steht der Verlauf ganz still.
+        let bewegt = AppSteuerung.shared.appVorn && SprachSchleife.shared.zustand == .aus
         return TimelineView(.animation(minimumInterval: 1.0 / 10, paused: !bewegt)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
@@ -108,7 +112,7 @@ struct JarvisKugel: View {
 
     var body: some View {
         // In Ruhe genügen wenige Bilder je Sekunde, sonst 30; verdeckt oder im Hintergrund gar keine. Das schont Akku und Grafikchip,
-        // und Mikrofon und Live bekommen ihre Rechenzeit.
+        // und das Mikrofon bekommt seine Rechenzeit.
         TimelineView(.animation(minimumInterval: zustand == .ruhe ? 1.0 / 15 : 1.0 / 30, paused: still || !AppSteuerung.shared.appVorn)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             let p = Double(min(max(pegel, 0), 1))
@@ -196,20 +200,20 @@ struct KugelLive: View {
     var body: some View { JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: groesse) }
 }
 
-/// Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife, Live, reines Vorlesen).
+/// Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife samt Live-Modus, reines Vorlesen).
 @MainActor
 enum KugelStand {
     static var zustand: JarvisKugel.KugelZustand {
-        let schleife = SprachSchleife.shared.zustand, live = LiveGespraech.shared.zustand
-        if Stimme.shared.spricht || schleife == .spricht || live == .spricht { return .spricht }
-        if schleife == .denkt || live == .denkt { return .denkt }
-        if schleife == .hoert || live == .hoert { return .hoert }
+        let schleife = SprachSchleife.shared.zustand
+        if Stimme.shared.spricht || schleife == .spricht { return .spricht }
+        if schleife == .denkt { return .denkt }
+        if schleife == .hoert { return .hoert }
         return .ruhe
     }
     static var pegel: Float {
         switch zustand {
-        case .spricht: return max(Stimme.shared.pegel, LiveGespraech.shared.pegelAus)
-        case .hoert: return max(Diktat.shared.pegel, LiveGespraech.shared.pegelEin)
+        case .spricht: return Stimme.shared.pegel
+        case .hoert: return Diktat.shared.pegel
         default: return 0
         }
     }

@@ -3,7 +3,7 @@ import QuartzCore
 
 /// Die schwebende Sprachpille, wie die Sprachblase am Handy (SprachBlase.kt): „Hey Jarvis“ aus einem anderen Programm öffnet Jarvis nicht, das Gespräch
 /// läuft im Hintergrund, und oben mittig zeigt eine kleine Pille ein Pegel-Spektrum in Orange. Sprechen Frank oder Jarvis, zittert es nach dem Pegel,
-/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, das X, langes Drücken, Rechtsklick oder Ziehen nach oben beendet das Gespräch; auch während Live.
+/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, das X, langes Drücken, Rechtsklick oder Ziehen nach oben beendet das Gespräch; auch im Live-Modus.
 /// Nimmt nie den Fokus und zeichnet direkt statt über SwiftUI: leicht, damit Spracherkennung und Ausgabe nichts davon merken.
 @MainActor
 final class SprachPille {
@@ -162,11 +162,6 @@ private final class PillenAnsicht: NSView {
         langDruck?.cancel()
         startPunkt = nil
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-        if LiveGespraech.shared.aktiv {
-            log("live", "Beenden über die Sprachpille", wo: "Sprachpille")
-            LiveGespraech.shared.beenden()
-            return
-        }
         log("sprache", "Sprachsitzung beendet", wo: "Sprachpille")
         SprachSchleife.shared.beenden()
     }
@@ -180,10 +175,8 @@ private final class PillenAnsicht: NSView {
         zuletzt = jetzt
         let t = CGFloat(jetzt)
 
-        let live = LiveGespraech.shared
         let frank = SprachSchleife.shared.zustand == .hoert && Diktat.shared.aktiv && !Diktat.shared.schreibtMit
-        let pegel = live.aktiv ? CGFloat(KugelStand.pegel)
-                               : CGFloat(frank ? Diktat.shared.pegel : (Stimme.shared.spricht ? Stimme.shared.pegel : 0))
+        let pegel = CGFloat(frank ? Diktat.shared.pegel : (Stimme.shared.spricht ? Stimme.shared.pegel : 0))
 
         let w = bounds.width, h = bounds.height
         let form = CGPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerWidth: h / 2 - 0.5, cornerHeight: h / 2 - 0.5, transform: nil)

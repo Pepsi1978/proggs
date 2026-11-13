@@ -269,9 +269,9 @@ final class ErinnerungPlaner {
         }
     }
 
-    /// Ein Sprachgespräch, Live, Diktat oder eine laufende Antwort wird nie unterbrochen: Stimme.sprich stoppt sonst, was gerade läuft.
+    /// Ein Sprachgespräch samt Live-Modus, Diktat oder eine laufende Antwort wird nie unterbrochen: Stimme.sprich stoppt sonst, was gerade läuft.
     private var stimmeBelegt: Bool {
-        LiveGespraech.shared.aktiv || SprachSchleife.shared.zustand != .aus || Diktat.shared.aktiv || Stimme.shared.spricht
+        SprachSchleife.shared.zustand != .aus || Diktat.shared.aktiv || Stimme.shared.spricht
     }
 
     private func sprechSchleife() async {

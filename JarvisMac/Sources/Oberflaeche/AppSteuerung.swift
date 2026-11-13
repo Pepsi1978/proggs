@@ -3,7 +3,7 @@ import Carbon.HIToolbox
 import SwiftUI
 
 enum Bereich: String, CaseIterable, Identifiable {
-    case start, zentrale, ablage, gespraech, live, einstellungen
+    case start, zentrale, biomarker, ablage, gespraech, einstellungen
     var id: String { rawValue }
     var titel: String {
         switch self {
@@ -11,7 +11,7 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .zentrale: return "Zentrale"
         case .ablage: return "Ablage"
         case .gespraech: return "Gespräch"
-        case .live: return "Live"
+        case .biomarker: return "Biomarker"
         case .einstellungen: return "Einstellungen"
         }
     }
@@ -21,7 +21,7 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .zentrale: return "sparkles"
         case .ablage: return "tray.full.fill"
         case .gespraech: return "bubble.left.and.text.bubble.right.fill"
-        case .live: return "waveform"
+        case .biomarker: return "bolt.heart.fill"
         case .einstellungen: return "gearshape.fill"
         }
     }
@@ -96,11 +96,24 @@ final class AppSteuerung {
                 try? await Task.sleep(for: .seconds(handyVerbunden && !unsicher ? 300 : 30))
             }
         }
-        // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
+        // Solarbatterie im eingestellten Takt (0 = nur Start und Knopf), nie während eines Sprachgesprächs.
+        Task {
+            var zuletzt = Date()
+            while true {
+                // Jede Minute nachsehen: Ein geänderter Takt gilt sofort, nicht erst nach Ablauf des alten.
+                try? await Task.sleep(for: .seconds(60))
+                let m = Einstellungen.shared.solarTaktMinuten
+                guard m > 0, Date().timeIntervalSince(zuletzt) >= Double(m) * 60 - 6 else { continue }
+                guard SprachSchleife.shared.zustand == .aus, handyVerbunden else { continue }
+                zuletzt = Date()
+                await SolarDaten.shared.lesen()
+            }
+        }
+        // Guthaben wie am Handy alle 15 Minuten, nicht während eines Sprachgesprächs und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
         Task { if await ConsoleSitzung.altbestandUebernehmen() { await Guthaben.shared.laden(frisch: true) } }
         Task {
             while true {
-                guard handyVerbunden || ConsoleSitzung.angemeldet, !LiveGespraech.shared.aktiv else { try? await Task.sleep(for: .seconds(30)); continue }
+                guard handyVerbunden || ConsoleSitzung.angemeldet, SprachSchleife.shared.zustand == .aus else { try? await Task.sleep(for: .seconds(30)); continue }
                 await Guthaben.shared.laden()
                 try? await Task.sleep(for: .seconds(900))
             }
@@ -274,18 +287,16 @@ final class AppSteuerung {
 
     func sprechen() { kuerzelSprechen() }
 
+    /// Live-Knopf wie am Handy (`AppViewModel.liveTippen`): startet dieselbe Gesprächsschleife wie „Hey Jarvis“ in der geöffneten App
+    /// (zuhören, antworten, vorlesen, wieder zuhören); läuft sie, beendet ein Klick sie. Ein zweites Echtzeit-Gespräch gibt es nicht mehr.
     func live() {
-        if LiveGespraech.shared.aktiv { LiveGespraech.shared.beenden(); return }
-        let g = gespraech ?? GespraechsSpeicher.shared.neu()
+        if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden(); log("sprache", "Live-Modus per Knopf beendet"); return }
+        log("sprache", "Live-Modus per Knopf gestartet")
+        Task { await McpKlient.shared.kontextVorladen() }
+        let g = bereich == .gespraech ? (gespraech ?? GespraechsSpeicher.shared.neu()) : entwurfOderNeu()
         gespraech = g
-        bereich = .live
-        LiveGespraech.shared.starten(in: g)
-    }
-
-    /// Knopf „Live“ in der Blase: öffnet nur den Live-Bildschirm, gestartet wird dort. Vom Start aus ein neues Gespräch, aus einem Gespräch dieses.
-    func liveOeffnen(in g: Gespraech?) {
-        if !LiveGespraech.shared.aktiv { gespraech = g }
-        bereich = .live
+        bereich = .gespraech
+        SprachSchleife.shared.starten(in: g, inApp: true)
     }
 
     func fensterZeigen() {
@@ -315,7 +326,7 @@ final class AppSteuerung {
 
     /// „Hey Jarvis“: wie am Handy. Ist Jarvis vorn, geht das offene Gespräch weiter, sonst beginnt ein neues im Hintergrund mit der Pille.
     func weckwortErkannt() {
-        guard !LiveGespraech.shared.aktiv, SprachSchleife.shared.zustand == .aus else { return }
+        guard SprachSchleife.shared.zustand == .aus else { return }
         log("sprache", "Weckwort erkannt")
         sprachgespraechStarten()
     }
@@ -335,9 +346,9 @@ final class AppSteuerung {
 
     // MARK: Sprachpille
 
-    /// Sichtbar, solange Live läuft, und im Gesprächsmodus, wenn Jarvis nicht vorn ist.
+    /// Sichtbar im Gesprächsmodus, wenn Jarvis nicht vorn ist.
     func pilleAbgleichen() {
-        pille.setze(sichtbar: LiveGespraech.shared.aktiv || (SprachSchleife.shared.zustand != .aus && !fensterVorn))
+        pille.setze(sichtbar: SprachSchleife.shared.zustand != .aus && !fensterVorn)
     }
 
     /// Damit die Pille nicht auf dem Bildschirmfoto landet, das sie gerade angestoßen hat.
@@ -347,8 +358,7 @@ final class AppSteuerung {
 
     /// Klick auf die Pille: öffnet Jarvis mit dem laufenden Gespräch.
     func pilleOeffnen() {
-        if LiveGespraech.shared.aktiv { bereich = .live }
-        else if let g = SprachSchleife.shared.gespraech { gespraech = g; bereich = .gespraech }
+        if let g = SprachSchleife.shared.gespraech { gespraech = g; bereich = .gespraech }
         fensterZeigen()
     }
 
@@ -407,7 +417,6 @@ final class AppSteuerung {
 
     func kuerzelSprechen() {
         if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden(); return }
-        guard !LiveGespraech.shared.aktiv else { return }
         sprachgespraechStarten()
     }
 }

@@ -10,11 +10,12 @@ struct ModellAntwort {
     var cacheSchreibTokens = 0
 }
 
-/// Listenpreise der Claude-API in Dollar je Million Tokens (Stand 06.10.2026). Cache schreiben = 1,25 × Eingabe. Websuche ist nicht enthalten.
+/// Listenpreise der Claude-API in Dollar je Million Tokens (Stand 12.11.2026). Cache schreiben = 1,25 × Eingabe. Websuche ist nicht enthalten.
 enum ClaudePreis {
     private static let tabelle: [String: (ein: Double, aus: Double, cacheLesen: Double)] = [
         "claude-opus-5-5": (4, 20, 0.20),
         "claude-sonnet-5-5": (2, 10, 0.20),
+        "claude-fable-5-2": (8, 40, 0.20),
         "claude-fable-5-1": (10, 50, 0.25),
         "claude-haiku-5-5": (0.10, 0.50, 0.01),
     ]
@@ -59,7 +60,7 @@ struct AnthropicKlient: ModellAnbieter {
         req.setValue(schluessel, forHTTPHeaderField: "x-api-key")
         req.setValue("2026-10-21", forHTTPHeaderField: "anthropic-version")
 
-        let mitFallback = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1"].contains(modell)
+        let mitFallback = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-2", "claude-fable-5-1"].contains(modell)
         if mitFallback { req.setValue("server-side-fallback-2026-07-01", forHTTPHeaderField: "anthropic-beta") }
 
         // Prompt-Cache: tools → system → messages. Stabiles zuerst, Haltepunkte am letzten Werkzeug und an den Systemteilen.

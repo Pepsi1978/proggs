@@ -163,3 +163,152 @@ enum SprechText {
         }
     }
 }
+
+/// Zerlegt einen wachsenden Antworttext in vorlesefertige Stücke: Das erste kommt nach dem ersten Satz, die weiteren sammeln kurze Sätze,
+/// damit nicht jedes „Ja.“ eine eigene Anfrage an die Stimme wird. Ein Punkt gilt erst als Satzende, wenn das nächste Zeichen da ist.
+final class SatzStrom {
+    static let ersteGrenze = 140
+    private static let grenze = 350, minErstes = 25, minWeitere = 80
+    private static let kuerzel: Set<String> = [
+        "bzw", "ca", "ggf", "evtl", "inkl", "exkl", "usw", "etc", "vgl", "nr", "abb", "kap", "mio", "mrd", "std", "sek", "tsd", "max", "min",
+        "dr", "prof", "hr", "fr", "st", "str", "tel", "bspw", "sog", "ggü",
+    ]
+
+    private var puffer: [Character] = []
+    private var gesammelt = ""
+    private var erstes = true
+
+    func hinzu(_ text: String) -> [String] {
+        puffer.append(contentsOf: text)
+        return nimm(ende: false)
+    }
+
+    func ende() -> [String] { nimm(ende: true) }
+
+    /// Stelle zum Trennen bis `grenze`: am liebsten hinter einem Komma, sonst an einer Wortgrenze.
+    static func schnittstelle(_ t: [Character], _ grenze: Int) -> Int {
+        let bis = min(grenze, t.count - 1)
+        guard bis > 0 else { return bis }
+        var komma = -1
+        for i in stride(from: min(bis, t.count - 2), through: 0, by: -1) where t[i] == "," && t[i + 1] == " " { komma = i; break }
+        if komma >= grenze / 3 { return komma + 1 }
+        for i in stride(from: bis, to: 0, by: -1) where t[i] == " " { return i }
+        return bis
+    }
+
+    private static func istKuerzel(_ t: [Character], _ start: Int, _ punkt: Int) -> Bool {
+        var a = punkt
+        while a > start && !t[a - 1].isWhitespace { a -= 1 }
+        let wort = String(t[a..<punkt]).drop { "([„\"*_".contains($0) }
+        if wort.isEmpty { return false }
+        if wort.count == 1 { return true }                                   // „z.“, „B.“
+        if wort.allSatisfy(\.isNumber) { return wort.count <= 2 }            // „3. Platz“, Listen; eine Jahreszahl beendet den Satz
+        return wort.contains(".") || kuerzel.contains(wort.lowercased())
+    }
+
+    private func nimm(ende: Bool) -> [String] {
+        var aus: [String] = []
+        let t = puffer
+        var start = 0
+        var imCode = false
+        var i = 0
+        while i < t.count {
+            if i + 2 < t.count && t[i] == "`" && t[i + 1] == "`" && t[i + 2] == "`" { imCode.toggle(); i += 3; continue }
+            if imCode { i += 1; continue }
+            let c = t[i]
+            let folgt = i + 1 < t.count
+            let satzende = c == "\n" || ((c == "." || c == "!" || c == "?") && folgt && (t[i + 1] == " " || t[i + 1] == "\n") && (c != "." || !Self.istKuerzel(t, start, i)))
+            if satzende {
+                satz(String(t[start...i]), &aus)
+                start = i + 1
+            }
+            i += 1
+        }
+        // Ein langer Satz ohne Punkt soll nicht bis zu seinem Ende warten.
+        let obergrenze = erstes ? Self.ersteGrenze : Self.grenze
+        if !ende && !imCode && t.count - start > obergrenze {
+            let rest = Array(t[start...])
+            let schnitt = Self.schnittstelle(rest, obergrenze)
+            if schnitt > 0 { satz(String(rest[..<schnitt]), &aus, sofort: true); start += schnitt }
+        }
+        puffer.removeFirst(min(start, puffer.count))
+        if ende {
+            satz(String(puffer), &aus, sofort: true)
+            puffer = []
+            if !gesammelt.isEmpty { abgeben(&aus) }
+        }
+        return aus
+    }
+
+    private func satz(_ s: String, _ aus: inout [String], sofort: Bool = false) {
+        // Zeilenumbrüche bleiben: Markdown-Listen und -Überschriften brauchen sie beim Bereinigen.
+        if !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { gesammelt += s }
+        let laenge = gesammelt.trimmingCharacters(in: .whitespacesAndNewlines).count
+        if laenge > 0 && (sofort || laenge >= (erstes ? Self.minErstes : Self.minWeitere)) { abgeben(&aus) }
+    }
+
+    private func abgeben(_ aus: inout [String]) {
+        let sauber = SprechText.fuerStimme(gesammelt)
+        gesammelt = ""
+        guard !sauber.isEmpty else { return }
+        aus.append(sauber)
+        erstes = false
+    }
+}
+
+/// Eine laufende Sprachausgabe, die mit der Modellantwort wächst. `text` nimmt die gestreamten Stücke, `ende` den fertigen Antworttext
+/// und liest nur, was im Strom noch nicht kam (etwa eine Fehlermeldung), damit nichts doppelt klingt.
+@MainActor
+final class VorleseStrom {
+    private let saetze = SatzStrom()
+    private var gefuettert = ""
+    private var beendet = false
+    let stuecke: AsyncStream<String>
+    private let zufluss: AsyncStream<String>.Continuation
+    var lauf: Task<Void, Never>?
+    private let stopp: () -> Void
+
+    init(stopp: @escaping () -> Void) {
+        (stuecke, zufluss) = AsyncStream.makeStream(of: String.self)
+        self.stopp = stopp
+    }
+
+    func text(_ stueck: String) {
+        guard !beendet else { return }
+        gefuettert += stueck
+        for s in saetze.hinzu(stueck) { zufluss.yield(s) }
+    }
+
+    /// Das Modell ist fertig. Kehrt zurück, wenn alles gesprochen oder gestoppt ist.
+    func ende(_ endtext: String) async {
+        if !beendet {
+            beendet = true
+            let rest = Self.nachzutragen(gefuettert, endtext)
+            if !rest.isEmpty { for s in saetze.hinzu(rest) { zufluss.yield(s) } }
+            for s in saetze.ende() { zufluss.yield(s) }
+            zufluss.finish()
+        }
+        await lauf?.value
+    }
+
+    func abbrechen() {
+        beendet = true
+        zufluss.finish()
+        stopp()
+    }
+
+    /// Was vom Endtext hinter dem schon Gestreamten liegt. Leerraum zählt nicht: Die Runden werden im Endtext durch Absätze getrennt.
+    /// Passt der Anfang nicht, wird nichts nachgetragen: Lieber ein fehlender Satz als eine doppelte Antwort.
+    nonisolated static func nachzutragen(_ gestreamt: String, _ endtext: String) -> String {
+        let g = Array(gestreamt), e = Array(endtext)
+        var i = 0, j = 0
+        while true {
+            while i < g.count && g[i].isWhitespace { i += 1 }
+            if i >= g.count { break }
+            while j < e.count && e[j].isWhitespace { j += 1 }
+            if j >= e.count || e[j] != g[i] { return "" }
+            i += 1; j += 1
+        }
+        return String(e[j...])
+    }
+}

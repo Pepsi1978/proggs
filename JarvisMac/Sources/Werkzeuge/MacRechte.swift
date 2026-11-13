@@ -86,7 +86,7 @@ enum MacRechte {
             Zeile(titel: "Automation", zustand: autoZustand, text: "Steuert " + auto.map { "\($0.0)\($0.1 == noErr ? " ✓" : $0.1 == OSStatus(procNotFound) ? " (läuft nicht, ungeprüft)" : "")" }.joined(separator: ", ") + ".", bereich: "Privacy_Automation"),
             Zeile(titel: "Festplattenvollzugriff", zustand: diskzugriff ? .ja : .nein, text: "Geschützte Ordner lesen. Kann nur Frank in den Systemeinstellungen einschalten.", bereich: "Privacy_AllFiles"),
             Zeile(titel: "Programme verwalten", zustand: .unbekannt, text: "Programme in /Applications ändern und ersetzen. Kann nur Frank in den Systemeinstellungen einschalten.", bereich: "Privacy_AppBundles"),
-            Zeile(titel: "Mikrofon", zustand: mikrofon, text: "Weckwort, Diktat und Live.", bereich: "Privacy_Microphone"),
+            Zeile(titel: "Mikrofon", zustand: mikrofon, text: "Weckwort, Diktat und Live-Modus.", bereich: "Privacy_Microphone"),
             Zeile(titel: "Spracherkennung", zustand: sprache, text: "Erkennung direkt auf dem Mac.", bereich: "Privacy_SpeechRecognition"),
             Zeile(titel: "Mitteilungen", zustand: mitteilung == .authorized || mitteilung == .provisional ? .ja : mitteilung == .notDetermined ? .offen : .nein, text: "Frank Bescheid sagen, wenn eine Freigabe nötig ist."),
             Zeile(titel: "sudo ohne Passwort", zustand: sudo ? .ja : .nein, text: sudo ? "Befehle mit sudo laufen ohne Abfrage." : "Befehle mit sudo fragen nach dem Passwort; Jarvis gibt es nie selbst ein."),

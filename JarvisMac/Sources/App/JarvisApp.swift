@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { _ = await CodexAnmeldung.shared.angemeldet }
         Task.detached(priority: .utility) { AblageLader.aufraeumen() }
         AblageAbgleich.shared.hochfahren()
+        ListenSpeicher.shared.hochfahren()
         ErinnerungPlaner.shared.starten()
         Task { _ = await McpKlient.shared.werkzeuge(frisch: true) }
         AppSteuerung.shared.hochfahren()
