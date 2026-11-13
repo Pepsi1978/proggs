@@ -8,7 +8,7 @@
 #   Ursache: Jeder Deploy laeuft per "docker compose up -d --build" (siehe DEPLOY.md).
 #   BuildKit legt dabei Zwischenschichten als Cache ab — und raeumte sie NIE wieder weg,
 #   weil weder eine GC-Policy in daemon.json noch ein Aufraeum-Job existierte.
-#   Bei zwei Stacks (second-brain + werft-studio) mit zusammen 12 selbst gebauten Diensten
+#   Bei den damals zwei Stacks auf dem VPS mit zusammen 12 selbst gebauten Diensten
 #   waechst das schnell: ~54 GB in gut vier Wochen.
 #
 # WAS ES TUT:
@@ -18,7 +18,7 @@
 #
 # WAS ES BEWUSST NICHT TUT (Funktionalitaets-Erhaltung, bugs/server/docker.md §6.4):
 #   KEIN "docker system prune", KEIN "-a", KEIN "--volumes". Images, Container, Netzwerke und
-#   vor allem VOLUMES (Postgres, Qdrant, MinIO = echte Daten!) werden NICHT angefasst.
+#   vor allem VOLUMES (z. B. Qdrant = echte Daten!) werden NICHT angefasst.
 #   Nur "docker builder prune" — der raeumt ausschliesslich Bau-Zwischenschichten.
 #
 # ZWEITE SCHICHT (Defense in Depth):
