@@ -200,7 +200,6 @@ function wischenEinrichten() {
 }
 function schicke(d, schliessen = true) {
   rollenStoppen();
-  schonGesprochen = false;
   if (schliessen) waehle("");
   $("nach-unten").hidden = true;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d }));
@@ -490,7 +489,7 @@ document.addEventListener("visibilitychange", () => {
 
 // ---- Sprache (TVO): Nur in Jarvis, das Handy nimmt auf und wandelt um. Erscheint von selbst, sobald ein Terminal offen ist, wie das Overlay an den Rechnern.
 const SPRACHE = window.JarvisSprache;
-let automatisch = false, schonGesprochen = false, diktatSitzung = null, meldeZeit = null;
+let automatisch = false, diktatSitzung = null, meldeZeit = null;
 function stimmeZeigen() { if (SPRACHE) $("stimme").hidden = !aktuell; }
 function stimmeMelden(text) {
   const m = $("stimme-meldung");
@@ -515,9 +514,12 @@ window.stimmeFertig = (text, fehler) => {
   if (!text) return;
   // Das Diktat gehört zu der Sitzung, in der es begann: nie mit automatischem Absenden in eine andere.
   if (diktatSitzung !== aktuell || !ws || ws.readyState !== 1) { stimmeMelden(`Nicht eingefügt, die Sitzung hat gewechselt: ${text.slice(0, 120)}`); return; }
-  // Ohne automatisches Absenden endet jedes Diktat mit dem Aufgabentrenner " ; " wie am Rechner (TVO): Die CLI erkennt daran mehrere Aufgaben, und die nächste Ansage schließt direkt an.
-  if (automatisch) { schicke(text); setTimeout(() => schicke("\r"), 60); }
-  else schicke(text.replace(/\s+$/, "") + " ; ");
+  // Jedes Diktat endet mit dem Aufgabentrenner " ; " wie am Rechner (TVO, auch mit automatischem Absenden): Die CLI erkennt daran mehrere Aufgaben, die nächste Ansage schließt direkt an.
+  const kern = text.trim().replace(/\s*;$/, "");
+  if (!kern) return;
+  schicke(kern + " ; ");
+  const sitzung = aktuell;
+  if (automatisch) setTimeout(() => { if (sitzung === aktuell) schicke("\r"); }, 60);
 };
 if (SPRACHE) {
   $("stimme-mikro").addEventListener("click", () => {
