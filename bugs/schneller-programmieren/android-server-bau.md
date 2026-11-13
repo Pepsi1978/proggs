@@ -69,6 +69,10 @@
   Tunnel und brauchte 45–101 s, ohne Chance auf Erfolg.
 - **Fix:** Steht die Tunnel-Adresse auf `unauthorized`, meldet das Skript sofort (0 s) und verbindet im Hintergrund neu.
   Das lässt die Abfrage „Debugging zulassen“ am Gerät wieder erscheinen.
+- **Nachtrag 13.11.2026 (Mac):** Über den Tunnel (`10.8.0.8:5555`) zeigte das Tablet für den neuen Mac-Schlüssel gar keine
+  Abfrage, obwohl es wach und entsperrt war. Lösung ohne Tippen: Der Mac bietet den schon freigegebenen Server-Schlüssel zusätzlich an
+  (`~/SK/Android/adbkey-server`, `ADB_VENDOR_KEYS`, gesetzt in `adb-wlan.sh`, `auf-beide.sh`, `jarvis-install.sh`, `logcat-lesen.sh`
+  und `~/.zshrc`). Wirkt nur beim Start des adb-Servers: danach einmal `adb kill-server`.
 
 ## B8. Zwei Bauten im selben Projekt
 
