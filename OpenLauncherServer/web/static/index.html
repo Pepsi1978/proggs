@@ -6,6 +6,7 @@
 <title>Server-Konsole</title>
 <link rel="stylesheet" href="/static/xterm.css?v=5.5.0">
 <link rel="stylesheet" href="/static/style.css">
+<script src="/static/designs.js"></script>
 <script>
 // Thema vor dem ersten Zeichnen setzen: Sonst blitzt die Seite bei Hell erst dunkel auf. app.js nutzt window.Thema weiter.
 (() => {
@@ -27,18 +28,39 @@
     const datum = (jd) => new Date((jd - 2440587.5) * 864e5);
     return { auf: datum(transit - w / 360), unter: datum(transit + w / 360) };
   }
+  const DESIGNS = window.DESIGNS || [];
+  const lies = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const merke = (k, v) => { try { localStorage.setItem(k, v); } catch { /* nur Komfort */ } };
+  const gueltig = (id, art) => DESIGNS.some((d) => d.id === id && d.art === art) ? id : (DESIGNS.find((d) => d.art === art) || {}).id;
+  // Die Wahl bleibt gespeichert, bis sie im Reiter System wieder umgestellt wird.
+  const design = { hell: gueltig(lies("design-hell"), "hell"), dunkel: gueltig(lies("design-dunkel"), "dunkel") };
   function stand() {
     const jetzt = new Date(), s = sonne(jetzt);
     const aktiv = wahl !== "auto" ? wahl : jetzt >= s.auf && jetzt < s.unter ? "hell" : "dunkel";
-    return { wahl, aktiv, auf: s.auf, unter: s.unter };
+    const d = DESIGNS.find((x) => x.id === design[aktiv]);
+    return { wahl, aktiv, design: d, auf: s.auf, unter: s.unter };
   }
-  function anwenden() { const s = stand(); document.documentElement.dataset.thema = s.aktiv; return s; }
+  const CSS = { grund: "--grund", flaeche: "--flaeche", rand: "--rand", text: "--text", leise: "--leise", akzent: "--akzent", aufAkzent: "--auf-akzent", gut: "--gut", warn: "--warn", gefahr: "--gefahr" };
+  function anwenden() {
+    const s = stand(), wurzel = document.documentElement;
+    wurzel.dataset.thema = s.aktiv;
+    if (s.design) {
+      for (const [k, v] of Object.entries(CSS)) wurzel.style.setProperty(v, s.design.ui[k]);
+      wurzel.style.setProperty("--term", s.design.term.background);
+    }
+    return s;
+  }
   function waehlen(neu) {
     wahl = ERLAUBT.includes(neu) ? neu : "auto";
-    try { localStorage.setItem("thema", wahl); } catch { /* nur Komfort */ }
+    merke("thema", wahl);
     return anwenden();
   }
-  window.Thema = { anwenden, waehlen, wahl: () => wahl };
+  function designWaehlen(art, id) {
+    design[art] = gueltig(id, art);
+    merke(`design-${art}`, design[art]);
+    return anwenden();
+  }
+  window.Thema = { anwenden, waehlen, designWaehlen, wahl: () => wahl, design: (art) => design[art], designs: DESIGNS };
   anwenden();
 })();
 </script>
@@ -103,6 +125,10 @@
         <option value="hell">Hell</option>
         <option value="dunkel">Dunkel</option>
       </select></label>
+      <label>Helles Design<select id="design-hell"></select></label>
+      <div id="vorschau-hell" class="vorschau"></div>
+      <label>Dunkles Design<select id="design-dunkel"></select></label>
+      <div id="vorschau-dunkel" class="vorschau"></div>
       <div id="thema-info" class="leise"></div>
     </div>
     <div id="programme"></div>

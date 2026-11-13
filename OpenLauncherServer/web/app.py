@@ -407,7 +407,7 @@ async def terminal(request: web.Request) -> web.WebSocketResponse:
 async def neu_laden_bei_aenderung(_: web.Application):
     """Neue Fassung aus dem Repo: beenden, systemd startet neu."""
     # Auch die Seiten: Ihre gepackten Fassungen entstehen beim Start, eine geänderte app.js käme sonst nie an.
-    dateien = [Path(__file__)] + [HIER / "static" / n for n in ("app.js", "style.css", "index.html")]
+    dateien = [Path(__file__)] + [HIER / "static" / n for n in ("app.js", "designs.js", "style.css", "index.html")]
     stand = launcher.quellstand(dateien)
 
     async def wache():
@@ -434,7 +434,7 @@ async def ohne_zwischenspeicher(request: web.Request, antwort: web.StreamRespons
 
 def gepackt_ablegen() -> None:
     """aiohttp liefert <datei>.gz von selbst aus: Das Terminal schrumpft von 290 auf rund 70 KB, das merkt man im Mobilfunk beim ersten Laden."""
-    for name in ("xterm.js", "xterm.css", "addon-fit.js", "app.js", "style.css"):
+    for name in ("xterm.js", "xterm.css", "addon-fit.js", "app.js", "designs.js", "style.css"):
         quelle, ziel = HIER / "static" / name, HIER / "static" / f"{name}.gz"
         try:
             if not ziel.exists() or ziel.stat().st_mtime < quelle.stat().st_mtime:

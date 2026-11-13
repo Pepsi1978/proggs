@@ -14,21 +14,41 @@ const dauer = (s) => s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` 
 
 // ---- Darstellung: Wahl und Sonnenstand stehen in index.html (window.Thema), hier nur Terminal und Anzeige
 const TERM_SCHRIFT = '"Roboto Mono","Noto Sans Mono","Droid Sans Mono","DejaVu Sans Mono","Cascadia Mono",Menlo,Consolas,monospace';
-const TERM_HELL = {
-  background: "#ffffff", foreground: "#1f2328", cursor: "#1f2328", cursorAccent: "#ffffff", selectionBackground: "#b6d6fd",
-  black: "#24292f", red: "#cf222e", green: "#116329", yellow: "#7d4e00", blue: "#0969da", magenta: "#8250df", cyan: "#1b7c83", white: "#6e7781",
-  brightBlack: "#57606a", brightRed: "#a40e26", brightGreen: "#1a7f37", brightYellow: "#633c01", brightBlue: "#218bff", brightMagenta: "#a475f9", brightCyan: "#3192aa", brightWhite: "#8c959f",
-};
 const uhrzeit = (d) => d.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
-function termThema(aktiv = document.documentElement.dataset.thema) {
-  return aktiv === "hell"
-    ? { theme: TERM_HELL, minimumContrastRatio: 4.5 }
-    : { theme: { background: "#000000" }, minimumContrastRatio: 1 };
+// Auf hellem Grund sind Gelb, Türkis und Hellgrau der Original-Paletten oft unter 3:1: xterm dunkelt sie dann selbst ab.
+function termThema(s) {
+  const d = s.design || { term: { background: "#000000" } };
+  return { theme: { ...d.term }, minimumContrastRatio: s.aktiv === "hell" ? 4.5 : 1 };
 }
+let termDesign = null;
 function themaAnwenden(s = Thema.anwenden()) {
-  const t = termThema(s.aktiv);
-  if (term && term.options.minimumContrastRatio !== t.minimumContrastRatio) { term.options.theme = t.theme; term.options.minimumContrastRatio = t.minimumContrastRatio; }
-  if (seite === "system") $("thema-info").textContent = `Heute in Berlin: Sonnenaufgang ${uhrzeit(s.auf)} Uhr, Sonnenuntergang ${uhrzeit(s.unter)} Uhr. Aktiv: ${s.aktiv === "hell" ? "Hell" : "Dunkel"}.`;
+  // xterm übernimmt ein neues Thema nur als neues Objekt, darum nur bei echtem Wechsel und immer frisch kopiert.
+  const schluessel = `${s.design && s.design.id}/${s.aktiv}`;
+  if (term && termDesign !== schluessel) { const t = termThema(s); term.options.theme = t.theme; term.options.minimumContrastRatio = t.minimumContrastRatio; termDesign = schluessel; }
+  if (seite !== "system") return;
+  const naechster = s.wahl !== "auto" ? "" : s.aktiv === "hell" ? ` Dunkles Design ab ${uhrzeit(s.unter)} Uhr.` : ` Helles Design ab Sonnenaufgang.`;
+  $("thema-info").textContent = `Heute in Berlin: Sonnenaufgang ${uhrzeit(s.auf)} Uhr, Sonnenuntergang ${uhrzeit(s.unter)} Uhr. Aktiv: ${s.design ? s.design.name : ""} (${s.aktiv === "hell" ? "hell" : "dunkel"}).${naechster}`;
+}
+// Vorschau als kleines Terminal in den Farben des Designs: Ein gewähltes dunkles Design ist am Tag sonst nicht zu sehen.
+function vorschau(art) {
+  const d = Thema.designs.find((x) => x.id === Thema.design(art));
+  const ziel = $(`vorschau-${art}`);
+  ziel.replaceChildren();
+  if (!d) return;
+  const t = d.term, ui = d.ui;
+  ziel.style.background = t.background;
+  ziel.style.color = t.foreground || "#ffffff";
+  ziel.style.borderColor = ui.rand;
+  const teil = (text, farbe, fett) => { const e = element("span", "", text); if (farbe) e.style.color = farbe; if (fett) e.style.fontWeight = "700"; return e; };
+  ziel.append(teil("❯ ", ui.akzent, true), teil("claude ", t.foreground), teil("--fertig", t.brightBlack || ui.leise), document.createElement("br"),
+    teil("✓ grün ", t.green || ui.gut), teil("⚠ gelb ", t.yellow || ui.warn), teil("✗ rot ", t.red || ui.gefahr), teil("blau ", t.blue), teil("lila ", t.magenta), teil("türkis", t.cyan));
+}
+function designListe(art) {
+  const wahl = $(`design-${art}`);
+  for (const d of Thema.designs.filter((x) => x.art === art)) { const o = element("option", "", d.name); o.value = d.id; wahl.append(o); }
+  wahl.value = Thema.design(art);
+  wahl.addEventListener("change", () => { themaAnwenden(Thema.designWaehlen(art, wahl.value)); vorschau(art); });
+  vorschau(art);
 }
 
 // ---- Reiter
@@ -104,7 +124,8 @@ let term = null, fit = null, ws = null, aktuell = null, neuVersuch = null;
 function aufbauen() {
   if (term) return;
   // Eigene Schriftliste: xterms Vorgabe „courier“ wird auf Android zu Cutive Mono, einer sehr breiten Schreibmaschinenschrift.
-  term = new Terminal({ fontSize: 13, fontFamily: TERM_SCHRIFT, scrollback: 5000, cursorBlink: true, convertEol: false, ...termThema() });
+  term = new Terminal({ fontSize: 13, fontFamily: TERM_SCHRIFT, scrollback: 5000, cursorBlink: true, convertEol: false, ...termThema(Thema.anwenden()) });
+  termDesign = null;
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open($("xterm"));
@@ -587,6 +608,8 @@ $("update").addEventListener("click", async () => { const { name } = await api("
 
 // Fehlgeschlagene Knöpfe und Abrufe sichtbar machen, statt dass beim Tippen nichts geschieht.
 window.addEventListener("unhandledrejection", (e) => { const m = $("auslastung"); m.textContent = `Fehler: ${e.reason && e.reason.message || e.reason}`; zeige("sitzungen"); });
+designListe("hell");
+designListe("dunkel");
 $("thema-wahl").value = Thema.wahl();
 $("thema-wahl").addEventListener("change", (e) => themaAnwenden(Thema.waehlen(e.target.value)));
 setInterval(themaAnwenden, 60000);
