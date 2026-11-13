@@ -271,6 +271,15 @@
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
         <receiver android:name=".ablage.ErinnerungEmpfaenger" android:exported="false" />
         <service android:name=".ablage.ErinnerungKlingelDienst" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <activity
+            android:name=".ablage.ErinnerungWeckerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:taskAffinity="de.frank.jarvis.wecker"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Jarvis" />
         <receiver android:name=".dienst.AgentenEntscheidungEmpfaenger" android:exported="false" />
         <!-- Wegwischen einer Meldung, die wie ein Wecker klingelt: Jarvis beendet ihren Weckton. -->
         <receiver android:name=".meldung.WeckerTonEmpfaenger" android:exported="false" />

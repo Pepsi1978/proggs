@@ -414,6 +414,11 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         }.toMap()
     }.getOrNull()
 
+    /** Die Tage mit Hausmüll-Abholung (nicht Gelbe Tonne, Papier oder Bio) von [von] bis [bis]. null, wenn der Kalender nicht lesbar ist. */
+    fun hausmuellTage(von: LocalDate, bis: LocalDate): List<LocalDate>? = if (!erlaubt) null else runCatching {
+        lies(von, bis).filterValues { liste -> liste.any { t -> t.titel.lowercase(Locale.GERMAN).let { "hausmüll" in it || "hausmuell" in it || "restmüll" in it } } }.keys.sorted()
+    }.getOrNull()
+
     /** Alle Termine je Tag. Mehrtägige Ganztagstermine stehen an jedem ihrer Tage. */
     private fun lies(von: LocalDate, bis: LocalDate): Map<LocalDate, List<Termin>> {
         val zone = ZoneId.systemDefault()

@@ -187,6 +187,12 @@ object ErinnerungPlaner {
         else alle.firstOrNull { it.quittung == quittung }?.let { bestaetige(app, it) } ?: verstummen(app, quittung)
     }
 
+    /** „Wecker ausschalten“ auf der Wecker-Karte: bestätigt alles, was gerade klingelt. */
+    fun ausschalten(context: Context) {
+        val app = context.applicationContext
+        bereich.launch { runCatching { bestaetigeAus(app, null); pruefen(app) }.onFailure { Logbuch.fehler("Wecker ausschalten", it) } }
+    }
+
     private fun meldungsNummer(quittung: String) = 20_000 + (quittung.hashCode() and 0xFFFF)
 
     private fun absicht(app: Context, aktion: String, quittung: String?, code: Int) = PendingIntent.getBroadcast(app, code,
