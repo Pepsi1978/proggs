@@ -50,8 +50,7 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
     mit Punkt. `build.gradle.kts` liest versionCode, versionName und VERSION_BUMPED_AT aus dem Log, dort nie von
     Hand eintragen. Neue Android-Apps bekommen den Versionslog von Anfang an (Vorlage: UpdateStation).
   - .NET/WPF: `<Version>` in der `.csproj`, Form `2.1.84`.
-  - Node/TypeScript: `version` in der Wurzel-`package.json`. Bei WerftStudio mit Zeitstempel-Suffix, Form
-    `0.32.2-20260809.1545`.
+  - Node/TypeScript: `version` in der Wurzel-`package.json`.
 - Wird die Version in der App angezeigt (meist im Einstellungs-Bildschirm, sonst auf anderen Seiten suchen), zieh
   die Anzeige mit.
 - Weicht ein Projekt von diesen Mustern ab, steht die Regel in dessen eigener CLAUDE.md. Findest du dort nichts und

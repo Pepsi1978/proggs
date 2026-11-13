@@ -28,7 +28,7 @@ Diese Regeln gelten für jede Programmieraufgabe!
   - Android: `app/src/main/assets/versionslog.json` — pro Commit einen Eintrag unten anhängen: `{ "versionCode": <letzter + 1>, "versionName": "1.0.28", "stand": "19.07.2026, 21:00 Uhr", "notiz": "<was geändert wurde>" }`.
   versionCode immer um 1 erhöhen, sonst erkennt UpdateStation das Update nicht. Uhrzeit mit Doppelpunkt, nicht mit Punkt. `build.gradle.kts` liest versionCode, versionName und VERSION_BUMPED_AT aus dem Log — dort nie von Hand eintragen. Neue Android-Apps bekommen den Versionslog von Anfang an (Vorlage: UpdateStation).
   - .NET/WPF: `<Version>` in der `.csproj`, Form `2.1.84`.
-  - Node/TypeScript: `version` in der Wurzel-`package.json`. Bei WerftStudio mit Zeitstempel-Suffix, Form `0.32.2-20260809.1545`.
+  - Node/TypeScript: `version` in der Wurzel-`package.json`.
 - Wird die Version in der App angezeigt (meist im Einstellungs-Bildschirm, sonst auf anderen Seiten suchen), zieh die Anzeige mit.
 - Weicht ein Projekt von diesen Mustern ab, steht die Regel in dessen eigener AGENTS.md. Findest du dort nichts und passt kein Muster: frag nach, rate nicht.
 

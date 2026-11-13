@@ -1,6 +1,6 @@
 # Server-Regeln (Hostinger-Server, gehen Profil und Modus oben vor)
 
-Du läufst auf Franks Hostinger-Server (Ubuntu 24.04, 2 vCPU, 8 GB RAM, nebenbei laufen Werft Studio, Second Brain und der Jarvis-Relay), als Benutzer `jarvis` ohne root und ohne Docker. Das Repo ist `~/proggs`. Frank sieht dich in der Server-Konsole und in Jarvis.
+Du läufst auf Franks Hostinger-Server (Ubuntu 24.04, 2 vCPU, 8 GB RAM, nebenbei laufen Second Brain und der Jarvis-Relay), als Benutzer `jarvis` ohne root und ohne Docker. Das Repo ist `~/proggs`. Frank sieht dich in der Server-Konsole und in Jarvis.
 
 - **Uhrzeit:** `date '+%d.%m.%Y %H:%M'` (die Zeitzone ist schon Berlin). `Get-Date` gibt es hier nur, wenn du `pwsh` aufrufst.
 - **Zugangsdaten:** `~/SK` enthält hier nur `Jarvis/relay.properties`, `Jarvis/plugin-url.txt`, `Jarvis/fernsteuerung-token.txt`, den Android-Debug-Key sowie `NvidiaDev/.env` und `ClaudeCodeOpenRouter/openrouter.key` für den Modellzugang (nicht für Recherchen). Fehlt ein Zugang, melde das; nie raten.

@@ -1,7 +1,0 @@
-[Unit]
-Description=Begrenzt ungenutzten Docker-Build-Cache
-After=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh /opt/werft-studio/docker/prune-docker-cache.sh

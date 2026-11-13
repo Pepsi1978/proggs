@@ -43,7 +43,7 @@ EFFORTS = {"claude": ["low", "medium", "high", "xhigh", "max"], "codex": ["low",
            "opencode": ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"], "kimi": ["low", "high", "max"],
            "antigravity": ["low", "medium", "high", "xhigh", "max"]}
 NUR_LOKAL = ("lmstudio",)  # läuft auf Franks eigenem Rechner, nicht auf einem Server ohne Grafikkarte
-# 2 vCPU, 8 GB, nebenbei Werft Studio und Second Brain: mehr vertragen die Sitzungen nicht (OpenLauncherServer/PLAN.md).
+# 2 vCPU, 8 GB, nebenbei Second Brain und Jarvis-Relay: mehr vertragen die Sitzungen nicht (OpenLauncherServer/PLAN.md).
 MAX_ARBEITEND = 2
 MAX_OFFEN = 4
 ARBEITET_S = 180  # CLIs ohne Hooks: so lange nach der letzten Ausgabe gilt die Sitzung als arbeitend
