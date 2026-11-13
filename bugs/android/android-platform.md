@@ -910,3 +910,8 @@ Tracker-Status.
 - **Fix:** Die eine Anweisung in `JNI_OnLoad` beim Bau umschreiben: `mov w0,#8` (Bytes `00 01 80 52`) → `mov w0,#6` (`c0 00 80 52`), gesucht über das Muster samt folgendem `movk w0,#1,lsl#16; ldr x30,[sp],#0x10; ret`. Der Bau bricht ab, wenn das Muster nicht genau einmal vorkommt (Task `ngrokBibliothek` in `Jarvis/app/build.gradle.kts`, Commit 126d40ccd).
 - **Diagnose:** `llvm-objdump -d --disassemble-symbols=JNI_OnLoad <lib>.so` aus dem NDK zeigt die zurückgegebene Zahl.
 - **Muster:** Vor dem Einbau einer JVM-Bibliothek mit nativer Komponente in der APK nachsehen, ob die `.so` wirklich unter `lib/arm64-v8a/` liegt, und das Laden früh beim App-Start mit Log-Ausgabe anstoßen, nicht erst im Fehlerpfad.
+
+## Samsung „auto_disabler“ schaltet Google Drive ab (13.11.2026, UpdateStation)
+- Symptom: SAF-Abfragen auf `content://com.google.android.apps.docs.storage/...` liefern `null` („Failed to find provider info“), obwohl die Ordnerfreigabe noch gilt. Vorher veraltet der Zwischenspeicher der Drive-App (neue APKs fehlen in der Liste).
+- Ursache: Samsung setzt ungenutzte Google-Apps (Drive, Maps, Wallet …) auf `DISABLED_UNTIL_USED` (`dumpsys package` → `enabled=4`, `lastDisabledCaller: auto_disabler`). `adb shell pm enable` ist verboten (SecurityException), Abfragen des Providers zählen nicht als Nutzung.
+- Lösung: Start der Launcher-Activity schaltet die App wieder ein (`am start -n com.google.android.apps.docs/.app.NewMainProxyActivity`). Robuster: Drive direkt per REST (drive.readonly) lesen statt über die Drive-App; UpdateStation tut das seit 1.0.35 zuerst.

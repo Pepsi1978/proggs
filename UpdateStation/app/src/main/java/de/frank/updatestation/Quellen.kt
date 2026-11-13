@@ -44,10 +44,31 @@ object Quellen {
         val e = Einstellungen(context)
         return when (e.quelle) {
             "drive" -> DriveQuelle(context, e)
-            "ordner" -> e.ordnerUri?.let { OrdnerQuelle(context, Uri.parse(it)) }
+            "ordner" -> e.ordnerUri?.let { uri ->
+                val ordner = OrdnerQuelle(context, Uri.parse(uri))
+                // Ordner aus dem Drive-Dokumentanbieter: zuerst direkt über die Drive-Schnittstelle lesen. Sie hängt
+                // nicht an der Drive-App, die Samsung abschaltet und deren Zwischenspeicher veraltet.
+                if (Uri.parse(uri).authority?.startsWith("com.google.android.apps.docs") == true) DriveZuerst(DriveQuelle(context, e), ordner)
+                else ordner
+            }
             else -> null
         }
     }
+}
+
+/** Liest über die Drive-Schnittstelle; ist dort (noch) keine Anmeldung erteilt, über den freigegebenen Ordner. */
+class DriveZuerst(private val drive: DriveQuelle, private val ordner: OrdnerQuelle) : UpdateQuelle {
+    override suspend fun suche(): Suchergebnis = try {
+        drive.suche()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.i(TAG, "Drive-Schnittstelle nicht nutzbar (${e.javaClass.simpleName}), lese den freigegebenen Ordner")
+        ordner.suche()
+    }
+
+    override suspend fun oeffne(fund: Fund): InputStream =
+        if (fund.apkRef?.startsWith("content://") == true) ordner.oeffne(fund) else drive.oeffne(fund)
 }
 
 object DriveAuth {
@@ -212,6 +233,11 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
     /** Eine Abfrage der Kinder; wartet kurz, falls der Anbieter selbst "lädt noch" meldet. */
     private suspend fun abfrage(uri: Uri, name: String, versuch: Int): List<Kind> {
         val c = context.contentResolver.query(uri, spalten, null, null, null)
+            ?: run {
+                // Abgeschaltete Drive-App (Samsung) sieht genauso aus wie eine verlorene Freigabe: erst wecken.
+                AnbieterWecker.sicherstellen(context, baum.authority ?: "")
+                context.contentResolver.query(uri, spalten, null, null, null)
+            }
             ?: throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
         try {
             val liste = mutableListOf<Kind>()
@@ -301,6 +327,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
     }
 
     override suspend fun suche(): Suchergebnis = withContext(Dispatchers.IO) {
+        baum.authority?.let { AnbieterWecker.sicherstellen(context, it) }
         val wurzel = DocumentsContract.getTreeDocumentId(baum)
         val ordner = kinder(wurzel, "Updates").filter { it.ordner }
         Log.i(TAG, "Updates: ${ordner.size} Projektordner")
