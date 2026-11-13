@@ -417,7 +417,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     /** Die Tage mit Hausmüll-Abholung (nicht Gelbe Tonne, Papier oder Bio) von [von] bis [bis]. null, wenn der Kalender nicht lesbar ist. */
     fun hausmuellTage(von: LocalDate, bis: LocalDate): List<LocalDate>? = if (!erlaubt) null else runCatching {
         // Nur Termine, die mit dem Wort beginnen („Hausmüll“, „Restmüll-Abfuhr“), nicht jeder, der es irgendwo erwähnt.
-        lies(von, bis).filterValues { liste -> liste.any { t -> t.titel.trim().lowercase(Locale.GERMAN).let { it.startsWith("hausmüll") || it.startsWith("hausmuell") || it.startsWith("restmüll") } } }.keys.sorted()
+        lies(von, bis).filterValues { liste -> liste.any { t -> t.titel.trim().lowercase(Locale.GERMAN).let { listOf("hausmüll", "hausmuell", "restmüll", "restmuell").any { w -> it.startsWith(w) } } } }.keys.sorted()
     }.getOrNull()
 
     /** Alle Termine je Tag. Mehrtägige Ganztagstermine stehen an jedem ihrer Tage. */

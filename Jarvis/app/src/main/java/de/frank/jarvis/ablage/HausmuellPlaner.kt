@@ -12,7 +12,7 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 /**
- * Hausmüll-Wecker: Jeden Montag um 6 Uhr (eigener Systemwecker, auch bei gesperrtem Handy) und zusätzlich einmal täglich aus der Minutenrunde liest Jarvis
+ * Hausmüll-Wecker: Jeden Montag um 6 Uhr (eigener Systemwecker, auch bei gesperrtem Handy) und zusätzlich alle drei Stunden aus der Minutenrunde liest Jarvis
  * die Hausmüll-Termine der nächsten [VORLAUF_TAGE] Tage aus dem Kalender und legt für jeden am Vortag eine Erinnerung in Weckerform an, die vorgelesen wird
  * und ausgeschaltet werden muss. Uhrzeit nach dem Dienst am Vortag: Nachtschicht 16:00 (Tonne auf dem Weg zur Arbeit mit raus), Tagschicht 17:40
  * (beim Heimkommen), sonst 16:50. X, F, U und K zählen als frei. Der tägliche Lauf zieht spätere Dienständerungen nach.
@@ -33,20 +33,33 @@ object HausmuellPlaner {
     private val UHR = DateTimeFormatter.ofPattern("HH:mm")
 
     /** Unsere Erinnerung oder eine, die Jarvis per Sprache für den Hausmüll angelegt hat; nie Bio, Papier oder Gelbe Tonne. */
-    private fun istHausmuell(e: Erinnerung) = !e.allgemein && (e.zeile == ZEILE || listOf(e.text, e.kurz, e.zeile).any { it.contains("Hausmüll", true) })
+    private fun istHausmuell(e: Erinnerung) = !e.allgemein && (e.zeile == ZEILE ||
+        listOf(e.text, e.kurz).any { it.contains("Hausmüll", true) && (it.contains("Mülltonne", true) || it.contains("abgeholt", true)) })
 
-    /** Aus der Minutenrunde und vom Montagswecker; kostet nichts, wenn heute schon geprüft ist. [erzwingen] = Montagswecker. */
-    @Synchronized
+    private val laeuft = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** Zwischen zwei Läufen: Dienständerungen im Lauf des Tages werden so binnen drei Stunden nachgezogen. */
+    private const val ABSTAND_MS = 3 * 3_600_000L
+
+    /** Aus der Minutenrunde und vom Montagswecker; kostet nichts, solange der letzte Lauf frisch ist. [erzwingen] = Montagswecker. */
     fun pruefen(context: Context, erzwingen: Boolean = false) {
-        val app = context.applicationContext
+        // Nie stapeln: Hängt eine Kalenderabfrage, wartet die nächste Minutenrunde nicht blockiert dahinter.
+        if (!laeuft.compareAndSet(false, true)) return
+        try { lauf(context.applicationContext, erzwingen) } finally { laeuft.set(false) }
+    }
+
+    private fun lauf(app: Context, erzwingen: Boolean) {
         if (de.frank.jarvis.data.Geraet.istTablet) return
         val p = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val heute = LocalDate.now()
-        if (!erzwingen && p.getString("regel", null) == REGEL && p.getString("zuletzt", null) == heute.toString()) return
-        if (Erinnerungen.defekt(app)) return
+        val nun = System.currentTimeMillis()
+        if (!erzwingen && p.getString("regel", null) == REGEL && nun - p.getLong("zuletztMs", 0L) in 0 until ABSTAND_MS) return
+        // Erster Abgleich nach Neuinstallation: Die Erinnerungen vom Server fehlen noch, sonst entstünden Doppelte.
+        if (ErinnerungPlaner.abgleichPause || Erinnerungen.defekt(app)) return
+        if (!erzwingen && nun - p.getLong("versuchMs", 0L) in 0 until 30 * 60_000L) return
+        p.edit().putLong("versuchMs", nun).apply()
         val kalender = KalenderFaehigkeit(app)
         val tage = kalender.hausmuellTage(heute, heute.plusDays(VORLAUF_TAGE)) ?: return
-        // Leer heißt meist: Kalender nach dem Start noch nicht synchronisiert. Dann nichts löschen und später erneut versuchen.
+        // Leer heißt meist: Kalender nach dem Start noch nicht synchronisiert. Dann nichts löschen und in einer halben Stunde erneut.
         if (tage.isEmpty()) { Logbuch.system("Hausmüll-Erinnerungen", "keine Abholtermine in den nächsten $VORLAUF_TAGE Tagen, später erneut"); return }
         val schichten = kalender.schichten(heute, VORLAUF_TAGE.toInt() + 1).orEmpty()
         val jetzt = LocalDateTime.now()
@@ -70,7 +83,8 @@ object HausmuellPlaner {
                 else -> "Morgen, am $wochentag, wird der Hausmüll abgeholt. Bitte jetzt die Mülltonne rausstellen."
             }
             val uhrzeit = zeit.format(UHR)
-            val alt = vorhanden[vortag.toString()]?.firstOrNull()
+            // Offene, unbestätigte zuerst: Eine schon ausgeschaltete Doppelte darf die offene nicht verdecken.
+            val alt = vorhanden[vortag.toString()]?.sortedBy { e -> e.erledigt != 0L || e.termine().any { it.quittung in quittungen } }?.firstOrNull()
             if (alt == null) {
                 if (angelegt[vortag.toString()]?.let { it !in alleIds } == true) continue
                 val e = Erinnerungen.anlegen(app, kurz, ZEILE, kurz, vortag.toString(), uhrzeit, Erinnerung.FORM_WECKER, emptyList(), uhrzeit)
@@ -84,18 +98,19 @@ object HausmuellPlaner {
             if (Erinnerungen.aendere(app, alt.id) { it.copy(text = kurz, kurz = kurz, zeile = ZEILE, uhrzeit = uhrzeit, form = Erinnerung.FORM_WECKER, ausloesungen = listOf(Erinnerungen.neueAusloesung(0))) } != null) angepasst++
             else fehler = true
         }
-        // Abholtermin verschoben oder gestrichen: eigene, noch offene Wecker im Planungsfenster fallen weg.
+        // Abholtermin verschoben oder gestrichen: eigene (von Jarvis angelegte oder übernommene), noch offene Wecker im Planungsfenster fallen weg.
         val ende = heute.plusDays(VORLAUF_TAGE - 1)
+        val eigene = angelegt.values.toSet()
         for (e in vorhanden.values.flatten()) {
             val d = e.tag() ?: continue
-            if (e.zeile != ZEILE || d in vortage || d.isBefore(heute) || d.isAfter(ende) || e.erledigt != 0L || e.termine().any { it.quittung in quittungen }) continue
+            if (e.id !in eigene || e.zeile != ZEILE || d in vortage || d.isBefore(heute) || d.isAfter(ende) || e.erledigt != 0L || e.termine().any { it.quittung in quittungen }) continue
             if ((e.termin() ?: 0L) <= System.currentTimeMillis()) continue
             if (Erinnerungen.loesche(app, e.id)) { entfernt++; angelegt.remove(e.datum) }
         }
         val behalten = angelegt.filterKeys { k -> runCatching { !LocalDate.parse(k).isBefore(heute) }.getOrDefault(false) }
         p.edit().putStringSet("angelegt", behalten.map { "${it.key}|${it.value}" }.toSet()).apply()
         // Nur ein vollständiger Lauf gilt als erledigt; sonst versucht es die nächste Minutenrunde erneut.
-        if (!fehler) p.edit().putString("zuletzt", heute.toString()).putString("regel", REGEL).apply()
+        if (!fehler) p.edit().putLong("zuletztMs", nun).putString("regel", REGEL).apply()
         Logbuch.system("Hausmüll-Erinnerungen geprüft", "${tage.size} Abholtermine, $neu neu, $angepasst angepasst, $entfernt entfernt" + if (fehler) ", nicht alles gespeichert" else "")
     }
 

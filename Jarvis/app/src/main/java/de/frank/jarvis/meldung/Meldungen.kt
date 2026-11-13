@@ -154,7 +154,7 @@ object Meldungsarten {
     /** Zwei unabhängige Profile; die Form gehört weiterhin zur einzelnen Erinnerung. */
     val ERINNERUNG = Meldungsart(
         "erinnerung", "Als Benachrichtigung", "Einstellungen für Erinnerungen in der Form Benachrichtigung.",
-        "Zu den eingestellten Zeitpunkten, auf dem Gerät, das du gerade benutzt.", ERINNERUNGEN, "jarvis_erinnerung",
+        "Zu den eingestellten Zeitpunkten, nur auf dem Handy; Tablet und Rechner zeigen sie nur in der Liste.", ERINNERUNGEN, "jarvis_erinnerung",
         schaltbar = false, vorlesenStandard = true, formFest = true,
     )
     val ERINNERUNG_WECKER = Meldungsart(

@@ -52,8 +52,8 @@ import kotlin.coroutines.resume
 /**
  * Lässt fällige Erinnerungen erscheinen. Ein einziger Wecker im AlarmManager steht auf dem nächsten Zeitpunkt.
  *
- * Wo sie erscheint: Der Relay kennt das zuletzt benutzte Gerät (Anwesenheit). Ist das ein anderes, bleibt das Handy still und fragt
- * alle zwei Minuten nach. Wird dort nicht bestätigt und Frank ist weg, ist nach fünf Minuten wieder das Handy dran. Ohne Netz meldet sich das Handy immer.
+ * Wo sie erscheint: nur auf dem Handy (Franks Vorgabe vom 13.11.2026), immer, auch wenn er gerade am Tablet oder Rechner sitzt. Das Tablet, Mac und Windows
+ * zeigen Erinnerungen nur in der Liste und können sie dort bestätigen.
  * Eine Bestätigung von irgendwo kommt über [AblageSync] herein und beendet Meldung, Stimme und Klingeln hier.
  */
 object ErinnerungPlaner {
@@ -101,7 +101,8 @@ object ErinnerungPlaner {
         // Anwesenheit: Solange das Handy entsperrt benutzt wird, meldet es das einmal je Minute.
         bereich.launch { while (true) { delay(60_000L); if (benutzt(app)) ziel(app) } }
         // Ein einziger Arbeiter: Eine laufende Sprachausgabe wird nie abgebrochen und nie doppelt bezahlt.
-        bereich.launch { while (true) { runCatching { ErinnerungStimme.vorbereiten(app) }.onFailure { Logbuch.fehler("Erinnerung Stimme vorbereiten", it) }; withTimeoutOrNull(10 * 60_000L) { stimmAnstoss.receive() } } }
+        // Das Tablet spricht keine Erinnerungen: dort nichts vorab erzeugen (kostet sonst jede Sprachausgabe doppelt).
+        if (!de.frank.jarvis.data.Geraet.istTablet) bereich.launch { while (true) { runCatching { ErinnerungStimme.vorbereiten(app) }.onFailure { Logbuch.fehler("Erinnerung Stimme vorbereiten", it) }; withTimeoutOrNull(10 * 60_000L) { stimmAnstoss.receive() } } }
     }
 
     fun anstossen(context: Context) { val app = context.applicationContext; bereich.launch { runCatching { pruefen(app) }.onFailure { Logbuch.fehler("Erinnerung prüfen", it) } } }

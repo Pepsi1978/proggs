@@ -166,10 +166,14 @@ final class ErinnerungPlaner {
         } while nochmal
     }
 
+    static let nurHandyLoestAus = true
+
     private func einLauf() async {
         guard bereit else { return }
         abgleichen()
         quittungenNachsenden()
+        // Franks Vorgabe (13.11.2026): Erinnerungen lösen nur auf dem Handy aus; der Mac zeigt sie nur in der Liste.
+        guard !Self.nurHandyLoestAus else { return }
         let neu = faellig(Self.jetzt()).filter { !gezeigt.contains($0.quittung) }
         gefragt = gefragt.intersection(neu.map(\.quittung))
         guard !neu.isEmpty else { return }

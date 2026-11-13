@@ -8,7 +8,7 @@ namespace JarvisWindows;
 
 // MARK: - Zustellung
 
-/// <summary>Lässt fällige Erinnerungen erscheinen, im Hauptfaden wie der Rest. Der Relay kennt das zuletzt benutzte Gerät (Anwesenheit): Ist das ein anderes, bleibt der Laptop still und fragt je Minute nach.
+/// <summary>Erinnerungen lösen nur auf Franks Handy aus ([NurHandyLoestAus]); der Laptop führt Liste und Quittungen. Ohne den Schalter: Der Relay kennt das zuletzt benutzte Gerät (Anwesenheit), ist das ein anderes, bleibt der Laptop still und fragt je Minute nach.
 /// Eine Quittung von anderswo, Löschen, Erledigen oder ein verschobener Termin kommen über den Abgleich herein und beenden Banner, Ton und Stimme sofort.</summary>
 public sealed class ErinnerungPlaner : Beobachtbar
 {
@@ -159,8 +159,12 @@ public sealed class ErinnerungPlaner : Beobachtbar
 
         // Ausgelöst wird nur auf Franks Handy (Fold 8): Der Laptop zeigt Erinnerungen nur in der Liste, nie Banner, Ton, Stimme oder Wecker.
         // Früher Gezeigtes verstummt beim nächsten Lauf über das Leeren hier.
-        if (gezeigt.Count > 0) { foreach (var k in gezeigt.ToList()) Verstummen(k); gezeigt.Clear(); SichereGezeigt(); }
-        if (NurHandyLoestAus) { Abgleichen(new List<Faellig>()); return; }
+        if (NurHandyLoestAus)
+        {
+            if (gezeigt.Count > 0) { foreach (var k in gezeigt.ToList()) Verstummen(k); gezeigt.Clear(); SichereGezeigt(); }
+            Abgleichen(new List<Faellig>());
+            return;
+        }
         if (faellig.Any(f => !gezeigt.Contains(f.Kennung)) && DateTime.Now >= naechsteFrage)
         {
             var (ziel, erreichbar) = await Anwesenheit(Aktiv());
