@@ -117,7 +117,7 @@ Umgesetzt in `Werkzeuge/vorwaermen/` (Python, plattformneutral; Einrichtung `ein
 
 | Server-Maßnahme | PC |
 |---|---|
-| Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen`: Anmeldung (+2 min) und alle 10 min, `fetch` + `merge --ff-only` wie `RepoSync.cs`, dann Vorbau |
+| Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen` (läuft ohne CLI und ohne OpenLauncher): Anmeldung (+30 s), Aufwachen aus dem Standby (Power-Troubleshooter Ereignis 1, +30 s) und alle 5 min, `fetch` + `merge --ff-only` wie `RepoSync.cs`, dann Vorbau |
 | Auftragsstart-Vorbau | PC-Brücke `Starte-Sitzung` startet `vorwaermen.py lauf --app <App> --immer` |
 | Daemon 24 h warm | `org.gradle.daemon.idletimeout=86400000` in `~/.gradle/gradle.properties`; Anmelde-Auslöser nach 30 s startet ihn gleich nach dem Windows-Start (Jarvis-Bau, sonst eine saubere App mit denselben jvmargs); älter als 24 h → unter der Bau-Sperre `--stop` + Kotlin-Daemon beenden und frisch starten (`daemon_pflege`, wie am Server) |
 | Repo-Abgleich beim CLI-Start | OpenLauncher `RepoSync.PullAsync` stößt nach einem neuen Stand `schtasks /run /tn Vorwaermen` an (ab 1.24.121) |
