@@ -402,6 +402,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "raumklima" -> RaumklimaStartKarte(griff)
                 // Victron-Solarbatterie (BMV-712) und Laderegler (MPPT): letzter Stand, Aktualisieren liest frisch.
                 "victron" -> VictronStartKarte(griff)
+                // Saugroboter M7 Pro: Knöpfe tippen in der Proscenic-App (Bedienungshilfe), Akku aus dem letzten Ablesen.
+                "staubsauger" -> StaubsaugerStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

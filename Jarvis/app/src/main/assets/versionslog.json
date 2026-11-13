@@ -667,6 +667,7 @@
     {"versionCode": 662, "versionName": "1.8.651", "stand": "13.11.2026, 10:59 Uhr", "notiz": "Raumklima zeigt nur noch die Sensoren aus deinem SwitchBot-Konto, die zusätzliche Zeile „nicht im SwitchBot-Konto gefunden“ fällt weg."},
     {"versionCode": 663, "versionName": "1.8.652", "stand": "13.11.2026, 11:37 Uhr", "notiz": "Raumklima holt die Sensorliste nach einem Umbenennen schon im selben Abruf frisch und sagt Jarvis weiterhin, wenn ein Raum im SwitchBot-Konto fehlt, ohne Zusatzzeile auf der Karte."},
     {"versionCode": 664, "versionName": "1.8.653", "stand": "13.11.2026, 12:57 Uhr", "notiz": "Die Aufgaben auf dem Startbildschirm zeigen heute und morgen nur noch den Aufgabentext, ohne Zusatzzeile wie täglich, Uhrzeit oder überfällig, damit die Liste kompakter ist."},
-    {"versionCode": 665, "versionName": "1.8.654", "stand": "13.11.2026, 13:04 Uhr", "notiz": "Überfällige Aufgaben auf dem Startbildschirm sind am roten Titel erkennbar, und TalkBack liest Uhrzeit und überfällig weiter vor."}
+    {"versionCode": 665, "versionName": "1.8.654", "stand": "13.11.2026, 13:04 Uhr", "notiz": "Überfällige Aufgaben auf dem Startbildschirm sind am roten Titel erkennbar, und TalkBack liest Uhrzeit und überfällig weiter vor."},
+    {"versionCode": 666, "versionName": "1.8.655", "stand": "13.11.2026, 19:30 Uhr", "notiz": "Jarvis steuert den Saugroboter M7 Pro über die Proscenic-App, per Sprache und mit neuer Startkarte für Reinigen, Tiefenreinigung, Akku, Gerät positionieren und Staubsammlung."}
 ]
 }

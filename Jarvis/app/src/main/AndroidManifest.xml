@@ -96,6 +96,12 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
     <queries>
+        <!-- Saugroboter: die Proscenic-App öffnen und danach zur vorher offenen App zurückkehren. -->
+        <package android:name="com.proscenic.robot" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <package android:name="de.frank.ziele" />
         <provider android:authorities="de.frank.ziele.jarvis" />
         <package android:name="de.frank.aufgaben" />
@@ -174,6 +180,20 @@
         </service>
 
         <!-- Lauscht auf „Hey Jarvis“, auch bei gesperrtem Handy. -->
+        <!-- Bedienungshilfe „Jarvis Staubsauger“: tippt auf Wunsch in der Proscenic-App (M7 Pro). -->
+        <service
+            android:name=".staubsauger.ProscenicBedienung"
+            android:exported="true"
+            android:label="@string/staubsauger_bedienung"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/staubsauger_bedienung" />
+        </service>
+
         <service
             android:name=".weckwort.WeckwortDienst"
             android:exported="false"

@@ -8,4 +8,6 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+    <string name="staubsauger_bedienung">Jarvis Staubsauger</string>
+    <string name="staubsauger_bedienung_beschreibung">Lässt Jarvis die Proscenic-App bedienen, damit du den Saugroboter M7 Pro per Sprache oder über die Startkarte starten, anhalten, zur Station schicken, orten und die Staubsammlung auslösen kannst. Jarvis tippt nur, wenn du es verlangst.</string>
 </resources>
