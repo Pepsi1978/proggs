@@ -87,7 +87,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /** Eine Aufgabe des heutigen Bestands, so wie Geniale Aufgaben sie meldet. */
 private data class HeuteAufgabe(
     val id: Long, val titel: String, val uhrzeit: String?, val prioritaet: String,
-    val erledigt: Boolean, val ueberfaellig: Boolean, val taeglich: Boolean,
+    val erledigt: Boolean, val ueberfaellig: Boolean,
 )
 
 private val PRIO_RANG = listOf("HOCH", "MITTEL", "GERING", "SPAETER")
@@ -189,7 +189,7 @@ private fun aufgabeAus(o: JSONObject) = HeuteAufgabe(
     id = o.optLong("id"), titel = o.optString("titel").ifBlank { o.optString("text") },
     uhrzeit = if (o.isNull("uhrzeit")) null else o.optString("uhrzeit"),
     prioritaet = o.optString("prioritaet"), erledigt = o.optBoolean("erledigt"),
-    ueberfaellig = o.optBoolean("ueberfaellig"), taeglich = o.optString("wiederholung") == "TAEGLICH",
+    ueberfaellig = o.optBoolean("ueberfaellig"),
 )
 
 private fun JSONArray?.aufgaben(): List<HeuteAufgabe> = (0 until (this?.length() ?: 0)).map { aufgabeAus(this!!.getJSONObject(it)) }
@@ -437,7 +437,6 @@ private fun MorgenBereich() {
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f).padding(end = 12.dp), horizontalAlignment = Alignment.End) {
                             Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
-                            zusatz(a).takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End) }
                         }
                         Box(Modifier.padding(top = 7.dp, end = 10.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
                     }
@@ -448,10 +447,7 @@ private fun MorgenBereich() {
     }
 }
 
-/** Uhrzeit, „überfällig“ (nur offen) und „täglich“ unter dem Titel, gleich für heute und morgen. */
-private fun zusatz(a: HeuteAufgabe): String =
-    listOfNotNull(a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt }, "täglich".takeIf { a.taeglich }).joinToString(" · ")
-
+// Unter dem Titel steht bewusst keine Zusatzzeile (Uhrzeit, überfällig, täglich): Die Liste bleibt kompakt.
 @Composable
 private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> Unit) {
     val f = LocalFarben.current
@@ -482,8 +478,6 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> 
                 textAlign = TextAlign.End,
                 onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
             )
-            val zusatz = zusatz(a)
-            if (zusatz.isNotEmpty()) Text(zusatz, color = if (a.ueberfaellig && !a.erledigt) f.gefahr else f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End)
         }
         Box(
             Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(

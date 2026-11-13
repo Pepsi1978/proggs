@@ -665,6 +665,7 @@
     {"versionCode": 660, "versionName": "1.8.649", "stand": "13.11.2026, 10:26 Uhr", "notiz": "Neu auf dem Startbildschirm: der Bereich Raumklima direkt über der Solarbatterie zeigt Temperatur und Luftfeuchtigkeit deiner SwitchBot-Sensoren, holt sie über das Internet auch unterwegs und hat einen Aktualisieren-Knopf."},
     {"versionCode": 661, "versionName": "1.8.650", "stand": "13.11.2026, 10:57 Uhr", "notiz": "Raumklima: benennst du einen SwitchBot-Sensor in der SwitchBot-App um, zeigt Jarvis den neuen Namen sofort beim nächsten Aktualisieren statt erst nach einer Stunde."},
     {"versionCode": 662, "versionName": "1.8.651", "stand": "13.11.2026, 10:59 Uhr", "notiz": "Raumklima zeigt nur noch die Sensoren aus deinem SwitchBot-Konto, die zusätzliche Zeile „nicht im SwitchBot-Konto gefunden“ fällt weg."},
-    {"versionCode": 663, "versionName": "1.8.652", "stand": "13.11.2026, 11:37 Uhr", "notiz": "Raumklima holt die Sensorliste nach einem Umbenennen schon im selben Abruf frisch und sagt Jarvis weiterhin, wenn ein Raum im SwitchBot-Konto fehlt, ohne Zusatzzeile auf der Karte."}
+    {"versionCode": 663, "versionName": "1.8.652", "stand": "13.11.2026, 11:37 Uhr", "notiz": "Raumklima holt die Sensorliste nach einem Umbenennen schon im selben Abruf frisch und sagt Jarvis weiterhin, wenn ein Raum im SwitchBot-Konto fehlt, ohne Zusatzzeile auf der Karte."},
+    {"versionCode": 664, "versionName": "1.8.653", "stand": "13.11.2026, 12:57 Uhr", "notiz": "Die Aufgaben auf dem Startbildschirm zeigen heute und morgen nur noch den Aufgabentext, ohne Zusatzzeile wie täglich, Uhrzeit oder überfällig, damit die Liste kompakter ist."}
 ]
 }
