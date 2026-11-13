@@ -1,4 +1,5 @@
-:root { --grund:#10131a; --flaeche:#1a1f2b; --rand:#2b3241; --text:#e6e9ef; --leise:#97a0b3; --akzent:#6ea8fe; --gut:#4cc38a; --warn:#e0b252; --gefahr:#f0716b; }
+:root { color-scheme:dark; --grund:#10131a; --flaeche:#1a1f2b; --rand:#2b3241; --text:#e6e9ef; --leise:#97a0b3; --akzent:#6ea8fe; --auf-akzent:#0b1220; --gut:#4cc38a; --warn:#e0b252; --gefahr:#f0716b; --term:#000; --schatten:0 0 3px #000, 0 0 3px #000; }
+:root[data-thema="hell"] { color-scheme:light; --grund:#eef1f6; --flaeche:#ffffff; --rand:#cfd6e2; --text:#1b2230; --leise:#566074; --akzent:#2f6fd6; --auf-akzent:#ffffff; --gut:#1d955e; --warn:#a8760f; --gefahr:#cc3a33; --term:#ffffff; --schatten:0 0 3px #fff, 0 0 3px #fff; }
 * { box-sizing:border-box; }
 html,body { overscroll-behavior:none; overflow:hidden; height:100%; margin:0; background:var(--grund); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
 body { display:flex; flex-direction:column; height:100dvh; }
@@ -10,7 +11,7 @@ main { flex:1; min-height:0; }
 .seite.an { display:block; }
 #terminal.an { display:flex; flex-direction:column; padding:0; overflow:hidden; }
 button { background:var(--flaeche); color:var(--text); border:1px solid var(--rand); border-radius:8px; padding:11px 14px; font:inherit; min-height:44px; }
-button.haupt { background:var(--akzent); color:#0b1220; border:0; font-weight:600; width:100%; }
+button.haupt { background:var(--akzent); color:var(--auf-akzent); border:0; font-weight:600; width:100%; }
 button.gefahr { color:var(--gefahr); }
 button.klein { padding:4px 10px; font-size:13px; min-height:32px; }
 .leise { color:var(--leise); font-size:14px; }
@@ -31,7 +32,7 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #titel { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #links { flex:none; padding:0 10px; }
 #links a { display:block; color:var(--akzent); padding:6px 0; font-size:13px; overflow-wrap:anywhere; }
-#xterm { position:relative; flex:1; min-height:0; background:#000; padding:2px; touch-action:none; }
+#xterm { position:relative; flex:1; min-height:0; background:var(--term); padding:2px; touch-action:none; }
 .wisch { position:absolute; inset:0; z-index:20; touch-action:none; }
 #tasten { display:flex; flex:none; gap:4px; padding:5px 6px 0; overflow-x:auto; }
 #tasten button { flex:1 0 auto; padding:5px 10px; min-height:36px; font-size:14px; }
@@ -44,23 +45,23 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #stimme-tastatur.an { color:var(--akzent); }
 .wisch { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 #terminal.wahl-offen #stimme { visibility:hidden; }
-#nach-unten { position:absolute; top:8px; right:8px; z-index:25; width:44px; padding:0; border-radius:50%; font-size:20px; background:color-mix(in srgb, var(--flaeche) 25%, transparent); border-color:color-mix(in srgb, var(--leise) 60%, transparent); text-shadow:0 0 3px #000, 0 0 3px #000; }
+#nach-unten { position:absolute; top:8px; right:8px; z-index:25; width:44px; padding:0; border-radius:50%; font-size:20px; background:color-mix(in srgb, var(--flaeche) 25%, transparent); border-color:color-mix(in srgb, var(--leise) 60%, transparent); text-shadow:var(--schatten); }
 #nach-unten[hidden] { display:none; }
 #buchstaben button { flex:0 0 46px; padding:0; font-size:16px; font-weight:600; }
 #eingabe { display:flex; flex:none; gap:6px; padding:6px; }
 #eingabe textarea { margin:0; flex:1; resize:none; padding:9px; max-height:120px; }
 #browser.an { padding:0; overflow:hidden; }
 #browser-meldung { padding:14px 16px; }
-#browser-bild { display:block; width:100%; height:100%; border:0; background:#000; }
+#browser-bild { display:block; width:100%; height:100%; border:0; background:var(--term); }
 #terminal { position:relative; }
 #stimme { position:absolute; right:10px; bottom:112px; z-index:30; display:flex; align-items:center; gap:8px; }
 #stimme[hidden] { display:none; }
 /* Durchscheinend: Der Text des Terminals dahinter bleibt lesbar. */
-#stimme button { min-height:44px; border-radius:22px; background:color-mix(in srgb, var(--flaeche) 25%, transparent); border-color:color-mix(in srgb, var(--leise) 60%, transparent); text-shadow:0 0 3px #000, 0 0 3px #000; font-size:15px; }
+#stimme button { min-height:44px; border-radius:22px; background:color-mix(in srgb, var(--flaeche) 25%, transparent); border-color:color-mix(in srgb, var(--leise) 60%, transparent); text-shadow:var(--schatten); font-size:15px; }
 #stimme-auto.an { color:var(--gut); font-weight:700; }
 #stimme #stimme-mikro { width:64px; height:64px; border-radius:50%; font-size:26px; background:color-mix(in srgb, var(--akzent) 25%, transparent); color:var(--text); border:1px solid color-mix(in srgb, var(--akzent) 70%, transparent); }
 /* Ein offenes Mikrofon muss auffallen: deutlich deckender als der Ruhezustand. */
 #stimme #stimme-mikro[data-stand="nimmt"] { background:color-mix(in srgb, var(--gefahr) 60%, transparent); border-color:var(--gefahr); }
-#stimme-meldung { max-width:50vw; padding:8px 12px; border-radius:10px; background:#1a1f2bee; font-size:14px; }
+#stimme-meldung { max-width:50vw; padding:8px 12px; border-radius:10px; background:color-mix(in srgb, var(--flaeche) 93%, transparent); font-size:14px; }
 #stimme-meldung[hidden] { display:none; }
 .punkt.keine { background:var(--gut); }
