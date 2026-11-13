@@ -14,6 +14,9 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             "Jarvis tippt dafür in der Proscenic-App; das dauert etwa 10 bis 20 Sekunden und braucht ein entsperrtes Handy. " +
             "Antworte danach kurz mit dem Ergebnis, etwa: „Tiefenreinigung läuft, Akku 100 Prozent.“"
 
+    /** Öffnet eine andere App und tippt darin: nur auf Franks Wunsch im Gespräch, nie in Hintergrund-Agenten. */
+    override val nurImGespraech: Boolean get() = true
+
     override fun stoerung(): String? =
         if (!ProscenicBedienung.eingeschaltet(context)) "Die Bedienungshilfe „Jarvis Staubsauger“ ist in den Android-Einstellungen aus." else null
 
@@ -22,7 +25,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             name = "staubsauger",
             titel = "Saugroboter",
             beschreibung = "Jarvis: Saugroboter Proscenic M7 Pro über die Proscenic-App. „Starte eine Reinigung“ / „Staubsauger los“ → reinigen. " +
-                "„Tiefenreinigung“ → tiefenreinigung. „Stopp“ / „Anhalten“ → stoppen. „Zurück zur Station“ / „Laden“ → station. " +
+                "„Tiefenreinigung“ → tiefenreinigung. „Staubsauger stopp“ / „Halt den Staubsauger an“ → stoppen (ein bloßes „Stopp“ ohne Staubsauger gilt nicht dem Sauger). „Zurück zur Station“ / „Laden“ → station. " +
                 "„Wo ist der Staubsauger?“ / „Gerät positionieren“ → positionieren. „Staub absaugen“ / „Ein-Klick-Staubsammlung“ → staubsammlung. " +
                 "„Wie voll ist der Akku vom Staubsauger?“ / „Was macht der Staubsauger?“ → status.",
             schema = schema(

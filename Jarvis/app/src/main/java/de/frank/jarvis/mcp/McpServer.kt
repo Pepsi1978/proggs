@@ -416,7 +416,7 @@ class McpServer(context: Context) {
         private val GESCHUETZT = setOf(
             "aufgabe_anlegen", "aufgabe_aendern", "aufgabe_loeschen", "kalender_eintragen", "kalender_loeschen", "idee_speichern", "idee_loeschen",
             "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "in_ablage_uebernehmen", "jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_verdichten", "wecker_stellen", "wecker_loeschen",
-            "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
+            "stack_speichern", "mittel_speichern", "stack_mittel_setzen", "staubsauger",
         )
         private val schutz = Wiederholschutz()
         /** Längste Wartezeit des Tunnel-Fadens auf ein Werkzeug; großzügig über der längsten legitimen Dauer (der Relay gibt nach 75 s auf). */

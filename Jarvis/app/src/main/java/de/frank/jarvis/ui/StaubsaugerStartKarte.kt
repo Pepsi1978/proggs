@@ -32,9 +32,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.LaunchedEffect
 
 private val saugerBereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -47,10 +46,15 @@ private val saugerBereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
-    remember(context) { SaugerStand.laden(context); true }
+    // Ohne Proscenic-App auf diesem Gerät bleibt der Bereich leer, statt nur Fehler zu zeigen.
+    val installiert = remember(context) { context.packageManager.getLaunchIntentForPackage(ProscenicSteuerung.PAKET) != null }
+    if (!installiert) return
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { SaugerStand.laden(context) } }
     val s = SaugerStand
     fun los(aktion: Aktion) {
         if (s.laeuft) return
+        // Sofort sperren (Hauptthread), damit ein Doppeltipp keinen zweiten Lauf anstößt.
+        s.laeuft = true
         saugerBereich.launch { ProscenicSteuerung.ausfuehren(context, aktion) }
     }
     Karte(modifier = griff) {
@@ -60,7 +64,7 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 Text(
                     when {
                         s.laeuft -> "Bedient die Proscenic-App …"
-                        s.gelesenUm != null -> "Stand ${SimpleDateFormat("HH:mm", Locale.GERMAN).format(Date(s.gelesenUm!!))} Uhr · M7 Pro"
+                        s.gelesenUm != null -> "Stand ${alterKurz(s.gelesenUm!!)} · M7 Pro"
                         else -> "Noch kein Stand · M7 Pro"
                     },
                     color = if (s.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
@@ -84,7 +88,7 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 Text(z, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, modifier = Modifier.weight(2f))
             }
         }
-        s.meldung?.takeIf { it.fehler && !s.laeuft }?.let { Text(it.text, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
+        s.meldung?.takeIf { !s.laeuft }?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SaugerKnopf("Reinigen", s.laeuft, Modifier.weight(1f)) { los(Aktion.REINIGEN) }
             SaugerKnopf("Tiefenreinigung", s.laeuft, Modifier.weight(1f)) { los(Aktion.TIEFENREINIGUNG) }

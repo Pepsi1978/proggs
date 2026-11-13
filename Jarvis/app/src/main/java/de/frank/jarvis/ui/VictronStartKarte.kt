@@ -55,7 +55,7 @@ private object VictronStartStand {
     }
 }
 
-private fun alterKurz(zeit: Long): String {
+internal fun alterKurz(zeit: Long): String {
     if (zeit <= 0) return ""
     val s = System.currentTimeMillis() / 1000 - zeit
     val uhr = java.time.Instant.ofEpochSecond(zeit).atZone(java.time.ZoneId.systemDefault())

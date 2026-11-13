@@ -96,12 +96,6 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
     <queries>
-        <!-- Saugroboter: die Proscenic-App öffnen und danach zur vorher offenen App zurückkehren. -->
-        <package android:name="com.proscenic.robot" />
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
         <package android:name="de.frank.ziele" />
         <provider android:authorities="de.frank.ziele.jarvis" />
         <package android:name="de.frank.aufgaben" />
@@ -116,7 +110,8 @@
         <provider android:authorities="de.frank.genialerwecker.jarvis" />
         <provider android:authorities="de.frank.epigenetik.jarvis" />
         <provider android:authorities="de.frank.stacklabor.werftstudio.jarvis" />
-        <!-- Schnellstart auf dem Startbildschirm: Franks eigene startbare Apps finden und öffnen. -->
+        <!-- Schnellstart auf dem Startbildschirm: Franks eigene startbare Apps finden und öffnen.
+             Auch der Saugroboter: Proscenic-App öffnen und danach zur vorher offenen App zurückkehren. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -179,7 +174,6 @@
                 android:value="Persönlicher Assistent: nimmt Werkzeugaufrufe des eigenen ChatGPT-Plugins dauerhaft entgegen." />
         </service>
 
-        <!-- Lauscht auf „Hey Jarvis“, auch bei gesperrtem Handy. -->
         <!-- Bedienungshilfe „Jarvis Staubsauger“: tippt auf Wunsch in der Proscenic-App (M7 Pro). -->
         <service
             android:name=".staubsauger.ProscenicBedienung"
@@ -194,6 +188,7 @@
                 android:resource="@xml/staubsauger_bedienung" />
         </service>
 
+        <!-- Lauscht auf „Hey Jarvis“, auch bei gesperrtem Handy. -->
         <service
             android:name=".weckwort.WeckwortDienst"
             android:exported="false"
