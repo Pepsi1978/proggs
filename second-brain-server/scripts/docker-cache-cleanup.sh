@@ -18,7 +18,7 @@
 #
 # WAS ES BEWUSST NICHT TUT (Funktionalitaets-Erhaltung, bugs/server/docker.md §6.4):
 #   KEIN "docker system prune", KEIN "-a", KEIN "--volumes". Images, Container, Netzwerke und
-#   vor allem VOLUMES (z. B. Qdrant = echte Daten!) werden NICHT angefasst.
+#   vor allem Daten werden NICHT angefasst: Volumes (Caddy-TLS) und die Qdrant-Daten im Bind-Mount ./qdrant-data.
 #   Nur "docker builder prune" — der raeumt ausschliesslich Bau-Zwischenschichten.
 #
 # ZWEITE SCHICHT (Defense in Depth):
@@ -62,13 +62,13 @@ log "ENDE   root=${nachher_used} (${nachher_pct}%)"
 
 # Invariante: alle Container muessen weiterlaufen. Ein Cache-Prune darf NIE einen Dienst
 # umbringen — wenn doch, muss das laut und sofort im Log stehen.
-laufend="$(docker ps -q | wc -l)"
-gesamt="$(docker ps -aq | wc -l)"
+laufend="$(docker ps -q 2>/dev/null | wc -l || true)"
+gesamt="$(docker ps -aq 2>/dev/null | wc -l || true)"
 if [ "$laufend" -lt "$gesamt" ]; then
     log "WARNUNG: nur ${laufend} von ${gesamt} Containern laufen — bitte pruefen!"
 fi
 
-if [ "$nachher_pct" -ge "$WARN_PCT" ]; then
+if [ "${nachher_pct:-0}" -ge "$WARN_PCT" ]; then
     log "WARNUNG: Root-Disk trotz Aufraeumen bei ${nachher_pct}% — andere Ursache pruefen (du -xh --max-depth=1 /var)"
 fi
 

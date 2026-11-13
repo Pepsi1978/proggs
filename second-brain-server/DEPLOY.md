@@ -188,7 +188,7 @@ Steigt sie dauerhaft ueber ~10 GB, greift die Automatik nicht (dann `crontab -l`
 `/opt/second-brain/brain-logs/docker-cache-cleanup.jsonl` pruefen).
 
 **Wichtig:** Nur `docker builder prune` verwenden. **NIE** `docker system prune -a --volumes` — das
-loescht die Volumes von Postgres, Qdrant und MinIO, also echte Daten (siehe `bugs/server/docker.md` §6.4).
+loescht Volumes (Caddy-TLS) und gefährdet echte Daten wie Qdrant (siehe `bugs/server/docker.md` §6.4).
 Die Diagnose-Falle: `du -sh /var/lib/docker` zeigt den Cache NICHT, er liegt unter
 `/var/lib/containerd` (containerd-Snapshotter) — Details in `bugs/server/docker.md` §6.11.
 

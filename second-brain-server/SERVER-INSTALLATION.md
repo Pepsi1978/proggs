@@ -124,8 +124,8 @@ Struktur auf dem neuen Rechner (Home-Verzeichnis):
 
 Weil der Key **nicht** in `~/.ssh/` liegt, finden ihn Werkzeuge, die nur dort suchen (OpenCode,
 Cowork, manche Deploy-Skripte), nicht und melden „kein SSH-Key gefunden". Deshalb auf JEDEM Rechner
-`~/.ssh/config` anlegen — damit gilt der Key für alle Projekte auf diesem VPS (Second Brain **und**
-Werft Studio, beide `root@10.8.0.1`):
+`~/.ssh/config` anlegen — damit gilt der Key für alle Projekte auf diesem VPS (Second Brain, `root@10.8.0.1`;
+Werft Studio lief dort früher ebenfalls und wurde am 13.11.2026 vollständig entfernt):
 
 ```
 Host 10.8.0.1 168.231.83.205
