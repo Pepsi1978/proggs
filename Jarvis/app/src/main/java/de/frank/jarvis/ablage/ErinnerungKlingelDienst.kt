@@ -35,7 +35,7 @@ import kotlinx.coroutines.Job
 /**
  * Eine Erinnerung in der Form Wecker: Weckton in der Schleife, dazwischen liest Jarvis die Kurzfassung vor, bis Frank ausdrücklich ausschaltet.
  * Bewusst ohne Höchstdauer und ohne Wegwischen: Weggewischt kommt die Meldung sofort wieder. Aus ist nur „Wecker ausschalten“ auf der Wecker-Karte
- * (Overlay über jeder App, bei gesperrtem Handy über dem Sperrbildschirm), „Aus“ in der Meldung, in der App oder per Sprache, oder eine Bestätigung von einem anderen Gerät.
+ * (Overlay über jeder App, bei gesperrtem Handy über dem Sperrbildschirm), „Wecker ausschalten“ in der Meldung, in der App oder per Sprache, oder eine Bestätigung von einem anderen Gerät.
  */
 class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
     private var ablauf: Job? = null
@@ -63,6 +63,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
         if (!vorn) { ErinnerungPlaner.dienstGescheitert(this); stopSelf(); return START_NOT_STICKY }
         if (ErinnerungPlaner.klingelt.value.isEmpty()) { beenden(); return START_NOT_STICKY }
         zeigeKarte()
+        if (!empfaengerAn) empfaengerAn = runCatching { registerReceiver(bildschirmAn, android.content.IntentFilter(Intent.ACTION_SCREEN_ON)) }.isSuccess
         if (ablauf?.isActive != true) {
             ablauf = ErinnerungsWeckablauf.starten(this, NUMMER) { ErinnerungPlaner.klingelt.value }
             sperrbildschirm()
@@ -87,7 +88,8 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             }
         }
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            // Nur so breit wie die Karte: Daneben bleibt die App darunter bedienbar.
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT,
@@ -98,9 +100,15 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
     }
 
     private fun entferneKarte() {
-        karte?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
+        karte?.let { v -> runCatching { v.disposeComposition(); getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
         karte = null
     }
+
+    /** Wird das Handy während des Klingelns gesperrt und wieder eingeschaltet, steht die Karte gleich auf dem Sperrbildschirm. */
+    private val bildschirmAn = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) { if (ErinnerungPlaner.klingelt.value.isNotEmpty()) sperrbildschirm() }
+    }
+    private var empfaengerAn = false
 
     /** Gesperrt oder Bildschirm aus: die Wecker-Karte über dem Sperrbildschirm. Mit Overlay-Recht darf Jarvis sie auch aus dem Hintergrund öffnen. */
     private fun sperrbildschirm() {
@@ -124,6 +132,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
 
     override fun onDestroy() {
         instanz = null
+        if (empfaengerAn) { runCatching { unregisterReceiver(bildschirmAn) }; empfaengerAn = false }
         ablauf?.cancel()
         de.frank.jarvis.meldung.WeckerTon.stopp(NUMMER)
         entferneKarte()
@@ -148,6 +157,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             .setContentIntent(vollbild)
             .setFullScreenIntent(vollbild, true)
             .addAction(R.drawable.ic_stat_jarvis, "Wecker ausschalten", rundfunk(19_996, ErinnerungPlaner.AKTION_BESTAETIGEN))
+            .apply { liste.firstOrNull()?.let { addAction(R.drawable.ic_stat_jarvis, "In Jarvis öffnen", ErinnerungPlaner.oeffnenAbsicht(this@ErinnerungKlingelDienst, it.erinnerung.id, 19_997)) } }
             .setDeleteIntent(rundfunk(19_995, ErinnerungPlaner.AKTION_ZEIGEN))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()

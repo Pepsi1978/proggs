@@ -88,6 +88,7 @@ object ErinnerungPlaner {
         gestartet = true
         val app = context.applicationContext
         kanalAnlegen(app)
+        HausmuellPlaner.planen(app)
         bereich.launch {
             Erinnerungen.stand.collectLatest {
                 delay(300)
@@ -133,6 +134,9 @@ object ErinnerungPlaner {
         var schon = gezeigt(app)
         (schon - offen).forEach { verstummen(app, it) }
         schon = schon intersect offen
+        // Ausgelöst wird nur auf dem Handy (Franks Vorgabe): Das Tablet zeigt Erinnerungen nur in der Liste, nie Meldung, Stimme oder Wecker.
+        val handy = !de.frank.jarvis.data.Geraet.istTablet
+        if (!handy) { schon.forEach { verstummen(app, it) }; schon = emptySet() }
         val alsWecker = faellig.filter { it.erinnerung.wecker }.map { it.quittung }.toSet()
         // Auch wenn die Form inzwischen Benachrichtigung ist: Der Ton hört auf, die Meldung erscheint unten neu.
         _klingelt.value.filter { it.quittung !in alsWecker }.forEach { verstummen(app, it.quittung) }
@@ -141,11 +145,12 @@ object ErinnerungPlaner {
         _klingelt.value = _klingelt.value.mapNotNull { alt -> faellig.firstOrNull { it.quittung == alt.quittung && it.erinnerung.wecker } }
         // Der Live-Sprachmodus hat Vorrang: Ein Wecker wartet das Gespräch ab und klingelt danach.
         val live = GespraechsFokus.stilleHinweise
-        val neu = faellig.filter { it.quittung !in schon && !(it.erinnerung.wecker && live) }
-        var warten = faellig.any { it.quittung !in schon && it.erinnerung.wecker && live }
+        val neu = if (handy) faellig.filter { it.quittung !in schon && !(it.erinnerung.wecker && live) } else emptyList()
+        var warten = handy && faellig.any { it.quittung !in schon && it.erinnerung.wecker && live }
         val jetztGezeigt = HashSet<String>()
         if (neu.isNotEmpty()) {
-            if (!abgleichPause && ziel(app) == AblageQuellen.DIESES) {
+            // Das Handy meldet sich immer selbst, auch wenn Frank gerade am Tablet oder PC sitzt.
+            if (!abgleichPause) {
                 neu.forEach { zeige(app, it); jetztGezeigt += it.quittung }
                 schon = schon + jetztGezeigt
             } else warten = true
@@ -157,7 +162,7 @@ object ErinnerungPlaner {
             if (f.erinnerung.wecker) { if (!live && f.quittung !in ersatzKlingeln && _klingelt.value.none { k -> k.quittung == f.quittung }) klingeln(app, f) }
             else if (meldungsNummer(f.quittung) !in sichtbar) zeigeMeldung(app, f, sprechen = false)
         }
-        stelleWecker(app, Erinnerungen.naechste(app, jetzt).firstOrNull(), if (warten) jetzt + NACHFRAGE_MS else null)
+        stelleWecker(app, if (handy) Erinnerungen.naechste(app, jetzt).firstOrNull() else null, if (warten) jetzt + NACHFRAGE_MS else null)
     }
 
     private fun verstummen(app: Context, quittung: String) {
@@ -190,7 +195,8 @@ object ErinnerungPlaner {
     /** „Wecker ausschalten“ auf der Wecker-Karte: bestätigt alles, was gerade klingelt. */
     fun ausschalten(context: Context) {
         val app = context.applicationContext
-        bereich.launch { runCatching { bestaetigeAus(app, null); pruefen(app) }.onFailure { Logbuch.fehler("Wecker ausschalten", it) } }
+        // Unter der Prüfsperre: Ein laufendes Prüfen mit altem Stand ließe den eben ausgeschalteten Wecker sonst neu klingeln.
+        bereich.launch { runCatching { pruefSperre.withLock { bestaetigeAus(app, null) }; pruefen(app) }.onFailure { Logbuch.fehler("Wecker ausschalten", it) } }
     }
 
     private fun meldungsNummer(quittung: String) = 20_000 + (quittung.hashCode() and 0xFFFF)
@@ -279,6 +285,7 @@ object ErinnerungPlaner {
                 when (intent.action) {
                     AKTION_BESTAETIGEN -> bestaetigeAus(app, intent.getStringExtra(EXTRA_QUITTUNG))
                     AKTION_ZEIGEN -> ErinnerungKlingelDienst.abgleichen()
+                    HausmuellPlaner.AKTION -> runCatching { HausmuellPlaner.pruefen(app, erzwingen = true) }.onFailure { Logbuch.fehler("Hausmüll-Erinnerungen", it) }.also { HausmuellPlaner.planen(app) }
                     else -> Unit
                 }
                 pruefen(app)

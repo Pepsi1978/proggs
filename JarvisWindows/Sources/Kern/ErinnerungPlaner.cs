@@ -17,6 +17,9 @@ public sealed class ErinnerungPlaner : Beobachtbar
     /// <summary>Älteres, nie Bestätigtes meldet sich nicht mehr von selbst, es bleibt in der Liste stehen.</summary>
     public const long VerpasstNachMs = 7 * 24 * 3_600_000L;
 
+    /// <summary>Franks Vorgabe (13.11.2026): Erinnerungen lösen nur auf dem Handy aus, hier stehen sie nur in der Liste.</summary>
+    private static readonly bool NurHandyLoestAus = true;
+
     private int _stand;
     /// <summary>Zählt jede lokale Änderung an Bestätigungen: Offline Bestätigtes steht sonst in keinem Neuaufbau des Abgleichs.</summary>
     public int Stand { get => _stand; private set => Setze(ref _stand, value); }
@@ -154,6 +157,10 @@ public sealed class ErinnerungPlaner : Beobachtbar
         foreach (var k in stimmen.Keys.Concat(klingelt).Where(k => !offen.Contains(k)).Distinct().ToList()) Verstummen(k);
         if (weg.Count > 0) SichereGezeigt();
 
+        // Ausgelöst wird nur auf Franks Handy (Fold 8): Der Laptop zeigt Erinnerungen nur in der Liste, nie Banner, Ton, Stimme oder Wecker.
+        // Früher Gezeigtes verstummt beim nächsten Lauf über das Leeren hier.
+        if (gezeigt.Count > 0) { foreach (var k in gezeigt.ToList()) Verstummen(k); gezeigt.Clear(); SichereGezeigt(); }
+        if (NurHandyLoestAus) { Abgleichen(new List<Faellig>()); return; }
         if (faellig.Any(f => !gezeigt.Contains(f.Kennung)) && DateTime.Now >= naechsteFrage)
         {
             var (ziel, erreichbar) = await Anwesenheit(Aktiv());
