@@ -435,9 +435,7 @@ private fun MorgenBereich() {
                 androidx.compose.runtime.key("morgen_${a.id}") {
                     // Rechtsbündig mit Punkt ganz rechts, passend zu den heutigen Aufgaben (rechter Daumen).
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f).padding(end = 12.dp), horizontalAlignment = Alignment.End) {
-                            Text(a.titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
-                        }
+                        Text(a.titel, Modifier.weight(1f).padding(end = 12.dp), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 4, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
                         Box(Modifier.padding(top = 7.dp, end = 10.dp).size(8.dp).knopf3d(f.sekundaer, f.sekundaer, 4.dp, f.dunkel))
                     }
                 }
@@ -447,7 +445,10 @@ private fun MorgenBereich() {
     }
 }
 
-// Unter dem Titel steht bewusst keine Zusatzzeile (Uhrzeit, überfällig, täglich): Die Liste bleibt kompakt.
+/**
+ * Eine heutige Aufgabe: nur der Titel, ohne Zusatzzeile, damit die Liste kompakt bleibt. Überfällige offene erkennt man am
+ * roten Titel; Uhrzeit und „überfällig“ liest TalkBack über die Zustandsbeschreibung vor.
+ */
 @Composable
 private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> Unit) {
     val f = LocalFarben.current
@@ -457,8 +458,12 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> 
     val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
     Row(
         Modifier.gleitend().fillMaxWidth().alpha(deckung).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
-            .semantics(mergeDescendants = true) { stateDescription = if (a.erledigt) "erledigt" else "offen" },
-        // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, nicht mittig zwischen Titel und Zusatzzeile.
+            .semantics(mergeDescendants = true) {
+                stateDescription = listOfNotNull(
+                    if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
+                ).joinToString(", ")
+            },
+        // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, auch wenn der Titel zweizeilig umbricht.
         verticalAlignment = Alignment.Top,
     ) {
         // Mitte des Kreises = optische Mitte der ersten Textzeile (Grundlinie minus halbe Versalhöhe),
@@ -468,17 +473,13 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> 
         var textMitte by remember { mutableFloatStateOf(halbKreis) }
         val versatz = textMitte - halbKreis
         // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
-        Column(
-            Modifier.weight(1f).padding(end = 12.dp, top = with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }),
-            horizontalAlignment = Alignment.End,
-        ) {
-            Text(
-                a.titel, color = if (a.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
-            )
-        }
+        Text(
+            a.titel, Modifier.weight(1f).padding(end = 12.dp, top = with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }),
+            color = when { a.erledigt -> f.textLeise; a.ueberfaellig -> f.gefahr; else -> f.text }, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+            textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
+        )
         Box(
             Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
                 // Hellmodus: weißes Glas auf heller Karte verschwindet fast, ein kräftiger Ring macht das Abhakfeld klar erkennbar.
