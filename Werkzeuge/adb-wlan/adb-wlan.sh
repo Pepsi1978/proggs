@@ -197,6 +197,8 @@ adb start-server >/dev/null 2>&1
 # Tunnel-Adresse verbunden, aber nicht freigegeben: Warten und alle weiteren Wege ändern daran nichts (kostete 1:41, 13.11.2026).
 if [ -n "$TUNNEL_IP" ] && [ "$(adb devices 2>/dev/null | awk -v s="$TUNNEL_IP:$PORT" '$1==s {print $2}')" = "unauthorized" ]; then
   melde "FEHLER: $TUNNEL_IP:$PORT ist verbunden, aber nicht freigegeben (unauthorized). Am Gerät 'Debugging zulassen' mit 'Immer zulassen' bestätigen."
+  # Neu verbinden lässt die Freigabe-Abfrage am Gerät wieder erscheinen; im Hintergrund, damit niemand darauf wartet.
+  ( adb disconnect "$TUNNEL_IP:$PORT"; sleep 1; adb connect "$TUNNEL_IP:$PORT" ) >/dev/null 2>&1 </dev/null &
   exit 1
 fi
 

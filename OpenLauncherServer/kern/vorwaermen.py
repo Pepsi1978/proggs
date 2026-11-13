@@ -10,7 +10,7 @@ Regeln:
   dieselbe Sperre und legen die Datei pause an; dann hört das Vorwärmen nach der laufenden App auf. Ein laufender Bau wird nie
   abgebrochen (ein abgebrochener Client nimmt den Daemon mit).
 - Apps mit offenen Änderungen im Arbeitsbaum (eine Sitzung arbeitet daran) werden übersprungen.
-- Niedrige Priorität (nice 19, ionice idle), damit Werft Studio, Second Brain und der Relay nicht leiden.
+- Normale Priorität: nice würde an die gemeinsam genutzten Daemons vererbt und auch Sitzungsbauten bremsen.
 
 Aufrufe: vorwaermen.py start [--app ORDNER] [--immer]   (löst sich vom Aufrufer, kehrt sofort zurück)
          vorwaermen.py lauf  [--app ORDNER] [--immer]   (arbeitet im Vordergrund)
@@ -31,7 +31,7 @@ HANDY = "10.8.0.7:5555"
 # Werden von hier nie installiert (fehlende Schlüssel oder nur am Windows-PC), Vorwärmen wäre nur Last.
 AUSSCHLUSS = {"GenialerWeckerAndroid", "BestJournalAndroid", "EntropieReductor"}
 # Namen aus Jarvis-Aufträgen, die nicht dem Ordner entsprechen.
-NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWecker", "geniale ideen": "GenialeIdeen",
+NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWeckerAndroid", "geniale ideen": "GenialeIdeen",
          "stack-labor": "StackLabor", "stack labor": "StackLabor", "entropie reductor": "EntropieReductor"}
 PAUSE_SEKUNDEN = 20 * 60
 # Der Timer-Dienst startet ohne Franks Shell-Profil: dieselbe Umgebung wie in den Sitzungen setzen (~/.profile).
@@ -135,7 +135,9 @@ def pausiert() -> bool:
 def baue(app: str, hash_: str, stand: dict) -> bool:
     if subprocess.run(["git", "-C", str(PROGGS), "lfs", "ls-files", "-I", f"{app}/**"], capture_output=True, text=True, timeout=60).stdout.strip():
         subprocess.run(["git", "-C", str(PROGGS), "lfs", "pull", f"--include={app}/**"], capture_output=True, timeout=1800)
-    befehl = ["nice", "-n", "19", "ionice", "-c", "3", "bash", "gradlew", "assembleDebug", "-q"]
+    # Ohne nice/ionice: Der Gradle- und der Kotlin-Daemon erben die Priorität, und die Sitzungsbauten nutzen dieselben Daemons
+    # (jarvis darf sie nicht wieder anheben). Begrenzt ist der Bau ohnehin über workers.max=2 in ~/.gradle/gradle.properties.
+    befehl = ["bash", "gradlew", "assembleDebug", "-q"]
     with open(BAU_SPERRE, "a+") as sperre:
         beginn = time.time()
         fcntl.flock(sperre, fcntl.LOCK_EX)  # wartet, falls eine Sitzung gerade baut
@@ -157,7 +159,7 @@ def baue(app: str, hash_: str, stand: dict) -> bool:
         stand.get("_fehler", {}).pop(app, None)
         stand.get("_versuche", {}).pop(app, None)
         schreib_stand(stand)
-        log(f"{app}: vorgewärmt in {dauer} s" + (f" (vorher {int(warte)} s auf Sitzungsbau gewartet)" if warte > 2 else ""))
+        log(f"{app}: {'Auftragsstart-Vorbau' if ARGS.immer else 'vorgewärmt'} in {dauer} s" + (f" (vorher {int(warte)} s auf Sitzungsbau gewartet)" if warte > 2 else ""))
     else:
         # Fehlschlag: erneut versuchen (z. B. Netz weg), aber höchstens VERSUCHE-mal je Stand, damit ein kaputter Stand nicht alle 5 Minuten baut.
         v = stand.setdefault("_versuche", {})

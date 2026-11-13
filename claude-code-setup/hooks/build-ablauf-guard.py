@@ -284,7 +284,8 @@ def main():
         if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(cmd) and 'gradle-bau.lock' not in cmd \
                 and os.path.isdir(os.path.expanduser('~/.openlauncher/vorwaermen')):
             neu = dict(d.get('tool_input') or {})
-            neu['command'] = ('touch ~/.openlauncher/vorwaermen/pause; flock -w 3600 ~/.openlauncher/vorwaermen/gradle-bau.lock true; ' + cmd)
+            # Sperre über einen offenen Deskriptor halten, bis die Shell endet (flock … true gäbe sie vor dem Bau frei).
+            neu['command'] = ('touch ~/.openlauncher/vorwaermen/pause; exec 9>>~/.openlauncher/vorwaermen/gradle-bau.lock; flock -w 3600 9; ' + cmd)
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
                                                      "permissionDecisionReason": "Server: wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
     except Exception:
