@@ -1,5 +1,6 @@
 package de.frank.updatestation
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -32,8 +33,45 @@ import java.util.concurrent.TimeUnit
  */
 class WlanDebugReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == AKTION_BESTAETIGEN) {
+            // Tipp auf die Benachrichtigung: Frank schaut gerade aufs Gerät, jetzt Androids Nachfrage auslösen.
+            Benachrichtigungen.entferneWlanDebug(context)
+            runCatching { Settings.Global.putInt(context.contentResolver, "adb_wifi_enabled", 1) }
+                .onFailure { Log.e(TAG, "Einschalten nach Tipp fehlgeschlagen", it) }
+            pruefenPlanen(context, 60)
+            return
+        }
         // BOOT_COMPLETED / MY_PACKAGE_REPLACED: auf WLAN warten und dann einschalten
         planen(context)
+    }
+
+    /**
+     * Prüft kurz nach dem Einschalten, ob Debugging über WLAN wirklich läuft. In einem neuen WLAN zeigt Android nur ein
+     * Fenster („In diesem Netzwerk zulassen?“), das ungesehen verloren geht; dann bleibt der Wert 0. Solange das so ist
+     * und das WLAN besteht: stehende Benachrichtigung, alle 2 Minuten neu prüfen. Läuft es oder ist das WLAN weg: entfernen.
+     */
+    class Pruefung(context: Context, params: WorkerParameters) : Worker(context, params) {
+        override fun doWork(): Result {
+            val app = applicationContext
+            val cr = app.contentResolver
+            val cm = app.getSystemService(ConnectivityManager::class.java)
+            val erlaubt = app.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) ==
+                PackageManager.PERMISSION_GRANTED
+            val offen = erlaubt && cm != null && wlanNetz(cm) != null &&
+                Settings.Global.getInt(cr, Settings.Global.ADB_ENABLED, 0) == 1 &&
+                Settings.Global.getInt(cr, "adb_wifi_enabled", 0) != 1
+            if (!offen) {
+                Benachrichtigungen.entferneWlanDebug(app)
+                return Result.success()
+            }
+            val tippen = PendingIntent.getBroadcast(
+                app, 43, Intent(app, WlanDebugReceiver::class.java).setAction(AKTION_BESTAETIGEN),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            Benachrichtigungen.wlanDebugBestaetigen(app, tippen)
+            pruefenPlanen(app, 120)
+            return Result.success()
+        }
     }
 
     /**
@@ -48,9 +86,15 @@ class WlanDebugReceiver : BroadcastReceiver() {
                 spaeterNachsehen(applicationContext)
                 return Result.success()
             }
-            if (einschalten(applicationContext)) return Result.success()
-            // Android hat den Wert wieder zurückgesetzt (WLAN noch ohne IP): später erneut, begrenzt
-            return if (runAttemptCount < MAX_VERSUCHE) Result.retry() else Result.success()
+            if (einschalten(applicationContext)) {
+                pruefenPlanen(applicationContext, 60)
+                return Result.success()
+            }
+            // Android hat den Wert wieder zurückgesetzt (WLAN noch ohne IP oder neues Netz mit offener Nachfrage):
+            // später erneut, begrenzt; danach meldet die Prüfung es per Benachrichtigung.
+            if (runAttemptCount < MAX_VERSUCHE) return Result.retry()
+            pruefenPlanen(applicationContext, 60)
+            return Result.success()
         }
     }
 
@@ -58,6 +102,18 @@ class WlanDebugReceiver : BroadcastReceiver() {
         private const val TAG = "WlanDebug"
         private const val ARBEIT = "wlan-debug-einschalten"
         private const val WARTEN = "wlan-debug-warten-auf-wlan"
+        private const val PRUEFEN = "wlan-debug-pruefen"
+        const val AKTION_BESTAETIGEN = "de.frank.updatestation.WLAN_DEBUG_BESTAETIGEN"
+
+        /** Eine einzige wartende Prüfung (REPLACE), nach [sekunden]. */
+        fun pruefenPlanen(context: Context, sekunden: Long) {
+            try {
+                val arbeit = OneTimeWorkRequestBuilder<Pruefung>().setInitialDelay(sekunden, TimeUnit.SECONDS).build()
+                WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(PRUEFEN, ExistingWorkPolicy.REPLACE, arbeit)
+            } catch (e: Exception) {
+                Log.e(TAG, "Prüfung planen fehlgeschlagen", e)
+            }
+        }
         private const val PREFS = "wlan_debug"
         private const val LETZTES_NETZ = "letztes_netz"
         private const val MAX_VERSUCHE = 5
