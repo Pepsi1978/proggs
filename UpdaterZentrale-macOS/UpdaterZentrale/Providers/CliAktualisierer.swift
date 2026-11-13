@@ -139,6 +139,17 @@ struct CliAktualisierer: Aktualisierer {
                                  protokoll: lauf.ausgabe + "\n" + ersatz.protokoll)
         }
 
+        // Die eigene Gesamtfrist des Werkzeugs fuer den Download ist abgelaufen (Claude Code: ~10 min fuer
+        // ~300 MB) und der Ersatzdownload half nicht. Kein Code-Problem: eigene Meldung, keine Claude-Uebergabe.
+        // Nur solange es stimmt: "bleibt nutzbar" darf nicht ueber einem von npm entfernten Paket stehen.
+        if Self.istDownloadFrist(lauf), FileManager.default.fileExists(atPath: programmDatei) {
+            return PruefErgebnis(zustand: .fehler,
+                                 meldung: Self.langsamesNetzMeldung + eintrag.name + " bricht seinen eigenen Download nach etwa 10 Minuten ab. "
+                                    + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
+                                    + "Die installierte Version bleibt unverändert nutzbar.",
+                                 protokoll: lauf.ausgabe)
+        }
+
         if lauf.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
         }
@@ -212,7 +223,11 @@ struct CliAktualisierer: Aktualisierer {
             guard (Prozessdienst.pfadVon(pid) as NSString).resolvingSymlinksInPath == ziel,
                   let info = bsdInfo(pid), info.pbi_ppid == 1 else { continue }
             let start = Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec))
-            guard Date().timeIntervalSince(start) >= 120 else { continue }
+            guard Date().timeIntervalSince(start) >= 120 else {
+                protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) läuft erst seit "
+                                   + Formate.uhrzeit(start) + " – bleibt bestehen, das Update bitte in ein paar Minuten erneut versuchen.")
+                continue
+            }
             protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) (gestartet "
                                + Formate.zeitpunkt(start) + ") hält das Update auf – wird beendet.")
             // Auch die Nachfahren koennen die Sperre halten. Erst freundlich, dann hart.
@@ -227,7 +242,7 @@ struct CliAktualisierer: Aktualisierer {
             for p in baum { kill(p, SIGKILL) }
             warten(5)
             if lebt() {
-                protokoll.berichte("Prozess \(pid) ließ sich nicht beenden.")
+                protokoll.berichte("Prozess \(pid) ließ sich nicht vollständig beenden.")
             } else {
                 beendet += 1
             }
@@ -295,6 +310,17 @@ struct CliAktualisierer: Aktualisierer {
     /// Hinweise, dass der eigene Download des Werkzeugs abriss (Go: agy). Nur dann lohnt der Ersatzweg.
     static let downloadAbbruchHinweise = ["download interrupted", "while reading body", "wsarecv", "connection reset",
                                           "timed out", "timeout", "deadline exceeded", "network is unreachable"]
+
+    /// Anfang der Fehlermeldung zu `istDownloadFrist`; haelt sie aus der automatischen Claude-Uebergabe.
+    static let langsamesNetzMeldung = "Download zu langsam: "
+
+    /// Die eigene Gesamtfrist des Werkzeugs lief ab. Kein kurzer Aussetzer: auf derselben langsamen
+    /// Leitung kostet jeder weitere Versuch wieder die volle Frist (Windows 1.3.51).
+    static func istDownloadFrist(_ lauf: BefehlErgebnis) -> Bool {
+        lauf.exitCode != 0
+            && (lauf.ausgabe.localizedCaseInsensitiveContains("exceeded the total deadline")
+                || lauf.ausgabe.localizedCaseInsensitiveContains("Download timed out"))
+    }
 
     static func istDownloadAbbruch(_ lauf: BefehlErgebnis) -> Bool {
         lauf.exitCode != 0 && downloadAbbruchHinweise.contains { lauf.ausgabe.lowercased().contains($0) }

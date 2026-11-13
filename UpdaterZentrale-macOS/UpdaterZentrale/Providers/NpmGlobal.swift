@@ -55,7 +55,7 @@ enum NpmGlobal {
 
         if lauf.abgelaufen {
             protokoll.berichte(lauf.ausgabe)
-            let was = lauf.abgebrochen ? "Abgebrochen" : "Der Download kommt nicht voran"
+            let was = AbbruchMarke.aktuell?.istAbgebrochen == true ? "Abgebrochen" : "Der Download kommt nicht voran"
             return PruefErgebnis(zustand: .fehler,
                                  meldung: "\(was) – \(eintrag.name) wurde nicht angefasst und bleibt unverändert nutzbar.",
                                  protokoll: lauf.ausgabe)

@@ -86,12 +86,37 @@ actor RepoAbgleich {
                                                       zeitlimit: vorspulZeitlimit, arbeitsverzeichnis: wurzel)
         // git meldet hier Erfolg: Der Baum steht auf dem Upstream, die lokalen Aenderungen warten im Stash.
         if mitStash.exitCode == 0, mitStash.ausgabe.localizedCaseInsensitiveContains(stashKonflikt) {
+            await laufzeitdateienEntkonflikten(wurzel, protokoll)
             return BefehlErgebnis(exitCode: 1, ausgabe: mitStash.ausgabe, abgelaufen: false)
         }
         return mitStash
     }
 
     private static let stashKonflikt = "safe in the stash"
+
+    /// Dateien, die der OpenLauncher zur Laufzeit neu schreibt (models.json) und die zugleich versioniert
+    /// sind. Kollidiert der Autostash mit ihnen, bleiben Konfliktmarker stehen; der Launcher kann das
+    /// nicht lesen, faellt auf seine Vorgaben zurueck und ueberschreibt die Modell-Liste des Nutzers.
+    /// 1:1-Port von RepoAbgleich.Laufzeitdateien (Windows 1.3.80).
+    private static let laufzeitdateien: Set<String> = ["models.json"]
+
+    /// Nach einem kollidierenden Autostash gewinnt bei Laufzeitdateien der eigene Stand: die Stash-Seite
+    /// ("theirs" beim Anwenden eines Stashs) nehmen und aus dem Index nehmen. Andere Konfliktdateien
+    /// behalten ihre Marker, der Stash bleibt liegen.
+    private static func laufzeitdateienEntkonflikten(_ wurzel: String, _ protokoll: Fortschritt?) async {
+        let git = "/usr/bin/git"
+        let offen = await Kommandozeile.ausfuehren(git, ["diff", "--name-only", "--diff-filter=U"],
+                                                   zeitlimit: 120, arbeitsverzeichnis: wurzel)
+        guard offen.exitCode == 0 else { return }
+        for zeile in pfade(offen.ausgabe) where laufzeitdateien.contains((zeile as NSString).lastPathComponent.lowercased()) {
+            let lokal = await Kommandozeile.ausfuehren(git, ["checkout", "--theirs", "--", zeile],
+                                                       zeitlimit: 120, arbeitsverzeichnis: wurzel)
+            guard lokal.exitCode == 0 else { continue }
+            _ = await Kommandozeile.ausfuehren(git, ["reset", "--quiet", "--", zeile],
+                                               zeitlimit: 120, arbeitsverzeichnis: wurzel)
+            berichten(protokoll, "repo.laufzeitdatei", "\(zeile): Konflikt mit dem Autostash, der lokale Stand bleibt erhalten.")
+        }
+    }
 
     /// Der echte Grund einer Verweigerung, nicht die uebliche Vermutung.
     static func vorspulGrund(_ lauf: BefehlErgebnis) -> String {

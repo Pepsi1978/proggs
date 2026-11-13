@@ -339,3 +339,22 @@ Aus den macOS-Commits 1.0.21, die Windows noch fehlten, übernommen:
 | 1.0.21 Android Studio Zeitlimit 120 Minuten | ✅ `programs.json` |
 
 Nicht übernommen, weil nur macOS: Windscribe per `brew fetch` + eigener Installer (1.0.18/1.0.19), Casks vor dem Beenden vorab laden (1.0.22/1.0.24), Fensteranpassung ans MacBook (1.0.17).
+
+## H) Windows-Gleichstand 1.3.85 (macOS 1.0.49, 13.11.2026)
+
+Geprüft: alle Windows-Commits 1.3.50–1.3.85 ohne Mac-Gegenstück.
+
+| Windows | macOS |
+|---|---|
+| 1.3.80 Kollidiert der Autostash mit `models.json`, gewinnt der lokale Stand (`checkout --theirs`, aus dem Index) | ✅ `RepoAbgleich.laufzeitdateienEntkonflikten` |
+| 1.3.51 Eigene Download-Frist des Werkzeugs abgelaufen („exceeded the total deadline“, „Download timed out“): Meldung „Download zu langsam: …“, keine automatische Claude-Übergabe | ✅ nach dem Ersatzdownload, nur solange die Programmdatei noch da ist |
+| 1.3.50 Protokollauszug der Übergabe behält Fortschritts-Bruchstücke, Kopf und Fuß des Laufs; ohne eigene Zeilen das Dateiende mit eigenem Titel | ✅ `ClaudeUebergabe.zeilenDesProgramms` |
+| 1.3.50 Zu junger verwaister Prozess wird gemeldet statt still übergangen, „nicht vollständig beenden“ | ✅ |
+| 1.3.84/1.3.85 Kein Upgrade auf „nicht installiert“, auch in der Kette | ✅ sinngemäß für Homebrew-Formeln (`brew upgrade`); Casks ohne brew-Installation laufen weiter legitim als `install --force` |
+| 1.3.47 Fehlende oder leere Programmdatei nach abgebrochenem Update | war schon da (`Programmpruefung`) |
+| 1.3.59 gemerktes „nicht installiert“ neu prüfen | überholt durch 1.3.61 (Mac 1.0.33: beim Start alles neu prüfen) |
+
+Nicht übernommen:
+* **1.3.57** Bun/Deno über `~/.bun`/`~/.deno`: auf dem Mac kommen beide nur aus Homebrew; `bun upgrade` auf die Cellar-Kopie würde brew umgehen. Brew-Karte plus ausgeblendete `bun-nativ`-Karte bleiben.
+* **1.3.81** maximiert starten: ausdrücklich „unter Windows“, die Mac-Fenstergröße richtet sich nach `visibleFrame` (siehe D 5).
+* **1.3.73, 1.3.74/1.3.77, 1.3.82/1.3.83, ARP-Teil von 1.3.84**: winget- bzw. Visual-Studio-spezifisch.

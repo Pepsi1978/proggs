@@ -530,6 +530,7 @@ final class ProgrammViewModel {
                                          fingerabdruckVorher: vorher)
 
             var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
+                ?? UpdateKette.formelNichtInstalliert(self.eintrag, vorher, vorPruefung)
             var liefVorher = false
             var vomUpdateGeschlossen = false
 

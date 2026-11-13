@@ -29,6 +29,7 @@ enum ClaudeUebergabe {
     /// Lauf und ein Netz, das ueber alle Versuche gestoert blieb: das kann eine Sitzung nicht reparieren.
     static func automatischRelevant(_ bericht: UpdateBericht) -> Bool {
         bericht.istFehler && !bericht.ohneAutoUebergabe && !bericht.meldung.hasPrefix(BrewAktualisierer.netzGestoertMeldung)
+            && !bericht.meldung.hasPrefix(CliAktualisierer.langsamesNetzMeldung)
     }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
@@ -225,10 +226,10 @@ enum ClaudeUebergabe {
             // Tolerant dekodiert: ungueltige Bytes einer Werkzeug-Ausgabe duerfen den Auszug nicht kosten.
             if let daten = FileManager.default.contents(atPath: bericht.protokollDatei) {
                 let inhalt = String(decoding: daten, as: UTF8.self)
-                let marke = "[\(eintrag.id)]"
                 let alleZeilen = inhalt.components(separatedBy: CharacterSet(charactersIn: "\r\n"))
-                let eigene = alleZeilen.filter { $0.contains(marke) }
-                let zeilen = eigene.isEmpty ? alleZeilen : eigene
+                let eigene = zeilenDesProgramms(alleZeilen, eintrag.id)
+                let gefiltert = !eigene.isEmpty
+                let zeilen = gefiltert ? eigene : alleZeilen
                 var ende: [String] = []
                 var laenge = 0
                 let budget = protokollZeichen / faelle.count
@@ -243,12 +244,46 @@ enum ClaudeUebergabe {
                     laenge += kurz.count + 1
                     if laenge >= budget { break }
                 }
+                let titel = gefiltert ? "Protokoll von \(eintrag.id)"
+                    : "Protokoll (keine Zeilen von \(eintrag.id) in dieser Datei, daher das Dateiende)"
                 t += "\n" + (ende.count < zeilen.count
-                    ? "Protokoll von \(eintrag.id) (letzte \(ende.count) von \(zeilen.count) Zeilen, den Rest in der Datei oben lesen):\n"
-                    : "Protokoll von \(eintrag.id):\n")
+                    ? "\(titel) (letzte \(ende.count) von \(zeilen.count) Zeilen, den Rest in der Datei oben lesen):\n"
+                    : "\(titel):\n")
                 t += "----\n" + ende.joined(separator: "\n") + "\n----\n"
             }
         }
         return t
+    }
+
+    /// Die Zeilen eines Programms. Eine markierte Zeile ("HH:mm:ss  [id]  …") nennt ihren Besitzer;
+    /// unmarkierte Zeilen -- Bruchstuecke nach einem blanken \r und Kopf/Fuss aus laufBeginnen/laufBeenden --
+    /// gehoeren dem letzten Besitzer, und die Kopf- und Fusszeilen mit Programmnamen wechseln ihn selbst.
+    /// Port von ClaudeUebergabe.ZeilenDesProgramms (Windows 1.3.50).
+    static func zeilenDesProgramms(_ zeilen: [String], _ id: String) -> [String] {
+        var ergebnis: [String] = []
+        var eigen = false
+        for (i, zeile) in zeilen.enumerated() {
+            if let besitzer = zeilenBesitzer(zeile) {
+                eigen = besitzer == id
+            } else if zeile.hasPrefix("Update-Lauf: ") {
+                eigen = zeile.contains("(\(id), ")
+                // Die "====="-Zeile direkt vor dem Kopf gehoert zu diesem Lauf.
+                if eigen, i > 0, zeilen[i - 1].hasPrefix("====") { ergebnis.append(zeilen[i - 1]) }
+            } else if zeile.hasPrefix("Programm: ") {
+                eigen = zeile.trimmingCharacters(in: .whitespaces).hasSuffix("(\(id))")
+            }
+            if eigen { ergebnis.append(zeile) }
+        }
+        return ergebnis
+    }
+
+    /// Besitzer einer markierten Zeile "HH:mm:ss  [id]  …", sonst nil.
+    private static func zeilenBesitzer(_ zeile: String) -> String? {
+        let z = Array(zeile.utf8)
+        guard z.count > 12, z[2] == 58, z[5] == 58, z[8] == 32, z[9] == 32, z[10] == 91,
+              [0, 1, 3, 4, 6, 7].allSatisfy({ (48...57).contains(z[$0]) }) else { return nil }
+        let rest = zeile.dropFirst(11)
+        guard let zu = rest.range(of: "]  ") else { return nil }
+        return String(rest[rest.startIndex..<zu.lowerBound])
     }
 }

@@ -75,7 +75,23 @@ final class UpdateKette {
                             fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
     }
 
+    /// `brew upgrade` auf eine Formel, die Homebrew selbst nicht installiert hat, kann nur scheitern
+    /// (Gegenstueck zu Windows 1.3.84/1.3.85, winget 0x8A150014): die Kette endet vor dem Aufruf.
+    /// Nur fuer Formeln -- ein Cask ohne brew-Installation laeuft legitim als `install --force`.
+    static func formelNichtInstalliert(_ eintrag: ProgrammEintrag, _ fingerabdruck: String,
+                                       _ vor: PruefErgebnis) -> KettenUrteil? {
+        guard vor.zustand == .nichtInstalliert, eintrag.art.lowercased() == "brew",
+              let formel = eintrag.formel, !formel.istLeer else { return nil }
+        return KettenUrteil(ergebnis: .abgebrochen,
+                            meldung: "Nicht installiert – brew upgrade kann nur aktualisieren, was Homebrew als installiert kennt; "
+                                + "es wurde nichts ausgeführt. Zum Neuinstallieren im Terminal: brew install \(formel)",
+                            fingerabdruckVorher: fingerabdruck, fingerabdruckNachher: fingerabdruck,
+                            fuerKarte: vor, updateAufrufe: 0, updateLiefDurch: false)
+    }
+
     func ausfuehren(_ fingerabdruckStart: String, _ vor: PruefErgebnis) async -> KettenUrteil {
+        // Fuer jeden Aufrufer der Kette, nicht nur den Kartenklick: kein Upgrade auf "nicht installiert".
+        if let nichtInstalliert = Self.formelNichtInstalliert(eintrag, fingerabdruckStart, vor) { return nichtInstalliert }
         var uebergaenge: [String] = []
         var angebot = vor.verfuegbareVersion
         var standVor = fingerabdruckStart
