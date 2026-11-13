@@ -476,6 +476,22 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre.",
       "ruecknahme": "In beiden Skripten die eigner-Zeilen entfernen (rm -rf darf bleiben).",
       "kosten": "kein Dauerkontext, ein adb-cat je Warterunde"
+    },
+    {
+      "id": "M28",
+      "titel": "git add mit bereits per git rm entfernter Datei bricht das ganze add ab",
+      "datum": "2026-11-13T12:16",
+      "beleg": "941ce074: git rm designs.js, danach git add <6 Pfade inkl. designs.js> -> pathspec-Fehler, mit ';' verkettet lief der Commit nur mit der Löschung, zweiter Commit nötig.",
+      "ort": [
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "pathspec '[^']+' did not match any files",
+      "aufruf_regex": "git (-C \\S+ )?add ",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Sitzungen mit git add: kein pathspec-Fehler mehr bei eigenen Commits.",
+      "ruecknahme": "Die Zeile 'git add <pfade> bricht komplett ab' aus commit-nur-mit-pfaden.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
     }
   ]
 }
