@@ -192,7 +192,9 @@ tunnel_umsteigen() {
 
 # Über den Tunnel den TLS-Port von „Debugging über WLAN“ finden und Port 5555 zurückholen. 0 = verbunden.
 # Die volle Suche (tls-port-suche.py, meldet nur Ports, die wie adbd antworten) lässt adbd kurz hängen und kostet im Mobilnetz
-# Daten: Nach jeder erfolglosen Suche verdoppelt sich der Abstand (5, 10, 20, 40, höchstens 60 Minuten), ein Erfolg setzt ihn zurück.
+# Daten. Direkt nach einem Neustart ist WLAN-Debugging oft erst Minuten später an (Entsperren, WLAN, UpdateStation; gemessen
+# 13.11.2026 am Tablet: erste Suche zu früh). Deshalb die ersten 4 erfolglosen Suchen alle 2 Minuten, danach wachsender
+# Abstand (5, 10, 20, 40, höchstens 60 Minuten). Ein Erfolg setzt ihn zurück.
 # Gemerkt werden Ports nur, wenn die Verbindung danach scheiterte (nach „adb tcpip“ wählt adbd ohnehin einen neuen Port).
 TLS_PORTS_DATEI="$HOME/.adb-wlan${ZUSATZ}-tls-ports"
 TLS_SUCHE_MARKE="$HOME/.adb-wlan${ZUSATZ}-tls-suche"
@@ -215,8 +217,10 @@ tunnel_tls_verbinden() {
     [ $r -eq 0 ] && { tls_erfolg; return 0; }
     [ $r -eq 2 ] && return 1
   fi
-  abstand=$(tr -dc '0-9' 2>/dev/null <"$TLS_ABSTAND_DATEI"); [ -z "$abstand" ] && abstand=5
-  [ -n "$(find "$TLS_SUCHE_MARKE" -mmin -"$abstand" 2>/dev/null)" ] && return 1
+  # Datei hält die Zahl der erfolglosen Suchen in Folge; daraus der Abstand in Minuten.
+  local fehl; fehl=$(tr -dc '0-9' 2>/dev/null <"$TLS_ABSTAND_DATEI"); [ -z "$fehl" ] && fehl=0
+  if [ "$fehl" -lt 4 ]; then abstand=2; else abstand=$((5 << (fehl - 4))); [ $abstand -gt 60 ] && abstand=60; fi
+  [ "$fehl" -gt 0 ] && [ -n "$(find "$TLS_SUCHE_MARKE" -mmin -"$abstand" 2>/dev/null)" ] && return 1
   for py in python3 python; do command -v "$py" >/dev/null 2>&1 && "$py" -c "import asyncio" >/dev/null 2>&1 && break; py=""; done
   [ -z "$py" ] && { melde "TLS-Suche übersprungen: kein Python gefunden"; return 1; }
   ports=$("$py" "$HIER/tls-port-suche.py" "$TUNNEL_IP" 2>&1); code=$?
@@ -225,7 +229,8 @@ tunnel_tls_verbinden() {
   touch "$TLS_SUCHE_MARKE"
   if [ $code -ne 0 ]; then melde "TLS-Suche fehlgeschlagen (Exit $code): $(echo "$ports" | tail -1)"; return 1; fi
   if [ -z "$ports" ]; then
-    abstand=$((abstand * 2)); [ $abstand -gt 60 ] && abstand=60; echo "$abstand" > "$TLS_ABSTAND_DATEI"
+    fehl=$((fehl + 1)); [ $fehl -gt 20 ] && fehl=20; echo "$fehl" > "$TLS_ABSTAND_DATEI"
+    if [ "$fehl" -lt 4 ]; then abstand=2; else abstand=$((5 << (fehl - 4))); [ $abstand -gt 60 ] && abstand=60; fi
     melde "Tunnel $TUNNEL_IP: Port $PORT zu, kein adb-TLS-Port (WLAN-Debugging aus oder Gerät nicht im WLAN) – nächste Suche in $abstand Minuten"
     return 1
   fi

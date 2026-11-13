@@ -87,3 +87,4 @@ Nur über `Werkzeuge/logcat/logcat-lesen.sh`, nie `adb logcat -d | grep` am Rech
 - Grenze: Ohne WLAN (nur Mobilfunk) schaltet Android „Debugging über WLAN“ nicht ein; dann geht es erst wieder, sobald das Gerät in einem WLAN ist.
 - Falle: Direkt nach der Portsuche scheitert `adb connect` auf den TLS-Port („failed to connect“), Sekunden später klappt es → 5 s warten, bis zu 3 Runden. Gemessen: Server holte 5555 am Tablet allein in ~45 s zurück.
 - Installation bei gesperrtem Gerät (Bildschirm aus, „Dozing“) klappt per adb ohne Eingriff am Gerät (gemessen 13.11.2026 am Tab S9 über den Tunnel).
+- Echter Neustart-Test 13.11.2026 (Tab S9, Heim-WLAN, PC-Wachhund aus): Server holte 5555 allein zurück. Falle: Die erste Suche lief 1 min nach dem Neustart, bevor WLAN-Debugging an war (erst nach Entsperren + UpdateStation) → ersten 4 Suchen im 2-Minuten-Takt, erst dann wachsender Abstand. Vor dem ersten Entsperren nach einem Neustart laufen WireGuard und UpdateStation nicht.
