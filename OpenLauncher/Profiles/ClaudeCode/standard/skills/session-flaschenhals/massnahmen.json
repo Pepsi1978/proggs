@@ -492,6 +492,22 @@
       "pruefung": "Nach 10 Sitzungen mit git add: kein pathspec-Fehler mehr bei eigenen Commits.",
       "ruecknahme": "Die Zeile 'git add <pfade> bricht komplett ab' aus commit-nur-mit-pfaden.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+    },
+    {
+      "id": "M29",
+      "titel": "build-ablauf-guard: adb-Installziel-Prüfung überspringt Befehle, die per ssh auf einem anderen Rechner laufen",
+      "datum": "2026-11-13T17:19",
+      "beleg": "Sitzung 0aadec04: Installation auf dem Server per ssh geblockt, weil das lokale adb devices die Tunnel-Adresse nicht kannte; Umweg über Skriptdatei kostete ~2 Aufrufe",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "ist gerade nicht verbunden",
+      "aufruf_regex": "ssh\\s[^\\n]*adb[^\\n]*-s\\s",
+      "fehler_am_aufruf": true,
+      "pruefung": "Nach 10 Sitzungen mit ssh+adb -s: keine Meldung 'ist gerade nicht verbunden' bei ssh-Befehlen; lokale Installationen auf falsche Adresse blocken weiter",
+      "ruecknahme": "Die drei Zeilen mit dem ssh-Ausschluss in adb_ziel_fehlt() entfernen",
+      "kosten": "keine (nur Regex im Hook)"
     }
   ]
 }

@@ -206,6 +206,9 @@ def adb_ziel_fehlt(cmd):
         # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
         # adb connect auf genau diese Adresse oder ein Lauf des WLAN-Werkzeugs davor verbinden erst im Befehl: nicht prüfbar.
         davor = cmd[:m.start()]
+        # Läuft auf einem anderen Rechner (ssh, z. B. Hostinger-Server): das lokale "adb devices" sagt darüber nichts.
+        if re.search(r'(?:^|[;&|\s(])ssh\s', davor):
+            continue
         if ADB_WLAN_LAUF.search(davor) or re.search(r'\bconnect\s+["\']?' + re.escape(m.group(1)) + r'(?![\w.:])', davor):
             continue
         if geraete is None:
