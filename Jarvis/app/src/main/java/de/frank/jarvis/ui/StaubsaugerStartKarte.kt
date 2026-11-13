@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -126,13 +126,15 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
 private fun SaugerKachel(titel: String, @DrawableRes symbol: Int, gesperrt: Boolean, modifier: Modifier, aktion: () -> Unit) {
     val f = LocalFarben.current
     Column(
-        modifier.heightIn(min = 92.dp).glas(f, 14.dp, erhoeht = 0.5f).antippen { if (!gesperrt) aktion() }
+        modifier.height(104.dp).glas(f, 14.dp, erhoeht = 0.5f).antippen { if (!gesperrt) aktion() }
             .padding(horizontal = 4.dp, vertical = 10.dp).alpha(if (gesperrt) 0.45f else 1f),
         horizontalAlignment = Alignment.CenterHorizontally,
+        // Feste Höhe: Alle Kacheln sind gleich groß, auch wenn eine Beschriftung zweizeilig ist.
+        verticalArrangement = Arrangement.Center,
     ) {
         Image(painterResource(symbol), null, Modifier.size(40.dp))
         Text(
-            titel, color = f.text, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center,
+            titel, color = f.text, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center, maxLines = 2,
             modifier = Modifier.padding(top = 6.dp),
         )
     }
