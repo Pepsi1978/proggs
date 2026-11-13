@@ -82,11 +82,16 @@ final class UpdateKette {
                                        _ vor: PruefErgebnis) -> KettenUrteil? {
         guard vor.zustand == .nichtInstalliert, eintrag.art.lowercased() == "brew",
               let formel = eintrag.formel, !formel.istLeer else { return nil }
-        return KettenUrteil(ergebnis: .abgebrochen,
-                            meldung: "Nicht installiert – brew upgrade kann nur aktualisieren, was Homebrew als installiert kennt; "
-                                + "es wurde nichts ausgeführt. Zum Neuinstallieren im Terminal: brew install \(formel)",
+        let meldung = "Nicht installiert – brew upgrade kann nur aktualisieren, was Homebrew als installiert kennt; "
+            + "es wurde nichts ausgeführt. Zum Neuinstallieren im Terminal: brew install \(formel)"
+        Diagnose.ereignis(.warnung, "kette", "kette.urteil", meldung,
+                          ["programm": eintrag.id, "ergebnis": LaufErgebnis.abgebrochen.rawValue, "aufrufe": 0,
+                           "standVorher": fingerabdruck, "standNachher": fingerabdruck])
+        var karte = vor
+        karte.meldung = meldung
+        return KettenUrteil(ergebnis: .abgebrochen, meldung: meldung,
                             fingerabdruckVorher: fingerabdruck, fingerabdruckNachher: fingerabdruck,
-                            fuerKarte: vor, updateAufrufe: 0, updateLiefDurch: false)
+                            fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
     }
 
     func ausfuehren(_ fingerabdruckStart: String, _ vor: PruefErgebnis) async -> KettenUrteil {

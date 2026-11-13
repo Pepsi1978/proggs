@@ -469,6 +469,8 @@ enum Formate {
 
     static func uhrzeitMitSekunden(_ datum: Date) -> String {
         let f = DateFormatter()
+        // Feste Ziffern: ClaudeUebergabe erkennt den Zeilenkopf des Protokolls daran.
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "HH:mm:ss"
         return f.string(from: datum)
     }

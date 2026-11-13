@@ -46,12 +46,16 @@ enum Protokollierung {
     }
 
     /// Markiert den Beginn eines Laufs, damit ein Protokoll nie einem anderen Versuch zugeordnet wird.
+    /// Anfang der Kopf- und Fusszeile, die einen Lauf einem Programm zuordnen (gelesen von ClaudeUebergabe).
+    static let laufKopf = "Update-Lauf: "
+    static let laufFuss = "Programm: "
+
     static func laufBeginnen(_ eintrag: ProgrammEintrag, befehl: String, fingerabdruckVorher: String) {
         let linie = String(repeating: "=", count: 78)
         let strich = String(repeating: "-", count: 78)
         let kopf = """
         \(linie)
-        Update-Lauf: \(eintrag.name)  (\(eintrag.id), Art \(eintrag.art))
+        \(laufKopf)\(eintrag.name)  (\(eintrag.id), Art \(eintrag.art))
         Gestartet:   \(Formate.langerZeitpunkt(Date()))
         Rechte:      Standardbenutzer (macOS kennt keine Rechte-Erhöhung für Programme)
         Befehl:      \(befehl)
@@ -69,7 +73,7 @@ enum Protokollierung {
         let strich = String(repeating: "-", count: 78)
         let fuss = """
         \(strich)
-        Programm:      \(bericht.name)  (\(bericht.programmId))
+        \(laufFuss)     \(bericht.name)  (\(bericht.programmId))
         Ergebnis:      \(bericht.ergebnisText)
         Begründung:    \(bericht.meldung)
         Stand vorher:  \(bericht.versionVorher)

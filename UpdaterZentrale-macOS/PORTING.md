@@ -358,3 +358,10 @@ Nicht übernommen:
 * **1.3.57** Bun/Deno über `~/.bun`/`~/.deno`: auf dem Mac kommen beide nur aus Homebrew; `bun upgrade` auf die Cellar-Kopie würde brew umgehen. Brew-Karte plus ausgeblendete `bun-nativ`-Karte bleiben.
 * **1.3.81** maximiert starten: ausdrücklich „unter Windows“, die Mac-Fenstergröße richtet sich nach `visibleFrame` (siehe D 5).
 * **1.3.73, 1.3.74/1.3.77, 1.3.82/1.3.83, ARP-Teil von 1.3.84**: winget- bzw. Visual-Studio-spezifisch.
+
+Nach dem sehr ausführlichen Review (macOS 1.0.51):
+* Scheitert nach abgelaufener Download-Frist auch der Ersatzdownload, bleibt es bei „Download zu langsam: …“ (keine Claude-Übergabe). Die Frist zählt nur, wenn das Werkzeug selbst aufgab, nicht beim Zeitlimit der App; die Meldung nennt keine feste Minutenzahl mehr.
+* Hält ein eben gestarteter früherer Lauf die Update-Sperre, meldet die Karte „Update läuft noch: …“ statt „Endete mit Code 1“, ebenfalls ohne Claude-Übergabe.
+* Autostash: nur `OpenLauncher/models.json` (voller Pfad) gilt als Laufzeitdatei. Waren das die einzigen Konflikte, gilt das Vorspulen als gelungen und der doppelte Stash-Eintrag wird verworfen.
+* Protokollauszug: Zeilenkopf per regulärem Ausdruck, Zeitstempel mit festen Ziffern (POSIX), Kopf-/Fuß-Präfixe als gemeinsame Konstanten in `Protokollierung`, die „=====“-Zeile vor einem Laufkopf wird nicht mehr doppelt oder dem falschen Programm zugeordnet.
+* Formel-Sperre schreibt `kette.urteil` in die Diagnose und zeigt die Meldung mit dem `brew install`-Hinweis auf der Karte.

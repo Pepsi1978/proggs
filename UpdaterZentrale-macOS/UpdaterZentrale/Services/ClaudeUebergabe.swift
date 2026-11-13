@@ -30,6 +30,7 @@ enum ClaudeUebergabe {
     static func automatischRelevant(_ bericht: UpdateBericht) -> Bool {
         bericht.istFehler && !bericht.ohneAutoUebergabe && !bericht.meldung.hasPrefix(BrewAktualisierer.netzGestoertMeldung)
             && !bericht.meldung.hasPrefix(CliAktualisierer.langsamesNetzMeldung)
+            && !bericht.meldung.hasPrefix(CliAktualisierer.laeuftNochMeldung)
     }
 
     /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
@@ -263,13 +264,15 @@ enum ClaudeUebergabe {
         var ergebnis: [String] = []
         var eigen = false
         for (i, zeile) in zeilen.enumerated() {
+            // Die "====="-Zeile vor einem Laufkopf gehoert schon zum naechsten Lauf, siehe unten.
+            if zeile.hasPrefix("===="), i + 1 < zeilen.count, zeilen[i + 1].hasPrefix(Protokollierung.laufKopf) { continue }
             if let besitzer = zeilenBesitzer(zeile) {
                 eigen = besitzer == id
-            } else if zeile.hasPrefix("Update-Lauf: ") {
+            } else if zeile.hasPrefix(Protokollierung.laufKopf) {
                 eigen = zeile.contains("(\(id), ")
                 // Die "====="-Zeile direkt vor dem Kopf gehoert zu diesem Lauf.
                 if eigen, i > 0, zeilen[i - 1].hasPrefix("====") { ergebnis.append(zeilen[i - 1]) }
-            } else if zeile.hasPrefix("Programm: ") {
+            } else if zeile.hasPrefix(Protokollierung.laufFuss) {
                 eigen = zeile.trimmingCharacters(in: .whitespaces).hasSuffix("(\(id))")
             }
             if eigen { ergebnis.append(zeile) }
@@ -277,13 +280,13 @@ enum ClaudeUebergabe {
         return ergebnis
     }
 
-    /// Besitzer einer markierten Zeile "HH:mm:ss  [id]  …", sonst nil.
+    /// Markierte Zeile aus Protokollierung.schreiben: "HH:mm:ss  [id]  …".
+    private static let zeilenkopf = try! NSRegularExpression(pattern: #"^\d\d:\d\d:\d\d  \[(.+?)\]  "#)
+
+    /// Besitzer einer markierten Zeile, sonst nil.
     private static func zeilenBesitzer(_ zeile: String) -> String? {
-        let z = Array(zeile.utf8)
-        guard z.count > 12, z[2] == 58, z[5] == 58, z[8] == 32, z[9] == 32, z[10] == 91,
-              [0, 1, 3, 4, 6, 7].allSatisfy({ (48...57).contains(z[$0]) }) else { return nil }
-        let rest = zeile.dropFirst(11)
-        guard let zu = rest.range(of: "]  ") else { return nil }
-        return String(rest[rest.startIndex..<zu.lowerBound])
+        let ns = zeile as NSString
+        guard let treffer = zeilenkopf.firstMatch(in: zeile, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        return ns.substring(with: treffer.range(at: 1))
     }
 }

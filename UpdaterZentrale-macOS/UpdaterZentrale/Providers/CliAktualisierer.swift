@@ -109,15 +109,27 @@ struct CliAktualisierer: Aktualisierer {
 
         // Das Werkzeug meldet, dass noch ein anderes Update laeuft. Nur fuer Werkzeuge, die sich
         // selbst aktualisieren: ihre verwaisten Reste sind ein haengengebliebener frueherer Lauf.
-        if Self.istUpdateSperre(lauf),
-           Self.gleicheDatei(exe, Pfade.aufloesen(eintrag.exePfadWirksam)),
-           await Self.verwaisteBeenden(exe, protokoll) > 0 {
-            protokoll.berichte("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …")
-            lauf = await Kommandozeile.ausfuehren(exe, Kommandozeile.zerlegen(argumente),
-                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
-                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent,
-                                                  lebenszeichen: npmGlobal ? NpmGlobal.downloadGroesse : nil)
-            protokoll.berichte(lauf.ausgabe)
+        var sperreZuJung = false
+        if Self.istUpdateSperre(lauf), Self.gleicheDatei(exe, Pfade.aufloesen(eintrag.exePfadWirksam)) {
+            let reste = await Self.verwaisteBeenden(exe, protokoll)
+            sperreZuJung = reste.beendet == 0 && reste.zuJung > 0
+            if reste.beendet > 0 {
+                protokoll.berichte("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …")
+                lauf = await Kommandozeile.ausfuehren(exe, Kommandozeile.zerlegen(argumente),
+                                                      zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                      arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent,
+                                                      lebenszeichen: npmGlobal ? NpmGlobal.downloadGroesse : nil)
+                protokoll.berichte(lauf.ausgabe)
+            }
+        }
+
+        // Ein eben gestarteter frueherer Lauf haelt die Sperre: er wird von selbst fertig. Kein Code-Problem,
+        // deshalb eigene Meldung ohne automatische Claude-Uebergabe.
+        if sperreZuJung, Self.istUpdateSperre(lauf) {
+            return PruefErgebnis(zustand: .fehler,
+                                 meldung: Self.laeuftNochMeldung + "Ein eben gestartetes Update von \(eintrag.name) läuft noch. "
+                                    + "In ein paar Minuten erneut versuchen.",
+                                 protokoll: lauf.ausgabe)
         }
 
         // npm hat das alte Paket entfernt, und der Lauf endete, bevor das neue da war.
@@ -128,13 +140,24 @@ struct CliAktualisierer: Aktualisierer {
                                  protokoll: lauf.ausgabe)
         }
 
+        // Nur wenn das Werkzeug selbst aufgab, nicht wenn das Zeitlimit der App den Lauf beendete.
+        let downloadFrist = !lauf.abgelaufen && Self.istDownloadFrist(lauf)
+        let langsamMeldung = Self.langsamesNetzMeldung + eintrag.name + " hat seinen eigenen Download wegen Zeitüberschreitung abgebrochen. "
+            + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
+            + "Die installierte Version bleibt unverändert nutzbar."
+
         // Eigener Download gescheitert oder haengengeblieben: die Datei aus dem Manifest selbst laden
         // (IPv4 zuerst). Nicht, solange ein anderer Lauf des Werkzeugs seine Update-Sperre haelt.
         if eintrag.ersatzDownload, !npmGlobal, !Self.istUpdateSperre(lauf),
            AbbruchMarke.aktuell?.istAbgebrochen != true,
-           lauf.abgelaufen || Self.istDownloadAbbruch(lauf) || Self.istDownloadFrist(lauf),
+           lauf.abgelaufen || Self.istDownloadAbbruch(lauf) || downloadFrist,
            Self.gleicheDatei(exe, programmDatei),
            let ersatz = await Self.ersatzDownload(eintrag, programmDatei, protokoll) {
+            // Half auch der Ersatz nicht, bleibt es bei der langsamen Leitung: keine Claude-Uebergabe dafuer.
+            if ersatz.zustand == .fehler, downloadFrist, FileManager.default.fileExists(atPath: programmDatei) {
+                return PruefErgebnis(zustand: .fehler, meldung: langsamMeldung + " " + ersatz.meldung,
+                                     protokoll: lauf.ausgabe + "\n" + ersatz.protokoll)
+            }
             return PruefErgebnis(zustand: ersatz.zustand, meldung: ersatz.meldung,
                                  protokoll: lauf.ausgabe + "\n" + ersatz.protokoll)
         }
@@ -142,12 +165,8 @@ struct CliAktualisierer: Aktualisierer {
         // Die eigene Gesamtfrist des Werkzeugs fuer den Download ist abgelaufen (Claude Code: ~10 min fuer
         // ~300 MB) und der Ersatzdownload half nicht. Kein Code-Problem: eigene Meldung, keine Claude-Uebergabe.
         // Nur solange es stimmt: "bleibt nutzbar" darf nicht ueber einem von npm entfernten Paket stehen.
-        if Self.istDownloadFrist(lauf), FileManager.default.fileExists(atPath: programmDatei) {
-            return PruefErgebnis(zustand: .fehler,
-                                 meldung: Self.langsamesNetzMeldung + eintrag.name + " bricht seinen eigenen Download nach etwa 10 Minuten ab. "
-                                    + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
-                                    + "Die installierte Version bleibt unverändert nutzbar.",
-                                 protokoll: lauf.ausgabe)
+        if downloadFrist, FileManager.default.fileExists(atPath: programmDatei) {
+            return PruefErgebnis(zustand: .fehler, meldung: langsamMeldung, protokoll: lauf.ausgabe)
         }
 
         if lauf.abgelaufen {
@@ -203,8 +222,8 @@ struct CliAktualisierer: Aktualisierer {
     /// laufen: eine interaktive Sitzung hat ihr Terminal als Elternteil, ein gerade gestartetes
     /// Update darf fertig werden. Gerufen nur, nachdem das Werkzeug selbst eine laufende
     /// Aktualisierung gemeldet hat.
-    /// - Returns: wie viele Reste wirklich beendet sind.
-    static func verwaisteBeenden(_ exe: String, _ protokoll: Fortschritt) async -> Int {
+    /// - Returns: wie viele Reste wirklich beendet sind und wie viele als zu jung stehen blieben.
+    static func verwaisteBeenden(_ exe: String, _ protokoll: Fortschritt) async -> (beendet: Int, zuJung: Int) {
         await withCheckedContinuation { fortsetzung in
             // Eigener Thread: Prozesstabelle, pgrep und das Warten blockieren.
             DispatchQueue.global(qos: .userInitiated).async {
@@ -213,11 +232,12 @@ struct CliAktualisierer: Aktualisierer {
         }
     }
 
-    private static func verwaisteBeendenBlockierend(_ exe: String, _ protokoll: Fortschritt) -> Int {
+    private static func verwaisteBeendenBlockierend(_ exe: String, _ protokoll: Fortschritt) -> (beendet: Int, zuJung: Int) {
         let ziel = (exe as NSString).resolvingSymlinksInPath
         var pids = [pid_t](repeating: 0, count: 8192)
         let anzahl = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
         var beendet = 0
+        var zuJung = 0
         // Ueber den Programmpfad statt den Namen: Claudes nativer Installer laeuft als "2.1.x".
         for pid in pids.prefix(max(0, anzahl)) where pid > 1 && pid != getpid() {
             guard (Prozessdienst.pfadVon(pid) as NSString).resolvingSymlinksInPath == ziel,
@@ -226,6 +246,7 @@ struct CliAktualisierer: Aktualisierer {
             guard Date().timeIntervalSince(start) >= 120 else {
                 protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) läuft erst seit "
                                    + Formate.uhrzeit(start) + " – bleibt bestehen, das Update bitte in ein paar Minuten erneut versuchen.")
+                zuJung += 1
                 continue
             }
             protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) (gestartet "
@@ -247,7 +268,7 @@ struct CliAktualisierer: Aktualisierer {
                 beendet += 1
             }
         }
-        return beendet
+        return (beendet, zuJung)
     }
 
     private static func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {
@@ -313,6 +334,9 @@ struct CliAktualisierer: Aktualisierer {
 
     /// Anfang der Fehlermeldung zu `istDownloadFrist`; haelt sie aus der automatischen Claude-Uebergabe.
     static let langsamesNetzMeldung = "Download zu langsam: "
+
+    /// Anfang der Meldung, wenn ein eben gestarteter frueherer Lauf die Update-Sperre haelt; ebenfalls ohne Claude-Uebergabe.
+    static let laeuftNochMeldung = "Update läuft noch: "
 
     /// Die eigene Gesamtfrist des Werkzeugs lief ab. Kein kurzer Aussetzer: auf derselben langsamen
     /// Leitung kostet jeder weitere Versuch wieder die volle Frist (Windows 1.3.51).
