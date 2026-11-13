@@ -15,9 +15,6 @@
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <!-- Signatur-Erlaubnis von Jarvis: Update-Signal empfangen und Ansagen an Jarvis schicken. -->
     <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
-    <!-- Erlaubt das Wecken einer von Samsung abgeschalteten Google-Drive-App auch aus der Hintergrundprüfung
-         (Start einer Activity aus dem Hintergrund). Wird per adb (appops) erteilt. -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name=".UpdateStationApp"
@@ -43,7 +40,6 @@
             android:name=".WeckActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:noHistory="false"
             android:taskAffinity="de.frank.updatestation.wecken"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 

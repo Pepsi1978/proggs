@@ -48,7 +48,7 @@ object Quellen {
                 val ordner = OrdnerQuelle(context, Uri.parse(uri))
                 // Ordner aus dem Drive-Dokumentanbieter: zuerst direkt über die Drive-Schnittstelle lesen. Sie hängt
                 // nicht an der Drive-App, die Samsung abschaltet und deren Zwischenspeicher veraltet.
-                if (Uri.parse(uri).authority?.startsWith("com.google.android.apps.docs") == true) DriveZuerst(DriveQuelle(context, e), ordner)
+                if (AnbieterWecker.istDrive(Uri.parse(uri).authority)) DriveZuerst(DriveQuelle(context, e), ordner)
                 else ordner
             }
             else -> null
@@ -235,7 +235,8 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
         val c = context.contentResolver.query(uri, spalten, null, null, null)
             ?: run {
                 // Abgeschaltete Drive-App (Samsung) sieht genauso aus wie eine verlorene Freigabe: erst wecken.
-                AnbieterWecker.sicherstellen(context, baum.authority ?: "")
+                val authority = baum.authority ?: return@run null
+                AnbieterWecker.sicherstellen(context, authority)
                 context.contentResolver.query(uri, spalten, null, null, null)
             }
             ?: throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
@@ -335,7 +336,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
             ordner.map { o ->
                 async {
                     runCatching { leseProjekt(o) }
-                        .onFailure { if (it is CancellationException) throw it; Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
+                        .onFailure { if (it is CancellationException || it is AnbieterAbgeschaltet) throw it; Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
                         .getOrElse { ProjektErgebnis(o.name, null, zwischenstand = "LESEFEHLER|${it.javaClass.simpleName}") }
                 }
             }.awaitAll()

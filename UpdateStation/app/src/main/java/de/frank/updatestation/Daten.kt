@@ -255,6 +255,9 @@ class Einstellungen(context: Context) {
         return stand.keys().asSequence().filter { k -> stand.optJSONObject(k)?.let { haengt(it, max, jetzt) } == true }.sorted().toList()
     }
 
+    /** Gespeicherte Kennung (Grund und Nummern) des Zwischenstands von [projekt], null = keiner. */
+    fun kennung(projekt: String): String? = nachpruefungsStand().optJSONObject(projekt)?.optString("kennung")
+
     private fun nachpruefungsStand(): JSONObject =
         runCatching { JSONObject(prefs.getString("nachpruefungen", "{}") ?: "{}") }.getOrDefault(JSONObject())
 

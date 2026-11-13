@@ -79,10 +79,9 @@ object Pruefer {
             np.neu.forEach { p ->
                 Diagnose.ereignis(context, Phase.SYNC, "ZWISCHENSTAND", "projekt" to p, "grund" to zwischen[p]?.substringBefore('|'))
             }
-            np.erschoepft.filter { it != Einstellungen.LEER && fehltUpdate(context, funde, it) }.forEach { p ->
+            np.erschoepft.filter { it != Einstellungen.LEER && fehltUpdate(context, funde, it, zwischen[it]) }.forEach { p ->
                 Diagnose.ereignis(context, Phase.SYNC, "HAENGT", "projekt" to p, "grund" to zwischen[p]?.substringBefore('|'))
-                val gezeigt = Benachrichtigungen.warnung(context, p.hashCode() + 11, "Update-Ordner „$p“ nicht stimmig",
-                    "Seit etwa 30 Minuten passen APK und update.json in Google Drive auf dem Handy nicht zusammen. UpdateStation prüft weiter.")
+                val gezeigt = Benachrichtigungen.warnung(context, p.hashCode() + 11, haengtTitel(p), HAENGT_TEXT)
                 if (gezeigt) einst.markiereGewarnt(p)
             }
             if (zwischen.isNotEmpty()) {
@@ -113,11 +112,18 @@ object Pruefer {
      * Hängt der Ordner [projekt] noch an einem Update, das hier fehlt? Nein, wenn die App schon in der Version
      * der update.json (oder neuer) installiert ist, etwa per adb: dann ist der Zwischenstand ohne Folgen.
      */
-    fun fehltUpdate(context: Context, funde: List<Fund>, projekt: String): Boolean {
+    fun fehltUpdate(context: Context, funde: List<Fund>, projekt: String, kennung: String?): Boolean {
+        // Nur bei "APK fehlt" ist die Version der update.json das Ziel; sonst (neuere APK, Lesefehler,
+        // unlesbares Manifest) kann im Ordner mehr liegen, als die gespeicherten Funde zeigen.
+        if (kennung?.substringBefore('|') != "APK_FEHLT") return true
         val m = funde.firstOrNull { it.manifest.projekt == projekt }?.manifest ?: return true
         val code = installiert(context.packageManager, m.paket)?.longVersionCode ?: return true
-        return code < m.versionCode
+        val ziel = maxOf(m.versionCode, Regex("""apk=(\d+)""").find(kennung)?.groupValues?.get(1)?.toLongOrNull() ?: 0)
+        return code < ziel
     }
+
+    fun haengtTitel(projekt: String) = "Update-Ordner „$projekt“ nicht stimmig"
+    const val HAENGT_TEXT = "Seit etwa 30 Minuten passen APK und update.json im Update-Ordner nicht zusammen. UpdateStation prüft bei jeder Prüfung erneut."
 
     /** Ohne Netz: letzte Funde gegen den aktuellen Installationsstand neu bewerten. */
     fun bewerteGespeichert(context: Context) {

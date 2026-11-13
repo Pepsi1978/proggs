@@ -90,8 +90,12 @@ object Hinweise {
         if (einst.quelleLeer) {
             liste += "Keine Update-Projekte mehr gefunden" to "Der Update-Ordner ist seit längerer Zeit leer. UpdateStation sucht bei jeder Prüfung weiter."
         }
-        einst.haengendeProjekte(PruefWorker.MAX_NACHPRUEFUNGEN).filter { it != Einstellungen.LEER && Pruefer.fehltUpdate(context, einst.funde, it) }.forEach { projekt ->
-            liste += "Update-Ordner „$projekt“ nicht stimmig" to "Seit etwa 30 Minuten passen APK und update.json in Google Drive auf dem Handy nicht zusammen. UpdateStation prüft weiter."
+        val haengend = einst.haengendeProjekte(PruefWorker.MAX_NACHPRUEFUNGEN).filter { it != Einstellungen.LEER }
+        if (haengend.isNotEmpty()) {
+            val funde = einst.funde
+            haengend.filter { Pruefer.fehltUpdate(context, funde, it, einst.kennung(it)) }.forEach { projekt ->
+                liste += Pruefer.haengtTitel(projekt) to Pruefer.HAENGT_TEXT
+            }
         }
         return liste
     }
