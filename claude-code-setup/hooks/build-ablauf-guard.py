@@ -301,7 +301,7 @@ def main():
         skript = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'vorwaermen', 'vorwaermen.py')
         teile = [t.strip() for t in re.split(r'[;\n]|&&|\|\|', cmd) if t.strip()]
         nur_bau = bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
-            r'(&\s*)?((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*', t, re.I)
+            r'(&\s*)?((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$', t, re.I)
             for t in teile) and any('gradlew' in t.lower() for t in teile)
         if os.name == 'nt' and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
             neu = dict(d.get('tool_input') or {})

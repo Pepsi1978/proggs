@@ -96,13 +96,46 @@ def prozesse() -> list:
     return liste
 
 
+_BEKANNT = {}  # pid → ist Gradle-Client (laut Befehlszeile); einmal je pid abgefragt
+
+
 def gradle_clients(liste=None) -> list:
-    """(pid, Eltern-pid) laufender Gradle-Clients: java, gestartet von einer Shell (gradlew.bat / gradlew). Daemons sind Kinder
-    eines Clients (oder verwaist), Kotlin-Daemons Kinder eines Daemons; Android Studio startet nie über eine Shell."""
+    """(pid, Eltern-pid) laufender Gradle-Clients. Vorauswahl billig über die Prozessliste (java unter einer Shell; Daemons
+    sind Kinder eines Clients, Kotlin-Daemons Kinder eines Daemons, Android Studio startet nie über eine Shell), bestätigt über
+    die Befehlszeile (gradle-wrapper.jar), aber nur für neue Kandidaten: apksigner.bat & Co. bremsen sonst den Vorbau aus."""
     liste = liste if liste is not None else prozesse()
     name = {pid: exe for pid, _, exe in liste}
     java = ("java.exe",) if WINDOWS else ("java",)
-    return [(pid, ppid) for pid, ppid, exe in liste if exe in java and name.get(ppid, "") in (SHELLS if WINDOWS else {"bash", "sh", "zsh"})]
+    kandidaten = [(pid, ppid) for pid, ppid, exe in liste
+                  if exe in java and name.get(ppid, "") in (SHELLS if WINDOWS else {"bash", "sh", "zsh"})]
+    neu = [pid for pid, _ in kandidaten if pid not in _BEKANNT]
+    if neu:
+        zeilen = befehlszeilen(neu)
+        if zeilen is None:
+            return kandidaten  # Abfrage gescheitert: lieber ausweichen als einer Sitzung im Weg stehen
+        for pid in neu:
+            z = zeilen.get(pid)
+            if z is not None:
+                _BEKANNT[pid] = "gradle-wrapper.jar" in z or "GradleWrapperMain" in z
+    return [(pid, ppid) for pid, ppid in kandidaten if _BEKANNT.get(pid, True)]
+
+
+def befehlszeilen(pids: list):
+    """pid → Befehlszeile, nur für die genannten pids; None, wenn die Abfrage scheiterte."""
+    if WINDOWS:
+        filter_ = " OR ".join(f"ProcessId={p}" for p in pids)
+        e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 f"Get-CimInstance Win32_Process -Filter '{filter_}' | ForEach-Object {{ '{{0}}|{{1}}' -f $_.ProcessId, $_.CommandLine }}"], timeout=60)
+    else:
+        e = run(["ps", "-o", "pid=,args=", "-p", ",".join(map(str, pids))], timeout=20)
+    if e.returncode != 0:
+        return None
+    aus = {}
+    for z in e.stdout.splitlines():
+        t = z.split("|", 1) if WINDOWS else z.strip().split(None, 1)
+        if len(t) == 2 and t[0].strip().isdigit():
+            aus[int(t[0])] = t[1]
+    return aus
 
 
 def fremder_bau_laeuft(eigene_shell: int = 0) -> bool:
@@ -163,10 +196,13 @@ def run(befehl, timeout=None, cwd=None, ausweichen=None) -> Ergebnis:
             except subprocess.TimeoutExpired:
                 weichen = bool(ausweichen and ausweichen(p.pid))
                 if weichen or (ende is not None and time.time() >= ende):
-                    beende_client(p.pid)  # zuerst den Client: sonst baute er nach dem Ende von cmd verwaist weiter
-                    try:
-                        p.wait(timeout=60)
-                    except subprocess.TimeoutExpired:
+                    if ausweichen:
+                        beende_client(p.pid)  # Gradle: zuerst den Client, sonst baute er nach dem Ende von cmd verwaist weiter
+                        try:
+                            p.wait(timeout=30)
+                        except subprocess.TimeoutExpired:
+                            pass
+                    if p.poll() is None:
                         p.kill()
                         p.wait()
                     code = AUSGEWICHEN if weichen else -1
@@ -379,6 +415,8 @@ def repo_vorspulen() -> None:
     vorher = git("rev-parse", "HEAD")
     if run(["git", "-C", str(PROGGS), "fetch", "--quiet"], timeout=300).returncode != 0:
         return
+    if vorher == git("rev-parse", "@{u}"):
+        return  # nichts Neues: kein merge, kein Indexzugriff neben laufenden Sitzungen
     if run(["git", "-C", str(PROGGS), "merge", "--ff-only", "--quiet", "@{u}"]).returncode == 0:
         nachher = git("rev-parse", "HEAD")
         if nachher and nachher != vorher:
@@ -432,7 +470,10 @@ def baue(app: str):
         e = run(gradlew(app), cwd=PROGGS / app, timeout=3600, ausweichen=Ausweichen())
         dauer = int(time.time() - beginn)
         if e.returncode == AUSGEWICHEN:
-            log(f"{app}: Vorbau nach {dauer} s abgebrochen, eine Sitzung oder ein Spiel hat Vorrang")
+            # Selbst pausieren: Sonst begänne der nächste Takt denselben Vorbau neben einem Bau ohne Hook (Codex, OpenCode …)
+            # kalt von vorn und bräche ihn wieder ab, endlos.
+            PAUSE.touch()
+            log(f"{app}: Vorbau nach {dauer} s abgebrochen, eine Sitzung oder ein Spiel hat Vorrang (20 min Pause)")
             return None
         ok, fehler = e.returncode == 0, e.stdout.strip()[-400:] or ("nach 60 Minuten abgebrochen" if e.returncode == -1 else "")
     if not ist_sauber:
@@ -557,7 +598,9 @@ def lauf() -> int:
                 baue(ARGS.app)
             return 0
         if pausiert() or fremder_bau_laeuft():
-            return 0  # eine Sitzung baut: weder Repo verschieben noch bauen
+            log_gedrosselt("Aussetzen: eine Sitzung baut (oder Pause nach ihrem Bau), weder Repo vorspulen noch bauen")
+            return 0
+        daemon_pflege()  # zuerst: warmer Daemon direkt nach dem Windows-Start, nicht erst nach allen Vorbauten
         repo_vorspulen()
         stand = lies_json(STAND)
         hashes = baum_hashes()
@@ -567,12 +610,23 @@ def lauf() -> int:
                 continue  # eine Sitzung arbeitet daran
             if time.time() - commitzeit(app) < RUHE_NACH_COMMIT:
                 continue  # frisch committet: die Sitzung baut und installiert gleich selbst
-            if baue(app) is None:
-                log("Pause: eine Sitzung baut oder ein Spiel läuft, Vorwärmen setzt beim nächsten Lauf fort")
+            if akkubetrieb() or baue(app) is None:
+                log("Pause: Akku, eine Sitzung baut oder ein Spiel läuft, Vorwärmen setzt später fort")
                 return 0
-        if not pausiert() and not fremder_bau_laeuft() and not spiel_laeuft():
-            daemon_pflege()
     return 0
+
+
+def log_gedrosselt(text: str) -> None:
+    """Höchstens einmal je Stunde ins Log, damit ein dauerhaftes Aussetzen sichtbar ist, ohne das Log zu fluten."""
+    marke = ORDNER / "aussetzen.log-marke"
+    try:
+        if time.time() - marke.stat().st_mtime < 3600:
+            return
+    except OSError:
+        pass
+    ORDNER.mkdir(parents=True, exist_ok=True)
+    marke.touch()
+    log(text)
 
 
 def warte() -> int:
@@ -594,7 +648,11 @@ def zeige() -> int:
     for app in alle_apps():
         fehler = stand.get("_fehler", {}).get(app, "")
         aktuell = stand.get(app) == hashes.get(app)
-        print(f"{app:24} {'aktuell' if aktuell else 'offen'}" + (f"  FEHLER {fehler[-80:]!r}" if fehler and aktuell else ""))
+        grund = "" if aktuell else ("  (offene Änderungen im Ordner, wird übersprungen)" if not sauber(app) else "  (kommt beim nächsten Takt)")
+        print(f"{app:24} {'aktuell' if aktuell else 'offen'}{grund}" + (f"  FEHLER {fehler[-80:]!r}" if fehler and aktuell else ""))
+    gemerkt = lies_json(DAEMON)
+    if gemerkt:
+        print(f"Warmer Daemon: pid {gemerkt.get('pid')}, seit {time.strftime('%d.%m. %H:%M', time.localtime(gemerkt.get('seit', 0)))}")
     return 0
 
 

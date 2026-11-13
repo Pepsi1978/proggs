@@ -134,7 +134,12 @@ Umgesetzt in `Werkzeuge/vorwaermen/vorwaermen.py` (Python, plattformneutral; Ein
 - git nur mit `GIT_OPTIONAL_LOCKS=0`: `git status` nimmt sonst kurz `index.lock` und lässt Commits der Sitzungen scheitern.
 - Testaufrufe mit `Start-Process bash -ArgumentList '-c', "…"` brauchen eigene Anführungszeichen um den Befehl, sonst läuft nur das erste Wort.
 
-**Last (gemessen):** Leerlauf-Takt 4,6 s Wandzeit alle 5 min, fast nur Warten auf Netz (fetch). Gebaut wird nur nach neuen
-Commits, mit halber Kernzahl, und nie, während eine Sitzung baut oder ein Spiel läuft.
+**Last (gemessen 13.11.2026):** Leerlauf-Takt 1,2 s alle 5 min (einmal je Stunde mit adb-Paketliste ≈ 5 s), fast nur
+Warten auf das Netz. `warte` ohne Vorbau 0,1 s, mit ausweichendem Vorbau 0,8 s. Daemon-Start per `help` 14 s, ein `help` in
+einer App derselben Gruppe danach 5,3 s im selben Daemon. Gebaut wird nur nach neuen Commits (erste Runde aller Apps 36–189 s
+je App), mit halber Kernzahl, nie während einer Sitzung oder eines Spiels.
+- Fremde Clients: Vorauswahl java unter einer Shell, bestätigt über die Befehlszeile (`gradle-wrapper.jar`, einmal je pid),
+  sonst bremste `apksigner.bat` den Vorbau aus. Nach dem Ausweichen pausiert der Vorbau selbst 20 min, sonst begänne er
+  neben einer CLI ohne Hook alle 5 min von vorn.
 
 Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaermen/vorwaermen.py stand`.
