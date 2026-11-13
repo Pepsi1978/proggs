@@ -194,6 +194,12 @@ trap aufraeumen EXIT
 
 adb start-server >/dev/null 2>&1
 
+# Tunnel-Adresse verbunden, aber nicht freigegeben: Warten und alle weiteren Wege ändern daran nichts (kostete 1:41, 13.11.2026).
+if [ -n "$TUNNEL_IP" ] && [ "$(adb devices 2>/dev/null | awk -v s="$TUNNEL_IP:$PORT" '$1==s {print $2}')" = "unauthorized" ]; then
+  melde "FEHLER: $TUNNEL_IP:$PORT ist verbunden, aber nicht freigegeben (unauthorized). Am Gerät 'Debugging zulassen' mit 'Immer zulassen' bestätigen."
+  exit 1
+fi
+
 # Neuer Mac: Wachhund (LaunchAgent) beim ersten Aufruf selbst einrichten. Auch ein schon eingerichteter, der noch nur das Handy
 # kennt (ohne „--geraet alle“), wird einmal neu eingerichtet. Nur am Mac (launchd).
 WACHHUND_DATEI="$HOME/Library/LaunchAgents/de.frank.adb-wlan.wachhund.plist"

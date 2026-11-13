@@ -11,6 +11,7 @@ import json
 import os
 import re
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -140,6 +141,12 @@ def starte(auftrag: dict, w: dict) -> str:
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"],
                                                                                                        w["cli"] == "claude" and bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer)))}
+    # Die genannte App sofort vorbauen: Während die Sitzung liest und ändert, wird der Gradle-Daemon warm und der build-Ordner aktuell.
+    try:
+        subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "kern" / "vorwaermen.py"), "start", "--app", app, "--immer"],
+                       timeout=30, stdin=subprocess.DEVNULL, capture_output=True)
+    except Exception:
+        pass
     name = launcher.starten(w["cli"], w["modell"], w["anbieter"], w["effort"], w["profil"], w["modus"], titel, auftragstext(auftrag, w["cli"]),
                             nummer if re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer) else "")
     if w["cli"] != "claude":

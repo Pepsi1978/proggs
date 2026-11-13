@@ -112,6 +112,11 @@ def repo_abgleich() -> dict:
         stand = {"ok": False, "meldung": str(fehler)[-300:]}
     stand["zeit"] = time.strftime("%d.%m.%Y %H:%M")
     _schreib(ZUSTAND / "repo-status.json", json.dumps(stand, ensure_ascii=False))
+    # Android-Apps mit neuem Stand im Hintergrund vorbauen (kern/vorwaermen.py, löst sich selbst vom Dienst; prüft nur Hashes, wenn nichts neu ist).
+    try:
+        subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "vorwaermen.py"), "start"], timeout=30, stdin=subprocess.DEVNULL, capture_output=True)
+    except (subprocess.TimeoutExpired, OSError):
+        pass
     return stand
 
 
