@@ -36,6 +36,8 @@ interface OpenMeteoApi {
         @Query("past_days") pastDays: Int = 7,
         @Query("forecast_days") forecastDays: Int = 1,
         @Query("hourly") hourly: String = "temperature_2m,weather_code",
+        // Auch hier nur DWD ICON, wie bei der Wettervorhersage.
+        @Query("models") models: String = "icon_seamless",
         @Query("timezone") timezone: String = "auto",
     ): OpenMeteoResponse
 }

@@ -346,8 +346,9 @@ eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie
 
 ## Wetter, Kalender schreiben, Mitdenken
 
-- **Wetter** (`faehigkeit/WetterFaehigkeit.kt`): stündliche Vorhersage für sieben Tage von Open-Meteo (ohne Schlüssel), abgelegt in
-  `filesDir/wetter.json`, aufgefrischt bei jeder Synchronisierung und sonst höchstens stündlich. Ort einstellbar (Vorgabe Neuenhagen
+- **Wetter** (`faehigkeit/WetterFaehigkeit.kt`): stündliche Vorhersage für sieben Tage, nur DWD ICON über Open-Meteo
+  (`/v1/dwd-icon`, `icon_seamless`, ohne Schlüssel), abgelegt in `filesDir/wetter.json` samt Lauf (ICON-D2-`meta.json`) und
+  Abrufzeit; vor dem Lesen ab 45 Minuten im Hintergrund, ab 90 Minuten mit Warten aufgefrischt, über drei Stunden VERALTET. Ort einstellbar (Vorgabe Neuenhagen
   bei Berlin). Heute, morgen und übermorgen stehen in Tagesdatenbank und Tagesauswertung.
 - **Kalender schreiben:** `kalender_eintragen` legt Termine über den Kalenderspeicher von Android an (Erlaubnis `WRITE_CALENDAR`),
   und zwar in dem Kalender, in dem die Dienste stehen. Farbe: der Farbschlüssel des Google-Kontos, der dem genannten Farbton am
