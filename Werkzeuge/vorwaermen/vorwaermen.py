@@ -122,6 +122,10 @@ def gradle_clients(liste=None) -> list:
         # Mac/Linux: gradlew endet mit `exec java`, der Client ersetzt also die Shell und hängt direkt unter dem Aufrufer
         # (zsh der CLI, pwsh von apk-update, node, python). Darum jede java-JVM als Kandidat; ps ist hier billig.
         kandidaten = [(pid, ppid) for pid, ppid, exe in liste if exe == "java"]
+    # Beendete pids vergessen: Eine wiederverwendete pid erbte sonst die alte Einordnung, und das Wörterbuch wüchse im Dauerlauf.
+    lebend = {pid for pid, _, _ in liste}
+    for pid in [p for p in _BEKANNT if p not in lebend]:
+        del _BEKANNT[pid]
     neu = [pid for pid, _ in kandidaten if pid not in _BEKANNT]
     if neu:
         zeilen = befehlszeilen(neu)
@@ -131,6 +135,9 @@ def gradle_clients(liste=None) -> list:
             z = zeilen.get(pid)
             if z is not None:
                 _BEKANNT[pid] = "gradle-wrapper.jar" in z or "GradleWrapperMain" in z
+            elif not WINDOWS:
+                # Mac/Linux: jede JVM ist Kandidat, auch kurzlebige Gradle-Worker des eigenen Vorbaus. Schon beendet = kein Client.
+                _BEKANNT[pid] = False
     return [(pid, ppid) for pid, ppid in kandidaten if _BEKANNT.get(pid, True)]
 
 

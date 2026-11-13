@@ -60,7 +60,8 @@ enum RepoSync {
         guard FileManager.default.fileExists(atPath: plist) else { return }
         let ziel = "gui/\(getuid())/de.frank.vorwaermen"
         let r = Shell.run("/bin/launchctl", ["kickstart", ziel], environment: ProcessInfo.processInfo.environment, timeout: 5)
-        if r.exitCode != 0 { Logger.shared.warn("RepoSync", "starteVorwaermen", r.stderr) }
+        // Läuft der Agent gerade, lehnt launchctl den Anstoß ab: kein Fehler, der laufende Lauf sieht den neuen Stand ohnehin.
+        if r.exitCode != 0 { Logger.shared.info("RepoSync", "starteVorwaermen", r.stderr) }
     }
 
     /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete

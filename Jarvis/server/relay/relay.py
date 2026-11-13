@@ -1102,7 +1102,7 @@ class PcBruecke:
             return ["server"] + rechner
         if regel == "mitte":
             # Franks Reihenfolge: Vorrangrechner, Server, anderer Rechner; davon nur, wer dieses Modell kann.
-            voll = ["haupt", "server", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "server", "haupt"]
+            voll = ["haupt", "server", "ersatz"] if auftrag.get("vorrang") == "windows" or modell == "sol" else ["ersatz", "server", "haupt"]
             return [r for r in voll if r == "server" or r in rechner]
         if regel == "zuletzt":
             return rechner + ["server"]

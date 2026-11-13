@@ -14,6 +14,8 @@ struct ListenAnsicht: View {
     @State private var neuName = ""
     @State private var eingabe = ""
     @State private var nameText = ""
+    /// Zu welcher Liste nameText und abschnitteText gehören: Ein Wechsel mit fokussiertem Feld benennt sonst die neue Liste um.
+    @State private var kopfVon: Int64 = 0
     @State private var abschnitteText = ""
     @FocusState private var eingabeFokus: Bool
     @FocusState private var nameFokus: Bool
@@ -54,7 +56,7 @@ struct ListenAnsicht: View {
                     .font(.jarvis(14)).foregroundStyle(Farbe.text2)
             }
         }
-        .onAppear { if let l { gewaehlt = l.id; nameText = l.name; abschnitteText = l.abschnitte.joined(separator: ", ") } }
+        .onAppear { if let l { gewaehlt = l.id; kopfVon = l.id; nameText = l.name; abschnitteText = l.abschnitte.joined(separator: ", ") } }
         .onChange(of: aktuell?.id) { _, _ in uebernehmeKopf() }
         // Tippt Frank gerade im Kopf, bleibt sein Text stehen: Sonst überschriebe eine Änderung vom Handy die halbe Eingabe.
         .onChange(of: speicher.aenderung) { _, _ in uebernehmeKopf() }
@@ -63,12 +65,16 @@ struct ListenAnsicht: View {
     private func uebernehmeKopf() {
         guard let l = aktuell else { return }
         if gewaehlt != l.id { gewaehlt = l.id; Self.gewaehlt = l.id }
-        if !nameFokus { nameText = l.name }
-        if !abschnitteFokus { abschnitteText = l.abschnitte.joined(separator: ", ") }
+        let gewechselt = kopfVon != l.id
+        kopfVon = l.id
+        if gewechselt || !nameFokus { nameText = l.name }
+        if gewechselt || !abschnitteFokus { abschnitteText = l.abschnitte.joined(separator: ", ") }
     }
 
     private func waehle(_ id: Int64) {
         guard gewaehlt != id else { return }
+        // Offene Eingabe im Kopf gehört zur bisherigen Liste: vor dem Wechsel dort speichern.
+        if let alt = aktuell, kopfVon == alt.id { namensAenderung(alt); abschnitteAenderung(alt) }
         gewaehlt = id; Self.gewaehlt = id
         unterVon = 0; bearbeite = 0; loeschenFrage = false
         uebernehmeKopf()
@@ -143,11 +149,13 @@ struct ListenAnsicht: View {
     // MARK: Kopf der Liste
 
     private func namensAenderung(_ l: Liste) {
+        guard kopfVon == l.id else { return }
         let n = nameText.trimmingCharacters(in: .whitespaces)
         if !n.isEmpty && n != l.name { speicher.listeAendern(l.id) { $0["name"] = n } }
     }
 
     private func abschnitteAenderung(_ l: Liste) {
+        guard kopfVon == l.id else { return }
         var neu: [String] = []
         for a in abschnitteText.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) where !a.isEmpty && !neu.contains(a) { neu.append(a) }
         if neu != l.abschnitte { speicher.listeAendern(l.id) { $0["abschnitte"] = neu } }

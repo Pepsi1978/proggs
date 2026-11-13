@@ -98,9 +98,11 @@ enum ListenArten {
         return (titel.isEmpty ? text.trimmingCharacters(in: .whitespaces) : titel, prio, tags)
     }
 
+    /// Einmal angelegt: tag() läuft je Zeile und beim Sortieren mehrfach je Eintrag.
+    private static let isoTag: DateFormatter = { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f }()
+
     static func tag(_ iso: String) -> Date? {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
-        return f.date(from: iso).map { Calendar.current.startOfDay(for: $0) }
+        return isoTag.date(from: iso).map { Calendar.current.startOfDay(for: $0) }
     }
 
     /// Fälligkeit kurz: heute, morgen, gestern oder „12.11.“.
@@ -439,8 +441,8 @@ final class ListenSpeicher {
                     aenderung += 1
                 }
             } else {
-                // Abgelehnt ohne verwertbare Fassung: einmal alles vom Server neu lesen, damit der Mac nicht dauerhaft abweicht.
-                offen.remove(pfad)
+                // Abgelehnt ohne verwertbare Fassung: Franks Änderung bleibt offen (nie still verwerfen), der Mac liest den Server neu.
+                log("fehler", "Listen-Änderung vom Server abgelehnt, bleibt offen: \(pfad)", wo: "Listen")
                 fern[pfad] = nil
                 stand = 0
             }
@@ -555,12 +557,22 @@ final class ListenSpeicher {
 
     private func ablegen(_ pfad: String, _ o: JSONObjekt, _ jetzt: Int64) {
         var o = o
-        o["geaendert"] = jetzt
+        // Nie älter als der Stand, auf dem die Änderung aufbaut: Geht die Uhr eines anderen Geräts vor, verlöre Franks Änderung sonst.
+        o["geaendert"] = max(jetzt, (fern[pfad]?.geaendert ?? 0) + 1)
         let daten = JSON.daten(o)
         do { try daten.write(to: lokalDatei(pfad), options: .atomic) } catch { log("fehler", "Liste nicht gespeichert: \(error.localizedDescription)", wo: "Listen") }
         shaMerker[pfad] = Self.sha(daten)
         uebernimm(o)
         offen.insert(pfad)
+        zustandSofort()   // „offen“ sofort sichern: Endet die App gleich danach, überschriebe der Server die Änderung sonst
+    }
+
+    /// Schreibt den Abgleichstand sofort (klein, synchron), ohne die 800-ms-Bündelung von [zustandSpeichern].
+    private func zustandSofort() {
+        var f: JSONObjekt = [:]
+        for (k, v) in fern { f[k] = ["sha": v.sha, "geaendert": v.geaendert] as JSONObjekt }
+        let z: JSONObjekt = ["stand": stand, "instanz": instanz, "fern": f, "offen": Array(offen)]
+        try? JSON.daten(z).write(to: zustandDatei, options: .atomic)
     }
 
     func neueId() -> Int64 {

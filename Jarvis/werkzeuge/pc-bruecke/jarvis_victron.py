@@ -57,7 +57,9 @@ def lade_geraete() -> dict:
             if len(schluessel) != 16:
                 raise ValueError("Schlüssel nicht 16 Byte")
             # Schlüssel: MAC (Windows, Linux), sonst der Name (macOS sieht keine MAC-Adressen).
-            kennung = str(g.get("mac") or "").replace(":", "").lower() or str(g.get("name") or len(geraete))
+            kennung = str(g.get("mac") or "").replace(":", "").lower() or str(g.get("name") or "Gerät")
+            while kennung in geraete:  # gleiche Namen ohne MAC dürfen sich nicht überschreiben
+                kennung += "+"
             geraete[kennung] = {**g, "schluessel_roh": schluessel}
         except Exception as fehler:
             protokoll(f"Eintrag {g.get('name', '?')} unbrauchbar: {fehler}")
@@ -116,7 +118,8 @@ async def scannen(geraete: dict, sekunden: float = 12.0) -> dict:
         roh = bytes(roh)
         mac = geraet.address.replace(":", "").lower()
         # Windows: über die MAC. macOS: zufällige UUID statt MAC, also jeden Schlüssel mit passendem Prüfbyte versuchen.
-        kandidaten = [(mac, geraete[mac])] if mac in geraete else \
+        # Nur unter macOS (keine MAC sichtbar): Unter Windows ist eine unbekannte MAC ein fremdes Gerät, nie Franks.
+        kandidaten = [(mac, geraete[mac])] if mac in geraete else [] if not MAC else \
             [(k, g) for k, g in geraete.items() if len(roh) > 7 and g["schluessel_roh"][0] == roh[7]]
         for kennung, g in kandidaten:
             try:
@@ -130,6 +133,8 @@ async def scannen(geraete: dict, sekunden: float = 12.0) -> dict:
                 werte["zeit"] = int(time.time())
                 gefunden[kennung] = werte
                 break
+        if len(gefunden) == len(geraete):
+            fertig.set()
             if len(gefunden) == len(geraete):
                 fertig.set()
 

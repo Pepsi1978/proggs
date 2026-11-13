@@ -192,7 +192,12 @@ final class Verdichter {
                 aus.append(Block(art: kopf.art, titel: kopf.kopf.components(separatedBy: " (")[0], eintraege: []))
                 continue
             }
-            if !aus.isEmpty, let m = regexTreffer(#"^\[(\d+)\]\s+(.+)$"#, z), let id = Int64(m[1]) { aus[aus.count - 1].eintraege.append((id, m[2])) }
+            if !aus.isEmpty, let m = regexTreffer(#"^\[(\d+)\]\s+(.+)$"#, z), let id = Int64(m[1]) { aus[aus.count - 1].eintraege.append((id, m[2])); continue }
+            // Folgezeile eines mehrzeiligen Eintrags: anhängen, sonst ersetzte „Übernehmen“ den Eintrag durch seine erste Zeile.
+            if !z.isEmpty, !aus.isEmpty, var letzter = aus[aus.count - 1].eintraege.popLast() {
+                letzter.1 += "\n" + z
+                aus[aus.count - 1].eintraege.append(letzter)
+            }
         }
         return aus
     }

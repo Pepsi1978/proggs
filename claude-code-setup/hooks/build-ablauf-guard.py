@@ -319,7 +319,7 @@ def main():
         skript = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'vorwaermen', 'vorwaermen.py')
         teile = [t.strip() for t in re.split(r'[;\n]|&&|\|\|', cmd) if t.strip()]
         nur_bau = bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
-            r'(&\s*)?((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$', t, re.I)
+            r'(&\s*)?([A-Za-z_]\w*=\S+\s+)*((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$', t, re.I)
             for t in teile) and any('gradlew' in t.lower() for t in teile)
         # Mac: derselbe Weg mit python3 (Werkzeugs/vorwaermen/einrichten.sh); flock gibt es am Mac nicht.
         mac = sys.platform == 'darwin'
