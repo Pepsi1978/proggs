@@ -1388,6 +1388,11 @@ final class OpenLauncherService {
         (Paths.home as NSString).appendingPathComponent(".local/state/opencode/model.json")
     }
 
+    /// Merkt den Effort fuer OpenCode, ohne die Provider-Konfiguration anzufassen (Jarvis-Auftraege ueber OpenRouter).
+    func setzeOpenCodeVariante(modelString: String, effort: String?) {
+        Self.patchModelVariantState(modelString: modelString, thinkingLevel: effort)
+    }
+
     private static func patchModelVariantState(modelString: String, thinkingLevel rawLevel: String?) {
         guard let thinkingLevel = normalizeThinkingLevel(rawLevel) else { return }
 
@@ -1518,7 +1523,14 @@ final class OpenLauncherService {
         // Siehe patchProvider: ensureObject-Ergebnis verwenden und zurueckgeben, damit der Patch auch
         // bei einer nicht-objektfoermigen Wurzel greift statt still verloren zu gehen.
         let rootObject = JSONNode.ensureObject(root)
-        let models = rootObject.getOrAddObject("provider").getOrAddObject(providerId).getOrAddObject("models")
+        let providerNode = rootObject.getOrAddObject("provider").getOrAddObject(providerId)
+        // Eine vorhandene Whitelist blendet alle nicht genannten Modelle aus; OpenCode meldet das gewaehlte
+        // Modell dann als "not valid" und faellt auf ein anderes zurueck (GPT-6.1 Terra, Windows 1.24.106).
+        if let whitelist = providerNode["whitelist"], case .array = whitelist.kind,
+           !whitelist.items.contains(where: { $0.stringValue?.caseInsensitiveCompare(slug) == .orderedSame }) {
+            whitelist.append(.string(slug))
+        }
+        let models = providerNode.getOrAddObject("models")
         let modelNode = models.getOrAddObject(slug)
         modelNode["name"] = .string(displayName)
 

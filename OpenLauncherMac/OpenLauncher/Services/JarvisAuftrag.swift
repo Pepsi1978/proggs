@@ -96,6 +96,11 @@ enum JarvisAuftrag {
             // OpenRouter braucht in der Oberfläche eine Provider-Wahl; ohne sie routet OpenRouter selbst (kein Patch).
             let modelString = model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame ? model.modelString
                 : try launcher.configureProvider(model: model, chosen: ProviderEntry(), allProviders: [], thinkingLevel: effort)
+            // Der Effort gilt bei OpenCode nur ueber den gemerkten Modellzustand: ohne diesen Schritt fiele er
+            // bei OpenRouter still weg (Windows 1.24.112).
+            if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
+                launcher.setzeOpenCodeVariante(modelString: modelString, effort: effort)
+            }
             if auftragId != nil { installiereJarvisPlugin() }
             try launcher.launch(modelString: modelString, workDir: ordner, thinkingLevel: effort, profileConfigPath: sitzung.configPath,
                                 workMode: modus, useTmux: false, initialPromptFile: datei, jarvisAuftragId: auftragId, title: name)

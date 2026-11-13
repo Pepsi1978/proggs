@@ -33,7 +33,9 @@ final class ModelRegistry {
         ("claude-sonnet-5", "claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)"),
         ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)"),
         // Sonnet 5.5 loest Sonnet 5 ab: der bisherige Eintrag wird einmalig umgestellt.
-        ("claude-sonnet-5[1m]", "claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)")
+        ("claude-sonnet-5[1m]", "claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)"),
+        // Fable 5.2 loest Fable 5.1 ab: der bisherige Eintrag wird einmalig umgestellt (Windows 1.24.120).
+        ("claude-fable-5-1[1m]", "claude-fable-5-2[1m]", "Claude Fable 5.2 (1M)")
     ]
 
     private static var anthropicManagedSlugs: [String] {
@@ -113,11 +115,30 @@ final class ModelRegistry {
             }
 
             Logger.shared.warn("ModelRegistry", "load", "models.json nicht lesbar, Defaults werden verwendet")
+            backupBrokenFile()
         }
 
         registry.groups = createDefaults()
         registry.save()
         return registry
+    }
+
+    /// Eine nicht lesbare models.json (z. B. Git-Konfliktmarker nach einem Update) wird gleich durch die
+    /// Defaults ueberschrieben -- Modell-Liste, Reihenfolge und Hidden-State waeren verloren. Vorher eine
+    /// Kopie ablegen, damit sich der Stand wiederherstellen laesst (Windows 1.24.119).
+    private static func backupBrokenFile() {
+        guard FileManager.default.fileExists(atPath: filePath) else { return }
+        let stempel = DateFormatter()
+        stempel.locale = Locale(identifier: "en_US_POSIX")
+        stempel.dateFormat = "yyyyMMdd-HHmmss"
+        let backup = filePath + ".defekt-" + stempel.string(from: Date())
+        do {
+            try? FileManager.default.removeItem(atPath: backup)
+            try FileManager.default.copyItem(atPath: filePath, toPath: backup)
+            Logger.shared.warn("ModelRegistry", "backupBrokenFile", "Defekte Modell-Liste gesichert", ["backup": backup])
+        } catch {
+            Logger.shared.warn("ModelRegistry", "backupBrokenFile", "Sicherung fehlgeschlagen: \(error.localizedDescription)")
+        }
     }
 
     /// Uebernimmt eine Modell-Liste vom frueheren Ort einmalig ins Repo. Kopiert statt verschoben:
@@ -517,7 +538,12 @@ final class ModelRegistry {
                     let alreadyPresent = group.models.contains { $0.slug.caseInsensitiveCompare(migration.newSlug) == .orderedSame }
                     if let outdated, !alreadyPresent {
                         outdated.slug = migration.newSlug
-                        if !outdated.hasCustomDisplayName || outdated.displayName == "Claude Sonnet 5" { outdated.displayName = migration.displayName }
+                        if !outdated.hasCustomDisplayName || outdated.displayName == "Claude Sonnet 5" {
+                            outdated.displayName = migration.displayName
+                        } else if outdated.displayName.lowercased().hasPrefix("claude fable 5.1") {
+                            // Eigener Name wie "Claude Fable 5.1": nur die Versionsnummer mitziehen, den Rest behalten.
+                            outdated.displayName = "Claude Fable 5.2" + outdated.displayName.dropFirst("Claude Fable 5.1".count)
+                        }
                         Logger.shared.info("ModelRegistry", "repairAndNormalize",
                                            "1M-Variante gesetzt: \(migration.oldSlug) -> \(migration.newSlug)")
                     }
@@ -547,7 +573,7 @@ final class ModelRegistry {
             createGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", normalizeOpenRouter(openRouterModels)),
             createGroup("entropic", "Anthropic", "anthropic", "Anthropic", [
                 model(claudeOpus5Slug, "Claude Opus 5 (1M)", "anthropic", "Anthropic"),
-                model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
+                model("claude-fable-5-2[1m]", "Claude Fable 5.2 (1M)", "anthropic", "Anthropic"),
                 model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
                 model("claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)", "anthropic", "Anthropic"),
                 model("claude-haiku-5-5", "Claude Haiku 5.5", "anthropic", "Anthropic"),

@@ -68,7 +68,7 @@ enum OpenCodeVariantCatalog {
         var slug = rawSlug
         if slug.hasSuffix("[1m]") { slug = String(slug.dropLast("[1m]".count)) }
 
-        if ["claude-opus-5", "claude-fable-5-1", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7",
+        if ["claude-opus-5", "claude-fable-5-2", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7",
             "claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-5-5", "claude-haiku-4-5"].contains(slug) {
             return ["low", "medium", "high", "xhigh", "max"]
         }

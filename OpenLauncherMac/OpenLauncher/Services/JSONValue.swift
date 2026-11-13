@@ -71,6 +71,12 @@ final class JSONNode {
     /// Liefert das Unterobjekt unter `key` und legt es an, falls es fehlt oder kein Objekt ist.
     /// Gegenstueck zu JsonExtensions.GetOrAddObject im Windows-Launcher.
     @discardableResult
+    /// Haengt an ein Array an; bei anderen Knoten passiert nichts.
+    func append(_ node: JSONNode) {
+        guard case .array = kind else { return }
+        items.append(node)
+    }
+
     func getOrAddObject(_ key: String) -> JSONNode {
         if let existing = self[key], existing.isObject { return existing }
         let created = JSONNode.object()
