@@ -440,6 +440,25 @@
       "pruefung": "fehler_regex zählt Läufe, in denen adb.exe einen unverwandelten /c/-Pfad bekam.",
       "ruecknahme": "In auf-beide.sh die cygpath-Zeile nach der APK-Prüfschleife entfernen.",
       "kosten": "kein Dauerkontext, nur das Skript"
+    },
+    {
+      "id": "M26",
+      "titel": "Bau-Hook: Gradle-Bau auf dem Server (Linux) nur mit run_in_background",
+      "datum": "2026-11-13T10:07",
+      "beleg": "Server: 8 von 24 Bau-Sitzungen bauten mit timeout 5xx im Vordergrund, 2 davon abgebrochen (6cc8416c, a662036e: 9,9 min verloren, danach Neubau im Hintergrund).",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (GRADLE_BAU, nur sys.platform linux)"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "Terminated",
+      "aufruf_regex": "gradlew\\s+\\S*assemble",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein 'Terminated' mehr beim Gradle-Bau.",
+      "ruecknahme": "Block mit GRADLE_BAU in main() von build-ablauf-guard.py entfernen.",
+      "kosten": "Kein Kontext; höchstens eine Sperrmeldung, wenn im Vordergrund gebaut wird.",
+      "plattform": [
+        "linux"
+      ]
     }
   ]
 }

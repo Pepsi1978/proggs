@@ -221,6 +221,9 @@ def adb_ziel_fehlt(cmd):
     return None
 
 
+GRADLE_BAU = re.compile(r'(^|[\s;&|(])(\./|bash\s+)?gradlew(\.bat)?\s+[^\n;&|]*\b(assemble|bundle|build|install)\w*', re.I)
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -255,6 +258,16 @@ def main():
         if os.name == 'nt' and d.get('tool_name') == 'Bash' and HEREDOC.search(cmd) and cmd.count('\n') >= 30:
             verweigern("STOPP – langes Bash-Heredoc (>30 Zeilen) scheitert unter Windows oft mit 'unexpected EOF'.\n"
                        "Skript per Write in den Scratchpad legen und dann mit python/pwsh <pfad> ausführen.")
+            return
+    except Exception:
+        pass
+    try:
+        # Hostinger-Server (Linux): Gradle-Bauten dauern oft über 10 Minuten; im Vordergrund bricht das Zeitlimit sie ab
+        # (Maßnahme M26). Nur im Hintergrund starten.
+        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(cmd) \
+                and not (d.get('tool_input') or {}).get('run_in_background'):
+            verweigern("STOPP – Gradle-Bau auf dem Server im Vordergrund: dauert oft über 10 Minuten, das Zeitlimit bricht ihn ab.\n"
+                       "Denselben Befehl ohne timeout mit run_in_background: true starten und auf die Meldung warten.")
             return
     except Exception:
         pass
