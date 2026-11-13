@@ -2,7 +2,9 @@
 # Verbindet das Android-Handy per WLAN mit adb – mit Kabel und ohne.
 # Reihenfolge: schon verbunden und antwortet? -> mDNS (findet das Handy in jedem Netz, auch nach IP-Wechsel)
 # -> zuletzt bekannte IP -> WireGuard-Tunnel (fragt dort die aktuelle WLAN-IP ab und verbindet direkt, sonst bleibt der Tunnel) -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
-# Gleicher Stand wie adb-wlan.ps1; nur die Direktverbindung über den PC-Hotspot (Schritt 6) gibt es am Mac nicht.
+# Gleicher Stand wie adb-wlan.ps1; nur die Direktverbindung über den PC-Hotspot (Schritt 6) gibt es am Mac nicht,
+# und nur hier gibt es Schritt 3c (TLS-Portsuche durch den Tunnel; der PC findet das Gerät im Heimnetz per mDNS,
+# unterwegs holt der Server-Wachhund Port 5555 zurück).
 # Ohne Kabel wird nach einem Handy-Neustart Port 5555 über "Debugging über WLAN" (TLS) wiederhergestellt.
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte werden nie angesprochen.
 # --leise: für den Wachhund (launchd), schreibt nur ins Log und startet den adb-Server nie neu.
@@ -18,9 +20,12 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-# Linux = Hostinger-Server: kein Heim-WLAN in Reichweite, nur der Tunnel (überschreibbar per ADB_WLAN_NUR_TUNNEL=0).
-[ -z "${ADB_WLAN_NUR_TUNNEL:-}" ] && [ "$(uname -s)" = Linux ] && ADB_WLAN_NUR_TUNNEL=1
-GERAETE_DATEI="$(cd "$(dirname "$0")" && pwd)/geraete.json"
+# Hostinger-Server (erkannt am tmux-Dienst der Sitzungen): kein Heim-WLAN in Reichweite, nur der Tunnel
+# (überschreibbar per ADB_WLAN_NUR_TUNNEL=0). Andere Linux-Rechner (WSL, Laptop) bleiben im normalen Ablauf.
+[ -z "${ADB_WLAN_NUR_TUNNEL:-}" ] && [ "$(uname -s)" = Linux ] && [ -f /etc/systemd/system/jarvis-tmux.service ] && ADB_WLAN_NUR_TUNNEL=1
+NUR_TUNNEL=${ADB_WLAN_NUR_TUNNEL:-0}
+HIER="$(cd "$(dirname "$0")" && pwd)"
+GERAETE_DATEI="$HIER/geraete.json"
 # reg <gerät> <feld>: liest ein Feld aus geraete.json (ein Feld je Zeile, wie im Repo abgelegt)
 reg() {
   awk -v g="\"$1\":" -v f="\"$2\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1==f {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null
@@ -139,7 +144,9 @@ pflege() {
   touch "$PFLEGE_DATEI"
 }
 
+STABILISIERT=0
 stabilisiere() { # $1 TLS-Serial, $2 IP
+  STABILISIERT=1
   melde "Nur WLAN-Debugging (TLS) erreichbar – stelle Port $PORT wieder her"
   adbzeit 8 -s "$1" tcpip "$PORT" >/dev/null
   adb disconnect "$1" >/dev/null 2>&1   # TLS-Port wechselt beim adbd-Neustart ohnehin
@@ -147,7 +154,8 @@ stabilisiere() { # $1 TLS-Serial, $2 IP
     sleep 2
     verbinde "$2:$PORT" && return 0
   done
-  melde "Port $PORT kam nicht zurück – nächster Lauf findet WLAN-Debugging wieder per mDNS"
+  if [ "$2" = "$TUNNEL_IP" ]; then melde "Port $PORT kam nicht zurück – nächster Lauf sucht WLAN-Debugging erneut über den Tunnel"
+  else melde "Port $PORT kam nicht zurück – nächster Lauf findet WLAN-Debugging wieder per mDNS"; fi
   return 1
 }
 
@@ -182,36 +190,67 @@ tunnel_umsteigen() {
   return 0
 }
 
-# Über den Tunnel den TLS-Port von „Debugging über WLAN“ suchen (tls-port-suche.py) und Port 5555 zurückholen. 0 = verbunden.
+# Über den Tunnel den TLS-Port von „Debugging über WLAN“ finden und Port 5555 zurückholen. 0 = verbunden.
+# Zuerst die zuletzt gefundenen Ports (keine Suche nötig); die volle Suche (tls-port-suche.py) höchstens alle 5 Minuten,
+# denn sie lässt adbd kurz hängen, und ein Minutenlauf mit neuer Suche würde die Verbindung sonst immer wieder stören.
+TLS_PORTS_DATEI="$HOME/.adb-wlan${ZUSATZ}-tls-ports"
+TLS_SUCHE_MARKE="$HOME/.adb-wlan${ZUSATZ}-tls-suche"
+tls_ports_versuchen() { # $1 Ports; 0 = verbunden, 1 = keiner antwortet, 2 = tcpip lief, 5555 kam nicht (alte Ports sind dann ungültig)
+  local p
+  for p in $1; do
+    if verbinde "$TUNNEL_IP:$p"; then stabilisiere "$TUNNEL_IP:$p" "$TUNNEL_IP" && return 0; return 2; fi
+    adb disconnect "$TUNNEL_IP:$p" >/dev/null 2>&1
+  done
+  return 1
+}
 tunnel_tls_verbinden() {
-  local py p ports
+  local py ports code runde r alt
+  alt=$(tr -d '\r' 2>/dev/null <"$TLS_PORTS_DATEI")
+  if [ -n "$alt" ]; then
+    tls_ports_versuchen "$alt"; r=$?
+    [ $r -eq 0 ] && return 0
+    rm -f "$TLS_PORTS_DATEI"; [ $r -eq 2 ] && return 1
+  fi
+  [ -n "$(find "$TLS_SUCHE_MARKE" -mmin -5 2>/dev/null)" ] && return 1
   for py in python3 python; do command -v "$py" >/dev/null 2>&1 && "$py" -c "import asyncio" >/dev/null 2>&1 && break; py=""; done
-  [ -z "$py" ] && return 1
-  ports=$("$py" "$(cd "$(dirname "$0")" && pwd)/tls-port-suche.py" "$TUNNEL_IP" 2>/dev/null | tr -d '\r') || return 1
-  [ -z "$ports" ] && return 1
+  [ -z "$py" ] && { melde "TLS-Suche übersprungen: kein Python gefunden"; return 1; }
+  ports=$("$py" "$HIER/tls-port-suche.py" "$TUNNEL_IP" 2>&1); code=$?
+  ports=$(echo "$ports" | tr -d '\r')
+  [ $code -eq 2 ] && return 1   # Gerät antwortet im Tunnel gar nicht (aus oder WireGuard weg): keine Suche, keine Marke
+  touch "$TLS_SUCHE_MARKE"
+  if [ $code -ne 0 ]; then melde "TLS-Suche fehlgeschlagen (Exit $code): $(echo "$ports" | tail -1)"; return 1; fi
+  [ -z "$ports" ] && { melde "Tunnel $TUNNEL_IP: Port $PORT zu, kein offener TLS-Port (WLAN-Debugging aus oder Gerät nicht im WLAN)"; return 1; }
   melde "Tunnel $TUNNEL_IP: Port $PORT zu, offene Ports $(echo $ports) – suche WLAN-Debugging (TLS)"
-  # Die Suche selbst lässt adbd kurz hängen (offene Probe-Verbindung ohne TLS): erst kurz warten, dann je Port mehrfach versuchen
-  # (gemessen 13.11.2026: direkt nach der Suche „failed to connect“, eine Minute später sofort verbunden).
-  local runde
+  # Direkt nach der Suche scheitert „adb connect“ oft („failed to connect“), Sekunden später klappt es (gemessen 13.11.2026).
   for runde in 1 2 3; do
     sleep 5
-    for p in $ports; do
-      if verbinde "$TUNNEL_IP:$p"; then stabilisiere "$TUNNEL_IP:$p" "$TUNNEL_IP" && return 0; fi
-      adb disconnect "$TUNNEL_IP:$p" >/dev/null 2>&1
-    done
+    tls_ports_versuchen "$ports"; r=$?
+    if [ $r -eq 0 ]; then echo "$ports" > "$TLS_PORTS_DATEI"; return 0; fi
+    [ $r -eq 2 ] && return 1
   done
+  echo "$ports" > "$TLS_PORTS_DATEI"
   return 1
 }
 
 # Parallele Aufrufe nicht gegeneinander laufen lassen
 LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
-for _ in $(seq 1 90); do mkdir "$LOCK" 2>/dev/null && break; sleep 1; done
+HABE_SPERRE=0
+for _ in $(seq 1 90); do
+  if mkdir "$LOCK" 2>/dev/null; then echo $$ > "$LOCK/pid"; HABE_SPERRE=1; break; fi
+  # Verwaiste Sperre (Lauf wurde hart beendet): übernehmen
+  ALT_PID=$(cat "$LOCK/pid" 2>/dev/null)
+  if [ -n "$ALT_PID" ] && ! kill -0 "$ALT_PID" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
+  [ -z "$ALT_PID" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null)" ] && { rm -rf "$LOCK"; continue; }
+  sleep 1
+done
+# Läuft nach 90 s noch ein anderer Lauf, erledigt der die Arbeit: nicht parallel weitermachen.
+[ $HABE_SPERRE -eq 1 ] || { echo "adb-wlan läuft schon (Sperre $LOCK) – übersprungen"; exit 0; }
 aufraeumen() {
   # Log klein halten
   if [ -f "$LOG" ] && [ "$(wc -c 2>/dev/null <"$LOG" | tr -d ' ')" -gt 524288 2>/dev/null ]; then
     tail -n 2000 "$LOG" > "$LOG.tmp" && mv -f "$LOG.tmp" "$LOG"
   fi
-  rmdir "$LOCK" 2>/dev/null
+  [ $HABE_SPERRE -eq 1 ] && rm -rf "$LOCK"
 }
 trap aufraeumen EXIT
 
@@ -221,7 +260,12 @@ adb start-server >/dev/null 2>&1
 if [ -n "$TUNNEL_IP" ] && [ "$(adb devices 2>/dev/null | awk -v s="$TUNNEL_IP:$PORT" '$1==s {print $2}')" = "unauthorized" ]; then
   melde "FEHLER: $TUNNEL_IP:$PORT ist verbunden, aber nicht freigegeben (unauthorized). Am Gerät 'Debugging zulassen' mit 'Immer zulassen' bestätigen."
   # Neu verbinden lässt die Freigabe-Abfrage am Gerät wieder erscheinen; im Hintergrund, damit niemand darauf wartet.
-  ( adb disconnect "$TUNNEL_IP:$PORT"; sleep 1; adb connect "$TUNNEL_IP:$PORT" ) >/dev/null 2>&1 </dev/null &
+  # Höchstens alle 30 Minuten, sonst erscheint die Abfrage beim Minuten-Wachhund jede Minute neu.
+  FRAGE_MARKE="$HOME/.adb-wlan${ZUSATZ}-freigabe-frage"
+  if [ -z "$(find "$FRAGE_MARKE" -mmin -30 2>/dev/null)" ]; then
+    touch "$FRAGE_MARKE"
+    ( adb disconnect "$TUNNEL_IP:$PORT"; sleep 1; adb connect "$TUNNEL_IP:$PORT" ) >/dev/null 2>&1 </dev/null &
+  fi
   exit 1
 fi
 
@@ -229,13 +273,14 @@ fi
 # kennt (ohne „--geraet alle“), wird einmal neu eingerichtet. Nur am Mac (launchd).
 WACHHUND_DATEI="$HOME/Library/LaunchAgents/de.frank.adb-wlan.wachhund.plist"
 if [ $LEISE -eq 0 ] && [ "$(uname -s)" = Darwin ] && { [ ! -f "$WACHHUND_DATEI" ] || ! grep -q '<string>alle</string>' "$WACHHUND_DATEI"; }; then
-  bash "$(cd "$(dirname "$0")" && pwd)/wachhund-einrichten.sh" >/dev/null 2>&1 && melde "Wachhund de.frank.adb-wlan.wachhund eingerichtet"
+  bash "$HIER/wachhund-einrichten.sh" >/dev/null 2>&1 && melde "Wachhund de.frank.adb-wlan.wachhund eingerichtet"
 fi
 
 # Tote oder hängende Netz-Einträge räumen; antwortende fremde Geräte bleiben unberührt
 adb devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $1, $2}' | while read -r s z; do
   ist_netz "$s" || continue
-  if [ "$z" != "device" ] || [ -z "$(adbzeit 8 -s "$s" shell echo ok)" ]; then
+  WARTE=8; [ "$NUR_TUNNEL" = 1 ] && WARTE=30
+  if [ "$z" != "device" ] || [ -z "$(adbzeit $WARTE -s "$s" shell echo ok)" ]; then
     adb disconnect "$s" >/dev/null 2>&1; melde "Toten Eintrag $s ($z) getrennt"
   fi
 done
@@ -258,7 +303,7 @@ for RUNDE in 1 2; do
     # Nur über den WireGuard-Tunnel verbunden: im Heim-WLAN direkt ist schneller -> umsteigen
     if [ -n "$TUNNEL_IP" ] && [ -z "$(echo "$NETZ" | grep -vxF "$TUNNEL_IP:$PORT")" ]; then
       # Server (ADB_WLAN_NUR_TUNNEL=1): kein Heim-WLAN in Reichweite, der Tunnel ist dort der einzige Weg.
-      [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] && break
+      [ "$NUR_TUNNEL" = 1 ] && break
       if mdns_verbinden; then
         adb disconnect "$TUNNEL_IP:$PORT" >/dev/null 2>&1
         melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
@@ -274,18 +319,18 @@ for RUNDE in 1 2; do
   fi
 
   # 2. mDNS (nicht auf dem Server: dort gibt es kein Heim-WLAN)
-  [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] || { mdns_verbinden && break; }
+  [ "$NUR_TUNNEL" = 1 ] || { mdns_verbinden && break; }
 
   # 3. Zuletzt bekannte IP
   LETZTE=$(tr -d '[:space:]' 2>/dev/null <"$STATE")
-  [ -n "$LETZTE" ] && [ "${ADB_WLAN_NUR_TUNNEL:-0}" != 1 ] && verbinde "$LETZTE:$PORT" && break
+  [ -n "$LETZTE" ] && [ "$NUR_TUNNEL" != 1 ] && verbinde "$LETZTE:$PORT" && break
 
   # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
   #     Braucht WireGuard an auf Mac und Handy und Port 5555 (seit dem letzten Handy-Neustart).
   #     Danach nach der aktuellen WLAN-Adresse fragen: Ist das Handy im selben Netz, geht es direkt weiter (viel schneller).
   if [ -n "$TUNNEL_IP" ] && verbinde "$TUNNEL_IP:$PORT"; then
     melde "Verbunden über WireGuard-Tunnel $TUNNEL_IP:$PORT"
-    [ "${ADB_WLAN_NUR_TUNNEL:-0}" = 1 ] || tunnel_umsteigen
+    [ "$NUR_TUNNEL" = 1 ] || tunnel_umsteigen
     break
   fi
 
@@ -311,7 +356,8 @@ for RUNDE in 1 2; do
 
   # 5. Einmal adb-Server neu starten (macOS: "No route to host"). Nie im Wachhund.
   #    Auch nie für ein Zweitgerät: Das Tablet ist oft einfach aus, und der Neustart trennte dann grundlos das Handy.
-  if [ "$RUNDE" = 1 ] && [ $LEISE -eq 0 ] && [ -z "$ZUSATZ" ]; then
+  #    Nie auf dem Server: Dort teilen sich alle Sitzungen einen adb-Server.
+  if [ "$RUNDE" = 1 ] && [ $LEISE -eq 0 ] && [ -z "$ZUSATZ" ] && [ "$NUR_TUNNEL" != 1 ]; then
     melde "Keine Verbindung – starte adb-Server neu und versuche es erneut"
     adb kill-server; adb start-server >/dev/null 2>&1; sleep 3
   else
@@ -321,7 +367,7 @@ done
 
 FERTIG=$(netz_verbunden | head -1)
 # Direkt nach „adb tcpip“ antwortet die erste Shell über den Tunnel manchmal erst nach Sekunden: einmal nachfassen.
-[ -z "$FERTIG" ] && { sleep 4; FERTIG=$(netz_verbunden | head -1); }
+[ -z "$FERTIG" ] && [ $STABILISIERT -eq 1 ] && { sleep 4; FERTIG=$(netz_verbunden | head -1); }
 # Ein Zweitgerät ist oft einfach aus: Der Wachhund meldet das nur beim Wechsel, nicht alle zwei Minuten.
 WEG_MARKE="$HOME/.adb-wlan${ZUSATZ}-nicht-erreichbar"
 if [ -n "$FERTIG" ]; then

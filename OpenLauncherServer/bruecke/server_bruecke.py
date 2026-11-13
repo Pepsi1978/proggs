@@ -141,12 +141,11 @@ def starte(auftrag: dict, w: dict) -> str:
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"],
                                                                                                        w["cli"] == "claude" and bool(re.fullmatch(r"[A-Za-z0-9]{1,20}", nummer)))}
-    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (sonst erst beim nächsten Minutenlauf
-    # des Wachhunds); läuft im Hintergrund, bis die Sitzung installieren will, ist die Verbindung meist längst da.
+    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (sonst erst beim nächsten Minutenlauf).
+    # Nur anstoßen: jarvis-adb-wachhund.path startet den Dienst, so läuft er wie der Minutenlauf unter systemd (eigene Gruppe,
+    # ein dabei gestarteter adb-Server überlebt einen Brücken-Neustart, nie zwei Läufe gleichzeitig).
     try:
-        subprocess.Popen(["bash", str(Path(__file__).resolve().parents[2] / "Werkzeuge" / "adb-wlan" / "adb-wlan.sh"), "--leise", "--geraet", "alle"],
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-                         env={**os.environ, "ANDROID_HOME": os.environ.get("ANDROID_HOME") or str(Path.home() / "android-sdk"), "ADB_WLAN_NUR_TUNNEL": "1"})
+        (Path.home() / ".adb-wlan-anstoss").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"), encoding="utf-8")
     except Exception:
         pass
     # Die genannte App sofort vorbauen: Während die Sitzung liest und ändert, wird der Gradle-Daemon warm und der build-Ordner aktuell.

@@ -1,6 +1,7 @@
 [Unit]
 Description=Handy und Tablet über den Tunnel verbunden halten (stellt nach einem Geräte-Neustart Port 5555 wieder her, auch ohne PC)
-After=network-online.target
+Wants=network-online.target
+After=network-online.target wg-quick@wg0.service
 
 [Service]
 Type=oneshot
@@ -8,7 +9,9 @@ User=jarvis
 WorkingDirectory=/home/jarvis/proggs
 Environment=HOME=/home/jarvis ANDROID_HOME=/home/jarvis/android-sdk LANG=C.UTF-8 ADB_WLAN_NUR_TUNNEL=1
 ExecStart=/bin/bash /home/jarvis/proggs/Werkzeuge/adb-wlan/adb-wlan.sh --leise --geraet alle
+# Exit 1 = Handy gerade nicht erreichbar (aus, kein Netz): kein Fehler des Dienstes.
+SuccessExitStatus=1
 # Ein dabei gestarteter adb-Server muss weiterlaufen, sonst brechen alle Geräteverbindungen der Sitzungen ab.
 KillMode=process
-TimeoutStartSec=240
+TimeoutStartSec=600
 Nice=5

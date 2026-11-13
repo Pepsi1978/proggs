@@ -113,10 +113,10 @@ als "python3 $REPO/OpenLauncherServer/kern/mcp_anbindung.py" || echo "MCP-Anbind
 
 # Als Kopie, die root gehört: Aus dem Repo des Benutzers jarvis führte root sonst jede lokale Änderung aus.
 install -o root -g root -m 755 "$REPO/OpenLauncherServer/systemd/jarvis-pakete-aktualisieren.sh" /usr/local/sbin/jarvis-pakete-aktualisieren
-install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer /etc/systemd/system/
+install -m 644 "$REPO"/OpenLauncherServer/systemd/*.service "$REPO"/OpenLauncherServer/systemd/*.timer "$REPO"/OpenLauncherServer/systemd/*.path /etc/systemd/system/
 systemctl daemon-reload
 if command -v ufw >/dev/null; then ufw allow in on wg0 to any port 8090 proto tcp comment 'Server-Konsole' >/dev/null; else echo "ufw fehlt: Port 8090 auf wg0 selbst freigeben"; fi
-systemctl enable --now jarvis-tmux.service jarvis-konsole.service jarvis-server-bruecke.service jarvis-clis.timer jarvis-repo.timer jarvis-powershell.timer jarvis-adb-wachhund.timer
+systemctl enable --now jarvis-tmux.service jarvis-konsole.service jarvis-server-bruecke.service jarvis-clis.timer jarvis-repo.timer jarvis-powershell.timer jarvis-adb-wachhund.timer jarvis-adb-wachhund.path
 systemctl restart jarvis-konsole.service jarvis-server-bruecke.service
 # tmux nicht neu starten, das beendete alle Sitzungen: Die Konfiguration nur neu einlesen.
 sudo -u "$BENUTZER" -H tmux -L jarvis source-file "$REPO/OpenLauncherServer/systemd/tmux.conf" || true

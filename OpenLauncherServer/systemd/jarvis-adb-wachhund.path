@@ -1,0 +1,9 @@
+[Unit]
+Description=Wachhund für Handy und Tablet sofort starten, wenn ein Jarvis-Auftrag beginnt (Anstoß-Datei der Server-Brücke)
+
+[Path]
+PathModified=/home/jarvis/.adb-wlan-anstoss
+Unit=jarvis-adb-wachhund.service
+
+[Install]
+WantedBy=multi-user.target
