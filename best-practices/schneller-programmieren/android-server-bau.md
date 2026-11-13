@@ -110,29 +110,31 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
 - Prüfen nach dem Übertragen: Während eines Sitzungsbaus muss `flock -n ~/.openlauncher/vorwaermen/gradle-bau.lock true`
   scheitern.
 
+
 ## 8. Windows-PC (umgesetzt 13.11.2026, Mac folgt mit demselben Skript)
 
 Dasselbe Grundproblem gilt am PC: Nach vielen Commits auf Server, Mac oder in der Cloud passt der `build`-Ordner nicht mehr.
-Umgesetzt in `Werkzeuge/vorwaermen/` (Python, plattformneutral; Einrichtung `einrichten.ps1`):
+Umgesetzt in `Werkzeuge/vorwaermen/vorwaermen.py` (Python, plattformneutral; Einrichtung `einrichten.ps1`).
 
 | Server-Maßnahme | PC |
 |---|---|
-| Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen` (läuft ohne CLI und ohne OpenLauncher): Anmeldung (+30 s), Aufwachen aus dem Standby (Power-Troubleshooter Ereignis 1, +30 s) und alle 5 min, `fetch` + `merge --ff-only` wie `RepoSync.cs`, dann Vorbau |
-| Auftragsstart-Vorbau | PC-Brücke `Starte-Sitzung` startet `vorwaermen.py lauf --app <App> --immer` |
-| Daemon 24 h warm | `org.gradle.daemon.idletimeout=86400000` in `~/.gradle/gradle.properties`; Anmelde-Auslöser nach 30 s startet ihn gleich nach dem Windows-Start (Jarvis-Bau, sonst eine saubere App mit denselben jvmargs); älter als 24 h → unter der Bau-Sperre `--stop` + Kotlin-Daemon beenden und frisch starten (`daemon_pflege`, wie am Server) |
-| Repo-Abgleich beim CLI-Start | OpenLauncher `RepoSync.PullAsync` stößt nach einem neuen Stand `schtasks /run /tn Vorwaermen` an (ab 1.24.121) |
-| — | Kein Vorbau, solange ein Steam-Spiel läuft (`HKCU\Software\Valve\Steam\RunningAppID` ≠ 0) oder ein Call-of-Duty-Prozess (`cod.exe`, `cod24…`; Muster nie `cod*`, das trifft `codex.exe`) |
-| Bau-Sperre über Hook | `build-ablauf-guard.py` setzt unter Windows `python …/vorwaermen.py warte;` vor jeden Gradle-Bau (Bash und PowerShell), `apk-update.ps1` ruft es selbst: pausiert 20 min, wartet auf einen laufenden Vorbau. Zusätzlich setzt das Skript aus, solange ein Gradle-Client läuft (`gradle-wrapper.jar` in der Befehlszeile), und überspringt Apps mit offenen Änderungen oder Commit jünger als 10 min |
-| Vorrang für Sitzungen (alle CLIs) | Der Vorbau prüft während des Bauens alle 2 s die Datei `pause` und alle 10 s fremde Gradle-Clients. Startet eine Sitzung (Claude, Codex, OpenCode, Kimi, Antigravity) einen Bau, beendet er **nur seinen Client-Prozess** (Kind von `cmd`, nie `taskkill /T`: der Daemon ist Kind des Clients). Der Daemon bricht den Bau ab und bleibt warm (gemessen: nach 5 s frei, Daemon danach IDLE). Sitzungen warten nie aufeinander; parallele Bauten bekommen je einen eigenen Daemon, die Pflege beendet Leerlauf-Daemons über die 3 jüngsten hinaus |
-| `gradlew.bat` aus Agenten-Shells | Claude Code setzt `NoDefaultCurrentDirectoryInExePath=1`: `cmd /c gradlew.bat` findet die Datei im cwd nicht. Immer den absoluten Pfad nehmen |
-| Ausgaben | Nie über Pipes (Temp-Datei): Ein dabei gestarteter Daemon oder adb-Server erbte sonst die Pipe, und unter Windows hängt `subprocess.run` dann auch nach dem Zeitlimit |
-| Apps vom Handy | Pakete von **allen** verbundenen Geräten (Handy + Tablet), keine Ausschlussliste (am PC bauen auch Wecker und BestJournal) |
-| `nur-arm64`, `workers.max=2`, cgroup, M26 | nicht übernommen: Emulator ist x86_64, PC hat 8 Kerne/31 GB; Vorbau nur mit `--max-workers=<Kerne/2>` |
-| — | Im Akkubetrieb kein Vorwärmen |
+| Repo-Abgleich alle 5 min + Vorbau geänderter Apps (Baum-Hash) | Aufgabe `Vorwaermen`, läuft ohne CLI und ohne OpenLauncher: Anmeldung (+30 s), Aufwachen aus dem Standby (Power-Troubleshooter Ereignis 1, +30 s), alle 5 min. `fetch` + `merge --ff-only` wie `RepoSync.cs`, aber nicht, solange eine Sitzung baut |
+| Auftragsstart-Vorbau | PC-Brücke startet `vorwaermen.py lauf --app <App>`; wartet 25 s auf den Repo-Abgleich des OpenLaunchers, sonst übersetzte es den alten Stand |
+| Daemon 24 h warm | Nur ein Daemon mit den Jarvis-`jvmargs`, gestartet mit `gradlew help -Dorg.gradle.daemon.idletimeout=86400000` (keine globale Grenze: Sitzungs-Daemons behalten 3 h). Fehlt er, startet ihn der nächste Takt; älter als 24 h und IDLE → genau diese pid beenden, neu starten (nie `--stop`: träfe laufende Sitzungen). `daemon.json` merkt die pid, der Takt prüft nur, ob sie lebt |
+| Vorbau | Immer `--no-daemon` und halbe Kernzahl. **Gemessen:** Bricht man einem Daemon einen laufenden Bau ab (Client beenden oder Strg+C), beendet er sich oft selbst. Ein Vorbau im gemeinsamen Daemon nähme den Sitzungen also den warmen Daemon |
+| Vorrang für Sitzungen (alle CLIs) | Vorbau prüft alle 2 s die Datei `pause` und fremde Gradle-Clients (java mit Eltern `cmd.exe`/`sh.exe`/`bash.exe`, über Toolhelp32, Millisekunden, keine PowerShell). Dann beendet er seinen Client (nie `taskkill /T`). Gemessen: `warte` 0,8 s, gemeinsamer Daemon unberührt. Sitzungen warten nie aufeinander |
+| Bau-Hook | `build-ablauf-guard.py` setzt unter Windows `python …/vorwaermen.py warte;` nur vor **reine** Bau-Befehle (`cd` + `gradlew`), weil `allow` den ganzen Befehl freigibt; `apk-update.ps1` ruft `warte` selbst |
+| — | Kein Vorbau bei Akku oder Spiel: Steam `RunningAppID` ≠ 0 (außer Wallpaper Engine 431960) oder `cod.exe`/`cod24…` (Muster nie `cod*`, das trifft `codex.exe`); startet ein Spiel mitten im Vorbau, weicht er aus |
+| Apps vom Handy | Pakete von Handy **und** Tablet, höchstens stündlich per adb gelesen (weckt die Geräte sonst alle 5 min) |
+| `nur-arm64`, `workers.max=2`, cgroup, M26 | nicht übernommen: Emulator ist x86_64, PC hat 8 Kerne/31 GB |
 
-- Daemons sind am PC **nicht** für alle Apps gemeinsam: verschiedene `org.gradle.jvmargs` (2048m/4096m/Metaspace) ergeben je
-  einen eigenen Daemon. Dauerhaft warm bleibt deshalb nur die Jarvis-Gruppe; andere Apps baut der Takt-Lauf mit
-  `--no-daemon` vor (der `build`-Ordner wird trotzdem aktuell), nur der Auftragsstart-Vorbau wärmt auch ihren Daemon.
-  Sonst lägen mehrere 2–4-GB-Daemons 24 Stunden im Speicher.
-- Ersten Lauf nie aus einer Agenten-Shell starten (`Start-ScheduledTask Vorwaermen`), sonst erbt der Daemon die Pipe.
-- Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaermen/vorwaermen.py stand`.
+**Fallen am PC**
+- `gradlew.bat` immer mit absolutem Pfad: Claude Code setzt `NoDefaultCurrentDirectoryInExePath=1`, dann findet `cmd` die Datei im cwd nicht.
+- Ausgaben nie über Pipes (Temp-Datei): Ein gestarteter Daemon oder adb-Server erbte sonst die Pipe, und `subprocess.run` hinge auch nach dem Zeitlimit.
+- git nur mit `GIT_OPTIONAL_LOCKS=0`: `git status` nimmt sonst kurz `index.lock` und lässt Commits der Sitzungen scheitern.
+- Testaufrufe mit `Start-Process bash -ArgumentList '-c', "…"` brauchen eigene Anführungszeichen um den Befehl, sonst läuft nur das erste Wort.
+
+**Last (gemessen):** Leerlauf-Takt 4,6 s Wandzeit alle 5 min, fast nur Warten auf Netz (fetch). Gebaut wird nur nach neuen
+Commits, mit halber Kernzahl, und nie, während eine Sitzung baut oder ein Spiel läuft.
+
+Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaermen/vorwaermen.py stand`.

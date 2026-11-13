@@ -281,7 +281,7 @@ $unklar2
         $vorwaermen = Join-Path $proggs 'Werkzeuge\vorwaermen\vorwaermen.py'
         $pyw = Join-Path (Split-Path (Get-Command python -ErrorAction Stop).Source) 'pythonw.exe'
         if ((Test-Path -LiteralPath $vorwaermen) -and (Test-Path -LiteralPath $pyw)) {
-            Start-Process -FilePath $pyw -ArgumentList "`"$vorwaermen`"", 'lauf', '--app', "`"$app`"", '--immer' -WindowStyle Hidden
+            Start-Process -FilePath $pyw -ArgumentList "`"$vorwaermen`"", 'lauf', '--app', "`"$app`"" -WindowStyle Hidden
         }
     } catch { Schreib "Vorwärmen: $_" }
     $stempel =Get-Date -Format 'yyyyMMdd-HHmmss'

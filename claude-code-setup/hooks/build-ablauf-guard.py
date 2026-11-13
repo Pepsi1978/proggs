@@ -295,11 +295,15 @@ def main():
     except Exception:
         pass
     try:
-        # Windows-PC: dasselbe über Werkzeuge/vorwaermen/vorwaermen.py warte (pausiert das Vorwärmen, wartet auf einen Vorbau).
-        # Eigenes Muster, weil PowerShell .\gradlew.bat schreibt. warte bricht nie ab und verhindert nie den Bau.
+        # Windows-PC: dasselbe über Werkzeuge/vorwaermen/vorwaermen.py warte (pausiert das Vorwärmen, wartet kurz, bis ein
+        # Vorbau ausgewichen ist). Nur bei reinen Bau-Befehlen (jedes Teilstück cd/Set-Location/Push-Location oder gradlew),
+        # weil "allow" den ganzen Befehl freigibt. Gemischte Befehle bleiben unverändert; der Vorbau erkennt den Client trotzdem.
         skript = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'vorwaermen', 'vorwaermen.py')
-        if os.name == 'nt' and d.get('tool_name') in ('Bash', 'PowerShell') and 'vorwaermen.py' not in cmd \
-                and re.search(r'gradlew(\.bat)?\b[^\n;&|]*\b(assemble|bundle|build|install)\w*', cmd, re.I) and os.path.isfile(skript):
+        teile = [t.strip() for t in re.split(r'[;\n]|&&|\|\|', cmd) if t.strip()]
+        nur_bau = bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
+            r'(&\s*)?((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*', t, re.I)
+            for t in teile) and any('gradlew' in t.lower() for t in teile)
+        if os.name == 'nt' and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
             neu = dict(d.get('tool_input') or {})
             neu['command'] = 'python "' + skript.replace('\\', '/') + '" warte; ' + cmd
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",

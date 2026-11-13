@@ -1,5 +1,5 @@
 # Richtet das Vorwärmen am Windows-PC ein (mehrfach ausführbar):
-# 1. Gradle-Daemon bleibt 24 Stunden im Leerlauf warm (~/.gradle/gradle.properties, wie am Server).
+# 1. Räumt eine frühere globale Leerlauf-Grenze aus ~/.gradle/gradle.properties (24 h gilt nur für den vorgewärmten Daemon).
 # 2. Aufgabe "Vorwaermen" in der Aufgabenplanung: bei der Anmeldung (30 s verzögert, startet den Daemon), nach dem Aufwachen
 #    aus dem Standby und alle 5 Minuten; unabhängig von OpenLauncher und CLIs.
 #    Jeder Lauf spult das Repo vor (nur Fast-Forward) und baut geänderte Apps von Handy/Tablet nach.
@@ -9,8 +9,9 @@ $ErrorActionPreference = 'Stop'
 $props = Join-Path $env:USERPROFILE '.gradle\gradle.properties'
 New-Item -ItemType Directory -Force -Path (Split-Path $props) | Out-Null
 $zeilen = @(if (Test-Path $props) { Get-Content $props -Encoding utf8 })
+# Keine globale Leerlauf-Grenze: 24 h gibt vorwaermen.py nur seinem eigenen Daemon mit (Kommandozeile). Global hielten sonst
+# auch alle Sitzungs-Daemons paralleler Bauten (je 2-4 GB) einen Tag lang Speicher fest; sie behalten Gradles 3 h.
 $zeilen = @($zeilen | Where-Object { $_ -notmatch '^\s*org\.gradle\.daemon\.idletimeout\s*=' })
-$zeilen += 'org.gradle.daemon.idletimeout=86400000'
 [IO.File]::WriteAllLines($props, [string[]]$zeilen, [Text.UTF8Encoding]::new($false))
 
 $py = (Get-Command python -ErrorAction Stop).Source
@@ -29,7 +30,7 @@ $aufwachen.Enabled = $true
 $aufwachen.Delay = 'PT30S'
 $aufwachen.Subscription = '<QueryList><Query Id="0" Path="System"><Select Path="System">*[System[Provider[@Name=''Microsoft-Windows-Power-Troubleshooter''] and EventID=1]]</Select></Query></QueryList>'
 $einst = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+    -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 8)
 $prinzipal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 Register-ScheduledTask -TaskName 'Vorwaermen' -Action $aktion -Trigger $anmeldung, $takt, $aufwachen -Settings $einst -Principal $prinzipal `
     -Description 'Repo vorspulen und geänderte Android-Apps vorbauen (Werkzeuge/vorwaermen)' -Force | Out-Null

@@ -2,23 +2,23 @@
 
 Problem: Git bringt nur Quelltext. Hat Frank auf dem Server, dem Mac oder in der Cloud viele Commits gemacht, passt der
 build-Ordner am PC nicht mehr, und der erste Bau einer Sitzung übersetzt fast alles neu, dazu kalter Gradle-Daemon.
-Dieses Skript holt deshalb im Hintergrund den neuen Stand (nur Vorspulen wie der OpenLauncher, nie ein echter Merge)
-und baut danach jede App nach, die am Handy oder Tablet installiert ist und deren Ordner sich geändert hat.
+Dieses Skript holt deshalb im Hintergrund den neuen Stand (nur Vorspulen wie der OpenLauncher, nie ein echter Merge),
+baut jede App nach, die am Handy oder Tablet installiert ist und deren Ordner sich geändert hat, und hält einen
+Gradle-Daemon mit den Jarvis-Einstellungen warm.
 
-Regeln (siehe best-practices/schneller-programmieren/android-server-bau.md, Abschnitt 8):
-- Nie einen laufenden Bau abbrechen, nie Daemons beenden, keine niedrigere Priorität (vererbt sich an den geteilten Daemon).
-- Sitzungsbauten rufen vorher `vorwaermen.py warte` auf (Bau-Hook für Claude Code, Skill apk-update): Das wartet auf einen
-  laufenden Vorbau und legt die Datei pause an, damit 20 Minuten kein neuer Vorbau beginnt.
-- Läuft trotzdem ein fremder Gradle-Bau, setzt das Vorwärmen aus; Apps mit offenen Änderungen und frisch committete Apps
-  (die Sitzung baut gleich selbst) werden übersprungen. Im Akkubetrieb kein Vorwärmen.
+Leitlinien (Abschnitt 8 in best-practices/schneller-programmieren/android-server-bau.md):
+- Sitzungen haben immer Vorrang, in jeder CLI: Startet irgendwo ein Gradle-Bau, weicht ein laufender Vorbau binnen 2 s aus.
+  Vorbauten laufen mit Wegwerf-Daemon (--no-daemon) und belegen nie den warmen Daemon, den nur `gradlew help` startet.
+  Sitzungen warten nie aufeinander.
+- Wenig Dauerlast: Der Leerlauf-Takt (alle 5 min) braucht nur git und eine Prozessliste über die Windows-API; adb fragt
+  höchstens stündlich nach den installierten Apps, die Java-Befehlszeilen (PowerShell) nur, wenn der Daemon fehlt.
+- Vorbau mit halber Kernzahl, keine niedrigere Priorität (vererbt sich an den geteilten Daemon), kein Vorbau bei Akku
+  oder Spiel. 24 h Leerlauf gilt nur für den vorgewärmten Daemon (Kommandozeile), Sitzungs-Daemons behalten 3 h.
 - Ausgaben nie über Pipes: Ein dabei gestarteter Gradle-Daemon oder adb-Server erbte die Pipe, und der Lauf hinge.
-- Dauerhaft warm bleibt nur der Daemon mit den Jarvis-Einstellungen; andere Apps bauen ihren Ordner mit --no-daemon vor
-  (am PC hat fast jede App eigene jvmargs, sonst blieben mehrere 2-4-GB-Daemons einen Tag lang liegen).
+- git nur mit GIT_OPTIONAL_LOCKS=0: git status nimmt sonst kurz index.lock und stört Commits der Sitzungen.
 
-Aufrufe: vorwaermen.py lauf  [--app ORDNER] [--immer]   (Aufgabenplanung alle 10 Minuten und bei der Anmeldung;
-                                                         PC-Brücke beim Auftragsstart per Start-Process)
-         vorwaermen.py start [--app ORDNER] [--immer]   (löst sich vom Aufrufer, für Aufrufe aus Agenten-Shells)
-         vorwaermen.py warte                             (vor einem Sitzungsbau)
+Aufrufe: vorwaermen.py lauf  [--app ORDNER] [--immer]   (Aufgabenplanung; PC-Brücke beim Auftragsstart mit --app)
+         vorwaermen.py warte                             (vor einem Sitzungsbau: Hook, apk-update)
          vorwaermen.py stand                             (zeigt, was vorgewärmt ist)
 """
 import argparse, json, os, re, subprocess, sys, tempfile, time
@@ -30,6 +30,7 @@ ORDNER = Path.home() / ".openlauncher" / "vorwaermen"
 STAND = ORDNER / "stand.json"
 STAND_SPERRE = ORDNER / "stand.lock"
 PAKETE = ORDNER / "pakete.json"
+DAEMON = ORDNER / "daemon.json"
 LOG = ORDNER / "log.txt"
 BAU_SPERRE = ORDNER / "gradle-bau.lock"
 LAUF_SPERRE = ORDNER / "lauf.lock"
@@ -37,12 +38,22 @@ PAUSE = ORDNER / "pause"
 PAUSE_SEKUNDEN = 20 * 60
 RUHE_NACH_COMMIT = 10 * 60
 VERSUCHE = 2
+DAEMON_LEBEN = 24 * 3600
+LEERLAUF_24H = "-Dorg.gradle.daemon.idletimeout=86400000"
 NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWeckerAndroid", "geniale ideen": "GenialeIdeen",
          "stack-labor": "StackLabor", "stack labor": "StackLabor", "entropie reductor": "EntropieReductor"}
 OHNE_FENSTER = 0x08000000 if WINDOWS else 0  # CREATE_NO_WINDOW
+SHELLS = {"cmd.exe", "bash.exe", "sh.exe", "powershell.exe", "pwsh.exe"}
+# Steam-Apps, die keine Spiele sind und dauerhaft laufen können (Wallpaper Engine).
+STEAM_KEIN_SPIEL = {0, 431960}
+# cod.exe, cod22-cod.exe, cod24.exe …, aber nie codex.exe (Codex CLI).
+SPIEL_EXE = re.compile(r"^(cod|cod\d\d\S*|modernwarfare\S*|blackops\S*|warzone\S*)\.exe$", re.I)
+AUSGEWICHEN = -2
+ENV = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
 
 if WINDOWS:
-    import msvcrt
+    import ctypes, msvcrt
+    from ctypes import wintypes
 else:
     import fcntl
 
@@ -56,22 +67,92 @@ def log(text: str) -> None:
         LOG.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
 
 
+# ---------------------------------------------------------------- Prozesse (billig über die Windows-API, ohne PowerShell)
+
+def prozesse() -> list:
+    """(pid, Eltern-pid, Programmname klein) aller Prozesse."""
+    if not WINDOWS:
+        aus = run(["ps", "-A", "-o", "pid=,ppid=,comm="], timeout=20).stdout
+        return [(int(t[0]), int(t[1]), os.path.basename(t[2]).lower()) for t in (z.split(None, 2) for z in aus.splitlines())
+                if len(t) == 3 and t[0].isdigit() and t[1].isdigit()]
+
+    class EINTRAG(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long), ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_wchar * 260)]
+    k32 = ctypes.windll.kernel32
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    schnapp = k32.CreateToolhelp32Snapshot(0x2, 0)
+    liste, e = [], EINTRAG()
+    e.dwSize = ctypes.sizeof(EINTRAG)
+    try:
+        ok = k32.Process32FirstW(schnapp, ctypes.byref(e))
+        while ok:
+            liste.append((e.th32ProcessID, e.th32ParentProcessID, e.szExeFile.lower()))
+            ok = k32.Process32NextW(schnapp, ctypes.byref(e))
+    finally:
+        k32.CloseHandle(schnapp)
+    return liste
+
+
+def gradle_clients(liste=None) -> list:
+    """(pid, Eltern-pid) laufender Gradle-Clients: java, gestartet von einer Shell (gradlew.bat / gradlew). Daemons sind Kinder
+    eines Clients (oder verwaist), Kotlin-Daemons Kinder eines Daemons; Android Studio startet nie über eine Shell."""
+    liste = liste if liste is not None else prozesse()
+    name = {pid: exe for pid, _, exe in liste}
+    java = ("java.exe",) if WINDOWS else ("java",)
+    return [(pid, ppid) for pid, ppid, exe in liste if exe in java and name.get(ppid, "") in (SHELLS if WINDOWS else {"bash", "sh", "zsh"})]
+
+
+def fremder_bau_laeuft(eigene_shell: int = 0) -> bool:
+    return any(ppid != eigene_shell for _, ppid in gradle_clients())
+
+
+def spiel_laeuft(liste=None) -> bool:
+    """Steam-Spiel aktiv (Steam setzt RunningAppID) oder ein Call-of-Duty-Prozess: dann volle Leistung fürs Spiel."""
+    if not WINDOWS:
+        return False
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as k:
+            if int(winreg.QueryValueEx(k, "RunningAppID")[0] or 0) not in STEAM_KEIN_SPIEL:
+                return True
+    except (OSError, ValueError):
+        pass
+    liste = liste if liste is not None else prozesse()
+    return any(SPIEL_EXE.match(exe) for _, _, exe in liste)
+
+
+def akkubetrieb() -> bool:
+    try:
+        if not WINDOWS:
+            return sys.platform == "darwin" and "Battery Power" in run(["pmset", "-g", "batt"], timeout=10).stdout
+
+        class Status(ctypes.Structure):
+            _fields_ = [("ACLineStatus", ctypes.c_byte), ("BatteryFlag", ctypes.c_byte), ("BatteryLifePercent", ctypes.c_byte),
+                        ("SystemStatusFlag", ctypes.c_byte), ("BatteryLifeTime", ctypes.c_ulong), ("BatteryFullLifeTime", ctypes.c_ulong)]
+        s = Status()
+        ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(s))
+        return s.ACLineStatus == 0
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------- Ausführen, Sperren, Stand
+
 class Ergebnis:
     def __init__(self, code: int, text: str):
         self.returncode, self.stdout = code, text
 
 
-AUSGEWICHEN = -2
-
-
 def run(befehl, timeout=None, cwd=None, ausweichen=None) -> Ergebnis:
-    """Startet ohne Pipes: Ausgabe in eine Temp-Datei. Erbt ein Langläufer (Gradle-Daemon, adb-Server) das Handle, blockiert
-    nichts, und ein Zeitlimit beendet nur diesen Prozess. Nie eine Ausnahme: Fehler und Zeitlimit kommen als Code -1 zurück.
-    ausweichen(pid): alle 2 s gefragt; True → nur der Gradle-Client unter pid wird beendet (der Daemon bricht den Bau ab und
-    bleibt warm), Code AUSGEWICHEN."""
+    """Startet ohne Pipes (Ausgabe in eine Temp-Datei), nie eine Ausnahme: Fehler und Zeitlimit kommen als Code -1 zurück.
+    ausweichen(shell_pid): alle 2 s gefragt; True → nur der Gradle-Client wird beendet, Code AUSGEWICHEN."""
     with tempfile.TemporaryFile() as aus:
         try:
-            p = subprocess.Popen(befehl, cwd=cwd, stdin=subprocess.DEVNULL, stdout=aus, stderr=subprocess.STDOUT, creationflags=OHNE_FENSTER)
+            p = subprocess.Popen(befehl, cwd=cwd, env=ENV, stdin=subprocess.DEVNULL, stdout=aus, stderr=subprocess.STDOUT,
+                                 creationflags=OHNE_FENSTER)
         except OSError as fehler:
             return Ergebnis(-1, str(fehler))
         ende = None if timeout is None else time.time() + timeout
@@ -80,43 +161,44 @@ def run(befehl, timeout=None, cwd=None, ausweichen=None) -> Ergebnis:
             try:
                 code = p.wait(timeout=2 if ausweichen else timeout)
             except subprocess.TimeoutExpired:
-                if ausweichen and ausweichen(p.pid):
-                    beende_client(p.pid)
+                weichen = bool(ausweichen and ausweichen(p.pid))
+                if weichen or (ende is not None and time.time() >= ende):
+                    beende_client(p.pid)  # zuerst den Client: sonst baute er nach dem Ende von cmd verwaist weiter
                     try:
                         p.wait(timeout=60)
                     except subprocess.TimeoutExpired:
                         p.kill()
                         p.wait()
-                    code = AUSGEWICHEN
-                elif ende is not None and time.time() >= ende:
-                    p.kill()
-                    p.wait()
-                    code = -1
+                    code = AUSGEWICHEN if weichen else -1
         aus.seek(0)
         return Ergebnis(code, aus.read().decode("utf-8", "replace"))
 
 
-def beende_client(eltern: int) -> None:
-    """Beendet die Gradle-Client-JVM unter eltern (cmd /c gradlew.bat bzw. bash gradlew), nie den Daemon: Der ist ein Kind des
-    Clients und würde bei einem Baum-Kill (taskkill /T) mitsterben."""
-    for pid, ppid, _, z in java_prozesse() or []:
-        if ppid == eltern and ("gradle-wrapper.jar" in z or "GradleWrapperMain" in z):
+def beende_client(shell: int) -> None:
+    """Beendet die Gradle-Client-JVM unter der Shell, nie den Daemon (ein Baum-Kill, taskkill /T, träfe ihn mit)."""
+    for pid, ppid in gradle_clients():
+        if ppid == shell:
             try:
                 os.kill(pid, 15)
             except OSError:
                 pass
 
 
-def git(*args: str, timeout=120) -> str:
+def git(*args: str, timeout=120):
+    """Ausgabe von git; None bei Fehler oder Zeitlimit (nie als „leer“ werten)."""
     e = run(["git", "-C", str(PROGGS), *args], timeout=timeout)
-    return e.stdout.strip() if e.returncode == 0 else ""
+    return e.stdout.strip() if e.returncode == 0 else None
+
+
+def sauber(app: str) -> bool:
+    return git("status", "--porcelain", "--", app) == ""
 
 
 class Sperre:
     """Dateisperre für Windows (msvcrt) und Mac/Linux (fcntl). warten: Sekunden (None = unbegrenzt, 0 = sofort aufgeben)."""
 
-    def __init__(self, pfad: Path, warten=None):
-        self.pfad, self.warten, self.f = pfad, warten, None
+    def __init__(self, pfad: Path, warten=None, takt=1.0):
+        self.pfad, self.warten, self.takt, self.f = pfad, warten, takt, None
 
     def __enter__(self):
         ORDNER.mkdir(parents=True, exist_ok=True)
@@ -135,7 +217,7 @@ class Sperre:
                     self.f.close()
                     self.f = None
                     return False
-                time.sleep(1 if self.pfad == STAND_SPERRE else 5)
+                time.sleep(self.takt)
 
     def __exit__(self, *a):
         if self.f:
@@ -148,44 +230,45 @@ class Sperre:
             self.f.close()
 
 
-def lies_stand() -> dict:
+def lies_json(pfad: Path) -> dict:
     try:
-        return json.loads(STAND.read_text(encoding="utf-8"))
+        return json.loads(pfad.read_text(encoding="utf-8"))
     except Exception:
         return {}
 
 
+def schreib_json(pfad: Path, daten: dict) -> None:
+    ORDNER.mkdir(parents=True, exist_ok=True)
+    neu = pfad.with_name(f"{pfad.stem}.{os.getpid()}.neu")
+    neu.write_text(json.dumps(daten, ensure_ascii=False, indent=1), encoding="utf-8")
+    for _ in range(10):
+        try:
+            neu.replace(pfad)
+            return
+        except PermissionError:  # Windows: ein Leser hält die Datei gerade offen
+            time.sleep(0.5)
+    neu.unlink(missing_ok=True)
+
+
 def aendere_stand(aenderung) -> None:
     """Lesen, ändern, schreiben unter einer eigenen Sperre: Brücken-Lauf und Takt-Lauf dürfen sich nicht überschreiben."""
-    with Sperre(STAND_SPERRE, warten=60):
-        stand = lies_stand()
+    with Sperre(STAND_SPERRE, warten=60, takt=0.2) as frei:
+        if not frei:
+            log("stand.json gesperrt, Ergebnis nicht gemerkt (wird beim nächsten Lauf neu geprüft)")
+            return
+        stand = lies_json(STAND)
         aenderung(stand)
-        neu = STAND.with_name(f"stand.{os.getpid()}.neu")
-        neu.write_text(json.dumps(stand, ensure_ascii=False, indent=1), encoding="utf-8")
-        for _ in range(10):
-            try:
-                neu.replace(STAND)
-                return
-            except PermissionError:  # Windows: ein Leser hält die Datei gerade offen
-                time.sleep(0.5)
-        neu.unlink(missing_ok=True)
+        schreib_json(STAND, stand)
 
 
-def akkubetrieb() -> bool:
+def pausiert() -> bool:
     try:
-        if not WINDOWS:
-            return sys.platform == "darwin" and "Battery Power" in run(["pmset", "-g", "batt"], timeout=10).stdout
-        import ctypes
-
-        class Status(ctypes.Structure):
-            _fields_ = [("ACLineStatus", ctypes.c_byte), ("BatteryFlag", ctypes.c_byte), ("BatteryLifePercent", ctypes.c_byte),
-                        ("SystemStatusFlag", ctypes.c_byte), ("BatteryLifeTime", ctypes.c_ulong), ("BatteryFullLifeTime", ctypes.c_ulong)]
-        s = Status()
-        ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(s))
-        return s.ACLineStatus == 0
-    except Exception:
+        return time.time() - PAUSE.stat().st_mtime < PAUSE_SEKUNDEN
+    except OSError:
         return False
 
+
+# ---------------------------------------------------------------- Apps
 
 def adb() -> str:
     sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
@@ -196,34 +279,25 @@ def adb() -> str:
 
 
 def geraete_pakete() -> set:
-    """Installierte Pakete je Gerät (Seriennummer). Verbundene Geräte werden frisch gelesen, für die übrigen gilt ihre letzte
-    Liste. So fällt eine deinstallierte App heraus, sobald das Gerät wieder gelesen wird."""
+    """Installierte Pakete je Gerät (Seriennummer), höchstens stündlich frisch gelesen (weckt sonst Handy und Tablet alle
+    5 Minuten). Für nicht verbundene Geräte gilt ihre letzte Liste; deinstallierte Apps fallen beim nächsten Lesen heraus."""
+    je_geraet = lies_json(PAKETE)
     try:
-        je_geraet = json.loads(PAKETE.read_text(encoding="utf-8"))
-    except Exception:
-        je_geraet = {}
-    for z in run([adb(), "devices"], timeout=20).stdout.splitlines()[1:]:
-        teile = z.split()
-        if len(teile) < 2 or teile[1] != "device":
-            continue
-        seriell = run([adb(), "-s", teile[0], "shell", "getprop", "ro.serialno"], timeout=15).stdout.strip() or teile[0]
-        e = run([adb(), "-s", teile[0], "shell", "pm", "list", "packages", "-3"], timeout=20)
-        pakete = sorted({p.split(":", 1)[1].strip() for p in e.stdout.splitlines() if p.startswith("package:")})
-        if e.returncode == 0 and pakete:
-            je_geraet[seriell] = pakete
-    if je_geraet:
-        ORDNER.mkdir(parents=True, exist_ok=True)
-        PAKETE.write_text(json.dumps(je_geraet, indent=1), encoding="utf-8")
-    return {p for liste in je_geraet.values() for p in liste}
-
-
-_COMMITZEIT = {}
-
-
-def commitzeit(app: str) -> int:
-    if app not in _COMMITZEIT:
-        _COMMITZEIT[app] = int(git("log", "-1", "--format=%ct", "--", app) or 0)
-    return _COMMITZEIT[app]
+        frisch = time.time() - PAKETE.stat().st_mtime < 3600
+    except OSError:
+        frisch = False
+    if not frisch:
+        for z in run([adb(), "devices"], timeout=20).stdout.splitlines()[1:]:
+            teile = z.split()
+            if len(teile) < 2 or teile[1] != "device":
+                continue
+            seriell = run([adb(), "-s", teile[0], "shell", "getprop", "ro.serialno"], timeout=15).stdout.strip() or teile[0]
+            e = run([adb(), "-s", teile[0], "shell", "pm", "list", "packages", "-3"], timeout=20)
+            pakete = sorted({p.split(":", 1)[1].strip() for p in e.stdout.splitlines() if p.startswith("package:")})
+            if e.returncode == 0 and pakete:
+                je_geraet[seriell] = pakete
+        schreib_json(PAKETE, je_geraet)  # auch ohne Gerät: Zeitstempel erneuern, damit adb erst in einer Stunde wieder fragt
+    return {p for liste in je_geraet.values() if isinstance(liste, list) for p in liste}
 
 
 def app_id(app: str) -> str:
@@ -235,11 +309,16 @@ def app_id(app: str) -> str:
     return m.group(1) if m else ""
 
 
+def baum_hashes() -> dict:
+    """Ordner → Baum-Hash in HEAD, alles in einem git-Aufruf."""
+    aus = git("ls-tree", "HEAD") or ""
+    return {t[3]: t[2] for t in (z.split(None, 3) for z in aus.splitlines()) if len(t) == 4 and t[1] == "tree"}
+
+
 def alle_apps() -> list:
-    """Android-Apps im Repo, die auf Handy oder Tablet installiert sind; Jarvis zuerst, dann die zuletzt geänderten.
-    Ohne bekannte Paketliste: nur Apps, die in den letzten 14 Tagen geändert wurden."""
+    """Android-Apps im Repo, die auf Handy oder Tablet installiert sind (ohne bekannte Paketliste: alle mit Commit in den
+    letzten 14 Tagen)."""
     pakete = geraete_pakete()
-    grenze = time.time() - 14 * 86400
     apps = []
     for d in sorted(PROGGS.iterdir()):
         if not (d / "gradlew").is_file() or not (d / "app" / "build.gradle.kts").is_file():
@@ -248,10 +327,19 @@ def alle_apps() -> list:
             kennung = app_id(d.name)
             if not kennung or not any(p == kennung or p.startswith(kennung + ".") for p in pakete):
                 continue
-        elif commitzeit(d.name) < grenze:
+        elif commitzeit(d.name) < time.time() - 14 * 86400:
             continue
         apps.append(d.name)
-    return sorted(apps, key=lambda a: (a != "Jarvis", -commitzeit(a)))
+    return apps
+
+
+_COMMITZEIT = {}
+
+
+def commitzeit(app: str) -> int:
+    if app not in _COMMITZEIT:
+        _COMMITZEIT[app] = int(git("log", "-1", "--format=%ct", "--", app) or 0)
+    return _COMMITZEIT[app]
 
 
 def ordner_zu(name: str) -> str:
@@ -267,87 +355,21 @@ def ordner_zu(name: str) -> str:
     return ""
 
 
-def java_prozesse():
-    """(pid, Eltern-pid, Sekunden seit Start, Befehlszeile) aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann: nicht bauen)."""
-    if WINDOWS:
-        e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
-                 "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { "
-                 "'{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.ParentProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
-    else:
-        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,ppid=,etimes=,args="], timeout=20)
-    if e.returncode != 0:
-        return None
-    liste = []
-    for z in e.stdout.splitlines():
-        teile = z.split("|", 3) if WINDOWS else z.split(None, 3)
-        if len(teile) == 4 and all(t.strip().isdigit() for t in teile[:3]):
-            liste.append((int(teile[0]), int(teile[1]), int(teile[2]), teile[3]))
-    return liste
-
-
-def java_befehlszeilen():
-    p = java_prozesse()
-    return None if p is None else [z for _, _, _, z in p]
-
-
-def ist_client(z: str) -> bool:
-    return "gradle-wrapper.jar" in z or "GradleWrapperMain" in z
-
-
-# cod.exe, cod22-cod.exe, cod24.exe …, aber nie codex.exe (Codex CLI).
-SPIEL_EXE = re.compile(r"^(cod|cod\d\d\S*|modernwarfare\S*|blackops\S*|warzone\S*)\.exe$", re.I)
-
-
-def spiel_laeuft() -> bool:
-    """Steam-Spiel aktiv (Steam setzt RunningAppID) oder ein Call-of-Duty-Prozess: dann volle Leistung fürs Spiel."""
-    if not WINDOWS:
-        return False
+def jvmargs(app: str) -> str:
     try:
-        import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as k:
-            if int(winreg.QueryValueEx(k, "RunningAppID")[0] or 0) != 0:
-                return True
+        text = (PROGGS / app / "gradle.properties").read_text(encoding="utf-8")
     except OSError:
-        pass
-    aus = run(["tasklist", "/fo", "csv", "/nh"], timeout=30).stdout
-    return any(SPIEL_EXE.match(z.split('","')[0].strip('"')) for z in aus.splitlines() if z)
+        return ""
+    m = re.search(r"^\s*org\.gradle\.jvmargs\s*=(.*)$", text, re.M)
+    return " ".join(m.group(1).split()) if m else ""
 
 
-def fremder_bau_laeuft() -> bool:
-    """Läuft ein Gradle-Client (gradlew einer Sitzung, apk-update)? Erkennbar am Wrapper in der Befehlszeile. Bauten aus
-    Android Studio (Tooling-API) sieht das nicht; die Sitzungen am PC bauen aber über gradlew."""
-    zeilen = java_befehlszeilen()
-    return zeilen is None or any(ist_client(z) for z in zeilen)
+def jarvis_gruppe(app: str) -> bool:
+    """Teilt sich die App den vorgewärmten Daemon (gleiche jvmargs wie Jarvis)?"""
+    return app == "Jarvis" or jvmargs(app) == jvmargs("Jarvis")
 
 
-class Ausweichen:
-    """Während eines Vorbaus: Ein Sitzungsbau (Datei pause frisch angelegt oder fremder Gradle-Client, jede CLI) hat Vorrang.
-    Pause wird alle 2 s geprüft (billig), fremde Clients alle 10 s (Prozessabfrage)."""
-
-    def __init__(self):
-        self.beginn, self.zuletzt = time.time(), 0.0
-
-    def __call__(self, eigener: int) -> bool:
-        try:
-            if PAUSE.stat().st_mtime > self.beginn:
-                return True
-        except OSError:
-            pass
-        if time.time() - self.zuletzt < 10:
-            return False
-        self.zuletzt = time.time()
-        prozesse = java_prozesse()
-        if prozesse is None:
-            return False
-        return any(ist_client(z) and ppid != eigener for _, ppid, _, z in prozesse)
-
-
-def pausiert() -> bool:
-    try:
-        return time.time() - PAUSE.stat().st_mtime < PAUSE_SEKUNDEN
-    except OSError:
-        return False
-
+# ---------------------------------------------------------------- Bauen
 
 def repo_vorspulen() -> None:
     """Wie OpenLauncher/Services/RepoSync.cs: fetch (darf abbrechen) + merge --ff-only (nie abbrechen, sonst bleibt index.lock)."""
@@ -364,47 +386,57 @@ def repo_vorspulen() -> None:
             log(f"Repo vorgespult: {git('rev-list', '--count', f'{vorher}..{nachher}')} neue Commits")
 
 
-def jvmargs(app: str) -> str:
-    try:
-        text = (PROGGS / app / "gradle.properties").read_text(encoding="utf-8")
-    except OSError:
-        return ""
-    m = re.search(r"^\s*org\.gradle\.jvmargs\s*=(.*)$", text, re.M)
-    return " ".join(m.group(1).split()) if m else ""
-
-
 def gradle_basis(ordner: Path) -> list:
     # Absoluter Pfad: Agenten-Shells setzen NoDefaultCurrentDirectoryInExePath=1, dann findet cmd gradlew.bat im cwd nicht.
     return ["cmd", "/c", str(ordner / "gradlew.bat")] if WINDOWS else ["bash", str(ordner / "gradlew")]
 
 
 def gradlew(app: str) -> list:
-    workers = str(max(2, (os.cpu_count() or 4) // 2))  # gilt nur für diesen Bau, nicht für den Daemon
-    befehl = gradle_basis(PROGGS / app) + ["assembleDebug", "-q", f"--max-workers={workers}"]
-    # Dauerhaft warm bleibt nur der Daemon mit den Jarvis-Einstellungen; beim Auftragsstart (--immer) auch der der App.
-    if not ARGS.immer and app != "Jarvis" and jvmargs(app) != jvmargs("Jarvis"):
-        befehl.append("--no-daemon")
-    return befehl
+    # Vorbau immer mit Wegwerf-Daemon: Er belegt nie den warmen Daemon der Sitzungen, lässt keinen weiteren 2-4-GB-Daemon
+    # liegen, und Ausweichen kostet nichts. (Gemessen 13.11.2026: Bricht man einem Daemon einen laufenden Bau ab, per Client-
+    # Ende oder Strg+C, beendet er sich oft selbst; ein Vorbau im gemeinsamen Daemon nähme den Sitzungen also den warmen Daemon.)
+    workers = str(max(2, (os.cpu_count() or 4) // 2))  # halbe Kernzahl, gilt nur für diesen Bau
+    return gradle_basis(PROGGS / app) + ["assembleDebug", "-q", f"--max-workers={workers}", "--no-daemon"]
 
 
-def baue(app: str) -> bool:
+class Ausweichen:
+    """Während eines Vorbaus: Sitzungsbau (pause frisch oder fremder Gradle-Client, jede CLI) oder Spielstart hat Vorrang.
+    Alle 2 s geprüft, über die Windows-API (Millisekunden, keine PowerShell)."""
+
+    def __init__(self):
+        self.beginn = time.time()
+
+    def __call__(self, eigene_shell: int) -> bool:
+        try:
+            if PAUSE.stat().st_mtime > self.beginn - 5:
+                return True
+        except OSError:
+            pass
+        liste = prozesse()
+        return any(ppid != eigene_shell for _, ppid in gradle_clients(liste)) or spiel_laeuft(liste)
+
+
+def baue(app: str):
+    """True/False = Bau ok/fehlgeschlagen, None = nicht gebaut (Sitzung oder Spiel hat Vorrang)."""
     if git("lfs", "ls-files", "-I", f"{app}/**", timeout=60):
         run(["git", "-C", str(PROGGS), "lfs", "pull", f"--include={app}/**"])  # ohne Zeitlimit: ein Abbruch ließe index.lock liegen
     with Sperre(BAU_SPERRE):
-        # Erst nach dem Warten den Stand lesen: Ein anderer Lauf kann die App inzwischen gebaut haben.
-        hash_ = git("rev-parse", f"HEAD:{app}")
-        if not hash_ or (lies_stand().get(app) == hash_ and not ARGS.immer):
+        # Erst nach dem Warten prüfen: Inzwischen kann eine Sitzung bauen oder ein anderer Lauf die App gebaut haben.
+        if pausiert() or fremder_bau_laeuft() or spiel_laeuft():
+            return None
+        hash_ = baum_hashes().get(app, "")
+        if not hash_ or (lies_json(STAND).get(app) == hash_ and not ARGS.immer):
             return True
-        sauber = not git("status", "--porcelain", "--", app)
+        ist_sauber = sauber(app)
         beginn = time.time()
         e = run(gradlew(app), cwd=PROGGS / app, timeout=3600, ausweichen=Ausweichen())
-        ok, fehler = e.returncode == 0, e.stdout.strip()[-400:] or ("nach 60 Minuten abgebrochen" if e.returncode == -1 else "")
         dauer = int(time.time() - beginn)
-    if e.returncode == AUSGEWICHEN:
-        log(f"{app}: Vorbau nach {dauer} s abgebrochen, ein Sitzungsbau hat Vorrang (Daemon bleibt warm)")
-        return None
-    if not sauber:
-        # Halb geänderter Arbeitsbaum (Auftragsstart): Der Bau wärmt, passt aber nicht genau zu HEAD, also nichts merken.
+        if e.returncode == AUSGEWICHEN:
+            log(f"{app}: Vorbau nach {dauer} s abgebrochen, eine Sitzung oder ein Spiel hat Vorrang")
+            return None
+        ok, fehler = e.returncode == 0, e.stdout.strip()[-400:] or ("nach 60 Minuten abgebrochen" if e.returncode == -1 else "")
+    if not ist_sauber:
+        # Offener Arbeitsstand (Auftragsstart): Der Bau wärmt, passt aber nicht genau zu HEAD, also nichts merken.
         log(f"{app}: Vorbau auf offenem Arbeitsstand in {dauer} s ({'ok' if ok else 'fehlgeschlagen'})")
         return ok
 
@@ -428,77 +460,88 @@ def baue(app: str) -> bool:
     return ok
 
 
+# ---------------------------------------------------------------- Daemon
+
+def java_daemons():
+    """(pid, Sekunden seit Start, ist Jarvis-Gruppe) aller Gradle-Daemons; teuer (PowerShell), daher nur bei Bedarf.
+    None, wenn die Abfrage scheiterte."""
+    if WINDOWS:
+        e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { "
+                 "'{0}|{1}|{2}' -f $_.ProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
+    else:
+        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,etimes=,args="], timeout=20)
+    if e.returncode != 0:
+        return None
+    ziel = set(jvmargs("Jarvis").split())
+    liste = []
+    for z in e.stdout.splitlines():
+        t = z.split("|", 2) if WINDOWS else z.split(None, 2)
+        if len(t) == 3 and t[0].strip().isdigit() and t[1].strip().isdigit() and "GradleDaemon" in t[2]:
+            schalter = {s for s in t[2].split() if s.startswith(("-X", "-Dfile."))}
+            liste.append((int(t[0]), int(t[1]), schalter == ziel))
+    return liste
+
+
 def daemon_app() -> str:
-    """App, deren Bau den gemeinsamen Daemon (Jarvis-Einstellungen) startet: Jarvis, sonst eine saubere App mit denselben jvmargs."""
-    ziel = jvmargs("Jarvis")
-    kandidaten = ["Jarvis"] + [d.name for d in sorted(PROGGS.iterdir()) if d.name != "Jarvis" and (d / "gradlew").is_file()
-                               and (d / "app" / "build.gradle.kts").is_file() and jvmargs(d.name) == ziel]
-    for app in kandidaten:
-        if (PROGGS / app / "gradlew").is_file() and not git("status", "--porcelain", "--", app) \
-                and time.time() - commitzeit(app) >= RUHE_NACH_COMMIT:
-            return app
+    """App, deren `gradlew help` den gemeinsamen Daemon startet: Jarvis, sonst eine App mit denselben jvmargs."""
+    if (PROGGS / "Jarvis" / "gradlew").is_file():
+        return "Jarvis"
+    for d in sorted(PROGGS.iterdir()):
+        if (d / "gradlew").is_file() and (d / "app" / "build.gradle.kts").is_file() and jarvis_gruppe(d.name):
+            return d.name
     return ""
 
 
-BEHALTEN = 3  # so viele Gradle-Daemons dürfen im Leerlauf liegen bleiben (je 2-4 GB)
-
-
-def ueberzaehlige_beenden(prozesse) -> None:
-    """Mehrere Sitzungen bauen gleichzeitig: Gradle startet dann je Bau einen eigenen Daemon, und mit 24 h Leerlauf blieben
-    alle einen Tag liegen. Behalten werden die BEHALTEN jüngsten; ältere werden nur beendet, wenn sie laut --status IDLE sind."""
-    daemons = sorted(((alter, pid) for pid, _, alter, z in prozesse if "GradleDaemon" in z))
-    if len(daemons) <= BEHALTEN:
-        return
-    ordner = PROGGS / "Jarvis" if (PROGGS / "Jarvis" / "gradlew").is_file() else PROGGS / (daemon_app() or "Jarvis")
-    status = run(gradle_basis(ordner) + ["--status", "-q"], cwd=ordner, timeout=120).stdout
-    leer = {int(t[0]) for t in (z.split() for z in status.splitlines()) if len(t) >= 2 and t[0].isdigit() and t[1] == "IDLE"}
-    beendet = 0
-    for _, pid in daemons[BEHALTEN:]:
-        if pid in leer:
-            try:
-                os.kill(pid, 15)
-                beendet += 1
-            except OSError:
-                pass
-    if beendet:
-        log(f"{beendet} überzählige Gradle-Daemons im Leerlauf beendet ({BEHALTEN} bleiben warm)")
+def wecke_daemon(app: str) -> None:
+    """Startet den gemeinsamen Daemon mit `gradlew help` (konfiguriert das Projekt, lädt AGP und Kotlin-Plugin, baut nichts;
+    am PC um 15-30 s). Nur er bekommt 24 h Leerlauf, Sitzungs-Daemons behalten Gradles 3 h."""
+    beginn = time.time()
+    e = run(gradle_basis(PROGGS / app) + ["help", "-q", LEERLAUF_24H], cwd=PROGGS / app, timeout=600)
+    log(f"Gradle-Daemon mit {app} gestartet in {int(time.time() - beginn)} s" + ("" if e.returncode == 0 else " (help fehlgeschlagen)"))
 
 
 def daemon_pflege() -> None:
-    """Wie am Server (Frank, 13.11.2026): Der Gradle-Daemon läuft ab dem Windows-Start (Anmelde-Auslöser) rund um die Uhr.
-    Fehlt er, startet ihn ein Bau; ist er älter als 24 Stunden, wird er unter der Bau-Sperre beendet (samt Kotlin-Daemon) und
-    frisch gestartet. Leerlauf-Grenze 24 h steht in ~/.gradle/gradle.properties (einrichten.ps1)."""
-    prozesse = java_prozesse()
-    if prozesse is None:
+    """Wie am Server (Frank, 13.11.2026): Ein Daemon mit den Jarvis-Einstellungen läuft ab dem Windows-Start rund um die Uhr.
+    Fehlt er, startet ihn ein Bau; ist er älter als 24 Stunden und gerade IDLE, wird genau er beendet und frisch gestartet
+    (nie --stop: das träfe auch die Daemons laufender Sitzungen). Gemerkt wird er in daemon.json, damit der Takt nur prüft,
+    ob die pid noch lebt, statt jedes Mal die teure Befehlszeilen-Abfrage zu starten."""
+    gemerkt = lies_json(DAEMON)
+    lebende = {pid for pid, _, exe in prozesse() if exe in ("java.exe", "java")}
+    if gemerkt.get("pid") in lebende and time.time() - gemerkt.get("seit", 0) < DAEMON_LEBEN:
         return
-    ueberzaehlige_beenden(prozesse)
-    prozesse = java_prozesse() or prozesse
-    daemons = [(pid, alter) for pid, _, alter, z in prozesse if "GradleDaemon" in z]
-    alt = [pid for pid, alter in daemons if alter > 24 * 3600]
-    if daemons and not alt:
+    daemons = java_daemons()
+    if daemons is None:
+        return
+    jarvis = sorted((alter, pid) for pid, alter, gruppe in daemons if gruppe)
+    if jarvis and jarvis[0][0] < DAEMON_LEBEN:
+        alter, pid = jarvis[0]
+        schreib_json(DAEMON, {"pid": pid, "seit": time.time() - alter})
         return
     app = daemon_app()
     if not app:
         return
-    if alt:
-        with Sperre(BAU_SPERRE):
-            if fremder_bau_laeuft():
+    if jarvis:
+        alter, pid = jarvis[0]
+        status = run(gradle_basis(PROGGS / app) + ["--status", "-q"], cwd=PROGGS / app, timeout=60).stdout
+        if not re.search(rf"^\s*{pid}\s+IDLE\b", status, re.M):
+            return  # baut gerade: beim nächsten Takt wieder
+        with Sperre(BAU_SPERRE, warten=0) as frei:
+            if not frei or fremder_bau_laeuft():
                 return
-            stop = gradle_basis(PROGGS / app) + ["--stop", "-q"]
-            run(stop, cwd=PROGGS / app, timeout=120)
-            for pid, _, _, z in java_prozesse() or []:
-                if "KotlinCompileDaemon" in z or ("GradleDaemon" in z and pid in alt):
-                    try:
-                        os.kill(pid, 15)
-                    except OSError:
-                        pass
+            try:
+                os.kill(pid, 15)
+            except OSError:
+                pass
         log("Gradle-Daemon nach 24 Stunden beendet, starte ihn frisch")
-    else:
-        log(f"Kein Gradle-Daemon aktiv, starte ihn mit einem {app}-Bau")
-    ARGS.immer = True
-    baue(app)
-    ARGS.immer = False
+    wecke_daemon(app)
+    neu =[(alter, pid) for pid, alter, gruppe in (java_daemons() or []) if gruppe]
+    if neu:
+        alter, pid = min(neu)
+        schreib_json(DAEMON, {"pid": pid, "seit": time.time() - alter})
 
+
+# ---------------------------------------------------------------- Abläufe
 
 def lauf() -> int:
     einzeln = LAUF_SPERRE if not ARGS.app else ORDNER / f"lauf-{ARGS.app}.lock"
@@ -506,70 +549,58 @@ def lauf() -> int:
         if not frei or akkubetrieb() or spiel_laeuft():
             return 0
         if ARGS.app:
-            baue(ARGS.app)
+            # Auftragsstart: Der OpenLauncher gleicht gleich danach das Repo ab (bis 20 s). Erst danach bauen, sonst übersetzte
+            # der Vorbau den alten Stand und das Vorspulen änderte die Dateien mitten im Bau.
+            time.sleep(25)
+            if not fremder_bau_laeuft() and not pausiert():
+                daemon_pflege()  # warmer Daemon für den ersten Sitzungsbau, falls er fehlt
+                baue(ARGS.app)
             return 0
+        if pausiert() or fremder_bau_laeuft():
+            return 0  # eine Sitzung baut: weder Repo verschieben noch bauen
         repo_vorspulen()
-        stand = lies_stand()
-        jetzt = time.time()
-        for app in alle_apps():
-            hash_ = git("rev-parse", f"HEAD:{app}")
-            if not hash_ or stand.get(app) == hash_:
-                continue
-            if git("status", "--porcelain", "--", app):
+        stand = lies_json(STAND)
+        hashes = baum_hashes()
+        offen = [a for a in alle_apps() if hashes.get(a) and stand.get(a) != hashes[a]]
+        for app in sorted(offen, key=lambda a: (a != "Jarvis", -commitzeit(a))):
+            if not sauber(app):
                 continue  # eine Sitzung arbeitet daran
-            if jetzt - commitzeit(app) < RUHE_NACH_COMMIT:
+            if time.time() - commitzeit(app) < RUHE_NACH_COMMIT:
                 continue  # frisch committet: die Sitzung baut und installiert gleich selbst
-            if pausiert() or fremder_bau_laeuft() or spiel_laeuft():
+            if baue(app) is None:
                 log("Pause: eine Sitzung baut oder ein Spiel läuft, Vorwärmen setzt beim nächsten Lauf fort")
                 return 0
-            if baue(app) is None:
-                return 0  # einem Sitzungsbau ausgewichen: der nächste Takt-Lauf macht weiter
-            stand = lies_stand()
         if not pausiert() and not fremder_bau_laeuft() and not spiel_laeuft():
             daemon_pflege()
     return 0
 
 
 def warte() -> int:
-    """Vor einem Sitzungsbau: Vorwärmen 20 Minuten pausieren. Ein laufender Vorbau sieht die frische Datei pause binnen 2 s
-    und weicht aus; gewartet wird nur, bis er seine Sperre freigibt (höchstens 2 Minuten), dann ist sein warmer Daemon frei.
+    """Vor einem Sitzungsbau: Vorwärmen 20 Minuten pausieren. Ein laufender Vorbau sieht das binnen 2 s und weicht aus;
+    gewartet wird nur, bis er die Sperre freigibt (sein Daemon ist dann frei), höchstens 2 Minuten.
     Sitzungen warten nie aufeinander: Mehrere Sitzungsbauten laufen gleichzeitig."""
     ORDNER.mkdir(parents=True, exist_ok=True)
     PAUSE.touch()
     beginn = time.time()
-    with Sperre(BAU_SPERRE, warten=120) as frei:
+    with Sperre(BAU_SPERRE, warten=120, takt=0.3) as frei:
         gewartet = int(time.time() - beginn)
         if gewartet > 2:
             print(f"VORWAERMEN: {gewartet} s auf einen laufenden Vorbau gewartet" + ("" if frei else ", baue trotzdem"))
     return 0
 
 
-def start() -> int:
-    """Startet einen Lauf losgelöst, ohne Handles des Aufrufers zu erben (sonst wartet ein Agent bis in sein Zeitlimit)."""
-    py = Path(sys.executable)
-    if WINDOWS and (py.parent / "pythonw.exe").is_file():
-        py = py.parent / "pythonw.exe"
-    befehl = [str(py), str(Path(__file__).resolve()), "lauf"] + (["--app", ARGS.app] if ARGS.app else []) + (["--immer"] if ARGS.immer else [])
-    if WINDOWS:
-        subprocess.Popen(befehl, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True,
-                         creationflags=0x00000008 | 0x00000200 | OHNE_FENSTER)  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-    else:
-        subprocess.Popen(befehl, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-    return 0
-
-
 def zeige() -> int:
-    stand = lies_stand()
+    stand, hashes = lies_json(STAND), baum_hashes()
     for app in alle_apps():
-        h = git("rev-parse", f"HEAD:{app}")
         fehler = stand.get("_fehler", {}).get(app, "")
-        print(f"{app:24} {'aktuell' if stand.get(app) == h else 'offen'}" + (f"  FEHLER {fehler[-80:]!r}" if fehler and stand.get(app) == h else ""))
+        aktuell = stand.get(app) == hashes.get(app)
+        print(f"{app:24} {'aktuell' if aktuell else 'offen'}" + (f"  FEHLER {fehler[-80:]!r}" if fehler and aktuell else ""))
     return 0
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("aktion", choices=["start", "lauf", "warte", "stand"])
+    p.add_argument("aktion", choices=["lauf", "warte", "stand"])
     p.add_argument("--app", default="")
     p.add_argument("--immer", action="store_true", help="auch bauen, wenn der Stand schon vorgewärmt ist (wärmt den Daemon)")
     ARGS = p.parse_args()
@@ -578,7 +609,7 @@ if __name__ == "__main__":
         if not ARGS.app:
             sys.exit(0)
     try:
-        sys.exit({"start": start, "lauf": lauf, "warte": warte, "stand": zeige}[ARGS.aktion]())
+        sys.exit({"lauf": lauf, "warte": warte, "stand": zeige}[ARGS.aktion]())
     except Exception as fehler:  # Hintergrundlauf: nie still sterben; warte darf einen Sitzungsbau nie verhindern
         log(f"Fehler ({ARGS.aktion}): {fehler!r}")
         sys.exit(0 if ARGS.aktion == "warte" else 1)
