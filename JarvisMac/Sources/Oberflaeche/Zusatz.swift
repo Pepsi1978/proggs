@@ -83,7 +83,7 @@ struct PromptsAnsicht: View {
                             Text("\(p.nummer)").font(.jarvis(18, .heavy)).foregroundStyle(Farbe.akzent).frame(width: 30)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(p.titel.isEmpty ? "Prompt \(p.nummer)" : p.titel).font(.jarvis(14, .semibold))
-                                Text("Von \(p.quelle)").font(.jarvis(11)).foregroundStyle(Farbe.text3)
+                                Text("Von \(p.quelle)\(ErinnerungZeit.gespeichert(p.erstellt))").font(.jarvis(11)).foregroundStyle(Farbe.text3).lineLimit(1)
                                 Text(p.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(offen?.id == p.id ? nil : 2).textSelection(.enabled)
                             }
                             Spacer()

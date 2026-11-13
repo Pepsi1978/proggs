@@ -3,6 +3,18 @@ import Foundation
 /// Rechnet wie java.time am Handy in lokaler Wanduhrzeit: Die Kennung einer Auslösung enthält die Zeit und muss auf allen Geräten gleich herauskommen.
 /// Darum bewusst ohne Calendar-Arithmetik: Bei Zeitumstellungen löst Foundation nicht überall so auf wie java.time.
 enum ErinnerungZeit {
+    private static let gespeichertFormat: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "de_DE")
+        f.dateFormat = "dd.MM.yyyy, HH:mm 'Uhr'"
+        return f
+    }()
+
+    /// „ · 13.11.2026, 20:15 Uhr“ hinter der Quelle von Prompts und Erinnerungen (wie am Handy). Vor 2000 ist kein echter Zeitpunkt (fehlende Zeiten nummeriert das Handy 1, 2, 3 …): dann leer.
+    static func gespeichert(_ ms: Int64) -> String {
+        ms < 946_684_800_000 ? "" : " · " + gespeichertFormat.string(from: Date(timeIntervalSince1970: Double(ms) / 1000))
+    }
+
     struct Tag: Hashable, Sendable {
         let jahr: Int, monat: Int, tag: Int
         var text: String { String(format: "%04d-%02d-%02d", jahr, monat, tag) }

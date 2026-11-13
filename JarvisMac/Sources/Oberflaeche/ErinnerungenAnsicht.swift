@@ -194,7 +194,7 @@ private struct ErinnerungDetailEbene: View {
                     if !e.allgemein {
                         RundKnopf(symbol: "plus", hilfe: "Erinnerungszeitpunkt hinzufügen", aktiv: true) { plusOffen = true }
                     }
-                    Text("Von \(e.quelle.isEmpty ? "Jarvis Handy" : e.quelle)").font(.jarvis(11)).foregroundStyle(Farbe.text3).padding(.top, 8)
+                    Text("Von \(e.quelle.isEmpty ? "Jarvis Handy" : e.quelle)\(ErinnerungZeit.gespeichert(e.erstellt))").font(.jarvis(11)).foregroundStyle(Farbe.text3).padding(.top, 8)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

@@ -128,6 +128,9 @@ public static class ErinnerungZeit
 
     public static long Jetzt => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+    /// <summary>„ · 13.11.2026, 20:15 Uhr“ hinter der Quelle von Prompts und Erinnerungen (wie am Handy). Vor 2000 ist kein echter Zeitpunkt (fehlende Zeiten nummeriert das Handy 1, 2, 3 …): dann leer.</summary>
+    public static string Gespeichert(long ms) => ms < 946_684_800_000L ? "" : " · " + DateTimeOffset.FromUnixTimeMilliseconds(ms).LocalDateTime.ToString("dd.MM.yyyy, HH:mm 'Uhr'", Deutsch);
+
     public static TimeOnly Uhr(string t) => TimeOnly.TryParseExact(t, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var u) ? u : new TimeOnly(10, 0);
 
     public static long Ms(DateTime wand)

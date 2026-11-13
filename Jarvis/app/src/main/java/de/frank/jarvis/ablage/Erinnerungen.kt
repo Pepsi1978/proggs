@@ -47,6 +47,10 @@ data class Erinnerung(
     val geaendert: Long = 0L,
 ) {
     val wecker get() = form == FORM_WECKER
+    /** Leer = aus der Zeit vor dem Abgleich, also vom Handy. */
+    val quelleName: String get() = quelle.ifBlank { AblageQuellen.HANDY }
+    /** Quelle mit Anlagezeitpunkt für die Anzeige. */
+    val herkunftText: String get() = Herkunft.text(quelleName, erstellt)
 
     fun tag(): LocalDate? = datum?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 

@@ -147,7 +147,7 @@ public sealed class ErinnerungDetail : LebendeAnsicht
             if (plusOffen) VAnfuegen(inhalt, PlusWahl(e), 8);
             else VAnfuegen(inhalt, H(0, Rund("plus", () => { fehler = ""; plusOffen = true; plusInStunden = e.Uhrzeit != null; anzahl = ""; plusUhr = ""; Neu(); }, "Erinnerungszeitpunkt hinzufügen"), Spacer()), 8);
         }
-        VAnfuegen(inhalt, Rand(T($"Von {(e.Quelle.Trim().Length == 0 ? "Jarvis Handy" : e.Quelle)}{PromptEintrag.ZeitText(e.Erstellt)}", 12, null, Farbe.Text3), o: 10, u: 10), 4);
+        VAnfuegen(inhalt, Rand(T($"Von {(e.Quelle.Trim().Length == 0 ? "Jarvis Handy" : e.Quelle)}{ErinnerungZeit.Gespeichert(e.Erstellt)}", 12, null, Farbe.Text3), o: 10, u: 10), 4);
         var scroll = new ScrollViewer { Content = inhalt, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(0, 10, 0, 10) };
         Grid.SetRow(scroll, 1);
         g.Children.Add(scroll);

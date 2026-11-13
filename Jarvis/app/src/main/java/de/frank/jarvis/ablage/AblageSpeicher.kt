@@ -81,10 +81,6 @@ object AblageQuellen {
 
     fun merke(titel: String, quelle: String) { gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)] = quelle.trim().take(40) to System.currentTimeMillis() }
 
-    /** „Jarvis Handy · 13.11.2026, 20:15 Uhr“: Quelle und Speicherzeitpunkt für die Anzeige; ohne Zeit (0) nur die Quelle. */
-    fun mitZeit(quelle: String, ms: Long): String =
-        if (ms <= 0L) quelle else quelle + " · " + java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN).format(java.util.Date(ms))
-
     fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < MERKEN_MS }?.first ?: DIESES
 
     /** Die gespeicherte Reihenfolge, zum Beispiel „handy,mac,windows“, als Namen; Fehlendes kommt hinten dazu. */
@@ -98,6 +94,17 @@ object AblageQuellen {
     /** Alle Reihenfolgen für die Einstellung per Sprache. */
     val alleOrdnungen: List<Pair<String, String>> = listOf("handy,mac,windows", "handy,windows,mac", "mac,handy,windows", "mac,windows,handy", "windows,handy,mac", "windows,mac,handy")
         .map { w -> w to w.split(',').joinToString(", dann ") { kurz.getValue(it) } }
+}
+
+/** Anzeige „Jarvis Handy · 13.11.2026, 20:15 Uhr“ unter Prompts und Erinnerungen (gleich in JarvisWindows und JarvisMac). */
+object Herkunft {
+    private val format = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN)
+
+    /** Vor 2000 ist kein echter Speicherzeitpunkt: fehlende Zeiten (0) werden beim Laden zu 1, 2, 3 … nummeriert. */
+    private const val AB_MS = 946_684_800_000L
+
+    fun text(quelle: String, ms: Long): String =
+        if (ms < AB_MS) quelle else quelle + " · " + format.format(java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()))
 }
 
 /**
