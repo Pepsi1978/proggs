@@ -515,11 +515,9 @@ window.stimmeFertig = (text, fehler) => {
   if (!text) return;
   // Das Diktat gehört zu der Sitzung, in der es begann: nie mit automatischem Absenden in eine andere.
   if (diktatSitzung !== aktuell || !ws || ws.readyState !== 1) { stimmeMelden(`Nicht eingefügt, die Sitzung hat gewechselt: ${text.slice(0, 120)}`); return; }
-  // Mehrere Eingaben hintereinander bekommen ein Leerzeichen dazwischen, wie am Rechner.
-  const mitLeerzeichen = schonGesprochen && !automatisch;
-  schicke((mitLeerzeichen ? " " : "") + text);
-  schonGesprochen = !automatisch;
-  if (automatisch) setTimeout(() => schicke("\r"), 60);
+  // Ohne automatisches Absenden endet jedes Diktat mit dem Aufgabentrenner " ; " wie am Rechner (TVO): Die CLI erkennt daran mehrere Aufgaben, und die nächste Ansage schließt direkt an.
+  if (automatisch) { schicke(text); setTimeout(() => schicke("\r"), 60); }
+  else schicke(text.replace(/\s+$/, "") + " ; ");
 };
 if (SPRACHE) {
   $("stimme-mikro").addEventListener("click", () => {
