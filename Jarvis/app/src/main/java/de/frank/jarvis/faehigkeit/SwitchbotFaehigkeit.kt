@@ -89,10 +89,10 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
             }.awaitAll()
         }
-        // Ein Problem kann an einer veralteten Liste liegen (umbenannt, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
-        if (sensoren.any { it.problem != null }) liste = null
-        val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val fehlend = if (einzeln) emptyList() else ERWARTET.filter { name -> sensoren.none { it.name.contains(name, ignoreCase = true) } }
+        // Ein Problem oder ein fehlender Name kann an einer veralteten Liste liegen (umbenannt, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
+        if (sensoren.any { it.problem != null } || fehlend.isNotEmpty()) liste = null
+        val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}"
             else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.batterie?.let { ", Batterie $it %" } ?: "")
