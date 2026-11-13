@@ -167,10 +167,14 @@ final class JarvisAgent {
                 puffer.runde += 1
                 puffer.text = ""
                 let runde = puffer.runde
+                // Text aus einer früheren Runde (vor einem Werkzeugschritt) bekommt wie im Endtext einen Absatz davor, sonst liest die
+                // Stimme „nachDas Wetter“ zusammen und erkennt kein Satzende.
+                let absatz = textTeile.contains { !$0.isEmpty }
                 antwort = try await a.antworte(system: system, werkzeuge: alleWerkzeuge, websuche: true, verlauf: g.verlauf,
                                                modell: modell, effort: effort) { stueck in
                     Task { @MainActor in
                         guard puffer.runde == runde else { return }
+                        if puffer.text.isEmpty && absatz { onText?("\n\n") }
                         puffer.text += stueck; onText?(stueck)
                         // Höchstens 20-mal je Sekunde neu darstellen: Die Stücke kommen schneller, als es jemand lesen kann.
                         let jetzt = Date()

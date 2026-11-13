@@ -153,7 +153,7 @@ enum MacEinstellungsKatalog {
                 if !fremd.isEmpty { return "Unbekannte Karte: " + fremd.joined(separator: ", ") }
                 e.zentraleAusgeblendet = ohneDoppel(ids).joined(separator: ","); return nil
             },
-            Eintrag(kennung: "listen_abgleich", bereich: "Zentrale & Bereiche", titel: "Listen mit Handy und Tablet abgleichen", beschreibung: "Ablage → Listen gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Mac.",
+            Eintrag(kennung: "listen_abgleich", bereich: "Zentrale & Bereiche", titel: "Listen mit Handy und Tablet abgleichen", beschreibung: "Die Listen (eigener Reiter) gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Mac.",
                     werte: "an | aus", lesen: { e.listenAbgleichAn ? "an" : "aus" }) { v in
                 guard let b = wahr(v) else { return "an oder aus" }
                 e.listenAbgleichAn = b; ListenSpeicher.shared.jetztAbgleichen(); return nil

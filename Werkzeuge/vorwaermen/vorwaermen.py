@@ -149,7 +149,10 @@ def befehlszeilen(pids: list):
                  f"Get-CimInstance Win32_Process -Filter '{filter_}' | ForEach-Object {{ '{{0}}|{{1}}' -f $_.ProcessId, $_.CommandLine }}"], timeout=60)
     else:
         e = run(["ps", "-o", "pid=,args=", "-p", ",".join(map(str, pids))], timeout=20)
-    if e.returncode != 0:
+        # macOS-ps endet mit 1, wenn keine der pids mehr lebt (kurzlebige Gradle-Worker): kein Fehler, nur leer.
+        if e.returncode == 1 and not e.stdout.strip():
+            return {}
+    if e.returncode != 0 and (WINDOWS or e.returncode != 1):
         return None
     aus = {}
     for z in e.stdout.splitlines():

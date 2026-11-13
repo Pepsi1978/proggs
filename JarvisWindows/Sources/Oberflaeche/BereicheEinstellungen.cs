@@ -36,7 +36,7 @@ internal sealed class BereicheEinstellungen : UserControl
             new KapselKnopf("arrow.uturn.backward", "Zurücksetzen", () => { einst.ZentraleReihenfolge = ""; Log("einstellung", "Zentrale-Reihenfolge zurückgesetzt", wo: "Einstellungen"); })), 6);
 
         var listen = Karte(V(8, Titel("checklist", "Listen", Farbe.Gruen),
-            EinstellungenAnsicht.Zeile("Mit Handy und Tablet abgleichen", "Ablage → Listen sind dieselben Listen wie auf Handy und Tablet. Aus: Der Laptop zeigt und ändert nur seine Kopie, nichts geht hoch, bis du es wieder einschaltest.",
+            EinstellungenAnsicht.Zeile("Mit Handy und Tablet abgleichen", "Der Reiter Listen zeigt dieselben Listen wie auf Handy und Tablet. Aus: Der Laptop zeigt und ändert nur seine Kopie, nichts geht hoch, bis du es wieder einschaltest.",
                 new Schalter(() => einst.ListenAbgleichAn, an => { einst.ListenAbgleichAn = an; ListenSpeicher.Shared.JetztAbgleichen(); })),
             EinstellungenAnsicht.Zeile("Jetzt abgleichen", "Holt sofort den Stand vom Server und schickt Offenes los.", new KapselKnopf("arrow.clockwise", "Abgleichen", ListenSpeicher.Shared.JetztAbgleichen))));
 

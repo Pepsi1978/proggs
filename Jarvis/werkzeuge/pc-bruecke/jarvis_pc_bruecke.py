@@ -117,7 +117,7 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
                                               # Diese Brücke kennt Aufträge mit frei gewähltem Modell (modell=katalog).
                                               "X-Jarvis-Katalog": "1",
                                               # Und Sol 6.1 (über Codex CLI oder OpenCode): Der Relay gibt ihn her, wenn der Windows-PC fehlt.
-                                              **({"X-Jarvis-Sol": "1"} if KANN_SOL else {}),
+                                              **({"X-Jarvis-Sol": "1"} if sol_clis() else {}),
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
         with urllib.request.urlopen(anfrage, timeout=sekunden) as antwort:
@@ -235,24 +235,32 @@ def openlauncher_kann_jarvis(ab: tuple = OPENLAUNCHER_AB) -> bool:
         return False
 
 
-def kann_sol() -> bool:
-    """Sol über den Katalog-Weg des OpenLaunchers (ab 1.24.45) mit installiertem und angemeldetem Codex CLI. Ohne das meldet die
-    Brücke kein X-Jarvis-Sol, und das Handy nimmt wie bisher Codex Cloud, statt eine hängende Sitzung zu starten."""
-    if not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
-        return False
-    pfad = ":".join([str(HOME / ".local" / "bin"), "/opt/homebrew/bin", "/usr/local/bin", os.environ.get("PATH", "")])
-    codex = shutil.which("codex", path=pfad)
-    if not codex:
-        return False
+_SOL = {"zeit": 0.0, "clis": set()}
+SOL_PRUEFEN_S = 600
+
+
+def sol_clis(frisch: bool = False) -> set:
+    """Womit dieser Mac Sol 6.1 starten kann: „codex“ (installiert und angemeldet) und/oder „opencode“ (installiert), nur mit dem
+    Katalog-Weg des OpenLaunchers (ab 1.24.45). Höchstens alle 10 Minuten neu geprüft (nie beim Import): Eine Anmeldung, ein
+    Abmelden oder ein Update gilt so ohne Neustart der Brücke. Leer = kein X-Jarvis-Sol, das Handy nimmt dann Codex Cloud."""
+    if not frisch and time.time() - _SOL["zeit"] < SOL_PRUEFEN_S:
+        return _SOL["clis"]
+    clis = set()
     try:
-        aus = subprocess.run([codex, "login", "status"], capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
-        return aus.returncode == 0 and "logged in" in (aus.stdout + aus.stderr).lower()
+        if openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
+            pfad = ":".join([str(HOME / ".local" / "bin"), str(HOME / ".opencode" / "bin"), "/opt/homebrew/bin", "/usr/local/bin",
+                             os.environ.get("PATH", "")])
+            codex = shutil.which("codex", path=pfad)
+            if codex:
+                aus = subprocess.run([codex, "login", "status"], capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
+                if aus.returncode == 0 and "logged in" in (aus.stdout + aus.stderr).lower():
+                    clis.add("codex")
+            if shutil.which("opencode", path=pfad):
+                clis.add("opencode")
     except Exception:
-        return False
-
-
-# Beim Start der Brücke geprüft; nach einem Update von OpenLauncher oder Codex startet git pull die Brücke ohnehin neu.
-KANN_SOL = kann_sol()
+        pass
+    _SOL.update(zeit=time.time(), clis=clis)
+    return clis
 
 
 def katalog_cli(auftrag: dict) -> str:
@@ -341,6 +349,19 @@ VORGEHEN
 """
 
 
+def vorbau(app: str) -> None:
+    """Auftrags-App sofort vorbauen (wärmt den Gradle-Daemon, während die Sitzung noch liest), wie am PC und am Server. Erst nach
+    dem Start der Sitzung, damit ein abgelehnter oder gescheiterter Auftrag keinen Bau auslöst; Sitzungsbauten warten per Hook darauf.
+    vorwaermen.py wartet selbst 25 s auf den Repo-Abgleich des OpenLaunchers und setzt Java und SDK selbst."""
+    try:
+        vorwaermen = PROGGS / "Werkzeuge" / "vorwaermen" / "vorwaermen.py"
+        if vorwaermen.is_file() and (PROGGS / app / "app" / "build.gradle.kts").is_file():
+            subprocess.Popen([sys.executable, str(vorwaermen), "lauf", "--app", app], cwd=str(PROGGS),
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except Exception as fehler:
+        schreib(f"Vorwärmen: {fehler}")
+
+
 def starte_sitzung(auftrag: dict) -> str:
     app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
     name = f"Jarvis: {app}"
@@ -377,16 +398,6 @@ def starte_sitzung(auftrag: dict) -> str:
     # sie); Codex, OpenCode, Kimi und Antigravity erst ab 1.24.45.
     if cli not in ("", "claude") and not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
         raise RuntimeError(f"{cli} braucht am Mac OpenLauncher ab 1.24.45; bitte den OpenLauncher über das Updatescript aktualisieren.")
-    # Auftrags-App sofort vorbauen (wärmt den Gradle-Daemon, während die Sitzung noch liest), wie am PC und am Server.
-    # Erst nach allen Prüfungen, damit ein abgelehnter Auftrag keinen Bau auslöst; Sitzungsbauten warten per Hook darauf.
-    # vorwaermen.py wartet selbst 25 s auf den Repo-Abgleich des OpenLaunchers und setzt Java und SDK selbst.
-    try:
-        vorwaermen = PROGGS / "Werkzeuge" / "vorwaermen" / "vorwaermen.py"
-        if vorwaermen.is_file() and (PROGGS / app / "app" / "build.gradle.kts").is_file():
-            subprocess.Popen([sys.executable, str(vorwaermen), "lauf", "--app", app], cwd=str(PROGGS),
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-    except Exception as fehler:
-        schreib(f"Vorwärmen: {fehler}")
     if openlauncher_kann_jarvis():
         argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei), "--name", name,
                      "--profil", str(auftrag.get("profil") or PROFIL) if cli else PROFIL,
@@ -405,9 +416,11 @@ def starte_sitzung(auftrag: dict) -> str:
             code = prozess.wait(30)
         except subprocess.TimeoutExpired:
             schreib("OpenLauncher nach 30 s noch nicht fertig, Start unbestätigt")
+            vorbau(app)
             return f"{name} (Start unbestätigt: der OpenLauncher war nach 30 Sekunden noch nicht fertig)"
         if code != 0:
             raise RuntimeError(f"Der OpenLauncher konnte die Sitzung nicht starten (Code {code}, siehe OpenLauncher-Log).")
+        vorbau(app)
         return name
 
     # Notweg für einen älteren OpenLauncherMac: direkt in Terminal.app starten (Profil-Ordner, Modell, Effort, Hooks wie
@@ -444,6 +457,7 @@ exec /bin/zsh -l
     ergebnis = subprocess.run(["/usr/bin/open", "-a", "Terminal", str(start)], capture_output=True, text=True, timeout=20)
     if ergebnis.returncode != 0:
         raise RuntimeError(f"Terminal.app ließ sich nicht öffnen: {ergebnis.stderr.strip()[:200]}")
+    vorbau(app)
     return name
 
 
@@ -488,7 +502,10 @@ def victron_faden() -> None:
             fehlte = False
             try:
                 # Fehler vor dem eigenen Protokoll (fehlendes bleak, Importfehler) landen so trotzdem in victron.log.
-                with open(ORDNER / "victron.log", "a", encoding="utf-8") as fehlerlog:
+                log_datei = ORDNER / "victron.log"
+                if log_datei.exists() and log_datei.stat().st_size > 200_000:
+                    log_datei.write_text("", "utf-8")  # wie protokoll() im Skript: nie unbegrenzt wachsen
+                with open(log_datei, "a", encoding="utf-8") as fehlerlog:
                     subprocess.run([sys.executable, str(skript)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
                                    stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=50)
             except Exception as fehler:
@@ -547,8 +564,10 @@ def main() -> int:
                 # Sol 6.1: über den Katalog-Weg (Codex CLI oder OpenCode); ohne passendes CLI klar ablehnen, nie still als Opus.
                 if auftrag.get("modell") == "sol":
                     auftrag = sol_als_katalog(auftrag)
-                    if not KANN_SOL or not shutil.which(auftrag["cli"], path=frische_umgebung()["PATH"]):
-                        raise RuntimeError(f"Das {auftrag['cli']} CLI für Sol 6.1 ist auf {RECHNER} nicht installiert.")
+                    if auftrag["cli"] not in sol_clis(frisch=True):
+                        grund = "nicht angemeldet (codex login)" if auftrag["cli"] == "codex" and shutil.which("codex", path=frische_umgebung()["PATH"]) \
+                            else "nicht installiert"
+                        raise RuntimeError(f"Sol 6.1 im {auftrag['cli']} CLI geht auf {RECHNER} nicht: {grund}.")
                 # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
                 # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist. Codex, OpenCode, Kimi und
                 # Antigravity haben eigene Anmeldungen: Dort zählt die von Claude Code nicht.

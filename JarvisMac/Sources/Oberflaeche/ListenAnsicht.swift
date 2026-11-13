@@ -90,7 +90,8 @@ struct ListenAnsicht: View {
         // Offene Eingabe im Kopf gehört zur bisherigen Liste: vor dem Wechsel dort speichern.
         if let alt = aktuell, kopfVon == alt.id { namensAenderung(alt); abschnitteAenderung(alt) }
         gewaehlt = id; Self.gewaehlt = id
-        unterVon = 0; bearbeite = 0; loeschenFrage = false
+        if bearbeite != 0, let e = speicher.eintrag(mitId: bearbeite) { titelFertig(e) }
+        unterVon = 0; bearbeite = 0; loeschenFrage = false; abschnittWahl = ""
         uebernehmeKopf()
     }
 
@@ -130,7 +131,7 @@ struct ListenAnsicht: View {
                     neuName = ""
                     gewaehlt = 0
                     waehle(l.id)
-                    log("listen", "Liste angelegt: \(name)", wo: "Ablage/Listen")
+                    log("listen", "Liste angelegt: \(name)", wo: "Listen")
                 }
         }
     }
@@ -188,7 +189,7 @@ struct ListenAnsicht: View {
                     .onChange(of: nameFokus) { _, drin in if !drin { namensAenderung(l) } }
                 RundKnopf(symbol: "checkmark.circle.fill", hilfe: "Erledigte Einträge löschen", groesse: 30) {
                     let n = speicher.erledigteLoeschen(l.id)
-                    log("listen", "\(n) erledigte Einträge gelöscht", wo: "Ablage/Listen")
+                    log("listen", "\(n) erledigte Einträge gelöscht", wo: "Listen")
                 }
                 if loeschenFrage {
                     Text("Liste wirklich löschen?").font(.jarvis(12, .semibold)).foregroundStyle(Farbe.rot)
@@ -196,7 +197,7 @@ struct ListenAnsicht: View {
                         loeschenFrage = false
                         speicher.listeLoeschen(l.id)
                         gewaehlt = 0; Self.gewaehlt = 0
-                        log("listen", "Liste gelöscht: \(l.name)", wo: "Ablage/Listen")
+                        log("listen", "Liste gelöscht: \(l.name)", wo: "Listen")
                     }
                     KapselKnopf(symbol: "xmark", titel: "Abbrechen") { loeschenFrage = false }
                 } else {
@@ -245,7 +246,7 @@ struct ListenAnsicht: View {
         let oben = speicher.eintraegeVon(l.id).contains { $0.id == unterVon } ? unterVon : 0
         speicher.hinzufuegen(l.id, s.titel, eltern: oben, prioritaet: s.prio, tags: s.tags, abschnitt: abschnitt)
         eingabe = ""
-        log("listen", "Eintrag hinzugefügt: \(s.titel)", wo: "Ablage/Listen")
+        log("listen", "Eintrag hinzugefügt: \(s.titel)", wo: "Listen")
     }
 
     // MARK: Zeilen
@@ -295,7 +296,7 @@ struct ListenAnsicht: View {
         return ListenZeileRahmen(tiefe: z.tiefe) {
             Button {
                 speicher.abhaken(e.id, !e.erledigt)
-                log("listen", (e.erledigt ? "Wieder geöffnet: " : "Abgehakt: ") + e.titel, wo: "Ablage/Listen")
+                log("listen", (e.erledigt ? "Wieder geöffnet: " : "Abgehakt: ") + e.titel, wo: "Listen")
             } label: {
                 ZStack {
                     Circle().fill(e.erledigt ? Farbe.haupt : Color.clear)
@@ -318,7 +319,11 @@ struct ListenAnsicht: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(e.titel).font(.jarvis(14, e.angeheftet ? .semibold : .regular)).foregroundStyle(e.erledigt ? Farbe.text3 : Farbe.text)
                         .strikethrough(e.erledigt)
-                        .onTapGesture(count: 2) { bearbeite = e.id; bearbeiteText = e.titel }
+                        .onTapGesture(count: 2) {
+                            // Läuft schon eine Bearbeitung, erst sie speichern: sonst ginge der geänderte Titel still verloren.
+                            if bearbeite != 0, bearbeite != e.id, let alt = speicher.eintrag(mitId: bearbeite) { titelFertig(alt) }
+                            bearbeite = e.id; bearbeiteText = e.titel
+                        }
                         .help("Doppelklick: Titel ändern")
                     let zusatz = !e.tags.isEmpty || e.angeheftet || !e.faellig.isEmpty || z.kinderGesamt > 0 || (!e.abschnitt.isEmpty && liste.gruppierung != "abschnitt")
                     if zusatz {
@@ -351,7 +356,7 @@ struct ListenAnsicht: View {
                         ForEach(andere, id: \.id) { l in
                             Button(ListenArten.zeichen(l.art) + "  " + l.name) {
                                 speicher.verschieben(e.id, nach: l.id)
-                                log("listen", "Verschoben nach \(l.name): \(e.titel)", wo: "Ablage/Listen")
+                                log("listen", "Verschoben nach \(l.name): \(e.titel)", wo: "Listen")
                             }
                         }
                     } label: {
@@ -362,7 +367,7 @@ struct ListenAnsicht: View {
                 }
                 RundKnopf(symbol: "trash", hilfe: "Löschen (mit Unterpunkten)", groesse: 26) {
                     speicher.loeschen(e.id)
-                    log("listen", "Gelöscht: " + e.titel, wo: "Ablage/Listen")
+                    log("listen", "Gelöscht: " + e.titel, wo: "Listen")
                 }
             }
         }

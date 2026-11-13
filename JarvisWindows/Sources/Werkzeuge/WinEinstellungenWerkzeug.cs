@@ -154,7 +154,7 @@ public static class WinEinstellungsKatalog
                     e.ZentraleAusgeblendet = string.Join(",", ids.Distinct());
                     return null;
                 }),
-                new("listen_abgleich", "Zentrale & Bereiche", "Listen mit Handy und Tablet abgleichen", "Ablage → Listen gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Laptop.", "an | aus",
+                new("listen_abgleich", "Zentrale & Bereiche", "Listen mit Handy und Tablet abgleichen", "Die Listen (eigener Reiter) gleichen sich mit Handy und Tablet ab; aus = nur die Kopie am Laptop.", "an | aus",
                     () => AnAus(e.ListenAbgleichAn), w => Schalte(w, b => { e.ListenAbgleichAn = b; ListenSpeicher.Shared.JetztAbgleichen(); })),
                 new("biomarker_zeitraum", "Zentrale & Bereiche", "Biomarker-Zeitraum", "Vergleich und Verlauf im Biomarker-Bereich in Tagen.", "7 | 30 | 90", () => e.BiomarkerTage.ToString(), w =>
                 {

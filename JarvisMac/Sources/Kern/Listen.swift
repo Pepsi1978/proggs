@@ -139,6 +139,9 @@ final class ListenSpeicher {
     @ObservationIgnored private var fern: [String: (sha: String, geaendert: Int64)] = [:]
     /// Hier geändert und noch nicht vom Server angenommen.
     @ObservationIgnored private var offen: Set<String> = []
+    /// Pfad → Prüfsumme einer Fassung, die der Server ohne Gegenfassung abgelehnt hat: nicht erneut hochladen, bis Frank sie ändert
+    /// (sonst lüde die Schleife sie alle zwei Sekunden neu hoch und läse jedes Mal alles von vorn).
+    @ObservationIgnored private var abgelehnt: [String: String] = [:]
     @ObservationIgnored private var stand: Int64 = 0
     @ObservationIgnored private var instanz = ""
     @ObservationIgnored private var laeuft = false
@@ -182,6 +185,8 @@ final class ListenSpeicher {
     func listeZu(_ id: Int64) -> Liste? { listen[id].flatMap { $0.geloescht ? nil : $0 } }
     func eintraegeVon(_ liste: Int64) -> [ListenEintrag] { _ = aenderung; return eintraege.values.filter { $0.listeId == liste && !$0.geloescht } }
     func offen(_ liste: Int64) -> Int { _ = aenderung; return eintraege.values.filter { $0.listeId == liste && !$0.geloescht && !$0.erledigt }.count }
+    /// Ein Eintrag über seine id (für die Oberfläche, etwa um eine offene Titelbearbeitung zu speichern).
+    func eintrag(mitId id: Int64) -> ListenEintrag? { eintraege[id] }
     var offenGesamt: Int { alle.reduce(0) { $0 + offen($1.id) } }
 
     // MARK: Hochfahren und Abgleich
@@ -395,6 +400,8 @@ final class ListenSpeicher {
         for pfad in Array(offen) {
             guard let daten = try? Data(contentsOf: lokalDatei(pfad)) else { offen.remove(pfad); continue }
             let sha = Self.sha(daten)
+            if abgelehnt[pfad] == sha { continue }
+            abgelehnt[pfad] = nil
             guard let blobURL = URL(string: "\(basis)/blob/\(sha)"), let docURL = URL(string: "\(basis)/doc/gedaechtnis/\(Self.kennung(pfad))") else { continue }
             var breq = anfrage(blobURL, "PUT")
             breq.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
@@ -408,7 +415,7 @@ final class ListenSpeicher {
             if vorher.geaendert >= geaendert && vorher.sha != sha {
                 // Drüben liegt eine jüngere Fassung als Franks Änderung hier: Sie gilt, wie am Handy.
                 offen.remove(pfad)
-                if !vorher.sha.isEmpty { _ = try await holeDatei(basis, pfad, vorher.sha, vorher.geaendert) }
+                if !vorher.sha.isEmpty, try await holeDatei(basis, pfad, vorher.sha, vorher.geaendert) { aenderung += 1 }
                 continue
             }
             geaendert = max(geaendert, vorher.geaendert + 1)
@@ -443,6 +450,7 @@ final class ListenSpeicher {
             } else {
                 // Abgelehnt ohne verwertbare Fassung: Franks Änderung bleibt offen (nie still verwerfen), der Mac liest den Server neu.
                 log("fehler", "Listen-Änderung vom Server abgelehnt, bleibt offen: \(pfad)", wo: "Listen")
+                abgelehnt[pfad] = sha
                 fern[pfad] = nil
                 stand = 0
             }

@@ -80,6 +80,17 @@ def entschluesseln(daten: bytes, schluessel: bytes) -> bytes | None:
     return bytes(a ^ b for a, b in zip(roh, strom))
 
 
+def plausibel(w: dict) -> bool:
+    """Nur am Mac nötig: Dort wird mit jedem Schlüssel mit passendem Prüfbyte entschlüsselt (Treffer 1:256 bei fremden Geräten),
+    und ein falscher Schlüssel liefert Zufallswerte. Franks Anlage ist ein 24-V-System; jede gelesene Größe muss im Rahmen liegen."""
+    def im(k, lo, hi):
+        v = w.get(k)
+        return v is None or lo <= v <= hi
+    return im("spannung_v", 5, 70) and im("ladezustand_prozent", 0, 100) and im("solarleistung_w", 0, 5000) \
+        and im("ladestrom_a", -200, 200) and im("strom_a", -500, 500) and im("ertrag_heute_kwh", 0, 50) \
+        and w.get("spannung_v") is not None
+
+
 def auswerten(art: int, d: bytes) -> dict | None:
     if art == 0x01 and len(d) >= 10:  # Laderegler
         spannung = int.from_bytes(d[2:4], "little", signed=True)
@@ -128,7 +139,7 @@ async def scannen(geraete: dict, sekunden: float = 12.0) -> dict:
             except Exception as fehler:
                 protokoll(f"Paket von {g['name']} unlesbar: {fehler}")
                 continue
-            if werte:
+            if werte and (mac in geraete or plausibel(werte)):
                 werte["name"] = g["name"]
                 werte["zeit"] = int(time.time())
                 gefunden[kennung] = werte

@@ -1,4 +1,4 @@
-<!-- stand: JarvisWindows 1.0.21 -->
+<!-- stand: JarvisWindows 1.0.22 -->
 Was Jarvis Windows HP kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis

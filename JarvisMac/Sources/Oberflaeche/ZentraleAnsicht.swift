@@ -312,6 +312,10 @@ struct MacKachel: View {
         .scaleEffect(schwebt ? 1.015 : 1)
         .contentShape(Rectangle())
         .onTapGesture { log("oberflaeche", "Funktionsboard: \(titel) gestartet", wo: "Zentrale/Am Mac"); aktion() }
+        // Kein Button (der schluckte das Ziehen), für Tastatur und VoiceOver aber weiter als Knopf erkennbar und auslösbar.
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { log("oberflaeche", "Funktionsboard: \(titel) gestartet", wo: "Zentrale/Am Mac"); aktion() }
         .onHover { schwebt = $0 }
         .animation(.spring(duration: 0.25), value: schwebt)
     }

@@ -53,7 +53,7 @@ struct BereicheEinstellungen: View {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 8) {
                     KartenTitel(symbol: "checklist", titel: "Listen", farbe: Farbe.gruen)
-                    zeile("Mit Handy und Tablet abgleichen", "Ablage → Listen sind dieselben Listen wie auf Handy und Tablet. Aus: Der Mac zeigt und ändert nur seine Kopie, nichts geht hoch, bis du es wieder einschaltest.") {
+                    zeile("Mit Handy und Tablet abgleichen", "Der Reiter Listen zeigt dieselben Listen wie auf Handy und Tablet. Aus: Der Mac zeigt und ändert nur seine Kopie, nichts geht hoch, bis du es wieder einschaltest.") {
                         Toggle("", isOn: $einst.listenAbgleichAn).toggleStyle(.switch).labelsHidden()
                             .onChange(of: einst.listenAbgleichAn) { _, _ in ListenSpeicher.shared.jetztAbgleichen() }
                     }

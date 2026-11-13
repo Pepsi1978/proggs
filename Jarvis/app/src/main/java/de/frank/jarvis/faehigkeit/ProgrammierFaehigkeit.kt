@@ -154,7 +154,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /**
      * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“ (nur die Namen: wer bei
-     * Opus Vorrang hat, stellt Frank in den Einstellungen ein, Standard Mac; Sol bleibt am Windows-PC). Ein Rechner, der sich seit
+     * Opus Vorrang hat, stellt Frank in den Einstellungen ein, Standard Mac; Sol geht zuerst an den Windows-PC, sonst an einen Sol-fähigen Mac). Ein Rechner, der sich seit
      * dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
      */
     private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String, relayNaechster: String = ""): String {
@@ -179,7 +179,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             !pcDa -> "Programmieraufträge gehen in die Cloud."
             erster?.optBoolean("da") == true && zweiter?.optBoolean("da") == true && naechster != erster.optString("rechner") ->
                 "Der nächste Auftrag ginge an $naechster: Der $ersterName fragt gerade nicht ab, deshalb springt der $zweiterName ein."
-            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft am Windows-PC oder auf dem Hostinger-Server."
+            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft am Windows-PC, sonst am Mac (wenn seine Brücke Sol kann) oder auf dem Hostinger-Server."
             else -> "Der nächste Auftrag ginge an $naechster."
         }
         val server = eintraege.firstOrNull { it.optString("rang") == "server" }
@@ -683,7 +683,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Die bereiten Ziele für [ziel] (pc, cloud, sonst automatisch). Sol 6.1 läuft am Windows-PC, ist der aus, in Codex Cloud;
+     * Die bereiten Ziele für [ziel] (pc, cloud, sonst automatisch). Sol 6.1 läuft am Windows-PC, ist der aus, am Sol-fähigen Mac, sonst in Codex Cloud;
      * nie still als Opus in der Claude-Code-Routine. Opus nie in Codex Cloud.
      */
     private fun zieleFuer(ziel: String, modell: String, cli: String = ""): List<ProgrammierZiel> = when {
@@ -836,7 +836,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String, runde: String): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
-        if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC oder, ist der aus, in Codex Cloud). Frag ihn kurz: " +
+        if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC, ist der aus, am Mac, sonst in Codex Cloud). Frag ihn kurz: " +
             "„Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Argon mit cli=antigravity erneut auf.")
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
@@ -901,7 +901,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Noch nichts gestartet: Sol 6.1 im Codex CLI kann keine Rückfragen stellen, deshalb fragt Jarvis vorher nach dem Review (diese Frage gehört zum " +
                 "Codex-Ablauf und gilt nicht als ungefragt angefordertes Review). Frag Frank kurz: „Soll ein Review laufen, wenn die App oder das APK-Update fertig " +
                 "programmiert ist? Ja oder Nein?“ und rufe programmieren danach mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false erneut auf."
-        else "Noch nichts gestartet: Sol 6.1 läuft am Windows-PC im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
+        else "Noch nichts gestartet: Sol 6.1 läuft am Rechner (Windows-PC, sonst Mac) im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
             "programmieren danach mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode erneut auf.")
         // Das Modell ist per Sprache oder Text schon gewählt: keine Erinnerung an eine Modellwahl-Karte dieses Gesprächs mehr.
         offeneWahlen.filterValues { it.gespraech == gespraech && it.stufe == STUFE_MODELL }.keys.forEach { erinnerungen.remove(it)?.cancel() }

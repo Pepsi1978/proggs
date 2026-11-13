@@ -349,7 +349,7 @@ final class Einstellungen {
         func s(_ k: String, _ v: String) -> String { d.string(forKey: k) ?? v }
         func b(_ k: String, _ v: Bool) -> Bool { d.object(forKey: k) as? Bool ?? v }
         helferAutomatik = b("helferAutomatik", true)
-        rechercheModell = s("rechercheModell", "gpt-6.1-sol")
+        rechercheModell = ModellWahl.aktuell(s("rechercheModell", "gpt-6.1-sol"))
         rechercheEffort = s("rechercheEffort", "high")
         modell = ModellWahl.aktuell(s("modell", "claude-opus-5-5"))
         effort = s("effort", "medium")

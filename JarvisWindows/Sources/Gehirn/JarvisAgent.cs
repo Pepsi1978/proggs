@@ -179,11 +179,15 @@ public sealed class JarvisAgent
                     puffer.Runde += 1;
                     puffer.Text = "";
                     var runde = puffer.Runde;
+                    // Text aus einer früheren Runde (vor einem Werkzeugschritt) bekommt wie im Endtext einen Absatz davor, sonst liest die
+                    // Stimme „nachDas Wetter“ zusammen und erkennt kein Satzende.
+                    var absatz = textTeile.Any(t => t.Length > 0);
                     antwort = await a.Antworte(system, alleWerkzeuge, websuche, g.Verlauf.ToList(), modell, effort, stueck =>
                     {
                         Haupt.Post(() =>
                         {
                             if (puffer.Runde != runde) return;
+                            if (puffer.Text.Length == 0 && absatz) onText?.Invoke("\n\n");
                             puffer.Text += stueck;
                             onText?.Invoke(stueck);
                             // Höchstens 20-mal je Sekunde neu darstellen: Die Stücke kommen schneller, als es jemand lesen kann.

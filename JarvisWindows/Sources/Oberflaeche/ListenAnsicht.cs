@@ -6,8 +6,6 @@ using static JarvisWindows.Ui;
 
 namespace JarvisWindows;
 
-/// <summary>Ablage → Listen, wie der Listen-Reiter am Handy (ui/ListenBildschirm.kt): Listen als Kacheln, darunter die gewählte Liste mit
-/// Abhaken, Unterpunkten, Prioritäten, Tags, Abschnitten, Sortierung und Gruppierung. Alles geht über ListenSpeicher und ist sofort auf Handy und Tablet.</summary>
 /// <summary>Eigener Leistenreiter „Listen“ zwischen Ablage und Einstellungen, wie am Handy und Tablet.</summary>
 public sealed class ListenReiter : Decorator
 {
@@ -20,6 +18,8 @@ public sealed class ListenReiter : Decorator
     }
 }
 
+/// <summary>Die Listen, wie der Listen-Reiter am Handy (ui/ListenBildschirm.kt): Listen als Kacheln, darunter die gewählte Liste mit
+/// Abhaken, Unterpunkten, Prioritäten, Tags, Abschnitten, Sortierung und Gruppierung. Alles geht über ListenSpeicher und ist sofort auf Handy und Tablet.</summary>
 public sealed class ListenAnsicht : UserControl
 {
     private readonly ListenSpeicher speicher = ListenSpeicher.Shared;
@@ -114,7 +114,7 @@ public sealed class ListenAnsicht : UserControl
             var karte = Box(H(10, bild, V(1, Tx(l.Name, 13, FontWeights.SemiBold, null, zeilen: 1), Tx($"{speicher.Offen(l.Id)} offen", 11, null, Farbe.Text3)).Fuell()),
                 Farbe.Glas(aktiv ? 0.13 : 0.04), 14, 10, 10, aktiv ? Farbe.Mit(farbe, 0.7) : Farbe.Glas(0.06));
             var id = l.Id;
-            kacheln.Children.Add(karte.Klick(() => { if (gewaehlt == id) return; gewaehlt = id; unterVon = 0; bearbeite = 0; loeschenFrage = false; Bauen(); }));
+            kacheln.Children.Add(karte.Klick(() => { if (gewaehlt == id) return; gewaehlt = id; unterVon = 0; bearbeite = 0; loeschenFrage = false; abschnittWahl = ""; Bauen(); }));
         }
         // Neue Liste: Name eintippen, Enter legt an.
         TextFeld neu = null!;
@@ -127,7 +127,7 @@ public sealed class ListenAnsicht : UserControl
             gewaehlt = l.Id;
             unterVon = 0; bearbeite = 0; loeschenFrage = false;
             Bauen();
-            Log("listen", $"Liste angelegt: {name}", wo: "Ablage/Listen");
+            Log("listen", $"Liste angelegt: {name}", wo: "Listen");
         });
         kacheln.Children.Add(Box(neu, Farbe.Glas(0.03), 14, 12, 18, Farbe.Glas(0.08)));
     }
@@ -170,11 +170,11 @@ public sealed class ListenAnsicht : UserControl
         var aufraeumen = new RundKnopf("checkmark.circle.fill", () =>
         {
             var n = speicher.ErledigteLoeschen(id);
-            Log("listen", $"{n} erledigte Einträge gelöscht", wo: "Ablage/Listen");
+            Log("listen", $"{n} erledigte Einträge gelöscht", wo: "Listen");
         }, hilfe: "Erledigte Einträge löschen", groesse: 30);
         var loeschen = loeschenFrage
             ? (UIElement)H(6, Tx("Liste wirklich löschen?", 12, FontWeights.SemiBold, Farbe.Rot),
-                new KapselKnopf("trash.fill", "Löschen", () => { loeschenFrage = false; speicher.ListeLoeschen(id); gewaehlt = 0; Log("listen", $"Liste gelöscht: {l.Name}", wo: "Ablage/Listen"); }, hervorgehoben: true),
+                new KapselKnopf("trash.fill", "Löschen", () => { loeschenFrage = false; speicher.ListeLoeschen(id); gewaehlt = 0; Log("listen", $"Liste gelöscht: {l.Name}", wo: "Listen"); }, hervorgehoben: true),
                 new KapselKnopf("xmark", "Abbrechen", () => { loeschenFrage = false; BaueKopf(); }))
             : new RundKnopf("trash", () => { loeschenFrage = true; BaueKopf(); }, hilfe: "Liste löschen", groesse: 30);
         var abschnitte = new TextFeld("Abschnitte, mit Komma getrennt (z. B. Obst, Drogerie)", 12, text: string.Join(", ", l.Abschnitte));
@@ -209,7 +209,7 @@ public sealed class ListenAnsicht : UserControl
         if (l.Gruppierung == "abschnitt" && unterVon == 0) abschnitt = abschnittWahl;
         speicher.Hinzufuegen(l.Id, s.Titel, unterVon, s.Prio, s.Tags, abschnitt);
         eingabe.Text = "";
-        Log("listen", $"Eintrag hinzugefügt: {s.Titel}", wo: "Ablage/Listen");
+        Log("listen", $"Eintrag hinzugefügt: {s.Titel}", wo: "Listen");
     }
 
     private string abschnittWahl = "";
@@ -245,7 +245,7 @@ public sealed class ListenAnsicht : UserControl
             Width = 20, Height = 20, CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1.6),
             BorderBrush = e.Erledigt ? Farbe.Haupt : (e.Prioritaet > 0 ? prio : Farbe.Text3), Background = e.Erledigt ? Farbe.Haupt : Farbe.Klar,
             Child = e.Erledigt ? Sym.Bild("checkmark", 10, Farbe.Schwarz) : null, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0),
-        }.Klick(() => { speicher.Abhaken(id, !e.Erledigt); Log("listen", (e.Erledigt ? "Wieder geöffnet: " : "Abgehakt: ") + e.Titel, wo: "Ablage/Listen"); }).Hilfe(e.Erledigt ? "Wieder öffnen" : "Abhaken");
+        }.Klick(() => { speicher.Abhaken(id, !e.Erledigt); Log("listen", (e.Erledigt ? "Wieder geöffnet: " : "Abgehakt: ") + e.Titel, wo: "Listen"); }).Hilfe(e.Erledigt ? "Wieder öffnen" : "Abhaken");
 
         UIElement titel;
         if (bearbeite == id)
@@ -286,7 +286,7 @@ public sealed class ListenAnsicht : UserControl
             new RundKnopf("bookmark.fill", () => speicher.Aendern(id, o => o["angeheftet"] = !e.Angeheftet), hilfe: e.Angeheftet ? "Lösen" : "Oben anheften", aktiv: e.Angeheftet, groesse: 26),
             e.Eltern != 0 ? new RundKnopf("arrow.uturn.backward", () => speicher.Einhaengen(id, 0), hilfe: "Auf die oberste Ebene", groesse: 26) : null,
             VerschiebenKnopf(e),
-            new RundKnopf("trash", () => { speicher.Loeschen(id); Log("listen", "Gelöscht: " + e.Titel, wo: "Ablage/Listen"); }, hilfe: "Löschen (mit Unterpunkten)", groesse: 26));
+            new RundKnopf("trash", () => { speicher.Loeschen(id); Log("listen", "Gelöscht: " + e.Titel, wo: "Listen"); }, hilfe: "Löschen (mit Unterpunkten)", groesse: 26));
         werkzeuge.Opacity = 0;
         var zeile = HOben(12, haken, titel.Fuell(), werkzeuge);
         var rahmen = new Border { Child = zeile, Padding = new Thickness(10 + 24 * z.Tiefe, 8, 8, 8), CornerRadius = new CornerRadius(10) };
@@ -307,7 +307,7 @@ public sealed class ListenAnsicht : UserControl
             {
                 var ziel = l.Id;
                 var punkt = new MenuItem { Header = ListenArten.Zeichen(l.Art) + "  " + l.Name };
-                punkt.Click += (_, _) => { speicher.Verschieben(e.Id, ziel); Log("listen", $"Verschoben nach {l.Name}: {e.Titel}", wo: "Ablage/Listen"); };
+                punkt.Click += (_, _) => { speicher.Verschieben(e.Id, ziel); Log("listen", $"Verschoben nach {l.Name}: {e.Titel}", wo: "Listen"); };
                 menue.Items.Add(punkt);
             }
             menue.PlacementTarget = knopf;
