@@ -83,11 +83,20 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
 - `unauthorized` am Tunnel-Gerät: `adb-wlan.sh` meldet es jetzt sofort und verbindet im Hintergrund neu (stößt die
   Freigabe-Abfrage am Gerät wieder an), statt 45–100 s zu warten.
 
+## 5b. Daemon rund um die Uhr warm (umgesetzt 13.11.2026)
+
+- `org.gradle.daemon.idletimeout=86400000` (24 h) in `~/.gradle/gradle.properties` und in der Vorlage in `installieren.sh`.
+- `vorwaermen.py` (`daemon_pflege`, nach jedem Abgleich-Lauf): fehlt der Daemon, startet ein Jarvis-Bau ihn. Ist er älter
+  als 24 Stunden, wird er unter der Bau-Sperre beendet (samt Kotlin-Daemon) und frisch gestartet. So gibt es keine
+  „verwitterten“ Daemons nach Wochen Laufzeit.
+- Speicher: Gradle-Daemon ≈ 2,25 GB, Kotlin-Daemon 0,8–1,5 GB. Beide liegen im cgroup von `jarvis-tmux.service`
+  (MemoryHigh 4,5 GB, MemoryMax 5,5 GB) zusammen mit den Sitzungen. Neben einem warmen Daemon passt eine Sitzung bequem,
+  zwei werden eng. Den Deckel kann nur root ändern.
+
 ## 6. Weitere Hebel (nicht umgesetzt, Franks Entscheidung)
 
 | Hebel | Gewinn | Preis |
 |-------|--------|-------|
-| Daemon länger warm halten (`idletimeout` höher oder Leerlauf-Bau alle 10 min) | 1–1,75 min je Auftrag nach > 15 min Pause | dauerhaft 2–3,5 GB RAM belegt; Server-Regel verbietet Änderung an `~/.gradle/gradle.properties` ohne Freigabe |
 | Overlay bei Server-Aufträgen überspringen | bis zu Franks Reaktionszeit | Laufende Sprachaufnahme kann abbrechen |
 | Configuration-Cache | warm nur 0,3 s Konfiguration, also kaum Gewinn | EntropieReductor hat ihn bewusst aus; der Versionslog-Bump macht ihn ohnehin vor jedem Bau ungültig (Vermutung) |
 | Mehr vCPU beim Hostinger-Tarif | Kotlin-Vollbau skaliert fast linear | Kosten |
