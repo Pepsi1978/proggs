@@ -235,9 +235,11 @@ tunnel_tls_verbinden() {
     return 1
   fi
   melde "Tunnel $TUNNEL_IP: Port $PORT zu, adb-TLS-Port $(echo $ports) – verbinde"
-  # Direkt nach der Suche scheitert „adb connect“ oft („failed to connect“), Sekunden später klappt es (gemessen 13.11.2026).
-  for runde in 1 2 3; do
-    sleep 5
+  # Direkt nach der Suche scheitert „adb connect“ („failed to connect“): adbd hängt danach bis über eine Minute
+  # (gemessen 13.11.2026 am Tablet: Versuche nach 20, 40 und 60 s gescheitert, nach 90 s sofort verbunden).
+  # Deshalb wachsende Pausen, zusammen gut 2 Minuten.
+  for runde in 5 25 45 60; do
+    sleep "$runde"
     tls_ports_versuchen "$ports"; r=$?
     [ $r -eq 0 ] && { tls_erfolg; return 0; }
     [ $r -eq 2 ] && return 1
