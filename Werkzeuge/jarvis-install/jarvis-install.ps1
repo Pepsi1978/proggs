@@ -82,13 +82,17 @@ function Nimm-Sperre {
         # Ein abgestürzter Lauf hinterlässt die Sperre: Älter als jeder echte Lauf heißt verwaist.
         $alter = 0
         try { $alter = [long](Handy date +%s) - [long](Handy stat -c %Y $sperre) } catch { }
-        if ($alter -gt $sperreFristS) { Handy rmdir $sperre | Out-Null; continue }
+        # Abgebrochener Lauf auf diesem Rechner (Prozess tot): sofort frei statt 15 Minuten warten.
+        $eigner = (Handy cat "$sperre/eigner") -split ' '
+        $tot = $eigner.Count -eq 2 -and $eigner[0] -eq $env:COMPUTERNAME -and -not (Get-Process -Id ([int]($eigner[1] -replace '\D', '0')) -ErrorAction SilentlyContinue)
+        if ($alter -gt $sperreFristS -or $tot) { Handy rm -rf $sperre | Out-Null; continue }
         if ([DateTimeOffset]::Now.ToUnixTimeSeconds() -ge $bis) { Ende fehler "Eine andere Jarvis-Installation blockiert das Handy" }
         if (-not $gemeldet) { "Eine andere Jarvis-Installation läuft, warte ..." | Write-Host; $gemeldet = $true }
         Start-Sleep -Seconds 3
         if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
     }
     $script:sperreMein = $true
+    Handy "echo '$($env:COMPUTERNAME) $PID' > $sperre/eigner" | Out-Null
     Handy rm -f "'/data/local/tmp/jarvis-install*.apk'" | Out-Null
 }
 function Installiere {
@@ -231,6 +235,6 @@ finally {
     if ($sperreMein -and (Verbinde) -and (Handy getprop ro.serialno) -eq $serie) {
         if ($sitzung -and -not $abgeschlossen) { Handy pm install-abandon $sitzung | Out-Null }
         Handy rm -f $zwischenlager $antwort | Out-Null
-        Handy rmdir $sperre | Out-Null
+        Handy rm -rf $sperre | Out-Null
     }
 }

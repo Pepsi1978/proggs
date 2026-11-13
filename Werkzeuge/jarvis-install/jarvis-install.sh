@@ -85,7 +85,7 @@ aufraeumen() {
   if [ -n "${SPERRE_MEIN:-}" ] && verbinde && [ "$(handy getprop ro.serialno)" = "$SERIE" ]; then
     [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
     handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
-    handy rmdir "$SPERRE" >/dev/null
+    handy rm -rf "$SPERRE" >/dev/null
   fi
   [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"
 }
@@ -102,13 +102,17 @@ nimm_sperre() {
     # Gerade freigegeben oder Lesefehler: Dann ist hier nichts verwaist.
     case "$alter$jetzt" in ''|*[!0-9]*) alter=$jetzt ;; esac
     case "$jetzt" in ''|*[!0-9]*) alter=0; jetzt=0 ;; esac
-    [ $(( jetzt - alter )) -gt "$SPERRE_FRIST_S" ] && { handy rmdir "$SPERRE" >/dev/null; continue; }
+    [ $(( jetzt - alter )) -gt "$SPERRE_FRIST_S" ] && { handy rm -rf "$SPERRE" >/dev/null; continue; }
+    # Abgebrochener Lauf auf diesem Rechner (Prozess tot): sofort frei statt 15 Minuten warten.
+    set -- $(handy cat "$SPERRE/eigner")
+    [ "$#" -eq 2 ] && [ "$1" = "$(hostname)" ] && ! kill -0 "$2" 2>/dev/null && { handy rm -rf "$SPERRE" >/dev/null; continue; }
     [ "$(date +%s)" -ge "$bis" ] && ende fehler "Eine andere Jarvis-Installation blockiert das Handy"
     [ -z "${SPERRE_GEMELDET:-}" ] && { echo "Eine andere Jarvis-Installation läuft, warte ..."; SPERRE_GEMELDET=1; }
     sleep 3
     verbinde || ende fehler "Handy nicht erreichbar"
   done
   SPERRE_MEIN=1
+  handy "echo '$(hostname) $$' > $SPERRE/eigner" >/dev/null
   handy rm -f '/data/local/tmp/jarvis-install*.apk' >/dev/null
 }
 bereite_vor() {

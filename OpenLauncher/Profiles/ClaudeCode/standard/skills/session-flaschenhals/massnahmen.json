@@ -459,6 +459,23 @@
       "plattform": [
         "linux"
       ]
+    },
+    {
+      "id": "M27",
+      "titel": "jarvis-install: verwaiste Sperre eines abgebrochenen Laufs desselben Rechners sofort freigeben",
+      "datum": "2026-11-13T11:42",
+      "beleg": "69a473c1: Werkzeugaufruf von außen abgebrochen, Sperre blieb am Handy liegen, nächster Lauf wartete 7,9 min auf 'eine andere Installation' bis zur 900-s-Frist.",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.ps1 (Nimm-Sperre, eigner-Datei)",
+        "Werkzeuge/jarvis-install/jarvis-install.sh (nimm_sperre, eigner-Datei)"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "Eine andere Jarvis-Installation (läuft|blockiert)",
+      "aufruf_regex": "jarvis-install\\.(ps1|sh)",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre.",
+      "ruecknahme": "In beiden Skripten die eigner-Zeilen entfernen (rm -rf darf bleiben).",
+      "kosten": "kein Dauerkontext, ein adb-cat je Warterunde"
     }
   ]
 }
