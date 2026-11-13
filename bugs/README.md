@@ -140,6 +140,12 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **NVIDIA DLSS Override** (NVIDIA App, Profile Inspector, DLL-Tausch, Anti-Cheat) | [`gaming/nvidia-dlss-override.md`](gaming/nvidia-dlss-override.md) | 2026-09-21 | 10 | „DLSS", „DLSS Override", „Profile Inspector", „nvngx_dlss", „Smooth Motion", „DLSS 5", „Ricochet" · Best-Practices: `best-practices/gaming/nvidia-dlss-override.md` |
 | **DLSS 5 Mod inoffiziell** (OptiScaler-DLSSNR, DLSS5-Feeder, DLSS5 Swapper, RenoDX, geleaktes `nvngx_dlssnr.dll`) | [`gaming/dlss5-mod-inoffiziell.md`](gaming/dlss5-mod-inoffiziell.md) | 2026-09-21 | 11 | „DLSS 5 Mod", „dlssnr", „DLSS5-Feeder", „DLSS5 Swapper", „RenoDX", „Neural Rendering", „Deep Fried Chicken" · Best-Practices: `best-practices/gaming/dlss5-mod-inoffiziell.md` |
 
+### ⏱️ `schneller-programmieren/` — Zeitfallen bei Programmieraufträgen
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **Android-Bau auf dem Hostinger-Server** (Vorwärmen, Daemon, Bau-Sperre, adb) | [`schneller-programmieren/android-server-bau.md`](schneller-programmieren/android-server-bau.md) | 2026-11-13 | 9 | `gradlew` auf dem Server, `vorwaermen.py`, `gradle-bau.lock`, `build-ablauf-guard.py` · „Bau dauert lange", „Terminated", „Daemon", „timeout gradlew", „nice", „flock", „pkill -f", „unauthorized", „Vorwärmen" · Best-Practices: `best-practices/schneller-programmieren/android-server-bau.md` |
+
 ### 🔐 `server/` — Server-Betrieb & Infrastruktur (VPS, VPN, Hosting)
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |

@@ -61,6 +61,7 @@ best-practices/
 | `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |
 | `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
 | `design/` | 2 | Design-zu-Code-Treue: Handoff-Formate, Responsivität, Verifikation · KI-Designstudio: Spec→Design-Konsistenz, Effekt-Rendering, parallele Aufträge, Geschwindigkeit | `bugs/design/` |
+| `schneller-programmieren/` | 1 | Programmieraufträge beschleunigen: Android-Bau auf dem Hostinger-Server (Vorwärmen, warmer Daemon, Bau-Sperre, Ablauf in der Sitzung, Messwerte) | `bugs/schneller-programmieren/` |
 
 ---
 
