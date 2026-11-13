@@ -69,7 +69,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         return sensoren
     }
 
-    private suspend fun abrufen(nur: String): Ergebnis = withContext(Dispatchers.IO) {
+    /** Frisch lesen (Werkzeug und Startkarte „Raumklima“); [Ergebnis.struktur] trägt je Sensor Werte oder „problem“. */
+    suspend fun abrufen(nur: String = ""): Ergebnis = withContext(Dispatchers.IO) {
         stoerung()?.let { return@withContext Ergebnis(it, fehler = true) }
         val alle = try {
             sensorListe()

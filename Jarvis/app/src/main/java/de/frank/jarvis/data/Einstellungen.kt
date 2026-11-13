@@ -27,10 +27,10 @@ private val RECHNER = listOf("mac", "windows", "server")
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
  * und lässt sich wie die anderen verschieben.
  */
-val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "victron")
+val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
-val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "victron" to "Solarbatterie")
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
@@ -451,7 +451,12 @@ class Einstellungen private constructor(context: Context) {
     var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }
     /** Von Frank per Ziehen gewählte Reihenfolge der Startbildschirm-Bereiche; neue Bereiche hängen sich hinten an. */
     var startReihenfolge: List<String>
-        get() = ((prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE } + START_BEREICHE).distinct()
+        get() {
+            val gespeichert = (prefs.getString("start_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in START_BEREICHE }
+            // Raumklima (ab 1.8.649) kommt in einer schon gespeicherten Reihenfolge direkt über die Solarbatterie (Franks Wunsch), nicht ans Ende.
+            val mitRaumklima = if ("raumklima" in gespeichert) gespeichert else gespeichert.flatMap { if (it == "victron") listOf("raumklima", it) else listOf(it) }
+            return (mitRaumklima + START_BEREICHE).distinct()
+        }
         set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")) }
     // ---- Programmieren am Rechner ----
     /** Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026). */
