@@ -127,10 +127,10 @@ private fun SaugerKachel(titel: String, @DrawableRes symbol: Int, gesperrt: Bool
     val f = LocalFarben.current
     Column(
         modifier.height(104.dp).glas(f, 14.dp, erhoeht = 0.5f).antippen { if (!gesperrt) aktion() }
-            .padding(horizontal = 4.dp, vertical = 10.dp).alpha(if (gesperrt) 0.45f else 1f),
+            .padding(start = 4.dp, end = 4.dp, top = 13.dp, bottom = 7.dp).alpha(if (gesperrt) 0.45f else 1f),
         horizontalAlignment = Alignment.CenterHorizontally,
-        // Feste Höhe: Alle Kacheln sind gleich groß, auch wenn eine Beschriftung zweizeilig ist.
-        verticalArrangement = Arrangement.Center,
+        // Feste Höhe und Symbol immer oben auf derselben Höhe, auch wenn eine Beschriftung einzeilig, die andere zweizeilig ist.
+        verticalArrangement = Arrangement.Top,
     ) {
         Image(painterResource(symbol), null, Modifier.size(40.dp))
         Text(
