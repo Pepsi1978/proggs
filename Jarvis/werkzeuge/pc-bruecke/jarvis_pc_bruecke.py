@@ -3,7 +3,7 @@ mit Remote Control. Frank sieht sie im Terminal und in der Claude-App unter Code
 
 Ablauf: Dauerschleife GET https://<Server>/pc/auftrag (Long-Polling, bis 25 s). Solange das Skript fragt, gilt der Mac
 beim Relay als da. Die Mac-Brücke meldet sich mit X-Jarvis-Rang: ersatz (nur der Name): Seit Franks Wahl vom 25.10.2026 hat
-der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.1 bleibt beim PC. Ist keiner da, nimmt Jarvis
+der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.1 geht zuerst an den PC. Ist keiner da, nimmt Jarvis
 die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang aus ~/SK/Jarvis/relay.properties.
 
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows. Nennt Frank in Jarvis ein
@@ -13,6 +13,9 @@ Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Cla
 abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
 Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten
 liegen vor. Ob sie gelten, zeigt erst eine Sitzung (der Hook meldet „Login expired“ sofort). Abgemeldet startet keine Sitzung.
+Sol 6.1 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Windows-PC fehlt; gestartet über den Katalog-Weg
+(gpt-6.1-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
+Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay.
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
@@ -24,6 +27,7 @@ import os
 import plistlib
 import re
 import shlex
+import shutil
 import socket
 import subprocess
 import sys
@@ -39,6 +43,7 @@ from jarvis_review import antigravity_review_zeile
 PROFIL = "minimal"
 MODUS = "schnell"
 MODELL = "claude-opus-5-5[1m]"
+MODELL_SOL = "gpt-6.1-sol"  # wie $ModellSol in jarvis-pc-bruecke.ps1
 EFFORT = "high"
 HOME = Path.home()
 PROGGS = HOME / "proggs"
@@ -96,6 +101,14 @@ def rechnername() -> str:
         return socket.gethostname() or "Mac"
 
 
+def sol_als_katalog(auftrag: dict) -> dict:
+    """Sol 6.1 wie am Windows-PC (gpt-6.1-sol, Effort High, Profil Minimal, Schnellmodus, Codex CLI oder auf Franks Wahl
+    OpenCode), am Mac über den Katalog-Weg des OpenLaunchers. Der Name bleibt „Sol 6.1“."""
+    cli = "opencode" if str(auftrag.get("cli") or "") == "opencode" else "codex"
+    return {**auftrag, "modell": "katalog", "cli": cli, "slug": MODELL_SOL, "anbieter": "openai", "effort": EFFORT,
+            "profil": PROFIL, "modus": MODUS, "name": "Sol 6.1"}
+
+
 def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> tuple[int, bytes]:
     anfrage = urllib.request.Request(adresse, method="POST" if rumpf is not None else "GET",
                                      data=json.dumps(rumpf, ensure_ascii=False).encode("utf-8") if rumpf is not None else None,
@@ -103,6 +116,8 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
                                               "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
                                               # Diese Brücke kennt Aufträge mit frei gewähltem Modell (modell=katalog).
                                               "X-Jarvis-Katalog": "1",
+                                              # Und Sol 6.1 (über Codex CLI oder OpenCode): Der Relay gibt ihn her, wenn der Windows-PC fehlt.
+                                              **({"X-Jarvis-Sol": "1"} if KANN_SOL else {}),
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
         with urllib.request.urlopen(anfrage, timeout=sekunden) as antwort:
@@ -220,6 +235,11 @@ def openlauncher_kann_jarvis(ab: tuple = OPENLAUNCHER_AB) -> bool:
         return False
 
 
+# Sol über Codex/OpenCode braucht den Katalog-Weg des OpenLaunchers (ab 1.24.45). Beim Start der Brücke geprüft; ein Update des
+# OpenLaunchers ändert nichts daran, nur ein Neustart der Brücke (git pull startet sie ohnehin neu).
+KANN_SOL = openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB)
+
+
 def katalog_cli(auftrag: dict) -> str:
     """Das CLI eines Katalog-Auftrags; bei Opus/Sol leer."""
     return str(auftrag.get("cli") or "claude") if auftrag.get("modell") == "katalog" else ""
@@ -328,6 +348,16 @@ def starte_sitzung(auftrag: dict) -> str:
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     except Exception:
         pass
+    # Auftrags-App sofort vorbauen (wärmt den Gradle-Daemon, während die Sitzung noch liest), wie am PC und am Server.
+    # Erst nach den Prüfungen (Anhänge), Sitzungsbauten warten per Hook darauf. vorwaermen.py wartet selbst 25 s auf den
+    # Repo-Abgleich des OpenLaunchers.
+    try:
+        vorwaermen = PROGGS / "Werkzeuge" / "vorwaermen" / "vorwaermen.py"
+        if vorwaermen.is_file() and (PROGGS / app / "app" / "build.gradle.kts").is_file():
+            subprocess.Popen([sys.executable, str(vorwaermen), "lauf", "--app", app], cwd=str(PROGGS), env=frische_umgebung(),
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except Exception as fehler:
+        schreib(f"Vorwärmen: {fehler}")
     text = auftragstext(auftrag)
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
@@ -431,6 +461,27 @@ def jarvis_mac_faden() -> None:
             pause = min(pause * 2, 30)
 
 
+def victron_faden() -> None:
+    """Victron-Anlage (Batterie, Laderegler) per Bluetooth wie die PC-Brücke unter Windows: jede Minute ein kurzer Scan (bis 12 s),
+    der Stand geht an den Relay (jarvis_victron.py, POST /pc/victron). Nur mit ~/SK/Victron/victron.json; eigener Prozess, damit
+    ein hängender Bluetooth-Stack die Brücke nie aufhält. Fehler stehen in ~/Library/Logs/JarvisPcBruecke/victron.log."""
+    skript = Path(__file__).resolve().with_name("jarvis_victron.py")
+    fehlte = False
+    while True:
+        beginn = time.time()
+        if (HOME / "SK" / "Victron" / "victron.json").is_file():
+            fehlte = False
+            try:
+                subprocess.run([sys.executable, str(skript)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=50)
+            except Exception as fehler:
+                schreib(f"Victron: {fehler}")
+        elif not fehlte:
+            fehlte = True
+            schreib("Victron: ~/SK/Victron/victron.json fehlt, die Solarbatterie wird vom Mac nicht gemeldet")
+        time.sleep(max(5, 60 - (time.time() - beginn)))
+
+
 class AnmeldungFehlt(Exception):
     pass
 
@@ -446,6 +497,7 @@ def main() -> int:
     schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
     raeume_auf()
     threading.Thread(target=jarvis_mac_faden, daemon=True).start()
+    threading.Thread(target=victron_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")
@@ -475,9 +527,11 @@ def main() -> int:
             auftrag = json.loads(roh.decode("utf-8"))
             schreib(f"Auftrag für {auftrag.get('app')}")
             try:
-                # Sol 6.1 (Codex CLI) startet der OpenLauncherMac noch nicht über --jarvis-auftrag: klar ablehnen, nie still als Opus.
+                # Sol 6.1: über den Katalog-Weg (Codex CLI oder OpenCode); ohne passendes CLI klar ablehnen, nie still als Opus.
                 if auftrag.get("modell") == "sol":
-                    raise RuntimeError(f"Sol 6.1 geht bisher nur am Windows-PC, nicht auf {RECHNER}. Mit Opus 5.5 starten oder den Windows-PC einschalten.")
+                    auftrag = sol_als_katalog(auftrag)
+                    if not shutil.which(auftrag["cli"], path=frische_umgebung()["PATH"]):
+                        raise RuntimeError(f"Das {auftrag['cli']} CLI für Sol 6.1 ist auf {RECHNER} nicht installiert.")
                 # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
                 # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist. Codex, OpenCode, Kimi und
                 # Antigravity haben eigene Anmeldungen: Dort zählt die von Claude Code nicht.

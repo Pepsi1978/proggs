@@ -17,6 +17,8 @@
 | B7 | adb `unauthorized`, Skript wartet 45–100 s | Sofort melden, Neuverbindung nur im Hintergrund | §B7 |
 | B8 | `BUILD FAILED` im selben Projekt, während eine Sitzung baut | Eine gemeinsame Bau-Sperre für alle Bauten | §B8 |
 | B9 | Kind eines oneshot-Dienstes verschwindet | Über `tmux run-shell -b` oder `setsid` lösen | §B9 |
+| B10 | Mac: Vorbau weicht sich selbst aus, oder fremde Bauten bleiben unerkannt | `gradlew` macht `exec java`: Client-pid = bash-pid, Eltern = Aufrufer; jede java prüfen | §B10 |
+| B11 | Mac: `ps: etimes: keyword not found`, Daemon-Pflege still tot | `ps -o etime=` und umrechnen | §B11 |
 
 ## B1. Zeitlimit bricht den Bau ab und reißt den Daemon mit
 
@@ -80,3 +82,20 @@
   Dienst beendet worden und hätte den 5-Minuten-Abgleich blockiert.
 - **Fix:** `vorwaermen.py start` übergibt den Lauf per `tmux -L jarvis run-shell -b` an den tmux-Server und kehrt sofort
   zurück. Ersatzweise `setsid nohup`.
+
+
+## B10. Mac: `gradlew` ersetzt die Shell durch java
+
+- **Erlebt (13.11.2026, Portierung von `Werkzeuge/vorwaermen` auf den Mac):** Die Windows-Logik „Gradle-Client = java mit Shell als
+  Eltern“ greift am Mac nicht. `bash gradlew …` endet mit `exec "$JAVACMD"`: Der Client übernimmt die pid der bash und hängt direkt
+  unter dem Aufrufer (zsh der CLI, pwsh von apk-update, node, python, nach Ende der Subshell sogar launchd/pid 1).
+- **Folge ohne Fix:** Der eigene Vorbau (pid = gestartete bash) galt als fremder Bau und brach sich nach 2 s selbst ab; Sitzungsbauten
+  aus `cd X && ./gradlew …` blieben unerkannt.
+- **Fix:** Am Mac jede java-JVM als Kandidat (ps ist billig), bestätigt über `gradle-wrapper.jar` in der Befehlszeile; eigen ist, wer
+  die eigene pid **oder** sie als Eltern hat (`fremd()` in `vorwaermen.py`).
+
+## B11. Mac: `ps` kennt `etimes` nicht
+
+- **Erlebt:** `ps -o pid=,etimes=,args=` bricht unter macOS mit „etimes: keyword not found“ ab. `java_daemons()` lieferte dann None,
+  und die Daemon-Pflege hielt still nie einen Daemon warm.
+- **Fix:** `ps -o etime=` (Form `[[TT-]hh:]mm:ss`) und `sekunden_aus_etime()`; Linux versteht beides.

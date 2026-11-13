@@ -786,12 +786,16 @@ class PcBruecke:
         # Zwei Bruecken: Die Windows-Bruecke fragt ohne Rang ab („haupt“), die Mac-Bruecke mit X-Jarvis-Rang: ersatz. Welche
         # zuerst drankommt, schickt das Handy mit jedem Auftrag („vorrang“: mac oder windows, Einstellung in Jarvis; Standard
         # seit 25.10.2026 der Mac). Der andere Rechner bekommt Opus-Auftraege nur, solange der Vorrangrechner nicht abfragt.
-        # Sol 6.1 bleibt immer beim Windows-PC (nur dort laeuft das Codex CLI). Die Rang-Namen bleiben fuer Bruecken und App.
+        # Sol 6.1 geht zuerst an den Windows-PC; seit 13.11.2026 springt der Mac ein, wenn seine Bruecke X-Jarvis-Sol: 1 meldet.
+        # Die Rang-Namen bleiben fuer Bruecken und App.
         # Dritter Platz seit 31.10.2026: der Hostinger-Server (X-Jarvis-Rang: server, OpenLauncherServer/bruecke). Ein Auftrag kommt
         # nur zu ihm, wenn das Handy es mit „server“ erlaubt (zuletzt, mitte, zuerst, nur); aeltere Handys bekommen ihn also nie.
         self.plaetze = {rang: {"zuletzt": 0.0, "rechner": "", "abfragen": {}, "belegt": False} for rang in PLAETZE}
         # Wann sich auf einem Platz zuletzt eine Bruecke gemeldet hat, die modell=katalog kennt (X-Jarvis-Katalog: 1).
         self.katalog_zuletzt: dict[str, float] = {}
+        # Wann sich auf einem Platz zuletzt eine Bruecke gemeldet hat, die Sol 6.1 selbst starten kann (X-Jarvis-Sol: 1, die
+        # Mac-Bruecke ab 13.11.2026 ueber Codex CLI oder OpenCode). Dann springt sie fuer Sol ein, wenn der Windows-PC fehlt.
+        self.sol_zuletzt: dict[str, float] = {}
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         self.abgeholt = {}           # Auftrag-id -> Auftrag, bis die Quittung da ist (zum Weitergeben, siehe quittung)
         # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
@@ -1085,7 +1089,8 @@ class PcBruecke:
         # Opus und frei gewaehlte Modelle gehoeren dem Vorrangrechner, der andere springt ein.
         reihe = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
         if modell == "sol":
-            rechner = ["haupt"]
+            # Der Windows-PC zuerst (wie bisher), der Mac springt ein, wenn seine Bruecke Sol kann (X-Jarvis-Sol: 1).
+            rechner = ["haupt"] + [r for r in ("ersatz",) if time.monotonic() - self.sol_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
         elif modell == "katalog":
             rechner = [r for r in reihe if time.monotonic() - self.katalog_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
         else:
@@ -1115,14 +1120,15 @@ class PcBruecke:
             return False
         return not any(self._nimmt(r) for r in reihe[:reihe.index(rang)])
 
-    def _auftrag_fuer(self, rang: str, kann_katalog: bool) -> dict | None:
+    def _auftrag_fuer(self, rang: str, kann_katalog: bool, kann_sol: bool = False) -> dict | None:
         """Der aelteste Auftrag, den diese Bruecke holen darf; verwaiste (das Handy wartet nicht mehr) fallen dabei weg."""
         for auftrag in list(self.auftraege):
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
                 self.auftraege.remove(auftrag)
-            elif self._darf(rang, auftrag) and (kann_katalog or auftrag.get("modell") != "katalog"):
+            elif self._darf(rang, auftrag) and (kann_katalog or auftrag.get("modell") != "katalog") \
+                    and (rang != "ersatz" or kann_sol or auftrag.get("modell") != "sol"):
                 return auftrag
         return None
 
@@ -1149,13 +1155,16 @@ class PcBruecke:
         kann_katalog = request.headers.get("X-Jarvis-Katalog") == "1"
         if kann_katalog:
             self.katalog_zuletzt[rang] = time.monotonic()
+        kann_sol = request.headers.get("X-Jarvis-Sol") == "1"
+        if kann_sol:
+            self.sol_zuletzt[rang] = time.monotonic()
         # Voll ausgelastet: fragt weiter ab (bleibt sichtbar), bekommt aber nichts; der Auftrag geht an den naechsten.
         self.plaetze[rang]["belegt"] = request.headers.get("X-Jarvis-Belegt") == "1"
         self._melde_dich(rang, rechner, request)
         abfragen = self.plaetze[rang]["abfragen"]
         abfragen[id(request)] = request
         try:
-            return await self._warte_auf_auftrag(request, rang, rechner, kann_katalog)
+            return await self._warte_auf_auftrag(request, rang, rechner, kann_katalog, kann_sol)
         finally:
             abfragen.pop(id(request), None)
 
@@ -1165,14 +1174,15 @@ class PcBruecke:
             return web.Response(status=404, text="Not found")
         return web.json_response({"raenge": list(PLAETZE)})
 
-    async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str, kann_katalog: bool) -> web.Response:
+    async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str, kann_katalog: bool,
+                                 kann_sol: bool = False) -> web.Response:
         frist = asyncio.get_running_loop().time() + PC_WARTEN_S
         while True:
             rest = frist - asyncio.get_running_loop().time()
             if rest <= 0:
                 self._melde_dich(rang, rechner)
                 return web.Response(status=204)
-            auftrag = self._auftrag_fuer(rang, kann_katalog)
+            auftrag = self._auftrag_fuer(rang, kann_katalog, kann_sol)
             if auftrag is None:
                 # In kurzen Stuecken warten: So merkt der zweite Rechner binnen Sekunden, wenn der erste wegfaellt.
                 self.neuer_auftrag.clear()

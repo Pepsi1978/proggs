@@ -876,7 +876,10 @@ if (-not $OhneBuild) {
     Write-Host "Baue $Projekt mit :app:$gradleTask ..."
     # Vorwärmen (Werkzeuge/vorwaermen): pausieren und einen laufenden Vorbau abwarten, nie zwei Bauten gleichzeitig.
     $vorwaermen = Join-Path $HOME 'proggs/Werkzeuge/vorwaermen/vorwaermen.py'
-    if (-not $aufUnix -and (Test-Path -LiteralPath $vorwaermen)) { try { & python $vorwaermen warte } catch { } }
+    # Windows und Mac (Werkzeuge/vorwaermen); der Linux-Server hat sein eigenes Vorwärmen mit Bau-Sperre im Hook.
+    if ((-not $aufUnix -or $IsMacOS) -and (Test-Path -LiteralPath $vorwaermen)) {
+        try { if ($IsMacOS) { & python3 $vorwaermen warte } else { & python $vorwaermen warte } } catch { }
+    }
     Push-Location $projektDir
     try {
         # Unter Linux über sh: gradlew ist in Git oft nicht als ausführbar markiert, und chmod

@@ -1,6 +1,6 @@
 # Jarvis Windows HP (JarvisWindows) – Projektregeln
 
-Native .NET-10-WPF-App ohne XAML, Port von `JarvisMac` nach `PORT-VERTRAG.md`: gleiche Datei- und Typnamen, gleiche Texte, Windows-Gegenstücke. Eine neue Funktion in JarvisMac gehört auch hierher (Feature-Gleichstand) und umgekehrt.
+Native .NET-10-WPF-App ohne XAML, Port von `JarvisMac` nach `PORT-VERTRAG.md`: gleiche Datei- und Typnamen, gleiche Texte, Windows-Gegenstücke. Eine neue Funktion in JarvisMac gehört auch hierher (Feature-Gleichstand) und umgekehrt. Dauerhafte Regel: Jede neue Funktion von JarvisWindows, der PC-Brücke oder des Vorwärmens bekommt sofort, im selben Auftrag, auch ihr Mac-Gegenstück (JarvisMac, `Jarvis/werkzeuge/pc-bruecke/jarvis_pc_bruecke.py`, `Werkzeuge/vorwaermen/einrichten.sh`).
 
 ## Version (Regel 6)
 `<Version>` in `JarvisWindows.csproj`, Form `1.0.0`, pro Commit genau einmal die letzte Stelle erhöhen. Den Zeitstempel setzt der Bau selbst. Die App zeigt beides unten links und unter Einstellungen → Über.

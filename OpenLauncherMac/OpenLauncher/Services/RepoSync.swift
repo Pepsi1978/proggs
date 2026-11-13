@@ -48,7 +48,19 @@ enum RepoSync {
         let after = Shell.run(git, ["-C", repo, "rev-parse", "HEAD"], environment: env, timeout: 5)
         let message = before.stdout == after.stdout ? "Repo war aktuell" : "Repo aktualisiert"
         log.info("RepoSync", "pull", message)
+        if before.stdout != after.stdout { starteVorwaermen() }
         return Result(ok: true, message: message)
+    }
+
+    /// Neuer Stand vom Repo: den LaunchAgent de.frank.vorwaermen (Werkzeuge/vorwaermen/einrichten.sh) sofort anstoßen, statt bis
+    /// zu 5 Minuten auf seinen Takt zu warten (wie RepoSync.cs ab 1.24.121). Er baut die geänderten Apps vor; der Sitzungsbau
+    /// wartet per Hook darauf. Über launchd, damit kein Langläufer am Launcher hängt; ohne -k, ein laufender Lauf bleibt.
+    private static func starteVorwaermen() {
+        let plist = (Paths.home as NSString).appendingPathComponent("Library/LaunchAgents/de.frank.vorwaermen.plist")
+        guard FileManager.default.fileExists(atPath: plist) else { return }
+        let ziel = "gui/\(getuid())/de.frank.vorwaermen"
+        let r = Shell.run("/bin/launchctl", ["kickstart", ziel], environment: ProcessInfo.processInfo.environment, timeout: 5)
+        if r.exitCode != 0 { Logger.shared.warn("RepoSync", "starteVorwaermen", r.stderr) }
     }
 
     /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete

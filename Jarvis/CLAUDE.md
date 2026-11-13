@@ -34,3 +34,6 @@ Gesprächsvariante mehr; das frühere Echtzeit-Live-Gespräch (OpenAI/Gemini, Pa
 
 ## Sprachkette messen, ohne zu sprechen
 `adb shell am broadcast -a de.frank.jarvis.SPRACH_MESSLAUF -p de.frank.jarvis --es frage "…"` startet die Kette wie nach dem Weckwort mit Text statt Mitschrift (nur Shell und System dürfen das). Der Lauf beginnt ein neues Gespräch und spricht laut, also vorher fragen; ist Jarvis vorn oder läuft schon ein Sprachgespräch, lehnt er ab. Ergebnis im Logbuch: „Kette Mikrofon“, „Kette Weckwort“, „Blase“.
+
+## Mac gleichwertig zum Windows-PC
+Jede neue Funktion der PC-Brücke (`werkzeuge/pc-bruecke/jarvis-pc-bruecke.ps1`), des Vorwärmens (`Werkzeuge/vorwaermen`) oder von JarvisWindows bekommt im selben Auftrag ihr Mac-Gegenstück (`jarvis_pc_bruecke.py`, LaunchAgent per `einrichten.sh`, JarvisMac), damit der Mac den Windows-PC jederzeit voll ersetzt. Gemeinsame Python-Skripte bleiben plattformneutral (`jarvis_victron.py`, `vorwaermen.py`). Prüfung des Mac-Dauerbetriebs: `zsh Werkzeuge/mac-dauerbetrieb/einrichten.sh pruefen`.

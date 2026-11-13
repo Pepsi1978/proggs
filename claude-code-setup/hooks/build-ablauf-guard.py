@@ -321,11 +321,13 @@ def main():
         nur_bau = bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
             r'(&\s*)?((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$', t, re.I)
             for t in teile) and any('gradlew' in t.lower() for t in teile)
-        if os.name == 'nt' and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
+        # Mac: derselbe Weg mit python3 (Werkzeugs/vorwaermen/einrichten.sh); flock gibt es am Mac nicht.
+        mac = sys.platform == 'darwin'
+        if (os.name == 'nt' or mac) and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
             neu = dict(d.get('tool_input') or {})
-            neu['command'] = 'python "' + skript.replace('\\', '/') + '" warte; ' + cmd
+            neu['command'] = ('python3 "' if mac else 'python "') + skript.replace('\\', '/') + '" warte; ' + cmd
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                                     "permissionDecisionReason": "PC: wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
+                                                     "permissionDecisionReason": ("Mac" if mac else "PC") + ": wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
     except Exception:
         pass
 

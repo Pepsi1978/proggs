@@ -111,7 +111,7 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
   scheitern.
 
 
-## 8. Windows-PC (umgesetzt 13.11.2026, Mac folgt mit demselben Skript)
+## 8. Windows-PC (umgesetzt 13.11.2026; Mac siehe §9, dasselbe Skript)
 
 Dasselbe Grundproblem gilt am PC: Nach vielen Commits auf Server, Mac oder in der Cloud passt der `build`-Ordner nicht mehr.
 Umgesetzt in `Werkzeuge/vorwaermen/vorwaermen.py` (Python, plattformneutral; Einrichtung `einrichten.ps1`).
@@ -143,3 +143,21 @@ je App), mit halber Kernzahl, nie während einer Sitzung oder eines Spiels.
   neben einer CLI ohne Hook alle 5 min von vorn.
 
 Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaermen/vorwaermen.py stand`.
+
+
+## 9. Mac (umgesetzt 13.11.2026, dasselbe `Werkzeuge/vorwaermen/vorwaermen.py`)
+
+| PC | Mac |
+|---|---|
+| Aufgabe `Vorwaermen` | LaunchAgent `de.frank.vorwaermen` (`Werkzeuge/vorwaermen/einrichten.sh`): `RunAtLoad` (Daemon ab Anmeldung), `StartCalendarInterval` zu jeder vollen Fünferminute (launchd holt einen verpassten Lauf nach dem Aufwachen einmal nach), `AbandonProcessGroup` (sonst beendet launchd den per `help` gestarteten Daemon am Lauf-Ende), `ProcessType Interactive` |
+| Aufwachen: Power-Troubleshooter | entfällt weitgehend: `pmset disablesleep 1` (`Werkzeuge/mac-dauerbetrieb/einrichten.sh`), sonst StartCalendarInterval nach dem Aufwachen |
+| Bau-Hook `python … warte;` | derselbe Zweig mit `python3` (`sys.platform == 'darwin'`), `apk-update.ps1` ruft `warte` unter `$IsMacOS` |
+| PC-Brücke `lauf --app` | `jarvis_pc_bruecke.py` startet `vorwaermen.py lauf --app <App>` mit `start_new_session` |
+| OpenLauncher 1.24.121 stößt nach neuem Repo-Stand an | OpenLauncherMac 1.24.59: `launchctl kickstart gui/<uid>/de.frank.vorwaermen` (ohne `-k`) |
+| Fremde Clients: java unter cmd/bash | **jede** java-JVM, bestätigt über `gradle-wrapper.jar` in `ps -o args`: `gradlew` endet mit `exec java`, der Client ersetzt die Shell und hängt direkt unter zsh, pwsh, node oder python |
+| eigener Vorbau = Kind von cmd | eigener Vorbau = **dieselbe pid** wie die gestartete bash (`exec`), deshalb `fremd()` prüft pid und Eltern-pid |
+| Daemon-Alter per CIM | `ps -o etime=` und Umrechnung: macOS kennt `etimes` nicht |
+| Java | immer `/opt/homebrew/opt/openjdk@17/…` (wie die Sitzungen), nie der Cellar-Pfad aus `/usr/libexec/java_home`: Gradle vergleicht den Java-Pfad, sonst passt der warme Daemon nicht |
+| kein Vorbau bei Akku | gleich (`pmset -g batt`), im Log höchstens stündlich „Aussetzen: Akkubetrieb“ |
+
+Spiele-Pause gibt es am Mac nicht. Log und Stand wie am PC: `~/.openlauncher/vorwaermen/log.txt`, `python3 Werkzeuge/vorwaermen/vorwaermen.py stand`.

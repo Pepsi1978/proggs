@@ -1,4 +1,4 @@
-"""Vorwärmen der Android-Apps am Windows-PC (später auch am Mac), Gegenstück zu OpenLauncherServer/kern/vorwaermen.py.
+"""Vorwärmen der Android-Apps am Windows-PC und am Mac (Einrichtung einrichten.ps1 bzw. einrichten.sh), Gegenstück zu OpenLauncherServer/kern/vorwaermen.py.
 
 Problem: Git bringt nur Quelltext. Hat Frank auf dem Server, dem Mac oder in der Cloud viele Commits gemacht, passt der
 build-Ordner am PC nicht mehr, und der erste Bau einer Sitzung übersetzt fast alles neu, dazu kalter Gradle-Daemon.
@@ -50,6 +50,17 @@ STEAM_KEIN_SPIEL = {0, 431960}
 SPIEL_EXE = re.compile(r"^(cod|cod\d\d\S*|modernwarfare\S*|blackops\S*|warzone\S*)\.exe$", re.I)
 AUSGEWICHEN = -2
 ENV = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
+if sys.platform == "darwin":
+    # Gleiche Java und SDK wie die Sitzungen, sonst passte der warme Daemon nicht (Gradle vergleicht den Java-Pfad). Der
+    # Cellar-Pfad aus /usr/libexec/java_home bricht nach jedem brew upgrade; launchd bringt nur einen kurzen PATH mit.
+    _JAVA = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+    if (not ENV.get("JAVA_HOME") or "/Cellar/" in ENV["JAVA_HOME"]) and os.path.isdir(_JAVA):
+        ENV["JAVA_HOME"] = _JAVA
+    _SDK = ENV.get("ANDROID_HOME") or "/opt/homebrew/share/android-commandlinetools"
+    ENV.setdefault("ANDROID_HOME", _SDK)
+    ENV.setdefault("ANDROID_SDK_ROOT", _SDK)
+    ENV["PATH"] = ":".join(dict.fromkeys([f"{ENV.get('JAVA_HOME', _JAVA)}/bin", f"{_SDK}/platform-tools", "/opt/homebrew/bin",
+                                          *ENV.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin").split(":")]))
 
 if WINDOWS:
     import ctypes, msvcrt
@@ -105,9 +116,12 @@ def gradle_clients(liste=None) -> list:
     die Befehlszeile (gradle-wrapper.jar), aber nur für neue Kandidaten: apksigner.bat & Co. bremsen sonst den Vorbau aus."""
     liste = liste if liste is not None else prozesse()
     name = {pid: exe for pid, _, exe in liste}
-    java = ("java.exe",) if WINDOWS else ("java",)
-    kandidaten = [(pid, ppid) for pid, ppid, exe in liste
-                  if exe in java and name.get(ppid, "") in (SHELLS if WINDOWS else {"bash", "sh", "zsh"})]
+    if WINDOWS:
+        kandidaten = [(pid, ppid) for pid, ppid, exe in liste if exe == "java.exe" and name.get(ppid, "") in SHELLS]
+    else:
+        # Mac/Linux: gradlew endet mit `exec java`, der Client ersetzt also die Shell und hängt direkt unter dem Aufrufer
+        # (zsh der CLI, pwsh von apk-update, node, python). Darum jede java-JVM als Kandidat; ps ist hier billig.
+        kandidaten = [(pid, ppid) for pid, ppid, exe in liste if exe == "java"]
     neu = [pid for pid, _ in kandidaten if pid not in _BEKANNT]
     if neu:
         zeilen = befehlszeilen(neu)
@@ -138,8 +152,15 @@ def befehlszeilen(pids: list):
     return aus
 
 
+def fremd(client: tuple, eigene_shell: int) -> bool:
+    """Nicht der eigene Vorbau: Unter Windows hängt der Client unter cmd (eigene_shell), am Mac ist er wegen `exec java`
+    dieselbe pid wie die gestartete bash."""
+    pid, ppid = client
+    return not eigene_shell or (ppid != eigene_shell and pid != eigene_shell)
+
+
 def fremder_bau_laeuft(eigene_shell: int = 0) -> bool:
-    return any(ppid != eigene_shell for _, ppid in gradle_clients())
+    return any(fremd(c, eigene_shell) for c in gradle_clients())
 
 
 def spiel_laeuft(liste=None) -> bool:
@@ -213,7 +234,7 @@ def run(befehl, timeout=None, cwd=None, ausweichen=None) -> Ergebnis:
 def beende_client(shell: int) -> None:
     """Beendet die Gradle-Client-JVM unter der Shell, nie den Daemon (ein Baum-Kill, taskkill /T, träfe ihn mit)."""
     for pid, ppid in gradle_clients():
-        if ppid == shell:
+        if ppid == shell or pid == shell:
             try:
                 os.kill(pid, 15)
             except OSError:
@@ -309,7 +330,11 @@ def pausiert() -> bool:
 def adb() -> str:
     sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
     if not sdk:
-        sdk = str(Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk") if WINDOWS else str(Path.home() / "Library" / "Android" / "sdk")
+        if WINDOWS:
+            sdk = str(Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk")
+        else:
+            sdk = next((k for k in ("/opt/homebrew/share/android-commandlinetools", str(Path.home() / "Library" / "Android" / "sdk"))
+                        if (Path(k) / "platform-tools" / "adb").is_file()), "")
     kandidat = Path(sdk) / "platform-tools" / ("adb.exe" if WINDOWS else "adb")
     return str(kandidat) if kandidat.is_file() else "adb"
 
@@ -451,7 +476,7 @@ class Ausweichen:
         except OSError:
             pass
         liste = prozesse()
-        return any(ppid != eigene_shell for _, ppid in gradle_clients(liste)) or spiel_laeuft(liste)
+        return any(fremd(c, eigene_shell) for c in gradle_clients(liste)) or spiel_laeuft(liste)
 
 
 def baue(app: str):
@@ -511,17 +536,33 @@ def java_daemons():
                  "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { "
                  "'{0}|{1}|{2}' -f $_.ProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
     else:
-        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,etimes=,args="], timeout=20)
+        # macOS kennt etimes nicht, nur etime ([[TT-]hh:]mm:ss); Linux kann beides.
+        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,etime=,args="], timeout=20)
     if e.returncode != 0:
         return None
     ziel = set(jvmargs("Jarvis").split())
     liste = []
     for z in e.stdout.splitlines():
         t = z.split("|", 2) if WINDOWS else z.split(None, 2)
-        if len(t) == 3 and t[0].strip().isdigit() and t[1].strip().isdigit() and "GradleDaemon" in t[2]:
+        alter = t[1].strip() if len(t) == 3 else ""
+        if not WINDOWS:
+            alter = str(sekunden_aus_etime(alter))
+        if len(t) == 3 and t[0].strip().isdigit() and alter.isdigit() and "GradleDaemon" in t[2]:
             schalter = {s for s in t[2].split() if s.startswith(("-X", "-Dfile."))}
-            liste.append((int(t[0]), int(t[1]), schalter == ziel))
+            liste.append((int(t[0]), int(alter), schalter == ziel))
     return liste
+
+
+def sekunden_aus_etime(text: str) -> int:
+    """ps etime „[[TT-]hh:]mm:ss“ in Sekunden; -1, wenn unlesbar."""
+    try:
+        tage, _, rest = text.rpartition("-")
+        teile = [int(x) for x in rest.split(":")]
+        while len(teile) < 3:
+            teile.insert(0, 0)
+        return (int(tage) if tage else 0) * 86400 + teile[0] * 3600 + teile[1] * 60 + teile[2]
+    except ValueError:
+        return -1
 
 
 def daemon_app() -> str:
@@ -587,7 +628,10 @@ def daemon_pflege() -> None:
 def lauf() -> int:
     einzeln = LAUF_SPERRE if not ARGS.app else ORDNER / f"lauf-{ARGS.app}.lock"
     with Sperre(einzeln, warten=0) as frei:
-        if not frei or akkubetrieb() or spiel_laeuft():
+        if not frei or spiel_laeuft():
+            return 0
+        if akkubetrieb():
+            log_gedrosselt("Aussetzen: Akkubetrieb, kein Vorspulen und kein Vorbau, bis das Netzteil steckt")
             return 0
         if ARGS.app:
             # Auftragsstart: Der OpenLauncher gleicht gleich danach das Repo ab (bis 20 s). Erst danach bauen, sonst übersetzte

@@ -4,6 +4,11 @@ Die Geräte senden ihre Messwerte verschlüsselt (AES-CTR) in ihren BLE-Werbepak
 ~/SK/Victron/victron.json (aus VictronConnect → Produktinfo → Instant Readout). Jarvis auf Handy und Tablet liest dieselben
 Pakete selbst; unterwegs fragt es den Relay (GET /geraet/victron), den dieses Skript füllt (POST /pc/victron).
 
+Windows: die PC-Brücke (jarvis-pc-bruecke.ps1) startet es jede Minute. Mac: die Mac-Brücke (jarvis_pc_bruecke.py) ebenso;
+macOS (CoreBluetooth) nennt keine MAC-Adressen, nur eine zufällige UUID je Rechner. Dort erkennt das Skript die Geräte am
+Prüfbyte (erstes Schlüsselbyte im Paket) und entschlüsselt mit jedem passenden Schlüssel aus victron.json, bis einer gültige Werte
+liefert. Die Bluetooth-Freigabe gilt dem Python der Brücke (Systemeinstellungen → Datenschutz & Sicherheit → Bluetooth).
+
 Aufruf:  python jarvis_victron.py          einmal scannen (bis 12 s) und melden (so startet es die PC-Brücke jede Minute)
          python jarvis_victron.py zeigen   nur scannen und ausgeben, nichts melden
 """
@@ -26,7 +31,9 @@ LADEZUSTAND = {0: "aus", 1: "Schwachlast", 2: "Fehler", 3: "Bulk", 4: "Absorptio
                9: "Wechselrichter", 11: "Netzteil", 245: "Start", 247: "Ausgleich", 252: "extern gesteuert"}
 
 
-PROTOKOLL = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "JarvisPcBruecke" / "victron.log"
+MAC = sys.platform == "darwin"
+PROTOKOLL = (Path.home() / "Library" / "Logs" / "JarvisPcBruecke" / "victron.log" if MAC
+             else Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "JarvisPcBruecke" / "victron.log")
 
 
 def protokoll(text: str) -> None:
@@ -49,7 +56,9 @@ def lade_geraete() -> dict:
             schluessel = bytes.fromhex(g["schluessel"])
             if len(schluessel) != 16:
                 raise ValueError("Schlüssel nicht 16 Byte")
-            geraete[g["mac"].replace(":", "").lower()] = {**g, "schluessel_roh": schluessel}
+            # Schlüssel: MAC (Windows, Linux), sonst der Name (macOS sieht keine MAC-Adressen).
+            kennung = str(g.get("mac") or "").replace(":", "").lower() or str(g.get("name") or len(geraete))
+            geraete[kennung] = {**g, "schluessel_roh": schluessel}
         except Exception as fehler:
             protokoll(f"Eintrag {g.get('name', '?')} unbrauchbar: {fehler}")
     return geraete
@@ -102,20 +111,25 @@ async def scannen(geraete: dict, sekunden: float = 12.0) -> dict:
 
     def paket(geraet, werbung):
         roh = werbung.manufacturer_data.get(VICTRON)
+        if roh is None:
+            return
+        roh = bytes(roh)
         mac = geraet.address.replace(":", "").lower()
-        g = geraete.get(mac)
-        if roh is None or g is None:
-            return
-        try:
-            klar = entschluesseln(bytes(roh), g["schluessel_roh"])
-            werte = auswerten(roh[4], klar) if klar else None
-        except Exception as fehler:
-            protokoll(f"Paket von {g['name']} unlesbar: {fehler}")
-            return
-        if werte:
-            werte["name"] = g["name"]
-            werte["zeit"] = int(time.time())
-            gefunden[mac] = werte
+        # Windows: über die MAC. macOS: zufällige UUID statt MAC, also jeden Schlüssel mit passendem Prüfbyte versuchen.
+        kandidaten = [(mac, geraete[mac])] if mac in geraete else \
+            [(k, g) for k, g in geraete.items() if len(roh) > 7 and g["schluessel_roh"][0] == roh[7]]
+        for kennung, g in kandidaten:
+            try:
+                klar = entschluesseln(roh, g["schluessel_roh"])
+                werte = auswerten(roh[4], klar) if klar else None
+            except Exception as fehler:
+                protokoll(f"Paket von {g['name']} unlesbar: {fehler}")
+                continue
+            if werte:
+                werte["name"] = g["name"]
+                werte["zeit"] = int(time.time())
+                gefunden[kennung] = werte
+                break
             if len(gefunden) == len(geraete):
                 fertig.set()
 
@@ -145,8 +159,10 @@ def melden(stand: dict) -> None:
         kopf.write_bytes(f"X-Jarvis-Token: {token}\nContent-Type: application/json; charset=utf-8\n".encode())
         rumpf = Path(ordner) / "rumpf.json"
         rumpf.write_text(json.dumps(stand, ensure_ascii=False), "utf-8")
-        subprocess.run(["curl.exe", "-4", "-s", "-S", "--fail", "--max-time", "15", "-o", "NUL", "-H", f"@{kopf}", "-X", "POST",
-                        "--data-binary", f"@{rumpf}", f"https://{host}/pc/victron"], check=True, creationflags=0x08000000)
+        windows = os.name == "nt"
+        subprocess.run(["curl.exe" if windows else "curl", "-4", "-s", "-S", "--fail", "--max-time", "15", "-o",
+                        "NUL" if windows else "/dev/null", "-H", f"@{kopf}", "-X", "POST", "--data-binary", f"@{rumpf}",
+                        f"https://{host}/pc/victron"], check=True, creationflags=0x08000000 if windows else 0)
 
 
 def main() -> None:
@@ -156,7 +172,7 @@ def main() -> None:
     except Exception as fehler:
         protokoll(f"Bluetooth-Scan gescheitert: {fehler!r}")
         raise
-    stand = {"geraete": list(gefunden.values()), "quelle": "PC", "zeit": int(time.time())}
+    stand = {"geraete": list(gefunden.values()), "quelle": "Mac" if MAC else "PC", "zeit": int(time.time())}
     if len(sys.argv) > 1 and sys.argv[1] == "zeigen":
         print(json.dumps(stand, ensure_ascii=False, indent=2))
         return
