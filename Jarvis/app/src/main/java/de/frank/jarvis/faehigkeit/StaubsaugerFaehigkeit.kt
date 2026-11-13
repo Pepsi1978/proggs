@@ -26,11 +26,11 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             titel = "Saugroboter",
             beschreibung = "Jarvis: Saugroboter Proscenic M7 Pro über die Proscenic-App. „Starte eine Reinigung“ / „Staubsauger los“ → reinigen. " +
                 "„Tiefenreinigung“ → tiefenreinigung. „Staubsauger stopp“ / „Halt den Staubsauger an“ → stoppen (ein bloßes „Stopp“ ohne Staubsauger gilt nicht dem Sauger). „Zurück zur Station“ / „Laden“ → station. " +
-                "„Wo ist der Staubsauger?“ / „Gerät positionieren“ → positionieren. „Staub absaugen“ / „Ein-Klick-Staubsammlung“ → staubsammlung. " +
+                "„Wo ist der Staubsauger?“ / „Gerät positionieren“ → positionieren. „Staub absaugen“ / „Ein-Klick-Staubsammlung“ → staubsammlung. „Wischen“ / „Y-förmiges Wischen“ → wischen." +
                 "„Wie voll ist der Akku vom Staubsauger?“ / „Was macht der Staubsauger?“ → status.",
             schema = schema(
                 "aktion" to text(
-                    "reinigen, tiefenreinigung, stoppen, station, positionieren, staubsammlung oder status.",
+                    "reinigen, tiefenreinigung, stoppen, station, positionieren, staubsammlung, wischen oder status.",
                     ProscenicSteuerung.Aktion.entries.map { it.wort },
                 ),
                 pflicht = listOf("aktion"),

@@ -66,6 +66,8 @@ data class SaugerAusgang(val text: String, val fehler: Boolean = false)
 object SaugerStand {
     var akku by mutableStateOf<Int?>(null)
     var status by mutableStateOf<String?>(null)
+    /** Saugstufe laut Proscenic-App, etwa „Leistungsstarker Modus“. */
+    var modus by mutableStateOf<String?>(null)
     /** Sekunden seit 1970, wann Akku oder Zustand zuletzt wirklich abgelesen wurden. */
     var gelesenUm by mutableStateOf<Long?>(null)
     var laeuft by mutableStateOf(false)
@@ -79,18 +81,20 @@ object SaugerStand {
         val p = context.getSharedPreferences("staubsauger", Context.MODE_PRIVATE)
         akku = p.getInt("akku", -1).takeIf { it >= 0 }
         status = p.getString("status", null)
+        modus = p.getString("modus", null)
         gelesenUm = p.getLong("gelesen_s", 0L).takeIf { it > 0 }
     }
 
     /** Merkt nur, was wirklich abgelesen wurde; ohne Wert bleibt auch die Zeit beim alten Stand. */
     @Synchronized
-    fun merken(context: Context, akku: Int?, status: String?) {
+    fun merken(context: Context, akku: Int?, status: String?, modus: String? = null) {
         if (akku == null && status.isNullOrBlank()) return
         if (akku != null) this.akku = akku
         if (!status.isNullOrBlank()) this.status = status
+        if (!modus.isNullOrBlank()) this.modus = modus
         gelesenUm = System.currentTimeMillis() / 1000
         context.getSharedPreferences("staubsauger", Context.MODE_PRIVATE).edit()
-            .putInt("akku", this.akku ?: -1).putString("status", this.status).putLong("gelesen_s", gelesenUm ?: 0L).apply()
+            .putInt("akku", this.akku ?: -1).putString("status", this.status).putString("modus", this.modus).putLong("gelesen_s", gelesenUm ?: 0L).apply()
     }
 }
 
@@ -105,7 +109,7 @@ object ProscenicSteuerung {
 
     enum class Aktion(val wort: String) {
         REINIGEN("reinigen"), TIEFENREINIGUNG("tiefenreinigung"), STOPPEN("stoppen"), STATION("station"),
-        POSITIONIEREN("positionieren"), STAUBSAMMLUNG("staubsammlung"), STATUS("status");
+        POSITIONIEREN("positionieren"), STAUBSAMMLUNG("staubsammlung"), WISCHEN("wischen"), STATUS("status");
 
         companion object { fun aus(wort: String): Aktion? = entries.firstOrNull { it.wort == wort.trim().lowercase() } }
     }
@@ -119,6 +123,8 @@ object ProscenicSteuerung {
     private const val MEHR_TIEFENREINIGUNG = "ll_depthTotalClean"
     private const val MEHR_POSITIONIEREN = "ll_pop_window_more_location_reboot"
     private const val MEHR_STAUBSAMMLUNG = "ll_startDustCenter"
+    private const val MEHR_WISCHEN = "ll_y_word_2"
+    private const val MODUS = "tv_clean_mode"
     /** Bestätigungsknöpfe einer Rückfrage; bewusst ohne „Start“, das auch als Beschriftung anderer Knöpfe vorkommt. */
     private val BESTAETIGEN = listOf("Bestätigen", "OK", "Ja", "Fortfahren")
 
@@ -208,14 +214,16 @@ object ProscenicSteuerung {
                 Aktion.STAUBSAMMLUNG ->
                     if (knopf == Knopf.REINIGT) "Der M7 Pro reinigt gerade; die Staubsammlung geht erst in der Station."
                     else mehr(dienst, MEHR_STAUBSAMMLUNG, "Staubsammlung ausgelöst.")
+                Aktion.WISCHEN -> mehr(dienst, MEHR_WISCHEN, "Y-förmiges Wischen ausgelöst.")
             }
             if (aktion != Aktion.STATUS) delay(3500)
             // Ein noch offenes Mehr-Menü schließen, damit Zustand und Akku lesbar sind.
             if (finde(dienst, MEHR_TIEFENREINIGUNG) != null) { dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); delay(800) }
             val zustand = text(dienst, ZUSTAND)
             val akku = text(dienst, AKKU)?.let { Regex("\\d{1,3}").find(it)?.value?.toIntOrNull() }?.takeIf { it in 0..100 }
-            SaugerStand.merken(context, akku, zustand)
-            val stand = listOfNotNull(zustand?.let { "Zustand: $it." }, akku?.let { "Akku $it Prozent." }).joinToString(" ")
+            val modus = text(dienst, MODUS)
+            SaugerStand.merken(context, akku, zustand, modus)
+            val stand = listOfNotNull(zustand?.let { "Zustand: $it." }, akku?.let { "Akku $it Prozent." }, modus?.let { "Saugstufe: $it." }).joinToString(" ")
             return SaugerAusgang(listOf(antwort, stand).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "Kein Stand lesbar." })
         } finally {
             zurueck(dienst, context, vorher)

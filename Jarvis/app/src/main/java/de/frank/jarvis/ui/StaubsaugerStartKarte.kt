@@ -1,5 +1,7 @@
 package de.frank.jarvis.ui
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +16,19 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.jarvis.R
 import de.frank.jarvis.staubsauger.ProscenicSteuerung
 import de.frank.jarvis.staubsauger.ProscenicSteuerung.Aktion
 import de.frank.jarvis.staubsauger.SaugerStand
@@ -33,14 +40,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.runtime.LaunchedEffect
 
 private val saugerBereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 /**
- * Startbereich „Staubsauger“ (Proscenic M7 Pro): Reinigen, Tiefenreinigung, Gerät positionieren und Ein-Klick-Staubsammlung.
- * Jeder Knopf öffnet kurz die Proscenic-App und tippt dort (Bedienungshilfe „Jarvis Staubsauger“); Akku und Zustand stammen
- * vom letzten Ablesen, Aktualisieren liest frisch.
+ * Startbereich „Staubsauger“ (Proscenic M7 Pro) im Stil der Proscenic-App, mit deren Symbolen: oben Akku, Zustand und
+ * Saugstufe, darunter Reinigen, Tiefenreinigung, Y-förmiges Wischen, Gerät positionieren, Staubsammlung und Ladestation.
+ * Jeder Knopf öffnet kurz die Proscenic-App und tippt dort (Bedienungshilfe „Jarvis Staubsauger“); Akku, Zustand und
+ * Saugstufe stammen vom letzten Ablesen, Aktualisieren liest frisch. Die Saugstufe lässt die Proscenic-App nur während
+ * einer Reinigung umstellen, sie steht hier deshalb nur als Anzeige.
  */
 @Composable
 fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
@@ -78,35 +86,54 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 Icon(Icons.Rounded.Refresh, if (s.laeuft) "Staubsauger wird gelesen" else "Akku und Zustand aktualisieren", tint = if (s.laeuft) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-            Text("Akku", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text(s.akku?.let { "$it %" } ?: "–", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
-        s.status?.let { z ->
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.Top) {
-                Text("Zustand", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Text(z, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, modifier = Modifier.weight(2f))
+        // Kopfzeile wie in der Proscenic-App: Akkustand, Zustand, Saugstufe.
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.sauger_laden), null, Modifier.size(26.dp))
+                Column(Modifier.padding(start = 8.dp)) {
+                    Text(s.akku?.let { "$it %" } ?: "–", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Akkustand", color = f.textLeise, fontSize = 12.sp)
+                }
+            }
+            Row(Modifier.weight(1.4f), verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painterResource(R.drawable.sauger_saugstufe), null, Modifier.size(26.dp),
+                    colorFilter = ColorFilter.tint(f.textLeise),
+                )
+                Column(Modifier.padding(start = 8.dp)) {
+                    Text(s.modus ?: "–", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp)
+                    Text("Saugstufe", color = f.textLeise, fontSize = 12.sp)
+                }
             }
         }
+        s.status?.let { z -> Text(z, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         s.meldung?.takeIf { !s.laeuft }?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SaugerKnopf("Reinigen", s.laeuft, Modifier.weight(1f)) { los(Aktion.REINIGEN) }
-            SaugerKnopf("Tiefenreinigung", s.laeuft, Modifier.weight(1f)) { los(Aktion.TIEFENREINIGUNG) }
+            SaugerKachel("Reinigen", R.drawable.sauger_reinigen, s.laeuft, Modifier.weight(1f)) { los(Aktion.REINIGEN) }
+            SaugerKachel("Tiefenreinigung", R.drawable.sauger_tiefenreinigung, s.laeuft, Modifier.weight(1f)) { los(Aktion.TIEFENREINIGUNG) }
+            SaugerKachel("Y-förmiges Wischen", R.drawable.sauger_wischen, s.laeuft, Modifier.weight(1f)) { los(Aktion.WISCHEN) }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SaugerKnopf("Gerät positionieren", s.laeuft, Modifier.weight(1f)) { los(Aktion.POSITIONIEREN) }
-            SaugerKnopf("Staubsammlung", s.laeuft, Modifier.weight(1f)) { los(Aktion.STAUBSAMMLUNG) }
+            SaugerKachel("Gerät positionieren", R.drawable.sauger_positionieren, s.laeuft, Modifier.weight(1f)) { los(Aktion.POSITIONIEREN) }
+            SaugerKachel("Staubsammlung", R.drawable.sauger_staubsammlung, s.laeuft, Modifier.weight(1f)) { los(Aktion.STAUBSAMMLUNG) }
+            SaugerKachel("Zur Station", R.drawable.sauger_laden, s.laeuft, Modifier.weight(1f)) { los(Aktion.STATION) }
         }
     }
 }
 
+/** Knopf wie im Mehr-Menü der Proscenic-App: Symbol oben, Beschriftung darunter. */
 @Composable
-private fun SaugerKnopf(titel: String, gesperrt: Boolean, modifier: Modifier, aktion: () -> Unit) {
+private fun SaugerKachel(titel: String, @DrawableRes symbol: Int, gesperrt: Boolean, modifier: Modifier, aktion: () -> Unit) {
     val f = LocalFarben.current
-    Box(
-        modifier.heightIn(min = 44.dp).glas(f, 14.dp, erhoeht = 0.5f).antippen { if (!gesperrt) aktion() }.padding(horizontal = 8.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier.heightIn(min = 92.dp).glas(f, 14.dp, erhoeht = 0.5f).antippen { if (!gesperrt) aktion() }
+            .padding(horizontal = 4.dp, vertical = 10.dp).alpha(if (gesperrt) 0.45f else 1f),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(titel, color = if (gesperrt) f.textLeise else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Image(painterResource(symbol), null, Modifier.size(40.dp))
+        Text(
+            titel, color = f.text, fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
