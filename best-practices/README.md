@@ -52,7 +52,7 @@ best-practices/
 | `android/` | 13 | Kotlin/Compose/Android-Stack + Libraries | `bugs/android/` |
 | `android-build/` | 3 | Gradle/AGP, R8, Play-Store-Release | `bugs/android-build/` |
 | `desktop/` | 14 | .NET/WPF, Swift/AppKit, Overlays, STT, 3D nativ, Windows-Tastenkombinationen | `bugs/desktop/` |
-| `web/` | 5 | Chrome-Erweiterungen, TypeScript, 3D Web, Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen | `bugs/web/` |
+| `web/` | 6 | Chrome-Erweiterungen, TypeScript, 3D Web, Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen, Terminal-Farbschemata | `bugs/web/` |
 | `apis/` | 17 | LLM-/HTTP-APIs + OAuth (16 gepaart + `multi-provider` ungepaart; neu: `stt-provider`) | `bugs/apis/` |
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `gaming/` | 2 | NVIDIA DLSS Override (App/Profile Inspector, Anti-Cheat), DLSS-5-Mod inoffiziell (OptiScaler-DLSSNR) | `bugs/gaming/` |
