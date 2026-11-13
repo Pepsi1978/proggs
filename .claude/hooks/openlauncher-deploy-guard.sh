@@ -34,7 +34,7 @@ except Exception:
 printf '%s' "$command_str" | grep -qiE 'update-launcher|guard-aus' && exit 0
 
 # 2. Nur Befehle, die den Launcher ueberhaupt betreffen.
-printf '%s' "$command_str" | grep -qi 'OpenLauncher' || exit 0
+printf '%s' "$command_str" | grep -q 'OpenLauncher' || exit 0  # Gross-/Kleinschreibung: ~/.openlauncher ist nicht der Launcher
 
 # 3. Die drei Handgriffe, die update-launcher.ps1 ersetzt. Lesende Cmdlets stehen bewusst NICHT
 #    hier: Get-Process/Get-Item auf die EXE bleiben erlaubt (Versionspruefung nach dem Deploy).

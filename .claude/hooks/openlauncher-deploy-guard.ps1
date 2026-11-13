@@ -32,7 +32,8 @@ if ([string]::IsNullOrWhiteSpace($command)) { exit 0 }
 if ($command -match 'update-launcher' -or $command -match 'guard-aus') { exit 0 }
 
 # 2. Nur Befehle, die den Launcher überhaupt betreffen.
-if ($command -notmatch 'OpenLauncher') { exit 0 }
+#    Groß-/Kleinschreibung beachten: der Zustandsordner ~/.openlauncher (Vorwärmen, Repo-Status) ist nicht der Launcher.
+if ($command -cnotmatch 'OpenLauncher') { exit 0 }
 
 # 3. Die drei Handgriffe, die update-launcher.ps1 ersetzt. Lesende Cmdlets stehen bewusst NICHT
 #    hier: Get-Process/Get-Item auf die EXE bleiben erlaubt (Versionsprüfung nach dem Deploy).
