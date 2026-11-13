@@ -340,14 +340,14 @@ Aus den macOS-Commits 1.0.21, die Windows noch fehlten, übernommen:
 
 Nicht übernommen, weil nur macOS: Windscribe per `brew fetch` + eigener Installer (1.0.18/1.0.19), Casks vor dem Beenden vorab laden (1.0.22/1.0.24), Fensteranpassung ans MacBook (1.0.17).
 
-## H) Windows-Gleichstand 1.3.85 (macOS 1.0.49, 13.11.2026)
+## H) Windows-Gleichstand 1.3.85 (macOS 1.0.49–1.0.50, 13.11.2026)
 
 Geprüft: alle Windows-Commits 1.3.50–1.3.85 ohne Mac-Gegenstück.
 
 | Windows | macOS |
 |---|---|
 | 1.3.80 Kollidiert der Autostash mit `models.json`, gewinnt der lokale Stand (`checkout --theirs`, aus dem Index) | ✅ `RepoAbgleich.laufzeitdateienEntkonflikten` |
-| 1.3.51 Eigene Download-Frist des Werkzeugs abgelaufen („exceeded the total deadline“, „Download timed out“): Meldung „Download zu langsam: …“, keine automatische Claude-Übergabe | ✅ nach dem Ersatzdownload, nur solange die Programmdatei noch da ist |
+| 1.3.51 Eigene Download-Frist des Werkzeugs abgelaufen („exceeded the total deadline“, „Download timed out“): Meldung „Download zu langsam: …“, keine automatische Claude-Übergabe | ✅ zuerst der IPv4-Ersatzdownload (1.0.50: auch bei dieser Meldung), danach die Meldung, nur solange die Programmdatei noch da ist |
 | 1.3.50 Protokollauszug der Übergabe behält Fortschritts-Bruchstücke, Kopf und Fuß des Laufs; ohne eigene Zeilen das Dateiende mit eigenem Titel | ✅ `ClaudeUebergabe.zeilenDesProgramms` |
 | 1.3.50 Zu junger verwaister Prozess wird gemeldet statt still übergangen, „nicht vollständig beenden“ | ✅ |
 | 1.3.84/1.3.85 Kein Upgrade auf „nicht installiert“, auch in der Kette | ✅ sinngemäß für Homebrew-Formeln (`brew upgrade`); Casks ohne brew-Installation laufen weiter legitim als `install --force` |

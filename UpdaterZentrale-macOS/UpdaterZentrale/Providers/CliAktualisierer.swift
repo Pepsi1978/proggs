@@ -132,7 +132,7 @@ struct CliAktualisierer: Aktualisierer {
         // (IPv4 zuerst). Nicht, solange ein anderer Lauf des Werkzeugs seine Update-Sperre haelt.
         if eintrag.ersatzDownload, !npmGlobal, !Self.istUpdateSperre(lauf),
            AbbruchMarke.aktuell?.istAbgebrochen != true,
-           lauf.abgelaufen || Self.istDownloadAbbruch(lauf),
+           lauf.abgelaufen || Self.istDownloadAbbruch(lauf) || Self.istDownloadFrist(lauf),
            Self.gleicheDatei(exe, programmDatei),
            let ersatz = await Self.ersatzDownload(eintrag, programmDatei, protokoll) {
             return PruefErgebnis(zustand: ersatz.zustand, meldung: ersatz.meldung,
