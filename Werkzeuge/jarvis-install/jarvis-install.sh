@@ -11,6 +11,9 @@
 # Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
 set -u
+# Mac: zusätzlich den adb-Schlüssel des Servers anbieten. Das Tablet zeigt über den Tunnel keine Freigabefrage für neue Rechner,
+# kennt aber den Server-Schlüssel (13.11.2026). Wirkt beim Start des adb-Servers; fehlt die Datei, ändert sich nichts.
+[ -f "$HOME/SK/Android/adbkey-server" ] && export ADB_VENDOR_KEYS="${ADB_VENDOR_KEYS:-$HOME/SK/Android/adbkey-server}"
 PAKET=de.frank.jarvis
 FENSTER=$PAKET/.ui.InstallFrageDienst
 ANTWORT=/sdcard/Android/data/$PAKET/files/install-antwort.txt

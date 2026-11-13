@@ -15,6 +15,9 @@
 #   logcat-lesen.sh --paket de.frank.jarvis --minuten 10   # nur der laufende Prozess der App
 # Letzte Zeile: LOGCAT_STATUS=ok|leer|zeitlimit|fehler (<Grund>)
 set -u
+# Mac: zusätzlich den adb-Schlüssel des Servers anbieten. Das Tablet zeigt über den Tunnel keine Freigabefrage für neue Rechner,
+# kennt aber den Server-Schlüssel (13.11.2026). Wirkt beim Start des adb-Servers; fehlt die Datei, ändert sich nichts.
+[ -f "$HOME/SK/Android/adbkey-server" ] && export ADB_VENDOR_KEYS="${ADB_VENDOR_KEYS:-$HOME/SK/Android/adbkey-server}"
 PAKET=""; TAGS=""; MUSTER=""; MINUTEN=60; ZEILEN=300; PUFFER="main,system,crash"; SERIAL=""; LIMIT=60
 while [ $# -gt 0 ]; do
   case "$1" in

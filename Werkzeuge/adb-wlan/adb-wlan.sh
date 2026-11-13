@@ -12,6 +12,9 @@
 #   (Fold 8 = handy, Tab S9 = tablet); so verdrängt ein angestecktes Tablet nie das Handy und umgekehrt.
 # Einrichtung/Hintergrund: best-practices/android/adb-wlan-debugging.md
 set -u
+# Mac: zusätzlich den adb-Schlüssel des Servers anbieten. Das Tablet zeigt über den Tunnel keine Freigabefrage für neue Rechner,
+# kennt aber den Server-Schlüssel (13.11.2026). Wirkt beim Start des adb-Servers; fehlt die Datei, ändert sich nichts.
+[ -f "$HOME/SK/Android/adbkey-server" ] && export ADB_VENDOR_KEYS="${ADB_VENDOR_KEYS:-$HOME/SK/Android/adbkey-server}"
 LEISE=0; GERAET=handy
 while [ $# -gt 0 ]; do
   case "$1" in

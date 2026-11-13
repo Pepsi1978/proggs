@@ -7,6 +7,9 @@
 # Aufruf: auf-beide.sh <apk> [<apk> …]     Ein nicht erreichbares Gerät wird gemeldet, das andere trotzdem bedient.
 # Letzte Zeile AUF_BEIDE_STATUS: fertig (alle Installationen gelungen), teilweise oder fehler.
 set -u
+# Mac: zusätzlich den adb-Schlüssel des Servers anbieten. Das Tablet zeigt über den Tunnel keine Freigabefrage für neue Rechner,
+# kennt aber den Server-Schlüssel (13.11.2026). Wirkt beim Start des adb-Servers; fehlt die Datei, ändert sich nichts.
+[ -f "$HOME/SK/Android/adbkey-server" ] && export ADB_VENDOR_KEYS="${ADB_VENDOR_KEYS:-$HOME/SK/Android/adbkey-server}"
 export MSYS_NO_PATHCONV=1
 HIER="$(cd "$(dirname "$0")" && pwd)"
 for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "${LOCALAPPDATA:-}/Android/Sdk/platform-tools/adb.exe" "$(command -v adb 2>/dev/null)"; do
