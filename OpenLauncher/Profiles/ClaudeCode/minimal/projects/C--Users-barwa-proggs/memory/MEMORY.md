@@ -41,6 +41,7 @@
 - [Fernwartung](windows-fernwartung-zugeklappt.md): kein Bild = Anzeige aus; Notweg Parsec VDD
 - [Biomarker alt](biomarker-abgleich-stand-je-quelle.md): Diagnose-Protokoll per adb; Whoop neu anmelden
 - [Azure](azure-speech-schluessel.md): „baue Azure ein“ → SK\Azure\azure-speech.json
+- [Heim-WLAN](heim-wlan-in-sk.md): Geräte einrichten → SSID + Passwort aus SK\Zuhause\wlan.json, nie fragen
 - [Dieser Rechner](dieser-rechner-installationswege.md): npm-CLIs, LM Studio, Stream Deck per winget
 - [Explorer blinkt](explorer-blinkschutz.md): Wächter-Log; leerer UserChoice-Schlüssel einer Store-App
 - Grafik: [DLSS-5-Mod](dlss5-mod-installiert.md), [MW2-Override](mw2-dlss-override-eingerichtet.md) (nach Treiber-Clean-Install neu)
