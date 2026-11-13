@@ -16,6 +16,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import java.util.concurrent.TimeUnit
 
 /**
  * Schaltet "Debugging über WLAN" wieder ein, damit der PC ohne Kabel verbinden kann
@@ -35,9 +36,18 @@ class WlanDebugReceiver : BroadcastReceiver() {
         planen(context)
     }
 
-    /** Läuft, sobald ein WLAN (nicht getaktetes Netz) verbunden ist. */
+    /**
+     * Läuft, sobald irgendein Netz verbunden ist. Jedes WLAN zählt, auch ein getaktetes (Handy-Hotspot unterwegs):
+     * Mit NetworkType.UNMETERED lief die Aufgabe dort nie, und der Server konnte Port 5555 nach einem Neustart nicht zurückholen.
+     * Nur Mobilfunk: alle 2 Minuten erneut nachsehen, bis ein WLAN da ist (WorkManager kennt keine Bedingung „WLAN“).
+     */
     class Aufgabe(context: Context, params: WorkerParameters) : Worker(context, params) {
         override fun doWork(): Result {
+            val cm = applicationContext.getSystemService(ConnectivityManager::class.java)
+            if (cm != null && wlanNetz(cm) == null) {
+                spaeterNachsehen(applicationContext)
+                return Result.success()
+            }
             if (einschalten(applicationContext)) return Result.success()
             // Android hat den Wert wieder zurückgesetzt (WLAN noch ohne IP): später erneut, begrenzt
             return if (runAttemptCount < MAX_VERSUCHE) Result.retry() else Result.success()
@@ -47,6 +57,7 @@ class WlanDebugReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "WlanDebug"
         private const val ARBEIT = "wlan-debug-einschalten"
+        private const val WARTEN = "wlan-debug-warten-auf-wlan"
         private const val PREFS = "wlan_debug"
         private const val LETZTES_NETZ = "letztes_netz"
         private const val MAX_VERSUCHE = 5
@@ -55,12 +66,26 @@ class WlanDebugReceiver : BroadcastReceiver() {
         fun planen(context: Context) {
             try {
                 val arbeit = OneTimeWorkRequestBuilder<Aufgabe>()
-                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build())
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                     .build()
                 WorkManager.getInstance(context.applicationContext)
                     .enqueueUniqueWork(ARBEIT, ExistingWorkPolicy.KEEP, arbeit)
             } catch (e: Exception) {
                 Log.e(TAG, "Planen fehlgeschlagen", e)
+            }
+        }
+
+        /** Nur Mobilfunk: in 2 Minuten erneut prüfen (eigener Name, REPLACE: nie mehr als eine wartende Aufgabe). */
+        private fun spaeterNachsehen(context: Context) {
+            try {
+                val arbeit = OneTimeWorkRequestBuilder<Aufgabe>()
+                    .setInitialDelay(2, TimeUnit.MINUTES)
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .build()
+                WorkManager.getInstance(context.applicationContext)
+                    .enqueueUniqueWork(WARTEN, ExistingWorkPolicy.REPLACE, arbeit)
+            } catch (e: Exception) {
+                Log.e(TAG, "Nachsehen planen fehlgeschlagen", e)
             }
         }
 
@@ -114,7 +139,7 @@ class WlanDebugReceiver : BroadcastReceiver() {
                 cm.getLinkProperties(n)?.linkAddresses?.any { it.address is java.net.Inet4Address } == true
 
         @Suppress("DEPRECATION")
-        private fun wlanNetz(cm: ConnectivityManager): Network? =
+        internal fun wlanNetz(cm: ConnectivityManager): Network? =
             cm.allNetworks.firstOrNull { istWlan(cm, it) }
     }
 }

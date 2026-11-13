@@ -38,6 +38,7 @@
     {"versionCode": 34, "versionName": "1.0.33", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
     {"versionCode": 35, "versionName": "1.0.34", "stand": "11.11.2026, 18:11 Uhr", "notiz": "Update-Signal und Ansagen über Jarvis funktionieren auch dann, wenn eine andere App deinstalliert wurde."},
     {"versionCode": 36, "versionName": "1.0.35", "stand": "13.11.2026, 16:23 Uhr", "notiz": "Liest den Update-Ordner direkt über Google Drive statt über die Drive-App, weckt eine von Samsung abgeschaltete Drive-App selbst wieder auf und warnt nicht mehr ohne fehlendes Update."},
-    {"versionCode": 37, "versionName": "1.0.36", "stand": "13.11.2026, 16:36 Uhr", "notiz": "Review-Befunde behoben: Drive wird nur noch bei geöffneter UpdateStation geweckt, und Warnungen zu unstimmigen Ordnern greifen wieder bei neueren APKs."}
+    {"versionCode": 37, "versionName": "1.0.36", "stand": "13.11.2026, 16:36 Uhr", "notiz": "Review-Befunde behoben: Drive wird nur noch bei geöffneter UpdateStation geweckt, und Warnungen zu unstimmigen Ordnern greifen wieder bei neueren APKs."},
+    {"versionCode": 38, "versionName": "1.0.37", "stand": "13.11.2026, 19:14 Uhr", "notiz": "Debugging über WLAN wird nach einem Neustart in jedem WLAN eingeschaltet, auch im Handy-Hotspot unterwegs, damit der Server die Verbindung zum Gerät selbst wiederherstellen kann."}
 ]
 }
