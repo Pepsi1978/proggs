@@ -5,30 +5,37 @@ build-Ordner am PC nicht mehr, und der erste Bau einer Sitzung übersetzt fast a
 Dieses Skript holt deshalb im Hintergrund den neuen Stand (nur Vorspulen wie der OpenLauncher, nie ein echter Merge)
 und baut danach jede App nach, die am Handy oder Tablet installiert ist und deren Ordner sich geändert hat.
 
-Regeln (siehe best-practices/schneller-programmieren/android-server-bau.md):
+Regeln (siehe best-practices/schneller-programmieren/android-server-bau.md, Abschnitt 8):
 - Nie einen laufenden Bau abbrechen, nie Daemons beenden, keine niedrigere Priorität (vererbt sich an den geteilten Daemon).
-- Läuft gerade irgendein Gradle-Bau (eine Sitzung baut), setzt das Vorwärmen aus; Apps mit offenen Änderungen und frisch
-  committete Apps (eine Sitzung baut vermutlich gleich) werden übersprungen.
-- Im Akkubetrieb kein Vorwärmen.
+- Sitzungsbauten rufen vorher `vorwaermen.py warte` auf (Bau-Hook für Claude Code, Skill apk-update): Das wartet auf einen
+  laufenden Vorbau und legt die Datei pause an, damit 20 Minuten kein neuer Vorbau beginnt.
+- Läuft trotzdem ein fremder Gradle-Bau, setzt das Vorwärmen aus; Apps mit offenen Änderungen und frisch committete Apps
+  (die Sitzung baut gleich selbst) werden übersprungen. Im Akkubetrieb kein Vorwärmen.
+- Ausgaben nie über Pipes: Ein dabei gestarteter Gradle-Daemon oder adb-Server erbte die Pipe, und der Lauf hinge.
+- Dauerhaft warm bleibt nur der Daemon mit den Jarvis-Einstellungen; andere Apps bauen ihren Ordner mit --no-daemon vor
+  (am PC hat fast jede App eigene jvmargs, sonst blieben mehrere 2-4-GB-Daemons einen Tag lang liegen).
 
-Aufrufe: vorwaermen.py lauf  [--app ORDNER] [--immer]   (Aufgabenplanung alle 10 Minuten, Anmeldung)
-         vorwaermen.py start [--app ORDNER] [--immer]   (löst sich vom Aufrufer, z. B. PC-Brücke beim Auftragsstart)
+Aufrufe: vorwaermen.py lauf  [--app ORDNER] [--immer]   (Aufgabenplanung alle 10 Minuten und bei der Anmeldung;
+                                                         PC-Brücke beim Auftragsstart per Start-Process)
+         vorwaermen.py start [--app ORDNER] [--immer]   (löst sich vom Aufrufer, für Aufrufe aus Agenten-Shells)
+         vorwaermen.py warte                             (vor einem Sitzungsbau)
          vorwaermen.py stand                             (zeigt, was vorgewärmt ist)
 """
-import argparse, json, os, re, subprocess, sys, time
+import argparse, json, os, re, subprocess, sys, tempfile, time
 from pathlib import Path
 
 WINDOWS = os.name == "nt"
 PROGGS = Path.home() / "proggs"
 ORDNER = Path.home() / ".openlauncher" / "vorwaermen"
 STAND = ORDNER / "stand.json"
-PAKETE = ORDNER / "pakete.txt"
+STAND_SPERRE = ORDNER / "stand.lock"
+PAKETE = ORDNER / "pakete.json"
 LOG = ORDNER / "log.txt"
 BAU_SPERRE = ORDNER / "gradle-bau.lock"
 LAUF_SPERRE = ORDNER / "lauf.lock"
 PAUSE = ORDNER / "pause"
 PAUSE_SEKUNDEN = 20 * 60
-RUHE_NACH_COMMIT = 10 * 60  # frisch committet = eine Sitzung hier baut/installiert vermutlich gerade selbst
+RUHE_NACH_COMMIT = 10 * 60
 VERSUCHE = 2
 NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWeckerAndroid", "geniale ideen": "GenialeIdeen",
          "stack-labor": "StackLabor", "stack labor": "StackLabor", "entropie reductor": "EntropieReductor"}
@@ -49,31 +56,44 @@ def log(text: str) -> None:
         LOG.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
 
 
-def run(befehl, **kw):
-    kw.setdefault("capture_output", True)
-    kw.setdefault("text", True)
-    kw.setdefault("stdin", subprocess.DEVNULL)
-    kw.setdefault("encoding", "utf-8")
-    kw.setdefault("errors", "replace")
-    return subprocess.run(befehl, creationflags=OHNE_FENSTER, **kw)
+class Ergebnis:
+    def __init__(self, code: int, text: str):
+        self.returncode, self.stdout = code, text
+
+
+def run(befehl, timeout=None, cwd=None) -> Ergebnis:
+    """Startet ohne Pipes: Ausgabe in eine Temp-Datei. Erbt ein Langläufer (Gradle-Daemon, adb-Server) das Handle, blockiert
+    nichts, und ein Zeitlimit beendet nur diesen Prozess. Nie eine Ausnahme: Fehler und Zeitlimit kommen als Code -1 zurück."""
+    with tempfile.TemporaryFile() as aus:
+        try:
+            p = subprocess.Popen(befehl, cwd=cwd, stdin=subprocess.DEVNULL, stdout=aus, stderr=subprocess.STDOUT, creationflags=OHNE_FENSTER)
+        except OSError as fehler:
+            return Ergebnis(-1, str(fehler))
+        try:
+            code = p.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+            code = -1
+        aus.seek(0)
+        return Ergebnis(code, aus.read().decode("utf-8", "replace"))
 
 
 def git(*args: str, timeout=120) -> str:
-    try:
-        return run(["git", "-C", str(PROGGS), *args], timeout=timeout).stdout.strip()
-    except Exception:
-        return ""
+    e = run(["git", "-C", str(PROGGS), *args], timeout=timeout)
+    return e.stdout.strip() if e.returncode == 0 else ""
 
 
 class Sperre:
-    """Dateisperre für Windows (msvcrt) und Mac/Linux (fcntl). warten=False: sofort aufgeben, wenn belegt."""
+    """Dateisperre für Windows (msvcrt) und Mac/Linux (fcntl). warten: Sekunden (None = unbegrenzt, 0 = sofort aufgeben)."""
 
-    def __init__(self, pfad: Path, warten: bool):
+    def __init__(self, pfad: Path, warten=None):
         self.pfad, self.warten, self.f = pfad, warten, None
 
     def __enter__(self):
         ORDNER.mkdir(parents=True, exist_ok=True)
         self.f = open(self.pfad, "a+")
+        ende = None if self.warten is None else time.time() + self.warten
         while True:
             try:
                 if WINDOWS:
@@ -83,11 +103,11 @@ class Sperre:
                     fcntl.flock(self.f, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 return True
             except OSError:
-                if not self.warten:
+                if ende is not None and time.time() >= ende:
                     self.f.close()
                     self.f = None
                     return False
-                time.sleep(5)
+                time.sleep(1 if self.pfad == STAND_SPERRE else 5)
 
     def __exit__(self, *a):
         if self.f:
@@ -107,17 +127,26 @@ def lies_stand() -> dict:
         return {}
 
 
-def schreib_stand(stand: dict) -> None:
-    neu = STAND.with_suffix(".neu")
-    neu.write_text(json.dumps(stand, ensure_ascii=False, indent=1), encoding="utf-8")
-    neu.replace(STAND)
+def aendere_stand(aenderung) -> None:
+    """Lesen, ändern, schreiben unter einer eigenen Sperre: Brücken-Lauf und Takt-Lauf dürfen sich nicht überschreiben."""
+    with Sperre(STAND_SPERRE, warten=60):
+        stand = lies_stand()
+        aenderung(stand)
+        neu = STAND.with_name(f"stand.{os.getpid()}.neu")
+        neu.write_text(json.dumps(stand, ensure_ascii=False, indent=1), encoding="utf-8")
+        for _ in range(10):
+            try:
+                neu.replace(STAND)
+                return
+            except PermissionError:  # Windows: ein Leser hält die Datei gerade offen
+                time.sleep(0.5)
+        neu.unlink(missing_ok=True)
 
 
 def akkubetrieb() -> bool:
-    if not WINDOWS:
-        aus = run(["pmset", "-g", "batt"], timeout=10).stdout if sys.platform == "darwin" else ""
-        return "Battery Power" in aus
     try:
+        if not WINDOWS:
+            return sys.platform == "darwin" and "Battery Power" in run(["pmset", "-g", "batt"], timeout=10).stdout
         import ctypes
 
         class Status(ctypes.Structure):
@@ -131,34 +160,42 @@ def akkubetrieb() -> bool:
 
 
 def adb() -> str:
-    sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT") or \
-        str(Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk" if WINDOWS else Path.home() / "Library" / "Android" / "sdk")
+    sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+    if not sdk:
+        sdk = str(Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk") if WINDOWS else str(Path.home() / "Library" / "Android" / "sdk")
     kandidat = Path(sdk) / "platform-tools" / ("adb.exe" if WINDOWS else "adb")
     return str(kandidat) if kandidat.is_file() else "adb"
 
 
 def geraete_pakete() -> set:
-    """Installierte Pakete auf allen gerade verbundenen Geräten (Handy, Tablet); sonst die zuletzt gemerkte Liste."""
-    pakete = set()
+    """Installierte Pakete je Gerät (Seriennummer). Verbundene Geräte werden frisch gelesen, für die übrigen gilt ihre letzte
+    Liste. So fällt eine deinstallierte App heraus, sobald das Gerät wieder gelesen wird."""
     try:
-        liste = run([adb(), "devices"], timeout=15).stdout.splitlines()
-        for z in liste[1:]:
-            teile = z.split()
-            if len(teile) >= 2 and teile[1] == "device":
-                aus = run([adb(), "-s", teile[0], "shell", "pm", "list", "packages", "-3"], timeout=20).stdout
-                pakete |= {p.split(":", 1)[1].strip() for p in aus.splitlines() if p.startswith("package:")}
+        je_geraet = json.loads(PAKETE.read_text(encoding="utf-8"))
     except Exception:
-        pass
-    alt = set()
-    try:
-        alt = set(PAKETE.read_text(encoding="utf-8").split())
-    except OSError:
-        pass
-    if pakete:
+        je_geraet = {}
+    for z in run([adb(), "devices"], timeout=20).stdout.splitlines()[1:]:
+        teile = z.split()
+        if len(teile) < 2 or teile[1] != "device":
+            continue
+        seriell = run([adb(), "-s", teile[0], "shell", "getprop", "ro.serialno"], timeout=15).stdout.strip() or teile[0]
+        e = run([adb(), "-s", teile[0], "shell", "pm", "list", "packages", "-3"], timeout=20)
+        pakete = sorted({p.split(":", 1)[1].strip() for p in e.stdout.splitlines() if p.startswith("package:")})
+        if e.returncode == 0 and pakete:
+            je_geraet[seriell] = pakete
+    if je_geraet:
         ORDNER.mkdir(parents=True, exist_ok=True)
-        PAKETE.write_text("\n".join(sorted(pakete | alt)) + "\n", encoding="utf-8")
-        return pakete | alt
-    return alt
+        PAKETE.write_text(json.dumps(je_geraet, indent=1), encoding="utf-8")
+    return {p for liste in je_geraet.values() for p in liste}
+
+
+_COMMITZEIT = {}
+
+
+def commitzeit(app: str) -> int:
+    if app not in _COMMITZEIT:
+        _COMMITZEIT[app] = int(git("log", "-1", "--format=%ct", "--", app) or 0)
+    return _COMMITZEIT[app]
 
 
 def app_id(app: str) -> str:
@@ -183,11 +220,10 @@ def alle_apps() -> list:
             kennung = app_id(d.name)
             if not kennung or not any(p == kennung or p.startswith(kennung + ".") for p in pakete):
                 continue
-        elif int(git("log", "-1", "--format=%ct", "--", d.name) or 0) < grenze:
+        elif commitzeit(d.name) < grenze:
             continue
         apps.append(d.name)
-    zeit = {a: int(git("log", "-1", "--format=%ct", "--", a) or 0) for a in apps}
-    return sorted(apps, key=lambda a: (a != "Jarvis", -zeit[a]))
+    return sorted(apps, key=lambda a: (a != "Jarvis", -commitzeit(a)))
 
 
 def ordner_zu(name: str) -> str:
@@ -203,18 +239,21 @@ def ordner_zu(name: str) -> str:
     return ""
 
 
-def java_befehlszeilen() -> list:
+def java_befehlszeilen():
+    """Befehlszeilen aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann gilt: lieber nicht bauen)."""
     if WINDOWS:
-        aus = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
-                   "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { $_.CommandLine }"], timeout=60).stdout
+        e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { $_.CommandLine }"], timeout=60)
     else:
-        aus = run(["ps", "-u", str(os.getuid()), "-o", "args="], timeout=20).stdout
-    return [z for z in aus.splitlines() if z.strip()]
+        e = run(["ps", "-u", str(os.getuid()), "-o", "args="], timeout=20)
+    return [z for z in e.stdout.splitlines() if z.strip()] if e.returncode == 0 else None
 
 
 def fremder_bau_laeuft() -> bool:
-    """Läuft ein Gradle-Client (gradlew einer Sitzung, apk-update)? Erkennbar am Wrapper-Jar in der Befehlszeile."""
-    return any("gradle-wrapper.jar" in z or "GradleWrapperMain" in z for z in java_befehlszeilen())
+    """Läuft ein Gradle-Client (gradlew einer Sitzung, apk-update)? Erkennbar am Wrapper in der Befehlszeile. Bauten aus
+    Android Studio (Tooling-API) sieht das nicht; die Sitzungen am PC bauen aber über gradlew."""
+    zeilen = java_befehlszeilen()
+    return zeilen is None or any("gradle-wrapper.jar" in z or "GradleWrapperMain" in z for z in zeilen)
 
 
 def pausiert() -> bool:
@@ -225,101 +264,131 @@ def pausiert() -> bool:
 
 
 def repo_vorspulen() -> None:
-    """Wie OpenLauncher/Services/RepoSync.cs: fetch + merge --ff-only. Nie ein echter Merge, das Vorspulen wird nie abgebrochen."""
+    """Wie OpenLauncher/Services/RepoSync.cs: fetch (darf abbrechen) + merge --ff-only (nie abbrechen, sonst bleibt index.lock)."""
     gitdir = PROGGS / ".git"
     if any((gitdir / n).exists() for n in ("index.lock", "rebase-merge", "rebase-apply", "MERGE_HEAD")):
         return
     vorher = git("rev-parse", "HEAD")
-    if run(["git", "-C", str(PROGGS), "fetch", "--quiet"], timeout=120).returncode != 0:
+    if run(["git", "-C", str(PROGGS), "fetch", "--quiet"], timeout=300).returncode != 0:
         return
-    ergebnis = run(["git", "-C", str(PROGGS), "merge", "--ff-only", "--quiet", "@{u}"])  # ohne Zeitlimit: ein Abbruch hinterließe index.lock
-    nachher = git("rev-parse", "HEAD")
-    if ergebnis.returncode == 0 and nachher != vorher:
-        anzahl = git("rev-list", "--count", f"{vorher}..{nachher}")
-        log(f"Repo vorgespult: {anzahl} neue Commits")
+    if run(["git", "-C", str(PROGGS), "merge", "--ff-only", "--quiet", "@{u}"]).returncode == 0:
+        nachher = git("rev-parse", "HEAD")
+        if nachher and nachher != vorher:
+            _COMMITZEIT.clear()
+            log(f"Repo vorgespult: {git('rev-list', '--count', f'{vorher}..{nachher}')} neue Commits")
+
+
+def jvmargs(app: str) -> str:
+    try:
+        text = (PROGGS / app / "gradle.properties").read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    m = re.search(r"^\s*org\.gradle\.jvmargs\s*=(.*)$", text, re.M)
+    return " ".join(m.group(1).split()) if m else ""
 
 
 def gradlew(app: str) -> list:
     workers = str(max(2, (os.cpu_count() or 4) // 2))  # gilt nur für diesen Bau, nicht für den Daemon
-    basis = ["cmd", "/c", "gradlew.bat"] if WINDOWS else ["bash", "gradlew"]
-    return basis + ["assembleDebug", "-q", f"--max-workers={workers}"]
+    befehl = (["cmd", "/c", "gradlew.bat"] if WINDOWS else ["bash", "gradlew"]) + ["assembleDebug", "-q", f"--max-workers={workers}"]
+    # Dauerhaft warm bleibt nur der Daemon mit den Jarvis-Einstellungen; beim Auftragsstart (--immer) auch der der App.
+    if not ARGS.immer and app != "Jarvis" and jvmargs(app) != jvmargs("Jarvis"):
+        befehl.append("--no-daemon")
+    return befehl
 
 
-def baue(app: str, hash_: str, stand: dict) -> bool:
+def baue(app: str) -> bool:
     if git("lfs", "ls-files", "-I", f"{app}/**", timeout=60):
-        run(["git", "-C", str(PROGGS), "lfs", "pull", f"--include={app}/**"], timeout=1800)
-    with Sperre(BAU_SPERRE, warten=True):
-        hash_ = git("rev-parse", f"HEAD:{app}") or hash_
-        if stand.get(app) == hash_ and not ARGS.immer:
+        run(["git", "-C", str(PROGGS), "lfs", "pull", f"--include={app}/**"])  # ohne Zeitlimit: ein Abbruch ließe index.lock liegen
+    with Sperre(BAU_SPERRE):
+        # Erst nach dem Warten den Stand lesen: Ein anderer Lauf kann die App inzwischen gebaut haben.
+        hash_ = git("rev-parse", f"HEAD:{app}")
+        if not hash_ or (lies_stand().get(app) == hash_ and not ARGS.immer):
             return True
+        sauber = not git("status", "--porcelain", "--", app)
         beginn = time.time()
-        try:
-            e = run(gradlew(app), cwd=PROGGS / app, timeout=3600)
-            ok, fehler = e.returncode == 0, (e.stderr or e.stdout or "").strip()[-400:]
-        except subprocess.TimeoutExpired:
-            ok, fehler = False, "nach 60 Minuten nicht fertig"
+        e = run(gradlew(app), cwd=PROGGS / app, timeout=3600)
+        ok, fehler = e.returncode == 0, e.stdout.strip()[-400:] or ("nach 60 Minuten abgebrochen" if e.returncode == -1 else "")
         dauer = int(time.time() - beginn)
-    stand = lies_stand()
+    if not sauber:
+        # Halb geänderter Arbeitsbaum (Auftragsstart): Der Bau wärmt, passt aber nicht genau zu HEAD, also nichts merken.
+        log(f"{app}: Vorbau auf offenem Arbeitsstand in {dauer} s ({'ok' if ok else 'fehlgeschlagen'})")
+        return ok
+
+    def merke(stand):
+        if ok:
+            stand[app] = hash_
+            stand.get("_fehler", {}).pop(app, None)
+            stand.get("_versuche", {}).pop(app, None)
+        else:
+            v = stand.setdefault("_versuche", {})
+            alt = v.get(app, ["", 0])
+            v[app] = [hash_, alt[1] + 1 if alt[0] == hash_ else 1]
+            if v[app][1] >= VERSUCHE:
+                stand[app] = hash_
+            stand.setdefault("_fehler", {})[app] = fehler
+    aendere_stand(merke)
     if ok:
-        stand[app] = hash_
-        stand.get("_fehler", {}).pop(app, None)
-        stand.get("_versuche", {}).pop(app, None)
-        schreib_stand(stand)
         log(f"{app}: {'Auftragsstart-Vorbau' if ARGS.immer else 'vorgewärmt'} in {dauer} s")
     else:
-        v = stand.setdefault("_versuche", {})
-        v[app] = [hash_, (v.get(app, ["", 0])[1] + 1) if v.get(app, ["", 0])[0] == hash_ else 1]
-        if v[app][1] >= VERSUCHE:
-            stand[app] = hash_
-        stand.setdefault("_fehler", {})[app] = fehler
-        schreib_stand(stand)
         log(f"{app}: Bau fehlgeschlagen nach {dauer} s: {fehler.splitlines()[-1] if fehler else '?'}")
     return ok
 
 
 def daemon_warm() -> None:
-    """Kein Gradle-Daemon aktiv (Rechnerstart, JDK-Update): per Jarvis-Bau einen starten. Die Lebensdauer (24 h Leerlauf)
-    steht in ~/.gradle/gradle.properties (einrichten.ps1)."""
-    if not (PROGGS / "Jarvis" / "gradlew").is_file():
+    """Kein Gradle-Daemon aktiv (Rechnerstart, JDK-Update): per Jarvis-Bau einen starten. Lebensdauer 24 h Leerlauf steht in
+    ~/.gradle/gradle.properties (einrichten.ps1)."""
+    if not (PROGGS / "Jarvis" / "gradlew").is_file() or git("status", "--porcelain", "--", "Jarvis"):
         return
-    if any("GradleDaemon" in z for z in java_befehlszeilen()):
+    if time.time() - commitzeit("Jarvis") < RUHE_NACH_COMMIT:
+        return
+    zeilen = java_befehlszeilen()
+    if zeilen is None or any("GradleDaemon" in z for z in zeilen):
         return
     log("Kein Gradle-Daemon aktiv, starte ihn mit einem Jarvis-Bau")
     ARGS.immer = True
-    baue("Jarvis", git("rev-parse", "HEAD:Jarvis"), lies_stand())
+    baue("Jarvis")
     ARGS.immer = False
 
 
 def lauf() -> int:
     einzeln = LAUF_SPERRE if not ARGS.app else ORDNER / f"lauf-{ARGS.app}.lock"
-    with Sperre(einzeln, warten=False) as frei:
-        if not frei:
+    with Sperre(einzeln, warten=0) as frei:
+        if not frei or akkubetrieb():
             return 0
-        if not ARGS.app:
-            if akkubetrieb():
-                return 0
-            repo_vorspulen()
-            if pausiert() or fremder_bau_laeuft():
-                return 0
-        apps = [ARGS.app] if ARGS.app else alle_apps()
+        if ARGS.app:
+            baue(ARGS.app)
+            return 0
+        repo_vorspulen()
         stand = lies_stand()
         jetzt = time.time()
-        for app in apps:
+        for app in alle_apps():
             hash_ = git("rev-parse", f"HEAD:{app}")
-            if not hash_ or (stand.get(app) == hash_ and not ARGS.immer):
+            if not hash_ or stand.get(app) == hash_:
                 continue
-            if not ARGS.app:
-                if git("status", "--porcelain", "--", app):
-                    continue  # eine Sitzung arbeitet daran
-                if jetzt - int(git("log", "-1", "--format=%ct", "--", app) or 0) < RUHE_NACH_COMMIT:
-                    continue  # frisch committet: die Sitzung baut und installiert gleich selbst
-                if pausiert() or fremder_bau_laeuft():
-                    log("Pause: eine Sitzung baut, Vorwärmen setzt beim nächsten Lauf fort")
-                    return 0
-            baue(app, hash_, stand)
+            if git("status", "--porcelain", "--", app):
+                continue  # eine Sitzung arbeitet daran
+            if jetzt - commitzeit(app) < RUHE_NACH_COMMIT:
+                continue  # frisch committet: die Sitzung baut und installiert gleich selbst
+            if pausiert() or fremder_bau_laeuft():
+                log("Pause: eine Sitzung baut, Vorwärmen setzt beim nächsten Lauf fort")
+                return 0
+            baue(app)
             stand = lies_stand()
-        if not ARGS.app and not pausiert() and not fremder_bau_laeuft():
+        if not pausiert() and not fremder_bau_laeuft():
             daemon_warm()
+    return 0
+
+
+def warte() -> int:
+    """Vor einem Sitzungsbau: Vorwärmen 20 Minuten pausieren und auf einen laufenden Vorbau warten (höchstens 60 Minuten).
+    Gibt die Sperre danach frei; der Sitzungsbau läuft über denselben Daemon."""
+    ORDNER.mkdir(parents=True, exist_ok=True)
+    PAUSE.touch()
+    beginn = time.time()
+    with Sperre(BAU_SPERRE, warten=3600) as frei:
+        gewartet = int(time.time() - beginn)
+        if gewartet > 2:
+            print(f"VORWAERMEN: {gewartet} s auf einen laufenden Vorbau gewartet" + ("" if frei else ", baue trotzdem"))
     return 0
 
 
@@ -348,7 +417,7 @@ def zeige() -> int:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("aktion", choices=["start", "lauf", "stand"])
+    p.add_argument("aktion", choices=["start", "lauf", "warte", "stand"])
     p.add_argument("--app", default="")
     p.add_argument("--immer", action="store_true", help="auch bauen, wenn der Stand schon vorgewärmt ist (wärmt den Daemon)")
     ARGS = p.parse_args()
@@ -357,7 +426,7 @@ if __name__ == "__main__":
         if not ARGS.app:
             sys.exit(0)
     try:
-        sys.exit({"start": start, "lauf": lauf, "stand": zeige}[ARGS.aktion]())
-    except Exception as fehler:  # Hintergrundlauf: nie still sterben
-        log(f"Fehler: {fehler!r}")
-        sys.exit(1)
+        sys.exit({"start": start, "lauf": lauf, "warte": warte, "stand": zeige}[ARGS.aktion]())
+    except Exception as fehler:  # Hintergrundlauf: nie still sterben; warte darf einen Sitzungsbau nie verhindern
+        log(f"Fehler ({ARGS.aktion}): {fehler!r}")
+        sys.exit(0 if ARGS.aktion == "warte" else 1)

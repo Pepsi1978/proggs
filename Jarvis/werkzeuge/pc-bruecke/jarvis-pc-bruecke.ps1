@@ -194,14 +194,6 @@ function Starte-Sitzung($auftrag) {
     if (-not $app) { $app = 'App' }
     # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (Wachhund-Aufgabe, läuft im Hintergrund).
     try { Start-ScheduledTask -TaskName 'adb-wlan-wachhund' -ErrorAction Stop } catch {}
-    # Auftrags-App sofort vorbauen (wärmt den Gradle-Daemon, während die Sitzung noch liest), wie am Server.
-    try {
-        $vorwaermen = Join-Path $proggs 'Werkzeuge\vorwaermen\vorwaermen.py'
-        $pyw = Join-Path (Split-Path (Get-Command python -ErrorAction Stop).Source) 'pythonw.exe'
-        if ((Test-Path -LiteralPath $vorwaermen) -and (Test-Path -LiteralPath $pyw)) {
-            Start-Process -FilePath $pyw -ArgumentList "`"$vorwaermen`"", 'lauf', '--app', "`"$app`"", '--immer' -WindowStyle Hidden
-        }
-    } catch { Schreib "Vorwärmen: $_" }
     $name = "Jarvis: $app"
     # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.1, Minimal, Schnellmodus, Effort High).
     $sol = "$($auftrag.modell)" -eq 'sol'
@@ -283,6 +275,15 @@ $unklar2
         if (-not $vorhanden -and $pruefCli -eq 'antigravity') { $vorhanden = Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'agy\bin\agy.exe') }
         if (-not $vorhanden) { throw "Das CLI $programm ist auf $env:COMPUTERNAME nicht installiert." }
     }
+    # Auftrags-App sofort vorbauen (wärmt den Gradle-Daemon, während die Sitzung noch liest), wie am Server.
+    # Erst nach den Prüfungen oben, damit ein abgelehnter Auftrag keinen Bau auslöst. Sitzungsbauten warten per Hook darauf.
+    try {
+        $vorwaermen = Join-Path $proggs 'Werkzeuge\vorwaermen\vorwaermen.py'
+        $pyw = Join-Path (Split-Path (Get-Command python -ErrorAction Stop).Source) 'pythonw.exe'
+        if ((Test-Path -LiteralPath $vorwaermen) -and (Test-Path -LiteralPath $pyw)) {
+            Start-Process -FilePath $pyw -ArgumentList "`"$vorwaermen`"", 'lauf', '--app', "`"$app`"", '--immer' -WindowStyle Hidden
+        }
+    } catch { Schreib "Vorwärmen: $_" }
     $stempel =Get-Date -Format 'yyyyMMdd-HHmmss'
     $ordner = Join-Path $env:TEMP 'JarvisPcBruecke'
     New-Item -ItemType Directory -Force -Path $ordner | Out-Null

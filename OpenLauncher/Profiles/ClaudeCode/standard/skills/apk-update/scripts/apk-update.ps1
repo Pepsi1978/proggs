@@ -874,6 +874,9 @@ if (-not ($N -gt $P -and $N -ge $I)) {
 # --- Bauen ----------------------------------------------------------------------------------
 if (-not $OhneBuild) {
     Write-Host "Baue $Projekt mit :app:$gradleTask ..."
+    # Vorwärmen (Werkzeuge/vorwaermen): pausieren und einen laufenden Vorbau abwarten, nie zwei Bauten gleichzeitig.
+    $vorwaermen = Join-Path $HOME 'proggs/Werkzeuge/vorwaermen/vorwaermen.py'
+    if (-not $aufUnix -and (Test-Path -LiteralPath $vorwaermen)) { try { & python $vorwaermen warte } catch { } }
     Push-Location $projektDir
     try {
         # Unter Linux über sh: gradlew ist in Git oft nicht als ausführbar markiert, und chmod

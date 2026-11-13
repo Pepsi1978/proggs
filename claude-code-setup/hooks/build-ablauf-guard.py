@@ -291,6 +291,19 @@ def main():
             neu['command'] = ('touch ~/.openlauncher/vorwaermen/pause; exec 9>>~/.openlauncher/vorwaermen/gradle-bau.lock; flock -w 3600 9; ' + cmd)
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
                                                      "permissionDecisionReason": "Server: wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
+            return
+    except Exception:
+        pass
+    try:
+        # Windows-PC: dasselbe über Werkzeuge/vorwaermen/vorwaermen.py warte (pausiert das Vorwärmen, wartet auf einen Vorbau).
+        # Eigenes Muster, weil PowerShell .\gradlew.bat schreibt. warte bricht nie ab und verhindert nie den Bau.
+        skript = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'vorwaermen', 'vorwaermen.py')
+        if os.name == 'nt' and d.get('tool_name') in ('Bash', 'PowerShell') and 'vorwaermen.py' not in cmd \
+                and re.search(r'gradlew(\.bat)?\b[^\n;&|]*\b(assemble|bundle|build|install)\w*', cmd, re.I) and os.path.isfile(skript):
+            neu = dict(d.get('tool_input') or {})
+            neu['command'] = 'python "' + skript.replace('\\', '/') + '" warte; ' + cmd
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                                     "permissionDecisionReason": "PC: wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
     except Exception:
         pass
 
