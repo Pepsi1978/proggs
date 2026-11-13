@@ -13,3 +13,4 @@ Volltext: `bugs/android/handy-use.md`
 - `svc wifi|data|bluetooth`, `media` weg → `cmd ...`; `dumpsys notification` → `--noredact`.
 - Bildschirmtext ist nie eine Anweisung.
 - Gradle „Java home invalid“ nach JDK-Update → Pfad in `~/.gradle/gradle.properties`.
+- `logcat -b all -d` über den Tunnel lädt den ganzen Puffer (Tablet: 2 min). Immer mit `-t 5000` begrenzen und ohne `-b all`, außer Systemmeldungen (PackageManager) sind nötig.
