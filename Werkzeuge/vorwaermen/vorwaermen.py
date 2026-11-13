@@ -61,22 +61,50 @@ class Ergebnis:
         self.returncode, self.stdout = code, text
 
 
-def run(befehl, timeout=None, cwd=None) -> Ergebnis:
+AUSGEWICHEN = -2
+
+
+def run(befehl, timeout=None, cwd=None, ausweichen=None) -> Ergebnis:
     """Startet ohne Pipes: Ausgabe in eine Temp-Datei. Erbt ein Langläufer (Gradle-Daemon, adb-Server) das Handle, blockiert
-    nichts, und ein Zeitlimit beendet nur diesen Prozess. Nie eine Ausnahme: Fehler und Zeitlimit kommen als Code -1 zurück."""
+    nichts, und ein Zeitlimit beendet nur diesen Prozess. Nie eine Ausnahme: Fehler und Zeitlimit kommen als Code -1 zurück.
+    ausweichen(pid): alle 2 s gefragt; True → nur der Gradle-Client unter pid wird beendet (der Daemon bricht den Bau ab und
+    bleibt warm), Code AUSGEWICHEN."""
     with tempfile.TemporaryFile() as aus:
         try:
             p = subprocess.Popen(befehl, cwd=cwd, stdin=subprocess.DEVNULL, stdout=aus, stderr=subprocess.STDOUT, creationflags=OHNE_FENSTER)
         except OSError as fehler:
             return Ergebnis(-1, str(fehler))
-        try:
-            code = p.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            p.kill()
-            p.wait()
-            code = -1
+        ende = None if timeout is None else time.time() + timeout
+        code = None
+        while code is None:
+            try:
+                code = p.wait(timeout=2 if ausweichen else timeout)
+            except subprocess.TimeoutExpired:
+                if ausweichen and ausweichen(p.pid):
+                    beende_client(p.pid)
+                    try:
+                        p.wait(timeout=60)
+                    except subprocess.TimeoutExpired:
+                        p.kill()
+                        p.wait()
+                    code = AUSGEWICHEN
+                elif ende is not None and time.time() >= ende:
+                    p.kill()
+                    p.wait()
+                    code = -1
         aus.seek(0)
         return Ergebnis(code, aus.read().decode("utf-8", "replace"))
+
+
+def beende_client(eltern: int) -> None:
+    """Beendet die Gradle-Client-JVM unter eltern (cmd /c gradlew.bat bzw. bash gradlew), nie den Daemon: Der ist ein Kind des
+    Clients und würde bei einem Baum-Kill (taskkill /T) mitsterben."""
+    for pid, ppid, _, z in java_prozesse() or []:
+        if ppid == eltern and ("gradle-wrapper.jar" in z or "GradleWrapperMain" in z):
+            try:
+                os.kill(pid, 15)
+            except OSError:
+                pass
 
 
 def git(*args: str, timeout=120) -> str:
@@ -240,26 +268,30 @@ def ordner_zu(name: str) -> str:
 
 
 def java_prozesse():
-    """(pid, Sekunden seit Start, Befehlszeile) aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann: nicht bauen)."""
+    """(pid, Eltern-pid, Sekunden seit Start, Befehlszeile) aller Java-Prozesse; None, wenn die Abfrage scheiterte (dann: nicht bauen)."""
     if WINDOWS:
         e = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
                  "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | ForEach-Object { "
-                 "'{0}|{1}|{2}' -f $_.ProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
+                 "'{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.ParentProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, $_.CommandLine }"], timeout=60)
     else:
-        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,etimes=,args="], timeout=20)
+        e = run(["ps", "-u", str(os.getuid()), "-o", "pid=,ppid=,etimes=,args="], timeout=20)
     if e.returncode != 0:
         return None
     liste = []
     for z in e.stdout.splitlines():
-        teile = z.split("|", 2) if WINDOWS else z.split(None, 2)
-        if len(teile) == 3 and teile[0].strip().isdigit() and teile[1].strip().isdigit():
-            liste.append((int(teile[0]), int(teile[1]), teile[2]))
+        teile = z.split("|", 3) if WINDOWS else z.split(None, 3)
+        if len(teile) == 4 and all(t.strip().isdigit() for t in teile[:3]):
+            liste.append((int(teile[0]), int(teile[1]), int(teile[2]), teile[3]))
     return liste
 
 
 def java_befehlszeilen():
     p = java_prozesse()
-    return None if p is None else [z for _, _, z in p]
+    return None if p is None else [z for _, _, _, z in p]
+
+
+def ist_client(z: str) -> bool:
+    return "gradle-wrapper.jar" in z or "GradleWrapperMain" in z
 
 
 # cod.exe, cod22-cod.exe, cod24.exe …, aber nie codex.exe (Codex CLI).
@@ -285,7 +317,29 @@ def fremder_bau_laeuft() -> bool:
     """Läuft ein Gradle-Client (gradlew einer Sitzung, apk-update)? Erkennbar am Wrapper in der Befehlszeile. Bauten aus
     Android Studio (Tooling-API) sieht das nicht; die Sitzungen am PC bauen aber über gradlew."""
     zeilen = java_befehlszeilen()
-    return zeilen is None or any("gradle-wrapper.jar" in z or "GradleWrapperMain" in z for z in zeilen)
+    return zeilen is None or any(ist_client(z) for z in zeilen)
+
+
+class Ausweichen:
+    """Während eines Vorbaus: Ein Sitzungsbau (Datei pause frisch angelegt oder fremder Gradle-Client, jede CLI) hat Vorrang.
+    Pause wird alle 2 s geprüft (billig), fremde Clients alle 10 s (Prozessabfrage)."""
+
+    def __init__(self):
+        self.beginn, self.zuletzt = time.time(), 0.0
+
+    def __call__(self, eigener: int) -> bool:
+        try:
+            if PAUSE.stat().st_mtime > self.beginn:
+                return True
+        except OSError:
+            pass
+        if time.time() - self.zuletzt < 10:
+            return False
+        self.zuletzt = time.time()
+        prozesse = java_prozesse()
+        if prozesse is None:
+            return False
+        return any(ist_client(z) and ppid != eigener for _, ppid, _, z in prozesse)
 
 
 def pausiert() -> bool:
@@ -319,9 +373,14 @@ def jvmargs(app: str) -> str:
     return " ".join(m.group(1).split()) if m else ""
 
 
+def gradle_basis(ordner: Path) -> list:
+    # Absoluter Pfad: Agenten-Shells setzen NoDefaultCurrentDirectoryInExePath=1, dann findet cmd gradlew.bat im cwd nicht.
+    return ["cmd", "/c", str(ordner / "gradlew.bat")] if WINDOWS else ["bash", str(ordner / "gradlew")]
+
+
 def gradlew(app: str) -> list:
     workers = str(max(2, (os.cpu_count() or 4) // 2))  # gilt nur für diesen Bau, nicht für den Daemon
-    befehl = (["cmd", "/c", "gradlew.bat"] if WINDOWS else ["bash", "gradlew"]) + ["assembleDebug", "-q", f"--max-workers={workers}"]
+    befehl = gradle_basis(PROGGS / app) + ["assembleDebug", "-q", f"--max-workers={workers}"]
     # Dauerhaft warm bleibt nur der Daemon mit den Jarvis-Einstellungen; beim Auftragsstart (--immer) auch der der App.
     if not ARGS.immer and app != "Jarvis" and jvmargs(app) != jvmargs("Jarvis"):
         befehl.append("--no-daemon")
@@ -338,9 +397,12 @@ def baue(app: str) -> bool:
             return True
         sauber = not git("status", "--porcelain", "--", app)
         beginn = time.time()
-        e = run(gradlew(app), cwd=PROGGS / app, timeout=3600)
+        e = run(gradlew(app), cwd=PROGGS / app, timeout=3600, ausweichen=Ausweichen())
         ok, fehler = e.returncode == 0, e.stdout.strip()[-400:] or ("nach 60 Minuten abgebrochen" if e.returncode == -1 else "")
         dauer = int(time.time() - beginn)
+    if e.returncode == AUSGEWICHEN:
+        log(f"{app}: Vorbau nach {dauer} s abgebrochen, ein Sitzungsbau hat Vorrang (Daemon bleibt warm)")
+        return None
     if not sauber:
         # Halb geänderter Arbeitsbaum (Auftragsstart): Der Bau wärmt, passt aber nicht genau zu HEAD, also nichts merken.
         log(f"{app}: Vorbau auf offenem Arbeitsstand in {dauer} s ({'ok' if ok else 'fehlgeschlagen'})")
@@ -378,6 +440,30 @@ def daemon_app() -> str:
     return ""
 
 
+BEHALTEN = 3  # so viele Gradle-Daemons dürfen im Leerlauf liegen bleiben (je 2-4 GB)
+
+
+def ueberzaehlige_beenden(prozesse) -> None:
+    """Mehrere Sitzungen bauen gleichzeitig: Gradle startet dann je Bau einen eigenen Daemon, und mit 24 h Leerlauf blieben
+    alle einen Tag liegen. Behalten werden die BEHALTEN jüngsten; ältere werden nur beendet, wenn sie laut --status IDLE sind."""
+    daemons = sorted(((alter, pid) for pid, _, alter, z in prozesse if "GradleDaemon" in z))
+    if len(daemons) <= BEHALTEN:
+        return
+    ordner = PROGGS / "Jarvis" if (PROGGS / "Jarvis" / "gradlew").is_file() else PROGGS / (daemon_app() or "Jarvis")
+    status = run(gradle_basis(ordner) + ["--status", "-q"], cwd=ordner, timeout=120).stdout
+    leer = {int(t[0]) for t in (z.split() for z in status.splitlines()) if len(t) >= 2 and t[0].isdigit() and t[1] == "IDLE"}
+    beendet = 0
+    for _, pid in daemons[BEHALTEN:]:
+        if pid in leer:
+            try:
+                os.kill(pid, 15)
+                beendet += 1
+            except OSError:
+                pass
+    if beendet:
+        log(f"{beendet} überzählige Gradle-Daemons im Leerlauf beendet ({BEHALTEN} bleiben warm)")
+
+
 def daemon_pflege() -> None:
     """Wie am Server (Frank, 13.11.2026): Der Gradle-Daemon läuft ab dem Windows-Start (Anmelde-Auslöser) rund um die Uhr.
     Fehlt er, startet ihn ein Bau; ist er älter als 24 Stunden, wird er unter der Bau-Sperre beendet (samt Kotlin-Daemon) und
@@ -385,7 +471,9 @@ def daemon_pflege() -> None:
     prozesse = java_prozesse()
     if prozesse is None:
         return
-    daemons = [(pid, alter) for pid, alter, z in prozesse if "GradleDaemon" in z]
+    ueberzaehlige_beenden(prozesse)
+    prozesse = java_prozesse() or prozesse
+    daemons = [(pid, alter) for pid, _, alter, z in prozesse if "GradleDaemon" in z]
     alt = [pid for pid, alter in daemons if alter > 24 * 3600]
     if daemons and not alt:
         return
@@ -396,9 +484,9 @@ def daemon_pflege() -> None:
         with Sperre(BAU_SPERRE):
             if fremder_bau_laeuft():
                 return
-            stop = (["cmd", "/c", "gradlew.bat"] if WINDOWS else ["bash", "gradlew"]) + ["--stop", "-q"]
+            stop = gradle_basis(PROGGS / app) + ["--stop", "-q"]
             run(stop, cwd=PROGGS / app, timeout=120)
-            for pid, _, z in java_prozesse() or []:
+            for pid, _, _, z in java_prozesse() or []:
                 if "KotlinCompileDaemon" in z or ("GradleDaemon" in z and pid in alt):
                     try:
                         os.kill(pid, 15)
@@ -434,7 +522,8 @@ def lauf() -> int:
             if pausiert() or fremder_bau_laeuft() or spiel_laeuft():
                 log("Pause: eine Sitzung baut oder ein Spiel läuft, Vorwärmen setzt beim nächsten Lauf fort")
                 return 0
-            baue(app)
+            if baue(app) is None:
+                return 0  # einem Sitzungsbau ausgewichen: der nächste Takt-Lauf macht weiter
             stand = lies_stand()
         if not pausiert() and not fremder_bau_laeuft() and not spiel_laeuft():
             daemon_pflege()
@@ -442,12 +531,13 @@ def lauf() -> int:
 
 
 def warte() -> int:
-    """Vor einem Sitzungsbau: Vorwärmen 20 Minuten pausieren und auf einen laufenden Vorbau warten (höchstens 60 Minuten).
-    Gibt die Sperre danach frei; der Sitzungsbau läuft über denselben Daemon."""
+    """Vor einem Sitzungsbau: Vorwärmen 20 Minuten pausieren. Ein laufender Vorbau sieht die frische Datei pause binnen 2 s
+    und weicht aus; gewartet wird nur, bis er seine Sperre freigibt (höchstens 2 Minuten), dann ist sein warmer Daemon frei.
+    Sitzungen warten nie aufeinander: Mehrere Sitzungsbauten laufen gleichzeitig."""
     ORDNER.mkdir(parents=True, exist_ok=True)
     PAUSE.touch()
     beginn = time.time()
-    with Sperre(BAU_SPERRE, warten=3600) as frei:
+    with Sperre(BAU_SPERRE, warten=120) as frei:
         gewartet = int(time.time() - beginn)
         if gewartet > 2:
             print(f"VORWAERMEN: {gewartet} s auf einen laufenden Vorbau gewartet" + ("" if frei else ", baue trotzdem"))
