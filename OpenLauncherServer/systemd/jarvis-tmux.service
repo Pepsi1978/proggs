@@ -1,5 +1,5 @@
 [Unit]
-Description=tmux-Server aller CLI-Sitzungen (Speicherdeckel 7 GB und CPU-Deckel schützen Relay und Second Brain)
+Description=tmux-Server aller CLI-Sitzungen (Speicherdeckel 7 GB schützt Relay und Second Brain, CPU ohne Deckel)
 After=network-online.target
 
 [Service]
@@ -14,7 +14,8 @@ RestartSec=5
 # 7 GB (Franks Vorgabe 13.11.2026, nach dem Entfernen von Werft Studio): ab 6,5 GB bremst der Kernel, bei 7 GB ist Schluss.
 MemoryHigh=6500M
 MemoryMax=7000M
-CPUQuota=170%
+# Kein CPU-Deckel (Franks Vorgabe 13.11.2026): Die Sitzungen dürfen alle vCPUs voll nutzen; Nice=5 lässt Relay und Second Brain bei Last trotzdem vor.
+CPUQuota=
 OOMPolicy=continue
 Nice=5
 
