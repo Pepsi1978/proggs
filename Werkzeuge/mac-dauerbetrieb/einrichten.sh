@@ -28,7 +28,7 @@ if [[ "${1:-}" != pruefen ]]; then
 fi
 
 [[ "$(pmset -g | awk '/SleepDisabled/{print $2}')" == 1 ]] && ok "Ruhezustand aus (auch zugeklappt)" || warn "Ruhezustand nicht abgeschaltet"
-pmset -g batt | grep -q "AC Power" && ok "am Netzteil" || warn "läuft auf Akku: Netzteil anstecken (Vorwärmen baut auf Akku nichts vor)"
+pmset -g batt | grep -q "AC Power" && ok "am Netzteil" || warn "läuft auf Akku: als Dauerrechner ans Netzteil (Vorwärmen baut auf Akku nur ab 30 % Ladung)"
 fdesetup status | grep -q "Off" && ok "FileVault aus (Anmeldung nach Neustart ohne Passworteingabe möglich)" || warn "FileVault an: nach einem Neustart wartet der Mac auf das Passwort"
 sudo -n launchctl print system/de.frank.mac-auto-anmelden >/dev/null 2>&1 && ok "Auto-Anmeldung aktiv" || warn "Auto-Anmeldung fehlt: sudo zsh $PROGGS/Werkzeuge/mac-ohne-passwort/anmeldung-einrichten.sh"
 for d in de.frank.jarvis.pc-bruecke de.frank.vorwaermen de.frank.adb-wlan.wachhund de.frank.jarvis.fernsteuerung; do

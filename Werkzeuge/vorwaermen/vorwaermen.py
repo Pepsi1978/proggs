@@ -185,10 +185,20 @@ def spiel_laeuft(liste=None) -> bool:
     return any(SPIEL_EXE.match(exe) for _, _, exe in liste)
 
 
+AKKU_MINDESTENS = 30  # Mac: auf Akku nur ab dieser Ladung vorbauen (Frank, 13.11.2026), darunter nicht mehr
+
+
 def akkubetrieb() -> bool:
+    """Kein Vorbau? Windows: bei jedem Akkubetrieb. Mac: erst unter AKKU_MINDESTENS % Ladung auf Akku."""
     try:
         if not WINDOWS:
-            return sys.platform == "darwin" and "Battery Power" in run(["pmset", "-g", "batt"], timeout=10).stdout
+            if sys.platform != "darwin":
+                return False
+            aus = run(["pmset", "-g", "batt"], timeout=10).stdout
+            if "Battery Power" not in aus:
+                return False
+            m = re.search(r"(\d+)%", aus)
+            return not m or int(m.group(1)) < AKKU_MINDESTENS
 
         class Status(ctypes.Structure):
             _fields_ = [("ACLineStatus", ctypes.c_byte), ("BatteryFlag", ctypes.c_byte), ("BatteryLifePercent", ctypes.c_byte),
@@ -638,7 +648,7 @@ def lauf() -> int:
         if not frei or spiel_laeuft():
             return 0
         if akkubetrieb():
-            log_gedrosselt("Aussetzen: Akkubetrieb, kein Vorspulen und kein Vorbau, bis das Netzteil steckt")
+            log_gedrosselt("Aussetzen: Akku zu leer (Mac unter 30 %, Windows jeder Akkubetrieb), kein Vorspulen und kein Vorbau")
             return 0
         if ARGS.app:
             # Auftragsstart: Der OpenLauncher gleicht gleich danach das Repo ab (bis 20 s). Erst danach bauen, sonst übersetzte

@@ -158,6 +158,6 @@ Log und Stand: `~/.openlauncher/vorwaermen/log.txt`, `python Werkzeuge/vorwaerme
 | eigener Vorbau = Kind von cmd | eigener Vorbau = **dieselbe pid** wie die gestartete bash (`exec`), deshalb `fremd()` prüft pid und Eltern-pid |
 | Daemon-Alter per CIM | `ps -o etime=` und Umrechnung: macOS kennt `etimes` nicht |
 | Java | immer `/opt/homebrew/opt/openjdk@17/…` (wie die Sitzungen), nie der Cellar-Pfad aus `/usr/libexec/java_home`: Gradle vergleicht den Java-Pfad, sonst passt der warme Daemon nicht |
-| kein Vorbau bei Akku | gleich (`pmset -g batt`), im Log höchstens stündlich „Aussetzen: Akkubetrieb“ |
+| kein Vorbau bei Akku | auf Akku erlaubt, erst unter 30 % Ladung nicht mehr (`AKKU_MINDESTENS`, Frank 13.11.2026); im Log höchstens stündlich „Aussetzen: Akku zu leer“ |
 
 Spiele-Pause gibt es am Mac nicht. Log und Stand wie am PC: `~/.openlauncher/vorwaermen/log.txt`, `python3 Werkzeuge/vorwaermen/vorwaermen.py stand`.
