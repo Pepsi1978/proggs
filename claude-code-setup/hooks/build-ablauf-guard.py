@@ -198,6 +198,24 @@ def adb_pfad():
 ADB_WLAN_LAUF = re.compile(r'(?:-File\s+|\bbash\s+|&\s*|^|[;&|\n(]\s*)["\']?[^\s;&|"\']*adb-wlan\.(?:ps1|sh)\b', re.IGNORECASE)
 
 
+def in_ssh_argument(davor):
+    """True, wenn die Stelle am Ende von [davor] zum Befehl eines vorausgehenden ssh gehört: zwischen dem letzten ssh
+    und der Stelle kein ; & | oder Zeilenumbruch außerhalb von Anführungszeichen (ssh host 'a; adb …' zählt, ssh x; adb … nicht)."""
+    treffer = list(re.finditer(r'(?:^|[;&|\s(])ssh\s', davor))
+    if not treffer:
+        return False
+    quote = None
+    for ch in davor[treffer[-1].end():]:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in ('"', "'"):
+            quote = ch
+        elif ch in ';&|\n':
+            return False
+    return True
+
+
 def adb_ziel_fehlt(cmd):
     geraete = None
     for m in ADB_INSTALL.finditer(cmd):
@@ -207,7 +225,7 @@ def adb_ziel_fehlt(cmd):
         # adb connect auf genau diese Adresse oder ein Lauf des WLAN-Werkzeugs davor verbinden erst im Befehl: nicht prüfbar.
         davor = cmd[:m.start()]
         # Läuft auf einem anderen Rechner (ssh, z. B. Hostinger-Server): das lokale "adb devices" sagt darüber nichts.
-        if re.search(r'(?:^|[;&|\s(])ssh\s', davor):
+        if in_ssh_argument(davor):
             continue
         if ADB_WLAN_LAUF.search(davor) or re.search(r'\bconnect\s+["\']?' + re.escape(m.group(1)) + r'(?![\w.:])', davor):
             continue

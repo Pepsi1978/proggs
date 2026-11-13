@@ -41,7 +41,7 @@ if [ "$GERAET" = "alle" ]; then
   exit $CODE
 fi
 FEST_SERIAL=$(reg "$GERAET" serial)
-if [ -z "$FEST_SERIAL" ] && [ "$GERAET" != handy ]; then echo "FEHLER: Gerät '$GERAET' steht nicht in $GERAETE_DATEI."; exit 1; fi
+if [ -z "$FEST_SERIAL" ] && [ "$GERAET" != handy ]; then echo "FEHLER: Gerät '$GERAET' steht nicht in $GERAETE_DATEI."; exit 3; fi
 # Seriennummern der anderen eingetragenen Geräte: gelten nie als dieses Gerät.
 FREMDE_SERIALS=$(for N in $(reg_namen); do [ "$N" != "$GERAET" ] && reg "$N" serial; done)
 ZUSATZ=""; [ "$GERAET" != handy ] && ZUSATZ="-$GERAET"
@@ -61,7 +61,7 @@ LOG="$LOGDIR/adb-wlan.log"
 for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB_BIN="$K"; break; }
 done
-[ -z "${ADB_BIN:-}" ] && { echo "FEHLER: adb nicht gefunden (weder \$ADB noch Android-SDK noch PATH)."; exit 1; }
+[ -z "${ADB_BIN:-}" ] && { echo "FEHLER: adb nicht gefunden (weder \$ADB noch Android-SDK noch PATH)."; exit 3; }
 adb() { "$ADB_BIN" "$@"; }
 
 melde() {
@@ -191,10 +191,12 @@ tunnel_umsteigen() {
 }
 
 # Über den Tunnel den TLS-Port von „Debugging über WLAN“ finden und Port 5555 zurückholen. 0 = verbunden.
-# Zuerst die zuletzt gefundenen Ports (keine Suche nötig); die volle Suche (tls-port-suche.py) höchstens alle 5 Minuten,
-# denn sie lässt adbd kurz hängen, und ein Minutenlauf mit neuer Suche würde die Verbindung sonst immer wieder stören.
+# Die volle Suche (tls-port-suche.py, meldet nur Ports, die wie adbd antworten) lässt adbd kurz hängen und kostet im Mobilnetz
+# Daten: Nach jeder erfolglosen Suche verdoppelt sich der Abstand (5, 10, 20, 40, höchstens 60 Minuten), ein Erfolg setzt ihn zurück.
+# Gemerkt werden Ports nur, wenn die Verbindung danach scheiterte (nach „adb tcpip“ wählt adbd ohnehin einen neuen Port).
 TLS_PORTS_DATEI="$HOME/.adb-wlan${ZUSATZ}-tls-ports"
 TLS_SUCHE_MARKE="$HOME/.adb-wlan${ZUSATZ}-tls-suche"
+TLS_ABSTAND_DATEI="$HOME/.adb-wlan${ZUSATZ}-tls-abstand"
 tls_ports_versuchen() { # $1 Ports; 0 = verbunden, 1 = keiner antwortet, 2 = tcpip lief, 5555 kam nicht (alte Ports sind dann ungültig)
   local p
   for p in $1; do
@@ -203,15 +205,18 @@ tls_ports_versuchen() { # $1 Ports; 0 = verbunden, 1 = keiner antwortet, 2 = tcp
   done
   return 1
 }
+tls_erfolg() { rm -f "$TLS_PORTS_DATEI" "$TLS_ABSTAND_DATEI" "$TLS_SUCHE_MARKE"; return 0; }
 tunnel_tls_verbinden() {
-  local py ports code runde r alt
+  local py ports code runde r alt abstand
   alt=$(tr -d '\r' 2>/dev/null <"$TLS_PORTS_DATEI")
   if [ -n "$alt" ]; then
+    rm -f "$TLS_PORTS_DATEI"
     tls_ports_versuchen "$alt"; r=$?
-    [ $r -eq 0 ] && return 0
-    rm -f "$TLS_PORTS_DATEI"; [ $r -eq 2 ] && return 1
+    [ $r -eq 0 ] && { tls_erfolg; return 0; }
+    [ $r -eq 2 ] && return 1
   fi
-  [ -n "$(find "$TLS_SUCHE_MARKE" -mmin -5 2>/dev/null)" ] && return 1
+  abstand=$(tr -dc '0-9' 2>/dev/null <"$TLS_ABSTAND_DATEI"); [ -z "$abstand" ] && abstand=5
+  [ -n "$(find "$TLS_SUCHE_MARKE" -mmin -"$abstand" 2>/dev/null)" ] && return 1
   for py in python3 python; do command -v "$py" >/dev/null 2>&1 && "$py" -c "import asyncio" >/dev/null 2>&1 && break; py=""; done
   [ -z "$py" ] && { melde "TLS-Suche übersprungen: kein Python gefunden"; return 1; }
   ports=$("$py" "$HIER/tls-port-suche.py" "$TUNNEL_IP" 2>&1); code=$?
@@ -219,13 +224,17 @@ tunnel_tls_verbinden() {
   [ $code -eq 2 ] && return 1   # Gerät antwortet im Tunnel gar nicht (aus oder WireGuard weg): keine Suche, keine Marke
   touch "$TLS_SUCHE_MARKE"
   if [ $code -ne 0 ]; then melde "TLS-Suche fehlgeschlagen (Exit $code): $(echo "$ports" | tail -1)"; return 1; fi
-  [ -z "$ports" ] && { melde "Tunnel $TUNNEL_IP: Port $PORT zu, kein offener TLS-Port (WLAN-Debugging aus oder Gerät nicht im WLAN)"; return 1; }
-  melde "Tunnel $TUNNEL_IP: Port $PORT zu, offene Ports $(echo $ports) – suche WLAN-Debugging (TLS)"
+  if [ -z "$ports" ]; then
+    abstand=$((abstand * 2)); [ $abstand -gt 60 ] && abstand=60; echo "$abstand" > "$TLS_ABSTAND_DATEI"
+    melde "Tunnel $TUNNEL_IP: Port $PORT zu, kein adb-TLS-Port (WLAN-Debugging aus oder Gerät nicht im WLAN) – nächste Suche in $abstand Minuten"
+    return 1
+  fi
+  melde "Tunnel $TUNNEL_IP: Port $PORT zu, adb-TLS-Port $(echo $ports) – verbinde"
   # Direkt nach der Suche scheitert „adb connect“ oft („failed to connect“), Sekunden später klappt es (gemessen 13.11.2026).
   for runde in 1 2 3; do
     sleep 5
     tls_ports_versuchen "$ports"; r=$?
-    if [ $r -eq 0 ]; then echo "$ports" > "$TLS_PORTS_DATEI"; return 0; fi
+    [ $r -eq 0 ] && { tls_erfolg; return 0; }
     [ $r -eq 2 ] && return 1
   done
   echo "$ports" > "$TLS_PORTS_DATEI"
@@ -235,16 +244,25 @@ tunnel_tls_verbinden() {
 # Parallele Aufrufe nicht gegeneinander laufen lassen
 LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
 HABE_SPERRE=0
-for _ in $(seq 1 90); do
+# Wachhund 90 s, direkte Aufrufe (Installation) bis 5 Minuten: Ein Lauf mit TLS-Suche dauert länger als 90 s.
+WARTE_SPERRE=90; [ $LEISE -eq 0 ] && WARTE_SPERRE=300
+for _ in $(seq 1 $WARTE_SPERRE); do
   if mkdir "$LOCK" 2>/dev/null; then echo $$ > "$LOCK/pid"; HABE_SPERRE=1; break; fi
-  # Verwaiste Sperre (Lauf wurde hart beendet): übernehmen
+  # Verwaiste Sperre (Lauf hart beendet): atomar beiseiteschieben (mv gelingt nur einem Wartenden), dann neu versuchen.
+  # ps statt kill -0: kill -0 scheitert auch bei lebenden Prozessen anderer Benutzer.
   ALT_PID=$(cat "$LOCK/pid" 2>/dev/null)
-  if [ -n "$ALT_PID" ] && ! kill -0 "$ALT_PID" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
-  [ -z "$ALT_PID" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null)" ] && { rm -rf "$LOCK"; continue; }
+  if { [ -n "$ALT_PID" ] && ! ps -p "$ALT_PID" >/dev/null 2>&1; } || \
+     { [ -z "$ALT_PID" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null)" ]; }; then
+    mv "$LOCK" "$LOCK.alt.$$" 2>/dev/null && rm -rf "$LOCK.alt.$$"
+    continue
+  fi
   sleep 1
 done
-# Läuft nach 90 s noch ein anderer Lauf, erledigt der die Arbeit: nicht parallel weitermachen.
-[ $HABE_SPERRE -eq 1 ] || { echo "adb-wlan läuft schon (Sperre $LOCK) – übersprungen"; exit 0; }
+if [ $HABE_SPERRE -ne 1 ]; then
+  # Ein anderer Lauf arbeitet noch: nicht parallel weitermachen, aber ehrlich melden, ob das Gerät schon da ist.
+  if [ -n "$(netz_verbunden | head -1)" ]; then echo "adb-wlan läuft schon – Gerät ist verbunden"; exit 0; fi
+  echo "adb-wlan läuft schon (Sperre $LOCK) – Gerät noch nicht verbunden"; exit 1
+fi
 aufraeumen() {
   # Log klein halten
   if [ -f "$LOG" ] && [ "$(wc -c 2>/dev/null <"$LOG" | tr -d ' ')" -gt 524288 2>/dev/null ]; then
@@ -279,8 +297,9 @@ fi
 # Tote oder hängende Netz-Einträge räumen; antwortende fremde Geräte bleiben unberührt
 adb devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $1, $2}' | while read -r s z; do
   ist_netz "$s" || continue
-  WARTE=8; [ "$NUR_TUNNEL" = 1 ] && WARTE=30
-  if [ "$z" != "device" ] || [ -z "$(adbzeit $WARTE -s "$s" shell echo ok)" ]; then
+  # Server: nur nicht verbundene Einträge räumen. Eine Shell-Probe wartet über den langsamen Tunnel hinter laufenden
+  # Installationen, und das Trennen bräche sie ab; ein wirklich toter Eintrag wird von adb selbst „offline“.
+  if [ "$z" != "device" ] || { [ "$NUR_TUNNEL" != 1 ] && [ -z "$(adbzeit 8 -s "$s" shell echo ok)" ]; }; then
     adb disconnect "$s" >/dev/null 2>&1; melde "Toten Eintrag $s ($z) getrennt"
   fi
 done

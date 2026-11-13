@@ -320,10 +320,12 @@ def starte_sitzung(auftrag: dict) -> str:
         import jarvis_anhaenge
         zugang = lies_zugang()
         auftrag = {**auftrag, "auftrag": (auftrag.get("auftrag") or "") + jarvis_anhaenge.fuer_auftrag(auftrag, zugang["host"], zugang["token"], cli in ("", "claude") and mit_hooks)}
-    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (Wachhund, im Hintergrund).
+    # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (Wachhund, im Hintergrund);
+    # nur bei Android-Apps (gradle-Projekt im Repo).
     try:
-        subprocess.Popen(["bash", str(PROGGS / "Werkzeuge" / "adb-wlan" / "adb-wlan.sh"), "--leise", "--geraet", "alle"],
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        if (PROGGS / app / "app" / "build.gradle.kts").is_file():
+            subprocess.Popen(["bash", str(PROGGS / "Werkzeuge" / "adb-wlan" / "adb-wlan.sh"), "--leise", "--geraet", "alle"],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     except Exception:
         pass
     text = auftragstext(auftrag)

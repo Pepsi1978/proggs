@@ -64,5 +64,10 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Aktionen der Benachrichtigung „Debugging über WLAN bestätigen“; nicht exportiert, damit keine andere App sie auslöst. -->
+        <receiver
+            android:name=".WlanDebugTipp"
+            android:exported="false" />
     </application>
 </manifest>

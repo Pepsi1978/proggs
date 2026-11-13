@@ -214,7 +214,7 @@ object Benachrichtigungen {
      * Bleibt stehen (nicht wegwischbar), bis Debugging über WLAN in diesem WLAN läuft oder das WLAN weg ist:
      * Androids eigene Nachfrage ist nur ein Fenster, das in der Hosentasche ungesehen verloren geht.
      */
-    fun wlanDebugBestaetigen(context: Context, tippen: PendingIntent) {
+    fun wlanDebugBestaetigen(context: Context, tippen: PendingIntent, nichtHier: PendingIntent): Boolean {
         val n = NotificationCompat.Builder(context, KANAL_STATUS)
             .setSmallIcon(R.drawable.ic_launcher_vordergrund)
             .setContentTitle("Debugging über WLAN bestätigen")
@@ -223,10 +223,11 @@ object Benachrichtigungen {
                 "Tippen, dann „Immer in diesem Netzwerk zulassen“. Erst dann können deine Rechner und der Server " +
                     "nach dem Neustart wieder Apps auf dieses Gerät installieren."))
             .setContentIntent(tippen)
+            .addAction(0, "Nicht in diesem Netz", nichtHier)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .build()
-        zeige(context, ID_WLAN_DEBUG, n)
+        return zeige(context, ID_WLAN_DEBUG, n)
     }
 
     fun entferneWlanDebug(context: Context) = NotificationManagerCompat.from(context).cancel(ID_WLAN_DEBUG)

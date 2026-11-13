@@ -144,8 +144,10 @@ def starte(auftrag: dict, w: dict) -> str:
     # Handy und Tablet sofort prüfen und nach einem Geräte-Neustart wieder verbinden (sonst erst beim nächsten Minutenlauf).
     # Nur anstoßen: jarvis-adb-wachhund.path startet den Dienst, so läuft er wie der Minutenlauf unter systemd (eigene Gruppe,
     # ein dabei gestarteter adb-Server überlebt einen Brücken-Neustart, nie zwei Läufe gleichzeitig).
+    # Nur bei Android-Apps (gradle-Projekt im Repo): Aufträge für Web- oder Desktop-Projekte brauchen keine Geräte.
     try:
-        (Path.home() / ".adb-wlan-anstoss").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"), encoding="utf-8")
+        if (Path(__file__).resolve().parents[2] / app / "app" / "build.gradle.kts").is_file():
+            (Path.home() / ".adb-wlan-anstoss").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"), encoding="utf-8")
     except Exception:
         pass
     # Die genannte App sofort vorbauen: Während die Sitzung liest und ändert, wird der Gradle-Daemon warm und der build-Ordner aktuell.

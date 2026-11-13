@@ -3,18 +3,22 @@
 
 Nach einem Neustart lauscht adbd nicht mehr auf 5555, sondern nur noch auf einem zufälligen TLS-Port
 (Android-Bereich 32768–60999). mDNS reicht nicht durch den Tunnel, deshalb prüft dieses Skript die Ports
-direkt. Ausgabe: offene Ports außer 5555, einer je Zeile. Exit 2, wenn das Gerät gar nicht antwortet
-(aus oder Tunnel weg); dann wird nicht gesucht. Aufruf: tls-port-suche.py <ip>
+direkt: erst welche offen sind, dann, welche wie adbd antworten (auf ein CNXN-Paket folgt STLS, CNXN oder AUTH).
+Ausgabe: nur diese adb-Ports, einer je Zeile. Exit 2, wenn das Gerät gar nicht antwortet (aus oder Tunnel weg);
+dann wird nicht gesucht. Aufruf: tls-port-suche.py <ip>
 """
 from __future__ import annotations
 
 import asyncio
 import errno
 import socket
+import struct
 import sys
 
 VON, BIS = 32768, 61000
-WARTEN = 1.5
+WARTEN = 3.0          # Mobilfunk-Tunnel: SYN-ACK kommt unter Last oft erst nach über einer Sekunde
+ANTWORT_WARTEN = 4.0
+KNAPP = (errno.EMFILE, errno.ENFILE, errno.ENOBUFS)
 
 
 def gleichzeitig() -> int:
@@ -34,21 +38,59 @@ def gleichzeitig() -> int:
         return 400
 
 
+async def offen(ip: str, port: int) -> bool:
+    for versuch in range(3):
+        try:
+            _, w = await asyncio.wait_for(asyncio.open_connection(ip, port), WARTEN)
+            w.close()
+            return True
+        except OSError as e:
+            if e.errno in KNAPP and versuch < 2:   # Dateigrenze kurz erreicht: nicht als „zu“ werten
+                await asyncio.sleep(0.5)
+                continue
+            return False
+        except Exception:
+            return False
+    return False
+
+
+def cnxn_paket() -> bytes:
+    nutz = b"host::\0"
+    befehl = 0x4E584E43  # "CNXN"
+    return struct.pack("<6I", befehl, 0x01000001, 256 * 1024, len(nutz), sum(nutz) & 0xFFFFFFFF,
+                       befehl ^ 0xFFFFFFFF) + nutz
+
+
+async def ist_adb(ip: str, port: int) -> bool:
+    """adbd antwortet auf CNXN mit STLS (WLAN-Debugging), CNXN oder AUTH; andere Dienste nicht."""
+    try:
+        r, w = await asyncio.wait_for(asyncio.open_connection(ip, port), WARTEN)
+    except Exception:
+        return False
+    try:
+        w.write(cnxn_paket())
+        await w.drain()
+        kopf = await asyncio.wait_for(r.readexactly(4), ANTWORT_WARTEN)
+        return kopf in (b"STLS", b"CNXN", b"AUTH")
+    except Exception:
+        return False
+    finally:
+        w.close()
+
+
 async def suche(ip: str) -> list[int]:
     ports = iter(range(VON, BIS))
-    offen: list[int] = []
+    gefunden: list[int] = []
 
     async def arbeiter() -> None:
         for port in ports:
-            try:
-                _, w = await asyncio.wait_for(asyncio.open_connection(ip, port), WARTEN)
-                w.close()
-                offen.append(port)
-            except Exception:
-                pass
+            if await offen(ip, port):
+                gefunden.append(port)
 
     await asyncio.gather(*(arbeiter() for _ in range(gleichzeitig())))
-    return sorted(offen)
+    gefunden = sorted(p for p in gefunden if p != 5555)
+    pruefung = await asyncio.gather(*(ist_adb(ip, p) for p in gefunden))
+    return [p for p, ok in zip(gefunden, pruefung) if ok]
 
 
 def erreichbar(ip: str) -> bool:
