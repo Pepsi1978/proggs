@@ -12,6 +12,8 @@ namespace JarvisWindows;
 public sealed record PromptEintrag
 {
     public PromptEintrag() { }
+    /// <summary>„ · 13.11.2026, 20:15 Uhr“ hinter der Quelle (wie am Handy); ohne Zeitpunkt leer.</summary>
+    public static string ZeitText(long ms) => ms <= 0 ? "" : " · " + DateTimeOffset.FromUnixTimeMilliseconds(ms).LocalDateTime.ToString("dd.MM.yyyy, HH:mm 'Uhr'", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
     public PromptEintrag(int nummer, string titel, string text, long erstellt = 0, string quelle = "")
     {
         Nummer = nummer; Titel = titel; Text = text; Erstellt = erstellt; Quelle = quelle;
@@ -128,7 +130,7 @@ public sealed class PromptsAnsicht : LebendeAnsicht
         nummer.TextAlignment = TextAlignment.Center;
         var oben = Klick(HOben(8, nummer, Fuell(V(4,
             T(p.Titel.Length == 0 ? $"Prompt {p.Nummer}" : p.Titel, 14, FontWeights.SemiBold),
-            T($"Von {p.Quelle}", 11, null, Farbe.Text3),
+            T($"Von {p.Quelle}{PromptEintrag.ZeitText(p.Erstellt)}", 11, null, Farbe.Text3),
             text))), () => { offen = offen?.Id == p.Id ? null : p; Neu(); });
         return Karte(V(8, oben, H(8,
             Spacer(),

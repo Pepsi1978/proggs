@@ -81,6 +81,10 @@ object AblageQuellen {
 
     fun merke(titel: String, quelle: String) { gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)] = quelle.trim().take(40) to System.currentTimeMillis() }
 
+    /** „Jarvis Handy · 13.11.2026, 20:15 Uhr“: Quelle und Speicherzeitpunkt für die Anzeige; ohne Zeit (0) nur die Quelle. */
+    fun mitZeit(quelle: String, ms: Long): String =
+        if (ms <= 0L) quelle else quelle + " · " + java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN).format(java.util.Date(ms))
+
     fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < MERKEN_MS }?.first ?: DIESES
 
     /** Die gespeicherte Reihenfolge, zum Beispiel „handy,mac,windows“, als Namen; Fehlendes kommt hinten dazu. */

@@ -193,7 +193,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                         if (p.titel.isNotEmpty()) { append("  ·  "); append(p.titel) }
                     }, color = f.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-                    Text(p.quelleName, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(AblageQuellen.mitZeit(p.quelleName, p.erstellt), color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 // Griff rechts, gut mit dem Daumen erreichbar: lange drücken und ziehen.
                 // Nach Quelle sortiert gibt es nichts zu ziehen: Die Reihenfolge ergibt sich dann aus der Quelle.
@@ -246,7 +246,7 @@ fun PromptAnsichtEbene(vm: AppViewModel) {
                 Box(Modifier.size(40.dp).antippen { schliessen() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
             if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
-            Text("Von ${p.quelleName}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            Text("Von ${AblageQuellen.mitZeit(p.quelleName, p.erstellt)}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
             // Der Text bekommt nur den Platz, den Kopf und Knöpfe übrig lassen, und scrollt darin.
             Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.weight(1f, fill = gross).fillMaxWidth().padding(vertical = 10.dp)
                 .then(if (gross) Modifier else Modifier.heightIn(max = 420.dp)).verticalScroll(rememberScrollState()))
