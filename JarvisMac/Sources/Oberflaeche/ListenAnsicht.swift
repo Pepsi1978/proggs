@@ -1,6 +1,20 @@
 import SwiftUI
 
-/// Ablage → Listen, wie der Listen-Reiter am Handy (ui/ListenBildschirm.kt): Listen als Kacheln, darunter die gewählte Liste mit
+/// Eigener Leistenreiter „Listen“ zwischen Ablage und Einstellungen, wie am Handy und Tablet.
+struct ListenReiter: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                BereichsKopf(symbol: "checklist", titel: "Listen",
+                             untertitel: "Dieselben Listen wie auf Handy und Tablet, in beide Richtungen abgeglichen; die jüngere Änderung gilt.")
+                ListenAnsicht()
+            }
+            .padding(36).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// Die Listen, wie der Listen-Reiter am Handy (ui/ListenBildschirm.kt): Listen als Kacheln, darunter die gewählte Liste mit
 /// Abhaken, Unterpunkten, Prioritäten, Tags, Abschnitten, Sortierung und Gruppierung. Alles geht über ListenSpeicher und ist sofort auf Handy und Tablet.
 struct ListenAnsicht: View {
     @State private var speicher = ListenSpeicher.shared

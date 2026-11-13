@@ -497,7 +497,8 @@ public sealed class AblageAnsicht : UserControl
     private void BaueOrdner()
     {
         ordner.Children.Clear();
-        foreach (var b in Enum.GetValues<AblageBereich>()) ordner.Children.Add(OrdnerKachel(b));
+        // Listen haben seit 1.0.21 einen eigenen Leistenreiter (wie am Handy), nicht mehr in der Ablage.
+        foreach (var b in Enum.GetValues<AblageBereich>()) if (b != AblageBereich.Listen) ordner.Children.Add(OrdnerKachel(b));
     }
 
     private void BaueStatus()

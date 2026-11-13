@@ -3,13 +3,14 @@ import Carbon.HIToolbox
 import SwiftUI
 
 enum Bereich: String, CaseIterable, Identifiable {
-    case start, zentrale, biomarker, ablage, gespraech, einstellungen
+    case start, zentrale, biomarker, ablage, listen, gespraech, einstellungen
     var id: String { rawValue }
     var titel: String {
         switch self {
         case .start: return "Start"
         case .zentrale: return "Zentrale"
         case .ablage: return "Ablage"
+        case .listen: return "Listen"
         case .gespraech: return "Gespräch"
         case .biomarker: return "Biomarker"
         case .einstellungen: return "Einstellungen"
@@ -20,6 +21,7 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .start: return "house.fill"
         case .zentrale: return "sparkles"
         case .ablage: return "tray.full.fill"
+        case .listen: return "checklist"
         case .gespraech: return "bubble.left.and.text.bubble.right.fill"
         case .biomarker: return "bolt.heart.fill"
         case .einstellungen: return "gearshape.fill"

@@ -214,6 +214,7 @@ public sealed class HauptFenster : Window
             Bereich.Zentrale => new ZentraleAnsicht(),
             Bereich.Biomarker => new BiomarkerAnsicht(),
             Bereich.Ablage => new AblageAnsicht(),
+            Bereich.Listen => new ListenReiter(),
             Bereich.Gespraech => s.Gespraech is { } g ? new ChatAnsicht(g) : new StartAnsicht(),
             _ => new EinstellungenAnsicht(),
         };
@@ -256,6 +257,7 @@ public sealed class HauptFenster : Window
             Key.OemComma => () => s.Bereich = Bereich.Einstellungen,
             Key.D2 or Key.NumPad2 => () => s.Bereich = Bereich.Zentrale,
             Key.D3 or Key.NumPad3 => () => s.Bereich = Bereich.Ablage,
+            Key.D4 or Key.NumPad4 => () => s.Bereich = Bereich.Listen,
             _ => null,
         };
         if (a == null) return;
@@ -323,7 +325,7 @@ public sealed class Seitenleiste : Decorator
         var bereiche = new Reaktiv(() =>
         {
             var v = V(2, startKnopf.Parent == null ? startKnopf : Abgeloest(startKnopf));
-            foreach (var b in new[] { Bereich.Zentrale, Bereich.Biomarker, Bereich.Ablage, Bereich.Einstellungen })
+            foreach (var b in new[] { Bereich.Zentrale, Bereich.Biomarker, Bereich.Ablage, Bereich.Listen, Bereich.Einstellungen })
                 v.Children.Add(new LeistenEintrag(b.Symbol, b.Titel, steuerung.Bereich == b, () => steuerung.Bereich = b));
             return v;
         }, new[] { nameof(AppSteuerung.Bereich) }, steuerung);

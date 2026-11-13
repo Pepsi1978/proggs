@@ -14,6 +14,7 @@ struct HauptFenster: View {
                 case .start: StartAnsicht()
                 case .zentrale: ZentraleAnsicht()
                 case .ablage: AblageAnsicht()
+                case .listen: ListenReiter()
                 case .gespraech:
                     if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { StartAnsicht() }
                 case .biomarker: BiomarkerAnsicht()
@@ -58,7 +59,7 @@ struct HauptFenster: View {
     }
 }
 
-/// Fenster-Tastenkürzel: ⌘N und ⌘1 Start mit neuem Gespräch, ⌘L Live-Modus, ⌘D Sprechen, ⌘, Einstellungen, ⌘2 Zentrale, ⌘3 Ablage.
+/// Fenster-Tastenkürzel: ⌘N und ⌘1 Start mit neuem Gespräch, ⌘L Live-Modus, ⌘D Sprechen, ⌘, Einstellungen, ⌘2 Zentrale, ⌘3 Ablage, ⌘4 Listen.
 private struct TastenKuerzel: View {
     @State private var steuerung = AppSteuerung.shared
     var body: some View {
@@ -70,6 +71,7 @@ private struct TastenKuerzel: View {
             Button("") { AppSteuerung.shared.startOeffnen() }.keyboardShortcut("1", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .zentrale }.keyboardShortcut("2", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .ablage }.keyboardShortcut("3", modifiers: .command)
+            Button("") { AppSteuerung.shared.bereich = .listen }.keyboardShortcut("4", modifiers: .command)
         }
         // Im Prompt-Editor würden sie den Bereich unsichtbar darunter wechseln.
         .disabled(steuerung.promptBearbeiten != nil || steuerung.erinnerungOffen != nil || steuerung.erinnerungEntwurf != nil)
@@ -138,7 +140,7 @@ struct Seitenleiste: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 4)
-                ForEach([Bereich.zentrale, .biomarker, .ablage, .einstellungen]) { b in
+                ForEach([Bereich.zentrale, .biomarker, .ablage, .listen, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
                 }
             }

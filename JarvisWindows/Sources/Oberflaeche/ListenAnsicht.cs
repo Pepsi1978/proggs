@@ -8,6 +8,18 @@ namespace JarvisWindows;
 
 /// <summary>Ablage → Listen, wie der Listen-Reiter am Handy (ui/ListenBildschirm.kt): Listen als Kacheln, darunter die gewählte Liste mit
 /// Abhaken, Unterpunkten, Prioritäten, Tags, Abschnitten, Sortierung und Gruppierung. Alles geht über ListenSpeicher und ist sofort auf Handy und Tablet.</summary>
+/// <summary>Eigener Leistenreiter „Listen“ zwischen Ablage und Einstellungen, wie am Handy und Tablet.</summary>
+public sealed class ListenReiter : Decorator
+{
+    public ListenReiter()
+    {
+        var v = V(18, new BereichsKopf("checklist", "Listen", "Dieselben Listen wie auf Handy und Tablet, in beide Richtungen abgeglichen; die jüngere Änderung gilt."),
+            new ListenAnsicht());
+        v.Margin = new Thickness(36);
+        Child = new Scroller(v);
+    }
+}
+
 public sealed class ListenAnsicht : UserControl
 {
     private readonly ListenSpeicher speicher = ListenSpeicher.Shared;
