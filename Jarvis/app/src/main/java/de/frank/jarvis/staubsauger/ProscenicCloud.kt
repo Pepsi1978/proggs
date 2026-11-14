@@ -115,14 +115,19 @@ object ProscenicCloud {
         val login = post("/user/login", null, body.toString().toRequestBody("application/json".toMediaType()), ios = true)
         val daten = login.optJSONObject("data")
         val token = daten?.optString("token").orEmpty()
-        if (token.isBlank() || daten?.optInt("equipcount", 0) == 0)
-            throw Abgewiesen("Die Anmeldung bei Proscenic hat nicht geklappt: Prüfe E-Mail und Passwort in Jarvis unter Konten, Proscenic. Ist der M7 Pro in einem anderen Konto, trag dieses ein.")
+        Logbuch.netz("Proscenic: Anmeldung", "Antwort ohne Token: " + JSONObject(login.toString()).also { it.optJSONObject("data")?.remove("token") }.toString().take(400))
+        if (token.isBlank())
+            throw Abgewiesen("Die Anmeldung bei Proscenic hat nicht geklappt: Prüfe E-Mail und Passwort in Jarvis unter Konten, Proscenic.")
         val geraete = post("/user/getEquips/$mail", token, FormBody.Builder().add("username", mail).build())
+        Logbuch.netz("Proscenic: Geräteliste", geraete.toString().take(900))
         val liste = geraete.optJSONObject("data")?.optJSONArray("content")
         val roboter = (0 until (liste?.length() ?: 0)).mapNotNull { liste?.optJSONObject(it) }
             .firstOrNull { it.optString("typeName").equals("CleanRobot", true) || it.optString("code").contains("M7", true) }
         val sn = roboter?.optString("sn").orEmpty()
-        if (sn.isBlank()) throw Abgewiesen("In deinem Proscenic-Konto finde ich keinen Saugroboter.")
+        if (sn.isBlank()) throw Abgewiesen(
+            "Im Proscenic-Konto $mail ist noch kein Saugroboter sichtbar. Ist es ein Zweitkonto, muss es die Freigabe erst annehmen: " +
+                "Melde dich in der Proscenic-App einmal mit diesem Konto an, nimm die Einladung unter Nachrichten an und prüfe, ob der M7 Pro in der Geräteliste steht. " +
+                "Danach meldest du dich in der App wieder mit deinem Hauptkonto an.")
         p.edit().putString("mail", mail).putString("token", token).putString("sn", sn).putBoolean("geteilt", roboter?.optBoolean("shared") == true).apply()
         Logbuch.netz("Proscenic: Anmeldung", "neu angemeldet, Geräte ${daten?.optInt("equipcount")}, Modell ${roboter?.optString("model")}")
         return Sitzung(token, sn, mail)
