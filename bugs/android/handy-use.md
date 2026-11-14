@@ -90,3 +90,11 @@
 - **Ursache:** Das JDK-Update ersetzt den Ordner, `~/.gradle/gradle.properties` bleibt auf dem alten Pfad.
 - **Fix:** `-Dorg.gradle.java.home=<aktueller Pfad>` oder die Datei anpassen.
 - **Quelle:** eigene Messung 02.11.2026.
+
+## 16. Fremd-App per Bedienungshilfe bedient: Befehl verpufft, App meldet „kein WLAN“
+- **Symptom:** Jarvis tippt in der Proscenic-App, nichts passiert; die App zeigt „Aktueller WLAN ist nicht verfügbar“, obwohl Handy und Gerät im WLAN sind.
+- **Ursache:** Android sperrt Apps im Hintergrund das Netz (`dumpsys netpolicy`: `blocked=APP_BACKGROUND`). Die App trennt ihre Gerätverbindung etwa 5 s nach dem Wechsel in den Hintergrund und verbindet erst wieder, wenn sie vorn ist. Wer sofort nach dem Öffnen liest oder tippt, erwischt den alten, getrennten Zustand.
+- **Fix:** Nach dem Öffnen mindestens 2–3 s und bis die Statusanzeige keine Netzwarnung mehr zeigt warten, erst dann tippen; die App nach dem Tipp mindestens ~6 s vorn lassen; Toasts per `typeNotificationStateChanged` mitlesen, um Abweisungen zu erkennen.
+- **Zweite Falle:** Beim Kaltstart nie früh `GLOBAL_ACTION_BACK` drücken, solange Startbildschirm oder Liste noch laden; das beendet die App. Fensterklasse aus `TYPE_WINDOW_STATE_CHANGED` (`event.className`) unterscheidet Startbildschirm, Liste und Unterseite.
+- **Diagnose:** `adb logcat --pid=$(pidof <paket>)` und `dumpsys netpolicy | grep UID=<uid>`.
+- **Quelle:** eigene Messung 14.11.2026 (Jarvis 1.8.672, Proscenic 1.5.5, Fold 8).
