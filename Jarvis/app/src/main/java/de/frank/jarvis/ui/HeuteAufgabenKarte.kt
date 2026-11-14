@@ -181,6 +181,17 @@ private object HeuteAufgabenStand {
     }
 }
 
+/**
+ * Öffnet Geniale Aufgaben; mit [tag] direkt dessen Tagesübersicht (Extra „tag_datum“, ISO-Datum). CLEAR_TOP + SINGLE_TOP:
+ * Läuft die App schon, kommt der Wunsch per onNewIntent an, statt dass nur der alte Stand nach vorn kommt.
+ */
+private fun aufgabenOeffnen(context: android.content.Context, tag: LocalDate? = null) {
+    val intent = android.content.Intent().setClassName("de.frank.aufgaben", "de.frank.aufgaben.MainActivity")
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    tag?.let { intent.putExtra("tag_datum", it.toString()) }
+    runCatching { context.startActivity(intent) }
+}
+
 /** Leselimit je Bereich über die Brücke. */
 private const val LIMIT = 200
 
@@ -374,7 +385,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             ?.let { liste -> sortiere(liste) { it.erledigt && it.id !in s.halten } }
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
-        Column(griff.fillMaxWidth()) {
+        // Tipp auf den Kopf öffnet Geniale Aufgaben mit dem heutigen Tag.
+        Column(griff.fillMaxWidth().antippen { aufgabenOeffnen(context, LocalDate.now()) }) {
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
@@ -391,7 +403,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
             // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
             Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
-                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten) { umschalten(a) } } }
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context) }) { umschalten(a) } } }
             }
             if (anzeige.size > SICHTBAR) Text(
                 if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
@@ -425,6 +437,9 @@ private fun MorgenBereich() {
         )
     }
     if (!s.morgenOffen) return
+    val context = LocalContext.current.applicationContext
+    // Tipp irgendwo in den aufgeklappten Bereich öffnet Geniale Aufgaben mit dem morgigen Tag (Zuklappen nur über den Kopf).
+    Column(Modifier.fillMaxWidth().antippen { aufgabenOeffnen(context, LocalDate.now().plusDays(1)) }) {
     when {
         liste == null && fehler != null -> Text(fehler, color = f.gefahr, fontSize = 14.sp)
         liste == null -> Text("Wird gelesen …", color = f.textLeise, fontSize = 14.sp)
@@ -443,6 +458,7 @@ private fun MorgenBereich() {
             if (s.morgenAnzahl > liste.size) Text("Weitere ${s.morgenAnzahl - liste.size} nur in Geniale Aufgaben.", color = f.textLeise, fontSize = 13.sp)
         }
     }
+    }
 }
 
 /**
@@ -450,19 +466,18 @@ private fun MorgenBereich() {
  * roten Titel; Uhrzeit und „überfällig“ liest TalkBack über die Zustandsbeschreibung vor.
  */
 @Composable
-private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> Unit) {
+private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Unit, umschalten: () -> Unit) {
     val f = LocalFarben.current
     // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Während der Halte-Zeit [gehalten] bleibt die
     // frisch abgehakte Zeile kräftig (Haken gut sichtbar) und graut erst beim Gleiten aus, im Takt mit der Bewegung.
     val deckung by animateFloatAsState(if (a.erledigt && !gehalten) 0.5f else 1f, tween(GLEITEN_MS), label = "deckung")
     val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
+    val zustand = listOfNotNull(
+        if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
+    ).joinToString(", ")
+    // Abhaken nur über Titel oder Abhakfeld; die freie Fläche links vom Titel öffnet Geniale Aufgaben, die Lücke dazwischen tut nichts.
     Row(
-        Modifier.gleitend().fillMaxWidth().alpha(deckung).antippen(rolle = Role.Checkbox, aktion = umschalten).padding(vertical = 6.dp)
-            .semantics(mergeDescendants = true) {
-                stateDescription = listOfNotNull(
-                    if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
-                ).joinToString(", ")
-            },
+        Modifier.gleitend().fillMaxWidth().alpha(deckung),
         // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, auch wenn der Titel zweizeilig umbricht.
         verticalAlignment = Alignment.Top,
     ) {
@@ -473,15 +488,21 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, umschalten: () -> 
         var textMitte by remember { mutableFloatStateOf(halbKreis) }
         val versatz = textMitte - halbKreis
         // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
+        Box(
+            Modifier.weight(1f).antippen(aktion = oeffnen).padding(top = 6.dp + with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }, bottom = 6.dp),
+            contentAlignment = Alignment.TopEnd,
+        ) {
         Text(
-            a.titel, Modifier.weight(1f).padding(end = 12.dp, top = with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }),
+            a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand },
             color = when { a.erledigt -> f.textLeise; a.ueberfaellig -> f.gefahr; else -> f.text }, fontSize = 15.sp, fontWeight = FontWeight.Medium,
             textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
             onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
         )
+        }
         Box(
-            Modifier.padding(top = with(dichte) { versatz.coerceAtLeast(0f).toDp() }).size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
+            Modifier.padding(start = 12.dp, top = 6.dp + with(dichte) { versatz.coerceAtLeast(0f).toDp() }, bottom = 6.dp).size(28.dp)
+                .antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
                 // Hellmodus: weißes Glas auf heller Karte verschwindet fast, ein kräftiger Ring macht das Abhakfeld klar erkennbar.
                 if (f.dunkel) Modifier else Modifier.border(2.dp, f.textLeise.copy(alpha = 0.75f), CircleShape))),
             contentAlignment = Alignment.Center,

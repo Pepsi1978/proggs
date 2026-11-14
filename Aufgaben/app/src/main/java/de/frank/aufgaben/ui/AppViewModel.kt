@@ -172,6 +172,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun kalenderOeffnen() { kalenderTag = null; bildschirm = Bildschirm.Kalender }
 
+    /** Öffnet einen Tag direkt als Tagesübersicht (von Jarvis). Ein offener Editor wird vorher wie beim Zurück verlassen. */
+    fun tagOeffnen(tag: Long) {
+        kalenderTag = tag
+        // Editor offen: wie beim Zurück speichern bzw. verlassen, danach (auch nach einer laufenden Aufnahme) in den Tag.
+        if (bildschirm is Bildschirm.Bearbeiten) { nachEditor = Bildschirm.Kalender; editorVerlassen() }
+        else bildschirm = Bildschirm.Kalender
+    }
+
     fun zurueck(): Boolean = when (bildschirm) {
         is Bildschirm.Bearbeiten -> { editorVerlassen(); true }
         Bildschirm.Liste -> false

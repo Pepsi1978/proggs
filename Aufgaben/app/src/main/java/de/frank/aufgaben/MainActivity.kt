@@ -59,7 +59,10 @@ class MainActivity : ComponentActivity() {
     private fun verarbeite(intent: Intent?) {
         intent ?: return
         val id = intent.getLongExtra(EXTRA_AUFGABE, -1)
+        // Jarvis öffnet einen Tag (ISO-Datum) direkt als Tagesübersicht im Kalender.
+        val tag = intent.getStringExtra(EXTRA_TAG)?.let { runCatching { java.time.LocalDate.parse(it).toEpochDay() }.getOrNull() }
         when {
+            tag != null -> vm.tagOeffnen(tag)
             intent.getBooleanExtra(EXTRA_NEU, false) -> vm.neueAufgabe(mitMikro = true)
             id >= 0 -> {
                 // Antippen der Erinnerung beendet ein laufendes Vorlesen bzw. den Wecker.
@@ -72,5 +75,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_AUFGABE = "aufgabe_id"
         const val EXTRA_NEU = "neu"
+        const val EXTRA_TAG = "tag_datum"
     }
 }
