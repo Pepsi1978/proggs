@@ -97,4 +97,5 @@
 - **Fix:** Nach dem Öffnen mindestens 2–3 s und bis die Statusanzeige keine Netzwarnung mehr zeigt warten, erst dann tippen; die App nach dem Tipp mindestens ~6 s vorn lassen; Toasts per `typeNotificationStateChanged` mitlesen, um Abweisungen zu erkennen.
 - **Zweite Falle:** Beim Kaltstart nie früh `GLOBAL_ACTION_BACK` drücken, solange Startbildschirm oder Liste noch laden; das beendet die App. Fensterklasse aus `TYPE_WINDOW_STATE_CHANGED` (`event.className`) unterscheidet Startbildschirm, Liste und Unterseite.
 - **Diagnose:** `adb logcat --pid=$(pidof <paket>)` und `dumpsys netpolicy | grep UID=<uid>`.
+- **Falle beim Testen:** In `adb shell input tap`-Schleifen vor jedem Tipp den Vordergrund prüfen (`dumpsys activity activities | grep topResumedActivity`); ein eingehender Anruf schiebt sich dazwischen und bekommt sonst die Tipps.
 - **Quelle:** eigene Messung 14.11.2026 (Jarvis 1.8.672, Proscenic 1.5.5, Fold 8).
