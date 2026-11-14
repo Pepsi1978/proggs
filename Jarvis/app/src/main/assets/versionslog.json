@@ -691,6 +691,7 @@
     {"versionCode": 686, "versionName": "1.8.675", "stand": "14.11.2026, 13:05 Uhr", "notiz": "Die Proscenic-App bleibt beim Steuern des Staubsaugers unsichtbar hinter einer Jarvis-Fläche, und Jarvis gibt beim Warten auf die Verbindung nicht mehr zu früh auf."},
     {"versionCode": 687, "versionName": "1.8.676", "stand": "14.11.2026, 13:23 Uhr", "notiz": "Jarvis steuert den Saugroboter M7 Pro jetzt unsichtbar im Hintergrund direkt über die Proscenic-Cloud, sobald unter Konten die Proscenic-Anmeldung eingetragen ist."},
     {"versionCode": 688, "versionName": "1.8.677", "stand": "14.11.2026, 13:41 Uhr", "notiz": "Die Staubsauger-Steuerung über die Proscenic-Cloud schreibt Anmeldung, Befehle und Statusabfragen ins Logbuch, damit sich Verbindungsprobleme klären lassen."},
+    {"versionCode": 689, "versionName": "1.8.678", "stand": "14.11.2026, 13:44 Uhr", "notiz": "Nach einem Staubsauger-Befehl fragt Jarvis den Stand seltener ab, damit die Proscenic-App parallel bedienbar bleibt."},
     {"versionCode": 687, "versionName": "1.8.676", "stand": "14.11.2026, 13:10 Uhr", "notiz": "In der Mac-Fernwartung scrollt ein Wisch mit einem Finger über einem Terminalfenster den Inhalt mit Schwung, und langes Drücken dort startet das Markieren von Text."},
     {"versionCode": 688, "versionName": "1.8.677", "stand": "14.11.2026, 13:20 Uhr", "notiz": "Langes Drücken ohne Ziehen öffnet im Terminal das Kontextmenü, die Titelleiste zieht wieder das Fenster, und das Scrollen verliert beim langsamen Wischen keinen Weg mehr."}
 ]

@@ -68,7 +68,8 @@ object ProscenicCloud {
             // Kurz warten und den neuen Stand lesen, damit Frank hört, ob der Roboter reagiert hat.
             val nachher = if (aktion == ProscenicSteuerung.Aktion.STATUS) vorher else {
                 var st: Stand? = null
-                for (i in 0 until 3) { delay(if (i == 0) 3000 else 2500); st = runCatching { stand(s) }.getOrNull(); if (st != null && st.mode != vorher?.mode) break }
+                // Höchstens zwei kurze Gateway-Abfragen: jede verdrängt kurz die Verbindung der Proscenic-App.
+                for (i in 0 until 2) { delay(4000); st = runCatching { stand(s) }.getOrNull(); if (st != null && st.mode != vorher?.mode) break }
                 st
             }
             nachher?.let { SaugerStand.merken(context, it.akku, it.zustand, it.saugstufe) }
