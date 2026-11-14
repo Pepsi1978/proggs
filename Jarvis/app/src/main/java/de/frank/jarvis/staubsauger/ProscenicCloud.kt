@@ -13,6 +13,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import de.frank.jarvis.observability.Logbuch
 import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -115,6 +116,7 @@ object ProscenicCloud {
         val sn = roboter?.optString("sn").orEmpty()
         if (sn.isBlank()) throw Abgewiesen("In deinem Proscenic-Konto finde ich keinen Saugroboter.")
         p.edit().putString("mail", mail).putString("token", token).putString("sn", sn).apply()
+        Logbuch.netz("Proscenic: Anmeldung", "neu angemeldet, Geräte ${daten?.optInt("equipcount")}, Modell ${roboter?.optString("model")}")
         return Sitzung(token, sn, mail)
     }
 
@@ -161,6 +163,7 @@ object ProscenicCloud {
     private fun senden(s: Sitzung, pfad: String, body: RequestBody) {
         val a = post(pfad, s.token, body)
         val code = a.optInt("code", 0)
+        Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
         if (code == 102 || code == 401 || code == 403) throw TokenUngueltig()
         if (code != 0) throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
     }
@@ -208,7 +211,11 @@ object ProscenicCloud {
     }
 
     private fun stand(s: Sitzung): Stand? {
+        // Zur Erkundung: Antwort des HTTP-Infopunkts mitschreiben (Aufbau ist nirgends dokumentiert).
+        runCatching { post("/app/cleanRobot/info", s.token, FormBody.Builder().add("username", s.mail).add("sn", s.sn).build()) }
+            .onSuccess { Logbuch.netz("Proscenic: Info", it.toString().take(900)) }
         val adr = post("/appInit/getSockAddr", s.token, FormBody.Builder().add("username", s.mail).add("sn", s.sn).build())
+        Logbuch.netz("Proscenic: Gateway", adr.toString().take(300))
         if (adr.optInt("code", 0) == 102) throw TokenUngueltig()
         val eintrag = adr.optJSONObject("data")?.optJSONArray("addr_list")?.optJSONObject(0) ?: return null
         val ip = eintrag.optString("ip"); val port = eintrag.optInt("port")
@@ -222,6 +229,7 @@ object ProscenicCloud {
             val puffer = ByteArrayOutputStream()
             val buf = ByteArray(8192)
             val bis = System.currentTimeMillis() + 15_000
+            val gesehen = mutableListOf<String>()
             while (System.currentTimeMillis() < bis) {
                 val n = try { ein.read(buf) } catch (_: java.net.SocketTimeoutException) { continue }
                 if (n < 0) break
@@ -230,7 +238,7 @@ object ProscenicCloud {
                 while (true) {
                     val i = text.indexOf(ENDE); if (i < 0) break
                     val rahmen = text.substring(0, i); text = text.substring(i + ENDE.length)
-                    nachricht(rahmen, s.token)?.let { j ->
+                    nachricht(rahmen, s.token).also { gesehen += (it?.optInt("infoType")?.toString() ?: "?:" + rahmen.take(60)) }?.let { j ->
                         if (j.optInt("infoType") == 20001) {
                             val d = j.optJSONObject("data") ?: return null
                             return Stand(d.optString("mode"), d.optInt("elec", -1).takeIf { it in 0..100 },
@@ -240,6 +248,7 @@ object ProscenicCloud {
                 }
                 puffer.reset(); puffer.write(text.toByteArray())
             }
+            Logbuch.netz("Proscenic: Stand fehlt", "Gateway $ip:$port, Rahmen: ${gesehen.joinToString().ifBlank { "keine" }}".take(400))
         }
         return null
     }
