@@ -220,8 +220,8 @@ object ProscenicSteuerung {
         SaugerStand.laeuft = true
         SaugerStand.meldung = null
         val ausgang = try {
-            // Unsichtbar über die Proscenic-Cloud, sobald die Anmeldung unter Konten steht; nur Y-Wischen kennt die Cloud nicht.
-            if (aktion != Aktion.WISCHEN && ProscenicCloud.konfiguriert(context)) ProscenicCloud.ausfuehren(context.applicationContext, aktion)
+            // Unsichtbar über die Proscenic-Cloud, sobald die Anmeldung unter Konten steht.
+            if (ProscenicCloud.konfiguriert(context)) ProscenicCloud.ausfuehren(context.applicationContext, aktion)
             else withContext(Dispatchers.Default) { ablauf(context.applicationContext, aktion) }
         } catch (e: CancellationException) {
             throw e

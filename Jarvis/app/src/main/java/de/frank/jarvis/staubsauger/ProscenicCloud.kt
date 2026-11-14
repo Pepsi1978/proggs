@@ -33,9 +33,9 @@ import javax.crypto.spec.SecretKeySpec
  * Der Token wird gespeichert und nur bei Fehlern neu geholt, damit Jarvis die Proscenic-App möglichst selten verdrängt.
  */
 object ProscenicCloud {
-    private const val HOST = "https://mobile.proscenic.com.de"
-    private const val ENDE = "#\t#"
-    private val CLIENT = OkHttpClient.Builder()
+    internal const val HOST = "https://mobile.proscenic.com.de"
+    internal const val ENDE = "#\t#"
+    internal val CLIENT = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS).readTimeout(25, TimeUnit.SECONDS).callTimeout(40, TimeUnit.SECONDS).build()
 
     fun konfiguriert(context: Context): Boolean {
@@ -46,7 +46,7 @@ object ProscenicCloud {
     /** Nicht weiter versuchen: falsche Anmeldedaten oder kein Roboter im Konto. */
     class Abgewiesen(text: String) : Exception(text)
 
-    private data class Sitzung(val token: String, val sn: String, val mail: String)
+    internal data class Sitzung(val token: String, val sn: String, val mail: String)
 
     private fun prefs(c: Context) = c.getSharedPreferences("staubsauger_cloud", Context.MODE_PRIVATE)
 
@@ -99,9 +99,9 @@ object ProscenicCloud {
 
     // ---- Anmeldung ----
 
-    private class TokenUngueltig : Exception()
+    internal class TokenUngueltig : Exception()
 
-    private fun sitzung(context: Context, neu: Boolean): Sitzung {
+    internal fun sitzung(context: Context, neu: Boolean): Sitzung {
         val s = SecureSettings.get(context)
         val mail = s.proscenicMail.trim()
         val p = prefs(context)
@@ -169,11 +169,14 @@ object ProscenicCloud {
                     senden(s, "/instructions/cmd/${s.sn}$user", json.toString().toRequestBody("application/x-www-form-urlencoded".toMediaType()))
                     "Staubsammlung gestartet."
                 }
-            ProscenicSteuerung.Aktion.WISCHEN -> throw IllegalStateException("Y-Wischen ist über die Cloud nicht bekannt")
+            ProscenicSteuerung.Aktion.WISCHEN -> {
+                senden(s, "/instructions/${s.sn}/21020$user", form("ctrlCode" to "3024"))
+                "Y-förmiges Wischen gestartet."
+            }
         }
     }
 
-    private fun senden(s: Sitzung, pfad: String, body: RequestBody) {
+    internal fun senden(s: Sitzung, pfad: String, body: RequestBody) {
         val a = post(pfad, s.token, body)
         val code = a.optInt("code", 0)
         Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
@@ -181,7 +184,7 @@ object ProscenicCloud {
         if (code != 0) throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
     }
 
-    private fun post(pfad: String, token: String?, body: RequestBody, ios: Boolean = false): JSONObject {
+    internal fun post(pfad: String, token: String?, body: RequestBody, ios: Boolean = false): JSONObject {
         val r = Request.Builder().url(HOST + pfad).post(body)
             .header("User-Agent", "ProscenicHome/1.7.8 (iPhone; iOS 14.2.1; Scale/3.00)")
             .apply { if (ios) { header("os", "i"); header("c", "338"); header("lan", "en"); header("v", "1.7.8") } }
@@ -267,7 +270,7 @@ object ProscenicCloud {
     }
 
     /** Ein Rahmen vom Gateway: Klartext-JSON oder `{"encrypt":…,"data":"<Base64>"}` (AES-ECB, Schlüssel = Token). */
-    private fun nachricht(rahmen: String, token: String): JSONObject? {
+    internal fun nachricht(rahmen: String, token: String): JSONObject? {
         val j = runCatching { JSONObject(rahmen.trim()) }.getOrNull() ?: return null
         if (j.has("infoType") && j.opt("data") is JSONObject) return j
         val daten = j.optString("data").ifBlank { return null }
