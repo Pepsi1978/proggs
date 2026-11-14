@@ -140,7 +140,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
     )
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().imePadding()) {
-            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
+            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.obenLeiste))
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück (speichert)") { vm.zurueck() }
                 Text(if (neu) "Neu" else "Aufgabe", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).padding(start = 8.dp))

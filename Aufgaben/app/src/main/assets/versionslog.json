@@ -96,6 +96,7 @@
     {"versionCode": 92, "versionName": "1.0.91", "stand": "12.11.2026, 16:35 Uhr", "notiz": "Erledigte Aufgaben sind jetzt ganz grau samt Zeiten, Symbolen und Widget-Haken, gut lesbar und auch beim Ziehen grau."},
     {"versionCode": 93, "versionName": "1.0.92", "stand": "14.11.2026, 11:12 Uhr", "notiz": "Jarvis kann Geniale Aufgaben jetzt direkt mit einem bestimmten Tag öffnen, zum Beispiel heute oder morgen in der Tagesübersicht."},
     {"versionCode": 94, "versionName": "1.0.93", "stand": "14.11.2026, 11:22 Uhr", "notiz": "Aus Jarvis heraus öffnet sich jetzt die normale Startseite, passend gescrollt mit Heute oder Morgen oben statt des Kalenders; ein offener Editor oder laufender Fokus bleibt dabei unberührt."},
-    {"versionCode": 95, "versionName": "1.0.94", "stand": "14.11.2026, 11:29 Uhr", "notiz": "Neuer Schalter in den Einstellungen unter Aussehen: Statusleiste oben ausblenden, die Wahl bleibt nach dem Neustart erhalten."}
+    {"versionCode": 95, "versionName": "1.0.94", "stand": "14.11.2026, 11:29 Uhr", "notiz": "Neuer Schalter in den Einstellungen unter Aussehen: Statusleiste oben ausblenden, die Wahl bleibt nach dem Neustart erhalten."},
+    {"versionCode": 96, "versionName": "1.0.95", "stand": "14.11.2026, 11:32 Uhr", "notiz": "Mit ausgeblendeter Statusleiste rücken die Inhalte jetzt nach oben, und die Leiste bleibt auch nach App-Wechsel oder geteiltem Bildschirm verborgen."}
 ]
 }

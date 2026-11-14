@@ -108,7 +108,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         if (uri != null) vm.eigenenTonWaehlen(uri)
     }
     Column(Modifier.fillMaxSize().imePadding()) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.obenLeiste))
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Text("Einstellungen", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))

@@ -120,7 +120,7 @@ private fun KalenderUebersicht(vm: AppViewModel, heute: Long, start: Long, proTa
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.obenLeiste))
         Kopfzeile(
             zurueck = { vm.zurueck() }, zurueckText = "Zurück zu den Aufgaben",
             oben = "Kalender", titel = "$vonText – $bisText",
@@ -284,7 +284,7 @@ private fun TagesUebersicht(vm: AppViewModel, tag: Long, heute: Long, start: Lon
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.obenLeiste))
         Kopfzeile(
             zurueck = { vm.zurueck() }, zurueckText = "Zurück zum Kalender",
             oben = relativ, titel = Tage.langesDatum(tag), obenFarbe = if (tag == heute) f.primaer else f.textLeise,

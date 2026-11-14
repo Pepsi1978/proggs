@@ -176,7 +176,7 @@ fun ListeBildschirm(vm: AppViewModel) {
     // Von Jarvis gewünscht: Bereich Heute bzw. Morgen oben unter der Statusleiste. Erst scrollen, wenn die Liste steht
     // (Daten kommen beim Kaltstart erst nach ein paar Frames, Bereiche blenden ein); sonst landet man daneben.
     val bereichY = remember { HashMap<String, Float>() }
-    val statusHoehe = WindowInsets.statusBarsIgnoringVisibility.getTop(LocalDensity.current)
+    val statusHoehe = WindowInsets.obenLeiste.getTop(LocalDensity.current)
     LaunchedEffect(vm.bereichZiel) {
         val (bereich, _) = vm.bereichZiel ?: return@LaunchedEffect
         var letzte = -1f
@@ -211,7 +211,7 @@ fun ListeBildschirm(vm: AppViewModel) {
 
     // Randscrollen während des Ziehens, auch bei stillstehendem Finger.
     val zieht = zustand.aufgabe != null
-    val statusOben = WindowInsets.statusBarsIgnoringVisibility.getTop(dichte)
+    val statusOben = WindowInsets.obenLeiste.getTop(dichte)
     val navUnten = WindowInsets.navigationBarsIgnoringVisibility.getBottom(dichte)
     LaunchedEffect(zieht) {
         if (!zieht) return@LaunchedEffect
@@ -283,7 +283,7 @@ fun ListeBildschirm(vm: AppViewModel) {
         if (!zieht) { zustand.kanteOben = r.top + statusOben; zustand.kanteUnten = r.bottom - navUnten; zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
-            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBarsIgnoringVisibility))
+            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.obenLeiste))
             Kopf(vm, b, sucheOffen, { sucheOffen = !sucheOffen; if (!sucheOffen) suche = "" })
             AnimatedVisibility(sucheOffen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) { Suchfeld(suche) { suche = it } }
             if (szeneZeigen && !sucheOffen) {
@@ -661,7 +661,7 @@ private fun AblageOben(zustand: ZiehZustand, heute: Long) {
         Modifier.fillMaxWidth()
             .onGloballyPositioned { zustand.meldeObenLeiste(it.boundsInRoot()) }
             .background(f.flaecheDeckend)
-            .glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(horizontal = 10.dp, vertical = 10.dp),
+            .glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).windowInsetsPadding(WindowInsets.obenLeiste).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

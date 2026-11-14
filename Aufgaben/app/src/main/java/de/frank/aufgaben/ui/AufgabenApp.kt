@@ -130,7 +130,7 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
                     Bildschirm.Kalender -> KalenderBildschirm(vm)
                 }
             }
-            FokusLeisten(vm.bildschirm is Bildschirm.Fokus, vm.einstellungen.statusleisteAus)
+            SystemLeisten(vm.bildschirm is Bildschirm.Fokus, vm.einstellungen.statusleisteAus)
             Konfetti(vm.konfetti)
             Meldung(vm, Modifier.align(Alignment.BottomCenter))
         }
@@ -178,27 +178,52 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
 }
 
 /**
- * Fokus blendet Status- und Navigationsleiste aus; ein Wisch vom Rand geht direkt zurück. Beim Zurückgehen kommen sie sofort
- * wieder, schon zu Beginn des Übergangs und nicht erst, wenn der Fokus-Bildschirm ganz verschwunden ist. Die übrigen
- * Bildschirme und der Fokus selbst rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
+ * Steuert Status- und Navigationsleiste. Fokus blendet beide aus; ein Wisch vom Rand geht direkt zurück. Beim Zurückgehen kommen
+ * sie sofort wieder, schon zu Beginn des Übergangs. Der Fokus selbst rechnet mit der Leistenhöhe unabhängig von ihrer
+ * Sichtbarkeit, darum springt dabei nichts. Außerhalb des Fokus gilt die Einstellung „Statusleiste oben ausblenden“: Dann bleibt
+ * nur die Statusleiste weg, und die übrigen Bildschirme rücken über [obenLeiste] nach oben. Weil Android die Leisten nach
+ * Mehrfenster, Pop-up-Ansicht oder App-Wechsel wieder zeigen kann, gilt der Zustand bei jeder Rückkehr und jedem Fokusgewinn erneut.
  */
 @Composable
-private fun FokusLeisten(fokus: Boolean, statusleisteAus: Boolean) {
+private fun SystemLeisten(fokus: Boolean, statusleisteAus: Boolean) {
     val view = LocalView.current
-    LaunchedEffect(fokus, statusleisteAus) {
-        val fenster = (view.context as? Activity)?.window ?: return@LaunchedEffect
-        val leisten = WindowCompat.getInsetsController(fenster, view)
-        if (fokus) {
-            // Nicht „zeigen beim Wischen“: Dort holte die erste Zurück-Geste nur die Leisten hervor und erst die zweite
-            // ging zurück. So wirkt die Zurück-Geste sofort, ohne die Statusleiste einzublenden.
-            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            leisten.hide(WindowInsetsCompat.Type.systemBars())
-        } else if (statusleisteAus) {
-            // Einstellung „Statusleiste ausblenden“: nur die Statusleiste bleibt weg, ein Wisch vom oberen Rand zeigt sie kurz.
-            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            leisten.show(WindowInsetsCompat.Type.navigationBars())
-            leisten.hide(WindowInsetsCompat.Type.statusBars())
-        } else leisten.show(WindowInsetsCompat.Type.systemBars())
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val anwenden = remember(view, fokus, statusleisteAus) {
+        {
+            val fenster = (view.context as? Activity)?.window
+            if (fenster != null) {
+                val leisten = WindowCompat.getInsetsController(fenster, view)
+                when {
+                    fokus -> {
+                        // Nicht „zeigen beim Wischen“: Dort holte die erste Zurück-Geste nur die Leisten hervor und erst die zweite
+                        // ging zurück. So wirkt die Zurück-Geste sofort, ohne die Statusleiste einzublenden.
+                        leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                        leisten.hide(WindowInsetsCompat.Type.systemBars())
+                    }
+                    statusleisteAus -> {
+                        // Ein Wisch vom oberen Rand zeigt sie nur kurz; mit BEHAVIOR_DEFAULT bliebe sie danach dauerhaft sichtbar.
+                        leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        leisten.show(WindowInsetsCompat.Type.navigationBars())
+                        leisten.hide(WindowInsetsCompat.Type.statusBars())
+                    }
+                    else -> {
+                        leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                        leisten.show(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
+        }
+    }
+    DisposableEffect(lifecycle, view, anwenden) {
+        anwenden()
+        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) anwenden() }
+        val fensterFokus = android.view.ViewTreeObserver.OnWindowFocusChangeListener { hat -> if (hat) anwenden() }
+        lifecycle.addObserver(beobachter)
+        view.viewTreeObserver.addOnWindowFocusChangeListener(fensterFokus)
+        onDispose {
+            lifecycle.removeObserver(beobachter)
+            if (view.viewTreeObserver.isAlive) view.viewTreeObserver.removeOnWindowFocusChangeListener(fensterFokus)
+        }
     }
 }
 
