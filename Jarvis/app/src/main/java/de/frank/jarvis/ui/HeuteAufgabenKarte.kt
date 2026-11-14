@@ -405,7 +405,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
             // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
             Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
-                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context, vm) }) { umschalten(a) } } }
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context, vm, LocalDate.now()) }) { umschalten(a) } } }
             }
             if (anzeige.size > SICHTBAR) Text(
                 if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
@@ -477,7 +477,7 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Uni
     val zustand = listOfNotNull(
         if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
     ).joinToString(", ")
-    // Abhaken nur über Titel oder Abhakfeld; die freie Fläche links vom Titel öffnet Geniale Aufgaben, die Lücke dazwischen tut nichts.
+    // Abhaken nur über Titel oder Abhakfeld; die freie Fläche links vom Titel öffnet Geniale Aufgaben mit Heute oben, die Lücke dazwischen tut nichts.
     Row(
         Modifier.gleitend().fillMaxWidth().alpha(deckung),
         // Oben ausgerichtet: Das Abhakfeld sitzt auf Höhe der ersten Titelzeile, auch wenn der Titel zweizeilig umbricht.
