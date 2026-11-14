@@ -54,6 +54,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -387,8 +391,18 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             ?.let { liste -> sortiere(liste) { it.erledigt && it.id !in s.halten } }
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
-        // Tipp auf den Kopf öffnet Geniale Aufgaben mit dem heutigen Tag.
-        Column(griff.fillMaxWidth().antippen(lange = {}, langeText = "Verschieben") { aufgabenOeffnen(context, vm, LocalDate.now()) }) {
+        // Tipp auf den Kopf öffnet Geniale Aufgaben mit dem heutigen Tag. Kein onLongClick: Ein Lang-Druck-Handler verbraucht
+        // nach dem langen Druck alle Fingerbewegungen, dann bricht das Verschieben des Patterns sofort ab und es springt zurück.
+        // Stattdessen öffnet nur ein kurzer Tipp; ein langer Druck (Verschieben ohne Bewegung) öffnet nichts.
+        val langDruck = androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis
+        val druckBeginn = remember { longArrayOf(0L) }
+        Column(
+            griff.fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture { druckBeginn[0] = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial).uptimeMillis }
+                }
+                .antippen { if (android.os.SystemClock.uptimeMillis() - druckBeginn[0] < langDruck) aufgabenOeffnen(context, vm, LocalDate.now()) },
+        ) {
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
