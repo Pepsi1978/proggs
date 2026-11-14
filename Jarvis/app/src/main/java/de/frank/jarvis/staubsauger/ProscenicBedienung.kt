@@ -6,11 +6,19 @@ import android.app.KeyguardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Path
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.TextView
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.runtime.getValue
@@ -19,6 +27,7 @@ import androidx.compose.runtime.setValue
 import de.frank.jarvis.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -53,8 +62,37 @@ class ProscenicBedienung : AccessibilityService() {
 
     override fun onInterrupt() {}
 
+    private val haupt = Handler(Looper.getMainLooper())
+    private var vorhang: View? = null
+
+    /**
+     * Deckt den ganzen Bildschirm mit einer Jarvis-Fläche ab, solange Jarvis in der Proscenic-App tippt: Die App muss vorn laufen
+     * (im Hintergrund sperrt Android ihr das Netz), Frank soll sie aber nicht sehen. Die Fläche lässt Berührungen durch und nimmt
+     * keinen Fokus, die Proscenic-App bleibt also aktiv und bedienbar.
+     */
+    fun vorhangZeigen(text: String) = haupt.post {
+        if (vorhang != null) return@post
+        val v = TextView(this).apply {
+            setText(text); setTextColor(Color.WHITE); textSize = 18f; gravity = Gravity.CENTER
+            setBackgroundColor(Color.rgb(14, 17, 22)); setPadding(64, 64, 64, 64)
+        }
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.OPAQUE,
+        ).apply { layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS }
+        runCatching { getSystemService(WindowManager::class.java).addView(v, lp); vorhang = v }
+    }
+
+    fun vorhangWeg() = haupt.post {
+        vorhang?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeView(v) } }
+        vorhang = null
+    }
+
     override fun onUnbind(intent: Intent?): Boolean { if (instanz === this) instanz = null; return super.onUnbind(intent) }
-    override fun onDestroy() { if (instanz === this) instanz = null; super.onDestroy() }
+    override fun onDestroy() { vorhang?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeView(v) } }; vorhang = null; if (instanz === this) instanz = null; super.onDestroy() }
 
     companion object {
         @Volatile var instanz: ProscenicBedienung? = null
@@ -223,8 +261,10 @@ object ProscenicSteuerung {
                 ?.takeIf { it != PAKET && context.packageManager.getLaunchIntentForPackage(it) != null }
                 ?: ProscenicBedienung.zuletztVorn
         }
-        dienst.startActivity(Intent(start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        dienst.vorhangZeigen("Jarvis steuert den Staubsauger …")
         try {
+            delay(250)
+            dienst.startActivity(Intent(start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             when (val v = bereitMachen(dienst, context, start, ende)) {
                 is Bereit.Nein -> return v.ausgang
                 Bereit.Ja -> Unit
@@ -279,6 +319,9 @@ object ProscenicSteuerung {
             return SaugerAusgang(e.message.orEmpty(), fehler = true)
         } finally {
             zurueck(dienst, context, vorher)
+            // Kurz warten, damit der Wechsel zurück hinter dem Vorhang passiert.
+            withContext(NonCancellable) { delay(700) }
+            dienst.vorhangWeg()
         }
     }
 
@@ -327,10 +370,15 @@ object ProscenicSteuerung {
     private suspend fun verbunden(dienst: AccessibilityService, context: Context, bis: Long): Boolean {
         val frueh = System.currentTimeMillis() + 2500
         var gut = 0
+        var ohneKnopfSeit = 0L
         while (System.currentTimeMillis() < bis) {
             if (telefonat(context)) return false
-            if (finde(dienst, KNOPF_REINIGEN) == null) return false
-            val z = text(dienst, ZUSTAND)
+            // Der Gerätebildschirm ist beim Wiederaufbau kurz nicht lesbar; erst nach 6 Sekunden ohne ihn aufgeben.
+            val knopfDa = finde(dienst, KNOPF_REINIGEN) != null
+            if (knopfDa) ohneKnopfSeit = 0L
+            else if (ohneKnopfSeit == 0L) ohneKnopfSeit = System.currentTimeMillis()
+            else if (System.currentTimeMillis() - ohneKnopfSeit > 6000) return false
+            val z = if (knopfDa) text(dienst, ZUSTAND) else null
             gut = if (!z.isNullOrBlank() && !offline(z)) gut + 1 else 0
             if (gut >= 2 && System.currentTimeMillis() >= frueh) return true
             delay(500)
