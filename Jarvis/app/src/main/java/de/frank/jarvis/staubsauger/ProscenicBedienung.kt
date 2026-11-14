@@ -352,6 +352,9 @@ object ProscenicSteuerung {
             val seit = System.currentTimeMillis()
             tippen()
             bestaetigen(dienst)
+            // Das Mehr-Menü bleibt nach dem Tipp offen und verdeckt die Zustandsanzeige; der Befehl ist da schon raus.
+            delay(1500)
+            menueSchliessen(dienst)
             val bis = minOf(ende - 4000, System.currentTimeMillis() + if (wirkung) 15_000 else 6_000)
             var abgewiesen: String? = null
             while (System.currentTimeMillis() < bis) {
