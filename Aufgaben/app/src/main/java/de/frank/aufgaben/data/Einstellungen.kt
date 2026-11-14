@@ -114,6 +114,8 @@ class Einstellungen private constructor(context: Context) {
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
     var szeneZeigen: Boolean get() = prefs.getBoolean("szene", true); set(v) = put { putBoolean("szene", v) }
+    /** Android-Statusleiste oben in der App ausblenden. */
+    var statusleisteAus: Boolean get() = prefs.getBoolean("statusleiste_aus", false); set(v) = put { putBoolean("statusleiste_aus", v) }
 
     // ---- Erinnerungen ----
     /** Eigener Ton (classic, bells, pulse, chime) oder "uri:<Systemton>". */

@@ -130,7 +130,7 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
                     Bildschirm.Kalender -> KalenderBildschirm(vm)
                 }
             }
-            FokusLeisten(vm.bildschirm is Bildschirm.Fokus)
+            FokusLeisten(vm.bildschirm is Bildschirm.Fokus, vm.einstellungen.statusleisteAus)
             Konfetti(vm.konfetti)
             Meldung(vm, Modifier.align(Alignment.BottomCenter))
         }
@@ -183,9 +183,9 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
  * Bildschirme und der Fokus selbst rechnen mit der Leistenhöhe unabhängig von ihrer Sichtbarkeit, darum springt dabei nichts.
  */
 @Composable
-private fun FokusLeisten(fokus: Boolean) {
+private fun FokusLeisten(fokus: Boolean, statusleisteAus: Boolean) {
     val view = LocalView.current
-    LaunchedEffect(fokus) {
+    LaunchedEffect(fokus, statusleisteAus) {
         val fenster = (view.context as? Activity)?.window ?: return@LaunchedEffect
         val leisten = WindowCompat.getInsetsController(fenster, view)
         if (fokus) {
@@ -193,6 +193,11 @@ private fun FokusLeisten(fokus: Boolean) {
             // ging zurück. So wirkt die Zurück-Geste sofort, ohne die Statusleiste einzublenden.
             leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             leisten.hide(WindowInsetsCompat.Type.systemBars())
+        } else if (statusleisteAus) {
+            // Einstellung „Statusleiste ausblenden“: nur die Statusleiste bleibt weg, ein Wisch vom oberen Rand zeigt sie kurz.
+            leisten.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            leisten.show(WindowInsetsCompat.Type.navigationBars())
+            leisten.hide(WindowInsetsCompat.Type.statusBars())
         } else leisten.show(WindowInsetsCompat.Type.systemBars())
     }
 }

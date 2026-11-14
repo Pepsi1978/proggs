@@ -135,6 +135,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     }
                     // Gilt für alle Designs; Hell/Dunkel und Design wechselt man über die Knöpfe oben in der Hauptansicht.
                     Schalter("Animierte Szene oben zeigen", e.szeneZeigen) { e.szeneZeigen = it }
+                    Schalter("Statusleiste oben ausblenden", e.statusleisteAus) { e.statusleisteAus = it }
                 }
                 // ---- Sprache ----
                 Block("Spracheingabe · Offline") {
