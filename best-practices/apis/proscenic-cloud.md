@@ -11,6 +11,7 @@
 | 3 | Token | speichern, nur bei `code 102`/HTTP 401/403 neu einloggen (jeder Login stellt neuen Token aus) | Ablauf |
 | 4 | Befehle | Formular-POST `/instructions/...` mit Header `token` | Befehle |
 | 5 | Status | TCP-Gateway aus `/appInit/getSockAddr`, 70001-Handshake, AES-128-ECB (Schlüssel = Token), Rahmenende `#\t#`, infoType 20001 | Status |
+| 6 | Parallel zur App | Je Konto nur EINE aktive Anmeldung (App-Login macht Fremd-Token ungültig: `code 102` „token过期“, und umgekehrt). Eigenes Zweitkonto nehmen, Gerät in der App per „Gerät teilen“/„Kontenfreigabe“ freigeben (in App 1.5.5 vorhanden: `AddShareForUserActivity`, `/app/cleanRobot/share/...`) | Ablauf |
 
 ## Warum Cloud
 UI-Automation per Bedienungshilfe braucht die Proscenic-App sichtbar im Vordergrund (Android 15+ sperrt Apps im Hintergrund das Netz, `BLOCKED_REASON_APP_BACKGROUND`, ~5 s nach Wechsel). Eine fremde Activity auf einer eigenen VirtualDisplay starten verbietet Android ab 10. Lokal hat der M7 Pro keine offenen Ports (gemessen 14.11.2026). Bleibt: die Cloud-API.

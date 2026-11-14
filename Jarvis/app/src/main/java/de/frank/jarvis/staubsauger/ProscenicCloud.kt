@@ -50,6 +50,9 @@ object ProscenicCloud {
 
     private fun prefs(c: Context) = c.getSharedPreferences("staubsauger_cloud", Context.MODE_PRIVATE)
 
+    /** Nutzt Jarvis ein Zweitkonto, mit dem der Roboter geteilt ist? Dann verdrängt seine Anmeldung die Proscenic-App nicht. */
+    private fun geteilt(c: Context) = prefs(c).getBoolean("geteilt", false)
+
     suspend fun ausfuehren(context: Context, aktion: ProscenicSteuerung.Aktion): SaugerAusgang = withContext(Dispatchers.IO) {
         try {
             var s = sitzung(context, neu = false)
@@ -62,7 +65,7 @@ object ProscenicCloud {
                 befehl(s, aktion, vorher)
             } catch (e: TokenUngueltig) {
                 if (neuAngemeldet) throw Abgewiesen("Die Proscenic-Cloud lehnt die Anmeldung von Jarvis ab; trag E-Mail und Passwort unter Konten, Proscenic neu ein.")
-                s = sitzung(context, neu = true)
+                s = sitzung(context, neu = true); neuAngemeldet = true
                 befehl(s, aktion, vorher)
             }
             // Kurz warten und den neuen Stand lesen, damit Frank hört, ob der Roboter reagiert hat.
@@ -77,7 +80,11 @@ object ProscenicCloud {
                 ?: if (aktion == ProscenicSteuerung.Aktion.STATUS) "" else "Den neuen Stand konnte ich nicht abrufen."
             if (aktion == ProscenicSteuerung.Aktion.STATUS && nachher == null)
                 return@withContext SaugerAusgang("Den Stand des M7 Pro konnte ich über die Proscenic-Cloud gerade nicht abrufen; vermutlich ist das Internet zu langsam.", fehler = true)
-            SaugerAusgang(listOf(antwort, standText).filter { it.isNotBlank() }.joinToString(" "))
+            // Proscenic erlaubt je Konto nur eine aktive Anmeldung: Musste Jarvis sich neu anmelden, ist die Proscenic-App jetzt abgemeldet.
+            val hinweis = if (neuAngemeldet && !geteilt(context))
+                "Hinweis: Weil du dich in der Proscenic-App angemeldet hattest, musste ich mich neu anmelden; die App ist damit abgemeldet. " +
+                    "Teile den Roboter in der App mit einem zweiten Konto (Gerät teilen) und trag dieses in Jarvis unter Konten ein, dann geht beides parallel." else ""
+            SaugerAusgang(listOf(antwort, standText, hinweis).filter { it.isNotBlank() }.joinToString(" "))
         } catch (e: Abgewiesen) {
             SaugerAusgang(e.message.orEmpty(), fehler = true)
         } catch (e: TokenUngueltig) {
@@ -116,7 +123,7 @@ object ProscenicCloud {
             .firstOrNull { it.optString("typeName").equals("CleanRobot", true) || it.optString("code").contains("M7", true) }
         val sn = roboter?.optString("sn").orEmpty()
         if (sn.isBlank()) throw Abgewiesen("In deinem Proscenic-Konto finde ich keinen Saugroboter.")
-        p.edit().putString("mail", mail).putString("token", token).putString("sn", sn).apply()
+        p.edit().putString("mail", mail).putString("token", token).putString("sn", sn).putBoolean("geteilt", roboter?.optBoolean("shared") == true).apply()
         Logbuch.netz("Proscenic: Anmeldung", "neu angemeldet, Geräte ${daten?.optInt("equipcount")}, Modell ${roboter?.optString("model")}")
         return Sitzung(token, sn, mail)
     }

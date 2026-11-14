@@ -8,10 +8,10 @@
 - **Fix:** Erfolg an `data.token` und `equipcount` >= 1 prüfen.
 - **Quelle:** https://community.home-assistant.io/t/proscenic-m7-pro/241732
 
-## 2. Token wird ungültig, nachdem sich die Handy-App neu anmeldet
+## 2. Nur eine aktive Anmeldung je Konto (verifiziert 14.11.2026)
 - **Symptom:** Befehle oder `getSockAddr` liefern `code 102`.
-- **Ursache:** Jeder Login stellt einen neuen Token aus; widersprüchlich belegt, ob alte ungültig werden.
-- **Fix:** Token speichern, bei `code 102`/401/403 einmal neu einloggen und den Befehl wiederholen.
+- **Ursache:** Jeder Login stellt einen neuen Token aus und macht den alten ungültig (`getSockAddr` → `{"code":102,"msg":"APP你的token过期啦"}`). Meldet sich der Fremd-Client neu an, ist die Handy-App abgemeldet (Knöpfe grau, nur Neu-Anmelden hilft).
+- **Fix:** Zweitkonto anlegen und den Roboter per „Gerät teilen“ freigeben (App 1.5.5 kann das); Token speichern, bei `code 102` einmal neu einloggen.
 - **Quelle:** https://community.home-assistant.io/t/proscenic-m7-pro/241732?page=3 ; JuliusBlueTek `update_sockets_ip`
 
 ## 3. Zwei Gateway-Verbindungen verdrängen sich
