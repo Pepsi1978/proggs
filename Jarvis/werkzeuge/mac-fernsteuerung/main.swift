@@ -434,7 +434,7 @@ final class Eingabe {
         case "hoch":
             maus(.leftMouseUp, punkt(j)); gedrueckt = false
         case "scrollen":
-            let dx = Int32((j["dx"] as? Double) ?? 0), dy = Int32((j["dy"] as? Double) ?? 0)
+            let dx = Int32(((j["dx"] as? Double) ?? 0).rounded()), dy = Int32(((j["dy"] as? Double) ?? 0).rounded())
             if j["x"] != nil { maus(.mouseMoved, punkt(j)) }
             CGEvent(scrollWheelEvent2Source: quelle, units: .pixel, wheelCount: 2, wheel1: dy, wheel2: dx, wheel3: 0)?
                 .post(tap: .cghidEventTap)
@@ -627,21 +627,50 @@ final class Zustand {
     /// Gezeigter Bildschirm in globalen Koordinaten; die Fenster werden darauf bezogen (0…1).
     var rahmen: () -> CGRect = { .zero }
     static let terminalApps: Set<String> = ["Terminal", "iTerm2", "Ghostty", "WezTerm", "Alacritty", "kitty", "Warp", "Hyper", "Tabby"]
+    /// Verlässlicher als der (übersetzbare) Name: Bundle-Kennungen der Terminal-Apps.
+    static let terminalBundles: Set<String> = ["com.apple.Terminal", "com.googlecode.iterm2", "com.mitchellh.ghostty", "com.github.wez.wezterm",
+                                               "org.alacritty", "net.kovidgoyal.kitty", "dev.warp.Warp-Stable", "co.zeit.hyper", "org.tabby"]
+    /// Titel- und Tableiste eines Terminals (Punkte): dort zieht ein Finger weiter das Fenster statt zu scrollen.
+    static let terminalKopf: CGFloat = 30
+    private static var terminalPid: [pid_t: Bool] = [:]
+
+    private static func istTerminal(_ f: [String: Any]) -> Bool {
+        let pid = (f[kCGWindowOwnerPID as String] as? Int).map { pid_t($0) } ?? 0
+        if let w = terminalPid[pid] { return w }
+        let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? ""
+        let w = terminalBundles.contains(bundle) || terminalApps.contains(f[kCGWindowOwnerName as String] as? String ?? "")
+        if terminalPid.count > 200 { terminalPid.removeAll() }
+        terminalPid[pid] = w
+        return w
+    }
 
     /// Sichtbare Fenster von vorn nach hinten als [x, y, b, h, terminal 0/1], bezogen auf den gezeigten Bildschirm.
     /// Das Handy erkennt daran, ob ein Finger auf einem Terminal liegt (Wischen = scrollen, lange drücken = markieren).
     static func fenster(_ r: CGRect) -> [[Double]] {
         guard r.width > 0, let liste = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [] }
         var aus: [[Double]] = []
+        func n(_ v: CGFloat) -> Double { (Double(v) * 1000).rounded() / 1000 }
+        func eintrag(_ fr: CGRect, _ t: Bool) -> [Double] {
+            [n((fr.minX - r.minX) / r.width), n((fr.minY - r.minY) / r.height), n(fr.width / r.width), n(fr.height / r.height), t ? 1 : 0]
+        }
         for f in liste {
-            guard (f[kCGWindowLayer as String] as? Int ?? 1) == 0, (f[kCGWindowAlpha as String] as? Double ?? 1) > 0,
+            let ebene = f[kCGWindowLayer as String] as? Int ?? 1
+            guard (f[kCGWindowAlpha as String] as? Double ?? 1) > 0,
                   let b = f[kCGWindowBounds as String] as? NSDictionary, let fr = CGRect(dictionaryRepresentation: b),
-                  fr.width > 40, fr.height > 40, fr.intersects(r) else { continue }
-            let name = f[kCGWindowOwnerName as String] as? String ?? ""
-            func n(_ v: CGFloat) -> Double { (Double(v) * 1000).rounded() / 1000 }
-            aus.append([n((fr.minX - r.minX) / r.width), n((fr.minY - r.minY) / r.height), n(fr.width / r.width), n(fr.height / r.height),
-                        terminalApps.contains(name) ? 1 : 0])
-            if aus.count >= 40 { break }
+                  fr.width > 8, fr.height > 8, fr.intersects(r) else { continue }
+            if ebene != 0 {
+                // Menüs, Dock, schwebende Leisten über einem Terminal verdecken es; bildschirmfüllende Ebenen (Menüleiste o. Ä.) nicht.
+                if ebene > 0, fr.width * fr.height < r.width * r.height * 0.6 { aus.append(eintrag(fr, false)) }
+            } else {
+                guard fr.width > 40, fr.height > 40 else { continue }
+                let t = istTerminal(f)
+                if t, fr.height > terminalKopf * 3 {
+                    // Kopfleiste zuerst: sie liegt „vorn“ und zählt nicht als Terminal.
+                    aus.append(eintrag(CGRect(x: fr.minX, y: fr.minY, width: fr.width, height: terminalKopf), false))
+                }
+                aus.append(eintrag(fr, t))
+            }
+            if aus.count >= 60 { break }
         }
         return aus
     }
@@ -681,7 +710,13 @@ final class Zustand {
         }
         t.resume(); timer = t
     }
-    func stop() { timer?.cancel(); timer = nil }
+    /// Frischer Stand für die erste Nachricht einer Sitzung; der erste Timer-Durchlauf schickt ihn dann nicht doppelt.
+    func aktuell() -> Werte {
+        let (text, geheim) = Zustand.fokus()
+        werte = Werte(tastatur: text, geheim: geheim, gesperrt: Zustand.gesperrt(), fenster: Zustand.fenster(rahmen()))
+        return werte
+    }
+    func stop() { timer?.cancel(); timer = nil; werte = Werte() }
 }
 
 // MARK: - Verbindung zum Handy
@@ -966,8 +1001,8 @@ final class Dienst {
             self.wach.an()
             self.bildschirm.sicherstellen()
             self.warGesperrt = Zustand.gesperrt()
+            _ = self.zustand.aktuell()
             var z = self.zustand.json; z["gesperrt"] = self.warGesperrt
-            z["fenster"] = Zustand.fenster(self.bildschirm.rahmen)
             s.sendenJSON(0x03, z)
             self.fehlstarts = 0
             self.aufnahmeStarten()

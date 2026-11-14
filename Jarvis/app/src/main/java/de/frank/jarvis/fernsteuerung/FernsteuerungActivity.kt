@@ -151,6 +151,8 @@ class FernsteuerungActivity : ComponentActivity() {
 
     private fun trennen() {
         verbindung?.stop(); verbindung = null
+        // Alte Fensterlage gilt nach dem Trennen nicht mehr; der Mac schickt sie mit dem ersten Zustand neu.
+        if (::ansicht.isInitialized) { ansicht.fensterSetzen(null); ansicht.schwungAus() }
         dekoder?.stop(); dekoder = null
     }
 

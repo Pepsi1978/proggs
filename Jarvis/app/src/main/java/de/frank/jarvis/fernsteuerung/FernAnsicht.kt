@@ -29,7 +29,8 @@ import kotlin.math.hypot
  * Tippen = Klick, Doppeltippen = Doppelklick (öffnet Apps), lange drücken = Rechtsklick, ein Finger ziehen = Maus ziehen,
  * zwei Finger schieben = scrollen (vergrößert: Ausschnitt verschieben), zwei Finger spreizen = vergrößern.
  * Auf einem Terminalfenster des Macs: ein Finger wischen = scrollen (mit Schwung), lange drücken = Text markieren
- * (Maustaste bleibt gedrückt, weiterziehen markiert, Loslassen beendet).
+ * (Maustaste bleibt gedrückt, weiterziehen markiert, Loslassen beendet); lange drücken ohne Ziehen = Rechtsklick.
+ * Die Titel- und Tableiste eines Terminals zählt nicht dazu (dort zieht ein Finger weiter das Fenster).
  * Ist sie fokussiert, nimmt sie die Bildschirmtastatur des Handys entgegen und tippt auf dem Mac.
  */
 @SuppressLint("ViewConstructor")
@@ -135,11 +136,16 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
     private var schwungY = 0f
     private var schwungX = 0f
     private var schwungLetzt = 0L
+    private var markiertBewegt = false
+    private var langX = 0f
+    private var langY = 0f
+    /** Ein Tippen, das einen laufenden Schwung anhält, klickt nicht am Mac. */
+    private var tippenStopptSchwung = false
 
     private val gesten = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             // Tippen auf die schwarzen Ränder neben dem Bild löst am Mac nichts aus.
-            if (zweiFinger || !imBild(e.x, e.y)) return false
+            if (zweiFinger || tippenStopptSchwung || !imBild(e.x, e.y)) return false
             eingabeNeu()
             ereignis("klick", e.x, e.y)
             return true
@@ -153,7 +159,7 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
             if (zweiFinger || ziehtMaus || wischScroll || !imBild(e.x, e.y)) return
             if (terminal) {
                 // Markieren: Maustaste drücken und halten, weiterziehen zieht die Markierung auf.
-                markiert = true
+                markiert = true; markiertBewegt = false; langX = e.x; langY = e.y
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 ereignis("runter", e.x, e.y)
                 return
@@ -182,6 +188,7 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 zweiFinger = false; ziehtMaus = false; wischScroll = false; markiert = false
+                tippenStopptSchwung = schwungLaeuft()
                 schwungStopp()
                 startX = e.x; startY = e.y; letzteX = e.x; letzteY = e.y
                 terminal = aufTerminal(e.x, e.y)
@@ -195,9 +202,10 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
                 letzteMitteX = mitteX(e); letzteMitteY = mitteY(e)
                 scrollRestX = 0f; scrollRestY = 0f
                 // Den GestureDetector die Folge abbrechen lassen (kein Tippen, kein Rechtsklick)
-                gesten.onTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
+                abbrechen(e)
             }
             MotionEvent.ACTION_MOVE -> {
+                tempo?.addMovement(e)
                 if (zweiFinger) {
                     if (e.pointerCount >= 2 && !skalierung.isInProgress || e.pointerCount >= 2 && abs(skalierung.scaleFactor - 1f) < 0.01f) {
                         val mx = mitteX(e); val my = mitteY(e)
@@ -205,37 +213,37 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
                         letzteMitteX = mx; letzteMitteY = my
                         if (zoom > 1.02f) { versatzX += dx; versatzY += dy; anordnen() }
                         else {
-                            scrollRestX += dx; scrollRestY += dy
-                            if (abs(scrollRestX) >= 2 || abs(scrollRestY) >= 2) {
-                                senden(JSONObject().put("t", "scrollen").put("dx", (scrollRestX * 1.2f).toDouble()).put("dy", (scrollRestY * 1.2f).toDouble()))
-                                scrollRestX = 0f; scrollRestY = 0f
-                            }
+                            scrollSenden(dx * 1.2f, dy * 1.2f, nurSenkrecht = false)
                         }
                     } else { letzteMitteX = mitteX(e); letzteMitteY = mitteY(e) }
                 } else if (ziehtMaus || markiert) {
+                    if (markiert && hypot(e.x - langX, e.y - langY) > slop) markiertBewegt = true
                     ereignis("ziehen", e.x, e.y)
                 } else if (wischScroll) {
-                    tempo?.addMovement(e)
                     wischen(e.x - letzteX, e.y - letzteY)
                     letzteX = e.x; letzteY = e.y
                 } else if (terminal && hypot(e.x - startX, e.y - startY) > slop) {
                     // Terminal: ein Finger wischen scrollt, natürliche Richtung (Inhalt folgt dem Finger).
                     wischScroll = true
-                    tempo?.addMovement(e)
-                    gesten.onTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
+                    abbrechen(e)
                     scrollRestX = 0f; scrollRestY = 0f
-                    senden(JSONObject().put("t", "bewegen").put("x", macPunkt(startX, startY).first).put("y", macPunkt(startX, startY).second))
+                    ereignis("bewegen", startX, startY)
                     wischen(e.x - startX, e.y - startY)
                     letzteX = e.x; letzteY = e.y
                 } else if (hypot(e.x - startX, e.y - startY) > slop * 1.5f && imBild(startX, startY)) {
                     ziehtMaus = true
-                    gesten.onTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
+                    abbrechen(e)
                     ereignis("runter", startX, startY)
                     ereignis("ziehen", e.x, e.y)
                 } else gesten.onTouchEvent(e)
             }
             MotionEvent.ACTION_UP -> {
-                if (ziehtMaus || markiert) { ereignis("hoch", e.x, e.y); ziehtMaus = false; markiert = false; gesten.onTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL }) }
+                if (ziehtMaus || markiert) {
+                    ereignis("hoch", e.x, e.y)
+                    // Lange gedrückt, aber nicht gezogen: Kontextmenü des Terminals (Kopieren, Einsetzen …).
+                    if (markiert && !markiertBewegt) ereignis("rechtsklick", langX, langY)
+                    ziehtMaus = false; markiert = false; abbrechen(e)
+                }
                 else if (wischScroll) {
                     wischScroll = false
                     tempo?.let { it.addMovement(e); it.computeCurrentVelocity(1000); schwungStart(it.xVelocity, it.yVelocity) }
@@ -257,13 +265,27 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
     private fun wischen(dx: Float, dy: Float) {
         // Vergrößert ist ein Bildpunkt auf dem Handy weniger Weg auf dem Mac.
         val f = 1.2f / zoom
-        scrollRestX += dx * f; scrollRestY += dy * f
-        if (abs(scrollRestX) >= 2 || abs(scrollRestY) >= 2) {
-            // Vorwiegend senkrecht: waagerechtes Zittern weglassen, damit das Terminal nicht seitlich wackelt.
-            val sx = if (abs(scrollRestX) > abs(scrollRestY) * 2) scrollRestX else 0f
-            senden(JSONObject().put("t", "scrollen").put("dx", sx.toDouble()).put("dy", scrollRestY.toDouble()))
-            scrollRestX = 0f; scrollRestY = 0f
-        }
+        scrollSenden(dx * f, dy * f, nurSenkrecht = true)
+    }
+
+    /**
+     * Sammelt Scrollweg und schickt ganze Bildpunkte (der Mac rechnet in ganzen Zahlen); der Rest bleibt für das nächste Mal,
+     * damit langsames Wischen und der auslaufende Schwung keinen Weg verlieren.
+     */
+    private fun scrollSenden(dx: Float, dy: Float, nurSenkrecht: Boolean) {
+        scrollRestX += dx; scrollRestY += dy
+        if (abs(scrollRestX) < 2 && abs(scrollRestY) < 2) return
+        // Terminal: waagerechtes Zittern weglassen, damit der Inhalt nicht seitlich wackelt.
+        if (nurSenkrecht && abs(scrollRestX) <= abs(scrollRestY) * 2) scrollRestX = 0f
+        val sx = scrollRestX.toInt(); val sy = scrollRestY.toInt()
+        scrollRestX -= sx; scrollRestY -= sy
+        senden(JSONObject().put("t", "scrollen").put("dx", sx).put("dy", sy))
+    }
+
+    /** Dem GestureDetector die laufende Folge abbrechen (kein Tippen, kein langes Drücken). */
+    private fun abbrechen(e: MotionEvent) {
+        val c = MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL }
+        gesten.onTouchEvent(c); c.recycle()
     }
 
     // Schwung nach dem Loslassen: Geschwindigkeit klingt pro Bild ab.
@@ -285,6 +307,12 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         schwungLetzt = System.nanoTime()
         postOnAnimation(schwungSchritt)
     }
+
+    private fun schwungLaeuft() = abs(schwungX) > 0f || abs(schwungY) > 0f
+
+    override fun onDetachedFromWindow() { schwungStopp(); super.onDetachedFromWindow() }
+
+    fun schwungAus() = schwungStopp()
 
     private fun schwungStopp() { removeCallbacks(schwungSchritt); schwungX = 0f; schwungY = 0f }
 
