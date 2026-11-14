@@ -166,6 +166,8 @@ class FernsteuerungActivity : ComponentActivity() {
         gesperrt = j.optBoolean("gesperrt")
         // Der Fokus auf dem Mac öffnet die Tastatur nicht mehr, er setzt nur die Eingabe zurück (Eingabeart, alter Entwurf).
         ansicht.geheim = j.optBoolean("geheim")
+        // Fensterliste (nur der Mac schickt sie): erkennt Terminalfenster für Wisch-Scrollen und Markieren.
+        if (j.has("fenster")) ansicht.fensterSetzen(j.optJSONArray("fenster"))
         val feld = j.optBoolean("tastatur")
         if (feld != feldAmRechner) { feldAmRechner = feld; ansicht.eingabeNeu() }
     }

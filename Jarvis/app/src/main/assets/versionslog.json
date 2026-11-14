@@ -688,6 +688,7 @@
     {"versionCode": 683, "versionName": "1.8.672", "stand": "14.11.2026, 12:14 Uhr", "notiz": "Das Pattern „Heute in Geniale Aufgaben“ lässt sich auf dem Startbildschirm wieder an der Überschrift lang drücken und verschieben."},
     {"versionCode": 684, "versionName": "1.8.673", "stand": "14.11.2026, 12:53 Uhr", "notiz": "Die Staubsauger-Steuerung wartet geduldig auf die Proscenic-App und ihre Verbindung zum M7 Pro, tippt den Roboter in der Geräteliste mehrfach an, prüft, ob ein Befehl ankommt, und nennt sonst klar den Grund."},
     {"versionCode": 685, "versionName": "1.8.674", "stand": "14.11.2026, 13:00 Uhr", "notiz": "Nach Tiefenreinigung, Wischen oder Staubsammlung erkennt Jarvis den neuen Zustand des M7 Pro jetzt richtig, statt fälschlich „nicht reagiert“ zu melden."},
-    {"versionCode": 686, "versionName": "1.8.675", "stand": "14.11.2026, 13:05 Uhr", "notiz": "Die Proscenic-App bleibt beim Steuern des Staubsaugers unsichtbar hinter einer Jarvis-Fläche, und Jarvis gibt beim Warten auf die Verbindung nicht mehr zu früh auf."}
+    {"versionCode": 686, "versionName": "1.8.675", "stand": "14.11.2026, 13:05 Uhr", "notiz": "Die Proscenic-App bleibt beim Steuern des Staubsaugers unsichtbar hinter einer Jarvis-Fläche, und Jarvis gibt beim Warten auf die Verbindung nicht mehr zu früh auf."},
+    {"versionCode": 687, "versionName": "1.8.676", "stand": "14.11.2026, 13:10 Uhr", "notiz": "In der Mac-Fernwartung scrollt ein Wisch mit einem Finger über einem Terminalfenster den Inhalt mit Schwung, und langes Drücken dort startet das Markieren von Text."}
 ]
 }

@@ -7,7 +7,7 @@
 // in Terminal und nicht launchd direkt.
 //
 // Protokoll, beide Richtungen: [1 Byte Typ][4 Byte Länge, Big Endian][Nutzlast]
-//   Mac -> Handy: 0x01 Info-JSON {w,h}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt},
+//   Mac -> Handy: 0x01 Info-JSON {w,h}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt,fenster},
 //                 0x04 Meldung-JSON {meldung}
 //   Handy -> Mac: 0x10 Anmeldung-JSON {token, art?}, 0x11 Eingabe-JSON {t:…}
 //   Computer Use (art=werkzeug, eigene Verbindung neben der Live-Sitzung): siehe Befehle.swift
@@ -622,8 +622,31 @@ final class Eingabe {
 // MARK: - Fokus- und Sperrzustand
 
 final class Zustand {
-    struct Werte: Equatable { var tastatur = false; var geheim = false; var gesperrt = false }
+    struct Werte: Equatable { var tastatur = false; var geheim = false; var gesperrt = false; var fenster: [[Double]] = [] }
     private(set) var werte = Werte()
+    /// Gezeigter Bildschirm in globalen Koordinaten; die Fenster werden darauf bezogen (0…1).
+    var rahmen: () -> CGRect = { .zero }
+    static let terminalApps: Set<String> = ["Terminal", "iTerm2", "Ghostty", "WezTerm", "Alacritty", "kitty", "Warp", "Hyper", "Tabby"]
+
+    /// Sichtbare Fenster von vorn nach hinten als [x, y, b, h, terminal 0/1], bezogen auf den gezeigten Bildschirm.
+    /// Das Handy erkennt daran, ob ein Finger auf einem Terminal liegt (Wischen = scrollen, lange drücken = markieren).
+    static func fenster(_ r: CGRect) -> [[Double]] {
+        guard r.width > 0, let liste = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [] }
+        var aus: [[Double]] = []
+        for f in liste {
+            guard (f[kCGWindowLayer as String] as? Int ?? 1) == 0, (f[kCGWindowAlpha as String] as? Double ?? 1) > 0,
+                  let b = f[kCGWindowBounds as String] as? NSDictionary, let fr = CGRect(dictionaryRepresentation: b),
+                  fr.width > 40, fr.height > 40, fr.intersects(r) else { continue }
+            let name = f[kCGWindowOwnerName as String] as? String ?? ""
+            func n(_ v: CGFloat) -> Double { (Double(v) * 1000).rounded() / 1000 }
+            aus.append([n((fr.minX - r.minX) / r.width), n((fr.minY - r.minY) / r.height), n(fr.width / r.width), n(fr.height / r.height),
+                        terminalApps.contains(name) ? 1 : 0])
+            if aus.count >= 40 { break }
+        }
+        return aus
+    }
+
+    var json: [String: Any] { ["tastatur": werte.tastatur, "geheim": werte.geheim, "gesperrt": werte.gesperrt, "fenster": werte.fenster] }
     var geaendert: ((Werte) -> Void)?
     private var timer: DispatchSourceTimer?
 
@@ -653,7 +676,7 @@ final class Zustand {
         t.setEventHandler { [weak self] in
             guard let self else { return }
             let (text, geheim) = Zustand.fokus()
-            let neu = Werte(tastatur: text, geheim: geheim, gesperrt: Zustand.gesperrt())
+            let neu = Werte(tastatur: text, geheim: geheim, gesperrt: Zustand.gesperrt(), fenster: Zustand.fenster(self.rahmen()))
             if neu != self.werte { self.werte = neu; self.geaendert?(neu) }
         }
         t.resume(); timer = t
@@ -746,7 +769,7 @@ final class Dienst {
     let wach = Wachhalter()
     let kodierer = Kodierer()
     let aufnahme = Aufnahme()
-    let zustand = Zustand()
+    lazy var zustand: Zustand = { let z = Zustand(); z.rahmen = { [unowned self] in self.bildschirm.rahmen }; return z }()
     var eingabe: Eingabe!
     /// Angemeldete Sitzung; nur auf main lesen und schreiben.
     var sitzung: Sitzung?
@@ -897,7 +920,7 @@ final class Dienst {
         }
         zustand.geaendert = { [weak self] w in
             guard let self else { return }
-            self.sitzung?.sendenJSON(0x03, ["tastatur": w.tastatur, "geheim": w.geheim, "gesperrt": w.gesperrt])
+            self.sitzung?.sendenJSON(0x03, self.zustand.json)
             // Nach dem Entsperren liefert eine im gesperrten Zustand gestartete Aufnahme oft nichts: neu starten.
             if self.warGesperrt && !w.gesperrt, self.sitzung != nil {
                 log("entsperrt, Aufnahme neu")
@@ -943,8 +966,9 @@ final class Dienst {
             self.wach.an()
             self.bildschirm.sicherstellen()
             self.warGesperrt = Zustand.gesperrt()
-            let w = self.zustand.werte
-            s.sendenJSON(0x03, ["tastatur": w.tastatur, "geheim": w.geheim, "gesperrt": self.warGesperrt])
+            var z = self.zustand.json; z["gesperrt"] = self.warGesperrt
+            z["fenster"] = Zustand.fenster(self.bildschirm.rahmen)
+            s.sendenJSON(0x03, z)
             self.fehlstarts = 0
             self.aufnahmeStarten()
             self.zustand.start()
