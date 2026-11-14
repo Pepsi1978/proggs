@@ -2,6 +2,7 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import de.frank.jarvis.staubsauger.ProscenicBedienung
+import de.frank.jarvis.staubsauger.ProscenicCloud
 import de.frank.jarvis.staubsauger.ProscenicSteuerung
 
 /** Saugroboter Proscenic M7 Pro: Jarvis bedient dafür die Proscenic-App über die Bedienungshilfe „Jarvis Staubsauger“. */
@@ -11,14 +12,16 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Saugroboter Proscenic M7 Pro starten, Tiefenreinigung, anhalten, zur Station, orten, Staubsammlung, Akku und Zustand."
     override val hinweise =
         "Sagt Frank „Staubsauger“, „Saugroboter“, „M7 Pro“, „starte eine Reinigung“ oder „Tiefenreinigung“, nimm staubsauger. " +
-            "Jarvis tippt dafür in der Proscenic-App, wartet geduldig auf deren Verbindung zum Roboter und prüft die Wirkung; das dauert meist 15 bis 30 Sekunden, bei langsamem Internet bis knapp zwei Minuten, und braucht ein entsperrtes Handy. Meldet das Werkzeug einen Fehler, sag Frank den genannten Grund. " +
-            "Antworte danach kurz mit dem Ergebnis, etwa: „Tiefenreinigung läuft, Akku 100 Prozent.“"
+            "Jarvis steuert den Roboter unsichtbar über die Proscenic-Cloud (Anmeldung unter Konten, Proscenic); das dauert meist 5 bis 15 Sekunden, " +
+            "bei langsamem Internet länger, und Frank kann Jarvis währenddessen weiter benutzen. Nur Y-Wischen und eine fehlende Anmeldung laufen noch über die Proscenic-App. " +
+            "Meldet das Werkzeug einen Fehler, sag Frank den genannten Grund. Antworte danach kurz mit dem Ergebnis, etwa: „Tiefenreinigung läuft, Akku 100 Prozent.“"
 
     /** Öffnet eine andere App und tippt darin: nur auf Franks Wunsch im Gespräch, nie in Hintergrund-Agenten. */
     override val nurImGespraech: Boolean get() = true
 
     override fun stoerung(): String? =
-        if (!ProscenicBedienung.eingeschaltet(context)) "Die Bedienungshilfe „Jarvis Staubsauger“ ist in den Android-Einstellungen aus." else null
+        if (!ProscenicCloud.konfiguriert(context) && !ProscenicBedienung.eingeschaltet(context))
+            "Für den Staubsauger fehlt die Proscenic-Anmeldung unter Konten (oder die Bedienungshilfe „Jarvis Staubsauger“)." else null
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(

@@ -248,6 +248,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.SWITCHBOT_SECRET, "")
         set(value) = writeString(Keys.SWITCHBOT_SECRET, value.trim())
 
+    // ---- Proscenic-Cloud (Saugroboter M7 Pro, unsichtbare Steuerung ohne Proscenic-App) ----
+
+    var proscenicMail: String
+        get() = readString(Keys.PROSCENIC_MAIL, "")
+        set(value) = writeString(Keys.PROSCENIC_MAIL, value.trim())
+
+    var proscenicPasswort: String
+        get() = readString(Keys.PROSCENIC_PASSWORT, "")
+        set(value) = writeString(Keys.PROSCENIC_PASSWORT, value)
+
     var filterStilleVorabAn: Boolean
         get() = readFlag(Keys.FILTER_VAD, true)
         set(value) = writeFlag(Keys.FILTER_VAD, value)
@@ -389,6 +399,8 @@ class SecureSettings(context: Context) : Closeable {
         const val GROQ_API_KEY = "groq_api_key"
         const val SWITCHBOT_TOKEN = "switchbot_token"
         const val SWITCHBOT_SECRET = "switchbot_secret"
+        const val PROSCENIC_MAIL = "proscenic_mail"
+        const val PROSCENIC_PASSWORT = "proscenic_passwort"
         const val FILTER_VAD = "filter_vad"
         const val FILTER_SEGMENTS = "filter_segments"
         const val FILTER_TIMESTAMPS = "filter_timestamps"
