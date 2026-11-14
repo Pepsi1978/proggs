@@ -695,6 +695,7 @@
     {"versionCode": 690, "versionName": "1.8.679", "stand": "14.11.2026, 14:15 Uhr", "notiz": "Muss sich Jarvis beim Staubsauger neu bei Proscenic anmelden, sagt es dir, dass die Proscenic-App dadurch abgemeldet ist, und erklärt den Weg über ein geteiltes Zweitkonto."},
     {"versionCode": 691, "versionName": "1.8.680", "stand": "14.11.2026, 14:35 Uhr", "notiz": "Jarvis fragt die Proscenic-Geräteliste wie die Proscenic-App ab, damit auch ein mit einem Zweitkonto geteilter Saugroboter gefunden wird."},
     {"versionCode": 687, "versionName": "1.8.676", "stand": "14.11.2026, 13:10 Uhr", "notiz": "In der Mac-Fernwartung scrollt ein Wisch mit einem Finger über einem Terminalfenster den Inhalt mit Schwung, und langes Drücken dort startet das Markieren von Text."},
-    {"versionCode": 688, "versionName": "1.8.677", "stand": "14.11.2026, 13:20 Uhr", "notiz": "Langes Drücken ohne Ziehen öffnet im Terminal das Kontextmenü, die Titelleiste zieht wieder das Fenster, und das Scrollen verliert beim langsamen Wischen keinen Weg mehr."}
+    {"versionCode": 688, "versionName": "1.8.677", "stand": "14.11.2026, 13:20 Uhr", "notiz": "Langes Drücken ohne Ziehen öffnet im Terminal das Kontextmenü, die Titelleiste zieht wieder das Fenster, und das Scrollen verliert beim langsamen Wischen keinen Weg mehr."},
+    {"versionCode": 692, "versionName": "1.8.681", "stand": "14.11.2026, 15:30 Uhr", "notiz": "Eine laufende Aufnahme in einer Session bleibt an, wenn du zwischendurch andere Bereiche, Listen oder Merklisten öffnest oder per Zurück-Geste in die Session zurückkehrst; alles Gesprochene landet im Text."}
 ]
 }

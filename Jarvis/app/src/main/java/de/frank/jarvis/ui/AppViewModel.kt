@@ -1352,7 +1352,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
-        if (nimmtAuf && diktatZiel != null) aufnahmeBeenden()
+        // Nur ein Diktat, das für die Liste begann: Das Mikrofon der Eingabeblase, ein Prompt- oder Antwort-Diktat läuft weiter.
+        if (nimmtAuf && diktatZiel != null && !diktatInsFeld && !promptDiktat && antwortDiktatFeld == null) aufnahmeBeenden()
         merkOffen = null
     }
 
@@ -1871,7 +1872,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * der alten Session enden sofort. Nichts davon darf in der neuen Session landen oder dort das Mikrofon wieder öffnen.
      * Laufende Antworten und Programmieraufträge der alten Session bleiben unberührt und schreiben in deren Datei.
      */
-    private fun aufnahmeVerwerfen(): Job? {
+    private fun aufnahmeVerwerfen(anlass: String = "Session von Hand gewechselt"): Job? {
         wechselStand++
         if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
@@ -1886,7 +1887,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         feldMitschrift = false
         diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null
         diktatInsFeld = false
-        Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
+        Logbuch.sprache("Aufnahme verworfen", anlass)
         return viewModelScope.launch {
             mikro.stop()
             de.frank.jarvis.audio.AufnahmeDienst.stoppen()
@@ -2138,7 +2139,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         sprachsitzungBeendet = true
         SprachZustellung.bewusstBeendet(getApplication(), anlass)
         Logbuch.sprache("Sprachsitzung beendet", anlass)
-        aufnahmeVerwerfen()
+        aufnahmeVerwerfen(anlass)
         abbrechen()
         vorleser.stopp()
         SprachBlase.abgleichen(getApplication())
@@ -2602,7 +2603,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 rueckfrageNebenher = ziel
                 Logbuch.sprache("Rückfrage nebenher", "Aufnahme läuft weiter, Gespräch bleibt offen")
             } else if (ziel.first != sitzungId) {
-                aufnahmeVerwerfen()
+                aufnahmeVerwerfen("Rückfrage einer anderen Session geöffnet")
                 // Ließ sich das Gespräch nicht öffnen, bleibt die Frage nicht als offen stehen (sonst versuchte es jeder Anstoß erneut).
                 if (!sitzungLaden(ziel.first, wegenRueckfrage = true) && rueckfrageOffen == ziel) rueckfrageOffen = null
             }
@@ -2882,10 +2883,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Zurück-Geste in einer Session: zum Startbildschirm. Läuft dort eine von Hand gestartete Aufnahme oder ihre Mitschrift,
+     * bleibt die Session offen und die Aufnahme läuft weiter (Frank wischt nach einem Abstecher in andere Bereiche oft eine
+     * Geste zu viel). Hey Jarvis und der Live-Modus verhalten sich wie bisher.
+     */
+    fun zurueckInSession() {
+        if ((nimmtAuf || holtMikro || schreibtMit) && weckwortLauf?.isActive != true) {
+            meldung = if (schreibtMit) "Die Aufnahme wird gerade in Text umgewandelt." else "Die Aufnahme läuft weiter. Zum Beenden aufs Mikrofon tippen."
+            Logbuch.sprache("Zurück-Geste", "Aufnahme läuft weiter, Session bleibt offen")
+            return
+        }
+        neuesGespraech("Zurück-Geste in der Session")
+    }
+
     /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
-    fun neuesGespraech() {
+    fun neuesGespraech(anlass: String = "neues Gespräch von Hand") {
         // Von Hand (Knopf, Seitenleiste, Löschen): Aufnahme und Gesprächsmodus der alten Session enden.
-        aufnahmeVerwerfen()
+        aufnahmeVerwerfen(anlass)
         gespraechLeeren()
         eingabeKompakt = true
         tastaturWeg++
@@ -3013,7 +3028,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sitzungOeffnen(id: String) {
         if (id == sitzungId) return
         // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
-        aufnahmeVerwerfen()
+        aufnahmeVerwerfen("andere Session geöffnet")
         eingabeKompakt = true
         tastaturWeg++
         knoepfeAus()
