@@ -682,6 +682,7 @@
     {"versionCode": 677, "versionName": "1.8.666", "stand": "13.11.2026, 21:51 Uhr", "notiz": "Sol 6.1 lässt sich auch starten, wenn nur der Mac an ist: Jarvis erkennt den Sol-fähigen Mac und bietet Sol dann wie beim Windows-PC an."},
     {"versionCode": 678, "versionName": "1.8.667", "stand": "13.11.2026, 22:18 Uhr", "notiz": "Die Funktionsübersicht nennt jetzt, dass Sol 6.1 auch am Mac läuft, wenn der Windows-PC aus ist."},
     {"versionCode": 679, "versionName": "1.8.668", "stand": "13.11.2026, 23:13 Uhr", "notiz": "Jarvis nennt in Status und Rückfragen jetzt richtig, dass Sol 6.1 bei ausgeschaltetem Windows-PC am Mac läuft."},
-    {"versionCode": 680, "versionName": "1.8.669", "stand": "14.11.2026, 11:12 Uhr", "notiz": "Heutige Aufgaben hakst du nur noch über Titel oder Abhakfeld ab; links daneben, der Kopf Heute und der aufgeklappte Bereich Morgen öffnen Geniale Aufgaben am jeweiligen Tag."}
+    {"versionCode": 680, "versionName": "1.8.669", "stand": "14.11.2026, 11:12 Uhr", "notiz": "Heutige Aufgaben hakst du nur noch über Titel oder Abhakfeld ab; links daneben, der Kopf Heute und der aufgeklappte Bereich Morgen öffnen Geniale Aufgaben am jeweiligen Tag."},
+    {"versionCode": 681, "versionName": "1.8.670", "stand": "14.11.2026, 11:22 Uhr", "notiz": "Heutige Aufgaben treffen sich leichter beim Abhaken, langes Drücken auf den Kopf öffnet Geniale Aufgaben nicht mehr, und TalkBack nennt den Titel am Abhakfeld."}
 ]
 }

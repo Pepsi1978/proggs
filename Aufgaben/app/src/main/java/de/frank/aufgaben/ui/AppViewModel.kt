@@ -172,12 +172,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun kalenderOeffnen() { kalenderTag = null; bildschirm = Bildschirm.Kalender }
 
-    /** Öffnet einen Tag direkt als Tagesübersicht (von Jarvis). Ein offener Editor wird vorher wie beim Zurück verlassen. */
-    fun tagOeffnen(tag: Long) {
-        kalenderTag = tag
-        // Editor offen: wie beim Zurück speichern bzw. verlassen, danach (auch nach einer laufenden Aufnahme) in den Tag.
-        if (bildschirm is Bildschirm.Bearbeiten) { nachEditor = Bildschirm.Kalender; editorVerlassen() }
-        else bildschirm = Bildschirm.Kalender
+    /** Bereich der Liste („heute“ oder „morgen“), an den die Liste einmal scrollen soll; zweiter Wert unterscheidet Wünsche. */
+    var bereichZiel by mutableStateOf<Pair<String, Long>?>(null)
+
+    /**
+     * Von Jarvis: zeigt die normale Liste, so gescrollt, dass der Bereich Heute bzw. Morgen oben steht. Ein offener Editor
+     * oder ein laufender Fokus bleibt unberührt (kein halber Entwurf, kein Timer ohne Bildschirm); die App kommt nur nach vorn.
+     */
+    fun bereichZeigen(tag: Long) {
+        if (bildschirm is Bildschirm.Bearbeiten || bildschirm is Bildschirm.Fokus) return
+        val bereich = when (tag - heute) { 0L -> "heute"; 1L -> "morgen"; else -> return }
+        // Einstellungen wie beim Zurück verlassen (fehlende Sprachfassungen nachholen).
+        if (bildschirm == Bildschirm.Einstellungen) zurueck()
+        kalenderTag = null
+        bildschirm = Bildschirm.Liste
+        bereichZiel = bereich to System.nanoTime()
     }
 
     fun zurueck(): Boolean = when (bildschirm) {

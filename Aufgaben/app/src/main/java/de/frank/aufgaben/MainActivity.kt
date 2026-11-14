@@ -59,10 +59,13 @@ class MainActivity : ComponentActivity() {
     private fun verarbeite(intent: Intent?) {
         intent ?: return
         val id = intent.getLongExtra(EXTRA_AUFGABE, -1)
-        // Jarvis öffnet einen Tag (ISO-Datum) direkt als Tagesübersicht im Kalender.
-        val tag = intent.getStringExtra(EXTRA_TAG)?.let { runCatching { java.time.LocalDate.parse(it).toEpochDay() }.getOrNull() }
+        // Jarvis öffnet die Liste mit dem Bereich Heute bzw. Morgen oben (ISO-Datum des Tags).
+        // Aus den letzten Apps neu gestartet: Android liefert den alten Start-Intent erneut, der Tag von damals gilt nicht mehr.
+        val ausVerlauf = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        val tag = intent.getStringExtra(EXTRA_TAG)?.takeUnless { ausVerlauf }?.let { runCatching { java.time.LocalDate.parse(it).toEpochDay() }.getOrNull() }
+        intent.removeExtra(EXTRA_TAG)
         when {
-            tag != null -> vm.tagOeffnen(tag)
+            tag != null -> vm.bereichZeigen(tag)
             intent.getBooleanExtra(EXTRA_NEU, false) -> vm.neueAufgabe(mitMikro = true)
             id >= 0 -> {
                 // Antippen der Erinnerung beendet ein laufendes Vorlesen bzw. den Wecker.

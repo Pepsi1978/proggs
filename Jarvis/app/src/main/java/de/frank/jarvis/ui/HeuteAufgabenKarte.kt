@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.Measurable
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -182,14 +184,14 @@ private object HeuteAufgabenStand {
 }
 
 /**
- * Öffnet Geniale Aufgaben; mit [tag] direkt dessen Tagesübersicht (Extra „tag_datum“, ISO-Datum). CLEAR_TOP + SINGLE_TOP:
+ * Öffnet Geniale Aufgaben; mit [tag] (heute oder morgen, Extra „tag_datum“, ISO-Datum) die Startliste, gescrollt auf diesen Bereich. CLEAR_TOP + SINGLE_TOP:
  * Läuft die App schon, kommt der Wunsch per onNewIntent an, statt dass nur der alte Stand nach vorn kommt.
  */
-private fun aufgabenOeffnen(context: android.content.Context, tag: LocalDate? = null) {
+private fun aufgabenOeffnen(context: android.content.Context, vm: AppViewModel, tag: LocalDate? = null) {
     val intent = android.content.Intent().setClassName("de.frank.aufgaben", "de.frank.aufgaben.MainActivity")
         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
     tag?.let { intent.putExtra("tag_datum", it.toString()) }
-    runCatching { context.startActivity(intent) }
+    runCatching { context.startActivity(intent) }.onFailure { vm.meldung = "Geniale Aufgaben ließ sich nicht öffnen." }
 }
 
 /** Leselimit je Bereich über die Brücke. */
@@ -386,7 +388,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
         // Tipp auf den Kopf öffnet Geniale Aufgaben mit dem heutigen Tag.
-        Column(griff.fillMaxWidth().antippen { aufgabenOeffnen(context, LocalDate.now()) }) {
+        Column(griff.fillMaxWidth().antippen(lange = {}, langeText = "Verschieben") { aufgabenOeffnen(context, vm, LocalDate.now()) }) {
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
@@ -403,7 +405,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
             // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
             Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
-                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context) }) { umschalten(a) } } }
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context, vm) }) { umschalten(a) } } }
             }
             if (anzeige.size > SICHTBAR) Text(
                 if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
@@ -411,13 +413,13 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
                 color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             )
         }
-        MorgenBereich()
+        MorgenBereich(vm)
     }
 }
 
 /** Aufklappbarer Bereich „Aufgaben morgen“ unter den heutigen: zu bis zum Antippen, zeigt dann alle offenen von morgen. */
 @Composable
-private fun MorgenBereich() {
+private fun MorgenBereich(vm: AppViewModel) {
     val f = LocalFarben.current
     val s = HeuteAufgabenStand
     val liste = s.morgen
@@ -439,7 +441,7 @@ private fun MorgenBereich() {
     if (!s.morgenOffen) return
     val context = LocalContext.current.applicationContext
     // Tipp irgendwo in den aufgeklappten Bereich öffnet Geniale Aufgaben mit dem morgigen Tag (Zuklappen nur über den Kopf).
-    Column(Modifier.fillMaxWidth().antippen { aufgabenOeffnen(context, LocalDate.now().plusDays(1)) }) {
+    Column(Modifier.fillMaxWidth().antippen { aufgabenOeffnen(context, vm, LocalDate.now().plusDays(1)) }) {
     when {
         liste == null && fehler != null -> Text(fehler, color = f.gefahr, fontSize = 14.sp)
         liste == null -> Text("Wird gelesen …", color = f.textLeise, fontSize = 14.sp)
@@ -488,26 +490,36 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Uni
         var textMitte by remember { mutableFloatStateOf(halbKreis) }
         val versatz = textMitte - halbKreis
         // Text rechtsbündig, Abhakfeld ganz rechts: mit dem rechten Daumen einhändig erreichbar.
+        // Freie Fläche: ohne eigene Druckanimation, damit ein Tipp auf den Titel nicht auch hier „drückt“.
         Box(
-            Modifier.weight(1f).antippen(aktion = oeffnen).padding(top = 6.dp + with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }, bottom = 6.dp),
+            Modifier.weight(1f)
+                .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null, onClickLabel = "Geniale Aufgaben öffnen", onClick = oeffnen)
+                .padding(top = with(dichte) { (-versatz).coerceAtLeast(0f).toDp() }),
             contentAlignment = Alignment.TopEnd,
         ) {
+        // Abstand innerhalb der Tippfläche: Ein knapper Tipp über, unter oder links vom Titel hakt trotzdem ab.
         Text(
-            a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand },
+            a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
             color = when { a.erledigt -> f.textLeise; a.ueberfaellig -> f.gefahr; else -> f.text }, fontSize = 15.sp, fontWeight = FontWeight.Medium,
             textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
             onTextLayout = { l -> textMitte = l.getLineBaseline(0) - with(dichte) { 15.sp.toPx() } * 0.35f },
         )
         }
+        // Tippfläche größer als der Kreis (oben, unten, links je 6 dp); die übrigen 6 dp Lücke zum Titel tun nichts.
         Box(
-            Modifier.padding(start = 12.dp, top = 6.dp + with(dichte) { versatz.coerceAtLeast(0f).toDp() }, bottom = 6.dp).size(28.dp)
-                .antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
+            Modifier.padding(start = 6.dp).antippen(rolle = Role.Checkbox, aktion = umschalten)
+                .semantics { contentDescription = a.titel; stateDescription = zustand }
+                .padding(start = 6.dp, top = 6.dp + with(dichte) { versatz.coerceAtLeast(0f).toDp() }, bottom = 6.dp),
+        ) {
+        Box(
+            Modifier.size(28.dp).then(if (a.erledigt) Modifier.knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel) else Modifier.glas(f, 14.dp, erhoeht = 0.3f).then(
                 // Hellmodus: weißes Glas auf heller Karte verschwindet fast, ein kräftiger Ring macht das Abhakfeld klar erkennbar.
                 if (f.dunkel) Modifier else Modifier.border(2.dp, f.textLeise.copy(alpha = 0.75f), CircleShape))),
             contentAlignment = Alignment.Center,
         ) {
             if (a.erledigt) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(17.dp).scale(haken))
+        }
         }
     }
 }

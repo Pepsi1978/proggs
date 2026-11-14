@@ -86,6 +86,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -171,6 +172,23 @@ fun ListeBildschirm(vm: AppViewModel) {
             // Passt der Rest schon auf den Bildschirm, kommt gleich das nächste Stück (maxValue ändert sich mit dem neuen Inhalt).
             if (offen && rest < NACHLADEN_PX && zeigen < erledigtAnzahl) erledigtZeigen = zeigen + ERLEDIGT_STUECK
         }
+    }
+    // Von Jarvis gewünscht: Bereich Heute bzw. Morgen oben unter der Statusleiste. Erst scrollen, wenn die Liste steht
+    // (Daten kommen beim Kaltstart erst nach ein paar Frames, Bereiche blenden ein); sonst landet man daneben.
+    val bereichY = remember { HashMap<String, Float>() }
+    val statusHoehe = WindowInsets.statusBarsIgnoringVisibility.getTop(LocalDensity.current)
+    LaunchedEffect(vm.bereichZiel) {
+        val (bereich, _) = vm.bereichZiel ?: return@LaunchedEffect
+        var letzte = -1f
+        var ruhig = 0
+        val bis = System.currentTimeMillis() + 1_500
+        while (ruhig < 8 && System.currentTimeMillis() < bis) {
+            withFrameNanos { }
+            val y = bereichY[bereich] ?: continue
+            if (y == letzte) ruhig++ else { ruhig = 0; letzte = y }
+        }
+        bereichY[bereich]?.let { scroll.animateScrollTo((it - statusHoehe).toInt().coerceAtLeast(0)) }
+        vm.bereichZiel = null
     }
     // Ganz aus dem Bild gescrollt: Die Szene hält an, statt unsichtbar weiterzuzeichnen.
     val szeneWeg by remember { androidx.compose.runtime.derivedStateOf { scroll.value > 900 } }
@@ -286,6 +304,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             }
 
             // ---- Heute ----
+            Spacer(Modifier.onGloballyPositioned { bereichY["heute"] = it.positionInParent().y })
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, einblendDauer = 750, leuchten = true, dunklesBand = true,
@@ -303,6 +322,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 )
             }
             // ---- Morgen ----
+            Spacer(Modifier.onGloballyPositioned { bereichY["morgen"] = it.positionInParent().y })
             Sektion(
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
                 Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80, leuchten = true,
