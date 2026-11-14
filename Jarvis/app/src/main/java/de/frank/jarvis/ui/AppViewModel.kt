@@ -1353,7 +1353,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
         // Nur ein Diktat, das für die Liste begann: Das Mikrofon der Eingabeblase, ein Prompt- oder Antwort-Diktat läuft weiter.
-        if (nimmtAuf && diktatZiel != null && !diktatInsFeld && !promptDiktat && antwortDiktatFeld == null) aufnahmeBeenden()
+        if (merkDiktat) {
+            if (nimmtAuf) aufnahmeBeenden()
+            // Noch beim Starten: nicht mehr anfangen, sonst ginge der Listeneintrag als Frage an Jarvis.
+            else if (!schreibtMit) { antwortStartAbbrechen = true; diktatZiel = null }
+            merkDiktat = false
+        }
         merkOffen = null
     }
 
@@ -1361,11 +1366,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun merkMikrofonTippen(liste: Merkliste) {
         when {
             schreibtMit -> Unit
-            nimmtAuf -> aufnahmeBeenden()
+            nimmtAuf && merkDiktat -> { merkDiktat = false; aufnahmeBeenden() }
+            // Eine Aufnahme aus der Eingabeblase, einem Prompt oder einer Antwort läuft über die Bereiche weiter und gehört nicht in die Liste.
+            nimmtAuf || holtMikro -> meldung = "Es läuft schon eine andere Aufnahme. Bitte erst diese beenden."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
-            else -> { diktatZiel = liste::neu; mikrofonAnfragen() }
+            else -> { diktatZiel = liste::neu; merkDiktat = true; mikrofonAnfragen() }
         }
     }
+
+    /** Das laufende Diktat wurde im Vollbild einer Merkliste gestartet und gehört in diese. */
+    private var merkDiktat = false
+    /** Läuft gerade ein Diktat für die offene Merkliste? Nur dann zeigt sie „Ich höre zu“. */
+    val merkNimmtAuf get() = nimmtAuf && merkDiktat
 
     // ---- Prompts (Reiter der Ablage) ----
 
@@ -1813,7 +1825,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (antwortStartAbbrechen) { antwortStartAbbrechen = false; diktatZiel = null; antwortDiktatFeld = null; return }
         if (holtMikro) {
             // Ein anderer Start („Hey Jarvis“, Gesprächsmodus) ist schneller: Die Antwort-Aufnahme fängt nicht an und hängt nicht.
@@ -1827,11 +1839,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else if (antwortStartAbbrechen) {
                     // Während des Starts geschlossen: Die Aufnahme gleich wieder verwerfen, sonst liefe sie unsichtbar weiter.
                     antwortStartAbbrechen = false
-                    aufnahmeVerwerfen()
+                    aufnahmeVerwerfen("beim Starten geschlossen")
                 } else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
@@ -1864,6 +1876,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Zählt Sessionwechsel von Hand. Jede Aufnahme merkt sich den Stand beim Start ([aufnahmeStand]) und gehört nur zu dieser Session. */
     private var wechselStand = 0
     private var aufnahmeStand = 0
+    /** Grund des letzten Verwerfens, auch für die dadurch verfallene Mitschrift im Logbuch. */
+    private var verwerfAnlass = "Session von Hand gewechselt"
     /** Die Mitschrift der zuletzt beendeten Aufnahme; ein Wechsel von Hand bricht sie ab. */
     private var mitschriftJob: Job? = null
 
@@ -1872,8 +1886,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * der alten Session enden sofort. Nichts davon darf in der neuen Session landen oder dort das Mikrofon wieder öffnen.
      * Laufende Antworten und Programmieraufträge der alten Session bleiben unberührt und schreiben in deren Datei.
      */
-    private fun aufnahmeVerwerfen(anlass: String = "Session von Hand gewechselt"): Job? {
+    private fun aufnahmeVerwerfen(anlass: String): Job? {
         wechselStand++
+        verwerfAnlass = anlass
+        merkDiktat = false
         if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
@@ -2231,7 +2247,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Das Antwortfeld bleibt bis zum Ende der Mitschrift markiert: So lange sperrt die Rückfrage das Senden.
         val antwortFeld = antwortDiktatFeld
         feldMitschrift = ziel != null && diktatInsFeld
-        diktatZiel = null; promptDiktat = false
+        diktatZiel = null; promptDiktat = false; merkDiktat = false
         diktatInsFeld = false
         mitschriftJob = viewModelScope.launch {
             try {
@@ -2259,7 +2275,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
-                if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
+                if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", verwerfAnlass); return@launch }
                 if (text.isBlank() || ziel != null) de.frank.jarvis.observability.Antwortkette.verwerfen()
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
@@ -2889,13 +2905,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Geste zu viel). Hey Jarvis und der Live-Modus verhalten sich wie bisher.
      */
     fun zurueckInSession() {
-        if ((nimmtAuf || holtMikro || schreibtMit) && weckwortLauf?.isActive != true) {
-            meldung = if (schreibtMit) "Die Aufnahme wird gerade in Text umgewandelt." else "Die Aufnahme läuft weiter. Zum Beenden aufs Mikrofon tippen."
+        val jetzt = System.currentTimeMillis()
+        // Hängt die Umwandlung in Text (schwaches Netz), führt eine zweite Geste kurz danach wie früher zum Startbildschirm.
+        val nochmal = schreibtMit && !nimmtAuf && jetzt - zurueckGewarnt < 5_000
+        if (handAufnahmeAktiv() && !nochmal) {
+            zurueckGewarnt = jetzt
+            meldung = if (schreibtMit && !nimmtAuf) "Die Aufnahme wird gerade in Text umgewandelt. Nochmal zurück verwirft sie."
+                else "Die Aufnahme läuft weiter. Zum Beenden dort aufs Mikrofon tippen, wo du sie gestartet hast."
             Logbuch.sprache("Zurück-Geste", "Aufnahme läuft weiter, Session bleibt offen")
             return
         }
         neuesGespraech("Zurück-Geste in der Session")
     }
+    private var zurueckGewarnt = 0L
+
+    /** Eine von Hand gestartete Aufnahme oder ihre Mitschrift läuft (nicht die Sprachschleife von „Hey Jarvis“ oder Live). */
+    private fun handAufnahmeAktiv() = sprachwegAktiv() && weckwortLauf?.isActive != true
 
     /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
     fun neuesGespraech(anlass: String = "neues Gespräch von Hand") {

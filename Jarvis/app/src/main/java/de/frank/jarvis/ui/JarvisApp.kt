@@ -107,6 +107,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             androidx.activity.compose.BackHandler(enabled = vm.reiter != Reiter.JARVIS && !vm.gesperrt) { vm.reiterZurueck() }
             // Zurück-Geste in einer Session: zum Startbildschirm mit der Tagesauswertung; erst dort beendet die nächste Geste die App.
             // Die Session bleibt in der Seitenleiste.
+            // Läuft eine von Hand gestartete Aufnahme, bleibt die Session offen und die Aufnahme läuft weiter (zurueckInSession).
             androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.zurueckInSession() }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.

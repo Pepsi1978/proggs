@@ -111,18 +111,18 @@ fun MerkBildschirm(vm: AppViewModel, liste: AppViewModel.Merkliste, modifier: Mo
 
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Bottom) {
             val hinzufuegen = { if (eingabe.isNotBlank()) { liste.neu(eingabe); eingabe = "" } }
-            Eingabe(eingabe, { eingabe = it }, if (vm.nimmtAuf) "Ich höre zu … tippe zum Speichern" else if (vm.schreibtMit) "Schreibe mit …" else liste.platzhalter, Modifier.weight(1f), einzeilig = false, senden = hinzufuegen)
+            Eingabe(eingabe, { eingabe = it }, if (vm.merkNimmtAuf) "Ich höre zu … tippe zum Speichern" else if (vm.schreibtMit) "Schreibe mit …" else liste.platzhalter, Modifier.weight(1f), einzeilig = false, senden = hinzufuegen)
             Spacer(Modifier.width(10.dp))
             // Leeres Feld: der Knopf ist das Mikrofon. Mit Text: als Eintrag speichern.
             val alsMikro = eingabe.isBlank()
             Box(
-                Modifier.size(52.dp).knopf3d(if (vm.nimmtAuf) f.gefahr else f.primaer, if (vm.nimmtAuf) f.gefahr else f.tertiaer, 26.dp, f.dunkel)
-                    .antippen { if (alsMikro || vm.nimmtAuf) vm.merkMikrofonTippen(liste) else hinzufuegen() },
+                Modifier.size(52.dp).knopf3d(if (vm.merkNimmtAuf) f.gefahr else f.primaer, if (vm.merkNimmtAuf) f.gefahr else f.tertiaer, 26.dp, f.dunkel)
+                    .antippen { if (alsMikro || vm.merkNimmtAuf) vm.merkMikrofonTippen(liste) else hinzufuegen() },
                 contentAlignment = Alignment.Center,
             ) {
                 when {
                     vm.schreibtMit -> Kern(34.dp, f.aufPrimaer, aktiv = true)
-                    vm.nimmtAuf -> Icon(Icons.Rounded.Stop, "Aufnahme beenden und speichern", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
+                    vm.merkNimmtAuf -> Icon(Icons.Rounded.Stop, "Aufnahme beenden und speichern", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
                     alsMikro -> Icon(Icons.Rounded.Mic, "Einsprechen", tint = f.aufPrimaer, modifier = Modifier.size(24.dp))
                     else -> Icon(Icons.AutoMirrored.Rounded.Send, "Speichern", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
                 }
