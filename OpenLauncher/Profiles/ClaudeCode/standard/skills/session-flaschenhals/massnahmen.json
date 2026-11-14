@@ -545,6 +545,26 @@
       "pruefung": "Nach 10 Mac-Sitzungen: keine Treffer von fehler_regex",
       "ruecknahme": "Almanach-Datei und README-Zeile löschen, Eintrag entfernen",
       "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
+    },
+    {
+      "id": "M32",
+      "titel": "gradlew im Repo ausführbar (Mode 100755)",
+      "datum": "2026-11-14T12:17",
+      "beleg": "Sitzung adfaaf45 (Mac): './gradlew' -> permission denied, ein Wiederholaufruf mit 'bash gradlew'; 26 von 28 gradlew im Index mit 100644",
+      "ort": [
+        "*/gradlew (Git-Mode)"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "permission denied: \\./gradlew",
+      "aufruf_regex": "\\./gradlew",
+      "fehler_am_aufruf": false,
+      "plattform": [
+        "mac",
+        "linux"
+      ],
+      "pruefung": "Nach 10 Mac-/Server-Sitzungen: keine Treffer von fehler_regex",
+      "ruecknahme": "git update-index --chmod=-x auf die gradlew-Dateien, Eintrag entfernen",
+      "kosten": "kein Kontext"
     }
   ]
 }
