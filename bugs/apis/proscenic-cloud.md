@@ -27,3 +27,9 @@
 ## 5. cmd21005 liefert HTTP 400 auf dem M6 Pro
 - **Fix:** Befehlscodes modellabhängig; am Gerät prüfen.
 - **Quelle:** https://community.home-assistant.io/t/proscenic-m7-pro/241732?page=2
+
+## 6. Zweitkonto sieht geteilten Roboter nicht, obwohl Login `equipcount: 1` meldet
+- **Symptom:** `getEquips` des Zweitkontos liefert `content: []`, die Anmeldung zählt aber 1 Gerät.
+- **Ursache:** Die Freigabe ist angelegt, aber im Zweitkonto noch nicht angenommen.
+- **Fix:** Einmal in der Proscenic-App mit dem Zweitkonto anmelden und die Einladung annehmen; danach liefert `getEquips` den Roboter, und App (Hauptkonto) und Fremd-Client (Zweitkonto) laufen parallel (verifiziert 14.11.2026: Reinigen über Jarvis, Pause in der App, Jarvis liest „pause“).
+- **Quelle:** eigene Messung 14.11.2026 (Jarvis 1.8.680).
