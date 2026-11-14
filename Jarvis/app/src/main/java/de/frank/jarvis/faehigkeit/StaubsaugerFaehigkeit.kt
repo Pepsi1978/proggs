@@ -11,7 +11,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Saugroboter Proscenic M7 Pro starten, Tiefenreinigung, anhalten, zur Station, orten, Staubsammlung, Akku und Zustand."
     override val hinweise =
         "Sagt Frank „Staubsauger“, „Saugroboter“, „M7 Pro“, „starte eine Reinigung“ oder „Tiefenreinigung“, nimm staubsauger. " +
-            "Jarvis tippt dafür in der Proscenic-App; das dauert etwa 10 bis 20 Sekunden und braucht ein entsperrtes Handy. " +
+            "Jarvis tippt dafür in der Proscenic-App, wartet geduldig auf deren Verbindung zum Roboter und prüft die Wirkung; das dauert meist 15 bis 30 Sekunden, bei langsamem Internet bis knapp zwei Minuten, und braucht ein entsperrtes Handy. Meldet das Werkzeug einen Fehler, sag Frank den genannten Grund. " +
             "Antworte danach kurz mit dem Ergebnis, etwa: „Tiefenreinigung läuft, Akku 100 Prozent.“"
 
     /** Öffnet eine andere App und tippt darin: nur auf Franks Wunsch im Gespräch, nie in Hintergrund-Agenten. */

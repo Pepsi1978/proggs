@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.media.AudioManager
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
@@ -35,9 +36,18 @@ class ProscenicBedienung : AccessibilityService() {
     override fun onServiceConnected() { instanz = this }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        event ?: return
         val paket = event.packageName?.toString() ?: return
-        if (paket == ProscenicSteuerung.PAKET) return
+        if (paket == ProscenicSteuerung.PAKET) {
+            when (event.eventType) {
+                // Toasts der Proscenic-App (etwa „kein aktives WLAN“), damit Jarvis sieht, ob ein Befehl abgewiesen wurde.
+                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED ->
+                    if (event.parcelableData == null) event.text.joinToString(" ").trim().takeIf { it.isNotEmpty() }?.let { toast = it; toastUm = System.currentTimeMillis() }
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> event.className?.toString()?.let { proscenicKlasse = it }
+            }
+            return
+        }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         if (startbar.getOrPut(paket) { packageManager.getLaunchIntentForPackage(paket) != null }) zuletztVorn = paket
     }
 
@@ -49,6 +59,11 @@ class ProscenicBedienung : AccessibilityService() {
     companion object {
         @Volatile var instanz: ProscenicBedienung? = null
         @Volatile var zuletztVorn: String? = null
+        /** Letzter Toast der Proscenic-App und wann er kam. */
+        @Volatile var toast: String? = null
+        @Volatile var toastUm: Long = 0L
+        /** Klasse des zuletzt geöffneten Proscenic-Fensters (Startbildschirm, Geräteliste, Gerät, Unterseite). */
+        @Volatile var proscenicKlasse: String? = null
 
         /** Ist die Bedienungshilfe in den Android-Einstellungen eingeschaltet? */
         fun eingeschaltet(context: Context): Boolean {
@@ -99,9 +114,14 @@ object SaugerStand {
 }
 
 /**
- * Tippt in der Proscenic-App. Ablauf je Aktion: App öffnen, Gerätebildschirm des M7 Pro abwarten (aus der Geräteliste
- * „M7 Pro“ antippen, aus Unterseiten zurückgehen), Knopf drücken, Stand ablesen, zur vorher offenen App zurück.
- * Kennungen und Beschriftungen stammen aus Proscenic 1.5.5 auf Deutsch (ausgelesen am 13.11.2026). Erkennt Jarvis eine
+ * Tippt in der Proscenic-App. Ablauf je Aktion: App öffnen, geduldig auf den Gerätebildschirm des M7 Pro warten (Startbildschirm
+ * und Anmeldung abwarten, in der Geräteliste „M7 Pro“ wiederholt antippen, aus Unterseiten zurückgehen), warten, bis die App den
+ * Roboter wieder erreicht, Knopf drücken, die Wirkung prüfen, Stand ablesen, zur vorher offenen App zurück.
+ *
+ * Warum so geduldig: Android sperrt der Proscenic-App im Hintergrund das Netz; etwa 5 Sekunden nach dem Wechsel trennt sie ihre
+ * Verbindung zum Roboter und zeigt „Aktueller WLAN ist nicht verfügbar“. Kommt sie wieder nach vorn, verbindet sie neu, bei
+ * langsamem Internet erst nach Sekunden. Ein Tipp davor verpufft.
+ * Kennungen und Beschriftungen stammen aus Proscenic 1.5.5 auf Deutsch (ausgelesen am 13. und 14.11.2026). Erkennt Jarvis eine
  * Beschriftung nicht, tippt es lieber nicht und sagt, was dasteht.
  */
 object ProscenicSteuerung {
@@ -125,8 +145,15 @@ object ProscenicSteuerung {
     private const val MEHR_STAUBSAMMLUNG = "ll_startDustCenter"
     private const val MEHR_WISCHEN = "ll_y_word_2"
     private const val MODUS = "tv_clean_mode"
+    /** Name des Geräts in der Geräteliste („CleanRobot“ / „M7 Pro“). */
+    private const val LISTE_GERAET = "tv_device_name"
     /** Bestätigungsknöpfe einer Rückfrage; bewusst ohne „Start“, das auch als Beschriftung anderer Knöpfe vorkommt. */
     private val BESTAETIGEN = listOf("Bestätigen", "OK", "Ja", "Fortfahren")
+
+    /** Gesamtfrist je Aktion; bleibt unter dem 120-Sekunden-Limit der Werkzeuge, damit Frank eine klare Antwort bekommt. */
+    private const val FRIST_MS = 105_000L
+    /** So lange darf die App nach dem Öffnen brauchen, bis sie den Roboter wieder erreicht (in zwei Anläufen). */
+    private const val VERBINDEN_MS = 50_000L
 
     /** Zustand des Reinigen-Knopfs nach seiner Beschriftung. */
     private enum class Knopf { BEREIT, REINIGT, PAUSIERT, UNBEKANNT }
@@ -139,6 +166,13 @@ object ProscenicSteuerung {
             t.contains("reinig") || t.contains("start") -> Knopf.BEREIT
             else -> Knopf.UNBEKANNT
         }
+    }
+
+    /** Meldet die App, dass sie den Roboter nicht erreicht („Aktueller WLAN ist nicht verfügbar“, offline …)? */
+    private fun offline(text: String?): Boolean {
+        val t = text?.lowercase() ?: return false
+        return "wlan" in t || "wi-fi" in t || "wifi" in t || "nicht verfügbar" in t || "offline" in t || "netzwerk" in t ||
+            "verbindung" in t || "getrennt" in t
     }
 
     private val sperre = Mutex()
@@ -160,6 +194,12 @@ object ProscenicSteuerung {
         ausgang
     }
 
+    /** Läuft ein Telefonat oder klingelt es? Dann tippt Jarvis nirgends hin. */
+    private fun telefonat(context: Context): Boolean {
+        val mode = context.getSystemService(AudioManager::class.java)?.mode ?: return false
+        return mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_RINGTONE
+    }
+
     private suspend fun ablauf(context: Context, aktion: Aktion): SaugerAusgang {
         val dienst = ProscenicBedienung.instanz
             ?: return SaugerAusgang(
@@ -171,18 +211,24 @@ object ProscenicSteuerung {
         val pm = context.getSystemService(PowerManager::class.java)
         if (km?.isKeyguardLocked == true || pm?.isInteractive == false)
             return SaugerAusgang("Das Gerät ist gesperrt. Entsperre es kurz, dann kann ich die Proscenic-App bedienen.", fehler = true)
+        if (telefonat(context))
+            return SaugerAusgang("Während eines Telefonats bediene ich die Proscenic-App nicht. Sag es mir nach dem Gespräch noch einmal.", fehler = true)
         val start = context.packageManager.getLaunchIntentForPackage(PAKET)
             ?: return SaugerAusgang("Die Proscenic-App ist auf diesem Gerät nicht installiert.", fehler = true)
 
+        val ende = System.currentTimeMillis() + FRIST_MS
         val vorher = when {
             MainActivity.sichtbar -> context.packageName
             else -> dienst.rootInActiveWindow?.packageName?.toString()
                 ?.takeIf { it != PAKET && context.packageManager.getLaunchIntentForPackage(it) != null }
                 ?: ProscenicBedienung.zuletztVorn
         }
-        dienst.startActivity(start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        dienst.startActivity(Intent(start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
-            if (!hauptbildschirm(dienst)) return SaugerAusgang("Der Bildschirm des M7 Pro in der Proscenic-App ließ sich nicht öffnen.", fehler = true)
+            when (val v = bereitMachen(dienst, context, start, ende)) {
+                is Bereit.Nein -> return v.ausgang
+                Bereit.Ja -> Unit
+            }
             val vorZustand = text(dienst, ZUSTAND).orEmpty()
             val knopfText = text(dienst, TEXT_REINIGEN).orEmpty()
             val knopf = knopfZustand(knopfText)
@@ -190,12 +236,13 @@ object ProscenicSteuerung {
                 Aktion.STATUS -> ""
                 Aktion.REINIGEN -> when (knopf) {
                     Knopf.REINIGT -> "Der M7 Pro reinigt schon."
-                    Knopf.BEREIT -> { klick(dienst, KNOPF_REINIGEN); "Reinigung gestartet." }
-                    Knopf.PAUSIERT -> { klick(dienst, KNOPF_REINIGEN); "Reinigung fortgesetzt." }
+                    Knopf.BEREIT, Knopf.PAUSIERT -> befehl(dienst, context, ende, vorZustand, knopf, wirkung = true, if (knopf == Knopf.BEREIT) "Reinigung gestartet." else "Reinigung fortgesetzt.") {
+                        klick(dienst, KNOPF_REINIGEN)
+                    }
                     Knopf.UNBEKANNT -> return unbekannt(knopfText)
                 }
                 Aktion.STOPPEN -> when (knopf) {
-                    Knopf.REINIGT -> { klick(dienst, KNOPF_REINIGEN); "Reinigung angehalten." }
+                    Knopf.REINIGT -> befehl(dienst, context, ende, vorZustand, knopf, wirkung = true, "Reinigung angehalten.") { klick(dienst, KNOPF_REINIGEN) }
                     Knopf.BEREIT, Knopf.PAUSIERT -> "Der M7 Pro reinigt gerade nicht."
                     Knopf.UNBEKANNT -> return unbekannt(knopfText)
                 }
@@ -204,30 +251,136 @@ object ProscenicSteuerung {
                     when {
                         z.contains("rück") || z.contains("zurück") -> "Der M7 Pro fährt schon zur Ladestation."
                         z.contains("ladevorgang") || z.contains("lädt") || z.contains("geladen") || z.contains("aufladen") -> "Der M7 Pro steht schon in der Ladestation."
-                        else -> { klick(dienst, KNOPF_STATION); "Der M7 Pro fährt zurück zur Ladestation." }
+                        else -> befehl(dienst, context, ende, vorZustand, knopf, wirkung = true, "Der M7 Pro fährt zurück zur Ladestation.") { klick(dienst, KNOPF_STATION) }
                     }
                 }
                 Aktion.TIEFENREINIGUNG ->
                     if (knopf == Knopf.REINIGT) "Der M7 Pro reinigt gerade schon; halte ihn erst an, dann starte ich die Tiefenreinigung."
-                    else mehr(dienst, MEHR_TIEFENREINIGUNG, "Tiefenreinigung ausgelöst.")
-                Aktion.POSITIONIEREN -> mehr(dienst, MEHR_POSITIONIEREN, "Gerät positionieren ausgelöst; der M7 Pro meldet sich.")
+                    else befehl(dienst, context, ende, vorZustand, knopf, wirkung = true, "Tiefenreinigung gestartet.") { mehr(dienst, MEHR_TIEFENREINIGUNG) }
+                Aktion.POSITIONIEREN ->
+                    befehl(dienst, context, ende, vorZustand, knopf, wirkung = false, "Gerät positionieren an den M7 Pro gesendet; er sollte sich jetzt mit einer Ansage melden.") {
+                        mehr(dienst, MEHR_POSITIONIEREN)
+                    }
                 Aktion.STAUBSAMMLUNG ->
                     if (knopf == Knopf.REINIGT) "Der M7 Pro reinigt gerade; die Staubsammlung geht erst in der Station."
-                    else mehr(dienst, MEHR_STAUBSAMMLUNG, "Staubsammlung ausgelöst.")
-                Aktion.WISCHEN -> mehr(dienst, MEHR_WISCHEN, "Y-förmiges Wischen ausgelöst.")
+                    else befehl(dienst, context, ende, vorZustand, knopf, wirkung = false, "Staubsammlung an den M7 Pro gesendet.") { mehr(dienst, MEHR_STAUBSAMMLUNG) }
+                Aktion.WISCHEN -> befehl(dienst, context, ende, vorZustand, knopf, wirkung = true, "Y-förmiges Wischen gestartet.") { mehr(dienst, MEHR_WISCHEN) }
             }
-            if (aktion != Aktion.STATUS) delay(3500)
-            // Ein noch offenes Mehr-Menü schließen, damit Zustand und Akku lesbar sind.
-            if (finde(dienst, MEHR_TIEFENREINIGUNG) != null) { dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); delay(800) }
+            menueSchliessen(dienst)
             val zustand = text(dienst, ZUSTAND)
             val akku = text(dienst, AKKU)?.let { Regex("\\d{1,3}").find(it)?.value?.toIntOrNull() }?.takeIf { it in 0..100 }
             val modus = text(dienst, MODUS)
-            SaugerStand.merken(context, akku, zustand, modus)
-            val stand = listOfNotNull(zustand?.let { "Zustand: $it." }, akku?.let { "Akku $it Prozent." }, modus?.let { "Saugstufe: $it." }).joinToString(" ")
+            val ohneNetz = offline(zustand)
+            SaugerStand.merken(context, akku, zustand?.takeUnless { ohneNetz }, modus)
+            val stand = listOfNotNull(zustand?.let { if (ohneNetz) "Die Proscenic-App meldet: $it." else "Zustand: $it." }, akku?.let { "Akku $it Prozent." }, modus?.let { "Saugstufe: $it." }).joinToString(" ")
             return SaugerAusgang(listOf(antwort, stand).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "Kein Stand lesbar." })
+        } catch (e: Unbestaetigt) {
+            menueSchliessen(dienst)
+            return SaugerAusgang(e.message.orEmpty(), fehler = true)
         } finally {
             zurueck(dienst, context, vorher)
         }
+    }
+
+    private sealed interface Bereit {
+        data object Ja : Bereit
+        data class Nein(val ausgang: SaugerAusgang) : Bereit
+    }
+
+    /** Ein Befehl, dessen Ankunft am Roboter sich nicht belegen ließ. */
+    private class Unbestaetigt(text: String) : Exception(text)
+
+    /**
+     * Gerätebildschirm öffnen und warten, bis die App den Roboter erreicht. Meldet sie nach der halben Wartezeit noch „kein WLAN“,
+     * geht Jarvis einmal zurück in die Geräteliste und öffnet den M7 Pro neu (das hilft auch beim Antippen von Hand).
+     */
+    private suspend fun bereitMachen(dienst: AccessibilityService, context: Context, start: Intent, ende: Long): Bereit {
+        var neuGeoeffnet = false
+        while (true) {
+            if (!hauptbildschirm(dienst, context, start, ende))
+                return Bereit.Nein(SaugerAusgang(
+                    if (telefonat(context)) "Ein Telefonat kam dazwischen; ich habe die Proscenic-App nicht weiter bedient."
+                    else "Der Bildschirm des M7 Pro in der Proscenic-App öffnete sich auch nach langem Warten und mehrfachem Antippen nicht. " +
+                        "Vermutlich ist das Internet gerade zu langsam für die Anmeldung bei Proscenic.",
+                    fehler = true,
+                ))
+            when (verbunden(dienst, context, minOf(ende, System.currentTimeMillis() + VERBINDEN_MS / 2))) {
+                true -> return Bereit.Ja
+                false -> {
+                    val meldung = text(dienst, ZUSTAND)
+                    if (neuGeoeffnet || System.currentTimeMillis() > ende - 30_000 || telefonat(context))
+                        return Bereit.Nein(SaugerAusgang(
+                            "Die Proscenic-App erreicht den M7 Pro gerade nicht" + (meldung?.let { ", sie meldet „$it“" } ?: "") + ". " +
+                                "Ich habe lange gewartet und den Roboter neu geöffnet. Meist ist das Internet zu Hause zu langsam " +
+                                "oder der Roboter hat kurz keine Verbindung zum Proscenic-Server. Ich habe nichts angetippt.",
+                            fehler = true,
+                        ))
+                    neuGeoeffnet = true
+                    dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                    delay(1500)
+                }
+            }
+        }
+    }
+
+    /** Wartet (mindestens 2,5 Sekunden, damit ein alter Stand nicht täuscht), bis der Zustand keine Netzwarnung mehr zeigt. */
+    private suspend fun verbunden(dienst: AccessibilityService, context: Context, bis: Long): Boolean {
+        val frueh = System.currentTimeMillis() + 2500
+        var gut = 0
+        while (System.currentTimeMillis() < bis) {
+            if (telefonat(context)) return false
+            if (finde(dienst, KNOPF_REINIGEN) == null) return false
+            val z = text(dienst, ZUSTAND)
+            gut = if (!z.isNullOrBlank() && !offline(z)) gut + 1 else 0
+            if (gut >= 2 && System.currentTimeMillis() >= frueh) return true
+            delay(500)
+        }
+        return false
+    }
+
+    /**
+     * Drückt einen Knopf ([tippen]) und prüft danach im Vordergrund, ob der Roboter reagiert. Die App bleibt dabei mindestens
+     * 6 Sekunden vorn, damit der Befehl auch bei langsamem Netz rausgeht. Weist die App ihn mit einer Netzwarnung ab, wartet Jarvis
+     * auf die Verbindung und tippt einmal neu. Bei [wirkung] muss sich Zustand oder Reinigen-Knopf ändern; sonst einmal nachtippen,
+     * danach ehrlich „nicht bestätigt“.
+     */
+    private suspend fun befehl(
+        dienst: AccessibilityService, context: Context, ende: Long, vorZustand: String, vorKnopf: Knopf,
+        wirkung: Boolean, erfolg: String, tippen: suspend () -> Unit,
+    ): String {
+        repeat(2) { versuch ->
+            val seit = System.currentTimeMillis()
+            tippen()
+            bestaetigen(dienst)
+            val bis = minOf(ende - 4000, System.currentTimeMillis() + if (wirkung) 15_000 else 6_000)
+            var abgewiesen: String? = null
+            while (System.currentTimeMillis() < bis) {
+                delay(700)
+                val t = ProscenicBedienung.toast?.takeIf { ProscenicBedienung.toastUm >= seit }
+                if (t != null && offline(t)) { abgewiesen = t; break }
+                if (wirkung) {
+                    val z = text(dienst, ZUSTAND).orEmpty()
+                    val k = knopfZustand(text(dienst, TEXT_REINIGEN).orEmpty())
+                    if (z.isNotBlank() && !offline(z) && (z != vorZustand || k != vorKnopf) && System.currentTimeMillis() - seit >= 3000) return erfolg
+                }
+            }
+            if (abgewiesen == null && !wirkung) {
+                val t = ProscenicBedienung.toast?.takeIf { ProscenicBedienung.toastUm >= seit }
+                return if (t != null) "$erfolg Die App meldet: $t." else erfolg
+            }
+            if (versuch == 1 || System.currentTimeMillis() > ende - 25_000) {
+                throw Unbestaetigt(
+                    if (abgewiesen != null) "Die Proscenic-App hat den Befehl abgewiesen: „$abgewiesen“. Der M7 Pro ist gerade nicht erreichbar, vermutlich wegen des langsamen Internets."
+                    else "Ich habe den Befehl zweimal gesendet, aber der M7 Pro hat in der Proscenic-App nicht reagiert (Zustand: ${text(dienst, ZUSTAND) ?: "nicht lesbar"}). " +
+                        "Vermutlich kommt er wegen des langsamen Internets nicht an.",
+                )
+            }
+            // Zweiter Versuch: Menü schließen, auf Verbindung warten, neu tippen.
+            menueSchliessen(dienst)
+            if (!verbunden(dienst, context, minOf(ende - 20_000, System.currentTimeMillis() + 25_000)))
+                throw Unbestaetigt("Die Proscenic-App hat die Verbindung zum M7 Pro verloren" + (abgewiesen?.let { " („$it“)" } ?: "") + "; der Befehl kam nicht an.")
+        }
+        return erfolg
     }
 
     private fun unbekannt(knopfText: String) = SaugerAusgang(
@@ -235,37 +388,79 @@ object ProscenicSteuerung {
         fehler = true,
     )
 
-    /** Öffnet das Mehr-Menü, tippt den Eintrag [id] und bestätigt eine Rückfrage. */
-    private suspend fun mehr(dienst: AccessibilityService, id: String, erfolg: String): String {
+    /** Ein noch offenes Mehr-Menü schließen, damit Zustand und Akku lesbar sind. */
+    private suspend fun menueSchliessen(dienst: AccessibilityService) {
+        if (finde(dienst, MEHR_TIEFENREINIGUNG) != null) { dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); delay(800) }
+    }
+
+    /** Öffnet das Mehr-Menü und tippt den Eintrag [id]. */
+    private suspend fun mehr(dienst: AccessibilityService, id: String) {
         if (finde(dienst, id) == null) {
             klick(dienst, KNOPF_MEHR)
-            if (!warte { finde(dienst, id) != null }) throw IllegalStateException("das Menü „Mehr“ öffnete sich nicht")
+            if (!warte(8) { finde(dienst, id) != null }) throw IllegalStateException("das Menü „Mehr“ öffnete sich nicht")
         }
         klick(dienst, id)
-        bestaetigen(dienst)
-        return erfolg
     }
 
     /**
-     * Wartet bis zu 15 Sekunden auf den Gerätebildschirm des M7 Pro. Aus der Geräteliste tippt es „M7 Pro“ an,
-     * von einer Unterseite (Karte, Einstellungen) geht es höchstens viermal zurück.
+     * Wartet bis zur Frist auf den Gerätebildschirm des M7 Pro. Startbildschirm und Anmeldung wartet es geduldig ab, in der
+     * Geräteliste tippt es „M7 Pro“ alle drei Sekunden erneut an (die App reagiert bei langsamem Netz oft erst nach mehreren Tipps),
+     * aus einer Unterseite (Karte, Einstellungen) geht es höchstens viermal zurück. Ist die App nicht mehr vorn, holt es sie zurück.
      */
-    private suspend fun hauptbildschirm(dienst: AccessibilityService): Boolean {
-        val ende = System.currentTimeMillis() + 15_000
-        var letzterVersuch = System.currentTimeMillis()
+    private suspend fun hauptbildschirm(dienst: AccessibilityService, context: Context, start: Intent, ende: Long): Boolean {
+        val bis = ende - 25_000
+        var letzterTipp = 0L
         var zurueckGegangen = 0
-        while (System.currentTimeMillis() < ende) {
+        var unterseiteSeit = 0L
+        var wegSeit = 0L
+        var neuGestartet = 0
+        while (System.currentTimeMillis() < bis) {
+            if (telefonat(context)) return false
+            val jetzt = System.currentTimeMillis()
             val wurzeln = wurzeln(dienst)
-            if (wurzeln.isNotEmpty()) {
-                if (finde(dienst, KNOPF_REINIGEN) != null) { delay(700); return true }
-                if (System.currentTimeMillis() - letzterVersuch > 2500) {
-                    letzterVersuch = System.currentTimeMillis()
-                    val eintrag = wurzeln.firstNotNullOfOrNull { w -> w.findAccessibilityNodeInfosByText("M7 Pro").firstOrNull { it.isVisibleToUser && klickbar(it) } }
-                    if (eintrag != null) tippe(dienst, eintrag)
-                    else if (zurueckGegangen < 4) { zurueckGegangen++; dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) }
+            if (wurzeln.isEmpty()) {
+                // Proscenic ist nicht vorn (etwa nach einem Zurück zu viel): nach 4 Sekunden neu öffnen, höchstens dreimal.
+                if (wegSeit == 0L) wegSeit = jetzt
+                else if (jetzt - wegSeit > 4000 && neuGestartet < 3) {
+                    neuGestartet++; wegSeit = 0L
+                    runCatching { dienst.startActivity(Intent(start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }
+                delay(500); continue
+            }
+            wegSeit = 0L
+            if (finde(dienst, KNOPF_REINIGEN) != null) { delay(700); return true }
+            val eintrag = finde(dienst, LISTE_GERAET)
+                ?: wurzeln.firstNotNullOfOrNull { w -> w.findAccessibilityNodeInfosByText("M7 Pro").firstOrNull { it.isVisibleToUser && klickbar(it) } }
+            val klasse = ProscenicBedienung.proscenicKlasse.orEmpty()
+            when {
+                eintrag != null -> {
+                    unterseiteSeit = 0L
+                    if (jetzt - letzterTipp > 3000) { letzterTipp = jetzt; tippe(dienst, eintrag) }
+                }
+                bestaetigeHinweis(dienst) -> unterseiteSeit = 0L
+                // Startbildschirm, Geräteliste beim Laden und Gerätebildschirm beim Aufbau: abwarten, nie zurückgehen.
+                klasse.contains("launch", ignoreCase = true) || klasse.endsWith(".activity.MainActivity_") || klasse.contains("RobotMain") ||
+                    !klasse.startsWith("com.proscenic") -> unterseiteSeit = 0L
+                else -> {
+                    if (unterseiteSeit == 0L) unterseiteSeit = jetzt
+                    else if (jetzt - unterseiteSeit > 4000 && zurueckGegangen < 4) {
+                        zurueckGegangen++; unterseiteSeit = 0L
+                        dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                    }
                 }
             }
-            delay(400)
+            delay(500)
+        }
+        return false
+    }
+
+    /** Ein Hinweisfenster der App (etwa zum WLAN) mit „OK“/„Bestätigen“ schließen; true, wenn getippt wurde. */
+    private fun bestaetigeHinweis(dienst: AccessibilityService): Boolean {
+        for (w in wurzeln(dienst)) for (wort in BESTAETIGEN) {
+            val knoten = w.findAccessibilityNodeInfosByText(wort).firstOrNull { n ->
+                n.isVisibleToUser && n.text?.toString()?.trim()?.equals(wort, ignoreCase = true) == true
+            }
+            if (knoten != null) { tippe(dienst, knoten); return true }
         }
         return false
     }
@@ -275,12 +470,7 @@ object ProscenicSteuerung {
         val ende = System.currentTimeMillis() + 2500
         while (System.currentTimeMillis() < ende) {
             delay(500)
-            for (w in wurzeln(dienst)) for (wort in BESTAETIGEN) {
-                val knoten = w.findAccessibilityNodeInfosByText(wort).firstOrNull { n ->
-                    n.isVisibleToUser && n.text?.toString()?.trim()?.equals(wort, ignoreCase = true) == true
-                }
-                if (knoten != null) { tippe(dienst, knoten); return true }
-            }
+            if (bestaetigeHinweis(dienst)) { delay(500); return true }
         }
         return false
     }
@@ -328,8 +518,9 @@ object ProscenicSteuerung {
         dienst.dispatchGesture(GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(pfad, 0, 60)).build(), null, null)
     }
 
-    /** Zurück zur App, die vorher vorn war; ohne bekannte App auf den Startbildschirm. */
+    /** Zurück zur App, die vorher vorn war; ohne bekannte App auf den Startbildschirm. Während eines Telefonats nichts tun. */
     private fun zurueck(dienst: AccessibilityService, context: Context, vorher: String?) {
+        if (telefonat(context) && wurzeln(dienst).isEmpty()) return
         val intent = vorher?.let { context.packageManager.getLaunchIntentForPackage(it) }
         if (intent != null && runCatching { dienst.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
         dienst.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
