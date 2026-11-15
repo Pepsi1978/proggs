@@ -12,7 +12,9 @@
     "ENABLE_TOOL_SEARCH": "1",
     "ENABLE_SECURITY_REMINDER": "0",
     "ECC_HOOK_PROFILE": "minimal",
-    "ENABLE_PROMPT_CACHING_1H": "1"
+    "ENABLE_PROMPT_CACHING_1H": "1",
+    "BASH_DEFAULT_TIMEOUT_MS": "60000",
+    "BASH_MAX_TIMEOUT_MS": "60000"
   },
   "permissions": {
     "defaultMode": "bypassPermissions"

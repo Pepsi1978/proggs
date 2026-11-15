@@ -1,29 +1,55 @@
 #!/usr/bin/env python3
-"""Sichtbare Minutenprüfung eines Befehls, der nach dem 60-s-Zeitlimit im Hintergrund weiterläuft (Franks Regel vom 15.11.2026).
+"""Sichtbare Minutenprüfung eines Befehls, der nach dem 60-s-Zeitlimit weiterläuft (Franks Regel vom 15.11.2026).
 
-Aufruf (im Vordergrund, Beschreibung „Minute N: Lauf prüfen“):
+Aufruf (im Vordergrund, Beschreibung „Minute N: Lauf prüfen“; Windows: python -X utf8):
     python3 ~/proggs/Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute>
 
-Beobachtet höchstens 50 s und endet sofort, wenn der Lauf fertig ist. Danach eine Zeile Einschätzung:
-  FERTIG    – kein Prozess schreibt mehr in die Ausgabe
-  LÄUFT     – arbeitet (CPU oder neue Ausgabe), keine Fehlermeldung
-  FEHLER    – Fehlermeldung in der neuen Ausgabe (Zeile wird gezeigt)
-  WARTET    – absichtliche Pause im Lauf (sleep, z. B. gewählte Installationszeit), kein Fehler
-  HÄNGER?   – kein CPU-Verbrauch und keine neue Ausgabe im ganzen Fenster: Prozesse ansehen, Ursache beheben
-Gradle: Der Client tut nichts, der Daemon arbeitet; dessen CPU zählt mit (GradleDaemon, KotlinCompileDaemon).
-Unter Windows ohne ps/lsof nur Ausgabe und Fehlermeldungen. Lange Befehle nie in `| tail`/`| head` leiten: Die Pipe hält
-die Ausgabe bis zum Ende zurück, dann sieht diese Prüfung nichts (15.11.2026: „Gewählt: in 5 Minuten“ war unsichtbar).
+Beobachtet höchstens 40 s (bleibt so selbst unter dem 60-s-Limit) und endet sofort, wenn der Lauf fertig ist. Danach eine Zeile:
+  FERTIG       – Claude Code hat „[exited with code N]“ geschrieben bzw. kein Prozess hält die Ausgabe mehr offen
+  LÄUFT        – arbeitet (CPU-Zeit steigt oder neue Ausgabe), keine Fehlermeldung
+  WARTET       – absichtliche Pause: sleep, Ja/Nein-Dialog (osascript), Overlay-Frage. NIE beenden, Frank entscheidet gerade.
+  FEHLER       – eindeutige Fehlermeldung in der neuen Ausgabe (Zeile wird gezeigt)
+  HÄNGER?      – keine CPU-Zeit und keine neue Ausgabe im ganzen Fenster: Prozesse ansehen, Ursache beheben
+  STILL        – (nur ohne Prozessdaten, z. B. Windows) keine neue Ausgabe: Prozesse von Hand prüfen
+  DATEI FEHLT  – Pfad falsch oder noch nicht angelegt
+CPU zählt als kumulierte CPU-Zeit (ps -o time), nicht als Durchschnitt; Gradle: der Daemon arbeitet, nicht der Client.
+Lange Befehle nie in `| tail`/`| head` leiten: Die Pipe hält die Ausgabe bis zum Ende zurück, dann sieht diese Prüfung nichts.
 """
 import os, re, subprocess, sys, time
 
-FENSTER = 50
-FEHLER = re.compile(r'(^e: |error:|\bERROR\b|FAILURE|FAILED|BUILD FAILED|Exception|Traceback|fatal:|No such file|command not found|Permission denied)', re.I)
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
+FENSTER = 40
+TAKT = 5
+# Nur eindeutige Fehler (Groß-/Kleinschreibung zählt); „0 failed“, Warnungen mit „Exception“ und INSTALL_FAILED_MISSING_SPLIT
+# (Jarvis-Installationsschutz, kein Fehler) zählen nicht.
+FEHLER = re.compile(r'(^e: |^FAILURE: |BUILD FAILED|^Traceback \(most recent call last\)|^fatal: |command not found|'
+                    r'Exception in thread|^error: |^Error: |INSTALL_FAILED_(?!MISSING_SPLIT)|JARVIS_INSTALL_STATUS=fehler|'
+                    r'APK_UPDATE_STATUS=fehler)', re.M)
 DAEMON = re.compile(r'GradleDaemon|KotlinCompileDaemon|kotlin-daemon', re.I)
+WARTEN = re.compile(r'^(/bin/)?sleep \d|osascript|display dialog|zenity|Start-Sleep|timeout(\.exe)? /t|InstallFrage', re.I)
+ENDE = re.compile(r'^\[exited with code (-?\d+)\]', re.M)
+
+
+def zeit_sek(t):
+    """ps-Zeit [[dd-]hh:]mm:ss[.cc] in Sekunden."""
+    tage = 0
+    if '-' in t:
+        d, t = t.split('-', 1)
+        tage = int(d)
+    teile = [float(x.replace(',', '.')) for x in t.split(':')]
+    s = 0.0
+    for x in teile:
+        s = s * 60 + x
+    return tage * 86400 + s
 
 
 def ps():
     try:
-        out = subprocess.run(['ps', '-A', '-o', 'pid=,ppid=,pcpu=,etime=,command='], capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run(['ps', '-A', '-o', 'pid=,ppid=,time=,etime=,command='], capture_output=True, text=True, timeout=5).stdout
     except Exception:
         return None
     zeilen = []
@@ -31,37 +57,43 @@ def ps():
         t = z.split(None, 4)
         if len(t) == 5:
             try:
-                zeilen.append((int(t[0]), int(t[1]), float(t[2].replace(',', '.')), t[3], t[4]))
+                zeilen.append((int(t[0]), int(t[1]), zeit_sek(t[2]), t[3], t[4]))
             except ValueError:
                 pass
     return zeilen
 
 
 def schreiber(datei):
-    """PIDs, die die Ausgabedatei offen halten (lsof am Mac, fuser unter Linux)."""
+    """PIDs, die die Ausgabedatei offen halten (lsof am Mac, fuser unter Linux); None = unbekannt."""
     for befehl in (['lsof', '-t', datei], ['fuser', datei]):
         try:
-            r = subprocess.run(befehl, capture_output=True, text=True, timeout=10)
-            pids = [int(x) for x in re.findall(r'\d+', r.stdout)]
-            if r.returncode in (0, 1):
-                return pids
+            r = subprocess.run(befehl, capture_output=True, text=True, timeout=5)
         except Exception:
             continue
+        pids = [int(x) for x in re.findall(r'\d+', r.stdout)]
+        if r.returncode == 0 or (r.returncode == 1 and not r.stderr.strip()):
+            return pids
     return None
 
 
 def baum(alle, wurzeln):
     kinder = {}
-    for pid, ppid, *_ in alle:
-        kinder.setdefault(ppid, []).append(pid)
+    for z in alle:
+        kinder.setdefault(z[1], []).append(z[0])
     gesehen, offen = set(), list(wurzeln)
     while offen:
         p = offen.pop()
-        if p in gesehen:
-            continue
-        gesehen.add(p)
-        offen += kinder.get(p, [])
-    return [z for z in alle if z[0] in gesehen]
+        if p not in gesehen:
+            gesehen.add(p)
+            offen += kinder.get(p, [])
+    return [z for z in alle if z[0] in gesehen and 'minute.py' not in z[4]]
+
+
+def cpu_zeit(alle, prozesse):
+    s = sum(z[2] for z in prozesse)
+    if any('gradle' in z[4].lower() for z in prozesse):
+        s += sum(z[2] for z in alle if DAEMON.search(z[4]))
+    return s
 
 
 def kurz(cmd, n=70):
@@ -69,54 +101,70 @@ def kurz(cmd, n=70):
     return cmd if len(cmd) <= n else cmd[:n - 1] + '…'
 
 
+def lies_ab(datei, ab):
+    with open(datei, 'rb') as f:
+        f.seek(ab)
+        return f.read().decode('utf-8', 'replace')
+
+
 def main():
     if len(sys.argv) < 3:
         print("Aufruf: minute.py <ausgabedatei> <minute>")
         return
     datei, minute = sys.argv[1], sys.argv[2]
+    if not os.path.exists(datei):
+        print('Minute %s · DATEI FEHLT – %s gibt es nicht (Pfad prüfen)' % (minute, datei))
+        return
     start = time.time()
-    groesse0 = os.path.getsize(datei) if os.path.exists(datei) else 0
-    cpu_max, fertig, prozesse = 0.0, False, []
-    while time.time() - start < FENSTER:
-        pids = schreiber(datei) if os.name != 'nt' else None
+    groesse0 = os.path.getsize(datei)
+    posix = os.name != 'nt'
+    cpu0 = cpu1 = None
+    fertig, prozesse = False, []
+    while True:
+        if ENDE.search(lies_ab(datei, max(0, os.path.getsize(datei) - 200))):
+            fertig = True
+            break
+        pids = schreiber(datei) if posix else None
         if pids is not None and not pids:
             fertig = True
             break
-        alle = ps() if os.name != 'nt' else None
+        alle = ps() if posix else None
         if alle and pids:
-            prozesse = [z for z in baum(alle, pids) if 'minute.py' not in z[4]]
-            cpu = sum(z[2] for z in prozesse)
-            if any('gradle' in z[4].lower() for z in prozesse):
-                cpu += sum(z[2] for z in alle if DAEMON.search(z[4]))
-            cpu_max = max(cpu_max, cpu)
-        time.sleep(5)
+            prozesse = baum(alle, pids)
+            c = cpu_zeit(alle, prozesse)
+            cpu0 = c if cpu0 is None else cpu0
+            cpu1 = c
+        rest = FENSTER - (time.time() - start)
+        if rest <= 0:
+            break
+        time.sleep(min(TAKT, rest))
     dauer = int(time.time() - start)
-    neu = ''
-    if os.path.exists(datei):
-        with open(datei, 'rb') as f:
-            f.seek(groesse0)
-            neu = f.read().decode('utf-8', 'replace')
+    neu = lies_ab(datei, groesse0)
     zeilen = [z for z in neu.splitlines() if z.strip()]
     fehler = [z for z in zeilen if FEHLER.search(z)]
     letzte = zeilen[-1] if zeilen else ''
+    arbeit = (cpu1 - cpu0) if cpu0 is not None else None
+    wartend = [z for z in prozesse if WARTEN.search(z[4])]
+    ende = ENDE.search(neu) or ENDE.search(lies_ab(datei, max(0, os.path.getsize(datei) - 200)))
     if fertig:
-        stand = 'FERTIG – der Lauf ist beendet, Ergebnis jetzt auswerten'
+        stand = 'FERTIG – der Lauf ist beendet%s, Ergebnis jetzt auswerten' % (' (Exit %s)' % ende.group(1) if ende else '')
     elif fehler:
         stand = 'FEHLER – Fehlermeldung in der Ausgabe: ' + kurz(fehler[-1], 120)
-    elif any(re.match(r'(/bin/)?sleep \d', z[4]) for z in prozesse):
-        s = next(z for z in prozesse if re.match(r'(/bin/)?sleep \d', z[4]))
-        stand = 'WARTET – absichtliche Pause im Lauf (%s, läuft seit %s), kein Fehler' % (kurz(s[4], 30), s[3])
-    elif cpu_max < 1.0 and not zeilen and prozesse:
-        stand = 'HÄNGER? – kein CPU-Verbrauch und keine neue Ausgabe seit %d s: Prozesse ansehen und Ursache beheben' % dauer
+    elif wartend:
+        stand = 'WARTET – absichtliche Pause (%s, seit %s), kein Fehler, nicht beenden' % (kurz(wartend[0][4], 40), wartend[0][3])
+    elif arbeit is None and not zeilen:
+        stand = 'STILL – keine neue Ausgabe seit %d s, Prozessdaten fehlen hier: Prozesse von Hand prüfen' % dauer
+    elif arbeit is not None and arbeit < 0.2 and not zeilen:
+        stand = 'HÄNGER? – keine CPU-Zeit und keine neue Ausgabe seit %d s: Prozesse ansehen und Ursache beheben' % dauer
     else:
-        stand = 'LÄUFT – arbeitet fehlerfrei weiter (CPU bis %d %%, %d neue Zeilen), nächste Prüfung in Minute %d' % (
-            cpu_max, len(zeilen), int(minute) + 1 if minute.isdigit() else 0)
+        stand = 'LÄUFT – arbeitet fehlerfrei weiter (%s%d neue Zeilen), nächste Prüfung in Minute %s' % (
+            ('%.1f s CPU, ' % arbeit) if arbeit is not None else '', len(zeilen), int(minute) + 1 if minute.isdigit() else '?')
     print('Minute %s · %s' % (minute, stand))
     if letzte:
         print('  Letzte Ausgabe: ' + kurz(letzte, 140))
     if prozesse and not fertig:
-        for z in sorted(prozesse, key=lambda z: -z[2])[:4]:
-            print('  Prozess %d · %s %% CPU · läuft %s · %s' % (z[0], z[2], z[3], kurz(z[4])))
+        for z in prozesse[-4:]:
+            print('  Prozess %d · läuft %s · %s' % (z[0], z[3], kurz(z[4])))
 
 
 if __name__ == '__main__':

@@ -12,13 +12,14 @@
 #    eigene Shell, der Bau gilt ewig als laufend (gemessen 15.11.2026: 20 Minuten Warten auf einen fertigen Jarvis-Bau).
 # 5) Komfort-Aliase aus ~/.zshrc im Shell-Schnappschuss (ls->eza, cat->bat): "ls -t <datei>" wurde zu "eza -t <datei>",
 #    eza wartete auf die offene Standardeingabe (15.11.2026, 10 Minuten bis zum Timeout). Ursache behoben in ~/.zshrc (Aliase nur
-#    im echten Terminal); für Sitzungen mit altem Schnappschuss bekommen Bash-Befehle mit ls/cat/tree bis 22.11.2026 im Bypass-Modus
-#    "unalias …; eval '<befehl>'" (ll bleibt, es gibt ihn nur als Alias). Siehe bugs/werkzeuge/agenten-shell-aliase.md
+#    im echten Terminal); für Mac-Sitzungen mit altem Schnappschuss bekommen Bash-Befehle mit ls/cat/tree bis 22.11.2026 im
+#    Bypass-Modus "unalias …; eval '<befehl>'" (ll bleibt). Danach Block 5) löschen (Rücknahme M35). bugs/werkzeuge/agenten-shell-aliase.md
 #
-# 6) Gestaffelte Zeitlimits (Franks Regel vom 15.11.2026): Jeder Vordergrund-Befehl bekommt höchstens 60 s. Läuft er länger,
-#    bricht Claude Code ihn nicht ab, sondern schiebt ihn in den Hintergrund; der Agent prüft dann im Minutentakt Ausgabe und
-#    Prozesse (hängt etwas bei 0 % CPU, ist ein Fehler aufgetreten?). Vorher: 10-Minuten-Zeitlimits, ein Hänger kostete 10 Minuten.
-#    Nur im Bypass-Modus (dort gibt "allow" nichts zusätzlich frei), für Bash und PowerShell, auf Mac, Windows und Server gleich.
+# 6) Gestaffelte Zeitlimits (Franks Regel vom 15.11.2026): höchstens 60 s im Vordergrund. Für Bash setzt das Claude Code selbst
+#    (BASH_DEFAULT_TIMEOUT_MS/BASH_MAX_TIMEOUT_MS = 60000 in allen Profil-settings.json); dieser Hook senkt es nur für das
+#    PowerShell-Werkzeug (Bypass-Modus) und für die Befehle, die er ohnehin umschreibt (Vorwärmen). Läuft ein Befehl länger, schiebt
+#    Claude Code ihn in den Hintergrund (Ausnahme: Befehle, die mit sleep beginnen, werden abgebrochen; die bleiben hier ungedeckelt).
+#    Danach jede Minute sichtbar prüfen: Werkzeuge/lauf-waechter/minute.py. Der Hinweis geht per additionalContext an das Modell.
 #
 # Blockt per permissionDecision=deny + exit 0 (claude-hooks.md 1.6), stdin per Python statt jq.
 # Fail-open: jeder Fehler -> kein Block. Notaus: leere Datei build-ablauf-guard-disable.flag im TEMP.
@@ -58,28 +59,34 @@ HINWEIS_KILL = (
 )
 
 
-SCHLEIFE = re.compile(r'\b(until|while)\b')
+SCHLEIFE = re.compile(r'\b(until|while|for)\b')
 ALIAS_BEFEHL = re.compile(r'(?:^|[;&|(\n`{]|\$\(|\b(?:do|then|else|xargs|time)\s)\s*(ls|cat|tree)(?=[\s|;&)]|$)')
 ALIAS_BIS = (2026, 11, 22)
 HINWEIS_WARTEN = (
     "STOPP - diese Warte-Schleife arbeitet falsch (endet nie bzw. sofort).\n\n"
     "pgrep -f \"{muster}\" findet die eigene Shell (das Muster steht woertlich im Befehl), der Prozess gilt also immer als laufend.\n\n"
     "Stattdessen: Den Bau direkt starten (bash gradlew assembleDebug -q). Wird er in den Hintergrund verschoben, meldet sich das\n"
-    "Werkzeug beim Ende selbst. Muss doch gewartet werden: auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
+    "Werkzeug beim Ende selbst (Server: mit run_in_background, M26). Danach jede Minute sichtbar pruefen:\n"
+    "Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute>. Sonst auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
     "Prozessnamen, oder den Klammer-Trick nutzen: pgrep -f \"[g]radlew assembleDebug\".\n\n"
     "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
 )
 
 
 ZEITLIMIT_MS = 60000
-HINWEIS_ZEIT = ("Zeitlimit auf 60 s (gestaffelt): Ist der Befehl dann nicht fertig, läuft er weiter. Jede weitere Minute sichtbar prüfen: "
-                "python3 ~/proggs/Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute> (Beschreibung 'Minute N: Lauf prüfen'), "
-                "danach ein Satz Einschätzung für Frank; bei Fehler oder Hänger sofort eingreifen, nie still warten.")
+_PY = 'python -X utf8 "%USERPROFILE%/proggs' if os.name == 'nt' else 'python3 ~/proggs'
+HINWEIS_ZEIT = ("Gestaffeltes Zeitlimit (60 s): Ist der Befehl dann nicht fertig, läuft er weiter. Jede weitere Minute sichtbar prüfen: "
+                + _PY + "/Werkzeuge/lauf-waechter/minute.py" + ('"' if os.name == 'nt' else '') + " <ausgabedatei> <minute> "
+                "(Beschreibung 'Minute N: Lauf prüfen'), danach ein Satz Einschätzung für Frank. WARTET (Dialog, Overlay, sleep) nie beenden; "
+                "bei FEHLER oder HÄNGER sofort eingreifen.")
 
 
 def mit_zeitlimit(d, neu):
-    """Senkt das Vordergrund-Zeitlimit auf 60 s; liefert True, wenn etwas geändert wurde."""
+    """Senkt das Vordergrund-Zeitlimit auf 60 s; liefert True, wenn etwas geändert wurde. Befehle, die mit sleep beginnen, bleiben
+    unverändert: Claude Code schiebt sie beim Zeitlimit nicht in den Hintergrund, sondern bricht sie ab."""
     if d.get('permission_mode') != 'bypassPermissions' or neu.get('run_in_background'):
+        return False
+    if re.match(r'\s*(sleep|Start-Sleep)\b', neu.get('command') or '', re.I):
         return False
     alt = neu.get('timeout')
     if isinstance(alt, (int, float)) and alt <= ZEITLIMIT_MS:
@@ -89,28 +96,41 @@ def mit_zeitlimit(d, neu):
 
 
 def freigeben(d, neu, grund):
+    aus = {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": grund, "updatedInput": neu}
     if mit_zeitlimit(d, neu):
-        grund += " · " + HINWEIS_ZEIT
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                             "permissionDecisionReason": grund, "updatedInput": neu}}))
+        aus["additionalContext"] = HINWEIS_ZEIT  # permissionDecisionReason sieht bei "allow" nur der Nutzer, nicht das Modell
+    print(json.dumps({"hookSpecificOutput": aus}))
 
 
-def nur_shell(cmd):
-    """Alle Heredoc-Inhalte entfernen, die nicht an eine Shell gehen (python, node, cat …): Das sind Daten, keine Shell-Befehle.
-    Fehlalarm vom 15.11.2026: Ein python-Heredoc mit dem Text einer pgrep-Schleife wurde als Schleife geblockt."""
+def heredoc_filter(cmd, weg):
+    """Gemeinsamer Heredoc-Parser: entfernt den Inhalt jedes Heredocs, für dessen ganze Zeile (vor und nach << , also auch
+    "cat <<EOF | bash") weg(zeile) wahr ist. Endmarker: bei <<- mit führenden Tabs, sonst genau am Zeilenanfang."""
     teile, rest = [], cmd
     while True:
-        m = re.search(r"<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?[^\n]*\n", rest)
+        m = re.search(r"<<(-?)\s*['\"]?([A-Za-z_]\w*)['\"]?([^\n]*)\n", rest)
         if not m:
             return ''.join(teile) + rest
-        ende = re.search(r'(?m)^\s*' + re.escape(m.group(1)) + r'\s*$', rest[m.end():])
-        zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.start()]
+        ende = re.search(r'(?m)^' + (r'\t*' if m.group(1) else '') + re.escape(m.group(2)) + r'[ \t]*$', rest[m.end():])
+        zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.start()] + ' ' + m.group(3)
         teile.append(rest[:m.end()])
         if not ende:
             return ''.join(teile) + rest[m.end():]
-        if re.search(r'\b(bash|sh|zsh)\b', zeile):
+        if not weg(zeile):
             teile.append(rest[m.end():m.end() + ende.end()])
         rest = rest[m.end() + ende.end():]
+
+
+SHELL_ZEILE = re.compile(r'(?:^|[\s|;&(])(?:bash|sh|zsh)(?:\s|$)')
+
+
+def nur_shell(cmd):
+    """Nur Heredocs behalten, die an eine Shell gehen; python-, node-, cat-Heredocs sind Daten (Fehlalarm vom 15.11.2026)."""
+    return heredoc_filter(cmd, lambda z: not SHELL_ZEILE.search(z))
+
+
+def ohne_kommentar_und_text(cmd):
+    """Text in Anführungszeichen ausblenden (Commit-Nachrichten, echo), damit dort kein while/for als Schleife zählt."""
+    return re.sub(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'', '""', cmd)
 
 
 def warte_schleife(cmd):
@@ -123,7 +143,10 @@ def warte_schleife(cmd):
         # Klammer-Trick, Anker (^…, …$) und Variablen passen nicht auf den eigenen Befehlstext.
         if not muster or '[' in muster or muster.startswith('^') or muster.endswith('$') or muster.startswith('$'):
             continue
-        if SCHLEIFE.search(cmd[:m.start()]):
+        davor = ohne_kommentar_und_text(cmd[:m.start()])
+        # Nur eine noch offene Schleife zählt: alles bis zum letzten "done" davor ist abgeschlossen.
+        letzte = [x.end() for x in re.finditer(r'\bdone\b', davor)]
+        if SCHLEIFE.search(davor[letzte[-1] if letzte else 0:]):
             return muster
     return None
 
@@ -131,7 +154,7 @@ def warte_schleife(cmd):
 def ohne_aliase(cmd):
     """ls/cat/tree/ll als Befehl -> Aliase dieser Shell vorher aufheben (wirkt auch in Sitzungen mit altem Schnappschuss)."""
     import datetime
-    if os.name == 'nt' or datetime.date.today() > datetime.date(*ALIAS_BIS) or cmd.lstrip().startswith('unalias ls cat tree') \
+    if sys.platform != 'darwin' or datetime.date.today() > datetime.date(*ALIAS_BIS) or cmd.lstrip().startswith('unalias ls cat tree') \
             or not ALIAS_BEFEHL.search(nur_shell(cmd)):
         return cmd
     # Aliase werden beim Einlesen ersetzt: Ein unalias im selben Befehl wirkte nicht mehr. Deshalb der eigentliche Befehl erst
@@ -197,22 +220,8 @@ def eigener_bump_ungebaut(basis, log):
 
 def ohne_heredoc(cmd):
     """Heredoc-Inhalte entfernen, die cat/tee nur in eine Datei schreiben: Dieser Text wird nicht ausgeführt.
-    Heredocs an python/bash/sh bleiben (sie laufen, und ihr Text steht in der Befehlszeile der Shell)."""
-    teile, rest = [], cmd
-    while True:
-        m = re.search(r"<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?[^\n]*\n", rest)
-        if not m:
-            return ''.join(teile) + rest
-        ende = re.search(r'(?m)^\s*' + re.escape(m.group(1)) + r'\s*$', rest[m.end():])
-        zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.start()]
-        if not ende or not re.search(r'\b(cat|tee)\b', zeile):
-            teile.append(rest[:m.end()])
-            rest = rest[m.end():]
-            if not ende:
-                return ''.join(teile) + rest
-            continue
-        teile.append(rest[:m.end()])
-        rest = rest[m.end() + ende.end():]
+    Heredocs an python/bash/sh bleiben (sie laufen, und ihr Text steht in der Befehlszeile der Shell); "cat <<EOF | bash" auch."""
+    return heredoc_filter(cmd, lambda z: bool(re.search(r'\b(cat|tee)\b', z)) and not SHELL_ZEILE.search(z))
 
 
 def bau_ohne_bump(cmd, cwd):
@@ -438,7 +447,8 @@ def main():
             if neu_cmd != cmd:
                 neu['command'] = neu_cmd
                 grund.append("Komfort-Aliase (eza, bat) aufgehoben")
-        if grund or mit_zeitlimit(d, dict(neu)):
+        # Bash: Zeitlimit kommt aus BASH_MAX_TIMEOUT_MS (settings.json), kein pauschales "allow" je Befehl. PowerShell: hier deckeln.
+        if grund or (d.get('tool_name') == 'PowerShell' and mit_zeitlimit(d, dict(neu))):
             freigeben(d, neu, " · ".join(grund) or "Gestaffeltes Zeitlimit")
     except Exception:
         pass
