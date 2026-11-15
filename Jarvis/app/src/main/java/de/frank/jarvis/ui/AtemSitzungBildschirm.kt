@@ -127,67 +127,71 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
     )
 
     Box(modifier.background(Brush.verticalGradient(listOf(Color(0xFF060912), Color(0xFF0A1220), Color(0xFF070B14))))) {
-        // ------------------------------------------------ Animation
-        Canvas(Modifier.fillMaxSize().graphicsLayer()) { zeichne(t, rahmen, akzent) }
-
-        // ------------------------------------------------ Kopf
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Rund(Icons.Rounded.Close, "Übung beenden") { if (!gestartet || ende) AtemSitzung.beenden() else { AtemSitzung.pause(); endeFrage = true } }
-            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                Text(profil.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(akzent))
-                    Text(" ${profil.zyklen} Zyklen · ${dauerText(profil.dauerMs)} min", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
-                }
-            }
-        }
-
-        // ------------------------------------------------ Mitte: Phase und Sekunden
-        val anzeige by remember { derivedStateOf { mitteText(t, AtemSitzung.gestartet) } }
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(anzeige.first, color = Color.White, fontSize = if (anzeige.first.length > 12) 24.sp else 34.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 40.dp))
-            if (anzeige.second.isNotEmpty()) Text(anzeige.second, color = Color.White.copy(alpha = 0.78f), fontSize = 22.sp, fontWeight = FontWeight.Light)
-        }
-
-        // ------------------------------------------------ Unten: Einstellungen, Satz, Fortschritt, Pause
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // Schalter direkt unter der Animation, mit dem Daumen gut erreichbar.
-            Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Haken("Vorlesen", Icons.Rounded.RecordVoiceOver, AtemSitzung.vorlesen) { AtemSitzung.vorlesenUmschalten() }
-                Haken("Atem", Icons.Rounded.Air, AtemSitzung.geraeusch) { AtemSitzung.geraeuschUmschalten() }
-            }
-            val satz = AtemSitzung.satz
-            Box(Modifier.heightIn(min = 64.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                var letzter by remember { mutableStateOf("") }
-                if (satz != null) letzter = satz
-                val sicht by androidx.compose.animation.core.animateFloatAsState(if (satz != null) 1f else 0f, tween(if (satz != null) 700 else 900), label = "satz")
-                if (letzter.isNotEmpty()) Text("„$letzter“", Modifier.graphicsLayer { alpha = sicht }, color = Color.White.copy(alpha = 0.9f), fontSize = 19.sp, fontStyle = FontStyle.Italic, textAlign = TextAlign.Center, lineHeight = 26.sp)
-            }
-            AtemSitzung.hinweis?.let { Text(it, color = P_HALT.copy(alpha = 0.85f), fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp)) }
-            val vorb = AtemSitzung.vorbereitung
-            when {
-                vorb != null -> {
-                    Text("Stimme wird vorbereitet … ${vorb.first} von ${vorb.second}", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
-                    Fortschritt(if (vorb.second > 0) vorb.first / vorb.second.toFloat() else 0f, akzent, Modifier.padding(top = 10.dp))
-                }
-                ende -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Knopf("Nochmal", icon = Icons.Rounded.Refresh, haupt = false) { AtemSitzung.starten(context, profil) }
-                    Knopf("Schließen", farbe = akzent) { AtemSitzung.beenden() }
-                }
-                else -> {
-                    val info by remember { derivedStateOf { untenText(t) } }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(info.first, Modifier.weight(1f), color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
-                        Text(info.second, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+        // Kopf, Animation und Bedienung untereinander: Die Animation bekommt nur den Platz dazwischen,
+        // so liegen Schalter und Knöpfe nie im Kreis.
+        Column(Modifier.fillMaxSize()) {
+            // ------------------------------------------------ Kopf
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Rund(Icons.Rounded.Close, "Übung beenden") { if (!gestartet || ende) AtemSitzung.beenden() else { AtemSitzung.pause(); endeFrage = true } }
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text(profil.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(akzent))
+                        Text(" ${profil.zyklen} Zyklen · ${dauerText(profil.dauerMs)} min", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
                     }
-                    val anteil by remember { derivedStateOf { gesamtAnteil(t) } }
-                    Fortschritt(anteil, akzent, Modifier.padding(top = 8.dp, bottom = 16.dp))
-                    val pausiert = AtemSitzung.pausiert
-                    Box(
-                        Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)).border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
-                            .antippen { if (pausiert) AtemSitzung.weiter() else AtemSitzung.pause() }.semantics { contentDescription = if (pausiert) "Weiter" else "Pause" },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(if (pausiert) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, null, tint = Color.White, modifier = Modifier.size(32.dp)) }
+                }
+            }
+
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                // ------------------------------------------------ Animation
+                Canvas(Modifier.fillMaxSize().graphicsLayer()) { zeichne(t, rahmen, akzent) }
+                // ------------------------------------------------ Mitte: Phase und Sekunden
+                val anzeige by remember { derivedStateOf { mitteText(t, AtemSitzung.gestartet) } }
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(anzeige.first, color = Color.White, fontSize = if (anzeige.first.length > 12) 24.sp else 34.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 40.dp))
+                    if (anzeige.second.isNotEmpty()) Text(anzeige.second, color = Color.White.copy(alpha = 0.78f), fontSize = 22.sp, fontWeight = FontWeight.Light)
+                }
+            }
+            // ------------------------------------------------ Unten: Einstellungen, Satz, Fortschritt, Pause
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Schalter direkt unter der Animation, mit dem Daumen gut erreichbar.
+                Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Haken("Vorlesen", Icons.Rounded.RecordVoiceOver, AtemSitzung.vorlesen) { AtemSitzung.vorlesenUmschalten() }
+                    Haken("Atem", Icons.Rounded.Air, AtemSitzung.geraeusch) { AtemSitzung.geraeuschUmschalten() }
+                }
+                val satz = AtemSitzung.satz
+                Box(Modifier.heightIn(min = 64.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    var letzter by remember { mutableStateOf("") }
+                    if (satz != null) letzter = satz
+                    val sicht by androidx.compose.animation.core.animateFloatAsState(if (satz != null) 1f else 0f, tween(if (satz != null) 700 else 900), label = "satz")
+                    if (letzter.isNotEmpty()) Text("„$letzter“", Modifier.graphicsLayer { alpha = sicht }, color = Color.White.copy(alpha = 0.9f), fontSize = 19.sp, fontStyle = FontStyle.Italic, textAlign = TextAlign.Center, lineHeight = 26.sp)
+                }
+                AtemSitzung.hinweis?.let { Text(it, color = P_HALT.copy(alpha = 0.85f), fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp)) }
+                val vorb = AtemSitzung.vorbereitung
+                when {
+                    vorb != null -> {
+                        Text("Stimme wird vorbereitet … ${vorb.first} von ${vorb.second}", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        Fortschritt(if (vorb.second > 0) vorb.first / vorb.second.toFloat() else 0f, akzent, Modifier.padding(top = 10.dp))
+                    }
+                    ende -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Knopf("Nochmal", icon = Icons.Rounded.Refresh, haupt = false) { AtemSitzung.starten(context, profil) }
+                        Knopf("Schließen", farbe = akzent) { AtemSitzung.beenden() }
+                    }
+                    else -> {
+                        val info by remember { derivedStateOf { untenText(t) } }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(info.first, Modifier.weight(1f), color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                            Text(info.second, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                        }
+                        val anteil by remember { derivedStateOf { gesamtAnteil(t) } }
+                        Fortschritt(anteil, akzent, Modifier.padding(top = 8.dp, bottom = 16.dp))
+                        val pausiert = AtemSitzung.pausiert
+                        Box(
+                            Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)).border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+                                .antippen { if (pausiert) AtemSitzung.weiter() else AtemSitzung.pause() }.semantics { contentDescription = if (pausiert) "Weiter" else "Pause" },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(if (pausiert) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, null, tint = Color.White, modifier = Modifier.size(32.dp)) }
+                    }
                 }
             }
         }
@@ -255,8 +259,9 @@ private fun zustand(t: Long): Triple<Float, Color, Float> {
 
 private fun DrawScope.zeichne(t: Long, rahmen: Long, akzent: Color) {
     val (s, farbe, fortschritt) = zustand(t)
-    val mitte = Offset(size.width / 2f, size.height * 0.46f)
-    val maxR = size.minDimension * 0.34f
+    val mitte = Offset(size.width / 2f, size.height * 0.5f)
+    // Ring (1,18 × Höchstmaß) passt mit Rand in die Fläche zwischen Kopf und Bedienung.
+    val maxR = size.minDimension * 0.36f
     val r = maxR * s
     val drehung = rahmen * 0.000045f + s * 0.9f
 

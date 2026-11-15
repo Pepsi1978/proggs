@@ -19,6 +19,8 @@ import kotlin.random.Random
  */
 object AtemKlang {
     const val RATE = 24_000
+    /** Pegel des Atemgeräuschs gegenüber der Stimme (1 = voll): bewusst leise, nur im Hintergrund. */
+    const val LAUTSTAERKE = 0.18f
     /** Längste erzeugte Geräuschdauer: Ein echter Atemzug klingt nach spätestens 30 Sekunden aus, und der Speicher bleibt klein. */
     private const val HOECHSTENS_MS = 30_000L
     /** Hält nur die zuletzt genutzten Geräusche (je Übung zwei). */
@@ -52,6 +54,12 @@ object AtemKlang {
         return t * t * (3 - 2 * t)
     }
 
+    private fun luftstrom(x: Double, a: Double, b: Double): Double {
+        val gipfel = a / (a + b)
+        val hoch = gipfel.pow(a) * (1 - gipfel).pow(b)
+        return (x.pow(a) * (1 - x).pow(b) / hoch).coerceIn(0.0, 1.0)
+    }
+
     private fun logLerp(a: Double, b: Double, t: Double) = exp(ln(a) + (ln(b) - ln(a)) * t)
 
     private fun erzeuge(einatmen: Boolean, ms: Long): ShortArray {
@@ -83,11 +91,9 @@ object AtemKlang {
             p1 = 0.96300 * p1 + w * 0.2965164
             p2 = 0.57000 * p2 + w * 1.0526913
             val rosa = (p0 + p1 + p2 + w * 0.1848) * 0.25
-            val huelle = if (einatmen) {
-                glatt(0.0, 0.22, x) * (1 - glatt(0.80, 1.0, x)) * (0.78 + 0.22 * sin(PI * x))
-            } else {
-                glatt(0.0, 0.10, x) * (1 - x).pow(0.45) * (1 - glatt(0.88, 1.0, x))
-            }
+            // Lautstärke folgt der Luftgeschwindigkeit: leise anfangen, anschwellen, gegen Ende wieder leiser werden
+            // (Form x^a · (1−x)^b, auf 1 normiert). Einatmen gipfelt etwa in der Mitte, Ausatmen früher und läuft lange aus.
+            val huelle = if (einatmen) luftstrom(x, 1.6, 1.3) else luftstrom(x, 1.25, 2.0)
             val mix = if (einatmen) koerper.lauf(rosa) * 1.0 + luft.lauf(rosa) * 0.38 + tief.lauf(rosa) * 0.25
             else koerper.lauf(rosa) * 1.0 + luft.lauf(rosa) * 0.22 + tief.lauf(rosa) * 0.45
             val v = mix * huelle * (1 + 0.09 * flatter)

@@ -169,8 +169,9 @@ object AtemSitzung {
                             lokal[text] = mp to (mp.duration.toLong().takeIf { it > 0 } ?: clip.ms)
                         }.onFailure { Log.w(TAG, "Clip nicht ladbar", it) }
                     }
-                    ein = AtemKlang.spur(AtemKlang.ton(true, p.ein * 100L), 0.75f)
-                    if (p.aus > 0) aus = AtemKlang.spur(AtemKlang.ton(false, p.aus * 100L), 0.75f)
+                    // Nur ein Nebengeräusch: deutlich leiser als die Stimme.
+                    ein = AtemKlang.spur(AtemKlang.ton(true, p.ein * 100L), AtemKlang.LAUTSTAERKE)
+                    if (p.aus > 0) aus = AtemKlang.spur(AtemKlang.ton(false, p.aus * 100L), AtemKlang.LAUTSTAERKE)
                 }
             } catch (abbruch: CancellationException) {
                 lokal.values.forEach { runCatching { it.first.release() } }
