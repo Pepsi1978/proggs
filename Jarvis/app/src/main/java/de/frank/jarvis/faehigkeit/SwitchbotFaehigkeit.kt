@@ -19,7 +19,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -92,6 +94,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         } catch (e: Problem) {
             return@withContext Ergebnis(e.message ?: "SwitchBot antwortet nicht.", fehler = true)
         }
+        val webhook = webhookSicherstellen(alle)
         val genutzt = liste
         if (alle.isEmpty()) return@withContext Ergebnis(
             "In deinem SwitchBot-Konto ist kein Thermo-Hygrometer zu sehen. Prüfe in der SwitchBot-App, ob die Sensoren mit dem Hub verbunden sind und bei jedem der Cloud-Dienst eingeschaltet ist.", fehler = true)
@@ -128,7 +131,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 if (z.problem != null) { put("problem", z.problem); if (z.offline) put("offline", true) }
                 else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) } }
             }
-        })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)) }
+        })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)); webhook?.let { put("webhook", it) } }
         Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)
     }
 
@@ -176,7 +179,44 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val t = w.wert("temperatur_c") ?: return null
         val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
         val uhr = java.time.Instant.ofEpochSecond(w.optLong("zeit")).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
-        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = "über den Mac zu Hause, gemessen $uhr Uhr")
+        val weg = if (w.optString("quelle") == "webhook") "über die SwitchBot-Cloud (Webhook)" else "über den Mac zu Hause"
+        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = "$weg, gemessen $uhr Uhr")
+    }
+
+    @Volatile private var webhookStand: String? = null
+
+    /**
+     * Webhook der SwitchBot-Cloud auf den Relay (POST /switchbot/hook/<geheim>): Die Cloud schickt dann jede Wertänderung selbst,
+     * auch wenn GET /status nur Nullen liefert (SwitchBotAPI #436). Nur wenn ein Meter Pro CO2 im Konto ist; einmal je App-Lauf geprüft,
+     * nach einem Fehler beim nächsten Abruf erneut. Eine fremde, schon eingetragene Adresse wird nie überschrieben.
+     */
+    private fun webhookSicherstellen(alle: List<JSONObject>): String? {
+        if (alle.none { it.optString("deviceType").contains("CO2", ignoreCase = true) }) return null
+        webhookStand?.let { return it }
+        val stand = runCatching {
+            val e = Einstellungen.get(context)
+            if (e.serverToken.isBlank()) return null
+            val ziel = CLIENT.newCall(Request.Builder().url("https://${e.serverHost}/geraet/switchbot-hook").header("X-Jarvis-Token", e.serverToken)
+                .header(Geraet.KOPFZEILE, Geraet.kennung).build()).execute().use { a ->
+                check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
+                JSONObject(a.body?.string().orEmpty()).getString("url")
+            }
+            val vorhanden = try {
+                anfrage("/v1.1/webhook/queryWebhook", rumpf = JSONObject().put("action", "queryUrl")).optJSONObject("body")?.optJSONArray("urls")
+                    ?.let { u -> (0 until u.length()).map { u.optString(it) } }.orEmpty()
+            } catch (_: Problem) { emptyList() }
+            when {
+                ziel in vorhanden -> "angemeldet"
+                vorhanden.isNotEmpty() -> "fremde Adresse eingetragen, nicht überschrieben"
+                else -> {
+                    anfrage("/v1.1/webhook/setupWebhook", rumpf = JSONObject().put("action", "setupWebhook").put("url", ziel).put("deviceList", "ALL"))
+                    Logbuch.netz("SwitchBot-Webhook", "angemeldet")
+                    "neu angemeldet"
+                }
+            }
+        }.getOrElse { "Fehler: ${it.message ?: it.javaClass.simpleName}".also { m -> Logbuch.netz("SwitchBot-Webhook", m) } }
+        if (!stand.startsWith("Fehler")) webhookStand = stand
+        return stand
     }
 
     private class Problem(text: String, val code: Int = 0) : Exception(text)
@@ -185,7 +225,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
      * Eine signierte GET-Anfrage. Wirft ausschließlich [Problem] mit einem Satz für Frank: bei der Geräteliste ([status] = false) als ganzer Satz,
      * beim Status eines Sensors als Satzteil nach „Name:“.
      */
-    private fun anfrage(pfad: String, status: Boolean = false): JSONObject {
+    private fun anfrage(pfad: String, status: Boolean = false, rumpf: JSONObject? = null): JSONObject {
         fun problem(sensor: String, liste: String, log: String, code: Int = 0): Problem {
             Logbuch.netz("SwitchBot $pfad", log)
             return Problem(if (status) sensor else liste, code)
@@ -198,7 +238,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             val sign = Base64.encodeToString(mac.doFinal((token + zeit + nonce).toByteArray()), Base64.NO_WRAP).uppercase(Locale.ROOT)
             Request.Builder().url("https://api.switch-bot.com$pfad")
                 .header("Authorization", token).header("sign", sign).header("t", zeit).header("nonce", nonce)
-                .header("Content-Type", "application/json; charset=utf8").build()
+                .header("Content-Type", "application/json; charset=utf8")
+                .apply { if (rumpf != null) post(rumpf.toString().toRequestBody("application/json; charset=utf8".toMediaType())) }.build()
         } catch (e: Exception) {
             throw problem("keine Abfrage möglich: Token oder Secret ist leer oder enthält ungültige Zeichen.",
                 "SwitchBot-Token oder -Secret ist leer oder enthält ungültige Zeichen; bitte unter Konten und APIs neu eintragen.", e.javaClass.simpleName)
@@ -240,8 +281,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer", "Auto", "CO2-Monitor")
         private const val LISTE_GILT_MS = 60 * 60 * 1000L
         private const val NEU_HOLEN_AB_MS = 60 * 1000L
-        /** Der Mac meldet alle fünf Minuten; älter als 20 Minuten gilt nicht mehr als aktuell. */
-        private const val MAC_GILT_S = 20 * 60L
+        /** Der Mac meldet alle fünf Minuten, der Webhook bei jeder Änderung; älter als 40 Minuten gilt nicht mehr als aktuell
+         *  (mit Batterie misst der CO2-Monitor nur alle 30 Minuten). */
+        private const val MAC_GILT_S = 40 * 60L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private fun JSONObject.wert(k: String): Double? = if (has(k) && !isNull(k)) optDouble(k).takeIf { !it.isNaN() } else null

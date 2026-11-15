@@ -1783,6 +1783,8 @@ ABGLEICH_FRIST_S = 3 * 86_400
 
 VICTRON_DATEI = ZUSTAND.with_name("victron.json")
 VICTRON_MAX = 8_192
+# Geheimer Pfadteil für den SwitchBot-Webhook: fest aus dem Geräte-Token abgeleitet (bleibt über Neustarts gleich, verrät ihn nicht).
+SWITCHBOT_HOOK = hmac.new(TOKEN.encode(), b"switchbot-webhook", hashlib.sha256).hexdigest()[:32]
 
 
 class VictronStand:
@@ -1811,6 +1813,10 @@ class VictronStand:
             neu = [g for g in stand["geraete"] if isinstance(g, dict) and isinstance(g.get("art"), str) and isinstance(g.get("zeit"), int)]
         except Exception:
             return web.Response(status=400, text="ungueltig")
+        await self.aufnehmen(neu)
+        return web.json_response({"ok": True})
+
+    async def aufnehmen(self, neu: list) -> None:
         # Je Art zusammenführen: Ein Scan, der nur ein Gerät fand, löscht den letzten Wert des anderen nicht.
         alt = {g.get("art"): g for g in (self.stand or {}).get("geraete", []) if isinstance(g, dict)}
         for g in neu:
@@ -1828,7 +1834,42 @@ class VictronStand:
             await asyncio.to_thread(schreiben)
         except Exception as fehler:
             log.warning("%s nicht geschrieben: %s", self.datei.name, fehler)
+
+    async def webhook(self, request: web.Request) -> web.Response:
+        """POST /switchbot/hook/<geheim>: Die SwitchBot-Cloud schickt hier jede Wertänderung (changeReport) selbst hin.
+        SwitchBot kann keinen Kopf mitsenden, darum steht das Geheimnis im Pfad. Werte landen wie die vom Mac je MAC (art)."""
+        if not hmac.compare_digest(request.match_info.get("geheim", ""), SWITCHBOT_HOOK):
+            return web.Response(status=404, text="Not found")
+        roh = await request.read()
+        if len(roh) > VICTRON_MAX:
+            return web.Response(status=413, text="zu gross")
+        try:
+            log.info("SwitchBot-Webhook roh: %s", roh[:400].decode("utf-8", "replace"))
+            k = json.loads(roh.decode("utf-8")).get("context") or {}
+            mac = str(k.get("deviceMac") or "").replace(":", "").lower()
+            if len(mac) != 12:
+                raise ValueError("deviceMac fehlt")
+            def zahl(n):
+                v = k.get(n)
+                return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+            t, f, c = zahl("temperature"), zahl("humidity"), zahl("CO2")
+            zeit = int((zahl("timeOfSample") or time.time() * 1000) / 1000)
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        log.info("SwitchBot-Webhook %s: %s °C, %s %%, CO2 %s (%s)", mac, t, f, c, str(k.get("deviceType"))[:40])
+        # Nullen sind Platzhalter (kein Hub-Weg), keine Messwerte.
+        if f:
+            eintrag = {"art": mac, "mac": mac, "temperatur_c": t, "luftfeuchtigkeit_prozent": f, "zeit": zeit, "quelle": "webhook"}
+            if c and 400 <= c <= 9999:
+                eintrag["co2_ppm"] = int(c)
+            await self.aufnehmen([eintrag])
         return web.json_response({"ok": True})
+
+    async def hook_adresse(self, request: web.Request) -> web.Response:
+        """GET /geraet/switchbot-hook (Handy): die Adresse, die Jarvis bei SwitchBot als Webhook anmeldet."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        return web.json_response({"url": f"https://{request.host}/switchbot/hook/{SWITCHBOT_HOOK}"})
 
     async def holen(self, request: web.Request) -> web.Response:
         if not darf_handy(request):
@@ -2153,6 +2194,8 @@ def app() -> web.Application:
     switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"))
     anwendung.router.add_post("/pc/switchbot", switchbot.melden)
     anwendung.router.add_get("/geraet/switchbot", switchbot.holen)
+    anwendung.router.add_post("/switchbot/hook/{geheim}", switchbot.webhook)
+    anwendung.router.add_get("/geraet/switchbot-hook", switchbot.hook_adresse)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)
