@@ -676,7 +676,16 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
         val gesamt = vm.gespraech.take(nummer + 1).sumOf { it.tokens }
         val zahl = { t: Long -> String.format(java.util.Locale.GERMAN, "%,d", t) }
         Text("${zahl(n.tokens)} Tokens · im Gespräch gesamt ${zahl(gesamt)}", color = f.textLeise, fontSize = 13.sp,
-            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp))
+            modifier = Modifier.padding(start = 8.dp, bottom = if (n.gedaechtnis > 0 || n.ausgabe > 0) 0.dp else 4.dp))
+        // Woraus die Tokens bestehen: Live-Gedächtnis (geschätzt, mit den geladenen Bereichen) und Jarvis' eigenes Denken samt Antwort.
+        if (n.gedaechtnis > 0 || n.ausgabe > 0) Text(
+            buildString {
+                if (n.gedaechtnis > 0) append("Live-Gedächtnis ca. ${zahl(n.gedaechtnis)}" + (if (n.bereiche.isNotEmpty()) " (${n.bereiche})" else ""))
+                if (n.gedaechtnis > 0 && n.ausgabe > 0) append(" · ")
+                if (n.ausgabe > 0) append("eigenes Denken und Antwort ${zahl(n.ausgabe)}")
+            },
+            color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
+        )
     }
     if (grundFragen) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { grundFragen = false }, containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {

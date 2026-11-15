@@ -55,7 +55,7 @@ enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), VER
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
  * „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell, etwa was in der Runde erledigt wurde.
  */
-data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0)
+data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0, val gedaechtnis: Long = 0, val ausgabe: Long = 0, val bereiche: String = "")
 
 /** Ein Schritt für „Rückgängig“ in einer Merkliste: wie sich die eigene Änderung umkehren lässt, ohne fremde zu berühren. */
 private sealed class MerkSchritt {
@@ -654,7 +654,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
         // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus.
         val frageNotiz = if (art == "fehler") erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt) else ""
-        val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt), tokens = runde.tokens.tokens)
+        val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt), tokens = runde.tokens.tokens, gedaechtnis = runde.tokens.gedaechtnis, ausgabe = runde.tokens.ausgabe, bereiche = runde.tokens.bereiche.joinToString(", "))
         if (runde.sitzung == sitzungId) {
             rundeInsOffene(runde, frageNotiz, neu, vorlesen)
             return
@@ -667,7 +667,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (runde.sitzung == sitzungId) true else {
                     withContext(Dispatchers.IO) {
                         if (frageNotiz.isNotEmpty()) de.frank.jarvis.data.Gespraeche.letzteFrageKontext(getApplication(), runde.sitzung, frageNotiz)
-                        de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext, tokens = neu.tokens))
+                        de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext, tokens = neu.tokens, gedaechtnis = neu.gedaechtnis, ausgabe = neu.ausgabe, bereiche = neu.bereiche))
                     }
                     false
                 }
@@ -2914,7 +2914,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
         val projekt = sitzungProjekt
-        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) }
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens, it.gedaechtnis, it.ausgabe, it.bereiche) }
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
@@ -3098,7 +3098,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierGespraech = id
             val geladen = de.frank.jarvis.data.Gespraeche.laden(app, id)
             if (geladen != null) {
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens, it.gedaechtnis, it.ausgabe, it.bereiche) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 sitzungProjekt = geladen.first.projekt
@@ -3143,7 +3143,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (!(wegenRueckfrage && vorleser.unterbrochen) && vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
                 sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
                 gespraech.clear()
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens, it.gedaechtnis, it.ausgabe, it.bereiche) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 sitzungProjekt = geladen.first.projekt

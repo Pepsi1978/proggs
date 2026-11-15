@@ -213,7 +213,17 @@ class JarvisAgent(context: Context) {
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
         // Den Mac und den Windows-PC bedient nur das Gespräch mit Frank, nie ein Hintergrundlauf ohne sein Zuschauen.
         // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.
-        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && !it.nurImGespraech && it.id != "mac" && it.id != "windows")) }
+        // Gespräch mit Frank (Chat und Sprache): nur die Gedächtnis-Bereiche, die die Frage braucht; Agenten behalten das ganze Gesamtbild.
+        val gespraechId = currentCoroutineContext()[de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung]?.id
+        val wahl = if (lernen && rolle == null) runCatching {
+            de.frank.jarvis.gedaechtnis.KontextWahl.waehle(app, auftrag, verlauf.filter { it.role == "user" }.map { it.text }, gespraechId)
+        }.onFailure { Logbuch.fehler("Kontextwahl", it) }.getOrNull() else null
+        val nachgeladen = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+        var nachgeladenZeichen = 0
+        val wahlFaehigkeit = wahl?.takeIf { !it.voll }?.let {
+            de.frank.jarvis.gedaechtnis.KontextWahl.faehigkeit(app) { kennungen, zeichen -> nachgeladen += kennungen; nachgeladenZeichen += zeichen }
+        }
+        val faehigkeiten = (Register.alle(app) + listOfNotNull(wahlFaehigkeit)).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && !it.nurImGespraech && it.id != "mac" && it.id != "windows")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else if (!lernen && it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.imHintergrund() else it }
             // Ein Agent-Helfer bekommt nur die Werkzeuge aus seinem Steckbrief.
@@ -231,12 +241,22 @@ class JarvisAgent(context: Context) {
         // sonst wartet Frank bei jeder Frage bis zu 2,5 Sekunden, bevor das Denk-Modell überhaupt anfängt.
         // wartenMs = 0: Die schnellen Bereiche frischen im Hintergrund für die nächste Frage auf, ohne dass diese Frage wartet;
         // nur beim allerersten Start (Bereiche fehlen ganz) wird kurz gewartet. Abbruch wird nie verschluckt.
-        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L, trenner = de.frank.jarvis.auth.CACHE_TRENNER) + Programmierregeln.alsKontext(app) } }
+        val gezielt = if (wahl != null && !wahl.voll) try {
+            withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.KontextWahl.kontext(app, wahl, wartenMs = if (schnell) 0L else 2_500L, trenner = de.frank.jarvis.auth.CACHE_TRENNER) }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gezieltes Gesamtbild", e); null } else null
+        val gesamtbild = if (gezielt != null) gezielt else if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L, trenner = de.frank.jarvis.auth.CACHE_TRENNER) + Programmierregeln.alsKontext(app) } }
             catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gesamtbild", e); gesamtbildMitZeitlimit() }
             else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
-        Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen (fest ${festerTeil(faehigkeiten).length}, Gesamtbild ${gesamtbild.length}), Verlauf ${zuege.size} Züge")
+        Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen (fest ${festerTeil(faehigkeiten).length}, Gesamtbild ${gesamtbild.length}), Verlauf ${zuege.size} Züge" +
+            (wahl?.let { w -> if (w.voll) ", Gedächtnis vollständig" else if (gezielt != null) ", Gedächtnis gezielt: ${w.kennungen.joinToString()} (${w.grund})" else ", Gedächtnis gezielt gescheitert, vollständig" } ?: ""))
+        // Für die Anzeige unter der Antwort: welche Bereiche, und welcher Anteil der Eingabe auf das Gedächtnis entfällt.
+        val gedaechtnisTitel = when {
+            wahl == null || (gezielt == null && !wahl.voll) -> if (lernen || rolle != null || schnell) listOf("gesamtes Live-Gedächtnis") else listOf("Gemerktes")
+            else -> wahl.titel()
+        }
+        val zaehler = currentCoroutineContext()[de.frank.jarvis.auth.TokenZaehler]
         val messen = currentCoroutineContext()[Antwortkette.Marke] != null
         if (messen) Antwortkette.punkt("Kontext")
         // Für den Abschluss bleibt ein Teil der Zeit übrig: Ein langes Werkzeug (Bild, Download) darf nicht das ganze Ergebnis verschlucken.
@@ -279,10 +299,19 @@ class JarvisAgent(context: Context) {
                 beiDenken()
                 var erstesZeichen = 0L
                 val strom = beiErstemSatz?.let { AntwortStrom() }
-                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it }, onDelta = { d ->
+                val eingabeVorher = zaehler?.eingabe ?: 0L
+                val roh = try { auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it }, onDelta = { d ->
                     if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; if (messen) Antwortkette.punkt(if (schritte == 1) "Denken" else "Denken $schritte") }
                     strom?.neu(d)?.let { satz -> beiErstemSatz?.invoke(satz) }
-                })
+                }) } finally {
+                    // Anteil des Gedächtnisses an dieser Eingabe, nach Zeichen geschätzt (Gesamtbild und Nachgeladenes gegen alles Gesendete).
+                    zaehler?.let { z ->
+                        val neu = z.eingabe - eingabeVorher
+                        val gesendet = anweisungText.length + zuege.sumOf { it.text.length }
+                        if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * (gesamtbild.length + nachgeladenZeichen).toDouble() / gesendet).toLong().coerceAtMost(neu),
+                            gedaechtnisTitel + nachgeladen.toList().map { de.frank.jarvis.gedaechtnis.KontextWahl.titelVon(it) })
+                    }
+                }
                 if (messen) Antwortkette.punkt(if (schritte == 1) "Schreiben" else "Schreiben $schritte")
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen, erstes Zeichen nach $erstesZeichen ms")
                 var schritt = lies(roh)
@@ -310,7 +339,13 @@ class JarvisAgent(context: Context) {
                             "in ganzen deutschen Sätzen, ohne Werkzeugnamen, Parameter, Tags oder JSON im Text.")
                         continue
                     }
-                    Logbuch.dauer("Antwort: gesamt", System.currentTimeMillis() - beginn, "$schritte Schritt(e)" + (rolle?.let { ", Agent" } ?: ""))
+                    Logbuch.dauer("Antwort: gesamt", System.currentTimeMillis() - beginn, "$schritte Schritt(e)" + (rolle?.let { ", Agent" } ?: "") +
+                        (if (nachgeladen.isNotEmpty()) ", nachgeladen: ${nachgeladen.joinToString()}" else ""))
+                    // Lernen im Hintergrund: was fehlte, was unnötig war (laut „genutzt“ im Antwort-JSON).
+                    if (wahl != null && gezielt != null) {
+                        val genutzt = schritt?.optJSONArray("genutzt")?.let { arr -> (0 until arr.length()).map { arr.optString(it).trim().lowercase(Locale.GERMAN) }.toSet() }
+                        runCatching { de.frank.jarvis.gedaechtnis.KontextWahl.lerne(app, wahl, gespraechId, nachgeladen.toSet(), genutzt) }
+                    }
                     // Ersatzsatz nur, wenn die Antwort aus nichts als Markup bestand; eine leere Antwort bleibt leer, wie die Aufrufer es erwarten.
                     val sauber = WerkzeugMarkup.entferne(antwort)
                     return@withTimeoutOrNull if (sauber.isBlank() && antwort.isNotBlank()) MARKUP_ERSATZ else sauber

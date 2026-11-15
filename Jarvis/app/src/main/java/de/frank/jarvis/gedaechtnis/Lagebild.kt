@@ -507,6 +507,52 @@ object Lagebild {
         }.trim()
     }
 
+    /**
+     * Das Gesamtbild nur mit den für eine Frage gewählten Bereichen ([KontextWahl]); alle übrigen stehen als Verzeichnis
+     * mit Kennung und Größe darunter. [selten] = der gewählte Teil des Gemerkten (vor dem Trenner, zwischengespeichert),
+     * [weitere] = zusätzliche Verzeichniszeilen (nicht geladene Teile des Gemerkten), [geladen] = Kennungen für die GELADEN-Zeile.
+     * Nur die gewählten schnellen Bereiche werden vorher nachgelesen, höchstens [wartenMs].
+     */
+    suspend fun gezielt(context: Context, gewaehlt: Set<Bereich>, selten: String, weitere: List<String>, geladen: Set<String>, wartenMs: Long, trenner: String): String {
+        val app = context.applicationContext
+        lade(app)
+        val fehlend = gewaehlt.filter { it !in _stand.value.abschnitte }
+        runCatching { if (Bereich.AUSWERTUNG in gewaehlt && Tagesauswertung.veraltet(app) && !Tagesauswertung.stand.value.laeuft) de.frank.jarvis.dienst.JarvisDienst.auswerten(app, "nachgeholt für das Gesamtbild") }
+        val zuLesen = (gewaehlt.filter { it.schnell } + fehlend).distinct()
+        if (zuLesen.isNotEmpty()) {
+            val laeuft = bereich.async { auffrischen(app, zuLesen, "beim Abruf (gezielt)", hoechstensAlterMs = 30_000L) }
+            val warten = if (fehlend.isEmpty()) wartenMs else maxOf(wartenMs, 12_000L)
+            if (warten > 0) withTimeoutOrNull(warten) { laeuft.await() }
+        }
+        val s = _stand.value
+        val tagebuch = s.abschnitte[Bereich.TAGEBUCH]?.takeIf { Bereich.TAGEBUCH in gewaehlt }
+        return buildString {
+            append("GESAMTBILD VON FRANK (Live-Gedächtnis von Jarvis, gezielt für diese Frage geladen).\n")
+            append("Dein Hintergrund, live aus Franks Apps; [Stand …] je Bereich. Beziehe von dir aus ein, was die Antwort besser macht; Unpassendes weglassen, nie ungefragt aufzählen.\n")
+            append("KONTEXTREGEL: Älteres oder ein bestimmtes Thema mit gedaechtnis_suchen oder dem App-Werkzeug; nach eigener Änderung oder für Messwerte von gerade eben die App frisch lesen.\n\n")
+            append(selten.trim()).append("\n\n")
+            tagebuch?.let { append(Bereich.TAGEBUCH.ueberschrift).append(":\n").append(it.text.trim()).append("\n") }
+            append(trenner)
+            append("GELADEN für diese Frage: ").append(geladen.filter { it != Bereich.GEMERKT.kennung }.joinToString()).append(".\n\n")
+            tagebuch?.let { append(abschnittKopf(Bereich.TAGEBUCH, it)).append(": Inhalt steht weiter oben.\n\n") }
+            val kennungen = gewaehlt.mapTo(HashSet()) { it.kennung }
+            val neu = s.neuigkeiten.filter { it.zeit > System.currentTimeMillis() - 24 * 3_600_000L && it.bereich in kennungen }.take(15)
+                .joinToString("\n") { "- " + uhr(it.zeit) + " Uhr: " + it.text }
+            if (neu.isNotEmpty()) append("NEU IN 24 STUNDEN (neueste zuerst):\n").append(neu).append("\n\n")
+            Bereich.entries.filter { it in gewaehlt && it != Bereich.GEMERKT && it != Bereich.TAGEBUCH }.forEach { b ->
+                s.abschnitte[b]?.let { append(abschnitt(b, it)).append('\n') } ?: append(b.ueberschrift).append(":\nwird gerade zum ersten Mal geladen.\n\n")
+            }
+            append("WEITERE BEREICHE (nicht geladen; braucht die Frage einen davon, mit gedaechtnis_laden und seiner Kennung vollständig holen):\n")
+            Bereich.entries.filter { it !in gewaehlt && it != Bereich.GEMERKT }.forEach { b ->
+                val a = s.abschnitte[b]
+                append("- ").append(b.kennung).append(": ").append(b.ueberschrift)
+                append(if (a == null) " (noch nicht geladen)" else " (${a.text.length} Zeichen" + (if (a.geaendert > System.currentTimeMillis() - 3_600_000L) ", in der letzten Stunde geändert" else "") + ")")
+                append('\n')
+            }
+            weitere.forEach { append(it).append('\n') }
+        }.trim()
+    }
+
     // ---------------------------------------------------------------- Kurzer Startkontext und gezieltes Nachladen (Plugin)
 
     /**

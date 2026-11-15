@@ -35,7 +35,9 @@ fun Sitzung.archiviert(jetzt: Long, projektIds: Set<String>): Boolean =
  * Antwort) oder „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell im Verlauf,
  * etwa was in einer abgebrochenen Runde schon erledigt war.
  */
-data class GespeicherteNachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0)
+data class GespeicherteNachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0,
+    /** Davon geschätzt fürs Live-Gedächtnis, vom Modell selbst erzeugt (Denken und Antwort), und die geladenen Gedächtnis-Bereiche. */
+    val gedaechtnis: Long = 0, val ausgabe: Long = 0, val bereiche: String = "")
 
 /**
  * Jedes Gespräch mit Jarvis als eigene Datei unter `files/gespraeche/<id>.json`, damit Frank alte Gespräche in der
@@ -147,7 +149,7 @@ object Gespraeche {
         val nachrichten = (0 until a.length()).map {
             a.getJSONObject(it).let { n ->
                 val anh = n.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { k -> l.getString(k) } }.orEmpty()
-                GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"), n.optLong("tokens"))
+                GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"), n.optLong("tokens"), n.optLong("gedaechtnis"), n.optLong("ausgabe"), n.optString("bereiche"))
             }
         }
         sitzungAus(j, id) to nachrichten
@@ -198,6 +200,9 @@ object Gespraeche {
                                 if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                                 if (n.bewertung != 0) put("bewertung", n.bewertung)
                                 if (n.tokens > 0) put("tokens", n.tokens)
+                                if (n.gedaechtnis > 0) put("gedaechtnis", n.gedaechtnis)
+                                if (n.ausgabe > 0) put("ausgabe", n.ausgabe)
+                                if (n.bereiche.isNotEmpty()) put("bereiche", n.bereiche)
                             })
                         }
                     })
@@ -279,6 +284,9 @@ object Gespraeche {
                     if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
                     if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                     if (n.tokens > 0) put("tokens", n.tokens)
+                                if (n.gedaechtnis > 0) put("gedaechtnis", n.gedaechtnis)
+                                if (n.ausgabe > 0) put("ausgabe", n.ausgabe)
+                                if (n.bereiche.isNotEmpty()) put("bereiche", n.bereiche)
                 })
                 j.put("geaendert", System.currentTimeMillis())
                 if (n.art in PROGRAMMIER_ARTEN) j.put("programmierung", true)

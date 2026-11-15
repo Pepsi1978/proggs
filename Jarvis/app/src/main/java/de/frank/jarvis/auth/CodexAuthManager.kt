@@ -814,7 +814,7 @@ class CodexAuthManager(context: Context) {
                 activeQuestionCall.clear(trackedResponse.call)
             }
         }
-        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens)
+        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens, accumulator.ausgabeToken.toLong())
         // Prüft, ob die Antwort vollständig ist; das Ergebnis selbst holt der Aufrufer.
         accumulator.result()
         return accumulator
@@ -904,7 +904,7 @@ class CodexAuthManager(context: Context) {
                 activeQuestionCall.clear(trackedResponse.call)
             }
         }
-        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens)
+        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens, accumulator.ausgabeToken.toLong())
         de.frank.jarvis.observability.Logbuch.netz("Anthropic-Zwischenspeicher", accumulator.cacheText)
         // Auch eine abgeschnittene Antwort hat Token gekostet: vor der Vollständigkeitsprüfung melden.
         onUsage(accumulator.ausgabeToken)

@@ -15,6 +15,10 @@ jeder Prompt, der Gedächtnistext schreibt, setzt genau diese Konstante ein, nie
 Überschrift höchstens 120 Zeichen, Inhalt ohne Doppelungen (was ein Werkzeug oder anderer Bereich schon liefert, nur verweisen), Kurzkontext gedeckelt.
 Herkunft und Anlass von Einträgen stehen nur in `jarvis_gemerktes_lesen`, nicht im Kontext. Bestehende Einträge verdichtet `jarvis_gemerktes_verdichten`.
 
+## Live-Gedächtnis gezielt laden
+Jarvis' eigener Chat und das Sprachgespräch laden je Frage nur passende Bereiche (`gedaechtnis/KontextWahl.kt`): Immer-Kern, Stichworte, Gelerntes, sonst Standard-Satz; der Rest steht als Verzeichnis im Kontext und kommt per `gedaechtnis_laden` nach. „Gesamtes Live-Gedächtnis“ lädt alles. Agenten und der MCP-Weg (`jarvis_kontext`) bleiben unverändert.
+Neuer Bereich im `Bereich`-Enum: im selben Commit einen Zweig in `KontextWahl.profil` (Rolle IMMER/STANDARD/WAHL, Stichworte, Begleiter); der Compiler verlangt ihn. Gelerntes liegt in `files/kontextwahl.json`.
+
 ## Tätigkeitsanzeige für neue Werkzeuge und Apps
 Was Jarvis gerade tut, steht im Chat, in der Sprachblase und bei Agenten als kurzer Satz aus `agent/Taetigkeit.kt`.
 Neue Werkzeuge und Apps erscheinen dort von selbst (nach App und Art: „schaut in …“, „arbeitet in …“, „löscht etwas in …“).
