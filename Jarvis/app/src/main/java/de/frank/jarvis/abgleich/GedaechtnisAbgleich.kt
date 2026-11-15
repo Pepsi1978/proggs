@@ -70,6 +70,8 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", "gespraeche/anhaenge", ordner = true, loeschbar = true),
         // Franks Listen: je Liste und Eintrag eine Datei, gelöscht wird nur als Grabstein in der Datei (nie die Datei selbst).
         Quelle("gedaechtnis", de.frank.jarvis.listen.Listen.ORDNER, ordner = true, endung = ".json"),
+        // Franks Veränderungen: je Eintrag eine Datei, gelöscht nur als Grabstein.
+        Quelle("gedaechtnis", de.frank.jarvis.veraenderung.Veraenderungen.ORDNER, ordner = true, endung = ".json"),
         )
     }
 
@@ -398,6 +400,7 @@ object GedaechtnisAbgleich {
             quelle.pfad == "langzeitkontext.txt" -> synchronized(de.frank.jarvis.gedaechtnis.Langzeitkontext) { schreiben() }
             quelle.pfad == "gespraechsnotizen.json" -> synchronized(de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis) { schreiben() }
             quelle.pfad == de.frank.jarvis.listen.Listen.ORDNER -> de.frank.jarvis.listen.Listen.vonAussen(schreiben)
+            quelle.pfad == de.frank.jarvis.veraenderung.Veraenderungen.ORDNER -> de.frank.jarvis.veraenderung.Veraenderungen.vonAussen(schreiben)
             else -> schreiben()
         }
     }
@@ -420,6 +423,7 @@ object GedaechtnisAbgleich {
         if (pfade.any { it.startsWith("gespraeche/") || it == "projekte.json" }) runCatching { beiGespraechen?.invoke() }
         // Listen: neu einlesen, damit Oberfläche und Widget hier sofort den Stand des anderen Geräts zeigen.
         if (pfade.any { it.startsWith(de.frank.jarvis.listen.Listen.ORDNER + "/") }) runCatching { de.frank.jarvis.listen.Listen.neuLaden(app) }
+        if (pfade.any { it.startsWith(de.frank.jarvis.veraenderung.Veraenderungen.ORDNER + "/") }) runCatching { de.frank.jarvis.veraenderung.Veraenderungen.neuLaden(app) }
     }
 
     private fun loesche(app: Context, quelle: Quelle, datei: File) {

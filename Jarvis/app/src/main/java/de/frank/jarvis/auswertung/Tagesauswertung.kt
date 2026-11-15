@@ -404,6 +404,9 @@ object Tagesauswertung {
             append("== TAGEBUCH DER LETZTEN 7 TAGE ==\n")
             append(tagebuch.await()).append("\n\n")
 
+            append("== VERÄNDERUNGEN (Franks aktuelle Lebensveränderungen mit Grund) ==\n")
+            append(runCatching { alle.filterIsInstance<de.frank.jarvis.faehigkeit.VeraenderungenFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== GENIALE IDEEN (offen, gekürzt) ==\n")
             append(ideen.await()).append("\n\n")
 
@@ -467,6 +470,7 @@ Feste Regeln:
 - Nenne die Zahlen, die etwas aussagen, gerundet und mit Einordnung (zum Beispiel „HRV 49, über deinem Monatsschnitt“). Sage Wochentage statt Kalenderdaten.
 - Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
 - Stehen in deiner Anweisung FRANKS REGELN, halte sie ein. Sie gehen diesen Vorgaben vor. Steht dort WAS JARVIS ÜBER FRANK WEISS, beziehe es in Deutung und Empfehlungen ein (zum Beispiel was ihm wichtig ist oder was er bei Regen nicht mag). Stehen dort FRANKS ZIELE, stelle sie den aktuellen Werten gegenüber und nenne, was heute darauf einzahlt.
+- Stehen VERÄNDERUNGEN unten, beziehe sie ein: Was Frank im Tagebuch darüber schreibt, zeigt, wie weit er mit der Umsetzung ist. Ordne das kurz ein und nenne, wo es passt, den nächsten sinnvollen Schritt.
 - Keine medizinischen Diagnosen.
 - Meist reichen die Daten unten. Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, wenn ein auffälliger Wert einen Blick in den Verlauf braucht.
 
@@ -485,7 +489,7 @@ $daten
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
         "rahmen" to "RAHMEN", "termine" to "TERMINE", "wetter" to "WETTER", "wecker" to "GESTELLTE WECKER", "erinnerungen" to "ERINNERUNGEN", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
-        "biodaten_verlauf" to "BIODATEN: VERLAUF", "rueckblick_termine" to "DIENSTE UND TERMINE DER LETZTEN", "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
+        "biodaten_verlauf" to "BIODATEN: VERLAUF", "rueckblick_termine" to "DIENSTE UND TERMINE DER LETZTEN", "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "veraenderungen" to "VERÄNDERUNGEN", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 
     /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */

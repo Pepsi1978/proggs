@@ -39,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.foundation.layout.offset
@@ -125,8 +126,12 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
             if (!vm.gesperrt && ListenAnsicht.offen) {
-                // Listen im Vollbild über die ganze Breite (wie der Biomarker-Bereich), geöffnet über die Leiste oder das Widget.
-                ListenBildschirm(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
+                // Listen über die ganze Breite (wie der Biomarker-Bereich), geöffnet über die Leiste oder das Widget.
+                // Die untere Leiste bleibt darunter immer sichtbar und bedienbar, auch in einer geöffneten Liste.
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+                    ListenBildschirm(Modifier.weight(1f).fillMaxWidth())
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Box(Modifier.widthIn(max = 640.dp)) { Leiste(vm) } }
+                }
             } else if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else
@@ -169,6 +174,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                         when (reiter) {
                             Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity, schublade)
                             Reiter.ABLAGE -> AblageBildschirm(vm, activity)
+                            Reiter.VERAENDERUNGEN -> VeraenderungenBildschirm(vm)
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
                         }
@@ -228,12 +234,18 @@ private fun Leiste(vm: AppViewModel) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // Reihenfolge: Reiter, Einstellungen ganz rechts.
+        // Die Listen liegen über den Reitern: Jeder Tipp in der Leiste schließt sie, sonst bliebe der neue Reiter dahinter verdeckt.
+        val listenOffen = ListenAnsicht.offen
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
-            val aktiv = vm.reiter == r
-            val icon = when (r) { Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune }
+            val aktiv = vm.reiter == r && !listenOffen
+            val icon = when (r) {
+                Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
+                Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune
+            }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
             Row(
-                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { vm.reiter = r },
+                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { ListenAnsicht.schliessen(); vm.reiter = r }
+                    .semantics { contentDescription = r.anzeige },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -243,11 +255,19 @@ private fun Leiste(vm: AppViewModel) {
         }
         reiterKnopf(Reiter.JARVIS)
         reiterKnopf(Reiter.ABLAGE)
-        // Listen (Einkaufsliste, Packliste …): öffnet das Listen-Vollbild, ohne den Reiter zu wechseln.
-        Box(
-            Modifier.weight(1f).height(50.dp).antippen { ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" },
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Rounded.Checklist, null, tint = f.textLeise, modifier = Modifier.size(20.dp)) }
+        // Listen (Einkaufsliste, Packliste …): öffnet die Listen über den Reitern, die Leiste bleibt darunter stehen.
+        // Nochmal Tippen in einer geöffneten Liste führt zurück zur Listen-Übersicht.
+        Row(
+            Modifier.weight(if (listenOffen) 1.9f else 1f).height(50.dp)
+                .then(if (listenOffen) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier)
+                .antippen { if (listenOffen) ListenAnsicht.liste = null else ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.Checklist, null, tint = if (listenOffen) f.aufPrimaer else f.textLeise, modifier = Modifier.size(20.dp))
+            if (listenOffen) Text("Listen", Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        reiterKnopf(Reiter.VERAENDERUNGEN)
         // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der
         // Programmier-Sessions. Arbeitet eine, blinkt derselbe orange Punkt wie am Reiter „Programmierung“ in der Leiste.
         val arbeitende = arbeitendeProgrammierungen()
@@ -255,7 +275,7 @@ private fun Leiste(vm: AppViewModel) {
         val programmiertGerade = LeistenReiter.PROGRAMMIERUNG in
             aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
         Box(
-            Modifier.weight(1f).height(50.dp).antippen { vm.reiter = Reiter.JARVIS; LeistenWunsch.reiter = LeistenReiter.PROGRAMMIERUNG }
+            Modifier.weight(1f).height(50.dp).antippen { ListenAnsicht.schliessen(); vm.reiter = Reiter.JARVIS; LeistenWunsch.reiter = LeistenReiter.PROGRAMMIERUNG }
                 .semantics { contentDescription = "Programmierung" },
             contentAlignment = Alignment.Center,
         ) {

@@ -49,7 +49,7 @@ private const val UPDATE_VORLAUF = 15 * 60_000L
 /** So lange nach dem Update gilt das erste Öffnen noch als Neustart durch das Update, später als normaler Start. */
 private const val UPDATE_NACHLAUF = 60 * 60_000L
 
-enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
+enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), VERAENDERUNGEN("Veränderungen"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
 
 /**
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
@@ -1376,6 +1376,64 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Das laufende Diktat wurde im Vollbild einer Merkliste gestartet und gehört in diese. */
     private var merkDiktat = false
+
+    // ---- Veränderungen: Eingabefeld im Reiter, die KI schreibt daraus Einzeile und Beschreibung ----
+
+    /** Text im Eingabefeld des Reiters „Veränderungen“ (getippt oder eingesprochen). */
+    var veraenderungEntwurf by mutableStateOf("")
+    /** Die KI formuliert gerade eine neue Veränderung. */
+    var veraenderungFormuliert by mutableStateOf(false); private set
+    /** Das laufende Diktat gehört ins Feld der Veränderungen, nie als Frage an Jarvis. */
+    private var veraenderungDiktat = false
+    val veraenderungNimmtAuf get() = nimmtAuf && veraenderungDiktat
+
+    fun veraenderungMikrofonTippen() {
+        when {
+            schreibtMit -> Unit
+            nimmtAuf && veraenderungDiktat -> aufnahmeBeenden()
+            nimmtAuf || holtMikro -> meldung = "Es läuft schon eine andere Aufnahme. Bitte erst diese beenden."
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
+            else -> {
+                antwortStartAbbrechen = false
+                diktatZiel = { t -> veraenderungEntwurf = DiktatTrenner.anhaengen(veraenderungEntwurf, t) }
+                veraenderungDiktat = true
+                mikrofonAnfragen()
+            }
+        }
+    }
+
+    /** Pfeil im Reiter „Veränderungen“: Die KI macht aus Franks Worten Einzeile und Beschreibung; scheitert sie, bleibt der Text im Feld. */
+    fun veraenderungAufnehmen() {
+        val roh = veraenderungEntwurf
+        val text = DiktatTrenner.ohneSchluss(roh).trim()
+        when {
+            text.isBlank() -> { meldung = "Erst eine Veränderung eintippen oder einsprechen."; return }
+            veraenderungFormuliert -> return
+            veraenderungNimmtAuf -> { meldung = "Bitte erst die Aufnahme beenden."; return }
+            !modellBereit -> { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
+        }
+        veraenderungFormuliert = true
+        viewModelScope.launch {
+            try {
+                val antwort = auth.streamChat(VERAENDERUNG_AUFTRAG, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe)
+                val j = runCatching { org.json.JSONObject("{" + antwort.substringAfter('{').substringBeforeLast('}') + "}") }.getOrNull()
+                val titel = j?.optString("titel").orEmpty().trim()
+                if (titel.isEmpty()) meldung = "Die KI hat nichts Brauchbares geliefert. Dein Text bleibt im Feld."
+                else {
+                    val v = de.frank.jarvis.veraenderung.Veraenderungen.anlegen(getApplication(), titel, j?.optString("beschreibung").orEmpty().trim().ifEmpty { text })
+                    if (veraenderungEntwurf == roh) veraenderungEntwurf = ""
+                    meldung = "„${v.titel}“ steht jetzt unter Veränderungen."
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                de.frank.jarvis.observability.Logbuch.fehler("Veränderungen", e, "KI-Aufnahme")
+                meldung = "Die KI war nicht erreichbar. Dein Text bleibt im Feld."
+            } finally {
+                veraenderungFormuliert = false
+            }
+        }
+    }
     /** Läuft gerade ein Diktat für die offene Merkliste? Nur dann zeigt sie „Ich höre zu“. */
     val merkNimmtAuf get() = nimmtAuf && merkDiktat
 
@@ -1825,7 +1883,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; promptDiktat = false; merkDiktat = false; veraenderungDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (antwortStartAbbrechen) { antwortStartAbbrechen = false; diktatZiel = null; antwortDiktatFeld = null; return }
         if (holtMikro) {
             // Ein anderer Start („Hey Jarvis“, Gesprächsmodus) ist schneller: Die Antwort-Aufnahme fängt nicht an und hängt nicht.
@@ -1839,7 +1897,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; merkDiktat = false; veraenderungDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else if (antwortStartAbbrechen) {
                     // Während des Starts geschlossen: Die Aufnahme gleich wieder verwerfen, sonst liefe sie unsichtbar weiter.
                     antwortStartAbbrechen = false
@@ -1890,6 +1948,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         wechselStand++
         verwerfAnlass = anlass
         merkDiktat = false
+        veraenderungDiktat = false
         if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
@@ -2243,11 +2302,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
-        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat || antwortDiktatFeld != null }
+        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat || antwortDiktatFeld != null || veraenderungDiktat }
         // Das Antwortfeld bleibt bis zum Ende der Mitschrift markiert: So lange sperrt die Rückfrage das Senden.
         val antwortFeld = antwortDiktatFeld
         feldMitschrift = ziel != null && diktatInsFeld
-        diktatZiel = null; promptDiktat = false; merkDiktat = false
+        diktatZiel = null; promptDiktat = false; merkDiktat = false; veraenderungDiktat = false
         diktatInsFeld = false
         mitschriftJob = viewModelScope.launch {
             try {
@@ -3817,6 +3876,13 @@ private const val PROMPT_KORREKTUR =
         "nur, wenn sie den Auftrag klarer machen. Der Text ist genau ein Abschnitt: Trenne Sätze mit Punkten, nicht mit Semikolons. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Glättung einer eigenen Antwort auf eine Rückfrage der Programmier-Sitzung. */
+private val VERAENDERUNG_AUFTRAG =
+    "Frank hält eine wichtige Veränderung in seinem Leben fest; er hat sie eingesprochen oder eingetippt. Mach daraus einen Eintrag für seine Liste „Veränderungen“: " +
+        "titel = kurze Einzeile mit höchstens 7 Wörtern, die die Veränderung benennt (etwa „Mit dem Sonnenaufgang aufstehen“); " +
+        "beschreibung = genau, was Frank ab jetzt anders macht und warum, in ganzen Sätzen über Frank in der dritten Person („Frank steht ab sofort …, weil …“). Nimm nur, was Frank sagt, erfinde keinen Grund dazu; " +
+        "berichtige Hörfehler der Spracherkennung, lass Füllwörter und Aufforderungen an Jarvis („nimm auf …“) weg. ${Merkdatei.KNAPP} " +
+        "Antworte nur mit JSON: {\"titel\": \"…\", \"beschreibung\": \"…\"}"
+
 private const val ANTWORT_KORREKTUR =
     "Du bringst Franks Antwort auf eine Rückfrage seiner Programmier-Sitzung in gutes Deutsch. Frank hat sie eingesprochen oder eingetippt. " +
         "Erfasse den Inhalt sinngemäß und schreibe ihn als klare, für sich allein verständliche Antwort an den Programmierer. Behalte jeden inhaltlichen Punkt, " +
