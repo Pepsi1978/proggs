@@ -72,8 +72,10 @@ object Planer {
         val app = context.applicationContext
         val heute = Tage.heute()
         val jetzt = System.currentTimeMillis()
+        val aufGeraet = Einstellungen.get(app).erinnerungenAufGeraet
         AufgabenRepository.get(app).alleEinmal().forEach { a ->
             val pi = ausloeser(app, a.id, (a.id * 2).toInt())
+            if (!aufGeraet) { alarmManager(app).cancel(pi); alarmManager(app).cancel(ausloeser(app, a.id, (a.id * 2 + 1).toInt())); return@forEach }
             val min = a.minuten
             // Täglich: Ist der Zeitpunkt heute vorbei, gilt schon der von morgen.
             var tag = a.aufHeute(heute).tag
@@ -229,9 +231,10 @@ class ErinnerungsEmpfaenger : BroadcastReceiver() {
         val ergebnis = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             val a = runCatching { AufgabenRepository.get(context).eine(id) }.getOrNull()
-            if (a == null || a.erledigt) { ergebnis.finish(); return@launch }
-            Planer.kanalAnlegen(context)
             val e = Einstellungen.get(context)
+            // Auf diesem Gerät ausgeschaltet (z. B. Tablet): keine Erinnerung, auch nicht aus einem schon gestellten Alarm.
+            if (a == null || a.erledigt || !e.erinnerungenAufGeraet) { ergebnis.finish(); return@launch }
+            Planer.kanalAnlegen(context)
             // Vorlesen, Wecker und eigene MP3s (länger als ein kurzer Ton) laufen im Vordergrund-Dienst.
             // Bei „Nicht stören“ (kein Wecker) nur die stille Benachrichtigung über einfacheErinnerung.
             val still = Lautsprecher.stillHalten(context, a.alsWecker)

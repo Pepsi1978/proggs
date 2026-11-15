@@ -2,6 +2,7 @@
 
 package de.frank.aufgaben.ui
 
+import kotlinx.coroutines.launch
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -258,6 +259,12 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
                 // ---- Erinnerungen ----
                 Block("Erinnerungen") {
+                    val geraetKontext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+                    Schalter("Erinnerungen auf diesem Gerät", e.erinnerungenAufGeraet) {
+                        e.erinnerungenAufGeraet = it
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { runCatching { de.frank.aufgaben.erinnerung.Planer.planeAlle(geraetKontext) } }
+                    }
+                    Text(if (e.erinnerungenAufGeraet) "Erinnerungen klingeln, sprechen und erscheinen auf diesem Gerät." else "Aus: Auf diesem Gerät kommt keine Erinnerung und kein Wecker. Die Aufgaben bleiben sichtbar und werden weiter abgeglichen; die Einstellung gilt nur hier.", color = f.textLeise, fontSize = 12.sp)
                     Text("Ton", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe {
                         Toene.eigene.forEach { (id, name) -> Chip(name, e.ton == id) { e.ton = id; e.tonName = name; vm.tonProbe() } }

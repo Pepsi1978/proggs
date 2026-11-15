@@ -127,6 +127,8 @@ class Einstellungen private constructor(context: Context) {
         put { putInt("vorlauf", v) }
         runCatching { app.contentResolver.notifyChange(android.net.Uri.parse("content://${app.packageName}.jarvis"), null) }
     }
+    /** Nur dieses Gerät, wird nicht abgeglichen: Aus = hier klingt, spricht und erscheint keine Erinnerung (z. B. Tablet). */
+    var erinnerungenAufGeraet: Boolean get() = prefs.getBoolean("erinnerungen_geraet", true); set(v) = put { putBoolean("erinnerungen_geraet", v) }
     var vibration: Boolean get() = prefs.getBoolean("vibration", true); set(v) = put { putBoolean("vibration", v) }
     /** Neue Erinnerungen lesen den Aufgabentext standardmäßig vor. */
     var vorlesenStandard: Boolean get() = prefs.getBoolean("vorlesen_standard", true); set(v) = put { putBoolean("vorlesen_standard", v) }
