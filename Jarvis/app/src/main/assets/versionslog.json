@@ -708,6 +708,7 @@
     {"versionCode": 700, "versionName": "1.8.689", "stand": "15.11.2026, 12:06 Uhr", "notiz": "Biomarker-Startkarte: jede Messgröße steht in einem eigenen abgerundeten Block mit ihrer Linie, Erholung hat jetzt auch die Skala von 0 bis 100 Prozent; auf breiten Bildschirmen zwei Blöcke nebeneinander."},
     {"versionCode": 701, "versionName": "1.8.690", "stand": "15.11.2026, 14:26 Uhr", "notiz": "Die untere Leiste bleibt in den Listen immer sichtbar; neuer Reiter „Veränderungen“: Veränderungen per Sprache oder Eingabefeld festhalten, Jarvis schreibt Einzeile und Beschreibung, abhaken, zurückholen, löschen, und Jarvis berücksichtigt sie in allen Antworten."},
     {"versionCode": 702, "versionName": "1.8.691", "stand": "15.11.2026, 14:38 Uhr", "notiz": "Veränderungen: sicheres Speichern ohne verlorene Änderungen vom Tablet, kein Absturz bei Speicherfehlern, Diktat landet nie versehentlich im falschen Feld, klarere Meldungen und schnellere KI-Formulierung."},
-    {"versionCode": 703, "versionName": "1.8.692", "stand": "15.11.2026, 19:02 Uhr", "notiz": "Raumklima zeigt jetzt auch den CO2-Wert vom CO2-Monitor und den Sensor im Auto, und Jarvis beantwortet Fragen wie „Wie ist der CO2-Wert in der Wohnung?“."}
+    {"versionCode": 703, "versionName": "1.8.692", "stand": "15.11.2026, 19:02 Uhr", "notiz": "Raumklima zeigt jetzt auch den CO2-Wert vom CO2-Monitor und den Sensor im Auto, und Jarvis beantwortet Fragen wie „Wie ist der CO2-Wert in der Wohnung?“."},
+    {"versionCode": 704, "versionName": "1.8.693", "stand": "15.11.2026, 19:05 Uhr", "notiz": "Der CO2-Monitor wird jetzt direkt abgefragt, auch wenn SwitchBot den Cloud-Dienst als aus meldet, und zeigt sonst eine klare Anleitung zum Einschalten."}
 ]
 }

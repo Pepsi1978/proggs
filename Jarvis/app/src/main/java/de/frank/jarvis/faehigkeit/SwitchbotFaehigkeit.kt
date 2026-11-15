@@ -126,17 +126,18 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     private fun lesen(g: JSONObject): Sensor {
         val name = g.optString("deviceName").ifBlank { g.optString("deviceId") }
         val typ = g.optString("deviceType")
-        if (g.has("enableCloudService") && !g.optBoolean("enableCloudService", true))
-            return Sensor(name, typ, problem = "keine Werte, weil der Cloud-Dienst für diesen Sensor in der SwitchBot-App ausgeschaltet ist.")
+        // Der Schalter in der Geräteliste kann veraltet sein: trotzdem den Status fragen, die Anleitung nur, wenn wirklich keine Werte kommen.
+        val cloudAus = g.has("enableCloudService") && !g.optBoolean("enableCloudService", true)
+        val cloudHinweis = "keine Werte: In der SwitchBot-App beim Sensor Zahnrad → Cloud-Dienst einschalten und als Hub den Hub Mini wählen (Sensor dafür nah an den Hub legen)."
         val antwort = try {
             anfrage("/v1.1/devices/${g.optString("deviceId")}/status", status = true)
         } catch (e: Problem) {
-            return Sensor(name, typ, problem = e.message)
+            return Sensor(name, typ, problem = if (cloudAus) cloudHinweis else e.message)
         }
         val body = antwort.optJSONObject("body") ?: JSONObject()
         val temperatur = body.wert("temperature")
         val feuchte = body.wert("humidity")
-        if (temperatur == null || feuchte == null) return Sensor(name, typ, problem = "nicht erreichbar, die Cloud liefert gerade keine Messwerte.")
+        if (temperatur == null || feuchte == null) return Sensor(name, typ, problem = if (cloudAus) cloudHinweis else "nicht erreichbar, die Cloud liefert gerade keine Messwerte.")
         // Meter Pro CO2 meldet zusätzlich „CO2“ in ppm.
         val co2 = (body.wert("CO2") ?: body.wert("co2"))?.toInt()
         return Sensor(name, typ, temperatur, feuchte, body.wert("battery")?.toInt(), co2)
