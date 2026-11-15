@@ -3,6 +3,7 @@ package de.frank.jarvis.staubsauger
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Base64
+import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,7 +51,11 @@ object ProscenicMehr {
         val modus: String?, val akku: Int?, val saugstufe: String?, val lautstaerke: Int?, val led: Boolean?, val staubFrequenz: Int?,
         val karte: Karte?, val pfad: List<Pair<Int, Int>>, val roboter: Pair<Int, Int>?, val station: Pair<Int, Int>?,
         val mapId: Long?, val zonen: List<Zone>, val zeitZone: Int, val zeitZoneSek: Int, val zeitplaene: List<Zeitplan>,
-    )
+    ) {
+        /** Diese Karte mit dem Zustand (Modus, Akku, Einstellungen, Position) aus [neu]. */
+        fun mitZustand(neu: Live) = copy(modus = neu.modus, akku = neu.akku, saugstufe = neu.saugstufe, lautstaerke = neu.lautstaerke,
+            led = neu.led, staubFrequenz = neu.staubFrequenz, roboter = neu.roboter ?: roboter)
+    }
 
     data class Lauf(val start: Long, val dauerSek: Int, val flaeche: Int)
     data class Verlauf(val laeufe: List<Lauf>, val gesamtMin: Int?, val gesamtFlaeche: Int?, val anzahl: Int?)
@@ -85,9 +90,11 @@ object ProscenicMehr {
      */
     suspend fun live(context: Context, mitKarte: Boolean = true): Live? = withContext(Dispatchers.IO) {
         runCatching {
-            val daten = mitSitzung(context) { s -> lesen(s, mitKarte) } ?: return@runCatching null
-            // Mit Karte gelesen: die Rohdaten zwischenspeichern, damit die Karte beim nächsten Aufklappen sofort da ist.
-            if (daten.containsKey(20002)) kartenSpeichern(context, daten)
+            var mail = ""
+            val daten = mitSitzung(context) { s -> mail = s.mail; lesen(s, mitKarte) } ?: return@runCatching null
+            // Vollständig mit Karte gelesen (Status, Karte, Zeitpläne): die Rohdaten zwischenspeichern, damit die Karte beim
+            // nächsten Aufklappen sofort da ist. Ein unvollständiger Lauf überschreibt den Speicher nicht.
+            if (daten.keys.containsAll(listOf(20001, 20002, 21002))) kartenSpeichern(context, daten, mail)
             bauen(daten)
         }.onFailure { Logbuch.netz("Proscenic: Live-Stand fehlt", it.toString().take(200)) }.getOrNull()
     }
@@ -98,23 +105,31 @@ object ProscenicMehr {
 
     private fun kartenPrefs(context: Context) = context.applicationContext.getSharedPreferences("staubsauger", Context.MODE_PRIVATE)
 
+    /** Gehört der Speicher zum jetzt eingetragenen Proscenic-Konto? Nach einem Kontowechsel gilt er nicht mehr. */
+    private fun speicherGilt(context: Context) =
+        kartenPrefs(context).getString("karte_mail", null) == SecureSettings.get(context).proscenicMail.trim()
+
     /** Wann zuletzt eine Karte bei stehendem Roboter (also nach der Reinigung) gespeichert wurde, ms seit 1970; 0 = noch nie. */
-    fun kartenStand(context: Context): Long = kartenPrefs(context).getLong("karte_fertig_ms", 0L)
+    fun kartenStand(context: Context): Long = if (speicherGilt(context)) kartenPrefs(context).getLong("karte_fertig_ms", 0L) else 0L
 
     @Synchronized
-    private fun kartenSpeichern(context: Context, daten: Map<Int, JSONObject>) {
+    private fun kartenSpeichern(context: Context, daten: Map<Int, JSONObject>, mail: String) {
         runCatching {
             val j = JSONObject(); daten.forEach { (k, v) -> j.put(k.toString(), v) }
             val ziel = kartenDatei(context); val tmp = java.io.File(ziel.path + ".tmp")
-            tmp.writeText(j.toString()); tmp.renameTo(ziel)
+            tmp.writeText(j.toString())
+            if (!tmp.renameTo(ziel)) { tmp.delete(); return@runCatching }
             // Eine Karte mitten in der Reinigung zählt nicht als fertig: Sonst holte der Wächter die Endkarte nie.
-            if (!aktiv(daten[20001]?.optString("mode"))) kartenPrefs(context).edit().putLong("karte_fertig_ms", System.currentTimeMillis()).apply()
+            val e = kartenPrefs(context).edit().putString("karte_mail", mail)
+            if (!aktiv(daten[20001]?.optString("mode"))) e.putLong("karte_fertig_ms", System.currentTimeMillis())
+            e.apply()
         }.onFailure { Logbuch.fehler("Proscenic: Karte speichern", it) }
     }
 
     /** Die zuletzt gespeicherte Karte samt Stand, ohne Netz. */
     suspend fun ausSpeicher(context: Context): Live? = withContext(Dispatchers.IO) {
         runCatching {
+            if (!speicherGilt(context)) return@runCatching null
             val d = kartenDatei(context).takeIf { it.exists() } ?: return@runCatching null
             val j = JSONObject(d.readText())
             val daten = HashMap<Int, JSONObject>()
@@ -137,8 +152,8 @@ object ProscenicMehr {
         }.getOrNull()
     }
 
-    /** Läuft der Roboter gerade (reinigt, pausiert oder fährt zurück)? */
-    fun aktiv(modus: String?) = modus in setOf("sweep", "pause", "backcharge", "findchargerpause")
+    /** Läuft der Roboter gerade (reinigt, pausiert oder fährt zurück)? Unbekannte Modi zählen als Arbeit, nur bekannte Ruhezustände nicht. */
+    fun aktiv(modus: String?) = !modus.isNullOrBlank() && modus !in setOf("charge", "fullcharge", "idle", "fault", "sleep", "dormant", "DustCenterWorking")
     fun pausiert(modus: String?) = modus == "pause" || modus == "findchargerpause"
 
     private fun lesen(s: ProscenicCloud.Sitzung, mitKarte: Boolean): HashMap<Int, JSONObject>? {

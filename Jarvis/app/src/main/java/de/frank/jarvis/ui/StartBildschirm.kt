@@ -430,8 +430,10 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-        // Beim Bearbeiten langer Texte mit offener Tastatur braucht die Eingabeblase den Platz: dann kein Symbolstapel.
-        if (!EingabeLage.bearbeitet) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
+        // Beim Bearbeiten langer Texte mit offener Tastatur braucht die Eingabeblase den Platz: dann wird der Symbolstapel nicht
+        // gezeichnet und nimmt keine Berührung an, bleibt aber in der Komposition (laufender Fernwartungsstart, offene Auswahl bleiben).
+        ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd)
+            .then(if (EingabeLage.bearbeitet) Modifier.layout { m, c -> m.measure(c); layout(0, 0) {} } else Modifier).padding(end = SCHWEBE_RECHTS, bottom = SCHWEBE_UNTEN)
             // Ungebunden gemessen und unten verankert: Reicht der Platz selbst für die dichteste Stufe nicht (oder für ein Bild, bis die
             // Stufe nachzieht), ragt der Stapel nach oben über die Liste, statt Programmierer und Pfeil unten abzuschneiden.
             .wrapContentHeight(Alignment.Bottom, unbounded = true), schwebStufe,

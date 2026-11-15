@@ -472,7 +472,6 @@ class BioAuswertung(context: Context) {
             // Ganze Historie bis zum Bezugstag (mit dem aktuellen Wert): für die Farbskala der Startkarte.
             .put("min_alle", runde(bisBezug.values.min(), m.stellen))
             .put("max_alle", runde(bisBezug.values.max(), m.stellen))
-            .put("schnitt_alle", runde(bisBezug.values.average(), m.stellen + 1))
             .put("min_vergleich", vorher.minOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("max_vergleich", vorher.maxOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("vergleichstage", vorher.size)

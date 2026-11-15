@@ -383,6 +383,7 @@ class JarvisDienst : Service() {
         Logbuch.system("Dienst beendet")
         Waechter.stoppe(this)
         de.frank.jarvis.bio.BioSpiegel.stoppe()
+        de.frank.jarvis.staubsauger.SaugerKartenWaechter.stoppe()
         runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netz) }
         Tunnel.beiSignal = null
         Tunnel.beiVerbunden = null

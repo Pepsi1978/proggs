@@ -185,8 +185,13 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
     // Bearbeiten mit offener Tastatur: Die Blase darf dann den Platz des Symbolstapels mitnehmen (der Stapel blendet sich aus),
     // und das Textfeld wächst auf alles, was über der Tastatur frei ist. Vorher blieben bei langem Diktat nur ein bis zwei Zeilen.
     var feldFokus by remember { mutableStateOf(false) }
-    val tastaturOffen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-    val bearbeitet = feldFokus && tastaturOffen
+    val imeRand = androidx.compose.foundation.layout.WindowInsets.ime
+    val dichte = androidx.compose.ui.platform.LocalDensity.current
+    // Nur der Wechsel offen/zu zählt, nicht jedes Bild der Tastatur-Animation.
+    val tastaturOffen by remember(imeRand, dichte) { androidx.compose.runtime.derivedStateOf { imeRand.getBottom(dichte) > 0 } }
+    // Eingeklappt gibt es kein Textfeld: ein beim Verschwinden nicht mehr gemeldeter Fokus gilt dann nicht.
+    LaunchedEffect(vm.eingabeKompakt) { if (vm.eingabeKompakt) feldFokus = false }
+    val bearbeitet = feldFokus && tastaturOffen && !vm.eingabeKompakt
     SideEffect { EingabeLage.bearbeitet = bearbeitet }
     DisposableEffect(Unit) { onDispose { EingabeLage.bearbeitet = false } }
     val platz = if (bearbeitet) 0.dp else platzOben
@@ -474,13 +479,13 @@ val LISTEN_ABSTAND = 10.dp
 /** Ob der Papierkorb „Gespräch löschen“ im Stapel steht; eine Quelle für Stapel, Höhe und Stufe. */
 val AppViewModel.gespraechLoeschbar: Boolean get() = gespraech.isNotEmpty() || sitzungId != null
 
+/** Bearbeitet Frank gerade den Text der Eingabeblase mit offener Tastatur? Dann weicht der Symbolstapel. */
+object EingabeLage { var bearbeitet by mutableStateOf(false) }
+
 /**
  * Platz, den die Eingabeblase über sich freilässt, auch bei sehr langem Text: der verdichtete Stapel (Neue Session, Nachtrag,
  * Programmierer, Pfeil), eingeklappt nur der Pfeil.
  */
-/** Bearbeitet Frank gerade den Text der Eingabeblase mit offener Tastatur? Dann weicht der Symbolstapel. */
-object EingabeLage { var bearbeitet by mutableStateOf(false) }
-
 fun schwebeMindest(vm: AppViewModel): Dp = when {
     vm.schweberEingeklappt -> SCHWEBE_LUECKE + SCHWEBE_UNTEN
     else -> schwebeHoehe(vm.nachtragMoeglich, stufe = 2) + SCHWEBE_UNTEN

@@ -98,7 +98,9 @@ fun BiomarkerStartVorladen() {
             val m = liste.getJSONObject(i)
             val wert = if (m.isNull("aktuell")) "–" else m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
             val skala = if (m.optString("id") in MIT_SKALA && !m.isNull("aktuell") && m.has("min_alle")) {
-                val tief = m.optDouble("min_alle"); val hoch = m.optDouble("max_alle"); val schnitt = m.optDouble("schnitt_alle")
+                val tief = m.optDouble("min_alle"); val hoch = m.optDouble("max_alle"); val tage = m.optInt("tage_gesamt")
+                // Langfristiger Schnitt samt aktuellem Wert, aus dem Schnitt aller Tage davor.
+                val schnitt = if (tage > 0 && !m.isNull("schnitt_gesamt")) (m.optDouble("schnitt_gesamt") * tage + m.optDouble("aktuell")) / (tage + 1) else m.optDouble("aktuell")
                 val niedrigBesser = m.optString("hoeher_ist") == "schlechter"
                 BioSkala(if (niedrigBesser) hoch else tief, if (niedrigBesser) tief else hoch, m.optDouble("aktuell"), schnitt,
                     zahl(schnitt))

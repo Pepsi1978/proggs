@@ -155,11 +155,12 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
 
     // Zustand still lesen, damit Pause-Taste und Statuszeile auch zugeklappt stimmen: beim Erscheinen, während der Roboter
     // arbeitet alle 45 Sekunden, sonst alle 5 Minuten (nur solange die Karte zu sehen ist).
-    if (cloud) LaunchedEffect(Unit) {
+    // Nicht auf dem Tablet: Handy und Tablet teilen das Proscenic-Konto, jede Anmeldung macht die andere ungültig.
+    if (cloud && !de.frank.jarvis.data.Geraet.istTablet) LaunchedEffect(Unit) {
         while (true) {
             val aktiv = ProscenicMehr.aktiv(a.live?.modus)
-            if (System.currentTimeMillis() - a.zustandUm > (if (aktiv) 40_000L else 4 * 60_000L)) zustandLesen(context)
-            delay(if (ProscenicMehr.aktiv(a.live?.modus)) 45_000L else 5 * 60_000L)
+            if (System.currentTimeMillis() - a.zustandUm > (if (aktiv) 45_000L else 5 * 60_000L)) zustandLesen(context)
+            delay(15_000L)
         }
     }
 
@@ -248,7 +249,7 @@ private fun StatusKnopf(text: String, aktion: () -> Unit) {
 private suspend fun uebernehmen(context: android.content.Context, l: ProscenicMehr.Live) {
     val a = SaugerAnsicht
     val alt = a.live
-    a.live = if (l.karte == null && alt?.karte != null) alt.copy(modus = l.modus, akku = l.akku, saugstufe = l.saugstufe, lautstaerke = l.lautstaerke, led = l.led, staubFrequenz = l.staubFrequenz, roboter = l.roboter ?: alt.roboter) else l
+    a.live = if (l.karte == null && alt?.karte != null) alt.mitZustand(l) else l
     a.zustandUm = System.currentTimeMillis()
     withContext(Dispatchers.IO) { SaugerStand.merken(context, l.akku, l.modus?.let(::zustandName), stufeName(l.saugstufe)) }
 }
@@ -267,8 +268,10 @@ private suspend fun oeffnen(context: android.content.Context) {
     val a = SaugerAnsicht
     if (a.live?.karte == null) ProscenicMehr.ausSpeicher(context)?.let { c ->
         val l = a.live
-        a.live = if (l == null) c else c.copy(modus = l.modus, akku = l.akku, saugstufe = l.saugstufe, lautstaerke = l.lautstaerke, led = l.led, staubFrequenz = l.staubFrequenz, roboter = l.roboter ?: c.roboter)
+        a.live = if (l == null) c else c.mitZustand(l)
     }
+    // Zustand noch unbekannt (Karte direkt nach dem App-Start geöffnet): erst lesen, sonst bliebe eine laufende Reinigung unerkannt.
+    if (a.live?.modus == null) zustandLesen(context)
     val neuer = a.live?.karte == null || ProscenicMehr.aktiv(a.live?.modus) ||
         (ProscenicMehr.letzteReinigungEnde(context)?.let { it > ProscenicMehr.kartenStand(context) } ?: false)
     aktualisieren(context, mitKarte = neuer)
@@ -292,13 +295,18 @@ private suspend fun coroutineScopeAsync(context: android.content.Context, mitKar
     neu.await()?.let { uebernehmen(context, it) }
 }
 
+/** Liest Karte, Zonen und Zeitpläne frisch (wartet einen laufenden Abruf ab). */
+private suspend fun frischMitKarte(context: android.content.Context) {
+    while (SaugerAnsicht.laedt) delay(100)
+    aktualisieren(context, mitKarte = true)
+}
+
 private fun zustandName(m: String) = when (m) {
     "charge" -> "lädt in der Station"; "fullcharge" -> "voll geladen in der Station"; "sweep" -> "reinigt"; "pause" -> "pausiert"
     "backcharge" -> "fährt zur Ladestation"; "findchargerpause" -> "Rückfahrt pausiert"; "DustCenterWorking" -> "Staubsammlung läuft"
     "idle" -> "bereit"; "fault" -> "Störung"; else -> m
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (suspend () -> SaugerAusgang) -> Unit) {
     val f = LocalFarben.current
@@ -340,6 +348,7 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
 
     // Karte der Wohnung: Antippen öffnet sie im Vollbild (Zoom mit zwei Fingern, zurück per Wischgeste).
     val karte = live?.karte
+    LaunchedEffect(karte == null) { if (karte == null) vollbild = false }
     if (karte != null) {
         KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = false,
             beiTipp = { vollbild = true },
@@ -421,11 +430,18 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     }
     // Sperrzonen, Zeitpläne, Verlauf.
     Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Vor dem Bearbeiten Zonen und Zeitpläne frisch vom Roboter holen: Gespeichert wird immer die ganze Liste, ein alter
+        // Stand aus dem Speicher würde Änderungen aus der Proscenic-App oder per Sprache überschreiben.
         Knopf("Sperrzonen", Modifier.weight(1f), aktiv = zonenModus) {
-            if (live?.karte == null) return@Knopf
-            entwurf.clear(); entwurf.addAll(live.zonen); zonenModus = true
+            if (zonenModus) return@Knopf
+            saugerBereich.launch {
+                frischMitKarte(context)
+                val l = a.live ?: return@launch
+                if (l.karte == null) return@launch
+                entwurf.clear(); entwurf.addAll(l.zonen); zonenModus = true
+            }
         }
-        Knopf("Zeitpläne", Modifier.weight(1f)) { dialog = "zeitplaene" }
+        Knopf("Zeitpläne", Modifier.weight(1f)) { saugerBereich.launch { frischMitKarte(context); dialog = "zeitplaene" } }
         Knopf("Verlauf", Modifier.weight(1f)) { dialog = "verlauf" }
     }
 
@@ -474,12 +490,15 @@ private fun KartenAnsicht(
         Canvas(
             flaeche.pointerInput(bearbeiten, vollbild, zonen, k) {
                 awaitEachGesture {
-                    val start = awaitFirstDown(requireUnconsumed = false).position
-                    var ende = start; var bewegt = false; var mehr = false
+                    val unten = awaitFirstDown(requireUnconsumed = false)
+                    val start = unten.position
+                    var ende = start; var bewegt = false; var mehr = false; var tippGilt = true
                     while (true) {
                         val ev = awaitPointerEvent()
                         val gedrueckt = ev.changes.filter { it.pressed }
-                        if (gedrueckt.isEmpty()) break
+                        // Langer Druck (Karte verschieben) oder ein Griff der Liste ist kein Tipp.
+                        if (ev.changes.any { it.uptimeMillis - unten.uptimeMillis > viewConfiguration.longPressTimeoutMillis }) tippGilt = false
+                        if (gedrueckt.isEmpty()) { if (ev.changes.any { it.isConsumed }) tippGilt = false; break }
                         if (gedrueckt.size >= 2) {
                             mehr = true; ziehStart = null; ziehEnde = null
                             if (!vollbild) continue
@@ -499,8 +518,8 @@ private fun KartenAnsicht(
                         if (bewegt && bearbeiten) {
                             val a = sicht.karte(start); val b = sicht.karte(ende)
                             beiNeu(k.mmX(a.x), k.mmY(a.y), k.mmX(b.x), k.mmY(b.y))
-                        } else if (!bewegt && !vollbild) beiTipp()
-                        else if (!bewegt && bearbeiten) {
+                        } else if (!bewegt && !vollbild) { if (tippGilt) beiTipp() }
+                        else if (!bewegt && bearbeiten && tippGilt) {
                             val p = sicht.karte(start); val mx = k.mmX(p.x); val my = k.mmY(p.y)
                             val i = zonen.indexOfFirst { z -> z.sperre && z.ecken.let { e -> e.isNotEmpty() && mx in e.minOf { it.first }..e.maxOf { it.first } && my in e.minOf { it.second }..e.maxOf { it.second } } }
                             if (i >= 0) beiZone(i)

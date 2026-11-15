@@ -19,6 +19,9 @@ object SaugerKartenWaechter {
     private var schleife: Job? = null
 
     @Synchronized
+    fun stoppe() { schleife?.cancel(); schleife = null }
+
+    @Synchronized
     fun starte(context: Context) {
         if (schleife?.isActive == true) return
         // Nur auf dem Handy: Handy und Tablet teilen das Proscenic-Konto, und jede Anmeldung macht die andere ungültig (Almanach proscenic-cloud Nr. 2).
@@ -38,6 +41,8 @@ object SaugerKartenWaechter {
         if (!ProscenicCloud.konfiguriert(context)) return false
         val ende = ProscenicMehr.letzteReinigungEnde(context) ?: return false
         if (ende <= 0L || ende <= ProscenicMehr.kartenStand(context)) return false
+        // Arbeitet er schon wieder (nächste Reinigung), wartet die Karte bis zu deren Ende.
+        if (ProscenicMehr.aktiv(ProscenicMehr.live(context, mitKarte = false)?.modus)) return false
         val neu = ProscenicMehr.live(context, mitKarte = true)?.karte != null
         if (neu) Logbuch.system("Staubsauger-Karte nach der Reinigung gespeichert")
         return neu
