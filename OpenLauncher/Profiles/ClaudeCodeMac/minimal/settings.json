@@ -1,12 +1,12 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5"
   },
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5-1[1m]",
+  "model": "fable[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -40,16 +40,17 @@
         ]
       },
       {
+        "matcher": "AskUserQuestion",
         "hooks": [
           {
             "type": "command",
             "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal frage",
             "timeout": 660
           }
-        ],
-        "matcher": "AskUserQuestion"
+        ]
       },
       {
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -57,8 +58,7 @@
             "timeout": 10,
             "async": true
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "SessionStart": [
@@ -106,6 +106,7 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -113,12 +114,12 @@
             "timeout": 15,
             "async": true
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PostToolUseFailure": [
       {
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -126,8 +127,7 @@
             "timeout": 15,
             "async": true
           }
-        ],
-        "matcher": "Bash|PowerShell"
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -183,27 +183,6 @@
     "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh",
     "refreshInterval": 10
   },
-  "language": "german",
-  "effortLevel": "xhigh",
-  "advisorModel": "fable",
-  "askUserQuestionTimeout": "never",
-  "skipDangerousModePermissionPrompt": true,
-  "claudeMdExcludes": [
-    "**/proggs/CLAUDE.md",
-    "**/proggs/CLAUDE.local.md",
-    "**/.claude/rules/**"
-  ],
-  "theme": "dark",
-  "preferredNotifChannel": "auto",
-  "remoteControlAtStartup": true,
-  "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "modelSettings": {
-    "claude-fable-5-1": {
-      "effortLevel": "high"
-    }
-  },
-  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein.",
   "enabledPlugins": {
     "bio-research@synced": false,
     "sales@synced": false,
@@ -221,6 +200,32 @@
     "enterprise-search@synced": false,
     "engineering@synced": false,
     "desktop-commander@synced": false,
-    "cowork-plugin-management@synced": false
-  }
+    "cowork-plugin-management@synced": false,
+    "frontend-design@claude-plugins-official": true
+  },
+  "language": "german",
+  "effortLevel": "xhigh",
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    }
+  },
+  "advisorModel": "fable",
+  "askUserQuestionTimeout": "5m",
+  "dialogExpiry": "5m",
+  "timeFormat": "24-hour",
+  "skipDangerousModePermissionPrompt": true,
+  "claudeMdExcludes": [
+    "**/proggs/CLAUDE.md",
+    "**/proggs/CLAUDE.local.md",
+    "**/.claude/rules/**"
+  ],
+  "theme": "dark",
+  "preferredNotifChannel": "terminal_bell",
+  "switchModelsOnFlag": true,
+  "remoteControlAtStartup": true,
+  "crossSessionInbound": "accept",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein."
 }
