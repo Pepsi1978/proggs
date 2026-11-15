@@ -722,6 +722,7 @@
     {"versionCode": 714, "versionName": "1.8.703", "stand": "15.11.2026, 20:03 Uhr", "notiz": "Raumklima: „Mac“ erscheint nur noch, wenn die SwitchBot-Cloud seit 30 Minuten nichts gemeldet hat; sonst stehen Cloud-Werte ohne Zusatz da."},
     {"versionCode": 715, "versionName": "1.8.704", "stand": "15.11.2026, 20:05 Uhr", "notiz": "Die gezielte Gedächtnis-Auswahl richtet sich nur nach deinen eigenen Worten, lernt vorsichtiger und hält das Tagebuch im Budget."},
     {"versionCode": 716, "versionName": "1.8.705", "stand": "15.11.2026, 20:10 Uhr", "notiz": "Letzte Aufräumarbeiten an der gezielten Gedächtnis-Auswahl: Nachgeladenes gilt auch nach abgebrochenen Antworten für die Anschlussfrage."},
-    {"versionCode": 717, "versionName": "1.8.706", "stand": "15.11.2026, 20:13 Uhr", "notiz": "Rückfragen aus am Rechner gestarteten Sitzungen sind in Jarvis wie alle anderen fünf Minuten beantwortbar statt 24 Stunden."}
+    {"versionCode": 717, "versionName": "1.8.706", "stand": "15.11.2026, 20:13 Uhr", "notiz": "Rückfragen aus am Rechner gestarteten Sitzungen sind in Jarvis wie alle anderen fünf Minuten beantwortbar statt 24 Stunden."},
+    {"versionCode": 718, "versionName": "1.8.707", "stand": "15.11.2026, 20:15 Uhr", "notiz": "Raumklima: schnellere Antworten, sicherere Webhook-Anmeldung, CO2 nur noch beim CO2-Monitor und klarere Herkunftsangaben (Review-Befunde)."}
 ]
 }

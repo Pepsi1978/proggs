@@ -103,7 +103,6 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         } catch (e: Problem) {
             return@withContext Ergebnis(e.message ?: "SwitchBot antwortet nicht.", fehler = true)
         }
-        val webhook = webhookSicherstellen(alle)
         val genutzt = liste
         if (alle.isEmpty()) return@withContext Ergebnis(
             "In deinem SwitchBot-Konto ist kein Thermo-Hygrometer zu sehen. Prüfe in der SwitchBot-App, ob die Sensoren mit dem Hub verbunden sind und bei jedem der Cloud-Dienst eingeschaltet ist.", fehler = true)
@@ -112,20 +111,32 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val gewaehlt = treffer.ifEmpty { alle }
         val einzeln = treffer.isNotEmpty()
 
-        // Rückgriff für Sensoren ohne Cloud-Werte: der Mac zu Hause hört sie per Bluetooth mit (jarvis_switchbot.py → Relay), nur einmal je Abruf geholt.
-        val fern by lazy { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(Fern()) }
-        // Parallel zur Cloud lauscht das Handy selbst per Bluetooth (wie bei der Victron-Batterie): Für das Auto zuerst, denn es steht meist
-        // außer Reichweite des Hubs; für alle anderen nur, wenn die Cloud nichts liefert (Frank, 15.11.2026).
+        // Parallel zur Cloud: Webhook-Anmeldung, Relay-Stand (Webhook-Werte und Mac zu Hause, jarvis_switchbot.py) und das Handy selbst per
+        // Bluetooth (wie bei der Victron-Batterie): für das Auto zuerst, denn es steht meist außer Reichweite des Hubs; für alle anderen nur,
+        // wenn weder Cloud noch Relay einen brauchbaren Wert haben (Frank, 15.11.2026).
         val nah = ConcurrentHashMap<String, JSONObject>()
         val stopp = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val scanEnde = System.currentTimeMillis() + NAH_MS
+        var webhook: String? = null
+        lateinit var fern: Fern
         val sensoren = coroutineScope {
             val scan = async { runCatching { nahLauschen(nah, stopp) }.onFailure { Logbuch.fehler("SwitchBot: Bluetooth-Scan", null, it.javaClass.simpleName) } }
+            val hookArbeit = async { webhookSicherstellen(alle) }
+            val fernArbeit = async { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(Fern()) }
             val ausCloud = gewaehlt.map { g ->
                 async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
             }.awaitAll()
-            // Gebraucht: das Auto und jeder Sensor ohne Cloud-Werte. Warten, bis alle gehört sind, höchstens [NAH_MS] ab Scanbeginn.
-            val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) -> z.problem != null || istMobil(g) }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
-            if (gebraucht.isNotEmpty()) withTimeoutOrNull(NAH_MS) { while (!gebraucht.all { nah.containsKey(it) }) delay(150) }
+            webhook = hookArbeit.await()
+            fern = fernArbeit.await().also { it.webhookAktiv = webhookAktiv() }
+            // Gebraucht: das Auto und jeder Sensor ohne Cloud-Werte, für den auch der Relay nichts Frisches hat. Warten, bis alle gehört sind,
+            // höchstens bis [NAH_MS] nach Scanbeginn und nur, solange der Scan wirklich läuft (kein Recht, Bluetooth aus, Scan gescheitert).
+            val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) ->
+                val id = g.optString("deviceId").lowercase(Locale.ROOT)
+                istMobil(g) || (z.problem != null && frisch(fern.hook[id]) == null && frisch(fern.mac[id]) == null)
+            }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
+            if (gebraucht.isNotEmpty()) withTimeoutOrNull((scanEnde - System.currentTimeMillis()).coerceAtLeast(0)) {
+                while (!scan.isCompleted && !gebraucht.all { nah.containsKey(it) }) delay(150)
+            }
             stopp.complete(Unit)
             scan.await()
             gewaehlt.zip(ausCloud).map { (g, z) ->
@@ -155,7 +166,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.co2?.let { ", ${co2Text(it)}" } ?: "") + (z.batterie?.let { ", Batterie $it %" } ?: "") + (z.quelle?.let { " ($it)" } ?: "")
         }
         val vorweg = if (nur.isNotEmpty() && !einzeln) "Einen Sensor „$nur“ gibt es nicht, hier alle.\n" else ""
-        val text = vorweg + "Abgerufen um $uhr Uhr aus der SwitchBot-Cloud (sie nennt keine eigene Messzeit):\n" + zeilen.joinToString("\n")
+        val kopf = if (sensoren.any { it.problem == null && it.quelle == null }) "Abgerufen um $uhr Uhr; Werte ohne Herkunftsangabe kommen aus der SwitchBot-Cloud (sie nennt keine eigene Messzeit):"
+            else "Abgerufen um $uhr Uhr:"
+        val text = vorweg + kopf + "\n" + zeilen.joinToString("\n")
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
             JSONObject().put("name", z.name).put("typ", z.typ).apply {
                 if (z.problem != null) { put("problem", z.problem); if (z.offline) put("offline", true) }
@@ -190,7 +203,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Relay-Stand je MAC (klein, ohne Doppelpunkte), getrennt nach Webhook der Cloud und Mac; [cloudLebt]: Webhook in den letzten [CLOUD_LEBT_S]. */
     private class Fern(val hook: Map<String, JSONObject> = emptyMap(), val mac: Map<String, JSONObject> = emptyMap()) {
-        val cloudLebt: Boolean get() = hook.values.any { System.currentTimeMillis() / 1000 - it.optLong("zeit") <= CLOUD_LEBT_S }
+        /** Ohne eingetragenen Webhook lässt sich nicht erkennen, ob die Cloud schweigt: dann gilt sie (wie vor dem Webhook). */
+        var webhookAktiv = false
+        val cloudLebt: Boolean get() = !webhookAktiv || hook.values.any { System.currentTimeMillis() / 1000 - it.optLong("zeit") <= CLOUD_LEBT_S }
     }
 
     /** Stand vom Relay (GET /geraet/switchbot): Werte mit Messzeit „zeit“; „quelle“ = webhook für die Cloud, sonst vom Mac. */
@@ -212,22 +227,31 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     /** Werte vom Mac zu Hause, wenn er den Sensor in den letzten [MAC_GILT_S] gehört hat; sonst null (das Cloud-Problem bleibt stehen). */
     private fun alsSensor(z: Sensor, w: JSONObject?, hoechstens: Long): Sensor? {
         w ?: return null
-        val alter = System.currentTimeMillis() / 1000 - w.optLong("zeit")
-        if (alter > hoechstens) return null
-        val t = w.wert("temperatur_c") ?: return null
-        val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
-        val uhr = java.time.Instant.ofEpochSecond(w.optLong("zeit")).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
+        val zeit = minOf(w.optLong("zeit"), System.currentTimeMillis() / 1000)
+        if (System.currentTimeMillis() / 1000 - zeit > hoechstens) return null
+        val uhr = java.time.Instant.ofEpochSecond(zeit).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val weg = if (w.optString("quelle") == "webhook") "über die SwitchBot-Cloud (Webhook)" else "über den Mac zu Hause"
-        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = "$weg, gemessen $uhr Uhr")
+        return ausPaket(z, w, "$weg, gemessen $uhr Uhr")
     }
 
     private fun istMobil(g: JSONObject) = MOBIL.any { g.optString("deviceName").equals(it, ignoreCase = true) }
 
+    /** Werte aus Relay oder Bluetooth als Sensor; CO2 nur beim CO2-Monitor (ein 16-Byte-Paket eines anderen Geräts kann Zufallswerte tragen). */
     private fun ausPaket(z: Sensor, w: JSONObject, weg: String): Sensor? {
         val t = w.wert("temperatur_c") ?: return null
         val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
-        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = weg)
+        val co2 = if (z.typ.contains("CO2", ignoreCase = true)) w.wert("co2_ppm")?.toInt() else null
+        return Sensor(z.name, z.typ, t, f, null, co2, quelle = weg)
     }
+
+    /** [w], wenn höchstens [FRISCH_S] alt (Messzeit in der Zukunft zählt als jetzt), sonst null. */
+    private fun frisch(w: JSONObject?): JSONObject? = w?.takeIf { System.currentTimeMillis() / 1000 - it.optLong("zeit") <= FRISCH_S }
+
+    /** Webhook bei SwitchBot eingetragen? Nur dann sagt das Ausbleiben von Meldungen etwas über die Cloud. */
+    private fun webhookAktiv() = webhookStand == "angemeldet" || webhookStand == "neu angemeldet"
+
+    /** Zeitpunkte der letzten Scan-Starts: Android drosselt mehr als fünf startScan je 30 s still (keine Ergebnisse, kein Fehler). */
+    private val scanStarts = java.util.ArrayDeque<Long>()
 
     /**
      * Hört die Werbepakete der SwitchBot-Sensoren (Hersteller 0x0969) und legt je MAC (klein, ohne Doppelpunkte) die Werte in [ziel],
@@ -239,6 +263,13 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return
         if (!adapter.isEnabled) return
         val scanner = adapter.bluetoothLeScanner ?: return
+        synchronized(scanStarts) {
+            val jetzt = System.currentTimeMillis()
+            while (scanStarts.isNotEmpty() && jetzt - scanStarts.first() > 30_000) scanStarts.removeFirst()
+            // Victron scannt ebenfalls: mit Reserve unter Androids Grenze bleiben.
+            if (scanStarts.size >= 3) return
+            scanStarts.addLast(jetzt)
+        }
         val rueckruf = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 // Im Binder-Thread: nichts darf hier werfen.
@@ -253,39 +284,44 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     @Volatile private var webhookStand: String? = null
+    @Volatile private var webhookFehlerBis = 0L
+    private val webhookSperre = Any()
 
     /**
      * Webhook der SwitchBot-Cloud auf den Relay (POST /switchbot/hook/<geheim>): Die Cloud schickt dann jede Wertänderung selbst,
      * auch wenn GET /status nur Nullen liefert (SwitchBotAPI #436). Nur wenn ein Meter Pro CO2 im Konto ist; einmal je App-Lauf geprüft,
-     * nach einem Fehler beim nächsten Abruf erneut. Eine fremde, schon eingetragene Adresse wird nie überschrieben.
+     * nach einem Fehler erst nach [WEBHOOK_PAUSE_MS] erneut. Eine fremde, schon eingetragene Adresse wird nie überschrieben; lässt sich
+     * nicht abfragen, was eingetragen ist, wird auch nichts eingetragen. Nur ein Abruf zur Zeit (sonst zweimal setupWebhook).
      */
     private fun webhookSicherstellen(alle: List<JSONObject>): String? {
         if (alle.none { it.optString("deviceType").contains("CO2", ignoreCase = true) }) return null
         webhookStand?.let { return it }
-        val stand = runCatching {
-            val e = Einstellungen.get(context)
-            if (e.serverToken.isBlank()) return null
-            val ziel = CLIENT.newCall(Request.Builder().url("https://${e.serverHost}/geraet/switchbot-hook").header("X-Jarvis-Token", e.serverToken)
-                .header(Geraet.KOPFZEILE, Geraet.kennung).build()).execute().use { a ->
-                check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
-                JSONObject(a.body?.string().orEmpty()).getString("url")
-            }
-            val vorhanden = try {
-                anfrage("/v1.1/webhook/queryWebhook", rumpf = JSONObject().put("action", "queryUrl")).optJSONObject("body")?.optJSONArray("urls")
-                    ?.let { u -> (0 until u.length()).map { u.optString(it) } }.orEmpty()
-            } catch (_: Problem) { emptyList() }
-            when {
-                ziel in vorhanden -> "angemeldet"
-                vorhanden.isNotEmpty() -> "fremde Adresse eingetragen, nicht überschrieben"
-                else -> {
-                    anfrage("/v1.1/webhook/setupWebhook", rumpf = JSONObject().put("action", "setupWebhook").put("url", ziel).put("deviceList", "ALL"))
-                    Logbuch.netz("SwitchBot-Webhook", "angemeldet")
-                    "neu angemeldet"
+        if (System.currentTimeMillis() < webhookFehlerBis) return "Fehler beim letzten Versuch, neuer Versuch später"
+        synchronized(webhookSperre) {
+            webhookStand?.let { return it }
+            val stand = runCatching {
+                val e = Einstellungen.get(context)
+                if (e.serverToken.isBlank()) return null
+                val ziel = CLIENT.newCall(Request.Builder().url("https://${e.serverHost}/geraet/switchbot-hook").header("X-Jarvis-Token", e.serverToken)
+                    .header(Geraet.KOPFZEILE, Geraet.kennung).build()).execute().use { a ->
+                    check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
+                    JSONObject(a.body?.string().orEmpty()).getString("url")
                 }
-            }
-        }.getOrElse { "Fehler: ${it.message ?: it.javaClass.simpleName}".also { m -> Logbuch.netz("SwitchBot-Webhook", m) } }
-        if (!stand.startsWith("Fehler")) webhookStand = stand
-        return stand
+                val antwort = anfrage("/v1.1/webhook/queryWebhook", rumpf = JSONObject().put("action", "queryUrl"))
+                val vorhanden = antwort.optJSONObject("body")?.optJSONArray("urls")?.let { u -> (0 until u.length()).map { u.optString(it) } }.orEmpty()
+                when {
+                    ziel in vorhanden -> "angemeldet"
+                    vorhanden.isNotEmpty() -> "fremde Adresse eingetragen, nicht überschrieben"
+                    else -> {
+                        anfrage("/v1.1/webhook/setupWebhook", rumpf = JSONObject().put("action", "setupWebhook").put("url", ziel).put("deviceList", "ALL"))
+                        Logbuch.netz("SwitchBot-Webhook", "angemeldet")
+                        "neu angemeldet"
+                    }
+                }
+            }.getOrElse { "Fehler: ${it.message ?: it.javaClass.simpleName}".also { m -> Logbuch.netz("SwitchBot-Webhook", m) } }
+            if (stand.startsWith("Fehler")) webhookFehlerBis = System.currentTimeMillis() + WEBHOOK_PAUSE_MS else webhookStand = stand
+            return stand
+        }
     }
 
     private class Problem(text: String, val code: Int = 0) : Exception(text)
@@ -355,8 +391,11 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         private const val MAC_GILT_S = 40 * 60L
         /** So frisch gemessen geht ein Wert vom Mac oder Webhook der Cloud vor (Mac meldet alle fünf Minuten). */
         private const val FRISCH_S = 10 * 60L
-        /** Die Cloud gilt als lebendig, solange in dieser Zeit irgendeine Webhook-Meldung kam (CO2-Monitor misst alle fünf Minuten). */
-        private const val CLOUD_LEBT_S = 30 * 60L
+        /** Die Cloud gilt als lebendig, solange in dieser Zeit irgendeine Webhook-Meldung kam (CO2-Monitor misst alle fünf, mit Batterie
+         *  höchstens alle 30 Minuten; Thermometer melden nur bei Änderung). */
+        private const val CLOUD_LEBT_S = 45 * 60L
+        /** Nach einem Fehler bei der Webhook-Anmeldung so lange nicht erneut (jeder Versuch kostet bis zu drei Netzanfragen). */
+        private const val WEBHOOK_PAUSE_MS = 10 * 60 * 1000L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private const val WOAN = 0x0969
@@ -378,7 +417,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             if (feuchte == 0 || feuchte > 100 || temp < -40 || temp > 70) return null
             val mac = (0..5).joinToString("") { String.format(Locale.ROOT, "%02x", b(it)) }
             return JSONObject().put("mac", mac).put("temperatur_c", Math.round(temp * 10) / 10.0).put("luftfeuchtigkeit_prozent", feuchte).apply {
-                if (roh.size == 16) ((b(13) shl 8) or b(14)).takeIf { it in 400..9999 }?.let { put("co2_ppm", it) }
+                // CO2 nur bei Paketen ab 15 Byte (pySwitchbot); ob das Gerät ein CO2-Monitor ist, prüft ausPaket über den Cloud-Typ.
+                if (roh.size >= 15) ((b(13) shl 8) or b(14)).takeIf { it in 400..9999 }?.let { put("co2_ppm", it) }
             }
         }
 

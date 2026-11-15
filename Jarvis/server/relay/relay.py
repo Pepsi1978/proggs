@@ -1790,11 +1790,14 @@ SWITCHBOT_HOOK = hmac.new(TOKEN.encode(), b"switchbot-webhook", hashlib.sha256).
 class VictronStand:
     """Letzter Stand von Franks Victron-Anlage, den ein Rechner in Bluetooth-Reichweite meldet (jarvis_victron.py).
     POST /pc/victron (Rolle pc) legt ihn ab, GET /geraet/victron (Rolle handy) liefert ihn mit Alter in Sekunden.
-    Dieselbe Klasse mit eigener Datei dient dem SwitchBot-CO2-Monitor (jarvis_switchbot.py, /pc/switchbot, /geraet/switchbot);
-    dort ist „art“ die MAC des Geräts."""
+    Dieselbe Klasse mit eigener Datei dient den SwitchBot-Sensoren (jarvis_switchbot.py, /pc/switchbot, /geraet/switchbot, Webhook):
+    dort ist „art“ beim Webhook die MAC, beim Mac „mac-<MAC>“, damit der Mac die Cloud-Werte nie verdrängt. Einträge älter als
+    einen Tag fallen weg (fremde Geräte in Bluetooth-Reichweite sammeln sich sonst an)."""
 
-    def __init__(self, datei: Path = VICTRON_DATEI):
+    def __init__(self, datei: Path = VICTRON_DATEI, max_bytes: int = VICTRON_MAX):
         self.datei = datei
+        self.max_bytes = max_bytes
+        self.sperre = asyncio.Lock()
         try:
             self.stand = json.loads(datei.read_text("utf-8"))
         except Exception:
@@ -1804,7 +1807,7 @@ class VictronStand:
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         roh = await request.read()
-        if len(roh) > VICTRON_MAX:
+        if len(roh) > self.max_bytes:
             return web.Response(status=413, text="zu gross")
         try:
             stand = json.loads(roh.decode("utf-8"))
@@ -1817,8 +1820,17 @@ class VictronStand:
         return web.json_response({"ok": True})
 
     async def aufnehmen(self, neu: list) -> None:
+        async with self.sperre:  # gleichzeitige Meldungen (Webhook und Mac) dürfen sich beim Schreiben nicht überholen
+            await self._aufnehmen(neu)
+
+    async def _aufnehmen(self, neu: list) -> None:
+        jetzt = int(time.time())
+        # Messzeiten aus der Zukunft (falsch gehende Uhr) zählen als jetzt, sonst blockieren sie spätere echte Werte.
+        for g in neu:
+            g["zeit"] = min(int(g["zeit"]), jetzt)
         # Je Art zusammenführen: Ein Scan, der nur ein Gerät fand, löscht den letzten Wert des anderen nicht.
-        alt = {g.get("art"): g for g in (self.stand or {}).get("geraete", []) if isinstance(g, dict)}
+        alt = {g.get("art"): g for g in (self.stand or {}).get("geraete", []) if isinstance(g, dict)
+               and jetzt - int(g.get("zeit", 0) or 0) <= 86_400}
         for g in neu:
             if g["zeit"] >= alt.get(g["art"], {}).get("zeit", -1):
                 alt[g["art"]] = g
@@ -1841,10 +1853,9 @@ class VictronStand:
         if not hmac.compare_digest(request.match_info.get("geheim", ""), SWITCHBOT_HOOK):
             return web.Response(status=404, text="Not found")
         roh = await request.read()
-        if len(roh) > VICTRON_MAX:
+        if len(roh) > self.max_bytes:
             return web.Response(status=413, text="zu gross")
         try:
-            log.info("SwitchBot-Webhook roh: %s", roh[:400].decode("utf-8", "replace"))
             k = json.loads(roh.decode("utf-8")).get("context") or {}
             mac = str(k.get("deviceMac") or "").replace(":", "").lower()
             if len(mac) != 12:
@@ -1856,7 +1867,7 @@ class VictronStand:
             zeit = int((zahl("timeOfSample") or time.time() * 1000) / 1000)
         except Exception:
             return web.Response(status=400, text="ungueltig")
-        log.info("SwitchBot-Webhook %s: %s °C, %s %%, CO2 %s (%s)", mac, t, f, c, str(k.get("deviceType"))[:40])
+        log.debug("SwitchBot-Webhook %s: %s °C, %s %%, CO2 %s (%s)", mac, t, f, c, str(k.get("deviceType"))[:40])
         # Nullen sind Platzhalter (kein Hub-Weg), keine Messwerte.
         if f:
             eintrag = {"art": mac, "mac": mac, "temperatur_c": t, "luftfeuchtigkeit_prozent": f, "zeit": zeit, "quelle": "webhook"}
@@ -2103,6 +2114,8 @@ async def mitschrift(request: web.Request, handler):
         teile[2] = "<geheim>" if len(teile[2]) >= 32 else "<falsch>"
     if len(teile) > 2 and teile[1] == "anhang":
         teile[2:] = ["<geheim>"]
+    if len(teile) > 3 and teile[1] == "switchbot" and teile[2] == "hook":
+        teile[3:] = ["<geheim>"]
     pfad = "/".join(teile)[:120]
     start = asyncio.get_running_loop().time()
     status = 500
@@ -2191,7 +2204,7 @@ def app() -> web.Application:
     victron = VictronStand()
     anwendung.router.add_post("/pc/victron", victron.melden)
     anwendung.router.add_get("/geraet/victron", victron.holen)
-    switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"))
+    switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"), max_bytes=32_768)
     anwendung.router.add_post("/pc/switchbot", switchbot.melden)
     anwendung.router.add_get("/geraet/switchbot", switchbot.holen)
     anwendung.router.add_post("/switchbot/hook/{geheim}", switchbot.webhook)

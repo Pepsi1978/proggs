@@ -523,11 +523,14 @@ def victron_faden() -> None:
                 if sb_log.exists() and sb_log.stat().st_size > 200_000:
                     sb_log.write_text("", "utf-8")
                 with open(sb_log, "a", encoding="utf-8") as fehlerlog:
+                    # Scan bis 30 s + 5 s Nachlauf + Meldung bis 15 s + Start: 65 s reichen sicher.
                     lauf = subprocess.run([sys.executable, str(skript.with_name("jarvis_switchbot.py"))], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                                          stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=50)
-                if lauf.returncode == 0:
+                                          stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=65)
+                # Nur „nichts gehört“ (Exit 3) lohnt einen neuen Scan in der nächsten Minute; andere Fehler (Zugang, Relay) behebt ein Scan nicht.
+                if lauf.returncode != 3:
                     switchbot_gemeldet = time.time()
             except Exception as fehler:
+                switchbot_gemeldet = time.time()
                 schreib(f"SwitchBot: {fehler}")
         time.sleep(max(5, 60 - (time.time() - beginn)))
 

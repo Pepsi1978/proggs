@@ -78,7 +78,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 Text(
                     when {
                         s.laeuft -> "Liest die Sensoren …"
-                        struktur != null -> "Stand ${struktur.optString("abgerufen")} Uhr · SwitchBot-Cloud"
+                        struktur != null -> "Stand ${struktur.optString("abgerufen")} Uhr"
                         else -> "Noch kein Stand"
                     },
                     color = if (s.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),

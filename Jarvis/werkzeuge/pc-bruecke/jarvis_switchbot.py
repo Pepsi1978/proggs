@@ -11,7 +11,7 @@ Format (pySwitchbot adv_parsers/meter.py, Hersteller 0x0969, Nutzdaten nach der 
   0–5 MAC · 8 Bits 3–0 Zehntel °C · 9 Bit 7 Vorzeichen (1 = positiv), Bits 6–0 ganze °C · 10 Bits 6–0 Luftfeuchte %
   nur Meter Pro CO2: 13–14 CO2 ppm (Big Endian, gültig 400–9999).
 
-Aufruf:  python jarvis_switchbot.py          einmal scannen (bis 40 s) und melden; Exit 3 = nichts empfangen
+Aufruf:  python jarvis_switchbot.py          einmal scannen (bis 30 s) und melden; Exit 3 = nichts empfangen
          (die Brücke startet es alle fünf Minuten, nach einem Fehlschlag in der nächsten Minute erneut;
          der Monitor misst ohnehin höchstens alle fünf Minuten neu)
          python jarvis_switchbot.py zeigen   nur scannen und ausgeben, nichts melden
@@ -41,14 +41,15 @@ def auswerten(roh: bytes) -> dict | None:
     mac = roh[0:6].hex()
     # „art“ mit Vorsilbe: Der Relay führt je art den jüngsten Wert; so verdrängt der Mac nie die Webhook-Werte der Cloud (art = MAC).
     werte = {"art": f"mac-{mac}", "mac": mac, "temperatur_c": temperatur, "luftfeuchtigkeit_prozent": feuchte, "zeit": int(time.time())}
-    if len(roh) == 16:
+    # CO2 ab 15 Byte (pySwitchbot); ob das Gerät ein CO2-Monitor ist, entscheidet Jarvis über den Typ aus der Cloud.
+    if len(roh) >= 15:
         co2 = int.from_bytes(roh[13:15], "big")
         if 400 <= co2 <= 9999:
             werte["co2_ppm"] = co2
     return werte
 
 
-async def scannen(sekunden: float = 40.0) -> dict:
+async def scannen(sekunden: float = 30.0) -> dict:
     """Thermometer senden alle paar Sekunden, der Meter Pro CO2 nur alle paar Sekunden bis eine halbe Minute: lauschen, bis der CO2-Monitor
     gehört ist (dann noch 5 s für die übrigen), höchstens [sekunden]."""
     gefunden: dict = {}
