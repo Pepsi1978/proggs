@@ -404,8 +404,11 @@ object Tagesauswertung {
             append("== TAGEBUCH DER LETZTEN 7 TAGE ==\n")
             append(tagebuch.await()).append("\n\n")
 
-            append("== VERÄNDERUNGEN (Franks aktuelle Lebensveränderungen mit Grund) ==\n")
-            append(runCatching { alle.filterIsInstance<de.frank.jarvis.faehigkeit.VeraenderungenFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            // Nur wenn es welche gibt: Ein leerer Abschnitt verleitete das Modell zu erfundenen „nächsten Schritten“.
+            if (de.frank.jarvis.veraenderung.Veraenderungen.sicher(app).isNotEmpty()) {
+                append("== VERÄNDERUNGEN (Franks aktuelle Lebensveränderungen mit Grund) ==\n")
+                append((runCatching { alle.filterIsInstance<de.frank.jarvis.faehigkeit.VeraenderungenFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").take(4_000)).append("\n\n")
+            }
 
             append("== GENIALE IDEEN (offen, gekürzt) ==\n")
             append(ideen.await()).append("\n\n")

@@ -65,29 +65,28 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
                 pflicht = listOf("aktion"),
             ),
             nurLesen = false,
-            taetigkeit = "hält eine Veränderung fest",
         ) { a ->
             when (val aktion = a.optString("aktion")) {
                 "anlegen" -> {
-                    val titel = a.optString("titel").trim()
+                    val titel = a.feld("titel")
                     if (titel.isEmpty()) Ergebnis("Bitte einen titel (Einzeile) mitgeben.", fehler = true)
                     else {
-                        val v = Veraenderungen.anlegen(context, titel, a.optString("beschreibung").trim())
-                        Ergebnis("Veränderung „${v.titel}“ steht unter Veränderungen (aktuell). [id ${v.id}]")
+                        val v = Veraenderungen.anlegen(context, titel, a.feld("beschreibung"))
+                        if (v == null) Ergebnis("Die Veränderung ließ sich nicht speichern.", fehler = true)
+                        else Ergebnis("Veränderung „${v.titel}“ steht unter Veränderungen (aktuell). [id ${v.id}]")
                     }
                 }
                 "erledigt", "zurueck", "aendern", "loeschen" -> {
                     val (v, fehler) = finde(a.optString("veraenderung"))
+                    val nichtDa = Ergebnis("Die Veränderung ließ sich nicht ändern: Sie wurde inzwischen gelöscht, oder das Speichern scheiterte.", fehler = true)
                     fehler ?: when (aktion) {
-                        "erledigt" -> { Veraenderungen.erledigt(context, v!!.id, true); Ergebnis("„${v.titel}“ ist erledigt und liegt unter „Erledigt“.") }
-                        "zurueck" -> { Veraenderungen.erledigt(context, v!!.id, false); Ergebnis("„${v.titel}“ ist wieder aktuell.") }
-                        "loeschen" -> { Veraenderungen.loeschen(context, v!!.id); Ergebnis("„${v.titel}“ ist gelöscht.") }
-                        else -> {
-                            val n = Veraenderungen.aendern(context, v!!.id) {
-                                it.copy(titel = a.optString("titel").trim().ifEmpty { it.titel }, beschreibung = a.optString("beschreibung").trim().ifEmpty { it.beschreibung })
-                            }
-                            Ergebnis("„${n?.titel}“ ist geändert.")
-                        }
+                        "erledigt" -> Veraenderungen.erledigt(context, v!!.id, true)?.let { Ergebnis("„${it.titel}“ ist erledigt und liegt unter „Erledigt“.") } ?: nichtDa
+                        "zurueck" -> Veraenderungen.erledigt(context, v!!.id, false)?.let { Ergebnis("„${it.titel}“ ist wieder aktuell.") } ?: nichtDa
+                        "loeschen" -> Veraenderungen.loeschen(context, v!!.id)?.let { Ergebnis("„${it.titel}“ ist gelöscht.") } ?: nichtDa
+                        else -> if (a.feld("titel").isEmpty() && a.feld("beschreibung").isEmpty()) Ergebnis("Zum Ändern einen neuen titel oder eine neue beschreibung mitgeben.", fehler = true)
+                        else Veraenderungen.aendern(context, v!!.id) {
+                            it.copy(titel = a.feld("titel").ifEmpty { it.titel }, beschreibung = a.feld("beschreibung").ifEmpty { it.beschreibung })
+                        }?.let { Ergebnis("„${it.titel}“ ist geändert.") } ?: nichtDa
                     }
                 }
                 else -> Ergebnis("Unbekannte aktion „$aktion“.", fehler = true)
@@ -95,11 +94,14 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
         },
     )
 
+    /** Textfeld ohne JSON-null (optString gäbe sonst „null“). */
+    private fun org.json.JSONObject.feld(n: String): String = if (has(n) && !isNull(n)) optString(n).trim() else ""
+
     /** Live-Gedächtnis: aktuelle Veränderungen mit Grund, dazu die Zahl der erledigten. */
     fun gedaechtnis(): String {
         val s = Veraenderungen.sicher(context)
         val aktuell = s.filter { !it.erledigt }
-        val erledigt = s.filter { it.erledigt }
+        val erledigt = s.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
         if (s.isEmpty()) return "Noch keine Veränderungen festgehalten."
         return (if (aktuell.isEmpty()) "Keine aktuellen Veränderungen." else aktuell.joinToString("\n") { zeile(it, true).substringBeforeLast(" [id ") }) +
             (if (erledigt.isEmpty()) "" else "\nErledigt (umgesetzt oder nicht mehr verfolgt): " + erledigt.take(10).joinToString("; ") { it.titel } + if (erledigt.size > 10) " …" else "")

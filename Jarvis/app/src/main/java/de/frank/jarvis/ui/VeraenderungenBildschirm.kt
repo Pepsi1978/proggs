@@ -65,7 +65,7 @@ import de.frank.jarvis.ui.theme.knopf3d
 fun VeraenderungenBildschirm(vm: AppViewModel) {
     val context = LocalContext.current
     val alle by Veraenderungen.stand.collectAsState()
-    LaunchedEffect(Unit) { Veraenderungen.sicher(context) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Veraenderungen.sicher(context) } }
     var offenId by rememberSaveable { mutableStateOf<Long?>(null) }
     val offen = offenId?.let { id -> alle.firstOrNull { it.id == id } }
     // Auf dem anderen Gerät gelöscht, während der Eintrag hier offen war: zurück zur Liste.

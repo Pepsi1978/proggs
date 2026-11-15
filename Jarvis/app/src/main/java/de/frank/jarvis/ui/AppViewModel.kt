@@ -1410,25 +1410,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             text.isBlank() -> { meldung = "Erst eine Veränderung eintippen oder einsprechen."; return }
             veraenderungFormuliert -> return
             veraenderungNimmtAuf -> { meldung = "Bitte erst die Aufnahme beenden."; return }
+            schreibtMit -> { meldung = "Jarvis schreibt das Gesprochene noch mit. Bitte gleich noch einmal tippen."; return }
             !modellBereit -> { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
         }
         veraenderungFormuliert = true
         viewModelScope.launch {
             try {
-                val antwort = auth.streamChat(VERAENDERUNG_AUFTRAG, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe)
-                val j = runCatching { org.json.JSONObject("{" + antwort.substringAfter('{').substringBeforeLast('}') + "}") }.getOrNull()
-                val titel = j?.optString("titel").orEmpty().trim()
-                if (titel.isEmpty()) meldung = "Die KI hat nichts Brauchbares geliefert. Dein Text bleibt im Feld."
-                else {
-                    val v = de.frank.jarvis.veraenderung.Veraenderungen.anlegen(getApplication(), titel, j?.optString("beschreibung").orEmpty().trim().ifEmpty { text })
-                    if (veraenderungEntwurf == roh) veraenderungEntwurf = ""
-                    meldung = "„${v.titel}“ steht jetzt unter Veränderungen."
+                val antwort = try {
+                    auth.streamChat(VERAENDERUNG_AUFTRAG, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.modell.normalizeEffort(de.frank.jarvis.auth.ReasoningEffort.LOW))
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    de.frank.jarvis.observability.Logbuch.fehler("Veränderungen", e, "KI-Aufnahme")
+                    meldung = "Die KI war nicht erreichbar. Dein Text bleibt im Feld."
+                    return@launch
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                de.frank.jarvis.observability.Logbuch.fehler("Veränderungen", e, "KI-Aufnahme")
-                meldung = "Die KI war nicht erreichbar. Dein Text bleibt im Feld."
+                val j = antwort.indexOf('{').takeIf { it >= 0 }?.let { a -> runCatching { org.json.JSONObject(antwort.substring(a, antwort.lastIndexOf('}') + 1)) }.getOrNull() }
+                fun feld(n: String) = j?.takeIf { it.has(n) && !it.isNull(n) }?.optString(n).orEmpty().trim()
+                val titel = feld("titel")
+                when {
+                    titel.isEmpty() -> meldung = "Die KI hat nichts Brauchbares geliefert. Dein Text bleibt im Feld."
+                    // Während die KI formulierte, kam Text dazu: nichts aus dem alten Stand anlegen, sonst entstünde beim nächsten Senden ein Doppel.
+                    veraenderungEntwurf != roh -> meldung = "Der Text hat sich geändert. Bitte noch einmal senden."
+                    else -> {
+                        val v = withContext(Dispatchers.IO) { de.frank.jarvis.veraenderung.Veraenderungen.anlegen(getApplication(), titel, feld("beschreibung").ifEmpty { text }) }
+                        if (v == null) meldung = "Die Veränderung ließ sich nicht speichern. Dein Text bleibt im Feld."
+                        else { veraenderungEntwurf = ""; meldung = "„${v.titel}“ steht jetzt unter Veränderungen." }
+                    }
+                }
             } finally {
                 veraenderungFormuliert = false
             }
@@ -1888,6 +1897,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (holtMikro) {
             // Ein anderer Start („Hey Jarvis“, Gesprächsmodus) ist schneller: Die Antwort-Aufnahme fängt nicht an und hängt nicht.
             if (antwortDiktatFeld != null) { antwortDiktatFeld = null; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
+            if (veraenderungDiktat) { veraenderungDiktat = false; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
             return
         }
         // Eine diktierte Antwort auf die Rückfrage beendet das dafür angehaltene Vorlesen nicht.
@@ -2075,7 +2085,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
         FunktionenAnsicht.offen = false
-        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null
+        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; veraenderungDiktat = false
         vorleser.stopp()
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
@@ -3875,7 +3885,7 @@ private const val PROMPT_KORREKTUR =
         "und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. Absätze oder Aufzählungen " +
         "nur, wenn sie den Auftrag klarer machen. Der Text ist genau ein Abschnitt: Trenne Sätze mit Punkten, nicht mit Semikolons. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
-/** Auftrag an das Modell für die KI-Glättung einer eigenen Antwort auf eine Rückfrage der Programmier-Sitzung. */
+/** Auftrag an das Modell: aus Franks Worten Einzeile und Beschreibung einer Veränderung (JSON). */
 private val VERAENDERUNG_AUFTRAG =
     "Frank hält eine wichtige Veränderung in seinem Leben fest; er hat sie eingesprochen oder eingetippt. Mach daraus einen Eintrag für seine Liste „Veränderungen“: " +
         "titel = kurze Einzeile mit höchstens 7 Wörtern, die die Veränderung benennt (etwa „Mit dem Sonnenaufgang aufstehen“); " +
@@ -3883,6 +3893,7 @@ private val VERAENDERUNG_AUFTRAG =
         "berichtige Hörfehler der Spracherkennung, lass Füllwörter und Aufforderungen an Jarvis („nimm auf …“) weg. ${Merkdatei.KNAPP} " +
         "Antworte nur mit JSON: {\"titel\": \"…\", \"beschreibung\": \"…\"}"
 
+/** Auftrag an das Modell für die KI-Glättung einer eigenen Antwort auf eine Rückfrage der Programmier-Sitzung. */
 private const val ANTWORT_KORREKTUR =
     "Du bringst Franks Antwort auf eine Rückfrage seiner Programmier-Sitzung in gutes Deutsch. Frank hat sie eingesprochen oder eingetippt. " +
         "Erfasse den Inhalt sinngemäß und schreibe ihn als klare, für sich allein verständliche Antwort an den Programmierer. Behalte jeden inhaltlichen Punkt, " +

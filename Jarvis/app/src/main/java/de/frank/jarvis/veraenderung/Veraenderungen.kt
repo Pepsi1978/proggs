@@ -73,33 +73,46 @@ object Veraenderungen {
         runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.VERAENDERUNGEN), anlass) }
     }
 
-    private fun schreibe(context: Context, v: Veraenderung): Veraenderung {
+    /**
+     * Lesen, Ändern und Schreiben in einem Zug unter der Sperre: Der Stand kommt aus der Datei (der Abgleich kann sie eben ersetzt
+     * haben, bevor [neuLaden] lief), sonst aus dem Speicher. Erst die Datei, dann der Speicher; ein Schreibfehler ergibt null statt Absturz.
+     * Unverändert (ohne Zeitstempel) wird nichts geschrieben, sonst schlüge eine neue Zeit jüngere Änderungen des anderen Geräts.
+     */
+    private fun schreibe(context: Context, id: Long, neuAnlegen: Veraenderung? = null, aendern: (Veraenderung) -> Veraenderung): Veraenderung? {
         val app = context.applicationContext
         sicher(app)
-        val n = v.copy(geaendert = System.currentTimeMillis())
+        val ergebnis: Veraenderung
         synchronized(sperre) {
+            val ziel = File(ordner(app), "v_$id.json")
+            val alt = neuAnlegen ?: (runCatching { aus(JSONObject(ziel.readText())) }.getOrNull() ?: alle[id])?.takeIf { !it.geloescht } ?: return null
+            val neu = aendern(alt)
+            if (neuAnlegen == null && neu.copy(geaendert = 0) == alt.copy(geaendert = 0)) { alle[id] = alt; veroeffentlichen(); return alt }
+            val n = neu.copy(geaendert = System.currentTimeMillis())
+            try {
+                val teil = File(ziel.path + ".teil")
+                teil.writeText(json(n).toString())
+                if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" } }
+            } catch (e: Exception) {
+                Logbuch.fehler("Veränderungen", e, "Speichern")
+                return null
+            }
             alle[n.id] = n
-            val ziel = File(ordner(app), "v_${n.id}.json")
-            val teil = File(ziel.path + ".teil")
-            teil.writeText(json(n).toString())
-            if (!teil.renameTo(ziel)) { ziel.delete(); teil.renameTo(ziel) }
             veroeffentlichen()
+            ergebnis = n
         }
         runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
         auffrischen(app, "Veränderungen geändert")
-        return n
+        return ergebnis
     }
 
     fun finde(context: Context, id: Long): Veraenderung? = sicher(context).firstOrNull { it.id == id }
 
-    fun anlegen(context: Context, titel: String, beschreibung: String): Veraenderung =
-        schreibe(context, Veraenderung(neueId(), titel.trim(), beschreibung.trim()))
-
-    fun aendern(context: Context, id: Long, aendern: (Veraenderung) -> Veraenderung): Veraenderung? {
-        val alt = finde(context, id) ?: return null
-        val neu = aendern(alt)
-        return if (neu == alt) alt else schreibe(context, neu)
+    fun anlegen(context: Context, titel: String, beschreibung: String): Veraenderung? {
+        val v = Veraenderung(neueId(), titel.trim(), beschreibung.trim())
+        return schreibe(context, v.id, neuAnlegen = v) { it }
     }
+
+    fun aendern(context: Context, id: Long, aendern: (Veraenderung) -> Veraenderung): Veraenderung? = schreibe(context, id, aendern = aendern)
 
     fun erledigt(context: Context, id: Long, erledigt: Boolean): Veraenderung? =
         aendern(context, id) { if (it.erledigt == erledigt) it else it.copy(erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else 0L) }
@@ -113,7 +126,7 @@ object Veraenderungen {
         val t = glatt(text)
         if (t.isEmpty()) return emptyList()
         s.filter { glatt(it.titel) == t }.takeIf { it.isNotEmpty() }?.let { return it }
-        return s.filter { glatt(it.titel).contains(t) || t.contains(glatt(it.titel)) || glatt(it.beschreibung).contains(t) }
+        return s.filter { v -> val g = glatt(v.titel); (g.isNotEmpty() && (g.contains(t) || t.contains(g))) || glatt(v.beschreibung).contains(t) }
     }
 
     private fun glatt(s: String) = s.lowercase().replace(Regex("[^\\p{L}\\p{N} ]"), " ").replace(Regex("\\s+"), " ").trim()
