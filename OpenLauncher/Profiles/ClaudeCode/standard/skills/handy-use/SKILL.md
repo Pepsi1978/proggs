@@ -11,7 +11,7 @@ Beim ersten Aufruf legt das Skript einen kleinen Helfer nach `/data/local/tmp/ha
 
 ## Aufruf
 
-`H` steht für `python <Skill-Ordner>/scripts/handy.py` (auf macOS und dem Server `python3`).
+`H` steht für `python <Skill-Ordner>/scripts/handy.py` (auf macOS und dem Server `python3`). In zsh (Mac) als Funktion anlegen, `H="python3 …"; $H` scheitert dort (keine Wortzerlegung): `H() { python3 <Skill-Ordner>/scripts/handy.py "$@"; }`.
 
 ```
 H tree                  nummerierter UI-Baum, IMMER der erste Schritt
