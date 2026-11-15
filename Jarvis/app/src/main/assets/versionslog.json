@@ -743,6 +743,7 @@
     {"versionCode": 735, "versionName": "1.8.724", "stand": "15.11.2026, 21:16 Uhr", "notiz": "Dritte gründliche Prüfung des Live-Gedächtnisses: Deine Entscheidungen im Lernbericht bleiben verlässlich bestehen, Fehlerläufe wiederholen sich nicht mehr jede Minute, und beim Abgleich gewinnt deine eigene Fassung."},
     {"versionCode": 736, "versionName": "1.8.725", "stand": "15.11.2026, 21:17 Uhr", "notiz": "Atemübung: Die Schalter Vorlesen und Atem stehen jetzt unten unter der Animation, und die Sätze entstehen erst während der Übung, jeweils einer im Voraus, sodass auch lange Übungen sofort beginnen."},
     {"versionCode": 737, "versionName": "1.8.726", "stand": "15.11.2026, 21:23 Uhr", "notiz": "Atemübung: Schalter und Bedienung liegen sicher unter der Animation, das Atemgeräusch ist deutlich leiser als die Stimme und schwillt wie echter Atem an und ab."},
-    {"versionCode": 738, "versionName": "1.8.727", "stand": "15.11.2026, 21:28 Uhr", "notiz": "Veränderungen: Einträge unter „Aktuell“ lassen sich per langem Drücken weich verschieben, die Reihenfolge bleibt gespeichert und gilt auch auf dem Tablet."}
+    {"versionCode": 738, "versionName": "1.8.727", "stand": "15.11.2026, 21:28 Uhr", "notiz": "Veränderungen: Einträge unter „Aktuell“ lassen sich per langem Drücken weich verschieben, die Reihenfolge bleibt gespeichert und gilt auch auf dem Tablet."},
+    {"versionCode": 739, "versionName": "1.8.728", "stand": "15.11.2026, 21:29 Uhr", "notiz": "Einstellungen: Die Bereiche oben stehen jetzt alphabetisch sortiert wie in der Ablage."}
 ]
 }

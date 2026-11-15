@@ -101,7 +101,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
     ) {
         Text("Einstellungen", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
 
-        // Reiter: Die vielen Bereiche nach Themen gebündelt, damit nicht alles in einer langen Liste steht.
+        // Reiter: Die vielen Bereiche nach Themen gebündelt, damit nicht alles in einer langen Liste steht; alphabetisch wie in der Ablage.
         // Im ViewModel: Ein Neustart durch ein Update öffnet denselben Bereich wieder, eine normale Rückkehr beginnt bei „Jarvis“.
         var reiter by vm::einstellungsReiter
         // Zurück-Geste führt durch die zuvor geöffneten Bereiche bis „Jarvis“; erst von dort geht es zum vorherigen App-Reiter.
@@ -111,7 +111,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "biomarker" to "Biomarker", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "archiv" to "Archiv", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "tools" to "Eigene Tools", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "biomarker" to "Biomarker", "konten" to "Konten und APIs", "guthaben" to "Guthaben", "kontingente" to "Kontingente", "archiv" to "Archiv", "system" to "System").sortedWith { x, y -> java.text.Collator.getInstance(java.util.Locale.GERMAN).compare(x.second, y.second) }.forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
