@@ -53,7 +53,7 @@ private object RaumklimaStartStand {
 }
 
 /**
- * Startbereich „Raumklima“: Temperatur und Luftfeuchtigkeit der SwitchBot-Sensoren, frisch über das Internet aus der SwitchBot-Cloud
+ * Startbereich „Raumklima“: Temperatur, Luftfeuchtigkeit und beim CO2-Monitor CO2 der SwitchBot-Sensoren, frisch über das Internet aus der SwitchBot-Cloud
  * (also auch unterwegs), mit Aktualisieren-Knopf. Nicht erreichbare Sensoren stehen mit Grund statt mit Werten da.
  */
 @Composable
@@ -96,7 +96,8 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 Text(z.optString("name"), color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
-                    String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")),
+                    String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")) +
+                        (if (z.has("co2_ppm")) " · ${z.optInt("co2_ppm")} ppm CO2" else ""),
                     color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                 )
             }

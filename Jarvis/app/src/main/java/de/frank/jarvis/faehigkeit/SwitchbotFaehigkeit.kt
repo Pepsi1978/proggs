@@ -23,7 +23,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Franks SwitchBot-Thermo-Hygrometer (Balkon, Wohnzimmer, Schlafzimmer), per Bluetooth am Hub Mini, der sie in die SwitchBot-Cloud meldet.
+ * Franks SwitchBot-Sensoren (Balkon, Wohnzimmer, Schlafzimmer, Auto und der CO2-Monitor Meter Pro CO2 in der Wohnung), per Bluetooth am Hub Mini, der sie in die SwitchBot-Cloud meldet.
  * Nur Lesen über die offizielle Cloud-API v1.1 (GET /devices, GET /devices/{id}/status), signiert mit Token und Secret aus
  * Einstellungen → Konten und APIs (HMAC-SHA256 über Token + Zeit + Nonce, Base64, Großbuchstaben).
  * Messwerte bewusst ohne Zwischenspeicher: Ist der Hub oder ein Sensor offline (Status 161/171) oder liefert er keine Werte, meldet Jarvis das
@@ -33,10 +33,12 @@ import org.json.JSONObject
 class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "switchbot"
     override val name = "Raumklima"
-    override val beschreibung = "Temperatur und Luftfeuchtigkeit der SwitchBot-Sensoren in Franks Wohnung (Balkon, Wohnzimmer, Schlafzimmer)."
+    override val beschreibung = "Temperatur, Luftfeuchtigkeit und CO2 der SwitchBot-Sensoren (Balkon, Wohnzimmer, Schlafzimmer, Auto, CO2-Monitor in der Wohnung)."
     override val hinweise =
-        "Fragt Frank nach Temperatur oder Luftfeuchtigkeit in seiner Wohnung, auf dem Balkon, im Wohn- oder Schlafzimmer („Wie warm ist es im Schlafzimmer?“), " +
-            "nutze raumklima_lesen. Nenne je Sensor Name, Temperatur, Luftfeuchtigkeit und die Abrufzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
+        "Fragt Frank nach Temperatur, Luftfeuchtigkeit oder CO2 in seiner Wohnung, auf dem Balkon, im Wohn- oder Schlafzimmer oder im Auto („Wie warm ist es im Schlafzimmer?“, " +
+            "„Wie ist der CO2-Wert in der Wohnung?“, „Wie warm ist es im Auto?“), nutze raumklima_lesen. Der Sensor „Auto“ liegt in Franks Auto, nicht in der Wohnung. " +
+            "Der CO2-Wert kommt vom Sensor „CO2-Monitor“ in der Wohnung (co2_ppm): ordne ihn ein, unter 800 ppm gut, 800 bis 1000 in Ordnung, 1000 bis 1400 lüften, darüber dringend lüften. " +
+            "Nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
             "sag das genau so und nenne für ihn keine Werte. Steht ein Raum unter nicht_im_konto, gibt es im SwitchBot-Konto keinen Sensor mit diesem Namen: " +
             "sag das und rate keine Werte (ähnlich benannte Sensoren nennen, z. B. Tippfehler). Für das Wetter draußen bleibt wetter_lesen zuständig."
 
@@ -49,16 +51,16 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "raumklima_lesen",
             titel = "Raumklima lesen",
-            beschreibung = "Liest jetzt frisch aus der SwitchBot-Cloud Temperatur (°C) und Luftfeuchtigkeit (%) von Franks SwitchBot-Sensoren " +
-                "(Balkon, Wohnzimmer, Schlafzimmer), je mit Name und Abrufzeit. Nicht erreichbare Sensoren oder ein Hub offline werden gemeldet, nie alte Werte. Nur Lesen.",
-            schema = schema("sensor" to text("Optional: Name eines einzelnen Sensors, z. B. Balkon. Für alle Sensoren weglassen.")),
+            beschreibung = "Liest jetzt frisch aus der SwitchBot-Cloud Temperatur (°C), Luftfeuchtigkeit (%) und beim CO2-Monitor den CO2-Wert (ppm) von Franks SwitchBot-Sensoren " +
+                "(Balkon, Wohnzimmer, Schlafzimmer, Auto, CO2-Monitor in der Wohnung), je mit Name und Abrufzeit. Nicht erreichbare Sensoren oder ein Hub offline werden gemeldet, nie alte Werte. Nur Lesen.",
+            schema = schema("sensor" to text("Optional: Name eines einzelnen Sensors, z. B. Balkon, Auto oder CO2-Monitor. Für alle Sensoren weglassen.")),
             nurLesen = true,
             taetigkeit = "liest die Raumsensoren",
         ) { eingabe -> abrufen(eingabe.optString("sensor").trim()) },
     )
 
     /** Ergebnis eines Sensors: Werte oder ein verständlicher Grund, warum es keine gibt. */
-    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val problem: String? = null)
+    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val co2: Int? = null, val problem: String? = null)
 
     /** Geräteliste (nur Namen und Kennungen, keine Messwerte) mit Abrufzeit. */
     @Volatile private var liste: Pair<Long, List<JSONObject>>? = null
@@ -108,14 +110,14 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}"
-            else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.batterie?.let { ", Batterie $it %" } ?: "")
+            else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.co2?.let { ", CO2 $it ppm" } ?: "") + (z.batterie?.let { ", Batterie $it %" } ?: "")
         }
         val vorweg = if (nur.isNotEmpty() && !einzeln) "Einen Sensor „$nur“ gibt es nicht, hier alle.\n" else ""
         val text = vorweg + "Abgerufen um $uhr Uhr aus der SwitchBot-Cloud (sie nennt keine eigene Messzeit):\n" + zeilen.joinToString("\n")
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
             JSONObject().put("name", z.name).put("typ", z.typ).apply {
                 if (z.problem != null) put("problem", z.problem)
-                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.batterie?.let { put("batterie_prozent", it) } }
+                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.batterie?.let { put("batterie_prozent", it) } }
             }
         })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)) }
         Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)
@@ -135,7 +137,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val temperatur = body.wert("temperature")
         val feuchte = body.wert("humidity")
         if (temperatur == null || feuchte == null) return Sensor(name, typ, problem = "nicht erreichbar, die Cloud liefert gerade keine Messwerte.")
-        return Sensor(name, typ, temperatur, feuchte, body.wert("battery")?.toInt())
+        // Meter Pro CO2 meldet zusätzlich „CO2“ in ppm.
+        val co2 = (body.wert("CO2") ?: body.wert("co2"))?.toInt()
+        return Sensor(name, typ, temperatur, feuchte, body.wert("battery")?.toInt(), co2)
     }
 
     private class Problem(text: String) : Exception(text)
@@ -193,10 +197,10 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     companion object {
-        /** Thermo-Hygrometer: Meter, MeterPlus, MeterPro, WoIOSensor (Außensensor). Hubs zählen nicht als Sensor. */
+        /** Thermo-Hygrometer: Meter, MeterPlus, MeterPro, MeterPro(CO2), WoIOSensor (Außensensor). Hubs zählen nicht als Sensor. */
         private val SENSORTYP = Regex("meter|iosensor", RegexOption.IGNORE_CASE)
-        /** Franks Sensoren laut ihm (Auftrag 13.11.2026); fehlt einer in der gespeicherten Liste, holt der Abruf sie frisch. */
-        private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer")
+        /** Franks Sensoren laut ihm (Aufträge 13.11. und 15.11.2026); fehlt einer in der gespeicherten Liste, holt der Abruf sie frisch. */
+        private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer", "Auto", "CO2-Monitor")
         private const val LISTE_GILT_MS = 60 * 60 * 1000L
         private const val NEU_HOLEN_AB_MS = 60 * 1000L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
