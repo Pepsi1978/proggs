@@ -95,9 +95,27 @@ def freigeben(d, neu, grund):
                                              "permissionDecisionReason": grund, "updatedInput": neu}}))
 
 
+def nur_shell(cmd):
+    """Alle Heredoc-Inhalte entfernen, die nicht an eine Shell gehen (python, node, cat …): Das sind Daten, keine Shell-Befehle.
+    Fehlalarm vom 15.11.2026: Ein python-Heredoc mit dem Text einer pgrep-Schleife wurde als Schleife geblockt."""
+    teile, rest = [], cmd
+    while True:
+        m = re.search(r"<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?[^\n]*\n", rest)
+        if not m:
+            return ''.join(teile) + rest
+        ende = re.search(r'(?m)^\s*' + re.escape(m.group(1)) + r'\s*$', rest[m.end():])
+        zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.start()]
+        teile.append(rest[:m.end()])
+        if not ende:
+            return ''.join(teile) + rest[m.end():]
+        if re.search(r'\b(bash|sh|zsh)\b', zeile):
+            teile.append(rest[m.end():m.end() + ende.end()])
+        rest = rest[m.end() + ende.end():]
+
+
 def warte_schleife(cmd):
     """pgrep -f in einer until/while-Schleife (auch mehrzeilig), dessen Muster im eigenen Befehl steht; gleicher Parser wie selbstmord()."""
-    cmd = ohne_heredoc(cmd)
+    cmd = nur_shell(cmd)
     for m in PKILL.finditer(cmd):
         if m.group(1) != 'pgrep' or not re.search(r'\s-\w*f|--full', m.group(2) or ''):
             continue
@@ -114,7 +132,7 @@ def ohne_aliase(cmd):
     """ls/cat/tree/ll als Befehl -> Aliase dieser Shell vorher aufheben (wirkt auch in Sitzungen mit altem Schnappschuss)."""
     import datetime
     if os.name == 'nt' or datetime.date.today() > datetime.date(*ALIAS_BIS) or cmd.lstrip().startswith('unalias ls cat tree') \
-            or not ALIAS_BEFEHL.search(ohne_heredoc(cmd)):
+            or not ALIAS_BEFEHL.search(nur_shell(cmd)):
         return cmd
     # Aliase werden beim Einlesen ersetzt: Ein unalias im selben Befehl wirkte nicht mehr. Deshalb der eigentliche Befehl erst
     # über ein inneres eval, das nach dem unalias eingelesen wird.

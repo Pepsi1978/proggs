@@ -565,6 +565,61 @@
       "pruefung": "Nach 10 Mac-/Server-Sitzungen: keine Treffer von fehler_regex",
       "ruecknahme": "git update-index --chmod=-x auf die gradlew-Dateien, Eintrag entfernen",
       "kosten": "kein Kontext"
+    },
+    {
+      "id": "M33",
+      "titel": "Vordergrund-Zeitlimit höchstens 60 s, danach sichtbarer Minutentakt",
+      "datum": "2026-11-15T12:11",
+      "beleg": "Sitzung 12d87da4 (Mac): drei Befehle liefen je 10 min ins Zeitlimit (30 min), der Bau selbst brauchte unter 1 min",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (mit_zeitlimit)",
+        "Werkzeuge/lauf-waechter/minute.py",
+        "Profilregel 24/18 in allen sources und AGENTS.md"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "did not complete within its [1-9]\\d{2,}s timeout",
+      "aufruf_regex": ".",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Sitzungen: keine Zeitlimit-Meldung über 99 s",
+      "ruecknahme": "mit_zeitlimit-Aufrufe im Hook entfernen, Regel aus den Profilen streichen",
+      "kosten": "eine Profilregel"
+    },
+    {
+      "id": "M34",
+      "titel": "Warteschleife, die sich per Prozesssuche selbst findet, wird geblockt",
+      "datum": "2026-11-15T12:11",
+      "beleg": "Sitzung 12d87da4: Warteschleife auf den Gradle-Prozess fand die eigene Shell, 10 min Zeitlimit",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py (warte_schleife, nur_shell)"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "Warte-Schleife arbeitet falsch",
+      "aufruf_regex": "\\b(until|while)\\b",
+      "fehler_am_aufruf": true,
+      "pruefung": "Nach 10 Sitzungen: keine 10-min-Läufe mit Warteschleifen; Fehlalarme (Blocks ohne echte Schleife) prüfen",
+      "ruecknahme": "warte_schleife-Aufruf im Hook entfernen",
+      "kosten": "kein Kontext"
+    },
+    {
+      "id": "M35",
+      "titel": "Komfort-Aliase (ls→eza, cat→bat) nur im echten Terminal",
+      "datum": "2026-11-15T12:11",
+      "beleg": "Sitzung 12d87da4 (Mac): ls -t <apk> | head -1 hing 30 min (eza -t frisst den Pfad, wartet auf stdin)",
+      "ort": [
+        "~/.zshrc (Mac, lokal)",
+        "claude-code-setup/hooks/build-ablauf-guard.py (ohne_aliase, bis 22.11.2026)",
+        "bugs/werkzeuge/agenten-shell-aliase.md"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "did not complete within its \\d+s timeout",
+      "aufruf_regex": "(^|[;&|]\\s*)ls\\s+-\\w*t",
+      "auch_ohne_fehlerstatus": true,
+      "plattform": [
+        "mac"
+      ],
+      "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t",
+      "ruecknahme": "if-Block in ~/.zshrc zurück auf die vier alias-Zeilen",
+      "kosten": "kein Kontext"
     }
   ]
 }
