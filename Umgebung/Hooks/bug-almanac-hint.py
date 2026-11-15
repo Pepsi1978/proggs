@@ -23,6 +23,7 @@ import tempfile
 
 # almanach-relpath -> (Anzeigename, [Mehrwort-/eindeutige Stichwoerter, lowercase])
 AREAS = {
+    "peripherie/switchbot": ("SwitchBot Cloud-API und Bluetooth", ["switchbot", "switch bot", "switch-bot", "meter pro", "meter-pro", "co2-monitor", "co2 monitor", "hub mini", "hub-mini"]),
     "peripherie/huawei-watchface": ("Huawei-Zifferblätter (.hwt)", ["huawei watch", "huawei-watch", "zifferblatt", "watchface", "watch face", "watch-face", ".hwt", "theme studio", "theme-studio"]),
     "opencode/opencode-cli":        ("OpenCode CLI: Modellpreise", ["opencode preise", "opencode-preise", "tui preise", "tui-preise", "tui preis", "tui-preis", "token-cost-sidebar", "gpt-6.1-sol", "gpt 6.1 sol"]),
     "web/chrome-extensions":        ("Chrome-Erweiterungen", ["manifest v3", "manifest_version", "chrome extension", "chrome-erweiterung", "content script", "service worker", "chrome.storage", "chrome.runtime"]),
