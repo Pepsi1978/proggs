@@ -1,12 +1,15 @@
-"""Liest Franks SwitchBot Meter Pro CO2 per Bluetooth (passiv, ohne Pairing) und meldet den Stand an den Relay.
+"""Liest Franks SwitchBot-Sensoren (Thermometer, Außensensoren, Meter Pro CO2) per Bluetooth (passiv, ohne Pairing) und meldet den Stand an den Relay.
 
 Warum: Der Hub Mini reicht den CO2-Monitor nicht in die SwitchBot-Cloud weiter (die Cloud liefert nur Nullen, 15.11.2026).
 Der Mac zu Hause hört die Werbepakete mit; Jarvis fragt unterwegs den Relay (GET /geraet/switchbot), den dieses Skript füllt
 (POST /pc/switchbot). Jarvis ordnet die Werte über die MAC zu, die zugleich die deviceId in der SwitchBot-Cloud ist.
 
-Format (pySwitchbot adv_parsers/meter.py, Hersteller 0x0969, Nutzdaten nach der Company-ID, 16 Byte beim Meter Pro CO2):
+Rückfall für alle Sensoren, wenn die Cloud ausfällt oder alte Werte liefert (Frank, 15.11.2026). Gemeldet wird jeder gehörte
+SwitchBot-Sensor; Jarvis nimmt nur die, deren MAC eine deviceId in Franks Konto ist (fremde Geräte in Reichweite fallen dort weg).
+
+Format (pySwitchbot adv_parsers/meter.py, Hersteller 0x0969, Nutzdaten nach der Company-ID; mindestens 11 Byte, 16 beim Meter Pro CO2):
   0–5 MAC · 8 Bits 3–0 Zehntel °C · 9 Bit 7 Vorzeichen (1 = positiv), Bits 6–0 ganze °C · 10 Bits 6–0 Luftfeuchte %
-  13–14 CO2 ppm (Big Endian, gültig 400–9999).
+  nur Meter Pro CO2: 13–14 CO2 ppm (Big Endian, gültig 400–9999).
 
 Aufruf:  python jarvis_switchbot.py          einmal scannen (bis 40 s) und melden; Exit 3 = nichts empfangen
          (die Brücke startet es alle fünf Minuten, nach einem Fehlschlag in der nächsten Minute erneut;
@@ -27,22 +30,26 @@ WOAN = 0x0969
 
 
 def auswerten(roh: bytes) -> dict | None:
-    if len(roh) != 16:
+    if len(roh) < 11:
         return None
     zehntel = roh[8] & 0x0F
     ganz = roh[9] & 0x7F
     temperatur = round((ganz + zehntel / 10) * (1 if roh[9] & 0x80 else -1), 1)
     feuchte = roh[10] & 0x7F
-    co2 = int.from_bytes(roh[13:15], "big")
-    if not 400 <= co2 <= 9999 or not 0 < feuchte <= 100 or not -30 <= temperatur <= 60:
+    if not 0 < feuchte <= 100 or not -40 <= temperatur <= 70:
         return None
     mac = roh[0:6].hex()
-    return {"art": mac, "mac": mac, "temperatur_c": temperatur, "luftfeuchtigkeit_prozent": feuchte, "co2_ppm": co2,
-            "zeit": int(time.time())}
+    werte = {"art": mac, "mac": mac, "temperatur_c": temperatur, "luftfeuchtigkeit_prozent": feuchte, "zeit": int(time.time())}
+    if len(roh) == 16:
+        co2 = int.from_bytes(roh[13:15], "big")
+        if 400 <= co2 <= 9999:
+            werte["co2_ppm"] = co2
+    return werte
 
 
 async def scannen(sekunden: float = 40.0) -> dict:
-    """Der Meter Pro CO2 sendet nur alle paar Sekunden bis eine halbe Minute ein Messpaket: lange lauschen, beim ersten Treffer aufhören."""
+    """Thermometer senden alle paar Sekunden, der Meter Pro CO2 nur alle paar Sekunden bis eine halbe Minute: lauschen, bis der CO2-Monitor
+    gehört ist (dann noch 5 s für die übrigen), höchstens [sekunden]."""
     gefunden: dict = {}
     fertig = asyncio.Event()
 
@@ -53,11 +60,13 @@ async def scannen(sekunden: float = 40.0) -> dict:
         werte = auswerten(bytes(roh))
         if werte:
             gefunden[werte["mac"]] = werte
-            fertig.set()
+            if "co2_ppm" in werte:
+                fertig.set()
 
     async with BleakScanner(detection_callback=paket):
         try:
             await asyncio.wait_for(fertig.wait(), sekunden)
+            await asyncio.sleep(5)
         except asyncio.TimeoutError:
             pass
     return gefunden

@@ -131,7 +131,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             gewaehlt.zip(ausCloud).map { (g, z) ->
                 val id = g.optString("deviceId").lowercase(Locale.ROOT)
                 val direkt = nah[id]?.takeIf { z.problem != null || istMobil(g) }?.let { ausPaket(z, it, "direkt per Bluetooth") }
-                direkt ?: if (z.problem == null) z else vomMac(z, id, fern) ?: z
+                // Die Cloud nennt kein Messalter und liefert bei ausgestecktem Hub alte Werte ohne Fehler (15.11.2026): Ein höchstens
+                // [FRISCH_S] alter, gemessener Wert vom Mac oder Webhook geht ihr deshalb vor; sonst Cloud, sonst ein älterer Rückfallwert.
+                direkt ?: vomMac(z, id, fern, FRISCH_S) ?: if (z.problem == null) z else vomMac(z, id, fern, MAC_GILT_S) ?: z
             }
         }
         // Ein Problem kann an einer veralteten Liste liegen (Gerät getauscht, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
@@ -193,10 +195,10 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Werte vom Mac zu Hause, wenn er den Sensor in den letzten [MAC_GILT_S] gehört hat; sonst null (das Cloud-Problem bleibt stehen). */
-    private fun vomMac(z: Sensor, deviceId: String, fern: Map<String, JSONObject>): Sensor? {
+    private fun vomMac(z: Sensor, deviceId: String, fern: Map<String, JSONObject>, hoechstens: Long): Sensor? {
         val w = fern[deviceId.lowercase(Locale.ROOT)] ?: return null
         val alter = System.currentTimeMillis() / 1000 - w.optLong("zeit")
-        if (alter > MAC_GILT_S) return null
+        if (alter > hoechstens) return null
         val t = w.wert("temperatur_c") ?: return null
         val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
         val uhr = java.time.Instant.ofEpochSecond(w.optLong("zeit")).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
@@ -336,6 +338,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         /** Der Mac meldet alle fünf Minuten, der Webhook bei jeder Änderung; älter als 40 Minuten gilt nicht mehr als aktuell
          *  (mit Batterie misst der CO2-Monitor nur alle 30 Minuten). */
         private const val MAC_GILT_S = 40 * 60L
+        /** So frisch gemessen geht ein Wert vom Mac oder Webhook der Cloud vor (Mac meldet alle fünf Minuten). */
+        private const val FRISCH_S = 10 * 60L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private const val WOAN = 0x0969
