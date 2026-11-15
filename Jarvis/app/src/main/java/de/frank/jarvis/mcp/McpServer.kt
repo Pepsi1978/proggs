@@ -78,7 +78,9 @@ class McpServer(context: Context) {
             val marke = "STAND-MARKE: $beginn (für jarvis_kontext seit=$beginn)"
             when {
                 gewaehlt.isNotEmpty() -> Ergebnis(Lagebild.bereiche(app, gewaehlt) + "\n\n" + marke)
-                seit != null -> Ergebnis(Lagebild.seit(app, seit) + "\n\n" + vorgangsBlock(app).let { if (it.isEmpty()) "" else "$it\n\n" } + marke)
+                // Die Marke erst nach dem eigenen Auffrischen setzen: Sonst gälte, was dabei als geändert erkannt wurde, beim nächsten Abruf noch einmal als neu.
+                seit != null -> Lagebild.seit(app, seit).let { t -> val nach = System.currentTimeMillis()
+                    Ergebnis(t + "\n\n" + vorgangsBlock(app).let { if (it.isEmpty()) "" else "$it\n\n" } + "STAND-MARKE: $nach (für jarvis_kontext seit=$nach)") }
                     // Die Neuigkeiten sind damit geliefert: nicht noch einmal an das nächste Ergebnis hängen, keine falsche GESAMTBILD-Mahnung.
                     .also { Gehirn.zuletztNachgereicht = beginn }
                 else -> {

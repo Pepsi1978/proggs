@@ -288,6 +288,8 @@ open class Merkdatei(
         if (regel.id <= 0) return null
         val vorher = lies(context)
         if (vorher.defekt != null) return null
+        // Steht derselbe Text schon unter einer anderen id (später neu gelernt), nicht doppelt anlegen: der vorhandene Eintrag gilt.
+        vorher.eintraege.firstOrNull { it.id != regel.id && it.text.equals(regel.text, ignoreCase = true) }?.let { return it }
         val belegt = vorher.eintraege.firstOrNull { it.id == regel.id }
         val gleich = belegt != null && belegt.text == regel.text
         if (!gleich && vorher.eintraege.size >= hoechstens) return null

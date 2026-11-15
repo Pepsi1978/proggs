@@ -314,7 +314,8 @@ class JarvisAgent(context: Context) {
                         val zugZeichen = zuege.sumOf { it.text.length }
                         val gesendet = anweisungText.length + zugZeichen
                         // Bilder tragen Tokens ohne Zeichen: Mit Bildern höchstens so viel, wie die Gedächtniszeichen selbst ergeben (gut 3,5 Zeichen je Token).
-                        val gedaechtnisZeichen = gesamtbild.length + minOf(nachgeladenZeichen.get(), zugZeichen)
+                        // Nachgeladenes höchstens so viel, wie die Werkzeugergebnisse nach dem Kürzen älterer noch enthalten.
+                        val gedaechtnisZeichen = gesamtbild.length + minOf(nachgeladenZeichen.get(), ergebnisZuege.sumOf { i -> zuege.getOrNull(i)?.text?.length ?: 0 })
                         val obergrenze = if (zuege.any { it.bilder.isNotEmpty() }) (gedaechtnisZeichen / 3.5).toLong() else neu
                         if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * gedaechtnisZeichen.toDouble() / gesendet).toLong().coerceAtMost(minOf(neu, obergrenze)),
                             gedaechtnisTitel + nachgeladen.toList().map { de.frank.jarvis.gedaechtnis.KontextWahl.titelVon(it) })

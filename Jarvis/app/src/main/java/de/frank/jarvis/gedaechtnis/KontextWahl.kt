@@ -346,7 +346,8 @@ object KontextWahl {
      */
     fun genutzteKennungen(roh: List<String>): Set<String>? {
         val aus = LinkedHashSet<String>()
-        roh.map { it.trim().lowercase(Locale.GERMAN) }.filter { it.isNotEmpty() }.forEach { n ->
+        // Der immer geladene Kern (Regeln, Stil, Entscheidungen, Gemerktes) ist kein wählbarer Bereich: überspringen statt alles zu verwerfen.
+        roh.map { it.trim().lowercase(Locale.GERMAN) }.filter { it.isNotEmpty() && it !in KERN_NAMEN }.forEach { n ->
             val k = when {
                 gueltig(n) -> n
                 else -> Bereich.entries.firstOrNull { it != Bereich.GEMERKT && (it.titel.lowercase(Locale.GERMAN) == n || it.ueberschrift.lowercase(Locale.GERMAN).startsWith(n)) }?.kennung
@@ -356,6 +357,8 @@ object KontextWahl {
         }
         return aus
     }
+
+    private val KERN_NAMEN = setOf("gemerkt", "gemerktes", "regeln", "franks regeln", "regel", "stil", "antwort-stil", "franks antwort-stil", "entscheidungen", "franks entscheidungen", "franks ziele", "kern")
 
     /** Die gültigen Kennungen in [kennungen], klein geschrieben. */
     fun gueltige(kennungen: Collection<String>): Set<String> = kennungen.map { it.trim().lowercase(Locale.GERMAN) }.filterTo(LinkedHashSet()) { gueltig(it) }
@@ -387,8 +390,8 @@ object KontextWahl {
         override val beschreibung = "Lädt weitere Bereiche des Live-Gedächtnisses nach."
         override val hinweise = "Das Live-Gedächtnis ist für jede Frage gezielt geladen (GELADEN im Gesamtbild); alles andere steht unter WEITERE BEREICHE mit Kennung. " +
             "Braucht die Frage etwas daraus, lade es mit gedaechtnis_laden, bevor du antwortest; rate nie, was in einem nicht geladenen Bereich steht. " +
-            "Lade nur, was die Frage wirklich braucht. Bei der Antwort an Frank beginnt das JSON immer mit \"antwort\"; dahinter hängst du das Feld \"genutzt\" an: die Kennungen der " +
-            "geladenen Gedächtnis-Bereiche, die du für diese Antwort tatsächlich gebraucht hast, etwa {\"antwort\": \"…\", \"genutzt\": [\"biodaten\", \"wetter\"]}; keine: []."
+            "Lade nur, was die Frage wirklich braucht. Bei der Antwort an Frank beginnt das JSON immer mit \"antwort\"; dahinter hängst du das Feld \"genutzt\" an: die Kennungen (aus GELADEN) der " +
+            "Gedächtnis-Bereiche, die du für diese Antwort tatsächlich gebraucht hast (der immer geladene Kern mit FRANKS REGELN, STIL, ZIELE und ENTSCHEIDUNGEN gehört nicht dazu; „ziele“ meint nur die Ziele-App), etwa {\"antwort\": \"…\", \"genutzt\": [\"biodaten\", \"wetter\"]}; keine: []."
         override val imPlugin = false
         override val nurImGespraech = true
         override fun stoerung(): String? = null

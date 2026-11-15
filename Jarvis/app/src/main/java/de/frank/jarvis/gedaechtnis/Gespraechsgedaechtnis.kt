@@ -108,13 +108,7 @@ object Gespraechsgedaechtnis {
         // Wiederholte Läufe dürfen keine Dubletten anlegen: auch fast gleiche Fassungen desselben Vorhabens nicht.
         if (gueltig.any { it.text.equals(sauber, ignoreCase = true) || de.frank.jarvis.faehigkeit.Merkdatei.aehnlichkeit(it.text, sauber) >= 0.75 }) return null
         val notiz = Gespraechsnotiz(naechsteId(context, alleNotizen(context)), sauber, System.currentTimeMillis(), bis)
-        val neu = gueltig + notiz
-        // Ist es zu voll, geht die älteste gültige Notiz; das steht im Protokoll statt still zu verschwinden.
-        neu.dropLast(NOTIZEN_HOECHSTENS).forEach { weg ->
-            Logbuch.gedaechtnis("Gesprächsnotiz verdrängt (mehr als $NOTIZEN_HOECHSTENS)", weg.text.take(200))
-            Protokoll.melde(Quelle.JARVIS, "Gesprächsnotiz verdrängt", "Mehr als $NOTIZEN_HOECHSTENS Notizen, die älteste ging: ${weg.text}")
-        }
-        schreibeNotizen(context, neu.takeLast(NOTIZEN_HOECHSTENS))
+        schreibeMitAbgelaufenen(context, gueltig + notiz)
         return notiz
     }
 
@@ -131,22 +125,40 @@ object Gespraechsgedaechtnis {
         val frisch = if (abgelaufen) notiz.copy(erstellt = System.currentTimeMillis(), bis = null) else notiz
         val zurueck = if (alle.any { it.id == notiz.id }) frisch.copy(id = naechsteId(context, alle)) else frisch
         // Wie beim Merken: Die zurückgeholte Notiz steht als jüngste hinten; ist es zu voll, geht die älteste gültige, nachvollziehbar.
-        val neu = notizen(context) + zurueck
-        neu.dropLast(NOTIZEN_HOECHSTENS).forEach { weg ->
-            Logbuch.gedaechtnis("Gesprächsnotiz verdrängt (mehr als $NOTIZEN_HOECHSTENS)", weg.text.take(200))
-            Protokoll.melde(Quelle.JARVIS, "Gesprächsnotiz verdrängt", "Mehr als $NOTIZEN_HOECHSTENS Notizen, die älteste ging: ${weg.text}")
-        }
-        schreibeNotizen(context, neu.takeLast(NOTIZEN_HOECHSTENS))
+        schreibeMitAbgelaufenen(context, notizen(context) + zurueck)
         return alleNotizen(context).any { it.id == zurueck.id && it.text == zurueck.text }
     }
 
-    /** Abgelaufene Notizen (Ablaufdatum vorbei) endgültig aus der Datei nehmen; liefert die entfernten. */
+    /**
+     * Schreibt die gültigen Notizen [gueltig] (jüngste hinten) und lässt abgelaufene in der Datei: Sie verschwinden erst über
+     * [entferneAbgelaufene] im Lernlauf, mit Posten im Bericht und „Wiederherstellen“, nie still nebenbei. Ist es zu voll, geht die
+     * älteste gültige Notiz; das steht im Protokoll.
+     */
+    @Synchronized
+    private fun schreibeMitAbgelaufenen(context: Context, gueltig: List<Gespraechsnotiz>) {
+        val ids = gueltig.mapTo(HashSet()) { it.id }
+        val heute = LocalDate.now()
+        val abgelaufen = alleNotizen(context).filter { it.id !in ids && gueltigBis(it).isBefore(heute) }
+        gueltig.dropLast(NOTIZEN_HOECHSTENS).forEach { weg ->
+            Logbuch.gedaechtnis("Gesprächsnotiz verdrängt (mehr als $NOTIZEN_HOECHSTENS)", weg.text.take(200))
+            Protokoll.melde(Quelle.JARVIS, "Gesprächsnotiz verdrängt", "Mehr als $NOTIZEN_HOECHSTENS Notizen, die älteste ging: ${weg.text}")
+        }
+        schreibeNotizen(context, abgelaufen + gueltig.takeLast(NOTIZEN_HOECHSTENS))
+    }
+
+    /**
+     * Abgelaufene Notizen (Ablaufdatum vorbei) endgültig aus der Datei nehmen; liefert die entfernten. Was Frank im Lernbericht
+     * behalten oder wiederhergestellt hat, wird nie automatisch entfernt: Es gilt dann einfach weitere 14 Tage.
+     */
     @Synchronized
     fun entferneAbgelaufene(context: Context): List<Gespraechsnotiz> {
         val alle = alleNotizen(context)
         val gueltig = notizen(context)
-        val weg = alle.filter { a -> gueltig.none { it.id == a.id } }
-        if (weg.isNotEmpty()) schreibeNotizen(context, gueltig)
+        val abgelaufen = alle.filter { a -> gueltig.none { it.id == a.id } }
+        if (abgelaufen.isEmpty()) return emptyList()
+        val (behalten, weg) = abgelaufen.partition { Lernlauf.istBehalten(context, "Notiz", it.text) }
+        val erneuert = behalten.map { it.copy(erstellt = System.currentTimeMillis(), bis = null) }
+        schreibeNotizen(context, gueltig + erneuert)
         return weg
     }
 
@@ -381,9 +393,10 @@ object Gespraechsgedaechtnis {
             return null
         }
         val alle = Regeln.alle(app)
-        if (alle.any { it.text.equals(satz, ignoreCase = true) }) return null
         // Nur eine selbst gelernte Regel darf ein Lernlauf ersetzen; Franks eigene Regeln bleiben, die neue kommt daneben.
         val alt = id?.let { i -> alle.firstOrNull { it.id == i && it.gelernt } }
+        // Dubletten auch in leicht anderer Fassung (wie bei Infos und Zielen), nur nicht gegen die Regel, die ersetzt wird.
+        if (alle.any { it.id != alt?.id && (it.text.equals(satz, ignoreCase = true) || de.frank.jarvis.faehigkeit.Merkdatei.aehnlichkeit(it.text, satz) >= 0.6) }) return null
         val neu = Regeln.speichere(app, satz, alt?.id, "Gespräch")
         if (neu == null) {
             Protokoll.melde(Quelle.JARVIS, if (Regeln.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt (Gespräch): $satz", ok = false)

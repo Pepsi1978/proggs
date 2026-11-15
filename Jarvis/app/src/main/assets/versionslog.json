@@ -739,6 +739,7 @@
     {"versionCode": 731, "versionName": "1.8.720", "stand": "15.11.2026, 21:03 Uhr", "notiz": "Der untere Reiter für Veränderungen heißt jetzt kurz „Änderung“, damit er auf dem Handy vollständig hineinpasst; oben im Bildschirm steht weiter „Veränderungen“."},
     {"versionCode": 732, "versionName": "1.8.721", "stand": "15.11.2026, 21:06 Uhr", "notiz": "Der untere Reiter für die Einstellungen heißt jetzt kurz „Settings“, damit er auf dem Handy vollständig hineinpasst."},
     {"versionCode": 733, "versionName": "1.8.722", "stand": "15.11.2026, 21:09 Uhr", "notiz": "Unter Veränderungen erklärt der Hinweis bei leerer Liste jetzt, dass neue Einträge per Sprache an Jarvis kommen; die nicht mehr genutzte Eingabe-Logik ist entfernt."},
-    {"versionCode": 734, "versionName": "1.8.723", "stand": "15.11.2026, 21:14 Uhr", "notiz": "Bedienhilfe und Protokoll nennen die Reiter wieder „Veränderungen“ und „Einstellungen“, nur die Beschriftung unten bleibt kurz; Code-Review-Befunde behoben."}
+    {"versionCode": 734, "versionName": "1.8.723", "stand": "15.11.2026, 21:14 Uhr", "notiz": "Bedienhilfe und Protokoll nennen die Reiter wieder „Veränderungen“ und „Einstellungen“, nur die Beschriftung unten bleibt kurz; Code-Review-Befunde behoben."},
+    {"versionCode": 735, "versionName": "1.8.724", "stand": "15.11.2026, 21:16 Uhr", "notiz": "Dritte gründliche Prüfung des Live-Gedächtnisses: Deine Entscheidungen im Lernbericht bleiben verlässlich bestehen, Fehlerläufe wiederholen sich nicht mehr jede Minute, und beim Abgleich gewinnt deine eigene Fassung."}
 ]
 }

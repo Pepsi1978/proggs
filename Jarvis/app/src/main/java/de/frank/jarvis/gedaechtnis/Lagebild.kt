@@ -611,7 +611,8 @@ object Lagebild {
             if (neu.isNotEmpty()) append("NEU IN 24 STUNDEN (neueste zuerst):\n").append(neu).append("\n\n")
             KURZ.forEach { (b, grenze) -> s.abschnitte[b]?.let { a -> append(abschnitt(b, a.copy(text = gedeckelt(a.text, grenze)))).append('\n') } }
             append("WEITERE BEREICHE (nicht enthalten; bei Bedarf mit jarvis_kontext bereiche=[kennung] vollständig nachladen):\n")
-            Bereich.entries.filter { it != Bereich.GEMERKT && it !in KURZ }.forEach { b ->
+            // Auch Kernbereiche, die noch nie geladen wurden: Sonst wüsste das Modell nicht, dass es sie gibt.
+            Bereich.entries.filter { it != Bereich.GEMERKT && (it !in KURZ || it !in s.abschnitte) }.forEach { b ->
                 val a = s.abschnitte[b]
                 append("- ").append(b.kennung).append(": ").append(b.titel)
                 append(if (a == null) " (noch nicht geladen)" else " (Stand ${uhr(a.stand)} Uhr, ${a.text.length} Zeichen" + (if (a.fehler.isNotEmpty()) ", gerade gestört" else "") + ")")

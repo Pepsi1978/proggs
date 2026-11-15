@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,10 +60,15 @@ fun LernlaufBereich(geaendert: () -> Unit) {
         automatik = withContext(Dispatchers.IO) { runCatching { Lernlauf.automatikText(app) }.getOrDefault("") }
         if (!laeuft) geaendert()
     }
+    // Doppeltippen sperren: Je Posten läuft höchstens eine Antwort, bis ihr Ergebnis da ist.
+    val laufend = remember { mutableStateMapOf<String, Boolean>() }
     val antworten: (Lernbericht, LernPosten, String) -> Unit = { b, p, was ->
-        bereich.launch {
-            hinweis = withContext(Dispatchers.IO) { Lernlauf.antworte(app, b.id, p.schluessel, was) }
-            geaendert()
+        val schluessel = "${b.id}/${p.schluessel}"
+        if (laufend.put(schluessel, true) == null) bereich.launch {
+            try {
+                hinweis = withContext(Dispatchers.IO) { Lernlauf.antworte(app, b.id, p.schluessel, was) }
+                geaendert()
+            } finally { laufend.remove(schluessel) }
         }
     }
 

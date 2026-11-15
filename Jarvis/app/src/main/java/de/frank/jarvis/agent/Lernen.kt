@@ -152,6 +152,11 @@ object Lernen {
             if (Merkdatei.istErlaubnis(satz)) return@mapNotNull null
             // Nur selbst Gelerntes ersetzt ein Lernlauf (Franks eigene Einträge sind oben schon ausgeschlossen).
             val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i && it.gelernt } }
+            // Hat Frank diesen gelernten Eintrag im Lernbericht behalten oder wiederhergestellt, ersetzt ihn kein späterer Lauf still.
+            if (alt != null && de.frank.jarvis.gedaechtnis.Lernlauf.istBehalten(app, if (istZiel) "Ziel" else "Info", alt.text)) {
+                Logbuch.gedaechtnis("Nicht gelernt: würde einen von Frank behaltenen Eintrag ersetzen", "[${alt.id}] $satz".take(200))
+                return@mapNotNull null
+            }
             val neu = datei.speichere(app, satz, alt?.id, quelle)
             if (neu == null) { Protokoll.melde(Quelle.JARVIS, if (datei.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt ($quelle): $satz", ok = false); return@mapNotNull null }
             if (alt != null) de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis.haengeAn(File(app.filesDir, "merk_verlauf.jsonl"), JSONObject().put("zeit", System.currentTimeMillis())

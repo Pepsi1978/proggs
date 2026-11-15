@@ -152,7 +152,7 @@ data class Lernbericht(
  * Jede Änderung steht mit Grund, vorherigem Text und Beleg in `lern_aenderungen.jsonl` (Ziele und Infos zusätzlich in
  * `merk_verlauf.jsonl`); Entferntes lässt sich im Bericht wiederherstellen und wird danach nicht erneut entfernt.
  *
- * Automatik: Der Wächter (alle zehn Minuten, solange der Dienst läuft), der Lauf nach jeder Tagesauswertung und ein
+ * Automatik: Der Wächter (jede Minute, solange der Dienst läuft; billig, solange nichts fällig ist), der Lauf nach jeder Tagesauswertung und ein
  * eigener Wecker etwa alle sechs Stunden stoßen [automatisch] an. Nie zwei Läufe gleichzeitig (eine Sperre für alle
  * Auslöser); nicht während eines Sprachgesprächs, ohne Netz, im Stromsparmodus oder bei schwachem Akku ohne Ladegerät.
  */
@@ -204,9 +204,34 @@ object Lernlauf {
         geladen = true
     }
 
+    /** Noch offene Antworten in einem Bericht (Bestätigen oder Wiederherstellen, das Frank noch nicht erledigt hat). */
+    private fun offen(b: Lernbericht) = (b.bestaetigen + b.entfernt).any { it.aktion.isNotEmpty() && it.erledigt.isEmpty() }
+
+    /**
+     * Was Frank in einem Bericht schon beantwortet hat, bleibt beim erneuten Veröffentlichen erhalten: Ein laufender Lauf
+     * veröffentlicht seinen Sammler-Stand bei jedem Schritt, der kennt Franks Antworten nicht.
+     */
+    private fun mitErledigt(neu: Lernbericht, alt: Lernbericht?): Lernbericht {
+        if (alt == null) return neu
+        val erledigt = (alt.neu + alt.aktualisiert + alt.entfernt + alt.geprueft + alt.bestaetigen).filter { it.erledigt.isNotEmpty() }.associate { it.schluessel to it.erledigt }
+        if (erledigt.isEmpty()) return neu
+        fun l(x: List<LernPosten>) = x.map { p -> if (p.erledigt.isEmpty()) erledigt[p.schluessel]?.let { p.copy(erledigt = it) } ?: p else p }
+        return neu.copy(neu = l(neu.neu), aktualisiert = l(neu.aktualisiert), entfernt = l(neu.entfernt), geprueft = l(neu.geprueft), bestaetigen = l(neu.bestaetigen))
+    }
+
     @Synchronized
-    private fun veroeffentliche(context: Context, b: Lernbericht) {
-        val liste = (listOf(b) + _berichte.value.filter { it.id != b.id }).sortedByDescending { it.id }.take(BERICHTE_HOECHSTENS)
+    private fun veroeffentliche(context: Context, eingang: Lernbericht) {
+        val b = mitErledigt(eingang, _berichte.value.firstOrNull { it.id == eingang.id })
+        // Gescheiterte automatische Läufe ohne offene Antworten stapeln sich nicht: der neueste ersetzt die vorigen.
+        val uebrige = _berichte.value.filter { it.id != b.id && !(b.zustand == FEHLER && b.ausloeser == AUTOMATISCH && it.zustand == FEHLER && it.ausloeser == AUTOMATISCH && !offen(it)) }
+        val alle = (listOf(b) + uebrige).sortedByDescending { it.id }
+        // Zu viele: zuerst die ältesten ohne offene Antworten gehen, Berichte mit offenen Bestätigungen bleiben (bis zur doppelten Zahl).
+        val liste = if (alle.size <= BERICHTE_HOECHSTENS) alle else {
+            val behalten = alle.filter { offen(it) }.take(BERICHTE_HOECHSTENS * 2).toSet()
+            val platz = (BERICHTE_HOECHSTENS - behalten.size).coerceAtLeast(1)
+            val rest = alle.filter { it !in behalten }.take(platz).toSet()
+            alle.filter { it in behalten || it in rest }
+        }
         _berichte.value = liste
         runCatching { de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(berichtDatei(context), JSONArray(liste.map { it.json() }).toString().toByteArray()) }
             .onFailure { Logbuch.fehler("Lernlauf: Bericht speichern", it) }
@@ -258,11 +283,22 @@ object Lernlauf {
         // die Drossel gilt nur nach einem Hindernis, damit ein verschobener Lauf nicht jede Wächter-Minute erneut anläuft.
         if (!pruefungFaellig(app) && !Gespraechsgedaechtnis.neueGespraecheFaellig(app)) return false
         if (jetzt - letzterVersuch < VERSUCH_ABSTAND_MS) return false
+        // Nach einem gescheiterten Lauf (Modell antwortet nicht, Kontingent leer) wartet die Automatik wachsend: 10, 20, 40 … höchstens 120 Minuten.
+        if (jetzt < prefs(app).getLong("fehlerBis", 0L)) return false
         val hindernis = hindernis(app) ?: return true
         letzterVersuch = jetzt
         prefs(app).edit().putString("autoHinweis", hindernis).putLong("autoHinweisZeit", jetzt).apply()
         Logbuch.gedaechtnis("Lernlauf verschoben", hindernis)
         return false
+    }
+
+    /** Merkt einen gescheiterten Lauf für die Drossel der Automatik bzw. setzt sie nach einem gelungenen zurück. */
+    private fun merkeAusgang(app: Context, gescheitert: Boolean) {
+        val p = prefs(app)
+        if (!gescheitert) { if (p.getInt("fehlerFolge", 0) != 0) p.edit().putInt("fehlerFolge", 0).putLong("fehlerBis", 0L).apply(); return }
+        val folge = p.getInt("fehlerFolge", 0)
+        val warte = minOf(VERSUCH_ABSTAND_MS shl folge.coerceAtMost(4), 120 * 60_000L)
+        p.edit().putInt("fehlerFolge", folge + 1).putLong("fehlerBis", System.currentTimeMillis() + warte).apply()
     }
 
     /** Was einen automatischen Lauf gerade verhindert, oder null. */
@@ -398,6 +434,7 @@ object Lernlauf {
 
     private fun beende(app: Context, b: Lernbericht): Lernbericht {
         val fertig = b.copy(ende = System.currentTimeMillis(), schritt = "")
+        if (fertig.zustand == FEHLER) merkeAusgang(app, gescheitert = true) else if (fertig.zustand == FERTIG) merkeAusgang(app, gescheitert = false)
         veroeffentliche(app, fertig)
         val zeile = fertig.zusammenfassung()
         Logbuch.gedaechtnis("Lernlauf ${fertig.ausloeser}", zeile)
@@ -440,7 +477,7 @@ object Lernlauf {
         val kopf = buildString {
             append("HEUTE: ").append(LocalDate.now()).append("\n\n")
             append("SCHON GEMERKT (Kennung in eckigen Klammern, Herkunft in runden):\n")
-            append("REGELN (nur Zusammenhang, du änderst oder entfernst sie nie):\n").append(Regeln.listeRoh(Regeln.alle(app)).ifEmpty { "(keine)" })
+            append("REGELN (nur Zusammenhang; du entfernst sie nie. „REGEL 3: …“ nur, wenn Frank die Regel [3] ausdrücklich ändert; selbst gelernte werden ersetzt, Franks eigene legt Jarvis ihm zur Bestätigung vor):\n").append(Regeln.listeRoh(Regeln.alle(app)).ifEmpty { "(keine)" })
             append("\n\nZIELE:\n").append(ziele.joinToString("\n") { "[Z${it.id}] (${herkunft(it)}, Stand ${it.stand}) ${it.text}" }.ifEmpty { "(keine)" })
             append("\n\nINFOS:\n").append(infos.joinToString("\n") { "[I${it.id}] (${herkunft(it)}, Stand ${it.stand}) ${it.text}" }.ifEmpty { "(keine)" })
             append("\n\nNOTIZEN (alle aus Gesprächen gelernt):\n").append(notizen.joinToString("\n") { "[N${it.id}] ${it.text} (bis ${Gespraechsgedaechtnis.gueltigBis(it)}, notiert ${Gespraechsgedaechtnis.datum(it.erstellt)})" }.ifEmpty { "(keine)" })
@@ -585,6 +622,8 @@ object Lernlauf {
                     val r = when (kennung.firstOrNull()) { 'Z' -> ziele.firstOrNull { it.id == id }; 'I' -> infos.firstOrNull { it.id == id }; else -> null } ?: return@forEach
                     val artName = if (kennung.startsWith("Z")) "Ziel" else "Info"
                     if (urteile.optJSONObject(urteilSchluessel(artName, r.text))?.optBoolean("behalten") == true) return@forEach
+                    // Mehrere Zeilen zum selben Eintrag ergeben nur einen Posten.
+                    if (s.bestaetigen.any { it.art == artName && it.ref?.optInt("id") == r.id }) return@forEach
                     // Ziele und Infos entfernt der Lauf nie auf eine Deutung hin: Frank entscheidet.
                     s.bestaetigen += LernPosten(s.schluessel(), artName, r.text, grund = "scheint nicht mehr aktuell: ${satz.ifEmpty { "ohne Begründung" }}", status = herkunft(r),
                         aktion = "entfernen", ref = regelRef(artName, r))
@@ -679,7 +718,11 @@ object Lernlauf {
                 (p.art == "Ziel" || p.art == "Info") && p.gelernt && p.regel != null -> {
                     val datei: Merkdatei = if (p.art == "Ziel") Ziele else UeberFrank
                     val aktuell = datei.alle(app).firstOrNull { it.id == p.id }
-                    if (aktuell != null && aktuell.text == p.regel.text && datei.loesche(app, p.id) != null) {
+                    // Hat Frank den Eintrag während der Prüfung übernommen (gespeichert, Herkunft leer), ist er jetzt seiner: nur vorlegen.
+                    if (aktuell != null && aktuell.text == p.regel.text && !aktuell.gelernt) {
+                        s.bestaetigen += LernPosten(s.schluessel(), p.art, p.text, grund = "$zeile. Du hast diesen Eintrag inzwischen selbst übernommen, deshalb entfernt Jarvis ihn nicht von sich aus.$alter",
+                            beleg = beleg, status = "umgesetzt", aktion = "entfernen", ref = regelRef(p.art, aktuell))
+                    } else if (aktuell != null && aktuell.gelernt && aktuell.text == p.regel.text && datei.loesche(app, p.id) != null) {
                         merkVerlauf(app, p.art, aktuell, "Lernlauf: umgesetzt, entfernt", beleg)
                         val posten = LernPosten(s.schluessel(), p.art, p.text, grund = "$zeile; veraltetes ${if (p.art == "Ziel") "Ziel" else "Vorhaben"} entfernt$alter", beleg = beleg,
                             status = "umgesetzt", aktion = "wiederherstellen", ref = regelRef(p.art, aktuell))
@@ -715,10 +758,12 @@ object Lernlauf {
         }))
         val ergebnis = withTimeoutOrNull(PRUEFER_MS) {
             for (schritt in 1..PRUEFER_SCHRITTE) {
-                if (schritt == PRUEFER_SCHRITTE) zuege += ChatTurn("user", "LETZTER SCHRITT: Rufe kein Werkzeug mehr auf und antworte jetzt mit dem Urteil.")
+                // Der letzte Schritt hängt den Hinweis an das letzte Werkzeug-Ergebnis an: nie zwei Nachrichten von „user“ hintereinander.
+                if (schritt == PRUEFER_SCHRITTE) zuege[zuege.lastIndex] = zuege.last().let { it.copy(text = it.text + "\n\nLETZTER SCHRITT: Rufe kein Werkzeug mehr auf und antworte jetzt mit dem Urteil.") }
                 val roh = agent.auth.streamChat(PRUEFER, zuege, e.modell, e.denkstufe)
                 val j = jsonAus(roh) ?: return@withTimeoutOrNull JSONObject().put("stand", "ungeprueft").put("grund", "Die Prüfung lieferte kein lesbares Ergebnis.")
                 j.optJSONObject("urteil")?.let { return@withTimeoutOrNull it }
+                if (schritt == PRUEFER_SCHRITTE) return@withTimeoutOrNull JSONObject().put("stand", "ungeprueft").put("grund", "Die Prüfung kam in $PRUEFER_SCHRITTE Schritten zu keinem Urteil.")
                 val name = j.optString("werkzeug")
                 val argumente = j.optJSONObject("argumente") ?: JSONObject()
                 val text = when (name) {
@@ -764,6 +809,9 @@ object Lernlauf {
     // ---------------------------------------------------------------- Urteile, Protokoll, Wiederherstellen
 
     private fun urteilSchluessel(art: String, text: String) = art + ":" + text.lowercase(Locale.GERMAN).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim().hashCode()
+
+    /** Hat Frank diesen Eintrag im Lernbericht behalten oder wiederhergestellt? Dann entfernt oder ersetzt ihn kein Lauf mehr von sich aus. */
+    fun istBehalten(c: Context, art: String, text: String): Boolean = ladeUrteile(c.applicationContext).optJSONObject(urteilSchluessel(art, text))?.optBoolean("behalten") == true
 
     @Synchronized
     private fun ladeUrteile(c: Context): JSONObject = runCatching { JSONObject(urteilDatei(c).readText()) }.getOrDefault(JSONObject())
@@ -819,6 +867,8 @@ object Lernlauf {
      * Franks Antwort auf einen Posten im Bericht: „wiederherstellen“ (Entferntes zurück, danach nie mehr automatisch entfernt),
      * „entfernen“ (von ihm bestätigt) oder „behalten“ (nicht mehr vorlegen). Liefert einen Satz für die Anzeige.
      */
+    // Synchronisiert: Zwei schnelle Antworten auf denselben Posten laufen nacheinander, die zweite sieht „Schon erledigt“.
+    @Synchronized
     fun antworte(context: Context, berichtId: Long, schluessel: String, was: String): String {
         val app = context.applicationContext
         lade(app)
@@ -826,7 +876,9 @@ object Lernlauf {
         val posten = (bericht.entfernt + bericht.bestaetigen).firstOrNull { it.schluessel == schluessel } ?: return "Den Eintrag gibt es im Bericht nicht mehr."
         if (posten.erledigt.isNotEmpty()) return "Schon erledigt: ${posten.erledigt}."
         val ref = posten.ref
-        fun behalten() = setzeUrteil(app, urteilSchluessel(posten.art, posten.text), JSONObject().put("stand", "behalten").put("behalten", true).put("zeit", System.currentTimeMillis()))
+        // Bei einem Ersetzungsvorschlag gilt das Urteil der alten Fassung (dieselbe Prüfung wie in ersetzenVorlegen), nicht dem neuen Text.
+        val urteilText = ref?.optString("ersatz").orEmpty().takeIf { it.isNotEmpty() }?.let { ref?.optString("text").orEmpty().ifEmpty { posten.text } } ?: posten.text
+        fun behalten() = setzeUrteil(app, urteilSchluessel(posten.art, urteilText), JSONObject().put("stand", "behalten").put("behalten", true).put("zeit", System.currentTimeMillis()))
         val ergebnis: String = when (was) {
             "wiederherstellen" -> {
                 if (ref == null) return "Dafür fehlen die Angaben."
@@ -882,8 +934,10 @@ object Lernlauf {
             var anzahl = 0
             for (datei in listOf(Ziele, UeberFrank)) datei.alle(app).filter { !it.gelernt && it.text in gelernt }.forEach { if (datei.setzeQuelle(app, it.id, "Gespräch")) anzahl++ }
             if (anzahl > 0) Logbuch.gedaechtnis("Lernlauf: Herkunft nachgetragen", "$anzahl Einträge aus dem Aktivitätsprotokoll")
+        }.onSuccess {
+            // Nur nach Erfolg als erledigt merken: Scheiterte das Lesen des Protokolls, versucht es der nächste Lauf erneut.
+            p.edit().putBoolean("herkunftNachgetragen", true).apply()
         }
-        p.edit().putBoolean("herkunftNachgetragen", true).apply()
     }
 
     // ---------------------------------------------------------------- Helfer
@@ -925,6 +979,7 @@ ZIEL: Frank will …            → ein neues Ziel, das Frank in den neuen Wechs
 INFO: Frank …                 → eine neue dauerhafte Tatsache über ihn (Vorlieben, Abneigungen, was ihm wichtig ist, Besitz, Gewohnheiten, Menschen, Gesundheitliches von Dauer)
 INFO 7: Frank …               → ersetzt die Info [I7], wenn das Gespräch sie überholt oder genauer macht. Ziele ersetzt du nie (die setzt Frank); ein neues Ziel ist eine neue Zeile.
 REGEL: …                      → NUR wenn Frank ausdrücklich festlegt, wie Jarvis künftig arbeiten oder antworten soll („ab jetzt“, „in Zukunft“, „merk dir“, „immer wenn …“, „nie wieder …“). Eine vollständige Anweisung an Jarvis.
+REGEL 3: …                    → nur wenn Frank die bestehende Regel [3] ausdrücklich ändert; dann die vollständige neue Fassung.
 NOTIZ: … (bis JJJJ-MM-TT)      → etwas Kurzlebiges, das Jarvis in den nächsten Tagen wissen sollte: ein Vorhaben („Frank will am Freitag laufen gehen“), eine Zusage von Jarvis, ein offenes Thema, eine Entscheidung. Mit Datum, bis wann es zählt (höchstens 30 Tage).
 ERLEDIGT N4: Grund            → die Notiz [N4] ist laut Franks Worten erledigt, überholt oder ihr Anlass ist vorbei; Grund in wenigen Worten.
 

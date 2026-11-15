@@ -447,10 +447,24 @@ object GedaechtnisAbgleich {
             var geschafft = false
             // Lesen, Zusammenführen und Schreiben unter der Sperre des Speichers: Nichts, was Jarvis gerade merkt, geht dazwischen verloren.
             unterSperre(quelle) {
+                val notizen = pfad == "gespraechsnotizen.json"
+                // Notizen: auch über jede je vergebene id hinaus nummerieren (Zähler des Gesprächsgedächtnisses), nie eine gelöschte neu vergeben.
+                val notizPrefs = if (notizen) app.getSharedPreferences("gespraechsgedaechtnis", Context.MODE_PRIVATE) else null
                 val text = runCatching {
-                    fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = pfad == "gespraechsnotizen.json")
+                    fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = notizen,
+                        mindestId = (notizPrefs?.getInt("hoechsteId", 0) ?: 0) + 1,
+                        beiVerworfen = { e -> Logbuch.system("Gedächtnis-Abgleich", "$pfad: Fassung von [${e.optInt("id")}] verworfen, weil Franks eigene Fassung gilt: ${e.optString("text").take(200)}") })
                 }.onFailure { Logbuch.fehler("Gedächtnis-Abgleich", it, "$pfad: Zusammenführen nicht möglich, die jüngste Fassung gilt") }.getOrNull()
-                if (text != null) { ersetze(datei, 0L) { it.writeText(text) }; geschafft = true }
+                if (text != null) {
+                    ersetze(datei, 0L) { it.writeText(text) }
+                    geschafft = true
+                    // Die höchste jetzt vergebene Notiz-id merken (commit: ein Prozessende darf sie nicht wieder freigeben).
+                    if (notizPrefs != null) runCatching {
+                        val a = JSONArray(text)
+                        val hoechste = (0 until a.length()).maxOfOrNull { a.optJSONObject(it)?.optInt("id") ?: 0 } ?: 0
+                        if (hoechste > notizPrefs.getInt("hoechsteId", 0)) notizPrefs.edit().putInt("hoechsteId", hoechste).commit()
+                    }
+                }
             }
             if (!geschafft) return null
             // Die fremde Fassung ist eingearbeitet: Sie ist die neue gemeinsame Grundlage, die nächste Runde lädt das Ergebnis hoch.
@@ -465,11 +479,18 @@ object GedaechtnisAbgleich {
 
     /**
      * Drei-Wege-Zusammenführung nach id: [basisText] = zuletzt gemeinsame Fassung. Je id: nur eine Seite geändert → deren Fassung;
-     * beide geändert → die jüngere ([fernGewinnt]); auf einer Seite gelöscht → weg, außer die andere hat ihn seither geändert; auf
+     * beide geändert → Franks eigene Fassung (Merkdatei ohne quelle) vor einer Lernlauf-Fassung, sonst die jüngere ([fernGewinnt]).
+     * Die unterlegene Fassung geht nie still verloren: Ist sie Franks eigene mit anderem Text, bleibt sie unter neuer id stehen
+     * (er hat sie selbst geschrieben); eine unterlegene Lernlauf-Fassung oder Notiz geht nur ins Logbuch ([beiVerworfen]), weil sie neben
+     * Franks Korrektur ein Widerspruch wäre. Auf einer Seite gelöscht → weg, außer die andere hat ihn seither geändert; auf
      * beiden Seiten neu mit derselben id, aber anderem Text → der Eintrag der älteren Fassung bekommt eine neue id über allen bekannten
-     * (auch über gelöschten, damit keine alte id wieder vergeben wird). [notizen] = gespraechsnotizen.json (Liste), sonst Merkdatei.
+     * (auch über gelöschten und mindestens [mindestId], damit keine alte id wieder vergeben wird). [notizen] = gespraechsnotizen.json
+     * (Liste, alle gelernt), sonst Merkdatei.
      */
-    internal fun fuehreZusammen(basisText: String, lokalText: String, fernText: String, fernGewinnt: Boolean, notizen: Boolean): String {
+    internal fun fuehreZusammen(
+        basisText: String, lokalText: String, fernText: String, fernGewinnt: Boolean, notizen: Boolean,
+        mindestId: Int = 0, beiVerworfen: (JSONObject) -> Unit = {},
+    ): String {
         fun eintraege(t: String): List<JSONObject> {
             if (t.isBlank()) return emptyList()
             val a = if (notizen) JSONArray(t) else JSONObject(t).getJSONArray("regeln")
@@ -492,7 +513,20 @@ object GedaechtnisAbgleich {
                 fe == null -> if (!gleich(le, be)) ergebnis[id] = le
                 gleich(le, be) -> ergebnis[id] = fe
                 gleich(fe, be) -> ergebnis[id] = le
-                else -> ergebnis[id] = sieger.getValue(id)
+                else -> {
+                    // Beide Seiten geändert: Franks eigene Fassung gewinnt gegen eine gelernte, sonst die jüngere.
+                    val vonFrankL = !notizen && le.optString("quelle").isEmpty()
+                    val vonFrankF = !notizen && fe.optString("quelle").isEmpty()
+                    val (gewinner, unterlegen) = when {
+                        vonFrankL && !vonFrankF -> le to fe
+                        vonFrankF && !vonFrankL -> fe to le
+                        else -> sieger.getValue(id) to verlierer.getValue(id)
+                    }
+                    ergebnis[id] = gewinner
+                    if (gewinner.optString("text") != unterlegen.optString("text")) {
+                        if (!notizen && unterlegen.optString("quelle").isEmpty()) umnummern += unterlegen else beiVerworfen(unterlegen)
+                    }
+                }
             } else when {
                 le == null -> ergebnis[id] = fe!!
                 fe == null -> ergebnis[id] = le
@@ -500,7 +534,7 @@ object GedaechtnisAbgleich {
                 else -> { ergebnis[id] = sieger.getValue(id); umnummern += verlierer.getValue(id) }
             }
         }
-        var frei = maxOf(naechste(basisText), naechste(lokalText), naechste(fernText),
+        var frei = maxOf(mindestId, naechste(basisText), naechste(lokalText), naechste(fernText),
             maxOf(b.keys.maxOrNull() ?: 0, l.keys.maxOrNull() ?: 0, f.keys.maxOrNull() ?: 0) + 1)
         for (e in umnummern) {
             if (ergebnis.values.any { it.optString("text") == e.optString("text") }) continue
