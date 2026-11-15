@@ -1,6 +1,10 @@
 package de.frank.jarvis.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,9 +49,9 @@ private data class BioSkala(val schlecht: Double, val gut: Double, val aktuell: 
     fun lage(w: Double): Float = if (gut == schlecht) 0.5f else ((w - schlecht) / (gut - schlecht)).toFloat().coerceIn(0f, 1f)
 }
 
-/** Diese Größen zeigen statt des Einordnungstexts die Farbskala, mit festem Anzeigebereich (Franks Vorgabe vom 15.11.2026). */
+/** Diese Größen zeigen statt des Einordnungstexts die Farbskala, mit festem Anzeigebereich (Franks Vorgabe vom 15.11.2026; Erholung 0–100 % ab 1.8.689). */
 private val SKALA_BEREICH = mapOf(
-    "hrv" to (20.0 to 60.0), "ruhepuls" to (45.0 to 70.0), "tiefschlaf_prozent" to (0.0 to 30.0),
+    "erholung" to (0.0 to 100.0), "hrv" to (20.0 to 60.0), "ruhepuls" to (45.0 to 70.0), "tiefschlaf_prozent" to (0.0 to 30.0),
     "schlafdauer" to (6.0 to 12.0), "vo2max" to (30.0 to 50.0),
 )
 
@@ -166,17 +170,40 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
         if (uebernahme.isNotEmpty()) Text(uebernahme, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         if (bereit) {
             probleme.forEach { Text("⚠ $it", color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
-            Spacer(Modifier.height(6.dp))
-            zeilen.forEach { z ->
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                    Text(z.name, color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                    Text(z.wert + datumZusatz(z.datum), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                }
-                if (z.skala != null) FarbSkala(z.skala)
-                else if (z.einordnung.contains("besser") || z.einordnung.contains("schlechter")) {
-                    Text(z.einordnung, color = if (z.einordnung.contains("besser")) f.erfolg else f.gefahr, fontSize = 13.sp)
+            Spacer(Modifier.height(10.dp))
+            // Jede Messgröße als eigener abgerundeter Block mit ihrer Linie darin, damit klar ist, welche Linie zu welchem Wert gehört
+            // (Franks Wunsch vom 15.11.2026). Ab 600 dp Breite (Tablet, Fold offen) zwei Blöcke nebeneinander.
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val spalten = if (maxWidth >= 600.dp) 2 else 1
+                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    zeilen.chunked(spalten).forEach { reihe ->
+                        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                            reihe.forEach { z -> BioBlock(z, Modifier.weight(1f).fillMaxHeight()) }
+                            repeat(spalten - reihe.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+/** Ein Block je Messgröße: Name links, Wert rechts, darunter die Farbskala oder die Einordnung, auf eigener Fläche mit Rand. */
+@Composable
+private fun BioBlock(z: BioZeile, modifier: Modifier) {
+    val f = LocalFarben.current
+    val form = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+    Column(
+        modifier.clip(form).background(f.flaeche, form).border(1.dp, f.rand, form)
+            .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = if (z.skala != null) 2.dp else 10.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(z.name, color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(z.wert + datumZusatz(z.datum), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (z.skala != null) FarbSkala(z.skala)
+        else if (z.einordnung.contains("besser") || z.einordnung.contains("schlechter")) {
+            Text(z.einordnung, color = if (z.einordnung.contains("besser")) f.erfolg else f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
