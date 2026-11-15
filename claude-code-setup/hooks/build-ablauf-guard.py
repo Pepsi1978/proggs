@@ -11,8 +11,9 @@
 # 4) Warte-Schleife, die nie endet: until/while mit pgrep -f "<muster>", das im eigenen Befehl steht. pgrep findet die
 #    eigene Shell, der Bau gilt ewig als laufend (gemessen 15.11.2026: 20 Minuten Warten auf einen fertigen Jarvis-Bau).
 # 5) Komfort-Aliase aus ~/.zshrc im Shell-Schnappschuss (ls->eza, cat->bat): "ls -t <datei>" wurde zu "eza -t <datei>",
-#    eza wartete auf die offene Standardeingabe (15.11.2026, 10 Minuten bis zum Timeout). Bash-Befehle mit ls/cat/tree/ll
-#    bekommen deshalb am Mac und unter Linux "unalias … 2>/dev/null;" vorangestellt. Siehe bugs/werkzeuge/agenten-shell-aliase.md
+#    eza wartete auf die offene Standardeingabe (15.11.2026, 10 Minuten bis zum Timeout). Ursache behoben in ~/.zshrc (Aliase nur
+#    im echten Terminal); für Sitzungen mit altem Schnappschuss bekommen Bash-Befehle mit ls/cat/tree bis 22.11.2026 im Bypass-Modus
+#    "unalias …; eval '<befehl>'" (ll bleibt, es gibt ihn nur als Alias). Siehe bugs/werkzeuge/agenten-shell-aliase.md
 #
 # 6) Gestaffelte Zeitlimits (Franks Regel vom 15.11.2026): Jeder Vordergrund-Befehl bekommt höchstens 60 s. Läuft er länger,
 #    bricht Claude Code ihn nicht ab, sondern schiebt ihn in den Hintergrund; der Agent prüft dann im Minutentakt Ausgabe und
@@ -57,10 +58,11 @@ HINWEIS_KILL = (
 )
 
 
-WARTE_SCHLEIFE = re.compile(r'\b(until|while)\b[^\n]*?\bpgrep\b[^\n]*?\s-\w*f\w*\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))')
-ALIAS_BEFEHL = re.compile(r'(?:^|[;&|(\n`]|\$\()\s*(ls|cat|tree|ll)(?=\s|$)')
+SCHLEIFE = re.compile(r'\b(until|while)\b')
+ALIAS_BEFEHL = re.compile(r'(?:^|[;&|(\n`{]|\$\(|\b(?:do|then|else|xargs|time)\s)\s*(ls|cat|tree)(?=[\s|;&)]|$)')
+ALIAS_BIS = (2026, 11, 22)
 HINWEIS_WARTEN = (
-    "STOPP - diese Warte-Schleife endet nie.\n\n"
+    "STOPP - diese Warte-Schleife arbeitet falsch (endet nie bzw. sofort).\n\n"
     "pgrep -f \"{muster}\" findet die eigene Shell (das Muster steht woertlich im Befehl), der Prozess gilt also immer als laufend.\n\n"
     "Stattdessen: Den Bau direkt starten (bash gradlew assembleDebug -q). Wird er in den Hintergrund verschoben, meldet sich das\n"
     "Werkzeug beim Ende selbst. Muss doch gewartet werden: auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
@@ -93,21 +95,30 @@ def freigeben(d, neu, grund):
 
 
 def warte_schleife(cmd):
-    for m in WARTE_SCHLEIFE.finditer(ohne_heredoc(cmd)):
-        muster = m.group(2) or m.group(3) or m.group(4) or ''
-        if muster and '[' not in muster:
+    """pgrep -f in einer until/while-Schleife (auch mehrzeilig), dessen Muster im eigenen Befehl steht; gleicher Parser wie selbstmord()."""
+    cmd = ohne_heredoc(cmd)
+    for m in PKILL.finditer(cmd):
+        if m.group(1) != 'pgrep' or not re.search(r'\s-\w*f|--full', m.group(2) or ''):
+            continue
+        muster = m.group(3) or m.group(4) or m.group(5) or ''
+        # Klammer-Trick, Anker (^…, …$) und Variablen passen nicht auf den eigenen Befehlstext.
+        if not muster or '[' in muster or muster.startswith('^') or muster.endswith('$') or muster.startswith('$'):
+            continue
+        if SCHLEIFE.search(cmd[:m.start()]):
             return muster
     return None
 
 
 def ohne_aliase(cmd):
     """ls/cat/tree/ll als Befehl -> Aliase dieser Shell vorher aufheben (wirkt auch in Sitzungen mit altem Schnappschuss)."""
-    if os.name == 'nt' or cmd.lstrip().startswith('unalias ls ll cat tree') or not ALIAS_BEFEHL.search(ohne_heredoc(cmd)):
+    import datetime
+    if os.name == 'nt' or datetime.date.today() > datetime.date(*ALIAS_BIS) or cmd.lstrip().startswith('unalias ls cat tree') \
+            or not ALIAS_BEFEHL.search(ohne_heredoc(cmd)):
         return cmd
     # Aliase werden beim Einlesen ersetzt: Ein unalias im selben Befehl wirkte nicht mehr. Deshalb der eigentliche Befehl erst
     # über ein inneres eval, das nach dem unalias eingelesen wird.
     import shlex
-    return 'unalias ls ll cat tree 2>/dev/null; eval ' + shlex.quote(cmd)
+    return 'unalias ls cat tree 2>/dev/null; eval ' + shlex.quote(cmd)
 
 
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]+['\"]?")
