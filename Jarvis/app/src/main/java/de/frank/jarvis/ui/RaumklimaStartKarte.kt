@@ -56,6 +56,17 @@ private object RaumklimaStartStand {
 }
 
 /**
+ * Beim Öffnen der App einmal im Hintergrund lesen, egal welcher Bildschirm vorn ist (Frank, 15.11.2026): Beim Wechsel auf den
+ * Startbildschirm stehen die Werte dann schon da; frischer gibt es sie über den Aktualisieren-Knopf.
+ */
+fun raumklimaVorladen(context: android.content.Context) {
+    val s = RaumklimaStartStand
+    if (s.automatischGelesen) return
+    s.automatischGelesen = true
+    s.lesen(Register.alle(context.applicationContext).filterIsInstance<SwitchbotFaehigkeit>().first())
+}
+
+/**
  * Startbereich „Raumklima“: Temperatur, Luftfeuchtigkeit und beim CO2-Monitor CO2 der SwitchBot-Sensoren, frisch über das Internet aus der SwitchBot-Cloud
  * (also auch unterwegs), mit Aktualisieren-Knopf. Nicht erreichbare Sensoren stehen mit Grund statt mit Werten da.
  */

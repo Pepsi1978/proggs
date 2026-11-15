@@ -184,6 +184,8 @@ class MainActivity : FragmentActivity() {
         if (vm.ueberSperre) ueberSperreZeigen(true)
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
+        // Raumklima schon jetzt im Hintergrund lesen, damit der Startbildschirm beim ersten Wechsel Werte zeigt (Frank, 15.11.2026).
+        de.frank.jarvis.ui.raumklimaVorladen(applicationContext)
         setContent { JarvisApp(vm, this) }
         if (savedInstanceState == null) weckwortPruefen(intent, neu = true)
         if (savedInstanceState == null) rueckfragePruefen(intent)
