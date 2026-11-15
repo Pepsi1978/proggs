@@ -469,6 +469,10 @@ class BioAuswertung(context: Context) {
             .put("schnitt_90", mittel(letzter.key.minusDays(89), letzter.key)?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
             .put("schnitt_gesamt", alleDavor.takeIf { it.isNotEmpty() }?.average()?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
             .put("tage_gesamt", alleDavor.size)
+            // Ganze Historie bis zum Bezugstag (mit dem aktuellen Wert): für die Farbskala der Startkarte.
+            .put("min_alle", runde(bisBezug.values.min(), m.stellen))
+            .put("max_alle", runde(bisBezug.values.max(), m.stellen))
+            .put("schnitt_alle", runde(bisBezug.values.average(), m.stellen + 1))
             .put("min_vergleich", vorher.minOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("max_vergleich", vorher.maxOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("vergleichstage", vorher.size)

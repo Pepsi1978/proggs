@@ -58,7 +58,7 @@ class VictronFaehigkeit(private val context: Context) : Faehigkeit {
             name = "batterie_lesen",
             titel = "Solarbatterie lesen",
             beschreibung = "Liest Franks Victron-Solarbatterie (BMV-712: Ladezustand %, Spannung V, Strom A, Restlaufzeit) und den Solarladeregler " +
-                "(Solarleistung W, Ertrag heute kWh, Ladephase). Erst direkt per Bluetooth, unterwegs über den Rechner zu Hause.",
+                "(Solarleistung W, Ertrag heute Wh). Erst direkt per Bluetooth, unterwegs über den Rechner zu Hause.",
             schema = JSONObject().put("type", "object").put("properties", JSONObject()),
             nurLesen = true,
             taetigkeit = "liest die Solarbatterie",
@@ -226,16 +226,14 @@ class VictronFaehigkeit(private val context: Context) : Faehigkeit {
                 })
             }
             b.zahlOder("restlaufzeit_min")?.toInt()?.let { m -> add("Restlaufzeit" to if (m >= 1440) "etwa ${m / 1440} Tage" else "${m / 60} h ${m % 60} min") }
-            b.zahlOder("verbraucht_ah")?.let { add("Entnommen" to "${zahl(-it)} Ah") }
         }
 
         /** Zeilen (Name, Wert) des Ladereglers, für Sprache und Startkarte. */
         fun reglerZeilen(l: JSONObject): List<Pair<String, String>> = buildList {
             l.zahlOder("solarleistung_w")?.let { add("Solarleistung" to "${it.toInt()} W") }
             l.zahlOder("ladestrom_a")?.let { add("Ladestrom" to "${zahl(it)} A") }
-            l.zahlOder("ertrag_heute_kwh")?.let { add("Ertrag heute" to "${zahl(it, 2)} kWh") }
+            l.zahlOder("ertrag_heute_kwh")?.let { add("Ertrag heute" to "${Math.round(it * 1000)} Wh") }
             l.zahlOder("spannung_v")?.let { add("Batteriespannung" to "${zahl(it, 2)} V") }
-            l.optString("zustand").takeIf { it.isNotEmpty() }?.let { add("Ladephase" to it) }
         }
 
         private fun le(d: ByteArray, von: Int, laenge: Int): Long {

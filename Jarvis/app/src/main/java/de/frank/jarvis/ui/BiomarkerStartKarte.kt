@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.drawText
 import de.frank.jarvis.bio.BioAbruf
 import de.frank.jarvis.bio.BioAuswertung
 import de.frank.jarvis.bio.BioSpiegel
@@ -36,8 +37,16 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (ISO, wie gemeldet), Einordnung. */
-private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String)
+/** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (ISO, wie gemeldet), Einordnung, dazu die Farbskala. */
+private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String, val skala: BioSkala? = null)
+
+/** Farbskala über die ganze Historie: schlechtester Wert links (rot), bester rechts (grün); [schnitt] = langfristiger Durchschnitt. */
+private data class BioSkala(val schlecht: Double, val gut: Double, val aktuell: Double, val schnitt: Double, val schnittText: String) {
+    fun lage(w: Double): Float = if (gut == schlecht) 0.5f else ((w - schlecht) / (gut - schlecht)).toFloat().coerceIn(0f, 1f)
+}
+
+/** Diese Größen zeigen statt des Einordnungstexts die Farbskala. */
+private val MIT_SKALA = setOf("hrv", "ruhepuls", "tiefschlaf_prozent", "schlafdauer", "vo2max")
 
 /**
  * Stand der Karte außerhalb der Komposition: Sie liegt in der LazyColumn des Startbildschirms. Mit `remember` war sie nach dem
@@ -88,7 +97,13 @@ fun BiomarkerStartVorladen() {
         s.zeilen = (0 until liste.length()).map { i ->
             val m = liste.getJSONObject(i)
             val wert = if (m.isNull("aktuell")) "–" else m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
-            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum"), m.optString("einordnung"))
+            val skala = if (m.optString("id") in MIT_SKALA && !m.isNull("aktuell") && m.has("min_alle")) {
+                val tief = m.optDouble("min_alle"); val hoch = m.optDouble("max_alle"); val schnitt = m.optDouble("schnitt_alle")
+                val niedrigBesser = m.optString("hoeher_ist") == "schlechter"
+                BioSkala(if (niedrigBesser) hoch else tief, if (niedrigBesser) tief else hoch, m.optDouble("aktuell"), schnitt,
+                    zahl(schnitt))
+            } else null
+            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum"), m.optString("einordnung"), skala)
         }
         val st = antwort.optJSONObject("stand")
         s.stand = when {
@@ -151,7 +166,8 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                     Text(z.name, color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
                     Text(z.wert + datumZusatz(z.datum), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
-                if (z.einordnung.contains("besser") || z.einordnung.contains("schlechter")) {
+                if (z.skala != null) FarbSkala(z.skala)
+                else if (z.einordnung.contains("besser") || z.einordnung.contains("schlechter")) {
                     Text(z.einordnung, color = if (z.einordnung.contains("besser")) f.erfolg else f.gefahr, fontSize = 13.sp)
                 }
             }
@@ -160,3 +176,40 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
 }
 
 private fun zahl(w: Double): String = if (w == Math.floor(w) && kotlin.math.abs(w) < 1e9) w.toLong().toString() else String.format(java.util.Locale.GERMAN, "%.1f", w)
+
+/**
+ * Verlauf rot → gelb → grün über alle bisherigen Werte (links der schlechteste, rechts der beste), darauf der aktuelle Wert als
+ * Strich (ohne Zahl, die steht schon in der Zeile) und der langfristige Durchschnitt als Punkt mit seinem Wert darüber.
+ */
+@Composable
+private fun FarbSkala(s: BioSkala) {
+    val f = LocalFarben.current
+    val messer = androidx.compose.ui.text.rememberTextMeasurer()
+    val stil = androidx.compose.ui.text.TextStyle(color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    val rot = androidx.compose.ui.graphics.Color(0xFFE5484D)
+    val gelb = androidx.compose.ui.graphics.Color(0xFFF5C451)
+    val gruen = androidx.compose.ui.graphics.Color(0xFF3DBE7A)
+    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp).height(30.dp)) {
+        val dicke = 6.dp.toPx()
+        val y = size.height - 9.dp.toPx()
+        val rand = 7.dp.toPx()
+        val breite = size.width - 2 * rand
+        fun x(w: Double) = rand + breite * s.lage(w)
+        drawLine(
+            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(rot, gelb, gruen), startX = rand, endX = rand + breite),
+            androidx.compose.ui.geometry.Offset(rand, y), androidx.compose.ui.geometry.Offset(rand + breite, y),
+            strokeWidth = dicke, cap = androidx.compose.ui.graphics.StrokeCap.Round,
+        )
+        // Durchschnitt: Punkt mit Wert darüber, am Rand eingerückt, damit die Zahl nicht abgeschnitten wird.
+        val sx = x(s.schnitt)
+        drawCircle(f.hgOben, 5.dp.toPx(), androidx.compose.ui.geometry.Offset(sx, y))
+        drawCircle(f.text, 3.5.dp.toPx(), androidx.compose.ui.geometry.Offset(sx, y))
+        val t = messer.measure("Ø " + s.schnittText, stil)
+        val tx = (sx - t.size.width / 2f).coerceIn(0f, size.width - t.size.width)
+        drawText(t, topLeft = androidx.compose.ui.geometry.Offset(tx, y - dicke / 2 - 3.dp.toPx() - t.size.height))
+        // Aktueller Wert: kräftiger Strich quer über die Linie.
+        val ax = x(s.aktuell)
+        drawLine(f.hgOben, androidx.compose.ui.geometry.Offset(ax, y - 8.dp.toPx()), androidx.compose.ui.geometry.Offset(ax, y + 8.dp.toPx()), strokeWidth = 5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(f.text, androidx.compose.ui.geometry.Offset(ax, y - 7.dp.toPx()), androidx.compose.ui.geometry.Offset(ax, y + 7.dp.toPx()), strokeWidth = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+    }
+}

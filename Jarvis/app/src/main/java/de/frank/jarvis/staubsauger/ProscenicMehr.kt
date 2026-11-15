@@ -84,11 +84,64 @@ object ProscenicMehr {
      * Fahrweg (21011) und Zeitpläne (21002). [mitKarte] = false holt nur den Status.
      */
     suspend fun live(context: Context, mitKarte: Boolean = true): Live? = withContext(Dispatchers.IO) {
-        runCatching { mitSitzung(context) { s -> lesen(s, mitKarte) } }
-            .onFailure { Logbuch.netz("Proscenic: Live-Stand fehlt", it.toString().take(200)) }.getOrNull()
+        runCatching {
+            val daten = mitSitzung(context) { s -> lesen(s, mitKarte) } ?: return@runCatching null
+            // Mit Karte gelesen: die Rohdaten zwischenspeichern, damit die Karte beim nächsten Aufklappen sofort da ist.
+            if (daten.containsKey(20002)) kartenSpeichern(context, daten)
+            bauen(daten)
+        }.onFailure { Logbuch.netz("Proscenic: Live-Stand fehlt", it.toString().take(200)) }.getOrNull()
     }
 
-    private fun lesen(s: ProscenicCloud.Sitzung, mitKarte: Boolean): Live? {
+    // ---- Zwischengespeicherte Karte ----
+
+    private fun kartenDatei(context: Context) = java.io.File(context.applicationContext.filesDir, "staubsauger_karte.json")
+
+    private fun kartenPrefs(context: Context) = context.applicationContext.getSharedPreferences("staubsauger", Context.MODE_PRIVATE)
+
+    /** Wann zuletzt eine Karte bei stehendem Roboter (also nach der Reinigung) gespeichert wurde, ms seit 1970; 0 = noch nie. */
+    fun kartenStand(context: Context): Long = kartenPrefs(context).getLong("karte_fertig_ms", 0L)
+
+    @Synchronized
+    private fun kartenSpeichern(context: Context, daten: Map<Int, JSONObject>) {
+        runCatching {
+            val j = JSONObject(); daten.forEach { (k, v) -> j.put(k.toString(), v) }
+            val ziel = kartenDatei(context); val tmp = java.io.File(ziel.path + ".tmp")
+            tmp.writeText(j.toString()); tmp.renameTo(ziel)
+            // Eine Karte mitten in der Reinigung zählt nicht als fertig: Sonst holte der Wächter die Endkarte nie.
+            if (!aktiv(daten[20001]?.optString("mode"))) kartenPrefs(context).edit().putLong("karte_fertig_ms", System.currentTimeMillis()).apply()
+        }.onFailure { Logbuch.fehler("Proscenic: Karte speichern", it) }
+    }
+
+    /** Die zuletzt gespeicherte Karte samt Stand, ohne Netz. */
+    suspend fun ausSpeicher(context: Context): Live? = withContext(Dispatchers.IO) {
+        runCatching {
+            val d = kartenDatei(context).takeIf { it.exists() } ?: return@runCatching null
+            val j = JSONObject(d.readText())
+            val daten = HashMap<Int, JSONObject>()
+            j.keys().forEach { k -> k.toIntOrNull()?.let { n -> j.optJSONObject(k)?.let { daten[n] = it } } }
+            // Nur Karte, Fahrweg, Zonen und Zeitpläne aus dem Speicher; Zustand, Akku und Einstellungen kommen frisch.
+            val roboter = daten[20001]?.optJSONArray("pos")
+            daten.remove(20001)
+            bauen(daten).copy(roboter = roboter?.let { it.optInt(0) to it.optInt(1) })
+        }.getOrNull()
+    }
+
+    /** Ende (ms) der letzten abgeschlossenen Reinigung laut Verlauf der Cloud; null = nicht lesbar. */
+    suspend fun letzteReinigungEnde(context: Context): Long? = withContext(Dispatchers.IO) {
+        runCatching {
+            mitSitzung(context) { s ->
+                val r = ProscenicCloud.post("/app/cleanRobot/records", s.token, FormBody.Builder().add("username", s.mail).add("sn", s.sn).add("page", "0").add("size", "1").build())
+                if (r.optInt("code") == 102) throw ProscenicCloud.TokenUngueltig()
+                r.optJSONObject("data")?.optJSONArray("content")?.optJSONObject(0)?.let { (it.optLong("startTime") + it.optInt("cleanTime")) * 1000 } ?: 0L
+            }
+        }.getOrNull()
+    }
+
+    /** Läuft der Roboter gerade (reinigt, pausiert oder fährt zurück)? */
+    fun aktiv(modus: String?) = modus in setOf("sweep", "pause", "backcharge", "findchargerpause")
+    fun pausiert(modus: String?) = modus == "pause" || modus == "findchargerpause"
+
+    private fun lesen(s: ProscenicCloud.Sitzung, mitKarte: Boolean): HashMap<Int, JSONObject>? {
         val adr = ProscenicCloud.post("/appInit/getSockAddr", s.token, FormBody.Builder().add("username", s.mail).add("sn", s.sn).build())
         if (adr.optInt("code") == 102) throw ProscenicCloud.TokenUngueltig()
         val e = adr.optJSONObject("data")?.optJSONArray("addr_list")?.optJSONObject(0) ?: return null
@@ -129,6 +182,10 @@ object ProscenicMehr {
                 puffer.reset(); puffer.write(text.toByteArray())
             }
         }
+        return daten
+    }
+
+    private fun bauen(daten: Map<Int, JSONObject>): Live {
         val st = daten[20001]
         val k = daten[20002]
         val zonenQuelle = daten[21004]?.optJSONArray("value") ?: k?.optJSONArray("area")

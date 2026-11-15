@@ -124,6 +124,8 @@ class JarvisDienst : Service() {
             de.frank.jarvis.bio.BioUebernahme.nachholen(app)
             de.frank.jarvis.bio.BioSpiegel.starte(app)
         }
+        // Staubsauger: nach jeder fertigen Reinigung die Wohnungskarte im Hintergrund einlesen und speichern.
+        de.frank.jarvis.staubsauger.SaugerKartenWaechter.starte(app)
         // Die erste Meldung des Rückrufs ist nur die Bestandsaufnahme: kein Abriss wegen eines Netzes aus einem früheren Dienstlauf.
         Tunnel.netzVergessen()
         runCatching { getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netz) }

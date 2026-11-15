@@ -1,16 +1,28 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package de.frank.jarvis.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -18,7 +30,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
@@ -46,6 +61,8 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -55,6 +72,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import de.frank.jarvis.R
 import de.frank.jarvis.staubsauger.ProscenicCloud
 import de.frank.jarvis.staubsauger.ProscenicMehr
@@ -71,6 +90,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -89,6 +109,10 @@ private object SaugerAnsicht {
     var geprueft by mutableStateOf(false)
     var laedt by mutableStateOf(false)
     var meldung by mutableStateOf<SaugerAusgang?>(null)
+    /** Abschnitt, zu dem nach dem Aufklappen gescrollt wird: "saugstufe" oder "staub" (aus der Statuszeile). */
+    var ziel by mutableStateOf<String?>(null)
+    /** Wann der Zustand zuletzt still gelesen wurde (ms). */
+    var zustandUm = 0L
 }
 
 private fun stufeName(s: String?) = when (s) { "quiet" -> "Leise"; "auto" -> "Normal"; "strong" -> "Leistungsstark"; null, "" -> "–"; else -> s }
@@ -116,7 +140,7 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         s.laeuft = true
         saugerBereich.launch {
             ProscenicSteuerung.ausfuehren(context, aktion)
-            if (a.offen && cloud) aktualisieren(context, mitKarte = true)
+            if (cloud) aktualisieren(context, mitKarte = a.offen)
         }
     }
     fun einstellen(block: suspend () -> SaugerAusgang) {
@@ -129,11 +153,28 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         }
     }
 
+    // Zustand still lesen, damit Pause-Taste und Statuszeile auch zugeklappt stimmen: beim Erscheinen, während der Roboter
+    // arbeitet alle 45 Sekunden, sonst alle 5 Minuten (nur solange die Karte zu sehen ist).
+    if (cloud) LaunchedEffect(Unit) {
+        while (true) {
+            val aktiv = ProscenicMehr.aktiv(a.live?.modus)
+            if (System.currentTimeMillis() - a.zustandUm > (if (aktiv) 40_000L else 4 * 60_000L)) zustandLesen(context)
+            delay(if (ProscenicMehr.aktiv(a.live?.modus)) 45_000L else 5 * 60_000L)
+        }
+    }
+
+    fun aufklappen(ziel: String? = null) {
+        a.ziel = ziel
+        if (!a.offen) {
+            a.offen = true
+            if (cloud) saugerBereich.launch { oeffnen(context) }
+        }
+    }
+
     Karte(modifier = griff) {
-        // Kopf: Titel, Akku, Erreichbarkeit, Tiefenreinigung, Aktualisieren, Auf-/Zuklappen.
+        // Kopf: Titel, Akku, Erreichbarkeit, dann Tiefenreinigung, Pause, Aktualisieren mit Abstand zueinander und zum Klapp-Pfeil.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().antippen {
-            a.offen = !a.offen
-            if (a.offen && cloud && (a.live?.karte == null)) saugerBereich.launch { aktualisieren(context, mitKarte = true) }
+            if (a.offen) { a.offen = false; a.ziel = null } else aufklappen()
         }) {
             Column(Modifier.weight(1f)) {
                 Text("Staubsauger", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -141,33 +182,96 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                     Image(painterResource(R.drawable.sauger_laden), null, Modifier.size(18.dp))
                     Text(
                         (live?.akku ?: s.akku)?.let { "$it %" } ?: "–",
-                        color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, end = 10.dp),
+                        color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, end = 8.dp),
                     )
+                    val st = Modifier.weight(1f, fill = false)
                     when {
-                        a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp)
-                        a.geprueft && a.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        a.geprueft && a.erreichbar == false -> Text("nicht erreichbar", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        a.geprueft -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp)
-                        s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp)
+                        a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
+                        a.geprueft && a.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                        a.geprueft && a.erreichbar == false -> Text("nicht erreichbar", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                        a.geprueft -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
+                        s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
                     }
                 }
             }
             KopfKnopf(R.drawable.sauger_tiefenreinigung, "Tiefenreinigung", s.laeuft) { los(Aktion.TIEFENREINIGUNG) }
+            if (cloud) {
+                // Pause/Weiter: läuft er, Pause-Symbol; pausiert, Play-Symbol; steht er, ausgegraut.
+                val modus = live?.modus
+                val pausiert = ProscenicMehr.pausiert(modus)
+                val bereit = ProscenicMehr.aktiv(modus) && !a.laedt
+                Spacer(Modifier.width(18.dp))
+                Box(
+                    Modifier.size(42.dp).glas(f, 21.dp, erhoeht = 0.5f).antippen { if (bereit) einstellen { ProscenicMehr.pauseOderWeiter(context, weiter = pausiert) } }
+                        .alpha(if (bereit) 1f else 0.4f),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(if (pausiert) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (pausiert) "Weiter reinigen" else "Pause", tint = f.text, modifier = Modifier.size(24.dp)) }
+            }
+            Spacer(Modifier.width(18.dp))
             Box(
-                Modifier.padding(start = 6.dp).size(42.dp).glas(f, 21.dp, erhoeht = 0.5f, toenung = if (a.laedt) f.primaer else null)
+                Modifier.size(42.dp).glas(f, 21.dp, erhoeht = 0.5f, toenung = if (a.laedt) f.primaer else null)
                     .antippen { if (cloud) saugerBereich.launch { aktualisieren(context, mitKarte = a.offen) } else los(Aktion.STATUS) },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.Refresh, "Aktualisieren", tint = if (a.laedt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp)) }
             Icon(
                 if (a.offen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, if (a.offen) "Zuklappen" else "Aufklappen",
-                tint = f.textLeise, modifier = Modifier.padding(start = 4.dp).size(26.dp),
+                tint = f.textLeise, modifier = Modifier.padding(start = 22.dp).size(26.dp),
             )
+        }
+        // Statuszeile, solange der Roboter arbeitet: Saugstufe und automatische Staubsammlung, beides antippbar.
+        if (!a.offen && cloud && live != null && ProscenicMehr.aktiv(live.modus)) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Saugstufe:", color = f.textLeise, fontSize = 13.sp)
+                StatusKnopf(stufeName(live.saugstufe)) { aufklappen("saugstufe") }
+                Text("Staubsammlung:", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
+                StatusKnopf(when (live.staubFrequenz) { null -> "–"; 0 -> "aus"; else -> "an" }) { aufklappen("staub") }
+            }
         }
         val meldung = a.meldung ?: s.meldung?.takeIf { !s.laeuft }
         meldung?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
 
         if (a.offen) Aufgeklappt(cloud, ::los, ::einstellen)
     }
+}
+
+/** Antippbarer Wert in der Statuszeile. */
+@Composable
+private fun StatusKnopf(text: String, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    Box(Modifier.padding(start = 6.dp).height(34.dp).glas(f, 12.dp, erhoeht = 0.5f, toenung = f.primaer).antippen { aktion() }.padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center) {
+        Text(text, color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Übernimmt einen frisch gelesenen Stand; ohne Karte bleibt die bisherige (gespeicherte) Karte stehen. */
+private suspend fun uebernehmen(context: android.content.Context, l: ProscenicMehr.Live) {
+    val a = SaugerAnsicht
+    val alt = a.live
+    a.live = if (l.karte == null && alt?.karte != null) alt.copy(modus = l.modus, akku = l.akku, saugstufe = l.saugstufe, lautstaerke = l.lautstaerke, led = l.led, staubFrequenz = l.staubFrequenz, roboter = l.roboter ?: alt.roboter) else l
+    a.zustandUm = System.currentTimeMillis()
+    withContext(Dispatchers.IO) { SaugerStand.merken(context, l.akku, l.modus?.let(::zustandName), stufeName(l.saugstufe)) }
+}
+
+/** Liest still nur den Zustand (ohne Karte, ohne „wird gelesen …“). */
+private suspend fun zustandLesen(context: android.content.Context) {
+    if (SaugerAnsicht.laedt) return
+    ProscenicMehr.live(context, mitKarte = false)?.let { uebernehmen(context, it) }
+}
+
+/**
+ * Aufklappen: zuerst sofort die gespeicherte Karte zeigen, dann nur prüfen, ob es eine neuere gibt (der Roboter arbeitet gerade
+ * oder im Verlauf endete eine Reinigung nach der gespeicherten Karte); nur dann wird die Karte neu geholt, sonst nur der Zustand.
+ */
+private suspend fun oeffnen(context: android.content.Context) {
+    val a = SaugerAnsicht
+    if (a.live?.karte == null) ProscenicMehr.ausSpeicher(context)?.let { c ->
+        val l = a.live
+        a.live = if (l == null) c else c.copy(modus = l.modus, akku = l.akku, saugstufe = l.saugstufe, lautstaerke = l.lautstaerke, led = l.led, staubFrequenz = l.staubFrequenz, roboter = l.roboter ?: c.roboter)
+    }
+    val neuer = a.live?.karte == null || ProscenicMehr.aktiv(a.live?.modus) ||
+        (ProscenicMehr.letzteReinigungEnde(context)?.let { it > ProscenicMehr.kartenStand(context) } ?: false)
+    aktualisieren(context, mitKarte = neuer)
 }
 
 /** Liest Erreichbarkeit und Stand neu (mit Karte, wenn aufgeklappt). */
@@ -185,11 +289,7 @@ private suspend fun coroutineScopeAsync(context: android.content.Context, mitKar
     val online = async { ProscenicMehr.erreichbar(context) }
     val neu = async { ProscenicMehr.live(context, mitKarte) }
     a.erreichbar = online.await(); a.geprueft = true
-    neu.await()?.let { l ->
-        // Karte nur ersetzen, wenn eine neue kam (Statusabfrage ohne Karte behält die alte).
-        a.live = if (l.karte == null && a.live?.karte != null) a.live!!.copy(modus = l.modus, akku = l.akku, saugstufe = l.saugstufe, lautstaerke = l.lautstaerke, led = l.led, staubFrequenz = l.staubFrequenz, roboter = l.roboter ?: a.live!!.roboter) else l
-        withContext(Dispatchers.IO) { SaugerStand.merken(context, l.akku, l.modus?.let(::zustandName), stufeName(l.saugstufe)) }
-    }
+    neu.await()?.let { uebernehmen(context, it) }
 }
 
 private fun zustandName(m: String) = when (m) {
@@ -198,6 +298,7 @@ private fun zustandName(m: String) = when (m) {
     "idle" -> "bereit"; "fault" -> "Störung"; else -> m
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (suspend () -> SaugerAusgang) -> Unit) {
     val f = LocalFarben.current
@@ -208,35 +309,73 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     var zonenModus by remember { mutableStateOf(false) }
     val entwurf = remember { mutableStateListOf<Zone>() }
     var dialog by remember { mutableStateOf<String?>(null) }
+    var vollbild by remember { mutableStateOf(false) }
+    val saugZiel = remember { BringIntoViewRequester() }
+    val staubZiel = remember { BringIntoViewRequester() }
+    // Aus der Statuszeile: zum gewünschten Abschnitt scrollen. Einige Male nachfassen, weil die Karte darüber noch erscheinen kann.
+    LaunchedEffect(a.ziel) {
+        val z = a.ziel ?: return@LaunchedEffect
+        val r = if (z == "staub") staubZiel else saugZiel
+        repeat(6) { delay(250); runCatching { r.bringIntoView() } }
+        a.ziel = null
+    }
 
     live?.modus?.let { Text("Zustand: ${zustandName(it)} · Saugstufe: ${stufeName(live.saugstufe)}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
 
-    // Karte der Wohnung.
+    fun neueZone(x1: Int, y1: Int, x2: Int, y2: Int) {
+        if (kotlin.math.abs(x2 - x1) < 150 || kotlin.math.abs(y2 - y1) < 150) return   // versehentliches Wischen, keine Zone
+        val id = (entwurf.maxOfOrNull { it.json.optInt("id") } ?: 1000) + 1
+        val nr = entwurf.count { it.sperre } + 1
+        val j = JSONObject().put("active", "forbid").put("id", id).put("mode", "default").put("name", "扫地机禁区").put("tag", nr.toString())
+            .put("forbidType", "all")
+            .put("vertexs", JSONArray().put(JSONArray().put(minOf(x1, x2)).put(maxOf(y1, y2))).put(JSONArray().put(maxOf(x1, x2)).put(maxOf(y1, y2)))
+                .put(JSONArray().put(maxOf(x1, x2)).put(minOf(y1, y2))).put(JSONArray().put(minOf(x1, x2)).put(minOf(y1, y2))))
+        entwurf.add(Zone(j))
+    }
+    fun zonenSpeichern() {
+        val mapId = live?.mapId ?: return
+        val liste = entwurf.toList(); zonenModus = false
+        einstellen { ProscenicMehr.zonenSpeichern(context, mapId, liste) }
+    }
+
+    // Karte der Wohnung: Antippen öffnet sie im Vollbild (Zoom mit zwei Fingern, zurück per Wischgeste).
     val karte = live?.karte
     if (karte != null) {
-        KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus,
+        KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = false,
+            beiTipp = { vollbild = true },
             beiZone = { i -> if (zonenModus && entwurf[i].sperre) entwurf.removeAt(i) },
-            beiNeu = { x1, y1, x2, y2 ->
-                val id = (entwurf.maxOfOrNull { it.json.optInt("id") } ?: 1000) + 1
-                val nr = entwurf.count { it.sperre } + 1
-                val j = JSONObject().put("active", "forbid").put("id", id).put("mode", "default").put("name", "扫地机禁区").put("tag", nr.toString())
-                    .put("forbidType", "all")
-                    .put("vertexs", JSONArray().put(JSONArray().put(minOf(x1, x2)).put(maxOf(y1, y2))).put(JSONArray().put(maxOf(x1, x2)).put(maxOf(y1, y2)))
-                        .put(JSONArray().put(maxOf(x1, x2)).put(minOf(y1, y2))).put(JSONArray().put(minOf(x1, x2)).put(minOf(y1, y2))))
-                entwurf.add(Zone(j))
-            })
+            beiNeu = ::neueZone)
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Legende(Color(0xFF1565C0), "Roboter"); Legende(Color(0xFF43A047), "Station"); Legende(Color(0xFF1E88E5), "Fahrweg"); Legende(Color(0xFFE53935), "Sperrzone")
+        }
+        if (vollbild) Dialog(onDismissRequest = { vollbild = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Box(Modifier.fillMaxSize().background(f.hgOben)) {
+                KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = true, modifier = Modifier.fillMaxSize(),
+                    beiZone = { i -> if (zonenModus && entwurf[i].sperre) entwurf.removeAt(i) },
+                    beiNeu = ::neueZone)
+                Column(Modifier.fillMaxWidth().systemBarsPadding().padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (zonenModus) "Rechteck ziehen = neue Sperrzone, rote Zone antippen = löschen, zwei Finger = zoomen" else "Zwei Finger zum Zoomen und Verschieben",
+                            color = f.textLeise, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(42.dp).glas(f, 21.dp, erhoeht = 0.5f).antippen { vollbild = false }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Close, "Schließen", tint = f.text, modifier = Modifier.size(22.dp))
+                        }
+                    }
+                }
+                if (zonenModus) Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().systemBarsPadding().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Knopf("Speichern", Modifier.weight(1f)) { zonenSpeichern(); vollbild = false }
+                    Knopf("Abbrechen", Modifier.weight(1f)) { zonenModus = false }
+                }
+            }
+        }
     } else {
         Text(if (a.laedt) "Karte wird geladen …" else if (cloud) "Keine Karte – tippe auf Aktualisieren." else "Die Karte gibt es nur mit der Proscenic-Anmeldung unter Konten.",
             color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
     }
     if (zonenModus) {
-        Text("Ziehe auf der Karte ein Rechteck für eine neue Sperrzone, tippe eine rote Zone an, um sie zu löschen.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("Ziehe auf der Karte ein Rechteck für eine neue Sperrzone; tippe die Karte an, um sie groß zu bearbeiten (rote Zone antippen = löschen).", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Knopf("Speichern", Modifier.weight(1f)) {
-                val mapId = live?.mapId ?: return@Knopf
-                val liste = entwurf.toList(); zonenModus = false
-                einstellen { ProscenicMehr.zonenSpeichern(context, mapId, liste) }
-            }
+            Knopf("Speichern", Modifier.weight(1f)) { zonenSpeichern() }
             Knopf("Abbrechen", Modifier.weight(1f)) { zonenModus = false }
         }
     }
@@ -259,7 +398,7 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     }
 
     // Saugstufe.
-    Text("Saugstufe", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+    Text("Saugstufe", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp).bringIntoViewRequester(saugZiel))
     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("quiet", "auto", "strong").forEach { st ->
             Knopf(stufeName(st), Modifier.weight(1f), aktiv = live?.saugstufe == st) { einstellen { ProscenicMehr.saugstufe(context, st) } }
@@ -275,7 +414,7 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     }
     // Automatische Staubsammlung.
     Text("Automatische Staubsammlung nach dem Andocken", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp).bringIntoViewRequester(staubZiel), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf(0 to "Aus", 1 to "Jedes Mal", 2 to "Jedes 2.", 3 to "Jedes 3.").forEach { (w, t) ->
             Knopf(t, Modifier.weight(1f), aktiv = live?.staubFrequenz == w) { einstellen { ProscenicMehr.staubFrequenz(context, w) } }
         }
@@ -297,79 +436,113 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     }
 }
 
-/** Wohnungskarte mit Fahrweg (blau), Roboter, Station (grün), Räumen und Sperrzonen (rot). */
+/** Abbildung Kartenpixel ↔ Bildschirm: eingepasst (basis, bx, by), dazu Zoom und Verschiebung des Vollbilds. */
+private class Sicht(val basis: Float, val bx: Float, val by: Float, val zoom: Float, val pan: Offset) {
+    fun bild(px: Float, py: Float) = Offset(pan.x + zoom * (bx + basis * px), pan.y + zoom * (by + basis * py))
+    fun karte(p: Offset) = Offset(((p.x - pan.x) / zoom - bx) / basis, ((p.y - pan.y) / zoom - by) / basis)
+    companion object {
+        fun von(w: Float, h: Float, k: ProscenicMehr.Karte, zoom: Float, pan: Offset): Sicht {
+            val basis = minOf(w / k.breite, h / k.hoehe)
+            return Sicht(basis, (w - k.breite * basis) / 2, (h - k.hoehe * basis) / 2, zoom, pan)
+        }
+    }
+}
+
+/** Verschiebung so begrenzen, dass die gezoomte Fläche den Bildschirm nie freigibt. */
+private fun klemmen(pan: Offset, zoom: Float, w: Float, h: Float) = Offset(pan.x.coerceIn(w * (1 - zoom), 0f), pan.y.coerceIn(h * (1 - zoom), 0f))
+
+/**
+ * Wohnungskarte mit Fahrweg (blau), Roboter, Station (grün), Räumen und Sperrzonen (rot).
+ * Klein: Antippen ruft [beiTipp] (Vollbild), im Sperrzonen-Modus zieht ein Finger ein Rechteck.
+ * Vollbild: zwei Finger zoomen und verschieben; ein Finger verschiebt, im Sperrzonen-Modus zieht er ein Rechteck, Antippen löscht eine Zone.
+ */
 @Composable
 private fun KartenAnsicht(
-    live: ProscenicMehr.Live, zonen: List<Zone>, bearbeiten: Boolean,
-    beiZone: (Int) -> Unit, beiNeu: (Int, Int, Int, Int) -> Unit,
+    live: ProscenicMehr.Live, zonen: List<Zone>, bearbeiten: Boolean, vollbild: Boolean, modifier: Modifier = Modifier,
+    beiTipp: () -> Unit = {}, beiZone: (Int) -> Unit, beiNeu: (Int, Int, Int, Int) -> Unit,
 ) {
     val f = LocalFarben.current
     val k = live.karte ?: return
     val bild = remember(k) { k.bild.asImageBitmap() }
     var ziehStart by remember { mutableStateOf<Offset?>(null) }
     var ziehEnde by remember { mutableStateOf<Offset?>(null) }
-    val maxHoehe = 520.dp
-    Box(Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(max = maxHoehe), contentAlignment = Alignment.Center) {
+    var zoom by remember { mutableStateOf(1f) }
+    var pan by remember { mutableStateOf(Offset.Zero) }
+    val flaeche = if (vollbild) Modifier.fillMaxSize()
+    else Modifier.fillMaxWidth().aspectRatio(k.breite.toFloat() / k.hoehe, matchHeightConstraintsFirst = true).glas(f, 12.dp)
+    Box(if (vollbild) modifier else Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(max = 520.dp), contentAlignment = Alignment.Center) {
         Canvas(
-            Modifier.fillMaxWidth().aspectRatio(k.breite.toFloat() / k.hoehe, matchHeightConstraintsFirst = true)
-                .glas(f, 12.dp)
-                .pointerInput(bearbeiten, zonen.size) {
-                    if (!bearbeiten) return@pointerInput
-                    detectTapGestures { p ->
-                        val sk = size.width.toFloat() / k.breite
-                        val mx = k.mmX(p.x / sk); val my = k.mmY(p.y / sk)
-                        val i = zonen.indexOfFirst { z -> z.sperre && z.ecken.let { e -> e.isNotEmpty() && mx in e.minOf { it.first }..e.maxOf { it.first } && my in e.minOf { it.second }..e.maxOf { it.second } } }
-                        if (i >= 0) beiZone(i)
+            flaeche.pointerInput(bearbeiten, vollbild, zonen, k) {
+                awaitEachGesture {
+                    val start = awaitFirstDown(requireUnconsumed = false).position
+                    var ende = start; var bewegt = false; var mehr = false
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val gedrueckt = ev.changes.filter { it.pressed }
+                        if (gedrueckt.isEmpty()) break
+                        if (gedrueckt.size >= 2) {
+                            mehr = true; ziehStart = null; ziehEnde = null
+                            if (!vollbild) continue
+                            val c = ev.calculateCentroid(); val nz = (zoom * ev.calculateZoom()).coerceIn(1f, 8f)
+                            pan = klemmen(c - (c - pan) * (nz / zoom) + ev.calculatePan(), nz, size.width.toFloat(), size.height.toFloat())
+                            zoom = nz
+                            ev.changes.forEach { it.consume() }
+                        } else if (!mehr) {
+                            val ch = gedrueckt[0]; ende = ch.position
+                            if (!bewegt && (ende - start).getDistance() > viewConfiguration.touchSlop) bewegt = true
+                            if (bewegt && bearbeiten) { ziehStart = start; ziehEnde = ende; ch.consume() }
+                            else if (bewegt && vollbild) { pan = klemmen(pan + ch.positionChange(), zoom, size.width.toFloat(), size.height.toFloat()); ch.consume() }
+                        }
                     }
+                    if (!mehr) {
+                        val sicht = Sicht.von(size.width.toFloat(), size.height.toFloat(), k, zoom, pan)
+                        if (bewegt && bearbeiten) {
+                            val a = sicht.karte(start); val b = sicht.karte(ende)
+                            beiNeu(k.mmX(a.x), k.mmY(a.y), k.mmX(b.x), k.mmY(b.y))
+                        } else if (!bewegt && !vollbild) beiTipp()
+                        else if (!bewegt && bearbeiten) {
+                            val p = sicht.karte(start); val mx = k.mmX(p.x); val my = k.mmY(p.y)
+                            val i = zonen.indexOfFirst { z -> z.sperre && z.ecken.let { e -> e.isNotEmpty() && mx in e.minOf { it.first }..e.maxOf { it.first } && my in e.minOf { it.second }..e.maxOf { it.second } } }
+                            if (i >= 0) beiZone(i)
+                        }
+                    }
+                    ziehStart = null; ziehEnde = null
                 }
-                .pointerInput(bearbeiten) {
-                    if (!bearbeiten) return@pointerInput
-                    detectDragGestures(
-                        onDragStart = { ziehStart = it; ziehEnde = it },
-                        onDrag = { c, d -> c.consume(); ziehEnde = (ziehEnde ?: Offset.Zero) + d },
-                        onDragEnd = {
-                            val a = ziehStart; val b = ziehEnde
-                            if (a != null && b != null) {
-                                val sk = size.width.toFloat() / k.breite
-                                beiNeu(k.mmX(a.x / sk), k.mmY(a.y / sk), k.mmX(b.x / sk), k.mmY(b.y / sk))
-                            }
-                            ziehStart = null; ziehEnde = null
-                        },
-                        onDragCancel = { ziehStart = null; ziehEnde = null },
-                    )
-                },
+            },
         ) {
-            val sk = size.width / k.breite
-            drawImage(bild, IntOffset.Zero, IntSize(k.breite, k.hoehe), IntOffset.Zero, IntSize(size.width.toInt(), size.height.toInt()), filterQuality = FilterQuality.None)
-            // Räume und Sperrzonen.
-            zonen.forEach { z ->
-                val e = z.ecken; if (e.isEmpty()) return@forEach
-                val x1 = k.px(e.minOf { it.first }) * sk; val x2 = k.px(e.maxOf { it.first }) * sk
-                val y1 = k.py(e.maxOf { it.second }) * sk; val y2 = k.py(e.minOf { it.second }) * sk
-                if (z.sperre) {
-                    drawRect(Color(0x44E53935), Offset(x1, y1), Size(x2 - x1, y2 - y1))
-                    drawRect(Color(0xFFE53935), Offset(x1, y1), Size(x2 - x1, y2 - y1), style = Stroke(2.dp.toPx()))
-                } else drawRect(Color(0x33607D8B), Offset(x1, y1), Size(x2 - x1, y2 - y1), style = Stroke(1.dp.toPx()))
-            }
-            // Fahrweg.
-            if (live.pfad.size > 1) {
-                val p = Path()
-                live.pfad.forEachIndexed { i, (x, y) -> val px = k.px(x) * sk; val py = k.py(y) * sk; if (i == 0) p.moveTo(px, py) else p.lineTo(px, py) }
-                drawPath(p, Color(0xCC1E88E5), style = Stroke(1.6.dp.toPx()))
-            }
-            live.station?.let { (x, y) -> drawCircle(Color(0xFF43A047), 6.dp.toPx(), Offset(k.px(x) * sk, k.py(y) * sk)) }
-            live.roboter?.let { (x, y) ->
-                drawCircle(Color.White, 8.dp.toPx(), Offset(k.px(x) * sk, k.py(y) * sk))
-                drawCircle(Color(0xFF1565C0), 6.dp.toPx(), Offset(k.px(x) * sk, k.py(y) * sk))
-            }
-            val a = ziehStart; val b = ziehEnde
-            if (a != null && b != null) {
-                drawRect(Color(0x44E53935), Offset(minOf(a.x, b.x), minOf(a.y, b.y)), Size(kotlin.math.abs(b.x - a.x), kotlin.math.abs(b.y - a.y)))
+            val sicht = Sicht.von(size.width, size.height, k, zoom, pan)
+            fun pt(x: Int, y: Int) = sicht.bild(k.px(x), k.py(y))
+            clipRect {
+                val o = sicht.bild(0f, 0f)
+                val sk = sicht.basis * sicht.zoom
+                drawImage(bild, IntOffset.Zero, IntSize(k.breite, k.hoehe), IntOffset(o.x.toInt(), o.y.toInt()),
+                    IntSize((k.breite * sk).toInt(), (k.hoehe * sk).toInt()), filterQuality = FilterQuality.None)
+                // Räume und Sperrzonen.
+                zonen.forEach { z ->
+                    val e = z.ecken; if (e.isEmpty()) return@forEach
+                    val a = pt(e.minOf { it.first }, e.maxOf { it.second }); val b = pt(e.maxOf { it.first }, e.minOf { it.second })
+                    if (z.sperre) {
+                        drawRect(Color(0x44E53935), a, Size(b.x - a.x, b.y - a.y))
+                        drawRect(Color(0xFFE53935), a, Size(b.x - a.x, b.y - a.y), style = Stroke(2.dp.toPx()))
+                    } else drawRect(Color(0x33607D8B), a, Size(b.x - a.x, b.y - a.y), style = Stroke(1.dp.toPx()))
+                }
+                // Fahrweg.
+                if (live.pfad.size > 1) {
+                    val p = Path()
+                    live.pfad.forEachIndexed { i, (x, y) -> val q = pt(x, y); if (i == 0) p.moveTo(q.x, q.y) else p.lineTo(q.x, q.y) }
+                    drawPath(p, Color(0xCC1E88E5), style = Stroke(1.6.dp.toPx()))
+                }
+                live.station?.let { (x, y) -> drawCircle(Color(0xFF43A047), 6.dp.toPx(), pt(x, y)) }
+                live.roboter?.let { (x, y) ->
+                    drawCircle(Color.White, 8.dp.toPx(), pt(x, y))
+                    drawCircle(Color(0xFF1565C0), 6.dp.toPx(), pt(x, y))
+                }
+                val a = ziehStart; val b = ziehEnde
+                if (a != null && b != null) {
+                    drawRect(Color(0x44E53935), Offset(minOf(a.x, b.x), minOf(a.y, b.y)), Size(kotlin.math.abs(b.x - a.x), kotlin.math.abs(b.y - a.y)))
+                }
             }
         }
-    }
-    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Legende(Color(0xFF1565C0), "Roboter"); Legende(Color(0xFF43A047), "Station"); Legende(Color(0xFF1E88E5), "Fahrweg"); Legende(Color(0xFFE53935), "Sperrzone")
     }
 }
 

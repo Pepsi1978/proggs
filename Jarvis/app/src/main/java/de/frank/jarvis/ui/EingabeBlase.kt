@@ -73,6 +73,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -180,9 +182,17 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
     // Rand, Konsolenwarnung, Anhänge, Knopfzeile und eine Zeile Text. Darüber hinaus wird nur das Textfeld kürzer und scrollt in sich.
     val blaseMindest = 12.dp + (if (konsole == false) 56.dp else 0.dp) + (if (vm.anhaenge.isNotEmpty()) 76.dp else 0.dp) +
         (if (vm.eingabeKompakt) 56.dp else 102.dp)
+    // Bearbeiten mit offener Tastatur: Die Blase darf dann den Platz des Symbolstapels mitnehmen (der Stapel blendet sich aus),
+    // und das Textfeld wächst auf alles, was über der Tastatur frei ist. Vorher blieben bei langem Diktat nur ein bis zwei Zeilen.
+    var feldFokus by remember { mutableStateOf(false) }
+    val tastaturOffen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val bearbeitet = feldFokus && tastaturOffen
+    SideEffect { EingabeLage.bearbeitet = bearbeitet }
+    DisposableEffect(Unit) { onDispose { EingabeLage.bearbeitet = false } }
+    val platz = if (bearbeitet) 0.dp else platzOben
     val begrenzt = Modifier.layout { messbar, c ->
-        val max = if (!c.hasBoundedHeight || platzOben <= 0.dp) c.maxHeight
-        else (c.maxHeight - platzOben.roundToPx()).coerceAtLeast(blaseMindest.roundToPx()).coerceIn(c.minHeight, c.maxHeight)
+        val max = if (!c.hasBoundedHeight || platz <= 0.dp) c.maxHeight
+        else (c.maxHeight - platz.roundToPx()).coerceAtLeast(blaseMindest.roundToPx()).coerceIn(c.minHeight, c.maxHeight)
         val p = messbar.measure(c.copy(maxHeight = max))
         layout(p.width, p.height) { p.place(0, 0) }
     }
@@ -230,7 +240,6 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
             } finally { tastaturWunsch = false }
         }
         val fokusVerwalter = LocalFocusManager.current
-        var feldFokus by remember { mutableStateOf(false) }
         LaunchedEffect(vm.tastaturWeg) {
             if (vm.tastaturWeg == 0) return@LaunchedEffect
             fokusVerwalter.clearFocus()
@@ -253,11 +262,11 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
                     // Verschwindet das Feld mit Fokus, meldet Compose noch einmal seinen letzten Stand. Nach dem Senden wäre das
                     // der schon abgeschickte Text: Solche Meldungen dürfen den Entwurf nicht zurückschreiben.
                     wert, { if (EingabeFeld.meldungGilt(vm.eingabeKompakt, feld.text, vm.entwurf, it.text)) { feld = it; vm.entwurf = it.text } },
-                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus).onFocusChanged { feldFokus = it.isFocused },
+                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = if (bearbeitet) Dp.Infinity else 160.dp).focusRequester(fokus).onFocusChanged { feldFokus = it.isFocused },
                     textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                     cursorBrush = SolidColor(LIVE_ORANGE),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    maxLines = 6,
+                    maxLines = if (bearbeitet) Int.MAX_VALUE else 6,
                 )
             }
             Box(Modifier.padding(start = 4.dp).size(36.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
@@ -469,6 +478,9 @@ val AppViewModel.gespraechLoeschbar: Boolean get() = gespraech.isNotEmpty() || s
  * Platz, den die Eingabeblase über sich freilässt, auch bei sehr langem Text: der verdichtete Stapel (Neue Session, Nachtrag,
  * Programmierer, Pfeil), eingeklappt nur der Pfeil.
  */
+/** Bearbeitet Frank gerade den Text der Eingabeblase mit offener Tastatur? Dann weicht der Symbolstapel. */
+object EingabeLage { var bearbeitet by mutableStateOf(false) }
+
 fun schwebeMindest(vm: AppViewModel): Dp = when {
     vm.schweberEingeklappt -> SCHWEBE_LUECKE + SCHWEBE_UNTEN
     else -> schwebeHoehe(vm.nachtragMoeglich, stufe = 2) + SCHWEBE_UNTEN
