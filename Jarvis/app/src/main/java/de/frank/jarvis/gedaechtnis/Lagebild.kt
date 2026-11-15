@@ -179,13 +179,15 @@ object Lagebild {
                 })
                 .put("neuigkeiten", JSONArray(s.neuigkeiten.map { JSONObject().put("z", it.zeit).put("b", it.bereich).put("t", it.text).put("a", it.anlass) }))
                 .toString()
-            // Erst daneben schreiben, dann umbenennen: Eine halbe Datei würde das ganze Gedächtnis kosten.
-            runCatching {
-                val neu = File(f.path + ".neu")
-                neu.writeText(json)
-                if (!neu.renameTo(f)) { f.writeText(json); neu.delete() }
-            }.onFailure { Log.w(TAG, "Lagebild nicht gespeichert", it) }
+            runCatching { schreibeAtomar(f, json) }.onFailure { Log.w(TAG, "Lagebild nicht gespeichert", it) }
         }
+    }
+
+    /** Erst daneben schreiben, dann umbenennen: Eine halbe Datei würde das ganze Gedächtnis kosten. Aufrufer sperren selbst. */
+    internal fun schreibeAtomar(f: File, text: String) {
+        val neu = File(f.path + ".neu")
+        neu.writeText(text)
+        if (!neu.renameTo(f)) { f.writeText(text); neu.delete() }
     }
 
     // ---------------------------------------------------------------- Auffrischen
@@ -435,8 +437,8 @@ object Lagebild {
     // ---------------------------------------------------------------- Kontext für die Modelle
 
     /** Die Neuigkeiten seit [seit] als kurze Liste (neueste zuerst); leer, wenn es keine gibt. [ohneAnlass] lässt eigene Aktionen weg. */
-    fun neuigkeitenSeit(seit: Long, ohneAnlass: String? = null, hoechstens: Int = 25): String =
-        _stand.value.neuigkeiten.filter { it.zeit > seit && (ohneAnlass == null || !it.anlass.startsWith(ohneAnlass)) }.take(hoechstens)
+    fun neuigkeitenSeit(seit: Long, ohneAnlass: String? = null, hoechstens: Int = 25, nurBereiche: Set<String>? = null): String =
+        _stand.value.neuigkeiten.filter { it.zeit > seit && (ohneAnlass == null || !it.anlass.startsWith(ohneAnlass)) && (nurBereiche == null || it.bereich in nurBereiche) }.take(hoechstens)
             .joinToString("\n") { "- " + uhr(it.zeit) + " Uhr: " + it.text }
 
     /**
@@ -531,8 +533,7 @@ object Lagebild {
         val tagebuch = s.abschnitte[Bereich.TAGEBUCH]?.takeIf { Bereich.TAGEBUCH in gewaehlt }
         val tagebuchTeile = tagebuch?.let { zerlegeTagebuch(it.text) }
         val kennungen = gewaehlt.mapTo(HashSet()) { it.kennung }
-        val neu = s.neuigkeiten.filter { it.zeit > System.currentTimeMillis() - 24 * 3_600_000L && it.bereich in kennungen }.take(15)
-            .joinToString("\n") { "- " + uhr(it.zeit) + " Uhr: " + it.text }
+        val neu = neuigkeitenSeit(System.currentTimeMillis() - 24 * 3_600_000L, hoechstens = 15, nurBereiche = kennungen)
         val reihe = Bereich.entries.filter { it in gewaehlt && it != Bereich.GEMERKT && it != Bereich.TAGEBUCH }
         fun live(deckel: Map<Bereich, Int>): String = buildString {
             reihe.forEach { b ->

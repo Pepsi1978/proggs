@@ -73,7 +73,7 @@ object KontextWahl {
     /** Teile des Gemerkten, die nur bei Bedarf dazukommen (Regeln, Stil, Ziele und Entscheidungen stehen immer darin). */
     enum class Merkteil(val kennung: String, val titel: String, val rolle: Rolle, val stichworte: List<String>, val text: (Context) -> String) {
         UEBER_FRANK("ueber_frank", "Über Frank", Rolle.STANDARD,
-            listOf("über mich", "weißt du", "kennst du", "mein auto", "meine familie", "vorliebe", "lieblings", "geburtstag", "adresse", "wohne", "ich mag", "mein haus", "meine wohnung"),
+            listOf("über mich", "weißt du", "kennst du", "zur arbeit", "nach hause", "mein auto", "meine familie", "vorliebe", "lieblings", "geburtstag", "adresse", "wohne", "ich mag", "mein haus", "meine wohnung"),
             { UeberFrank.alsKontext(it) }),
         LANGZEIT("langzeit", "Langzeitkontext", Rolle.STANDARD,
             listOf("über mich", "langzeit", "lebenslauf", "lebensziel", "mein leben", "biografie"),
@@ -172,9 +172,6 @@ object KontextWahl {
         }.getOrElse { HashMap() }.also { gelernt = it }
     }
 
-    /** Vorab im Hintergrund laden, damit die erste Frage nach dem Start nicht auf die Datei wartet. */
-    fun vorwaermen(context: Context) { val app = context.applicationContext; if (gelernt == null) ablauf.launch { gelernt(app) } }
-
     private fun speichere(context: Context) {
         val g = gelernt ?: return
         // Eine Sperre für Schnappschuss und Schreiben: Zwei gleichzeitige Lernläufe schrieben sonst dieselbe .neu-Datei.
@@ -182,12 +179,7 @@ object KontextWahl {
             val json = synchronized(sperre) {
                 JSONObject().put("format", 1).put("woerter", JSONObject().apply { g.forEach { (w, m) -> put(w, JSONObject(m as Map<*, *>)) } }).toString()
             }
-            runCatching {
-                val f = datei(context)
-                val neu = File(f.path + ".neu")
-                neu.writeText(json)
-                if (!neu.renameTo(f)) { f.writeText(json); neu.delete() }
-            }.onFailure { Log.w(TAG, "Kontextwahl nicht gespeichert", it) }
+            runCatching { Lagebild.schreibeAtomar(datei(context), json) }.onFailure { Log.w(TAG, "Kontextwahl nicht gespeichert", it) }
         }
     }
 
@@ -213,7 +205,7 @@ object KontextWahl {
      * Nachricht (Anschlussfragen wie „und morgen?“ erben so deren Fachwörter). [gespraech] = Kennung des Gesprächs für das
      * bereits Nachgeladene. [programmierung] = die App weiß schon, dass es ein Programmierauftrag ist.
      */
-    fun waehle(context: Context, frage: String, vorher: String?, gespraech: String?, programmierung: Boolean = false): Wahl {
+    fun waehle(context: Context, frage: String, vorher: String?, gespraech: String?, programmierung: Boolean = de.frank.jarvis.faehigkeit.ProgrammiererVorlage.aktiv(frage)): Wahl {
         if (GANZ.containsMatchIn(frage)) return Wahl(true, Bereich.entries.toSet(), Merkteil.entries.toSet(), emptyMap(), emptyList(), "gesamtes Gedächtnis verlangt")
         val jetzt = frage.lowercase(Locale.GERMAN)
         val immer = Bereich.entries.filter { profil(it).rolle == Rolle.IMMER }
@@ -270,11 +262,17 @@ object KontextWahl {
      * Nach der Antwort, im Hintergrund: [nachgeladen] = was das Modell mit gedaechtnis_laden holen musste, [genutzt] = was es
      * laut Antwort wirklich gebraucht hat (null = keine Angabe, dann wird nichts abgestuft).
      */
+    /** Endet eine Antwort ohne fertiges JSON (Zeitlimit, Abbruch): Das Nachgeladene gilt trotzdem für die Anschlussfrage. */
+    fun merkeNachgeladen(gespraech: String?, nachgeladen: Set<String>) {
+        val gut = nachgeladen.filterTo(HashSet()) { gueltig(it) }
+        if (gespraech != null && gut.isNotEmpty()) synchronized(nachgeladenJeGespraech) { nachgeladenJeGespraech.getOrPut(gespraech) { HashSet() } += gut }
+    }
+
     fun lerne(context: Context, wahl: Wahl, gespraech: String?, nachgeladen: Set<String>, genutzt: Set<String>?) {
         if (wahl.voll) return
         val app = context.applicationContext
         val gueltigNachgeladen = nachgeladen.filterTo(LinkedHashSet()) { gueltig(it) }
-        if (gespraech != null && gueltigNachgeladen.isNotEmpty()) synchronized(nachgeladenJeGespraech) { nachgeladenJeGespraech.getOrPut(gespraech) { HashSet() } += gueltigNachgeladen }
+        merkeNachgeladen(gespraech, gueltigNachgeladen)
         if (wahl.woerter.isEmpty()) return
         val fehlten = gueltigNachgeladen - wahl.kennungen
         val unnoetig = if (genutzt == null) emptyMap() else wahl.gelernteTreffer.filterKeys { it !in genutzt }

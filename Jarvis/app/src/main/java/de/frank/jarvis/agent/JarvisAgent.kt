@@ -309,8 +309,9 @@ class JarvisAgent(context: Context) {
                     // Anteil des Gedächtnisses an dieser Eingabe, nach Zeichen geschätzt (Gesamtbild und Nachgeladenes gegen alles Gesendete).
                     zaehler?.let { z ->
                         val neu = z.eingabe - eingabeVorher
-                        val gesendet = anweisungText.length + zuege.sumOf { it.text.length }
-                        if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * (gesamtbild.length + nachgeladenZeichen.get()).toDouble() / gesendet).toLong().coerceAtMost(neu),
+                        val zugZeichen = zuege.sumOf { it.text.length }
+                        val gesendet = anweisungText.length + zugZeichen
+                        if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * (gesamtbild.length + minOf(nachgeladenZeichen.get(), zugZeichen)).toDouble() / gesendet).toLong().coerceAtMost(neu),
                             gedaechtnisTitel + nachgeladen.toList().map { de.frank.jarvis.gedaechtnis.KontextWahl.titelVon(it) })
                     }
                 }
@@ -450,6 +451,7 @@ class JarvisAgent(context: Context) {
             val letzter = zuege.lastIndex
             zuege[letzter] = zuege[letzter].copy(text = zuege[letzter].text + "\n\n" + notiz)
         }
+        if (wahl != null && gezielt != null && ergebnis == null) de.frank.jarvis.gedaechtnis.KontextWahl.merkeNachgeladen(gespraechId, nachgeladen.toSet())
         ergebnis?.let { return it }
         // Noch nichts gesammelt: Der Fehler geht wie bisher an den Aufrufer (er zeigt etwa „Kontingent ausgeschöpft“ oder „bitte anmelden“).
         modellFehler?.let { if (ergebnisZuege.isEmpty()) throw it }
