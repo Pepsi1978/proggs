@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.faehigkeit.Ergebnis
@@ -94,11 +95,12 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
             val problem = z.optString("problem")
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                 Text(z.optString("name"), color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
+                // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
+                if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
                     String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")) +
-                        (if (z.has("co2_ppm")) " · ${z.optInt("co2_ppm")} ppm CO2" else ""),
-                    color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                        (if (z.has("co2_ppm")) " · " + SwitchbotFaehigkeit.co2Text(z.optInt("co2_ppm")) else ""),
+                    color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(2f), textAlign = TextAlign.End,
                 )
             }
         }
