@@ -4,6 +4,8 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -74,17 +76,28 @@ object AtemProfile {
     private val _stand = MutableStateFlow<List<AtemProfil>>(emptyList())
     val stand: StateFlow<List<AtemProfil>> = _stand
     @Volatile private var geladen = false
+    /** Lesen, Ändern und Schreiben nacheinander: Schnelles Löschen und Speichern überschreiben sich sonst gegenseitig. */
+    private val sperre = Mutex()
 
     private fun datei(context: Context) = File(context.filesDir, "atem/profile.json")
 
     suspend fun sicher(context: Context) {
+        if (geladen) return
+        sperre.withLock { laden(context) }
+    }
+
+    private suspend fun laden(context: Context) {
         if (geladen) return
         withContext(Dispatchers.IO) {
             val d = datei(context)
             val liste = if (d.exists()) runCatching {
                 val a = JSONArray(d.readText())
                 (0 until a.length()).map { AtemProfil.aus(a.getJSONObject(it)) }
-            }.getOrDefault(emptyList()) else startProfile().also { schreibe(context, it) }
+            }.getOrElse {
+                // Unlesbare Datei nie überschreiben: beiseitelegen, damit die Profile darin von Hand zu retten bleiben.
+                d.renameTo(File(d.parentFile, "profile.defekt-${System.currentTimeMillis()}.json"))
+                emptyList()
+            } else startProfile().also { schreibe(context, it) }
             _stand.value = liste
             geladen = true
         }
@@ -103,14 +116,23 @@ object AtemProfile {
         if (!tmp.renameTo(d)) { d.delete(); tmp.renameTo(d) }
     }
 
-    suspend fun speichern(context: Context, p: AtemProfil) = withContext(Dispatchers.IO) {
-        sicher(context)
+    suspend fun speichern(context: Context, p: AtemProfil) = sperre.withLock {
+        laden(context)
+        withContext(Dispatchers.IO) { schreibeNeu(context, p) }
+    }
+
+    private fun schreibeNeu(context: Context, p: AtemProfil) {
         val alt = _stand.value
         val neu = if (alt.any { it.id == p.id }) alt.map { if (it.id == p.id) p else it } else alt + p
         schreibe(context, neu); _stand.value = neu
     }
 
-    suspend fun loeschen(context: Context, id: String) = withContext(Dispatchers.IO) {
+    suspend fun loeschen(context: Context, id: String) = sperre.withLock {
+        laden(context)
+        withContext(Dispatchers.IO) { entferne(context, id) }
+    }
+
+    private fun entferne(context: Context, id: String) {
         val neu = _stand.value.filterNot { it.id == id }
         schreibe(context, neu); _stand.value = neu
     }

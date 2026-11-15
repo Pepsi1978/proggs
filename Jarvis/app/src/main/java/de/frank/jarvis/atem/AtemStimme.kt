@@ -30,6 +30,8 @@ object AtemStimme {
     private val sperre = Mutex()
     private val dauern = HashMap<String, Long>()
 
+    private fun einstellungen(context: Context) = SecureSettings.get(context.applicationContext)
+
     private fun stimmKennung(s: SecureSettings): String {
         val a = s.ttsProvider
         return listOf(a, s.ttsTempo(a), s.edgeTtsVoice, s.googleTtsVoice, s.azureTtsVoice, s.geminiFlashTtsVoice, s.geminiLiteTtsVoice, s.qwenStandardVoice, s.qwenTtsVoiceId).joinToString("|")
@@ -42,28 +44,43 @@ object AtemStimme {
 
     /** Schon erzeugter Clip, ohne Netz; null, wenn er noch fehlt. */
     fun vorhanden(context: Context, text: String): Clip? {
-        val s = SecureSettings(context)
+        val s = einstellungen(context)
         val k = schluessel(text, stimmKennung(s))
-        val d = ordner(context).listFiles()?.firstOrNull { it.name.startsWith("$k.") && it.length() > 0 } ?: return null
+        val d = ordner(context).listFiles()?.firstOrNull { it.name.startsWith("$k.") && !it.name.endsWith(".tmp") && it.length() > 0 } ?: return null
         return Clip(d, dauer(d))
     }
 
     /** Holt oder erzeugt den Clip. Scheitert die Stimme (offline, Kontingent), kommt null: Die Übung läuft dann ohne. */
     suspend fun hole(context: Context, text: String): Clip? {
-        vorhanden(context, text)?.let { return it }
+        val app = context.applicationContext
+        withContext(Dispatchers.IO) { vorhanden(app, text) }?.let { return it }
         return sperre.withLock {
-            vorhanden(context, text) ?: runCatching {
-                val app = context.applicationContext
-                val s = SecureSettings(app)
+            withContext(Dispatchers.IO) { vorhanden(app, text) } ?: erzeuge(app, text)
+        }
+    }
+
+    private suspend fun erzeuge(app: Context, text: String): Clip? {
+        val s = einstellungen(app)
+        // Zwei Versuche: Räumt der Vorleser seinen Zwischenordner genau zwischen Erzeugen und Kopieren leer, fehlt die Datei.
+        repeat(2) { versuch ->
+            val ergebnis = runCatching {
                 val roh = Synthese(app, s).synthetisiere(text)
                 withContext(Dispatchers.IO) {
-                    // Sofort wegkopieren: Der Vorleser räumt seinen Zwischenordner nach jeder Wiedergabe leer.
                     val ziel = File(ordner(app), schluessel(text, stimmKennung(s)) + "." + roh.extension.ifBlank { "mp3" })
-                    roh.copyTo(ziel, overwrite = true); roh.delete()
+                    // Erst unter Zwischennamen, dann umbenennen: Ein abgebrochenes Kopieren hinterlässt nie einen halben Clip.
+                    val tmp = File(ziel.parentFile, ziel.name + ".tmp")
+                    roh.copyTo(tmp, overwrite = true); roh.delete()
+                    if (!tmp.renameTo(ziel)) { ziel.delete(); check(tmp.renameTo(ziel)) { "Clip nicht ablegbar" } }
                     Clip(ziel, dauer(ziel))
                 }
-            }.onFailure { Log.w(TAG, "Stimme für „$text“ nicht erzeugt", it) }.getOrNull()
+            }
+            ergebnis.getOrNull()?.let { return it }
+            val fehler = ergebnis.exceptionOrNull()
+            if (fehler is kotlinx.coroutines.CancellationException) throw fehler
+            Log.w(TAG, "Stimme für „$text“ nicht erzeugt (Versuch ${versuch + 1})", fehler)
+            if (fehler !is java.io.FileNotFoundException && fehler !is java.nio.file.NoSuchFileException) return null
         }
+        return null
     }
 
     private fun dauer(d: File): Long = synchronized(dauern) { dauern[d.path] } ?: runCatching {
@@ -74,16 +91,25 @@ object AtemStimme {
 
     /** Grobe Schätzung vor der Erzeugung: gut 14 Zeichen je Sekunde, im eingestellten Tempo. */
     fun schaetzeMs(context: Context, text: String): Long {
-        val s = SecureSettings(context)
+        val s = einstellungen(context)
         val tempo = s.ttsTempo(s.ttsProvider).coerceIn(0.5f, 2f)
         return (text.length / 14.5f / tempo * 1000f + 350f).toLong()
     }
 
-    /** Alle Texte eines Profils, die gesprochen werden können. */
+    /**
+     * Alle Texte eines Profils, die gesprochen werden können. Die Stichworte immer (kurz, einmal je Stimme erzeugt),
+     * damit das Häkchen „Vorlesen“ auch mitten in einer Übung ohne Ansage im Profil sofort greift.
+     */
     fun texte(p: AtemProfil): List<String> = buildList {
         add(EINATMEN); if (p.halt1 > 0 || p.halt2 > 0) add(HALTEN); add(AUSATMEN)
         if (p.intro) add(INTRO); if (p.outro) add(OUTRO)
         if (p.saetzeAn) { addAll(p.saetzeEin); addAll(p.saetzeAus) }
+    }.distinct()
+
+    /** Texte, die das Profil mit seinen Schaltern wirklich spricht: Nur deren Fehlen ist einen Hinweis wert. */
+    fun noetig(p: AtemProfil): List<String> = buildList {
+        if (p.vorlesen) { add(EINATMEN); if (p.halt1 > 0 || p.halt2 > 0) add(HALTEN); add(AUSATMEN); if (p.intro) add(INTRO); if (p.outro) add(OUTRO) }
+        if (p.saetzeAn && p.vorlesen) { addAll(p.saetzeEin); addAll(p.saetzeAus) }
     }.distinct()
 
     /** Erzeugt alles vorab, z. B. gleich nach dem Speichern; meldet den Fortschritt (fertig, gesamt). */

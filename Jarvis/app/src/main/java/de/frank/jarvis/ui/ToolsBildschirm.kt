@@ -78,6 +78,8 @@ object ToolsAnsicht {
     internal val hintergrund = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 }
 
+/** Längste Phase: zwei Minuten. */
+private const val MAX_PHASE = 1200
 private val GRUEN = Color(AtemFarben.EIN)
 private val GELB = Color(AtemFarben.HALTEN)
 private val ORANGE = Color(AtemFarben.AUS)
@@ -339,8 +341,8 @@ private fun ZeitZeile(titel: String, farbe: Color, wert: Int, minimum: Int, setz
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(farbe))
         Text(titel, Modifier.weight(1f).padding(start = 10.dp), color = f.text, fontSize = 16.sp)
-        Stepper(zehntelText(wert), { setze((wert - 1).coerceAtLeast(minimum)) }, { setze((wert + 1).coerceAtMost(6000)) }, einheit = "s", dezimal = true) { t ->
-            t.replace(',', '.').toFloatOrNull()?.let { setze(Math.round(it * 10).coerceIn(minimum, 6000)) }
+        Stepper(zehntelText(wert), { setze((wert - 1).coerceAtLeast(minimum)) }, { setze((wert + 1).coerceAtMost(MAX_PHASE)) }, einheit = "s", dezimal = true) { t ->
+            t.replace(',', '.').toFloatOrNull()?.let { setze(Math.round(it * 10).coerceIn(minimum, MAX_PHASE)) }
         }
     }
 }

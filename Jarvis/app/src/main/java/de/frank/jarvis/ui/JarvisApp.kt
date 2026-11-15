@@ -243,14 +243,17 @@ private fun Leiste(vm: AppViewModel) {
         val listenOffen = ListenAnsicht.offen
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
             // Die Listen gehören zur Ablage: Sind sie offen, leuchtet der Ablage-Reiter.
-            val aktiv = vm.reiter == r || (r == Reiter.ABLAGE && listenOffen)
+            val aktiv = if (listenOffen) r == Reiter.ABLAGE else vm.reiter == r
             val icon = when (r) {
                 Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
                 Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune
             }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
             Row(
-                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
+                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen {
+                    // In einer offenen Liste führt der Ablage-Reiter erst zur Listen-Übersicht zurück, von dort in die Ablage.
+                    if (r == Reiter.ABLAGE && listenOffen && ListenAnsicht.liste != null) { ListenAnsicht.liste = null; return@antippen }
+                    ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
                     .semantics { contentDescription = r.anzeige },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,

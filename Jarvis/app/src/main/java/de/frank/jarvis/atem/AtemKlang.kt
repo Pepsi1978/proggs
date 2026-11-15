@@ -19,10 +19,16 @@ import kotlin.random.Random
  */
 object AtemKlang {
     const val RATE = 24_000
-    private val cache = HashMap<String, ShortArray>()
+    /** Längste erzeugte Geräuschdauer: Ein echter Atemzug klingt nach spätestens 30 Sekunden aus, und der Speicher bleibt klein. */
+    private const val HOECHSTENS_MS = 30_000L
+    /** Hält nur die zuletzt genutzten Geräusche (je Übung zwei). */
+    private val cache = object : LinkedHashMap<String, ShortArray>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ShortArray>?) = size > 4
+    }
 
-    fun ton(einatmen: Boolean, ms: Long): ShortArray = synchronized(cache) {
-        cache.getOrPut("${einatmen}_$ms") { erzeuge(einatmen, ms) }
+    fun ton(einatmen: Boolean, ms: Long): ShortArray {
+        val laenge = ms.coerceIn(1L, HOECHSTENS_MS)
+        return synchronized(cache) { cache.getOrPut("${einatmen}_$laenge") { erzeuge(einatmen, laenge) } }
     }
 
     private class Bandpass {

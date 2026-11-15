@@ -91,21 +91,31 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
     val akzent = Color(profil.farbe)
     var t by remember { mutableLongStateOf(0L) }
     var rahmen by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(Unit) { while (true) withFrameMillis { rahmen = it; t = AtemSitzung.zeit() } }
+    // Bilder nur, solange sich etwas bewegt: In der Pause und nach dem Ende genügt ein langsamer Takt.
+    LaunchedEffect(Unit) {
+        while (true) {
+            val ruhig = AtemSitzung.pausiert || (AtemSitzung.gestartet && AtemSitzung.plan.isNotEmpty() && AtemSitzung.zeit() >= AtemSitzung.gesamt)
+            if (ruhig) { kotlinx.coroutines.delay(250); t = AtemSitzung.zeit() } else withFrameMillis { rahmen = it; t = AtemSitzung.zeit() }
+        }
+    }
     var endeFrage by remember { mutableStateOf(false) }
 
     // Bildschirm bleibt an, Leisten verschwinden: echtes Vollbild.
     DisposableEffect(Unit) {
+        val vorher = view.keepScreenOn
         view.keepScreenOn = true
         val fenster = (context as? Activity)?.window
         val steuer = fenster?.let { WindowCompat.getInsetsController(it, view) }
         steuer?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         steuer?.hide(WindowInsetsCompat.Type.systemBars())
-        onDispose { view.keepScreenOn = false; steuer?.show(WindowInsetsCompat.Type.systemBars()) }
+        onDispose { view.keepScreenOn = vorher; steuer?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 
     val gestartet = AtemSitzung.gestartet
-    val ende by remember { derivedStateOf { gestartet && AtemSitzung.plan.isNotEmpty() && t >= AtemSitzung.gesamt } }
+    // Den Zustand im derivedStateOf selbst lesen, nicht die Momentaufnahme der ersten Zusammensetzung.
+    val ende by remember { derivedStateOf { AtemSitzung.gestartet && AtemSitzung.plan.isNotEmpty() && t >= AtemSitzung.gesamt } }
+    // Nach dem Ende darf der Bildschirm wieder ausgehen.
+    LaunchedEffect(ende) { if (ende) view.keepScreenOn = false }
     BackHandler { if (!gestartet || ende) AtemSitzung.beenden() else { AtemSitzung.pause(); endeFrage = true } }
 
     if (endeFrage) AlertDialog(
@@ -136,7 +146,7 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
         }
 
         // ------------------------------------------------ Mitte: Phase und Sekunden
-        val anzeige by remember { derivedStateOf { mitteText(t, gestartet) } }
+        val anzeige by remember { derivedStateOf { mitteText(t, AtemSitzung.gestartet) } }
         Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(anzeige.first, color = Color.White, fontSize = if (anzeige.first.length > 12) 24.sp else 34.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 40.dp))
             if (anzeige.second.isNotEmpty()) Text(anzeige.second, color = Color.White.copy(alpha = 0.78f), fontSize = 22.sp, fontWeight = FontWeight.Light)
@@ -213,13 +223,13 @@ private fun gesamtAnteil(t: Long): Float {
 /** Größe der Blase (Anteil vom Höchstmaß) und Phasenfarbe mit weichem Übergang. */
 private fun zustand(t: Long): Triple<Float, Color, Float> {
     val plan = AtemSitzung.plan
-    val a = AtemSitzung.abschnitt(t)
+    val i = AtemSitzung.abschnittIndex(t)
+    val a = plan.getOrNull(i)
     if (!AtemSitzung.gestartet || a == null) {
         val ende = AtemSitzung.gestartet && plan.isNotEmpty()
         return Triple(if (ende) 0.6f else 0.5f, P_RUHE, 0f)
     }
     val x = ((t - a.start).toFloat() / a.dauer.coerceAtLeast(1)).coerceIn(0f, 1f)
-    val i = plan.indexOf(a)
     val vorher = plan.getOrNull(i - 1)?.phase
     val farbe = lerp(phasenFarbe(vorher ?: a.phase), phasenFarbe(a.phase), weich(((t - a.start) / 800f).coerceIn(0f, 1f)))
     val beben = (sin(t * 0.0459f) * 0.6f + sin(t * 0.0697f) * 0.4f) * 0.011f
