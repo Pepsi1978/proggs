@@ -509,44 +509,61 @@ object Lagebild {
 
     /**
      * Das Gesamtbild nur mit den für eine Frage gewählten Bereichen ([KontextWahl]); alle übrigen stehen als Verzeichnis
-     * mit Kennung und Größe darunter. [selten] = der gewählte Teil des Gemerkten (vor dem Trenner, zwischengespeichert),
-     * [weitere] = zusätzliche Verzeichniszeilen (nicht geladene Teile des Gemerkten), [geladen] = Kennungen für die GELADEN-Zeile.
-     * Nur die gewählten schnellen Bereiche werden vorher nachgelesen, höchstens [wartenMs].
+     * mit Kennung und Größe darunter. [kern] = der immer gleiche Kern des Gemerkten (vor dem Trenner, zwischengespeichert),
+     * [teile] = gewählte weitere Teile des Gemerkten (hinter dem Trenner, damit der Anfang über Fragen gleich bleibt),
+     * [weitere] = zusätzliche Verzeichniszeilen, [geladen] = Kennungen für die GELADEN-Zeile.
+     * Nur die gewählten schnellen Bereiche werden vorher nachgelesen, höchstens [wartenMs] (0 = gar nicht warten, auch beim ersten Mal).
+     * Wie [kontext]: Tagebuch im Budget, große Bereiche gedeckelt, wenn das Ganze [HOECHSTENS] übersteigt.
      */
-    suspend fun gezielt(context: Context, gewaehlt: Set<Bereich>, selten: String, weitere: List<String>, geladen: Set<String>, wartenMs: Long, trenner: String): String {
+    suspend fun gezielt(context: Context, gewaehlt: Set<Bereich>, kern: String, teile: String, weitere: List<String>, geladen: Set<String>, wartenMs: Long, trenner: String): String {
         val app = context.applicationContext
         lade(app)
-        val fehlend = gewaehlt.filter { it !in _stand.value.abschnitte }
+        // GEMERKT nie: Den Kern des Gemerkten baut KontextWahl selbst aus den Merkdateien.
+        val fehlend = gewaehlt.filter { it != Bereich.GEMERKT && it !in _stand.value.abschnitte }
         runCatching { if (Bereich.AUSWERTUNG in gewaehlt && Tagesauswertung.veraltet(app) && !Tagesauswertung.stand.value.laeuft) de.frank.jarvis.dienst.JarvisDienst.auswerten(app, "nachgeholt für das Gesamtbild") }
-        val zuLesen = (gewaehlt.filter { it.schnell } + fehlend).distinct()
+        val zuLesen = (gewaehlt.filter { it.schnell && it != Bereich.GEMERKT } + fehlend).distinct()
         if (zuLesen.isNotEmpty()) {
             val laeuft = bereich.async { auffrischen(app, zuLesen, "beim Abruf (gezielt)", hoechstensAlterMs = 30_000L) }
-            val warten = if (fehlend.isEmpty()) wartenMs else maxOf(wartenMs, 12_000L)
+            val warten = if (wartenMs <= 0L) 0L else if (fehlend.isEmpty()) wartenMs else maxOf(wartenMs, 12_000L)
             if (warten > 0) withTimeoutOrNull(warten) { laeuft.await() }
         }
         val s = _stand.value
         val tagebuch = s.abschnitte[Bereich.TAGEBUCH]?.takeIf { Bereich.TAGEBUCH in gewaehlt }
+        val tagebuchTeile = tagebuch?.let { zerlegeTagebuch(it.text) }
+        val kennungen = gewaehlt.mapTo(HashSet()) { it.kennung }
+        val neu = s.neuigkeiten.filter { it.zeit > System.currentTimeMillis() - 24 * 3_600_000L && it.bereich in kennungen }.take(15)
+            .joinToString("\n") { "- " + uhr(it.zeit) + " Uhr: " + it.text }
+        val reihe = Bereich.entries.filter { it in gewaehlt && it != Bereich.GEMERKT && it != Bereich.TAGEBUCH }
+        fun live(deckel: Map<Bereich, Int>): String = buildString {
+            reihe.forEach { b ->
+                s.abschnitte[b]?.let { a -> append(abschnitt(b, deckel[b]?.let { d -> a.copy(text = gedeckelt(a.text, d)) } ?: a)).append('\n') }
+                    ?: append(b.ueberschrift).append(":\nwird gerade zum ersten Mal geladen.\n\n")
+            }
+        }
+        var bereicheText = live(emptyMap())
+        val fest = kern.length + teile.length + neu.length + 3_000
+        if (fest + bereicheText.length + (tagebuchTeile?.mindestens ?: 0) > HOECHSTENS) bereicheText = live(DECKEL)
+        val tagebuchText = if (tagebuch != null && tagebuchTeile != null) {
+            val platz = (HOECHSTENS - fest - bereicheText.length).coerceAtLeast(tagebuchTeile.mindestens)
+            tagebuchTeile.imBudget((platz / TAGEBUCH_STUFE * TAGEBUCH_STUFE).coerceAtLeast(tagebuchTeile.mindestens))
+        } else null
         return buildString {
             append("GESAMTBILD VON FRANK (Live-Gedächtnis von Jarvis, gezielt für diese Frage geladen).\n")
-            append("Dein Hintergrund, live aus Franks Apps; [Stand …] je Bereich. Beziehe von dir aus ein, was die Antwort besser macht; Unpassendes weglassen, nie ungefragt aufzählen.\n")
-            append("KONTEXTREGEL: Älteres oder ein bestimmtes Thema mit gedaechtnis_suchen oder dem App-Werkzeug; nach eigener Änderung oder für Messwerte von gerade eben die App frisch lesen.\n\n")
-            append(selten.trim()).append("\n\n")
-            tagebuch?.let { append(Bereich.TAGEBUCH.ueberschrift).append(":\n").append(it.text.trim()).append("\n") }
+            append("Dein Hintergrund, live aus Franks Apps; [Stand …] je Bereich. Beziehe von dir aus ein, was die Antwort besser macht; Unpassendes weglassen, nie ungefragt aufzählen. ")
+            append("Fragt Frank, was jetzt am sinnvollsten ist: ein bis drei Vorschläge aus seiner Lage mit kurzem Grund, wichtigster zuerst.\n")
+            append("KONTEXTREGEL: 10 Tage vollständig, Älteres verdichtet. Älteres oder ein bestimmtes Thema mit gedaechtnis_suchen oder dem App-Werkzeug; nach eigener Änderung oder für Messwerte von gerade eben die App frisch lesen.\n\n")
+            append(kern.trim()).append('\n')
             append(trenner)
             append("GELADEN für diese Frage: ").append(geladen.filter { it != Bereich.GEMERKT.kennung }.joinToString()).append(".\n\n")
-            tagebuch?.let { append(abschnittKopf(Bereich.TAGEBUCH, it)).append(": Inhalt steht weiter oben.\n\n") }
-            val kennungen = gewaehlt.mapTo(HashSet()) { it.kennung }
-            val neu = s.neuigkeiten.filter { it.zeit > System.currentTimeMillis() - 24 * 3_600_000L && it.bereich in kennungen }.take(15)
-                .joinToString("\n") { "- " + uhr(it.zeit) + " Uhr: " + it.text }
+            if (teile.isNotBlank()) append(teile.trim()).append("\n\n")
             if (neu.isNotEmpty()) append("NEU IN 24 STUNDEN (neueste zuerst):\n").append(neu).append("\n\n")
-            Bereich.entries.filter { it in gewaehlt && it != Bereich.GEMERKT && it != Bereich.TAGEBUCH }.forEach { b ->
-                s.abschnitte[b]?.let { append(abschnitt(b, it)).append('\n') } ?: append(b.ueberschrift).append(":\nwird gerade zum ersten Mal geladen.\n\n")
-            }
+            append(bereicheText)
+            if (tagebuch != null && tagebuchText != null) append(abschnitt(Bereich.TAGEBUCH, tagebuch.copy(text = tagebuchText))).append('\n')
             append("WEITERE BEREICHE (nicht geladen; braucht die Frage einen davon, mit gedaechtnis_laden und seiner Kennung vollständig holen):\n")
             Bereich.entries.filter { it !in gewaehlt && it != Bereich.GEMERKT }.forEach { b ->
                 val a = s.abschnitte[b]
                 append("- ").append(b.kennung).append(": ").append(b.ueberschrift)
-                append(if (a == null) " (noch nicht geladen)" else " (${a.text.length} Zeichen" + (if (a.geaendert > System.currentTimeMillis() - 3_600_000L) ", in der letzten Stunde geändert" else "") + ")")
+                append(if (a == null) " (noch nicht geladen)" else " (${a.text.length} Zeichen" + (if (a.geaendert > System.currentTimeMillis() - 3_600_000L) ", in der letzten Stunde geändert" else "") + (if (a.fehler.isNotEmpty()) ", gerade gestört" else "") + ")")
                 append('\n')
             }
             weitere.forEach { append(it).append('\n') }

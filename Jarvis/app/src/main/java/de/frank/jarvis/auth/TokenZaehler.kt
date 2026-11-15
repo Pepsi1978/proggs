@@ -15,7 +15,7 @@ class TokenZaehler : AbstractCoroutineContextElement(Key) {
     private val summe = AtomicLong()
     private val ausgabeSumme = AtomicLong()
     private val gedaechtnisSumme = AtomicLong()
-    private val genutzteBereiche = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    private val genutzteBereiche = LinkedHashSet<String>()
     val tokens: Long get() = summe.get()
     /** Eingabe aller Anfragen (Anweisung, Gedächtnis, Verlauf, Werkzeugergebnisse). */
     val eingabe: Long get() = summe.get() - ausgabeSumme.get()
@@ -24,7 +24,7 @@ class TokenZaehler : AbstractCoroutineContextElement(Key) {
     /** Geschätzter Anteil des Live-Gedächtnisses an der Eingabe. */
     val gedaechtnis: Long get() = gedaechtnisSumme.get()
     /** Die Titel der Gedächtnis-Bereiche dieser Runde, in der Reihenfolge ihres ersten Auftretens. */
-    val bereiche: List<String> get() = genutzteBereiche.toList().distinct()
+    val bereiche: List<String> get() = synchronized(genutzteBereiche) { genutzteBereiche.toList() }
 
     fun dazu(anzahl: Long, ausgabe: Long = 0L) {
         if (anzahl > 0) summe.addAndGet(anzahl)
@@ -33,6 +33,6 @@ class TokenZaehler : AbstractCoroutineContextElement(Key) {
 
     fun gedaechtnisDazu(anzahl: Long, bereiche: Collection<String>) {
         if (anzahl > 0) gedaechtnisSumme.addAndGet(anzahl)
-        bereiche.forEach { if (it !in genutzteBereiche) genutzteBereiche += it }
+        synchronized(genutzteBereiche) { genutzteBereiche += bereiche }
     }
 }

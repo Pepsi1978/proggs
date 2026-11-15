@@ -719,6 +719,7 @@
     {"versionCode": 711, "versionName": "1.8.700", "stand": "15.11.2026, 19:50 Uhr", "notiz": "Raumklima: Der Mac meldet jetzt alle SwitchBot-Sensoren, und frische Mac-Werte gehen den manchmal veralteten Cloud-Werten vor."},
     {"versionCode": 712, "versionName": "1.8.701", "stand": "15.11.2026, 19:51 Uhr", "notiz": "Jarvis lernt jetzt auch, unnötige Gedächtnis-Bereiche wegzulassen, und lädt bei Programmieraufträgen nur noch die Programmierregeln."},
     {"versionCode": 713, "versionName": "1.8.702", "stand": "15.11.2026, 19:56 Uhr", "notiz": "Raumklima: Vor Werten vom Mac steht „Mac“, vor direkt per Bluetooth gelesenen „Bluetooth“; Cloud-Werte stehen ohne Zusatz da."},
-    {"versionCode": 714, "versionName": "1.8.703", "stand": "15.11.2026, 20:03 Uhr", "notiz": "Raumklima: „Mac“ erscheint nur noch, wenn die SwitchBot-Cloud seit 30 Minuten nichts gemeldet hat; sonst stehen Cloud-Werte ohne Zusatz da."}
+    {"versionCode": 714, "versionName": "1.8.703", "stand": "15.11.2026, 20:03 Uhr", "notiz": "Raumklima: „Mac“ erscheint nur noch, wenn die SwitchBot-Cloud seit 30 Minuten nichts gemeldet hat; sonst stehen Cloud-Werte ohne Zusatz da."},
+    {"versionCode": 715, "versionName": "1.8.704", "stand": "15.11.2026, 20:05 Uhr", "notiz": "Die gezielte Gedächtnis-Auswahl richtet sich nur nach deinen eigenen Worten, lernt vorsichtiger und hält das Tagebuch im Budget."}
 ]
 }
