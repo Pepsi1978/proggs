@@ -10,8 +10,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,7 +57,7 @@ import de.frank.jarvis.ui.theme.glas
 
 /**
  * Reiter „Veränderungen“: Franks wichtige Veränderungen im Leben. Oben „Aktuell“ (Einzeile, Kreis hakt ab), unten aufklappbar
- * „Erledigt“ (Zurückholen). Antippen öffnet die genaue Beschreibung mit Papierkorb. Neue Einträge kommen nur per
+ * „Erledigt“ (Zurückholen). Lange drücken und ziehen ordnet „Aktuell“ um (geräteübergreifend gespeichert). Antippen öffnet die genaue Beschreibung mit Papierkorb. Neue Einträge kommen nur per
  * Sprache an Jarvis (Werkzeug `veraenderung`).
  */
 @Composable
@@ -70,10 +79,26 @@ fun VeraenderungenBildschirm() {
 private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List<Veraenderung>, oeffnen: (Long) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
+    val haptik = LocalHapticFeedback.current
     val aktuell = alle.filter { !it.erledigt }
     val erledigt = alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
+    // Während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert; danach wieder der Stand aus der Datei.
+    var lokal by remember { mutableStateOf<List<Veraenderung>?>(null) }
+    val gezeigt = lokal ?: aktuell
+    val listenStand = rememberLazyListState()
+    val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
+        val vonId = von.key as? Long ?: return@rememberReorderableLazyListState
+        val nachId = nach.key as? Long ?: return@rememberReorderableLazyListState
+        val l = (lokal ?: aktuell).toMutableList()
+        val a = l.indexOfFirst { it.id == vonId }
+        val b = l.indexOfFirst { it.id == nachId }
+        if (a < 0 || b < 0) return@rememberReorderableLazyListState
+        l.add(b, l.removeAt(a))
+        lokal = l
+        haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
     Text("Veränderungen", Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listenStand, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item(key = "kopf_aktuell") { Abschnitt("Aktuell") }
         if (aktuell.isEmpty()) item(key = "leer") {
             Karte {
@@ -84,7 +109,26 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
                 )
             }
         }
-        items(aktuell, key = { it.id }) { v -> Zeile(v, oeffnen = { oeffnen(v.id) }) { Veraenderungen.erledigt(context, v.id, true) } }
+        items(gezeigt, key = { it.id }) { v ->
+            ReorderableItem(ordnen, key = v.id) { zieht ->
+                val gross by animateFloatAsState(if (zieht) 1.035f else 1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow), label = "gross")
+                val hoch by animateFloatAsState(if (zieht) 1.5f else 0.7f, spring(stiffness = Spring.StiffnessMediumLow), label = "hoch")
+                Zeile(
+                    v,
+                    Modifier
+                        .graphicsLayer { scaleX = gross; scaleY = gross }
+                        .longPressDraggableHandle(
+                            onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
+                            onDragStopped = {
+                                lokal?.let { l -> Veraenderungen.reihenfolge(context, l.map { it.id }) }
+                                lokal = null
+                            },
+                        ),
+                    erhoeht = hoch,
+                    oeffnen = { oeffnen(v.id) },
+                ) { Veraenderungen.erledigt(context, v.id, true) }
+            }
+        }
         if (erledigt.isNotEmpty()) item(key = "erledigt") {
             Bereich("Erledigt", kopf = { Text(erledigt.size.toString(), Modifier.padding(end = 8.dp), color = f.textLeise, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -104,9 +148,9 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
 }
 
 @Composable
-private fun Zeile(v: Veraenderung, oeffnen: () -> Unit, abhaken: () -> Unit) {
+private fun Zeile(v: Veraenderung, modifier: Modifier = Modifier, erhoeht: Float = 0.7f, oeffnen: () -> Unit, abhaken: () -> Unit) {
     val f = LocalFarben.current
-    Row(Modifier.fillMaxWidth().glas(f, 18.dp, erhoeht = 0.7f).antippen(aktion = oeffnen).padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().glas(f, 18.dp, erhoeht = erhoeht).antippen(aktion = oeffnen).padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(46.dp).antippen(aktion = abhaken), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.RadioButtonUnchecked, "Als erledigt abhaken", tint = f.primaer, modifier = Modifier.size(24.dp))
         }

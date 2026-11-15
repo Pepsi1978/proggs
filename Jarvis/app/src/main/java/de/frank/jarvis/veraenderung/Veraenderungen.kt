@@ -19,6 +19,8 @@ data class Veraenderung(
     val erstellt: Long = System.currentTimeMillis(),
     val geaendert: Long = System.currentTimeMillis(),
     val geloescht: Boolean = false,
+    /** Platz in „Aktuell“ (klein = oben). Ohne eigene Reihenfolge: neueste zuerst über −[erstellt]. */
+    val rang: Double = -erstellt.toDouble(),
 )
 
 /**
@@ -31,7 +33,7 @@ object Veraenderungen {
     @Volatile private var geladen = false
     private val alle = HashMap<Long, Veraenderung>()
     private val _stand = MutableStateFlow<List<Veraenderung>>(emptyList())
-    /** Nicht gelöschte, neueste zuerst. */
+    /** Nicht gelöschte, nach [Veraenderung.rang] (von Frank per Ziehen geordnet, sonst neueste zuerst). */
     val stand: StateFlow<List<Veraenderung>> = _stand.asStateFlow()
     private val letzteId = java.util.concurrent.atomic.AtomicLong(0)
 
@@ -66,7 +68,7 @@ object Veraenderungen {
     }
 
     private fun veroeffentlichen() {
-        _stand.value = alle.values.filter { !it.geloescht }.sortedByDescending { it.erstellt }
+        _stand.value = alle.values.filter { !it.geloescht }.sortedWith(compareBy<Veraenderung> { it.rang }.thenByDescending { it.erstellt })
     }
 
     private fun auffrischen(app: Context, anlass: String) {
@@ -88,14 +90,7 @@ object Veraenderungen {
             val neu = aendern(alt)
             if (neuAnlegen == null && neu.copy(geaendert = 0) == alt.copy(geaendert = 0)) { alle[id] = alt; veroeffentlichen(); return alt }
             val n = neu.copy(geaendert = System.currentTimeMillis())
-            try {
-                val teil = File(ziel.path + ".teil")
-                teil.writeText(json(n).toString())
-                if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" } }
-            } catch (e: Exception) {
-                Logbuch.fehler("Veränderungen", e, "Speichern")
-                return null
-            }
+            if (!ablegen(ziel, n)) return null
             alle[n.id] = n
             veroeffentlichen()
             ergebnis = n
@@ -103,6 +98,37 @@ object Veraenderungen {
         runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
         auffrischen(app, "Veränderungen geändert")
         return ergebnis
+    }
+
+    private fun ablegen(ziel: File, n: Veraenderung): Boolean = try {
+        val teil = File(ziel.path + ".teil")
+        teil.writeText(json(n).toString())
+        if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" } }
+        true
+    } catch (e: Exception) {
+        Logbuch.fehler("Veränderungen", e, "Speichern")
+        false
+    }
+
+    /** Neue Reihenfolge von „Aktuell“ nach Ziehen: [ids] von oben nach unten; nur geänderte Plätze werden geschrieben, ein Abgleich am Ende. */
+    fun reihenfolge(context: Context, ids: List<Long>) {
+        val app = context.applicationContext
+        sicher(app)
+        var geschrieben = false
+        synchronized(sperre) {
+            ids.forEachIndexed { i, id ->
+                val ziel = File(ordner(app), "v_$id.json")
+                val alt = (runCatching { aus(JSONObject(ziel.readText())) }.getOrNull() ?: alle[id])?.takeIf { !it.geloescht } ?: return@forEachIndexed
+                val rang = i.toDouble()
+                if (alt.rang == rang) { alle[id] = alt; return@forEachIndexed }
+                val n = alt.copy(rang = rang, geaendert = System.currentTimeMillis())
+                if (ablegen(ziel, n)) { alle[id] = n; geschrieben = true }
+            }
+            veroeffentlichen()
+        }
+        if (!geschrieben) return
+        runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
+        auffrischen(app, "Reihenfolge der Veränderungen geändert")
     }
 
     fun finde(context: Context, id: Long): Veraenderung? = sicher(context).firstOrNull { it.id == id }
@@ -133,12 +159,15 @@ object Veraenderungen {
 
     private fun json(v: Veraenderung) = JSONObject()
         .put("id", v.id).put("titel", v.titel).put("beschreibung", v.beschreibung).put("erledigt", v.erledigt).put("erledigtAm", v.erledigtAm)
-        .put("erstellt", v.erstellt).put("geaendert", v.geaendert).put("geloescht", v.geloescht)
+        .put("erstellt", v.erstellt).put("geaendert", v.geaendert).put("geloescht", v.geloescht).put("rang", v.rang)
 
-    private fun aus(j: JSONObject) = Veraenderung(
-        j.getLong("id"), j.optString("titel"), j.optString("beschreibung"), j.optBoolean("erledigt"), j.optLong("erledigtAm"),
-        j.optLong("erstellt"), j.optLong("geaendert"), j.optBoolean("geloescht"),
-    )
+    private fun aus(j: JSONObject): Veraenderung {
+        val erstellt = j.optLong("erstellt")
+        return Veraenderung(
+            j.getLong("id"), j.optString("titel"), j.optString("beschreibung"), j.optBoolean("erledigt"), j.optLong("erledigtAm"),
+            erstellt, j.optLong("geaendert"), j.optBoolean("geloescht"), rang = if (j.has("rang")) j.optDouble("rang") else -erstellt.toDouble(),
+        )
+    }
 
     /** Datum kurz für Anzeige und Gedächtnis. */
     fun datum(ms: Long): String = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.of("Europe/Berlin")).toLocalDate()
