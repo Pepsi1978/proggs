@@ -304,16 +304,24 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             val promptZahl by ladeImHintergrund(0, promptStand) { de.frank.jarvis.ablage.Prompts.alle(context).size }
             val erinnerungZahl by ladeImHintergrund(0, erinnerungStand) { de.frank.jarvis.ablage.Erinnerungen.alle(context).size }
             val zahlen = remember(alle) { Kategorie.entries.associateWith { k -> alle.count { k in it.kategorien } } }
-            Chip("Alle ${alle.size}", filter == null) { filter = null }
-            Kategorie.entries.forEach { k -> Chip("${k.anzeige} ${zahlen[k] ?: 0}", filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
-            Chip("Prompts $promptZahl", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER }
-            Chip("Erinnerung $erinnerungZahl", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER }
             // Listen als eigener Reiter wie Prompts und Erinnerung; die Zahl sind die offenen Einträge aller Listen.
             val listenStand by de.frank.jarvis.listen.Listen.stand.collectAsState()
             LaunchedEffect(Unit) { de.frank.jarvis.listen.Listen.sicher(context) }
             val listenOffenZahl = remember(listenStand) { listenStand.listen.sumOf { listenStand.offen(it.id) } }
-            Chip("Listen $listenOffenZahl", filter == LISTEN_REITER, icon = Icons.Rounded.Checklist) {
-                if (filter == LISTEN_REITER) filter = null else { filter = LISTEN_REITER; ListenAnsicht.oeffnen() }
+            // „Alle“ vorn, danach alle Bereiche alphabetisch; der Inhalt steht in Klammern.
+            class Bereich(val name: String, val zahl: Int, val kennung: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+            val bereiche = Kategorie.entries.map { k -> Bereich(k.anzeige, zahlen[k] ?: 0, k.name, kategorieSymbol(k)) } + listOf(
+                Bereich("Prompts", promptZahl, PROMPTS_REITER, Icons.Rounded.Bolt),
+                Bereich("Erinnerung", erinnerungZahl, ERINNERUNG_REITER, Icons.Rounded.NotificationsActive),
+                Bereich("Listen", listenOffenZahl, LISTEN_REITER, Icons.Rounded.Checklist),
+            )
+            val sortierer = remember { java.text.Collator.getInstance(Locale.GERMAN) }
+            Chip("Alle (${alle.size})", filter == null) { filter = null }
+            bereiche.sortedWith { x, y -> sortierer.compare(x.name, y.name) }.forEach { b ->
+                Chip("${b.name} (${b.zahl})", filter == b.kennung, icon = b.icon) {
+                    if (filter == b.kennung) filter = null
+                    else { filter = b.kennung; if (b.kennung == LISTEN_REITER) ListenAnsicht.oeffnen() }
+                }
             }
         }
         val abgleichText = abgleich.hinweis ?: when {
