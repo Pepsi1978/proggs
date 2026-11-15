@@ -620,6 +620,26 @@
       "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t",
       "ruecknahme": "if-Block in ~/.zshrc zurück auf die vier alias-Zeilen",
       "kosten": "kein Kontext"
+    },
+    {
+      "id": "M36",
+      "titel": "zsh: Glob-Muster in Optionen quoten (--include='*.kt')",
+      "datum": "2026-11-15T20:57",
+      "beleg": "Sitzung 27e0c906 (Mac): 3 grep-Aufrufe mit --include=*.kt brachen still mit 'no matches found' ab, Suche musste wiederholt werden",
+      "ort": [
+        "bugs/desktop/macos-zsh-wortaufteilung.md"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "no matches found: --include=",
+      "aufruf_regex": "--include=\\*",
+      "auch_ohne_fehlerstatus": true,
+      "plattform": [
+        "mac",
+        "linux"
+      ],
+      "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='",
+      "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen",
+      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
     }
   ]
 }
