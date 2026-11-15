@@ -16,3 +16,9 @@ Stand: 15.11.2026 (macOS, zsh, Claude Code mit Shell-Schnappschuss, eza 0.2x)
 ## Verwandte Fallen (geprüft)
 - `cat`→`bat`: im Nicht-Terminal unkritisch, aber ebenfalls nur noch im echten Terminal aktiv.
 - `Jarvis/gradlew` ohne Ausführungsrecht: immer `bash gradlew`; eine Pipe auf grep verschluckt den Fehler, deshalb die APK mit aapt2 prüfen (siehe Gedächtnis „OpenLauncher Server“).
+
+## Absicherung gegen lange Wartezeiten (alle Plattformen, 15.11.2026)
+- **Zeitlimit 60 s im Minutentakt:** `claude-code-setup/hooks/build-ablauf-guard.py` (Mac, Windows, Server gemeinsam) senkt im Bypass-Modus jedes Vordergrund-Zeitlimit von Bash und PowerShell auf 60 s. Claude Code bricht danach nicht ab, sondern schiebt den Befehl in den Hintergrund; der Agent prüft im Minutentakt. Vorher kostete ein Hänger bis zu 10 Minuten je Versuch.
+- **Warteschleifen:** Der Wächter blockt `until/while … pgrep -f "<text im eigenen Befehl>"` (auch mehrzeilig); Klammer-Trick, `^`/`$`-Anker und Variablen bleiben erlaubt.
+- **Alte Schnappschüsse:** Bis 22.11.2026 bekommen Bash-Befehle mit `ls`/`cat`/`tree` im Bypass-Modus `unalias …; eval '<befehl>'` (ein `unalias` im selben Befehl wirkt nicht, weil Aliase beim Einlesen ersetzt werden).
+- **Messwerte Mac:** Jarvis-Bau ohne Änderung 0,5 s, mit Änderung unter 1 Minute (warmer Daemon, Vorwärmen aktiv). Deutlich länger = Fehler, sofort nachsehen.
