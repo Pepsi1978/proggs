@@ -59,14 +59,28 @@ object AtemStimme {
         }
     }
 
-    private suspend fun erzeuge(app: Context, text: String): Clip? {
+    /**
+     * Frisch erzeugte Fassung eines Satzes, nicht aus dem Zwischenspeicher: Die Stimme betont ihn so jedes Mal ein wenig anders.
+     * Liegt unter files/atem/frisch und wird nach dem Abspielen gelöscht.
+     */
+    suspend fun frisch(context: Context, text: String): Clip? {
+        val app = context.applicationContext
+        val dir = File(app.filesDir, "atem/frisch").apply { mkdirs() }
+        return erzeuge(app, text) { roh -> File(dir, java.util.UUID.randomUUID().toString() + "." + roh.extension.ifBlank { "mp3" }) }
+    }
+
+    fun frischAufraeumen(context: Context) {
+        runCatching { File(context.applicationContext.filesDir, "atem/frisch").listFiles()?.forEach(File::delete) }
+    }
+
+    private suspend fun erzeuge(app: Context, text: String, zielFuer: ((File) -> File)? = null): Clip? {
         val s = einstellungen(app)
         // Zwei Versuche: Räumt der Vorleser seinen Zwischenordner genau zwischen Erzeugen und Kopieren leer, fehlt die Datei.
         repeat(2) { versuch ->
             val ergebnis = runCatching {
                 val roh = Synthese(app, s).synthetisiere(text)
                 withContext(Dispatchers.IO) {
-                    val ziel = File(ordner(app), schluessel(text, stimmKennung(s)) + "." + roh.extension.ifBlank { "mp3" })
+                    val ziel = zielFuer?.invoke(roh) ?: File(ordner(app), schluessel(text, stimmKennung(s)) + "." + roh.extension.ifBlank { "mp3" })
                     // Erst unter Zwischennamen, dann umbenennen: Ein abgebrochenes Kopieren hinterlässt nie einen halben Clip.
                     val tmp = File(ziel.parentFile, ziel.name + ".tmp")
                     roh.copyTo(tmp, overwrite = true); roh.delete()

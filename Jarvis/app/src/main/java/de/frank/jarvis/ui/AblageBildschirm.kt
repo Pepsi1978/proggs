@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.drop
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -149,6 +151,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val alle = geladen.orEmpty()
 
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
+    // Listen von außen geöffnet (Widget, Sprache): gleich den Reiter „Listen“ zeigen. Verlässt man den Reiter, schließen sie.
+    LaunchedEffect(ListenAnsicht.offen) { if (ListenAnsicht.offen) filter = LISTEN_REITER else if (filter == LISTEN_REITER) filter = null }
+    LaunchedEffect(Unit) { snapshotFlow { filter }.drop(1).collect { if (it != LISTEN_REITER && ListenAnsicht.offen) ListenAnsicht.schliessen() } }
     var sucheOffen by rememberSaveable { mutableStateOf(false) }
     var sucheText by rememberSaveable { mutableStateOf("") }
     var sucheFokus by remember { mutableStateOf(false) }
@@ -265,15 +270,10 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             // Kopfzeile mit fester Höhe: Die Reiter darunter springen nicht, wenn Prompts und Erinnerung die Knöpfe ausblenden.
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 20.dp, end = 12.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ablage", Modifier.weight(1f), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                // Listen (Einkaufsliste, Packliste …) wohnen jetzt in der Ablage: öffnen sich über den Reitern, die Leiste bleibt darunter.
-                Row(Modifier.height(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = f.primaer).antippen { ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Checklist, null, tint = f.primaer, modifier = Modifier.size(20.dp))
-                    Text("Listen", Modifier.padding(start = 6.dp), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
                 // Die Suche gilt für die ganze Ablage und steht deshalb in jedem Reiter bereit.
                 Rundknopf(Icons.Rounded.Search, "In der ganzen Ablage suchen", farbe = f.primaer) { sucheFokus = true; sucheOffen = true }
                 // Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für die Reiter „Prompts“ und „Erinnerung“.
-                if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) {
+                if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER && filter != LISTEN_REITER) {
                     var sortMenue by remember { mutableStateOf(false) }
                     Box {
                         Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
@@ -308,6 +308,13 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             Kategorie.entries.forEach { k -> Chip("${k.anzeige} ${zahlen[k] ?: 0}", filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
             Chip("Prompts $promptZahl", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER }
             Chip("Erinnerung $erinnerungZahl", filter == ERINNERUNG_REITER, icon = Icons.Rounded.NotificationsActive) { filter = if (filter == ERINNERUNG_REITER) null else ERINNERUNG_REITER }
+            // Listen als eigener Reiter wie Prompts und Erinnerung; die Zahl sind die offenen Einträge aller Listen.
+            val listenStand by de.frank.jarvis.listen.Listen.stand.collectAsState()
+            LaunchedEffect(Unit) { de.frank.jarvis.listen.Listen.sicher(context) }
+            val listenOffenZahl = remember(listenStand) { listenStand.listen.sumOf { listenStand.offen(it.id) } }
+            Chip("Listen $listenOffenZahl", filter == LISTEN_REITER, icon = Icons.Rounded.Checklist) {
+                if (filter == LISTEN_REITER) filter = null else { filter = LISTEN_REITER; ListenAnsicht.oeffnen() }
+            }
         }
         val abgleichText = abgleich.hinweis ?: when {
             abgleich.dateien.isNotEmpty() -> "Überträgt ${abgleich.dateien.size} große Datei(en): „${abgleich.dateien[0].first}“" + (if (abgleich.geladen > 0) " · ${Dateityp.groesse(abgleich.geladen)} von ${Dateityp.groesse(abgleich.dateien[0].second)}" else "")
@@ -319,6 +326,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
         if (filter == ERINNERUNG_REITER) { ErinnerungenBereich(vm, Modifier.weight(1f)); return@Column }
+        if (filter == LISTEN_REITER) { ListenBildschirm(Modifier.weight(1f).fillMaxWidth()); return@Column }
         val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
         // Steht man ganz oben, bleibt man oben: Sonst landet ein neuer Eintrag von einem anderen Gerät unsichtbar über der Sichtfläche.
         val ersterEintrag = sicht?.firstOrNull()?.id

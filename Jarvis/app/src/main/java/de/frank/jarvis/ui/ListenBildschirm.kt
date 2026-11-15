@@ -44,6 +44,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,6 +86,9 @@ import de.frank.module.draganddrop.reorderItem
 import de.frank.module.draganddrop.reorderViewport
 
 /** Ob die Listen im Vollbild offen sind und welche Liste (null = Übersicht). Geöffnet über die Leiste oder das Widget. */
+/** Reiter „Listen“ in der Ablage, neben Prompts und Erinnerung. */
+const val LISTEN_REITER = "LISTEN"
+
 object ListenAnsicht {
     var offen by mutableStateOf(false)
         private set
@@ -113,11 +118,23 @@ fun ListenBildschirm(modifier: Modifier = Modifier) {
     val offen = ListenAnsicht.liste?.let { id -> stand.listen.firstOrNull { it.id == id } }
     // Liste auf dem anderen Gerät gelöscht, während sie hier offen war: zurück zur Übersicht.
     LaunchedEffect(offen, ListenAnsicht.liste, stand.listen.size) { if (ListenAnsicht.liste != null && offen == null && stand.listen.isNotEmpty()) ListenAnsicht.liste = null }
+    var neu by remember { mutableStateOf(false) }
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
             if (offen == null) Uebersicht() else ListeAnsehen(offen)
         }
+        // Schwebender Plus-Knopf unten rechts: neue Liste anlegen.
+        if (offen == null) {
+            val f = LocalFarben.current
+            Box(
+                Modifier.align(Alignment.BottomEnd).padding(18.dp).size(58.dp)
+                    .knopf3d(f.primaer, f.tertiaer, 29.dp, f.dunkel).antippen { neu = true }
+                    .semantics { contentDescription = "Neue Liste" },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Add, null, tint = f.aufPrimaer, modifier = Modifier.size(30.dp)) }
+        }
     }
+    if (neu) ListeDialog(null) { neu = false }
 }
 
 // ---------------------------------------------------------------- Übersicht
@@ -127,16 +144,12 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht() {
     val f = LocalFarben.current
     val context = LocalContext.current
     val stand by Listen.stand.collectAsState()
-    var neu by remember { mutableStateOf(false) }
-    BackHandler { ListenAnsicht.schliessen() }
-    Kopf("Listen", zurueck = { ListenAnsicht.schliessen() }) {
-        Rundknopf(Icons.Rounded.Widgets, "Widget auf den Startbildschirm") { widgetAnheften(context) }
-    }
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Eingebettet in die Ablage (Reiter „Listen“): ohne eigenen Kopf, der Ablage-Kopf steht darüber.
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (stand.listen.isEmpty()) item(key = "leer") {
             Karte {
                 Text("Noch keine Listen", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("Lege unten eine an oder sag einfach: „Hey Jarvis, füge Zahnpasta meiner Einkaufsliste hinzu.“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp))
+                Text("Lege mit dem Plus unten rechts eine an oder sag einfach: „Hey Jarvis, füge Zahnpasta meiner Einkaufsliste hinzu.“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
         items(stand.listen, key = { it.id }) { l ->
@@ -156,11 +169,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht() {
                 Text(offenZahl.toString(), color = LISTEN_FARBEN[l.farbe.mod(LISTEN_FARBEN.size)], fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
+        item(key = "widget") {
+            Row(Modifier.padding(top = 4.dp).antippen { widgetAnheften(context) }.padding(horizontal = 6.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Widgets, null, tint = f.textLeise, modifier = Modifier.size(18.dp))
+                Text("Widget auf den Startbildschirm", Modifier.padding(start = 8.dp), color = f.textLeise, fontSize = 14.sp)
+            }
+        }
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Knopf("Neue Liste", Modifier.weight(1f), Icons.Rounded.Add) { neu = true }
-    }
-    if (neu) ListeDialog(null) { neu = false }
 }
 
 private fun widgetAnheften(context: android.content.Context) {

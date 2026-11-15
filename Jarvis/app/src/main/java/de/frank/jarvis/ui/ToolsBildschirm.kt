@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Settings
@@ -304,8 +306,8 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
             Abschnitt("Sätze") {
                 SchalterZeile("Sätze vorlesen", "Eigene Sätze mittig in der Ein- und Ausatemphase; je Zeile ein Satz, mehrere wechseln sich ab", p.saetzeAn) { p = p.copy(saetzeAn = it) }
                 if (p.saetzeAn) {
-                    SatzFeld("Beim Einatmen", GRUEN, p.satzEin, p.ein, AtemStimme.EINATMEN, p.vorlesen) { p = p.copy(satzEin = it) }
-                    SatzFeld("Beim Ausatmen", ORANGE, p.satzAus, p.aus, AtemStimme.AUSATMEN, p.vorlesen) { p = p.copy(satzAus = it) }
+                    SatzFeld(vm, "Beim Einatmen", GRUEN, p.satzEin, p.ein, AtemStimme.EINATMEN, p.vorlesen) { p = p.copy(satzEin = it) }
+                    SatzFeld(vm, "Beim Ausatmen", ORANGE, p.satzAus, p.aus, AtemStimme.AUSATMEN, p.vorlesen) { p = p.copy(satzAus = it) }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -394,6 +396,44 @@ private fun WiederholKnopf(icon: ImageVector, beschreibung: String, schritt: () 
     ) { Icon(icon, null, tint = f.text, modifier = Modifier.size(20.dp)) }
 }
 
+/**
+ * Rundes Mikrofon unter einem Satzfeld: Tippen startet die Aufnahme, nochmal Tippen übernimmt das Gesagte als neue Zeile (neuer Satz).
+ * Dieselbe Transkription wie überall in Jarvis; die Mitschrift kommt über das ViewModel, auch wenn sie erst später ankommt.
+ */
+@Composable
+private fun SatzMikrofon(vm: AppViewModel, feld: String, wert: String, setze: (String) -> Unit, farbe: Color) {
+    val f = LocalFarben.current
+    val jetzt by rememberUpdatedState(wert)
+    val aktuellSetzen by rememberUpdatedState(setze)
+    val meins = vm.antwortDiktatFeld == feld
+    val diktat = vm.antwortDiktate[feld]
+    LaunchedEffect(diktat) {
+        val neu = diktat?.trim() ?: return@LaunchedEffect
+        vm.antwortDiktate.remove(feld)
+        if (neu.isNotEmpty()) aktuellSetzen(jetzt.trimEnd().let { if (it.isEmpty()) neu else it + "\n" + neu })
+    }
+    // Editor geschlossen, während die Aufnahme lief: die Aufnahme beenden.
+    DisposableEffect(feld) { onDispose { if (vm.antwortDiktatFeld == feld) vm.antwortAufnahmeBeenden() } }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        val aufnahme = meins && vm.nimmtAuf
+        Box(
+            Modifier.size(46.dp).clip(CircleShape).background(if (aufnahme) f.gefahr else farbe.copy(alpha = 0.9f))
+                .antippen { vm.antwortMikrofonTippen(feld) }
+                .semantics { contentDescription = if (aufnahme) "Aufnahme beenden und übernehmen" else "Satz einsprechen" },
+            contentAlignment = Alignment.Center,
+        ) { Icon(if (aufnahme) Icons.Rounded.Stop else Icons.Rounded.Mic, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+        Text(
+            when {
+                aufnahme -> "Ich höre zu … tippe zum Übernehmen"
+                meins && vm.schreibtMit -> "Schreibe mit …"
+                meins -> "Mikrofon startet …"
+                else -> "Satz einsprechen"
+            },
+            Modifier.padding(start = 10.dp), color = if (aufnahme) f.gefahr else f.textLeise, fontSize = 14.sp,
+        )
+    }
+}
+
 @Composable
 private fun SchalterZeile(titel: String, text: String, an: Boolean, setze: (Boolean) -> Unit) {
     val f = LocalFarben.current
@@ -414,7 +454,7 @@ private fun SchalterZeile(titel: String, text: String, an: Boolean, setze: (Bool
  * Erst geschätzt nach der Länge, nach „Genau messen“ mit der echten Stimme.
  */
 @Composable
-private fun SatzFeld(titel: String, farbe: Color, wert: String, phaseZehntel: Int, stichwort: String, vorlesen: Boolean, setze: (String) -> Unit) {
+private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, wert: String, phaseZehntel: Int, stichwort: String, vorlesen: Boolean, setze: (String) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val bereich = rememberCoroutineScope()
@@ -437,6 +477,7 @@ private fun SatzFeld(titel: String, farbe: Color, wert: String, phaseZehntel: In
         Text("Phase ${zehntelText(phaseZehntel)} s", color = f.textLeise, fontSize = 13.sp)
     }
     Eingabe(wert, setze, "z. B. Heute ist der erste Tag vom Rest meines Lebens.", einzeilig = false)
+    SatzMikrofon(vm, "atem:$titel", wert, setze, farbe)
     val phase = phaseZehntel * 100L
     zeilen.forEachIndexed { i, z ->
         val echt = gemessen[z]

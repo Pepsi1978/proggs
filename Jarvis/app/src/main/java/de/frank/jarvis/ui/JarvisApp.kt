@@ -126,16 +126,11 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.einstellungsReiter = "biomarker"
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
+            // Listen wohnen als Reiter in der Ablage: Von außen geöffnet (Widget, Sprache), geht es dorthin.
+            androidx.compose.runtime.LaunchedEffect(ListenAnsicht.offen) { if (ListenAnsicht.offen) vm.reiter = Reiter.ABLAGE }
             if (!vm.gesperrt && de.frank.jarvis.atem.AtemSitzung.offen) {
                 // Laufende Atemübung im echten Vollbild, ohne Leiste.
                 AtemSitzungBildschirm(Modifier.fillMaxSize())
-            } else if (!vm.gesperrt && ListenAnsicht.offen) {
-                // Listen über die ganze Breite (wie der Biomarker-Bereich), geöffnet über die Leiste oder das Widget.
-                // Die untere Leiste bleibt darunter immer sichtbar und bedienbar, auch in einer geöffneten Liste.
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-                    ListenBildschirm(Modifier.weight(1f).fillMaxWidth())
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Box(Modifier.widthIn(max = 640.dp)) { Leiste(vm) } }
-                }
             } else if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else
@@ -243,7 +238,7 @@ private fun Leiste(vm: AppViewModel) {
         val listenOffen = ListenAnsicht.offen
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
             // Die Listen gehören zur Ablage: Sind sie offen, leuchtet der Ablage-Reiter.
-            val aktiv = if (listenOffen) r == Reiter.ABLAGE else vm.reiter == r
+            val aktiv = vm.reiter == r
             val icon = when (r) {
                 Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
                 Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune
@@ -252,8 +247,8 @@ private fun Leiste(vm: AppViewModel) {
             Row(
                 Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen {
                     // In einer offenen Liste führt der Ablage-Reiter erst zur Listen-Übersicht zurück, von dort in die Ablage.
-                    if (r == Reiter.ABLAGE && listenOffen && ListenAnsicht.liste != null) { ListenAnsicht.liste = null; return@antippen }
-                    ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
+                    if (r == Reiter.ABLAGE && vm.reiter == r && listenOffen && ListenAnsicht.liste != null) { ListenAnsicht.liste = null; return@antippen }
+                    if (r != Reiter.ABLAGE) ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
                     .semantics { contentDescription = r.anzeige },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,

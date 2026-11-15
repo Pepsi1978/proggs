@@ -71,6 +71,51 @@ object AtemSitzung {
     private val spieler = HashMap<String, MediaPlayer>()
     private val dauern = HashMap<String, Long>()
     private val angehalten = ArrayList<MediaPlayer>()
+
+    /** Vorab frisch erzeugter Satz für die nächste Ein- (true) bzw. Ausatemphase. */
+    private class Vorrat(val text: String, val mp: MediaPlayer, val ms: Long, val datei: java.io.File)
+    private val vorrat = HashMap<Boolean, Vorrat>()
+    /** Frische Sätze, die gerade spielen: Pause und Vorlesen-Häkchen gelten auch für sie. */
+    private val laufendeFrisch = HashSet<MediaPlayer>()
+    private fun alleSpieler(): List<MediaPlayer> = spieler.values + laufendeFrisch
+
+    private fun freigeben(v: Vorrat) {
+        laufendeFrisch.remove(v.mp)
+        runCatching { v.mp.stop() }; runCatching { v.mp.release() }; v.datei.delete()
+    }
+
+    /**
+     * Erzeugt den Satz für Zyklus [zyklus] der Ein- bzw. Ausatemphase schon jetzt neu, eine ganze Runde vor seinem Einsatz:
+     * Er klingt jedes Mal etwas anders und ist trotzdem pünktlich, auch bei schwachem Netz. Ist er nicht rechtzeitig fertig,
+     * springt der gespeicherte Clip ein.
+     */
+    private fun kotlinx.coroutines.CoroutineScope.frischVorbereiten(ein: Boolean, zyklus: Int, p: AtemProfil) {
+        val a = app ?: return
+        val liste = if (ein) p.saetzeEin else p.saetzeAus
+        if (!p.saetzeAn || !vorlesen || liste.isEmpty() || zyklus > p.zyklen) return
+        val text = liste[(zyklus - 1) % liste.size]
+        launch {
+            val clip = AtemStimme.frisch(a, text) ?: return@launch
+            var mp: MediaPlayer? = null
+            try {
+                mp = withContext(Dispatchers.IO) {
+                    MediaPlayer().apply {
+                        setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                        setDataSource(clip.datei.path); prepare()
+                    }
+                }
+                val neu = Vorrat(text, mp, mp.duration.toLong().takeIf { it > 0 } ?: clip.ms, clip.datei)
+                vorrat.put(ein, neu)?.let { freigeben(it) }
+                mp = null
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (f: Exception) {
+                Log.w(TAG, "Frischer Satz nicht ladbar", f)
+            } finally {
+                mp?.let { runCatching { it.release() }; clip.datei.delete() }
+            }
+        }
+    }
     /** Zwei Geräuschspuren, je Übung einmal gebaut und für jede Phase neu abgespielt. */
     private var spurEin: AudioTrack? = null
     private var spurAus: AudioTrack? = null
@@ -160,6 +205,7 @@ object AtemSitzung {
     }
 
     private suspend fun ablauf(p: AtemProfil) = coroutineScope {
+        frischVorbereiten(true, 1, p); frischVorbereiten(false, 1, p)
         for (a in plan) {
             warteBis(a.start)
             when (a.phase) {
@@ -175,15 +221,27 @@ object AtemSitzung {
                         val liste = if (ein) p.saetzeEin else p.saetzeAus
                         if (liste.isNotEmpty()) {
                             val text = liste[(a.zyklus - 1) % liste.size]
-                            val s = dauern[text]
+                            // Frische Fassung nehmen, wenn sie fertig ist, und gleich die für die nächste Runde in Auftrag geben.
+                            val frisch = vorrat.remove(ein)?.let { v -> if (v.text == text) v else { freigeben(v); null } }
+                            frischVorbereiten(ein, a.zyklus + 1, p)
+                            val s = frisch?.ms ?: dauern[text]
                             // Gleich viel Ruhe vor und nach dem Satz: zwischen Ende des Stichworts und Ende der Phase mittig gesetzt.
                             val frei = if (s != null) a.dauer - cue - s else -1L
                             if (s != null && frei >= 300) launch {
-                                warteBis(a.start + cue + frei / 2)
-                                if (zeit() < a.ende) { satz = text; if (vorlesen) spiele(text) }
-                                warteBis(a.start + cue + frei / 2 + s + 400)
-                                if (satz == text) satz = null
-                            }
+                                try {
+                                    warteBis(a.start + cue + frei / 2)
+                                    if (zeit() < a.ende) {
+                                        satz = text
+                                        if (vorlesen) {
+                                            if (frisch != null) { laufendeFrisch += frisch.mp; runCatching { frisch.mp.start() } } else spiele(text)
+                                        }
+                                    }
+                                    warteBis(a.start + cue + frei / 2 + s + 400)
+                                    if (satz == text) satz = null
+                                } finally {
+                                    frisch?.let { freigeben(it) }
+                                }
+                            } else frisch?.let { freigeben(it) }
                         }
                     }
                 }
@@ -227,7 +285,7 @@ object AtemSitzung {
         pauseSeit = SystemClock.elapsedRealtime(); pausiert = true
         spur?.let { runCatching { if (it.playState == AudioTrack.PLAYSTATE_PLAYING) it.pause() } }
         angehalten.clear()
-        spieler.values.forEach { runCatching { if (it.isPlaying) { it.pause(); angehalten += it } } }
+        alleSpieler().forEach { runCatching { if (it.isPlaying) { it.pause(); angehalten += it } } }
     }
 
     fun weiter() {
@@ -241,7 +299,7 @@ object AtemSitzung {
 
     fun vorlesenUmschalten() {
         vorlesen = !vorlesen
-        if (!vorlesen) { spieler.values.forEach { runCatching { if (it.isPlaying) { it.pause(); it.seekTo(0) } } }; angehalten.clear() }
+        if (!vorlesen) { alleSpieler().forEach { runCatching { if (it.isPlaying) { it.pause(); it.seekTo(0) } } }; angehalten.clear() }
     }
 
     fun geraeuschUmschalten() {
@@ -256,6 +314,9 @@ object AtemSitzung {
         spurEin = null; spurAus = null
         spieler.values.forEach { runCatching { it.stop() }; runCatching { it.release() } }
         spieler.clear(); dauern.clear(); angehalten.clear()
+        vorrat.values.toList().forEach { freigeben(it) }; vorrat.clear()
+        laufendeFrisch.forEach { runCatching { it.stop() }; runCatching { it.release() } }; laufendeFrisch.clear()
+        app?.let { AtemStimme.frischAufraeumen(it) }
         fokusAbgeben(); wachLos()
         offen = false; gestartet = false; pausiert = false; vorbereitung = null; satz = null; hinweis = null; plan = emptyList()
     }
