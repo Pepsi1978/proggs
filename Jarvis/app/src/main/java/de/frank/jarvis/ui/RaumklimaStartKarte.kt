@@ -20,6 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -82,7 +87,20 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
     val e = s.ergebnis
     val struktur = e?.struktur
     val sensoren = struktur?.optJSONArray("sensoren")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
-    Karte(modifier = griff) {
+    // Antippen irgendwo in der Karte öffnet die SwitchBot-App (Frank, 15.11.2026). Um den Aktualisieren-Knopf liegt ein
+    // großzügiger Schutzkreis für den Daumen: Ein Tipp dort liest nur neu und öffnet nie die App.
+    val lage = remember { arrayOfNulls<LayoutCoordinates>(2) }
+    val schutzRadius = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
+    Karte(modifier = griff.onGloballyPositioned { lage[0] = it }.pointerInput(Unit) {
+        detectTapGestures { punkt ->
+            val karte = lage[0]
+            val knopf = lage[1]
+            val mitte = if (karte != null && knopf != null && karte.isAttached && knopf.isAttached)
+                karte.localPositionOf(knopf, Offset(knopf.size.width / 2f, knopf.size.height / 2f)) else null
+            if (mitte != null && (punkt - mitte).getDistance() <= schutzRadius) s.lesen(faehigkeit)
+            else Schnellstart.starten(context, SWITCHBOT_PAKET)
+        }
+    }) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("Raumklima", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -96,7 +114,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 )
             }
             Box(
-                Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (s.laeuft) f.primaer else null)
+                Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).onGloballyPositioned { lage[1] = it }.glas(f, 22.dp, erhoeht = 0.5f, toenung = if (s.laeuft) f.primaer else null)
                     .antippen { s.lesen(faehigkeit) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -124,6 +142,9 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
         }
     }
 }
+
+/** Paket der SwitchBot-App; sichtbar über die LAUNCHER-Abfrage im Manifest. */
+private const val SWITCHBOT_PAKET = "com.theswitchbot.switchbot"
 
 /** Einordnung wie im Sprachhinweis von SwitchbotFaehigkeit: unter 800 gut, bis 1000 in Ordnung, bis 1400 lüften, darüber dringend lüften. */
 private fun co2Stufe(ppm: Int): String = when {
