@@ -89,7 +89,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(vm: AppVie
             Karte {
                 Text("Noch keine Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Sprich oder tippe unten ein, was du ab jetzt anders machst und warum. Oder sag: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“",
+                    "Sag Jarvis, was du ab jetzt anders machst und warum, etwa: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“",
                     color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
                 )
             }
