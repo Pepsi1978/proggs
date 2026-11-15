@@ -20,12 +20,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.gestures.detectTapGestures
+import android.widget.Toast
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,17 +92,19 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
     val sensoren = struktur?.optJSONArray("sensoren")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
     // Antippen irgendwo in der Karte öffnet die SwitchBot-App (Frank, 15.11.2026). Um den Aktualisieren-Knopf liegt ein
     // großzügiger Schutzkreis für den Daumen: Ein Tipp dort liest nur neu und öffnet nie die App.
-    val lage = remember { arrayOfNulls<LayoutCoordinates>(2) }
-    val schutzRadius = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
-    Karte(modifier = griff.onGloballyPositioned { lage[0] = it }.pointerInput(Unit) {
-        detectTapGestures { punkt ->
-            val karte = lage[0]
-            val knopf = lage[1]
-            val mitte = if (karte != null && knopf != null && karte.isAttached && knopf.isAttached)
-                karte.localPositionOf(knopf, Offset(knopf.size.width / 2f, knopf.size.height / 2f)) else null
-            if (mitte != null && (punkt - mitte).getDistance() <= schutzRadius) s.lesen(faehigkeit)
-            else Schnellstart.starten(context, SWITCHBOT_PAKET)
+    // Die Druckstelle wird im Initial-Durchlauf nur gemerkt (nicht verbraucht); Haptik, Druckeffekt und TalkBack kommen von antippen.
+    // Langes Drücken (Karte verschieben) öffnet nichts.
+    val lage = remember { RaumklimaLage() }
+    val dichte = LocalDensity.current
+    Karte(modifier = griff.onPlaced { lage.karte = it }.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.changedToDown() }?.let { lage.druck = it.position }
+            }
         }
+    }.antippen(lange = {}) {
+        if (lage.imSchutzkreis(with(dichte) { SCHUTZ_RADIUS.toPx() })) s.lesen(faehigkeit)
+        else if (!Schnellstart.starten(context, SWITCHBOT_PAKET)) Toast.makeText(context, "SwitchBot-App nicht gefunden", Toast.LENGTH_SHORT).show()
     }) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
@@ -114,7 +119,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 )
             }
             Box(
-                Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).onGloballyPositioned { lage[1] = it }.glas(f, 22.dp, erhoeht = 0.5f, toenung = if (s.laeuft) f.primaer else null)
+                Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).onPlaced { lage.knopf = it }.glas(f, 22.dp, erhoeht = 0.5f, toenung = if (s.laeuft) f.primaer else null)
                     .antippen { s.lesen(faehigkeit) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -140,6 +145,25 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
             }
             if (co2 != null) Co2Skala(co2)
         }
+    }
+}
+
+/** Radius des Schutzkreises um den Aktualisieren-Knopf, gemessen von dessen Mitte (Knopf 22 dp + Daumenrand). */
+private val SCHUTZ_RADIUS = 72.dp
+
+/** Lage von Karte und Knopf und die letzte Druckstelle (in Kartenkoordinaten); kein State, nur beim Tippen gelesen. */
+private class RaumklimaLage {
+    var karte: LayoutCoordinates? = null
+    var knopf: LayoutCoordinates? = null
+    var druck: Offset? = null
+
+    fun imSchutzkreis(radiusPx: Float): Boolean {
+        val k = karte ?: return false
+        val b = knopf ?: return false
+        val p = druck ?: return false
+        if (!k.isAttached || !b.isAttached) return false
+        val mitte = k.localPositionOf(b, Offset(b.size.width / 2f, b.size.height / 2f))
+        return (p - mitte).getDistance() <= radiusPx
     }
 }
 
