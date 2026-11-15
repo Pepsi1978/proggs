@@ -8,6 +8,16 @@
 # 2) Selbstmord der Shell: pkill -f / pgrep -f (bzw. Win32_Process-CommandLine-Filter) mit einem
 #    Muster, das als Text auch im eigenen Befehl steht. Das Tool laeuft als "bash -c '<befehl>'",
 #    also trifft das Muster die ausfuehrende Shell mit (gemessen 08.11.2026: Exit 144, Sitzung 3429c693).
+# 4) Warte-Schleife, die nie endet: until/while mit pgrep -f "<muster>", das im eigenen Befehl steht. pgrep findet die
+#    eigene Shell, der Bau gilt ewig als laufend (gemessen 15.11.2026: 20 Minuten Warten auf einen fertigen Jarvis-Bau).
+# 5) Komfort-Aliase aus ~/.zshrc im Shell-Schnappschuss (ls->eza, cat->bat): "ls -t <datei>" wurde zu "eza -t <datei>",
+#    eza wartete auf die offene Standardeingabe (15.11.2026, 10 Minuten bis zum Timeout). Bash-Befehle mit ls/cat/tree/ll
+#    bekommen deshalb am Mac und unter Linux "unalias … 2>/dev/null;" vorangestellt. Siehe bugs/werkzeuge/agenten-shell-aliase.md
+#
+# 6) Gestaffelte Zeitlimits (Franks Regel vom 15.11.2026): Jeder Vordergrund-Befehl bekommt höchstens 60 s. Läuft er länger,
+#    bricht Claude Code ihn nicht ab, sondern schiebt ihn in den Hintergrund; der Agent prüft dann im Minutentakt Ausgabe und
+#    Prozesse (hängt etwas bei 0 % CPU, ist ein Fehler aufgetreten?). Vorher: 10-Minuten-Zeitlimits, ein Hänger kostete 10 Minuten.
+#    Nur im Bypass-Modus (dort gibt "allow" nichts zusätzlich frei), für Bash und PowerShell, auf Mac, Windows und Server gleich.
 #
 # Blockt per permissionDecision=deny + exit 0 (claude-hooks.md 1.6), stdin per Python statt jq.
 # Fail-open: jeder Fehler -> kein Block. Notaus: leere Datei build-ablauf-guard-disable.flag im TEMP.
@@ -45,6 +55,59 @@ HINWEIS_KILL = (
     "Und Kill nie mit weiteren Schritten in denselben Befehl packen.\n\n"
     "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
 )
+
+
+WARTE_SCHLEIFE = re.compile(r'\b(until|while)\b[^\n]*?\bpgrep\b[^\n]*?\s-\w*f\w*\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))')
+ALIAS_BEFEHL = re.compile(r'(?:^|[;&|(\n`]|\$\()\s*(ls|cat|tree|ll)(?=\s|$)')
+HINWEIS_WARTEN = (
+    "STOPP - diese Warte-Schleife endet nie.\n\n"
+    "pgrep -f \"{muster}\" findet die eigene Shell (das Muster steht woertlich im Befehl), der Prozess gilt also immer als laufend.\n\n"
+    "Stattdessen: Den Bau direkt starten (bash gradlew assembleDebug -q). Wird er in den Hintergrund verschoben, meldet sich das\n"
+    "Werkzeug beim Ende selbst. Muss doch gewartet werden: auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
+    "Prozessnamen, oder den Klammer-Trick nutzen: pgrep -f \"[g]radlew assembleDebug\".\n\n"
+    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+)
+
+
+ZEITLIMIT_MS = 60000
+HINWEIS_ZEIT = ("Zeitlimit auf 60 s (gestaffelt): Ist der Befehl dann nicht fertig, läuft er im Hintergrund weiter. Danach im "
+                "Minutentakt Ausgabe und Prozesse prüfen (Fehler? hängt etwas bei 0 % CPU?), sofort reagieren, nie still warten.")
+
+
+def mit_zeitlimit(d, neu):
+    """Senkt das Vordergrund-Zeitlimit auf 60 s; liefert True, wenn etwas geändert wurde."""
+    if d.get('permission_mode') != 'bypassPermissions' or neu.get('run_in_background'):
+        return False
+    alt = neu.get('timeout')
+    if isinstance(alt, (int, float)) and alt <= ZEITLIMIT_MS:
+        return False
+    neu['timeout'] = ZEITLIMIT_MS
+    return True
+
+
+def freigeben(d, neu, grund):
+    if mit_zeitlimit(d, neu):
+        grund += " · " + HINWEIS_ZEIT
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                             "permissionDecisionReason": grund, "updatedInput": neu}}))
+
+
+def warte_schleife(cmd):
+    for m in WARTE_SCHLEIFE.finditer(ohne_heredoc(cmd)):
+        muster = m.group(2) or m.group(3) or m.group(4) or ''
+        if muster and '[' not in muster:
+            return muster
+    return None
+
+
+def ohne_aliase(cmd):
+    """ls/cat/tree/ll als Befehl -> Aliase dieser Shell vorher aufheben (wirkt auch in Sitzungen mit altem Schnappschuss)."""
+    if os.name == 'nt' or cmd.lstrip().startswith('unalias ls ll cat tree') or not ALIAS_BEFEHL.search(ohne_heredoc(cmd)):
+        return cmd
+    # Aliase werden beim Einlesen ersetzt: Ein unalias im selben Befehl wirkte nicht mehr. Deshalb der eigentliche Befehl erst
+    # über ein inneres eval, das nach dem unalias eingelesen wird.
+    import shlex
+    return 'unalias ls ll cat tree 2>/dev/null; eval ' + shlex.quote(cmd)
 
 
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]+['\"]?")
@@ -266,6 +329,13 @@ def main():
     except Exception:
         pass
     try:
+        w = warte_schleife(cmd)
+        if w:
+            verweigern(HINWEIS_WARTEN.format(muster=w))
+            return
+    except Exception:
+        pass
+    try:
         b = bau_ohne_bump(cmd, d.get('cwd') or os.getcwd())
         if b:
             app, dateien = b
@@ -307,8 +377,7 @@ def main():
             neu = dict(d.get('tool_input') or {})
             # Sperre über einen offenen Deskriptor halten, bis die Shell endet (flock … true gäbe sie vor dem Bau frei).
             neu['command'] = ('touch ~/.openlauncher/vorwaermen/pause; exec 9>>~/.openlauncher/vorwaermen/gradle-bau.lock; flock -w 3600 9; ' + cmd)
-            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                                     "permissionDecisionReason": "Server: wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
+            freigeben(d, neu, "Server: wartet auf laufendes Vorwärmen")
             return
     except Exception:
         pass
@@ -326,8 +395,21 @@ def main():
         if (os.name == 'nt' or mac) and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
             neu = dict(d.get('tool_input') or {})
             neu['command'] = ('python3 "' if mac else 'python "') + skript.replace('\\', '/') + '" warte; ' + cmd
-            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                                     "permissionDecisionReason": ("Mac" if mac else "PC") + ": wartet auf laufendes Vorwärmen", "updatedInput": neu}}))
+            freigeben(d, neu, ("Mac" if mac else "PC") + ": wartet auf laufendes Vorwärmen")
+            return
+    except Exception:
+        pass
+    try:
+        # "allow" gibt den ganzen Befehl frei: nur dort, wo ohnehin alles frei ist (Bypass); sonst schützt ~/.zshrc (nur echtes Terminal).
+        neu = dict(d.get('tool_input') or {})
+        grund = []
+        if d.get('tool_name') == 'Bash' and d.get('permission_mode') == 'bypassPermissions':
+            neu_cmd = ohne_aliase(cmd)
+            if neu_cmd != cmd:
+                neu['command'] = neu_cmd
+                grund.append("Komfort-Aliase (eza, bat) aufgehoben")
+        if grund or mit_zeitlimit(d, dict(neu)):
+            freigeben(d, neu, " · ".join(grund) or "Gestaffeltes Zeitlimit")
     except Exception:
         pass
 
