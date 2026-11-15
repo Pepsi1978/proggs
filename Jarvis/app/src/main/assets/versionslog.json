@@ -716,6 +716,7 @@
     {"versionCode": 708, "versionName": "1.8.697", "stand": "15.11.2026, 19:32 Uhr", "notiz": "Jarvis meldet bei SwitchBot einen Webhook an, damit die CO2-Werte direkt aus der SwitchBot-Cloud kommen, auch ohne Mac."},
     {"versionCode": 709, "versionName": "1.8.698", "stand": "15.11.2026, 19:45 Uhr", "notiz": "Jarvis lädt je Frage nur die passenden Bereiche des Live-Gedächtnisses, lernt dazu und zeigt unter jeder Antwort, wie viele Tokens auf Gedächtnis und eigenes Denken entfielen."},
     {"versionCode": 710, "versionName": "1.8.699", "stand": "15.11.2026, 19:46 Uhr", "notiz": "Raumklima: Das Handy liest den Sensor im Auto und jeden Sensor ohne Cloud-Werte direkt per Bluetooth, wenn er in der Nähe ist."},
-    {"versionCode": 711, "versionName": "1.8.700", "stand": "15.11.2026, 19:50 Uhr", "notiz": "Raumklima: Der Mac meldet jetzt alle SwitchBot-Sensoren, und frische Mac-Werte gehen den manchmal veralteten Cloud-Werten vor."}
+    {"versionCode": 711, "versionName": "1.8.700", "stand": "15.11.2026, 19:50 Uhr", "notiz": "Raumklima: Der Mac meldet jetzt alle SwitchBot-Sensoren, und frische Mac-Werte gehen den manchmal veralteten Cloud-Werten vor."},
+    {"versionCode": 712, "versionName": "1.8.701", "stand": "15.11.2026, 19:51 Uhr", "notiz": "Jarvis lernt jetzt auch, unnötige Gedächtnis-Bereiche wegzulassen, und lädt bei Programmieraufträgen nur noch die Programmierregeln."}
 ]
 }

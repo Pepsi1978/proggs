@@ -57,7 +57,7 @@ object KontextWahl {
         Bereich.AUSWERTUNG -> Profil(Rolle.STANDARD, listOf("auswertung", "guten morgen", "wie geht es mir", "wie geht's mir", "einschätzung", "tagesplan", "wie war mein tag"))
         Bereich.GESPRAECHE -> Profil(Rolle.STANDARD, listOf("gespräch", "gesprochen", "vorhin", "letztens", "worüber", "besprochen", "erzählt", "unterhalten", "hatten wir"))
         Bereich.ZIELE -> Profil(Rolle.STANDARD, listOf("ziel", "fortschritt", "vorsatz", "vorsätze"))
-        Bereich.STACKS -> Profil(Rolle.WAHL, listOf("stack", "nahrungserg", "supplement", "vitamin", "mineral", "magnesium", "omega", "kreatin", "zink", "einnahme", "einnehm", "kapsel", "dosis", "präparat", "mittel"))
+        Bereich.STACKS -> Profil(Rolle.WAHL, listOf("stack", "nahrungserg", "supplement", "vitamin", "mineral", "magnesium", "omega", "kreatin", "zink", "einnahme", "einnehm", "kapsel", "dosis", "präparat", "mittel="))
         Bereich.BIODATEN -> Profil(Rolle.WAHL, listOf("schlaf", "geschlafen", "hrv", "herzraten", "erholung", "erholt", "recovery", "ruhepuls", "puls", "whoop", "oura", "gewicht", "waage", "wiege", "körperfett", "biomarker", "biodaten", "fitness", "vo2", "strain", "belast", "müde", "energie", "gesundheit", "temperatur", "blutdruck", "krank", "körper"), listOf(Bereich.TRAININGS, Bereich.AUSWERTUNG))
         Bereich.TRAININGS -> Profil(Rolle.WAHL, listOf("training", "trainier", "lauf", "gelaufen", "joggen", "sport", "kilometer", "pace", "intervall", "workout", "radfahr", "schwimm", "waldlauf", "traillauf"), listOf(Bereich.BIODATEN, Bereich.WETTER))
         Bereich.KONTINGENTE -> Profil(Rolle.WAHL, listOf("kontingent", "limit", "token", "guthaben", "codex", "chatgpt", "claude", "anthropic", "opus", "sonnet", "gemini", "kosten"))
@@ -67,7 +67,7 @@ object KontextWahl {
         Bereich.MAIL -> Profil(Rolle.WAHL, listOf("mail", "e-mail", "posteingang", "newsletter", "bestellung", "post="))
         Bereich.WISSEN -> Profil(Rolle.WAHL, listOf("wissen", "datenbank", "artikel", "nachschlag", "studie"))
         Bereich.IDEEN -> Profil(Rolle.WAHL, listOf("idee"))
-        Bereich.TAGEBUCH -> Profil(Rolle.WAHL, listOf("tagebuch", "journal", "eintrag", "einträge", "notiert", "gefühlt", "stimmung", "reflexion", "gedanken"), listOf(Bereich.GESPRAECHE))
+        Bereich.TAGEBUCH -> Profil(Rolle.WAHL, listOf("tagebuch", "journal", "eintrag", "einträge", "notiert", "gefühlt", "stimmung", "reflexion", "gedanken"))
     }
 
     /** Teile des Gemerkten, die nur bei Bedarf dazukommen (Regeln, Stil, Ziele und Entscheidungen stehen immer darin). */
@@ -79,7 +79,7 @@ object KontextWahl {
             listOf("über mich", "langzeit", "lebenslauf", "lebensziel", "mein leben", "biografie"),
             { Langzeitkontext.alsKontext(it) }),
         PROGRAMMIERREGELN("programmierregeln", "Programmierregeln", Rolle.WAHL,
-            listOf("programm", "entwickler", "code=", "coden", "bug", "commit", "claude code", "nachtrag", "übergib", "implement", "feature", "repo", "android", "kotlin", "swift",
+            listOf("programm", "entwickler", "code=", "coden", "bug", "commit", "claude code", "nachtrag", "übergib", "implement", "feature", "repo=", "repository", "android", "kotlin", "swift",
                 "die app", "der app", "jarvis-app", "session", "sitzung", "bauen", "einbauen", "baue ", "funktion in", "fehler in"),
             { Programmierregeln.alsKontext(it) }),
     }
@@ -90,9 +90,17 @@ object KontextWahl {
 
     /** „Benutze dein gesamtes Live-Gedächtnis“ und ähnlich: dann wie früher alles. */
     private val GANZ = Regex(
-        "(gesamte[nmsr]?|ganze[nmsr]?|komplette[nmsr]?|volle[nmsr]?|vollständige[nmsr]?)\\s+(live[- ]?)?(gedächtnis|kontext|gesamtbild)|alles,? was du (über mich )?weißt|alles aus deinem gedächtnis",
+        "(gesamte[nmsr]?|ganze[nmsr]?|komplette[nmsr]?|volle[nmsr]?|vollständige[nmsr]?)\\s+((live|life|leif|laiv)[- ]?)?(gedächtnis|kontext|gesamtbild)|alles,? was du (über mich )?weißt|alles aus deinem gedächtnis",
         RegexOption.IGNORE_CASE,
     )
+    /** Klare Übergabe an den Programmierer: dann nur Immer-Kern und Programmierregeln, egal welche Fachwörter im Auftrag stehen. */
+    private val UEBERGABE = Regex(
+        "(an|für) den programmierer|zum programmierer|programmier(auftrag|nachtrag)|lass (das|es|ihn) programmieren|programmier(e|t)? (das|mir)|übergib .{0,40}programmier|schick .{0,60}programmier",
+        RegexOption.IGNORE_CASE,
+    )
+    /** Ab dieser Summe (negativ) über die Wörter einer Frage bleibt ein Bereich weg: Er war bei solchen Fragen wiederholt unnötig. */
+    private const val WEGLASSEN = -3
+
     /** Allgemeine Lagefragen ohne Fachwort: dann kommt der Standard-Satz dazu. */
     private val LAGE = listOf("sinnvoll", "empfiehl", "empfehl", "vorschlag", "was soll ich", "was mache ich", "wie sieht mein", "überblick", "meine lage", "was steht an", "was liegt an", "tipp", "wie geht es mir")
 
@@ -181,6 +189,7 @@ object KontextWahl {
     fun waehle(context: Context, frage: String, vorher: List<String>, gespraech: String?): Wahl {
         if (GANZ.containsMatchIn(frage)) return Wahl(true, Bereich.entries.toSet(), Merkteil.entries.toSet(), emptyMap(), emptyList(), "gesamtes Gedächtnis verlangt")
         val jetzt = frage.lowercase(Locale.GERMAN)
+        if (UEBERGABE.containsMatchIn(jetzt)) return Wahl(false, Bereich.entries.filter { profil(it).rolle == Rolle.IMMER }.toSet(), setOf(Merkteil.PROGRAMMIERREGELN), emptyMap(), woerter(frage), "Programmierauftrag")
         val davor = vorher.takeLast(2).joinToString("\n").lowercase(Locale.GERMAN).take(3_000)
         val bereiche = LinkedHashSet<Bereich>()
         val teile = LinkedHashSet<Merkteil>()
@@ -194,7 +203,8 @@ object KontextWahl {
         }
         val eigen = fach(jetzt)
         if (eigen) gruende += "Stichworte"
-        if (davor.isNotBlank() && fach(davor)) gruende += "Gesprächsverlauf"
+        // Der Verlauf zählt nur, wenn die Frage selbst nichts Bestimmtes nennt (Anschlussfrage wie „und morgen?“), sonst nach Themenwechsel zu viel.
+        if (!eigen && davor.isNotBlank() && fach(davor)) gruende += "Gesprächsverlauf"
         // Gelernt: Wörter, bei denen das Modell früher einen Bereich nachladen musste.
         val worte = woerter(frage)
         val treffer = HashMap<String, MutableSet<String>>()
@@ -213,6 +223,15 @@ object KontextWahl {
             Merkteil.entries.filter { it.rolle == Rolle.STANDARD }.forEach { teile += it }
             gruende += "Standard"
         }
+        // Gelerntes Weglassen: Bereiche, die bei Fragen mit diesen Wörtern wiederholt geladen, aber nicht gebraucht wurden.
+        val summen = HashMap<String, Int>()
+        synchronized(sperre) { worte.forEach { w -> g[w]?.forEach { (k, gewicht) -> if (gewicht < 0) summen[k] = (summen[k] ?: 0) + gewicht } } }
+        val weg = summen.filterValues { it <= WEGLASSEN }.keys
+        if (weg.isNotEmpty()) {
+            bereiche.removeAll { it.kennung in weg && profil(it).rolle != Rolle.IMMER }
+            teile.removeAll { it.kennung in weg }
+            gruende += "gelernt weggelassen: " + weg.joinToString()
+        }
         return Wahl(false, bereiche, teile, treffer, worte, gruende.joinToString(", "))
     }
 
@@ -227,23 +246,30 @@ object KontextWahl {
         val fehlten = nachgeladen - wahl.kennungen
         val unnoetig = if (genutzt == null) emptyMap() else wahl.gelernteTreffer.filterKeys { it !in genutzt }
         val bestaetigt = if (genutzt == null) emptyMap() else wahl.gelernteTreffer.filterKeys { it in genutzt }
-        if (fehlten.isEmpty() && unnoetig.isEmpty() && bestaetigt.isEmpty()) return
+        // Jeder geladene Nicht-Immer-Bereich, den das Modell nicht gebraucht hat, verliert für die Wörter dieser Frage an Gewicht.
+        val wahlweise = wahl.bereiche.filter { profil(it).rolle != Rolle.IMMER }.map { it.kennung } + wahl.teile.map { it.kennung }
+        val ungebraucht = if (genutzt == null) emptyList() else wahlweise.filter { it !in genutzt && it !in wahl.gelernteTreffer }
+        val gebraucht = if (genutzt == null) emptyList() else wahlweise.filter { it in genutzt }
+        if (fehlten.isEmpty() && unnoetig.isEmpty() && bestaetigt.isEmpty() && ungebraucht.isEmpty() && gebraucht.isEmpty()) return
         ablauf.launch {
             val g = gelernt(app)
             synchronized(sperre) {
                 fun aendere(w: String, k: String, um: Int) {
                     val m = g.getOrPut(w) { HashMap() }
-                    val neu = ((m[k] ?: 0) + um).coerceAtMost(HOECHSTGEWICHT)
-                    if (neu <= 0) m.remove(k) else m[k] = neu
+                    val neu = ((m[k] ?: 0) + um).coerceIn(-HOECHSTGEWICHT, HOECHSTGEWICHT)
+                    if (neu == 0) m.remove(k) else m[k] = neu
                     if (m.isEmpty()) g.remove(w)
                 }
                 fehlten.forEach { k -> wahl.woerter.forEach { w -> aendere(w, k, SCHWELLE) } }
                 unnoetig.forEach { (k, ws) -> ws.forEach { w -> aendere(w, k, -1) } }
                 bestaetigt.forEach { (k, ws) -> ws.forEach { w -> aendere(w, k, 1) } }
-                if (g.size > HOECHSTENS_WOERTER) g.keys.sortedBy { w -> g[w]?.values?.sum() ?: 0 }.take(g.size - HOECHSTENS_WOERTER).forEach { g.remove(it) }
+                ungebraucht.forEach { k -> wahl.woerter.forEach { w -> aendere(w, k, -1) } }
+                // Doch gebraucht: ein früheres Weglass-Gewicht wieder abbauen (nie über 0 hinaus, Vorabladen lernt nur das Nachladen).
+                gebraucht.forEach { k -> wahl.woerter.forEach { w -> if ((g[w]?.get(k) ?: 0) < 0) aendere(w, k, 1) } }
+                if (g.size > HOECHSTENS_WOERTER) g.keys.sortedBy { w -> g[w]?.values?.sumOf { kotlin.math.abs(it) } ?: 0 }.take(g.size - HOECHSTENS_WOERTER).forEach { g.remove(it) }
             }
             speichere(app)
-            Logbuch.gedaechtnis("Kontextwahl gelernt", "fehlten ${fehlten.joinToString().ifEmpty { "–" }}; unnötig ${unnoetig.keys.joinToString().ifEmpty { "–" }}; bestätigt ${bestaetigt.keys.joinToString().ifEmpty { "–" }}")
+            Logbuch.gedaechtnis("Kontextwahl gelernt", "fehlten ${fehlten.joinToString().ifEmpty { "–" }}; unnötig ${(unnoetig.keys + ungebraucht).joinToString().ifEmpty { "–" }}; bestätigt ${bestaetigt.keys.joinToString().ifEmpty { "–" }}")
         }
     }
 
