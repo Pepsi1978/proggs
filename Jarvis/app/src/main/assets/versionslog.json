@@ -746,6 +746,7 @@
     {"versionCode": 738, "versionName": "1.8.727", "stand": "15.11.2026, 21:28 Uhr", "notiz": "Veränderungen: Einträge unter „Aktuell“ lassen sich per langem Drücken weich verschieben, die Reihenfolge bleibt gespeichert und gilt auch auf dem Tablet."},
     {"versionCode": 739, "versionName": "1.8.728", "stand": "15.11.2026, 21:29 Uhr", "notiz": "Einstellungen: Die Bereiche oben stehen jetzt alphabetisch sortiert wie in der Ablage."},
     {"versionCode": 740, "versionName": "1.8.729", "stand": "15.11.2026, 21:36 Uhr", "notiz": "Atemübung: Regler für die Lautstärke des Atemgeräuschs während der Übung; der Wert bleibt gespeichert und lässt sich auch per Sprache ändern."},
-    {"versionCode": 741, "versionName": "1.8.730", "stand": "15.11.2026, 21:38 Uhr", "notiz": "Ablage, Listen: Eine geöffnete Liste erscheint im Vollbild und scrollt über die ganze Höhe; die Zurück-Geste führt zur Listen-Übersicht."}
+    {"versionCode": 741, "versionName": "1.8.730", "stand": "15.11.2026, 21:38 Uhr", "notiz": "Ablage, Listen: Eine geöffnete Liste erscheint im Vollbild und scrollt über die ganze Höhe; die Zurück-Geste führt zur Listen-Übersicht."},
+    {"versionCode": 742, "versionName": "1.8.731", "stand": "15.11.2026, 21:41 Uhr", "notiz": "Atemübung: Der Lautstärkeregler hat die leise Stufe in der Mitte, links aus, rechts voll; die Blase wächst beim Einatmen deutlich und schrumpft beim Ausatmen fast ganz."}
 ]
 }

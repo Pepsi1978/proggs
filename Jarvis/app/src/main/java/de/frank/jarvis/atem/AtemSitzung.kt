@@ -171,8 +171,8 @@ object AtemSitzung {
                         }.onFailure { Log.w(TAG, "Clip nicht ladbar", it) }
                     }
                     // Nur ein Nebengeräusch: deutlich leiser als die Stimme.
-                    ein = AtemKlang.spur(AtemKlang.ton(true, p.ein * 100L), pegel)
-                    if (p.aus > 0) aus = AtemKlang.spur(AtemKlang.ton(false, p.aus * 100L), pegel)
+                    ein = AtemKlang.spur(AtemKlang.ton(true, p.ein * 100L), lautstaerke(pegel))
+                    if (p.aus > 0) aus = AtemKlang.spur(AtemKlang.ton(false, p.aus * 100L), lautstaerke(pegel))
                 }
             } catch (abbruch: CancellationException) {
                 lokal.values.forEach { runCatching { it.first.release() } }
@@ -331,11 +331,17 @@ object AtemSitzung {
     }
 
     /** Lautstärke des Atemgeräuschs (0–1), live per Regler; bleibt für die nächsten Übungen gespeichert. */
-    var pegel by mutableStateOf(0.18f); private set
+    var pegel by mutableStateOf(0.5f); private set
+
+    /**
+     * Reglerstellung → Lautstärke, gehörrichtig gekrümmt: Mitte = 18 % der Stimme (das leise Nebengeräusch),
+     * ganz links still, ganz rechts so laut wie die Stimme. 0,5^2,47 ≈ 0,18.
+     */
+    private fun lautstaerke(regler: Float): Float = Math.pow(regler.coerceIn(0f, 1f).toDouble(), 2.47).toFloat()
 
     fun pegelSetzen(wert: Float, speichern: Boolean = true) {
         pegel = wert.coerceIn(0f, 1f)
-        listOfNotNull(spurEin, spurAus).forEach { runCatching { it.setVolume(pegel) } }
+        listOfNotNull(spurEin, spurAus).forEach { runCatching { it.setVolume(lautstaerke(pegel)) } }
         if (speichern) app?.let { de.frank.jarvis.data.Einstellungen.get(it).atemGeraeuschLautstaerke = Math.round(pegel * 100) }
     }
 

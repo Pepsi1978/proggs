@@ -65,7 +65,8 @@ private val P_EIN = Color(AtemFarben.EIN)
 private val P_HALT = Color(AtemFarben.HALTEN)
 private val P_AUS = Color(AtemFarben.AUS)
 private val P_RUHE = Color(0xFF7FB8FF)
-private const val KLEIN = 0.40f
+/** Kleinste Blase nach dem Ausatmen: fast verschwunden, damit Ein- und Ausatmen deutlich zu sehen sind. */
+private const val KLEIN = 0.07f
 
 private fun phasenFarbe(p: AtemPhase?): Color = when (p) {
     AtemPhase.EIN -> P_EIN
@@ -256,7 +257,7 @@ private fun zustand(t: Long): Triple<Float, Color, Float> {
         AtemPhase.EIN -> KLEIN + (1f - KLEIN) * weich(x)
         AtemPhase.HALT_OBEN -> 1f + beben
         AtemPhase.AUS -> 1f - (1f - KLEIN) * weich(x)
-        AtemPhase.HALT_UNTEN -> KLEIN + beben
+        AtemPhase.HALT_UNTEN -> KLEIN + beben * 0.3f
         AtemPhase.INTRO -> 0.5f + 0.035f * sin(t / 1400f)
         AtemPhase.OUTRO -> {
             // Vom letzten Stand sanft in eine ruhige Mitte.
@@ -274,7 +275,7 @@ private fun DrawScope.zeichne(t: Long, rahmen: Long, akzent: Color) {
     val (s, farbe, fortschritt) = zustand(t)
     val mitte = Offset(size.width / 2f, size.height * 0.5f)
     // Ring (1,18 × Höchstmaß) passt mit Rand in die Fläche zwischen Kopf und Bedienung.
-    val maxR = size.minDimension * 0.36f
+    val maxR = size.minDimension * 0.38f
     val r = maxR * s
     val drehung = rahmen * 0.000045f + s * 0.9f
 
@@ -284,7 +285,7 @@ private fun DrawScope.zeichne(t: Long, rahmen: Long, akzent: Color) {
     // Teilchen: kreisen langsam, folgen der Atmung mit Abstand.
     TEILCHEN.forEach { p ->
         val w = p.winkel + rahmen * p.tempo
-        val d = r * p.abstand + maxR * 0.06f * sin(rahmen / 2400f + p.phase)
+        val d = maxR * 0.12f + r * p.abstand + maxR * 0.06f * sin(rahmen / 2400f + p.phase)
         val pos = Offset(mitte.x + cos(w) * d, mitte.y + sin(w) * d)
         val funkeln = 0.25f + 0.35f * (0.5f + 0.5f * sin(rahmen / 900f + p.phase * 3f))
         drawCircle(lerp(Color.White, farbe, 0.4f).copy(alpha = funkeln), p.groesse * density * 0.9f, pos)
