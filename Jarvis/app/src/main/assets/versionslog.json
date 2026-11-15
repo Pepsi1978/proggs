@@ -735,6 +735,7 @@
     {"versionCode": 727, "versionName": "1.8.716", "stand": "15.11.2026, 20:54 Uhr", "notiz": "Listen sind ein normaler Reiter in der Ablage mit schwebendem Plus für neue Listen; Atemsätze lassen sich per Mikrofon einsprechen und werden für jeden Zyklus vorab neu vorgelesen, damit sie nicht immer gleich klingen."},
     {"versionCode": 728, "versionName": "1.8.717", "stand": "15.11.2026, 20:57 Uhr", "notiz": "Unter Veränderungen ist das Eingabefeld mit Mikrofon und Senden-Knopf entfernt, neue Veränderungen kommen per Sprachbefehl an Jarvis."},
     {"versionCode": 729, "versionName": "1.8.718", "stand": "15.11.2026, 21:00 Uhr", "notiz": "Das Lernen ist robuster: keine verwechselten oder doppelten Einträge zwischen Handy und Tablet, deine eigenen Einträge werden nur nach deiner Bestätigung ersetzt, und das Live-Gedächtnis wählt noch sparsamer aus."},
-    {"versionCode": 730, "versionName": "1.8.719", "stand": "15.11.2026, 21:01 Uhr", "notiz": "Ablage: Bereiche stehen nach „Alle“ alphabetisch sortiert, die Anzahl der Inhalte steht in Klammern."}
+    {"versionCode": 730, "versionName": "1.8.719", "stand": "15.11.2026, 21:01 Uhr", "notiz": "Ablage: Bereiche stehen nach „Alle“ alphabetisch sortiert, die Anzahl der Inhalte steht in Klammern."},
+    {"versionCode": 731, "versionName": "1.8.720", "stand": "15.11.2026, 21:03 Uhr", "notiz": "Der untere Reiter für Veränderungen heißt jetzt kurz „Änderung“, damit er auf dem Handy vollständig hineinpasst; oben im Bildschirm steht weiter „Veränderungen“."}
 ]
 }
