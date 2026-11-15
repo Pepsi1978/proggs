@@ -72,8 +72,9 @@ HINWEIS_WARTEN = (
 
 
 ZEITLIMIT_MS = 60000
-HINWEIS_ZEIT = ("Zeitlimit auf 60 s (gestaffelt): Ist der Befehl dann nicht fertig, läuft er im Hintergrund weiter. Danach im "
-                "Minutentakt Ausgabe und Prozesse prüfen (Fehler? hängt etwas bei 0 % CPU?), sofort reagieren, nie still warten.")
+HINWEIS_ZEIT = ("Zeitlimit auf 60 s (gestaffelt): Ist der Befehl dann nicht fertig, läuft er weiter. Jede weitere Minute sichtbar prüfen: "
+                "python3 ~/proggs/Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute> (Beschreibung 'Minute N: Lauf prüfen'), "
+                "danach ein Satz Einschätzung für Frank; bei Fehler oder Hänger sofort eingreifen, nie still warten.")
 
 
 def mit_zeitlimit(d, neu):

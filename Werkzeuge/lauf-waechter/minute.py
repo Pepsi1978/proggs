@@ -8,9 +8,11 @@ Beobachtet höchstens 50 s und endet sofort, wenn der Lauf fertig ist. Danach ei
   FERTIG    – kein Prozess schreibt mehr in die Ausgabe
   LÄUFT     – arbeitet (CPU oder neue Ausgabe), keine Fehlermeldung
   FEHLER    – Fehlermeldung in der neuen Ausgabe (Zeile wird gezeigt)
+  WARTET    – absichtliche Pause im Lauf (sleep, z. B. gewählte Installationszeit), kein Fehler
   HÄNGER?   – kein CPU-Verbrauch und keine neue Ausgabe im ganzen Fenster: Prozesse ansehen, Ursache beheben
 Gradle: Der Client tut nichts, der Daemon arbeitet; dessen CPU zählt mit (GradleDaemon, KotlinCompileDaemon).
-Unter Windows ohne ps/lsof nur Ausgabe und Fehlermeldungen.
+Unter Windows ohne ps/lsof nur Ausgabe und Fehlermeldungen. Lange Befehle nie in `| tail`/`| head` leiten: Die Pipe hält
+die Ausgabe bis zum Ende zurück, dann sieht diese Prüfung nichts (15.11.2026: „Gewählt: in 5 Minuten“ war unsichtbar).
 """
 import os, re, subprocess, sys, time
 
@@ -101,6 +103,9 @@ def main():
         stand = 'FERTIG – der Lauf ist beendet, Ergebnis jetzt auswerten'
     elif fehler:
         stand = 'FEHLER – Fehlermeldung in der Ausgabe: ' + kurz(fehler[-1], 120)
+    elif any(re.match(r'(/bin/)?sleep \d', z[4]) for z in prozesse):
+        s = next(z for z in prozesse if re.match(r'(/bin/)?sleep \d', z[4]))
+        stand = 'WARTET – absichtliche Pause im Lauf (%s, läuft seit %s), kein Fehler' % (kurz(s[4], 30), s[3])
     elif cpu_max < 1.0 and not zeilen and prozesse:
         stand = 'HÄNGER? – kein CPU-Verbrauch und keine neue Ausgabe seit %d s: Prozesse ansehen und Ursache beheben' % dauer
     else:
