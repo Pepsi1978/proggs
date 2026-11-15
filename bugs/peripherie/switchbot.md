@@ -10,7 +10,8 @@
 |---|--------|--------------|
 | S1 | Status `statusCode 100`, aber temperature/humidity/CO2/battery alle 0 | Platzhalter, die Cloud hat keine Daten (Gerät nicht über Hub angebunden). Nie als Messwert zeigen |
 | S2 | Geräteliste `enableCloudService:false`, `hubDeviceId "000000000000"` | Kein Hub-Weg; per API nicht einschaltbar. Trotzdem Status fragen, Flag kann veraltet sein |
-| S3 | App: „Hub offline oder Meter Pro nicht angeschlossen“, obwohl Gerät unter Manage Hubs steht | Hub Mini reicht den Meter Pro CO2 nicht weiter; Rückfall: Werbepakete per Bluetooth mithören |
+| S3 | App: „Hub offline oder Meter Pro nicht angeschlossen“, obwohl Gerät unter Manage Hubs steht | **Gelöst: Hub 10 Minuten stromlos, wieder einstecken** → Cloud lieferte sofort (Webhook). Rückfall bleibt: Bluetooth mithören |
+| S6 | Hub ausgesteckt, Cloud liefert trotzdem Werte mit Status 100 | Cloud-Cache ohne Messzeit: frische, gemessene Werte (BLE, Webhook) vorziehen |
 | S4 | macOS-Scan findet Meter Pro CO2 nur selten | Sendet Messpakete nur alle ~6–30 s: bis 40 s lauschen, beim ersten Treffer aufhören |
 | S5 | „Daten in den letzten 20 Tagen nicht synchronisiert“ | Betrifft nur den Verlauf (Handy lädt ihn per BLE), nicht die Live-Werte über den Hub |
 
@@ -27,4 +28,5 @@ Seit App V9.0 gibt es keinen „Cloud Service“-Schalter mehr; Anbindung automa
 
 ### S3 Meter Pro CO2 am klassischen Hub Mini
 Offiziell kompatibel (support.switch-bot.com Artikel 26500881438999), in der Praxis hier trotz Zuordnung keine Cloud-Werte.
+Lösung am 15.11.2026: Hub Mini 10 Minuten vom Strom, wieder eingesteckt; eine Minute danach kamen die ersten Webhook-Meldungen (changeReport) für den Meter Pro CO2 mit echtem CO2-Wert. Webhook (setupWebhook, deviceList ALL) ist der verlässliche Cloud-Weg mit Messzeit (timeOfSample).
 Rückfall, der sicher geht: Rechner zu Hause hört die Herstellerdaten 0x0969 mit (siehe Best Practices), meldet an eigenen Server.
