@@ -1,5 +1,11 @@
 package de.frank.jarvis.faehigkeit
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.util.Base64
 import de.frank.jarvis.data.Einstellungen
@@ -10,6 +16,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -17,6 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.MediaType.Companion.toMediaType
@@ -43,7 +52,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             "„Wie ist der CO2-Wert in der Wohnung?“, „Wie warm ist es im Auto?“), nutze raumklima_lesen. Der Sensor „Auto“ liegt in Franks Auto, nicht in der Wohnung. " +
             "Der CO2-Wert kommt vom Sensor „CO2-Monitor“ in der Wohnung (co2_ppm): ordne ihn ein, unter 800 ppm gut, 800 bis 1000 in Ordnung, 1000 bis 1400 lüften, darüber dringend lüften. " +
             "Fragt Frank nur nach CO2 oder Luftqualität, rufe raumklima_lesen mit sensor CO2-Monitor auf und nenne nur den CO2-Wert mit Einordnung. Fragt er nach einem Raum, nur diesen. " +
-            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal. Steht bei einem Sensor quelle, kamen die Werte über den Mac zu Hause statt aus der SwitchBot-Cloud; nenne dann die Messzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
+            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal; in Bluetooth-Nähe liest das Handy ihn direkt. Steht bei einem Sensor quelle, kamen die Werte über den Mac zu Hause statt aus der SwitchBot-Cloud; nenne dann die Messzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
             "sag das genau so und nenne für ihn keine Werte. Steht ein Raum unter nicht_im_konto, gibt es im SwitchBot-Konto keinen Sensor mit diesem Namen: " +
             "sag das und rate keine Werte (ähnlich benannte Sensoren nennen, z. B. Tippfehler). Für das Wetter draußen bleibt wetter_lesen zuständig."
 
@@ -105,13 +114,25 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
 
         // Rückgriff für Sensoren ohne Cloud-Werte: der Mac zu Hause hört sie per Bluetooth mit (jarvis_switchbot.py → Relay), nur einmal je Abruf geholt.
         val fern by lazy { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(emptyMap()) }
+        // Parallel zur Cloud lauscht das Handy selbst per Bluetooth (wie bei der Victron-Batterie): Für das Auto zuerst, denn es steht meist
+        // außer Reichweite des Hubs; für alle anderen nur, wenn die Cloud nichts liefert (Frank, 15.11.2026).
+        val nah = ConcurrentHashMap<String, JSONObject>()
+        val stopp = kotlinx.coroutines.CompletableDeferred<Unit>()
         val sensoren = coroutineScope {
-            gewaehlt.map { g ->
-                async {
-                    val z = runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") }
-                    if (z.problem == null) z else vomMac(z, g.optString("deviceId"), fern) ?: z
-                }
+            val scan = async { runCatching { nahLauschen(nah, stopp) }.onFailure { Logbuch.fehler("SwitchBot: Bluetooth-Scan", null, it.javaClass.simpleName) } }
+            val ausCloud = gewaehlt.map { g ->
+                async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
             }.awaitAll()
+            // Gebraucht: das Auto und jeder Sensor ohne Cloud-Werte. Warten, bis alle gehört sind, höchstens [NAH_MS] ab Scanbeginn.
+            val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) -> z.problem != null || istMobil(g) }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
+            if (gebraucht.isNotEmpty()) withTimeoutOrNull(NAH_MS) { while (!gebraucht.all { nah.containsKey(it) }) delay(150) }
+            stopp.complete(Unit)
+            scan.await()
+            gewaehlt.zip(ausCloud).map { (g, z) ->
+                val id = g.optString("deviceId").lowercase(Locale.ROOT)
+                val direkt = nah[id]?.takeIf { z.problem != null || istMobil(g) }?.let { ausPaket(z, it, "direkt per Bluetooth") }
+                direkt ?: if (z.problem == null) z else vomMac(z, id, fern) ?: z
+            }
         }
         // Ein Problem kann an einer veralteten Liste liegen (Gerät getauscht, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
         // Nur die hier benutzte Liste verwerfen, nie eine, die ein paralleler Abruf gerade frisch abgelegt hat.
@@ -181,6 +202,37 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val uhr = java.time.Instant.ofEpochSecond(w.optLong("zeit")).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val weg = if (w.optString("quelle") == "webhook") "über die SwitchBot-Cloud (Webhook)" else "über den Mac zu Hause"
         return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = "$weg, gemessen $uhr Uhr")
+    }
+
+    private fun istMobil(g: JSONObject) = MOBIL.any { g.optString("deviceName").equals(it, ignoreCase = true) }
+
+    private fun ausPaket(z: Sensor, w: JSONObject, weg: String): Sensor? {
+        val t = w.wert("temperatur_c") ?: return null
+        val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
+        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = weg)
+    }
+
+    /**
+     * Hört die Werbepakete der SwitchBot-Sensoren (Hersteller 0x0969) und legt je MAC (klein, ohne Doppelpunkte) die Werte in [ziel],
+     * bis [stopp] erfüllt ist oder [NAH_MS] um sind. Ohne Bluetooth-Recht („Geräte in der Nähe“) oder bei ausgeschaltetem Bluetooth: nichts.
+     */
+    @SuppressLint("MissingPermission")
+    private suspend fun nahLauschen(ziel: ConcurrentHashMap<String, JSONObject>, stopp: kotlinx.coroutines.CompletableDeferred<Unit>) {
+        if (!VictronFaehigkeit.erlaubt(context)) return
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return
+        if (!adapter.isEnabled) return
+        val scanner = adapter.bluetoothLeScanner ?: return
+        val rueckruf = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                // Im Binder-Thread: nichts darf hier werfen.
+                runCatching { result.scanRecord?.getManufacturerSpecificData(WOAN)?.let { blePaket(it) }?.let { ziel[it.getString("mac")] = it } }
+            }
+
+            override fun onScanFailed(errorCode: Int) { stopp.complete(Unit) }
+        }
+        scanner.startScan(listOf(ScanFilter.Builder().setManufacturerData(WOAN, byteArrayOf()).build()),
+            ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), rueckruf)
+        try { withTimeoutOrNull(NAH_MS + 500) { stopp.await() } } finally { runCatching { scanner.stopScan(rueckruf) } }
     }
 
     @Volatile private var webhookStand: String? = null
@@ -285,6 +337,29 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
          *  (mit Batterie misst der CO2-Monitor nur alle 30 Minuten). */
         private const val MAC_GILT_S = 40 * 60L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
+
+        private const val WOAN = 0x0969
+        /** Sensoren, die nicht beim Hub stehen: immer zuerst direkt per Bluetooth (Name wie in der SwitchBot-App). */
+        private val MOBIL = listOf("Auto")
+        /** So lange lauscht das Handy höchstens; Thermometer senden alle paar Sekunden, der CO2-Monitor seltener. */
+        private const val NAH_MS = 5_000L
+
+        /**
+         * Werbepaket (Nutzdaten nach der Company-ID 0x0969, pySwitchbot adv_parsers/meter.py): 0–5 MAC, 8 Bits 3–0 Zehntel °C,
+         * 9 Bit 7 Vorzeichen (1 = positiv) und Bits 6–0 ganze °C, 10 Bits 6–0 Feuchte %; beim Meter Pro CO2 (16 Byte) 13–14 CO2 ppm (Big Endian).
+         * Geprüft am 15.11.2026 mit Franks Geräten (Schlafzimmer 20,3 °C / 48 %, CO2-Monitor 22,1 °C / 43 % / 662 ppm).
+         */
+        fun blePaket(roh: ByteArray): JSONObject? {
+            if (roh.size < 11) return null
+            val b = { i: Int -> roh[i].toInt() and 0xFF }
+            val temp = ((b(9) and 0x7F) + (b(8) and 0x0F) / 10.0) * (if (b(9) and 0x80 != 0) 1 else -1)
+            val feuchte = b(10) and 0x7F
+            if (feuchte == 0 || feuchte > 100 || temp < -40 || temp > 70) return null
+            val mac = (0..5).joinToString("") { String.format(Locale.ROOT, "%02x", b(it)) }
+            return JSONObject().put("mac", mac).put("temperatur_c", Math.round(temp * 10) / 10.0).put("luftfeuchtigkeit_prozent", feuchte).apply {
+                if (roh.size == 16) ((b(13) shl 8) or b(14)).takeIf { it in 400..9999 }?.let { put("co2_ppm", it) }
+            }
+        }
 
         private fun JSONObject.wert(k: String): Double? = if (has(k) && !isNull(k)) optDouble(k).takeIf { !it.isNaN() } else null
         /** Einheitliche CO2-Angabe für Sprachtext und Startkarte. */
