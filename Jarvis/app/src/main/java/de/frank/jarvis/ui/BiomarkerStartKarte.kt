@@ -2,13 +2,7 @@ package de.frank.jarvis.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Row
@@ -40,7 +34,6 @@ import de.frank.jarvis.bio.presentation.BioAnsicht
 import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
-import de.frank.jarvis.ui.theme.glas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -155,7 +148,21 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
 
     // Die ganze Karte ist der Griff (langer Druck, dann ziehen), wie Frank es für alle Startbereiche erwartet. Ein Tippen irgendwo auf
     // die Karte öffnet den Biomarker-Bereich (Franks Wunsch vom 11.11.2026, ohne eigenen Öffnen-Knopf).
-    Karte(modifier = if (bereit) griff.antippen { BioAnsicht.oeffnen(context) } else griff) {
+    // Aktualisieren direkt auf dem Startbildschirm (Frank, 15.11.2026), mit Schutzkreis wie bei Raumklima: Ein knapp verfehlter
+    // Knopf liest neu statt den Bereich zu öffnen. Die neuen Werte liest BiomarkerStartVorladen nach dem Abruf.
+    val schutz = remember { KnopfSchutz() }
+    val scope = rememberCoroutineScope()
+    val aktualisieren: () -> Unit = {
+        if (BioAbruf.stand.value.laeuft) android.widget.Toast.makeText(context, "Der Abruf läuft schon.", android.widget.Toast.LENGTH_SHORT).show()
+        else {
+            val laeuft = BioAbruf.manuell(context, "Aktualisieren-Knopf (Startbildschirm)")
+            // Tablet: holt nur den Spiegel des Handys und liefert nie einen Bericht; ein fehlender Bericht ist dort kein Fehler.
+            if (!Geraet.istTablet) scope.launch {
+                if (laeuft.await() == null) android.widget.Toast.makeText(context, "Abruf fehlgeschlagen, Grund im Logbuch.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    Karte(modifier = if (bereit) griff.antippenMitSchutz(schutz, imSchutz = aktualisieren) { BioAnsicht.oeffnen(context) } else griff) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("Biomarker", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -168,15 +175,11 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                     color = if (abruf.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            // Aktualisieren direkt auf dem Startbildschirm, ohne erst den Bereich zu öffnen (Frank, 15.11.2026); wie bei Raumklima.
-            // Der Knopf verbraucht seinen Tipp selbst, die Karte öffnet dann nicht. Die neuen Werte liest BiomarkerStartVorladen nach dem Abruf.
-            if (bereit) Box(
-                Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (abruf.laeuft) f.primaer else null)
-                    .antippen { if (!abruf.laeuft) BioAbruf.manuell(context, "Aktualisieren-Knopf (Startbildschirm)") },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.Refresh, if (abruf.laeuft) "Biomarker werden abgerufen" else "Biomarker aktualisieren", tint = if (abruf.laeuft) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
-            }
+            if (bereit) AktualisierenKnopf(
+                abruf.laeuft,
+                if (Geraet.istTablet) "Biomarker vom Handy holen" else "Biomarker aktualisieren",
+                "Biomarker werden abgerufen", schutz, aktualisieren,
+            )
             // Nur solange die Übernahme aus Entropie Reductor aussteht; danach öffnet das Tippen auf die Karte den Bereich.
             if (!bereit) Knopf("Übernehmen") {
                 // Im Modulbereich, nicht in der Karte: Scrollt Frank sie weg, läuft die Übernahme trotzdem zu Ende.
