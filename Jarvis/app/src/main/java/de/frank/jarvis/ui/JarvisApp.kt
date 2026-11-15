@@ -131,6 +131,9 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             if (!vm.gesperrt && de.frank.jarvis.atem.AtemSitzung.offen) {
                 // Laufende Atemübung im echten Vollbild, ohne Leiste.
                 AtemSitzungBildschirm(Modifier.fillMaxSize())
+            } else if (!vm.gesperrt && ListenAnsicht.offen && ListenAnsicht.liste != null) {
+                // Geöffnete Liste im Vollbild ohne Ablage-Kopf und Leiste, scrollbar; die Zurück-Geste führt zur Listen-Übersicht in der Ablage.
+                ListenBildschirm(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else
