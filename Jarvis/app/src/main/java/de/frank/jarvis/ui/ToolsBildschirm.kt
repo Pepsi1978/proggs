@@ -186,7 +186,7 @@ private fun AtemKarte(p: AtemProfil) {
                 "${p.zyklen} Zyklen · ${dauerText(p.dauerMs)} min · " + "%.1f".format(600f / p.zyklusZehntel.coerceAtLeast(1)).replace('.', ',') + " Atemzüge/min",
                 Modifier.padding(top = 8.dp), color = f.textLeise, fontSize = 13.sp,
             )
-            val extras = listOfNotNull("Stimme".takeIf { p.vorlesen }, "Atemgeräusch".takeIf { p.geraeusch }, "Sätze".takeIf { p.saetzeAn && (p.saetzeEin + p.saetzeAus).isNotEmpty() }, "Intro".takeIf { p.intro })
+            val extras = listOfNotNull("Stimme".takeIf { p.vorlesen }, "Atemgeräusch".takeIf { p.geraeusch }, "Sätze".takeIf { p.saetzeAn && p.alleSaetze.isNotEmpty() }, "Intro".takeIf { p.intro })
             if (extras.isNotEmpty()) Text(extras.joinToString(" · "), Modifier.padding(top = 2.dp), color = f.textSchwach, fontSize = 12.sp)
         }
         Column(Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -307,10 +307,13 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
                 SchalterZeile("Outro", "Ruhiger Ausklang am Ende", p.outro) { p = p.copy(outro = it) }
             }
             Abschnitt("Sätze") {
-                SchalterZeile("Sätze vorlesen", "Eigene Sätze mittig in der Ein- und Ausatemphase; je Zeile ein Satz, mehrere wechseln sich ab", p.saetzeAn) { p = p.copy(saetzeAn = it) }
+                SchalterZeile("Sätze vorlesen", "Eigene Sätze mittig in der Ein-, Halte- und Ausatemphase; je Zeile ein Satz, mehrere wechseln sich ab; leeres Feld = kein Satz", p.saetzeAn) { p = p.copy(saetzeAn = it) }
                 if (p.saetzeAn) {
                     SatzFeld(vm, "Beim Einatmen", GRUEN, p.satzEin, p.ein, AtemStimme.EINATMEN, p.vorlesen) { p = p.copy(satzEin = it) }
+                    // Haltephasen nur, wenn sie eine Dauer haben; leer = es wird nichts vorgelesen.
+                    if (p.halt1 > 0) SatzFeld(vm, "Beim Halten nach dem Einatmen", GELB, p.satzHalt1, p.halt1, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt1 = it) }
                     SatzFeld(vm, "Beim Ausatmen", ORANGE, p.satzAus, p.aus, AtemStimme.AUSATMEN, p.vorlesen) { p = p.copy(satzAus = it) }
+                    if (p.halt2 > 0) SatzFeld(vm, "Beim Halten nach dem Ausatmen", GELB, p.satzHalt2, p.halt2, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt2 = it) }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

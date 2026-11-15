@@ -85,9 +85,11 @@ object AtemSitzung {
     private val dauern = HashMap<String, Long>()
     private val angehalten = ArrayList<MediaPlayer>()
 
-    /** Vorab frisch erzeugter Satz für die Ein- (true) bzw. Ausatemphase eines bestimmten Zyklus. */
+    /** Vorab frisch erzeugter Satz für eine Phase (Ein, Halten, Aus, Halten) eines bestimmten Zyklus. */
     private class Vorrat(val zyklus: Int, val text: String, val mp: MediaPlayer, val ms: Long, val datei: java.io.File)
-    private val vorrat = HashMap<Boolean, Vorrat>()
+    private val vorrat = HashMap<AtemPhase, Vorrat>()
+    private val SATZ_PHASEN = listOf(AtemPhase.EIN, AtemPhase.HALT_OBEN, AtemPhase.AUS, AtemPhase.HALT_UNTEN)
+    private fun stichwortFuer(phase: AtemPhase) = when (phase) { AtemPhase.EIN -> AtemStimme.EINATMEN; AtemPhase.AUS -> AtemStimme.AUSATMEN; else -> AtemStimme.HALTEN }
     /** Frische Sätze, die gerade spielen: Pause und Vorlesen-Häkchen gelten auch für sie. */
     private val laufendeFrisch = HashSet<MediaPlayer>()
     private fun alleSpieler(): List<MediaPlayer> = spieler.values + laufendeFrisch
@@ -124,8 +126,8 @@ object AtemSitzung {
         runCatching { v.mp.stop() }; runCatching { v.mp.release() }; v.datei.delete()
     }
 
-    private fun satzText(p: AtemProfil, ein: Boolean, zyklus: Int): String? {
-        val liste = if (ein) p.saetzeEin else p.saetzeAus
+    private fun satzText(p: AtemProfil, phase: AtemPhase, zyklus: Int): String? {
+        val liste = p.saetze(phase)
         return if (!p.saetzeAn || liste.isEmpty()) null else liste[(zyklus - 1) % liste.size]
     }
 
@@ -140,12 +142,12 @@ object AtemSitzung {
      * Erzeugt den Satz für Zyklus [zyklus] der Ein- bzw. Ausatemphase schon jetzt neu, eine Runde vor seinem Einsatz.
      * Nur, wenn vorgelesen wird und der Satz (nach bekannter oder geschätzter Länge) überhaupt in die Phase passt.
      */
-    private fun CoroutineScope.frischVorbereiten(ein: Boolean, zyklus: Int, p: AtemProfil) {
+    private fun CoroutineScope.frischVorbereiten(art: AtemPhase, zyklus: Int, p: AtemProfil) {
         val a = app ?: return
         if (!vorlesen || zyklus > p.zyklen) return
-        val text = satzText(p, ein, zyklus) ?: return
-        val phase = (if (ein) p.ein else p.aus) * 100L
-        val cue = stichwortDauer(if (ein) AtemStimme.EINATMEN else AtemStimme.AUSATMEN, phase)
+        val text = satzText(p, art, zyklus) ?: return
+        val phase = p.zehntel(art) * 100L
+        val cue = stichwortDauer(stichwortFuer(art), phase)
         if (AtemStimme.satzRuhe(phase, cue, dauern[text] ?: AtemStimme.schaetzeMs(a, text)) == null) return
         launch {
             val clip = AtemStimme.frisch(a, text) ?: return@launch
@@ -154,9 +156,9 @@ object AtemSitzung {
                 val mp = withContext(Dispatchers.IO) { spielerFuer(clip.datei) }
                 ensureActive()
                 val neu = Vorrat(zyklus, text, mp, mp.duration.toLong().takeIf { it > 0 } ?: clip.ms, clip.datei)
-                val alt = vorrat[ein]
+                val alt = vorrat[art]
                 // Kommt eine ältere Runde verspätet nach einer neueren an, bleibt die neuere.
-                if (alt != null && alt.zyklus > zyklus) { runCatching { mp.release() } } else { vorrat[ein] = neu; alt?.let { freigeben(it) }; uebernommen = true }
+                if (alt != null && alt.zyklus > zyklus) { runCatching { mp.release() } } else { vorrat[art] = neu; alt?.let { freigeben(it) }; uebernommen = true }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (f: Exception) {
@@ -180,7 +182,7 @@ object AtemSitzung {
             withContext(Dispatchers.IO) { AtemStimme.frischAufraeumen(a); AtemStimme.aufraeumen(a) }
             vorbereitung = 0 to 1
             // Die ersten Sätze entstehen schon parallel zur Vorbereitung, alle weiteren erst während der Übung.
-            frischVorbereiten(true, 1, p); frischVorbereiten(false, 1, p)
+            SATZ_PHASEN.forEach { frischVorbereiten(it, 1, p) }
             val clips = AtemStimme.vorbereiten(a, p) { x, y -> vorbereitung = x to (y + 1) }
             // Spieler und Spuren erst lokal bauen; nur eine noch laufende Übung übernimmt sie, sonst werden sie gleich freigegeben.
             val lokal = HashMap<String, Pair<MediaPlayer, Long>>()
@@ -210,7 +212,7 @@ object AtemSitzung {
             }
             hinweis = hinweise.joinToString(" ").ifBlank { null }
             // Gespeicherte Fassungen der Sätze als Rückfall laden (ohne Netz); fehlende entstehen einmal im Hintergrund.
-            if (p.saetzeAn) (p.saetzeEin + p.saetzeAus).distinct().forEach { text ->
+            if (p.saetzeAn) p.alleSaetze.forEach { text ->
                 val vorhanden = withContext(Dispatchers.IO) { AtemStimme.vorhanden(a, text) }
                 if (vorhanden != null) lade(text, vorhanden)
                 else if (p.vorlesen) launch { AtemStimme.hole(a, text)?.let { lade(text, it) } }
@@ -219,7 +221,7 @@ object AtemSitzung {
             if (!p.intro && p.vorlesen && p.saetzeEin.isNotEmpty() && p.saetzeEin.first() !in spieler && p.saetzeAn) {
                 vorbereitung = (vorbereitung?.second ?: 1).let { (it - 1) to it }
                 val bis = SystemClock.elapsedRealtime() + 10_000L
-                while (!vorrat.containsKey(true) && SystemClock.elapsedRealtime() < bis) delay(100)
+                while (!vorrat.containsKey(AtemPhase.EIN) && SystemClock.elapsedRealtime() < bis) delay(100)
             }
             // Der Abschluss liegt meist schon im Speicher; sonst entsteht er im Hintergrund, bis dahin gilt eine Schätzung.
             if (p.outro && p.vorlesen) {
@@ -291,11 +293,13 @@ object AtemSitzung {
                     if (geraeusch) geraeusch(ein)
                     val cue = stichwortDauer(if (ein) AtemStimme.EINATMEN else AtemStimme.AUSATMEN, a.dauer)
                     if (cue > 0) spiele(if (ein) AtemStimme.EINATMEN else AtemStimme.AUSATMEN)
-                    satzEinplanen(p, a, ein, cue)
+                    satzEinplanen(p, a, cue)
                 }
                 AtemPhase.HALT_OBEN, AtemPhase.HALT_UNTEN -> {
                     spurStopp()
-                    if (stichwortDauer(AtemStimme.HALTEN, a.dauer) > 0) spiele(AtemStimme.HALTEN)
+                    val cue = stichwortDauer(AtemStimme.HALTEN, a.dauer)
+                    if (cue > 0) spiele(AtemStimme.HALTEN)
+                    satzEinplanen(p, a, cue)
                 }
                 AtemPhase.ENDE -> Unit
             }
@@ -311,10 +315,10 @@ object AtemSitzung {
     }
 
     /** Wählt für den Satz dieser Phase die frische Fassung, sonst die gespeicherte, sonst nur den Untertitel, und setzt ihn mittig. */
-    private fun CoroutineScope.satzEinplanen(p: AtemProfil, a: Abschnitt, ein: Boolean, cue: Long) {
-        val text = satzText(p, ein, a.zyklus) ?: return
-        val frisch = vorrat.remove(ein)?.let { v -> if (v.zyklus == a.zyklus && v.text == text) v else { freigeben(v); null } }
-        frischVorbereiten(ein, a.zyklus + 1, p)
+    private fun CoroutineScope.satzEinplanen(p: AtemProfil, a: Abschnitt, cue: Long) {
+        val text = satzText(p, a.phase, a.zyklus) ?: return
+        val frisch = vorrat.remove(a.phase)?.let { v -> if (v.zyklus == a.zyklus && v.text == text) v else { freigeben(v); null } }
+        frischVorbereiten(a.phase, a.zyklus + 1, p)
         val gespeichert = dauern[text]
         val schaetzung = app?.let { AtemStimme.schaetzeMs(it, text) } ?: 3_000L
         val (nimmFrisch, s) = when {

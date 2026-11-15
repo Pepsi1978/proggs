@@ -32,16 +32,38 @@ data class AtemProfil(
     val saetzeAn: Boolean = false,
     val satzEin: String = "",
     val satzAus: String = "",
+    /** Sätze beim Halten nach dem Einatmen bzw. nach dem Ausatmen (je Zeile einer). */
+    val satzHalt1: String = "",
+    val satzHalt2: String = "",
 ) {
     val zyklusZehntel: Int get() = ein + halt1 + aus + halt2
     val dauerMs: Long get() = zyklusZehntel * 100L * zyklen
     val saetzeEin: List<String> get() = satzEin.lines().map { it.trim() }.filter { it.isNotEmpty() }
     val saetzeAus: List<String> get() = satzAus.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    val saetzeHalt1: List<String> get() = satzHalt1.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    val saetzeHalt2: List<String> get() = satzHalt2.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+    /** Sätze einer Phase; eine Haltephase ohne Dauer spricht keine. */
+    fun saetze(phase: AtemPhase): List<String> = when (phase) {
+        AtemPhase.EIN -> saetzeEin
+        AtemPhase.HALT_OBEN -> if (halt1 > 0) saetzeHalt1 else emptyList()
+        AtemPhase.AUS -> saetzeAus
+        AtemPhase.HALT_UNTEN -> if (halt2 > 0) saetzeHalt2 else emptyList()
+        else -> emptyList()
+    }
+
+    /** Länge einer Atemphase in Zehntelsekunden. */
+    fun zehntel(phase: AtemPhase): Int = when (phase) {
+        AtemPhase.EIN -> ein; AtemPhase.HALT_OBEN -> halt1; AtemPhase.AUS -> aus; AtemPhase.HALT_UNTEN -> halt2; else -> 0
+    }
+
+    val alleSaetze: List<String> get() = (saetzeEin + saetze(AtemPhase.HALT_OBEN) + saetzeAus + saetze(AtemPhase.HALT_UNTEN)).distinct()
 
     fun json(): JSONObject = JSONObject()
         .put("id", id).put("name", name).put("ein", ein).put("halt1", halt1).put("aus", aus).put("halt2", halt2)
         .put("zyklen", zyklen).put("farbe", farbe).put("vorlesen", vorlesen).put("geraeusch", geraeusch)
         .put("intro", intro).put("outro", outro).put("saetzeAn", saetzeAn).put("satzEin", satzEin).put("satzAus", satzAus)
+        .put("satzHalt1", satzHalt1).put("satzHalt2", satzHalt2)
 
     companion object {
         fun aus(o: JSONObject) = AtemProfil(
@@ -51,6 +73,7 @@ data class AtemProfil(
             vorlesen = o.optBoolean("vorlesen", true), geraeusch = o.optBoolean("geraeusch", true),
             intro = o.optBoolean("intro", true), outro = o.optBoolean("outro", true),
             saetzeAn = o.optBoolean("saetzeAn", false), satzEin = o.optString("satzEin"), satzAus = o.optString("satzAus"),
+            satzHalt1 = o.optString("satzHalt1"), satzHalt2 = o.optString("satzHalt2"),
         )
     }
 }
