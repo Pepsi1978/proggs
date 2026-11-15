@@ -1041,7 +1041,9 @@ def warte(eingabe: dict) -> int:
 # ---------------------------------------------------------------- Lokale Sitzungen (siehe Kopf)
 
 ZEICHEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # wie Auftragsbuch.neueNummer in der App
-FRAGE_HALTEN_LOKAL_S = 24 * 3600  # so lange ist eine freie Rückfrage einer lokalen Sitzung in Jarvis beantwortbar
+# So lange ist eine freie Rückfrage einer lokalen Sitzung in Jarvis beantwortbar: fünf Minuten wie jede Rückfrage (Franks Vorgabe
+# vom 15.11.2026; vorher 24 Stunden, Jarvis zeigte dann „noch 1.440 min“). Danach beantwortet Frank sie am Rechner.
+FRAGE_HALTEN_LOKAL_S = 300
 
 
 def setze_auftrag(nummer: str) -> None:
