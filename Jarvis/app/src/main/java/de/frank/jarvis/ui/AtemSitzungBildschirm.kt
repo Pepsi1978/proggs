@@ -140,9 +140,6 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
                     Text(" ${profil.zyklen} Zyklen · ${dauerText(profil.dauerMs)} min", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
                 }
             }
-            Haken("Vorlesen", Icons.Rounded.RecordVoiceOver, AtemSitzung.vorlesen) { AtemSitzung.vorlesenUmschalten() }
-            Spacer(Modifier.width(6.dp))
-            Haken("Atem", Icons.Rounded.Air, AtemSitzung.geraeusch) { AtemSitzung.geraeuschUmschalten() }
         }
 
         // ------------------------------------------------ Mitte: Phase und Sekunden
@@ -152,8 +149,13 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
             if (anzeige.second.isNotEmpty()) Text(anzeige.second, color = Color.White.copy(alpha = 0.78f), fontSize = 22.sp, fontWeight = FontWeight.Light)
         }
 
-        // ------------------------------------------------ Unten: Satz, Fortschritt, Pause
+        // ------------------------------------------------ Unten: Einstellungen, Satz, Fortschritt, Pause
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            // Schalter direkt unter der Animation, mit dem Daumen gut erreichbar.
+            Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Haken("Vorlesen", Icons.Rounded.RecordVoiceOver, AtemSitzung.vorlesen) { AtemSitzung.vorlesenUmschalten() }
+                Haken("Atem", Icons.Rounded.Air, AtemSitzung.geraeusch) { AtemSitzung.geraeuschUmschalten() }
+            }
             val satz = AtemSitzung.satz
             Box(Modifier.heightIn(min = 64.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 var letzter by remember { mutableStateOf("") }

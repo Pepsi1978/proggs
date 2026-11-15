@@ -23,6 +23,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
@@ -147,6 +148,8 @@ object AtemSitzung {
         runCatching { Vorleser.aktuell()?.stopp() }
         job = bereich.launch {
             vorbereitung = 0 to 1
+            // Die ersten Sätze entstehen schon parallel zur Vorbereitung, alle weiteren erst während der Übung.
+            frischVorbereiten(true, 1, p); frischVorbereiten(false, 1, p)
             val clips = AtemStimme.vorbereiten(a, p) { x, y -> vorbereitung = x to y }
             if (AtemStimme.noetig(p).any { it !in clips }) hinweis = "Die Stimme ist gerade nicht vollständig erreichbar. Die Übung läuft ohne die fehlenden Ansagen."
             // Spieler und Spuren erst lokal bauen; nur eine noch laufende Übung übernimmt sie, sonst werden sie gleich freigegeben.
@@ -176,6 +179,16 @@ object AtemSitzung {
             }
             lokal.forEach { (text, paar) -> spieler[text] = paar.first; dauern[text] = paar.second }
             spurEin = ein; spurAus = aus
+            // Ohne Begrüßung kommt der erste Satz gleich: kurz auf ihn warten, höchstens zehn Sekunden.
+            if (!p.intro && p.vorlesen && p.saetzeAn && p.saetzeEin.isNotEmpty()) {
+                val bis = SystemClock.elapsedRealtime() + 10_000L
+                while (!vorrat.containsKey(true) && SystemClock.elapsedRealtime() < bis) delay(100)
+            }
+            // Der Abschluss liegt meist schon im Speicher; sonst entsteht er im Hintergrund, bis dahin gilt eine Schätzung.
+            if (p.outro) {
+                withContext(Dispatchers.IO) { AtemStimme.vorhanden(a, AtemStimme.OUTRO) }?.let { lade(AtemStimme.OUTRO, it) }
+                if (AtemStimme.OUTRO !in spieler) launch { AtemStimme.hole(a, AtemStimme.OUTRO)?.let { lade(AtemStimme.OUTRO, it) } }
+            }
             plan = baue(p)
             uebungStart = plan.firstOrNull { it.phase == AtemPhase.EIN }?.start ?: 0L
             uebungEnde = plan.lastOrNull { it.zyklus > 0 }?.ende ?: 0L
@@ -196,7 +209,7 @@ object AtemSitzung {
                 if (z > 0) { l += Abschnitt(ph, t, z * 100L, c); t += z * 100L }
             }
         }
-        if (p.outro) { val d = (dauern[AtemStimme.OUTRO] ?: 4_000L) + 3_500L; l += Abschnitt(AtemPhase.OUTRO, t, d, 0); t += d }
+        if (p.outro) { val d = (dauern[AtemStimme.OUTRO] ?: app?.let { AtemStimme.schaetzeMs(it, AtemStimme.OUTRO) } ?: 8_000L) + 3_500L; l += Abschnitt(AtemPhase.OUTRO, t, d, 0); t += d }
         return l
     }
 
@@ -204,8 +217,21 @@ object AtemSitzung {
         while (zeit() < t) { coroutineContext.ensureActive(); delay((t - zeit()).coerceIn(4L, 120L)) }
     }
 
+    /** Lädt einen fertigen Clip als Spieler nach; nur eine noch laufende Übung übernimmt ihn. */
+    private suspend fun lade(text: String, clip: AtemStimme.Clip) {
+        val mp = runCatching {
+            withContext(Dispatchers.IO) {
+                MediaPlayer().apply {
+                    setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                    setDataSource(clip.datei.path); prepare()
+                }
+            }
+        }.onFailure { if (it is CancellationException) throw it; Log.w(TAG, "Clip nicht ladbar", it) }.getOrNull() ?: return
+        if (!coroutineContext.isActive || text in spieler) { runCatching { mp.release() }; return }
+        spieler[text] = mp; dauern[text] = mp.duration.toLong().takeIf { it > 0 } ?: clip.ms
+    }
+
     private suspend fun ablauf(p: AtemProfil) = coroutineScope {
-        frischVorbereiten(true, 1, p); frischVorbereiten(false, 1, p)
         for (a in plan) {
             warteBis(a.start)
             when (a.phase) {

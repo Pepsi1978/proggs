@@ -111,20 +111,19 @@ object AtemStimme {
     }
 
     /**
-     * Alle Texte eines Profils, die gesprochen werden können. Die Stichworte immer (kurz, einmal je Stimme erzeugt),
-     * damit das Häkchen „Vorlesen“ auch mitten in einer Übung ohne Ansage im Profil sofort greift.
+     * Texte, die vor dem Start bereitliegen müssen: nur die kurzen Stichworte und die Begrüßung (einmal je Stimme erzeugt,
+     * danach aus dem Speicher). Die Sätze der Übung entstehen erst während der Übung, jeweils eine Runde vor ihrem Einsatz,
+     * und der Abschluss im Hintergrund: So beginnt auch eine 60-Minuten-Übung sofort.
+     * Die Stichworte immer, damit das Häkchen „Vorlesen“ auch mitten in einer Übung sofort greift.
      */
     fun texte(p: AtemProfil): List<String> = buildList {
         add(EINATMEN); if (p.halt1 > 0 || p.halt2 > 0) add(HALTEN); add(AUSATMEN)
-        if (p.intro) add(INTRO); if (p.outro) add(OUTRO)
-        if (p.saetzeAn) { addAll(p.saetzeEin); addAll(p.saetzeAus) }
+        if (p.intro) add(INTRO)
     }.distinct()
 
-    /** Texte, die das Profil mit seinen Schaltern wirklich spricht: Nur deren Fehlen ist einen Hinweis wert. */
-    fun noetig(p: AtemProfil): List<String> = buildList {
-        if (p.vorlesen) { add(EINATMEN); if (p.halt1 > 0 || p.halt2 > 0) add(HALTEN); add(AUSATMEN); if (p.intro) add(INTRO); if (p.outro) add(OUTRO) }
-        if (p.saetzeAn && p.vorlesen) { addAll(p.saetzeEin); addAll(p.saetzeAus) }
-    }.distinct()
+    /** Vorab-Texte, die das Profil mit seinen Schaltern wirklich spricht: Nur deren Fehlen ist einen Hinweis wert. */
+    fun noetig(p: AtemProfil): List<String> =
+        if (p.vorlesen) texte(p) else emptyList()
 
     /** Erzeugt alles vorab, z. B. gleich nach dem Speichern; meldet den Fortschritt (fertig, gesamt). */
     suspend fun vorbereiten(context: Context, p: AtemProfil, fortschritt: (Int, Int) -> Unit = { _, _ -> }): Map<String, Clip> {
