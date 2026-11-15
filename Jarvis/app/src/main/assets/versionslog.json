@@ -711,6 +711,7 @@
     {"versionCode": 703, "versionName": "1.8.692", "stand": "15.11.2026, 19:02 Uhr", "notiz": "Raumklima zeigt jetzt auch den CO2-Wert vom CO2-Monitor und den Sensor im Auto, und Jarvis beantwortet Fragen wie „Wie ist der CO2-Wert in der Wohnung?“."},
     {"versionCode": 704, "versionName": "1.8.693", "stand": "15.11.2026, 19:05 Uhr", "notiz": "Der CO2-Monitor wird jetzt direkt abgefragt, auch wenn SwitchBot den Cloud-Dienst als aus meldet, und zeigt sonst eine klare Anleitung zum Einschalten."},
     {"versionCode": 705, "versionName": "1.8.694", "stand": "15.11.2026, 19:07 Uhr", "notiz": "Raumklima: das Auto außer Reichweite steht leise statt rot da, CO2-Fragen beantwortet Jarvis knapp nur mit dem CO2-Wert, die Werte auf der Startkarte bleiben auch auf schmalen Bildschirmen sauber, und Platzhalter-Nullen der Cloud erscheinen nie mehr als Messwerte."},
-    {"versionCode": 706, "versionName": "1.8.695", "stand": "15.11.2026, 19:20 Uhr", "notiz": "Der CO2-Monitor zeigt jetzt echte Werte auch unterwegs: Der Mac zu Hause liest ihn per Bluetooth und meldet ihn alle fünf Minuten an den Jarvis-Server."}
+    {"versionCode": 706, "versionName": "1.8.695", "stand": "15.11.2026, 19:20 Uhr", "notiz": "Der CO2-Monitor zeigt jetzt echte Werte auch unterwegs: Der Mac zu Hause liest ihn per Bluetooth und meldet ihn alle fünf Minuten an den Jarvis-Server."},
+    {"versionCode": 707, "versionName": "1.8.696", "stand": "15.11.2026, 19:27 Uhr", "notiz": "Raumklima: Beim CO2-Monitor stehen nur noch der CO2-Wert und eine Farbskala von Grün über Gelb nach Rot, die den aktuellen Stand zeigt."}
 ]
 }
