@@ -732,6 +732,7 @@
     {"versionCode": 724, "versionName": "1.8.713", "stand": "15.11.2026, 20:41 Uhr", "notiz": "Die Biomarker-Karte auf dem Startbildschirm hat oben rechts einen Aktualisieren-Knopf, der frische Daten holt, ohne den Bereich zu öffnen."},
     {"versionCode": 725, "versionName": "1.8.714", "stand": "15.11.2026, 20:45 Uhr", "notiz": "Auch die Biomarker-Karte hat jetzt den Daumen-Schutzkreis um den Aktualisieren-Knopf, langes Drücken öffnet nichts mehr, und ein laufender oder fehlgeschlagener Abruf wird gemeldet."},
     {"versionCode": 726, "versionName": "1.8.715", "stand": "15.11.2026, 20:49 Uhr", "notiz": "Atemübungen: Phasen und Endknöpfe erscheinen zuverlässig, beendete Übungen sprechen nicht mehr in die nächste hinein, Profile bleiben bei Fehlern erhalten; in einer offenen Liste führt der Ablage-Reiter zur Listenübersicht zurück."},
-    {"versionCode": 727, "versionName": "1.8.716", "stand": "15.11.2026, 20:54 Uhr", "notiz": "Listen sind ein normaler Reiter in der Ablage mit schwebendem Plus für neue Listen; Atemsätze lassen sich per Mikrofon einsprechen und werden für jeden Zyklus vorab neu vorgelesen, damit sie nicht immer gleich klingen."}
+    {"versionCode": 727, "versionName": "1.8.716", "stand": "15.11.2026, 20:54 Uhr", "notiz": "Listen sind ein normaler Reiter in der Ablage mit schwebendem Plus für neue Listen; Atemsätze lassen sich per Mikrofon einsprechen und werden für jeden Zyklus vorab neu vorgelesen, damit sie nicht immer gleich klingen."},
+    {"versionCode": 728, "versionName": "1.8.717", "stand": "15.11.2026, 20:57 Uhr", "notiz": "Unter Veränderungen ist das Eingabefeld mit Mikrofon und Senden-Knopf entfernt, neue Veränderungen kommen per Sprachbefehl an Jarvis."}
 ]
 }

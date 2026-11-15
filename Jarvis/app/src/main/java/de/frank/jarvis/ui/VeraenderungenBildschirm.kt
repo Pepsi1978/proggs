@@ -111,7 +111,6 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(vm: AppVie
             }
         }
     }
-    EingabeZeile(vm)
 }
 
 @Composable
@@ -157,30 +156,4 @@ private fun androidx.compose.foundation.layout.ColumnScope.Detail(v: Veraenderun
         confirmButton = { TextButton({ loeschenFrage = false; Veraenderungen.loeschen(context, v.id); zurueck() }) { Text("Löschen", color = f.gefahr) } },
         dismissButton = { TextButton({ loeschenFrage = false }) { Text("Abbrechen", color = f.text) } },
     )
-}
-
-/** Eingabefeld unten: tippen oder mit dem Mikrofon einsprechen, der Pfeil lässt die KI den Eintrag anlegen. */
-@Composable
-private fun EingabeZeile(vm: AppViewModel) {
-    val f = LocalFarben.current
-    val hoert = vm.veraenderungNimmtAuf
-    if (hoert || vm.veraenderungFormuliert) Text(
-        if (hoert) "Ich höre zu …" else "Jarvis formuliert die Veränderung …",
-        Modifier.padding(start = 24.dp, top = 4.dp), color = if (hoert) f.gefahr else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-    )
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Bottom) {
-        Eingabe(vm.veraenderungEntwurf, { vm.veraenderungEntwurf = it }, "Neue Veränderung einsprechen oder tippen …", Modifier.weight(1f), einzeilig = false)
-        Spacer(Modifier.width(8.dp))
-        Box(
-            Modifier.size(52.dp).background(if (hoert) f.gefahr else Color.Transparent, CircleShape).glas(f, 26.dp, erhoeht = 0.5f).antippen { vm.veraenderungMikrofonTippen() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(if (hoert) Icons.Rounded.Stop else Icons.Rounded.Mic, if (hoert) "Aufnahme beenden" else "Einsprechen", tint = if (hoert) Color.White else f.primaer, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(52.dp).knopf3d(f.primaer, f.tertiaer, 26.dp, f.dunkel).antippen { vm.veraenderungAufnehmen() }, contentAlignment = Alignment.Center) {
-            if (vm.veraenderungFormuliert) CircularProgressIndicator(Modifier.size(22.dp), color = f.aufPrimaer, strokeWidth = 2.5.dp)
-            else Icon(Icons.AutoMirrored.Rounded.Send, "Als Veränderung aufnehmen", tint = f.aufPrimaer, modifier = Modifier.size(24.dp))
-        }
-    }
 }
