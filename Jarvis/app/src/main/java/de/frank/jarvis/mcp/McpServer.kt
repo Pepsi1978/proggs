@@ -67,7 +67,7 @@ class McpServer(context: Context) {
                 "umfang" to text("kurz (Vorgabe) oder voll.", listOf("kurz", "voll")),
                 "bereiche" to textListe("Nur diese Bereiche vollständig und frisch: " + Bereich.entries.joinToString { it.kennung } + "."),
                 "seit" to text("STAND-MARKE aus einem früheren Abruf: dann nur Neuigkeiten und geänderte Bereiche seither."),
-                "leise" to schalter("Nur für Anzeigen in Oberflächen: nichts gilt als einem Gespräch gemeldet. In Gesprächen weglassen."),
+                "leise" to schalter("Für Anzeigen in Oberflächen und für Programmier-Sitzungen (Claude Code, Codex): nichts gilt als einem Gespräch gemeldet, sonst fehlte ChatGPT danach das nachgereichte Gedächtnis. In Gesprächen mit Frank weglassen."),
             ),
             nurLesen = true,
         ) { a ->

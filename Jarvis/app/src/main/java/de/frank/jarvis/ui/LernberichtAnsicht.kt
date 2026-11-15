@@ -146,8 +146,10 @@ private fun PostenZeile(p: LernPosten, b: Lernbericht, antworten: (Lernbericht, 
             when (p.aktion) {
                 "wiederherstellen" -> KleinerKnopf("Wiederherstellen", f.primaer) { antworten(b, p, "wiederherstellen") }
                 "entfernen" -> {
-                    KleinerKnopf("Entfernen", f.gefahr) { antworten(b, p, "entfernen") }
-                    KleinerKnopf("Behalten", f.primaer) { antworten(b, p, "behalten") }
+                    // Ein Ersetzungsvorschlag (neue Fassung eines eigenen Eintrags) ersetzt beim Tippen, statt zu löschen.
+                    val ersetzt = p.ref?.optString("ersatz").orEmpty().isNotEmpty()
+                    KleinerKnopf(if (ersetzt) "Ersetzen" else "Entfernen", if (ersetzt) f.primaer else f.gefahr) { antworten(b, p, "entfernen") }
+                    KleinerKnopf(if (ersetzt) "Alte Fassung behalten" else "Behalten", if (ersetzt) f.textLeise else f.primaer) { antworten(b, p, "behalten") }
                 }
             }
         }

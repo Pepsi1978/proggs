@@ -156,11 +156,11 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
         }.joinToString("\n\n")
     }
 
-    /** Von hinten (neueste) so viele Zeilen, wie in [budget] Zeichen passen, in der ursprünglichen Reihenfolge. */
-    private fun neuesteZuerst(zeilen: List<String>, budget: Int): List<String> {
-        var summe = 0
-        return zeilen.asReversed().takeWhile { summe += it.length + 1; summe <= budget }.reversed()
-    }
+    /** Von hinten (neueste) so viele Zeilen, wie in [budget] Zeichen passen: dieselbe Regel wie im Lagebild, nur einmal geschrieben. */
+    private fun neuesteZuerst(zeilen: List<String>, budget: Int): List<String> = de.frank.jarvis.gedaechtnis.Lagebild.neuesteZuerst(zeilen, budget)
+
+    /** Atomar schreiben: Kurzfassungen und Verdichtungen werden zwischen den Geräten abgeglichen, eine halbe Datei wanderte sonst mit. */
+    private fun schreibe(f: File, text: String) = de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(f, text.toByteArray(Charsets.UTF_8))
 
     /** Die gespeicherte Kurzfassung eines Tages, wenn sie zum aktuellen Text des Eintrags passt. */
     private fun kurzfassung(tag: LocalDate, datei: File): String? = runCatching {
@@ -180,7 +180,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
     fun speichereKurzfassung(tag: LocalDate, text: String) {
         val datei = eintraege().firstOrNull { it.first == tag }?.second ?: return
         val inhalt = JSONObject().put("text", text.trim().take(400)).put("pruefsumme", pruefsumme(datei.readText())).toString()
-        File(kurz, "$tag.json").writeText(inhalt)
+        schreibe(File(kurz, "$tag.json"), inhalt)
     }
 
     /**
@@ -196,7 +196,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             // Übergang: Ältere Fassungen schrieben nur die Kurzfassung, ohne Prüfsumme. Dann die Summe des heutigen Inhalts
             // nachtragen und den Monat als fertig werten, statt die ganze Historie Stunde für Stunde neu zu verdichten.
             if (gespeichert == null && File(verdichtet, "$m.txt").exists()) {
-                runCatching { File(verdichtet, "$m.pruefsumme").writeText(summe) }
+                runCatching { schreibe(File(verdichtet, "$m.pruefsumme"), summe) }
                 false
             } else summe != gespeichert
         } ?: return null
@@ -220,11 +220,11 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Speichert die Kurzfassung eines Monats mit der Prüfsumme der Einträge, aus denen sie entstand. */
     fun speichereVerdichtung(monat: String, text: String, eintraegeText: String) {
-        File(verdichtet, "$monat.txt").writeText(text.trim())
+        schreibe(File(verdichtet, "$monat.txt"), text.trim())
         val liste = eintraege().filter { YearMonth.from(it.first).toString() == monat }
         // Hat sich der Monat während des Schreibens geändert, bleibt die Summe der alten Fassung: Der nächste Lauf verdichtet ihn erneut.
         val jetzt = liste.sortedBy { it.first }.joinToString("\n\n") { (tag, datei) -> "### " + lang(tag) + "\n" + datei.readText().trim().take(3000) }
-        if (jetzt == eintraegeText) File(verdichtet, "$monat.pruefsumme").writeText(monatsSumme(liste))
+        if (jetzt == eintraegeText) schreibe(File(verdichtet, "$monat.pruefsumme"), monatsSumme(liste))
     }
 
     /**

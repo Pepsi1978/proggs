@@ -38,15 +38,15 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
      * Werten, die wichtigen Größen gegen den letzten Monat und der Verlauf der letzten 10 Tage.
      */
     suspend fun live(): String {
-        // Die drei Abfragen gleichzeitig: nacheinander summierten sie sich und rissen bei langsamer Partner-App das Zeitlimit des Bereichs.
-        val (tag, vergleich, verlauf) = kotlinx.coroutines.coroutineScope {
-            val t = async { rufe("tag", JSONObject()) }
+        // Erst der Tag (scheitert er, ist die Partner-App gestört: keine zwei weiteren hängenden Abfragen), dann Vergleich und Verlauf gleichzeitig.
+        val tag = rufe("tag", JSONObject())
+        tag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return "NICHT VERFÜGBAR: $it" }
+        val (vergleich, verlauf) = kotlinx.coroutines.coroutineScope {
             val v = async { rufe("auswertung", JSONObject().put("tage", 30).put("metriken", org.json.JSONArray(LIVE_METRIKEN))) }
             val l = async { rufe("verlauf", JSONObject().put("von", java.time.LocalDate.now().minusDays(10).toString()).put("aufloesung", "tag")
                 .put("metriken", org.json.JSONArray(listOf("schlafdauer", "tiefschlaf_prozent", "erholung", "hrv", "ruhepuls")))) }
-            Triple(t.await(), v.await(), l.await())
+            v.await() to l.await()
         }
-        tag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return "NICHT VERFÜGBAR: $it" }
         return buildString {
             append(standText(tag)).append(runCatching { tagText(tag) }.getOrDefault("Tageswerte nicht lesbar."))
             append("\n\nIM VERGLEICH:\n").append(vergleich.optString("fehler").takeIf { it.isNotEmpty() } ?: runCatching { auswertungText(vergleich) }.getOrDefault("nicht lesbar"))

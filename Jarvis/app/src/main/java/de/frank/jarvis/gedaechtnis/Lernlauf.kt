@@ -14,6 +14,7 @@ import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.agent.Lernen
 import de.frank.jarvis.auth.ChatTurn
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Merkdatei
@@ -211,10 +212,13 @@ object Lernlauf {
             .onFailure { Logbuch.fehler("Lernlauf: Bericht speichern", it) }
     }
 
-    /** Der jüngste vollständige Prüflauf, der fertig wurde. */
+    /** Der jüngste vollständige Prüflauf, der fertig wurde (nie ein erfundener Zeitpunkt). */
     fun letztePruefung(context: Context): Long = prefs(context).getLong("letztePruefung", 0L)
 
-    fun pruefungFaellig(context: Context): Boolean = System.currentTimeMillis() - letztePruefung(context) >= PRUEF_ABSTAND_MS
+    /** Wann die nächste Prüfung fällig ist: sechs Stunden nach der letzten vollständigen, nach einer unvollständigen schon früher. */
+    private fun naechstePruefung(context: Context): Long = prefs(context).getLong("naechstePruefung", letztePruefung(context) + PRUEF_ABSTAND_MS)
+
+    fun pruefungFaellig(context: Context): Boolean = System.currentTimeMillis() >= naechstePruefung(context)
 
     // ---------------------------------------------------------------- Auslöser
 
@@ -248,13 +252,14 @@ object Lernlauf {
 
     /** Fällig (neue ruhende Gespräche oder Prüfung) und nichts spricht dagegen; ein Hindernis wird für die Anzeige gemerkt. */
     private fun faelligUndErlaubt(app: Context): Boolean {
-        if (!Einstellungen.get(app).auswertungLernen) return false
+        if (!Einstellungen.get(app).auswertungLernen || Geraet.istTablet) return false
         val jetzt = System.currentTimeMillis()
-        if (jetzt - letzterVersuch < VERSUCH_ABSTAND_MS) return false
-        // Die Drossel gilt schon für die Prüfung selbst: Sie liest alle Gespräche der letzten Tage und lief sonst jede Wächter-Minute.
-        letzterVersuch = jetzt
+        // Die Fälligkeit ist billig (neueGespraecheFaellig liest nur bei geänderten Dateien neu) und zehrt die Drossel nicht auf;
+        // die Drossel gilt nur nach einem Hindernis, damit ein verschobener Lauf nicht jede Wächter-Minute erneut anläuft.
         if (!pruefungFaellig(app) && !Gespraechsgedaechtnis.neueGespraecheFaellig(app)) return false
+        if (jetzt - letzterVersuch < VERSUCH_ABSTAND_MS) return false
         val hindernis = hindernis(app) ?: return true
+        letzterVersuch = jetzt
         prefs(app).edit().putString("autoHinweis", hindernis).putLong("autoHinweisZeit", jetzt).apply()
         Logbuch.gedaechtnis("Lernlauf verschoben", hindernis)
         return false
@@ -306,7 +311,8 @@ object Lernlauf {
         val absicht = PendingIntent.getBroadcast(app, 9, Intent(app, LernEmpfaenger::class.java).setAction(AKTION), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         wecker.cancel(absicht)
         if (!Einstellungen.get(app).auswertungLernen) return
-        val millis = maxOf(letztePruefung(app) + PRUEF_ABSTAND_MS, System.currentTimeMillis() + 20 * 60_000L)
+        if (Geraet.istTablet) return
+        val millis = maxOf(naechstePruefung(app), System.currentTimeMillis() + 20 * 60_000L)
         runCatching {
             // Exakt, wo erlaubt: Nur ein exakter Wecker darf den Vordergrund-Dienst aus dem Hintergrund starten.
             if (Build.VERSION.SDK_INT < 31 || wecker.canScheduleExactAlarms()) wecker.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, absicht)
@@ -344,7 +350,8 @@ object Lernlauf {
         if (!sperre.tryLock()) return _berichte.value.firstOrNull { it.zustand == LAEUFT }
             ?: Lernbericht(System.currentTimeMillis(), ausloeser, System.currentTimeMillis(), System.currentTimeMillis(), UEBERSPRUNGEN, "Es läuft schon ein Lernlauf.")
         val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:lernlauf")
-        runCatching { wach.acquire(20 * 60_000L) }
+        // 30 Minuten: Ein Lauf von Hand braucht bis zu 150 s Sichten plus sechs Prüfer zu je vier Minuten.
+        runCatching { wach.acquire(30 * 60_000L) }
         var b = Lernbericht(id = System.currentTimeMillis(), ausloeser = ausloeser, start = System.currentTimeMillis(), schritt = "startet", pruefung = mitPruefung)
         val s = Sammler()
         fun schritt(text: String) { b = s.bericht(b).copy(schritt = text); veroeffentliche(app, b) }
@@ -352,6 +359,8 @@ object Lernlauf {
             veroeffentliche(app, b)
             val e = Einstellungen.get(app)
             if (!e.auswertungLernen) return beende(app, b.copy(zustand = UEBERSPRUNGEN, grund = "Das Lernen ist in den Einstellungen ausgeschaltet (Tagesauswertung → „Aus Tagebuch und Gesprächen lernen“)."))
+            // Nur das Handy lernt: Gespräche und Merkdateien werden abgeglichen, der Lernstand nicht. Lernten beide, entstünde alles doppelt.
+            if (Geraet.istTablet) return beende(app, b.copy(zustand = UEBERSPRUNGEN, grund = "Auf dem Tablet lernt Jarvis nicht; das Handy lernt aus allen abgeglichenen Gesprächen für beide."))
             val agent = JarvisAgent(app)
             if (!agent.verbunden) return beende(app, b.copy(zustand = UEBERSPRUNGEN, grund = "Jarvis ist nicht mit ChatGPT angemeldet; ohne Anmeldung kann er weder lernen noch prüfen (Einstellungen → Konten)."))
             if (!netzDa(app)) return beende(app, b.copy(zustand = UEBERSPRUNGEN, grund = "Kein Netz; der nächste Lauf holt es nach."))
@@ -366,8 +375,12 @@ object Lernlauf {
             if (mitPruefung) {
                 val vollstaendig = pruefeImCode(app, agent, e, ausloeser, pruefliste, s) { schritt(it) }
                 // Blieb etwas zurückgestellt (Höchstzahl je Lauf, Sprachgespräch), ist die nächste Prüfung schon in einer Stunde fällig statt in sechs.
-                val zeit = if (vollstaendig) System.currentTimeMillis() else System.currentTimeMillis() - PRUEF_ABSTAND_MS + NACHHOL_MS
-                prefs(app).edit().putLong("letztePruefung", zeit).apply()
+                // Die letzte vollständige Prüfung bleibt dann, wie sie war: Die Anzeige sagt nur, was wirklich war.
+                val jetzt = System.currentTimeMillis()
+                val ed = prefs(app).edit()
+                if (vollstaendig) ed.putLong("letztePruefung", jetzt).putLong("naechstePruefung", jetzt + PRUEF_ABSTAND_MS)
+                else ed.putLong("naechstePruefung", jetzt + NACHHOL_MS)
+                ed.apply()
             }
             return beende(app, s.bericht(b).copy(zustand = FERTIG))
         } catch (ex: CancellationException) {
@@ -436,7 +449,7 @@ object Lernlauf {
                 val auftraege = runCatching { Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().firstOrNull()?.auftragsUebersicht(15) }.getOrNull().orEmpty()
                 append("\n\nPROGRAMMIERAUFTRÄGE (Auftragsbuch, nur Daten; „fertig“ heißt nur, dass die Sitzung das gemeldet hat):\n").append(auftraege.take(6_000).ifEmpty { "(keine)" })
             }
-            append("\n\nNEUE GESPRÄCHSWECHSEL (Jarvis' Antworten nur als Zusammenhang):\n")
+            append("\n\nNEUE GESPRÄCHSWECHSEL (Jarvis' Antworten und Zeilen mit „SCHON GELERNT“ nur als Zusammenhang, daraus nichts lernen):\n")
         }
 
         // Die Eingabe wächst Nachricht für Nachricht bis zum Budget. In den Stand kommt je Gespräch nur, was das Modell
@@ -444,17 +457,20 @@ object Lernlauf {
         val budget = maxOf(EINGABE_HOECHSTENS, kopf.length + 6_000)
         val eingabe = StringBuilder(kopf)
         val gelesenBis = LinkedHashMap<String, Int>()
-        val frankSagt = mutableListOf<String>()
+        val nachrichtenJe = HashMap<String, List<de.frank.jarvis.data.GespeicherteNachricht>>()
+        val frankJe = LinkedHashMap<String, List<String>>()
         val titelJe = LinkedHashMap<String, String>()
         for ((sitzung, gelernt, nachrichten) in gespraeche) {
             val titelZeile = "Gespräch „${sitzung.titel}“ vom ${Gespraechsgedaechtnis.zeit(sitzung.geaendert)}:\n"
             val stueck = StringBuilder()
             val frank = mutableListOf<String>()
             var bis = gelernt
-            // Ein Wechsel davor als Zusammenhang, damit eine kurze Antwort wie „ja, genau“ verständlich bleibt.
+            // Ein Wechsel davor als Zusammenhang, damit eine kurze Antwort wie „ja, genau“ verständlich bleibt. Er ist schon gelernt und
+            // steht deshalb nicht als FRANK da: Sonst lernte das Modell ihn umformuliert ein zweites Mal.
             for (i in (gelernt - 1).coerceAtLeast(0) until nachrichten.size) {
                 val n = nachrichten[i]
-                val zeile = (if (n.vonMir) "FRANK: " + Gespraechsgedaechtnis.flach(n.text, 1500) else "Jarvis: " + Gespraechsgedaechtnis.flach(n.text, 400)) + "\n"
+                val zeile = (if (i < gelernt) "SCHON GELERNT (nur Zusammenhang), " + (if (n.vonMir) "Frank: " else "Jarvis: ") + Gespraechsgedaechtnis.flach(n.text, 400)
+                    else if (n.vonMir) "FRANK: " + Gespraechsgedaechtnis.flach(n.text, 1500) else "Jarvis: " + Gespraechsgedaechtnis.flach(n.text, 400)) + "\n"
                 if (eingabe.length + titelZeile.length + stueck.length + zeile.length + 1 > budget) break
                 stueck.append(zeile)
                 if (i >= gelernt) { bis = i + 1; if (n.vonMir) frank += n.text }
@@ -463,8 +479,9 @@ object Lernlauf {
             if (frank.isEmpty()) continue
             eingabe.append(titelZeile).append(stueck).append('\n')
             gelesenBis[sitzung.id] = bis
+            nachrichtenJe[sitzung.id] = nachrichten
             titelJe[sitzung.id] = sitzung.titel
-            frankSagt += frank
+            frankJe[sitzung.id] = frank
         }
         if (gelesenBis.isEmpty()) eingabe.append("(keine neuen)\n")
         if (gespraeche.isNotEmpty() && gelesenBis.size < gespraeche.size) s.hinweise += "${gespraeche.size - gelesenBis.size} Gespräch(e) passten nicht mehr hinein und folgen beim nächsten Lauf."
@@ -491,16 +508,19 @@ object Lernlauf {
         Logbuch.dauer("Lernlauf: Sichten", System.currentTimeMillis() - beginn, "Eingabe ${eingabe.length} Zeichen, ${gelesenBis.size} Gespräch(e)" + if (mitPruefung) ", mit Prüfung" else "")
 
         val quelleText = titelJe.values.joinToString(", ") { "„$it“" }.let { if (it.isEmpty()) "" else "aus dem Gespräch $it" }
-        // Regeln nur, wenn Frank selbst ausdrücklich etwas für die Zukunft festgelegt hat: Sonst würde Jarvis sich Vorgaben ausdenken.
-        val regelErlaubt = Gespraechsgedaechtnis.ausdruecklich(frankSagt)
+        // Regeln nur, wenn Frank selbst ausdrücklich etwas für die Zukunft festgelegt hat, und zwar genau dazu (je Regel geprüft):
+        // Sonst würde Jarvis sich Vorgaben ausdenken oder ein „grundsätzlich“ aus einem anderen Gespräch genügte.
+        val regelErlaubt = Gespraechsgedaechtnis.ausdruecklich(frankJe.values.flatten())
         val zieleUndInfos = mutableListOf<String>()
         val pruefliste = mutableListOf<Pruefling>()
         val urteile = ladeUrteile(app)
-        antwort.lines().map { it.trim().replace("**", "").replace(Regex("^(?:[-*•–]\\s*|\\d+[.)]\\s*)"), "").trim() }.forEach { zeile ->
+        antwort.lines().map { Gespraechsgedaechtnis.bereinigeZeile(it) }.forEach { zeile ->
             val t = ZEILE.find(zeile) ?: return@forEach
             val art = t.groupValues[1].uppercase(Locale.GERMAN).replace("Ü", "UE")
             val kennung = t.groupValues[2].uppercase(Locale.GERMAN)
             val id = kennung.filter { it.isDigit() }.toIntOrNull()
+            // Aufgaben-ids sind lang (Zeitstempel): als Long lesen, sonst fände „PRUEFEN A…“ die Aufgabe nie.
+            val langeId = kennung.filter { it.isDigit() }.toLongOrNull()
             // Das Präfix der Kennung muss zur Art passen: „ERLEDIGT Z3“ darf nie Notiz 3 löschen, „INFO N7“ nie Info 7 ersetzen.
             val praefix = kennung.firstOrNull()?.takeIf { it.isLetter() }
             val satz = t.groupValues[3].trim()
@@ -508,14 +528,28 @@ object Lernlauf {
             val neueWorte = gelesenBis.isNotEmpty()
             when (art) {
                 "ZIEL" -> if (neueWorte) zieleUndInfos += "ZIEL: $satz"
-                "INFO" -> if (neueWorte) zieleUndInfos += "INFO" + (id?.takeIf { praefix == null || praefix == 'I' }?.let { " $it" } ?: "") + ": " + satz
-                "REGEL" -> if (neueWorte && regelErlaubt) Gespraechsgedaechtnis.lerneRegel(app, satz, id?.takeIf { praefix == null })?.let { (alt, neu) ->
-                    val p = LernPosten(s.schluessel(), "Regel", neu, grund = "du hast es ausdrücklich so festgelegt $quelleText".trim(), vorher = alt.orEmpty())
-                    if (alt == null) s.neu += p else s.aktualisiert += p
-                    protokolliere(app, if (alt == null) "neu" else "aktualisiert", p)
+                "INFO" -> if (neueWorte) {
+                    val infoId = id?.takeIf { praefix == null || praefix == 'I' }
+                    // Will das Modell eine Info ersetzen, die Frank selbst angelegt hat: nie still daneben, sondern ihm vorlegen.
+                    val eigene = infoId?.let { i -> infos.firstOrNull { it.id == i && !it.gelernt } }
+                    if (eigene != null) ersetzenVorlegen(app, s, "Info", eigene, satz, quelleText)
+                    else zieleUndInfos += "INFO" + (infoId?.let { " $it" } ?: "") + ": " + satz
+                }
+                "REGEL" -> if (neueWorte && regelErlaubt && Gespraechsgedaechtnis.regelBelegt(satz, frankJe.values)) {
+                    val regelId = id?.takeIf { praefix == null }
+                    val eigene = regelId?.let { i -> Regeln.alle(app).firstOrNull { it.id == i && !it.gelernt } }
+                    if (eigene != null) ersetzenVorlegen(app, s, "Regel", eigene, satz, quelleText)
+                    else Gespraechsgedaechtnis.lerneRegel(app, satz, regelId)?.let { (alt, neu) ->
+                        val p = LernPosten(s.schluessel(), "Regel", neu, grund = "du hast es ausdrücklich so festgelegt $quelleText".trim(), vorher = alt.orEmpty())
+                        if (alt == null) s.neu += p else s.aktualisiert += p
+                        protokolliere(app, if (alt == null) "neu" else "aktualisiert", p)
+                    }
                 }
                 "NOTIZ" -> if (neueWorte) {
+                    // Ein Ablaufdatum in der Vergangenheit machte die Notiz sofort unsichtbar, eines in ferner Zukunft ewig: dann Standard bzw. höchstens 30 Tage.
+                    val heute = LocalDate.now()
                     val bis = BIS.find(satz)?.groupValues?.get(1)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        ?.takeIf { !it.isBefore(heute) }?.let { minOf(it, heute.plusDays(30)) }
                     Gespraechsgedaechtnis.merkeNotiz(app, satz.replace(BIS, "").trim(), bis)?.let { n ->
                         val p = LernPosten(s.schluessel(), "Notiz", n.text, grund = listOf(quelleText, "gilt bis ${tag(Gespraechsgedaechtnis.gueltigBis(n))}").filter { it.isNotEmpty() }.joinToString("; "))
                         s.neu += p
@@ -544,7 +578,7 @@ object Lernlauf {
                         'N' -> notizen.firstOrNull { it.id == id }?.let { pruefliste += Pruefling(kennung, "Notiz", it.id, it.text, projekt, wunsch, true, it, null) }
                         'Z' -> ziele.firstOrNull { it.id == id }?.let { pruefliste += Pruefling(kennung, "Ziel", it.id, it.text, projekt, wunsch, it.gelernt, null, it) }
                         'I' -> infos.firstOrNull { it.id == id }?.let { pruefliste += Pruefling(kennung, "Info", it.id, it.text, projekt, wunsch, it.gelernt, null, it) }
-                        'A' -> aufgaben.lines().firstOrNull { it.contains("[id $id]") }?.let { pruefliste += Pruefling(kennung, "Aufgabe", id ?: 0, Gespraechsgedaechtnis.flach(it.substringAfter("] ").trim(), 300), projekt, wunsch, false, null, null) }
+                        'A' -> langeId?.let { aid -> aufgaben.lines().firstOrNull { it.contains("[id $aid]") } }?.let { pruefliste += Pruefling(kennung, "Aufgabe", id ?: 0, Gespraechsgedaechtnis.flach(it.substringAfter("] ").trim(), 300), projekt, wunsch, false, null, null) }
                     }
                 }
                 "VERALTET" -> if (mitPruefung) {
@@ -562,10 +596,12 @@ object Lernlauf {
             if (g.alt == null) s.neu += p else s.aktualisiert += p
             protokolliere(app, if (g.alt == null) "neu" else "aktualisiert", p)
         }
-        gelesenBis.forEach { (id, anzahl) -> stand.put(id, anzahl) }
+        gelesenBis.forEach { (id, anzahl) -> Gespraechsgedaechtnis.merkeGelernt(stand, id, nachrichtenJe[id].orEmpty(), anzahl) }
         if (aktionenBis > 0L) stand.put("_chatgpt", aktionenBis)
         Gespraechsgedaechtnis.standAufraeumen(app, stand)
-        Gespraechsgedaechtnis.speichereStand(app, stand)
+        // Der Zeitpunkt des Laufs rückt nur vor, wenn jedes offene Gespräch ganz gelesen wurde; sonst läse der nächste Lauf zu kurz zurück.
+        val allesGelesen = gespraeche.all { (sitzung, _, nachrichten) -> gelesenBis[sitzung.id] == nachrichten.size }
+        Gespraechsgedaechtnis.speichereStand(app, stand, vorruecken = allesGelesen)
         return pruefliste
     }
 
@@ -602,8 +638,11 @@ object Lernlauf {
                     JSONObject().put("stand", "ungeprueft").put("grund", "Prüfung fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}")
                 }
                 u.put("zeit", System.currentTimeMillis())
-                // Nur dieses Urteil frisch in die Datei mischen: Ein „behalten“, das Frank währenddessen gesetzt hat, bleibt so erhalten.
-                setzeUrteil(app, schluessel, u)
+                // Nur dieses Urteil frisch in die Datei mischen. Hat Frank währenddessen „behalten“ getippt, gilt das: kein Urteil anwenden.
+                if (!setzeUrteil(app, schluessel, u)) {
+                    s.geprueft += LernPosten(s.schluessel(), p.art, p.text, grund = "von dir behalten, wird nicht mehr automatisch entfernt", status = "behalten")
+                    continue
+                }
                 u
             }
             wende(app, p, urteil, frisch, s)
@@ -729,14 +768,18 @@ object Lernlauf {
     @Synchronized
     private fun ladeUrteile(c: Context): JSONObject = runCatching { JSONObject(urteilDatei(c).readText()) }.getOrDefault(JSONObject())
 
-    /** Liest die Urteile frisch, setzt genau eines und speichert, alles unter derselben Sperre (kein verlorenes Update). */
+    /**
+     * Liest die Urteile frisch, setzt genau eines und speichert, alles unter derselben Sperre (kein verlorenes Update).
+     * false = Frank hat diesen Eintrag inzwischen behalten; das Prüfurteil wurde nicht gesetzt und darf nicht angewendet werden.
+     */
     @Synchronized
-    private fun setzeUrteil(c: Context, schluessel: String, urteil: JSONObject) {
+    private fun setzeUrteil(c: Context, schluessel: String, urteil: JSONObject): Boolean {
         val u = ladeUrteile(c)
         // Ein von Frank gesetztes „behalten“ überschreibt kein Prüfergebnis.
-        if (u.optJSONObject(schluessel)?.optBoolean("behalten") == true && !urteil.optBoolean("behalten")) return
+        if (u.optJSONObject(schluessel)?.optBoolean("behalten") == true && !urteil.optBoolean("behalten")) return false
         u.put(schluessel, urteil)
         speichereUrteile(c, u)
+        return true
     }
 
     @Synchronized
@@ -751,12 +794,26 @@ object Lernlauf {
         Gespraechsgedaechtnis.haengeAn(aenderungsDatei(app), JSONObject().put("zeit", System.currentTimeMillis()).put("aktion", aktion).put("art", p.art).put("text", p.text)
             .put("vorher", p.vorher).put("grund", p.grund).put("beleg", p.beleg).apply { p.ref?.let { put("ref", it) } }.toString())
 
-    private fun merkVerlauf(app: Context, art: String, alt: Regel, quelle: String, beleg: String) =
-        Gespraechsgedaechtnis.haengeAn(File(app.filesDir, "merk_verlauf.jsonl"), JSONObject().put("zeit", System.currentTimeMillis()).put("datei", if (art == "Ziel") "ziele" else "ueber_frank")
-            .put("id", alt.id).put("alt", alt.text).put("neu", "").put("quelle", quelle).put("beleg", beleg).toString())
+    private fun merkVerlauf(app: Context, art: String, alt: Regel, quelle: String, beleg: String, neu: String = "") =
+        Gespraechsgedaechtnis.haengeAn(File(app.filesDir, "merk_verlauf.jsonl"), JSONObject().put("zeit", System.currentTimeMillis())
+            .put("datei", when (art) { "Ziel" -> "ziele"; "Regel" -> "regeln"; else -> "ueber_frank" })
+            .put("id", alt.id).put("alt", alt.text).put("neu", neu).put("quelle", quelle).put("beleg", beleg).toString())
+
+    /**
+     * Das Modell will einen Eintrag ersetzen, den Frank selbst angelegt hat: Nie still eine zweite, widersprüchliche Fassung daneben,
+     * sondern Frank vorlegen. „Entfernen“ ersetzt dann seine alte Fassung durch die neue, „Behalten“ lässt sie, wie sie ist.
+     */
+    private fun ersetzenVorlegen(app: Context, s: Sammler, art: String, alt: Regel, neu: String, quelleText: String) {
+        if (neu.length !in 12..400 || neu.equals(alt.text, ignoreCase = true)) return
+        if (ladeUrteile(app).optJSONObject(urteilSchluessel(art, alt.text))?.optBoolean("behalten") == true) return
+        if (s.bestaetigen.any { it.ref?.optInt("id") == alt.id && it.art == art }) return
+        s.bestaetigen += LernPosten(s.schluessel(), art, neu, vorher = alt.text, status = "von Frank",
+            grund = ("Du hast dazu etwas Neues gesagt $quelleText. „Entfernen“ ersetzt deine alte Fassung durch die neue, „Behalten“ lässt sie unverändert.").replace("  ", " "),
+            aktion = "entfernen", ref = regelRef(art, alt).put("ersatz", neu))
+    }
 
     private fun notizRef(n: Gespraechsnotiz) = JSONObject().put("typ", "notiz").put("id", n.id).put("text", n.text).put("erstellt", n.erstellt).put("bis", n.bis?.toString() ?: "")
-    private fun regelRef(art: String, r: Regel) = JSONObject().put("typ", if (art == "Ziel") "ziel" else "info").put("id", r.id).put("text", r.text).put("stand", r.stand).put("quelle", r.quelle)
+    private fun regelRef(art: String, r: Regel) = JSONObject().put("typ", when (art) { "Ziel" -> "ziel"; "Regel" -> "regel"; else -> "info" }).put("id", r.id).put("text", r.text).put("stand", r.stand).put("quelle", r.quelle)
 
     /**
      * Franks Antwort auf einen Posten im Bericht: „wiederherstellen“ (Entferntes zurück, danach nie mehr automatisch entfernt),
@@ -785,12 +842,20 @@ object Lernlauf {
             }
             "entfernen" -> {
                 if (ref == null) return "Dafür fehlen die Angaben."
-                val datei: Merkdatei = if (ref.optString("typ") == "ziel") Ziele else UeberFrank
+                val datei: Merkdatei = when (ref.optString("typ")) { "ziel" -> Ziele; "regel" -> Regeln; else -> UeberFrank }
                 val aktuell = datei.alle(app).firstOrNull { it.id == ref.optInt("id") } ?: return "Den Eintrag gibt es schon nicht mehr."
                 if (aktuell.text != ref.optString("text")) return "Der Eintrag wurde inzwischen geändert; bitte unter „Über Frank“ selbst prüfen."
-                datei.loesche(app, aktuell.id) ?: return "Entfernen ging nicht."
-                merkVerlauf(app, posten.art, aktuell, "Lernlauf: von Frank bestätigt entfernt", posten.beleg)
-                "entfernt (von dir bestätigt)"
+                val ersatz = ref.optString("ersatz")
+                if (ersatz.isNotEmpty()) {
+                    // Ein Ersetzungsvorschlag: Franks alte Fassung durch die neue ersetzen (gleiche id, die alte steht im Verlauf).
+                    val neu = datei.speichere(app, ersatz, aktuell.id, aktuell.quelle) ?: return "Ersetzen ging nicht (Gedächtnis voll oder beschädigt)."
+                    merkVerlauf(app, posten.art, aktuell, "Lernlauf: von Frank bestätigt ersetzt", posten.beleg, neu.text)
+                    "ersetzt (von dir bestätigt)"
+                } else {
+                    datei.loesche(app, aktuell.id) ?: return "Entfernen ging nicht."
+                    merkVerlauf(app, posten.art, aktuell, "Lernlauf: von Frank bestätigt entfernt", posten.beleg)
+                    "entfernt (von dir bestätigt)"
+                }
             }
             "behalten" -> { behalten(); "behalten" }
             else -> return "Unbekannte Aktion."
@@ -845,7 +910,8 @@ object Lernlauf {
         }
     }
 
-    private val ZEILE = Regex("^(ZIEL|INFO|REGEL|NOTIZ|ERLEDIGT|PRUEFEN|PRÜFEN|VERALTET)\\s*\\[?([NZIA]?\\d+)?\\]?\\s*:?\\s*(.*)$", RegexOption.IGNORE_CASE)
+    /** Schlüsselwort als ganzes Wort, danach Doppelpunkt, Leerzeichen oder Zeilenende: „Regelmäßig …“ oder „Notizen zu …“ sind keine Lernzeilen. */
+    private val ZEILE = Regex("^(ZIEL|INFO|REGEL|NOTIZ|ERLEDIGT|PRUEFEN|PRÜFEN|VERALTET)(?![\\p{L}])\\s*\\[?([NZIA]?\\d+)?\\]?\\s*(?::\\s*|\\s+|$)(.*)$", RegexOption.IGNORE_CASE)
     private val BIS = Regex("\\(?\\s*bis\\s+(\\d{4}-\\d{2}-\\d{2})\\s*\\)?", RegexOption.IGNORE_CASE)
     /** Notizen, die einen Programmierwunsch beschreiben: Sie gelten erst nach der Codeprüfung als erledigt. */
     private val PROGRAMMIERWUNSCH = Regex("(programmier|app\\b|apps\\b|einbau|einbauen|funktion|knopf|schalter|bildschirm|implementier|feature|jarvis-app|in jarvis|in der app|claude code|codex|umbauen|integrier)")

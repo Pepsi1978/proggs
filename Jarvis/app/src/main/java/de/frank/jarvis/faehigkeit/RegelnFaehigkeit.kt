@@ -278,18 +278,22 @@ open class Merkdatei(
     }
 
     /**
-     * Stellt einen einzelnen Eintrag mit seiner alten id wieder her (Rückgängig): ersetzt ihn, wenn es ihn noch gibt,
-     * sonst kommt er zurück. Andere Einträge bleiben unberührt. null = Datei voll, defekt oder nicht geschrieben.
+     * Stellt einen einzelnen Eintrag mit seiner alten id wieder her (Rückgängig): Steht unter der id noch derselbe Eintrag (gleicher
+     * Text), wird er ersetzt; ist sie frei, kommt er zurück. Ist sie inzwischen mit einem anderen Eintrag belegt (Geräteabgleich,
+     * alte Fassung), kommt er unter einer neuen id zurück: Ein fremder Eintrag wird nie überschrieben. Andere Einträge bleiben
+     * unberührt. Liefert den Eintrag mit seiner tatsächlichen id; null = Datei voll, defekt oder nicht geschrieben.
      */
     @Synchronized
     fun stelleWiederHer(context: Context, regel: Regel): Regel? {
         if (regel.id <= 0) return null
         val vorher = lies(context)
         if (vorher.defekt != null) return null
-        val da = vorher.eintraege.any { it.id == regel.id }
-        if (!da && vorher.eintraege.size >= hoechstens) return null
-        val neu = if (da) vorher.eintraege.map { if (it.id == regel.id) regel else it } else vorher.eintraege + regel
-        return if (schreibe(context, vorher, neu)) regel else null
+        val belegt = vorher.eintraege.firstOrNull { it.id == regel.id }
+        val gleich = belegt != null && belegt.text == regel.text
+        if (!gleich && vorher.eintraege.size >= hoechstens) return null
+        val eintrag = if (belegt != null && !gleich) regel.copy(id = vorher.naechsteId) else regel
+        val neu = if (gleich) vorher.eintraege.map { if (it.id == regel.id) regel else it } else vorher.eintraege + eintrag
+        return if (schreibe(context, vorher, neu)) eintrag else null
     }
 
     /** Setzt die Herkunft eines vorhandenen Eintrags (Nachtrag aus dem Aktivitätsprotokoll); Text und Stand bleiben. */

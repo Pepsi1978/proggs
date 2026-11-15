@@ -34,6 +34,8 @@ object Lernen {
         val app = context.applicationContext
         val e = Einstellungen.get(app)
         if (!e.auswertungLernen) return
+        // Nur das Handy lernt aus dem Tagebuch: Tagebuch und Merkdateien werden abgeglichen, sonst entstünde alles doppelt.
+        if (de.frank.jarvis.data.Geraet.istTablet) return
         val agent = JarvisAgent(app)
         if (!agent.verbunden) return
         val tagebuch = Register.alle(app).filterIsInstance<TagebuchFaehigkeit>().firstOrNull() ?: return
@@ -130,18 +132,25 @@ object Lernen {
 
     /** Wie [uebernimm], aber je Eintrag mit Art und alter Fassung (für den Lernbericht). Neue Einträge tragen [quelle] als Herkunft. */
     fun uebernimmEinzeln(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<Uebernommen> = antwort.lines()
-        .map { it.trim().replace(Regex("^(?:[-*•–]\\s*|\\d+[.)]\\s*)"), "").replace("**", "").trim().trimStart('„', '"', '“', '»').trim() }
+        .map { de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis.bereinigeZeile(it) }
         // Erst prüfen, dann zählen: Verworfene Zeilen (bekannt, zu kurz, Erlaubnis) verbrauchen keinen Platz; die Folge stoppt nach [hoechstens] Übernahmen.
         .asSequence().mapNotNull { ZEILE.find(it) }.mapNotNull { treffer ->
             val istZiel = treffer.groupValues[1].uppercase() == "ZIEL"
             val datei: Merkdatei = if (istZiel) Ziele else UeberFrank
             val satz = treffer.groupValues[3].trim().trimEnd('“', '”', '"', '«').trim()
             val id = treffer.groupValues[2].toIntOrNull()?.takeIf { it > 0 && !istZiel && datei.alle(app).any { r -> r.id == it } }
-            if (satz.length !in 12..300 || !satz.startsWith("Frank") || datei.alle(app).any { normal(it.text) == normal(satz) }) return@mapNotNull null
+            // Eine Info, die Frank selbst angelegt hat, ersetzt kein Lernlauf, auch nicht als zweite Fassung daneben (widersprüchlich).
+            // Der Gesprächs-Lernlauf legt sie Frank vorher zur Bestätigung vor; hier wird der Vorschlag nur verworfen.
+            if (id != null && datei.alle(app).any { it.id == id && !it.gelernt }) {
+                Logbuch.gedaechtnis("Nicht gelernt: würde Franks eigene Info ersetzen", "[$id] $satz".take(200))
+                return@mapNotNull null
+            }
+            // Dubletten wie bei jarvis_merken: auch fast gleiche Fassungen (Ähnlichkeit ab 0,6), nur nicht gegen den Eintrag, der ersetzt wird.
+            if (satz.length !in 12..300 || !satz.startsWith("Frank") ||
+                datei.alle(app).any { it.id != id && (normal(it.text) == normal(satz) || Merkdatei.aehnlichkeit(it.text, satz) >= 0.6) }) return@mapNotNull null
             // Aus gelernten Infos und Zielen folgen keine Rechte: nichts übernehmen, das nach einer Erlaubnis ohne Rückfrage klingt.
             if (Merkdatei.istErlaubnis(satz)) return@mapNotNull null
-            // Nur selbst Gelerntes ersetzt ein Lernlauf; eine Info, die Frank selbst angelegt hat, bleibt, und die neue kommt daneben.
-            // Ob die alte noch stimmt, legt ein späterer Prüflauf Frank zur Bestätigung vor (VERALTET).
+            // Nur selbst Gelerntes ersetzt ein Lernlauf (Franks eigene Einträge sind oben schon ausgeschlossen).
             val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i && it.gelernt } }
             val neu = datei.speichere(app, satz, alt?.id, quelle)
             if (neu == null) { Protokoll.melde(Quelle.JARVIS, if (datei.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt ($quelle): $satz", ok = false); return@mapNotNull null }
@@ -172,7 +181,7 @@ object Lernen {
             "Antworte je Tag mit genau einer Zeile in der Form JJJJ-MM-TT: Stichpunkt; Stichpunkt; Stichpunkt – sonst nichts."
 
     /** „ZIEL: Satz“, „INFO: Satz“ oder mit id zum Ersetzen „INFO 4: Satz“. */
-    private val ZEILE = Regex("^(ZIEL|INFO)\\s*\\[?(\\d+)?\\]?\\s*:\\s*(.+)$", RegexOption.IGNORE_CASE)
+    private val ZEILE = Regex("^(ZIEL|INFO)(?![\\p{L}])\\s*\\[?(\\d+)?\\]?\\s*:\\s*(.+)$", RegexOption.IGNORE_CASE)
     private val TAG = Regex("^(\\d{4}-\\d{2}-\\d{2})\\s*:\\s*(.+)$")
 
     private const val LERNEN =

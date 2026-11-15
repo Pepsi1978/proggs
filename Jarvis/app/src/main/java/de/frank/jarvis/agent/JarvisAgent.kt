@@ -310,11 +310,13 @@ class JarvisAgent(context: Context) {
                 }) } finally {
                     // Anteil des Gedächtnisses an dieser Eingabe, nach Zeichen geschätzt (Gesamtbild und Nachgeladenes gegen alles Gesendete).
                     zaehler?.let { z ->
-                        // Bilder zählen nicht als Zeichen: grob 1.600 Token je Bild vorher abziehen, sonst gälte ihr Anteil als Gedächtnis.
-                        val neu = (z.eingabe - eingabeVorher - zuege.sumOf { it.bilder.size } * 1_600L).coerceAtLeast(0L)
+                        val neu = z.eingabe - eingabeVorher
                         val zugZeichen = zuege.sumOf { it.text.length }
                         val gesendet = anweisungText.length + zugZeichen
-                        if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * (gesamtbild.length + minOf(nachgeladenZeichen.get(), zugZeichen)).toDouble() / gesendet).toLong().coerceAtMost(neu),
+                        // Bilder tragen Tokens ohne Zeichen: Mit Bildern höchstens so viel, wie die Gedächtniszeichen selbst ergeben (gut 3,5 Zeichen je Token).
+                        val gedaechtnisZeichen = gesamtbild.length + minOf(nachgeladenZeichen.get(), zugZeichen)
+                        val obergrenze = if (zuege.any { it.bilder.isNotEmpty() }) (gedaechtnisZeichen / 3.5).toLong() else neu
+                        if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * gedaechtnisZeichen.toDouble() / gesendet).toLong().coerceAtMost(minOf(neu, obergrenze)),
                             gedaechtnisTitel + nachgeladen.toList().map { de.frank.jarvis.gedaechtnis.KontextWahl.titelVon(it) })
                     }
                 }
@@ -349,7 +351,7 @@ class JarvisAgent(context: Context) {
                         (if (nachgeladen.isNotEmpty()) ", nachgeladen: ${nachgeladen.joinToString()}" else ""))
                     // Lernen im Hintergrund: was fehlte, was unnötig war (laut „genutzt“ im Antwort-JSON).
                     if (wahl != null && gezielt != null) {
-                        val gebrauchteBereiche = schritt?.optJSONArray("genutzt")?.let { arr -> (0 until arr.length()).map { arr.optString(it).trim().lowercase(Locale.GERMAN) }.toSet() }
+                        val gebrauchteBereiche = schritt?.optJSONArray("genutzt")?.let { arr -> de.frank.jarvis.gedaechtnis.KontextWahl.genutzteKennungen((0 until arr.length()).map { arr.optString(it) }) }
                         runCatching { de.frank.jarvis.gedaechtnis.KontextWahl.lerne(app, wahl, gespraechId, nachgeladen.toSet(), gebrauchteBereiche) }
                     }
                     // Ersatzsatz nur, wenn die Antwort aus nichts als Markup bestand; eine leere Antwort bleibt leer, wie die Aufrufer es erwarten.

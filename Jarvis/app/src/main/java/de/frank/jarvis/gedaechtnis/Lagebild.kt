@@ -171,7 +171,7 @@ object Lagebild {
                 val abschnitte = j.optJSONObject("bereiche")?.let { b ->
                     b.keys().asSequence().mapNotNull { k ->
                         val a = b.getJSONObject(k)
-                        Bereich.von(k)?.let { it to Abschnitt(a.optString("text"), a.optLong("stand"), a.optLong("geaendert"), a.optString("anlass"), a.optString("fehler")) }
+                        Bereich.von(k)?.let { it to Abschnitt(a.optString("text"), a.optLong("stand"), a.optLong("geaendert"), a.optString("anlass"), a.optString("fehler"), a.optLong("versucht")) }
                     }.toMap()
                 }.orEmpty()
                 val neu = j.optJSONArray("neuigkeiten")?.let { a ->
@@ -192,7 +192,7 @@ object Lagebild {
             val json = JSONObject()
                 .put("format", 1)
                 .put("bereiche", JSONObject().apply {
-                    s.abschnitte.forEach { (b, a) -> put(b.kennung, JSONObject().put("text", a.text).put("stand", a.stand).put("geaendert", a.geaendert).put("anlass", a.anlass).put("fehler", a.fehler)) }
+                    s.abschnitte.forEach { (b, a) -> put(b.kennung, JSONObject().put("text", a.text).put("stand", a.stand).put("geaendert", a.geaendert).put("anlass", a.anlass).put("fehler", a.fehler).put("versucht", a.versucht)) }
                 })
                 .put("neuigkeiten", JSONArray(s.neuigkeiten.map { JSONObject().put("z", it.zeit).put("b", it.bereich).put("t", it.text).put("a", it.anlass) }))
                 .toString()
@@ -201,11 +201,7 @@ object Lagebild {
     }
 
     /** Erst daneben schreiben, dann umbenennen: Eine halbe Datei würde das ganze Gedächtnis kosten. Aufrufer sperren selbst. */
-    internal fun schreibeAtomar(f: File, text: String) {
-        val neu = File(f.path + ".neu")
-        neu.writeText(text)
-        if (!neu.renameTo(f)) { f.writeText(text); neu.delete() }
-    }
+    internal fun schreibeAtomar(f: File, text: String) = de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(f, text.toByteArray(Charsets.UTF_8))
 
     // ---------------------------------------------------------------- Auffrischen
 
@@ -548,7 +544,8 @@ object Lagebild {
         val zuLesen = (gewaehlt.filter { it.schnell && it != Bereich.GEMERKT } + fehlend).distinct()
         if (zuLesen.isNotEmpty()) {
             val laeuft = bereich.async { auffrischen(app, zuLesen, "beim Abruf (gezielt)", hoechstensAlterMs = 30_000L) }
-            val warten = if (wartenMs <= 0L) 0L else if (fehlend.isEmpty()) wartenMs else maxOf(wartenMs, 12_000L)
+            // Fehlt ein gewählter Bereich ganz (erster Start), wartet auch die Sprache kurz: Sonst antwortete sie ohne Dienst und Termine.
+            val warten = if (fehlend.isNotEmpty()) maxOf(wartenMs, if (wartenMs <= 0L) 4_000L else 12_000L) else wartenMs.coerceAtLeast(0L)
             if (warten > 0) withTimeoutOrNull(warten) { laeuft.await() }
         }
         val s = _stand.value
@@ -693,7 +690,7 @@ object Lagebild {
     }
 
     /** Von hinten (neueste) so viele Einträge, wie in [budget] Zeichen passen, in der ursprünglichen Reihenfolge. */
-    private fun neuesteZuerst(liste: List<String>, budget: Int): List<String> {
+    internal fun neuesteZuerst(liste: List<String>, budget: Int): List<String> {
         var summe = 0
         return liste.asReversed().takeWhile { summe += it.length + 1; summe <= budget }.reversed()
     }
@@ -725,7 +722,9 @@ object Lagebild {
         append(b.ueberschrift).append(" [Stand ").append(uhr(a.stand)).append(" Uhr")
         if (a.geaendert in 1 until a.stand && System.currentTimeMillis() - a.geaendert < 24 * 3_600_000L) append(", zuletzt geändert ").append(uhr(a.geaendert)).append(" Uhr")
         append("]")
-        if (a.fehler.isNotEmpty()) append("\nACHTUNG: gerade nicht frisch lesbar (").append(a.fehler).append("); unten der letzte gute Stand.")
+        // Nur mit gutem Text darunter ist es „der letzte gute Stand“; sonst steht dort bloß die Störung.
+        if (a.fehler.isNotEmpty()) append("\nACHTUNG: gerade nicht frisch lesbar (").append(a.fehler).append(")")
+            .append(if (a.text.trim().startsWith("NICHT VERFÜGBAR")) "; es liegt noch kein guter Stand vor, lies die App selbst." else "; unten der letzte gute Stand.")
     }
 
     private val ID = Regex("\\[id ([^\\]]+)\\]")

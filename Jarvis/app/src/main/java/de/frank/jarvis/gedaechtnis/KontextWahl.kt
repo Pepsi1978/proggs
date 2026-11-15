@@ -122,9 +122,9 @@ object KontextWahl {
         "sowas", "sodass", "wenn", "aber", "oder", "und", "auch", "über", "unter", "nach", "zwischen", "letzte", "letzten", "ersten", "neuen", "neue",
         "jetzt", "brauche", "brauchst", "einmal", "sollte", "solltest", "zuerst", "vorher", "nachher", "später", "eigentlich", "trotzdem", "allerdings",
         "gerne", "denke", "glaube", "meinst", "hätte", "wäre", "würde", "könnte", "müsste", "dürfte", "bisschen", "wenig", "viele", "vieles", "alles", "allem",
-        "andere", "anderen", "weiter", "weitere", "gleich", "ganze", "ganzen", "dieser", "jemand", "nichts", "deshalb", "darum", "dabei", "dazu", "seine", "ihrer",
+        "andere", "anderen", "weiter", "weitere", "gleich", "ganze", "ganzen", "jemand", "nichts", "deshalb", "darum", "dabei", "dazu", "seine", "ihrer",
         "erzähl", "erzähle", "erzählen", "frage", "fragen", "erkläre", "erklär", "erklären", "sagst", "sagen", "mache", "machst", "macht", "kurze", "kurzem",
-        "findest", "finde", "denkst", "meinung", "einen", "bescheid", "schreib", "schreibe", "zusammen", "zusammenfassung", "fasse", "nenne", "liste", "zeige",
+        "findest", "finde", "denkst", "meinung", "bescheid", "schreib", "schreibe", "zusammen", "zusammenfassung", "fasse", "nenne", "liste", "zeige",
     )
 
     /** Die Auswahl für eine Frage. [gelernteTreffer] = Kennung → Wörter, die sie über das Gelernte gewählt haben (für das Abstufen). */
@@ -161,6 +161,8 @@ object KontextWahl {
     private const val NACHGELADEN_MS = 15 * 60_000L
     /** Zweimal nachgeladen bei Fragen mit diesem Wort, dann lädt es den Bereich künftig vorab (einmal ist Zufall). */
     private const val SCHWELLE = 2
+    /** Mehr Bereiche mit positivem Gewicht als diese Zahl: Das Wort gilt als allgemein und lädt nichts mehr vorab. */
+    private const val ALLGEMEIN = 3
     private const val HOECHSTGEWICHT = 10
     private const val HOECHSTENS_WOERTER = 3_000
 
@@ -247,7 +249,8 @@ object KontextWahl {
         val treffer = HashMap<String, MutableSet<String>>()
         val g = gelernt(context)
         synchronized(sperre) {
-            worte.forEach { w -> g[w]?.forEach { (k, gewicht) -> if (gewicht >= SCHWELLE && gueltig(k) && Bereich.von(k)?.let { profil(it).rolle == Rolle.IMMER } != true) treffer.getOrPut(k) { HashSet() } += w } }
+            // Ein Wort, das schon für viele Bereiche gelernt ist, ist zu allgemein, um etwas vorab zu laden (Dämpfung statt endloser Stoppliste).
+            worte.forEach { w -> g[w]?.takeIf { m -> m.count { it.value > 0 } <= ALLGEMEIN }?.forEach { (k, gewicht) -> if (gewicht >= SCHWELLE && gueltig(k) && Bereich.von(k)?.let { profil(it).rolle == Rolle.IMMER } != true) treffer.getOrPut(k) { HashSet() } += w } }
         }
         treffer.keys.forEach { k -> Bereich.von(k)?.let { bereiche += it } ?: merkteil(k)?.let { teile += it } }
         if (treffer.isNotEmpty()) gruende += "gelernt"
@@ -336,6 +339,23 @@ object KontextWahl {
 
     /** Der lesbare Titel zu einer Kennung (Bereich oder Teil des Gemerkten), sonst die Kennung selbst. */
     fun titelVon(kennung: String): String = Bereich.von(kennung)?.titel ?: merkteil(kennung)?.titel ?: kennung
+
+    /**
+     * Das Feld „genutzt“ der Modellantwort als Kennungen: Kennung oder Titel (auch Überschrift-Anfang) werden erkannt.
+     * Bleibt ein Eintrag unerkannt, gilt die ganze Angabe als unsicher (null): Sonst würden gebrauchte Bereiche als unnötig abgestuft.
+     */
+    fun genutzteKennungen(roh: List<String>): Set<String>? {
+        val aus = LinkedHashSet<String>()
+        roh.map { it.trim().lowercase(Locale.GERMAN) }.filter { it.isNotEmpty() }.forEach { n ->
+            val k = when {
+                gueltig(n) -> n
+                else -> Bereich.entries.firstOrNull { it != Bereich.GEMERKT && (it.titel.lowercase(Locale.GERMAN) == n || it.ueberschrift.lowercase(Locale.GERMAN).startsWith(n)) }?.kennung
+                    ?: Merkteil.entries.firstOrNull { it.titel.lowercase(Locale.GERMAN) == n }?.kennung
+            } ?: return null
+            aus += k
+        }
+        return aus
+    }
 
     /** Die gültigen Kennungen in [kennungen], klein geschrieben. */
     fun gueltige(kennungen: Collection<String>): Set<String> = kennungen.map { it.trim().lowercase(Locale.GERMAN) }.filterTo(LinkedHashSet()) { gueltig(it) }

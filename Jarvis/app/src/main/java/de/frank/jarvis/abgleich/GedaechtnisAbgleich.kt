@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -36,6 +37,11 @@ import java.util.concurrent.TimeUnit
  * - **Je Datei gewinnt die jüngste Fassung.** Hat nur ein Gerät seit dem letzten Abgleich geändert, gilt dessen Fassung; haben
  *   beide geändert, die mit der jüngeren Änderungszeit. Jede Fassung, die der Abgleich hier überschreibt oder löscht, bleibt 30 Tage
  *   unter `abgleich-rueckfall/` liegen (höchstens 500).
+ * - **Ausnahme Merkdateien und Gesprächsnotizen:** Haben beide Geräte geändert, werden sie eintragsweise zusammengeführt (Drei-Wege
+ *   gegen die zuletzt gemeinsame Fassung, die je Datei unter `abgleich-basis/` liegt): Neues von beiden Seiten bleibt, ein Löschen
+ *   gilt, wenn die andere Seite den Eintrag nicht geändert hat (so steht nichts Gelöschtes wieder auf), und vergaben beide Geräte
+ *   dieselbe id an verschiedene Einträge, bekommt der Eintrag der älteren Fassung eine neue id über allen bekannten. Fehlt die
+ *   gemeinsame Fassung (erster Abgleich nach dem Update) oder ist eine Datei unlesbar, gilt wie bisher die jüngste Fassung.
  * - **Erster Kontakt:** Kennt ein Gerät eine Datei noch nicht als abgeglichen und der Server hat eine andere Fassung, übernimmt
  *   das Tablet die des Servers, das Handy behält seine und lädt sie hoch (das Handy ist die Erstquelle).
  * - **Löschen** gibt es nur bei Gesprächen: Ein hier gelöschtes Gespräch wird als gelöscht gemeldet und verschwindet auch drüben.
@@ -175,7 +181,7 @@ object GedaechtnisAbgleich {
             val lokal = lokaleDateien(app, unlesbar)
             for ((pfad, datei) in lokal) {
                 if (pause()) return
-                jeDatei(pfad) { if (ladeHoch(basis, pfad, datei, dateien.obj(pfad)) && ++hochgeladen % 25 == 0) sichere(app, z) }
+                jeDatei(pfad) { if (ladeHoch(app, basis, pfad, datei, dateien.obj(pfad)) && ++hochgeladen % 25 == 0) sichere(app, z) }
             }
             // Hier gelöscht: abgeglichen gewesen, jetzt nicht mehr da. Nie aus einem Ordner, der sich nicht lesen ließ.
             val geloescht = dateien.keys().asSequence().toList().filter { pfad ->
@@ -286,7 +292,11 @@ object GedaechtnisAbgleich {
         }
         val fernSha = fern.optString("sha")
         if (fernSha.isEmpty()) return false
-        if (lokal == fernSha) { s.put("basis", fernSha).put("weg", false); return false }
+        if (lokal == fernSha) { merkeBasis(app, pfad, datei, fernSha); s.put("basis", fernSha).put("weg", false); return false }
+        // Beide Geräte haben geändert: Merkdateien und Notizen eintragsweise zusammenführen statt eine Fassung zu verwerfen.
+        if (datei.isFile && lokalGeaendert && gemerkt.isNotEmpty() && zusammenfuehrbar(pfad)) {
+            zusammenfuehren(app, basis, pfad, quelle, datei, s, fern, fernSha, gemerkt)?.let { return it }
+        }
         val nimmFern = when {
             !datei.isFile -> true
             !lokalGeaendert -> true                                   // nur drüben geändert
@@ -309,6 +319,7 @@ object GedaechtnisAbgleich {
                 Logbuch.system("Gedächtnis-Abgleich", "$pfad: beide Geräte haben geändert, die Fassung von ${fern.optString("von")} ist jünger und gilt; die hiesige liegt unter $RUECKFALL")
             }
             schreibe(app, quelle, datei, neu, fern.optLong("geaendert"))
+            merkeBasis(app, pfad, neu, fernSha)
             s.put("basis", fernSha).put("weg", false)
             return true
         } finally {
@@ -317,7 +328,7 @@ object GedaechtnisAbgleich {
     }
 
     /** Lädt eine hier geänderte Datei hoch. True, wenn hochgeladen. */
-    private fun ladeHoch(basis: String, pfad: String, datei: File, s: JSONObject): Boolean {
+    private fun ladeHoch(app: Context, basis: String, pfad: String, datei: File, s: JSONObject): Boolean {
         // Unverändert seit dem letzten Blick (Größe und Zeit): ohne Prüfsumme weiter.
         val marke = "${datei.length()}:${datei.lastModified()}"
         if (s.optString("marke") == marke) return false
@@ -333,7 +344,7 @@ object GedaechtnisAbgleich {
         // Abgeglichen und am Server bekannt: nichts zu tun. Kennt der Server die Datei nicht (mehr), etwa nach einem neu aufgesetzten
         // Speicher, geht sie unten wieder hoch.
         if (sha == s.optString("basis") && fern != null) { s.put("marke", marke); return false }
-        if (fern != null && !fern.optBoolean("weg") && fern.optString("sha") == sha) { s.put("basis", sha).put("marke", marke).put("weg", false); return false }
+        if (fern != null && !fern.optBoolean("weg") && fern.optString("sha") == sha) { merkeBasis(app, pfad, datei, sha); s.put("basis", sha).put("marke", marke).put("weg", false); return false }
         // Eine fremde Fassung wird nur abgelöst, wenn [uebernimm] sie bewertet und bewusst nicht genommen hat (die hiesige ist jünger,
         // oder dies ist das Handy beim ersten Kontakt). Steht die Bewertung noch aus (das Gespräch ist gerade offen, der Download
         // scheiterte, die Fassung kam eben erst), wartet der Upload: Sonst gewönne eine ältere Fassung nur, weil sie zuerst hochlud.
@@ -360,6 +371,7 @@ object GedaechtnisAbgleich {
             s.remove("entschieden")
             return false
         }
+        merkeBasis(app, pfad, datei, sha)
         s.put("basis", sha).put("marke", marke).put("weg", false)
         s.put("fern", JSONObject().put("sha", sha).put("geaendert", geaendert).put("weg", false).put("von", Geraet.ablageName))
         return true
@@ -381,17 +393,128 @@ object GedaechtnisAbgleich {
     // ---------------------------------------------------------------- Schreiben
 
     private fun schreibe(app: Context, quelle: Quelle, ziel: File, neu: File, zeit: Long) {
-        val schreiben: () -> Unit = {
-            ziel.parentFile?.mkdirs()
-            // Nie „<name>.new“: Dorthin schreibt die App selbst (AtomicFile), und beim Lesen löscht sie die Datei.
-            val teil = File(ziel.path + ".abgleich")
-            neu.copyTo(teil, overwrite = true)
-            // Eine liegen gebliebene Sicherung spielte die App beim nächsten Lesen über die neue Fassung zurück.
-            File(ziel.path + ".bak").delete()
-            if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" } }
-            if (zeit > 0) ziel.setLastModified(zeit)
+        unterSperre(quelle) { ersetze(ziel, zeit) { teil -> neu.copyTo(teil, overwrite = true) } }
+    }
+
+    /** Schreibt über eine Nachbardatei ([fuelle] füllt sie) nach [ziel]; [zeit] > 0 setzt die Änderungszeit. */
+    private fun ersetze(ziel: File, zeit: Long, fuelle: (File) -> Unit) {
+        ziel.parentFile?.mkdirs()
+        // Nie „<name>.new“: Dorthin schreibt die App selbst (AtomicFile), und beim Lesen löscht sie die Datei.
+        val teil = File(ziel.path + ".abgleich")
+        fuelle(teil)
+        // Eine liegen gebliebene Sicherung spielte die App beim nächsten Lesen über die neue Fassung zurück.
+        File(ziel.path + ".bak").delete()
+        if (!teil.renameTo(ziel)) { ziel.delete(); check(teil.renameTo(ziel)) { "${ziel.name} ließ sich nicht ersetzen" } }
+        if (zeit > 0) ziel.setLastModified(zeit)
+    }
+
+    // ---------------------------------------------------------------- Zusammenführen (Merkdateien, Gesprächsnotizen)
+
+    private const val BASIS = "abgleich-basis"
+
+    /** Dateien mit Einträgen und ids, die bei beidseitiger Änderung zusammengeführt statt ganz ersetzt werden. */
+    private fun zusammenfuehrbar(pfad: String): Boolean =
+        pfad == "gespraechsnotizen.json" || de.frank.jarvis.faehigkeit.merkdateien().any { it.name == pfad }
+
+    private fun basisDatei(app: Context, pfad: String) = File(File(app.filesDir, BASIS), pfad)
+
+    /** Hält die zuletzt gemeinsame Fassung fest (nur, wenn ihr Inhalt wirklich zur Prüfsumme [sha] passt). */
+    private fun merkeBasis(app: Context, pfad: String, inhalt: File, sha: String) {
+        if (!zusammenfuehrbar(pfad)) return
+        runCatching {
+            val bytes = inhalt.readBytes()
+            val ziel = basisDatei(app, pfad)
+            if (sha256(bytes) != sha) { ziel.delete(); return }
+            ersetze(ziel, 0L) { it.writeBytes(bytes) }
         }
-        // Unter derselben Sperre wie das eigene Lesen-Ändern-Schreiben des jeweiligen Speichers.
+    }
+
+    /**
+     * Führt die fremde Fassung mit der hiesigen zusammen. true = hier geschrieben, null = nicht möglich (keine gemeinsame Fassung,
+     * unlesbar): Dann gilt wie bei allen Dateien die jüngste Fassung.
+     */
+    private fun zusammenfuehren(app: Context, basis: String, pfad: String, quelle: Quelle, datei: File, s: JSONObject, fern: JSONObject, fernSha: String, gemerkt: String): Boolean? {
+        val basisKopie = basisDatei(app, pfad)
+        if (!basisKopie.isFile || sha256(basisKopie) != gemerkt) return null
+        val neu = File(app.cacheDir, "gedaechtnis-fern.teil")
+        try {
+            netz.newCall(Request.Builder().url("$basis/blob/$fernSha").build()).execute().use { r ->
+                if (!r.isSuccessful) throw Abgelehnt("Datei holen: Server ${r.code}")
+                neu.outputStream().use { aus -> r.body!!.byteStream().copyTo(aus) }
+            }
+            if (sha256(neu) != fernSha) throw Abgelehnt("Datei beschädigt angekommen")
+            rueckfall(app, pfad, datei)
+            var geschafft = false
+            // Lesen, Zusammenführen und Schreiben unter der Sperre des Speichers: Nichts, was Jarvis gerade merkt, geht dazwischen verloren.
+            unterSperre(quelle) {
+                val text = runCatching {
+                    fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = pfad == "gespraechsnotizen.json")
+                }.onFailure { Logbuch.fehler("Gedächtnis-Abgleich", it, "$pfad: Zusammenführen nicht möglich, die jüngste Fassung gilt") }.getOrNull()
+                if (text != null) { ersetze(datei, 0L) { it.writeText(text) }; geschafft = true }
+            }
+            if (!geschafft) return null
+            // Die fremde Fassung ist eingearbeitet: Sie ist die neue gemeinsame Grundlage, die nächste Runde lädt das Ergebnis hoch.
+            merkeBasis(app, pfad, neu, fernSha)
+            s.put("basis", fernSha).put("weg", false)
+            Logbuch.system("Gedächtnis-Abgleich", "$pfad: beide Geräte haben geändert, eintragsweise zusammengeführt")
+            return true
+        } finally {
+            neu.delete()
+        }
+    }
+
+    /**
+     * Drei-Wege-Zusammenführung nach id: [basisText] = zuletzt gemeinsame Fassung. Je id: nur eine Seite geändert → deren Fassung;
+     * beide geändert → die jüngere ([fernGewinnt]); auf einer Seite gelöscht → weg, außer die andere hat ihn seither geändert; auf
+     * beiden Seiten neu mit derselben id, aber anderem Text → der Eintrag der älteren Fassung bekommt eine neue id über allen bekannten
+     * (auch über gelöschten, damit keine alte id wieder vergeben wird). [notizen] = gespraechsnotizen.json (Liste), sonst Merkdatei.
+     */
+    internal fun fuehreZusammen(basisText: String, lokalText: String, fernText: String, fernGewinnt: Boolean, notizen: Boolean): String {
+        fun eintraege(t: String): List<JSONObject> {
+            if (t.isBlank()) return emptyList()
+            val a = if (notizen) JSONArray(t) else JSONObject(t).getJSONArray("regeln")
+            return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optInt("id") > 0 }
+        }
+        fun naechste(t: String) = if (notizen || t.isBlank()) 0 else JSONObject(t).optInt("naechsteId")
+        val b = eintraege(basisText).associateBy { it.optInt("id") }
+        val l = eintraege(lokalText).associateBy { it.optInt("id") }
+        val f = eintraege(fernText).associateBy { it.optInt("id") }
+        val (sieger, verlierer) = if (fernGewinnt) f to l else l to f
+        fun gleich(x: JSONObject?, y: JSONObject?) = x?.toString() == y?.toString()
+        val ergebnis = java.util.TreeMap<Int, JSONObject>()
+        val umnummern = mutableListOf<JSONObject>()
+        for (id in (l.keys + f.keys)) {
+            val le = l[id]
+            val fe = f[id]
+            val be = b[id]
+            if (be != null) when {
+                le == null -> if (fe != null && !gleich(fe, be)) ergebnis[id] = fe
+                fe == null -> if (!gleich(le, be)) ergebnis[id] = le
+                gleich(le, be) -> ergebnis[id] = fe
+                gleich(fe, be) -> ergebnis[id] = le
+                else -> ergebnis[id] = sieger.getValue(id)
+            } else when {
+                le == null -> ergebnis[id] = fe!!
+                fe == null -> ergebnis[id] = le
+                le.optString("text") == fe.optString("text") -> ergebnis[id] = sieger.getValue(id)
+                else -> { ergebnis[id] = sieger.getValue(id); umnummern += verlierer.getValue(id) }
+            }
+        }
+        var frei = maxOf(naechste(basisText), naechste(lokalText), naechste(fernText),
+            maxOf(b.keys.maxOrNull() ?: 0, l.keys.maxOrNull() ?: 0, f.keys.maxOrNull() ?: 0) + 1)
+        for (e in umnummern) {
+            if (ergebnis.values.any { it.optString("text") == e.optString("text") }) continue
+            ergebnis[frei] = JSONObject(e.toString()).put("id", frei)
+            frei++
+        }
+        val liste = JSONArray(ergebnis.values.toList())
+        if (notizen) return liste.toString()
+        return JSONObject(if (fernGewinnt) fernText else lokalText).put("naechsteId", frei).put("regeln", liste).toString(2)
+    }
+
+    /** Führt [block] unter derselben Sperre aus wie das eigene Lesen-Ändern-Schreiben des jeweiligen Speichers. */
+    private fun unterSperre(quelle: Quelle, block: () -> Unit) {
+        val schreiben = block
         val merk = if (quelle.ordner) null else de.frank.jarvis.faehigkeit.merkdateien().firstOrNull { it.name == quelle.pfad }
         when {
             merk != null -> merk.vonAussen(schreiben)

@@ -49,7 +49,8 @@ object Gespraechsgedaechtnis {
     @Synchronized
     private fun naechsteId(context: Context, alle: List<Gespraechsnotiz>): Int {
         val id = maxOf(alle.maxOfOrNull { it.id } ?: 0, prefs(context).getInt("hoechsteId", 0)) + 1
-        prefs(context).edit().putInt("hoechsteId", id).apply()
+        // commit statt apply: Endet der Prozess gleich danach, darf die id nicht ein zweites Mal vergeben werden.
+        prefs(context).edit().putInt("hoechsteId", id).commit()
         return id
     }
 
@@ -129,8 +130,14 @@ object Gespraechsgedaechtnis {
         val abgelaufen = gueltigBis(notiz).isBefore(LocalDate.now())
         val frisch = if (abgelaufen) notiz.copy(erstellt = System.currentTimeMillis(), bis = null) else notiz
         val zurueck = if (alle.any { it.id == notiz.id }) frisch.copy(id = naechsteId(context, alle)) else frisch
-        schreibeNotizen(context, (alle + zurueck).sortedBy { it.id }.takeLast(NOTIZEN_HOECHSTENS))
-        return true
+        // Wie beim Merken: Die zurückgeholte Notiz steht als jüngste hinten; ist es zu voll, geht die älteste gültige, nachvollziehbar.
+        val neu = notizen(context) + zurueck
+        neu.dropLast(NOTIZEN_HOECHSTENS).forEach { weg ->
+            Logbuch.gedaechtnis("Gesprächsnotiz verdrängt (mehr als $NOTIZEN_HOECHSTENS)", weg.text.take(200))
+            Protokoll.melde(Quelle.JARVIS, "Gesprächsnotiz verdrängt", "Mehr als $NOTIZEN_HOECHSTENS Notizen, die älteste ging: ${weg.text}")
+        }
+        schreibeNotizen(context, neu.takeLast(NOTIZEN_HOECHSTENS))
+        return alleNotizen(context).any { it.id == zurueck.id && it.text == zurueck.text }
     }
 
     /** Abgelaufene Notizen (Ablaufdatum vorbei) endgültig aus der Datei nehmen; liefert die entfernten. */
@@ -236,8 +243,37 @@ object Gespraechsgedaechtnis {
         return runCatching { JSONObject(d.readText()) }.getOrElse { beiseitelegen(d); JSONObject() }
     }
     // Atomar: Ein halb geschriebener Stand ließe Jarvis die Gespräche der letzten drei Tage noch einmal lernen.
-    internal fun speichereStand(context: Context, stand: JSONObject) =
-        runCatching { de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(standDatei(context), stand.put("_zuletzt", System.currentTimeMillis()).toString().toByteArray()) }
+    /**
+     * [vorruecken] = alles Offene wurde gelesen: Erst dann rückt der Zeitpunkt des letzten Laufs vor. Blieb etwas übrig, bliebe es
+     * sonst außerhalb des nächsten (dann wieder kürzeren) Lesefensters und ginge still verloren.
+     */
+    internal fun speichereStand(context: Context, stand: JSONObject, vorruecken: Boolean = true) = runCatching {
+        if (vorruecken) stand.put("_zuletzt", System.currentTimeMillis())
+        de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(standDatei(context), stand.toString().toByteArray())
+    }
+
+    /** Wiedererkennung einer Nachricht: Wer sie schrieb und ihr Text. */
+    private fun anker(n: de.frank.jarvis.data.GespeicherteNachricht): String = (if (n.vonMir) "F:" else "J:") + n.text.trim().hashCode()
+
+    /**
+     * Wie viele Nachrichten eines Gesprächs schon gelernt sind. Maßgeblich ist die zuletzt gelernte Nachricht (Anker), nicht die
+     * reine Anzahl: Fällt davor eine weg (Erneut versuchen, Kürzen) oder ändert sich ihr Fehlerstatus, verrutschte die Anzahl.
+     * Steht der Anker mehrfach im Gespräch, gilt die Stelle, die der alten Anzahl am nächsten liegt; fehlt er, die Anzahl.
+     */
+    internal fun gelerntBis(stand: JSONObject, id: String, nachrichten: List<de.frank.jarvis.data.GespeicherteNachricht>): Int {
+        val anzahl = stand.optInt(id, 0).coerceAtMost(nachrichten.size)
+        val a = stand.optJSONObject("_anker")?.optString(id).orEmpty()
+        if (a.isEmpty() || anzahl == 0) return anzahl
+        val stellen = nachrichten.indices.filter { anker(nachrichten[it]) == a }
+        return stellen.minByOrNull { kotlin.math.abs(it + 1 - anzahl) }?.let { it + 1 } ?: anzahl
+    }
+
+    /** Hält fest, dass [bis] Nachrichten des Gesprächs gelernt sind, mit dem Anker der letzten. */
+    internal fun merkeGelernt(stand: JSONObject, id: String, nachrichten: List<de.frank.jarvis.data.GespeicherteNachricht>, bis: Int) {
+        stand.put(id, bis)
+        val anker = stand.optJSONObject("_anker") ?: JSONObject().also { stand.put("_anker", it) }
+        if (bis in 1..nachrichten.size) anker.put(id, anker(nachrichten[bis - 1])) else anker.remove(id)
+    }
 
     /**
      * Wie weit der Lernlauf zurückliest: drei Tage, und nach einer längeren Pause (nicht angemeldet, Lernen aus, kein Netz)
@@ -249,11 +285,15 @@ object Gespraechsgedaechtnis {
         return ((System.currentTimeMillis() - zuletzt) / (24 * 3_600_000L) + 2).coerceIn(3L, 14L)
     }
 
-    /** Gespräche seit dem letzten Lauf (mindestens drei Tage, siehe [lernTage]) mit neuen Worten von Frank: (Gespräch, bisher gelernte Anzahl, alle Nachrichten, ruht schon zehn Minuten). */
+    /**
+     * Gespräche seit dem letzten Lauf (mindestens drei Tage, siehe [lernTage]) mit neuen Worten von Frank: (Gespräch, bisher
+     * gelernte Anzahl, alle Nachrichten, ruht schon zehn Minuten). Programmier-Gespräche nie: Dort spricht Frank mit dem
+     * Programmierer über eine App („ab jetzt immer die Version anzeigen“), nicht mit Jarvis über sich.
+     */
     private fun mitNeuem(context: Context, stand: JSONObject): List<Pair<Triple<de.frank.jarvis.data.Sitzung, Int, List<de.frank.jarvis.data.GespeicherteNachricht>>, Boolean>> {
         val jetzt = System.currentTimeMillis()
-        return neuereGespraeche(context, lernTage(stand)).mapNotNull { (s, nachrichten) ->
-            val gelernt = stand.optInt(s.id, 0).coerceAtMost(nachrichten.size)
+        return neuereGespraeche(context, lernTage(stand)).filter { !it.first.programmierung }.mapNotNull { (s, nachrichten) ->
+            val gelernt = gelerntBis(stand, s.id, nachrichten)
             if (nachrichten.drop(gelernt).none { it.vonMir }) null else Triple(s, gelernt, nachrichten) to (jetzt - s.geaendert >= RUHE_MS)
         }
     }
@@ -269,7 +309,21 @@ object Gespraechsgedaechtnis {
      * Gibt es Neues zu lernen? Billig: liest nur die Gespräche der letzten drei Tage. Neue Aktionen über ChatGPT allein
      * lösen keinen Lauf aus: Sie sind Werkzeugergebnisse, nicht Franks Worte, also keine Lernquelle.
      */
-    fun neueGespraecheFaellig(context: Context): Boolean = runCatching { offen(context, ladeStand(context)).isNotEmpty() }.getOrDefault(false)
+    fun neueGespraecheFaellig(context: Context): Boolean = runCatching {
+        // Billig bei jeder Wächter-Minute: Nur wenn sich eine Gesprächsdatei oder der Stand geändert hat oder fünf Minuten vergangen sind
+        // (ein Gespräch kann inzwischen zehn Minuten ruhen), werden die Dateien wirklich gelesen.
+        val app = context.applicationContext
+        val jetzt = System.currentTimeMillis()
+        val stand = ladeStand(app)
+        val grenze = jetzt - lernTage(stand) * 24 * 3_600_000L
+        val abdruck = File(app.filesDir, "gespraeche").listFiles { f -> f.name.endsWith(".json") && f.lastModified() >= grenze }.orEmpty()
+            .sortedBy { it.name }.joinToString(",") { it.name + ":" + it.lastModified() + ":" + it.length() } + "|" + standDatei(app).lastModified()
+        faelligZwischen?.let { (a, zeit, ergebnis) -> if (a == abdruck && jetzt - zeit < FAELLIG_HOECHSTENS_MS) return@runCatching ergebnis }
+        offen(app, stand).isNotEmpty().also { faelligZwischen = Triple(abdruck, jetzt, it) }
+    }.getOrDefault(false)
+
+    @Volatile private var faelligZwischen: Triple<String, Long, Boolean>? = null
+    private const val FAELLIG_HOECHSTENS_MS = 5 * 60_000L
 
     /** true = gerade läuft ein Lernlauf (von Hand oder automatisch). */
     val lerntGerade: Boolean get() = Lernlauf.laeuft
@@ -285,10 +339,32 @@ object Gespraechsgedaechtnis {
     internal fun standAufraeumen(app: Context, stand: JSONObject) {
         val vorhanden = File(app.filesDir, "gespraeche").list().orEmpty().map { it.removeSuffix(".json") }.toSet()
         stand.keys().asSequence().toList().filter { !it.startsWith("_") && it !in vorhanden }.forEach { stand.remove(it) }
+        stand.optJSONObject("_anker")?.let { a -> a.keys().asSequence().toList().filter { it !in vorhanden }.forEach { a.remove(it) } }
     }
 
     /** true = Frank legt in diesen Worten ausdrücklich etwas für die Zukunft fest; nur dann darf ein Lernlauf eine Regel anlegen. */
     internal fun ausdruecklich(worte: List<String>): Boolean = worte.any { AUSDRUECKLICH.containsMatchIn(it.lowercase(Locale.GERMAN)) }
+
+    /**
+     * Stammt die Regel [satz] aus einer ausdrücklichen Festlegung von Frank? Ja nur, wenn eine seiner Nachrichten mit „ab jetzt“,
+     * „merk dir“ … mindestens zwei inhaltliche Wörter mit der Regel teilt. Ein „grundsätzlich“ in einem anderen Gespräch reicht nicht.
+     */
+    internal fun regelBelegt(satz: String, frankJeGespraech: Collection<List<String>>): Boolean {
+        val regel = inhaltsWoerter(satz)
+        return frankJeGespraech.any { worte -> worte.any { w -> AUSDRUECKLICH.containsMatchIn(w.lowercase(Locale.GERMAN)) && (inhaltsWoerter(w) intersect regel).size >= 2 } }
+    }
+
+    /** Wörter ab fünf Buchstaben, klein, ohne Endung „-en/-e/-n/-s“: grob genug, dass „Schlaffragen“ und „Schlaffrage“ zusammenpassen. */
+    private fun inhaltsWoerter(text: String): Set<String> = Regex("[\\p{L}]{5,}").findAll(text.lowercase(Locale.GERMAN))
+        .map { it.value.removeSuffix("en").removeSuffix("e").removeSuffix("n").removeSuffix("s") }.filter { it.length >= 4 }.toSet()
+
+    /**
+     * Eine Antwortzeile eines Lern-Modells, bereinigt: Aufzählungszeichen, Nummern, Fettdruck und Anführungszeichen am Rand weg.
+     * Gemeinsam für Lernlauf und Tagebuch-Lernen, damit beide dieselben Zeilen erkennen.
+     */
+    internal fun bereinigeZeile(zeile: String): String = zeile.trim().replace("**", "")
+        .replace(Regex("^(?:[-*•–]\\s*|\\d+[.)]\\s*)"), "").trim()
+        .trimStart('„', '"', '“', '»', '\'').trimEnd('“', '”', '"', '«', '\'').trim()
 
     /**
      * Übernimmt eine Regel aus einem Gespräch. Eine id gilt nur für eine selbst gelernte Regel (sonst neu anlegen); die alte
