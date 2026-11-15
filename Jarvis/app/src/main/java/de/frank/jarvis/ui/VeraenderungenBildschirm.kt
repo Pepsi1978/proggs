@@ -1,34 +1,26 @@
 package de.frank.jarvis.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,7 +34,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -54,15 +45,14 @@ import de.frank.jarvis.veraenderung.Veraenderungen
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
-import de.frank.jarvis.ui.theme.knopf3d
 
 /**
  * Reiter „Veränderungen“: Franks wichtige Veränderungen im Leben. Oben „Aktuell“ (Einzeile, Kreis hakt ab), unten aufklappbar
- * „Erledigt“ (Zurückholen). Antippen öffnet die genaue Beschreibung mit Papierkorb. Unten das Eingabefeld mit Mikrofon:
- * Die KI macht aus Franks Worten Einzeile und Beschreibung.
+ * „Erledigt“ (Zurückholen). Antippen öffnet die genaue Beschreibung mit Papierkorb. Neue Einträge kommen nur per
+ * Sprache an Jarvis (Werkzeug `veraenderung`).
  */
 @Composable
-fun VeraenderungenBildschirm(vm: AppViewModel) {
+fun VeraenderungenBildschirm() {
     val context = LocalContext.current
     val alle by Veraenderungen.stand.collectAsState()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Veraenderungen.sicher(context) } }
@@ -72,12 +62,12 @@ fun VeraenderungenBildschirm(vm: AppViewModel) {
     LaunchedEffect(offenId, offen) { if (offenId != null && offen == null && alle.isNotEmpty()) offenId = null }
     Column(Modifier.fillMaxSize()) {
         if (offen != null) Detail(offen) { offenId = null }
-        else Uebersicht(vm, alle) { offenId = it }
+        else Uebersicht(alle) { offenId = it }
     }
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(vm: AppViewModel, alle: List<Veraenderung>, oeffnen: (Long) -> Unit) {
+private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List<Veraenderung>, oeffnen: (Long) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val aktuell = alle.filter { !it.erledigt }

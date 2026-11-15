@@ -174,7 +174,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                             Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity, schublade)
                             Reiter.ABLAGE -> AblageBildschirm(vm, activity)
                             Reiter.TOOLS -> ToolsBildschirm(vm)
-                            Reiter.VERAENDERUNGEN -> VeraenderungenBildschirm(vm)
+                            Reiter.VERAENDERUNGEN -> VeraenderungenBildschirm()
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
                         }
@@ -254,7 +254,7 @@ private fun Leiste(vm: AppViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(icon, null, tint = if (aktiv) f.aufPrimaer else f.textLeise, modifier = Modifier.size(20.dp))
-                if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (aktiv) Text(r.kurz, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         reiterKnopf(Reiter.JARVIS)

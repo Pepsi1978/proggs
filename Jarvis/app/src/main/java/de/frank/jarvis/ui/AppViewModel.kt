@@ -49,7 +49,8 @@ private const val UPDATE_VORLAUF = 15 * 60_000L
 /** So lange nach dem Update gilt das erste Öffnen noch als Neustart durch das Update, später als normaler Start. */
 private const val UPDATE_NACHLAUF = 60 * 60_000L
 
-enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), TOOLS("Tools"), VERAENDERUNGEN("Änderung"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Settings") }
+/** [anzeige] ist der volle Name (Bedienhilfe, Logs), [kurz] nur die sichtbare Beschriftung in der unteren Leiste. */
+enum class Reiter(val anzeige: String, val kurz: String = anzeige) { JARVIS("Jarvis"), ABLAGE("Ablage"), TOOLS("Tools"), VERAENDERUNGEN("Veränderungen", "Änderung"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen", "Settings") }
 
 /**
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
@@ -1378,8 +1379,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Das laufende Diktat wurde im Vollbild einer Merkliste gestartet und gehört in diese. */
     private var merkDiktat = false
-
-    // ---- Veränderungen: Eingabefeld im Reiter, die KI schreibt daraus Einzeile und Beschreibung ----
 
     /** Läuft gerade ein Diktat für die offene Merkliste? Nur dann zeigt sie „Ich höre zu“. */
     val merkNimmtAuf get() = nimmtAuf && merkDiktat
