@@ -1787,11 +1787,14 @@ VICTRON_MAX = 8_192
 
 class VictronStand:
     """Letzter Stand von Franks Victron-Anlage, den ein Rechner in Bluetooth-Reichweite meldet (jarvis_victron.py).
-    POST /pc/victron (Rolle pc) legt ihn ab, GET /geraet/victron (Rolle handy) liefert ihn mit Alter in Sekunden."""
+    POST /pc/victron (Rolle pc) legt ihn ab, GET /geraet/victron (Rolle handy) liefert ihn mit Alter in Sekunden.
+    Dieselbe Klasse mit eigener Datei dient dem SwitchBot-CO2-Monitor (jarvis_switchbot.py, /pc/switchbot, /geraet/switchbot);
+    dort ist „art“ die MAC des Geräts."""
 
-    def __init__(self):
+    def __init__(self, datei: Path = VICTRON_DATEI):
+        self.datei = datei
         try:
-            self.stand = json.loads(VICTRON_DATEI.read_text("utf-8"))
+            self.stand = json.loads(datei.read_text("utf-8"))
         except Exception:
             self.stand = None
 
@@ -1817,14 +1820,14 @@ class VictronStand:
         inhalt = json.dumps(self.stand, ensure_ascii=False)
 
         def schreiben():
-            zwischen = VICTRON_DATEI.with_suffix(".neu")
+            zwischen = self.datei.with_suffix(".neu")
             zwischen.write_text(inhalt, "utf-8")
-            os.replace(zwischen, VICTRON_DATEI)
+            os.replace(zwischen, self.datei)
 
         try:
             await asyncio.to_thread(schreiben)
         except Exception as fehler:
-            log.warning("victron.json nicht geschrieben: %s", fehler)
+            log.warning("%s nicht geschrieben: %s", self.datei.name, fehler)
         return web.json_response({"ok": True})
 
     async def holen(self, request: web.Request) -> web.Response:
@@ -2147,6 +2150,9 @@ def app() -> web.Application:
     victron = VictronStand()
     anwendung.router.add_post("/pc/victron", victron.melden)
     anwendung.router.add_get("/geraet/victron", victron.holen)
+    switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"))
+    anwendung.router.add_post("/pc/switchbot", switchbot.melden)
+    anwendung.router.add_get("/geraet/switchbot", switchbot.holen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

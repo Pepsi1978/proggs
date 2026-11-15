@@ -2,6 +2,8 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.util.Base64
+import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import java.time.LocalTime
@@ -39,7 +41,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             "„Wie ist der CO2-Wert in der Wohnung?“, „Wie warm ist es im Auto?“), nutze raumklima_lesen. Der Sensor „Auto“ liegt in Franks Auto, nicht in der Wohnung. " +
             "Der CO2-Wert kommt vom Sensor „CO2-Monitor“ in der Wohnung (co2_ppm): ordne ihn ein, unter 800 ppm gut, 800 bis 1000 in Ordnung, 1000 bis 1400 lüften, darüber dringend lüften. " +
             "Fragt Frank nur nach CO2 oder Luftqualität, rufe raumklima_lesen mit sensor CO2-Monitor auf und nenne nur den CO2-Wert mit Einordnung. Fragt er nach einem Raum, nur diesen. " +
-            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
+            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal. Steht bei einem Sensor quelle, kamen die Werte über den Mac zu Hause statt aus der SwitchBot-Cloud; nenne dann die Messzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
             "sag das genau so und nenne für ihn keine Werte. Steht ein Raum unter nicht_im_konto, gibt es im SwitchBot-Konto keinen Sensor mit diesem Namen: " +
             "sag das und rate keine Werte (ähnlich benannte Sensoren nennen, z. B. Tippfehler). Für das Wetter draußen bleibt wetter_lesen zuständig."
 
@@ -61,7 +63,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     /** Ergebnis eines Sensors: Werte oder ein verständlicher Grund, warum es keine gibt. */
-    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val co2: Int? = null, val problem: String? = null, val offline: Boolean = false)
+    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val co2: Int? = null, val problem: String? = null, val offline: Boolean = false, val quelle: String? = null)
 
     /** Geräteliste (nur Namen und Kennungen, keine Messwerte) mit Abrufzeit. */
     @Volatile private var liste: Pair<Long, List<JSONObject>>? = null
@@ -98,9 +100,14 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val gewaehlt = treffer.ifEmpty { alle }
         val einzeln = treffer.isNotEmpty()
 
+        // Rückgriff für Sensoren ohne Cloud-Werte: der Mac zu Hause hört sie per Bluetooth mit (jarvis_switchbot.py → Relay), nur einmal je Abruf geholt.
+        val fern by lazy { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(emptyMap()) }
         val sensoren = coroutineScope {
             gewaehlt.map { g ->
-                async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
+                async {
+                    val z = runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") }
+                    if (z.problem == null) z else vomMac(z, g.optString("deviceId"), fern) ?: z
+                }
             }.awaitAll()
         }
         // Ein Problem kann an einer veralteten Liste liegen (Gerät getauscht, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
@@ -112,14 +119,14 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}"
-            else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.co2?.let { ", ${co2Text(it)}" } ?: "") + (z.batterie?.let { ", Batterie $it %" } ?: "")
+            else "- ${z.name}: ${zahl(z.temperatur!!)} °C, ${zahl(z.feuchte!!, 0)} % Luftfeuchtigkeit" + (z.co2?.let { ", ${co2Text(it)}" } ?: "") + (z.batterie?.let { ", Batterie $it %" } ?: "") + (z.quelle?.let { " ($it)" } ?: "")
         }
         val vorweg = if (nur.isNotEmpty() && !einzeln) "Einen Sensor „$nur“ gibt es nicht, hier alle.\n" else ""
         val text = vorweg + "Abgerufen um $uhr Uhr aus der SwitchBot-Cloud (sie nennt keine eigene Messzeit):\n" + zeilen.joinToString("\n")
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
             JSONObject().put("name", z.name).put("typ", z.typ).apply {
                 if (z.problem != null) { put("problem", z.problem); if (z.offline) put("offline", true) }
-                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.batterie?.let { put("batterie_prozent", it) } }
+                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) } }
             }
         })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)) }
         Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)
@@ -146,6 +153,30 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         // Meter Pro CO2 meldet zusätzlich „CO2“ in ppm.
         val co2 = body.wert("CO2")?.toInt()
         return Sensor(name, typ, temperatur, feuchte, body.wert("battery")?.toInt(), co2)
+    }
+
+    /** Stand vom Relay (GET /geraet/switchbot): je MAC (klein, ohne Doppelpunkte) die zuletzt vom Mac gehörten Werte mit Messzeit „zeit“. */
+    private fun relayStand(): Map<String, JSONObject> {
+        val e = Einstellungen.get(context)
+        if (e.serverToken.isBlank()) return emptyMap()
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/switchbot").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung).build()
+        val j = CLIENT.newCall(anfrage).execute().use { a ->
+            check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
+            JSONObject(a.body?.string().orEmpty())
+        }
+        val liste = j.optJSONArray("geraete") ?: return emptyMap()
+        return (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.filter { it.optLong("zeit") > 0 }.associateBy { it.optString("art").lowercase(Locale.ROOT) }
+    }
+
+    /** Werte vom Mac zu Hause, wenn er den Sensor in den letzten [MAC_GILT_S] gehört hat; sonst null (das Cloud-Problem bleibt stehen). */
+    private fun vomMac(z: Sensor, deviceId: String, fern: Map<String, JSONObject>): Sensor? {
+        val w = fern[deviceId.lowercase(Locale.ROOT)] ?: return null
+        val alter = System.currentTimeMillis() / 1000 - w.optLong("zeit")
+        if (alter > MAC_GILT_S) return null
+        val t = w.wert("temperatur_c") ?: return null
+        val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
+        val uhr = java.time.Instant.ofEpochSecond(w.optLong("zeit")).atZone(java.time.ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
+        return Sensor(z.name, z.typ, t, f, null, w.wert("co2_ppm")?.toInt(), quelle = "über den Mac zu Hause, gemessen $uhr Uhr")
     }
 
     private class Problem(text: String, val code: Int = 0) : Exception(text)
@@ -209,6 +240,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         private val ERWARTET = listOf("Balkon", "Wohnzimmer", "Schlafzimmer", "Auto", "CO2-Monitor")
         private const val LISTE_GILT_MS = 60 * 60 * 1000L
         private const val NEU_HOLEN_AB_MS = 60 * 1000L
+        /** Der Mac meldet alle fünf Minuten; älter als 20 Minuten gilt nicht mehr als aktuell. */
+        private const val MAC_GILT_S = 20 * 60L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private fun JSONObject.wert(k: String): Double? = if (has(k) && !isNull(k)) optDouble(k).takeIf { !it.isNaN() } else null

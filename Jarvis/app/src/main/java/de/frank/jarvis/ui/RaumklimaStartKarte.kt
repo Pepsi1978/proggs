@@ -99,7 +99,8 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
                     String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")) +
-                        (if (z.has("co2_ppm")) " · " + SwitchbotFaehigkeit.co2Text(z.optInt("co2_ppm")) else ""),
+                        (if (z.has("co2_ppm")) " · " + SwitchbotFaehigkeit.co2Text(z.optInt("co2_ppm")) else "") +
+                        (if (z.has("quelle")) " · Mac" else ""),
                     color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(2f), textAlign = TextAlign.End,
                 )
             }

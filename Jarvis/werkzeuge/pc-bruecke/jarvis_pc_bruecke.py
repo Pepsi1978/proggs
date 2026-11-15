@@ -15,7 +15,8 @@ Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto o
 liegen vor. Ob sie gelten, zeigt erst eine Sitzung (der Hook meldet „Login expired“ sofort). Abgemeldet startet keine Sitzung.
 Sol 6.1 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Windows-PC fehlt; gestartet über den Katalog-Weg
 (gpt-6.1-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
-Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay.
+Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay,
+danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
@@ -496,6 +497,7 @@ def victron_faden() -> None:
     ein hängender Bluetooth-Stack die Brücke nie aufhält. Fehler stehen in ~/Library/Logs/JarvisPcBruecke/victron.log."""
     skript = Path(__file__).resolve().with_name("jarvis_victron.py")
     fehlte = False
+    switchbot_gemeldet = 0.0
     while True:
         beginn = time.time()
         if (HOME / "SK" / "Victron" / "victron.json").is_file():
@@ -513,6 +515,20 @@ def victron_faden() -> None:
         elif not fehlte:
             fehlte = True
             schreib("Victron: ~/SK/Victron/victron.json fehlt, die Solarbatterie wird vom Mac nicht gemeldet")
+        # Danach, nie gleichzeitig (ein Bluetooth-Scan zur Zeit): SwitchBot-CO2-Monitor, den der Hub Mini nicht in die Cloud bringt
+        # (jarvis_switchbot.py, POST /pc/switchbot). Alle fünf Minuten (so oft misst er höchstens), ohne Empfang in der nächsten Minute erneut.
+        if time.time() - switchbot_gemeldet >= 300:
+            try:
+                sb_log = ORDNER / "switchbot.log"
+                if sb_log.exists() and sb_log.stat().st_size > 200_000:
+                    sb_log.write_text("", "utf-8")
+                with open(sb_log, "a", encoding="utf-8") as fehlerlog:
+                    lauf = subprocess.run([sys.executable, str(skript.with_name("jarvis_switchbot.py"))], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                                          stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=50)
+                if lauf.returncode == 0:
+                    switchbot_gemeldet = time.time()
+            except Exception as fehler:
+                schreib(f"SwitchBot: {fehler}")
         time.sleep(max(5, 60 - (time.time() - beginn)))
 
 

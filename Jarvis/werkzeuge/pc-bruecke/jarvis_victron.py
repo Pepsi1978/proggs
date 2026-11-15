@@ -37,12 +37,18 @@ PROTOKOLL = (Path.home() / "Library" / "Logs" / "JarvisPcBruecke" / "victron.log
 
 
 def protokoll(text: str) -> None:
-    """Fehler landen hier statt im Nichts (die Brücke startet das Skript unsichtbar). Hält höchstens etwa 200 KB."""
+    protokoll_in(PROTOKOLL.name, text)
+
+
+def protokoll_in(datei: str, text: str) -> None:
+    """Fehler landen hier statt im Nichts (die Brücke startet das Skript unsichtbar). Hält höchstens etwa 200 KB.
+    Auch von jarvis_switchbot.py genutzt (eigene Datei im selben Ordner)."""
+    ziel = PROTOKOLL.with_name(datei)
     try:
-        PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
-        if PROTOKOLL.exists() and PROTOKOLL.stat().st_size > 200_000:
-            PROTOKOLL.write_text("", "utf-8")
-        with PROTOKOLL.open("a", encoding="utf-8") as d:
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        if ziel.exists() and ziel.stat().st_size > 200_000:
+            ziel.write_text("", "utf-8")
+        with ziel.open("a", encoding="utf-8") as d:
             d.write(time.strftime("%Y-%m-%d %H:%M:%S ") + text + "\n")
     except Exception:
         pass
@@ -167,6 +173,11 @@ def lies_zugang() -> tuple[str, str]:
 
 
 def melden(stand: dict) -> None:
+    melden_an("/pc/victron", stand)
+
+
+def melden_an(pfad: str, stand: dict) -> None:
+    """POST an den Relay (auch von jarvis_switchbot.py genutzt)."""
     host, token = lies_zugang()
     # curl.exe -4 wie die Brücke (IPv6 hängt auf diesem Netz zeitweise); der Token geht über eine Datei, nicht die Befehlszeile.
     with tempfile.TemporaryDirectory() as ordner:
@@ -178,7 +189,7 @@ def melden(stand: dict) -> None:
         windows = os.name == "nt"
         subprocess.run(["curl.exe" if windows else "curl", "-4", "-s", "-S", "--fail", "--max-time", "15", "-o",
                         "NUL" if windows else "/dev/null", "-H", f"@{kopf}", "-X", "POST", "--data-binary", f"@{rumpf}",
-                        f"https://{host}/pc/victron"], check=True, creationflags=0x08000000 if windows else 0)
+                        f"https://{host}{pfad}"], check=True, creationflags=0x08000000 if windows else 0)
 
 
 def main() -> None:
