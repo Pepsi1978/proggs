@@ -112,8 +112,13 @@ fun VictronStartKarte(griff: Modifier = Modifier) {
         }
         if (stand != null && stand.werte.isNotEmpty()) {
             if (stand.fehler != null && !s.laeuft) Text(stand.fehler, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-            stand.werte["batteriemonitor"]?.let { b -> Abschnitt("Batterie (BMV-712)", VictronFaehigkeit.batterieZeilen(b)) }
-            stand.werte["laderegler"]?.let { l -> Abschnitt("Laderegler (MPPT)", VictronFaehigkeit.reglerZeilen(l)) }
+            // Laderegler oben, Batterie darunter (Franks Wunsch vom 15.11.2026). Die Batteriespannung steht nur bei der Batterie,
+            // im Laderegler nur, wenn der Batteriemonitor fehlt.
+            val batterie = stand.werte["batteriemonitor"]
+            stand.werte["laderegler"]?.let { l ->
+                Abschnitt("Laderegler (MPPT)", VictronFaehigkeit.reglerZeilen(l).filter { batterie == null || it.first != "Batteriespannung" })
+            }
+            batterie?.let { b -> Abschnitt("Batterie (BMV-712)", VictronFaehigkeit.batterieZeilen(b)) }
         }
     }
 }

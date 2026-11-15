@@ -40,13 +40,16 @@ import org.json.JSONObject
 /** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (ISO, wie gemeldet), Einordnung, dazu die Farbskala. */
 private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String, val skala: BioSkala? = null)
 
-/** Farbskala über die ganze Historie: schlechtester Wert links (rot), bester rechts (grün); [schnitt] = langfristiger Durchschnitt. */
+/** Farbskala über einen festen Bereich: schlechtes Ende links (rot), gutes rechts (grün), Werte außerhalb am Rand; [schnitt] = langfristiger Durchschnitt. */
 private data class BioSkala(val schlecht: Double, val gut: Double, val aktuell: Double, val schnitt: Double, val schnittText: String) {
     fun lage(w: Double): Float = if (gut == schlecht) 0.5f else ((w - schlecht) / (gut - schlecht)).toFloat().coerceIn(0f, 1f)
 }
 
-/** Diese Größen zeigen statt des Einordnungstexts die Farbskala. */
-private val MIT_SKALA = setOf("hrv", "ruhepuls", "tiefschlaf_prozent", "schlafdauer", "vo2max")
+/** Diese Größen zeigen statt des Einordnungstexts die Farbskala, mit festem Anzeigebereich (Franks Vorgabe vom 15.11.2026). */
+private val SKALA_BEREICH = mapOf(
+    "hrv" to (20.0 to 60.0), "ruhepuls" to (45.0 to 70.0), "tiefschlaf_prozent" to (0.0 to 30.0),
+    "schlafdauer" to (6.0 to 12.0), "vo2max" to (30.0 to 50.0),
+)
 
 /**
  * Stand der Karte außerhalb der Komposition: Sie liegt in der LazyColumn des Startbildschirms. Mit `remember` war sie nach dem
@@ -97,8 +100,9 @@ fun BiomarkerStartVorladen() {
         s.zeilen = (0 until liste.length()).map { i ->
             val m = liste.getJSONObject(i)
             val wert = if (m.isNull("aktuell")) "–" else m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
-            val skala = if (m.optString("id") in MIT_SKALA && !m.isNull("aktuell") && m.has("min_alle")) {
-                val tief = m.optDouble("min_alle"); val hoch = m.optDouble("max_alle"); val tage = m.optInt("tage_gesamt")
+            val bereich = SKALA_BEREICH[m.optString("id")]
+            val skala = if (bereich != null && !m.isNull("aktuell")) {
+                val (tief, hoch) = bereich; val tage = m.optInt("tage_gesamt")
                 // Langfristiger Schnitt samt aktuellem Wert, aus dem Schnitt aller Tage davor.
                 val schnitt = if (tage > 0 && !m.isNull("schnitt_gesamt")) (m.optDouble("schnitt_gesamt") * tage + m.optDouble("aktuell")) / (tage + 1) else m.optDouble("aktuell")
                 val niedrigBesser = m.optString("hoeher_ist") == "schlechter"

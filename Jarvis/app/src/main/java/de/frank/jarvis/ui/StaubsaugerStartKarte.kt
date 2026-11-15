@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -185,7 +186,10 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                         (live?.akku ?: s.akku)?.let { "$it %" } ?: "–",
                         color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, end = 8.dp),
                     )
-                    val st = Modifier.weight(1f, fill = false)
+                }
+                // Stand und Erreichbarkeit als eigene Zeile unter dem Akku, auf jedem Gerät gleich (daneben wurde es zugeklappt gequetscht).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val st = Modifier
                     when {
                         a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
                         a.geprueft && a.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
@@ -362,10 +366,23 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
                 KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = true, modifier = Modifier.fillMaxSize(),
                     beiZone = { i -> if (zonenModus && entwurf[i].sperre) entwurf.removeAt(i) },
                     beiNeu = ::neueZone)
-                Column(Modifier.fillMaxWidth().systemBarsPadding().padding(12.dp)) {
+                // Nur die Karte: Statusleiste und Navigationsleiste ausgeblendet, solange das Vollbild offen ist (Wischen vom Rand holt sie kurz zurück).
+                val dialogFenster = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+                androidx.compose.runtime.DisposableEffect(dialogFenster) {
+                    dialogFenster?.let { w ->
+                        androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).apply {
+                            systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                        }
+                    }
+                    onDispose { }
+                }
+                Column(Modifier.fillMaxWidth().systemBarsPadding().displayCutoutPadding().padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (zonenModus) "Rechteck ziehen = neue Sperrzone, rote Zone antippen = löschen, zwei Finger = zoomen" else "Zwei Finger zum Zoomen und Verschieben",
+                        // Hinweis nur beim Sperrzonen-Zeichnen; sonst bleibt nur die Karte (Franks Wunsch vom 15.11.2026).
+                        if (zonenModus) Text("Rechteck ziehen = neue Sperrzone, rote Zone antippen = löschen, zwei Finger = zoomen",
                             color = f.textLeise, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        else Spacer(Modifier.weight(1f))
                         Box(Modifier.size(42.dp).glas(f, 21.dp, erhoeht = 0.5f).antippen { vollbild = false }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Close, "Schließen", tint = f.text, modifier = Modifier.size(22.dp))
                         }

@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.rounded.CloseFullscreen
+import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -191,7 +194,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
     val tastaturOffen by remember(imeRand, dichte) { androidx.compose.runtime.derivedStateOf { imeRand.getBottom(dichte) > 0 } }
     // Eingeklappt gibt es kein Textfeld: ein beim Verschwinden nicht mehr gemeldeter Fokus gilt dann nicht.
     LaunchedEffect(vm.eingabeKompakt) { if (vm.eingabeKompakt) feldFokus = false }
-    val bearbeitet = feldFokus && tastaturOffen && !vm.eingabeKompakt
+    // Vergrößert (Zwei-Pfeile-Symbol im Textfeld, wie in der ChatGPT-App): Die Blase nimmt die ganze Höhe, das Textfeld füllt sie.
+    // Nach dem Senden, beim Leeren und beim Einklappen wieder normal.
+    var vergroessert by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.entwurf.isEmpty(), vm.eingabeKompakt) { if (vm.entwurf.isEmpty() || vm.eingabeKompakt) vergroessert = false }
+    val gross = vergroessert && !vm.eingabeKompakt
+    val bearbeitet = (feldFokus && tastaturOffen && !vm.eingabeKompakt) || gross
     SideEffect { EingabeLage.bearbeitet = bearbeitet }
     DisposableEffect(Unit) { onDispose { EingabeLage.bearbeitet = false } }
     val platz = if (bearbeitet) 0.dp else platzOben
@@ -201,7 +209,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
         val p = messbar.measure(c.copy(maxHeight = max))
         layout(p.width, p.height) { p.place(0, 0) }
     }
-    Column(modifier.then(begrenzt).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
+    Column(modifier.then(begrenzt).then(if (gross) Modifier.fillMaxHeight() else Modifier).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
         if (konsole == false) KonsolenWarnung(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) { konsoleAnmelden = true }
 
         if (vm.anhaenge.isNotEmpty()) {
@@ -260,21 +268,30 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
         val leerbar = vm.entwurf.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit
         // Ist die Blase begrenzt (siehe blaseMindest), wird nur das Textfeld kürzer und scrollt in sich; Anhänge und die
         // Knopfzeile werden zuerst gemessen und bleiben ganz.
-        if (!kompakt) Row(Modifier.weight(1f, fill = false).fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
-            Box(Modifier.weight(1f).padding(top = 10.dp)) {
+        // Ab vier Zeilen erscheint unten rechts im Feld das Zwei-Pfeile-Symbol zum Vergrößern und Verkleinern.
+        var zeilen by remember { mutableStateOf(0) }
+        if (!kompakt) Box(Modifier.weight(1f, fill = gross).fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
+            Box(Modifier.fillMaxWidth().then(if (gross) Modifier.fillMaxHeight() else Modifier).padding(top = 10.dp, end = 40.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
                 BasicTextField(
                     // Verschwindet das Feld mit Fokus, meldet Compose noch einmal seinen letzten Stand. Nach dem Senden wäre das
                     // der schon abgeschickte Text: Solche Meldungen dürfen den Entwurf nicht zurückschreiben.
                     wert, { if (EingabeFeld.meldungGilt(vm.eingabeKompakt, feld.text, vm.entwurf, it.text)) { feld = it; vm.entwurf = it.text } },
-                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = if (bearbeitet) Dp.Infinity else 160.dp).focusRequester(fokus).onFocusChanged { feldFokus = it.isFocused },
+                    Modifier.fillMaxWidth().then(if (gross) Modifier.fillMaxHeight() else Modifier)
+                        .heightIn(min = 24.dp, max = if (bearbeitet) Dp.Infinity else 160.dp).focusRequester(fokus).onFocusChanged { feldFokus = it.isFocused },
+                    onTextLayout = { zeilen = it.lineCount },
                     textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                     cursorBrush = SolidColor(LIVE_ORANGE),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     maxLines = if (bearbeitet) Int.MAX_VALUE else 6,
                 )
             }
-            Box(Modifier.padding(start = 4.dp).size(36.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
+            if (gross || zeilen >= 4) Box(Modifier.align(Alignment.BottomEnd).size(36.dp).clip(CircleShape).antippen { vergroessert = !gross },
+                contentAlignment = Alignment.Center) {
+                Icon(if (gross) Icons.Rounded.CloseFullscreen else Icons.Rounded.OpenInFull, if (gross) "Eingabefeld verkleinern" else "Eingabefeld vergrößern",
+                    tint = f.textLeise, modifier = Modifier.size(20.dp))
+            }
+            Box(Modifier.align(Alignment.TopEnd).size(36.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
                 when {
                     leerbar -> Box(Modifier.size(36.dp).antippen { vm.entwurfLeeren() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Delete, "Text löschen", tint = f.textLeise, modifier = Modifier.size(22.dp))
