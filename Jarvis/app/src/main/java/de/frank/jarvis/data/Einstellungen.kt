@@ -504,6 +504,8 @@ class Einstellungen private constructor(context: Context) {
     var ablageAnsicht: String get() = s("ablage_ansicht", "mittel"); set(v) = put { putString("ablage_ansicht", v) }
     /** Sortierung der Ablage: neueste, aelteste, name, groesse oder quelle. */
     var ablageSortierung: String get() = s("ablage_sortierung", "neueste"); set(v) = put { putString("ablage_sortierung", v) }
+    /** Lautstärke des Atemgeräuschs in den Atemübungen, 0–100 % (Stimme = 100). Regler in der laufenden Übung. */
+    var atemGeraeuschLautstaerke: Int get() = prefs.getInt("atem_geraeusch_lautstaerke", 18).coerceIn(0, 100); set(v) = put { putInt("atem_geraeusch_lautstaerke", v.coerceIn(0, 100)) }
     /** Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle, zum Beispiel „handy,mac,windows“. */
     var ablageQuellen: String get() = s("ablage_quellen", "handy,mac,windows"); set(v) = put { putString("ablage_quellen", v) }
     /** Prompts nach Quelle sortiert statt in der eigenen, gezogenen Reihenfolge. */

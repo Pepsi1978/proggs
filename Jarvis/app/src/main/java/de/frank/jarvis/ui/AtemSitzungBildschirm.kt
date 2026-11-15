@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
@@ -158,6 +160,17 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
                 Row(Modifier.padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Haken("Vorlesen", Icons.Rounded.RecordVoiceOver, AtemSitzung.vorlesen) { AtemSitzung.vorlesenUmschalten() }
                     Haken("Atem", Icons.Rounded.Air, AtemSitzung.geraeusch) { AtemSitzung.geraeuschUmschalten() }
+                }
+                // Lautstärke des Atemgeräuschs: links leise, rechts laut; gilt sofort und bleibt gespeichert.
+                Row(Modifier.fillMaxWidth().widthIn(max = 420.dp).padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Rounded.VolumeDown, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    androidx.compose.material3.Slider(
+                        AtemSitzung.pegel, { AtemSitzung.pegelSetzen(it, speichern = false) },
+                        Modifier.weight(1f).padding(horizontal = 8.dp).semantics { contentDescription = "Lautstärke des Atemgeräuschs" },
+                        onValueChangeFinished = { AtemSitzung.pegelSetzen(AtemSitzung.pegel) },
+                        colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = akzent, inactiveTrackColor = Color.White.copy(alpha = 0.18f)),
+                    )
+                    Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                 }
                 val satz = AtemSitzung.satz
                 Box(Modifier.heightIn(min = 64.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {

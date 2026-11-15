@@ -505,6 +505,7 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("neueste" to "Neueste zuerst", "aelteste" to "Älteste zuerst", "name" to "Name A–Z", "groesse" to "Größte zuerst", "quelle" to "Nach Quelle") }, { e.ablageSortierung }) { e.ablageSortierung = it },
             auswahl("ablage_quellen", "Ablage", "Reihenfolge der Quellen", "In welcher Reihenfolge Einträge und Prompts der Jarvis-Versionen beim Sortieren nach Quelle stehen.",
                 { de.frank.jarvis.ablage.AblageQuellen.alleOrdnungen }, { e.ablageQuellen }) { e.ablageQuellen = it },
+            zahl("atem_geraeusch_lautstaerke", "Atemübungen", "Lautstärke des Atemgeräuschs", "Wie laut das Ein- und Ausatemgeräusch in den Atemübungen im Vergleich zur Stimme ist; 100 = so laut wie die Stimme.", 0, 100, "Prozent", { e.atemGeraeuschLautstaerke }) { e.atemGeraeuschLautstaerke = it; de.frank.jarvis.atem.AtemSitzung.pegelSetzen(it / 100f, speichern = false) },
             schalter("prompts_nach_quelle", "Ablage", "Prompts nach Quelle sortieren", "Zeigt die Prompts nach ihrer Jarvis-Version sortiert statt in der eigenen Reihenfolge.", { e.promptsNachQuelle }) { e.promptsNachQuelle = it },
 
             // ---- System ----
