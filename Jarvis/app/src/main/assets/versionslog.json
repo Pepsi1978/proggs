@@ -727,6 +727,7 @@
     {"versionCode": 719, "versionName": "1.8.708", "stand": "15.11.2026, 20:21 Uhr", "notiz": "Raumklima wird beim Öffnen der App im Hintergrund gelesen, damit auf dem Startbildschirm sofort Werte stehen."},
     {"versionCode": 720, "versionName": "1.8.709", "stand": "15.11.2026, 20:33 Uhr", "notiz": "Antippen der Raumklima-Karte öffnet die SwitchBot-App; rund um den Aktualisieren-Knopf liegt ein großer Schutzbereich, der nur neu liest."},
     {"versionCode": 721, "versionName": "1.8.710", "stand": "15.11.2026, 20:34 Uhr", "notiz": "Das Live-Gedächtnis ist gründlich überarbeitet: sparsamere Auswahl bei Anschlussfragen, Lernen ohne verwechselte Einträge, weniger unnötige Neu-Lesungen und schnellere Sprachantworten."},
-    {"versionCode": 722, "versionName": "1.8.711", "stand": "15.11.2026, 20:38 Uhr", "notiz": "Raumklima-Karte: langes Drücken zum Verschieben öffnet die SwitchBot-App nicht mehr, Tipps geben Rückmeldung, und fehlt die App, erscheint ein Hinweis."}
+    {"versionCode": 722, "versionName": "1.8.711", "stand": "15.11.2026, 20:38 Uhr", "notiz": "Raumklima-Karte: langes Drücken zum Verschieben öffnet die SwitchBot-App nicht mehr, Tipps geben Rückmeldung, und fehlt die App, erscheint ein Hinweis."},
+    {"versionCode": 723, "versionName": "1.8.712", "stand": "15.11.2026, 20:40 Uhr", "notiz": "Neuer Reiter Tools mit Atemübungen: eigene Atemprofile, Vollbild-Animation, Ansage mit der Jarvis-Stimme, Atemgeräusch und eigene Sätze; die Listen öffnen sich jetzt oben in der Ablage."}
 ]
 }

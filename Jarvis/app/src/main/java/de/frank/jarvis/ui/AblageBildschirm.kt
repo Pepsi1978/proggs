@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -264,6 +265,11 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             // Kopfzeile mit fester Höhe: Die Reiter darunter springen nicht, wenn Prompts und Erinnerung die Knöpfe ausblenden.
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 20.dp, end = 12.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ablage", Modifier.weight(1f), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                // Listen (Einkaufsliste, Packliste …) wohnen jetzt in der Ablage: öffnen sich über den Reitern, die Leiste bleibt darunter.
+                Row(Modifier.height(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = f.primaer).antippen { ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Checklist, null, tint = f.primaer, modifier = Modifier.size(20.dp))
+                    Text("Listen", Modifier.padding(start = 6.dp), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
                 // Die Suche gilt für die ganze Ablage und steht deshalb in jedem Reiter bereit.
                 Rundknopf(Icons.Rounded.Search, "In der ganzen Ablage suchen", farbe = f.primaer) { sucheFokus = true; sucheOffen = true }
                 // Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für die Reiter „Prompts“ und „Erinnerung“.

@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Visibility
@@ -112,7 +113,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.zurueckInSession() }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
-            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen
+            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
             GespraecheSchublade(vm, schublade, wischen) {
             Box(Modifier.fillMaxSize()) {
             // Biomarker-Bereich als Vollbild über die ganze Breite (Kartenraster auf Fold und Tablet), statt der Spalte.
@@ -125,7 +126,10 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.einstellungsReiter = "biomarker"
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
-            if (!vm.gesperrt && ListenAnsicht.offen) {
+            if (!vm.gesperrt && de.frank.jarvis.atem.AtemSitzung.offen) {
+                // Laufende Atemübung im echten Vollbild, ohne Leiste.
+                AtemSitzungBildschirm(Modifier.fillMaxSize())
+            } else if (!vm.gesperrt && ListenAnsicht.offen) {
                 // Listen über die ganze Breite (wie der Biomarker-Bereich), geöffnet über die Leiste oder das Widget.
                 // Die untere Leiste bleibt darunter immer sichtbar und bedienbar, auch in einer geöffneten Liste.
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
@@ -174,6 +178,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                         when (reiter) {
                             Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity, schublade)
                             Reiter.ABLAGE -> AblageBildschirm(vm, activity)
+                            Reiter.TOOLS -> ToolsBildschirm(vm)
                             Reiter.VERAENDERUNGEN -> VeraenderungenBildschirm(vm)
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
@@ -237,14 +242,15 @@ private fun Leiste(vm: AppViewModel) {
         // Die Listen liegen über den Reitern: Jeder Tipp in der Leiste schließt sie, sonst bliebe der neue Reiter dahinter verdeckt.
         val listenOffen = ListenAnsicht.offen
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
-            val aktiv = vm.reiter == r && !listenOffen
+            // Die Listen gehören zur Ablage: Sind sie offen, leuchtet der Ablage-Reiter.
+            val aktiv = vm.reiter == r || (r == Reiter.ABLAGE && listenOffen)
             val icon = when (r) {
-                Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
+                Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
                 Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune
             }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
             Row(
-                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { ListenAnsicht.schliessen(); vm.reiter = r }
+                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
                     .semantics { contentDescription = r.anzeige },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
@@ -255,18 +261,8 @@ private fun Leiste(vm: AppViewModel) {
         }
         reiterKnopf(Reiter.JARVIS)
         reiterKnopf(Reiter.ABLAGE)
-        // Listen (Einkaufsliste, Packliste …): öffnet die Listen über den Reitern, die Leiste bleibt darunter stehen.
-        // Nochmal Tippen in einer geöffneten Liste führt zurück zur Listen-Übersicht.
-        Row(
-            Modifier.weight(if (listenOffen) 1.9f else 1f).height(50.dp)
-                .then(if (listenOffen) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier)
-                .antippen { if (listenOffen) ListenAnsicht.liste = null else ListenAnsicht.oeffnen() }.semantics { contentDescription = "Listen" },
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Checklist, null, tint = if (listenOffen) f.aufPrimaer else f.textLeise, modifier = Modifier.size(20.dp))
-            if (listenOffen) Text("Listen", Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        // Listen stehen jetzt oben in der Ablage; hier die Tools (Atemübungen …).
+        reiterKnopf(Reiter.TOOLS)
         reiterKnopf(Reiter.VERAENDERUNGEN)
         // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der
         // Programmier-Sessions. Arbeitet eine, blinkt derselbe orange Punkt wie am Reiter „Programmierung“ in der Leiste.
