@@ -28,6 +28,8 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         de.frank.jarvis.timer.Timer.starte(this)
         de.frank.jarvis.timer.Stoppuhr.starte(this)
         de.frank.jarvis.ablage.ErinnerungPlaner.starte(this)
+        // Listen-Widget nach jedem Update neu zeichnen: Sonst zeigt der Launcher nur das leere Grundlayout ohne Listenwahl und Tipps.
+        Thread({ de.frank.jarvis.listen.ListenWidget.aktualisieren(this) }, "listen-widget-start").start()
         // Überholte, unverändert gebliebene Symbiose-Vorgaben einmal ersetzen (Regel 6: Websuche statt Agent); Dateizugriff nicht auf dem Hauptfaden.
         Thread {
             runCatching { de.frank.jarvis.faehigkeit.Symbiose.aktualisiereVorgaben(this) }

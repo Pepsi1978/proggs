@@ -46,41 +46,34 @@
                 android:ellipsize="end" />
         </LinearLayout>
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_zurueck"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/widget_listen_knopf"
-            android:gravity="center"
-            android:text="‹"
-            android:textColor="#EAF4FC"
-            android:textSize="22sp"
+            android:scaleType="center"
+            android:src="@drawable/widget_symbol_zurueck"
             android:contentDescription="Vorherige Liste" />
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_vor"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/widget_listen_knopf"
-            android:gravity="center"
-            android:text="›"
-            android:textColor="#EAF4FC"
-            android:textSize="22sp"
+            android:scaleType="center"
+            android:src="@drawable/widget_symbol_vor"
             android:contentDescription="Nächste Liste" />
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_neu"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/widget_listen_plus"
-            android:gravity="center"
-            android:text="+"
-            android:textColor="#021018"
-            android:textSize="24sp"
-            android:textStyle="bold"
+            android:scaleType="center"
+            android:src="@drawable/widget_symbol_plus"
             android:contentDescription="Eintrag hinzufügen" />
     </LinearLayout>
 
