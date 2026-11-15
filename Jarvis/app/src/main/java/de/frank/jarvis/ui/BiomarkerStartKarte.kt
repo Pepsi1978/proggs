@@ -101,7 +101,7 @@ fun BiomarkerStartVorladen() {
             val m = liste.getJSONObject(i)
             val wert = if (m.isNull("aktuell")) "–" else m.opt("aktuell").let { if (it is Number) zahl(it.toDouble()) else it.toString() }
             val bereich = SKALA_BEREICH[m.optString("id")]
-            val skala = if (bereich != null && !m.isNull("aktuell")) {
+            val skala = if (bereich != null && m.opt("aktuell") is Number) {
                 val (tief, hoch) = bereich; val tage = m.optInt("tage_gesamt")
                 // Langfristiger Schnitt samt aktuellem Wert, aus dem Schnitt aller Tage davor.
                 val schnitt = if (tage > 0 && !m.isNull("schnitt_gesamt")) (m.optDouble("schnitt_gesamt") * tage + m.optDouble("aktuell")) / (tage + 1) else m.optDouble("aktuell")
@@ -184,7 +184,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
 private fun zahl(w: Double): String = if (w == Math.floor(w) && kotlin.math.abs(w) < 1e9) w.toLong().toString() else String.format(java.util.Locale.GERMAN, "%.1f", w)
 
 /**
- * Verlauf rot → gelb → grün über alle bisherigen Werte (links der schlechteste, rechts der beste), darauf der aktuelle Wert als
+ * Verlauf rot → gelb → grün über den festen Bereich aus SKALA_BEREICH (links schlecht, rechts gut), darauf der aktuelle Wert als
  * Strich (ohne Zahl, die steht schon in der Zeile) und der langfristige Durchschnitt als Punkt mit seinem Wert darüber.
  */
 @Composable

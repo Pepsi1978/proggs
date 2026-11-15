@@ -116,7 +116,9 @@ fun VictronStartKarte(griff: Modifier = Modifier) {
             // im Laderegler nur, wenn der Batteriemonitor fehlt.
             val batterie = stand.werte["batteriemonitor"]
             stand.werte["laderegler"]?.let { l ->
-                Abschnitt("Laderegler (MPPT)", VictronFaehigkeit.reglerZeilen(l).filter { batterie == null || it.first != "Batteriespannung" })
+                // Nur weglassen, wenn die Batterie selbst eine Spannung zeigt; sonst bliebe gar keine Spannung stehen.
+                val doppelt = batterie?.has("spannung_v") == true
+                Abschnitt("Laderegler (MPPT)", VictronFaehigkeit.reglerZeilen(l).filter { !doppelt || it.first != "Batteriespannung" })
             }
             batterie?.let { b -> Abschnitt("Batterie (BMV-712)", VictronFaehigkeit.batterieZeilen(b)) }
         }

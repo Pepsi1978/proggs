@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -368,16 +370,20 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
                     beiNeu = ::neueZone)
                 // Nur die Karte: Statusleiste und Navigationsleiste ausgeblendet, solange das Vollbild offen ist (Wischen vom Rand holt sie kurz zurück).
                 val dialogFenster = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
-                androidx.compose.runtime.DisposableEffect(dialogFenster) {
+                LaunchedEffect(dialogFenster) {
                     dialogFenster?.let { w ->
                         androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).apply {
                             systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                             hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                         }
                     }
-                    onDispose { }
                 }
-                Column(Modifier.fillMaxWidth().systemBarsPadding().displayCutoutPadding().padding(12.dp)) {
+                // Knöpfe halten den Platz der ausgeblendeten Leisten frei: Eine per Wischen geholte Leiste verdeckt sie nicht,
+                // und unten liegen sie nicht in der Gestenzone.
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                val rand = Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.systemBarsIgnoringVisibility)
+                    .displayCutoutPadding().padding(12.dp)
+                Column(Modifier.fillMaxWidth().then(rand)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Hinweis nur beim Sperrzonen-Zeichnen; sonst bleibt nur die Karte (Franks Wunsch vom 15.11.2026).
                         if (zonenModus) Text("Rechteck ziehen = neue Sperrzone, rote Zone antippen = löschen, zwei Finger = zoomen",
@@ -388,7 +394,7 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
                         }
                     }
                 }
-                if (zonenModus) Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().systemBarsPadding().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (zonenModus) Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().then(rand), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Knopf("Speichern", Modifier.weight(1f)) { zonenSpeichern(); vollbild = false }
                     Knopf("Abbrechen", Modifier.weight(1f)) { zonenModus = false }
                 }

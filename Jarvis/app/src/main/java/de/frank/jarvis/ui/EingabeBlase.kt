@@ -196,9 +196,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
     LaunchedEffect(vm.eingabeKompakt) { if (vm.eingabeKompakt) feldFokus = false }
     // Vergrößert (Zwei-Pfeile-Symbol im Textfeld, wie in der ChatGPT-App): Die Blase nimmt die ganze Höhe, das Textfeld füllt sie.
     // Nach dem Senden, beim Leeren und beim Einklappen wieder normal.
-    var vergroessert by remember { mutableStateOf(false) }
+    var vergroessert by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(vm.entwurf.isEmpty(), vm.eingabeKompakt) { if (vm.entwurf.isEmpty() || vm.eingabeKompakt) vergroessert = false }
-    val gross = vergroessert && !vm.eingabeKompakt
+    // Schon im selben Bild wieder normal, wenn der Entwurf leer ist (nach dem Senden kein kurzes Vollbild ohne Text).
+    val gross = vergroessert && vm.entwurf.isNotEmpty() && !vm.eingabeKompakt
+    // Zurück-Geste verkleinert zuerst das Feld, statt die Seite zu verlassen (wie in der ChatGPT-App).
+    androidx.activity.compose.BackHandler(enabled = gross) { vergroessert = false }
     val bearbeitet = (feldFokus && tastaturOffen && !vm.eingabeKompakt) || gross
     SideEffect { EingabeLage.bearbeitet = bearbeitet }
     DisposableEffect(Unit) { onDispose { EingabeLage.bearbeitet = false } }
@@ -271,7 +274,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
         // Ab vier Zeilen erscheint unten rechts im Feld das Zwei-Pfeile-Symbol zum Vergrößern und Verkleinern.
         var zeilen by remember { mutableStateOf(0) }
         if (!kompakt) Box(Modifier.weight(1f, fill = gross).fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
-            Box(Modifier.fillMaxWidth().then(if (gross) Modifier.fillMaxHeight() else Modifier).padding(top = 10.dp, end = 40.dp)) {
+            // Mit Symbol mindestens zwei Knopfhöhen hoch: Papierkorb (oben) und Vergrößern (unten) überlappen nie, auch wenn die Blase eng ist.
+            val mitSymbol = gross || zeilen >= 4
+            Box(Modifier.fillMaxWidth().then(if (gross) Modifier.fillMaxHeight() else Modifier)
+                .then(if (mitSymbol) Modifier.heightIn(min = 72.dp) else Modifier).padding(top = 10.dp, end = 40.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
                 BasicTextField(
                     // Verschwindet das Feld mit Fokus, meldet Compose noch einmal seinen letzten Stand. Nach dem Senden wäre das
@@ -286,7 +292,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
                     maxLines = if (bearbeitet) Int.MAX_VALUE else 6,
                 )
             }
-            if (gross || zeilen >= 4) Box(Modifier.align(Alignment.BottomEnd).size(36.dp).clip(CircleShape).antippen { vergroessert = !gross },
+            if (mitSymbol) Box(Modifier.align(Alignment.BottomEnd).size(36.dp).clip(CircleShape).antippen { vergroessert = !gross },
                 contentAlignment = Alignment.Center) {
                 Icon(if (gross) Icons.Rounded.CloseFullscreen else Icons.Rounded.OpenInFull, if (gross) "Eingabefeld verkleinern" else "Eingabefeld vergrößern",
                     tint = f.textLeise, modifier = Modifier.size(20.dp))
