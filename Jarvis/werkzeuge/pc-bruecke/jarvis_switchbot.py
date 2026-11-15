@@ -39,7 +39,8 @@ def auswerten(roh: bytes) -> dict | None:
     if not 0 < feuchte <= 100 or not -40 <= temperatur <= 70:
         return None
     mac = roh[0:6].hex()
-    werte = {"art": mac, "mac": mac, "temperatur_c": temperatur, "luftfeuchtigkeit_prozent": feuchte, "zeit": int(time.time())}
+    # „art“ mit Vorsilbe: Der Relay führt je art den jüngsten Wert; so verdrängt der Mac nie die Webhook-Werte der Cloud (art = MAC).
+    werte = {"art": f"mac-{mac}", "mac": mac, "temperatur_c": temperatur, "luftfeuchtigkeit_prozent": feuchte, "zeit": int(time.time())}
     if len(roh) == 16:
         co2 = int.from_bytes(roh[13:15], "big")
         if 400 <= co2 <= 9999:

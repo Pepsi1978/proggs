@@ -113,7 +113,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val einzeln = treffer.isNotEmpty()
 
         // Rückgriff für Sensoren ohne Cloud-Werte: der Mac zu Hause hört sie per Bluetooth mit (jarvis_switchbot.py → Relay), nur einmal je Abruf geholt.
-        val fern by lazy { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(emptyMap()) }
+        val fern by lazy { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(Fern()) }
         // Parallel zur Cloud lauscht das Handy selbst per Bluetooth (wie bei der Victron-Batterie): Für das Auto zuerst, denn es steht meist
         // außer Reichweite des Hubs; für alle anderen nur, wenn die Cloud nichts liefert (Frank, 15.11.2026).
         val nah = ConcurrentHashMap<String, JSONObject>()
@@ -131,9 +131,16 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             gewaehlt.zip(ausCloud).map { (g, z) ->
                 val id = g.optString("deviceId").lowercase(Locale.ROOT)
                 val direkt = nah[id]?.takeIf { z.problem != null || istMobil(g) }?.let { ausPaket(z, it, "direkt per Bluetooth") }
-                // Die Cloud nennt kein Messalter und liefert bei ausgestecktem Hub alte Werte ohne Fehler (15.11.2026): Ein höchstens
-                // [FRISCH_S] alter, gemessener Wert vom Mac oder Webhook geht ihr deshalb vor; sonst Cloud, sonst ein älterer Rückfallwert.
-                direkt ?: vomMac(z, id, fern, FRISCH_S) ?: if (z.problem == null) z else vomMac(z, id, fern, MAC_GILT_S) ?: z
+                // Die Cloud nennt beim Abruf kein Messalter und liefert bei ausgestecktem Hub alte Werte ohne Fehler (15.11.2026). Ob sie lebt,
+                // zeigt der Webhook: Kam in den letzten [CLOUD_LEBT_S] irgendeine Meldung (der CO2-Monitor misst alle fünf Minuten und ändert
+                // sich fast immer), gilt die Cloud; sonst geht ein frischer Mac-Wert vor. Thermometer melden per Webhook nur bei Änderung.
+                val hook = fern.hook[id]
+                val mac = fern.mac[id]
+                direkt ?: if (fern.cloudLebt) {
+                    (if (z.problem == null) z else null) ?: alsSensor(z, hook, MAC_GILT_S) ?: alsSensor(z, mac, MAC_GILT_S) ?: z
+                } else {
+                    alsSensor(z, mac, FRISCH_S) ?: alsSensor(z, hook, MAC_GILT_S) ?: (if (z.problem == null) z else null) ?: alsSensor(z, mac, MAC_GILT_S) ?: z
+                }
             }
         }
         // Ein Problem kann an einer veralteten Liste liegen (Gerät getauscht, Cloud-Dienst umgeschaltet): beim nächsten Mal frisch holen.
@@ -181,22 +188,30 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         return Sensor(name, typ, temperatur, feuchte, body.wert("battery")?.toInt(), co2)
     }
 
-    /** Stand vom Relay (GET /geraet/switchbot): je MAC (klein, ohne Doppelpunkte) die zuletzt vom Mac gehörten Werte mit Messzeit „zeit“. */
-    private fun relayStand(): Map<String, JSONObject> {
+    /** Relay-Stand je MAC (klein, ohne Doppelpunkte), getrennt nach Webhook der Cloud und Mac; [cloudLebt]: Webhook in den letzten [CLOUD_LEBT_S]. */
+    private class Fern(val hook: Map<String, JSONObject> = emptyMap(), val mac: Map<String, JSONObject> = emptyMap()) {
+        val cloudLebt: Boolean get() = hook.values.any { System.currentTimeMillis() / 1000 - it.optLong("zeit") <= CLOUD_LEBT_S }
+    }
+
+    /** Stand vom Relay (GET /geraet/switchbot): Werte mit Messzeit „zeit“; „quelle“ = webhook für die Cloud, sonst vom Mac. */
+    private fun relayStand(): Fern {
         val e = Einstellungen.get(context)
-        if (e.serverToken.isBlank()) return emptyMap()
+        if (e.serverToken.isBlank()) return Fern()
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/switchbot").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung).build()
         val j = CLIENT.newCall(anfrage).execute().use { a ->
             check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
             JSONObject(a.body?.string().orEmpty())
         }
-        val liste = j.optJSONArray("geraete") ?: return emptyMap()
-        return (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.filter { it.optLong("zeit") > 0 }.associateBy { it.optString("art").lowercase(Locale.ROOT) }
+        val liste = j.optJSONArray("geraete") ?: return Fern()
+        val alle = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.filter { it.optLong("zeit") > 0 && it.optString("mac").length == 12 }
+        val (hook, mac) = alle.partition { it.optString("quelle") == "webhook" }
+        fun jeMac(l: List<JSONObject>) = l.groupBy { it.optString("mac").lowercase(Locale.ROOT) }.mapValues { (_, w) -> w.maxBy { it.optLong("zeit") } }
+        return Fern(jeMac(hook), jeMac(mac))
     }
 
     /** Werte vom Mac zu Hause, wenn er den Sensor in den letzten [MAC_GILT_S] gehört hat; sonst null (das Cloud-Problem bleibt stehen). */
-    private fun vomMac(z: Sensor, deviceId: String, fern: Map<String, JSONObject>, hoechstens: Long): Sensor? {
-        val w = fern[deviceId.lowercase(Locale.ROOT)] ?: return null
+    private fun alsSensor(z: Sensor, w: JSONObject?, hoechstens: Long): Sensor? {
+        w ?: return null
         val alter = System.currentTimeMillis() / 1000 - w.optLong("zeit")
         if (alter > hoechstens) return null
         val t = w.wert("temperatur_c") ?: return null
@@ -340,6 +355,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         private const val MAC_GILT_S = 40 * 60L
         /** So frisch gemessen geht ein Wert vom Mac oder Webhook der Cloud vor (Mac meldet alle fünf Minuten). */
         private const val FRISCH_S = 10 * 60L
+        /** Die Cloud gilt als lebendig, solange in dieser Zeit irgendeine Webhook-Meldung kam (CO2-Monitor misst alle fünf Minuten). */
+        private const val CLOUD_LEBT_S = 30 * 60L
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private const val WOAN = 0x0969
