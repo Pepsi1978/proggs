@@ -179,7 +179,7 @@ object Waechter {
             // und nie über einen Tageswechsel: Sonst stützten sich die Antworten eines langen Gesprächs auf veraltete Live-Bereiche.
             if (!de.frank.jarvis.speech.GespraechsFokus.sprachmodus) sprachSeit = 0L else if (sprachSeit == 0L) sprachSeit = jetzt
             val sprachePlatz = sprachSeit != 0L && !neuerTag && jetzt - sprachSeit < 10 * 60_000L
-            val faellig = if (sprachePlatz) emptyList() else if (neuerTag) Bereich.entries.toList() else Bereich.entries.filter { b -> abschnitte[b]?.let { jetzt - it.stand >= b.abstandMs } ?: true }
+            val faellig = if (sprachePlatz) emptyList() else if (neuerTag) Bereich.entries.toList() else Bereich.entries.filter { b -> abschnitte[b]?.let { jetzt - it.zuletzt >= b.abstandMs } ?: true }
             if (faellig.isNotEmpty()) {
                 val beginn = System.currentTimeMillis()
                 runCatching { Lagebild.auffrischen(app, faellig, if (neuerTag) "neuer Tag" else "regelmäßig") }

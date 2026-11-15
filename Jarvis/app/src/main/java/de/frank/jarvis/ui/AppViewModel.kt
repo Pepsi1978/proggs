@@ -421,6 +421,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     .let { if (einstellungen.denkstufe == ReasoningEffort.MAX) maxOf(it, 15 * 60_000L) else it }
                 var grund: String? = null
                 agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.zeige(it) }, beiDenken = { runde.zeige("") }, lernen = true, abschluss = true,
+                    // Gesprochen: das Gedächtnis so, wie es bereitliegt, ohne auf Nachlesen zu warten (der Wächter hält es frisch).
+                    schnell = vorlesen,
                     beiAenderung = { aenderung ->
                         runde.erledigt += aenderung
                         // Programmierauftrag mit Auswahlkarte: Deren fester Wortlaut steht jetzt fest, das Modell muss dafür nicht erst fertig schreiben.

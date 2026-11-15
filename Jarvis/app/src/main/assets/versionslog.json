@@ -725,6 +725,7 @@
     {"versionCode": 717, "versionName": "1.8.706", "stand": "15.11.2026, 20:13 Uhr", "notiz": "Rückfragen aus am Rechner gestarteten Sitzungen sind in Jarvis wie alle anderen fünf Minuten beantwortbar statt 24 Stunden."},
     {"versionCode": 718, "versionName": "1.8.707", "stand": "15.11.2026, 20:15 Uhr", "notiz": "Raumklima: schnellere Antworten, sicherere Webhook-Anmeldung, CO2 nur noch beim CO2-Monitor und klarere Herkunftsangaben (Review-Befunde)."},
     {"versionCode": 719, "versionName": "1.8.708", "stand": "15.11.2026, 20:21 Uhr", "notiz": "Raumklima wird beim Öffnen der App im Hintergrund gelesen, damit auf dem Startbildschirm sofort Werte stehen."},
-    {"versionCode": 720, "versionName": "1.8.709", "stand": "15.11.2026, 20:33 Uhr", "notiz": "Antippen der Raumklima-Karte öffnet die SwitchBot-App; rund um den Aktualisieren-Knopf liegt ein großer Schutzbereich, der nur neu liest."}
+    {"versionCode": 720, "versionName": "1.8.709", "stand": "15.11.2026, 20:33 Uhr", "notiz": "Antippen der Raumklima-Karte öffnet die SwitchBot-App; rund um den Aktualisieren-Knopf liegt ein großer Schutzbereich, der nur neu liest."},
+    {"versionCode": 721, "versionName": "1.8.710", "stand": "15.11.2026, 20:34 Uhr", "notiz": "Das Live-Gedächtnis ist gründlich überarbeitet: sparsamere Auswahl bei Anschlussfragen, Lernen ohne verwechselte Einträge, weniger unnötige Neu-Lesungen und schnellere Sprachantworten."}
 ]
 }

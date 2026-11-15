@@ -120,7 +120,7 @@ object Lernen {
 
     /**
      * Übernimmt die Zeilen einer Lern-Antwort. Ziele legt ein Lernlauf nur neu an, er ersetzt nie eines (Ziele setzt Frank).
-     * Infos darf er ersetzen; die alte Fassung landet im Verlauf `merk_verlauf.jsonl`. Ist eine id ungültig, wird neu angelegt.
+     * Selbst gelernte Infos darf er ersetzen, Franks eigene nie; die alte Fassung landet im Verlauf `merk_verlauf.jsonl`. Ist eine id ungültig, wird neu angelegt.
      */
     fun uebernimm(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<String> =
         uebernimmEinzeln(app, antwort, quelle, hoechstens).map { g -> (if (g.alt != null) "[${g.id}] „${g.alt}“ → " else "") + g.neu }
@@ -131,7 +131,8 @@ object Lernen {
     /** Wie [uebernimm], aber je Eintrag mit Art und alter Fassung (für den Lernbericht). Neue Einträge tragen [quelle] als Herkunft. */
     fun uebernimmEinzeln(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<Uebernommen> = antwort.lines()
         .map { it.trim().replace(Regex("^(?:[-*•–]\\s*|\\d+[.)]\\s*)"), "").replace("**", "").trim().trimStart('„', '"', '“', '»').trim() }
-        .mapNotNull { ZEILE.find(it) }.take(hoechstens).mapNotNull { treffer ->
+        // Erst prüfen, dann zählen: Verworfene Zeilen (bekannt, zu kurz, Erlaubnis) verbrauchen keinen Platz; die Folge stoppt nach [hoechstens] Übernahmen.
+        .asSequence().mapNotNull { ZEILE.find(it) }.mapNotNull { treffer ->
             val istZiel = treffer.groupValues[1].uppercase() == "ZIEL"
             val datei: Merkdatei = if (istZiel) Ziele else UeberFrank
             val satz = treffer.groupValues[3].trim().trimEnd('“', '”', '"', '«').trim()
@@ -139,15 +140,15 @@ object Lernen {
             if (satz.length !in 12..300 || !satz.startsWith("Frank") || datei.alle(app).any { normal(it.text) == normal(satz) }) return@mapNotNull null
             // Aus gelernten Infos und Zielen folgen keine Rechte: nichts übernehmen, das nach einer Erlaubnis ohne Rückfrage klingt.
             if (Merkdatei.istErlaubnis(satz)) return@mapNotNull null
-            val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i } }
-            val neu = datei.speichere(app, satz, id, quelle)
+            // Nur selbst Gelerntes ersetzt ein Lernlauf; eine Info, die Frank selbst angelegt hat, bleibt, und die neue kommt daneben.
+            // Ob die alte noch stimmt, legt ein späterer Prüflauf Frank zur Bestätigung vor (VERALTET).
+            val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i && it.gelernt } }
+            val neu = datei.speichere(app, satz, alt?.id, quelle)
             if (neu == null) { Protokoll.melde(Quelle.JARVIS, if (datei.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt ($quelle): $satz", ok = false); return@mapNotNull null }
-            if (alt != null) runCatching {
-                File(app.filesDir, "merk_verlauf.jsonl").appendText(JSONObject().put("zeit", System.currentTimeMillis()).put("datei", if (istZiel) "ziele" else "ueber_frank")
-                    .put("id", alt.id).put("alt", alt.text).put("neu", neu.text).put("quelle", quelle).toString() + "\n")
-            }
+            if (alt != null) de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis.haengeAn(File(app.filesDir, "merk_verlauf.jsonl"), JSONObject().put("zeit", System.currentTimeMillis())
+                .put("datei", if (istZiel) "ziele" else "ueber_frank").put("id", alt.id).put("alt", alt.text).put("neu", neu.text).put("quelle", quelle).toString())
             Uebernommen(istZiel, neu.id, alt?.text, neu.text)
-        }
+        }.take(hoechstens).toList()
 
     private fun normal(text: String): String = text.lowercase().replace(Regex("[^\\p{L}\\p{N} ]"), "").replace(Regex("\\s+"), " ").trim()
 

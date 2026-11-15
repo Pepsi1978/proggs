@@ -255,6 +255,8 @@ class JarvisAgent(context: Context) {
             (wahl?.let { w -> if (w.voll) ", Gedächtnis vollständig" else if (gezielt != null) ", Gedächtnis gezielt: ${w.kennungen.joinToString()} (${w.grund})" else ", Gedächtnis gezielt gescheitert, vollständig" } ?: ""))
         // Für die Anzeige unter der Antwort: welche Bereiche, und welcher Anteil der Eingabe auf das Gedächtnis entfällt.
         val gedaechtnisTitel = when {
+            // Hing der Aufbau des Gesamtbilds (Zeitlimit), ging nur Gemerktes mit: Die Anzeige sagt das, statt „gesamtes“ zu behaupten.
+            gesamtbild.startsWith("GESAMTBILD NICHT VERFÜGBAR") -> listOf("nur Gemerktes (Gesamtbild nicht verfügbar)")
             wahl == null || (gezielt == null && !wahl.voll) -> if (lernen || rolle != null || schnell) listOf("gesamtes Live-Gedächtnis") else listOf("Gemerktes")
             else -> wahl.titel()
         }
@@ -308,7 +310,8 @@ class JarvisAgent(context: Context) {
                 }) } finally {
                     // Anteil des Gedächtnisses an dieser Eingabe, nach Zeichen geschätzt (Gesamtbild und Nachgeladenes gegen alles Gesendete).
                     zaehler?.let { z ->
-                        val neu = z.eingabe - eingabeVorher
+                        // Bilder zählen nicht als Zeichen: grob 1.600 Token je Bild vorher abziehen, sonst gälte ihr Anteil als Gedächtnis.
+                        val neu = (z.eingabe - eingabeVorher - zuege.sumOf { it.bilder.size } * 1_600L).coerceAtLeast(0L)
                         val zugZeichen = zuege.sumOf { it.text.length }
                         val gesendet = anweisungText.length + zugZeichen
                         if (neu > 0 && gesendet > 0) z.gedaechtnisDazu((neu * (gesamtbild.length + minOf(nachgeladenZeichen.get(), zugZeichen)).toDouble() / gesendet).toLong().coerceAtMost(neu),

@@ -40,6 +40,24 @@ object Gespraechsgedaechtnis {
     private const val HOECHSTENS = 9_000
 
     private fun notizDatei(context: Context) = File(context.applicationContext.filesDir, "gespraechsnotizen.json")
+    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences("gespraechsgedaechtnis", Context.MODE_PRIVATE)
+
+    /**
+     * Die nächste freie Notiz-id: über der höchsten in der Datei und über jeder je vergebenen. Eine gelöschte id wird nie
+     * wieder vergeben, sonst träfe ein „wiederherstellen“ oder ein späteres „ERLEDIGT N…“ eine fremde Notiz.
+     */
+    @Synchronized
+    private fun naechsteId(context: Context, alle: List<Gespraechsnotiz>): Int {
+        val id = maxOf(alle.maxOfOrNull { it.id } ?: 0, prefs(context).getInt("hoechsteId", 0)) + 1
+        prefs(context).edit().putInt("hoechsteId", id).apply()
+        return id
+    }
+
+    /** Eine gemeinsame Sperre für das Anhängen an die Verlaufsdateien (`merk_verlauf.jsonl`, `lern_aenderungen.jsonl`). */
+    private val anhaengeSperre = Any()
+
+    /** Hängt eine Zeile an eine Verlaufsdatei; nie zwei Schreiber gleichzeitig, sonst vermischen sich die Zeilen. */
+    internal fun haengeAn(datei: File, zeile: String) = synchronized(anhaengeSperre) { runCatching { datei.appendText(zeile.trimEnd('\n') + "\n") } }
     private fun standDatei(context: Context) = File(context.applicationContext.filesDir, "gespraeche_gelernt.json")
 
     // ---------------------------------------------------------------- Notizen
@@ -88,17 +106,30 @@ object Gespraechsgedaechtnis {
         val gueltig = notizen(context)
         // Wiederholte Läufe dürfen keine Dubletten anlegen: auch fast gleiche Fassungen desselben Vorhabens nicht.
         if (gueltig.any { it.text.equals(sauber, ignoreCase = true) || de.frank.jarvis.faehigkeit.Merkdatei.aehnlichkeit(it.text, sauber) >= 0.75 }) return null
-        val notiz = Gespraechsnotiz((alleNotizen(context).maxOfOrNull { it.id } ?: 0) + 1, sauber, System.currentTimeMillis(), bis)
-        schreibeNotizen(context, (gueltig + notiz).takeLast(NOTIZEN_HOECHSTENS))
+        val notiz = Gespraechsnotiz(naechsteId(context, alleNotizen(context)), sauber, System.currentTimeMillis(), bis)
+        val neu = gueltig + notiz
+        // Ist es zu voll, geht die älteste gültige Notiz; das steht im Protokoll statt still zu verschwinden.
+        neu.dropLast(NOTIZEN_HOECHSTENS).forEach { weg ->
+            Logbuch.gedaechtnis("Gesprächsnotiz verdrängt (mehr als $NOTIZEN_HOECHSTENS)", weg.text.take(200))
+            Protokoll.melde(Quelle.JARVIS, "Gesprächsnotiz verdrängt", "Mehr als $NOTIZEN_HOECHSTENS Notizen, die älteste ging: ${weg.text}")
+        }
+        schreibeNotizen(context, neu.takeLast(NOTIZEN_HOECHSTENS))
         return notiz
     }
 
-    /** Holt eine vom Lernlauf entfernte Notiz mit ihrer alten id zurück (Wiederherstellen im Lernbericht). */
+    /**
+     * Holt eine vom Lernlauf entfernte Notiz zurück (Wiederherstellen im Lernbericht): mit ihrer alten id, wenn die frei ist,
+     * sonst unter einer neuen. War sie abgelaufen, gilt sie ab jetzt wieder 14 Tage, sonst wäre sie sofort unsichtbar und
+     * der nächste Lauf entfernte sie erneut.
+     */
     @Synchronized
     fun stelleNotizWiederHer(context: Context, notiz: Gespraechsnotiz): Boolean {
         val alle = alleNotizen(context)
-        if (alle.any { it.id == notiz.id }) return true
-        schreibeNotizen(context, (alle + notiz).sortedBy { it.id }.takeLast(NOTIZEN_HOECHSTENS))
+        if (alle.any { it.id == notiz.id && it.text == notiz.text }) return true
+        val abgelaufen = gueltigBis(notiz).isBefore(LocalDate.now())
+        val frisch = if (abgelaufen) notiz.copy(erstellt = System.currentTimeMillis(), bis = null) else notiz
+        val zurueck = if (alle.any { it.id == notiz.id }) frisch.copy(id = naechsteId(context, alle)) else frisch
+        schreibeNotizen(context, (alle + zurueck).sortedBy { it.id }.takeLast(NOTIZEN_HOECHSTENS))
         return true
     }
 
@@ -115,10 +146,11 @@ object Gespraechsgedaechtnis {
     /** Bis wann eine Notiz gilt (eigenes Datum oder 14 Tage nach dem Anlegen). */
     fun gueltigBis(n: Gespraechsnotiz): LocalDate = n.bis ?: datum(n.erstellt).plusDays(NOTIZ_TAGE)
 
+    /** [text] gesetzt: nur löschen, wenn die Notiz mit dieser id noch genau diesen Text hat (ein langer Lauf sah eine ältere Fassung). */
     @Synchronized
-    fun loescheNotiz(context: Context, id: Int): Boolean {
+    fun loescheNotiz(context: Context, id: Int, text: String? = null): Boolean {
         val alle = alleNotizen(context)
-        if (alle.none { it.id == id }) return false
+        if (alle.none { it.id == id && (text == null || it.text == text) }) return false
         schreibeNotizen(context, alle.filter { it.id != id })
         return true
     }
@@ -141,10 +173,28 @@ object Gespraechsgedaechtnis {
     private fun schreibTitel(context: Context): Set<String> = Register.werkzeuge(context).filter { !it.nurLesen }.map { it.titel }.toSet() +
         setOf("Idee speichern oder ändern", "Agent beauftragt")
 
+    /** Letztes Ergebnis von [kurzzeit] mit dem Fingerabdruck seiner Quellen. */
+    @Volatile private var kurzzeitZwischen: Triple<String, Long, String>? = null
+    private const val KURZZEIT_HOECHSTENS_MS = 5 * 60_000L
+
+    /**
+     * Das Kurzzeitgedächtnis. Zwischengespeichert: Neu gebaut wird nur, wenn sich eine Gesprächsdatei, die Notizen oder das
+     * Protokoll geändert haben oder der Stand älter als fünf Minuten ist (die 48-Stunden-Fenster rücken sonst nicht weiter).
+     */
     fun kurzzeit(context: Context): String {
         val app = context.applicationContext
         Protokoll.lade(app)
         val jetzt = System.currentTimeMillis()
+        val grenzeDateien = jetzt - TAGE * 24 * 3_600_000L
+        val dateien = File(app.filesDir, "gespraeche").listFiles { f -> f.name.endsWith(".json") && f.lastModified() >= grenzeDateien }.orEmpty()
+        val eintraege = Protokoll.eintraege.value
+        val fingerabdruck = dateien.sortedBy { it.name }.joinToString(",") { it.name + ":" + it.lastModified() + ":" + it.length() } +
+            "|" + notizDatei(app).lastModified() + "|" + eintraege.size + ":" + (eintraege.firstOrNull()?.zeit ?: 0L)
+        kurzzeitZwischen?.let { (abdruck, zeit, text) -> if (abdruck == fingerabdruck && jetzt - zeit < KURZZEIT_HOECHSTENS_MS) return text }
+        return baueKurzzeit(app, jetzt).also { kurzzeitZwischen = Triple(fingerabdruck, jetzt, it) }
+    }
+
+    private fun baueKurzzeit(app: Context, jetzt: Long): String {
         val teile = mutableListOf<String>()
 
         val notizen = notizen(app)
@@ -187,12 +237,22 @@ object Gespraechsgedaechtnis {
     }
     // Atomar: Ein halb geschriebener Stand ließe Jarvis die Gespräche der letzten drei Tage noch einmal lernen.
     internal fun speichereStand(context: Context, stand: JSONObject) =
-        runCatching { de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(standDatei(context), stand.toString().toByteArray()) }
+        runCatching { de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(standDatei(context), stand.put("_zuletzt", System.currentTimeMillis()).toString().toByteArray()) }
 
-    /** Gespräche der letzten drei Tage mit neuen Worten von Frank: (Gespräch, bisher gelernte Anzahl, alle Nachrichten, ruht schon zehn Minuten). */
+    /**
+     * Wie weit der Lernlauf zurückliest: drei Tage, und nach einer längeren Pause (nicht angemeldet, Lernen aus, kein Netz)
+     * bis zum letzten Lauf zurück, höchstens 14 Tage. Sonst gingen Franks Worte aus der Pause still verloren.
+     */
+    private fun lernTage(stand: JSONObject): Long {
+        val zuletzt = stand.optLong("_zuletzt", 0L)
+        if (zuletzt <= 0L) return 3L
+        return ((System.currentTimeMillis() - zuletzt) / (24 * 3_600_000L) + 2).coerceIn(3L, 14L)
+    }
+
+    /** Gespräche seit dem letzten Lauf (mindestens drei Tage, siehe [lernTage]) mit neuen Worten von Frank: (Gespräch, bisher gelernte Anzahl, alle Nachrichten, ruht schon zehn Minuten). */
     private fun mitNeuem(context: Context, stand: JSONObject): List<Pair<Triple<de.frank.jarvis.data.Sitzung, Int, List<de.frank.jarvis.data.GespeicherteNachricht>>, Boolean>> {
         val jetzt = System.currentTimeMillis()
-        return neuereGespraeche(context, 3).mapNotNull { (s, nachrichten) ->
+        return neuereGespraeche(context, lernTage(stand)).mapNotNull { (s, nachrichten) ->
             val gelernt = stand.optInt(s.id, 0).coerceAtMost(nachrichten.size)
             if (nachrichten.drop(gelernt).none { it.vonMir }) null else Triple(s, gelernt, nachrichten) to (jetzt - s.geaendert >= RUHE_MS)
         }
@@ -231,7 +291,7 @@ object Gespraechsgedaechtnis {
     internal fun ausdruecklich(worte: List<String>): Boolean = worte.any { AUSDRUECKLICH.containsMatchIn(it.lowercase(Locale.GERMAN)) }
 
     /**
-     * Übernimmt eine Regel aus einem Gespräch. Eine id gilt nur, wenn es die Regel gibt (sonst neu anlegen); die alte
+     * Übernimmt eine Regel aus einem Gespräch. Eine id gilt nur für eine selbst gelernte Regel (sonst neu anlegen); die alte
      * Fassung landet in `merk_verlauf.jsonl`. Scheitert das Speichern, steht der Grund im Protokoll statt still verloren.
      * Ergebnis: (alte Fassung oder null, neue Fassung).
      */
@@ -246,16 +306,15 @@ object Gespraechsgedaechtnis {
         }
         val alle = Regeln.alle(app)
         if (alle.any { it.text.equals(satz, ignoreCase = true) }) return null
-        val alt = id?.let { i -> alle.firstOrNull { it.id == i } }
+        // Nur eine selbst gelernte Regel darf ein Lernlauf ersetzen; Franks eigene Regeln bleiben, die neue kommt daneben.
+        val alt = id?.let { i -> alle.firstOrNull { it.id == i && it.gelernt } }
         val neu = Regeln.speichere(app, satz, alt?.id, "Gespräch")
         if (neu == null) {
             Protokoll.melde(Quelle.JARVIS, if (Regeln.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt (Gespräch): $satz", ok = false)
             return null
         }
-        if (alt != null) runCatching {
-            File(app.filesDir, "merk_verlauf.jsonl").appendText(JSONObject().put("zeit", System.currentTimeMillis()).put("datei", "regeln")
-                .put("id", alt.id).put("alt", alt.text).put("neu", neu.text).put("quelle", "Gespräch").toString() + "\n")
-        }
+        if (alt != null) haengeAn(File(app.filesDir, "merk_verlauf.jsonl"), JSONObject().put("zeit", System.currentTimeMillis()).put("datei", "regeln")
+            .put("id", alt.id).put("alt", alt.text).put("neu", neu.text).put("quelle", "Gespräch").toString())
         return alt?.text to neu.text
     }
 

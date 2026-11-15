@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlinx.coroutines.async
 
 /**
  * Anbindung an den Biomarker-Bereich von „Entropie Reductor“ (de.frank.entropyreducer) über dessen
@@ -37,11 +38,15 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
      * Werten, die wichtigen Größen gegen den letzten Monat und der Verlauf der letzten 10 Tage.
      */
     suspend fun live(): String {
-        val tag = rufe("tag", JSONObject())
+        // Die drei Abfragen gleichzeitig: nacheinander summierten sie sich und rissen bei langsamer Partner-App das Zeitlimit des Bereichs.
+        val (tag, vergleich, verlauf) = kotlinx.coroutines.coroutineScope {
+            val t = async { rufe("tag", JSONObject()) }
+            val v = async { rufe("auswertung", JSONObject().put("tage", 30).put("metriken", org.json.JSONArray(LIVE_METRIKEN))) }
+            val l = async { rufe("verlauf", JSONObject().put("von", java.time.LocalDate.now().minusDays(10).toString()).put("aufloesung", "tag")
+                .put("metriken", org.json.JSONArray(listOf("schlafdauer", "tiefschlaf_prozent", "erholung", "hrv", "ruhepuls")))) }
+            Triple(t.await(), v.await(), l.await())
+        }
         tag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return "NICHT VERFÜGBAR: $it" }
-        val vergleich = rufe("auswertung", JSONObject().put("tage", 30).put("metriken", org.json.JSONArray(LIVE_METRIKEN)))
-        val verlauf = rufe("verlauf", JSONObject().put("von", java.time.LocalDate.now().minusDays(10).toString()).put("aufloesung", "tag")
-            .put("metriken", org.json.JSONArray(listOf("schlafdauer", "tiefschlaf_prozent", "erholung", "hrv", "ruhepuls"))))
         return buildString {
             append(standText(tag)).append(runCatching { tagText(tag) }.getOrDefault("Tageswerte nicht lesbar."))
             append("\n\nIM VERGLEICH:\n").append(vergleich.optString("fehler").takeIf { it.isNotEmpty() } ?: runCatching { auswertungText(vergleich) }.getOrDefault("nicht lesbar"))

@@ -67,7 +67,7 @@ object KontextWahl {
         Bereich.MAIL -> Profil(Rolle.WAHL, listOf("mail=", "mails", "e-mail", "email", "posteingang", "newsletter", "bestellung", "post="))
         Bereich.WISSEN -> Profil(Rolle.WAHL, listOf("wissen", "datenbank", "artikel", "nachschlag", "studie"))
         Bereich.IDEEN -> Profil(Rolle.WAHL, listOf("idee"))
-        Bereich.TAGEBUCH -> Profil(Rolle.WAHL, listOf("tagebuch", "journal", "eintrag", "einträge", "notiert", "gefühlt", "stimmung", "reflexion", "gedanken"))
+        Bereich.TAGEBUCH -> Profil(Rolle.WAHL, listOf("tagebuch", "journal", "gefühlt", "stimmung", "reflexion", "geschrieben="))
     }
 
     /** Teile des Gemerkten, die nur bei Bedarf dazukommen (Regeln, Stil, Ziele und Entscheidungen stehen immer darin). */
@@ -123,6 +123,8 @@ object KontextWahl {
         "jetzt", "brauche", "brauchst", "einmal", "sollte", "solltest", "zuerst", "vorher", "nachher", "später", "eigentlich", "trotzdem", "allerdings",
         "gerne", "denke", "glaube", "meinst", "hätte", "wäre", "würde", "könnte", "müsste", "dürfte", "bisschen", "wenig", "viele", "vieles", "alles", "allem",
         "andere", "anderen", "weiter", "weitere", "gleich", "ganze", "ganzen", "dieser", "jemand", "nichts", "deshalb", "darum", "dabei", "dazu", "seine", "ihrer",
+        "erzähl", "erzähle", "erzählen", "frage", "fragen", "erkläre", "erklär", "erklären", "sagst", "sagen", "mache", "machst", "macht", "kurze", "kurzem",
+        "findest", "finde", "denkst", "meinung", "einen", "bescheid", "schreib", "schreibe", "zusammen", "zusammenfassung", "fasse", "nenne", "liste", "zeige",
     )
 
     /** Die Auswahl für eine Frage. [gelernteTreffer] = Kennung → Wörter, die sie über das Gelernte gewählt haben (für das Abstufen). */
@@ -149,10 +151,14 @@ object KontextWahl {
     private val dateiSperre = Any()
     /** Wort → (Kennung → Gewicht). Ab [SCHWELLE] lädt das Wort den Bereich vorab, ab [WEGLASSEN] bleibt er weg. */
     @Volatile private var gelernt: MutableMap<String, MutableMap<String, Int>>? = null
-    /** Je Gespräch, was das Modell schon nachgeladen hat: Eine Anschlussfrage bekommt es gleich mit. */
-    private val nachgeladenJeGespraech = object : LinkedHashMap<String, MutableSet<String>>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MutableSet<String>>?) = size > 30
+    /**
+     * Je Gespräch, was das Modell wann nachgeladen hat: Anschlussfragen der nächsten [NACHGELADEN_MS] bekommen es gleich mit,
+     * danach nicht mehr (sonst trüge ein Themenwechsel das Tagebuch bis zum Ende des Gesprächs mit).
+     */
+    private val nachgeladenJeGespraech = object : LinkedHashMap<String, MutableMap<String, Long>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MutableMap<String, Long>>?) = size > 30
     }
+    private const val NACHGELADEN_MS = 15 * 60_000L
     /** Zweimal nachgeladen bei Fragen mit diesem Wort, dann lädt es den Bereich künftig vorab (einmal ist Zufall). */
     private const val SCHWELLE = 2
     private const val HOECHSTGEWICHT = 10
@@ -162,7 +168,14 @@ object KontextWahl {
 
     private fun gelernt(context: Context): MutableMap<String, MutableMap<String, Int>> = gelernt ?: synchronized(sperre) {
         gelernt ?: runCatching {
-            val j = JSONObject(datei(context).readText()).optJSONObject("woerter") ?: JSONObject()
+            val f = datei(context)
+            if (!f.exists()) return@runCatching HashMap<String, MutableMap<String, Int>>() as MutableMap<String, MutableMap<String, Int>>
+            val j = runCatching { JSONObject(f.readText()).optJSONObject("woerter") ?: JSONObject() }.getOrElse { e ->
+                // Unlesbar: beiseitelegen statt beim nächsten Speichern mit leerem Stand zu überschreiben.
+                runCatching { f.renameTo(File(f.path + ".defekt-" + System.currentTimeMillis())) }
+                Log.w(TAG, "Kontextwahl unlesbar, beiseitegelegt", e)
+                JSONObject()
+            }
             val m = HashMap<String, MutableMap<String, Int>>()
             j.keys().forEach { w ->
                 val b = j.getJSONObject(w)
@@ -227,7 +240,8 @@ object KontextWahl {
         val eigen = fach(jetzt)
         if (eigen) gruende += "Stichworte"
         // Der Verlauf zählt nur, wenn die Frage selbst nichts Bestimmtes nennt (Anschlussfrage wie „und morgen?“), sonst nach Themenwechsel zu viel.
-        if (!eigen && davor.isNotBlank() && fach(davor)) gruende += "Gesprächsverlauf"
+        val ausVerlauf = !eigen && davor.isNotBlank() && fach(davor)
+        if (ausVerlauf) gruende += "Gesprächsverlauf"
         // Gelernt: Wörter, bei denen das Modell früher einen Bereich nachladen musste (nur gültige Kennungen außerhalb des Immer-Kerns).
         val worte = woerter(frage)
         val treffer = HashMap<String, MutableSet<String>>()
@@ -237,12 +251,14 @@ object KontextWahl {
         }
         treffer.keys.forEach { k -> Bereich.von(k)?.let { bereiche += it } ?: merkteil(k)?.let { teile += it } }
         if (treffer.isNotEmpty()) gruende += "gelernt"
-        gespraech?.let { id -> synchronized(nachgeladenJeGespraech) { nachgeladenJeGespraech[id]?.toList() }?.forEach { k ->
+        val grenze = System.currentTimeMillis() - NACHGELADEN_MS
+        gespraech?.let { id -> synchronized(nachgeladenJeGespraech) { nachgeladenJeGespraech[id]?.filterValues { it >= grenze }?.keys?.toList() }?.forEach { k ->
             geschuetzt += k
             Bereich.von(k)?.let { bereiche += it } ?: merkteil(k)?.let { teile += it }
         } }
         // Nichts Bestimmtes in der Frage selbst oder eine allgemeine Lagefrage: der Standard-Satz.
-        if ((!eigen && treffer.isEmpty()) || LAGE.any { trifft(jetzt, it) }) {
+        // Eine Anschlussfrage, deren Thema aus der vorigen Nachricht kommt („und morgen?“), braucht den Standard-Satz nicht.
+        if ((!eigen && !ausVerlauf && treffer.isEmpty()) || LAGE.any { trifft(jetzt, it) }) {
             Bereich.entries.filter { profil(it).rolle == Rolle.STANDARD }.forEach { bereiche += it }
             Merkteil.entries.filter { it.rolle == Rolle.STANDARD }.forEach { teile += it }
             gruende += "Standard"
@@ -265,7 +281,8 @@ object KontextWahl {
     /** Endet eine Antwort ohne fertiges JSON (Zeitlimit, Abbruch): Das Nachgeladene gilt trotzdem für die Anschlussfrage. */
     fun merkeNachgeladen(gespraech: String?, nachgeladen: Set<String>) {
         val gut = nachgeladen.filterTo(HashSet()) { gueltig(it) }
-        if (gespraech != null && gut.isNotEmpty()) synchronized(nachgeladenJeGespraech) { nachgeladenJeGespraech.getOrPut(gespraech) { HashSet() } += gut }
+        val jetzt = System.currentTimeMillis()
+        if (gespraech != null && gut.isNotEmpty()) synchronized(nachgeladenJeGespraech) { val m = nachgeladenJeGespraech.getOrPut(gespraech) { HashMap() }; gut.forEach { m[it] = jetzt } }
     }
 
     fun lerne(context: Context, wahl: Wahl, gespraech: String?, nachgeladen: Set<String>, genutzt: Set<String>?) {
@@ -334,7 +351,8 @@ object KontextWahl {
         val moeglich = (Bereich.entries.filter { it != Bereich.GEMERKT }.map { it.kennung } + Merkteil.entries.map { it.kennung }).joinToString()
         return buildString {
             teile.forEach { append(it.text(app).ifBlank { "${it.titel}: (leer)\n" }).append('\n') }
-            if (rest.isNotEmpty()) append(Lagebild.bereiche(app, rest)).append('\n')
+            // Kurz warten und fünf Minuten alten Stand gelten lassen: Langsame Bereiche (Mail, Kontingente) frischt der Wächter selbst auf.
+            if (rest.isNotEmpty()) append(Lagebild.bereiche(app, rest, wartenMs = 3_000L, hoechstensAlterMs = 5 * 60_000L)).append('\n')
             if (unbekannt.isNotEmpty()) append("\nUnbekannte Kennungen: ").append(unbekannt.joinToString()).append(". Möglich: ").append(moeglich).append('.')
         }.trim().ifEmpty { "Keine Kennung angegeben. Möglich: $moeglich." }
     }
