@@ -736,6 +736,7 @@
     {"versionCode": 728, "versionName": "1.8.717", "stand": "15.11.2026, 20:57 Uhr", "notiz": "Unter Veränderungen ist das Eingabefeld mit Mikrofon und Senden-Knopf entfernt, neue Veränderungen kommen per Sprachbefehl an Jarvis."},
     {"versionCode": 729, "versionName": "1.8.718", "stand": "15.11.2026, 21:00 Uhr", "notiz": "Das Lernen ist robuster: keine verwechselten oder doppelten Einträge zwischen Handy und Tablet, deine eigenen Einträge werden nur nach deiner Bestätigung ersetzt, und das Live-Gedächtnis wählt noch sparsamer aus."},
     {"versionCode": 730, "versionName": "1.8.719", "stand": "15.11.2026, 21:01 Uhr", "notiz": "Ablage: Bereiche stehen nach „Alle“ alphabetisch sortiert, die Anzahl der Inhalte steht in Klammern."},
-    {"versionCode": 731, "versionName": "1.8.720", "stand": "15.11.2026, 21:03 Uhr", "notiz": "Der untere Reiter für Veränderungen heißt jetzt kurz „Änderung“, damit er auf dem Handy vollständig hineinpasst; oben im Bildschirm steht weiter „Veränderungen“."}
+    {"versionCode": 731, "versionName": "1.8.720", "stand": "15.11.2026, 21:03 Uhr", "notiz": "Der untere Reiter für Veränderungen heißt jetzt kurz „Änderung“, damit er auf dem Handy vollständig hineinpasst; oben im Bildschirm steht weiter „Veränderungen“."},
+    {"versionCode": 732, "versionName": "1.8.721", "stand": "15.11.2026, 21:06 Uhr", "notiz": "Der untere Reiter für die Einstellungen heißt jetzt kurz „Settings“, damit er auf dem Handy vollständig hineinpasst."}
 ]
 }
