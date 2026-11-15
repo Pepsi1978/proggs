@@ -123,7 +123,8 @@ class ErinnerungsDienst : Service() {
         }
         scope.launch {
             val a = withContext(Dispatchers.IO) { AufgabenRepository.get(this@ErinnerungsDienst).eine(id) }
-            if (a == null || a.erledigt) {
+            // Auf diesem Gerät ausgeschaltet: auch eine schon angestoßene Erinnerung nicht abspielen.
+            if (a == null || a.erledigt || !Einstellungen.get(this@ErinnerungsDienst).erinnerungenAufGeraet) {
                 if (aktuell == null && warteschlange.isEmpty()) beenden(null, entfernen = true)
                 return@launch
             }
@@ -343,6 +344,18 @@ class ErinnerungsDienst : Service() {
         }
     }
 
+    /** Beendet alle Aufgaben-Erinnerungen (laufend und wartend), nicht den Fokus-Timer. */
+    private fun alleStoppenIntern() {
+        warteschlange.filter { it.id != Fokus.ID }.forEach { runCatching { NotificationManagerCompat.from(this).cancel(it.id.toInt()) } }
+        warteschlange.removeAll { it.id != Fokus.ID }
+        val a = aktuell
+        if (a != null && a.id != Fokus.ID) {
+            runCatching { NotificationManagerCompat.from(this).cancel(a.id.toInt()) }
+            stille()
+            weiter(a, entfernen = true)
+        }
+    }
+
     /** Nach dem Ende von [vorher]: nächste Erinnerung aus der Warteschlange oder Dienst beenden. */
     private fun weiter(vorher: Auftrag, entfernen: Boolean) {
         stille()
@@ -408,6 +421,12 @@ class ErinnerungsDienst : Service() {
         /** Ende des Fokus-Timers: Ton und einmal [Fokus.TEXT]. Wirft, wenn Android den Vordergrund-Dienst nicht erlaubt. */
         fun starteFokus(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, ErinnerungsDienst::class.java).setAction(Fokus.AKTION_ENDE))
+        }
+
+        /** Beendet alle laufenden und wartenden Aufgaben-Erinnerungen (Schalter „Erinnerungen auf diesem Gerät“ aus). */
+        fun alleStoppen(context: Context) {
+            val d = instanz ?: return
+            Handler(Looper.getMainLooper()).post { d.alleStoppenIntern() }
         }
 
         /** Beendet Vorlesen/Wecker der Aufgabe [id], falls gerade aktiv oder wartend. */

@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -64,18 +65,48 @@ object Planer {
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeit, pi)
     }
 
+    /** Storniert Erinnerung und Schlummer-Alarm der Aufgabe [id]. */
     fun storniere(context: Context, id: Long) {
         alarmManager(context).cancel(ausloeser(context, id, (id * 2).toInt()))
+        alarmManager(context).cancel(ausloeser(context, id, (id * 2 + 1).toInt()))
     }
 
-    suspend fun planeAlle(context: Context) {
+    /** Läufe von [planeAlle] nacheinander, damit ein älterer Lauf nie einen neueren überschreibt. */
+    private val planSperre = kotlinx.coroutines.sync.Mutex()
+    private val hintergrund = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Schalter „Erinnerungen auf diesem Gerät“. Aus: laufende Erinnerungen verstummen, ihre
+     * Benachrichtigungen verschwinden, alle Alarme werden storniert. Fokus-Timer bleiben unberührt.
+     */
+    fun aufGeraetUmschalten(context: Context, an: Boolean) {
+        val app = context.applicationContext
+        Einstellungen.get(app).erinnerungenAufGeraet = an
+        if (!an) ErinnerungsDienst.alleStoppen(app)
+        hintergrund.launch {
+            if (!an) runCatching {
+                val nm = NotificationManagerCompat.from(app)
+                AufgabenRepository.get(app).alleEinmal().forEach { nm.cancel(it.id.toInt()) }
+            }
+            runCatching { planeAlle(app) }
+        }
+    }
+
+    suspend fun planeAlle(context: Context) = planSperre.withLock { planeAlleIntern(context) }
+
+    private suspend fun planeAlleIntern(context: Context) {
         val app = context.applicationContext
         val heute = Tage.heute()
         val jetzt = System.currentTimeMillis()
-        val aufGeraet = Einstellungen.get(app).erinnerungenAufGeraet
-        AufgabenRepository.get(app).alleEinmal().forEach { a ->
+        val alle = AufgabenRepository.get(app).alleEinmal()
+        // Auf diesem Gerät aus: alles stornieren, keine Sprachfassungen erzeugen (kostet sonst TTS-Kontingent).
+        if (!Einstellungen.get(app).erinnerungenAufGeraet) {
+            alle.forEach { storniere(app, it.id) }
+            planeMitternacht(app)
+            return
+        }
+        alle.forEach { a ->
             val pi = ausloeser(app, a.id, (a.id * 2).toInt())
-            if (!aufGeraet) { alarmManager(app).cancel(pi); alarmManager(app).cancel(ausloeser(app, a.id, (a.id * 2 + 1).toInt())); return@forEach }
             val min = a.minuten
             // Täglich: Ist der Zeitpunkt heute vorbei, gilt schon der von morgen.
             var tag = a.aufHeute(heute).tag
@@ -133,6 +164,7 @@ object Planer {
     }
 
     fun schlummern(context: Context, id: Long, minuten: Int, alsWecker: Boolean = false) {
+        if (!Einstellungen.get(context).erinnerungenAufGeraet) return
         val zeit = System.currentTimeMillis() + minuten * 60_000L
         val pi = ausloeser(context, id, (id * 2 + 1).toInt())
         if (alsWecker) stelleWecker(context, zeit, pi, id) else stelle(context, zeit, pi)
@@ -200,8 +232,8 @@ object Planer {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val a = AufgabenRepository.get(context).eine(id)
-                if (a == null || a.erledigt) { fertig(); return@launch }
                 val e = Einstellungen.get(context)
+                if (a == null || a.erledigt || !e.erinnerungenAufGeraet) { fertig(); return@launch }
                 kanalAnlegen(context)
                 runCatching { NotificationManagerCompat.from(context).notify(id.toInt(), benachrichtigung(context, a, wann(a), imDienst = false)) }
                 // „Nicht stören“ aktiv und kein Wecker: nur die Benachrichtigung, ohne Ton und Vibration.
