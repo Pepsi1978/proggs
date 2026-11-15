@@ -236,7 +236,7 @@ und dass die Signatur der APK zur installierten App passt.
 - **Upload aussetzen:** `"driveUploadAusgesetzt": true` am Projekt in `projekte.json` schaltet den Upload vom Mac und vom Windows-PC ab, derzeit nur bei
   **Jarvis** (seit 01.11.2026, Franks Internet zu schwach). Der GitHub-Bau für Cloud- und Server-Sitzungen (`-CloudBau`) lädt weiter hoch: Der Upload läuft
   über GitHub, nur das Vorladen in UpdateStation läuft danach über das Netz des Handys. Solange das Feld gesetzt ist, zeigt UpdateStation vom Rechner aus keine neuen
-  Stände, die Rückfallebene veraltet also. Einmalig im Notfall: `-TrotzAussetzung`. Beim Aussetzen `driveUploadAusgesetztSeit` (JJJJ-MM-TT) mit eintragen. Wiedereinschalten: Feld auf `false`, committen, pushen, Skill einmal
+  Stände, die Rückfallebene veraltet also. Einmalig im Notfall: `-TrotzAussetzung`. Beim Aussetzen `driveUploadAusgesetztSeit` (JJJJ-MM-TT) mit eintragen. Steht `driveUploadAusgesetztBis` (Franks Bedingung), entfällt die 14-Tage-Erinnerung: nie nach dem Wiedereinschalten fragen. Wiedereinschalten: Feld auf `false`, committen, pushen, Skill einmal
   starten; er veröffentlicht dann den aktuellen Stand.
 - **Standard ist Debug** (Franks Vorgabe vom 30.09.2026): Auf dem Handy laufen Debug-Builds, damit
   App-Daten und Logs per adb lesbar sind und Ruckeln sichtbar wird. Release nur, wenn Frank es für

@@ -532,6 +532,12 @@ $ausgesetzt = $eintrag.driveUploadAusgesetzt -and -not $CloudBau -and -not $Trot
 function Melde-Ausgesetzt {
     Aufraeumen
     # Die Aussetzung ist vorübergehend gedacht: Ab 14 Tagen erinnert jeder Lauf daran. Ein Lesefehler darf hier nichts aufhalten.
+    # Hat Frank eine Bedingung gesetzt (driveUploadAusgesetztBis), gilt sie: dann keine Erinnerung und keine Rückfrage.
+    if ("$($eintrag.driveUploadAusgesetztBis)".Trim()) {
+        Write-Host "APK_UPDATE_STATUS=ausgesetzt"
+        Write-Host "APK_UPDATE_HINWEIS=Drive-Upload für $Projekt bleibt ausgesetzt bis: $($eintrag.driveUploadAusgesetztBis). Als 'APK-Update: nein (ausgesetzt)' melden, nicht nach dem Wiedereinschalten fragen."
+        exit 0
+    }
     try {
         $seit = [datetime]::ParseExact("$($eintrag.driveUploadAusgesetztSeit)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
         $tage = [int]((Get-Date).Date - $seit).TotalDays
