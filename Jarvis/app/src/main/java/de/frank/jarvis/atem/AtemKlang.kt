@@ -19,8 +19,6 @@ import kotlin.random.Random
  */
 object AtemKlang {
     const val RATE = 24_000
-    /** Pegel des Atemgeräuschs gegenüber der Stimme (1 = voll): bewusst leise, nur im Hintergrund. */
-    const val LAUTSTAERKE = 0.18f
     /** Längste erzeugte Geräuschdauer: Ein echter Atemzug klingt nach spätestens 30 Sekunden aus, und der Speicher bleibt klein. */
     private const val HOECHSTENS_MS = 30_000L
     /** Hält nur die zuletzt genutzten Geräusche (je Übung zwei). */
@@ -112,5 +110,8 @@ object AtemKlang {
             .setTransferMode(AudioTrack.MODE_STATIC)
             .setBufferSizeInBytes(daten.size * 2)
             .build().apply { write(daten, 0, daten.size); setVolume(lautstaerke) }
-    }.getOrNull()
+    }.onFailure { android.util.Log.w("AtemKlang", "Geräuschspur nicht gebaut (${daten.size} Werte)", it) }.getOrNull()
+
+    /** Gibt die erzeugten Geräusche frei, wenn keine Übung mehr offen ist. */
+    fun leeren() = synchronized(cache) { cache.clear() }
 }

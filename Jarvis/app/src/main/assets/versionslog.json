@@ -748,6 +748,7 @@
     {"versionCode": 740, "versionName": "1.8.729", "stand": "15.11.2026, 21:36 Uhr", "notiz": "Atemübung: Regler für die Lautstärke des Atemgeräuschs während der Übung; der Wert bleibt gespeichert und lässt sich auch per Sprache ändern."},
     {"versionCode": 741, "versionName": "1.8.730", "stand": "15.11.2026, 21:38 Uhr", "notiz": "Ablage, Listen: Eine geöffnete Liste erscheint im Vollbild und scrollt über die ganze Höhe; die Zurück-Geste führt zur Listen-Übersicht."},
     {"versionCode": 742, "versionName": "1.8.731", "stand": "15.11.2026, 21:41 Uhr", "notiz": "Atemübung: Der Lautstärkeregler hat die leise Stufe in der Mitte, links aus, rechts voll; die Blase wächst beim Einatmen deutlich und schrumpft beim Ausatmen fast ganz."},
-    {"versionCode": 743, "versionName": "1.8.732", "stand": "15.11.2026, 21:46 Uhr", "notiz": "Das Listen-Widget wird nach jedem Update wieder richtig gezeichnet: Listen sind darin wieder wählbar, blätterbar und abhakbar; Pfeile und Plus sitzen mittig in ihren Knöpfen."}
+    {"versionCode": 743, "versionName": "1.8.732", "stand": "15.11.2026, 21:46 Uhr", "notiz": "Das Listen-Widget wird nach jedem Update wieder richtig gezeichnet: Listen sind darin wieder wählbar, blätterbar und abhakbar; Pfeile und Plus sitzen mittig in ihren Knöpfen."},
+    {"versionCode": 744, "versionName": "1.8.733", "stand": "15.11.2026, 21:53 Uhr", "notiz": "Atemübungen: Sätze fallen bei langsamem Netz nicht mehr weg und stehen auch ohne Vorlesen als Untertitel da; Anrufe pausieren die Übung und setzen sie danach fort, Pause spart Akku, Abschluss wird ausgesprochen."}
 ]
 }

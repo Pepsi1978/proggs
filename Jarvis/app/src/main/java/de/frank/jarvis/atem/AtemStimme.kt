@@ -32,6 +32,23 @@ object AtemStimme {
 
     private fun einstellungen(context: Context) = SecureSettings.get(context.applicationContext)
 
+    /** Eine gemeinsame Synthese: ein HTTP-Client und eine Drossel für alle Clips, sonst laufen die Anbieter ins Rate-Limit. */
+    @Volatile private var synthese: Synthese? = null
+    private fun synthese(app: Context): Synthese = synthese ?: synchronized(this) { synthese ?: Synthese(app, einstellungen(app)).also { synthese = it } }
+
+    /** Endungen, die die Stimmen liefern; erspart das Auflisten des ganzen Ordners bei jeder Abfrage. */
+    private val ENDUNGEN = listOf("mp3", "wav", "ogg", "opus", "m4a", "aac", "pcm")
+
+    // ---- Gemeinsame Zeitregeln für Übung und Editor ----
+    /** Ein Stichwort wird nur gesprochen, wenn es mit etwas Luft in die Phase passt. */
+    fun stichwortPasst(cueMs: Long, phaseMs: Long): Boolean = cueMs in 1..(phaseMs - 150)
+
+    /** Ruhe vor (und gleich viel nach) einem Satz, der nach dem Stichwort mittig in der Phase steht; null = passt nicht. */
+    fun satzRuhe(phaseMs: Long, cueMs: Long, satzMs: Long): Long? {
+        val frei = phaseMs - cueMs - satzMs
+        return if (frei >= 300) frei / 2 else null
+    }
+
     private fun stimmKennung(s: SecureSettings): String {
         val a = s.ttsProvider
         return listOf(a, s.ttsTempo(a), s.edgeTtsVoice, s.googleTtsVoice, s.azureTtsVoice, s.geminiFlashTtsVoice, s.geminiLiteTtsVoice, s.qwenStandardVoice, s.qwenTtsVoiceId).joinToString("|")
@@ -46,8 +63,24 @@ object AtemStimme {
     fun vorhanden(context: Context, text: String): Clip? {
         val s = einstellungen(context)
         val k = schluessel(text, stimmKennung(s))
-        val d = ordner(context).listFiles()?.firstOrNull { it.name.startsWith("$k.") && !it.name.endsWith(".tmp") && it.length() > 0 } ?: return null
+        val o = ordner(context)
+        val d = ENDUNGEN.asSequence().map { File(o, "$k.$it") }.firstOrNull { it.length() > 0 }
+            ?: o.listFiles()?.firstOrNull { it.name.startsWith("$k.") && !it.name.endsWith(".tmp") && it.length() > 0 } ?: return null
+        // Genutzt: Zeitstempel auffrischen, damit das Aufräumen nur lange Ungenutztes entfernt.
+        if (System.currentTimeMillis() - d.lastModified() > 86_400_000L) d.setLastModified(System.currentTimeMillis())
         return Clip(d, dauer(d))
+    }
+
+    /** Ein Clip ließ sich nicht abspielen (beschädigt): weg damit, beim nächsten Mal entsteht er neu. */
+    fun verwerfen(clip: Clip) {
+        synchronized(dauern) { dauern.remove(clip.datei.path) }
+        clip.datei.delete()
+    }
+
+    /** Entfernt gespeicherte Clips, die seit 60 Tagen keine Übung mehr gebraucht hat (alte Stimmen, geänderte Sätze). */
+    fun aufraeumen(context: Context) {
+        val grenze = System.currentTimeMillis() - 60L * 86_400_000L
+        runCatching { ordner(context).listFiles()?.forEach { if (it.lastModified() < grenze || it.name.endsWith(".tmp")) it.delete() } }
     }
 
     /** Holt oder erzeugt den Clip. Scheitert die Stimme (offline, Kontingent), kommt null: Die Übung läuft dann ohne. */
@@ -70,7 +103,7 @@ object AtemStimme {
     }
 
     fun frischAufraeumen(context: Context) {
-        runCatching { File(context.applicationContext.filesDir, "atem/frisch").listFiles()?.forEach(File::delete) }
+        runCatching { File(context.applicationContext.filesDir, "atem/frisch").listFiles()?.forEach { f -> synchronized(dauern) { dauern.remove(f.path) }; f.delete() } }
     }
 
     private suspend fun erzeuge(app: Context, text: String, zielFuer: ((File) -> File)? = null): Clip? {
@@ -78,7 +111,7 @@ object AtemStimme {
         // Zwei Versuche: Räumt der Vorleser seinen Zwischenordner genau zwischen Erzeugen und Kopieren leer, fehlt die Datei.
         repeat(2) { versuch ->
             val ergebnis = runCatching {
-                val roh = Synthese(app, s).synthetisiere(text)
+                val roh = synthese(app).synthetisiere(text)
                 withContext(Dispatchers.IO) {
                     val ziel = zielFuer?.invoke(roh) ?: File(ordner(app), schluessel(text, stimmKennung(s)) + "." + roh.extension.ifBlank { "mp3" })
                     // Erst unter Zwischennamen, dann umbenennen: Ein abgebrochenes Kopieren hinterlässt nie einen halben Clip.
@@ -101,7 +134,10 @@ object AtemStimme {
         MediaMetadataRetriever().run {
             try { setDataSource(d.path); extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L } finally { release() }
         }
-    }.getOrDefault(0L).also { ms -> if (ms > 0) synchronized(dauern) { dauern[d.path] = ms } }
+    }.getOrDefault(0L).also { ms ->
+        // Frische Clips werden nach dem Abspielen gelöscht: ihre Länge nicht dauerhaft merken.
+        if (ms > 0 && d.parentFile?.name != "frisch") synchronized(dauern) { dauern[d.path] = ms }
+    }
 
     /** Grobe Schätzung vor der Erzeugung: gut 14 Zeichen je Sekunde, im eingestellten Tempo. */
     fun schaetzeMs(context: Context, text: String): Long {

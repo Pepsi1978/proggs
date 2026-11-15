@@ -75,6 +75,9 @@ fun dauerText(ms: Long): String {
 object AtemProfile {
     private val _stand = MutableStateFlow<List<AtemProfil>>(emptyList())
     val stand: StateFlow<List<AtemProfil>> = _stand
+    private val _hinweis = MutableStateFlow<String?>(null)
+    /** Hinweis für die Übersicht, etwa wenn eine beschädigte Datei beiseitegelegt wurde. */
+    val hinweis: StateFlow<String?> = _hinweis
     @Volatile private var geladen = false
     /** Lesen, Ändern und Schreiben nacheinander: Schnelles Löschen und Speichern überschreiben sich sonst gegenseitig. */
     private val sperre = Mutex()
@@ -95,9 +98,14 @@ object AtemProfile {
                 (0 until a.length()).map { AtemProfil.aus(a.getJSONObject(it)) }
             }.getOrElse {
                 // Unlesbare Datei nie überschreiben: beiseitelegen, damit die Profile darin von Hand zu retten bleiben.
-                d.renameTo(File(d.parentFile, "profile.defekt-${System.currentTimeMillis()}.json"))
+                val sicherung = File(d.parentFile, "profile.defekt-${System.currentTimeMillis()}.json")
+                d.renameTo(sicherung)
+                _hinweis.value = "Die Profildatei war beschädigt und liegt als ${sicherung.name} beiseite. Neue Profile werden in einer frischen Datei gespeichert."
                 emptyList()
-            } else startProfile().also { schreibe(context, it) }
+            } else startProfile().also { liste ->
+                // Speicher voll: die Startprofile trotzdem zeigen, statt Jarvis abstürzen zu lassen.
+                runCatching { schreibe(context, liste) }.onFailure { _hinweis.value = "Die Startprofile ließen sich nicht speichern (Speicher voll?)." }
+            }
             _stand.value = liste
             geladen = true
         }

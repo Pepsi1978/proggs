@@ -139,6 +139,8 @@ private fun AtemUebersicht() {
                 }
                 Text("Atemübungen", Modifier.weight(1f), color = f.text, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
+            val speicherHinweis by AtemProfile.hinweis.collectAsState()
+            speicherHinweis?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 6.dp), color = f.gefahr, fontSize = 13.sp) }
             if (profile.isEmpty()) {
                 Text("Noch kein Atemprofil. Tippe auf Plus, um dein erstes Muster anzulegen.", Modifier.padding(24.dp), color = f.textLeise, fontSize = 15.sp)
             }
@@ -231,9 +233,10 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
 
     fun speichern() {
         val fertig = p.copy(name = p.name.trim().ifBlank { "Atemprofil" }, zyklen = p.zyklen.coerceAtLeast(1))
-        if (fertig.zyklusZehntel <= 0) { vm.meldung = "Einatmen oder Ausatmen braucht mindestens 0,1 Sekunden."; return }
+        if (fertig.ein <= 0 || fertig.aus <= 0) { vm.meldung = "Einatmen und Ausatmen brauchen je mindestens 0,1 Sekunden."; return }
         bereich.launch {
-            AtemProfile.speichern(context, fertig)
+            val ok = runCatching { AtemProfile.speichern(context, fertig) }.isSuccess
+            if (!ok) { vm.meldung = "Das Profil ließ sich nicht speichern (Speicher voll?)."; return@launch }
             ToolsAnsicht.bearbeiten = null
             // Stimme gleich vorbereiten, damit der Start sofort klappt.
             ToolsAnsicht.hintergrund.launch { AtemStimme.vorbereiten(context.applicationContext, fertig) }
@@ -244,7 +247,7 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
         onDismissRequest = { loeschFrage = false },
         title = { Text("„${p.name}“ löschen?") },
         text = { Text("Das Atemprofil wird endgültig entfernt.") },
-        confirmButton = { TextButton({ loeschFrage = false; bereich.launch { AtemProfile.loeschen(context, p.id); ToolsAnsicht.bearbeiten = null } }) { Text("Löschen", color = f.gefahr) } },
+        confirmButton = { TextButton({ loeschFrage = false; bereich.launch { if (runCatching { AtemProfile.loeschen(context, p.id) }.isSuccess) ToolsAnsicht.bearbeiten = null else vm.meldung = "Das Profil ließ sich nicht löschen." } }) { Text("Löschen", color = f.gefahr) } },
         dismissButton = { TextButton({ loeschFrage = false }) { Text("Abbrechen") } },
     )
 
@@ -276,7 +279,7 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
             Abschnitt("Atemmuster") {
                 ZeitZeile("Einatmen", GRUEN, p.ein, 1) { p = p.copy(ein = it) }
                 ZeitZeile("Halten", GELB, p.halt1, 0) { p = p.copy(halt1 = it) }
-                ZeitZeile("Ausatmen", ORANGE, p.aus, 0) { p = p.copy(aus = it) }
+                ZeitZeile("Ausatmen", ORANGE, p.aus, 1) { p = p.copy(aus = it) }
                 ZeitZeile("Halten", GELB, p.halt2, 0) { p = p.copy(halt2 = it) }
                 MusterBand(p, Modifier.padding(top = 10.dp).fillMaxWidth().height(8.dp))
             }
@@ -344,7 +347,8 @@ private fun ZeitZeile(titel: String, farbe: Color, wert: Int, minimum: Int, setz
         Box(Modifier.size(10.dp).clip(CircleShape).background(farbe))
         Text(titel, Modifier.weight(1f).padding(start = 10.dp), color = f.text, fontSize = 16.sp)
         Stepper(zehntelText(wert), { setze((wert - 1).coerceAtLeast(minimum)) }, { setze((wert + 1).coerceAtMost(MAX_PHASE)) }, einheit = "s", dezimal = true) { t ->
-            t.replace(',', '.').toFloatOrNull()?.let { setze(Math.round(it * 10).coerceIn(minimum, MAX_PHASE)) }
+            // Werte unter dem Minimum (etwa die „0“ auf dem Weg zu „0,5“) nicht sofort anheben, sonst springt das Feld beim Tippen.
+            t.replace(',', '.').toFloatOrNull()?.let { Math.round(it * 10) }?.takeIf { it >= minimum }?.let { setze(it.coerceAtMost(MAX_PHASE)) }
         }
     }
 }
@@ -482,15 +486,17 @@ private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, wert: String
     zeilen.forEachIndexed { i, z ->
         val echt = gemessen[z]
         val s = echt ?: AtemStimme.schaetzeMs(context, z)
-        val frei = phase - (if (cue + 150 <= phase) cue else 0L) - s
-        val passt = frei >= 300
+        // Dieselben Regeln wie in der Übung (AtemStimme.stichwortPasst/satzRuhe).
+        val wirksam = if (AtemStimme.stichwortPasst(cue, phase)) cue else 0L
+        val ruhe = AtemStimme.satzRuhe(phase, wirksam, s)
+        val passt = ruhe != null
         val sek = { ms: Long -> "%.1f".format(ms / 1000f).replace('.', ',') }
         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Top) {
             Icon(if (passt) Icons.Rounded.Check else Icons.Rounded.GraphicEq, null, tint = if (passt) f.erfolg else f.gefahr, modifier = Modifier.size(16.dp).padding(top = 2.dp))
             Text(
                 (if (zeilen.size > 1) "Satz ${i + 1}: " else "") +
                     (if (echt != null) "${sek(s)} s gesprochen" else "≈ ${sek(s)} s geschätzt") +
-                    (if (passt) " · je ${sek(frei / 2)} s Ruhe davor und danach" else " · zu lang, frei sind nur ${sek((phase - cue).coerceAtLeast(0))} s"),
+                    (if (ruhe != null) " · je ${sek(ruhe)} s Ruhe davor und danach" else " · zu lang, frei sind nur ${sek((phase - wirksam).coerceAtLeast(0))} s"),
                 Modifier.padding(start = 6.dp), color = if (passt) f.textLeise else f.gefahr, fontSize = 12.sp, lineHeight = 15.sp,
             )
         }

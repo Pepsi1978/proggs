@@ -102,6 +102,10 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
         }
     }
     var endeFrage by remember { mutableStateOf(false) }
+    // War die Übung vor der Frage schon pausiert (von Hand oder durch einen Anruf), bleibt sie es danach auch.
+    var warPausiert by remember { mutableStateOf(false) }
+    fun frageOeffnen() { warPausiert = AtemSitzung.pausiert; AtemSitzung.pause(); endeFrage = true }
+    fun frageSchliessen() { endeFrage = false; if (!warPausiert) AtemSitzung.weiter() }
 
     // Bildschirm bleibt an, Leisten verschwinden: echtes Vollbild.
     DisposableEffect(Unit) {
@@ -118,15 +122,16 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
     // Den Zustand im derivedStateOf selbst lesen, nicht die Momentaufnahme der ersten Zusammensetzung.
     val ende by remember { derivedStateOf { AtemSitzung.gestartet && AtemSitzung.plan.isNotEmpty() && t >= AtemSitzung.gesamt } }
     // Nach dem Ende darf der Bildschirm wieder ausgehen.
-    LaunchedEffect(ende) { if (ende) view.keepScreenOn = false }
-    BackHandler { if (!gestartet || ende) AtemSitzung.beenden() else { AtemSitzung.pause(); endeFrage = true } }
+    // Nach dem Ende darf der Bildschirm ausgehen; „Nochmal“ schaltet die Wachhaltung wieder ein.
+    LaunchedEffect(ende) { view.keepScreenOn = !ende }
+    BackHandler { if (!gestartet || ende) AtemSitzung.beenden() else frageOeffnen() }
 
     if (endeFrage) AlertDialog(
-        onDismissRequest = { endeFrage = false; AtemSitzung.weiter() },
+        onDismissRequest = { frageSchliessen() },
         title = { Text("Übung beenden?") },
         text = { Text("Die Atemübung ist pausiert.") },
         confirmButton = { TextButton({ endeFrage = false; AtemSitzung.beenden() }) { Text("Beenden") } },
-        dismissButton = { TextButton({ endeFrage = false; AtemSitzung.weiter() }) { Text("Weiter atmen") } },
+        dismissButton = { TextButton({ frageSchliessen() }) { Text(if (warPausiert) "Zurück" else "Weiter atmen") } },
     )
 
     Box(modifier.background(Brush.verticalGradient(listOf(Color(0xFF060912), Color(0xFF0A1220), Color(0xFF070B14))))) {
@@ -135,7 +140,7 @@ fun AtemSitzungBildschirm(modifier: Modifier = Modifier) {
         Column(Modifier.fillMaxSize()) {
             // ------------------------------------------------ Kopf
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Rund(Icons.Rounded.Close, "Übung beenden") { if (!gestartet || ende) AtemSitzung.beenden() else { AtemSitzung.pause(); endeFrage = true } }
+                Rund(Icons.Rounded.Close, "Übung beenden") { if (!gestartet || ende) AtemSitzung.beenden() else frageOeffnen() }
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text(profil.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
