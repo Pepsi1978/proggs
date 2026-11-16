@@ -752,6 +752,7 @@
     {"versionCode": 744, "versionName": "1.8.733", "stand": "15.11.2026, 21:53 Uhr", "notiz": "Atemübungen: Sätze fallen bei langsamem Netz nicht mehr weg und stehen auch ohne Vorlesen als Untertitel da; Anrufe pausieren die Übung und setzen sie danach fort, Pause spart Akku, Abschluss wird ausgesprochen."},
     {"versionCode": 745, "versionName": "1.8.734", "stand": "15.11.2026, 21:56 Uhr", "notiz": "Atemübungen: Auch beim Halten nach dem Ein- und nach dem Ausatmen lassen sich eigene Sätze vorlesen; ein leeres Feld liest nichts vor."},
     {"versionCode": 746, "versionName": "1.8.735", "stand": "16.11.2026, 09:06 Uhr", "notiz": "Raumklima: Aktualisieren nimmt zuerst die Werte vom Mac zu Hause, die Cloud nur noch als Ausweg für die Wohnung, das Auto sonst per Bluetooth, angezeigt als BL."},
-    {"versionCode": 747, "versionName": "1.8.736", "stand": "16.11.2026, 09:14 Uhr", "notiz": "Raumklima: Aktualisieren lässt den Mac zu Hause die Sensoren sofort lesen, seine Werte gehen immer vor, die Cloud ist nur noch Rückfall."}
+    {"versionCode": 747, "versionName": "1.8.736", "stand": "16.11.2026, 09:14 Uhr", "notiz": "Raumklima: Aktualisieren lässt den Mac zu Hause die Sensoren sofort lesen, seine Werte gehen immer vor, die Cloud ist nur noch Rückfall."},
+    {"versionCode": 748, "versionName": "1.8.737", "stand": "16.11.2026, 09:39 Uhr", "notiz": "Raumklima: Review-Befunde behoben, Auto-Wert vom Mac gilt nur zwei Minuten, App-Start bleibt schnell, Batterie bleibt sichtbar, Mac antwortet auch ohne Treffer sofort."}
 ]
 }

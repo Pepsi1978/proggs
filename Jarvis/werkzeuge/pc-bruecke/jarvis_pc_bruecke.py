@@ -466,30 +466,41 @@ RECHNER = rechnername()
 # Ein Bluetooth-Scan zur Zeit: Victron, SwitchBot im Takt und SwitchBot auf Knopfdruck (/geraet/switchbot-jetzt) wechseln sich ab.
 BLUETOOTH = threading.Lock()
 SWITCHBOT_SOFORT = threading.Event()
+SWITCHBOT_ZULETZT = [0.0]   # Ende des letzten Scans mit Meldung (Takt oder Knopfdruck), damit keiner gleich danach doppelt scannt
+SWITCHBOT_ERSPART_S = 15    # so frisch gemeldet, erspart sich der Knopfdruck einen eigenen Scan (der Relay hat die Werte schon)
 
 
-def switchbot_lesen(schnell: bool = False) -> int:
-    """Ein Lauf von jarvis_switchbot.py (schnell: bis 30 s, endet 1 s nach dem CO2-Monitor; für den Aktualisieren-Knopf am Handy). Rückgabe: Exit-Code."""
+def switchbot_lesen(schnell: bool = False) -> int | None:
+    """Ein Lauf von jarvis_switchbot.py (schnell: bis 30 s, endet 1 s nach dem CO2-Monitor, frühestens nach 8 s; für den
+    Aktualisieren-Knopf am Handy, meldet auch „nichts gehört“). Rückgabe: Exit-Code; None = beim Knopfdruck erspart, weil eben gemeldet."""
     skript = Path(__file__).resolve().with_name("jarvis_switchbot.py")
     sb_log = ORDNER / "switchbot.log"
-    if sb_log.exists() and sb_log.stat().st_size > 200_000:
-        sb_log.write_text("", "utf-8")
-    with BLUETOOTH, open(sb_log, "a", encoding="utf-8") as fehlerlog:
-        # Scan bis 30 s + 5 s Nachlauf + Meldung bis 15 s + Start: 65 s reichen sicher.
-        return subprocess.run([sys.executable, str(skript)] + (["schnell"] if schnell else []), cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                              stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=65).returncode
+    with BLUETOOTH:
+        if schnell and time.time() - SWITCHBOT_ZULETZT[0] < SWITCHBOT_ERSPART_S:
+            return None
+        if sb_log.exists() and sb_log.stat().st_size > 200_000:
+            sb_log.write_text("", "utf-8")
+        with open(sb_log, "a", encoding="utf-8") as fehlerlog:
+            # Scan bis 30 s + 5 s Nachlauf + Meldung bis 15 s + Start: 65 s reichen sicher.
+            code = subprocess.run([sys.executable, str(skript)] + (["schnell"] if schnell else []), cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                                  stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=65).returncode
+        if code == 0:
+            SWITCHBOT_ZULETZT[0] = time.time()
+        return code
 
 
 def switchbot_sofort_faden() -> None:
-    """Liest auf Zuruf des Handys sofort (Frank, 16.11.2026: Aktualisieren soll die Werte des Macs in Echtzeit holen)."""
+    """Liest auf Zuruf des Handys sofort (Frank, 16.11.2026: Aktualisieren soll die Werte des Macs in Echtzeit holen).
+    Zurufe während des Scans (der Relay wiederholt seinen Befehl) gehen im laufenden Scan auf: erst danach wieder hinhören."""
     while True:
         SWITCHBOT_SOFORT.wait()
-        SWITCHBOT_SOFORT.clear()
         try:
             code = switchbot_lesen(schnell=True)
-            schreib(f"SwitchBot auf Knopfdruck gelesen (Exit {code})")
+            schreib("SwitchBot auf Knopfdruck: eben gemeldet, kein eigener Scan" if code is None else f"SwitchBot auf Knopfdruck gelesen (Exit {code})")
         except Exception as fehler:
             schreib(f"SwitchBot auf Knopfdruck: {fehler}")
+        finally:
+            SWITCHBOT_SOFORT.clear()
 
 
 def jarvis_mac_faden() -> None:
@@ -546,7 +557,8 @@ def victron_faden() -> None:
             schreib("Victron: ~/SK/Victron/victron.json fehlt, die Solarbatterie wird vom Mac nicht gemeldet")
         # Danach, nie gleichzeitig (ein Bluetooth-Scan zur Zeit): SwitchBot-CO2-Monitor, den der Hub Mini nicht in die Cloud bringt
         # (jarvis_switchbot.py, POST /pc/switchbot). Alle fünf Minuten (so oft misst er höchstens), ohne Empfang in der nächsten Minute erneut.
-        if time.time() - switchbot_gemeldet >= 300:
+        # Ein Scan auf Knopfdruck zählt mit: danach nicht gleich noch einmal.
+        if time.time() - max(switchbot_gemeldet, SWITCHBOT_ZULETZT[0]) >= 300:
             try:
                 # Nur „nichts gehört“ (Exit 3) lohnt einen neuen Scan in der nächsten Minute; andere Fehler (Zugang, Relay) behebt ein Scan nicht.
                 if switchbot_lesen() != 3:

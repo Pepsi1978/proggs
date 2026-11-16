@@ -1788,7 +1788,8 @@ ABGLEICH_FRIST_S = 3 * 86_400
 VICTRON_DATEI = ZUSTAND.with_name("victron.json")
 VICTRON_MAX = 8_192
 # Geheimer Pfadteil für den SwitchBot-Webhook: fest aus dem Geräte-Token abgeleitet (bleibt über Neustarts gleich, verrät ihn nicht).
-SWITCHBOT_JETZT_S = 40   # so lange wartet /geraet/switchbot-jetzt auf die Meldung des Macs (Scan bis 30 s + Meldung)
+SWITCHBOT_JETZT_S = 50   # so lange wartet /geraet/switchbot-jetzt auf die Meldung des Macs (Victron-Scan davor ~12 s, Scan bis 30 s, Meldung)
+SWITCHBOT_NOCHMAL_S = 12 # so oft wird der Befehl wiederholt, solange keine Meldung kam (eine tote Abfrage der Brücke kann ihn schlucken)
 SWITCHBOT_HOOK = hmac.new(TOKEN.encode(), b"switchbot-webhook", hashlib.sha256).hexdigest()[:32]
 
 
@@ -1804,7 +1805,8 @@ class VictronStand:
         self.datei = datei
         self.max_bytes = max_bytes
         self.sperre = asyncio.Lock()
-        self.gemeldet = asyncio.Event()   # jede Meldung eines Rechners (nicht der Webhook): für /geraet/switchbot-jetzt
+        self.gemeldet = asyncio.Event()   # Mac-Meldung mit Werten oder auf Knopfdruck (nicht der Webhook): für /geraet/switchbot-jetzt
+        self.gemeldet_anzahl = 0
         try:
             self.stand = json.loads(datei.read_text("utf-8"))
         except Exception:
@@ -1824,13 +1826,17 @@ class VictronStand:
         except Exception:
             return web.Response(status=400, text="ungueltig")
         await self.aufnehmen(neu)
-        self.gemeldet.set()
+        # Eine leere Meldung im Takt beantwortet keine Frage; die auf Knopfdruck (sofort) auch dann, wenn der Mac nichts hörte.
+        if neu or stand.get("sofort"):
+            self.gemeldet_anzahl = len(neu)
+            self.gemeldet.set()
         return web.json_response({"ok": True})
 
     async def jetzt(self, request: web.Request) -> web.Response:
         """POST /geraet/switchbot-jetzt (Handy, Aktualisieren-Knopf): Die Mac-Brücke liest die Sensoren sofort per Bluetooth
         (Befehl über /pc/mac-befehl); geantwortet wird mit dem Stand nach ihrer Meldung, höchstens nach SWITCHBOT_JETZT_S.
-        „ergebnis“: frisch, mac_nicht_verbunden oder keine_rueckmeldung (dann der bisherige Stand)."""
+        Auch eine Meldung des laufenden Takt-Scans beantwortet die Frage (seine Werte sind höchstens Sekunden alt).
+        „ergebnis“: frisch, nichts_gehoert, mac_nicht_verbunden oder keine_rueckmeldung (dann je der bisherige Stand)."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         kanal = self.kanal
@@ -1838,13 +1844,18 @@ class VictronStand:
             ergebnis = "mac_nicht_verbunden"
         else:
             self.gemeldet.clear()
-            kanal.switchbot_lesen = True
-            kanal.befehl.set()
-            try:
-                await asyncio.wait_for(self.gemeldet.wait(), SWITCHBOT_JETZT_S)
-                ergebnis = "frisch"
-            except asyncio.TimeoutError:
-                ergebnis = "keine_rueckmeldung"
+            ende = time.monotonic() + SWITCHBOT_JETZT_S
+            ergebnis = "keine_rueckmeldung"
+            while (rest := ende - time.monotonic()) > 0:
+                kanal.switchbot_lesen = True   # wiederholt: Die Brücke lässt Zurufe während ihres Scans im laufenden Scan aufgehen
+                kanal.befehl.set()
+                try:
+                    await asyncio.wait_for(self.gemeldet.wait(), min(rest, SWITCHBOT_NOCHMAL_S))
+                    ergebnis = "frisch" if self.gemeldet_anzahl else "nichts_gehoert"
+                    break
+                except asyncio.TimeoutError:
+                    pass
+            kanal.switchbot_lesen = False
         stand = self.stand or {"geraete": []}
         return web.json_response({**stand, "ergebnis": ergebnis, "alter_s": int(time.time()) - int(stand.get("empfangen", 0) or 0)})
 

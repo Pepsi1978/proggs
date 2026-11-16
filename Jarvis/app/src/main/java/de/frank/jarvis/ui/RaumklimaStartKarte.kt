@@ -38,16 +38,22 @@ import kotlinx.coroutines.launch
 private object RaumklimaStartStand {
     var ergebnis by mutableStateOf<Ergebnis?>(null)
     var laeuft by mutableStateOf(false)
+    /** Läuft gerade ein Lesen mit Sofort-Scan des Macs (nur dann sagt die Karte, dass der Mac liest)? */
+    var macLiest by mutableStateOf(false)
     /** Einmal je App-Start von selbst frisch lesen; danach nur über den Knopf. */
     var automatischGelesen = false
     val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    /** Die Karte lässt den Mac zu Hause die Sensoren sofort lesen; seine Werte gehen vor, die Cloud ist Rückfall (Frank, 16.11.2026). */
-    fun lesen(faehigkeit: SwitchbotFaehigkeit) {
+    /**
+     * Mac-Werte gehen immer vor, die Cloud ist Rückfall (Frank, 16.11.2026). [macJetzt] (Aktualisieren-Knopf): Der Mac liest die Sensoren
+     * dafür sofort, bis zu 40 s; das automatische Lesen beim App-Start nimmt seinen letzten Stand und bleibt schnell.
+     */
+    fun lesen(faehigkeit: SwitchbotFaehigkeit, macJetzt: Boolean = false) {
         if (laeuft) return
         laeuft = true
+        macLiest = macJetzt && faehigkeit.mitServer()
         bereich.launch {
-            try { ergebnis = runCatching { faehigkeit.abrufen(macJetzt = true) }.getOrElse { Ergebnis("Die Sensoren ließen sich nicht lesen.", fehler = true) } } finally { laeuft = false }
+            try { ergebnis = runCatching { faehigkeit.abrufen(macJetzt = macJetzt) }.getOrElse { Ergebnis("Die Sensoren ließen sich nicht lesen.", fehler = true) } } finally { laeuft = false; macLiest = false }
         }
     }
 }
@@ -81,7 +87,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
     val sensoren = struktur?.optJSONArray("sensoren")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
     // Antippen irgendwo in der Karte öffnet die SwitchBot-App (Frank, 15.11.2026); ein Tipp im Schutzkreis um den Knopf liest nur neu.
     val schutz = remember { KnopfSchutz() }
-    Karte(modifier = griff.antippenMitSchutz(schutz, imSchutz = { s.lesen(faehigkeit) }) {
+    Karte(modifier = griff.antippenMitSchutz(schutz, imSchutz = { s.lesen(faehigkeit, macJetzt = true) }) {
         if (!Schnellstart.starten(context, SWITCHBOT_PAKET)) Toast.makeText(context, "SwitchBot-App nicht gefunden", Toast.LENGTH_SHORT).show()
     }) {
         Row(verticalAlignment = Alignment.Top) {
@@ -89,14 +95,14 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 Text("Raumklima", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     when {
-                        s.laeuft -> "Der Mac liest die Sensoren …"
+                        s.laeuft -> if (s.macLiest) "Der Mac liest die Sensoren …" else "Liest die Sensoren …"
                         struktur != null -> "Stand ${struktur.optString("abgerufen")} Uhr"
                         else -> "Noch kein Stand"
                     },
                     color = if (s.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            AktualisierenKnopf(s.laeuft, "Raumklima aktualisieren", "Raumklima wird gelesen", schutz) { s.lesen(faehigkeit) }
+            AktualisierenKnopf(s.laeuft, "Raumklima aktualisieren", "Raumklima wird gelesen", schutz) { s.lesen(faehigkeit, macJetzt = true) }
         }
         if (e != null && struktur == null && !s.laeuft) Text(e.text, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         sensoren.forEach { z ->
