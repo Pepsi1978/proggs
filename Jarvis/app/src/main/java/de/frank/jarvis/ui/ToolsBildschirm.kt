@@ -64,7 +64,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -579,19 +582,18 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
     val zeilenOrte = remember { HashMap<Int, Rect>() }
     val griffOrt = remember { floatArrayOf(0f, 0f) }
 
-    val gesetzt = wert.lines().map { it.trim() }.filter { it.isNotEmpty() }
     val gesprochen = verlauf.eingesprochen[art]
-    // Alle Sätze aus allen Phasen: zuerst die dieser Phase, danach die der übrigen Phasen.
-    fun ausProfilen(a: SatzArt) = profile.flatMap { p ->
-        when (a) { SatzArt.EIN -> p.saetzeEin; SatzArt.AUS -> p.saetzeAus; SatzArt.HALTEN -> p.saetzeHalt1 + p.saetzeHalt2 }
+    val eintraege = remember(wert, verlauf, profile, art) {
+        val gesetzt = wert.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        // Alle Sätze aus allen Phasen: zuerst die dieser Phase, danach die der übrigen Phasen.
+        val andere = SatzArt.entries.filter { it != art }
+        (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + profile.flatMap { it.saetze(art) } +
+            andere.flatMap { a -> verlauf.saetze[a].orEmpty() + profile.flatMap { it.saetze(a) } } + andere.mapNotNull { verlauf.eingesprochen[it] })
+            .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            // Gelöschte Sätze ausblenden; was gerade im Feld steht, bleibt immer sichtbar.
+            .filter { it in gesetzt || it !in verlauf.geloescht }
+            .map { SatzEintrag(it, it in gesetzt, it == gesprochen) }
     }
-    val andere = SatzArt.entries.filter { it != art }
-    val eintraege = (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + ausProfilen(art) +
-        andere.flatMap { verlauf.saetze[it].orEmpty() + ausProfilen(it) } + andere.mapNotNull { verlauf.eingesprochen[it] })
-        .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        // Gelöschte Sätze ausblenden; was gerade im Feld steht, bleibt immer sichtbar.
-        .filter { it in gesetzt || it !in verlauf.geloescht }
-        .map { SatzEintrag(it, it in gesetzt, it == gesprochen) }
     val aktuelleEintraege by rememberUpdatedState(eintraege)
     val aktuellSetzen by rememberUpdatedState(setze)
     fun waehle(i: Int) {
@@ -618,12 +620,18 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
                 Modifier.padding(start = 6.dp).size(44.dp).clip(CircleShape)
                     .background(if (offen) farbe else farbe.copy(alpha = 0.22f))
                     .onGloballyPositioned { val o = it.positionInRoot(); griffOrt[0] = o.x; griffOrt[1] = o.y }
-                    .semantics { contentDescription = if (offen) "Satzliste schließen" else "Gespeicherte Sätze zeigen" }
+                    .semantics {
+                        contentDescription = if (offen) "Satzliste schließen" else "Gespeicherte Sätze zeigen"
+                        role = Role.Button
+                        onClick { offen = !offen; true }
+                    }
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val runter = awaitFirstDown()
                             runter.consume()
                             val warOffen = offen
+                            // Trefferflächen aus einem früheren Öffnen (Schließ-Animation) nicht mehr gelten lassen.
+                            if (!warOffen) zeilenOrte.clear()
                             offen = true
                             var bewegt = false
                             var ziel: Int? = null
@@ -635,7 +643,7 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
                                 c.consume()
                                 if (bewegt) {
                                     val ort = Offset(griffOrt[0] + c.position.x, griffOrt[1] + c.position.y)
-                                    val neu = zeilenOrte.entries.firstOrNull { it.value.contains(ort) }?.key
+                                    val neu = zeilenOrte.entries.firstOrNull { it.key < aktuelleEintraege.size && it.value.contains(ort) }?.key
                                     if (neu != ziel && neu != null) haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     ziel = neu; ueber = neu
                                 }
@@ -665,7 +673,7 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
                     val form = RoundedCornerShape(12.dp)
                     Row(
                         Modifier.fillMaxWidth()
-                            .onGloballyPositioned { zeilenOrte[i] = it.boundsInRoot() }
+                            .onGloballyPositioned { if (offen) zeilenOrte[i] = it.boundsInRoot() }
                             .clip(form)
                             .background(
                                 when {

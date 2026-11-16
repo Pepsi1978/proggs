@@ -57,6 +57,13 @@ data class AtemProfil(
         AtemPhase.EIN -> ein; AtemPhase.HALT_OBEN -> halt1; AtemPhase.AUS -> aus; AtemPhase.HALT_UNTEN -> halt2; else -> 0
     }
 
+    /** Sätze einer Phasenart fürs Satz-Menü; Haltephasen ohne Dauer zählen nicht. */
+    fun saetze(art: SatzArt): List<String> = when (art) {
+        SatzArt.EIN -> saetzeEin
+        SatzArt.AUS -> saetzeAus
+        SatzArt.HALTEN -> saetze(AtemPhase.HALT_OBEN) + saetze(AtemPhase.HALT_UNTEN)
+    }
+
     val alleSaetze: List<String> get() = (saetzeEin + saetze(AtemPhase.HALT_OBEN) + saetzeAus + saetze(AtemPhase.HALT_UNTEN)).distinct()
 
     fun json(): JSONObject = JSONObject()
@@ -201,7 +208,11 @@ object AtemSatzVerlauf {
                 SatzArt.entries.mapNotNull { art -> e.optString(art.schluessel).takeIf { it.isNotBlank() }?.let { art to it } }.toMap(),
                 o.optJSONArray("geloescht")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }.toSet() } ?: emptySet(),
             )
-        }.getOrElse { Stand() } else Stand()
+        }.getOrElse {
+            // Unlesbare Datei nie überschreiben: beiseitelegen, der Verlauf beginnt frisch.
+            runCatching { d.renameTo(File(d.parentFile, "saetze.defekt-${System.currentTimeMillis()}.json")) }
+            Stand()
+        } else Stand()
         geladen = true
     }
 
@@ -225,12 +236,13 @@ object AtemSatzVerlauf {
     fun merken(context: Context, p: AtemProfil, vorher: AtemProfil? = null) = synchronized(sperre) {
         ladeBlockierend(context)
         val alt = _stand.value
-        val neu = mapOf(SatzArt.EIN to p.saetzeEin, SatzArt.AUS to p.saetzeAus, SatzArt.HALTEN to (p.saetzeHalt1 + p.saetzeHalt2))
+        val neu = SatzArt.entries.associateWith { p.saetze(it) }
         // Ein gelöschter Satz kommt nur zurück, wenn er im Profil neu dazukam (nicht, weil das Profil ihn schon vorher hatte).
         val bisher = vorher?.let { it.saetzeEin + it.saetzeAus + it.saetzeHalt1 + it.saetzeHalt2 }.orEmpty().toSet()
         val wieder = neu.values.flatten().filter { it in alt.geloescht && it !in bisher }.toSet()
-        if (wieder.isEmpty() && neu.all { (art, l) -> l.all { it in alt.saetze[art].orEmpty() } }) return@synchronized
-        schreibe(context, alt.copy(saetze = SatzArt.entries.associateWith { vorne(alt.saetze[it].orEmpty(), neu[it].orEmpty()) }, geloescht = alt.geloescht - wieder))
+        val stand = alt.copy(saetze = SatzArt.entries.associateWith { vorne(alt.saetze[it].orEmpty(), neu[it].orEmpty()) }, geloescht = alt.geloescht - wieder)
+        // Auch bereits bekannte Sätze rücken nach vorn (neueste zuerst); geschrieben wird nur bei echter Änderung.
+        if (stand != alt) schreibe(context, stand)
     }
 
     /** Satz aus der Auswahl aller Phasen entfernen; Profile, die ihn verwenden, behalten ihn. */

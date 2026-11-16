@@ -756,6 +756,7 @@
     {"versionCode": 748, "versionName": "1.8.737", "stand": "16.11.2026, 09:39 Uhr", "notiz": "Raumklima: Review-Befunde behoben, Auto-Wert vom Mac gilt nur zwei Minuten, App-Start bleibt schnell, Batterie bleibt sichtbar, Mac antwortet auch ohne Treffer sofort."},
     {"versionCode": 749, "versionName": "1.8.738", "stand": "16.11.2026, 12:56 Uhr", "notiz": "Atemübungen: Satzfelder sind jetzt ein Auswahlmenü mit allen je gespeicherten Sätzen der Phase, wählbar per Antippen oder Ziehen."},
     {"versionCode": 750, "versionName": "1.8.739", "stand": "16.11.2026, 12:59 Uhr", "notiz": "Atemübungen: Das Satz-Menü zeigt in jeder Phase alle gespeicherten Sätze aus Einatmen, Ausatmen und Halten."},
-    {"versionCode": 751, "versionName": "1.8.740", "stand": "16.11.2026, 13:04 Uhr", "notiz": "Atemübungen: Langes Drücken auf einen Satz im Satz-Menü löscht ihn nach Rückfrage aus der Auswahl."}
+    {"versionCode": 751, "versionName": "1.8.740", "stand": "16.11.2026, 13:04 Uhr", "notiz": "Atemübungen: Langes Drücken auf einen Satz im Satz-Menü löscht ihn nach Rückfrage aus der Auswahl."},
+    {"versionCode": 752, "versionName": "1.8.741", "stand": "16.11.2026, 13:05 Uhr", "notiz": "Atemübungen: Review-Befunde im Satz-Menü behoben, beschädigte Satzdatei wird gesichert, neueste Sätze stehen vorn, Menü auch mit TalkBack bedienbar."}
 ]
 }
