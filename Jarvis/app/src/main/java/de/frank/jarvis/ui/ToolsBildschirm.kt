@@ -561,6 +561,21 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
     LaunchedEffect(Unit) { runCatching { AtemSatzVerlauf.sicher(context.applicationContext) } }
     var offen by remember { mutableStateOf(false) }
     var ueber by remember { mutableStateOf<Int?>(null) }
+    var loeschSatz by remember { mutableStateOf<String?>(null) }
+    loeschSatz?.let { satz ->
+        AlertDialog(
+            onDismissRequest = { loeschSatz = null },
+            title = { Text("Satz löschen?") },
+            text = { Text("„$satz“ verschwindet aus der Auswahl aller Phasen. Profile, die ihn verwenden, behalten ihn.") },
+            confirmButton = {
+                TextButton({
+                    loeschSatz = null
+                    ToolsAnsicht.hintergrund.launch { runCatching { AtemSatzVerlauf.loeschen(context.applicationContext, satz) } }
+                }) { Text("Löschen", color = f.gefahr) }
+            },
+            dismissButton = { TextButton({ loeschSatz = null }) { Text("Abbrechen") } },
+        )
+    }
     val zeilenOrte = remember { HashMap<Int, Rect>() }
     val griffOrt = remember { floatArrayOf(0f, 0f) }
 
@@ -574,6 +589,8 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
     val eintraege = (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + ausProfilen(art) +
         andere.flatMap { verlauf.saetze[it].orEmpty() + ausProfilen(it) } + andere.mapNotNull { verlauf.eingesprochen[it] })
         .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        // Gelöschte Sätze ausblenden; was gerade im Feld steht, bleibt immer sichtbar.
+        .filter { it in gesetzt || it !in verlauf.geloescht }
         .map { SatzEintrag(it, it in gesetzt, it == gesprochen) }
     val aktuelleEintraege by rememberUpdatedState(eintraege)
     val aktuellSetzen by rememberUpdatedState(setze)
@@ -640,7 +657,7 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
             ) {
                 Text(
                     if (eintraege.isEmpty()) "Noch keine gespeicherten Sätze. Tippe einen ein oder sprich ihn ein."
-                    else "${eintraege.size} ${if (eintraege.size == 1) "Satz" else "Sätze"} · antippen oder vom Pfeil hierher ziehen",
+                    else "${eintraege.size} ${if (eintraege.size == 1) "Satz" else "Sätze"} · antippen oder vom Pfeil hierher ziehen · lange drücken zum Löschen",
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = f.textLeise, fontSize = 12.sp,
                 )
                 eintraege.forEachIndexed { i, e ->
@@ -658,7 +675,7 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
                                 },
                             )
                             .then(if (ueber == i) Modifier.border(1.5.dp, farbe, form) else Modifier)
-                            .antippen { waehle(i) }
+                            .antippen(lange = { loeschSatz = e.text }, langeText = "Satz löschen") { waehle(i) }
                             .semantics { contentDescription = e.text + (if (e.gesetzt) ", aktuell" else "") + (if (e.gesprochen) ", zuletzt eingesprochen" else "") }
                             .padding(horizontal = 10.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,

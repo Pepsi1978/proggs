@@ -154,10 +154,11 @@ object AtemProfile {
 
     private fun schreibeNeu(context: Context, p: AtemProfil) {
         val alt = _stand.value
+        val vorher = alt.firstOrNull { it.id == p.id }
         val neu = if (alt.any { it.id == p.id }) alt.map { if (it.id == p.id) p else it } else alt + p
         schreibe(context, neu); _stand.value = neu
         // Jeder gespeicherte Satz kommt in den profilübergreifenden Verlauf (für das Satz-Menü im Editor).
-        runCatching { AtemSatzVerlauf.merken(context, p) }
+        runCatching { AtemSatzVerlauf.merken(context, p, vorher) }
     }
 
     suspend fun loeschen(context: Context, id: String) = sperre.withLock {
@@ -179,7 +180,8 @@ enum class SatzArt(val schluessel: String) { EIN("ein"), AUS("aus"), HALTEN("hal
  * Liegt in files/atem/saetze.json; Profile selbst bleiben unverändert.
  */
 object AtemSatzVerlauf {
-    data class Stand(val saetze: Map<SatzArt, List<String>> = emptyMap(), val eingesprochen: Map<SatzArt, String> = emptyMap())
+    /** [geloescht]: im Menü per langem Druck entfernte Sätze; ausgeblendet, auch wenn ein Profil sie noch enthält. */
+    data class Stand(val saetze: Map<SatzArt, List<String>> = emptyMap(), val eingesprochen: Map<SatzArt, String> = emptyMap(), val geloescht: Set<String> = emptySet())
 
     private val _stand = MutableStateFlow(Stand())
     val stand: StateFlow<Stand> = _stand
@@ -197,6 +199,7 @@ object AtemSatzVerlauf {
             Stand(
                 SatzArt.entries.associateWith { art -> o.optJSONArray(art.schluessel)?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } } ?: emptyList() },
                 SatzArt.entries.mapNotNull { art -> e.optString(art.schluessel).takeIf { it.isNotBlank() }?.let { art to it } }.toMap(),
+                o.optJSONArray("geloescht")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }.toSet() } ?: emptySet(),
             )
         }.getOrElse { Stand() } else Stand()
         geladen = true
@@ -206,6 +209,7 @@ object AtemSatzVerlauf {
         val o = JSONObject()
         SatzArt.entries.forEach { art -> o.put(art.schluessel, JSONArray(s.saetze[art].orEmpty())) }
         o.put("eingesprochen", JSONObject().apply { s.eingesprochen.forEach { (art, t) -> put(art.schluessel, t) } })
+        o.put("geloescht", JSONArray(s.geloescht.toList()))
         val d = datei(context).apply { parentFile?.mkdirs() }
         val tmp = File(d.parentFile, "saetze.json.tmp")
         tmp.writeText(o.toString(2))
@@ -218,12 +222,29 @@ object AtemSatzVerlauf {
     private fun vorne(alt: List<String>, neu: List<String>) = (neu + alt).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
     /** Blockierend (aufgerufen aus dem IO-Speichern der Profile). */
-    fun merken(context: Context, p: AtemProfil) = synchronized(sperre) {
+    fun merken(context: Context, p: AtemProfil, vorher: AtemProfil? = null) = synchronized(sperre) {
         ladeBlockierend(context)
         val alt = _stand.value
         val neu = mapOf(SatzArt.EIN to p.saetzeEin, SatzArt.AUS to p.saetzeAus, SatzArt.HALTEN to (p.saetzeHalt1 + p.saetzeHalt2))
-        if (neu.all { (art, l) -> l.all { it in alt.saetze[art].orEmpty() } }) return@synchronized
-        schreibe(context, alt.copy(saetze = SatzArt.entries.associateWith { vorne(alt.saetze[it].orEmpty(), neu[it].orEmpty()) }))
+        // Ein gelöschter Satz kommt nur zurück, wenn er im Profil neu dazukam (nicht, weil das Profil ihn schon vorher hatte).
+        val bisher = vorher?.let { it.saetzeEin + it.saetzeAus + it.saetzeHalt1 + it.saetzeHalt2 }.orEmpty().toSet()
+        val wieder = neu.values.flatten().filter { it in alt.geloescht && it !in bisher }.toSet()
+        if (wieder.isEmpty() && neu.all { (art, l) -> l.all { it in alt.saetze[art].orEmpty() } }) return@synchronized
+        schreibe(context, alt.copy(saetze = SatzArt.entries.associateWith { vorne(alt.saetze[it].orEmpty(), neu[it].orEmpty()) }, geloescht = alt.geloescht - wieder))
+    }
+
+    /** Satz aus der Auswahl aller Phasen entfernen; Profile, die ihn verwenden, behalten ihn. */
+    suspend fun loeschen(context: Context, satz: String) = withContext(Dispatchers.IO) {
+        synchronized(sperre) {
+            ladeBlockierend(context)
+            val t = satz.trim().takeIf { it.isNotEmpty() } ?: return@synchronized
+            val alt = _stand.value
+            schreibe(context, Stand(
+                saetze = alt.saetze.mapValues { (_, l) -> l - t },
+                eingesprochen = alt.eingesprochen.filterValues { it != t },
+                geloescht = alt.geloescht + t,
+            ))
+        }
     }
 
     suspend fun eingesprochen(context: Context, art: SatzArt, satz: String) = withContext(Dispatchers.IO) {
@@ -231,7 +252,7 @@ object AtemSatzVerlauf {
             ladeBlockierend(context)
             val t = satz.trim().takeIf { it.isNotEmpty() } ?: return@synchronized
             val alt = _stand.value
-            runCatching { schreibe(context, alt.copy(eingesprochen = alt.eingesprochen + (art to t))) }
+            runCatching { schreibe(context, alt.copy(eingesprochen = alt.eingesprochen + (art to t), geloescht = alt.geloescht - t)) }
         }
     }
 }
