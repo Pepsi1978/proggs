@@ -90,8 +90,12 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun List<JSONObject>.ohne(namen: List<String>) = namen.filter { n -> none { it.optString("deviceName").contains(n, ignoreCase = true) } }
 
-    /** Frisch lesen (Werkzeug und Startkarte „Raumklima“); [Ergebnis.struktur] trägt je Sensor Werte oder „problem“. */
-    suspend fun abrufen(nur: String = ""): Ergebnis = withContext(Dispatchers.IO) {
+    /**
+     * Frisch lesen (Werkzeug und Startkarte „Raumklima“); [Ergebnis.struktur] trägt je Sensor Werte oder „problem“.
+     * [macZuerst] (Aktualisieren-Knopf der Startkarte, Frank 16.11.2026): ein Wert, den der Mac zu Hause in den letzten [FRISCH_S] gehört hat,
+     * geht jedem anderen vor; nur ohne ihn gilt die übliche Reihenfolge (Wohnung: Cloud, Auto: Bluetooth). Die Cloud läuft trotzdem mit.
+     */
+    suspend fun abrufen(nur: String = "", macZuerst: Boolean = false): Ergebnis = withContext(Dispatchers.IO) {
         stoerung()?.let { return@withContext Ergebnis(it, fehler = true) }
         val alle = try {
             val (gespeichert, ausSpeicher) = sensorListe()
@@ -132,7 +136,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             // höchstens bis [NAH_MS] nach Scanbeginn und nur, solange der Scan wirklich läuft (kein Recht, Bluetooth aus, Scan gescheitert).
             val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) ->
                 val id = g.optString("deviceId").lowercase(Locale.ROOT)
-                istMobil(g) || (z.problem != null && frisch(fern.hook[id]) == null && frisch(fern.mac[id]) == null)
+                val macDa = macZuerst && frisch(fern.mac[id]) != null
+                !macDa && (istMobil(g) || (z.problem != null && frisch(fern.hook[id]) == null && frisch(fern.mac[id]) == null))
             }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
             if (gebraucht.isNotEmpty()) withTimeoutOrNull((scanEnde - System.currentTimeMillis()).coerceAtLeast(0)) {
                 while (!scan.isCompleted && !gebraucht.all { nah.containsKey(it) }) delay(150)
@@ -147,7 +152,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 // sich fast immer), gilt die Cloud; sonst geht ein frischer Mac-Wert vor. Thermometer melden per Webhook nur bei Änderung.
                 val hook = fern.hook[id]
                 val mac = fern.mac[id]
-                direkt ?: if (fern.cloudLebt) {
+                (if (macZuerst) alsSensor(z, mac, FRISCH_S) else null) ?: direkt ?: if (fern.cloudLebt) {
                     (if (z.problem == null) z else null) ?: alsSensor(z, hook, MAC_GILT_S) ?: alsSensor(z, mac, MAC_GILT_S) ?: z
                 } else {
                     alsSensor(z, mac, FRISCH_S) ?: alsSensor(z, hook, MAC_GILT_S) ?: (if (z.problem == null) z else null) ?: alsSensor(z, mac, MAC_GILT_S) ?: z

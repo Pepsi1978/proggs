@@ -42,11 +42,12 @@ private object RaumklimaStartStand {
     var automatischGelesen = false
     val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    fun lesen(faehigkeit: SwitchbotFaehigkeit) {
+    /** [macZuerst]: Aktualisieren per Knopf nimmt zuerst die Werte vom Mac zu Hause (Frank, 16.11.2026). */
+    fun lesen(faehigkeit: SwitchbotFaehigkeit, macZuerst: Boolean = false) {
         if (laeuft) return
         laeuft = true
         bereich.launch {
-            try { ergebnis = runCatching { faehigkeit.abrufen() }.getOrElse { Ergebnis("Die Sensoren ließen sich nicht lesen.", fehler = true) } } finally { laeuft = false }
+            try { ergebnis = runCatching { faehigkeit.abrufen(macZuerst = macZuerst) }.getOrElse { Ergebnis("Die Sensoren ließen sich nicht lesen.", fehler = true) } } finally { laeuft = false }
         }
     }
 }
@@ -80,7 +81,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
     val sensoren = struktur?.optJSONArray("sensoren")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
     // Antippen irgendwo in der Karte öffnet die SwitchBot-App (Frank, 15.11.2026); ein Tipp im Schutzkreis um den Knopf liest nur neu.
     val schutz = remember { KnopfSchutz() }
-    Karte(modifier = griff.antippenMitSchutz(schutz, imSchutz = { s.lesen(faehigkeit) }) {
+    Karte(modifier = griff.antippenMitSchutz(schutz, imSchutz = { s.lesen(faehigkeit, macZuerst = true) }) {
         if (!Schnellstart.starten(context, SWITCHBOT_PAKET)) Toast.makeText(context, "SwitchBot-App nicht gefunden", Toast.LENGTH_SHORT).show()
     }) {
         Row(verticalAlignment = Alignment.Top) {
@@ -95,7 +96,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                     color = if (s.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            AktualisierenKnopf(s.laeuft, "Raumklima aktualisieren", "Raumklima wird gelesen", schutz) { s.lesen(faehigkeit) }
+            AktualisierenKnopf(s.laeuft, "Raumklima aktualisieren", "Raumklima wird gelesen", schutz) { s.lesen(faehigkeit, macZuerst = true) }
         }
         if (e != null && struktur == null && !s.laeuft) Text(e.text, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         sensoren.forEach { z ->
@@ -107,7 +108,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
                 if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
-                    // Herkunft vor dem Wert (Frank, 15.11.2026): nichts = SwitchBot-Cloud (auch Webhook), „Mac“ = Mac zu Hause, „Bluetooth“ = Handy direkt.
+                    // Herkunft vor dem Wert (Frank, 15.11.2026): nichts = SwitchBot-Cloud (auch Webhook), „Mac“ = Mac zu Hause, „BL“ = Handy direkt per Bluetooth.
                     herkunft(z.optString("quelle")) +
                     if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
                     else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")),
@@ -170,6 +171,6 @@ private fun Co2Skala(ppm: Int) {
 
 private fun herkunft(quelle: String): String = when {
     quelle.startsWith("über den Mac") -> "Mac · "
-    quelle.startsWith("direkt per Bluetooth") -> "Bluetooth · "
+    quelle.startsWith("direkt per Bluetooth") -> "BL · "
     else -> ""
 }
