@@ -754,6 +754,7 @@
     {"versionCode": 746, "versionName": "1.8.735", "stand": "16.11.2026, 09:06 Uhr", "notiz": "Raumklima: Aktualisieren nimmt zuerst die Werte vom Mac zu Hause, die Cloud nur noch als Ausweg für die Wohnung, das Auto sonst per Bluetooth, angezeigt als BL."},
     {"versionCode": 747, "versionName": "1.8.736", "stand": "16.11.2026, 09:14 Uhr", "notiz": "Raumklima: Aktualisieren lässt den Mac zu Hause die Sensoren sofort lesen, seine Werte gehen immer vor, die Cloud ist nur noch Rückfall."},
     {"versionCode": 748, "versionName": "1.8.737", "stand": "16.11.2026, 09:39 Uhr", "notiz": "Raumklima: Review-Befunde behoben, Auto-Wert vom Mac gilt nur zwei Minuten, App-Start bleibt schnell, Batterie bleibt sichtbar, Mac antwortet auch ohne Treffer sofort."},
-    {"versionCode": 749, "versionName": "1.8.738", "stand": "16.11.2026, 12:56 Uhr", "notiz": "Atemübungen: Satzfelder sind jetzt ein Auswahlmenü mit allen je gespeicherten Sätzen der Phase, wählbar per Antippen oder Ziehen."}
+    {"versionCode": 749, "versionName": "1.8.738", "stand": "16.11.2026, 12:56 Uhr", "notiz": "Atemübungen: Satzfelder sind jetzt ein Auswahlmenü mit allen je gespeicherten Sätzen der Phase, wählbar per Antippen oder Ziehen."},
+    {"versionCode": 750, "versionName": "1.8.739", "stand": "16.11.2026, 12:59 Uhr", "notiz": "Atemübungen: Das Satz-Menü zeigt in jeder Phase alle gespeicherten Sätze aus Einatmen, Ausatmen und Halten."}
 ]
 }

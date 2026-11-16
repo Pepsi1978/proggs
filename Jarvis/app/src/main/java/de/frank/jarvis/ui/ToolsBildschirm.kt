@@ -547,8 +547,8 @@ private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, art: SatzArt
 private data class SatzEintrag(val text: String, val gesetzt: Boolean, val gesprochen: Boolean)
 
 /**
- * Satzfeld als Auswahlmenü: Eintippen bleibt möglich, der Pfeil rechts öffnet die Liste aller je für diese Phase gespeicherten Sätze
- * (profilübergreifend). Antippen eines Eintrags oder vom Pfeil auf einen Eintrag ziehen und loslassen setzt ihn ins Feld.
+ * Satzfeld als Auswahlmenü: Eintippen bleibt möglich, der Pfeil rechts öffnet die Liste aller je gespeicherten Sätze aller Phasen
+ * (profilübergreifend, die dieser Phase zuerst). Antippen eines Eintrags oder vom Pfeil auf einen Eintrag ziehen und loslassen setzt ihn ins Feld.
  * Öffnen und Schließen allein ändern nichts.
  */
 @Composable
@@ -566,10 +566,13 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
 
     val gesetzt = wert.lines().map { it.trim() }.filter { it.isNotEmpty() }
     val gesprochen = verlauf.eingesprochen[art]
-    val ausProfilen = profile.flatMap { p ->
-        when (art) { SatzArt.EIN -> p.saetzeEin; SatzArt.AUS -> p.saetzeAus; SatzArt.HALTEN -> p.saetzeHalt1 + p.saetzeHalt2 }
+    // Alle Sätze aus allen Phasen: zuerst die dieser Phase, danach die der übrigen Phasen.
+    fun ausProfilen(a: SatzArt) = profile.flatMap { p ->
+        when (a) { SatzArt.EIN -> p.saetzeEin; SatzArt.AUS -> p.saetzeAus; SatzArt.HALTEN -> p.saetzeHalt1 + p.saetzeHalt2 }
     }
-    val eintraege = (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + ausProfilen)
+    val andere = SatzArt.entries.filter { it != art }
+    val eintraege = (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + ausProfilen(art) +
+        andere.flatMap { verlauf.saetze[it].orEmpty() + ausProfilen(it) } + andere.mapNotNull { verlauf.eingesprochen[it] })
         .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         .map { SatzEintrag(it, it in gesetzt, it == gesprochen) }
     val aktuelleEintraege by rememberUpdatedState(eintraege)
@@ -636,7 +639,7 @@ private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    if (eintraege.isEmpty()) "Noch keine gespeicherten Sätze für diese Phase. Tippe einen ein oder sprich ihn ein."
+                    if (eintraege.isEmpty()) "Noch keine gespeicherten Sätze. Tippe einen ein oder sprich ihn ein."
                     else "${eintraege.size} ${if (eintraege.size == 1) "Satz" else "Sätze"} · antippen oder vom Pfeil hierher ziehen",
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = f.textLeise, fontSize = 12.sp,
                 )
