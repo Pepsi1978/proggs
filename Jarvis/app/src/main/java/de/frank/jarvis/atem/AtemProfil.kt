@@ -156,6 +156,8 @@ object AtemProfile {
         val alt = _stand.value
         val neu = if (alt.any { it.id == p.id }) alt.map { if (it.id == p.id) p else it } else alt + p
         schreibe(context, neu); _stand.value = neu
+        // Jeder gespeicherte Satz kommt in den profilübergreifenden Verlauf (für das Satz-Menü im Editor).
+        runCatching { AtemSatzVerlauf.merken(context, p) }
     }
 
     suspend fun loeschen(context: Context, id: String) = sperre.withLock {
@@ -166,5 +168,70 @@ object AtemProfile {
     private fun entferne(context: Context, id: String) {
         val neu = _stand.value.filterNot { it.id == id }
         schreibe(context, neu); _stand.value = neu
+    }
+}
+
+/** Phasenart für das Satz-Menü: beide Haltephasen teilen sich eine Liste. */
+enum class SatzArt(val schluessel: String) { EIN("ein"), AUS("aus"), HALTEN("halten") }
+
+/**
+ * Alle Sätze, die je in einem Profil gespeichert wurden, je Phasenart (neueste zuerst), dazu der zuletzt eingesprochene Satz.
+ * Liegt in files/atem/saetze.json; Profile selbst bleiben unverändert.
+ */
+object AtemSatzVerlauf {
+    data class Stand(val saetze: Map<SatzArt, List<String>> = emptyMap(), val eingesprochen: Map<SatzArt, String> = emptyMap())
+
+    private val _stand = MutableStateFlow(Stand())
+    val stand: StateFlow<Stand> = _stand
+    @Volatile private var geladen = false
+    private val sperre = Any()
+
+    private fun datei(context: Context) = File(context.filesDir, "atem/saetze.json")
+
+    private fun ladeBlockierend(context: Context) {
+        if (geladen) return
+        val d = datei(context)
+        _stand.value = if (d.exists()) runCatching {
+            val o = JSONObject(d.readText())
+            val e = o.optJSONObject("eingesprochen") ?: JSONObject()
+            Stand(
+                SatzArt.entries.associateWith { art -> o.optJSONArray(art.schluessel)?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } } ?: emptyList() },
+                SatzArt.entries.mapNotNull { art -> e.optString(art.schluessel).takeIf { it.isNotBlank() }?.let { art to it } }.toMap(),
+            )
+        }.getOrElse { Stand() } else Stand()
+        geladen = true
+    }
+
+    private fun schreibe(context: Context, s: Stand) {
+        val o = JSONObject()
+        SatzArt.entries.forEach { art -> o.put(art.schluessel, JSONArray(s.saetze[art].orEmpty())) }
+        o.put("eingesprochen", JSONObject().apply { s.eingesprochen.forEach { (art, t) -> put(art.schluessel, t) } })
+        val d = datei(context).apply { parentFile?.mkdirs() }
+        val tmp = File(d.parentFile, "saetze.json.tmp")
+        tmp.writeText(o.toString(2))
+        if (!tmp.renameTo(d)) { d.delete(); tmp.renameTo(d) }
+        _stand.value = s
+    }
+
+    suspend fun sicher(context: Context) = withContext(Dispatchers.IO) { synchronized(sperre) { ladeBlockierend(context) } }
+
+    private fun vorne(alt: List<String>, neu: List<String>) = (neu + alt).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+    /** Blockierend (aufgerufen aus dem IO-Speichern der Profile). */
+    fun merken(context: Context, p: AtemProfil) = synchronized(sperre) {
+        ladeBlockierend(context)
+        val alt = _stand.value
+        val neu = mapOf(SatzArt.EIN to p.saetzeEin, SatzArt.AUS to p.saetzeAus, SatzArt.HALTEN to (p.saetzeHalt1 + p.saetzeHalt2))
+        if (neu.all { (art, l) -> l.all { it in alt.saetze[art].orEmpty() } }) return@synchronized
+        schreibe(context, alt.copy(saetze = SatzArt.entries.associateWith { vorne(alt.saetze[it].orEmpty(), neu[it].orEmpty()) }))
+    }
+
+    suspend fun eingesprochen(context: Context, art: SatzArt, satz: String) = withContext(Dispatchers.IO) {
+        synchronized(sperre) {
+            ladeBlockierend(context)
+            val t = satz.trim().takeIf { it.isNotEmpty() } ?: return@synchronized
+            val alt = _stand.value
+            runCatching { schreibe(context, alt.copy(eingesprochen = alt.eingesprochen + (art to t))) }
+        }
     }
 }

@@ -3,6 +3,14 @@ package de.frank.jarvis.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +30,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.KeyboardVoice
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Stop
@@ -38,7 +48,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -60,6 +78,8 @@ import de.frank.jarvis.atem.AtemProfil
 import de.frank.jarvis.atem.AtemProfile
 import de.frank.jarvis.atem.AtemSitzung
 import de.frank.jarvis.atem.AtemStimme
+import de.frank.jarvis.atem.AtemSatzVerlauf
+import de.frank.jarvis.atem.SatzArt
 import de.frank.jarvis.atem.dauerText
 import de.frank.jarvis.atem.zehntelText
 import de.frank.jarvis.ui.theme.LocalFarben
@@ -309,11 +329,11 @@ private fun AtemEditor(vm: AppViewModel, start: AtemProfil, neu: Boolean) {
             Abschnitt("Sätze") {
                 SchalterZeile("Sätze vorlesen", "Eigene Sätze mittig in der Ein-, Halte- und Ausatemphase; je Zeile ein Satz, mehrere wechseln sich ab; leeres Feld = kein Satz", p.saetzeAn) { p = p.copy(saetzeAn = it) }
                 if (p.saetzeAn) {
-                    SatzFeld(vm, "Beim Einatmen", GRUEN, p.satzEin, p.ein, AtemStimme.EINATMEN, p.vorlesen) { p = p.copy(satzEin = it) }
+                    SatzFeld(vm, "Beim Einatmen", GRUEN, SatzArt.EIN, p.satzEin, p.ein, AtemStimme.EINATMEN, p.vorlesen) { p = p.copy(satzEin = it) }
                     // Haltephasen nur, wenn sie eine Dauer haben; leer = es wird nichts vorgelesen.
-                    if (p.halt1 > 0) SatzFeld(vm, "Beim Halten nach dem Einatmen", GELB, p.satzHalt1, p.halt1, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt1 = it) }
-                    SatzFeld(vm, "Beim Ausatmen", ORANGE, p.satzAus, p.aus, AtemStimme.AUSATMEN, p.vorlesen) { p = p.copy(satzAus = it) }
-                    if (p.halt2 > 0) SatzFeld(vm, "Beim Halten nach dem Ausatmen", GELB, p.satzHalt2, p.halt2, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt2 = it) }
+                    if (p.halt1 > 0) SatzFeld(vm, "Beim Halten nach dem Einatmen", GELB, SatzArt.HALTEN, p.satzHalt1, p.halt1, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt1 = it) }
+                    SatzFeld(vm, "Beim Ausatmen", ORANGE, SatzArt.AUS, p.satzAus, p.aus, AtemStimme.AUSATMEN, p.vorlesen) { p = p.copy(satzAus = it) }
+                    if (p.halt2 > 0) SatzFeld(vm, "Beim Halten nach dem Ausatmen", GELB, SatzArt.HALTEN, p.satzHalt2, p.halt2, AtemStimme.HALTEN, p.vorlesen) { p = p.copy(satzHalt2 = it) }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -408,16 +428,17 @@ private fun WiederholKnopf(icon: ImageVector, beschreibung: String, schritt: () 
  * Dieselbe Transkription wie überall in Jarvis; die Mitschrift kommt über das ViewModel, auch wenn sie erst später ankommt.
  */
 @Composable
-private fun SatzMikrofon(vm: AppViewModel, feld: String, wert: String, setze: (String) -> Unit, farbe: Color) {
+private fun SatzMikrofon(vm: AppViewModel, feld: String, wert: String, setze: (String) -> Unit, farbe: Color, eingesprochen: (String) -> Unit = {}) {
     val f = LocalFarben.current
     val jetzt by rememberUpdatedState(wert)
     val aktuellSetzen by rememberUpdatedState(setze)
+    val aktuellGesprochen by rememberUpdatedState(eingesprochen)
     val meins = vm.antwortDiktatFeld == feld
     val diktat = vm.antwortDiktate[feld]
     LaunchedEffect(diktat) {
         val neu = diktat?.trim() ?: return@LaunchedEffect
         vm.antwortDiktate.remove(feld)
-        if (neu.isNotEmpty()) aktuellSetzen(jetzt.trimEnd().let { if (it.isEmpty()) neu else it + "\n" + neu })
+        if (neu.isNotEmpty()) { aktuellSetzen(jetzt.trimEnd().let { if (it.isEmpty()) neu else it + "\n" + neu }); aktuellGesprochen(neu) }
     }
     // Editor geschlossen, während die Aufnahme lief: die Aufnahme beenden.
     DisposableEffect(feld) { onDispose { if (vm.antwortDiktatFeld == feld) vm.antwortAufnahmeBeenden() } }
@@ -461,7 +482,7 @@ private fun SchalterZeile(titel: String, text: String, an: Boolean, setze: (Bool
  * Erst geschätzt nach der Länge, nach „Genau messen“ mit der echten Stimme.
  */
 @Composable
-private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, wert: String, phaseZehntel: Int, stichwort: String, vorlesen: Boolean, setze: (String) -> Unit) {
+private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, art: SatzArt, wert: String, phaseZehntel: Int, stichwort: String, vorlesen: Boolean, setze: (String) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val bereich = rememberCoroutineScope()
@@ -483,8 +504,10 @@ private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, wert: String
         Text(titel, Modifier.padding(start = 8.dp).weight(1f), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text("Phase ${zehntelText(phaseZehntel)} s", color = f.textLeise, fontSize = 13.sp)
     }
-    Eingabe(wert, setze, "z. B. Heute ist der erste Tag vom Rest meines Lebens.", einzeilig = false)
-    SatzMikrofon(vm, "atem:$titel", wert, setze, farbe)
+    SatzAuswahl(art, wert, farbe, setze)
+    SatzMikrofon(vm, "atem:$titel", wert, setze, farbe) { gesagt ->
+        ToolsAnsicht.hintergrund.launch { runCatching { AtemSatzVerlauf.eingesprochen(context.applicationContext, art, gesagt) } }
+    }
     val phase = phaseZehntel * 100L
     zeilen.forEachIndexed { i, z ->
         val echt = gemessen[z]
@@ -517,5 +540,149 @@ private fun SatzFeld(vm: AppViewModel, titel: String, farbe: Color, wert: String
             }.padding(horizontal = 8.dp, vertical = 6.dp),
             color = farbe, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
         )
+    }
+}
+
+/** Ein Eintrag im Satz-Menü: aktuell im Feld gesetzt und/oder zuletzt eingesprochen. */
+private data class SatzEintrag(val text: String, val gesetzt: Boolean, val gesprochen: Boolean)
+
+/**
+ * Satzfeld als Auswahlmenü: Eintippen bleibt möglich, der Pfeil rechts öffnet die Liste aller je für diese Phase gespeicherten Sätze
+ * (profilübergreifend). Antippen eines Eintrags oder vom Pfeil auf einen Eintrag ziehen und loslassen setzt ihn ins Feld.
+ * Öffnen und Schließen allein ändern nichts.
+ */
+@Composable
+private fun SatzAuswahl(art: SatzArt, wert: String, farbe: Color, setze: (String) -> Unit) {
+    val f = LocalFarben.current
+    val context = LocalContext.current
+    val haptik = LocalHapticFeedback.current
+    val verlauf by AtemSatzVerlauf.stand.collectAsState()
+    val profile by AtemProfile.stand.collectAsState()
+    LaunchedEffect(Unit) { runCatching { AtemSatzVerlauf.sicher(context.applicationContext) } }
+    var offen by remember { mutableStateOf(false) }
+    var ueber by remember { mutableStateOf<Int?>(null) }
+    val zeilenOrte = remember { HashMap<Int, Rect>() }
+    val griffOrt = remember { floatArrayOf(0f, 0f) }
+
+    val gesetzt = wert.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    val gesprochen = verlauf.eingesprochen[art]
+    val ausProfilen = profile.flatMap { p ->
+        when (art) { SatzArt.EIN -> p.saetzeEin; SatzArt.AUS -> p.saetzeAus; SatzArt.HALTEN -> p.saetzeHalt1 + p.saetzeHalt2 }
+    }
+    val eintraege = (gesetzt + listOfNotNull(gesprochen) + verlauf.saetze[art].orEmpty() + ausProfilen)
+        .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        .map { SatzEintrag(it, it in gesetzt, it == gesprochen) }
+    val aktuelleEintraege by rememberUpdatedState(eintraege)
+    val aktuellSetzen by rememberUpdatedState(setze)
+    fun waehle(i: Int) {
+        aktuelleEintraege.getOrNull(i)?.let { aktuellSetzen(it.text) }
+        offen = false; ueber = null
+    }
+    LaunchedEffect(offen) { if (!offen) { zeilenOrte.clear(); ueber = null } }
+    val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
+
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark)
+                .then(if (offen) Modifier.border(1.5.dp, farbe.copy(alpha = 0.8f), RoundedCornerShape(14.dp)) else Modifier)
+                .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                if (wert.isEmpty()) Text("z. B. Heute ist der erste Tag vom Rest meines Lebens.", color = f.textSchwach, fontSize = 16.sp)
+                BasicTextField(wert, setze, Modifier.fillMaxWidth(), singleLine = false, minLines = 2,
+                    textStyle = TextStyle(color = f.text, fontSize = 16.sp), cursorBrush = SolidColor(f.primaer))
+            }
+            // Griff: Antippen öffnet bzw. schließt, gedrückt halten und auf einen Satz ziehen wählt ihn beim Loslassen.
+            Box(
+                Modifier.padding(start = 6.dp).size(44.dp).clip(CircleShape)
+                    .background(if (offen) farbe else farbe.copy(alpha = 0.22f))
+                    .onGloballyPositioned { val o = it.positionInRoot(); griffOrt[0] = o.x; griffOrt[1] = o.y }
+                    .semantics { contentDescription = if (offen) "Satzliste schließen" else "Gespeicherte Sätze zeigen" }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val runter = awaitFirstDown()
+                            runter.consume()
+                            val warOffen = offen
+                            offen = true
+                            var bewegt = false
+                            var ziel: Int? = null
+                            while (true) {
+                                val ereignis = awaitPointerEvent()
+                                val c = ereignis.changes.firstOrNull { it.id == runter.id } ?: break
+                                if (!c.pressed) { c.consume(); break }
+                                if ((c.position - runter.position).getDistance() > viewConfiguration.touchSlop) bewegt = true
+                                c.consume()
+                                if (bewegt) {
+                                    val ort = Offset(griffOrt[0] + c.position.x, griffOrt[1] + c.position.y)
+                                    val neu = zeilenOrte.entries.firstOrNull { it.value.contains(ort) }?.key
+                                    if (neu != ziel && neu != null) haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    ziel = neu; ueber = neu
+                                }
+                            }
+                            ueber = null
+                            when {
+                                bewegt && ziel != null -> waehle(ziel)
+                                !bewegt && warOffen -> offen = false
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.ExpandMore, null, tint = if (offen) Color.White else farbe, modifier = Modifier.size(28.dp).rotate(drehung)) }
+        }
+        AnimatedVisibility(offen, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Column(
+                Modifier.padding(top = 8.dp).fillMaxWidth().glas(f, 18.dp, erhoeht = 1f, toenung = farbe.copy(alpha = 0.06f)).padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    if (eintraege.isEmpty()) "Noch keine gespeicherten Sätze für diese Phase. Tippe einen ein oder sprich ihn ein."
+                    else "${eintraege.size} ${if (eintraege.size == 1) "Satz" else "Sätze"} · antippen oder vom Pfeil hierher ziehen",
+                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = f.textLeise, fontSize = 12.sp,
+                )
+                eintraege.forEachIndexed { i, e ->
+                    val markiert = e.gesetzt || e.gesprochen
+                    val form = RoundedCornerShape(12.dp)
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .onGloballyPositioned { zeilenOrte[i] = it.boundsInRoot() }
+                            .clip(form)
+                            .background(
+                                when {
+                                    ueber == i -> farbe.copy(alpha = 0.32f)
+                                    markiert -> farbe.copy(alpha = if (f.dunkel) 0.16f else 0.12f)
+                                    else -> Color.Transparent
+                                },
+                            )
+                            .then(if (ueber == i) Modifier.border(1.5.dp, farbe, form) else Modifier)
+                            .antippen { waehle(i) }
+                            .semantics { contentDescription = e.text + (if (e.gesetzt) ", aktuell" else "") + (if (e.gesprochen) ", zuletzt eingesprochen" else "") }
+                            .padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(width = 4.dp, height = 28.dp).clip(RoundedCornerShape(2.dp)).background(if (markiert) farbe else f.rand))
+                        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                            Text(e.text, color = f.text, fontSize = 15.sp, lineHeight = 19.sp, fontWeight = if (markiert) FontWeight.SemiBold else FontWeight.Normal, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            if (markiert) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (e.gesetzt) SatzMarke("Aktuell", Icons.Rounded.Check, farbe)
+                                if (e.gesprochen) SatzMarke("Zuletzt eingesprochen", Icons.Rounded.KeyboardVoice, farbe)
+                            }
+                        }
+                        if (e.gesetzt) Icon(Icons.Rounded.Check, null, tint = farbe, modifier = Modifier.padding(start = 8.dp).size(20.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SatzMarke(text: String, icon: ImageVector, farbe: Color) {
+    Row(
+        Modifier.clip(RoundedCornerShape(50)).background(farbe.copy(alpha = 0.22f)).padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = farbe, modifier = Modifier.size(12.dp))
+        Text(text, Modifier.padding(start = 4.dp), color = farbe, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
