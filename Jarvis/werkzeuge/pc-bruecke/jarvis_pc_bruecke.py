@@ -463,6 +463,33 @@ exec /bin/zsh -l
 
 
 RECHNER = rechnername()
+# Ein Bluetooth-Scan zur Zeit: Victron, SwitchBot im Takt und SwitchBot auf Knopfdruck (/geraet/switchbot-jetzt) wechseln sich ab.
+BLUETOOTH = threading.Lock()
+SWITCHBOT_SOFORT = threading.Event()
+
+
+def switchbot_lesen(schnell: bool = False) -> int:
+    """Ein Lauf von jarvis_switchbot.py (schnell: bis 30 s, endet 1 s nach dem CO2-Monitor; für den Aktualisieren-Knopf am Handy). Rückgabe: Exit-Code."""
+    skript = Path(__file__).resolve().with_name("jarvis_switchbot.py")
+    sb_log = ORDNER / "switchbot.log"
+    if sb_log.exists() and sb_log.stat().st_size > 200_000:
+        sb_log.write_text("", "utf-8")
+    with BLUETOOTH, open(sb_log, "a", encoding="utf-8") as fehlerlog:
+        # Scan bis 30 s + 5 s Nachlauf + Meldung bis 15 s + Start: 65 s reichen sicher.
+        return subprocess.run([sys.executable, str(skript)] + (["schnell"] if schnell else []), cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                              stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=65).returncode
+
+
+def switchbot_sofort_faden() -> None:
+    """Liest auf Zuruf des Handys sofort (Frank, 16.11.2026: Aktualisieren soll die Werte des Macs in Echtzeit holen)."""
+    while True:
+        SWITCHBOT_SOFORT.wait()
+        SWITCHBOT_SOFORT.clear()
+        try:
+            code = switchbot_lesen(schnell=True)
+            schreib(f"SwitchBot auf Knopfdruck gelesen (Exit {code})")
+        except Exception as fehler:
+            schreib(f"SwitchBot auf Knopfdruck: {fehler}")
 
 
 def jarvis_mac_faden() -> None:
@@ -480,7 +507,9 @@ def jarvis_mac_faden() -> None:
                 time.sleep(60 if code == 404 else 10)
                 continue
             befehl = json.loads(roh.decode("utf-8"))
-            if befehl.get("befehl") == "jarvis_starten":
+            if befehl.get("befehl") == "switchbot_lesen":
+                SWITCHBOT_SOFORT.set()   # eigener Faden: der Scan darf die Abfrage nie aufhalten
+            elif befehl.get("befehl") == "jarvis_starten":
                 argumente = ["/usr/bin/open"] + ([] if befehl.get("vorn") else ["-g"]) + ["-b", "de.frank.jarvismac"]
                 ergebnis = subprocess.run(argumente, capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
                 schreib(f"Jarvis Mac OS gestartet (vorn={bool(befehl.get('vorn'))})" if ergebnis.returncode == 0
@@ -507,7 +536,7 @@ def victron_faden() -> None:
                 log_datei = ORDNER / "victron.log"
                 if log_datei.exists() and log_datei.stat().st_size > 200_000:
                     log_datei.write_text("", "utf-8")  # wie protokoll() im Skript: nie unbegrenzt wachsen
-                with open(log_datei, "a", encoding="utf-8") as fehlerlog:
+                with BLUETOOTH, open(log_datei, "a", encoding="utf-8") as fehlerlog:
                     subprocess.run([sys.executable, str(skript)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
                                    stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=50)
             except Exception as fehler:
@@ -519,15 +548,8 @@ def victron_faden() -> None:
         # (jarvis_switchbot.py, POST /pc/switchbot). Alle fünf Minuten (so oft misst er höchstens), ohne Empfang in der nächsten Minute erneut.
         if time.time() - switchbot_gemeldet >= 300:
             try:
-                sb_log = ORDNER / "switchbot.log"
-                if sb_log.exists() and sb_log.stat().st_size > 200_000:
-                    sb_log.write_text("", "utf-8")
-                with open(sb_log, "a", encoding="utf-8") as fehlerlog:
-                    # Scan bis 30 s + 5 s Nachlauf + Meldung bis 15 s + Start: 65 s reichen sicher.
-                    lauf = subprocess.run([sys.executable, str(skript.with_name("jarvis_switchbot.py"))], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                                          stdout=subprocess.DEVNULL, stderr=fehlerlog, timeout=65)
                 # Nur „nichts gehört“ (Exit 3) lohnt einen neuen Scan in der nächsten Minute; andere Fehler (Zugang, Relay) behebt ein Scan nicht.
-                if lauf.returncode != 3:
+                if switchbot_lesen() != 3:
                     switchbot_gemeldet = time.time()
             except Exception as fehler:
                 switchbot_gemeldet = time.time()
@@ -551,6 +573,7 @@ def main() -> int:
     raeume_auf()
     threading.Thread(target=jarvis_mac_faden, daemon=True).start()
     threading.Thread(target=victron_faden, daemon=True).start()
+    threading.Thread(target=switchbot_sofort_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")

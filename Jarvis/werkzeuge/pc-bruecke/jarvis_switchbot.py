@@ -14,6 +14,7 @@ Format (pySwitchbot adv_parsers/meter.py, Hersteller 0x0969, Nutzdaten nach der 
 Aufruf:  python jarvis_switchbot.py          einmal scannen (bis 30 s) und melden; Exit 3 = nichts empfangen
          (die Brücke startet es alle fünf Minuten, nach einem Fehlschlag in der nächsten Minute erneut;
          der Monitor misst ohnehin höchstens alle fünf Minuten neu)
+         python jarvis_switchbot.py schnell  wie oben, aber nur 1 s Nachlauf nach dem CO2-Monitor (Aktualisieren-Knopf am Handy; er sendet am Mac nur alle 10–25 s)
          python jarvis_switchbot.py zeigen   nur scannen und ausgeben, nichts melden
 """
 
@@ -49,7 +50,7 @@ def auswerten(roh: bytes) -> dict | None:
     return werte
 
 
-async def scannen(sekunden: float = 30.0) -> dict:
+async def scannen(sekunden: float = 30.0, nachlauf: float = 5.0) -> dict:
     """Thermometer senden alle paar Sekunden, der Meter Pro CO2 nur alle paar Sekunden bis eine halbe Minute: lauschen, bis der CO2-Monitor
     gehört ist (dann noch 5 s für die übrigen), höchstens [sekunden]."""
     gefunden: dict = {}
@@ -68,7 +69,7 @@ async def scannen(sekunden: float = 30.0) -> dict:
     async with BleakScanner(detection_callback=paket):
         try:
             await asyncio.wait_for(fertig.wait(), sekunden)
-            await asyncio.sleep(5)
+            await asyncio.sleep(nachlauf)
         except asyncio.TimeoutError:
             pass
     return gefunden
@@ -76,7 +77,8 @@ async def scannen(sekunden: float = 30.0) -> dict:
 
 def main() -> None:
     try:
-        gefunden = asyncio.run(scannen())
+        schnell = len(sys.argv) > 1 and sys.argv[1] == "schnell"
+        gefunden = asyncio.run(scannen(30.0, 1.0) if schnell else scannen())
     except Exception as fehler:
         protokoll_in("switchbot.log", f"Bluetooth-Scan gescheitert: {fehler!r}")
         raise

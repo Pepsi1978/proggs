@@ -52,7 +52,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             "„Wie ist der CO2-Wert in der Wohnung?“, „Wie warm ist es im Auto?“), nutze raumklima_lesen. Der Sensor „Auto“ liegt in Franks Auto, nicht in der Wohnung. " +
             "Der CO2-Wert kommt vom Sensor „CO2-Monitor“ in der Wohnung (co2_ppm): ordne ihn ein, unter 800 ppm gut, 800 bis 1000 in Ordnung, 1000 bis 1400 lüften, darüber dringend lüften. " +
             "Fragt Frank nur nach CO2 oder Luftqualität, rufe raumklima_lesen mit sensor CO2-Monitor auf und nenne nur den CO2-Wert mit Einordnung. Fragt er nach einem Raum, nur diesen. " +
-            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal; in Bluetooth-Nähe liest das Handy ihn direkt. Steht bei einem Sensor quelle, kamen die Werte über den Mac zu Hause statt aus der SwitchBot-Cloud; nenne dann die Messzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
+            "Sonst nenne je Sensor Name, Temperatur, Luftfeuchtigkeit, falls vorhanden CO2 und die Abrufzeit; der Sensor im Auto ist oft außer Reichweite des Hubs, das ist normal; in Bluetooth-Nähe liest das Handy ihn direkt. Die Werte kommen zuerst vom Mac zu Hause (per Bluetooth, quelle nennt das und die Messzeit), die SwitchBot-Cloud ist nur Rückfall; steht quelle, nenne die Messzeit. Meldet es einen Sensor oder den Hub als nicht erreichbar, " +
             "sag das genau so und nenne für ihn keine Werte. Steht ein Raum unter nicht_im_konto, gibt es im SwitchBot-Konto keinen Sensor mit diesem Namen: " +
             "sag das und rate keine Werte (ähnlich benannte Sensoren nennen, z. B. Tippfehler). Für das Wetter draußen bleibt wetter_lesen zuständig."
 
@@ -65,7 +65,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "raumklima_lesen",
             titel = "Raumklima lesen",
-            beschreibung = "Liest jetzt frisch aus der SwitchBot-Cloud Temperatur (°C), Luftfeuchtigkeit (%) und beim CO2-Monitor den CO2-Wert (ppm) von Franks SwitchBot-Sensoren " +
+            beschreibung = "Liest jetzt frisch, zuerst vom Mac zu Hause, sonst aus der SwitchBot-Cloud, Temperatur (°C), Luftfeuchtigkeit (%) und beim CO2-Monitor den CO2-Wert (ppm) von Franks SwitchBot-Sensoren " +
                 "(Balkon, Wohnzimmer, Schlafzimmer, Auto, CO2-Monitor in der Wohnung), je mit Name und Abrufzeit. Nicht erreichbare Sensoren oder ein Hub offline werden gemeldet, nie alte Werte. Nur Lesen.",
             schema = schema("sensor" to text("Optional: Name eines einzelnen Sensors, z. B. Balkon, Auto oder CO2-Monitor. Für alle Sensoren weglassen.")),
             nurLesen = true,
@@ -92,10 +92,11 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
 
     /**
      * Frisch lesen (Werkzeug und Startkarte „Raumklima“); [Ergebnis.struktur] trägt je Sensor Werte oder „problem“.
-     * [macZuerst] (Aktualisieren-Knopf der Startkarte, Frank 16.11.2026): ein Wert, den der Mac zu Hause in den letzten [FRISCH_S] gehört hat,
-     * geht jedem anderen vor; nur ohne ihn gilt die übliche Reihenfolge (Wohnung: Cloud, Auto: Bluetooth). Die Cloud läuft trotzdem mit.
+     * Rangfolge (Frank, 16.11.2026): Ein Wert, den der Mac zu Hause in den letzten [FRISCH_S] gehört hat, geht immer vor; nur ohne ihn
+     * die Wohnungssensoren aus der Cloud (Webhook, Status) und das Auto direkt per Bluetooth. Die Cloud wird trotzdem parallel gefragt.
+     * [macJetzt] (Startkarte): Der Mac liest die Sensoren sofort per Bluetooth (POST /geraet/switchbot-jetzt), statt bis zu fünf Minuten alte Werte zu liefern.
      */
-    suspend fun abrufen(nur: String = "", macZuerst: Boolean = false): Ergebnis = withContext(Dispatchers.IO) {
+    suspend fun abrufen(nur: String = "", macJetzt: Boolean = false): Ergebnis = withContext(Dispatchers.IO) {
         stoerung()?.let { return@withContext Ergebnis(it, fehler = true) }
         val alle = try {
             val (gespeichert, ausSpeicher) = sensorListe()
@@ -126,7 +127,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val sensoren = coroutineScope {
             val scan = async { runCatching { nahLauschen(nah, stopp) }.onFailure { Logbuch.fehler("SwitchBot: Bluetooth-Scan", null, it.javaClass.simpleName) } }
             val hookArbeit = async { webhookSicherstellen(alle) }
-            val fernArbeit = async { runCatching { relayStand() }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(Fern()) }
+            val fernArbeit = async { runCatching { relayStand(macJetzt) }.onFailure { Logbuch.netz("SwitchBot-Stand vom Relay", it.message ?: it.javaClass.simpleName) }.getOrDefault(Fern()) }
             val ausCloud = gewaehlt.map { g ->
                 async { runCatching { lesen(g) }.getOrElse { Sensor(g.optString("deviceName"), g.optString("deviceType"), problem = "gerade nicht lesbar (${it.javaClass.simpleName}).") } }
             }.awaitAll()
@@ -136,7 +137,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             // höchstens bis [NAH_MS] nach Scanbeginn und nur, solange der Scan wirklich läuft (kein Recht, Bluetooth aus, Scan gescheitert).
             val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) ->
                 val id = g.optString("deviceId").lowercase(Locale.ROOT)
-                val macDa = macZuerst && frisch(fern.mac[id]) != null
+                val macDa = frisch(fern.mac[id]) != null
                 !macDa && (istMobil(g) || (z.problem != null && frisch(fern.hook[id]) == null && frisch(fern.mac[id]) == null))
             }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
             if (gebraucht.isNotEmpty()) withTimeoutOrNull((scanEnde - System.currentTimeMillis()).coerceAtLeast(0)) {
@@ -152,7 +153,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 // sich fast immer), gilt die Cloud; sonst geht ein frischer Mac-Wert vor. Thermometer melden per Webhook nur bei Änderung.
                 val hook = fern.hook[id]
                 val mac = fern.mac[id]
-                (if (macZuerst) alsSensor(z, mac, FRISCH_S) else null) ?: direkt ?: if (fern.cloudLebt) {
+                alsSensor(z, mac, FRISCH_S) ?: direkt ?: if (fern.cloudLebt) {
                     (if (z.problem == null) z else null) ?: alsSensor(z, hook, MAC_GILT_S) ?: alsSensor(z, mac, MAC_GILT_S) ?: z
                 } else {
                     alsSensor(z, mac, FRISCH_S) ?: alsSensor(z, hook, MAC_GILT_S) ?: (if (z.problem == null) z else null) ?: alsSensor(z, mac, MAC_GILT_S) ?: z
@@ -213,15 +214,25 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val cloudLebt: Boolean get() = !webhookAktiv || hook.values.any { System.currentTimeMillis() / 1000 - it.optLong("zeit") <= CLOUD_LEBT_S }
     }
 
-    /** Stand vom Relay (GET /geraet/switchbot): Werte mit Messzeit „zeit“; „quelle“ = webhook für die Cloud, sonst vom Mac. */
-    private fun relayStand(): Fern {
+    /**
+     * Stand vom Relay (GET /geraet/switchbot): Werte mit Messzeit „zeit“; „quelle“ = webhook für die Cloud, sonst vom Mac.
+     * [jetzt]: erst POST /geraet/switchbot-jetzt (der Mac scannt sofort, Antwort nach seiner Meldung, bis 40 s); scheitert das, der bisherige Stand.
+     */
+    private fun relayStand(jetzt: Boolean = false): Fern {
         val e = Einstellungen.get(context)
         if (e.serverToken.isBlank()) return Fern()
-        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/switchbot").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung).build()
-        val j = CLIENT.newCall(anfrage).execute().use { a ->
-            check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
-            JSONObject(a.body?.string().orEmpty())
+        fun holen(pfad: String, post: Boolean, client: OkHttpClient): JSONObject {
+            val anfrage = Request.Builder().url("https://${e.serverHost}$pfad").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung)
+                .apply { if (post) post(ByteArray(0).toRequestBody(null)) }.build()
+            return client.newCall(anfrage).execute().use { a ->
+                check(a.isSuccessful) { "Relay antwortet mit ${a.code}" }
+                JSONObject(a.body?.string().orEmpty())
+            }
         }
+        val j = (if (jetzt) runCatching { holen("/geraet/switchbot-jetzt", true, CLIENT_LANG) }
+            .onSuccess { Logbuch.netz("SwitchBot sofort vom Mac", it.optString("ergebnis")) }
+            .onFailure { Logbuch.netz("SwitchBot sofort vom Mac", it.message ?: it.javaClass.simpleName) }.getOrNull() else null)
+            ?: holen("/geraet/switchbot", false, CLIENT)
         val liste = j.optJSONArray("geraete") ?: return Fern()
         val alle = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.filter { it.optLong("zeit") > 0 && it.optString("mac").length == 12 }
         val (hook, mac) = alle.partition { it.optString("quelle") == "webhook" }
@@ -401,6 +412,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         private const val CLOUD_LEBT_S = 45 * 60L
         /** Nach einem Fehler bei der Webhook-Anmeldung so lange nicht erneut (jeder Versuch kostet bis zu drei Netzanfragen). */
         private const val WEBHOOK_PAUSE_MS = 10 * 60 * 1000L
+        /** Für den Sofort-Scan des Macs: Der Relay antwortet erst nach dessen Meldung (bis 40 s). */
+        private val CLIENT_LANG = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(50, TimeUnit.SECONDS).callTimeout(55, TimeUnit.SECONDS).build()
         private val CLIENT = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
         private const val WOAN = 0x0969

@@ -1542,6 +1542,7 @@ class AgentenKanal:
         self.mac_kam = asyncio.Event()       # die Mac-App hat gerade abgefragt
         self.befehl = asyncio.Event()
         self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
+        self.switchbot_lesen = False         # Handy will die SwitchBot-Sensoren jetzt vom Mac gelesen haben (/geraet/switchbot-jetzt)
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1744,12 +1745,15 @@ class AgentenKanal:
             if self.start_vorn is None and self._frage_liegt() and time.monotonic() - self.geweckt >= MAC_WECKEN_ABSTAND_S:
                 self.geweckt = time.monotonic()
                 self.start_vorn = False
-            if self.start_vorn is None:
+            if self.start_vorn is None and not self.switchbot_lesen:
                 self.befehl.clear()
                 try:
                     await asyncio.wait_for(self.befehl.wait(), KANAL_ABFRAGE_S)
                 except asyncio.TimeoutError:
                     pass
+            if self.start_vorn is None and self.switchbot_lesen:
+                self.switchbot_lesen = False
+                return web.json_response({"befehl": "switchbot_lesen"})
             if self.start_vorn is None:
                 return web.Response(status=204)
             vorn, self.start_vorn = self.start_vorn, None
@@ -1784,6 +1788,7 @@ ABGLEICH_FRIST_S = 3 * 86_400
 VICTRON_DATEI = ZUSTAND.with_name("victron.json")
 VICTRON_MAX = 8_192
 # Geheimer Pfadteil für den SwitchBot-Webhook: fest aus dem Geräte-Token abgeleitet (bleibt über Neustarts gleich, verrät ihn nicht).
+SWITCHBOT_JETZT_S = 40   # so lange wartet /geraet/switchbot-jetzt auf die Meldung des Macs (Scan bis 30 s + Meldung)
 SWITCHBOT_HOOK = hmac.new(TOKEN.encode(), b"switchbot-webhook", hashlib.sha256).hexdigest()[:32]
 
 
@@ -1794,10 +1799,12 @@ class VictronStand:
     dort ist „art“ beim Webhook die MAC, beim Mac „mac-<MAC>“, damit der Mac die Cloud-Werte nie verdrängt. Einträge älter als
     einen Tag fallen weg (fremde Geräte in Bluetooth-Reichweite sammeln sich sonst an)."""
 
-    def __init__(self, datei: Path = VICTRON_DATEI, max_bytes: int = VICTRON_MAX):
+    def __init__(self, datei: Path = VICTRON_DATEI, max_bytes: int = VICTRON_MAX, kanal=None):
+        self.kanal = kanal   # nur bei SwitchBot: Befehlskanal zur Mac-Brücke für /geraet/switchbot-jetzt
         self.datei = datei
         self.max_bytes = max_bytes
         self.sperre = asyncio.Lock()
+        self.gemeldet = asyncio.Event()   # jede Meldung eines Rechners (nicht der Webhook): für /geraet/switchbot-jetzt
         try:
             self.stand = json.loads(datei.read_text("utf-8"))
         except Exception:
@@ -1817,7 +1824,29 @@ class VictronStand:
         except Exception:
             return web.Response(status=400, text="ungueltig")
         await self.aufnehmen(neu)
+        self.gemeldet.set()
         return web.json_response({"ok": True})
+
+    async def jetzt(self, request: web.Request) -> web.Response:
+        """POST /geraet/switchbot-jetzt (Handy, Aktualisieren-Knopf): Die Mac-Brücke liest die Sensoren sofort per Bluetooth
+        (Befehl über /pc/mac-befehl); geantwortet wird mit dem Stand nach ihrer Meldung, höchstens nach SWITCHBOT_JETZT_S.
+        „ergebnis“: frisch, mac_nicht_verbunden oder keine_rueckmeldung (dann der bisherige Stand)."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        kanal = self.kanal
+        if kanal is None or not kanal.bruecke.da():
+            ergebnis = "mac_nicht_verbunden"
+        else:
+            self.gemeldet.clear()
+            kanal.switchbot_lesen = True
+            kanal.befehl.set()
+            try:
+                await asyncio.wait_for(self.gemeldet.wait(), SWITCHBOT_JETZT_S)
+                ergebnis = "frisch"
+            except asyncio.TimeoutError:
+                ergebnis = "keine_rueckmeldung"
+        stand = self.stand or {"geraete": []}
+        return web.json_response({**stand, "ergebnis": ergebnis, "alter_s": int(time.time()) - int(stand.get("empfangen", 0) or 0)})
 
     async def aufnehmen(self, neu: list) -> None:
         async with self.sperre:  # gleichzeitige Meldungen (Webhook und Mac) dürfen sich beim Schreiben nicht überholen
@@ -2204,7 +2233,8 @@ def app() -> web.Application:
     victron = VictronStand()
     anwendung.router.add_post("/pc/victron", victron.melden)
     anwendung.router.add_get("/geraet/victron", victron.holen)
-    switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"), max_bytes=32_768)
+    switchbot = VictronStand(ZUSTAND.with_name("switchbot.json"), max_bytes=32_768, kanal=kanal)
+    anwendung.router.add_post("/geraet/switchbot-jetzt", switchbot.jetzt)
     anwendung.router.add_post("/pc/switchbot", switchbot.melden)
     anwendung.router.add_get("/geraet/switchbot", switchbot.holen)
     anwendung.router.add_post("/switchbot/hook/{geheim}", switchbot.webhook)

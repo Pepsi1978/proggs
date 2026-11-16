@@ -751,6 +751,7 @@
     {"versionCode": 743, "versionName": "1.8.732", "stand": "15.11.2026, 21:46 Uhr", "notiz": "Das Listen-Widget wird nach jedem Update wieder richtig gezeichnet: Listen sind darin wieder wählbar, blätterbar und abhakbar; Pfeile und Plus sitzen mittig in ihren Knöpfen."},
     {"versionCode": 744, "versionName": "1.8.733", "stand": "15.11.2026, 21:53 Uhr", "notiz": "Atemübungen: Sätze fallen bei langsamem Netz nicht mehr weg und stehen auch ohne Vorlesen als Untertitel da; Anrufe pausieren die Übung und setzen sie danach fort, Pause spart Akku, Abschluss wird ausgesprochen."},
     {"versionCode": 745, "versionName": "1.8.734", "stand": "15.11.2026, 21:56 Uhr", "notiz": "Atemübungen: Auch beim Halten nach dem Ein- und nach dem Ausatmen lassen sich eigene Sätze vorlesen; ein leeres Feld liest nichts vor."},
-    {"versionCode": 746, "versionName": "1.8.735", "stand": "16.11.2026, 09:06 Uhr", "notiz": "Raumklima: Aktualisieren nimmt zuerst die Werte vom Mac zu Hause, die Cloud nur noch als Ausweg für die Wohnung, das Auto sonst per Bluetooth, angezeigt als BL."}
+    {"versionCode": 746, "versionName": "1.8.735", "stand": "16.11.2026, 09:06 Uhr", "notiz": "Raumklima: Aktualisieren nimmt zuerst die Werte vom Mac zu Hause, die Cloud nur noch als Ausweg für die Wohnung, das Auto sonst per Bluetooth, angezeigt als BL."},
+    {"versionCode": 747, "versionName": "1.8.736", "stand": "16.11.2026, 09:14 Uhr", "notiz": "Raumklima: Aktualisieren lässt den Mac zu Hause die Sensoren sofort lesen, seine Werte gehen immer vor, die Cloud ist nur noch Rückfall."}
 ]
 }
