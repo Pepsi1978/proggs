@@ -179,8 +179,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             val art = Meldungsarten.INSTALLFRAGE
             if (!Meldungen.an(this, art) || GespraechsFokus.aufnahme || GespraechsFokus.stilleHinweise || Meldungen.inRuhe(this, art) || ansage?.isActive == true) return
             val profil = Meldungen.profil(this, art)
-            // Nennt das Gerät, auf dem diese Version läuft: Ein eigener Satz aus der Zeit vor „{geraet}“ sagte sonst auf dem Tablet „Handy“.
-            val satz = profil.sprechtext("").let { if (de.frank.jarvis.data.Geraet.istTablet) it.replace("Handy", "Tablet") else it }
+            val satz = profil.sprechtext("")
             Meldungen.ereignis(this, art, ANSAGE_NUMMER, "Jarvis-Update", satz, vorlesen = false)
             ansage = lifecycleScope.launch {
                 val stimme = launch {

@@ -287,7 +287,7 @@ class EinstellungsKatalog(context: Context) {
             if (art.wecker && art != de.frank.jarvis.meldung.Meldungsarten.ERINNERUNG && art != de.frank.jarvis.meldung.Meldungsarten.TIMER) add(zahl(art.schluessel("weckton_sekunden"), b, "Dauer des Wecktons für ${art.titel}", if (art.formFest) "Dauer des Tons vor dem Text; 0 = 10 Sekunden. Wiederholung bis zur Bestätigung." else "So viele Sekunden klingelt der Weckton, danach auf Wunsch Vorlesen; 0 = bis zum Antippen oder Wegwischen.", 0, 300, "Sekunden", { p.wecktonSekunden }) { p.wecktonSekunden = it })
             if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
             art.eigenerTextStandard?.let { standard -> add(Eintrag(art.schluessel("vorlesetext"), b, "Vorgelesener Text für ${art.titel}",
-                "Was Jarvis bei dieser Meldung vorliest; „{name}“ setzt den Namen ein. „standard“ stellt den Standardsatz „$standard“ wieder her.",
+                "Was Jarvis bei dieser Meldung vorliest; " + (if (art == de.frank.jarvis.meldung.Meldungsarten.INSTALLFRAGE) "„{geraet}“ setzt Handy oder Tablet ein (nie fest „Handy“ schreiben)." else "„{name}“ setzt den Namen ein, „{geraet}“ Handy oder Tablet.") + " „standard“ stellt den Standardsatz „$standard“ wieder her.",
                 "freier Text oder „standard“", { p.vorlesetext.ifBlank { "standard ($standard)" } }) {
                 p.vorlesetext = if (norm(it) in setOf("standard", "standardsatz", "leer", "zuruecksetzen", "zurücksetzen")) "" else it.trim()
             }) }

@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.data.Geraet
 import de.frank.jarvis.speech.Ansage
 import de.frank.jarvis.speech.GespraechsFokus
 import de.frank.jarvis.speech.StimmWahl
@@ -67,6 +68,11 @@ class Meldungsart(
 }
 
 /** Die Einstellungen einer [Meldungsart], gelesen und geschrieben über [Einstellungen]. */
+/** „{geraet}“ im Vorlesetext, auch mit Umlaut geschrieben: wird zu Handy oder Tablet. */
+private val GERAET_PLATZHALTER = Regex("""\{ger(ae|ä)t\}""", RegexOption.IGNORE_CASE)
+/** Nur das ganze Wort „Handy“, nie Zusammensetzungen wie „Handynetz“. */
+private val HANDY_WORT = Regex("""\bHandy\b""")
+
 class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var an: Boolean get() = e.wahr(art.schluessel("an"), true); set(v) = e.setzeWahr(art.schluessel("an"), v)
     var ton: Boolean get() = e.wahr(art.schluessel("ton"), art.tonStandard); set(v) = e.setzeWahr(art.schluessel("ton"), v)
@@ -84,8 +90,14 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var vorlesetext: String get() = e.wort(art.schluessel("vorlesetext"), ""); set(v) = e.setzeWort(art.schluessel("vorlesetext"), v)
 
     /** Der Satz, den Jarvis vorliest, mit [name] für „{name}“. */
-    fun sprechtext(name: String) = vorlesetext.ifBlank { art.eigenerTextStandard.orEmpty() }.replace("{name}", name, ignoreCase = true)
-        .replace("{geraet}", de.frank.jarvis.data.Geraet.wort, ignoreCase = true)
+    fun sprechtext(name: String): String {
+        val eigener = vorlesetext
+        var satz = eigener.ifBlank { art.eigenerTextStandard.orEmpty() }.replace(GERAET_PLATZHALTER, Geraet.wort)
+        // Eigene Installationssätze aus der Zeit vor „{geraet}“ nennen fest das Handy; auf dem Tablet wäre das falsch.
+        if (eigener.isNotBlank() && art == Meldungsarten.INSTALLFRAGE && Geraet.istTablet) satz = satz.replace(HANDY_WORT, Geraet.wort)
+        // Der Name zuletzt: Ein Timer namens „{geraet}“ bleibt so wörtlich.
+        return satz.replace("{name}", name, ignoreCase = true)
+    }
 
     val stimmWahl get() = StimmWahl(stimme.ifBlank { null }, tempo.takeIf { it > 0f })
 
@@ -177,7 +189,7 @@ object Meldungsarten {
         "installfrage", "Installationsfrage ansagen", "Jarvis sagt an, wenn eine neue Jarvis-Version installiert werden kann und das Fenster auf deine Antwort wartet.",
         "Wenn die Frage zur Installation erscheint, außer während einer Aufnahme oder eines Gesprächs.", ALLTAG, null,
         vorlesenStandard = true, ruhezeit = true, lautStandard = 100, tonStandard = false,
-        eigenerTextStandard = "Eine neue Jarvis-Version ist für das {geraet} verfügbar. Bitte wähle, wann sie installiert werden soll. Ohne Antwort startet sie gleich von selbst.",
+        eigenerTextStandard = "Eine neue Jarvis-Version ist für das {geraet} verfügbar. Bitte wähle im Jarvis-Fenster, wann sie installiert werden soll. Ohne Antwort startet sie gleich von selbst.",
     )
     val WECKWORT_HOERT = Meldungsart(
         "weckwort", "Jarvis hört zu", "Zeigt, dass Jarvis auf dein Weckwort lauscht, auch bei gesperrtem Handy.",
