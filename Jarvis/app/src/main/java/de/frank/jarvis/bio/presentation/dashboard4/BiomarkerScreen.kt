@@ -264,7 +264,10 @@ fun BiomarkerHostScreen(
                         // Frank-Wunsch 2026-05-18: individuelle Hintergrundfarbe pro
                         // Karte via CompositionLocal — alle GlassCards in dieser
                         // Card lesen automatisch den Override.
-                            Box(modifier = Modifier.fillMaxWidth().longPressDraggableHandle()) {
+                            // Franks Wunsch vom 17.11.2026: kein eckiger Rahmen beim langen Drücken und Ziehen. Die Druck-Welle
+                            // des Antippens lag außerhalb der abgerundeten Karte und blieb während des Ziehens als Rechteck stehen;
+                            // der Zuschnitt auf die Kartenform (GlassCard, 20 dp) hält sie innerhalb der Karte.
+                            Box(modifier = Modifier.fillMaxWidth().clip(KARTEN_FORM).longPressDraggableHandle()) {
                                 BiomarkerCardForId(
                                     id = id,
                                     state = state,
@@ -637,6 +640,9 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
 }
 
 /** Zentrale Konstanten für Metrik-IDs — werden in Routes + Detail-Screen genutzt. */
+/** Form aller Biomarker-Karten (GlassCard-Standard), für den Zuschnitt beim Verschieben. */
+private val KARTEN_FORM = RoundedCornerShape(20.dp)
+
 internal object MetricKey {
     const val HRV = "hrv"
     const val RHR = "rhr"
@@ -667,6 +673,8 @@ internal object MetricKey {
     // Trail, Walk). Wert wird im BiomarkerViewModel berechnet und in
     // chartData["vo2max"] abgelegt.
     const val VO2MAX = "vo2max"
+    // Franks Wunsch vom 17.11.2026: Tiefschlafanteil (%) mit eigenem Detailbereich.
+    const val SLEEP_DEEP_PERCENT = "sleep_deep_percent"
 }
 
 /**
@@ -1463,7 +1471,7 @@ private fun BiomarkerCardForId(
                     selectedSnapshot = state.selectedSnapshot ?: state.latest,
                     history = state.history,
                     precomputed = state.deepSleepDerived,
-                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEEP) },
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEEP_PERCENT) },
                 )
 
             BiomarkerCardId.SLEEP_REM_GRAPH ->

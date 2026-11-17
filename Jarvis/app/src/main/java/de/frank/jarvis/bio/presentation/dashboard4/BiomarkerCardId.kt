@@ -43,6 +43,7 @@ object BiomarkerCardId {
     const val MINI_MUSCLE_MASS = "mini_muscle_mass"
     const val MINI_SKELETAL_MUSCLE = "mini_skeletal_muscle"
     const val MINI_VISCERAL_FAT = "mini_visceral_fat"
+    /** Stillgelegt (17.11.2026), bleibt nur zum Ausblenden gespeicherter Reihenfolgen. */
     const val MINI_BMI = "mini_bmi"
     const val MINI_PROTEIN = "mini_protein"
     const val MINI_BODY_WATER_PERCENT = "mini_body_water_percent"
@@ -129,7 +130,6 @@ object BiomarkerCardId {
             MINI_MUSCLE_MASS,
             MINI_SKELETAL_MUSCLE,
             MINI_VISCERAL_FAT,
-            MINI_BMI,
             MINI_PROTEIN,
             MINI_BODY_WATER_PERCENT,
         )
@@ -152,7 +152,6 @@ object BiomarkerCardId {
             MINI_BONE_MASS,
             MINI_SKELETAL_MUSCLE,
             MINI_VISCERAL_FAT,
-            MINI_BMI,
             MINI_BODY_WATER,
             MINI_BODY_WATER_PERCENT,
             MINI_PROTEIN,
@@ -205,5 +204,7 @@ object BiomarkerCardId {
             WORKOUTS_FOR_DAY,
             CORRELATION,
             SLEEP_RESTORATIVE,
+            // Franks Vorgabe vom 17.11.2026: BMI wird nicht gebraucht, weder in Anzeige noch Auswertung.
+            MINI_BMI,
         )
 }

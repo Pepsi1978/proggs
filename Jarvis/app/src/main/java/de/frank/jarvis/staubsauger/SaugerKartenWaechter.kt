@@ -39,6 +39,8 @@ object SaugerKartenWaechter {
     /** Holt die Karte, wenn eine Reinigung nach dem Stand der gespeicherten Karte endete. Gibt true zurück, wenn neu geholt wurde. */
     suspend fun pruefen(context: Context): Boolean {
         if (!ProscenicCloud.konfiguriert(context)) return false
+        // Während die Live-Karte offen ist, hält sie selbst die Gateway-Verbindung; eine zweite würde sie verdrängen.
+        if (SaugerLive.aktiv) return false
         val ende = ProscenicMehr.letzteReinigungEnde(context) ?: return false
         if (ende <= 0L || ende <= ProscenicMehr.kartenStand(context)) return false
         // Arbeitet er schon wieder (nächste Reinigung), wartet die Karte bis zu deren Ende.

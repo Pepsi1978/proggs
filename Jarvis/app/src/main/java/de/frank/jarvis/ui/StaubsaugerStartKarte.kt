@@ -116,6 +116,8 @@ private object SaugerAnsicht {
     var ziel by mutableStateOf<String?>(null)
     /** Wann der Zustand zuletzt still gelesen wurde (ms). */
     var zustandUm = 0L
+    /** Live-Karte im Vollbild offen (Franks Wunsch vom 17.11.2026). */
+    var liveOffen by mutableStateOf(false)
 }
 
 private fun stufeName(s: String?) = when (s) { "quiet" -> "Leise"; "auto" -> "Normal"; "strong" -> "Leistungsstark"; null, "" -> "–"; else -> s }
@@ -162,7 +164,8 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
     if (cloud && !de.frank.jarvis.data.Geraet.istTablet) LaunchedEffect(Unit) {
         while (true) {
             val aktiv = ProscenicMehr.aktiv(a.live?.modus)
-            if (System.currentTimeMillis() - a.zustandUm > (if (aktiv) 45_000L else 5 * 60_000L)) zustandLesen(context)
+            // Die offene Live-Karte hält selbst die Gateway-Verbindung; eine zweite würde sie verdrängen.
+            if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > (if (aktiv) 45_000L else 5 * 60_000L)) zustandLesen(context)
             delay(15_000L)
         }
     }
@@ -233,11 +236,21 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 Text("Staubsammlung:", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
                 StatusKnopf(when (live.staubFrequenz) { null -> "–"; 0 -> "aus"; else -> "an" }) { aufklappen("staub") }
             }
+            // Während der Reinigung direkt zur Live-Karte.
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Fahrt verfolgen:", color = f.textLeise, fontSize = 13.sp)
+                StatusKnopf("Live-Karte") { a.liveOffen = true }
+            }
         }
         val meldung = a.meldung ?: s.meldung?.takeIf { !s.laeuft }
         meldung?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
 
         if (a.offen) Aufgeklappt(cloud, ::los, ::einstellen)
+    }
+    if (cloud && a.liveOffen) SaugerLiveDialog(a.live) {
+        a.liveOffen = false
+        // Danach Zustand (und aufgeklappt die Karte) wieder wie gewohnt lesen.
+        saugerBereich.launch { aktualisieren(context, mitKarte = a.offen) }
     }
 }
 
@@ -363,6 +376,8 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Legende(Color(0xFF1565C0), "Roboter"); Legende(Color(0xFF43A047), "Station"); Legende(Color(0xFF1E88E5), "Fahrweg"); Legende(Color(0xFFE53935), "Sperrzone")
         }
+        // Live-Karte: Position und gefahrene Strecke der laufenden Reinigung in Echtzeit (auch abrufbar, wenn er gerade steht).
+        if (cloud) Knopf(if (ProscenicMehr.aktiv(live.modus)) "Live-Karte: Fahrt verfolgen" else "Live-Karte", Modifier.fillMaxWidth().padding(top = 6.dp)) { a.liveOffen = true }
         if (vollbild) Dialog(onDismissRequest = { vollbild = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             Box(Modifier.fillMaxSize().background(f.hgOben)) {
                 KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = true, modifier = Modifier.fillMaxSize(),

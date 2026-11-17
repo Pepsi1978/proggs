@@ -71,6 +71,12 @@ object BioAnsicht {
         de.frank.jarvis.bio.BioSpiegel.jetztNachschauen(context)
     }
 
+    /** Öffnet den Bereich direkt mit dem Detailbereich einer Messgröße (Kachel auf dem Startbildschirm, Franks Wunsch vom 17.11.2026). */
+    fun oeffnenMitDetail(context: Context, metrik: String) {
+        oeffnen(context)
+        zeige(BioSeite.MetrikDetail(metrik))
+    }
+
     fun schliessen() {
         offen = false
         stapel.clear()

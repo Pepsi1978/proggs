@@ -42,17 +42,27 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** Eine Zeile der Karte: Name, Wert mit Einheit, Datum der Messung (ISO, wie gemeldet), Einordnung, dazu die Farbskala. */
-private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String, val skala: BioSkala? = null)
+private data class BioZeile(val name: String, val wert: String, val datum: String, val einordnung: String, val skala: BioSkala? = null, val id: String = "")
+
+/** Messgröße der Kachel → Detailbereich im Biomarker-Bereich (Franks Wunsch vom 17.11.2026). */
+private val DETAIL_ZU_ID = mapOf(
+    "erholung" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.RECOVERY,
+    "hrv" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.HRV,
+    "ruhepuls" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.RHR,
+    "tiefschlaf_prozent" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.SLEEP_DEEP_PERCENT,
+    "schlafdauer" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.SLEEP_TOTAL,
+    "vo2max" to de.frank.jarvis.bio.presentation.dashboard4.MetricKey.VO2MAX,
+)
 
 /** Farbskala über einen festen Bereich: schlechtes Ende links (rot), gutes rechts (grün), Werte außerhalb am Rand; [schnitt] = langfristiger Durchschnitt. */
 private data class BioSkala(val schlecht: Double, val gut: Double, val aktuell: Double, val schnitt: Double, val schnittText: String) {
     fun lage(w: Double): Float = if (gut == schlecht) 0.5f else ((w - schlecht) / (gut - schlecht)).toFloat().coerceIn(0f, 1f)
 }
 
-/** Diese Größen zeigen statt des Einordnungstexts die Farbskala, mit festem Anzeigebereich (Franks Vorgabe vom 15.11.2026; Erholung 0–100 % ab 1.8.689). */
+/** Diese Größen zeigen statt des Einordnungstexts die Farbskala, mit festem Anzeigebereich (Franks Vorgabe vom 15.11.2026; Erholung 0–100 % ab 1.8.689, Schlafzeit bis 10 Stunden ab 1.8.742). */
 private val SKALA_BEREICH = mapOf(
     "erholung" to (0.0 to 100.0), "hrv" to (20.0 to 60.0), "ruhepuls" to (45.0 to 70.0), "tiefschlaf_prozent" to (0.0 to 30.0),
-    "schlafdauer" to (6.0 to 12.0), "vo2max" to (30.0 to 50.0),
+    "schlafdauer" to (6.0 to 10.0), "vo2max" to (30.0 to 50.0),
 )
 
 /**
@@ -113,7 +123,7 @@ fun BiomarkerStartVorladen() {
                 BioSkala(if (niedrigBesser) hoch else tief, if (niedrigBesser) tief else hoch, m.optDouble("aktuell"), schnitt,
                     zahl(schnitt))
             } else null
-            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum"), m.optString("einordnung"), skala)
+            BioZeile(m.optString("name").substringBefore(" ("), "$wert ${m.optString("einheit")}".trim(), m.optString("datum"), m.optString("einordnung"), skala, m.optString("id"))
         }
         val st = antwort.optJSONObject("stand")
         s.stand = when {
@@ -197,7 +207,12 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                 Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                     zeilen.chunked(spalten).forEach { reihe ->
                         Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                            reihe.forEach { z -> BioBlock(z, Modifier.weight(1f).fillMaxHeight()) }
+                            // Antippen einer Kachel öffnet direkt ihren Detailbereich (Graph, Werte-Übersicht, 7/30/90 Tage).
+                            reihe.forEach { z ->
+                                val detail = DETAIL_ZU_ID[z.id]
+                                BioBlock(z, Modifier.weight(1f).fillMaxHeight()
+                                    .then(if (detail != null) Modifier.antippen { BioAnsicht.oeffnenMitDetail(context, detail) } else Modifier))
+                            }
                             repeat(spalten - reihe.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }

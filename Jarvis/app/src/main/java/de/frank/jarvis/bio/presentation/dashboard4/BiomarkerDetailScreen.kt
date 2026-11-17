@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.frank.jarvis.bio.data.local.entities.BiomarkerSnapshotEntity
-import de.frank.jarvis.bio.presentation.components.ColorPaletteBar
 import de.frank.jarvis.bio.presentation.components.CosmosScaffold
 import de.frank.jarvis.bio.presentation.components.GlassCard
 import de.frank.jarvis.bio.presentation.components.charts.InteractiveLineChart
@@ -55,10 +54,10 @@ import java.util.Locale
  * Historie sehen, in Zahlen und als interaktiver Chart, mit Range-Switcher".
  *
  * Zeigt:
- * - Header mit Metrik-Name + Statistiken (Min/Max/Mittel, Anzahl Werte)
- * - Range-Switcher (7T / 30T / 90T / Alle)
- * - Großer interaktiver Chart (Y-Achse, X-Achse, Tap-Tooltip)
- * - Liste ALLER Werte mit Datum + Wert + Delta zum Vortag
+ * Aufbau (Franks Wunsch vom 17.11.2026):
+ * - oben der interaktive Graph über den gesamten Verlauf (sofort sichtbar)
+ * - darunter die Werte-Übersicht (Anzahl, Minimum, Mittel, Maximum) mit Umschalter 7 / 30 / 90 Tage
+ * - die Einzelwerte des gewählten Zeitraums mit Abweichung zum Vortag
  */
 @Composable
 fun BiomarkerDetailScreen(
@@ -69,35 +68,17 @@ fun BiomarkerDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val spec = metricSpecFor(metricKey)
-    var range by remember { mutableStateOf(DetailRange.ALL) }
+    // Franks Wunsch vom 17.11.2026: Der Graph zeigt sofort den ganzen Verlauf; der Umschalter (7, 30, 90 Tage) gilt für die
+    // Werte-Übersicht darunter (Anzahl, Minimum, Mittel, Maximum) und die Liste der Einzelwerte.
+    var range by remember { mutableStateOf(DetailRange.THIRTY) }
 
-    // Frank-Wunsch 2026-05-18: Farb-Auswahl pro Pattern. Wirkt sich auf BEIDE
-    // Karten (Mini + volle) aus, weil Mini- und volle Karte denselben Pattern
-    // visuell darstellen — eine gemeinsame Farbe haelt das Layout konsistent.
-    val cardIdsForMetric = cardIdsForMetricKey(metricKey)
-    val selectedColorIndex = 0
-
-    val now = System.currentTimeMillis()
-    val cutoff = when (range) {
-        DetailRange.SEVEN -> now - 7L * 24 * 60 * 60 * 1000
-        DetailRange.THIRTY -> now - 30L * 24 * 60 * 60 * 1000
-        DetailRange.NINETY -> now - 90L * 24 * 60 * 60 * 1000
-        DetailRange.ALL -> Long.MIN_VALUE
+    // VO2max kommt nicht aus dem BiomarkerSnapshot, sondern aus den VO2max-fähigen Trainings (im VM vorberechnet).
+    val gesamt: List<Pair<Long, Double>> = remember(metricKey, state.history, state.chartData) {
+        if (metricKey == MetricKey.VO2MAX) (state.chartData.fullPoints["vo2max"] ?: emptyList()).sortedBy { it.first }
+        else state.history.mapNotNull { snap -> spec.extract(snap)?.let { snap.capturedAt to it } }.sortedBy { it.first }
     }
-
-    // Frank-Wunsch 2026-05-18: VO2max-Werte kommen nicht aus dem
-    // BiomarkerSnapshot, sondern aus AmazfitWorkouts × Whoop-Snapshots —
-    // vorberechnet im VM. Spezialfall: precomputed-Liste aus chartData
-    // nutzen statt extract-Lookup ueber state.history.
-    val pointsAll: List<Pair<Long, Double>> =
-        if (metricKey == MetricKey.VO2MAX) {
-            (state.chartData.fullPoints["vo2max"] ?: emptyList())
-                .filter { it.first >= cutoff }
-        } else {
-            state.history
-                .filter { it.capturedAt >= cutoff }
-                .mapNotNull { snap -> spec.extract(snap)?.let { snap.capturedAt to it } }
-        }
+    val cutoff = System.currentTimeMillis() - range.tage * 24L * 60 * 60 * 1000
+    val pointsAll = gesamt.filter { it.first >= cutoff }
     val values = pointsAll.map { it.second }
     val minV = values.minOrNull()
     val maxV = values.maxOrNull()
@@ -117,85 +98,29 @@ fun BiomarkerDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                // Frank-Wunsch 2026-05-18: Farbpalette oben — Auswahl wirkt
-                // sich auf den Karten-Hintergrund im Uebersichts-Screen aus.
-                ColorPaletteBar(
-                    selectedIndex = selectedColorIndex,
-                    onPick = { idx ->
-                        Unit
-                    },
-                )
-            }
-            item {
-                // Range-Switcher
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ALL_DETAIL_RANGES.forEach { r ->
-                        FilterChip(
-                            selected = range == r,
-                            onClick = { range = r },
-                            label = { Text(r.label) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = spec.accent.copy(alpha = 0.2f),
-                                selectedLabelColor = cosmos.textPrimary,
-                                containerColor = cosmos.glassBg,
-                                labelColor = cosmos.textSecondary,
-                            ),
-                        )
-                    }
-                }
-            }
-            item {
-                // Statistik-Card: Min/Max/Mittel/Anzahl
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        // Frank-Wunsch 2026-06-01: Min/Mittel/Max wert-abhaengig faerben
-                        // (z.B. Recovery nach WHOOP-Ampel). Faellt auf spec.accent zurueck
-                        // wenn die Metrik keine wert-abhaengige Faerbung definiert.
-                        val statColor: (Double?) -> Color = { v ->
-                            v?.let { spec.valueColor?.invoke(it) } ?: spec.accent
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatCell("Anzahl", values.size.toString(), spec.accent, Modifier.weight(1f))
-                            StatCell("Min", minV?.let { spec.format(it) } ?: "—", statColor(minV), Modifier.weight(1f))
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatCell("Mittel", avgV?.let { spec.format(it) } ?: "—", statColor(avgV), Modifier.weight(1f))
-                            StatCell("Max", maxV?.let { spec.format(it) } ?: "—", statColor(maxV), Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-            item {
-                // Großer Chart
+                // Oben der Graph über den ganzen Verlauf.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Text(
-                            text = "${spec.title} — Verlauf",
+                            text = "${spec.title}: gesamter Verlauf",
                             color = cosmos.textPrimary,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(8.dp))
-                        if (pointsAll.isEmpty()) {
+                        if (gesamt.isEmpty()) {
                             Text(
-                                text = "Keine Daten in diesem Zeitraum.",
+                                text = "Noch keine Werte vorhanden.",
                                 color = cosmos.textSecondary,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         } else {
                             InteractiveLineChart(
-                                points = pointsAll,
+                                points = gesamt,
                                 accent = spec.accent,
                                 unit = spec.unit,
-                                height = 220,
-                                // Frank-Wunsch 2026-05-11: Y-Achse und Tooltip mit der
-                                // gleichen Formatierung wie die Werte-Liste/Statistik —
-                                // Schlafdauer also "7h 23min" statt nackter Minutenzahl.
+                                height = 240,
                                 valueFormatter = spec.format,
-                                // Frank-Wunsch 2026-05-16: Trendlinien-Farbe muss
-                                // semantisch sein. Bei RHR/Atemfrequenz/Hauttemperatur
-                                // ist niedriger besser — fallend = gruen, steigend = rot.
                                 lowerIsBetter = spec.lowerIsBetter,
                             )
                         }
@@ -203,17 +128,61 @@ fun BiomarkerDetailScreen(
                 }
             }
             item {
+                // Werte-Übersicht mit Umschalter für 7, 30 und 90 Tage.
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Werte-Übersicht",
+                                color = cosmos.textPrimary,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ALL_DETAIL_RANGES.forEach { r ->
+                                FilterChip(
+                                    selected = range == r,
+                                    onClick = { range = r },
+                                    label = { Text(r.label) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = spec.accent.copy(alpha = 0.2f),
+                                        selectedLabelColor = cosmos.textPrimary,
+                                        containerColor = cosmos.glassBg,
+                                        labelColor = cosmos.textSecondary,
+                                    ),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        // Min/Mittel/Max wert-abhängig färben (z. B. Erholung nach WHOOP-Ampel), sonst in der Akzentfarbe.
+                        val statColor: (Double?) -> Color = { v ->
+                            v?.let { spec.valueColor?.invoke(it) } ?: spec.accent
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatCell("Anzahl", values.size.toString(), spec.accent, Modifier.weight(1f))
+                            StatCell("Minimum", minV?.let { spec.format(it) } ?: "—", statColor(minV), Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatCell("Mittel", avgV?.let { spec.format(it) } ?: "—", statColor(avgV), Modifier.weight(1f))
+                            StatCell("Maximum", maxV?.let { spec.format(it) } ?: "—", statColor(maxV), Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            item {
                 Text(
-                    text = "Alle Werte (${pointsAll.size})",
+                    text = "Werte der letzten ${range.tage} Tage (${pointsAll.size})",
                     color = cosmos.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            // Werte-Liste (juengster zuerst). Mit Delta zum Vortag.
-            // Performance-Audit Loop 3 (2026-05-10): sortedByDescending pro
-            // Recomposition vermeiden + key=ts fuer strukturelles Diffing der Items.
-            val sortedDescending = pointsAll.sortedByDescending { it.first }
+            // Werte-Liste (jüngster zuerst) mit Abweichung zum Vortag.
+            val sortedDescending = pointsAll.asReversed()
             itemsIndexed(sortedDescending, key = { _, (ts, _) -> ts }) { idx, (ts, value) ->
                 val previousValue = sortedDescending.getOrNull(idx + 1)?.second
                 ValueRow(
@@ -383,6 +352,18 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         accent = LocalCosmos.current.accent,
         extract = { it.sleepDeepMinutes?.toDouble() },
         format = { "%.0f min".format(it) },
+    )
+    MetricKey.SLEEP_DEEP_PERCENT -> MetricSpec(
+        title = "Tiefschlafanteil",
+        unit = "%",
+        accent = LocalCosmos.current.accent,
+        // Gleiche Rechnung wie der Tiefschlaf-Verlauf: Tiefschlaf ÷ (Tief + REM + Leicht + Wach).
+        extract = { snap ->
+            val deep = snap.sleepDeepMinutes
+            val total = (deep ?: 0) + (snap.sleepRemMinutes ?: 0) + (snap.sleepLightMinutes ?: 0) + (snap.sleepAwakeMinutes ?: 0)
+            if (deep == null || total <= 0) null else deep.toDouble() / total * 100.0
+        },
+        format = { "%.1f %%".format(it) },
     )
     MetricKey.SLEEP_LIGHT -> MetricSpec(
         title = "Leichtschlaf",
@@ -566,7 +547,7 @@ internal fun cardIdsForMetricKey(metricKey: String): List<String> = when (metric
     MetricKey.SLEEP_PERF ->
         listOf(BiomarkerCardId.SLEEP_PERFORMANCE, BiomarkerCardId.MINI_SLEEP_PERFORMANCE)
     MetricKey.VO2MAX -> listOf(BiomarkerCardId.MINI_VO2MAX)
-    MetricKey.SLEEP_DEEP -> listOf(BiomarkerCardId.SLEEP_DEEP_GRAPH)
+    MetricKey.SLEEP_DEEP, MetricKey.SLEEP_DEEP_PERCENT -> listOf(BiomarkerCardId.SLEEP_DEEP_GRAPH)
     MetricKey.SLEEP_REM -> listOf(BiomarkerCardId.SLEEP_REM_GRAPH)
     MetricKey.SLEEP_AWAKE -> listOf(BiomarkerCardId.SLEEP_WAKE_GRAPH)
     MetricKey.RECOVERY -> listOf(BiomarkerCardId.GESAMTERHOLUNG, BiomarkerCardId.RECOVERY_GRAPH)
@@ -583,11 +564,10 @@ internal fun cardIdsForMetricKey(metricKey: String): List<String> = when (metric
     else -> listOf(metricKey)
 }
 
-private enum class DetailRange(val label: String) {
-    SEVEN("7T"),
-    THIRTY("30T"),
-    NINETY("90T"),
-    ALL("Alle"),
+private enum class DetailRange(val label: String, val tage: Int) {
+    SEVEN("7 Tage", 7),
+    THIRTY("30 Tage", 30),
+    NINETY("90 Tage", 90),
 }
 
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-

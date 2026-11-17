@@ -67,7 +67,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         "erholung, hrv, ruhepuls, schlafperformance, schlafdauer, tiefschlaf_min, rem_min, leichtschlaf_min, wach_min, tiefschlaf_prozent, rem_prozent, " +
             "leichtschlaf_prozent, wach_prozent, erholsamer_schlaf_prozent, schlafeffizienz, schlafkonsistenz, schlafbedarf, schlafdefizit_min, schlafstoerungen, " +
             "schlafzyklen, atemfrequenz, hauttemperatur, tagesbelastung, energie_kcal, oura_readiness, oura_schlafscore, oura_resilienz, oura_aktivitaet, " +
-            "schritte, oura_temperaturabweichung, vo2max, gewicht, koerperfett, muskelmasse, skelettmuskel, magermasse, knochenmasse, viszeralfett, bmi, " +
+            "schritte, oura_temperaturabweichung, vo2max, gewicht, koerperfett, muskelmasse, skelettmuskel, magermasse, knochenmasse, viszeralfett, " +
             "koerperwasser, wasseranteil, eiweiss"
 
     override val werkzeuge: List<Werkzeug> by lazy {

@@ -181,7 +181,6 @@ class ZeppBodyRepository constructor(
         read("skeletalMuscle", METRIC_SKELETAL_MUSCLE, 0.1..weight, mass = true)
         read("boneMass", METRIC_BONE, 0.1..weight, mass = true)
         read("visceralFat", METRIC_VISCERAL_FAT, 0.0..100.0)
-        read("bmi", METRIC_BMI, 1.0..200.0)
         read("proteinRate", METRIC_PROTEIN, 0.0..100.0)
         read("moisture", METRIC_WATER_PERCENT, 0.0..100.0)?.let {
             values[METRIC_WATER] = round(weight * it) / 100.0
@@ -228,7 +227,6 @@ class ZeppBodyRepository constructor(
         const val METRIC_MUSCLE = "muscle_mass"
         const val METRIC_SKELETAL_MUSCLE = "skeletal_muscle_mass"
         const val METRIC_VISCERAL_FAT = "visceral_fat"
-        const val METRIC_BMI = "bmi"
         const val METRIC_PROTEIN = "protein_percent"
         const val METRIC_WATER_PERCENT = "body_water_percent"
     }

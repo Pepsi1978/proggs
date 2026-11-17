@@ -226,7 +226,7 @@ object ProscenicMehr {
         )
     }
 
-    private fun karte(d: JSONObject): Karte {
+    internal fun karte(d: JSONObject): Karte {
         val b = d.optInt("width"); val h = d.optInt("height")
         val roh = Base64.decode(d.optString("map").replace(' ', '+'), Base64.DEFAULT)
         val px = lz4(roh, b * h)

@@ -25,8 +25,6 @@ enum class BodyMetric(
         BiomarkerCardId.MINI_SKELETAL_MUSCLE, "Skelettmuskeln", "kg"),
     VISCERAL_FAT(ZeppBodyRepository.METRIC_VISCERAL_FAT, "zepp_visceral_fat",
         BiomarkerCardId.MINI_VISCERAL_FAT, "Viszerales Fett", "Index", true),
-    BMI(ZeppBodyRepository.METRIC_BMI, "zepp_bmi",
-        BiomarkerCardId.MINI_BMI, "BMI", "", true),
     WATER(ZeppBodyRepository.METRIC_WATER, HealthConnectMetricKey.BODY_WATER,
         BiomarkerCardId.MINI_BODY_WATER, "Körperwasser", "kg"),
     WATER_PERCENT(ZeppBodyRepository.METRIC_WATER_PERCENT, "zepp_water_percent",

@@ -94,7 +94,6 @@ class BioAuswertung(context: Context) {
         Metrik("magermasse", "Magermasse", "kg", "Waage", 0, 1),
         Metrik("knochenmasse", "Knochenmasse", "kg", "Waage", 0, 2),
         Metrik("viszeralfett", "Viszerales Fett", "Stufe", "Waage", -1, 1),
-        Metrik("bmi", "BMI", "kg/m²", "Waage", 0, 1),
         Metrik("koerperwasser", "Körperwasser", "kg", "Waage", 0, 1),
         Metrik("wasseranteil", "Wasseranteil", "%", "Waage", 0, 1),
         Metrik("eiweiss", "Eiweiß", "%", "Waage", 0, 1),
@@ -105,7 +104,7 @@ class BioAuswertung(context: Context) {
     private val waage = mapOf(
         "weight" to "gewicht", "body_fat" to "koerperfett", "muscle_mass" to "muskelmasse",
         "skeletal_muscle_mass" to "skelettmuskel", "lean_body_mass" to "magermasse", "bone_mass" to "knochenmasse",
-        "visceral_fat" to "viszeralfett", "bmi" to "bmi", "body_water" to "koerperwasser",
+        "visceral_fat" to "viszeralfett", "body_water" to "koerperwasser",
         "body_water_percent" to "wasseranteil", "protein_percent" to "eiweiss",
     )
     private val resilienzStufen = listOf("limited", "adequate", "solid", "strong", "exceptional")
