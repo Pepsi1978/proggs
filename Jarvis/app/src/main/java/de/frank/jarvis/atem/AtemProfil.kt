@@ -120,13 +120,56 @@ object AtemProfile {
 
     private fun datei(context: Context) = File(context.filesDir, DATEI)
 
-    /** Für den Abgleich: Schreiben von außen unter derselben Sperre wie die eigenen Änderungen (läuft auf dessen IO-Faden). */
-    fun vonAussen(block: () -> Unit) = runBlocking { sperre.withLock { block() } }
+    /**
+     * Für den Abgleich: Schreiben von außen unter derselben Sperre wie die eigenen Änderungen (läuft auf dessen IO-Faden). Danach gilt
+     * der Speicherstand als veraltet: Das nächste Speichern liest die eingespielte Datei frisch, statt sie mit dem alten Stand zu überschreiben.
+     */
+    fun vonAussen(block: () -> Unit) = runBlocking { sperre.withLock { try { block() } finally { geladen = false } } }
 
-    /** Nach dem Abgleich: die eingespielte Datei neu einlesen, damit Übersicht und nächstes Speichern auf ihr aufbauen. */
+    /** Nach dem Abgleich: die eingespielte Datei neu einlesen, damit die Übersicht sie sofort zeigt. */
     fun neuLaden(context: Context) = runBlocking { sperre.withLock { geladen = false; laden(context.applicationContext) } }
 
-    private fun abgleichen() { runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() } }
+    /**
+     * Drei-Wege-Zusammenführung für den Abgleich, wenn beide Geräte geändert haben ([basisText] = zuletzt gemeinsame Fassung). Je Profil
+     * (nach id): nur eine Seite geändert → deren Fassung; beide geändert → die jüngere ([fernGewinnt]); auf einer Seite gelöscht und auf
+     * der anderen unverändert → weg; neu auf einer Seite → bleibt. Reihenfolge: hat nur eine Seite umsortiert, gilt deren Folge, sonst die
+     * der jüngeren; Profile nur der anderen Seite stehen hinter ihrem dortigen Vorgänger.
+     */
+    fun fuehreZusammen(basisText: String, lokalText: String, fernText: String, fernGewinnt: Boolean): String {
+        fun liste(t: String) = JSONArray(t).let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optString("id").isNotEmpty() } }
+        val b = liste(basisText).associateBy { it.optString("id") }
+        val l = liste(lokalText); val f = liste(fernText)
+        val lm = l.associateBy { it.optString("id") }; val fm = f.associateBy { it.optString("id") }
+        fun gleich(x: JSONObject?, y: JSONObject?) = x?.toString() == y?.toString()
+        val ergebnis = LinkedHashMap<String, JSONObject>()
+        for (id in (lm.keys + fm.keys)) {
+            val le = lm[id]; val fe = fm[id]; val be = b[id]
+            val wahl = if (be == null) (if (fernGewinnt) fe ?: le else le ?: fe) else when {
+                le == null -> fe?.takeIf { !gleich(it, be) }
+                fe == null -> le.takeIf { !gleich(it, be) }
+                gleich(le, be) -> fe
+                gleich(fe, be) -> le
+                else -> if (fernGewinnt) fe else le
+            }
+            if (wahl != null) ergebnis[id] = wahl
+        }
+        fun folge(x: List<JSONObject>) = x.map { it.optString("id") }.filter { it in ergebnis }
+        val basisFolge = b.keys.filter { it in ergebnis }
+        fun gemeinsam(x: List<String>, y: List<String>) = x.filter { it in y } == y.filter { it in x }
+        val (erst, zweit) = when {
+            gemeinsam(folge(l), basisFolge) -> folge(f) to folge(l)
+            gemeinsam(folge(f), basisFolge) -> folge(l) to folge(f)
+            fernGewinnt -> folge(f) to folge(l)
+            else -> folge(l) to folge(f)
+        }
+        val reihe = erst.toMutableList()
+        zweit.forEachIndexed { i, id ->
+            if (id in reihe) return@forEachIndexed
+            val vor = zweit.take(i).lastOrNull { it in reihe }
+            reihe.add(if (vor == null) 0 else reihe.indexOf(vor) + 1, id)
+        }
+        return JSONArray().apply { reihe.forEach { put(ergebnis.getValue(it)) } }.toString(2)
+    }
 
     suspend fun sicher(context: Context) {
         if (geladen) return
@@ -146,10 +189,7 @@ object AtemProfile {
                 d.renameTo(sicherung)
                 _hinweis.value = "Die Profildatei war beschädigt und liegt als ${sicherung.name} beiseite. Neue Profile werden in einer frischen Datei gespeichert."
                 emptyList()
-            } else startProfile().also { liste ->
-                // Speicher voll: die Startprofile trotzdem zeigen, statt Jarvis abstürzen zu lassen.
-                runCatching { schreibe(context, liste) }.onFailure { _hinweis.value = "Die Startprofile ließen sich nicht speichern (Speicher voll?)." }
-            }
+            } else startProfile()   // Erst mit der ersten Änderung gespeichert: Sonst schlüge die frisch erzeugte Datei im Abgleich echte Profile.
             _stand.value = liste
             geladen = true
         }
@@ -166,6 +206,7 @@ object AtemProfile {
         val tmp = File(d.parentFile, "profile.json.tmp")
         tmp.writeText(JSONArray().apply { liste.forEach { put(it.json()) } }.toString(2))
         if (!tmp.renameTo(d)) { d.delete(); tmp.renameTo(d) }
+        runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
     }
 
     suspend fun speichern(context: Context, p: AtemProfil) = sperre.withLock {
@@ -178,7 +219,6 @@ object AtemProfile {
         val vorher = alt.firstOrNull { it.id == p.id }
         val neu = if (alt.any { it.id == p.id }) alt.map { if (it.id == p.id) p else it } else alt + p
         schreibe(context, neu); _stand.value = neu
-        abgleichen()
         // Jeder gespeicherte Satz kommt in den profilübergreifenden Verlauf (für das Satz-Menü im Editor).
         runCatching { AtemSatzVerlauf.merken(context, p, vorher) }
     }
@@ -191,7 +231,7 @@ object AtemProfile {
             val rang = ids.withIndex().associate { (i, id) -> id to i }
             val neu = alt.withIndex().sortedBy { (i, p) -> rang[p.id] ?: (ids.size + i) }.map { it.value }
             if (neu.map { it.id } != alt.map { it.id }) {
-                runCatching { schreibe(context, neu); _stand.value = neu; abgleichen() }
+                runCatching { schreibe(context, neu); _stand.value = neu }
                     .onFailure { _hinweis.value = "Die neue Reihenfolge ließ sich nicht speichern (Speicher voll?)." }
             }
         }
@@ -205,7 +245,6 @@ object AtemProfile {
     private fun entferne(context: Context, id: String) {
         val neu = _stand.value.filterNot { it.id == id }
         schreibe(context, neu); _stand.value = neu
-        abgleichen()
     }
 }
 
@@ -229,7 +268,7 @@ object AtemSatzVerlauf {
     private fun datei(context: Context) = File(context.filesDir, DATEI)
 
     /** Für den Abgleich: Schreiben von außen unter derselben Sperre. */
-    fun vonAussen(block: () -> Unit) = synchronized(sperre) { block() }
+    fun vonAussen(block: () -> Unit) = synchronized(sperre) { try { block() } finally { geladen = false } }
 
     /** Nach dem Abgleich: neu einlesen. */
     fun neuLaden(context: Context) = synchronized(sperre) { geladen = false; ladeBlockierend(context.applicationContext) }

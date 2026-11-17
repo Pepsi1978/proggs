@@ -78,7 +78,7 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", de.frank.jarvis.listen.Listen.ORDNER, ordner = true, endung = ".json"),
         // Franks Veränderungen: je Eintrag eine Datei, gelöscht nur als Grabstein.
         Quelle("gedaechtnis", de.frank.jarvis.veraenderung.Veraenderungen.ORDNER, ordner = true, endung = ".json"),
-        // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei, dazu der Satzverlauf; die jüngere Fassung gilt.
+        // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
         )
@@ -89,9 +89,7 @@ object GedaechtnisAbgleich {
      * an, dass der Server sie gegen jede Fassung des Handys ablehnt und ihm die des Handys gibt (sonst gewönne eine zufällig jüngere
      * Tablet-Datei, wenn das Tablet als Erstes hochlädt).
      */
-    private val HANDY_ZUERST: Set<String> by lazy {
-        setOf(de.frank.jarvis.atem.AtemProfile.DATEI, de.frank.jarvis.atem.AtemSatzVerlauf.DATEI)
-    }
+    private val HANDY_ZUERST = setOf(de.frank.jarvis.atem.AtemProfile.DATEI, de.frank.jarvis.atem.AtemSatzVerlauf.DATEI)
 
     /** Setzt die Oberfläche: Der Abgleich hat Gespräche oder Projekte eingespielt, die Seitenleiste soll neu lesen. */
     @Volatile var beiGespraechen: (() -> Unit)? = null
@@ -183,7 +181,9 @@ object GedaechtnisAbgleich {
             for (pfad in dateien.keys().asSequence().toList()) {
                 val s = dateien.optJSONObject(pfad) ?: continue
                 val fern = s.optJSONObject("fern") ?: continue
-                val offen = if (fern.optBoolean("weg")) !s.optBoolean("weg") else fern.optString("sha") != s.optString("basis")
+                // Eine abgeglichene Atem-Datei, die hier fehlt (beschädigt beiseitegelegt), kommt vom Server zurück, bevor ein fast leerer Stand hochgeht.
+                val fehlt = pfad in HANDY_ZUERST && !fern.optBoolean("weg") && !File(app.filesDir, pfad).isFile
+                val offen = fehlt || if (fern.optBoolean("weg")) !s.optBoolean("weg") else fern.optString("sha") != s.optString("basis")
                 if (!offen || istOffen(app, pfad)) continue
                 if (pause()) return
                 jeDatei(pfad) { if (uebernimm(app, basis, pfad, s)) eingespielt += pfad }
@@ -330,7 +330,8 @@ object GedaechtnisAbgleich {
             if (konflikt) {
                 Logbuch.system("Gedächtnis-Abgleich", "$pfad: beide Geräte haben geändert, die Fassung von ${fern.optString("von")} ist jünger und gilt; die hiesige liegt unter $RUECKFALL")
             }
-            schreibe(app, quelle, datei, neu, fern.optLong("geaendert"))
+            // Zeit 1 ist nur die Erstkontakt-Marke eines Tablets (siehe ladeHoch), keine echte Änderungszeit.
+            schreibe(app, quelle, datei, neu, fern.optLong("geaendert").takeIf { it > 1 } ?: 0L)
             merkeBasis(app, pfad, neu, fernSha)
             s.put("basis", fernSha).put("weg", false)
             return true
@@ -427,7 +428,7 @@ object GedaechtnisAbgleich {
 
     /** Dateien mit Einträgen und ids, die bei beidseitiger Änderung zusammengeführt statt ganz ersetzt werden. */
     private fun zusammenfuehrbar(pfad: String): Boolean =
-        pfad == "gespraechsnotizen.json" || de.frank.jarvis.faehigkeit.merkdateien().any { it.name == pfad }
+        pfad == "gespraechsnotizen.json" || pfad == de.frank.jarvis.atem.AtemProfile.DATEI || de.frank.jarvis.faehigkeit.merkdateien().any { it.name == pfad }
 
     private fun basisDatei(app: Context, pfad: String) = File(File(app.filesDir, BASIS), pfad)
 
@@ -464,7 +465,8 @@ object GedaechtnisAbgleich {
                 // Notizen: auch über jede je vergebene id hinaus nummerieren (Zähler des Gesprächsgedächtnisses), nie eine gelöschte neu vergeben.
                 val notizPrefs = if (notizen) app.getSharedPreferences("gespraechsgedaechtnis", Context.MODE_PRIVATE) else null
                 val text = runCatching {
-                    fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = notizen,
+                    if (pfad == de.frank.jarvis.atem.AtemProfile.DATEI) de.frank.jarvis.atem.AtemProfile.fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"))
+                    else fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = notizen,
                         mindestId = (notizPrefs?.getInt("hoechsteId", 0) ?: 0) + 1,
                         beiVerworfen = { e -> Logbuch.system("Gedächtnis-Abgleich", "$pfad: Fassung von [${e.optInt("id")}] verworfen, weil Franks eigene Fassung gilt: ${e.optString("text").take(200)}") })
                 }.onFailure { Logbuch.fehler("Gedächtnis-Abgleich", it, "$pfad: Zusammenführen nicht möglich, die jüngste Fassung gilt") }.getOrNull()
