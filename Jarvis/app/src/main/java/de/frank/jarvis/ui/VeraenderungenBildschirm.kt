@@ -118,71 +118,75 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
     val offene = alle.filter { !it.erledigt && !it.angenommen }
     val aktuell = if (zeigtOffene) offene else angenommen
     val erledigt = if (zeigtOffene) emptyList() else alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
-    // Während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert; danach wieder der Stand aus der Datei.
-    var lokal by remember(zeigtOffene) { mutableStateOf<List<Veraenderung>?>(null) }
-    val gezeigt = lokal ?: aktuell
-    val listenStand = rememberLazyListState()
-    val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
-        val vonId = von.key as? Long ?: return@rememberReorderableLazyListState
-        val nachId = nach.key as? Long ?: return@rememberReorderableLazyListState
-        val l = (lokal ?: aktuell).toMutableList()
-        val a = l.indexOfFirst { it.id == vonId }
-        val b = l.indexOfFirst { it.id == nachId }
-        if (a < 0 || b < 0) return@rememberReorderableLazyListState
-        l.add(b, l.removeAt(a))
-        lokal = l
-        haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-    }
     Text("Veränderungen", Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     ReiterWahl(zeigtOffene, angenommen.size, offene.size, reiterWaehlen)
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listenStand, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (aktuell.isEmpty() && zeigtOffene) item(key = "leer_offen") {
-            Karte {
-                Text("Keine offene Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Was du Jarvis als Veränderung einsprichst, landet zuerst hier. Öffne sie und tippe auf „Annehmen“, sobald du sie umsetzt.",
-                    color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
-                )
-            }
+    // Je Reiter eine eigene Liste: Beim Wechsel erscheinen die Karten sofort samt Glasschatten, ohne Einblend-Animation,
+    // deren Alpha-Ebene den Schatten außerhalb der Karte bis zum Ende abschneiden würde.
+    androidx.compose.runtime.key(zeigtOffene) {
+        // Während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert; danach wieder der Stand aus der Datei.
+        var lokal by remember { mutableStateOf<List<Veraenderung>?>(null) }
+        val gezeigt = lokal ?: aktuell
+        val listenStand = rememberLazyListState()
+        val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
+            val vonId = von.key as? Long ?: return@rememberReorderableLazyListState
+            val nachId = nach.key as? Long ?: return@rememberReorderableLazyListState
+            val l = (lokal ?: aktuell).toMutableList()
+            val a = l.indexOfFirst { it.id == vonId }
+            val b = l.indexOfFirst { it.id == nachId }
+            if (a < 0 || b < 0) return@rememberReorderableLazyListState
+            l.add(b, l.removeAt(a))
+            lokal = l
+            haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
-        else if (aktuell.isEmpty()) item(key = "leer") {
-            Karte {
-                Text("Keine laufende Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Sag Jarvis, was du anders machen willst und warum, etwa: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“ Sie landet unter „Offen“; mit „Annehmen“ kommt sie hierher.",
-                    color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
-                )
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listenStand, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (aktuell.isEmpty() && zeigtOffene) item(key = "leer_offen") {
+                Karte {
+                    Text("Keine offene Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Was du Jarvis als Veränderung einsprichst, landet zuerst hier. Öffne sie und tippe auf „Annehmen“, sobald du sie umsetzt.",
+                        color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
-        }
-        items(gezeigt, key = { it.id }) { v ->
-            ReorderableItem(ordnen, key = v.id) { zieht ->
-                val gross by animateFloatAsState(if (zieht) 1.035f else 1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow), label = "gross")
-                val hoch by animateFloatAsState(if (zieht) 1.5f else 0.7f, spring(stiffness = Spring.StiffnessMediumLow), label = "hoch")
-                Zeile(
-                    v,
-                    Modifier
-                        .graphicsLayer { scaleX = gross; scaleY = gross }
-                        .longPressDraggableHandle(
-                            onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
-                            onDragStopped = {
-                                lokal?.let { l -> Veraenderungen.reihenfolge(context, l.map { it.id }) }
-                                lokal = null
-                            },
-                        ),
-                    erhoeht = hoch,
-                    oeffnen = { oeffnen(v.id) },
-                ) { Veraenderungen.erledigt(context, v.id, true) }
+            else if (aktuell.isEmpty()) item(key = "leer") {
+                Karte {
+                    Text("Keine laufende Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Sag Jarvis, was du anders machen willst und warum, etwa: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“ Sie landet unter „Offen“; mit „Annehmen“ kommt sie hierher.",
+                        color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
-        }
-        if (erledigt.isNotEmpty()) item(key = "erledigt") {
-            Bereich("Erledigt", kopf = { Text(erledigt.size.toString(), Modifier.padding(end = 8.dp), color = f.textLeise, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    erledigt.forEach { v ->
-                        Row(Modifier.fillMaxWidth().antippen { oeffnen(v.id) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(22.dp))
-                            Text(v.titel, Modifier.weight(1f).padding(start = 12.dp), color = f.textLeise, fontSize = 15.sp, textDecoration = TextDecoration.LineThrough, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Box(Modifier.size(42.dp).antippen { Veraenderungen.erledigt(context, v.id, false) }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Rounded.Undo, "In Aktuell zurückholen", tint = f.primaer, modifier = Modifier.size(22.dp))
+            items(gezeigt, key = { it.id }) { v ->
+                ReorderableItem(ordnen, key = v.id) { zieht ->
+                    val gross by animateFloatAsState(if (zieht) 1.035f else 1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow), label = "gross")
+                    val hoch by animateFloatAsState(if (zieht) 1.5f else 0.7f, spring(stiffness = Spring.StiffnessMediumLow), label = "hoch")
+                    Zeile(
+                        v,
+                        Modifier
+                            .graphicsLayer { scaleX = gross; scaleY = gross }
+                            .longPressDraggableHandle(
+                                onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                onDragStopped = {
+                                    lokal?.let { l -> Veraenderungen.reihenfolge(context, l.map { it.id }) }
+                                    lokal = null
+                                },
+                            ),
+                        erhoeht = hoch,
+                        oeffnen = { oeffnen(v.id) },
+                    ) { Veraenderungen.erledigt(context, v.id, true) }
+                }
+            }
+            if (erledigt.isNotEmpty()) item(key = "erledigt") {
+                Bereich("Erledigt", kopf = { Text(erledigt.size.toString(), Modifier.padding(end = 8.dp), color = f.textLeise, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        erledigt.forEach { v ->
+                            Row(Modifier.fillMaxWidth().antippen { oeffnen(v.id) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(22.dp))
+                                Text(v.titel, Modifier.weight(1f).padding(start = 12.dp), color = f.textLeise, fontSize = 15.sp, textDecoration = TextDecoration.LineThrough, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Box(Modifier.size(42.dp).antippen { Veraenderungen.erledigt(context, v.id, false) }, contentAlignment = Alignment.Center) {
+                                    Icon(Icons.AutoMirrored.Rounded.Undo, "In Aktuell zurückholen", tint = f.primaer, modifier = Modifier.size(22.dp))
+                                }
                             }
                         }
                     }
