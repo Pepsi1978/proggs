@@ -35,6 +35,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -82,12 +86,8 @@ fun VeraenderungenBildschirm() {
     Column(Modifier.fillMaxSize()) {
         // Zurück aus dem Detail in den Reiter, in dem die Veränderung jetzt steht (nach „Annehmen“ oder Zurücklegen nach „Offen“).
         if (offen != null) Detail(offen) { if (!offen.erledigt && zeigtOffene == offen.angenommen) zeigtOffene = !offen.angenommen; offenId = null }
-        else Uebersicht(alle, zeigtOffene, { neu ->
-            if (neu != zeigtOffene) {
-                zeigtOffene = neu
-                Veraenderungen.gedaechtnisNachziehen(context, if (neu) "Reiter Offen geöffnet" else "Reiter Aktuell geöffnet")
-            }
-        }) { offenId = it }
+        // Das Gedächtnis hängt nicht am gezeigten Reiter: Jedes Verschieben zwischen „Aktuell“ und „Offen“ schreibt und frischt es auf.
+        else Uebersicht(alle, zeigtOffene, { zeigtOffene = it }) { offenId = it }
     }
 }
 
@@ -103,7 +103,7 @@ private fun ReiterWahl(zeigtOffene: Boolean, aktuell: Int, offene: Int, waehlen:
         listOf(false to "Aktuell ($aktuell)", true to "Offen ($offene)").forEach { (istOffen, text) ->
             val gewaehlt = istOffen == zeigtOffene
             val farbe by animateColorAsState(if (gewaehlt) f.primaer else Color.Transparent, label = "reiter")
-            Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(farbe).antippen { waehlen(istOffen) }.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).semantics { role = Role.Tab; selected = gewaehlt }.clip(RoundedCornerShape(12.dp)).background(farbe).antippen { waehlen(istOffen) }.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
                 Text(text, color = if (gewaehlt) f.aufPrimaer else f.textLeise, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1)
             }
         }
@@ -115,10 +115,11 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
     val f = LocalFarben.current
     val context = LocalContext.current
     val haptik = LocalHapticFeedback.current
-    val angenommen = alle.filter { !it.erledigt && it.angenommen }
-    val offene = alle.filter { !it.erledigt && !it.angenommen }
-    val aktuell = if (zeigtOffene) offene else angenommen
-    val erledigt = if (zeigtOffene) emptyList() else alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
+    val angenommen = alle.filter { it.laeuft }
+    val offene = alle.filter { it.stehtAn }
+    val gruppe = if (zeigtOffene) offene else angenommen
+    // Erledigte erscheinen in dem Reiter, aus dem sie kamen; Zurückholen bringt sie genau dorthin.
+    val erledigt = alle.filter { it.erledigt && it.angenommen != zeigtOffene }.sortedByDescending { it.erledigtAm }
     Text("Veränderungen", Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     ReiterWahl(zeigtOffene, angenommen.size, offene.size, reiterWaehlen)
     // Je Reiter eine eigene Liste: Beim Wechsel erscheinen die Karten sofort samt Glasschatten, ohne Einblend-Animation,
@@ -126,12 +127,12 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
     androidx.compose.runtime.key(zeigtOffene) {
         // Während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert; danach wieder der Stand aus der Datei.
         var lokal by remember { mutableStateOf<List<Veraenderung>?>(null) }
-        val gezeigt = lokal ?: aktuell
+        val gezeigt = lokal ?: gruppe
         val listenStand = rememberLazyListState()
         val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
             val vonId = von.key as? Long ?: return@rememberReorderableLazyListState
             val nachId = nach.key as? Long ?: return@rememberReorderableLazyListState
-            val l = (lokal ?: aktuell).toMutableList()
+            val l = (lokal ?: gruppe).toMutableList()
             val a = l.indexOfFirst { it.id == vonId }
             val b = l.indexOfFirst { it.id == nachId }
             if (a < 0 || b < 0) return@rememberReorderableLazyListState
@@ -140,7 +141,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
             haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listenStand, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (aktuell.isEmpty() && zeigtOffene) item(key = "leer_offen") {
+            if (gruppe.isEmpty() && zeigtOffene) item(key = "leer_offen") {
                 Karte {
                     Text("Keine offene Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(
@@ -149,7 +150,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
                     )
                 }
             }
-            else if (aktuell.isEmpty()) item(key = "leer") {
+            else if (gruppe.isEmpty()) item(key = "leer") {
                 Karte {
                     Text("Keine laufende Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(
@@ -186,7 +187,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
                                 Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(22.dp))
                                 Text(v.titel, Modifier.weight(1f).padding(start = 12.dp), color = f.textLeise, fontSize = 15.sp, textDecoration = TextDecoration.LineThrough, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Box(Modifier.size(42.dp).antippen { Veraenderungen.erledigt(context, v.id, false) }, contentAlignment = Alignment.Center) {
-                                    Icon(Icons.AutoMirrored.Rounded.Undo, "In Aktuell zurückholen", tint = f.primaer, modifier = Modifier.size(22.dp))
+                                    Icon(Icons.AutoMirrored.Rounded.Undo, if (zeigtOffene) "In Offen zurückholen" else "In Aktuell zurückholen", tint = f.primaer, modifier = Modifier.size(22.dp))
                                 }
                             }
                         }
@@ -231,11 +232,12 @@ private fun androidx.compose.foundation.layout.ColumnScope.Detail(v: Veraenderun
             Text(v.beschreibung.ifBlank { "Keine Beschreibung." }, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 12.dp))
         }
         if (v.erledigt) Knopf(if (v.angenommen) "In Aktuell zurückholen" else "In Offen zurückholen", Modifier.fillMaxWidth(), Icons.AutoMirrored.Rounded.Undo) { Veraenderungen.erledigt(context, v.id, false) }
-        // Unten der Schalter zwischen den Reitern: offen = „Annehmen“ (normal), aktuell = „Angenommen“ (grün mit Haken, Tipp legt zurück nach „Offen“).
-        else if (!v.angenommen) Knopf("Annehmen", Modifier.fillMaxWidth(), Icons.Rounded.TaskAlt, haupt = false) { Veraenderungen.annehmen(context, v.id) }
+        // Schalter zwischen den Reitern: offen = „Annehmen“ (normal), aktuell = „Angenommen“ (grün mit Haken, Tipp legt zurück nach „Offen“).
+        // Er steht in beiden Zuständen an derselben Stelle: Ein doppelter Tipp schaltet nur hin und zurück, trifft nie „Als erledigt abhaken“.
         else {
+            if (v.angenommen) Knopf("Angenommen", Modifier.fillMaxWidth(), Icons.Rounded.CheckCircle, farbe = f.erfolg) { Veraenderungen.nachOffen(context, v.id) }
+            else Knopf("Annehmen", Modifier.fillMaxWidth(), Icons.Rounded.TaskAlt, haupt = false) { Veraenderungen.annehmen(context, v.id) }
             Knopf("Als erledigt abhaken", Modifier.fillMaxWidth(), Icons.Rounded.RadioButtonUnchecked, haupt = false) { Veraenderungen.erledigt(context, v.id, true); zurueck() }
-            Knopf("Angenommen", Modifier.fillMaxWidth(), Icons.Rounded.CheckCircle, farbe = f.erfolg) { Veraenderungen.nachOffen(context, v.id) }
         }
     }
     if (loeschenFrage) AlertDialog(

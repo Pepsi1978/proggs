@@ -406,7 +406,7 @@ object Tagesauswertung {
 
             // Nur wenn es welche gibt: Ein leerer Abschnitt verleitete das Modell zu erfundenen „nächsten Schritten“.
             if (de.frank.jarvis.veraenderung.Veraenderungen.sicher(app).isNotEmpty()) {
-                append("== VERÄNDERUNGEN (Franks aktuelle Lebensveränderungen mit Grund) ==\n")
+                append("== VERÄNDERUNGEN (AKTUELL = Gewohnheiten in Umsetzung: Stand und nächster Schritt; OFFEN = noch nicht angenommen: nur als mögliche nächste Veränderung erwähnen, keinen Fortschritt bewerten) ==\n")
                 append((runCatching { alle.filterIsInstance<de.frank.jarvis.faehigkeit.VeraenderungenFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").take(4_000)).append("\n\n")
             }
 

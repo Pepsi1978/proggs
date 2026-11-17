@@ -19,11 +19,16 @@ data class Veraenderung(
     val erstellt: Long = System.currentTimeMillis(),
     val geaendert: Long = System.currentTimeMillis(),
     val geloescht: Boolean = false,
-    /** Platz in „Aktuell“ (klein = oben). Ohne eigene Reihenfolge: neueste zuerst über −[erstellt]. */
+    /** Platz innerhalb seines Reiters „Aktuell“ oder „Offen“ (klein = oben). Ohne eigene Reihenfolge: neueste zuerst über −[erstellt]. */
     val rang: Double = -erstellt.toDouble(),
     /** true = Reiter „Aktuell“ (wird gerade umgesetzt), false = Reiter „Offen“ (steht noch an). Alte Einträge ohne Feld gelten als angenommen. */
     val angenommen: Boolean = true,
-)
+) {
+    /** Reiter „Aktuell“: angenommen und nicht erledigt. */
+    val laeuft get() = !erledigt && angenommen
+    /** Reiter „Offen“: noch nicht angenommen und nicht erledigt. */
+    val stehtAn get() = !erledigt && !angenommen
+}
 
 /**
  * Franks Veränderungen: je Eintrag eine kleine JSON-Datei unter `filesDir/veraenderungen/` (`v_<id>.json`), abgeglichen mit dem
@@ -112,7 +117,7 @@ object Veraenderungen {
         false
     }
 
-    /** Neue Reihenfolge von „Aktuell“ nach Ziehen: [ids] von oben nach unten; nur geänderte Plätze werden geschrieben, ein Abgleich am Ende. */
+    /** Neue Reihenfolge des gezeigten Reiters („Aktuell“ oder „Offen“) nach Ziehen: [ids] von oben nach unten; nur geänderte Plätze werden geschrieben, ein Abgleich am Ende. */
     fun reihenfolge(context: Context, ids: List<Long>) {
         val app = context.applicationContext
         sicher(app)
@@ -146,20 +151,20 @@ object Veraenderungen {
     fun erledigt(context: Context, id: Long, erledigt: Boolean): Veraenderung? =
         aendern(context, id) { if (it.erledigt == erledigt) it else it.copy(erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else 0L) }
 
-    /** „Annehmen“: von „Offen“ nach „Aktuell“, dort ganz oben. */
-    fun annehmen(context: Context, id: Long): Veraenderung? {
-        val oben = (sicher(context).filter { it.angenommen && !it.erledigt }.minOfOrNull { it.rang } ?: 0.0) - 1.0
-        return aendern(context, id) { if (it.angenommen) it else it.copy(angenommen = true, rang = oben) }
-    }
+    /** „Annehmen“: nach „Aktuell“, dort ganz oben; eine erledigte läuft damit wieder. */
+    fun annehmen(context: Context, id: Long): Veraenderung? = verschieben(context, id, angenommen = true)
 
-    /** Zurück von „Aktuell“ nach „Offen“, dort ganz oben. */
-    fun nachOffen(context: Context, id: Long): Veraenderung? {
-        val oben = (sicher(context).filter { !it.angenommen && !it.erledigt }.minOfOrNull { it.rang } ?: 0.0) - 1.0
-        return aendern(context, id) { if (!it.angenommen) it else it.copy(angenommen = false, rang = oben) }
-    }
+    /** Zurück nach „Offen“, dort ganz oben; eine erledigte steht damit wieder an. */
+    fun nachOffen(context: Context, id: Long): Veraenderung? = verschieben(context, id, angenommen = false)
 
-    /** Live-Gedächtnis von außen nachziehen, etwa beim Wechsel zwischen den Reitern „Aktuell“ und „Offen“. */
-    fun gedaechtnisNachziehen(context: Context, anlass: String) = auffrischen(context.applicationContext, anlass)
+    /** Der oberste Platz wird unter der Sperre (im [schreibe]-Block) aus dem frischen Stand berechnet, nicht vorher aus einem alten. */
+    private fun verschieben(context: Context, id: Long, angenommen: Boolean): Veraenderung? = aendern(context, id) { v ->
+        if (v.angenommen == angenommen && !v.erledigt) v
+        else {
+            val oben = (alle.values.filter { !it.geloescht && it.id != id && !it.erledigt && it.angenommen == angenommen }.minOfOrNull { it.rang } ?: 0.0) - 1.0
+            v.copy(angenommen = angenommen, erledigt = false, erledigtAm = 0L, rang = oben)
+        }
+    }
 
     fun loeschen(context: Context, id: Long): Veraenderung? = aendern(context, id) { it.copy(geloescht = true) }
 

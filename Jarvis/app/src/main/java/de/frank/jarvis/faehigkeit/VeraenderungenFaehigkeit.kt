@@ -46,8 +46,8 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
             taetigkeit = "schaut in die Veränderungen",
         ) { a ->
             val s = Veraenderungen.sicher(context)
-            val aktuell = s.filter { !it.erledigt && it.angenommen }
-            val offen = s.filter { !it.erledigt && !it.angenommen }
+            val aktuell = s.filter { it.laeuft }
+            val offen = s.filter { it.stehtAn }
             val erledigt = s.filter { it.erledigt }
             Ergebnis(
                 "AKTUELL (in Umsetzung):\n" + (aktuell.joinToString("\n") { zeile(it, true) }.ifEmpty { "(keine)" }) +
@@ -105,17 +105,22 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
     /** Textfeld ohne JSON-null (optString gäbe sonst „null“). */
     private fun org.json.JSONObject.feld(n: String): String = if (has(n) && !isNull(n)) optString(n).trim() else ""
 
-    /** Live-Gedächtnis: aktuelle (in Umsetzung) und offene Veränderungen mit Grund, dazu die erledigten als Titel. */
+    /**
+     * Live-Gedächtnis: aktuelle (in Umsetzung) mit Grund, offene knapp (Titel und Anfang der Beschreibung, damit sie im kurzen
+     * Startkontext Platz finden; ganz über veraenderungen_lesen), dazu die erledigten als Titel. Wie damit umzugehen ist, steht in [hinweise].
+     */
     fun gedaechtnis(): String {
         val s = Veraenderungen.sicher(context)
-        val aktuell = s.filter { !it.erledigt && it.angenommen }
-        val offen = s.filter { !it.erledigt && !it.angenommen }
+        val aktuell = s.filter { it.laeuft }
+        val offen = s.filter { it.stehtAn }
         val erledigt = s.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
         if (s.isEmpty()) return "Noch keine Veränderungen festgehalten."
-        return "AKTUELL (Gewohnheiten, die Frank gerade einarbeitet; für Erinnerung, Motivation und Tagesauswertung):\n" +
+        return "AKTUELL (in Umsetzung):\n" +
             (if (aktuell.isEmpty()) "(keine)" else aktuell.joinToString("\n") { zeile(it, true).substringBeforeLast(" [id ") }) +
-            "\nOFFEN (stehen noch an, eventuell als Nächstes umsetzen):\n" +
-            (if (offen.isEmpty()) "(keine)" else offen.joinToString("\n") { zeile(it, true).substringBeforeLast(" [id ") }) +
+            "\nOFFEN (noch nicht angenommen):\n" +
+            (if (offen.isEmpty()) "(keine)" else offen.joinToString("\n") { v ->
+                "- ${v.titel}" + (v.beschreibung.takeIf { it.isNotBlank() }?.let { b -> ": " + if (b.length > 120) b.take(120).trimEnd() + " …" else b } ?: "")
+            }) +
             (if (erledigt.isEmpty()) "" else "\nErledigt (umgesetzt oder nicht mehr verfolgt): " + erledigt.take(10).joinToString("; ") { it.titel } + if (erledigt.size > 10) " …" else "")
     }
 }
