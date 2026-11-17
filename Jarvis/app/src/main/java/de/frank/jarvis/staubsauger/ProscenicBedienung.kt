@@ -240,8 +240,14 @@ object ProscenicSteuerung {
         SaugerStand.meldung = null
         val ausgang = try {
             // Unsichtbar über die Proscenic-Cloud, sobald die Anmeldung unter Konten steht.
-            if (ProscenicCloud.konfiguriert(context)) ProscenicCloud.ausfuehren(context.applicationContext, aktion)
-            else withContext(Dispatchers.Default) { ablauf(context.applicationContext, aktion) }
+            if (ProscenicCloud.konfiguriert(context)) {
+                // Statusabruf und Befehl nutzen das Gateway; eine laufende Live-Aufzeichnung trennt es dafür kurz.
+                SaugerLive.gatewayFrei { ProscenicCloud.ausfuehren(context.applicationContext, aktion) }.also {
+                    // Reinigung gestartet: die Live-Karte zeichnet den Weg ab Reinigungsbeginn im Hintergrund auf.
+                    if (!it.fehler && aktion in setOf(Aktion.REINIGEN, Aktion.TIEFENREINIGUNG, Aktion.WISCHEN))
+                        SaugerLive.hintergrund(context, null, beginn = true)
+                }
+            } else withContext(Dispatchers.Default) { ablauf(context.applicationContext, aktion) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

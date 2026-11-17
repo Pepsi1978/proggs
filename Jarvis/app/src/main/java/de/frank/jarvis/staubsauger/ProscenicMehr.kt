@@ -91,18 +91,39 @@ object ProscenicMehr {
     suspend fun live(context: Context, mitKarte: Boolean = true): Live? = withContext(Dispatchers.IO) {
         runCatching {
             var mail = ""
-            val daten = mitSitzung(context) { s ->
-                mail = s.mail
-                // Offline? Dann gar nicht erst 14 Sekunden aufs Gateway warten.
-                if (ProscenicCloud.online(s) == false) null else lesen(s, mitKarte)
+            // Läuft die Live-Aufzeichnung, trennt sie das Gateway kurz (nur eine Verbindung je Konto, Almanach proscenic-cloud Nr. 3).
+            val daten = SaugerLive.gatewayFrei {
+                mitSitzung(context) { s ->
+                    mail = s.mail
+                    // Offline? Dann gar nicht erst 14 Sekunden aufs Gateway warten.
+                    if (ProscenicCloud.online(s) == false) null else lesen(s, mitKarte)
+                }
             } ?: return@runCatching null
             // Vollständig mit Karte gelesen (Status, Karte, Zeitpläne): die Rohdaten zwischenspeichern, damit die Karte beim
             // nächsten Aufklappen sofort da ist. Ein unvollständiger Lauf überschreibt den Speicher nicht.
             if (daten.keys.containsAll(listOf(20001, 20002, 21002))) kartenSpeichern(context, daten, mail)
             // Ein frischer Status kommt nur von einem verbundenen Roboter.
             if (daten.containsKey(20001)) SaugerStand.erreichbar = true
-            bauen(daten)
+            bauen(daten).also { arbeitetGesehen(context, it) }
         }.onFailure { Logbuch.netz("Proscenic: Live-Stand fehlt", it.toString().take(200)) }.getOrNull()
+    }
+
+    /** Arbeitet der Roboter laut einem frischen Stand, zeichnet die Live-Karte seinen Weg ab jetzt im Hintergrund auf. */
+    private fun arbeitetGesehen(context: Context, l: Live) {
+        if (aktiv(l.modus) && !SaugerLive.aktiv) SaugerLive.hintergrund(context, l, beginn = false)
+    }
+
+    /**
+     * Stiller Statusblick für den Kartenwächter: nur mit dem gespeicherten Token (keine Neu-Anmeldung, die die Proscenic-App abmelden
+     * würde) und nur, wenn der Roboter online ist. Arbeitet er, startet die Hintergrund-Aufzeichnung.
+     */
+    suspend fun zustandStill(context: Context): Live? = withContext(Dispatchers.IO) {
+        if (!ProscenicCloud.konfiguriert(context) || SaugerLive.aktiv) return@withContext null
+        runCatching {
+            val s = ProscenicCloud.sitzung(context, neu = false)
+            if (ProscenicCloud.online(s) == false) return@runCatching null
+            lesen(s, mitKarte = false)?.takeIf { it.containsKey(20001) }?.let { bauen(it) }?.also { arbeitetGesehen(context, it) }
+        }.getOrNull()
     }
 
     // ---- Zwischengespeicherte Karte ----

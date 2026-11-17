@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,8 +80,8 @@ fun SaugerLiveDialog(start: ProscenicMehr.Live?, schliessen: () -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
     DisposableEffect(Unit) {
-        SaugerLive.starte(context, start)
-        onDispose { SaugerLive.stoppe() }
+        SaugerLive.oeffne(context, start)
+        onDispose { SaugerLive.schliesse() }
     }
     val spur by SaugerLive.spur.collectAsState()
     Dialog(onDismissRequest = schliessen, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
@@ -131,8 +132,40 @@ fun SaugerLiveDialog(start: ProscenicMehr.Live?, schliessen: () -> Unit) {
     }
 }
 
+/**
+ * Live-Karte eingebettet in die Staubsauger-Karte des Startbildschirms, solange der Roboter arbeitet (Franks Wunsch vom 17.11.2026):
+ * zeigt die Spur seit Reinigungsbeginn und die aktuelle Position. Ohne Zoom-Gesten, damit der Startbildschirm scrollbar bleibt;
+ * Antippen öffnet das Vollbild.
+ */
 @Composable
-private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: Modifier) {
+fun SaugerLiveEingebettet(start: ProscenicMehr.Live?, modifier: Modifier = Modifier, antippen: () -> Unit) {
+    val f = LocalFarben.current
+    val context = LocalContext.current.applicationContext
+    DisposableEffect(Unit) {
+        SaugerLive.oeffne(context, start)
+        onDispose { SaugerLive.schliesse() }
+    }
+    val spur by SaugerLive.spur.collectAsState()
+    val k = spur.karte ?: start?.karte
+    if (k == null) {
+        Text(spur.fehler ?: "Live-Karte wird geladen …", color = f.textLeise, fontSize = 13.sp, modifier = modifier.padding(top = 6.dp))
+        return
+    }
+    var jetzt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); jetzt = System.currentTimeMillis() } }
+    Box(modifier.fillMaxWidth().aspectRatio(k.breite.toFloat() / k.hoehe, matchHeightConstraintsFirst = true).glas(f, 12.dp).antippen { antippen() }) {
+        LiveKarte(spur, k, Modifier.fillMaxSize(), gesten = false)
+        Row(Modifier.align(Alignment.TopStart).padding(8.dp).glas(f, 10.dp, erhoeht = 0.5f).padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            val frisch = spur.positionUm > 0 && jetzt - spur.positionUm < 10_000
+            Canvas(Modifier.size(8.dp)) { drawCircle(if (frisch) Color(0xFFE53935) else Color(0xFF9E9E9E)) }
+            Text("Live", color = f.text, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+        }
+    }
+}
+
+@Composable
+private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: Modifier, gesten: Boolean = true) {
     val bild = remember(k) { k.bild.asImageBitmap() }
     var zoom by remember { mutableStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
@@ -157,7 +190,7 @@ private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: M
         0f, 1f, infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "puls",
     )
     Canvas(
-        modifier.pointerInput(Unit) {
+        if (!gesten) modifier else modifier.pointerInput(Unit) {
             detectTransformGestures { mitte, verschiebung, faktor, _ ->
                 val nz = (zoom * faktor).coerceIn(1f, 8f)
                 val p = mitte - (mitte - pan) * (nz / zoom) + verschiebung

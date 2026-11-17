@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -147,7 +148,22 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { SaugerStand.laden(context) } }
     val s = SaugerStand
     val a = SaugerAnsicht
+    // Läuft die Live-Aufzeichnung, ruht das stille Lesen hier; Modus, Akku und Position kommen dann aus ihr.
+    val spur by de.frank.jarvis.staubsauger.SaugerLive.spur.collectAsState()
+    LaunchedEffect(spur) {
+        val l = a.live ?: return@LaunchedEffect
+        if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv || spur.modus == null) return@LaunchedEffect
+        if (l.modus != spur.modus || (spur.akku != null && l.akku != spur.akku) || (spur.roboter != null && l.roboter != spur.roboter))
+            a.live = l.copy(modus = spur.modus, akku = spur.akku ?: l.akku, roboter = spur.roboter ?: l.roboter)
+    }
     val live = a.live
+    val liveZeigen = liveAnzeigen(cloud)
+    // Endet die Reinigung, danach Zustand und (aufgeklappt) die fertige Karte frisch lesen.
+    var warLive by remember { mutableStateOf(false) }
+    LaunchedEffect(liveZeigen) {
+        if (warLive && !liveZeigen) { delay(5_000); aktualisieren(context, mitKarte = a.offen) }
+        warLive = liveZeigen
+    }
 
     fun los(aktion: Aktion) {
         if (s.laeuft) return
@@ -275,12 +291,14 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 Text("Staubsammlung:", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
                 StatusKnopf(when (live.staubFrequenz) { null -> "–"; 0 -> "aus"; else -> "an" }) { aufklappen("staub") }
             }
-            // Während der Reinigung direkt zur Live-Karte.
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Während der Reinigung direkt zur Live-Karte (auf dem Handy steht sie ohnehin eingebettet darunter).
+            if (!liveZeigen) Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Fahrt verfolgen:", color = f.textLeise, fontSize = 13.sp)
                 StatusKnopf("Live-Karte") { a.liveOffen = true }
             }
         }
+        // Arbeitet der Roboter, zeigt die Karte auch zugeklappt die Live-Ansicht: Spur seit Reinigungsbeginn und aktuelle Position.
+        if (!a.offen && liveZeigen) SaugerLiveEingebettet(live, Modifier.padding(top = 8.dp)) { a.liveOffen = true }
         val meldung = a.meldung ?: s.meldung?.takeIf { !s.laeuft }
         meldung?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
 
@@ -293,6 +311,17 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         // Danach Zustand (und aufgeklappt die Karte) wieder wie gewohnt lesen.
         saugerBereich.launch { aktualisieren(context, mitKarte = a.offen) }
     }
+}
+
+/**
+ * Live-Ansicht statt der normalen Karte, solange der Roboter arbeitet (Franks Wunsch vom 17.11.2026). Nur auf dem Handy:
+ * Handy und Tablet teilen das Proscenic-Konto, eine dauerhafte Live-Verbindung auf dem Tablet meldete das Handy ab.
+ */
+@Composable
+private fun liveAnzeigen(cloud: Boolean): Boolean {
+    val spur by de.frank.jarvis.staubsauger.SaugerLive.spur.collectAsState()
+    if (!cloud || de.frank.jarvis.data.Geraet.istTablet) return false
+    return ProscenicMehr.aktiv(SaugerAnsicht.live?.modus) || (de.frank.jarvis.staubsauger.SaugerLive.aktiv && ProscenicMehr.aktiv(spur.modus))
 }
 
 /** Antippbarer Wert in der Statuszeile. */
@@ -435,8 +464,11 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     // Karte der Wohnung: Antippen öffnet sie im Vollbild (Zoom mit zwei Fingern, zurück per Wischgeste).
     val karte = live?.karte
     LaunchedEffect(karte == null) { if (karte == null) vollbild = false }
+    val liveZeigen = liveAnzeigen(cloud)
     if (karte != null) {
-        KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = false,
+        // Arbeitet der Roboter, wird die normale Karte zur Live-Ansicht (außer beim Zeichnen von Sperrzonen).
+        if (liveZeigen && !zonenModus) SaugerLiveEingebettet(live, Modifier.padding(top = 8.dp)) { a.liveOffen = true }
+        else KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = false,
             beiTipp = { vollbild = true },
             beiZone = { i -> if (zonenModus && entwurf[i].sperre) entwurf.removeAt(i) },
             beiNeu = ::neueZone)
@@ -444,7 +476,7 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
             Legende(Color(0xFF1565C0), "Roboter"); Legende(Color(0xFF43A047), "Station"); Legende(Color(0xFF1E88E5), "Fahrweg"); Legende(Color(0xFFE53935), "Sperrzone")
         }
         // Live-Karte: Position und gefahrene Strecke der laufenden Reinigung in Echtzeit (auch abrufbar, wenn er gerade steht).
-        if (cloud) Knopf(if (ProscenicMehr.aktiv(live.modus)) "Live-Karte: Fahrt verfolgen" else "Live-Karte", Modifier.fillMaxWidth().padding(top = 6.dp)) { a.liveOffen = true }
+        if (cloud) Knopf(if (ProscenicMehr.aktiv(live.modus)) "Live-Karte im Vollbild" else "Live-Karte", Modifier.fillMaxWidth().padding(top = 6.dp)) { a.liveOffen = true }
         if (vollbild) Dialog(onDismissRequest = { vollbild = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             Box(Modifier.fillMaxSize().background(f.hgOben)) {
                 KartenAnsicht(live, if (zonenModus) entwurf else live.zonen, zonenModus, vollbild = true, modifier = Modifier.fillMaxSize(),

@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
  * Liest nach jeder fertigen Reinigung die Wohnungskarte im Hintergrund ein und speichert sie (ProscenicMehr.kartenSpeichern),
  * damit die Staubsauger-Karte beim Aufklappen sofort die aktuelle Karte zeigt. Läuft im Jarvis-Dienst: alle 10 Minuten ein
  * kleiner Blick in den Reinigungsverlauf der Cloud; nur wenn dort eine Reinigung nach der gespeicherten Karte endete, wird die Karte geholt.
+ * Dazu alle 2 Minuten ein stiller Statusblick: Arbeitet der Roboter, startet die Hintergrund-Aufzeichnung der Live-Karte ([SaugerLive]).
  */
 object SaugerKartenWaechter {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -29,9 +30,14 @@ object SaugerKartenWaechter {
         val app = context.applicationContext
         schleife = bereich.launch {
             delay(60_000)
+            var runde = 0
             while (true) {
-                runCatching { pruefen(app) }.onFailure { Logbuch.netz("Staubsauger-Karte: Prüfung gescheitert", it.toString().take(200)) }
-                delay(10 * 60_000L)
+                // Alle 2 Minuten still nachsehen, ob der Roboter arbeitet (Zeitplan, Proscenic-App); dann startet die Aufzeichnung
+                // der Live-Karte im Hintergrund (ProscenicMehr.zustandStill). Ohne Neu-Anmeldung, damit die Proscenic-App angemeldet bleibt.
+                if (!SaugerLive.aktiv) runCatching { ProscenicMehr.zustandStill(app) }
+                // Alle 10 Minuten die Karte nach einer fertigen Reinigung.
+                if (runde++ % 5 == 0) runCatching { pruefen(app) }.onFailure { Logbuch.netz("Staubsauger-Karte: Prüfung gescheitert", it.toString().take(200)) }
+                delay(2 * 60_000L)
             }
         }
     }
