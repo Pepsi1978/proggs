@@ -150,14 +150,14 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
     val a = SaugerAnsicht
     // Läuft die Live-Aufzeichnung, ruht das stille Lesen hier; Modus, Akku und Position kommen dann aus ihr.
     val spur by de.frank.jarvis.staubsauger.SaugerLive.spur.collectAsState()
-    LaunchedEffect(spur) {
+    LaunchedEffect(spur.modus, spur.akku, spur.roboter) {
         val l = a.live ?: return@LaunchedEffect
         if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv || spur.modus == null) return@LaunchedEffect
         if (l.modus != spur.modus || (spur.akku != null && l.akku != spur.akku) || (spur.roboter != null && l.roboter != spur.roboter))
             a.live = l.copy(modus = spur.modus, akku = spur.akku ?: l.akku, roboter = spur.roboter ?: l.roboter)
     }
     val live = a.live
-    val liveZeigen = liveAnzeigen(cloud)
+    val liveZeigen = liveAnzeigen(cloud, spur.modus)
     // Endet die Reinigung, danach Zustand und (aufgeklappt) die fertige Karte frisch lesen.
     var warLive by remember { mutableStateOf(false) }
     LaunchedEffect(liveZeigen) {
@@ -302,7 +302,7 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         val meldung = a.meldung ?: s.meldung?.takeIf { !s.laeuft }
         meldung?.let { Text(it.text, color = if (it.fehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
 
-        if (a.offen) Aufgeklappt(cloud, ::los, ::einstellen)
+        if (a.offen) Aufgeklappt(cloud, liveZeigen, ::los, ::einstellen)
     }
     // Verschwindet die Karte (anderer Bereich, Neuaufbau), schließt auch die Live-Karte: Sonst öffnete sie sich beim Zurückkommen von selbst.
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { a.liveOffen = false } }
@@ -317,11 +317,9 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
  * Live-Ansicht statt der normalen Karte, solange der Roboter arbeitet (Franks Wunsch vom 17.11.2026). Nur auf dem Handy:
  * Handy und Tablet teilen das Proscenic-Konto, eine dauerhafte Live-Verbindung auf dem Tablet meldete das Handy ab.
  */
-@Composable
-private fun liveAnzeigen(cloud: Boolean): Boolean {
-    val spur by de.frank.jarvis.staubsauger.SaugerLive.spur.collectAsState()
+private fun liveAnzeigen(cloud: Boolean, liveModus: String?): Boolean {
     if (!cloud || de.frank.jarvis.data.Geraet.istTablet) return false
-    return ProscenicMehr.aktiv(SaugerAnsicht.live?.modus) || (de.frank.jarvis.staubsauger.SaugerLive.aktiv && ProscenicMehr.aktiv(spur.modus))
+    return ProscenicMehr.aktiv(SaugerAnsicht.live?.modus) || (de.frank.jarvis.staubsauger.SaugerLive.aktiv && ProscenicMehr.aktiv(liveModus))
 }
 
 /** Antippbarer Wert in der Statuszeile. */
@@ -420,7 +418,7 @@ internal fun zustandName(m: String) = when (m) {
 }
 
 @Composable
-private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (suspend () -> SaugerAusgang) -> Unit) {
+private fun Aufgeklappt(cloud: Boolean, liveZeigen: Boolean, los: (Aktion) -> Unit, einstellen: (suspend () -> SaugerAusgang) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
     val s = SaugerStand
@@ -464,7 +462,6 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     // Karte der Wohnung: Antippen öffnet sie im Vollbild (Zoom mit zwei Fingern, zurück per Wischgeste).
     val karte = live?.karte
     LaunchedEffect(karte == null) { if (karte == null) vollbild = false }
-    val liveZeigen = liveAnzeigen(cloud)
     if (karte != null) {
         // Arbeitet der Roboter, wird die normale Karte zur Live-Ansicht (außer beim Zeichnen von Sperrzonen).
         if (liveZeigen && !zonenModus) SaugerLiveEingebettet(live, Modifier.padding(top = 8.dp)) { a.liveOffen = true }

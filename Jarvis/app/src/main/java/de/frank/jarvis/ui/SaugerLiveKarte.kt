@@ -78,11 +78,7 @@ private fun liveZustand(m: String?) = if (m.isNullOrBlank()) "Zustand wird geles
 @Composable
 fun SaugerLiveDialog(start: ProscenicMehr.Live?, schliessen: () -> Unit) {
     val f = LocalFarben.current
-    val context = LocalContext.current.applicationContext
-    DisposableEffect(Unit) {
-        SaugerLive.oeffne(context, start)
-        onDispose { SaugerLive.schliesse() }
-    }
+    LiveBetrachter(start)
     val spur by SaugerLive.spur.collectAsState()
     Dialog(onDismissRequest = schliessen, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize().background(f.hgOben)) {
@@ -140,11 +136,7 @@ fun SaugerLiveDialog(start: ProscenicMehr.Live?, schliessen: () -> Unit) {
 @Composable
 fun SaugerLiveEingebettet(start: ProscenicMehr.Live?, modifier: Modifier = Modifier, antippen: () -> Unit) {
     val f = LocalFarben.current
-    val context = LocalContext.current.applicationContext
-    DisposableEffect(Unit) {
-        SaugerLive.oeffne(context, start)
-        onDispose { SaugerLive.schliesse() }
-    }
+    LiveBetrachter(start)
     val spur by SaugerLive.spur.collectAsState()
     val k = spur.karte ?: start?.karte
     if (k == null) {
@@ -161,6 +153,27 @@ fun SaugerLiveEingebettet(start: ProscenicMehr.Live?, modifier: Modifier = Modif
             Canvas(Modifier.size(8.dp)) { drawCircle(if (frisch) Color(0xFFE53935) else Color(0xFF9E9E9E)) }
             Text("Live", color = f.text, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         }
+    }
+}
+
+/**
+ * Meldet eine Ansicht bei [SaugerLive] als Betrachter an, solange die App sichtbar ist. Im Hintergrund wird der Startbildschirm nicht
+ * neu aufgebaut; ohne diese Abmeldung bliebe die Ansicht nach Reinigungsende angemeldet und hielte die Sitzung stundenlang offen.
+ */
+@Composable
+private fun LiveBetrachter(start: ProscenicMehr.Live?) {
+    val context = LocalContext.current.applicationContext
+    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lebenszyklus) {
+        var angemeldet = false
+        fun an() { if (!angemeldet) { angemeldet = true; SaugerLive.oeffne(context, start) } }
+        fun ab() { if (angemeldet) { angemeldet = false; SaugerLive.schliesse() } }
+        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) an() else if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) ab()
+        }
+        if (lebenszyklus.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) an()
+        lebenszyklus.addObserver(beobachter)
+        onDispose { lebenszyklus.removeObserver(beobachter); ab() }
     }
 }
 

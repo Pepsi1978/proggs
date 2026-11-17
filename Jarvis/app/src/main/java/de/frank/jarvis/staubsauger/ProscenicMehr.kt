@@ -122,8 +122,19 @@ object ProscenicMehr {
         runCatching {
             val s = ProscenicCloud.sitzung(context, neu = false)
             if (ProscenicCloud.online(s) == false) return@runCatching null
-            lesen(s, mitKarte = false)?.takeIf { it.containsKey(20001) }?.let { bauen(it) }?.also { arbeitetGesehen(context, it) }
+            SaugerLive.gatewayFrei { lesen(s, mitKarte = false) }?.takeIf { it.containsKey(20001) }?.let { bauen(it) }?.also { arbeitetGesehen(context, it) }
         }.getOrNull()
+    }
+
+    /**
+     * Steht ein aktiver Zeitplan kurz bevor oder hat eben begonnen (5 Minuten vorher bis 20 Minuten danach)? Dann sieht der Kartenwächter
+     * öfter nach, ob der Roboter losgefahren ist. Die Startzeit gilt als Ortszeit (so zeigt Jarvis sie auch an); 0 = Sonntag.
+     */
+    fun zeitplanNahe(plaene: List<Zeitplan>): Boolean {
+        val k = java.util.Calendar.getInstance()
+        val tag = k.get(java.util.Calendar.DAY_OF_WEEK) - 1
+        val sek = k.get(java.util.Calendar.HOUR_OF_DAY) * 3600 + k.get(java.util.Calendar.MINUTE) * 60
+        return plaene.any { z -> z.aktiv && (z.tage.isEmpty() || tag in z.tage) && sek - z.startSek in -300..1200 }
     }
 
     // ---- Zwischengespeicherte Karte ----
