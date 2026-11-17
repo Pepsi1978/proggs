@@ -176,6 +176,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
                             ),
                         erhoeht = hoch,
                         oeffnen = { oeffnen(v.id) },
+                        gezogen = { ordnen.isAnyItemDragging },
                     ) { Veraenderungen.erledigt(context, v.id, true) }
                 }
             }
@@ -199,10 +200,11 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
 }
 
 @Composable
-private fun Zeile(v: Veraenderung, modifier: Modifier = Modifier, erhoeht: Float = 0.7f, oeffnen: () -> Unit, abhaken: () -> Unit) {
+private fun Zeile(v: Veraenderung, modifier: Modifier = Modifier, erhoeht: Float = 0.7f, oeffnen: () -> Unit, gezogen: () -> Boolean, abhaken: () -> Unit) {
     val f = LocalFarben.current
-    Row(modifier.fillMaxWidth().glas(f, 18.dp, erhoeht = erhoeht).antippen(aktion = oeffnen).padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(46.dp).antippen(aktion = abhaken), contentAlignment = Alignment.Center) {
+    // Ein langer Druck ohne Bewegung (Ziehen begonnen, nicht bewegt) öffnet und hakt nichts ab.
+    Row(modifier.fillMaxWidth().glas(f, 18.dp, erhoeht = erhoeht).antippen(unterdruecken = gezogen, aktion = oeffnen).padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(46.dp).antippen(unterdruecken = gezogen, aktion = abhaken), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.RadioButtonUnchecked, "Als erledigt abhaken", tint = f.primaer, modifier = Modifier.size(24.dp))
         }
         Text(v.titel, Modifier.weight(1f).padding(vertical = 8.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)

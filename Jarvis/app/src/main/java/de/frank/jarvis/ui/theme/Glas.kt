@@ -143,11 +143,17 @@ fun Modifier.druck3d(quelle: MutableInteractionSource, staerke: Float = 1f): Mod
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-fun Modifier.antippen(rolle: Role = Role.Button, haptik: Boolean = true, lange: (() -> Unit)? = null, langeText: String? = null, aktion: () -> Unit): Modifier {
+fun Modifier.antippen(
+    rolle: Role = Role.Button, haptik: Boolean = true, lange: (() -> Unit)? = null, langeText: String? = null,
+    unterdruecken: (() -> Boolean)? = null, aktion: () -> Unit,
+): Modifier {
     val quelle = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
     // Ohne `lange` verhält sich combinedClickable wie clickable; beim langen Drücken vibriert es selbst (hapticFeedbackEnabled).
+    // [unterdruecken]: In ziehbaren Karten (longPressDraggableHandle außen) darf `lange` nicht gesetzt sein, sonst verbraucht die
+    // Karte den langen Druck und das Ziehen bricht ab. Endet ein langer Druck ohne Bewegung, schluckt das den Tipp samt Vibration.
     return this.druck3d(quelle).combinedClickable(quelle, null, role = rolle, onLongClickLabel = langeText, onLongClick = lange) {
+        if (unterdruecken?.invoke() == true) return@combinedClickable
         if (haptik) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         aktion()
     }
