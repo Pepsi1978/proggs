@@ -188,6 +188,10 @@ private fun AtemUebersicht() {
                     if (lokal === ids) lokal = null
                 }
             }
+            // Langer Druck gehört allein dem Ziehen: Die Karte darf ihn nicht selbst verbrauchen (antippen mit lange), sonst bricht
+            // das Ziehen sofort ab (1.8.749). Ein langer Druck ohne Bewegung endet beim Loslassen als Tipp; den schluckt dieser Merker.
+            val zug = remember { booleanArrayOf(false) }
+            val nachZug = { zug[0].also { zug[0] = false } }
             val listenStand = rememberLazyListState()
             val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
                 val l = gezeigt.map { it.id }.toMutableList()
@@ -208,14 +212,15 @@ private fun AtemUebersicht() {
                             p,
                             // Der Griff liegt außen, die Vergrößerung innen: sonst liefe die Karte langsamer als der Finger.
                             Modifier.longPressDraggableHandle(
-                                onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
-                                onDragStopped = { lokal?.let { speichere(it) } },
+                                onDragStarted = { zug[0] = true; haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                onDragStopped = { zug[0] = false; lokal?.let { speichere(it) } },
                             ).graphicsLayer { scaleX = gross; scaleY = gross }.semantics {
                                 customActions = listOfNotNull(
                                     CustomAccessibilityAction("Nach oben verschieben") { speichere(schiebe(i - 1)); true }.takeIf { i > 0 },
                                     CustomAccessibilityAction("Nach unten verschieben") { speichere(schiebe(i + 1)); true }.takeIf { i < ids.lastIndex },
                                 )
                             },
+                            nachZug,
                         )
                     }
                 }
@@ -238,7 +243,7 @@ private fun ordne(liste: List<AtemProfil>, ids: List<String>): List<AtemProfil> 
 }
 
 @Composable
-private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
+private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier, nachZug: () -> Boolean = { false }) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val farbe = Color(p.farbe)
@@ -247,7 +252,7 @@ private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth().clip(form)
             .background(Brush.linearGradient(listOf(farbe.copy(alpha = if (f.dunkel) 0.40f else 0.32f), farbe.copy(alpha = 0.08f))))
             .border(1.dp, farbe.copy(alpha = 0.55f), form)
-            .antippen(lange = {}) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }
+            .antippen { if (!nachZug()) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p } }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -269,12 +274,12 @@ private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
             if (extras.isNotEmpty()) Text(extras.joinToString(" · "), Modifier.padding(top = 2.dp), color = f.textSchwach, fontSize = 12.sp)
         }
         Column(Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(f.flaecheStark).antippen(lange = {}) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }.semantics { contentDescription = "Einstellungen von ${p.name}" }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(f.flaecheStark).antippen { if (!nachZug()) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p } }.semantics { contentDescription = "Einstellungen von ${p.name}" }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Settings, null, tint = f.textLeise, modifier = Modifier.size(20.dp))
             }
             Box(
                 Modifier.size(58.dp).shadow(8.dp, CircleShape).clip(CircleShape).background(Brush.linearGradient(listOf(farbe, farbe.copy(alpha = 0.7f))))
-                    .antippen(lange = {}) { AtemSitzung.starten(context, p) }.semantics { contentDescription = "${p.name} starten" },
+                    .antippen { if (!nachZug()) AtemSitzung.starten(context, p) }.semantics { contentDescription = "${p.name} starten" },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(34.dp)) }
         }
