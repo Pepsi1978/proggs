@@ -168,6 +168,17 @@ object AtemProfile {
         runCatching { AtemSatzVerlauf.merken(context, p, vorher) }
     }
 
+    /** Neue Reihenfolge aus der Übersicht (Ziehen per langem Druck); unbekannte oder fehlende Kennungen bleiben hinten in alter Folge. */
+    suspend fun reihenfolge(context: Context, ids: List<String>) = sperre.withLock {
+        laden(context)
+        withContext(Dispatchers.IO) {
+            val alt = _stand.value
+            val rang = ids.withIndex().associate { (i, id) -> id to i }
+            val neu = alt.sortedBy { rang[it.id] ?: (ids.size + alt.indexOf(it)) }
+            if (neu.map { it.id } != alt.map { it.id }) { schreibe(context, neu); _stand.value = neu }
+        }
+    }
+
     suspend fun loeschen(context: Context, id: String) = sperre.withLock {
         laden(context)
         withContext(Dispatchers.IO) { entferne(context, id) }

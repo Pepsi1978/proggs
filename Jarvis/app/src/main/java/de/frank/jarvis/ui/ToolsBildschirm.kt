@@ -14,6 +14,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.graphics.graphicsLayer
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -167,8 +171,40 @@ private fun AtemUebersicht() {
             if (profile.isEmpty()) {
                 Text("Noch kein Atemprofil. Tippe auf Plus, um dein erstes Muster anzulegen.", Modifier.padding(24.dp), color = f.textLeise, fontSize = 15.sp)
             }
-            LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(profile, key = { it.id }) { p -> AtemKarte(p) }
+            // Langer Druck auf eine Karte zieht sie an eine neue Stelle; während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert.
+            val haptik = LocalHapticFeedback.current
+            val bereich = rememberCoroutineScope()
+            var lokal by remember { mutableStateOf<List<AtemProfil>?>(null) }
+            val gezeigt = lokal ?: profile
+            val listenStand = rememberLazyListState()
+            val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
+                val l = (lokal ?: profile).toMutableList()
+                val a = l.indexOfFirst { it.id == von.key }
+                val b = l.indexOfFirst { it.id == nach.key }
+                if (a < 0 || b < 0) return@rememberReorderableLazyListState
+                l.add(b, l.removeAt(a))
+                lokal = l
+                haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+            LazyColumn(state = listenStand, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(gezeigt, key = { it.id }) { p ->
+                    ReorderableItem(ordnen, key = p.id) { zieht ->
+                        val gross by animateFloatAsState(if (zieht) 1.035f else 1f, label = "gross")
+                        AtemKarte(
+                            p,
+                            Modifier.graphicsLayer { scaleX = gross; scaleY = gross }.longPressDraggableHandle(
+                                onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                onDragStopped = {
+                                    val l = lokal
+                                    if (l != null) bereich.launch {
+                                        runCatching { AtemProfile.reihenfolge(context.applicationContext, l.map { it.id }) }
+                                        lokal = null
+                                    }
+                                },
+                            ),
+                        )
+                    }
+                }
             }
         }
         Box(
@@ -182,13 +218,13 @@ private fun AtemUebersicht() {
 }
 
 @Composable
-private fun AtemKarte(p: AtemProfil) {
+private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val farbe = Color(p.farbe)
     val form = RoundedCornerShape(26.dp)
     Row(
-        Modifier.fillMaxWidth().clip(form)
+        modifier.fillMaxWidth().clip(form)
             .background(Brush.linearGradient(listOf(farbe.copy(alpha = if (f.dunkel) 0.40f else 0.32f), farbe.copy(alpha = 0.08f))))
             .border(1.dp, farbe.copy(alpha = 0.55f), form)
             .antippen { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }
