@@ -15,6 +15,11 @@
 - Fix: Fenster nicht schließen, sondern den Shader-/Store-Vorgang einmal durchlaufen lassen (nicht während Online-Matches). Hilft das nicht: `wsreset.exe` → Gaming Services Repair Tool (Xbox-App) → als Admin `Get-AppxPackage Microsoft.GamingServices | Remove-AppxPackage -AllUsers`, danach `start ms-windows-store://pdp/?productid=9MWPM2CQNLHN` (zuletzt, kann Xbox-App-Installationen beschädigen). Beleg bei Frank 17.11.2026: `C:\XboxGames\Shaders\Steam\1938090` (Steam-ID von CoD) um 17:51 geändert, während gamingservices lud. Quelle: https://devblogs.microsoft.com/directx/advanced-shader-delivery-is-available-now-across-hardware · https://support.xbox.com/en-US/help/games-apps/troubleshooting/gaming-services-repair-tool
 - **Zweite Möglichkeit:** Xbox Game Bar (`Microsoft.XboxGamingOverlay`) fehlt, aber `GameDVR_Enabled=1` → Windows öffnet beim Spielstart ein kleines Fenster „neue App für ms-gamingoverlay-Link“ mit Store-Verweis. Unterscheiden am Fenstertext. Fix: Game Bar aus dem Store installieren **oder** Einstellungen → Spielen → Aufnahmen/Game Bar ausschalten.
 
+## B2a Gaming Services lassen sich nicht sperren, hartes Beenden startet sie sofort neu
+- `Set-Service GamingServices -StartupType Disabled` → „Zugriff verweigert“ (geschützter Paket-Dienst), auch als Admin.
+- `Stop-Process gamingservices` wertet der Dienststeuerungs-Manager als Absturz → Wiederherstellung startet den Dienst sofort neu.
+- Fix: `Stop-Service -NoWait` + `WaitForStatus('Stopped', 15 s)`, bei Wiederanlauf erneut stoppen (umgesetzt in `Werkzeuge/spielmodus/waechter.ps1`, verifiziert 17.11.2026).
+
 ## B3 Intel AX201/AX210/AX211: Ping-Spitzen etwa alle 10 Minuten
 - Ursache: WLAN-Hintergrundscan von Windows; die Treiberoption „Global BG Scan blocking“ fehlt ab 22.150.0.
 - Fix (Workaround, Forenberichte): während des Spielens `netsh wlan set autoconfig enabled=no interface="WLAN"`, danach wieder `enabled=yes`. Besser: LAN-Kabel. Quelle: https://community.intel.com/t5/Wireless/AX201-ping-spikes/td-p/1567871
