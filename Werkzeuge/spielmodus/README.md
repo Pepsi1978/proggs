@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.0.0 · Stand 17.11.2026, 18:20 Uhr
+Version 1.0.1 · Stand 17.11.2026, 18:17 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -9,7 +9,8 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
 ## Was es tut
 - **Wächter** (`waechter.ps1`, geplante Aufgabe „Spielmodus-Waechter“, bei Anmeldung, höchste Rechte, unsichtbar):
   Läuft `steam`, `cod` oder ein CoD-Bootstrapper, werden die Dienste `GamingServices`, `GamingServicesNet`
-  und `InstallService` (Store-Installationen) gestoppt und gesperrt, `WinStore.App` und die Xbox-App beendet.
+  und `InstallService` (Store-Installationen) gestoppt (Starttyp sperrbar nur bei `InstallService`, die
+  Gaming-Dienste sind geschützte Paket-Dienste und werden stattdessen bei jedem Neustart sofort wieder beendet), `WinStore.App` und die Xbox-App beendet.
   Startet etwas davon neu, wird es sofort wieder beendet. Ist kein Spiel mehr offen, stellt er die
   ursprünglichen Starttypen (`starttypen.json`) wieder her.
   In den ersten 90 Sekunden nach CoD-Start protokolliert er alle neuen Fenster (Diagnose des Absturzfensters).

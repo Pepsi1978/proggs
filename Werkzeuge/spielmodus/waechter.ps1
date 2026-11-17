@@ -14,6 +14,8 @@ New-Item -ItemType Directory -Force $daten | Out-Null
 
 $ausloeser = '^(steam|cod|cod\d\d-cod|sp\d\d-cod|bootstrapper)$'
 $dienste   = 'GamingServices', 'GamingServicesNet', 'InstallService'
+# GamingServices/-Net sind Paket-Dienste: Starttyp nicht aenderbar (Zugriff verweigert), nur stoppbar
+$sperrbar  = 'InstallService'
 $stopProz  = 'WinStore.App', 'XboxPcApp', 'XboxPcAppFT', 'gamingservices', 'gamingservicesnet'
 
 function Write-Log([string]$t) {
@@ -62,7 +64,7 @@ function Save-Starttypen {
 
 function Enable-Sperre {
     foreach ($d in $dienste) {
-        try { Set-Service $d -StartupType Disabled -ErrorAction Stop } catch { Write-Log "Starttyp $d nicht setzbar: $($_.Exception.Message)" }
+        if ($d -in $sperrbar) { try { Set-Service $d -StartupType Disabled -ErrorAction Stop } catch { Write-Log "Starttyp $d nicht setzbar: $($_.Exception.Message)" } }
         try { Stop-Service $d -Force -ErrorAction Stop } catch { Write-Log "Stop ${d}: $($_.Exception.Message)" }
     }
     Stop-Process -Name $stopProz -Force -ErrorAction SilentlyContinue
@@ -70,8 +72,8 @@ function Enable-Sperre {
 
 function Disable-Sperre {
     $s = if (Test-Path $sicher) { Get-Content $sicher -Raw | ConvertFrom-Json } else { $null }
-    foreach ($d in $dienste) {
-        $typ = if ($s -and $s.$d) { $s.$d } elseif ($d -eq 'InstallService') { 'Manual' } else { 'Automatic' }
+    foreach ($d in $sperrbar) {
+        $typ = if ($s -and $s.$d) { $s.$d } else { 'Manual' }
         try { Set-Service $d -StartupType $typ -ErrorAction Stop } catch { Write-Log "Rueckstellen ${d}: $($_.Exception.Message)" }
     }
     Start-Service GamingServices, GamingServicesNet -ErrorAction SilentlyContinue
