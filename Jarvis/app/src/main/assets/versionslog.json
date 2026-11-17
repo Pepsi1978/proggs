@@ -760,6 +760,7 @@
     {"versionCode": 752, "versionName": "1.8.741", "stand": "16.11.2026, 13:05 Uhr", "notiz": "Atemübungen: Review-Befunde im Satz-Menü behoben, beschädigte Satzdatei wird gesichert, neueste Sätze stehen vorn, Menü auch mit TalkBack bedienbar."},
     {"versionCode": 753, "versionName": "1.8.742", "stand": "17.11.2026, 09:39 Uhr", "notiz": "Biomarker: Schlafzeit-Skala bis 10 Stunden, BMI entfernt, kein eckiger Rahmen beim Verschieben, eigener Detailbereich mit Graph, Werte-Übersicht und 7/30/90 Tagen je Messgröße; Staubsauger: Live-Karte mit flüssiger Roboterposition und gefahrener Strecke."},
     {"versionCode": 754, "versionName": "1.8.743", "stand": "17.11.2026, 09:49 Uhr", "notiz": "Veränderungen: zwei Reiter „Aktuell“ und „Offen“; neue Veränderungen landen unter „Offen“ und kommen mit „Annehmen“ nach „Aktuell“, Jarvis' Gedächtnis kennt beide Gruppen."},
-    {"versionCode": 755, "versionName": "1.8.744", "stand": "17.11.2026, 09:53 Uhr", "notiz": "Veränderungen: beim Wechsel zwischen „Aktuell“ und „Offen“ ist der Schatten um die Einträge sofort da und springt nicht mehr nach."}
+    {"versionCode": 755, "versionName": "1.8.744", "stand": "17.11.2026, 09:53 Uhr", "notiz": "Veränderungen: beim Wechsel zwischen „Aktuell“ und „Offen“ ist der Schatten um die Einträge sofort da und springt nicht mehr nach."},
+    {"versionCode": 756, "versionName": "1.8.745", "stand": "17.11.2026, 09:56 Uhr", "notiz": "Veränderungen: Im Detail einer aktuellen Veränderung steht unten der grüne Knopf „Angenommen“; ein Tipp legt sie zurück nach „Offen“, dort holt „Annehmen“ sie wieder nach „Aktuell“."}
 ]
 }

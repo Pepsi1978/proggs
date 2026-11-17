@@ -152,6 +152,12 @@ object Veraenderungen {
         return aendern(context, id) { if (it.angenommen) it else it.copy(angenommen = true, rang = oben) }
     }
 
+    /** Zurück von „Aktuell“ nach „Offen“, dort ganz oben. */
+    fun nachOffen(context: Context, id: Long): Veraenderung? {
+        val oben = (sicher(context).filter { !it.angenommen && !it.erledigt }.minOfOrNull { it.rang } ?: 0.0) - 1.0
+        return aendern(context, id) { if (!it.angenommen) it else it.copy(angenommen = false, rang = oben) }
+    }
+
     /** Live-Gedächtnis von außen nachziehen, etwa beim Wechsel zwischen den Reitern „Aktuell“ und „Offen“. */
     fun gedaechtnisNachziehen(context: Context, anlass: String) = auffrischen(context.applicationContext, anlass)
 

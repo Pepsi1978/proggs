@@ -80,7 +80,8 @@ fun VeraenderungenBildschirm() {
     // Auf dem anderen Gerät gelöscht, während der Eintrag hier offen war: zurück zur Liste.
     LaunchedEffect(offenId, offen) { if (offenId != null && offen == null && alle.isNotEmpty()) offenId = null }
     Column(Modifier.fillMaxSize()) {
-        if (offen != null) Detail(offen) { offenId = null }
+        // Zurück aus dem Detail in den Reiter, in dem die Veränderung jetzt steht (nach „Annehmen“ oder Zurücklegen nach „Offen“).
+        if (offen != null) Detail(offen) { if (!offen.erledigt && zeigtOffene == offen.angenommen) zeigtOffene = !offen.angenommen; offenId = null }
         else Uebersicht(alle, zeigtOffene, { neu ->
             if (neu != zeigtOffene) {
                 zeigtOffene = neu
@@ -230,8 +231,12 @@ private fun androidx.compose.foundation.layout.ColumnScope.Detail(v: Veraenderun
             Text(v.beschreibung.ifBlank { "Keine Beschreibung." }, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 12.dp))
         }
         if (v.erledigt) Knopf(if (v.angenommen) "In Aktuell zurückholen" else "In Offen zurückholen", Modifier.fillMaxWidth(), Icons.AutoMirrored.Rounded.Undo) { Veraenderungen.erledigt(context, v.id, false) }
-        else if (!v.angenommen) Knopf("Annehmen", Modifier.fillMaxWidth(), Icons.Rounded.TaskAlt) { Veraenderungen.annehmen(context, v.id); zurueck() }
-        else Knopf("Als erledigt abhaken", Modifier.fillMaxWidth(), Icons.Rounded.CheckCircle) { Veraenderungen.erledigt(context, v.id, true); zurueck() }
+        // Unten der Schalter zwischen den Reitern: offen = „Annehmen“ (normal), aktuell = „Angenommen“ (grün mit Haken, Tipp legt zurück nach „Offen“).
+        else if (!v.angenommen) Knopf("Annehmen", Modifier.fillMaxWidth(), Icons.Rounded.TaskAlt, haupt = false) { Veraenderungen.annehmen(context, v.id) }
+        else {
+            Knopf("Als erledigt abhaken", Modifier.fillMaxWidth(), Icons.Rounded.RadioButtonUnchecked, haupt = false) { Veraenderungen.erledigt(context, v.id, true); zurueck() }
+            Knopf("Angenommen", Modifier.fillMaxWidth(), Icons.Rounded.CheckCircle, farbe = f.erfolg) { Veraenderungen.nachOffen(context, v.id) }
+        }
     }
     if (loeschenFrage) AlertDialog(
         onDismissRequest = { loeschenFrage = false }, containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,

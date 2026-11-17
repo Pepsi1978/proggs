@@ -60,14 +60,14 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
             titel = "Veränderung",
             beschreibung = "Jarvis: hält eine Veränderung fest oder ändert sie. „Nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe, weil …“ → anlegen mit " +
                 "titel (Einzeile, höchstens 7 Wörter, etwa „Mit dem Sonnenaufgang aufstehen“) und beschreibung (genau, was sich ändert und warum, in ganzen Sätzen über Frank in der dritten Person, nur aus Franks Worten, nichts erfinden). " +
-                "Neue landen unter „Offen“. „Nimm die Veränderung … an“ oder „setze … ab jetzt um“ → annehmen (nach „Aktuell“). " +
+                "Neue landen unter „Offen“. „Nimm die Veränderung … an“ oder „setze … ab jetzt um“ → annehmen (nach „Aktuell“). „Leg … zurück nach Offen“ → offen. " +
                 "„Die Veränderung … ist umgesetzt“ oder „verfolge ich nicht mehr“ → erledigt. „Hol … zurück“ → zurueck. „Lösch die Veränderung …“ → loeschen (nur auf ausdrücklichen Wunsch). " +
                 "aendern: neuer titel oder beschreibung.",
             schema = schema(
-                "aktion" to text("anlegen, annehmen, erledigt, zurueck, aendern oder loeschen.", listOf("anlegen", "annehmen", "erledigt", "zurueck", "aendern", "loeschen")),
+                "aktion" to text("anlegen, annehmen, offen, erledigt, zurueck, aendern oder loeschen.", listOf("anlegen", "annehmen", "offen", "erledigt", "zurueck", "aendern", "loeschen")),
                 "titel" to text("Beim Anlegen und Ändern: kurze Einzeile, höchstens 7 Wörter."),
                 "beschreibung" to text("Beim Anlegen und Ändern: genaue Beschreibung der Veränderung samt Grund."),
-                "veraenderung" to text("Bei annehmen, erledigt, zurueck, aendern, loeschen: die vorhandene Veränderung (Titel oder id)."),
+                "veraenderung" to text("Bei annehmen, offen, erledigt, zurueck, aendern, loeschen: die vorhandene Veränderung (Titel oder id)."),
                 pflicht = listOf("aktion"),
             ),
             nurLesen = false,
@@ -82,11 +82,12 @@ class VeraenderungenFaehigkeit(private val context: Context) : Faehigkeit {
                         else Ergebnis("Veränderung „${v.titel}“ steht unter Veränderungen im Reiter „Offen“. [id ${v.id}]")
                     }
                 }
-                "annehmen", "erledigt", "zurueck", "aendern", "loeschen" -> {
+                "annehmen", "offen", "erledigt", "zurueck", "aendern", "loeschen" -> {
                     val (v, fehler) = finde(a.optString("veraenderung"))
                     val nichtDa = Ergebnis("Die Veränderung ließ sich nicht ändern: Sie wurde inzwischen gelöscht, oder das Speichern scheiterte.", fehler = true)
                     fehler ?: when (aktion) {
                         "annehmen" -> Veraenderungen.annehmen(context, v!!.id)?.let { Ergebnis("„${it.titel}“ ist angenommen und steht jetzt unter „Aktuell“.") } ?: nichtDa
+                        "offen" -> Veraenderungen.nachOffen(context, v!!.id)?.let { Ergebnis("„${it.titel}“ steht wieder unter „Offen“.") } ?: nichtDa
                         "erledigt" -> Veraenderungen.erledigt(context, v!!.id, true)?.let { Ergebnis("„${it.titel}“ ist erledigt und liegt unter „Erledigt“.") } ?: nichtDa
                         "zurueck" -> Veraenderungen.erledigt(context, v!!.id, false)?.let { Ergebnis("„${it.titel}“ ist zurückgeholt und steht wieder unter „${if (it.angenommen) "Aktuell" else "Offen"}“.") } ?: nichtDa
                         "loeschen" -> Veraenderungen.loeschen(context, v!!.id)?.let { Ergebnis("„${it.titel}“ ist gelöscht.") } ?: nichtDa
