@@ -177,9 +177,11 @@ private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: M
             }
             // Gefahrene Strecke: breite, halbdurchsichtige Spur (abgesaugte Fläche) und darüber die Mittellinie; endet am gleitenden Roboter.
             val r = pos.value.takeIf { it != Offset.Unspecified }
-            if (spur.pfad.isNotEmpty()) {
+            // Der letzte Wegpunkt ist das Ziel der Gleitbewegung; während der Fahrt endet der Strich am gleitenden Roboter statt davor.
+            val weg = if (r != null && ProscenicMehr.aktiv(spur.modus) && spur.pfad.lastOrNull() == spur.roboter) spur.pfad.dropLast(1) else spur.pfad
+            if (weg.isNotEmpty()) {
                 val p = Path()
-                spur.pfad.forEachIndexed { i, (x, y) -> val q = pt(x.toFloat(), y.toFloat()); if (i == 0) p.moveTo(q.x, q.y) else p.lineTo(q.x, q.y) }
+                weg.forEachIndexed { i, (x, y) -> val q = pt(x.toFloat(), y.toFloat()); if (i == 0) p.moveTo(q.x, q.y) else p.lineTo(q.x, q.y) }
                 if (r != null && ProscenicMehr.aktiv(spur.modus)) pt(r.x, r.y).let { p.lineTo(it.x, it.y) }
                 val breite = (SPUR_BREITE_M / k.aufloesung * massstab).toFloat().coerceAtLeast(3.dp.toPx())
                 drawPath(p, Color(0x5542A5F5), style = Stroke(breite, cap = StrokeCap.Round, join = StrokeJoin.Round))

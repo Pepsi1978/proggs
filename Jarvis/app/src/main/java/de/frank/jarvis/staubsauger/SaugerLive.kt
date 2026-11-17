@@ -62,7 +62,8 @@ object SaugerLive {
     fun starte(context: Context, start: ProscenicMehr.Live?) {
         if (lauf?.isActive == true) return
         // Sofort die bekannte Karte zeigen; Weg und Position kommen live.
-        _spur.value = Spur(karte = start?.karte, pfad = start?.pfad.orEmpty(), roboter = start?.roboter, station = start?.station,
+        wolke = start?.pfad.orEmpty(); nachtrag = emptyList(); wegGemeldet = 0L
+        _spur.value = Spur(karte = start?.karte, pfad = wolke, roboter = start?.roboter, station = start?.station,
             zonen = start?.zonen.orEmpty(), modus = start?.modus, akku = start?.akku)
         val app = context.applicationContext
         lauf = bereich.launch {
@@ -71,7 +72,11 @@ object SaugerLive {
                 try {
                     sitzung(ProscenicCloud.sitzung(app, neu))
                     neu = false
+                    // Kurze Pause vor dem Neuaufbau: Schließt das Gateway die Verbindung (etwa weil die Proscenic-App oder eine
+                    // Sprachabfrage eine eigene öffnet, Almanach Nr. 3), entsteht sonst eine enge Schleife.
+                    delay(2_000)
                 } catch (e: ProscenicCloud.TokenUngueltig) {
+                    if (neu) { _spur.value = _spur.value.copy(fehler = "Die Proscenic-Cloud lehnt die Anmeldung ab."); delay(15_000) }
                     neu = true
                 } catch (e: ProscenicCloud.Abgewiesen) {
                     _spur.value = _spur.value.copy(fehler = e.message); delay(15_000)
@@ -144,17 +149,25 @@ object SaugerLive {
         if (abgelehnt.get()) throw ProscenicCloud.TokenUngueltig()
     }
 
+    /** Fahrweg laut Cloud (21011) und die seitdem live gemeldeten Positionen; angezeigt wird beides hintereinander. */
+    @Volatile private var wolke: List<Pair<Int, Int>> = emptyList()
+    @Volatile private var nachtrag: List<Pair<Int, Int>> = emptyList()
+    @Volatile private var wegGemeldet = 0L
+
     private fun verarbeiten(typ: Int, d: JSONObject) {
         val alt = _spur.value
         when (typ) {
             20001 -> {
                 val pos = d.optJSONArray("pos")?.let { it.optInt(0) to it.optInt(1) }
                 val modus = d.optString("mode").ifBlank { alt.modus }
+                // Beginnt eine neue Reinigung (stand → arbeitet), gehört der alte Weg nicht mehr dazu.
+                if (alt.modus != null && !ProscenicMehr.aktiv(alt.modus) && ProscenicMehr.aktiv(modus)) { wolke = emptyList(); nachtrag = emptyList() }
                 // Neue Position verlängert den Strich, wenn der Roboter arbeitet und sich merklich bewegt hat (> 2 cm).
-                val pfad = if (pos != null && ProscenicMehr.aktiv(modus) && alt.pfad.lastOrNull()?.let { (x, y) ->
-                        kotlin.math.hypot((x - pos.first).toDouble(), (y - pos.second).toDouble()) > 20 } != false) alt.pfad + pos else alt.pfad
+                val letzte = (wolke + nachtrag).lastOrNull()
+                if (pos != null && ProscenicMehr.aktiv(modus) && (letzte == null ||
+                        kotlin.math.hypot((letzte.first - pos.first).toDouble(), (letzte.second - pos.second).toDouble()) > 20)) nachtrag = nachtrag + pos
                 _spur.value = alt.copy(roboter = pos ?: alt.roboter, modus = modus, akku = d.optInt("elec", -1).takeIf { it in 0..100 } ?: alt.akku,
-                    pfad = pfad, positionUm = if (pos != null) System.currentTimeMillis() else alt.positionUm, fehler = null)
+                    pfad = wolke + nachtrag, positionUm = if (pos != null) System.currentTimeMillis() else alt.positionUm, fehler = null)
             }
             20002 -> {
                 val k = runCatching { ProscenicMehr.karte(d) }.getOrNull() ?: return
@@ -168,8 +181,16 @@ object SaugerLive {
                 val a = d.optJSONArray("posArray") ?: return
                 if (a.length() == 0) return
                 val weg = (0 until a.length()).mapNotNull { a.optJSONArray(it)?.let { p -> p.optInt(0) to p.optInt(1) } }
-                // Der Fahrweg der Cloud ist maßgeblich; die aktuelle Position hängt hinten an, damit der Strich bis zum Roboter reicht.
-                _spur.value = alt.copy(pfad = alt.roboter?.takeIf { ProscenicMehr.aktiv(alt.modus) }?.let { weg + it } ?: weg)
+                // Ob 21011 während der Fahrt den ganzen Weg oder nur ein Stück liefert, ist nicht belegt: Ein kürzerer Weg während
+                // der Reinigung zählt als Fortsetzung, sonst ersetzt er den bisherigen. Aufbau ins Logbuch (höchstens einmal je Minute).
+                val stueck = ProscenicMehr.aktiv(alt.modus) && weg.size < wolke.size
+                if (System.currentTimeMillis() - wegGemeldet > 60_000) {
+                    wegGemeldet = System.currentTimeMillis()
+                    Logbuch.netz("Staubsauger live: Fahrweg", "21011 mit ${weg.size} Punkten (bisher ${wolke.size}), Felder ${d.keys().asSequence().toList()}, ${if (stueck) "als Fortsetzung" else "ersetzt"}".take(300))
+                }
+                wolke = if (stueck) wolke + weg else weg
+                nachtrag = alt.roboter?.takeIf { ProscenicMehr.aktiv(alt.modus) }?.let { listOf(it) }.orEmpty()
+                _spur.value = alt.copy(pfad = wolke + nachtrag)
             }
         }
     }

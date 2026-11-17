@@ -264,10 +264,11 @@ fun BiomarkerHostScreen(
                         // Frank-Wunsch 2026-05-18: individuelle Hintergrundfarbe pro
                         // Karte via CompositionLocal — alle GlassCards in dieser
                         // Card lesen automatisch den Override.
-                            // Franks Wunsch vom 17.11.2026: kein eckiger Rahmen beim langen Drücken und Ziehen. Die Druck-Welle
-                            // des Antippens lag außerhalb der abgerundeten Karte und blieb während des Ziehens als Rechteck stehen;
-                            // der Zuschnitt auf die Kartenform (GlassCard, 20 dp) hält sie innerhalb der Karte.
-                            Box(modifier = Modifier.fillMaxWidth().clip(KARTEN_FORM).longPressDraggableHandle()) {
+                            // Franks Wunsch vom 17.11.2026: kein eckiger Rahmen beim langen Drücken und Ziehen. Die Druckwelle
+                            // (Ripple) des Antippens lag außerhalb der abgerundeten Karte und blieb während des Ziehens als Rechteck
+                            // stehen; die Karten zeigen sie deshalb nicht mehr. Ein Zuschnitt schied aus, er hätte den Schatten gekappt.
+                            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.LocalIndication provides OhneDruckwelle) {
+                            Box(modifier = Modifier.fillMaxWidth().longPressDraggableHandle()) {
                                 BiomarkerCardForId(
                                     id = id,
                                     state = state,
@@ -279,6 +280,7 @@ fun BiomarkerHostScreen(
                                     onOpenHealthConnectDetail = onOpenHealthConnectDetail,
                                     onSaveWorkoutOverrides = onSaveWorkoutOverrides,
                                 )
+                            }
                             }
                     }
                 }
@@ -640,8 +642,13 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
 }
 
 /** Zentrale Konstanten für Metrik-IDs — werden in Routes + Detail-Screen genutzt. */
-/** Form aller Biomarker-Karten (GlassCard-Standard), für den Zuschnitt beim Verschieben. */
-private val KARTEN_FORM = RoundedCornerShape(20.dp)
+/** Keine Druckwelle auf den verschiebbaren Karten (sie erschien beim Ziehen als eckiger Rahmen). */
+private object OhneDruckwelle : androidx.compose.foundation.IndicationNodeFactory {
+    override fun create(interactionSource: androidx.compose.foundation.interaction.InteractionSource): androidx.compose.ui.node.DelegatableNode =
+        object : Modifier.Node() {}
+    override fun equals(other: Any?) = other === this
+    override fun hashCode() = 0x0D7E
+}
 
 internal object MetricKey {
     const val HRV = "hrv"

@@ -55,8 +55,9 @@ import java.util.Locale
  *
  * Zeigt:
  * Aufbau (Franks Wunsch vom 17.11.2026):
- * - oben der interaktive Graph über den gesamten Verlauf (sofort sichtbar)
- * - darunter die Werte-Übersicht (Anzahl, Minimum, Mittel, Maximum) mit Umschalter 7 / 30 / 90 Tage
+ * - oben der interaktive Graph, beim Öffnen über den gesamten Verlauf
+ * - darunter die Werte-Übersicht (Anzahl, Minimum, Mittel, Maximum) mit Umschalter 7 / 30 / 90 Tage (grenzt Graph und
+ *   Übersicht ein; erneutes Antippen = wieder gesamter Verlauf)
  * - die Einzelwerte des gewählten Zeitraums mit Abweichung zum Vortag
  */
 @Composable
@@ -68,17 +69,16 @@ fun BiomarkerDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val spec = metricSpecFor(metricKey)
-    // Franks Wunsch vom 17.11.2026: Der Graph zeigt sofort den ganzen Verlauf; der Umschalter (7, 30, 90 Tage) gilt für die
-    // Werte-Übersicht darunter (Anzahl, Minimum, Mittel, Maximum) und die Liste der Einzelwerte.
-    var range by remember { mutableStateOf(DetailRange.THIRTY) }
+    // Franks Wunsch vom 17.11.2026: Beim Öffnen zeigen Graph und Werte-Übersicht sofort den gesamten Verlauf. Der Umschalter
+    // (7, 30, 90 Tage) grenzt beides ein; erneutes Antippen des gewählten Zeitraums führt zurück zum Gesamtverlauf.
+    var range by remember { mutableStateOf<DetailRange?>(null) }
 
     // VO2max kommt nicht aus dem BiomarkerSnapshot, sondern aus den VO2max-fähigen Trainings (im VM vorberechnet).
     val gesamt: List<Pair<Long, Double>> = remember(metricKey, state.history, state.chartData) {
         if (metricKey == MetricKey.VO2MAX) (state.chartData.fullPoints["vo2max"] ?: emptyList()).sortedBy { it.first }
         else state.history.mapNotNull { snap -> spec.extract(snap)?.let { snap.capturedAt to it } }.sortedBy { it.first }
     }
-    val cutoff = System.currentTimeMillis() - range.tage * 24L * 60 * 60 * 1000
-    val pointsAll = gesamt.filter { it.first >= cutoff }
+    val pointsAll = range?.let { r -> val cutoff = System.currentTimeMillis() - r.tage * 24L * 60 * 60 * 1000; gesamt.filter { it.first >= cutoff } } ?: gesamt
     val values = pointsAll.map { it.second }
     val minV = values.minOrNull()
     val maxV = values.maxOrNull()
@@ -102,21 +102,21 @@ fun BiomarkerDetailScreen(
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Text(
-                            text = "${spec.title}: gesamter Verlauf",
+                            text = "${spec.title}: " + (range?.let { "letzte ${it.tage} Tage" } ?: "gesamter Verlauf"),
                             color = cosmos.textPrimary,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(8.dp))
-                        if (gesamt.isEmpty()) {
+                        if (pointsAll.isEmpty()) {
                             Text(
-                                text = "Noch keine Werte vorhanden.",
+                                text = if (gesamt.isEmpty()) "Noch keine Werte vorhanden." else "Keine Werte in diesem Zeitraum.",
                                 color = cosmos.textSecondary,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         } else {
                             InteractiveLineChart(
-                                points = gesamt,
+                                points = pointsAll,
                                 accent = spec.accent,
                                 unit = spec.unit,
                                 height = 240,
@@ -145,7 +145,7 @@ fun BiomarkerDetailScreen(
                             ALL_DETAIL_RANGES.forEach { r ->
                                 FilterChip(
                                     selected = range == r,
-                                    onClick = { range = r },
+                                    onClick = { range = if (range == r) null else r },
                                     label = { Text(r.label) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = spec.accent.copy(alpha = 0.2f),
@@ -175,7 +175,7 @@ fun BiomarkerDetailScreen(
             }
             item {
                 Text(
-                    text = "Werte der letzten ${range.tage} Tage (${pointsAll.size})",
+                    text = (range?.let { "Werte der letzten ${it.tage} Tage" } ?: "Alle Werte") + " (${pointsAll.size})",
                     color = cosmos.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
