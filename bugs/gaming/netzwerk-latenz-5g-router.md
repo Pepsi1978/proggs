@@ -12,22 +12,23 @@
 ## B2 Gaming-Services öffnet beim CoD-Start ein Microsoft-Store-Fenster
 - Symptom: Bei jedem Start von CoD (Steam) erscheint ein kleines Store-Verbindungsfenster; Wegklicken lässt es beim nächsten Start wiederkommen.
 - Ursache (Hypothese, nicht offiziell): Advanced Shader Delivery — vorkompilierte Shader über Xbox-App/Gaming Services (`C:\XboxGames\Shaders`). Activision empfiehlt die Xbox-PC-App plattformübergreifend.
-- Fix: Fenster nicht schließen, sondern den Shader-/Store-Vorgang einmal durchlaufen lassen (nicht während Online-Matches). Hilft das nicht: `wsreset.exe` → Gaming Services Repair Tool (Xbox-App) → als Admin `Get-AppxPackage Microsoft.GamingServices | Remove-AppxPackage -AllUsers`, danach `start ms-windows-store://pdp/?productid=9MWPM2CQNLHN` (zuletzt, kann Xbox-App-Installationen beschädigen). Quelle: https://devblogs.microsoft.com/directx/ (Advanced Shader Delivery), https://support.xbox.com/
+- Fix: Fenster nicht schließen, sondern den Shader-/Store-Vorgang einmal durchlaufen lassen (nicht während Online-Matches). Hilft das nicht: `wsreset.exe` → Gaming Services Repair Tool (Xbox-App) → als Admin `Get-AppxPackage Microsoft.GamingServices | Remove-AppxPackage -AllUsers`, danach `start ms-windows-store://pdp/?productid=9MWPM2CQNLHN` (zuletzt, kann Xbox-App-Installationen beschädigen). Beleg bei Frank 17.11.2026: `C:\XboxGames\Shaders\Steam\1938090` (Steam-ID von CoD) um 17:51 geändert, während gamingservices lud. Quelle: https://devblogs.microsoft.com/directx/advanced-shader-delivery-is-available-now-across-hardware · https://support.xbox.com/en-US/help/games-apps/troubleshooting/gaming-services-repair-tool
+- **Zweite Möglichkeit:** Xbox Game Bar (`Microsoft.XboxGamingOverlay`) fehlt, aber `GameDVR_Enabled=1` → Windows öffnet beim Spielstart ein kleines Fenster „neue App für ms-gamingoverlay-Link“ mit Store-Verweis. Unterscheiden am Fenstertext. Fix: Game Bar aus dem Store installieren **oder** Einstellungen → Spielen → Aufnahmen/Game Bar ausschalten.
 
 ## B3 Intel AX201/AX210/AX211: Ping-Spitzen etwa alle 10 Minuten
 - Ursache: WLAN-Hintergrundscan von Windows; die Treiberoption „Global BG Scan blocking“ fehlt ab 22.150.0.
-- Fix (Workaround, Forenberichte): während des Spielens `netsh wlan set autoconfig enabled=no interface="WLAN"`, danach wieder `enabled=yes`. Besser: LAN-Kabel. Quelle: https://community.intel.com/
+- Fix (Workaround, Forenberichte): während des Spielens `netsh wlan set autoconfig enabled=no interface="WLAN"`, danach wieder `enabled=yes`. Besser: LAN-Kabel. Quelle: https://community.intel.com/t5/Wireless/AX201-ping-spikes/td-p/1567871
 
 ## B4 PC hängt im 2,4-GHz-WLAN, obwohl 5 GHz verfügbar ist
 - Symptom: Router sendet „Tenda 5 Ghz“ (Kanal 36, 80 MHz), PC verbindet sich mit „Tenda 2.4 Ghz“ Kanal 13 (Nachbar auf Kanal 1 mit 69 % Last); `netsh wlan show networks` zeigt das 5-GHz-Netz erst nach erzwungenem Scan.
 - Fix: `netsh wlan set profileorder name="Tenda 5 Ghz" interface="WLAN" priority=1` + `connectionmode=auto`; als Admin „Bevorzugtes Band“ = 5 GHz. Ergebnis 17.11.2026: Link 287 → 1081 Mbit/s, Router-Ping max 9 → 5 ms.
 
 ## B5 Windows bildet DSCP 46 auf WMM-Priorität 5 statt 6 ab
-- Fix: `New-NetQosPolicy … -DSCPAction 46 -PriorityValue8021Action 6`. Über Mobilfunk wird DSCP ohnehin meist verworfen. Quelle: https://learn.microsoft.com/en-us/windows-server/networking/technologies/qos/
+- Fix: `New-NetQosPolicy … -DSCPAction 46 -PriorityValue8021Action 6`. Über Mobilfunk wird DSCP ohnehin meist verworfen. Quelle: https://learn.microsoft.com/en-us/powershell/module/netqos/new-netqospolicy
 
 ## B6 O2: NAT „strikt“ trotz UPnP/Portfreigabe
 - Ursache: CGNAT (WAN-IP 10.x), IPv6 eingehend geblockt.
-- Fix: nur APN `netpublic` (öffentliche IPv4, einmalig 49,99 €, nicht in 5G SA). Für Ping wirkungslos. Quelle: https://hilfe.o2online.de/
+- Fix: nur APN `netpublic` (öffentliche IPv4, einmalig 49,99 €, nicht in 5G SA). Für Ping wirkungslos. Quelle: https://hilfe.o2online.de/packs-optionen-ausland-18/keine-oeffentliche-ipv4-trotz-buchung-und-nutzung-apn-netpublic-636077
 
 ## B7 Tenda 5G03: Band-Lock mit allen Häkchen wirkt nicht
 - Der Schalter „4G/5G Lock BAND“ steht auf an, aber alle Bänder sind angehakt → kein Effekt. Ein echter Lock (z. B. nur N28+N78) erst nach A/B-Test; Locks laufen ins Leere, wenn der Betreiber Sender umbaut (Baustelle am Mast).
