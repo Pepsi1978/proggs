@@ -20,6 +20,6 @@ Remove-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore' -Name AutoD
 Set-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_Enabled -Value 1 -Type DWord
 Set-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR' -Name AppCaptureEnabled -Value 1 -Type DWord
 $desk = [Environment]::GetFolderPath('Desktop')
-Remove-Item (Join-Path $desk 'Spielmodus an-aus.lnk'), (Join-Path $desk 'Spielmodus zurueck.lnk') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $desk 'Spielmodus an-aus.lnk') -ErrorAction SilentlyContinue
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.MessageBox]::Show('Spielmodus entfernt: Store, Gaming Services und Game-Bar-Aufnahme sind wieder wie vorher.', 'Spielmodus') | Out-Null

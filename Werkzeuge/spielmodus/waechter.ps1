@@ -82,13 +82,28 @@ function Disable-Sperre {
 Write-Log "Waechter gestartet (PID $PID)"
 Save-Starttypen
 $gesperrt = $false
+$steamLief = [bool](Get-Process steam -ErrorAction SilentlyContinue)
 $codSeit = $null
+
+function Show-Meldung([string]$t) {
+    $pwsh = (Get-Command pwsh).Source
+    $skript = Join-Path $PSScriptRoot 'meldung.ps1'
+    Start-Process "$env:WINDIR\System32\conhost.exe" -ArgumentList "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$skript`" -Text `"$t`"" -WindowStyle Hidden
+}
 $fensterBekannt = @{}
 
 while ($true) {
     $aus = Test-Path $flagAus
     $laeuft = @(Get-Process | Where-Object { $_.ProcessName -match $ausloeser })
     $soll = (-not $aus) -and $laeuft.Count -gt 0
+
+    $steamJetzt = [bool]($laeuft | Where-Object ProcessName -eq 'steam')
+    if ($steamJetzt -and -not $steamLief) {
+        if ($aus) { Show-Meldung 'Steam gestartet: Spielmodus ist AUS. Store und Xbox-Downloads sind nicht gesperrt.' }
+        else      { Show-Meldung 'Steam gestartet: Spielmodus ist AN. Store und Xbox-Downloads sind gesperrt.' }
+        Write-Log ("Steam-Start gemeldet (Spielmodus " + $(if ($aus) { 'AUS' } else { 'AN' }) + ')')
+    }
+    $steamLief = $steamJetzt
 
     if ($soll -and -not $gesperrt) {
         Write-Log "Sperre AN (Ausloeser: $(($laeuft.ProcessName | Sort-Object -Unique) -join ', '))"

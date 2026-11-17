@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.0.1 · Stand 17.11.2026, 18:17 Uhr
+Version 1.0.2 · Stand 17.11.2026, 18:21 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -14,8 +14,11 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
   Startet etwas davon neu, wird es sofort wieder beendet. Ist kein Spiel mehr offen, stellt er die
   ursprünglichen Starttypen (`starttypen.json`) wieder her.
   In den ersten 90 Sekunden nach CoD-Start protokolliert er alle neuen Fenster (Diagnose des Absturzfensters).
-- **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`).
-- **Desktop „Spielmodus zurueck“** (`zurueck.ps1`): entfernt alles wieder (UAC), inkl. Store-Richtlinie und Game-Bar-Aufnahme.
+- **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
+  und meldet per Windows-Mitteilung, ob der Spielmodus jetzt AN oder AUS ist (`meldung.ps1`).
+- **Steam-Start:** Der Wächter meldet beim Start von Steam per Mitteilung, ob der Spielmodus AN oder AUS ist.
+- **Entfernen** nur über die CLI: `zurueck.ps1` (bewusst kein Desktop-Symbol), entfernt Aufgabe, Store-Richtlinie,
+  Game-Bar-Sperre und das Symbol.
 - **Einrichtung** (`einrichten.ps1 -TreiberZip <zip>`, einmal als Admin): Store-Automatikupdates aus
   (`HKLM\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload=2`, Wirkung unter Windows 11 Home unbelegt),
   Aufgabe + Verknüpfungen anlegen, Intel-WLAN-Treiber aktualisieren (alter Treiber per `pnputil /export-driver`

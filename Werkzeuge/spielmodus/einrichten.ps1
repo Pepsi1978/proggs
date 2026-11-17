@@ -1,7 +1,7 @@
 # Einmalige Einrichtung (als Administrator, ein UAC-Klick):
 #  1. Microsoft-Store-Automatikupdates per Richtlinie aus
 #  2. Geplante Aufgabe "Spielmodus-Waechter" (bei Anmeldung, hoechste Rechte, unsichtbar)
-#  3. Desktop-Verknuepfungen "Spielmodus an-aus" und "Spielmodus zurueck"
+#  3. Desktop-Verknuepfung "Spielmodus an-aus" (Entfernen nur per CLI ueber zurueck.ps1)
 #  4. Intel-WLAN-Treiber aktualisieren (nur bei gueltiger Signatur), alter Treiber wird gesichert
 #  5. WLAN: 5 GHz bevorzugen, Roaming-Dynamik am niedrigsten, mit "Tenda 5 Ghz" verbinden
 param([string]$TreiberZip)
@@ -43,10 +43,6 @@ try {
     $v.TargetPath = "$env:WINDIR\System32\conhost.exe"
     $v.Arguments = "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$hier\umschalten.ps1`""
     $v.IconLocation = "$env:WINDIR\System32\imageres.dll,101"; $v.Save()
-    $v = $sh.CreateShortcut((Join-Path $desk 'Spielmodus zurueck.lnk'))
-    $v.TargetPath = $pwsh
-    $v.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$hier\zurueck.ps1`""
-    $v.IconLocation = "$env:WINDIR\System32\imageres.dll,229"; $v.Save()
     L "Verknuepfungen auf $desk angelegt"
 } catch { L "FEHLER Verknuepfungen: $($_.Exception.Message)" }
 
