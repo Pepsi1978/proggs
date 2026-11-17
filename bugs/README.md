@@ -141,6 +141,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
+| **Gaming über 5G-Router** (Ping, Jitter, Paketverlust, Bufferbloat, Tenda 5G03, O2 5G SA, AX201, Gaming Services) | [`gaming/netzwerk-latenz-5g-router.md`](gaming/netzwerk-latenz-5g-router.md) | 2026-11-17 | 8 | „Paketverlust", „Bufferbloat", „Jitter", „Tenda", „SINR", „Gaming Services" · Best-Practices: `best-practices/gaming/netzwerk-latenz-5g-router.md` |
 | **NVIDIA DLSS Override** (NVIDIA App, Profile Inspector, DLL-Tausch, Anti-Cheat) | [`gaming/nvidia-dlss-override.md`](gaming/nvidia-dlss-override.md) | 2026-09-21 | 10 | „DLSS", „DLSS Override", „Profile Inspector", „nvngx_dlss", „Smooth Motion", „DLSS 5", „Ricochet" · Best-Practices: `best-practices/gaming/nvidia-dlss-override.md` |
 | **DLSS 5 Mod inoffiziell** (OptiScaler-DLSSNR, DLSS5-Feeder, DLSS5 Swapper, RenoDX, geleaktes `nvngx_dlssnr.dll`) | [`gaming/dlss5-mod-inoffiziell.md`](gaming/dlss5-mod-inoffiziell.md) | 2026-09-21 | 11 | „DLSS 5 Mod", „dlssnr", „DLSS5-Feeder", „DLSS5 Swapper", „RenoDX", „Neural Rendering", „Deep Fried Chicken" · Best-Practices: `best-practices/gaming/dlss5-mod-inoffiziell.md` |
 
