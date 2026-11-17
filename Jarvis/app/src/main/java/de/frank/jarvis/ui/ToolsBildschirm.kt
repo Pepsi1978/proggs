@@ -14,6 +14,9 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.graphicsLayer
 import sh.calvin.reorderable.ReorderableItem
@@ -171,37 +174,48 @@ private fun AtemUebersicht() {
             if (profile.isEmpty()) {
                 Text("Noch kein Atemprofil. Tippe auf Plus, um dein erstes Muster anzulegen.", Modifier.padding(24.dp), color = f.textLeise, fontSize = 15.sp)
             }
-            // Langer Druck auf eine Karte zieht sie an eine neue Stelle; während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert.
+            // Langer Druck auf eine Karte zieht sie an eine neue Stelle; während des Ziehens eigene Reihenfolge (nur Kennungen,
+            // die Karten selbst bleiben aktuell), beim Loslassen einmal gespeichert.
             val haptik = LocalHapticFeedback.current
-            val bereich = rememberCoroutineScope()
-            var lokal by remember { mutableStateOf<List<AtemProfil>?>(null) }
-            val gezeigt = lokal ?: profile
+            var lokal by remember { mutableStateOf<List<String>?>(null) }
+            val gezeigt = lokal?.let { ids -> ordne(profile, ids) } ?: profile
+            fun speichere(ids: List<String>) {
+                lokal = ids
+                // App-weiter Bereich: Zurück direkt nach dem Loslassen bricht das Speichern nicht ab.
+                ToolsAnsicht.hintergrund.launch {
+                    AtemProfile.reihenfolge(context.applicationContext, ids)
+                    // Nur zurücksetzen, wenn inzwischen kein neues Ziehen eine eigene Reihenfolge gesetzt hat.
+                    if (lokal === ids) lokal = null
+                }
+            }
             val listenStand = rememberLazyListState()
             val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
-                val l = (lokal ?: profile).toMutableList()
-                val a = l.indexOfFirst { it.id == von.key }
-                val b = l.indexOfFirst { it.id == nach.key }
+                val l = gezeigt.map { it.id }.toMutableList()
+                val a = l.indexOf(von.key)
+                val b = l.indexOf(nach.key)
                 if (a < 0 || b < 0) return@rememberReorderableLazyListState
                 l.add(b, l.removeAt(a))
                 lokal = l
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
             LazyColumn(state = listenStand, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(gezeigt, key = { it.id }) { p ->
+                itemsIndexed(gezeigt, key = { _, it -> it.id }) { i, p ->
                     ReorderableItem(ordnen, key = p.id) { zieht ->
                         val gross by animateFloatAsState(if (zieht) 1.035f else 1f, label = "gross")
+                        val ids = gezeigt.map { it.id }
+                        fun schiebe(nach: Int) = ids.toMutableList().apply { add(nach, removeAt(i)) }
                         AtemKarte(
                             p,
-                            Modifier.graphicsLayer { scaleX = gross; scaleY = gross }.longPressDraggableHandle(
+                            // Der Griff liegt außen, die Vergrößerung innen: sonst liefe die Karte langsamer als der Finger.
+                            Modifier.longPressDraggableHandle(
                                 onDragStarted = { haptik.performHapticFeedback(HapticFeedbackType.LongPress) },
-                                onDragStopped = {
-                                    val l = lokal
-                                    if (l != null) bereich.launch {
-                                        runCatching { AtemProfile.reihenfolge(context.applicationContext, l.map { it.id }) }
-                                        lokal = null
-                                    }
-                                },
-                            ),
+                                onDragStopped = { lokal?.let { speichere(it) } },
+                            ).graphicsLayer { scaleX = gross; scaleY = gross }.semantics {
+                                customActions = listOfNotNull(
+                                    CustomAccessibilityAction("Nach oben verschieben") { speichere(schiebe(i - 1)); true }.takeIf { i > 0 },
+                                    CustomAccessibilityAction("Nach unten verschieben") { speichere(schiebe(i + 1)); true }.takeIf { i < ids.lastIndex },
+                                )
+                            },
                         )
                     }
                 }
@@ -217,6 +231,12 @@ private fun AtemUebersicht() {
     }
 }
 
+/** [liste] in der Folge von [ids]; nicht genannte (etwa gerade neu angelegte) Profile bleiben hinten. */
+private fun ordne(liste: List<AtemProfil>, ids: List<String>): List<AtemProfil> {
+    val rang = ids.withIndex().associate { (i, id) -> id to i }
+    return liste.withIndex().sortedBy { (i, p) -> rang[p.id] ?: (ids.size + i) }.map { it.value }
+}
+
 @Composable
 private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
@@ -227,7 +247,7 @@ private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth().clip(form)
             .background(Brush.linearGradient(listOf(farbe.copy(alpha = if (f.dunkel) 0.40f else 0.32f), farbe.copy(alpha = 0.08f))))
             .border(1.dp, farbe.copy(alpha = 0.55f), form)
-            .antippen { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }
+            .antippen(lange = {}) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -249,12 +269,12 @@ private fun AtemKarte(p: AtemProfil, modifier: Modifier = Modifier) {
             if (extras.isNotEmpty()) Text(extras.joinToString(" · "), Modifier.padding(top = 2.dp), color = f.textSchwach, fontSize = 12.sp)
         }
         Column(Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(f.flaecheStark).antippen { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }.semantics { contentDescription = "Einstellungen von ${p.name}" }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(f.flaecheStark).antippen(lange = {}) { ToolsAnsicht.neu = false; ToolsAnsicht.bearbeiten = p }.semantics { contentDescription = "Einstellungen von ${p.name}" }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Settings, null, tint = f.textLeise, modifier = Modifier.size(20.dp))
             }
             Box(
                 Modifier.size(58.dp).shadow(8.dp, CircleShape).clip(CircleShape).background(Brush.linearGradient(listOf(farbe, farbe.copy(alpha = 0.7f))))
-                    .antippen { AtemSitzung.starten(context, p) }.semantics { contentDescription = "${p.name} starten" },
+                    .antippen(lange = {}) { AtemSitzung.starten(context, p) }.semantics { contentDescription = "${p.name} starten" },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(34.dp)) }
         }

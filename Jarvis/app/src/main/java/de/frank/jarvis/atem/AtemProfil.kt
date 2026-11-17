@@ -2,6 +2,7 @@ package de.frank.jarvis.atem
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -171,11 +172,14 @@ object AtemProfile {
     /** Neue Reihenfolge aus der Übersicht (Ziehen per langem Druck); unbekannte oder fehlende Kennungen bleiben hinten in alter Folge. */
     suspend fun reihenfolge(context: Context, ids: List<String>) = sperre.withLock {
         laden(context)
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + NonCancellable) {
             val alt = _stand.value
             val rang = ids.withIndex().associate { (i, id) -> id to i }
-            val neu = alt.sortedBy { rang[it.id] ?: (ids.size + alt.indexOf(it)) }
-            if (neu.map { it.id } != alt.map { it.id }) { schreibe(context, neu); _stand.value = neu }
+            val neu = alt.withIndex().sortedBy { (i, p) -> rang[p.id] ?: (ids.size + i) }.map { it.value }
+            if (neu.map { it.id } != alt.map { it.id }) {
+                runCatching { schreibe(context, neu); _stand.value = neu }
+                    .onFailure { _hinweis.value = "Die neue Reihenfolge ließ sich nicht speichern (Speicher voll?)." }
+            }
         }
     }
 
