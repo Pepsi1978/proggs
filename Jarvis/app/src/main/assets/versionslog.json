@@ -758,6 +758,7 @@
     {"versionCode": 750, "versionName": "1.8.739", "stand": "16.11.2026, 12:59 Uhr", "notiz": "Atemübungen: Das Satz-Menü zeigt in jeder Phase alle gespeicherten Sätze aus Einatmen, Ausatmen und Halten."},
     {"versionCode": 751, "versionName": "1.8.740", "stand": "16.11.2026, 13:04 Uhr", "notiz": "Atemübungen: Langes Drücken auf einen Satz im Satz-Menü löscht ihn nach Rückfrage aus der Auswahl."},
     {"versionCode": 752, "versionName": "1.8.741", "stand": "16.11.2026, 13:05 Uhr", "notiz": "Atemübungen: Review-Befunde im Satz-Menü behoben, beschädigte Satzdatei wird gesichert, neueste Sätze stehen vorn, Menü auch mit TalkBack bedienbar."},
-    {"versionCode": 753, "versionName": "1.8.742", "stand": "17.11.2026, 09:39 Uhr", "notiz": "Biomarker: Schlafzeit-Skala bis 10 Stunden, BMI entfernt, kein eckiger Rahmen beim Verschieben, eigener Detailbereich mit Graph, Werte-Übersicht und 7/30/90 Tagen je Messgröße; Staubsauger: Live-Karte mit flüssiger Roboterposition und gefahrener Strecke."}
+    {"versionCode": 753, "versionName": "1.8.742", "stand": "17.11.2026, 09:39 Uhr", "notiz": "Biomarker: Schlafzeit-Skala bis 10 Stunden, BMI entfernt, kein eckiger Rahmen beim Verschieben, eigener Detailbereich mit Graph, Werte-Übersicht und 7/30/90 Tagen je Messgröße; Staubsauger: Live-Karte mit flüssiger Roboterposition und gefahrener Strecke."},
+    {"versionCode": 754, "versionName": "1.8.743", "stand": "17.11.2026, 09:49 Uhr", "notiz": "Veränderungen: zwei Reiter „Aktuell“ und „Offen“; neue Veränderungen landen unter „Offen“ und kommen mit „Annehmen“ nach „Aktuell“, Jarvis' Gedächtnis kennt beide Gruppen."}
 ]
 }

@@ -21,6 +21,8 @@ data class Veraenderung(
     val geloescht: Boolean = false,
     /** Platz in „Aktuell“ (klein = oben). Ohne eigene Reihenfolge: neueste zuerst über −[erstellt]. */
     val rang: Double = -erstellt.toDouble(),
+    /** true = Reiter „Aktuell“ (wird gerade umgesetzt), false = Reiter „Offen“ (steht noch an). Alte Einträge ohne Feld gelten als angenommen. */
+    val angenommen: Boolean = true,
 )
 
 /**
@@ -133,8 +135,9 @@ object Veraenderungen {
 
     fun finde(context: Context, id: Long): Veraenderung? = sicher(context).firstOrNull { it.id == id }
 
+    /** Neue Veränderungen landen zuerst unter „Offen“; erst [annehmen] macht sie zur laufenden Veränderung. */
     fun anlegen(context: Context, titel: String, beschreibung: String): Veraenderung? {
-        val v = Veraenderung(neueId(), titel.trim(), beschreibung.trim())
+        val v = Veraenderung(neueId(), titel.trim(), beschreibung.trim(), angenommen = false)
         return schreibe(context, v.id, neuAnlegen = v) { it }
     }
 
@@ -142,6 +145,15 @@ object Veraenderungen {
 
     fun erledigt(context: Context, id: Long, erledigt: Boolean): Veraenderung? =
         aendern(context, id) { if (it.erledigt == erledigt) it else it.copy(erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else 0L) }
+
+    /** „Annehmen“: von „Offen“ nach „Aktuell“, dort ganz oben. */
+    fun annehmen(context: Context, id: Long): Veraenderung? {
+        val oben = (sicher(context).filter { it.angenommen && !it.erledigt }.minOfOrNull { it.rang } ?: 0.0) - 1.0
+        return aendern(context, id) { if (it.angenommen) it else it.copy(angenommen = true, rang = oben) }
+    }
+
+    /** Live-Gedächtnis von außen nachziehen, etwa beim Wechsel zwischen den Reitern „Aktuell“ und „Offen“. */
+    fun gedaechtnisNachziehen(context: Context, anlass: String) = auffrischen(context.applicationContext, anlass)
 
     fun loeschen(context: Context, id: Long): Veraenderung? = aendern(context, id) { it.copy(geloescht = true) }
 
@@ -159,13 +171,14 @@ object Veraenderungen {
 
     private fun json(v: Veraenderung) = JSONObject()
         .put("id", v.id).put("titel", v.titel).put("beschreibung", v.beschreibung).put("erledigt", v.erledigt).put("erledigtAm", v.erledigtAm)
-        .put("erstellt", v.erstellt).put("geaendert", v.geaendert).put("geloescht", v.geloescht).put("rang", v.rang)
+        .put("erstellt", v.erstellt).put("geaendert", v.geaendert).put("geloescht", v.geloescht).put("rang", v.rang).put("angenommen", v.angenommen)
 
     private fun aus(j: JSONObject): Veraenderung {
         val erstellt = j.optLong("erstellt")
         return Veraenderung(
             j.getLong("id"), j.optString("titel"), j.optString("beschreibung"), j.optBoolean("erledigt"), j.optLong("erledigtAm"),
             erstellt, j.optLong("geaendert"), j.optBoolean("geloescht"), rang = if (j.has("rang")) j.optDouble("rang") else -erstellt.toDouble(),
+            angenommen = j.optBoolean("angenommen", true),
         )
     }
 

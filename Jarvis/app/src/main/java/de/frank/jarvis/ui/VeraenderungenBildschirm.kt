@@ -28,6 +28,13 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.TaskAlt
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -56,7 +63,8 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 
 /**
- * Reiter „Veränderungen“: Franks wichtige Veränderungen im Leben. Oben „Aktuell“ (Einzeile, Kreis hakt ab), unten aufklappbar
+ * Reiter „Veränderungen“: Franks wichtige Veränderungen im Leben. Oben zwei Reiter: „Aktuell“ (angenommen, wird gerade umgesetzt;
+ * Standard beim Öffnen) und „Offen“ (neu eingesprochen, steht noch an; Detail mit „Annehmen“). In „Aktuell“ (Einzeile, Kreis hakt ab), unten aufklappbar
  * „Erledigt“ (Zurückholen). Lange drücken und ziehen ordnet „Aktuell“ um (geräteübergreifend gespeichert). Antippen öffnet die genaue Beschreibung mit Papierkorb. Neue Einträge kommen nur per
  * Sprache an Jarvis (Werkzeug `veraenderung`).
  */
@@ -66,24 +74,52 @@ fun VeraenderungenBildschirm() {
     val alle by Veraenderungen.stand.collectAsState()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Veraenderungen.sicher(context) } }
     var offenId by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Beim Öffnen des Bereichs immer „Aktuell“; der Reiter bleibt erhalten, solange eine Veränderung im Detail offen ist.
+    var zeigtOffene by rememberSaveable { mutableStateOf(false) }
     val offen = offenId?.let { id -> alle.firstOrNull { it.id == id } }
     // Auf dem anderen Gerät gelöscht, während der Eintrag hier offen war: zurück zur Liste.
     LaunchedEffect(offenId, offen) { if (offenId != null && offen == null && alle.isNotEmpty()) offenId = null }
     Column(Modifier.fillMaxSize()) {
         if (offen != null) Detail(offen) { offenId = null }
-        else Uebersicht(alle) { offenId = it }
+        else Uebersicht(alle, zeigtOffene, { neu ->
+            if (neu != zeigtOffene) {
+                zeigtOffene = neu
+                Veraenderungen.gedaechtnisNachziehen(context, if (neu) "Reiter Offen geöffnet" else "Reiter Aktuell geöffnet")
+            }
+        }) { offenId = it }
+    }
+}
+
+/** Zwei Reiter wie in Geniale Ideen: links „Aktuell“, daneben „Offen“, je mit Anzahl. */
+@Composable
+private fun ReiterWahl(zeigtOffene: Boolean, aktuell: Int, offene: Int, waehlen: (Boolean) -> Unit) {
+    val f = LocalFarben.current
+    val form = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(form).background(f.flaeche).border(1.dp, f.primaer.copy(alpha = 0.25f), form).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(false to "Aktuell ($aktuell)", true to "Offen ($offene)").forEach { (istOffen, text) ->
+            val gewaehlt = istOffen == zeigtOffene
+            val farbe by animateColorAsState(if (gewaehlt) f.primaer else Color.Transparent, label = "reiter")
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(farbe).antippen { waehlen(istOffen) }.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                Text(text, color = if (gewaehlt) f.aufPrimaer else f.textLeise, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1)
+            }
+        }
     }
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List<Veraenderung>, oeffnen: (Long) -> Unit) {
+private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List<Veraenderung>, zeigtOffene: Boolean, reiterWaehlen: (Boolean) -> Unit, oeffnen: (Long) -> Unit) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val haptik = LocalHapticFeedback.current
-    val aktuell = alle.filter { !it.erledigt }
-    val erledigt = alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
+    val angenommen = alle.filter { !it.erledigt && it.angenommen }
+    val offene = alle.filter { !it.erledigt && !it.angenommen }
+    val aktuell = if (zeigtOffene) offene else angenommen
+    val erledigt = if (zeigtOffene) emptyList() else alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm }
     // Während des Ziehens eigene Reihenfolge, beim Loslassen einmal gespeichert; danach wieder der Stand aus der Datei.
-    var lokal by remember { mutableStateOf<List<Veraenderung>?>(null) }
+    var lokal by remember(zeigtOffene) { mutableStateOf<List<Veraenderung>?>(null) }
     val gezeigt = lokal ?: aktuell
     val listenStand = rememberLazyListState()
     val ordnen = rememberReorderableLazyListState(listenStand) { von, nach ->
@@ -98,13 +134,22 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
         haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
     Text("Veränderungen", Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    ReiterWahl(zeigtOffene, angenommen.size, offene.size, reiterWaehlen)
     LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listenStand, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item(key = "kopf_aktuell") { Abschnitt("Aktuell") }
-        if (aktuell.isEmpty()) item(key = "leer") {
+        if (aktuell.isEmpty() && zeigtOffene) item(key = "leer_offen") {
             Karte {
-                Text("Noch keine Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("Keine offene Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Sag Jarvis, was du ab jetzt anders machst und warum, etwa: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“",
+                    "Was du Jarvis als Veränderung einsprichst, landet zuerst hier. Öffne sie und tippe auf „Annehmen“, sobald du sie umsetzt.",
+                    color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        }
+        else if (aktuell.isEmpty()) item(key = "leer") {
+            Karte {
+                Text("Keine laufende Veränderung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Sag Jarvis, was du anders machen willst und warum, etwa: „Hey Jarvis, nimm unter Veränderungen auf, dass ich ab sofort mit dem Sonnenaufgang aufstehe.“ Sie landet unter „Offen“; mit „Annehmen“ kommt sie hierher.",
                     color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
                 )
             }
@@ -175,12 +220,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.Detail(v: Veraenderun
         Karte {
             Text(v.titel, color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             Text(
-                "Seit ${Veraenderungen.datum(v.erstellt)}" + if (v.erledigt) " · erledigt am ${Veraenderungen.datum(v.erledigtAm)}" else " · aktuell",
+                "Seit ${Veraenderungen.datum(v.erstellt)}" + when { v.erledigt -> " · erledigt am ${Veraenderungen.datum(v.erledigtAm)}"; v.angenommen -> " · aktuell"; else -> " · offen" },
                 color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp),
             )
             Text(v.beschreibung.ifBlank { "Keine Beschreibung." }, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 12.dp))
         }
-        if (v.erledigt) Knopf("In Aktuell zurückholen", Modifier.fillMaxWidth(), Icons.AutoMirrored.Rounded.Undo) { Veraenderungen.erledigt(context, v.id, false) }
+        if (v.erledigt) Knopf(if (v.angenommen) "In Aktuell zurückholen" else "In Offen zurückholen", Modifier.fillMaxWidth(), Icons.AutoMirrored.Rounded.Undo) { Veraenderungen.erledigt(context, v.id, false) }
+        else if (!v.angenommen) Knopf("Annehmen", Modifier.fillMaxWidth(), Icons.Rounded.TaskAlt) { Veraenderungen.annehmen(context, v.id); zurueck() }
         else Knopf("Als erledigt abhaken", Modifier.fillMaxWidth(), Icons.Rounded.CheckCircle) { Veraenderungen.erledigt(context, v.id, true); zurueck() }
     }
     if (loeschenFrage) AlertDialog(
