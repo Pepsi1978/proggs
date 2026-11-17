@@ -101,6 +101,10 @@ def kurz(cmd, n=70):
     return cmd if len(cmd) <= n else cmd[:n - 1] + '…'
 
 
+# adb-Übertragung (push/install) ist netzgebunden und braucht kaum CPU: kein Hänger (Jarvis-Installation, 17.11.2026).
+UEBERTRAGUNG = re.compile(r'\badb\b.*\b(push|install|install-multiple|sync)\b')
+
+
 def lies_ab(datei, ab):
     with open(datei, 'rb') as f:
         f.seek(ab)
@@ -154,6 +158,8 @@ def main():
         stand = 'WARTET – absichtliche Pause (%s, seit %s), kein Fehler, nicht beenden' % (kurz(wartend[0][4], 40), wartend[0][3])
     elif arbeit is None and not zeilen:
         stand = 'STILL – keine neue Ausgabe seit %d s, Prozessdaten fehlen hier: Prozesse von Hand prüfen' % dauer
+    elif arbeit is not None and arbeit < 0.2 and not zeilen and any(UEBERTRAGUNG.search(z[4]) for z in prozesse):
+        stand = 'ÜBERTRÄGT – adb lädt über WLAN/Tunnel (kaum CPU, kein Hänger), nicht beenden, nächste Prüfung in Minute %s' % (int(minute) + 1 if minute.isdigit() else '?')
     elif arbeit is not None and arbeit < 0.2 and not zeilen:
         stand = 'HÄNGER? – keine CPU-Zeit und keine neue Ausgabe seit %d s: Prozesse ansehen und Ursache beheben' % dauer
     else:

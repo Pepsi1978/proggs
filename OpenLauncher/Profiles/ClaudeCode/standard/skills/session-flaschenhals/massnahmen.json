@@ -642,6 +642,23 @@
       "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='",
       "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen; Zeile 'setopt nonomatch' samt Kommentar aus ~/.zshrc entfernen",
       "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
+    },
+    {
+      "id": "M37",
+      "titel": "Lauf-Wächter meldet adb-Übertragung nicht mehr als Hänger",
+      "datum": "2026-11-17T10:41",
+      "beleg": "Sitzung 56b7f785: Minute 1 meldete HÄNGER? während jarvis-install 136 MB per adb über WLAN lud; Lauf endete fehlerfrei",
+      "ort": [
+        "Werkzeuge/lauf-waechter/minute.py"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "lauf-waechter/minute\\.py",
+      "fehler_regex": "HÄNGER\\? .*\\n.*adb",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Bei Jarvis-Installationen zeigt der Wächter ÜBERTRÄGT statt HÄNGER?",
+      "ruecknahme": "UEBERTRAGUNG-Zweig in minute.py entfernen",
+      "kosten": "0 Kontext",
+      "messbar": true
     }
   ]
 }
