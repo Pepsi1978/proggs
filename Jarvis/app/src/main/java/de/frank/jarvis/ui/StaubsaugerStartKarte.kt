@@ -108,7 +108,8 @@ private val saugerBereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private object SaugerAnsicht {
     var offen by mutableStateOf(false)
     var live by mutableStateOf<ProscenicMehr.Live?>(null)
-    var erreichbar by mutableStateOf<Boolean?>(null)
+    /** Letzte Prüfung erreichte die Proscenic-Cloud selbst nicht (die Erreichbarkeit des Roboters steht in [SaugerStand.erreichbar]). */
+    var cloudFehler by mutableStateOf(false)
     var geprueft by mutableStateOf(false)
     var laedt by mutableStateOf(false)
     var meldung by mutableStateOf<SaugerAusgang?>(null)
@@ -165,7 +166,9 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         while (true) {
             val aktiv = ProscenicMehr.aktiv(a.live?.modus)
             // Die offene Live-Karte hält selbst die Gateway-Verbindung; eine zweite würde sie verdrängen.
-            if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > (if (aktiv) 45_000L else 5 * 60_000L)) zustandLesen(context)
+            // Gilt der Roboter als nicht erreichbar, jede Minute nachsehen, damit die Anzeige nicht rot stehen bleibt.
+            val abstand = if (aktiv) 45_000L else if (SaugerStand.erreichbar == false) 60_000L else 5 * 60_000L
+            if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > abstand) zustandLesen(context)
             delay(15_000L)
         }
     }
@@ -197,9 +200,9 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                     val st = Modifier
                     when {
                         a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
-                        a.geprueft && a.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
-                        a.geprueft && a.erreichbar == false -> Text("nicht erreichbar", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
-                        a.geprueft -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
+                        a.geprueft && a.cloudFehler -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
+                        s.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                        s.erreichbar == false -> Text("nicht erreichbar", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
                         s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
                     }
                 }
@@ -277,7 +280,13 @@ private suspend fun uebernehmen(context: android.content.Context, l: ProscenicMe
 
 /** Liest still nur den Zustand (ohne Karte, ohne „wird gelesen …“). */
 private suspend fun zustandLesen(context: android.content.Context) {
-    if (SaugerAnsicht.laedt) return
+    val a = SaugerAnsicht
+    if (a.laedt) return
+    a.zustandUm = System.currentTimeMillis()
+    // Erst die Erreichbarkeit (schnell, ohne Gateway); nur ein verbundener Roboter schickt seinen Zustand.
+    val online = ProscenicMehr.erreichbar(context)
+    a.cloudFehler = online == null; a.geprueft = true
+    if (online == false) return
     ProscenicMehr.live(context, mitKarte = false)?.let { uebernehmen(context, it) }
 }
 
@@ -312,7 +321,7 @@ private suspend fun coroutineScopeAsync(context: android.content.Context, mitKar
     val a = SaugerAnsicht
     val online = async { ProscenicMehr.erreichbar(context) }
     val neu = async { ProscenicMehr.live(context, mitKarte) }
-    a.erreichbar = online.await(); a.geprueft = true
+    a.cloudFehler = online.await() == null; a.geprueft = true
     neu.await()?.let { uebernehmen(context, it) }
 }
 

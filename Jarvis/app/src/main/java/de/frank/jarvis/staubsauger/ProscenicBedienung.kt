@@ -125,6 +125,8 @@ object SaugerStand {
     var gelesenUm by mutableStateOf<Long?>(null)
     var laeuft by mutableStateOf(false)
     var meldung by mutableStateOf<SaugerAusgang?>(null)
+    /** Ist der Roboter mit der Proscenic-Cloud verbunden? null = noch nicht geprüft. Jede Abfrage und jeder Befehl hält das aktuell. */
+    var erreichbar by mutableStateOf<Boolean?>(null)
     private var geladen = false
 
     @Synchronized

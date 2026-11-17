@@ -79,7 +79,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             "fortsetzen" -> ProscenicMehr.pauseOderWeiter(context, weiter = true)
             "erreichbar" -> when (ProscenicMehr.erreichbar(context)) {
                 true -> SaugerAusgang("Der M7 Pro ist erreichbar und mit der Proscenic-Cloud verbunden.")
-                false -> SaugerAusgang("Der M7 Pro ist gerade nicht mit der Proscenic-Cloud verbunden.", true)
+                false -> SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
                 null -> SaugerAusgang("Die Proscenic-Cloud ist gerade nicht erreichbar.", true)
             }
             "saugstufe" -> when {
@@ -134,7 +134,14 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
     /** Aktionen, die erst den aktuellen Stand (Zeitpläne, Zonen) brauchen. */
     private suspend fun mitLive(aktion: String, a: JSONObject, wert: String): SaugerAusgang {
         val live = ProscenicMehr.live(context, mitKarte = true)
-            ?: return SaugerAusgang("Den aktuellen Stand des M7 Pro konnte ich gerade nicht abrufen; vermutlich ist das Internet zu langsam.", true)
+            ?: return if (ProscenicMehr.erreichbar(context) == false) SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
+                else SaugerAusgang("Den aktuellen Stand des M7 Pro konnte ich gerade nicht abrufen; versuch es gleich noch einmal.", true)
+        // Ohne frisch gelesene Zeitpläne bzw. Zonen nichts vorlesen und vor allem nichts zurückschreiben: Sonst würde eine leere
+        // Liste die vorhandenen Zeitpläne oder Sperrzonen auf dem Roboter überschreiben.
+        val brauchtZeitplaene = aktion.startsWith("zeitplan")
+        if ((brauchtZeitplaene && !live.zeitplaeneGelesen) || (aktion == "sperrzone_loeschen" && !live.zonenGelesen))
+            return if (ProscenicMehr.erreichbar(context) == false) SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
+            else SaugerAusgang("Der M7 Pro hat ${if (brauchtZeitplaene) "seine Zeitpläne" else "seine Sperrzonen"} gerade nicht geschickt; versuch es gleich noch einmal.", true)
         val nummer = a.optInt("nummer", 0)
         val sperren = live.zonen.filter { it.sperre }
         return when (aktion) {

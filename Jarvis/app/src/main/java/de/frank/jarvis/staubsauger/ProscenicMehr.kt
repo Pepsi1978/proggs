@@ -9,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -51,6 +50,8 @@ object ProscenicMehr {
         val modus: String?, val akku: Int?, val saugstufe: String?, val lautstaerke: Int?, val led: Boolean?, val staubFrequenz: Int?,
         val karte: Karte?, val pfad: List<Pair<Int, Int>>, val roboter: Pair<Int, Int>?, val station: Pair<Int, Int>?,
         val mapId: Long?, val zonen: List<Zone>, val zeitZone: Int, val zeitZoneSek: Int, val zeitplaene: List<Zeitplan>,
+        /** Kamen Zeitpläne (21002) bzw. Räume und Sperrzonen (21004) wirklich vom Roboter? Nur dann darf Jarvis sie zurückschreiben. */
+        val zeitplaeneGelesen: Boolean = false, val zonenGelesen: Boolean = false,
     ) {
         /** Diese Karte mit dem Zustand (Modus, Akku, Einstellungen, Position) aus [neu]. */
         fun mitZustand(neu: Live) = copy(modus = neu.modus, akku = neu.akku, saugstufe = neu.saugstufe, lautstaerke = neu.lautstaerke,
@@ -71,17 +72,8 @@ object ProscenicMehr {
 
     /** Ist der Roboter gerade mit der Proscenic-Cloud verbunden? null = Cloud selbst nicht erreichbar. */
     suspend fun erreichbar(context: Context): Boolean? = withContext(Dispatchers.IO) {
-        runCatching {
-            mitSitzung(context) { s ->
-                ProscenicCloud.CLIENT.newCall(Request.Builder().url("${ProscenicCloud.HOST}/appInit/robotOnLine/${s.sn}").header("token", s.token).get().build())
-                    .execute().use { a ->
-                        if (a.code == 401 || a.code == 403) throw ProscenicCloud.TokenUngueltig()
-                        val j = JSONObject(a.body?.string().orEmpty())
-                        if (j.optInt("code") == 102) throw ProscenicCloud.TokenUngueltig()
-                        j.optBoolean("data", false)
-                    }
-            }
-        }.getOrNull()
+        runCatching { ProscenicCloud.online(ProscenicCloud.sitzung(context, neu = false)) }.getOrNull()
+            ?.also { SaugerStand.erreichbar = it }
     }
 
     /**
@@ -95,6 +87,8 @@ object ProscenicMehr {
             // Vollständig mit Karte gelesen (Status, Karte, Zeitpläne): die Rohdaten zwischenspeichern, damit die Karte beim
             // nächsten Aufklappen sofort da ist. Ein unvollständiger Lauf überschreibt den Speicher nicht.
             if (daten.keys.containsAll(listOf(20001, 20002, 21002))) kartenSpeichern(context, daten, mail)
+            // Ein frischer Status kommt nur von einem verbundenen Roboter.
+            if (daten.containsKey(20001)) SaugerStand.erreichbar = true
             bauen(daten)
         }.onFailure { Logbuch.netz("Proscenic: Live-Stand fehlt", it.toString().take(200)) }.getOrNull()
     }
@@ -223,6 +217,7 @@ object ProscenicMehr {
                         z.optJSONArray("period")?.let { p -> (0 until p.length()).map { p.optInt(it) } }.orEmpty(), z.optString("workNoisy", "auto"), z)
                 }
             }.orEmpty(),
+            zeitplaeneGelesen = zp != null, zonenGelesen = daten[21004] != null,
         )
     }
 

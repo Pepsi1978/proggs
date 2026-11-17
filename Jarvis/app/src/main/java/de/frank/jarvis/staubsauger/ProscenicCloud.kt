@@ -44,7 +44,39 @@ object ProscenicCloud {
     }
 
     /** Nicht weiter versuchen: falsche Anmeldedaten oder kein Roboter im Konto. */
-    class Abgewiesen(text: String) : Exception(text)
+    open class Abgewiesen(text: String) : Exception(text)
+
+    /** Der Roboter selbst hat gerade keine Verbindung zur Cloud (meist WLAN-Aussetzer); Anmeldung und Cloud sind in Ordnung. */
+    class Offline : Abgewiesen(OFFLINE_TEXT)
+
+    const val OFFLINE_TEXT = "Der M7 Pro ist gerade nicht mit dem WLAN verbunden, deshalb erreicht ihn die Proscenic-Cloud nicht. " +
+        "Anmeldung und Jarvis sind in Ordnung; meist verbindet er sich nach ein, zwei Minuten von selbst wieder."
+
+    /** So lange wartet ein Befehl auf einen Roboter, der gerade kurz aus dem WLAN gefallen ist (er springt oft nach Sekunden zurück). */
+    private const val WARTEN_MS = 30_000L
+
+    /**
+     * Ist der Roboter gerade mit der Cloud verbunden? `robotOnLine` prüft das Token nicht (auch ein ungültiges liefert eine Antwort),
+     * es zeigt nur den Verbindungsstand des Roboters. null = Cloud nicht erreichbar oder unlesbare Antwort.
+     */
+    internal fun online(s: Sitzung): Boolean? = runCatching {
+        CLIENT.newCall(Request.Builder().url("$HOST/appInit/robotOnLine/${s.sn}").header("token", s.token).get().build()).execute().use { a ->
+            if (!a.isSuccessful) return@use null
+            val j = JSONObject(a.body?.string().orEmpty())
+            if (j.optInt("code", -1) != 0 || j.opt("data") !is Boolean) null else j.optBoolean("data")
+        }
+    }.getOrNull()
+
+    /** Wartet bis zu [WARTEN_MS], bis der Roboter wieder online ist; true = er ist (wieder) da oder der Stand ist unbekannt. */
+    internal fun aufRoboterWarten(s: Sitzung): Boolean {
+        val bis = System.currentTimeMillis() + WARTEN_MS
+        while (true) {
+            val o = online(s)
+            if (o != false) return true
+            if (System.currentTimeMillis() >= bis) return false
+            Thread.sleep(3000)
+        }
+    }
 
     internal data class Sitzung(val token: String, val sn: String, val mail: String)
 
@@ -57,6 +89,13 @@ object ProscenicCloud {
         try {
             var s = sitzung(context, neu = false)
             var neuAngemeldet = false
+            // Erst schnell fragen, ob der Roboter überhaupt online ist: Sonst liefe die Gateway-Abfrage 15 Sekunden ins Leere
+            // und der Befehl bekäme nur „failure“. Kurze WLAN-Aussetzer überbrückt Jarvis durch Warten.
+            if (!aufRoboterWarten(s)) {
+                SaugerStand.erreichbar = false
+                throw Offline()
+            }
+            SaugerStand.erreichbar = true
             val vorher = try { stand(s) } catch (e: TokenUngueltig) {
                 s = sitzung(context, neu = true); neuAngemeldet = true
                 runCatching { stand(s) }.getOrNull()
@@ -79,7 +118,8 @@ object ProscenicCloud {
             val standText = nachher?.let { listOfNotNull("Zustand: ${it.zustand}.", it.akku?.let { a -> "Akku $a Prozent." }, it.saugstufe?.let { m -> "Saugstufe: $m." }).joinToString(" ") }
                 ?: if (aktion == ProscenicSteuerung.Aktion.STATUS) "" else "Den neuen Stand konnte ich nicht abrufen."
             if (aktion == ProscenicSteuerung.Aktion.STATUS && nachher == null)
-                return@withContext SaugerAusgang("Den Stand des M7 Pro konnte ich über die Proscenic-Cloud gerade nicht abrufen; vermutlich ist das Internet zu langsam.", fehler = true)
+                return@withContext if (online(s) == false) SaugerAusgang(OFFLINE_TEXT, fehler = true).also { SaugerStand.erreichbar = false }
+                else SaugerAusgang("Der M7 Pro ist online, hat seinen Stand aber gerade nicht geschickt. Versuch es gleich noch einmal.", fehler = true)
             // Proscenic erlaubt je Konto nur eine aktive Anmeldung: Musste Jarvis sich neu anmelden, ist die Proscenic-App jetzt abgemeldet.
             val hinweis = if (neuAngemeldet && !geteilt(context))
                 "Hinweis: Weil du dich in der Proscenic-App angemeldet hattest, musste ich mich neu anmelden; die App ist damit abgemeldet. " +
@@ -90,7 +130,7 @@ object ProscenicCloud {
         } catch (e: TokenUngueltig) {
             SaugerAusgang("Die Proscenic-Cloud lehnt die Anmeldung von Jarvis ab; trag E-Mail und Passwort unter Konten, Proscenic neu ein.", fehler = true)
         } catch (e: java.io.IOException) {
-            SaugerAusgang("Die Proscenic-Cloud war nicht erreichbar (${e.message ?: e.javaClass.simpleName}); vermutlich ist das Internet gerade zu langsam. Der Befehl kam nicht an.", fehler = true)
+            SaugerAusgang("Die Proscenic-Cloud war vom Handy aus nicht erreichbar (${e.message ?: e.javaClass.simpleName}); prüf die Internetverbindung des Handys. Der Befehl kam nicht an.", fehler = true)
         }
         catch (e: org.json.JSONException) {
             SaugerAusgang("Die Proscenic-Cloud hat unerwartet geantwortet (${e.message}).", fehler = true)
@@ -176,12 +216,27 @@ object ProscenicCloud {
         }
     }
 
+    /**
+     * Schickt einen Befehl. Antwortet die Cloud mit einem Fehler (meist `-1 failure`, weil der Roboter gerade nicht verbunden ist),
+     * wartet Jarvis bis zu [WARTEN_MS], bis er wieder online ist, und schickt den Befehl genau noch einmal.
+     */
     internal fun senden(s: Sitzung, pfad: String, body: RequestBody) {
-        val a = post(pfad, s.token, body)
-        val code = a.optInt("code", 0)
-        Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
-        if (code == 102 || code == 401 || code == 403) throw TokenUngueltig()
-        if (code != 0) throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
+        var versuch = 0
+        while (true) {
+            val a = post(pfad, s.token, body)
+            val code = a.optInt("code", 0)
+            Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
+            if (code == 102 || code == 401 || code == 403) throw TokenUngueltig()
+            if (code == 0) { SaugerStand.erreichbar = true; return }
+            val online = online(s)
+            if (online == false) SaugerStand.erreichbar = false
+            if (versuch++ > 0) {
+                if (online == false) throw Offline()
+                throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
+            }
+            if (online == false) { if (!aufRoboterWarten(s)) throw Offline(); SaugerStand.erreichbar = true }
+            else Thread.sleep(2000)
+        }
     }
 
     internal fun post(pfad: String, token: String?, body: RequestBody, ios: Boolean = false): JSONObject {
@@ -273,6 +328,8 @@ object ProscenicCloud {
     internal fun nachricht(rahmen: String, token: String): JSONObject? {
         val j = runCatching { JSONObject(rahmen.trim()) }.getOrNull() ?: return null
         if (j.has("infoType") && j.opt("data") is JSONObject) return j
+        // Unverschlüsselt verpackt: {"encrypt":0,"data":{"infoType":…,"data":{…}}}
+        (j.opt("data") as? JSONObject)?.takeIf { it.has("infoType") }?.let { return it }
         val daten = j.optString("data").ifBlank { return null }
         return runCatching {
             val c = Cipher.getInstance("AES/ECB/PKCS5Padding")
