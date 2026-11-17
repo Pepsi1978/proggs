@@ -161,6 +161,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     // Aktualisieren direkt auf dem Startbildschirm (Frank, 15.11.2026), mit Schutzkreis wie bei Raumklima: Ein knapp verfehlter
     // Knopf liest neu statt den Bereich zu öffnen. Die neuen Werte liest BiomarkerStartVorladen nach dem Abruf.
     val schutz = remember { KnopfSchutz() }
+    val dichte = androidx.compose.ui.platform.LocalDensity.current
     val scope = rememberCoroutineScope()
     val aktualisieren: () -> Unit = {
         if (BioAbruf.stand.value.laeuft) android.widget.Toast.makeText(context, "Der Abruf läuft schon.", android.widget.Toast.LENGTH_SHORT).show()
@@ -210,8 +211,13 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                             // Antippen einer Kachel öffnet direkt ihren Detailbereich (Graph, Werte-Übersicht, 7/30/90 Tage).
                             reihe.forEach { z ->
                                 val detail = DETAIL_ZU_ID[z.id]
+                                // Langer Druck verschiebt weiter die Karte (lange = {} verbraucht ihn); ein Tipp im Schutzkreis des
+                                // Aktualisieren-Knopfs aktualisiert wie auf der übrigen Karte (die Karte merkt sich die Druckstelle).
                                 BioBlock(z, Modifier.weight(1f).fillMaxHeight()
-                                    .then(if (detail != null) Modifier.antippen { BioAnsicht.oeffnenMitDetail(context, detail) } else Modifier))
+                                    .then(if (detail != null) Modifier.antippen(lange = {}) {
+                                        if (schutz.imSchutzkreis(with(dichte) { SCHUTZ_RADIUS.toPx() })) aktualisieren()
+                                        else BioAnsicht.oeffnenMitDetail(context, detail)
+                                    } else Modifier))
                             }
                             repeat(spalten - reihe.size) { Spacer(Modifier.weight(1f)) }
                         }

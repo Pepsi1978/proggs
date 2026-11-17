@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -66,12 +67,7 @@ import kotlinx.coroutines.delay
 /** Breite der Saugspur auf der Karte in Metern (Bürste des M7 Pro, etwa 25 cm), damit der Strich die abgesaugte Fläche zeigt. */
 private const val SPUR_BREITE_M = 0.25
 
-private fun liveZustand(m: String?) = when (m) {
-    null, "" -> "Zustand wird gelesen …"
-    "charge" -> "lädt in der Station"; "fullcharge" -> "voll geladen in der Station"; "sweep" -> "reinigt"; "pause" -> "pausiert"
-    "backcharge" -> "fährt zur Ladestation"; "findchargerpause" -> "Rückfahrt pausiert"; "DustCenterWorking" -> "Staubsammlung läuft"
-    "idle" -> "bereit"; "fault" -> "Störung"; else -> m
-}
+private fun liveZustand(m: String?) = if (m.isNullOrBlank()) "Zustand wird gelesen …" else zustandName(m)
 
 /**
  * Live-Karte im Vollbild (Franks Wunsch vom 17.11.2026, wie in der Proscenic-App): Die Position des Roboters gleitet flüssig
@@ -148,11 +144,20 @@ private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: M
         if (alt == Offset.Unspecified || (alt - ziel).getDistance() > 3000f) pos.snapTo(ziel)
         else pos.animateTo(ziel, tween(durationMillis = 2100, easing = LinearEasing))
     }
+    // Weg in Kartenpunkten, nur bei neuem Weg neu gebaut (nicht in jedem Animationsbild); zweites Feld = letzter gezeichneter Punkt.
+    val wegPfad = remember(spur.pfad, spur.roboter, spur.modus, k) {
+        val weg = if (spur.roboter != null && ProscenicMehr.aktiv(spur.modus) && spur.pfad.lastOrNull() == spur.roboter) spur.pfad.dropLast(1) else spur.pfad
+        if (weg.isEmpty()) null else {
+            val p = Path(); var letzter = Offset.Zero
+            weg.forEachIndexed { i, (x, y) -> letzter = Offset(k.px(x), k.py(y)); if (i == 0) p.moveTo(letzter.x, letzter.y) else p.lineTo(letzter.x, letzter.y) }
+            p to letzter
+        }
+    }
     val puls by rememberInfiniteTransition(label = "puls").animateFloat(
         0f, 1f, infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "puls",
     )
     Canvas(
-        modifier.pointerInput(k) {
+        modifier.pointerInput(Unit) {
             detectTransformGestures { mitte, verschiebung, faktor, _ ->
                 val nz = (zoom * faktor).coerceIn(1f, 8f)
                 val p = mitte - (mitte - pan) * (nz / zoom) + verschiebung
@@ -178,14 +183,22 @@ private fun LiveKarte(spur: SaugerLive.Spur, k: ProscenicMehr.Karte, modifier: M
             // Gefahrene Strecke: breite, halbdurchsichtige Spur (abgesaugte Fläche) und darüber die Mittellinie; endet am gleitenden Roboter.
             val r = pos.value.takeIf { it != Offset.Unspecified }
             // Der letzte Wegpunkt ist das Ziel der Gleitbewegung; während der Fahrt endet der Strich am gleitenden Roboter statt davor.
-            val weg = if (r != null && ProscenicMehr.aktiv(spur.modus) && spur.pfad.lastOrNull() == spur.roboter) spur.pfad.dropLast(1) else spur.pfad
-            if (weg.isNotEmpty()) {
-                val p = Path()
-                weg.forEachIndexed { i, (x, y) -> val q = pt(x.toFloat(), y.toFloat()); if (i == 0) p.moveTo(q.x, q.y) else p.lineTo(q.x, q.y) }
-                if (r != null && ProscenicMehr.aktiv(spur.modus)) pt(r.x, r.y).let { p.lineTo(it.x, it.y) }
-                val breite = (SPUR_BREITE_M / k.aufloesung * massstab).toFloat().coerceAtLeast(3.dp.toPx())
-                drawPath(p, Color(0x5542A5F5), style = Stroke(breite, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawPath(p, Color(0xDD1E88E5), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            // Der Weg liegt einmal berechnet in Kartenpunkten vor (wegPfad) und wird nur verschoben und skaliert gezeichnet.
+            if (wegPfad != null) {
+                val o = bildPunkt(0f, 0f)
+                val breite = (SPUR_BREITE_M / k.aufloesung).toFloat().coerceAtLeast(3.dp.toPx() / massstab)
+                val linie = 1.6.dp.toPx() / massstab
+                withTransform({ translate(o.x, o.y); scale(massstab, massstab, Offset.Zero) }) {
+                    drawPath(wegPfad.first, Color(0x5542A5F5), style = Stroke(breite, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawPath(wegPfad.first, Color(0xDD1E88E5), style = Stroke(linie, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+                // Letztes Stück bis zum gleitenden Roboter.
+                val ende = wegPfad.second
+                if (ende != null && r != null && ProscenicMehr.aktiv(spur.modus)) {
+                    val a = bildPunkt(ende.x, ende.y); val b = pt(r.x, r.y)
+                    drawLine(Color(0x5542A5F5), a, b, strokeWidth = breite * massstab, cap = StrokeCap.Round)
+                    drawLine(Color(0xDD1E88E5), a, b, strokeWidth = linie * massstab, cap = StrokeCap.Round)
+                }
             }
             spur.station?.let { (x, y) -> drawCircle(Color(0xFF43A047), 7.dp.toPx(), pt(x.toFloat(), y.toFloat())) }
             if (r != null) {

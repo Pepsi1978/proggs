@@ -71,7 +71,7 @@ fun BiomarkerDetailScreen(
     val spec = metricSpecFor(metricKey)
     // Franks Wunsch vom 17.11.2026: Beim Öffnen zeigen Graph und Werte-Übersicht sofort den gesamten Verlauf. Der Umschalter
     // (7, 30, 90 Tage) grenzt beides ein; erneutes Antippen des gewählten Zeitraums führt zurück zum Gesamtverlauf.
-    var range by remember { mutableStateOf<DetailRange?>(null) }
+    var range by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<DetailRange?>(null) }
 
     // VO2max kommt nicht aus dem BiomarkerSnapshot, sondern aus den VO2max-fähigen Trainings (im VM vorberechnet).
     val gesamt: List<Pair<Long, Double>> = remember(metricKey, state.history, state.chartData) {
@@ -183,7 +183,8 @@ fun BiomarkerDetailScreen(
             }
             // Werte-Liste (jüngster zuerst) mit Abweichung zum Vortag.
             val sortedDescending = pointsAll.asReversed()
-            itemsIndexed(sortedDescending, key = { _, (ts, _) -> ts }) { idx, (ts, value) ->
+            // Ohne Schlüssel: Zwei Werte mit gleichem Zeitstempel (zwei Quellen, zwei Trainings) brächten LazyColumn sonst zum Absturz.
+            itemsIndexed(sortedDescending) { idx, (ts, value) ->
                 val previousValue = sortedDescending.getOrNull(idx + 1)?.second
                 ValueRow(
                     timestamp = ts,
@@ -357,11 +358,12 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         title = "Tiefschlafanteil",
         unit = "%",
         accent = LocalCosmos.current.accent,
-        // Gleiche Rechnung wie der Tiefschlaf-Verlauf: Tiefschlaf ÷ (Tief + REM + Leicht + Wach).
+        // Tiefschlaf ÷ (Tief + REM + Leicht + Wach); nur mit vollständigen Phasen, wie die Auswertung hinter der Startkachel
+        // (ein Tag ohne REM- oder Leichtschlafwert ergäbe sonst 100 %).
         extract = { snap ->
-            val deep = snap.sleepDeepMinutes
-            val total = (deep ?: 0) + (snap.sleepRemMinutes ?: 0) + (snap.sleepLightMinutes ?: 0) + (snap.sleepAwakeMinutes ?: 0)
-            if (deep == null || total <= 0) null else deep.toDouble() / total * 100.0
+            val deep = snap.sleepDeepMinutes; val rem = snap.sleepRemMinutes; val light = snap.sleepLightMinutes
+            if (deep == null || rem == null || light == null) null
+            else (deep + rem + light + (snap.sleepAwakeMinutes ?: 0)).takeIf { it > 0 }?.let { deep.toDouble() / it * 100.0 }
         },
         format = { "%.1f %%".format(it) },
     )

@@ -22,7 +22,7 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 
 /** Radius des Schutzkreises um einen Knopf in einer antippbaren Karte, gemessen von der Knopfmitte (Knopf 22 dp + Daumenrand; Frank, 15.11.2026). */
-private val SCHUTZ_RADIUS = 72.dp
+internal val SCHUTZ_RADIUS = 72.dp
 
 /** Lage von Karte und Knopf und die letzte Druckstelle (in Kartenkoordinaten); kein State, nur beim Tippen gelesen. */
 class KnopfSchutz {

@@ -247,6 +247,8 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
 
         if (a.offen) Aufgeklappt(cloud, ::los, ::einstellen)
     }
+    // Verschwindet die Karte (anderer Bereich, Neuaufbau), schließt auch die Live-Karte: Sonst öffnete sie sich beim Zurückkommen von selbst.
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { a.liveOffen = false } }
     if (cloud && a.liveOffen) SaugerLiveDialog(a.live) {
         a.liveOffen = false
         // Danach Zustand (und aufgeklappt die Karte) wieder wie gewohnt lesen.
@@ -320,7 +322,7 @@ private suspend fun frischMitKarte(context: android.content.Context) {
     aktualisieren(context, mitKarte = true)
 }
 
-private fun zustandName(m: String) = when (m) {
+internal fun zustandName(m: String) = when (m) {
     "charge" -> "lädt in der Station"; "fullcharge" -> "voll geladen in der Station"; "sweep" -> "reinigt"; "pause" -> "pausiert"
     "backcharge" -> "fährt zur Ladestation"; "findchargerpause" -> "Rückfahrt pausiert"; "DustCenterWorking" -> "Staubsammlung läuft"
     "idle" -> "bereit"; "fault" -> "Störung"; else -> m
