@@ -80,11 +80,12 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var wecker: Boolean get() = if (art.formFest) art.weckerStandard else e.wahr(art.schluessel("wecker"), art.weckerStandard); set(v) { if (!art.formFest) e.setzeWahr(art.schluessel("wecker"), v) }
     var minimiert: Boolean get() = e.wahr(art.schluessel("minimiert"), false); set(v) = e.setzeWahr(art.schluessel("minimiert"), v)
 
-    /** Selbst geschriebener Vorlesetext; „{name}“ steht für den Namen (etwa des Timers). Leer = der Standardsatz der Art. */
+    /** Selbst geschriebener Vorlesetext; „{name}“ steht für den Namen (etwa des Timers), „{geraet}“ für Handy oder Tablet. Leer = der Standardsatz der Art. */
     var vorlesetext: String get() = e.wort(art.schluessel("vorlesetext"), ""); set(v) = e.setzeWort(art.schluessel("vorlesetext"), v)
 
     /** Der Satz, den Jarvis vorliest, mit [name] für „{name}“. */
     fun sprechtext(name: String) = vorlesetext.ifBlank { art.eigenerTextStandard.orEmpty() }.replace("{name}", name, ignoreCase = true)
+        .replace("{geraet}", de.frank.jarvis.data.Geraet.wort, ignoreCase = true)
 
     val stimmWahl get() = StimmWahl(stimme.ifBlank { null }, tempo.takeIf { it > 0f })
 
@@ -176,7 +177,7 @@ object Meldungsarten {
         "installfrage", "Installationsfrage ansagen", "Jarvis sagt an, wenn eine neue Jarvis-Version installiert werden kann und das Fenster auf deine Antwort wartet.",
         "Wenn die Frage zur Installation erscheint, außer während einer Aufnahme oder eines Gesprächs.", ALLTAG, null,
         vorlesenStandard = true, ruhezeit = true, lautStandard = 100, tonStandard = false,
-        eigenerTextStandard = "Eine neue Jarvis-Version kann installiert werden. Bitte wähle auf dem Handy im Jarvis-Fenster, wann die Installation starten soll. Ohne Antwort startet sie gleich von selbst.",
+        eigenerTextStandard = "Eine neue Jarvis-Version ist für das {geraet} verfügbar. Bitte wähle, wann sie installiert werden soll. Ohne Antwort startet sie gleich von selbst.",
     )
     val WECKWORT_HOERT = Meldungsart(
         "weckwort", "Jarvis hört zu", "Zeigt, dass Jarvis auf dein Weckwort lauscht, auch bei gesperrtem Handy.",

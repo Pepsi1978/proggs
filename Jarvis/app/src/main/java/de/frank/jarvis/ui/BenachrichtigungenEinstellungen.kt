@@ -409,7 +409,7 @@ private fun VorleseText(p: MeldungsProfil) {
     if (gespeichert != text.trim()) text = gespeichert
     Unterzeile("Text, den Jarvis vorliest")
     Eingabe(text, { text = it; p.vorlesetext = it.trim() }, p.art.eigenerTextStandard.orEmpty(), Modifier.fillMaxWidth(), einzeilig = false)
-    Text("Leer = „${p.art.eigenerTextStandard}“. „{name}“ setzt den Namen ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+    Text("Leer = „${p.art.eigenerTextStandard}“. „{name}“ setzt den Namen ein, „{geraet}“ Handy oder Tablet.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 }
 
 /** Stimme, Tempo und Lautstärke einer Meldung; „Wie Jarvis“ übernimmt die Einstellungen unter Stimme → Vorlesen. */
