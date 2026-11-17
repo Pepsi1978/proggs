@@ -9,7 +9,26 @@ import datetime
 import json
 import pathlib
 import re
+import subprocess
 import sys
+
+
+def entfernter_code(datei: pathlib.Path):
+    """Letzter versionCode der Datei auf origin/main (nach kurzem fetch); None, wenn das nicht geht (fail-open)."""
+    try:
+        ordner = str(datei.parent)
+        wurzel = subprocess.run(["git", "-C", ordner, "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=5)
+        if wurzel.returncode != 0:
+            return None
+        pfad = datei.resolve().relative_to(pathlib.Path(wurzel.stdout.strip()).resolve()).as_posix()
+        subprocess.run(["git", "-C", ordner, "fetch", "--quiet", "origin", "main"], capture_output=True, timeout=20)
+        r = subprocess.run(["git", "-C", ordner, "show", f"origin/main:{pfad}"], capture_output=True, timeout=5)
+        if r.returncode != 0:
+            return None
+        e = json.loads(r.stdout.decode("utf-8-sig")).get("eintraege") or []
+        return int(e[-1]["versionCode"]) if e else None
+    except Exception:
+        return None
 
 
 def main() -> int:
@@ -24,6 +43,12 @@ def main() -> int:
         print(f"VERSIONSLOG_FEHLER: {datei} hat keine Einträge; den ersten Eintrag von Hand anlegen", file=sys.stderr)
         return 3
     letzter = eintraege[-1]
+    # Hat eine parallele Sitzung schon einen höheren Stand gepusht, gäbe der Eintrag beim Rebase einen Konflikt und eine doppelte Nummer.
+    entfernt = entfernter_code(datei)
+    if entfernt is not None and entfernt > int(letzter["versionCode"]):
+        print(f"VERSIONSLOG_FEHLER: origin/main ist schon bei versionCode {entfernt}; zuerst auf origin/main rebasen "
+              "(git pull --rebase --autostash bzw. im Worktree git rebase origin/main), dann erneut aufrufen", file=sys.stderr)
+        return 4
     teile = str(letzter["versionName"]).split(".")
     m = re.match(r"(\d+)(.*)", teile[-1])
     if not m:

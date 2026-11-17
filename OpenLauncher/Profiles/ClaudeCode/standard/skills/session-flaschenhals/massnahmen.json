@@ -659,6 +659,22 @@
       "ruecknahme": "UEBERTRAGUNG-Zweig in minute.py entfernen",
       "kosten": "0 Kontext",
       "messbar": true
+    },
+    {
+      "id": "M38",
+      "titel": "Versionslog-Eintrag bricht ab, wenn origin/main schon höher ist",
+      "datum": "2026-11-17T15:51",
+      "beleg": "Sitzung 1a46fdab: parallele Sitzung pushte 1.8.760 um 15:45, eintrag.py vergab 15:46 dieselbe Nummer; Rebase-Konflikt, Neubau, abgebrochene Installation (~3 min)",
+      "ort": [
+        "Werkzeuge/versionslog/eintrag.py"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "aufruf_regex": "git (rebase|pull)",
+      "fehler_regex": "KONFLIKT \\(Inhalt\\): Merge-Konflikt in .*versionslog\\.json",
+      "pruefung": "Kein Rebase-Konflikt mehr in versionslog.json; stattdessen VERSIONSLOG_FEHLER vor dem Eintrag",
+      "ruecknahme": "Funktion entfernter_code und ihren Aufruf aus eintrag.py entfernen",
+      "kosten": "0 Kontext, ein git fetch je Eintrag",
+      "messbar": true
     }
   ]
 }
