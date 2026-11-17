@@ -1,136 +1,133 @@
-# Spielmodus-Waechter (Version siehe README.md)
-# Laeuft als geplante Aufgabe "Spielmodus-Waechter" im Benutzerkontext mit hoechsten Rechten.
-# Solange Steam oder Call of Duty laeuft, werden Microsoft Store und Gaming Services (Shader-
-# und Spiel-Downloads ueber die Xbox-App) gestoppt und gesperrt. Danach wird alles auf die
-# gesicherten Starttypen zurueckgestellt.
-# Ausschalten per Doppelklick auf "Spielmodus an-aus" (Flag-Datei aus.flag).
+# Game-mode watcher (version: see README.md).
+# Runs as scheduled task "Spielmodus-Waechter" in the user context with highest privileges.
+# While Steam or Call of Duty runs: stops Microsoft Store installs (InstallService, start type locked)
+# and Gaming Services (protected package services: stop only, killed again if they come back),
+# ends Store and Xbox app processes. Afterwards restores the previous state.
+# Toggle via desktop shortcut "Spielmodus an-aus" (aus.flag).
+# Designed to cost almost nothing while gaming: one process snapshot every 4 s, no pipelines,
+# no blocking service waits, logging only on state changes.
 
 $ErrorActionPreference = 'Continue'
-$daten  = Join-Path $env:LOCALAPPDATA 'Spielmodus'
-$log    = Join-Path $daten 'waechter.log'
-$sicher = Join-Path $daten 'starttypen.json'
+$daten   = Join-Path $env:LOCALAPPDATA 'Spielmodus'
+$log     = Join-Path $daten 'waechter.log'
+$sicher  = Join-Path $daten 'starttypen.json'
 $flagAus = Join-Path $daten 'aus.flag'
 New-Item -ItemType Directory -Force $daten | Out-Null
 
-$ausloeser = '^(steam|cod|cod\d\d-cod|sp\d\d-cod|bootstrapper)$'
-$dienste   = 'GamingServices', 'GamingServicesNet', 'InstallService'
-# GamingServices/-Net sind Paket-Dienste: Starttyp nicht aenderbar (Zugriff verweigert), nur stoppbar
-$sperrbar  = 'InstallService'
-$stopProz  = 'WinStore.App', 'XboxPcApp', 'XboxPcAppFT', 'gamingservices', 'gamingservicesnet'
+$ausloeserNamen = @('steam', 'cod')                 # exact process names
+$ausloeserMuster = '^(cod\d\d-cod|sp\d\d-cod)$'     # older CoD titles
+$dienstGesperrt = 'InstallService'                   # start type can be locked
+$dienstGestoppt = @('GamingServices', 'GamingServicesNet')
+$stopProz       = @('WinStore.App', 'XboxPcApp', 'XboxPcAppFT', 'gamingservices', 'gamingservicesnet')
+$entprellSek    = 20                                 # trigger must be gone this long before unlocking
+$pwsh           = (Get-Process -Id $PID).Path
 
 function Write-Log([string]$t) {
-    $z = '{0:dd.MM.yyyy HH:mm:ss}  {1}' -f (Get-Date), $t
-    Add-Content -Path $log -Value $z -Encoding utf8
-    if ((Get-Item $log).Length -gt 2MB) { Move-Item $log "$log.alt" -Force }
+    try {
+        Add-Content -Path $log -Value ('{0:dd.MM.yyyy HH:mm:ss}  {1}' -f (Get-Date), $t) -Encoding utf8
+        if ((Get-Item $log).Length -gt 2MB) { Move-Item $log "$log.alt" -Force }
+    } catch { }
 }
 
-Add-Type @"
-using System; using System.Text; using System.Runtime.InteropServices;
-public class SpielmodusFenster {
-  public delegate bool EnumProc(IntPtr h, IntPtr l);
-  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc p, IntPtr l);
-  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
-  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+function Show-Meldung([string]$t) {
+    $skript = Join-Path $PSScriptRoot 'meldung.ps1'
+    try {
+        Start-Process "$env:WINDIR\System32\conhost.exe" -WindowStyle Hidden -ArgumentList "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$skript`" -Text `"$t`""
+    } catch { Write-Log "Mitteilung fehlgeschlagen: $($_.Exception.Message)" }
 }
-"@
 
-function Get-SichtbareFenster {
-    $liste = New-Object System.Collections.Generic.List[string]
-    [SpielmodusFenster]::EnumWindows({ param($h, $l)
-        if ([SpielmodusFenster]::IsWindowVisible($h)) {
-            $sb = New-Object System.Text.StringBuilder 300
-            [void][SpielmodusFenster]::GetWindowText($h, $sb, 300)
-            if ($sb.Length -gt 0) {
-                $p = 0; [void][SpielmodusFenster]::GetWindowThreadProcessId($h, [ref]$p)
-                $n = (Get-Process -Id $p -ErrorAction SilentlyContinue).ProcessName
-                $liste.Add("$n | $($sb.ToString())")
-            }
-        }
-        return $true }, [IntPtr]::Zero) | Out-Null
-    return $liste
+function Get-Ausloeser {
+    # One cheap snapshot; returns the names of running trigger processes.
+    $treffer = foreach ($p in [Diagnostics.Process]::GetProcesses()) {
+        $n = $p.ProcessName
+        if ($ausloeserNamen -contains $n -or $n -match $ausloeserMuster) { $n }
+        $p.Dispose()
+    }
+    return @($treffer | Sort-Object -Unique)
+}
+
+function Get-Originaltyp {
+    $typ = $null
+    if (Test-Path $sicher) { try { $typ = (Get-Content $sicher -Raw | ConvertFrom-Json).$dienstGesperrt } catch { } }
+    if (-not $typ -or $typ -eq 'Disabled') { $typ = 'Manual' }   # never treat 'Disabled' as original
+    return $typ
 }
 
 function Save-Starttypen {
     if (Test-Path $sicher) { return }
-    $s = @{}
-    foreach ($d in $dienste) {
-        $svc = Get-Service $d -ErrorAction SilentlyContinue
-        if ($svc) { $s[$d] = "$($svc.StartType)" }
-    }
-    $s | ConvertTo-Json | Set-Content $sicher -Encoding utf8
-    Write-Log "Starttypen gesichert: $($s | ConvertTo-Json -Compress)"
+    $svc = Get-Service $dienstGesperrt -ErrorAction SilentlyContinue
+    $typ = if ($svc -and "$($svc.StartType)" -ne 'Disabled') { "$($svc.StartType)" } else { 'Manual' }
+    @{ $dienstGesperrt = $typ } | ConvertTo-Json | Set-Content $sicher -Encoding utf8
+    Write-Log "Starttyp gesichert: $dienstGesperrt=$typ"
 }
 
-function Enable-Sperre {
-    foreach ($d in $dienste) {
-        if ($d -in $sperrbar) { try { Set-Service $d -StartupType Disabled -ErrorAction Stop } catch { Write-Log "Starttyp $d nicht setzbar: $($_.Exception.Message)" } }
-        try { Stop-Service $d -Force -ErrorAction Stop } catch { Write-Log "Stop ${d}: $($_.Exception.Message)" }
+function Stop-Ziele {
+    # Non-blocking: -NoWait never hangs on StopPending; processes are killed directly.
+    foreach ($d in @($dienstGesperrt) + $dienstGestoppt) {
+        $s = Get-Service $d -ErrorAction SilentlyContinue
+        if ($s -and $s.Status -ne 'Stopped') { try { Stop-Service $d -Force -NoWait -ErrorAction Stop } catch { } }
     }
     Stop-Process -Name $stopProz -Force -ErrorAction SilentlyContinue
 }
 
-function Disable-Sperre {
-    $s = if (Test-Path $sicher) { Get-Content $sicher -Raw | ConvertFrom-Json } else { $null }
-    foreach ($d in $sperrbar) {
-        $typ = if ($s -and $s.$d) { $s.$d } else { 'Manual' }
-        try { Set-Service $d -StartupType $typ -ErrorAction Stop } catch { Write-Log "Rueckstellen ${d}: $($_.Exception.Message)" }
-    }
-    Start-Service GamingServices, GamingServicesNet -ErrorAction SilentlyContinue
+function Enable-Sperre {
+    $script:gamingWarAktiv = (Get-Service 'GamingServices' -ErrorAction SilentlyContinue).Status -eq 'Running'
+    try { Set-Service $dienstGesperrt -StartupType Disabled -ErrorAction Stop } catch { Write-Log "Starttyp $dienstGesperrt nicht setzbar: $($_.Exception.Message)" }
+    Stop-Ziele
 }
 
-Write-Log "Waechter gestartet (PID $PID)"
+function Disable-Sperre {
+    $typ = Get-Originaltyp
+    try { Set-Service $dienstGesperrt -StartupType $typ -ErrorAction Stop } catch { Write-Log "Rückstellen $dienstGesperrt fehlgeschlagen: $($_.Exception.Message)" }
+    # Only restart Gaming Services if they were running before the lock.
+    if ($script:gamingWarAktiv) { Start-Service $dienstGestoppt -ErrorAction SilentlyContinue }
+}
+
+Write-Log "Wächter gestartet (PID $PID)"
 Save-Starttypen
 $gesperrt = $false
-$steamLief = [bool](Get-Process steam -ErrorAction SilentlyContinue)
-$codSeit = $null
+$script:gamingWarAktiv = $true
+$zuletztGesehen = [datetime]::MinValue
+$steamLief = (Get-Ausloeser) -contains 'steam'
+$restMeldung = ''
 
-function Show-Meldung([string]$t) {
-    $pwsh = (Get-Command pwsh).Source
-    $skript = Join-Path $PSScriptRoot 'meldung.ps1'
-    Start-Process "$env:WINDIR\System32\conhost.exe" -ArgumentList "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$skript`" -Text `"$t`"" -WindowStyle Hidden
+# Reconcile after a crash/reboot during a lock: InstallService must not stay disabled.
+if ((Get-Service $dienstGesperrt -ErrorAction SilentlyContinue).StartType -eq 'Disabled') {
+    Write-Log 'Altlast: InstallService war noch gesperrt, stelle zurück'
+    Disable-Sperre
 }
-$fensterBekannt = @{}
 
 while ($true) {
-    $aus = Test-Path $flagAus
-    $laeuft = @(Get-Process | Where-Object { $_.ProcessName -match $ausloeser })
-    $soll = (-not $aus) -and $laeuft.Count -gt 0
+    $aus    = Test-Path $flagAus
+    $laeuft = Get-Ausloeser
+    if ($laeuft.Count -gt 0) { $zuletztGesehen = Get-Date }
 
-    $steamJetzt = [bool]($laeuft | Where-Object ProcessName -eq 'steam')
+    $steamJetzt = $laeuft -contains 'steam'
     if ($steamJetzt -and -not $steamLief) {
         if ($aus) { Show-Meldung 'Steam gestartet: Spielmodus ist AUS. Store und Xbox-Downloads sind nicht gesperrt.' }
         else      { Show-Meldung 'Steam gestartet: Spielmodus ist AN. Store und Xbox-Downloads sind gesperrt.' }
-        Write-Log ("Steam-Start gemeldet (Spielmodus " + $(if ($aus) { 'AUS' } else { 'AN' }) + ')')
+        Write-Log ('Steam-Start gemeldet (Spielmodus ' + $(if ($aus) { 'AUS' } else { 'AN' }) + ')')
     }
     $steamLief = $steamJetzt
 
+    $soll = (-not $aus) -and (($laeuft.Count -gt 0) -or ($gesperrt -and ((Get-Date) - $zuletztGesehen).TotalSeconds -lt $entprellSek))
+
     if ($soll -and -not $gesperrt) {
-        Write-Log "Sperre AN (Ausloeser: $(($laeuft.ProcessName | Sort-Object -Unique) -join ', '))"
+        Write-Log "Sperre AN (Auslöser: $($laeuft -join ', '))"
         Enable-Sperre; $gesperrt = $true
     } elseif (-not $soll -and $gesperrt) {
-        Write-Log ("Sperre AUS (" + $(if ($aus) { 'von Hand ausgeschaltet' } else { 'kein Spiel/Steam mehr' }) + ')')
-        Disable-Sperre; $gesperrt = $false
+        Write-Log ('Sperre AUS (' + $(if ($aus) { 'von Hand ausgeschaltet' } else { 'kein Spiel/Steam mehr' }) + ')')
+        Disable-Sperre; $gesperrt = $false; $restMeldung = ''
     }
 
     if ($gesperrt) {
-        $rest = @(Get-Process -Name $stopProz -ErrorAction SilentlyContinue)
+        $rest = @([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
         if ($rest.Count -gt 0) {
-            Write-Log "Wieder gestartet und beendet: $(($rest.ProcessName | Sort-Object -Unique) -join ', ')"
-            Enable-Sperre
+            Stop-Ziele
+            $txt = ($rest | Sort-Object -Unique) -join ', '
+            if ($txt -ne $restMeldung) { Write-Log "Wieder aufgetaucht, beendet: $txt"; $restMeldung = $txt }
         }
     }
 
-    # Fenster-Protokoll in den ersten 90 Sekunden nach CoD-Start (Diagnose Absturz-/Store-Fenster)
-    $cod = @($laeuft | Where-Object { $_.ProcessName -ne 'steam' })
-    if ($cod.Count -gt 0 -and -not $codSeit) { $codSeit = Get-Date; $fensterBekannt = @{}; Write-Log 'CoD-Start erkannt, protokolliere neue Fenster 90 s' }
-    if ($cod.Count -eq 0) { $codSeit = $null }
-    if ($codSeit -and ((Get-Date) - $codSeit).TotalSeconds -lt 90) {
-        foreach ($f in Get-SichtbareFenster) {
-            if (-not $fensterBekannt.ContainsKey($f)) { $fensterBekannt[$f] = 1; Write-Log "Fenster: $f" }
-        }
-        Start-Sleep -Seconds 1
-    } else {
-        Start-Sleep -Seconds 4
-    }
+    Start-Sleep -Seconds 4
 }

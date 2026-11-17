@@ -1,32 +1,34 @@
 # Spielmodus (Windows)
 
-Version 1.0.2 · Stand 17.11.2026, 18:21 Uhr
+Version 1.1.0 · Stand 17.11.2026, 18:28 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
 Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-router.md`, B1/B2).
 
 ## Was es tut
-- **Wächter** (`waechter.ps1`, geplante Aufgabe „Spielmodus-Waechter“, bei Anmeldung, höchste Rechte, unsichtbar):
-  Läuft `steam`, `cod` oder ein CoD-Bootstrapper, werden die Dienste `GamingServices`, `GamingServicesNet`
-  und `InstallService` (Store-Installationen) gestoppt (Starttyp sperrbar nur bei `InstallService`, die
-  Gaming-Dienste sind geschützte Paket-Dienste und werden stattdessen bei jedem Neustart sofort wieder beendet), `WinStore.App` und die Xbox-App beendet.
-  Startet etwas davon neu, wird es sofort wieder beendet. Ist kein Spiel mehr offen, stellt er die
-  ursprünglichen Starttypen (`starttypen.json`) wieder her.
-  In den ersten 90 Sekunden nach CoD-Start protokolliert er alle neuen Fenster (Diagnose des Absturzfensters).
+- **Wächter** (`waechter.ps1`, geplante Aufgabe „Spielmodus-Waechter“, bei Anmeldung, höchste Rechte, unsichtbar, niedrige Priorität):
+  Läuft `steam` oder `cod` (auch ältere `codNN-cod`/`spNN-cod`), wird `InstallService` (Store-Installationen)
+  gestoppt und sein Starttyp gesperrt. `GamingServices`/`GamingServicesNet` sind geschützte Paket-Dienste:
+  Sie werden nur gestoppt und bei jedem Wiederauftauchen sofort beendet, ebenso `WinStore.App` und die Xbox-App.
+  Stoppen ist nicht blockierend (`-NoWait`), Prüfung alle 4 s über einen einzigen Prozess-Schnappschuss,
+  Protokoll nur bei Zustandswechseln. Aufgehoben wird die Sperre erst, wenn 20 s kein Auslöser mehr läuft
+  (Steam-Selbstupdate löst sie nicht kurz auf). Danach: Starttyp zurück, Gaming Services nur dann neu
+  gestartet, wenn sie vorher liefen. Nach Absturz/Neustart während einer Sperre stellt er beim Start zurück.
 - **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
   und meldet per Windows-Mitteilung, ob der Spielmodus jetzt AN oder AUS ist (`meldung.ps1`).
 - **Steam-Start:** Der Wächter meldet beim Start von Steam per Mitteilung, ob der Spielmodus AN oder AUS ist.
-- **Entfernen** nur über die CLI: `zurueck.ps1` (bewusst kein Desktop-Symbol), entfernt Aufgabe, Store-Richtlinie,
-  Game-Bar-Sperre und das Symbol.
-- **Einrichtung** (`einrichten.ps1 -TreiberZip <zip>`, einmal als Admin): Store-Automatikupdates aus
-  (`HKLM\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload=2`, Wirkung unter Windows 11 Home unbelegt),
-  Aufgabe + Verknüpfungen anlegen, Intel-WLAN-Treiber aktualisieren (alter Treiber per `pnputil /export-driver`
-  gesichert, Installation nur bei gültig signierten Katalogen), danach „Bevorzugtes Band“ = 5 GHz (Wert 2)
-  und „Roaming-Dynamik“ = am niedrigsten (Wert 0).
+- **Einrichtung** (`einrichten.ps1 [-TreiberZip <zip>]`, hebt sich selbst auf Admin):
+  Store-Automatikupdates aus (`AutoDownload=2`, Wirkung unter Windows 11 Home unbelegt), Übermittlungsoptimierung
+  gedeckelt (Hintergrund 10 %, Vordergrund 50 %), Game-Bar-Aufnahme aus (verhindert das „ms-gamingoverlay“-Fenster
+  bei fehlender Game Bar), alten Wächter stoppen, Aufgabe + Verknüpfung anlegen. Optional Intel-WLAN-Treiber
+  (Sicherung per `pnputil /export-driver` mit Prüfung, nur `netwtw*.inf` mit gültiger Microsoft/Intel-Signatur).
+  Danach „Bevorzugtes Band“ = 5 GHz (Wert 2) und „Roaming-Dynamik“ = am niedrigsten (Wert 0) mit einem Adapter-Neustart.
+- **Entfernen** nur über die CLI: `zurueck.ps1` (bewusst kein Desktop-Symbol). Stellt die in `vorher.json`
+  gesicherten Ursprungswerte wieder her und löscht Aufgabe, Symbol und Zustandsdateien.
 
 ## Dateien und Protokolle
-`%LOCALAPPDATA%\Spielmodus\` → `waechter.log`, `einrichten.log`, `starttypen.json`, `aus.flag`, `treiber-sicherung-*`.
+`%LOCALAPPDATA%\Spielmodus\` → `waechter.log`, `einrichten.log`, `starttypen.json`, `vorher.json`, `aus.flag`, `treiber-sicherung-*`.
 
 ## Hinweise
 - Solange Steam läuft, bekommen auch Store-Apps (z. B. Codex, VS Code als Store-Paket) keine Updates.
