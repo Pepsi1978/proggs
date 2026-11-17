@@ -156,10 +156,16 @@ object SaugerLive {
                 val leer = "{}".toRequestBody("application/json;charset=UTF-8".toMediaType())
                 runCatching { ProscenicCloud.post("/instructions/cmd21004/${s.sn}${u(s)}", s.token, leer) }
                 var naechsterWeg = 0L
+                var letzteOnlinePruefung = 0L
                 while (isActive) {
                     val r = try { ProscenicCloud.post("/instructions/cmd20001/${s.sn}${u(s)}", s.token, leer) }
                         catch (_: ProscenicCloud.TokenUngueltig) { JSONObject().put("code", 102) } catch (_: Exception) { null }
                     if (r?.optInt("code") == 102) { abgelehnt.set(true); runCatching { sock.close() }; return@launch }
+                    // „failure“ heißt meist: Roboter gerade nicht verbunden. Höchstens alle 15 Sekunden nachfragen und es anzeigen.
+                    if (r != null && r.optInt("code", 0) != 0 && System.currentTimeMillis() - letzteOnlinePruefung > 15_000L) {
+                        letzteOnlinePruefung = System.currentTimeMillis()
+                        if (runCatching { ProscenicCloud.online(s) }.getOrNull() == false) melde(gen, ProscenicCloud.OFFLINE_TEXT)
+                    }
                     if (System.currentTimeMillis() >= naechsterWeg) {
                         naechsterWeg = System.currentTimeMillis() + WEG_TAKT_MS
                         runCatching {
@@ -209,6 +215,8 @@ object SaugerLive {
         val alt = _spur.value
         when (typ) {
             20001 -> {
+                // Ein Status kommt nur von einem verbundenen Roboter: Erreichbarkeit auch während der Live-Karte aktuell halten.
+                if (SaugerStand.erreichbar != true || System.currentTimeMillis() - SaugerStand.erreichbarUm > 30_000L) SaugerStand.erreichbar = true
                 val pos = d.optJSONArray("pos")?.let { it.optInt(0) to it.optInt(1) }
                 val modus = d.optString("mode").ifBlank { alt.modus }
                 // Neue Position verlängert den Strich, wenn der Roboter arbeitet und sich merklich bewegt hat (> 2 cm).

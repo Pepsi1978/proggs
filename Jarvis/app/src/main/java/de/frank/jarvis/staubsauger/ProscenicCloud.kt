@@ -49,34 +49,48 @@ object ProscenicCloud {
     /** Der Roboter selbst hat gerade keine Verbindung zur Cloud (meist WLAN-Aussetzer); Anmeldung und Cloud sind in Ordnung. */
     class Offline : Abgewiesen(OFFLINE_TEXT)
 
-    const val OFFLINE_TEXT = "Der M7 Pro ist gerade nicht mit dem WLAN verbunden, deshalb erreicht ihn die Proscenic-Cloud nicht. " +
-        "Anmeldung und Jarvis sind in Ordnung; meist verbindet er sich nach ein, zwei Minuten von selbst wieder."
+    const val OFFLINE_TEXT = "Der M7 Pro ist gerade nicht mit der Proscenic-Cloud verbunden; Anmeldung und Jarvis sind in Ordnung. " +
+        "Meist ist es ein kurzer WLAN-Aussetzer, und er meldet sich nach ein, zwei Minuten von selbst wieder. " +
+        "Bleibt er länger weg, ist er vermutlich ausgeschaltet, der Akku leer oder das WLAN an der Station zu schwach."
 
     /** So lange wartet ein Befehl auf einen Roboter, der gerade kurz aus dem WLAN gefallen ist (er springt oft nach Sekunden zurück). */
-    private const val WARTEN_MS = 30_000L
+    private const val WARTEN_MS = 20_000L
+
+    /** Kurzer Client nur für die Online-Abfrage, damit das Warten auf den Roboter berechenbar bleibt. */
+    private val KURZ = CLIENT.newBuilder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(6, TimeUnit.SECONDS).callTimeout(8, TimeUnit.SECONDS).build()
 
     /**
-     * Ist der Roboter gerade mit der Cloud verbunden? `robotOnLine` prüft das Token nicht (auch ein ungültiges liefert eine Antwort),
-     * es zeigt nur den Verbindungsstand des Roboters. null = Cloud nicht erreichbar oder unlesbare Antwort.
+     * Ist der Roboter gerade mit der Cloud verbunden? null = Cloud nicht erreichbar oder unlesbare Antwort.
+     * Meldet die Cloud ein abgelaufenes Token (HTTP 401/403 oder Code 102), wirft es [TokenUngueltig], damit neu angemeldet wird.
      */
-    internal fun online(s: Sitzung): Boolean? = runCatching {
-        CLIENT.newCall(Request.Builder().url("$HOST/appInit/robotOnLine/${s.sn}").header("token", s.token).get().build()).execute().use { a ->
-            if (!a.isSuccessful) return@use null
-            val j = JSONObject(a.body?.string().orEmpty())
-            if (j.optInt("code", -1) != 0 || j.opt("data") !is Boolean) null else j.optBoolean("data")
-        }
-    }.getOrNull()
+    internal fun online(s: Sitzung): Boolean? {
+        val j = try {
+            KURZ.newCall(Request.Builder().url("$HOST/appInit/robotOnLine/${s.sn}").header("token", s.token).get().build()).execute().use { a ->
+                if (a.code == 401 || a.code == 403) throw TokenUngueltig()
+                if (!a.isSuccessful) return null
+                JSONObject(a.body?.string().orEmpty())
+            }
+        } catch (e: TokenUngueltig) { throw e } catch (e: Exception) { return null }
+        if (j.optInt("code", -1) == 102) throw TokenUngueltig()
+        return if (j.optInt("code", -1) != 0 || j.opt("data") !is Boolean) null else j.optBoolean("data").also { SaugerStand.erreichbar = it }
+    }
 
-    /** Wartet bis zu [WARTEN_MS], bis der Roboter wieder online ist; true = er ist (wieder) da oder der Stand ist unbekannt. */
-    internal fun aufRoboterWarten(s: Sitzung): Boolean {
+    /**
+     * Wartet bis zu [WARTEN_MS], bis der Roboter wieder online ist (abbrechbar). true = online, false = weiterhin offline,
+     * null = Stand unbekannt (Cloud antwortet nicht verwertbar); dann versucht der Aufrufer es einfach.
+     */
+    internal suspend fun aufRoboterWarten(s: Sitzung): Boolean? {
         val bis = System.currentTimeMillis() + WARTEN_MS
         while (true) {
             val o = online(s)
-            if (o != false) return true
+            if (o != false) return o
             if (System.currentTimeMillis() >= bis) return false
-            Thread.sleep(3000)
+            delay(3000)
         }
     }
+
+    /** Wie [aufRoboterWarten], wirft aber [Offline], wenn der Roboter auch nach dem Warten nicht verbunden ist. */
+    internal suspend fun roboterBereit(s: Sitzung) { if (aufRoboterWarten(s) == false) throw Offline() }
 
     internal data class Sitzung(val token: String, val sn: String, val mail: String)
 
@@ -91,11 +105,7 @@ object ProscenicCloud {
             var neuAngemeldet = false
             // Erst schnell fragen, ob der Roboter überhaupt online ist: Sonst liefe die Gateway-Abfrage 15 Sekunden ins Leere
             // und der Befehl bekäme nur „failure“. Kurze WLAN-Aussetzer überbrückt Jarvis durch Warten.
-            if (!aufRoboterWarten(s)) {
-                SaugerStand.erreichbar = false
-                throw Offline()
-            }
-            SaugerStand.erreichbar = true
+            try { roboterBereit(s) } catch (e: TokenUngueltig) { s = sitzung(context, neu = true); neuAngemeldet = true; roboterBereit(s) }
             val vorher = try { stand(s) } catch (e: TokenUngueltig) {
                 s = sitzung(context, neu = true); neuAngemeldet = true
                 runCatching { stand(s) }.getOrNull()
@@ -118,7 +128,7 @@ object ProscenicCloud {
             val standText = nachher?.let { listOfNotNull("Zustand: ${it.zustand}.", it.akku?.let { a -> "Akku $a Prozent." }, it.saugstufe?.let { m -> "Saugstufe: $m." }).joinToString(" ") }
                 ?: if (aktion == ProscenicSteuerung.Aktion.STATUS) "" else "Den neuen Stand konnte ich nicht abrufen."
             if (aktion == ProscenicSteuerung.Aktion.STATUS && nachher == null)
-                return@withContext if (online(s) == false) SaugerAusgang(OFFLINE_TEXT, fehler = true).also { SaugerStand.erreichbar = false }
+                return@withContext if (runCatching { online(s) }.getOrNull() == false) SaugerAusgang(OFFLINE_TEXT, fehler = true)
                 else SaugerAusgang("Der M7 Pro ist online, hat seinen Stand aber gerade nicht geschickt. Versuch es gleich noch einmal.", fehler = true)
             // Proscenic erlaubt je Konto nur eine aktive Anmeldung: Musste Jarvis sich neu anmelden, ist die Proscenic-App jetzt abgemeldet.
             val hinweis = if (neuAngemeldet && !geteilt(context))
@@ -217,26 +227,19 @@ object ProscenicCloud {
     }
 
     /**
-     * Schickt einen Befehl. Antwortet die Cloud mit einem Fehler (meist `-1 failure`, weil der Roboter gerade nicht verbunden ist),
-     * wartet Jarvis bis zu [WARTEN_MS], bis er wieder online ist, und schickt den Befehl genau noch einmal.
+     * Schickt einen Befehl genau einmal (kein automatisches Wiederholen: Start, Pause/Weiter oder Ansage liefen sonst doppelt,
+     * wenn die Cloud „failure“ meldet, der Roboter den Befehl aber doch ausgeführt hat). Auf einen kurz weggefallenen Roboter
+     * wartet der Aufrufer vorher mit [roboterBereit]. Lehnt die Cloud ab, klärt eine Online-Abfrage die Ursache.
      */
     internal fun senden(s: Sitzung, pfad: String, body: RequestBody) {
-        var versuch = 0
-        while (true) {
-            val a = post(pfad, s.token, body)
-            val code = a.optInt("code", 0)
-            Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
-            if (code == 102 || code == 401 || code == 403) throw TokenUngueltig()
-            if (code == 0) { SaugerStand.erreichbar = true; return }
-            val online = online(s)
-            if (online == false) SaugerStand.erreichbar = false
-            if (versuch++ > 0) {
-                if (online == false) throw Offline()
-                throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
-            }
-            if (online == false) { if (!aufRoboterWarten(s)) throw Offline(); SaugerStand.erreichbar = true }
-            else Thread.sleep(2000)
-        }
+        val a = post(pfad, s.token, body)
+        val code = if (a.has("roh") || !a.has("code")) null else a.optInt("code")
+        Logbuch.netz("Proscenic: Befehl", "${pfad.substringBefore('?')} → Code $code ${a.optString("msg")}".take(300))
+        if (code == 102 || code == 401 || code == 403) throw TokenUngueltig()
+        if (code == 0) { SaugerStand.erreichbar = true; return }
+        if (code == null) throw Abgewiesen("Die Proscenic-Cloud hat unerwartet geantwortet; der Befehl kam vermutlich nicht an. Versuch es gleich noch einmal.")
+        if (online(s) == false) throw Offline()
+        throw Abgewiesen("Die Proscenic-Cloud hat den Befehl abgelehnt (Code $code: ${a.optString("msg").ifBlank { "ohne Grund" }}).")
     }
 
     internal fun post(pfad: String, token: String?, body: RequestBody, ios: Boolean = false): JSONObject {

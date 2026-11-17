@@ -125,8 +125,14 @@ object SaugerStand {
     var gelesenUm by mutableStateOf<Long?>(null)
     var laeuft by mutableStateOf(false)
     var meldung by mutableStateOf<SaugerAusgang?>(null)
+    private var erreichbarWert by mutableStateOf<Boolean?>(null)
+    /** Wann [erreichbar] zuletzt bestätigt wurde (ms seit 1970). */
+    var erreichbarUm by mutableStateOf(0L)
+        private set
     /** Ist der Roboter mit der Proscenic-Cloud verbunden? null = noch nicht geprüft. Jede Abfrage und jeder Befehl hält das aktuell. */
-    var erreichbar by mutableStateOf<Boolean?>(null)
+    var erreichbar: Boolean?
+        get() = erreichbarWert
+        set(v) { erreichbarWert = v; erreichbarUm = System.currentTimeMillis() }
     private var geladen = false
 
     @Synchronized

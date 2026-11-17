@@ -6,6 +6,7 @@ import de.frank.jarvis.staubsauger.ProscenicCloud
 import de.frank.jarvis.staubsauger.ProscenicMehr
 import de.frank.jarvis.staubsauger.ProscenicSteuerung
 import de.frank.jarvis.staubsauger.SaugerAusgang
+import de.frank.jarvis.staubsauger.SaugerStand
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -79,7 +80,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             "fortsetzen" -> ProscenicMehr.pauseOderWeiter(context, weiter = true)
             "erreichbar" -> when (ProscenicMehr.erreichbar(context)) {
                 true -> SaugerAusgang("Der M7 Pro ist erreichbar und mit der Proscenic-Cloud verbunden.")
-                false -> SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
+                false -> SaugerAusgang(ProscenicCloud.OFFLINE_TEXT, true)
                 null -> SaugerAusgang("Die Proscenic-Cloud ist gerade nicht erreichbar.", true)
             }
             "saugstufe" -> when {
@@ -133,15 +134,14 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Aktionen, die erst den aktuellen Stand (Zeitpläne, Zonen) brauchen. */
     private suspend fun mitLive(aktion: String, a: JSONObject, wert: String): SaugerAusgang {
-        val live = ProscenicMehr.live(context, mitKarte = true)
-            ?: return if (ProscenicMehr.erreichbar(context) == false) SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
-                else SaugerAusgang("Den aktuellen Stand des M7 Pro konnte ich gerade nicht abrufen; versuch es gleich noch einmal.", true)
-        // Ohne frisch gelesene Zeitpläne bzw. Zonen nichts vorlesen und vor allem nichts zurückschreiben: Sonst würde eine leere
-        // Liste die vorhandenen Zeitpläne oder Sperrzonen auf dem Roboter überschreiben.
-        val brauchtZeitplaene = aktion.startsWith("zeitplan")
-        if ((brauchtZeitplaene && !live.zeitplaeneGelesen) || (aktion == "sperrzone_loeschen" && !live.zonenGelesen))
-            return if (ProscenicMehr.erreichbar(context) == false) SaugerAusgang(de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT, true)
-            else SaugerAusgang("Der M7 Pro hat ${if (brauchtZeitplaene) "seine Zeitpläne" else "seine Sperrzonen"} gerade nicht geschickt; versuch es gleich noch einmal.", true)
+        // live() fragt selbst zuerst, ob der Roboter online ist; danach steht das Ergebnis in SaugerStand.erreichbar.
+        fun nichtGelesen(was: String) = if (SaugerStand.erreichbar == false) SaugerAusgang(ProscenicCloud.OFFLINE_TEXT, true)
+            else SaugerAusgang("Der M7 Pro hat $was gerade nicht geschickt; versuch es gleich noch einmal.", true)
+        val live = ProscenicMehr.live(context, mitKarte = true) ?: return nichtGelesen("seinen Stand")
+        // Ohne frisch gelesene Zeitpläne bzw. Zonen nichts vorlesen und nichts zurückschreiben: Eine leere Liste hieße sonst
+        // fälschlich „keine angelegt“ (die Schreibfunktionen prüfen das zusätzlich selbst).
+        if (aktion.startsWith("zeitplan") && !live.zeitplaeneGelesen) return nichtGelesen("seine Zeitpläne")
+        if (aktion.startsWith("sperrzone") && !live.zonenGelesen) return nichtGelesen("seine Sperrzonen")
         val nummer = a.optInt("nummer", 0)
         val sperren = live.zonen.filter { it.sperre }
         return when (aktion) {
@@ -155,7 +155,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
                 if (h == null || tage == null) return frage("Um wie viel Uhr und an welchen Tagen soll der Roboter reinigen?")
                 val stufe = when { wert.startsWith("lei") -> "quiet"; wert.startsWith("stark") || wert.startsWith("leistung") -> "strong"; else -> "auto" }
                 val neu = live.zeitplaene + ProscenicMehr.Zeitplan(true, h * 3600 + m * 60, tage, stufe, JSONObject())
-                ProscenicMehr.zeitplaeneSpeichern(context, live.zeitZone, live.zeitZoneSek, neu)
+                ProscenicMehr.zeitplaeneSpeichern(context, live, neu)
                     .let { if (it.fehler) it else SaugerAusgang("Zeitplan angelegt: " + zeitplanText(neu.size - 1, neu.last()).substringAfter(". ") + ".") }
             }
             "zeitplan_schalten", "zeitplan_loeschen" -> {
@@ -164,7 +164,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
                 val neu = live.zeitplaene.toMutableList()
                 if (aktion == "zeitplan_loeschen") neu.removeAt(i)
                 else neu[i] = neu[i].copy(aktiv = when (wert) { "an", "ein", "1" -> true; "aus", "0" -> false; else -> return frage("Soll der Zeitplan an oder aus?") })
-                ProscenicMehr.zeitplaeneSpeichern(context, live.zeitZone, live.zeitZoneSek, neu)
+                ProscenicMehr.zeitplaeneSpeichern(context, live, neu)
                     .let { if (it.fehler) it else SaugerAusgang(if (aktion == "zeitplan_loeschen") "Zeitplan ${i + 1} gelöscht." else "Zeitplan ${i + 1} ist jetzt ${if (neu[i].aktiv) "an" else "aus"}.") }
             }
             "sperrzonen" -> if (sperren.isEmpty()) SaugerAusgang("Es sind keine Sperrzonen angelegt.")
@@ -172,8 +172,7 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             "sperrzone_loeschen" -> {
                 val i = nummer - 1
                 val ziel = sperren.getOrNull(i) ?: return frage("Welche Sperrzone? " + sperren.mapIndexed { n, z -> "${n + 1}. " + raumVon(z, live) }.joinToString("; ").ifBlank { "Es gibt keine." })
-                val mapId = live.mapId ?: return SaugerAusgang("Die Karte des Roboters ist gerade nicht lesbar.", true)
-                ProscenicMehr.zonenSpeichern(context, mapId, live.zonen.filter { it !== ziel })
+                ProscenicMehr.zonenSpeichern(context, live, live.zonen.filter { it !== ziel })
                     .let { if (it.fehler) it else SaugerAusgang("Sperrzone ${i + 1} gelöscht.") }
             }
             else -> SaugerAusgang("Unbekannte Aktion für den Saugroboter.", true)

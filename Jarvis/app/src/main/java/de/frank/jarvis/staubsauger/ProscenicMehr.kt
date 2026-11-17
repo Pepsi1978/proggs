@@ -53,15 +53,23 @@ object ProscenicMehr {
         /** Kamen Zeitpläne (21002) bzw. Räume und Sperrzonen (21004) wirklich vom Roboter? Nur dann darf Jarvis sie zurückschreiben. */
         val zeitplaeneGelesen: Boolean = false, val zonenGelesen: Boolean = false,
     ) {
-        /** Diese Karte mit dem Zustand (Modus, Akku, Einstellungen, Position) aus [neu]. */
+        /**
+         * Diese Karte mit dem Zustand (Modus, Akku, Einstellungen, Position) aus [neu]. Zeitpläne und Zonen kommen aus [neu], wenn
+         * es sie frisch gelesen hat; die Gelesen-Marken gelten immer nur für den letzten Abruf, damit nie ein älterer Stand
+         * als frisch zurückgeschrieben wird.
+         */
         fun mitZustand(neu: Live) = copy(modus = neu.modus, akku = neu.akku, saugstufe = neu.saugstufe, lautstaerke = neu.lautstaerke,
-            led = neu.led, staubFrequenz = neu.staubFrequenz, roboter = neu.roboter ?: roboter)
+            led = neu.led, staubFrequenz = neu.staubFrequenz, roboter = neu.roboter ?: roboter,
+            zeitplaene = if (neu.zeitplaeneGelesen) neu.zeitplaene else zeitplaene,
+            zeitZone = if (neu.zeitplaeneGelesen) neu.zeitZone else zeitZone, zeitZoneSek = if (neu.zeitplaeneGelesen) neu.zeitZoneSek else zeitZoneSek,
+            zonen = if (neu.zonenGelesen) neu.zonen else zonen, mapId = if (neu.zonenGelesen) neu.mapId ?: mapId else mapId,
+            zeitplaeneGelesen = neu.zeitplaeneGelesen, zonenGelesen = neu.zonenGelesen)
     }
 
     data class Lauf(val start: Long, val dauerSek: Int, val flaeche: Int)
     data class Verlauf(val laeufe: List<Lauf>, val gesamtMin: Int?, val gesamtFlaeche: Int?, val anzahl: Int?)
 
-    private fun <T> mitSitzung(context: Context, block: (ProscenicCloud.Sitzung) -> T): T {
+    private inline fun <T> mitSitzung(context: Context, block: (ProscenicCloud.Sitzung) -> T): T {
         val s = ProscenicCloud.sitzung(context, neu = false)
         return try { block(s) } catch (e: ProscenicCloud.TokenUngueltig) { block(ProscenicCloud.sitzung(context, neu = true)) }
     }
@@ -72,8 +80,8 @@ object ProscenicMehr {
 
     /** Ist der Roboter gerade mit der Proscenic-Cloud verbunden? null = Cloud selbst nicht erreichbar. */
     suspend fun erreichbar(context: Context): Boolean? = withContext(Dispatchers.IO) {
-        runCatching { ProscenicCloud.online(ProscenicCloud.sitzung(context, neu = false)) }.getOrNull()
-            ?.also { SaugerStand.erreichbar = it }
+        // online() meldet ein abgelaufenes Token; mitSitzung meldet dann neu an und fragt noch einmal.
+        runCatching { mitSitzung(context) { s -> ProscenicCloud.online(s) } }.getOrNull()
     }
 
     /**
@@ -83,7 +91,11 @@ object ProscenicMehr {
     suspend fun live(context: Context, mitKarte: Boolean = true): Live? = withContext(Dispatchers.IO) {
         runCatching {
             var mail = ""
-            val daten = mitSitzung(context) { s -> mail = s.mail; lesen(s, mitKarte) } ?: return@runCatching null
+            val daten = mitSitzung(context) { s ->
+                mail = s.mail
+                // Offline? Dann gar nicht erst 14 Sekunden aufs Gateway warten.
+                if (ProscenicCloud.online(s) == false) null else lesen(s, mitKarte)
+            } ?: return@runCatching null
             // Vollständig mit Karte gelesen (Status, Karte, Zeitpläne): die Rohdaten zwischenspeichern, damit die Karte beim
             // nächsten Aufklappen sofort da ist. Ein unvollständiger Lauf überschreibt den Speicher nicht.
             if (daten.keys.containsAll(listOf(20001, 20002, 21002))) kartenSpeichern(context, daten, mail)
@@ -131,7 +143,8 @@ object ProscenicMehr {
             // Nur Karte, Fahrweg, Zonen und Zeitpläne aus dem Speicher; Zustand, Akku und Einstellungen kommen frisch.
             val roboter = daten[20001]?.optJSONArray("pos")
             daten.remove(20001)
-            bauen(daten).copy(roboter = roboter?.let { it.optInt(0) to it.optInt(1) })
+            // Gespeicherte Zeitpläne und Zonen sind nicht frisch vom Roboter: nur anzeigen, nie als Grundlage zum Zurückschreiben.
+            bauen(daten).copy(roboter = roboter?.let { it.optInt(0) to it.optInt(1) }, zeitplaeneGelesen = false, zonenGelesen = false)
         }.getOrNull()
     }
 
@@ -191,6 +204,9 @@ object ProscenicMehr {
                 puffer.reset(); puffer.write(text.toByteArray())
             }
         }
+        // Ohne Status (20001) hat der Roboter nicht geantwortet (offline oder WLAN-Aussetzer); was dann noch kam, ist nur
+        // der Stand, den die Cloud zwischengespeichert hat, etwa die Karte. Das gilt nicht als frischer Stand.
+        if (!daten.containsKey(20001)) { Logbuch.netz("Proscenic: kein Status vom Roboter", "Rahmen: ${daten.keys}"); return null }
         return daten
     }
 
@@ -256,10 +272,16 @@ object ProscenicMehr {
 
     // ---- Einstellungen ----
 
-    private fun mitErgebnis(context: Context, erfolg: String, block: (ProscenicCloud.Sitzung) -> Unit): SaugerAusgang = try {
-        mitSitzung(context, block); SaugerAusgang(erfolg)
+    /** Führt einen Befehl aus: wartet kurz auf einen gerade weggefallenen Roboter, meldet bei abgelaufenem Token neu an. */
+    private suspend fun mitErgebnis(context: Context, erfolg: String, block: (ProscenicCloud.Sitzung) -> Unit): SaugerAusgang = try {
+        var s = ProscenicCloud.sitzung(context, neu = false)
+        try { ProscenicCloud.roboterBereit(s) } catch (e: ProscenicCloud.TokenUngueltig) { s = ProscenicCloud.sitzung(context, neu = true); ProscenicCloud.roboterBereit(s) }
+        try { block(s) } catch (e: ProscenicCloud.TokenUngueltig) { block(ProscenicCloud.sitzung(context, neu = true)) }
+        SaugerAusgang(erfolg)
     } catch (e: ProscenicCloud.Abgewiesen) { SaugerAusgang(e.message.orEmpty(), true) }
-    catch (e: Exception) { SaugerAusgang("Die Proscenic-Cloud war nicht erreichbar (${e.message ?: e.javaClass.simpleName}).", true) }
+    catch (e: ProscenicCloud.TokenUngueltig) { SaugerAusgang("Die Proscenic-Cloud lehnt die Anmeldung von Jarvis ab; trag E-Mail und Passwort unter Konten, Proscenic neu ein.", true) }
+    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+    catch (e: Exception) { SaugerAusgang("Die Proscenic-Cloud war vom Handy aus nicht erreichbar (${e.message ?: e.javaClass.simpleName}); prüf die Internetverbindung des Handys.", true) }
 
     /** Saugstufe: quiet, auto oder strong. */
     suspend fun saugstufe(context: Context, stufe: String) = withContext(Dispatchers.IO) {
@@ -295,15 +317,23 @@ object ProscenicMehr {
     }
 
     /** Speichert Räume und Sperrzonen (die ganze Liste, wie die App über cmd21003). */
-    suspend fun zonenSpeichern(context: Context, mapId: Long, zonen: List<Zone>) = withContext(Dispatchers.IO) {
+    /** Grundlage fehlt: Zeitpläne bzw. Zonen wurden nicht frisch vom Roboter gelesen. Zurückschreiben würde Vorhandenes löschen. */
+    private fun ohneGrundlage(was: String) = SaugerAusgang("Die $was des M7 Pro konnte ich nicht frisch lesen; damit nichts verloren geht, habe ich nichts gespeichert. Versuch es gleich noch einmal.", true)
+
+    /** Speichert alle Zonen; [basis] muss die Zonen frisch vom Roboter gelesen haben, sonst würde eine alte oder leere Liste Vorhandenes löschen. */
+    suspend fun zonenSpeichern(context: Context, basis: Live, zonen: List<Zone>) = withContext(Dispatchers.IO) {
+        val mapId = basis.mapId
+        if (!basis.zonenGelesen || mapId == null) return@withContext ohneGrundlage("Sperrzonen")
         mitErgebnis(context, "Sperrzonen gespeichert.") { s ->
             val body = JSONObject().put("mapId", mapId).put("value", JSONArray().apply { zonen.forEach { put(it.json) } })
             ProscenicCloud.senden(s, "/instructions/cmd21003/${s.sn}${u(s)}", json(body))
         }
     }
 
-    /** Speichert alle Zeitpläne (wie die App über cmd21001). */
-    suspend fun zeitplaeneSpeichern(context: Context, zeitZone: Int, zeitZoneSek: Int, liste: List<Zeitplan>) = withContext(Dispatchers.IO) {
+    /** Speichert alle Zeitpläne (wie die App über cmd21001); [basis] muss sie frisch vom Roboter gelesen haben. */
+    suspend fun zeitplaeneSpeichern(context: Context, basis: Live, liste: List<Zeitplan>) = withContext(Dispatchers.IO) {
+        if (!basis.zeitplaeneGelesen) return@withContext ohneGrundlage("Zeitpläne")
+        val zeitZone = basis.zeitZone; val zeitZoneSek = basis.zeitZoneSek
         mitErgebnis(context, "Zeitpläne gespeichert.") { s ->
             val werte = JSONArray()
             liste.forEach { z ->

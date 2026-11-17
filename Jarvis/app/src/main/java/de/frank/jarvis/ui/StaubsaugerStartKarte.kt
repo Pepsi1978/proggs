@@ -92,7 +92,6 @@ import de.frank.jarvis.ui.theme.glas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -108,8 +107,11 @@ private val saugerBereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private object SaugerAnsicht {
     var offen by mutableStateOf(false)
     var live by mutableStateOf<ProscenicMehr.Live?>(null)
-    /** Letzte Prüfung erreichte die Proscenic-Cloud selbst nicht (die Erreichbarkeit des Roboters steht in [SaugerStand.erreichbar]). */
-    var cloudFehler by mutableStateOf(false)
+    /**
+     * Wann eine Prüfung zuletzt die Proscenic-Cloud selbst nicht erreichte (ms; 0 = nie). Angezeigt nur, solange danach keine
+     * Erreichbarkeit bestätigt wurde ([SaugerStand.erreichbarUm]), damit ein einzelner Aussetzer nicht rot stehen bleibt.
+     */
+    var cloudFehlerUm by mutableStateOf(0L)
     var geprueft by mutableStateOf(false)
     var laedt by mutableStateOf(false)
     var meldung by mutableStateOf<SaugerAusgang?>(null)
@@ -169,6 +171,8 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
             // Gilt der Roboter als nicht erreichbar, jede Minute nachsehen, damit die Anzeige nicht rot stehen bleibt.
             val abstand = if (aktiv) 45_000L else if (SaugerStand.erreichbar == false) 60_000L else 5 * 60_000L
             if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > abstand) zustandLesen(context)
+            // Dazwischen alle 2 Minuten nur die Erreichbarkeit (schnelle Abfrage ohne Gateway, verdrängt die Proscenic-App nicht).
+            else if (System.currentTimeMillis() - SaugerStand.erreichbarUm > 2 * 60_000L && !a.laedt) erreichbarPruefen(context)
             delay(15_000L)
         }
     }
@@ -200,9 +204,13 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                     val st = Modifier
                     when {
                         a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
-                        a.geprueft && a.cloudFehler -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
-                        s.erreichbar == true -> Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                        a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
                         s.erreichbar == false -> Text("nicht erreichbar", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                        s.erreichbar == true -> {
+                            Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                            // Alter von Akku und Zustand weiter sichtbar, damit ein alter Wert nicht als aktuell gilt.
+                            s.gelesenUm?.let { Text(" · Stand ${alterKurz(it)}", color = f.textLeise, fontSize = 13.sp) }
+                        }
                         s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
                     }
                 }
@@ -284,10 +292,21 @@ private suspend fun zustandLesen(context: android.content.Context) {
     if (a.laedt) return
     a.zustandUm = System.currentTimeMillis()
     // Erst die Erreichbarkeit (schnell, ohne Gateway); nur ein verbundener Roboter schickt seinen Zustand.
-    val online = ProscenicMehr.erreichbar(context)
-    a.cloudFehler = online == null; a.geprueft = true
-    if (online == false) return
+    if (erreichbarPruefen(context) == false) return
     ProscenicMehr.live(context, mitKarte = false)?.let { uebernehmen(context, it) }
+}
+
+/**
+ * Fragt nur ab, ob der Roboter mit der Cloud verbunden ist. Ist er es nicht, gilt sein letzter Modus nicht mehr: Pause-Taste und
+ * schnelles Nachlesen sollen nicht weiter so tun, als reinige er noch.
+ */
+private suspend fun erreichbarPruefen(context: android.content.Context): Boolean? {
+    val a = SaugerAnsicht
+    val online = ProscenicMehr.erreichbar(context)
+    if (online == null) a.cloudFehlerUm = System.currentTimeMillis()
+    a.geprueft = true
+    if (online == false) a.live = a.live?.copy(modus = null)
+    return online
 }
 
 /**
@@ -318,11 +337,9 @@ private suspend fun aktualisieren(context: android.content.Context, mitKarte: Bo
 }
 
 private suspend fun coroutineScopeAsync(context: android.content.Context, mitKarte: Boolean) = kotlinx.coroutines.coroutineScope {
-    val a = SaugerAnsicht
-    val online = async { ProscenicMehr.erreichbar(context) }
-    val neu = async { ProscenicMehr.live(context, mitKarte) }
-    a.cloudFehler = online.await() == null; a.geprueft = true
-    neu.await()?.let { uebernehmen(context, it) }
+    // Erst prüfen, dann lesen: Ein offline Roboter würde sonst eine 14 Sekunden lange Gateway-Sitzung für nichts öffnen.
+    if (erreichbarPruefen(context) == false) return@coroutineScope
+    ProscenicMehr.live(context, mitKarte)?.let { uebernehmen(context, it) }
 }
 
 /** Liest Karte, Zonen und Zeitpläne frisch (wartet einen laufenden Abruf ab). */
@@ -330,6 +347,11 @@ private suspend fun frischMitKarte(context: android.content.Context) {
     while (SaugerAnsicht.laedt) delay(100)
     aktualisieren(context, mitKarte = true)
 }
+
+/** Meldung, wenn Zeitpläne oder Zonen nicht frisch vom Roboter kamen und deshalb nicht bearbeitet werden dürfen. */
+private fun nichtFrisch(was: String) = SaugerAusgang(
+    if (SaugerStand.erreichbar == false) de.frank.jarvis.staubsauger.ProscenicCloud.OFFLINE_TEXT
+    else "Die $was kamen gerade nicht frisch vom M7 Pro; damit nichts verloren geht, kannst du sie erst nach dem nächsten Abruf bearbeiten.", true)
 
 internal fun zustandName(m: String) = when (m) {
     "charge" -> "lädt in der Station"; "fullcharge" -> "voll geladen in der Station"; "sweep" -> "reinigt"; "pause" -> "pausiert"
@@ -345,6 +367,9 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
     val a = SaugerAnsicht
     val live = a.live
     var zonenModus by remember { mutableStateOf(false) }
+    /** Frisch gelesener Stand, auf dem der Zonen-Entwurf bzw. der Zeitplan-Dialog beruht (Grundlage fürs Speichern). */
+    var zonenBasis by remember { mutableStateOf<ProscenicMehr.Live?>(null) }
+    var zeitplanBasis by remember { mutableStateOf<ProscenicMehr.Live?>(null) }
     val entwurf = remember { mutableStateListOf<Zone>() }
     var dialog by remember { mutableStateOf<String?>(null) }
     var vollbild by remember { mutableStateOf(false) }
@@ -371,9 +396,9 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
         entwurf.add(Zone(j))
     }
     fun zonenSpeichern() {
-        val mapId = live?.mapId ?: return
-        val liste = entwurf.toList(); zonenModus = false
-        einstellen { ProscenicMehr.zonenSpeichern(context, mapId, liste) }
+        val basis = zonenBasis ?: return
+        val liste = entwurf.toList(); zonenModus = false; zonenBasis = null
+        einstellen { ProscenicMehr.zonenSpeichern(context, basis, liste) }
     }
 
     // Karte der Wohnung: Antippen öffnet sie im Vollbild (Zoom mit zwei Fingern, zurück per Wischgeste).
@@ -487,16 +512,28 @@ private fun Aufgeklappt(cloud: Boolean, los: (Aktion) -> Unit, einstellen: (susp
                 frischMitKarte(context)
                 val l = a.live ?: return@launch
                 if (l.karte == null) return@launch
+                // Nur auf frisch vom Roboter gelesenen Zonen bearbeiten, sonst löschte das Speichern Zonen aus der Proscenic-App.
+                if (!l.zonenGelesen) { a.meldung = nichtFrisch("Sperrzonen"); return@launch }
+                zonenBasis = l
                 entwurf.clear(); entwurf.addAll(l.zonen); zonenModus = true
             }
         }
-        Knopf("Zeitpläne", Modifier.weight(1f)) { saugerBereich.launch { frischMitKarte(context); dialog = "zeitplaene" } }
+        Knopf("Zeitpläne", Modifier.weight(1f)) {
+            saugerBereich.launch {
+                frischMitKarte(context)
+                val l = a.live
+                if (l == null || !l.zeitplaeneGelesen) { a.meldung = nichtFrisch("Zeitpläne"); return@launch }
+                zeitplanBasis = l; dialog = "zeitplaene"
+            }
+        }
         Knopf("Verlauf", Modifier.weight(1f)) { dialog = "verlauf" }
     }
 
     when (dialog) {
         "lautstaerke" -> LautstaerkeDialog(live?.lautstaerke ?: 5, { dialog = null }) { w -> dialog = null; einstellen { ProscenicMehr.lautstaerke(context, w) } }
-        "zeitplaene" -> ZeitplanDialog(live, { dialog = null }) { liste -> dialog = null; einstellen { ProscenicMehr.zeitplaeneSpeichern(context, live?.zeitZone ?: 1, live?.zeitZoneSek ?: 3600, liste) } }
+        "zeitplaene" -> zeitplanBasis?.let { basis ->
+            ZeitplanDialog(basis, { dialog = null; zeitplanBasis = null }) { liste -> dialog = null; zeitplanBasis = null; einstellen { ProscenicMehr.zeitplaeneSpeichern(context, basis, liste) } }
+        }
         "verlauf" -> VerlaufDialog { dialog = null }
     }
 }
