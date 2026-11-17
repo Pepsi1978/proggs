@@ -58,10 +58,14 @@ private object VictronStartStand {
 internal fun alterKurz(zeit: Long): String {
     if (zeit <= 0) return ""
     val s = System.currentTimeMillis() / 1000 - zeit
+    return if (s < 120) "gerade eben" else uhrzeitKurz(zeit)
+}
+
+/** „15:42 Uhr“ für einen Zeitpunkt in Sekunden seit 1970, an einem anderen Tag mit Datum („16.11. 23:50 Uhr“). */
+internal fun uhrzeitKurz(zeit: Long): String {
     val uhr = java.time.Instant.ofEpochSecond(zeit).atZone(java.time.ZoneId.systemDefault())
-    val heute = uhr.toLocalDate() == java.time.LocalDate.now()
-    val zeitText = if (heute) "%02d:%02d Uhr".format(uhr.hour, uhr.minute) else "%02d.%02d. %02d:%02d Uhr".format(uhr.dayOfMonth, uhr.monthValue, uhr.hour, uhr.minute)
-    return if (s < 120) "gerade eben" else zeitText
+    return if (uhr.toLocalDate() == java.time.LocalDate.now()) "%02d:%02d Uhr".format(uhr.hour, uhr.minute)
+    else "%02d.%02d. %02d:%02d Uhr".format(uhr.dayOfMonth, uhr.monthValue, uhr.hour, uhr.minute)
 }
 
 /**

@@ -129,14 +129,18 @@ object SaugerStand {
     /** Wann [erreichbar] zuletzt bestätigt wurde (ms seit 1970). */
     var erreichbarUm by mutableStateOf(0L)
         private set
-    /** Seit wann (Sekunden seit 1970) der Roboter ununterbrochen offline ist; 0 = verbunden oder unbekannt. */
+    /**
+     * Seit wann (Sekunden seit 1970) der Roboter ununterbrochen offline ist; 0 = verbunden oder Beginn unbekannt. Gesetzt nur beim
+     * beobachteten Wechsel von online zu offline: Ist er schon beim ersten Blick nach dem App-Start offline, ist der Beginn unbekannt.
+     */
     var offlineSeit by mutableStateOf(0L)
         private set
     /** Ist der Roboter mit der Proscenic-Cloud verbunden? null = noch nicht geprüft. Jede Abfrage und jeder Befehl hält das aktuell. */
     var erreichbar: Boolean?
         get() = erreichbarWert
-        set(v) {
-            if (v == false && erreichbarWert != false) offlineSeit = System.currentTimeMillis() / 1000
+        // Mehrere IO-Threads (Startkarte, Sprachbefehle, Live-Karte) setzen den Wert; Lesen und Schreiben zusammen sperren.
+        @Synchronized set(v) {
+            if (v == false && erreichbarWert == true) offlineSeit = System.currentTimeMillis() / 1000
             if (v != false) offlineSeit = 0L
             erreichbarWert = v; erreichbarUm = System.currentTimeMillis()
         }

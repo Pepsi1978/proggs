@@ -71,6 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -121,8 +122,11 @@ private object SaugerAnsicht {
     var zustandUm = 0L
     /** Live-Karte im Vollbild offen (Franks Wunsch vom 17.11.2026). */
     var liveOffen by mutableStateOf(false)
-    /** Letzter bekannter Zustand, bevor der Roboter aus dem WLAN fiel (angezeigt, bis er sich zurückmeldet). */
-    var zuletztModus by mutableStateOf<String?>(null)
+    /** Nach der Rückkehr aus einem Aussetzer: den Zustand so lange alle 15 Sekunden nachlesen, bis ein Abruf klappt. */
+    var nachlesen = false
+    /** Seit wann die schnelle Offline-Prüfung läuft (ms; 0 = online): erst alle 15 Sekunden, nach 3 Minuten jede Minute. */
+    var offlinePruefungSeit = 0L
+    var offlineGeprueftUm = 0L
 }
 
 private fun stufeName(s: String?) = when (s) { "quiet" -> "Leise"; "auto" -> "Normal"; "strong" -> "Leistungsstark"; null, "" -> "–"; else -> s }
@@ -173,9 +177,21 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
             // Offline (der M7 Pro fällt bei schwachem WLAN oft nur für ein, zwei Minuten raus, 17.11.2026): alle 15 Sekunden die
             // schnelle Online-Abfrage ohne Gateway und gleich nach der Rückkehr den Zustand frisch lesen, damit die Anzeige stimmt.
             val abstand = if (aktiv) 45_000L else 5 * 60_000L
+            val jetzt = System.currentTimeMillis()
             if (SaugerStand.erreichbar == false && !a.laedt) {
-                if (erreichbarPruefen(context) == true && !de.frank.jarvis.staubsauger.SaugerLive.aktiv) zustandLesen(context, gepruft = true)
-            } else if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > abstand) zustandLesen(context)
+                if (a.offlinePruefungSeit == 0L) a.offlinePruefungSeit = jetzt
+                // Bleibt er länger weg (ausgeschaltet, Akku leer), nur noch jede Minute fragen statt dauerhaft alle 15 Sekunden.
+                val takt = if (jetzt - a.offlinePruefungSeit < 3 * 60_000L) 15_000L else 60_000L
+                if (jetzt - a.offlineGeprueftUm >= takt) {
+                    a.offlineGeprueftUm = jetzt
+                    if (erreichbarPruefen(context) == true) a.nachlesen = true
+                }
+            }
+            if (SaugerStand.erreichbar != false) a.offlinePruefungSeit = 0L
+            if (SaugerStand.erreichbar == false || a.laedt || de.frank.jarvis.staubsauger.SaugerLive.aktiv) Unit
+            // Zurück aus dem Aussetzer: nachlesen, bis der Zustand wirklich kam (der erste Gateway-Abruf läuft danach oft ins Leere).
+            else if (a.nachlesen) { if (zustandLesen(context)) a.nachlesen = false }
+            else if (!de.frank.jarvis.staubsauger.SaugerLive.aktiv && System.currentTimeMillis() - a.zustandUm > abstand) zustandLesen(context)
             // Dazwischen alle 2 Minuten nur die Erreichbarkeit (schnelle Abfrage ohne Gateway, verdrängt die Proscenic-App nicht).
             else if (System.currentTimeMillis() - SaugerStand.erreichbarUm > 2 * 60_000L && !a.laedt) erreichbarPruefen(context)
             delay(15_000L)
@@ -212,9 +228,11 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                         a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
                         // Ehrlich benennen, wessen Verbindung fehlt: der Roboter ist aus dem WLAN, Handy und Cloud sind in Ordnung.
                         s.erreichbar == false -> {
-                            Text("Roboter ohne WLAN" + (s.offlineSeit.takeIf { it > 0 }?.let { " seit ${seitKurz(it)}" } ?: ""),
-                                color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
-                            a.zuletztModus?.let { Text(" · zuletzt ${zustandName(it)}", color = f.textLeise, fontSize = 13.sp, maxLines = 1) }
+                            // „offline“ statt „ohne WLAN“: Die Cloud sagt nur, dass er nicht verbunden ist (WLAN, ausgeschaltet oder Akku leer).
+                            Text("Roboter offline" + (s.offlineSeit.takeIf { it > 0 }?.let { " seit ${uhrzeitKurz(it)}" } ?: ""),
+                                color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = st)
+                            // Der zuletzt wirklich abgelesene Zustand (gespeichert, auch nach einem Neustart), etwa „zuletzt reinigt“.
+                            s.status?.let { Text(" · zuletzt $it", color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                         s.erreichbar == true -> {
                             Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
@@ -296,14 +314,16 @@ private suspend fun uebernehmen(context: android.content.Context, l: ProscenicMe
     withContext(Dispatchers.IO) { SaugerStand.merken(context, l.akku, l.modus?.let(::zustandName), stufeName(l.saugstufe)) }
 }
 
-/** Liest still nur den Zustand (ohne Karte, ohne „wird gelesen …“); [gepruft] = Erreichbarkeit eben schon bestätigt. */
-private suspend fun zustandLesen(context: android.content.Context, gepruft: Boolean = false) {
+/** Liest still nur den Zustand (ohne Karte, ohne „wird gelesen …“). true = ein frischer Zustand kam an. */
+private suspend fun zustandLesen(context: android.content.Context): Boolean {
     val a = SaugerAnsicht
-    if (a.laedt) return
+    if (a.laedt) return false
     a.zustandUm = System.currentTimeMillis()
-    // Erst die Erreichbarkeit (schnell, ohne Gateway); nur ein verbundener Roboter schickt seinen Zustand.
-    if (!gepruft && erreichbarPruefen(context) == false) return
-    ProscenicMehr.live(context, mitKarte = false)?.let { uebernehmen(context, it) }
+    // live() fragt selbst zuerst schnell, ob der Roboter online ist (ohne Gateway); nur ein verbundener Roboter schickt seinen Zustand.
+    val l = ProscenicMehr.live(context, mitKarte = false)
+    if (l == null) { if (SaugerStand.erreichbar == false) a.live = a.live?.copy(modus = null); return false }
+    uebernehmen(context, l)
+    return true
 }
 
 /**
@@ -315,20 +335,9 @@ private suspend fun erreichbarPruefen(context: android.content.Context): Boolean
     val online = ProscenicMehr.erreichbar(context)
     if (online == null) a.cloudFehlerUm = System.currentTimeMillis()
     a.geprueft = true
-    if (online == false) {
-        // Den letzten Zustand merken, damit die Karte zeigt, was er zuletzt tat (er reinigt ohne WLAN meist einfach weiter).
-        a.live?.modus?.let { a.zuletztModus = it }
-        a.live = a.live?.copy(modus = null)
-    }
-    if (online == true) a.zuletztModus = null
+    // Offline gilt der letzte Modus nicht mehr (Pause-Taste grau); was er zuletzt tat, zeigt die Statuszeile aus SaugerStand.status.
+    if (online == false) a.live = a.live?.copy(modus = null)
     return online
-}
-
-/** „15:42 Uhr“ für einen Zeitpunkt in Sekunden seit 1970 (heute), sonst mit Datum. */
-private fun seitKurz(zeit: Long): String {
-    val uhr = java.time.Instant.ofEpochSecond(zeit).atZone(java.time.ZoneId.systemDefault())
-    return if (uhr.toLocalDate() == java.time.LocalDate.now()) "%02d:%02d Uhr".format(uhr.hour, uhr.minute)
-    else "%02d.%02d. %02d:%02d Uhr".format(uhr.dayOfMonth, uhr.monthValue, uhr.hour, uhr.minute)
 }
 
 /**
