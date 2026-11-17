@@ -82,7 +82,7 @@ try {
     $v.TargetPath = "$env:WINDIR\System32\conhost.exe"
     $v.Arguments = "--headless `"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$hier\umschalten.ps1`""
     $v.IconLocation = "$env:WINDIR\System32\imageres.dll,101"; $v.Save()
-    L "Verknüpfung „Spielmodus an-aus“ auf $desk angelegt"
+    L "Verknüpfung 'Spielmodus an-aus' auf $desk angelegt"
 } catch { L "FEHLER Verknüpfung: $($_.Exception.Message)" }
 
 function Wait-WlanUp([int]$sek) {

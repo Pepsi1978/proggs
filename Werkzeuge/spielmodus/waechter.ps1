@@ -18,7 +18,9 @@ $ausloeserNamen = @('steam', 'cod')                 # exact process names
 $ausloeserMuster = '^(cod\d\d-cod|sp\d\d-cod)$'     # older CoD titles
 $dienstGesperrt = 'InstallService'                   # start type can be locked
 $dienstGestoppt = @('GamingServices', 'GamingServicesNet')
-$stopProz       = @('WinStore.App', 'XboxPcApp', 'XboxPcAppFT', 'gamingservices', 'gamingservicesnet')
+# Only app processes are killed. Killing gamingservices.exe counts as a service crash and the SCM
+# recovery restarts it at once (seen 17.11.2026), so services are stopped cleanly instead.
+$stopProz       = @('WinStore.App', 'XboxPcApp', 'XboxPcAppFT')
 $entprellSek    = 20                                 # trigger must be gone this long before unlocking
 $pwsh           = (Get-Process -Id $PID).Path
 
@@ -61,12 +63,18 @@ function Save-Starttypen {
     Write-Log "Starttyp gesichert: $dienstGesperrt=$typ"
 }
 
-function Stop-Ziele {
-    # Non-blocking: -NoWait never hangs on StopPending; processes are killed directly.
-    foreach ($d in @($dienstGesperrt) + $dienstGestoppt) {
+function Get-LaufendeDienste {
+    return @(foreach ($d in @($dienstGesperrt) + $dienstGestoppt) {
         $s = Get-Service $d -ErrorAction SilentlyContinue
-        if ($s -and $s.Status -ne 'Stopped') { try { Stop-Service $d -Force -NoWait -ErrorAction Stop } catch { } }
-    }
+        if ($s -and $s.Status -ne 'Stopped') { $s }
+    })
+}
+
+function Stop-Ziele {
+    # Clean stop with a bounded wait (never hangs on StopPending), then end app processes.
+    $laufend = Get-LaufendeDienste
+    foreach ($s in $laufend) { try { Stop-Service $s.Name -Force -NoWait -ErrorAction Stop } catch { } }
+    foreach ($s in $laufend) { try { $s.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15)) } catch { Write-Log "$($s.Name) nach 15 s nicht gestoppt" } }
     Stop-Process -Name $stopProz -Force -ErrorAction SilentlyContinue
 }
 
@@ -122,6 +130,7 @@ while ($true) {
 
     if ($gesperrt) {
         $rest = @([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
+        $rest += @(Get-LaufendeDienste | ForEach-Object { $_.Name })
         if ($rest.Count -gt 0) {
             Stop-Ziele
             $txt = ($rest | Sort-Object -Unique) -join ', '

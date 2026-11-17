@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.1.0 · Stand 17.11.2026, 18:28 Uhr
+Version 1.1.1 · Stand 17.11.2026, 18:31 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -10,8 +10,9 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
 - **Wächter** (`waechter.ps1`, geplante Aufgabe „Spielmodus-Waechter“, bei Anmeldung, höchste Rechte, unsichtbar, niedrige Priorität):
   Läuft `steam` oder `cod` (auch ältere `codNN-cod`/`spNN-cod`), wird `InstallService` (Store-Installationen)
   gestoppt und sein Starttyp gesperrt. `GamingServices`/`GamingServicesNet` sind geschützte Paket-Dienste:
-  Sie werden nur gestoppt und bei jedem Wiederauftauchen sofort beendet, ebenso `WinStore.App` und die Xbox-App.
-  Stoppen ist nicht blockierend (`-NoWait`), Prüfung alle 4 s über einen einzigen Prozess-Schnappschuss,
+  Sie werden sauber gestoppt (nie hart beendet: das wertet Windows als Absturz und startet sie sofort neu)
+  und bei jedem Wiederanlaufen erneut gestoppt. `WinStore.App` und die Xbox-App werden beendet.
+  Stoppen wartet höchstens 15 s (`-NoWait` + `WaitForStatus`), Prüfung alle 4 s über einen einzigen Prozess-Schnappschuss,
   Protokoll nur bei Zustandswechseln. Aufgehoben wird die Sperre erst, wenn 20 s kein Auslöser mehr läuft
   (Steam-Selbstupdate löst sie nicht kurz auf). Danach: Starttyp zurück, Gaming Services nur dann neu
   gestartet, wenn sie vorher liefen. Nach Absturz/Neustart während einer Sperre stellt er beim Start zurück.
