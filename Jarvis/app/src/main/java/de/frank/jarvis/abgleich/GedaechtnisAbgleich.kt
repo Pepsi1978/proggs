@@ -78,7 +78,19 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", de.frank.jarvis.listen.Listen.ORDNER, ordner = true, endung = ".json"),
         // Franks Veränderungen: je Eintrag eine Datei, gelöscht nur als Grabstein.
         Quelle("gedaechtnis", de.frank.jarvis.veraenderung.Veraenderungen.ORDNER, ordner = true, endung = ".json"),
+        // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei, dazu der Satzverlauf; die jüngere Fassung gilt.
+        Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
+        Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
         )
+    }
+
+    /**
+     * Dateien, bei denen das Handy beim ersten Abgleich sicher gewinnt: Ein Tablet ohne abgeglichenen Stand meldet seine Fassung so alt
+     * an, dass der Server sie gegen jede Fassung des Handys ablehnt und ihm die des Handys gibt (sonst gewönne eine zufällig jüngere
+     * Tablet-Datei, wenn das Tablet als Erstes hochlädt).
+     */
+    private val HANDY_ZUERST: Set<String> by lazy {
+        setOf(de.frank.jarvis.atem.AtemProfile.DATEI, de.frank.jarvis.atem.AtemSatzVerlauf.DATEI)
     }
 
     /** Setzt die Oberfläche: Der Abgleich hat Gespräche oder Projekte eingespielt, die Seitenleiste soll neu lesen. */
@@ -354,7 +366,8 @@ object GedaechtnisAbgleich {
             if (!r.isSuccessful) throw Abgelehnt("Datei hochladen: Server ${r.code}")
         }
         // Die Datei kann sich während des Hochladens geändert haben: Dann passt die Prüfsumme am Server nicht, die nächste Runde lädt neu.
-        val geaendert = maxOf(datei.lastModified(), (fern?.optLong("geaendert") ?: 0L) + 1)
+        val erstesTablet = Geraet.istTablet && pfad in HANDY_ZUERST && s.optString("basis").isEmpty()
+        val geaendert = if (erstesTablet) 1L else maxOf(datei.lastModified(), (fern?.optLong("geaendert") ?: 0L) + 1)
         val daten = JSONObject().put("pfad", pfad).put("text_sha", sha).put("groesse", datei.length())
         val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", false).put("von", Geraet.ablageName).toString()
         val antwort = netz.newCall(Request.Builder().url("$basis/doc/${quelle.art}/${kennung(pfad)}").put(rumpf.toRequestBody(JSON)).build()).execute().use { r ->
@@ -558,6 +571,8 @@ object GedaechtnisAbgleich {
             quelle.pfad == "gespraechsnotizen.json" -> synchronized(de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis) { schreiben() }
             quelle.pfad == de.frank.jarvis.listen.Listen.ORDNER -> de.frank.jarvis.listen.Listen.vonAussen(schreiben)
             quelle.pfad == de.frank.jarvis.veraenderung.Veraenderungen.ORDNER -> de.frank.jarvis.veraenderung.Veraenderungen.vonAussen(schreiben)
+            quelle.pfad == de.frank.jarvis.atem.AtemProfile.DATEI -> de.frank.jarvis.atem.AtemProfile.vonAussen(schreiben)
+            quelle.pfad == de.frank.jarvis.atem.AtemSatzVerlauf.DATEI -> de.frank.jarvis.atem.AtemSatzVerlauf.vonAussen(schreiben)
             else -> schreiben()
         }
     }
@@ -581,6 +596,8 @@ object GedaechtnisAbgleich {
         // Listen: neu einlesen, damit Oberfläche und Widget hier sofort den Stand des anderen Geräts zeigen.
         if (pfade.any { it.startsWith(de.frank.jarvis.listen.Listen.ORDNER + "/") }) runCatching { de.frank.jarvis.listen.Listen.neuLaden(app) }
         if (pfade.any { it.startsWith(de.frank.jarvis.veraenderung.Veraenderungen.ORDNER + "/") }) runCatching { de.frank.jarvis.veraenderung.Veraenderungen.neuLaden(app) }
+        if (de.frank.jarvis.atem.AtemProfile.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemProfile.neuLaden(app) }
+        if (de.frank.jarvis.atem.AtemSatzVerlauf.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemSatzVerlauf.neuLaden(app) }
     }
 
     private fun loesche(app: Context, quelle: Quelle, datei: File) {

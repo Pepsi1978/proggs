@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -102,8 +103,12 @@ fun dauerText(ms: Long): String {
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
-/** Profile in files/atem/profile.json; beim ersten Öffnen mit Franks Startprofilen gefüllt. */
+/**
+ * Profile in files/atem/profile.json; beim ersten Öffnen mit Franks Startprofilen gefüllt. Handy und Tablet gleichen die Datei über
+ * [de.frank.jarvis.abgleich.GedaechtnisAbgleich] ab (jüngere Fassung gilt, beim ersten Abgleich die des Handys).
+ */
 object AtemProfile {
+    const val DATEI = "atem/profile.json"
     private val _stand = MutableStateFlow<List<AtemProfil>>(emptyList())
     val stand: StateFlow<List<AtemProfil>> = _stand
     private val _hinweis = MutableStateFlow<String?>(null)
@@ -113,7 +118,15 @@ object AtemProfile {
     /** Lesen, Ändern und Schreiben nacheinander: Schnelles Löschen und Speichern überschreiben sich sonst gegenseitig. */
     private val sperre = Mutex()
 
-    private fun datei(context: Context) = File(context.filesDir, "atem/profile.json")
+    private fun datei(context: Context) = File(context.filesDir, DATEI)
+
+    /** Für den Abgleich: Schreiben von außen unter derselben Sperre wie die eigenen Änderungen (läuft auf dessen IO-Faden). */
+    fun vonAussen(block: () -> Unit) = runBlocking { sperre.withLock { block() } }
+
+    /** Nach dem Abgleich: die eingespielte Datei neu einlesen, damit Übersicht und nächstes Speichern auf ihr aufbauen. */
+    fun neuLaden(context: Context) = runBlocking { sperre.withLock { geladen = false; laden(context.applicationContext) } }
+
+    private fun abgleichen() { runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() } }
 
     suspend fun sicher(context: Context) {
         if (geladen) return
@@ -165,6 +178,7 @@ object AtemProfile {
         val vorher = alt.firstOrNull { it.id == p.id }
         val neu = if (alt.any { it.id == p.id }) alt.map { if (it.id == p.id) p else it } else alt + p
         schreibe(context, neu); _stand.value = neu
+        abgleichen()
         // Jeder gespeicherte Satz kommt in den profilübergreifenden Verlauf (für das Satz-Menü im Editor).
         runCatching { AtemSatzVerlauf.merken(context, p, vorher) }
     }
@@ -177,7 +191,7 @@ object AtemProfile {
             val rang = ids.withIndex().associate { (i, id) -> id to i }
             val neu = alt.withIndex().sortedBy { (i, p) -> rang[p.id] ?: (ids.size + i) }.map { it.value }
             if (neu.map { it.id } != alt.map { it.id }) {
-                runCatching { schreibe(context, neu); _stand.value = neu }
+                runCatching { schreibe(context, neu); _stand.value = neu; abgleichen() }
                     .onFailure { _hinweis.value = "Die neue Reihenfolge ließ sich nicht speichern (Speicher voll?)." }
             }
         }
@@ -191,6 +205,7 @@ object AtemProfile {
     private fun entferne(context: Context, id: String) {
         val neu = _stand.value.filterNot { it.id == id }
         schreibe(context, neu); _stand.value = neu
+        abgleichen()
     }
 }
 
@@ -210,7 +225,14 @@ object AtemSatzVerlauf {
     @Volatile private var geladen = false
     private val sperre = Any()
 
-    private fun datei(context: Context) = File(context.filesDir, "atem/saetze.json")
+    const val DATEI = "atem/saetze.json"
+    private fun datei(context: Context) = File(context.filesDir, DATEI)
+
+    /** Für den Abgleich: Schreiben von außen unter derselben Sperre. */
+    fun vonAussen(block: () -> Unit) = synchronized(sperre) { block() }
+
+    /** Nach dem Abgleich: neu einlesen. */
+    fun neuLaden(context: Context) = synchronized(sperre) { geladen = false; ladeBlockierend(context.applicationContext) }
 
     private fun ladeBlockierend(context: Context) {
         if (geladen) return
@@ -241,6 +263,7 @@ object AtemSatzVerlauf {
         tmp.writeText(o.toString(2))
         if (!tmp.renameTo(d)) { d.delete(); tmp.renameTo(d) }
         _stand.value = s
+        runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
     }
 
     suspend fun sicher(context: Context) = withContext(Dispatchers.IO) { synchronized(sperre) { ladeBlockierend(context) } }
