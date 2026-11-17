@@ -19,6 +19,8 @@
 - `Set-Service GamingServices -StartupType Disabled` → „Zugriff verweigert“ (geschützter Paket-Dienst), auch als Admin.
 - `Stop-Process gamingservices` wertet der Dienststeuerungs-Manager als Absturz → Wiederherstellung startet den Dienst sofort neu.
 - Fix: `Stop-Service -NoWait` + `WaitForStatus('Stopped', 15 s)`, bei Wiederanlauf erneut stoppen (umgesetzt in `Werkzeuge/spielmodus/waechter.ps1`, verifiziert 17.11.2026).
+- Während CoD läuft, startet CoD die Gaming Services selbst neu (~30 Stopp/Start-Runden in 20 min) → dann nicht bekämpfen, nur vor/nach CoD stoppen.
+- Messung im Spiel nach allen Maßnahmen (17.11.2026, 20 min DMZ): Ping Ø 22–25 ms, 95 % < 36 ms, Jitter 6–9 ms. Restspitzen nur bei CoD-Nachladen zwischen Runden (3–7,7 Mbit/s) und Uploads laufender KI-Sitzungen (Claude Code sendet je Antwort den ganzen Verlauf).
 
 ## B3 Intel AX201/AX210/AX211: Ping-Spitzen etwa alle 10 Minuten
 - Ursache: WLAN-Hintergrundscan von Windows; die Treiberoption „Global BG Scan blocking“ fehlt ab 22.150.0.

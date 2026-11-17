@@ -64,7 +64,10 @@ function Save-Starttypen {
 }
 
 function Get-LaufendeDienste {
-    return @(foreach ($d in @($dienstGesperrt) + $dienstGestoppt) {
+    # While CoD runs it restarts Gaming Services itself (measured 17.11.2026: ~30 stop/start rounds
+    # per session) - fighting it gains no bandwidth and risks hitches, so they are left alone then.
+    $ziele = if ($script:codLaeuft) { @($dienstGesperrt) } else { @($dienstGesperrt) + $dienstGestoppt }
+    return @(foreach ($d in $ziele) {
         $s = Get-Service $d -ErrorAction SilentlyContinue
         if ($s -and $s.Status -ne 'Stopped') { $s }
     })
@@ -95,6 +98,7 @@ Write-Log "Wächter gestartet (PID $PID)"
 Save-Starttypen
 $gesperrt = $false
 $script:gamingWarAktiv = $true
+$script:codLaeuft = $false
 $zuletztGesehen = [datetime]::MinValue
 $steamLief = (Get-Ausloeser) -contains 'steam'
 $restMeldung = ''
@@ -109,6 +113,9 @@ while ($true) {
     $aus    = Test-Path $flagAus
     $laeuft = Get-Ausloeser
     if ($laeuft.Count -gt 0) { $zuletztGesehen = Get-Date }
+    $codJetzt = [bool]($laeuft | Where-Object { $_ -ne 'steam' })
+    if ($codJetzt -ne $script:codLaeuft -and $gesperrt) { Write-Log ('CoD ' + $(if ($codJetzt) { 'läuft: Gaming Services bleiben in Ruhe' } else { 'beendet: Gaming Services werden wieder gestoppt' })) }
+    $script:codLaeuft = $codJetzt
 
     $steamJetzt = $laeuft -contains 'steam'
     if ($steamJetzt -and -not $steamLief) {
