@@ -78,11 +78,8 @@ class StaubsaugerFaehigkeit(private val context: Context) : Faehigkeit {
             return SaugerAusgang("Dafür braucht Jarvis die Proscenic-Anmeldung unter Einstellungen, Konten und APIs.", true)
         return when (aktion) {
             "fortsetzen" -> ProscenicMehr.pauseOderWeiter(context, weiter = true)
-            "erreichbar" -> when (ProscenicMehr.erreichbar(context)) {
-                true -> SaugerAusgang("Der M7 Pro ist erreichbar und mit der Proscenic-Cloud verbunden.")
-                false -> SaugerAusgang(ProscenicCloud.OFFLINE_TEXT, true)
-                null -> SaugerAusgang("Die Proscenic-Cloud ist gerade nicht erreichbar.", true)
-            }
+            // Prüft bei einem Fehlschlag nach kurzer Pause einmal neu und nennt die Ursache statt pauschal „nicht erreichbar“.
+            "erreichbar" -> ProscenicCloud.verbindungPruefen(context).let { SaugerAusgang(it.text, it.online != true) }
             "saugstufe" -> when {
                 wert.startsWith("lei") || wert == "quiet" -> ProscenicMehr.saugstufe(context, "quiet")
                 wert.startsWith("norm") || wert == "auto" || wert == "mittel" -> ProscenicMehr.saugstufe(context, "auto")

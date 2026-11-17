@@ -63,16 +63,84 @@ object ProscenicCloud {
      * Ist der Roboter gerade mit der Cloud verbunden? null = Cloud nicht erreichbar oder unlesbare Antwort.
      * Meldet die Cloud ein abgelaufenes Token (HTTP 401/403 oder Code 102), wirft es [TokenUngueltig], damit neu angemeldet wird.
      */
-    internal fun online(s: Sitzung): Boolean? {
+    internal fun online(s: Sitzung): Boolean? = onlineMitGrund(s).online
+
+    /** Antwort der Online-Abfrage: [online] wie bei [online], [grund] erklärt bei null, woran es lag. */
+    internal class OnlineAntwort(val online: Boolean?, val grund: String = "")
+
+    /** Wie [online], nennt aber bei null den Grund (Zeitüberschreitung, Server nicht gefunden, Serverfehler …). */
+    internal fun onlineMitGrund(s: Sitzung): OnlineAntwort {
         val j = try {
             KURZ.newCall(Request.Builder().url("$HOST/appInit/robotOnLine/${s.sn}").header("token", s.token).get().build()).execute().use { a ->
                 if (a.code == 401 || a.code == 403) throw TokenUngueltig()
-                if (!a.isSuccessful) return null
+                if (!a.isSuccessful) return OnlineAntwort(null, "sie hat mit einem Serverfehler geantwortet (HTTP ${a.code})")
                 JSONObject(a.body?.string().orEmpty())
             }
-        } catch (e: TokenUngueltig) { throw e } catch (e: Exception) { return null }
+        } catch (e: TokenUngueltig) { throw e } catch (e: Exception) { return OnlineAntwort(null, netzGrund(e)) }
         if (j.optInt("code", -1) == 102) throw TokenUngueltig()
-        return if (j.optInt("code", -1) != 0 || j.opt("data") !is Boolean) null else j.optBoolean("data").also { SaugerStand.erreichbar = it }
+        if (j.optInt("code", -1) != 0 || j.opt("data") !is Boolean)
+            return OnlineAntwort(null, "sie hat unerwartet geantwortet (Code ${j.optInt("code", -1)})")
+        return OnlineAntwort(j.optBoolean("data").also { SaugerStand.erreichbar = it })
+    }
+
+    /** Übersetzt einen Netzfehler in einen kurzen, vorlesbaren Grund. */
+    internal fun netzGrund(e: Throwable): String = when (e) {
+        is java.net.UnknownHostException -> "das Handy hat den Proscenic-Server nicht gefunden (Namensauflösung gescheitert)"
+        is java.net.SocketTimeoutException, is java.io.InterruptedIOException -> "sie hat nicht rechtzeitig geantwortet (Zeitüberschreitung)"
+        is java.net.ConnectException -> "der Proscenic-Server hat die Verbindung abgelehnt"
+        is javax.net.ssl.SSLException -> "die verschlüsselte Verbindung zum Proscenic-Server ist gescheitert"
+        is org.json.JSONException -> "sie hat eine unlesbare Antwort geschickt"
+        else -> "Netzfehler ${e.message?.take(80) ?: e.javaClass.simpleName}"
+    }
+
+    /** Hat das Handy gerade ein Netz mit funktionierendem Internet (von Android geprüft)? */
+    internal fun handyHatInternet(context: Context): Boolean = runCatching {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }.getOrDefault(true)
+
+    /** Ergebnis einer Verbindungsprüfung: [online] true/false/null (unbekannt), [text] vorlesbar mit Ursache, [kurz] die Ursache in Stichworten. */
+    data class Verbindung(val online: Boolean?, val text: String, val kurz: String)
+
+    /** So lange wartet die Verbindungsprüfung vor dem einen Neuversuch, damit kurze Aussetzer nicht als Ausfall gemeldet werden. */
+    private const val NEUVERSUCH_MS = 6_000L
+
+    /**
+     * Prüft, ob der Roboter mit der Cloud verbunden ist, und nennt sonst die Ursache: Handy ohne Internet, Cloud nicht erreichbar
+     * (mit Grund), Anmeldung abgelehnt oder Roboter offline. Klappt der erste Versuch nicht, prüft sie nach kurzer Pause einmal neu.
+     */
+    suspend fun verbindungPruefen(context: Context): Verbindung = withContext(Dispatchers.IO) {
+        val erst = einmalPruefen(context.applicationContext)
+        if (erst.online == true) return@withContext erst
+        Logbuch.netz("Proscenic: Erreichbarkeit, Neuversuch", erst.kurz)
+        delay(NEUVERSUCH_MS)
+        val zweit = einmalPruefen(context.applicationContext)
+        if (zweit.online == true)
+            zweit.copy(text = "Der M7 Pro ist erreichbar und mit der Proscenic-Cloud verbunden. Beim ersten Versuch gab es kurz einen Aussetzer (${erst.kurz}), der Neuversuch hat geklappt.")
+        else zweit.copy(text = zweit.text + " Ich habe nach ${NEUVERSUCH_MS / 1000} Sekunden noch einmal geprüft, mit demselben Ergebnis.")
+    }
+
+    private fun einmalPruefen(context: Context): Verbindung {
+        val a = try {
+            try { onlineMitGrund(sitzung(context, neu = false)) } catch (e: TokenUngueltig) { onlineMitGrund(sitzung(context, neu = true)) }
+        } catch (e: TokenUngueltig) {
+            return Verbindung(null, "Die Proscenic-Cloud lehnt die Anmeldung von Jarvis ab; trag E-Mail und Passwort unter Konten, Proscenic neu ein.", "Anmeldung abgelehnt")
+        } catch (e: Abgewiesen) {
+            return Verbindung(null, e.message.orEmpty(), "Anmeldung gescheitert")
+        } catch (e: Exception) {
+            OnlineAntwort(null, netzGrund(e))
+        }
+        return when (a.online) {
+            true -> Verbindung(true, "Der M7 Pro ist erreichbar und mit der Proscenic-Cloud verbunden.", "verbunden")
+            false -> Verbindung(false, "Ursache: Roboter offline. Die Proscenic-Cloud ist erreichbar, aber der M7 Pro selbst ist gerade nicht mit ihr verbunden. " +
+                "Meist ist es ein kurzer WLAN-Aussetzer, und er meldet sich nach ein, zwei Minuten von selbst wieder. " +
+                "Bleibt er länger weg, ist er vermutlich ausgeschaltet, der Akku leer oder das WLAN an der Station zu schwach.", "Roboter offline")
+            null -> if (!handyHatInternet(context))
+                Verbindung(null, "Ursache: Das Handy hat gerade kein funktionierendes Internet, deshalb erreicht Jarvis die Proscenic-Cloud nicht.", "Handy ohne Internet")
+            else Verbindung(null, "Ursache: Proscenic-Cloud nicht erreichbar. Das Internet des Handys funktioniert, aber ${a.grund}. " +
+                "Ob der Roboter selbst verbunden ist, lässt sich so nicht sagen.", "Cloud nicht erreichbar, ${a.grund}")
+        }
     }
 
     /**
@@ -140,7 +208,11 @@ object ProscenicCloud {
         } catch (e: TokenUngueltig) {
             SaugerAusgang("Die Proscenic-Cloud lehnt die Anmeldung von Jarvis ab; trag E-Mail und Passwort unter Konten, Proscenic neu ein.", fehler = true)
         } catch (e: java.io.IOException) {
-            SaugerAusgang("Die Proscenic-Cloud war vom Handy aus nicht erreichbar (${e.message ?: e.javaClass.simpleName}); prüf die Internetverbindung des Handys. Der Befehl kam nicht an.", fehler = true)
+            SaugerAusgang(
+                if (!handyHatInternet(context)) "Ursache: Das Handy hat gerade kein funktionierendes Internet. Der Befehl kam nicht an."
+                else "Ursache: Proscenic-Cloud nicht erreichbar, ${netzGrund(e)}; das Internet des Handys funktioniert. Der Befehl kam nicht an, versuch es gleich noch einmal.",
+                fehler = true,
+            )
         }
         catch (e: org.json.JSONException) {
             SaugerAusgang("Die Proscenic-Cloud hat unerwartet geantwortet (${e.message}).", fehler = true)

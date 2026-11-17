@@ -774,6 +774,7 @@
     {"versionCode": 766, "versionName": "1.8.755", "stand": "17.11.2026, 11:00 Uhr", "notiz": "Atemübungen lassen sich wieder per langem Druck und Ziehen verschieben; ein langer Druck ohne Ziehen öffnet nichts."},
     {"versionCode": 767, "versionName": "1.8.756", "stand": "17.11.2026, 11:06 Uhr", "notiz": "Ein langer Druck ohne Ziehen öffnet bei Atemübungen und Veränderungen nichts mehr und vibriert nicht doppelt; Play und Einstellungen reagieren auch nach etwas längerem Druck."},
     {"versionCode": 768, "versionName": "1.8.757", "stand": "17.11.2026, 13:50 Uhr", "notiz": "Der Saugroboter überbrückt kurze WLAN-Aussetzer, die Startkarte zeigt die Erreichbarkeit immer aktuell, Fehlermeldungen nennen die echte Ursache und Zeitpläne werden nie mehr versehentlich überschrieben."},
-    {"versionCode": 769, "versionName": "1.8.758", "stand": "17.11.2026, 14:01 Uhr", "notiz": "Review-Befunde zum Saugroboter behoben: Zeitplan-Dialog und Sperrzonen-Editor können nichts mehr löschen, offline wird klar erkannt und angezeigt, Befehle laufen nie doppelt."}
+    {"versionCode": 769, "versionName": "1.8.758", "stand": "17.11.2026, 14:01 Uhr", "notiz": "Review-Befunde zum Saugroboter behoben: Zeitplan-Dialog und Sperrzonen-Editor können nichts mehr löschen, offline wird klar erkannt und angezeigt, Befehle laufen nie doppelt."},
+    {"versionCode": 770, "versionName": "1.8.759", "stand": "17.11.2026, 15:39 Uhr", "notiz": "Saugroboter: Bei einem Verbindungsproblem prüft Jarvis kurz neu und nennt die Ursache, etwa Roboter offline oder Proscenic-Cloud nicht erreichbar."}
 ]
 }
