@@ -625,10 +625,12 @@
       "id": "M36",
       "titel": "zsh: Glob-Muster in Optionen quoten (--include='*.kt')",
       "datum": "2026-11-15T20:57",
-      "beleg": "Sitzung 27e0c906 (Mac): 3 grep-Aufrufe mit --include=*.kt brachen still mit 'no matches found' ab, Suche musste wiederholt werden",
+      "beleg": "Sitzung 27e0c906 (Mac): 3 grep-Aufrufe mit --include=*.kt brachen still mit 'no matches found' ab, Suche musste wiederholt werden. Sitzung d536e9ce (17.11.2026): trotz Almanach 2 weitere Abbrüche (Bedarfsdatei wird beim Suchen nicht gelesen) -> Ursache behoben: setopt nonomatch in ~/.zshrc (Mac, lokal).",
       "ort": [
-        "bugs/desktop/macos-zsh-wortaufteilung.md"
+        "bugs/desktop/macos-zsh-wortaufteilung.md",
+        "~/.zshrc (Mac, lokal): setopt nonomatch"
       ],
+      "nachgebessert": "2026-11-17T10:31",
       "werkzeug": "Bash",
       "fehler_regex": "no matches found: --include=",
       "aufruf_regex": "--include=\\*",
@@ -638,7 +640,7 @@
         "linux"
       ],
       "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='",
-      "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen",
+      "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen; Zeile 'setopt nonomatch' samt Kommentar aus ~/.zshrc entfernen",
       "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
     }
   ]
