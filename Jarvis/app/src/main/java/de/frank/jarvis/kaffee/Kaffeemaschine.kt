@@ -80,11 +80,15 @@ object Kaffeemaschine {
         val einstellungen: Map<String, Int>, val profile: Map<Int, String>,
         /** Hat die Maschine gerade eben frisch geantwortet? Sonst ist der Wert ein alter Stand aus der Cloud. */
         val frisch: Boolean,
+        /** Alter des Stands in Sekunden (-1 = unbekannt). */
+        val alterSek: Long = 0,
     ) {
         val bereit get() = online && frisch && status == 7 && aktion == 0
         val brueht get() = online && frisch && status == 7 && aktion != 0
         fun text(): String = when {
             !online -> "Offline (nicht mit dem WLAN verbunden)"
+            !frisch && alterSek in 0..1800 -> (if (status == 7 && aktion != 0) "Bereitet zu" else STATUS[status] ?: "Zustand $status") +
+                " (Stand vor ${maxOf(1, alterSek / 60)} Min., antwortet gerade langsam)"
             !frisch -> "Antwortet gerade nicht"
             status == 7 && aktion != 0 -> "Bereitet zu …"
             else -> STATUS[status] ?: "Zustand $status"
@@ -269,7 +273,8 @@ object Kaffeemaschine {
     private fun befehl(context: Context, op: Int, flags: Int, daten: ByteArray) = schreiben(context, "data_request", rahmen(op, flags, daten))
 
     // ---- Zustand ----
-    private class Monitor(val status: Int, val aktion: Int, val alarmBits: Int, val frisch: Boolean)
+    /** [alterSek] = Alter des Zustands laut Zeitstempel der Maschine (-1 = unbekannt). */
+    private class Monitor(val status: Int, val aktion: Int, val alarmBits: Int, val frisch: Boolean, val alterSek: Long)
 
     /** Die Soul meldet ihren Live-Zustand nur, wenn eine App-Sitzung in `device_connected` steht; danach kommt er nach 4–7 s. */
     private suspend fun monitor(context: Context): Monitor {
@@ -277,8 +282,10 @@ object Kaffeemaschine {
         val beginn = System.currentTimeMillis() / 1000
         schreiben(context, "device_connected", beginn)
         var mon = vorher
-        for (versuch in 1..10) {
-            delay(1000)
+        // Die Soul antwortet über die Cloud nach 5 bis knapp 30 Sekunden (gemessen 18.11.2026: 5, 19 und 29 s).
+        val bis = System.currentTimeMillis() + 32_000
+        while (System.currentTimeMillis() < bis) {
+            delay(1500)
             val n = lesen(context, "d302_monitor")
             if (n.zeit != vorher.zeit) { mon = n; break }
         }
@@ -290,7 +297,8 @@ object Kaffeemaschine {
         val frisch = mon.zeit != vorher.zeit || (a.zeit > 0 && kotlin.math.abs(System.currentTimeMillis() / 1000 - a.zeit) < 20)
         // Im Standby (0) stehen in den Meldungsbytes Altwerte (gesehen: „Wassertank leer“ bei vollem Tank); dann keine Meldungen auswerten.
         val bits = if (u(5) == 0) 0 else u(3) or (u(4) shl 8) or (u(8) shl 16) or (u(9) shl 24)
-        return Monitor(u(5), u(6), bits, frisch)
+        val alter = if (a.zeit > 0) System.currentTimeMillis() / 1000 - a.zeit else -1L
+        return Monitor(u(5), u(6), bits, frisch, alter)
     }
 
     suspend fun zustand(context: Context): Zustand = withContext(Dispatchers.IO) {
@@ -304,7 +312,7 @@ object Kaffeemaschine {
         val einst = EINSTELLUNGEN.associate { e -> e.schluessel to (einstellungLesen(context, e) ?: -1) }
         return Zustand(
             true, m.status, m.aktion, ALARME.filterKeys { m.alarmBits and (1 shl it) != 0 }.values.toList(),
-            ALARME.filterKeys { it in SPERREND && m.alarmBits and (1 shl it) != 0 }.values.toList(), einst, profile(context), m.frisch,
+            ALARME.filterKeys { it in SPERREND && m.alarmBits and (1 shl it) != 0 }.values.toList(), einst, profile(context), m.frisch, m.alterSek,
         )
     }
 
@@ -374,13 +382,14 @@ object Kaffeemaschine {
         val vorher = runCatching { lesen(context, eig) }.getOrNull()
         befehl(context, 0xa6, 0xf0, byteArrayOf(profil.toByte(), g.id.toByte()))
         var wert: Wert? = null
-        for (versuch in 1..8) {
-            delay(1000)
+        val bis = System.currentTimeMillis() + 32_000
+        while (System.currentTimeMillis() < bis) {
+            delay(1500)
             val n = runCatching { lesen(context, eig) }.getOrNull()
             if (n != null && n.zeit != vorher?.zeit) { wert = n; break }
         }
         val d = wert?.let { antwort(it.text, 0xa6)?.daten }
-            ?: throw Fehler("Die Maschine hat das Rezept für ${g.name} nicht geschickt. Ist die Coffee-Link-App gerade offen? Dann bitte schließen.")
+            ?: throw Fehler("Die Maschine hat das Rezept für ${g.name} nicht geschickt (keine Antwort in 30 Sekunden). Schläft sie oder ist die Coffee-Link-App offen?")
         if (d.size < 2 || (d[0].toInt() and 0xFF) != profil || (d[1].toInt() and 0xFF) != g.id) throw Fehler("Das Rezept für ${g.name} passt nicht zum Profil.")
         val felder = mutableListOf<Byte>()
         var sichtbar = false
@@ -418,7 +427,9 @@ object Kaffeemaschine {
             val m = monitor(context)
             sperrendeMeldung(m)?.let { throw Fehler("Die Maschine meldet: $it.") }
             if (m.frisch && m.status == 7 && m.aktion != 0) throw Fehler("Die Maschine bereitet gerade schon etwas zu.")
-            if (!m.bereit()) {
+            // Ein bis zu 10 Minuten alter Bereit-Stand genügt: Ob sie wirklich antwortet, zeigt gleich die Rezeptabfrage.
+            val kuerzlichBereit = !m.frisch && m.status == 7 && m.aktion == 0 && m.alterSek in 0..600
+            if (!m.bereit() && !kuerzlichBereit) {
                 // Nur Schlafen, Aufwachen und Spülen enden von selbst in „bereit“; alles andere (Entkalken, Dampf, Reinigen) nennt Jarvis beim Namen.
                 if (m.frisch && m.status !in setOf(0, 1, 2, 8)) throw Fehler("Die Maschine ist gerade beschäftigt: ${zustandName(m.status)}.")
                 if (!m.frisch || m.schlaeft()) { fortschritt("Weckt die Maschine auf …"); wecken(context) }
@@ -559,16 +570,20 @@ object Kaffeemaschine {
      */
     suspend fun wachHalten(context: Context) = withContext(Dispatchers.IO) {
         val app = context.applicationContext
+        runCatching { KaffeeUmkreis.abgleichen(app) }
         val e = de.frank.jarvis.data.Einstellungen.get(app)
         if (!e.kaffeeWachHalten || de.frank.jarvis.data.Geraet.istTablet || !konfiguriert(app)) return@withContext
         val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
         val jetzt = java.time.LocalDateTime.now()
+        val systemUmkreis = e.kaffeeNurZuhause && KaffeeUmkreis.aktiv(app)
         // Ein neues Fenster öffnet sich, sobald der heutige Start erreicht ist; ein über Mitternacht laufendes gilt bis zu seinem gespeicherten Ende.
         val fenster = runCatching { wachFenster(app) }.getOrNull()
         if (fenster != null && !jetzt.isBefore(fenster.first.zeit) && jetzt.isBefore(fenster.second) && p.getString("fenster", "") != fenster.first.zeit.toString()) {
             // Neues Fenster: alte Merker (weg, Weckzähler, letztes Signal) gelten nicht mehr; ob Frank weg ist, misst zuhausePruefen neu.
+            // Mit System-Umkreis ist „weg“ der echte Stand von Android und bleibt; nur die eigene Ortung fängt neu an.
             p.edit().putString("fenster", fenster.first.zeit.toString()).putString("ende", fenster.second.toString()).putLong("zuletzt", 0L)
-                .putBoolean("weg", false).putInt("draussen", 0).putLong("ortZuletzt", 0L).putInt("weckAnzahl", 0).putLong("signalOk", 0L).apply()
+                .putInt("draussen", 0).putLong("ortZuletzt", 0L).putInt("weckAnzahl", 0).putLong("signalOk", 0L).apply()
+            if (!systemUmkreis) p.edit().putBoolean("weg", false).apply()
         }
         val ende = runCatching { java.time.LocalDateTime.parse(p.getString("ende", "")) }.getOrNull() ?: return@withContext
         if (!jetzt.isBefore(ende)) {
@@ -585,7 +600,11 @@ object Kaffeemaschine {
         }
         val fensterTag = runCatching { java.time.LocalDateTime.parse(p.getString("fenster", "")).toLocalDate() }.getOrNull() ?: jetzt.toLocalDate()
         // Nur zu Hause: Verlässt Frank den Umkreis, geht die Maschine aus und bleibt aus, solange er weg ist.
-        if (e.kaffeeNurZuhause && !zuhausePruefen(app, p, fensterTag)) return@withContext
+        if (e.kaffeeNurZuhause) {
+            if (systemUmkreis) {
+                if (p.getBoolean("weg", false)) { if (p.getBoolean("ausOffen", false)) ausschaltenWeilWeg(app, p); return@withContext }
+            } else if (!zuhausePruefen(app, p, fensterTag)) return@withContext
+        }
         val abschaltMin = p.getInt("abschaltMin", 180)
         if (System.currentTimeMillis() - p.getLong("zuletzt", 0L) in 0 until signalAbstandMs(abschaltMin)) return@withContext
         if (!sperre.tryLock()) return@withContext
@@ -655,8 +674,51 @@ object Kaffeemaschine {
         d[0] to ort.accuracy
     }
 
+    private fun fensterLaeuft(p: android.content.SharedPreferences): Boolean =
+        runCatching { java.time.LocalDateTime.now().isBefore(java.time.LocalDateTime.parse(p.getString("ende", ""))) }.getOrDefault(false)
+
+    /** Schaltet aus, weil Frank weg ist; brüht sie gerade, bleibt „ausOffen“ stehen und die Minutenrunde versucht es erneut. */
+    private suspend fun ausschaltenWeilWeg(app: Context, p: android.content.SharedPreferences) {
+        if (!sperre.tryLock()) { p.edit().putBoolean("ausOffen", true).apply(); return }
+        try {
+            if (!online(app)) { p.edit().putBoolean("ausOffen", false).apply(); return }
+            val m = monitor(app)
+            if (m.frisch && m.status == 7 && m.aktion != 0) { p.edit().putBoolean("ausOffen", true).apply(); return }
+            if (!m.schlaeft()) ausBefehl(app)
+            p.edit().putBoolean("ausOffen", false).apply()
+        } catch (c: kotlinx.coroutines.CancellationException) { throw c
+        } catch (_: Exception) { p.edit().putBoolean("ausOffen", true).apply()
+        } finally { sperre.unlock() }
+    }
+
+    /** Vom System-Umkreis: Frank hat das Haus verlassen. Im laufenden Fenster geht die Maschine aus. */
+    suspend fun umkreisVerlassen(context: Context) {
+        val app = context.applicationContext
+        val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
+        if (p.getBoolean("weg", false)) return
+        // signalOk löschen: Das Aus beim Verlassen kommt von Jarvis und darf beim Heimkommen nicht als „am Gerät ausgeschaltet“ gelten.
+        p.edit().putBoolean("weg", true).putLong("signalOk", 0L).apply()
+        de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine Umkreis", "Frank hat das Haus verlassen")
+        val e = de.frank.jarvis.data.Einstellungen.get(app)
+        if (e.kaffeeWachHalten && e.kaffeeNurZuhause && fensterLaeuft(p) && konfiguriert(app)) ausschaltenWeilWeg(app, p)
+    }
+
+    /** Vom System-Umkreis: Frank ist wieder zu Hause. An freien Tagen geht die Maschine im Fenster wieder an, nach dem Dienst nicht. */
+    suspend fun umkreisBetreten(context: Context) {
+        val app = context.applicationContext
+        val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
+        if (!p.getBoolean("weg", false)) return
+        p.edit().putBoolean("weg", false).putBoolean("ausOffen", false).putLong("zuletzt", 0L).apply()
+        if (!fensterLaeuft(p)) { de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine Umkreis", "Frank ist zurück (kein Fenster offen)"); return }
+        val fensterTag = runCatching { java.time.LocalDateTime.parse(p.getString("fenster", "")).toLocalDate() }.getOrNull() ?: java.time.LocalDate.now()
+        if (dienstArt(app, fensterTag) != null) {
+            manuellAus(app)
+            de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine Umkreis", "zurück nach dem Dienst, Maschine bleibt aus")
+        } else de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine Umkreis", "Frank ist zurück, Maschine wird geweckt")
+    }
+
     /**
-     * Prüft höchstens alle 3 Minuten den Standort. Weg heißt: zweimal hintereinander sicher außerhalb des Umkreises (Abstand minus Ungenauigkeit);
+     * Ersatz ohne System-Umkreis: Prüft höchstens alle 3 Minuten den Standort. Weg heißt: zweimal hintereinander sicher außerhalb des Umkreises (Abstand minus Ungenauigkeit);
      * schon nach der ersten Messung draußen weckt und signalisiert Jarvis nicht. Beim Verlassen schaltet Jarvis die Maschine aus (wenn sie gerade
      * brüht, beim nächsten Mal). Kommt Frank zurück, weckt Jarvis sie nur an freien Tagen wieder: Begann das Fenster an einem Diensttag, bleibt sie aus.
      * true = zu Hause (Wachhalten geht weiter), false = weg oder unsicher.
@@ -713,8 +775,8 @@ object Kaffeemaschine {
             val d = byteArrayOf((e.id shr 8).toByte(), e.id.toByte(), (wert ushr 24).toByte(), (wert ushr 16).toByte(), (wert ushr 8).toByte(), wert.toByte())
             befehl(context, 0x90, 0x0f, d)
             var ergebnis = "${e.name}: ${e.werte[wert]} gesendet; die Maschine hat noch nicht bestätigt."
-            for (versuch in 1..8) {
-                delay(1000)
+            for (versuch in 1..14) {
+                delay(1500)
                 val w = runCatching { lesen(context, "data_response") }.getOrNull() ?: continue
                 if (w.zeit == vorher) continue
                 val a = antwort(w.text, 0x90)?.daten ?: continue

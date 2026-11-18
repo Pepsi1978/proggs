@@ -233,6 +233,8 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_listen_info" />
         </receiver>
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
+        <!-- Kaffeemaschine: Android meldet Betreten und Verlassen des Umkreises um Zuhause. -->
+        <receiver android:name=".kaffee.KaffeeUmkreisEmpfaenger" android:exported="false" />
         <receiver android:name=".gedaechtnis.LernEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
         <!-- Ansagen eigener Apps (UpdateStation): nur mit Franks Signatur. -->

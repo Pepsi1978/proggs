@@ -199,6 +199,8 @@ dependencies {
     implementation(libs.health.connect.client)
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
+    // Umkreis um Zuhause für die Kaffeemaschine (Android-Geofence statt eigener Ortung alle paar Minuten).
+    implementation(libs.play.services.location)
     implementation(libs.security.crypto)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)

@@ -26,6 +26,7 @@ reorderable = "2.4.0"
 healthConnect = "1.1.0-alpha07"
 mapsCompose = "6.4.1"
 playServicesMaps = "19.0.0"
+playServicesLocation = "21.3.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -68,6 +69,7 @@ reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.r
 health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
