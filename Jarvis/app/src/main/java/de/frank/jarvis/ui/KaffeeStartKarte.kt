@@ -61,10 +61,14 @@ private object KaffeeStand {
     var automatischGelesen = false
     val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    fun tun(nachlesen: Boolean = true, arbeit: suspend () -> String?) {
-        if (laeuft) return
+    var konfiguriert by mutableStateOf(false)
+
+    /** false = gerade läuft schon etwas, der Tipp wird verworfen. */
+    fun tun(nachlesen: Boolean = true, arbeit: suspend () -> String?): Boolean {
+        if (laeuft) return false
         laeuft = true
         fehler = null
+        schritt = null
         bereich.launch {
             try {
                 arbeit()?.let { schritt = it }
@@ -76,13 +80,14 @@ private object KaffeeStand {
                 fehler = "Die Kaffeemaschine ist gerade nicht erreichbar."
             } finally { laeuft = false }
         }
+        return true
     }
 
     var appKontext: android.content.Context? = null
 
     fun lesen(c: android.content.Context) {
         appKontext = c
-        tun(nachlesen = false) { zustand = Kaffeemaschine.zustand(c); schritt = null; null }
+        tun(nachlesen = false) { zustand = Kaffeemaschine.zustand(c); null }
     }
 }
 
@@ -97,7 +102,8 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
     val s = KaffeeStand
     LaunchedEffect(Unit) {
         s.appKontext = c
-        if (!s.automatischGelesen && Kaffeemaschine.konfiguriert(c)) { s.automatischGelesen = true; s.lesen(c) }
+        s.konfiguriert = Kaffeemaschine.konfiguriert(c)
+        if (!s.automatischGelesen && s.konfiguriert) { s.automatischGelesen = true; s.lesen(c) }
     }
     val z = s.zustand
     Karte(modifier = griff) {
@@ -106,7 +112,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 Text("Kaffeemaschine", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     when {
-                        !Kaffeemaschine.konfiguriert(c) -> "Anmeldung fehlt: Einstellungen, Konten und APIs, De'Longhi"
+                        !s.konfiguriert -> "Anmeldung fehlt: Einstellungen, Konten und APIs, De'Longhi"
                         s.laeuft && s.schritt != null -> s.schritt!!
                         s.laeuft -> "Fragt die Maschine …"
                         z != null -> z.text() + (s.schritt?.let { " · $it" } ?: "")
@@ -115,7 +121,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                     color = if (s.laeuft) f.primaer else if (z?.bereit == true) f.erfolg else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            AktualisierenKnopf(s.laeuft, "Kaffeemaschine aktualisieren", "Kaffeemaschine wird gelesen") { s.lesen(c) }
+            AktualisierenKnopf(s.laeuft, "Kaffeemaschine aktualisieren", "Kaffeemaschine wird gelesen") { s.konfiguriert = Kaffeemaschine.konfiguriert(c); s.lesen(c) }
         }
         s.fehler?.let { Text(it, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         z?.alarme?.takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
@@ -128,8 +134,8 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
             Row(
                 Modifier.weight(1f).antippen {
                     val g = s.auswahl
-                    s.tun { Kaffeemaschine.bruehen(c, g) { s.schritt = it } }
-                    Toast.makeText(c, "${g.name} wird vorbereitet", Toast.LENGTH_SHORT).show()
+                    if (s.tun { Kaffeemaschine.bruehen(c, g) { s.schritt = it } }) Toast.makeText(c, "${g.name} wird vorbereitet", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(c, "Moment, die Kaffeemaschine ist noch beschäftigt", Toast.LENGTH_SHORT).show()
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -182,7 +188,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp),
                 )
                 z?.profile?.takeIf { it.isNotEmpty() }?.let { p ->
-                    Text("Rezepte aus Profil 1 (${p[1] ?: "Profil 1"}).", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text("Jarvis brüht die Rezepte aus Profil 1 (${p[1] ?: "Profil 1"}).", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -237,10 +243,10 @@ fun GetraenkBild(bild: Bild, modifier: Modifier = Modifier) {
                 dampf(w * 0.48f, h * 0.02f, h * 0.14f, rand)
             }
             Bild.CAPPUCCINO -> tasse(w * 0.14f, h * 0.34f, w * 0.68f, h * 0.48f, listOf(KAFFEE to 0.4f, MILCH to 0.25f, SCHAUM to 0.35f), rand, haube = true)
-            Bild.LATTE -> glas(w * 0.28f, h * 0.06f, w * 0.44f, h * 0.86f, listOf(MILCH to 0.45f, CREMA to 0.22f, SCHAUM to 0.25f), rand)
-            Bild.CORTADO -> glas(w * 0.28f, h * 0.34f, w * 0.44f, h * 0.56f, listOf(KAFFEE to 0.5f, MILCH to 0.4f), rand)
-            Bild.MILCH -> glas(w * 0.28f, h * 0.10f, w * 0.44f, h * 0.82f, listOf(MILCH to 0.8f, SCHAUM to 0.12f), rand)
-            Bild.WASSER -> glas(w * 0.28f, h * 0.10f, w * 0.44f, h * 0.82f, listOf(WASSER.copy(alpha = 0.75f) to 0.8f), rand)
+            Bild.LATTE -> glasForm(w * 0.28f, h * 0.06f, w * 0.44f, h * 0.86f, listOf(MILCH to 0.45f, CREMA to 0.22f, SCHAUM to 0.25f), rand)
+            Bild.CORTADO -> glasForm(w * 0.28f, h * 0.34f, w * 0.44f, h * 0.56f, listOf(KAFFEE to 0.5f, MILCH to 0.4f), rand)
+            Bild.MILCH -> glasForm(w * 0.28f, h * 0.10f, w * 0.44f, h * 0.82f, listOf(MILCH to 0.8f, SCHAUM to 0.12f), rand)
+            Bild.WASSER -> glasForm(w * 0.28f, h * 0.10f, w * 0.44f, h * 0.82f, listOf(WASSER.copy(alpha = 0.75f) to 0.8f), rand)
         }
     }
 }
@@ -283,7 +289,7 @@ private fun DrawScope.becher(x: Float, y: Float, b: Float, hoehe: Float, inhalt:
     drawArc(rand, -90f, 180f, false, Offset(x + b * 0.8f, y + hoehe * 0.2f), Size(b * 0.42f, hoehe * 0.44f), style = strich)
 }
 
-private fun DrawScope.glas(x: Float, y: Float, b: Float, hoehe: Float, inhalt: List<Pair<Color, Float>>, rand: Color) {
+private fun DrawScope.glasForm(x: Float, y: Float, b: Float, hoehe: Float, inhalt: List<Pair<Color, Float>>, rand: Color) {
     val strich = Stroke(width = size.minDimension * 0.04f)
     val form = Path().apply {
         moveTo(x, y); lineTo(x + b, y); lineTo(x + b * 0.9f, y + hoehe); lineTo(x + b * 0.1f, y + hoehe); close()
