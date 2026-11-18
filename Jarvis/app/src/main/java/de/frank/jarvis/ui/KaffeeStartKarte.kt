@@ -218,8 +218,15 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !nurZuhause) { nurZuhause = false; e.kaffeeNurZuhause = false }
                     KaffeeKnopf("An", Modifier.weight(1f), aktiv = nurZuhause) { nurZuhause = true; e.kaffeeNurZuhause = true }
-                    KaffeeKnopf("$radius m", Modifier.weight(1f)) { radius = listOf(50, 100, 150, 200, 300, 500).let { l -> l[(l.indexOf(radius).coerceAtLeast(0) + 1) % l.size] }; e.kaffeeRadius = radius }
-                    KaffeeKnopf("Hier ist zuhause", Modifier.weight(1.4f)) { s.tun(nachlesen = false) { Kaffeemaschine.zuhauseHierSetzen(c) } }
+                    KaffeeKnopf("Hier ist zuhause", Modifier.weight(2f)) { s.tun(nachlesen = false) { Kaffeemaschine.zuhauseHierSetzen(c) } }
+                }
+                // Umkreis per Regler, 150 bis 500 Meter: größer, wenn das GPS zu Hause ungenau ist.
+                if (nurZuhause) {
+                    Text("Umkreis: $radius m", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+                    androidx.compose.material3.Slider(
+                        value = radius.toFloat(), onValueChange = { radius = ((it / 10).toInt() * 10).coerceIn(150, 500) },
+                        onValueChangeFinished = { e.kaffeeRadius = radius }, valueRange = 150f..500f,
+                    )
                 }
                 var ortText by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(nurZuhause, radius) {
