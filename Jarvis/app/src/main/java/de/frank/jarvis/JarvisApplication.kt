@@ -15,6 +15,8 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
 
     override fun onCreate() {
         super.onCreate()
+        // Cloud-Sicherung: eine bereitgelegte Wiederherstellung vor jedem anderen Zugriff auf Daten und Einstellungen einspielen.
+        de.frank.jarvis.sicherung.CloudSicherung.einspielenBeimStart(this)
         // Das Logbuch schreibt ab dem ersten Augenblick mit, auch Abstürze der Oberfläche ohne laufenden Dienst.
         de.frank.jarvis.observability.Logbuch.starte(this)
         // Biomarker-Bereich: nur einrichten, gebaut wird alles erst beim ersten Zugriff.

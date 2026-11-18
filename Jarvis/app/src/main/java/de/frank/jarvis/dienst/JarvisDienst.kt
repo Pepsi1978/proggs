@@ -116,6 +116,8 @@ class JarvisDienst : Service() {
         de.frank.jarvis.abgleich.GeraeteAbgleich.starte(this)
         // Jarvis' eigenes Gedächtnis und die Gespräche ebenso.
         de.frank.jarvis.abgleich.GedaechtnisAbgleich.starte(this)
+        // Tägliche Cloud-Sicherung nach Google Drive (nur Handy).
+        de.frank.jarvis.sicherung.CloudSicherung.starte(this)
         // Biomarker: einmalige Übernahme aus Entropie Reductor (nur Handy, bis sie gelungen ist) und Spiegel fürs Tablet.
         // Kein Abruf: Frische Daten holt allein BioAbruf (Bereich öffnen, ausdrücklicher Wunsch, vor der Tagesauswertung).
         bereich.launch {

@@ -651,6 +651,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             }
         }
 
+        if (reiter == "system") CloudSicherungKarte()
+
         Text(
             "Jarvis ${BuildConfig.VERSION_NAME} · Stand ${BuildConfig.VERSION_BUMPED_AT}",
             Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp), color = f.textSchwach, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,

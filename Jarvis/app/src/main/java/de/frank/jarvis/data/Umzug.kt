@@ -46,12 +46,12 @@ object Umzug {
      */
     val TABLET_AUS = listOf("auswertung_an", "auswertung_lernen", "abfahrt_an", "weckwort_an")
 
-    private fun speicher(c: Context, name: String): SharedPreferences = EncryptedSharedPreferences.create(
+    internal fun speicher(c: Context, name: String): SharedPreferences = EncryptedSharedPreferences.create(
         name, MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), c.applicationContext,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    private fun zieht(schluessel: String) = schluessel !in NIE && schluessel !in NIE_ALT && NIE_VORSILBE.none { schluessel.startsWith(it) }
+    internal fun zieht(schluessel: String) = schluessel !in NIE && schluessel !in NIE_ALT && NIE_VORSILBE.none { schluessel.startsWith(it) }
 
     /** Schreibt alle umziehenden Werte nach `files/umzug-export.json`; liefert ihre Anzahl. */
     fun exportiere(c: Context): Int {
