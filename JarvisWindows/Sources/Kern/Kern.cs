@@ -370,14 +370,14 @@ public sealed record ModellWahl(string Id, string Name, Anbieter Anbieter)
         new("claude-sonnet-5-5", "Claude Sonnet 5.5", Anbieter.Anthropic),
         new("claude-haiku-5-5", "Claude Haiku 5.5", Anbieter.Anthropic),
         new("claude-fable-5-2", "Claude Fable 5.2", Anbieter.Anthropic),
-        new("gpt-6-astra", "GPT-6 Astra", Anbieter.Openai),
-        new("gpt-6.1-sol", "GPT-6.1 Sol", Anbieter.Openai),
+        new("gpt-6.2-astra", "GPT-6.2 Astra", Anbieter.Openai),
+        new("gpt-6.2-sol", "GPT-6.2 Sol", Anbieter.Openai),
         new("gpt-6-luna", "GPT-6 Luna", Anbieter.Openai),
         new("gpt-6.1-terra", "GPT-6.1 Terra", Anbieter.Openai),
     };
     public static IEnumerable<ModellWahl> FuerRecherche => Alle.Where(m => !m.Id.Contains("luna") && !m.Id.Contains("haiku"));
     public static ModellWahl Zu(string id) => Alle.FirstOrDefault(m => m.Id == id) ?? Alle[0];
-    public static string Aktuell(string id) => id switch { "gpt-5.6-terra" => "gpt-6.1-terra", "claude-fable-5-1" => "claude-fable-5-2", _ => id };
+    public static string Aktuell(string id) => id switch { "gpt-5.6-terra" => "gpt-6.1-terra", "gpt-6.1-sol" or "gpt-6-sol" => "gpt-6.2-sol", "gpt-6-astra" => "gpt-6.2-astra", "claude-fable-5-1" => "claude-fable-5-2", _ => id };
 }
 
 /// <summary>Einfacher Ersatz für UserDefaults: eine JSON-Datei, schreibt verzögert. Auch für die Vorlese-Einstellungen und alles andere, was UserDefaults nutzte.</summary>
@@ -456,7 +456,7 @@ public sealed class Einstellungen : Beobachtbar
     private bool _helferAutomatik = Vorgaben.Wahr("helferAutomatik", true);
     /// <summary>Eigene Tools: darf Jarvis fehlende Helfer selbst bauen lassen? Aus = Pause, vorhandene Helfer laufen weiter.</summary>
     public bool HelferAutomatik { get => _helferAutomatik; set => Merke(ref _helferAutomatik, value); }
-    private string _rechercheModell = Vorgaben.Text("rechercheModell") ?? "gpt-6.1-sol";
+    private string _rechercheModell = Vorgaben.Text("rechercheModell") ?? "gpt-6.2-sol";
     public string RechercheModell { get => _rechercheModell; set => Merke(ref _rechercheModell, value); }
     private string _rechercheEffort = Vorgaben.Text("rechercheEffort") ?? "high";
     public string RechercheEffort { get => _rechercheEffort; set => Merke(ref _rechercheEffort, value); }

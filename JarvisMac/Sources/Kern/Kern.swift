@@ -254,8 +254,8 @@ struct ModellWahl: Identifiable, Hashable {
         .init(id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", anbieter: .anthropic),
         .init(id: "claude-haiku-5-5", name: "Claude Haiku 5.5", anbieter: .anthropic),
         .init(id: "claude-fable-5-2", name: "Claude Fable 5.2", anbieter: .anthropic),
-        .init(id: "gpt-6-astra", name: "GPT-6 Astra", anbieter: .openai),
-        .init(id: "gpt-6.1-sol", name: "GPT-6.1 Sol", anbieter: .openai),
+        .init(id: "gpt-6.2-astra", name: "GPT-6.2 Astra", anbieter: .openai),
+        .init(id: "gpt-6.2-sol", name: "GPT-6.2 Sol", anbieter: .openai),
         .init(id: "gpt-6-luna", name: "GPT-6 Luna", anbieter: .openai),
         .init(id: "gpt-6.1-terra", name: "GPT-6.1 Terra", anbieter: .openai),
     ]
@@ -266,6 +266,8 @@ struct ModellWahl: Identifiable, Hashable {
     static func aktuell(_ id: String) -> String {
         switch id {
         case "gpt-5.6-terra": return "gpt-6.1-terra"
+        case "gpt-6.1-sol", "gpt-6-sol": return "gpt-6.2-sol"
+        case "gpt-6-astra": return "gpt-6.2-astra"
         case "claude-fable-5-1": return "claude-fable-5-2"
         default: return id
         }
@@ -349,7 +351,7 @@ final class Einstellungen {
         func s(_ k: String, _ v: String) -> String { d.string(forKey: k) ?? v }
         func b(_ k: String, _ v: Bool) -> Bool { d.object(forKey: k) as? Bool ?? v }
         helferAutomatik = b("helferAutomatik", true)
-        rechercheModell = ModellWahl.aktuell(s("rechercheModell", "gpt-6.1-sol"))
+        rechercheModell = ModellWahl.aktuell(s("rechercheModell", "gpt-6.2-sol"))
         rechercheEffort = s("rechercheEffort", "high")
         modell = ModellWahl.aktuell(s("modell", "claude-opus-5-5"))
         effort = s("effort", "medium")

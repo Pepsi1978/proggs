@@ -153,11 +153,11 @@ class ModellSuche(private val codex: CodexClient, private val einstellungen: Ein
             }.distinctBy { it.id }
         }
 
-        /** Kennungen wie gpt-6.1-sol oder o4-mini: nur Kleinbuchstaben, Ziffern, Punkt, Strich, Unterstrich. */
+        /** Kennungen wie gpt-6.2-sol oder o4-mini: nur Kleinbuchstaben, Ziffern, Punkt, Strich, Unterstrich. */
         private val KENNUNG = Regex("[a-z0-9][a-z0-9._-]{1,63}")
 
         /**
-         * Schreibweisen derselben Kennung: Die KI schreibt „gpt-6.1-sol“, der Dienst womöglich
+         * Schreibweisen derselben Kennung: Die KI schreibt „gpt-6.2-sol“, der Dienst womöglich
          * „gpt-6-1-sol“. Höchstens drei, die erste ist immer die genannte.
          */
         internal fun varianten(id: String): List<String> =

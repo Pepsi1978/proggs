@@ -533,7 +533,7 @@ class CodexAuthManager(context: Context) {
             .header("Accept", "text/event-stream")
             .header("Authorization", "Bearer $token")
             .header("originator", "codex_cli_rs")
-            // Sol 6.1 wird vom Backend erst ab Codex-Client-Kennung 0.159 freigeschaltet.
+            // Sol 6.2 wird vom Backend erst ab Codex-Client-Kennung 0.169 freigeschaltet.
             .header("version", CODEX_CLIENT_VERSION)
             .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Geniale Ideen)")
             .header("ChatGPT-Account-ID", requestAccountId)
@@ -661,7 +661,7 @@ class CodexAuthManager(context: Context) {
     private data class TrackedResponse(val call: Call, val response: Response)
 
     companion object {
-        private const val CODEX_CLIENT_VERSION = "0.159.0"
+        private const val CODEX_CLIENT_VERSION = "0.169.0"
         private const val CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
         private const val TOKEN_URL = "https://auth.openai.com/oauth/token"
         private const val DEVICE_USER_CODE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode"

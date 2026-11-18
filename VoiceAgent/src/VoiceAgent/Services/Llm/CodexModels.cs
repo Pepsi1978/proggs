@@ -18,14 +18,14 @@ namespace VoiceAgent.Services.Llm
         /// <summary>Kuratierte Fallback-Liste (Hermes DEFAULT_CODEX_MODELS, Stand 2026).</summary>
         public static readonly IReadOnlyList<string> Fallback = new[]
         {
-            "gpt-6-astra",
-            "gpt-6.1-sol",
+            "gpt-6.2-astra",
+            "gpt-6.2-sol",
             "gpt-5.6-terra",
             "gpt-6-luna",
         };
 
         /// <summary>Standard-Modell, wenn nichts ausgewaehlt ist.</summary>
-        public const string Default = "gpt-6.1-sol";
+        public const string Default = "gpt-6.2-sol";
 
         public static IReadOnlyList<string> Efforts(string? model) =>
             CodexProvider.NormalizeModel(model) == "gpt-6-luna"

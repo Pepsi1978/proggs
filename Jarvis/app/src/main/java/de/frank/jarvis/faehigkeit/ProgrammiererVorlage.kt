@@ -10,7 +10,7 @@ package de.frank.jarvis.faehigkeit
 object ProgrammiererVorlage {
     const val VORSPANN = "Übergib bitte folgende Aufgabe an den Programmierer:"
     const val VORSPANN_OPUS = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Opus 5.5:"
-    const val VORSPANN_SOL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Sol 6.1:"
+    const val VORSPANN_SOL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Sol 6.2:"
     const val VORSPANN_KIMI = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Kimi K3.1 Pro:"
     const val VORSPANN_ARGON = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Gemini 4 Argon:"
 
@@ -27,7 +27,7 @@ object ProgrammiererVorlage {
     private data class KnopfModell(val wert: String, val label: String, val vorspann: String, val katalogName: String? = null, val cli: String? = null, val clis: List<String>)
     private val KNOPF_MODELLE = listOf(
         KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS, clis = listOf("claude")),
-        KnopfModell(MODELL_SOL, "Sol 6.1", VORSPANN_SOL, clis = listOf("codex", "opencode")),
+        KnopfModell(MODELL_SOL, "Sol 6.2", VORSPANN_SOL, clis = listOf("codex", "opencode")),
         KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", clis = listOf("opencode", "kimi")),
         KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode")),
     )

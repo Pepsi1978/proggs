@@ -1,8 +1,8 @@
 package de.frank.longevity.auth
 
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
-    ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    ASTRA("GPT-6.2 Astra", "gpt-6.2-astra"),
+    SOL("GPT-6.2 Sol", "gpt-6.2-sol"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
     TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
@@ -25,7 +25,13 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
     companion object {
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)
-        } ?: TERRA
+        } ?: when {
+            // Abgelöste Kennungen (z. B. gpt-6.1-sol, gpt-6-astra) bleiben in ihrer Modellfamilie.
+            value.contains("sol", ignoreCase = true) -> SOL
+            value.contains("astra", ignoreCase = true) -> ASTRA
+            value.contains("luna", ignoreCase = true) -> LUNA
+            else -> TERRA
+        }
 
         fun von(anbieter: KiAnbieter): List<CodexModel> = entries.filter { it.anbieter == anbieter }
     }

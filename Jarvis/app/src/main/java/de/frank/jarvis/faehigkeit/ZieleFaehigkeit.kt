@@ -160,7 +160,7 @@ class ZieleFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: liest oder ändert die Einstellungen der App Ziele: KI-Modell (OpenAI GPT oder Claude), Denkstufe, Websuche bei der Auswertung, " +
                     "dein Live-Gedächtnis als Kontext, Sortierung der Vorschläge, Menge der Vorschläge und Hell/Dunkel/Automatik. Ohne Angaben kommt der Stand mit allen möglichen Werten.",
                 schema = schema(
-                    "modell" to text("z. B. GPT-6.1 Sol oder Claude Opus 5.5."),
+                    "modell" to text("z. B. GPT-6.2 Sol oder Claude Opus 5.5."),
                     "denkstufe" to text("Niedrig, Mittel, Hoch, Sehr hoch, Maximal (Ultra nur bei manchen GPT-Modellen)."),
                     "recherche" to schalter("Vor den Vorschlägen im Internet recherchieren."),
                     "jarvis_kontext" to schalter("Dein Live-Gedächtnis als Kontext mitschicken."),

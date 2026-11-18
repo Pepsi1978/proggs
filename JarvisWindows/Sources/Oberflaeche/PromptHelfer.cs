@@ -106,7 +106,7 @@ public static class ProgrammierVorspann
     public static readonly IReadOnlyList<Modell> Modelle = new[]
     {
         new Modell("Opus 5.5", new() { ["modell"] = "opus" }, MitStandard(new() { ["modell"] = "claude-opus-5-5[1m]", ["cli"] = "claude" }), new[] { "claude" }),
-        new Modell("Sol 6.1", new() { ["modell"] = "sol" }, MitStandard(new() { ["modell"] = "gpt-6.1-sol", ["anbieter"] = "openai", ["cli"] = "codex" }), new[] { "codex", "opencode" }),
+        new Modell("Sol 6.2", new() { ["modell"] = "sol" }, MitStandard(new() { ["modell"] = "gpt-6.2-sol", ["anbieter"] = "openai", ["cli"] = "codex" }), new[] { "codex", "opencode" }),
         new Modell("Kimi K3.1 Pro", MitStandard(new() { ["modell"] = "Kimi K3.1 Pro", ["cli"] = "opencode" }),
             MitStandard(new() { ["modell"] = "k3.1-pro", ["anbieter"] = "kimi-code-plan-global", ["cli"] = "opencode" }), new[] { "opencode", "kimi" }),
         new Modell("Gemini 4 Argon", MitStandard(new() { ["modell"] = "Gemini 4 Argon", ["cli"] = "antigravity" }),

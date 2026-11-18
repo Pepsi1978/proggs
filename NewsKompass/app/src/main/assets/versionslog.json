@@ -47,6 +47,7 @@
     {"versionCode": 43, "versionName": "1.10.32", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
     {"versionCode": 44, "versionName": "1.10.33", "stand": "30.10.2026, 11:43 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
     {"versionCode": 45, "versionName": "1.10.34", "stand": "30.10.2026, 19:31 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."},
-    {"versionCode": 46, "versionName": "1.10.35", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 46, "versionName": "1.10.35", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 47, "versionName": "1.10.36", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."}
 ]
 }

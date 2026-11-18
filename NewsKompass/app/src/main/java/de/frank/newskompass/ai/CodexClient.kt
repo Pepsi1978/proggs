@@ -586,7 +586,7 @@ class CodexClient(context: Context) {
         private const val WEITERLEITUNG_URL = "https://auth.openai.com/deviceauth/callback"
         private const val ANTWORT_URL = "https://chatgpt.com/backend-api/codex/responses"
         private const val MODELLE_URL = "https://chatgpt.com/backend-api/codex/models"
-        private const val CLIENT_VERSION = "0.159.0"
+        private const val CLIENT_VERSION = "0.169.0"
         private const val ABLAGE_NAME = "codex_oauth"
 
         private const val SCHL_ZUGANG = "access_token"

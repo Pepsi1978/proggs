@@ -25,7 +25,7 @@ object ProgrammierChat {
     /** Nachrichtenart eines Bildes, das Jarvis im Gespräch erzeugt hat: groß im Chat, mit „In Ablage verschieben“. */
     const val ART_BILD = "bild"
 
-    /** Modellwahl vor dem Start am Rechner: Karte mit „Opus 5.5“ und „Sol 6.1“, Kontext {wahl_id, app}. */
+    /** Modellwahl vor dem Start am Rechner: Karte mit „Opus 5.5“ und „Sol 6.2“, Kontext {wahl_id, app}. */
     const val ART_MODELLWAHL = "modellwahl"
 
     /** Nachrichtenart des Ergebnisses eines Hintergrund-Agenten, das in sein Gespräch zurückkommt (Bericht samt Bildern). */

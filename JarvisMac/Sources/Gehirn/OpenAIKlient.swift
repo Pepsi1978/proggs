@@ -11,8 +11,8 @@ struct OpenAIKlient: ModellAnbieter {
 
     static let codexURL = URL(string: "https://chatgpt.com/backend-api/codex/responses")!
     static let apiURL = URL(string: "https://api.openai.com/v1/responses")!
-    /// Neue Modelle (z. B. GPT-6.1 Sol) schaltet das Codex-Backend erst ab dieser Client-Kennung frei, sonst HTTP 400.
-    static let codexVersion = "0.159.0"
+    /// Neue Modelle (z. B. GPT-6.2 Sol) schaltet das Codex-Backend erst ab dieser Client-Kennung frei, sonst HTTP 400.
+    static let codexVersion = "0.169.0"
 
     func antworte(system: [String], werkzeuge: [WerkzeugDefinition], websuche: Bool, verlauf: [JSONObjekt],
                   modell: String, effort: String, onText: @escaping @Sendable (String) -> Void) async throws -> ModellAntwort {

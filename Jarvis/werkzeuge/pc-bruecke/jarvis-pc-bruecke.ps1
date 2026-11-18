@@ -14,8 +14,8 @@ $ErrorActionPreference = 'Stop'
 $Profil = 'minimal'
 $Modus = 'schnell'
 $Modell = 'claude-opus-5-5[1m]'
-# Wählt Frank beim Start „Sol 6.1“: Codex CLI über den OpenLauncher (Franks Vorgabe vom 22.10.2026), Profil, Modus und Effort wie oben.
-$ModellSol = 'gpt-6.1-sol'
+# Wählt Frank beim Start „Sol 6.2“: Codex CLI über den OpenLauncher (Franks Vorgabe vom 22.10.2026), Profil, Modus und Effort wie oben.
+$ModellSol = 'gpt-6.2-sol'
 $Effort = 'high'
 $proggs = Join-Path $env:USERPROFILE 'proggs'
 $protokoll = Join-Path $env:LOCALAPPDATA 'JarvisPcBruecke\bruecke.log'
@@ -198,13 +198,13 @@ function Starte-Sitzung($auftrag) {
         try { Start-ScheduledTask -TaskName 'adb-wlan-wachhund' -ErrorAction Stop } catch {}
     }
     $name = "Jarvis: $app"
-    # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.1, Minimal, Schnellmodus, Effort High).
+    # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.2, Minimal, Schnellmodus, Effort High).
     $sol = "$($auftrag.modell)" -eq 'sol'
     # Frei gewähltes Modell aus dem OpenLauncher-Angebot: genau mit Franks Angaben (die App hat sie geprüft), nie still Opus.
     $katalog = "$($auftrag.modell)" -eq 'katalog'
     $katalogCli = if ($katalog) { $c = "$($auftrag.cli)"; if ($c) { $c } else { 'claude' } } else { '' }
     if ($katalog -and $katalogCli -notin 'claude', 'codex', 'opencode', 'kimi', 'antigravity') { throw "Unbekanntes CLI im Auftrag." }
-    # Sol 6.1 läuft im Codex CLI (Vorgabe) oder im OpenCode CLI (Franks Wahl per Knopf in Jarvis).
+    # Sol 6.2 läuft im Codex CLI (Vorgabe) oder im OpenCode CLI (Franks Wahl per Knopf in Jarvis).
     $openCode = ($sol -and "$($auftrag.cli)" -eq 'opencode') -or $katalogCli -eq 'opencode'
     $codex = ($sol -and -not $openCode) -or $katalogCli -in 'codex', 'kimi', 'antigravity'
     $mitClaude = -not $sol -and $katalogCli -in '', 'claude'
@@ -308,7 +308,7 @@ $unklar2
     if ($openLauncher -and (Test-Path -LiteralPath $openLauncher)) {
         try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]$ab } catch { }
     }
-    if ($sol -and -not $kannJarvis) { throw "Sol 6.1 braucht OpenLauncher ab $ab ($(if ($openCode) { 'OpenCode CLI' } else { 'Codex CLI' })); bitte den OpenLauncher aktualisieren." }
+    if ($sol -and -not $kannJarvis) { throw "Sol 6.2 braucht OpenLauncher ab $ab ($(if ($openCode) { 'OpenCode CLI' } else { 'Codex CLI' })); bitte den OpenLauncher aktualisieren." }
     # Der Notweg kennt nur Opus: ein frei gewähltes Modell nie still als Opus starten.
     if ($katalog -and -not $kannJarvis) { throw "$katalogCli braucht am Windows-PC OpenLauncher ab $ab; bitte den OpenLauncher über das Updatescript aktualisieren." }
     if ($kannJarvis) {
@@ -321,7 +321,7 @@ $unklar2
             if ($anbieter) { $argumente += @('--anbieter', "`"$anbieter`"") }
         }
         elseif ($sol) {
-            $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name (Sol 6.1$(if ($openCode) { ', OpenCode' }))`"", '--profil', $Profil, '--modus', $Modus,
+            $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name (Sol 6.2$(if ($openCode) { ', OpenCode' }))`"", '--profil', $Profil, '--modus', $Modus,
                 '--cli', $(if ($openCode) { 'opencode' } else { 'codex' }), '--modell', $ModellSol, '--effort', $Effort)
         }
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.

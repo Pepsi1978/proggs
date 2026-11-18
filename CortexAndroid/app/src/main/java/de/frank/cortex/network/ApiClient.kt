@@ -55,8 +55,8 @@ class ChatStreamException(
 
 // Vom Server auswaehlbare Codex-Modelle (Modell-Picker in den Einstellungen).
 internal val CODEX_MODELS = listOf(
-    "gpt-6-astra",
-    "gpt-6.1-sol",
+    "gpt-6.2-astra",
+    "gpt-6.2-sol",
     "gpt-5.6-terra",
     "gpt-6-luna",
 )
@@ -83,9 +83,9 @@ internal fun currentCodexModel(value: String): String {
     return when {
         !id.startsWith("gpt-") -> value
         id in CODEX_MODELS -> id
-        "sol" in id -> "gpt-6.1-sol"
+        "sol" in id -> "gpt-6.2-sol"
         "luna" in id -> "gpt-6-luna"
-        "astra" in id -> "gpt-6-astra"
+        "astra" in id -> "gpt-6.2-astra"
         else -> "gpt-5.6-terra"
     }
 }
@@ -93,7 +93,7 @@ internal fun currentCodexModel(value: String): String {
 internal fun modelReasoningOptions(model: String, fallback: List<String>): List<String> {
     val slug = model.trim().lowercase().removePrefix("openai-codex/").removePrefix("codex/")
     return when (codexModelRequestConfig(slug).model) {
-        "gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra" -> listOf("low", "medium", "high", "xhigh", "max", "ultra")
+        "gpt-6.2-astra", "gpt-6.2-sol", "gpt-5.6-terra" -> listOf("low", "medium", "high", "xhigh", "max", "ultra")
         "gpt-6-luna" -> listOf("low", "medium", "high", "xhigh", "max")
         else -> if (slug.startsWith("gpt-5")) listOf("none", "low", "medium", "high", "xhigh")
             else fallback.filterNot { it == "max" || it == "ultra" }

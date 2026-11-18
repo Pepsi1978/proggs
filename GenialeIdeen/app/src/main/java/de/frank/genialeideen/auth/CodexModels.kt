@@ -1,8 +1,8 @@
 package de.frank.genialeideen.auth
 
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
-    ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    ASTRA("GPT-6.2 Astra", "gpt-6.2-astra"),
+    SOL("GPT-6.2 Sol", "gpt-6.2-sol"),
     TERRA("GPT-6.1 Terra", "gpt-6.1-terra"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
@@ -13,7 +13,7 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
 
     val istAnthropic: Boolean get() = anbieter == KiAnbieter.ANTHROPIC
 
-    /** Sol 6.1, Astra 6 und Terra 6.1: low bis ultra; Luna 6 und Claude: low bis max. */
+    /** Sol 6.2, Astra 6.2 und Terra 6.1: low bis ultra; Luna 6 und Claude: low bis max. */
     val supportedEfforts: List<ReasoningEffort>
         get() = when (this) {
             ASTRA, SOL, TERRA -> ReasoningEffort.entries.toList()
@@ -29,7 +29,9 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
         } ?: when (value.trim().lowercase()) {
             // Alte gespeicherte Auswahlen bleiben in derselben Modellfamilie.
             "gpt-5.6-sol", "gpt 5.6 sol", "gpt-5.6 sol",
-            "gpt-6-sol", "gpt 6 sol", "gpt-6 sol" -> SOL
+            "gpt-6-sol", "gpt 6 sol", "gpt-6 sol",
+            "gpt-6.1-sol", "gpt 6.1 sol", "gpt-6.1 sol" -> SOL
+            "gpt-6-astra", "gpt 6 astra", "gpt-6 astra" -> ASTRA
             "gpt-5.6-luna", "gpt 5.6 luna", "gpt-5.6 luna" -> LUNA
             else -> TERRA
         }

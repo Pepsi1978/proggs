@@ -622,7 +622,7 @@ fun ProgrammierSchweber(
             }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
-        // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
+        // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.2, danach CLI oder Review), rechts
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
         Row(Modifier.onGloballyPositioned { if (!vm.schweberEingeklappt) symbolUnten(it.positionInRoot().y + it.size.height) }, verticalAlignment = Alignment.CenterVertically) {
             // Eingeklappt verschwinden sie hier sofort; dann stehen sie allein über dem Pfeil (siehe unten), nie doppelt.
@@ -664,7 +664,7 @@ fun ProgrammierSchweber(
 }
 
 /**
- * Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review). Sie stehen unabhängig vom Einklappen immer da:
+ * Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.2, danach CLI oder Review). Sie stehen unabhängig vom Einklappen immer da:
  * ausgeklappt links neben „Programmierer“, eingeklappt allein direkt über dem Pfeil.
  */
 @Composable
@@ -814,7 +814,7 @@ private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Un
     ) { inhalt() }
 }
 
-/** „GPT-6.1 Sol“ → „6.1 Sol“, wie in der ChatGPT-App; „Claude Opus 5.5“ → „Opus 5.5“. */
+/** „GPT-6.2 Sol“ → „6.2 Sol“, wie in der ChatGPT-App; „Claude Opus 5.5“ → „Opus 5.5“. */
 private fun kurzName(m: CodexModel) = m.label.removePrefix("GPT-").removePrefix("Claude ")
 
 @Composable

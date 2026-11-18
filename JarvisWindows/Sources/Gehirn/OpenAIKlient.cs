@@ -15,8 +15,8 @@ public sealed class OpenAIKlient : ModellAnbieter
 
     public const string CodexURL = "https://chatgpt.com/backend-api/codex/responses";
     public const string ApiURL = "https://api.openai.com/v1/responses";
-    /// <summary>Neue Modelle (z. B. GPT-6.1 Sol) schaltet das Codex-Backend erst ab dieser Client-Kennung frei, sonst HTTP 400.</summary>
-    public const string CodexVersion = "0.159.0";
+    /// <summary>Neue Modelle (z. B. GPT-6.2 Sol) schaltet das Codex-Backend erst ab dieser Client-Kennung frei, sonst HTTP 400.</summary>
+    public const string CodexVersion = "0.169.0";
 
     public Task<ModellAntwort> Antworte(IReadOnlyList<string> system, IReadOnlyList<WerkzeugDefinition> werkzeuge, bool websuche, IReadOnlyList<JSONObjekt> verlauf,
                                         string modell, string effort, Action<string> onText, CancellationToken ct = default)

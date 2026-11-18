@@ -14,7 +14,7 @@
 
 ## Was OpenCode beim Start einliest (und was das Setup mitbringt)
 
-GPT-6 Astra erhält explizite Reasoning-Varianten: Low, Medium, High, XHigh, Max und
+GPT-6.2 Astra erhält explizite Reasoning-Varianten: Low, Medium, High, XHigh, Max und
 Ultra (OpenAI-Codex-Modellkatalog vom 04.09.2026). Ohne `reasoning: true` und
 `variants` kann ein manuell ergänztes Modell ohne Effort-Auswahl erscheinen.
 Die globale Konfiguration und diese Vorlage müssen dieselben Modellvarianten enthalten.

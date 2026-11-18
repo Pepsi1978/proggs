@@ -22,7 +22,7 @@ gesunde Lebenszeit beeinflussen – streng nach Wichtigkeit sortiert: Rang 1 bri
 - **Heute für dich:** die drei wirksamsten offenen Schritte. **Überblick:** Wirkungsbalken,
   Lebensbereiche-Ring, Evidenz-Ring (native Diagramme).
 - **KI:** ChatGPT über die Codex-Anmeldung (Gerätecode 4 + 5 Zeichen, kopierbar). Modell und Effort für
-  die Hauptarbeit (Standard GPT-6 Astra · Hoch) und getrennt für die Textkorrektur einstellbar.
+  die Hauptarbeit (Standard GPT-6.2 Astra · Hoch) und getrennt für die Textkorrektur einstellbar.
   Optionales Kurzprofil fließt in jede Anfrage ein.
 - **Vier Designs** (Morgenröte, Lebensbaum, Atem, Helix) in Hell und Dunkel, je mit eigener animierter Szene.
 

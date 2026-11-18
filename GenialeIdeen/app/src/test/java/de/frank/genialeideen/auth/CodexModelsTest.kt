@@ -7,7 +7,7 @@ class CodexModelsTest {
     @Test
     fun openAiAuswahlEnthaeltGenauDieAktuellenModelle() {
         assertEquals(
-            listOf("GPT-6 Astra" to "gpt-6-astra", "GPT-6.1 Sol" to "gpt-6.1-sol",
+            listOf("GPT-6.2 Astra" to "gpt-6.2-astra", "GPT-6.2 Sol" to "gpt-6.2-sol",
                 "GPT-5.6 Terra" to "gpt-5.6-terra", "GPT-6 Luna" to "gpt-6-luna"),
             CodexModel.von(KiAnbieter.OPENAI).map { it.label to it.apiId },
         )

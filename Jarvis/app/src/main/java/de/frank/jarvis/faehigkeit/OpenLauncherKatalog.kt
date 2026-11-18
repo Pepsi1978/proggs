@@ -180,7 +180,7 @@ object OpenLauncherKatalog {
     /** Kleinbuchstaben und Ziffern, ohne Klammerzusatz und ohne „Anbieter: “ davor (OpenRouter). */
     private fun kern(s: String) = s.lowercase(Locale.ROOT).replace(Regex("\\(.*?\\)"), "").substringAfter(": ").filter { it.isLetterOrDigit() }
     private fun voll(s: String) = s.lowercase(Locale.ROOT).filter { it.isLetterOrDigit() }
-    /** „GPT Astra 6“ → gpt, astra, 6 (Buchstaben- und Zifferngruppen getrennt). */
+    /** „GPT Astra 6.2“ → gpt, astra, 6 (Buchstaben- und Zifferngruppen getrennt). */
     private fun teile(s: String) = Regex("[a-z]+|[0-9]+").findAll(s.lowercase(Locale.ROOT)).map { it.value }.toList()
 
     /** Anbieter mit eigenem Zugang (nicht OpenRouter, OpenCode Zen, NVIDIA oder lokal): bei mehreren Treffern zuerst. */
@@ -197,7 +197,7 @@ object OpenLauncherKatalog {
     private val ALLGEMEIN = setOf("gpt", "claude", "free", "for", "coding", "preview", "ultra", "flash", "pro", "mini")
 
     /**
-     * Das Modell zu Franks Worten [anfrage]: genaue Treffer (Name, Slug) vor Buchstabendrehern („GPT-Astra 6“) vor Teilen
+     * Das Modell zu Franks Worten [anfrage]: genaue Treffer (Name, Slug) vor Buchstabendrehern („GPT-Astra 6.2“) vor Teilen
      * („Astra“). Je Stufe gewinnen Anbieter mit eigenem Zugang; bleiben mehrere übrig, ist es mehrdeutig, außer ein Treffer ist
      * die Grundform der anderen („Kimi 3.1 Pro“ → Kimi K3.1 Pro statt Kimi K3.1 Pro HighSpeed). Ein gesprochenes „Ka“ vor einer
      * Zahl ist der Buchstabe K („Kimi Ka 3.1 Pro“ → Kimi K3.1 Pro).

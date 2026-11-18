@@ -10,7 +10,7 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   in den Einstellungen schaltbar.
 - **KI-Korrektur** (ChatGPT per Codex-Anmeldung): macht aus dem Diktat eine Aufgabe in der
   Befehlsform („Verkaufe die Grafikkarte bei Kleinanzeigen.“); jeder weitere Tipp liefert eine neue
-  Fassung, **Zurück** stellt das Original wieder her. Modelle: GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna,
+  Fassung, **Zurück** stellt das Original wieder her. Modelle: GPT-6.2 Astra, GPT-6.2 Sol, GPT-6 Luna,
   GPT-5.6 Terra.
 - **Überschrift** tippt man selbst; bleibt sie leer, erzeugt die KI einen Titel.
 - Tag, Uhrzeit, Dauer, Priorität, Erinnerung mit Vorlauf, Wiederholung und Checkliste direkt

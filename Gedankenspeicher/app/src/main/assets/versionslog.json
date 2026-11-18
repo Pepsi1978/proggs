@@ -14,6 +14,7 @@
     { "versionCode": 65, "versionName": "0.6.24", "stand": "30.10.2026, 11:42 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten." },
     { "versionCode": 66, "versionName": "0.6.25", "stand": "30.10.2026, 19:15 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin." },
     { "versionCode": 67, "versionName": "0.6.26", "stand": "30.10.2026, 20:26 Uhr", "notiz": "Update bereitgestellt" },
-    {"versionCode": 68, "versionName": "0.6.27", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."}
+    {"versionCode": 68, "versionName": "0.6.27", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
+    {"versionCode": 69, "versionName": "0.6.28", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."}
 ]
 }

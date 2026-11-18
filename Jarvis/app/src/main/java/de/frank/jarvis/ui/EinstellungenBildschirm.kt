@@ -860,7 +860,7 @@ private fun RechnerReihenfolge(e: Einstellungen) {
     var schritt by remember { mutableFloatStateOf(1f) }
     val namen = mapOf("mac" to "Mac", "windows" to "Windows-PC", "server" to "Hostinger-Server")
     Text("Lang drücken und ziehen. Programmieraufträge gehen an den Rechner oben; ist er nicht erreichbar, springt der nächste ein, " +
-        "sind alle aus oder belegt, die Cloud. Sol 6.1 läuft am Windows-PC oder auf dem Hostinger-Server.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        "sind alle aus oder belegt, die Cloud. Sol 6.2 läuft am Windows-PC oder auf dem Hostinger-Server.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
     reihe.forEachIndexed { i, id ->
         key(id) {
             val aktiv = gezogen == id

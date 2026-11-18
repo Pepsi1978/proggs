@@ -347,8 +347,8 @@ internal class ThrottledAnswerEmitter(
 }
 
 internal val RESEARCH_MODELS = mapOf(
-    "GPT 6 Astra" to "gpt-6-astra",
-    "GPT 6.1 Sol" to "gpt-6.1-sol",
+    "GPT 6.2 Astra" to "gpt-6.2-astra",
+    "GPT 6.2 Sol" to "gpt-6.2-sol",
     "GPT 5.6 Terra" to "gpt-5.6-terra",
     "GPT 6 Luna" to "gpt-6-luna",
     // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).

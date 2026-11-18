@@ -4,8 +4,8 @@ package de.frank.jarvis.auth
 enum class KiAnbieter(val label: String) { OPENAI("OpenAI"), ANTHROPIC("Anthropic") }
 
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
-    ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    ASTRA("GPT-6.2 Astra", "gpt-6.2-astra"),
+    SOL("GPT-6.2 Sol", "gpt-6.2-sol"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
     TERRA("GPT-6.1 Terra", "gpt-6.1-terra"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
@@ -28,7 +28,12 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
 
     companion object {
         /** Gespeicherte Kennung eines abgelösten Modells auf den heutigen Eintrag; alle anderen bleiben unverändert. */
-        fun aktuelleId(id: String): String = if (id == "gpt-5.6-terra") TERRA.apiId else id
+        fun aktuelleId(id: String): String = when (id) {
+            "gpt-5.6-terra" -> TERRA.apiId
+            "gpt-6.1-sol", "gpt-6-sol" -> SOL.apiId
+            "gpt-6-astra" -> ASTRA.apiId
+            else -> id
+        }
 
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)

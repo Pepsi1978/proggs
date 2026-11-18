@@ -490,7 +490,7 @@ class EinstellungenStore(context: Context) {
     }
 
     companion object {
-        const val STANDARD_MODELL = "gpt-6.1-sol"
+        const val STANDARD_MODELL = "gpt-6.2-sol"
 
         /** Feste ID des vorbelegten KI-Themas, solange die Themenliste noch nie gespeichert wurde. */
         const val STANDARD_THEMA_ID = "standard-ki"

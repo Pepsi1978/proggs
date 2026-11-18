@@ -82,7 +82,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "neuen Auftrag oder einen Nachtrag will oder welche Sitzung er meint, frag kurz und sende nichts. Ohne Nachtragswunsch ist ein Programmierwunsch ein neuer Auftrag (außer Frank spricht den Programmierer der geöffneten Session direkt an, siehe oben). " +
             "Bevor du für Jarvis selbst eine neue Funktion vorschlägst oder beauftragst, prüfe mit funktionen_lesen, ob es sie schon gibt. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
-            "Nennt Frank dabei ein Modell (etwa „GPT-6 Astra“, „Kimi K3“), einen Effort, ein Profil, einen Modus oder ein CLI (Claude Code, Codex, OpenCode, Kimi CLI, Antigravity), " +
+            "Nennt Frank dabei ein Modell (etwa „GPT-6.2 Astra“, „Kimi K3“), einen Effort, ein Profil, einen Modus oder ein CLI (Claude Code, Codex, OpenCode, Kimi CLI, Antigravity), " +
             "gib genau das in modell, effort, profil, modus und cli mit und lass Fehlendes weg; Jarvis prüft es gegen OpenLauncher und fragt bei Unklarem zurück. " +
             "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch."
 
@@ -94,7 +94,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** In dieser Reihenfolge versucht; das erste bereite Ziel bekommt den Auftrag. */
     private val ziele: List<ProgrammierZiel> by lazy { listOf(PcBruecke(), CloudRoutine()) }
-    /** Sol 6.1 ohne Windows-PC: Codex Cloud mit Franks ChatGPT-Konto (nur für modell=sol, nie automatisch). */
+    /** Sol 6.2 ohne Windows-PC: Codex Cloud mit Franks ChatGPT-Konto (nur für modell=sol, nie automatisch). */
     private val codex by lazy { CodexCloud() }
 
     override fun stoerung(): String? = if (ziele.none { it.bereit() }) ziele.last().fehlt() else null
@@ -122,8 +122,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }.getOrElse { "PC: unbekannt, der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName})." }
         val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
-        val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: am Mac, wenn er an ist (Codex CLI oder OpenCode), sonst Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
-            else "Sol 6.1 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
+        val sol = if (codex.bereit()) "Sol 6.2 ohne Windows-PC: am Mac, wenn er an ist (Codex CLI oder OpenCode), sonst Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
+            else "Sol 6.2 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
         "$pc ${tunnel.await()} $cloud $sol"
     }
 
@@ -179,7 +179,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             !pcDa -> "Programmieraufträge gehen in die Cloud."
             erster?.optBoolean("da") == true && zweiter?.optBoolean("da") == true && naechster != erster.optString("rechner") ->
                 "Der nächste Auftrag ginge an $naechster: Der $ersterName fragt gerade nicht ab, deshalb springt der $zweiterName ein."
-            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft am Windows-PC, sonst am Mac (wenn seine Brücke Sol kann) oder auf dem Hostinger-Server."
+            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.2 läuft am Windows-PC, sonst am Mac (wenn seine Brücke Sol kann) oder auf dem Hostinger-Server."
             else -> "Der nächste Auftrag ginge an $naechster."
         }
         val server = eintraege.firstOrNull { it.optString("rang") == "server" }
@@ -406,8 +406,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         listOf(REVIEW_STANDARD, REVIEW_SEHR_AUSFUEHRLICH)),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc (sein Mac oder Windows-PC), server (Hostinger-Server) oder cloud. Vorgabe automatisch (Reihenfolge aus den Einstellungen, zuletzt die Cloud).", listOf("automatisch", "pc", "server", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
-                    "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1: am Windows-PC im Codex CLI, " +
-                        "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
+                    "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.2: am Windows-PC im Codex CLI, " +
+                        "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6.2 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
                         "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
                         "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac oder Windows-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
                     "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh, max oder ultra (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
@@ -499,7 +499,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> knopfStartIn(gespraech, aktuell)
                 }
                 // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
-                // ein anderes CLI), startet genau das am Mac oder Windows-PC. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
+                // ein anderes CLI), startet genau das am Mac oder Windows-PC. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.2).
                 // Stammt die Vorwahl aus der vorigen Nachricht, gehört deren Einstieg zu Franks Worten, sonst fielen Effort und Co. still weg.
                 val katalogWorte = if (vorwahl != null && vorwahl.text != aktuell) aktuell + "\n" + vorwahl.text else worte?.aktuell
                 val ersterKatalog = when {
@@ -669,9 +669,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // In der App zählt ein vom Modell eingesetzter Name nur, wenn Franks eigene Worte ihn nennen; sonst wie bisher die Knöpfe
         // (auch kein Laden des Angebots und keine Rückfrage, die den Auftrag aufhielte).
         if (!ausChatGpt && !worte.isNullOrBlank() && !OpenLauncherKatalog.textGenannt(modellText, worte)) return null
-        val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.1 Sol"; else -> modellText }
+        val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.2 Sol"; else -> modellText }
         val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
-            return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
+            return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.2 zu starten (programmieren ohne modell).", fehler = true)
         }
         return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
             // Auch die CLI-Frage nur zu einem Modell, das Frank selbst genannt hat (sonst wie bisher die Knöpfe).
@@ -683,7 +683,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Die bereiten Ziele für [ziel] (pc, cloud, sonst automatisch). Sol 6.1 läuft am Windows-PC, ist der aus, am Sol-fähigen Mac, sonst in Codex Cloud;
+     * Die bereiten Ziele für [ziel] (pc, cloud, sonst automatisch). Sol 6.2 läuft am Windows-PC, ist der aus, am Sol-fähigen Mac, sonst in Codex Cloud;
      * nie still als Opus in der Claude-Code-Routine. Opus nie in Codex Cloud.
      */
     private fun zieleFuer(ziel: String, modell: String, cli: String = ""): List<ProgrammierZiel> = when {
@@ -800,7 +800,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private fun reviewUmfang(a: JSONObject) = a.optString("review_umfang").trim().lowercase().takeIf { it == REVIEW_STANDARD || it == REVIEW_SEHR_AUSFUEHRLICH }
 
     private fun modellName(modell: String, cli: String) = ProgrammiererVorlage.katalogName(modell) ?: modell.takeIf { it.isNotEmpty() && it !in listOf(MODELL_OPUS, MODELL_SOL) } ?:
-        if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
+        if (modell == MODELL_SOL) "Sol 6.2 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
 
     /** Die Angebotswahl zum Knopf [wert] (Standards minimal, schnell, high): [OpenLauncherKatalog.Wahl] oder [Ergebnis] mit dem Grund. */
     private suspend fun festeKatalogWahl(wert: String, cli: String, zusatz: String): Any {
@@ -831,13 +831,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "biete an, es mit programmier_nachtrag an Nummer ${k.nummer} zu geben. Will er ausdrücklich einen weiteren, eigenen Auftrag, rufe programmieren mit neu=true auf.")
 
     /**
-     * Sol möglich, Modell offen: In der App kommt eine Karte mit „Opus 5.5“ und „Sol 6.1“ ins Gespräch, der Start folgt
+     * Sol möglich, Modell offen: In der App kommt eine Karte mit „Opus 5.5“ und „Sol 6.2“ ins Gespräch, der Start folgt
      * auf den Tipp ([modellGewaehlt]). Aus ChatGPT gibt es keine Karte: Das Modell fragt Frank und ruft mit modell erneut auf.
      */
     private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String, runde: String): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
-        if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC, ist der aus, am Mac, sonst in Codex Cloud). Frag ihn kurz: " +
-            "„Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Argon mit cli=antigravity erneut auf.")
+        if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.2 läuft am Windows-PC, ist der aus, am Mac, sonst in Codex Cloud). Frag ihn kurz: " +
+            "„Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Argon mit cli=antigravity erneut auf.")
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
         // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
@@ -850,19 +850,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             karten[id]?.let { karten[id] = it.copy(frage = frageUndKnoepfe(neuGefasst).first, zeit = System.currentTimeMillis(), ausRunde = true) }
             wahlenSichern(app)
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
-                STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
+                STUFE_CLI -> "Frank hat schon Sol 6.2 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon ${modellName(alt.modell, alt.cli)} gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
                 STUFE_REVIEW_UMFANG -> "Frank will ein Review; im Chat stehen die Knöpfe „Standard“ und „Sehr ausführlich“ (bis 100 Findings)."
-                else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.1“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“."
+                else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
         karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde, anhaenge = anhangPfade()))
-        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“, „Sol 6.1“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“. $KARTE_FRAGT " +
+        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“. $KARTE_FRAGT " +
             "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro bzw. modell=Gemini 4 Argon auf; sonst starte nichts.")
     }
 
     /**
-     * Folgefrage nach Sol 6.1 am Windows-PC (Franks Wahl vom 22.10.2026): „Codex CLI oder OpenCode CLI?“, bei Codex danach
+     * Folgefrage nach Sol 6.2 am Windows-PC (Franks Wahl vom 22.10.2026): „Codex CLI oder OpenCode CLI?“, bei Codex danach
      * „Review: Ja/Nein?“ (Codex kann nicht selbst fragen, die Antwort steht dann als REVIEW-Zeile im Auftrag). In der App als
      * Karte im Chat, aus ChatGPT fragt das Modell Frank und ruft programmieren mit cli bzw. review erneut auf.
      */
@@ -898,10 +898,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review. $KARTE_FRAGT Der Tipp startet den Auftrag; starte nichts selbst.")
         }
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis(if (review)
-            "Noch nichts gestartet: Sol 6.1 im Codex CLI kann keine Rückfragen stellen, deshalb fragt Jarvis vorher nach dem Review (diese Frage gehört zum " +
+            "Noch nichts gestartet: Sol 6.2 im Codex CLI kann keine Rückfragen stellen, deshalb fragt Jarvis vorher nach dem Review (diese Frage gehört zum " +
                 "Codex-Ablauf und gilt nicht als ungefragt angefordertes Review). Frag Frank kurz: „Soll ein Review laufen, wenn die App oder das APK-Update fertig " +
                 "programmiert ist? Ja oder Nein?“ und rufe programmieren danach mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false erneut auf."
-        else "Noch nichts gestartet: Sol 6.1 läuft am Rechner (Windows-PC, sonst Mac) im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
+        else "Noch nichts gestartet: Sol 6.2 läuft am Rechner (Windows-PC, sonst Mac) im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
             "programmieren danach mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode erneut auf.")
         // Das Modell ist per Sprache oder Text schon gewählt: keine Erinnerung an eine Modellwahl-Karte dieses Gesprächs mehr.
         offeneWahlen.filterValues { it.gespraech == gespraech && it.stufe == STUFE_MODELL }.keys.forEach { erinnerungen.remove(it)?.cancel() }
@@ -953,11 +953,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
-        STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
+        STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.2 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
         STUFE_REVIEW_UMFANG -> "Programmierauftrag${fuer(w.app)}: Review Standard oder sehr ausführlich mit bis zu 100 Findings?" to listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich")
         STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: " + (if (w.cli == CLI_ANTIGRAVITY) "Review: Ja oder Nein?"
             else "Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.gewaehlt.isNotEmpty() } ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?") to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
+        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
@@ -969,7 +969,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Tipp auf „Opus 5.5“ oder „Sol 6.1“: startet den gemerkten Auftrag genau einmal. Scheitert der Start, steht der Grund im
+     * Tipp auf „Opus 5.5“ oder „Sol 6.2“: startet den gemerkten Auftrag genau einmal. Scheitert der Start, steht der Grund im
      * Gespräch und die Knöpfe sind wieder offen (Frank kann das andere Modell nehmen, ohne den Auftrag neu zu sagen).
      * Ein unklarer Start (Zeitüberschreitung) bleibt gewählt: Er läuft womöglich.
      */
@@ -999,8 +999,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (folge != null && sprachGespraech.isNotEmpty()) sprachGespraeche[folge.key] = sprachGespraech
         val e = tippErgebnisse.remove(wahlId)
         val name = when (vorher.stufe) {
-            STUFE_CLI -> "Sol 6.1 im " + (if (wert == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI")
-            STUFE_MODELL -> ProgrammiererVorlage.katalogName(wert) ?: if (wert == MODELL_SOL) "Sol 6.1" else "Opus 5.5"
+            STUFE_CLI -> "Sol 6.2 im " + (if (wert == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI")
+            STUFE_MODELL -> ProgrammiererVorlage.katalogName(wert) ?: if (wert == MODELL_SOL) "Sol 6.2" else "Opus 5.5"
             else -> modellName(vorher.modell, vorher.cli)
         }
         return when {
@@ -1255,7 +1255,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Unmittelbar vor stand=fertig noch einmal stand=laeuft melden, damit ein später Nachtrag ankommt; kommt einer, ihn abarbeiten statt fertig zu melden."
 
     /**
-     * Sol 6.1 im Codex CLI: keine Hooks, kein Jarvis-MCP, keine Rückfragen und Nachträge. Die Sitzung meldet selbst mit dem
+     * Sol 6.2 im Codex CLI: keine Hooks, kein Jarvis-MCP, keine Rückfragen und Nachträge. Die Sitzung meldet selbst mit dem
      * MELDEN-Befehl, den die PC-Brücke über den Auftrag schreibt (jarvis_hook.py melde).
      */
     private fun fortschrittSol(nummer: String) =
@@ -1265,7 +1265,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "melde sie mit laeuft als Frage und arbeite mit der sinnvollsten Annahme weiter."
 
     /**
-     * Sol 6.1 in Codex Cloud: keine Hooks, kein Jarvis-MCP, keine Rückfragen. Gemeldet wird über `.claude/hooks/jarvis.sh`
+     * Sol 6.2 in Codex Cloud: keine Hooks, kein Jarvis-MCP, keine Rückfragen. Gemeldet wird über `.claude/hooks/jarvis.sh`
      * (braucht JARVIS_MCP_URL in der Umgebung); Nachträge reisen wie in der Claude-Code-Cloud mit der Antwort zurück.
      */
     private fun fortschrittCodex(nummer: String): String {
@@ -2688,17 +2688,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurServer && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Hostinger-Server konnte die Sitzung nicht starten." })
                 // Frei gewählte Modelle starten nur Mac, Windows-PC oder Server: kein Ersatz in der Cloud.
                 frei != null && code == 409 -> throw IllegalStateException("Weder Mac noch Windows-PC noch Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
-                    "Bitte die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.1 starten.")
+                    "Bitte die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.2 starten.")
                 frei != null && code == 504 -> throw IllegalStateException("${antwort.optString("rechner").ifEmpty { "Der Rechner" }} hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
                 frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sitzung nicht starten." })
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
-                openCode && code == 409 -> throw IllegalStateException("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.1 in Codex Cloud.")
+                openCode && code == 409 -> throw IllegalStateException("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.2 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).
-                sol && code == 409 -> throw NichtDa("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an, deshalb Sol 6.1 in Codex Cloud.")
+                sol && code == 409 -> throw NichtDa("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an, deshalb Sol 6.2 in Codex Cloud.")
                 // 504 heißt seit Relay-Stand 24.10.2026: nicht abgeholt, also sicher nicht gestartet (und startet auch nicht mehr).
                 sol && code == 504 -> throw IllegalStateException("Der Rechner hat den Sol-Auftrag nicht abgeholt, er ist nicht gestartet. Bitte dort nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
                 // Der Server lehnt ab (etwa nicht angemeldet), und kein Rechner übernimmt: sicher nicht gestartet, Codex Cloud darf ran.
-                sol && !openCode && code in 200..299 && !antwort.optBoolean("ok") && antwort.optBoolean("server") -> throw NichtDa("${antwort.optString("text").take(160)} Deshalb Sol 6.1 in Codex Cloud.")
+                sol && !openCode && code in 200..299 && !antwort.optBoolean("ok") && antwort.optBoolean("server") -> throw NichtDa("${antwort.optString("text").take(160)} Deshalb Sol 6.2 in Codex Cloud.")
                 sol && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sol-Sitzung nicht starten." })
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
@@ -2714,7 +2714,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val rechner = antwort.optString("rechner").ifEmpty { "dem PC" }
             // Auf dem Server gibt es die Sitzung in der Server-Konsole; sie meldet Schritte und Rückfragen wie am Rechner.
-            if (antwort.optBoolean("server")) Start("", "Der Auftrag für $app läuft auf dem Hostinger-Server" + (frei?.let { " (${it.beschreibung()})" } ?: if (sol) " (Sol 6.1, ${if (openCode) "OpenCode" else "Codex CLI"})" else "") +
+            if (antwort.optBoolean("server")) Start("", "Der Auftrag für $app läuft auf dem Hostinger-Server" + (frei?.let { " (${it.beschreibung()})" } ?: if (sol) " (Sol 6.2, ${if (openCode) "OpenCode" else "Codex CLI"})" else "") +
                 ". Zu sehen ist die Sitzung in der Server-Konsole über das Fernwartungssymbol. Android-Apps kommen über den Tunnel aufs Handy und über den Cloud-Bau in UpdateStation; Mac- und Windows-Apps kann der Server nur bearbeiten und pushen.")
             else if (frei != null) Start("", "Die Sitzung „Jarvis: $app (${frei.modell.name}${if (frei.cli == CLI_CLAUDE) "" else ", ${frei.cli}"})“ läuft auf $rechner: " +
                 "${frei.beschreibung()}. " + when (frei.cli) {
@@ -2722,9 +2722,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     CLI_OPENCODE -> "Schritte, Rückfragen und Nachträge laufen wie bei Claude Code über Jarvis."
                     else -> "Sie meldet ihre Schritte selbst; Rückfragen und Nachträge gehen dort nicht."
                 })
-            else if (openCode) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1, OpenCode)“ läuft auf $rechner im OpenCode CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
+            else if (openCode) Start("", "Die Sitzung „Jarvis: $app (Sol 6.2, OpenCode)“ läuft auf $rechner im OpenCode CLI mit Sol 6.2 (Minimalprofil, Schnellmodus, Effort High). " +
                 "Schritte, Rückfragen und Nachträge laufen wie bei Claude Code über Jarvis; meist kommt die App danach per WLAN aufs Handy.")
-            else if (sol) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1)“ läuft auf $rechner im Codex CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
+            else if (sol) Start("", "Die Sitzung „Jarvis: $app (Sol 6.2)“ läuft auf $rechner im Codex CLI mit Sol 6.2 (Minimalprofil, Schnellmodus, Effort High). " +
                 "Sie meldet ihre Schritte selbst; Rückfragen und Nachträge gehen dort nicht.")
             else Start("", "Die Sitzung „Jarvis: $app“ läuft auf $rechner und ist in der Claude-App unter Code zu sehen. " +
                 "Meist dauert es wenige Minuten, dann wird die App per WLAN installiert.")
@@ -2773,15 +2773,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Sol 6.1 in Codex Cloud über Franks ChatGPT-Konto, wie in der Codex-App: Die Umgebung kommt aus `environment/config/list`
-     * (Name wie das Repo, sonst die einzige bereite), dann `thread/start` mit gpt-6.1-sol und `turn/start` mit dem Auftrag.
+     * Sol 6.2 in Codex Cloud über Franks ChatGPT-Konto, wie in der Codex-App: Die Umgebung kommt aus `environment/config/list`
+     * (Name wie das Repo, sonst die einzige bereite), dann `thread/start` mit gpt-6.2-sol und `turn/start` mit dem Auftrag.
      * Der Zug läuft in der Cloud weiter, wenn Jarvis die Verbindung schließt. Kein automatischer Neuversuch (jeder Start ist ein Thread).
      */
     private inner class CodexCloud : ProgrammierZiel {
         private val auth by lazy { de.frank.jarvis.auth.CodexAuthManager(app) }
         override val name = ZIEL_CODEX
         override fun bereit() = auth.isConnected
-        override fun fehlt() = "Sol 6.1 geht ohne Windows-PC nur in Codex Cloud, und dafür muss Jarvis mit dem ChatGPT-Konto verbunden sein (Einstellungen → Konten)."
+        override fun fehlt() = "Sol 6.2 geht ohne Windows-PC nur in Codex Cloud, und dafür muss Jarvis mit dem ChatGPT-Konto verbunden sein (Einstellungen → Konten)."
 
         override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String, modell: String): Start {
             val repo = e.repoName.substringAfterLast('/')
@@ -2812,7 +2812,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 id
             }
             return Start("https://chatgpt.com/local/$thread",
-                "Sol 6.1 arbeitet jetzt in Codex Cloud (Thread „Jarvis: $app“ in der Codex-App unter Cloud) und meldet seine Schritte selbst; " +
+                "Sol 6.2 arbeitet jetzt in Codex Cloud (Thread „Jarvis: $app“ in der Codex-App unter Cloud) und meldet seine Schritte selbst; " +
                     "Rückfragen gehen dort nicht. Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version.")
         }
     }
@@ -2926,18 +2926,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Die Namen der Ziele, so stehen sie im Auftragsbuch (Feld „ziel“). */
         const val ZIEL_PC = "Claude Code auf deinem PC"
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
-        const val ZIEL_CODEX = "Sol 6.1 in Codex Cloud"
+        const val ZIEL_CODEX = "Sol 6.2 in Codex Cloud"
         /** Modell der Codex-Cloud-Threads (wie Sol am Windows-PC). */
-        private const val SOL_CLOUD_MODELL = "gpt-6.1-sol"
+        private const val SOL_CLOUD_MODELL = "gpt-6.2-sol"
 
         /** Läuft der Auftrag in einer Cloud-Sitzung (Claude Code oder Codex)? Sie meldet selbst, Nachträge reisen mit der Antwort. */
         fun inDerCloud(ziel: String) = ziel == ZIEL_CLOUD || ziel == ZIEL_CODEX
 
-        /** Modellwahl beim Start am Rechner: Claude Opus 5.5 (wie bisher) oder Sol 6.1 im Codex CLI. */
+        /** Modellwahl beim Start am Rechner: Claude Opus 5.5 (wie bisher) oder Sol 6.2 im Codex CLI. */
         const val MODELL_OPUS = ProgrammiererVorlage.MODELL_OPUS
         const val MODELL_SOL = ProgrammiererVorlage.MODELL_SOL
 
-        /** Womit Sol 6.1 am Windows-PC läuft (Franks Wahl per Knopf): Codex CLI (wie bisher) oder OpenCode CLI. */
+        /** Womit Sol 6.2 am Windows-PC läuft (Franks Wahl per Knopf): Codex CLI (wie bisher) oder OpenCode CLI. */
         const val CLI_CODEX = "codex"
         const val CLI_OPENCODE = "opencode"
         const val CLI_CLAUDE = "claude"
@@ -3008,7 +3008,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Hörbare Erinnerung an eine noch offene Modellwahl (siehe modellErinnerung), je wahl_id höchstens eine. */
         private val erinnerungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
         private const val ERINNERUNG_NACH_MS = 30_000L
-        private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5, Sol 6.1, Kimi K3.1 Pro oder Gemini 4 Argon?"
+        private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?"
         /**
          * Wahlen, die unten Knöpfe bekommen (Franks Wunsch vom 24.10.2026: erst nach dem Abschicken): nur die jüngste Modellfrage je
          * Gespräch samt ihren Folgefragen. Nach einem Neustart nur, was höchstens [FRISCH_NACH_NEUSTART_MS] alt ist; liegengebliebene

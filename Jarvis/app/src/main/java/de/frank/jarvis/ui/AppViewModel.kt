@@ -642,7 +642,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             synchronized(runde.erledigt) { runde.erledigt.any { e -> de.frank.jarvis.agent.Taetigkeit.UEBERGABE_TITEL.any(e::startsWith) } } -> de.frank.jarvis.agent.Taetigkeit.Ende.UEBERGEBEN
             else -> de.frank.jarvis.agent.Taetigkeit.Ende.FERTIG
         })
-        // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
+        // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.2 usw.), ist die Karte die Antwort: keine freie Rückfrage des
         // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut; nach einem schnellen Tipp nichts (leer) bzw. nur eine Folgefrage. Hat die Runde
         // daneben noch etwas anderes erledigt (Timer, Aufgabe …), bleibt die Antwort des Modells stehen.
         val nurAuftrag = synchronized(runde.erledigt) { runde.erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
@@ -2655,7 +2655,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Jede offene Auswahlkarte (Opus 5.5 / Sol 6.1 usw.) des offenen Gesprächs steht im Chat, mit Knöpfen: Fehlt sie dort, weil
+     * Jede offene Auswahlkarte (Opus 5.5 / Sol 6.2 usw.) des offenen Gesprächs steht im Chat, mit Knöpfen: Fehlt sie dort, weil
      * die Zustellung sie verlor (Neustart durch ein Update, ein Speicherstand überholte die Datei), trägt die App sie nach.
      * Damit gehört das Gespräch zugleich unter „Programmierung“.
      */
@@ -2719,7 +2719,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Laufende Sprachwahlen; der Gesprächsmodus wartet darauf wie auf eine Antwort. */
     private var sprachWahlen by mutableStateOf(0)
 
-    /** Knopf „Opus 5.5“ oder „Sol 6.1“ vor einem Programmierauftrag am Rechner: startet ihn mit diesem Modell. */
+    /** Knopf „Opus 5.5“ oder „Sol 6.2“ vor einem Programmierauftrag am Rechner: startet ihn mit diesem Modell. */
     // Auch „Codex CLI“/„OpenCode CLI“ und „Ja“/„Nein“ zum Review: [modell] ist der Wert des getippten Knopfs.
     fun programmierModell(wahlId: String, modell: String) {
         // Liest Jarvis gerade die Frage dieser Auswahl vor, ist sie mit dem Tipp beantwortet.

@@ -54,7 +54,7 @@ data class Aktualisierung(
 
 /**
  * Alle KI-Arbeiten der App. Die Hauptarbeit läuft mit dem Modell aus den Einstellungen
- * (Standard GPT-6 Astra, Hoch), die Textkorrektur mit einem eigenen, meist schnelleren Modell.
+ * (Standard GPT-6.2 Astra, Hoch), die Textkorrektur mit einem eigenen, meist schnelleren Modell.
  */
 class LongevityKi(
     private val auth: CodexAuthManager,

@@ -44,6 +44,7 @@
     {"versionCode": 39, "versionName": "1.0.38", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
     {"versionCode": 40, "versionName": "1.0.39", "stand": "10.11.2026, 15:20 Uhr", "notiz": "Deine Ziele und die Kontextdatei gleichen sich jetzt über Jarvis zwischen Handy und Tablet ab: Der jüngere Stand gilt auf beiden Geräten."},
     {"versionCode": 41, "versionName": "1.0.40", "stand": "10.11.2026, 15:36 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet nimmt jetzt auch Stände mit Volltextsuche zuverlässig an."},
-    {"versionCode": 42, "versionName": "1.0.41", "stand": "10.11.2026, 17:06 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet spielt Stände jetzt in einem Zug ein, räumt entfallene Zusatzdateien mit auf und nimmt kein Paket einer neueren App-Fassung an, solange die App hier älter ist."}
+    {"versionCode": 42, "versionName": "1.0.41", "stand": "10.11.2026, 17:06 Uhr", "notiz": "Der Abgleich zwischen Handy und Tablet spielt Stände jetzt in einem Zug ein, räumt entfallene Zusatzdateien mit auf und nimmt kein Paket einer neueren App-Fassung an, solange die App hier älter ist."},
+    {"versionCode": 43, "versionName": "1.0.42", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."}
 ]
 }

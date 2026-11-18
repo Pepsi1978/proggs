@@ -7,9 +7,9 @@ enum class CardStatus { NEW, KNOWN, UNKNOWN }
 
 internal fun normalizeModelName(value: String): String = when {
     value.startsWith("Claude", ignoreCase = true) -> value
-    value.contains("sol", ignoreCase = true) || value.contains("soul", ignoreCase = true) -> "GPT 6.1 Sol"
+    value.contains("sol", ignoreCase = true) || value.contains("soul", ignoreCase = true) -> "GPT 6.2 Sol"
     value.contains("luna", ignoreCase = true) -> "GPT 6 Luna"
-    value.contains("astra", ignoreCase = true) -> "GPT 6 Astra"
+    value.contains("astra", ignoreCase = true) -> "GPT 6.2 Astra"
     else -> "GPT 5.6 Terra"
 }
 

@@ -205,7 +205,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     ChipReihe { CodexModel.von(e.modell.anbieter).forEach { m -> Chip(m.label, e.modell == m) { e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe) } } }
                     Text("Effort (Denkstufe)", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
-                    Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)
+                    Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6.2 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)
                     val stufe = e.aktualisierungsStufe
                     val (stufenName, stufenText) = AKTUALISIERUNGS_STUFEN[stufe - 1]
                     Row(verticalAlignment = Alignment.CenterVertically) {

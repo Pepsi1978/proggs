@@ -89,7 +89,7 @@ enum ProgrammierVorspann {
     private static func mitStandard(_ d: [String: String]) -> [String: String] { d.merging(standard) { a, _ in a } }
     static let modelle: [Modell] = [
         Modell("Opus 5.5", handy: ["modell": "opus"], mac: mitStandard(["modell": "claude-opus-5-5[1m]", "cli": "claude"]), clis: ["claude"]),
-        Modell("Sol 6.1", handy: ["modell": "sol"], mac: mitStandard(["modell": "gpt-6.1-sol", "anbieter": "openai", "cli": "codex"]), clis: ["codex", "opencode"]),
+        Modell("Sol 6.2", handy: ["modell": "sol"], mac: mitStandard(["modell": "gpt-6.2-sol", "anbieter": "openai", "cli": "codex"]), clis: ["codex", "opencode"]),
         Modell("Kimi K3.1 Pro", handy: mitStandard(["modell": "Kimi K3.1 Pro", "cli": "opencode"]),
                mac: mitStandard(["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"]), clis: ["opencode", "kimi"]),
         Modell("Gemini 4 Argon", handy: mitStandard(["modell": "Gemini 4 Argon", "cli": "antigravity"]),

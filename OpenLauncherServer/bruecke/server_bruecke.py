@@ -94,7 +94,7 @@ def wahl(auftrag: dict) -> dict:
                 "name": str(auftrag.get("name") or auftrag.get("slug") or "")}
     if modell == "sol":
         cli = "opencode" if auftrag.get("cli") == "opencode" else "codex"
-        return {"cli": cli, "modell": "gpt-6.1-sol", "anbieter": "openai", "effort": "high", "profil": "minimal", "modus": "schnell", "name": "Sol 6.1"}
+        return {"cli": cli, "modell": "gpt-6.2-sol", "anbieter": "openai", "effort": "high", "profil": "minimal", "modus": "schnell", "name": "Sol 6.2"}
     return {"cli": "claude", "modell": "claude-opus-5-5[1m]", "anbieter": "anthropic", "effort": "high", "profil": "minimal", "modus": "schnell", "name": ""}
 
 

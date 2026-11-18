@@ -41,7 +41,7 @@ namespace VoiceAgent.Services.Llm
             // Sonde: Wenn ein fremdes Modell auf den Default gemappt wurde, sichtbar machen.
             if (!string.Equals(_model, (model ?? "").Trim(), StringComparison.Ordinal))
                 Log.Warn($"Codex: '{model}' ist kein Codex-Modell — nutze '{_model}'. " +
-                         "(In den Einstellungen als Modell z. B. gpt-6.1-sol eintragen.)");
+                         "(In den Einstellungen als Modell z. B. gpt-6.2-sol eintragen.)");
             _effort = NormalizeEffort(effort, _model);
         }
 
@@ -58,7 +58,7 @@ namespace VoiceAgent.Services.Llm
             var m = (model ?? "").Trim();
             if (CodexModels.Fallback.Contains(m)) return m;
             if (m.Contains("luna", StringComparison.OrdinalIgnoreCase)) return "gpt-6-luna";
-            if (m.Contains("astra", StringComparison.OrdinalIgnoreCase)) return "gpt-6-astra";
+            if (m.Contains("astra", StringComparison.OrdinalIgnoreCase)) return "gpt-6.2-astra";
             if (m.Contains("terra", StringComparison.OrdinalIgnoreCase)) return "gpt-5.6-terra";
             return CodexModels.Default;
         }

@@ -5,9 +5,9 @@ endet der Hook sofort ohne Ausgabe: In normalen Sitzungen passiert nie etwas.
 
 Aufruf: python jarvis_hook.py <post|frage|stop|puls|warte|fehlschlag> (macOS: python3), die Hook-Eingabe kommt als JSON auf stdin.
   melde  Kein Hook: python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>" meldet aus einer Sitzung ohne Hooks (Codex CLI
-         mit Sol 6.1, gestartet mit OpenLauncher --cli codex) einen Schritt an Jarvis.
+         mit Sol 6.2, gestartet mit OpenLauncher --cli codex) einen Schritt an Jarvis.
 Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftrag) setzt dieselben Hooks.
-OpenCode (Sol 6.1, OpenLauncher --cli opencode) hat keine Claude-Hooks: Das Plugin opencode-setup/plugins/jarvis-auftrag.js ruft
+OpenCode (Sol 6.2, OpenLauncher --cli opencode) hat keine Claude-Hooks: Das Plugin opencode-setup/plugins/jarvis-auftrag.js ruft
 post, puls, frage, stop und warte mit derselben Eingabe auf (Werkzeugnamen wie bei Claude, statt transcript_path die Liste
 „texte“ mit den Zwischentexten der KI) und setzt JARVIS_CLI=opencode und JARVIS_ELTERN_PID (der OpenCode-Prozess für den Warter).
   post   PostToolUse (alle Werkzeuge) und PostToolUseFailure (Bash|PowerShell, nur dort stehen fehlgeschlagene Befehle).
@@ -1882,7 +1882,7 @@ def main() -> int:
     if not AUFTRAG:
         return 0
     if art == "melde":
-        # Von Hand aus einer Sitzung ohne Hooks (Codex CLI, Sol 6.1): python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>".
+        # Von Hand aus einer Sitzung ohne Hooks (Codex CLI, Sol 6.2): python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>".
         # Ohne stdin: Die Sitzung ruft das als normalen Befehl auf.
         stand = sys.argv[2] if len(sys.argv) > 2 else ""
         schritt = " ".join(sys.argv[3:]).strip()

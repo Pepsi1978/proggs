@@ -95,6 +95,7 @@ VERSION = "0.85.0 (05.08.2026, 14:04 Uhr)"  # 0.85.0: SPEICHERMODUS formuliert s
 
 # ---------------------------------------------------------------------------
 VERSION = "0.85.1 (22.10.2026, 22:03 Uhr)"  # Aktuelle Codex-Modellfamilien mit passenden Denkstufen.
+VERSION = "0.85.2 (18.11.2026, 08:45 Uhr)"  # 0.85.2: GPT-6.2 Sol und GPT-6.2 Astra ersetzen GPT-6.1 Sol und GPT-6 Astra.
 
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
 # ---------------------------------------------------------------------------
@@ -264,14 +265,14 @@ MODEL_PRICES = {
     "gpt-5.3-codex-spark":    {"input": 1.75, "output": 14.00},
 }
 CODEX_GPT56_MODELS = [
-    "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna",
+    "gpt-6.2-sol", "gpt-5.6-terra", "gpt-6-luna",
 ]
 CODEX_FAST_MODEL_ALIASES = {
     "gpt-5.6-sol-fast": "gpt-5.6-sol",
     "gpt-5.6-terra-fast": "gpt-5.6-terra",
     "gpt-5.6-luna-fast": "gpt-5.6-luna",
 }
-CODEX_MODELS_FALLBACK = ["gpt-6-astra"] + CODEX_GPT56_MODELS
+CODEX_MODELS_FALLBACK = ["gpt-6.2-astra"] + CODEX_GPT56_MODELS
 
 
 def _current_codex_model(model: str) -> str:
@@ -281,11 +282,11 @@ def _current_codex_model(model: str) -> str:
     if slug in CODEX_MODELS_FALLBACK:
         return slug
     if "sol" in slug:
-        return "gpt-6.1-sol"
+        return "gpt-6.2-sol"
     if "luna" in slug:
         return "gpt-6-luna"
     if "astra" in slug:
-        return "gpt-6-astra"
+        return "gpt-6.2-astra"
     return "gpt-5.6-terra"
 CODEX_OAUTH_CLIENT_ID = os.getenv("CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann")
 CODEX_AUTH_ISSUER = os.getenv("CODEX_AUTH_ISSUER", "https://auth.openai.com").rstrip("/")
@@ -309,7 +310,7 @@ REASONING_AVAILABLE = ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
 def _valid_reasoning_for_model(model: str) -> set[str]:
     slug = _codex_model_request_fields((model or "").strip().lower())["model"]
     # Lokaler Codex-Modellkatalog vom 07.09.2026; Fast-Aliase nutzen dieselben Efforts.
-    if slug in {"gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra"}:
+    if slug in {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-5.6-terra"}:
         return {"low", "medium", "high", "xhigh", "max", "ultra"}
     if slug == "gpt-6-luna":
         return {"low", "medium", "high", "xhigh", "max"}

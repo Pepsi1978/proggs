@@ -3,7 +3,7 @@ mit Remote Control. Frank sieht sie im Terminal und in der Claude-App unter Code
 
 Ablauf: Dauerschleife GET https://<Server>/pc/auftrag (Long-Polling, bis 25 s). Solange das Skript fragt, gilt der Mac
 beim Relay als da. Die Mac-Brücke meldet sich mit X-Jarvis-Rang: ersatz (nur der Name): Seit Franks Wahl vom 25.10.2026 hat
-der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.1 geht zuerst an den PC. Ist keiner da, nimmt Jarvis
+der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.2 geht zuerst an den PC. Ist keiner da, nimmt Jarvis
 die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang aus ~/SK/Jarvis/relay.properties.
 
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows. Nennt Frank in Jarvis ein
@@ -13,8 +13,8 @@ Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Cla
 abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
 Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten
 liegen vor. Ob sie gelten, zeigt erst eine Sitzung (der Hook meldet „Login expired“ sofort). Abgemeldet startet keine Sitzung.
-Sol 6.1 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Windows-PC fehlt; gestartet über den Katalog-Weg
-(gpt-6.1-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
+Sol 6.2 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Windows-PC fehlt; gestartet über den Katalog-Weg
+(gpt-6.2-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
 Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay,
 danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
@@ -44,7 +44,7 @@ from jarvis_review import antigravity_review_zeile
 PROFIL = "minimal"
 MODUS = "schnell"
 MODELL = "claude-opus-5-5[1m]"
-MODELL_SOL = "gpt-6.1-sol"  # wie $ModellSol in jarvis-pc-bruecke.ps1
+MODELL_SOL = "gpt-6.2-sol"  # wie $ModellSol in jarvis-pc-bruecke.ps1
 EFFORT = "high"
 HOME = Path.home()
 PROGGS = HOME / "proggs"
@@ -103,11 +103,11 @@ def rechnername() -> str:
 
 
 def sol_als_katalog(auftrag: dict) -> dict:
-    """Sol 6.1 wie am Windows-PC (gpt-6.1-sol, Effort High, Profil Minimal, Schnellmodus, Codex CLI oder auf Franks Wahl
-    OpenCode), am Mac über den Katalog-Weg des OpenLaunchers. Der Name bleibt „Sol 6.1“."""
+    """Sol 6.2 wie am Windows-PC (gpt-6.2-sol, Effort High, Profil Minimal, Schnellmodus, Codex CLI oder auf Franks Wahl
+    OpenCode), am Mac über den Katalog-Weg des OpenLaunchers. Der Name bleibt „Sol 6.2“."""
     cli = "opencode" if str(auftrag.get("cli") or "") == "opencode" else "codex"
     return {**auftrag, "modell": "katalog", "cli": cli, "slug": MODELL_SOL, "anbieter": "openai", "effort": EFFORT,
-            "profil": PROFIL, "modus": MODUS, "name": "Sol 6.1"}
+            "profil": PROFIL, "modus": MODUS, "name": "Sol 6.2"}
 
 
 def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> tuple[int, bytes]:
@@ -117,7 +117,7 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
                                               "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
                                               # Diese Brücke kennt Aufträge mit frei gewähltem Modell (modell=katalog).
                                               "X-Jarvis-Katalog": "1",
-                                              # Und Sol 6.1 (über Codex CLI oder OpenCode): Der Relay gibt ihn her, wenn der Windows-PC fehlt.
+                                              # Und Sol 6.2 (über Codex CLI oder OpenCode): Der Relay gibt ihn her, wenn der Windows-PC fehlt.
                                               **({"X-Jarvis-Sol": "1"} if sol_clis() else {}),
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
@@ -241,7 +241,7 @@ SOL_PRUEFEN_S = 600
 
 
 def sol_clis(frisch: bool = False) -> set:
-    """Womit dieser Mac Sol 6.1 starten kann: „codex“ (installiert und angemeldet) und/oder „opencode“ (installiert), nur mit dem
+    """Womit dieser Mac Sol 6.2 starten kann: „codex“ (installiert und angemeldet) und/oder „opencode“ (installiert), nur mit dem
     Katalog-Weg des OpenLaunchers (ab 1.24.45). Höchstens alle 10 Minuten neu geprüft (nie beim Import): Eine Anmeldung, ein
     Abmelden oder ein Update gilt so ohne Neustart der Brücke. Leer = kein X-Jarvis-Sol, das Handy nimmt dann Codex Cloud."""
     if not frisch and time.time() - _SOL["zeit"] < SOL_PRUEFEN_S:
@@ -615,13 +615,13 @@ def main() -> int:
             auftrag = json.loads(roh.decode("utf-8"))
             schreib(f"Auftrag für {auftrag.get('app')}")
             try:
-                # Sol 6.1: über den Katalog-Weg (Codex CLI oder OpenCode); ohne passendes CLI klar ablehnen, nie still als Opus.
+                # Sol 6.2: über den Katalog-Weg (Codex CLI oder OpenCode); ohne passendes CLI klar ablehnen, nie still als Opus.
                 if auftrag.get("modell") == "sol":
                     auftrag = sol_als_katalog(auftrag)
                     if auftrag["cli"] not in sol_clis(frisch=True):
                         grund = "nicht angemeldet (codex login)" if auftrag["cli"] == "codex" and shutil.which("codex", path=frische_umgebung()["PATH"]) \
                             else "nicht installiert"
-                        raise RuntimeError(f"Sol 6.1 im {auftrag['cli']} CLI geht auf {RECHNER} nicht: {grund}.")
+                        raise RuntimeError(f"Sol 6.2 im {auftrag['cli']} CLI geht auf {RECHNER} nicht: {grund}.")
                 # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
                 # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist. Codex, OpenCode, Kimi und
                 # Antigravity haben eigene Anmeldungen: Dort zählt die von Claude Code nicht.

@@ -66,7 +66,7 @@ Handy (Jarvis) ── POST /geraet/pc-auftrag ──► Relay ◄── Long-Pol
 5. **OpenLauncher Server portiert die Logik, nicht die Oberfläche.** Kern in Python: Profil → `CLAUDE_CONFIG_DIR`, Modus →
    aktive `CLAUDE.md`/`AGENTS.md`, Modell, Effort und CLI → Startbefehl. Gelesen werden dieselben Dateien wie am Mac:
    `models.json`, `model-defaults.json`, `WorkModes/*.md`. Vorlage ist `OpenLauncherService.swift`, Skripte in bash.
-6. **Standards wie auf Mac und Windows:** Opus 5.5 · Minimal · Schnellmodus · High, bei OpenAI GPT 6.1 Sol · Minimal ·
+6. **Standards wie auf Mac und Windows:** Opus 5.5 · Minimal · Schnellmodus · High, bei OpenAI GPT 6.2 Sol · Minimal ·
    Schnellmodus · High. Neu ist nur, dass Sol und das Katalog-Angebot auch auf dem Server laufen.
 7. **Eigener Profilsatz `Profiles/ClaudeCodeServer/`** mit eigenen Regeln: Installation über GitHub Actions statt adb,
    kein Emulator, keine Updateskripte. Merkmal `JARVIS_SERVER=1` steuert Skills wie `apk-update-cloud`. Nicht
@@ -119,7 +119,7 @@ Commit auf GitHub landet, während Mac und Windows-PC ihre Aufträge weiter wie 
 
 **Phase 3: Alle Modelle.** Codex, OpenCode, Kimi, Antigravity samt Anmeldung, Reiter OpenLauncher, Sol und Katalog auf dem
 Server, Android-Abschluss über GitHub Actions.
-*Fertig, wenn:* GPT 6.1 Sol vom Handy startet und eine Android-Änderung in UpdateStation ankommt.
+*Fertig, wenn:* GPT 6.2 Sol vom Handy startet und eine Android-Änderung in UpdateStation ankommt.
 
 **Phase 4: Dauerbetrieb.** Update-Timer, Reiter System, PowerShell, Aufräumen alter Sitzungen, JarvisMac-Anbindung.
 

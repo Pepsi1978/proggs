@@ -89,19 +89,19 @@ data class KiModell(
          * Startbestand und keine abgeschlossene Aufzählung.
          */
         val bekannt = listOf(
-            KiModell("GPT-6.1 Sol", "gpt-6.1-sol"),
+            KiModell("GPT-6.2 Sol", "gpt-6.2-sol"),
             KiModell("GPT-5.6 Terra", "gpt-5.6-terra"),
             KiModell("GPT-6 Luna", "gpt-6-luna"),
-            KiModell("GPT-6 Astra", "gpt-6-astra"),
+            KiModell("GPT-6.2 Astra", "gpt-6.2-astra"),
         )
         val standard = bekannt[1]
 
         fun aktuelleId(id: String): String = when {
             id.startsWith("claude-", ignoreCase = true) -> id
             id in bekannt.map { it.apiId } -> id
-            id.contains("sol", ignoreCase = true) -> "gpt-6.1-sol"
+            id.contains("sol", ignoreCase = true) -> "gpt-6.2-sol"
             id.contains("luna", ignoreCase = true) -> "gpt-6-luna"
-            id.contains("astra", ignoreCase = true) -> "gpt-6-astra"
+            id.contains("astra", ignoreCase = true) -> "gpt-6.2-astra"
             else -> standard.apiId
         }
     }
@@ -119,7 +119,7 @@ enum class Denktiefe(val label: String, val apiValue: String) {
     companion object {
         // Lokaler Codex-Modellkatalog vom 07.09.2026; eigene Modelle behalten die bisherigen Stufen.
         fun fuerModell(modellId: String): List<Denktiefe> = when (modellId) {
-            "gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra" -> entries
+            "gpt-6.2-astra", "gpt-6.2-sol", "gpt-5.6-terra" -> entries
             else -> entries.filter { it != ULTRA }
         }
 

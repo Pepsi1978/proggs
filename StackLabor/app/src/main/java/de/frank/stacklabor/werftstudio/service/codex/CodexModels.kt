@@ -1,8 +1,8 @@
 package de.frank.stacklabor.werftstudio.service.codex
 
 enum class CodexModel(val apiId: String, private val anzeige: String? = null) {
-    ASTRA("gpt-6-astra"),
-    SOL("gpt-6.1-sol"),
+    ASTRA("gpt-6.2-astra"),
+    SOL("gpt-6.2-sol"),
     TERRA("gpt-5.6-terra"),
     LUNA("gpt-6-luna"),
     // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).

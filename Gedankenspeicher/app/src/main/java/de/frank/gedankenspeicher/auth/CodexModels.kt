@@ -1,8 +1,8 @@
 package de.frank.gedankenspeicher.auth
 
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
-    ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    ASTRA("GPT-6.2 Astra", "gpt-6.2-astra"),
+    SOL("GPT-6.2 Sol", "gpt-6.2-sol"),
     TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),

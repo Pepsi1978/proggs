@@ -814,7 +814,7 @@ public static partial class WinWerkzeuge
                 if (cli != "claude" && string.IsNullOrWhiteSpace(modell))
                 {
                     if (cli != "codex") return new WerkzeugErgebnis($"Für das CLI {cli} braucht openlauncher_sitzung ein ausdrückliches modell.", Fehler: true);
-                    modell = "gpt-6.1-sol";
+                    modell = "gpt-6.2-sol";
                 }
                 // Ein älterer OpenLauncher überginge die Wahl still und startete Claude Code.
                 var ab = cli is "kimi" or "antigravity" or "opencode" ? new Version(1, 24, 111) : cli == "codex" ? new Version(1, 24, 98) : new Version(1, 24, 89);
