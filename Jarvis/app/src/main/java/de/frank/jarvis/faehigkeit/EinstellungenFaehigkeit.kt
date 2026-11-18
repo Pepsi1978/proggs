@@ -252,6 +252,8 @@ class EinstellungsKatalog(context: Context) {
     private fun kaffeeEintraege(): List<Eintrag> = listOf(
         schalter("kaffee_wach_halten", "Kaffeemaschine", "Kaffeemaschine wach halten", "Jarvis hält die PrimaDonna Soul im Zeitfenster an, damit ein Kaffee ohne Aufwach-Spülung kommt; zu Beginn weckt er sie einmal.", { e.kaffeeWachHalten }) { e.kaffeeWachHalten = it },
         schalter("kaffee_wach_nach_wecker", "Kaffeemaschine", "Wach halten ab dem Wecker", "Die Kaffeemaschine geht mit deinem heutigen Wecker an (Tagschicht-, Nachtschicht- oder sonst der eingeschaltete Wecker) statt zur festen Stunde.", { e.kaffeeWachNachWecker }) { e.kaffeeWachNachWecker = it },
+        schalter("kaffee_nur_zuhause", "Kaffeemaschine", "Kaffeemaschine aus, wenn ich weg bin", "Verlässt du den Umkreis um dein Zuhause, schaltet Jarvis die Kaffeemaschine aus; kommst du an einem freien Tag im Zeitfenster zurück, weckt er sie wieder.", { e.kaffeeNurZuhause }) { e.kaffeeNurZuhause = it },
+        zahl("kaffee_radius", "Kaffeemaschine", "Umkreis um Zuhause", "Ab diesem Abstand vom Zuhause gilt: Du bist weg, die Kaffeemaschine geht aus.", 50, 1000, "Meter", { e.kaffeeRadius }) { e.kaffeeRadius = it },
         zahl("kaffee_wach_von", "Kaffeemaschine", "Wach halten ab", "Ab dieser vollen Stunde hält Jarvis die Kaffeemaschine wach.", 0, 23, "Uhr", { e.kaffeeWachVon }) { e.kaffeeWachVon = it },
         zahl("kaffee_wach_bis", "Kaffeemaschine", "Wach halten bis", "Bis zu dieser vollen Stunde hält Jarvis die Kaffeemaschine wach; danach schaltet sie sich selbst ab.", 0, 23, "Uhr", { e.kaffeeWachBis }) { e.kaffeeWachBis = it },
     )

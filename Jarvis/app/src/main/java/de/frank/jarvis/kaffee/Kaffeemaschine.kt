@@ -529,6 +529,8 @@ object Kaffeemaschine {
         }
         val ende = runCatching { java.time.LocalDateTime.parse(p.getString("ende", "")) }.getOrNull() ?: return@withContext
         if (!jetzt.isBefore(ende)) return@withContext
+        // Nur zu Hause: Verlässt Frank den Umkreis, geht die Maschine aus und bleibt aus, solange er weg ist.
+        if (e.kaffeeNurZuhause && !zuhausePruefen(app, p, fenster?.first?.zeit?.toLocalDate() ?: jetzt.toLocalDate(), ende)) return@withContext
         if (System.currentTimeMillis() - p.getLong("zuletzt", 0L) in 0 until WACH_ABSTAND_MS) return@withContext
         if (!sperre.tryLock()) return@withContext
         try {
@@ -557,6 +559,80 @@ object Kaffeemaschine {
             }
         } catch (_: Exception) {
         } finally { sperre.unlock() }
+    }
+
+    // ---- Nur zu Hause ----
+    /** Zuhause-Koordinaten: einmal aus der Adresse in den Einstellungen ermittelt oder per Knopf auf der Karte vom aktuellen Standort übernommen. */
+    fun zuhause(context: Context): Pair<Double, Double>? {
+        val p = context.applicationContext.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
+        val adresse = de.frank.jarvis.data.Einstellungen.get(context.applicationContext).adresseZuhause
+        if (p.contains("heimLat") && p.getString("heimAdresse", "") == adresse)
+            return p.getFloat("heimLat", 0f).toDouble() to p.getFloat("heimLon", 0f).toDouble()
+        @Suppress("DEPRECATION")
+        val treffer = runCatching { android.location.Geocoder(context, Locale.GERMANY).getFromLocationName(adresse, 1)?.firstOrNull() }.getOrNull() ?: return null
+        p.edit().putFloat("heimLat", treffer.latitude.toFloat()).putFloat("heimLon", treffer.longitude.toFloat()).putString("heimAdresse", adresse).apply()
+        return treffer.latitude to treffer.longitude
+    }
+
+    /** Knopf auf der Karte: „Ich bin gerade zu Hause“, genauer als die Adresse. */
+    suspend fun zuhauseHierSetzen(context: Context): String {
+        val ort = de.frank.jarvis.fahrt.Standort.aktuell(context.applicationContext, 15_000) ?: throw Fehler("Jarvis bekommt gerade keinen Standort (Ortung an und für Jarvis erlaubt?).")
+        context.applicationContext.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE).edit()
+            .putFloat("heimLat", ort.latitude.toFloat()).putFloat("heimLon", ort.longitude.toFloat())
+            .putString("heimAdresse", de.frank.jarvis.data.Einstellungen.get(context.applicationContext).adresseZuhause).apply()
+        return "Zuhause ist jetzt dieser Standort (Genauigkeit etwa ${ort.accuracy.toInt()} m)."
+    }
+
+    /** Abstand zu Hause in Metern, null ohne Standort oder Zuhause. */
+    suspend fun abstandZuHause(context: Context): Pair<Float, Float>? {
+        val heim = zuhause(context) ?: return null
+        val ort = de.frank.jarvis.fahrt.Standort.aktuell(context.applicationContext, 8000) ?: return null
+        val d = FloatArray(1)
+        android.location.Location.distanceBetween(heim.first, heim.second, ort.latitude, ort.longitude, d)
+        return d[0] to ort.accuracy
+    }
+
+    /**
+     * Prüft höchstens alle 2 Minuten den Standort. Weg heißt: zweimal hintereinander sicher außerhalb des Umkreises (Abstand minus Ungenauigkeit).
+     * Beim Verlassen schaltet Jarvis die Maschine aus. Kommt Frank zurück und das Fenster läuft noch, weckt Jarvis sie wieder, aber nur an freien Tagen:
+     * Nach Tag- oder Nachtschicht (Fenster begann an einem Diensttag) bleibt sie aus, damit er schlafen kann.
+     * true = zu Hause (Wachhalten geht weiter), false = weg.
+     */
+    private suspend fun zuhausePruefen(app: Context, p: android.content.SharedPreferences, fensterTag: java.time.LocalDate, ende: java.time.LocalDateTime): Boolean {
+        val warWeg = p.getBoolean("weg", false)
+        if (System.currentTimeMillis() - p.getLong("ortZuletzt", 0L) in 0 until 2 * 60_000L) return !warWeg
+        p.edit().putLong("ortZuletzt", System.currentTimeMillis()).apply()
+        val radius = de.frank.jarvis.data.Einstellungen.get(app).kaffeeRadius
+        val (abstand, ungenau) = abstandZuHause(app) ?: return !warWeg
+        val sicherDraussen = abstand - minOf(ungenau, 150f) > radius
+        val sicherDrinnen = abstand <= radius + minOf(ungenau, 50f)
+        if (!warWeg && sicherDraussen) {
+            val zweimal = p.getInt("draussen", 0) + 1
+            p.edit().putInt("draussen", zweimal).apply()
+            if (zweimal < 2) return true
+            // signalOk löschen: Das Aus beim Verlassen kommt von Jarvis und darf beim Heimkommen nicht als „am Gerät ausgeschaltet“ gelten.
+            p.edit().putBoolean("weg", true).putInt("draussen", 0).putLong("signalOk", 0L).apply()
+            runCatching {
+                sperre.withLock {
+                    if (online(app)) { val m = monitor(app); if (m.frisch && m.status == 7 && m.aktion == 0) befehl(app, 0x84, 0x0f, byteArrayOf(1, 1)) }
+                }
+            }
+            de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "Frank ist weg (${abstand.toInt()} m), Maschine aus")
+            return false
+        }
+        if (!sicherDraussen) p.edit().putInt("draussen", 0).apply()
+        if (warWeg && sicherDrinnen) {
+            p.edit().putBoolean("weg", false).putLong("zuletzt", 0L).apply()
+            val dienst = runCatching {
+                de.frank.jarvis.faehigkeit.Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.KalenderFaehigkeit>().firstOrNull()?.schichten(fensterTag, 1)?.get(fensterTag)
+            }.getOrNull()
+            if (dienst != null || !java.time.LocalDateTime.now().isBefore(ende)) {
+                manuellAus(app)
+                de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "zurück nach dem Dienst, Maschine bleibt aus")
+            } else de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "Frank ist zurück, Maschine wird geweckt")
+            return true
+        }
+        return !warWeg
     }
 
     suspend fun einstellen(context: Context, e: Einstellung, wert: Int): String = withContext(Dispatchers.IO) {

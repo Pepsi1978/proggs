@@ -211,6 +211,25 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                     } ?: if (nachWecker) "Heute klingelt kein eingeschalteter Wecker mehr." else null
                 }
                 if (wach) startText?.let { Text(it, color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
+                // Nur zu Hause: beim Verlassen des Umkreises aus, an freien Tagen beim Heimkommen wieder an.
+                var nurZuhause by remember { mutableStateOf(e.kaffeeNurZuhause) }
+                var radius by remember { mutableStateOf(e.kaffeeRadius) }
+                Text("Aus, wenn ich das Haus verlasse", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !nurZuhause) { nurZuhause = false; e.kaffeeNurZuhause = false }
+                    KaffeeKnopf("An", Modifier.weight(1f), aktiv = nurZuhause) { nurZuhause = true; e.kaffeeNurZuhause = true }
+                    KaffeeKnopf("$radius m", Modifier.weight(1f)) { radius = listOf(50, 100, 150, 200, 300, 500).let { l -> l[(l.indexOf(radius).coerceAtLeast(0) + 1) % l.size] }; e.kaffeeRadius = radius }
+                    KaffeeKnopf("Hier ist zuhause", Modifier.weight(1.4f)) { s.tun(nachlesen = false) { Kaffeemaschine.zuhauseHierSetzen(c) } }
+                }
+                var ortText by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(nurZuhause, radius) {
+                    ortText = when {
+                        !nurZuhause -> null
+                        !de.frank.jarvis.fahrt.Standort.immerErlaubt(c) -> "Für „Aus, wenn ich weg bin“ braucht Jarvis den Standort „Immer zulassen“ (Android-Einstellungen, Apps, Jarvis, Berechtigungen, Standort)."
+                        else -> runCatching { Kaffeemaschine.abstandZuHause(c) }.getOrNull()?.let { (d, g) -> "Du bist gerade ${d.toInt()} m von zu Hause entfernt (±${g.toInt()} m)." } ?: "Standort oder Zuhause gerade nicht bestimmbar."
+                    }
+                }
+                ortText?.let { Text(it, color = if ("braucht" in it) f.gefahr else f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
                 Text(
                     "Länger als 3 Stunden bleibt die Soul allein nicht an. Mit „Wach halten“ schickt Jarvis vom Handy aus (auch unterwegs, über die Cloud) alle 10 Minuten ein Signal, dann bleibt sie bereit. " +
                         "Schaltest du sie am Gerät oder hier aus, bleibt sie bis morgen aus. " +
