@@ -257,8 +257,7 @@ class Einstellungen private constructor(context: Context) {
         get() = s("server_token", "")
         set(v) = putGeheim("server_token", v.trim())
     // ---- Eigene Tools ----
-    /** Darf Jarvis fehlende Helfer selbst bauen lassen? Aus = pausiert; fertige Helfer bleiben nutzbar. */
-    /** Kaffeemaschine im Zeitfenster wach halten (stündliches Signal), damit ein Kaffee ohne Aufwach-Spülung kommt. */
+    /** Kaffeemaschine im Zeitfenster wach halten (Signal alle 10 Minuten), damit ein Kaffee ohne Aufwach-Spülung kommt. */
     var kaffeeWachHalten: Boolean get() = prefs.getBoolean("kaffee_wach_halten", false); set(v) = put { putBoolean("kaffee_wach_halten", v) }
     /** Wachfenster beginnt mit dem heutigen Wecker (nach Dienst gewählt) statt zur festen Stunde. */
     var kaffeeWachNachWecker: Boolean get() = prefs.getBoolean("kaffee_wach_nach_wecker", false); set(v) = put { putBoolean("kaffee_wach_nach_wecker", v) }
@@ -267,6 +266,7 @@ class Einstellungen private constructor(context: Context) {
     var kaffeeRadius: Int get() = prefs.getInt("kaffee_radius", 150).coerceIn(150, 500); set(v) = put { putInt("kaffee_radius", v.coerceIn(150, 500)) }
     var kaffeeWachVon: Int get() = prefs.getInt("kaffee_wach_von", 6).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_von", v.coerceIn(0, 23)) }
     var kaffeeWachBis: Int get() = prefs.getInt("kaffee_wach_bis", 22).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_bis", v.coerceIn(0, 23)) }
+    /** Darf Jarvis fehlende Helfer selbst bauen lassen? Aus = pausiert; fertige Helfer bleiben nutzbar. */
     var helferAutomatik: Boolean get() = prefs.getBoolean("helfer_automatik", true); set(v) = put { putBoolean("helfer_automatik", v) }
     var helferParallel: Int get() = prefs.getInt("helfer_parallel", 2).coerceIn(1, 5); set(v) = put { putInt("helfer_parallel", v.coerceIn(1, 5)) }
     var helferProTag: Int get() = prefs.getInt("helfer_pro_tag", 10).coerceIn(1, 50); set(v) = put { putInt("helfer_pro_tag", v.coerceIn(1, 50)) }

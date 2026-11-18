@@ -262,7 +262,7 @@ class SecureSettings(context: Context) : Closeable {
 
     var delonghiMail: String
         get() = readString(Keys.DELONGHI_MAIL, "")
-        set(value) = writeString(Keys.DELONGHI_MAIL, value.trim())
+        set(value) { writeString(Keys.DELONGHI_MAIL, value.trim()); writeString(Keys.DELONGHI_AUFFRISCHUNG, "") }
 
     var delonghiPasswort: String
         get() = readString(Keys.DELONGHI_PASSWORT, "")

@@ -88,13 +88,14 @@ private object KaffeeStand {
 
     fun lesen(c: android.content.Context) {
         appKontext = c
+        konfiguriert = Kaffeemaschine.konfiguriert(c)
         tun(nachlesen = false) { zustand = Kaffeemaschine.zustand(c); null }
     }
 }
 
 /**
  * Startbereich „Kaffeemaschine“: oben Franks Standard (Long Black) zum Antippen, aufklappbar alle Getränke mit Bild und die Einstellungen
- * der Maschine (Ein/Aus, Stopp, automatisch aus, Wasserhärte). Jarvis weckt die Maschine vor dem Brühen selbst auf (Franks Wunsch vom 18.11.2026).
+ * der Maschine (Ein/Aus, Stopp, automatisch aus, Wasserhärte, wach halten, nur zu Hause). Schläft die Maschine, weckt Jarvis sie nur und meldet, wenn sie bereit ist.
  */
 @Composable
 fun KaffeeStartKarte(griff: Modifier = Modifier) {
@@ -124,7 +125,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
             }
             AktualisierenKnopf(s.laeuft, "Kaffeemaschine aktualisieren", "Kaffeemaschine wird gelesen") { s.konfiguriert = Kaffeemaschine.konfiguriert(c); s.lesen(c) }
         }
-        Kaffeemaschine.bereitMeldung?.takeIf { !s.laeuft }?.let { Text(it, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
+        Kaffeemaschine.bereitMeldung?.takeIf { !s.laeuft && System.currentTimeMillis() - Kaffeemaschine.bereitMeldungZeit < 10 * 60_000L }?.let { Text(it, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         s.fehler?.let { Text(it, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         z?.alarme?.takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
 
@@ -187,10 +188,10 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 }
                 // Wach halten: Die Soul spült bei jedem Aufwachen; bleibt sie an, kommt der Kaffee ohne Spülwasser.
                 val e = remember { de.frank.jarvis.data.Einstellungen.get(c) }
-                var wach by remember { mutableStateOf(e.kaffeeWachHalten) }
-                var von by remember { mutableStateOf(e.kaffeeWachVon) }
-                var bis by remember { mutableStateOf(e.kaffeeWachBis) }
-                var nachWecker by remember { mutableStateOf(e.kaffeeWachNachWecker) }
+                var wach by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeWachHalten) }
+                var von by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeWachVon) }
+                var bis by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeWachBis) }
+                var nachWecker by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeWachNachWecker) }
                 Text("Wach halten (kein Spülen vor dem Kaffee)", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !wach) { wach = false; e.kaffeeWachHalten = false }
@@ -212,8 +213,8 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 }
                 if (wach) startText?.let { Text(it, color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
                 // Nur zu Hause: beim Verlassen des Umkreises aus, an freien Tagen beim Heimkommen wieder an.
-                var nurZuhause by remember { mutableStateOf(e.kaffeeNurZuhause) }
-                var radius by remember { mutableStateOf(e.kaffeeRadius) }
+                var nurZuhause by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeNurZuhause) }
+                var radius by remember(s.einstellungenOffen) { mutableStateOf(e.kaffeeRadius) }
                 Text("Aus, wenn ich das Haus verlasse", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !nurZuhause) { nurZuhause = false; e.kaffeeNurZuhause = false }
@@ -229,7 +230,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                     )
                 }
                 var ortText by remember { mutableStateOf<String?>(null) }
-                LaunchedEffect(nurZuhause, radius) {
+                LaunchedEffect(nurZuhause) {
                     ortText = when {
                         !nurZuhause -> null
                         !de.frank.jarvis.fahrt.Standort.immerErlaubt(c) -> "Für „Aus, wenn ich weg bin“ braucht Jarvis den Standort „Immer zulassen“ (Android-Einstellungen, Apps, Jarvis, Berechtigungen, Standort)."

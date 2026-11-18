@@ -192,7 +192,7 @@ object Waechter {
             // Im eigenen Rahmen: Die Minutenrunde wartet nie auf das Modell.
             bereich.launch { runCatching { de.frank.jarvis.ablage.ErinnerungHinweis.pruefen(app) }.onFailure { Logbuch.fehler("Erinnerungshinweis", it) } }
             bereich.launch { runCatching { de.frank.jarvis.ablage.HausmuellPlaner.pruefen(app) }.onFailure { Logbuch.fehler("Hausmüll-Erinnerungen", it) } }
-            // Kaffeemaschine wach halten: höchstens ein Signal je Stunde, nur am Handy und nur, wenn der Schalter an ist.
+            // Kaffeemaschine wach halten: Signal höchstens alle 10 Minuten, nur am Handy und nur, wenn der Schalter an ist.
             bereich.launch { runCatching { de.frank.jarvis.kaffee.Kaffeemaschine.wachHalten(app) }.onFailure { Logbuch.fehler("Kaffeemaschine wach halten", it) } }
             // Ein fester Minutentakt: Die Runde selbst kostet nichts, wenn nichts fällig ist. Kürzer zu schlafen brächte nichts
             // (die Abstände sind lang) und ließe einen gestörten Bereich, dessen Stand stehen bleibt, im Sekundentakt neu lesen.

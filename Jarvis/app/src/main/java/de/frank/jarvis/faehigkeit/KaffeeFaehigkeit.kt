@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /**
  * Kaffeemaschine De'Longhi PrimaDonna Soul: alles, was die Kaffee-Karte auf dem Startbildschirm kann, auch per Sprache.
- * „Mach mir einen Kaffee“ brüht Franks Standard (Long Black); Jarvis weckt die Maschine vorher selbst aus dem Standby.
+ * „Mach mir einen Kaffee“ brüht Franks Standard (Long Black); schläft die Maschine, weckt Jarvis sie nur und meldet, wenn sie bereit ist.
  */
 class KaffeeFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "kaffee"
@@ -98,15 +98,7 @@ class KaffeeFaehigkeit(private val context: Context) : Faehigkeit {
         val w = a.optString("wert").trim().lowercase()
         val wert = when (e.schluessel) {
             "abschaltzeit" -> {
-                // Zuerst die Zahl samt Einheit lesen: „12 Stunden“ ist mehr als das Maximum (3 Stunden), nicht 1 Stunde.
-                val zahl = Regex("\\d+").find(w)?.value?.toIntOrNull()
-                val minuten = when {
-                    "länger" in w || "max" in w || "drei" in w -> 180
-                    "eine stunde" in w || w == "stunde" -> 60
-                    zahl == null -> null
-                    "min" in w -> zahl
-                    else -> if (zahl <= 12 && ("stund" in w || zahl <= 3)) zahl * 60 else zahl
-                }
+                val minuten = gewuenschteMinuten(w)
                 when {
                     minuten == null -> null
                     minuten <= 22 -> 0
@@ -118,9 +110,24 @@ class KaffeeFaehigkeit(private val context: Context) : Faehigkeit {
             else -> w.filter(Char::isDigit).toIntOrNull()?.minus(1)
         } ?: return Ergebnis("RÜCKFRAGE: Welchen Wert? Möglich: ${e.werte.values.joinToString(", ")}.", true)
         val text = Kaffeemaschine.einstellen(context, e, wert)
-        val zahl = Regex("\\d+").find(w)?.value?.toIntOrNull() ?: 0
-        val zuLang = e.schluessel == "abschaltzeit" && ("länger" in w || (zahl in 4..12 && "min" !in w) || (zahl > 180 && "min" in w))
-        val hinweis = if (zuLang) " Länger als 3 Stunden kann die Soul nicht; ich wecke sie beim Kaffee aber selbst auf." else ""
+        val zuLang = e.schluessel == "abschaltzeit" && gewuenschteMinuten(w).let { it != null && it > 180 }
+        val hinweis = if (zuLang) " Länger als 3 Stunden kann die Soul nicht; mit „Wach halten“ hält Jarvis sie aber an." else ""
         return Ergebnis(text + hinweis)
+    }
+
+    /** Gewünschte Abschaltzeit in Minuten aus Franks Worten: „12 Stunden“ ist mehr als das Maximum, nicht 1 Stunde; „dreißig“ ist nicht „drei“. */
+    private fun gewuenschteMinuten(w: String): Int? {
+        val zahl = Regex("\\d+").find(w)?.value?.toIntOrNull()
+        return when {
+            "dreißig" in w || "dreissig" in w -> 30
+            "fünfzehn" in w || "viertel" in w -> 15
+            "länger" in w || "max" in w || "drei" in w -> 180
+            "eine stunde" in w || w == "stunde" -> 60
+            zahl == null -> null
+            "min" in w -> zahl
+            "stund" in w -> zahl * 60
+            zahl <= 3 -> zahl * 60
+            else -> zahl
+        }
     }
 }
