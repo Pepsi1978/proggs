@@ -51,7 +51,9 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -213,19 +216,23 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
 private fun Hintergrund() {
     val f = LocalFarben.current
     val bewegt = LocalBewegung.current
-    val phase = remember { androidx.compose.runtime.mutableFloatStateOf(0.2f) }
+    // Startwert aus derselben Uhr wie die Bildtaktung (System.nanoTime): Das erste Bild springt so nicht zur nächsten Phase.
+    val phase = remember { mutableFloatStateOf(phaseJetzt(System.nanoTime() / 1_000_000L)) }
     if (bewegt) LaunchedEffect(Unit) {
         while (true) {
-            androidx.compose.runtime.withFrameMillis { ms -> phase.floatValue = (ms % 46_000L) / 46_000f }
+            withFrameMillis { ms -> phase.floatValue = phaseJetzt(ms) }
             delay(100)
         }
     }
     // Der Wert wird erst beim Zeichnen gelesen: Jeder Schritt zeichnet nur die Ebene neu, nichts wird neu zusammengesetzt.
-    Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
         drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
         lichtflecken(f, if (bewegt) phase.floatValue else 0.2f)
     }
 }
+
+/** Lage der Lichtflecken im 46-Sekunden-Umlauf (0 bis 1) zur Zeit [ms]. */
+private fun phaseJetzt(ms: Long): Float = (ms % 46_000L) / 46_000f
 
 private fun DrawScope.lichtflecken(f: de.frank.jarvis.ui.theme.Farben, phase: Float) {
     val w = (phase * 2 * PI).toFloat()
