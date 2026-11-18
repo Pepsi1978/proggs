@@ -120,6 +120,32 @@ function Disable-Sperre {
     if ($script:gamingWarAktiv) { foreach ($d in $dienstGestoppt) { & sc.exe start $d *> $null } }
 }
 
+# ---------- Cut existing TCP connections (a firewall block only stops NEW connections) ----------
+Add-Type -Namespace Spielmodus -Name Tcp -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)] public struct ZEILE { public uint State; public uint LocalAddr; public uint LocalPort; public uint RemoteAddr; public uint RemotePort; }
+[DllImport("iphlpapi.dll")] public static extern uint SetTcpEntry(ref ZEILE row);
+'@ -ErrorAction SilentlyContinue
+
+function Close-Verbindungen([scriptblock]$trennen) {
+    # Resets established IPv4 TCP connections to the internet for which $trennen (gets the connection,
+    # returns bool) is true. IPv6 cannot be reset this way; those end with their next reconnect.
+    $n = 0
+    foreach ($c in @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue)) {
+        if ($c.RemoteAddress -match '^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)' -or $c.RemoteAddress -match ':') { continue }
+        if (-not (& $trennen $c)) { continue }
+        try {
+            $z = New-Object Spielmodus.Tcp+ZEILE
+            $z.State = 12   # MIB_TCP_STATE_DELETE_TCB
+            $z.LocalAddr = [BitConverter]::ToUInt32([Net.IPAddress]::Parse($c.LocalAddress).GetAddressBytes(), 0)
+            $z.RemoteAddr = [BitConverter]::ToUInt32([Net.IPAddress]::Parse($c.RemoteAddress).GetAddressBytes(), 0)
+            $z.LocalPort = [uint32]((($c.LocalPort -band 0xFF) -shl 8) -bor ($c.LocalPort -shr 8))
+            $z.RemotePort = [uint32]((($c.RemotePort -band 0xFF) -shl 8) -bor ($c.RemotePort -shr 8))
+            if ([Spielmodus.Tcp]::SetTcpEntry([ref]$z) -eq 0) { $n++ }
+        } catch { }
+    }
+    return $n
+}
+
 # ---------- Google Drive: block sync via firewall (Drive stays usable locally) ----------
 function Get-DrivePfade {
     $pf = @(foreach ($p in [Diagnostics.Process]::GetProcesses()) {
@@ -138,7 +164,9 @@ function Enable-DriveSperre {
         catch { Write-Log "Drive-Sperre fehlgeschlagen: $($_.Exception.Message)" }
     }
     $script:driveGeprueft = Get-Date
-    Write-Log $(if ($n -gt 0) { "Google Drive: Abgleich gesperrt ($n Regel(n))" } else { 'Google Drive: nicht gefunden, nichts gesperrt' })
+    $drivePids = @(Get-Process GoogleDriveFS -ErrorAction SilentlyContinue | ForEach-Object Id)
+    $weg = if ($drivePids.Count) { Close-Verbindungen { param($c) $drivePids -contains $c.OwningProcess } } else { 0 }
+    Write-Log $(if ($n -gt 0) { "Google Drive: Abgleich gesperrt ($n Regel(n), $weg offene Verbindung(en) getrennt)" } else { 'Google Drive: nicht gefunden, nichts gesperrt' })
 }
 
 function Update-DriveSperre {
@@ -245,19 +273,15 @@ function Add-GrundErlaubnis {
         "$env:USERPROFILE\.local\bin\claude.exe",
         "$env:ProgramFiles\nodejs\node.exe",
         "$env:APPDATA\npm\node_modules\opencode-ai\bin\opencode.exe",
-        "$env:ProgramFiles\Git\cmd\git.exe",
-        "$env:ProgramFiles\Git\mingw64\bin\git.exe",
-        "$env:ProgramFiles\Git\mingw64\libexec\git-core\git-remote-https.exe",
-        "$env:ProgramFiles\Git\mingw64\bin\git-credential-manager.exe",
-        "$env:ProgramFiles\Git\mingw64\libexec\git-core\git-credential-manager.exe",
-        "$env:ProgramFiles\Git\mingw64\bin\curl.exe",
-        "$env:ProgramFiles\Git\usr\bin\ssh.exe",
         "$env:ProgramFiles\GitHub CLI\gh.exe",
         "$env:WINDIR\System32\curl.exe",
         "$env:ProgramFiles\PowerShell\7\pwsh.exe",
         "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe",
         "$env:USERPROFILE\proggs\OpenLauncher\bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe"
     )
+    # Git for Windows: newer builds live in ucrt64\, older ones in mingw64\ (seen 18.11.2026: push failed
+    # mid-game because only mingw64 was allowed) - take the network-relevant tools from wherever they are.
+    $cli += @(Get-ChildItem "$env:ProgramFiles\Git" -Recurse -File -ErrorAction SilentlyContinue -Include 'git.exe', 'git-remote-http*.exe', 'git-credential-manager*.exe', 'curl.exe', 'ssh.exe' | ForEach-Object FullName)
     $cli += @(Get-ChildItem "$env:LOCALAPPDATA\Programs\Python\Python3*\python*.exe" -ErrorAction SilentlyContinue | ForEach-Object FullName)
     $cli += Get-ExeIn @("$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin", "$env:APPDATA\npm\node_modules\@openai\codex", "$env:APPDATA\npm\node_modules\opencode-ai")
     # Claude Code version binaries have no extension (e.g. versions\2.1.327)
@@ -319,7 +343,25 @@ function Enable-SpielFirewall([int]$appId) {
         # The connection stays; only scanning/roaming pause until the game ends.
         if ($wlan) { netsh wlan set autoconfig enabled=no interface="$wlan" *> $null; Write-Log "WLAN-Hintergrundsuche aus ($wlan)" }
     }
-    try { Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop; Write-Log "Spiel-Firewall AN (App $appId)" }
+    try {
+        Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop
+        # Programs that are now blocked keep connections opened before the block - cut them, so they
+        # cannot keep downloading. Allowed programs (game, Steam, CLIs ...) and system processes stay.
+        $pfade = @{}
+        # svchost is cut too (Windows Update/BITS/telemetry), except the DNS and NCSI hosts
+        $schutz = @(Get-CimInstance Win32_Service -Filter "Name='Dnscache' OR Name='NlaSvc'" -ErrorAction SilentlyContinue | ForEach-Object ProcessId)
+        $weg = Close-Verbindungen {
+            param($c)
+            $id = $c.OwningProcess
+            if ($id -le 4 -or $schutz -contains $id) { return $false }
+            if (-not $pfade.ContainsKey($id)) { $pfade[$id] = try { (Get-Process -Id $id -ErrorAction Stop).Path } catch { $null } }
+            $p = $pfade[$id]
+            # a self-updated CLI keeps running as "<name>.old.<n>" - still the allowed program
+            $basis = if ($p) { $p -replace '\.old\.[\d.]+$', '' } else { $null }
+            return ($p -and -not $script:erlaubtSet.Contains($p) -and -not $script:erlaubtSet.Contains($basis) -and $p -notmatch '\\Windows\\System32\\(lsass|services)\.exe$')
+        }
+        Write-Log "Spiel-Firewall AN (App $appId), $weg offene Verbindung(en) gesperrter Programme getrennt"
+    }
     catch { Write-Log "Spiel-Firewall nicht setzbar: $($_.Exception.Message)" }
     return $true   # restore file exists -> the off path undoes whatever was changed
 }
@@ -362,6 +404,7 @@ if (Test-Path -LiteralPath $fwSicher) {
     $idStart = Get-SpielAppId
     if ($steamLief -and $idStart -gt 0 -and $keinSpiel -notcontains $idStart) {
         Write-Log "Spiel läuft noch (App $idStart): Spiel-Firewall bleibt an"
+        Add-GrundErlaubnis   # a new version may allow more programs - apply them right away
         [void](Add-SpielErlaubnis $idStart); $fwAppId = $idStart; $spielZuletzt = Get-Date
     } else {
         Write-Log 'Altlast: Spiel-Firewall war noch an, stelle zurück'

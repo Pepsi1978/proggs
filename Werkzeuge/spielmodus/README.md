@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.4.0 · Stand 18.11.2026, 15:24 Uhr
+Version 1.4.1 · Stand 18.11.2026, 17:04 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung (Tenda-Router, O2) alles von der Leitung fern, was Ping,
 Latenz und Paketverluste verursacht. Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen
@@ -36,6 +36,9 @@ Shader und trieben den Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/n
     (`LocalSubnet`, z. B. Tenda-Router-Seite), Ping (IPv4 und IPv6), verschlüsseltes DNS und die Windows-Internetprüfung,
     die Programmier-CLIs samt Werkzeugen (Claude Code, Codex, OpenCode, OpenLauncher, node, git mit Anmeldehelfer, gh,
     curl, pwsh/PowerShell, python).
+  - Beim Sperren trennt er die schon offenen IPv4-Verbindungen gesperrter Programme (auch Google Drive und
+    Windows Update unter svchost; DNS und Internetprüfung bleiben), denn eine Firewall-Sperre stoppt nur neue Verbindungen.
+  - Git wird in allen Varianten erkannt (`Git\ucrt64` und `Git\mingw64`).
   - Findet der Wächter keine Programmdatei des Spiels, sperrt er nicht (sonst wäre das Spiel selbst offline).
   - Kein Statusfenster beim Spielstart; alle Fenster nehmen nie den Fokus (`WS_EX_NOACTIVATE`).
   - 8 s nach Spielende ist alles wieder offen („Spiel beendet“-Fenster).
