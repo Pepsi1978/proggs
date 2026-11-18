@@ -280,7 +280,8 @@ object Kaffeemaschine {
             if (n.zeit != vorher.zeit) { mon = n; break }
         }
         val a = antwort(mon.text, 0x75) ?: throw Fehler("Die Kaffeemaschine hat keinen lesbaren Zustand geschickt.")
-        val inhalt = a.daten.copyOfRange(2, a.daten.size)
+        // antwort() liefert schon den Inhalt hinter „D0 len 75 0F“: Feld 5 = Zustand, 6 = Aktion, 3/4/8/9 = Meldungsbits (wie actabi monitor.py).
+        val inhalt = a.daten
         fun u(i: Int) = if (i < inhalt.size) inhalt[i].toInt() and 0xFF else 0
         // Frisch nur, wenn der Rahmen neu ist und der Zeitstempel der Maschine zu jetzt passt.
         val frisch = mon.zeit != vorher.zeit || (a.zeit > 0 && kotlin.math.abs(System.currentTimeMillis() / 1000 - a.zeit) < 20)
@@ -387,28 +388,24 @@ object Kaffeemaschine {
     }
 
     /**
-     * Weckt die Maschine bei Bedarf, wartet die Aufheiz-Spülung ab und brüht dann das Getränk aus Profil 1.
-     * Läuft schon eine Zubereitung, lehnt Jarvis sofort ab (sonst liefe der neue Kaffee in die volle Tasse).
+     * Brüht das Getränk aus Profil 1, aber nur, wenn die Maschine schon bereit ist. Schläft sie, weckt Jarvis sie nur auf: Beim Aufwachen spült die
+     * Soul immer heißes Wasser durch die Auslässe (laut Anleitung nicht abschaltbar), und das liefe sonst in die Tasse und verdünnte den Kaffee
+     * (Frank, 18.11.2026). Sobald sie bereit ist, meldet sich Jarvis; dann Tasse leeren, unterstellen und noch einmal bestellen.
+     * Läuft schon eine Zubereitung, lehnt Jarvis sofort ab. Dauerhaft ohne Spülung: Schalter „Kaffeemaschine wach halten“.
      */
     suspend fun bruehen(context: Context, g: Getraenk, profil: Int = 1, fortschritt: (String) -> Unit = {}): String = withContext(Dispatchers.IO) {
         sperre.withLock {
             if (!konfiguriert(context)) throw Fehler("Für die Kaffeemaschine fehlt die De'Longhi-Anmeldung unter Einstellungen, Konten und APIs.")
             if (!online(context)) throw Fehler("Die Kaffeemaschine ist offline, also nicht mit dem WLAN verbunden.")
-            var m = monitor(context)
-            if (m.frisch && m.status == 7 && m.aktion != 0) throw Fehler("Die Maschine bereitet gerade schon etwas zu.")
-            var geweckt = false
-            val ende = System.currentTimeMillis() + 150_000
-            while (!(m.frisch && m.status == 7 && m.aktion == 0)) {
-                sperrendeMeldung(m)?.let { throw Fehler("Die Maschine meldet: $it.") }
-                // Standby, „geht in Standby“ oder kein frischer Stand: wecken (einmal, und erneut, falls sie zwischendurch einschläft).
-                if (!m.frisch || m.status == 0 || m.status == 2) {
-                    if (!geweckt || m.status == 0) { fortschritt("Weckt die Maschine auf …"); befehl(context, 0x84, 0x0f, byteArrayOf(2, 1)); geweckt = true }
-                } else fortschritt("Wartet, bis die Maschine bereit ist (${STATUS[m.status] ?: "Zustand ${m.status}"}) …")
-                if (System.currentTimeMillis() > ende) throw Fehler("Die Maschine wurde nicht rechtzeitig bereit (${STATUS[m.status] ?: "Zustand ${m.status}"}).")
-                delay(4000)
-                m = monitor(context)
-            }
+            val m = monitor(context)
             sperrendeMeldung(m)?.let { throw Fehler("Die Maschine meldet: $it.") }
+            if (m.frisch && m.status == 7 && m.aktion != 0) throw Fehler("Die Maschine bereitet gerade schon etwas zu.")
+            if (!(m.frisch && m.status == 7 && m.aktion == 0)) {
+                if (!m.frisch || m.status == 0 || m.status == 2) { fortschritt("Weckt die Maschine auf …"); befehl(context, 0x84, 0x0f, byteArrayOf(2, 1)) }
+                aufBereitMelden(context.applicationContext, g)
+                return@withLock "Die Maschine wacht auf und spült zuerst heißes Wasser durch. Bitte noch keine Tasse drunter, sonst verdünnt das Spülwasser den Kaffee. " +
+                    "In etwa einer Minute ist sie bereit, dann sage ich Bescheid: Tasse unterstellen und ${g.name} noch einmal bestellen."
+            }
             fortschritt("Holt das Rezept …")
             befehl(context, 0x83, 0xf0, rezept(context, g, profil))
             fortschritt("${g.name} läuft …")
@@ -416,29 +413,66 @@ object Kaffeemaschine {
         }
     }
 
+    /** Wartet im Hintergrund (höchstens drei Minuten), bis die Maschine nach dem Aufwachen bereit ist, und meldet das mit einer Einblendung. */
+    private fun aufBereitMelden(app: Context, g: Getraenk) {
+        hintergrund.launch {
+            val ende = System.currentTimeMillis() + 180_000
+            var text = "Die Kaffeemaschine ist nicht rechtzeitig bereit geworden."
+            while (System.currentTimeMillis() < ende) {
+                delay(8000)
+                val m = runCatching { sperre.withLock { monitor(app) } }.getOrNull() ?: continue
+                sperrendeMeldung(m)?.let { text = "Die Kaffeemaschine meldet: $it."; return@launch zeigen(app, text) }
+                if (m.frisch && m.status == 7 && m.aktion == 0) { text = "Die Kaffeemaschine ist bereit. Tasse unterstellen und ${g.name} noch einmal bestellen."; break }
+            }
+            zeigen(app, text)
+        }
+    }
+
+    private fun zeigen(app: Context, text: String) {
+        bereitMeldung = text
+        Handler(Looper.getMainLooper()).post { Toast.makeText(app, text, Toast.LENGTH_LONG).show() }
+    }
+
+    /** Letzte Hintergrundmeldung (für die Karte). */
+    @Volatile var bereitMeldung: String? = null
+
     private fun sperrendeMeldung(m: Monitor): String? =
         ALARME.filterKeys { it in SPERREND && m.alarmBits and (1 shl it) != 0 }.values.joinToString(", ").ifBlank { null }
 
+    // ---- Wach halten ----
+    private const val WACH_PREFS = "kaffee_wach"
+    /** Ein Signal je Stunde genügt: Die Abschaltzeit (höchstens 3 Stunden) beginnt mit jedem Signal neu (Test vom 18.11.2026 mit 15 Minuten). */
+    private const val WACH_ABSTAND_MS = 60 * 60_000L
+
     /**
-     * Für Sprache und ChatGPT: Ist die Maschine bereit, wird sofort gebrüht (gut 10 Sekunden). Muss sie erst aufwachen, läuft das
-     * im Hintergrund weiter, damit der Aufruf nicht an der Wartezeit des Relays (75 s) scheitert; das Ergebnis kommt als kurze Einblendung.
+     * Aus der Minutenrunde des Wächters, nur am Handy: Ist „wach halten“ an, schickt Jarvis im gewählten Zeitfenster stündlich dasselbe Signal wie die
+     * Coffee-Link-App beim Verbinden (Profil 1 wählen). Das setzt die automatische Abschaltung zurück. Zu Beginn des Fensters weckt Jarvis eine schlafende
+     * Maschine einmal auf (sie spült dabei ins Abtropfgitter); hat Frank sie danach selbst ausgeschaltet, bleibt sie bis zum nächsten Tag aus.
      */
-    suspend fun bruehenFuerSprache(context: Context, g: Getraenk): String = withContext(Dispatchers.IO) {
-        val bereit = sperre.withLock {
-            if (!konfiguriert(context)) throw Fehler("Für die Kaffeemaschine fehlt die De'Longhi-Anmeldung unter Einstellungen, Konten und APIs.")
-            if (!online(context)) throw Fehler("Die Kaffeemaschine ist offline, also nicht mit dem WLAN verbunden.")
-            val m = monitor(context)
-            if (m.frisch && m.status == 7 && m.aktion != 0) throw Fehler("Die Maschine bereitet gerade schon etwas zu.")
-            sperrendeMeldung(m)?.let { throw Fehler("Die Maschine meldet: $it.") }
-            m.frisch && m.status == 7 && m.aktion == 0
-        }
-        if (bereit) return@withContext bruehen(context, g)
+    suspend fun wachHalten(context: Context) = withContext(Dispatchers.IO) {
         val app = context.applicationContext
-        hintergrund.launch {
-            val text = try { bruehen(app, g) } catch (e: Fehler) { e.message ?: "Der Kaffee hat nicht geklappt." } catch (e: Exception) { "Die Kaffeemaschine ist nicht erreichbar." }
-            Handler(Looper.getMainLooper()).post { Toast.makeText(app, "Kaffeemaschine: $text", Toast.LENGTH_LONG).show() }
-        }
-        "Die Maschine wacht gerade auf und spült; ${g.name} startet danach von selbst, in etwa ein bis zwei Minuten."
+        val e = de.frank.jarvis.data.Einstellungen.get(app)
+        if (!e.kaffeeWachHalten || de.frank.jarvis.data.Geraet.istTablet || !konfiguriert(app)) return@withContext
+        val stunde = java.time.LocalTime.now().hour
+        val imFenster = if (e.kaffeeWachVon <= e.kaffeeWachBis) stunde in e.kaffeeWachVon until e.kaffeeWachBis else stunde >= e.kaffeeWachVon || stunde < e.kaffeeWachBis
+        if (!imFenster) return@withContext
+        val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
+        val jetzt = System.currentTimeMillis()
+        if (jetzt - p.getLong("zuletzt", 0L) in 0 until WACH_ABSTAND_MS) return@withContext
+        if (!sperre.tryLock()) return@withContext
+        try {
+            p.edit().putLong("zuletzt", jetzt).apply()
+            if (!online(app)) return@withContext
+            val m = monitor(app)
+            val heute = java.time.LocalDate.now().toString()
+            if (m.frisch && (m.status == 0 || m.status == 2)) {
+                if (p.getString("geweckt", "") != heute) { befehl(app, 0x84, 0x0f, byteArrayOf(2, 1)); p.edit().putString("geweckt", heute).apply() }
+            } else {
+                befehl(app, 0xa9, 0xf0, byteArrayOf(1))
+                p.edit().putString("geweckt", heute).apply()
+            }
+        } catch (_: Exception) {
+        } finally { sperre.unlock() }
     }
 
     suspend fun einstellen(context: Context, e: Einstellung, wert: Int): String = withContext(Dispatchers.IO) {

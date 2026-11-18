@@ -249,6 +249,12 @@ class EinstellungsKatalog(context: Context) {
         NEBENHER.launch { runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() } }
     }
 
+    private fun kaffeeEintraege(): List<Eintrag> = listOf(
+        schalter("kaffee_wach_halten", "Kaffeemaschine", "Kaffeemaschine wach halten", "Jarvis hält die PrimaDonna Soul im Zeitfenster an, damit ein Kaffee ohne Aufwach-Spülung kommt; zu Beginn weckt er sie einmal.", { e.kaffeeWachHalten }) { e.kaffeeWachHalten = it },
+        zahl("kaffee_wach_von", "Kaffeemaschine", "Wach halten ab", "Ab dieser vollen Stunde hält Jarvis die Kaffeemaschine wach.", 0, 23, "Uhr", { e.kaffeeWachVon }) { e.kaffeeWachVon = it },
+        zahl("kaffee_wach_bis", "Kaffeemaschine", "Wach halten bis", "Bis zu dieser vollen Stunde hält Jarvis die Kaffeemaschine wach; danach schaltet sie sich selbst ab.", 0, 23, "Uhr", { e.kaffeeWachBis }) { e.kaffeeWachBis = it },
+    )
+
     private fun helferEintraege(): List<Eintrag> = listOf(
         schalter("helfer_automatik", "Eigene Tools", "Helfer selbst bauen lassen", "Aus = pausiert: Jarvis baut nichts Neues, fertige Helfer bleiben nutzbar.", { e.helferAutomatik }) {
             e.helferAutomatik = it
@@ -468,6 +474,7 @@ class EinstellungsKatalog(context: Context) {
             // ---- Benachrichtigungen: je Meldungsart aus derselben Liste wie der Bildschirm; Felder mit alten Kennungen stehen oben ----
             *meldungsEintraege().toTypedArray(),
             *helferEintraege().toTypedArray(),
+            *kaffeeEintraege().toTypedArray(),
             schalter("meldung_ruhe_an", "Benachrichtigungen", "Ruhezeit", "In der Ruhezeit kommen Agenten, Ablage, Programmieraufträge und Update-Ansagen lautlos, ohne Vorlesen und Wecker.", { e.meldungRuheAn }) { e.meldungRuheAn = it },
             uhrzeit("meldung_ruhe_von", "Benachrichtigungen", "Ruhezeit beginnt", "Ab dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheVon }) { e.meldungRuheVon = it },
             uhrzeit("meldung_ruhe_bis", "Benachrichtigungen", "Ruhezeit endet", "Bis zu dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheBis }) { e.meldungRuheBis = it },

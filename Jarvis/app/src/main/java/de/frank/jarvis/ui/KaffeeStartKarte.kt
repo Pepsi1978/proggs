@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -123,6 +124,7 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
             }
             AktualisierenKnopf(s.laeuft, "Kaffeemaschine aktualisieren", "Kaffeemaschine wird gelesen") { s.konfiguriert = Kaffeemaschine.konfiguriert(c); s.lesen(c) }
         }
+        Kaffeemaschine.bereitMeldung?.takeIf { !s.laeuft }?.let { Text(it, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         s.fehler?.let { Text(it, color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         z?.alarme?.takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
 
@@ -183,9 +185,22 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                         }
                     }
                 }
+                // Wach halten: Die Soul spült bei jedem Aufwachen; bleibt sie an, kommt der Kaffee ohne Spülwasser.
+                val e = remember { de.frank.jarvis.data.Einstellungen.get(c) }
+                var wach by remember { mutableStateOf(e.kaffeeWachHalten) }
+                var von by remember { mutableStateOf(e.kaffeeWachVon) }
+                var bis by remember { mutableStateOf(e.kaffeeWachBis) }
+                Text("Wach halten (kein Spülen vor dem Kaffee)", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !wach) { wach = false; e.kaffeeWachHalten = false }
+                    KaffeeKnopf("An", Modifier.weight(1f), aktiv = wach) { wach = true; e.kaffeeWachHalten = true }
+                    KaffeeKnopf("ab $von Uhr", Modifier.weight(1f)) { von = (von + 1) % 24; e.kaffeeWachVon = von }
+                    KaffeeKnopf("bis $bis Uhr", Modifier.weight(1f)) { bis = (bis + 1) % 24; e.kaffeeWachBis = bis }
+                }
                 Text(
-                    "Länger als 3 Stunden bleibt die Soul nicht an. Brauchst du nicht: Jarvis weckt sie bei „Mach mir einen Kaffee“ selbst auf und brüht nach der Spülung.",
-                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp),
+                    "Länger als 3 Stunden bleibt die Soul allein nicht an. Mit „Wach halten“ schickt Jarvis im Zeitfenster stündlich ein Signal, dann bleibt sie bereit. " +
+                        "Schläft sie doch, weckt Jarvis sie bei „Mach mir einen Kaffee“ nur auf und meldet sich, wenn das Spülen vorbei ist. Uhrzeiten: antippen zählt eine Stunde weiter.",
+                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp),
                 )
                 z?.profile?.takeIf { it.isNotEmpty() }?.let { p ->
                     Text("Jarvis brüht die Rezepte aus Profil 1 (${p[1] ?: "Profil 1"}).", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))

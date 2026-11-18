@@ -16,7 +16,8 @@ class KaffeeFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Sagt Frank „mach mir einen Kaffee“, „mach mir meinen Kaffee“ oder „Kaffee bitte“ ohne Sorte, nimm kaffeemaschine mit aktion kaffee: " +
             "Das ist sein Standard, ein Long Black. Nennt er eine Sorte (Espresso, Cappuccino, Americano …), aktion getraenk mit name. " +
-            "Jarvis weckt die Maschine selbst auf und wartet die Aufheiz-Spülung ab; das dauert bis zu zwei Minuten. Nicht nach der Tasse fragen. " +
+            "Ist die Maschine bereit, läuft der Kaffee sofort. Schläft sie, weckt Jarvis sie nur auf (sie spült dabei, das Wasser darf nicht in die Tasse) und meldet sich, " +
+                "wenn sie bereit ist; dann bestellt Frank noch einmal. Sag ihm das genau so, wie das Werkzeug es zurückgibt. Nicht nach der Tasse fragen. " +
             "Zustand, Meldungen und die Getränkeliste liest kaffeemaschine_status. Meldet das Werkzeug einen Fehler (Wassertank leer, offline …), sag Frank genau den Grund. Antworte danach kurz, etwa: „Dein Long Black läuft.“"
 
     override fun stoerung(): String? =
@@ -73,11 +74,11 @@ class KaffeeFaehigkeit(private val context: Context) : Faehigkeit {
 
     private suspend fun ausfuehren(a: JSONObject): Ergebnis = try {
         when (val aktion = a.optString("aktion").trim().lowercase()) {
-            "kaffee" -> Ergebnis(Kaffeemaschine.bruehenFuerSprache(context, Kaffeemaschine.STANDARD))
+            "kaffee" -> Ergebnis(Kaffeemaschine.bruehen(context, Kaffeemaschine.STANDARD))
             "getraenk" -> {
                 val g = Kaffeemaschine.finden(a.optString("name"))
                     ?: return Ergebnis("RÜCKFRAGE: Welches Getränk? Möglich sind: ${Kaffeemaschine.GETRAENKE.joinToString(", ") { it.name }}.", true)
-                Ergebnis(Kaffeemaschine.bruehenFuerSprache(context, g))
+                Ergebnis(Kaffeemaschine.bruehen(context, g))
             }
             "aufwecken" -> Ergebnis(Kaffeemaschine.aufwecken(context))
             "ausschalten" -> Ergebnis(Kaffeemaschine.ausschalten(context))
