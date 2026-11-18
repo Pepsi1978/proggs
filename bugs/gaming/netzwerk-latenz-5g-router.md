@@ -49,7 +49,7 @@
 
 ## B7b Dieselbe 5G-Zelle schwankt um 30 dB, Bandkombinationen wechseln ständig
 - Messung 18.11.2026, 5G SA N28, NR-Zelle 6881771692: 17:23 RSRP −63 dBm / SINR 19 dB / CQI 14 (Ping Median 15–18 ms) → 17:41 RSRP −96 dBm / SINR −1 dB / CQI 8. Gleichzeitig bot das Netz wechselnde Kombinationen an (B7+B1, N28+B7 NSA, B1+B20, B3+B1).
-- Ursache unbelegt: Router bewegt, Leistungsregelung/Umbau am Mast (nach O2-Umbauten ändern sich oft eNB-/Zell-IDs), Last.
+- 17:44 wieder RSRP −63 dBm / SINR 22 dB / CQI 14 — **ohne Neueinwahl** (gleiche WAN-IP, gleiche Zelle) und parallel auf Franks Handy 5 → 0–1 → 5 Balken. Beleg: Leistungsänderung am Mast (Arbeiten/Umkonfiguration bei O2), nicht Router oder Standort.
 - Fix: vor dem Spielen Statusseite lesen (SINR/CQI, nicht Balken); SA nur bei SINR > 10 dB, sonst „4G only“.
 - Mast: eNodeB 21118 = Berliner Straße, Neuenhagen-Bollensdorf, 52.508093, 13.684266 (CellMapper-API, bestätigt durch OSM-Turm 2 m daneben); Bänder dort B20+B3, Zelle 51 vermutlich B1.
 
