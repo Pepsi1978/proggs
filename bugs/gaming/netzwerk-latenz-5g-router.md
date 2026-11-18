@@ -43,7 +43,8 @@
 ## B7a Tenda 5G03: „5G SA Preferred“ fällt bei schwachem Signal auf 5G NSA zurück
 - Messung 18.11.2026 (CoD, je ~40 min, PC-Verkehr gleich): NSA/wechselnd (0–1 Balken) Median 50 ms, 95 % 204 ms, 18 % über 100 ms · SA (2 Balken) Median 26 ms, 95 % 106 ms, 5 % über 100 ms. Router-Ping in beiden Fällen 1 ms → Ursache ist allein die Funkstrecke.
 - NSA braucht einen 4G-Anker; bei schwachem 4G (0–1 Balken) ist NSA schlechter als SA. Jeder SA↔NSA-Wechsel kostet Sekunden ohne Verbindung (Ausfälle 3–73 s im Mitschnitt).
-- Fix: SA erzwingen (Modus „5G SA only“, falls vorhanden) oder per „Lock BAND“ nur das SA-Band anhaken; Router drehen/Richtantenne zum Mast für mehr SA-Pegel.
+- Aber: Um 17:09 fiel der Router auf NSA mit **3 Balken** (bessere 4G-Ankerzelle) → Ping Ø 21–34 ms, 0 Verluste, bester Abschnitt des Tages. NSA ist also nur mit schwacher Ankerzelle schlecht.
+- Fix: nicht blind „SA only“ erzwingen. Nach gemessenem Ping entscheiden, bei guter Lage Band/PCI/Zell-ID von der Tenda-Statusseite notieren und genau dieses Band per „Lock BAND“ festlegen; Router drehen/Richtantenne zum Mast für mehr Pegel.
 
 ## B8a Restbandbreite trotz Spielmodus (gemessen 18.11.2026)
 - CoD lädt trotz „On-Demand-Texturstreaming: Minimal“ und 1-GB-Limit im Menü/Kartenwechsel Inhalte per HTTP (Port 80) mit 1–3,7 MB/s, ~17 min nach Spielstart. Abhilfe nur: alle Inhaltspakete vorab installieren.
