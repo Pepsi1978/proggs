@@ -17,6 +17,7 @@ Im gemeinsamen Repo `~/proggs` laufen oft mehrere Sitzungen gleichzeitig. Nackte
 - Nie einen Ordner vormerken (`git add <ordner>`), nur einzelne Dateien: Am 11.11.2026 nahm `git add Jarvis/…/faehigkeit` die halbfertige `VictronFaehigkeit.kt` einer parallelen Sitzung mit.
 - Datei mit fremden Änderungen: nur den eigenen Teil vormerken (`git hash-object -w` + `git update-index --cacheinfo`), `git diff --cached --name-only` prüfen, dann `git commit` **ohne** Pfade.
 - `git add <pfade>` bricht komplett ab, wenn ein Pfad schon per `git rm` weg ist („pathspec … did not match“): gelöschte Dateien nicht erneut nennen, `add && commit` verketten (13.11.2026: Commit nur mit der Löschung, Rest fehlte).
+- Nur geänderte, schon versionierte Dateien: `git add -u -- <pfade>`. Plain `git add` bricht komplett ab, wenn ein Pfad in einem .gitignore-Ordner liegt (18.11.2026: `token-cost-sidebar/dist/pricing.ts`, „durch eine Ihrer .gitignore Dateien ignoriert“).
 - Ersetzungsskript dafür: erst Arbeitskopie und HEAD-Fassung fertig berechnen und prüfen, dann schreiben. `open(p,'w').write(f(x))` leert die Datei schon vor `f` (13.11.2026: Assert in `f` ließ `Einstellungen.kt` leer zurück). Zeilenenden der Quelle übernehmen.
 
 Verwandt: [[parallele-sitzung-nimmt-dateien-mit]].

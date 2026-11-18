@@ -675,6 +675,22 @@
       "ruecknahme": "Funktion entfernter_code und ihren Aufruf aus eintrag.py entfernen",
       "kosten": "0 Kontext, ein git fetch je Eintrag",
       "messbar": true
+    },
+    {
+      "id": "M39",
+      "titel": "git add mit Pfad in .gitignore-Ordner bricht das ganze add ab; für versionierte Dateien git add -u",
+      "datum": "2026-11-18T09:14",
+      "beleg": "afc7a472: git add von 99 Pfaden scheiterte an versioniertem opencode-setup/plugins/token-cost-sidebar/dist/pricing.ts (ignorierter Ordner), zweiter Aufruf mit git add -u nötig.",
+      "ort": [
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+      ],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "(durch eine Ihrer \\\".gitignore\\\" Dateien ignoriert|paths are ignored by one of your .gitignore files)",
+      "aufruf_regex": "git (-C \\S+ )?add ",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Sitzungen mit git add: kein .gitignore-Abbruch mehr bei eigenen Commits.",
+      "ruecknahme": "Die Zeile 'git add -u -- <pfade>' aus commit-nur-mit-pfaden.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
     }
   ]
 }
