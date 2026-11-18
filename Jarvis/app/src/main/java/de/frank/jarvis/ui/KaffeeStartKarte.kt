@@ -212,7 +212,8 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 }
                 if (wach) startText?.let { Text(it, color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
                 Text(
-                    "Länger als 3 Stunden bleibt die Soul allein nicht an. Mit „Wach halten“ schickt Jarvis im Zeitfenster stündlich ein Signal, dann bleibt sie bereit. " +
+                    "Länger als 3 Stunden bleibt die Soul allein nicht an. Mit „Wach halten“ schickt Jarvis vom Handy aus (auch unterwegs, über die Cloud) alle 10 Minuten ein Signal, dann bleibt sie bereit. " +
+                        "Schaltest du sie am Gerät oder hier aus, bleibt sie bis morgen aus. " +
                         "Schläft sie doch, weckt Jarvis sie bei „Mach mir einen Kaffee“ nur auf und meldet sich, wenn das Spülen vorbei ist. Uhrzeiten: antippen zählt eine Stunde weiter.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp),
                 )

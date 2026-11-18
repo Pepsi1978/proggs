@@ -511,7 +511,9 @@ object Kaffeemaschine {
     /**
      * Aus der Minutenrunde des Wächters, nur am Handy: Ist „wach halten“ an, weckt Jarvis die Maschine zum Start des Fensters (laut Wecker oder feste
      * Stunde; sie spült dabei ins Abtropfgitter) und hält sie bis zum Ende mit einem Signal alle 10 Minuten an, wie es die Coffee-Link-App beim
-     * Verbinden schickt (Profil 1 wählen). Geht sie im Fenster doch aus, weckt Jarvis sie bis zu dreimal am Tag wieder; nach „Ausschalten“ über Jarvis nicht.
+     * Verbinden schickt (Profil 1 wählen). Läuft nur am Handy und über die Cloud, also auch unterwegs mit mobilen Daten. Geht sie aus, obwohl das letzte
+     * Signal frisch war, hat Frank sie am Gerät ausgeschaltet: dann heute nicht wieder wecken (ebenso nach „Ausschalten“ über Jarvis). Nur nach einer
+     * langen Signalpause weckt Jarvis sie bis zu dreimal am Tag wieder.
      */
     suspend fun wachHalten(context: Context) = withContext(Dispatchers.IO) {
         val app = context.applicationContext
@@ -534,13 +536,25 @@ object Kaffeemaschine {
             if (!online(app)) return@withContext
             val m = monitor(app)
             if (m.frisch && (m.status == 0 || m.status == 2)) {
+                // Von selbst geht sie bei regelmäßigem Signal nicht aus: Lag das letzte Signal deutlich unter der Abschaltzeit zurück, hat Frank sie
+                // am Gerät ausgeschaltet. Dann bleibt sie heute aus. Nur nach langer Signalpause (Handy aus, kein Netz) oder zum Fensterstart weckt Jarvis.
+                val abschaltMin = when (einstellungLesen(app, EINSTELLUNGEN[0])) { 0 -> 15; 1 -> 30; 2 -> 60; else -> 180 }
+                val seitSignal = System.currentTimeMillis() - p.getLong("signalOk", 0L)
+                val amGeraetAus = seitSignal in 0 until (abschaltMin - 10).coerceAtLeast(5) * 60_000L
+                if (amGeraetAus && p.getString("aus", "") != heute) {
+                    manuellAus(app)
+                    de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "am Gerät ausgeschaltet, heute nicht wieder wecken")
+                }
                 val geweckt = if (p.getString("weckTag", "") == heute) p.getInt("weckAnzahl", 0) else 0
                 if (p.getString("aus", "") != heute && geweckt < WACH_MAX_WECKEN) {
                     befehl(app, 0x84, 0x0f, byteArrayOf(2, 1))
-                    p.edit().putString("weckTag", heute).putInt("weckAnzahl", geweckt + 1).apply()
+                    p.edit().putString("weckTag", heute).putInt("weckAnzahl", geweckt + 1).putLong("signalOk", System.currentTimeMillis()).apply()
                     de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "geweckt (${geweckt + 1}. Mal heute)")
                 }
-            } else befehl(app, 0xa9, 0xf0, byteArrayOf(1))
+            } else if (m.frisch) {
+                befehl(app, 0xa9, 0xf0, byteArrayOf(1))
+                p.edit().putLong("signalOk", System.currentTimeMillis()).apply()
+            }
         } catch (_: Exception) {
         } finally { sperre.unlock() }
     }
