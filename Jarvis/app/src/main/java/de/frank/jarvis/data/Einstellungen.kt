@@ -598,7 +598,7 @@ class Einstellungen private constructor(context: Context) {
         /** Die Schlüssel, die zugang.json setzen darf (siehe zugangPruefen). */
         private val ZUGANG = listOf("server_token", "routine_token", "such_schluessel", "maps_schluessel", "drive_client_secret", "server_host")
         /** Schlüssel, die nie unverschlüsselt abgelegt werden dürfen. */
-        private val GEHEIM = listOf(
+        internal val GEHEIM = listOf(
             "geheimnis", "server_token", "mail_passwort", "github_token", "such_schluessel", "drive_client_id", "drive_client_secret",
             "maps_schluessel", "maps_schluessel_bau", "routine_token",
         )

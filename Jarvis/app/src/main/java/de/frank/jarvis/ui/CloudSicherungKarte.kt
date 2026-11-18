@@ -51,15 +51,17 @@ internal fun CloudSicherungKarte() {
                 "Ziel: Meine Ablage › Dokumente › Apps Backup › Jarvis. Die letzten 14 Sicherungen bleiben. API-Schlüssel, Passwörter und Anmeldungen sind bewusst nicht dabei, die trägst du nach einer Wiederherstellung selbst ein.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp),
         )
-        Knopf(if (stand.ordnerGewaehlt) "Ordner ändern" else "Ordner in Google Drive wählen", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = !stand.ordnerGewaehlt) { ordnerwahl.launch(null) }
-        if (stand.ordnerGewaehlt) Knopf(if (stand.laeuft) "Sichert …" else "Jetzt sichern", Modifier.padding(top = 8.dp).fillMaxWidth()) {
+        // Am Tablet nur Wiederherstellen: Gesichert wird von der Erstquelle, dem Handy.
+        if (de.frank.jarvis.data.Geraet.istTablet) Text("Gesichert wird vom Handy aus.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        else Knopf(if (stand.ordnerGewaehlt) "Ordner ändern" else "Ordner in Google Drive wählen", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = !stand.ordnerGewaehlt) { ordnerwahl.launch(null) }
+        if (stand.ordnerGewaehlt && !de.frank.jarvis.data.Geraet.istTablet) Knopf(if (stand.laeuft) "Sichert …" else "Jetzt sichern", Modifier.padding(top = 8.dp).fillMaxWidth()) {
             meldung = "Sicherung läuft …"
             CloudSicherung.jetzt(c) { meldung = it }
         }
         Unterzeile("Wiederherstellen")
         Text("Nach einem neuen Handy: Jarvis installieren, hier die Sicherung aus Drive wählen. Jarvis spielt sie ein und startet neu.", color = f.textSchwach, fontSize = 13.sp)
         val wahl = gewaehlt
-        if (wahl == null) Knopf("Sicherung wählen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { dateiwahl.launch(arrayOf("application/zip", "application/octet-stream")) }
+        if (wahl == null) Knopf("Sicherung wählen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { dateiwahl.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/x-zip", "application/octet-stream")) }
         else {
             Text("Achtung: Der jetzige Stand auf diesem Gerät wird durch die Sicherung ersetzt.", color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             Knopf("Einspielen und neu starten", Modifier.padding(top = 8.dp).fillMaxWidth(), farbe = f.gefahr) {

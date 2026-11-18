@@ -58,10 +58,17 @@ object CloudSicherung {
     private const val BEREIT = "wiederherstellung-bereit.zip"
     private const val ABSTAND_MS = 23 * 3_600_000L
     private const val NEUVERSUCH_MS = 2 * 3_600_000L
+    private const val BEREIT_TEIL = "wiederherstellung.teil"
+    private const val GESCHEITERT = "wiederherstellung-gescheitert.zip"
     private val NAMENSFORM = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")
+    @Volatile private var schleife: kotlinx.coroutines.Job? = null
 
     /** Unter `files/` nie sichern: Protokolle, Modelle, Zugangsdateien und Zwischenstände. */
-    private val NIE_DATEIEN = setOf("logbuch", "parakeet-bpe.vocab", "profileInstalled", "fernsteuerung-token.txt", "umzug.json", "umzug-export.json", "zugang.json")
+    private val NIE_DATEIEN = setOf("logbuch", "logs", "parakeet-bpe.vocab", "profileInstalled", "fernsteuerung-token.txt", "victron.json",
+        "umzug.json", "umzug-export.json", "zugang.json", "vorlaeufig", "erinnerung-stimme", "stimmproben")
+    /** Abgeleitete Ton-Zwischenspeicher: lassen sich jederzeit neu erzeugen. */
+    private val NIE_PFADE = listOf("atem/stimme", "atem/frisch")
+    private fun ausgelassen(rel: String) = rel.substringBefore('/') in NIE_DATEIEN || NIE_PFADE.any { rel == it || rel.startsWith("$it/") }
     private val NEBENDATEI = listOf(".teil", ".tmp", ".neu", ".new")
 
     /** Einstellungsspeicher, die nie mitgehen: Konten-Register und verschlüsselte Geheimnis-Speicher anderer Bereiche. */
@@ -70,8 +77,8 @@ object CloudSicherung {
     private val VERSCHLUESSELT = listOf(Einstellungen.NAME, SecureSettings.STORE_NAME)
 
     /** Schlüsselnamen, die nach Zugangsdaten aussehen: nie in die Cloud. */
-    private val GEHEIM = Regex("api_key|_key$|_key_|token|secret|geheimnis|passwort|password|sitzung|session|cookie|auffrischung|refresh|client_id|oauth|zugang|credential|auth_")
-    private fun geheim(k: String) = k != "tokenlimit" && GEHEIM.containsMatchIn(k.lowercase())
+    private val GEHEIM = Regex("api_key|_key$|_key_|token|secret|geheimnis|schluessel(?!_wahl)|passwort|password|sitzung|session|cookie|auffrischung|refresh|client_id|oauth|zugang|credential|auth_")
+    private fun geheim(k: String) = k in Einstellungen.GEHEIM || (k != "tokenlimit" && GEHEIM.containsMatchIn(k.lowercase()))
 
     private val sperre = Mutex()
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -87,7 +94,10 @@ object CloudSicherung {
 
     /** Merkt den in Drive gewählten Ordner dauerhaft (Freigabe überlebt Neustarts). */
     fun ordnerSetzen(c: Context, uri: Uri): Boolean = runCatching {
-        c.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        val rechte = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        c.contentResolver.takePersistableUriPermission(uri, rechte)
+        // Die Freigabe des bisherigen Ordners zurückgeben: Android begrenzt die dauerhaften Freigaben je App.
+        prefs(c).getString(K_ORDNER, null)?.let(Uri::parse)?.takeIf { it != uri }?.let { alt -> runCatching { c.contentResolver.releasePersistableUriPermission(alt, rechte) } }
         prefs(c).edit().putString(K_ORDNER, uri.toString()).commit()
     }.getOrDefault(false).also { aktualisiere(c) }
 
@@ -95,8 +105,8 @@ object CloudSicherung {
     fun starte(c: Context) {
         val app = c.applicationContext
         aktualisiere(app)
-        if (Geraet.istTablet) return
-        bereich.launch {
+        if (Geraet.istTablet || schleife?.isActive == true) return
+        schleife = bereich.launch {
             delay(5 * 60_000L)
             while (true) {
                 runCatching { if (faellig(app)) sichere(app, "täglich") }
@@ -185,12 +195,17 @@ object CloudSicherung {
             fun datei(name: String, f: File) { z.putNextEntry(ZipEntry(name).apply { time = f.lastModified() }); f.inputStream().use { it.copyTo(z) }; z.closeEntry(); anzahl++ }
             fun text(name: String, inhalt: String) { z.putNextEntry(ZipEntry(name)); z.write(inhalt.toByteArray(Charsets.UTF_8)); z.closeEntry() }
 
+            // 0. Kopf zuerst: Die Prüfung vor dem Wiederherstellen muss dann nicht das ganze Archiv entpacken.
+            text("sicherung.json", JSONObject().put("format", FORMAT).put("version", 1).put("app", BuildConfig.VERSION_NAME)
+                .put("erstellt", ZonedDateTime.now().toString()).put("geraet", Geraet.kennung)
+                .put("hinweis", "API-Schlüssel, Tokens, Passwörter und Sitzungen sind bewusst nicht enthalten.").toString(2))
+
             // 1. Alle Dateien unter files/
             val basis = c.filesDir
-            basis.walkTopDown().onEnter { it == basis || it.relativeTo(basis).invariantSeparatorsPath.substringBefore('/') !in NIE_DATEIEN }.forEach { f ->
+            basis.walkTopDown().onEnter { it == basis || !ausgelassen(it.relativeTo(basis).invariantSeparatorsPath) }.forEach { f ->
                 if (!f.isFile) return@forEach
                 val rel = f.relativeTo(basis).invariantSeparatorsPath
-                if (rel.substringBefore('/') in NIE_DATEIEN || NEBENDATEI.any { rel.endsWith(it) }) return@forEach
+                if (ausgelassen(rel) || NEBENDATEI.any { rel.endsWith(it) }) return@forEach
                 runCatching { datei("files/$rel", f) }.onFailure { Logbuch.fehler("Cloud-Sicherung: $rel", it) }
             }
 
@@ -200,7 +215,7 @@ object CloudSicherung {
                 val kopie = File(c.cacheDir, "sicherung-${db.name}")
                 kopie.delete()
                 val ok = runCatching {
-                    SQLiteDatabase.openDatabase(db.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.execSQL("VACUUM INTO ?", arrayOf(kopie.path)) }
+                    SQLiteDatabase.openDatabase(db.path, null, SQLiteDatabase.OPEN_READONLY).use { it.execSQL("VACUUM INTO ?", arrayOf(kopie.path)) }
                     kopie.length() > 0
                 }.getOrDefault(false)
                 if (ok) datei("databases/${db.name}", kopie)
@@ -210,19 +225,17 @@ object CloudSicherung {
 
             // 3. Einstellungen Wert für Wert, ohne Zugangsdaten
             val einstellungen = JSONObject()
-            var ausgelassen = 0
-            for (name in VERSCHLUESSELT) einstellungen.put(name, werte(Umzug.speicher(c, name)) { k -> Umzug.zieht(k) && !geheim(k).also { if (it) ausgelassen++ } })
+            // Ein gestörter Keystore darf die Sicherung von Dateien und Datenbanken nicht verhindern.
+            for (name in VERSCHLUESSELT) runCatching { einstellungen.put(name, werte(Umzug.speicher(c, name)) { k -> Umzug.zieht(k) && !geheim(k) }) }
+                .onFailure { Logbuch.fehler("Cloud-Sicherung: Einstellungen $name", null, it.javaClass.simpleName) }
             File(c.applicationInfo.dataDir, "shared_prefs").listFiles()?.map { it.name.removeSuffix(".xml") }
                 ?.filter { it !in NIE_SPEICHER && it !in VERSCHLUESSELT && !it.startsWith("jarvis_konten") }?.forEach { name ->
                     val sp = c.getSharedPreferences(name, Context.MODE_PRIVATE)
                     // Mit Schlüsselbund = verschlüsselter Speicher eines anderen Bereichs: nicht lesbar und nicht übertragbar.
                     if (sp.all.keys.any { it.startsWith("__androidx_security_crypto") }) return@forEach
-                    einstellungen.put(name, werte(sp) { k -> !geheim(k).also { if (it) ausgelassen++ } })
+                    einstellungen.put(name, werte(sp) { k -> !geheim(k) })
                 }
             text("einstellungen.json", einstellungen.toString())
-            text("sicherung.json", JSONObject().put("format", FORMAT).put("version", 1).put("app", BuildConfig.VERSION_NAME)
-                .put("erstellt", ZonedDateTime.now().toString()).put("geraet", Geraet.kennung).put("dateien", anzahl)
-                .put("hinweis", "API-Schlüssel, Tokens, Passwörter und Sitzungen sind bewusst nicht enthalten ($ausgelassen Werte ausgelassen).").toString(2))
         }
         return anzahl
     }
@@ -251,7 +264,7 @@ object CloudSicherung {
     fun wiederherstellenVorbereiten(c: Context, quelle: Uri, fertig: (String) -> Unit) {
         val app = c.applicationContext
         bereich.launch {
-            val ziel = File(app.noBackupFilesDir, BREIT_TEIL)
+            val ziel = File(app.noBackupFilesDir, BEREIT_TEIL)
             val meldung = runCatching {
                 app.contentResolver.openInputStream(quelle)?.use { ein -> ziel.outputStream().use { ein.copyTo(it) } } ?: error("Datei nicht lesbar")
                 val kopf = ZipInputStream(ziel.inputStream().buffered()).use { z ->
@@ -259,10 +272,13 @@ object CloudSicherung {
                 }
                 check(kopf?.optString("format") == FORMAT) { "Das ist keine Jarvis-Sicherung." }
                 check(ziel.renameTo(File(app.noBackupFilesDir, BEREIT))) { "Ließ sich nicht bereitlegen." }
-                "Sicherung vom ${kopf!!.optString("erstellt").take(16).replace('T', ' ')} wird eingespielt, Jarvis startet neu …"
+                val vom = runCatching { ZonedDateTime.parse(kopf!!.optString("erstellt")).format(DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'")) }.getOrDefault("unbekannt")
+                "Sicherung vom $vom wird eingespielt, Jarvis startet neu …"
             }.getOrElse { ziel.delete(); "Wiederherstellen nicht möglich: ${it.message}" }
             fertig(meldung)
             if (File(app.noBackupFilesDir, BEREIT).exists()) {
+                // Eine laufende Sicherung erst fertig hochladen lassen, sonst bliebe eine halbe Datei in Drive liegen.
+                sperre.lock()
                 delay(2_500)
                 Logbuch.system("Cloud-Sicherung", "Wiederherstellung bereitgelegt, Neustart")
                 app.packageManager.getLaunchIntentForPackage(app.packageName)?.let {
@@ -272,7 +288,6 @@ object CloudSicherung {
             }
         }
     }
-    private const val BREIT_TEIL = "wiederherstellung.teil"
 
     /**
      * Ganz am Anfang von [de.frank.jarvis.JarvisApplication.onCreate]: spielt eine bereitgelegte Sicherung ein, bevor Einstellungen,
@@ -284,6 +299,10 @@ object CloudSicherung {
         var dateien = 0
         try {
             val dbOrdner = c.getDatabasePath("x").parentFile!!.apply { mkdirs() }
+            // Ersetzen statt mischen: Was hier liegt und nicht in der Sicherung steht, käme sonst als zweiter Stand dazu.
+            // Das Logbuch bleibt (gehört nie zur Sicherung), die verschlüsselten Speicher bekommen ihre Werte unten.
+            c.filesDir.listFiles()?.filter { it.name != "logbuch" }?.forEach { it.deleteRecursively() }
+            dbOrdner.listFiles()?.forEach { it.delete() }
             var einstellungen: JSONObject? = null
             ZipInputStream(bereit.inputStream().buffered()).use { z ->
                 while (true) {
@@ -324,10 +343,12 @@ object CloudSicherung {
                 File(c.filesDir, "umzug.json").writeText(umzug.toString())
             }
             Logbuch.system("Cloud-Sicherung", "Wiederhergestellt: $dateien Dateien. API-Schlüssel und Zugänge bitte neu eintragen.")
-        } catch (e: Exception) {
-            Logbuch.fehler("Cloud-Sicherung: Wiederherstellen", e)
-        } finally {
             bereit.delete()
+        } catch (e: Exception) {
+            // Die Sicherung bleibt erhalten, damit Frank sie erneut wählen oder von Hand einspielen kann.
+            Logbuch.fehler("Cloud-Sicherung: Wiederherstellen", e, "Sicherung liegt unter no_backup/$GESCHEITERT")
+            File(c.noBackupFilesDir, GESCHEITERT).delete()
+            if (!bereit.renameTo(File(c.noBackupFilesDir, GESCHEITERT))) bereit.delete()
         }
     }
 
