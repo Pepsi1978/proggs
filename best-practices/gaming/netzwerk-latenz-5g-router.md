@@ -1,6 +1,6 @@
 # Online-Gaming über 5G-Router: Ping, Jitter, Paketverlust — Best Practices
 
-> Stand: 17.11.2026 17:54 · Versions-Anker: Tenda 5G03 Firmware V05.03.01.26_multi, O2 Deutschland 5G SA (N28 + zeitweise N78), Windows 11 Build 26200, Intel AX201 Treiber 23.170.0.1 (aktuell 24.80.0.2), Gaming Services 39.118.30001.0, CoD MW4 (Steam)
+> Stand: 18.11.2026 17:44 · Versions-Anker: Tenda 5G03 Firmware V05.03.01.26_multi, O2 Deutschland 5G SA (N28 + zeitweise N78), Windows 11 Build 26200, Intel AX201 Treiber 23.170.0.1 (aktuell 24.80.0.2), Gaming Services 39.118.30001.0, CoD MW4 (Steam)
 > Anlass: Franks Spiel-PC (MSI MS-7D32, RTX 5090) — CoD-Telemetrie zeigt hohen Ping, Paketverlust, Latenzschwankung
 > Gegenstück: `bugs/gaming/netzwerk-latenz-5g-router.md` · Kurzcheck: `netzwerk-latenz-5g-router-kurzcheck.md` · Rohrecherchen: `recherchen/netzwerk-latenz-5g/` (8 Sonnet-Researcher)
 
@@ -32,3 +32,9 @@
 ## 5. O2
 - APN Vertrag `internet`, Prepaid `pinternet.interkom.de`; kein Low-Latency-APN. IPv6 eingehend geblockt.
 - Berlin: seit 05/2026 bekannte O2-Zellprobleme mit Paketverlust (O2-Community, ohne Lösung). Vergleich mit Telekom/Vodafone-Test-SIM im selben Router lohnt.
+
+## 6. Messung 18.11.2026 (Mitschnitt im Spiel, 2 × 40 min)
+- Netzart nach **SINR/CQI** wählen, nicht nach Balken: SA N28 SINR 19 dB → Ping Median 15–18 ms (bester Wert); 4G B3+B1 SINR 27 dB → 21–34 ms; SA/NSA bei SINR ≤ 2 dB → Median 50 ms, 18 % über 100 ms. Dieselbe N28-Zelle fiel binnen 20 min von SINR 19 auf −1 dB (Almanach B7b) → vor jedem Spielabend Statusseite prüfen. `extern` (eigene Messung)
+- Mast zur Zelle finden: eNodeB = ECI / 256 (Rest = Zellnummer), dann `https://api.cellmapper.net/v6/getTowerInformation?MCC=262&MNC=3&Region=0&Site=<eNodeB>&RAT=LTE` (ohne Login abrufbar, Region=0 genügt), Gegenprobe per OSM/Nominatim (Turm-Node in der Nähe). Band nur über EARFCN bestimmen, die Zellnummer kodiert es bei O2 nicht verlässlich. `extern` https://www.cellmapper.net
+- Restbandbreite am PC: CoD lädt nach dem Start ~15 min Inhalte per HTTP nach (trotz Texturstreaming Minimal), Steam Shader Pre-Caching lädt beim Spielstart (`*.steamcontent.com`) → in Steam ausschalten. KI-CLIs während eines Matches nicht nutzen (Upload je Antwort).
+- Speed: N28 (10 MHz) schafft ~3 MB/s (28 Mbit/s); für 20 MB/s braucht es N78 oder 4G-Carrier-Aggregation.
