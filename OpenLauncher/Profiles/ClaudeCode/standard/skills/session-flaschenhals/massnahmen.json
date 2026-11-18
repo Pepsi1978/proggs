@@ -80,7 +80,7 @@
       "id": "M5",
       "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
       "datum": "2026-11-08T23:19",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf.",
       "ort": [
         "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN)"
@@ -114,7 +114,7 @@
       "id": "M7",
       "titel": "Versionslog-Eintrag per Skript statt handgesetzter Nummer",
       "datum": "2026-11-10T16:33",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung b4be088d: versionCode 620 von Hand gesetzt, eine parallele Sitzung hatte 620 schon vergeben; Build rot, aber im selben Befehl committet und gepusht, Korrektur-Commit nötig (~2 min).",
       "ort": [
         "Werkzeuge/versionslog/eintrag.py",
@@ -147,7 +147,7 @@
       "id": "M9",
       "titel": "Fremde halbfertige App-Änderungen: sofort im Worktree bauen",
       "datum": "2026-11-11T14:28",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung 2f166e55: Jarvis-Bau im Arbeitsbaum scheiterte zweimal (2.2 min + 76 s) an der unfertigen Biomarker-Integration einer Parallelsitzung (?? bio/, M build.gradle.kts); im Worktree danach grün.",
       "ort": [
         "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md"
@@ -216,7 +216,7 @@
       "id": "M13",
       "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
       "datum": "2026-11-11T17:43",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf.",
       "ort": [
         "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
@@ -233,7 +233,7 @@
       "id": "M14",
       "titel": "jarvis-install bricht vor dem Hochladen ab, wenn am Gerät schon eine neuere Fassung ist",
       "datum": "2026-11-11T17:52",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung 6fc10676: 140-MB-APK (versionCode 638) über WLAN hochgeladen und gefragt, dann INSTALL_FAILED_VERSION_DOWNGRADE, weil eine parallele Sitzung schon 639 installiert hatte (~4 min).",
       "ort": [
         "Werkzeuge/jarvis-install/jarvis-install.ps1 (Versionsprüfung vor dem Hochladen)",
@@ -325,7 +325,7 @@
       "id": "M19",
       "titel": "Kotlin: /* in KDoc öffnet verschachtelten Kommentar (Unclosed comment)",
       "datum": "2026-11-12T10:53",
-      "status": "aktiv",
+      "status": "wirkt",
       "beleg": "Sitzung c46c6c99: KDoc mit `files/stimmproben/*.pcm` brach den Build (Unclosed comment, Missing '}'), ein Bauzyklus von etwa 50 s verloren.",
       "ort": [
         "bugs/android/kotlin-kurzcheck.md"
