@@ -6,7 +6,7 @@ $zuletzt = Join-Path $daten 'umschalten.zeit'
 $log   = Join-Path $daten 'waechter.log'
 New-Item -ItemType Directory -Force $daten | Out-Null
 
-$textAn  = 'Jetzt AN. Mit Steam pausieren Store, Xbox und Google Drive. Im Spiel haben nur das Spiel, Steam, Chrome und das Heimnetz Internet.'
+$textAn  = 'Jetzt AN. Mit Steam pausieren Store, Xbox und Google Drive. Im Spiel haben nur Spiel, Steam, Chrome, Heimnetz, Ping und die Programmier-CLIs Internet.'
 $textAus = 'Jetzt AUS. Store, Xbox, Google Drive und Internet laufen ganz normal.'
 
 # Only one toggle at a time: overlapping launches (fast repeated clicks) must not both toggle.

@@ -2,15 +2,21 @@
 # Windows 11 often swallows NotifyIcon balloons, so a small own window is used instead.
 # The window never takes focus (WS_EX_NOACTIVATE), so a fullscreen game is not interrupted.
 # Usage: meldung.ps1 -Text "..." [-Farbe an|aus|info]
-param([string]$Text = 'Spielmodus', [string]$Farbe = 'info')
+#        meldung.ps1 -Bauen <dll>   (einrichten.ps1: compile the window class once, next to the scripts)
+param([string]$Text = 'Spielmodus', [string]$Farbe = 'info', [string]$Bauen)
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+$dll = Join-Path $PSScriptRoot 'meldung.dll'
+if (-not $Bauen -and -not ('Spielmodus.StillesFenster' -as [type]) -and (Test-Path -LiteralPath $dll)) {
+    try { Add-Type -Path $dll -ErrorAction Stop } catch { }   # prebuilt: no compile per message
+}
 if (-not ('Spielmodus.StillesFenster' -as [type])) {
     $refs = @([System.Windows.Forms.Form].Assembly.Location, [System.Drawing.Color].Assembly.Location,
         [System.ComponentModel.Component].Assembly.Location) +
         @([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -in 'System.Windows.Forms.Primitives', 'System.Drawing.Primitives', 'System.ComponentModel.Primitives', 'System.Runtime', 'System.Private.Windows.Core' } | ForEach-Object Location)
-    Add-Type -ReferencedAssemblies ($refs | Sort-Object -Unique) -TypeDefinition @'
+    $extra = if ($Bauen) { @{ OutputAssembly = $Bauen; OutputType = 'Library' } } else { @{} }
+    Add-Type -ReferencedAssemblies ($refs | Sort-Object -Unique) @extra -TypeDefinition @'
 namespace Spielmodus {
     public class StillesFenster : System.Windows.Forms.Form {
         protected override bool ShowWithoutActivation { get { return true; } }
@@ -25,6 +31,7 @@ namespace Spielmodus {
 }
 '@
 }
+if ($Bauen) { exit }
 
 $hinter = switch ($Farbe) {
     'an'    { [System.Drawing.Color]::FromArgb(22, 128, 61) }
