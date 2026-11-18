@@ -43,26 +43,28 @@ final class ModelRegistry {
     }
 
     private static let gpt56Models: [(slug: String, displayName: String)] = [
-        ("gpt-6-astra", "GPT-6 Astra"),
-        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.2-astra", "GPT-6.2 Astra"),
+        ("gpt-6.2-sol", "GPT-6.2 Sol"),
         ("gpt-6.1-terra", "GPT-6.1 Terra"),
         (gpt56TerraSlug, "GPT-5.6 Terra"),
         ("gpt-6-luna", "GPT-6 Luna")
     ]
 
     /// GPT-6-Modelle, die einmalig nachgetragen werden. Sie stehen (noch) nicht nativ im
-    /// OpenCode-Katalog und laufen deshalb wie GPT-6 Astra als Direktmodell (isUserDefined),
+    /// OpenCode-Katalog und laufen deshalb wie GPT-6.2 Astra als Direktmodell (isUserDefined),
     /// damit configureProvider den provider.openai.models-Eintrag schreibt.
     private static let gpt6Models: [(slug: String, displayName: String)] = [
-        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.2-sol", "GPT-6.2 Sol"),
         ("gpt-6.1-terra", "GPT-6.1 Terra"),
         ("gpt-6-luna", "GPT-6 Luna")
     ]
 
-    /// GPT-6.1 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
+    /// GPT-6.2 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
     /// (Merker: neuer Slug in knownSyncedModelSlugs), damit er nicht doppelt erscheint.
     private static let gpt6Migrations: [(oldSlug: String, newSlug: String, displayName: String)] = [
-        ("gpt-6-sol", "gpt-6.1-sol", "GPT-6.1 Sol")
+        ("gpt-6-sol", "gpt-6.2-sol", "GPT-6.2 Sol"),
+        ("gpt-6.1-sol", "gpt-6.2-sol", "GPT-6.2 Sol"),
+        ("gpt-6-astra", "gpt-6.2-astra", "GPT-6.2 Astra")
     ]
 
     static let moonshotGroupId = "moonshot"
@@ -617,8 +619,8 @@ final class ModelRegistry {
                 model("north-mini-code-free", "North Mini Code Free", "opencode", "OpenCode Zen")
             ]),
             createGroup("openai", "OpenAI", "openai", "OpenAI", [
-                model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
-                model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
+                model("gpt-6.2-astra", "GPT-6.2 Astra", "openai", "OpenAI"),
+                model("gpt-6.2-sol", "GPT-6.2 Sol", "openai", "OpenAI"),
                 model("gpt-6.1-terra", "GPT-6.1 Terra", "openai", "OpenAI"),
                 model(gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
                 model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI")

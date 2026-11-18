@@ -8,7 +8,7 @@ namespace OpenLauncher.Services;
 /// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER]
 /// [--cli claude|codex|opencode|kimi|antigravity] [--anbieter openai]</c>. Ab 1.24.111 jedes Modell aus dem Angebot:
 /// --anbieter wählt bei OpenCode die Modellgruppe, kimi und antigravity starten wie die CLI-Kacheln.
-/// Mit --cli codex (etwa --modell gpt-6.1-sol) startet stattdessen das Codex CLI wie der Startknopf, ohne Remote Control;
+/// Mit --cli codex (etwa --modell gpt-6.2-sol) startet stattdessen das Codex CLI wie der Startknopf, ohne Remote Control;
 /// mit --cli opencode OpenCode mit openai/&lt;modell&gt; (ab 1.24.99).
 /// Mit --auftrag-id bekommt die Sitzung die Jarvis-Hooks (Fortschritt und Rückfragen in den Jarvis-Chat).
 /// Startet genau wie der Startknopf eine Claude-Code-Sitzung (Profil-Ordner, aktive CLAUDE.md mit Modus, Modell,

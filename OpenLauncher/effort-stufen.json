@@ -75,7 +75,7 @@
                                             "xhigh",
                                             "max"
                                         ],
-    "openai/gpt-6.1-sol [codex]":  [
+    "openai/gpt-6.2-sol [codex]":  [
                                        "low",
                                        "medium",
                                        "high",
@@ -83,7 +83,7 @@
                                        "max",
                                        "ultra"
                                    ],
-    "openai/gpt-6.1-sol [opencode]":  [
+    "openai/gpt-6.2-sol [opencode]":  [
                                           "low",
                                           "medium",
                                           "high",
@@ -107,14 +107,14 @@
                                             "max",
                                             "ultra"
                                         ],
-    "openai/gpt-6-astra":  [
+    "openai/gpt-6.2-astra":  [
                                "low",
                                "medium",
                                "high",
                                "xhigh",
                                "max"
                            ],
-    "openai/gpt-6-astra [codex]":  [
+    "openai/gpt-6.2-astra [codex]":  [
                                        "low",
                                        "medium",
                                        "high",
@@ -122,7 +122,7 @@
                                        "max",
                                        "ultra"
                                    ],
-    "openai/gpt-6-astra [opencode]":  [
+    "openai/gpt-6.2-astra [opencode]":  [
                                           "low",
                                           "medium",
                                           "high",

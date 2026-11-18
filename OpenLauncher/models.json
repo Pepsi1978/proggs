@@ -67,8 +67,8 @@
         "IsUserDefined": true,
         "ProviderId": "openai",
         "ProviderName": "OpenAI",
-        "Slug": "gpt-6-astra",
-        "DisplayName": "GPT-6 Astra",
+        "Slug": "gpt-6.2-astra",
+        "DisplayName": "GPT-6.2 Astra",
         "IsHidden": false
       },
       {
@@ -76,8 +76,8 @@
         "IsUserDefined": true,
         "ProviderId": "openai",
         "ProviderName": "OpenAI",
-        "Slug": "gpt-6.1-sol",
-        "DisplayName": "GPT-6.1 Sol",
+        "Slug": "gpt-6.2-sol",
+        "DisplayName": "GPT-6.2 Sol",
         "IsHidden": false
       },
       {
@@ -110,8 +110,8 @@
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
-      "gpt-6-astra",
-      "gpt-6.1-sol",
+      "gpt-6.2-astra",
+      "gpt-6.2-sol",
       "gpt-6.1-terra",
       "gpt-5.6-terra",
       "gpt-6-luna"

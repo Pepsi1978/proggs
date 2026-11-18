@@ -57,8 +57,8 @@ public sealed class ModelRegistry
 
     private static readonly (string Slug, string DisplayName)[] Gpt56Models =
     [
-        ("gpt-6-astra", "GPT-6 Astra"),
-        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.2-astra", "GPT-6.2 Astra"),
+        ("gpt-6.2-sol", "GPT-6.2 Sol"),
         ("gpt-6.1-terra", "GPT-6.1 Terra"),
         (Gpt56TerraSlug, "GPT-5.6 Terra"),
         ("gpt-6-luna", "GPT-6 Luna"),
@@ -66,23 +66,25 @@ public sealed class ModelRegistry
 
     /// <summary>
     /// GPT-6-Modelle, die einmalig nachgetragen werden. Sie stehen (noch) nicht nativ im
-    /// OpenCode-Katalog und laufen deshalb wie GPT-6 Astra als Direktmodell (IsUserDefined),
+    /// OpenCode-Katalog und laufen deshalb wie GPT-6.2 Astra als Direktmodell (IsUserDefined),
     /// damit ConfigureProvider den provider.openai.models-Eintrag schreibt.
     /// </summary>
     private static readonly (string Slug, string DisplayName)[] Gpt6Models =
     [
-        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.2-sol", "GPT-6.2 Sol"),
         ("gpt-6.1-terra", "GPT-6.1 Terra"),
         ("gpt-6-luna", "GPT-6 Luna"),
     ];
 
     /// <summary>
-    /// GPT-6.1 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
+    /// GPT-6.2 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
     /// (Merker: neuer Slug in KnownSyncedModelSlugs), damit er nicht doppelt erscheint.
     /// </summary>
     private static readonly (string OldSlug, string NewSlug, string DisplayName)[] Gpt6Migrations =
     [
-        ("gpt-6-sol", "gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-sol", "gpt-6.2-sol", "GPT-6.2 Sol"),
+        ("gpt-6.1-sol", "gpt-6.2-sol", "GPT-6.2 Sol"),
+        ("gpt-6-astra", "gpt-6.2-astra", "GPT-6.2 Astra"),
     ];
 
     /// <summary>
@@ -724,8 +726,8 @@ public sealed class ModelRegistry
         }),
         CreateGroup("openai", "OpenAI", "openai", "OpenAI", new[]
         {
-            Model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
-            Model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
+            Model("gpt-6.2-astra", "GPT-6.2 Astra", "openai", "OpenAI"),
+            Model("gpt-6.2-sol", "GPT-6.2 Sol", "openai", "OpenAI"),
             Model("gpt-6.1-terra", "GPT-6.1 Terra", "openai", "OpenAI"),
             Model(Gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
             Model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI"),
