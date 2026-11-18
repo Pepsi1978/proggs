@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.3.0 · Stand 18.11.2026, 14:42 Uhr
+Version 1.3.1 · Stand 18.11.2026, 14:43 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -27,7 +27,8 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
   Alles andere hat im Spiel kein Internet, auch Claude Code, Jarvis-PC-Brücke, WireGuard und Discord.
   20 s nach Spielende ist alles wieder offen. Nach einem Absturz stellt der Wächter beim Start zurück.
 - **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
-  und meldet per Windows-Mitteilung, ob der Spielmodus jetzt AN oder AUS ist (`meldung.ps1`).
+  und zeigt unten rechts ein eigenes Statusfenster (grün = AN, grau = AUS, 5 s, Klick schließt; `meldung.ps1`).
+  Die Windows-Sprechblase wurde unter Windows 11 verschluckt. Ein zweiter Klick innerhalb von 3 s schaltet nicht zurück.
 - **Steam-Start:** Der Wächter meldet beim Start von Steam per Mitteilung, ob der Spielmodus AN oder AUS ist.
 - **Einrichtung** (`einrichten.ps1 [-TreiberZip <zip>]`, hebt sich selbst auf Admin):
   Store-Automatikupdates aus (`AutoDownload=2`, Wirkung unter Windows 11 Home unbelegt), Übermittlungsoptimierung

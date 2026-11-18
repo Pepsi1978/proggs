@@ -256,8 +256,8 @@ while ($true) {
 
     $steamJetzt = $laeuft -contains 'steam'
     if ($steamJetzt -and -not $steamLief) {
-        if ($aus) { Show-Meldung 'Steam gestartet: Spielmodus ist AUS. Store und Xbox-Downloads sind nicht gesperrt.' }
-        else      { Show-Meldung 'Steam gestartet: Spielmodus ist AN. Store und Xbox-Downloads sind gesperrt.' }
+        if ($aus) { Show-Meldung 'Steam gestartet: Spielmodus ist AUS. Store, Xbox und Google Drive laufen normal.' }
+        else      { Show-Meldung 'Steam gestartet: Spielmodus ist AN. Store, Xbox und Google Drive pausieren.' }
         Write-Log ('Steam-Start gemeldet (Spielmodus ' + $(if ($aus) { 'AUS' } else { 'AN' }) + ')')
     }
     $steamLief = $steamJetzt
