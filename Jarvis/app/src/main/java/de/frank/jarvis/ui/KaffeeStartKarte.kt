@@ -190,13 +190,27 @@ fun KaffeeStartKarte(griff: Modifier = Modifier) {
                 var wach by remember { mutableStateOf(e.kaffeeWachHalten) }
                 var von by remember { mutableStateOf(e.kaffeeWachVon) }
                 var bis by remember { mutableStateOf(e.kaffeeWachBis) }
+                var nachWecker by remember { mutableStateOf(e.kaffeeWachNachWecker) }
                 Text("Wach halten (kein Spülen vor dem Kaffee)", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     KaffeeKnopf("Aus", Modifier.weight(1f), aktiv = !wach) { wach = false; e.kaffeeWachHalten = false }
                     KaffeeKnopf("An", Modifier.weight(1f), aktiv = wach) { wach = true; e.kaffeeWachHalten = true }
-                    KaffeeKnopf("ab $von Uhr", Modifier.weight(1f)) { von = (von + 1) % 24; e.kaffeeWachVon = von }
+                    if (!nachWecker) KaffeeKnopf("ab $von Uhr", Modifier.weight(1f)) { von = (von + 1) % 24; e.kaffeeWachVon = von }
                     KaffeeKnopf("bis $bis Uhr", Modifier.weight(1f)) { bis = (bis + 1) % 24; e.kaffeeWachBis = bis }
                 }
+                // Start mit dem Wecker: Tagschicht-, Nachtschicht- oder sonst der eingeschaltete Wecker von heute.
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    KaffeeKnopf("Feste Uhrzeit", Modifier.weight(1f), aktiv = !nachWecker) { nachWecker = false; e.kaffeeWachNachWecker = false }
+                    KaffeeKnopf("Ab meinem Wecker", Modifier.weight(1f), aktiv = nachWecker) { nachWecker = true; e.kaffeeWachNachWecker = true }
+                }
+                var startText by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(nachWecker, von, bis, wach) {
+                    startText = runCatching { Kaffeemaschine.wachFenster(c) }.getOrNull()?.let { (start, ende) ->
+                        val uhr = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                        "Heute an ab ${start.zeit.format(uhr)} Uhr (${start.grund}) bis ${ende.format(uhr)} Uhr" + (if (ende.toLocalDate() != start.zeit.toLocalDate()) " am nächsten Tag" else "") + "."
+                    } ?: if (nachWecker) "Heute klingelt kein eingeschalteter Wecker mehr." else null
+                }
+                if (wach) startText?.let { Text(it, color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
                 Text(
                     "Länger als 3 Stunden bleibt die Soul allein nicht an. Mit „Wach halten“ schickt Jarvis im Zeitfenster stündlich ein Signal, dann bleibt sie bereit. " +
                         "Schläft sie doch, weckt Jarvis sie bei „Mach mir einen Kaffee“ nur auf und meldet sich, wenn das Spülen vorbei ist. Uhrzeiten: antippen zählt eine Stunde weiter.",

@@ -285,7 +285,9 @@ object Kaffeemaschine {
         fun u(i: Int) = if (i < inhalt.size) inhalt[i].toInt() and 0xFF else 0
         // Frisch nur, wenn der Rahmen neu ist und der Zeitstempel der Maschine zu jetzt passt.
         val frisch = mon.zeit != vorher.zeit || (a.zeit > 0 && kotlin.math.abs(System.currentTimeMillis() / 1000 - a.zeit) < 20)
-        return Monitor(u(5), u(6), u(3) or (u(4) shl 8) or (u(8) shl 16) or (u(9) shl 24), frisch)
+        // Im Standby (0) stehen in den Meldungsbytes Altwerte (gesehen: „Wassertank leer“ bei vollem Tank); dann keine Meldungen auswerten.
+        val bits = if (u(5) == 0) 0 else u(3) or (u(4) shl 8) or (u(8) shl 16) or (u(9) shl 24)
+        return Monitor(u(5), u(6), bits, frisch)
     }
 
     suspend fun zustand(context: Context): Zustand = withContext(Dispatchers.IO) {
@@ -340,7 +342,8 @@ object Kaffeemaschine {
         sperre.withLock {
             if (!online(context)) throw Fehler("Die Kaffeemaschine ist offline.")
             befehl(context, 0x84, 0x0f, byteArrayOf(1, 1))
-            "Die Kaffeemaschine spült und geht in Standby."
+            manuellAus(context)
+            "Die Kaffeemaschine spült und geht in Standby" + (if (de.frank.jarvis.data.Einstellungen.get(context.applicationContext).kaffeeWachHalten) "; Jarvis weckt sie heute nicht mehr von selbst." else ".")
         }
     }
 
@@ -441,36 +444,103 @@ object Kaffeemaschine {
 
     // ---- Wach halten ----
     private const val WACH_PREFS = "kaffee_wach"
-    /** Ein Signal je Stunde genügt: Die Abschaltzeit (höchstens 3 Stunden) beginnt mit jedem Signal neu (Test vom 18.11.2026 mit 15 Minuten). */
-    private const val WACH_ABSTAND_MS = 60 * 60_000L
+    /**
+     * Alle 10 Minuten ein Signal: Ein Test am 18.11.2026 zeigte, dass das Signal die Abschaltzeit zurücksetzt, aber nicht jedes zählt
+     * (bei 15 Minuten ging sie 15 Minuten nach einem Signal trotz späterer aus). Zehn Minuten liegen weit unter den eingestellten 3 Stunden.
+     */
+    private const val WACH_ABSTAND_MS = 10 * 60_000L
+    /** Höchstens so oft weckt Jarvis die Maschine am Tag wieder auf, wenn sie im Fenster doch ausgegangen ist (jedes Wecken spült). */
+    private const val WACH_MAX_WECKEN = 3
+
+    /** Start des Wachfensters heute: laut Wecker (nach Dienst gewählt) oder die eingestellte volle Stunde. */
+    data class WachStart(val zeit: java.time.LocalDateTime, val grund: String)
+
+    @Volatile private var weckerCache: Pair<Long, WachStart?>? = null
 
     /**
-     * Aus der Minutenrunde des Wächters, nur am Handy: Ist „wach halten“ an, schickt Jarvis im gewählten Zeitfenster stündlich dasselbe Signal wie die
-     * Coffee-Link-App beim Verbinden (Profil 1 wählen). Das setzt die automatische Abschaltung zurück. Zu Beginn des Fensters weckt Jarvis eine schlafende
-     * Maschine einmal auf (sie spült dabei ins Abtropfgitter); hat Frank sie danach selbst ausgeschaltet, bleibt sie bis zum nächsten Tag aus.
+     * Der Wecker, der heute klingelt und eingeschaltet ist. Tagschicht: der Tagschicht-Wecker, Nachtschicht: der Nachtschicht-Wecker, sonst der früheste
+     * andere (etwa der Sonnenaufgangswecker). Klingelt heute keiner, gibt es keinen Start laut Wecker.
+     */
+    suspend fun weckerStart(context: Context, frisch: Boolean = false): WachStart? {
+        weckerCache?.let { (wann, wert) -> if (!frisch && System.currentTimeMillis() - wann < 10 * 60_000L) return wert }
+        val app = context.applicationContext
+        val heute = java.time.LocalDate.now()
+        val liste = de.frank.jarvis.faehigkeit.Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.WeckerFaehigkeit>().firstOrNull()?.weckerRoh()
+            ?: return weckerCache?.second
+        data class W(val name: String, val zeit: java.time.LocalDateTime)
+        val heutige = (0 until liste.length()).mapNotNull { i ->
+            val w = liste.optJSONObject(i) ?: return@mapNotNull null
+            if (!w.optBoolean("aktiv") || w.isNull("naechstes_klingeln")) return@mapNotNull null
+            val z = runCatching { java.time.LocalDateTime.parse(w.optString("naechstes_klingeln").take(16)) }.getOrNull() ?: return@mapNotNull null
+            if (z.toLocalDate() != heute) null else W(w.optString("name"), z)
+        }.sortedBy { it.zeit }
+        val art = runCatching {
+            de.frank.jarvis.faehigkeit.Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.KalenderFaehigkeit>().firstOrNull()?.schichten(heute, 1)?.get(heute)?.first
+        }.getOrNull()
+        fun hat(w: W, wort: String) = w.name.lowercase(Locale.GERMANY).contains(wort)
+        val gewaehlt = when (art) {
+            "tag" -> heutige.firstOrNull { hat(it, "tag") }
+            "nacht" -> heutige.firstOrNull { hat(it, "nacht") }
+            else -> null
+        } ?: heutige.firstOrNull { !hat(it, "tagschicht") && !hat(it, "nachtschicht") } ?: heutige.firstOrNull()
+        // Nach dem Klingeln zeigt der Wecker schon auf morgen: Den heutigen Start merken, damit das Fenster trotzdem öffnet.
+        val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
+        val ergebnis = gewaehlt?.let { WachStart(it.zeit, "Wecker „${it.name}“") }?.also { p.edit().putString("weckerZeit", it.zeit.toString()).putString("weckerGrund", it.grund).apply() }
+            ?: runCatching { java.time.LocalDateTime.parse(p.getString("weckerZeit", "")) }.getOrNull()?.takeIf { it.toLocalDate() == heute }
+                ?.let { WachStart(it, p.getString("weckerGrund", "Wecker").orEmpty()) }
+        weckerCache = System.currentTimeMillis() to ergebnis
+        return ergebnis
+    }
+
+    /** Start heute (Wecker oder feste Stunde) und das Ende: die „bis“-Stunde danach, notfalls am nächsten Tag. */
+    suspend fun wachFenster(context: Context): Pair<WachStart, java.time.LocalDateTime>? {
+        val e = de.frank.jarvis.data.Einstellungen.get(context.applicationContext)
+        val heute = java.time.LocalDate.now()
+        val start = if (e.kaffeeWachNachWecker) weckerStart(context) ?: return null
+            else WachStart(heute.atTime(e.kaffeeWachVon, 0), "fest ab ${e.kaffeeWachVon} Uhr")
+        var ende = start.zeit.toLocalDate().atTime(e.kaffeeWachBis, 0)
+        if (!ende.isAfter(start.zeit)) ende = ende.plusDays(1)
+        return start to ende
+    }
+
+    /** Frank hat die Maschine über Jarvis ausgeschaltet: heute nicht wieder wecken. */
+    private fun manuellAus(context: Context) {
+        context.applicationContext.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE).edit().putString("aus", java.time.LocalDate.now().toString()).apply()
+    }
+
+    /**
+     * Aus der Minutenrunde des Wächters, nur am Handy: Ist „wach halten“ an, weckt Jarvis die Maschine zum Start des Fensters (laut Wecker oder feste
+     * Stunde; sie spült dabei ins Abtropfgitter) und hält sie bis zum Ende mit einem Signal alle 10 Minuten an, wie es die Coffee-Link-App beim
+     * Verbinden schickt (Profil 1 wählen). Geht sie im Fenster doch aus, weckt Jarvis sie bis zu dreimal am Tag wieder; nach „Ausschalten“ über Jarvis nicht.
      */
     suspend fun wachHalten(context: Context) = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         val e = de.frank.jarvis.data.Einstellungen.get(app)
         if (!e.kaffeeWachHalten || de.frank.jarvis.data.Geraet.istTablet || !konfiguriert(app)) return@withContext
-        val stunde = java.time.LocalTime.now().hour
-        val imFenster = if (e.kaffeeWachVon <= e.kaffeeWachBis) stunde in e.kaffeeWachVon until e.kaffeeWachBis else stunde >= e.kaffeeWachVon || stunde < e.kaffeeWachBis
-        if (!imFenster) return@withContext
         val p = app.getSharedPreferences(WACH_PREFS, Context.MODE_PRIVATE)
-        val jetzt = System.currentTimeMillis()
-        if (jetzt - p.getLong("zuletzt", 0L) in 0 until WACH_ABSTAND_MS) return@withContext
+        val jetzt = java.time.LocalDateTime.now()
+        val heute = jetzt.toLocalDate().toString()
+        // Ein neues Fenster öffnet sich, sobald der heutige Start erreicht ist; ein über Mitternacht laufendes gilt bis zu seinem gespeicherten Ende.
+        val fenster = runCatching { wachFenster(app) }.getOrNull()
+        if (fenster != null && !jetzt.isBefore(fenster.first.zeit) && jetzt.isBefore(fenster.second) && p.getString("fenster", "") != fenster.first.zeit.toString()) {
+            p.edit().putString("fenster", fenster.first.zeit.toString()).putString("ende", fenster.second.toString()).putLong("zuletzt", 0L).apply()
+        }
+        val ende = runCatching { java.time.LocalDateTime.parse(p.getString("ende", "")) }.getOrNull() ?: return@withContext
+        if (!jetzt.isBefore(ende)) return@withContext
+        if (System.currentTimeMillis() - p.getLong("zuletzt", 0L) in 0 until WACH_ABSTAND_MS) return@withContext
         if (!sperre.tryLock()) return@withContext
         try {
-            p.edit().putLong("zuletzt", jetzt).apply()
+            p.edit().putLong("zuletzt", System.currentTimeMillis()).apply()
             if (!online(app)) return@withContext
             val m = monitor(app)
-            val heute = java.time.LocalDate.now().toString()
             if (m.frisch && (m.status == 0 || m.status == 2)) {
-                if (p.getString("geweckt", "") != heute) { befehl(app, 0x84, 0x0f, byteArrayOf(2, 1)); p.edit().putString("geweckt", heute).apply() }
-            } else {
-                befehl(app, 0xa9, 0xf0, byteArrayOf(1))
-                p.edit().putString("geweckt", heute).apply()
-            }
+                val geweckt = if (p.getString("weckTag", "") == heute) p.getInt("weckAnzahl", 0) else 0
+                if (p.getString("aus", "") != heute && geweckt < WACH_MAX_WECKEN) {
+                    befehl(app, 0x84, 0x0f, byteArrayOf(2, 1))
+                    p.edit().putString("weckTag", heute).putInt("weckAnzahl", geweckt + 1).apply()
+                    de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "geweckt (${geweckt + 1}. Mal heute)")
+                }
+            } else befehl(app, 0xa9, 0xf0, byteArrayOf(1))
         } catch (_: Exception) {
         } finally { sperre.unlock() }
     }

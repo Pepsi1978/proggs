@@ -33,6 +33,9 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
     /** Alle Wecker als kurzer Text, für Tagesdatenbank und Live-Gedächtnis. [mitJetzt] = false lässt die Uhrzeit weg, damit gleiche Wecker gleich aussehen. */
     suspend fun ueberblick(mitJetzt: Boolean = true): String = rufe("lesen", JSONObject()).let { a -> a.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: liste(a, mitJetzt) }
 
+    /** Rohliste der Wecker aus Genialer Wecker (id, name, uhrzeit, aktiv, naechstes_klingeln …); null, wenn die App nicht erreichbar ist. */
+    suspend fun weckerRoh(): JSONArray? = rufe("lesen", JSONObject()).let { if (it.optString("fehler").isNotEmpty()) null else it.optJSONArray("wecker") }
+
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
             name = "wecker_lesen",

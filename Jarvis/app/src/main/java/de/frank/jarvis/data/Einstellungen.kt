@@ -260,6 +260,8 @@ class Einstellungen private constructor(context: Context) {
     /** Darf Jarvis fehlende Helfer selbst bauen lassen? Aus = pausiert; fertige Helfer bleiben nutzbar. */
     /** Kaffeemaschine im Zeitfenster wach halten (stündliches Signal), damit ein Kaffee ohne Aufwach-Spülung kommt. */
     var kaffeeWachHalten: Boolean get() = prefs.getBoolean("kaffee_wach_halten", false); set(v) = put { putBoolean("kaffee_wach_halten", v) }
+    /** Wachfenster beginnt mit dem heutigen Wecker (nach Dienst gewählt) statt zur festen Stunde. */
+    var kaffeeWachNachWecker: Boolean get() = prefs.getBoolean("kaffee_wach_nach_wecker", false); set(v) = put { putBoolean("kaffee_wach_nach_wecker", v) }
     var kaffeeWachVon: Int get() = prefs.getInt("kaffee_wach_von", 6).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_von", v.coerceIn(0, 23)) }
     var kaffeeWachBis: Int get() = prefs.getInt("kaffee_wach_bis", 22).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_bis", v.coerceIn(0, 23)) }
     var helferAutomatik: Boolean get() = prefs.getBoolean("helfer_automatik", true); set(v) = put { putBoolean("helfer_automatik", v) }
