@@ -51,6 +51,7 @@
 - Messung 18.11.2026, 5G SA N28, NR-Zelle 6881771692: 17:23 RSRP −63 dBm / SINR 19 dB / CQI 14 (Ping Median 15–18 ms) → 17:41 RSRP −96 dBm / SINR −1 dB / CQI 8. Gleichzeitig bot das Netz wechselnde Kombinationen an (B7+B1, N28+B7 NSA, B1+B20, B3+B1).
 - 17:44 wieder RSRP −63 dBm / SINR 22 dB / CQI 14 — **ohne Neueinwahl** (gleiche WAN-IP, gleiche Zelle) und parallel auf Franks Handy 5 → 0–1 → 5 Balken. Beleg: Leistungsänderung am Mast (Arbeiten/Umkonfiguration bei O2), nicht Router oder Standort.
 - Fix: vor dem Spielen Statusseite lesen (SINR/CQI, nicht Balken); SA nur bei SINR > 10 dB, sonst „4G only“.
+- **Beste Kombination 18.11.2026 17:48: 5G NSA mit 4G-Anker B7 (2600 MHz, 20 MHz) + N28** — LTE SINR 30 dB / RSRQ −7 / CQI 15, NR SINR 21 dB / RSRP −64 dBm → Ping Median 14–21 ms ohne Verluste, Steam-Download bis **38 MB/s (305 Mbit/s)** statt 3 MB/s bei SA N28. NSA ist also nur mit schwachem Anker schlecht. Kandidat für „Lock BAND“: 4G B7, 5G N28 (erst nach Ende der Mastarbeiten).
 - Mast: eNodeB 21118 = Berliner Straße, Neuenhagen-Bollensdorf, 52.508093, 13.684266 (CellMapper-API, bestätigt durch OSM-Turm 2 m daneben); Bänder dort B20+B3, Zelle 51 vermutlich B1.
 
 ## B8a Restbandbreite trotz Spielmodus (gemessen 18.11.2026)
