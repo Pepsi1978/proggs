@@ -522,7 +522,10 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (!LmStudioService.IsInstalled) return;
 
-            var localModels = await _lmStudio.GetLocalModelsWithServerAsync();
+            // Read only: never start the LM Studio server at launcher start (the launcher runs at
+            // Windows logon, so this used to keep LM Studio running in the background all day).
+            // The server is started on demand when a session with an LM Studio model is launched.
+            var localModels = await _lmStudio.GetLocalModelsAsync();
             if (localModels.Count == 0) return;
 
             _registry.SyncLmStudioModels(localModels);
