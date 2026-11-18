@@ -792,6 +792,7 @@
     {"versionCode": 784, "versionName": "1.8.773", "stand": "18.11.2026, 11:53 Uhr", "notiz": "Kaffeekarte: Umkreis für „Aus, wenn ich das Haus verlasse“ jetzt per Regler von 150 bis 500 Meter."},
     {"versionCode": 785, "versionName": "1.8.774", "stand": "18.11.2026, 11:54 Uhr", "notiz": "Kaffeekarte: Erklärtext unter den Einstellungen entfernt."},
     {"versionCode": 780, "versionName": "1.8.769", "stand": "18.11.2026, 11:14 Uhr", "notiz": "Staubsauger-Karte: Erreichbarkeit und Stand stehen jetzt in einer eigenen Zeile unter den Knöpfen und werden nicht mehr zusammengedrückt."},
-    {"versionCode": 781, "versionName": "1.8.770", "stand": "18.11.2026, 11:18 Uhr", "notiz": "Staubsauger-Karte: Die Statuszeile klappt beim Antippen auf, aktualisiert „gerade eben“ von selbst und zeigt bei Offline den letzten Zustand vollständig."}
+    {"versionCode": 781, "versionName": "1.8.770", "stand": "18.11.2026, 11:18 Uhr", "notiz": "Staubsauger-Karte: Die Statuszeile klappt beim Antippen auf, aktualisiert „gerade eben“ von selbst und zeigt bei Offline den letzten Zustand vollständig."},
+    {"versionCode": 786, "versionName": "1.8.775", "stand": "18.11.2026, 12:00 Uhr", "notiz": "Startbildschirm: Aufgaben, Biomarker, Raumklima, Solarbatterie und Tagesauswertung haben jetzt gezeichnete Symbole im Kartenkopf; die Batterie zeigt den Ladezustand, das Klemmbrett die erledigten Aufgaben."}
 ]
 }

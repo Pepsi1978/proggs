@@ -403,6 +403,9 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
                 }
                 .antippen { if (android.os.SystemClock.uptimeMillis() - druckBeginn[0] < langDruck) aufgabenOeffnen(context, vm, LocalDate.now()) },
         ) {
+        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.Top) {
+        KartenSymbol(KartenArt.AUFGABEN, Modifier.padding(end = 10.dp), wert = anzeige?.takeIf { it.isNotEmpty() }?.let { fertig.toFloat() / it.size })
+        Column(Modifier.weight(1f)) {
         Text("Heute in Geniale Aufgaben", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(
             when {
@@ -413,6 +416,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             },
             color = if (fehler != null) f.gefahr else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
         )
+        }
+        }
         }
         if (anzeige != null) {
             val zeigen = if (s.alleZeigen || anzeige.size <= SICHTBAR) anzeige else anzeige.take(SICHTBAR)

@@ -91,6 +91,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
         if (!Schnellstart.starten(context, SWITCHBOT_PAKET)) Toast.makeText(context, "SwitchBot-App nicht gefunden", Toast.LENGTH_SHORT).show()
     }) {
         Row(verticalAlignment = Alignment.Top) {
+            KartenSymbol(KartenArt.RAUMKLIMA, Modifier.padding(end = 10.dp))
             Column(Modifier.weight(1f)) {
                 Text("Raumklima", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(

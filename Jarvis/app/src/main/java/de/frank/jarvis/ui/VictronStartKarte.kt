@@ -90,6 +90,9 @@ fun VictronStartKarte(griff: Modifier = Modifier) {
     val stand = s.stand
     Karte(modifier = griff) {
         Row(verticalAlignment = Alignment.Top) {
+            // Die Batterie im Symbol ist so voll wie der Ladezustand des BMV-712.
+            val soc = stand?.werte?.get("batteriemonitor")?.takeIf { it.has("ladezustand_prozent") }?.optDouble("ladezustand_prozent")
+            KartenSymbol(KartenArt.SOLAR, Modifier.padding(end = 10.dp), wert = soc?.takeIf { !it.isNaN() }?.let { (it / 100).toFloat() })
             Column(Modifier.weight(1f)) {
                 Text("Solarbatterie", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(

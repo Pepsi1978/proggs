@@ -175,6 +175,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     }
     Karte(modifier = if (bereit) griff.antippenMitSchutz(schutz, imSchutz = aktualisieren) { BioAnsicht.oeffnen(context) } else griff) {
         Row(verticalAlignment = Alignment.Top) {
+            KartenSymbol(KartenArt.BIOMARKER, Modifier.padding(end = 10.dp))
             Column(Modifier.weight(1f)) {
                 Text("Biomarker", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(

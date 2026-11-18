@@ -317,7 +317,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 when (bereich) {
                 "auswertung" -> Karte {
                     Row(verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f).then(griff)) {
+                      Row(Modifier.weight(1f).then(griff), verticalAlignment = Alignment.Top) {
+                        KartenSymbol(KartenArt.AUSWERTUNG, Modifier.padding(end = 10.dp))
+                        Column(Modifier.weight(1f)) {
                             Text("Tagesauswertung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             val neueste = auswertung.neueste
                             Text(
@@ -331,6 +333,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 color = if (auswertung.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                             )
                         }
+                      }
                         // Oben: Vorlesen links neben dem Zahnrad, darunter der Knopf für eine neue Auswertung.
                         Column(Modifier.offset(x = 4.dp, y = (-6).dp), horizontalAlignment = Alignment.End) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
