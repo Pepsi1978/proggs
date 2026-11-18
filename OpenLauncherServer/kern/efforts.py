@@ -8,7 +8,7 @@ BREIT = ["low", "medium", "high"]
 GPT52 = ["none", "low", "medium", "high", "xhigh"]
 AKTUELL = ["low", "medium", "high", "xhigh", "max", "ultra"]
 LUNA = ["low", "medium", "high", "xhigh", "max"]
-SOL_FAMILIE = {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6.1-terra", "gpt-5.6-terra"}
+SOL_FAMILIE = {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra"}
 KIMI = {"k3.1-pro", "k3.1-pro-highspeed", "k3", "k3-256k", "kimi-for-coding"}
 ANTHROPIC_FUENF = {"claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7", "claude-sonnet-5-5", "claude-sonnet-5",
                    "claude-haiku-5-5", "claude-haiku-4-5"}

@@ -8,18 +8,21 @@ class CodexModelsTest {
     fun openAiAuswahlEnthaeltGenauDieAktuellenModelle() {
         assertEquals(
             listOf("GPT-6.2 Astra" to "gpt-6.2-astra", "GPT-6.2 Sol" to "gpt-6.2-sol",
-                "GPT-5.6 Terra" to "gpt-5.6-terra", "GPT-6 Luna" to "gpt-6-luna"),
+                "GPT-6.1 Terra" to "gpt-6.1-terra", "GPT-6 Luna" to "gpt-6-luna"),
             CodexModel.von(KiAnbieter.OPENAI).map { it.label to it.apiId },
         )
     }
 
     @Test
     fun gespeicherteAlteAuswahlenBehaltenIhreModellfamilie() {
-        listOf("gpt-5.6-sol", "GPT 5.6 Sol", "GPT-5.6 Sol", "gpt-6-sol", "GPT-6 Sol").forEach {
+        listOf("gpt-5.6-sol", "GPT 5.6 Sol", "GPT-5.6 Sol", "gpt-6-sol", "GPT-6 Sol", "gpt-6.1-sol", "GPT-6.1 Sol").forEach {
             assertEquals(CodexModel.SOL, CodexModel.fromLabel(" $it "))
         }
         listOf("gpt-5.6-luna", "GPT 5.6 Luna", "GPT-5.6 Luna").forEach {
             assertEquals(CodexModel.LUNA, CodexModel.fromLabel(it))
+        }
+        listOf("gpt-6-astra", "GPT 6 Astra", "GPT-6 Astra").forEach {
+            assertEquals(CodexModel.ASTRA, CodexModel.fromLabel(it))
         }
         assertEquals(CodexModel.TERRA, CodexModel.fromLabel("GPT 5.6 Terra"))
         CodexModel.entries.forEach {

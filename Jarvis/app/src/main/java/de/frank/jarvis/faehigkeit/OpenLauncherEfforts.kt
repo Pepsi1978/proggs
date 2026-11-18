@@ -37,7 +37,7 @@ object OpenLauncherEfforts {
     private val GPT52 = listOf("none", "low", "medium", "high", "xhigh")
     private val AKTUELL = listOf("low", "medium", "high", "xhigh", "max", "ultra")
     private val LUNA = listOf("low", "medium", "high", "xhigh", "max")
-    private val SOL_FAMILIE = setOf("gpt-6.2-astra", "gpt-6.2-sol", "gpt-6.1-terra", "gpt-5.6-terra")
+    private val SOL_FAMILIE = setOf("gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra")
 
     /** Die aktuellen OpenAI-Modelle zeigt OpenLauncher immer aus der festen Tabelle, nie aus einem gemerkten Stand. */
     fun immerFest(anbieter: String, slug: String) = anbieter.equals("openai", true) && (slug in SOL_FAMILIE || slug == "gpt-6-luna")

@@ -121,7 +121,7 @@ public sealed class CodexResearchService
     {
         if (!await IsConnectedAsync(ct).ConfigureAwait(false)) return [];
         // Version is a backend protocol parameter, not a hardcoded model inventory.
-        using var request = await AuthorizedAsync(HttpMethod.Get, Backend + "models?client_version=0.159.3", ct).ConfigureAwait(false);
+        using var request = await AuthorizedAsync(HttpMethod.Get, Backend + "models?client_version=0.169.0", ct).ConfigureAwait(false);
         using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
@@ -443,7 +443,7 @@ public sealed class CodexResearchService
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Access);
             request.Headers.Add("ChatGPT-Account-ID", account);
             request.Headers.Add("originator", "codex_cli_rs");
-            request.Headers.UserAgent.ParseAdd("codex_cli_rs/0.159.3 (OpenLauncher)");
+            request.Headers.UserAgent.ParseAdd("codex_cli_rs/0.169.0 (OpenLauncher)");
             return request;
         }
         finally { AuthGate.Release(); }

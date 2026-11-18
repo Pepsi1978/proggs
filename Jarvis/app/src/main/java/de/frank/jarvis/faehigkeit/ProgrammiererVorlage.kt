@@ -91,8 +91,11 @@ object ProgrammiererVorlage {
 
     private val ALLE = listOf(VORSPANN) + KNOPF_MODELLE.map { it.vorspann } + CLI_EINSTIEGE.keys
 
+    /** Alter Einstieg „… Modell Sol 6.1“ (gespeicherte Prompts, ältere JarvisMac/JarvisWindows) zählt als Sol 6.2; gleich lang, deshalb schneiden [aufgabe] und [entfernen] per Länge. */
+    private fun altSol(t: String) = if (t.startsWith(EINSTIEG_MODELL + "Sol 6.1")) EINSTIEG_MODELL + "Sol 6.2" + t.drop(EINSTIEG_MODELL.length + 7) else t
+
     /** Der Einstieg, mit dem [text] beginnt; null, wenn keiner. */
-    fun vorspannIn(text: String): String? = text.trimStart().let { t -> ALLE.firstOrNull { t.startsWith(it) } ?: FREI.find(t)?.value }
+    fun vorspannIn(text: String): String? = altSol(text.trimStart()).let { t -> ALLE.firstOrNull { t.startsWith(it) } ?: FREI.find(t)?.value }
 
     /** Beginnt [text] mit einem Auftragseinstieg? */
     fun aktiv(text: String): Boolean = vorspannIn(text) != null
@@ -115,10 +118,10 @@ object ProgrammiererVorlage {
 
     /** Nimmt genau den Einstieg vorn wieder heraus; Getipptes dahinter bleibt unverändert. */
     fun entfernen(entwurf: String): String =
-        vorspannIn(entwurf)?.let { entwurf.trimStart().removePrefix(it).trimStart() } ?: entwurf
+        vorspannIn(entwurf)?.let { entwurf.trimStart().drop(it.length).trimStart() } ?: entwurf
 
     /** Die Aufgabe hinter dem Einstieg (getrimmt, leer = noch keine); null, wenn [text] nicht mit einem Einstieg beginnt. */
-    fun aufgabe(text: String): String? = vorspannIn(text)?.let { text.trimStart().removePrefix(it).trim() }
+    fun aufgabe(text: String): String? = vorspannIn(text)?.let { text.trimStart().drop(it.length).trim() }
 
     /** Steht hinter dem Einstieg nichts Inhaltliches (nur Leerzeichen oder Satzzeichen), startet kein Auftrag. */
     fun ohneAufgabe(text: String): Boolean = aufgabe(text)?.none { it.isLetterOrDigit() } == true

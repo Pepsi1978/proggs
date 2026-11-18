@@ -456,7 +456,7 @@ public sealed class Einstellungen : Beobachtbar
     private bool _helferAutomatik = Vorgaben.Wahr("helferAutomatik", true);
     /// <summary>Eigene Tools: darf Jarvis fehlende Helfer selbst bauen lassen? Aus = Pause, vorhandene Helfer laufen weiter.</summary>
     public bool HelferAutomatik { get => _helferAutomatik; set => Merke(ref _helferAutomatik, value); }
-    private string _rechercheModell = Vorgaben.Text("rechercheModell") ?? "gpt-6.2-sol";
+    private string _rechercheModell = ModellWahl.Aktuell(Vorgaben.Text("rechercheModell") ?? "gpt-6.2-sol");
     public string RechercheModell { get => _rechercheModell; set => Merke(ref _rechercheModell, value); }
     private string _rechercheEffort = Vorgaben.Text("rechercheEffort") ?? "high";
     public string RechercheEffort { get => _rechercheEffort; set => Merke(ref _rechercheEffort, value); }

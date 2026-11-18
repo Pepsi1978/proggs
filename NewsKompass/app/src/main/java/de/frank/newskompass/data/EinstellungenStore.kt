@@ -325,7 +325,7 @@ class EinstellungenStore(context: Context) {
             if (ki.any { k -> modelle.any { it.id == k.id } }) putString(K_KI_MODELLE, modellJson(ki.filter { k -> modelle.none { it.id == k.id } }))
             // Kennt das gewählte Modell laut neuer Liste die bisherige Denktiefe nicht mehr, auf dessen Standard wechseln —
             // sonst lehnt der Dienst jede Anfrage ab.
-            val gewaehlt = modelle.firstOrNull { it.id == (offen.getString(K_MODELL, null) ?: STANDARD_MODELL) }
+            val gewaehlt = modelle.firstOrNull { it.id == Denkstufen.aktuelleId(offen.getString(K_MODELL, null) ?: STANDARD_MODELL) }
             val tiefe = offen.getString(K_DENKTIEFE, null) ?: "medium"
             if (gewaehlt != null && gewaehlt.stufen.isNotEmpty() && tiefe !in gewaehlt.stufen) putString(K_DENKTIEFE, gewaehlt.standardStufe)
         }

@@ -303,7 +303,7 @@ $unklar2
     # Sol (Codex CLI) erst ab OpenLauncher 1.24.98 (--cli codex); einen Notweg ohne OpenLauncher gibt es dafür nicht.
     # OpenCode mit Jarvis-Auftrag erst ab 1.24.99 (--cli opencode).
     # Frei gewählt: Claude Code und Codex CLI können das schon lange; Kimi, Antigravity und OpenCode mit fremdem Anbieter erst ab 1.24.111.
-    $ab = if ($katalogCli -in 'kimi', 'antigravity', 'opencode') { '1.24.111' } elseif ($katalogCli -eq 'codex') { '1.24.98' } elseif ($katalog) { '1.24.89' }
+    $ab = if ($katalogCli -in 'kimi', 'antigravity', 'opencode') { '1.24.111' } elseif ($katalogCli -eq 'codex') { '1.24.123' } elseif ($katalog) { '1.24.89' }
         elseif ($openCode) { '1.24.99' } elseif ($sol) { '1.24.98' } else { '1.24.89' }
     if ($openLauncher -and (Test-Path -LiteralPath $openLauncher)) {
         try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]$ab } catch { }

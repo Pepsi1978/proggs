@@ -2927,11 +2927,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val ZIEL_PC = "Claude Code auf deinem PC"
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
         const val ZIEL_CODEX = "Sol 6.2 in Codex Cloud"
+        /** So hieß das Ziel bis 18.11.2026; ältere Einträge im Auftragsbuch tragen es noch. */
+        const val ZIEL_CODEX_ALT = "Sol 6.1 in Codex Cloud"
         /** Modell der Codex-Cloud-Threads (wie Sol am Windows-PC). */
         private const val SOL_CLOUD_MODELL = "gpt-6.2-sol"
 
         /** Läuft der Auftrag in einer Cloud-Sitzung (Claude Code oder Codex)? Sie meldet selbst, Nachträge reisen mit der Antwort. */
-        fun inDerCloud(ziel: String) = ziel == ZIEL_CLOUD || ziel == ZIEL_CODEX
+        fun inDerCloud(ziel: String) = ziel == ZIEL_CLOUD || ziel == ZIEL_CODEX || ziel == ZIEL_CODEX_ALT
 
         /** Modellwahl beim Start am Rechner: Claude Opus 5.5 (wie bisher) oder Sol 6.2 im Codex CLI. */
         const val MODELL_OPUS = ProgrammiererVorlage.MODELL_OPUS

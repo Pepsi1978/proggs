@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.24.61</string>
+	<string>1.24.62</string>
 	<key>CFBundleVersion</key>
-	<string>1.24.61</string>
+	<string>1.24.62</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSAppleEventsUsageDescription</key>
