@@ -19,6 +19,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeCatalogService _openCodeCatalog = new();
     private readonly LmStudioService _lmStudio = new();
+    private string? _lastLmStudioSignature;
     private readonly OpenLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
     private readonly InstructionProfileService _profiles = new();
@@ -114,6 +115,9 @@ public sealed partial class MainViewModel : ObservableObject
         _ = CheckOpenCodeUpdateAsync();
         _ = RefreshOpenAiLoginStatusAsync();
         _effortTimer.Tick += async (_, _) => await RefreshPeriodicEffortsAsync();
+        // Read-only LM Studio refresh every minute: picks up new models whenever LM Studio is running,
+        // without ever starting it (connection refused costs nothing).
+        _effortTimer.Tick += async (_, _) => await RefreshLmStudioModelsAsync();
         _effortTimer.Start();
 
         // Version UND Zeitstempel kommen aus der Assembly: die Uhrzeit setzt MSBuild beim Compile
@@ -527,6 +531,9 @@ public sealed partial class MainViewModel : ObservableObject
             // The server is started on demand when a session with an LM Studio model is launched.
             var localModels = await _lmStudio.GetLocalModelsAsync();
             if (localModels.Count == 0) return;
+            var signature = string.Join("|", localModels.Select(m => m.Slug).OrderBy(s => s, StringComparer.OrdinalIgnoreCase));
+            if (signature == _lastLmStudioSignature) return;   // unchanged: no registry write every minute
+            _lastLmStudioSignature = signature;
 
             _registry.SyncLmStudioModels(localModels);
             var group = ModelGroups.FirstOrDefault(g => string.Equals(g.Id, "lmstudio", StringComparison.OrdinalIgnoreCase));

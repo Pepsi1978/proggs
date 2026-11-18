@@ -172,36 +172,19 @@ public sealed class LmStudioService
                 });
             }
         }
+        catch (HttpRequestException)
+        {
+            // Server off is the normal state (LM Studio is no longer started at launcher start).
+        }
+        catch (TaskCanceledException)
+        {
+            // Timeout or shutdown: same as "server off".
+        }
         catch (Exception ex)
         {
             Logger.Instance.Warn("LmStudioService", "GetLocalModelsAsync", $"LM-Studio-Modelle nicht lesbar: {ex.Message}");
         }
         return result;
-    }
-
-    /// <summary>
-    /// Startet bei Bedarf den Server und liest danach die Modelle. Der Serverstart passiert nur,
-    /// wenn die erste Abfrage ins Leere läuft — so bleibt der Programmstart schnell.
-    /// </summary>
-    public async Task<List<ModelEntry>> GetLocalModelsWithServerAsync(CancellationToken ct = default)
-    {
-        var models = await GetLocalModelsAsync(ct).ConfigureAwait(false);
-        if (models.Count > 0 || !IsInstalled) return models;
-
-        await Task.Run(() => EnsureServerRunning(), ct).ConfigureAwait(false);
-
-        // "lms server start" kehrt zurück, bevor der HTTP-Endpunkt Anfragen annimmt. Ohne
-        // Wiederholversuche liefert die nächste Abfrage deshalb eine leere Liste — der Reiter
-        // "LM Studio" bleibt dann leer, obwohl LM Studio läuft.
-        for (var attempt = 0; attempt < 4; attempt++)
-        {
-            models = await GetLocalModelsAsync(ct).ConfigureAwait(false);
-            if (models.Count > 0) return models;
-            if (attempt < 3) await Task.Delay(1500, ct).ConfigureAwait(false);
-        }
-        Logger.Instance.Warn("LmStudioService", "GetLocalModelsWithServerAsync",
-            "Server gestartet, liefert aber keine Modelle");
-        return models;
     }
 
     /// <summary>"mistralai/devstral-small-2-2512" -> "Devstral Small 2 2512 (lokal)".</summary>
