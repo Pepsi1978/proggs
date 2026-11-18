@@ -258,6 +258,21 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.PROSCENIC_PASSWORT, "")
         set(value) = writeString(Keys.PROSCENIC_PASSWORT, value)
 
+    // ---- De'Longhi Coffee Link (Kaffeemaschine PrimaDonna Soul, Ayla-Cloud) ----
+
+    var delonghiMail: String
+        get() = readString(Keys.DELONGHI_MAIL, "")
+        set(value) = writeString(Keys.DELONGHI_MAIL, value.trim())
+
+    var delonghiPasswort: String
+        get() = readString(Keys.DELONGHI_PASSWORT, "")
+        set(value) { writeString(Keys.DELONGHI_PASSWORT, value); writeString(Keys.DELONGHI_AUFFRISCHUNG, "") }
+
+    /** Ayla-Auffrischungstoken; erneuert sich bei jeder Auffrischung selbst, kein Eintrag unter Konten. */
+    var delonghiAuffrischung: String
+        get() = readString(Keys.DELONGHI_AUFFRISCHUNG, "")
+        set(value) = writeString(Keys.DELONGHI_AUFFRISCHUNG, value)
+
     var filterStilleVorabAn: Boolean
         get() = readFlag(Keys.FILTER_VAD, true)
         set(value) = writeFlag(Keys.FILTER_VAD, value)
@@ -401,6 +416,9 @@ class SecureSettings(context: Context) : Closeable {
         const val SWITCHBOT_SECRET = "switchbot_secret"
         const val PROSCENIC_MAIL = "proscenic_mail"
         const val PROSCENIC_PASSWORT = "proscenic_passwort"
+        const val DELONGHI_MAIL = "delonghi_mail"
+        const val DELONGHI_PASSWORT = "delonghi_passwort"
+        const val DELONGHI_AUFFRISCHUNG = "delonghi_auffrischung"
         const val FILTER_VAD = "filter_vad"
         const val FILTER_SEGMENTS = "filter_segments"
         const val FILTER_TIMESTAMPS = "filter_timestamps"

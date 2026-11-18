@@ -33,6 +33,9 @@
 - Aufwecken (0x84) → nicht auf 0x84-Antwort warten, sondern Status 0x75 bis „Ready“ (7) pollen; Aufheiz-/Spülgang ist nicht unterbrechbar. Erst dann 0x83 senden.
 - Kein Tassensensor, keine Bestätigung an der Maschine: Tasse vorher unterstellen. Alarme (Tank leer, Satzbehälter voll) blockieren.
 
+## 5a. WLAN neu verbinden (neuer Router, neues Passwort)
+- Anleitung 57132C8859 Kap. 6.3: Einstellungen (B6) → „Connectivity“ → „Next“ → **„Reset“** → „Ok“ löscht **nur die Netzwerkeinstellungen** („deleting of the network settings“), nicht Rezepte/Profile. Danach in der Coffee-Link-App neu verbinden. Der Werksreset ist ein eigener Punkt (Kap. 6.12 „Default values“). `offiziell` https://dls.delonghigroup.com/files/docs/5/EN-57132C8859.pdf
+
 ## 6. Architektur-Empfehlung (für Jarvis)
 - **Ein** Dienst im Heimnetz hält die einzige Verbindung zur Maschine (LAN-Modus, Cloud nur als Rückfall); Jarvis, Mac, Sprachbefehl rufen nur dessen HTTP/MCP-Schnittstelle. Keine direkten Cloud-Aufrufe von jedem Client.
 - Coffee-Link-App am Handy geschlossen halten, sonst hat ihre LAN-Sitzung Vorrang und Befehle werden still ignoriert.

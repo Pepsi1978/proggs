@@ -404,6 +404,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "victron" -> VictronStartKarte(griff)
                 // Saugroboter M7 Pro: Knöpfe tippen in der Proscenic-App (Bedienungshilfe), Akku aus dem letzten Ablesen.
                 "staubsauger" -> StaubsaugerStartKarte(griff)
+                // Kaffeemaschine PrimaDonna Soul: Standardgetränk mit einem Tipp, alle Getränke und Einstellungen aufklappbar.
+                "kaffee" -> KaffeeStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

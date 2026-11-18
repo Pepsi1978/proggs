@@ -782,6 +782,7 @@
     {"versionCode": 774, "versionName": "1.8.763", "stand": "17.11.2026, 17:25 Uhr", "notiz": "Saugroboter: Sobald er losfährt, zeichnet Jarvis seinen Weg im Hintergrund auf, und die Staubsauger-Karte zeigt automatisch die Live-Ansicht mit der ganzen Strecke seit Reinigungsbeginn und der aktuellen Position."},
     {"versionCode": 775, "versionName": "1.8.764", "stand": "17.11.2026, 17:37 Uhr", "notiz": "Saugroboter: Die Live-Aufzeichnung übersteht Ladepausen mitten in der Reinigung, endet zuverlässig, wenn die App im Hintergrund ist, und stört Befehle und die Proscenic-App weniger."},
     {"versionCode": 776, "versionName": "1.8.765", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."},
-    {"versionCode": 777, "versionName": "1.8.766", "stand": "18.11.2026, 09:09 Uhr", "notiz": "Ältere Sol-6.1-Aufträge in Codex Cloud und alte Sol-6.1-Einstiege werden weiter erkannt; OpenRouter-Modelle GPT-6.1 Sol und GPT-6 Astra behalten alle Denkstufen."}
+    {"versionCode": 777, "versionName": "1.8.766", "stand": "18.11.2026, 09:09 Uhr", "notiz": "Ältere Sol-6.1-Aufträge in Codex Cloud und alte Sol-6.1-Einstiege werden weiter erkannt; OpenRouter-Modelle GPT-6.1 Sol und GPT-6 Astra behalten alle Denkstufen."},
+    {"versionCode": 778, "versionName": "1.8.767", "stand": "18.11.2026, 10:33 Uhr", "notiz": "Neue Startkarte Kaffeemaschine: Long Black mit einem Tipp, alle Getränke mit Bild und die Einstellungen der PrimaDonna Soul, dazu „Mach mir einen Kaffee“ per Sprache."}
 ]
 }
