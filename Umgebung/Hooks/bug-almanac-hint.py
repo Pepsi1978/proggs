@@ -24,8 +24,9 @@ import tempfile
 # almanach-relpath -> (Anzeigename, [Mehrwort-/eindeutige Stichwoerter, lowercase])
 AREAS = {
     "peripherie/switchbot": ("SwitchBot Cloud-API und Bluetooth", ["switchbot", "switch bot", "switch-bot", "meter pro", "meter-pro", "co2-monitor", "co2 monitor", "hub mini", "hub-mini"]),
+    "peripherie/delonghi-coffeelink": ("De'Longhi Coffee Link (Kaffeemaschine)", ["kaffeemaschine", "kaffee maschine", "kaffee-maschine", "delonghi", "de'longhi", "de longhi", "de-longhi", "coffee link", "coffee-link", "coffeelink", "primadonna", "prima donna", "prima-donna", "long black", "long-black", "ecam", "aylanetworks", "ayla cloud", "ayla-cloud"]),
     "peripherie/huawei-watchface": ("Huawei-Zifferblätter (.hwt)", ["huawei watch", "huawei-watch", "zifferblatt", "watchface", "watch face", "watch-face", ".hwt", "theme studio", "theme-studio"]),
-    "opencode/opencode-cli":        ("OpenCode CLI: Modellpreise", ["opencode preise", "opencode-preise", "tui preise", "tui-preise", "tui preis", "tui-preis", "token-cost-sidebar", "gpt-6.1-sol", "gpt 6.1 sol"]),
+    "opencode/opencode-cli":        ("OpenCode CLI: Modellpreise", ["opencode preise", "opencode-preise", "tui preise", "tui-preise", "tui preis", "tui-preis", "token-cost-sidebar", "gpt-6.1-sol", "gpt 6.1 sol", "gpt-6.2-sol", "gpt 6.2 sol"]),
     "web/chrome-extensions":        ("Chrome-Erweiterungen", ["manifest v3", "manifest_version", "chrome extension", "chrome-erweiterung", "content script", "service worker", "chrome.storage", "chrome.runtime"]),
     "desktop/wake-word":            ("Wake-Word",            ["wake word", "wakeword", "wake-word", "keyword spotter", "sherpa-onnx", "porcupine"]),
     "desktop/groq-transkription":   ("Groq-Transkription",   ["groq whisper", "groq-whisper", "whisper-large-v3", "whisper large v3", "whisper turbo", "whisper-turbo", "groq transkription", "groq-transkription"]),
