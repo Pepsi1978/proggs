@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.2.0 · Stand 17.11.2026, 19:14 Uhr
+Version 1.3.0 · Stand 18.11.2026, 14:42 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -18,6 +18,14 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
   Protokoll nur bei Zustandswechseln. Aufgehoben wird die Sperre erst, wenn 20 s kein Auslöser mehr läuft
   (Steam-Selbstupdate löst sie nicht kurz auf). Danach: Starttyp zurück, Gaming Services nur dann neu
   gestartet, wenn sie vorher liefen. Nach Absturz/Neustart während einer Sperre stellt er beim Start zurück.
+- **Google Drive** (Sperre aktiv = Steam oder CoD läuft): Firewall-Sperrregel für `GoogleDriveFS.exe`
+  (Gruppe `Spielmodus`). Drive bleibt offen und die Dateien bleiben lokal nutzbar, nur der Abgleich pausiert. Danach läuft er von selbst weiter.
+- **Spiel-Firewall** (nur solange ein Spiel läuft: Steam `RunningAppID` ≠ 0 oder CoD, nicht bei Steam allein):
+  Windows-Firewall „ausgehend standardmäßig blockieren“ (Ursprungswerte in `firewall.json`). Erlaubt sind
+  (Gruppe `Spielmodus-Erlaubt`, bleibt dauerhaft, ist ohne Block wirkungslos): alle .exe im Spielordner
+  (aus `appmanifest_<id>.acf`), Steam, Anti-Cheat (EAC/BattlEye), Google Chrome und das Heimnetz (`LocalSubnet`, z. B. Tenda-Router-Seite).
+  Alles andere hat im Spiel kein Internet, auch Claude Code, Jarvis-PC-Brücke, WireGuard und Discord.
+  20 s nach Spielende ist alles wieder offen. Nach einem Absturz stellt der Wächter beim Start zurück.
 - **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
   und meldet per Windows-Mitteilung, ob der Spielmodus jetzt AN oder AUS ist (`meldung.ps1`).
 - **Steam-Start:** Der Wächter meldet beim Start von Steam per Mitteilung, ob der Spielmodus AN oder AUS ist.

@@ -3,6 +3,9 @@
 # While Steam or Call of Duty runs: stops Microsoft Store installs (InstallService, start type locked)
 # and Gaming Services (protected package services: stop only, killed again if they come back),
 # ends Store and Xbox app processes. Afterwards restores the previous state.
+# Also blocks Google Drive sync (firewall block rule) while the lock is on.
+# While a Steam game runs (RunningAppID) or CoD: Windows Firewall blocks ALL outbound traffic except
+# the running game folder, Steam, anti-cheat, Google Chrome and the local subnet (router page).
 # Toggle via desktop shortcut "Spielmodus an-aus" (aus.flag).
 # Designed to cost almost nothing while gaming: one process snapshot every 4 s, no pipelines,
 # no blocking service waits, logging only on state changes.
@@ -23,6 +26,10 @@ $dienstGestoppt = @('GamingServices', 'GamingServicesNet')
 $stopProz       = @('WinStore.App', 'XboxPcApp', 'XboxPcAppFT')
 $entprellSek    = 20                                 # trigger must be gone this long before unlocking
 $pwsh           = (Get-Process -Id $PID).Path
+$fwSicher       = Join-Path $daten 'firewall.json'   # exists only while the game firewall is on
+$fwGruppe       = 'Spielmodus'                       # temporary rules (Drive block)
+$fwErlaubt      = 'Spielmodus-Erlaubt'               # persistent allow rules (harmless when outbound is Allow)
+$driveRegel     = 'Spielmodus: Google Drive gesperrt'
 
 function Write-Log([string]$t) {
     try {
@@ -85,13 +92,137 @@ function Enable-Sperre {
     $script:gamingWarAktiv = (Get-Service 'GamingServices' -ErrorAction SilentlyContinue).Status -eq 'Running'
     try { Set-Service $dienstGesperrt -StartupType Disabled -ErrorAction Stop } catch { Write-Log "Starttyp $dienstGesperrt nicht setzbar: $($_.Exception.Message)" }
     Stop-Ziele
+    Enable-DriveSperre
 }
 
 function Disable-Sperre {
     $typ = Get-Originaltyp
+    Disable-DriveSperre
     try { Set-Service $dienstGesperrt -StartupType $typ -ErrorAction Stop } catch { Write-Log "Rückstellen $dienstGesperrt fehlgeschlagen: $($_.Exception.Message)" }
     # Only restart Gaming Services if they were running before the lock.
     if ($script:gamingWarAktiv) { Start-Service $dienstGestoppt -ErrorAction SilentlyContinue }
+}
+
+# ---------- Google Drive: block sync via firewall (Drive stays usable locally) ----------
+function Get-DrivePfade {
+    $pf = @(foreach ($p in [Diagnostics.Process]::GetProcesses()) {
+        if ($p.ProcessName -eq 'GoogleDriveFS') { try { $p.MainModule.FileName } catch { } }
+        $p.Dispose()
+    })
+    $pf += @(Get-ChildItem "$env:ProgramFiles\Google\Drive File Stream\*\GoogleDriveFS.exe" -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    return @($pf | Where-Object { $_ } | Sort-Object -Unique)
+}
+
+function Enable-DriveSperre {
+    Remove-NetFirewallRule -DisplayName $driveRegel -ErrorAction SilentlyContinue
+    foreach ($p in Get-DrivePfade) {
+        try { New-NetFirewallRule -DisplayName $driveRegel -Group $fwGruppe -Direction Outbound -Action Block -Program $p -Profile Any -ErrorAction Stop | Out-Null }
+        catch { Write-Log "Drive-Sperre fehlgeschlagen: $($_.Exception.Message)" }
+    }
+    Write-Log 'Google Drive: Abgleich gesperrt'
+}
+
+function Disable-DriveSperre {
+    Remove-NetFirewallRule -DisplayName $driveRegel -ErrorAction SilentlyContinue
+}
+
+# ---------- Game firewall: only the running game, Steam, anti-cheat, Chrome, LAN ----------
+function Get-SpielAppId {
+    try { return [int](Get-ItemPropertyValue 'HKCU:\Software\Valve\Steam' -Name RunningAppID -ErrorAction Stop) } catch { return 0 }
+}
+
+function Get-SteamPfad {
+    try { return ((Get-ItemPropertyValue 'HKCU:\Software\Valve\Steam' -Name SteamPath -ErrorAction Stop) -replace '/', '\') } catch { return "${env:ProgramFiles(x86)}\Steam" }
+}
+
+function Get-SpielOrdner([int]$appId) {
+    $steam = Get-SteamPfad
+    $libs = @($steam)
+    $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
+    if (Test-Path $vdf) {
+        foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) { $libs += ($m.Groups[1].Value -replace '\\\\', '\') }
+    }
+    foreach ($lib in ($libs | Sort-Object -Unique)) {
+        $acf = Join-Path $lib "steamapps\appmanifest_$appId.acf"
+        if (Test-Path $acf) {
+            $m = [regex]::Match((Get-Content $acf -Raw), '"installdir"\s+"([^"]+)"')
+            if ($m.Success) { return (Join-Path $lib "steamapps\common\$($m.Groups[1].Value)") }
+        }
+    }
+    return $null
+}
+
+function Add-Erlaubt([string[]]$programme) {
+    if ($null -eq $script:erlaubtSet) {
+        $script:erlaubtSet = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        try { Get-NetFirewallRule -Group $fwErlaubt -ErrorAction Stop | Get-NetFirewallApplicationFilter | ForEach-Object { [void]$script:erlaubtSet.Add("$($_.Program)") } } catch { }
+    }
+    $neu = 0
+    foreach ($p in $programme) {
+        if (-not $p -or $script:erlaubtSet.Contains($p) -or -not (Test-Path $p)) { continue }
+        try {
+            New-NetFirewallRule -DisplayName "Spielmodus erlaubt: $(Split-Path $p -Leaf)" -Group $fwErlaubt -Direction Outbound -Action Allow -Program $p -Profile Any -ErrorAction Stop | Out-Null
+            [void]$script:erlaubtSet.Add($p); $neu++
+        } catch { Write-Log "Erlaubnis für $p fehlgeschlagen: $($_.Exception.Message)" }
+    }
+    if ($neu -gt 0) { Write-Log "Firewall: $neu Programm(e) neu erlaubt" }
+}
+
+function Add-GrundErlaubnis {
+    $steam = Get-SteamPfad
+    $liste = @(Get-ChildItem $steam -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    $liste += @(Get-ChildItem (Join-Path $steam 'bin') -Filter *.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    $liste += @(
+        "${env:ProgramFiles(x86)}\Common Files\Steam\steamservice.exe",
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\EasyAntiCheat_EOS\EasyAntiCheat_EOS.exe",
+        "${env:ProgramFiles(x86)}\EasyAntiCheat\EasyAntiCheat.exe",
+        "${env:ProgramFiles(x86)}\Common Files\BattlEye\BEService.exe"
+    )
+    Add-Erlaubt $liste
+    # Home network (router page, adb over Wi-Fi) for every program
+    if (-not (Get-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Heimnetz' -ErrorAction SilentlyContinue)) {
+        try { New-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Heimnetz' -Group $fwErlaubt -Direction Outbound -Action Allow -RemoteAddress LocalSubnet -Profile Any -ErrorAction Stop | Out-Null }
+        catch { Write-Log "Heimnetz-Erlaubnis fehlgeschlagen: $($_.Exception.Message)" }
+    }
+}
+
+function Add-SpielErlaubnis([int]$appId) {
+    $ordner = @()
+    if ($appId -gt 0) { $o = Get-SpielOrdner $appId; if ($o) { $ordner += $o } else { Write-Log "Spielordner für App $appId nicht gefunden" } }
+    # CoD outside Steam (or not yet in RunningAppID): allow the folder of the running process
+    foreach ($p in [Diagnostics.Process]::GetProcesses()) {
+        if ($p.ProcessName -eq 'cod' -or $p.ProcessName -match $ausloeserMuster) { try { $ordner += (Split-Path $p.MainModule.FileName) } catch { } }
+        $p.Dispose()
+    }
+    foreach ($o in ($ordner | Sort-Object -Unique)) {
+        Add-Erlaubt @(Get-ChildItem $o -Filter *.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    }
+}
+
+function Enable-SpielFirewall([int]$appId) {
+    Add-GrundErlaubnis
+    Add-SpielErlaubnis $appId
+    if (-not (Test-Path $fwSicher)) {
+        $vorher = @{}
+        foreach ($pr in Get-NetFirewallProfile) { $vorher[$pr.Name] = "$($pr.DefaultOutboundAction)" }
+        $vorher | ConvertTo-Json | Set-Content $fwSicher -Encoding utf8
+    }
+    try { Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop; Write-Log "Spiel-Firewall AN (App $appId): nur Spiel, Steam, Chrome, Heimnetz" }
+    catch { Write-Log "Spiel-Firewall nicht setzbar: $($_.Exception.Message)" }
+}
+
+function Disable-SpielFirewall {
+    $vorher = $null
+    if (Test-Path $fwSicher) { try { $vorher = Get-Content $fwSicher -Raw | ConvertFrom-Json } catch { } }
+    foreach ($pr in @('Domain', 'Private', 'Public')) {
+        $wert = if ($vorher -and $vorher.$pr -and $vorher.$pr -ne 'Block') { $vorher.$pr } else { 'NotConfigured' }
+        try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $wert -ErrorAction Stop } catch { Write-Log "Firewall $pr zurückstellen fehlgeschlagen: $($_.Exception.Message)" }
+    }
+    Remove-Item $fwSicher -ErrorAction SilentlyContinue
+    Write-Log 'Spiel-Firewall AUS: alle Programme haben wieder Internet'
 }
 
 Write-Log "Wächter gestartet (PID $PID)"
@@ -108,6 +239,12 @@ if ((Get-Service $dienstGesperrt -ErrorAction SilentlyContinue).StartType -eq 'D
     Write-Log 'Altlast: InstallService war noch gesperrt, stelle zurück'
     Disable-Sperre
 }
+# Same after a crash during a game: outbound must not stay blocked, Drive must sync again.
+if (Test-Path $fwSicher) { Write-Log 'Altlast: Spiel-Firewall war noch an, stelle zurück'; Disable-SpielFirewall }
+Disable-DriveSperre
+$fwAn = $false
+$fwAppId = -1
+$spielZuletzt = [datetime]::MinValue
 
 while ($true) {
     $aus    = Test-Path $flagAus
@@ -135,8 +272,23 @@ while ($true) {
         Disable-Sperre; $gesperrt = $false; $restMeldung = ''
     }
 
+    # Game firewall: only while an actual game runs (Steam RunningAppID or CoD), not for Steam alone.
+    $appId = Get-SpielAppId
+    $spielJetzt = ($appId -gt 0) -or $script:codLaeuft
+    if ($spielJetzt) { $spielZuletzt = Get-Date }
+    $fwSoll = (-not $aus) -and ($spielJetzt -or ($fwAn -and ((Get-Date) - $spielZuletzt).TotalSeconds -lt $entprellSek))
+    if ($fwSoll -and -not $fwAn) {
+        Enable-SpielFirewall $appId; $fwAn = $true; $fwAppId = $appId
+        Show-Meldung 'Spiel läuft: Internet nur noch für das Spiel, Steam, Chrome und das Heimnetz.'
+    } elseif ($fwAn -and $fwSoll -and $spielJetzt -and $appId -ne $fwAppId) {
+        Add-SpielErlaubnis $appId; $fwAppId = $appId
+    } elseif ($fwAn -and -not $fwSoll) {
+        Disable-SpielFirewall; $fwAn = $false; $fwAppId = -1
+        Show-Meldung 'Spiel beendet: Alle Programme haben wieder Internet.'
+    }
+
     if ($gesperrt) {
-        $rest = @([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
+        $rest =@([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
         $rest += @(Get-LaufendeDienste | ForEach-Object { $_.Name })
         if ($rest.Count -gt 0) {
             Stop-Ziele

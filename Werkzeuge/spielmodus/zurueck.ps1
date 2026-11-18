@@ -12,6 +12,18 @@ Stop-ScheduledTask -TaskName 'Spielmodus-Waechter' -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName 'Spielmodus-Waechter' -Confirm:$false -ErrorAction SilentlyContinue
 Get-CimInstance Win32_Process -Filter "Name='pwsh.exe'" | Where-Object { $_.CommandLine -match 'spielmodus\\waechter\.ps1' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
+# Firewall: outbound back to the saved default (never stay on Block), remove all game-mode rules
+$fwSicher = Join-Path $daten 'firewall.json'
+$fwv = $null
+if (Test-Path $fwSicher) { try { $fwv = Get-Content $fwSicher -Raw | ConvertFrom-Json } catch { } }
+foreach ($pr in @('Domain', 'Private', 'Public')) {
+    $w = if ($fwv -and $fwv.$pr -and $fwv.$pr -ne 'Block') { $fwv.$pr } else { 'NotConfigured' }
+    try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $w -ErrorAction Stop } catch { $fehler += "Firewall ${pr}: $($_.Exception.Message)" }
+}
+Remove-NetFirewallRule -Group 'Spielmodus' -ErrorAction SilentlyContinue
+Remove-NetFirewallRule -Group 'Spielmodus-Erlaubt' -ErrorAction SilentlyContinue
+Remove-Item $fwSicher -ErrorAction SilentlyContinue
+
 # InstallService back to its original start type (never 'Disabled')
 $typ = 'Manual'
 $sicher = Join-Path $daten 'starttypen.json'
@@ -41,5 +53,5 @@ Remove-Item (Join-Path $desk 'Spielmodus an-aus.lnk'), (Join-Path $desk 'Spielmo
 Remove-Item (Join-Path $daten 'aus.flag'), $sicher, $vorherDatei -ErrorAction SilentlyContinue
 
 Add-Type -AssemblyName System.Windows.Forms
-$text = if ($fehler) { "Spielmodus entfernt, aber mit Fehlern:`n" + ($fehler -join "`n") } else { 'Spielmodus entfernt: Store, Übermittlungsoptimierung und Game-Bar-Aufnahme sind wieder wie vorher.' }
+$text = if ($fehler) { "Spielmodus entfernt, aber mit Fehlern:`n" + ($fehler -join "`n") } else { 'Spielmodus entfernt: Store, Firewall, Google Drive, Übermittlungsoptimierung und Game-Bar-Aufnahme sind wieder wie vorher.' }
 [System.Windows.Forms.MessageBox]::Show($text, 'Spielmodus') | Out-Null
