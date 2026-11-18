@@ -52,6 +52,7 @@
 - 17:44 wieder RSRP −63 dBm / SINR 22 dB / CQI 14 — **ohne Neueinwahl** (gleiche WAN-IP, gleiche Zelle) und parallel auf Franks Handy 5 → 0–1 → 5 Balken. Beleg: Leistungsänderung am Mast (Arbeiten/Umkonfiguration bei O2), nicht Router oder Standort.
 - Fix: vor dem Spielen Statusseite lesen (SINR/CQI, nicht Balken); SA nur bei SINR > 10 dB, sonst „4G only“.
 - **Beste Kombination 18.11.2026 17:48: 5G NSA mit 4G-Anker B7 (2600 MHz, 20 MHz) + N28** — LTE SINR 30 dB / RSRQ −7 / CQI 15, NR SINR 21 dB / RSRP −64 dBm → Ping Median 14–21 ms ohne Verluste, Steam-Download bis **38 MB/s (305 Mbit/s)** statt 3 MB/s bei SA N28. NSA ist also nur mit schwachem Anker schlecht. Kandidat für „Lock BAND“: 4G B7, 5G N28 (erst nach Ende der Mastarbeiten).
+- Spieltest damit (17:53–18:22, CoD, Texturstreaming hochgestellt): **0,0 % Verlust**, Median 27 ms, 95 % 83 ms, 2,6 % über 100 ms, kein Ausfall. CoD lud dabei 5,1 GB (Ø 1,3–1,6 MB/s Texturen) — Ping bei 1–5 MB/s Download unverändert (Median 26 ms); erst > 5 MB/s (ein noch laufender Steam-Download) Median 79 ms. Auf B7+N28 ist Texturstreaming also unschädlich.
 - Mast: eNodeB 21118 = Berliner Straße, Neuenhagen-Bollensdorf, 52.508093, 13.684266 (CellMapper-API, bestätigt durch OSM-Turm 2 m daneben); Bänder dort B20+B3, Zelle 51 vermutlich B1.
 
 ## B8a Restbandbreite trotz Spielmodus (gemessen 18.11.2026)
