@@ -39,3 +39,14 @@
 
 ## §8 Rezeptfelder geändert
 - Coffee-Link-App 4.9.6 änderte Rezeptfelder; cremaevolution 0.3.0b9–b11 musste `brew_custom` anpassen (Breaking). Nach App-Updates Rezept-Frames prüfen.
+
+## §9 Halber Kaffee bei knappem Wassertank (Geräteverhalten, kein Software-Fehler)
+- **Symptom:** Bezug startet, obwohl das Wasser nicht für die Tasse reicht; mitten im Bezug „Wassertank füllen“, in der Tasse nur ein Teil.
+- **Ursache:** Schwimmer/Magnet-Sensor mit fester Schwelle, keine Füllstandsmessung (alle belegten Hersteller). Ob der Bezug nach dem Nachfüllen fortgesetzt wird, steht in keiner Anleitung.
+- **Betroffen:** ECAM 610.74 (Franks), laut Nutzerbericht auch Magnifica S; vermutlich alle De'Longhi-Vollautomaten.
+- **Fix (funktionserhaltend):** In Jarvis den Wasserverbrauch je Bezug mitzählen und vor dem Brühen warnen (best-practices §7). Quelle: Recherche 18.11.2026, Anleitung https://dls.delonghigroup.com/files/docs/5/DE-5713248491.pdf
+
+## §10 Spülen beim Einschalten/Wecken lässt sich nicht abschalten
+- **Symptom:** Jeder Fernstart (0x84) spült erst; Spülwasser landet in der Tasse, wenn sie schon steht.
+- **Ursache:** Firmware: Einschaltspülung „nicht unterbrechbar“, kein Menüschalter, auch nicht bei Eletta Ultra 2026.
+- **Fix:** Maschine wach halten (siehe best-practices §5b) statt neu wecken; Tasse erst nach dem Spülen hinstellen bzw. Jarvis wartet auf Status „bereit“.

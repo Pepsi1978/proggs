@@ -10,3 +10,5 @@
 | 4 | Weg wählen | LAN-Modus (Schlüssel einmal aus der Cloud) vor Cloud-Polling | §3 |
 | 5 | Vor dem Brühen | 0x84 senden, auf Status Ready (7) warten, Tasse steht? | §5 |
 | 6 | Mehrere Clients | Ein Dienst hält die Verbindung, alle anderen über dessen API | §6 |
+| 7 | Neue Maschine wegen Spülen/Tasse/Wasser? | Bringt nichts: kein De'Longhi (auch Eletta Ultra 2026) hat Tassensensor, abschaltbares Spülen oder echte Füllstandsmessung | §7 |
+| 8 | Halber Kaffee vermeiden | In Jarvis selbst zählen: Rezeptmenge je Bezug vom Tank abziehen, vor dem Brühen warnen | §7 |

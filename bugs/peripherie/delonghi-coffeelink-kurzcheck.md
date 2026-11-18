@@ -12,3 +12,5 @@
 | 6 | HTTP 429 | Polling drosseln (≤ 180/h) | §6 |
 | 7 | LAN-Modus geht nicht | Maschine muss nach Neustart erst die Cloud erreichen | §7 |
 | 8 | Rezept bricht nach App-Update | Rezeptfelder neu prüfen (App 4.9.6) | §8 |
+| 9 | Halber Kaffee, Tank knapp | Gerät prüft nur Schwelle; in Jarvis Verbrauch mitzählen und vorher warnen | §9 |
+| 10 | Spülwasser in der Tasse beim Fernstart | Spülen nicht abschaltbar; wach halten, auf „bereit“ warten | §10 |
