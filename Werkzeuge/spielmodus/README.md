@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.3.2 · Stand 18.11.2026, 14:50 Uhr
+Version 1.3.3 · Stand 18.11.2026, 15:01 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -15,19 +15,21 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
   selbst neu (gemessen ~30 Runden je Sitzung), Bekämpfen bringt dann keine Bandbreite, nur Ruckelrisiko.
   `WinStore.App` und die Xbox-App werden beendet.
   Stoppen wartet höchstens 15 s (`-NoWait` + `WaitForStatus`), Prüfung alle 4 s über einen einzigen Prozess-Schnappschuss,
-  Protokoll nur bei Zustandswechseln. Aufgehoben wird die Sperre erst, wenn 20 s kein Auslöser mehr läuft
+  Protokoll nur bei Zustandswechseln. Aufgehoben wird die Sperre erst, wenn 8 s kein Auslöser mehr läuft
   (Steam-Selbstupdate löst sie nicht kurz auf). Danach: Starttyp zurück, Gaming Services nur dann neu
   gestartet, wenn sie vorher liefen. Nach Absturz/Neustart während einer Sperre stellt er beim Start zurück.
 - **Google Drive** (Sperre aktiv = Steam oder CoD läuft): Firewall-Sperrregel für `GoogleDriveFS.exe`
   (Gruppe `Spielmodus`). Drive bleibt offen und die Dateien bleiben lokal nutzbar, nur der Abgleich pausiert. Danach läuft er von selbst weiter.
-- **Spiel-Firewall** (nur solange ein Spiel läuft: Steam `RunningAppID` ≠ 0 oder CoD, nicht bei Steam allein):
+- **Spiel-Firewall** (nur solange ein Steam-Spiel läuft: Steam-Prozess da und `RunningAppID` ≠ 0, nicht bei Steam allein
+  und nicht bei Steam-Werkzeugen wie Wallpaper Engine, SteamVR oder Soundpad; kein Statusfenster beim Spielstart, damit das Spiel den Fokus behält):
   Windows-Firewall „ausgehend standardmäßig blockieren“ (Ursprungswerte in `firewall.json`). Erlaubt sind
   (Gruppe `Spielmodus-Erlaubt`, bleibt dauerhaft, ist ohne Block wirkungslos): alle .exe im Spielordner
-  (aus `appmanifest_<id>.acf`), Steam, Anti-Cheat (EAC/BattlEye), Google Chrome und das Heimnetz (`LocalSubnet`, z. B. Tenda-Router-Seite).
+  (aus `appmanifest_<id>.acf`), Steam, Anti-Cheat (EAC/BattlEye), Google Chrome, das Heimnetz (`LocalSubnet`, z. B. Tenda-Router-Seite),
+  Ping (ICMPv4) und die Programmier-CLIs samt Werkzeugen (Claude Code, Codex, OpenCode/node, OpenLauncher, git, gh, curl, pwsh, python).
   Vorhandene fremde ausgehende Freigaben (Claude Desktop, Teams, Store-Apps, Telemetrie, Sicherung …) werden
   für das Spiel abgeschaltet (Liste in `firewall.json`) und danach wieder eingeschaltet, nur das Kernnetzwerk (DNS, DHCP) bleibt.
-  Eingehend blockt Windows ohnehin. Alles andere hat im Spiel kein Internet, auch Claude Code, Jarvis-PC-Brücke, WireGuard und Discord.
-  20 s nach Spielende ist alles wieder offen. Nach einem Absturz stellt der Wächter beim Start zurück.
+  Eingehend blockt Windows ohnehin. Alles andere hat im Spiel kein Internet, auch Jarvis-PC-Brücke, WireGuard und Discord.
+  8 s nach Spielende ist alles wieder offen, nach Steam-Ende meldet ein Statusfenster „Spielmodus pausiert“. Nach einem Absturz stellt der Wächter beim Start zurück.
 - **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
   und zeigt unten rechts ein eigenes Statusfenster (grün = AN, grau = AUS, 5 s, Klick schließt; `meldung.ps1`).
   Die Windows-Sprechblase wurde unter Windows 11 verschluckt. Ein zweiter Klick innerhalb von 3 s schaltet nicht zurück.

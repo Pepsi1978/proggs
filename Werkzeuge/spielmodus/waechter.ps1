@@ -24,7 +24,7 @@ $dienstGestoppt = @('GamingServices', 'GamingServicesNet')
 # Only app processes are killed. Killing gamingservices.exe counts as a service crash and the SCM
 # recovery restarts it at once (seen 17.11.2026), so services are stopped cleanly instead.
 $stopProz       = @('WinStore.App', 'XboxPcApp', 'XboxPcAppFT')
-$entprellSek    = 20                                 # trigger must be gone this long before unlocking
+$entprellSek    = 8                                # trigger must be gone this long before unlocking
 $pwsh           = (Get-Process -Id $PID).Path
 $fwSicher       = Join-Path $daten 'firewall.json'   # exists only while the game firewall is on
 $fwGruppe       = 'Spielmodus'                       # temporary rules (Drive block)
@@ -119,7 +119,8 @@ function Enable-DriveSperre {
         try { New-NetFirewallRule -DisplayName $driveRegel -Group $fwGruppe -Direction Outbound -Action Block -Program $p -Profile Any -ErrorAction Stop | Out-Null }
         catch { Write-Log "Drive-Sperre fehlgeschlagen: $($_.Exception.Message)" }
     }
-    Write-Log 'Google Drive: Abgleich gesperrt'
+    $n = @(Get-NetFirewallRule -DisplayName $driveRegel -ErrorAction SilentlyContinue).Count
+    Write-Log $(if ($n -gt 0) { "Google Drive: Abgleich gesperrt ($n Regel(n))" } else { 'Google Drive: nicht gefunden, nichts gesperrt' })
 }
 
 function Disable-DriveSperre {
@@ -159,7 +160,7 @@ function Add-Erlaubt([string[]]$programme) {
     }
     $neu = 0
     foreach ($p in $programme) {
-        if (-not $p -or $script:erlaubtSet.Contains($p) -or -not (Test-Path $p)) { continue }
+        if (-not $p -or $script:erlaubtSet.Contains($p) -or -not (Test-Path -LiteralPath $p)) { continue }
         try {
             New-NetFirewallRule -DisplayName "Spielmodus erlaubt: $(Split-Path $p -Leaf)" -Group $fwErlaubt -Direction Outbound -Action Allow -Program $p -Profile Any -ErrorAction Stop | Out-Null
             [void]$script:erlaubtSet.Add($p); $neu++
@@ -179,9 +180,34 @@ function Add-GrundErlaubnis {
         "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
         "${env:ProgramFiles(x86)}\EasyAntiCheat_EOS\EasyAntiCheat_EOS.exe",
         "${env:ProgramFiles(x86)}\EasyAntiCheat\EasyAntiCheat.exe",
-        "${env:ProgramFiles(x86)}\Common Files\BattlEye\BEService.exe"
+        "${env:ProgramFiles(x86)}\Common Files\BattlEye\BEService.exe",
+        "${env:ProgramFiles(x86)}\Common Files\BattlEye\BEService_x64.exe"
     )
-    Add-Erlaubt $liste
+    # Coding CLIs stay online during games (e.g. "check my ping while I play"): Claude Code, Codex,
+    # OpenCode (node), OpenLauncher and the tools they call (git incl. https helper, gh, curl, shells, python).
+    $cli = @(
+        "$env:USERPROFILE\.local\bin\claude.exe",
+        "$env:ProgramFiles\nodejs\node.exe",
+        "$env:ProgramFiles\Git\cmd\git.exe",
+        "$env:ProgramFiles\Git\mingw64\bin\git.exe",
+        "$env:ProgramFiles\Git\mingw64\libexec\git-core\git-remote-https.exe",
+        "$env:ProgramFiles\Git\mingw64\bin\curl.exe",
+        "$env:ProgramFiles\Git\usr\bin\ssh.exe",
+        "$env:ProgramFiles\GitHub CLI\gh.exe",
+        "$env:WINDIR\System32\curl.exe",
+        "$env:ProgramFiles\PowerShell\7\pwsh.exe",
+        "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
+        "$env:USERPROFILE\proggs\OpenLauncher\bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe"
+    )
+    $cli += @(Get-ChildItem "$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin" -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    $cli += @(Get-ChildItem "$env:USERPROFILE\.local\share\claude\versions" -Filter *.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    Add-Erlaubt ($liste + $cli)
+    # ping (ICMPv4) for every program, tiny traffic, needed for latency checks
+    if (-not (Get-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Ping' -ErrorAction SilentlyContinue)) {
+        try { New-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Ping' -Group $fwErlaubt -Direction Outbound -Action Allow -Protocol ICMPv4 -Profile Any -ErrorAction Stop | Out-Null }
+        catch { Write-Log "Ping-Erlaubnis fehlgeschlagen: $($_.Exception.Message)" }
+    }
     # Home network (router page, adb over Wi-Fi) for every program
     if (-not (Get-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Heimnetz' -ErrorAction SilentlyContinue)) {
         try { New-NetFirewallRule -DisplayName 'Spielmodus erlaubt: Heimnetz' -Group $fwErlaubt -Direction Outbound -Action Allow -RemoteAddress LocalSubnet -Profile Any -ErrorAction Stop | Out-Null }
@@ -190,19 +216,16 @@ function Add-GrundErlaubnis {
 }
 
 function Add-SpielErlaubnis([int]$appId) {
-    $ordner = @()
-    if ($appId -gt 0) { $o = Get-SpielOrdner $appId; if ($o) { $ordner += $o } else { Write-Log "Spielordner für App $appId nicht gefunden" } }
-    # CoD outside Steam (or not yet in RunningAppID): allow the folder of the running process
-    foreach ($p in [Diagnostics.Process]::GetProcesses()) {
-        if ($p.ProcessName -eq 'cod' -or $p.ProcessName -match $ausloeserMuster) { try { $ordner += (Split-Path $p.MainModule.FileName) } catch { } }
-        $p.Dispose()
-    }
-    foreach ($o in ($ordner | Sort-Object -Unique)) {
-        Add-Erlaubt @(Get-ChildItem $o -Filter *.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName)
-    }
+    # Scan each game folder once per watcher run (CoD folders are huge); rules persist anyway.
+    if ($appId -le 0 -or $script:gescannt.Contains($appId)) { return }
+    $o = Get-SpielOrdner $appId
+    if (-not $o) { Write-Log "Spielordner für App $appId nicht gefunden"; return }
+    Add-Erlaubt @(Get-ChildItem -LiteralPath $o -Filter *.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName)
+    [void]$script:gescannt.Add($appId)
 }
 
 function Enable-SpielFirewall([int]$appId) {
+    # Returns $true only when outbound is really blocked (and the restore file exists).
     Add-GrundErlaubnis
     Add-SpielErlaubnis $appId
     if (-not (Test-Path $fwSicher)) {
@@ -213,29 +236,35 @@ function Enable-SpielFirewall([int]$appId) {
             Where-Object { $_.Group -ne $fwErlaubt -and $_.Group -ne '@FirewallAPI.dll,-25000' -and $_.DisplayGroup -notmatch '^(Kernnetzwerk|Core Networking)$' })
         $vorher = @{ Deaktiviert = @($fremd | ForEach-Object Name) }
         foreach ($pr in Get-NetFirewallProfile) { $vorher[$pr.Name] = "$($pr.DefaultOutboundAction)" }
-        $vorher | ConvertTo-Json | Set-Content $fwSicher -Encoding utf8
+        try { $vorher | ConvertTo-Json | Set-Content $fwSicher -Encoding utf8 -ErrorAction Stop }
+        catch { Write-Log "firewall.json nicht schreibbar, Spiel-Firewall bleibt aus: $($_.Exception.Message)"; return $false }
         if ($fremd.Count -gt 0) {
             try { $fremd | Disable-NetFirewallRule -ErrorAction Stop; Write-Log "Firewall: $($fremd.Count) fremde ausgehende Freigaben vorübergehend aus" }
             catch { Write-Log "Fremde Freigaben nicht abschaltbar: $($_.Exception.Message)" }
         }
     }
-    try { Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop; Write-Log "Spiel-Firewall AN (App $appId): nur Spiel, Steam, Chrome, Heimnetz" }
-    catch { Write-Log "Spiel-Firewall nicht setzbar: $($_.Exception.Message)" }
+    try { Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop; Write-Log "Spiel-Firewall AN (App $appId): nur Spiel, Steam, Chrome, Heimnetz"; return $true }
+    catch { Write-Log "Spiel-Firewall nicht setzbar: $($_.Exception.Message)"; return $true }   # restore file exists -> undo anyway later
 }
 
 function Disable-SpielFirewall {
+    # Returns $true when everything was restored; on failure firewall.json stays for a retry.
+    if (-not (Test-Path $fwSicher)) { return $true }   # never touch a firewall we did not change
     $vorher = $null
-    if (Test-Path $fwSicher) { try { $vorher = Get-Content $fwSicher -Raw | ConvertFrom-Json } catch { } }
+    try { $vorher = Get-Content $fwSicher -Raw | ConvertFrom-Json } catch { }
+    $ok = $true
     foreach ($pr in @('Domain', 'Private', 'Public')) {
         $wert = if ($vorher -and $vorher.$pr -and $vorher.$pr -ne 'Block') { $vorher.$pr } else { 'NotConfigured' }
-        try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $wert -ErrorAction Stop } catch { Write-Log "Firewall $pr zurückstellen fehlgeschlagen: $($_.Exception.Message)" }
+        try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $wert -ErrorAction Stop } catch { $ok = $false; Write-Log "Firewall $pr zurückstellen fehlgeschlagen: $($_.Exception.Message)" }
     }
     $namen = @($vorher.Deaktiviert | Where-Object { $_ })
     if ($namen.Count -gt 0) {
         try { Enable-NetFirewallRule -Name $namen -ErrorAction Stop } catch { Write-Log "Fremde Freigaben teilweise nicht wieder an: $($_.Exception.Message)" }
     }
+    if (-not $ok) { return $false }
     Remove-Item $fwSicher -ErrorAction SilentlyContinue
     Write-Log 'Spiel-Firewall AUS: alle Programme haben wieder Internet'
+    return $true
 }
 
 Write-Log "Wächter gestartet (PID $PID)"
@@ -253,11 +282,14 @@ if ((Get-Service $dienstGesperrt -ErrorAction SilentlyContinue).StartType -eq 'D
     Disable-Sperre
 }
 # Same after a crash during a game: outbound must not stay blocked, Drive must sync again.
-if (Test-Path $fwSicher) { Write-Log 'Altlast: Spiel-Firewall war noch an, stelle zurück'; Disable-SpielFirewall }
+if (Test-Path $fwSicher) { Write-Log 'Altlast: Spiel-Firewall war noch an, stelle zurück'; [void](Disable-SpielFirewall) }
 Disable-DriveSperre
 $fwAn = $false
 $fwAppId = -1
 $spielZuletzt = [datetime]::MinValue
+$script:gescannt = [Collections.Generic.HashSet[int]]::new()
+# Steam apps that are tools, not games: never cut the whole PC off for them
+$keinSpiel = @(431960, 250820, 629520, 228980)   # Wallpaper Engine, SteamVR, Soundpad, Steamworks Common Redistributables
 
 while ($true) {
     $aus    = Test-Path $flagAus
@@ -283,25 +315,29 @@ while ($true) {
     } elseif (-not $soll -and $gesperrt) {
         Write-Log ('Sperre AUS (' + $(if ($aus) { 'von Hand ausgeschaltet' } else { 'kein Spiel/Steam mehr' }) + ')')
         Disable-Sperre; $gesperrt = $false; $restMeldung = ''
+        if (-not $aus) { Show-Meldung 'Steam beendet: Spielmodus pausiert. Google Drive, Store und Xbox laufen wieder normal.' }
     }
 
-    # Game firewall: only while an actual game runs (Steam RunningAppID or CoD), not for Steam alone.
+    # Game firewall: only while a real Steam game runs (Steam running AND RunningAppID set, no tool app).
+    # A stale RunningAppID after a Steam crash does not count, Steam must be running.
     $appId = Get-SpielAppId
-    $spielJetzt = ($appId -gt 0) -or $script:codLaeuft
+    $spielJetzt = $steamJetzt -and ($appId -gt 0) -and ($keinSpiel -notcontains $appId)
     if ($spielJetzt) { $spielZuletzt = Get-Date }
     $fwSoll = (-not $aus) -and ($spielJetzt -or ($fwAn -and ((Get-Date) - $spielZuletzt).TotalSeconds -lt $entprellSek))
     if ($fwSoll -and -not $fwAn) {
-        Enable-SpielFirewall $appId; $fwAn = $true; $fwAppId = $appId
-        Show-Meldung 'Spiel läuft: Internet nur noch für das Spiel, Steam, Chrome und das Heimnetz.'
+        # No status window here: a top-most window could pull a fullscreen game out of focus.
+        if (Enable-SpielFirewall $appId) { $fwAn = $true; $fwAppId = $appId }
     } elseif ($fwAn -and $fwSoll -and $spielJetzt -and $appId -ne $fwAppId) {
         Add-SpielErlaubnis $appId; $fwAppId = $appId
     } elseif ($fwAn -and -not $fwSoll) {
-        Disable-SpielFirewall; $fwAn = $false; $fwAppId = -1
-        Show-Meldung 'Spiel beendet: Alle Programme haben wieder Internet.'
+        if (Disable-SpielFirewall) {
+            $fwAn = $false; $fwAppId = -1
+            if (-not $aus) { Show-Meldung 'Spiel beendet: Alle Programme haben wieder Internet.' }
+        }
     }
 
     if ($gesperrt) {
-        $rest =@([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
+        $rest = @([Diagnostics.Process]::GetProcesses() | Where-Object { $stopProz -contains $_.ProcessName } | ForEach-Object { $_.ProcessName })
         $rest += @(Get-LaufendeDienste | ForEach-Object { $_.Name })
         if ($rest.Count -gt 0) {
             Stop-Ziele

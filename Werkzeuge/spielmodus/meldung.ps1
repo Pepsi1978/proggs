@@ -1,9 +1,30 @@
 # Shows a clearly visible status window (top-most, bottom right, closes after 5 s or on click).
 # Windows 11 often swallows NotifyIcon balloons, so a small own window is used instead.
+# The window never takes focus (WS_EX_NOACTIVATE), so a fullscreen game is not interrupted.
 # Usage: meldung.ps1 -Text "..." [-Farbe an|aus|info]
 param([string]$Text = 'Spielmodus', [string]$Farbe = 'info')
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
+
+if (-not ('Spielmodus.StillesFenster' -as [type])) {
+    $refs = @([System.Windows.Forms.Form].Assembly.Location, [System.Drawing.Color].Assembly.Location,
+        [System.ComponentModel.Component].Assembly.Location) +
+        @([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -in 'System.Windows.Forms.Primitives', 'System.Drawing.Primitives', 'System.ComponentModel.Primitives', 'System.Runtime', 'System.Private.Windows.Core' } | ForEach-Object Location)
+    Add-Type -ReferencedAssemblies ($refs | Sort-Object -Unique) -TypeDefinition @'
+namespace Spielmodus {
+    public class StillesFenster : System.Windows.Forms.Form {
+        protected override bool ShowWithoutActivation { get { return true; } }
+        protected override System.Windows.Forms.CreateParams CreateParams {
+            get {
+                var cp = base.CreateParams;
+                cp.ExStyle |= 0x08000000 | 0x00000080 | 0x00000008; // NOACTIVATE | TOOLWINDOW | TOPMOST
+                return cp;
+            }
+        }
+    }
+}
+'@
+}
 
 $hinter = switch ($Farbe) {
     'an'    { [System.Drawing.Color]::FromArgb(22, 128, 61) }
@@ -11,7 +32,7 @@ $hinter = switch ($Farbe) {
     default { [System.Drawing.Color]::FromArgb(30, 64, 175) }
 }
 
-$f = New-Object System.Windows.Forms.Form
+$f = New-Object Spielmodus.StillesFenster
 $f.FormBorderStyle = 'None'
 $f.ShowInTaskbar = $false
 $f.TopMost = $true
@@ -41,6 +62,6 @@ $f.Add_Click($schliessen); $titel.Add_Click($schliessen); $inhalt.Add_Click($sch
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 5000
 $timer.Add_Tick($schliessen)
-$f.Add_Shown({ $timer.Start(); $f.Activate() })
+$f.Add_Shown({ $timer.Start() })
 [System.Windows.Forms.Application]::Run($f)
 $timer.Dispose()
