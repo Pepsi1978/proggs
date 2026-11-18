@@ -96,6 +96,14 @@ public sealed class EntwicklungsKartenTests
     public void Neustart_noetig_wird_erkannt(int code, string ausgabe, bool erwartet)
         => Assert.Equal(erwartet, WingetAktualisierer.BrauchtNeustart(Lauf(ausgabe, code)));
 
+    [Theory]
+    [InlineData(unchecked((int)0xC000013A), "Paketinstallation wird gestartet...", true)]
+    [InlineData(unchecked((int)0xC000013A), "Starting package install...", true)]
+    [InlineData(unchecked((int)0xC000013A), "Download läuft https://x/y.msi", false)]   // died before the installer
+    [InlineData(unchecked((int)0x8A150006), "Starting package install...", false)]      // a real installer failure
+    public void Winget_waehrend_der_Installation_beendet_wird_erkannt(int code, string ausgabe, bool erwartet)
+        => Assert.Equal(erwartet, WingetAktualisierer.WaehrendInstallationBeendet(Lauf(ausgabe, code)));
+
     [Fact]
     public void Vom_Hersteller_gesperrtes_Update_wird_erkannt()
     {
