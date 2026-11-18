@@ -190,7 +190,7 @@ public sealed class UpdateKette
                     continue;
                 }
 
-                standNach = await StandNachAbschlussAsync();
+                standNach = await StandNachAbschlussAsync(installerAbwarten: true);
                 return Ende(LaufErgebnis.Fehlgeschlagen, Text(ergebnis.Meldung, "Das Update ist fehlgeschlagen."),
                     ergebnis with { Zustand = UpdateZustand.Fehler });
             }
@@ -314,11 +314,20 @@ public sealed class UpdateKette
     /// diagnostic only: it is bounded, ignores the possibly fired cancel token and can never
     /// replace the verdict that already stands. An unreadable state is named as such.
     /// </summary>
-    private async Task<string> StandNachAbschlussAsync()
+    private async Task<string> StandNachAbschlussAsync(bool installerAbwarten = false)
     {
         _status("Prüft das Ergebnis …");
         try
         {
+            // Any provider: the tool may have failed while its MSI still installs (msiexec is a
+            // service). Reading now would show the old version as "nothing happened". Not after a
+            // user cancel -- that must end at once.
+            if (installerAbwarten && WindowsInstaller.SicherLaeuft())
+            {
+                _protokoll.Report("Der Windows Installer arbeitet noch – warte vor dem Lesen des Stands …");
+                await WindowsInstaller.AbwartenAsync(WindowsInstaller.HoechsteWartezeit, CancellationToken.None);
+            }
+
             using var grenze = new CancellationTokenSource(AbschlussLesegrenze);
             var stand = await _aktualisierer.FingerabdruckAsync(_eintrag, grenze.Token).WaitAsync(grenze.Token);
             return string.IsNullOrWhiteSpace(stand) ? NichtLesbar : stand;

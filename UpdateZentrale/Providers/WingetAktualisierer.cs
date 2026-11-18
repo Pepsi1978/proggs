@@ -563,13 +563,19 @@ public sealed class WingetAktualisierer : IAktualisierer
         // (PowerShell 7.6.10, 18.11.2026: 0xC000013A while the MSI replaced pwsh). msiexec runs on
         // as a service and finished 16 s later -- reading the version at once reported a false
         // failure. Wait for the installer, then the chain's own re-check decides (fail-closed).
-        if (WaehrendInstallationBeendet(lauf))
+        if (WaehrendInstallationBeendet(lauf, WindowsInstaller.SicherLaeuft()))
         {
             protokoll.Report("winget wurde während der Installation beendet (" + Code(lauf.ExitCode)
                              + ") – warte, bis der Windows Installer fertig ist …");
-            var fertig = await WindowsInstallerAbwartenAsync(TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch);
-            protokoll.Report(fertig ? "Windows Installer ist fertig – die Nachprüfung entscheidet."
-                                    : "Windows Installer läuft nach dem Zeitlimit noch – die Nachprüfung entscheidet.");
+            var fertig = await WindowsInstaller.AbwartenAsync(TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch);
+            // A list taken during the wait still shows the old version.
+            SammelVerwerfen();
+            if (!fertig)
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: "winget wurde während der Installation beendet (" + Code(lauf.ExitCode) + "), der Windows Installer arbeitet nach "
+                             + (int)WindowsInstaller.HoechsteWartezeit.TotalMinutes + " min noch – nicht erneut starten, später prüfen.",
+                    Protokoll: lauf.Ausgabe);
+            protokoll.Report("Windows Installer ist fertig – die Nachprüfung entscheidet.");
             return new PruefErgebnis(UpdateZustand.Fertig,
                 Meldung: "winget wurde während der Installation beendet (" + Code(lauf.ExitCode) + "); das Ergebnis zeigt die Nachprüfung.",
                 Protokoll: lauf.Ausgabe);
@@ -750,54 +756,16 @@ public sealed class WingetAktualisierer : IAktualisierer
 
     /// <summary>
     /// winget ended by itself with an NTSTATUS error (0xC0000000 range: 0xC000013A console closed /
-    /// Ctrl+C, a crash) AFTER it announced the package install. Its own errors are 0x8A15xxxx or the
-    /// installer's code, so this range means winget died, not that the installer failed.
+    /// Ctrl+C, a crash) AFTER the installer started: announced in the output (English/German) or,
+    /// language-neutral, an MSI transaction still running right now. Its own errors are 0x8A15xxxx
+    /// or the installer's code, so this range means winget died, not that the installer failed.
     /// </summary>
-    internal static bool WaehrendInstallationBeendet(BefehlErgebnis lauf)
+    internal static bool WaehrendInstallationBeendet(BefehlErgebnis lauf, bool installerLaeuft = false)
         => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null
            && (unchecked((uint)lauf.ExitCode) & 0xF0000000) == 0xC0000000
-           && (lauf.Ausgabe.Contains("Starting package install", StringComparison.OrdinalIgnoreCase)
+           && (installerLaeuft
+               || lauf.Ausgabe.Contains("Starting package install", StringComparison.OrdinalIgnoreCase)
                || lauf.Ausgabe.Contains("Paketinstallation wird gestartet", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>Test seam: whether a Windows Installer transaction is running right now.</summary>
-    internal static Func<bool> WindowsInstallerLaeuft { get; set; } = MsiTransaktionLaeuft;
-
-    /// <summary>Poll pause while waiting for Windows Installer.</summary>
-    internal static TimeSpan InstallerPause { get; set; } = TimeSpan.FromSeconds(2);
-
-    /// <summary>
-    /// msiexec holds the global mutex _MSIExecute for the whole install transaction. Missing = idle.
-    /// Without admin rights the open is denied -- which only happens when it exists.
-    /// </summary>
-    private static bool MsiTransaktionLaeuft()
-    {
-        try
-        {
-            if (!Mutex.TryOpenExisting(@"Global\_MSIExecute", out var mutex)) return false;
-            mutex.Dispose();
-            return true;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or ArgumentException)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>Waits, bounded, until no Windows Installer transaction runs. true = idle.</summary>
-    internal static async Task<bool> WindowsInstallerAbwartenAsync(TimeSpan grenze, CancellationToken abbruch)
-    {
-        var uhr = System.Diagnostics.Stopwatch.StartNew();
-        while (WindowsInstallerLaeuft())
-        {
-            if (uhr.Elapsed >= grenze) return false;
-            await Task.Delay(InstallerPause, abbruch);
-        }
-        return true;
-    }
 
     /// <summary>The manifest denies upgrades through winget; only the publisher's own updater may.</summary>
     internal static bool NurUeberHersteller(BefehlErgebnis lauf)

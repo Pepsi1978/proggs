@@ -1,6 +1,6 @@
 # UpdateZentrale: winget endet mit 0xC000013A, das MSI installiert trotzdem fertig (18.11.2026)
 
-> Behoben in UpdateZentrale 1.3.86. macOS ist nicht betroffen: Dort gibt es weder winget noch den Windows Installer als eigenständig weiterlaufenden Dienst.
+> Behoben in UpdateZentrale 1.3.86, nach dem Review geschärft in 1.3.87 (Mutex per `WaitOne(0)` statt nur auf Existenz prüfen, eigene Wartegrenze von 5 min, Listen-Cache nach dem Warten verwerfen, Zeitüberschreitung als klarer Fehler, laufendes MSI als sprachneutrales Signal, Warten auch in `UpdateKette` nach jedem Fehlschlag für alle Arten). macOS ist nicht betroffen: Dort gibt es weder winget noch den Windows Installer als eigenständig weiterlaufenden Dienst.
 
 ## Symptom
 
@@ -15,7 +15,9 @@ Karte „PowerShell 7“ (`art: winget`, `Microsoft.PowerShell`, `wingetUpdatePe
 ## Behebung (ganze Fehlerart)
 
 - `WingetAktualisierer.WaehrendInstallationBeendet`: Code im NTSTATUS-Fehlerbereich `0xC…` (winget starb: Ctrl+C, Konsole zu, Absturz) **und** die Ausgabe enthält „Starting package install“/„Paketinstallation wird gestartet“. Eigene winget-Fehler (`0x8A15…`) und Installer-Codes fallen nicht darunter. Stirbt winget vor dem Installerstart, bleibt es ein Fehler.
-- Dann wartet `WindowsInstallerAbwartenAsync` (begrenzt durch `zeitlimitMinuten`), bis keine Installer-Transaktion mehr läuft: Mutex `Global\_MSIExecute`; „Zugriff verweigert“ ohne Adminrechte heißt, dass er existiert. Danach meldet der Provider „durchgelaufen“, und die normale Nachprüfung der Kette entscheidet. Bewegt sich der Stand nicht, bleibt es fail-closed „Nicht verifiziert“, nie „Erfolgreich“.
+- Sprachneutral zählt zusätzlich: Code `0xC…` und gerade läuft eine MSI-Transaktion.
+- Dann wartet `Services/WindowsInstaller.AbwartenAsync` (höchstens 5 min), bis keine Installer-Transaktion mehr läuft. Geprüft wird der Mutex `Global\_MSIExecute`: fehlt er oder lässt er sich mit `WaitOne(0)` sofort nehmen, ist der Installer frei. Der ruhende Dienst hält ihn offen, ohne ihn zu besitzen, deshalb reicht „existiert“ nicht. „Zugriff verweigert“ heißt besetzt, das Warten bleibt aber begrenzt. Danach wird der winget-Listen-Cache verworfen, der Provider meldet „durchgelaufen“, und die normale Nachprüfung der Kette entscheidet. Bewegt sich der Stand nicht, bleibt es fail-closed „Nicht verifiziert“, nie „Erfolgreich“. Läuft das MSI nach 5 min noch, gibt es einen klaren Fehler („nicht erneut starten, später prüfen“).
+- Für alle Arten: `UpdateKette` wartet nach jedem Fehlschlag auf ein freies MSI, bevor sie „Stand nachher“ liest (nicht nach einem Abbruch durch den Nutzer).
 
 ## Erkennen
 

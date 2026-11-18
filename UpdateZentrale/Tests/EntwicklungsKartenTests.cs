@@ -105,6 +105,38 @@ public sealed class EntwicklungsKartenTests
         => Assert.Equal(erwartet, WingetAktualisierer.WaehrendInstallationBeendet(Lauf(ausgabe, code)));
 
     [Fact]
+    public void Laufendes_MSI_erkennt_den_Abbruch_unabhaengig_von_der_Sprache()
+    {
+        var lauf = Lauf("Démarrage de l'installation du package...", unchecked((int)0xC000013A));
+        Assert.True(WingetAktualisierer.WaehrendInstallationBeendet(lauf, installerLaeuft: true));
+        Assert.False(WingetAktualisierer.WaehrendInstallationBeendet(lauf, installerLaeuft: false));
+    }
+
+    [Fact]
+    public async Task Warten_auf_den_Windows_Installer_endet_wenn_er_frei_ist_oder_an_der_Grenze()
+    {
+        var alt = (WindowsInstaller.Laeuft, WindowsInstaller.Pause);
+        try
+        {
+            WindowsInstaller.Pause = TimeSpan.FromMilliseconds(5);
+            var abfragen = 0;
+            WindowsInstaller.Laeuft = () => ++abfragen <= 2;   // busy twice, then idle
+            Assert.True(await WindowsInstaller.AbwartenAsync(TimeSpan.FromSeconds(10), CancellationToken.None));
+            Assert.Equal(3, abfragen);
+
+            WindowsInstaller.Laeuft = () => true;
+            Assert.False(await WindowsInstaller.AbwartenAsync(TimeSpan.FromMilliseconds(30), CancellationToken.None));
+
+            WindowsInstaller.Laeuft = () => throw new InvalidOperationException("Probe kaputt");
+            Assert.True(await WindowsInstaller.AbwartenAsync(TimeSpan.FromSeconds(10), CancellationToken.None));
+        }
+        finally
+        {
+            (WindowsInstaller.Laeuft, WindowsInstaller.Pause) = alt;
+        }
+    }
+
+    [Fact]
     public void Vom_Hersteller_gesperrtes_Update_wird_erkannt()
     {
         Assert.True(WingetAktualisierer.NurUeberHersteller(Lauf(
