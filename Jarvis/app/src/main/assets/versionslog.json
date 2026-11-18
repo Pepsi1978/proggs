@@ -784,6 +784,7 @@
     {"versionCode": 776, "versionName": "1.8.765", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."},
     {"versionCode": 777, "versionName": "1.8.766", "stand": "18.11.2026, 09:09 Uhr", "notiz": "Ältere Sol-6.1-Aufträge in Codex Cloud und alte Sol-6.1-Einstiege werden weiter erkannt; OpenRouter-Modelle GPT-6.1 Sol und GPT-6 Astra behalten alle Denkstufen."},
     {"versionCode": 778, "versionName": "1.8.767", "stand": "18.11.2026, 10:33 Uhr", "notiz": "Neue Startkarte Kaffeemaschine: Long Black mit einem Tipp, alle Getränke mit Bild und die Einstellungen der PrimaDonna Soul, dazu „Mach mir einen Kaffee“ per Sprache."},
-    {"versionCode": 779, "versionName": "1.8.768", "stand": "18.11.2026, 10:43 Uhr", "notiz": "Kaffeemaschine zuverlässiger: Entkalken-Hinweise blockieren keinen Kaffee mehr, laufende Zubereitungen werden nicht überbrüht, Sprachaufträge warten das Aufwachen im Hintergrund ab und Getränke werden genauer erkannt."}
+    {"versionCode": 779, "versionName": "1.8.768", "stand": "18.11.2026, 10:43 Uhr", "notiz": "Kaffeemaschine zuverlässiger: Entkalken-Hinweise blockieren keinen Kaffee mehr, laufende Zubereitungen werden nicht überbrüht, Sprachaufträge warten das Aufwachen im Hintergrund ab und Getränke werden genauer erkannt."},
+    {"versionCode": 780, "versionName": "1.8.769", "stand": "18.11.2026, 11:14 Uhr", "notiz": "Staubsauger-Karte: Erreichbarkeit und Stand stehen jetzt in einer eigenen Zeile unter den Knöpfen und werden nicht mehr zusammengedrückt."}
 ]
 }

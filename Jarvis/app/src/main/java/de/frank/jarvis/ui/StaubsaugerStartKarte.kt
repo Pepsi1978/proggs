@@ -236,28 +236,6 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                         color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, end = 8.dp),
                     )
                 }
-                // Stand und Erreichbarkeit als eigene Zeile unter dem Akku, auf jedem Gerät gleich (daneben wurde es zugeklappt gequetscht).
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val st = Modifier
-                    when {
-                        a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
-                        a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
-                        // Ehrlich benennen, wessen Verbindung fehlt: der Roboter ist aus dem WLAN, Handy und Cloud sind in Ordnung.
-                        s.erreichbar == false -> {
-                            // „offline“ statt „ohne WLAN“: Die Cloud sagt nur, dass er nicht verbunden ist (WLAN, ausgeschaltet oder Akku leer).
-                            Text("Roboter offline" + (s.offlineSeit.takeIf { it > 0 }?.let { " seit ${uhrzeitKurz(it)}" } ?: ""),
-                                color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = st)
-                            // Der zuletzt wirklich abgelesene Zustand (gespeichert, auch nach einem Neustart), etwa „zuletzt reinigt“.
-                            s.status?.let { Text(" · zuletzt $it", color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        }
-                        s.erreichbar == true -> {
-                            Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
-                            // Alter von Akku und Zustand weiter sichtbar, damit ein alter Wert nicht als aktuell gilt.
-                            s.gelesenUm?.let { Text(" · Stand ${alterKurz(it)}", color = f.textLeise, fontSize = 13.sp) }
-                        }
-                        s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
-                    }
-                }
             }
             KopfKnopf(R.drawable.sauger_tiefenreinigung, "Tiefenreinigung", s.laeuft) { los(Aktion.TIEFENREINIGUNG) }
             if (cloud) {
@@ -282,6 +260,28 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
                 if (a.offen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, if (a.offen) "Zuklappen" else "Aufklappen",
                 tint = f.textLeise, modifier = Modifier.padding(start = 22.dp).size(26.dp),
             )
+        }
+        // Stand und Erreichbarkeit als eigene Zeile unter Titel und Knöpfen in voller Breite (neben den Knöpfen wurde es gequetscht).
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            val st = Modifier
+            when {
+                a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
+                a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
+                // Ehrlich benennen, wessen Verbindung fehlt: der Roboter ist aus dem WLAN, Handy und Cloud sind in Ordnung.
+                s.erreichbar == false -> {
+                    // „offline“ statt „ohne WLAN“: Die Cloud sagt nur, dass er nicht verbunden ist (WLAN, ausgeschaltet oder Akku leer).
+                    Text("Roboter offline" + (s.offlineSeit.takeIf { it > 0 }?.let { " seit ${uhrzeitKurz(it)}" } ?: ""),
+                        color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = st)
+                    // Der zuletzt wirklich abgelesene Zustand (gespeichert, auch nach einem Neustart), etwa „zuletzt reinigt“.
+                    s.status?.let { Text(" · zuletzt $it", color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
+                s.erreichbar == true -> {
+                    Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                    // Alter von Akku und Zustand weiter sichtbar, damit ein alter Wert nicht als aktuell gilt.
+                    s.gelesenUm?.let { Text(" · Stand ${alterKurz(it)}", color = f.textLeise, fontSize = 13.sp) }
+                }
+                s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
+            }
         }
         // Statuszeile, solange der Roboter arbeitet: Saugstufe und automatische Staubsammlung, beides antippbar.
         if (!a.offen && cloud && live != null && ProscenicMehr.aktiv(live.modus)) {
