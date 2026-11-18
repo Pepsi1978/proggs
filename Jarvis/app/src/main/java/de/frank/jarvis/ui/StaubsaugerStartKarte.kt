@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -222,8 +223,11 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
         }
     }
 
+    // Takt alle 30 Sekunden, damit „Stand gerade eben“ in der Statuszeile zur Uhrzeit weiterwandert.
+    var standTakt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(30_000L); standTakt++ } }
     Karte(modifier = griff) {
-        // Kopf: Titel, Akku, Erreichbarkeit, dann Tiefenreinigung, Pause, Aktualisieren mit Abstand zueinander und zum Klapp-Pfeil.
+        // Kopf: Titel und Akku, dann Tiefenreinigung, Pause, Aktualisieren mit Abstand zueinander und zum Klapp-Pfeil.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().antippen {
             if (a.offen) { a.offen = false; a.ziel = null } else aufklappen()
         }) {
@@ -262,25 +266,34 @@ fun StaubsaugerStartKarte(griff: Modifier = Modifier) {
             )
         }
         // Stand und Erreichbarkeit als eigene Zeile unter Titel und Knöpfen in voller Breite (neben den Knöpfen wurde es gequetscht).
-        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            val st = Modifier
+        // Antippen klappt wie der Kopf auf und zu; ohne Inhalt entfällt die Zeile ganz.
+        val statusDa = a.laedt || s.laeuft || a.cloudFehlerUm > s.erreichbarUm || s.erreichbar != null || s.gelesenUm != null
+        if (statusDa) Row(
+            Modifier.fillMaxWidth().padding(top = 2.dp).antippen { if (a.offen) { a.offen = false; a.ziel = null } else aufklappen() },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // „gerade eben“ altert: der Takt zeichnet die Zeile regelmäßig neu, damit ein alter Stand nicht als frisch gilt.
+            val alter = { zeit: Long -> if (standTakt >= 0) alterKurz(zeit) else "" }
+            val gelesen = s.gelesenUm
             when {
-                a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp, modifier = st)
-                a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp, modifier = st)
+                a.laedt || s.laeuft -> Text("wird gelesen …", color = f.primaer, fontSize = 13.sp)
+                a.cloudFehlerUm > s.erreichbarUm -> Text("Cloud nicht erreichbar", color = f.gefahr, fontSize = 13.sp)
                 // Ehrlich benennen, wessen Verbindung fehlt: der Roboter ist aus dem WLAN, Handy und Cloud sind in Ordnung.
                 s.erreichbar == false -> {
                     // „offline“ statt „ohne WLAN“: Die Cloud sagt nur, dass er nicht verbunden ist (WLAN, ausgeschaltet oder Akku leer).
+                    // weight(fill = false): der erste Text darf den letzten Zustand daneben nicht ganz verdrängen.
                     Text("Roboter offline" + (s.offlineSeit.takeIf { it > 0 }?.let { " seit ${uhrzeitKurz(it)}" } ?: ""),
-                        color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = st)
+                        color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false))
                     // Der zuletzt wirklich abgelesene Zustand (gespeichert, auch nach einem Neustart), etwa „zuletzt reinigt“.
                     s.status?.let { Text(" · zuletzt $it", color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 s.erreichbar == true -> {
-                    Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = st)
+                    Text("erreichbar", color = f.erfolg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     // Alter von Akku und Zustand weiter sichtbar, damit ein alter Wert nicht als aktuell gilt.
-                    s.gelesenUm?.let { Text(" · Stand ${alterKurz(it)}", color = f.textLeise, fontSize = 13.sp) }
+                    gelesen?.let { Text(" · Stand ${alter(it)}", color = f.textLeise, fontSize = 13.sp) }
                 }
-                s.gelesenUm != null -> Text("Stand ${alterKurz(s.gelesenUm!!)}", color = f.textLeise, fontSize = 13.sp, modifier = st)
+                gelesen != null -> Text("Stand ${alter(gelesen)}", color = f.textLeise, fontSize = 13.sp)
             }
         }
         // Statuszeile, solange der Roboter arbeitet: Saugstufe und automatische Staubsammlung, beides antippbar.
