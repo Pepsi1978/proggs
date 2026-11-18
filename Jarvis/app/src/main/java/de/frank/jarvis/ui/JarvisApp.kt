@@ -102,7 +102,8 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
         val f = LocalFarben.current
         val tunnel by Tunnel.zustand.collectAsState()
         var fensterBreite by remember { mutableIntStateOf(0) }
-        Box(Modifier.fillMaxSize().onSizeChanged { fensterBreite = it.width }.background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))) {
+        // Der Grundverlauf steckt mit den Lichtflecken in Hintergrund(): eine gemeinsame, zwischengespeicherte Fläche statt zweier Vollbild-Füllungen je Bild.
+        Box(Modifier.fillMaxSize().onSizeChanged { fensterBreite = it.width }) {
             Hintergrund()
             // Zurück-Geste auf Ablage, Aktivität oder Einstellungen: vorheriger Reiter, sonst Jarvis-Start, nie App schließen.
             // Steht vor dem Inhalt, damit die Zurück-Behandlung innerer Ansichten (Ablage, Merkliste, Gedächtnis) Vorrang hat.
@@ -201,19 +202,28 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
     }
 }
 
-/** Ruhig treibende Lichtflecken hinter dem Glas. */
+/**
+ * Grundverlauf und ruhig treibende Lichtflecken hinter dem Glas, als zwischengespeicherte Fläche (Offscreen-Ebene):
+ * Beim Scrollen und im Stillstand wird sie nur noch als fertiges Bild eingeblendet, statt in jedem Bild Verlauf und drei
+ * bildschirmgroße Kreisverläufe neu zu rechnen (das hielt die Grafik auf 120 Bildern je Sekunde und ließ das Scrollen ruckeln).
+ * Die Flecken wandern weiter, aber in groben Schritten von etwa 10 je Sekunde (rund 2 Pixel je Schritt, nicht sichtbar);
+ * zwischen den Schritten fordert der Hintergrund kein Bild an. Die Bildtaktung pausiert im Hintergrund der App von selbst.
+ */
 @Composable
 private fun Hintergrund() {
     val f = LocalFarben.current
-    if (LocalBewegung.current) {
-        val lauf = rememberInfiniteTransition(label = "hg")
-        val t = lauf.animateFloat(0f, 1f, infiniteRepeatable(tween(46_000, easing = LinearEasing)), label = "t")
-        // Der Wert wird erst beim Zeichnen gelesen: Jedes Bild wird nur neu gezeichnet, nicht neu zusammengesetzt.
-        // Eigene Ebene, damit das Glas darüber nicht in jedem Bild mitgezeichnet wird.
-        Canvas(Modifier.fillMaxSize().graphicsLayer()) { lichtflecken(f, t.value) }
-    } else {
-        // Ohne Bewegung gar keine Endlos-Animation: Sie würde sonst weiter Bilder anfordern.
-        Canvas(Modifier.fillMaxSize().graphicsLayer()) { lichtflecken(f, 0.2f) }
+    val bewegt = LocalBewegung.current
+    val phase = remember { androidx.compose.runtime.mutableFloatStateOf(0.2f) }
+    if (bewegt) LaunchedEffect(Unit) {
+        while (true) {
+            androidx.compose.runtime.withFrameMillis { ms -> phase.floatValue = (ms % 46_000L) / 46_000f }
+            delay(100)
+        }
+    }
+    // Der Wert wird erst beim Zeichnen gelesen: Jeder Schritt zeichnet nur die Ebene neu, nichts wird neu zusammengesetzt.
+    Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }) {
+        drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
+        lichtflecken(f, if (bewegt) phase.floatValue else 0.2f)
     }
 }
 

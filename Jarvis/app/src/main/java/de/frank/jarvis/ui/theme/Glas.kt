@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -98,7 +99,7 @@ fun Modifier.glas(
             if (rand) drawPath(form, Color.White.copy(alpha = if (farben.dunkel) 0.16f else 0.55f), style = Stroke(1.dp.toPx()))
             return@onDrawBehind
         }
-        if (erhoeht > 0f) clipPath(form, ClipOp.Difference) {
+        if (erhoeht > 0f) clipPath(form, ClipOp.Difference) { nurAussen(r) {
             for (i in 1..stufen) {
                 val a = (if (farben.dunkel) 0.16f else 0.07f) * (1f - i / (stufen + 1f)) * erhoeht
                 val g = i * 1.6.dp.toPx() * erhoeht
@@ -109,12 +110,31 @@ fun Modifier.glas(
                     cornerRadius = CornerRadius(r + g),
                 )
             }
-        }
+        } }
         drawPath(form, verlauf)
         tonVerlauf?.let { drawPath(form, it) }
-        drawPath(form, glanz)
+        // Unterhalb von 45 % ist der Glanz völlig durchsichtig: dort nicht zeichnen (spart eine ganze Füllung je hoher Karte).
+        clipRect(bottom = kotlin.math.ceil(verlaufEnde * 0.45f).coerceAtMost(size.height)) { drawPath(form, glanz) }
         if (rand) drawPath(form, kante, style = Stroke(1.dp.toPx()))
     }
+}
+
+/**
+ * Zeichnet [block] nur außerhalb eines Innenrechtecks, das sicher (mit Abstand zur Kantenglättung) in der abgerundeten Fläche
+ * mit Radius [r] liegt. Die Schatten sind dort ohnehin per ClipOp.Difference ausgestanzt; so rechnet die Grafik die verdeckte
+ * Kartenfläche nicht mehr siebenfach mit. Vier sich nicht überlappende Streifen mit ganzzahligen Kanten (ohne Kantenglättung):
+ * jedes Pixel außerhalb wird genau einmal gezeichnet, das Bild bleibt pixelgleich.
+ */
+private inline fun DrawScope.nurAussen(r: Float, block: DrawScope.() -> Unit) {
+    val k = kotlin.math.ceil(r * 0.3f + 2f)
+    val b = size.width
+    val h = size.height
+    if (b <= 2 * k + 2f || h <= 2 * k + 2f) { block(); return }
+    val weit = 4f * (b + h)
+    clipRect(-weit, -weit, b + weit, k) { block() }
+    clipRect(-weit, h - k, b + weit, h + weit) { block() }
+    clipRect(-weit, k, k, h - k) { block() }
+    clipRect(b - k, k, b + weit, h - k) { block() }
 }
 
 /** Quadratische Fläche mit voller Rundung, also ein Kreis. Längliche Pillen behalten ihren 3D-Effekt. */
@@ -185,7 +205,7 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
             drawPath(form, Color.White.copy(alpha = 0.16f), style = Stroke(1.dp.toPx()))
             return@onDrawBehind
         }
-        clipPath(form, ClipOp.Difference) {
+        clipPath(form, ClipOp.Difference) { nurAussen(r) {
             for (i in 1..6) {
                 val g = i * 1.8.dp.toPx()
                 drawRoundRect(
@@ -195,7 +215,7 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
                     cornerRadius = CornerRadius(r + g),
                 )
             }
-        }
+        } }
         drawPath(form, koerper)
         drawPath(form, unten)
         clipPath(form) {

@@ -297,14 +297,15 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) textende - LISTEN_ABSTAND else 8.dp + schweber),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(LISTEN_ABSTAND, Alignment.Bottom) else Arrangement.spacedBy(LISTEN_ABSTAND),
         ) {
-            if (offen > 0) item(key = EINRICHTUNG_KEY) {
+            if (offen > 0) item(key = EINRICHTUNG_KEY, contentType = "einrichtung") {
                 Karte(toenung = f.primaer) {
                     Text("Einrichtung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Noch $offen von ${schritte.size} Schritten, dann hört Jarvis auf dein Wort.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
                     schritte.forEachIndexed { i, s -> SchrittZeile(i + 1, s) }
                 }
             }
-            if (vm.gespraech.isEmpty()) items(reihe, key = ::bereichKey) { bereich ->
+            // contentType je Bereich: Jede Karte bekommt ihren eigenen Wiederverwendungs-Vorrat, statt beim Scrollen fremde Karten umzubauen.
+            if (vm.gespraech.isEmpty()) items(reihe, key = ::bereichKey, contentType = { it }) { bereich ->
               // Griff ist nur der Titel samt Unterzeile jeder Karte (wächst mit der Schriftgröße); Knöpfe daneben und der
               // Inhalt darunter bleiben frei. Mit TalkBack verschieben eigene Aktionen den Bereich nach oben oder unten.
               val griff = reorderHandle(zustand, bereichKey(bereich)).semantics {
@@ -414,13 +415,13 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
               }
             }
-            items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
+            items(vm.gespraech.size, contentType = { "blase" }) { i -> Blase(vm, i, vm.gespraech[i]) }
             // Laufender Stand (Tätigkeit samt Leuchtkern, Arbeitssymbol der Programmier-Sitzung, Abschluss, Agenten) gehört zum
             // Gesprächsinhalt (Franks Wunsch vom 11.11.2026): kein eigener Grund, keine feste Zeile, er scrollt mit dem Text.
             // Ein einziger Eintrag: Leer steht er mit Höhe 0 genau auf dem Textende (das Polster unten ist um den Listenabstand
             // kürzer); sichtbar holt er diesen Abstand unten nach, damit auch seine letzte Zeile auf derselben Höhe endet.
             // Seine Zeilen halten untereinander den Listenabstand wie früher als eigene Einträge (leere Zeilen zählen nicht).
-            item(key = "stand") {
+            item(key = "stand", contentType = "stand") {
                 Column(Modifier.fillMaxWidth().layout { messbar, grenzen ->
                     val p = messbar.measure(grenzen)
                     val extra = if (vonUnten && p.height > 0) LISTEN_ABSTAND.roundToPx() else 0
