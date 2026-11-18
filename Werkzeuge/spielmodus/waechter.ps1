@@ -206,9 +206,18 @@ function Enable-SpielFirewall([int]$appId) {
     Add-GrundErlaubnis
     Add-SpielErlaubnis $appId
     if (-not (Test-Path $fwSicher)) {
-        $vorher = @{}
+        # Existing outbound allow rules (Claude Desktop, Teams, Store apps, telemetry, backup ...) would
+        # still pass under "block by default" - switch them off for the game, keep only Core Networking
+        # (DNS, DHCP). Saved BEFORE disabling so a crash can always restore them.
+        $fremd = @(Get-NetFirewallRule -Direction Outbound -Enabled True -Action Allow -ErrorAction SilentlyContinue |
+            Where-Object { $_.Group -ne $fwErlaubt -and $_.Group -ne '@FirewallAPI.dll,-25000' -and $_.DisplayGroup -notmatch '^(Kernnetzwerk|Core Networking)$' })
+        $vorher = @{ Deaktiviert = @($fremd | ForEach-Object Name) }
         foreach ($pr in Get-NetFirewallProfile) { $vorher[$pr.Name] = "$($pr.DefaultOutboundAction)" }
         $vorher | ConvertTo-Json | Set-Content $fwSicher -Encoding utf8
+        if ($fremd.Count -gt 0) {
+            try { $fremd | Disable-NetFirewallRule -ErrorAction Stop; Write-Log "Firewall: $($fremd.Count) fremde ausgehende Freigaben vorübergehend aus" }
+            catch { Write-Log "Fremde Freigaben nicht abschaltbar: $($_.Exception.Message)" }
+        }
     }
     try { Set-NetFirewallProfile -All -DefaultOutboundAction Block -ErrorAction Stop; Write-Log "Spiel-Firewall AN (App $appId): nur Spiel, Steam, Chrome, Heimnetz" }
     catch { Write-Log "Spiel-Firewall nicht setzbar: $($_.Exception.Message)" }
@@ -220,6 +229,10 @@ function Disable-SpielFirewall {
     foreach ($pr in @('Domain', 'Private', 'Public')) {
         $wert = if ($vorher -and $vorher.$pr -and $vorher.$pr -ne 'Block') { $vorher.$pr } else { 'NotConfigured' }
         try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $wert -ErrorAction Stop } catch { Write-Log "Firewall $pr zurückstellen fehlgeschlagen: $($_.Exception.Message)" }
+    }
+    $namen = @($vorher.Deaktiviert | Where-Object { $_ })
+    if ($namen.Count -gt 0) {
+        try { Enable-NetFirewallRule -Name $namen -ErrorAction Stop } catch { Write-Log "Fremde Freigaben teilweise nicht wieder an: $($_.Exception.Message)" }
     }
     Remove-Item $fwSicher -ErrorAction SilentlyContinue
     Write-Log 'Spiel-Firewall AUS: alle Programme haben wieder Internet'

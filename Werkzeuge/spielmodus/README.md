@@ -1,6 +1,6 @@
 # Spielmodus (Windows)
 
-Version 1.3.1 · Stand 18.11.2026, 14:43 Uhr
+Version 1.3.2 · Stand 18.11.2026, 14:50 Uhr
 
 Hält beim Online-Spielen über die schmale 5G-Leitung alle Microsoft-Store- und Xbox-Downloads fern.
 Hintergrund: Gaming Services (Xbox-App) luden mit 12 parallelen Verbindungen Shader und trieben den
@@ -24,7 +24,9 @@ Ping von 30 ms auf über 1500 ms (Almanach `bugs/gaming/netzwerk-latenz-5g-route
   Windows-Firewall „ausgehend standardmäßig blockieren“ (Ursprungswerte in `firewall.json`). Erlaubt sind
   (Gruppe `Spielmodus-Erlaubt`, bleibt dauerhaft, ist ohne Block wirkungslos): alle .exe im Spielordner
   (aus `appmanifest_<id>.acf`), Steam, Anti-Cheat (EAC/BattlEye), Google Chrome und das Heimnetz (`LocalSubnet`, z. B. Tenda-Router-Seite).
-  Alles andere hat im Spiel kein Internet, auch Claude Code, Jarvis-PC-Brücke, WireGuard und Discord.
+  Vorhandene fremde ausgehende Freigaben (Claude Desktop, Teams, Store-Apps, Telemetrie, Sicherung …) werden
+  für das Spiel abgeschaltet (Liste in `firewall.json`) und danach wieder eingeschaltet, nur das Kernnetzwerk (DNS, DHCP) bleibt.
+  Eingehend blockt Windows ohnehin. Alles andere hat im Spiel kein Internet, auch Claude Code, Jarvis-PC-Brücke, WireGuard und Discord.
   20 s nach Spielende ist alles wieder offen. Nach einem Absturz stellt der Wächter beim Start zurück.
 - **Desktop „Spielmodus an-aus“** (`umschalten.ps1`): Doppelklick schaltet den Wächter aus/an (Datei `aus.flag`)
   und zeigt unten rechts ein eigenes Statusfenster (grün = AN, grau = AUS, 5 s, Klick schließt; `meldung.ps1`).

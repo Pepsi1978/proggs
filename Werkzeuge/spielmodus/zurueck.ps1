@@ -20,6 +20,8 @@ foreach ($pr in @('Domain', 'Private', 'Public')) {
     $w = if ($fwv -and $fwv.$pr -and $fwv.$pr -ne 'Block') { $fwv.$pr } else { 'NotConfigured' }
     try { Set-NetFirewallProfile -Name $pr -DefaultOutboundAction $w -ErrorAction Stop } catch { $fehler += "Firewall ${pr}: $($_.Exception.Message)" }
 }
+$fwNamen = @($fwv.Deaktiviert | Where-Object { $_ })
+if ($fwNamen.Count -gt 0) { try { Enable-NetFirewallRule -Name $fwNamen -ErrorAction Stop } catch { $fehler += "Firewall-Freigaben: $($_.Exception.Message)" } }
 Remove-NetFirewallRule -Group 'Spielmodus' -ErrorAction SilentlyContinue
 Remove-NetFirewallRule -Group 'Spielmodus-Erlaubt' -ErrorAction SilentlyContinue
 Remove-Item $fwSicher -ErrorAction SilentlyContinue
