@@ -36,6 +36,12 @@
 ## 5a. WLAN neu verbinden (neuer Router, neues Passwort)
 - Anleitung 57132C8859 Kap. 6.3: Einstellungen (B6) → „Connectivity“ → „Next“ → **„Reset“** → „Ok“ löscht **nur die Netzwerkeinstellungen** („deleting of the network settings“), nicht Rezepte/Profile. Danach in der Coffee-Link-App neu verbinden. Der Werksreset ist ein eigener Punkt (Kap. 6.12 „Default values“). `offiziell` https://dls.delonghigroup.com/files/docs/5/EN-57132C8859.pdf
 
+## 5b. Wach halten und Aufwach-Spülung (erprobt 18.11.2026, ECAM 610.74)
+- Die Spülung beim Einschalten ist nicht abschaltbar (Anleitung: „cannot be interrupted“, kein Menüpunkt). Weckt man die Maschine per 0x84 und brüht direkt, läuft das Spülwasser in die Tasse → nach dem Wecken erst „bereit“ melden, dann neu bestellen lassen.
+- Abschaltzeit (0x3E) nur 0..3 = 15 min, 30 min, 1 h, 3 h; Schreiben per 0x90 0x0F `00 3E 00 00 00 0n`, Antwort `90 0F 00 3E 00` = angenommen.
+- **Wach halten wirkt:** Bei 15 min Abschaltzeit blieb die Maschine 26 min bereit, solange alle 3 min `device_connected` (Zeitstempel) und 0xA9 0xF0 `01` (Profil 1 wählen, wie die App) geschickt wurden. Bei 3 h genügt ein Signal je Stunde.
+- Monitor-Auswertung: Inhalt = Rohbytes ab Index 4 (hinter `D0 len 75 0F`), Zustand = Inhalt[5], Aktion = Inhalt[6]. Zwei Bytes zu weit (Index 6) ergibt fälschlich „Standby“ mit Wassertank/Satzbehälter/Entkalken.
+
 ## 6. Architektur-Empfehlung (für Jarvis)
 - **Ein** Dienst im Heimnetz hält die einzige Verbindung zur Maschine (LAN-Modus, Cloud nur als Rückfall); Jarvis, Mac, Sprachbefehl rufen nur dessen HTTP/MCP-Schnittstelle. Keine direkten Cloud-Aufrufe von jedem Client.
 - Coffee-Link-App am Handy geschlossen halten, sonst hat ihre LAN-Sitzung Vorrang und Befehle werden still ignoriert.
