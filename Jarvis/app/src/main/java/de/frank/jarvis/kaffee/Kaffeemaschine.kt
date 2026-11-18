@@ -512,25 +512,31 @@ object Kaffeemaschine {
             if (z.toLocalDate() != heute) null else W(w.optString("name"), z)
         }.sortedBy { it.zeit }
         fun hat(w: W, wort: String) = w.name.lowercase(Locale.GERMANY).contains(wort)
-        val gewaehlt = when (dienstArt(app, heute)) {
+        val dienst = dienstArt(app, heute)
+        val gewaehlt = when (dienst) {
             "tag" -> heutige.firstOrNull { hat(it, "tagschicht") || hat(it, "frühschicht") }
             "nacht" -> heutige.firstOrNull { hat(it, "nachtschicht") }
             else -> null
         } ?: heutige.firstOrNull { !hat(it, "tagschicht") && !hat(it, "nachtschicht") } ?: heutige.firstOrNull()
-        val ergebnis = gewaehlt?.let { WachStart(it.zeit, "Wecker „${it.name}“") }?.also { p.edit().putString("weckerZeit", it.zeit.toString()).putString("weckerGrund", it.grund).apply() }
+        // Dienst aus dem Kalender (X, F, U, K gelten als frei): in der Anzeige mit dabei, damit Frank sieht, warum dieser Wecker gilt.
+        val tagArt = when (dienst) { "tag" -> "Tagschicht"; "nacht" -> "Nachtschicht"; else -> "frei" }
+        val ergebnis = gewaehlt?.let { WachStart(it.zeit, "Wecker „${it.name}“, heute $tagArt") }?.also { p.edit().putString("weckerZeit", it.zeit.toString()).putString("weckerGrund", it.grund).apply() }
             ?: gemerkt
         weckerCache = Triple(System.currentTimeMillis(), heute, ergebnis)
         ergebnis
     }
 
-    /** Start heute (Wecker oder feste Stunde) und das Ende: die „bis“-Stunde danach, notfalls am nächsten Tag. */
+    /**
+     * Start heute (Wecker oder feste Stunde) und das Ende: die „bis“-Stunde am selben Tag. Liegt der Start danach (Nachtschicht-Wecker 15 Uhr, „bis“ 14 Uhr),
+     * endet das Fenster um 23 Uhr: Nachts schläft Frank oder arbeitet, die Maschine soll nie über Nacht wach gehalten werden (Frank, 18.11.2026).
+     */
     suspend fun wachFenster(context: Context): Pair<WachStart, java.time.LocalDateTime>? = withContext(Dispatchers.IO) {
         val e = de.frank.jarvis.data.Einstellungen.get(context.applicationContext)
         val heute = java.time.LocalDate.now()
         val start = if (e.kaffeeWachNachWecker) weckerStart(context) ?: return@withContext null
             else WachStart(heute.atTime(e.kaffeeWachVon, 0), "fest ab ${e.kaffeeWachVon} Uhr")
         var ende = start.zeit.toLocalDate().atTime(e.kaffeeWachBis, 0)
-        if (!ende.isAfter(start.zeit)) ende = ende.plusDays(1)
+        if (!ende.isAfter(start.zeit)) ende = start.zeit.toLocalDate().atTime(23, 0).takeIf { it.isAfter(start.zeit.plusMinutes(30)) } ?: start.zeit.plusHours(1)
         start to ende
     }
 
@@ -565,7 +571,18 @@ object Kaffeemaschine {
                 .putBoolean("weg", false).putInt("draussen", 0).putLong("ortZuletzt", 0L).putInt("weckAnzahl", 0).putLong("signalOk", 0L).apply()
         }
         val ende = runCatching { java.time.LocalDateTime.parse(p.getString("ende", "")) }.getOrNull() ?: return@withContext
-        if (!jetzt.isBefore(ende)) return@withContext
+        if (!jetzt.isBefore(ende)) {
+            // Fensterende (an freien Tagen etwa 14 Uhr): einmal ausschalten, statt sie noch bis zu 3 Stunden von selbst laufen zu lassen.
+            if (p.getString("beendet", "") != p.getString("fenster", "") && jetzt.isBefore(ende.plusHours(3)) && sperre.tryLock()) {
+                try {
+                    p.edit().putString("beendet", p.getString("fenster", "")).apply()
+                    if (online(app)) { val m = monitor(app); if (m.frisch && m.status == 7 && m.aktion == 0) ausBefehl(app) }
+                    de.frank.jarvis.observability.Logbuch.system("Kaffeemaschine wach halten", "Fensterende, Maschine aus")
+                } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (_: Exception) {
+                } finally { sperre.unlock() }
+            }
+            return@withContext
+        }
         val fensterTag = runCatching { java.time.LocalDateTime.parse(p.getString("fenster", "")).toLocalDate() }.getOrNull() ?: jetzt.toLocalDate()
         // Nur zu Hause: Verlässt Frank den Umkreis, geht die Maschine aus und bleibt aus, solange er weg ist.
         if (e.kaffeeNurZuhause && !zuhausePruefen(app, p, fensterTag)) return@withContext
