@@ -32,5 +32,10 @@
 - LAN-Registrierung kann die App-Verbindung trennen (ioBroker.coffeelink).
 - Franks 610.74: im Standby kein offener Port (80/10275/10280) — ungeklärt, nach Test mit wacher Maschine ergänzen.
 
+## §7a Gerät „Offline“ seit Monaten, IP scheinbar erreichbar
+- **Symptom:** Ayla meldet `connection_status: Offline`, alle Datenpunkte alt; eine vermutete IP antwortet auf Ping, aber kein Port offen.
+- **Ursache (Frank, 18.11.2026):** Die vermutete IP war ein anderes Gerät; die Maschine hing gar nicht mehr im WLAN (seit Router-Wechsel). Prüfen: `mac` aus `GET /apiv1/dsns/<DSN>.json` mit der ARP-Tabelle vergleichen.
+- **Fix:** Maschine in der Coffee-Link-App neu mit dem WLAN (2,4 GHz) verbinden.
+
 ## §8 Rezeptfelder geändert
 - Coffee-Link-App 4.9.6 änderte Rezeptfelder; cremaevolution 0.3.0b9–b11 musste `brew_custom` anpassen (Breaking). Nach App-Updates Rezept-Frames prüfen.

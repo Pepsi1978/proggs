@@ -10,7 +10,7 @@
 - Das **Frame-Format ist auf allen Wegen gleich** (BLE, Cloud, LAN): `0x0D` (App→Maschine) / `0xD0` (Maschine→App), Länge (Gesamt−1), Befehl, Nutzdaten, CRC16 AUG-CCITT (Init 0x1D0F, Poly 0x1021, Big Endian). Befehle: 0x83 Brühen, 0x84 Ein/Standby (`0d 07 84 0f 02 01 55 12`), 0x75 Status/Monitor. `extern` longshot `hardware_enums.rs` https://docs.rs/crate/longshot/0.1.13
 
 ## 2. Cloud-Weg (Ayla EU)
-1. Login über SAP Gigya (OIDC) → JWT → `POST https://user-field-eu.aylanetworks.com/api/v1/token_sign_in` → Ayla `auth_token` + `refresh_token` (24 h, refreshen).
+1. Login über SAP Gigya (OIDC) → `POST https://user-field-eu.aylanetworks.com/api/v1/token_sign_in` → Ayla `auth_token` + `refresh_token` (24 h, refreshen). **Erprobt 18.11.2026:** Der OIDC-Browserweg (authorize mit client_id 1S8q1WJEs-emOB43Z0-66WnL, redirect_uri https://google.it) funktioniert auch für Konten mit Google-Login, wenn man per „Passwort vergessen“ ein Passwort setzt (die OIDC-Seite hat keinen Google-Knopf). Tauschen: das OIDC-**access_token** mit app_id `DeLonghiCoffeeLink2-DQ-id` geht, das id_token liefert 422 „Unable to login“; ohne Header `Accept: application/json` antwortet Ayla 406. google.it leitet auf google.com weiter und verliert den Code: Code aus dem Chrome-Verlauf (History-DB) lesen.
 2. Geräte: `GET https://ads-eu.aylanetworks.com/apiv1/devices.json` → DSN.
 3. Befehl: `POST /apiv1/dsns/<DSN>/properties/data_request/datapoints.json`, Wert = base64 des Binär-Frames (+ Zeitstempel/Sitzungsbytes). Soul = `data_request`; Eletta Explore = `app_data_request` + Heartbeat `app_device_connected`.
 4. Region muss zum Konto passen (EU/US), sonst „0 Geräte“.
