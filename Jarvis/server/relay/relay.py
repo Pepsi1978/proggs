@@ -632,7 +632,30 @@ class Tagebuch:
                                  dumps=lambda daten: json.dumps(daten, ensure_ascii=False))
 
 
-PLAETZE = ("haupt", "ersatz", "server")
+PLAETZE = ("haupt", "ersatz", "server", "power")
+# Kennungen der Rechner, wie das Handy sie in „reihenfolge“ schickt (seit 19.11.2026), und ihr Platz im Relay. Der Power-PC
+# (Franks grosser Windows-Rechner zu Hause) meldet sich mit X-Jarvis-Rang: power; der Laptop ohne Rang bleibt „haupt“.
+KENNUNG_PLATZ = {"windows": "haupt", "mac": "ersatz", "power": "power", "server": "server"}
+PLATZ_KENNUNG = {platz: kennung for kennung, platz in KENNUNG_PLATZ.items()}
+
+
+def reihenfolge_lesen(wert) -> list:
+    """„reihenfolge“ aus Auftrag oder Abfrage: Liste oder kommagetrennt aus mac, windows, power, server. Unbekanntes und
+    Doppeltes faellt weg; leer = nicht gesetzt (dann gilt der alte Weg vorrang + server)."""
+    if isinstance(wert, str):
+        teile = wert.split(",")
+    elif isinstance(wert, (list, tuple)):
+        teile = [t for t in wert if isinstance(t, str)]
+    else:
+        return []
+    reihe = []
+    for teil in teile:
+        kennung = teil.strip().lower()
+        if kennung in KENNUNG_PLATZ and kennung not in reihe:
+            reihe.append(kennung)
+    return reihe
+
+
 PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
 PC_HAUPT_LUECKE_S = 3  # so kurz nach einer Abfrage einer Bruecke gilt sie noch als „holt gleich ab“
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
@@ -1088,6 +1111,18 @@ class PcBruecke:
         # (Effort, Profil, Modus, CLI) nimmt nur eine Bruecke, die es kennt: Eine aeltere startete sonst still Opus.
         # Opus und frei gewaehlte Modelle gehoeren dem Vorrangrechner, der andere springt ein.
         reihe = ["haupt", "ersatz"] if auftrag.get("vorrang") == "windows" else ["ersatz", "haupt"]
+        gewaehlt = reihenfolge_lesen(auftrag.get("reihenfolge"))
+        if gewaehlt:
+            # Seit 19.11.2026: Franks freie Reihenfolge (ein einziger Eintrag = nur dieser Rechner). Sol 6.1 nimmt der Laptop
+            # immer (er sendet keinen Sol-Kopf), Mac und Power-PC nur mit X-Jarvis-Sol: 1; ein Katalogmodell nur eine Bruecke, die
+            # es kennt. Der Server wie bisher ohne diese Pruefung (seine Bruecke gibt ab, was sie nicht kann).
+            jetzt = time.monotonic()
+            plaetze = [KENNUNG_PLATZ[k] for k in gewaehlt]
+            if modell == "sol":
+                return [r for r in plaetze if r in ("haupt", "server") or jetzt - self.sol_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
+            if modell == "katalog":
+                return [r for r in plaetze if r == "server" or jetzt - self.katalog_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
+            return plaetze
         if modell == "sol":
             # Der Windows-PC zuerst (wie bisher), der Mac springt ein, wenn seine Bruecke Sol kann (X-Jarvis-Sol: 1).
             rechner = ["haupt"] + [r for r in ("ersatz",) if time.monotonic() - self.sol_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
@@ -1128,7 +1163,7 @@ class PcBruecke:
             if wartend is None or wartend.done():
                 self.auftraege.remove(auftrag)
             elif self._darf(rang, auftrag) and (kann_katalog or auftrag.get("modell") != "katalog") \
-                    and (rang != "ersatz" or kann_sol or auftrag.get("modell") != "sol"):
+                    and (rang not in ("ersatz", "power") or kann_sol or auftrag.get("modell") != "sol"):
                 return auftrag
         return None
 
@@ -1146,7 +1181,8 @@ class PcBruecke:
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         rang = request.headers.get("X-Jarvis-Rang", "").strip().lower()
-        rang = rang if rang in ("ersatz", "server") else "haupt"
+        # Ohne Rang (der Laptop, aeltere Bruecken) bleibt es „haupt“; der Power-PC kommt mit X-Jarvis-Rang: power.
+        rang = rang if rang in ("ersatz", "server", "power") else "haupt"
         if time.monotonic() - self.plaetze[rang]["zuletzt"] >= PC_FRISCH_S:
             log.info("Bruecke verbunden: %s", rang)
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
@@ -1172,7 +1208,7 @@ class PcBruecke:
         """GET /pc/faehigkeiten: Die Server-Bruecke fragt ohne diese Antwort nichts ab. Ein aelterer Relay fuehrte sie als Windows-PC."""
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
-        return web.json_response({"raenge": list(PLAETZE)})
+        return web.json_response({"raenge": list(PLAETZE), "reihenfolge": True, "kennungen": KENNUNG_PLATZ})
 
     async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str, kann_katalog: bool,
                                  kann_sol: bool = False) -> web.Response:
@@ -1215,8 +1251,12 @@ class PcBruecke:
         # springt das Handy nicht ueber den Mac hinweg in die Cloud. Sonst kommt die Absage wie jede andere ans Handy.
         abgeholt = self.abgeholt.get(daten["id"])
         # „Nur der Server“ ist Franks ausdrueckliche Wahl: nie auf einen Schreibtisch-Rechner ausweichen, die Absage geht ans Handy.
-        if daten.get("weiter") and abgeholt is not None and abgeholt.get("server") != "nur" and wartend is not None and not wartend.done():
+        # Das Einzelziel „reihenfolge: server“ ist ebenso Franks ausdrueckliche Wahl; sonst faellt der Server aus der Reihenfolge.
+        nur_server = abgeholt is not None and (abgeholt.get("server") == "nur" or reihenfolge_lesen(abgeholt.get("reihenfolge")) == ["server"])
+        if daten.get("weiter") and abgeholt is not None and not nur_server and wartend is not None and not wartend.done():
             abgeholt["server"] = ""
+            if abgeholt.get("reihenfolge"):
+                abgeholt["reihenfolge"] = [k for k in reihenfolge_lesen(abgeholt["reihenfolge"]) if k != "server"]
             if self._naechster(abgeholt):
                 self.abgeholt.pop(daten["id"], None)
                 self.zugestellt_an.pop(daten["id"], None)
@@ -1245,7 +1285,7 @@ class PcBruecke:
             return web.Response(status=400, text="Auftrag unlesbar")
         # Kein Rechner da, der diesen Auftrag nehmen darf (fuer Sol etwa nur der Windows-PC): 409, das Handy nimmt das naechste Ziel.
         if not self._naechster(daten):
-            return web.json_response({"pc": False, "mac": False}, status=409)
+            return web.json_response({"pc": False, "mac": False, "power": False}, status=409)
         nummer = uuid.uuid4().hex
         jarvis_id = str(daten.get("nummer", ""))[:20]
         # Meldungen und Rueckfragen dieser Sitzung gehen an das Geraet, das den Auftrag stellt (Handy oder Tablet).
@@ -1264,6 +1304,10 @@ class PcBruecke:
                        "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
                        "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac",
                        "server": daten.get("server") if daten.get("server") in ("zuletzt", "zuerst", "mitte", "nur") else ""}
+            # reihenfolge (seit 19.11.2026, wahlweise): Kennungen in Franks Reihenfolge; fehlt sie, gilt vorrang + server wie bisher.
+            reihe = reihenfolge_lesen(daten.get("reihenfolge"))
+            if reihe:
+                eintrag["reihenfolge"] = reihe
             if katalog:
                 for feld in ("slug", "anbieter", "name", "effort", "profil", "modus"):
                     eintrag[feld] = str(daten.get(feld, ""))[:80]
@@ -1288,6 +1332,7 @@ class PcBruecke:
                 aufgabe.add_done_callback(self.spaete.discard)
                 return web.json_response({"pc": True, "ok": True, "unbestaetigt": True, "rechner": rechner,
                                           "server": bool(rechner) and rechner == self.plaetze["server"]["rechner"],
+                                          "power": bool(rechner) and rechner == self.plaetze["power"]["rechner"],
                                           "text": "Der PC hat den Auftrag abgeholt, die Startbestaetigung steht noch aus."}, status=202)
             # Nie abgeholt: Er startet auch nie mehr (_warte_auf_auftrag ueberspringt ihn ohne wartende Future).
             log.info("PC hat den Auftrag nicht abgeholt")
@@ -1297,6 +1342,7 @@ class PcBruecke:
                 rechner = self._quittung_abschliessen(nummer, wartend)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner,
                                   "server": bool(rechner) and rechner == self.plaetze["server"]["rechner"],
+                                  "power": bool(rechner) and rechner == self.plaetze["power"]["rechner"],
                                   "anmeldung_fehlt": bool(quittung.get("anmeldung_fehlt"))})
 
     def _quittung_abschliessen(self, nummer: str, wartend: asyncio.Future) -> str:
@@ -1472,14 +1518,16 @@ class PcBruecke:
         rechner = []
         for rang, platz in self.plaetze.items():
             if platz["zuletzt"]:
-                rechner.append({"rechner": platz["rechner"], "rang": rang, "da": jetzt - platz["zuletzt"] < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - platz["zuletzt"]),
+                rechner.append({"rechner": platz["rechner"], "rang": rang, "kennung": PLATZ_KENNUNG[rang], "da": jetzt - platz["zuletzt"] < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - platz["zuletzt"]),
                                 "belegt": platz["belegt"],
-                                # Kann diese Bruecke Sol 6.1 selbst starten (Mac ab 13.11.2026 per X-Jarvis-Sol)? Der Windows-PC immer.
+                                # Kann diese Bruecke Sol 6.1 selbst starten (Mac ab 13.11.2026, Power-PC per X-Jarvis-Sol)? Der Laptop immer.
                                 "sol": rang == "haupt" or jetzt - self.sol_zuletzt.get(rang, -PC_FRISCH_S) < PC_FRISCH_S})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
         # ?vorrang=windows: Franks Reihenfolge aus der App (Standard Mac zuerst).
         # ?server=zuletzt|mitte|zuerst|nur: Franks Wahl fuer den Server (ohne Angabe wie bisher nur Mac und Windows).
-        naechster = self._naechster({"vorrang": request.query.get("vorrang"), "server": request.query.get("server")})
+        # ?reihenfolge=mac,power,windows,server (seit 19.11.2026): Franks freie Reihenfolge, geht vorrang und server vor.
+        naechster = self._naechster({"vorrang": request.query.get("vorrang"), "server": request.query.get("server"),
+                                     "reihenfolge": request.query.get("reihenfolge")})
         aktiv = self.plaetze[naechster]["rechner"] if naechster else self.plaetze["ersatz"]["rechner"] or self.plaetze["haupt"]["rechner"]
         jetzt_s = time.time()
         for r in rechner:
@@ -1495,7 +1543,10 @@ class PcBruecke:
                 sitzungen[auftrag_id] = {"kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
                                          "warter_vor_s": int(jetzt - warter) if warter else None, "lebt": self._wartet(auftrag_id)}
         return web.json_response({"pc": self.da(), "server": self._rechner_da("server"), "naechster": naechster, "rechner": aktiv, "zuletzt_vor_s": vor,
-                                  "rechner_alle": rechner, "sitzungen": sitzungen})
+                                  "rechner_alle": rechner, "sitzungen": sitzungen,
+                                  # Woran das Handy einen Relay erkennt, der reihenfolge, Einzelziele und den Power-PC kennt.
+                                  "faehigkeiten": {"reihenfolge": True, "einzelziel": True, "power": True,
+                                                   "kennungen": list(KENNUNG_PLATZ)}})
 
 
 KANAL_DATEI = Path(os.environ.get("JARVIS_KANAL", "/data/agentenkanal.json"))
@@ -1528,7 +1579,8 @@ class _Abfrage:
 
 class AgentenKanal:
     """Je Rechner eine eigene Instanz: Postfach, Abfragen und Datei getrennt. geraet "mac" behaelt die alten Wege und Signale,
-    "hp" (Jarvis Windows HP) hat eigene Wege unter /geraet/hp, /pc/hp-befehl und /j/<Geheimnis>/hp und traegt im Signal "geraet"."""
+    "hp" (Jarvis Windows HP) hat eigene Wege unter /geraet/hp, /pc/hp-befehl und /j/<Geheimnis>/hp und traegt im Signal "geraet";
+    "power" (Jarvis Windows Power-PC, seit 19.11.2026) genauso unter /geraet/power, /pc/power-befehl und /j/<Geheimnis>/power."""
 
     def __init__(self, relay: Relay, geraet: str = "mac"):
         self.relay = relay
@@ -2298,7 +2350,8 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/lokal-entfernen", pc.lokal_entfernen)
     kanal = AgentenKanal(relay)
     kanal_hp = AgentenKanal(relay, "hp")
-    relay.kanaele = [kanal, kanal_hp]
+    kanal_power = AgentenKanal(relay, "power")
+    relay.kanaele = [kanal, kanal_hp, kanal_power]
     anwendung.router.add_post("/geraet/kanal", kanal.handy_sendet)
     anwendung.router.add_post("/geraet/kanal/quittung", kanal.handy_quittiert)
     anwendung.router.add_get("/geraet/kanal/status", kanal.status)
@@ -2317,6 +2370,14 @@ def app() -> web.Application:
     anwendung.router.add_get("/j/{geheimnis}/hp/kanal", kanal_hp.mac_abfrage)
     anwendung.router.add_post("/j/{geheimnis}/hp/kanal", kanal_hp.mac_sendet)
     anwendung.router.add_post("/j/{geheimnis}/hp/kanal/quittung", kanal_hp.mac_quittiert)
+    anwendung.router.add_post("/geraet/power/kanal", kanal_power.handy_sendet)
+    anwendung.router.add_post("/geraet/power/kanal/quittung", kanal_power.handy_quittiert)
+    anwendung.router.add_get("/geraet/power/kanal/status", kanal_power.status)
+    anwendung.router.add_post("/geraet/power/start", kanal_power.mac_start)
+    anwendung.router.add_get("/pc/power-befehl", kanal_power.bruecke_abfrage)
+    anwendung.router.add_get("/j/{geheimnis}/power/kanal", kanal_power.mac_abfrage)
+    anwendung.router.add_post("/j/{geheimnis}/power/kanal", kanal_power.mac_sendet)
+    anwendung.router.add_post("/j/{geheimnis}/power/kanal/quittung", kanal_power.mac_quittiert)
     ablage = AblageAbgleich(relay)
     anwendung.on_startup.append(ablage.waechter)
     anwendung.router.add_get("/j/{geheimnis}/ablage/aenderungen", ablage.aenderungen)
