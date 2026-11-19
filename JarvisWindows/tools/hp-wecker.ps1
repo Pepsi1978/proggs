@@ -13,7 +13,7 @@ if (Test-Path -LiteralPath $geraetDatei) {
 $protokoll = Join-Path $ordner ($(if ($geraet -eq 'hp') { 'wecker.log' } else { "wecker-$geraet.log" }))
 # Läuft aus dem Installationsordner (publish.ps1 kopiert es dorthin): So ändert kein git pull ein laufendes Skript.
 $exe = Join-Path $PSScriptRoot 'JarvisWindows.exe'
-$marke = Join-Path $ordner 'installiert-gerade'
+$marke = Join-Path $ordner ('installiert-gerade' + $(if ($geraet -eq 'hp') { '' } else { "-$geraet" }))
 
 function Schreib([string]$t) {
     try {
@@ -56,6 +56,24 @@ $curl = Join-Path $env:SystemRoot 'System32\curl.exe'
 $zusatz = $(if ($geraet -eq 'hp') { '' } else { "-$geraet" })
 $antwortDatei = Join-Path $ordner "wecker-antwort$zusatz.json"
 $kopfDatei = Join-Path $ordner "wecker-kopf$zusatz.txt"
+$kopfToken = $null
+$kopfRechte = $false
+
+# Wie Schreib-Kopf der Brücke: zuerst leer anlegen, Rechte auf den eigenen Benutzer einschränken, erst dann den Token hineinschreiben.
+function Schreib-Kopf([string]$token) {
+    if ($script:kopfToken -eq $token -and (Test-Path -LiteralPath $kopfDatei)) { return }
+    if (-not (Test-Path -LiteralPath $kopfDatei)) {
+        [System.IO.File]::WriteAllText($kopfDatei, '', [System.Text.UTF8Encoding]::new($false))
+        $script:kopfRechte = $false
+    }
+    if (-not $script:kopfRechte) {
+        & icacls.exe $kopfDatei /inheritance:r /grant:r "$($env:USERNAME):(R,W,D)" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Rechte der Kopfzeilen-Datei ließen sich nicht einschränken.' }
+        $script:kopfRechte = $true
+    }
+    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`n", [System.Text.UTF8Encoding]::new($false))
+    $script:kopfToken = $token
+}
 
 Schreib "Wecker gestartet ($geraet)"
 $pause = 2
@@ -63,7 +81,7 @@ while ($true) {
     try {
         $z = Lies-Zugang
         # Der Token steht in einer Datei, nicht in der Befehlszeile: Die kann jedes Programm lesen.
-        [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $($z.token)`n", [System.Text.UTF8Encoding]::new($false))
+        Schreib-Kopf $z.token
         Remove-Item -LiteralPath $antwortDatei -ErrorAction SilentlyContinue
         $code = & $curl -4 -s -S --max-time 40 -H "@$kopfDatei" -o $antwortDatei -w '%{http_code}' "https://$($z.host)/pc/$geraet-befehl"
         if ($code -eq '204') { $pause = 2; continue }

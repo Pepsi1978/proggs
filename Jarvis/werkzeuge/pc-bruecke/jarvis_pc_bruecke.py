@@ -468,7 +468,8 @@ RECHNER = rechnername()
 def lies_rang() -> str:
     """Platz beim Relay. Standard „ersatz“; eine lokale Einstellung ~/Library/Application Support/JarvisPcBruecke/rechner.json
     ({"rang": "..."}, geschrieben von einrichten.sh --rang ...) kann ihn ändern, wie rechner.json der Windows-Brücke.
-    Fehlt oder taugt sie nicht, bleibt es bei „ersatz“."""
+    Erlaubt sind nur „ersatz“ und „power“ (der Relay lehnt unbekannte Ränge ab). Fehlt oder taugt sie nicht, bleibt es bei
+    „ersatz“, laut im Protokoll."""
     datei = HOME / "Library" / "Application Support" / "JarvisPcBruecke" / "rechner.json"
     try:
         rang = str(json.loads(datei.read_text(encoding="utf-8-sig")).get("rang") or "").strip().lower()
@@ -477,7 +478,13 @@ def lies_rang() -> str:
     except Exception as fehler:
         schreib(f"rechner.json unlesbar ({fehler}), Rang ersatz")
         return "ersatz"
-    return rang if re.fullmatch(r"[a-z]+", rang) else "ersatz"
+    if rang in RAENGE:
+        return rang
+    schreib(f"ACHTUNG: Rang '{rang}' in rechner.json unbekannt (erlaubt: {', '.join(sorted(RAENGE))}), Rang ersatz")
+    return "ersatz"
+
+
+RAENGE = {"ersatz", "power"}
 
 
 RANG = lies_rang()

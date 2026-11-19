@@ -1,5 +1,5 @@
-<!-- stand: JarvisWindows 1.0.22 -->
-Was Jarvis Windows HP kann (geprüft am Code).
+<!-- stand: JarvisWindows 1.0.26 -->
+Was Jarvis Windows kann (geprüft am Code). Zwei Identitäten aus demselben Code: Jarvis Windows HP (Laptop, Standard) und Jarvis Windows Power-PC (`publish.ps1 -Geraet power`, `geraet.json` neben der EXE). „Laptop“ unten heißt je nach Identität HP-Laptop oder Power-PC; Persona, Kanaltexte und Geschwister-Angabe (Jarvis Mac OS und die jeweils andere Windows-Fassung) kommen aus der Identität (`AppInfo.Kurz`, `AppInfo.Geschwister`).
 
 ## Gehirn und Gedächtnis
 - Chat mit Claude Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.2 (Anthropic-Schlüssel) oder GPT-6.2 Astra, GPT-6.2 Sol, GPT-6 Luna, GPT-6.1 Terra (eigene ChatGPT-Anmeldung am Laptop per Gerätecode oder OpenAI-Schlüssel); Denkstufe und Schrittlimit wählbar; Websuche des Modells.
@@ -10,7 +10,8 @@ Was Jarvis Windows HP kann (geprüft am Code).
 ## Agentenkanal mit Jarvis am Handy
 - Allgemeiner Kanal über den Relay in beide Richtungen, solange der Laptop verbunden ist: `handy_jarvis_sprechen` (frage, info), `handy_jarvis_lesen`. Nachrichten überstehen Abwesenheit und Neustarts (Quittung, id gegen Doppel, Eingang auf der Platte).
 - Fragen vom Handy (Frage, Stand der Programmieraufgaben, Begutachtung des gesamten Geschehens am Laptop) beantwortet Jarvis mit vollem Laptop-Zugriff im eigenen Gespräch „Jarvis am Handy (Agentenkanal)“.
-- Das Handy kann die App über die Jarvis-Brücke starten („Starte Jarvis Windows HP“); eine Frage an den Laptop startet sie im Hintergrund, eine bloße Mitteilung nicht. Läufe für den Kanal: je Nachricht frisches Modellgespräch mit Kanal-Auszug, höchstens 10 Minuten, ohne Merken, Mail und Programmieraufträge, kein Lernen daraus.
+- Kanal je Identität beim Relay: HP `/j/<Geheimnis>/hp/kanal`, `/pc/hp-befehl`, `/geraet/hp/...`; Power-PC `/j/<Geheimnis>/power/kanal`, `/pc/power-befehl`, `/geraet/power/...`. Am Handy heißen die Werkzeuge `jarvis_windows_hp_starten/_sprechen/_lesen` bzw. `jarvis_windows_power_starten/_sprechen/_lesen`.
+- Das Handy kann die App über die Jarvis-Brücke starten („Starte Jarvis Windows HP“ bzw. „… Power-PC“); eine Frage an den Laptop startet sie im Hintergrund, eine bloße Mitteilung nicht. Läufe für den Kanal: je Nachricht frisches Modellgespräch mit Kanal-Auszug, höchstens 10 Minuten, ohne Merken, Mail und Programmieraufträge, kein Lernen daraus.
 
 ## Laptop (Vollzugriff, abschaltbar)
 - `windows_befehl` (PowerShell), `windows_powershell`, `windows_oeffnen`, `windows_programme` (liste/vordergrund/beenden), `windows_bildschirm` (Bildschirmfoto ans Modell), `windows_bedienen` (Computer Use: klicken, ziehen, scrollen in Bildpixeln des letzten Fotos, danach neues Foto), `windows_aufnahme` (Bildschirmvideo nach %USERPROFILE%\Videos\Jarvis), `windows_tastatur`, `windows_zwischenablage`, `windows_mitteilung`, `windows_lautstaerke`, `windows_datei`, `windows_status`. Ist der Vollzugriff aus, gehen nur noch Öffnen, Mitteilungen, Programmliste und Status.
@@ -22,7 +23,7 @@ Was Jarvis Windows HP kann (geprüft am Code).
 ## Eigene Tools
 - Einstellungen → Eigene Tools: Inhaltsverzeichnis mit Reihenfolge, Detail je Helfer (Zweck, Fähigkeiten, Aufruf, Eingaben, Ergebnis, Rechte, Grenzen, Zustand, Fassung, letzte Prüfung), Aktivieren, Deaktivieren, Freigeben, letzte Fassung, Papierkorb. Oben Pause für den Helferbau und Modell und Effort der Recherche (Vorgabe Sol 6.2, High; ohne Luna und Haiku; auch `windows_einstellungen`).
 - `windows_helfer_suchen`, `windows_helfer_info`, `windows_helfer_ausfuehren`, `windows_helfer_verwalten`, `windows_helfer_bauen` (über `helfer_bauen` des Handys; ohne Handy Sitzung am Laptop mit Opus 5.5, höchstens 5 am Tag). Bau-Vorschrift: JarvisHelfer/README.md. Ein Helfer gilt erst nach bestandenen Tests auf diesem Laptop als bereit; durchgefallen bleibt die bisherige Fassung. Konten, Werkzeugrechte und Wirkung nach außen braucht Franks Freigabe, nur im Bereich selbst.
-- Das Handy führt die Helfer dieses Laptops nicht in seinem Katalog. Helfer-Post über den Agentenkanal bekommt eine klare Absage; das Handy erreicht die Helfer über `jarvis_windows_hp_sprechen`. `cli_frage` und `cli_recherche` laufen am Laptop mit Claude Code nur lesend.
+- Das Handy führt die Helfer dieses Laptops nicht in seinem Katalog. Helfer-Post über den Agentenkanal bekommt eine klare Absage; das Handy erreicht die Helfer über `jarvis_windows_hp_sprechen` (Power-PC: `jarvis_windows_power_sprechen`). `cli_frage` und `cli_recherche` laufen am Laptop mit Claude Code nur lesend.
 - Grenze: Laptop-Helfer laufen unter Franks Benutzer und sind nicht abgeschottet. Erklärte Netz-Hosts setzt die Laufzeit nicht durch; deshalb braucht jeder Helfer mit Netz Franks Freigabe, dazu Review und bereinigte Umgebung. Ohne Vollzugriff laufen Helfer nicht, Tests laufen in eigenen Ordnern, Recherche am Laptop nur mit Web-Werkzeugen ohne Dateizugriff, Dateien über 700 kB bleiben am Laptop.
 
 ## Konten und APIs
@@ -62,7 +63,7 @@ Was Jarvis Windows HP kann (geprüft am Code).
 - „Hey Jarvis, wie wird das Wetter?“ in einem Atemzug zählt als erste Frage; das Mikrofon läuft nach dem Weckwort ohne Neuaufbau weiter. Parakeet rechnet Abschnitte schon während des Sprechens, mit Vorschau.
 
 ## Abweichungen von der Mac-Fassung
-- Helfer dieses Laptops erreicht das Handy über `jarvis_windows_hp_sprechen`, nicht über seinen Helferkatalog; ein Helferbau läuft direkt am Laptop.
+- Helfer dieses Laptops erreicht das Handy über `jarvis_windows_hp_sprechen` (Power-PC: `jarvis_windows_power_sprechen`), nicht über seinen Helferkatalog; ein Helferbau läuft direkt am Laptop.
 - Weckwort über Parakeet (Modell einmalig laden, rund 640 MB); ohne Modell die Windows-Spracherkennung, die die Datenschutz-Einstellung „Online-Spracherkennung“ braucht.
 - Echounterdrückung nur, wenn Windows den Effekt des Mikrofons als aktiv bestätigt, sonst Echosperre.
 

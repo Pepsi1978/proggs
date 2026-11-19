@@ -31,7 +31,11 @@ function Schreib([string]$text) {
 
 # Nur eine Brücke je Anmeldung.
 $sperre = [System.Threading.Mutex]::new($false, 'Local\JarvisPcBruecke')
-if (-not $sperre.WaitOne(0)) { exit 0 }
+# Wurde die Vorgängerin hart beendet (einrichten.ps1 nach Rangwechsel), ist die Sperre verwaist: dann gehört sie jetzt uns.
+try { $habeSperre = $sperre.WaitOne(0) } catch {
+    if ($_.Exception -is [System.Threading.AbandonedMutexException] -or $_.Exception.InnerException -is [System.Threading.AbandonedMutexException]) { $habeSperre = $true } else { throw }
+}
+if (-not $habeSperre) { exit 0 }
 
 function Lies-Zugang {
     $datei = Join-Path $env:USERPROFILE 'SK\Jarvis\relay.properties'
@@ -388,24 +392,36 @@ $kopfToken = $null
 
 # Platz beim Relay aus der lokalen Einstellung %LOCALAPPDATA%\JarvisPcBruecke\rechner.json ({"rang":"power","sol":true},
 # geschrieben von einrichten.ps1 -Rang power). Fehlt sie: kein Rang (Platz haupt) und kein Sol-Kopf, wie bisher.
-# Ist sie da, aber unlesbar, endet die Brücke: Sonst nähme der Power-PC still den Platz des Laptops ein. Der Wächter startet neu.
+# Ist sie da, aber unlesbar oder mit unbekanntem Rang (erlaubt nur haupt und power), endet die Brücke: Sonst nähme der
+# Power-PC still den Platz des Laptops ein. Der Wächter startet neu, das Protokoll nennt den Grund.
+# X-Jarvis-Sol nur, wenn sol gesetzt ist UND Codex CLI oder OpenCode hier wirklich gefunden wird (wie sol_clis() am Mac).
 $rechnerDatei = Join-Path (Split-Path $protokoll) 'rechner.json'
 $rang = ''
-$sol = $false
+$kannSol = $false
 if (Test-Path -LiteralPath $rechnerDatei) {
     try {
         $rechner = Get-Content -Raw -Encoding utf8 -LiteralPath $rechnerDatei | ConvertFrom-Json
         $rang = "$($rechner.rang)".Trim().ToLowerInvariant()
-        $sol = $rechner.sol -eq $true
-        if ($rang -and $rang -notmatch '^[a-z]+$') { throw "Rang '$rang' ungültig" }
+        $kannSol = $rechner.sol -eq $true
+        if ($rang -and $rang -notin 'haupt', 'power') { throw "Rang '$rang' unbekannt (erlaubt: haupt, power)" }
+        if ($rang -eq 'haupt') { $rang = '' }
     } catch {
-        Schreib "rechner.json unlesbar, Brücke endet: $($_.Exception.Message)"
+        Schreib "rechner.json unlesbar oder ungültig, Brücke endet: $($_.Exception.Message)"
         exit 1
     }
 }
+if ($kannSol) {
+    $solPfad = [Environment]::ExpandEnvironmentVariables(
+        ([Environment]::GetEnvironmentVariable('PATH', 'Machine').TrimEnd(';') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')))
+    $altPfad = $env:PATH
+    $env:PATH = $solPfad
+    $kannSol = [bool](Get-Command codex, opencode -ErrorAction SilentlyContinue)
+    $env:PATH = $altPfad
+    if (-not $kannSol) { Schreib 'rechner.json will Sol, aber weder codex noch opencode ist installiert: kein X-Jarvis-Sol.' }
+}
 $kopfZusatz = ''
 if ($rang) { $kopfZusatz += "X-Jarvis-Rang: $rang`r`n" }
-if ($sol) { $kopfZusatz += "X-Jarvis-Sol: 1`r`n" }
+if ($kannSol) { $kopfZusatz += "X-Jarvis-Sol: 1`r`n" }
 
 function Schreib-Kopf([string]$token) {
     if ($script:kopfToken -eq $token -and (Test-Path -LiteralPath $kopfDatei)) { return }
@@ -430,7 +446,7 @@ function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDa
     return [int]("$code".Trim())
 }
 
-Schreib $(if ($rang) { "Brücke gestartet (Rang $rang$(if ($sol) { ', Sol' }))" } else { 'Brücke gestartet' })
+Schreib $(if ($rang) { "Brücke gestartet (Rang $rang$(if ($kannSol) { ', Sol' }))" } else { 'Brücke gestartet' })
 Raeume-Auf
 $pause = 2
 # Am PC direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess, endet nach Sekunden).

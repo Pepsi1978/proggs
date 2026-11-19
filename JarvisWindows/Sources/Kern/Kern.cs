@@ -135,6 +135,10 @@ public static class AppInfo
     public static readonly string Rechner;
     /// <summary>Aufgabe des Weckers in der Aufgabenplanung (publish.ps1).</summary>
     public static readonly string WeckerAufgabe;
+    /// <summary>Kurzname des Rechners für Texte an Modell und Kanal („am Laptop“, „am Power-PC“); beide männlich, Artikel passen.</summary>
+    public static readonly string Kurz;
+    /// <summary>Satz über die Geschwister-Instanzen im Systemprompt: Jarvis Mac OS und die jeweils andere Windows-Fassung.</summary>
+    public static readonly string Geschwister;
     /// <summary>Quellnamen aller Windows-Versionen in der Ablage (für die Sortierung nach Quelle).</summary>
     public static readonly string[] AlleWindowsNamen = { "Jarvis Windows HP", "Jarvis Windows Power-PC" };
 
@@ -153,11 +157,13 @@ public static class AppInfo
         catch { kennung = "hp"; }
         if (kennung == "power")
         {
-            Geraet = "power"; Geraetename = "Power-PC"; Rechner = "Power-PC (Franks großer Windows-Rechner zu Hause)"; WeckerAufgabe = "JarvisWindowsWeckerPower";
+            Geraet = "power"; Geraetename = "Power-PC"; Rechner = "Power-PC (Franks großer Windows-Rechner zu Hause)"; WeckerAufgabe = "JarvisWindowsWeckerPower"; Kurz = "Power-PC";
+            Geschwister = "Daneben gibt es Jarvis Mac OS auf seinem MacBook und Jarvis Windows HP auf seinem HP-Laptop, beide mit eigenen Aufgaben.";
         }
         else
         {
-            Geraet = "hp"; Geraetename = "HP"; Rechner = "HP-Laptop (OmniBook Ultra Flip)"; WeckerAufgabe = "JarvisWindowsWecker";
+            Geraet = "hp"; Geraetename = "HP"; Rechner = "HP-Laptop (OmniBook Ultra Flip)"; WeckerAufgabe = "JarvisWindowsWecker"; Kurz = "Laptop";
+            Geschwister = "Daneben gibt es Jarvis Mac OS auf seinem MacBook und Jarvis Windows Power-PC auf seinem großen Windows-Rechner zu Hause, beide mit eigenen Aufgaben.";
         }
         Name = "Jarvis Windows " + Geraetename;
     }

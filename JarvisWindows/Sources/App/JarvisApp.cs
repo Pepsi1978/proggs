@@ -47,7 +47,9 @@ internal static partial class Nativ
 /// <summary>Einstieg. Einzelinstanz per Mutex; `--hintergrund` startet ohne Fenster (so weckt das Handy die App); ein zweiter Start holt das Fenster nach vorn.</summary>
 public static class JarvisApp
 {
-    private const string MutexName = @"Local\JarvisWindows-Einzelinstanz";
+    // Je Identität eigene Sperre und Botschaften: Laufen HP- und Power-Fassung auf einem Rechner, beendet oder weckt keine die andere. HP unverändert.
+    private static string Zusatz => AppInfo.Geraet == "hp" ? "" : "-" + AppInfo.Geraet;
+    private static string MutexName => @"Local\JarvisWindows-Einzelinstanz" + Zusatz;
     private static uint nachrichtZeigen;
     private static uint nachrichtBeenden;
     private static bool gesperrt, schlaeft, anzeigeAus;
@@ -71,8 +73,8 @@ public static class JarvisApp
         var hintergrund = args.Contains("--hintergrund", StringComparer.OrdinalIgnoreCase);
         // publish.ps1: sauber beenden lassen, damit Einstellungen, Zugang und Gespräche noch auf die Platte kommen.
         var beenden = args.Contains("--beenden", StringComparer.OrdinalIgnoreCase);
-        nachrichtZeigen = Nativ.RegisterWindowMessageW("JarvisWindows.FensterZeigen");
-        nachrichtBeenden = Nativ.RegisterWindowMessageW("JarvisWindows.Beenden");
+        nachrichtZeigen = Nativ.RegisterWindowMessageW("JarvisWindows.FensterZeigen" + Zusatz);
+        nachrichtBeenden = Nativ.RegisterWindowMessageW("JarvisWindows.Beenden" + Zusatz);
         using var einzel = new Mutex(true, MutexName, out var erster);
         if (beenden)
         {

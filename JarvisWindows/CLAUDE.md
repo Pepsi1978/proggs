@@ -7,9 +7,10 @@ Native .NET-10-WPF-App ohne XAML, Port von `JarvisMac` nach `PORT-VERTRAG.md`: g
 
 ## Bauen und installieren
 `pwsh -File publish.ps1` baut, installiert nach `%LOCALAPPDATA%\Programs\JarvisWindowsHP`, richtet die Aufgabe `JarvisWindowsWecker` ein und startet die App.
+Power-PC: `pwsh -File publish.ps1 -Geraet power` → Ordner `JarvisWindowsPower`, Aufgabe `JarvisWindowsWeckerPower`, Verknüpfung „Jarvis Windows Power-PC.lnk“, `geraet.json` neben der EXE. Eine HP-Installation auf demselben Rechner wird dabei beendet und entfernt (auf dem Power-PC läuft nur die Power-Identität). Aufräumen, Einzelinstanz-Mutex (`Local\JarvisWindows-Einzelinstanz`, Power mit `-power`) und Fensterbotschaften gelten je Identität; Texte an Modell und Kanal kommen aus `AppInfo` (`Kurz`, `Geschwister`), nie fest „Laptop“.
 
 ## Anbindung ans Handy
-Eigener Kanal beim Relay neben dem des Macs: `/j/<Geheimnis>/hp/kanal` (App), `/pc/hp-befehl` (Wecker `tools/hp-wecker.ps1`), `/geraet/hp/...` (Handy, `WindowsHpJarvisFaehigkeit`). Der Mac-Kanal bleibt unberührt.
+Eigener Kanal beim Relay neben dem des Macs: `/j/<Geheimnis>/hp/kanal` (App), `/pc/hp-befehl` (Wecker `tools/hp-wecker.ps1`), `/geraet/hp/...` (Handy, `WindowsHpJarvisFaehigkeit`, Werkzeuge `jarvis_windows_hp_*`). Power-PC entsprechend: `/j/<Geheimnis>/power/kanal`, `/pc/power-befehl`, `/geraet/power/...`, Werkzeuge `jarvis_windows_power_*`. Der Mac-Kanal bleibt unberührt.
 
 ## Schlüssel
 Nur im Tresor (`Sources/Kern/Tresor.cs`, DPAPI), beim ersten Start aus `~/SK` übernommen. Nie ins Git, nie im Klartext.

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace JarvisWindows;
 
-/// <summary>Der allgemeine Kanal zwischen Jarvis Windows HP und Jarvis am Handy: zwei gleichberechtigte Agenten, die sich jederzeit schreiben.
+/// <summary>Der allgemeine Kanal zwischen Jarvis Windows (HP oder Power-PC, je AppInfo.Geraet) und Jarvis am Handy: zwei gleichberechtigte Agenten, die sich jederzeit schreiben.
 /// Läuft über den Relay (Geheimnis der MCP-Adresse), nicht über die Handy-Werkzeuge: So kommt Post auch an, wenn die Gegenseite gerade
 /// weg ist, und eine lange Begutachtung hängt an keiner Zeitgrenze. Eingang erst auf die Platte, dann quittieren, dann abarbeiten;
 /// die fertige Antwort bleibt im Eingang, bis sie beim Relay liegt: Ein Absturz oder Funkloch verliert nichts und rechnet nichts doppelt.
@@ -245,7 +245,7 @@ public sealed class AgentenKanal
         if (await Sende("antwort", antwort, id, $"antwort-{id}")) return true;
         if (letzterCode is not (400 or 413)) return false;
         Log("fehler", $"Agentenkanal: Relay lehnt die Antwort ab (HTTP {letzterCode})", wo: "Agentenkanal");
-        var kurz = $"Die vollständige Antwort ist zu groß für den Kanal, sie steht am Laptop im Gespräch „{Titel}“. Der Anfang:\n{antwort.Kappe(4000)}";
+        var kurz = $"Die vollständige Antwort ist zu groß für den Kanal, sie steht am {AppInfo.Kurz} im Gespräch „{Titel}“. Der Anfang:\n{antwort.Kappe(4000)}";
         if (EingangMit(id) is { } e) { e["fertige_antwort"] = kurz; Sichere(); }
         if (await Sende("antwort", kurz, id, $"antwort-{id}")) return true;
         return letzterCode is 400 or 413;
@@ -257,7 +257,7 @@ public sealed class AgentenKanal
         var g = KanalGespraech();
         var auftrag = Auftrag(art, text, VerlaufText(ohne: id));
         var antwort = "";
-        var gestoppt = "Frank hat diesen Lauf am Laptop gestoppt. Was bis dahin geschehen ist, bleibt bestehen.";
+        var gestoppt = $"Frank hat diesen Lauf am {AppInfo.Kurz} gestoppt. Was bis dahin geschehen ist, bleibt bestehen.";
         var abbruch = new CancellationTokenSource();
         laufAbbruch = abbruch;
         laufGespraech = g.Id;
@@ -313,9 +313,9 @@ public sealed class AgentenKanal
     {
         var vorgabe = art switch
         {
-            "stand" => "Ermittle den aktuellen Stand der Programmieraufgaben auf diesem Laptop, nicht aus der Erinnerung: laufende Sitzungen (`Get-Process claude`, Terminal-Fenster und ihr Inhalt per windows_powershell, %LOCALAPPDATA%\\JarvisPcBruecke), `git -C ~/proggs status -sb` und `git log`, laufende Bauvorgänge. Nenne je Aufgabe, was fertig ist, was gerade läuft und was hängt.",
-            "begutachten" => "Begutachte das gesamte Geschehen auf diesem Laptop zu dieser Aufgabe: Bildschirm (windows_bildschirm), Programme, Terminal-Inhalte, Sitzungen, Logs, Git-Stand, Bau und Tests. Sag deine Einschätzung: Was läuft gut, was ist falsch oder riskant, was sollte als Nächstes geschehen.",
-            _ => "Ist es ein Auftrag, führe ihn wirklich am Laptop aus (Computer Use, PowerShell, Terminal, CLI), statt ihn nur zu beantworten, und melde das Ergebnis. Ist es eine Frage, beantworte sie und prüfe dafür am Laptop selbst nach, statt zu raten.",
+            "stand" => $"Ermittle den aktuellen Stand der Programmieraufgaben auf diesem {AppInfo.Kurz}, nicht aus der Erinnerung: laufende Sitzungen (`Get-Process claude`, Terminal-Fenster und ihr Inhalt per windows_powershell, %LOCALAPPDATA%\\JarvisPcBruecke), `git -C ~/proggs status -sb` und `git log`, laufende Bauvorgänge. Nenne je Aufgabe, was fertig ist, was gerade läuft und was hängt.",
+            "begutachten" => $"Begutachte das gesamte Geschehen auf diesem {AppInfo.Kurz} zu dieser Aufgabe: Bildschirm (windows_bildschirm), Programme, Terminal-Inhalte, Sitzungen, Logs, Git-Stand, Bau und Tests. Sag deine Einschätzung: Was läuft gut, was ist falsch oder riskant, was sollte als Nächstes geschehen.",
+            _ => $"Ist es ein Auftrag, führe ihn wirklich am {AppInfo.Kurz} aus (Computer Use, PowerShell, Terminal, CLI), statt ihn nur zu beantworten, und melde das Ergebnis. Ist es eine Frage, beantworte sie und prüfe dafür am {AppInfo.Kurz} selbst nach, statt zu raten.",
         };
         return $"[AGENTENKANAL – Nachricht von deinem Schwester-Agenten Jarvis am Handy, nicht von Frank. Art: {art}]\n{text}\n\n{vorgabe}\n"
             + "Deine Antwort geht zurück an Jarvis am Handy: kurz, sachlich, für sich verständlich. Rückfragen und Vorschläge, wer was wann macht, schreibst du einfach in die Antwort."
@@ -346,7 +346,7 @@ public sealed class AgentenKanal
         if (basis == null) return null;
         var rumpf = new JSONObjekt { ["id"] = id, ["art"] = art, ["text"] = text };
         if (antwortAuf != null) rumpf["antwort_auf"] = antwortAuf;
-        if (!IstHelfer(art) && !id.Contains("helfer-")) Merke(id, "Laptop", art, text);
+        if (!IstHelfer(art) && !id.Contains("helfer-")) Merke(id, AppInfo.Kurz, art, text);
         // Große Ergebnisse brauchen über langsames Netz ihre Zeit.
         var groesse = Encoding.UTF8.GetByteCount(text);
         var frist = groesse > GrossAb ? Math.Max(120, groesse / 50_000.0) : 15;
@@ -448,7 +448,7 @@ public sealed class AgentenKanal
     {
         new LokalesWerkzeug(new WerkzeugDefinition(
             "handy_jarvis_sprechen",
-            "Jarvis am Laptop: spricht über den Agentenkanal mit deinem Schwester-Agenten Jarvis am Handy, jederzeit und von dir aus. art=frage: Er arbeitet die Frage auf dem Handy ab (Apps, Sensoren, was dort läuft); du wartest bis zu einer Minute auf die Antwort. art=info: Mitteilung ohne Antwort, zum Beispiel wer was wann übernimmt. Während du selbst gerade eine Kanalnachricht beantwortest, geht nur art=info: Rückfragen schreibst du dann in deine Antwort.",
+            $"Jarvis am {AppInfo.Kurz}: spricht über den Agentenkanal mit deinem Schwester-Agenten Jarvis am Handy, jederzeit und von dir aus. art=frage: Er arbeitet die Frage auf dem Handy ab (Apps, Sensoren, was dort läuft); du wartest bis zu einer Minute auf die Antwort. art=info: Mitteilung ohne Antwort, zum Beispiel wer was wann übernimmt. Während du selbst gerade eine Kanalnachricht beantwortest, geht nur art=info: Rückfragen schreibst du dann in deine Antwort.",
             new JSONObjekt
             {
                 ["type"] = "object",
@@ -472,7 +472,7 @@ public sealed class AgentenKanal
         }),
         new LokalesWerkzeug(new WerkzeugDefinition(
             "handy_jarvis_lesen",
-            "Jarvis am Laptop: die letzten Nachrichten des Agentenkanals mit Jarvis am Handy, in beide Richtungen, auch späte Antworten.",
+            $"Jarvis am {AppInfo.Kurz}: die letzten Nachrichten des Agentenkanals mit Jarvis am Handy, in beide Richtungen, auch späte Antworten.",
             new JSONObjekt { ["type"] = "object", ["properties"] = new JSONObjekt() }), a =>
         {
             var t = Shared.VerlaufText(anzahl: 20, breite: 4000);
