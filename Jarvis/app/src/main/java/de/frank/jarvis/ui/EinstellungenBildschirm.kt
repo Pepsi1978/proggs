@@ -274,14 +274,14 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                         "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
-                var konferenz by remember { mutableStateOf(e.konferenzMikrofonAn) }
+                val konferenz = e.konferenzMikrofonAn
                 Zeile("Mikrofone des Konferenz-Lautsprechers", if (konferenz) "An" else "Aus", if (konferenz) f.erfolg else f.textLeise)
                 Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("An", aktiv = konferenz) { e.konferenzMikrofonAn = true; konferenz = true }
-                    Chip("Aus", aktiv = !konferenz) { e.konferenzMikrofonAn = false; konferenz = false }
+                    Chip("An", aktiv = konferenz) { e.konferenzMikrofonAn = true }
+                    Chip("Aus", aktiv = !konferenz) { e.konferenzMikrofonAn = false }
                 }
                 Text(
-                    "Ist der Anker PowerConf verbunden, hört Jarvis dir nach dem Weckwort über dessen Mikrofone zu. Nur solange er zuhört, sonst bliebe der Ton in Telefonqualität; die Antworten kommen in voller Qualität. Das Weckwort selbst hört weiter das Handy.",
+                    "Ist der Anker PowerConf verbunden, hört Jarvis dir im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu. Nur solange er zuhört, sonst bliebe der Ton in Telefonqualität; die Antworten kommen in voller Qualität. Das Weckwort selbst hört weiter das Handy.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
                 if (e.weckwortAn && !vm.weckwortMikro) Knopf("Mikrofon erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }

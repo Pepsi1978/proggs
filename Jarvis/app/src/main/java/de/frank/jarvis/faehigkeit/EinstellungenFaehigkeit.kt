@@ -373,7 +373,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("weckwort_an", "Hey Jarvis", "Auf „Hey Jarvis“ lauschen", "Dauerhaft auf das Weckwort hören, auch bei gesperrtem Handy.", { e.weckwortAn }) {
                 e.weckwortAn = it; de.frank.jarvis.weckwort.WeckwortDienst.abgleichen(app)
             },
-            schalter("konferenz_mikrofon_an", "Hey Jarvis", "Mikrofone des Konferenz-Lautsprechers", "Ist der Anker PowerConf per Bluetooth verbunden, hört Jarvis im Gespräch nach dem Weckwort über dessen Mikrofone zu; die Antworten bleiben in voller Qualität, das Weckwort hört weiter das Handy.", { e.konferenzMikrofonAn }) {
+            schalter("konferenz_mikrofon_an", "Hey Jarvis", "Mikrofone des Konferenz-Lautsprechers", "Ist der Anker PowerConf per Bluetooth verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität, das Weckwort hört weiter das Handy.", { e.konferenzMikrofonAn }) {
                 e.konferenzMikrofonAn = it
             },
             stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Weckwort in der geöffneten App fiel; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.",

@@ -33,6 +33,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /** [kleidiaiAbschalten]: siehe [SileroVad] — true auf Prozessoren mit SME, aber ohne SME2. */
 class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
+    /** Gewünschtes Eingabegerät der nächsten Aufnahme dieses Rekorders (Konferenz-Mikrofon); null = Androids Wahl. */
+    @Volatile var bevorzugtesGeraet: android.media.AudioDeviceInfo? = null
     private val appContext = context.applicationContext
     private val lifecycleLock = Any()
     private val bufferLock = Any()
@@ -425,9 +427,6 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
 
     companion object {
         const val SAMPLE_RATE = 16_000
-
-        /** Gewünschtes Eingabegerät der nächsten Aufnahme (Konferenz-Mikrofon); null = Androids Wahl. */
-        @Volatile var bevorzugtesGeraet: android.media.AudioDeviceInfo? = null
 
         const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
