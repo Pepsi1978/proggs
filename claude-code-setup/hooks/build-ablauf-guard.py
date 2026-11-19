@@ -200,7 +200,9 @@ def heredoc_filter(cmd, weg):
         rest = rest[m.end() + ende.end():]
 
 
-SHELL_ZEILE = re.compile(r'(?:^|[\s|;&(])(?:bash|sh|zsh)(?:\s|$)')
+# pwsh/powershell zählen mit: selbstmord() sieht seit der Server-Prüfrunde nur Shell-Heredocs, ein "pwsh -Command - <<EOF" mit
+# Stop-Process und CommandLine-Filter muss weiter geprüft werden.
+SHELL_ZEILE = re.compile(r'(?:^|[\s|;&(])(?:bash|sh|zsh|pwsh|powershell)(?:\.exe)?(?:\s|$)', re.I)
 
 
 def nur_shell(cmd):
@@ -408,7 +410,8 @@ def adb_ziel_fehlt(cmd, powershell=False):
     geraete = None
     # Wie bei Bau und Kill: Heredoc-Daten (cat > skript.sh <<EOF) und Text in Anführungszeichen (Commit-Nachricht, echo) sind
     # keine Installation (Fehlalarm am Mac, 19.11.2026: Testdatei per Heredoc geblockt). ssh 'adb …' bleibt sichtbar (s. u.).
-    cmd = ohne_heredoc(cmd)
+    # Auch python-/node-Heredocs sind Daten (Server 19.11.2026: Notiz mit dem Text "adb -s … install" per python3 - <<EOF geblockt).
+    cmd = nur_shell(cmd)
     maskiert = maske(cmd, powershell)
     for m in ADB_INSTALL.finditer(cmd):
         if in_text(maskiert, m.start()):

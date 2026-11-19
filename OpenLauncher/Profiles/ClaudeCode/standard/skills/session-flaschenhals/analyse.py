@@ -140,7 +140,9 @@ MENSCH_WERKZEUGE = {"AskUserQuestion", "ExitPlanMode"}
 # in dem die Fehlermeldung woertlich stehen kann (cat jarvis-install.sh, Almanach lesen).
 LESE_WERKZEUGE = {"Read", "Grep", "Glob", "NotebookRead", "WebFetch", "WebSearch", "ToolSearch"}
 # Nur Befehle, deren Ausgabe Dateiinhalt ist; ls/find bleiben Arbeit (M35 misst ein haengendes ls -t).
-LESE_BEFEHL = re.compile(r"(cat|bat|grep|egrep|rg|head|tail|less|more|wc|nl|awk|sed\s+-n|"
+# ls zählt als Lesen, nur ls -t (M35, hing am Mac) bleibt Arbeit: Sonst machte ein angehängtes "ls … | head" ein grep im
+# Quelltext zum Treffer (Server 19.11.2026, M27: grep in jarvis-install.sh fand den Meldungstext).
+LESE_BEFEHL = re.compile(r"(cat|bat|grep|egrep|rg|head|tail|less|more|wc|nl|awk|sed\s+-n|ls(?!\s+-\w*t)|"
                          r"get-content|gc|select-string|sls|type|"
                          r"git\s+(-C\s+\S+\s+)?(grep|log|show|diff|blame))\b", re.I)
 NEBENBEFEHL = re.compile(r"(cd|set-location|sl|echo|printf|write-host|write-output|true|export)\b", re.I)
@@ -162,6 +164,8 @@ def nur_lesen(a):
     if a["name"] not in ("Bash", "PowerShell"):
         return False
     cmd = str(a["eingabe"].get("command", ""))
+    # Text in Anführungszeichen vor dem Zerlegen ausblenden: grep "a\|b" zerfiel sonst an den | im Muster (Server, M27).
+    cmd = re.sub(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'', '""', cmd)
     teile = [t.strip(" \t({") for t in re.split(r"&&|\|\||[;|\n]", cmd)]
     teile = [t for t in teile if t and not NEBENBEFEHL.match(t)]
     return bool(teile) and all(LESE_BEFEHL.match(t) for t in teile)

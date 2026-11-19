@@ -49,6 +49,15 @@ Die fünf offenen Punkte vom Mac:
 Außerdem: Kill-Schutz übersah `pkill -u jarvis -f X` (Schalter mit Wert, Exit 144 in d6a0f83e); Python-Heredocs mit pkill-Text
 sind frei; der Kill-Hinweis rät auf dem Server nicht mehr zu `gradlew --stop`. Lauf-Wächter: CPU unter Linux aus `/proc`
 (procps nur ganze Sekunden), Overlay-Wartezeile höchstens 10 min WARTET.
+Nachgeprüft: echter Hook-Aufruf mit einer nicht verbundenen adb-Adresse wird geblockt (adb in der Hook-Umgebung gefunden);
+Bump-Wächter an einem Wegwerf-Repo (Code geändert: STOPP; eintrag.py-Kette, Python-Heredoc-Bump, nach dem Bump: frei mit
+Sperre); apk-install.sh echt aufs Handy (gleiche Fassung, `installiert (10.8.0.7:5555)`), falsches `--ziel` endet vor jedem
+adb-Aufruf. Der adb-Wächter blockte einen Python-Heredoc, der den Installationsbefehl nur als Text enthielt: jetzt wie der
+Kill-Schutz nur Shell-Heredocs (der Bump-Wächter behält Python-Heredocs, sie können den Versionslog wirklich schreiben).
+Messung: `nur_lesen` zerlegte `grep "a\|b"` an den `|` im Muster, und `ls` zählte als Arbeit; der einzige M27-Treffer war
+dadurch ein grep im Quelltext. Jetzt 0 F, nur `ls -t` (M35) bleibt Arbeit.
+Nicht heute ausgeführt: jarvis-install.sh (bräuchte eine neue Jarvis-Fassung und Franks Overlay-Antwort); die adb-Suche ist
+dieselbe wie in auf-beide/apk-install, frühere Server-Läufe fehlerfrei (M4/M14).
 
 ## Offen für die nächste Prüfrunde am Mac und am Windows-PC
 
@@ -58,7 +67,14 @@ sind frei; der Kill-Hinweis rät auf dem Server nicht mehr zu `gradlew --stop`. 
    Ausgabedatei des PowerShell-Werkzeugs); am Mac bleibt die CPU aus ps (`proc_cpu` gilt nur unter Linux).
 3. apk-install.sh wählt jetzt per Seriennummer: am Mac mit Handy und Tablet gleichzeitig verbunden einmal installieren.
 4. auf-beide.sh: Jarvis-Erkennung am Dateinamen auch mit Windows-Pfaden (`C:\…\Jarvis\app\…`, Git Bash) prüfen.
-5. Regel 24 in den Profiltexten nennt noch „auf dem Server Gradle mit run_in_background“: weiter richtig (spart die 60 s
+5. Bau-Wächter: `SHELL_ZEILE` kennt jetzt auch pwsh/powershell (Heredocs an PowerShell werden weiter auf Kill geprüft);
+   unter Windows einen `pwsh -Command - <<EOF`-Fall mit Stop-Process gegenprüfen. adb- und Kill-Prüfung übergehen jetzt
+   Python-Heredocs: am Mac und unter Windows je einen Heredoc mit Testtext gegenprüfen.
+6. Profil strict auf dem Server: Es verweist auf 43 Hooks unter `~/.claude/hooks` (am Mac von setup.sh dorthin kopiert), auf
+   dem Server gibt es den Ordner nicht; 4 davon (bun-runner-stop, graph-reindex-on-push, reindex-codebase,
+   session-backup-nudge) liegen nur lokal am Mac. Bewusst nicht umgebogen: 39 nie unter Linux gelaufene Hooks würden scharf.
+   Frank entscheidet, ob strict auf dem Server gebraucht wird (dann launcher.py `_uebersetzt` auf claude-code-setup/hooks).
+7. Regel 24 in den Profiltexten nennt noch „auf dem Server Gradle mit run_in_background“: weiter richtig (spart die 60 s
    Wartezeit), aber keine Pflicht mehr. Profiltexte nur auf Franks Wunsch ändern.
 
 ## Hostinger-Server: Liste vom Mac (erledigt am 19.11.2026, siehe oben)

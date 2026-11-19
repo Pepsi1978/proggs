@@ -9,19 +9,19 @@ HIER="$(cd "$(dirname "$0")" && pwd)"
 source "$HIER/delta-push.sh"
 ende() { echo "APK_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; exit 0; }
 
-APK=""; GERAET=""; ZIEL=handy
+APK=""; GERAET=""; ZIELNAME=handy
 while [ $# -gt 0 ]; do
   case "$1" in
     -s) GERAET="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
-    --ziel) ZIEL="${2:-handy}"; shift; [ $# -gt 0 ] && shift ;;
+    --ziel) ZIELNAME="${2:-handy}"; shift; [ $# -gt 0 ] && shift ;;
     *) APK="$1"; shift ;;
   esac
 done
 [ -f "$APK" ] || ende fehler "APK nicht gefunden: $APK"
 # Zielgerät über die feste Seriennummer (Regel 18): Sind Handy und Tablet beide verbunden (Server: 10.8.0.7 und 10.8.0.8),
 # zählt nie „das erste Gerät“ in adb devices. Ohne geraete.json gilt wie früher das erste Netzgerät.
-ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/../adb-wlan/geraete.json" 2>/dev/null)
-[ -z "$ZIEL_SERIE" ] && [ "$ZIEL" != handy ] && ende fehler "Ziel '$ZIEL' steht nicht in Werkzeuge/adb-wlan/geraete.json"
+ZIEL_SERIE=$(awk -v g="\"$ZIELNAME\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/../adb-wlan/geraete.json" 2>/dev/null)
+[ -z "$ZIEL_SERIE" ] && [ "$ZIELNAME" != handy ] && ende fehler "Ziel '$ZIELNAME' steht nicht in Werkzeuge/adb-wlan/geraete.json"
 
 for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/android-sdk/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB_BIN="$K"; break; }
@@ -45,7 +45,7 @@ netzgeraet() { geraet_suchen netz; }
 if [ -z "$GERAET" ] || [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" != device ]; then
   # Regel 18: erst WLAN/Tunnel, ohne Netzverbindung einmal adb-wlan.sh, Kabel nur als Notnagel.
   GERAET=$(netzgeraet)
-  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" --geraet "$ZIEL" >/dev/null 2>&1; GERAET=$(netzgeraet); }
+  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" --geraet "$ZIELNAME" >/dev/null 2>&1; GERAET=$(netzgeraet); }
   if [ -z "$GERAET" ]; then
     GERAET=$(waehle_geraet)
     [ -n "$GERAET" ] && echo "WLAN/Tunnel nicht erreichbar, auch adb-wlan.sh half nicht: installiere per Kabel ($GERAET)."
@@ -57,7 +57,7 @@ fi
 AAPT2=$(ls -d "${ANDROID_HOME:-$HOME/android-sdk}"/build-tools/*/aapt2 "$HOME/Library/Android/sdk"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
 PAKET=""
 [ -n "$AAPT2" ] && PAKET=$("$AAPT2" dump packagename "$APK" 2>/dev/null | head -1)
-[ "$PAKET" = de.frank.jarvis ] && exec "$HIER/../jarvis-install/jarvis-install.sh" "$APK" -s "$GERAET"
+[ "$PAKET" = de.frank.jarvis ] && exec "$HIER/../jarvis-install/jarvis-install.sh" "$APK" --ziel "$ZIELNAME" -s "$GERAET"
 if [ -z "$PAKET" ]; then
   echo "Paketname nicht lesbar (aapt2 fehlt?), installiere ohne Delta per adb install."
   AUSGABE=$("$ADB_BIN" -s "$GERAET" install -r "$APK" 2>&1)
