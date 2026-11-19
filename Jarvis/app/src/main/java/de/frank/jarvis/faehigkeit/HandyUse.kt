@@ -15,7 +15,7 @@ object HandyUse {
         "sonst findet und meldet sie nur. Das ist die einzige Ausnahme von „keine Lösungswege“. Jarvis' eigene Einstellungen bleiben beim Werkzeug einstellungen, und Termine, Aufgaben und Mails bei deinen Werkzeugen. " +
         "Nie für Banking, PIN, Passwörter oder Codes. Handy-Use läuft nur am Mac, am Windows-PC und auf dem Hostinger-Server, nicht in der Cloud."
 
-    const val KEIN_RECHNER = "Der Handy-Use-Auftrag ist nicht gestartet: Weder der Mac noch der Windows-PC noch der Hostinger-Server nehmen ihn gerade an, und die Cloud erreicht das Handy nicht."
+    const val KEIN_RECHNER = "Der Handy-Use-Auftrag ist nicht gestartet: Kein Rechner (Mac, Windows-PC, Power-PC, Hostinger-Server) nimmt ihn gerade an, und die Cloud erreicht das Handy nicht."
 
     const val NICHT_IN_CLOUD = "Der Handy-Use-Auftrag ist nicht gestartet: Die Cloud erreicht das Handy nicht. Er läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server."
 

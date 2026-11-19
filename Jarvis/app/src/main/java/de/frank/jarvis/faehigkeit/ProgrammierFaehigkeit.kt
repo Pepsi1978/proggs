@@ -205,13 +205,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         // „naechster“ ist der Platz, den der Relay für den nächsten Auftrag wählt (der Vorrangrechner nur mit frischer Abfrage).
         fun den(id: String) = "den " + (de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
+        fun der(id: String) = "Der " + (de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
         val naechsterId = KENNUNG_VON_PLATZ[relayNaechster]
         val erster = reihe.first()
         val wohin = when {
             naechsterId == null && pcDa && naechster.isNotEmpty() -> "Der nächste Auftrag ginge an $naechster."
             naechsterId == null -> "Programmieraufträge gehen in die Cloud."
             naechsterId == erster -> "Der nächste Auftrag ginge an ${den(naechsterId)} (Vorrang laut Einstellungen)."
-            else -> "Der nächste Auftrag ginge an ${den(naechsterId)}: ${den(erster).replaceFirstChar { it.uppercase() }} hat Vorrang (Einstellungen), ist aber gerade nicht bereit, deshalb springt der nächste in der Reihenfolge ein."
+            else -> "Der nächste Auftrag ginge an ${den(naechsterId)}: ${der(erster)} hat Vorrang (Einstellungen), ist aber gerade nicht bereit, deshalb springt der nächste in der Reihenfolge ein."
         }
         return "$zeilen $wohin Sol 6.2 nehmen der Windows-PC, Sol-fähige Brücken (Power-PC, Mac) und der Hostinger-Server."
     }
@@ -2693,6 +2694,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (w.cli == CLI_ANTIGRAVITY && review) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.umfang?.takeIf { it.isNotEmpty() }?.let { rumpf.put("review_umfang", it) }
             }
             kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste?.takeIf { it.length() > 0 }?.let { rumpf.put("anhaenge", it) }
+            // Ausdrücklich genau ein Rechner: kein Ersatz, und die Meldung nennt ihn. Ein Relay ohne reihenfolge (faehigkeiten.reihenfolge fehlt)
+            // gäbe den Auftrag still einem anderen Rechner: dann lieber nicht starten.
+            val einzel = gewaehlt?.takeIf { it in EINZELRECHNER }?.let { de.frank.jarvis.data.RECHNER_NAMEN[it] ?: it }
+            if (einzel != null) {
+                val kennt = runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("faehigkeiten")?.optBoolean("reihenfolge") == true } }.getOrNull()
+                if (kennt == false) throw IllegalStateException("Der Jarvis-Server kann Aufträge noch nicht gezielt an den $einzel geben (Relay zu alt). Der Auftrag ist nicht gestartet; ohne Zielangabe geht er nach Franks Reihenfolge.")
+            }
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -2705,8 +2713,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
             val nurServer = gewaehlt == "server"
-            // Ausdrücklich genau ein Rechner: kein Ersatz, und die Meldung nennt ihn.
-            val einzel = gewaehlt?.takeIf { it in EINZELRECHNER }?.let { de.frank.jarvis.data.RECHNER_NAMEN[it] ?: it }
             // Abgeholt, aber die Startbestätigung kam nicht in der Frist des Relays (Brücke langsam, am 24.10.2026 51 s): läuft
             // vermutlich. Nie „nicht gestartet“ und nie die Cloud; die späte Quittung reicht der Relay als Meldung nach.
             if (code in 200..299 && antwort.optBoolean("unbestaetigt")) throw Unbestaetigt(antwort.optString("rechner").ifEmpty { "dem PC" })
