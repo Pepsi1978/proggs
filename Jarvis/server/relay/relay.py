@@ -1759,10 +1759,12 @@ class AgentenKanal:
         self.licht_kennung = f"{time.time():.6f}"
         self.licht_auftrag = {"befehle": befehle, "kennung": self.licht_kennung}
         self.befehl.set()
+        meine = self.licht_kennung
         try:
             await asyncio.wait_for(self.licht_fertig.wait(), 35)
         except asyncio.TimeoutError:
-            self.licht_auftrag = None
+            if self.licht_auftrag is not None and self.licht_auftrag.get("kennung") == meine:
+                self.licht_auftrag = None
             return web.json_response({"ergebnis": "keine_rueckmeldung"})
         return web.json_response({"ergebnis": "fertig", **(self.licht_ergebnis or {})})
 

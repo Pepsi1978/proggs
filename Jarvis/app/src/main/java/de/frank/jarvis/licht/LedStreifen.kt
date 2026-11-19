@@ -33,6 +33,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -147,10 +148,10 @@ object LedStreifen {
         lauf(c, "setzen", { t -> befehle(t, z) }) { "auf ${z.text()}" }.also { if (it.ok > 0) anMerken(c, true) }
     }
 
-    /** Liest die erreichbaren Streifen: true, wenn einer an ist; false, wenn alle gelesenen aus sind; null, wenn keiner lesbar war. */
+    /** Liest die erreichbaren Streifen: true, wenn alle gelesenen an sind; false, wenn einer aus ist; null, wenn keiner lesbar war. */
     suspend fun istAn(c: Context): Boolean? = sperre.withLock {
         val gelesen = lesenAlle(c)
-        if (gelesen.isEmpty()) null else gelesen.values.any { it.an }
+        if (gelesen.isEmpty()) null else gelesen.values.all { it.an }
     }
 
     private class Meldung(val an: Boolean, val rgb: String, val hell: Int)
@@ -215,7 +216,12 @@ object LedStreifen {
     /** Nur Franks Streifen, nie fremde in Bluetooth-Reichweite (Nachbarn). */
     private fun eigene(c: Context): Set<String> = BEKANNTE_NAMEN.map(::schluessel).toSet()
 
-    private fun bekannt(c: Context): Map<String, String> = adressen(c).all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
+    private fun bekannt(c: Context): Map<String, String> {
+        val alle = adressen(c).all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
+        val fremd = alle.filterValues { schluessel(it) !in eigene(c) }
+        if (fremd.isNotEmpty()) adressen(c).edit().apply { fremd.keys.forEach { remove(it) } }.apply()
+        return alle - fremd.keys
+    }
 
     private suspend fun handySchalten(c: Context, adapter: BluetoothAdapter, befehl: (Typ) -> List<String>, ok: MutableSet<String>, gesehen: MutableSet<String>) {
         val geraete = HashMap(bekannt(c))
@@ -307,15 +313,23 @@ object LedStreifen {
         if (liveJob?.isActive == true || !erlaubt(c)) return
         val adapter = c.getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return
         val app = c.applicationContext
+        liveBereich.launch { runCatching { macAbbrechen(app) } }
         liveJob = liveBereich.launch {
             bekannt(app).forEach { (mac, n) ->
                 launch {
                     val s = Sitzung()
                     val t = typ(n)
-                    if (withTimeoutOrNull(VERBINDEN_MS) { oeffnen(app, adapter.getRemoteDevice(mac), t, s) } == true) {
-                        liveSitzungen[mac] = s to t
-                        liveWunsch.value?.let { z -> runCatching { s.schreiben(befehle(t, z), nachlauf = false) } }
-                    } else s.schliessen()
+                    var uebergeben = false
+                    try {
+                        if (withTimeoutOrNull(VERBINDEN_MS) { oeffnen(app, adapter.getRemoteDevice(mac), t, s) } == true && isActive) {
+                            liveSitzungen[mac] = s to t
+                            uebergeben = true
+                            liveWunsch.value?.let { z -> runCatching { s.schreiben(befehle(t, z), nachlauf = false) } }
+                        }
+                    } finally {
+                        // Abgebrochen (losgelassen) oder nicht verbunden: nie eine offene Verbindung zurücklassen.
+                        if (!uebergeben || !isActive) { liveSitzungen.remove(mac); s.schliessen() }
+                    }
                 }
             }
             launch {
@@ -391,7 +405,12 @@ object LedStreifen {
 
         fun melde(v: ByteArray) { v.joinToString("") { "%02X".format(it) }.takeIf { it.startsWith("5F0") }?.let { antwort.complete(it) } }
 
-        suspend fun schreiben(liste: List<String>, nachlauf: Boolean = true): Boolean {
+        /** Ein Schreibvorgang zur Zeit je Verbindung (Live: Erstwunsch und Sammelschleife dürfen sich nicht überholen). */
+        private val schreibSperre = Mutex()
+
+        suspend fun schreiben(liste: List<String>, nachlauf: Boolean = true): Boolean = schreibSperre.withLock { schreibenOhneSperre(liste, nachlauf) }
+
+        private suspend fun schreibenOhneSperre(liste: List<String>, nachlauf: Boolean): Boolean {
             val gatt = gatt ?: return false
             val k = kanal ?: return false
             val ohneAntwort = k.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0
@@ -446,7 +465,7 @@ object LedStreifen {
         val filter = if (wach) null else namen.map { ScanFilter.Builder().setDeviceName(it).build() }
         scanner.startScan(filter, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), rueckruf)
         try {
-            withTimeoutOrNull(SUCHE_MS) { while (!gefunden.values.containsAll(namen)) delay(200) }
+            withTimeoutOrNull(SUCHE_MS) { while (!gefunden.values.map(::schluessel).toSet().containsAll(eigene(c))) delay(200) }
         } finally { runCatching { scanner.stopScan(rueckruf) } }
         return gefunden
     }
@@ -472,6 +491,15 @@ object LedStreifen {
                 else -> MacErgebnis(emptySet(), emptySet(), "ohne Rückmeldung")
             }
         }
+    }
+
+    /** Laufenden Licht-Auftrag am Mac beenden (leere Befehle: die Brücke bricht ab und meldet sofort). */
+    private suspend fun macAbbrechen(c: Context) = withContext(Dispatchers.IO) {
+        val e = Einstellungen.get(c)
+        if (e.serverToken.isBlank()) return@withContext
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/licht").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung)
+            .post(JSONObject().put("befehle", JSONObject()).toString().toRequestBody("application/json".toMediaType())).build()
+        CLIENT.newCall(anfrage).execute().close()
     }
 
     // ------------------------------------------------------------------ Namen und Tabellen

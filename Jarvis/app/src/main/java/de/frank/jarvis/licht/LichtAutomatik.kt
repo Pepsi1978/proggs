@@ -34,6 +34,8 @@ object LichtAutomatik {
     private const val PREFS = "licht_automatik"
     private const val ID = "licht_zuhause"
     private val laeuft = AtomicBoolean(false)
+    /** Prozessweiter Bereich für Umkreis-Ereignisse. */
+    val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val BERLIN = ZoneId.of("Europe/Berlin")
 
     /** Heutiges Fenster: Einschaltzeit, Ausschaltzeit und Tagesart; null = heute keine Automatik (Nachtdienst, Schalter aus, Sommer). */
@@ -45,8 +47,9 @@ object LichtAutomatik {
         val e = Einstellungen.get(c)
         if (!e.lichtAutomatik) return null
         val dienst = dienstCache.takeIf { it.first == tag && System.currentTimeMillis() - it.second < 30 * 60_000L }?.third ?: runCatching {
-            de.frank.jarvis.faehigkeit.Register.alle(c).filterIsInstance<de.frank.jarvis.faehigkeit.KalenderFaehigkeit>().firstOrNull()?.schichten(tag, 1)?.get(tag)?.first ?: "frei"
-        }.getOrNull().also { if (it != null) dienstCache = Triple(tag, System.currentTimeMillis(), it) }
+            // null = Kalender nicht lesbar (kein Recht, Fehler): dann lieber nicht schalten als an einem Nachtdienst-Tag.
+            de.frank.jarvis.faehigkeit.Register.alle(c).filterIsInstance<de.frank.jarvis.faehigkeit.KalenderFaehigkeit>().firstOrNull()?.schichten(tag, 1)?.let { it[tag]?.first ?: "frei" }
+        }.getOrNull().also { if (it != null) dienstCache = Triple(tag, System.currentTimeMillis(), it) } ?: return null
         val (art, ausStunde) = when (dienst) {
             "nacht" -> return null
             "tag" -> if (e.lichtAutoTag) "Tagdienst" to e.lichtAusTag else return null
@@ -93,7 +96,7 @@ object LichtAutomatik {
     private suspend fun einschaltenWennAus(c: Context, grund: String) {
         if (!zuHause(c)) { Logbuch.system("Licht-Automatik", "$grund: Frank ist nicht zu Hause, Licht bleibt aus"); return }
         // Nicht lesbar (Handy außer Reichweite): trotzdem schalten, dann erreicht der Mac die Streifen.
-        if (LedStreifen.istAn(c) == true) { Logbuch.system("Licht-Automatik", "$grund: Licht ist schon an, nichts zu tun"); return }
+        if (LedStreifen.istAn(c) == true) { Logbuch.system("Licht-Automatik", "$grund: alle lesbaren Streifen sind schon an, nichts zu tun"); return }
         val b = LedStreifen.an(c)
         Logbuch.system("Licht-Automatik", "$grund: ${b.ok} von ${b.gesamt} an")
     }
@@ -159,15 +162,15 @@ class LichtUmkreisEmpfaenger : BroadcastReceiver() {
         val ereignis = GeofencingEvent.fromIntent(intent) ?: return
         if (ereignis.hasError()) return
         val app = context.applicationContext
-        val warten = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                when (ereignis.geofenceTransition) {
+        val uebergang = ereignis.geofenceTransition
+        // Schalten kann bis zu einer Minute dauern (Handy, Mac, Sperre): nicht im Broadcast-Zeitlimit warten.
+        LichtAutomatik.bereich.launch {
+            runCatching {
+                when (uebergang) {
                     Geofence.GEOFENCE_TRANSITION_EXIT -> LichtAutomatik.verlassen(app)
                     Geofence.GEOFENCE_TRANSITION_ENTER -> LichtAutomatik.betreten(app)
                 }
-            } catch (_: Exception) {
-            } finally { warten.finish() }
+            }.onFailure { Logbuch.fehler("Licht Umkreis", it) }
         }
     }
 }

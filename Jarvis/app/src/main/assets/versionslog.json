@@ -814,6 +814,7 @@
     {"versionCode": 804, "versionName": "1.8.793", "stand": "19.11.2026, 15:49 Uhr", "notiz": "Die LED-Karte ist jetzt wie die Kaffee-Karte aufgebaut, mit Farbkreis zum Live-Einstellen, 16 speicherbaren Farbplätzen und Farbcode-Eingabe."},
     {"versionCode": 805, "versionName": "1.8.794", "stand": "19.11.2026, 15:55 Uhr", "notiz": "Die LED-Karte zeigt oben ein animiertes LED-Band in der aktuellen Lichtfarbe mit glimmendem Schriftzug."},
     {"versionCode": 806, "versionName": "1.8.795", "stand": "19.11.2026, 16:04 Uhr", "notiz": "Das LED-Band auf der Karte ist jetzt ein räumlich liegendes, leuchtendes Band mit Lichtimpuls, Lichtpfützen und Zünden der Reihe nach."},
-    {"versionCode": 807, "versionName": "1.8.796", "stand": "19.11.2026, 16:20 Uhr", "notiz": "Die Biomarker- und die Raumklima-Karte lassen sich auf dem Startbildschirm wieder mit langem Druck verschieben, so weich wie die Kaffee-Karte."}
+    {"versionCode": 807, "versionName": "1.8.796", "stand": "19.11.2026, 16:20 Uhr", "notiz": "Die Biomarker- und die Raumklima-Karte lassen sich auf dem Startbildschirm wieder mit langem Druck verschieben, so weich wie die Kaffee-Karte."},
+    {"versionCode": 808, "versionName": "1.8.797", "stand": "19.11.2026, 16:25 Uhr", "notiz": "Die LED-Steuerung schaltet nach einem gründlichen Code-Review zuverlässiger: nur eigene Streifen, keine hängenden Verbindungen, Automatik nur mit lesbarem Dienstplan."}
 ]
 }

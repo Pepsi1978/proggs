@@ -1,9 +1,11 @@
 """Schaltet Franks LED-Streifen (App „KS Lite“, Gerätenamen „KS03~…“) per Bluetooth direkt, ohne die App.
 
 Das Handy schickt über den Relay (POST /geraet/licht → GET /pc/mac-befehl) die Befehle je Namensvorsatz, etwa
-{"KS03~": ["5BF000B5", "5A0001FF0000006400A5"]}. Dieses Skript sucht bis 6 s nach Streifen, verbindet sich mit allen
+{"KS03~": ["5BF000B5", "5A0001FF0000006400A5"], "_namen": [Franks Streifen]}. Dieses Skript sucht bis SUCHE_S (8 s) oder bis alle eigenen
+Streifen gefunden sind, verbindet sich mit allen
 gleichzeitig, schreibt die Befehle nacheinander und gibt {"geschaltet": [Namen], "gesehen": [Namen]} als JSON auf stdout aus.
-Protokoll aus der KS-Lite-App 1.8 (unverschlüsselt); dieselbe Tabelle steht in LichtFaehigkeit.kt auf dem Handy.
+Protokoll aus der KS-Lite-App 1.8 (unverschlüsselt); dieselbe Tabelle steht in licht/LedStreifen.kt auf dem Handy.
+Leere Befehle schickt das Handy nur zum Abbrechen; die Brücke startet dann kein Skript.
 
 Aufruf:  python jarvis_licht.py '<befehle als JSON>'      schalten
          python jarvis_licht.py an | aus                   zum Ausprobieren am Rechner
@@ -74,25 +76,24 @@ def schluessel(name: str) -> str:
 async def schalten(befehle: dict) -> dict:
     # Nur Franks Streifen (vom Handy mitgeschickt), nie fremde in Reichweite.
     eigene = {schluessel(n) for n in befehle.pop("_namen", [])}
-    gefunden, staerke = {}, {}
+    gefunden, staerke, schluessel_gesehen = {}, {}, set()
 
     def gesehen(geraet, werbung):
         name = werbung.local_name or geraet.name or ""
         if name.startswith("KS") and (not eigene or schluessel(name) in eigene):
-            gefunden.setdefault(name, geraet)
-            staerke[name] = werbung.rssi
+            # macOS meldet denselben Streifen teils unter zwei Schreibweisen: je Schlüssel nur einmal zählen und verbinden.
+            k = schluessel(name)
+            if k not in schluessel_gesehen:
+                schluessel_gesehen.add(k)
+                gefunden[name] = geraet
+                staerke[name] = werbung.rssi
 
     async with BleakScanner(gesehen):
         # Früher fertig nur, wenn alle erwarteten Streifen da sind; manche werben selten und kommen erst nach Sekunden.
-        # Fertig bei allen erwarteten Streifen, oder nach 3 s, wenn 2 s lang kein neuer dazukam; höchstens SUCHE_S.
+        # Fertig, sobald alle eigenen Streifen da sind; sonst bis SUCHE_S (manche werben selten und kommen erst nach Sekunden).
         uhr = asyncio.get_event_loop().time
-        beginn = zuletzt = uhr()
-        anzahl = 0
-        while uhr() - beginn < SUCHE_S and len(gefunden) < (len(eigene) or ERWARTET):
-            if len(gefunden) != anzahl:
-                anzahl, zuletzt = len(gefunden), uhr()
-            if anzahl and uhr() - beginn >= 3 and uhr() - zuletzt >= 2:
-                break
+        beginn = uhr()
+        while uhr() - beginn < SUCHE_S and len(schluessel_gesehen) < (len(eigene) or ERWARTET):
             await asyncio.sleep(0.2)
     namen = sorted(gefunden)
     ergebnisse = await asyncio.gather(*(schalten_eins(gefunden[n], n, befehle) for n in namen))

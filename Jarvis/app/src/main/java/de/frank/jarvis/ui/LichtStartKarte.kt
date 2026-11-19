@@ -96,7 +96,10 @@ private object LichtStand {
         bereich.launch { runCatching { arbeit() }; zustand = LedStreifen.zustand(c) }
     }
 
-    fun setzen(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; tun(c) { LedStreifen.setzen(c, z) } }
+    fun setzen(c: android.content.Context, z: LedStreifen.Zustand) {
+        if (LedStreifen.laeuft) { Toast.makeText(c, "Moment, das Licht wird gerade geschaltet", Toast.LENGTH_SHORT).show(); return }
+        zustand = z; tun(c) { LedStreifen.setzen(c, z) }
+    }
 
     /** Während des Ziehens: sofort anzeigen und live an die verbundenen Streifen. */
     fun live(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; LedStreifen.liveStart(c); LedStreifen.live(z) }
@@ -146,7 +149,7 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
                     z.modus == Modus.SZENE -> "An · Szene"
                     else -> "An · Mikrofon"
                 },
-                color = when { LedStreifen.laeuft -> f.primaer; b?.fehler == true -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
+                color = when { LedStreifen.laeuft -> f.primaer; b?.fehler == true && System.currentTimeMillis() - b.zeit < 30 * 60_000L -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
             )
         }
         b?.takeIf { it.fehler && System.currentTimeMillis() - it.zeit < 30 * 60_000L }?.let { Text(it.text, color = f.gefahr, fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
@@ -277,7 +280,7 @@ private fun SzenenTeil() {
         var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
         Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
-            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
+            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else (z ?: LedStreifen.Zustand()).copy(tempo = tempo.toInt()).let { LedStreifen.merken(c, it); s.zustand = it }
         })
     }
 }
@@ -300,7 +303,7 @@ private fun MikrofonTeil() {
         var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
         Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
-            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
+            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else (z ?: LedStreifen.Zustand()).copy(empfindlichkeit = empf.toInt()).let { LedStreifen.merken(c, it); s.zustand = it }
         })
     }
 }
@@ -312,9 +315,14 @@ private fun MikrofonTeil() {
 @Composable
 private fun Farbkreis(rgb: String, modifier: Modifier, ziehen: (String) -> Unit, los: (String) -> Unit) {
     val f = LocalFarben.current
-    val hsv = remember(rgb) { FloatArray(3).also { android.graphics.Color.colorToHSV(android.graphics.Color.parseColor("#$rgb"), it) } }
-    var farbton by remember(rgb) { mutableFloatStateOf(hsv[0]) }
-    var saettigung by remember(rgb) { mutableFloatStateOf(hsv[1]) }
+    val aktZiehen by androidx.compose.runtime.rememberUpdatedState(ziehen)
+    val aktLos by androidx.compose.runtime.rememberUpdatedState(los)
+    fun hsvAus(code: String) = FloatArray(3).also { runCatching { android.graphics.Color.colorToHSV(android.graphics.Color.parseColor("#$code"), it) } }
+    var farbton by remember { mutableFloatStateOf(hsvAus(rgb)[0]) }
+    var saettigung by remember { mutableFloatStateOf(hsvAus(rgb)[1]) }
+    var zieht by remember { mutableStateOf(false) }
+    // Neue Farbe von außen (Platz, Code, Sprache): Punkt nachführen, aber nie mitten im Ziehen.
+    androidx.compose.runtime.LaunchedEffect(rgb) { if (!zieht) hsvAus(rgb).let { farbton = it[0]; saettigung = it[1] } }
     val aktuell = Color.hsv(farbton, saettigung.coerceIn(0f, 1f), 1f)
     Box(modifier.glas(f, 18.dp, erhoeht = 0.4f).padding(14.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxWidth().aspectRatio(1f).pointerInput(Unit) {
@@ -328,17 +336,19 @@ private fun Farbkreis(rgb: String, modifier: Modifier, ziehen: (String) -> Unit,
             awaitEachGesture {
                 val erst = awaitFirstDown()
                 erst.consume()
+                zieht = true
                 var letzte = setze(erst.position)
-                ziehen(letzte)
+                aktZiehen(letzte)
                 while (true) {
                     val e = awaitPointerEvent()
                     val p = e.changes.firstOrNull() ?: break
                     if (!p.pressed) break
                     p.consume()
                     val neu = setze(p.position)
-                    if (neu != letzte) { letzte = neu; ziehen(neu) }
+                    if (neu != letzte) { letzte = neu; aktZiehen(neu) }
                 }
-                los(letzte)
+                zieht = false
+                aktLos(letzte)
             }
         }) {
             val r = min(size.width, size.height) / 2f
@@ -506,9 +516,9 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
     androidx.compose.runtime.LaunchedEffect(an) { if (an != warAn) { wechsel = sek; warAn = an } }
     androidx.compose.runtime.LaunchedEffect(an, laeuft) {
         val bis = if (an || laeuft) Float.MAX_VALUE else sek + 3.5f
-        val start = androidx.compose.runtime.withFrameNanos { it }
+        val start = System.nanoTime()
         val basis = sek
-        while (sek < bis) androidx.compose.runtime.withFrameNanos { n -> sek = basis + (n - start) / 1e9f }
+        while (sek < bis) { kotlinx.coroutines.delay(33); sek = basis + (System.nanoTime() - start) / 1e9f }
     }
     val grund = anzeige(z)
     val hellFaktor = ((z?.hell ?: 100) / 100f).coerceIn(0.2f, 1f)
@@ -618,17 +628,5 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
                 drawOval(Color(0xFFC9C1A8), Offset(m.x - gr * 0.28f, m.y - gr * 0.15f), androidx.compose.ui.geometry.Size(gr * 0.56f, gr * 0.3f))
             }
         }
-    }
-}
-
-/** Leuchtende Kugel in der aktuellen Farbe; pulsiert, solange geschaltet wird. */
-@Composable
-private fun Leuchtkugel(farbe: Color, aktiv: Boolean, modifier: Modifier) {
-    val puls by rememberInfiniteTransition(label = "licht").animateFloat(0.55f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "puls")
-    val staerke = if (aktiv) puls else 0.85f
-    Canvas(modifier) {
-        val r = size.minDimension / 2
-        drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.55f * staerke), Color.Transparent), center, r), r, center)
-        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.9f), farbe, farbe.copy(alpha = 0.8f)), center + Offset(-r * 0.15f, -r * 0.15f), r * 0.55f), r * 0.5f, center)
     }
 }

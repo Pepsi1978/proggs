@@ -513,13 +513,20 @@ def licht_schalten(befehle: dict, kennung: str = "") -> None:
     skript = Path(__file__).resolve().with_name("jarvis_licht.py")
     try:
         # Nur ein Licht-Lauf zur Zeit: Ein neuer Befehl beendet den laufenden, sonst könnte ein veralteter Auftrag zuletzt schreiben.
+        # Leere Befehle (nur „_namen“): laufenden Lauf abbrechen, kein neuer (das Handy stellt gerade live ein).
+        abbrechen = not any(isinstance(v, list) and v for k, v in befehle.items() if not k.startswith("_"))
         with LICHT_SPERRE:
             alt = LICHT_LAUF["prozess"]
             if alt is not None and alt.poll() is None:
                 alt.kill()
-            prozess = subprocess.Popen([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            prozess = None if abbrechen else subprocess.Popen([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent),
+                                                              stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             LICHT_LAUF["prozess"] = prozess
+        if prozess is None:
+            zugang = lies_zugang()
+            rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 15, {"geschaltet": [], "gesehen": [], "abgebrochen": True, "kennung": kennung})
+            schreib("Licht: laufender Auftrag abgebrochen (Handy stellt live ein)")
+            return
         try:
             ausgabe, fehlertext = prozess.communicate(timeout=30)
         except subprocess.TimeoutExpired:

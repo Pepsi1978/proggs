@@ -50,29 +50,37 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
     private fun zahl(t: String) = Regex("\\d+").find(t)?.value?.toIntOrNull()
 
     private suspend fun ausfuehren(a: JSONObject): Ergebnis {
-        val alt = LedStreifen.zustand(context) ?: LedStreifen.Zustand()
+        val aktion = a.optString("aktion").trim().lowercase()
         val hText = a.optString("helligkeit").trim().lowercase()
-        val hell = when {
+        // Ausgang für Änderungen: gemerkt, sonst von den Streifen gelesen (nur wenn wirklich gebraucht), sonst Vorgabe.
+        val braucht = aktion in setOf("farbe", "helligkeit", "szene", "mikrofon") || (aktion in setOf("an", "ein", "einschalten", "on") && hText.isNotEmpty())
+        val alt = (if (braucht) LedStreifen.basis(context) else LedStreifen.zustand(context)) ?: LedStreifen.Zustand()
+        val woerter = hText.split(Regex("[^a-zäöüß0-9]+")).filter { it.isNotEmpty() }.toSet()
+        fun hell(): Int? = when {
             hText.isEmpty() -> alt.hell
-            "hell" in hText || "mehr" in hText -> alt.hell + 25
-            "dunk" in hText || "weniger" in hText -> alt.hell - 25
-            "max" in hText || "voll" in hText -> 100
-            else -> zahl(hText) ?: return Ergebnis("RÜCKFRAGE: Welche Helligkeit, 1 bis 100 Prozent?", true)
-        }.coerceIn(1, 100)
-        val b = when (a.optString("aktion").trim().lowercase()) {
-            "an", "ein", "einschalten", "on" -> LedStreifen.an(context)
+            zahl(hText) != null -> zahl(hText)
+            "max" in hText || "voll" in hText || "maximal" in woerter -> 100
+            woerter.any { it in setOf("heller", "mehr", "hoch", "höher") } -> alt.hell + 25
+            woerter.any { it in setOf("dunkler", "weniger", "runter", "niedriger") } -> alt.hell - 25
+            else -> null
+        }?.coerceIn(1, 100)
+        val rueckfrage = Ergebnis("RÜCKFRAGE: Welche Helligkeit, 1 bis 100 Prozent?", true)
+        val b = when (aktion) {
+            "an", "ein", "einschalten", "on" ->
+                if (hText.isEmpty()) LedStreifen.an(context)
+                else LedStreifen.setzen(context, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell() ?: return rueckfrage))
             "aus", "ausschalten", "off" -> LedStreifen.aus(context)
             "farbe" -> {
                 val rgb = LedStreifen.farbe(a.optString("farbe")) ?: return Ergebnis("RÜCKFRAGE: Welche Farbe? Möglich: ${LedStreifen.FARBEN.keys.joinToString(", ")} oder #RRGGBB.", true)
-                LedStreifen.setzen(context, alt.copy(modus = Modus.FARBE, rgb = rgb, hell = hell))
+                LedStreifen.setzen(context, alt.copy(modus = Modus.FARBE, rgb = rgb, hell = hell() ?: return rueckfrage))
             }
             "helligkeit" -> {
                 val basis = LedStreifen.basis(context) ?: return Ergebnis("RÜCKFRAGE: Ich kenne die eingestellte Farbe noch nicht. Welche Farbe soll das Licht haben?", true)
-                LedStreifen.setzen(context, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell))
+                LedStreifen.setzen(context, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell() ?: return rueckfrage))
             }
             "szene" -> {
                 val s = LedStreifen.szene(a.optString("szene")) ?: return Ergebnis("RÜCKFRAGE: Welche Szene? ${LedStreifen.SZENEN.mapIndexed { i, n -> "${i + 1} $n" }.joinToString(", ")}.", true)
-                LedStreifen.setzen(context, alt.copy(modus = Modus.SZENE, szene = s, hell = hell, tempo = zahl(a.optString("tempo"))?.coerceIn(0, 100) ?: alt.tempo))
+                LedStreifen.setzen(context, alt.copy(modus = Modus.SZENE, szene = s, hell = hell() ?: return rueckfrage, tempo = zahl(a.optString("tempo"))?.coerceIn(0, 100) ?: alt.tempo))
             }
             "mikrofon" -> {
                 val m = a.optString("modus").trim().lowercase()
