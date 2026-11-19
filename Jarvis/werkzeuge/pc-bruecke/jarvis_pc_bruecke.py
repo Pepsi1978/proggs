@@ -503,7 +503,7 @@ def switchbot_sofort_faden() -> None:
             SWITCHBOT_SOFORT.clear()
 
 
-def licht_schalten(befehle: dict) -> None:
+def licht_schalten(befehle: dict, kennung: str = "") -> None:
     """LED-Streifen auf Zuruf des Handys (POST /geraet/licht) per Bluetooth schalten (jarvis_licht.py) und das Ergebnis an
     POST /pc/licht melden. Bewusst ohne die BLUETOOTH-Sperre: Licht soll sofort gehen, nicht erst nach einem Victron-Scan."""
     skript = Path(__file__).resolve().with_name("jarvis_licht.py")
@@ -518,7 +518,7 @@ def licht_schalten(befehle: dict) -> None:
             (f" ({ergebnis['fehler']})" if ergebnis.get("fehler") else ""))
     try:
         zugang = lies_zugang()
-        rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 15, ergebnis)
+        rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 15, {**ergebnis, "kennung": kennung})
     except Exception as fehler:
         schreib(f"Licht melden: {fehler}")
 
@@ -539,7 +539,7 @@ def jarvis_mac_faden() -> None:
                 continue
             befehl = json.loads(roh.decode("utf-8"))
             if befehl.get("befehl") == "licht":
-                threading.Thread(target=licht_schalten, args=(befehl.get("befehle") or {},), daemon=True).start()
+                threading.Thread(target=licht_schalten, args=(befehl.get("befehle") or {}, str(befehl.get("kennung") or "")), daemon=True).start()
             elif befehl.get("befehl") == "switchbot_lesen":
                 SWITCHBOT_SOFORT.set()   # eigener Faden: der Scan darf die Abfrage nie aufhalten
             elif befehl.get("befehl") == "jarvis_starten":

@@ -249,6 +249,19 @@ class EinstellungsKatalog(context: Context) {
         NEBENHER.launch { runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() } }
     }
 
+    private fun lichtEintraege(): List<Eintrag> = listOf(
+        schalter("licht_automatik", "LED-Licht", "Licht-Automatik", "Jarvis schaltet die LED-Streifen abends von selbst an und zur Ausschaltzeit aus; mit dem Umkreis auch aus, wenn du das Haus verlässt.", { e.lichtAutomatik }) { e.lichtAutomatik = it },
+        schalter("licht_auto_frei", "LED-Licht", "Automatik an freien Tagen", "An freien Tagen (frei, krank, Urlaub, Freischicht) geht das Licht abends an und um die Ausschaltzeit für freie Tage aus.", { e.lichtAutoFrei }) { e.lichtAutoFrei = it },
+        schalter("licht_auto_tag", "LED-Licht", "Automatik bei Tagdienst", "An Tagdienst-Tagen geht das Licht abends an und um die Ausschaltzeit für Tagdienst aus; bei Nachtdienst nie.", { e.lichtAutoTag }) { e.lichtAutoTag = it },
+        auswahl("licht_an_bei", "LED-Licht", "Einschalten bei", "Wann das Licht abends angeht (Zeitzone Berlin): schon bei Sonnenuntergang, wenn die Dämmerung beginnt, oder erst, wenn es dunkel ist.",
+            { listOf("daemmerung" to "Beginn der Dämmerung", "dunkel" to "Dunkelheit") }, { e.lichtAnBei },
+            { listOf("daemmerung" to "Sonnenuntergang", "dunkel" to "dunkel") }) { e.lichtAnBei = it },
+        zahl("licht_aus_frei", "LED-Licht", "Aus an freien Tagen um", "Spätestens zu dieser vollen Stunde schaltet Jarvis das Licht an freien Tagen aus.", 17, 23, "Uhr", { e.lichtAusFrei }) { e.lichtAusFrei = it },
+        zahl("licht_aus_tag", "LED-Licht", "Aus bei Tagdienst um", "Spätestens zu dieser vollen Stunde schaltet Jarvis das Licht an Tagdienst-Tagen aus.", 17, 23, "Uhr", { e.lichtAusTag }) { e.lichtAusTag = it },
+        schalter("licht_nur_zuhause", "LED-Licht", "Licht aus, wenn ich weg bin", "Verlässt du den Umkreis um dein Zuhause, geht das Licht aus; die Automatik schaltet nur ein, wenn du zu Hause bist, und beim Heimkommen im Zeitfenster an.", { e.lichtNurZuhause }) { e.lichtNurZuhause = it },
+        zahl("licht_radius", "LED-Licht", "Umkreis um Zuhause fürs Licht", "Ab diesem Abstand vom Zuhause gilt: Du bist weg, das Licht geht aus.", 100, 500, "Meter", { e.lichtRadius }) { e.lichtRadius = it },
+    )
+
     private fun kaffeeEintraege(): List<Eintrag> = listOf(
         schalter("kaffee_wach_halten", "Kaffeemaschine", "Kaffeemaschine wach halten", "Jarvis hält die PrimaDonna Soul im Zeitfenster an, damit ein Kaffee ohne Aufwach-Spülung kommt; zu Beginn weckt er sie einmal.", { e.kaffeeWachHalten }) { e.kaffeeWachHalten = it },
         schalter("kaffee_wach_nach_wecker", "Kaffeemaschine", "Wach halten ab dem Wecker", "Die Kaffeemaschine geht mit deinem heutigen Wecker an (Tagschicht-, Nachtschicht- oder sonst der eingeschaltete Wecker) statt zur festen Stunde.", { e.kaffeeWachNachWecker }) { e.kaffeeWachNachWecker = it },
@@ -481,6 +494,7 @@ class EinstellungsKatalog(context: Context) {
             *meldungsEintraege().toTypedArray(),
             *helferEintraege().toTypedArray(),
             *kaffeeEintraege().toTypedArray(),
+            *lichtEintraege().toTypedArray(),
             schalter("meldung_ruhe_an", "Benachrichtigungen", "Ruhezeit", "In der Ruhezeit kommen Agenten, Ablage, Programmieraufträge und Update-Ansagen lautlos, ohne Vorlesen und Wecker.", { e.meldungRuheAn }) { e.meldungRuheAn = it },
             uhrzeit("meldung_ruhe_von", "Benachrichtigungen", "Ruhezeit beginnt", "Ab dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheVon }) { e.meldungRuheVon = it },
             uhrzeit("meldung_ruhe_bis", "Benachrichtigungen", "Ruhezeit endet", "Bis zu dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheBis }) { e.meldungRuheBis = it },

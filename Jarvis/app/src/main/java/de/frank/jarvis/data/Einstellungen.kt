@@ -27,10 +27,10 @@ private val RECHNER = listOf("mac", "windows", "server")
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
  * und lässt sich wie die anderen verschieben.
  */
-val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron", "staubsauger", "kaffee")
+val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron", "staubsauger", "kaffee", "licht")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
-val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine")
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
@@ -266,6 +266,20 @@ class Einstellungen private constructor(context: Context) {
     var kaffeeRadius: Int get() = prefs.getInt("kaffee_radius", 150).coerceIn(150, 500); set(v) = put { putInt("kaffee_radius", v.coerceIn(150, 500)) }
     var kaffeeWachVon: Int get() = prefs.getInt("kaffee_wach_von", 6).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_von", v.coerceIn(0, 23)) }
     var kaffeeWachBis: Int get() = prefs.getInt("kaffee_wach_bis", 22).coerceIn(0, 23); set(v) = put { putInt("kaffee_wach_bis", v.coerceIn(0, 23)) }
+    // ---- LED-Licht (KS Lite) ----
+    /** Licht-Automatik insgesamt: abends an, zur Ausschaltzeit aus, beim Verlassen des Hauses aus. */
+    var lichtAutomatik: Boolean get() = prefs.getBoolean("licht_automatik", true); set(v) = put { putBoolean("licht_automatik", v) }
+    /** Automatik an freien Tagen (frei, krank, Urlaub, Freischicht). */
+    var lichtAutoFrei: Boolean get() = prefs.getBoolean("licht_auto_frei", true); set(v) = put { putBoolean("licht_auto_frei", v) }
+    /** Automatik an Tagdienst-Tagen (an Nachtdienst-Tagen nie). */
+    var lichtAutoTag: Boolean get() = prefs.getBoolean("licht_auto_tag", true); set(v) = put { putBoolean("licht_auto_tag", v) }
+    /** Einschalten bei „daemmerung“ (Sonnenuntergang, Beginn der Dämmerung) oder „dunkel“ (Ende der bürgerlichen Dämmerung). */
+    var lichtAnBei: String get() = prefs.getString("licht_an_bei", "dunkel").takeIf { it == "daemmerung" || it == "dunkel" } ?: "dunkel"; set(v) = put { putString("licht_an_bei", if (v == "daemmerung") v else "dunkel") }
+    var lichtAusFrei: Int get() = prefs.getInt("licht_aus_frei", 22).coerceIn(17, 23); set(v) = put { putInt("licht_aus_frei", v.coerceIn(17, 23)) }
+    var lichtAusTag: Int get() = prefs.getInt("licht_aus_tag", 19).coerceIn(17, 23); set(v) = put { putInt("licht_aus_tag", v.coerceIn(17, 23)) }
+    /** Licht aus, wenn Frank das Haus verlässt; die Automatik schaltet nur ein, wenn er zu Hause ist. */
+    var lichtNurZuhause: Boolean get() = prefs.getBoolean("licht_nur_zuhause", true); set(v) = put { putBoolean("licht_nur_zuhause", v) }
+    var lichtRadius: Int get() = prefs.getInt("licht_radius", 150).coerceIn(100, 500); set(v) = put { putInt("licht_radius", v.coerceIn(100, 500)) }
     /** Darf Jarvis fehlende Helfer selbst bauen lassen? Aus = pausiert; fertige Helfer bleiben nutzbar. */
     var helferAutomatik: Boolean get() = prefs.getBoolean("helfer_automatik", true); set(v) = put { putBoolean("helfer_automatik", v) }
     var helferParallel: Int get() = prefs.getInt("helfer_parallel", 2).coerceIn(1, 5); set(v) = put { putInt("helfer_parallel", v.coerceIn(1, 5)) }

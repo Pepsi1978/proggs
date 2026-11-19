@@ -410,6 +410,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "staubsauger" -> StaubsaugerStartKarte(griff)
                 // Kaffeemaschine PrimaDonna Soul: Standardgetränk mit einem Tipp, alle Getränke und Einstellungen aufklappbar.
                 "kaffee" -> KaffeeStartKarte(griff)
+                // LED-Streifen (KS Lite) direkt per Bluetooth: an/aus, Farbe, Helligkeit, Szenen, Mikrofon-Modi und die Automatik.
+                "licht" -> LichtStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

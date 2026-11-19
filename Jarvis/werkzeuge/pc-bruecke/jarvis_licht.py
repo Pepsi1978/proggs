@@ -65,12 +65,13 @@ async def schalten_eins(geraet, name: str, befehle: dict) -> bool:
 
 
 async def schalten(befehle: dict) -> dict:
-    gefunden = {}
+    gefunden, staerke = {}, {}
 
     def gesehen(geraet, werbung):
         name = werbung.local_name or geraet.name or ""
         if name.startswith("KS"):
             gefunden.setdefault(name, geraet)
+            staerke[name] = werbung.rssi
 
     async with BleakScanner(gesehen):
         # Früher fertig nur, wenn alle erwarteten Streifen da sind; manche werben selten und kommen erst nach Sekunden.
@@ -79,7 +80,8 @@ async def schalten(befehle: dict) -> dict:
             await asyncio.sleep(0.2)
     namen = sorted(gefunden)
     ergebnisse = await asyncio.gather(*(schalten_eins(gefunden[n], n, befehle) for n in namen))
-    return {"geschaltet": [n for n, ok in zip(namen, ergebnisse) if ok], "gesehen": namen}
+    # Signalstärke je Streifen (dBm): zeigt, ob ein Streifen nur knapp in Reichweite des Macs ist.
+    return {"geschaltet": [n for n, ok in zip(namen, ergebnisse) if ok], "gesehen": namen, "staerke": {n: staerke.get(n) for n in namen}}
 
 
 def main() -> int:

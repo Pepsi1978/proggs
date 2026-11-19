@@ -15,8 +15,21 @@ object Sonnenstand {
     /** Dunkel schon ab Sonnenuntergang (Oberrand am Horizont, mit Refraktion), also zu Beginn der Abenddämmerung. */
     private const val HOEHE_DUNKEL = -0.833
 
+    /** Sonnenuntergang (Beginn der Abenddämmerung) in Berlin. */
+    const val SONNENUNTERGANG = HOEHE_DUNKEL
+    /** Ende der bürgerlichen Abenddämmerung: draußen ist es dunkel. */
+    const val DUNKEL = -6.0
+
+    /** Abendzeitpunkt am Kalendertag [tag] (Berlin), an dem die Sonne auf [hoehe] Grad sinkt, als Epochen-Millisekunden. */
+    fun abend(tag: java.time.LocalDate, hoehe: Double): Long {
+        val utcTag = tag.toEpochDay()
+        return morgenUndAbend(utcTag, HOEHE_HELL, hoehe).second
+    }
+
     /** Beginn von Hell und Dunkel als Epochen-Millisekunden. Beide liegen in Berlin stets auf demselben UTC-Tag. */
-    private fun hellUndDunkelBeginn(utcTag: Long): Pair<Long, Long> {
+    private fun hellUndDunkelBeginn(utcTag: Long): Pair<Long, Long> = morgenUndAbend(utcTag, HOEHE_HELL, HOEHE_DUNKEL)
+
+    private fun morgenUndAbend(utcTag: Long, hoeheMorgen: Double, hoeheAbend: Double): Pair<Long, Long> {
         val j = utcTag - 10957 - LAENGE / 360
         val m = 357.5291 + 0.98560028 * j
         val c = 1.9148 * sinG(m) + 0.02 * sinG(2 * m) + 0.0003 * sinG(3 * m)
@@ -25,7 +38,7 @@ object Sonnenstand {
         val sinDekl = sinG(laenge) * sinG(23.4397)
         val cosDekl = sqrt(1 - sinDekl * sinDekl)
         fun stundenwinkel(hoehe: Double) = Math.toDegrees(acos((sinG(hoehe) - sinG(BREITE) * sinDekl) / (cos(Math.toRadians(BREITE)) * cosDekl)))
-        return zeit(mittag - stundenwinkel(HOEHE_HELL) / 360) to zeit(mittag + stundenwinkel(HOEHE_DUNKEL) / 360)
+        return zeit(mittag - stundenwinkel(hoeheMorgen) / 360) to zeit(mittag + stundenwinkel(hoeheAbend) / 360)
     }
 
     private fun sinG(grad: Double) = sin(Math.toRadians(grad))

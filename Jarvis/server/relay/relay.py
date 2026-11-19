@@ -1546,6 +1546,7 @@ class AgentenKanal:
         self.licht_auftrag = None            # LED-Streifen schalten, den der Mac per Bluetooth ausführt (/geraet/licht)
         self.licht_ergebnis = None
         self.licht_fertig = asyncio.Event()
+        self.licht_kennung = ""
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1755,7 +1756,8 @@ class AgentenKanal:
             return web.json_response({"ergebnis": "mac_nicht_verbunden"})
         self.licht_fertig.clear()
         self.licht_ergebnis = None
-        self.licht_auftrag = {"befehle": befehle, "kennung": str(time.time())}
+        self.licht_kennung = f"{time.time():.6f}"
+        self.licht_auftrag = {"befehle": befehle, "kennung": self.licht_kennung}
         self.befehl.set()
         try:
             await asyncio.wait_for(self.licht_fertig.wait(), 35)
@@ -1774,7 +1776,10 @@ class AgentenKanal:
                 raise ValueError
         except Exception:
             return web.Response(status=400, text="ungueltig")
-        self.licht_ergebnis = {k: daten.get(k) for k in ("geschaltet", "gesehen", "fehler") if k in daten}
+        # Eine späte Antwort auf eine ältere Anfrage beantwortet nie die laufende (Brücken ohne Kennung: wie bisher annehmen).
+        if daten.get("kennung") not in (None, self.licht_kennung):
+            return web.json_response({"ok": True, "veraltet": True})
+        self.licht_ergebnis = {k: daten.get(k) for k in ("geschaltet", "gesehen", "fehler", "staerke") if k in daten}
         self.licht_fertig.set()
         return web.json_response({"ok": True})
 
