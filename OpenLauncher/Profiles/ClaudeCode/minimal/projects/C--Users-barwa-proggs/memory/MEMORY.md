@@ -4,6 +4,7 @@
 - [Lange Skripte](lange-skripte-per-write.md): >30 Zeilen nie als Bash-Heredoc, per Write in den Scratchpad; PowerShell: „“ brechen jeden Befehl → Edit/Write
 - [Rückfrage](jarvis-rueckfrage-nie-stehen-bleiben.md): PC + Jarvis je 5 min, dann selbst entscheiden (auch Review)
 - [HTML](html-immer-in-chrome-oeffnen.md): sofort per Start-Process chrome öffnen
+- [Grafik](grafik-erst-selbst-ansehen.md): Animation/Optik nie ungesehen ausliefern: Skizze + Tablet-Foto zuerst
 - [Fehler an Anthropic](fehler-an-anthropic-als-github-issue.md): `gh issue create` in anthropics/claude-code, /feedback gesperrt
 - [HTTP-Timeout](http-timeouts-fallback-wartezeit.md): scheitert genau am Limit → curl -4 gegen -6, IPv4 zuerst
 - [Agenten-Pipe](gestartetes-programm-erbt-agenten-pipe.md): „started“, Tool wartet bis Timeout = Handle-Vererbung
