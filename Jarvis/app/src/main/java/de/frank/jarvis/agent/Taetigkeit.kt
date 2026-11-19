@@ -119,7 +119,7 @@ object Taetigkeit {
         "programmierer_sprechen" to "spricht mit dem Programmierer",
         "programmierauftraege" to "schaut in die Programmieraufträge",
         "programmier_fortschritt" to "meldet den Fortschritt",
-        "pc_status" to "prüft PC und Mac",
+        "pc_status" to "prüft die Rechner",
         "repo_lesen" to "schaut im Repo nach",
         // Apps
         "aufgaben_lesen" to "schaut in die Aufgaben",

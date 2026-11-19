@@ -122,7 +122,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }.getOrElse { "PC: unbekannt, der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName})." }
         val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
-        val sol = if (codex.bereit()) "Sol 6.2 ohne Windows-PC: am Mac, wenn er an ist (Codex CLI oder OpenCode), sonst Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
+        val sol = if (codex.bereit()) "Sol 6.2 ohne Windows-PC: am Power-PC oder Mac, wenn einer an ist (Codex CLI oder OpenCode), sonst Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
             else "Sol 6.2 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
         "$pc ${tunnel.await()} $cloud $sol"
     }
@@ -149,18 +149,42 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         } + ". Erreichbar über den Server heißt nicht, dass der Tunnel lebt."
     }
 
-    /** Franks Reihenfolge aus den Einstellungen für den Relay: „mac“ oder „windows“ zuerst. */
+    /** Für alte Relays ohne Feld reihenfolge: „mac“ oder „windows“ zuerst (Power-PC kennen sie nicht). */
     private fun vorrang() = if (e.macZuerst) "mac" else "windows"
 
     /**
-     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“ (nur die Namen: wer bei
-     * Opus Vorrang hat, stellt Frank in den Einstellungen ein, Standard Mac; Sol geht zuerst an den Windows-PC, sonst an einen Sol-fähigen Mac). Ein Rechner, der sich seit
-     * dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
+     * Die Rechner-Reihenfolge für den Relay (Feld bzw. Parameter reihenfolge, kommagetrennt): automatisch Franks volle Reihenfolge,
+     * pc ohne den Server, server bzw. ein einzelner Rechner (mac, windows, power) nur dieser. Alte Relays lesen weiter vorrang und server.
+     */
+    private fun reihenfolgeFuer(ziel: String?): String = when (ziel) {
+        "server" -> "server"
+        "pc" -> e.rechnerReihenfolge.filter { it != "server" }.joinToString(",")
+        in EINZELRECHNER -> ziel.orEmpty()
+        else -> e.rechnerReihenfolge.joinToString(",")
+    }
+
+    /** vorrang für alte Relays: Bei ziel=mac oder windows genau dieser, sonst Franks Reihenfolge. */
+    private fun vorrangFuer(ziel: String?) = when (ziel) { "mac" -> "mac"; "windows" -> "windows"; else -> vorrang() }
+
+    /** server für alte Relays: nur (ziel=server), leer (nur die Rechner) oder Franks Platz des Servers. */
+    private fun serverFuer(ziel: String?) = when (ziel) { "server" -> "nur"; "pc", in EINZELRECHNER -> ""; else -> e.serverPlatz }
+
+    /** Darf der Rechner [kennung] (mac, windows, power, server) einen Auftrag mit [ziel] nehmen? */
+    private fun zielNimmt(ziel: String, kennung: String): Boolean = when (ziel) {
+        in EINZELRECHNER -> kennung == ziel
+        "pc" -> kennung != "server"
+        "server" -> kennung == "server"
+        else -> true
+    }
+
+    /**
+     * Alle Rechner einzeln, in Franks Reihenfolge: Der Relay meldet den Windows-PC (HP-Laptop) als Rang „haupt“, den Mac als „ersatz“,
+     * den Power-PC als „power“ und den Hostinger-Server als „server“ (neuere Relays zusätzlich mit „kennung“). Wer Vorrang hat, stellt Frank
+     * in den Einstellungen ein; Sol nehmen nur Sol-fähige Brücken. Ein Rechner, der sich seit dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
      */
     private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String, relayNaechster: String = ""): String {
         val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
-        val haupt = eintraege.firstOrNull { it.optString("rang") == "haupt" }
-        val ersatz = eintraege.firstOrNull { it.optString("rang") == "ersatz" }
+        fun eintrag(kennung: String) = eintraege.firstOrNull { it.optString("kennung").ifEmpty { KENNUNG_VON_PLATZ[it.optString("rang")].orEmpty() } == kennung }
         fun zeile(r: JSONObject?, art: String): String {
             if (r == null) return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht). Claude-Anmeldung: unbekannt."
             val name = r.optString("rechner").ifEmpty { art }
@@ -170,27 +194,26 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return (if (da) "$art $name: an und erreichbar$seit." else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht.") +
                 " " + anmeldungZeile(r, da)
         }
-        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (der Vorrangrechner nur mit frischer Abfrage).
-        val macZuerst = e.macZuerst
-        val erster = if (macZuerst) ersatz else haupt
-        val zweiter = if (macZuerst) haupt else ersatz
-        val (ersterName, zweiterName) = if (macZuerst) "Mac" to "Windows-PC" else "Windows-PC" to "Mac"
+        val reihe = e.rechnerReihenfolge
+        val zeilen = reihe.joinToString(" ") { id ->
+            val r = eintrag(id)
+            if (id == "server") when {
+                r == null -> "Hostinger-Server: hat sich seit dem letzten Serverstart nicht gemeldet."
+                r.optBoolean("belegt") -> "Hostinger-Server: ausgelastet, nimmt gerade keinen Auftrag an."
+                else -> zeile(r, "Server")
+            } else zeile(r, de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
+        }
+        // „naechster“ ist der Platz, den der Relay für den nächsten Auftrag wählt (der Vorrangrechner nur mit frischer Abfrage).
+        fun den(id: String) = "den " + (de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
+        val naechsterId = KENNUNG_VON_PLATZ[relayNaechster]
+        val erster = reihe.first()
         val wohin = when {
-            !pcDa -> "Programmieraufträge gehen in die Cloud."
-            erster?.optBoolean("da") == true && zweiter?.optBoolean("da") == true && naechster != erster.optString("rechner") ->
-                "Der nächste Auftrag ginge an $naechster: Der $ersterName fragt gerade nicht ab, deshalb springt der $zweiterName ein."
-            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.2 läuft am Windows-PC, sonst am Mac (wenn seine Brücke Sol kann) oder auf dem Hostinger-Server."
-            else -> "Der nächste Auftrag ginge an $naechster."
+            naechsterId == null && pcDa && naechster.isNotEmpty() -> "Der nächste Auftrag ginge an $naechster."
+            naechsterId == null -> "Programmieraufträge gehen in die Cloud."
+            naechsterId == erster -> "Der nächste Auftrag ginge an ${den(naechsterId)} (Vorrang laut Einstellungen)."
+            else -> "Der nächste Auftrag ginge an ${den(naechsterId)}: ${den(erster).replaceFirstChar { it.uppercase() }} hat Vorrang (Einstellungen), ist aber gerade nicht bereit, deshalb springt der nächste in der Reihenfolge ein."
         }
-        val server = eintraege.firstOrNull { it.optString("rang") == "server" }
-        val serverZeile = when {
-            server == null -> "Hostinger-Server: hat sich seit dem letzten Serverstart nicht gemeldet."
-            server.optBoolean("belegt") -> "Hostinger-Server: ausgelastet, nimmt gerade keinen Auftrag an."
-            else -> zeile(server, "Server")
-        }
-        // Der Relay nennt den, der wirklich dran ist; der Text oben kennt nur Mac und Windows.
-        val serverWohin = if (relayNaechster == "server") " Der nächste Auftrag ginge an den Hostinger-Server." else ""
-        return "${zeile(haupt, "Windows-PC")} ${zeile(ersatz, "Mac")} $serverZeile ${if (serverWohin.isEmpty()) wohin else serverWohin.trim()}"
+        return "$zeilen $wohin Sol 6.2 nehmen der Windows-PC, Sol-fähige Brücken (Power-PC, Mac) und der Hostinger-Server."
     }
 
     /**
@@ -223,7 +246,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("sitzungen") } }.getOrNull()
     }
 
-    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}&server=${e.serverPlatz}").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()
+    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}&server=${e.serverPlatz}&reihenfolge=${reihenfolgeFuer(null)}").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()
 
     private fun zeitspanne(sekunden: Int): String = when {
         sekunden < 120 -> "$sekunden Sekunden"
@@ -235,11 +258,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         listOf(
             Werkzeug(
                 name = "pc_status",
-                titel = "Sind Franks Windows-PC und Mac erreichbar und bei Claude angemeldet?",
-                beschreibung = "Jarvis: prüft jetzt einzeln, ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (beide Brücken melden sich beim Jarvis-Server), " +
-                    "wann sich jeder zuletzt gemeldet hat, ob der WireGuard-Tunnel zu Windows-PC, Mac und Hostinger-Server lebt (vom Handy aus geprüft, Grundlage der Fernwartung), ob Claude Code dort angemeldet ist (getrennt: nicht angemeldet, abgelaufen, gültig bestätigt durch eine Sitzung, nur Anmeldedaten " +
+                titel = "Sind Franks Rechner erreichbar und bei Claude angemeldet?",
+                beschreibung = "Jarvis: prüft jetzt einzeln, ob Franks Rechner (Mac, Windows-PC = HP-Laptop, Power-PC = großer Windows-Rechner zu Hause, Hostinger-Server) an und für Programmieraufträge erreichbar sind (die Brücken melden sich beim Jarvis-Server), " +
+                    "wann sich jeder zuletzt gemeldet hat, ob der WireGuard-Tunnel zu Mac, Windows-PC, Power-PC und Hostinger-Server lebt (vom Handy aus geprüft, Grundlage der Fernwartung), ob Claude Code dort angemeldet ist (getrennt: nicht angemeldet, abgelaufen, gültig bestätigt durch eine Sitzung, nur Anmeldedaten " +
                     "vorhanden oder unbekannt, je mit Prüfzeit), wohin der nächste Auftrag ginge und ob der Cloud-Weg eingerichtet ist. Erreichbar heißt nicht angemeldet; sag Frank nie " +
-                    "„angemeldet“, wenn hier nur „Anmeldedaten liegen vor“ oder „unbekannt“ steht. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, „Ist mein Mac online?“, " +
+                    "„angemeldet“, wenn hier nur „Anmeldedaten liegen vor“ oder „unbekannt“ steht. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, „Ist mein Mac online?“, „Läuft der Power-PC?“, " +
                     "„Bin ich bei Claude angemeldet?“, „Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
                 schema = schema(),
                 nurLesen = true,
@@ -404,12 +427,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         "(Codex kann nicht selbst fragen). Sonst weglassen: Opus und OpenCode fragen am Ende selbst."),
                     "review_umfang" to text("Nur im Antigravity CLI und nur zusammen mit review=true: Franks Antwort, wie gründlich das Review sein soll: standard oder sehr_ausfuehrlich (bis zu 100 Findings). Nie raten; fehlt sie, fragt Jarvis.",
                         listOf(REVIEW_STANDARD, REVIEW_SEHR_AUSFUEHRLICH)),
-                    "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc (sein Mac oder Windows-PC), server (Hostinger-Server) oder cloud. Vorgabe automatisch (Reihenfolge aus den Einstellungen, zuletzt die Cloud).", listOf("automatisch", "pc", "server", "cloud")),
+                    "ziel" to text("Nur wenn Frank es ausdrücklich sagt: mac, windows (HP-Laptop) oder power (Power-PC) für genau diesen Rechner, pc (erster erreichbarer davon nach Franks Reihenfolge), " +
+                        "server (Hostinger-Server) oder cloud. Vorgabe automatisch (Reihenfolge aus den Einstellungen, zuletzt die Cloud).", listOf("automatisch", "mac", "windows", "power", "pc", "server", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.2: am Windows-PC im Codex CLI, " +
                         "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6.2 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
                         "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
-                        "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac oder Windows-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
+                        "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac, Windows-PC oder Power-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
                     "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh, max oder ultra (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
                     "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
                     "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: schnell."),
@@ -558,14 +582,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     freieAngabe != null && katalog is Ergebnis -> ausweg(katalog)
                     HandyUse.verlangt(auftrag) && ziel == "cloud" -> ausweg(Ergebnis(HandyUse.NICHT_IN_CLOUD, fehler = true))
                     freieAngabe != null && ziel == "cloud" ->
-                        ausweg(Ergebnis("${freieAngabe.modell} ist nicht gestartet: Die OpenLauncher-Auswahl läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                        ausweg(Ergebnis("${freieAngabe.modell} ist nicht gestartet: Die OpenLauncher-Auswahl läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     // Für diese Modelle gibt es keinen Weg außerhalb des Angebots: nie still als Opus starten.
                     festModell != null && katalog !is OpenLauncherKatalog.Wahl ->
                         ausweg(Ergebnis("$festModell ist nicht gestartet: Das Angebot von OpenLauncher ist gerade nicht lesbar oder enthält das Modell nicht.", fehler = true))
                     festModell != null && ziel == "cloud" ->
-                        ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                        ausweg(Ergebnis("$festModell ist nicht gestartet: Es läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY && ziel == "cloud" ->
-                        ausweg(Ergebnis("${katalog.modell.name} ist nicht gestartet: Das Antigravity CLI läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
+                        ausweg(Ergebnis("${katalog.modell.name} ist nicht gestartet: Das Antigravity CLI läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true))
                     // Antigravity, auch frei genannt: vor jedem Start „Review: Ja oder Nein?“, bei Ja danach der Umfang (Franks Wahl vom 31.10.2026).
                     katalog is OpenLauncherKatalog.Wahl && katalog.cli == CLI_ANTIGRAVITY && (!a.has("review") || a.optBoolean("review") && reviewUmfang(a) == null) ->
                         wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, gespraech, null, ziel, (knopfModell ?: antwortModell) ?: katalog.modell.name, CLI_ANTIGRAVITY,
@@ -690,11 +714,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // OpenCode läuft nur am Windows-PC: nie Codex Cloud als Ersatz.
         modell == MODELL_SOL && cli == CLI_OPENCODE -> ziele.filterIsInstance<PcBruecke>()
         modell == MODELL_SOL -> when (ziel) {
-            "pc", "server" -> ziele.filterIsInstance<PcBruecke>()
+            "pc", "server", in EINZELRECHNER -> ziele.filterIsInstance<PcBruecke>()
             "cloud" -> listOf(codex)
             else -> ziele.filterIsInstance<PcBruecke>() + codex
         }
-        ziel == "pc" || ziel == "server" -> ziele.filterIsInstance<PcBruecke>()
+        ziel == "pc" || ziel == "server" || ziel in EINZELRECHNER -> ziele.filterIsInstance<PcBruecke>()
         ziel == "cloud" -> ziele.filterIsInstance<CloudRoutine>()
         else -> ziele
     }.filter { it.bereit() }
@@ -716,11 +740,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (!a.isSuccessful) return@use false
                 val alle = JSONObject(a.body?.string().orEmpty()).optJSONArray("rechner_alle") ?: return@use false
                 (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { r ->
-                    r.optBoolean("da") && when (r.optString("rang")) {
-                        "haupt" -> ziel != "server"
-                        // Der Mac nimmt Sol, wenn seine Brücke es dem Relay meldet (Codex CLI oder OpenCode, seit 13.11.2026).
-                        "ersatz" -> ziel != "server" && r.optBoolean("sol") && !r.optBoolean("belegt")
-                        "server" -> ziel != "pc" && !r.optBoolean("belegt")
+                    val kennung = r.optString("kennung").ifEmpty { KENNUNG_VON_PLATZ[r.optString("rang")].orEmpty() }
+                    r.optBoolean("da") && zielNimmt(ziel, kennung) && when (kennung) {
+                        "windows" -> true
+                        // Mac und Power-PC nehmen Sol, wenn ihre Brücke es dem Relay meldet (X-Jarvis-Sol, Mac seit 13.11.2026).
+                        "mac", "power" -> r.optBoolean("sol") && !r.optBoolean("belegt")
+                        "server" -> !r.optBoolean("belegt")
                         else -> false
                     }
                 }
@@ -1035,7 +1060,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val ergebnis = withContext(umgebung + ServerWahl(w.ziel)) {
             if (ProgrammiererVorlage.katalogName(modell) != null || w.gewaehlt.isNotEmpty()) {
                 // Kimi K3.1 Pro und Gemini 4 Argon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
-                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
+                if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
                 else when (val k = vorgepruefteWahl(w) ?: festeKatalogWahl(modell, w.cli, w.zusatz)) {
                     is OpenLauncherKatalog.Wahl -> starteKatalog(k, w.app, w.auftrag, review, nummer, w.neu, umfang)
                     else -> k as Ergebnis
@@ -2651,8 +2676,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val sol = modell == MODELL_SOL
             // Womit Sol läuft (Codex CLI oder OpenCode CLI); steht im Kontext von starteErstes.
             val openCode = sol && kotlinx.coroutines.currentCoroutineContext()[CliWahl]?.cli == CLI_OPENCODE
-            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell).put("vorrang", vorrang())
-                .put("server", when (kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel) { "server" -> "nur"; "pc" -> ""; else -> e.serverPlatz })
+            // Franks Zielangabe (automatisch, pc, server, mac, windows, power); daraus reihenfolge für neue und vorrang/server für alte Relays.
+            val gewaehlt = kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel
+            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell)
+                .put("vorrang", vorrangFuer(gewaehlt)).put("server", serverFuer(gewaehlt)).put("reihenfolge", reihenfolgeFuer(gewaehlt))
                 .put("cli", if (openCode) CLI_OPENCODE else CLI_CODEX)
             // Frei gewähltes Modell: genau Franks geprüfte Wahl (nur Brücken, die sie kennen, starten sie, siehe Relay).
             val frei = if (modell == MODELL_KATALOG) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.wahl else null
@@ -2677,7 +2704,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 throw NichtDa("Der Jarvis-Server war nicht erreichbar, deshalb die Cloud.")
             }
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
-            val nurServer = kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel == "server"
+            val nurServer = gewaehlt == "server"
+            // Ausdrücklich genau ein Rechner: kein Ersatz, und die Meldung nennt ihn.
+            val einzel = gewaehlt?.takeIf { it in EINZELRECHNER }?.let { de.frank.jarvis.data.RECHNER_NAMEN[it] ?: it }
             // Abgeholt, aber die Startbestätigung kam nicht in der Frist des Relays (Brücke langsam, am 24.10.2026 51 s): läuft
             // vermutlich. Nie „nicht gestartet“ und nie die Cloud; die späte Quittung reicht der Relay als Meldung nach.
             if (code in 200..299 && antwort.optBoolean("unbestaetigt")) throw Unbestaetigt(antwort.optString("rechner").ifEmpty { "dem PC" })
@@ -2686,15 +2715,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurServer && code == 409 -> throw IllegalStateException("Der Hostinger-Server nimmt gerade nicht an (aus oder ausgelastet). Der Auftrag ist nicht gestartet.")
                 nurServer && code == 504 -> throw IllegalStateException("Der Hostinger-Server hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
                 nurServer && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Hostinger-Server konnte die Sitzung nicht starten." })
-                // Frei gewählte Modelle starten nur Mac, Windows-PC oder Server: kein Ersatz in der Cloud.
-                frei != null && code == 409 -> throw IllegalStateException("Weder Mac noch Windows-PC noch Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
+                einzel != null && code == 409 -> throw IllegalStateException("Der $einzel nimmt gerade nicht an (aus, im Standby, belegt, seine Brücke läuft nicht oder sie kann dieses Modell nicht). Der Auftrag ist nicht gestartet.")
+                einzel != null && code == 504 -> throw IllegalStateException("Der $einzel hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
+                // Frei gewählte Modelle starten nur Mac, Windows-PC, Power-PC oder Server: kein Ersatz in der Cloud.
+                frei != null && code == 409 -> throw IllegalStateException("Weder Mac noch Windows-PC noch Power-PC noch Hostinger-Server nimmt gerade an; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
                     "Bitte die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.2 starten.")
                 frei != null && code == 504 -> throw IllegalStateException("${antwort.optString("rechner").ifEmpty { "Der Rechner" }} hat den Auftrag nicht abgeholt, er ist nicht gestartet.")
                 frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sitzung nicht starten." })
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
-                openCode && code == 409 -> throw IllegalStateException("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.2 in Codex Cloud.")
+                openCode && code == 409 -> throw IllegalStateException("Kein Rechner mit OpenCode CLI (Windows-PC, Power-PC, Mac) und nicht der Hostinger-Server nimmt gerade an. Mit Codex CLI ginge Sol 6.2 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).
-                sol && code == 409 -> throw NichtDa("Weder der Windows-PC noch der Hostinger-Server nimmt gerade an, deshalb Sol 6.2 in Codex Cloud.")
+                sol && code == 409 -> throw NichtDa("Weder der Windows-PC noch ein Sol-fähiger Power-PC oder Mac noch der Hostinger-Server nimmt gerade an, deshalb Sol 6.2 in Codex Cloud.")
                 // 504 heißt seit Relay-Stand 24.10.2026: nicht abgeholt, also sicher nicht gestartet (und startet auch nicht mehr).
                 sol && code == 504 -> throw IllegalStateException("Der Rechner hat den Sol-Auftrag nicht abgeholt, er ist nicht gestartet. Bitte dort nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
                 // Der Server lehnt ab (etwa nicht angemeldet), und kein Rechner übernimmt: sicher nicht gestartet, Codex Cloud darf ran.
@@ -2964,7 +2995,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             companion object Key : kotlin.coroutines.CoroutineContext.Key<KatalogStart>
         }
 
-        /** Trägt Franks Zielangabe bis PcBruecke.starte: server = nur der Hostinger-Server, pc = nur Mac und Windows-PC, sonst die Reihenfolge. */
+        /** Rechner, die Frank als genaues Ziel nennen kann (ziel=mac, windows, power): nur dieser, kein Ersatz. */
+        private val EINZELRECHNER = setOf("mac", "windows", "power")
+        /** Relay-Platz → Kennung in den Einstellungen (alte Relays melden nur den Platz als rang). */
+        private val KENNUNG_VON_PLATZ = mapOf("haupt" to "windows", "ersatz" to "mac", "power" to "power", "server" to "server")
+
+        /** Trägt Franks Zielangabe bis PcBruecke.starte: server = nur der Hostinger-Server, pc = nur die Rechner, mac/windows/power = genau dieser, sonst die Reihenfolge. */
         private class ServerWahl(val ziel: String) : kotlin.coroutines.AbstractCoroutineContextElement(ServerWahl) {
             companion object Key : kotlin.coroutines.CoroutineContext.Key<ServerWahl>
         }

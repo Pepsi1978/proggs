@@ -174,7 +174,7 @@ class McpServer(context: Context) {
             name = "jarvis_status",
             titel = "Jarvis-Status",
             beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind, welches Datum und welche Uhrzeit dort gerade gelten " +
-                "und ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (genauer: pc_status). " +
+                "und ob Franks Rechner (Mac, Windows-PC, Power-PC, Hostinger-Server) an und für Programmieraufträge erreichbar sind (genauer: pc_status). " +
                 "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst. Mit funktionen=true kommt zusätzlich die vollständige, tatsächliche " +
                 "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen). Für Fragen, was Jarvis kann oder was fehlt, " +
                 "ist funktionen_lesen die erste Quelle: die gepflegte Funktionsübersicht mit Grenzen und Versionsstand.",

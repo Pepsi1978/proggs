@@ -228,7 +228,7 @@ class JarvisAgent(context: Context) {
         } catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gezieltes Gesamtbild", e); null } else null
         val wahlFaehigkeit = if (gezielt == null) null else
             de.frank.jarvis.gedaechtnis.KontextWahl.faehigkeit(app) { kennungen, zeichen -> nachgeladen += kennungen; nachgeladenZeichen.addAndGet(zeichen) }
-        val faehigkeiten = (Register.alle(app) + listOfNotNull(wahlFaehigkeit)).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "programmieren" && it.id != "sprachsession" && !it.nurImGespraech && it.id != "mac" && it.id != "windows")) }
+        val faehigkeiten = (Register.alle(app) + listOfNotNull(wahlFaehigkeit)).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "jarvis_windows_hp" && it.id != "jarvis_windows_power" && it.id != "programmieren" && it.id != "sprachsession" && !it.nurImGespraech && it.id != "mac" && it.id != "windows" && it.id != "power_pc")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else if (!lernen && it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.imHintergrund() else it }
             // Ein Agent-Helfer bekommt nur die Werkzeuge aus seinem Steckbrief.
@@ -714,7 +714,7 @@ class JarvisAgent(context: Context) {
         private const val GESAMTBILD_MS = 15_000L
         /** Höchstens so viele Werkzeugaufrufe laufen in einem Schritt; der Rest geht als „NICHT AUSGEFÜHRT“ ans Modell zurück. */
         private const val MAX_AUFRUFE = 6
-        /** So viele Screenshots sieht das Modell höchstens gleichzeitig; mac_aufnahme und windows_aufnahme liefern bis zu vier auf einmal. */
+        /** So viele Screenshots sieht das Modell höchstens gleichzeitig; mac_aufnahme, windows_aufnahme und power_pc_aufnahme liefern bis zu vier auf einmal. */
         private const val MAX_WERKZEUG_BILDER = 4
         /** Was läuft, solange das Modell an einem Schritt denkt (für [Zeitablauf.unterbrochen]). */
         const val MODELL_DENKT = "Das Modell denkt nach"

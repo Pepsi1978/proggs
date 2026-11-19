@@ -19,8 +19,12 @@ import javax.crypto.AEADBadTagException
 /** Gültige Uhrzeit HH:MM (00:00 bis 23:59). */
 private val UHRZEIT_HHMM = Regex("""([01]\d|2[0-3]):[0-5]\d""")
 
-/** Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]). */
-private val RECHNER = listOf("mac", "windows", "server")
+/**
+ * Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]) mit ihren Anzeigenamen.
+ * windows = HP-Laptop (Relay-Platz haupt), mac = ersatz, power = Franks großer Windows-Rechner zu Hause (Platz power), server = Hostinger.
+ */
+val RECHNER_NAMEN: Map<String, String> = linkedMapOf("mac" to "Mac", "windows" to "Windows-PC", "power" to "Power-PC", "server" to "Hostinger-Server")
+private val RECHNER = RECHNER_NAMEN.keys.toList()
 
 /**
  * Die großen Bereiche des Startbildschirms in ihrer Grundreihenfolge (Kennungen für [Einstellungen.startReihenfolge]).
@@ -484,13 +488,25 @@ class Einstellungen private constructor(context: Context) {
         }
         set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")) }
     // ---- Programmieren am Rechner ----
-    /** Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026). */
+    /**
+     * Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“, „power“, „server“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026).
+     * Eine Reihenfolge von vor dem Power-PC (19.11.2026) bekommt ihn direkt hinter den Windows-PC, nicht ans Ende hinter den Server.
+     */
     var rechnerReihenfolge: List<String>
-        get() = ((prefs.getString("rechner_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in RECHNER } + RECHNER).distinct()
+        get() {
+            val gespeichert = (prefs.getString("rechner_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in RECHNER }.distinct()
+            val mitPower = if (gespeichert.isEmpty() || "power" in gespeichert) gespeichert else gespeichert.toMutableList().apply {
+                val windows = indexOf("windows")
+                val server = indexOf("server")
+                when { windows >= 0 -> add(windows + 1, "power"); server >= 0 -> add(server, "power"); else -> add("power") }
+            }
+            return (mitPower + RECHNER).distinct()
+        }
         set(v) = put { putString("rechner_reihenfolge", (v.filter { it in RECHNER } + RECHNER).distinct().joinToString(",")) }
-    val macZuerst: Boolean get() = rechnerReihenfolge.first { it != "server" } == "mac"
-    /** Wo der Hostinger-Server in der Reihenfolge steht, für den Relay: zuerst, mitte oder zuletzt. */
-    val serverPlatz: String get() = when (rechnerReihenfolge.indexOf("server")) { 0 -> "zuerst"; 1 -> "mitte"; else -> "zuletzt" }
+    /** Für alte Relays (ohne Feld reihenfolge): Mac oder Windows-PC zuerst, je nachdem, wer von beiden weiter oben steht. */
+    val macZuerst: Boolean get() = rechnerReihenfolge.first { it == "mac" || it == "windows" } == "mac"
+    /** Wo der Hostinger-Server in der Reihenfolge steht, für alte Relays: zuerst, mitte oder zuletzt (unter Mac und Windows-PC, ohne Power-PC gezählt). */
+    val serverPlatz: String get() = when (rechnerReihenfolge.filter { it != "power" }.indexOf("server")) { 0 -> "zuerst"; 1 -> "mitte"; else -> "zuletzt" }
     // ---- Timer ----
     /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
     var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }

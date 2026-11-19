@@ -32,7 +32,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Der Agentenkanal zwischen Jarvis am Handy und einem Schwester-Agenten auf Franks Rechnern (Jarvis Mac OS, Jarvis Windows HP; was je Rechner
+ * Der Agentenkanal zwischen Jarvis am Handy und einem Schwester-Agenten auf Franks Rechnern (Jarvis Mac OS, Jarvis Windows HP, Jarvis Windows Power-PC; was je Rechner
  * anders ist, steht in [RechnerArt]): zwei gleichberechtigte Agenten, die sich jederzeit schreiben, solange der Rechner verbunden ist. Der Relay
  * hält die Post, bis die Gegenseite sie quittiert ([AgentenKanal] in relay.py); Post vom Rechner kommt als Signal über den Tunnel ([empfangen]).
  * Fragen vom Rechner beantwortet das Modell des Handys im Hintergrund, als Lauf ohne Frank (lernen=false: kein Merken, keine Programmieraufträge,
@@ -380,7 +380,7 @@ class MacJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, AR
         val ART = RechnerArt(
             id = "jarvis_mac", name = "Jarvis Mac OS", rechner = "Mac", speicher = "agentenkanal", kanalWeg = "/geraet/kanal", startWeg = "/geraet/mac-start", meldung = 310_001,
             beschreibung = "Der Schwester-Agent auf Franks Mac: starten, Stand abfragen, begutachten lassen, abstimmen.",
-            hinweise = "Jarvis Mac OS ist dein Schwester-Agent auf Franks Mac und hat Vollzugriff auf den ganzen Computer. Daneben gibt es Jarvis Windows HP auf Franks HP-Laptop; „Rechner“ ohne weitere Angabe meint den Mac, „Windows“ oder „HP“ meint Jarvis Windows HP. " +
+            hinweise = "Jarvis Mac OS ist dein Schwester-Agent auf Franks Mac und hat Vollzugriff auf den ganzen Computer. Daneben gibt es Jarvis Windows HP auf Franks HP-Laptop und Jarvis Windows Power-PC auf seinem großen Windows-Rechner zu Hause; „Rechner“ ohne weitere Angabe meint den Mac, „Windows“ oder „HP“ meint Jarvis Windows HP, „Power-PC“ meint Jarvis Windows Power-PC. " +
                 "„Starte Jarvis Mac OS“ und im selben Zusammenhang auch das kurze „Starte Jarvis“ bedeuten jarvis_mac_starten. Sprich ihn von dir aus an, wenn etwas am Rechner zählt: " +
                 "jarvis_mac_sprechen mit art=stand für den Stand von Programmieraufgaben, art=begutachten für eine Begutachtung des gesamten Geschehens, art=frage für Rückfragen, art=info für Mitteilungen. " +
                 "Er fragt dich genauso. Stimmt euch laufend ab, wer was wann macht: Du hast Franks Alltag, das Handy und die Sprache im Blick, er den Mac, das Repo und die Sitzungen.",
@@ -402,6 +402,23 @@ class WindowsHpJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(conte
                 "Er fragt dich genauso. Stimmt euch laufend ab: Du hast Franks Alltag, das Handy und die Sprache im Blick, er den Laptop, das Repo und die Sitzungen dort.",
             startBeschreibung = "Jarvis: startet Jarvis Windows HP auf Franks HP-Laptop und prüft, dass die App wirklich läuft. Nutze es bei „Starte Windows HP“, „Starte Jarvis Windows“, „Mach Jarvis auf dem HP auf“. " +
                 "Das Ergebnis sagt, ob sie gestartet ist, schon lief oder der Laptop nicht verbunden ist; sag Frank das in einem Satz.",
+            helferKatalog = false,
+        )
+    }
+}
+
+/** Jarvis Windows Power-PC: dieselbe App auf Franks großem Windows-Rechner zu Hause (Geraet power), eigener Kanal beim Relay. Helfer wie beim HP über art=frage. */
+class WindowsPowerJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, ART) {
+    private companion object {
+        val ART = RechnerArt(
+            // Meldungs-ids: je Art meldung + 0..0xFFF; 320_002 läge im Bereich des HP-Kanals, 330_000 belegt der Helferablauf.
+            id = "jarvis_windows_power", name = "Jarvis Windows Power-PC", rechner = "Power-PC", speicher = "agentenkanal_power", kanalWeg = "/geraet/power/kanal", startWeg = "/geraet/power/start", meldung = 340_001,
+            beschreibung = "Der Schwester-Agent auf Franks Power-PC (großer Windows-Rechner zu Hause): starten, Aufgaben geben, Stand abfragen, begutachten lassen, abstimmen.",
+            hinweise = "Jarvis Windows Power-PC ist dein Schwester-Agent auf Franks Power-PC, seinem großen Windows-Rechner zu Hause, mit Vollzugriff auf den ganzen Computer: Computer Use mit allen Programmen, Terminal und CLI-Sitzungen. Frank nennt ihn auch „Power-PC“ oder „Jarvis auf dem Power-PC“; „Windows HP“ ist dagegen der Laptop. " +
+                "„Starte den Power-PC-Jarvis“ bedeutet jarvis_windows_power_starten. Aufgaben und Fragen gibst du mit jarvis_windows_power_sprechen: art=frage für Aufträge, Rückfragen und freies Gespräch, art=stand für den Stand von Programmieraufgaben, art=begutachten für eine Begutachtung des gesamten Geschehens, art=info für Mitteilungen. " +
+                "Er fragt dich genauso. Stimmt euch laufend ab: Du hast Franks Alltag, das Handy und die Sprache im Blick, er den Power-PC, das Repo und die Sitzungen dort.",
+            startBeschreibung = "Jarvis: startet Jarvis Windows Power-PC auf Franks Power-PC und prüft, dass die App wirklich läuft. Nutze es bei „Starte Jarvis auf dem Power-PC“, „Mach Jarvis Windows Power-PC auf“. " +
+                "Das Ergebnis sagt, ob sie gestartet ist, schon lief oder der Power-PC nicht verbunden ist; sag Frank das in einem Satz.",
             helferKatalog = false,
         )
     }

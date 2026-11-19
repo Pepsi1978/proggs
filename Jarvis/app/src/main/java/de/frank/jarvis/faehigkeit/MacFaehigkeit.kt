@@ -16,23 +16,27 @@ import java.util.Base64
 import java.util.Locale
 
 /**
- * Computer Use auf dem Mac oder Windows-PC ([ziel], Werkzeuge mac_… bzw. windows_…): Das im Chat gewählte Modell sieht den Bildschirm als Bild am Werkzeug-Ergebnis und bedient Maus,
+ * Computer Use auf dem Mac, dem Windows-PC (HP-Laptop) oder dem Power-PC ([ziel], Werkzeuge mac_…, windows_… bzw. power_pc_…): Das im Chat gewählte Modell sieht den Bildschirm als Bild am Werkzeug-Ergebnis und bedient Maus,
  * Tastatur, Programme und Fenster über den Fernsteuerungs-Dienst ([MacSteuerung]). Das geht mit jedem Modell, das Bilder lesen kann.
  * Nur im Gespräch mit Frank (nicht in Agenten und Tagesauswertung) und nicht im Plugin.
  */
 class MacFaehigkeit(private val context: Context, private val ziel: Fernziel = Fernziel.MAC) : Faehigkeit {
     private val mac = ziel == Fernziel.MAC
-    private val p = if (mac) "mac" else "windows"
-    private val rechner = if (mac) "Mac" else "Windows-PC"
+    /** Werkzeug-Präfix und Fähigkeits-id: mac, windows (HP-Laptop) oder power_pc. */
+    private val p = when (ziel) { Fernziel.MAC -> "mac"; Fernziel.WINDOWS -> "windows"; else -> ziel.name.lowercase() }
+    /** „Mac“, „Windows-PC“, „Power-PC“. */
+    private val rechner = ziel.nominativ.removePrefix("Der ")
+    /** Genitiv für „Programme und Fenster des …“. */
+    private val rechnerGenitiv = if (mac) "Macs" else "${rechner}s"
     override val id = p
     override val name = "$rechner bedienen"
     override val beschreibung = "Sieht den Bildschirm von Franks $rechner und bedient dort Maus, Tastatur, Programme und Fenster."
     override val imPlugin = false
     // Die Regeln stehen nur einmal in den Hinweisen des Macs: Beide Fassungen gehen in jeder Anfrage mit.
     override val hinweise = if (!mac)
-        "Windows-PC bedienen: Es gelten dieselbe Arbeitsweise und dieselbe SICHERHEIT wie bei Mac bedienen, mit windows_bildschirm, windows_bedienen, windows_programme und windows_aufnahme; " +
-            "wähle nach dem Rechner, den Frank meint. Tastenkürzel nimmst du mit ctrl statt cmd. Für beenden und fenster_schliessen nennst du den genauen Programmnamen aus der Liste von windows_programme. " +
-            "Meldet das Bild, dass es fast schwarz ist, ist die Anzeige aus: Sag es Frank und klicke nicht blind. Ist der Windows-PC gesperrt, sag es Frank: Entsperren geht nur am Gerät, auch an UAC-Abfragen kommt der Fernweg nicht heran."
+        "$rechner bedienen: Es gelten dieselbe Arbeitsweise und dieselbe SICHERHEIT wie bei Mac bedienen, mit ${p}_bildschirm, ${p}_bedienen, ${p}_programme und ${p}_aufnahme; " +
+            "wähle nach dem Rechner, den Frank meint (Windows-PC = HP-Laptop, Power-PC = sein großer Windows-Rechner zu Hause). Tastenkürzel nimmst du mit ctrl statt cmd. Für beenden und fenster_schliessen nennst du den genauen Programmnamen aus der Liste von ${p}_programme. " +
+            "Meldet das Bild, dass es fast schwarz ist, ist die Anzeige aus: Sag es Frank und klicke nicht blind. Ist der $rechner gesperrt, sag es Frank: Entsperren geht nur am Gerät, auch an UAC-Abfragen kommt der Fernweg nicht heran."
     else
         "Soll etwas auf ${ziel.dativ} gesehen oder getan werden, arbeite in Schleife: Sehen (${p}_bildschirm), eine Aktion (${p}_bedienen, ${p}_programme), am neuen Bild prüfen, " +
             "weiter, bis das Ziel wirklich erreicht ist. Das Bild hängt am Werkzeug-Ergebnis. Koordinaten sind Pixel im letzten ganzen Bild (Ursprung oben links), nie geschätzte Bildschirmmaße. " +
@@ -89,8 +93,8 @@ class MacFaehigkeit(private val context: Context, private val ziel: Fernziel = F
         ) { a -> gesichert { bedienen(a) } },
         Werkzeug(
             name = "${p}_programme",
-            titel = "Programme und Fenster ${if (mac) "am Mac" else "am Windows-PC"}",
-            beschreibung = "Programme und Fenster ${if (mac) "des Macs" else "des Windows-PCs"}. aktion: liste (laufende Programme und sichtbare Fenster mit Lage in Bildpixeln), oeffnen (app und/oder ziel: Adresse oder Dateipfad; holt nach vorn), vordergrund (app), beenden (app), " +
+            titel = "Programme und Fenster am $rechner",
+            beschreibung = "Programme und Fenster des $rechnerGenitiv. aktion: liste (laufende Programme und sichtbare Fenster mit Lage in Bildpixeln), oeffnen (app und/oder ziel: Adresse oder Dateipfad; holt nach vorn), vordergrund (app), beenden (app), " +
                 "fenster_vorn, fenster_verschieben (x, y), fenster_groesse (breite, hoehe), fenster_minimieren, fenster_schliessen (je app, optional fenster = Teil des Fenstertitels).",
             schema = schema(
                 "aktion" to text("Was geschehen soll.", listOf("liste", "oeffnen", "vordergrund", "beenden", "fenster_vorn", "fenster_verschieben", "fenster_groesse", "fenster_minimieren", "fenster_schliessen")),

@@ -203,7 +203,7 @@ class FernsteuerungActivity : ComponentActivity() {
                     if (getrennt) Button(onClick = { verbinden() }, Modifier.padding(top = 12.dp)) { Text("Neu verbinden") }
                 }
             }
-            if (gesperrt) { if (ziel == Fernziel.WINDOWS) WindowsGesperrt(Modifier.align(Alignment.Center)) else Entsperren(Modifier.align(Alignment.Center)) }
+            if (gesperrt) { if (ziel.istWindows) WindowsGesperrt(Modifier.align(Alignment.Center)) else Entsperren(Modifier.align(Alignment.Center)) }
             // Tastatur-Knopf unten rechts in Daumennähe, darunter der Leisten-Knopf, beide über der Leiste.
             Column(
                 Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (leisteAn) LEISTE_HOEHE + 12.dp else 16.dp),
@@ -245,7 +245,7 @@ class FernsteuerungActivity : ComponentActivity() {
             Knopf(text = "Tab") { taste("tab") }
             Knopf(text = "⌫") { taste("zurueck") }
             Knopf(text = "Enter") { taste("enter") }
-            if (ziel == Fernziel.WINDOWS) {
+            if (ziel.istWindows) {
                 Knopf(text = "Start ⊞") { taste("win") }
                 Knopf(text = "App-Wechsel") { taste("tab", "alt") }
                 Knopf(text = "Tab zu Strg+W") { taste("w", "ctrl") }
@@ -322,7 +322,7 @@ class FernsteuerungActivity : ComponentActivity() {
 
     companion object {
         const val PORT = 47800
-        /** Fernziel.name ("MAC" oder "WINDOWS"); fehlt es, verbindet die Fernsteuerung wie bisher mit dem Mac. */
+        /** Fernziel.name ("MAC", "WINDOWS" oder "POWER_PC"); fehlt es, verbindet die Fernsteuerung wie bisher mit dem Mac. */
         const val EXTRA_ZIEL = "ziel"
         private val LEISTE_HOEHE = 52.dp
     }

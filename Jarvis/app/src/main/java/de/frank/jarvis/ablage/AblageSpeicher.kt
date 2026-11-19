@@ -73,7 +73,9 @@ object AblageQuellen {
     const val MAC = "Jarvis Mac OS"
     /** Genau der Name, den die App auf dem HP-Laptop als Quelle sendet (AppInfo.Name). */
     const val WINDOWS = "Jarvis Windows HP"
-    private val kurz = linkedMapOf("handy" to HANDY, "tablet" to TABLET, "mac" to MAC, "windows" to WINDOWS)
+    /** Dieselbe App auf Franks Power-PC (Geraet power, AppInfo.Name). */
+    const val POWER = "Jarvis Windows Power-PC"
+    private val kurz = linkedMapOf("handy" to HANDY, "tablet" to TABLET, "mac" to MAC, "windows" to WINDOWS, "power" to POWER)
     private val gemerkt = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
     /** Ein Aufruf wird in Minuten fertig; länger gemerkt träfe es einen späteren Eintrag gleichen Titels vom Handy. */

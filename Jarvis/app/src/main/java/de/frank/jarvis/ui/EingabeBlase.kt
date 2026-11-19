@@ -710,7 +710,7 @@ internal fun wahlOptionen(kontext: String): List<Pair<String, String>> {
 }
 
 /**
- * Fernwartung: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = Mac oder Windows-PC hat in der letzten Minute geantwortet, orange = nur der Hostinger-Server
+ * Fernwartung: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = Mac, Windows-PC oder Power-PC hat in der letzten Minute geantwortet, orange = nur der Hostinger-Server
  * (Fernwartungs-Dienst im Tunnel), rot = keiner; geprüft wird in der Leiste (JarvisApp). Beim Antippen zählt nur, wer gerade wirklich
  * antwortet (RechnerStatus.schnell liefert das ungeglättet).
  */
@@ -732,7 +732,7 @@ private fun FernwartungsSymbol() {
         }
     }
     val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
-    // Grün heißt weiter: Mac oder Windows-PC ist erreichbar. Antwortet nur der Hostinger-Server, leuchtet das Symbol im Orange des Live-Knopfs.
+    // Grün heißt weiter: Mac, Windows-PC oder Power-PC ist erreichbar. Antwortet nur der Hostinger-Server, leuchtet das Symbol im Orange des Live-Knopfs.
     val nurKonsole = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.let { da -> da.isNotEmpty() && da.all { it.konsole } } == true
     val bereich = androidx.compose.runtime.rememberCoroutineScope()
     val sucht = start != null
@@ -742,7 +742,7 @@ private fun FernwartungsSymbol() {
             .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
     }
     auswahl?.let { da -> RechnerAuswahl(da, { auswahl = null }) { auswahl = null; oeffnen(it) } }
-    val beschreibung = if (sucht) "Fernwartung wird vorbereitet, erneut tippen bricht ab" else "Fernwartung Mac, Windows oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" }
+    val beschreibung = if (sucht) "Fernwartung wird vorbereitet, erneut tippen bricht ab" else "Fernwartung Mac, Windows, Power-PC oder Server, " + when (rechnerDa) { true -> if (nurKonsole) "nur die Server-Konsole erreichbar" else "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" }
     SchwebeSymbol(beschreibung, false, {
         if (start != null) startAbbrechen()
         else start = bereich.launch {
@@ -752,7 +752,7 @@ private fun FernwartungsSymbol() {
             when {
                 da.size > 1 -> auswahl = da
                 da.size == 1 -> oeffnen(da.first())
-                else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
+                else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac, Windows-PC, Power-PC und Server antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }) {

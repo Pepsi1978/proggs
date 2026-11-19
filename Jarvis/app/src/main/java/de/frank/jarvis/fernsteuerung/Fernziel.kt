@@ -12,8 +12,13 @@ import java.net.SocketTimeoutException
 enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String, val port: Int = FernsteuerungActivity.PORT, val konsole: Boolean = false) {
     MAC("10.8.0.6", "Mac-Bildschirm", "Der Mac", "dem Mac"),
     WINDOWS("10.8.0.2", "Windows-Bildschirm", "Der Windows-PC", "dem Windows-PC"),
+    /** Franks großer Windows-Rechner zu Hause, gleicher Fernwartungsdienst wie der Windows-PC (Laptop). */
+    POWER_PC("10.8.0.9", "Power-PC-Bildschirm", "Der Power-PC", "dem Power-PC"),
     /** Kein Bildschirm: Die Server-Konsole (OpenLauncherServer/web) öffnet [ServerKonsoleActivity] statt der Fernsteuerung. */
     SERVER("10.8.0.1", "Server-Konsole", "Der Hostinger-Server", "dem Hostinger-Server", 8090, konsole = true);
+
+    /** Windows-Rechner: Sperrbildschirm-Sonderpfad und Windows-Tasten in der Fernsteuerung. */
+    val istWindows: Boolean get() = this == WINDOWS || this == POWER_PC
 
     companion object {
         fun aus(name: String?): Fernziel = entries.firstOrNull { it.name == name } ?: MAC

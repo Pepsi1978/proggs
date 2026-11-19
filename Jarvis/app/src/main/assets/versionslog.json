@@ -818,6 +818,7 @@
     {"versionCode": 808, "versionName": "1.8.797", "stand": "19.11.2026, 16:25 Uhr", "notiz": "Die LED-Steuerung schaltet nach einem gründlichen Code-Review zuverlässiger: nur eigene Streifen, keine hängenden Verbindungen, Automatik nur mit lesbarem Dienstplan."},
     {"versionCode": 809, "versionName": "1.8.798", "stand": "19.11.2026, 16:29 Uhr", "notiz": "Langer Druck auf Aktualisieren- oder Übernehmen-Knopf verschiebt die Karte jetzt, ohne beim Loslassen etwas auszulösen; Bedienung per TalkBack bleibt zuverlässig."},
     {"versionCode": 810, "versionName": "1.8.799", "stand": "19.11.2026, 16:47 Uhr", "notiz": "Die LED-Steuerung zeigt jetzt überall denselben Zustand, sendet nie eine geratene Farbe und die Automatik wiederholt ein gescheitertes Einschalten."},
-    {"versionCode": 811, "versionName": "1.8.800", "stand": "19.11.2026, 17:16 Uhr", "notiz": "Die LED-Steuerung bleibt nicht mehr auf Schaltet hängen, schaltet beim Verlassen des Hauses verlässlich aus und versteht 20 Prozent heller richtig."}
+    {"versionCode": 811, "versionName": "1.8.800", "stand": "19.11.2026, 17:16 Uhr", "notiz": "Die LED-Steuerung bleibt nicht mehr auf Schaltet hängen, schaltet beim Verlassen des Hauses verlässlich aus und versteht 20 Prozent heller richtig."},
+    {"versionCode": 812, "versionName": "1.8.801", "stand": "19.11.2026, 17:57 Uhr", "notiz": "Jarvis kennt jetzt den Power-PC als vierten Rechner: in der Reihenfolge zum Ziehen, im Rechnerstatus, in der Fernwartung, beim Programmieren als eigenes Ziel und mit eigenem Agentenkanal."}
 ]
 }
