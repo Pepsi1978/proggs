@@ -22,8 +22,38 @@
 #    Danach jede Minute sichtbar prüfen: Werkzeuge/lauf-waechter/minute.py. Der Hinweis geht per additionalContext an das Modell.
 #
 # Blockt per permissionDecision=deny + exit 0 (claude-hooks.md 1.6), stdin per Python statt jq.
-# Fail-open: jeder Fehler -> kein Block. Notaus: leere Datei build-ablauf-guard-disable.flag im TEMP.
-import json, os, re, subprocess, sys
+# Fail-open: jeder Fehler -> kein Block. Notaus: leere Datei ~/.claude/build-ablauf-guard-disable.flag (wirkt 2 Stunden ab Anlegen).
+import json, os, re, subprocess, sys, time
+
+_START = time.monotonic()
+FRIST_S = 8  # alle Unterprozesse zusammen; der Hook hat laut settings.json 10 s
+
+
+def frist(n):
+    """Zeitlimit für den nächsten Unterprozess: höchstens n, zusammen höchstens FRIST_S. Ist kaum Zeit übrig: Abbruch (fail-open)."""
+    rest = FRIST_S - (time.monotonic() - _START)
+    if rest < 0.5:
+        raise TimeoutError('Hook-Frist aufgebraucht')
+    return min(n, rest)
+
+
+NOTAUS = os.path.join(os.path.expanduser('~'), '.claude', 'build-ablauf-guard-disable.flag')
+NOTAUS_ZEILE = ("Notaus bei Fehlalarm: leere Datei " + NOTAUS.replace('\\', '/') + " anlegen (wirkt 2 Stunden)."
+                ).replace('{', '{{').replace('}', '}}')
+
+
+def notaus_aktiv():
+    """Flag gilt nur 2 Stunden ab Anlegen/Ändern, damit ein vergessenes Flag den Hook nicht dauerhaft abschaltet.
+    Der alte Ort im TEMP zählt weiter, mit derselben Frist."""
+    tmp = os.environ.get('TEMP') or os.environ.get('TMPDIR') or '/tmp'
+    for p in (NOTAUS, os.path.join(tmp, 'build-ablauf-guard-disable.flag')):
+        try:
+            if time.time() - os.path.getmtime(p) < 7200:
+                return True
+        except OSError:
+            pass
+    return False
+
 
 BAU = re.compile(r'(?:^|[\s"\'&;(/\\])((?:[^\s"\';&|]*[/\\])?gradlew(?:\.bat)?)["\']?\s+([^;&|\n]*)', re.IGNORECASE)
 BAU_AUFGABE = re.compile(r'(?:^|\s|:)(assemble|install|bundle)\w*', re.IGNORECASE)
@@ -43,7 +73,7 @@ HINWEIS_BUMP = (
     "Reihenfolge: Code aendern -> Versionslog-Eintrag anhaengen (versionCode +1, Systemzeit per "
     "Befehl) -> bauen -> committen -> pushen -> installieren.\n"
     "Geaenderte Dateien: {dateien}\n\n"
-    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+    + NOTAUS_ZEILE
 )
 HINWEIS_KILL = (
     "STOPP - dieses Beenden trifft die eigene Shell.\n\n"
@@ -55,7 +85,7 @@ HINWEIS_KILL = (
     "  Sonst Klammer-Trick: pkill -f \"[g]radlew assembleDebug\"  (das Muster passt dann nicht auf sich selbst)\n"
     "  Oder gezielt per PID: kill <pid> aus einem vorherigen, eigenen pgrep-Aufruf.\n"
     "Und Kill nie mit weiteren Schritten in denselben Befehl packen.\n\n"
-    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+    + NOTAUS_ZEILE
 )
 
 
@@ -69,37 +99,90 @@ HINWEIS_WARTEN = (
     "Werkzeug beim Ende selbst (Server: mit run_in_background, M26). Danach jede Minute sichtbar pruefen:\n"
     "Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute>. Sonst auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
     "Prozessnamen, oder den Klammer-Trick nutzen: pgrep -f \"[g]radlew assembleDebug\".\n\n"
-    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+    + NOTAUS_ZEILE
 )
 
 
 ZEITLIMIT_MS = 60000
-_PY = 'python -X utf8 "%USERPROFILE%/proggs' if os.name == 'nt' else 'python3 ~/proggs'
+_MINUTE = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'lauf-waechter', 'minute.py').replace('\\', '/')
+_PY = ('python -X utf8 "' if os.name == 'nt' else 'python3 "') + _MINUTE + '"'
 HINWEIS_ZEIT = ("Gestaffeltes Zeitlimit (60 s): Ist der Befehl dann nicht fertig, läuft er weiter. Jede weitere Minute sichtbar prüfen: "
-                + _PY + "/Werkzeuge/lauf-waechter/minute.py" + ('"' if os.name == 'nt' else '') + " <ausgabedatei> <minute> "
+                + _PY + " <ausgabedatei> <minute> "
                 "(Beschreibung 'Minute N: Lauf prüfen'), danach ein Satz Einschätzung für Frank. WARTET (Dialog, Overlay, sleep) nie beenden; "
                 "bei FEHLER oder HÄNGER sofort eingreifen.")
 
 
 def mit_zeitlimit(d, neu):
-    """Senkt das Vordergrund-Zeitlimit auf 60 s; liefert True, wenn etwas geändert wurde. Befehle, die mit sleep beginnen, bleiben
+    """Senkt das Vordergrund-Zeitlimit auf 60 s. Liefert None (nichts geändert), 'gesetzt' (kein eigenes timeout, Wert nur
+    ergänzt) oder 'gesenkt' (ausdrücklich höheres timeout herabgesetzt). Befehle, die mit sleep beginnen, bleiben
     unverändert: Claude Code schiebt sie beim Zeitlimit nicht in den Hintergrund, sondern bricht sie ab."""
     if d.get('permission_mode') != 'bypassPermissions' or neu.get('run_in_background'):
-        return False
+        return None
     if re.match(r'\s*(sleep|Start-Sleep)\b', neu.get('command') or '', re.I):
-        return False
+        return None
     alt = neu.get('timeout')
     if isinstance(alt, (int, float)) and alt <= ZEITLIMIT_MS:
-        return False
+        return None
     neu['timeout'] = ZEITLIMIT_MS
-    return True
+    return 'gesenkt' if isinstance(alt, (int, float)) else 'gesetzt'
 
 
 def freigeben(d, neu, grund):
     aus = {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": grund, "updatedInput": neu}
-    if mit_zeitlimit(d, neu):
+    # Hinweis nur, wenn ein ausdrücklich höheres timeout gesenkt wurde (Kontextkosten; Regel 24 steht ohnehin im Profil).
+    if mit_zeitlimit(d, neu) == 'gesenkt':
         aus["additionalContext"] = HINWEIS_ZEIT  # permissionDecisionReason sieht bei "allow" nur der Nutzer, nicht das Modell
     print(json.dumps({"hookSpecificOutput": aus}))
+
+
+# Heredoc-Anfang; '<<<' (Here-String) zählt nicht.
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*['\"]?([A-Za-z_]\w*)['\"]?([^\n]*)\n")
+
+
+def heredoc_koerper(cmd):
+    """(start, ende, zeilen) jedes Heredoc-Inhalts: von der Zeile nach dem Marker bis einschließlich Endmarker (bzw. Befehlsende)."""
+    spannen, pos = [], 0
+    while True:
+        m = HEREDOC_START.search(cmd, pos)
+        if not m:
+            return spannen
+        ende = re.compile(r'(?m)^' + (r'\t*' if m.group(1) else '') + re.escape(m.group(2)) + r'[ \t]*$').search(cmd, m.end())
+        stop = ende.end() if ende else len(cmd)
+        inhalt = cmd[m.end():ende.start() if ende else len(cmd)]
+        spannen.append((m.end(), stop, inhalt.count('\n') + (0 if inhalt.endswith('\n') or not inhalt else 1)))
+        pos = stop
+
+
+AUSGEFUEHRT = re.compile(r'(?:\s-c|\s-Command|\beval|\bssh\s+[^\s;&|]+(?:\s+-\S+)*)\s*$', re.I)
+BEFEHLSSTELLE = re.compile(r'(?:^|[;&|\n({])\s*(?:&\s*|(?:bash|sh)\s+)?$')
+
+
+def maske(cmd, powershell=False):
+    """Text in Anführungszeichen längenerhaltend durch '_' ersetzen: nur zum Finden von Stellen; Muster und Pfade immer aus dem
+    Original lesen (gleiche Offsets). Bleibt sichtbar: ausgeführter Text (bash -c "…", pwsh -Command "…", eval, ssh host '…'),
+    ein Programmpfad in Anführungszeichen an Befehlsstelle ("./gradlew" …) und Heredoc-Inhalte (Apostrophe dort kippen sonst die Paarung)."""
+    text = re.compile(r'"[^"]*"|\'[^\']*\'' if powershell else r'"(?:[^"\\]|\\.)*"|\'[^\']*\'', re.S)
+
+    def ersatz(m, versatz):
+        s, davor = m.group(0), cmd[:versatz + m.start()]
+        if AUSGEFUEHRT.search(davor):
+            return s
+        if re.search(r'gradlew(?:\.bat)?$', s[1:-1], re.I) and BEFEHLSSTELLE.search(davor):
+            return s
+        return s[0] + re.sub(r'[^\n]', '_', s[1:-1]) + s[-1]
+
+    teile, pos = [], 0
+    for start, stop, _ in heredoc_koerper(cmd) + [(len(cmd), len(cmd), 0)]:
+        stueck = cmd[pos:start]
+        teile.append(text.sub(lambda m, v=pos: ersatz(m, v), stueck))
+        teile.append(cmd[start:stop])
+        pos = stop
+    return ''.join(teile)
+
+
+def in_text(maskiert, i):
+    """True, wenn die Stelle i im Original innerhalb ausgeblendeten Texts liegt."""
+    return 0 <= i < len(maskiert) and maskiert[i] == '_'
 
 
 def heredoc_filter(cmd, weg):
@@ -107,7 +190,7 @@ def heredoc_filter(cmd, weg):
     "cat <<EOF | bash") weg(zeile) wahr ist. Endmarker: bei <<- mit führenden Tabs, sonst genau am Zeilenanfang."""
     teile, rest = [], cmd
     while True:
-        m = re.search(r"<<(-?)\s*['\"]?([A-Za-z_]\w*)['\"]?([^\n]*)\n", rest)
+        m = HEREDOC_START.search(rest)
         if not m:
             return ''.join(teile) + rest
         ende = re.search(r'(?m)^' + (r'\t*' if m.group(1) else '') + re.escape(m.group(2)) + r'[ \t]*$', rest[m.end():])
@@ -136,9 +219,12 @@ def ohne_kommentar_und_text(cmd):
 def warte_schleife(cmd):
     """pgrep -f in einer until/while-Schleife (auch mehrzeilig), dessen Muster im eigenen Befehl steht; gleicher Parser wie selbstmord()."""
     cmd = nur_shell(cmd)
+    maskiert = maske(cmd)
     for m in PKILL.finditer(cmd):
         if m.group(1) != 'pgrep' or not re.search(r'\s-\w*f|--full', m.group(2) or ''):
             continue
+        if in_text(maskiert, m.start(1)):
+            continue  # pgrep nur als Text (Commit-Nachricht, echo, grep-Muster)
         muster = m.group(3) or m.group(4) or m.group(5) or ''
         # Klammer-Trick, Anker (^…, …$) und Variablen passen nicht auf den eigenen Befehlstext.
         if not muster or '[' in muster or muster.startswith('^') or muster.endswith('$') or muster.startswith('$'):
@@ -163,33 +249,40 @@ def ohne_aliase(cmd):
     return 'unalias ls cat tree 2>/dev/null; eval ' + shlex.quote(cmd)
 
 
-HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]+['\"]?")
-
-
 def verweigern(grund):
     sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
                                  "permissionDecision": "deny", "permissionDecisionReason": grund}}))
 
 
 def pfad(p, basis):
-    p = os.path.expandvars(os.path.expanduser(p.strip()))
+    # PowerShell $env:NAME -> ${NAME}, $HOME -> ~ (unter Windows meist keine Umgebungsvariable), dann wie gewohnt auflösen.
+    p = re.sub(r'\$env:(\w+)', r'${\1}', p.strip(), flags=re.IGNORECASE)
+    p = re.sub(r'^\$(?:HOME\b|\{HOME\})', '~', p)
+    p = os.path.expandvars(os.path.expanduser(p))
+    if os.name == 'nt':
+        p = re.sub(r'^/([A-Za-z])(?:/|$)', lambda m: m.group(1).upper() + ':/', p)  # Git Bash: /c/Users/… -> C:/Users/…
     return os.path.normpath(p if os.path.isabs(p) else os.path.join(basis, p))
 
 
-def selbstmord(cmd):
+def selbstmord(cmd, powershell=False):
     cmd = ohne_heredoc(cmd)
+    # Nur Aufrufe außerhalb von Text zählen (git commit -m "… pkill -f gradle …", grep "pkill -f x" beenden nichts).
+    maskiert = maske(cmd, powershell)
     for m in PKILL.finditer(cmd):
         schalter = m.group(2) or ''
-        if not re.search(r'\s-\w*f|--full', schalter):
+        if not re.search(r'\s-\w*f|--full', schalter) or in_text(maskiert, m.start(1)):
             continue
         muster = m.group(3) or m.group(4) or m.group(5) or ''
-        if m.group(1) == 'pgrep' and not re.search(r'\bkill\b|xargs', cmd):
+        if m.group(1) == 'pgrep' and not re.search(r'\bkill\b|xargs', maskiert):
             continue  # reines Nachsehen beendet nichts
-        if '[' in muster:
-            continue  # Klammer-Trick: passt nicht auf den eigenen Befehlstext
+        # Klammer-Trick, Anker (^…, …$) und Variablen passen nicht auf den eigenen Befehlstext ("bash -c …").
+        if not muster or '[' in muster or muster.startswith('^') or muster.endswith('$') or muster.startswith('$'):
+            continue
         return muster, m.group(1)
     for m in WIN_CMDLINE.finditer(cmd):
-        if re.search(r'Stop-Process|Terminate|taskkill|\.Kill\(', cmd, re.IGNORECASE) and '[' not in m.group(1):
+        if in_text(maskiert, m.start()):
+            continue
+        if re.search(r'Stop-Process|Terminate|taskkill|\.Kill\(', maskiert, re.IGNORECASE) and '[' not in m.group(1):
             return m.group(1), 'der CommandLine-Filter'
     return None
 
@@ -209,11 +302,13 @@ def eigener_bump_ungebaut(basis, log):
         return False
     # Eigener Commit, auch schon gepusht (Sitzung a56e3dee: commit, pull --rebase, push, dann Bau): Er steht im Reflog als
     # "commit:" bzw. nach dem Rebase als "rebase (pick):". Ein per pull/merge geholter Bump steht dort nur als Fast-Forward.
-    r = subprocess.run(['git', '-C', basis, 'log', '-1', '--format=%H', '--', log], capture_output=True, text=True, timeout=5)
+    r = subprocess.run(['git', '-C', basis, 'log', '-1', '--format=%H', '--', log], capture_output=True, text=True,
+                       stdin=subprocess.DEVNULL, timeout=frist(3))
     bump = r.stdout.strip()
     if r.returncode != 0 or not bump:
         return False
-    r = subprocess.run(['git', '-C', basis, 'reflog', '-n', '200', '--format=%H %gs'], capture_output=True, text=True, timeout=5)
+    r = subprocess.run(['git', '-C', basis, 'reflog', '-n', '200', '--format=%H %gs'], capture_output=True, text=True,
+                       stdin=subprocess.DEVNULL, timeout=frist(3))
     return any(z.startswith(bump + ' ') and re.match(r'(commit|rebase[^:]*\((pick|continue|reword|edit)\))', z[len(bump) + 1:])
                for z in r.stdout.splitlines())
 
@@ -224,11 +319,14 @@ def ohne_heredoc(cmd):
     return heredoc_filter(cmd, lambda z: bool(re.search(r'\b(cat|tee)\b', z)) and not SHELL_ZEILE.search(z))
 
 
-def bau_ohne_bump(cmd, cwd):
+def bau_ohne_bump(cmd, cwd, powershell=False):
     cmd = ohne_heredoc(cmd)  # Skripttext, den cat/tee nur in eine Datei schreibt, ist kein Bau
-    for m in BAU.finditer(cmd):
+    # Gesucht wird im maskierten Befehl (grep "gradlew assembleDebug", Commit-Nachrichten sind kein Bau); Pfade, -p und
+    # alles davor kommen aus dem Original (gleiche Offsets).
+    for m in BAU.finditer(maske(cmd, powershell)):
         if not BAU_AUFGABE.search(m.group(2)):
             continue
+        m = BAU.match(cmd, m.start()) or m
         davor = cmd[:m.start()]
         # Derselbe Befehl schreibt den Versionslog vor dem Bau (Bump und Bau in einem Aufruf): kein Bau ohne Bump.
         # Nur echtes Schreiben zählt; bloßes Lesen (cat, Get-Content) vor dem Bau bleibt geblockt.
@@ -253,7 +351,7 @@ def bau_ohne_bump(cmd, cwd):
         if not os.path.isfile(log):
             continue
         r = subprocess.run(['git', '-C', basis, 'status', '--porcelain', '--', '.'],
-                           capture_output=True, text=True, timeout=5)
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=frist(4))
         if r.returncode != 0:
             continue
         zeilen = [z[3:].strip().strip('"') for z in r.stdout.splitlines() if len(z) > 3]
@@ -280,8 +378,9 @@ HINWEIS_ADB = (
     "STOPP - {ziel} ist gerade nicht verbunden.\n\n"
     "adb devices meldet: {geraete}.\n"
     "Installiere mit genau der Adresse, die dort steht (adb -s <Adresse> install ...). "
-    "Steht dort kein WLAN-Gerät: erst Werkzeuge/adb-wlan/adb-wlan.ps1 ausführen (Regel 18).\n\n"
-    "Notaus bei Fehlalarm: leere Datei build-ablauf-guard-disable.flag im TEMP anlegen."
+    "Steht dort kein WLAN-Gerät: erst Werkzeuge/adb-wlan/" + ('adb-wlan.ps1' if os.name == 'nt' else 'adb-wlan.sh')
+    + " ausführen (Regel 18).\n\n"
+    + NOTAUS_ZEILE
 )
 
 
@@ -335,16 +434,39 @@ def adb_ziel_fehlt(cmd):
             adb = adb_pfad()
             if not adb:
                 return None
-            r = subprocess.run([adb, 'devices'], capture_output=True, text=True, timeout=6)
+            # Ausgabe in eine Datei statt eine Pipe: Startet "adb devices" den adb-Server neu, erbt der die Handles und hielte
+            # eine Pipe bis zum Zeitlimit offen. Eingabe ins Leere.
+            import tempfile
+            with tempfile.TemporaryFile() as f:
+                r = subprocess.run([adb, 'devices'], stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.DEVNULL, timeout=frist(5))
+                f.seek(0)
+                ausgabe = f.read().decode('utf-8', 'replace')
             if r.returncode != 0:
                 return None
-            geraete = [z.split()[0] for z in r.stdout.splitlines()[1:] if len(z.split()) >= 2 and z.split()[1] == 'device']
+            geraete = [z.split()[0] for z in ausgabe.splitlines() if len(z.split()) >= 2 and z.split()[1] == 'device']
         if m.group(1) not in geraete:
             return m.group(1), ', '.join(geraete) or 'kein Gerät'
     return None
 
 
-GRADLE_BAU = re.compile(r'(^|[\s;&|(])(\./|bash\s+)?gradlew(\.bat)?\s+[^\n;&|]*\b(assemble|bundle|build|install)\w*', re.I)
+GRADLE_BAU = re.compile(r'(^|[\s;&|("\'])(\./|bash\s+)?gradlew(\.bat)?["\']?\s+[^\n;&|]*\b(assemble|bundle|build|install)\w*', re.I)
+# Harmlose Umleitungen in einem Bau-Teilstück (2>&1, > datei, 2>/dev/null) gelten auf dem Server (nur Bypass) noch als reiner Bau.
+UMLEITUNG = re.compile(r'\s\d*>&\d+|\s\d*>>?\s*[^\s|&;<>]+')
+
+
+def nur_bau(cmd, umleitung=False):
+    """Jedes Teilstück ist cd/Set-Location/Push-Location/Pop-Location oder ein gradlew-Bau, mindestens ein gradlew: Dann darf
+    "allow" den ganzen Befehl freigeben, weil nichts anderes darin steht."""
+    teile = [t.strip() for t in re.split(r'[;\n]|&&|\|\|', cmd) if t.strip()]
+    return bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
+        r'(&\s*)?([A-Za-z_]\w*=\S+\s+)*((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$',
+        UMLEITUNG.sub(' ', t) if umleitung else t, re.I)
+        for t in teile) and any('gradlew' in t.lower() for t in teile)
+
+
+def langes_heredoc(cmd, grenze=30):
+    """True, wenn ein einzelner Heredoc-Inhalt mehr als [grenze] Zeilen hat (nicht der ganze Befehl, kein '<<<')."""
+    return any(zeilen > grenze for _, _, zeilen in heredoc_koerper(cmd))
 
 
 def main():
@@ -357,11 +479,12 @@ def main():
     cmd = (d.get('tool_input') or {}).get('command') or ''
     if not cmd:
         return
-    tmp = os.environ.get('TEMP') or os.environ.get('TMPDIR') or '/tmp'
-    if os.path.exists(os.path.join(tmp, 'build-ablauf-guard-disable.flag')):
+    if notaus_aktiv():
         return
+    ps = d.get('tool_name') == 'PowerShell'
+    bypass = d.get('permission_mode') == 'bypassPermissions'
     try:
-        k = selbstmord(cmd)
+        k = selbstmord(cmd, ps)
         if k:
             verweigern(HINWEIS_KILL.format(muster=k[0], werkzeug=k[1]))
             return
@@ -375,7 +498,7 @@ def main():
     except Exception:
         pass
     try:
-        b = bau_ohne_bump(cmd, d.get('cwd') or os.getcwd())
+        b = bau_ohne_bump(cmd, d.get('cwd') or os.getcwd(), ps)
         if b:
             app, dateien = b
             liste = ', '.join(dateien[:6]) + (f' (+{len(dateien) - 6})' if len(dateien) > 6 else '')
@@ -385,7 +508,7 @@ def main():
         pass
     try:
         # Windows-Bash: Heredocs über 30 Zeilen scheitern oft mit "unexpected EOF" (Maßnahme M1, Almanach python-windows §10.1).
-        if os.name == 'nt' and d.get('tool_name') == 'Bash' and HEREDOC.search(cmd) and cmd.count('\n') >= 30:
+        if os.name == 'nt' and d.get('tool_name') == 'Bash' and langes_heredoc(cmd):
             verweigern("STOPP – langes Bash-Heredoc (>30 Zeilen) scheitert unter Windows oft mit 'unexpected EOF'.\n"
                        "Skript per Write in den Scratchpad legen und dann mit python/pwsh <pfad> ausführen.")
             return
@@ -394,7 +517,7 @@ def main():
     try:
         # Hostinger-Server (Linux): Gradle-Bauten dauern oft über 10 Minuten; im Vordergrund bricht das Zeitlimit sie ab
         # (Maßnahme M26). Nur im Hintergrund starten.
-        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(cmd) \
+        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(maske(cmd)) \
                 and not (d.get('tool_input') or {}).get('run_in_background'):
             verweigern("STOPP – Gradle-Bau auf dem Server im Vordergrund: dauert oft über 10 Minuten, das Zeitlimit bricht ihn ab.\n"
                        "Denselben Befehl ohne timeout mit run_in_background: true starten und auf die Meldung warten.")
@@ -411,8 +534,10 @@ def main():
     try:
         # Server: Sitzungsbau wartet auf einen laufenden Vorwärm-Bau (eine gemeinsame Sperre, nie zwei Daemons) und pausiert das
         # Vorwärmen (OpenLauncherServer/kern/vorwaermen.py). Nur ergänzen, nie den Befehl selbst ändern.
-        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(cmd) and 'gradle-bau.lock' not in cmd \
-                and os.path.isdir(os.path.expanduser('~/.openlauncher/vorwaermen')):
+        # "allow" gibt den ganzen Befehl frei: nur bei reinem Bau und nur im Bypass (dort ist ohnehin alles frei). Sonst bleibt der
+        # Befehl unverändert (kein "ask": das hielte unbeaufsichtigte Sitzungen an).
+        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and bypass and nur_bau(cmd, True) \
+                and 'gradle-bau.lock' not in cmd and os.path.isdir(os.path.expanduser('~/.openlauncher/vorwaermen')):
             neu = dict(d.get('tool_input') or {})
             # Sperre über einen offenen Deskriptor halten, bis die Shell endet (flock … true gäbe sie vor dem Bau frei).
             neu['command'] = ('touch ~/.openlauncher/vorwaermen/pause; exec 9>>~/.openlauncher/vorwaermen/gradle-bau.lock; flock -w 3600 9; ' + cmd)
@@ -425,13 +550,9 @@ def main():
         # Vorbau ausgewichen ist). Nur bei reinen Bau-Befehlen (jedes Teilstück cd/Set-Location/Push-Location oder gradlew),
         # weil "allow" den ganzen Befehl freigibt. Gemischte Befehle bleiben unverändert; der Vorbau erkennt den Client trotzdem.
         skript = os.path.join(os.path.expanduser('~'), 'proggs', 'Werkzeuge', 'vorwaermen', 'vorwaermen.py')
-        teile = [t.strip() for t in re.split(r'[;\n]|&&|\|\|', cmd) if t.strip()]
-        nur_bau = bool(teile) and all(re.match(r'(cd|set-location|push-location|pop-location)\b', t, re.I) or re.match(
-            r'(&\s*)?([A-Za-z_]\w*=\S+\s+)*((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$', t, re.I)
-            for t in teile) and any('gradlew' in t.lower() for t in teile)
         # Mac: derselbe Weg mit python3 (Werkzeugs/vorwaermen/einrichten.sh); flock gibt es am Mac nicht.
         mac = sys.platform == 'darwin'
-        if (os.name == 'nt' or mac) and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau and os.path.isfile(skript):
+        if (os.name == 'nt' or mac) and d.get('tool_name') in ('Bash', 'PowerShell') and nur_bau(cmd) and os.path.isfile(skript):
             neu = dict(d.get('tool_input') or {})
             neu['command'] = ('python3 "' if mac else 'python "') + skript.replace('\\', '/') + '" warte; ' + cmd
             freigeben(d, neu, ("Mac" if mac else "PC") + ": wartet auf laufendes Vorwärmen")
@@ -442,14 +563,20 @@ def main():
         # "allow" gibt den ganzen Befehl frei: nur dort, wo ohnehin alles frei ist (Bypass); sonst schützt ~/.zshrc (nur echtes Terminal).
         neu = dict(d.get('tool_input') or {})
         grund = []
-        if d.get('tool_name') == 'Bash' and d.get('permission_mode') == 'bypassPermissions':
+        if d.get('tool_name') == 'Bash' and bypass:
             neu_cmd = ohne_aliase(cmd)
             if neu_cmd != cmd:
                 neu['command'] = neu_cmd
                 grund.append("Komfort-Aliase (eza, bat) aufgehoben")
         # Bash: Zeitlimit kommt aus BASH_MAX_TIMEOUT_MS (settings.json), kein pauschales "allow" je Befehl. PowerShell: hier deckeln.
-        if grund or (d.get('tool_name') == 'PowerShell' and mit_zeitlimit(d, dict(neu))):
+        if grund or (ps and mit_zeitlimit(d, dict(neu))):
             freigeben(d, neu, " · ".join(grund) or "Gestaffeltes Zeitlimit")
+        elif ps and not bypass and not neu.get('run_in_background') and isinstance(neu.get('timeout'), (int, float)) \
+                and neu['timeout'] > ZEITLIMIT_MS and not re.match(r'\s*(sleep|Start-Sleep)\b', cmd, re.I):
+            # Außerhalb des Bypass wirkt updatedInput nur mit "allow" (gäbe den Befehl ungeprüft frei) oder "ask" (Rückfrage auch
+            # bei erlaubten Befehlen, hält unbeaufsichtigte Sitzungen an). Deshalb nur der Hinweis, das timeout bleibt.
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext":
+                              "Zeitlimit nicht gesenkt (kein Bypass-Modus): Nächste Befehle ohne timeout über 60000 starten. " + HINWEIS_ZEIT}}))
     except Exception:
         pass
 

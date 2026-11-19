@@ -29,11 +29,25 @@ $command = $payload.tool_input.command
 if ([string]::IsNullOrWhiteSpace($command)) { exit 0 }
 
 # 1. Der vorgeschriebene Weg selbst und der bewusste Notausstieg laufen immer durch.
-if ($command -match 'update-launcher' -or $command -match 'guard-aus') { exit 0 }
+#    update-launcher zählt nur als echter Skriptaufruf (Befehlsanfang, -File, &, pwsh/bash), nicht als Text irgendwo im Befehl.
+$skriptAufruf = '(?:^|[;&|\n(]\s*|-File\s+|&\s*|\b(?:pwsh|powershell|bash|sh|zsh)(?:\s+-\S+)*\s+)["'']?[^\s;&|"'']*update-launcher\.(?:ps1|sh)\b'
+if ($command -match $skriptAufruf -or $command -match 'guard-aus') { exit 0 }
 
 # 2. Nur Befehle, die den Launcher überhaupt betreffen.
 #    Groß-/Kleinschreibung beachten: der Zustandsordner ~/.openlauncher (Vorwärmen, Repo-Status) ist nicht der Launcher.
-if ($command -cnotmatch 'OpenLauncher') { exit 0 }
+#    Seit dem Review ohne Rücksicht auf die Schreibweise (taskkill /IM openlauncher.exe), dafür vorher entfernt: der
+#    Zustandsordner .openlauncher/, die Profile unter OpenLauncher/Profiles (Skills, Memory, HTML) und OpenLauncherServer.
+$bezug = $command -replace '(?i)\.openlauncher[\\/]', '' -replace '(?i)OpenLauncher[\\/]+Profiles\b', '' -replace '(?i)OpenLauncherServer', ''
+if ($bezug -notmatch 'OpenLauncher') { exit 0 }
+
+# Text in Anführungszeichen (Commit-Nachrichten, grep-Muster, echo) ist kein Handgriff: für die Suche ausblenden.
+# Pfade in Anführungszeichen bleiben für Schritt 2 sichtbar (oben geprüft), ausgeführter Text (-Command "…", -c "…") auch.
+$ohneText = [regex]::Replace($command, '"[^"]*"|''[^'']*''', {
+    param($m)
+    $davor = $command.Substring(0, $m.Index)
+    if ($davor -match '(?:\s-c|\s-Command|\beval)\s*$') { return $m.Value }
+    return '""'
+})
 
 # 3. Die drei Handgriffe, die update-launcher.ps1 ersetzt. Lesende Cmdlets stehen bewusst NICHT
 #    hier: Get-Process/Get-Item auf die EXE bleiben erlaubt (Versionsprüfung nach dem Deploy).
@@ -43,14 +57,14 @@ $verbote = @(
     @{ Muster = 'Start-Process|Invoke-Item'; Handgriff = 'Starten' }
 )
 
-$treffer = @($verbote | Where-Object { $command -match $_.Muster } | ForEach-Object { $_.Handgriff })
+$treffer = @($verbote | Where-Object { $ohneText -match $_.Muster } | ForEach-Object { $_.Handgriff })
 if ($treffer.Count -eq 0) { exit 0 }
 
 $grund = @"
 Blockiert: $($treffer -join ' + ') des OpenLaunchers von Hand.
 
 Nimm stattdessen den vorgeschriebenen Weg:
-    pwsh ~/proggs/OpenLauncher/update-launcher.ps1
+    pwsh C:\Users\barwa\proggs\OpenLauncher\update-launcher.ps1
 
 Warum: Vor diesem Skript wurde mehrfach die ALTE EXE gestartet und als neue Version gemeldet.
 Das Skript prueft den Build-Exit-Code, prueft dass eine neue Datei entstand und erkennt einen

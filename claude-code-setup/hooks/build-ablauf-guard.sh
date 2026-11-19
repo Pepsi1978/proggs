@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # build-ablauf-guard: PreToolUse-Blocker: Android-Bau vor Versions-Bump und Kill-Befehle, die die eigene Shell treffen.
-# Logik in build-ablauf-guard.py (gemeinsam mit der .ps1-Version). Blockt via permissionDecision=deny.
+# Logik in build-ablauf-guard.py (Windows ruft sie direkt auf, Mac und Server über diese Hülle). Blockt via permissionDecision=deny.
 # Fail-open: faellt Python aus, wird nicht blockiert (kein Crash, kein Hook-Fehler).
 input=$(cat)
 [ -z "$input" ] && exit 0
