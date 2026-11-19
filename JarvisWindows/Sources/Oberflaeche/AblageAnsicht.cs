@@ -56,7 +56,7 @@ public sealed record AblageEintrag
 /// <summary>Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle; gilt nur auf diesem Gerät.</summary>
 public static class QuellenOrdnung
 {
-    public static readonly string[] Alle = { "Jarvis Handy", "Jarvis Mac OS", AppInfo.Name };
+    public static readonly string[] Alle = new[] { "Jarvis Handy", "Jarvis Mac OS", AppInfo.Name }.Concat(AppInfo.AlleWindowsNamen).Distinct().ToArray();
     public static event Action? Geaendert;
     public static string Wert
     {

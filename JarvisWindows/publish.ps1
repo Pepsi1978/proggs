@@ -1,15 +1,26 @@
 # Baut Jarvis Windows HP, installiert nach %LOCALAPPDATA%\Programs\JarvisWindowsHP, richtet den Wecker ein und startet die App.
-# Aufruf: pwsh -File publish.ps1            → bauen, installieren, starten
-#         pwsh -File publish.ps1 -NurBauen  → nur bauen
-param([switch]$NurBauen)
+# Aufruf: pwsh -File publish.ps1                 → bauen, installieren, starten (HP-Laptop)
+#         pwsh -File publish.ps1 -Geraet power   → dasselbe für den Power-PC: Ordner JarvisWindowsPower, Aufgabe JarvisWindowsWeckerPower,
+#                                                  Verknüpfung "Jarvis Windows Power-PC.lnk", geraet.json neben der EXE
+#         pwsh -File publish.ps1 -NurBauen       → nur bauen
+param([switch]$NurBauen, [ValidateSet('hp', 'power')][string]$Geraet = 'hp')
 $ErrorActionPreference = 'Stop'
 $projekt = $PSScriptRoot
-$ziel = Join-Path $env:LOCALAPPDATA 'Programs\JarvisWindowsHP'
+if ($Geraet -eq 'power') {
+    $ordnerName = 'JarvisWindowsPower'; $aufgabe = 'JarvisWindowsWeckerPower'; $lnkName = 'Jarvis Windows Power-PC.lnk'
+} else {
+    $ordnerName = 'JarvisWindowsHP'; $aufgabe = 'JarvisWindowsWecker'; $lnkName = 'Jarvis Windows HP.lnk'
+}
+$ziel = Join-Path $env:LOCALAPPDATA "Programs\$ordnerName"
 $aus = Join-Path $projekt 'publish'
 
 dotnet publish (Join-Path $projekt 'JarvisWindows.csproj') -c Release -r win-x64 --self-contained true -o $aus --nologo -v q
 if ($LASTEXITCODE -ne 0) { throw 'Bau fehlgeschlagen' }
 Copy-Item (Join-Path $projekt 'tools\hp-wecker.ps1') (Join-Path $aus 'hp-wecker.ps1') -Force
+# Identität für App und Wecker. Ohne -Geraet keine Datei (HP wie bisher); robocopy /MIR entfernt sie dann auch im Ziel.
+$geraetDatei = Join-Path $aus 'geraet.json'
+if ($Geraet -eq 'hp') { Remove-Item -LiteralPath $geraetDatei -Force -ErrorAction SilentlyContinue }
+else { [System.IO.File]::WriteAllText($geraetDatei, "{`"geraet`":`"$Geraet`"}", [System.Text.UTF8Encoding]::new($false)) }
 if ($NurBauen) { Write-Output "Gebaut: $aus"; return }
 
 # Fenster schließen versteckt die App nur. Sauber beendet sie erst --beenden: Einstellungen, Zugang und Gespräche kommen dann noch auf die Platte.
@@ -43,13 +54,13 @@ try {
 $global:LASTEXITCODE = 0
 
 $exe = Join-Path $ziel 'JarvisWindows.exe'
-$startmenue = Join-Path ([Environment]::GetFolderPath('Programs')) 'Jarvis Windows HP.lnk'
+$startmenue = Join-Path ([Environment]::GetFolderPath('Programs')) $lnkName
 $sh = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut($startmenue)
 $lnk.TargetPath = $exe
 $lnk.WorkingDirectory = $ziel
 $lnk.Save()
-$desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Jarvis Windows HP.lnk'
+$desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) $lnkName
 $lnk = $sh.CreateShortcut($desktop)
 $lnk.TargetPath = $exe
 $lnk.WorkingDirectory = $ziel
@@ -71,11 +82,11 @@ $ausloeser = @(
 $regeln = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) `
     -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 $haupt = New-ScheduledTaskPrincipal -UserId $benutzer -LogonType Interactive -RunLevel Limited
-Register-ScheduledTask -TaskName 'JarvisWindowsWecker' -Action $aktion -Trigger $ausloeser -Settings $regeln -Principal $haupt -Force | Out-Null
+Register-ScheduledTask -TaskName $aufgabe -Action $aktion -Trigger $ausloeser -Settings $regeln -Principal $haupt -Force | Out-Null
 # Neu starten, damit die neue Fassung gilt. Stop-ScheduledTask allein verwaiste die pwsh (siehe Jarvis-PC-Brücke); darum den Prozess selbst beenden.
 Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*hp-wecker.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-for ($i = 0; $i -lt 10 -and (Get-ScheduledTask -TaskName 'JarvisWindowsWecker').State -eq 'Running'; $i++) { Start-Sleep -Milliseconds 500 }
-Start-ScheduledTask -TaskName 'JarvisWindowsWecker'
+for ($i = 0; $i -lt 10 -and (Get-ScheduledTask -TaskName $aufgabe).State -eq 'Running'; $i++) { Start-Sleep -Milliseconds 500 }
+Start-ScheduledTask -TaskName $aufgabe
 
 Start-Process -FilePath $exe
 Write-Output "Installiert und gestartet: $exe"

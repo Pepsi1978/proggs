@@ -113,7 +113,7 @@ def sol_als_katalog(auftrag: dict) -> dict:
 def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> tuple[int, bytes]:
     anfrage = urllib.request.Request(adresse, method="POST" if rumpf is not None else "GET",
                                      data=json.dumps(rumpf, ensure_ascii=False).encode("utf-8") if rumpf is not None else None,
-                                     headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": RECHNER, "X-Jarvis-Rang": "ersatz",
+                                     headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": RECHNER, "X-Jarvis-Rang": RANG,
                                               "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
                                               # Diese Brücke kennt Aufträge mit frei gewähltem Modell (modell=katalog).
                                               "X-Jarvis-Katalog": "1",
@@ -463,6 +463,24 @@ exec /bin/zsh -l
 
 
 RECHNER = rechnername()
+
+
+def lies_rang() -> str:
+    """Platz beim Relay. Standard „ersatz“; eine lokale Einstellung ~/Library/Application Support/JarvisPcBruecke/rechner.json
+    ({"rang": "..."}, geschrieben von einrichten.sh --rang ...) kann ihn ändern, wie rechner.json der Windows-Brücke.
+    Fehlt oder taugt sie nicht, bleibt es bei „ersatz“."""
+    datei = HOME / "Library" / "Application Support" / "JarvisPcBruecke" / "rechner.json"
+    try:
+        rang = str(json.loads(datei.read_text(encoding="utf-8-sig")).get("rang") or "").strip().lower()
+    except FileNotFoundError:
+        return "ersatz"
+    except Exception as fehler:
+        schreib(f"rechner.json unlesbar ({fehler}), Rang ersatz")
+        return "ersatz"
+    return rang if re.fullmatch(r"[a-z]+", rang) else "ersatz"
+
+
+RANG = lies_rang()
 # Ein Bluetooth-Scan zur Zeit: Victron, SwitchBot im Takt und SwitchBot auf Knopfdruck (/geraet/switchbot-jetzt) wechseln sich ab.
 BLUETOOTH = threading.Lock()
 SWITCHBOT_SOFORT = threading.Event()
@@ -637,7 +655,7 @@ def main() -> int:
         fcntl.flock(sperre, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         return 0
-    schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
+    schreib(f"Brücke gestartet ({RECHNER}, Rang {RANG})")
     raeume_auf()
     threading.Thread(target=jarvis_mac_faden, daemon=True).start()
     threading.Thread(target=victron_faden, daemon=True).start()

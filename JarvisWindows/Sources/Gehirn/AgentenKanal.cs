@@ -97,7 +97,7 @@ public sealed class AgentenKanal
         {
             var a = Einstellungen.Shared.Zugang.Relay.Trim();
             if (!a.EndsWith("/mcp", StringComparison.Ordinal)) return null;
-            return a[..^4] + "/hp/kanal";
+            return a[..^4] + $"/{AppInfo.Geraet}/kanal";
         }
     }
 

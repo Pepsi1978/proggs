@@ -41,14 +41,14 @@ public static class WinRechte
 
     private static async Task<(ZustandArt, string)> Autostart()
     {
-        foreach (var name in new[] { "JarvisWindowsWecker", AppInfo.Name })
+        foreach (var name in new[] { AppInfo.WeckerAufgabe, AppInfo.Name })
         {
             var r = await Shell.Prozess("schtasks", new[] { "/query", "/tn", name }, sekunden: 10);
             if (r.Code == 0) return (ZustandArt.Ja, $"Aufgabe „{name}“ ist eingerichtet: Jarvis ist nach der Anmeldung erreichbar.");
         }
         foreach (var name in new[] { AppInfo.Name, "JarvisWindows" })
             if (Wert(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Run", name) != null) return (ZustandArt.Ja, $"Autostart-Eintrag „{name}“ ist gesetzt.");
-        return (ZustandArt.Nein, "Keine Autostart-Aufgabe gefunden; publish.ps1 richtet JarvisWindowsWecker ein.");
+        return (ZustandArt.Nein, $"Keine Autostart-Aufgabe gefunden; publish.ps1 richtet {AppInfo.WeckerAufgabe} ein.");
     }
 
     private static async Task<ZustandArt> WindowsHello()

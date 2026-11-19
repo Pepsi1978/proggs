@@ -22,6 +22,7 @@ public sealed class McpKlient
     {
         "ablage_struktur", "ablage_datei", "jarvis_mac_starten", "jarvis_mac_sprechen", "jarvis_mac_lesen",
         "jarvis_windows_hp_starten", "jarvis_windows_hp_sprechen", "jarvis_windows_hp_lesen",
+        "jarvis_windows_power_starten", "jarvis_windows_power_sprechen", "jarvis_windows_power_lesen",
     };
     public static readonly IReadOnlySet<string> PrivateWerkzeuge = new HashSet<string>
     {

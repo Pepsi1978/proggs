@@ -2,7 +2,22 @@
 # Richtet die Jarvis-Mac-Brücke ein (Gegenstück zu einrichten.ps1): LaunchAgent de.frank.jarvis.pc-bruecke startet sie bei
 # jeder Anmeldung und sofort neu, falls sie endet (KeepAlive ersetzt den Minuten-Wächter der Windows-Aufgabe).
 # Ohne sudo, nur für den angemeldeten Benutzer. Mehrfach ausführbar.
+# Optional: einrichten.sh --rang <name> schreibt den Platz beim Relay nach ~/Library/Application Support/JarvisPcBruecke/rechner.json
+# (Standard ohne Datei: ersatz). Ohne --rang bleibt eine vorhandene Datei unverändert.
 set -euo pipefail
+RANG=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --rang) RANG="${2:-}"; shift 2 || { echo "--rang braucht einen Wert"; exit 1; } ;;
+        *) echo "Unbekannter Parameter: $1"; exit 1 ;;
+    esac
+done
+if [ -n "$RANG" ]; then
+    [[ "$RANG" =~ ^[a-z]+$ ]] || { echo "--rang nur aus Kleinbuchstaben (z. B. ersatz)"; exit 1; }
+    mkdir -p "$HOME/Library/Application Support/JarvisPcBruecke"
+    printf '{"rang":"%s"}\n' "$RANG" > "$HOME/Library/Application Support/JarvisPcBruecke/rechner.json"
+    echo "Rang $RANG gespeichert."
+fi
 HIER="$(cd "$(dirname "$0")" && pwd)"
 SKRIPT="$HIER/jarvis_pc_bruecke.py"
 NAME="de.frank.jarvis.pc-bruecke"

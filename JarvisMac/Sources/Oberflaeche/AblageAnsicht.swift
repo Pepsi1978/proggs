@@ -32,7 +32,7 @@ struct AblageEintrag: Identifiable, Hashable {
 
 /// Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle; gilt nur auf diesem Gerät.
 enum QuellenOrdnung {
-    static let alle = ["Jarvis Handy", "Jarvis Mac OS", "Jarvis Windows"]
+    static let alle = ["Jarvis Handy", "Jarvis Mac OS", "Jarvis Windows", "Jarvis Windows HP", "Jarvis Windows Power-PC"]
     static func liste(_ wert: String) -> [String] {
         let gewaehlt = wert.split(separator: ",").map(String.init).filter(alle.contains)
         return gewaehlt + alle.filter { !gewaehlt.contains($0) }

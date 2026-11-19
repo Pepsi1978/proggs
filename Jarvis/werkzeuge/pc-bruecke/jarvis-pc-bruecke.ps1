@@ -386,6 +386,27 @@ New-Item -ItemType Directory -Force -Path (Split-Path $antwortDatei) | Out-Null
 $kopfDatei = Join-Path (Split-Path $protokoll) 'kopf.txt'
 $kopfToken = $null
 
+# Platz beim Relay aus der lokalen Einstellung %LOCALAPPDATA%\JarvisPcBruecke\rechner.json ({"rang":"power","sol":true},
+# geschrieben von einrichten.ps1 -Rang power). Fehlt sie: kein Rang (Platz haupt) und kein Sol-Kopf, wie bisher.
+# Ist sie da, aber unlesbar, endet die Brücke: Sonst nähme der Power-PC still den Platz des Laptops ein. Der Wächter startet neu.
+$rechnerDatei = Join-Path (Split-Path $protokoll) 'rechner.json'
+$rang = ''
+$sol = $false
+if (Test-Path -LiteralPath $rechnerDatei) {
+    try {
+        $rechner = Get-Content -Raw -Encoding utf8 -LiteralPath $rechnerDatei | ConvertFrom-Json
+        $rang = "$($rechner.rang)".Trim().ToLowerInvariant()
+        $sol = $rechner.sol -eq $true
+        if ($rang -and $rang -notmatch '^[a-z]+$') { throw "Rang '$rang' ungültig" }
+    } catch {
+        Schreib "rechner.json unlesbar, Brücke endet: $($_.Exception.Message)"
+        exit 1
+    }
+}
+$kopfZusatz = ''
+if ($rang) { $kopfZusatz += "X-Jarvis-Rang: $rang`r`n" }
+if ($sol) { $kopfZusatz += "X-Jarvis-Sol: 1`r`n" }
+
 function Schreib-Kopf([string]$token) {
     if ($script:kopfToken -eq $token -and (Test-Path -LiteralPath $kopfDatei)) { return }
     if (-not (Test-Path -LiteralPath $kopfDatei)) {
@@ -394,7 +415,7 @@ function Schreib-Kopf([string]$token) {
     }
     & icacls.exe $kopfDatei /inheritance:r /grant:r "$($env:USERNAME):(R,W,D)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Rechte der Kopfzeilen-Datei ließen sich nicht einschränken.' }
-    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`r`nX-Jarvis-Rechner: $env:COMPUTERNAME`r`nX-Jarvis-Katalog: 1`r`n", [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`r`nX-Jarvis-Rechner: $env:COMPUTERNAME`r`nX-Jarvis-Katalog: 1`r`n$kopfZusatz", [System.Text.UTF8Encoding]::new($false))
     $script:kopfToken = $token
 }
 
@@ -409,7 +430,7 @@ function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDa
     return [int]("$code".Trim())
 }
 
-Schreib 'Brücke gestartet'
+Schreib $(if ($rang) { "Brücke gestartet (Rang $rang$(if ($sol) { ', Sol' }))" } else { 'Brücke gestartet' })
 Raeume-Auf
 $pause = 2
 # Am PC direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess, endet nach Sekunden).

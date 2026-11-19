@@ -18,7 +18,7 @@ namespace JarvisWindows;
 public sealed class AblageAbgleich : Beobachtbar
 {
     public static AblageAbgleich Shared { get; } = new();
-    public const string Quelle = AppInfo.Name;
+    public static readonly string Quelle = AppInfo.Name;
 
     private ObservableCollection<AblageEintrag> _eintraege = new();
     public ObservableCollection<AblageEintrag> Eintraege { get => _eintraege; private set => Setze(ref _eintraege, value); }

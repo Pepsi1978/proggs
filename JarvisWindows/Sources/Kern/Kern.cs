@@ -126,10 +126,41 @@ public static class Pfade
 
 public static class AppInfo
 {
-    /// <summary>Kennung beim Relay und Name des Rechners. Ein weiterer Windows-Rechner braucht nur andere Werte.</summary>
-    public const string Geraet = "hp";
-    public const string Geraetename = "HP";
-    public const string Name = "Jarvis Windows " + Geraetename;
+    /// <summary>Kennung beim Relay und Name des Rechners. Kommt aus geraet.json neben der EXE ({"geraet":"power"}, geschrieben von
+    /// publish.ps1 -Geraet power). Fehlt die Datei oder ist sie unbekannt/unlesbar, gilt der HP-Laptop wie bisher.</summary>
+    public static readonly string Geraet;
+    public static readonly string Geraetename;
+    public static readonly string Name;
+    /// <summary>Beschreibung des Rechners im Systemprompt.</summary>
+    public static readonly string Rechner;
+    /// <summary>Aufgabe des Weckers in der Aufgabenplanung (publish.ps1).</summary>
+    public static readonly string WeckerAufgabe;
+    /// <summary>Quellnamen aller Windows-Versionen in der Ablage (für die Sortierung nach Quelle).</summary>
+    public static readonly string[] AlleWindowsNamen = { "Jarvis Windows HP", "Jarvis Windows Power-PC" };
+
+    static AppInfo()
+    {
+        var kennung = "hp";
+        try
+        {
+            var datei = Path.Combine(AppContext.BaseDirectory, "geraet.json");
+            if (File.Exists(datei))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(datei).TrimStart('﻿'));
+                if (doc.RootElement.TryGetProperty("geraet", out var g) && g.ValueKind == JsonValueKind.String) kennung = (g.GetString() ?? "").Trim().ToLowerInvariant();
+            }
+        }
+        catch { kennung = "hp"; }
+        if (kennung == "power")
+        {
+            Geraet = "power"; Geraetename = "Power-PC"; Rechner = "Power-PC (Franks großer Windows-Rechner zu Hause)"; WeckerAufgabe = "JarvisWindowsWeckerPower";
+        }
+        else
+        {
+            Geraet = "hp"; Geraetename = "HP"; Rechner = "HP-Laptop (OmniBook Ultra Flip)"; WeckerAufgabe = "JarvisWindowsWecker";
+        }
+        Name = "Jarvis Windows " + Geraetename;
+    }
     public static string Version => (Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "dev").Split('+')[0];
     public static string Stand => Assembly.GetEntryAssembly()?.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "BuildTimestamp")?.Value ?? "";
 }

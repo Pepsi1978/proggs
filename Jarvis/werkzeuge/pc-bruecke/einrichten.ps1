@@ -1,6 +1,19 @@
 # Richtet die Jarvis-PC-Brücke ein: Aufgabe „JarvisPcBruecke“ startet sie bei jeder Anmeldung unsichtbar und startet
 # sie jede Minute neu, falls sie nicht mehr läuft. Läuft ohne Administratorrechte (nur für den angemeldeten Benutzer). Mehrfach ausführbar.
+# Power-PC: einrichten.ps1 -Rang power schreibt %LOCALAPPDATA%\JarvisPcBruecke\rechner.json ({"rang":"power","sol":true}).
+# -Rang haupt entfernt die Datei wieder (Laptop: kein Rang, Platz haupt). Ohne -Rang bleibt eine vorhandene Datei unverändert.
+# Ein geänderter Rang gilt erst nach einem Neustart der Brücke (die laufende hält die Sperre, die neue endet sofort).
+param([ValidateSet('haupt', 'power')][string]$Rang)
 $ErrorActionPreference = 'Stop'
+$rechnerDatei = Join-Path $env:LOCALAPPDATA 'JarvisPcBruecke\rechner.json'
+if ($Rang -eq 'power') {
+    New-Item -ItemType Directory -Force -Path (Split-Path $rechnerDatei) | Out-Null
+    [System.IO.File]::WriteAllText($rechnerDatei, '{"rang":"power","sol":true}', [System.Text.UTF8Encoding]::new($false))
+    Write-Output "Rang power gespeichert: $rechnerDatei"
+} elseif ($Rang -eq 'haupt') {
+    Remove-Item -LiteralPath $rechnerDatei -Force -ErrorAction SilentlyContinue
+    Write-Output 'Rang haupt (Standard): keine lokale Einstellung.'
+}
 $skript = Join-Path $PSScriptRoot 'jarvis-pc-bruecke.ps1'
 $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
 if (-not $pwsh) { $pwsh = (Get-Command powershell.exe).Source }
