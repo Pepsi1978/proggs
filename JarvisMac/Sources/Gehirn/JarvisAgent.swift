@@ -72,7 +72,8 @@ final class JarvisAgent {
 
     private func systemTeile(g: Gespraech) async -> [String] {
         let anweisungen = await McpKlient.shared.anweisungen
-        let fest = Self.persona + (anweisungen.isEmpty ? "" : "\n\nVORGABEN DES HANDY-JARVIS (gelten auch hier, soweit sie nicht den Mac betreffen):\n" + anweisungen)
+        let fest = Self.persona + (anweisungen.isEmpty ? "" : "\n\nVORGABEN DES HANDY-JARVIS (gelten auch hier, soweit sie nicht den Mac betreffen):\n" + anweisungen
+            + "\n\nAM MAC NICHT VERFÜGBAR: Die Kanal-Werkzeuge des Handys zu den PC-Jarvis-Versionen (jarvis_mac_*, jarvis_windows_hp_*, jarvis_windows_power_*) gibt es hier nicht; ruf sie nie auf. Will Frank den HP-Laptop oder den Power-PC ansprechen, sag ihm, dass das über Jarvis am Handy geht.")
         let handyDa = await McpKlient.shared.verbunden
         let kontext = g.kontext.isEmpty
             ? (handyDa
@@ -138,6 +139,7 @@ final class JarvisAgent {
         let lokale = MacWerkzeuge.alleLokal
         let lokaleNamen = Set(lokale.map(\.definition.name))
         let alleWerkzeuge = (lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) && !McpKlient.nurFuerOberflaeche.contains($0.name) }).filter { !ohneWerkzeuge.contains($0.name) && nurWerkzeuge?.contains($0.name) != false }
+        let erlaubteNamen = Set(alleWerkzeuge.map(\.name))
         let system = await systemTeile(g: g)
         let (a, modell) = await anbieter()
         let effort = gesprochen ? e.sprachEffort : e.effort
@@ -223,6 +225,11 @@ final class JarvisAgent {
                 for (i, auf) in aufrufe.enumerated() {
                     let name = auf["name"] as? String ?? "?"
                     let args = ProgrammierVorspann.verbindlich(werkzeug: name, args: auf["input"] as? JSONObjekt ?? [:], frage: text, vorige: vorigeWahl)
+                    // Nur angebotene Werkzeuge laufen; ein ausgeblendetes oder gesperrtes wird nie über den Relay ausgeführt.
+                    guard erlaubteNamen.contains(name) else {
+                        gruppe.addTask { (i, WerkzeugErgebnis(text: "Das Werkzeug \(name) steht hier nicht zur Verfügung.", fehler: true)) }
+                        continue
+                    }
                     gruppe.addTask { (i, await Self.fuehreAus(name, args, lokal: lokaleNamen.contains(name))) }
                 }
                 var r = [WerkzeugErgebnis](repeating: WerkzeugErgebnis(text: ""), count: aufrufe.count)
