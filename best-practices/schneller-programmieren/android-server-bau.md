@@ -69,7 +69,8 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
 2. Während der Bau läuft: README/Funktionsdatei, Commit, `git pull --rebase`, Push. Das spart die Dauer dieser Schritte
    (diesmal 20 s Commit/Push parallel).
 3. Nie `timeout N bash gradlew …` im Vordergrund. Das Bash-Werkzeug bricht bei 10 min ab, und mit dem Client stirbt der
-   Daemon samt halber Übersetzung (Almanach B1). Hook M26 sperrt das auf dem Server.
+   Daemon samt halber Übersetzung (Almanach B1). Ein Bau ohne `timeout` im Vordergrund wandert nach 60 s von selbst in
+   den Hintergrund; mit `run_in_background` bleibt die Zeit davor für Schritt 2 frei.
 4. Nach der Bau-Meldung direkt installieren (Jarvis über `jarvis-install.sh`, sonst `apk-install.sh`, beide per Delta).
 5. Große MCP-Antworten (Tagesauswertung ≈ 34 k Zeichen) kosten Kontext, aber wenig Zeit (< 1 s). Sie gehören zu Franks
    Regel 21 und bleiben.
@@ -104,7 +105,7 @@ eher 3,5–4 min realistisch, für kleine Apps 2,5–3 min.
 ## 7. Auf andere CLIs übertragen (Codex, OpenCode, Kimi)
 
 - Vorwärmen läuft serverseitig und gilt für jede CLI automatisch.
-- Ohne Claude-Hooks fehlen Bau-Sperre und M26: In Skills oder Prompts den gesperrten Bauaufruf aus dem Kurzcheck (#4)
+- Ohne Claude-Hooks fehlt die Bau-Sperre: In Skills oder Prompts den gesperrten Bauaufruf aus dem Kurzcheck (#4)
   vorgeben und „Bau im Hintergrund, nie mit Zeitlimit“ verlangen. Die Regel steht in `OpenLauncherServer/server-zusatz.md`,
   das alle CLIs auf dem Server lesen.
 - Prüfen nach dem Übertragen: Während eines Sitzungsbaus muss `flock -n ~/.openlauncher/vorwaermen/gradle-bau.lock true`

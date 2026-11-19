@@ -22,6 +22,9 @@ set +e
 
 raw=$(cat 2>/dev/null)
 [ -z "$raw" ] && exit 0
+# Linux (Hostinger-Server): Dort laeuft kein OpenLauncher, den man von Hand bauen, beenden oder starten koennte; dotnet build
+# ist dort die erlaubte WPF-Fehlerpruefung (-p:EnableWindowsTargeting=true, Server-Regeln) und wurde sonst geblockt.
+[ "$(uname -s 2>/dev/null)" = Linux ] && exit 0
 
 # stdin per python3 parsen (NIE jq — §16.2: Control-Chars brechen jq → stiller Guard-Bypass).
 # Strikt spec-konformes JSON (§16.1: non-spec hookSpecificOutput crasht die ganze Session).

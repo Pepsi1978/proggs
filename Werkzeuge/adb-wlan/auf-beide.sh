@@ -18,9 +18,11 @@ done
 [ -n "${ADB:-}" ] || { echo "AUF_BEIDE_STATUS=fehler (adb nicht gefunden)"; exit 1; }
 [ $# -gt 0 ] || { echo "AUF_BEIDE_STATUS=fehler (keine APK genannt)"; exit 2; }
 for APK in "$@"; do
-  case "$APK" in
-    */Jarvis/app/*|*\\Jarvis\\app\\*|*[Jj]arvis*.apk) echo "AUF_BEIDE_STATUS=fehler (Jarvis nie hierüber, sondern mit jarvis-install und Ziel handy/tablet: $APK)"; exit 2 ;;
-  esac
+  # Jarvis am App-Ordner oder am Dateinamen erkennen, nie am ganzen Pfad: Auf dem Server liegt jede APK unter /home/jarvis/…,
+  # das frühere Muster *[Jj]arvis*.apk lehnte dort jede APK ab.
+  case "$APK" in */Jarvis/app/*|*\\Jarvis\\app\\*) JARVIS_APK=1 ;; *) JARVIS_APK="" ;; esac
+  case "${APK##*[/\\]}" in [Jj]arvis*.apk) JARVIS_APK=1 ;; esac
+  [ -n "$JARVIS_APK" ] && { echo "AUF_BEIDE_STATUS=fehler (Jarvis nie hierüber, sondern mit jarvis-install und Ziel handy/tablet: $APK)"; exit 2; }
   [ -f "$APK" ] || { echo "AUF_BEIDE_STATUS=fehler (APK fehlt: $APK)"; exit 2; }
 done
 # Git Bash: /c/…-Pfade erreichen adb.exe sonst teils unverwandelt („failed to stat /c/…“), daher in Windows-Form.

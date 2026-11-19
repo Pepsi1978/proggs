@@ -36,7 +36,10 @@ FEHLER = re.compile(r'(^e: |^FAILURE: |BUILD FAILED|^Traceback \(most recent cal
                     r'Exception in thread|^error: |^Error: |INSTALL_FAILED_(?!MISSING_SPLIT)|JARVIS_INSTALL_STATUS=fehler|'
                     r'APK_UPDATE_STATUS=fehler)', re.M)
 DAEMON = re.compile(r'GradleDaemon|KotlinCompileDaemon|kotlin-daemon', re.I)
-WARTEN = re.compile(r'^(/bin/)?sleep \d|osascript|display dialog|zenity|Start-Sleep|timeout(\.exe)? /t|InstallFrage', re.I)
+# flock auf einen Deskriptor (flock -w 3600 9): Server-Bau wartet auf die Gradle-Sperre eines laufenden Vorbaus (Bau-Wächter);
+# ohne CPU und ohne Ausgabe hieß das sonst „HÄNGER?“ (am Server geprüft 19.11.2026). flock <datei> <befehl> zählt nicht.
+WARTEN = re.compile(r'^(/bin/)?sleep \d|osascript|display dialog|zenity|Start-Sleep|timeout(\.exe)? /t|InstallFrage'
+                    r'|^(/usr/bin/)?flock(\s+-\w+(\s+\d+)?)*\s+\d+$', re.I)
 ENDE = re.compile(r'^\[exited with code (-?\d+)\]', re.M)
 
 # Windows: Befehlszeilen tragen den vollen Pfad („C:\…\usr\bin\sleep.exe" 80), Dialoge laufen im Prozess der Shell selbst
@@ -66,6 +69,25 @@ def zeit_sek(t):
     return tage * 86400 + s
 
 
+try:
+    _TAKTE = os.sysconf('SC_CLK_TCK') if sys.platform.startswith('linux') else 0
+except (ValueError, OSError, AttributeError):
+    _TAKTE = 0
+
+
+def proc_cpu(pid, ersatz):
+    """Linux: CPU-Zeit aus /proc/<pid>/stat (utime+stime, 1/100 s). procps zeigt time= nur in ganzen Sekunden, gegen die
+    0,2-s-Schwelle hieß ein leiser Lauf mit 0,5 s CPU je Fenster sonst mal „HÄNGER?“. Sonst (Mac, Fehler): der ps-Wert."""
+    if not _TAKTE:
+        return ersatz
+    try:
+        with open('/proc/%d/stat' % pid, 'rb') as f:
+            felder = f.read().rsplit(b')', 1)[1].split()
+        return (int(felder[11]) + int(felder[12])) / _TAKTE
+    except (OSError, IndexError, ValueError):
+        return ersatz
+
+
 def ps():
     try:
         out = subprocess.run(['ps', '-A', '-o', 'pid=,ppid=,time=,etime=,command='], capture_output=True, text=True, timeout=5).stdout
@@ -76,7 +98,7 @@ def ps():
         t = z.split(None, 4)
         if len(t) == 5:
             try:
-                zeilen.append((int(t[0]), int(t[1]), zeit_sek(t[2]), t[3], t[4]))
+                zeilen.append((int(t[0]), int(t[1]), proc_cpu(int(t[0]), zeit_sek(t[2])), t[3], t[4]))
             except ValueError:
                 pass
     return zeilen
@@ -264,7 +286,8 @@ def kurz(cmd, n=70):
 UEBERTRAGUNG = re.compile(r'\badb\b.*\b(push|install|install-multiple|sync)\b')
 # Unter den Installationsskripten (eigene Fristen) ist jeder adb-Schritt geräte- bzw. netzgebunden, auch adb shell
 # (sha256sum, Delta am Handy, pm install-write): gemessen am Mac 18.11.2026, Sitzung e9a405d7, „HÄNGER?“ mitten in jarvis-install.
-ADB_SKRIPT = re.compile(r'jarvis-install\.(sh|ps1)|auf-beide\.sh|delta-push|apk-update', re.I)
+# apk-install.sh (Server-Standard) bindet delta-push nur per source ein: In den Befehlszeilen steht dann nur apk-install.sh.
+ADB_SKRIPT = re.compile(r'jarvis-install\.(sh|ps1)|auf-beide\.sh|apk-install\.sh|delta-push|apk-update', re.I)
 ADB = re.compile(r'(^|[\\/\s"])adb(\.exe)?"?\s', re.I)
 
 
@@ -349,8 +372,11 @@ def main():
     # jarvis-install wartet auf die Overlay-Antwort mit kurzen adb-Abfragen und sleep 0.2: Welcher Prozess gerade getroffen
     # wird, ist Zufall; sicher erkennbar ist das Warten nur an seiner letzten Ausgabezeile (Windows und Mac gleich).
     schluss = [z for z in lies_ab(datei, max(0, os.path.getsize(datei) - 4000)).splitlines() if z.strip()]
-    if schluss and WARTE_AUSGABE.search(schluss[-1].strip()):
-        wartend.append((schluss[-1].strip(), '%d s' % dauer if not zeilen else 'gerade'))
+    # Höchstens 10 Minuten (Overlay 33 s, „in 5 Minuten“ plus Reserve): Hängt das Skript nach dieser Zeile (Tunnel weg),
+    # hieße es sonst für immer WARTET. Die Zeit seit der letzten Ausgabe ist das Alter der Ausgabedatei.
+    still = time.time() - os.path.getmtime(datei)
+    if schluss and WARTE_AUSGABE.search(schluss[-1].strip()) and still <= 600:
+        wartend.append((schluss[-1].strip(), '%d s' % still if not zeilen else 'gerade'))
     if fertig:
         stand = 'FERTIG – der Lauf ist beendet%s, Ergebnis jetzt auswerten' % (' (Exit %s)' % ende.group(1) if ende else '')
     elif fehler:

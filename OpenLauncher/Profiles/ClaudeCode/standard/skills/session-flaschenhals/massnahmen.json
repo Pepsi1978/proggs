@@ -37,9 +37,9 @@
         "OpenLauncher/Profiles/ClaudeCodeMac/{minimal,standard,strict}/settings.json (auch Quelle des Servers)"
       ],
       "werkzeug": "Bash",
-      "aufruf_regex": "\\b(pkill|pgrep)\\s+-\\w*f",
+      "aufruf_regex": "\\b(pkill|pgrep)\\b[^;&|\\n]*\\s-\\w*f",
       "fehler_regex": "Exit code 144",
-      "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Kill-Schutz echte Fälle fälschlich, Muster im Hook schärfen. Die Bump-Sperre desselben Hooks misst M42.",
+      "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Kill-Schutz echte Fälle fälschlich, Muster im Hook schärfen. Die Bump-Sperre desselben Hooks misst M42. Server 19.11.2026: Schalter mit Wert (pkill -u jarvis -f X, Exit 144 in d6a0f83e) werden jetzt übersprungen; python-Heredocs mit pkill-Text und Commit-Nachrichten nach einem Heredoc blocken nicht mehr (heredoc_filter behält die Endmarke).",
       "ruecknahme": "Kill-Schutz: Aufruf von selbstmord() in main() von build-ablauf-guard.py entfernen. Ganzer Hook: Eintrag aus den sechs settings.json entfernen, Hook-Dateien (.py, .sh) löschen; Notaus sofort: leere Datei ~/.claude/build-ablauf-guard-disable.flag (gilt nur 2 Stunden ab Änderungszeit; der alte Ort im TEMP zählt mit derselben Frist).",
       "kosten": "kein Kontext; je Bash/PowerShell-Aufruf unter Windows ~100 ms (python direkt aus settings.json, gemessen 12.11.2026; vorher pwsh-Wrapper ~360 ms)",
       "fehler_am_aufruf": true
@@ -176,12 +176,13 @@
       "status": "aktiv",
       "beleg": "Sitzung 966a4cf2: fünf APKs nacheinander auf zwei Geräte dauerten 6.2, 3.5 und 2.9 min je Lauf (Werkzeugzeit); nach der Änderung eine APK auf beide in 40 s.",
       "ort": [
-        "Werkzeuge/adb-wlan/auf-beide.sh"
+        "Werkzeuge/adb-wlan/auf-beide.sh",
+        "Werkzeuge/apk-delta/apk-install.sh (--ziel, Seriennummer aus geraete.json)"
       ],
       "fehler_regex": "AUF_BEIDE_STATUS=(teilweise|fehler)",
       "aufruf_regex": "auf-beide\\.sh",
       "werkzeug": "Bash|PowerShell",
-      "pruefung": "Nicht automatisch messbar: AUF_BEIDE_STATUS=teilweise entsteht schon, wenn das Tablet aus ist. Von Hand: Laufzeit je auf-beide.sh-Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs, nachher etwa 40 s je APK) -> wirkt.",
+      "pruefung": "Nicht automatisch messbar: AUF_BEIDE_STATUS=teilweise entsteht schon, wenn das Tablet aus ist. Von Hand: Laufzeit je auf-beide.sh-Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs, nachher etwa 40 s je APK) -> wirkt. Server 19.11.2026: Der Jarvis-Filter *[Jj]arvis*.apk traf jeden Pfad unter /home/jarvis und lehnte jede APK ab; jetzt nur App-Ordner Jarvis/app oder Dateiname. apk-install.sh nahm das erste Netzgerät, obwohl Handy und Tablet beide im Tunnel hängen; jetzt die Seriennummer des Ziels (Vorgabe handy).",
       "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
       "kosten": "kein Dauerkontext, nur das Skript",
       "messbar": false
@@ -455,13 +456,13 @@
       "fehler_regex": "Terminated",
       "aufruf_regex": "gradlew\\s+\\S*assemble",
       "auch_ohne_fehlerstatus": true,
-      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein 'Terminated' mehr beim Gradle-Bau. Vermerk 19.11.2026: Wohl überholt durch M33 (Claude Code schiebt jeden Bash-Befehl nach 60 s in den Hintergrund). Nach einem Server-Test, ob ein Vordergrund-Bau jetzt verschoben statt abgebrochen wird: GRADLE_BAU-Block in main() entfernen und status ueberholt.",
+      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein 'Terminated' mehr beim Gradle-Bau. Vermerk 19.11.2026: Wohl überholt durch M33 (Claude Code schiebt jeden Bash-Befehl nach 60 s in den Hintergrund). Nach einem Server-Test, ob ein Vordergrund-Bau jetzt verschoben statt abgebrochen wird: GRADLE_BAU-Block in main() entfernen und status ueberholt. Server-Prüfrunde 19.11.2026: Ein echter Gradle-Bau im Vordergrund (UpdateStation, --rerun-tasks) und eine 80-s-Schleife wurden nach 60 s in den Hintergrund verschoben, nicht abgebrochen. In den Server-Verläufen 6 M26-Sperren, davon 3 Text-Fehlalarme (python-Heredocs und ein echo-Test mit gradlew im Text), die übrigen kosteten je einen Neustart des Befehls. Block entfernt.",
       "ruecknahme": "Block mit GRADLE_BAU in main() von build-ablauf-guard.py entfernen.",
       "kosten": "Kein Kontext; höchstens eine Sperrmeldung, wenn im Vordergrund gebaut wird.",
       "plattform": [
         "linux"
       ],
-      "status": "aktiv"
+      "status": "überholt"
     },
     {
       "id": "M27",
@@ -524,13 +525,14 @@
       "beleg": "Sitzung 2d05ad7c: Start-Process python + Pfad ~/.openlauncher/vorwaermen/log.txt als 'Starten des OpenLaunchers' geblockt; Umweg kostete je einen Aufruf Mac-Prüfrunde 19.11.2026: Der Mac-Zweig suchte OpenLauncherMac.app, die App heißt aber OpenLauncher.app (Prozess OpenLauncher, Bundle de.frank.OpenLauncher); killall OpenLauncher, open -a OpenLauncher und open /Applications/OpenLauncher.app blieben frei. Jetzt am echten Namen; frei bleiben build.sh (Kompilier-Check), dotnet build zur Probe, open -R und Lesen.",
       "ort": [
         ".claude/hooks/openlauncher-deploy-guard.ps1",
-        ".claude/hooks/openlauncher-deploy-guard.sh"
+        ".claude/hooks/openlauncher-deploy-guard.sh",
+        ".claude/hooks/openlauncher-deploy-guard.sh: unter Linux sofort exit 0 (Server-Prüfrunde 19.11.2026)"
       ],
       "werkzeug": "Bash|PowerShell",
       "fehler_regex": "des OpenLaunchers von Hand",
       "aufruf_regex": "\\.openlauncher[\\\\/]",
       "fehler_am_aufruf": true,
-      "pruefung": "Nach 10 Sitzungen mit ~/.openlauncher im Befehl: keine Blockade ohne echten Launcher-Bezug; dotnet build/Stop-Process auf OpenLauncher blocken weiter",
+      "pruefung": "Nach 10 Sitzungen mit ~/.openlauncher im Befehl: keine Blockade ohne echten Launcher-Bezug; dotnet build/Stop-Process auf OpenLauncher blocken weiter Server: dotnet build -p:EnableWindowsTargeting=true (erlaubte WPF-Fehlerprüfung) wurde mit Windows-Pfad als Hinweis geblockt; dort läuft kein OpenLauncher, der Wächter prüft unter Linux nichts mehr.",
       "ruecknahme": "In .ps1 und .sh die Entfernung von .openlauncher[\\\\/] vor der Bezugsprüfung (bezug = …) streichen; Mac-Zweig (mac_verbote) bleibt.",
       "kosten": "keine (nur Mustervergleich im Hook)",
       "status": "aktiv"
@@ -667,7 +669,7 @@
       "aufruf_regex": "lauf-waechter/minute\\.py",
       "fehler_regex": "(?s)HÄNGER\\?.*?adb",
       "auch_ohne_fehlerstatus": true,
-      "pruefung": "Bei Jarvis-Installationen zeigt der Wächter ÜBERTRÄGT statt HÄNGER?",
+      "pruefung": "Bei Jarvis-Installationen zeigt der Wächter ÜBERTRÄGT statt HÄNGER? 19.11.2026: apk-install.sh (Server-Standard, delta-push nur per source) zählt mit.",
       "ruecknahme": "UEBERTRAGUNG-Zweig in minute.py entfernen",
       "kosten": "0 Kontext",
       "messbar": true,
@@ -745,8 +747,29 @@
       "aufruf_regex": "jarvis-install|apk-update\\.ps1",
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Sitzungen mit Android-Bau: keine Meldung 'APK hat erst N-1' bzw. 'Build veraltet?' mehr, wenn der Eintrag per eintrag.py kam.",
-      "ruecknahme": "Die rmtree-Zeilen hinter datei.write_text in eintrag.py entfernen.",
+      "ruecknahme": "In eintrag.py die Zeile shutil.rmtree(... \".gradle\" / \"configuration-cache\" ...) samt Kommentar darüber entfernen.",
       "kosten": "keine, Werkzeug-Änderung ohne Kontext",
+      "status": "aktiv"
+    },
+    {
+      "id": "M43",
+      "titel": "Lauf-Wächter (Linux): Warten auf die Gradle-Sperre ist WARTET, CPU-Zeit aus /proc statt ganzer Sekunden",
+      "datum": "2026-11-19T17:52",
+      "beleg": "Server-Prüfrunde 19.11.2026: Ein Bau hinter flock -w 3600 9 (Sperre des Vorwärmens, vom Bau-Wächter vorangestellt) meldete 'HÄNGER?', Regel 24 verlangt dann Beenden. procps zeigt time= in ganzen Sekunden: ein leiser Lauf mit 0,3 s CPU je 40-s-Fenster las sich als 0 s.",
+      "ort": [
+        "Werkzeuge/lauf-waechter/minute.py (WARTEN mit flock <fd>, proc_cpu)"
+      ],
+      "werkzeug": "Bash",
+      "aufruf_regex": "lauf-waechter/minute\\.py",
+      "fehler_regex": "(?s)HÄNGER\\?.*?flock -w",
+      "auch_ohne_fehlerstatus": true,
+      "fehler_am_aufruf": true,
+      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein HÄNGER? bei einem Prozess 'flock -w … 9'. Am Server mit sleep, tail -f, leiser Python-Schleife, flock-Warten und adb push geprüft.",
+      "ruecknahme": "Die flock-Alternative in WARTEN und proc_cpu() samt Aufruf in ps() entfernen.",
+      "kosten": "kein Kontext",
+      "plattform": [
+        "linux"
+      ],
       "status": "aktiv"
     }
   ]

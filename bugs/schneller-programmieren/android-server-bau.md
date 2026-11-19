@@ -26,7 +26,9 @@
   Daemon (`daemon-2042133`) starb mit, der zweite Bau startete kalt und übersetzte alles neu. Verlust ≈ 10 min.
   In 8 von 24 Server-Sitzungen mit Bau stand ein `timeout` davor, 2 davon brachen ab.
 - **Warum:** Das Bash-Werkzeug erlaubt höchstens 600 s im Vordergrund. Ein Kotlin-Vollbau auf 2 vCPU dauert länger.
-- **Fix:** Hook M26 in `claude-code-setup/hooks/build-ablauf-guard.py` sperrt Gradle-Bauten im Vordergrund unter Linux.
+- **Fix:** Nie `timeout N` vor Gradle (coreutils-timeout beendet den Client samt Daemon). Das Vordergrund-Limit ist seit
+  Regel 24 nur noch 60 s, danach schiebt Claude Code den Befehl in den Hintergrund statt ihn abzubrechen (am Server
+  19.11.2026 mit echtem Bau geprüft). Die frühere Sperre M26 für Gradle im Vordergrund ist deshalb entfernt.
 
 ## B2. Hintergrunddienst ohne Shell-Profil
 
@@ -52,7 +54,7 @@
 ## B5. PreToolUse-Hook prüft den Befehlstext, auch Heredocs und Testtexte
 
 - **Erlebt:** Ein Python-Heredoc, das nur den Text des Bau-Befehls enthielt (Regex, JSON-Testeingabe), wurde von M26
-  gesperrt. Zweimal ist das passiert.
+  gesperrt. Dreimal ist das passiert; M26 ist seit 19.11.2026 entfernt, das Muster gilt für die übrigen Prüfungen weiter.
 - **Fix:** Lange Skripte per Write in den Scratchpad legen und dann ausführen. Testeingaben für Hooks als Datei
   (`python3 hook.py < test.json`) und den Bau-Text im Skript zerlegen (`"grad"+"lew"`).
 

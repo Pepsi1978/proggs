@@ -2,38 +2,50 @@
 # Installiert eine App-APK per adb (Tunnel/WLAN vor Kabel) wie `adb install -r`, überträgt aber nur die geänderten
 # Einträge gegenüber der installierten Fassung (SHA-256 geprüft, sonst die ganze APK mit lz4).
 # Nicht für Jarvis: dafür immer Werkzeuge/jarvis-install/jarvis-install.sh.
-# Aufruf: apk-install.sh <apk> [-s <gerät>]
+# Aufruf: apk-install.sh <apk> [--ziel handy|tablet] [-s <gerät>]   (Vorgabe handy, Seriennummer aus adb-wlan/geraete.json)
 # Letzte Zeile APK_INSTALL_STATUS: installiert oder fehler. Bei INSTALL_FAILED_UPDATE_INCOMPATIBLE nie deinstallieren.
 set -u
 HIER="$(cd "$(dirname "$0")" && pwd)"
 source "$HIER/delta-push.sh"
 ende() { echo "APK_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; exit 0; }
 
-APK=""; GERAET=""
+APK=""; GERAET=""; ZIEL=handy
 while [ $# -gt 0 ]; do
   case "$1" in
     -s) GERAET="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
+    --ziel) ZIEL="${2:-handy}"; shift; [ $# -gt 0 ] && shift ;;
     *) APK="$1"; shift ;;
   esac
 done
 [ -f "$APK" ] || ende fehler "APK nicht gefunden: $APK"
+# Zielgerät über die feste Seriennummer (Regel 18): Sind Handy und Tablet beide verbunden (Server: 10.8.0.7 und 10.8.0.8),
+# zählt nie „das erste Gerät“ in adb devices. Ohne geraete.json gilt wie früher das erste Netzgerät.
+ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$HIER/../adb-wlan/geraete.json" 2>/dev/null)
+[ -z "$ZIEL_SERIE" ] && [ "$ZIEL" != handy ] && ende fehler "Ziel '$ZIEL' steht nicht in Werkzeuge/adb-wlan/geraete.json"
 
 for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/android-sdk/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB_BIN="$K"; break; }
 done
 [ -n "${ADB_BIN:-}" ] || ende fehler "adb nicht gefunden"
 
-waehle_geraet() {
-  local netz
-  netz=$("$ADB_BIN" devices | awk '$2=="device" && $1 ~ /:[0-9]+$/ {print $1; exit}')
-  [ -n "$netz" ] && { echo "$netz"; return; }
-  "$ADB_BIN" devices | awk 'NR>1 && $2=="device" {print $1; exit}'
+ist_ziel() {
+  [ -z "$ZIEL_SERIE" ] && return 0
+  [ "$("$ADB_BIN" -s "$1" shell getprop ro.serialno </dev/null 2>/dev/null | tr -d '[:space:]')" = "$ZIEL_SERIE" ]
 }
-netzgeraet() { "$ADB_BIN" devices | awk '$2=="device" && $1 ~ /:[0-9]+$/ {print $1; exit}'; }
+# $1 = netz: nur IP:Port, sonst jedes Gerät; jeweils nur das Zielgerät.
+geraet_suchen() {
+  local s
+  for s in $("$ADB_BIN" devices | awk 'NR>1 && $2=="device" {print $1}'); do
+    case "$s" in *:[0-9]*) ;; *) [ "$1" = netz ] && continue ;; esac
+    ist_ziel "$s" && { echo "$s"; return; }
+  done
+}
+waehle_geraet() { geraet_suchen alle; }
+netzgeraet() { geraet_suchen netz; }
 if [ -z "$GERAET" ] || [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" != device ]; then
   # Regel 18: erst WLAN/Tunnel, ohne Netzverbindung einmal adb-wlan.sh, Kabel nur als Notnagel.
   GERAET=$(netzgeraet)
-  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" >/dev/null 2>&1; GERAET=$(netzgeraet); }
+  [ -n "$GERAET" ] || { "$HIER/../adb-wlan/adb-wlan.sh" --geraet "$ZIEL" >/dev/null 2>&1; GERAET=$(netzgeraet); }
   if [ -z "$GERAET" ]; then
     GERAET=$(waehle_geraet)
     [ -n "$GERAET" ] && echo "WLAN/Tunnel nicht erreichbar, auch adb-wlan.sh half nicht: installiere per Kabel ($GERAET)."

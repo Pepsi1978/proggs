@@ -109,7 +109,8 @@ Testeingabe, die weiter blocken muss und eine, die frei sein muss (Hook ist fail
     vor jedem CLI-Start (Startknopf und Jarvis-Auftrag) und auf dem Server zusätzlich alle 5 Minuten.
   - Liegt die Ursache in einem Launcher (`OpenLauncher`, `OpenLauncherMac`, `OpenLauncherServer`), alle drei angleichen.
   
-  Nach dem Push den Server prüfen: `ssh root@168.231.83.205 cat /home/jarvis/.openlauncher/repo-status.json` muss `"ok": true` zeigen. Mac und Server
+  Nach dem Push den Server prüfen: `ssh root@168.231.83.205 cat /home/jarvis/.openlauncher/repo-status.json` (auf dem Server selbst:
+  `cat ~/.openlauncher/repo-status.json`) muss `"ok": true` zeigen. Mac und Server
   ziehen den Stand von selbst (Mac beim CLI-Start, Server alle 5 Minuten). Codex und OpenCode kennen keine Claude-Hooks: Dort gilt nur, was in
   Skills und Skripten steht. Das gehört in den Bericht.
 

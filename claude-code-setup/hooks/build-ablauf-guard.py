@@ -57,8 +57,9 @@ CD = re.compile(r'(?:^|[;&|(\s])(?:cd|pushd|Set-Location|Push-Location|sl)\s+(?:
 SCHREIBEN = re.compile(r'WriteAllText|WriteAllLines|AppendAllText|Set-Content|Add-Content|Out-File|\bsed\s+-i|\btee\b|write_text|json\.dump|open\([^)]*,\s*["\']w'
                        r'|(?<![\d&>-])>>?\s*["\']?[^\s;&|"\']*versionslog\.json', re.IGNORECASE)
 PROJEKT = re.compile(r'(?:-p|--project-dir)[\s=]+(?:"([^"]+)"|\'([^\']+)\'|(\S+))')
-# pkill/pgrep mit -f (auch kombiniert wie -af, -9f) und dem Muster dahinter
-PKILL = re.compile(r'\b(pkill|pgrep)\b((?:\s+-[\w-]+(?:\s+\d+)?)*)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))')
+# pkill/pgrep mit -f (auch kombiniert wie -af, -9f) und dem Muster dahinter. Schalter mit Wert (-u jarvis, -P 123, -d ,) samt
+# Wert überspringen: Sonst galt "jarvis" als Muster, und pkill -u jarvis -f X beendete die eigene Shell (Server, d6a0f83e: Exit 144).
+PKILL = re.compile(r'\b(pkill|pgrep)\b((?:\s+(?:-[uUgGPstFOdrq]\s+[^\s;&|]+|-[\w-]+(?:\s+\d+)?))*)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))')
 WIN_CMDLINE = re.compile(r'CommandLine\s+-(?:like|match)\s+["\']([^"\']+)["\']', re.IGNORECASE)
 
 HINWEIS_BUMP = (
@@ -76,7 +77,8 @@ HINWEIS_KILL = (
     "'bash -c <befehl>' bzw. eigener PowerShell-Prozess, deshalb findet {werkzeug} auch die "
     "ausfuehrende Shell und beendet sie mit (Exit 144, der Rest des Befehls laeuft nie).\n\n"
     "Stattdessen:\n"
-    "  Gradle-Bau beenden:  ./gradlew --stop   (Windows: .\\gradlew.bat --stop)\n"
+    + ("  Gradle-Bau abbrechen: den Hintergrundlauf mit TaskStop beenden (Server: Gradle-Daemons nie beenden, kein --stop)\n"
+       if sys.platform.startswith('linux') else "  Gradle-Bau beenden:  ./gradlew --stop   (Windows: .\\gradlew.bat --stop)\n") +
     "  Sonst Klammer-Trick: pkill -f \"[g]radlew assembleDebug\"  (das Muster passt dann nicht auf sich selbst)\n"
     "  Oder gezielt per PID: kill <pid> aus einem vorherigen, eigenen pgrep-Aufruf.\n"
     "Und Kill nie mit weiteren Schritten in denselben Befehl packen.\n\n"
@@ -89,7 +91,7 @@ HINWEIS_WARTEN = (
     "STOPP - diese Warte-Schleife arbeitet falsch (endet nie bzw. sofort).\n\n"
     "pgrep -f \"{muster}\" findet die eigene Shell (das Muster steht woertlich im Befehl), der Prozess gilt also immer als laufend.\n\n"
     "Stattdessen: Den Bau direkt starten (bash gradlew assembleDebug -q). Wird er in den Hintergrund verschoben, meldet sich das\n"
-    "Werkzeug beim Ende selbst (Server: mit run_in_background, M26). Danach jede Minute sichtbar pruefen:\n"
+    "Werkzeug beim Ende selbst. Danach jede Minute sichtbar pruefen:\n"
     "Werkzeuge/lauf-waechter/minute.py <ausgabedatei> <minute>. Sonst auf das Ergebnis pruefen (APK neuer als der Start), nie auf\n"
     "Prozessnamen, oder den Klammer-Trick nutzen: pgrep -f \"[g]radlew assembleDebug\".\n\n"
     + NOTAUS_ZEILE
@@ -248,7 +250,9 @@ def pfad(p, basis):
 
 
 def selbstmord(cmd, powershell=False):
-    cmd = ohne_heredoc(cmd)
+    # Nur Heredocs an eine Shell zählen; python-/node-Heredocs sind Daten (Server a662036e/3429c693: massnahmen.json mit dem
+    # Text pkill -f "gradlew assembleDebug" per python3 - <<EOF geschrieben und geblockt). Wie warte_schleife().
+    cmd = nur_shell(cmd)
     # Nur Aufrufe außerhalb von Text zählen (git commit -m "… pkill -f gradle …", grep "pkill -f x" beenden nichts).
     maskiert = maske(cmd, powershell)
     for m in PKILL.finditer(cmd):
@@ -438,7 +442,6 @@ def adb_ziel_fehlt(cmd, powershell=False):
     return None
 
 
-GRADLE_BAU = re.compile(r'(^|[\s;&|("\'])(\./|bash\s+)?gradlew(\.bat)?["\']?\s+[^\n;&|]*\b(assemble|bundle|build|install)\w*', re.I)
 # Harmlose Umleitungen in einem Bau-Teilstück (2>&1, > datei, 2>/dev/null) gelten auf dem Server (nur Bypass) noch als reiner Bau.
 UMLEITUNG = re.compile(r'\s\d*>&\d+|\s\d*>>?\s*[^\s|&;<>]+')
 
@@ -451,6 +454,15 @@ def nur_bau(cmd, umleitung=False):
         r'(&\s*)?([A-Za-z_]\w*=\S+\s+)*((bash|sh)\s+)?(\.[\\/])?gradlew(\.bat)?\s+[^|&]*\b(assemble|bundle|build|install|compile|test)\w*[^|&]*$',
         UMLEITUNG.sub(' ', t) if umleitung else t, re.I)
         for t in teile) and any('gradlew' in t.lower() for t in teile)
+
+
+def echter_bau(cmd):
+    """gradlew mit Bau-Aufgabe an Befehlsstelle, nicht nur als Text (Anführungszeichen, cat/tee-Heredoc, python-Heredoc)."""
+    cmd = nur_shell(cmd)
+    # maske() lässt -c "…" sichtbar (für bash -c); bei python/node ist das Code, kein Bau.
+    cmd = re.sub(r'\b(?:python3?|node|perl|ruby)(?:\s+-\S+)*?\s+-[ce]\s+(?:"(?:[^"\\]|\\.)*"|\'[^\']*\')', ' ', cmd)
+    return any(re.search(r'(?:^|\s|:)(assemble|install|bundle|build|compile|test)\w*', m.group(2), re.I)
+               for m in BAU.finditer(maske(cmd)))
 
 
 def langes_heredoc(cmd, grenze=30):
@@ -503,16 +515,8 @@ def main():
             return
     except Exception:
         pass
-    try:
-        # Hostinger-Server (Linux): Gradle-Bauten dauern oft über 10 Minuten; im Vordergrund bricht das Zeitlimit sie ab
-        # (Maßnahme M26). Nur im Hintergrund starten.
-        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and GRADLE_BAU.search(maske(cmd)) \
-                and not (d.get('tool_input') or {}).get('run_in_background'):
-            verweigern("STOPP – Gradle-Bau auf dem Server im Vordergrund: dauert oft über 10 Minuten, das Zeitlimit bricht ihn ab.\n"
-                       "Denselben Befehl ohne timeout mit run_in_background: true starten und auf die Meldung warten.")
-            return
-    except Exception:
-        pass
+    # Die Server-Sperre für Gradle im Vordergrund (M26) ist seit 19.11.2026 entfernt: Claude Code schiebt jeden Befehl nach 60 s in
+    # den Hintergrund statt ihn abzubrechen (am Server mit einem echten Bau geprüft); 3 der 6 Sperren in den Server-Verläufen waren Text-Fehlalarme.
     try:
         a = adb_ziel_fehlt(cmd, ps)
         if a:
@@ -525,7 +529,9 @@ def main():
         # Vorwärmen (OpenLauncherServer/kern/vorwaermen.py). Nur ergänzen, nie den Befehl selbst ändern.
         # "allow" gibt den ganzen Befehl frei: nur bei reinem Bau und nur im Bypass (dort ist ohnehin alles frei). Sonst bleibt der
         # Befehl unverändert (kein "ask": das hielte unbeaufsichtigte Sitzungen an).
-        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and bypass and nur_bau(cmd, True) \
+        # Auf dem Server jeder Befehl mit echtem Bau (auch eintrag.py … && gradlew, git pull && gradlew: der übliche M13-Ablauf
+        # lief sonst ohne Sperre neben dem Vorbau); im Bypass gibt "allow" nichts frei, was nicht schon frei ist.
+        if sys.platform.startswith('linux') and d.get('tool_name') == 'Bash' and bypass and echter_bau(cmd) \
                 and 'gradle-bau.lock' not in cmd and os.path.isdir(os.path.expanduser('~/.openlauncher/vorwaermen')):
             neu = dict(d.get('tool_input') or {})
             # Sperre über einen offenen Deskriptor halten, bis die Shell endet (flock … true gäbe sie vor dem Bau frei).
