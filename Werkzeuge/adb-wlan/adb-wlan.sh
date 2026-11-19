@@ -123,7 +123,7 @@ verbinde() {
       if ist_fremd "$(adbzeit 8 -s "$1" shell getprop ro.serialno | tr -d '[:space:]')"; then melde "$1 ist ein anderes eingetragenes Gerät – bleibt verbunden"; return 1; fi
       melde "$1 ist nicht das gemerkte Handy – getrennt"; adb disconnect "$1" >/dev/null 2>&1; return 1
     fi
-    [ "$z" = "unauthorized" ] && [ $i -eq 1 ] && melde "HINWEIS: Auf dem Handy 'Debugging zulassen' bestätigen (Haken 'Immer zulassen')."
+    [ "$z" = "unauthorized" ] && [ $i -eq 1 ] && melde "HINWEIS: Nicht freigegeben (unauthorized). Erscheint keine Abfrage (dieser Rechner war nie freigegeben): Frank sofort um den Kopplungscode bitten (Entwickleroptionen > Drahtloses Debugging > Gerät mit Kopplungscode koppeln), Port per 'adb mdns services' (_adb-tls-pairing), dann 'adb pair <ip>:<port> <code>'. Danach gilt auch Port 5555."
     sleep 2
   done
   return 1
@@ -286,7 +286,7 @@ adb start-server >/dev/null 2>&1
 
 # Tunnel-Adresse verbunden, aber nicht freigegeben: Warten und alle weiteren Wege ändern daran nichts (kostete 1:41, 13.11.2026).
 if [ -n "$TUNNEL_IP" ] && [ "$(adb devices 2>/dev/null | awk -v s="$TUNNEL_IP:$PORT" '$1==s {print $2}')" = "unauthorized" ]; then
-  melde "FEHLER: $TUNNEL_IP:$PORT ist verbunden, aber nicht freigegeben (unauthorized). Am Gerät 'Debugging zulassen' mit 'Immer zulassen' bestätigen."
+  melde "FEHLER: $TUNNEL_IP:$PORT ist verbunden, aber nicht freigegeben (unauthorized). Am Gerät 'Debugging zulassen' mit 'Immer zulassen' bestätigen; erscheint keine Abfrage, Kopplungscode erfragen und 'adb pair' (siehe bugs/android/adb-wlan-debugging.md §14)."
   # Neu verbinden lässt die Freigabe-Abfrage am Gerät wieder erscheinen; im Hintergrund, damit niemand darauf wartet.
   # Höchstens alle 30 Minuten, sonst erscheint die Abfrage beim Minuten-Wachhund jede Minute neu.
   FRAGE_MARKE="$HOME/.adb-wlan${ZUSATZ}-freigabe-frage"

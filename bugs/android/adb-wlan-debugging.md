@@ -84,3 +84,9 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Ursache:** `adb-wlan` merkte sich die Seriennummer des Geräts am Kabel als „unser Handy“ (`~/.adb-wlan-serial`); jedes angesteckte Gerät überschrieb sie.
 - **Fix:** Feste Zuordnung in `Werkzeuge/adb-wlan/geraete.json` (handy, tablet, je Seriennummer und Tunnel-Adresse). `adb-wlan` läuft je Gerät (`-Geraet handy|tablet|alle`, Wachhund mit `alle`), eigene Merkdateien je Gerät; `jarvis-install -Ziel`, `logcat-lesen --geraet`, `handy.py` (`HANDY_GERAET`), `apk-update` und `logbuch-holen -Ziel` wählen über `getprop ro.serialno`. Nie „das erste Gerät aus adb devices“ nehmen.
 - **Quelle:** eigene Messung 10.11.2026 (Fold 8 R3GL7073MLM, Tab S9 R52W800205N)
+
+## 14. `unauthorized`, aber keine Freigabe-Abfrage am Gerät (Rechner nie freigegeben)
+- **Symptom:** Tablet im WLAN erreichbar, Port 5555 offen, `adb connect` → „failed to authenticate“, `unauthorized`; „ADB-Autorisierungstimeout deaktivieren“ ist an, Auto Blocker aus. Neu verbinden lässt keine Abfrage erscheinen, auch nicht bei entsperrtem Bildschirm.
+- **Ursache:** Das Gerät wurde von einem anderen Rechner eingerichtet (Tab S9 vom Mac) und hat den Schlüssel dieses Rechners nie gespeichert; über WLAN fragt es neue Rechner nicht nach. Kein Ablauf, kein Netzproblem.
+- **Fix (30 Sekunden, nicht lange suchen):** Frank sofort um den Kopplungscode bitten (Entwickleroptionen › Drahtloses Debugging › Gerät mit Kopplungscode koppeln). Port per `adb mdns services` (`_adb-tls-pairing._tcp`), dann `adb pair <ip>:<port> <code>`. Danach ist der Rechner dauerhaft freigegeben, auch für Port 5555. Jarvis Mac OS liest Kopplungscodes bewusst nicht aus (Sicherheitsgrenze): nicht darüber versuchen.
+- **Quelle:** eigene Messung 19.11.2026 (Windows-PC ↔ Tab S9 R52W800205N)

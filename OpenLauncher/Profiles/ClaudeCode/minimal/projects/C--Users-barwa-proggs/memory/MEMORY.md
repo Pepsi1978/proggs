@@ -23,6 +23,7 @@
 
 ## Handy, Android
 - [adb-WLAN](adb-wlan-selbstheilend.md): Ausfall → Log + Wachhund-Aufgabe; TLS-Port nie speichern
+- [unauthorized](adb-unauthorized-kopplungscode.md): keine Abfrage am Gerät → sofort Kopplungscode erfragen, `adb pair`
 - [Tunnel langsam](tunnel-install-langsam-heim-wlan.md): 10.8.0.7 hängt = Heim-WLAN; im Hotspot per LAN-IP
 - [Jarvis Tablet](jarvis-tablet-zweites-geraet.md): Tab S9 = zweites Gerät; geraete.json, auf beide installieren, Abgleich
 - [Installation sichtbar](installation-immer-im-vordergrund.md): nie run_in_background, immer Vordergrund, Geräte nacheinander

@@ -117,7 +117,7 @@ function Verbinde($ziel) {
             Melde "$ziel ist nicht das gemerkte Handy – getrennt"
             & $Adb disconnect $ziel 2>&1 | Out-Null; return $false
         }
-        if ($z -eq "unauthorized" -and $i -eq 0) { Melde "HINWEIS: Auf dem Handy 'Debugging zulassen' bestätigen (Haken 'Immer zulassen')." }
+        if ($z -eq "unauthorized" -and $i -eq 0) { Melde "HINWEIS: Nicht freigegeben (unauthorized). Erscheint keine Abfrage (dieser Rechner war nie freigegeben): Frank sofort um den Kopplungscode bitten (Entwickleroptionen > Drahtloses Debugging > Gerät mit Kopplungscode koppeln), Port per 'adb mdns services' (_adb-tls-pairing), dann 'adb pair <ip>:<port> <code>'. Danach gilt auch Port 5555." }
         Start-Sleep 2
     }
     return $false
