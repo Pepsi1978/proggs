@@ -31,7 +31,7 @@ HANDY = "10.8.0.7:5555"
 # Werden von hier nie installiert (fehlende Schlüssel oder nur am Windows-PC), Vorwärmen wäre nur Last.
 AUSSCHLUSS = {"GenialerWeckerAndroid", "BestJournalAndroid", "EntropieReductor"}
 # Namen aus Jarvis-Aufträgen, die nicht dem Ordner entsprechen.
-NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWeckerAndroid", "geniale ideen": "GenialeIdeen",
+NAMEN = {"geniale aufgaben": "Aufgaben", "genialer wecker": "GenialerWecker", "geniale ideen": "GenialeIdeen",
          "stack-labor": "StackLabor", "stack labor": "StackLabor", "entropie reductor": "EntropieReductor"}
 PAUSE_SEKUNDEN = 20 * 60
 # Der Timer-Dienst startet ohne Franks Shell-Profil: dieselbe Umgebung wie in den Sitzungen setzen (~/.profile).

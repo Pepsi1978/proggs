@@ -256,7 +256,7 @@ $($reviewZeile)AUFTRAG:
 $($auftrag.auftrag)$anhangText
 
 VORGEHEN
-1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. $unklar1
+1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWecker (die Store-Fassung GenialerWeckerAndroid nur, wenn Frank sie ausdrücklich meint), Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. $unklar1
 $unklar2
 3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN (die App Jarvis nie mit nacktem adb install, sondern immer über Werkzeuge/jarvis-install, das vorher per Overlay nach dem Zeitpunkt fragt), bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
 "@

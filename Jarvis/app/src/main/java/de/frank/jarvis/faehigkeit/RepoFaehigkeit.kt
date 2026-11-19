@@ -33,7 +33,7 @@ class RepoFaehigkeit(private val context: Context) : Faehigkeit {
             "Projekt, Ziel, die betroffenen Dateien mit Pfad und der jetzigen Stelle im Code, was genau anders werden soll, woran man erkennt, dass es fertig ist. Der Auftrag steht als eigener Block, " +
             "den Frank unverändert kopieren kann; lange Auswertungen und Aufträge legst du zusätzlich mit ablage_schreiben ab. " +
             "NACHSCHLAGEN: Alle angebundenen Apps liegen als Code im Repo: Geniale Aufgaben im Ordner Aufgaben, Entropie Reductor in EntropieReductor, Geniale Ideen in GenialeIdeen, " +
-            "Genialer Wecker in GenialerWeckerAndroid, du selbst in Jarvis. Nennt Frank einen Begriff aus einer dieser Apps, den dir kein Werkzeug erklärt " +
+            "Genialer Wecker in GenialerWecker (Store-Fassung: GenialerWeckerAndroid), du selbst in Jarvis. Nennt Frank einen Begriff aus einer dieser Apps, den dir kein Werkzeug erklärt " +
             "(zum Beispiel „grüne Erholung“ bei Whoop, eine Farbe, eine Stufe, ein Score, eine Abkürzung), schlag im Code der App nach, was genau dahintersteckt, statt zu raten oder Frank zu fragen: " +
             "aktion=suche unter dem Projektordner mit dem Begriff auf Deutsch und Englisch (etwa „Recovery“ und „Green“), dann die Fundstelle mit aktion=datei lesen. " +
             "Geht die Suche nicht, lies dich über aktion=dateien zu der passenden Datei vor. Nenne nur Werte, die du im Code gelesen hast."

@@ -123,7 +123,7 @@ APP: {auftrag.get("app") or ""}
 {text}
 
 VORGEHEN
-1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. {unklar1}
+1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWecker (die Store-Fassung GenialerWeckerAndroid nur, wenn Frank sie ausdrücklich meint), Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. {unklar1}
 {unklar2}
 3. Nach den Profilregeln und den Server-Regeln vollständig abschließen: bauen, Version, Commit, Push, Installation über den Tunnel (die App Jarvis nie mit nacktem adb install, sondern immer über Werkzeuge/jarvis-install). Den Skill apk-update hier nicht starten: Der Push vom Server löst den Android-Cloud-Bau aus, der die APK in den Drive-Ordner legt. Abschlussmeldung auf Deutsch.
 """
