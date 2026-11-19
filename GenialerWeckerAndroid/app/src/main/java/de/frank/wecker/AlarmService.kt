@@ -140,6 +140,8 @@ class AlarmService : Service() {
         playback?.close(); playback = null
         showForeground(alarm, quiet)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
+        // Entsperrt erscheint der Wecker als Vollbild statt als schwebende Meldung (gesperrt übernimmt der Full-Screen-Intent).
+        if (!quiet && vollbildDirekt(this)) runCatching { startActivity(Intent(this, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         if (alarm.vibrate) vibrateAsAlarm()
         // Lautstärke sofort setzen, bevor irgendetwas klingt: ohne Anlaufzeit gleich die eingestellte volle Lautstärke.
         setVolume(if (alarm.fadeSeconds == 0) alarm.volume else (alarm.volume * .05f).roundToInt().coerceAtLeast(1))
@@ -284,6 +286,13 @@ class AlarmService : Service() {
                 setSound(null, null); enableVibration(false); setShowBadge(false)
             })
             NotificationCompat.Builder(this, TEST_CHANNEL).setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true)
+        } else if (vollbildDirekt(this)) {
+            // Das Vollbild steht schon: die Meldung bleibt still in der Leiste, ohne schwebende Meldung oben.
+            manager.createNotificationChannel(NotificationChannel(FULLSCREEN_CHANNEL, "Wecker im Vollbild", NotificationManager.IMPORTANCE_LOW).apply {
+                setSound(null, null); enableVibration(false); setShowBadge(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            })
+            NotificationCompat.Builder(this, FULLSCREEN_CHANNEL).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_LOW)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setSilent(true)
         } else {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "Aktiver Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
                 setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -331,6 +340,14 @@ class AlarmService : Service() {
         /** True for an occurrence already stopped in this process. A newly claimed occurrence has another `at`. */
         @Synchronized internal fun wasStopped(entry: RingEntry) = stopped[entry.id] == entry.at
         const val CHANNEL = "alarm_ring_v1"
+        const val FULLSCREEN_CHANNEL = "alarm_fullscreen_v1"
+
+        /** Entsperrt und mit „Über anderen Apps einblenden“ darf der Dienst das Vollbild selbst öffnen. */
+        fun vollbildDirekt(context: android.content.Context): Boolean {
+            val app = context.applicationContext
+            val gesperrt = app.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked || !app.getSystemService(PowerManager::class.java).isInteractive
+            return !gesperrt && android.provider.Settings.canDrawOverlays(app)
+        }
         const val NOTIFICATION = 1001
         const val TEST_CHANNEL = "alarm_test_v1"
         const val TEST_NOTIFICATION = 1003
