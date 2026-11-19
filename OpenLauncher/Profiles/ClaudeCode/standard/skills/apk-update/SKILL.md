@@ -246,6 +246,7 @@ und dass die Signatur der APK zur installierten App passt.
 - **EntropieReductor, BestJournalFrank, VoiceKey**: Die Debug-Variante hat das Suffix `.debug`; am
   Handy ist genau diese installiert.
 - **GenialerWeckerAndroid**: signiert Debug und Release mit dem eigenen Schlüssel der Verkaufs-App.
+  Am Mac fehlt der Schlüssel: lokal kompiliert nichts, Fehler zeigt erst `gh workflow run android-cloud-build.yml -f projekt=GenialerWeckerAndroid` (~6 min); Overrides vorher selbst prüfen. Die APK aus dem Drive-Ordner lädt am Mac oft nicht (0 Byte): nicht warten, Installation über UpdateStation melden.
 - **Schlüssel-Regel (Frank, 01.10.2026):** Jede App bekommt den gemeinsamen Schlüssel, nur
   BestJournalAndroid und GenialerWeckerAndroid ihren eigenen – unabhängig von Debug oder Release.
 - Welche Variante am Handy liegt, zeigt `adb shell pm list packages`. Passt das Paket nicht, zeigt

@@ -691,6 +691,25 @@
       "pruefung": "Nach 10 Sitzungen mit git add: kein .gitignore-Abbruch mehr bei eigenen Commits.",
       "ruecknahme": "Die Zeile 'git add -u -- <pfade>' aus commit-nur-mit-pfaden.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+    },
+    {
+      "id": "M40",
+      "titel": "GenialerWecker am Mac: kein lokaler Bau, Drive-APK nicht per cp holen, UpdateStation melden",
+      "datum": "2026-11-19T09:54",
+      "beleg": "71d0235c: cp der vc59-APK aus Google Drive hing 4 min bei 0 Byte (abgebrochen); Kompilierfehler (doppeltes onResume) erst im Cloud-Bau, +1 Zyklus ~7 min.",
+      "ort": [
+        "OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/SKILL.md"
+      ],
+      "werkzeug": "Bash",
+      "plattform": [
+        "mac"
+      ],
+      "fehler_regex": "did not complete within its \\d+s timeout",
+      "aufruf_regex": "GoogleDrive-.*GenialerWeckerAndroid.*\\.apk",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Mac-Sitzungen mit Wecker-Änderung: kein cp/adb install der Drive-APK mehr, der in den Hintergrund rutscht.",
+      "ruecknahme": "Die Zeile 'Am Mac fehlt der Schlüssel …' unter GenialerWeckerAndroid in apk-update/SKILL.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
     }
   ]
 }
