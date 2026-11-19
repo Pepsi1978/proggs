@@ -31,7 +31,7 @@ HDT-Werte immer mit Prüflast lesen (0,45 vs. 1,8 MPa); Datenblätter widersprec
 |---|---|---|---|---|---|
 | **Bambu Lab H2S** | 350 °C | 65 °C | H12-HEPA + Kohle | 999 € (EU-Store, BF bis 01.12.) | nicht offiziell bestätigt |
 | Bambu Lab H2D (2 Düsen) | 350 °C | 65 °C | H12-HEPA + Kohle | ab 1.399 € | nicht offiziell bestätigt |
-| **Prusa CORE One+** + Advanced Filtration | 290 °C (HT-Hotend 400 °C +260 €) | 55 °C (L: 60 °C) | HEPA + Kohle (Zubehör 79,99 €) | ~1.250–1.470 € | nicht durch Prusa |
+| **Prusa CORE One+** + Advanced Filtration | 290 °C (HT-Hotend 400 °C +260 €) | **nein, nur über das Bett** bis ~55 °C (L: 60 °C) | HEPA + Kohle (Zubehör 79,99 €) | ~1.250–1.470 € | nicht durch Prusa |
 | **QIDI Q2** | 370 °C | 65 °C | H12-HEPA + Kohle | 449–499 € | ja (~475–499 €) |
 | QIDI Plus 5 | 370 °C | 65 °C | HEPA + Kohle | 637–749 € | ja (laut Smartzone) |
 | Bambu P2S / P1S | 300 °C | nein | **nur Kohle** | 599 € | Drittanbieter/110 V |
@@ -75,6 +75,13 @@ Quellen: Rohberichte r1, r2, r3, r7; https://www.igorslab.de/creality-k2-pro-com
 - INDX nachrüstbar: offizielles Conversion Kit Gen 2 4/8 Tools 669/899 € (Gen 1: 719/949 €, L: 751,90/999 €), nur ~39 € teurer als ab Werk, Selbstmontage 5–6 h, Versand nach 02/2027. Kein 4→8-Upgrade erhältlich; HT-Hotend (400 °C) nicht INDX-kompatibel (INDX max. 300 °C). Quelle: Rohbericht r8.
 - Lieferumfang CORE One+: 1 Blech Smooth PEI (CORE One L: Satin), montiert + 1 kg PLA. Blech je Material laut Prusa: TPU = Textured ohne Trennschicht; PETG = Textured/Satin (Smooth nur mit Klebestift); PLA = Satin/Smooth. Einzelbleche: Smooth 29,74 €, Textured 33,99 €, Satin 42,42 €. Quelle: Rohbericht r9.
 - Footer verlinkt „Prusa MCP“ (KI-Schnittstelle) – für Jarvis-/CLI-Anbindung prüfen.
+
+## 6d. CORE One+ Qualität und Langlebigkeit (Recherche 19.11.2026, Rohberichte r10–r13)
+- Tests: Gen 1 Tom's Hardware 4,5/5 Editor's Choice, Sanladerer „flawless“ ≈ Bambu X1C; Maßhaltigkeit 100,03/100,05 mm; Gen 2 Creative Bloq 4/5 (13.11.2026). Keine Tests von c't/CHIP/Computerbild.
+- Kammer wird nur über das Heizbett erwärmt (keine eigene Kammerheizung) → große ABS/PC-Teile verziehen eher; Schwächen laut Testern: Preis, Zubehör extra, Bedienung weniger poliert.
+- Langlebigkeit: belegte Einzelfälle 1.000–2.500 h ohne Probleme, ein Fall Riemenverschleiß nach ~600 h; realistisch 5–7 Jahre Nutzung/Support (MK3: 7 Jahre Firmware zugesagt). Wartung alle 200 h (Riemen, Schmierung, Lüfter). Upgrade CORE One→One+ 9,99 €.
+- Bewertungen: Trustpilot Prusa 4,4/5 bei 10.942 (82 % 5 Sterne); Kritik v. a. Lieferzeiten, Teillieferungen, E-Mail-/Garantie-Support; Live-Chat 24/7 nur Englisch; 2 J. Garantie, 60 Tage Rückgabe.
+- Gen 2 (seit 08/2026): GT1.5-Riemen, Nozzle Wiper, Expansion Joints Gen 2, kürzeres Aufheizen; noch nicht voll ausgereift. Lautstärke Gen 1 ~48–50 dB (Spitzen 55–58), Strom 90–110 W.
 
 ## 7. Empfehlung (für Frank, 19.11.2026)
 1. Bambu Lab H2S (+ AMS 2 Pro/HT) – beste Gesamtpaket aus 350 °C, 65 °C Kammer, HEPA + Kohle, Lidar, großer Bauraum, TPU 85A direkt. Kauf im EU-Store.

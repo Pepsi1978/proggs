@@ -42,3 +42,8 @@
 ## B9 Kauf-Fallen Amazon.de
 - 110-V-/Import-Listings (Bambu P2S Combo ASIN B0FT818HCH = 110 V; B0G87M7V8Z mit falsch geschriebenem Markennamen). Fix: „Verkauf durch“, EU-Modellnummer, 230 V prüfen; Bambu-Garantie nur mit Beleg aus EU-Store/autorisiertem Händler.
 - Recherche-Falle: amazon.de liefert WebFetch/curl HTTP 503; Bambu-Wiki WebFetch 402/403 (curl mit Browser-User-Agent geht).
+
+## B10 Prusa CORE One+ Gen 2 Kinderkrankheiten
+- Nozzle-Wiper sitzt ~2–3 mm zu weit vorn (GitHub-Issue 5496, offen auch mit Firmware 8.0.0); Gen 1: „Nozzle cleaning failed“ ohne bestätigten Fix, Resonanz bei 40–80 mm/s offen.
+- CORE One Kammer nur über das Bett beheizt → Warping großer ABS/PC-Teile; ASA-Geruch trotz Advanced Filtration nicht ganz weg (Kammer nicht dicht).
+- Wartungs-Kit (199 €) passt nicht zu Gen 2 / L+. Quelle: Rohberichte r11, r13 in best-practices/peripherie/recherchen/3d-drucker-2026-11/.

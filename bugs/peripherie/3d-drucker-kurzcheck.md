@@ -8,4 +8,5 @@
 - B7 PLA in beheizter Kammer → Heat Creep; Heizung aus/Tür auf.
 - B8 H2D-Verschleißteile (Lüfter, Spindelmutter) vorrätig; Prusa-Spannrolle fetten; QIDI Box meiden.
 - B9 Amazon.de: 110-V-/Importlistings, „Verkauf durch“ prüfen; amazon.de per WebFetch HTTP 503.
+- B10 CORE One+ Gen 2: Wiper-Position (Issue 5496) offen; Kammer nur über Bett → ABS/PC-Warping.
 Volltext: bugs/peripherie/3d-drucker.md
