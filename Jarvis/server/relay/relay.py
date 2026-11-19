@@ -1543,6 +1543,9 @@ class AgentenKanal:
         self.befehl = asyncio.Event()
         self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
         self.switchbot_lesen = False         # Handy will die SwitchBot-Sensoren jetzt vom Mac gelesen haben (/geraet/switchbot-jetzt)
+        self.licht_auftrag = None            # LED-Streifen schalten, den der Mac per Bluetooth ausführt (/geraet/licht)
+        self.licht_ergebnis = None
+        self.licht_fertig = asyncio.Event()
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1734,6 +1737,47 @@ class AgentenKanal:
             return web.Response(status=400, text="Quittung unvollstaendig")
         return web.json_response({"ok": True})
 
+    # ---------------------------------------------------------------- LED-Streifen ueber den Mac
+
+    async def licht(self, request: web.Request) -> web.Response:
+        """POST /geraet/licht (Handy): Der Mac schaltet die LED-Streifen per Bluetooth (Befehl ueber /pc/mac-befehl),
+        geantwortet wird mit seinem Ergebnis ({"geschaltet": [Namen], "gesehen": [Namen]}) oder „ergebnis“ mac_nicht_verbunden/keine_rueckmeldung."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = json.loads((await request.read()).decode("utf-8"))
+            befehle = daten.get("befehle")
+            if not isinstance(befehle, dict) or not all(isinstance(k, str) and isinstance(v, list) for k, v in befehle.items()):
+                raise ValueError("befehle fehlt")
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        if not self.bruecke.da():
+            return web.json_response({"ergebnis": "mac_nicht_verbunden"})
+        self.licht_fertig.clear()
+        self.licht_ergebnis = None
+        self.licht_auftrag = {"befehle": befehle, "kennung": str(time.time())}
+        self.befehl.set()
+        try:
+            await asyncio.wait_for(self.licht_fertig.wait(), 25)
+        except asyncio.TimeoutError:
+            self.licht_auftrag = None
+            return web.json_response({"ergebnis": "keine_rueckmeldung"})
+        return web.json_response({"ergebnis": "fertig", **(self.licht_ergebnis or {})})
+
+    async def licht_melden(self, request: web.Request) -> web.Response:
+        """POST /pc/licht (Mac-Bruecke): Ergebnis des Schaltens."""
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = json.loads((await request.read()).decode("utf-8"))
+            if not isinstance(daten, dict):
+                raise ValueError
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        self.licht_ergebnis = {k: daten.get(k) for k in ("geschaltet", "gesehen", "fehler") if k in daten}
+        self.licht_fertig.set()
+        return web.json_response({"ok": True})
+
     # ---------------------------------------------------------------- Mac-Bruecke
 
     async def bruecke_abfrage(self, request: web.Request) -> web.Response:
@@ -1745,12 +1789,15 @@ class AgentenKanal:
             if self.start_vorn is None and self._frage_liegt() and time.monotonic() - self.geweckt >= MAC_WECKEN_ABSTAND_S:
                 self.geweckt = time.monotonic()
                 self.start_vorn = False
-            if self.start_vorn is None and not self.switchbot_lesen:
+            if self.start_vorn is None and not self.switchbot_lesen and self.licht_auftrag is None:
                 self.befehl.clear()
                 try:
                     await asyncio.wait_for(self.befehl.wait(), KANAL_ABFRAGE_S)
                 except asyncio.TimeoutError:
                     pass
+            if self.licht_auftrag is not None:
+                auftrag, self.licht_auftrag = self.licht_auftrag, None
+                return web.json_response({"befehl": "licht", **auftrag})
             if self.start_vorn is None and self.switchbot_lesen:
                 self.switchbot_lesen = False
                 return web.json_response({"befehl": "switchbot_lesen"})
@@ -2217,6 +2264,8 @@ def app() -> web.Application:
     anwendung.router.add_get("/geraet/kanal/status", kanal.status)
     anwendung.router.add_post("/geraet/mac-start", kanal.mac_start)
     anwendung.router.add_get("/pc/mac-befehl", kanal.bruecke_abfrage)
+    anwendung.router.add_post("/geraet/licht", kanal.licht)
+    anwendung.router.add_post("/pc/licht", kanal.licht_melden)
     anwendung.router.add_get("/j/{geheimnis}/kanal", kanal.mac_abfrage)
     anwendung.router.add_post("/j/{geheimnis}/kanal", kanal.mac_sendet)
     anwendung.router.add_post("/j/{geheimnis}/kanal/quittung", kanal.mac_quittiert)

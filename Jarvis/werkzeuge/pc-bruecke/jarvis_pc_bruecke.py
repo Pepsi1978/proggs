@@ -503,6 +503,26 @@ def switchbot_sofort_faden() -> None:
             SWITCHBOT_SOFORT.clear()
 
 
+def licht_schalten(befehle: dict) -> None:
+    """LED-Streifen auf Zuruf des Handys (POST /geraet/licht) per Bluetooth schalten (jarvis_licht.py) und das Ergebnis an
+    POST /pc/licht melden. Bewusst ohne die BLUETOOTH-Sperre: Licht soll sofort gehen, nicht erst nach einem Victron-Scan."""
+    skript = Path(__file__).resolve().with_name("jarvis_licht.py")
+    try:
+        lauf = subprocess.run([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=22)
+        ergebnis = json.loads(lauf.stdout.strip().splitlines()[-1]) if lauf.returncode == 0 and lauf.stdout.strip() else \
+            {"geschaltet": [], "gesehen": [], "fehler": (lauf.stderr.strip() or f"Exit {lauf.returncode}")[-300:]}
+    except Exception as fehler:
+        ergebnis = {"geschaltet": [], "gesehen": [], "fehler": str(fehler)[:300]}
+    schreib(f"Licht: {len(ergebnis.get('geschaltet', []))} von {len(ergebnis.get('gesehen', []))} geschaltet" +
+            (f" ({ergebnis['fehler']})" if ergebnis.get("fehler") else ""))
+    try:
+        zugang = lies_zugang()
+        rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 15, ergebnis)
+    except Exception as fehler:
+        schreib(f"Licht melden: {fehler}")
+
+
 def jarvis_mac_faden() -> None:
     """Startet Jarvis Mac OS auf Zuruf des Relays. Eigener Faden: Der Start darf die Abfrage der Programmieraufträge nie aufhalten."""
     pause = 2
@@ -518,7 +538,9 @@ def jarvis_mac_faden() -> None:
                 time.sleep(60 if code == 404 else 10)
                 continue
             befehl = json.loads(roh.decode("utf-8"))
-            if befehl.get("befehl") == "switchbot_lesen":
+            if befehl.get("befehl") == "licht":
+                threading.Thread(target=licht_schalten, args=(befehl.get("befehle") or {},), daemon=True).start()
+            elif befehl.get("befehl") == "switchbot_lesen":
                 SWITCHBOT_SOFORT.set()   # eigener Faden: der Scan darf die Abfrage nie aufhalten
             elif befehl.get("befehl") == "jarvis_starten":
                 argumente = ["/usr/bin/open"] + ([] if befehl.get("vorn") else ["-g"]) + ["-b", "de.frank.jarvismac"]
