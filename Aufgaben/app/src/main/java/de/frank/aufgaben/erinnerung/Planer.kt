@@ -36,6 +36,18 @@ object Planer {
     private const val EXTRA_ID = "id"
     private const val MITTERNACHT_CODE = 1_000_000_001
 
+    const val KANAL_VOLLBILD = "wecker_vollbild_v1"
+
+    /** Stiller Kanal für die Meldung, während das Wecker-Vollbild steht (Ton spielt der Dienst). */
+    fun vollbildKanal(context: Context) {
+        val nm = context.getSystemService(NotificationManager::class.java)
+        if (nm.getNotificationChannel(KANAL_VOLLBILD) != null) return
+        nm.createNotificationChannel(NotificationChannel(KANAL_VOLLBILD, "Wecker im Vollbild", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Läuft eine Erinnerung als Wecker im Vollbild, steht hier still die Meldung dazu."
+            setSound(null, null); enableVibration(false); setShowBadge(false)
+        })
+    }
+
     fun kanalAnlegen(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(KANAL) != null) return
@@ -199,22 +211,26 @@ object Planer {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val zeile = if (wecker) "⏰ $wann · läuft, bis du ausschaltest" else wann
-        return NotificationCompat.Builder(context, KANAL)
+        // Wecker entsperrt mit Overlay-Recht: das Vollbild startet direkt, die Meldung bleibt still (keine schwebende Meldung oben).
+        val direkt = wecker && WeckerVollbild.direkt(context)
+        if (direkt) vollbildKanal(context)
+        return NotificationCompat.Builder(context, if (direkt) KANAL_VOLLBILD else KANAL)
             .setSmallIcon(R.drawable.ic_stat_aufgabe)
             .setContentTitle(a.titel)
             .setContentText(zeile)
             .setStyle(NotificationCompat.BigTextStyle().bigText(if (a.text.isNotBlank()) "$zeile\n${a.text}" else zeile))
             .setCategory(if (wecker) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(oeffnen)
+            .setPriority(if (direkt) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(if (wecker) PendingIntent.getActivity(context, (id * 4 + 1).toInt(), WeckerVollbild.absicht(context), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT) else oeffnen)
+            .apply { if (wecker && !direkt) setFullScreenIntent(PendingIntent.getActivity(context, (id * 4 + 1).toInt(), WeckerVollbild.absicht(context), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT), true) }
             .setAutoCancel(!wecker)
             .setOngoing(wecker)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .apply { if (imDienst) addAction(0, "Ausschalten", aktion(AKTION_AUS, (id * 4).toInt())) }
             .addAction(0, "Erledigt", aktion(AKTION_ERLEDIGT, (id * 4 + 2).toInt()))
             .addAction(0, "In 10 Min.", aktion(AKTION_SCHLUMMERN, (id * 4 + 3).toInt()))
-            // Wegwischen beendet ein laufendes Vorlesen ebenfalls.
-            .setDeleteIntent(aktion(AKTION_AUS, (id * 4 + 1).toInt()))
+            // Wegwischen beendet ein laufendes Vorlesen ebenfalls, einen Wecker nicht: der endet nur mit Ausschalten.
+            .apply { if (!wecker) setDeleteIntent(aktion(AKTION_AUS, (id * 4 + 1).toInt())) }
             .build()
     }
 

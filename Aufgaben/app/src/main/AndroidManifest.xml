@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Wecker-Erinnerungen als Vollbild: gesperrt per Full-Screen-Intent, entsperrt direkt (braucht „Über anderen Apps einblenden“). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Aufgaben lesen und schreiben. -->
     <permission
@@ -54,6 +57,14 @@
             android:name=".erinnerung.ErinnerungsDienst"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+        <activity
+            android:name=".erinnerung.WeckerVollbildActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="de.frank.aufgaben.wecker"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
         <receiver android:name=".erinnerung.ErinnerungsEmpfaenger" android:exported="false" />
         <receiver android:name=".erinnerung.AktionsEmpfaenger" android:exported="false" />
         <!-- Ende des Fokus-Timers, auch wenn die App im Hintergrund ist oder beendet wurde. -->

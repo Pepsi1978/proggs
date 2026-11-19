@@ -51,8 +51,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * - Benachrichtigung: Ton, dann die sechs vorbereiteten Fassungen nacheinander, je 3 s Pause, Ende.
  * - Wecker: Ton und Fassungen laufen in Schleife weiter, bis man in der Benachrichtigung „Ausschalten“
- *   tippt (oder sie öffnet, „Erledigt“ / „In 10 Min.“ wählt). Kein eigener Bildschirm. Die Benachrichtigung
- *   ist bewusst „ongoing“; wo Android 14+ sie trotzdem wegwischen lässt, stoppt der deleteIntent den Wecker.
+ *   tippt (oder sie öffnet, „Erledigt“ / „In 10 Min.“ wählt). Dazu erscheint immer das Vollbild [WeckerVollbildActivity],
+ *   auch bei entsperrtem Handy. Wegwischen der Benachrichtigung stoppt den Wecker nicht, nur Ausschalten.
  * Fehlen die Dateien (z. B. offline erstellt), spricht die Android-Stimme des Geräts.
  * Kommt während einer Erinnerung die nächste, wartet sie, bis die laufende vorbei ist.
  * Bei „Nicht stören“ / Schlafmodus bleiben normale Erinnerungen still (nur Benachrichtigung); nur
@@ -180,6 +180,8 @@ class ErinnerungsDienst : Service() {
             ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:erinnerung")
             ?.apply { acquire(grenze + 60_000L) }
         fokusAnfordern(a.wecker)
+        // Als Wecker: Vollbild mit „Ausschalten“, auch bei entsperrtem Handy.
+        if (a.wecker && a.id != Fokus.ID) { WeckerVollbild.klingelt.value = a.aufgabe; WeckerVollbild.zeigen(this) }
         if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
         val laufend = scope.launch {
             try {
@@ -360,6 +362,7 @@ class ErinnerungsDienst : Service() {
     private fun weiter(vorher: Auftrag, entfernen: Boolean) {
         stille()
         aktuell = null
+        WeckerVollbild.klingelt.value = null
         val naechste = warteschlange.removeFirstOrNull()
         if (naechste != null) {
             // startForeground mit neuer Nummer entfernt die alte Benachrichtigung; nach natürlichem Ende neu zeigen.
@@ -374,6 +377,7 @@ class ErinnerungsDienst : Service() {
     private fun beenden(vorher: Auftrag?, entfernen: Boolean) {
         stille()
         aktuell = null
+        WeckerVollbild.klingelt.value = null
         ServiceCompat.stopForeground(this, if (entfernen) ServiceCompat.STOP_FOREGROUND_REMOVE else ServiceCompat.STOP_FOREGROUND_DETACH)
         if (vorher != null && !entfernen) zeige(vorher)
         runCatching { NotificationManagerCompat.from(this).cancel(PLATZHALTER_ID) }
@@ -388,6 +392,7 @@ class ErinnerungsDienst : Service() {
 
     override fun onDestroy() {
         if (instanz === this) instanz = null
+        WeckerVollbild.klingelt.value = null
         runCatching { unregisterReceiver(ruheEmpfaenger) }
         stille()
         runCatching { geraeteStimme?.shutdown() }
