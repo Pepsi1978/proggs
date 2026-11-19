@@ -107,6 +107,27 @@ class AlarmActivity : ComponentActivity() {
             .getOrDefault(Ausrichtung.AUTOMATISCH)
     }
 
+    override fun onPause() { vorn = false; super.onPause() }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Bewusst mit Home oder Übersicht verlassen, während der Wecker klingelt: kurz danach wieder nach vorn.
+        // Anrufe und andere Wecker lösen das nicht aus; nicht im Test und nicht bei der Foto-Aufgabe (Kamera).
+        if (isFinishing) return
+        val app = applicationContext
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            val s = AlarmService.state.value
+            val alarm = s.alarm ?: return@postDelayed
+            if (s.test || alarm.photoRequired || !AlarmService.vollbildDirekt(app)) return@postDelayed
+            runCatching { app.startActivity(Intent(app, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }, 700)
+    }
+
+    companion object {
+        /** Das Weckbild ist gerade sichtbar vorn. */
+        @Volatile var vorn = false
+    }
+
     override fun onDestroy() {
         // Der eigene Wrapper meldet seinen Listener wieder ab; die Instanz des ViewModels bleibt unberührt.
         runCatching { settings?.close() }
@@ -335,6 +356,7 @@ class AlarmActivity : ComponentActivity() {
     }
     override fun onResume() {
         super.onResume()
+        vorn = true
         // Opened from the fallback notification: a visible activity may start the alarm service again.
         if (AlarmService.state.value.alarm == null && AlarmStore.get(this).ringing().isNotEmpty()) runCatching {
             androidx.core.content.ContextCompat.startForegroundService(this, Intent(this, AlarmService::class.java).setAction("RING"))
@@ -504,6 +526,22 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
+    // Der Text des Weckers, kurz und gut lesbar unter dem Namen.
+    weckText(alarm)?.let {
+        Text(it, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 5, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp))
+    }
+}
+
+/** Höchstens zwei Sätze aus dem Weckertext; null ohne Text. */
+private fun weckText(alarm: Alarm?): String? {
+    // Nur wenn der Text auch vorgelesen wird, und nicht noch einmal derselbe Wortlaut wie der Name.
+    if (alarm == null || Step.TEXT !in alarm.steps) return null
+    val roh = alarm.text.trim().ifBlank { alarm.originalText.trim() }
+    if (roh.isBlank() || roh.equals(alarm.name.trim(), ignoreCase = true)) return null
+    val k = roh.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }.take(2).joinToString(" ")
+    return if (k.length > 200) k.take(197).trimEnd() + " …" else k
 }
 
 /**

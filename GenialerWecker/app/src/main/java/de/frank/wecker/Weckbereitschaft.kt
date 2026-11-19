@@ -55,6 +55,7 @@ object Weckbereitschaft {
                 add(i(Settings.ACTION_APP_NOTIFICATION_SETTINGS, extraPackage = true))
                 add(appInfo)
             }
+            "Vollbild auch entsperrt" -> listOf(i(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri = true), appInfo)
             "Wecker bei Nicht stören" -> {
                 val nm = activity.getSystemService(NotificationManager::class.java)
                 if (!nm.isNotificationPolicyAccessGranted) listOf(i(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS), i("android.settings.ZEN_MODE_SETTINGS"), appInfo)

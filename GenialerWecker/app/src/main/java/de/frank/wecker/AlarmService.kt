@@ -148,9 +148,14 @@ class AlarmService : Service() {
         // Benachrichtigung gerade erst gepostet (mit Vollbild); dort genügt die Aktualisierung, ohne doppelten Alarm.
         showForeground(alarm, quiet, fresh = !quiet && foregroundShowsRing)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
+        vollbildRueckfall = false
         if (!quiet) {
             // Einmal je Klingeln direkt öffnen; Android verwirft den Start aus dem Hintergrund evtl. still, dann trägt das Vollbild.
             openAlarmScreen()
+            // Entsperrt mit Overlay-Recht ist die Meldung still; kam das Vollbild nicht nach vorn, wieder laut mit Full-Screen-Intent.
+            if (vollbildDirekt(this)) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (token == generation && current != null && !AlarmActivity.vorn) { vollbildRueckfall = true; showForeground(current, quiet, fresh = true) }
+            }, 2_000)
             val ring = ringId
             watchdog = scope.launch { while (isActive) { delay(5_000); ensureNotificationVisible(ring) } }
         }
@@ -284,6 +289,9 @@ class AlarmService : Service() {
      * Klingeln im weiterlaufenden Dienst (nach dem Schlummern) als neue Benachrichtigung mit Alarm und Vollbild gepostet.
      * Nicht auf eine einzige Id zurückbauen, sonst bleibt ein erneutes Klingeln ohne sichtbare Benachrichtigung.
      */
+    /** Das direkt gestartete Vollbild kam nicht nach vorn: Meldung wieder laut mit Full-Screen-Intent. */
+    private var vollbildRueckfall = false
+
     private fun showForeground(alarm: Alarm?, quietMode: Boolean, fresh: Boolean = false) {
         val id = when {
             quietMode -> TEST_NOTIFICATION
@@ -337,6 +345,13 @@ class AlarmService : Service() {
                 setSound(null, null); enableVibration(false); setShowBadge(false)
             })
             NotificationCompat.Builder(this, TEST_CHANNEL).setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true)
+        } else if (vollbildDirekt(this) && !vollbildRueckfall) {
+            // Entsperrt öffnet der Dienst das Vollbild selbst: die Meldung bleibt still in der Leiste, ohne schwebende Meldung oben.
+            manager.createNotificationChannel(NotificationChannel(FULLSCREEN_CHANNEL, "Wecker im Vollbild", NotificationManager.IMPORTANCE_LOW).apply {
+                setSound(null, null); enableVibration(false); setShowBadge(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            })
+            NotificationCompat.Builder(this, FULLSCREEN_CHANNEL).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_LOW)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setSilent(true)
         } else {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "Aktiver Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
                 setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -383,6 +398,14 @@ class AlarmService : Service() {
         /** True for an occurrence already stopped in this process. A newly claimed occurrence has another `at`. */
         @Synchronized internal fun wasStopped(entry: RingEntry) = stopped[entry.id] == entry.at
         const val CHANNEL = "alarm_ring_v1"
+        const val FULLSCREEN_CHANNEL = "alarm_fullscreen_v1"
+
+        /** Entsperrt und mit „Über anderen Apps einblenden“ darf der Dienst das Vollbild selbst öffnen. */
+        fun vollbildDirekt(context: android.content.Context): Boolean {
+            val app = context.applicationContext
+            val gesperrt = app.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked || !app.getSystemService(PowerManager::class.java).isInteractive
+            return !gesperrt && android.provider.Settings.canDrawOverlays(app)
+        }
         const val NOTIFICATION = 1001
         /** Wechsel-Id: jedes neue Klingeln postet seine Benachrichtigung frisch statt die alte nur zu aktualisieren. */
         const val NOTIFICATION_ALT = 1004

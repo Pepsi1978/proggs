@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Entsperrt startet der Weckdienst das Vollbild selbst; Android erlaubt das nur mit „Über anderen Apps einblenden“. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="de.frank.genialeideen.permission.WECKER" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />

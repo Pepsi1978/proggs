@@ -3490,6 +3490,8 @@ fun readiness(context: Context): List<Pair<String, Boolean>> {
     return listOf("Genaue Weckzeiten" to AlarmScheduler(context).allowed(),
         "Benachrichtigungen" to manager.areNotificationsEnabled(),
         "Vollbild-Wecker" to (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent()),
+        // Entsperrt erscheint der Wecker nur mit diesem Recht als Vollbild statt als kleine Meldung oben.
+        "Vollbild auch entsperrt" to android.provider.Settings.canDrawOverlays(context),
         "Wecker bei Nicht stören" to dndLaesstWeckerDurch,
         // Samsung puts optimized apps to sleep; unrestricted battery keeps restore and preparation alive.
         "Akku uneingeschränkt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
