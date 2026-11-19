@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -132,25 +133,24 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     val b = LedStreifen.letzterBericht
     Karte(modifier = griff) {
         if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
-        // Kopf: animiertes LED-Band über die ganze Breite, der Schriftzug glimmt darüber in der Lichtfarbe.
-        Box(Modifier.fillMaxWidth().height(78.dp), contentAlignment = Alignment.CenterStart) {
-            LedBand(z, LedStreifen.anAnzeige != false, LedStreifen.laeuft, Modifier.matchParentSize())
-            GluehSchrift("LED-Licht", anzeige(z), LedStreifen.anAnzeige != false, Modifier.padding(start = 14.dp))
-        }
+        // Kopf: Titel und Helligkeit, darunter die Bühne mit dem 3D-LED-Band.
+        val an = LedStreifen.anAnzeige != false
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f).padding(top = 6.dp)) {
-                Text(
-                    when {
-                        LedStreifen.laeuft -> "Schaltet die Streifen (Handy und Mac) …"
-                        b != null && System.currentTimeMillis() - b.zeit < 30 * 60_000L -> b.text
-                        z != null -> z.text()
-                        else -> "Alle Streifen · noch kein Zustand gemerkt"
-                    },
-                    color = when { LedStreifen.laeuft -> f.primaer; b?.fehler == true -> f.gefahr; else -> f.textLeise },
-                    fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 2.dp),
-                )
-            }
+            Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(
+                when {
+                    LedStreifen.laeuft -> "Schaltet …"
+                    b?.fehler == true && System.currentTimeMillis() - b.zeit < 30 * 60_000L -> "Nicht erreicht"
+                    !an -> "Aus"
+                    z?.modus == Modus.FARBE || z == null -> "An · Helligkeit ${z?.hell ?: 100} %"
+                    z.modus == Modus.SZENE -> "An · Szene"
+                    else -> "An · Mikrofon"
+                },
+                color = when { LedStreifen.laeuft -> f.primaer; b?.fehler == true -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
+            )
         }
+        b?.takeIf { it.fehler && System.currentTimeMillis() - it.zeit < 30 * 60_000L }?.let { Text(it.text, color = f.gefahr, fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
+        LedBand3D(z, an, LedStreifen.laeuft, Modifier.padding(top = 4.dp).fillMaxWidth().height(130.dp))
         if (!LedStreifen.erlaubt(c)) Text("Jarvis fehlt das Recht „Geräte in der Nähe“ (App-Infos von Jarvis, Berechtigungen).", color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
         // Hauptzeile: An, Aus und der Pfeil für alles Weitere.
@@ -442,57 +442,182 @@ private fun LichtKnopf(text: String, modifier: Modifier = Modifier, aktiv: Boole
 }
 
 /**
- * Animiertes LED-Band: eine dunkle Leiste mit LEDs samt Lichthof. Farbe: ein Lichtschimmer wandert entlang; Szene: Regenbogen läuft durch;
- * Mikrofon: Flackern wie ein Equalizer; aus: LEDs dunkel, nur angedeutet; beim Schalten läuft alles schneller.
+ * Welt des LED-Bands: Mittellinie auf dem Boden (x quer, z in die Tiefe), von hinten links in einer S-Kurve nach vorn rechts, am Ende eine Spule.
+ * Gleichmäßig nach Länge abgetastet ([M] Punkte), damit die LEDs vorn wie hinten im selben Abstand sitzen. Form abgestimmt per Vorschau am 19.11.2026.
  */
-@Composable
-private fun LedBand(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, modifier: Modifier) {
-    val zeit by rememberInfiniteTransition(label = "band").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(3200, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart), label = "lauf",
-    )
-    val grund = anzeige(z)
-    Canvas(modifier) {
-        val hoehe = size.height * 0.34f
-        val oben = (size.height - hoehe) / 2f
-        val ecke = androidx.compose.ui.geometry.CornerRadius(hoehe / 2f)
-        // Leiste mit leichtem Glanz oben.
-        drawRoundRect(Color(0xFF15161B), Offset(0f, oben), androidx.compose.ui.geometry.Size(size.width, hoehe), ecke)
-        drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent), oben, oben + hoehe * 0.6f),
-            Offset(0f, oben), androidx.compose.ui.geometry.Size(size.width, hoehe), ecke)
-        val abstand = 13.dp.toPx()
-        val anzahl = ((size.width - abstand) / abstand).toInt().coerceAtLeast(8)
-        val start = (size.width - (anzahl - 1) * abstand) / 2f
-        val mitte = oben + hoehe / 2f
-        val lauf = if (laeuft) (zeit * 3f) % 1f else zeit
+private object BandWelt {
+    const val M = 280
+    val x = FloatArray(M)
+    val z = FloatArray(M)
+    val nx = FloatArray(M)
+    val nz = FloatArray(M)
+
+    init {
         val pi2 = (Math.PI * 2).toFloat()
-        for (i in 0 until anzahl) {
-            val x = start + i * abstand
-            val anteil = i / anzahl.toFloat()
-            val (farbe, staerke) = when {
-                !an -> Color(0xFF3A3C44) to 0f
-                z?.modus == Modus.SZENE -> Color.hsv(((anteil - lauf) * 360f + 720f) % 360f, 1f, 1f) to 0.85f
-                z?.modus == Modus.RHYTHMUS -> {
-                    val w = (sin(i * 1.7f + lauf * pi2 * 4f) * 0.5f + 0.5f) * (sin(i * 0.37f - lauf * pi2 * 2f) * 0.5f + 0.5f)
-                    Color.hsv((lauf * 360f + i * 9f) % 360f, 1f, 1f) to (0.25f + 0.75f * w)
-                }
-                else -> grund to (0.55f + 0.45f * (cos((anteil - lauf) * pi2) * 0.5f + 0.5f).let { it * it })
-            }
-            if (staerke > 0f) drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.55f * staerke), Color.Transparent), Offset(x, mitte), abstand * 1.3f), abstand * 1.3f, Offset(x, mitte))
-            drawCircle(farbe.copy(alpha = if (an) 0.35f + 0.65f * staerke else 1f), hoehe * 0.26f, Offset(x, mitte))
-            if (staerke > 0f) drawCircle(Color.White.copy(alpha = 0.75f * staerke), hoehe * 0.1f, Offset(x, mitte))
+        val roh = 600
+        val k = (0.82f * roh).toInt()
+        val rx = FloatArray(roh + 1); val rz = FloatArray(roh + 1)
+        for (i in 0..k) {
+            val u = i / k.toFloat()
+            rx[i] = -3.5f + 7f * u + 0.55f * sin(pi2 * u * 1.5f)
+            rz[i] = 4.4f - 1.7f * u + 0.75f * sin(pi2 * u * 1.5f + 0.6f)
+        }
+        val a0 = atan2(rz[k] - rz[k - 1], rx[k] - rx[k - 1])
+        val r0 = 0.42f
+        val cx = rx[k] + r0 * cos(a0 - Math.PI.toFloat() / 2); val cz = rz[k] + r0 * sin(a0 - Math.PI.toFloat() / 2)
+        val start = atan2(rz[k] - cz, rx[k] - cx)
+        for (i in k + 1..roh) {
+            val u = (i - k) / (roh - k).toFloat()
+            val r = r0 * (1f - 0.45f * u)
+            rx[i] = cx + r * cos(start + pi2 * 1.15f * u); rz[i] = cz + r * sin(start + pi2 * 1.15f * u)
+        }
+        // Nach Länge gleichmäßig neu abtasten.
+        val laenge = FloatArray(roh + 1)
+        for (i in 1..roh) laenge[i] = laenge[i - 1] + hypot(rx[i] - rx[i - 1], rz[i] - rz[i - 1])
+        var j = 0
+        for (m in 0 until M) {
+            val ziel = laenge[roh] * m / (M - 1)
+            while (j < roh - 1 && laenge[j + 1] < ziel) j++
+            val f = ((ziel - laenge[j]) / (laenge[j + 1] - laenge[j]).coerceAtLeast(1e-6f)).coerceIn(0f, 1f)
+            x[m] = rx[j] + (rx[j + 1] - rx[j]) * f; z[m] = rz[j] + (rz[j + 1] - rz[j]) * f
+        }
+        for (m in 0 until M) {
+            val a = (m - 1).coerceAtLeast(0); val b = (m + 1).coerceAtMost(M - 1)
+            val dx = x[b] - x[a]; val dz = z[b] - z[a]; val l = hypot(dx, dz).coerceAtLeast(1e-4f)
+            nx[m] = -dz / l; nz[m] = dx / l
         }
     }
 }
 
-/** Schriftzug mit sanft pulsierendem Glühen in der Lichtfarbe (aus: ohne Glühen). */
+/**
+ * LED-Band als 3D-Motion-Graphic direkt auf dem Kartenhintergrund (keine eigene Bühne): Das Band liegt ausgerollt mit Spule auf dem Boden, gesehen
+ * aus 32° Höhe (echte Perspektive), automatisch in die Fläche eingepasst. Bewegung nur durch Licht und eine langsame Kamerafahrt: Lichtimpuls entlang
+ * des Bands, sanftes Atmen; bei „An“ zünden die LEDs nacheinander, bei „Aus“ erlöschen sie der Reihe nach. Je LED weißer Kern, enger Farbhof, weicher
+ * Schein und Licht auf dem Boden; im Dunkelmodus additiv wie echtes Licht. Szene: Regenbogen; Mikrofon: Equalizer-Flackern. Fortlaufende Uhr ohne
+ * Sprung; ist das Licht aus, ruht die Animation.
+ */
 @Composable
-private fun GluehSchrift(text: String, farbe: Color, an: Boolean, modifier: Modifier) {
-    val puls by rememberInfiniteTransition(label = "schrift").animateFloat(0.45f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "glimmen")
-    Box(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 3.dp)) {
-        Text(
-            text, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp,
-            style = TextStyle(shadow = androidx.compose.ui.graphics.Shadow(if (an) farbe.copy(alpha = puls) else Color.Transparent, Offset.Zero, 22f * puls)),
-        )
+private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, modifier: Modifier) {
+    val f = LocalFarben.current
+    val dunkel = (f.text.red + f.text.green + f.text.blue) / 3f > 0.5f
+    var sek by remember { mutableFloatStateOf(0f) }
+    var wechsel by remember { mutableFloatStateOf(-100f) }
+    var warAn by remember { mutableStateOf(an) }
+    androidx.compose.runtime.LaunchedEffect(an) { if (an != warAn) { wechsel = sek; warAn = an } }
+    androidx.compose.runtime.LaunchedEffect(an, laeuft) {
+        val bis = if (an || laeuft) Float.MAX_VALUE else sek + 3.5f
+        val start = androidx.compose.runtime.withFrameNanos { it }
+        val basis = sek
+        while (sek < bis) androidx.compose.runtime.withFrameNanos { n -> sek = basis + (n - start) / 1e9f }
+    }
+    val grund = anzeige(z)
+    val hellFaktor = ((z?.hell ?: 100) / 100f).coerceIn(0.2f, 1f)
+    val M = BandWelt.M
+    val pfad = remember { androidx.compose.ui.graphics.Path() }
+    val sx = remember { FloatArray(M) }; val sy = remember { FloatArray(M) }; val sd = remember { FloatArray(M) }
+    val ax = remember { FloatArray(M) }; val ay = remember { FloatArray(M) }
+    val bx = remember { FloatArray(M) }; val by = remember { FloatArray(M) }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        val pi2 = (Math.PI * 2).toFloat()
+        val t = sek * (if (laeuft) 3f else 1f)
+        val phi = Math.toRadians(32.0).toFloat(); val cp = cos(phi); val spp = sin(phi)
+        val kameraHoehe = 2.2f
+        val halb = 0.12f
+        // Rohprojektion (ohne Maßstab), Kamera schwenkt langsam um wenige Grad.
+        fun roh(X: Float, Z: Float, gier: Float, aus: FloatArray) {
+            val cg = cos(gier); val sg = sin(gier)
+            val rx = X * cg - Z * sg; val rz = X * sg + Z * cg
+            val vy = 0.02f - kameraHoehe
+            val d = (rz * cp - vy * spp).coerceAtLeast(0.2f)
+            aus[0] = rx / d; aus[1] = -(vy * cp + rz * spp) / d; aus[2] = d
+        }
+        val tmp = FloatArray(3)
+        // Einpassung aus der Ruhelage, damit nichts abgeschnitten wird und das Bild beim Schwenken nicht zappelt.
+        var minX = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE; var minY = Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
+        for (i in 0 until M) { roh(BandWelt.x[i], BandWelt.z[i], 0f, tmp); minX = min(minX, tmp[0]); maxX = kotlin.math.max(maxX, tmp[0]); minY = min(minY, tmp[1]); maxY = kotlin.math.max(maxY, tmp[1]) }
+        val rand = 0.09f
+        val sk = min(w * (1 - 2 * rand) / (maxX - minX), h * (1 - 2 * rand) / (maxY - minY))
+        val ox = w / 2 - sk * (maxX + minX) / 2; val oy = h / 2 - sk * (maxY + minY) / 2
+        val gier = 0.05f * sin(sek * 0.13f)
+        for (i in 0 until M) {
+            roh(BandWelt.x[i], BandWelt.z[i], gier, tmp); sx[i] = ox + sk * tmp[0]; sy[i] = oy + sk * tmp[1]; sd[i] = tmp[2]
+            roh(BandWelt.x[i] + BandWelt.nx[i] * halb, BandWelt.z[i] + BandWelt.nz[i] * halb, gier, tmp); ax[i] = ox + sk * tmp[0]; ay[i] = oy + sk * tmp[1]
+            roh(BandWelt.x[i] - BandWelt.nx[i] * halb, BandWelt.z[i] - BandWelt.nz[i] * halb, gier, tmp); bx[i] = ox + sk * tmp[0]; by[i] = oy + sk * tmp[1]
+        }
+        val schritt = 4
+        val anzahl = M / schritt
+        val modus = if (dunkel) androidx.compose.ui.graphics.BlendMode.Plus else androidx.compose.ui.graphics.BlendMode.SrcOver
+        fun licht(k: Int): Pair<Color, Float> {
+            val u = k / anzahl.toFloat()
+            val seit = sek - wechsel
+            val ordnung = if (an) seit - u * 1.6f else 1f - (seit - (1f - u) * 1.6f)
+            val zuend = (ordnung / 0.25f).coerceIn(0f, 1f)
+            if (zuend <= 0f) return Color(0xFF3C3E46) to 0f
+            val atmen = 0.88f + 0.12f * sin(sek * 1.4f)
+            val p = ((u - (t * 0.2f) % 1.3f + 0.2f) / 0.2f)
+            val impuls = if (p in 0f..2f) 1f - kotlin.math.abs(p - 1f) else 0f
+            val (farbe, s) = when (z?.modus) {
+                Modus.SZENE -> Color.hsv(((u * 300f - t * 60f) % 360f + 360f) % 360f, 1f, 1f) to zuend * 0.95f
+                Modus.RHYTHMUS -> {
+                    val e = (sin(k * 1.3f + t * 11f) * 0.5f + 0.5f) * (sin(k * 0.23f - t * 6f) * 0.5f + 0.5f)
+                    Color.hsv((t * 90f + k * 8f) % 360f, 1f, 1f) to zuend * (0.2f + 0.8f * e)
+                }
+                else -> grund to zuend * (atmen * 0.6f + 0.55f * impuls * impuls).coerceAtMost(1f)
+            }
+            return farbe to s * hellFaktor
+        }
+
+        // Licht auf dem Boden: weicher Schein unter den LEDs.
+        for (k in 0 until anzahl) {
+            val i = k * schritt + schritt / 2
+            val (farbe, s) = licht(k)
+            if (s <= 0.02f) continue
+            val r = sk * 0.55f / sd[i]
+            val m = Offset(sx[i], sy[i] + r * 0.08f)
+            drawOval(Brush.radialGradient(listOf(farbe.copy(alpha = (if (dunkel) 0.22f else 0.16f) * s), Color.Transparent), m, r),
+                Offset(m.x - r, m.y - r * 0.38f), androidx.compose.ui.geometry.Size(2 * r, r * 0.76f), blendMode = modus)
+        }
+
+        // Bandkörper von hinten nach vorn (die Tiefe fällt entlang des Bands, die Spule vorn zuletzt).
+        for (i in 0 until M - 1) {
+            val nah = (1f - (sd[i] - 2f) / 4f).coerceIn(0f, 1f)
+            val (farbe, s) = licht((i / schritt).coerceAtMost(anzahl - 1))
+            // Dicke: dunkle Unterkante.
+            val dicke = (sk * 0.018f / sd[i]).coerceAtLeast(1f)
+            pfad.reset()
+            pfad.moveTo(ax[i], ay[i]); pfad.lineTo(ax[i + 1], ay[i + 1]); pfad.lineTo(ax[i + 1], ay[i + 1] + dicke); pfad.lineTo(ax[i], ay[i] + dicke); pfad.close()
+            drawPath(pfad, Color(0xFF0B0C0F))
+            pfad.reset()
+            pfad.moveTo(ax[i], ay[i]); pfad.lineTo(ax[i + 1], ay[i + 1]); pfad.lineTo(bx[i + 1], by[i + 1]); pfad.lineTo(bx[i], by[i]); pfad.close()
+            val hell = 0.55f + 0.45f * nah
+            drawPath(pfad, Color(
+                (0.13f * hell + farbe.red * 0.08f * s).coerceAtMost(1f),
+                (0.14f * hell + farbe.green * 0.08f * s).coerceAtMost(1f),
+                (0.16f * hell + farbe.blue * 0.08f * s).coerceAtMost(1f),
+            ))
+            // Kupferbahnen an beiden Rändern.
+            val bahn = (sk * 0.004f / sd[i]).coerceAtLeast(0.7f)
+            drawLine(Color(0xFFC08A45).copy(alpha = 0.35f + 0.4f * nah), Offset(ax[i], ay[i]), Offset(ax[i + 1], ay[i + 1]), strokeWidth = bahn)
+            drawLine(Color(0xFFC08A45).copy(alpha = 0.25f + 0.3f * nah), Offset(bx[i], by[i]), Offset(bx[i + 1], by[i + 1]), strokeWidth = bahn)
+        }
+
+        // LEDs: SMD-Gehäuse, weicher Schein, enger Hof, weißer Kern.
+        for (k in 0 until anzahl) {
+            val i = k * schritt + schritt / 2
+            val (farbe, s) = licht(k)
+            val gr = sk * 0.085f / sd[i]
+            val m = Offset(sx[i], sy[i])
+            if (s > 0.02f) {
+                drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.6f * s), farbe.copy(alpha = 0.2f * s), Color.Transparent), m, gr * 2.8f), gr * 2.8f, m, blendMode = modus)
+                val kern = gr * (0.45f + 0.25f * s)
+                drawOval(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0.9f), farbe, farbe.copy(alpha = 0f)), m, kern),
+                    Offset(m.x - kern, m.y - kern * 0.62f), androidx.compose.ui.geometry.Size(2 * kern, kern * 1.24f))
+            } else {
+                drawOval(Color(0xFFE8E2D2), Offset(m.x - gr * 0.5f, m.y - gr * 0.28f), androidx.compose.ui.geometry.Size(gr * 1.0f, gr * 0.56f))
+                drawOval(Color(0xFFC9C1A8), Offset(m.x - gr * 0.28f, m.y - gr * 0.15f), androidx.compose.ui.geometry.Size(gr * 0.56f, gr * 0.3f))
+            }
+        }
     }
 }
 
