@@ -78,7 +78,7 @@ Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzei
 `Get-Date -Format yyyy-MM-ddTHH:mm` bzw. `date +%Y-%m-%dT%H:%M`), `beleg` (Zahlen), `ort` (Liste),
 `fehler_regex`/`aufruf_regex` (+ `werkzeug`, bei Bau/Git `Bash|PowerShell`, `min_zeilen`) für die Wirkungsprüfung,
 `fehler_am_aufruf: true`, wenn `fehler_regex` eine Hook-Meldung ist, die auch andere Fälle auslösen,
-`auch_ohne_fehlerstatus: true` für Zeitlimit-Meldungen (tragen kein `is_error`),
+`auch_ohne_fehlerstatus: true` für Zeitlimit-Meldungen (tragen kein `is_error`), `auch_lesebefehle: true`, wenn der Fehler im Suchbefehl selbst entsteht (M36),
 `pruefung`, `ruecknahme` (mit eindeutigem Textanker, nie „letzter Absatz“ oder „Zeile N“), `kosten`, `status: aktiv`,
 `plattform` (Liste, nur wo die Ursache auftritt: `windows`/`mac`/`linux`; weglassen = alle). Jeder Rechner misst nur seine eigenen Verläufe.
 **Präzision vor Vollständigkeit (Frank, 19.11.2026):** `fehler_regex` eng an den echten Fehlertext und den Aufruf koppeln

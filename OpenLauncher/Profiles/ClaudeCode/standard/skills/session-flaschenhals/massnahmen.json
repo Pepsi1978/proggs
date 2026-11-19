@@ -642,6 +642,7 @@
         "~/.zshrc (Mac, lokal): setopt nonomatch"
       ],
       "nachgebessert": "2026-11-17T10:31",
+      "auch_lesebefehle": true,
       "werkzeug": "Bash",
       "fehler_regex": "no matches found: --include=",
       "aufruf_regex": "--include=\\*",

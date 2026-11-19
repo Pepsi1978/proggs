@@ -74,6 +74,22 @@ if mac:
     # Windows-Fassung zur Probe (beruehrt am Mac keinen laufenden Launcher), open -R (zeigt nur im Finder), Lesen.
     # Jedes Teilstueck des Befehls einzeln; Text in Anfuehrungszeichen laengengleich ausgeblendet, damit Pfade in
     # Anfuehrungszeichen ("/Applications/OpenLauncher.app") aus dem Original gelesen werden.
+    # Heredoc-Daten, die cat/tee nur in eine Datei schreiben (Doku, Testskript), sind kein Handgriff (Review 19.11.2026).
+    def ohne_heredoc(c):
+        teile, rest = [], c
+        while True:
+            m = re.search(r"(?<!<)<<(?!<)(-?)\s*['\"]?([A-Za-z_]\w*)['\"]?[^\n]*\n", rest)
+            if not m:
+                return ''.join(teile) + rest
+            ende = re.search(r'(?m)^' + (r'\t*' if m.group(1) else '') + re.escape(m.group(2)) + r'[ \t]*$', rest[m.end():])
+            zeile = rest[rest.rfind('\n', 0, m.start()) + 1:m.end()]
+            teile.append(rest[:m.end()])
+            if not ende:
+                return ''.join(teile) + rest[m.end():]
+            daten = re.search(r'\b(cat|tee)\b', zeile) and not re.search(r'(?:^|[\s|;&(])(?:bash|sh|zsh)(?:\s|$)', zeile)
+            teile.append(ende.group(0) if daten else rest[m.end():m.end() + ende.end()])
+            rest = rest[m.end() + ende.end():]
+    command = ohne_heredoc(command)
     maskiert = re.sub(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'', lambda m: m.group(0)[0] + '_' * (len(m.group(0)) - 2) + m.group(0)[-1], command)
     app = r'OpenLauncher(?:Mac)?'
     mac_verbote = [
@@ -81,14 +97,14 @@ if mac:
         (r'pkill\b.*\b' + app + r'(?:\.app\b|(?=\s|$))', 'Beenden'),
         (r'osascript\b(?=.*\bquit\b)(?=.*(?:\bde\.frank\.OpenLauncher\b|\bapp(?:lication)?\s+OpenLauncher\b))', 'Beenden'),
         (r'open(?!.*\s-\w*R)(?:\s+-\S+)*\s+(?:\S*/)?' + app + r'\.app/?(?=\s|$)', 'Starten'),
-        (r'open\b.*\s-a\s+' + app + r'(?:\.app)?(?=\s|$)|open\b.*\s-b\s+de\.frank\.OpenLauncher(?=\s|$)', 'Starten'),
+        (r'open\b.*\s-\w*a\s+' + app + r'(?:\.app)?(?=\s|$)|open\b.*\s-\w*b\s+de\.frank\.OpenLauncher(?=\s|$)', 'Starten'),
         (r'\S*OpenLauncher\.app/Contents/MacOS/OpenLauncher(?=\s|$)', 'Starten'),
     ]
     for t in re.finditer(r'[^;&|\n()`]+', maskiert):
         stueck = command[t.start():t.end()]
         stueck = re.sub(r'OpenLauncher[\\/]+Profiles\S*|OpenLauncherServer\S*', '', stueck)
-        stueck = re.sub(r'["\']', '', stueck).strip()
-        stueck = re.sub(r'^(?:\{\s*|(?:then|do|else|sudo|nohup|exec|time|command)\s+|[A-Za-z_]\w*=\S*\s+)*', '', stueck)
+        stueck = re.sub(r'\\?["\']', '', stueck).strip()
+        stueck = re.sub(r'^(?:\{\s*|!\s*|(?:if|while|until|then|do|else|sudo|nohup|exec|time|command|caffeinate|xargs)\s+|(?:env|timeout)\s+(?:-\S+\s+)*\S+\s+|-\S+\s+|[A-Za-z_]\w*=\S*\s+)*', '', stueck)
         for muster, handgriff in mac_verbote:
             if handgriff not in treffer and re.match(muster, stueck, re.I):
                 treffer.append(handgriff)

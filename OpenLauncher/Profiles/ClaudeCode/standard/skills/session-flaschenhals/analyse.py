@@ -267,7 +267,8 @@ def neuer_aufruf(b, t, quelle):
 
 
 def ist_reminder(txt):
-    return txt.startswith("<") and "system-reminder" in txt[:40]
+    # Auch Meldungen fertiger Hintergrundläufe (<task-notification>) sind kein Prompt von Frank.
+    return txt.startswith("<") and ("system-reminder" in txt[:40] or txt.startswith("<task-notification>"))
 
 
 def analysiere(pfad):
@@ -445,8 +446,9 @@ def analysiere(pfad):
         wz = set(wz) if isinstance(wz, list) else set(wz.split("|")) if wz else None  # "Bash|PowerShell" = beide
 
         def im_werkzeug(a):
-            # werkzeug-Filter gilt immer; Lese-/Suchaufrufe zaehlen nie (Treffer im Quelltext)
-            return not nur_lesen(a) and (not wz or a["name"] in wz)
+            # werkzeug-Filter gilt immer; Lese-/Suchaufrufe zaehlen nie (Treffer im Quelltext), ausser die Massnahme
+            # betrifft den Suchbefehl selbst (auch_lesebefehle, z. B. M36: grep --include=*.kt in zsh)
+            return (mn.get("auch_lesebefehle") or not nur_lesen(a)) and (not wz or a["name"] in wz)
 
         def passt(a):
             if not ar or not im_werkzeug(a):

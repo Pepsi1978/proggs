@@ -147,7 +147,7 @@ def heredoc_koerper(cmd):
 
 
 AUSGEFUEHRT = re.compile(r'(?:\s-c|\s-Command|\beval|\bssh\s+[^\s;&|]+(?:\s+-\S+)*)\s*$', re.I)
-BEFEHLSSTELLE = re.compile(r'(?:^|[;&|\n({])\s*(?:&\s*|(?:bash|sh)\s+)?$')
+BEFEHLSSTELLE = re.compile(r'(?:^|[;&|\n({])\s*(?:&\s*|(?:bash|sh)\s+)?(?:(?:nohup|env|time|sudo|exec)\s+|[A-Za-z_]\w*=\S*\s+)*$')
 
 
 def maske(cmd, powershell=False):
@@ -160,7 +160,8 @@ def maske(cmd, powershell=False):
         s, davor = m.group(0), cmd[:versatz + m.start()]
         if AUSGEFUEHRT.search(davor):
             return s
-        if re.search(r'gradlew(?:\.bat)?$', s[1:-1], re.I) and BEFEHLSSTELLE.search(davor):
+        # Programmpfad in Anführungszeichen an Befehlsstelle: "./gradlew" …, & "C:\…\adb.exe" -s … install (PowerShell)
+        if re.search(r'(?:gradlew(?:\.bat)?|adb(?:\.exe)?)$', s[1:-1], re.I) and BEFEHLSSTELLE.search(davor):
             return s
         return s[0] + re.sub(r'[^\n]', '_', s[1:-1]) + s[-1]
 
@@ -191,8 +192,9 @@ def heredoc_filter(cmd, weg):
         teile.append(rest[:m.end()])
         if not ende:
             return ''.join(teile) + rest[m.end():]
-        if not weg(zeile):
-            teile.append(rest[m.end():m.end() + ende.end()])
+        # Der Endmarker bleibt immer stehen: Sonst hielte maske() (heredoc_koerper) den ganzen Rest des Befehls für
+        # Heredoc-Inhalt und blendete Text in Anführungszeichen dahinter nicht mehr aus (Review 19.11.2026).
+        teile.append(ende.group(0) if weg(zeile) else rest[m.end():m.end() + ende.end()])
         rest = rest[m.end() + ende.end():]
 
 

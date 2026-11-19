@@ -241,15 +241,16 @@ def cpu_proben(alle, prozesse):
     return d
 
 
-def cpu_merken(erste, letzte, probe):
+def cpu_merken(erste, letzte, probe, daemons=()):
     """Zuwachs je Prozess statt Summe der gerade lebenden: Endet ein Schritt und startet der nächste, fiele die Summe
     (gemessen am Mac 19.11.2026: adb push nacheinander, „-0.0 s CPU“), und ein fleißiger Lauf aus kurzen Schritten ohne
     Ausgabe hieße „HÄNGER?“. Ein Prozess, der erst nach der ersten Probe auftaucht, zählt ab 0."""
     if erste is None:
         erste = dict(probe)
     else:
-        for pid in probe:
-            erste.setdefault(pid, 0.0)
+        for pid, cpu in probe.items():
+            # Ein Gradle-/Kotlin-Daemon läuft oft seit Stunden: erst ab seinem ersten Auftauchen zählen (Review 19.11.2026).
+            erste.setdefault(pid, cpu if pid in daemons else 0.0)
     letzte.update(probe)
     return erste, sum(letzte[p] - erste.get(p, 0.0) for p in letzte)
 
@@ -305,7 +306,7 @@ def main():
             alle = ps()
             if alle and pids:
                 prozesse = baum(alle, pids)
-                erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse))
+                erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse), {z[0] for z in alle if DAEMON.search(z[4])})
         else:
             # FERTIG kommt unter Windows nur aus der Markierung „[exited with code N]“ (beide Werkzeuge schreiben sie).
             alle = win_ps()
@@ -316,7 +317,7 @@ def main():
                 lebend = {z[0] for z in alle}
                 if wurzeln and any(w in lebend for w in wurzeln):
                     prozesse = baum(alle, wurzeln, kanten)
-                    erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse))
+                    erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse), {z[0] for z in alle if DAEMON.search(z[4])})
                     proben += 1
         rest = FENSTER - (time.time() - start)
         if rest <= 1:
