@@ -70,6 +70,12 @@ Quellen: Rohberichte r1, r2, r3, r7; https://www.igorslab.de/creality-k2-pro-com
 - Fernzugriff von unterwegs: über den eigenen WireGuard-Tunnel ins Heimnetz statt Prusa Connect (Cloud optional).
 - Gegenbeispiel Bambu: Cloud-/Autorisierungszwang, lokale Steuerung nur im LAN-/Developer-Modus.
 
+## 6c. Prusa CORE One+ Optionen (Shop 19.11.2026)
+- Preise: montiert 1.349 €, Bausatz 1.049 €, INDX 8-Tool montiert 2.209 € (Versand nach 21.12.2026), als Bausatz 1.909 €.
+- INDX nachrüstbar: offizielles Conversion Kit Gen 2 4/8 Tools 669/899 € (Gen 1: 719/949 €, L: 751,90/999 €), nur ~39 € teurer als ab Werk, Selbstmontage 5–6 h, Versand nach 02/2027. Kein 4→8-Upgrade erhältlich; HT-Hotend (400 °C) nicht INDX-kompatibel (INDX max. 300 °C). Quelle: Rohbericht r8.
+- Lieferumfang CORE One+: 1 Blech Smooth PEI (CORE One L: Satin), montiert + 1 kg PLA. Blech je Material laut Prusa: TPU = Textured ohne Trennschicht; PETG = Textured/Satin (Smooth nur mit Klebestift); PLA = Satin/Smooth. Einzelbleche: Smooth 29,74 €, Textured 33,99 €, Satin 42,42 €. Quelle: Rohbericht r9.
+- Footer verlinkt „Prusa MCP“ (KI-Schnittstelle) – für Jarvis-/CLI-Anbindung prüfen.
+
 ## 7. Empfehlung (für Frank, 19.11.2026)
 1. Bambu Lab H2S (+ AMS 2 Pro/HT) – beste Gesamtpaket aus 350 °C, 65 °C Kammer, HEPA + Kohle, Lidar, großer Bauraum, TPU 85A direkt. Kauf im EU-Store.
 2. QIDI Q2 – günstigster Drucker mit allen harten Kriterien, bei Amazon.de; Schwäche weiches TPU < 95A.
