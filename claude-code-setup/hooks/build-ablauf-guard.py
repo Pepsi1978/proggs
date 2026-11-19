@@ -10,11 +10,6 @@
 #    also trifft das Muster die ausfuehrende Shell mit (gemessen 08.11.2026: Exit 144, Sitzung 3429c693).
 # 4) Warte-Schleife, die nie endet: until/while mit pgrep -f "<muster>", das im eigenen Befehl steht. pgrep findet die
 #    eigene Shell, der Bau gilt ewig als laufend (gemessen 15.11.2026: 20 Minuten Warten auf einen fertigen Jarvis-Bau).
-# 5) Komfort-Aliase aus ~/.zshrc im Shell-Schnappschuss (ls->eza, cat->bat): "ls -t <datei>" wurde zu "eza -t <datei>",
-#    eza wartete auf die offene Standardeingabe (15.11.2026, 10 Minuten bis zum Timeout). Ursache behoben in ~/.zshrc (Aliase nur
-#    im echten Terminal); für Mac-Sitzungen mit altem Schnappschuss bekommen Bash-Befehle mit ls/cat/tree bis 22.11.2026 im
-#    Bypass-Modus "unalias …; eval '<befehl>'" (ll bleibt). Danach Block 5) löschen (Rücknahme M35). bugs/werkzeuge/agenten-shell-aliase.md
-#
 # 6) Gestaffelte Zeitlimits (Franks Regel vom 15.11.2026): höchstens 60 s im Vordergrund. Für Bash setzt das Claude Code selbst
 #    (BASH_DEFAULT_TIMEOUT_MS/BASH_MAX_TIMEOUT_MS = 60000 in allen Profil-settings.json); dieser Hook senkt es nur für das
 #    PowerShell-Werkzeug (Bypass-Modus) und für die Befehle, die er ohnehin umschreibt (Vorwärmen). Läuft ein Befehl länger, schiebt
@@ -90,8 +85,6 @@ HINWEIS_KILL = (
 
 
 SCHLEIFE = re.compile(r'\b(until|while|for)\b')
-ALIAS_BEFEHL = re.compile(r'(?:^|[;&|(\n`{]|\$\(|\b(?:do|then|else|xargs|time)\s)\s*(ls|cat|tree)(?=[\s|;&)]|$)')
-ALIAS_BIS = (2026, 11, 22)
 HINWEIS_WARTEN = (
     "STOPP - diese Warte-Schleife arbeitet falsch (endet nie bzw. sofort).\n\n"
     "pgrep -f \"{muster}\" findet die eigene Shell (das Muster steht woertlich im Befehl), der Prozess gilt also immer als laufend.\n\n"
@@ -235,18 +228,6 @@ def warte_schleife(cmd):
         if SCHLEIFE.search(davor[letzte[-1] if letzte else 0:]):
             return muster
     return None
-
-
-def ohne_aliase(cmd):
-    """ls/cat/tree/ll als Befehl -> Aliase dieser Shell vorher aufheben (wirkt auch in Sitzungen mit altem Schnappschuss)."""
-    import datetime
-    if sys.platform != 'darwin' or datetime.date.today() > datetime.date(*ALIAS_BIS) or cmd.lstrip().startswith('unalias ls cat tree') \
-            or not ALIAS_BEFEHL.search(nur_shell(cmd)):
-        return cmd
-    # Aliase werden beim Einlesen ersetzt: Ein unalias im selben Befehl wirkte nicht mehr. Deshalb der eigentliche Befehl erst
-    # über ein inneres eval, das nach dem unalias eingelesen wird.
-    import shlex
-    return 'unalias ls cat tree 2>/dev/null; eval ' + shlex.quote(cmd)
 
 
 def verweigern(grund):
@@ -417,9 +398,15 @@ def in_ssh_argument(davor):
     return True
 
 
-def adb_ziel_fehlt(cmd):
+def adb_ziel_fehlt(cmd, powershell=False):
     geraete = None
+    # Wie bei Bau und Kill: Heredoc-Daten (cat > skript.sh <<EOF) und Text in Anführungszeichen (Commit-Nachricht, echo) sind
+    # keine Installation (Fehlalarm am Mac, 19.11.2026: Testdatei per Heredoc geblockt). ssh 'adb …' bleibt sichtbar (s. u.).
+    cmd = ohne_heredoc(cmd)
+    maskiert = maske(cmd, powershell)
     for m in ADB_INSTALL.finditer(cmd):
+        if in_text(maskiert, m.start()):
+            continue
         if re.search(r'[$%`{]', m.group(1)):
             continue  # Adresse aus Variable: nicht prüfbar
         # adb devices in demselben Befehl davor: die Ausgabe sieht das Modell erst danach, das schützt also nicht.
@@ -525,7 +512,7 @@ def main():
     except Exception:
         pass
     try:
-        a = adb_ziel_fehlt(cmd)
+        a = adb_ziel_fehlt(cmd, ps)
         if a:
             verweigern(HINWEIS_ADB.format(ziel=a[0], geraete=a[1]))
             return
@@ -560,17 +547,12 @@ def main():
     except Exception:
         pass
     try:
-        # "allow" gibt den ganzen Befehl frei: nur dort, wo ohnehin alles frei ist (Bypass); sonst schützt ~/.zshrc (nur echtes Terminal).
-        neu = dict(d.get('tool_input') or {})
-        grund = []
-        if d.get('tool_name') == 'Bash' and bypass:
-            neu_cmd = ohne_aliase(cmd)
-            if neu_cmd != cmd:
-                neu['command'] = neu_cmd
-                grund.append("Komfort-Aliase (eza, bat) aufgehoben")
         # Bash: Zeitlimit kommt aus BASH_MAX_TIMEOUT_MS (settings.json), kein pauschales "allow" je Befehl. PowerShell: hier deckeln.
-        if grund or (ps and mit_zeitlimit(d, dict(neu))):
-            freigeben(d, neu, " · ".join(grund) or "Gestaffeltes Zeitlimit")
+        # (Die befristete Alias-Umschreibung für Mac, M35, ist seit 19.11.2026 entfernt: ~/.zshrc setzt die Aliase nur im echten
+        # Terminal, kein Mac-Schnappschuss enthält sie noch.)
+        neu = dict(d.get('tool_input') or {})
+        if ps and mit_zeitlimit(d, dict(neu)):
+            freigeben(d, neu, "Gestaffeltes Zeitlimit")
         elif ps and not bypass and not neu.get('run_in_background') and isinstance(neu.get('timeout'), (int, float)) \
                 and neu['timeout'] > ZEITLIMIT_MS and not re.match(r'\s*(sleep|Start-Sleep)\b', cmd, re.I):
             # Außerhalb des Bypass wirkt updatedInput nur mit "allow" (gäbe den Befehl ungeprüft frei) oder "ask" (Rückfrage auch

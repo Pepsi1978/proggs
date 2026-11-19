@@ -12,3 +12,5 @@
 - **Signal:** `grep -rn X --include=*.kt .` bricht mit `(eval):1: no matches found: --include=*.kt` ab, ohne zu suchen.
 - **Warum:** zsh (`NOMATCH`) wertet `*` auch in `--include=*.kt` als Dateimuster aus und bricht ab, wenn nichts passt.
 - **Fix:** Muster immer quoten: `--include='*.kt'`, `find . -name '*.kt'`.
+- **Stand 19.11.2026:** `~/.zshrc` setzt `setopt nonomatch`, der Shell-Schnappschuss übernimmt es (geprüft): Das Muster bleibt
+  dann wörtlich stehen, grep sucht normal. Quoten bleibt richtig (`*.kt` passt sonst auf Dateien im aktuellen Ordner).

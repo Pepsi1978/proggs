@@ -233,11 +233,25 @@ def baum(alle, wurzeln, kanten=()):
     return [z for z in alle if z[0] in gesehen and 'minute.py' not in z[4]]
 
 
-def cpu_zeit(alle, prozesse):
-    s = sum(z[2] for z in prozesse)
+def cpu_proben(alle, prozesse):
+    """{pid: kumulierte CPU-Zeit} der Prozesse des Laufs, bei Gradle samt Daemons."""
+    d = {z[0]: z[2] for z in prozesse}
     if any('gradle' in z[4].lower() for z in prozesse):
-        s += sum(z[2] for z in alle if DAEMON.search(z[4]))
-    return s
+        d.update({z[0]: z[2] for z in alle if DAEMON.search(z[4])})
+    return d
+
+
+def cpu_merken(erste, letzte, probe):
+    """Zuwachs je Prozess statt Summe der gerade lebenden: Endet ein Schritt und startet der nächste, fiele die Summe
+    (gemessen am Mac 19.11.2026: adb push nacheinander, „-0.0 s CPU“), und ein fleißiger Lauf aus kurzen Schritten ohne
+    Ausgabe hieße „HÄNGER?“. Ein Prozess, der erst nach der ersten Probe auftaucht, zählt ab 0."""
+    if erste is None:
+        erste = dict(probe)
+    else:
+        for pid in probe:
+            erste.setdefault(pid, 0.0)
+    letzte.update(probe)
+    return erste, sum(letzte[p] - erste.get(p, 0.0) for p in letzte)
 
 
 def kurz(cmd, n=70):
@@ -247,6 +261,15 @@ def kurz(cmd, n=70):
 
 # adb-Übertragung (push/install) ist netzgebunden und braucht kaum CPU: kein Hänger (Jarvis-Installation, 17.11.2026).
 UEBERTRAGUNG = re.compile(r'\badb\b.*\b(push|install|install-multiple|sync)\b')
+# Unter den Installationsskripten (eigene Fristen) ist jeder adb-Schritt geräte- bzw. netzgebunden, auch adb shell
+# (sha256sum, Delta am Handy, pm install-write): gemessen am Mac 18.11.2026, Sitzung e9a405d7, „HÄNGER?“ mitten in jarvis-install.
+ADB_SKRIPT = re.compile(r'jarvis-install\.(sh|ps1)|auf-beide\.sh|delta-push|apk-update', re.I)
+ADB = re.compile(r'(^|[\\/\s"])adb(\.exe)?"?\s', re.I)
+
+
+def uebertraegt(befehle):
+    return any(UEBERTRAGUNG.search(b) for b in befehle) or (
+        any(ADB.search(b) for b in befehle) and any(ADB_SKRIPT.search(b) for b in befehle))
 
 
 def lies_ab(datei, ab):
@@ -266,7 +289,7 @@ def main():
     start = time.time()
     groesse0 = os.path.getsize(datei)
     posix = os.name != 'nt'
-    cpu0 = cpu1 = None
+    erste, letzte, zuwachs = None, {}, None
     proben = 0
     wurzeln, kanten = [], []
     fertig, prozesse = False, []
@@ -282,9 +305,7 @@ def main():
             alle = ps()
             if alle and pids:
                 prozesse = baum(alle, pids)
-                c = cpu_zeit(alle, prozesse)
-                cpu0 = c if cpu0 is None else cpu0
-                cpu1 = c
+                erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse))
         else:
             # FERTIG kommt unter Windows nur aus der Markierung „[exited with code N]“ (beide Werkzeuge schreiben sie).
             alle = win_ps()
@@ -295,9 +316,7 @@ def main():
                 lebend = {z[0] for z in alle}
                 if wurzeln and any(w in lebend for w in wurzeln):
                     prozesse = baum(alle, wurzeln, kanten)
-                    c = cpu_zeit(alle, prozesse)
-                    cpu0 = c if cpu0 is None else cpu0
-                    cpu1 = c
+                    erste, zuwachs = cpu_merken(erste, letzte, cpu_proben(alle, prozesse))
                     proben += 1
         rest = FENSTER - (time.time() - start)
         if rest <= 1:
@@ -310,21 +329,27 @@ def main():
     letzte = zeilen[-1] if zeilen else ''
     ende = ENDE.search(neu) or ENDE.search(lies_ab(datei, max(0, os.path.getsize(datei) - 200)))
     if posix:
-        arbeit = (cpu1 - cpu0) if cpu0 is not None else None
-        wartend = [(z[4], z[3]) for z in prozesse if WARTEN.search(z[4])]
-        befehle = [z[4] for z in prozesse]
+        arbeit = zuwachs
+        # Die zsh-Hülle (zsh -c "source …snapshot… && eval '<ganzer Befehl>'") trägt den ganzen Befehlstext: Zählte sie
+        # mit, wäre jeder Befehl mit „osascript“ oder „adb … install“ irgendwo darin WARTET bzw. ÜBERTRÄGT, auch während
+        # ein Gradle-Bau davor hängt (gemessen am Mac 19.11.2026). Ihre CPU-Zeit zählt weiter.
+        echte = [z for z in prozesse if not HUELLE.search(z[4])]
+        wartend = [(z[4], z[3]) for z in echte if WARTEN.search(z[4])]
+        befehle = [z[4] for z in echte]
         nur_huelle = False
     else:
         # Erst zwei Proben ergeben einen Zuwachs; eine einzige hieße 0 s CPU und damit ein falsches „HÄNGER?“.
-        arbeit = (cpu1 - cpu0) if proben >= 2 else None
+        arbeit = zuwachs if proben >= 2 else None
         echte = [z for z in prozesse if not HUELLE.search(z[4]) and z[5] != 'conhost.exe']
         befehle = [z[4] for z in echte]
         wartend = [(z[4], z[3]) for z in echte if WARTEN_WIN.search(z[4])]
         wartend += [('Dialog „%s“' % z[7], z[3]) for z in prozesse if DIALOG_TITEL.search(z[7])]
-        schluss = [z for z in lies_ab(datei, max(0, os.path.getsize(datei) - 4000)).splitlines() if z.strip()]
-        if schluss and WARTE_AUSGABE.search(schluss[-1].strip()):
-            wartend.append((schluss[-1].strip(), '%d s' % dauer if not zeilen else 'gerade'))
         nur_huelle = bool(prozesse) and not echte
+    # jarvis-install wartet auf die Overlay-Antwort mit kurzen adb-Abfragen und sleep 0.2: Welcher Prozess gerade getroffen
+    # wird, ist Zufall; sicher erkennbar ist das Warten nur an seiner letzten Ausgabezeile (Windows und Mac gleich).
+    schluss = [z for z in lies_ab(datei, max(0, os.path.getsize(datei) - 4000)).splitlines() if z.strip()]
+    if schluss and WARTE_AUSGABE.search(schluss[-1].strip()):
+        wartend.append((schluss[-1].strip(), '%d s' % dauer if not zeilen else 'gerade'))
     if fertig:
         stand = 'FERTIG – der Lauf ist beendet%s, Ergebnis jetzt auswerten' % (' (Exit %s)' % ende.group(1) if ende else '')
     elif fehler:
@@ -333,7 +358,7 @@ def main():
         stand = 'WARTET – absichtliche Pause (%s, seit %s), kein Fehler, nicht beenden' % (kurz(wartend[0][0], 40), wartend[0][1])
     elif arbeit is None and not zeilen:
         stand = 'STILL – keine neue Ausgabe seit %d s, Prozessdaten fehlen hier: Prozesse von Hand prüfen' % dauer
-    elif arbeit is not None and arbeit < 0.2 and not zeilen and any(UEBERTRAGUNG.search(b) for b in befehle):
+    elif arbeit is not None and arbeit < 0.2 and not zeilen and uebertraegt(befehle):
         stand = 'ÜBERTRÄGT – adb lädt über WLAN/Tunnel (kaum CPU, kein Hänger), nicht beenden, nächste Prüfung in Minute %s' % (int(minute) + 1 if minute.isdigit() else '?')
     elif arbeit is not None and arbeit < 0.2 and not zeilen and nur_huelle:
         # Nur die Shell selbst läuft (PowerShell-Skript im Prozess, z. B. Start-Sleep oder ein Warten auf Eingabe): von außen

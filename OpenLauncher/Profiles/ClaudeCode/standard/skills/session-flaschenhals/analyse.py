@@ -285,6 +285,7 @@ def analysiere(pfad):
     mensch_s = modell_s = 0.0
     lange_modell = []
     nutzer_prompts = 0
+    prompt_zeiten = []
     unterbrechungen = 0
     letzte_zeit = None
     letzte_art = None  # 'mensch' wenn das letzte Ereignis auf Frank wartete
@@ -306,6 +307,8 @@ def analysiere(pfad):
                 if "[Request interrupted" in txt:
                     unterbrechungen += 1
                 nutzer_prompts += 1
+                if t is not None and not d.get("isMeta"):  # isMeta: eingespeister Skill-Text, kein Prompt von Frank
+                    prompt_zeiten.append(t)
                 if not erste_prompt:
                     erste_prompt = re.sub(r"\s+", " ", txt)[:160]
                 letzte_zeit, letzte_art = t, "prompt"
@@ -419,10 +422,15 @@ def analysiere(pfad):
     zeiten = [ts(d["timestamp"]) for d in haupt if ts(d["timestamp"])]
     gesamt = (max(zeiten) - min(zeiten)) if zeiten else 0
 
-    # Eigenaufwand: vom ersten Aufruf dieses Skills bis zum Sitzungsende
+    # Eigenaufwand: vom ersten Aufruf dieses Skills bis zur letzten Zeile vor dem nächsten echten Prompt (sonst Sitzungsende).
+    # Ohne die Kappung zählten spätere Nachträge und Franks Pausen mit (Mac 19.11.2026: Mittel 40 min, max 172 min).
     eigen = next((a["start"] for i in reihenfolge if (a := aufrufe[i])["name"] == "Skill"
                   and str(a["eingabe"].get("skill", "")).endswith(SKILL_NAME)), None)
-    eigen_s = (max(zeiten) - eigen) if eigen and zeiten else 0
+    eigen_s = 0
+    if eigen and zeiten:
+        naechster = min((p for p in prompt_zeiten if p > eigen), default=None)
+        ende = max((z for z in zeiten if naechster is None or z < naechster), default=eigen)
+        eigen_s = max(0.0, ende - eigen)
 
     # Treffer je Massnahme (fuer die Wirkungspruefung vorher/nachher). Grundsatz (Frank, 19.11.2026):
     # Praezision vor Vollstaendigkeit, im Zweifel nicht zaehlen; Fehlalarme loesen falsche Ruecknahmen aus.

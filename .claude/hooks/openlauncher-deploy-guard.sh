@@ -15,8 +15,8 @@
 #
 # Seit dem Review (19.11.2026): Die Pruefung laeuft in python3 (wie die .ps1: Schreibweise egal, Zustandsordner,
 # Profile und OpenLauncherServer vorher entfernt, Text in Anfuehrungszeichen kein Handgriff, update-launcher nur als
-# echter Skriptaufruf). Unter Darwin zusaetzlich die Mac-Handgriffe (swift build/xcodebuild, killall/pkill, open …app),
-# Hinweis plattformabhaengig (Mac: OpenLauncherMac/update-launcher.sh, Regel 13).
+# echter Skriptaufruf). Unter Darwin statt der Windows-Handgriffe die Mac-Handgriffe an OpenLauncher.app (killall/pkill,
+# osascript quit, open …app / -a / -b, Binaerdatei direkt), Hinweis plattformabhaengig (Mac: OpenLauncherMac/update-launcher.sh, Regel 13).
 
 set +e
 
@@ -66,22 +66,36 @@ verbote = [
     (r'Stop-Process|taskkill|CloseMainWindow|\.Kill\(\)', 'Beenden'),
     (r'Start-Process|Invoke-Item', 'Starten'),
 ]
-if mac:
-    # Am Ziel verankert: nur Befehle, die den Mac-Launcher selbst bauen, beenden oder starten (kein nacktes "open").
-    ml = r'["\']?[^\s;&|"\']*OpenLauncherMac'
-    verbote += [
-        (r'(?:\bswift\s+build\b|\bxcodebuild\b)', 'Bauen'),
-        (r'\b(?:killall|pkill)(?:\s+-\S+)*\s+' + ml, 'Beenden'),
-        (r'\bopen\s+(?:-\S+\s+)*' + ml + r'[^\s;&|"\']*\.app\b|\bopen\s+(?:-\S+\s+)*-a\s+["\']?OpenLauncherMac\b', 'Starten'),
-    ]
 treffer = []
-for muster, handgriff in verbote:
-    if handgriff not in treffer and re.search(muster, ohne, re.I):
-        treffer.append(handgriff)
-# swift build/xcodebuild gelten nur, wenn der Befehl den Mac-Launcher betrifft (Pfad OpenLauncherMac im Befehl).
-if mac and 'Bauen' in treffer and not re.search(r'dotnet\s+(build|publish|msbuild)', ohne, re.I) \
-        and not re.search(r'OpenLauncherMac', command, re.I):
-    treffer.remove('Bauen')
+if mac:
+    # Der Mac-Launcher ist die App "OpenLauncher.app" (Prozess OpenLauncher, Bundle de.frank.OpenLauncher, Quellen in
+    # OpenLauncherMac, gebaut per build.sh mit swiftc). Geprueft am 19.11.2026 an den echten Mac-Verlaeufen.
+    # Frei bleiben: build.sh allein (Kompilier-Check, Memory openlauncher-immer-ueber-updater), dotnet build der
+    # Windows-Fassung zur Probe (beruehrt am Mac keinen laufenden Launcher), open -R (zeigt nur im Finder), Lesen.
+    # Jedes Teilstueck des Befehls einzeln; Text in Anfuehrungszeichen laengengleich ausgeblendet, damit Pfade in
+    # Anfuehrungszeichen ("/Applications/OpenLauncher.app") aus dem Original gelesen werden.
+    maskiert = re.sub(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'', lambda m: m.group(0)[0] + '_' * (len(m.group(0)) - 2) + m.group(0)[-1], command)
+    app = r'OpenLauncher(?:Mac)?'
+    mac_verbote = [
+        (r'killall(?:\s+-\S+)*(?:\s+\S+)*\s+' + app + r'(?=\s|$)', 'Beenden'),
+        (r'pkill\b.*\b' + app + r'(?:\.app\b|(?=\s|$))', 'Beenden'),
+        (r'osascript\b(?=.*\bquit\b)(?=.*(?:\bde\.frank\.OpenLauncher\b|\bapp(?:lication)?\s+OpenLauncher\b))', 'Beenden'),
+        (r'open(?!.*\s-\w*R)(?:\s+-\S+)*\s+(?:\S*/)?' + app + r'\.app/?(?=\s|$)', 'Starten'),
+        (r'open\b.*\s-a\s+' + app + r'(?:\.app)?(?=\s|$)|open\b.*\s-b\s+de\.frank\.OpenLauncher(?=\s|$)', 'Starten'),
+        (r'\S*OpenLauncher\.app/Contents/MacOS/OpenLauncher(?=\s|$)', 'Starten'),
+    ]
+    for t in re.finditer(r'[^;&|\n()`]+', maskiert):
+        stueck = command[t.start():t.end()]
+        stueck = re.sub(r'OpenLauncher[\\/]+Profiles\S*|OpenLauncherServer\S*', '', stueck)
+        stueck = re.sub(r'["\']', '', stueck).strip()
+        stueck = re.sub(r'^(?:\{\s*|(?:then|do|else|sudo|nohup|exec|time|command)\s+|[A-Za-z_]\w*=\S*\s+)*', '', stueck)
+        for muster, handgriff in mac_verbote:
+            if handgriff not in treffer and re.match(muster, stueck, re.I):
+                treffer.append(handgriff)
+else:
+    for muster, handgriff in verbote:
+        if handgriff not in treffer and re.search(muster, ohne, re.I):
+            treffer.append(handgriff)
 if not treffer:
     sys.exit(0)
 

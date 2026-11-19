@@ -140,7 +140,7 @@
       "titel": "Bau-Hook: adb-Installation nur auf eine Adresse, die adb devices gerade meldet (adb connect/adb-wlan im selben Befehl davor ausgenommen)",
       "datum": "2026-11-09T14:40",
       "status": "aktiv",
-      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf. Review 12.11.2026: alle Installationen im Befehl werden geprueft, Ausnahme nur fuer echten adb-wlan-Lauf oder adb connect auf genau diese Adresse.",
+      "beleg": "Sitzung 406cc1b7: adb devices und Installation in einem Befehl, Ziel 10.8.0.7:5555 geraten, verbunden war 192.168.0.197:5555; Fehlschlag und ein Extra-Durchlauf. Review 12.11.2026: alle Installationen im Befehl werden geprueft, Ausnahme nur fuer echten adb-wlan-Lauf oder adb connect auf genau diese Adresse. Mac 19.11.2026: Heredoc-Daten (cat > datei <<EOF) und Text in Anführungszeichen (Commit-Nachricht) blockten wie eine Installation; jetzt wie bei Bau und Kill ausgeblendet.",
       "ort": [
         "claude-code-setup/hooks/build-ablauf-guard.py (ADB_INSTALL)"
       ],
@@ -521,7 +521,7 @@
       "id": "M30",
       "titel": "openlauncher-deploy-guard: Launcher-Erkennung mit Groß-/Kleinschreibung, der Zustandsordner ~/.openlauncher löst nicht mehr aus",
       "datum": "2026-11-13T18:41",
-      "beleg": "Sitzung 2d05ad7c: Start-Process python + Pfad ~/.openlauncher/vorwaermen/log.txt als 'Starten des OpenLaunchers' geblockt; Umweg kostete je einen Aufruf",
+      "beleg": "Sitzung 2d05ad7c: Start-Process python + Pfad ~/.openlauncher/vorwaermen/log.txt als 'Starten des OpenLaunchers' geblockt; Umweg kostete je einen Aufruf Mac-Prüfrunde 19.11.2026: Der Mac-Zweig suchte OpenLauncherMac.app, die App heißt aber OpenLauncher.app (Prozess OpenLauncher, Bundle de.frank.OpenLauncher); killall OpenLauncher, open -a OpenLauncher und open /Applications/OpenLauncher.app blieben frei. Jetzt am echten Namen; frei bleiben build.sh (Kompilier-Check), dotnet build zur Probe, open -R und Lesen.",
       "ort": [
         ".claude/hooks/openlauncher-deploy-guard.ps1",
         ".claude/hooks/openlauncher-deploy-guard.sh"
@@ -531,7 +531,7 @@
       "aufruf_regex": "\\.openlauncher[\\\\/]",
       "fehler_am_aufruf": true,
       "pruefung": "Nach 10 Sitzungen mit ~/.openlauncher im Befehl: keine Blockade ohne echten Launcher-Bezug; dotnet build/Stop-Process auf OpenLauncher blocken weiter",
-      "ruecknahme": "-cnotmatch wieder zu -notmatch (ps1) und grep -q wieder zu grep -qi (sh)",
+      "ruecknahme": "In .ps1 und .sh die Entfernung von .openlauncher[\\\\/] vor der Bezugsprüfung (bezug = …) streichen; Mac-Zweig (mac_verbote) bleibt.",
       "kosten": "keine (nur Mustervergleich im Hook)",
       "status": "aktiv"
     },
@@ -581,7 +581,7 @@
       "id": "M33",
       "titel": "Vordergrund-Zeitlimit höchstens 60 s, danach sichtbarer Minutentakt",
       "datum": "2026-11-15T12:11",
-      "beleg": "Sitzung 12d87da4 (Mac): drei Befehle liefen je 10 min ins Zeitlimit (30 min), der Bau selbst brauchte unter 1 min",
+      "beleg": "Sitzung 12d87da4 (Mac): drei Befehle liefen je 10 min ins Zeitlimit (30 min), der Bau selbst brauchte unter 1 min Mac 19.11.2026: minute.py verglich die CPU-Summe der gerade lebenden Prozesse; ein fleißiger Lauf aus kurzen Schritten ohne Ausgabe (25.8 s CPU in 40 s) hieß HÄNGER?. Jetzt Zuwachs je Prozess.",
       "ort": [
         "claude-code-setup/hooks/build-ablauf-guard.py (mit_zeitlimit)",
         "Werkzeuge/lauf-waechter/minute.py",
@@ -618,11 +618,7 @@
       "titel": "Komfort-Aliase (ls→eza, cat→bat) nur im echten Terminal",
       "datum": "2026-11-15T12:11",
       "beleg": "Sitzung 12d87da4 (Mac): ls -t <apk> | head -1 hing 30 min (eza -t frisst den Pfad, wartet auf stdin)",
-      "ort": [
-        "~/.zshrc (Mac, lokal)",
-        "claude-code-setup/hooks/build-ablauf-guard.py (ohne_aliase, bis 22.11.2026)",
-        "bugs/werkzeuge/agenten-shell-aliase.md"
-      ],
+      "ort": ["~/.zshrc (Mac, lokal)", "bugs/werkzeuge/agenten-shell-aliase.md"],
       "werkzeug": "Bash",
       "fehler_regex": "did not complete within its \\d+s timeout",
       "aufruf_regex": "(^|[;&|]\\s*)ls\\s+-\\w*t",
@@ -630,7 +626,7 @@
       "plattform": [
         "mac"
       ],
-      "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t Vermerk: ohne_aliase in build-ablauf-guard.py ist bis 22.11.2026 befristet. Ab 23.11.2026 den Block samt ALIAS_BEFEHL/ALIAS_BIS und dem Zweig in main() entfernen und den Hook-Eintrag aus ort streichen; der ~/.zshrc-Teil bleibt. Achtung: aufruf_regex trifft auch einen langen Bau, der mit '&& ls -t' endet; vor einer Einstufung in --json (massnahmen_treffer) prüfen, ob wirklich ls hing.",
+      "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t. Die befristete Umschreibung in build-ablauf-guard.py (ohne_aliase) ist seit 19.11.2026 entfernt: kein Mac-Schnappschuss enthält die Aliase noch (geprüft in allen ClaudeCodeMac-Profilen). Achtung: aufruf_regex trifft auch einen langen Bau, der mit '&& ls -t' endet; vor einer Einstufung in --json (massnahmen_treffer) prüfen, ob wirklich ls hing.",
       "ruecknahme": "if-Block in ~/.zshrc zurück auf die vier alias-Zeilen",
       "kosten": "kein Kontext",
       "status": "aktiv",
@@ -662,7 +658,7 @@
       "id": "M37",
       "titel": "Lauf-Wächter meldet adb-Übertragung nicht mehr als Hänger",
       "datum": "2026-11-17T10:41",
-      "beleg": "Sitzung 56b7f785: Minute 1 meldete HÄNGER? während jarvis-install 136 MB per adb über WLAN lud; Lauf endete fehlerfrei",
+      "beleg": "Sitzung 56b7f785: Minute 1 meldete HÄNGER? während jarvis-install 136 MB per adb über WLAN lud; Lauf endete fehlerfrei Mac 18.11.2026 (e9a405d7): HÄNGER? während jarvis-install einen adb-shell-Schritt (Prüfsumme/Delta am Handy) ausführte. Seit 19.11.2026 zählt jeder adb-Schritt unter jarvis-install/auf-beide/delta-push/apk-update als Übertragung, die zsh-Hülle (ganzer Befehlstext) zählt am Mac nicht mehr mit, und die Overlay-Wartezeile gilt auch am Mac als WARTET.",
       "ort": [
         "Werkzeuge/lauf-waechter/minute.py"
       ],
