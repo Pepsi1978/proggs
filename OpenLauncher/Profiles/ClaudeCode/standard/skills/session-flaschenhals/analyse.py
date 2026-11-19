@@ -558,7 +558,7 @@ def vergleich(berichte, top):
         z.append(f"\n## {titel}")
         z.extend(fmt(*e) for e in w[:top]) if w else z.append("- keine")
     z.append("\n## Wirkung der Maßnahmen (Sitzungen mit Treffer / Fehler / Aufrufe)")
-    if BERLIN is None:
+    if BERLIN is None and PLATTFORM != "windows":  # Windows-PC laeuft ohnehin in Berliner Zeit
         z.append("- (Hinweis: zoneinfo/tzdata fehlt, Stichtage als Ortszeit gelesen)")
     liste = massnahmen()
     for mn in liste:

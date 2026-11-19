@@ -58,7 +58,8 @@ Der Vergleich zeigt je Maßnahme vorher/nachher (Sitzungen mit Treffer, Fehler, 
 - Muster läuft nachher wieder häufig **ohne** Fehler (Ursache upstream behoben) → `überholt`:
   Kontextzeile laut `ruecknahme` entfernen. So wächst die Pflichtlektüre nicht.
 - `messbar: false` → nie automatisch bewerten, nur laut `pruefung` von Hand. `DATUM UNLESBAR` / `STATUS FEHLT` → berichtigen.
-- Vor jeder Einstufung die Treffer in `--json` (`massnahmen_treffer`) ansehen: nur echte Fehler zählen.
+- Vor jeder Einstufung die Treffer ansehen, nur echte Fehler zählen: `--letzte=15 --json` ist groß (~130k Zeichen),
+  daher in eine Datei im Scratchpad leiten und nur `massnahmen_treffer` der betroffenen Maßnahme lesen.
 - `status` gilt je Rechner: Misst nur eine Plattform, `{"windows": "wirkt", "mac": "aktiv"}` schreiben.
 
 ## 4. Umsetzen (höchstens 3 Maßnahmen je Lauf, je ≤ 3 Dateien; Sofort-Korrekturen zählen nicht mit)
