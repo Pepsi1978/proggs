@@ -13,6 +13,8 @@ Mit echten Eingaben geprüft, beide Python-Fassungen und bash 3.2:
   adb-Pfad in Anführungszeichen geprüft (auch PowerShell `& "…adb.exe"`). Alias-Umschreibung (M35) entfernt.
 - Lauf-Wächter mit echten Hintergrundläufen: WARTET (osascript, Overlay-Wartezeile), HÄNGER? (stiller Prozess),
   LÄUFT (kurze stille Schritte mit 25 s CPU, früher HÄNGER?), adb push zum Tablet. zsh-Hülle zählt nicht mehr mit.
+  ÜBERTRÄGT live bestätigt am Muster vom 18.11. (adb … shell unter jarvis-install.sh, tr -d \r; alte Fassung: HÄNGER?).
+  Ein stiller 400-MB-Push über WLAN braucht am Mac ~0,2 s CPU je Minute und heißt LÄUFT: ebenfalls richtig, kein Hänger.
 - Versionslog-Eintrag (BOM, Umlaute, Konfigurations-Cache), analyse.py über alle Mac-Verläufe (0,7 s).
 - Mac-Maßnahmen: M31 und M35 ohne Treffer; M32 Ursache behoben (alle 28 gradlew 100755); M36 wirkt (nonomatch im
   Schnappschuss, jetzt messbar); M40 nur der Ursprungsfall.
@@ -20,6 +22,8 @@ Mit echten Eingaben geprüft, beide Python-Fassungen und bash 3.2:
 Begründet offen:
 - eintrag.py schreibt nicht atomar. Das Fenster ist winzig, und `os.replace` scheitert unter Windows, wenn die Datei offen ist.
 - `update-launcher.sh; open -a OpenLauncher` bleibt frei: Ein echter Skriptaufruf gibt den ganzen Befehl frei, unter Windows genauso.
+- M42 behält den Stichtag 12.11.2026: Er misst die zusammengelegte Fassung, deren letzte Fehlalarm-Fixes von dort stammen;
+  die Teile tragen ihr eigenes Datum unter `zusammengelegt`. Ein späterer Stichtag unterschätzt die Wirkung höchstens, er täuscht kein „wirkt“ vor.
 - `sleep` in einer Warteschleife heißt WARTET: Regel 24 definiert das so, und endlose Prozess-Warteschleifen deckt M34 ab.
 
 ## Hostinger-Server, 19.11.2026 17:57 (Jarvis-Auftrag X9VQZ)
@@ -68,3 +72,10 @@ lsof und fuser vorhanden, repo-status ok.
    ist das auf dem Server ein Fehlalarm-Auslöser. Klären, ob es dort überhaupt etwas zu schützen gibt.
 4. analyse.py mit `~/.openlauncher/claude/minimal` samt Geschwistern; Maßnahmen mit `plattform: linux` an echten Server-Verläufen.
 5. jarvis-install.sh und auf-beide.sh über die Tunnel 10.8.0.7/10.8.0.8 (ADB_VENDOR_KEYS); Lauf-Wächter meldet dort ÜBERTRÄGT.
+
+## Windows: nachprüfen (am Mac geändert, gemeinsamer Code, unter Windows nicht ausgeführt)
+- minute.py: CPU-Zuwachs je Prozess (cpu_merken, Daemon-Basiswert), uebertraegt() mit jarvis-install.ps1 als Elternprozess,
+  Overlay-Wartezeile jetzt für beide Systeme gemeinsam.
+- build-ablauf-guard.py: heredoc_filter lässt den Endmarker stehen; BEFEHLSSTELLE mit nohup/env/time/sudo/VAR=;
+  Pfad zu `& "…\adb.exe" -s <falsche Adresse> install` muss weiter blocken; Heredoc- und Commit-Text mit adb frei.
+- analyse.py: <task-notification> ist kein Prompt, Eigenaufwand bis zum nächsten echten Prompt, auch_lesebefehle (M36).

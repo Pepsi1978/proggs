@@ -652,10 +652,10 @@
       "plattform": [
         "mac"
       ],
-      "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='",
+      "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='. Geprüft 19.11.2026: seit nonomatch (17.11. 10:31) 18 Sitzungen, 16 mit grep --include, 0 Fehler -> wirkt; die 30 F im Vergleich stammen aus 15.-17.11. (vor dem Fix).",
       "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen; Zeile 'setopt nonomatch' samt Kommentar aus ~/.zshrc entfernen",
       "kosten": "keine Pflichtlektüre, nur Bedarfsdatei",
-      "status": "aktiv"
+      "status": "wirkt"
     },
     {
       "id": "M37",
