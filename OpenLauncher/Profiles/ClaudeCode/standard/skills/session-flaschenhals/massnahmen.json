@@ -1,5 +1,5 @@
 {
-  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. datum: ISO yyyy-MM-ddTHH:mm (Get-Date -Format yyyy-MM-ddTHH:mm). werkzeug: ein Name oder 'Bash|PowerShell' (Mac/Server bauen mit Bash). fehler_am_aufruf: true = nur Fehler genau der Aufrufe zaehlen, die auf aufruf_regex passen (Pflicht, wenn fehler_regex eine Hook-Meldung ist, die auch andere Massnahmen ausloesen). auch_ohne_fehlerstatus: true = fehler_regex in allen Ergebnissen der passenden Aufrufe suchen (Zeitlimit-Meldungen tragen is_error=False). messbar: false = keine automatische Bewertung, nur von Hand pruefen. plattform: Liste (windows/mac/linux, fehlt = alle). status: aktiv | wirkt | wirkungslos | ueberholt | zurueckgenommen.",
+  "hinweis": "Nur dieser Skill liest die Datei. Je Massnahme: Beleg, Ort, Pruefung (fehler_regex/aufruf_regex werden von analyse.py vorher/nachher gezaehlt), Ruecknahme. datum: ISO yyyy-MM-ddTHH:mm, Berliner Zeit (Get-Date -Format yyyy-MM-ddTHH:mm). werkzeug: ein Name, 'Bash|PowerShell' oder Liste; gilt immer, Lese-/Suchaufrufe (Read/Grep/Glob, cat/grep/sed -n) zaehlen nie. Grundsatz: Praezision vor Vollstaendigkeit, im Zweifel nicht zaehlen (lieber messbar: false als eine Regex, die normale Arbeit mitzaehlt). fehler_am_aufruf: true = nur Fehler genau der Aufrufe zaehlen, die auf aufruf_regex passen (Pflicht, wenn fehler_regex eine Hook-Meldung oder eine allgemeine Meldung ist). auch_ohne_fehlerstatus: true = fehler_regex in allen Ergebnissen der auf aufruf_regex passenden Aufrufe suchen (Zeitlimit-Meldungen tragen is_error=False). messbar: false = keine automatische Bewertung, nur von Hand pruefen. plattform: Liste (windows/mac/linux, fehlt = alle). status: aktiv | wirkt | wirkungslos | ueberholt | zurueckgenommen, Text oder je Plattform {\"windows\": .., \"mac\": .., \"linux\": ..}. zusammengelegt: fruehere Einzelmassnahmen (id, datum, status, ruecknahme) eines Sammeleintrags. Ruecknahmen nennen eindeutige Textanker, nie Positionen ('letzter Absatz', 'Zeile N').",
   "massnahmen": [
     {
       "id": "M1",
@@ -13,57 +13,115 @@
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/MEMORY.md (eine Zeile)",
         "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md",
-        "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Zeile 16",
+        "bugs/claude-tooling/python-windows.md §10.1 + Kurzcheck Nr. 16 (auch in python-windows-kurzcheck.md)",
         "claude-code-setup/hooks/build-ablauf-guard.py (Heredoc-Sperre)"
       ],
       "werkzeug": "Bash",
       "aufruf_regex": "<<\\s*['\"]?[A-Za-z_]+['\"]?",
       "min_zeilen": 31,
-      "fehler_regex": "unexpected EOF while looking for matching",
-      "pruefung": "Nach 10 weiteren Sitzungen: Fehler M1 nachher = 0 und lange Heredocs nachher deutlich seltener -> status wirkt. Kommen weiter Fehler -> wirkungslos, Ursache neu prüfen.",
-      "ruecknahme": "MEMORY.md-Zeile und lange-skripte-per-write.md löschen, Almanach-Abschnitt bleibt als Wissen. Heredoc-Block in build-ablauf-guard.py entfernen.",
+      "fehler_regex": "-c: line ([3-9]\\d|\\d{3,}): unexpected EOF while looking for matching",
+      "pruefung": "Nach 10 weiteren Sitzungen: Fehler M1 nachher = 0 und lange Heredocs nachher deutlich seltener -> status wirkt. Kommen weiter Fehler -> wirkungslos, Ursache neu prüfen. Seit 19.11.2026 zählt nur ein Abbruch ab Zeile 30 (Ende eines langen Heredocs), nicht 'eval: line 1' oder frühe Quoting-Fehler; Subagenten zählen mit.",
+      "ruecknahme": "MEMORY.md-Zeile 'Lange Skripte' und lange-skripte-per-write.md löschen, Almanach-Abschnitt §10.1 und Kurzcheck Nr. 16 bleiben als Wissen. Heredoc-Block in build-ablauf-guard.py entfernen.",
       "kosten": "eine Zeile (~45 Tokens) in jeder Sitzung"
     },
     {
       "id": "M2",
-      "titel": "Hook build-ablauf-guard: kein Bau vor dem Versions-Bump, kein pkill -f auf die eigene Shell",
+      "titel": "Hook build-ablauf-guard: Kill-Schutz, kein pkill -f auf die eigene Shell",
       "datum": "2026-11-08T13:06",
       "status": "aktiv",
       "beleg": "Sitzung 3429c693 (Server, 08.11.2026): Bau vor dem Versionslog-Eintrag gestartet, beim Abbrechen per pkill -f \"gradlew assembleDebug\" die eigene Shell beendet (Exit 144). Auf Franks Wunsch trotz Einzelfall auf allen Systemen abgesichert.",
       "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (+ .sh fuer Mac/Server, .ps1 nur noch Rueckfall)",
+        "claude-code-setup/hooks/build-ablauf-guard.py (selbstmord; + .sh für Mac/Server; die .ps1-Hülle wurde am 19.11.2026 gelöscht)",
         "OpenLauncher/Profiles/ClaudeCode/{minimal,standard,strict}/settings.json (python -X utf8 direkt)",
         "OpenLauncher/Profiles/ClaudeCodeMac/{minimal,standard,strict}/settings.json (auch Quelle des Servers)"
       ],
       "werkzeug": "Bash",
       "aufruf_regex": "\\b(pkill|pgrep)\\s+-\\w*f",
       "fehler_regex": "Exit code 144",
-      "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Guard echte Fälle fälschlich, Muster im Hook schärfen.",
-      "ruecknahme": "Hook-Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
-      "kosten": "kein Kontext; je Bash/PowerShell-Aufruf unter Windows ~100 ms (python direkt aus settings.json, gemessen 12.11.2026; vorher pwsh-Wrapper ~360 ms)"
+      "pruefung": "Nach 10 weiteren Sitzungen: Exit 144 nachher = 0 -> wirkt. Blockt der Kill-Schutz echte Fälle fälschlich, Muster im Hook schärfen. Die Bump-Sperre desselben Hooks misst M42.",
+      "ruecknahme": "Kill-Schutz: Aufruf von selbstmord() in main() von build-ablauf-guard.py entfernen. Ganzer Hook: Eintrag aus den sechs settings.json entfernen, Hook-Dateien löschen; Notaus sofort: leere Datei build-ablauf-guard-disable.flag im TEMP.",
+      "kosten": "kein Kontext; je Bash/PowerShell-Aufruf unter Windows ~100 ms (python direkt aus settings.json, gemessen 12.11.2026; vorher pwsh-Wrapper ~360 ms)",
+      "fehler_am_aufruf": true
     },
     {
-      "id": "M3",
-      "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken, wenn der Befehl den Versionslog wirklich schreibt",
-      "datum": "2026-11-08T18:29",
+      "id": "M42",
+      "titel": "Bump-Wächter: Fehlalarme (Bump im selben Befehl, eintrag.py, committeter Bump, git pull vor dem Bau)",
+      "datum": "2026-11-12T11:14",
       "status": "aktiv",
-      "beleg": "Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf.",
+      "zusammengelegt": [
+        {
+          "id": "M3",
+          "titel": "Bau-Hook: Bump und Bau in einem Befehl nicht mehr blocken, wenn der Befehl den Versionslog wirklich schreibt",
+          "datum": "2026-11-08T18:29",
+          "status": "aktiv",
+          "aufruf_regex": "(WriteAllText|Set-Content|Add-Content|Out-File|sed\\s+-i|\\btee\\b|write_text|json\\.dump|>>?)[^\\n]*versionslog\\.json[\\s\\S]*gradlew|versionslog\\.json[^\\n]*(WriteAllText|Set-Content|Out-File)[\\s\\S]*gradlew",
+          "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
+          "fehler_regex": "STOPP - erst die Version bumpen",
+          "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft)."
+        },
+        {
+          "id": "M5",
+          "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
+          "datum": "2026-11-08T23:19",
+          "status": "wirkt",
+          "aufruf_regex": "versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew",
+          "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
+          "fehler_regex": "STOPP - erst die Version bumpen",
+          "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026)."
+        },
+        {
+          "id": "M13",
+          "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
+          "datum": "2026-11-11T17:43",
+          "status": "wirkt",
+          "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py[\\s\\S]*gradlew",
+          "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
+          "fehler_regex": "erst die Version bumpen, dann bauen",
+          "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt."
+        },
+        {
+          "id": "M20",
+          "titel": "Bau-Hook: nicht blocken, wenn der Bump in diesem Repo committet (Reflog commit/rebase-pick, auch schon gepusht) und juenger als die neueste APK ist; per Pull geholter Bump und fehlende APK zaehlen nicht",
+          "datum": "2026-11-12T11:06",
+          "status": "aktiv",
+          "aufruf_regex": "gradlew(\\.bat)?\\s+assemble",
+          "ruecknahme": "Aufruf von eigener_bump_ungebaut in bau_ohne_bump und die Funktion entfernen",
+          "fehler_regex": "STOPP - erst die Version bumpen",
+          "pruefung": "Nicht automatisch messbar: aufruf_regex trifft jeden Bau, jede berechtigte Bump-Sperre zaehlte als Fehler. Von Hand: Fehlblock nach committetem Bump bleibt in den naechsten 10 Sitzungen aus. Hook-Test 12.11.2026: eigener Bump-Commit -> frei, Fast-Forward-Bump -> Sperre, APK juenger als Log -> Sperre, keine APK -> Sperre. Grenze: Bump-Commit einer parallelen Sitzung im selben Repo gilt als eigener.",
+          "messbar": false
+        },
+        {
+          "id": "M23",
+          "titel": "Bau-Hook: git pull vor dem Bau im selben Befehl nicht als Bau ohne Bump blocken (nur echter git-pull-Aufruf, nicht 'pull' in Texten)",
+          "datum": "2026-11-12T11:14",
+          "status": "aktiv",
+          "aufruf_regex": "(^|[;&|\\n({]\\s*)git(\\s+-[Cc]\\s+\\S+)*\\s+pull\\b[\\s\\S]*gradlew",
+          "ruecknahme": "git-pull-Zeile in bau_ohne_bump entfernen",
+          "fehler_regex": "erst die Version bumpen",
+          "pruefung": "kein Bump-Fehlalarm bei Pull+Bau in den nächsten 10 Sitzungen"
+        }
+      ],
+      "beleg": "M3 (2026-11-08): Sitzung 19b81a92: ein PowerShell-Aufruf schrieb versionslog.json und baute danach; der Hook prüfte den Git-Stand vor dem Befehl und blockte fälschlich, kostete einen zusätzlichen Durchlauf. | M5 (2026-11-08): Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf. | M13 (2026-11-11): Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf. | M20 (2026-11-12): Sitzung a56e3dee: 2 Fehlblocks nach committetem Bump 1.8.639 wegen fremder Dateien (Einstellungen.kt, HeuteAufgabenKarte.kt), Notaus nötig | M23 (2026-11-12): Sitzung ea31bf4c: 1 Fehlalarm, parallele Sitzung hatte gebumpt, Pull und Bau in einem Befehl, Umweg über Notaus-Flag",
       "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN, bau_ohne_bump)"
+        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump, SCHREIBEN, eigener_bump_ungebaut)"
       ],
       "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "(WriteAllText|Set-Content|Add-Content|Out-File|sed\\s+-i|\\btee\\b|write_text|json\\.dump|>>?)[^\\n]*versionslog\\.json[\\s\\S]*gradlew|versionslog\\.json[^\\n]*(WriteAllText|Set-Content|Out-File)[\\s\\S]*gradlew",
-      "fehler_regex": "STOPP - erst die Version bumpen",
-      "pruefung": "Nach 10 Sitzungen: kein STOPP mehr bei Befehlen, die versionslog.json vor gradlew schreiben -> wirkt. Bloßes Lesen vor dem Bau bleibt geblockt (am 08.11.2026 mit 7 Beispielbefehlen geprüft).",
-      "ruecknahme": "SCHREIBEN-Muster und die Ausnahme 'versionslog.json in davor and SCHREIBEN' in bau_ohne_bump entfernen.",
-      "kosten": "kein Kontext",
-      "fehler_am_aufruf": true
+      "aufruf_regex": "(?:(WriteAllText|Set-Content|Add-Content|Out-File|sed\\s+-i|\\btee\\b|write_text|json\\.dump|>>?)[^\\n]*versionslog\\.json[\\s\\S]*gradlew|versionslog\\.json[^\\n]*(WriteAllText|Set-Content|Out-File)[\\s\\S]*gradlew)|(?:versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew)|(?:versionslog[\\\\/]+eintrag\\.py[\\s\\S]*gradlew)|(?:(^|[;&|\\n({]\\s*)git(\\s+-[Cc]\\s+\\S+)*\\s+pull\\b[\\s\\S]*gradlew)",
+      "fehler_regex": "erst die Version bumpen",
+      "fehler_am_aufruf": true,
+      "pruefung": "Gezählt wird ein STOPP nur bei Befehlen, die einer der Ausnahmen entsprechen (Versionslog im Befehl geschrieben, eintrag.py vor gradlew, git pull vor gradlew). Nach 10 Sitzungen 0 F -> wirkt. Die Ausnahme 'committeter Bump' (früher M20) ist nicht per Regex trennbar (jeder Bau passt): von Hand prüfen, dass nach eigenem Bump-Commit kein Fehlblock kommt. Datum = jüngste Teil-Ausnahme, damit 'nachher' alle Ausnahmen enthält. Hook-Test 12.11.2026 siehe zusammengelegt[M20].pruefung.",
+      "ruecknahme": "Je Ausnahme einzeln laut zusammengelegt[].ruecknahme.",
+      "kosten": "kein Kontext; ein stat je Bau-Befehl"
     },
     {
       "id": "M4",
       "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
       "datum": "2026-11-08T18:30",
-      "status": "wirkt",
+      "status": {
+        "windows": "wirkt",
+        "mac": "aktiv",
+        "linux": "aktiv"
+      },
       "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit. Korrektur 12.11.2026: Im Zweitversuch setzten pwsh/adb devices LASTEXITCODE auf 0, ohne Gerät lief das Skript ohne Upload weiter; jetzt gilt der Zweitversuch ohne Push als gescheitert.",
       "ort": [
         "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)",
@@ -75,23 +133,6 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: Fehler 0 -> wirkt; kommt der Fehler weiter, Ursache im WLAN-Werkzeug prüfen. Die .sh-Fassung (Mac/Server) ist seit 12.11.2026 neu: dort erst nach 10 eigenen Sitzungen bewerten.",
       "ruecknahme": "Den zweiten Versuch im Push-Fehlerzweig von jarvis-install.ps1 und jarvis-install.sh entfernen.",
       "kosten": "kein Kontext; nur im Fehlerfall ein Lauf von adb-wlan.ps1"
-    },
-    {
-      "id": "M5",
-      "titel": "Bau-Hook: Python-open(...,'w') auf den Versionslog als Schreiben erkennen (Bump und Bau in einem Bash-Befehl)",
-      "datum": "2026-11-08T23:19",
-      "status": "wirkt",
-      "beleg": "Sitzung 148d96af (Server): Bash-Befehl schrieb versionslog.json per python3-Heredoc mit open(p,'w') und baute danach; SCHREIBEN kannte open() nicht, Hook blockte, ein zusätzlicher Durchlauf.",
-      "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (SCHREIBEN)"
-      ],
-      "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "versionslog\\.json[\\s\\S]*open\\([\\s\\S]*gradlew",
-      "fehler_regex": "STOPP - erst die Version bumpen",
-      "pruefung": "Nach 10 Sitzungen kein STOPP bei Bash-Befehlen, die den Versionslog per open(...,'w') vor gradlew schreiben -> wirkt. 'cat versionslog.json' vor dem Bau bleibt geblockt (geprüft 08.11.2026).",
-      "ruecknahme": "Alternative |open\\([^)]*,\\s*[\"']w aus SCHREIBEN entfernen.",
-      "kosten": "kein Kontext",
-      "fehler_am_aufruf": true
     },
     {
       "id": "M6",
@@ -139,25 +180,28 @@
       "fehler_regex": "AUF_BEIDE_STATUS=(teilweise|fehler)",
       "aufruf_regex": "auf-beide\\.sh",
       "werkzeug": "Bash|PowerShell",
-      "pruefung": "aufruf_regex zählt die Läufe; fehler_regex zählt Läufe, bei denen ein Gerät nicht bedient wurde. Laufzeit je Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs).",
+      "pruefung": "Nicht automatisch messbar: AUF_BEIDE_STATUS=teilweise entsteht schon, wenn das Tablet aus ist. Von Hand: Laufzeit je auf-beide.sh-Aufruf in den langen Werkzeugläufen vergleichen (vorher 3 bis 6 min für fünf APKs, nachher etwa 40 s je APK) -> wirkt.",
       "ruecknahme": "In auf-beide.sh die Funktion ein_geraet wieder nacheinander statt im Hintergrund aufrufen.",
-      "kosten": "kein Dauerkontext, nur das Skript"
+      "kosten": "kein Dauerkontext, nur das Skript",
+      "messbar": false
     },
     {
       "id": "M9",
       "titel": "Fremde halbfertige App-Änderungen: sofort im Worktree bauen",
       "datum": "2026-11-11T14:28",
-      "status": "wirkt",
+      "status": "aktiv",
       "beleg": "Sitzung 2f166e55: Jarvis-Bau im Arbeitsbaum scheiterte zweimal (2.2 min + 76 s) an der unfertigen Biomarker-Integration einer Parallelsitzung (?? bio/, M build.gradle.kts); im Worktree danach grün.",
       "ort": [
-        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md"
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md",
+        "bugs/werkzeuge/git-parallele-sitzungen.md (Kurzcheck Nr. 5)"
       ],
       "fehler_regex": "Unresolved reference",
       "aufruf_regex": "gradlew(\\.bat)? assemble",
       "werkzeug": "Bash|PowerShell",
-      "pruefung": "Fehlbauten mit Unresolved reference in Dateien, die die Sitzung nicht geändert hat, sollten nachher seltener sein; Treffer in eigenen Dateien sind normale Entwicklung.",
-      "ruecknahme": "Den Punkt zum Worktree-Bau aus der Memory-Datei entfernen.",
-      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+      "pruefung": "Nicht automatisch messbar: 'Unresolved reference' in eigenen Dateien ist normale Entwicklung, die Regex trennt das nicht (frühere Einstufung wirkt beruhte darauf, am 19.11.2026 auf aktiv zurückgesetzt). Von Hand: kein Fehlbau an fremden halbfertigen Dateien in 10 Sitzungen mit Parallelarbeit -> wirkt.",
+      "ruecknahme": "Den Punkt, der mit 'Vor dem Bauen ebenso' beginnt, aus parallele-sitzung-nimmt-dateien-mit.md und Kurzcheck Nr. 5 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei",
+      "messbar": false
     },
     {
       "id": "M10",
@@ -166,13 +210,13 @@
       "status": "aktiv",
       "beleg": "Sitzung 6fc10676: Biomarker-Übernahme per ATTACH auf Rooms openHelper; danach lieferte Rooms eigene Rechnung nichts ('Rechnung weicht ab … gegen null'), ein zusätzlicher Bau-, Commit- und Installationsdurchlauf (~15 min).",
       "ort": [
-        "bugs/android/room-kurzcheck.md Zeile 23"
+        "bugs/android/room-kurzcheck.md Tabellenzeile Nr. 23 (ATTACH)"
       ],
       "werkzeug": "Write",
       "aufruf_regex": "ATTACH DATABASE",
       "fehler_regex": "Rechnung weicht ab",
       "pruefung": "Nicht automatisch messbar: 'Rechnung weicht ab' steht im App-Log, nicht als Werkzeugfehler. Von Hand: kein neues ATTACH auf Rooms Verbindung (git grep 'ATTACH DATABASE' im App-Code) -> wirkt.",
-      "ruecknahme": "Zeile 23 aus dem Room-Kurzcheck entfernen.",
+      "ruecknahme": "Tabellenzeile Nr. 23 (ATTACH) aus bugs/android/room-kurzcheck.md entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei",
       "messbar": false
     },
@@ -183,14 +227,16 @@
       "status": "aktiv",
       "beleg": "Sitzung 9d83ba1b: mehrzeiliges str.replace auf EingabeBlase.kt (CRLF) scheiterte mit AssertionError, danach zerlegte ein sed-Flicken das Skript; ~2 min und 5 Aufrufe.",
       "ort": [
-        "memory/lange-skripte-per-write.md (letzter Absatz)"
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz **Ersetzskripte:**)",
+        "bugs/claude-tooling/python-windows.md §10.2 + Kurzcheck Nr. 17 (alle Plattformen, auch python-windows-kurzcheck.md)"
       ],
       "werkzeug": "Bash",
-      "aufruf_regex": "newline=''",
+      "aufruf_regex": "\\.replace\\(",
       "fehler_regex": "AssertionError",
-      "pruefung": "Nach 10 Sitzungen mit Ersetzskripten kein AssertionError mehr -> wirkt.",
-      "ruecknahme": "Letzten Absatz aus lange-skripte-per-write.md entfernen.",
-      "kosten": "kein Dauerkontext, nur Bedarfsdatei"
+      "pruefung": "Nach 10 Sitzungen mit Ersetzskripten (str.replace im Bash-Befehl) kein AssertionError mehr -> wirkt. Skripte per Write und Aufruf sieht die Messung nicht.",
+      "ruecknahme": "Absatz, der mit '**Ersetzskripte:**' beginnt, aus lange-skripte-per-write.md, §10.2 und Kurzcheck Nr. 17 aus python-windows.md (und python-windows-kurzcheck.md) entfernen.",
+      "kosten": "kein Dauerkontext, nur Bedarfsdatei",
+      "fehler_am_aufruf": true
     },
     {
       "id": "M12",
@@ -209,25 +255,8 @@
       "aufruf_regex": "[„“]",
       "fehler_regex": "Unerwartetes Token .„|Fehlender Eigenschaftsname nach Verweisoperator",
       "pruefung": "Nach 10 Sitzungen ohne diesen Parserfehler -> wirkt.",
-      "ruecknahme": "Absatz PowerShell aus lange-skripte-per-write.md und den Zusatz in der MEMORY.md-Zeile entfernen.",
+      "ruecknahme": "Absatz, der mit '**PowerShell und deutsche Anführungszeichen:**' beginnt, aus lange-skripte-per-write.md und den Zusatz zu „“ in der MEMORY.md-Zeile 'Lange Skripte' entfernen.",
       "kosten": "rund 60 Zeichen Dauerkontext in einer vorhandenen MEMORY.md-Zeile"
-    },
-    {
-      "id": "M13",
-      "titel": "Bau-Hook: Aufruf von Werkzeuge/versionslog/eintrag.py vor dem Bau als Bump erkennen",
-      "datum": "2026-11-11T17:43",
-      "status": "wirkt",
-      "beleg": "Sitzung 41aad0bc: eintrag.py + gradlew in einem Befehl vom Bau-Hook geblockt, ein zusätzlicher Aufruf.",
-      "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
-      ],
-      "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "versionslog[\\\\/]+eintrag\\.py[\\s\\S]*gradlew",
-      "fehler_regex": "erst die Version bumpen, dann bauen",
-      "pruefung": "Nach 10 Sitzungen mit eintrag.py + Bau in einem Befehl ohne Block -> wirkt.",
-      "ruecknahme": "Die drei Zeilen mit M13 in bau_ohne_bump entfernen.",
-      "kosten": "kein Dauerkontext",
-      "fehler_am_aufruf": true
     },
     {
       "id": "M14",
@@ -256,13 +285,13 @@
       ],
       "beleg": "Sitzung 6fc10676: 5 Fehlschläge (Invoke-Expression 'Variablenverweis ungültig', ')' fehlt, Funktion R = Invoke-History, stille CRLF-Nichttreffer), je 1-2 min Nacharbeit.",
       "ort": [
-        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz PowerShell-Fallen, nur Windows-Gedächtnis)"
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz **PowerShell-Fallen (Sitzung 6fc10676**, nur Windows-Gedächtnis)"
       ],
       "werkzeug": "PowerShell",
       "aufruf_regex": "\\.Replace\\(|function \\w\\(",
       "fehler_regex": "Variablenverweis ist ungültig|Invoke-History|fehlt im Methodenaufruf",
       "pruefung": "Nach 10 Sitzungen: diese Parserfehler seltener -> wirkt; sonst Hebel 1 (Hook-Warnung) prüfen.",
-      "ruecknahme": "Absatz PowerShell-Fallen aus der Memory-Datei entfernen.",
+      "ruecknahme": "Absatz, der mit '**PowerShell-Fallen (Sitzung 6fc10676' beginnt, aus der Memory-Datei entfernen; der eigene Absatz '**PowerShell [IO.File] und Variablennamen (Sitzung 3320ad98' gehört zu M24 und bleibt.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei"
     },
     {
@@ -277,9 +306,9 @@
       ],
       "werkzeug": "PowerShell",
       "aufruf_regex": "jarvis-install\\.ps1",
-      "fehler_regex": "moved to the background|did not complete within",
+      "fehler_regex": "did not complete within its [1-9]\\d{2,}s timeout",
       "min_zeilen": 1,
-      "pruefung": "Nach 10 Sitzungen mit jarvis-install: keine 10-min-Warteläufe mehr, Ausgabe 'Delta übertragen' erscheint -> wirkt.",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: keine Zeitlimit-Meldung ab 100 s mehr (Verschieben nach 60 s ist seit M33 planmäßig und zählt nicht), Ausgabe 'Delta übertragen' erscheint -> wirkt.",
       "ruecknahme": "In jarvis-install.ps1 die Zeilen mit gitBash/deltaSh/apkUnix und den origin/main-Block entfernen; in jarvis-install.sh den origin/main-Block.",
       "kosten": "kein Kontext; je Lauf ein git fetch (~1 s)",
       "fehler_am_aufruf": true,
@@ -292,13 +321,14 @@
       "status": "aktiv",
       "beleg": "Sitzung db10fa32: git add Jarvis/.../faehigkeit nahm VictronFaehigkeit.kt + Faehigkeit.kt einer parallelen Sitzung in Commit af845ca08 mit.",
       "ort": [
-        "minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+        "minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md",
+        "bugs/werkzeuge/git-parallele-sitzungen.md (Kurzcheck Nr. 2)"
       ],
       "werkzeug": "PowerShell",
       "aufruf_regex": "git add -- ",
       "fehler_regex": "VORMERKUNG_FREMD",
       "pruefung": "Nicht automatisch messbar (VORMERKUNG_FREMD gibt kein Werkzeug aus). Von Hand: in den naechsten 10 Sitzungen kein Commit mit fremden Dateien -> wirkt.",
-      "ruecknahme": "Die Zeile 'Nie einen Ordner vormerken' aus der Memory-Datei entfernen.",
+      "ruecknahme": "Die Zeile 'Nie einen Ordner vormerken' aus commit-nur-mit-pfaden.md und Kurzcheck Nr. 2 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
       "kosten": "kein Dauerkontext, nur Bedarfsdatei",
       "messbar": false
     },
@@ -328,31 +358,14 @@
       "status": "wirkt",
       "beleg": "Sitzung c46c6c99: KDoc mit `files/stimmproben/*.pcm` brach den Build (Unclosed comment, Missing '}'), ein Bauzyklus von etwa 50 s verloren.",
       "ort": [
-        "bugs/android/kotlin-kurzcheck.md"
+        "bugs/android/kotlin-kurzcheck.md Tabellenzeile Nr. 14 (Unclosed comment)"
       ],
       "werkzeug": "Bash|PowerShell",
       "aufruf_regex": "gradlew(\\.bat)? assemble",
       "fehler_regex": "Unclosed comment",
       "pruefung": "Nach 10 Sitzungen mit Kotlin-Builds kein 'Unclosed comment' mehr -> wirkt.",
-      "ruecknahme": "Zeile 14 im Kotlin-Kurzcheck entfernen.",
+      "ruecknahme": "Tabellenzeile Nr. 14 (Unclosed comment) aus bugs/android/kotlin-kurzcheck.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei"
-    },
-    {
-      "id": "M20",
-      "titel": "Bau-Hook: nicht blocken, wenn der Bump in diesem Repo committet (Reflog commit/rebase-pick, auch schon gepusht) und juenger als die neueste APK ist; per Pull geholter Bump und fehlende APK zaehlen nicht",
-      "datum": "2026-11-12T11:06",
-      "status": "aktiv",
-      "beleg": "Sitzung a56e3dee: 2 Fehlblocks nach committetem Bump 1.8.639 wegen fremder Dateien (Einstellungen.kt, HeuteAufgabenKarte.kt), Notaus nötig",
-      "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
-      ],
-      "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "gradlew(\\.bat)?\\s+assemble",
-      "fehler_regex": "STOPP - erst die Version bumpen",
-      "pruefung": "Nicht automatisch messbar: aufruf_regex trifft jeden Bau, jede berechtigte Bump-Sperre zaehlte als Fehler. Von Hand: Fehlblock nach committetem Bump bleibt in den naechsten 10 Sitzungen aus. Hook-Test 12.11.2026: eigener Bump-Commit -> frei, Fast-Forward-Bump -> Sperre, APK juenger als Log -> Sperre, keine APK -> Sperre. Grenze: Bump-Commit einer parallelen Sitzung im selben Repo gilt als eigener.",
-      "ruecknahme": "Aufruf von eigener_bump_ungebaut in bau_ohne_bump und die Funktion entfernen",
-      "kosten": "ein stat je Bau-Befehl, kein Kontext",
-      "messbar": false
     },
     {
       "id": "M21",
@@ -361,47 +374,35 @@
       "status": "aktiv",
       "beleg": "Sitzung 3e1741cc: 3 Rebase-Konflikte in versionslog.json (je Neubau ~2-4 min), 1 Konfliktmarker in funktionen.md mitcommittet, eigener Korrektur-Commit. Korrektur 12.11.2026: Die erste Fassung bumpte nach dem Bau, das widersprach M2/M16 (APK mit alter versionCode, jarvis-install-Abbruch 645 gegen 644).",
       "ort": [
-        "minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md (letzter Punkt)"
+        "minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md (Punkt 'Versionseintrag im Worktree erst direkt vor dem letzten Bau')",
+        "bugs/werkzeuge/git-parallele-sitzungen.md (Kurzcheck Nr. 6)"
       ],
       "werkzeug": "Bash|PowerShell",
       "aufruf_regex": "git\\b[^\\n]*\\b(rebase|pull\\s+--rebase)",
-      "fehler_regex": "CONFLICT \\(content\\): Merge conflict in .*versionslog\\.json",
+      "fehler_regex": "(CONFLICT \\(content\\): Merge conflict|KONFLIKT \\(Inhalt\\): Merge-Konflikt) in .*versionslog\\.json",
       "pruefung": "Versionslog-Konflikte beim Rebase seltener in den naechsten 10 Sitzungen mit Worktree-Bau; ein Konflikt kann bleiben, wenn waehrend des Baus eine andere Sitzung pusht (dann: fremden Stand nehmen, eintrag.py, neu bauen). Kein jarvis-install-Abbruch 'Auf origin/main liegt schon' mehr nach eigenem Bump.",
-      "ruecknahme": "Letzten Punkt in parallele-sitzung-nimmt-dateien-mit.md entfernen",
-      "kosten": "eine Zeile in einer Bedarfsdatei"
+      "ruecknahme": "Punkt, der mit 'Versionseintrag im Worktree erst direkt vor dem letzten Bau' beginnt, aus parallele-sitzung-nimmt-dateien-mit.md und Kurzcheck Nr. 6 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei",
+      "fehler_am_aufruf": true
     },
     {
       "id": "M22",
       "titel": "programmier_fortschritt bei Tablet-Auftrag nicht wiederholen",
       "datum": "2026-11-12T11:10",
-      "status": "wirkungslos",
+      "status": "zurueckgenommen",
       "beleg": "Sitzung 3e1741cc: 4× „Unbekannte auftrag_id“, Auftrag kam vom Tablet, MCP antwortet vom Handy Nachtrag 12.11.2026 (Sitzung 39a41959): erneut 5x 'Unbekannte auftrag_id', obwohl der Auftrag vom Handy kam und der MCP vom Handy antwortete und jarvis_status 'zuletzt bestaetigt durch Auftrag 3GMJF' zeigte: Ursache ist nicht das Tablet. Vorschlag an Frank: ProgrammierFaehigkeit sollte Auftraege, die nur der Server kennt, annehmen (App-Code, nicht durch diesen Skill).",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/jarvis-tablet-zweites-geraet.md (letzter Punkt)"
       ],
-      "werkzeug": "mcp__jarvis__programmier_fortschritt",
+      "werkzeug": [
+        "mcp__jarvis__programmier_fortschritt",
+        "mcp__claude_ai_Jarvis__programmier_fortschritt"
+      ],
       "aufruf_regex": "auftrag_id",
       "fehler_regex": "Unbekannte auftrag_id",
       "pruefung": "höchstens 1 solcher Fehler je Sitzung in den nächsten 10 Sitzungen",
-      "ruecknahme": "Letzten Punkt in jarvis-tablet-zweites-geraet.md entfernen",
+      "ruecknahme": "Erledigt 19.11.2026: der Punkt 'Kommt ein Programmierauftrag vom Tablet …' wurde aus jarvis-tablet-zweites-geraet.md entfernt (Ursache ist nicht das Tablet). Messung läuft weiter, um die Häufigkeit zu sehen.",
       "kosten": "eine Zeile in einer Bedarfsdatei"
-    },
-    {
-      "id": "M23",
-      "titel": "Bau-Hook: git pull vor dem Bau im selben Befehl nicht als Bau ohne Bump blocken (nur echter git-pull-Aufruf, nicht 'pull' in Texten)",
-      "datum": "2026-11-12T11:14",
-      "status": "aktiv",
-      "beleg": "Sitzung ea31bf4c: 1 Fehlalarm, parallele Sitzung hatte gebumpt, Pull und Bau in einem Befehl, Umweg über Notaus-Flag",
-      "ort": [
-        "claude-code-setup/hooks/build-ablauf-guard.py (bau_ohne_bump)"
-      ],
-      "werkzeug": "Bash|PowerShell",
-      "aufruf_regex": "(^|[;&|\\n({]\\s*)git(\\s+-[Cc]\\s+\\S+)*\\s+pull\\b[\\s\\S]*gradlew",
-      "fehler_regex": "erst die Version bumpen",
-      "pruefung": "kein Bump-Fehlalarm bei Pull+Bau in den nächsten 10 Sitzungen",
-      "ruecknahme": "git-pull-Zeile in bau_ohne_bump entfernen",
-      "kosten": "keine (Hook-Logik)",
-      "fehler_am_aufruf": true
     },
     {
       "id": "M24",
@@ -409,13 +410,13 @@
       "datum": "2026-11-12T14:32",
       "beleg": "Sitzung 3320ad98: 1 Fehlschlag mit 19k Zeichen Fehlerausgabe ([IO.File] relativ gegen Prozess-Verzeichnis), 1 Fehlschlag durch $B/$b-Kollision; Wiederholung kostete je ~1 min",
       "ort": [
-        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz PowerShell-Fallen)"
+        "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz **PowerShell [IO.File] und Variablennamen (Sitzung 3320ad98**)"
       ],
       "werkzeug": "PowerShell",
       "fehler_regex": "Could not find a part of the path|Syntax für den Dateinamen, Verzeichnisnamen",
       "aufruf_regex": "\\[IO\\.File\\]::",
       "pruefung": "Fehler mit [IO.File] und falschem Pfad in späteren Sitzungen zählen",
-      "ruecknahme": "Satz 'Sitzung 3320ad98 …' aus dem Absatz PowerShell-Fallen entfernen",
+      "ruecknahme": "Absatz, der mit '**PowerShell [IO.File] und Variablennamen (Sitzung 3320ad98' beginnt, aus lange-skripte-per-write.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei",
       "plattform": [
         "windows"
@@ -453,12 +454,13 @@
       "fehler_regex": "Terminated",
       "aufruf_regex": "gradlew\\s+\\S*assemble",
       "auch_ohne_fehlerstatus": true,
-      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein 'Terminated' mehr beim Gradle-Bau.",
+      "pruefung": "Nach 10 Server-Sitzungen mit Bau: kein 'Terminated' mehr beim Gradle-Bau. Vermerk 19.11.2026: Wohl überholt durch M33 (Claude Code schiebt jeden Bash-Befehl nach 60 s in den Hintergrund). Nach einem Server-Test, ob ein Vordergrund-Bau jetzt verschoben statt abgebrochen wird: GRADLE_BAU-Block in main() entfernen und status ueberholt.",
       "ruecknahme": "Block mit GRADLE_BAU in main() von build-ablauf-guard.py entfernen.",
       "kosten": "Kein Kontext; höchstens eine Sperrmeldung, wenn im Vordergrund gebaut wird.",
       "plattform": [
         "linux"
-      ]
+      ],
+      "status": "aktiv"
     },
     {
       "id": "M27",
@@ -473,9 +475,10 @@
       "fehler_regex": "Eine andere Jarvis-Installation (läuft|blockiert)",
       "aufruf_regex": "jarvis-install\\.(ps1|sh)",
       "auch_ohne_fehlerstatus": true,
-      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre.",
+      "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre. Lesen der Skripte (cat/grep) zählt seit 19.11.2026 nicht mehr (Treffer im Quelltext).",
       "ruecknahme": "In beiden Skripten die eigner-Zeilen entfernen (rm -rf darf bleiben).",
-      "kosten": "kein Dauerkontext, ein adb-cat je Warterunde"
+      "kosten": "kein Dauerkontext, ein adb-cat je Warterunde",
+      "status": "aktiv"
     },
     {
       "id": "M28",
@@ -483,15 +486,18 @@
       "datum": "2026-11-13T12:16",
       "beleg": "941ce074: git rm designs.js, danach git add <6 Pfade inkl. designs.js> -> pathspec-Fehler, mit ';' verkettet lief der Commit nur mit der Löschung, zweiter Commit nötig.",
       "ort": [
-        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md",
+        "bugs/werkzeuge/git-parallele-sitzungen.md (Kurzcheck Nr. 3)"
       ],
       "werkzeug": "Bash|PowerShell",
       "fehler_regex": "pathspec '[^']+' did not match any files",
       "aufruf_regex": "git (-C \\S+ )?add ",
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Sitzungen mit git add: kein pathspec-Fehler mehr bei eigenen Commits.",
-      "ruecknahme": "Die Zeile 'git add <pfade> bricht komplett ab' aus commit-nur-mit-pfaden.md entfernen.",
-      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+      "ruecknahme": "Die Zeile '`git add <pfade>` bricht komplett ab' aus commit-nur-mit-pfaden.md und Kurzcheck Nr. 3 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext",
+      "fehler_am_aufruf": true,
+      "status": "aktiv"
     },
     {
       "id": "M29",
@@ -507,7 +513,8 @@
       "fehler_am_aufruf": true,
       "pruefung": "Nach 10 Sitzungen mit ssh+adb -s: keine Meldung 'ist gerade nicht verbunden' bei ssh-Befehlen; lokale Installationen auf falsche Adresse blocken weiter",
       "ruecknahme": "Die drei Zeilen mit dem ssh-Ausschluss in adb_ziel_fehlt() entfernen",
-      "kosten": "keine (nur Regex im Hook)"
+      "kosten": "keine (nur Regex im Hook)",
+      "status": "aktiv"
     },
     {
       "id": "M30",
@@ -524,7 +531,8 @@
       "fehler_am_aufruf": true,
       "pruefung": "Nach 10 Sitzungen mit ~/.openlauncher im Befehl: keine Blockade ohne echten Launcher-Bezug; dotnet build/Stop-Process auf OpenLauncher blocken weiter",
       "ruecknahme": "-cnotmatch wieder zu -notmatch (ps1) und grep -q wieder zu grep -qi (sh)",
-      "kosten": "keine (nur Mustervergleich im Hook)"
+      "kosten": "keine (nur Mustervergleich im Hook)",
+      "status": "aktiv"
     },
     {
       "id": "M31",
@@ -544,7 +552,8 @@
       ],
       "pruefung": "Nach 10 Mac-Sitzungen: keine Treffer von fehler_regex",
       "ruecknahme": "Almanach-Datei und README-Zeile löschen, Eintrag entfernen",
-      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
+      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei",
+      "status": "aktiv"
     },
     {
       "id": "M32",
@@ -555,16 +564,17 @@
         "*/gradlew (Git-Mode)"
       ],
       "werkzeug": "Bash",
-      "fehler_regex": "permission denied: \\./gradlew",
+      "fehler_regex": "(?i)permission denied:? *\\./gradlew|\\./gradlew: Permission denied",
       "aufruf_regex": "\\./gradlew",
-      "fehler_am_aufruf": false,
+      "fehler_am_aufruf": true,
       "plattform": [
         "mac",
         "linux"
       ],
-      "pruefung": "Nach 10 Mac-/Server-Sitzungen: keine Treffer von fehler_regex",
+      "pruefung": "Ursache behoben: 19.11.2026 alle 28 gradlew im Index 100755 (git ls-files -s '*gradlew'). Kommt neu ein gradlew mit 100644 dazu, zeigt fehler_regex das (zsh- und bash-Meldung).",
       "ruecknahme": "git update-index --chmod=-x auf die gradlew-Dateien, Eintrag entfernen",
-      "kosten": "kein Kontext"
+      "kosten": "kein Kontext",
+      "status": "wirkt"
     },
     {
       "id": "M33",
@@ -582,7 +592,8 @@
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Sitzungen: keine Zeitlimit-Meldung über 99 s",
       "ruecknahme": "mit_zeitlimit-Aufrufe im Hook entfernen, Regel aus den Profilen streichen",
-      "kosten": "eine Profilregel"
+      "kosten": "eine Profilregel",
+      "status": "aktiv"
     },
     {
       "id": "M34",
@@ -598,7 +609,8 @@
       "fehler_am_aufruf": true,
       "pruefung": "Nach 10 Sitzungen: keine 10-min-Läufe mit Warteschleifen; Fehlalarme (Blocks ohne echte Schleife) prüfen",
       "ruecknahme": "warte_schleife-Aufruf im Hook entfernen",
-      "kosten": "kein Kontext"
+      "kosten": "kein Kontext",
+      "status": "aktiv"
     },
     {
       "id": "M35",
@@ -617,9 +629,11 @@
       "plattform": [
         "mac"
       ],
-      "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t",
+      "pruefung": "Nach 10 Mac-Sitzungen: kein Zeitlimit bei ls -t Vermerk: ohne_aliase in build-ablauf-guard.py ist bis 22.11.2026 befristet. Ab 23.11.2026 den Block samt ALIAS_BEFEHL/ALIAS_BIS und dem Zweig in main() entfernen und den Hook-Eintrag aus ort streichen; der ~/.zshrc-Teil bleibt.",
       "ruecknahme": "if-Block in ~/.zshrc zurück auf die vier alias-Zeilen",
-      "kosten": "kein Kontext"
+      "kosten": "kein Kontext",
+      "status": "aktiv",
+      "fehler_am_aufruf": true
     },
     {
       "id": "M36",
@@ -636,12 +650,12 @@
       "aufruf_regex": "--include=\\*",
       "auch_ohne_fehlerstatus": true,
       "plattform": [
-        "mac",
-        "linux"
+        "mac"
       ],
       "pruefung": "Nach 10 Mac-Sitzungen: kein 'no matches found: --include='",
       "ruecknahme": "Abschnitt 'Unquotierte Globs' aus dem Almanach entfernen; Zeile 'setopt nonomatch' samt Kommentar aus ~/.zshrc entfernen",
-      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei"
+      "kosten": "keine Pflichtlektüre, nur Bedarfsdatei",
+      "status": "aktiv"
     },
     {
       "id": "M37",
@@ -653,12 +667,14 @@
       ],
       "werkzeug": "Bash",
       "aufruf_regex": "lauf-waechter/minute\\.py",
-      "fehler_regex": "HÄNGER\\? .*\\n.*adb",
+      "fehler_regex": "(?s)HÄNGER\\?.*?adb",
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Bei Jarvis-Installationen zeigt der Wächter ÜBERTRÄGT statt HÄNGER?",
       "ruecknahme": "UEBERTRAGUNG-Zweig in minute.py entfernen",
       "kosten": "0 Kontext",
-      "messbar": true
+      "messbar": true,
+      "status": "aktiv",
+      "fehler_am_aufruf": true
     },
     {
       "id": "M38",
@@ -670,11 +686,13 @@
       ],
       "werkzeug": "Bash|PowerShell",
       "aufruf_regex": "git (rebase|pull)",
-      "fehler_regex": "KONFLIKT \\(Inhalt\\): Merge-Konflikt in .*versionslog\\.json",
+      "fehler_regex": "(CONFLICT \\(content\\): Merge conflict|KONFLIKT \\(Inhalt\\): Merge-Konflikt) in .*versionslog\\.json",
       "pruefung": "Kein Rebase-Konflikt mehr in versionslog.json; stattdessen VERSIONSLOG_FEHLER vor dem Eintrag",
       "ruecknahme": "Funktion entfernter_code und ihren Aufruf aus eintrag.py entfernen",
       "kosten": "0 Kontext, ein git fetch je Eintrag",
-      "messbar": true
+      "messbar": true,
+      "fehler_am_aufruf": true,
+      "status": "aktiv"
     },
     {
       "id": "M39",
@@ -682,15 +700,18 @@
       "datum": "2026-11-18T09:14",
       "beleg": "afc7a472: git add von 99 Pfaden scheiterte an versioniertem opencode-setup/plugins/token-cost-sidebar/dist/pricing.ts (ignorierter Ordner), zweiter Aufruf mit git add -u nötig.",
       "ort": [
-        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md"
+        "OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/commit-nur-mit-pfaden.md",
+        "bugs/werkzeuge/git-parallele-sitzungen.md (Kurzcheck Nr. 4)"
       ],
       "werkzeug": "Bash|PowerShell",
       "fehler_regex": "(durch eine Ihrer \\\".gitignore\\\" Dateien ignoriert|paths are ignored by one of your .gitignore files)",
       "aufruf_regex": "git (-C \\S+ )?add ",
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Sitzungen mit git add: kein .gitignore-Abbruch mehr bei eigenen Commits.",
-      "ruecknahme": "Die Zeile 'git add -u -- <pfade>' aus commit-nur-mit-pfaden.md entfernen.",
-      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+      "ruecknahme": "Die Zeile 'Nur geänderte, schon versionierte Dateien: `git add -u' aus commit-nur-mit-pfaden.md und Kurzcheck Nr. 4 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext",
+      "fehler_am_aufruf": true,
+      "status": "aktiv"
     },
     {
       "id": "M40",
@@ -709,21 +730,26 @@
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Mac-Sitzungen mit Wecker-Änderung: kein cp/adb install der Drive-APK mehr, der in den Hintergrund rutscht.",
       "ruecknahme": "Die Zeile 'Am Mac fehlt der Schlüssel …' unter GenialerWeckerAndroid in apk-update/SKILL.md entfernen.",
-      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+      "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext",
+      "status": "aktiv",
+      "fehler_am_aufruf": true
     },
     {
       "id": "M41",
       "titel": "eintrag.py löscht nach dem Versionslog-Eintrag den Gradle-Konfigurations-Cache",
       "datum": "2026-11-19T16:32",
       "beleg": "Sitzung bca5256b: jarvis-install lehnte die APK ab (versionCode 806 statt 807), Neubau nötig; schon am 30.09.2026 bei Longevity (Gedächtnis gradle-config-cache-versionslog).",
-      "ort": ["Werkzeuge/versionslog/eintrag.py"],
+      "ort": [
+        "Werkzeuge/versionslog/eintrag.py"
+      ],
       "werkzeug": "Bash|PowerShell",
       "fehler_regex": "die APK hat erst \\d+|Build veraltet\\?",
       "aufruf_regex": "jarvis-install|apk-update\\.ps1",
       "auch_ohne_fehlerstatus": true,
       "pruefung": "Nach 10 Sitzungen mit Android-Bau: keine Meldung 'APK hat erst N-1' bzw. 'Build veraltet?' mehr, wenn der Eintrag per eintrag.py kam.",
       "ruecknahme": "Die rmtree-Zeilen hinter datei.write_text in eintrag.py entfernen.",
-      "kosten": "keine, Werkzeug-Änderung ohne Kontext"
+      "kosten": "keine, Werkzeug-Änderung ohne Kontext",
+      "status": "aktiv"
     }
   ]
 }

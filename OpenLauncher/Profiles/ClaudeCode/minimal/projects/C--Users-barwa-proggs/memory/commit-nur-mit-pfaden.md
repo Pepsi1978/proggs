@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: b7db77d8-d4f1-438f-b516-b06f24346713
-  modified: 2026-11-13T09:30:02.472Z
+  modified: 2026-11-19T16:01:16.129Z
 ---
 
 Im gemeinsamen Repo `~/proggs` laufen oft mehrere Sitzungen gleichzeitig. Nacktes `git commit -a` oder ein Commit nach fremdem `git add` nimmt deren vorgemerkte Dateien mit.
@@ -20,4 +20,4 @@ Im gemeinsamen Repo `~/proggs` laufen oft mehrere Sitzungen gleichzeitig. Nackte
 - Nur geänderte, schon versionierte Dateien: `git add -u -- <pfade>`. Plain `git add` bricht komplett ab, wenn ein Pfad in einem .gitignore-Ordner liegt (18.11.2026: `token-cost-sidebar/dist/pricing.ts`, „durch eine Ihrer .gitignore Dateien ignoriert“).
 - Ersetzungsskript dafür: erst Arbeitskopie und HEAD-Fassung fertig berechnen und prüfen, dann schreiben. `open(p,'w').write(f(x))` leert die Datei schon vor `f` (13.11.2026: Assert in `f` ließ `Einstellungen.kt` leer zurück). Zeilenenden der Quelle übernehmen.
 
-Verwandt: [[parallele-sitzung-nimmt-dateien-mit]].
+Verwandt: [[parallele-sitzung-nimmt-dateien-mit]]. Für alle Rechner (Mac/Server laden dieses Gedächtnis nicht): `bugs/werkzeuge/git-parallele-sitzungen.md`.

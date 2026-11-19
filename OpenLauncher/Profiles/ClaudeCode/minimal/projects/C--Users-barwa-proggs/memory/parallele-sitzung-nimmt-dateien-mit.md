@@ -5,12 +5,12 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 582de434-44ae-462b-a498-b8787dc7ad04
-  modified: 2026-11-12T10:41:51.047Z
+  modified: 2026-11-19T16:01:18.476Z
 ---
 
 Beim Herauslösen von M1.4 (15.10.2026) nahm eine parallele Jarvis-Sitzung meine schon umgestellte `AppViewModel.kt` in ihren Commit (1.8.78) mit und pushte, während das neue Paket `de.frank.module.transkriptionsmodul` noch unversioniert war. `main` baute danach auf frischem Checkout nicht.
 
-**Why:** In viel bearbeiteten Apps (Jarvis) laufen oft mehrere Sitzungen; sie committen ganze Dateien, nicht Hunks. Siehe [[commit-nur-mit-pfaden]].
+**Why:** In viel bearbeiteten Apps (Jarvis) laufen oft mehrere Sitzungen; sie committen ganze Dateien, nicht Hunks. Siehe [[commit-nur-mit-pfaden]]. Für alle Rechner: `bugs/werkzeuge/git-parallele-sitzungen.md`.
 
 **How to apply:**
 - Vor dem Umstellen gemeinsamer Dateien `git status --short <App>` prüfen.

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Session-Flaschenhals: misst einen abgeschlossenen Claude-Code-Verlauf (JSONL).
 
-Aufruf:  python analyse.py <sitzung.jsonl | sitzungs-id | --letzte> [--json] [--top N]
-Ohne Pfad nimmt --letzte die juengste abgeschlossene Sitzung (>= 15 min unveraendert)
-im Projektordner des aktiven Profils. Subagenten-Verlaeufe (<id>/subagents/*.jsonl)
-werden mitgezaehlt. Liest nur, schreibt nichts.
+Aufruf:  python analyse.py <sitzung.jsonl | sitzungs-id | --letzte | --letzte=N> [--json] [--top N] [--nur-profil]
+Ohne Pfad nimmt --letzte die juengste abgeschlossene Sitzung (>= 15 min unveraendert).
+Gesucht wird in allen Geschwister-Profilen des aktiven Profils (minimal, standard, strict), denn
+massnahmen.json gilt fuer alle drei; --nur-profil beschraenkt auf das aktive Profil.
+Subagenten-Verlaeufe (<id>/subagents/*.jsonl): ihre Aufrufe und Fehler zaehlen bei Fehlern und
+Massnahmen mit, Dauer und Anzahl stehen im Block Subagenten; Zeittoepfe und Doppelarbeit messen
+nur den Hauptverlauf. --json liefert die vollen Befehle hinter Fehlern und Massnahmen-Treffern
+(mit --letzte=N als Liste). Liest nur, schreibt nichts.
 
 Zeit wird in drei Toepfe getrennt, damit Franks Antwortzeit nie dem Agenten angelastet wird:
   werkzeug = tool_use -> tool_result      (Laufzeit von Befehlen, Builds, Uploads)
@@ -19,6 +23,13 @@ import sys
 import time
 from collections import Counter, defaultdict
 from datetime import datetime
+
+try:  # Stichtage in massnahmen.json sind Berliner Zeit, egal wo das Skript laeuft (Server evtl. UTC)
+    from zoneinfo import ZoneInfo
+    BERLIN = ZoneInfo("Europe/Berlin")
+except Exception:  # ohne tzdata (Windows ohne Paket) oder Python < 3.9: fail-open auf Ortszeit
+    BERLIN = None
+
 
 def _konfig():
     """Aktiver Claude-Code-Profilordner; in Codex/OpenCode fehlt die Variable -> OpenLauncher-Profil."""
@@ -46,15 +57,36 @@ KONFIG = _konfig()
 PROJEKTE = os.path.join(KONFIG, "projects")
 HIER = os.path.dirname(os.path.abspath(__file__))
 SKILL_NAME = "session-flaschenhals"
+PROFILE = ("minimal", "standard", "strict")
+
+
+def _profilordner():
+    """Aktives Profil plus Geschwister (minimal/standard/strict desselben Ordners), ausser --nur-profil."""
+    k = os.path.normpath(KONFIG)
+    if "--nur-profil" in sys.argv or os.path.basename(k) not in PROFILE:
+        return [k]
+    eltern = os.path.dirname(k)
+    return [os.path.join(eltern, p) for p in PROFILE if os.path.isdir(os.path.join(eltern, p, "projects"))] or [k]
+
+
+PROFILORDNER = _profilordner()
+
+
+def profil_von(pfad):
+    """<profil>/projects/<projekt>/<id>.jsonl -> Profilname."""
+    return os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(pfad)))))
 
 
 def alle_verlaeufe():
-    """Hauptverlaeufe aller Projektordner des aktiven Profils (keine Subagenten)."""
-    if not os.path.isdir(PROJEKTE):
-        return []
-    return [os.path.join(PROJEKTE, d, f) for d in os.listdir(PROJEKTE)
-            if os.path.isdir(os.path.join(PROJEKTE, d))
-            for f in os.listdir(os.path.join(PROJEKTE, d)) if f.endswith(".jsonl")]
+    """Hauptverlaeufe aller Projektordner der gelesenen Profile (keine Subagenten)."""
+    erg = []
+    for k in PROFILORDNER:
+        p = os.path.join(k, "projects")
+        if not os.path.isdir(p):
+            continue
+        erg += [os.path.join(p, d, f) for d in os.listdir(p) if os.path.isdir(os.path.join(p, d))
+                for f in os.listdir(os.path.join(p, d)) if f.endswith(".jsonl")]
+    return erg
 
 
 _MASSNAHMEN = None
@@ -80,14 +112,59 @@ def _massnahmen_laden():
     except Exception as e:  # kaputte oder fehlende Liste darf die Analyse nicht stoppen
         print(f"(Hinweis: massnahmen.json nicht lesbar: {e})", file=sys.stderr)
         return []
+
+
+def status_von(mn):
+    """status ist Text oder je Plattform ein Objekt {"windows": .., "mac": .., "linux": ..}."""
+    s = mn.get("status")
+    if isinstance(s, dict):
+        s = s.get(PLATTFORM)
+    return s or "STATUS FEHLT"
+
+
+def stichtag_von(datum):
+    """datum (ISO, Vorgabe in SKILL.md, oder Profilregel-6-Format) als Berliner Zeit -> Zeitstempel."""
+    for form in (None, "%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M Uhr"):
+        try:
+            dt = datetime.fromisoformat(datum) if form is None else datetime.strptime(datum, form)
+        except ValueError:
+            continue
+        if dt.tzinfo is None and BERLIN is not None:
+            dt = dt.replace(tzinfo=BERLIN)
+        return dt.timestamp()
+    return None
+
+
 MENSCH_WERKZEUGE = {"AskUserQuestion", "ExitPlanMode"}
+# Lese-/Suchaufrufe zaehlen nie als Fehler oder Aufruf einer Massnahme: ihr Ergebnis ist Quelltext oder Doku,
+# in dem die Fehlermeldung woertlich stehen kann (cat jarvis-install.sh, Almanach lesen).
+LESE_WERKZEUGE = {"Read", "Grep", "Glob", "NotebookRead", "WebFetch", "WebSearch", "ToolSearch"}
+# Nur Befehle, deren Ausgabe Dateiinhalt ist; ls/find bleiben Arbeit (M35 misst ein haengendes ls -t).
+LESE_BEFEHL = re.compile(r"(cat|bat|grep|egrep|rg|head|tail|less|more|wc|nl|awk|sed\s+-n|"
+                         r"get-content|gc|select-string|sls|type|"
+                         r"git\s+(-C\s+\S+\s+)?(grep|log|show|diff|blame))\b", re.I)
+NEBENBEFEHL = re.compile(r"(cd|set-location|sl|echo|printf|write-host|write-output|true|export)\b", re.I)
 LANG_S = 60          # Werkzeuglauf ab hier = Kandidat fuer Wartezeit
 MODELL_LANG_S = 120  # Modellpause ab hier = Kandidat (z. B. Advisor, langes Denken)
+
+
 def ts(s):
     try:
         return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
     except Exception:
         return None
+
+
+def nur_lesen(a):
+    """Lese-Werkzeug oder Shell-Befehl, dessen Teile alle nur lesen/suchen (cat, grep, git log …)."""
+    if a["name"] in LESE_WERKZEUGE:
+        return True
+    if a["name"] not in ("Bash", "PowerShell"):
+        return False
+    cmd = str(a["eingabe"].get("command", ""))
+    teile = [t.strip(" \t({") for t in re.split(r"&&|\|\||[;|\n]", cmd)]
+    teile = [t for t in teile if t and not NEBENBEFEHL.match(t)]
+    return bool(teile) and all(LESE_BEFEHL.match(t) for t in teile)
 
 
 def finde_datei(arg):
@@ -97,7 +174,7 @@ def finde_datei(arg):
         treffer = [p for p in alle_verlaeufe() if os.path.basename(p).startswith(arg.replace(".jsonl", ""))]
         if treffer:
             return max(treffer, key=os.path.getmtime)
-        sys.exit(f"Verlauf nicht gefunden: {arg} (gesucht unter {PROJEKTE})")
+        sys.exit(f"Verlauf nicht gefunden: {arg} (gesucht unter {', '.join(PROFILORDNER)})")
     return abgeschlossene(1)[0]
 
 
@@ -157,7 +234,8 @@ def kurz(name, eingabe, n=90):
 
 def lies(pfad, quelle):
     zeilen = []
-    with open(pfad, encoding="utf-8") as f:
+    # errors="replace": die letzte Zeile einer laufenden Sitzung kann mitten in einem Mehrbyte-Zeichen enden
+    with open(pfad, encoding="utf-8", errors="replace") as f:
         for l in f:
             try:
                 d = json.loads(l)
@@ -167,6 +245,29 @@ def lies(pfad, quelle):
                 d["_quelle"] = quelle
                 zeilen.append(d)
     return zeilen
+
+
+def ergebnis_eintragen(a, b, t):
+    """tool_result b in den Aufruf a uebernehmen."""
+    a["ende"] = t
+    txt = text_von(b.get("content"))
+    a["fehler"] = bool(b.get("is_error"))  # vom Harness gesetzt: Exit-Code != 0, Edit-Fehlschlag, Ablehnung
+    a["ausgabe"] = len(txt)
+    a["fehlertext"] = re.sub(r"\s+", " ", txt)[:120] if a["fehler"] else ""
+    a["fehlertext_lang"] = re.sub(r"\s+", " ", txt)[:600] if a["fehler"] else ""
+    a["fehlerklasse"] = fehlerklasse(txt[:600]) if a["fehler"] else ""
+    # Anfang und Ende: Gradle & Co. melden den eigentlichen Fehler oft weit hinten (M7, M9, M19).
+    a["roh"] = txt if len(txt) <= 4000 else txt[:1000] + "\n…\n" + txt[-3000:]
+    a["fehlerroh"] = a["roh"] if a["fehler"] else ""
+
+
+def neuer_aufruf(b, t, quelle):
+    return {"name": b.get("name"), "eingabe": b.get("input") or {}, "start": t, "ende": None,
+            "fehler": False, "ausgabe": 0, "quelle": quelle}
+
+
+def ist_reminder(txt):
+    return txt.startswith("<") and "system-reminder" in txt[:40]
 
 
 def analysiere(pfad):
@@ -197,7 +298,10 @@ def analysiere(pfad):
                 isinstance(b, dict) and b.get("type") == "tool_result" for b in inhalt)
             if not ist_ergebnis:
                 txt = text_von(inhalt)
-                if txt.startswith("<") and "system-reminder" in txt[:40]:
+                if ist_reminder(txt):
+                    # Kein Prompt, aber die Ruhe davor verbucht die Schleife unten als Frank/Ruhe:
+                    # ab hier zaehlt erst das Modell (sonst doppelt gezaehlt).
+                    letzte_zeit, letzte_art = t, "prompt"
                     continue
                 if "[Request interrupted" in txt:
                     unterbrechungen += 1
@@ -212,31 +316,20 @@ def analysiere(pfad):
                 a = aufrufe.get(b.get("tool_use_id"))
                 if not a:
                     continue
-                a["ende"] = t
-                txt = text_von(b.get("content"))
-                a["fehler"] = bool(b.get("is_error"))  # vom Harness gesetzt: Exit-Code != 0, Edit-Fehlschlag, Ablehnung
-                a["ausgabe"] = len(txt)
-                a["fehlertext"] = re.sub(r"\s+", " ", txt)[:120] if a["fehler"] else ""
-                a["fehlerklasse"] = fehlerklasse(txt[:600]) if a["fehler"] else ""
-                # Anfang und Ende: Gradle & Co. melden den eigentlichen Fehler oft weit hinten (M7, M9, M19).
-                a["roh"] = txt if len(txt) <= 4000 else txt[:1000] + "\n…\n" + txt[-3000:]
-                a["fehlerroh"] = a["roh"] if a["fehler"] else ""
+                ergebnis_eintragen(a, b, t)
                 if a["name"] in MENSCH_WERKZEUGE:
                     mensch_s += max(0.0, t - a["start"])
                 letzte_zeit, letzte_art = t, "ergebnis"
         else:
             if letzte_zeit is not None and t is not None:
                 pause = t - letzte_zeit
-                if letzte_art == "prompt" and pause > 0:
-                    pass  # Modell startet nach Prompt: zaehlt als modell
                 if pause > 0:
                     modell_s += pause
                     if pause >= MODELL_LANG_S:
                         lange_modell.append((pause, d["timestamp"]))
             for b in inhalt if isinstance(inhalt, list) else []:
                 if isinstance(b, dict) and b.get("type") == "tool_use":
-                    aufrufe[b["id"]] = {"name": b.get("name"), "eingabe": b.get("input") or {},
-                                        "start": t, "ende": None, "fehler": False, "ausgabe": 0}
+                    aufrufe[b["id"]] = neuer_aufruf(b, t, "haupt")
                     reihenfolge.append(b["id"])
             letzte_zeit, letzte_art = t, "assistant"
 
@@ -252,6 +345,26 @@ def analysiere(pfad):
             prompt_pausen += max(0.0, t - vorher)
         vorher = t
     mensch_s += prompt_pausen  # Ruhe vor einem neuen Prompt: Frank tippt, Sitzung ruht oder Hintergrundmeldung
+
+    # Subagenten: Aufrufe und Ergebnisse fuer Fehler und Massnahmen (nicht fuer Zeittoepfe/Doppelarbeit)
+    sub_reihe = []
+    for name, zeilen in subs:
+        for d in zeilen:
+            t = ts(d["timestamp"])
+            inhalt = (d.get("message") or {}).get("content")
+            if not isinstance(inhalt, list):
+                continue
+            for b in inhalt:
+                if not isinstance(b, dict):
+                    continue
+                if d["type"] == "assistant" and b.get("type") == "tool_use" and b.get("id") not in aufrufe:
+                    aufrufe[b["id"]] = neuer_aufruf(b, t, name)
+                    sub_reihe.append(b["id"])
+                elif d["type"] == "user" and b.get("type") == "tool_result":
+                    a = aufrufe.get(b.get("tool_use_id"))
+                    if a and a["quelle"] == name:
+                        ergebnis_eintragen(a, b, t)
+    alle = [aufrufe[i] for i in reihenfolge + sub_reihe]
 
     lang = []
     namen = Counter()
@@ -287,7 +400,7 @@ def analysiere(pfad):
                       if (a := aufrufe[i])["name"] == "Read")
     mehrfach_gelesen = [(n, p) for p, n in gelesen.items() if p and n >= 3]
 
-    fehler = [a for i in reihenfolge if (a := aufrufe[i])["fehler"]]
+    fehler = [a for a in alle if a["fehler"]]
     fehlerklassen = Counter(f"{a['name']}: {a['fehlerklasse']}" for a in fehler)
     langsam = Counter()
     for i in reihenfolge:
@@ -311,8 +424,9 @@ def analysiere(pfad):
                   and str(a["eingabe"].get("skill", "")).endswith(SKILL_NAME)), None)
     eigen_s = (max(zeiten) - eigen) if eigen and zeiten else 0
 
-    # Treffer je Massnahme (fuer die Wirkungspruefung vorher/nachher)
-    m_treffer = {}
+    # Treffer je Massnahme (fuer die Wirkungspruefung vorher/nachher). Grundsatz (Frank, 19.11.2026):
+    # Praezision vor Vollstaendigkeit, im Zweifel nicht zaehlen; Fehlalarme loesen falsche Ruecknahmen aus.
+    m_treffer, m_details = {}, {}
     for mn in massnahmen():
         try:
             fr = re.compile(mn["fehler_regex"]) if mn.get("fehler_regex") else None
@@ -322,31 +436,54 @@ def analysiere(pfad):
         wz = mn.get("werkzeug")
         wz = set(wz) if isinstance(wz, list) else set(wz.split("|")) if wz else None  # "Bash|PowerShell" = beide
 
+        def im_werkzeug(a):
+            # werkzeug-Filter gilt immer; Lese-/Suchaufrufe zaehlen nie (Treffer im Quelltext)
+            return not nur_lesen(a) and (not wz or a["name"] in wz)
+
         def passt(a):
-            if not ar or (wz and a["name"] not in wz):
+            if not ar or not im_werkzeug(a):
                 return False
             roh = str(a["eingabe"].get("command") or json.dumps(a["eingabe"], ensure_ascii=False))
             return bool(ar.search(roh)) and roh.count("\n") + 1 >= mn.get("min_zeilen", 0)
         # fehler_am_aufruf: nur Fehler genau der Aufrufe zählen, die auf aufruf_regex passen. Sonst zählt z. B. jede
-        # berechtigte Bump-Sperre des Hooks als Fehler gegen alle Ausnahmen (M3, M5, M13, M23), die denselben Text haben.
+        # berechtigte Bump-Sperre des Hooks als Fehler gegen jede Ausnahme mit demselben Text.
         # Ohne aufruf_regex gibt es nichts zu koppeln (sonst stünde still 0 F da).
         gekoppelt = bool(mn.get("fehler_am_aufruf") and ar)
-        # auch_ohne_fehlerstatus: Zeitlimit-Meldungen ("did not complete within … moved to the background") tragen
-        # is_error=False; solche Maßnahmen (M16) durchsuchen deshalb alle Ergebnisse ihrer Aufrufe.
-        quelle = [aufrufe[i] for i in reihenfolge] if mn.get("auch_ohne_fehlerstatus") else fehler
-        feld = "roh" if mn.get("auch_ohne_fehlerstatus") else "fehlerroh"
-        n_f = sum(1 for a in quelle if fr and fr.search(a.get(feld, "")) and (not gekoppelt or passt(a)))
-        n_a = sum(1 for i in reihenfolge if passt(aufrufe[i]))
-        m_treffer[mn["id"]] = (n_f, n_a)
+        if mn.get("auch_ohne_fehlerstatus"):
+            # Zeitlimit-Meldungen tragen is_error=False: alle Ergebnisse durchsuchen, aber nur der passenden Aufrufe
+            quelle = [a for a in alle if (passt(a) if ar else im_werkzeug(a))]
+            feld = "roh"
+        else:
+            quelle = [a for a in fehler if im_werkzeug(a) and (not gekoppelt or passt(a))]
+            feld = "fehlerroh"
+        treffer = []
+        for a in quelle:
+            mt = fr.search(a.get(feld) or "") if fr else None
+            if mt:
+                txt = a.get(feld) or ""
+                treffer.append({"quelle": a["quelle"], "werkzeug": a["name"],
+                                "befehl": a["eingabe"].get("command") or a["eingabe"],
+                                "auszug": re.sub(r"\s+", " ", txt[max(0, mt.start() - 120):mt.end() + 120])})
+        n_a = sum(1 for a in alle if passt(a))
+        m_treffer[mn["id"]] = (len(treffer), n_a)
+        if treffer:
+            m_details[mn["id"]] = treffer
+
+    def fkurz(a, n=60):
+        return ("" if a["quelle"] == "haupt" else "[sub] ") + kurz(a["name"], a["eingabe"], n)
     return {
-        "datei": pfad, "auftrag": erste_prompt, "gesamt_s": gesamt, "beginn": min(zeiten) if zeiten else 0,
-        "eigen_s": eigen_s, "massnahmen": m_treffer,
+        "datei": pfad, "profil": profil_von(pfad), "auftrag": erste_prompt, "gesamt_s": gesamt,
+        "beginn": min(zeiten) if zeiten else 0,
+        "eigen_s": eigen_s, "massnahmen": m_treffer, "massnahmen_treffer": m_details,
         "werkzeug_s": werkzeug_s, "modell_s": modell_s, "mensch_s": mensch_s,
-        "aufrufe": len(reihenfolge), "werkzeuge": namen.most_common(8),
+        "aufrufe": len(reihenfolge), "sub_aufrufe": len(sub_reihe), "werkzeuge": namen.most_common(8),
         "nutzer_prompts": nutzer_prompts, "unterbrechungen": unterbrechungen,
         "lange_werkzeuge": sorted(lang, reverse=True), "lange_modell": sorted(lange_modell, reverse=True),
         "doppelt": sorted(doppelt, reverse=True), "mehrfach_gelesen": sorted(mehrfach_gelesen, reverse=True),
-        "fehler": [(kurz(a["name"], a["eingabe"], 60), a["fehlertext"]) for a in fehler],
+        "fehler": [(fkurz(a), a["fehlertext"]) for a in fehler],
+        "fehler_befehle": [{"quelle": a["quelle"], "werkzeug": a["name"],
+                            "befehl": a["eingabe"].get("command") or a["eingabe"],
+                            "fehler": a["fehlertext_lang"]} for a in fehler],
         "fehlerklassen": fehlerklassen.most_common(), "langsam_klassen": dict(langsam),
         "doppelt_klassen": [kurz(v[0]["name"], v[0]["eingabe"], 60) for v in gruppen.values() if len(v) >= 2],
         "grosse_ausgaben": sorted(((a["ausgabe"], kurz(a["name"], a["eingabe"], 60)) for i in reihenfolge
@@ -360,11 +497,12 @@ def m(s):
 
 
 def bericht(r, top):
-    z = [f"# Sitzung {os.path.basename(r['datei'])[:-6][:8]}  ({m(r['gesamt_s'])} gesamt)",
+    z = [f"# Sitzung {os.path.basename(r['datei'])[:-6][:8]}  ({m(r['gesamt_s'])} gesamt, Profil {r['profil']})",
          f"Auftrag: {r['auftrag']}",
          f"Zeit: Werkzeug {m(r['werkzeug_s'])} · Modell {m(r['modell_s'])} · Frank/Ruhe {m(r['mensch_s'])}",
-         f"Aufrufe: {r['aufrufe']} ({', '.join(f'{n} {c}' for n, c in r['werkzeuge'])}); "
-         f"Prompts {r['nutzer_prompts']}, Unterbrechungen {r['unterbrechungen']}"]
+         f"Aufrufe: {r['aufrufe']} ({', '.join(f'{n} {c}' for n, c in r['werkzeuge'])})"
+         + (f" + {r['sub_aufrufe']} in Subagenten" if r["sub_aufrufe"] else "")
+         + f"; Prompts {r['nutzer_prompts']}, Unterbrechungen {r['unterbrechungen']}"]
     def block(titel, eintraege, fmt):
         if eintraege:
             z.append(f"\n## {titel}")
@@ -389,7 +527,10 @@ def bericht(r, top):
 def vergleich(berichte, top):
     """Mehrere Sitzungen: was kommt in >= 2 Sitzungen vor (wiederkehrend) und was nur einmal."""
     n = len(berichte)
-    z = [f"# Vergleich der {n} jüngsten abgeschlossenen Sitzungen"]
+    profile = Counter(r["profil"] for r in berichte)
+    z = [f"# Vergleich der {n} jüngsten abgeschlossenen Sitzungen "
+         f"(Profile: {', '.join(f'{p} {k}' for p, k in profile.most_common())}; gelesen: "
+         f"{', '.join(os.path.basename(p) for p in PROFILORDNER)})"]
     for r in berichte[:top + 4]:
         z.append(f"- {os.path.basename(r['datei'])[:8]}  {m(r['gesamt_s'])}  W {m(r['werkzeug_s'])} · "
                  f"M {m(r['modell_s'])} · F {m(r['mensch_s'])}  {r['aufrufe']} Aufr., "
@@ -417,23 +558,17 @@ def vergleich(berichte, top):
         z.append(f"\n## {titel}")
         z.extend(fmt(*e) for e in w[:top]) if w else z.append("- keine")
     z.append("\n## Wirkung der Maßnahmen (Sitzungen mit Treffer / Fehler / Aufrufe)")
+    if BERLIN is None:
+        z.append("- (Hinweis: zoneinfo/tzdata fehlt, Stichtage als Ortszeit gelesen)")
     liste = massnahmen()
     for mn in liste:
         titel = str(mn.get("titel", ""))[:50]
+        status = status_von(mn)
         if mn.get("messbar") is False:
-            z.append(f"- {mn.get('id', '?')} [{mn.get('status', '?')}] nicht automatisch messbar  | {titel}")
+            z.append(f"- {mn.get('id', '?')} [{status}] nicht automatisch messbar  | {titel}")
             continue
-        stichtag = None
         datum = str(mn.get("datum", "")).strip()
-        try:
-            stichtag = datetime.fromisoformat(datum).timestamp()  # ISO, Vorgabe in SKILL.md
-        except ValueError:
-            for form in ("%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M Uhr"):  # Profilregel-6-Format
-                try:
-                    stichtag = datetime.strptime(datum, form).timestamp()
-                    break
-                except ValueError:
-                    pass
+        stichtag = stichtag_von(datum)
         if stichtag is None:
             z.append(f"- {mn.get('id', '?')} DATUM UNLESBAR ({datum!r}): nicht gemessen, in massnahmen.json berichtigen")
             continue
@@ -442,7 +577,8 @@ def vergleich(berichte, top):
             return f"{sum(1 for x in t if any(x))}/{len(teil)} Sitz., {sum(x[0] for x in t)} F, {sum(x[1] for x in t)} A"
         vor = [r for r in berichte if r["beginn"] < stichtag]
         nach = [r for r in berichte if r["beginn"] >= stichtag]
-        z.append(f"- {mn.get('id', '?')} [{mn.get('status', '?')}] vorher {summe(vor)} · nachher {summe(nach)}  | {titel}")
+        hinweis = "  ← status in massnahmen.json nachtragen" if status == "STATUS FEHLT" else ""
+        z.append(f"- {mn.get('id', '?')} [{status}] vorher {summe(vor)} · nachher {summe(nach)}  | {titel}{hinweis}")
     if not liste:
         z.append("- keine Maßnahmen eingetragen")
     eigen = [r["eigen_s"] for r in berichte if r["eigen_s"]]
@@ -459,18 +595,35 @@ if __name__ == "__main__":
     t0 = time.time()
     top = 8
     mehrere = 0
-    for a in sys.argv[1:]:
+    args = []
+    argv = sys.argv[1:]
+    i = 0
+    while i < len(argv):
+        a = argv[i]
         if a.startswith("--top="):
             top = int(a.split("=", 1)[1])
-        if a.startswith("--letzte="):
+        elif a == "--top" and i + 1 < len(argv) and argv[i + 1].isdigit():
+            top = int(argv[i + 1])
+            i += 1
+        elif a.startswith("--letzte="):
             mehrere = int(a.split("=", 1)[1])
-    args = [a for a in sys.argv[1:] if not a.startswith(("--top=", "--letzte="))]
+        elif a == "--letzte" and i + 1 < len(argv) and argv[i + 1].isdigit():
+            mehrere = int(argv[i + 1])
+            i += 1
+        elif a not in ("--alle-profile", "--nur-profil"):  # --alle-profile ist Standard
+            args.append(a)
+        i += 1
+    als_json = "--json" in args
     if mehrere:
-        txt = vergleich([analysiere(p) for p in abgeschlossene(mehrere)], top)
+        berichte = [analysiere(p) for p in abgeschlossene(mehrere)]
+        if als_json:
+            print(json.dumps(berichte, ensure_ascii=False, indent=1, default=str))
+            sys.exit(0)
+        txt = vergleich(berichte, top)
     else:
         ziel = next((a for a in args if a != "--json"), "--letzte")
         r = analysiere(finde_datei(ziel))
-        if "--json" in args:
+        if als_json:
             print(json.dumps(r, ensure_ascii=False, indent=1, default=str))
             sys.exit(0)
         txt = bericht(r, top)

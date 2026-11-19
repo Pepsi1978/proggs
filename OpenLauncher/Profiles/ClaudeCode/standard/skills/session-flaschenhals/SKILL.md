@@ -23,7 +23,9 @@ python -X utf8 "<skills>/session-flaschenhals/analyse.py" <sitzungs-id>     # di
 python -X utf8 "<skills>/session-flaschenhals/analyse.py" --letzte=15       # Vergleich + Wirkung
 ```
 Mac und Hostinger-Server: `python3` statt `python`. Ablauf überall gleich; das Skript findet den
-Profilordner selbst (`CLAUDE_CONFIG_DIR`, Server `~/.openlauncher/claude/minimal`).
+Profilordner selbst (`CLAUDE_CONFIG_DIR`, Server `~/.openlauncher/claude/minimal`) und liest standardmäßig
+alle Geschwister-Profile (minimal, standard, strict; `--nur-profil` = nur das aktive). Subagenten zählen bei
+Fehlern und Maßnahmen mit. `--json` (auch mit `--letzte=N`) liefert die vollen Befehle hinter Fehlern und Treffern.
 Sitzungs-ID = die UUID im Scratchpad-Pfad. Das Skript liest nur, braucht ~1 s und gibt < 1k Tokens aus.
 Andere CLIs (Codex, OpenCode) ohne eigenen Claude-Verlauf: nur den Vergleich laufen lassen und die
 eigene Sitzung aus dem Gedächtnis nach denselben Kriterien einordnen.
@@ -55,7 +57,9 @@ Der Vergleich zeigt je Maßnahme vorher/nachher (Sitzungen mit Treffer, Fehler, 
 - Fehler kommen nachher weiter → `wirkungslos`: Ursache neu prüfen oder laut `ruecknahme` zurücknehmen.
 - Muster läuft nachher wieder häufig **ohne** Fehler (Ursache upstream behoben) → `überholt`:
   Kontextzeile laut `ruecknahme` entfernen. So wächst die Pflichtlektüre nicht.
-- `messbar: false` → nie automatisch bewerten, nur laut `pruefung` von Hand. `DATUM UNLESBAR` → Datum berichtigen.
+- `messbar: false` → nie automatisch bewerten, nur laut `pruefung` von Hand. `DATUM UNLESBAR` / `STATUS FEHLT` → berichtigen.
+- Vor jeder Einstufung die Treffer in `--json` (`massnahmen_treffer`) ansehen: nur echte Fehler zählen.
+- `status` gilt je Rechner: Misst nur eine Plattform, `{"windows": "wirkt", "mac": "aktiv"}` schreiben.
 
 ## 4. Umsetzen (höchstens 3 Maßnahmen je Lauf, je ≤ 3 Dateien; Sofort-Korrekturen zählen nicht mit)
 
@@ -74,8 +78,12 @@ Jede Maßnahme in `massnahmen.json` eintragen: `id`, `titel`, `datum` (Systemzei
 `fehler_regex`/`aufruf_regex` (+ `werkzeug`, bei Bau/Git `Bash|PowerShell`, `min_zeilen`) für die Wirkungsprüfung,
 `fehler_am_aufruf: true`, wenn `fehler_regex` eine Hook-Meldung ist, die auch andere Fälle auslösen,
 `auch_ohne_fehlerstatus: true` für Zeitlimit-Meldungen (tragen kein `is_error`),
-`pruefung`, `ruecknahme`, `kosten`, `plattform` (Liste, nur wo die Ursache auftritt: `windows`/`mac`/`linux`;
-weglassen = alle). Ohne prüfbare Regex keine Maßnahme. Jeder Rechner misst nur seine eigenen Verläufe.
+`pruefung`, `ruecknahme` (mit eindeutigem Textanker, nie „letzter Absatz“ oder „Zeile N“), `kosten`, `status: aktiv`,
+`plattform` (Liste, nur wo die Ursache auftritt: `windows`/`mac`/`linux`; weglassen = alle). Jeder Rechner misst nur seine eigenen Verläufe.
+**Präzision vor Vollständigkeit (Frank, 19.11.2026):** `fehler_regex` eng an den echten Fehlertext und den Aufruf koppeln
+(`fehler_am_aufruf`, `werkzeug`); Lese-/Suchaufrufe zählen nie. Trifft die Regex auch normale Arbeit → `messbar: false`.
+Ohne prüfbare Regex und ohne Prüfweg von Hand keine Maßnahme. Ähnliche Maßnahmen an derselben Stelle zu einer zusammenlegen
+(`zusammengelegt`, Beispiel M42).
 **Gegenprüfung:** Vor dem Eintragen die Maßnahmen an derselben Stelle (Hook, Skript, Bedarfsdatei) und die
 Profilregeln lesen. Eine neue Ausnahme darf die Grundregel nicht aushebeln, ein neuer Ablauf keinem Hook
 widersprechen (12.11.2026: M21 bumpte nach dem Bau, gegen M2/M16). Hook-Änderung: `py_compile` und je eine

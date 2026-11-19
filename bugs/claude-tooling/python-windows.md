@@ -49,6 +49,8 @@
 | 13 | `re.sub`-Replacement | NIE Raw-String mit `\U`-Escape mischen — Lambda nutzen | §9.1 |
 | 14 | Fremdcode ohne `encoding=` | Notbremse `PYTHONUTF8=1` / `python -X utf8` | §1.3 |
 | 15 | `python`/`pip` auf Windows | `py -3` + `python -m pip` (nicht MS-Store-Stub) | §6.1 |
+| 16 | Skript > 30 Zeilen im Bash-Werkzeug | Nie als Heredoc: per Write in den Scratchpad, dann ausführen | §10.1 |
+| 17 | Ersetzskript auf Repo-Datei (Kotlin, C#) | CRLF nach dem Lesen in LF wandeln, beim Schreiben zurück (alle Plattformen) | §10.2 |
 
 ---
 
@@ -638,6 +640,15 @@ erklären es nicht (auch ohne `'''` gescheitert). Genaue Ursache im Werkzeug-Wra
 **Verwandte Stellen geprüft (gleiche 40 Sitzungen):** lange `python -c` im Bash-Werkzeug 3/3 ok;
 PowerShell-Here-Strings `@'…'@` nur kurze (44 ok, 4 Fehler aus anderen Gründen), lange kamen nicht
 vor; lange Bash-Befehle ohne Heredoc kamen nicht vor. Kein weiterer Befund.
+
+### 10.2 Mehrzeiliges `str.replace` trifft nichts → `AssertionError` (CRLF-Dateien)
+**Symptom:** Ein Ersetzskript mit `assert alt in s` scheitert, obwohl der Text sichtbar in der Datei steht.
+**Ursache:** Viele Dateien im Repo (Kotlin, C#) haben CRLF, das Suchmuster nur LF. Gilt auf jeder
+Plattform, weil die Zeilenenden aus dem Repo kommen, nicht vom Rechner.
+**Fix:** Nach dem Lesen `s = s.replace(chr(13) + chr(10), chr(10))`, beim Schreiben zurückwandeln, wenn
+die Quelle CRLF hatte (`open(p, 'w', encoding='utf-8', newline='')`). Nie per sed oder printf einsetzen
+(Sitzung 9d83ba1b: das zerlegte das Skript, ~2 min).
+**Wirkungsprüfung:** Maßnahme M11 in `skills/session-flaschenhals/massnahmen.json`.
 
 ---
 
