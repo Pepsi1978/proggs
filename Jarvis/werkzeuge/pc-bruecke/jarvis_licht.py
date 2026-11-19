@@ -64,19 +64,35 @@ async def schalten_eins(geraet, name: str, befehle: dict) -> bool:
     return False
 
 
+def schluessel(name: str) -> str:
+    """Gleicher Streifen, gleicher Schlüssel: macOS nennt manche Kennungen mit vertauschten Bytes (KS03~97000F statt KS03~000F97)."""
+    vor, _, rest = name.replace("-", "~").partition("~")
+    rest = rest.upper()
+    return vor + "~" + "".join(sorted(rest[i:i + 2] for i in range(0, len(rest), 2))) if rest and len(rest) % 2 == 0 else name.upper()
+
+
 async def schalten(befehle: dict) -> dict:
+    # Nur Franks Streifen (vom Handy mitgeschickt), nie fremde in Reichweite.
+    eigene = {schluessel(n) for n in befehle.pop("_namen", [])}
     gefunden, staerke = {}, {}
 
     def gesehen(geraet, werbung):
         name = werbung.local_name or geraet.name or ""
-        if name.startswith("KS"):
+        if name.startswith("KS") and (not eigene or schluessel(name) in eigene):
             gefunden.setdefault(name, geraet)
             staerke[name] = werbung.rssi
 
     async with BleakScanner(gesehen):
         # Früher fertig nur, wenn alle erwarteten Streifen da sind; manche werben selten und kommen erst nach Sekunden.
-        ende = asyncio.get_event_loop().time() + SUCHE_S
-        while asyncio.get_event_loop().time() < ende and len(gefunden) < ERWARTET:
+        # Fertig bei allen erwarteten Streifen, oder nach 3 s, wenn 2 s lang kein neuer dazukam; höchstens SUCHE_S.
+        uhr = asyncio.get_event_loop().time
+        beginn = zuletzt = uhr()
+        anzahl = 0
+        while uhr() - beginn < SUCHE_S and len(gefunden) < (len(eigene) or ERWARTET):
+            if len(gefunden) != anzahl:
+                anzahl, zuletzt = len(gefunden), uhr()
+            if anzahl and uhr() - beginn >= 3 and uhr() - zuletzt >= 2:
+                break
             await asyncio.sleep(0.2)
     namen = sorted(gefunden)
     ergebnisse = await asyncio.gather(*(schalten_eins(gefunden[n], n, befehle) for n in namen))

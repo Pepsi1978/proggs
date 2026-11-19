@@ -66,7 +66,10 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
                 val rgb = LedStreifen.farbe(a.optString("farbe")) ?: return Ergebnis("RÜCKFRAGE: Welche Farbe? Möglich: ${LedStreifen.FARBEN.keys.joinToString(", ")} oder #RRGGBB.", true)
                 LedStreifen.setzen(context, alt.copy(modus = Modus.FARBE, rgb = rgb, hell = hell))
             }
-            "helligkeit" -> LedStreifen.setzen(context, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell))
+            "helligkeit" -> {
+                val basis = LedStreifen.basis(context) ?: return Ergebnis("RÜCKFRAGE: Ich kenne die eingestellte Farbe noch nicht. Welche Farbe soll das Licht haben?", true)
+                LedStreifen.setzen(context, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell))
+            }
             "szene" -> {
                 val s = LedStreifen.szene(a.optString("szene")) ?: return Ergebnis("RÜCKFRAGE: Welche Szene? ${LedStreifen.SZENEN.mapIndexed { i, n -> "${i + 1} $n" }.joinToString(", ")}.", true)
                 LedStreifen.setzen(context, alt.copy(modus = Modus.SZENE, szene = s, hell = hell, tempo = zahl(a.optString("tempo"))?.coerceIn(0, 100) ?: alt.tempo))

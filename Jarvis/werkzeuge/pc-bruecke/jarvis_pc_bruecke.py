@@ -503,13 +503,31 @@ def switchbot_sofort_faden() -> None:
             SWITCHBOT_SOFORT.clear()
 
 
+LICHT_LAUF = {"prozess": None}
+LICHT_SPERRE = threading.Lock()
+
+
 def licht_schalten(befehle: dict, kennung: str = "") -> None:
     """LED-Streifen auf Zuruf des Handys (POST /geraet/licht) per Bluetooth schalten (jarvis_licht.py) und das Ergebnis an
     POST /pc/licht melden. Bewusst ohne die BLUETOOTH-Sperre: Licht soll sofort gehen, nicht erst nach einem Victron-Scan."""
     skript = Path(__file__).resolve().with_name("jarvis_licht.py")
     try:
-        lauf = subprocess.run([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                              capture_output=True, text=True, timeout=30)
+        # Nur ein Licht-Lauf zur Zeit: Ein neuer Befehl beendet den laufenden, sonst könnte ein veralteter Auftrag zuletzt schreiben.
+        with LICHT_SPERRE:
+            alt = LICHT_LAUF["prozess"]
+            if alt is not None and alt.poll() is None:
+                alt.kill()
+            prozess = subprocess.Popen([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            LICHT_LAUF["prozess"] = prozess
+        try:
+            ausgabe, fehlertext = prozess.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            prozess.kill()
+            ausgabe, fehlertext = prozess.communicate()
+        if prozess.returncode in (-9, -15) and LICHT_LAUF["prozess"] is not prozess:
+            return  # von einem neueren Befehl abgelöst: nichts melden
+        lauf = subprocess.CompletedProcess(prozess.args, prozess.returncode, ausgabe, fehlertext)
         ergebnis = json.loads(lauf.stdout.strip().splitlines()[-1]) if lauf.returncode == 0 and lauf.stdout.strip() else \
             {"geschaltet": [], "gesehen": [], "fehler": (lauf.stderr.strip() or f"Exit {lauf.returncode}")[-300:]}
     except Exception as fehler:

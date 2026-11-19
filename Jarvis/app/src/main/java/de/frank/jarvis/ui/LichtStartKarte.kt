@@ -154,8 +154,12 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
         var hell by remember(z?.hell) { mutableFloatStateOf((z?.hell ?: 100).toFloat()) }
         Text("Helligkeit: ${hell.toInt()} %", color = f.textLeise, fontSize = 13.sp)
         Slider(value = hell, onValueChange = { hell = it }, valueRange = 1f..100f, onValueChangeFinished = {
-            val alt = z ?: LedStreifen.Zustand()
-            s.setzen(c, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell.toInt()))
+            // Ohne bekannte Farbe nie eine geratene senden: erst die Streifen lesen, sonst um eine Farbe bitten.
+            s.bereich.launch {
+                val alt = LedStreifen.basis(c)
+                if (alt == null) Toast.makeText(c, "Bitte zuerst eine Farbe wählen", Toast.LENGTH_SHORT).show()
+                else s.setzen(c, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell.toInt()))
+            }
         })
 
         // Szenen und Mikrofon-Modi.
@@ -180,8 +184,7 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
                     var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
                     Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
                     Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
-                        val alt = z ?: LedStreifen.Zustand()
-                        if (alt.modus == Modus.SZENE) s.setzen(c, alt.copy(tempo = tempo.toInt())) else LedStreifen.merken(c, alt.copy(tempo = tempo.toInt()))
+                        if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
                     })
                 } else {
                     Text("Die Streifen reagieren mit ihrem eigenen Mikrofon auf Musik und Geräusche.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
@@ -195,8 +198,7 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
                     var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
                     Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
                     Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
-                        val alt = z ?: LedStreifen.Zustand()
-                        if (alt.modus == Modus.RHYTHMUS) s.setzen(c, alt.copy(empfindlichkeit = empf.toInt())) else LedStreifen.merken(c, alt.copy(empfindlichkeit = empf.toInt()))
+                        if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
                     })
                 }
             }

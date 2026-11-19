@@ -117,12 +117,15 @@ object LedStreifen {
             Modus.SZENE -> listOf("5C00${hex(z.szene.coerceIn(0, SZENEN.size - 1) + 128)}${hex(z.tempo.coerceIn(0, 100))}${h}00C5")
             Modus.RHYTHMUS -> listOf("5A0AF00${z.rhythmus.coerceIn(1, 4)}0${8 - z.empfindlichkeit.coerceIn(1, 7)}A5")
         }
-        return listOf(t.an) + (if (z.modus != Modus.RHYTHMUS) listOf(MIKRO_AUS) else emptyList()) + modus
+        return listOf(t.an) + modus
     }
 
     // ------------------------------------------------------------------ Bedienen
 
     private val sperre = Mutex()
+
+    /** Ausgangszustand für Änderungen (Helligkeit, Tempo): gemerkt, sonst die echte Mehrheit der Streifen (wird gemerkt), sonst null = nachfragen. */
+    suspend fun basis(c: Context): Zustand? = zustand(c) ?: sperre.withLock { zustand(c) ?: mehrheit(c)?.also { merken(c, it) } }
 
     /** Einschalten mit dem gemerkten Zustand; ist keiner gemerkt, vorher die Streifen lesen und die Farbe der Mehrheit übernehmen. */
     suspend fun an(c: Context): Bericht = sperre.withLock {
@@ -152,7 +155,10 @@ object LedStreifen {
     /** Die Farbe, die die meisten erreichbaren Streifen gerade haben, als Zustand; null, wenn keiner lesbar war. */
     private suspend fun mehrheit(c: Context): Zustand? {
         val gelesen = lesenAlle(c).values.filter { it.rgb != "000000" }
-        val beste = gelesen.groupingBy { it.rgb to it.hell }.eachCount().maxByOrNull { it.value }?.key ?: return null
+        val zaehlung = gelesen.groupingBy { it.rgb to it.hell }.eachCount()
+        val top = zaehlung.maxByOrNull { it.value } ?: return null
+        if (top.value < 2 || zaehlung.count { it.value == top.value } > 1) return null
+        val beste = top.key
         Logbuch.netz("Licht: Zustand übernommen", "${farbName(beste.first)} ${beste.second} % (${gelesen.size} Streifen gelesen)")
         return Zustand(Modus.FARBE, beste.first, beste.second.coerceIn(1, 100))
     }
@@ -178,14 +184,15 @@ object LedStreifen {
         // Losgelöst: Die Anfrage blockiert bis zur Antwort des Macs; ein frühes Ende soll nicht auf sie warten.
         val mac = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { runCatching { ueberMac(c, befehl) }.getOrElse { MacErgebnis(emptySet(), emptySet(), "nicht erreichbar") } }
         val handy = async { if (adapter != null) handySchalten(c, adapter, befehl, okHandy, gesehenHandy) }
-        val alleBekannt = (BEKANNTE_NAMEN + bekannt(c).values).map(::schluessel).toSet()
+        val alleBekannt = eigene(c)
         while (!(handy.isCompleted && mac.isCompleted)) {
             val ok = okHandy.map(::schluessel) + (if (mac.isCompleted) mac.await().geschaltet.map(::schluessel) else emptyList())
             if (ok.toSet().containsAll(alleBekannt)) break
             delay(150)
         }
         handy.cancel()
-        val m = if (mac.isCompleted) mac.await() else MacErgebnis(emptySet(), emptySet(), null).also { mac.cancel() }
+        val m = (if (mac.isCompleted) mac.await() else MacErgebnis(emptySet(), emptySet(), null).also { mac.cancel() })
+            .let { r -> MacErgebnis(r.geschaltet.filter { schluessel(it) in eigene(c) }.toSet(), r.gesehen.filter { schluessel(it) in eigene(c) }.toSet(), r.grund) }
         val ok = (okHandy + m.geschaltet).map(::schluessel).toSortedSet()
         val gesehen = (gesehenHandy + m.gesehen).map(::schluessel).toSet() + alleBekannt
         val gesamt = gesehen.size
@@ -201,6 +208,9 @@ object LedStreifen {
     }
 
     // ------------------------------------------------------------------ Handy
+
+    /** Nur Franks Streifen, nie fremde in Bluetooth-Reichweite (Nachbarn). */
+    private fun eigene(c: Context): Set<String> = BEKANNTE_NAMEN.map(::schluessel).toSet()
 
     private fun bekannt(c: Context): Map<String, String> = adressen(c).all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
 
@@ -296,13 +306,15 @@ object LedStreifen {
             override fun onServicesDiscovered(g: BluetoothGatt, status: Int) { bereit.complete(status == BluetoothGatt.GATT_SUCCESS) }
             override fun onCharacteristicWrite(g: BluetoothGatt, ch: BluetoothGattCharacteristic, status: Int) { geschrieben.complete(status == BluetoothGatt.GATT_SUCCESS) }
             override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) { beschrieben.complete(status == BluetoothGatt.GATT_SUCCESS) }
-            override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray) { antwort.complete(value.joinToString("") { "%02X".format(it) }) }
+            override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray) { melde(value) }
             @Deprecated("Vor Android 13")
             @Suppress("DEPRECATION")
             override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) ch.value?.let { v -> antwort.complete(v.joinToString("") { "%02X".format(it) }) }
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) ch.value?.let { melde(it) }
             }
         }
+
+        fun melde(v: ByteArray) { v.joinToString("") { "%02X".format(it) }.takeIf { it.startsWith("5F0") }?.let { antwort.complete(it) } }
 
         suspend fun schreiben(liste: List<String>): Boolean {
             val k = kanal ?: return false
@@ -347,7 +359,7 @@ object LedStreifen {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 runCatching {
                     val n = result.scanRecord?.deviceName ?: result.device.name ?: return
-                    if (n.startsWith("KS")) gefunden[result.device.address] = n
+                    if (schluessel(n) in eigene(c)) gefunden[result.device.address] = n
                 }
             }
             override fun onScanFailed(errorCode: Int) { Logbuch.fehler("Licht: Bluetooth-Scan gescheitert", null, "Code $errorCode") }
@@ -370,7 +382,7 @@ object LedStreifen {
     private suspend fun ueberMac(c: Context, befehl: (Typ) -> List<String>): MacErgebnis = withContext(Dispatchers.IO) {
         val e = Einstellungen.get(c)
         if (e.serverToken.isBlank()) return@withContext MacErgebnis(emptySet(), emptySet(), "nicht eingerichtet")
-        val befehle = JSONObject().apply { TYPEN.forEach { t -> put(t.vorsatz, JSONArray(befehl(t))) } }
+        val befehle = JSONObject().apply { TYPEN.forEach { t -> put(t.vorsatz, JSONArray(befehl(t))) }; put("_namen", JSONArray(BEKANNTE_NAMEN)) }
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/licht").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung)
             .post(JSONObject().put("befehle", befehle).toString().toRequestBody("application/json".toMediaType())).build()
         CLIENT.newCall(anfrage).execute().use { a ->
@@ -416,8 +428,6 @@ object LedStreifen {
     const val VERBINDEN_MS = 8_000L
     const val SUCHE_MS = 5_000L
     private const val ABFRAGE = "5F0100F5"
-    /** Mikrofon-Modus aus (KS Lite getMdModelNewOff); ein Farbbefehl allein beendet ihn nicht sicher. */
-    private const val MIKRO_AUS = "5A0A0F0305A5"
     private val CLIENT: OkHttpClient = OkHttpClient.Builder().callTimeout(45, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
     fun uuid(kurz: String): UUID = UUID.fromString("0000$kurz-0000-1000-8000-00805f9b34fb")
 

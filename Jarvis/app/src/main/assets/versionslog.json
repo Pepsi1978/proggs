@@ -809,6 +809,7 @@
     {"versionCode": 799, "versionName": "1.8.788", "stand": "19.11.2026, 14:41 Uhr", "notiz": "Jarvis schaltet jetzt auf Zuruf alle LED-Streifen der Wohnung per Bluetooth an oder aus, mit Farbe und Helligkeit wie zuletzt in der KS-Lite-App."},
     {"versionCode": 800, "versionName": "1.8.789", "stand": "19.11.2026, 14:51 Uhr", "notiz": "Jarvis stellt die LED-Streifen jetzt auch auf eine Farbe oder Helligkeit, und der Mac schaltet alle Streifen mit, die das Handy nicht erreicht."},
     {"versionCode": 801, "versionName": "1.8.790", "stand": "19.11.2026, 14:56 Uhr", "notiz": "Der Mac sucht die LED-Streifen jetzt länger und zählt Streifen, die Handy und Mac verschieden benennen, nur einmal."},
-    {"versionCode": 802, "versionName": "1.8.791", "stand": "19.11.2026, 15:18 Uhr", "notiz": "Das LED-Licht geht jetzt auf allen Streifen im selben zuletzt gewählten Zustand an, mit eigener Startkarte für Farben, Szenen, Mikrofon-Modi und einer Automatik für Dämmerung, Dienst und Umkreis."}
+    {"versionCode": 802, "versionName": "1.8.791", "stand": "19.11.2026, 15:18 Uhr", "notiz": "Das LED-Licht geht jetzt auf allen Streifen im selben zuletzt gewählten Zustand an, mit eigener Startkarte für Farben, Szenen, Mikrofon-Modi und einer Automatik für Dämmerung, Dienst und Umkreis."},
+    {"versionCode": 803, "versionName": "1.8.792", "stand": "19.11.2026, 15:25 Uhr", "notiz": "Das LED-Licht sendet nie mehr eine geratene Farbe, schaltet nur noch Franks eigene Streifen und der Mac bricht veraltete Schaltaufträge ab."}
 ]
 }
