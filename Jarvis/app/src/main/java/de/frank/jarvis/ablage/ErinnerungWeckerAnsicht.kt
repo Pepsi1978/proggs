@@ -5,7 +5,13 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,38 +45,44 @@ import androidx.compose.ui.unit.sp
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.ui.theme.JarvisTheme
 import de.frank.jarvis.ui.theme.LocalFarben
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Die Wecker-Karte einer klingelnden Erinnerung: Text und ein großer Knopf „Wecker ausschalten“. Sie erscheint als kleines Overlay über jeder App
+ * Die Wecker-Karte einer klingelnden Erinnerung: Text und ein großer Knopf „Wecker ausschalten“. Sie erscheint als Vollbild-Overlay über jeder App
  * (aus [ErinnerungKlingelDienst]) und, bei gesperrtem Handy, als eigene Ansicht über dem Sperrbildschirm ([ErinnerungWeckerActivity]).
  * Ein Tipp bestätigt alles, was gerade klingelt; die App muss dafür nicht geöffnet werden.
  */
 object ErinnerungWeckerAnsicht {
-    /** Die Sperrbildschirm-Ansicht ist vorn: Das Overlay hält sich dann zurück, damit die Karte nicht doppelt steht. */
-    val vorn = MutableStateFlow(false)
+    /** Kurzfassung in höchstens zwei Sätzen. */
+    fun kurz(text: String): String {
+        val saetze = text.trim().split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
+        val k = saetze.take(2).joinToString(" ").ifBlank { "Erinnerung" }
+        return if (k.length > 220) k.take(217).trimEnd() + " …" else k
+    }
 
+    /** Ganzer Bildschirm: oben groß die Kurzfassung, unten der große Knopf „Wecker ausschalten“. */
     @Composable
-    fun Karte(liste: List<Faellig>, onAus: () -> Unit) {
+    fun Vollbild(liste: List<Faellig>, onAus: () -> Unit) {
         val f = LocalFarben.current
-        val form = RoundedCornerShape(f.radius)
-        Box(Modifier.padding(16.dp)) {
-            Column(
-                Modifier.widthIn(max = 420.dp).fillMaxWidth().shadow(16.dp, form).background(f.hgUnten, form).border(2.dp, f.primaer, form).padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Alarm, null, tint = f.primaer, modifier = Modifier.size(26.dp))
-                    Text(if (liste.size > 1) "${liste.size} Erinnerungen" else "Erinnerung", color = f.primaer, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
-                liste.take(3).forEach { e ->
-                    Text(e.erinnerung.kurz, color = f.text, fontSize = 17.sp, maxLines = 5, overflow = TextOverflow.Ellipsis)
-                }
-                Button(
-                    onAus, Modifier.fillMaxWidth().height(58.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = f.primaer, contentColor = f.aufPrimaer),
-                ) { Text("Wecker ausschalten", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+        Column(
+            Modifier.fillMaxSize().background(f.hgUnten).safeDrawingPadding().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Rounded.Alarm, null, tint = f.primaer, modifier = Modifier.size(34.dp))
+                Text(if (liste.size > 1) "${liste.size} Erinnerungen" else "Erinnerung", color = f.primaer, fontWeight = FontWeight.Bold, fontSize = 22.sp)
             }
+            Spacer(Modifier.height(28.dp))
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                liste.take(3).forEach { e ->
+                    Text(kurz(e.erinnerung.kurz), color = f.text, fontSize = if (liste.size > 1) 26.sp else 34.sp, lineHeight = if (liste.size > 1) 33.sp else 42.sp,
+                        fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onAus, Modifier.fillMaxWidth().widthIn(max = 520.dp).height(84.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = f.primaer, contentColor = f.aufPrimaer),
+            ) { Text("Wecker ausschalten", fontSize = 26.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -86,15 +98,11 @@ class ErinnerungWeckerActivity : ComponentActivity() {
             JarvisTheme(einst.modus, einst.design) {
                 val liste by ErinnerungPlaner.klingelt.collectAsState()
                 LaunchedEffect(liste.isEmpty()) { if (liste.isEmpty()) finish() }
-                Box(Modifier.fillMaxSize().background(LocalFarben.current.hgUnten), contentAlignment = Alignment.Center) {
-                    if (liste.isNotEmpty()) ErinnerungWeckerAnsicht.Karte(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungWeckerActivity) }
-                }
+                BackHandler { }
+                if (liste.isNotEmpty()) ErinnerungWeckerAnsicht.Vollbild(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungWeckerActivity) }
             }
         }
     }
-
-    override fun onResume() { super.onResume(); ErinnerungWeckerAnsicht.vorn.value = true }
-    override fun onPause() { ErinnerungWeckerAnsicht.vorn.value = false; super.onPause() }
 
     companion object {
         fun gesperrt(context: android.content.Context): Boolean {

@@ -34,7 +34,7 @@ import kotlinx.coroutines.Job
 
 /**
  * Eine Erinnerung in der Form Wecker: Weckton in der Schleife, dazwischen liest Jarvis die Kurzfassung vor, bis Frank ausdrücklich ausschaltet.
- * Bewusst ohne Höchstdauer und ohne Wegwischen: Weggewischt kommt die Meldung sofort wieder. Aus ist nur „Wecker ausschalten“ auf der Wecker-Karte
+ * Bewusst ohne Höchstdauer und ohne Wegwischen: Weggewischt kommt die Meldung sofort wieder. Aus ist nur „Wecker ausschalten“ im Vollbild
  * (Overlay über jeder App, bei gesperrtem Handy über dem Sperrbildschirm), „Wecker ausschalten“ in der Meldung, in der App oder per Sprache, oder eine Bestätigung von einem anderen Gerät.
  */
 class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
@@ -71,7 +71,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
         return START_NOT_STICKY
     }
 
-    /** Kleines Overlay oben über jeder App; die App darunter bleibt bedienbar. Ohne Overlay-Recht bleibt es bei Meldung und Sperrbildschirm-Ansicht. */
+    /** Vollbild-Overlay über jeder App, nicht wegzuwischen; aus nur mit „Wecker ausschalten“. Ohne Overlay-Recht bleibt es bei Meldung und Sperrbildschirm-Ansicht. */
     private fun zeigeKarte() {
         if (karte != null || !de.frank.jarvis.ui.SprachBlase.darf(this)) return
         val einst = de.frank.jarvis.data.Einstellungen.get(this)
@@ -82,17 +82,16 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             setContent {
                 JarvisTheme(einst.modus, einst.design) {
                     val liste by ErinnerungPlaner.klingelt.collectAsState()
-                    val sperrAnsicht by ErinnerungWeckerAnsicht.vorn.collectAsState()
-                    if (liste.isNotEmpty() && !sperrAnsicht) ErinnerungWeckerAnsicht.Karte(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungKlingelDienst) }
+                    if (liste.isNotEmpty()) ErinnerungWeckerAnsicht.Vollbild(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungKlingelDienst) }
                 }
             }
         }
         val lp = WindowManager.LayoutParams(
-            // Nur so breit wie die Karte: Daneben bleibt die App darunter bedienbar.
-            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            // Ganzer Bildschirm: Die App darunter ist erst nach dem Ausschalten wieder bedienbar.
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+            PixelFormat.OPAQUE,
         ).apply { gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL; title = "Jarvis-Wecker" }
         runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
             .onSuccess { karte = neu }
@@ -147,15 +146,18 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
         val text = liste.firstOrNull()?.erinnerung?.kurz ?: "Erinnerung"
         val titel = if (liste.size > 1) "${liste.size} Erinnerungen" else liste.firstOrNull()?.erinnerung?.zeile ?: "Erinnerung"
         val vollbild = PendingIntent.getActivity(this, 19_993, Intent(this, ErinnerungWeckerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), flaggen)
-        return NotificationCompat.Builder(this, de.frank.jarvis.timer.Timer.KANAL_STILL).setSmallIcon(R.drawable.ic_stat_jarvis)
+        // Entsperrt mit Overlay-Recht steht das Vollbild schon: Meldung dann still, ohne schwebende Meldung oben.
+        val direkt = !ErinnerungWeckerActivity.gesperrt(this) && de.frank.jarvis.ui.SprachBlase.darf(this)
+        if (direkt) stillerKanal()
+        return NotificationCompat.Builder(this, if (direkt) KANAL_VOLLBILD else de.frank.jarvis.timer.Timer.KANAL_STILL).setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle(titel).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(if (direkt) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
             // Auch bei „Inhalt verbergen“ muss sich der Wecker gesperrt abstellen lassen, nur der Text bleibt dann verborgen.
             .setVisibility(if (de.frank.jarvis.data.Einstellungen.get(this).meldungInhaltVerbergen) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true)
             // Tippen öffnet die Wecker-Karte, nicht die App: Ausschalten geht dort mit einem Tipp.
             .setContentIntent(vollbild)
-            .setFullScreenIntent(vollbild, true)
+            .apply { if (!direkt) setFullScreenIntent(vollbild, true) }
             .addAction(R.drawable.ic_stat_jarvis, "Wecker ausschalten", rundfunk(19_996, ErinnerungPlaner.AKTION_BESTAETIGEN))
             .apply { liste.firstOrNull()?.let { addAction(R.drawable.ic_stat_jarvis, "In Jarvis öffnen", ErinnerungPlaner.oeffnenAbsicht(this@ErinnerungKlingelDienst, it.erinnerung.id, 19_997)) } }
             .setDeleteIntent(rundfunk(19_995, ErinnerungPlaner.AKTION_ZEIGEN))
@@ -163,8 +165,18 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             .build()
     }
 
+    private fun stillerKanal() {
+        val nm = getSystemService(NotificationManager::class.java)
+        if (nm.getNotificationChannel(KANAL_VOLLBILD) != null) return
+        nm.createNotificationChannel(android.app.NotificationChannel(KANAL_VOLLBILD, "Erinnerungs-Wecker im Vollbild", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Stille Meldung, solange eine Erinnerung als Wecker im Vollbild klingelt."
+            setSound(null, null); enableVibration(false); setShowBadge(false)
+        })
+    }
+
     companion object {
         private const val NUMMER = 19_994
+        private const val KANAL_VOLLBILD = "jarvis-erinnerung-vollbild"
         @Volatile private var instanz: ErinnerungKlingelDienst? = null
         fun abgleichen() { Handler(Looper.getMainLooper()).post { instanz?.aktualisieren() } }
     }

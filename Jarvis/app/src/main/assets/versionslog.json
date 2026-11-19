@@ -800,6 +800,7 @@
     {"versionCode": 790, "versionName": "1.8.779", "stand": "18.11.2026, 12:17 Uhr", "notiz": "Cloud-Sicherung nach Review sicherer: keine Such-, Karten- und Victron-Schlüssel in Drive, keine Ton-Zwischenspeicher, Wiederherstellen ersetzt den Stand vollständig und behält die Sicherung bei einem Fehler."},
     {"versionCode": 791, "versionName": "1.8.780", "stand": "18.11.2026, 12:17 Uhr", "notiz": "Startbildschirm scrollt flüssiger: Der Hintergrund wird zwischengespeichert statt in jedem Bild neu gerechnet, die Karten werden beim Scrollen nicht mehr gegenseitig umgebaut, und die Glasschatten rechnen die verdeckte Kartenfläche nicht mehr mit."},
     {"versionCode": 792, "versionName": "1.8.781", "stand": "18.11.2026, 12:31 Uhr", "notiz": "Kaffeemaschine: Jarvis wartet bis zu 30 Sekunden auf ihre Antwort (statt „antwortet gerade nicht“), zeigt sonst den letzten Stand, und das Haus-Verlassen meldet jetzt Android selbst (Umkreis-Dienst, spart Akku)."},
-    {"versionCode": 793, "versionName": "1.8.782", "stand": "18.11.2026, 12:33 Uhr", "notiz": "Die Lichtflecken im Hintergrund springen beim Öffnen von Jarvis nicht mehr kurz an eine andere Stelle."}
+    {"versionCode": 793, "versionName": "1.8.782", "stand": "18.11.2026, 12:33 Uhr", "notiz": "Die Lichtflecken im Hintergrund springen beim Öffnen von Jarvis nicht mehr kurz an eine andere Stelle."},
+    {"versionCode": 794, "versionName": "1.8.783", "stand": "19.11.2026, 09:23 Uhr", "notiz": "Erinnerungen in der Form Wecker erscheinen jetzt auch bei entsperrtem Handy als Vollbild mit großer Kurzfassung und Ausschalten-Knopf statt als kleine Karte."}
 ]
 }
