@@ -104,7 +104,6 @@ class AlarmActivity : ComponentActivity() {
             .getOrDefault(Ausrichtung.AUTOMATISCH)
     }
 
-    override fun onResume() { super.onResume(); vorn = true }
     override fun onPause() { vorn = false; super.onPause() }
 
     override fun onUserLeaveHint() {
@@ -354,6 +353,7 @@ class AlarmActivity : ComponentActivity() {
     }
     override fun onResume() {
         super.onResume()
+        vorn = true
         // Opened from the fallback notification: a visible activity may start the alarm service again.
         if (AlarmService.state.value.alarm == null && AlarmStore.get(this).ringing().isNotEmpty()) runCatching {
             androidx.core.content.ContextCompat.startForegroundService(this, Intent(this, AlarmService::class.java).setAction("RING"))

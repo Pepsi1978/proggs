@@ -61,6 +61,7 @@
     {"versionCode": 57, "versionName": "1.0.56", "stand": "11.11.2026, 17:01 Uhr", "notiz": "Die Weckerliste ist jetzt nach Uhrzeit sortiert, von früh bis spät, und neue oder geänderte Wecker sortieren sich automatisch ein."},
     {"versionCode": 58, "versionName": "1.0.57", "stand": "11.11.2026, 17:13 Uhr", "notiz": "Gleiche Uhrzeiten in der Weckerliste werden jetzt alphabetisch mit Umlauten geordnet."},
     {"versionCode": 59, "versionName": "1.0.58", "stand": "19.11.2026, 09:23 Uhr", "notiz": "Ein klingelnder Wecker erscheint jetzt auch bei entsperrtem Handy als Vollbild statt als schwebende Meldung und zeigt seinen Text kurz unter dem Namen."},
-    {"versionCode": 60, "versionName": "1.0.59", "stand": "19.11.2026, 09:44 Uhr", "notiz": "Die Weckbereitschaft fragt jetzt nach „Über anderen Apps einblenden“ für das Vollbild bei entsperrtem Handy, der Wecker weicht Anrufen aus und zeigt nur vorgelesenen Text."}
+    {"versionCode": 60, "versionName": "1.0.59", "stand": "19.11.2026, 09:44 Uhr", "notiz": "Die Weckbereitschaft fragt jetzt nach „Über anderen Apps einblenden“ für das Vollbild bei entsperrtem Handy, der Wecker weicht Anrufen aus und zeigt nur vorgelesenen Text."},
+    {"versionCode": 61, "versionName": "1.0.60", "stand": "19.11.2026, 09:48 Uhr", "notiz": "Behebt einen Baufehler der vorigen Version; das Vollbild bei entsperrtem Handy kommt damit tatsächlich an."}
 ]
 }
