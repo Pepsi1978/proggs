@@ -104,10 +104,13 @@ class AlarmActivity : ComponentActivity() {
             .getOrDefault(Ausrichtung.AUTOMATISCH)
     }
 
-    override fun onStop() {
-        super.onStop()
-        // Mit Home verlassen, während der Wecker klingelt: kurz danach wieder nach vorn. Nicht bei Bildschirm aus,
-        // im Test oder während der Kamera für die Foto-Aufgabe offen ist.
+    override fun onResume() { super.onResume(); vorn = true }
+    override fun onPause() { vorn = false; super.onPause() }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Bewusst mit Home oder Übersicht verlassen, während der Wecker klingelt: kurz danach wieder nach vorn.
+        // Anrufe und andere Wecker lösen das nicht aus; nicht im Test und nicht bei der Foto-Aufgabe (Kamera).
         if (isFinishing) return
         val app = applicationContext
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -116,6 +119,11 @@ class AlarmActivity : ComponentActivity() {
             if (s.test || alarm.photoRequired || !AlarmService.vollbildDirekt(app)) return@postDelayed
             runCatching { app.startActivity(Intent(app, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }, 700)
+    }
+
+    companion object {
+        /** Das Weckbild ist gerade sichtbar vorn. */
+        @Volatile var vorn = false
     }
 
     override fun onDestroy() {
@@ -517,8 +525,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
 
 /** Höchstens zwei Sätze aus dem Weckertext; null ohne Text. */
 private fun weckText(alarm: Alarm?): String? {
-    val roh = alarm?.text?.trim()?.ifBlank { alarm.originalText.trim() }.orEmpty()
-    if (roh.isBlank()) return null
+    // Nur wenn der Text auch vorgelesen wird, und nicht noch einmal derselbe Wortlaut wie der Name.
+    if (alarm == null || Step.TEXT !in alarm.steps) return null
+    val roh = alarm.text.trim().ifBlank { alarm.originalText.trim() }
+    if (roh.isBlank() || roh.equals(alarm.name.trim(), ignoreCase = true)) return null
     val k = roh.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }.take(2).joinToString(" ")
     return if (k.length > 200) k.take(197).trimEnd() + " …" else k
 }

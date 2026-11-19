@@ -141,7 +141,14 @@ class AlarmService : Service() {
         showForeground(alarm, quiet)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
         // Entsperrt erscheint der Wecker als Vollbild statt als schwebende Meldung (gesperrt übernimmt der Full-Screen-Intent).
-        if (!quiet && vollbildDirekt(this)) runCatching { startActivity(Intent(this, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        vollbildRueckfall = false
+        if (!quiet && vollbildDirekt(this)) {
+            runCatching { startActivity(Intent(this, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            // Kam das Vollbild nicht nach vorn (Android blockiert den Start), zurück zur lauten Meldung mit Full-Screen-Intent.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (token == generation && current != null && !AlarmActivity.vorn) { vollbildRueckfall = true; showForeground(current, quiet) }
+            }, 2_000)
+        }
         if (alarm.vibrate) vibrateAsAlarm()
         // Lautstärke sofort setzen, bevor irgendetwas klingt: ohne Anlaufzeit gleich die eingestellte volle Lautstärke.
         setVolume(if (alarm.fadeSeconds == 0) alarm.volume else (alarm.volume * .05f).roundToInt().coerceAtLeast(1))
@@ -268,6 +275,9 @@ class AlarmService : Service() {
      * Real alarms and the silent button test use different notification ids: a real alarm arriving during a
      * test gets a fresh notification and therefore its full-screen alert despite setOnlyAlertOnce.
      */
+    /** Das direkt gestartete Vollbild kam nicht nach vorn: Meldung wieder laut mit Full-Screen-Intent. */
+    private var vollbildRueckfall = false
+
     private fun showForeground(alarm: Alarm?, quietMode: Boolean) {
         val id = if (quietMode) TEST_NOTIFICATION else NOTIFICATION
         val manager = getSystemService(NotificationManager::class.java)
@@ -286,7 +296,7 @@ class AlarmService : Service() {
                 setSound(null, null); enableVibration(false); setShowBadge(false)
             })
             NotificationCompat.Builder(this, TEST_CHANNEL).setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true)
-        } else if (vollbildDirekt(this)) {
+        } else if (vollbildDirekt(this) && !vollbildRueckfall) {
             // Das Vollbild steht schon: die Meldung bleibt still in der Leiste, ohne schwebende Meldung oben.
             manager.createNotificationChannel(NotificationChannel(FULLSCREEN_CHANNEL, "Wecker im Vollbild", NotificationManager.IMPORTANCE_LOW).apply {
                 setSound(null, null); enableVibration(false); setShowBadge(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC

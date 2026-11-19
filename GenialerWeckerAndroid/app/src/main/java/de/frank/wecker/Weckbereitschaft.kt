@@ -55,6 +55,7 @@ object Weckbereitschaft {
                 add(i(Settings.ACTION_APP_NOTIFICATION_SETTINGS, extraPackage = true))
                 add(appInfo)
             }
+            "Vollbild auch entsperrt" -> listOf(i(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri = true), appInfo)
             "Wecker bei Nicht stören" -> {
                 // Mit Zugriff stellt die App es selbst ein; sonst direkt zu den Modi, dort „Wecker“ erlauben.
                 if (weckerImNichtStoerenErlauben(activity) && erfuellt(activity, name)) return true
@@ -82,6 +83,7 @@ object Weckbereitschaft {
             if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity) && !dialogGesperrt(activity)) "Im Fenster auf „Zulassen“ tippen."
             else "Auf der nächsten Seite „Benachrichtigungen zulassen“ einschalten, dann zurück."
         "Vollbild-Wecker" -> "Auf der nächsten Seite „Vollbildbenachrichtigungen erlauben“ einschalten, dann zurück."
+        "Vollbild auch entsperrt" -> "Auf der nächsten Seite „Über anderen Apps einblenden“ erlauben, dann zurück."
         "Wecker bei Nicht stören" -> "Auf der nächsten Seite den aktiven Nicht-stören-Modus öffnen und dort „Wecker“ bzw. „Alarme“ erlauben, dann zurück."
         "Akku uneingeschränkt" -> "Im Fenster auf „Zulassen“ tippen."
         else -> "Auf der nächsten Seite die Freigabe einschalten, dann zurück."
