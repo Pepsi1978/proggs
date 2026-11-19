@@ -73,7 +73,7 @@ final class JarvisAgent {
     private func systemTeile(g: Gespraech) async -> [String] {
         let anweisungen = await McpKlient.shared.anweisungen
         let fest = Self.persona + (anweisungen.isEmpty ? "" : "\n\nVORGABEN DES HANDY-JARVIS (gelten auch hier, soweit sie nicht den Mac betreffen):\n" + anweisungen)
-            + "\n\nAM MAC NICHT VERFÜGBAR: Die Kanal-Werkzeuge des Handys zu den PC-Jarvis-Versionen (jarvis_mac_*, jarvis_windows_hp_*, jarvis_windows_power_*) gibt es hier nicht; ruf sie nie auf. Will Frank den HP-Laptop oder den Power-PC ansprechen, sag ihm, dass das über Jarvis am Handy geht."
+            + "\n\nAM MAC NICHT VERFÜGBAR: Die Kanal-Werkzeuge, mit denen Jarvis am Handy die PC-Jarvis-Versionen anspricht (jarvis_mac_*, jarvis_windows_hp_*, jarvis_windows_power_*), gibt es hier nicht; ruf sie nie auf. jarvis_mac_* brauchst du ohnehin nicht, denn du bist selbst der Mac-Jarvis. Den HP-Laptop und den Power-PC erreicht nur Jarvis am Handy. Will Frank sie ansprechen, sag ihm, dass das über Jarvis am Handy geht; ist das Handy gerade nicht erreichbar, sag ihm, dass das erst wieder geht, wenn es erreichbar ist. Kommt die Bitte über den Agentenkanal vom Handy selbst, antworte ihm, dass es das mit seinen eigenen Kanal-Werkzeugen direkt kann."
         let handyDa = await McpKlient.shared.verbunden
         let kontext = g.kontext.isEmpty
             ? (handyDa
