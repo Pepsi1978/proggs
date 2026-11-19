@@ -509,7 +509,7 @@ def licht_schalten(befehle: dict) -> None:
     skript = Path(__file__).resolve().with_name("jarvis_licht.py")
     try:
         lauf = subprocess.run([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent), stdin=subprocess.DEVNULL,
-                              capture_output=True, text=True, timeout=22)
+                              capture_output=True, text=True, timeout=30)
         ergebnis = json.loads(lauf.stdout.strip().splitlines()[-1]) if lauf.returncode == 0 and lauf.stdout.strip() else \
             {"geschaltet": [], "gesehen": [], "fehler": (lauf.stderr.strip() or f"Exit {lauf.returncode}")[-300:]}
     except Exception as fehler:

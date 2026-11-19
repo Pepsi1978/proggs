@@ -130,8 +130,9 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
             val hd = async { if (adapter?.isEnabled == true) handySchalten(adapter, befehl) else emptyMap() }
             hd.await() to m.await()
         }
-        val alle = (handy.keys + mac.gesehen + BEKANNTE_NAMEN.filter { n -> handy.isEmpty() && mac.gesehen.isEmpty() && false }).toSortedSet(String.CASE_INSENSITIVE_ORDER)
-        val ok = (handy.filterValues { it }.keys + mac.geschaltet).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+        // Mac und Handy nennen denselben Streifen teils mit vertauschten Bytes (KS03~000F97 / KS03~97000F): über [schluessel] gleichsetzen.
+        val alle = (handy.keys + mac.gesehen).map(::schluessel).toSortedSet()
+        val ok = (handy.filterValues { it }.keys + mac.geschaltet).map(::schluessel).toSortedSet()
         val fehlt = alle.filter { it !in ok }
         Logbuch.netz("Licht $aktion", "Handy ${handy.count { it.value }}/${handy.size}, Mac ${mac.geschaltet.size}/${mac.gesehen.size}${mac.grund?.let { " ($it)" } ?: ""}" +
             if (fehlt.isNotEmpty()) ", fehlt: ${fehlt.joinToString()}" else "")
@@ -142,7 +143,7 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
             ok.isEmpty() -> Ergebnis("Ich habe keinen LED-Streifen erreicht. Ist die KS-Lite-App noch offen? Sie hält die Streifen besetzt; bitte schließen und noch einmal versuchen." +
                 (mac.grund?.let { " Der Mac ist $it." } ?: ""), true)
             ok.size >= gesamt -> Ergebnis("Alle ${ok.size} LED-Streifen sind $text.")
-            else -> Ergebnis("${ok.size} von $gesamt LED-Streifen sind $text; nicht erreicht: ${(BEKANNTE_NAMEN.filter { it !in ok } + fehlt).distinct().size} " +
+            else -> Ergebnis("${ok.size} von $gesamt LED-Streifen sind $text; nicht erreicht: ${gesamt - ok.size} " +
                 "(außer Reichweite von Handy und Mac oder von der KS-Lite-App besetzt)." + (mac.grund?.let { " Der Mac ist $it." } ?: ""))
         }
     }
@@ -285,6 +286,13 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /** Gleicher Streifen, gleicher Schlüssel: Vorsatz plus die Bytes der Kennung sortiert, groß geschrieben. */
+    private fun schluessel(n: String): String {
+        val vor = n.takeWhile { it != '~' && it != '-' }
+        val rest = n.drop(vor.length + 1).uppercase()
+        return if (rest.length % 2 == 0 && rest.isNotEmpty()) vor + "~" + rest.chunked(2).sorted().joinToString("") else n.uppercase()
+    }
+
     private fun farbe(f: String): String? {
         val k = f.lowercase().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss").replace(Regex("[^a-z0-9#]"), "")
         Regex("#?([0-9a-f]{6})").matchEntire(k)?.let { return it.groupValues[1].uppercase() }
@@ -295,7 +303,7 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
     private companion object {
         const val VERBINDEN_MS = 8_000L
         const val SUCHE_MS = 5_000L
-        val CLIENT: OkHttpClient = OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
+        val CLIENT: OkHttpClient = OkHttpClient.Builder().callTimeout(45, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
         fun uuid(kurz: String): UUID = UUID.fromString("0000$kurz-0000-1000-8000-00805f9b34fb")
 
         /** Aus KS Lite 1.8 (UUIDBeanList, Cmd_KS0x, CmdBase); der erste passende Vorsatz gilt. alt = 7E-Befehlssatz (KS03-/KS04-). */

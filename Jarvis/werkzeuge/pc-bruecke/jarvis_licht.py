@@ -21,7 +21,8 @@ TYPEN = [
     ("KS01-", "ae00", "ae01"), ("KS02-", "ae00", "ae01"), ("KS03-", "fff0", "fff3"), ("KS03~", "afd0", "afd1"),
     ("KS04-", "fff0", "fff3"), ("KS15~", "afd0", "afd1"), ("KS", "ae00", "ae01"),
 ]
-SUCHE_S = 6.0
+SUCHE_S = 8.0
+ERWARTET = 6  # Franks Streifen (Stand 19.11.2026): Wohnzimmer, Wohnzimmer 2, Wohnzimmer 3, Flur, Küche, Bad
 
 
 def uuid(kurz: str) -> str:
@@ -29,7 +30,7 @@ def uuid(kurz: str) -> str:
 
 
 def typ(name: str):
-    return next(t for t in TYPEN if name.startswith(t[0]))
+    return next((t for t in TYPEN if name.startswith(t[0])), TYPEN[-1])
 
 
 def befehle_fuer(name: str, befehle: dict) -> list:
@@ -37,15 +38,14 @@ def befehle_fuer(name: str, befehle: dict) -> list:
     return befehle.get(t) or befehle.get("KS") or []
 
 
-async def schalten_eins(geraet, befehle: dict) -> bool:
-    name = geraet.name or ""
+async def schalten_eins(geraet, name: str, befehle: dict) -> bool:
     liste = befehle_fuer(name, befehle)
     if not liste:
         return False
     _, dienst, kanal = typ(name)
     for versuch in range(2):
         try:
-            async with BleakClient(geraet, timeout=8.0) as client:
+            async with BleakClient(geraet, timeout=6.0) as client:
                 k = client.services.get_characteristic(uuid(kanal))
                 if k is None:  # anderer Typ: ersten bekannten Kanal nehmen
                     k = next((client.services.get_characteristic(uuid(c)) for _, _, c in TYPEN
@@ -73,17 +73,12 @@ async def schalten(befehle: dict) -> dict:
             gefunden.setdefault(name, geraet)
 
     async with BleakScanner(gesehen):
-        # Früher fertig, wenn eine Sekunde lang kein neuer Streifen dazukam (nach mindestens 2,5 s).
-        ende, zuletzt, anzahl = asyncio.get_event_loop().time() + SUCHE_S, 0.0, 0
-        beginn = asyncio.get_event_loop().time()
-        while (jetzt := asyncio.get_event_loop().time()) < ende:
-            if len(gefunden) != anzahl:
-                anzahl, zuletzt = len(gefunden), jetzt
-            if anzahl and jetzt - beginn >= 2.5 and jetzt - zuletzt >= 1.0:
-                break
+        # Früher fertig nur, wenn alle erwarteten Streifen da sind; manche werben selten und kommen erst nach Sekunden.
+        ende = asyncio.get_event_loop().time() + SUCHE_S
+        while asyncio.get_event_loop().time() < ende and len(gefunden) < ERWARTET:
             await asyncio.sleep(0.2)
     namen = sorted(gefunden)
-    ergebnisse = await asyncio.gather(*(schalten_eins(gefunden[n], befehle) for n in namen))
+    ergebnisse = await asyncio.gather(*(schalten_eins(gefunden[n], n, befehle) for n in namen))
     return {"geschaltet": [n for n, ok in zip(namen, ergebnisse) if ok], "gesehen": namen}
 
 

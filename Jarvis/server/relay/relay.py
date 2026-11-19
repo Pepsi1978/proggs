@@ -1758,7 +1758,7 @@ class AgentenKanal:
         self.licht_auftrag = {"befehle": befehle, "kennung": str(time.time())}
         self.befehl.set()
         try:
-            await asyncio.wait_for(self.licht_fertig.wait(), 25)
+            await asyncio.wait_for(self.licht_fertig.wait(), 35)
         except asyncio.TimeoutError:
             self.licht_auftrag = None
             return web.json_response({"ergebnis": "keine_rueckmeldung"})

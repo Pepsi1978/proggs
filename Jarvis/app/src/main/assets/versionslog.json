@@ -807,6 +807,7 @@
     {"versionCode": 797, "versionName": "1.8.786", "stand": "19.11.2026, 11:30 Uhr", "notiz": "Ist der Anker PowerConf verbunden, hört Jarvis im Gespräch nach dem Weckwort über dessen Mikrofone zu, die Antworten bleiben in voller Qualität."},
     {"versionCode": 798, "versionName": "1.8.787", "stand": "19.11.2026, 11:36 Uhr", "notiz": "Das Konferenz-Mikrofon schaltet jetzt sauber zurück aufs Handy, wenn das Umschalten scheitert, und ein neues Gespräch verliert es nicht mehr an ein altes."},
     {"versionCode": 799, "versionName": "1.8.788", "stand": "19.11.2026, 14:41 Uhr", "notiz": "Jarvis schaltet jetzt auf Zuruf alle LED-Streifen der Wohnung per Bluetooth an oder aus, mit Farbe und Helligkeit wie zuletzt in der KS-Lite-App."},
-    {"versionCode": 800, "versionName": "1.8.789", "stand": "19.11.2026, 14:51 Uhr", "notiz": "Jarvis stellt die LED-Streifen jetzt auch auf eine Farbe oder Helligkeit, und der Mac schaltet alle Streifen mit, die das Handy nicht erreicht."}
+    {"versionCode": 800, "versionName": "1.8.789", "stand": "19.11.2026, 14:51 Uhr", "notiz": "Jarvis stellt die LED-Streifen jetzt auch auf eine Farbe oder Helligkeit, und der Mac schaltet alle Streifen mit, die das Handy nicht erreicht."},
+    {"versionCode": 801, "versionName": "1.8.790", "stand": "19.11.2026, 14:56 Uhr", "notiz": "Der Mac sucht die LED-Streifen jetzt länger und zählt Streifen, die Handy und Mac verschieden benennen, nur einmal."}
 ]
 }
