@@ -42,6 +42,8 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
     private val lebenszyklus = LifecycleRegistry(this)
     private val speicher = SavedStateRegistryController.create(this)
     private var karte: ComposeView? = null
+    /** Das Vollbild-Overlay ließ sich nicht einblenden: die Meldung bleibt dann laut. */
+    private var karteFehlt = false
 
     override val lifecycle: Lifecycle get() = lebenszyklus
     override val savedStateRegistry: SavedStateRegistry get() = speicher.savedStateRegistry
@@ -82,7 +84,8 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             setContent {
                 JarvisTheme(einst.modus, einst.design) {
                     val liste by ErinnerungPlaner.klingelt.collectAsState()
-                    if (liste.isNotEmpty()) ErinnerungWeckerAnsicht.Vollbild(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungKlingelDienst) }
+                    val sperrAnsicht by ErinnerungWeckerAnsicht.vorn.collectAsState()
+                    if (liste.isNotEmpty() && !sperrAnsicht) ErinnerungWeckerAnsicht.Vollbild(liste) { ErinnerungPlaner.ausschalten(this@ErinnerungKlingelDienst) }
                 }
             }
         }
@@ -90,12 +93,18 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             // Ganzer Bildschirm: Die App darunter ist erst nach dem Ausschalten wieder bedienbar.
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+            // Fokussierbar: Zurück und andere Tasten landen beim Vollbild, nicht unsichtbar in der App darunter.
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.OPAQUE,
         ).apply { gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL; title = "Jarvis-Wecker" }
         runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
             .onSuccess { karte = neu }
-            .onFailure { Logbuch.fehler("Wecker-Karte ließ sich nicht einblenden", it) }
+            .onFailure {
+                Logbuch.fehler("Wecker-Vollbild ließ sich nicht einblenden", it)
+                // Rückfall: Meldung wieder laut mit Full-Screen-Intent statt still.
+                karteFehlt = true
+                aktualisieren()
+            }
     }
 
     private fun entferneKarte() {
@@ -147,7 +156,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
         val titel = if (liste.size > 1) "${liste.size} Erinnerungen" else liste.firstOrNull()?.erinnerung?.zeile ?: "Erinnerung"
         val vollbild = PendingIntent.getActivity(this, 19_993, Intent(this, ErinnerungWeckerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), flaggen)
         // Entsperrt mit Overlay-Recht steht das Vollbild schon: Meldung dann still, ohne schwebende Meldung oben.
-        val direkt = !ErinnerungWeckerActivity.gesperrt(this) && de.frank.jarvis.ui.SprachBlase.darf(this)
+        val direkt = !ErinnerungWeckerActivity.gesperrt(this) && de.frank.jarvis.ui.SprachBlase.darf(this) && !karteFehlt
         if (direkt) stillerKanal()
         return NotificationCompat.Builder(this, if (direkt) KANAL_VOLLBILD else de.frank.jarvis.timer.Timer.KANAL_STILL).setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle(titel).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
