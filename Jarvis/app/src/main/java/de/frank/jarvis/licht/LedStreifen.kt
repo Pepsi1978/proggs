@@ -33,6 +33,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -270,24 +271,96 @@ object LedStreifen {
     @SuppressLint("MissingPermission")
     private suspend fun <T> sitzung(c: Context, geraet: BluetoothDevice, typ: Typ, arbeit: suspend (Sitzung) -> T): T? {
         val s = Sitzung()
-        val gatt = geraet.connectGatt(c, false, s.rueckruf, BluetoothDevice.TRANSPORT_LE) ?: return null
-        s.gatt = gatt
         return try {
-            withTimeoutOrNull(VERBINDEN_MS) {
-                if (!s.bereit.await()) return@withTimeoutOrNull null
-                s.kanal = (listOf(typ) + TYPEN).firstNotNullOfOrNull { t -> gatt.getService(uuid(t.dienst))?.getCharacteristic(uuid(t.kanal)) } ?: return@withTimeoutOrNull null
-                s.melder = (listOf(typ) + TYPEN).firstNotNullOfOrNull { t -> gatt.getService(uuid(t.dienst))?.getCharacteristic(uuid(t.melde)) }
-                arbeit(s)
+            withTimeoutOrNull(VERBINDEN_MS) { if (oeffnen(c, geraet, typ, s)) arbeit(s) else null }
+        } finally { s.schliessen() }
+    }
+
+    /** Verbinden und Kanäle suchen; false = nicht verbunden (die Sitzung muss trotzdem geschlossen werden). */
+    @SuppressLint("MissingPermission")
+    private suspend fun oeffnen(c: Context, geraet: BluetoothDevice, typ: Typ, s: Sitzung): Boolean {
+        val gatt = geraet.connectGatt(c, false, s.rueckruf, BluetoothDevice.TRANSPORT_LE) ?: return false
+        s.gatt = gatt
+        if (!s.bereit.await()) return false
+        s.kanal = (listOf(typ) + TYPEN).firstNotNullOfOrNull { t -> gatt.getService(uuid(t.dienst))?.getCharacteristic(uuid(t.kanal)) } ?: return false
+        s.melder = (listOf(typ) + TYPEN).firstNotNullOfOrNull { t -> gatt.getService(uuid(t.dienst))?.getCharacteristic(uuid(t.melde)) }
+        return true
+    }
+
+    // ------------------------------------------------------------------ Live (Farbkreis, Helligkeit)
+
+    /**
+     * Solange Frank am Farbkreis oder Helligkeitsregler zieht, bleiben die Verbindungen zu den erreichbaren Streifen offen und jede Änderung geht sofort
+     * hinaus (zwischendurch Übersprungenes zählt nicht, es gilt immer der neueste Wunsch). Beim Loslassen [liveEnde]: Verbindungen zu, dann der
+     * normale Weg über Handy und Mac für alle Streifen, und der Zustand wird gemerkt. Nach 20 s ohne Änderung schließt sich alles von selbst.
+     */
+    private val liveBereich = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private val liveSitzungen = ConcurrentHashMap<String, Pair<Sitzung, Typ>>()
+    private val liveWunsch = kotlinx.coroutines.flow.MutableStateFlow<Zustand?>(null)
+    private var liveJob: kotlinx.coroutines.Job? = null
+    @Volatile private var liveZuletzt = 0L
+
+    fun liveStart(c: Context) {
+        liveZuletzt = System.currentTimeMillis()
+        if (liveJob?.isActive == true || !erlaubt(c)) return
+        val adapter = c.getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return
+        val app = c.applicationContext
+        liveJob = liveBereich.launch {
+            bekannt(app).forEach { (mac, n) ->
+                launch {
+                    val s = Sitzung()
+                    val t = typ(n)
+                    if (withTimeoutOrNull(VERBINDEN_MS) { oeffnen(app, adapter.getRemoteDevice(mac), t, s) } == true) {
+                        liveSitzungen[mac] = s to t
+                        liveWunsch.value?.let { z -> runCatching { s.schreiben(befehle(t, z), nachlauf = false) } }
+                    } else s.schliessen()
+                }
             }
-        } finally {
-            runCatching { gatt.disconnect() }
-            runCatching { gatt.close() }
+            launch {
+                liveWunsch.collect { z ->
+                    if (z == null) return@collect
+                    coroutineScope { liveSitzungen.values.map { (s, t) -> async { runCatching { s.schreiben(befehle(t, z), nachlauf = false) } } }.awaitAll() }
+                }
+            }
+            while (System.currentTimeMillis() - liveZuletzt < 20_000L) delay(1_000)
+            liveSchliessen()
         }
+    }
+
+    fun live(z: Zustand) { liveZuletzt = System.currentTimeMillis(); liveWunsch.value = z }
+
+    private fun liveSchliessen() {
+        liveSitzungen.values.forEach { it.first.schliessen() }
+        liveSitzungen.clear()
+        liveWunsch.value = null
+        liveJob?.cancel()
+        liveJob = null
+    }
+
+    /** Loslassen: Live-Verbindungen schließen, dann [z] wie gewohnt an alle Streifen (Handy und Mac) und merken. */
+    suspend fun liveEnde(c: Context, z: Zustand): Bericht {
+        liveSchliessen()
+        delay(300) // die Streifen kurz freigeben, bevor der normale Weg neu verbindet
+        return setzen(c, z)
+    }
+
+    // ------------------------------------------------------------------ Farbplätze
+
+    /** Franks 16 Farbplätze (tippen = einstellen, lange drücken = aktuelle Farbe speichern); Platz 1 ist ab Werk sein Orange aus KS Lite. */
+    fun plaetze(c: Context): List<String> {
+        val gespeichert = runCatching { JSONArray(zp(c).getString("plaetze", "[]")) }.getOrNull()
+        return (0 until PLAETZE).map { i -> gespeichert?.optString(i)?.takeIf { it.matches(Regex("[0-9A-Fa-f]{6}")) }?.uppercase() ?: STANDARD_PLAETZE[i] }
+    }
+
+    fun platzSpeichern(c: Context, platz: Int, rgb: String) {
+        val neu = plaetze(c).toMutableList().also { it[platz.coerceIn(0, PLAETZE - 1)] = rgb.uppercase() }
+        zp(c).edit().putString("plaetze", JSONArray(neu).toString()).apply()
     }
 
     @SuppressLint("MissingPermission")
     private class Sitzung {
-        lateinit var gatt: BluetoothGatt
+        var gatt: BluetoothGatt? = null
+        fun schliessen() { gatt?.let { g -> runCatching { g.disconnect() }; runCatching { g.close() } }; gatt = null }
         var kanal: BluetoothGattCharacteristic? = null
         var melder: BluetoothGattCharacteristic? = null
         val bereit = CompletableDeferred<Boolean>()
@@ -316,7 +389,8 @@ object LedStreifen {
 
         fun melde(v: ByteArray) { v.joinToString("") { "%02X".format(it) }.takeIf { it.startsWith("5F0") }?.let { antwort.complete(it) } }
 
-        suspend fun schreiben(liste: List<String>): Boolean {
+        suspend fun schreiben(liste: List<String>, nachlauf: Boolean = true): Boolean {
+            val gatt = gatt ?: return false
             val k = kanal ?: return false
             val ohneAntwort = k.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0
             val art = if (ohneAntwort) BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
@@ -329,12 +403,13 @@ object LedStreifen {
                 // Ohne Antwort meldet der Streifen nichts: kurz Luft lassen. Mit Antwort auf die Bestätigung warten.
                 if (ohneAntwort) delay(70) else if (!geschrieben.await()) return false
             }
-            delay(150) // Befehle aus dem Sendepuffer lassen, bevor getrennt wird.
+            if (nachlauf) delay(150) // Befehle aus dem Sendepuffer lassen, bevor getrennt wird.
             return true
         }
 
         /** Meldungen einschalten, Zustand abfragen, bis 1,5 s auf die Antwort warten. */
         suspend fun abfragen(): String? {
+            val gatt = gatt ?: return null
             val m = melder ?: return null
             if (!gatt.setCharacteristicNotification(m, true)) return null
             val d = m.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
@@ -446,10 +521,15 @@ object LedStreifen {
     val BEKANNTE_NAMEN = listOf("KS03~005EAD", "KS03~2b2a71", "KS03~000F97", "KS03~e52cc0", "KS03~3601E0", "KS03~1101E3")
 
     val FARBEN = linkedMapOf(
-        "orange" to "FF6000", "warmweiß" to "FFA03C", "kaltweiß" to "D0E0FF", "weiß" to "FFFFFF", "rot" to "FF0000", "gelb" to "FFC800",
+        "orange" to "FF2800", "warmweiß" to "FFA03C", "kaltweiß" to "D0E0FF", "weiß" to "FFFFFF", "rot" to "FF0000", "gelb" to "FFC800",
         "grün" to "00FF00", "türkis" to "00FFC0", "cyan" to "00FFFF", "hellblau" to "40A0FF", "blau" to "0000FF", "lila" to "8000FF",
         "violett" to "8000FF", "magenta" to "FF00FF", "pink" to "FF2080", "rosa" to "FF6080",
     )
+
+    const val PLAETZE = 16
+    /** Vorgaben der 16 Plätze, bis Frank eigene speichert (lange drücken). Die Streifen zeigen Codes anders als der Bildschirm: Frank stellt Farben live am Farbkreis ein. */
+    val STANDARD_PLAETZE = listOf("FF2800", "FF1400", "FFA03C", "D0E0FF", "FFFFFF", "FF0000", "FFC800", "00FF00",
+        "00FFC0", "00FFFF", "40A0FF", "0000FF", "8000FF", "FF00FF", "FF2080", "FF6080")
 
     /** Szenen 128–150 aus KS Lite (deutsche Namen der App). */
     val SZENEN = listOf(

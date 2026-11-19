@@ -10,17 +10,23 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -41,8 +47,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +69,11 @@ import de.frank.jarvis.licht.LichtAutomatik
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.min
+import kotlin.math.sin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,10 +83,12 @@ import kotlinx.coroutines.launch
 private object LichtStand {
     val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     var zustand by mutableStateOf<LedStreifen.Zustand?>(null)
-    var modusOffen by mutableStateOf(false)
+    var offen by mutableStateOf(false)
+    var farbeOffen by mutableStateOf(true)
+    var szenenOffen by mutableStateOf(false)
+    var mikroOffen by mutableStateOf(false)
     var automatikOffen by mutableStateOf(false)
-    var reiter by mutableIntStateOf(0)
-    var hinweis by mutableStateOf<String?>(null)
+    var plaetze by mutableStateOf<List<String>>(emptyList())
 
     fun tun(c: android.content.Context, arbeit: suspend () -> LedStreifen.Bericht) {
         if (LedStreifen.laeuft) { Toast.makeText(c, "Moment, das Licht wird gerade geschaltet", Toast.LENGTH_SHORT).show(); return }
@@ -73,21 +96,30 @@ private object LichtStand {
     }
 
     fun setzen(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; tun(c) { LedStreifen.setzen(c, z) } }
+
+    /** Während des Ziehens: sofort anzeigen und live an die verbundenen Streifen. */
+    fun live(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; LedStreifen.liveStart(c); LedStreifen.live(z) }
+
+    /** Loslassen: fest übernehmen (alle Streifen, Handy und Mac) und merken. */
+    fun los(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; bereich.launch { runCatching { LedStreifen.liveEnde(c, z) }; zustand = LedStreifen.zustand(c) } }
 }
 
-private fun farbe(rgb: String): Color = runCatching { Color(0xFF000000 or rgb.toLong(16)) }.getOrDefault(Color(0xFFFF6000))
+private fun farbe(rgb: String): Color = runCatching { Color(0xFF000000 or rgb.toLong(16)) }.getOrDefault(Color(0xFFFF1400))
 
-/** Ungefähre Anzeigefarbe eines Zustands (Szenen und Mikrofon als Regenbogen-Andeutung). */
+private fun hexAus(col: Color) = "%02X%02X%02X".format((col.red * 255).toInt(), (col.green * 255).toInt(), (col.blue * 255).toInt())
+
+/** Ungefähre Anzeigefarbe eines Zustands (Szenen und Mikrofon als Andeutung). */
 private fun anzeige(z: LedStreifen.Zustand?): Color = when (z?.modus) {
-    null -> Color(0xFFFF6000)
+    null -> Color(0xFFFF1400)
     Modus.FARBE -> farbe(z.rgb)
     Modus.SZENE -> Color(0xFFB45CFF)
     Modus.RHYTHMUS -> Color(0xFF39D0FF)
 }
 
 /**
- * Startbereich „LED-Licht“: alle Streifen an/aus, Farbe, Helligkeit, eigene Farbe; aufklappbar Szenen (23) und Mikrofon-Modi (4) aus KS Lite,
- * darunter die Automatik (freie Tage, Tagdienst, Dämmerung/Dunkelheit, Ausschaltzeiten, Umkreis). Alle Streifen bekommen immer denselben Zustand.
+ * Startbereich „LED-Licht“ wie die Kaffee-Karte: zugeklappt nur An und Aus, der Pfeil öffnet die Untermenüs Farbe und Helligkeit (16 Farbplätze:
+ * tippen = einstellen, lange drücken = aktuelle Farbe speichern; Farbkreis live; Farbcode), Szenen, Mikrofon-Modi und Automatik.
+ * Alle Streifen bekommen immer denselben Zustand.
  */
 @Composable
 fun LichtStartKarte(griff: Modifier = Modifier) {
@@ -95,11 +127,12 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     val c = LocalContext.current.applicationContext
     val s = LichtStand
     if (s.zustand == null) s.zustand = LedStreifen.zustand(c)
+    if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
     val z = s.zustand
     val b = LedStreifen.letzterBericht
     Karte(modifier = griff) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Leuchtkugel(anzeige(z), LedStreifen.laeuft, Modifier.size(52.dp))
+            Leuchtkugel(anzeige(z), LedStreifen.laeuft, Modifier.size(46.dp))
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
@@ -116,97 +149,204 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
         }
         if (!LedStreifen.erlaubt(c)) Text("Jarvis fehlt das Recht „Geräte in der Nähe“ (App-Infos von Jarvis, Berechtigungen).", color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
-        // An und Aus, groß.
-        Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            LichtKnopf("An", Modifier.weight(1f), toenung = anzeige(z), gross = true) { s.tun(c) { LedStreifen.an(c) } }
+        // Hauptzeile: An, Aus und der Pfeil für alles Weitere.
+        Row(
+            Modifier.padding(top = 10.dp).fillMaxWidth().glas(f, 18.dp, erhoeht = 0.6f, toenung = anzeige(z)).padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            LichtKnopf("An", Modifier.weight(1f), gross = true) { s.tun(c) { LedStreifen.an(c) } }
             LichtKnopf("Aus", Modifier.weight(1f), gross = true) { s.tun(c) { LedStreifen.aus(c) } }
+            Box(Modifier.size(44.dp).antippen { s.offen = !s.offen }, contentAlignment = Alignment.Center) {
+                Icon(if (s.offen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, if (s.offen) "Licht-Einstellungen zuklappen" else "Licht-Einstellungen zeigen", tint = f.text, modifier = Modifier.size(30.dp))
+            }
         }
 
-        // Farben: ein Tipp stellt alle Streifen um.
-        val farben = LedStreifen.FARBEN.entries.distinctBy { it.value }
-        Text("Farbe", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp, bottom = 8.dp))
-        farben.chunked(8).forEach { reihe ->
+        AnimatedVisibility(s.offen) {
+            Column {
+                Aufklapper("Farbe und Helligkeit", s.farbeOffen) { s.farbeOffen = !s.farbeOffen }
+                AnimatedVisibility(s.farbeOffen) { FarbeTeil() }
+                Aufklapper("Szenen", s.szenenOffen) { s.szenenOffen = !s.szenenOffen }
+                AnimatedVisibility(s.szenenOffen) { SzenenTeil() }
+                Aufklapper("Mikrofon-Modi", s.mikroOffen) { s.mikroOffen = !s.mikroOffen }
+                AnimatedVisibility(s.mikroOffen) { MikrofonTeil() }
+                Aufklapper("Automatik", s.automatikOffen) { s.automatikOffen = !s.automatikOffen }
+                AnimatedVisibility(s.automatikOffen) { AutomatikTeil() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FarbeTeil() {
+    val f = LocalFarben.current
+    val c = LocalContext.current.applicationContext
+    val s = LichtStand
+    val z = s.zustand
+    val haptik = LocalHapticFeedback.current
+    val basis = z ?: LedStreifen.Zustand(rgb = "FF1400")
+    Column(Modifier.padding(top = 6.dp)) {
+        Text("Tippen stellt ein · lange drücken speichert die aktuelle Farbe auf dem Platz", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+        s.plaetze.withIndex().chunked(8).forEach { reihe ->
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                reihe.forEach { (name, rgb) ->
+                reihe.forEach { (i, rgb) ->
                     val aktiv = z?.modus == Modus.FARBE && z.rgb.equals(rgb, true)
                     Box(
                         Modifier.size(34.dp).clip(CircleShape).background(farbe(rgb))
                             .border(if (aktiv) 3.dp else 1.dp, if (aktiv) f.text else f.textSchwach.copy(alpha = 0.4f), CircleShape)
-                            .antippen { s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.FARBE, rgb = rgb)) },
+                            .pointerInput(rgb, z) {
+                                detectTapGestures(
+                                    onTap = { s.setzen(c, basis.copy(modus = Modus.FARBE, rgb = rgb)) },
+                                    onLongPress = {
+                                        val aktuell = (s.zustand?.takeIf { it.modus == Modus.FARBE } ?: return@detectTapGestures).rgb
+                                        LedStreifen.platzSpeichern(c, i, aktuell)
+                                        s.plaetze = LedStreifen.plaetze(c)
+                                        haptik.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        Toast.makeText(c, "#$aktuell auf Platz ${i + 1} gespeichert", Toast.LENGTH_SHORT).show()
+                                    },
+                                )
+                            },
                     )
                 }
-                repeat(8 - reihe.size) { Spacer(Modifier.size(34.dp)) }
             }
         }
 
-        // Eigene Farbe über den Farbkreis (Farbton).
-        var farbton by remember { mutableFloatStateOf(30f) }
-        Text("Eigene Farbe", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-        Box(Modifier.fillMaxWidth().height(10.dp).padding(horizontal = 10.dp).clip(RoundedCornerShape(5.dp))
-            .background(Brush.horizontalGradient((0..6).map { Color.hsv(it * 60f % 360f, 1f, 1f) })))
-        Slider(value = farbton, onValueChange = { farbton = it }, valueRange = 0f..359f, onValueChangeFinished = {
-            val col = Color.hsv(farbton, 1f, 1f)
-            val rgb = "%02X%02X%02X".format((col.red * 255).toInt(), (col.green * 255).toInt(), (col.blue * 255).toInt())
-            s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.FARBE, rgb = rgb))
-        })
+        // Farbkreis wie in KS Lite: Daumen ziehen = live, loslassen = übernehmen.
+        Farbkreis(
+            if (z?.modus == Modus.FARBE) z.rgb else basis.rgb,
+            Modifier.padding(top = 4.dp).fillMaxWidth().aspectRatio(1f),
+            ziehen = { rgb -> s.live(c, basis.copy(modus = Modus.FARBE, rgb = rgb)) },
+            los = { rgb -> s.los(c, basis.copy(modus = Modus.FARBE, rgb = rgb)) },
+        )
 
-        // Helligkeit.
+        // Farbcode direkt eingeben.
+        var code by remember(z?.rgb) { mutableStateOf(z?.rgb ?: "") }
+        val fokus = LocalFocusManager.current
+        fun uebernehmen() {
+            val rgb = LedStreifen.farbe(code) ?: run { Toast.makeText(c, "Bitte sechs Zeichen 0–9 und A–F, etwa FF1400", Toast.LENGTH_SHORT).show(); return }
+            fokus.clearFocus()
+            s.setzen(c, basis.copy(modus = Modus.FARBE, rgb = rgb))
+        }
+        Row(Modifier.padding(top = 12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("#", color = f.textLeise, fontSize = 18.sp)
+            Box(Modifier.weight(1f).height(44.dp).glas(f, 12.dp, erhoeht = 0.4f).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
+                BasicTextField(
+                    code, { code = it.uppercase().filter { ch -> ch in "0123456789ABCDEF" }.take(6) }, singleLine = true,
+                    textStyle = TextStyle(color = f.text, fontSize = 17.sp, fontFamily = FontFamily.Monospace),
+                    cursorBrush = SolidColor(f.primaer),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { uebernehmen() }),
+                )
+                if (code.isEmpty()) Text("Farbcode, z. B. FF1400", color = f.textSchwach, fontSize = 14.sp)
+            }
+            Box(Modifier.size(28.dp).clip(CircleShape).background(farbe(code.padEnd(6, '0'))))
+            LichtKnopf("Übernehmen", Modifier.size(110.dp, 44.dp)) { uebernehmen() }
+        }
+
+        // Helligkeit, ebenfalls live.
         var hell by remember(z?.hell) { mutableFloatStateOf((z?.hell ?: 100).toFloat()) }
-        Text("Helligkeit: ${hell.toInt()} %", color = f.textLeise, fontSize = 13.sp)
-        Slider(value = hell, onValueChange = { hell = it }, valueRange = 1f..100f, onValueChangeFinished = {
-            // Ohne bekannte Farbe nie eine geratene senden: erst die Streifen lesen, sonst um eine Farbe bitten.
-            s.bereich.launch {
-                val alt = LedStreifen.basis(c)
-                if (alt == null) Toast.makeText(c, "Bitte zuerst eine Farbe wählen", Toast.LENGTH_SHORT).show()
-                else s.setzen(c, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell.toInt()))
-            }
-        })
+        Text("Helligkeit: ${hell.toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Slider(
+            value = hell, valueRange = 1f..100f,
+            onValueChange = { hell = it; s.live(c, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = it.toInt())) },
+            onValueChangeFinished = { s.los(c, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell.toInt())) },
+        )
+    }
+}
 
-        // Szenen und Mikrofon-Modi.
-        Aufklapper("Szenen und Mikrofon-Modi", s.modusOffen) { s.modusOffen = !s.modusOffen }
-        AnimatedVisibility(s.modusOffen) {
-            Column(Modifier.padding(top = 6.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LichtKnopf("Szenen", Modifier.weight(1f), aktiv = s.reiter == 0) { s.reiter = 0 }
-                    LichtKnopf("Mikrofon", Modifier.weight(1f), aktiv = s.reiter == 1) { s.reiter = 1 }
+@Composable
+private fun SzenenTeil() {
+    val f = LocalFarben.current
+    val c = LocalContext.current.applicationContext
+    val s = LichtStand
+    val z = s.zustand
+    Column(Modifier.padding(top = 2.dp)) {
+        LedStreifen.SZENEN.withIndex().chunked(2).forEach { reihe ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                reihe.forEach { (i, name) ->
+                    LichtKnopf(name.replaceFirstChar { it.uppercase() }, Modifier.weight(1f), aktiv = z?.modus == Modus.SZENE && z.szene == i) {
+                        s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.SZENE, szene = i))
+                    }
                 }
-                if (s.reiter == 0) {
-                    LedStreifen.SZENEN.withIndex().chunked(2).forEach { reihe ->
-                        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            reihe.forEach { (i, name) ->
-                                LichtKnopf(name.replaceFirstChar { it.uppercase() }, Modifier.weight(1f), aktiv = z?.modus == Modus.SZENE && z.szene == i) {
-                                    s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.SZENE, szene = i))
-                                }
-                            }
-                            if (reihe.size == 1) Spacer(Modifier.weight(1f))
-                        }
-                    }
-                    var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
-                    Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-                    Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
-                        if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
-                    })
-                } else {
-                    Text("Die Streifen reagieren mit ihrem eigenen Mikrofon auf Musik und Geräusche.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        LedStreifen.RHYTHMEN.forEachIndexed { i, name ->
-                            LichtKnopf(name, Modifier.weight(1f), aktiv = z?.modus == Modus.RHYTHMUS && z.rhythmus == i + 1) {
-                                s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.RHYTHMUS, rhythmus = i + 1))
-                            }
-                        }
-                    }
-                    var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
-                    Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-                    Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
-                        if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
-                    })
+                if (reihe.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
+        Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
+            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
+        })
+    }
+}
+
+@Composable
+private fun MikrofonTeil() {
+    val f = LocalFarben.current
+    val c = LocalContext.current.applicationContext
+    val s = LichtStand
+    val z = s.zustand
+    Column(Modifier.padding(top = 2.dp)) {
+        Text("Die Streifen reagieren mit ihrem eigenen Mikrofon auf Musik und Geräusche.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LedStreifen.RHYTHMEN.forEachIndexed { i, name ->
+                LichtKnopf(name, Modifier.weight(1f), aktiv = z?.modus == Modus.RHYTHMUS && z.rhythmus == i + 1) {
+                    s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.RHYTHMUS, rhythmus = i + 1))
                 }
             }
         }
+        var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
+        Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
+            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
+        })
+    }
+}
 
-        // Automatik.
-        Aufklapper("Automatik", s.automatikOffen) { s.automatikOffen = !s.automatikOffen }
-        AnimatedVisibility(s.automatikOffen) { AutomatikTeil() }
+/**
+ * Farbkreis in einem Quadrat: Winkel = Farbton, Abstand zur Mitte = Sättigung (Mitte weiß). Der Punkt zeigt genau die Farbe, die gesendet wird.
+ * [ziehen] bei jeder Bewegung (live), [los] beim Loslassen. Die Bewegung wird verbraucht, damit die Startseite dabei nicht scrollt.
+ */
+@Composable
+private fun Farbkreis(rgb: String, modifier: Modifier, ziehen: (String) -> Unit, los: (String) -> Unit) {
+    val f = LocalFarben.current
+    val hsv = remember(rgb) { FloatArray(3).also { android.graphics.Color.colorToHSV(android.graphics.Color.parseColor("#$rgb"), it) } }
+    var farbton by remember(rgb) { mutableFloatStateOf(hsv[0]) }
+    var saettigung by remember(rgb) { mutableFloatStateOf(hsv[1]) }
+    val aktuell = Color.hsv(farbton, saettigung.coerceIn(0f, 1f), 1f)
+    Box(modifier.glas(f, 18.dp, erhoeht = 0.4f).padding(14.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxWidth().aspectRatio(1f).pointerInput(Unit) {
+            fun setze(p: Offset): String {
+                val m = Offset(size.width / 2f, size.height / 2f)
+                val r = min(size.width, size.height) / 2f
+                farbton = ((Math.toDegrees(atan2((p.y - m.y).toDouble(), (p.x - m.x).toDouble())).toFloat() + 360f) % 360f)
+                saettigung = (hypot(p.x - m.x, p.y - m.y) / r).coerceIn(0f, 1f)
+                return hexAus(Color.hsv(farbton, saettigung, 1f))
+            }
+            awaitEachGesture {
+                val erst = awaitFirstDown()
+                erst.consume()
+                var letzte = setze(erst.position)
+                ziehen(letzte)
+                while (true) {
+                    val e = awaitPointerEvent()
+                    val p = e.changes.firstOrNull() ?: break
+                    if (!p.pressed) break
+                    p.consume()
+                    val neu = setze(p.position)
+                    if (neu != letzte) { letzte = neu; ziehen(neu) }
+                }
+                los(letzte)
+            }
+        }) {
+            val r = min(size.width, size.height) / 2f
+            val m = center
+            drawCircle(Brush.sweepGradient((0..6).map { Color.hsv(it * 60f % 360f, 1f, 1f) }, m), r, m)
+            drawCircle(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0f)), m, r), r, m)
+            val winkel = Math.toRadians(farbton.toDouble())
+            val p = Offset(m.x + (cos(winkel) * saettigung * r).toFloat(), m.y + (sin(winkel) * saettigung * r).toFloat())
+            drawCircle(aktuell, r * 0.09f, p)
+            drawCircle(Color.White, r * 0.09f, p, style = Stroke(width = r * 0.025f))
+            drawCircle(Color.Black.copy(alpha = 0.35f), r * 0.105f, p, style = Stroke(width = r * 0.01f))
+        }
     }
 }
 
