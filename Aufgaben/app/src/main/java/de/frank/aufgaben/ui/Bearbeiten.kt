@@ -66,6 +66,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -304,9 +305,20 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                             }
                             Schalter("Als Wecker – läuft, bis du ausschaltest", vm.eAlsWecker) { vm.eAlsWecker = it; if (it) vm.hinweiseAnfragen() }
                             if (vm.eAlsWecker) Text(
-                                if (vm.eVorlesen) "Ton und Vorlesen wiederholen sich, bis du oben in der Benachrichtigung „Ausschalten“ tippst."
-                                else "Der Ton wiederholt sich, bis du oben in der Benachrichtigung „Ausschalten“ tippst.",
+                                if (vm.eVorlesen) "Ton und Vorlesen wiederholen sich, bis du im Vollbild „Ausschalten“ tippst."
+                                else "Der Ton wiederholt sich, bis du im Vollbild „Ausschalten“ tippst.",
                                 color = f.textLeise, fontSize = 12.sp,
+                            )
+                            // Ohne „Über anderen Apps einblenden“ bleibt es bei entsperrtem Handy bei der Meldung oben.
+                            if (vm.eAlsWecker && !android.provider.Settings.canDrawOverlays(context)) Text(
+                                "Für das Vollbild bei entsperrtem Handy hier „Über anderen Apps einblenden“ erlauben.",
+                                color = f.sekundaer, fontSize = 13.sp,
+                                modifier = Modifier.clickable {
+                                    runCatching {
+                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:${context.packageName}")))
+                                    }
+                                },
                             )
                         }
                     }

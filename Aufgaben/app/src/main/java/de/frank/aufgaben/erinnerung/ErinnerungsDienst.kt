@@ -181,7 +181,14 @@ class ErinnerungsDienst : Service() {
             ?.apply { acquire(grenze + 60_000L) }
         fokusAnfordern(a.wecker)
         // Als Wecker: Vollbild mit „Ausschalten“, auch bei entsperrtem Handy.
-        if (a.wecker && a.id != Fokus.ID) { WeckerVollbild.klingelt.value = a.aufgabe; WeckerVollbild.zeigen(this) }
+        if (a.wecker && a.id != Fokus.ID) {
+            WeckerVollbild.rueckfall = false
+            WeckerVollbild.klingelt.value = a.aufgabe
+            if (WeckerVollbild.zeigen(this)) Handler(Looper.getMainLooper()).postDelayed({
+                // Kam das Vollbild nicht nach vorn (Android blockiert den Start): Meldung laut mit Full-Screen-Intent.
+                if (aktuell === a && !WeckerVollbild.vorn) { WeckerVollbild.rueckfall = true; zeige(a); vordergrund(a.id.toInt(), benachrichtigung(a, imDienst = true)) }
+            }, 2_000)
+        }
         if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
         val laufend = scope.launch {
             try {
@@ -432,6 +439,15 @@ class ErinnerungsDienst : Service() {
         fun alleStoppen(context: Context) {
             val d = instanz ?: return
             Handler(Looper.getMainLooper()).post { d.alleStoppenIntern() }
+        }
+
+        /** Weggewischte Wecker-Meldung von [id] wieder zeigen, solange er klingelt. */
+        fun wiederZeigen(context: Context, id: Long) {
+            val d = instanz ?: return
+            Handler(Looper.getMainLooper()).post {
+                val a = d.aktuell ?: return@post
+                if (a.id == id && a.wecker) { d.vordergrund(a.id.toInt(), d.benachrichtigung(a, imDienst = true)); WeckerVollbild.zeigen(d) }
+            }
         }
 
         /** Beendet Vorlesen/Wecker der Aufgabe [id], falls gerade aktiv oder wartend. */

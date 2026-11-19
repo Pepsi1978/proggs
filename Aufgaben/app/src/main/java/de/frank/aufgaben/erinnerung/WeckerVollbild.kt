@@ -11,6 +11,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -49,14 +51,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Vollbild einer Erinnerung „als Wecker“: oben groß die Aufgabe in höchstens zwei Sätzen, unten „Ausschalten“.
  * Erscheint immer, auch bei entsperrtem Handy (direkt gestartet, dafür braucht die App „Über anderen Apps einblenden“),
  * gesperrt über den Full-Screen-Intent der Benachrichtigung. Zurück schließt nichts; wer mit Home weggeht, bekommt
- * das Vollbild zurück, solange der Wecker läuft. Die Knöpfe gehen denselben Weg wie die der Benachrichtigung.
+ * das Vollbild zurück, solange der Wecker läuft (nicht bei Anrufen). Die Knöpfe gehen denselben Weg wie die der Benachrichtigung.
  */
 class WeckerVollbildActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
         else @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Dunkel von Anfang an: kein weißes Aufblitzen, helle Symbole in den Systemleisten.
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xFF101418.toInt()))
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         setContent {
             val a by WeckerVollbild.klingelt.collectAsState()
             LaunchedEffect(a == null) { if (a == null) finish() }
@@ -98,9 +102,13 @@ class WeckerVollbildActivity : ComponentActivity() {
         sendBroadcast(Intent(this, AktionsEmpfaenger::class.java).setAction(aktion).putExtra(Planer.ID, id))
     }
 
-    override fun onStop() {
-        super.onStop()
-        // Mit Home weggewischt, während der Wecker noch läuft: kurz danach wieder nach vorn. Bildschirm aus zählt nicht.
+    override fun onResume() { super.onResume(); WeckerVollbild.vorn = true }
+    override fun onPause() { WeckerVollbild.vorn = false; super.onPause() }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Bewusst mit Home oder Übersicht verlassen, während der Wecker läuft: kurz danach wieder nach vorn.
+        // Ein Anruf oder ein anderer Wecker löst das nicht aus.
         if (isFinishing) return
         val app = applicationContext
         Handler(Looper.getMainLooper()).postDelayed({ WeckerVollbild.zurueckholen(app) }, 700)
@@ -110,6 +118,12 @@ class WeckerVollbildActivity : ComponentActivity() {
 object WeckerVollbild {
     /** Die Aufgabe, deren Wecker gerade klingelt; null, sobald er aus ist. */
     val klingelt = MutableStateFlow<Aufgabe?>(null)
+
+    /** Das Vollbild ist gerade sichtbar vorn. */
+    @Volatile var vorn = false
+
+    /** Das direkt gestartete Vollbild kam nicht nach vorn: Meldung wieder laut mit Full-Screen-Intent. */
+    @Volatile var rueckfall = false
 
     fun gesperrt(context: Context): Boolean {
         val app = context.applicationContext
@@ -122,9 +136,10 @@ object WeckerVollbild {
     fun absicht(context: Context): Intent = Intent(context, WeckerVollbildActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
-    fun zeigen(context: Context) {
-        if (klingelt.value == null || !direkt(context)) return
-        runCatching { context.startActivity(absicht(context)) }
+    /** true, wenn der direkte Start versucht wurde. */
+    fun zeigen(context: Context): Boolean {
+        if (klingelt.value == null || !direkt(context) || rueckfall) return false
+        return runCatching { context.startActivity(absicht(context)) }.isSuccess
     }
 
     fun zurueckholen(context: Context) {

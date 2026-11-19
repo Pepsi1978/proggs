@@ -101,6 +101,7 @@
     {"versionCode": 97, "versionName": "1.0.96", "stand": "15.11.2026, 18:49 Uhr", "notiz": "Neuer Schalter „Erinnerungen auf diesem Gerät“: Auf dem Tablet ausgeschaltet, kommen dort keine Erinnerungen und Wecker mehr, die Aufgaben bleiben trotzdem sichtbar."},
     {"versionCode": 98, "versionName": "1.0.97", "stand": "15.11.2026, 18:53 Uhr", "notiz": "Der Schalter „Erinnerungen auf diesem Gerät“ stoppt jetzt auch laufende Erinnerungen und Schlummer-Wecker sofort und spart auf dem stillen Gerät Sprachkontingent."},
     {"versionCode": 99, "versionName": "1.0.98", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."},
-    {"versionCode": 100, "versionName": "1.0.99", "stand": "19.11.2026, 09:23 Uhr", "notiz": "Erinnerungen als Wecker erscheinen jetzt immer als Vollbild mit großem Aufgabentext und Ausschalten-Knopf, auch bei entsperrtem Handy, und lassen sich nicht mehr wegwischen."}
+    {"versionCode": 100, "versionName": "1.0.99", "stand": "19.11.2026, 09:23 Uhr", "notiz": "Erinnerungen als Wecker erscheinen jetzt immer als Vollbild mit großem Aufgabentext und Ausschalten-Knopf, auch bei entsperrtem Handy, und lassen sich nicht mehr wegwischen."},
+    {"versionCode": 101, "versionName": "1.0.100", "stand": "19.11.2026, 09:44 Uhr", "notiz": "Eine weggewischte Wecker-Meldung kommt sofort wieder, das Vollbild startet dunkel und weicht Anrufen aus, und beim Einschalten von „als Wecker“ erscheint der Hinweis auf das nötige Overlay-Recht."}
 ]
 }

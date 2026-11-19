@@ -212,7 +212,7 @@ object Planer {
         )
         val zeile = if (wecker) "⏰ $wann · läuft, bis du ausschaltest" else wann
         // Wecker entsperrt mit Overlay-Recht: das Vollbild startet direkt, die Meldung bleibt still (keine schwebende Meldung oben).
-        val direkt = wecker && WeckerVollbild.direkt(context)
+        val direkt = wecker && WeckerVollbild.direkt(context) && !WeckerVollbild.rueckfall
         if (direkt) vollbildKanal(context)
         return NotificationCompat.Builder(context, if (direkt) KANAL_VOLLBILD else KANAL)
             .setSmallIcon(R.drawable.ic_stat_aufgabe)
@@ -229,8 +229,8 @@ object Planer {
             .apply { if (imDienst) addAction(0, "Ausschalten", aktion(AKTION_AUS, (id * 4).toInt())) }
             .addAction(0, "Erledigt", aktion(AKTION_ERLEDIGT, (id * 4 + 2).toInt()))
             .addAction(0, "In 10 Min.", aktion(AKTION_SCHLUMMERN, (id * 4 + 3).toInt()))
-            // Wegwischen beendet ein laufendes Vorlesen ebenfalls, einen Wecker nicht: der endet nur mit Ausschalten.
-            .apply { if (!wecker) setDeleteIntent(aktion(AKTION_AUS, (id * 4 + 1).toInt())) }
+            // Wegwischen beendet ein laufendes Vorlesen ebenfalls; ein Wecker kommt dann sofort wieder, er endet nur mit Ausschalten.
+            .setDeleteIntent(if (wecker) aktion(AKTION_ZEIGEN, (id * 4 + 1).toInt()) else aktion(AKTION_AUS, (id * 4 + 1).toInt()))
             .build()
     }
 
@@ -268,6 +268,8 @@ object Planer {
     const val AKTION_MITTERNACHT = "de.frank.aufgaben.MITTERNACHT"
     const val AKTION_ERLEDIGT = "de.frank.aufgaben.ERLEDIGT"
     const val AKTION_SCHLUMMERN = "de.frank.aufgaben.SCHLUMMERN"
+    /** Weggewischte Wecker-Meldung: wieder zeigen, der Wecker läuft weiter. */
+    const val AKTION_ZEIGEN = "de.frank.aufgaben.WIEDER_ZEIGEN"
     const val AKTION_AUS = "de.frank.aufgaben.AUSSCHALTEN"
     internal const val ID = EXTRA_ID
 }
@@ -306,7 +308,8 @@ class AktionsEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getLongExtra(Planer.ID, -1)
         if (id < 0) return
-        // Jede Aktion (auch Wegwischen) beendet ein laufendes Vorlesen bzw. den Wecker.
+        if (intent.action == Planer.AKTION_ZEIGEN) { ErinnerungsDienst.wiederZeigen(context, id); return }
+        // Jede andere Aktion (auch Wegwischen einer normalen Erinnerung) beendet ein laufendes Vorlesen bzw. den Wecker.
         ErinnerungsDienst.stoppe(context, id)
         NotificationManagerCompat.from(context).cancel(id.toInt())
         if (intent.action == Planer.AKTION_AUS) return
