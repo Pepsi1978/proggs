@@ -32,11 +32,14 @@ class MacFaehigkeit(private val context: Context, private val ziel: Fernziel = F
     override val name = "$rechner bedienen"
     override val beschreibung = "Sieht den Bildschirm von Franks $rechner und bedient dort Maus, Tastatur, Programme und Fenster."
     override val imPlugin = false
-    // Die Regeln stehen nur einmal in den Hinweisen des Macs: Beide Fassungen gehen in jeder Anfrage mit.
-    override val hinweise = if (!mac)
-        "$rechner bedienen: Es gelten dieselbe Arbeitsweise und dieselbe SICHERHEIT wie bei Mac bedienen, mit ${p}_bildschirm, ${p}_bedienen, ${p}_programme und ${p}_aufnahme; " +
-            "wähle nach dem Rechner, den Frank meint (Windows-PC = HP-Laptop, Power-PC = sein großer Windows-Rechner zu Hause). Tastenkürzel nimmst du mit ctrl statt cmd. Für beenden und fenster_schliessen nennst du den genauen Programmnamen aus der Liste von ${p}_programme. " +
-            "Meldet das Bild, dass es fast schwarz ist, ist die Anzeige aus: Sag es Frank und klicke nicht blind. Ist der $rechner gesperrt, sag es Frank: Entsperren geht nur am Gerät, auch an UAC-Abfragen kommt der Fernweg nicht heran."
+    // Die Regeln stehen nur einmal in den Hinweisen des Macs, die Windows-Regeln nur einmal beim Windows-PC (für beide Präfixe):
+    // Alle Fassungen gehen in jeder Anfrage mit, der Power-PC hat darum keine eigenen.
+    override val hinweise = if (ziel == Fernziel.POWER_PC) ""
+    else if (!mac)
+        "Windows-PC und Power-PC bedienen: Es gelten dieselbe Arbeitsweise und dieselbe SICHERHEIT wie bei Mac bedienen, für den Windows-PC (HP-Laptop) mit windows_bildschirm, windows_bedienen, windows_programme und windows_aufnahme, " +
+            "für den Power-PC (Franks großer Windows-Rechner zu Hause) mit power_pc_bildschirm, power_pc_bedienen, power_pc_programme und power_pc_aufnahme; wähle nach dem Rechner, den Frank meint. " +
+            "Tastenkürzel nimmst du mit ctrl statt cmd. Für beenden und fenster_schliessen nennst du den genauen Programmnamen aus der Liste von windows_programme bzw. power_pc_programme. " +
+            "Meldet das Bild, dass es fast schwarz ist, ist die Anzeige aus: Sag es Frank und klicke nicht blind. Ist der Rechner gesperrt, sag es Frank: Entsperren geht nur am Gerät, auch an UAC-Abfragen kommt der Fernweg nicht heran."
     else
         "Soll etwas auf ${ziel.dativ} gesehen oder getan werden, arbeite in Schleife: Sehen (${p}_bildschirm), eine Aktion (${p}_bedienen, ${p}_programme), am neuen Bild prüfen, " +
             "weiter, bis das Ziel wirklich erreicht ist. Das Bild hängt am Werkzeug-Ergebnis. Koordinaten sind Pixel im letzten ganzen Bild (Ursprung oben links), nie geschätzte Bildschirmmaße. " +

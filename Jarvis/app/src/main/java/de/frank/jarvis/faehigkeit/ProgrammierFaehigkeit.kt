@@ -111,9 +111,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             STATUS_HTTP.newCall(pcAnfrage()).execute().use { antwort ->
                 if (!antwort.isSuccessful) return@use "PC: unbekannt, der Jarvis-Server antwortet mit HTTP ${antwort.code}."
                 val daten = JSONObject(antwort.body?.string().orEmpty())
+                merkeFaehigkeiten(daten)
                 val rechner = daten.optString("rechner").ifEmpty { "Franks PC" }
                 val alle = daten.optJSONArray("rechner_alle")
-                if (alle != null) return@use rechnerZustand(alle, daten.optBoolean("pc"), rechner, daten.optString("naechster"))
+                // Fehlt naechster (alter Relay), sagt der eigene Text, wohin es ginge; leer oder null heißt beim neuen Relay: in die Cloud.
+                val relayNaechster = if (!daten.has("naechster")) null else if (daten.isNull("naechster")) "" else daten.optString("naechster")
+                if (alle != null) return@use rechnerZustand(alle, daten.optBoolean("pc"), rechner, relayNaechster)
                 val vor = if (daten.isNull("zuletzt_vor_s")) -1 else daten.optInt("zuletzt_vor_s", -1)
                 if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
                 else "PC: nicht erreichbar" + (if (vor >= 0) " (letzte Meldung von $rechner vor ${zeitspanne(vor)})" else "") +
@@ -182,7 +185,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * den Power-PC als „power“ und den Hostinger-Server als „server“ (neuere Relays zusätzlich mit „kennung“). Wer Vorrang hat, stellt Frank
      * in den Einstellungen ein; Sol nehmen nur Sol-fähige Brücken. Ein Rechner, der sich seit dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
      */
-    private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String, relayNaechster: String = ""): String {
+    private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String, relayNaechster: String?): String {
         val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
         fun eintrag(kennung: String) = eintraege.firstOrNull { it.optString("kennung").ifEmpty { KENNUNG_VON_PLATZ[it.optString("rang")].orEmpty() } == kennung }
         fun zeile(r: JSONObject?, art: String): String {
@@ -206,11 +209,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // „naechster“ ist der Platz, den der Relay für den nächsten Auftrag wählt (der Vorrangrechner nur mit frischer Abfrage).
         fun den(id: String) = "den " + (de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
         fun der(id: String) = "Der " + (de.frank.jarvis.data.RECHNER_NAMEN[id] ?: id)
-        val naechsterId = KENNUNG_VON_PLATZ[relayNaechster]
+        val naechsterId = relayNaechster?.let { KENNUNG_VON_PLATZ[it] }
         val erster = reihe.first()
         val wohin = when {
-            naechsterId == null && pcDa && naechster.isNotEmpty() -> "Der nächste Auftrag ginge an $naechster."
-            naechsterId == null -> "Programmieraufträge gehen in die Cloud."
+            relayNaechster == null && pcDa && naechster.isNotEmpty() -> "Der nächste Auftrag ginge an $naechster."
+            relayNaechster.isNullOrEmpty() -> "Programmieraufträge gehen in die Cloud."
+            naechsterId == null -> "Der nächste Auftrag ginge an ${naechster.ifEmpty { relayNaechster }}."
             naechsterId == erster -> "Der nächste Auftrag ginge an ${den(naechsterId)} (Vorrang laut Einstellungen)."
             else -> "Der nächste Auftrag ginge an ${den(naechsterId)}: ${der(erster)} hat Vorrang (Einstellungen), ist aber gerade nicht bereit, deshalb springt der nächste in der Reihenfolge ein."
         }
@@ -244,7 +248,36 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Lebenszeichen der PC-Sitzungen je Auftrag vom Jarvis-Server (kontakt = letzte Arbeit, warter = Sitzung lebt), oder null. */
     private suspend fun sitzungsLage(): JSONObject? = withContext(Dispatchers.IO) {
         if (e.serverToken.isBlank()) return@withContext null
-        runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("sitzungen") } }.getOrNull()
+        runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).also { merkeFaehigkeiten(it) }.optJSONObject("sitzungen") } }.getOrNull()
+    }
+
+    /** Kennt der Relay das Feld reihenfolge (faehigkeiten.reihenfolge)? Aus der letzten erfolgreichen Statusabfrage; null = noch unbekannt. */
+    @Volatile private var relayKenntReihenfolge: Boolean? = null
+
+    /** Merkt faehigkeiten.reihenfolge aus einer erfolgreichen Antwort von /geraet/pc (ohne faehigkeiten: alter Relay, also nein). */
+    private fun merkeFaehigkeiten(daten: JSONObject) {
+        relayKenntReihenfolge = daten.optJSONObject("faehigkeiten")?.optBoolean("reihenfolge") == true
+    }
+
+    /**
+     * Bei ziel=mac, windows oder power: Kann der Relay genau diesen Rechner ansteuern? Dann null, sonst der Grund für die Ablehnung.
+     * Ein Relay ohne reihenfolge gäbe den Auftrag still einem anderen Rechner; ist es unbekannt (Abfrage scheitert), startet nichts.
+     */
+    private suspend fun einzelzielFehlt(): String? {
+        val gewaehlt = kotlinx.coroutines.currentCoroutineContext()[ServerWahl]?.ziel?.takeIf { it in EINZELRECHNER } ?: return null
+        val einzel = de.frank.jarvis.data.RECHNER_NAMEN[gewaehlt] ?: gewaehlt
+        val kennt = relayKenntReihenfolge.takeIf { it == true } ?: withContext(Dispatchers.IO) {
+            runCatching {
+                SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a ->
+                    if (!a.isSuccessful) null else { merkeFaehigkeiten(JSONObject(a.body?.string().orEmpty())); relayKenntReihenfolge }
+                }
+            }.getOrNull()
+        }
+        return when (kennt) {
+            true -> null
+            false -> "Der Jarvis-Server kann Aufträge noch nicht gezielt an den $einzel geben (Relay zu alt). Der Auftrag ist nicht gestartet; ohne Zielangabe geht er nach Franks Reihenfolge."
+            null -> "Der Jarvis-Server antwortet gerade nicht, deshalb ist unklar, ob er den Auftrag genau an den $einzel geben kann. Der Auftrag ist nicht gestartet; bitte gleich noch einmal versuchen."
+        }
     }
 
     private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}&server=${e.serverPlatz}&reihenfolge=${reihenfolgeFuer(null)}").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).build()
@@ -739,7 +772,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         runCatching {
             SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a ->
                 if (!a.isSuccessful) return@use false
-                val alle = JSONObject(a.body?.string().orEmpty()).optJSONArray("rechner_alle") ?: return@use false
+                val alle = JSONObject(a.body?.string().orEmpty()).also { merkeFaehigkeiten(it) }.optJSONArray("rechner_alle") ?: return@use false
                 (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { r ->
                     val kennung = r.optString("kennung").ifEmpty { KENNUNG_VON_PLATZ[r.optString("rang")].orEmpty() }
                     r.optBoolean("da") && zielNimmt(ziel, kennung) && when (kennung) {
@@ -1092,6 +1125,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
                                      modell: String = MODELL_OPUS, cli: String = CLI_CODEX, nurFuerSitzung: String = ""): Ergebnis {
+        // Genau ein Rechner verlangt, aber der Relay kann ihn nicht sicher ansteuern: vor dem Hochladen ablehnen.
+        einzelzielFehlt()?.let { return Ergebnis(it, fehler = true) }
         // Erst vollständig beim Relay, dann der Start: Nie eine Sitzung, der Franks Bilder oder Dateien fehlen.
         val anhaenge = try { anhaengeHochladen() } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) {
             return Ergebnis("Der Auftrag ist NICHT gestartet: ${fehler.message} Sag Frank das und bitte ihn, noch einmal zu senden.", fehler = true)
@@ -2694,13 +2729,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (w.cli == CLI_ANTIGRAVITY && review) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.umfang?.takeIf { it.isNotEmpty() }?.let { rumpf.put("review_umfang", it) }
             }
             kotlinx.coroutines.currentCoroutineContext()[HochgeladeneAnhaenge]?.liste?.takeIf { it.length() > 0 }?.let { rumpf.put("anhaenge", it) }
-            // Ausdrücklich genau ein Rechner: kein Ersatz, und die Meldung nennt ihn. Ein Relay ohne reihenfolge (faehigkeiten.reihenfolge fehlt)
-            // gäbe den Auftrag still einem anderen Rechner: dann lieber nicht starten.
+            // Ausdrücklich genau ein Rechner: kein Ersatz, und die Meldung nennt ihn. Geprüft schon in starteErstes (vor dem Hochladen), hier aus dem Zwischenspeicher.
             val einzel = gewaehlt?.takeIf { it in EINZELRECHNER }?.let { de.frank.jarvis.data.RECHNER_NAMEN[it] ?: it }
-            if (einzel != null) {
-                val kennt = runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("faehigkeiten")?.optBoolean("reihenfolge") == true } }.getOrNull()
-                if (kennt == false) throw IllegalStateException("Der Jarvis-Server kann Aufträge noch nicht gezielt an den $einzel geben (Relay zu alt). Der Auftrag ist nicht gestartet; ohne Zielangabe geht er nach Franks Reihenfolge.")
-            }
+            if (einzel != null) einzelzielFehlt()?.let { throw IllegalStateException(it) }
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -2746,6 +2777,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     benachrichtige(JSONObject().put("id", nummer).put("app", app).put("stand", STAND_ANMELDUNG).put("ziel", ZIEL_PC).put("schritt", "🔐 Nicht gestartet: $text"))
                     throw IllegalStateException("Nicht angemeldet: $text Der Auftrag ist NICHT gestartet und geht ohne Franks ausdrücklichen Wunsch auch nicht in die Cloud (mit ziel=cloud ginge er dorthin).")
                 }
+                // Genau dieser Rechner verlangt: kein Ersatz in der Cloud, der Grund kommt von der Brücke.
+                einzel != null && !antwort.optBoolean("ok") -> throw IllegalStateException("Der $einzel konnte die Sitzung nicht starten" +
+                    (antwort.optString("text").take(300).takeIf { it.isNotBlank() }?.let { ": $it" } ?: ".") + " Der Auftrag ist nicht gestartet und geht ohne Franks ausdrücklichen Wunsch auch nicht in die Cloud.")
                 // Sicher nicht gestartet (die Brücke hat es gemeldet): Dann übernimmt die Cloud, ohne doppelte Sitzung.
                 !antwort.optBoolean("ok") -> throw NichtDa("Der PC konnte die Sitzung nicht starten (${antwort.optString("text").take(160)}), deshalb die Cloud.")
             }

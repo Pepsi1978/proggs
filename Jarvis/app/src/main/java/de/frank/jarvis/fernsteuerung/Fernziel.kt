@@ -11,7 +11,8 @@ import java.net.SocketTimeoutException
 /** Rechner, deren Bildschirm Jarvis fernbedienen kann, mit ihrer Adresse im eigenen Tunnel (WireGuard). */
 enum class Fernziel(val adresse: String, val titel: String, val nominativ: String, val dativ: String, val port: Int = FernsteuerungActivity.PORT, val konsole: Boolean = false) {
     MAC("10.8.0.6", "Mac-Bildschirm", "Der Mac", "dem Mac"),
-    WINDOWS("10.8.0.2", "Windows-Bildschirm", "Der Windows-PC", "dem Windows-PC"),
+    /** Der HP-Laptop; „Windows-PC-Bildschirm“, damit er neben „Power-PC-Bildschirm“ eindeutig ist. */
+    WINDOWS("10.8.0.2", "Windows-PC-Bildschirm", "Der Windows-PC", "dem Windows-PC"),
     /** Franks großer Windows-Rechner zu Hause, gleicher Fernwartungsdienst wie der Windows-PC (Laptop). */
     POWER_PC("10.8.0.9", "Power-PC-Bildschirm", "Der Power-PC", "dem Power-PC"),
     /** Kein Bildschirm: Die Server-Konsole (OpenLauncherServer/web) öffnet [ServerKonsoleActivity] statt der Fernsteuerung. */

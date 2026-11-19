@@ -13,11 +13,11 @@ object HandyUse {
         "oder soll etwas auf dem Handy nachgesehen oder geprüft werden, was deine Werkzeuge nicht können, dann übergib das mit programmieren, ohne app und ohne Rückfrage. " +
         "Der Auftrag beginnt mit „$EINSTIEG“ und nennt, was zu finden oder zu prüfen ist, welcher Zustand richtig wäre und ob die CLI ihn setzen soll. Setzen nur, wenn Frank es will; " +
         "sonst findet und meldet sie nur. Das ist die einzige Ausnahme von „keine Lösungswege“. Jarvis' eigene Einstellungen bleiben beim Werkzeug einstellungen, und Termine, Aufgaben und Mails bei deinen Werkzeugen. " +
-        "Nie für Banking, PIN, Passwörter oder Codes. Handy-Use läuft nur am Mac, am Windows-PC und auf dem Hostinger-Server, nicht in der Cloud."
+        "Nie für Banking, PIN, Passwörter oder Codes. Handy-Use läuft nur am Mac, am Windows-PC, am Power-PC und auf dem Hostinger-Server, nicht in der Cloud."
 
     const val KEIN_RECHNER = "Der Handy-Use-Auftrag ist nicht gestartet: Kein Rechner (Mac, Windows-PC, Power-PC, Hostinger-Server) nimmt ihn gerade an, und die Cloud erreicht das Handy nicht."
 
-    const val NICHT_IN_CLOUD = "Der Handy-Use-Auftrag ist nicht gestartet: Die Cloud erreicht das Handy nicht. Er läuft nur am Mac, am Windows-PC oder auf dem Hostinger-Server."
+    const val NICHT_IN_CLOUD = "Der Handy-Use-Auftrag ist nicht gestartet: Die Cloud erreicht das Handy nicht. Er läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server."
 
     /**
      * Soll der Auftrag das Handy bedienen? Der Name allein genügt nicht: „Ändere im Skill handy-use die Wartezeit“ ist normale

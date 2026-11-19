@@ -93,9 +93,14 @@ object AblageQuellen {
     /** Unbekannte Quellen (eine spätere Version) stehen hinter allen bekannten. */
     fun rang(ordnung: List<String>, quelle: String): Int = ordnung.indexOf(if (quelle == "Jarvis Windows") WINDOWS else quelle).let { if (it < 0) ordnung.size else it }
 
-    /** Alle Reihenfolgen für die Einstellung per Sprache. */
-    val alleOrdnungen: List<Pair<String, String>> = listOf("handy,mac,windows", "handy,windows,mac", "mac,handy,windows", "mac,windows,handy", "windows,handy,mac", "windows,mac,handy")
-        .map { w -> w to w.split(',').joinToString(", dann ") { kurz.getValue(it) } }
+    /** Auswahl per Sprache wie bei rechner_reihenfolge: „X zuerst“, aus [kurz] erzeugt, damit jede Quelle (auch Tablet und Power-PC) wählbar ist. */
+    val zuerstOptionen: List<Pair<String, String>> get() = kurz.map { (k, name) -> k to "$name zuerst" }
+
+    /** Kennung der ersten Quelle in der gespeicherten Reihenfolge. */
+    fun erste(wert: String): String = alsWert(ordnung(wert).take(1))
+
+    /** [kennung] nach vorn, die übrigen behalten ihre Reihenfolge. */
+    fun mitZuerst(wert: String, kennung: String): String = alsWert((listOfNotNull(kurz[kennung]) + ordnung(wert)).distinct())
 }
 
 /** Anzeige „Jarvis Handy · 13.11.2026, 20:15 Uhr“ unter Prompts und Erinnerungen (gleich in JarvisWindows und JarvisMac). */

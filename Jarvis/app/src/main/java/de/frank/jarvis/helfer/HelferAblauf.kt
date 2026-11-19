@@ -316,7 +316,7 @@ object HelferAblauf {
     private fun melde(c: Context, titel: String, text: String) {
         runCatching {
             JarvisDienst.kanalAnlegen(c)
-            Meldungen.zeige(c, Meldungsarten.AGENT, 330_000 + ((titel + text).hashCode() and 0xFFF),
+            Meldungen.zeige(c, Meldungsarten.AGENT, 430_000 + ((titel + text).hashCode() and 0xFFF),
                 NotificationCompat.Builder(c, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle(titel).setContentText(text)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true).setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise),
                 titel, text.take(400))

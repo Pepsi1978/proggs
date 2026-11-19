@@ -667,7 +667,7 @@ class JarvisAgent(context: Context) {
                 // Nur im Gespräch mit Frank (dort gibt es agent_starten): die feste Regel Websuche statt Agent, vor den App-Hinweisen.
                 // Agenten selbst bekommen sie nicht, ihre gründliche Recherche ist ja gerade beauftragt.
                 if (faehigkeiten.any { it.id == "agenten" }) append(de.frank.jarvis.faehigkeit.SuchRegel.REGEL).append("\n\n")
-                faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
+                faehigkeiten.filter { it.hinweise.isNotBlank() }.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
                 append("WERKZEUGE:\n")
                 faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->
                     append("- ").append(w.name).append(": ").append(w.beschreibung).append("\n  Eingabe (JSON-Schema): ").append(w.schema.toString()).append('\n')

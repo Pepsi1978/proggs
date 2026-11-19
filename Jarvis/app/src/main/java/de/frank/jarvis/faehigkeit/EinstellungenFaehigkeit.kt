@@ -530,8 +530,8 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("gross" to "Große Kacheln", "mittel" to "Mittlere Kacheln", "klein" to "Kleine Kacheln", "details" to "Details", "liste" to "Liste") }, { e.ablageAnsicht }) { e.ablageAnsicht = it },
             auswahl("ablage_sortierung", "Ablage", "Sortierung der Ablage", "Wonach die Ablage ihre Einträge ordnet; nach Quelle heißt nach der Jarvis-Version, von der sie stammen.",
                 { listOf("neueste" to "Neueste zuerst", "aelteste" to "Älteste zuerst", "name" to "Name A–Z", "groesse" to "Größte zuerst", "quelle" to "Nach Quelle") }, { e.ablageSortierung }) { e.ablageSortierung = it },
-            auswahl("ablage_quellen", "Ablage", "Reihenfolge der Quellen", "In welcher Reihenfolge Einträge und Prompts der Jarvis-Versionen beim Sortieren nach Quelle stehen.",
-                { de.frank.jarvis.ablage.AblageQuellen.alleOrdnungen }, { e.ablageQuellen }) { e.ablageQuellen = it },
+            auswahl("ablage_quellen", "Ablage", "Welche Quelle zuerst", "Welche Jarvis-Version (Handy, Tablet, Mac, Windows HP, Power-PC) beim Sortieren nach Quelle zuerst steht; die übrigen behalten ihre Reihenfolge dahinter. Frei umordnen lassen sie sich in der App.",
+                { de.frank.jarvis.ablage.AblageQuellen.zuerstOptionen }, { de.frank.jarvis.ablage.AblageQuellen.erste(e.ablageQuellen) }) { e.ablageQuellen = de.frank.jarvis.ablage.AblageQuellen.mitZuerst(e.ablageQuellen, it) },
             zahl("atem_geraeusch_lautstaerke", "Atemübungen", "Lautstärke des Atemgeräuschs", "Regler für das Ein- und Ausatemgeräusch in den Atemübungen: 0 = aus, 50 = leises Nebengeräusch (Standard), 100 = so laut wie die Stimme.", 0, 100, "Prozent", { e.atemGeraeuschLautstaerke }) { e.atemGeraeuschLautstaerke = it; de.frank.jarvis.atem.AtemSitzung.pegelSetzen(it / 100f, speichern = false) },
             schalter("prompts_nach_quelle", "Ablage", "Prompts nach Quelle sortieren", "Zeigt die Prompts nach ihrer Jarvis-Version sortiert statt in der eigenen Reihenfolge.", { e.promptsNachQuelle }) { e.promptsNachQuelle = it },
 

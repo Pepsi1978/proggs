@@ -495,11 +495,9 @@ class Einstellungen private constructor(context: Context) {
     var rechnerReihenfolge: List<String>
         get() {
             val gespeichert = (prefs.getString("rechner_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in RECHNER }.distinct()
-            val mitPower = if (gespeichert.isEmpty() || "power" in gespeichert) gespeichert else gespeichert.toMutableList().apply {
-                val windows = indexOf("windows")
-                val server = indexOf("server")
-                when { windows >= 0 -> add(windows + 1, "power"); server >= 0 -> add(server, "power"); else -> add("power") }
-            }
+            // Der Setter speichert immer alle Rechner, eine alte Reihenfolge enthält also windows; fehlt es doch, hängt RECHNER power hinten an.
+            val windows = gespeichert.indexOf("windows")
+            val mitPower = if ("power" in gespeichert || windows < 0) gespeichert else gespeichert.toMutableList().apply { add(windows + 1, "power") }
             return (mitPower + RECHNER).distinct()
         }
         set(v) = put { putString("rechner_reihenfolge", (v.filter { it in RECHNER } + RECHNER).distinct().joinToString(",")) }

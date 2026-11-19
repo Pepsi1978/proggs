@@ -367,7 +367,10 @@ open class RechnerKanalFaehigkeit(context: Context, private val ziel: RechnerArt
     }
 }
 
-/** Was je Rechner anders ist: Name, Wege beim Relay, Speicher. Der Kanal selbst ist für alle gleich. */
+/** Was je Rechner anders ist: Name, Wege beim Relay, Speicher. Der Kanal selbst ist für alle gleich.
+ *  meldung: Basis der Meldungs-ids, belegt wird meldung + 0..0xFFF. Belegte Bereiche der App: feste ids unter 20_000,
+ *  Erinnerungen/Dienst 20_000–119_999, Zeitablauf 140_000–144_095, Ablage 200_000–299_999, Programmieren 300_000–365_535,
+ *  Kanäle Mac 400_000, HP 410_000, Power-PC 420_000, Helferablauf 430_000 (je +0xFFF). Neuer Kanal: nächster freier Zehntausender. */
 class RechnerArt(
     val id: String, val name: String, val rechner: String, val speicher: String, val kanalWeg: String, val startWeg: String, val meldung: Int,
     val beschreibung: String, val hinweise: String, val startBeschreibung: String, val helferKatalog: Boolean,
@@ -378,7 +381,7 @@ class RechnerArt(
 class MacJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, ART) {
     private companion object {
         val ART = RechnerArt(
-            id = "jarvis_mac", name = "Jarvis Mac OS", rechner = "Mac", speicher = "agentenkanal", kanalWeg = "/geraet/kanal", startWeg = "/geraet/mac-start", meldung = 310_001,
+            id = "jarvis_mac", name = "Jarvis Mac OS", rechner = "Mac", speicher = "agentenkanal", kanalWeg = "/geraet/kanal", startWeg = "/geraet/mac-start", meldung = 400_000,
             beschreibung = "Der Schwester-Agent auf Franks Mac: starten, Stand abfragen, begutachten lassen, abstimmen.",
             hinweise = "Jarvis Mac OS ist dein Schwester-Agent auf Franks Mac und hat Vollzugriff auf den ganzen Computer. Daneben gibt es Jarvis Windows HP auf Franks HP-Laptop und Jarvis Windows Power-PC auf seinem großen Windows-Rechner zu Hause; „Rechner“ ohne weitere Angabe meint den Mac, „Windows“ oder „HP“ meint Jarvis Windows HP, „Power-PC“ meint Jarvis Windows Power-PC. " +
                 "„Starte Jarvis Mac OS“ und im selben Zusammenhang auch das kurze „Starte Jarvis“ bedeuten jarvis_mac_starten. Sprich ihn von dir aus an, wenn etwas am Rechner zählt: " +
@@ -395,7 +398,7 @@ class MacJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, AR
 class WindowsHpJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, ART) {
     private companion object {
         val ART = RechnerArt(
-            id = "jarvis_windows_hp", name = "Jarvis Windows HP", rechner = "HP-Laptop", speicher = "agentenkanal_hp", kanalWeg = "/geraet/hp/kanal", startWeg = "/geraet/hp/start", meldung = 320_001,
+            id = "jarvis_windows_hp", name = "Jarvis Windows HP", rechner = "HP-Laptop", speicher = "agentenkanal_hp", kanalWeg = "/geraet/hp/kanal", startWeg = "/geraet/hp/start", meldung = 410_000,
             beschreibung = "Der Schwester-Agent auf Franks HP-Laptop (Windows): starten, Aufgaben geben, Stand abfragen, begutachten lassen, abstimmen.",
             hinweise = "Jarvis Windows HP ist dein Schwester-Agent auf Franks HP-Laptop mit Windows und hat Vollzugriff auf den ganzen Computer: Computer Use mit allen Programmen, Terminal und CLI-Sitzungen. Frank nennt ihn auch „Windows HP“, „Jarvis Windows“ oder „Jarvis auf dem HP“. " +
                 "„Starte Windows HP“ bedeutet jarvis_windows_hp_starten. Aufgaben und Fragen für den Laptop gibst du mit jarvis_windows_hp_sprechen: art=frage für Aufträge, Rückfragen und freies Gespräch, art=stand für den Stand von Programmieraufgaben, art=begutachten für eine Begutachtung des gesamten Geschehens, art=info für Mitteilungen. " +
@@ -411,8 +414,7 @@ class WindowsHpJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(conte
 class WindowsPowerJarvisFaehigkeit(context: Context) : RechnerKanalFaehigkeit(context, ART) {
     private companion object {
         val ART = RechnerArt(
-            // Meldungs-ids: je Art meldung + 0..0xFFF; 320_002 läge im Bereich des HP-Kanals, 330_000 belegt der Helferablauf.
-            id = "jarvis_windows_power", name = "Jarvis Windows Power-PC", rechner = "Power-PC", speicher = "agentenkanal_power", kanalWeg = "/geraet/power/kanal", startWeg = "/geraet/power/start", meldung = 340_001,
+            id = "jarvis_windows_power", name = "Jarvis Windows Power-PC", rechner = "Power-PC", speicher = "agentenkanal_power", kanalWeg = "/geraet/power/kanal", startWeg = "/geraet/power/start", meldung = 420_000,
             beschreibung = "Der Schwester-Agent auf Franks Power-PC (großer Windows-Rechner zu Hause): starten, Aufgaben geben, Stand abfragen, begutachten lassen, abstimmen.",
             hinweise = "Jarvis Windows Power-PC ist dein Schwester-Agent auf Franks Power-PC, seinem großen Windows-Rechner zu Hause, mit Vollzugriff auf den ganzen Computer: Computer Use mit allen Programmen, Terminal und CLI-Sitzungen. Frank nennt ihn auch „Power-PC“ oder „Jarvis auf dem Power-PC“; „Windows HP“ ist dagegen der Laptop. " +
                 "„Starte den Power-PC-Jarvis“ bedeutet jarvis_windows_power_starten. Aufgaben und Fragen gibst du mit jarvis_windows_power_sprechen: art=frage für Aufträge, Rückfragen und freies Gespräch, art=stand für den Stand von Programmieraufgaben, art=begutachten für eine Begutachtung des gesamten Geschehens, art=info für Mitteilungen. " +
