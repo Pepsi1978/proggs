@@ -25,6 +25,7 @@ import tempfile
 AREAS = {
     "peripherie/switchbot": ("SwitchBot Cloud-API und Bluetooth", ["switchbot", "switch bot", "switch-bot", "meter pro", "meter-pro", "co2-monitor", "co2 monitor", "hub mini", "hub-mini"]),
     "peripherie/delonghi-coffeelink": ("De'Longhi Coffee Link (Kaffeemaschine)", ["kaffeemaschine", "kaffee maschine", "kaffee-maschine", "delonghi", "de'longhi", "de longhi", "de-longhi", "coffee link", "coffee-link", "coffeelink", "primadonna", "prima donna", "prima-donna", "long black", "long-black", "ecam", "aylanetworks", "ayla cloud", "ayla-cloud"]),
+    "peripherie/3d-drucker": ("3D-Drucker (FDM) für die Wohnung", ["3d-drucker", "3d drucker", "3d-druck", "3d druck", "bambu lab", "bambu-lab", "bambulab", "prusa", "core one", "core-one", "qidi", "creality", "tpu 85a", "tpu-85a", "tpu 95a", "tpu-95a", "asa-filament", "asa filament"]),
     "peripherie/huawei-watchface": ("Huawei-Zifferblätter (.hwt)", ["huawei watch", "huawei-watch", "zifferblatt", "watchface", "watch face", "watch-face", ".hwt", "theme studio", "theme-studio"]),
     "opencode/opencode-cli":        ("OpenCode CLI: Modellpreise", ["opencode preise", "opencode-preise", "tui preise", "tui-preise", "tui preis", "tui-preis", "token-cost-sidebar", "gpt-6.1-sol", "gpt 6.1 sol", "gpt-6.2-sol", "gpt 6.2 sol"]),
     "web/chrome-extensions":        ("Chrome-Erweiterungen", ["manifest v3", "manifest_version", "chrome extension", "chrome-erweiterung", "content script", "service worker", "chrome.storage", "chrome.runtime"]),
