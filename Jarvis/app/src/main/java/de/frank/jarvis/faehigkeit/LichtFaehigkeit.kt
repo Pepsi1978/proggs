@@ -53,8 +53,11 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
         val aktion = a.optString("aktion").trim().lowercase()
         val hText = a.optString("helligkeit").trim().lowercase()
         // Ausgang für Änderungen: gemerkt, sonst von den Streifen gelesen (nur wenn wirklich gebraucht), sonst Vorgabe.
-        val braucht = aktion in setOf("farbe", "helligkeit", "szene", "mikrofon") || (aktion in setOf("an", "ein", "einschalten", "on") && hText.isNotEmpty())
-        val alt = (if (braucht) LedStreifen.basis(context) else LedStreifen.zustand(context)) ?: LedStreifen.Zustand()
+        // Helligkeit braucht die echte Farbe (sonst Rückfrage statt geratener Farbe); Farbe, Szene und Mikrofon setzen ihre Werte selbst.
+        val brauchtFarbe = aktion == "helligkeit" || (aktion in setOf("an", "ein", "einschalten", "on") && hText.isNotEmpty())
+        val basis = if (brauchtFarbe || aktion in setOf("farbe", "szene")) LedStreifen.basis(context) else LedStreifen.zustand(context)
+        val alt = basis ?: LedStreifen.Zustand()
+        val farbeFehlt = Ergebnis("RÜCKFRAGE: Ich kenne die eingestellte Farbe noch nicht. Welche Farbe soll das Licht haben?", true)
         val woerter = hText.split(Regex("[^a-zäöüß0-9]+")).filter { it.isNotEmpty() }.toSet()
         fun hell(): Int? = when {
             hText.isEmpty() -> alt.hell
@@ -68,15 +71,16 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
         val b = when (aktion) {
             "an", "ein", "einschalten", "on" ->
                 if (hText.isEmpty()) LedStreifen.an(context)
-                else LedStreifen.setzen(context, alt.copy(modus = if (alt.modus == Modus.RHYTHMUS) Modus.FARBE else alt.modus, hell = hell() ?: return rueckfrage))
+                else (basis ?: return farbeFehlt).let { LedStreifen.setzen(context, it.copy(modus = if (it.modus == Modus.RHYTHMUS) Modus.FARBE else it.modus, hell = hell() ?: return rueckfrage)) }
             "aus", "ausschalten", "off" -> LedStreifen.aus(context)
             "farbe" -> {
                 val rgb = LedStreifen.farbe(a.optString("farbe")) ?: return Ergebnis("RÜCKFRAGE: Welche Farbe? Möglich: ${LedStreifen.FARBEN.keys.joinToString(", ")} oder #RRGGBB.", true)
                 LedStreifen.setzen(context, alt.copy(modus = Modus.FARBE, rgb = rgb, hell = hell() ?: return rueckfrage))
             }
             "helligkeit" -> {
-                val basis = LedStreifen.basis(context) ?: return Ergebnis("RÜCKFRAGE: Ich kenne die eingestellte Farbe noch nicht. Welche Farbe soll das Licht haben?", true)
-                LedStreifen.setzen(context, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell() ?: return rueckfrage))
+                if (hText.isEmpty()) return rueckfrage
+                val b0 = basis ?: return farbeFehlt
+                LedStreifen.setzen(context, b0.copy(modus = if (b0.modus == Modus.RHYTHMUS) Modus.FARBE else b0.modus, hell = hell() ?: return rueckfrage))
             }
             "szene" -> {
                 val s = LedStreifen.szene(a.optString("szene")) ?: return Ergebnis("RÜCKFRAGE: Welche Szene? ${LedStreifen.SZENEN.mapIndexed { i, n -> "${i + 1} $n" }.joinToString(", ")}.", true)
@@ -92,7 +96,7 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
                 val uhr = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
                 return Ergebnis(
                     "Eingestellt: ${LedStreifen.zustand(context)?.text() ?: "noch nichts gemerkt (beim nächsten Einschalten liest Jarvis die Streifen)"}. " +
-                        (f?.let { "Automatik heute (${it.art}): an ab ${it.an.format(uhr)} Uhr, aus um ${it.aus.format(uhr)} Uhr." } ?: "Heute schaltet die Automatik nicht.") +
+                        (f?.let { "Automatik heute (${it.art}): an ab ${it.an.format(uhr)} Uhr, aus um ${it.aus.format(uhr)} Uhr." } ?: LichtAutomatik.grundOhneFenster(context)) +
                         (LedStreifen.letzterBericht?.let { " Zuletzt: ${it.text}" } ?: ""),
                 )
             }

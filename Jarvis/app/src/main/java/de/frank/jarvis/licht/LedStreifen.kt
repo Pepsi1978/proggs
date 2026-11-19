@@ -31,6 +31,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -97,7 +98,11 @@ object LedStreifen {
     private fun adressen(c: Context) = c.applicationContext.getSharedPreferences("licht", Context.MODE_PRIVATE)
 
     fun zustand(c: Context): Zustand? = zp(c).getString("zustand", null)?.let { Zustand.aus(it) }
-    fun merken(c: Context, z: Zustand) { zp(c).edit().putString("zustand", z.json()).apply() }
+    fun merken(c: Context, z: Zustand) { aktuell = z; zp(c).edit().putString("zustand", z.json()).apply() }
+
+    /** Angezeigter Zustand (Karte): gemerkt, während des Ziehens auch der Live-Wunsch; jede Änderung über Sprache oder Automatik kommt hier an. */
+    var aktuell by mutableStateOf<Zustand?>(null)
+    fun aktuellLaden(c: Context) { if (aktuell == null) aktuell = zustand(c) }
 
     /** Was Jarvis zuletzt selbst geschaltet hat (true = an); null = noch nie. Nur Hinweis, wenn die Streifen nicht lesbar sind. */
     fun zuletztAn(c: Context): Boolean? = zp(c).takeIf { it.contains("an") }?.getBoolean("an", false)
@@ -131,27 +136,36 @@ object LedStreifen {
     /** Ausgangszustand für Änderungen (Helligkeit, Tempo): gemerkt, sonst die echte Mehrheit der Streifen (wird gemerkt), sonst null = nachfragen. */
     suspend fun basis(c: Context): Zustand? = zustand(c) ?: sperre.withLock { zustand(c) ?: mehrheit(c)?.also { merken(c, it) } }
 
+    private suspend fun <T> beschaeftigt(arbeit: suspend () -> T): T {
+        laeuft = true
+        try { return sperre.withLock { arbeit() } } finally { laeuft = sperre.isLocked }
+    }
+
     /** Einschalten mit dem gemerkten Zustand; ist keiner gemerkt, vorher die Streifen lesen und die Farbe der Mehrheit übernehmen. */
-    suspend fun an(c: Context): Bericht = sperre.withLock {
+    suspend fun an(c: Context): Bericht = beschaeftigt {
         // Ohne gemerkten und ohne lesbaren Zustand nur einschalten: nie eine geratene Farbe über Franks Einstellung schreiben.
         val z = zustand(c) ?: mehrheit(c)?.also { merken(c, it) }
         lauf(c, "an", { t -> if (z != null) befehle(t, z) else listOf(t.an) }) { if (z != null) "an (${z.text()})" else "an" }.also { if (it.ok > 0) anMerken(c, true) }
     }
 
-    suspend fun aus(c: Context): Bericht = sperre.withLock {
+    suspend fun aus(c: Context): Bericht = beschaeftigt {
         lauf(c, "aus", { t -> listOf(t.aus) }) { "aus" }.also { if (it.ok > 0) anMerken(c, false) }
     }
 
     /** Neuen Zustand merken und an alle schicken (schaltet ein). */
-    suspend fun setzen(c: Context, z: Zustand): Bericht = sperre.withLock {
+    suspend fun setzen(c: Context, z: Zustand): Bericht = beschaeftigt {
         merken(c, z)
         lauf(c, "setzen", { t -> befehle(t, z) }) { "auf ${z.text()}" }.also { if (it.ok > 0) anMerken(c, true) }
     }
 
-    /** Liest die erreichbaren Streifen: true, wenn alle gelesenen an sind; false, wenn einer aus ist; null, wenn keiner lesbar war. */
+    /** Liest die Streifen: true nur, wenn alle eigenen gelesen wurden und an sind; false sonst; null, wenn keiner lesbar war. */
     suspend fun istAn(c: Context): Boolean? = sperre.withLock {
         val gelesen = lesenAlle(c)
-        if (gelesen.isEmpty()) null else gelesen.values.all { it.an }
+        when {
+            gelesen.isEmpty() -> null
+            gelesen.keys.map(::schluessel).toSet().containsAll(eigene(c)) && gelesen.values.all { it.an } -> true
+            else -> false
+        }
     }
 
     private class Meldung(val an: Boolean, val rgb: String, val hell: Int)
@@ -167,14 +181,8 @@ object LedStreifen {
         return Zustand(Modus.FARBE, beste.first, beste.second.coerceIn(1, 100))
     }
 
-    private suspend fun lauf(c: Context, art: String, befehl: (Typ) -> List<String>, wort: () -> String): Bericht {
-        laeuft = true
-        try {
-            val b = schalten(c.applicationContext, befehl, wort())
-            letzterBericht = b
-            return b
-        } finally { laeuft = false }
-    }
+    private suspend fun lauf(c: Context, art: String, befehl: (Typ) -> List<String>, wort: () -> String): Bericht =
+        schalten(c.applicationContext, befehl, wort()).also { letzterBericht = it }
 
     fun erlaubt(c: Context): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
         (c.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
@@ -187,7 +195,12 @@ object LedStreifen {
         val gesehenHandy = ConcurrentHashMap.newKeySet<String>()
         // Losgelöst: Die Anfrage blockiert bis zur Antwort des Macs; ein frühes Ende soll nicht auf sie warten.
         val mac = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { runCatching { ueberMac(c, befehl) }.getOrElse { MacErgebnis(emptySet(), emptySet(), "nicht erreichbar") } }
-        val handy = async { if (adapter != null) handySchalten(c, adapter, befehl, okHandy, gesehenHandy) }
+        val handy = async {
+            if (adapter != null) withTimeoutOrNull(HANDY_FRIST_MS) {
+                runCatching { handySchalten(c, adapter, befehl, okHandy, gesehenHandy) }
+                    .onFailure { if (it !is kotlinx.coroutines.CancellationException) Logbuch.fehler("Licht: Handy-Weg", it) }
+            }
+        }
         val alleBekannt = eigene(c)
         while (!(handy.isCompleted && mac.isCompleted)) {
             val ok = okHandy.map(::schluessel) + (if (mac.isCompleted) mac.await().geschaltet.map(::schluessel) else emptyList())
@@ -223,6 +236,8 @@ object LedStreifen {
         return alle - fremd.keys
     }
 
+    @Volatile private var letzteSuche = 0L
+
     private suspend fun handySchalten(c: Context, adapter: BluetoothAdapter, befehl: (Typ) -> List<String>, ok: MutableSet<String>, gesehen: MutableSet<String>) {
         val geraete = HashMap(bekannt(c))
         val erledigt = ConcurrentHashMap<String, Boolean>()
@@ -243,11 +258,13 @@ object LedStreifen {
         }
         gesehen.addAll(geraete.values)
         if (geraete.isNotEmpty()) senden(geraete)
-        if (geraete.isEmpty() || erledigt.values.any { !it } || geraete.size < BEKANNTE_NAMEN.size) {
+        val fehlt = geraete.isEmpty() || erledigt.values.any { !it } || geraete.values.map(::schluessel).toSet().size < eigene(c).size
+        if (fehlt && (geraete.isEmpty() || System.currentTimeMillis() - letzteSuche > SUCHE_ABSTAND_MS)) {
+            letzteSuche = System.currentTimeMillis()
             val neu = suchen(c, adapter)
             neu.forEach { (mac, n) -> adressen(c).edit().putString(mac, n).apply() }
             gesehen.addAll(neu.values)
-            val offen = neu.filterKeys { erledigt[it] != true }
+            val offen = neu.filterKeys { !erledigt.containsKey(it) }
             if (offen.isNotEmpty()) senden(offen)
         }
     }
@@ -305,7 +322,8 @@ object LedStreifen {
     private val liveBereich = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     private val liveSitzungen = ConcurrentHashMap<String, Pair<Sitzung, Typ>>()
     private val liveWunsch = kotlinx.coroutines.flow.MutableStateFlow<Zustand?>(null)
-    private var liveJob: kotlinx.coroutines.Job? = null
+    @Volatile private var liveJob: kotlinx.coroutines.Job? = null
+    @Volatile private var macAbbruch: kotlinx.coroutines.Job? = null
     @Volatile private var liveZuletzt = 0L
 
     fun liveStart(c: Context) {
@@ -313,7 +331,7 @@ object LedStreifen {
         if (liveJob?.isActive == true || !erlaubt(c)) return
         val adapter = c.getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return
         val app = c.applicationContext
-        liveBereich.launch { runCatching { macAbbrechen(app) } }
+        macAbbruch = liveBereich.launch { runCatching { macAbbrechen(app) } }
         liveJob = liveBereich.launch {
             bekannt(app).forEach { (mac, n) ->
                 launch {
@@ -339,23 +357,25 @@ object LedStreifen {
                 }
             }
             while (System.currentTimeMillis() - liveZuletzt < 20_000L) delay(1_000)
-            liveSchliessen()
+            liveSitzungenSchliessen()
+            liveWunsch.value = null
+            liveJob = null
         }
     }
 
-    fun live(z: Zustand) { liveZuletzt = System.currentTimeMillis(); liveWunsch.value = z }
+    fun live(z: Zustand) { liveZuletzt = System.currentTimeMillis(); aktuell = z; liveWunsch.value = z }
 
-    private fun liveSchliessen() {
+    private fun liveSitzungenSchliessen() {
         liveSitzungen.values.forEach { it.first.schliessen() }
         liveSitzungen.clear()
-        liveWunsch.value = null
-        liveJob?.cancel()
-        liveJob = null
     }
 
-    /** Loslassen: Live-Verbindungen schließen, dann [z] wie gewohnt an alle Streifen (Handy und Mac) und merken. */
+    /** Loslassen: erst den Live-Job beenden (keine Verbindung kommt mehr hinzu), dann alle schließen, den Mac-Abbruch abwarten, dann [z] wie gewohnt. */
     suspend fun liveEnde(c: Context, z: Zustand): Bericht {
-        liveSchliessen()
+        liveJob?.let { j -> liveJob = null; j.cancelAndJoin() }
+        liveSitzungenSchliessen()
+        liveWunsch.value = null
+        withTimeoutOrNull(4_000) { macAbbruch?.join() }
         delay(300) // die Streifen kurz freigeben, bevor der normale Weg neu verbindet
         return setzen(c, z)
     }
@@ -422,7 +442,7 @@ object LedStreifen {
                     else @Suppress("DEPRECATION") run { k.writeType = art; k.value = wert; gatt.writeCharacteristic(k) }
                 if (!gesendet) return false
                 // Ohne Antwort meldet der Streifen nichts: kurz Luft lassen. Mit Antwort auf die Bestätigung warten.
-                if (ohneAntwort) delay(70) else if (!geschrieben.await()) return false
+                if (ohneAntwort) delay(70) else if (withTimeoutOrNull(800) { geschrieben.await() } != true) return false
             }
             if (nachlauf) delay(150) // Befehle aus dem Sendepuffer lassen, bevor getrennt wird.
             return true
@@ -463,7 +483,8 @@ object LedStreifen {
         val wach = c.getSystemService(PowerManager::class.java)?.isInteractive != false
         val namen = (BEKANNTE_NAMEN + bekannt(c).values).distinct()
         val filter = if (wach) null else namen.map { ScanFilter.Builder().setDeviceName(it).build() }
-        scanner.startScan(filter, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), rueckruf)
+        if (runCatching { scanner.startScan(filter, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), rueckruf) }
+                .onFailure { Logbuch.fehler("Licht: Bluetooth-Scan nicht gestartet", it) }.isFailure) return gefunden
         try {
             withTimeoutOrNull(SUCHE_MS) { while (!gefunden.values.map(::schluessel).toSet().containsAll(eigene(c))) delay(200) }
         } finally { runCatching { scanner.stopScan(rueckruf) } }
@@ -488,6 +509,7 @@ object LedStreifen {
             when (j.optString("ergebnis")) {
                 "fertig" -> MacErgebnis(menge("geschaltet"), menge("gesehen"), j.optString("fehler").takeIf { it.isNotBlank() }?.let { "mit Fehler: ${it.take(120)}" })
                 "mac_nicht_verbunden" -> MacErgebnis(emptySet(), emptySet(), "nicht verbunden")
+                "abgeloest" -> MacErgebnis(emptySet(), emptySet(), null)
                 else -> MacErgebnis(emptySet(), emptySet(), "ohne Rückmeldung")
             }
         }
@@ -518,7 +540,9 @@ object LedStreifen {
         fun norm(s: String) = s.lowercase().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss").replace(Regex("[^a-z0-9#]"), "")
         val k = norm(f)
         Regex("#?([0-9a-f]{6})").matchEntire(k)?.let { return it.groupValues[1].uppercase() }
-        return FARBEN.entries.firstOrNull { norm(it.key) == k }?.value ?: FARBEN.entries.firstOrNull { k.contains(norm(it.key)) }?.value
+        val k2 = k.replace("warmes", "warm").replace("kaltes", "kalt")
+        return FARBEN.entries.firstOrNull { norm(it.key) == k2 }?.value
+            ?: FARBEN.entries.sortedByDescending { it.key.length }.firstOrNull { k2.contains(norm(it.key)) }?.value
     }
 
     fun farbName(rgb: String): String = FARBEN.entries.firstOrNull { it.value.equals(rgb, true) }?.key?.replaceFirstChar { it.uppercase() } ?: "#$rgb"
@@ -532,6 +556,8 @@ object LedStreifen {
 
     const val VERBINDEN_MS = 8_000L
     const val SUCHE_MS = 5_000L
+    private const val SUCHE_ABSTAND_MS = 120_000L
+    private const val HANDY_FRIST_MS = 22_000L
     private const val ABFRAGE = "5F0100F5"
     private val CLIENT: OkHttpClient = OkHttpClient.Builder().callTimeout(45, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
     fun uuid(kurz: String): UUID = UUID.fromString("0000$kurz-0000-1000-8000-00805f9b34fb")

@@ -81,9 +81,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /** Stand der Licht-Karte außerhalb der Komposition. */
+/** Zuletzt an den Reglern gewählt (auch ohne gemerkten Zustand), gilt beim Antippen einer Szene bzw. eines Mikrofon-Modus. */
+private object Wahl { @Volatile var tempo = 50; @Volatile var empf = 7 }
+
 private object LichtStand {
     val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    var zustand by mutableStateOf<LedStreifen.Zustand?>(null)
+    var zustand: LedStreifen.Zustand?
+        get() = LedStreifen.aktuell
+        set(v) { LedStreifen.aktuell = v }
     var offen by mutableStateOf(false)
     var farbeOffen by mutableStateOf(true)
     var szenenOffen by mutableStateOf(false)
@@ -102,7 +107,7 @@ private object LichtStand {
     }
 
     /** Während des Ziehens: sofort anzeigen und live an die verbundenen Streifen. */
-    fun live(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; LedStreifen.liveStart(c); LedStreifen.live(z) }
+    fun live(c: android.content.Context, z: LedStreifen.Zustand) { if (LedStreifen.laeuft) return; LedStreifen.liveStart(c); LedStreifen.live(z) }
 
     /** Loslassen: fest übernehmen (alle Streifen, Handy und Mac) und merken. */
     fun los(c: android.content.Context, z: LedStreifen.Zustand) { zustand = z; bereich.launch { runCatching { LedStreifen.liveEnde(c, z) }; zustand = LedStreifen.zustand(c) } }
@@ -130,7 +135,7 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val c = LocalContext.current.applicationContext
     val s = LichtStand
-    if (s.zustand == null) s.zustand = LedStreifen.zustand(c)
+    LedStreifen.aktuellLaden(c)
     if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
     val z = s.zustand
     val b = LedStreifen.letzterBericht
@@ -204,7 +209,8 @@ private fun FarbeTeil() {
                                 detectTapGestures(
                                     onTap = { s.setzen(c, basis.copy(modus = Modus.FARBE, rgb = rgb)) },
                                     onLongPress = {
-                                        val aktuell = (s.zustand?.takeIf { it.modus == Modus.FARBE } ?: return@detectTapGestures).rgb
+                                        val aktuell = s.zustand?.takeIf { it.modus == Modus.FARBE }?.rgb
+                                            ?: run { Toast.makeText(c, "Erst eine Farbe wählen, dann lange drücken zum Speichern", Toast.LENGTH_SHORT).show(); return@detectTapGestures }
                                         LedStreifen.platzSpeichern(c, i, aktuell)
                                         s.plaetze = LedStreifen.plaetze(c)
                                         haptik.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -254,8 +260,17 @@ private fun FarbeTeil() {
         Text("Helligkeit: ${hell.toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         Slider(
             value = hell, valueRange = 1f..100f,
-            onValueChange = { hell = it; s.live(c, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = it.toInt())) },
-            onValueChangeFinished = { s.los(c, basis.copy(modus = if (basis.modus == Modus.RHYTHMUS) Modus.FARBE else basis.modus, hell = hell.toInt())) },
+            onValueChange = { hell = it; z?.let { bz -> s.live(c, bz.copy(modus = if (bz.modus == Modus.RHYTHMUS) Modus.FARBE else bz.modus, hell = it.toInt())) } },
+            onValueChangeFinished = {
+                val h = hell.toInt()
+                if (z != null) s.los(c, z.copy(modus = if (z.modus == Modus.RHYTHMUS) Modus.FARBE else z.modus, hell = h))
+                else s.bereich.launch {
+                    // Ohne gemerkten Zustand: erst die Streifen lesen; ist keine Farbe bekannt, nichts Geratenes senden.
+                    val b0 = LedStreifen.basis(c)
+                    if (b0 == null) Toast.makeText(c, "Bitte zuerst eine Farbe wählen", Toast.LENGTH_SHORT).show()
+                    else s.setzen(c, b0.copy(modus = if (b0.modus == Modus.RHYTHMUS) Modus.FARBE else b0.modus, hell = h))
+                }
+            },
         )
     }
 }
@@ -271,16 +286,17 @@ private fun SzenenTeil() {
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 reihe.forEach { (i, name) ->
                     LichtKnopf(name.replaceFirstChar { it.uppercase() }, Modifier.weight(1f), aktiv = z?.modus == Modus.SZENE && z.szene == i) {
-                        s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.SZENE, szene = i))
+                        s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.SZENE, szene = i, tempo = Wahl.tempo))
                     }
                 }
                 if (reihe.size == 1) Spacer(Modifier.weight(1f))
             }
         }
         var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
+        Wahl.tempo = tempo.toInt()
         Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
-            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else (z ?: LedStreifen.Zustand()).copy(tempo = tempo.toInt()).let { LedStreifen.merken(c, it); s.zustand = it }
+            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
         })
     }
 }
@@ -296,14 +312,15 @@ private fun MikrofonTeil() {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LedStreifen.RHYTHMEN.forEachIndexed { i, name ->
                 LichtKnopf(name, Modifier.weight(1f), aktiv = z?.modus == Modus.RHYTHMUS && z.rhythmus == i + 1) {
-                    s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.RHYTHMUS, rhythmus = i + 1))
+                    s.setzen(c, (z ?: LedStreifen.Zustand()).copy(modus = Modus.RHYTHMUS, rhythmus = i + 1, empfindlichkeit = Wahl.empf))
                 }
             }
         }
         var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
+        Wahl.empf = empf.toInt()
         Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
-            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else (z ?: LedStreifen.Zustand()).copy(empfindlichkeit = empf.toInt()).let { LedStreifen.merken(c, it); s.zustand = it }
+            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
         })
     }
 }
@@ -396,10 +413,12 @@ private fun AutomatikTeil() {
                     val ohneStandort = if (!de.frank.jarvis.fahrt.Standort.immerErlaubt(c)) "Dafür braucht Jarvis den Standort „Immer zulassen“ (App-Infos von Jarvis, Berechtigungen, Standort)." else null
                     (ort ?: ohneStandort)?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
                 }
-                val heute = remember(stand) { runCatching { LichtAutomatik.fenster(c) }.getOrNull() }
+                val heute by androidx.compose.runtime.produceState<Pair<LichtAutomatik.Fenster?, String>?>(null, stand) {
+                    value = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { LichtAutomatik.fenster(c) }.getOrNull().let { it to (if (it == null) LichtAutomatik.grundOhneFenster(c) else "") } }
+                }
                 val uhr = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
                 Text(
-                    heute?.let { "Heute (${it.art}): an ab ${it.an.format(uhr)} Uhr, aus um ${it.aus.format(uhr)} Uhr." } ?: "Heute schaltet die Automatik nicht (Nachtdienst, Schalter aus oder es ist erst nach der Ausschaltzeit dunkel).",
+                    heute?.let { (f0, grund) -> f0?.let { "Heute (${it.art}): an ab ${it.an.format(uhr)} Uhr, aus um ${it.aus.format(uhr)} Uhr." } ?: grund } ?: "Lese den Dienstplan …",
                     color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp),
                 )
             }
@@ -516,9 +535,12 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
     androidx.compose.runtime.LaunchedEffect(an) { if (an != warAn) { wechsel = sek; warAn = an } }
     androidx.compose.runtime.LaunchedEffect(an, laeuft) {
         val bis = if (an || laeuft) Float.MAX_VALUE else sek + 3.5f
-        val start = System.nanoTime()
+        val start = androidx.compose.runtime.withFrameNanos { it }
         val basis = sek
-        while (sek < bis) { kotlinx.coroutines.delay(33); sek = basis + (System.nanoTime() - start) / 1e9f }
+        var zuletzt = start
+        while (sek < bis) androidx.compose.runtime.withFrameNanos { n ->
+            if (n - zuletzt >= 32_000_000L) { zuletzt = n; sek = (basis + (n - start) / 1e9f) % 36_000f }
+        }
     }
     val grund = anzeige(z)
     val hellFaktor = ((z?.hell ?: 100) / 100f).coerceIn(0.2f, 1f)

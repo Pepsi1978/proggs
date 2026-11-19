@@ -1547,6 +1547,7 @@ class AgentenKanal:
         self.licht_ergebnis = None
         self.licht_fertig = asyncio.Event()
         self.licht_kennung = ""
+        self.licht_warten = {}               # Kennung -> Future der wartenden Anfrage (/geraet/licht)
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1754,22 +1755,27 @@ class AgentenKanal:
             return web.Response(status=400, text="ungueltig")
         if not self.bruecke.da():
             return web.json_response({"ergebnis": "mac_nicht_verbunden"})
-        self.licht_fertig.clear()
-        self.licht_ergebnis = None
-        self.licht_kennung = f"{time.time():.6f}"
-        self.licht_auftrag = {"befehle": befehle, "kennung": self.licht_kennung}
+        # Jede Anfrage wartet auf ihr eigenes Ergebnis (Kennung). Eine neue löst ältere ab: Die Brücke beendet deren Lauf ohnehin.
+        meine = f"{time.time():.6f}"
+        for alte in list(self.licht_warten.values()):
+            if not alte.done():
+                alte.set_result({"ergebnis": "abgeloest"})
+        zukunft = asyncio.get_running_loop().create_future()
+        self.licht_warten[meine] = zukunft
+        self.licht_kennung = meine
+        self.licht_auftrag = {"befehle": befehle, "kennung": meine}
         self.befehl.set()
-        meine = self.licht_kennung
         try:
-            await asyncio.wait_for(self.licht_fertig.wait(), 35)
+            return web.json_response(await asyncio.wait_for(asyncio.shield(zukunft), 35))
         except asyncio.TimeoutError:
             if self.licht_auftrag is not None and self.licht_auftrag.get("kennung") == meine:
                 self.licht_auftrag = None
             return web.json_response({"ergebnis": "keine_rueckmeldung"})
-        return web.json_response({"ergebnis": "fertig", **(self.licht_ergebnis or {})})
+        finally:
+            self.licht_warten.pop(meine, None)
 
     async def licht_melden(self, request: web.Request) -> web.Response:
-        """POST /pc/licht (Mac-Bruecke): Ergebnis des Schaltens."""
+        """POST /pc/licht (Mac-Bruecke): Ergebnis des Schaltens, je Kennung an die wartende Anfrage."""
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         try:
@@ -1778,11 +1784,13 @@ class AgentenKanal:
                 raise ValueError
         except Exception:
             return web.Response(status=400, text="ungueltig")
-        # Eine späte Antwort auf eine ältere Anfrage beantwortet nie die laufende (Brücken ohne Kennung: wie bisher annehmen).
-        if daten.get("kennung") not in (None, self.licht_kennung):
+        # Brücken ohne Kennung (ältere Fassung): Ergebnis gehört zur jüngsten Anfrage.
+        kennung = daten.get("kennung") or self.licht_kennung
+        zukunft = self.licht_warten.get(kennung)
+        if zukunft is None or zukunft.done():
             return web.json_response({"ok": True, "veraltet": True})
-        self.licht_ergebnis = {k: daten.get(k) for k in ("geschaltet", "gesehen", "fehler", "staerke") if k in daten}
-        self.licht_fertig.set()
+        ergebnis = {k: daten.get(k) for k in ("geschaltet", "gesehen", "fehler", "staerke") if k in daten}
+        zukunft.set_result({"ergebnis": "abgeloest" if daten.get("abgebrochen") else "fertig", **ergebnis})
         return web.json_response({"ok": True})
 
     # ---------------------------------------------------------------- Mac-Bruecke
