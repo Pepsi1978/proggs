@@ -62,6 +62,14 @@ Quellen: Rohberichte r1, r2, r3, r7; https://www.igorslab.de/creality-k2-pro-com
 - Bambu Lab (Shenzhen, gegründet 2020, laut Bericht von Ex-DJI-Ingenieuren) ist Weltmarktführer bei Druckern unter 2.500 US$: 2025 laut CONTEXT 37 % Anteil (2024: 29 %, 1,2 Mio. Geräte). Über 90 % der Einstiegsgeräte kommen aus China. https://www.tomshardware.com/3d-printing/bambu-lab-overtakes-creality-as-the-worlds-top-selling-budget-3d-printer-brand , https://www.contextworld.com/quarterly-industrial-3d-printer-shipments-rebound-amid-continued-record-breaking-entry-level-growth
 - US-Marken: Stratasys (Erfinder von FDM) und 3D Systems = Industrie; Formlabs = Harzdruck (SLA), kein FDM; MakerBot ist in UltiMaker (NL) aufgegangen, Profi-Preisklasse. Stratasys gewann 09/2026 ein Patenturteil in Texas gegen Bambu (27,6 Mio. US$, Berufung angekündigt). https://technode.com/2026/10/30/how-bambu-lab-turned-3d-printing-into-a-consumer-hit/
 
+## 6b. Steuerung per Jarvis/CLI (Prusa CORE One, geprüft 19.11.2026)
+- Verbindung: WLAN (nur 2,4 GHz) + Ethernet (RJ45), kein Bluetooth. https://help.prusa3d.com/article/network-connection-core-one-l-core-one-mk4s-mk3-9s_736892
+- PrusaLink läuft lokal auf dem Drucker (nur LAN, kein Cloud-Zwang); offizielle OpenAPI-Spezifikation: https://github.com/prusa3d/Prusa-Link-Web/blob/master/spec/openapi.yaml
+  Endpunkte u. a. `/api/v1/status`, `/api/v1/job` (+ pause/resume), `/api/v1/files/{storage}/{path}` (Upload per PUT), `/api/v1/cameras/snap`, `/api/v1/transfer`.
+- Slicen per CLI: PrusaSlicer-Kommandozeile (`prusa-slicer --export-gcode …`), danach Upload per PrusaLink → Druck startet.
+- Fernzugriff von unterwegs: über den eigenen WireGuard-Tunnel ins Heimnetz statt Prusa Connect (Cloud optional).
+- Gegenbeispiel Bambu: Cloud-/Autorisierungszwang, lokale Steuerung nur im LAN-/Developer-Modus.
+
 ## 7. Empfehlung (für Frank, 19.11.2026)
 1. Bambu Lab H2S (+ AMS 2 Pro/HT) – beste Gesamtpaket aus 350 °C, 65 °C Kammer, HEPA + Kohle, Lidar, großer Bauraum, TPU 85A direkt. Kauf im EU-Store.
 2. QIDI Q2 – günstigster Drucker mit allen harten Kriterien, bei Amazon.de; Schwäche weiches TPU < 95A.
