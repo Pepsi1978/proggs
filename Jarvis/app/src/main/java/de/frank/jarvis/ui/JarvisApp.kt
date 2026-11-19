@@ -414,13 +414,13 @@ fun Abschnitt(titel: String, modifier: Modifier = Modifier) {
 
 /** Hauptknopf (plastisch, gefüllt) oder Nebenknopf (Glas). */
 @Composable
-fun Knopf(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null, haupt: Boolean = true, farbe: Color? = null, aktion: () -> Unit) {
+fun Knopf(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null, haupt: Boolean = true, farbe: Color? = null, unterdruecken: (() -> Boolean)? = null, aktion: () -> Unit) {
     val f = LocalFarben.current
     val c = farbe ?: f.primaer
     val grund = if (haupt) Modifier.knopf3d(c, if (farbe == null) f.tertiaer else c.copy(alpha = 0.8f), 16.dp, f.dunkel) else Modifier.glas(f, 16.dp, erhoeht = 0.5f)
     Row(
         // Mindesthöhe statt fester Höhe: Bei großer Schrift wächst der Knopf mit, statt dass Text und Nachbarn überlappen.
-        modifier.heightIn(min = 48.dp).then(grund).antippen(aktion = aktion).padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier.heightIn(min = 48.dp).then(grund).antippen(unterdruecken = unterdruecken, aktion = aktion).padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) Icon(icon, null, tint = if (haupt) f.aufPrimaer else c, modifier = Modifier.padding(end = 8.dp).size(18.dp))

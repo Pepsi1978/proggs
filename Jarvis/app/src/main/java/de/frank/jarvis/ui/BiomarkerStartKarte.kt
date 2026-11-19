@@ -174,7 +174,8 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
             }
         }
     }
-    Karte(modifier = if (bereit) griff.antippenMitSchutz(schutz, imSchutz = aktualisieren) { BioAnsicht.oeffnen(context) } else griff) {
+    // Before the takeover the card only records presses, so the "Übernehmen" button can ignore the release after a long press.
+    Karte(modifier = if (bereit) griff.antippenMitSchutz(schutz, imSchutz = aktualisieren) { BioAnsicht.oeffnen(context) } else griff.druckMerken(schutz)) {
         Row(verticalAlignment = Alignment.Top) {
             KartenSymbol(KartenArt.BIOMARKER, Modifier.padding(end = 10.dp))
             Column(Modifier.weight(1f)) {
@@ -194,7 +195,8 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                 "Biomarker werden abgerufen", schutz, aktualisieren,
             )
             // Nur solange die Übernahme aus Entropie Reductor aussteht; danach öffnet das Tippen auf die Karte den Bereich.
-            if (!bereit) Knopf("Übernehmen") {
+            if (!bereit) Knopf("Übernehmen", unterdruecken = { schutz.nachLangemDruck(langMs) }) {
+                schutz.erledigt()
                 // Im Modulbereich, nicht in der Karte: Scrollt Frank sie weg, läuft die Übernahme trotzdem zu Ende.
                 if (s.uebernahme != "Übernimmt …") { s.uebernahme = "Übernimmt …"; de.frank.jarvis.bio.BioModul.bereich.launch { s.uebernahme = BioUebernahme.starte(context) } }
             }
@@ -213,13 +215,15 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                             // Antippen einer Kachel öffnet direkt ihren Detailbereich (Graph, Werte-Übersicht, 7/30/90 Tage).
                             reihe.forEach { z ->
                                 val detail = DETAIL_ZU_ID[z.id]
-                                // Langer Druck verschiebt die Karte: kein eigener Long-Click (der verbrauchte den Druck und
-                                // verhinderte das Ziehen); der Tipp danach wird über die gemerkte Druckdauer unterdrückt. Ein Tipp im
-                                // Schutzkreis des Aktualisieren-Knopfs aktualisiert wie auf der übrigen Karte (die Karte merkt sich die Druckstelle).
+                                // A long press moves the card: no own long click here (it consumed the press and blocked dragging),
+                                // the click after it is suppressed via schutz. Press duration and position come from the card's
+                                // antippenMitSchutz, which wraps these tiles (they only exist while bereit). A tap inside the refresh
+                                // button's protection circle refreshes, like on the rest of the card.
                                 BioBlock(z, Modifier.weight(1f).fillMaxHeight()
-                                    .then(if (detail != null) Modifier.antippen(unterdruecken = { schutz.warLang(langMs) }) {
+                                    .then(if (detail != null) Modifier.antippen(unterdruecken = { schutz.nachLangemDruck(langMs) }) {
                                         if (schutz.imSchutzkreis(with(dichte) { SCHUTZ_RADIUS.toPx() })) aktualisieren()
                                         else BioAnsicht.oeffnenMitDetail(context, detail)
+                                        schutz.erledigt()
                                     } else Modifier))
                             }
                             repeat(spalten - reihe.size) { Spacer(Modifier.weight(1f)) }
