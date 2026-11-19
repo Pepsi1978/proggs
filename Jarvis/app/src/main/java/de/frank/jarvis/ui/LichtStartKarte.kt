@@ -52,6 +52,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -135,29 +139,36 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     val f = LocalFarben.current
     val c = LocalContext.current.applicationContext
     val s = LichtStand
-    LedStreifen.aktuellLaden(c)
-    if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        LedStreifen.aktuellLaden(c)
+        if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
+        if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
+    }
+    var minute by remember { mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(60_000); minute++ } }
     val z = s.zustand
     val b = LedStreifen.letzterBericht
-    Karte(modifier = griff) {
-        if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
-        // Kopf: Titel und Helligkeit, darunter die Bühne mit dem 3D-LED-Band.
+    val frischerFehler = minute >= 0 && b?.fehler == true && System.currentTimeMillis() - b.zeit < 30 * 60_000L
+    // 13: Nur die Titelzeile ist Griff zum Verschieben der Karte; Farbplätze, Farbkreis und Regler behalten ihre Gesten.
+    Karte {
+        // Kopf: Titel und Helligkeit, darunter das 3D-LED-Band.
         val an = LedStreifen.anAnzeige != false
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(griff.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(
                 when {
                     LedStreifen.laeuft -> "Schaltet …"
-                    b?.fehler == true && System.currentTimeMillis() - b.zeit < 30 * 60_000L -> "Nicht erreicht"
+                    frischerFehler -> "Nicht erreicht"
                     !an -> "Aus"
-                    z?.modus == Modus.FARBE || z == null -> "An · Helligkeit ${z?.hell ?: 100} %"
+                    z == null -> "An"
+                    z.modus == Modus.FARBE -> "An · Helligkeit ${z.hell} %"
                     z.modus == Modus.SZENE -> "An · Szene"
                     else -> "An · Mikrofon"
                 },
-                color = when { LedStreifen.laeuft -> f.primaer; b?.fehler == true && System.currentTimeMillis() - b.zeit < 30 * 60_000L -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
+                color = when { LedStreifen.laeuft -> f.primaer; frischerFehler -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
             )
         }
-        b?.takeIf { it.fehler && System.currentTimeMillis() - it.zeit < 30 * 60_000L }?.let { Text(it.text, color = f.gefahr, fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
+        b?.takeIf { frischerFehler }?.let { Text(it.text, color = f.gefahr, fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
         LedBand3D(z, an, LedStreifen.laeuft, Modifier.padding(top = 4.dp).fillMaxWidth().height(130.dp))
         if (!LedStreifen.erlaubt(c)) Text("Jarvis fehlt das Recht „Geräte in der Nähe“ (App-Infos von Jarvis, Berechtigungen).", color = f.gefahr, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
@@ -202,12 +213,21 @@ private fun FarbeTeil() {
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 reihe.forEach { (i, rgb) ->
                     val aktiv = z?.modus == Modus.FARBE && z.rgb.equals(rgb, true)
+                    val aktBasis by androidx.compose.runtime.rememberUpdatedState(basis)
                     Box(
                         Modifier.size(34.dp).clip(CircleShape).background(farbe(rgb))
                             .border(if (aktiv) 3.dp else 1.dp, if (aktiv) f.text else f.textSchwach.copy(alpha = 0.4f), CircleShape)
-                            .pointerInput(rgb, z) {
+                            .semantics {
+                                contentDescription = "Farbplatz ${i + 1}, ${LedStreifen.farbName(rgb)}" + if (aktiv) ", eingestellt" else ""
+                                role = androidx.compose.ui.semantics.Role.Button
+                                customActions = listOf(androidx.compose.ui.semantics.CustomAccessibilityAction("Aktuelle Farbe hier speichern") {
+                                    val akt = s.zustand?.takeIf { it.modus == Modus.FARBE }?.rgb ?: return@CustomAccessibilityAction false
+                                    LedStreifen.platzSpeichern(c, i, akt); s.plaetze = LedStreifen.plaetze(c); true
+                                })
+                            }
+                            .pointerInput(rgb) {
                                 detectTapGestures(
-                                    onTap = { s.setzen(c, basis.copy(modus = Modus.FARBE, rgb = rgb)) },
+                                    onTap = { s.setzen(c, aktBasis.copy(modus = Modus.FARBE, rgb = rgb)) },
                                     onLongPress = {
                                         val aktuell = s.zustand?.takeIf { it.modus == Modus.FARBE }?.rgb
                                             ?: run { Toast.makeText(c, "Erst eine Farbe wählen, dann lange drücken zum Speichern", Toast.LENGTH_SHORT).show(); return@detectTapGestures }
@@ -260,10 +280,11 @@ private fun FarbeTeil() {
         Text("Helligkeit: ${hell.toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         Slider(
             value = hell, valueRange = 1f..100f,
-            onValueChange = { hell = it; z?.let { bz -> s.live(c, bz.copy(modus = if (bz.modus == Modus.RHYTHMUS) Modus.FARBE else bz.modus, hell = it.toInt())) } },
+            onValueChange = { hell = it; z?.takeIf { bz -> bz.modus != Modus.RHYTHMUS || LedStreifen.farbeGewaehlt(c) }?.let { bz -> s.live(c, bz.copy(modus = if (bz.modus == Modus.RHYTHMUS) Modus.FARBE else bz.modus, hell = it.toInt())) } },
             onValueChangeFinished = {
                 val h = hell.toInt()
-                if (z != null) s.los(c, z.copy(modus = if (z.modus == Modus.RHYTHMUS) Modus.FARBE else z.modus, hell = h))
+                if (z != null && z.modus == Modus.RHYTHMUS && !LedStreifen.farbeGewaehlt(c)) Toast.makeText(c, "Bitte zuerst eine Farbe wählen", Toast.LENGTH_SHORT).show()
+                else if (z != null) s.los(c, z.copy(modus = if (z.modus == Modus.RHYTHMUS) Modus.FARBE else z.modus, hell = h))
                 else s.bereich.launch {
                     // Ohne gemerkten Zustand: erst die Streifen lesen; ist keine Farbe bekannt, nichts Geratenes senden.
                     val b0 = LedStreifen.basis(c)
@@ -293,10 +314,10 @@ private fun SzenenTeil() {
             }
         }
         var tempo by remember(z?.tempo) { mutableFloatStateOf((z?.tempo ?: 50).toFloat()) }
-        Wahl.tempo = tempo.toInt()
         Text("Tempo: ${tempo.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0f..100f, onValueChangeFinished = {
-            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(tempo = tempo.toInt()))
+            Wahl.tempo = tempo.toInt()
+            if (z?.modus == Modus.SZENE) s.setzen(c, z.copy(tempo = tempo.toInt())) else LedStreifen.aendern(c) { it.copy(tempo = tempo.toInt()) }
         })
     }
 }
@@ -317,10 +338,10 @@ private fun MikrofonTeil() {
             }
         }
         var empf by remember(z?.empfindlichkeit) { mutableFloatStateOf((z?.empfindlichkeit ?: 7).toFloat()) }
-        Wahl.empf = empf.toInt()
         Text("Empfindlichkeit: ${empf.toInt()}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         Slider(value = empf, onValueChange = { empf = it }, valueRange = 1f..7f, steps = 5, onValueChangeFinished = {
-            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else if (z != null) LedStreifen.merken(c, z.copy(empfindlichkeit = empf.toInt()))
+            Wahl.empf = empf.toInt()
+            if (z?.modus == Modus.RHYTHMUS) s.setzen(c, z.copy(empfindlichkeit = empf.toInt())) else LedStreifen.aendern(c) { it.copy(empfindlichkeit = empf.toInt()) }
         })
     }
 }
@@ -388,6 +409,7 @@ private fun AutomatikTeil() {
     val e = remember { Einstellungen.get(c) }
     var stand by remember { mutableIntStateOf(0) }
     fun neu() { stand++ }
+    androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(30_000); stand++ } }
     Column(Modifier.padding(top = 6.dp)) {
         androidx.compose.runtime.key(stand) {
             SchalterReihe("Automatik", "Abends von selbst an, zur Ausschaltzeit aus", e.lichtAutomatik) { e.lichtAutomatik = it; neu() }
@@ -529,17 +551,17 @@ private object BandWelt {
 private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, modifier: Modifier) {
     val f = LocalFarben.current
     val dunkel = (f.text.red + f.text.green + f.text.blue) / 3f > 0.5f
-    var sek by remember { mutableFloatStateOf(0f) }
-    var wechsel by remember { mutableFloatStateOf(-100f) }
+    var sek by remember { androidx.compose.runtime.mutableDoubleStateOf(0.0) }
+    var wechsel by remember { androidx.compose.runtime.mutableDoubleStateOf(-100.0) }
     var warAn by remember { mutableStateOf(an) }
     androidx.compose.runtime.LaunchedEffect(an) { if (an != warAn) { wechsel = sek; warAn = an } }
     androidx.compose.runtime.LaunchedEffect(an, laeuft) {
-        val bis = if (an || laeuft) Float.MAX_VALUE else sek + 3.5f
+        val bis = if (an || laeuft) Double.MAX_VALUE else sek + 3.5
         val start = androidx.compose.runtime.withFrameNanos { it }
         val basis = sek
         var zuletzt = start
         while (sek < bis) androidx.compose.runtime.withFrameNanos { n ->
-            if (n - zuletzt >= 32_000_000L) { zuletzt = n; sek = (basis + (n - start) / 1e9f) % 36_000f }
+            if (n - zuletzt >= 40_000_000L) { zuletzt = n; sek = basis + (n - start) / 1e9 }
         }
     }
     val grund = anzeige(z)
@@ -550,9 +572,10 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
     val ax = remember { FloatArray(M) }; val ay = remember { FloatArray(M) }
     val bx = remember { FloatArray(M) }; val by = remember { FloatArray(M) }
     Canvas(modifier) {
+        val sekF = (sek % 3600.0).toFloat()
         val w = size.width; val h = size.height
         val pi2 = (Math.PI * 2).toFloat()
-        val t = sek * (if (laeuft) 3f else 1f)
+        val t = sekF * (if (laeuft) 3f else 1f)
         val phi = Math.toRadians(32.0).toFloat(); val cp = cos(phi); val spp = sin(phi)
         val kameraHoehe = 2.2f
         val halb = 0.12f
@@ -571,7 +594,7 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
         val rand = 0.09f
         val sk = min(w * (1 - 2 * rand) / (maxX - minX), h * (1 - 2 * rand) / (maxY - minY))
         val ox = w / 2 - sk * (maxX + minX) / 2; val oy = h / 2 - sk * (maxY + minY) / 2
-        val gier = 0.05f * sin(sek * 0.13f)
+        val gier = 0.05f * sin(sekF * 0.13f)
         for (i in 0 until M) {
             roh(BandWelt.x[i], BandWelt.z[i], gier, tmp); sx[i] = ox + sk * tmp[0]; sy[i] = oy + sk * tmp[1]; sd[i] = tmp[2]
             roh(BandWelt.x[i] + BandWelt.nx[i] * halb, BandWelt.z[i] + BandWelt.nz[i] * halb, gier, tmp); ax[i] = ox + sk * tmp[0]; ay[i] = oy + sk * tmp[1]
@@ -582,11 +605,11 @@ private fun LedBand3D(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, mod
         val modus = if (dunkel) androidx.compose.ui.graphics.BlendMode.Plus else androidx.compose.ui.graphics.BlendMode.SrcOver
         fun licht(k: Int): Pair<Color, Float> {
             val u = k / anzahl.toFloat()
-            val seit = sek - wechsel
+            val seit = (sek - wechsel).toFloat()
             val ordnung = if (an) seit - u * 1.6f else 1f - (seit - (1f - u) * 1.6f)
             val zuend = (ordnung / 0.25f).coerceIn(0f, 1f)
             if (zuend <= 0f) return Color(0xFF3C3E46) to 0f
-            val atmen = 0.88f + 0.12f * sin(sek * 1.4f)
+            val atmen = 0.88f + 0.12f * sin(sekF * 1.4f)
             val p = ((u - (t * 0.2f) % 1.3f + 0.2f) / 0.2f)
             val impuls = if (p in 0f..2f) 1f - kotlin.math.abs(p - 1f) else 0f
             val (farbe, s) = when (z?.modus) {

@@ -19,7 +19,7 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
             "Es schaltet alle LED-Streifen der Wohnung gleichzeitig, an immer mit dem zuletzt gewählten Zustand (Farbe, Helligkeit, Modus), auf allen Streifen gleich. " +
             "„Mach das Licht blau“ → aktion farbe mit farbe; „heller/dunkler/auf 30 Prozent“ → aktion helligkeit; „Szene bunter Sprung“, „mach einen Farbverlauf“ → aktion szene mit szene (Name oder 1 bis 23), " +
             "optional tempo 0 bis 100; „Licht nach Musik“, „Disco-Modus“ → aktion mikrofon mit modus (Klassisch, Sanft, Dynamisch, Disco) und optional empfindlichkeit 1 bis 7. " +
-            "„Wie ist das Licht eingestellt?“ → aktion zustand. Die Automatik (abends an, um 22 bzw. 19 Uhr aus, aus beim Verlassen des Hauses) stellt Frank über das Werkzeug einstellungen, Bereich LED-Licht. " +
+            "„Wie ist das Licht eingestellt?“ → aktion zustand. Die Automatik (abends an, zur eingestellten Ausschaltzeit aus, aus beim Verlassen des Hauses) stellt Frank über das Werkzeug einstellungen, Bereich LED-Licht. " +
             "Melde danach kurz, wie viele Streifen geschaltet wurden; nennt das Ergebnis nicht erreichte Streifen oder einen Grund, sag das genau so."
 
     override fun stoerung(): String? = if (!LedStreifen.erlaubt(context)) "Für das Licht fehlt Jarvis das Recht „Geräte in der Nähe“ (Bluetooth)." else null
@@ -59,12 +59,14 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
         val alt = basis ?: LedStreifen.Zustand()
         val farbeFehlt = Ergebnis("RÜCKFRAGE: Ich kenne die eingestellte Farbe noch nicht. Welche Farbe soll das Licht haben?", true)
         val woerter = hText.split(Regex("[^a-zäöüß0-9]+")).filter { it.isNotEmpty() }.toSet()
+        val hoch = woerter.any { it in setOf("heller", "mehr", "hoch", "höher", "rauf") }
+        val runter = woerter.any { it in setOf("dunkler", "weniger", "runter", "niedriger") }
         fun hell(): Int? = when {
             hText.isEmpty() -> alt.hell
+            hoch -> alt.hell + (zahl(hText) ?: 25)
+            runter -> alt.hell - (zahl(hText) ?: 25)
             zahl(hText) != null -> zahl(hText)
             "max" in hText || "voll" in hText || "maximal" in woerter -> 100
-            woerter.any { it in setOf("heller", "mehr", "hoch", "höher") } -> alt.hell + 25
-            woerter.any { it in setOf("dunkler", "weniger", "runter", "niedriger") } -> alt.hell - 25
             else -> null
         }?.coerceIn(1, 100)
         val rueckfrage = Ergebnis("RÜCKFRAGE: Welche Helligkeit, 1 bis 100 Prozent?", true)
@@ -80,6 +82,7 @@ class LichtFaehigkeit(private val context: Context) : Faehigkeit {
             "helligkeit" -> {
                 if (hText.isEmpty()) return rueckfrage
                 val b0 = basis ?: return farbeFehlt
+                if (b0.modus == Modus.RHYTHMUS && !LedStreifen.farbeGewaehlt(context)) return farbeFehlt
                 LedStreifen.setzen(context, b0.copy(modus = if (b0.modus == Modus.RHYTHMUS) Modus.FARBE else b0.modus, hell = hell() ?: return rueckfrage))
             }
             "szene" -> {

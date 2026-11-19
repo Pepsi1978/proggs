@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -98,7 +99,16 @@ object LedStreifen {
     private fun adressen(c: Context) = c.applicationContext.getSharedPreferences("licht", Context.MODE_PRIVATE)
 
     fun zustand(c: Context): Zustand? = zp(c).getString("zustand", null)?.let { Zustand.aus(it) }
-    fun merken(c: Context, z: Zustand) { aktuell = z; zp(c).edit().putString("zustand", z.json()).apply() }
+    @Synchronized fun merken(c: Context, z: Zustand) {
+        aktuell = z
+        zp(c).edit().putString("zustand", z.json()).apply { if (z.modus == Modus.FARBE) putBoolean("farbeGewaehlt", true) }.apply()
+    }
+
+    /** Wurde je eine Farbe gewählt oder gelesen? Sonst ist rgb nur die Vorgabe und darf nie gesendet werden. */
+    fun farbeGewaehlt(c: Context): Boolean = zp(c).getBoolean("farbeGewaehlt", false) || zustand(c)?.modus == Modus.FARBE
+
+    /** Ein Feld im gemerkten Zustand ändern (Regler), ohne einen parallel gesetzten Zustand mit einer alten Kopie zu überschreiben. */
+    @Synchronized fun aendern(c: Context, f: (Zustand) -> Zustand) { zustand(c)?.let { merken(c, f(it)) } }
 
     /** Angezeigter Zustand (Karte): gemerkt, während des Ziehens auch der Live-Wunsch; jede Änderung über Sprache oder Automatik kommt hier an. */
     var aktuell by mutableStateOf<Zustand?>(null)
@@ -119,7 +129,8 @@ object LedStreifen {
         val h = hex(z.hell.coerceIn(1, 100))
         if (t.alt) return listOf(t.an) + when (z.modus) {
             Modus.SZENE -> listOf("7E0503${hex(z.szene + 128)}03FFFF00EF", "7E0402${hex(z.tempo.coerceIn(0, 100))}FFFFFF00EF", "7E0401${h}FFFFFF00EF")
-            else -> listOf("7E070503${z.rgb}00EF", "7E0401${h}FFFFFF00EF")
+            Modus.RHYTHMUS -> emptyList()
+            Modus.FARBE -> listOf("7E070503${z.rgb}00EF", "7E0401${h}FFFFFF00EF")
         }
         val modus = when (z.modus) {
             Modus.FARBE -> listOf("5A0001${z.rgb}00${h}00A5")
@@ -136,9 +147,13 @@ object LedStreifen {
     /** Ausgangszustand für Änderungen (Helligkeit, Tempo): gemerkt, sonst die echte Mehrheit der Streifen (wird gemerkt), sonst null = nachfragen. */
     suspend fun basis(c: Context): Zustand? = zustand(c) ?: sperre.withLock { zustand(c) ?: mehrheit(c)?.also { merken(c, it) } }
 
-    private suspend fun <T> beschaeftigt(arbeit: suspend () -> T): T {
-        laeuft = true
-        try { return sperre.withLock { arbeit() } } finally { laeuft = sperre.isLocked }
+    private val vorgaenge = java.util.concurrent.atomic.AtomicInteger(0)
+
+    private suspend fun <T> beschaeftigt(arbeit: suspend () -> T): T = belegt { sperre.withLock { arbeit() } }
+
+    private suspend fun <T> belegt(arbeit: suspend () -> T): T {
+        vorgaenge.incrementAndGet(); laeuft = true
+        try { return arbeit() } finally { laeuft = vorgaenge.decrementAndGet() > 0 }
     }
 
     /** Einschalten mit dem gemerkten Zustand; ist keiner gemerkt, vorher die Streifen lesen und die Farbe der Mehrheit übernehmen. */
@@ -238,6 +253,23 @@ object LedStreifen {
 
     @Volatile private var letzteSuche = 0L
 
+    /** Neue Adresse merken und ältere Adressen desselben Streifens (getauscht, zurückgesetzt) entfernen. */
+    private fun adresseMerken(c: Context, mac: String, n: String) {
+        val k = schluessel(n)
+        adressen(c).edit().apply {
+            adressen(c).all.forEach { (alt, name) -> if (alt != mac && name is String && schluessel(name) == k) remove(alt) }
+            putString(mac, n)
+        }.apply()
+    }
+
+    /** Nach 6 Fehlschlägen in Folge ist eine Adresse tot (der Streifen meldet sich bei der nächsten Suche neu). */
+    private fun fehlversuche(c: Context, mac: String, fehler: Boolean) {
+        val f = c.applicationContext.getSharedPreferences("licht_fehl", Context.MODE_PRIVATE)
+        val n = if (fehler) f.getInt(mac, 0) + 1 else 0
+        if (n >= 6) { adressen(c).edit().remove(mac).apply(); f.edit().remove(mac).apply(); Logbuch.netz("Licht: Adresse entfernt", "$mac nach 6 Fehlschlägen") }
+        else f.edit().putInt(mac, n).apply()
+    }
+
     private suspend fun handySchalten(c: Context, adapter: BluetoothAdapter, befehl: (Typ) -> List<String>, ok: MutableSet<String>, gesehen: MutableSet<String>) {
         val geraete = HashMap(bekannt(c))
         val erledigt = ConcurrentHashMap<String, Boolean>()
@@ -249,10 +281,11 @@ object LedStreifen {
                     for (versuch in 0..1) {
                         val gut = runCatching { sitzung(c, adapter.getRemoteDevice(mac), t) { s -> s.schreiben(befehl(t)) } ?: false }
                             .onFailure { if (it !is kotlinx.coroutines.CancellationException) Logbuch.fehler("Licht: $n", it) }.getOrDefault(false)
-                        if (gut) { ok.add(n); erledigt[mac] = true; return@async }
+                        if (gut) { ok.add(n); erledigt[mac] = true; fehlversuche(c, mac, false); return@async }
                         delay(300)
                     }
                     erledigt[mac] = false
+                    fehlversuche(c, mac, true)
                 }
             }.awaitAll()
         }
@@ -262,7 +295,7 @@ object LedStreifen {
         if (fehlt && (geraete.isEmpty() || System.currentTimeMillis() - letzteSuche > SUCHE_ABSTAND_MS)) {
             letzteSuche = System.currentTimeMillis()
             val neu = suchen(c, adapter)
-            neu.forEach { (mac, n) -> adressen(c).edit().putString(mac, n).apply() }
+            neu.forEach { (mac, n) -> adresseMerken(c, mac, n) }
             gesehen.addAll(neu.values)
             val offen = neu.filterKeys { !erledigt.containsKey(it) }
             if (offen.isNotEmpty()) senden(offen)
@@ -328,13 +361,15 @@ object LedStreifen {
 
     fun liveStart(c: Context) {
         liveZuletzt = System.currentTimeMillis()
-        if (liveJob?.isActive == true || !erlaubt(c)) return
+        if (liveJob?.isActive == true || liveEndet || !erlaubt(c)) return
         val adapter = c.getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return
         val app = c.applicationContext
-        macAbbruch = liveBereich.launch { runCatching { macAbbrechen(app) } }
+        val erstellt = System.currentTimeMillis()
+        macAbbruch = liveBereich.launch { runCatching { macAbbrechen(app, erstellt) } }
         liveJob = liveBereich.launch {
-            bekannt(app).forEach { (mac, n) ->
+            bekannt(app).entries.forEachIndexed { i, (mac, n) ->
                 launch {
+                    delay(i * 120L)
                     val s = Sitzung()
                     val t = typ(n)
                     var uebergeben = false
@@ -357,11 +392,17 @@ object LedStreifen {
                 }
             }
             while (System.currentTimeMillis() - liveZuletzt < 20_000L) delay(1_000)
+            // Ohne Loslassen beendet (Karte zugeklappt, Geste abgebrochen): letzten Wunsch noch fest übernehmen.
+            val letzter = liveWunsch.value
             liveSitzungenSchliessen()
             liveWunsch.value = null
             liveJob = null
+            if (letzter != null) liveBereich.launch { runCatching { setzen(app, letzter) } }
+            coroutineContext.cancelChildren()
         }
     }
+
+    @Volatile private var liveEndet = false
 
     fun live(z: Zustand) { liveZuletzt = System.currentTimeMillis(); aktuell = z; liveWunsch.value = z }
 
@@ -371,13 +412,17 @@ object LedStreifen {
     }
 
     /** Loslassen: erst den Live-Job beenden (keine Verbindung kommt mehr hinzu), dann alle schließen, den Mac-Abbruch abwarten, dann [z] wie gewohnt. */
-    suspend fun liveEnde(c: Context, z: Zustand): Bericht {
-        liveJob?.let { j -> liveJob = null; j.cancelAndJoin() }
-        liveSitzungenSchliessen()
-        liveWunsch.value = null
-        withTimeoutOrNull(4_000) { macAbbruch?.join() }
-        delay(300) // die Streifen kurz freigeben, bevor der normale Weg neu verbindet
-        return setzen(c, z)
+    suspend fun liveEnde(c: Context, z: Zustand): Bericht = belegt {
+        liveEndet = true
+        try {
+            liveJob?.let { j -> liveJob = null; j.cancelAndJoin() }
+            liveSitzungenSchliessen()
+            liveWunsch.value = null
+            // Kommt der Abbruch spät an, verwirft der Relay ihn (älter als dieser Befehl, „erstellt“); hier nur kurz warten.
+            withTimeoutOrNull(1_500) { macAbbruch?.join() }
+            delay(300) // die Streifen kurz freigeben, bevor der normale Weg neu verbindet
+            setzen(c, z)
+        } finally { liveEndet = false }
     }
 
     // ------------------------------------------------------------------ Farbplätze
@@ -406,7 +451,9 @@ object LedStreifen {
 
         val rueckruf = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-                if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    bereit.complete(false); geschrieben.complete(false); beschrieben.complete(false)
+                } else if (newState == BluetoothProfile.STATE_CONNECTED) {
                     if (!g.discoverServices()) bereit.complete(false)
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     bereit.complete(false); geschrieben.complete(false); beschrieben.complete(false)
@@ -442,7 +489,8 @@ object LedStreifen {
                     else @Suppress("DEPRECATION") run { k.writeType = art; k.value = wert; gatt.writeCharacteristic(k) }
                 if (!gesendet) return false
                 // Ohne Antwort meldet der Streifen nichts: kurz Luft lassen. Mit Antwort auf die Bestätigung warten.
-                if (ohneAntwort) delay(70) else if (withTimeoutOrNull(800) { geschrieben.await() } != true) return false
+                if (ohneAntwort) { if (withTimeoutOrNull(300) { geschrieben.await() } == null) delay(40) else delay(15) }
+                else if (withTimeoutOrNull(800) { geschrieben.await() } != true) return false
             }
             if (nachlauf) delay(150) // Befehle aus dem Sendepuffer lassen, bevor getrennt wird.
             return true
@@ -495,19 +543,31 @@ object LedStreifen {
 
     private class MacErgebnis(val geschaltet: Set<String>, val gesehen: Set<String>, val grund: String?)
 
+    private fun macFehler(roh: String): String {
+        Logbuch.netz("Licht: Fehler am Mac", roh.take(300))
+        val t = roh.lowercase()
+        return when {
+            "turned off" in t || "powered off" in t || "poweredoff" in t -> "ohne Bluetooth (am Mac ausgeschaltet)"
+            "bleak" in t && ("no module" in t || "modulenotfound" in t) -> "ohne Bluetooth-Baustein (bleak fehlt)"
+            "not authorized" in t || "unauthorized" in t || "tcc" in t -> "ohne Bluetooth-Freigabe"
+            "timeout" in t || "timed out" in t -> "zu langsam (Zeitüberschreitung)"
+            else -> "mit einem Fehler (Einzelheiten im Logbuch)"
+        }
+    }
+
     /** Der Mac schaltet per Bluetooth (Brücke, jarvis_licht.py); er bekommt die Bytefolgen je Namensvorsatz. */
     private suspend fun ueberMac(c: Context, befehl: (Typ) -> List<String>): MacErgebnis = withContext(Dispatchers.IO) {
         val e = Einstellungen.get(c)
         if (e.serverToken.isBlank()) return@withContext MacErgebnis(emptySet(), emptySet(), "nicht eingerichtet")
         val befehle = JSONObject().apply { TYPEN.forEach { t -> put(t.vorsatz, JSONArray(befehl(t))) }; put("_namen", JSONArray(BEKANNTE_NAMEN)) }
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/licht").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung)
-            .post(JSONObject().put("befehle", befehle).toString().toRequestBody("application/json".toMediaType())).build()
+            .post(JSONObject().put("befehle", befehle).put("erstellt", System.currentTimeMillis()).toString().toRequestBody("application/json".toMediaType())).build()
         CLIENT.newCall(anfrage).execute().use { a ->
             if (!a.isSuccessful) return@withContext MacErgebnis(emptySet(), emptySet(), "nicht erreichbar (Relay ${a.code})")
             val j = JSONObject(a.body?.string().orEmpty())
             fun menge(k: String) = j.optJSONArray(k)?.let { arr -> (0 until arr.length()).map { arr.getString(it) }.toSet() } ?: emptySet()
             when (j.optString("ergebnis")) {
-                "fertig" -> MacErgebnis(menge("geschaltet"), menge("gesehen"), j.optString("fehler").takeIf { it.isNotBlank() }?.let { "mit Fehler: ${it.take(120)}" })
+                "fertig" -> MacErgebnis(menge("geschaltet"), menge("gesehen"), j.optString("fehler").takeIf { it.isNotBlank() }?.let { macFehler(it) })
                 "mac_nicht_verbunden" -> MacErgebnis(emptySet(), emptySet(), "nicht verbunden")
                 "abgeloest" -> MacErgebnis(emptySet(), emptySet(), null)
                 else -> MacErgebnis(emptySet(), emptySet(), "ohne Rückmeldung")
@@ -516,11 +576,11 @@ object LedStreifen {
     }
 
     /** Laufenden Licht-Auftrag am Mac beenden (leere Befehle: die Brücke bricht ab und meldet sofort). */
-    private suspend fun macAbbrechen(c: Context) = withContext(Dispatchers.IO) {
+    private suspend fun macAbbrechen(c: Context, erstellt: Long) = withContext(Dispatchers.IO) {
         val e = Einstellungen.get(c)
         if (e.serverToken.isBlank()) return@withContext
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/licht").header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung)
-            .post(JSONObject().put("befehle", JSONObject()).toString().toRequestBody("application/json".toMediaType())).build()
+            .post(JSONObject().put("befehle", JSONObject()).put("erstellt", erstellt).toString().toRequestBody("application/json".toMediaType())).build()
         CLIENT.newCall(anfrage).execute().close()
     }
 

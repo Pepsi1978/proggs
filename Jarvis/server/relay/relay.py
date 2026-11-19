@@ -1544,10 +1544,10 @@ class AgentenKanal:
         self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
         self.switchbot_lesen = False         # Handy will die SwitchBot-Sensoren jetzt vom Mac gelesen haben (/geraet/switchbot-jetzt)
         self.licht_auftrag = None            # LED-Streifen schalten, den der Mac per Bluetooth ausführt (/geraet/licht)
-        self.licht_ergebnis = None
-        self.licht_fertig = asyncio.Event()
         self.licht_kennung = ""
         self.licht_warten = {}               # Kennung -> Future der wartenden Anfrage (/geraet/licht)
+        self.licht_bestaetigt = {}           # Kennung -> True, sobald die Brücke den Auftrag angenommen hat (/pc/licht mit „angenommen“)
+        self.licht_letzter_echter = 0        # „erstellt“ (ms) des letzten echten Licht-Befehls
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1755,6 +1755,13 @@ class AgentenKanal:
             return web.Response(status=400, text="ungueltig")
         if not self.bruecke.da():
             return web.json_response({"ergebnis": "mac_nicht_verbunden"})
+        # Abbruch (leere Befehle), der älter ist als der letzte echte Befehl desselben Geräts: kam nur spät an, darf ihn nicht ablösen.
+        erstellt = daten.get("erstellt") if isinstance(daten.get("erstellt"), (int, float)) else None
+        echt = any(isinstance(v, list) and v for k, v in befehle.items() if not k.startswith("_"))
+        if not echt and erstellt is not None and erstellt < self.licht_letzter_echter:
+            return web.json_response({"ergebnis": "ueberholt"})
+        if echt and erstellt is not None:
+            self.licht_letzter_echter = max(self.licht_letzter_echter, erstellt)
         # Jede Anfrage wartet auf ihr eigenes Ergebnis (Kennung). Eine neue löst ältere ab: Die Brücke beendet deren Lauf ohnehin.
         meine = f"{time.time():.6f}"
         for alte in list(self.licht_warten.values()):
@@ -1766,13 +1773,28 @@ class AgentenKanal:
         self.licht_auftrag = {"befehle": befehle, "kennung": meine}
         self.befehl.set()
         try:
-            return web.json_response(await asyncio.wait_for(asyncio.shield(zukunft), 35))
+            # Ging die Antwort an die Brücke verloren (kurzer WLAN-Aussetzer), den Auftrag nach 8 s ohne Meldung erneut ausgeben;
+            # die Brücke erkennt dieselbe Kennung und startet keinen zweiten Lauf.
+            ende = time.monotonic() + 35
+            while True:
+                rest = ende - time.monotonic()
+                if rest <= 0:
+                    raise asyncio.TimeoutError
+                try:
+                    return web.json_response(await asyncio.wait_for(asyncio.shield(zukunft), min(rest, 8)))
+                except asyncio.TimeoutError:
+                    if zukunft.done() or self.licht_kennung != meine:
+                        continue
+                    if self.licht_auftrag is None and not self.licht_bestaetigt.get(meine):
+                        self.licht_auftrag = {"befehle": befehle, "kennung": meine}
+                        self.befehl.set()
         except asyncio.TimeoutError:
             if self.licht_auftrag is not None and self.licht_auftrag.get("kennung") == meine:
                 self.licht_auftrag = None
             return web.json_response({"ergebnis": "keine_rueckmeldung"})
         finally:
             self.licht_warten.pop(meine, None)
+            self.licht_bestaetigt.pop(meine, None)
 
     async def licht_melden(self, request: web.Request) -> web.Response:
         """POST /pc/licht (Mac-Bruecke): Ergebnis des Schaltens, je Kennung an die wartende Anfrage."""
@@ -1786,6 +1808,9 @@ class AgentenKanal:
             return web.Response(status=400, text="ungueltig")
         # Brücken ohne Kennung (ältere Fassung): Ergebnis gehört zur jüngsten Anfrage.
         kennung = daten.get("kennung") or self.licht_kennung
+        if daten.get("angenommen"):
+            self.licht_bestaetigt[kennung] = True
+            return web.json_response({"ok": True})
         zukunft = self.licht_warten.get(kennung)
         if zukunft is None or zukunft.done():
             return web.json_response({"ok": True, "veraltet": True})

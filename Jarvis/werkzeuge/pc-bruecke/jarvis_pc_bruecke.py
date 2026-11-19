@@ -517,11 +517,20 @@ def licht_schalten(befehle: dict, kennung: str = "") -> None:
         abbrechen = not any(isinstance(v, list) and v for k, v in befehle.items() if not k.startswith("_"))
         with LICHT_SPERRE:
             alt = LICHT_LAUF["prozess"]
+            if kennung and kennung == LICHT_LAUF.get("kennung") and alt is not None and alt.poll() is None:
+                return  # derselbe Auftrag kam erneut (verlorene Antwort am Relay): der Lauf ist schon unterwegs
             if alt is not None and alt.poll() is None:
                 alt.kill()
+            LICHT_LAUF["kennung"] = kennung
             prozess = None if abbrechen else subprocess.Popen([sys.executable, str(skript), json.dumps(befehle)], cwd=str(skript.parent),
                                                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             LICHT_LAUF["prozess"] = prozess
+        if prozess is not None and kennung:
+            try:
+                zugang = lies_zugang()
+                rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 10, {"angenommen": True, "kennung": kennung})
+            except Exception as fehler:
+                schreib(f"Licht annehmen: {fehler}")
         if prozess is None:
             zugang = lies_zugang()
             rufe(f"https://{zugang['host']}/pc/licht", zugang["token"], 15, {"geschaltet": [], "gesehen": [], "abgebrochen": True, "kennung": kennung})

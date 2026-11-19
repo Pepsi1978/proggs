@@ -41,13 +41,21 @@ object LichtAutomatik {
     /** Heutiges Fenster: Einschaltzeit, Ausschaltzeit und Tagesart; null = heute keine Automatik (Nachtdienst, Schalter aus, Sommer). */
     data class Fenster(val an: LocalDateTime, val aus: LocalDateTime, val art: String)
 
-    @Volatile private var dienstCache = Triple<LocalDate?, Long, String?>(null, 0L, null)
+    private val dienstCache = java.util.concurrent.ConcurrentHashMap<LocalDate, Pair<Long, String>>()
 
-    /** Dienstart des Tages: „tag“, „nacht“, „frei“ oder null, wenn der Kalender nicht lesbar ist (30 Minuten gepuffert). */
-    private fun dienst(c: Context, tag: LocalDate): String? =
-        dienstCache.takeIf { it.first == tag && System.currentTimeMillis() - it.second < 30 * 60_000L }?.third ?: runCatching {
+    /**
+     * Dienstart des Tages: „tag“, „nacht“, „frei“ oder null, wenn der Kalender nicht lesbar ist (je Tag 30 Minuten gepuffert).
+     * Hinweis: Der Kalender ordnet Termine nach der Zeitzone des Geräts zu; Frank ist in Berlin, das Gerät auch.
+     */
+    private fun dienst(c: Context, tag: LocalDate): String? {
+        dienstCache[tag]?.takeIf { System.currentTimeMillis() - it.first < 30 * 60_000L }?.let { return it.second }
+        val wert = runCatching {
             de.frank.jarvis.faehigkeit.Register.alle(c).filterIsInstance<de.frank.jarvis.faehigkeit.KalenderFaehigkeit>().firstOrNull()?.schichten(tag, 1)?.let { it[tag]?.first ?: "frei" }
-        }.getOrNull().also { if (it != null) dienstCache = Triple(tag, System.currentTimeMillis(), it) }
+        }.getOrNull() ?: return null
+        dienstCache.keys.removeIf { it.isBefore(tag.minusDays(2)) }
+        dienstCache[tag] = System.currentTimeMillis() to wert
+        return wert
+    }
 
     fun fenster(c: Context, tag: LocalDate = LocalDate.now(BERLIN)): Fenster? {
         val e = Einstellungen.get(c)
@@ -72,11 +80,13 @@ object LichtAutomatik {
             else -> when (dienst(c, tag)) {
                 null -> "Jarvis kann den Dienstplan im Kalender gerade nicht lesen, deshalb schaltet die Automatik heute sicherheitshalber nicht."
                 "nacht" -> "Heute ist Nachtdienst, da schaltet die Automatik nicht."
-                "tag" -> if (!e.lichtAutoTag) "Die Automatik bei Tagdienst ist ausgeschaltet." else "Heute wird es erst nach ${e.lichtAusTag} Uhr dunkel, deshalb schaltet die Automatik nicht."
-                else -> if (!e.lichtAutoFrei) "Die Automatik an freien Tagen ist ausgeschaltet." else "Heute wird es erst nach ${e.lichtAusFrei} Uhr dunkel, deshalb schaltet die Automatik nicht."
+                "tag" -> if (!e.lichtAutoTag) "Die Automatik bei Tagdienst ist ausgeschaltet." else "Heute ${spaet(e.lichtAnBei)} erst nach ${e.lichtAusTag} Uhr, deshalb schaltet die Automatik nicht."
+                else -> if (!e.lichtAutoFrei) "Die Automatik an freien Tagen ist ausgeschaltet." else "Heute ${spaet(e.lichtAnBei)} erst nach ${e.lichtAusFrei} Uhr, deshalb schaltet die Automatik nicht."
             }
         }
     }
+
+    private fun spaet(anBei: String) = if (anBei == "daemmerung") "geht die Sonne" else "wird es"
 
     private fun p(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -92,6 +102,14 @@ object LichtAutomatik {
         try {
             val jetzt = LocalDateTime.now(BERLIN)
             val pr = p(c)
+            val faellig = pr.getLong("wegAusFaellig", 0L)
+            if (faellig > 0L && System.currentTimeMillis() >= faellig) {
+                pr.edit().putLong("wegAusFaellig", 0L).apply()
+                if (pr.getBoolean("weg", false)) {
+                    val b = LedStreifen.aus(c)
+                    Logbuch.system("Licht Umkreis", "Frank ist weg: ${b.ok} von ${b.gesamt} aus")
+                }
+            }
             // Ausschalten auch nach Mitternacht nachholen (Fenster von gestern, höchstens 3 Stunden nach der Ausschaltzeit).
             for (tag in listOf(jetzt.toLocalDate().minusDays(1), jetzt.toLocalDate())) {
                 val f = fenster(c, tag) ?: continue
@@ -175,20 +193,17 @@ object LichtAutomatik {
      * Vom Handy aus erreicht das meist nur noch der Mac.
      */
     suspend fun verlassen(c: Context) {
-        if (p(c).getBoolean("weg", false)) return
-        p(c).edit().putBoolean("weg", true).putLong("wegSeit", System.currentTimeMillis()).apply()
+        if (p(c).getBoolean("weg", false)) return // Aus ist schon vorgemerkt bzw. erledigt (die Minutenrunde holt es nach)
         val e = Einstellungen.get(c)
-        if (!e.lichtAutomatik || !e.lichtNurZuhause) return
-        kotlinx.coroutines.delay(3 * 60_000L)
-        if (!p(c).getBoolean("weg", false)) { Logbuch.system("Licht Umkreis", "kurz „weg“ gemeldet, aber zurück: Licht bleibt"); return }
-        val b = LedStreifen.aus(c)
-        Logbuch.system("Licht Umkreis", "Frank ist weg: ${b.ok} von ${b.gesamt} aus")
+        val faellig = if (e.lichtAutomatik && e.lichtNurZuhause) System.currentTimeMillis() + 3 * 60_000L else 0L
+        p(c).edit().putBoolean("weg", true).putLong("wegSeit", System.currentTimeMillis()).putLong("wegAusFaellig", faellig).apply()
+        if (faellig > 0L) Logbuch.system("Licht Umkreis", "Frank verlässt das Haus: Licht geht in 3 Minuten aus, falls er nicht zurückkommt")
     }
 
     /** Frank ist zurück: im heutigen Fenster an, wenn es aus ist (nur mit eingeschaltetem Umkreis-Schalter). */
     suspend fun betreten(c: Context) {
         if (!p(c).getBoolean("weg", false)) return
-        p(c).edit().putBoolean("weg", false).apply()
+        p(c).edit().putBoolean("weg", false).putLong("wegAusFaellig", 0L).apply()
         val e = Einstellungen.get(c)
         if (!e.lichtAutomatik || !e.lichtNurZuhause) return
         // Nur ein echtes Heimkommen (mindestens 10 Minuten weg) schaltet ein, kein GPS-Sprung.
