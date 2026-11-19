@@ -811,6 +811,7 @@
     {"versionCode": 801, "versionName": "1.8.790", "stand": "19.11.2026, 14:56 Uhr", "notiz": "Der Mac sucht die LED-Streifen jetzt länger und zählt Streifen, die Handy und Mac verschieden benennen, nur einmal."},
     {"versionCode": 802, "versionName": "1.8.791", "stand": "19.11.2026, 15:18 Uhr", "notiz": "Das LED-Licht geht jetzt auf allen Streifen im selben zuletzt gewählten Zustand an, mit eigener Startkarte für Farben, Szenen, Mikrofon-Modi und einer Automatik für Dämmerung, Dienst und Umkreis."},
     {"versionCode": 803, "versionName": "1.8.792", "stand": "19.11.2026, 15:25 Uhr", "notiz": "Das LED-Licht sendet nie mehr eine geratene Farbe, schaltet nur noch Franks eigene Streifen und der Mac bricht veraltete Schaltaufträge ab."},
-    {"versionCode": 804, "versionName": "1.8.793", "stand": "19.11.2026, 15:49 Uhr", "notiz": "Die LED-Karte ist jetzt wie die Kaffee-Karte aufgebaut, mit Farbkreis zum Live-Einstellen, 16 speicherbaren Farbplätzen und Farbcode-Eingabe."}
+    {"versionCode": 804, "versionName": "1.8.793", "stand": "19.11.2026, 15:49 Uhr", "notiz": "Die LED-Karte ist jetzt wie die Kaffee-Karte aufgebaut, mit Farbkreis zum Live-Einstellen, 16 speicherbaren Farbplätzen und Farbcode-Eingabe."},
+    {"versionCode": 805, "versionName": "1.8.794", "stand": "19.11.2026, 15:55 Uhr", "notiz": "Die LED-Karte zeigt oben ein animiertes LED-Band in der aktuellen Lichtfarbe mit glimmendem Schriftzug."}
 ]
 }

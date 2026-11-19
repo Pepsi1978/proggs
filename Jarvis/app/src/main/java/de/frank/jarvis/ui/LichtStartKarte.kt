@@ -131,10 +131,14 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     val z = s.zustand
     val b = LedStreifen.letzterBericht
     Karte(modifier = griff) {
+        if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
+        // Kopf: animiertes LED-Band über die ganze Breite, der Schriftzug glimmt darüber in der Lichtfarbe.
+        Box(Modifier.fillMaxWidth().height(78.dp), contentAlignment = Alignment.CenterStart) {
+            LedBand(z, LedStreifen.anAnzeige != false, LedStreifen.laeuft, Modifier.matchParentSize())
+            GluehSchrift("LED-Licht", anzeige(z), LedStreifen.anAnzeige != false, Modifier.padding(start = 14.dp))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Leuchtkugel(anzeige(z), LedStreifen.laeuft, Modifier.size(46.dp))
-            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Column(Modifier.weight(1f).padding(top = 6.dp)) {
                 Text(
                     when {
                         LedStreifen.laeuft -> "Schaltet die Streifen (Handy und Mac) …"
@@ -434,6 +438,61 @@ private fun LichtKnopf(text: String, modifier: Modifier = Modifier, aktiv: Boole
     ) {
         Text(text, color = if (aktiv) f.primaer else f.text, fontSize = if (gross) 17.sp else 12.sp, fontWeight = if (aktiv || gross) FontWeight.SemiBold else FontWeight.Normal,
             textAlign = TextAlign.Center, maxLines = 2, lineHeight = 13.sp)
+    }
+}
+
+/**
+ * Animiertes LED-Band: eine dunkle Leiste mit LEDs samt Lichthof. Farbe: ein Lichtschimmer wandert entlang; Szene: Regenbogen läuft durch;
+ * Mikrofon: Flackern wie ein Equalizer; aus: LEDs dunkel, nur angedeutet; beim Schalten läuft alles schneller.
+ */
+@Composable
+private fun LedBand(z: LedStreifen.Zustand?, an: Boolean, laeuft: Boolean, modifier: Modifier) {
+    val zeit by rememberInfiniteTransition(label = "band").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(3200, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart), label = "lauf",
+    )
+    val grund = anzeige(z)
+    Canvas(modifier) {
+        val hoehe = size.height * 0.34f
+        val oben = (size.height - hoehe) / 2f
+        val ecke = androidx.compose.ui.geometry.CornerRadius(hoehe / 2f)
+        // Leiste mit leichtem Glanz oben.
+        drawRoundRect(Color(0xFF15161B), Offset(0f, oben), androidx.compose.ui.geometry.Size(size.width, hoehe), ecke)
+        drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent), oben, oben + hoehe * 0.6f),
+            Offset(0f, oben), androidx.compose.ui.geometry.Size(size.width, hoehe), ecke)
+        val abstand = 13.dp.toPx()
+        val anzahl = ((size.width - abstand) / abstand).toInt().coerceAtLeast(8)
+        val start = (size.width - (anzahl - 1) * abstand) / 2f
+        val mitte = oben + hoehe / 2f
+        val lauf = if (laeuft) (zeit * 3f) % 1f else zeit
+        val pi2 = (Math.PI * 2).toFloat()
+        for (i in 0 until anzahl) {
+            val x = start + i * abstand
+            val anteil = i / anzahl.toFloat()
+            val (farbe, staerke) = when {
+                !an -> Color(0xFF3A3C44) to 0f
+                z?.modus == Modus.SZENE -> Color.hsv(((anteil - lauf) * 360f + 720f) % 360f, 1f, 1f) to 0.85f
+                z?.modus == Modus.RHYTHMUS -> {
+                    val w = (sin(i * 1.7f + lauf * pi2 * 4f) * 0.5f + 0.5f) * (sin(i * 0.37f - lauf * pi2 * 2f) * 0.5f + 0.5f)
+                    Color.hsv((lauf * 360f + i * 9f) % 360f, 1f, 1f) to (0.25f + 0.75f * w)
+                }
+                else -> grund to (0.55f + 0.45f * (cos((anteil - lauf) * pi2) * 0.5f + 0.5f).let { it * it })
+            }
+            if (staerke > 0f) drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.55f * staerke), Color.Transparent), Offset(x, mitte), abstand * 1.3f), abstand * 1.3f, Offset(x, mitte))
+            drawCircle(farbe.copy(alpha = if (an) 0.35f + 0.65f * staerke else 1f), hoehe * 0.26f, Offset(x, mitte))
+            if (staerke > 0f) drawCircle(Color.White.copy(alpha = 0.75f * staerke), hoehe * 0.1f, Offset(x, mitte))
+        }
+    }
+}
+
+/** Schriftzug mit sanft pulsierendem Glühen in der Lichtfarbe (aus: ohne Glühen). */
+@Composable
+private fun GluehSchrift(text: String, farbe: Color, an: Boolean, modifier: Modifier) {
+    val puls by rememberInfiniteTransition(label = "schrift").animateFloat(0.45f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "glimmen")
+    Box(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 3.dp)) {
+        Text(
+            text, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp,
+            style = TextStyle(shadow = androidx.compose.ui.graphics.Shadow(if (an) farbe.copy(alpha = puls) else Color.Transparent, Offset.Zero, 22f * puls)),
+        )
     }
 }
 

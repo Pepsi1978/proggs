@@ -89,6 +89,8 @@ object LedStreifen {
     /** Für die Startkarte: letzter Bericht und ob gerade geschaltet wird. */
     var letzterBericht by mutableStateOf<Bericht?>(null)
     var laeuft by mutableStateOf(false)
+    /** Für die Karte: ob die Streifen zuletzt an (true) oder aus (false) geschaltet wurden; null = unbekannt. */
+    var anAnzeige by mutableStateOf<Boolean?>(null)
 
     private fun zp(c: Context) = c.applicationContext.getSharedPreferences("licht_zustand", Context.MODE_PRIVATE)
     private fun adressen(c: Context) = c.applicationContext.getSharedPreferences("licht", Context.MODE_PRIVATE)
@@ -98,7 +100,7 @@ object LedStreifen {
 
     /** Was Jarvis zuletzt selbst geschaltet hat (true = an); null = noch nie. Nur Hinweis, wenn die Streifen nicht lesbar sind. */
     fun zuletztAn(c: Context): Boolean? = zp(c).takeIf { it.contains("an") }?.getBoolean("an", false)
-    private fun anMerken(c: Context, an: Boolean) { zp(c).edit().putBoolean("an", an).putLong("anZeit", System.currentTimeMillis()).apply() }
+    private fun anMerken(c: Context, an: Boolean) { anAnzeige = an; zp(c).edit().putBoolean("an", an).putLong("anZeit", System.currentTimeMillis()).apply() }
 
     // ------------------------------------------------------------------ Befehle
 
