@@ -1041,7 +1041,7 @@ class PcBruecke:
                                   "kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
                                   "warter_vor_s": int(jetzt - warter) if warter else None,
                                   # Auch der Server hält Sitzungen: Fragt seine Brücke ab, ist „der PC ist aus“ die falsche Diagnose.
-                                  "pc": self.da() or jetzt - self.plaetze["server"]["zuletzt"] < PC_FRISCH_S})
+                                  "pc": self.da() or any(jetzt - self.plaetze[r]["zuletzt"] < PC_FRISCH_S for r in ("server", "power"))})
 
     async def nachtrag_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/nachtrag?auftrag_id=…&warten=… (Hook): 200 {"nachtraege": [...]}, 204 = keiner. Entfernt nichts (erst die Quittung)."""
@@ -1119,7 +1119,12 @@ class PcBruecke:
             jetzt = time.monotonic()
             plaetze = [KENNUNG_PLATZ[k] for k in gewaehlt]
             if modell == "sol":
-                return [r for r in plaetze if r in ("haupt", "server") or jetzt - self.sol_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
+                faehig = [r for r in plaetze if r in ("haupt", "server") or jetzt - self.sol_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
+                # Wie bisher zuerst der Laptop (sofern Frank ihn nicht ausgeschlossen hat), danach die weiteren Sol-faehigen in
+                # Franks Reihenfolge. Ein Einzelziel bleibt nur dieses Ziel.
+                if "haupt" in faehig:
+                    faehig = ["haupt"] + [r for r in faehig if r != "haupt"]
+                return faehig
             if modell == "katalog":
                 return [r for r in plaetze if r == "server" or jetzt - self.katalog_zuletzt.get(r, -PC_FRISCH_S) < PC_FRISCH_S]
             return plaetze
@@ -1172,7 +1177,8 @@ class PcBruecke:
             self._anmeldung_merken(rechner, request)
         jetzt = time.monotonic()
         # „da“ meint Franks Schreibtisch-Rechner: Der immer laufende Server haelt ein aelteres Handy sonst von der Cloud ab.
-        if rang != "server":
+        # Auch der Power-PC nicht: Ein aelteres Handy ohne reihenfolge meldete sonst „PC da“, obwohl es ihn nie waehlen kann.
+        if rang not in ("server", "power"):
             self.zuletzt = jetzt
         self.plaetze[rang].update(zuletzt=jetzt, rechner=rechner)
 
@@ -1182,7 +1188,12 @@ class PcBruecke:
             return web.Response(status=404, text="Not found")
         rang = request.headers.get("X-Jarvis-Rang", "").strip().lower()
         # Ohne Rang (der Laptop, aeltere Bruecken) bleibt es „haupt“; der Power-PC kommt mit X-Jarvis-Rang: power.
-        rang = rang if rang in ("ersatz", "server", "power") else "haupt"
+        # Ein unbekannter Rang (Tippfehler, neuere Bruecke) teilt nie still den Platz des Laptops: klare Absage, die die Bruecke protokolliert.
+        if not rang:
+            rang = "haupt"
+        elif rang not in PLAETZE:
+            log.warning("Bruecke mit unbekanntem Rang abgelehnt: %s", rang[:40])
+            return web.Response(status=400, text=f"Unbekannter X-Jarvis-Rang: {rang[:40]} (erlaubt: {', '.join(PLAETZE)}; ohne Rang = haupt)")
         if time.monotonic() - self.plaetze[rang]["zuletzt"] >= PC_FRISCH_S:
             log.info("Bruecke verbunden: %s", rang)
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
@@ -1208,7 +1219,7 @@ class PcBruecke:
         """GET /pc/faehigkeiten: Die Server-Bruecke fragt ohne diese Antwort nichts ab. Ein aelterer Relay fuehrte sie als Windows-PC."""
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
-        return web.json_response({"raenge": list(PLAETZE), "reihenfolge": True, "kennungen": KENNUNG_PLATZ})
+        return web.json_response({"raenge": list(PLAETZE), "reihenfolge": True, "kennungen": list(KENNUNG_PLATZ)})
 
     async def _warte_auf_auftrag(self, request: web.Request, rang: str, rechner: str, kann_katalog: bool,
                                  kann_sol: bool = False) -> web.Response:
@@ -1528,7 +1539,8 @@ class PcBruecke:
         # ?reihenfolge=mac,power,windows,server (seit 19.11.2026): Franks freie Reihenfolge, geht vorrang und server vor.
         naechster = self._naechster({"vorrang": request.query.get("vorrang"), "server": request.query.get("server"),
                                      "reihenfolge": request.query.get("reihenfolge")})
-        aktiv = self.plaetze[naechster]["rechner"] if naechster else self.plaetze["ersatz"]["rechner"] or self.plaetze["haupt"]["rechner"]
+        aktiv = self.plaetze[naechster]["rechner"] if naechster else self.plaetze["ersatz"]["rechner"] or self.plaetze["haupt"]["rechner"] \
+            or self.plaetze["power"]["rechner"]
         jetzt_s = time.time()
         for r in rechner:
             b = self.bruecke_anmeldung.get(r["rechner"]) or {"stand": "unbekannt", "geprueft": 0}
