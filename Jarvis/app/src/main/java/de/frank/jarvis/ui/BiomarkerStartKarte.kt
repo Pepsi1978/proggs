@@ -162,6 +162,7 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
     // Knopf liest neu statt den Bereich zu öffnen. Die neuen Werte liest BiomarkerStartVorladen nach dem Abruf.
     val schutz = remember { KnopfSchutz() }
     val dichte = androidx.compose.ui.platform.LocalDensity.current
+    val langMs = androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis
     val scope = rememberCoroutineScope()
     val aktualisieren: () -> Unit = {
         if (BioAbruf.stand.value.laeuft) android.widget.Toast.makeText(context, "Der Abruf läuft schon.", android.widget.Toast.LENGTH_SHORT).show()
@@ -212,10 +213,11 @@ fun BiomarkerStartKarte(griff: Modifier = Modifier) {
                             // Antippen einer Kachel öffnet direkt ihren Detailbereich (Graph, Werte-Übersicht, 7/30/90 Tage).
                             reihe.forEach { z ->
                                 val detail = DETAIL_ZU_ID[z.id]
-                                // Langer Druck verschiebt weiter die Karte (lange = {} verbraucht ihn); ein Tipp im Schutzkreis des
-                                // Aktualisieren-Knopfs aktualisiert wie auf der übrigen Karte (die Karte merkt sich die Druckstelle).
+                                // Langer Druck verschiebt die Karte: kein eigener Long-Click (der verbrauchte den Druck und
+                                // verhinderte das Ziehen); der Tipp danach wird über die gemerkte Druckdauer unterdrückt. Ein Tipp im
+                                // Schutzkreis des Aktualisieren-Knopfs aktualisiert wie auf der übrigen Karte (die Karte merkt sich die Druckstelle).
                                 BioBlock(z, Modifier.weight(1f).fillMaxHeight()
-                                    .then(if (detail != null) Modifier.antippen(lange = {}) {
+                                    .then(if (detail != null) Modifier.antippen(unterdruecken = { schutz.warLang(langMs) }) {
                                         if (schutz.imSchutzkreis(with(dichte) { SCHUTZ_RADIUS.toPx() })) aktualisieren()
                                         else BioAnsicht.oeffnenMitDetail(context, detail)
                                     } else Modifier))

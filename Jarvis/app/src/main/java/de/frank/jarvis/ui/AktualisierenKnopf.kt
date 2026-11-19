@@ -12,10 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
@@ -29,6 +31,11 @@ class KnopfSchutz {
     var karte: LayoutCoordinates? = null
     var knopf: LayoutCoordinates? = null
     var druck: Offset? = null
+    var druckSeit = 0L
+    var losAm = 0L
+
+    /** True when the last press lasted at least [grenzeMs] (long press for dragging): the following tap must do nothing. */
+    fun warLang(grenzeMs: Long): Boolean = losAm - druckSeit >= grenzeMs
 
     fun imSchutzkreis(radiusPx: Float): Boolean {
         val k = karte ?: return false
@@ -44,17 +51,22 @@ class KnopfSchutz {
  * Antippbare Startkarte mit Schutzkreis um ihren Knopf: Ein Tipp im Kreis führt [imSchutz] aus (meist dasselbe wie der Knopf),
  * jeder andere [aktion]. Die Druckstelle wird im Initial-Durchlauf nur gemerkt, nicht verbraucht; Haptik, Druckeffekt und TalkBack
  * kommen von antippen. Langes Drücken (Karte verschieben) löst nichts aus.
+ * Kein `lange` an antippen: Ein eigener Long-Click verbraucht den langen Druck, dann startet das Ziehen der Startliste nie
+ * (Fehler vom 19.11.2026, Biomarker und Raumklima ließen sich nicht verschieben). Den Tipp nach langem Druck unterdrückt [KnopfSchutz.warLang].
  */
 @Composable
 fun Modifier.antippenMitSchutz(schutz: KnopfSchutz, imSchutz: () -> Unit, aktion: () -> Unit): Modifier {
     val dichte = LocalDensity.current
+    val langMs = LocalViewConfiguration.current.longPressTimeoutMillis
     return onPlaced { schutz.karte = it }.pointerInput(schutz) {
         awaitPointerEventScope {
             while (true) {
-                awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.changedToDown() }?.let { schutz.druck = it.position }
+                val changes = awaitPointerEvent(PointerEventPass.Initial).changes
+                changes.firstOrNull { it.changedToDown() }?.let { schutz.druck = it.position; schutz.druckSeit = it.uptimeMillis }
+                changes.firstOrNull { it.changedToUp() }?.let { schutz.losAm = it.uptimeMillis }
             }
         }
-    }.antippen(lange = {}) {
+    }.antippen(unterdruecken = { schutz.warLang(langMs) }) {
         if (schutz.imSchutzkreis(with(dichte) { SCHUTZ_RADIUS.toPx() })) imSchutz() else aktion()
     }
 }
