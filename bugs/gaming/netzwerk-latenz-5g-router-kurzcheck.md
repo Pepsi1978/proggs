@@ -8,3 +8,5 @@
 - B7 Tenda-Band-Lock mit allen Häkchen = wirkungslos.
 - B8 „Signal Good“ aber SINR 2 dB → Zellstörung, nicht Feldstärke.
 Volltext: `netzwerk-latenz-5g-router.md`
+- B9 Standardmast aus (Mastaustausch Polizeiwache Neuenhagen, bis Ende Nov. 2026) → ferne Zellen, SINR negativ; Router machtlos.
+- B10 Mac-Chrome: tendawifi.com statt 192.168.0.1; CellMapper nur über die Karte; EMF-Kurz-URLs 404.

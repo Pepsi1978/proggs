@@ -65,3 +65,13 @@
 - Symptom: Tenda zeigt „Good“, aber SS-SINR 2 dB, RSRQ −14 dB, CQI 6 → HARQ-Wiederholungen, Jitter, Verlust.
 - Ursache: Störung/Überlast der Zelle (bei Frank: Bauarbeiten am Mast), nicht zu geringe Feldstärke.
 - Fix: Standorttest im Router, Ausrichtung, externe n78-Antenne damit N78 öfter per CA dazukommt; Netzbetreiber-Vergleich.
+
+## B9 Standardmast komplett aus, Router weicht auf ferne Zellen aus (19.11.2026)
+- Symptom: gestern 38 MB/s, heute ab 8 Uhr LTE RSRP −111, SINR −2, CQI 5–6; Router hängt an eNB 23328 (4G) bzw. gNB 420030 (5G SA), eNB 21118 nicht mehr sichtbar. SA statt NSA ändert nichts.
+- Ursache: Mastaustausch wegen Statik am Gemeinschaftsstandort Polizeiwache Neuenhagen; Netz für Demontage/Neumontage vollständig abgeschaltet. Quelle: https://www.neuenhagen-bei-berlin.de/startseite-de/aktuelles/2026/einschraenkungen-im-mobilfunknetz-rund-um-die-berliner-strasse/
+- Fix: keiner am Router; abwarten (laut Gemeinde bis Ende November), Rückkehr erkennbar an cell_id/enode_id 21118 bzw. NR-gNB 421118.
+
+## B10 Werkzeug-Fallen bei der Mastsuche
+- Chrome (Mac) lädt 192.168.0.1 nicht (Fehlerseite), curl schon → `tendawifi.com` nehmen.
+- Fremd-Fetch auf api.cellmapper.net aus der Seite wird vom Auto-Modus geblockt → Karte bedienen (Menü → Search → Tower Search, Ergebnis-Link anklicken).
+- BNetzA-Kurz-URLs `emf3`/`emf` leiten am 19.11.2026 auf 404, Backend `emf-karte/…` antwortet trotzdem.

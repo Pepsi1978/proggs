@@ -8,3 +8,4 @@
 - Mast finden: `https://api.cellmapper.net/v6/getTowerInformation?MCC=262&MNC=3&Region=0&Site=<eNodeB>&RAT=LTE` (eNodeB = ECI / 256), Gegenprobe OSM/Nominatim. Franks Mast: eNB 21118, Berliner Straße Neuenhagen-Bollensdorf.
 - Steam „Shader Pre-Caching“ aus; Downloads nur ohne Match (sonst Ping ~160 ms); N28 schafft nur ~3 MB/s, schnell nur N78 oder 4G-CA.
 Volltext: `netzwerk-latenz-5g-router.md`
+- Mast stumm? Zuerst Gemeinde-Meldungen + O2-Live-Check, dann BNetzA-EMF „Datum der Erteilung“; O2-gNB = 400000 + eNB.
