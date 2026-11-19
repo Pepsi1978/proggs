@@ -194,6 +194,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
             return false
         }
 
+        bevorzugtesGeraet?.let { runCatching { activeRecorder.setPreferredDevice(it) } }
         try {
             activeRecorder.startRecording()
         } catch (error: Exception) {
@@ -424,6 +425,9 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
 
     companion object {
         const val SAMPLE_RATE = 16_000
+
+        /** Gewünschtes Eingabegerät der nächsten Aufnahme (Konferenz-Mikrofon); null = Androids Wahl. */
+        @Volatile var bevorzugtesGeraet: android.media.AudioDeviceInfo? = null
 
         const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT

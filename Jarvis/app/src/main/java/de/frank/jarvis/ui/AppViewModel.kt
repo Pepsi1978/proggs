@@ -2078,6 +2078,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     runde++
                 }
             } finally {
+                de.frank.jarvis.audio.KonferenzMikrofon.freigeben(getApplication())
                 de.frank.jarvis.speech.GespraechsFokus.freigeben()
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
@@ -2185,7 +2186,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun runde(erste: Boolean): de.frank.module.transkriptionsmodul.SprechEnde.Lage {
         holtMikro = true
-        val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
+        // Konferenz-Lautsprecher verbunden: Zuhören über seine Mikrofone, nur für diese Aufnahme (siehe KonferenzMikrofon).
+        val gestartet = try {
+            de.frank.jarvis.audio.KonferenzMikrofon.holen(getApplication())
+            aufnahmeStarten()
+        } finally { holtMikro = false }
+        if (!gestartet) de.frank.jarvis.audio.KonferenzMikrofon.freigeben(getApplication())
         mikroFehlte = !gestartet
         if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT }
         freihaendig = true
@@ -2213,6 +2219,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT -> {
                 nimmtAuf = false
                 mikro.stop()
+                de.frank.jarvis.audio.KonferenzMikrofon.freigeben(getApplication())
                 return lage
             }
             else -> {
@@ -2227,7 +2234,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
     private suspend fun piep() {
-        val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
+        // Mit offenem Konferenz-Mikrofon läuft der Lautsprecher als Freisprechgerät: Der Piepton geht dann über den Gesprächskanal.
+        val strom = if (de.frank.jarvis.audio.KonferenzMikrofon.aktiv) android.media.AudioManager.STREAM_VOICE_CALL else android.media.AudioManager.STREAM_MUSIC
+        val ton = runCatching { android.media.ToneGenerator(strom, 100) }.getOrNull() ?: return
         try {
             ton.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 160)
             kotlinx.coroutines.delay(220)
@@ -2258,6 +2267,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
                 // Hauptfaden, sonst steht die Mitschrift-Animation still.
                 val (wav, stimmhaft) = withContext(Dispatchers.Default) { de.frank.jarvis.data.Einstellungen.ohneSchlussstille(mikro.stop(), schluss) to mikro.letzteStimmhaft }
+                // Aufnahme zu Ende: Der Konferenz-Lautsprecher spielt die Antwort wieder in voller Qualität.
+                de.frank.jarvis.audio.KonferenzMikrofon.freigeben(getApplication())
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) {
                     de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()

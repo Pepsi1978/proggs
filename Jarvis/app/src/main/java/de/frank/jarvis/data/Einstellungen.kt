@@ -441,6 +441,8 @@ class Einstellungen private constructor(context: Context) {
     var stilleInAppMs: Int get() = prefs.getInt("weckwort_stille_app_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_MAX_MS); set(v) = put { putInt("weckwort_stille_app_ms", v) }
     /** Dasselbe für das Weckwort außerhalb der App (App im Hintergrund oder Bildschirm aus). */
     var stilleAussenMs: Int get() = prefs.getInt("weckwort_stille_aussen_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_AUSSEN_MAX_MS); set(v) = put { putInt("weckwort_stille_aussen_ms", v) }
+    /** Im Gespräch nach dem Weckwort über die Mikrofone des Konferenz-Lautsprechers (Anker PowerConf) zuhören, wenn er verbunden ist. */
+    var konferenzMikrofonAn: Boolean get() = prefs.getBoolean("konferenz_mikrofon_an", true); set(v) = put { putBoolean("konferenz_mikrofon_an", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", !Geraet.istTablet); set(v) = put { putBoolean("weckwort_an", v) }
     /** niedrig | normal | hoch | sehr_hoch: wie leicht „Hey Jarvis“ anspringt und wie großzügig die Stimmerkennung urteilt. */
