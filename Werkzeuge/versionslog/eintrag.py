@@ -68,6 +68,10 @@ def main() -> int:
     neu = text[: ende + 1] + ",\n" + einrueckung + json.dumps(eintrag, ensure_ascii=False) + text[ende + 1:]
     json.loads(neu)  # gültiges JSON, sonst Abbruch ohne Schreiben
     datei.write_text(neu, encoding="utf-8", newline="")
+    # build.gradle.kts reads the log via JsonSlurper, which the configuration cache does not track: without this the next
+    # build keeps the old versionCode (jarvis-install / apk-update then refuse the APK as outdated).
+    import shutil
+    shutil.rmtree(pathlib.Path(sys.argv[1]) / ".gradle" / "configuration-cache", ignore_errors=True)
     print(f"VERSIONSLOG_EINTRAG={eintrag['versionCode']} {eintrag['versionName']}")
     return 0
 

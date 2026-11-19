@@ -710,6 +710,20 @@
       "pruefung": "Nach 10 Mac-Sitzungen mit Wecker-Änderung: kein cp/adb install der Drive-APK mehr, der in den Hintergrund rutscht.",
       "ruecknahme": "Die Zeile 'Am Mac fehlt der Schlüssel …' unter GenialerWeckerAndroid in apk-update/SKILL.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext"
+    },
+    {
+      "id": "M41",
+      "titel": "eintrag.py löscht nach dem Versionslog-Eintrag den Gradle-Konfigurations-Cache",
+      "datum": "2026-11-19T16:32",
+      "beleg": "Sitzung bca5256b: jarvis-install lehnte die APK ab (versionCode 806 statt 807), Neubau nötig; schon am 30.09.2026 bei Longevity (Gedächtnis gradle-config-cache-versionslog).",
+      "ort": ["Werkzeuge/versionslog/eintrag.py"],
+      "werkzeug": "Bash|PowerShell",
+      "fehler_regex": "die APK hat erst \\d+|Build veraltet\\?",
+      "aufruf_regex": "jarvis-install|apk-update\\.ps1",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Nach 10 Sitzungen mit Android-Bau: keine Meldung 'APK hat erst N-1' bzw. 'Build veraltet?' mehr, wenn der Eintrag per eintrag.py kam.",
+      "ruecknahme": "Die rmtree-Zeilen hinter datei.write_text in eintrag.py entfernen.",
+      "kosten": "keine, Werkzeug-Änderung ohne Kontext"
     }
   ]
 }
