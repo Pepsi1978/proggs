@@ -57,6 +57,11 @@ Quellen: Rohberichte r1, r2, r3, r7; https://www.igorslab.de/creality-k2-pro-com
 - Kein Blauer Engel für 3D-Drucker (RAL-UZ 205 = Bürodrucker); Filter-Wirkangaben sind Herstellerangaben, keine Norm.
 - Weiches TPU nie durch AMS/QIDI Box/CFS, sondern von externer Spule direkt in den Extruder; 15–25 mm/s, Retraktion minimal. https://wiki.bambulab.com/en/h2/h2d-tpu-printing-guide
 
+## 6a. Marken-Einordnung (19.11.2026)
+- Klassische Haushaltsmarken (Siemens, Bosch, Philips) bauen keine Consumer-3D-Drucker. Dremel (Bosch-Tochter) hat seine DigiLab-Drucker an 3PI Tech Solutions lizenziert, der 3D45 ist bei Händlern seit 2023 ausgelaufen. https://www.dremel.com/us/en/digilab , https://www.cdw.ca/product/dremel-digilab-3d45-3d-printer/5451670
+- Bambu Lab (Shenzhen, gegründet 2020, laut Bericht von Ex-DJI-Ingenieuren) ist Weltmarktführer bei Druckern unter 2.500 US$: 2025 laut CONTEXT 37 % Anteil (2024: 29 %, 1,2 Mio. Geräte). Über 90 % der Einstiegsgeräte kommen aus China. https://www.tomshardware.com/3d-printing/bambu-lab-overtakes-creality-as-the-worlds-top-selling-budget-3d-printer-brand , https://www.contextworld.com/quarterly-industrial-3d-printer-shipments-rebound-amid-continued-record-breaking-entry-level-growth
+- US-Marken: Stratasys (Erfinder von FDM) und 3D Systems = Industrie; Formlabs = Harzdruck (SLA), kein FDM; MakerBot ist in UltiMaker (NL) aufgegangen, Profi-Preisklasse. Stratasys gewann 09/2026 ein Patenturteil in Texas gegen Bambu (27,6 Mio. US$, Berufung angekündigt). https://technode.com/2026/10/30/how-bambu-lab-turned-3d-printing-into-a-consumer-hit/
+
 ## 7. Empfehlung (für Frank, 19.11.2026)
 1. Bambu Lab H2S (+ AMS 2 Pro/HT) – beste Gesamtpaket aus 350 °C, 65 °C Kammer, HEPA + Kohle, Lidar, großer Bauraum, TPU 85A direkt. Kauf im EU-Store.
 2. QIDI Q2 – günstigster Drucker mit allen harten Kriterien, bei Amazon.de; Schwäche weiches TPU < 95A.
