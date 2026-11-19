@@ -12,7 +12,7 @@ set -u
 [ -f "$HOME/SK/Android/adbkey-server" ] && export ADB_VENDOR_KEYS="${ADB_VENDOR_KEYS:-$HOME/SK/Android/adbkey-server}"
 export MSYS_NO_PATHCONV=1
 HIER="$(cd "$(dirname "$0")" && pwd)"
-for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "${LOCALAPPDATA:-}/Android/Sdk/platform-tools/adb.exe" "$(command -v adb 2>/dev/null)"; do
+for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$HOME/Android/Sdk/platform-tools/adb" "${LOCALAPPDATA:-}/Android/Sdk/platform-tools/adb.exe" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB="$K"; break; }
 done
 [ -n "${ADB:-}" ] || { echo "AUF_BEIDE_STATUS=fehler (adb nicht gefunden)"; exit 1; }
@@ -44,8 +44,19 @@ bezeichnung() {
 # und würde sonst eine parallel laufende Installation auf dem anderen Gerät abbrechen.
 for G in handy tablet; do
   if [ -z "$(adresse "$(serie $G)")" ]; then
-    if [ -f "$HIER/adb-wlan.sh" ] && [ "$(uname -s | cut -c1-5)" != "MINGW" ] && [ "$(uname -s | cut -c1-4)" != "MSYS" ]; then bash "$HIER/adb-wlan.sh" --geraet $G >/dev/null 2>&1
-    else powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$HIER/adb-wlan.ps1" 2>/dev/null || echo "$HIER/adb-wlan.ps1")" -Geraet $G >/dev/null 2>&1; fi
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*)
+        # Windows einheitlich mit pwsh wie jarvis-install.ps1; Windows PowerShell nur, falls pwsh fehlt.
+        PS_EXE=$(command -v pwsh 2>/dev/null || command -v powershell.exe 2>/dev/null || echo powershell.exe)
+        WLAN_AUS=$("$PS_EXE" -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$HIER/adb-wlan.ps1" 2>/dev/null || echo "$HIER/adb-wlan.ps1")" -Geraet $G </dev/null 2>&1 | tr -d '\r') ;;
+      *) WLAN_AUS=$(bash "$HIER/adb-wlan.sh" --geraet $G </dev/null 2>&1 | tr -d '\r') ;;
+    esac
+    # adb-wlan hat keine STATUS-Zeile, nur Exitcode und „FEHLER: …“: den Grund mit Gerätepräfix melden (ein nacktes
+    # „error:“ am Zeilenanfang hielte der Lauf-Wächter für einen Fehler dieses Skripts). Nicht tödlich, das andere Gerät läuft weiter.
+    if [ -z "$(adresse "$(serie $G)")" ]; then
+      GRUND=$(printf '%s\n' "$WLAN_AUS" | grep -m1 'FEHLER' || printf '%s\n' "$WLAN_AUS" | grep -v '^[[:space:]]*$' | tail -1)
+      echo "$G: adb-wlan: ${GRUND:-keine Verbindung}"
+    fi
   fi
 done
 # Nach den Neuverbindungen alle Adressen frisch lesen (ein Server-Neustart kann auch das erste Gerät neu verbunden haben).

@@ -46,7 +46,7 @@ GERAETE_DATEI="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/geraete.json"
 ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null)
 if [ -z "$ZIEL_SERIE" ] && { [ -f "$GERAETE_DATEI" ] || [ "$ZIEL" != handy ]; }; then ende fehler "Ziel '$ZIEL' steht nicht in $GERAETE_DATEI"; fi
 
-for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
+for K in "${ADB:-}" "${ANDROID_HOME:-}/platform-tools/adb" "$HOME/Library/Android/sdk/platform-tools/adb" "$HOME/Android/Sdk/platform-tools/adb" "$(command -v adb 2>/dev/null)"; do
   [ -n "$K" ] && [ -x "$K" ] && { ADB_BIN="$K"; break; }
 done
 [ -n "${ADB_BIN:-}" ] || ende fehler "adb nicht gefunden"

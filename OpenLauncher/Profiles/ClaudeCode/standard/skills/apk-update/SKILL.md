@@ -223,7 +223,8 @@ Skript nur mit exakt der Prüfsumme aus `update.json` aus dem Drive-Speicher (`c
 - Die Datei liegt als Asset in der APK: UpdateStation liest sie direkt aus der installierten App
   (`createPackageContext(paket, 0).assets`) und zeigt den Versionsverlauf.
 - Regel 6: Jeder Commit an einer App hängt einen Eintrag an (versionCode + 1). Dafür
-  `python -X utf8 ~/proggs/Werkzeuge/versionslog/eintrag.py <App-Ordner> "<Notiz>"` (liest den letzten Eintrag
+  `python -X utf8 ~/proggs/Werkzeuge/versionslog/eintrag.py <App-Ordner> "<Notiz>"` (Mac und Server:
+  `python3 ~/proggs/Werkzeuge/versionslog/eintrag.py …`; liest den letzten Eintrag
   frisch und nimmt die Systemzeit), nie die Nummer von Hand einsetzen: Parallele Sitzungen vergeben sie sonst doppelt.
 - Neues Projekt: Datei anlegen und den Block aus `UpdateStation/app/build.gradle.kts` übernehmen.
 

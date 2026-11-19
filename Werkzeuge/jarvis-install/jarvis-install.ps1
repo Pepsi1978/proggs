@@ -28,6 +28,8 @@ $sitzung = ""
 $abgeschlossen = $false
 $serie = ""
 $wlanSkript = Join-Path (Split-Path $PSScriptRoot) "adb-wlan\adb-wlan.ps1"
+# pwsh wie überall; nur ohne pwsh (reines Windows PowerShell) dessen eigene Shell, sonst schlüge die Neuverbindung still fehl.
+$psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
 
 function Ende([string]$status, [string]$text = "") {
     if ($text) { "JARVIS_INSTALL_STATUS=$status ($text)" } else { "JARVIS_INSTALL_STATUS=$status" }
@@ -70,7 +72,7 @@ function Verbinde {
     $script:Geraet = ""
     $script:Geraet = Waehle-Geraet
     if ($script:Geraet) { return $true }
-    & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File $wlanSkript -Geraet $Ziel *> $null
     $script:Geraet = Waehle-Geraet
     return [bool]$script:Geraet
 }
@@ -93,7 +95,8 @@ function Nimm-Sperre {
     }
     $script:sperreMein = $true
     Handy "echo '$($env:COMPUTERNAME) $PID' > $sperre/eigner" | Out-Null
-    Handy rm -f "'/data/local/tmp/jarvis-install*.apk'" | Out-Null
+    # Ohne innere Anführungszeichen: Das Muster muss die Shell am Gerät auflösen (PowerShell globbt native Argumente nicht).
+    Handy rm -f "/data/local/tmp/jarvis-install*.apk" | Out-Null
 }
 function Installiere {
     if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
@@ -154,7 +157,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         # Hängender Tunnel (10.8.0.7): Das WLAN-Werkzeug verbindet neu, oft direkt im LAN (belegt 11.11.2026: zweiter Versuch
         # über 192.168.0.197 gelungen); dann ein zweiter Versuch am selben Handy.
-        & pwsh -NoProfile -File $wlanSkript -Geraet $Ziel *> $null
+        & $psExe -NoProfile -ExecutionPolicy Bypass -File $wlanSkript -Geraet $Ziel *> $null
         $script:Geraet = Waehle-Geraet
         # pwsh, adb devices und getprop setzen LASTEXITCODE auf 0: Ohne zweiten Push muss er wieder als gescheitert gelten.
         $selbesHandy = $Geraet -and (Handy getprop ro.serialno) -eq $serie
