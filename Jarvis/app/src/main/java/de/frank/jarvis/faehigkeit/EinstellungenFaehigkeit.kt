@@ -394,7 +394,7 @@ class EinstellungsKatalog(context: Context) {
                 de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter")
                 de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app)
             },
-            schalter("anker_weckwort", "Anker", "Weckwort über den Anker", "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil); nach dem Weckwort läuft das Gespräch im Medien-Profil in voller Tonqualität, danach zurück. Ohne Anker hört weiter das Handy.", { e.ankerWeckwort }) {
+            schalter("anker_weckwort", "Anker", "Weckwort über den Anker", "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil); im Gespräch kommen die Antworten im Medien-Profil in voller Tonqualität, danach zurück. Ist „Mikrofone des Anker im Gespräch“ aus, schaltet er gleich nach dem Weckwort ins Medien-Profil. Ohne Anker hört weiter das Handy.", { e.ankerWeckwort }) {
                 e.ankerWeckwort = it; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
             },
             schalter("konferenz_mikrofon_an", "Anker", "Mikrofone des Anker im Gespräch", "Ist der Anker PowerConf verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität.", { e.konferenzMikrofonAn }) {

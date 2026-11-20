@@ -44,7 +44,7 @@ object Umzug {
      * verbraucht Routen-Kontingent, und auf „Hey Jarvis“ antworteten sonst beide Geräte zugleich. Frank kann jedes wieder einschalten;
      * ein späterer Umzug lässt seine Wahl stehen.
      */
-    val TABLET_AUS = listOf("auswertung_an", "auswertung_lernen", "abfahrt_an", "weckwort_an")
+    val TABLET_AUS = listOf("auswertung_an", "auswertung_lernen", "abfahrt_an", "weckwort_an", "anker_auto_verbinden", "anker_weckwort")
 
     internal fun speicher(c: Context, name: String): SharedPreferences = EncryptedSharedPreferences.create(
         name, MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), c.applicationContext,

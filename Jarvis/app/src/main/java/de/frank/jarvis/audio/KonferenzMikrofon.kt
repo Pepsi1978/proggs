@@ -93,7 +93,10 @@ object KonferenzMikrofon {
 
     private suspend fun oeffnen(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
         val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return false
-        val geraet = am.availableCommunicationDevices.firstOrNull(::istGeraet) ?: return false
+        val geraet = am.availableCommunicationDevices.firstOrNull(::istGeraet) ?: run {
+            if (gespraech == WECKWORT) Logbuch.system("Konferenz-Mikrofon", "Anker noch nicht als Freisprechgerät bereit, Handy-Mikrofon")
+            return false
+        }
         val beginn = SystemClock.elapsedRealtime()
         // Bis der Freisprech-Kanal steht, dauert es bis etwa eine Sekunde; Android meldet es über diesen Zuhörer.
         val umgeschaltet = CompletableDeferred<Unit>()

@@ -290,7 +290,8 @@ class WeckwortDienst : Service() {
         try {
             if (ankerMoeglich()) {
                 ueberAnker = kotlinx.coroutines.runBlocking { de.frank.jarvis.audio.KonferenzMikrofon.holenFuerWeckwort(this@WeckwortDienst) }
-                if (!ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + 60_000L
+                // Kurz nach dem Verbinden steht das Telefon-Profil oft noch nicht: bald erneut versuchen.
+                if (!ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + 15_000L
             }
             if (ueberAnker != zuletztAnker) {
                 zuletztAnker = ueberAnker

@@ -938,7 +938,7 @@ private fun AnkerEinstellungen(e: Einstellungen) {
             Chip("Aus", aktiv = !weck) { e.ankerWeckwort = false; stand++; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app) }
         }
         Text(
-            "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil). Nach dem Weckwort schaltet er ins Medien-Profil, damit das Gespräch in voller Tonqualität läuft, danach zurück. Spielt Musik oder ist der Anker nicht verbunden, hört das Handy.",
+            "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil). Im Gespräch kommen die Antworten im Medien-Profil in voller Tonqualität; danach geht es zurück ins Telefon-Profil fürs nächste Weckwort. Mit „Mikrofone des Anker im Gespräch“ aus schaltet er gleich nach dem Weckwort ins Medien-Profil und du sprichst ins Handy. Spielt Musik oder ist der Anker nicht verbunden, hört das Handy.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
         )
         val konferenz = e.konferenzMikrofonAn
