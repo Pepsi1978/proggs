@@ -22,7 +22,7 @@ enum ClaudeUebergabe {
     /// Serialises the launcher starts, so the lock is read after the previous start has marked its
     /// programs. Sessions for different programs can still run side by side; the task text therefore
     /// tells them how to share main. Who comes later waits and is then checked against the lock.
-    @MainActor private static var automatischLaeuft = false
+    @MainActor static var automatischLaeuft = false
 
     /// Jeder Lauf, den die Karte als Fehler zeigt, auch "nicht verifiziert", was auch einen nicht lesbaren
     /// Stand meinen kann: der Auftrag laesst das zuerst pruefen. Ausgenommen sind ein vom Benutzer abgebrochener
@@ -106,7 +106,7 @@ enum ClaudeUebergabe {
                                                         beendenZugestimmt: beendenZugestimmt, skriptZugestimmt: skriptZugestimmt))
     }
 
-    private static func sitzungStarten(dateiName: String, sitzungsName: String,
+    static func sitzungStarten(dateiName: String, sitzungsName: String,
                                        auftrag: @autoclosure () -> String) async -> (problem: String?, vielleicht: Bool) {
         let launcher = OpenCodeSitzungAktualisierer.launcherExe
         guard FileManager.default.isExecutableFile(atPath: launcher) else {

@@ -25,6 +25,9 @@ final class ProgrammViewModel {
     var beiAenderung: (() -> Void)?
     /// Wird fuer Meldungen aufgerufen, die ein Hinweisfenster verdienen.
     var beiMeldung: ((String) -> Void)?
+    /// Wird nach jeder Pruefung mit Zustand Fehler aufgerufen (Eintrag, Ergebnis, Kartenprotokoll) --
+    /// die Prueffehler-Uebergabe sammelt sie fuer eine Claude-Code-Sitzung.
+    var beiPruefFehler: ((ProgrammEintrag, PruefErgebnis, String) -> Void)?
 
     let eintrag: ProgrammEintrag
 
@@ -436,6 +439,12 @@ final class ProgrammViewModel {
         }
     }
 
+    /// Status nach der automatischen Uebergabe eines Prueffehlers -- nur, solange die Karte noch den Fehler zeigt.
+    func pruefFehlerUebergabeMelden(_ text: String) {
+        guard !istBeschaeftigt, zustand == .fehler else { return }
+        statusText = text
+    }
+
     func starten() {
         if !Prozessdienst.starten(eintrag) {
             beiMeldung?("Konnte nicht gestartet werden: \(eintrag.zielPfad)")
@@ -816,6 +825,11 @@ final class ProgrammViewModel {
         istBeschaeftigt = false
         zustandAktualisieren()
         melden()
+
+        // Eine gescheiterte Pruefung (auch eine Ausnahme der Abfrage, die als Fehler endet) geht gesammelt an Claude Code.
+        if art == "pruefung" && ergebnis.zustand == .fehler {
+            beiPruefFehler?(eintrag, ergebnis, protokollPuffer)
+        }
     }
 
     private func protokollAnhaengen(_ text: String) {

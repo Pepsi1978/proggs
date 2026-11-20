@@ -17,6 +17,10 @@ final class ProgrammEinstellung: Codable {
     /// Neustarts hinweg). Schon vor dem Start gesetzt; scheitert er sicher, wird es zurueckgenommen.
     var automatischUebergebenAm: Date?
 
+    /// Wann zuletzt ein PRUEF-Fehler dieses Programms automatisch an Claude Code ging -- eigene Sperrfrist,
+    /// getrennt von den Update-Fehlern. Ebenfalls vor dem Start gesetzt und bei sicher gescheitertem Start zurueckgenommen.
+    var pruefFehlerUebergebenAm: Date?
+
     /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die
     /// Karte es nicht erneut an und der Sammellauf laesst es aus; eine Pruefung mit "aktuell" loescht es.
     var updateUebergebenAm: Date?
@@ -27,6 +31,7 @@ final class ProgrammEinstellung: Codable {
         case ausgeblendet = "Ausgeblendet"
         case fehlerQuittiertBis = "FehlerQuittiertBis"
         case automatischUebergebenAm = "AutomatischUebergebenAm"
+        case pruefFehlerUebergebenAm = "PruefFehlerUebergebenAm"
         case updateUebergebenAm = "UpdateUebergebenAm"
     }
 
@@ -35,6 +40,7 @@ final class ProgrammEinstellung: Codable {
         ausgeblendet = (try? c.decode(Bool.self, forKey: .ausgeblendet)) ?? false
         fehlerQuittiertBis = try? c.decode(Date.self, forKey: .fehlerQuittiertBis)
         automatischUebergebenAm = try? c.decode(Date.self, forKey: .automatischUebergebenAm)
+        pruefFehlerUebergebenAm = try? c.decode(Date.self, forKey: .pruefFehlerUebergebenAm)
         updateUebergebenAm = try? c.decode(Date.self, forKey: .updateUebergebenAm)
     }
 }

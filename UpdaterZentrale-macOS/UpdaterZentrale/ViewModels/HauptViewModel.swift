@@ -36,6 +36,17 @@ final class HauptViewModel {
     private(set) var kopfStatus = "Bereit." { didSet { beiAenderung?() } }
     private(set) var laeuftSammelvorgang = false { didSet { beiAenderung?() } }
 
+    /// Sammelt gescheiterte Pruefungen und startet 20 s nach dem letzten neuen Fehler, ausserhalb jedes
+    /// Sammelvorgangs, EINE Claude-Code-Sitzung fuer alle. Karten werden ueber die Id gefunden, weil
+    /// "Neu laden" die Kartenobjekte austauscht.
+    private lazy var pruefFehler = PruefFehlerUebergabe(
+        einstellungen: einstellungen,
+        sammelLaeuft: { [weak self] in self?.laeuftSammelvorgang ?? false },
+        karteMelden: { [weak self] id, text in
+            self?.programme.first { $0.eintrag.id == id }?.pruefFehlerUebergabeMelden(text)
+        },
+        protokollLesen: { [weak self] id in self?.programme.first { $0.eintrag.id == id }?.protokoll })
+
     /// Zweite Fusszeile waehrend eines Sammellaufs: was gerade laeuft, an welcher Position, seit wann.
     private(set) var laufDetail = "" { didSet { beiAenderung?() } }
 
@@ -235,6 +246,9 @@ final class HauptViewModel {
             if let gemessen = dauern[eintrag.id] { karte.dauernSetzen(gemessen) }
             karte.beiAenderung = { [weak self] in self?.beiAenderung?() }
             karte.beiMeldung = { text in Dialoge.hinweis(text) }
+            karte.beiPruefFehler = { [weak self] eintrag, ergebnis, protokoll in
+                self?.pruefFehler.melden(eintrag, ergebnis, protokoll: protokoll)
+            }
 
             // Der Verlauf ueberlebt Neustarts -- jede Karte kann zeigen, wie ihr letzter Lauf ging.
             if let bericht = berichte[eintrag.id] { karte.letzterBericht = bericht }
