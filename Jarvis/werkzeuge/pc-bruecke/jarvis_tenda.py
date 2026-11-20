@@ -11,7 +11,7 @@ des Handys über den Relay (befehl tenda, art zugang) und steht nie im Protokoll
 
 Schreiben: Die Oberfläche schickt immer das ganze simWan-Objekt (Profilliste mit APN). Darum lesen, ein Feld ändern, ganz zurück.
 dataOptions: 5 = 5G SA bevorzugt, 4 = 5G NSA, 2 = nur 4G. action: 1 = verbinden, 0 = trennen.
-Neustart: POST /goform/setSystemTools {"reboot": {"action": "reboot"}}.
+Neustart: POST /goform/setModules {"reboot": {"action": "reboot"}} (Antwort errCode 100 = startet neu; setSystemTools im Skript ist ungenutzt).
 """
 from __future__ import annotations
 
@@ -208,7 +208,7 @@ def aktion(art: str, wert: str = "") -> dict:
     with _SPERRE:
         try:
             if art == "neustart":
-                code = ROUTER_SITZUNG.setzen({"reboot": {"action": "reboot"}}, "/goform/setSystemTools", 15)
+                code = ROUTER_SITZUNG.setzen({"reboot": {"action": "reboot"}}, "/goform/setModules", 15)
                 if code not in (0, 100):
                     return {"ergebnis": "fehler", "text": f"Der Router hat den Neustart abgelehnt (Code {code})."}
             else:
@@ -234,13 +234,28 @@ def aktion(art: str, wert: str = "") -> dict:
         except TendaFehler as f:
             return {"ergebnis": "fehler", "text": str(f)}
         except Exception as f:
-            # Antwort verloren: Ob der Router geschaltet hat, ist offen. Nicht wiederholen, nur nachsehen.
-            return {"ergebnis": "unklar", "text": f"Keine klare Antwort vom Router ({type(f).__name__}); ich prüfe den Zustand, ohne erneut zu schalten."}
+            # Antwort verloren (beim Neustart üblich): Ob der Router geschaltet hat, ist offen. Nicht wiederholen, nur nachsehen.
+            unklar = f"Keine klare Antwort vom Router ({type(f).__name__}); nicht erneut geschaltet, Zustand danach geprüft."
+        else:
+            unklar = None
     wieder = _warten_bis_erreichbar(240 if art == "neustart" else 120, erst_weg=art == "neustart")
-    try:
-        stand = lesen()
-    except Exception as f:
-        return {"ergebnis": "unklar", "text": f"Befehl gesendet, der Router ist danach aber noch nicht lesbar ({f}).", "wieder_online": wieder}
+    # Direkt nach dem Wiederverbinden meldet der Router kurz „unknown“ und der Ping scheitert (Test 20.11.2026): bis zu 90 s
+    # nachlesen, bis Technik und Ping stehen. Gelesen wird nur, nie erneut geschaltet.
+    stand, ende = None, time.time() + 90
+    while True:
+        try:
+            stand = lesen()
+        except Exception as f:
+            if time.time() >= ende:
+                return {"ergebnis": "unklar", "text": f"Befehl gesendet, der Router ist danach aber noch nicht lesbar ({f}).", "wieder_online": wieder}
+            time.sleep(10)
+            continue
+        technik = str(stand.get("sim_info", {}).get("mobileNet") or "").lower()
+        if (technik not in ("", "unknown") and (stand.get("ping") or {}).get("empfangen")) or time.time() >= ende:
+            break
+        time.sleep(10)
+    if unklar:
+        return {"ergebnis": "unklar", "text": unklar, "stand": stand, "wieder_online": wieder}
     return {"ergebnis": "fertig", "text": "Befehl ausgeführt, neuer Zustand gelesen." if wieder else "Befehl ausgeführt, das Internet ist aber noch nicht wieder da.",
             "stand": stand, "wieder_online": wieder}
 

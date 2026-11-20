@@ -2099,6 +2099,7 @@ class TendaStand:
         self.kanal = kanal
         self.datei = datei
         self.warten = {}       # Kennung -> Future
+        self.quittiert = set() # Kennungen, deren Empfang die Brücke bestätigt hat (sonst nach 8 s erneut ausgeben, die Brücke dedupliziert)
         self.stand = None
         self.aktion = None     # letztes Ergebnis eines Schreibauftrags (ohne Stand)
         self.fehler = None     # letzter Fehler des Macs beim Lesen im Takt
@@ -2127,22 +2128,43 @@ class TendaStand:
             wert = str(daten.get("wert") or "")[:64]
         except Exception:
             return web.Response(status=400, text="ungueltig")
-        if not self.kanal.bruecke.da():
+        # Nach einem Moduswechsel oder Connect fragt die Brücke erst nach ihrer Pause wieder ab (Test 20.11.2026): kurz auf sie warten.
+        for _ in range(30):
+            if self.kanal.bruecke.da():
+                break
+            await asyncio.sleep(0.5)
+        else:
             return web.json_response({"ergebnis": "mac_nicht_verbunden"})
         kennung = f"t{time.time():.6f}"
         zukunft = asyncio.get_running_loop().create_future()
         self.warten[kennung] = zukunft
         # Höchstens ein offener Auftrag je Art; ein neuer löst einen noch nicht abgeholten gleicher Art ab.
+        auftrag = {"art": art, "wert": wert, "kennung": kennung}
         self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("art") != art][-4:]
-        self.kanal.tenda_auftraege.append({"art": art, "wert": wert, "kennung": kennung})
+        self.kanal.tenda_auftraege.append(auftrag)
         self.kanal.befehl.set()
+        ende = time.monotonic() + (45 if art in ("lesen", "zugang") else 25)
         try:
-            return web.json_response(await asyncio.wait_for(zukunft, 45 if art in ("lesen", "zugang") else 20))
+            # Ging der Auftrag an eine tote Abfrage (Brücke gerade neu gestartet, Netz kurz weg), fehlt die Empfangsquittung:
+            # nach 8 s erneut ausgeben. Die Brücke führt jede Kennung höchstens einmal aus, also nie ein doppelter Schreibvorgang.
+            while True:
+                rest = ende - time.monotonic()
+                if rest <= 0:
+                    raise asyncio.TimeoutError
+                try:
+                    return web.json_response(await asyncio.wait_for(asyncio.shield(zukunft), min(rest, 8)))
+                except asyncio.TimeoutError:
+                    if zukunft.done():
+                        continue
+                    if kennung not in self.quittiert and auftrag not in self.kanal.tenda_auftraege:
+                        self.kanal.tenda_auftraege.append(auftrag)
+                        self.kanal.befehl.set()
         except asyncio.TimeoutError:
             self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
             return web.json_response({"ergebnis": "keine_rueckmeldung" if art in ("lesen", "zugang") else "unklar", "kennung": kennung})
         finally:
             self.warten.pop(kennung, None)
+            self.quittiert.discard(kennung)
 
     async def melden(self, request: web.Request) -> web.Response:
         if not darf_pc(request):
@@ -2166,8 +2188,12 @@ class TendaStand:
         if isinstance(daten.get("stand"), dict) or daten.get("aktion"):
             await asyncio.to_thread(self._sichern)
         zukunft = self.warten.get(str(daten.get("kennung") or ""))
+        if daten.get("empfangen"):
+            self.quittiert.add(str(daten.get("kennung") or ""))
+            return web.json_response({"ok": True})
         if zukunft is not None and not zukunft.done():
             if daten.get("angenommen"):
+                self.quittiert.add(str(daten.get("kennung") or ""))
                 zukunft.set_result({"ergebnis": "angenommen", "kennung": daten.get("kennung")})
             else:
                 zukunft.set_result({k: daten.get(k) for k in ("ergebnis", "text", "art", "stand") if k in daten})

@@ -670,11 +670,23 @@ def tenda_melden(rumpf: dict, versuche: int = 1) -> bool:
     return False
 
 
+TENDA_GESEHEN: list = []
+TENDA_SPERRE = threading.Lock()
+
+
 def tenda_befehl(befehl: dict) -> None:
     """Auftrag des Handys über den Relay: lesen (frische Momentabfrage), zugang (Hash aus dem Einrichtungsdialog, nie protokolliert),
     modus/verbinden/neustart (je genau ein Schreibvorgang, danach Zustand prüfen)."""
     import jarvis_tenda
     kennung, art, wert = str(befehl.get("kennung") or ""), str(befehl.get("art") or ""), str(befehl.get("wert") or "")
+    # Der Relay gibt einen unquittierten Auftrag nach 8 s erneut aus: jede Kennung nur einmal ausführen, Empfang sofort bestätigen.
+    with TENDA_SPERRE:
+        if kennung in TENDA_GESEHEN:
+            tenda_melden({"kennung": kennung, "empfangen": True})
+            return
+        TENDA_GESEHEN.append(kennung)
+        del TENDA_GESEHEN[:-50]
+    tenda_melden({"kennung": kennung, "empfangen": True})
     try:
         if art == "zugang":
             jarvis_tenda.zugang_speichern(wert)
@@ -735,9 +747,12 @@ def main() -> int:
     letzter_scan = 0.0
     # Neue Fassung (git pull): beenden, launchd (KeepAlive) startet die neue.
     eigener_stand = Path(__file__).stat().st_mtime
+    # Auch eine neue Fassung von jarvis_tenda.py: Der Faden hält das Modul im Speicher.
+    tenda_datei = Path(__file__).resolve().with_name("jarvis_tenda.py")
+    tenda_stand = tenda_datei.stat().st_mtime if tenda_datei.exists() else 0
     while True:
         try:
-            if Path(__file__).stat().st_mtime != eigener_stand:
+            if Path(__file__).stat().st_mtime != eigener_stand or (tenda_datei.exists() and tenda_datei.stat().st_mtime != tenda_stand):
                 schreib("Neue Fassung, Neustart")
                 return 0
             if time.time() - letzter_scan >= 30:

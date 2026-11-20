@@ -236,13 +236,15 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
     /** Aktiver Modus aus dem Router; fehlt ein klares Feld, aus den gelieferten LTE- und 5G-Werten abgeleitet (dann mit Zusatz). */
     fun aktiverModus(s: Stand): String? {
         val i = s.simInfo
-        val roh = MODUS_FELDER.firstNotNullOfOrNull { k -> i.optString(k).takeIf { it.isNotBlank() } }?.uppercase(Locale.ROOT)
+        val roh = MODUS_FELDER.firstNotNullOfOrNull { k -> i.optString(k).takeIf { it.isNotBlank() && !it.equals("unknown", true) } }?.uppercase(Locale.ROOT)
         if (roh != null) {
             when {
                 "NSA" in roh || "ENDC" in roh || "EN-DC" in roh -> return "5G NSA"
                 "SA" in roh -> return "5G SA"
                 "LTE" in roh || "4G" in roh -> return "4G"
                 "3G" in roh || "WCDMA" in roh || "UMTS" in roh -> return "3G"
+                // Nur „5G“: NSA, wenn zugleich LTE-Werte kommen (Anker im LTE), sonst SA.
+                "5G" in roh || "NR" in roh -> return if (lte(s).any { it.name == "RSRP" && it.wert != null }) "5G NSA" else "5G SA"
             }
         }
         val lte = lte(s).any { it.name == "RSRP" && it.wert != null }
@@ -417,6 +419,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                 r.optJSONObject("stand")?.let { fertig(Stand(it, "Mac zu Hause")); merken(Stand(it, "Mac zu Hause")) }
                 val stand = _zustand.value.stand
                 val pruefung = if (art == "modus" && stand != null) " Eingestellt: ${eingestellterModus(stand) ?: "nicht gelesen"}, aktiv: ${aktiverModus(stand) ?: "nicht gelesen"}." else ""
+                // Gleich nach dem Wiederverbinden sind Technik und Ping teils noch nicht da: kurz danach einmal frisch lesen.
+                bereich.launch { delay(30_000); abrufen() }
                 ende(was, when (aktion.optString("ergebnis")) {
                     "fertig" -> "erledigt, Router wieder erreichbar." + pruefung
                     "unklar" -> aktion.optString("text").ifBlank { "Ausgang unklar." } + " Nicht erneut ausgelöst."
@@ -435,7 +439,10 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         val ende = System.currentTimeMillis() + 5 * 60_000L
         while (System.currentTimeMillis() < ende) {
             val roh = runCatching { direktLesen() }.getOrNull()
-            if (roh != null) {
+            // Direkt nach dem Wiederverbinden meldet der Router kurz „unknown“ ohne Ping: dann weiter nachlesen.
+            val steht = roh != null && !roh.optJSONObject("sim_info")?.optString("mobileNet").orEmpty().let { it.isBlank() || it.equals("unknown", true) } &&
+                (roh.optJSONObject("ping")?.optInt("empfangen") ?: 0) > 0
+            if (roh != null && (steht || System.currentTimeMillis() > ende - 60_000)) {
                 val s = Stand(roh, "Handy direkt im Heim-WLAN"); merken(s); fertig(s)
                 val pruefung = if (art == "modus") " Eingestellt: ${eingestellterModus(s) ?: "nicht gelesen"}, aktiv: ${aktiverModus(s) ?: "nicht gelesen"}." else ""
                 ende(was, "erledigt, Router wieder erreichbar.$pruefung")
@@ -611,7 +618,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun direktSchalten(art: String, wert: String) = direktSperre.withLock {
         val r = router()
         if (art == "neustart") {
-            val code = try { r.setzen(JSONObject().put("reboot", JSONObject().put("action", "reboot")), "/goform/setSystemTools") }
+            val code = try { r.setzen(JSONObject().put("reboot", JSONObject().put("action", "reboot"))) }
                 catch (f: java.io.IOException) { throw UnklarFehler("Keine klare Antwort vom Router; ich prüfe den Zustand, ohne erneut zu schalten.") }
             check(code == 0 || code == 100) { "Der Router hat den Neustart abgelehnt (Code $code)." }
             direkt = null
@@ -660,7 +667,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         val MODI = mapOf("5" to "5G SA bevorzugt", "4" to "5G NSA", "2" to "nur 4G", "3" to "nur 3G")
         /** Auswahl für die Karte: Kennung des Routers → Name. 3G bietet Jarvis bewusst nicht an. */
         val WAEHLBAR = listOf("5" to "5G SA bevorzugt", "4" to "5G NSA", "2" to "nur 4G")
-        private val MODUS_FELDER = listOf("networkType", "network_type", "netType", "net_type", "sysMode", "sys_mode", "accessTech", "access_tech",
+        /** mobileNet ist beim 5G03 das Feld für die aktive Technik (am 20.11.2026 im Modus „nur 4G“: „4G“). */
+        private val MODUS_FELDER = listOf("mobileNet", "networkType", "network_type", "netType", "net_type", "sysMode", "sys_mode", "accessTech", "access_tech",
             "connectNet", "netMode", "nrMode", "nr_mode", "radioType", "rat", "workNet")
         private val BAND_FELDER = listOf("accessBand", "access_band", "band", "lteBand", "lte_band", "nrBand", "nr_band", "caBand", "ca_band", "scellBand", "nr5g_band")
         private val GEHEIM = Regex("(?i)imei|imsi|iccid|msisdn|phone|number|pin|puk|mac|ip|dns|gateway|apn|user|pwd|pass|lat|lon|location")
