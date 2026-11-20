@@ -388,11 +388,14 @@ class EinstellungsKatalog(context: Context) {
             },
             // ---- Anker (Konferenz-Lautsprecher Anker PowerConf) ----
             Eintrag("anker_auto_verbinden", "Anker", "Zu Hause automatisch verbinden",
-                "Ist Bluetooth an und Frank zu Hause (Umkreis), verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener. Der Wert nennt auch den Verbindungsstand.",
+                "Ist Bluetooth an und Frank zu Hause (Umkreis), verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener; nach 15 Minuten ohne Erfolg kommt eine Meldung mit „Erneut versuchen“. Sind Kopfhörer verbunden, laufen Ton und Mikrofon über sie und der Anker wird getrennt. Der Wert nennt auch den Verbindungsstand.",
                 "an oder aus", { (if (e.ankerAutoVerbinden) "an" else "aus") + ", Stand: " + de.frank.jarvis.audio.AnkerVerbindung.zustand.value.text }) {
                 e.ankerAutoVerbinden = jaNein(it)
                 de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter")
                 de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app)
+            },
+            zahl("anker_radius", "Anker", "Umkreis um Zuhause für den Anker", "In diesem Abstand vom Zuhause gilt Frank als zu Hause, dann verbindet Jarvis den Anker.", 100, 1000, "Meter", { e.ankerRadius }) {
+                e.ankerRadius = it; de.frank.jarvis.audio.AnkerVerbindung.umkreisNeu(app)
             },
             schalter("anker_weckwort", "Anker", "Weckwort über den Anker", "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil); im Gespräch kommen die Antworten im Medien-Profil in voller Tonqualität, danach zurück. Ist „Mikrofone des Anker im Gespräch“ aus, schaltet er gleich nach dem Weckwort ins Medien-Profil. Ohne Anker hört weiter das Handy.", { e.ankerWeckwort }) {
                 e.ankerWeckwort = it; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)

@@ -157,6 +157,11 @@ object Meldungsarten {
         ton = true, vorlesen = true, wecker = true, vorlesenStandard = true, lautStandard = 100, dringend = true,
         alt = mapOf("an" to "abfahrt_an", "vorlesen" to "abfahrt_vorlesen", "lautstaerke" to "abfahrt_lautstaerke"),
     )
+    val ANKER = Meldungsart(
+        "anker", "Anker nicht verbunden", "Meldet, wenn sich der Anker PowerConf zu Hause 15 Minuten lang nicht verbinden lässt, mit Knopf „Erneut versuchen“.",
+        "Wenn du im Umkreis zu Hause bist und 15 Minuten lang keine Verbindung zustande kommt.", ALLTAG, "jarvis_ergebnisse",
+        ton = true,
+    )
     val TIMER = Meldungsart(
         "timer", "Timer abgelaufen", "Klingelt, wenn ein Timer abgelaufen ist.",
         // Der hörbare Timer-Kanal („jarvis-timer“), nicht der stumme des Klingel-Dienstes.
@@ -221,7 +226,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, TIMER, ERINNERUNG, ERINNERUNG_WECKER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, ANKER, TIMER, ERINNERUNG, ERINNERUNG_WECKER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, ERINNERUNGEN, WECKWORT, DAUER)
 }
 

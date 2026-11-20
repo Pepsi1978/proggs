@@ -925,12 +925,19 @@ private fun AnkerEinstellungen(e: Einstellungen) {
             when { !auto -> f.textLeise; zustand == de.frank.jarvis.audio.AnkerVerbindung.Zustand.VERBUNDEN -> f.erfolg; zustand == de.frank.jarvis.audio.AnkerVerbindung.Zustand.SUCHT -> f.text; else -> f.textLeise })
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("An", aktiv = auto) { e.ankerAutoVerbinden = true; stand++; de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter") }
-            Chip("Aus", aktiv = !auto) { e.ankerAutoVerbinden = false; stand++; de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app) }
+            Chip("Aus", aktiv = !auto) { e.ankerAutoVerbinden = false; stand++; de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter") }
         }
         Text(
-            "Ist Bluetooth an und du bist zu Hause, verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener, bis er verbunden ist.",
+            "Ist Bluetooth an und du bist zu Hause, verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener. Trennt er sich, verbindet Jarvis sofort neu. Klappt es 15 Minuten lang nicht, kommt eine Meldung mit „Erneut versuchen“. Sind Kopfhörer (etwa deine Sony) verbunden, laufen Ton und Mikrofon über sie: Jarvis trennt den Anker dann und holt ihn zurück, sobald die Kopfhörer weg sind.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
         )
+        if (auto) {
+            var radius by remember { mutableFloatStateOf(e.ankerRadius.toFloat()) }
+            Text("Umkreis um Zuhause: ${radius.toInt()} m", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            Slider(value = radius, onValueChange = { radius = ((it / 10).toInt() * 10f) }, valueRange = 100f..1000f,
+                onValueChangeFinished = { e.ankerRadius = radius.toInt(); de.frank.jarvis.audio.AnkerVerbindung.umkreisNeu(app) })
+            if (!de.frank.jarvis.fahrt.Standort.immerErlaubt(app)) Text("Für den Umkreis braucht Jarvis den Standort „Immer zulassen“; ohne gilt das Handy immer als zu Hause.", color = f.textSchwach, fontSize = 12.sp)
+        }
         val weck = e.ankerWeckwort
         Zeile("Weckwort über den Anker", if (weck) "An" else "Aus", if (weck) f.erfolg else f.textLeise)
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

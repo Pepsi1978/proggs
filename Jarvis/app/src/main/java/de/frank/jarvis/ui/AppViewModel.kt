@@ -2267,7 +2267,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun piep() {
         // Mit offenem Konferenz-Mikrofon läuft der Lautsprecher als Freisprechgerät: Der Piepton geht dann über den Gesprächskanal.
-        val strom = if (de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())) android.media.AudioManager.STREAM_VOICE_CALL else android.media.AudioManager.STREAM_MUSIC
+        val ueberKanal = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
+        // Gerade erst ins Medien-Profil zurück (Weckwort über den Anker): kurz warten, sonst verschluckt der Wechsel den Piepton.
+        if (!ueberKanal) de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
+        val strom = if (ueberKanal) android.media.AudioManager.STREAM_VOICE_CALL else android.media.AudioManager.STREAM_MUSIC
         val ton = runCatching { android.media.ToneGenerator(strom, 100) }.getOrNull() ?: return
         try {
             ton.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 160)

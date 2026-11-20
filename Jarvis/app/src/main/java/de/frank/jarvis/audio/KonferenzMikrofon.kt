@@ -42,9 +42,20 @@ object KonferenzMikrofon {
     /** Hat der Weckwort-Dienst das Mikrofon für das Gespräch nach dem Treffer stehen lassen (Übergabe ohne Umschalten)? */
     @Volatile private var uebergabeSeit = 0L
 
+    /** Wann die Strecke zuletzt freigegeben wurde (elapsedRealtime). */
+    @Volatile private var freiGegebenUm = 0L
+
+    /** Nach der Freigabe braucht das Medien-Profil etwa eine Sekunde: so lange warten, damit ein Ton nicht verschluckt wird. */
+    suspend fun medienBereit() {
+        val rest = 1_000L - (SystemClock.elapsedRealtime() - freiGegebenUm)
+        if (freiGegebenUm > 0L && rest > 0) delay(rest)
+    }
+
     /** Ist der Anker gerade als Freisprechgerät (Telefon-Profil) erreichbar? */
     fun verfuegbar(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < 31) return false
+        // Kopfhörer verbunden: Mikrofon und Ton gehören ihnen.
+        if (AnkerVerbindung.fremdesAudioGeraet(context.applicationContext) != null) return false
         val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return false
         return runCatching { am.availableCommunicationDevices.any(::istGeraet) }.getOrDefault(false)
     }
@@ -58,6 +69,8 @@ object KonferenzMikrofon {
      */
     suspend fun holen(context: Context, gespraech: Int): Boolean {
         if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(context).konferenzMikrofonAn || gescheitertIn == gespraech) return false
+        // Kopfhörer verbunden: über deren Mikrofon (Androids Wahl), nie über den Anker.
+        if (AnkerVerbindung.fremdesAudioGeraet(context.applicationContext) != null) return false
         // Übergabe vom Weckwort: Die Freisprech-Strecke steht schon, nur den Besitz übernehmen (kein Umschalten, kein Warten).
         if (aktiv && besitzer == WECKWORT && kanalSteht(context)) {
             besitzer = gespraech
@@ -71,15 +84,16 @@ object KonferenzMikrofon {
     /** Für den Weckwort-Dienst: Freisprech-Strecke zum Anker öffnen; false = nicht möglich, dann lauscht das Handy. */
     suspend fun holenFuerWeckwort(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < 31) return false
-        // Hält gerade ein Gespräch das Mikrofon, nicht dazwischenfunken.
-        if (aktiv && besitzer != WECKWORT) return false
+        if (AnkerVerbindung.fremdesAudioGeraet(context.applicationContext) != null) return false
+        // Hält oder öffnet gerade ein Gespräch das Mikrofon, nicht dazwischenfunken.
+        if ((aktiv && besitzer != WECKWORT) || oeffnetGespraech != 0) return false
         if (aktiv && besitzer == WECKWORT && kanalSteht(context)) { uebergabeSeit = 0L; return true }
         return oeffnen(context, WECKWORT) {}
     }
 
     /**
      * Treffer über den Anker und das Gespräch hört ebenfalls über ihn zu: Strecke stehen lassen, das Gespräch übernimmt sie.
-     * Holt es sie nicht binnen 10 Sekunden ab, gibt Jarvis sie frei (Medien-Profil).
+     * Holt es sie nicht binnen 20 Sekunden ab, gibt Jarvis sie frei (Medien-Profil).
      */
     fun uebergeben(context: Context) {
         if (besitzer != WECKWORT || !aktiv) return
@@ -88,13 +102,28 @@ object KonferenzMikrofon {
         val app = context.applicationContext
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (uebergabeSeit == seit && besitzer == WECKWORT) { uebergabeSeit = 0L; freigeben(app, WECKWORT) }
-        }, 10_000L)
+        }, 20_000L)
+    }
+
+    /** Gespräch, das die Strecke gerade öffnet (0 = keins): Das Weckwort funkt dann nicht dazwischen. */
+    @Volatile private var oeffnetGespraech = 0
+    /** Fehlschläge des Weckworts nur einmal je Serie ins Logbuch. */
+    @Volatile private var weckwortFehlerGemeldet = false
+
+    private fun fehlerMelden(gespraech: Int, text: String) {
+        if (gespraech == WECKWORT) { if (weckwortFehlerGemeldet) return; weckwortFehlerGemeldet = true }
+        Logbuch.system("Konferenz-Mikrofon", text)
     }
 
     private suspend fun oeffnen(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
+        if (gespraech != WECKWORT) oeffnetGespraech = gespraech
+        try { return oeffnenIntern(context, gespraech, gescheitert) } finally { if (gespraech != WECKWORT && oeffnetGespraech == gespraech) oeffnetGespraech = 0 }
+    }
+
+    private suspend fun oeffnenIntern(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
         val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return false
         val geraet = am.availableCommunicationDevices.firstOrNull(::istGeraet) ?: run {
-            if (gespraech == WECKWORT) Logbuch.system("Konferenz-Mikrofon", "Anker noch nicht als Freisprechgerät bereit, Handy-Mikrofon")
+            if (gespraech == WECKWORT) fehlerMelden(gespraech, "Anker noch nicht als Freisprechgerät bereit, Handy-Mikrofon")
             return false
         }
         val beginn = SystemClock.elapsedRealtime()
@@ -106,12 +135,12 @@ object KonferenzMikrofon {
         try {
             if (am.communicationDevice?.id == geraet.id) umgeschaltet.complete(Unit)
             if (!runCatching { am.setCommunicationDevice(geraet) }.getOrDefault(false)) {
-                Logbuch.system("Konferenz-Mikrofon", "Umschalten auf ${geraet.productName} abgelehnt, Handy-Mikrofon")
+                fehlerMelden(gespraech, "Umschalten auf ${geraet.productName} abgelehnt, Handy-Mikrofon")
                 gescheitert()
                 return false
             }
             if (withTimeoutOrNull(WARTE_MS) { umgeschaltet.await() } == null) {
-                Logbuch.system("Konferenz-Mikrofon", "Keine Bestätigung nach ${WARTE_MS / 1000} s, Handy-Mikrofon")
+                fehlerMelden(gespraech, "Keine Bestätigung nach ${WARTE_MS / 1000} s, Handy-Mikrofon")
                 gescheitert()
                 if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
                 return false
@@ -125,6 +154,7 @@ object KonferenzMikrofon {
         delay(150)
         eingang = am.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull(::istGeraet)
         aktiv = true
+        if (gespraech == WECKWORT) weckwortFehlerGemeldet = false
         Logbuch.dauer(if (gespraech == WECKWORT) "Konferenz-Mikrofon an (Weckwort)" else "Konferenz-Mikrofon an", SystemClock.elapsedRealtime() - beginn, "${geraet.productName}${if (eingang == null) ", Eingang nicht gefunden" else ""}")
         return true
     }
@@ -148,6 +178,7 @@ object KonferenzMikrofon {
         uebergabeSeit = 0L
         aktiv = false
         eingang = null
+        freiGegebenUm = SystemClock.elapsedRealtime()
         if (Build.VERSION.SDK_INT < 31) return
         val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return
         if (am.communicationDevice?.let(::istGeraet) == true) runCatching { am.clearCommunicationDevice() }

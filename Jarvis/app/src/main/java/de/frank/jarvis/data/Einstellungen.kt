@@ -464,6 +464,8 @@ class Einstellungen private constructor(context: Context) {
     /** Anker PowerConf zu Hause selbst verbinden und verbunden halten (siehe audio/AnkerVerbindung.kt); Vorgabe nur am Handy. */
     var ankerAutoVerbinden: Boolean get() = prefs.getBoolean("anker_auto_verbinden", !Geraet.istTablet); set(v) = put { putBoolean("anker_auto_verbinden", v) }
     /** Das Weckwort über die Mikrofone des Anker hören (Telefon-Profil), nach dem Treffer zurück ins Medien-Profil; Vorgabe nur am Handy. */
+    /** Umkreis um Zuhause in Metern, in dem Jarvis den Anker verbindet (100 bis 1000). */
+    var ankerRadius: Int get() = prefs.getInt("anker_radius", 150).coerceIn(100, 1000); set(v) = put { putInt("anker_radius", v.coerceIn(100, 1000)) }
     var ankerWeckwort: Boolean get() = prefs.getBoolean("anker_weckwort", !Geraet.istTablet); set(v) = put { putBoolean("anker_weckwort", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", !Geraet.istTablet); set(v) = put { putBoolean("weckwort_an", v) }

@@ -271,10 +271,16 @@ class WeckwortDienst : Service() {
     /** Lauschte der letzte Durchgang über den Anker? Nur für knappe Logbuch-Einträge beim Wechsel. */
     @Volatile private var zuletztAnker = false
 
-    /** Kann das Weckwort gerade über die Mikrofone des Anker gehört werden (Schalter, verbunden, keine fremde Musik)? */
+    /** Gescheiterte Versuche über den Anker in Folge: Der Abstand wächst (15 s, 60 s, 5 min), damit das Weckwort nicht ständig taub ist. */
+    @Volatile private var ankerFehler = 0
+
+    /** Telefonat oder VoIP-Gespräch: Dann gehört die Freisprech-Strecke der Telefon-App. */
+    private fun telefoniert(): Boolean = getSystemService(android.media.AudioManager::class.java)?.mode?.let { it != android.media.AudioManager.MODE_NORMAL } == true
+
+    /** Kann das Weckwort gerade über die Mikrofone des Anker gehört werden (Schalter, verbunden, keine fremde Musik, kein Telefonat)? */
     private fun ankerMoeglich(): Boolean {
         if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn) return false
-        if (SystemClock.elapsedRealtime() < ankerSperreBis) return false
+        if (SystemClock.elapsedRealtime() < ankerSperreBis || telefoniert()) return false
         // Spielt eine andere App Musik, bliebe sie sonst in Telefonqualität: dann lauscht das Handy.
         if (getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true) return false
         return de.frank.jarvis.audio.KonferenzMikrofon.verfuegbar(this)
@@ -290,8 +296,9 @@ class WeckwortDienst : Service() {
         try {
             if (ankerMoeglich()) {
                 ueberAnker = kotlinx.coroutines.runBlocking { de.frank.jarvis.audio.KonferenzMikrofon.holenFuerWeckwort(this@WeckwortDienst) }
-                // Kurz nach dem Verbinden steht das Telefon-Profil oft noch nicht: bald erneut versuchen.
-                if (!ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + 15_000L
+                // Kurz nach dem Verbinden steht das Telefon-Profil oft noch nicht: bald erneut versuchen, bei Wiederholung seltener.
+                if (!ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + when (ankerFehler++) { 0 -> 15_000L; 1 -> 60_000L; else -> 300_000L }
+                else ankerFehler = 0
             }
             if (ueberAnker != zuletztAnker) {
                 zuletztAnker = ueberAnker
@@ -373,7 +380,7 @@ class WeckwortDienst : Service() {
                     val wechsel = if (ueberAnker) {
                         val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
                         if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
-                        abgerissen || !Einstellungen.get(this).ankerWeckwort || getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true
+                        abgerissen || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn || telefoniert() || de.frank.jarvis.audio.AnkerVerbindung.fremdesAudioGeraet(this) != null || getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true
                     } else ankerMoeglich()
                     if (wechsel) { neuStart = true; break }
                 }
@@ -409,7 +416,7 @@ class WeckwortDienst : Service() {
                     uebersprungen++
                     inFolge = 0
                     // Den Hintergrund fürs Stimmprofil trotzdem ab und zu weiter pflegen.
-                    if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
+                    if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) if (!ueberAnker) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
                     continue
                 }
                 // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
@@ -441,7 +448,7 @@ class WeckwortDienst : Service() {
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
                     if (!nachgeholt && !phr.erkannt(block, boden)) {
-                        if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                 } else {
@@ -453,7 +460,7 @@ class WeckwortDienst : Service() {
                     }
                     if (wert < schwelle) {
                         inFolge = 0
-                        if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                     // Schnell gesprochen ist der Gipfel oft nur einen Block (80 ms) breit: Beim Anlernen und mit
