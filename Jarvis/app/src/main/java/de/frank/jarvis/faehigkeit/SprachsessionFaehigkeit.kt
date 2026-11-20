@@ -6,6 +6,8 @@ package de.frank.jarvis.faehigkeit
  */
 object Sprachsession {
     @Volatile var beenden: (() -> Boolean)? = null
+    /** Die laufende Runde ist der erste Satz nach „Hey Jarvis“ von außerhalb der App: Ende still, nur die Aufgabe bestätigen. */
+    @Volatile var einzelauftrag = false
 }
 
 /**
@@ -45,7 +47,8 @@ class SprachsessionFaehigkeit : Faehigkeit {
             val beenden = Sprachsession.beenden
             when {
                 beenden == null -> Ergebnis("Die Sprachsession lässt sich nur in der laufenden Jarvis-App beenden.", fehler = true)
-                beenden() -> Ergebnis("Sprachsession beendet: Nach deiner Antwort piept es nicht mehr und das Mikrofon bleibt zu. Bestätige Frank das kurz.")
+                beenden() -> if (Sprachsession.einzelauftrag) Ergebnis("Nach deiner Antwort schließt das Mikrofon. Bestätige nur kurz die erledigte Aufgabe, ohne das Ende der Session zu erwähnen.")
+                    else Ergebnis("Sprachsession beendet: Nach deiner Antwort piept es nicht mehr und das Mikrofon bleibt zu. Bestätige Frank das kurz.")
                 else -> Ergebnis("Es läuft keine freihändige Sprachsession; nach deiner Antwort öffnet das Mikrofon nicht von selbst. Bestätige Frank das kurz.")
             }
         },

@@ -368,7 +368,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
             (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.hinweis(text) else "") +
                 (if (DiktatTrenner.mehrteilig(text)) DiktatTrenner.HINWEIS else "") +
-                (if (einzelauftragPruefen && !programmierer) EINZELAUFTRAG_HINWEIS else "") +
+                (if (einzelauftragPruefen && !programmierer) { de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = true; EINZELAUFTRAG_HINWEIS } else "") +
                 if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
@@ -1980,8 +1980,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         sprachsitzungBeendet = true
         val lief = weckwortLauf?.isActive == true
         // Nur ein wirklich beendetes Sprachgespräch ist ein bewusstes Ende (nicht ChatGPT über MCP ohne laufende Sitzung).
-        if (lief) SprachZustellung.bewusstBeendet(getApplication(), "Werkzeug sprachsession_beenden")
-        Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
+        // Das automatische Ende nach einem Einzelauftrag von außen gilt wie „Danke“: Späte Ergebnisse werden weiter vorgelesen.
+        val einzel = de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag
+        if (lief && !einzel) SprachZustellung.bewusstBeendet(getApplication(), "Werkzeug sprachsession_beenden")
+        Logbuch.sprache("Sprachsitzung beendet", if (!lief) "per Werkzeug, keine Sprachschleife aktiv" else if (einzel) "per Werkzeug nach Einzelauftrag" else "per Werkzeug")
         lief
     }
 
@@ -2038,6 +2040,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Weckwort von außerhalb (Bildschirm aus, gesperrt, andere App): Der erste Satz darf als Einzelauftrag die Session beenden.
         // In der App, über den Live-Knopf und bei einer Wiederaufnahme bleibt alles wie bisher.
         einzelauftragOffen = !fortsetzen && !wiederaufnahme && !perKnopf
+        de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = false
         // Ohne Weckwort (Wiederaufnahme, Live-Knopf) gibt es keinen Treffer, aus dem das Stimmprofil lernen könnte.
         val ohneWeckwort = wiederaufnahme || perKnopf
         val treffer = if (ohneWeckwort) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
@@ -2079,6 +2082,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
                     snapshotFlow { schreibtMit || denkt || navigiert || sprachWahlen > 0 }.first { !it }
                     vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
+                    // Nur der erste Satz zählt als möglicher Einzelauftrag, auch wenn er nie bei [sende] ankam.
+                    einzelauftragOffen = false
+                    de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = false
                     // Ausdrücklich beendet: Schluss, auch wenn inzwischen eine Antwort aus dem Hintergrund (Programmierauftrag) ankam.
                     if (sprachsitzungBeendet) break
                     // Keine neue Antwort (abgebrochen, nichts verstanden) oder Frank hat selbst übernommen: Schluss.
@@ -2090,6 +2096,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 // Nur das eigene: Ein inzwischen neu gestartetes Gespräch behält sein Konferenz-Mikrofon.
                 konferenzFrei(nr)
+                if (sprachmodusNr == nr) { einzelauftragOffen = false; de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = false }
                 de.frank.jarvis.speech.GespraechsFokus.freigeben()
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
@@ -2151,6 +2158,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Nie in ein laufendes Gespräch hinein: Franks Aufnahme und seine Worte gingen sonst verloren.
         if (nimmtAuf || schreibtMit || holtMikro || sprachmodusAktiv || denkt) { Logbuch.sprache("Messlauf", "abgelehnt: Sprachgespräch läuft"); return }
         if (!SprachBlase.sprachmodusStarten(context)) { Logbuch.sprache("Messlauf", "nicht gestartet"); return }
+        // Der Messlauf misst die gewohnte Kette: kein Einzelauftrag, der die Session beendet.
+        einzelauftragOffen = false
         viewModelScope.launch {
             kotlinx.coroutines.withTimeoutOrNull(5_000) { snapshotFlow { nimmtAuf }.first { it } } ?: return@launch
             kotlinx.coroutines.delay(2_000)
@@ -3825,10 +3834,11 @@ private const val ANHANG_PLATZHALTER = "Schau dir den Anhang an."
  * beendet danach die Sprachsession (Mikrofon zu), ein offenes Gespräch nicht.
  */
 private const val EINZELAUFTRAG_HINWEIS = "\n\n(Gesprochen per Weckwort von außerhalb der App, etwa bei gesperrtem Handy. Ist das eine eindeutige, einmalige Aufgabe, " +
-    "die du in einem Schritt erledigst (etwa „Füge Nudeln zur Einkaufsliste hinzu“, „Aufgabe um 18:30 Uhr: laufen gehen“), führe sie aus, rufe zusätzlich " +
-    "sprachsession_beenden auf und bestätige nur in einem kurzen Satz, was erledigt ist (etwa „Nudeln wurden zur Einkaufsliste hinzugefügt.“), ohne " +
-    "„Sprachsession beendet“ und ohne Rückfrage. Bei einer Frage, mehreren Themen, einer nötigen Rückfrage oder keiner klar abgeschlossenen Aufgabe rufe " +
-    "sprachsession_beenden nicht auf, dann bleibt das Mikrofon offen.)"
+    "die du mit einem Werkzeug sofort abschließt (etwa „Füge Nudeln zur Einkaufsliste hinzu“, „Aufgabe um 18:30 Uhr: laufen gehen“), führe sie aus und rufe erst " +
+    "danach, wenn das Werkzeug den Erfolg bestätigt hat, sprachsession_beenden auf, nie im selben Schritt und nie nach einem Fehler. Bestätige dann nur in einem " +
+    "kurzen Satz, was erledigt ist (etwa „Nudeln wurden zur Einkaufsliste hinzugefügt.“), ohne das Ende der Session zu erwähnen. Rufe sprachsession_beenden nicht " +
+    "auf bei einer Frage, mehreren Themen, einer Rückfrage oder Auswahl, einem Fehler, Programmieraufträgen, Agenten, Recherchen oder allem, was erst später ein " +
+    "Ergebnis liefert, und wenn die Aufgabe nicht klar abgeschlossen ist: Dann bleibt das Mikrofon offen.)"
 
 /** Vorspann des Knopfs „Nachtrag“ im Programmiergespräch; steht immer vor dem eingesprochenen Text. */
 private const val NACHTRAG_VORSPANN = "Nachtrag:"
