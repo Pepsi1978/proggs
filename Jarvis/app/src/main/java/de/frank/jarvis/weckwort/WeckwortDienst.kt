@@ -99,6 +99,11 @@ class WeckwortDienst : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (gestartet) {
             if (intent?.action == AKTION_NEU_LADEN) { hinweisErneuern(this, nurSichtbare = true); bereich.launch { neuLaden() } }
+            // Nur einen neuen Durchgang beginnen (Mitschnitt): Modelle und Verstärkung bleiben, wie sie sind.
+            if (intent?.action == AKTION_NEU_STARTEN) bereich.launch {
+                anhalten()
+                if (!Weckwort.belegt.value && vorleser?.stand?.value?.zustand == VorleseZustand.AUS) lauschen()
+            }
             return START_STICKY
         }
         val e = Einstellungen.get(this)
@@ -124,16 +129,19 @@ class WeckwortDienst : Service() {
             .apply { setReferenceCounted(false); runCatching { acquire() } }
         val vorleser = Vorleser.hole(this, SecureSettings(this)).also { this.vorleser = it }
         bereich.launch {
-            combine(Weckwort.belegt, vorleser.stand) { belegt, stand -> !belegt && stand.zustand == VorleseZustand.AUS }
-                .distinctUntilChanged()
-                .collect { frei ->
-                    if (frei) {
+            combine(Weckwort.belegt, vorleser.stand) { belegt, stand ->
+                // null = frei; sonst der Grund, warum das Weckwort gerade taub ist (aus genau den Werten, die es auslösten).
+                if (belegt) "Jarvis nimmt auf oder führt ein Sprachgespräch" else if (stand.zustand != VorleseZustand.AUS) "Jarvis liest vor" else null
+            }
+                .distinctUntilChanged { a, b -> (a == null) == (b == null) }
+                .collect { grund ->
+                    if (grund == null) {
                         pauseMelden()
                         lauschen()
                     } else {
                         // Warum taub: Für die Auswertung „reagiert nicht“ (Leerlauf oder belegt) im Logbuch.
                         pauseSeit = SystemClock.elapsedRealtime()
-                        pauseGrund = if (Weckwort.belegt.value) "Jarvis nimmt auf oder führt ein Sprachgespräch" else "Jarvis liest vor"
+                        pauseGrund = grund
                         anhalten()
                     }
                 }
@@ -321,6 +329,8 @@ class WeckwortDienst : Service() {
         var uebergabe = false
         var neuStart = false
         try {
+            // Inzwischen angehalten (Gespräch holt das Mikrofon): weder Anker-Strecke noch Mikrofon öffnen.
+            if (!an.get()) return
             if (ankerMoeglich()) {
                 ueberAnker = kotlinx.coroutines.runBlocking { de.frank.jarvis.audio.KonferenzMikrofon.holenFuerWeckwort(this@WeckwortDienst) }
                 // Kurz nach dem Verbinden steht das Telefon-Profil oft noch nicht: bald erneut versuchen, bei Wiederholung seltener.
@@ -334,11 +344,13 @@ class WeckwortDienst : Service() {
             val minimum = AudioRecord.getMinBufferSize(WeckwortErkenner.ABTASTRATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             aufnahme = AudioRecord(
                 if (ueberAnker) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION, WeckwortErkenner.ABTASTRATE,
-                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 4, WeckwortErkenner.ABTASTRATE * 2),
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 4, WeckwortErkenner.ABTASTRATE * 2 * 2), // 2 s (Bytes)
             )
             // Wie jeder andere Mikrofon-Fehler: nach einer Pause neu versuchen (catch unten).
             check(aufnahme.state == AudioRecord.STATE_INITIALIZED) { "Mikrofon nicht verfügbar" }
             if (ueberAnker) de.frank.jarvis.audio.KonferenzMikrofon.eingang?.let { runCatching { aufnahme.setPreferredDevice(it) } }
+            // Das Umschalten auf den Anker kann bis 3 s dauern: Hat das Gespräch inzwischen das Mikrofon geholt, nicht mitschneiden.
+            if (!an.get()) return
             aufnahme.startRecording()
             Weckwort.hoertZu(true)
             lauschFehler = 0
@@ -417,6 +429,9 @@ class WeckwortDienst : Service() {
             }
             // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
             var knappUm = 0L
+            // Blöcke seit dem letzten Urteil über einen Ruf (Treffer, Abweisung, Anlern-Probe): Der Vorlauf eines Frischstarts darf
+            // diesen schon beurteilten Ruf nicht noch einmal durch den Spotter schicken.
+            var seitUrteil = Int.MAX_VALUE / 2
             // Alle 50 Blöcke (4 s): Anker dazugekommen, Strecke abgerissen oder fremde Musik? Dann neu anfangen.
             // Am Handy gestartet (etwa gleich nach einem Gespräch, solange der Anker noch umschaltet): schon nach 1 s statt 4 s
             // erneut nach dem Anker sehen. Im Mitschnitt hörte das Weckwort nach jedem Gespräch 5 s nur übers Handy und
@@ -440,6 +455,7 @@ class WeckwortDienst : Service() {
                     gelesen += n
                 }
                 if (!an.get()) break
+                seitUrteil++
                 gelesenWerte += block.size
                 val rueckstand = SystemClock.elapsedRealtime() - uhrStart - gelesenWerte * 1000 / WeckwortErkenner.ABTASTRATE
                 if (rueckstand > RUECKSTAND_MS) {
@@ -476,8 +492,8 @@ class WeckwortDienst : Service() {
                     inFolge = 0
                     phr?.ruhen(boden)
                     mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung, ueberAnker, false)
-                    // Den Hintergrund fürs Stimmprofil trotzdem ab und zu weiter pflegen.
-                    if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) if (!ueberAnker) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
+                    // Kein Hintergrund-Lernen in der Stille: Das Modell ruht, seine Merkmale stammen vom letzten Block davor und hätten
+                    // über eine lange Stille (Nacht) den Hintergrund ganz auf diesen einen Vektor gezogen.
                     continue
                 }
                 // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
@@ -496,7 +512,7 @@ class WeckwortDienst : Service() {
                 // selbst zurück und verliert dabei den Anfang des nächsten Rufs, Almanach §16). Im Mitschnitt holte das einen
                 // deutlich gerufenen, sonst verpassten Ruf zurück, ohne einen anderen zu verlieren.
                 val frisch = uebersprungen > 0 || (phr != null && (laut || stimmeImLaerm) && stilleVorher >= FRISCH_NACH_STILLE)
-                val nachgeholtBloecke = if (!frisch) 0 else if (phr != null) NACHHOLEN else minOf(uebersprungen, NACHHOLEN)
+                val nachgeholtBloecke = if (!frisch) 0 else if (phr != null) minOf(NACHHOLEN, seitUrteil - 1) else minOf(uebersprungen, NACHHOLEN)
                 if (frisch) {
                     // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
                     // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
@@ -505,7 +521,7 @@ class WeckwortDienst : Service() {
                     // Der frische Spotter bekommt immer die vollen 2 s Vorlauf aus dem Ring, auch wenn der Filter kürzer schlief:
                     // Mit nur gut 1 s Vorlauf verpasste er im Mitschnitt einen deutlichen Ruf, mit 2 s nicht. „Hey Jarvis“ bekommt
                     // nur, was es noch nicht gehört hat.
-                    for (k in (if (phr != null) NACHHOLEN else minOf(uebersprungen, NACHHOLEN)) downTo 1) {
+                    for (k in (if (phr != null) minOf(NACHHOLEN, seitUrteil - 1) else minOf(uebersprungen, NACHHOLEN)) downTo 1) {
                         val frueher = frueherBlock(k)
                         if (brauchtLaut && k <= uebersprungen) erk.bewerte(frueher)
                         // Ein Treffer schon im nachgeholten Ton zählt: Der Spotter hat danach zurückgesetzt und meldet ihn nicht noch einmal.
@@ -541,6 +557,7 @@ class WeckwortDienst : Service() {
                     inFolge = 0
                 }
                 val modellwert = if (phr == null) wert else null
+                seitUrteil = 0
                 if (anlernen) {
                     if (merkmale != null) {
                         val fingerabdruck = fingerabdruck()
@@ -583,6 +600,12 @@ class WeckwortDienst : Service() {
                     continue
                 }
                 knappUm = 0L
+                // Inzwischen angehalten (die Antwort kam während der Prüfung, Denkpause vorbei): nicht mehr rufen, sonst bräche der
+                // neue Ruf die eben beginnende Antwort ab.
+                if (!an.compareAndSet(true, false)) {
+                    Logbuch.system("Weckwort verworfen", "Ruf kam, als das Lauschen schon endete")
+                    break
+                }
                 Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})${if (nachdruck) ", Nachdruck" else ""}")
                 WeckwortProtokoll.treffer(this, art, modellwert, pruefung, if (nachdruck) "gerufen (Nachdruck)" else "gerufen", stimme, mitStimme, phr?.letzterTreffer)
                 Weckwort.erkannt(modellwert ?: 1f)
@@ -592,7 +615,6 @@ class WeckwortDienst : Service() {
                 // Hört das Gespräch ebenfalls über den Anker zu, bleibt die Strecke stehen; sonst zurück ins Medien-Profil.
                 uebergabe = ueberAnker && Einstellungen.get(this).konferenzMikrofonAn
                 if (ueberAnker) Logbuch.system("Weckwort über den Anker erkannt", if (uebergabe) "Gespräch übernimmt die Anker-Mikrofone" else "zurück ins Medien-Profil")
-                an.set(false)
                 bereich.launch { rufen() }
                 break
             }
@@ -852,6 +874,15 @@ class WeckwortDienst : Service() {
         private const val RING_WERTE = WeckwortErkenner.ABTASTRATE * 5 / 2
         private const val TON_WERTE = WeckwortErkenner.ABTASTRATE * 22 / 10
         private const val AKTION_NEU_LADEN = "de.frank.jarvis.weckwort.NEU_LADEN"
+        private const val AKTION_NEU_STARTEN = "de.frank.jarvis.weckwort.NEU_STARTEN"
+
+        /** Neuer Durchgang ohne neu geladene Modelle (für den Diagnose-Mitschnitt). */
+        fun neuStarten(context: Context) {
+            val app = context.applicationContext
+            if (!laeuft || !Einstellungen.get(app).weckwortAn || !mikrofonErlaubt(app)) return
+            runCatching { app.startService(Intent(app, WeckwortDienst::class.java).setAction(AKTION_NEU_STARTEN)) }
+                .onFailure { Log.w(TAG, "Neu starten nicht möglich", it) }
+        }
 
         /** Weckwort, Phrase oder Empfindlichkeit geändert: Der laufende Dienst liest sie neu ein. Nur aus der sichtbaren App. */
         fun neuLaden(context: Context) {

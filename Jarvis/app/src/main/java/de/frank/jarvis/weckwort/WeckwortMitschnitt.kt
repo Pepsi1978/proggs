@@ -73,8 +73,8 @@ class WeckwortMitschnitt private constructor(private val ton: BufferedOutputStre
             val s = intent.getIntExtra("sekunden", 90)
             anfordern(s)
             Logbuch.system("Weckwort-Mitschnitt", "angefordert für $s s")
-            // Neuer Durchgang, damit der Mitschnitt sofort beginnt.
-            WeckwortDienst.neuLaden(context)
+            // Neuer Durchgang, damit der Mitschnitt sofort beginnt; ohne neu geladene Modelle, sonst verfälschte er, was er misst.
+            WeckwortDienst.neuStarten(context)
         }
     }
 }

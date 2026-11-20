@@ -145,6 +145,11 @@ object KonferenzMikrofon {
                 if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
                 return false
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Abgebrochen, während der Kanal umschaltete (neues „Hey Jarvis“, Sessionwechsel): Sonst bliebe der Anker im Telefon-Profil,
+            // denn freigeben() greift erst, wenn der Kanal als aktiv gilt.
+            if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
+            throw e
         } finally {
             runCatching { am.removeOnCommunicationDeviceChangedListener(zuhoerer) }
         }

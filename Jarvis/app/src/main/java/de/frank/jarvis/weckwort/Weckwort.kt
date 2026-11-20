@@ -59,7 +59,11 @@ object Weckwort {
     }
     internal fun erkannt(sicherheit: Float) { _letzter.value = Treffer(System.currentTimeMillis(), sicherheit) }
     internal fun abgewiesen(sicherheit: Float) { _abgewiesen.value = Treffer(System.currentTimeMillis(), sicherheit) }
-    internal fun rufen() { rufCode = java.util.UUID.randomUUID().toString(); gerufenUm = System.currentTimeMillis(); nachRuf = true; _belegt.value = true }
+    internal fun rufen() { rufCode = java.util.UUID.randomUUID().toString(); gerufenUm = System.currentTimeMillis(); letzterRufUm = gerufenUm; nachRuf = true; _belegt.value = true }
+
+    /** Zeitpunkt des letzten Rufs (wird anders als [gerufenUm] beim Übernehmen nicht gelöscht). */
+    @Volatile var letzterRufUm = 0L
+        private set
 
     /** Extra mit dem Einmal-Code des Rufs: Nur damit startet die App nach „Hey Jarvis“ eine Aufnahme. */
     const val EXTRA_RUF_CODE = "weckwort_code"

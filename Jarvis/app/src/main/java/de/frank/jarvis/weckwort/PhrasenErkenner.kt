@@ -45,7 +45,10 @@ class PhrasenErkenner(
             // Leer-Rahmen meldet der Spotter die Phrase erst nach einer Pause, schnell weitergesprochen nie. Die
             // Entprellung übernimmt spotter.reset() nach jedem Treffer. Mehr Pfade halten unsichere Aussprache im Beam.
             numTrailingBlanks = 0
-            maxActivePaths = 8
+            // 16 statt 8 (20.11.2026): Im Nachspielen von Franks echten Rufen (Anker, Sofa) erkannte der breitere Strahl 12 statt
+            // 10 Rufe und löste bei 48 ähnlich klingenden Sätzen nur bei „… Java auf dem Smartphone“ aus. Niedrigere Schwelle,
+            // mehr Gewicht und die Varianten „JAVA“/„JA“/„SMART PHONE“ holten kaum mehr, lösten aber bei „Ja, mein Smartphone …“ aus.
+            maxActivePaths = 16
             // Gilt nur für Zeilen ohne eigenes „#“/„:“; unsere tragen beides, aber nie auf 0,25 zurückfallen.
             keywordsThreshold = schwelle
             keywordsScore = BOOST
@@ -94,7 +97,13 @@ class PhrasenErkenner(
     private val zufall = java.util.Random()
 
     /** Zielverstärkung für den Rauschboden: im ruhigen Raum bis [MAX_VERSTAERKUNG], im Lärm 1. */
-    private fun ziel(rauschboden: Float) = if (rauschboden > 0f) (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG) else 1f
+    // Kein Rauschboden (unter 1, etwa die Nullstille des Anker oder der erste leere Block nach dem Start) ist ein ruhiger Raum: volle
+    // Verstärkung. Bisher galt er als Lärm (1), und in jeder Anker-Stille fiel die Verstärkung für den nächsten leisen Ruf auf 1.
+    private fun ziel(rauschboden: Float) = when {
+        rauschboden < 0f -> 1f // unbekannt
+        rauschboden < 1f -> MAX_VERSTAERKUNG
+        else -> (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG)
+    }
 
     /**
      * Ein Block, den der Stille-Filter überspringt: Die Verstärkung erholt sich trotzdem. Sonst blieb sie nach einem lauten
@@ -202,6 +211,7 @@ object PhrasenTokens {
         "HEY" to listOf("HI", "HAY", "A"),
         "HI" to listOf("HEY"),
         "ONE" to listOf("WON", "WAN", "WHAN"),
+        // Nicht „JAVA“ oder „JA“: Im Test lösten sie bei „Ja, mein Smartphone …“ und „Java … Smartphone“ aus.
         "JARVIS" to listOf("JARVES", "JAVIS"),
         // Deutsches „Handy“ klingt wie „Hendi“.
         "HANDY" to listOf("HENDY", "HENDI", "HANDI"),

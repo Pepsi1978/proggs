@@ -844,6 +844,7 @@
     {"versionCode": 835, "versionName": "1.8.824", "stand": "20.11.2026, 12:51 Uhr", "notiz": "Die Weckphrase wird nach einer kurzen Sprechpause zuverlässiger erkannt, weil der Erkenner nach einer Sekunde Stille frisch mit Vorlauf anfängt."},
     {"versionCode": 836, "versionName": "1.8.825", "stand": "20.11.2026, 13:07 Uhr", "notiz": "Auf dem Startbildschirm steht bei heutigen Aufgaben mit Uhrzeit die Zeit vor dem Titel, etwa „14:30: Paket abholen“."},
     {"versionCode": 837, "versionName": "1.8.826", "stand": "20.11.2026, 13:08 Uhr", "notiz": "Die Uhrzeit vor heutigen Aufgaben auf dem Startbildschirm ist grün, solange sie noch kommt, und rot, sobald sie verstrichen ist und die Aufgabe offen."},
-    {"versionCode": 838, "versionName": "1.8.827", "stand": "20.11.2026, 13:14 Uhr", "notiz": "Die Uhrzeitfarbe auf dem Startbildschirm stimmt sofort nach dem Aufwachen und nach Mitternacht, und TalkBack sagt an, wenn eine Uhrzeit vorbei ist."}
+    {"versionCode": 838, "versionName": "1.8.827", "stand": "20.11.2026, 13:14 Uhr", "notiz": "Die Uhrzeitfarbe auf dem Startbildschirm stimmt sofort nach dem Aufwachen und nach Mitternacht, und TalkBack sagt an, wenn eine Uhrzeit vorbei ist."},
+    {"versionCode": 839, "versionName": "1.8.828", "stand": "20.11.2026, 13:16 Uhr", "notiz": "Das Weckwort erkennt verschliffene Rufe besser, leise Rufe über den Anker bekommen nach einer Stille die volle Verstärkung, und Fehler aus dem Code-Review rund um Denkpause, Anker-Umschaltung und parallele Sessions sind behoben."}
 ]
 }

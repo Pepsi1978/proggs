@@ -688,6 +688,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Hängt die Antwort einer Runde an das gerade offene Gespräch (das ihre ist) und liest sie bei Bedarf vor. */
+    /** Die zuletzt im offenen Gespräch vorgelesene Antwort (Runde, Text, Zeitpunkt): Ein „Hey Jarvis“ kurz davor darf sie nicht verschlucken. */
+    private var zuletztGesprochen: Triple<Runde, String, Long>? = null
+
     private fun rundeInsOffene(runde: Runde, frageNotiz: String, neu: Nachricht, vorlesen: Boolean) {
         val i = runde.frage
         val n = gespraech.getOrNull(i)
@@ -695,6 +698,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraech += neu
         sitzungSichern()
         if (!vorlesen) return
+        zuletztGesprochen = Triple(runde, ohneVorab(runde, neu.text), System.currentTimeMillis())
         // Der Gesprächsmodus ist inzwischen zu Ende (etwa bewusst beendet oder abgelöst): angesagt zustellen und danach wieder zuhören.
         if (runde.ursprung != null && weckwortLauf?.isActive != true) sprachZustellen(rundenZustellung(runde, ohneVorab(runde, neu.text)))
         else if (runde.vorab != null) vorleser.sprichNachVorab(runde.vorab!!, "gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
@@ -2025,8 +2029,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Arbeit im alten Gespräch, obwohl Frank nur nebenher eine neue Session öffnen will.
         // Parallel statt abbrechen: Arbeitet Jarvis im offenen Gespräch noch (auch nach „Hey Jarvis“ mitten im Nachdenken),
         // beginnt die neue Anfrage eine eigene Session. Die laufende Antwort arbeitet weiter und wird danach zugestellt.
-        val laeuftNoch = fortsetzen && !wiederaufnahme && !perKnopf && sitzungId?.let { laufende[it] } != null
+        // Wartet die Runde auf Franks Antwort (Rückfrage), geht es im selben Gespräch weiter, sonst bekäme sie die Antwort nie.
+        val laufendeRunde = sitzungId?.let { laufende[it] }
+        // Kam die Antwort genau zwischen Ruf und hier an und begann schon zu sprechen: wie eine laufende behandeln und zustellen,
+        // sonst bräche vorleser.stopp() sie ab und Frank hörte sie nie.
+        val eben = zuletztGesprochen?.takeIf { (r, _, um) -> r.sitzung == sitzungId && r.ursprung != null && !perKnopf && !wiederaufnahme &&
+            de.frank.jarvis.weckwort.Weckwort.letzterRufUm.let { ruf -> ruf > 0L && um >= ruf && System.currentTimeMillis() - ruf < 30_000L } }
+        val laeuftNoch = fortsetzen && !wiederaufnahme && !perKnopf && ((laufendeRunde != null && !laufendeRunde.wartet) || eben != null)
         if (laeuftNoch) Logbuch.sprache("Hey Jarvis neben laufender Antwort", "neue Session, die laufende arbeitet weiter")
+        val nachzustellen = if (laeuftNoch) eben else null
         weichendeRunde = if (fortsetzen && !laeuftNoch) sitzungId?.let { laufende[it] } else null
         reiter = Reiter.JARVIS
         merkOffen = null
@@ -2039,6 +2050,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
         // gespeichert; arbeitet Jarvis dort noch, landet die Antwort in dessen Datei, der Programmierauftrag läuft weiter.
         if ((!fortsetzen || laeuftNoch) && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
+        nachzustellen?.let { (r, text, _) -> zuletztGesprochen = null; sprachZustellen(rundenZustellung(r, text)) }
         // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
         sprachsitzungBeendet = false
         // Weckwort von außerhalb (Bildschirm aus, gesperrt, andere App): Der erste Satz darf als Einzelauftrag die Session beenden.
@@ -2119,7 +2131,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (perKnopf && sprachmodusNr == nr && !nimmtAuf && !holtMikro) de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
                 if (sprachmodusNr == nr) { sprachmodusAktiv = false; de.frank.jarvis.speech.GespraechsFokus.sprachmodus = false }
-                fertig()
+                // Abgelöst von einem neuen „Hey Jarvis“: Dessen Lauf meldet sich selbst als fertig. Sonst legte sich etwa der
+                // Sperrbildschirm über das neue Gespräch.
+                if (sprachmodusNr == nr) fertig()
                 SprachBlase.abgleichen(getApplication())
             }
         }
