@@ -17,6 +17,8 @@ Sol 6.2 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Win
 (gpt-6.2-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
 Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay,
 danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
+Mac-Update-Zentrale: Aufträge des Handys (prüfen, unkritische oder kritische Updates installieren) über /pc/mac-befehl an die
+Updater-Zentrale macOS (Dateien in ~/Library/Application Support/UpdaterZentrale/fern), ihr Stand geht an POST /pc/updatezentrale.
 Tenda: Einmal je Stunde Funkwerte, Modus und Ping des Heimanschlusses (jarvis_tenda.py, POST /pc/tenda); Aufträge des Handys über /pc/mac-befehl.
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
@@ -602,6 +604,8 @@ def jarvis_mac_faden() -> None:
                 threading.Thread(target=licht_schalten, args=(befehl.get("befehle") or {}, str(befehl.get("kennung") or "")), daemon=True).start()
             elif befehl.get("befehl") == "tenda":
                 threading.Thread(target=tenda_befehl, args=(befehl,), daemon=True).start()
+            elif befehl.get("befehl") == "updatezentrale":
+                threading.Thread(target=uz_befehl, args=(befehl,), daemon=True).start()
             elif befehl.get("befehl") == "switchbot_lesen":
                 SWITCHBOT_SOFORT.set()   # eigener Faden: der Scan darf die Abfrage nie aufhalten
             elif befehl.get("befehl") == "jarvis_starten":
@@ -651,6 +655,98 @@ def victron_faden() -> None:
                 switchbot_gemeldet = time.time()
                 schreib(f"SwitchBot: {fehler}")
         time.sleep(max(5, 60 - (time.time() - beginn)))
+
+
+# ---------------------------------------------------------------- Mac-Update-Zentrale (Updater-Zentrale macOS)
+
+UZ_ORDNER = HOME / "Library" / "Application Support" / "UpdaterZentrale" / "fern"
+UZ_BUNDLE = "de.frank.UpdaterZentrale"
+UZ_GESEHEN: list = []
+UZ_SPERRE = threading.Lock()
+UZ_SOFORT = threading.Event()
+
+
+def uz_melden(rumpf: dict, versuche: int = 1) -> bool:
+    for i in range(versuche):
+        try:
+            zugang = lies_zugang()
+            code, _ = rufe(f"https://{zugang['host']}/pc/updatezentrale", zugang["token"], 15, rumpf)
+            if code == 200:
+                return True
+        except Exception:
+            pass
+        if i + 1 < versuche:
+            time.sleep(3)
+    return False
+
+
+def uz_stand() -> tuple[dict | None, bool]:
+    """Letzter Stand der App und ob sie gerade lebt (Lebenszeichen alle 5 s, Prozess vorhanden)."""
+    try:
+        stand = json.loads((UZ_ORDNER / "stand.json").read_text("utf-8"))
+    except Exception:
+        return None, False
+    lebt = False
+    try:
+        os.kill(int(stand.get("pid") or 0), 0)
+        lebt = time.time() - float(stand.get("zeit") or 0) < 20
+    except Exception:
+        pass
+    return stand, lebt
+
+
+def uz_befehl(befehl: dict) -> None:
+    """Auftrag des Handys: Empfang sofort bestätigen (der Relay gibt sonst erneut aus), jede Kennung nur einmal, App bei Bedarf
+    im Hintergrund starten (sie prüft dann von selbst), Auftrag als Datei ablegen. Die App weist doppelte Installationen selbst ab."""
+    kennung, art = str(befehl.get("kennung") or ""), str(befehl.get("art") or "")
+    with UZ_SPERRE:
+        if kennung in UZ_GESEHEN:
+            uz_melden({"kennung": kennung, "empfangen": True})
+            return
+        UZ_GESEHEN.append(kennung)
+        del UZ_GESEHEN[:-50]
+    uz_melden({"kennung": kennung, "empfangen": True}, versuche=3)
+    if art not in ("pruefen", "unkritisch", "kritisch"):
+        return
+    try:
+        (UZ_ORDNER / "auftraege").mkdir(parents=True, exist_ok=True)
+        _, lebt = uz_stand()
+        if not lebt:
+            ergebnis = subprocess.run(["/usr/bin/open", "-g", "-b", UZ_BUNDLE], capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
+            schreib("Updater-Zentrale gestartet" if ergebnis.returncode == 0 else f"Updater-Zentrale nicht gestartet: {ergebnis.stderr.strip()[:200]}")
+            if ergebnis.returncode != 0:
+                uz_melden({"kennung": kennung, "fehler": "Die Update-Zentrale ließ sich am Mac nicht starten."}, versuche=3)
+                return
+        zwischen = UZ_ORDNER / "auftraege" / f".{kennung}.neu"
+        zwischen.write_text(json.dumps({"kennung": kennung, "art": art}), "utf-8")
+        os.replace(zwischen, UZ_ORDNER / "auftraege" / f"{kennung}.json")
+        schreib(f"Update-Zentrale: Auftrag {art} ({kennung})")
+    except Exception as fehler:
+        schreib(f"Update-Zentrale: {fehler}")
+        uz_melden({"kennung": kennung, "fehler": f"Auftrag nicht abgelegt ({type(fehler).__name__})."}, versuche=3)
+    UZ_SOFORT.set()
+
+
+def uz_faden() -> None:
+    """Reicht den Stand der App an den Relay weiter: bei jeder Änderung (höchstens alle 2 s), sonst alle 30 s während eines
+    Laufs und alle 10 Minuten in Ruhe. Beendet sich die App, einmal mit app=false."""
+    zuletzt, zuletzt_zeit = "", 0.0
+    while True:
+        UZ_SOFORT.wait(2)
+        UZ_SOFORT.clear()
+        try:
+            stand, lebt = uz_stand()
+            if stand is None:
+                continue
+            vergleich = json.dumps({k: v for k, v in stand.items() if k != "zeit"}, sort_keys=True) + str(lebt)
+            laeuft = lebt and (stand.get("laeuft") or (stand.get("vorgang") or {}).get("phase") == "laeuft")
+            alter = time.time() - zuletzt_zeit
+            if vergleich != zuletzt or alter >= (30 if laeuft else 600):
+                if uz_melden({"stand": stand, "app": lebt}):
+                    zuletzt, zuletzt_zeit = vergleich, time.time()
+        except Exception as fehler:
+            schreib(f"Update-Zentrale melden: {fehler}")
+            time.sleep(10)
 
 
 # ---------------------------------------------------------------- Tenda-Mobilfunkrouter (jarvis_tenda.py)
@@ -764,6 +860,7 @@ def main() -> int:
     threading.Thread(target=victron_faden, daemon=True).start()
     threading.Thread(target=switchbot_sofort_faden, daemon=True).start()
     threading.Thread(target=tenda_faden, daemon=True).start()
+    threading.Thread(target=uz_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")

@@ -48,6 +48,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Prozessdienst.swift"
     "$SRC_DIR/Services/Systemdienst.swift"
     "$SRC_DIR/Services/Dialoge.swift"
+    "$SRC_DIR/Services/Fernsteuerung.swift"
     "$SRC_DIR/Services/Terminal.swift"
     "$SRC_DIR/Services/Darstellung.swift"
     "$SRC_DIR/Services/Diagnose.swift"

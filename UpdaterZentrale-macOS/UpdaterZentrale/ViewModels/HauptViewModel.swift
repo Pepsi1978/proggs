@@ -58,6 +58,15 @@ final class HauptViewModel {
     private(set) var fortschrittGesamt = 1
     private(set) var katalogFehler: String? { didSet { beiAenderung?() } }
 
+    /// Was den Besitz gerade haelt: "pruefung" oder "installation" (fuer die Fernsteuerung aus Jarvis), sonst nil.
+    private(set) var laufArt: String?
+    /// Ende der letzten vollstaendigen Pruefung aller Programme.
+    private(set) var pruefungEnde: Date?
+    /// Die Anfangspruefung (samt Fortsetzung nach einem Selbst-Update) ist durch.
+    private(set) var erstePruefungFertig = false
+    var belegt: Bool { koordination.belegt }
+    var fortschritt: (fertig: Int, gesamt: Int) { (fortschrittFertig, fortschrittGesamt) }
+
     init() {
         hellModusIntern = einstellungen.hellModus
         Darstellung.anwenden(hellModusIntern)
@@ -196,13 +205,13 @@ final class HauptViewModel {
     /// gehoert trotzdem zum CLI-Knopf.
     private func plaeneBerechnen() -> (sicher: [Sammelplan.Schritt], cli: [Sammelplan.Schritt]) {
         let alles = Sammelplan.planen(programme.filter(\.hatUpdate))
-        return (alles.filter { !$0.programm.kannCliBeenden }, alles.filter { $0.programm.kannCliBeenden })
+        return (alles.filter { !$0.programm.eintrag.istCliKritisch }, alles.filter { $0.programm.eintrag.istCliKritisch })
     }
 
     /// Beschriftung des Knopfs fuer alles, was nicht CLI-kritisch ist.
     var sicherText: String {
         let n = plaeneBerechnen().sicher.count
-        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung && !$0.kannCliBeenden }.count
+        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung && !$0.eintrag.istCliKritisch }.count
         if n == 0 {
             if nurKlick > 0 { return "\(nurKlick) Hauptversion\(nurKlick == 1 ? "" : "en") nur per Klick auf der Karte" }
             return allesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates"
@@ -336,6 +345,7 @@ final class HauptViewModel {
 
         // Ein vom Selbst-Update unterbrochener Sammellauf geht jetzt weiter.
         if einstellungen.sammelFortsetzen != nil { await sammelFortsetzen() }
+        erstePruefungFertig = true
     }
 
     private func erstePruefungKern() async {
@@ -349,6 +359,8 @@ final class HauptViewModel {
             return
         }
         defer { besitz.freigeben() }
+        laufArt = "pruefung"
+        defer { laufArt = nil }
         let vorgang = Diagnose.vorgangBeginnen("startpruefung", nil, "Anfangsprüfung aller Programme")
         laeuftSammelvorgang = true
         defer { laeuftSammelvorgang = false }
@@ -370,6 +382,8 @@ final class HauptViewModel {
             return
         }
         defer { besitz.freigeben() }
+        laufArt = "pruefung"
+        defer { laufArt = nil }
         laeuftSammelvorgang = true
         defer { laeuftSammelvorgang = false }
         let vorgang = Diagnose.vorgangBeginnen("sammelpruefung", nil, "Alle prüfen")
@@ -428,11 +442,26 @@ final class HauptViewModel {
 
         kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "."
                    + (repoHinweis.map { "  ·  " + $0 } ?? "")
+        pruefungEnde = Date()
     }
 
     /// Zwei unabhaengige Knoepfe: alles, was keine CLI-Sitzung beruehren kann, und die
     /// CLI-kritischen Updates. Jeder darf zuerst -- keiner wartet auf den anderen.
     func sichereAktualisieren() async { await sammelStarten(cli: false) }
+
+    /// Fernsteuerung (Jarvis): derselbe Teilplan wie hinter dem jeweiligen Knopf, ohne die Frage am Mac. Die
+    /// Bestaetigung der kritischen Updates hat Frank am Handy gegeben; Fragen waehrend des Laufs (laufende Programme,
+    /// Ja/Nein der Skripte, Passwort) bleiben lokal.
+    func fernPlan(kritisch: Bool) -> [Sammelplan.Schritt] {
+        let plaene = plaeneBerechnen()
+        return kritisch ? plaene.cli : plaene.sicher
+    }
+
+    func fernInstallieren(_ plan: [Sammelplan.Schritt], kritisch: Bool) async {
+        let stempel = DateFormatter()
+        stempel.dateFormat = "yyyyMMdd-HHmmss"
+        await sammelAusfuehren(plan, sammelId: "fern-" + (kritisch ? "cli-" : "") + stempel.string(from: Date()), cliBestaetigt: kritisch)
+    }
     func cliAktualisieren() async { await sammelStarten(cli: true) }
 
     private func sammelStarten(cli: Bool) async {
@@ -459,7 +488,7 @@ final class HauptViewModel {
         }.joined(separator: "\n")
         let frage = cli
             ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
-              + plan.enumerated().map { i, s in "  \(i + 1). \(s.programm.name) – \(s.programm.eintrag.cliRisiko ?? "")" }
+              + plan.enumerated().map { i, s in "  \(i + 1). \(s.programm.name) – \(s.programm.eintrag.cliKritischGrund ?? "")" }
                   .joined(separator: "\n")
               + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
@@ -525,6 +554,8 @@ final class HauptViewModel {
             return
         }
         defer { besitz.freigeben() }
+        laufArt = "installation"
+        defer { laufArt = nil }
 
         let gesamtZahl = max(planGroesse, plan.count + versatz)
         let laufName = cliBestaetigt ? "CLI-kritische Updates" : "Updates"

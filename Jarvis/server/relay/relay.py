@@ -1615,6 +1615,8 @@ class AgentenKanal:
         self.licht_letzter_echter = 0        # „erstellt“ (ms) des letzten echten Licht-Befehls
         self.tenda_auftraege = []            # Aufträge für den Tenda-Router (TendaStand.befehl), die der Mac abholt; nur im Speicher
         self.tenda_ausgegeben = set()        # Kennungen, die die Brücke tatsächlich abgeholt hat (sonst „nie zugestellt“)
+        self.uz_auftraege = []               # Aufträge für die Updater-Zentrale am Mac (UpdateZentraleStand.befehl), nur im Speicher
+        self.uz_ausgegeben = set()
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1896,7 +1898,8 @@ class AgentenKanal:
             if self.start_vorn is None and self._frage_liegt() and time.monotonic() - self.geweckt >= MAC_WECKEN_ABSTAND_S:
                 self.geweckt = time.monotonic()
                 self.start_vorn = False
-            if self.start_vorn is None and not self.switchbot_lesen and self.licht_auftrag is None and not self.tenda_auftraege:
+            if self.start_vorn is None and not self.switchbot_lesen and self.licht_auftrag is None and not self.tenda_auftraege \
+                    and not self.uz_auftraege:
                 self.befehl.clear()
                 try:
                     await asyncio.wait_for(self.befehl.wait(), KANAL_ABFRAGE_S)
@@ -1909,6 +1912,10 @@ class AgentenKanal:
                 auftrag = self.tenda_auftraege.pop(0)
                 self.tenda_ausgegeben.add(auftrag.get("kennung"))
                 return web.json_response({"befehl": "tenda", **auftrag})
+            if self.uz_auftraege:
+                auftrag = self.uz_auftraege.pop(0)
+                self.uz_ausgegeben.add(auftrag.get("kennung"))
+                return web.json_response({"befehl": "updatezentrale", **auftrag})
             if self.start_vorn is None and self.switchbot_lesen:
                 self.switchbot_lesen = False
                 return web.json_response({"befehl": "switchbot_lesen"})
@@ -2233,6 +2240,137 @@ class TendaStand:
         jetzt = int(time.time())
         return web.json_response({"stand": self.stand, "alter_s": jetzt - int(self.stand.get("zeit", 0)) if self.stand else None,
                                   "aktion": self.aktion, "fehler": self.fehler, "mac_da": self.kanal.bruecke.da()})
+
+
+UZ_DATEI = ZUSTAND.with_name("updatezentrale.json")
+UZ_ARTEN = {"pruefen", "unkritisch", "kritisch"}
+
+
+class UpdateZentraleStand:
+    """Mac-Update-Zentrale (Updater-Zentrale macOS über die Mac-Brücke). POST /geraet/updatezentrale-befehl (Handy, Tablet):
+    pruefen, unkritisch oder kritisch; wartet nur auf die Empfangsquittung der Brücke (ein Lauf dauert Minuten), gibt einen
+    unquittierten Auftrag nach 8 s noch einmal aus (die Brücke führt jede Kennung höchstens einmal aus). Abgeholt ohne Quittung
+    heißt „unklar“ und wird nie erneut ausgegeben. Doppelte Installationen weist schon der Relay ab (laufender Vorgang im Stand
+    oder ein angenommener, den der Mac noch nicht zeigt), endgültig die App selbst. POST /pc/updatezentrale (Mac): Stand,
+    Quittung oder Fehler eines Auftrags. GET /geraet/updatezentrale: Stand mit Alter, ob die Brücke da ist, offener Auftrag."""
+
+    def __init__(self, kanal, datei: Path = UZ_DATEI):
+        self.kanal = kanal
+        self.datei = datei
+        self.warten = {}
+        self.quittiert = set()
+        self.stand = None
+        self.app = False
+        self.empfangen = 0
+        self.offen = None      # zuletzt angenommener Auftrag {kennung, art, zeit}
+        self.fehler = None     # Fehler der Brücke zu einem Auftrag {kennung, text, zeit}
+        try:
+            d = json.loads(datei.read_text("utf-8"))
+            self.stand, self.app, self.empfangen = d.get("stand"), bool(d.get("app")), int(d.get("empfangen") or 0)
+        except Exception:
+            pass
+
+    def _sichern(self) -> None:
+        try:
+            zwischen = self.datei.with_suffix(".neu")
+            zwischen.write_text(json.dumps({"stand": self.stand, "app": self.app, "empfangen": self.empfangen}, ensure_ascii=False), "utf-8")
+            os.replace(zwischen, self.datei)
+        except Exception as fehler:
+            log.warning("updatezentrale.json nicht geschrieben: %s", fehler)
+
+    def _laeuft(self) -> str | None:
+        """Text, wenn am Mac gerade ein Vorgang läuft oder ein angenommener Auftrag noch nicht im Stand angekommen ist."""
+        jetzt = int(time.time())
+        v = (self.stand or {}).get("vorgang") or {}
+        if self.app and jetzt - self.empfangen < 90 and v.get("phase") == "laeuft":
+            return v.get("text") or "Am Mac läuft bereits ein Vorgang."
+        if self.offen and jetzt - self.offen["zeit"] < 60 and v.get("kennung") != self.offen["kennung"] \
+                and ((self.stand or {}).get("abgewiesen") or {}).get("kennung") != self.offen["kennung"]:
+            return "Ein Auftrag ist gerade unterwegs zum Mac."
+        return None
+
+    async def befehl(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            art = str(json.loads((await request.read()).decode("utf-8")).get("art") or "")
+            if art not in UZ_ARTEN:
+                raise ValueError
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        for _ in range(20):
+            if self.kanal.bruecke.da():
+                break
+            await asyncio.sleep(0.5)
+        else:
+            return web.json_response({"ergebnis": "mac_nicht_verbunden"})
+        laeuft = self._laeuft()
+        if laeuft and (art != "pruefen" or ((self.stand or {}).get("vorgang") or {}).get("art") != "pruefen"):
+            return web.json_response({"ergebnis": "laeuft_bereits", "text": laeuft})
+        kennung = f"u{time.time():.6f}"
+        zukunft = asyncio.get_running_loop().create_future()
+        self.warten[kennung] = zukunft
+        auftrag = {"art": art, "kennung": kennung}
+        self.offen = {"kennung": kennung, "art": art, "zeit": int(time.time())}
+        self.kanal.uz_auftraege.append(auftrag)
+        self.kanal.befehl.set()
+        ende = time.monotonic() + 20
+        try:
+            while True:
+                rest = ende - time.monotonic()
+                if rest <= 0:
+                    raise asyncio.TimeoutError
+                try:
+                    await asyncio.wait_for(asyncio.shield(zukunft), min(rest, 8))
+                    return web.json_response({"ergebnis": "angenommen", "kennung": kennung})
+                except asyncio.TimeoutError:
+                    if zukunft.done():
+                        continue
+                    if kennung not in self.quittiert and auftrag not in self.kanal.uz_auftraege:
+                        self.kanal.uz_auftraege.append(auftrag)
+                        self.kanal.befehl.set()
+        except asyncio.TimeoutError:
+            if kennung not in self.kanal.uz_ausgegeben:
+                self.offen = None
+                return web.json_response({"ergebnis": "mac_nicht_verbunden", "kennung": kennung})
+            return web.json_response({"ergebnis": "unklar", "kennung": kennung})
+        finally:
+            self.kanal.uz_auftraege = [a for a in self.kanal.uz_auftraege if a.get("kennung") != kennung]
+            self.kanal.uz_ausgegeben.discard(kennung)
+            self.warten.pop(kennung, None)
+            self.quittiert.discard(kennung)
+
+    async def melden(self, request: web.Request) -> web.Response:
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        roh = await request.read()
+        if len(roh) > 200_000:
+            return web.Response(status=413, text="zu gross")
+        try:
+            daten = json.loads(roh.decode("utf-8"))
+            if not isinstance(daten, dict):
+                raise ValueError
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        kennung = str(daten.get("kennung") or "")
+        if isinstance(daten.get("stand"), dict):
+            self.stand, self.app, self.empfangen = daten["stand"], bool(daten.get("app")), int(time.time())
+            await asyncio.to_thread(self._sichern)
+        if daten.get("fehler") and kennung:
+            self.fehler = {"kennung": kennung, "text": str(daten["fehler"])[:300], "zeit": int(time.time())}
+        if daten.get("empfangen"):
+            zukunft = self.warten.get(kennung)
+            if zukunft is not None:
+                self.quittiert.add(kennung)
+                if not zukunft.done():
+                    zukunft.set_result(True)
+        return web.json_response({"ok": True})
+
+    async def holen(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.json_response({}, status=404)
+        return web.json_response({"stand": self.stand, "app": self.app, "alter_s": int(time.time()) - self.empfangen if self.stand else None,
+                                  "mac_da": self.kanal.bruecke.da(), "offen": self.offen, "fehler": self.fehler})
 
 
 class AblageAbgleich:
@@ -2568,6 +2706,10 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/tenda-befehl", tenda.befehl)
     anwendung.router.add_post("/pc/tenda", tenda.melden)
     anwendung.router.add_get("/geraet/tenda", tenda.holen)
+    updatezentrale = UpdateZentraleStand(kanal)
+    anwendung.router.add_post("/geraet/updatezentrale-befehl", updatezentrale.befehl)
+    anwendung.router.add_post("/pc/updatezentrale", updatezentrale.melden)
+    anwendung.router.add_get("/geraet/updatezentrale", updatezentrale.holen)
     anwendung.router.add_post("/switchbot/hook/{geheim}", switchbot.webhook)
     anwendung.router.add_get("/geraet/switchbot-hook", switchbot.hook_adresse)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)

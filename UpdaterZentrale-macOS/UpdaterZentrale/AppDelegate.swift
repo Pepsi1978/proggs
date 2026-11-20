@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menueBauen()
 
         let modell = HauptViewModel()
+        // Jarvis am Handy: Prüfen und Installieren aus der Ferne über die Mac-Brücke (Services/Fernsteuerung.swift).
+        Fernsteuerung.shared.starten(modell)
         let fenster = HauptFensterController(modell: modell)
         hauptFenster = fenster
         fenster.showWindow(nil)

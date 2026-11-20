@@ -152,6 +152,25 @@ struct ProgrammEintrag: Codable {
 
     var kannCliBeenden: Bool { !(cliRisiko?.istLeer ?? true) }
 
+    /// Gehoert das Update zum Knopf "CLI-kritische Updates" (am Mac und in der Jarvis-Karte)? Vorsichtig gefasst:
+    /// neben `cliRisiko` auch jeder Neustart eines Programms, die eigenen Werkzeuge (bauen und starten neu), die
+    /// OpenCode-Sitzung (startet eine eigene CLI-Sitzung) und alles aus "Entwicklung …" (tauscht Sprachen, SDKs und
+    /// Werkzeuge aus, die laufende Builds und Sitzungen benutzen; die Wirkung ist unklar, also kritisch).
+    /// Unabhaengig von der Sicherheitsdringlichkeit.
+    var cliKritischGrund: String? {
+        if kannCliBeenden { return cliRisiko }
+        let a = art.lowercased()
+        if a == "reposkript" { return "Baut ein eigenes Werkzeug neu und startet es neu." }
+        if a == "opencodesitzung" { return "Startet für das Update eine eigene CLI-Sitzung." }
+        if beendenVorUpdate || neuStartenNachUpdate { return "Das Programm wird für das Update beendet und neu gestartet." }
+        if gruppe.lowercased().hasPrefix("entwicklung") {
+            return "Tauscht einen Teil der Entwicklungsumgebung aus – laufende Builds und Sitzungen können gestört werden."
+        }
+        return nil
+    }
+
+    var istCliKritisch: Bool { cliKritischGrund != nil }
+
     var akzent: String = "#7C5CFF"
 
     /// Alle Prozessnamen -- Haupt- und Helferprogramme.
