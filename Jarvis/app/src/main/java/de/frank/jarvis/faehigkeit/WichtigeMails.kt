@@ -183,23 +183,23 @@ object WichtigeMails {
     }
 
     /**
-     * Öffnet genau diese Unterhaltung in Gmail, nicht bloß den Posteingang: Gmail im Web über Chrome (sonst den Standardbrowser), direkt auf
-     * die Unterhaltung (#cv/Inbox/<X-GM-THRID hex>). Nicht über die Gmail-App: Deren Linkempfänger für mail.google.com zeigt in Gmail 2026.11 auf
-     * eine fehlende Klasse und stürzt ab (Frank, 20.11.2026: „springt hin und her“), und ihr Nachrichten-Einstieg (VIEW_MESSAGE_DEEPLINK)
-     * öffnet nur den Posteingang oder schließt sich still. Ohne Browser bleibt die Gmail-App mit dem Posteingang.
+     * Öffnet genau diese Nachricht in der Gmail-App (Frank, 20.11.2026: „direkt in der App in der E-Mail“). Weg: Gmails eigener Link-Empfänger
+     * für gmail.app.goo.gl mit `tf=cv` und innerem Link `…#cv?th=#thread-f:<X-GM-THRID>|msg-f:<X-GM-MSGID>` (dezimal), am Fold geprüft, auch
+     * bei beendetem Gmail. Nicht über https://mail.google.com an die App: Deren Empfänger stürzt in Gmail 2026.11 ab; VIEW_MESSAGE_DEEPLINK
+     * zeigt nur den Posteingang. Ohne Gmail-App öffnet der Browser die Unterhaltung in der mobilen Ansicht.
      */
     fun oeffnen(context: Context, e: Eintrag) {
-        val pm = context.packageManager
-        // Mobile Ansicht mit Konto: Die Desktop-Adresse (#inbox/…) leitet Chrome am Handy auf die mobile Ansicht um und verliert dabei die
-        // Unterhaltung; #cv/Inbox/<hex> öffnet sie dort direkt (am Fold geprüft, 20.11.2026). authuser wählt Franks Konto, auch bei mehreren.
         val adresse = Einstellungen.get(context).mailAdresse.trim()
-        val konto = if (adresse.isNotEmpty()) "?authuser=" + Uri.encode(adresse) else ""
-        val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://mail.google.com/mail/mu/mp/$konto#cv/Inbox/${java.lang.Long.toHexString(e.thrId)}"))
+        val konto = if (adresse.isNotEmpty()) "authuser=" + Uri.encode(adresse) else ""
+        val th = Uri.encode("#thread-f:${java.lang.Long.toUnsignedString(e.thrId)}|msg-f:${java.lang.Long.toUnsignedString(e.msgId)}")
+        val innen = "https://mail.google.com/mail/u/0/?$konto#cv?th=$th"
+        val app = Intent(Intent.ACTION_VIEW, Uri.parse("https://gmail.app.goo.gl/?link=${Uri.encode(innen)}&tf=cv&$konto"))
+            .addCategory(Intent.CATEGORY_BROWSABLE).setPackage("com.google.android.gm").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://mail.google.com/mail/mu/mp/?$konto#cv/Inbox/${java.lang.Long.toHexString(e.thrId)}"))
             .addCategory(Intent.CATEGORY_BROWSABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        // Chrome ausdrücklich (keine Paketabfrage nötig); sonst der Standardbrowser: Mit BROWSABLE passt Gmails defekter Linkempfänger nicht.
-        runCatching { context.startActivity(Intent(web).setPackage("com.android.chrome")) }
+        runCatching { context.startActivity(app) }
+            .recoverCatching { context.startActivity(Intent(web).setPackage("com.android.chrome")) }
             .recoverCatching { context.startActivity(web) }
-            .recoverCatching { context.startActivity(pm.getLaunchIntentForPackage("com.google.android.gm")!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             .onFailure { Logbuch.fehler("Wichtige E-Mails: Gmail öffnen", it) }
     }
 
