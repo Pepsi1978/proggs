@@ -841,6 +841,7 @@
     {"versionCode": 832, "versionName": "1.8.821", "stand": "20.11.2026, 12:43 Uhr", "notiz": "Die Weckphrase wird über den Anker nach einer Pause zuverlässiger erkannt: Der Erkenner bekommt unhörbares Grundrauschen statt reiner Stille und immer zwei Sekunden Vorlauf."},
     {"versionCode": 833, "versionName": "1.8.822", "stand": "20.11.2026, 12:44 Uhr", "notiz": "Nach einem Gespräch wechselt das Weckwort schon nach einer Sekunde wieder auf die Mikrofone des Anker statt erst nach fünf."},
     {"versionCode": 834, "versionName": "1.8.823", "stand": "20.11.2026, 12:51 Uhr", "notiz": "Tenda Internet verbindet bei Connect immer wieder, schaltet bei nicht erreichbarem Server direkt im Heim-WLAN, meldet ein ausbleibendes Internet ehrlich und schützt das Router-Passwort besser vor Sperren."},
-    {"versionCode": 835, "versionName": "1.8.824", "stand": "20.11.2026, 12:51 Uhr", "notiz": "Die Weckphrase wird nach einer kurzen Sprechpause zuverlässiger erkannt, weil der Erkenner nach einer Sekunde Stille frisch mit Vorlauf anfängt."}
+    {"versionCode": 835, "versionName": "1.8.824", "stand": "20.11.2026, 12:51 Uhr", "notiz": "Die Weckphrase wird nach einer kurzen Sprechpause zuverlässiger erkannt, weil der Erkenner nach einer Sekunde Stille frisch mit Vorlauf anfängt."},
+    {"versionCode": 836, "versionName": "1.8.825", "stand": "20.11.2026, 13:07 Uhr", "notiz": "Auf dem Startbildschirm steht bei heutigen Aufgaben mit Uhrzeit die Zeit vor dem Titel, etwa „14:30: Paket abholen“."}
 ]
 }

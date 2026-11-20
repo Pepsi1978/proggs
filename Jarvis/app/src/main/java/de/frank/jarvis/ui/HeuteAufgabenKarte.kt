@@ -483,7 +483,7 @@ private fun MorgenBereich(vm: AppViewModel) {
 }
 
 /**
- * Eine heutige Aufgabe: nur der Titel, ohne Zusatzzeile, damit die Liste kompakt bleibt. Überfällige offene erkennt man am
+ * Eine heutige Aufgabe: Titel (mit Uhrzeit davor, „14:30: Titel“, wenn eine hinterlegt ist), ohne Zusatzzeile, damit die Liste kompakt bleibt. Überfällige offene erkennt man am
  * roten Titel; Uhrzeit und „überfällig“ liest TalkBack über die Zustandsbeschreibung vor.
  */
 @Composable
@@ -518,7 +518,7 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Uni
         ) {
         // Abstand innerhalb der Tippfläche: Ein knapper Tipp über, unter oder links vom Titel hakt trotzdem ab.
         Text(
-            a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
+            a.uhrzeit?.takeIf { it.isNotBlank() }?.let { "$it: ${a.titel}" } ?: a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
             color = when { a.erledigt -> f.textLeise; a.ueberfaellig -> f.gefahr; else -> f.text }, fontSize = 15.sp, fontWeight = FontWeight.Medium,
             textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
