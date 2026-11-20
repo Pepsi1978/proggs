@@ -206,9 +206,15 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         fun text(): String = if (wert == null) "nicht geliefert" else zahl(wert) + (if (einheit.isNotEmpty()) " $einheit" else "")
     }
 
-    data class Multiplayer(val stufe: Stufe?, val text: String, val begruendung: String)
+    data class Multiplayer(val stufe: Stufe?, val text: String, val begruendung: String, val veraltet: Boolean = false)
 
+    /** Veraltet oder ohne frische Abfrage: Die Einschätzung gilt dann nur für die Messzeit („zuletzt …“), nicht für jetzt. */
     fun multiplayer(s: Stand): Multiplayer {
+        val m = multiplayerRoh(s)
+        return if (s.veraltetGrund != null || gueltigkeit(s) == "veraltet") m.copy(text = "zuletzt " + m.text + " (Stand ${uhrzeit(s.zeit)})", veraltet = true) else m
+    }
+
+    private fun multiplayerRoh(s: Stand): Multiplayer {
         val p = s.ping ?: return Multiplayer(null, "nicht bewertbar", "keine Ping-Messung am Heimanschluss")
         val lat = p.zahl("latenz_ms"); val jit = p.zahl("jitter_ms"); val verlust = p.zahl("verlust_prozent")
         if (lat == null || verlust == null || jit == null) {
@@ -274,7 +280,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         fun nurMit(v: Double?) = if (da) v else null
         return listOf(
             Messwert("RSRP", rsrp, "dBm", rsrp?.let { stufe(it, -110.0, -100.0, -90.0, -80.0) }),
-            Messwert("RSRQ", nurMit(wert(i, "rsrq", "lte_rsrq")), "dB", nurMit(wert(i, "rsrq", "lte_rsrq"))?.let { stufe(it, -20.0, -15.0, -12.0, -10.0) },
+            Messwert("RSRQ (Signalqualität)", nurMit(wert(i, "rsrq", "lte_rsrq")), "dB", nurMit(wert(i, "rsrq", "lte_rsrq"))?.let { stufe(it, -20.0, -15.0, -12.0, -10.0) },
                 "Signalqualität (Störung und Last im Verhältnis zum Nutzsignal), keine direkte Auslastungsmessung"),
             Messwert("SINR", nurMit(wert(i, "sinr", "lte_sinr")), "dB", nurMit(wert(i, "sinr", "lte_sinr"))?.let { stufe(it, 0.0, 5.0, 13.0, 20.0) }),
             Messwert("CQI", nurMit(wert(i, "cqi", "lte_cqi")), "", nurMit(wert(i, "cqi", "lte_cqi"))?.let { stufe(it, 4.0, 7.0, 10.0, 12.0) }),
@@ -293,10 +299,15 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         val rssi = nurMit(wert(i, "ss_rssi", "nr_rssi", "ssRssi", "nr5g_rssi")?.takeIf { it < 0 })
         return listOf(
             Messwert("SS-RSRP", rsrp, "dBm", rsrp?.let { stufe(it, -110.0, -100.0, -90.0, -80.0) }),
-            Messwert("SS-RSRQ", rsrq, "dB", rsrq?.let { stufe(it, -20.0, -15.0, -12.0, -10.0) }, "Signalqualität, keine direkte Auslastungsmessung"),
+            Messwert("SS-RSRQ (Signalqualität)", rsrq, "dB", rsrq?.let { stufe(it, -20.0, -15.0, -12.0, -10.0) }, "Signalqualität, keine direkte Auslastungsmessung"),
             Messwert("SS-SINR", sinr, "dB", sinr?.let { stufe(it, 0.0, 5.0, 13.0, 20.0) }),
             Messwert("SS-RSSI", rssi, "dBm", rssi?.let { stufe(it, -95.0, -85.0, -75.0, -65.0) }, "grobe Einordnung"),
-        )
+        ) + run {
+            // Im 5G SA gibt es keine LTE-Werte; ein CQI gehört dann zum 5G (laut Messung vom 19.11.2026 kommt er dort mit).
+            val lteDa = wert(i, "rsrp", "lte_rsrp")?.let { it < 0 } == true
+            val cqi = if (da && !lteDa) wert(i, "cqi", "nr_cqi") else null
+            if (cqi != null) listOf(Messwert("CQI", cqi, "", stufe(cqi, 4.0, 7.0, 10.0, 12.0))) else emptyList()
+        }
     }
 
     /** Wie aktuell ein Stand ist: bis 10 Minuten aktuell, bis eine Stunde älter, danach veraltet. */
@@ -359,7 +370,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
             .put("zeit", s.zeit).put("quelle", s.quelle).put("gueltigkeit", gueltigkeit(s)).put("stand_text", kopf(s))
             .put("veraltet_grund", s.veraltetGrund ?: JSONObject.NULL)
             .put("modus_aktiv", aktiverModus(s) ?: JSONObject.NULL).put("modus_eingestellt", eingestellterModus(s) ?: JSONObject.NULL)
-            .put("multiplayer", JSONObject().put("stufe", m.stufe?.wort ?: JSONObject.NULL).put("text", m.text).put("begruendung", m.begruendung))
+            .put("multiplayer", JSONObject().put("stufe", if (m.veraltet) JSONObject.NULL else m.stufe?.wort ?: JSONObject.NULL).put("text", m.text).put("begruendung", m.begruendung).put("veraltet", m.veraltet))
             .put("abschnitte", JSONArray().put(verbindung).put(abschnitt("LTE (4G)", lte(s), bl)).put(abschnitt("5G (NR)", nr(s), bn)))
     }
 
@@ -600,6 +611,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val simInfo = roh.optJSONObject("simInfo") ?: JSONObject()
         val simWan = roh.optJSONObject("simWan") ?: JSONObject()
+        // Unterwegs eingerichtet: den WLAN-Namen beim ersten erfolgreichen Direktabruf nachtragen (danach prüft zuHause() ihn mit).
+        runCatching { SecureSettings(context).use { st -> if (st.tendaSsid.isBlank()) ssid()?.let { st.tendaSsid = it } } }
         val info = JSONObject()
         simInfo.keys().forEach { k -> val v = simInfo.opt(k); if (!GEHEIM.containsMatchIn(k) && (v is String || v is Number || v is Boolean) && v.toString().length <= 80) info.put(k, v) }
         val wan = JSONObject()

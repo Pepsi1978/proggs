@@ -672,6 +672,7 @@ def tenda_melden(rumpf: dict, versuche: int = 1) -> bool:
 
 TENDA_GESEHEN: list = []
 TENDA_SPERRE = threading.Lock()
+TENDA_SCHALTET = [0]   # laufende Schreibaufträge: solange kein Neustart der Brücke bei neuer Fassung (sonst bliebe etwa Connect halb getrennt)
 
 
 def tenda_befehl(befehl: dict) -> None:
@@ -698,7 +699,11 @@ def tenda_befehl(befehl: dict) -> None:
             return
         tenda_melden({"kennung": kennung, "angenommen": True})
         schreib(f"Tenda: {art} {wert}".strip())
-        ergebnis = jarvis_tenda.aktion(art, wert)
+        TENDA_SCHALTET[0] += 1
+        try:
+            ergebnis = jarvis_tenda.aktion(art, wert)
+        finally:
+            TENDA_SCHALTET[0] -= 1
         schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
         tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
     except jarvis_tenda.TendaFehler as fehler:
@@ -752,7 +757,8 @@ def main() -> int:
     tenda_stand = tenda_datei.stat().st_mtime if tenda_datei.exists() else 0
     while True:
         try:
-            if Path(__file__).stat().st_mtime != eigener_stand or (tenda_datei.exists() and tenda_datei.stat().st_mtime != tenda_stand):
+            if (Path(__file__).stat().st_mtime != eigener_stand or (tenda_datei.exists() and tenda_datei.stat().st_mtime != tenda_stand)) \
+                    and not TENDA_SCHALTET[0]:
                 schreib("Neue Fassung, Neustart")
                 return 0
             if time.time() - letzter_scan >= 30:

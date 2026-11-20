@@ -2144,6 +2144,7 @@ class TendaStand:
         self.kanal.tenda_auftraege.append(auftrag)
         self.kanal.befehl.set()
         ende = time.monotonic() + (45 if art in ("lesen", "zugang") else 25)
+        ausgaben = 1
         try:
             # Ging der Auftrag an eine tote Abfrage (Brücke gerade neu gestartet, Netz kurz weg), fehlt die Empfangsquittung:
             # nach 8 s erneut ausgeben. Die Brücke führt jede Kennung höchstens einmal aus, also nie ein doppelter Schreibvorgang.
@@ -2156,9 +2157,17 @@ class TendaStand:
                 except asyncio.TimeoutError:
                     if zukunft.done():
                         continue
-                    if kennung not in self.quittiert and auftrag not in self.kanal.tenda_auftraege:
-                        self.kanal.tenda_auftraege.append(auftrag)
-                        self.kanal.befehl.set()
+                    if kennung not in self.quittiert:
+                        # Zweimal ohne Empfangsquittung: Die Brücke ist weg (Mac aus, Abfrage tot). Dann sofort melden, damit das
+                        # Handy im Heim-WLAN selbst einspringt, statt 45 s zu warten.
+                        # Nur beim Lesen: Ein Schreibauftrag, der doch noch ankam, darf nie zusätzlich vom Handy ausgeführt werden.
+                        if ausgaben >= 2 and art in ("lesen", "zugang"):
+                            self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
+                            return web.json_response({"ergebnis": "mac_nicht_verbunden", "kennung": kennung})
+                        if auftrag not in self.kanal.tenda_auftraege:
+                            self.kanal.tenda_auftraege.append(auftrag)
+                            self.kanal.befehl.set()
+                        ausgaben += 1
         except asyncio.TimeoutError:
             self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
             return web.json_response({"ergebnis": "keine_rueckmeldung" if art in ("lesen", "zugang") else "unklar", "kennung": kennung})
