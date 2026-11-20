@@ -837,6 +837,7 @@
     {"versionCode": 828, "versionName": "1.8.817", "stand": "20.11.2026, 12:31 Uhr", "notiz": "Tenda Internet liest den Router nur noch stündlich von selbst; der Aktualisieren-Knopf und jede Frage holen weiterhin sofort frische Werte."},
     {"versionCode": 829, "versionName": "1.8.818", "stand": "20.11.2026, 12:32 Uhr", "notiz": "Leise Rufe des Weckworts kommen nach einem lauten Geräusch nicht mehr zu leise beim Erkenner an, und der Anfang der Phrase wird nach einer Stille vollständig nachgeholt."},
     {"versionCode": 830, "versionName": "1.8.819", "stand": "20.11.2026, 12:35 Uhr", "notiz": "Tenda Internet schaltet nie doppelt (auch bei Doppelklick oder Netzfehler), stellt nach Connect die Verbindung sicher wieder her, misst am Handy nur über das Heim-WLAN und blendet Zellkennungen aus."},
-    {"versionCode": 831, "versionName": "1.8.820", "stand": "20.11.2026, 12:37 Uhr", "notiz": "Der Diagnose-Mitschnitt des Weckworts läuft über Gespräche hinweg weiter, statt sich beim erneuten Lauschen zu überschreiben."}
+    {"versionCode": 831, "versionName": "1.8.820", "stand": "20.11.2026, 12:37 Uhr", "notiz": "Der Diagnose-Mitschnitt des Weckworts läuft über Gespräche hinweg weiter, statt sich beim erneuten Lauschen zu überschreiben."},
+    {"versionCode": 832, "versionName": "1.8.821", "stand": "20.11.2026, 12:43 Uhr", "notiz": "Die Weckphrase wird über den Anker nach einer Pause zuverlässiger erkannt: Der Erkenner bekommt unhörbares Grundrauschen statt reiner Stille und immer zwei Sekunden Vorlauf."}
 ]
 }

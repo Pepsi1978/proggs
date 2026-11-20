@@ -494,9 +494,12 @@ class WeckwortDienst : Service() {
                     // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
                     // setzt ihn in Stille von selbst zurück und verliert dabei den Anfang eines Rufs (Almanach §16).
                     phr?.zuruecksetzen()
-                    for (k in minOf(uebersprungen, NACHHOLEN) downTo 1) {
+                    // Der frische Spotter bekommt immer die vollen 2 s Vorlauf aus dem Ring, auch wenn der Filter kürzer schlief:
+                    // Mit nur gut 1 s Vorlauf verpasste er im Mitschnitt einen deutlichen Ruf, mit 2 s nicht. „Hey Jarvis“ bekommt
+                    // nur, was es noch nicht gehört hat.
+                    for (k in (if (phr != null) NACHHOLEN else minOf(uebersprungen, NACHHOLEN)) downTo 1) {
                         val frueher = frueherBlock(k)
-                        if (brauchtLaut) erk.bewerte(frueher)
+                        if (brauchtLaut && k <= uebersprungen) erk.bewerte(frueher)
                         // Ein Treffer schon im nachgeholten Ton zählt: Der Spotter hat danach zurückgesetzt und meldet ihn nicht noch einmal.
                         if (phr?.erkannt(frueher, boden) == true) nachgeholt = true
                     }

@@ -91,6 +91,7 @@ class PhrasenErkenner(
     /** Verstärkung vor dem Spotter: leise und entfernte Rufe in den Pegelbereich bringen, den das Modell kennt. */
     var verstaerkung = 1f
         private set
+    private val zufall = java.util.Random()
 
     /** Zielverstärkung für den Rauschboden: im ruhigen Raum bis [MAX_VERSTAERKUNG], im Lärm 1. */
     private fun ziel(rauschboden: Float) = if (rauschboden > 0f) (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG) else 1f
@@ -117,7 +118,9 @@ class PhrasenErkenner(
         for (w in block) { val a = kotlin.math.abs(w.toInt()); if (a > spitze) spitze = a }
         val spitzeFloat = spitze / 32768f
         if (spitzeFloat * verstaerkung > GRENZE) verstaerkung = maxOf(1f, GRENZE / spitzeFloat)
-        for (i in block.indices) puffer[i] = (block[i] / 32768f * verstaerkung).coerceIn(-1f, 1f)
+        // Unhörbares Grundrauschen (etwa -80 dBFS): Der Anker liefert zwischen den Wörtern reine Nullen (eigene Stummschaltung),
+        // und auf echter Nullstille verpasste das Modell im Mitschnitt vom 20.11.2026 deutliche Rufe, die es mit Rauschen erkannte.
+        for (i in block.indices) puffer[i] = (block[i] / 32768f * verstaerkung).coerceIn(-1f, 1f) + (zufall.nextFloat() - zufall.nextFloat()) * RAUSCHEN
         strom.acceptWaveform(if (block.size == puffer.size) puffer else puffer.copyOf(block.size), WeckwortErkenner.ABTASTRATE)
         // Pflicht: so lange dekodieren, wie Daten bereitliegen, nicht nur einmal (Almanach #21).
         while (spotter.isReady(strom)) spotter.decode(strom)
@@ -136,6 +139,8 @@ class PhrasenErkenner(
 
     companion object {
         private const val BOOST = 2.0f
+        /** Spitze des Grundrauschens (dreieckig verteilt, Effektivwert etwa 1e-4, also -80 dBFS). */
+        private const val RAUSCHEN = 2.5e-4f
         /** Mit Stimmerkennung: stärkerer Boost, damit auch schnell und verschliffen Gesprochenes greift. */
         private const val BOOST_BREIT = 3.0f
 
