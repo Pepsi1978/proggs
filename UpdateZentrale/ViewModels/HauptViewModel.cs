@@ -528,6 +528,20 @@ public sealed partial class HauptViewModel : ObservableObject
 
     private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz)
     {
+        // Check failures of this pass are collected and go to ONE Claude Code session at its end.
+        PruefFehlerUebergabe.SammelpruefungLaeuft = true;
+        try
+        {
+            await AllePruefenKernAsync(besitz);
+        }
+        finally
+        {
+            PruefFehlerUebergabe.SammelpruefungLaeuft = false;
+        }
+    }
+
+    private async Task AllePruefenKernAsync(Laufbesitz besitz)
+    {
         // A snapshot: the list must not shift under the run (reload is blocked meanwhile, this is
         // the second layer).
         var liste = Programme.ToList();

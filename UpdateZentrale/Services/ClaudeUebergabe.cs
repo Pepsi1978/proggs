@@ -142,7 +142,7 @@ public static class ClaudeUebergabe
     /// which cmd.exe reads in the OEM code page and would garble umlauts in.
     /// </param>
     /// <param name="auftrag">The task text.</param>
-    private static async Task<(string? Problem, bool Vielleicht)> SitzungStartenAsync(string dateiName, string sitzungsName, Func<string> auftrag)
+    internal static async Task<(string? Problem, bool Vielleicht)> SitzungStartenAsync(string dateiName, string sitzungsName, Func<string> auftrag)
     {
         if (!File.Exists(OpenCodeSitzungAktualisierer.LauncherExe))
             return ("OpenLauncher nicht gefunden: " + OpenCodeSitzungAktualisierer.LauncherExe, false);
@@ -169,8 +169,8 @@ public static class ClaudeUebergabe
         }
     }
 
-    private const string OhneAdminHinweis = "Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.";
-    private const string BeendenHinweis = "Beende andere laufende Programme nicht ohne Rückfrage.";
+    internal const string OhneAdminHinweis = "Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.";
+    internal const string BeendenHinweis ="Beende andere laufende Programme nicht ohne Rückfrage.";
     private const string RueckfrageHinweis = "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.";
 
     private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar, string befehl,

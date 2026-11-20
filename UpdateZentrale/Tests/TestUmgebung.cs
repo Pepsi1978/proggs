@@ -38,6 +38,7 @@ internal static class TestUmgebung
     {
         Directory.CreateDirectory(LogOrdner);
         Protokollierung.Ordner = LogOrdner;
+        PruefFehlerUebergabe.Aktiv = false;
 
         // The folder lives only as long as the test run: removed when the test host ends.
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>

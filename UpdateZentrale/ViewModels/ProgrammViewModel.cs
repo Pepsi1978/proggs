@@ -1220,6 +1220,28 @@ public sealed partial class ProgrammViewModel : ObservableObject
             OnPropertyChanged(nameof(VersionsText));
             OnPropertyChanged(nameof(Protokoll));
         }
+
+        // A failed CHECK goes to a Claude Code session as well, not only a failed update.
+        if (art == "pruefung" && Zustand == UpdateZustand.Fehler) PruefFehlerMelden();
+    }
+
+    private void PruefFehlerMelden()
+    {
+        try
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher?.HasShutdownStarted == true) return;
+            PruefFehlerUebergabe.Melden(new PruefFehlerUebergabe.Fall(Eintrag, StatusText ?? "", Protokoll, DateTime.Now,
+                text =>
+                {
+                    if (dispatcher is null) return;
+                    dispatcher.BeginInvoke(() => { if (Zustand == UpdateZustand.Fehler) StatusText = text; });
+                }), _einstellungen);
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
+        }
     }
 
     /// <summary>

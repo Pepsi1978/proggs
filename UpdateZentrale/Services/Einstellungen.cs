@@ -31,6 +31,12 @@ public sealed class ProgrammEinstellung
     public DateTime? AutomatischUebergebenAm { get; set; }
 
     /// <summary>
+    /// Wann zuletzt ein PRUEF-Fehler dieses Programms automatisch an Claude Code ging -- eigene
+    /// Sperrfrist, getrennt von den Update-Fehlern.
+    /// </summary>
+    public DateTime? PruefFehlerUebergebenAm { get; set; }
+
+    /// <summary>
     /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die
     /// Karte es nicht erneut an und der Sammellauf laesst es aus; eine Pruefung mit "aktuell" loescht es.
     /// </summary>
