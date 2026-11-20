@@ -118,11 +118,7 @@
       "id": "M4",
       "titel": "jarvis-install verbindet bei gescheitertem Hochladen neu und versucht es erneut",
       "datum": "2026-11-08T18:30",
-      "status": {
-        "windows": "wirkt",
-        "mac": "aktiv",
-        "linux": "aktiv"
-      },
+      "status": {"windows": "wirkt", "mac": "wirkt", "linux": "aktiv"},
       "beleg": "Sitzung 48b5e2c4 (08.11.2026): Hochladen über den hängenden Tunnel 10.8.0.7 scheiterte, danach 3 Handaufrufe (ip addr, adb-wlan.ps1) und ein zweiter Install-Lauf, etwa 1,5 min Agent-Zeit. Korrektur 12.11.2026: Im Zweitversuch setzten pwsh/adb devices LASTEXITCODE auf 0, ohne Gerät lief das Skript ohne Upload weiter; jetzt gilt der Zweitversuch ohne Push als gescheitert.",
       "ort": [
         "Werkzeuge/jarvis-install/jarvis-install.ps1 (Push-Fehlerzweig)",
@@ -226,7 +222,7 @@
       "id": "M11",
       "titel": "Python-Ersetzskripte: CRLF vor dem Suchen normalisieren",
       "datum": "2026-11-11T16:48",
-      "status": "aktiv",
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"},
       "beleg": "Sitzung 9d83ba1b: mehrzeiliges str.replace auf EingabeBlase.kt (CRLF) scheiterte mit AssertionError, danach zerlegte ein sed-Flicken das Skript; ~2 min und 5 Aufrufe.",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/lange-skripte-per-write.md (Absatz **Ersetzskripte:**)",
@@ -373,7 +369,7 @@
       "id": "M21",
       "titel": "Worktree-Bau neben paralleler Jarvis-Sitzung: rebase + Versionseintrag direkt vor dem letzten Bau, Konfliktmarker vor Commit suchen",
       "datum": "2026-11-12T11:10",
-      "status": "aktiv",
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"},
       "beleg": "Sitzung 3e1741cc: 3 Rebase-Konflikte in versionslog.json (je Neubau ~2-4 min), 1 Konfliktmarker in funktionen.md mitcommittet, eigener Korrektur-Commit. Korrektur 12.11.2026: Die erste Fassung bumpte nach dem Bau, das widersprach M2/M16 (APK mit alter versionCode, jarvis-install-Abbruch 645 gegen 644).",
       "ort": [
         "minimal/projects/C--Users-barwa-proggs/memory/parallele-sitzung-nimmt-dateien-mit.md (Punkt 'Versionseintrag im Worktree erst direkt vor dem letzten Bau')",
@@ -499,7 +495,7 @@
       "ruecknahme": "Die Zeile '`git add <pfade>` bricht komplett ab' aus commit-nur-mit-pfaden.md und Kurzcheck Nr. 3 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext",
       "fehler_am_aufruf": true,
-      "status": "aktiv"
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"}
     },
     {
       "id": "M29",
@@ -596,7 +592,7 @@
       "pruefung": "Nach 10 Sitzungen: keine Zeitlimit-Meldung über 99 s",
       "ruecknahme": "mit_zeitlimit-Aufrufe im Hook entfernen, Regel aus den Profilen streichen",
       "kosten": "eine Profilregel",
-      "status": "aktiv"
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"}
     },
     {
       "id": "M34",
@@ -695,7 +691,7 @@
       "kosten": "0 Kontext, ein git fetch je Eintrag",
       "messbar": true,
       "fehler_am_aufruf": true,
-      "status": "aktiv"
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"}
     },
     {
       "id": "M39",
@@ -714,7 +710,7 @@
       "ruecknahme": "Die Zeile 'Nur geänderte, schon versionierte Dateien: `git add -u' aus commit-nur-mit-pfaden.md und Kurzcheck Nr. 4 aus bugs/werkzeuge/git-parallele-sitzungen.md entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei, kein Dauerkontext",
       "fehler_am_aufruf": true,
-      "status": "aktiv"
+      "status": {"windows": "aktiv", "mac": "wirkt", "linux": "aktiv"}
     },
     {
       "id": "M40",
