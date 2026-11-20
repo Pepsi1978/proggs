@@ -36,6 +36,8 @@ public sealed partial class HauptViewModel : ObservableObject
 
     public HauptViewModel()
     {
+        // No check-failure session starts while any batch (check all, update all) runs.
+        PruefFehlerUebergabe.SammelLaeuft = () => LaeuftSammelvorgang;
         Programme = new ObservableCollection<ProgrammViewModel>();
         Ansicht = CollectionViewSource.GetDefaultView(Programme);
         // A card whose measured duration changes moves at once while "⏱ nach Dauer" is on.

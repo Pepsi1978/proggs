@@ -1222,20 +1222,27 @@ public sealed partial class ProgrammViewModel : ObservableObject
         }
 
         // A failed CHECK goes to a Claude Code session as well, not only a failed update.
-        if (art == "pruefung" && Zustand == UpdateZustand.Fehler) PruefFehlerMelden();
+        if (art == "pruefung")
+        {
+            if (Zustand == UpdateZustand.Fehler) PruefFehlerMelden(_letztePruefung?.Meldung ?? StatusText);
+            else PruefFehlerUebergabe.Erledigt(Eintrag.Id);
+        }
     }
 
-    private void PruefFehlerMelden()
+    private void PruefFehlerMelden(string? meldung)
     {
         try
         {
-            var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher?.HasShutdownStarted == true) return;
-            PruefFehlerUebergabe.Melden(new PruefFehlerUebergabe.Fall(Eintrag, StatusText ?? "", Protokoll, DateTime.Now,
-                text =>
+            if (System.Windows.Application.Current?.Dispatcher.HasShutdownStarted == true) return;
+            // Runs on the UI thread: the collector continues on this context, so the callbacks do too.
+            var angezeigt = StatusText;
+            PruefFehlerUebergabe.Melden(new PruefFehlerUebergabe.Fall(Eintrag, meldung ?? "", Protokoll, DateTime.Now,
+                () => Zustand == UpdateZustand.Fehler && !IstBeschaeftigt && StatusText == angezeigt,
+                (text, _) =>
                 {
-                    if (dispatcher is null) return;
-                    dispatcher.BeginInvoke(() => { if (Zustand == UpdateZustand.Fehler) StatusText = text; });
+                    if (Zustand != UpdateZustand.Fehler || IstBeschaeftigt || StatusText != angezeigt) return;
+                    StatusText = text;
+                    angezeigt = text;
                 }), _einstellungen);
         }
         catch (Exception diagAusnahme)

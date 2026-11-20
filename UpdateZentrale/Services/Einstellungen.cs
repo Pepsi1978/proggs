@@ -31,8 +31,8 @@ public sealed class ProgrammEinstellung
     public DateTime? AutomatischUebergebenAm { get; set; }
 
     /// <summary>
-    /// Wann zuletzt ein PRUEF-Fehler dieses Programms automatisch an Claude Code ging -- eigene
-    /// Sperrfrist, getrennt von den Update-Fehlern.
+    /// When a CHECK failure of this program last went to Claude Code automatically -- its own
+    /// lock, separate from the update failures.
     /// </summary>
     public DateTime? PruefFehlerUebergebenAm { get; set; }
 

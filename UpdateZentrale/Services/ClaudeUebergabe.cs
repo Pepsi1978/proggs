@@ -45,7 +45,7 @@ public static class ClaudeUebergabe
     /// programs. Sessions for different programs can still run side by side; the task text therefore
     /// tells them how to share main. Who comes later waits and is then checked against the lock.
     /// </summary>
-    private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
+    internal static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
     /// <summary>
     /// Every run the card shows as an error, including "not verified", which can also mean a state that
@@ -171,7 +171,7 @@ public static class ClaudeUebergabe
 
     internal const string OhneAdminHinweis = "Diese Sitzung läuft ohne Administratorrechte. Eine Windows-Rechteabfrage bei Installern unter „Program Files“ ist deshalb normal und kein Fehler des Update-Wegs.";
     internal const string BeendenHinweis ="Beende andere laufende Programme nicht ohne Rückfrage.";
-    private const string RueckfrageHinweis = "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.";
+    internal const string RueckfrageHinweis = "Ein Nein oder keine Antwort in einem Rückfragefenster (cancelled, no-answer) ist kein Klemmen: nicht erneut starten, sondern melden.";
 
     private static string UpdateAuftragText(ProgrammEintrag eintrag, string installiert, string verfuegbar, string befehl,
                                             bool beendenZugestimmt, bool skriptZugestimmt)
