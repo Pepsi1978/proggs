@@ -71,8 +71,8 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier) {
                 Text(
                     when {
                         sichtbar.isNotEmpty() -> if (sichtbar.size == 1) "1 wichtige E-Mail" else "${sichtbar.size} wichtige E-Mails"
-                        s.bestaetigt -> "Keine wichtigen E-Mails"
                         s.eintraege.isNotEmpty() -> "Keine weiteren wichtigen E-Mails"
+                        s.bestaetigt -> "Keine wichtigen E-Mails"
                         else -> "Wichtige E-Mails"
                     },
                     color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold,
