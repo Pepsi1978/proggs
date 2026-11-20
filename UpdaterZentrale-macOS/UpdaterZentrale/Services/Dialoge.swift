@@ -5,12 +5,14 @@ import AppKit
 @MainActor
 enum Dialoge {
     /// Titel des gerade offenen Fensters: die Fernsteuerung meldet es als "wartet auf Freigabe am Mac".
-    private(set) static var offenerTitel: String?
+    /// Bei verschachtelten Fenstern zählt das innerste; schließt es, gilt wieder das äußere.
+    private static var offeneTitel: [String] = []
+    static var offenerTitel: String? { offeneTitel.last }
 
     private static func zeigen(_ fenster: NSAlert) -> NSApplication.ModalResponse {
-        offenerTitel = fenster.messageText
+        offeneTitel.append(fenster.messageText)
         Fernsteuerung.shared.sofortMelden()
-        defer { offenerTitel = nil; Fernsteuerung.shared.sofortMelden() }
+        defer { offeneTitel.removeLast(); Fernsteuerung.shared.sofortMelden() }
         return fenster.runModal()
     }
     /// Fragt nach und gibt true bei "Ja" zurueck. "Nein" ist wie unter Windows die Vorgabe:

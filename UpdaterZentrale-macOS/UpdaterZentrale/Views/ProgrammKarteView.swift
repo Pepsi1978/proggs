@@ -87,8 +87,8 @@ final class ProgrammKarteView: KartenView {
         addSubview(kennzeichen)
 
         // --- Mitte ---
-        cliWarnung.toolTip = modell.cliRisiko
-        cliWarnung.isHidden = !modell.kannCliBeenden
+        cliWarnung.toolTip = modell.eintrag.cliKritischGrund
+        cliWarnung.isHidden = !modell.eintrag.istCliKritisch
         let plakettenReihe = NSStackView(views: [nameBeschriftung, cliWarnung, artPlakette, laeuftPlakette, autostartPlakette])
         plakettenReihe.orientation = .horizontal
         plakettenReihe.alignment = .centerY

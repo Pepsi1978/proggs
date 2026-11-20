@@ -119,17 +119,26 @@ final class Fernsteuerung {
         guard let modell else { return }
         switch art {
         case "pruefen":
-            if vorgangLaeuft && vorgang?["art"] as? String == "pruefen" { return }   // hängt sich an die laufende Prüfung
+            if vorgangLaeuft && vorgang?["art"] as? String == "pruefen" {
+                // Hängt sich an die laufende Prüfung; die Kennung steht im Stand, damit der Relay den Auftrag als angekommen sieht.
+                return setzen(["angehaengt": kennung])
+            }
             if vorgangLaeuft || modell.laufArt == "installation" {
                 abweisen(kennung, art, "Am Mac läuft gerade eine Installation – geprüft wird danach von selbst.")
                 return
             }
-            beginnen(kennung, art, "Prüft alle Programme …")
-            if modell.laufArt == "pruefung" || !modell.erstePruefungFertig {
-                // Eine Prüfung läuft schon (etwa die Anfangsprüfung nach dem Start durch die Brücke): sie ist die frische.
-                guard await frei(900) else { return setzen(["phase": "fehler", "text": "Die Prüfung am Mac ist nach 15 Minuten nicht fertig.", "ende": jetzt]) }
-            } else {
+            let anhaengen = modell.laufArt == "pruefung" || !modell.erstePruefungFertig
+            beginnen(kennung, art, modell.belegt && !anhaengen ? "Wartet auf das Ende des laufenden Vorgangs am Mac …" : "Prüft alle Programme …")
+            let vorher = modell.pruefungEnde
+            // Läuft schon eine Prüfung (etwa die Anfangsprüfung nach dem Start durch die Brücke), ist sie die frische;
+            // hält ein anderer Vorgang (Update einer Karte) den Besitz, erst sein Ende abwarten.
+            guard await frei(900) else { return setzen(["phase": "fehler", "text": "Am Mac lief nach 15 Minuten noch ein anderer Vorgang – nicht geprüft.", "ende": jetzt]) }
+            if !anhaengen || modell.pruefungEnde == vorher {
+                setzen(["text": "Prüft alle Programme …"])
                 await modell.allePruefen()
+            }
+            guard let ende = modell.pruefungEnde, ende != vorher else {
+                return setzen(["phase": "fehler", "text": "Die Prüfung kam am Mac nicht zustande: " + modell.kopfStatus, "ende": jetzt])
             }
             setzen(["phase": "fertig", "text": modell.kopfStatus, "ende": jetzt])
         case "unkritisch", "kritisch":
@@ -164,7 +173,10 @@ final class Fernsteuerung {
         var ergebnisse: [[String: Any]] = []
         var ok = 0, neustart: [String] = []
         for id in ids {
-            guard let p = modell.programme.first(where: { $0.eintrag.id == id }) else { continue }
+            guard let p = modell.programme.first(where: { $0.eintrag.id == id }) else {
+                ergebnisse.append(["name": id, "ok": false, "text": "nicht mehr im Katalog – Ergebnis unbekannt"])
+                continue
+            }
             var e: [String: Any] = ["name": p.name]
             if let b = p.letzterBericht, b.zeit >= beginn.addingTimeInterval(-5) {
                 switch b.ergebnis {
@@ -204,7 +216,8 @@ final class Fernsteuerung {
         if let titel = Dialoge.offenerTitel { return "Fenster am Mac offen: „\(titel)“" }
         guard let modell else { return "" }
         for p in modell.programme where p.istBeschaeftigt {
-            let letzte = p.protokoll.split(separator: "\n").last.map(String.init) ?? ""
+            let text = p.protokoll.hasSuffix("\n") ? String(p.protokoll.dropLast()) : p.protokoll
+            let letzte = text.range(of: "\n", options: .backwards).map { String(text[$0.upperBound...]) } ?? text
             if letzte.contains("Ja/Nein") { return "\(p.name): Ja/Nein-Fenster am Mac beantworten" }
             if letzte.localizedCaseInsensitiveContains("passwort") { return "\(p.name): Mac-Passwort am Mac eingeben" }
         }

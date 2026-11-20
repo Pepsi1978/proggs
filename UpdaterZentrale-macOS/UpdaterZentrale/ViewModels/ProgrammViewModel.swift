@@ -385,8 +385,8 @@ final class ProgrammViewModel {
     func updateAnCliUebergeben() async {
         guard !uebergibtAnClaude, kannAnCliUebergeben else { return }
 
-        if kannCliBeenden && !Dialoge.fragen(
-            "\(name) kann laufende CLI-Sitzungen beenden:\n\n\(eintrag.cliRisiko ?? "")"
+        if eintrag.istCliKritisch && !Dialoge.fragen(
+            "\(name) ist CLI-kritisch und kann laufende Programmierarbeit unterbrechen:\n\n\(eintrag.cliKritischGrund ?? "")"
             + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem an eine CLI-Sitzung übergeben?",
             "CLI-Sitzungen in Gefahr") {
             return
@@ -481,8 +481,8 @@ final class ProgrammViewModel {
     /// Ein Klick auf der Karte. Eine riskante Karte bekommt dieselbe Warnung, die der Sammellauf
     /// durch das Zurueckhalten gibt.
     func aktualisierenGeklickt() async {
-        if kannCliBeenden && !Dialoge.fragen(
-            "\(name) kann laufende CLI-Sitzungen beenden:\n\n\(eintrag.cliRisiko ?? "")"
+        if eintrag.istCliKritisch && !Dialoge.fragen(
+            "\(name) ist CLI-kritisch und kann laufende Programmierarbeit unterbrechen:\n\n\(eintrag.cliKritischGrund ?? "")"
             + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem aktualisieren?",
             "CLI-Sitzungen in Gefahr") {
             return

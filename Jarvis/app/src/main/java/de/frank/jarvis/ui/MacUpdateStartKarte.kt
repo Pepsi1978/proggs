@@ -106,12 +106,14 @@ object MacUpdateZentrale {
         bereich.launch {
             val text = withContext(Dispatchers.IO) {
                 val e = Einstellungen.get(context)
+                if (e.serverToken.isBlank()) return@withContext "Kein Server eingerichtet. Es wurde nichts gestartet."
                 try {
                     val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/updatezentrale-befehl")
                         .post(JSONObject().put("art", art).toString().toRequestBody(JSON))
                         .header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung).build()
                     NETZ.newCall(anfrage).execute().use { a ->
-                        check(a.isSuccessful) { "HTTP ${a.code}" }
+                        // Eine Fehlerantwort heißt: Der Relay hat nichts eingereiht.
+                        if (!a.isSuccessful) return@use "Der Server hat den Auftrag abgelehnt (HTTP ${a.code}). Es wurde nichts gestartet."
                         val j = JSONObject(a.body?.string().orEmpty())
                         when (j.optString("ergebnis")) {
                             "angenommen" -> { eigeneKennung.value = j.optString("kennung"); null }
@@ -122,7 +124,9 @@ object MacUpdateZentrale {
                         }
                     }
                 } catch (f: Exception) {
-                    if (f is ConnectException || f is UnknownHostException) "Server nicht erreichbar. Es wurde nichts gestartet."
+                    val nieGesendet = f is ConnectException || f is UnknownHostException ||
+                        (f is java.net.SocketTimeoutException && f.message.orEmpty().contains("connect", ignoreCase = true))
+                    if (nieGesendet) "Server nicht erreichbar. Es wurde nichts gestartet."
                     else "Verbindung abgebrochen. Ob der Auftrag ankam, ist unklar – er wird nicht erneut gesendet; die Karte zeigt gleich den Stand des Macs."
                 }
             }
@@ -157,7 +161,10 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
 
     val s = l.stand
     val vorgang = s?.optJSONObject("vorgang")
-    val laeuft = s != null && (s.optBoolean("laeuft") || vorgang?.optString("phase") == "laeuft")
+    // Nur solange die App am Mac lebt: Ist sie beendet oder abgestürzt, bleibt der alte Stand sonst für immer „läuft“, und
+    // Aktualisieren (startet die App über die Brücke neu) wäre gesperrt.
+    val laeuft = l.app && s != null && (s.optBoolean("laeuft") || vorgang?.optString("phase") == "laeuft")
+    val beendet = !l.app && s != null && (s.optBoolean("laeuft") || vorgang?.optString("phase") == "laeuft")
     // Während eines Laufs meldet der Mac mindestens alle 30 s: Bleibt das aus, ist die Verbindung weg und der Stand unklar.
     val abgerissen = laeuft && ((l.alterS ?: 0) > 120 || !l.macDa)
     val eilig by androidx.compose.runtime.rememberUpdatedState(laeuft || sendet != null)
@@ -244,6 +251,7 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
                 Text("Aktualisieren prüft nur und installiert nichts. Grün installiert sofort nur die unkritischen Updates; die kritischen starten nie von selbst danach.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
 
+                if (beendet) Hinweis("Die Update-Zentrale am Mac wurde während des Vorgangs beendet. Ergebnis unklar – Aktualisieren startet sie neu und prüft.", Color(0xFFF5A524))
                 if (abgerissen) Hinweis("Keine Rückmeldung vom MacBook seit ${(l.alterS ?: 0) / 60} Min. Der Stand ist unklar; es wird nichts erneut gestartet.", f.gefahr)
                 if (laeuft && s != null) {
                     val fo = s.optJSONArray("fortschritt")

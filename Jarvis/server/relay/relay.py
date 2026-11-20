@@ -2284,8 +2284,8 @@ class UpdateZentraleStand:
         v = (self.stand or {}).get("vorgang") or {}
         if self.app and jetzt - self.empfangen < 90 and v.get("phase") == "laeuft":
             return v.get("text") or "Am Mac läuft bereits ein Vorgang."
-        if self.offen and jetzt - self.offen["zeit"] < 60 and v.get("kennung") != self.offen["kennung"] \
-                and ((self.stand or {}).get("abgewiesen") or {}).get("kennung") != self.offen["kennung"]:
+        angekommen = {v.get("kennung"), v.get("angehaengt"), ((self.stand or {}).get("abgewiesen") or {}).get("kennung")}
+        if self.offen and jetzt - self.offen["zeit"] < 60 and self.offen["kennung"] not in angekommen:
             return "Ein Auftrag ist gerade unterwegs zum Mac."
         return None
 
@@ -2326,7 +2326,8 @@ class UpdateZentraleStand:
                 except asyncio.TimeoutError:
                     if zukunft.done():
                         continue
-                    if kennung not in self.quittiert and auftrag not in self.kanal.uz_auftraege:
+                    # Nur nie Abgeholtes erneut ausgeben: Abgeholt ohne Quittung bleibt „unklar“ (nie doppelt installieren).
+                    if kennung not in self.quittiert and kennung not in self.kanal.uz_ausgegeben and auftrag not in self.kanal.uz_auftraege:
                         self.kanal.uz_auftraege.append(auftrag)
                         self.kanal.befehl.set()
         except asyncio.TimeoutError:
