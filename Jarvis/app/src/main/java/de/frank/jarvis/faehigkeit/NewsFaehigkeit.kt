@@ -107,7 +107,10 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val anfrage = JSONObject().put("tage", a.optInt("tage", 2).coerceIn(1, 10))
         a.optString("rubrik").trim().takeIf { it.isNotEmpty() }?.let { anfrage.put("rubrik", it) }
-        val antwort = rufe("lesen", anfrage)
+        var antwort = rufe("lesen", anfrage)
+        // Rubriken, die seltener als täglich sammeln: ohne Lauf in den letzten zwei Tagen zehn Tage zurück, damit auch ihre neueste Ausgabe zählt.
+        val ohneLauf = antwort.optJSONArray("rubriken")?.let { r -> (0 until r.length()).any { r.getJSONObject(it).optLong("letzter_lauf") == 0L } } == true
+        if (ohneLauf && a.optInt("tage", 0) <= 0) rufe("lesen", JSONObject(anfrage.toString()).put("tage", 10)).takeIf { !it.has("fehler") }?.let { antwort = it }
         antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let {
             return Ergebnis("NEWS-KOMPASS NICHT ERREICHBAR: $it Sag Frank klar, dass News-Kompass gerade nicht gelesen werden konnte (das ist nicht „keine neuen Meldungen“).", fehler = true)
         }
@@ -128,7 +131,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             val zeiten = (r.optJSONArray("uhrzeiten") ?: JSONArray()).let { z -> (0 until z.length()).joinToString(" und ") { z.optString(it) } }
             stand.append("- ").append(r.optString("name").ifBlank { r.optString("titel") })
             if (zeiten.isNotEmpty()) stand.append(" (sammelt um ").append(zeiten).append(" Uhr)")
-            stand.append(": letzter Stand ").append(if (letzter > 0) zeit(letzter) else "keiner in den letzten Tagen")
+            stand.append(": letzter Stand ").append(if (letzter > 0) zeit(letzter) else "keiner in den letzten 10 Tagen")
             if (r.optBoolean("nichts_neues")) stand.append(", beim letzten Lauf nichts Neues gefunden")
             r.optString("fehler").takeIf { it.isNotBlank() }?.let { stand.append(", letzter Lauf gescheitert: ").append(it.take(160)) }
             // Ein fälliger Termin ohne Ausgabe danach (mehr als 20 Minuten her): älterer Stand, nicht „nichts Neues“.

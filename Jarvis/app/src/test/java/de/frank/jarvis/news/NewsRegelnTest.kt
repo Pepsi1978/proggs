@@ -31,4 +31,34 @@ class NewsRegelnTest {
         assertFalse(NewsRegeln.spoiler(NewsMeldung("x", "Fußball", "Bayern gewinnt 3:0")))
         assertEquals("Kobel fehlt.", NewsRegeln.ohneErgebnis("Dortmund gewinnt 3:1. Kobel fehlt."))
     }
+
+    /** Echte Schlagzeilen vom 20.11.2026: Nennt die Antwort alle außer einer, gilt die ausgelassene nicht als genannt. */
+    @Test fun ausgelasseneSchlagzeileBleibtUngenannt() {
+        val titel = listOf(
+        "Anthropic schließt ersten Handelstag mit siebzehn Prozent Plus",
+        "US-Senat will Rechenzentren an Netzkosten beteiligen",
+        "Kaliforniens Justiz verlangt Auskunft von Nvidia",
+        "US-Ausschuss legt Genehmigungen für KI-Chips offen",
+        "Britische Abgeordnete fordern Aufsicht für Spitzen-KI",
+        "Meta überprüft nach Emissionsanstieg sein Klimaziel",
+        "Google öffnet Genie vier für Entwickler",
+        "OpenAI gibt neues Modell für Sprachgespräche frei",
+        "Gemini kann jetzt Programme auf dem Mac bedienen",
+        "Blue Origin soll Googles KI-Satelliten starten",
+        "EU-Staaten wollen den Umgang mit KI stärker vermitteln",
+        "Apple-Forschung erprobt KI-Videos mit kürzerer Wartezeit",
+        "Moonshot überarbeitet die Arbeitsoberfläche von Kimi",
+        "Spanien, Belgien oder Norwegen für Deutschland",
+        "Deutschland klettert auf Weltranglistenplatz elf",
+        "Vier Dortmunder Einsätze gegen Gladbach offen",
+        "Union muss gegen Leipzig auf vier Spieler verzichten",
+        "Kovač erklärt Debatte um Nmechas Torjubel für beendet",
+        "Dortmund kündigt Fantreffen vor dem Arsenal-Spiel an"
+        )
+        titel.forEachIndexed { n, weg ->
+            val antwort = titel.filterIndexed { i, _ -> i != n }.joinToString(". ") + "."
+            assertFalse("fälschlich genannt: $weg", NewsRegeln.genanntIn(antwort, NewsMeldung("x", "r", weg)))
+            assertTrue(NewsRegeln.genanntIn(antwort, NewsMeldung("y", "r", titel[(n + 1) % titel.size])))
+        }
+    }
 }

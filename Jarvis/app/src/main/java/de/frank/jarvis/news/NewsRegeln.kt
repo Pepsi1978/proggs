@@ -62,11 +62,15 @@ object NewsRegeln {
      * deshalb zählen Wortanfänge der Titelwörter: mindestens zwei Treffer und mindestens zwei Fünftel der Wörter.
      */
     fun genanntIn(antwort: String, m: NewsMeldung): Boolean {
-        val gesagt = woerter(antwort)
         val titel = woerter(m.titel)
         if (titel.isEmpty()) return false
-        val treffer = titel.count { w -> val stamm = w.take(6); gesagt.any { it.startsWith(stamm) || (it.length >= 5 && w.startsWith(it)) } }
-        return treffer >= minOf(2, titel.size) && treffer * 5 >= titel.size * 2
+        // Satz für Satz: Über die ganze Antwort verteilt fänden sich bei vielen Schlagzeilen sonst zufällig gemeinsame Wörter
+        // („Dortmund“, „Spiel“), und eine ausgelassene Meldung gälte als genannt.
+        return antwort.split(Regex("[.!?;:\\n•]+(\\s|$)|\\n")).any { satz ->
+            val gesagt = woerter(satz)
+            val treffer = titel.count { w -> val stamm = w.take(6); gesagt.any { it.startsWith(stamm) || (it.length >= 5 && w.startsWith(it)) } }
+            treffer >= minOf(2, titel.size) && treffer * 5 >= titel.size * 2
+        }
     }
 
     // ------------------------------------------------------------------ Spoilerschutz Borussia Dortmund

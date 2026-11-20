@@ -847,6 +847,7 @@
     {"versionCode": 838, "versionName": "1.8.827", "stand": "20.11.2026, 13:14 Uhr", "notiz": "Die Uhrzeitfarbe auf dem Startbildschirm stimmt sofort nach dem Aufwachen und nach Mitternacht, und TalkBack sagt an, wenn eine Uhrzeit vorbei ist."},
     {"versionCode": 839, "versionName": "1.8.828", "stand": "20.11.2026, 13:16 Uhr", "notiz": "Das Weckwort erkennt verschliffene Rufe besser, leise Rufe über den Anker bekommen nach einer Stille die volle Verstärkung, und Fehler aus dem Code-Review rund um Denkpause, Anker-Umschaltung und parallele Sessions sind behoben."},
     {"versionCode": 840, "versionName": "1.8.829", "stand": "20.11.2026, 13:31 Uhr", "notiz": "Jarvis liest auf Fragen nach News alle Rubriken aus News-Kompass, nennt am selben Tag nur noch nicht Genanntes, beantwortet Rückfragen aus der Meldung selbst und blendet Dortmunder Ergebnisse aus."},
-    {"versionCode": 841, "versionName": "1.8.830", "stand": "20.11.2026, 13:35 Uhr", "notiz": "Fragt Frank nach News, nennt Jarvis den aktuellen Bestand aus News-Kompass (heutige Ausgaben, je Rubrik mindestens die neueste) statt aller Meldungen der letzten zwei Tage."}
+    {"versionCode": 841, "versionName": "1.8.830", "stand": "20.11.2026, 13:35 Uhr", "notiz": "Fragt Frank nach News, nennt Jarvis den aktuellen Bestand aus News-Kompass (heutige Ausgaben, je Rubrik mindestens die neueste) statt aller Meldungen der letzten zwei Tage."},
+    {"versionCode": 842, "versionName": "1.8.831", "stand": "20.11.2026, 13:39 Uhr", "notiz": "Jarvis erkennt genauer, welche Schlagzeilen er Frank wirklich genannt hat, und berücksichtigt auch News-Kompass-Rubriken, die seltener als täglich sammeln."}
 ]
 }
