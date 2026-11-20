@@ -51,4 +51,16 @@ class PiepSchnittTest {
         assertEquals(proben.size - schnitt / 2, (r.wav.size - 44) / 2)
         assertEquals(proben.size / 512 - (ab + 1023) / 1024, r.stimmhaft!!.size)
     }
+
+    @Test
+    fun vokalMit400HzOhnePiepWirdNichtAngeschnitten() {
+        // Kein Piepton in der Aufnahme (etwa Echounterdrückung), Frank spricht sofort einen Vokal mit Obertönen bei 400 und 1200 Hz.
+        val vokal = DoubleArray(ms(900)) { val t = it.toDouble() / rate; (1..8).sumOf { h -> 0.1 / h * Math.sin(2 * Math.PI * 200 * h * t) } }
+        val vor = stimme(300)
+        val ab = vor.size * 2
+        val r = PiepSchnitt.schneiden(wav(vor + vokal), ab, null)
+        assertEquals(false, r.piepGefunden)
+        val schnitt = (ab + 1023) / 1024 * 1024
+        assertEquals(vor.size + vokal.size - schnitt / 2, (r.wav.size - 44) / 2)
+    }
 }

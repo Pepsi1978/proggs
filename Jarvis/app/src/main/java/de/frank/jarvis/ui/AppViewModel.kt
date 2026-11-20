@@ -100,7 +100,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val PIEP_KEINER = -1
         private const val PIEP_ALLES = -2
         /** Vor dem Piepton nach einer Antwort: so lange mindestens warten, so lange ohne Stimme, höchstens so lange; ohne Spracherkennung fest. */
-        private const val RUHE_MIN_MS = 350L
+        private const val RUHE_MIN_MS = 600L
         private const val RUHE_STILL_MS = 250L
         private const val RUHE_HOECHST_MS = 2_000L
         private const val RUHE_OHNE_VAD_MS = 700L
@@ -2395,18 +2395,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         r.wav to r.stimmhaft
                     }
                 }
-                // Nach dem Piepton keine Stimme erkannt (nur Nachklang oder Geräusch): nichts abschicken, keine Antwort auf eine Phantom-Eingabe.
-                if (piepAb >= 0 && stimmhaft != null && stimmhaft.count { it } < 3 && messFrage == null) {
-                    Logbuch.sprache("Mitschrift verworfen", "nach dem Piepton keine Stimme")
-                    de.frank.jarvis.observability.Antwortkette.verwerfen()
-                    return@launch
-                }
                 // Aufnahme zu Ende: Der Konferenz-Lautsprecher spielt die Antwort wieder in voller Qualität.
                 konferenzFrei(sprachmodusNr)
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) {
                     de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                     de.frank.jarvis.speech.GespraechsFokus.freigeben()
+                }
+                // Nach dem Piepton keine Stimme erkannt (nur Nachklang oder Geräusch): nichts abschicken, keine Antwort auf eine Phantom-Eingabe.
+                if (piepAb >= 0 && stimmhaft != null && stimmhaft.count { it } < 3 && messFrage == null) {
+                    Logbuch.sprache("Mitschrift verworfen", "nach dem Piepton keine Stimme")
+                    de.frank.jarvis.observability.Antwortkette.verwerfen()
+                    return@launch
                 }
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
