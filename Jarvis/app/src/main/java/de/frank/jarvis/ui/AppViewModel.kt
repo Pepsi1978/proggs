@@ -320,6 +320,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
+        // Nur der erste gesprochene Satz nach „Hey Jarvis“ von außerhalb der App entscheidet über Einzelauftrag oder Gespräch.
+        val einzelauftragPruefen = vorlesen && einzelauftragOffen
+        if (vorlesen) einzelauftragOffen = false
         programmierVorwahlOffen = false
         // Ob die Antwort laut wird: gesprochene Frage (Hey Jarvis, Gesprächsmodus) oder eingesprochen und von Hand gesendet.
         val antwortLaut = (vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen)
@@ -365,6 +368,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
             (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.hinweis(text) else "") +
                 (if (DiktatTrenner.mehrteilig(text)) DiktatTrenner.HINWEIS else "") +
+                (if (einzelauftragPruefen && !programmierer) EINZELAUFTRAG_HINWEIS else "") +
                 if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
@@ -1968,6 +1972,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** „Sprachsession beenden“: Die laufende Sprachschleife öffnet das Mikrofon nicht mehr von selbst. Erst eine ausdrückliche Aktivierung hebt das auf. */
     @Volatile private var sprachsitzungBeendet = false
 
+    /** Der nächste gesprochene Satz ist der erste nach „Hey Jarvis“ von außerhalb der App (siehe [EINZELAUFTRAG_HINWEIS]). */
+    @Volatile private var einzelauftragOffen = false
+
     /** Das Werkzeug `sprachsession_beenden` (vom Modell, auf einem Hintergrundfaden): Ende vormerken. true = eine Sprachschleife lief. */
     private val sprachsessionBeenden: () -> Boolean = {
         sprachsitzungBeendet = true
@@ -2028,6 +2035,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
         // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
         sprachsitzungBeendet = false
+        // Weckwort von außerhalb (Bildschirm aus, gesperrt, andere App): Der erste Satz darf als Einzelauftrag die Session beenden.
+        // In der App, über den Live-Knopf und bei einer Wiederaufnahme bleibt alles wie bisher.
+        einzelauftragOffen = !fortsetzen && !wiederaufnahme && !perKnopf
         // Ohne Weckwort (Wiederaufnahme, Live-Knopf) gibt es keinen Treffer, aus dem das Stimmprofil lernen könnte.
         val ohneWeckwort = wiederaufnahme || perKnopf
         val treffer = if (ohneWeckwort) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
@@ -3810,6 +3820,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
 /** Text einer Frage, die nur aus Anhängen besteht. */
 private const val ANHANG_PLATZHALTER = "Schau dir den Anhang an."
+/**
+ * Geht nur mit dem ersten gesprochenen Satz nach „Hey Jarvis“ von außerhalb der App ans Modell: Eine eindeutige Einzelaufgabe
+ * beendet danach die Sprachsession (Mikrofon zu), ein offenes Gespräch nicht.
+ */
+private const val EINZELAUFTRAG_HINWEIS = "\n\n(Gesprochen per Weckwort von außerhalb der App, etwa bei gesperrtem Handy. Ist das eine eindeutige, einmalige Aufgabe, " +
+    "die du in einem Schritt erledigst (etwa „Füge Nudeln zur Einkaufsliste hinzu“, „Aufgabe um 18:30 Uhr: laufen gehen“), führe sie aus, rufe zusätzlich " +
+    "sprachsession_beenden auf und bestätige nur in einem kurzen Satz, was erledigt ist (etwa „Nudeln wurden zur Einkaufsliste hinzugefügt.“), ohne " +
+    "„Sprachsession beendet“ und ohne Rückfrage. Bei einer Frage, mehreren Themen, einer nötigen Rückfrage oder keiner klar abgeschlossenen Aufgabe rufe " +
+    "sprachsession_beenden nicht auf, dann bleibt das Mikrofon offen.)"
+
 /** Vorspann des Knopfs „Nachtrag“ im Programmiergespräch; steht immer vor dem eingesprochenen Text. */
 private const val NACHTRAG_VORSPANN = "Nachtrag:"
 

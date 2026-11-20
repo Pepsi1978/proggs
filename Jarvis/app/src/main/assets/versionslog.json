@@ -821,6 +821,7 @@
     {"versionCode": 811, "versionName": "1.8.800", "stand": "19.11.2026, 17:16 Uhr", "notiz": "Die LED-Steuerung bleibt nicht mehr auf Schaltet hängen, schaltet beim Verlassen des Hauses verlässlich aus und versteht 20 Prozent heller richtig."},
     {"versionCode": 812, "versionName": "1.8.801", "stand": "19.11.2026, 17:57 Uhr", "notiz": "Jarvis kennt jetzt den Power-PC als vierten Rechner: in der Reihenfolge zum Ziehen, im Rechnerstatus, in der Fernwartung, beim Programmieren als eigenes Ziel und mit eigenem Agentenkanal."},
     {"versionCode": 813, "versionName": "1.8.802", "stand": "19.11.2026, 18:01 Uhr", "notiz": "Sagst du genau einen Rechner wie den Power-PC an, startet der Auftrag nur dort oder gar nicht, und der Rechnerstatus spricht wieder sauber."},
-    {"versionCode": 814, "versionName": "1.8.803", "stand": "19.11.2026, 18:48 Uhr", "notiz": "Benachrichtigungen der Rechner-Kanäle überschneiden sich nicht mehr mit Programmieraufträgen, Aufträge für genau einen Rechner melden Fehler klar statt still in die Cloud, und Power-PC und Tablet sind in Handy-Use und Ablage-Reihenfolge wählbar."}
+    {"versionCode": 814, "versionName": "1.8.803", "stand": "19.11.2026, 18:48 Uhr", "notiz": "Benachrichtigungen der Rechner-Kanäle überschneiden sich nicht mehr mit Programmieraufträgen, Aufträge für genau einen Rechner melden Fehler klar statt still in die Cloud, und Power-PC und Tablet sind in Handy-Use und Ablage-Reihenfolge wählbar."},
+    {"versionCode": 815, "versionName": "1.8.804", "stand": "20.11.2026, 09:34 Uhr", "notiz": "Sagst du außerhalb der App „Hey Jarvis“ mit einer eindeutigen Einzelaufgabe, erledigt Jarvis sie, bestätigt kurz und schließt danach das Mikrofon; ein offenes Gespräch bleibt wie bisher offen."}
 ]
 }
