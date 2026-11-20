@@ -32,4 +32,4 @@
 | 17 | Alarm-Vollbild schließt per Zurück-Geste (targetSdk 36) | Eigener `OnBackInvokedCallback`/`BackHandler` | §10.1 |
 | 18 | onnxruntime/sherpa-onnx `.so` 16-KB-Warnung | sherpa-onnx ≥ 1.12.36; jede `.so` einzeln prüfen | §10.2 |
 | 19 | Sprachansage setzt nach Pausen leise/hallig ein (Verstärker schaltet bei digitalen Nullen ab) | Pausen als lückenlose Clips aus Füllsignal (unhörbarer 30-Hz-Ton −40 dBFS + Rauschen), nie Nullen; gleiche Abtastrate wie die Sprache; Cache-Dateiname versionieren | §10.3 |
-| 20 | Gmail-App: Link auf einzelne Nachricht stürzt ab oder zeigt nur den Posteingang | Chrome mit `mail/mu/mp/?authuser=<adresse>#cv/Inbox/<thrid hex>` | §12 |
+| 20 | Gmail-App: Link auf einzelne Nachricht stürzt ab oder zeigt nur den Posteingang | `gmail.app.goo.gl/?link=…#cv?th=#thread-f:X|msg-f:Y&tf=cv` an die Gmail-App (Rückfall Chrome `mail/mu/mp/…#cv/Inbox/<hex>`) | §12 |
