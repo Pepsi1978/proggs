@@ -418,7 +418,10 @@ class WeckwortDienst : Service() {
             // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
             var knappUm = 0L
             // Alle 50 Blöcke (4 s): Anker dazugekommen, Strecke abgerissen oder fremde Musik? Dann neu anfangen.
-            var pruefZaehler = 0
+            // Am Handy gestartet (etwa gleich nach einem Gespräch, solange der Anker noch umschaltet): schon nach 1 s statt 4 s
+            // erneut nach dem Anker sehen. Im Mitschnitt hörte das Weckwort nach jedem Gespräch 5 s nur übers Handy und
+            // verpasste dort Rufe vom Sofa.
+            var pruefZaehler = if (ueberAnker) 0 else 50 - ANKER_ERSTPRUEFUNG
             while (an.get()) {
                 if (++pruefZaehler >= 50) {
                     pruefZaehler = 0
@@ -822,6 +825,8 @@ class WeckwortDienst : Service() {
          */
         private const val STILLE_BLOECKE = 50
         private const val NACHHOLEN = 25
+        /** Blöcke (je 80 ms) bis zur ersten Anker-Prüfung nach einem Start am Handy. */
+        private const val ANKER_ERSTPRUEFUNG = 12
         /**
          * Laut ist ein Block etwa 2 dB über dem Rauschboden, mindestens aber über einem sehr niedrigen Pegel (16 Bit,
          * etwa -65 dBFS): Ohne Verstärkung liegt leise Sprache aus mehreren Metern nur knapp darüber.
