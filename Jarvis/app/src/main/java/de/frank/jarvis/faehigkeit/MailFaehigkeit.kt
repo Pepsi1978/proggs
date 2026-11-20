@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
  * Schutz: Gesendet wird nur an freigegebene Adressen (Vorgabe: nur an Frank selbst). So kann niemand,
  * auch kein untergeschobener Text in einer Mail, Jarvis dazu bringen, Daten an Fremde zu schicken.
  */
-class MailFaehigkeit(private val context: Context) : Faehigkeit {
+class MailFaehigkeit(internal val context: Context) : Faehigkeit {
     override val id = "mail"
     override val name = "E-Mail (Gmail)"
     override val beschreibung = "E-Mails an Frank senden (auch Dateien aus der Ablage) und eingegangene E-Mails lesen."
@@ -59,6 +59,7 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
     override val werkzeuge: List<Werkzeug> by lazy {
         listOf(
             w("mail_senden"),
+            WichtigeMails.werkzeug(this@MailFaehigkeit),
             w("mail_lesen").als(
                 beschreibung = w("mail_lesen").beschreibung + " Mit nr kommt eine einzelne E-Mail vollständig.",
                 schema = w("mail_lesen").schema.mit("nr" to zahl("Nummer einer E-Mail aus der Liste: dann nur diese, vollständig.")),
@@ -202,7 +203,7 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
         }.let { if (it.fehler) "NICHT VERFÜGBAR: ${it.text}" else it.text }
     }
 
-    private suspend fun mitMail(block: () -> Ergebnis): Ergebnis {
+    internal suspend fun mitMail(block: () -> Ergebnis): Ergebnis {
         stoerung()?.let { return Ergebnis(it, fehler = true) }
         return withContext(Dispatchers.IO) {
             runCatching(block).getOrElse { fehler ->
@@ -264,6 +265,18 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
         override fun createSocket(host: InetAddress, port: Int, lokal: InetAddress?, lokalPort: Int): Socket = createSocket(host, port)
     }
 
+    /**
+     * Gmail-Postfach mit Gmail-Erweiterungen (X-GM-MSGID, X-GM-THRID), nur lesend. Für die wichtigen E-Mails: Die Unterhaltungs-Kennung
+     * öffnet die Nachricht direkt in Gmail, und in „Alle Nachrichten“ zeigt sie, ob Frank in der Unterhaltung schon geantwortet hat.
+     */
+    internal fun <T> mitGmail(block: (com.sun.mail.gimap.GmailStore) -> T): T {
+        val speicher = com.sun.mail.gimap.GmailSSLStore(sitzung(smtp = false), javax.mail.URLName("gimaps", "imap.gmail.com", 993, null, e.mailAdresse, null))
+        speicher.connect("imap.gmail.com", 993, e.mailAdresse, e.mailPasswort.replace(" ", ""))
+        try { return block(speicher) } finally { runCatching { speicher.close() } }
+    }
+
+    internal val adresse: String get() = e.mailAdresse
+
     private fun sitzung(smtp: Boolean): Session {
         val eigenschaften = Properties().apply {
             if (smtp) {
@@ -273,6 +286,9 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
             } else {
                 put("mail.imaps.connectiontimeout", "15000"); put("mail.imaps.timeout", "30000")
                 put("mail.imaps.socketFactory", Ipv4Zuerst); put("mail.imaps.socketFactory.fallback", "false")
+                // Dieselben Grenzen für den Gmail-Zugang mit Gmail-Kennungen (wichtige E-Mails).
+                put("mail.gimaps.connectiontimeout", "15000"); put("mail.gimaps.timeout", "30000")
+                put("mail.gimaps.socketFactory", Ipv4Zuerst); put("mail.gimaps.socketFactory.fallback", "false")
             }
         }
         return Session.getInstance(eigenschaften, object : Authenticator() {
@@ -280,13 +296,13 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
         })
     }
 
-    private fun absender(n: Message): String = n.from?.firstOrNull()?.let { (it as? InternetAddress)?.let { a -> a.personal?.let { p -> "$p <${a.address}>" } ?: a.address } ?: it.toString() } ?: "unbekannt"
+    internal fun absender(n: Message): String = n.from?.firstOrNull()?.let { (it as? InternetAddress)?.let { a -> a.personal?.let { p -> "$p <${a.address}>" } ?: a.address } ?: it.toString() } ?: "unbekannt"
 
     private fun datum(n: Message): String = (n.receivedDate ?: n.sentDate)?.toInstant()?.atZone(ZoneId.systemDefault())
         ?.format(DateTimeFormatter.ofPattern("d.M.yyyy HH:mm", Locale.GERMAN)) ?: "ohne Datum"
 
     /** Der lesbare Text einer Nachricht: reiner Text bevorzugt, sonst HTML ohne Auszeichnung. */
-    private fun klartext(teil: Part): String = runCatching {
+    internal fun klartext(teil: Part): String = runCatching {
         when {
             teil.isMimeType("text/plain") -> teil.content as? String ?: ""
             teil.isMimeType("text/html") -> (teil.content as? String ?: "").replace(Regex("(?is)<(script|style)[^>]*>.*?</\\1>"), " ").replace(Regex("<[^>]+>"), " ").replace("&nbsp;", " ").replace("&amp;", "&")

@@ -194,6 +194,8 @@ object Waechter {
             runCatching { Lernlauf.anstossen(app) }.onFailure { Logbuch.fehler("Lernlauf anstoßen", it) }
             // Im eigenen Rahmen: Die Minutenrunde wartet nie auf das Modell.
             bereich.launch { runCatching { de.frank.jarvis.ablage.ErinnerungHinweis.pruefen(app) }.onFailure { Logbuch.fehler("Erinnerungshinweis", it) } }
+            // Wichtige E-Mails: alle drei Stunden still im Hintergrund, nie während eines Sprachgesprächs.
+            bereich.launch { runCatching { de.frank.jarvis.faehigkeit.WichtigeMails.automatisch(app) }.onFailure { Logbuch.fehler("Wichtige E-Mails", it) } }
             bereich.launch { runCatching { de.frank.jarvis.ablage.HausmuellPlaner.pruefen(app) }.onFailure { Logbuch.fehler("Hausmüll-Erinnerungen", it) } }
             // Kaffeemaschine wach halten: Signal höchstens alle 10 Minuten, nur am Handy und nur, wenn der Schalter an ist.
             bereich.launch { runCatching { de.frank.jarvis.kaffee.Kaffeemaschine.wachHalten(app) }.onFailure { Logbuch.fehler("Kaffeemaschine wach halten", it) } }

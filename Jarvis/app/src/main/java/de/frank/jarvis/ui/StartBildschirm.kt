@@ -415,6 +415,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "licht" -> LichtStartKarte(griff)
                 // Tenda-Mobilfunkrouter: Modus, Multiplayer-Einschätzung, Empfangswerte, Moduswechsel, Neuverbinden, Neustart.
                 "tenda" -> TendaStartKarte(griff)
+                // Wichtige E-Mails aus dem ganzen Gmail-Posteingang: Anzahl, aufklappbare Einträge (öffnen direkt in Gmail), Aktualisieren.
+                "wichtige_mails" -> WichtigeMailsKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

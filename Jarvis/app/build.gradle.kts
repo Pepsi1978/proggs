@@ -229,4 +229,6 @@ dependencies {
     // E-Mail über Gmail (SMTP senden, IMAP lesen).
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
+    // Gmail-Erweiterungen für IMAP (X-GM-MSGID, X-GM-THRID): wichtige E-Mails direkt in Gmail öffnen und Antworten erkennen.
+    implementation("com.sun.mail:gimap:1.6.7") { isTransitive = false; exclude(group = "javax.activation"); exclude(group = "com.sun.activation") }
 }

@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Welche Karte ihr Symbol zeigt. */
-enum class KartenArt { AUFGABEN, BIOMARKER, RAUMKLIMA, SOLAR, AUSWERTUNG }
+enum class KartenArt { AUFGABEN, BIOMARKER, RAUMKLIMA, SOLAR, AUSWERTUNG, MAIL }
 
 private val ROT = Color(0xFFE5484D)
 private val ROT_HELL = Color(0xFFFF7A7E)
@@ -57,6 +57,7 @@ fun KartenSymbol(art: KartenArt, modifier: Modifier = Modifier, wert: Float? = n
                 KartenArt.RAUMKLIMA -> thermometer(rand)
                 KartenArt.SOLAR -> solarBatterie(rand, wert)
                 KartenArt.AUSWERTUNG -> auswertung(primaer)
+                KartenArt.MAIL -> umschlag(rand, wert)
             }
         }
     }
@@ -171,5 +172,23 @@ private fun DrawScope.auswertung(primaer: Color) {
     listOf(0.28f to 0.55f, 0.46f to 0.78f, 0.66f to 1f).forEachIndexed { i, (hoehe, deckung) ->
         val x = w * (0.1f + i * 0.29f)
         drawRoundRect(primaer.copy(alpha = deckung), Offset(x, boden - h * hoehe), Size(w * 0.22f, h * hoehe), CornerRadius(w * 0.05f))
+    }
+}
+
+/** Briefumschlag; [anteil] > 0 = es gibt wichtige E-Mails (roter Punkt oben rechts). */
+private fun DrawScope.umschlag(rand: Color, anteil: Float?) {
+    val w = size.width
+    val h = size.height
+    val x = w * 0.08f
+    val y = h * 0.24f
+    val b = w * 0.84f
+    val ho = h * 0.6f
+    drawRoundRect(PAPIER, Offset(x, y), Size(b, ho), CornerRadius(w * 0.07f))
+    val klappe = Path().apply { moveTo(x + w * 0.04f, y + h * 0.04f); lineTo(x + b / 2, y + ho * 0.58f); lineTo(x + b - w * 0.04f, y + h * 0.04f) }
+    drawPath(klappe, BLAU, style = Stroke(w * 0.07f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawRoundRect(rand, Offset(x, y), Size(b, ho), CornerRadius(w * 0.07f), style = Stroke(w * 0.055f))
+    if ((anteil ?: 0f) > 0f) {
+        drawCircle(Color.White, w * 0.15f, Offset(x + b - w * 0.02f, y))
+        drawCircle(ROT, w * 0.12f, Offset(x + b - w * 0.02f, y))
     }
 }
