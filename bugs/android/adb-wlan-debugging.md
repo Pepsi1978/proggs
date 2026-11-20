@@ -96,3 +96,8 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Ursache:** Der Dump enthält Binärzeichen; BSD-grep behandelt ihn dann als Binärdatei und gibt nichts aus.
 - **Fix:** `adb exec-out dumpsys bluetooth_manager > <scratchpad>/bt.txt` und `LC_ALL=C grep -a …` darauf. Profilereignisse: `grep -a "connection state changed"`.
 - **Quelle:** eigene Messung 20.11.2026 (Fold 8, Anker-Auftrag CG73F)
+
+## 16. Nach `svc wifi enable` meldet `-s 10.8.0.7:5555` „device not found“
+- **Symptom:** WLAN am Handy per Tunnel eingeschaltet; ein späterer Lauf von `adb-wlan`/`jarvis-install` hängt das Handy unter seiner WLAN-Adresse (`192.168.0.x:5555`) an, der Tunnel-Eintrag verschwindet, `svc wifi disable` über 10.8.0.7 geht ins Leere.
+- **Fix:** Vor dem Zurückschalten `adb devices` lesen, die Adresse per `getprop ro.serialno` gegen `geraete.json` prüfen und darüber schalten; danach `adb disconnect <WLAN-Adresse>`, `adb connect 10.8.0.7:5555`.
+- **Quelle:** eigene Messung 20.11.2026 (Fold 8, Tenda-Auftrag ECU4X)
