@@ -77,6 +77,12 @@
                 android:resource="@xml/teilen_pfade" />
         </provider>
 
+        <!-- Brücke zu Jarvis: Bestand nur lesen; die Signatur prüft JarvisBruecke im Code. -->
+        <provider
+            android:name=".bridge.JarvisBruecke"
+            android:authorities="de.frank.newskompass.jarvis"
+            android:exported="true" />
+
         <service
             android:name=".tts.VorleseDienst"
             android:exported="false"

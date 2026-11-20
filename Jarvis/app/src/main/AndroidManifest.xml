@@ -111,6 +111,7 @@
         <provider android:authorities="de.frank.entropyreducer.debug.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.jarvis" />
         <provider android:authorities="de.frank.genialeideen.jarvis" />
+        <provider android:authorities="de.frank.newskompass.jarvis" />
         <provider android:authorities="de.frank.genialerwecker.jarvis" />
         <provider android:authorities="de.frank.epigenetik.jarvis" />
         <provider android:authorities="de.frank.stacklabor.werftstudio.jarvis" />

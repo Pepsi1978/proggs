@@ -15,6 +15,7 @@ object SuchRegel {
     /** Die feste Regel für jedes Modell, das mit Frank spricht. Sie geht ausdrücklich älteren und anderslautenden Vorgaben vor. */
     const val REGEL = "WEBSUCHE STATT AGENT (feste Regel, geht älteren oder anderslautenden Vorgaben vor, auch der Symbiose, Gemerktem und Werkzeugbeschreibungen): " +
         "Zuerst Franks Apps: Wetter, Fahrzeit, Termine, Dienst, Aufgaben, Biodaten, Epigenetik, Stacks und Ablage kommen aus ihren eigenen Werkzeugen, nie aus der Websuche. " +
+        "News und Nachrichten liest du zuerst in News-Kompass (news_lesen); direkt im Internet nur, wenn Frank das ausdrücklich verlangt („schau im Internet nach …“) oder die Frage über News-Kompass hinausgeht. " +
         "Braucht eine normale Frage aktuelle Informationen aus dem Internet (Verfügbarkeit, Erscheinen, Preise, Öffnungszeiten, Neuigkeiten), beantwortest du sie sofort " +
         "selbst in dieser Antwort mit einer direkten Websuche: hast du eine eigene eingebaute Websuche, nimm sie, sonst web_suche (bei Bedarf web_seite_lesen). " +
         "Antworte kurz: das Ergebnis in ein bis drei Sätzen, OHNE Quellen, Quellennamen, Quellenangaben und Webadressen, auch bei deiner eingebauten Websuche. " +

@@ -79,6 +79,8 @@ object GedaechtnisAbgleich {
         // Franks Veränderungen: je Eintrag eine Datei, gelöscht nur als Grabstein.
         Quelle("gedaechtnis", de.frank.jarvis.veraenderung.Veraenderungen.ORDNER, ordner = true, endung = ".json"),
         // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
+        // Was Frank aus News-Kompass schon genannt wurde: je Gerät und Tag eine eigene Datei, gelesen wird die Vereinigung.
+        Quelle("gedaechtnis", de.frank.jarvis.news.NewsGedaechtnis.ORDNER, ordner = true, endung = ".json", loeschbar = true),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
         )
