@@ -699,13 +699,14 @@ def tenda_befehl(befehl: dict) -> None:
             return
         tenda_melden({"kennung": kennung, "angenommen": True})
         schreib(f"Tenda: {art} {wert}".strip())
+        # Bis das Ergebnis gemeldet ist (das Internet kann dafür Minuten brauchen), startet die Brücke nicht neu.
         TENDA_SCHALTET[0] += 1
         try:
             ergebnis = jarvis_tenda.aktion(art, wert)
+            schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
+            tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
         finally:
             TENDA_SCHALTET[0] -= 1
-        schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
-        tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
     except jarvis_tenda.TendaFehler as fehler:
         tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": str(fehler), "art": fehler.art})
     except Exception as fehler:

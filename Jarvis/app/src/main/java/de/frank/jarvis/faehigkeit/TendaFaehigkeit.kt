@@ -154,7 +154,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Frische Momentabfrage (Karte, Werkzeug): Mac, sonst direkt im Heim-WLAN, sonst der letzte Stand mit Grund. */
     suspend fun abrufen(): Stand? = sperre.withLock {
-        _zustand.update { it.copy(liest = true, meldung = null) }
+        // Die Meldung zur letzten Aktion bleibt stehen (das Nachlesen danach soll sie nicht löschen).
+        _zustand.update { it.copy(liest = true) }
         try {
             withContext(Dispatchers.IO) {
                 val gruende = mutableListOf<String>()
@@ -216,11 +217,11 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun multiplayerRoh(s: Stand): Multiplayer {
         val p = s.ping ?: return Multiplayer(null, "nicht bewertbar", "keine Ping-Messung am Heimanschluss")
-        val lat = p.zahl("latenz_ms"); val jit = p.zahl("jitter_ms"); val verlust = p.zahl("verlust_prozent")
-        if (lat == null || verlust == null || jit == null) {
-            return Multiplayer(if (verlust != null && verlust >= 100.0) Stufe.SEHR_SCHLECHT else null,
-                if (verlust != null && verlust >= 100.0) "kein Internet" else "nicht bewertbar", p.optString("fehler").ifBlank { "Ping ohne Antwort" })
-        }
+        val lat = p.zahl("latenz_ms"); val verlust = p.zahl("verlust_prozent")
+        if (verlust != null && verlust >= 100.0) return Multiplayer(Stufe.SEHR_SCHLECHT, "kein Internet", "keine Ping-Antwort")
+        if (lat == null || verlust == null) return Multiplayer(null, "nicht bewertbar", p.optString("fehler").ifBlank { "Ping ohne Antwort" })
+        // Nur eine Antwort: kein Jitter messbar; bei so viel Verlust ist die Leitung ohnehin ungeeignet.
+        val jit = p.zahl("jitter_ms") ?: if (verlust >= 10.0) 999.0 else return Multiplayer(null, "nicht bewertbar", "Jitter nicht messbar")
         val stufe = when {
             lat <= 35 && jit <= 5 && verlust == 0.0 -> Stufe.EXZELLENT
             lat <= 50 && jit <= 10 && verlust == 0.0 -> Stufe.GUT
@@ -244,8 +245,10 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         val i = s.simInfo
         val roh = MODUS_FELDER.firstNotNullOfOrNull { k -> i.optString(k).takeIf { it.isNotBlank() && !it.equals("unknown", true) } }?.uppercase(Locale.ROOT)
         if (roh != null) {
+            val mit5g = "5G" in roh || "NR" in roh
             when {
                 "NSA" in roh || "ENDC" in roh || "EN-DC" in roh -> return "5G NSA"
+                mit5g && ("LTE" in roh || "4G" in roh) -> return "5G NSA"
                 "SA" in roh -> return "5G SA"
                 "LTE" in roh || "4G" in roh -> return "4G"
                 "3G" in roh || "WCDMA" in roh || "UMTS" in roh -> return "3G"
@@ -388,6 +391,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun schalten(art: String, wert: String): Pair<String, Boolean> = withContext(Dispatchers.IO) {
         if (hash().isBlank()) return@withContext "Das Router-Passwort ist noch nicht eingerichtet." to false
+        _zustand.value.schaltet?.let { return@withContext "Es läuft noch: $it. Erst danach ist ein neuer Befehl möglich." to false }
         val was = when (art) { "modus" -> "Moduswechsel auf ${MODI[wert]}"; "verbinden" -> "Neuverbinden"; else -> "Neustart" }
         val pause = if (art == "neustart") "zwei bis vier Minuten" else "ein bis drei Minuten"
         _zustand.update { it.copy(schaltet = was, meldung = "$was läuft. Das Internet ist jetzt etwa $pause unterbrochen; danach prüfe ich den neuen Zustand.") }
@@ -399,10 +403,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                 "$was gestartet (über den Mac). Das Internet ist etwa $pause unterbrochen; ich prüfe danach selbst den neuen Zustand." to true
             }
             "fehler" -> ende(was, antwort.optString("text").ifBlank { "Der Mac konnte den Befehl nicht ausführen." }) to false
-            "unklar" -> ende(was, "Unklar, ob der Mac den Befehl angenommen hat. Ich löse ihn nicht erneut aus; bitte gleich den Zustand ansehen.").also {
-                bereich.launch { delay(90_000); abrufen() }
-            } to false
-            else -> {
+            "abgeloest" -> ende(was, "Durch einen neueren Befehl ersetzt.") to false
+            "mac_nicht_verbunden" -> {
                 // Mac nicht da oder Server nicht erreichbar: direkt, wenn das Handy im Heim-WLAN ist.
                 if (!zuHause()) ende(was, "Weder der Mac zu Hause noch das Handy im Heim-WLAN erreichen den Router; nichts geändert.") to false
                 else {
@@ -415,6 +417,10 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                     "$was gestartet (direkt vom Handy). Das Internet ist etwa $pause unterbrochen; ich prüfe danach den neuen Zustand." to true
                 }
             }
+            // Unklar, Netzfehler oder unbekannte Antwort: Der Mac kann den Befehl schon ausführen. Nie zusätzlich direkt schalten, nur nachsehen.
+            else -> ende(was, "Unklar, ob der Mac den Befehl angenommen hat. Ich löse ihn nicht erneut aus; in eineinhalb Minuten lese ich den Zustand.").also {
+                bereich.launch { delay(90_000); abrufen() }
+            } to false
         }
     }
 
@@ -454,6 +460,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         delay(if (art == "neustart") 60_000 else 20_000)
         val ende = System.currentTimeMillis() + 5 * 60_000L
         while (System.currentTimeMillis() < ende) {
+            if (hash().isBlank()) { ende(was, "Router-Passwort ungültig; keine weiteren Anmeldeversuche."); return }
             val roh = runCatching { direktLesen() }.getOrNull()
             // Direkt nach dem Wiederverbinden meldet der Router kurz „unknown“ ohne Ping: dann weiter nachlesen.
             val steht = roh != null && !roh.optJSONObject("sim_info")?.optString("mobileNet").orEmpty().let { it.isBlank() || it.equals("unknown", true) } &&
@@ -572,6 +579,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         fun anmelden(h: String) {
+            // Ohne gültigen Hash nie anmelden: Jeder Fehlversuch zählt zur Sperre des Routers.
+            check(h.isNotBlank()) { "Passwort falsch oder nicht eingerichtet" }
             val a = rufe("/login/Auth", JSONObject().put("username", "admin").put("password", h))
             when (a.optInt("errCode", -1)) {
                 0 -> return
@@ -601,10 +610,13 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Ein Router-Lauf zur Zeit (der Router lässt nur drei Anmeldungen zu); die Sitzung bleibt bis zum Ablauf im Speicher. */
     private var direkt: DirektRouter? = null
+    private var direktNetz: Network? = null
     private val direktSperre = Mutex()
 
     private suspend fun router(): DirektRouter {
         val netz = wlan() ?: error("kein WLAN")
+        // Nach einem WLAN-Wechsel wäre die alte Sitzung an ein verschwundenes Netz gebunden.
+        if (netz != direktNetz) { direkt = null; direktNetz = netz }
         return direkt ?: DirektRouter(netz).also { direkt = it }
     }
 
@@ -628,7 +640,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         if (!feldListeGemeldet) { feldListeGemeldet = true; Logbuch.netz("Tenda: Felder von simInfo", felder.join(",").replace("\"", "")) }
         JSONObject().put("zeit", System.currentTimeMillis() / 1000).put("quelle", "Handy direkt im Heim-WLAN")
             .put("sim_info", info).put("sim_wan", wan).put("sim_status", roh.optJSONObject("simStatus")?.optString("simStatus"))
-            .put("felder", felder).put("ping", pingMessen())
+            .put("felder", felder).put("ping", pingMessen(wlan()))
     }
 
     @Volatile private var feldListeGemeldet = false
@@ -652,7 +664,13 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
             } else {
                 val trennen = JSONObject(simWan.toString()).put("action", "0")
                 var code = r.setzen(JSONObject().put("simWan", trennen))
-                if (code == 0) { delay(3_000); code = r.setzen(JSONObject().put("simWan", JSONObject(simWan.toString()).put("action", "1"))) }
+                if (code == 0) {
+                    delay(3_000)
+                    // Getrennt ist er jetzt: Verbinden darf nie ausbleiben (ein zweites „verbinden“ trennt nicht erneut).
+                    code = runCatching { r.setzen(JSONObject().put("simWan", JSONObject(simWan.toString()).put("action", "1"))) }.getOrDefault(-1)
+                    if (code != 0) { delay(3_000); code = r.setzen(JSONObject().put("simWan", JSONObject(simWan.toString()).put("action", "1"))) }
+                    check(code == 0) { "Getrennt, aber der Router nimmt das Verbinden nicht an (Code $code); das Heim-Internet ist gerade aus. Bitte Connect erneut drücken." }
+                }
                 check(code == 0) { "Der Router hat das Neuverbinden abgelehnt (Code $code)." }
             }
         } catch (f: java.io.IOException) {
@@ -661,9 +679,15 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Ping vom Handy aus (inklusive WLAN-Strecke): 20 Pakete an 1.1.1.1. */
-    private fun pingMessen(): JSONObject {
+    private fun pingMessen(netz: Network?): JSONObject {
         val ziel = "1.1.1.1"; val anzahl = 20
         val p = JSONObject().put("ziel", ziel).put("gesendet", anzahl).put("zeit", System.currentTimeMillis() / 1000).put("von", "Handy im WLAN")
+        // Das ping-Programm nimmt Androids Standardnetz. Ist das nicht das Heim-WLAN mit Internet (etwa kurz nach einem Moduswechsel),
+        // würde es den Mobilfunk des Handys messen statt den Heimanschluss: dann lieber nicht messen.
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        val standard = cm?.activeNetwork
+        val validiert = standard?.let { cm.getNetworkCapabilities(it)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } == true
+        if (netz == null || standard != netz || !validiert) return p.put("fehler", "Heim-WLAN gerade ohne Internet oder nicht das Standardnetz; kein Ping")
         val aus = runCatching {
             val prozess = ProcessBuilder("ping", "-c", "$anzahl", "-i", "0.2", "-W", "2", ziel).redirectErrorStream(true).start()
             val text = prozess.inputStream.bufferedReader().readText()
@@ -681,7 +705,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         private const val ROUTER = "http://192.168.0.1"
         private val JSON = "application/json; charset=UTF-8".toMediaType()
-        private val RELAY = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(55, TimeUnit.SECONDS).build()
+        /** Der Relay wartet bis 15 s auf die Brücke und bis 40 s auf ihr Ergebnis: Zeitlimit darüber. */
+        private val RELAY = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(75, TimeUnit.SECONDS).build()
         val MODI = mapOf("5" to "5G SA bevorzugt", "4" to "5G NSA", "2" to "nur 4G", "3" to "nur 3G")
         /** Auswahl für die Karte: Kennung des Routers → Name. 3G bietet Jarvis bewusst nicht an. */
         val WAEHLBAR = listOf("5" to "5G SA bevorzugt", "4" to "5G NSA", "2" to "nur 4G")
@@ -689,7 +714,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         private val MODUS_FELDER = listOf("mobileNet", "networkType", "network_type", "netType", "net_type", "sysMode", "sys_mode", "accessTech", "access_tech",
             "connectNet", "netMode", "nrMode", "nr_mode", "radioType", "rat", "workNet")
         private val BAND_FELDER = listOf("accessBand", "access_band", "band", "lteBand", "lte_band", "nrBand", "nr_band", "caBand", "ca_band", "scellBand", "nr5g_band")
-        private val GEHEIM = Regex("(?i)imei|imsi|iccid|msisdn|phone|number|pin|puk|mac|ip|dns|gateway|apn|user|pwd|pass|lat|lon|location")
+        /** Wie jarvis_tenda.py: auch Zellkennungen, die mit Mastkarten den Standort verraten. */
+        private val GEHEIM = Regex("(?i)imei|imsi|iccid|msisdn|phone|number|pin|puk|mac|ip|dns|gateway|apn|user|pwd|pass|lat|lon|location|cell|enode|enb|gnb|tac|lac|pci|eci")
 
         fun md5(text: String): String = MessageDigest.getInstance("MD5").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 

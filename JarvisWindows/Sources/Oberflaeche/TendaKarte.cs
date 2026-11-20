@@ -18,6 +18,8 @@ public sealed class TendaDaten : Beobachtbar
     private bool _offen;
     public bool Offen { get => _offen; set => Setze(ref _offen, value); }
     public bool AutomatischGelesen { get; set; }
+    /// <summary>Ein Schaltbefehl ist unterwegs: kein zweiter (Doppelklick hieße zwei Neustarts).</summary>
+    private bool schaltet;
 
     public async Task Lesen()
     {
@@ -34,9 +36,15 @@ public sealed class TendaDaten : Beobachtbar
 
     public async Task Schalten(string werkzeug, JSONObjekt args)
     {
-        Meldung = "Befehl wird gesendet …";
-        var e = await McpKlient.Shared.Rufe(werkzeug, args, 60);
-        Meldung = McpKlient.OhneKontextHinweis(e.Text);
+        if (schaltet) return;
+        schaltet = true;
+        try
+        {
+            Meldung = "Befehl wird gesendet …";
+            var e = await McpKlient.Shared.Rufe(werkzeug, args, 60);
+            Meldung = McpKlient.OhneKontextHinweis(e.Text);
+        }
+        finally { schaltet = false; }
     }
 }
 
@@ -54,10 +62,13 @@ public static class TendaKarte
             var mp = s?.Obj("multiplayer");
             var modus = s?.Text("modus_aktiv")?.Replace(" (abgeleitet)", "");
             var titel = H(8, new KartenTitel("antenna.radiowaves.left.and.right", "Tenda Internet", Farbe.Haupt), modus != null ? Tx(modus, 12, FontWeights.SemiBold, Farbe.Haupt) : null);
-            var veraltet = s?.Text("gueltigkeit") == "veraltet" || s?.Text("veraltet_grund") != null;
+            // Alter beim Anzeigen berechnet, damit „aktuell“ nicht stehen bleibt; ab 90 Minuten veraltet wie am Handy.
+            var zeit = s?.Zahl("zeit") is { } sek ? DateTimeOffset.FromUnixTimeSeconds((long)sek).LocalDateTime : (DateTime?)null;
+            var veraltet = s?.Text("veraltet_grund") != null || (zeit is { } zz && (DateTime.Now - zz).TotalMinutes > 90);
+            var standZeile = zeit is { } zt ? "Stand " + zt.ToString(zt.Date == DateTime.Today ? "HH:mm 'Uhr'" : "dd.MM. HH:mm 'Uhr'") + " · " + (s?.Text("quelle") ?? "") + (veraltet ? " · veraltet" : "") : "";
             var links = V(2, titel,
                 Tx(mp != null ? "Multiplayer: " + mp.Text("text") : d.Laeuft ? "Liest den Router …" : "Noch kein Stand", 14, FontWeights.SemiBold, StufenFarbe(mp?.Text("stufe"))),
-                Tx(d.Laeuft ? "Frische Abfrage läuft …" : s?.Text("stand_text") ?? "", 12, null, d.Laeuft ? Farbe.Haupt : veraltet ? Farbe.Warnung : Farbe.Text3, zeilen: 1)).Fuell();
+                Tx(d.Laeuft ? "Frische Abfrage läuft …" : standZeile, 12, null, d.Laeuft ? Farbe.Haupt : veraltet ? Farbe.Warnung : Farbe.Text3, zeilen: 1)).Fuell();
             links.Klick(() => d.Offen = !d.Offen);
             var kopf = H(8, links, d.Laeuft ? new Spinner(16) : null,
                 new RundKnopf("arrow.clockwise", () => Starte(d.Lesen), hilfe: "Router frisch abfragen", aktiv: d.Laeuft, groesse: 30),

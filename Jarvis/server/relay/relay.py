@@ -2099,6 +2099,7 @@ class TendaStand:
         self.kanal = kanal
         self.datei = datei
         self.warten = {}       # Kennung -> Future
+        self.abgeloest = set() # Kennungen, die ein neuerer Auftrag gleicher Art ersetzt hat: nie wieder ausgeben
         self.quittiert = set() # Kennungen, deren Empfang die Brücke bestätigt hat (sonst nach 8 s erneut ausgeben, die Brücke dedupliziert)
         self.stand = None
         self.aktion = None     # letztes Ergebnis eines Schreibauftrags (ohne Stand)
@@ -2140,10 +2141,12 @@ class TendaStand:
         self.warten[kennung] = zukunft
         # Höchstens ein offener Auftrag je Art; ein neuer löst einen noch nicht abgeholten gleicher Art ab.
         auftrag = {"art": art, "wert": wert, "kennung": kennung}
+        # Ein noch nicht abgeholter Auftrag derselben Art gilt als abgelöst (Frank hat neu gewählt) und wird nie mehr ausgegeben.
+        self.abgeloest.update(a.get("kennung") for a in self.kanal.tenda_auftraege if a.get("art") == art)
         self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("art") != art][-4:]
         self.kanal.tenda_auftraege.append(auftrag)
         self.kanal.befehl.set()
-        ende = time.monotonic() + (45 if art in ("lesen", "zugang") else 25)
+        ende = time.monotonic() + (40 if art in ("lesen", "zugang") else 25)
         ausgaben = 1
         try:
             # Ging der Auftrag an eine tote Abfrage (Brücke gerade neu gestartet, Netz kurz weg), fehlt die Empfangsquittung:
@@ -2157,6 +2160,8 @@ class TendaStand:
                 except asyncio.TimeoutError:
                     if zukunft.done():
                         continue
+                    if kennung in self.abgeloest:
+                        return web.json_response({"ergebnis": "abgeloest", "kennung": kennung})
                     if kennung not in self.quittiert:
                         # Zweimal ohne Empfangsquittung: Die Brücke ist weg (Mac aus, Abfrage tot). Dann sofort melden, damit das
                         # Handy im Heim-WLAN selbst einspringt, statt 45 s zu warten.
@@ -2174,6 +2179,7 @@ class TendaStand:
         finally:
             self.warten.pop(kennung, None)
             self.quittiert.discard(kennung)
+            self.abgeloest.discard(kennung)
 
     async def melden(self, request: web.Request) -> web.Response:
         if not darf_pc(request):
@@ -2198,11 +2204,11 @@ class TendaStand:
             await asyncio.to_thread(self._sichern)
         zukunft = self.warten.get(str(daten.get("kennung") or ""))
         if daten.get("empfangen"):
-            self.quittiert.add(str(daten.get("kennung") or ""))
+            if zukunft is not None:   # nur für noch wartende Aufträge, sonst wüchse die Menge mit späten Quittungen
+                self.quittiert.add(str(daten.get("kennung") or ""))
             return web.json_response({"ok": True})
         if zukunft is not None and not zukunft.done():
             if daten.get("angenommen"):
-                self.quittiert.add(str(daten.get("kennung") or ""))
                 zukunft.set_result({"ergebnis": "angenommen", "kennung": daten.get("kennung")})
             else:
                 zukunft.set_result({k: daten.get(k) for k in ("ergebnis", "text", "art", "stand") if k in daten})

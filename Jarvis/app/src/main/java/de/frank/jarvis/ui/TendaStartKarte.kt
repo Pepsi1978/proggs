@@ -73,7 +73,10 @@ fun TendaStartKarte(griff: Modifier = Modifier) {
         if (!TendaStartStand.automatischGelesen && eingerichtet) { TendaStartStand.automatischGelesen = true; lesen() }
     }
     val s = z.stand
-    val st: JSONObject? = remember(s) { s?.let { faehigkeit.struktur(it) } }
+    // Minutentakt: „gerade eben“, „aktuell“ und „zuletzt …“ altern mit, auch wenn die App lange offen bleibt.
+    var minute by remember { mutableStateOf(System.currentTimeMillis() / 60_000) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(60_000); minute = System.currentTimeMillis() / 60_000 } }
+    val st: JSONObject? = remember(s, minute) { s?.let { faehigkeit.struktur(it) } }
     val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
 
     Karte(modifier = griff) {

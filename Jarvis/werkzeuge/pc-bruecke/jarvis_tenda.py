@@ -36,7 +36,8 @@ PING_ZIEL = "1.1.1.1"
 PING_ANZAHL = 20
 MODI = {"5": "5G SA bevorzugt", "4": "5G NSA", "2": "nur 4G", "3": "nur 3G"}
 # Nie aus dem Router weitergeben: Kennungen der SIM und des Geräts, Adressen, Zugangsdaten.
-GEHEIM = re.compile(r"imei|imsi|iccid|msisdn|phone|number|pin|puk|mac|ip|dns|gateway|apn|user|pwd|pass|lat|lon|location", re.I)
+# Auch Zellkennungen (cell, eNB/gNB, TAC, PCI): Mit öffentlichen Mastkarten verraten sie den Standort.
+GEHEIM = re.compile(r"imei|imsi|iccid|msisdn|phone|number|pin|puk|mac|ip|dns|gateway|apn|user|pwd|pass|lat|lon|location|cell|enode|enb|gnb|tac|lac|pci|eci", re.I)
 # Zahlen, die am Handy bewertet werden: harmlos und klein.
 _SPERRE = threading.Lock()
 
@@ -65,9 +66,10 @@ def zugang_speichern(hash_hex: str) -> None:
     os.replace(zwischen, ZUGANG)
 
 
-def _falsch_merken() -> None:
+def _falsch_merken(benutzt: str) -> None:
+    """Nur den Hash als falsch markieren, mit dem gerade angemeldet wurde: Ein inzwischen neu eingegebener bleibt unberührt."""
     z = zugang_lesen()
-    if z.get("hash"):
+    if z.get("hash") and z.get("hash") == benutzt:
         z["falsch"] = True
         ZUGANG.write_text(json.dumps(z), "utf-8")
 
@@ -102,7 +104,7 @@ class Router:
         if code == 0:
             return
         if code == 4:
-            _falsch_merken()
+            _falsch_merken(z["hash"])
             raise TendaFehler("Router-Passwort ist falsch: bitte in Jarvis neu eingeben.", "zugang")
         if code == 5:
             raise TendaFehler("Am Router sind schon drei Geräte angemeldet, er nimmt gerade keine weitere Anmeldung an.")
@@ -111,16 +113,17 @@ class Router:
     def module(self, namen: str) -> dict:
         pfad = f"/goform/getModules?rand={random.random()}&modules={namen}"
         antwort = self._rufe(pfad)
-        if antwort.get("errCode") == 1000:
+        # errCode kann als Zahl oder Text kommen.
+        if str(antwort.get("errCode")) == "1000":
             self.anmelden()
             antwort = self._rufe(pfad)
-            if antwort.get("errCode") == 1000:
+            if str(antwort.get("errCode")) == "1000":
                 raise TendaFehler("Router nimmt die Anmeldung nicht an.")
         return antwort
 
     def setzen(self, rumpf: dict, pfad: str = "/goform/setModules", sekunden: float = 30) -> int:
         antwort = self._rufe(pfad, rumpf, sekunden)
-        if antwort.get("errCode") == 1000:
+        if str(antwort.get("errCode")) == "1000":
             self.anmelden()
             antwort = self._rufe(pfad, rumpf, sekunden)
         return int(antwort.get("errCode", -1))
@@ -226,7 +229,17 @@ def aktion(art: str, wert: str = "") -> dict:
                     code = ROUTER_SITZUNG.setzen({"simWan": trennen})
                     if code == 0:
                         time.sleep(3)
-                        code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
+                        # Getrennt ist er jetzt: Das Verbinden darf nie ausbleiben, sonst bliebe das Heim-Internet weg.
+                        # Ein zweites „verbinden“ ist dabei unschädlich (kein erneutes Trennen).
+                        try:
+                            code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
+                        except Exception:
+                            code = -1
+                        if code != 0:
+                            time.sleep(3)
+                            code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
+                            if code != 0:
+                                return {"ergebnis": "fehler", "text": f"Getrennt, aber der Router nimmt das Verbinden nicht an (Code {code}); das Heim-Internet ist gerade aus. Bitte Connect erneut drücken."}
                 else:
                     return {"ergebnis": "fehler", "text": "Unbekannte Aktion."}
                 if code != 0:

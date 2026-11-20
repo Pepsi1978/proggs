@@ -8,6 +8,8 @@ final class TendaDaten {
     private(set) var stand: JSONObjekt?
     private(set) var laeuft = false
     private(set) var meldung: String?
+    /** Ein Schaltbefehl ist unterwegs: kein zweiter (Doppelklick hieße zwei Neustarts). */
+    private(set) var schaltet = false
     @ObservationIgnored var automatischGelesen = false
 
     func lesen() async {
@@ -19,6 +21,9 @@ final class TendaDaten {
     }
 
     func schalten(_ werkzeug: String, _ args: JSONObjekt) async {
+        guard !schaltet else { return }
+        schaltet = true
+        defer { schaltet = false }
         meldung = "Befehl wird gesendet …"
         let e = await McpKlient.shared.rufe(werkzeug, args, sekunden: 60)
         meldung = McpKlient.ohneKontextHinweis(e.text)
@@ -73,11 +78,15 @@ struct TendaKarte: View {
         } message: { Text("Willst du den Router wirklich neu starten?") }
     }
 
-    private var veraltet: Bool { (d.stand?["gueltigkeit"] as? String) == "veraltet" || (d.stand?["veraltet_grund"] as? String) != nil }
+    /** Alter beim Anzeigen berechnet (nicht beim Lesen), damit „aktuell“ nicht stehen bleibt; ab 90 Minuten veraltet wie am Handy. */
+    private var zeit: Date? { (d.stand?["zeit"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue) } }
+    private var veraltet: Bool { (d.stand?["veraltet_grund"] as? String) != nil || (zeit.map { Date().timeIntervalSince($0) > 5400 } ?? false) }
 
     private var standZeile: String {
-        guard let s = d.stand else { return "" }
-        return (s["stand_text"] as? String) ?? ""
+        guard let s = d.stand, let z = zeit else { return "" }
+        let f = DateFormatter(); f.locale = Locale(identifier: "de_DE")
+        f.dateFormat = Calendar.current.isDateInToday(z) ? "HH:mm 'Uhr'" : "dd.MM. HH:mm 'Uhr'"
+        return "Stand " + f.string(from: z) + " · " + ((s["quelle"] as? String) ?? "") + (veraltet ? " · veraltet" : "")
     }
 
     @ViewBuilder private var aufgeklappt: some View {
@@ -112,6 +121,7 @@ struct TendaKarte: View {
                 Button("Connect") { Task { await d.schalten("tenda_verbinden", [:]) } }
                 Button("Router neu starten") { neustartFrage = true }
             }
+            .disabled(d.schaltet)
             Text("Moduswechsel, Connect und Neustart unterbrechen das Internet kurz, auch für diesen Mac. Jarvis prüft danach den neuen Zustand und löst unklare Befehle nicht erneut aus.")
                 .font(.jarvis(11)).foregroundStyle(Farbe.text3)
         }
