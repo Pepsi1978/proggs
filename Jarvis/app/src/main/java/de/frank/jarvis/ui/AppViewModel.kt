@@ -104,6 +104,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val RUHE_STILL_MS = 250L
         private const val RUHE_HOECHST_MS = 2_000L
         private const val RUHE_OHNE_VAD_MS = 700L
+        /** Ab hier kann anhaltende Stimme nicht mehr das Antwortende sein: Frank spricht schon. */
+        private const val FRANK_AB_MS = 1_200L
+        /** So lange ohne Stimme gilt als Lücke zwischen Antwortende und Franks Einsatz. */
+        private const val LUECKE_MS = 200L
+        /** Die Spracherkennung bestätigt Stimme erst nach drei Rahmen und einem Lesepuffer: so weit vor der Bestätigung beginnt sie (220 ms bei 16 kHz). */
+        private const val STIMME_VORLAUF_BYTES = 7_040
         /** Mindestdauer einer Tätigkeitszeile, damit Frank sie mitlesen kann (Franks Vorgabe: zwei Sekunden). */
         const val ANZEIGE_MIN_MS = 2_000L
         private const val ABGEBROCHEN = "abgebrochen"
@@ -2001,6 +2007,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */
     fun sprachStatus(liestVor: Boolean): String? = when {
+        nimmtAuf && wartetAufPiep -> "Einen Moment …"
         nimmtAuf -> if (freihaendig) "Ich höre zu …" else "Ich höre zu … tippe zum Senden"
         schreibtMit -> "Schreibe mit …"
         denkt -> "$taetigkeit …"
@@ -2161,6 +2168,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Was gerade wirklich läuft, nur aus dem vorhandenen Stand gelesen. Die Sprachblase fragt das je Bild ab, also nichts Teures hier. */
     fun blasenZustand(): BlasenZustand {
+        // Vor dem Bereit-Piepton klingt noch die eigene Antwort nach: nicht schon „hört zu“ zeigen.
+        if (nimmtAuf && wartetAufPiep) return BlasenZustand.SPRICHT
         if (nimmtAuf) {
             val ende = rundeEnde
             if (ende == null || !ende.gesprochen) return BlasenZustand.HOERT
@@ -2231,6 +2240,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var schlussStilleMs = 0L
     /** PCM-Stelle, an der der Bereit-Piepton der laufenden Gesprächsrunde begann; [PIEP_KEINER] = nichts schneiden, [PIEP_ALLES] = noch kein Piepton, alles verwerfen. */
     private var piepAbBytes = PIEP_KEINER
+    /** false = Frank sprach schon vor dem Piepton: nicht nach dem Piepton suchen, nur an der Marke schneiden. */
+    private var piepSuchen = true
+    /** Für die laufende Runde: Frank spricht schon, kein Piepton mitten in seinen Satz. */
+    private var ohnePiep = false
+    /** Vor dem Bereit-Piepton: Das Mikrofon läuft schon, zählt aber noch nicht; Blase und Status zeigen kein „hört zu“. */
+    var wartetAufPiep by mutableStateOf(false); private set
 
     /** Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen der App. */
     private fun stilleMsJetzt(): Int {
@@ -2268,17 +2283,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             piepAbBytes = PIEP_ALLES
             // Erst piepen, wenn das Mikrofon das Ende der eigenen Antwort nicht mehr hört: Lautsprecher und Bluetooth spielen nach dem
             // Ende des Players noch nach. So heißt der Piepton wirklich „jetzt sprechen“, unabhängig von der Stillezeit.
-            ruheVorPiep(mikroAn)
+            wartetAufPiep = true
+            val frankAb = try { ruheVorPiep(mikroAn) } finally { wartetAufPiep = false }
             if (!nimmtAuf) { freihaendig = false; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG }
             // Während des Wartens „Sprachsession beenden“: nicht mehr piepen, Mikrofon zu, nichts davon abschicken.
             if (sprachsitzungBeendet) {
                 freihaendig = false
                 nimmtAuf = false
+                piepAbBytes = PIEP_KEINER
                 mikro.stop()
                 konferenzFrei(sprachmodusNr)
                 return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT
             }
-            piepAbBytes = mikro.pufferBytes
+            // Spricht Frank schon (Stimme über das längste Antwortende hinaus): ab seinem Einsatz aufnehmen, ohne Piepton dazwischen.
+            piepAbBytes = frankAb ?: mikro.pufferBytes
+            piepSuchen = frankAb == null
+            ohnePiep = frankAb != null
         }
         // Ohne Spracherkennung zählt der Pegel; dann auch einen per Bluetooth verspäteten Piepton nicht als Sprache werten.
         val anlauf = if (erste || mikro.sprachRahmen != null) 250L else 600L
@@ -2287,7 +2307,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val start = System.currentTimeMillis()
         rundeEnde = ende; rundeBeginn = start
         val rufUm = if (erste) weckwortRufUm else 0L
-        piep()
+        if (!ohnePiep) piep()
+        ohnePiep = false
         if (rufUm > 0L) Logbuch.sprache("Kette Weckwort", "Mikrofon ${start - rufUm} · Piepton ${System.currentTimeMillis() - start}", System.currentTimeMillis() - rufUm)
         var lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER
         while (nimmtAuf && lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER) {
@@ -2303,6 +2324,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             !nimmtAuf -> return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
             lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT -> {
                 nimmtAuf = false
+                piepAbBytes = PIEP_KEINER
                 mikro.stop()
                 konferenzFrei(sprachmodusNr)
                 return lage
@@ -2327,28 +2349,50 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Wartet nach einer vorgelesenen Antwort, bis das laufende Mikrofon keine Stimme mehr hört (Silero): mindestens
      * [RUHE_MIN_MS] nach dem Mikrofonstart und [RUHE_STILL_MS] ohne neuen Sprachrahmen, höchstens [RUHE_HOECHST_MS].
      * Ohne Spracherkennung eine feste Wartezeit. Lüfter und Fahrgeräusch zählen nicht, nur Stimme.
+     * Hält Stimme über [FRANK_AB_MS] hinaus an, kann es nicht mehr das Antwortende sein: Frank spricht schon. Dann liefert es
+     * die PCM-Stelle seines Einsatzes (nach einer Lücke, sonst ab [RUHE_MIN_MS]); null = Ruhe, normal piepen.
      */
-    private suspend fun ruheVorPiep(mikroAn: Long) {
+    private suspend fun ruheVorPiep(mikroAn: Long): Int? {
         var stand: Long? = null
         var ruheAb = mikroAn
         var stimme = 0L
+        var letzteStimme = 0L
+        var einsatz = -1
+        var nachLuecke = false
+        var minBytes = -1
         var grund = "Höchstzeit"
+        var frankAb: Int? = null
         while (nimmtAuf && !sprachsitzungBeendet) {
             val jetzt = System.currentTimeMillis()
+            if (minBytes < 0 && jetzt - mikroAn >= RUHE_MIN_MS) minBytes = mikro.pufferBytes
             if (jetzt - mikroAn >= RUHE_HOECHST_MS) break
             val neu = mikro.sprachRahmen
             if (neu == null) {
                 if (!mikro.sprachErkennungLaedt && jetzt - mikroAn >= RUHE_OHNE_VAD_MS) { grund = "ohne Spracherkennung"; break }
             } else {
                 val alt = stand
-                if (alt == null) ruheAb = maxOf(ruheAb, jetzt - RUHE_STILL_MS / 2)
-                else if (neu > alt) { stimme += neu - alt; ruheAb = jetzt }
+                // Erster Blick der Spracherkennung: erst ab jetzt zählt die Ruhe, ihr Nachholen kann noch Antwortende enthalten.
+                if (alt == null) ruheAb = jetzt
+                else if (neu > alt) {
+                    stimme += neu - alt
+                    // Stimme setzt nach einer Lücke neu ein: Ihr Beginn liegt etwa um die Bestätigung der Spracherkennung früher.
+                    if (letzteStimme != 0L && jetzt - letzteStimme >= LUECKE_MS) { einsatz = (mikro.pufferBytes - STIMME_VORLAUF_BYTES).coerceAtLeast(0); nachLuecke = true }
+                    else if (letzteStimme == 0L) nachLuecke = false
+                    letzteStimme = jetzt
+                    ruheAb = jetzt
+                }
                 stand = neu
                 if (jetzt - mikroAn >= RUHE_MIN_MS && jetzt - ruheAb >= RUHE_STILL_MS) { grund = "Ruhe"; break }
+                if (jetzt - mikroAn >= FRANK_AB_MS && jetzt - ruheAb < RUHE_STILL_MS) {
+                    frankAb = if (nachLuecke && einsatz >= 0) einsatz else minBytes.coerceAtLeast(0)
+                    grund = "Frank spricht schon"
+                    break
+                }
             }
             kotlinx.coroutines.delay(20)
         }
-        Logbuch.sprache("Piepton bereit", "$grund nach ${System.currentTimeMillis() - mikroAn} ms, Nachklang davor ${stimme * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms Stimme")
+        Logbuch.sprache("Piepton bereit", "$grund nach ${System.currentTimeMillis() - mikroAn} ms, Stimme davor ${stimme * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms")
+        return frankAb
     }
 
     /**
@@ -2376,7 +2420,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val schluss = schlussStilleMs
         schlussStilleMs = 0L
         val piepAb = piepAbBytes
+        val suchen = piepSuchen
         piepAbBytes = PIEP_KEINER
+        piepSuchen = true
+        // Ein Messlauf-Text gehört nur zu dieser Aufnahme, auch wenn sie gleich verworfen wird.
+        val messText = messFrage
+        messFrage = null
         de.frank.jarvis.observability.Antwortkette.start(schluss)
         // Die Mitschrift gehört zur Session, in der die Aufnahme begann.
         val stand = aufnahmeStand
@@ -2398,8 +2447,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val (wav, stimmhaft) = when {
                     wavRoh == null || piepAb == PIEP_KEINER -> wavRoh to stimmhaftRoh
                     piepAb == PIEP_ALLES -> null to null
-                    else -> withContext(Dispatchers.Default) { de.frank.jarvis.speech.PiepSchnitt.schneiden(wavRoh, piepAb, stimmhaftRoh) }.let { r ->
-                        Logbuch.sprache("Piepton geschnitten", "${if (r.piepGefunden) "Piepton im Ton gefunden" else "kein Piepton im Ton"}, ${r.wegMs} ms ab Piepton entfernt, Stimme danach ${(r.stimmhaft?.count { it } ?: -1) * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms")
+                    else -> withContext(Dispatchers.Default) { de.frank.jarvis.speech.PiepSchnitt.schneiden(wavRoh, piepAb, stimmhaftRoh, suchen) }.let { r ->
+                        val danach = r.stimmhaft?.let { a -> "${a.count { it } * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms" } ?: "unbekannt"
+                        Logbuch.sprache("Piepton geschnitten", "${if (!suchen) "Frank sprach schon, ohne Piepton" else if (r.piepGefunden) "Piepton im Ton gefunden" else "kein Piepton im Ton"}, ${r.wegMs} ms ab Marke entfernt, Stimme danach $danach")
                         r.wav to r.stimmhaft
                     }
                 }
@@ -2417,7 +2467,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 // Nach dem Piepton keine Stimme erkannt (nur Nachklang oder Geräusch): nichts abschicken, keine Antwort auf eine Phantom-Eingabe.
-                if (piepAb >= 0 && stimmhaft != null && stimmhaft.count { it } < 3 && messFrage == null) {
+                if (piepAb >= 0 && stimmhaft != null && stimmhaft.none { it } && messText == null) {
                     Logbuch.sprache("Mitschrift verworfen", "nach dem Piepton keine Stimme")
                     de.frank.jarvis.observability.Antwortkette.verwerfen()
                     return@launch
@@ -2425,8 +2475,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
                 // Offline gewählt: nur auf dem Handy, nie still über Groq; fehlt das Modell, kommt ein Fehler.
-                val messText = messFrage
-                messFrage = null
                 val text = if (messText != null) messText else if (sprache.transkriptionLokal) {
                     de.frank.jarvis.speech.ParakeetLokal.run {
                         transkribiere(getApplication(), wav, stimmhaft, sprache.filterStilleVorabAn, if (sprache.woerterbuchAn) hotwords(de.frank.module.transkriptionsmodul.GroqTranscriber.begriffe(sprache.woerterbuchBegriffe)) else "")

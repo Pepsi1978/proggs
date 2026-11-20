@@ -37,8 +37,8 @@ class PiepSchnittTest {
         val r = PiepSchnitt.schneiden(wav(proben), ab, null)
         assertTrue(r.piepGefunden)
         val rest = (r.wav.size - 44) / 2
-        // Von der Stimme am Ende fehlt höchstens ein Rahmen (32 ms), der Piepton ist weg.
-        assertTrue("Rest $rest", rest >= ms(800) - ms(32) && rest <= ms(800) + ms(60))
+        // Von der Stimme fehlt nichts, vom Piepton bleibt höchstens ein Rest Nachhall.
+        assertTrue("Rest $rest", rest >= ms(800) && rest <= ms(800) + ms(70))
     }
 
     @Test
@@ -47,9 +47,9 @@ class PiepSchnittTest {
         val ab = ms(800) * 2
         val r = PiepSchnitt.schneiden(wav(proben), ab, BooleanArray(proben.size / 512) { true })
         assertEquals(false, r.piepGefunden)
-        val schnitt = (ab + 1023) / 1024 * 1024
+        val schnitt = ab / 1024 * 1024
         assertEquals(proben.size - schnitt / 2, (r.wav.size - 44) / 2)
-        assertEquals(proben.size / 512 - (ab + 1023) / 1024, r.stimmhaft!!.size)
+        assertEquals(proben.size / 512 - ab / 1024, r.stimmhaft!!.size)
     }
 
     @Test
@@ -60,7 +60,27 @@ class PiepSchnittTest {
         val ab = vor.size * 2
         val r = PiepSchnitt.schneiden(wav(vor + vokal), ab, null)
         assertEquals(false, r.piepGefunden)
-        val schnitt = (ab + 1023) / 1024 * 1024
+        val schnitt = ab / 1024 * 1024
         assertEquals(vor.size + vokal.size - schnitt / 2, (r.wav.size - 44) / 2)
+    }
+
+    @Test
+    fun tieferVokalMitFormantenBei400Und1200IstKeinPiep() {
+        // Grundton 100 Hz, Formanten genau auf 400 und 1200 Hz: jedes Fenster sieht wie Piepton aus, hält aber zu lange an.
+        val vokal = DoubleArray(ms(900)) { val t = it.toDouble() / rate; (1..30).sumOf { h -> (if (h == 4 || h == 12) 0.2 else 0.01 / h) * Math.sin(2 * Math.PI * 100 * h * t) } }
+        val vor = stimme(300)
+        val ab = vor.size * 2
+        val r = PiepSchnitt.schneiden(wav(vor + vokal), ab, null)
+        assertEquals(false, r.piepGefunden)
+        assertEquals(vor.size + vokal.size - ab / 1024 * 1024 / 2, (r.wav.size - 44) / 2)
+    }
+
+    @Test
+    fun ohneSucheNurAnDerMarke() {
+        val proben = stille(300) + piep(35) + stimme(500)
+        val ab = ms(300) * 2
+        val r = PiepSchnitt.schneiden(wav(proben), ab, null, suchen = false)
+        assertEquals(false, r.piepGefunden)
+        assertEquals(proben.size - ab / 1024 * 1024 / 2, (r.wav.size - 44) / 2)
     }
 }
