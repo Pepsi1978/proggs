@@ -857,6 +857,7 @@
     {"versionCode": 848, "versionName": "1.8.837", "stand": "20.11.2026, 20:14 Uhr", "notiz": "Neue Startkarte „Wichtige E-Mails“: Jarvis prüft deinen Gmail-Posteingang auf Wichtiges, zeigt es mit grünem Rahmen für heute und gestern, öffnet jede Nachricht direkt in Gmail und beantwortet „Habe ich wichtige E-Mails?“."},
     {"versionCode": 849, "versionName": "1.8.838", "stand": "20.11.2026, 20:23 Uhr", "notiz": "Neue aufklappbare Startkarte „Mac-Update-Zentrale“: Aktualisieren prüft am MacBook frisch, Grün installiert die CLI-unkritischen Updates, Rot nach Warnfenster die CLI-kritischen, mit Status, Freigaben und Neustart-Hinweisen."},
     {"versionCode": 850, "versionName": "1.8.839", "stand": "20.11.2026, 20:28 Uhr", "notiz": "Wichtige E-Mails öffnen sich beim Antippen jetzt wirklich direkt in Gmail, wiederkehrende gleiche Benachrichtigungen erscheinen nur noch einmal und reine Routine- und Massenmails fallen heraus."},
-    {"versionCode": 851, "versionName": "1.8.840", "stand": "20.11.2026, 20:34 Uhr", "notiz": "Mac-Update-Zentrale: Die Karte bleibt bedienbar, wenn die Update-Zentrale am Mac beendet wurde, und meldet abgelehnte Aufträge klar als nicht gestartet."}
+    {"versionCode": 851, "versionName": "1.8.840", "stand": "20.11.2026, 20:34 Uhr", "notiz": "Mac-Update-Zentrale: Die Karte bleibt bedienbar, wenn die Update-Zentrale am Mac beendet wurde, und meldet abgelehnte Aufträge klar als nicht gestartet."},
+    {"versionCode": 852, "versionName": "1.8.841", "stand": "20.11.2026, 20:36 Uhr", "notiz": "Wichtige E-Mails: Antippen öffnet die Nachricht direkt in Gmail im Web über Chrome statt über den abstürzenden Gmail-Link, gleiche wiederkehrende Benachrichtigungen erscheinen nur einmal, Massen- und Routinemails fallen heraus."}
 ]
 }
