@@ -374,9 +374,11 @@ class WeckwortDienst : Service() {
             var knappUm = 0L
             // Alle 50 Blöcke (4 s): Anker dazugekommen, Strecke abgerissen oder fremde Musik? Dann neu anfangen.
             var pruefZaehler = 0
+            var verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
             while (an.get()) {
                 if (++pruefZaehler >= 50) {
                     pruefZaehler = 0
+                    verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
                     val wechsel = if (ueberAnker) {
                         val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
                         if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
@@ -391,6 +393,8 @@ class WeckwortDienst : Service() {
                     gelesen += n
                 }
                 if (!an.get()) break
+                // Über den Anker leise Rufe hörbar machen: verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
+                if (ueberAnker && verstaerkung > 1f) verstaerken(block, verstaerkung)
                 for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 val anlernen = Stimmprofil.lerntAn
                 // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
@@ -549,6 +553,19 @@ class WeckwortDienst : Service() {
             // Läuft schon ein neuer Durchgang, gehört die Anzeige ihm.
             val aktuell = lauf
             if (aktuell == null || aktuell === an) Weckwort.hoertZu(false)
+        }
+    }
+
+    /**
+     * Verstärkt einen Block um [faktor]; über [KNIE] werden Spitzen weich zusammengedrückt, damit laute Rufe nicht hart
+     * übersteuern (das verfälschte Weckwort-Modell und Stimmerkennung mehr als leiser Ton).
+     */
+    private fun verstaerken(block: ShortArray, faktor: Float) {
+        for (i in block.indices) {
+            val y = block[i] * faktor
+            val betrag = kotlin.math.abs(y)
+            val begrenzt = if (betrag <= KNIE) betrag else KNIE + (32_767f - KNIE) * (1f - kotlin.math.exp(-(betrag - KNIE) / (32_767f - KNIE)))
+            block[i] = (if (y < 0) -begrenzt else begrenzt).toInt().coerceIn(-32_767, 32_767).toShort()
         }
     }
 
@@ -747,6 +764,8 @@ class WeckwortDienst : Service() {
          */
         private const val STILLE_FAKTOR = 1.25f
         private const val STILLE_MIN = 18f
+        /** Ab hier begrenzt die Anker-Verstärkung weich. */
+        private const val KNIE = 20_000f
         /**
          * So lange darf die App nach „Hey Jarvis“ zum Übernehmen brauchen, bevor der Wächter den Ruf als Meldung zeigt.
          * Großzügig, weil ein Kaltstart bei gesperrtem Handy unter Last mehrere Sekunden dauern kann.

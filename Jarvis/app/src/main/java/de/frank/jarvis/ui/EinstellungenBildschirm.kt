@@ -948,6 +948,13 @@ private fun AnkerEinstellungen(e: Einstellungen) {
             "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil). Im Gespräch kommen die Antworten im Medien-Profil in voller Tonqualität; danach geht es zurück ins Telefon-Profil fürs nächste Weckwort. Mit „Mikrofone des Anker im Gespräch“ aus schaltet er gleich nach dem Weckwort ins Medien-Profil und du sprichst ins Handy. Spielt Musik oder ist der Anker nicht verbunden, hört das Handy.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
         )
+        if (weck) {
+            var faktor by remember { mutableFloatStateOf(e.ankerVerstaerkung.toFloat()) }
+            Text("Mikrofon-Verstärkung fürs Weckwort: ${faktor.toInt()}-fach${if (faktor.toInt() == 8) " (Maximum)" else ""}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            Slider(value = faktor, onValueChange = { faktor = it.toInt().toFloat() }, valueRange = 1f..8f, steps = 6,
+                onValueChangeFinished = { e.ankerVerstaerkung = faktor.toInt() })
+            Text("Damit erkennt Jarvis auch leise gesprochene Rufe; laute Rufe werden weich begrenzt. Springt das Weckwort zu oft grundlos an, etwas zurückdrehen.", color = f.textSchwach, fontSize = 12.sp)
+        }
         val konferenz = e.konferenzMikrofonAn
         Zeile("Mikrofone des Anker im Gespräch", if (konferenz) "An" else "Aus", if (konferenz) f.erfolg else f.textLeise)
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

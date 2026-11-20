@@ -400,6 +400,9 @@ class EinstellungsKatalog(context: Context) {
             schalter("anker_weckwort", "Anker", "Weckwort über den Anker", "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil); im Gespräch kommen die Antworten im Medien-Profil in voller Tonqualität, danach zurück. Ist „Mikrofone des Anker im Gespräch“ aus, schaltet er gleich nach dem Weckwort ins Medien-Profil. Ohne Anker hört weiter das Handy.", { e.ankerWeckwort }) {
                 e.ankerWeckwort = it; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
             },
+            zahl("anker_verstaerkung", "Anker", "Mikrofon-Verstärkung fürs Weckwort", "Wie stark Jarvis die Anker-Mikrofone beim Lauschen auf das Weckwort verstärkt, damit auch leise Rufe ankommen; 8 ist das Maximum, laute Rufe werden dabei weich begrenzt. Gilt sofort.", 1, 8, "fach", { e.ankerVerstaerkung }) {
+                e.ankerVerstaerkung = it
+            },
             schalter("konferenz_mikrofon_an", "Anker", "Mikrofone des Anker im Gespräch", "Ist der Anker PowerConf verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität.", { e.konferenzMikrofonAn }) {
                 e.konferenzMikrofonAn = it
             },

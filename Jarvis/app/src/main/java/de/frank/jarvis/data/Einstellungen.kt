@@ -466,6 +466,8 @@ class Einstellungen private constructor(context: Context) {
     /** Das Weckwort über die Mikrofone des Anker hören (Telefon-Profil), nach dem Treffer zurück ins Medien-Profil; Vorgabe nur am Handy. */
     /** Umkreis um Zuhause in Metern, in dem Jarvis den Anker verbindet (100 bis 1000). */
     var ankerRadius: Int get() = prefs.getInt("anker_radius", 150).coerceIn(100, 1000); set(v) = put { putInt("anker_radius", v.coerceIn(100, 1000)) }
+    /** Verstärkung der Anker-Mikrofone fürs Weckwort (1- bis 8-fach), damit auch leise Rufe ankommen; Vorgabe Maximum. */
+    var ankerVerstaerkung: Int get() = prefs.getInt("anker_verstaerkung", 8).coerceIn(1, 8); set(v) = put { putInt("anker_verstaerkung", v.coerceIn(1, 8)) }
     var ankerWeckwort: Boolean get() = prefs.getBoolean("anker_weckwort", !Geraet.istTablet); set(v) = put { putBoolean("anker_weckwort", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", !Geraet.istTablet); set(v) = put { putBoolean("weckwort_an", v) }
