@@ -620,7 +620,10 @@
       "titel": "Komfort-Aliase (ls→eza, cat→bat) nur im echten Terminal",
       "datum": "2026-11-15T12:11",
       "beleg": "Sitzung 12d87da4 (Mac): ls -t <apk> | head -1 hing 30 min (eza -t frisst den Pfad, wartet auf stdin)",
-      "ort": ["~/.zshrc (Mac, lokal)", "bugs/werkzeuge/agenten-shell-aliase.md"],
+      "ort": [
+        "~/.zshrc (Mac, lokal)",
+        "bugs/werkzeuge/agenten-shell-aliase.md"
+      ],
       "werkzeug": "Bash",
       "fehler_regex": "did not complete within its \\d+s timeout",
       "aufruf_regex": "(^|[;&|]\\s*)ls\\s+-\\w*t",
@@ -770,6 +773,21 @@
       "plattform": [
         "linux"
       ],
+      "status": "aktiv"
+    },
+    {
+      "id": "M44",
+      "titel": "Weckwort-Aussetzer zuerst per Mitschnitt offline nachspielen statt Schwellen raten",
+      "datum": "2026-11-20T13:18",
+      "beleg": "Sitzung 471c55c7: 97 min, davon 3 Testrunden mit Frank und 5 Builds, bis Mitschnitt + sherpa-Replay die Ursache (Nullstille am Anker) zeigte",
+      "ort": [
+        "bugs/android/voice-assistant-trigger.md §18",
+        "bugs/android/voice-assistant-trigger-kurzcheck.md #18"
+      ],
+      "messbar": false,
+      "pruefung": "Bei der nächsten Weckwort-Sitzung prüfen, ob §18 gelesen und der Replay-Weg genutzt wurde, statt Schwellen ohne Daten zu ändern",
+      "ruecknahme": "Abschnitt '## §18 — sherpa-KWS verpasst Rufe auf digitaler Nullstille' und Kurzcheck-Zeile '| 18 | sherpa-KWS verpasst Rufe über Bluetooth-Freisprecher' entfernen",
+      "kosten": "0 (Bedarfsdatei, eine Kurzcheck-Zeile)",
       "status": "aktiv"
     }
   ]

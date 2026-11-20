@@ -26,3 +26,4 @@
 | 15 | sherpa-KWS (Kotlin) erkennt schnell gesprochene Phrase nie, langsam schon | Kotlin-`KeywordSpotterConfig` hat `numTrailingBlanks=2`, `maxActivePaths=4`: explizit `numTrailingBlanks=0`, `maxActivePaths=8` setzen | §15 |
 | 16 | sherpa-KWS 1.13.8 verpasst ~10 % der Rufe direkt nach einer Pause | Bug #3990 (Auto-Reset nach 1,5 s Stille verwirft Encoder-Zustand): Strom nach eigener Stille-Erkennung selbst neu anlegen, sonst zwei versetzte Stroeme | §16 |
 | 17 | Weckwort feuert, aber Sprecherpruefung weist schnelle/leise Rufe des Besitzers ab | Anlernen nimmt nur deutliche Proben (Spotter beim Anlernen zu streng) + Schwelle nur aus Zentroid; Empfindlichkeit muss auch die Stimm-Schwelle senken | §17 |
+| 18 | sherpa-KWS verpasst Rufe über Bluetooth-Freisprecher (Nullstille zwischen Wörtern) | Unhörbares Rauschen + 2 s Vorlauf in frischen Strom; Boden 0 = volle Verstärkung; vor Tuning Mitschnitt offline nachspielen (blockweise) | §18 |

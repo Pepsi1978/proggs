@@ -282,6 +282,11 @@ ModelScope CAM++-Doku (Beispielschwelle 0,31).
 ---
 
 <!-- verwandte-almanache (auto, bug-almanac-system) -->
+## §18 — sherpa-KWS verpasst Rufe auf digitaler Nullstille (Bluetooth-Freisprecher) ⭐ SELBST ERLEBT (Jarvis 1.8.821–1.8.828, 20.11.2026)
+- **Symptom:** Über den Anker PowerConf (SCO, `VOICE_COMMUNICATION`) springt die Phrase oft erst beim zweiten oder dritten Ruf an; Pegel und Bandbreite der Rufe sind normal.
+- **Ursache:** Der Freisprecher liefert zwischen den Wörtern exakt 0 (eigene Stummschaltung). Ein frischer Spotter-Strom mit nur ~1 s Nullstille als Vorlauf verpasst den Ruf; mit unhörbarem Rauschen (~-80 dBFS) oder 2 s Vorlauf erkennt er ihn. Ein Rauschboden von 0 darf nicht als „Lärm“ (Verstärkung 1) gelten.
+- **Prüfen ohne Frank:** Mitschnitt (`WECKWORT_MITSCHNITT`, PCM + CSV je Block) am Mac durch `pip install sherpa-onnx` (2.0.2; für 1.13.8 gibt es kein py3.15-Rad) schicken, **blockweise** füttern und nach jedem Block `get_result` prüfen (ganzer Puffer auf einmal meldet nichts). Nachbildung traf die App exakt. Echte vs. Fehlauslösung: Whisper (Groq) für Rufe, `say -v Anna …` für ähnliche Nicht-Rufe; Varianten „JAVA“/„JA“ und niedrigere Schwelle lösten bei „Ja, mein Smartphone …“ aus, `maxActivePaths=16` brachte +20 % ohne das.
+
 ## 🔗 Verwandte Almanache (siehe auch)
 
 Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft ebenfalls relevant. Wird einer von ihnen vom bug-almanac-guard getriggert, lohnt sich meist ein Blick (mindestens Kurzcheck) auch hier:
