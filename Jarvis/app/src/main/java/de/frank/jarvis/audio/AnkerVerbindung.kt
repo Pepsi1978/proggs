@@ -100,7 +100,10 @@ object AnkerVerbindung {
     fun fremdesAudioGeraet(c: Context): String? {
         if (!erlaubt(c)) return null
         for (p in listOfNotNull(a2dp, headset)) {
-            val d = runCatching { p.connectedDevices }.getOrNull()?.firstOrNull { runCatching { it.name?.contains(KonferenzMikrofon.GERAET, ignoreCase = true) != true }.getOrDefault(true) }
+            // Nur echte Audiogeräte (Kopfhörer, Headset, Auto); Uhren mit Freisprech-Profil (etwa die T-Rex) zählen nicht.
+            val d = runCatching { p.connectedDevices }.getOrNull()?.firstOrNull { g ->
+                runCatching { g.name?.contains(KonferenzMikrofon.GERAET, ignoreCase = true) != true && g.bluetoothClass?.majorDeviceClass == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO }.getOrDefault(false)
+            }
             if (d != null) return runCatching { d.name }.getOrNull() ?: "Kopfhörer"
         }
         return null
@@ -332,7 +335,8 @@ object AnkerVerbindung {
                     Logbuch.system("Anker getrennt")
                     anstossen(c, "Anker getrennt")
                 }
-                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED, BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> if (!istAnker && d != null) {
+                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED, BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> if (!istAnker && d != null &&
+                    runCatching { d.bluetoothClass?.majorDeviceClass == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO }.getOrDefault(false)) {
                     // Kopfhörer (oder Auto) kommt oder geht: Mit ihnen läuft alles über sie, ohne sie holt Jarvis den Anker zurück.
                     when (intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)) {
                         BluetoothProfile.STATE_CONNECTED -> bereich.launch {
