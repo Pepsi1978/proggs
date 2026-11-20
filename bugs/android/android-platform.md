@@ -915,3 +915,9 @@ Tracker-Status.
 - Symptom: SAF-Abfragen auf `content://com.google.android.apps.docs.storage/...` liefern `null` („Failed to find provider info“), obwohl die Ordnerfreigabe noch gilt. Vorher veraltet der Zwischenspeicher der Drive-App (neue APKs fehlen in der Liste).
 - Ursache: Samsung setzt ungenutzte Google-Apps (Drive, Maps, Wallet …) auf `DISABLED_UNTIL_USED` (`dumpsys package` → `enabled=4`, `lastDisabledCaller: auto_disabler`). `adb shell pm enable` ist verboten (SecurityException), Abfragen des Providers zählen nicht als Nutzung.
 - Lösung: Start der Launcher-Activity schaltet die App wieder ein (`am start -n com.google.android.apps.docs/.app.NewMainProxyActivity`). Robuster: Drive direkt per REST (drive.readonly) lesen statt über die Drive-App; UpdateStation tut das seit 1.0.35 zuerst.
+
+## 12. Gmail-App öffnet einzelne Nachrichten von außen nicht (20.11.2026, Jarvis; Gmail 2026.11.09, Fold 8 und Tab S9; eigener Befund)
+
+- `https://mail.google.com/…#inbox/<hex>` mit `setPackage("com.google.android.gm")` geht an `InterceptedAppLinkAlias` → Ziel `.ui.MailActivityGmail` fehlt (`ClassNotFoundException`) → Gmail stürzt ab („springt hin und her“).
+- `com.google.android.gm.intent.VIEW_MESSAGE_DEEPLINK` (Extras `account` = `Account(adresse,"com.google")`, `serverPermId` = `thread-f:<X-GM-THRID dez.>` bzw. `messageStorageId` = `msg-f:…`): zeigt nur den Posteingang oder schließt sich still. Nicht weiter probieren.
+- **Funktioniert (Handy und Tablet geprüft):** Chrome explizit (`setPackage("com.android.chrome")`, `CATEGORY_BROWSABLE`) mit `https://mail.google.com/mail/mu/mp/?authuser=<adresse>#cv/Inbox/<X-GM-THRID hex>`. Die Desktop-Adresse `/mail/u/0/#inbox/<hex>` verliert am Handy beim Umleiten auf die mobile Ansicht die Unterhaltung. X-GM-THRID per `com.sun.mail:gimap:1.6.7` (`isTransitive = false`, neben `android-mail`).
