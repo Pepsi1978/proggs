@@ -12,7 +12,11 @@ data class NewsMeldung(
     val quelle: String = "",
     val update: Boolean = false,
     val ausgabeUm: Long = 0L,
-)
+    /** Was Frank zu sehen bekommt, wenn es vom [titel] abweicht (Dortmund-Ergebnis ausgeblendet); leer = [titel]. */
+    val anzeige: String = "",
+) {
+    val gezeigt: String get() = anzeige.ifBlank { titel }
+}
 
 /** Was Frank heute schon genannt oder vorgelesen wurde: genug, um dieselbe Geschichte auch auf dem anderen Gerät wiederzuerkennen. */
 data class Genannt(val titel: String, val quelle: String, val um: Long)
@@ -38,17 +42,23 @@ object NewsRegeln {
     private fun jaccard(a: Set<String>, b: Set<String>): Double =
         if (a.isEmpty() || b.isEmpty()) 0.0 else a.intersect(b).size.toDouble() / a.union(b).size
 
-    /** Nur Artikeladressen zählen; eine bloße Startseite würde fremde Geschichten zusammenwerfen. */
+    /**
+     * Nur echte Artikeladressen zählen (mindestens zwei Pfadteile oder ein letzter Teil mit Ziffer bzw. Bindestrich und 8+ Zeichen);
+     * Start- und Rubrikseiten wie „bvb.de/news“ würden fremde Geschichten zusammenwerfen.
+     */
     fun adresse(url: String): String? {
         val ohne = url.substringBefore('#').substringBefore('?').lowercase(Locale.ROOT)
         val rest = ohne.substringAfter("://", ohne).removePrefix("www.")
         val pfad = rest.substringAfter('/', "").trimEnd('/')
-        return if (pfad.length < 2) null else rest.substringBefore('/') + "/" + pfad
+        val teile = pfad.split('/').filter { it.isNotEmpty() }
+        val artikel = teile.size >= 2 || teile.lastOrNull()?.let { it.length >= 8 && it.any { c -> c.isDigit() || c == '-' } } == true
+        return if (!artikel) null else rest.substringBefore('/') + "/" + pfad
     }
 
     /** Dieselbe Geschichte? Gleiche Artikeladresse oder sehr ähnlicher Titel. Eine Folgemeldung mit neuer Entwicklung gilt als neu. */
     fun gleich(m: NewsMeldung, g: Genannt): Boolean {
-        val a = adresse(m.quelle)
+        // Folgemeldungen (Liveticker unter derselben Adresse) nur über den Titel: Eine neue Entwicklung trägt meist einen neuen.
+        val a = if (m.update) null else adresse(m.quelle)
         if (a != null && a == adresse(g.quelle)) return true
         return jaccard(woerter(m.titel), woerter(g.titel)) >= 0.6
     }
@@ -62,7 +72,7 @@ object NewsRegeln {
      * deshalb zählen Wortanfänge der Titelwörter: mindestens zwei Treffer und mindestens zwei Fünftel der Wörter.
      */
     fun genanntIn(antwort: String, m: NewsMeldung): Boolean {
-        val titel = woerter(m.titel)
+        val titel = woerter(m.gezeigt)
         if (titel.isEmpty()) return false
         // Satz für Satz: Über die ganze Antwort verteilt fänden sich bei vielen Schlagzeilen sonst zufällig gemeinsame Wörter
         // („Dortmund“, „Spiel“), und eine ausgelassene Meldung gälte als genannt.
@@ -75,12 +85,14 @@ object NewsRegeln {
 
     // ------------------------------------------------------------------ Spoilerschutz Borussia Dortmund
 
-    private val DORTMUND = Regex("dortmund|\\bbvb\\b|borussia d", RegexOption.IGNORE_CASE)
-    private val STAND = Regex("\\b\\d{1,2}\\s*[:–-]\\s*\\d{1,2}\\b")
+    private val DORTMUND = Regex("dortmund|\\bbvb\\b|borussia d|borussen|schwarz-?gelb", RegexOption.IGNORE_CASE)
+    /** „3:1“, „2-2“, nicht aber Uhrzeiten („20:30 Uhr“). */
+    private val STAND = Regex("\\b\\d{1,2}\\s*[:–-]\\s*\\d{1,2}\\b(?!\\s*uhr)", RegexOption.IGNORE_CASE)
+    /** Ausgang eines Spiels, auch in Zusammensetzungen („Derbysieg“, „Heimpleite“, „Siegtreffer“). */
     private val AUSGANG = Regex(
-        "\\b(gewinnt|gewann|gewinnen|gewonnen|siegt|siegte|siegen|sieg|siege|besiegt|bezwingt|bezwang|schlägt|schlug|geschlagen|verliert|verlor|verlieren|verloren|" +
-            "niederlage|pleite|unentschieden|remis|punktet|punktgewinn|punkteteilung|torlos|trennt sich|trennen sich|ausgeschieden|scheitert|scheiterte|dreht|drehte|" +
-            "triumph|triumphiert|blamage|blamiert|kantersieg|heimsieg|auswärtssieg|endstand|spielstand|führt mit|führung|ausgleich|siegtor|tore)\\b",
+        "\\p{L}*(sieg|pleite|niederlage|triumph|blamage)\\p{L}*|\\b(gewinnt|gewann|gewinnen|gewonnen|besiegt|bezwingt|bezwang|schlägt|schlug|geschlagen|" +
+            "verliert|verlor|verlieren|verloren|unentschieden|remis|punktet|punkte|punkt|punktgewinn|punkteteilung|torlos|nullnummer|comeback|" +
+            "trennt sich|trennen sich|ausgeschieden|scheitert|scheiterte|dreht|drehte|erfolg\\p{L}*|endstand|spielstand|führt mit|führung|ausgleich\\p{L}*|tore|treffer|doppelpack|traf)\\b",
         RegexOption.IGNORE_CASE,
     )
 
@@ -91,9 +103,12 @@ object NewsRegeln {
     fun spoiler(m: NewsMeldung): Boolean = DORTMUND.containsMatchIn(m.titel + " " + m.kurz) &&
         (STAND.containsMatchIn(m.titel + " " + m.kurz) || AUSGANG.containsMatchIn(m.titel + " " + m.kurz))
 
-    /** Satzweise ohne Spielstand und Ergebnis, wenn der Text von Dortmund handelt; sonst unverändert. */
-    fun ohneErgebnis(text: String): String {
-        if (!DORTMUND.containsMatchIn(text)) return text
+    /**
+     * Satzweise ohne Spielstand und Ergebnis, wenn der Text von Dortmund handelt; sonst unverändert. [erzwingen]: Der Aufrufer weiß schon,
+     * dass die Meldung ein Dortmund-Ergebnis trägt (der einzelne Absatz nennt Dortmund vielleicht gar nicht).
+     */
+    fun ohneErgebnis(text: String, erzwingen: Boolean = false): String {
+        if (!erzwingen && !DORTMUND.containsMatchIn(text)) return text
         return text.split(Regex("(?<=[.!?])\\s+")).filterNot { STAND.containsMatchIn(it) || AUSGANG.containsMatchIn(it) }.joinToString(" ")
     }
 }

@@ -50,6 +50,7 @@
     {"versionCode": 46, "versionName": "1.10.35", "stand": "03.11.2026, 16:39 Uhr", "notiz": "Der Automatikmodus schaltet früher um: abends schon bei Sonnenuntergang in den Dunkelmodus und morgens schon mit Beginn der Morgendämmerung in den Hellmodus."},
     {"versionCode": 47, "versionName": "1.10.36", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."},
     {"versionCode": 48, "versionName": "1.10.37", "stand": "18.11.2026, 09:09 Uhr", "notiz": "Nach dem Modellwechsel passt die gespeicherte Denktiefe automatisch zum neuen Sol- bzw. Astra-Modell."},
-    {"versionCode": 49, "versionName": "1.10.38", "stand": "20.11.2026, 13:31 Uhr", "notiz": "Jarvis kann den Bestand aller Rubriken jetzt über eine eigene, nur lesende Brücke abfragen."}
+    {"versionCode": 49, "versionName": "1.10.38", "stand": "20.11.2026, 13:31 Uhr", "notiz": "Jarvis kann den Bestand aller Rubriken jetzt über eine eigene, nur lesende Brücke abfragen."},
+    {"versionCode": 50, "versionName": "1.10.39", "stand": "20.11.2026, 13:50 Uhr", "notiz": "Die Jarvis-Brücke filtert Rubriken genauer, liest nur so viele Ausgaben wie nötig und trennt verschiedene Meldungen derselben Rubrikseite."}
 ]
 }

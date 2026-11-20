@@ -10,6 +10,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -49,7 +50,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         schema = schema(
             "rubrik" to text("Nur diese Rubrik, so wie Frank sie nennt (z. B. KI, Fußball). Weglassen = alle Rubriken."),
             "auch_genannte" to schalter("Auch heute schon Genanntes zeigen (nur wenn Frank alles noch einmal hören will). Vorgabe: aus."),
-            "tage" to zahl("Nur wenn Frank ältere Meldungen will: so viele Tage zurück (1–10). Weglassen = aktueller Bestand (heutige Ausgaben, je Rubrik mindestens die neueste)."),
+            "tage" to zahl("Nur wenn Frank ältere Meldungen will: so viele Tage zurück (1–31). Weglassen = aktueller Bestand (heutige Ausgaben, je Rubrik mindestens die neueste)."),
             "mitgeteilt" to textListe("Nur für ChatGPT und andere Wege außerhalb der Jarvis-App: ids der Meldungen, die du Frank seit dem letzten Abruf tatsächlich genannt hast."),
         ),
         nurLesen = true,
@@ -92,9 +93,23 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         return liste.filter { it.ausgabeUm >= heute || it.ausgabeUm == neueste[it.rubrik] }
     }
 
-    /** Dortmund-Meldung mit Spielausgang: Schlagzeile und Kurztext verraten nichts. */
-    private fun entschaerft(m: NewsMeldung): NewsMeldung = if (!NewsRegeln.spoiler(m)) m else
-        m.copy(titel = "Borussia Dortmund: Meldung zum Spiel (Ergebnis ausgeblendet)", kurz = NewsRegeln.ohneErgebnis(m.kurz))
+    /**
+     * Dortmund-Meldung mit Spielausgang: Was Frank sieht ([NewsMeldung.anzeige], Kurztext), verrät nichts. Titel und Quelle bleiben
+     * unverändert, damit jede Geschichte für die Merkliste unterscheidbar bleibt.
+     */
+    private fun entschaerft(m: NewsMeldung): NewsMeldung {
+        if (!NewsRegeln.spoiler(m)) return m
+        val kurz = NewsRegeln.ohneErgebnis(m.kurz, erzwingen = true)
+        val anriss = kurz.split(Regex("\\s+")).filter { it.isNotBlank() }.take(8).joinToString(" ")
+        return m.copy(anzeige = "Borussia Dortmund: Meldung zum Spiel" + (if (anriss.isNotEmpty()) " – $anriss …" else "") + " (Ergebnis ausgeblendet)", kurz = kurz)
+    }
+
+    /** Kennung des Gesprächs mit Frank (eigener Chat, Sprache); null über ChatGPT/MCP, in Agenten und in der Tagesauswertung. */
+    private suspend fun gespraech(): String? {
+        val k = currentCoroutineContext()
+        if (k[ProgrammierChat.AusChatGpt] != null || k[de.frank.jarvis.ablage.AgentenKontext]?.eintragTitel != null) return null
+        return k[ProgrammierChat.GespraechKennung]?.id
+    }
 
     private suspend fun leseNews(a: JSONObject): Ergebnis {
         // ChatGPT meldet nach: Was es Frank zuvor genannt hat, zählt ab jetzt als genannt.
@@ -102,24 +117,29 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             val gemeldet = (0 until ids.length()).map { ids.optString(it) }.filter { it.isNotBlank() }.toSet()
             if (gemeldet.isNotEmpty()) {
                 val alle = rufe("lesen", JSONObject().put("tage", 10))
-                if (!alle.has("fehler")) NewsGedaechtnis.merke(context, meldungen(alle).filter { it.id in gemeldet }.map(::entschaerft))
+                if (!alle.has("fehler")) NewsGedaechtnis.merke(context, meldungen(alle).filter { it.id in gemeldet })
             }
         }
-        val anfrage = JSONObject().put("tage", a.optInt("tage", 2).coerceIn(1, 10))
+        // Ohne tage: der aktuelle Bestand (heutige Ausgaben, je Rubrik die neueste, auch bei Rubriken, die nur wöchentlich oder monatlich sammeln).
+        // Die Brücke sucht dafür bis zu 31 Tage zurück und liest nur so viele Ausgaben, wie sie braucht.
+        val gewuenscht = a.optInt("tage", 0)
+        val zeitraum = if (gewuenscht > 0) gewuenscht.coerceIn(1, 31) else 31
+        val anfrage = JSONObject().put("tage", zeitraum).put("aktuell", gewuenscht <= 0)
         a.optString("rubrik").trim().takeIf { it.isNotEmpty() }?.let { anfrage.put("rubrik", it) }
-        var antwort = rufe("lesen", anfrage)
-        // Rubriken, die seltener als täglich sammeln: ohne Lauf in den letzten zwei Tagen zehn Tage zurück, damit auch ihre neueste Ausgabe zählt.
-        val ohneLauf = antwort.optJSONArray("rubriken")?.let { r -> (0 until r.length()).any { r.getJSONObject(it).optLong("letzter_lauf") == 0L } } == true
-        if (ohneLauf && a.optInt("tage", 0) <= 0) rufe("lesen", JSONObject(anfrage.toString()).put("tage", 10)).takeIf { !it.has("fehler") }?.let { antwort = it }
+        val antwort = rufe("lesen", anfrage)
         antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let {
             return Ergebnis("NEWS-KOMPASS NICHT ERREICHBAR: $it Sag Frank klar, dass News-Kompass gerade nicht gelesen werden konnte (das ist nicht „keine neuen Meldungen“).", fehler = true)
         }
         val jetzt = antwort.optLong("jetzt", System.currentTimeMillis())
-        val alle = meldungen(antwort).let { if (a.optInt("tage", 0) > 0) it else aktuell(it) }.map(::entschaerft)
+        val alle = meldungen(antwort).let { if (gewuenscht > 0) it else aktuell(it) }
+        // Gestern Genanntes zählt nur für Ausgaben von gestern (kurz nach Mitternacht ist die neueste Ausgabe noch die vom Vorabend).
+        val heute = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val genannt = NewsGedaechtnis.genannt(context)
-        val neu = if (a.optBoolean("auch_genannte")) alle else NewsRegeln.neu(alle, genannt)
+        val gestern = NewsGedaechtnis.genannt(context, LocalDate.now().minusDays(1))
+        val neu = (if (a.optBoolean("auch_genannte")) alle else alle.filter { m -> NewsRegeln.neu(listOf(m), if (m.ausgabeUm < heute) genannt + gestern else genannt).isNotEmpty() })
+            .map(::entschaerft)
         val weggelassen = alle.size - neu.size
-        NewsGedaechtnis.angeboten(neu)
+        gespraech()?.let { NewsGedaechtnis.angeboten(it, neu) }
 
         val rubriken = antwort.optJSONArray("rubriken") ?: JSONArray()
         val stand = StringBuilder()
@@ -131,7 +151,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             val zeiten = (r.optJSONArray("uhrzeiten") ?: JSONArray()).let { z -> (0 until z.length()).joinToString(" und ") { z.optString(it) } }
             stand.append("- ").append(r.optString("name").ifBlank { r.optString("titel") })
             if (zeiten.isNotEmpty()) stand.append(" (sammelt um ").append(zeiten).append(" Uhr)")
-            stand.append(": letzter Stand ").append(if (letzter > 0) zeit(letzter) else "keiner in den letzten 10 Tagen")
+            stand.append(": letzter Stand ").append(if (letzter > 0) zeit(letzter) else "keiner in den letzten $zeitraum Tagen")
             if (r.optBoolean("nichts_neues")) stand.append(", beim letzten Lauf nichts Neues gefunden")
             r.optString("fehler").takeIf { it.isNotBlank() }?.let { stand.append(", letzter Lauf gescheitert: ").append(it.take(160)) }
             // Ein fälliger Termin ohne Ausgabe danach (mehr als 20 Minuten her): älterer Stand, nicht „nichts Neues“.
@@ -162,7 +182,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
                 neu.groupBy { it.rubrik }.forEach { (rubrik, liste) ->
                     append(rubrik).append(":\n")
                     liste.forEach { m ->
-                        append("- [id ").append(m.id).append("] ").append(m.titel)
+                        append("- [id ").append(m.id).append("] ").append(m.gezeigt)
                         if (m.wann.isNotBlank()) append(" (").append(m.wann).append(")")
                         if (m.update) append(" [Folgemeldung]")
                         if (m.kurz.isNotBlank()) append(": ").append(m.kurz.replace(Regex("\\s+"), " ").take(180))
@@ -189,12 +209,13 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
                 val alle = rufe("lesen", JSONObject().put("tage", 10))
                 alle.optString("fehler").takeIf { it.isNotEmpty() }?.let { return Ergebnis("NEWS-KOMPASS NICHT ERREICHBAR: $it", fehler = true) }
                 val gesucht = NewsRegeln.woerter(stichworte)
-                val treffer = meldungen(alle).map { m -> m to NewsRegeln.woerter(m.titel + " " + m.kurz + " " + m.rubrik).count { w -> gesucht.any { w.startsWith(it.take(5)) } } }
+                // Je Suchwort ein Punkt, wenn es in Titel, Kurztext oder Rubrik vorkommt: So passt die Zahl zu gesucht.size.
+                val treffer = meldungen(alle).map { m -> NewsRegeln.woerter(m.titel + " " + m.kurz + " " + m.rubrik).let { w -> m to gesucht.count { s -> w.any { it.startsWith(s.take(5)) } } } }
                     .filter { it.second > 0 }.sortedByDescending { it.second }
                 if (treffer.isEmpty()) return Ergebnis("Keine Meldung in News-Kompass passt zu „$stichworte“.", fehler = true)
                 if (treffer.size > 1 && treffer[0].second == treffer[1].second && treffer[0].second < gesucht.size)
                     return Ergebnis("Mehrere Meldungen passen. Frage Frank, welche gemeint ist, oder nimm die id:\n" +
-                        treffer.take(5).joinToString("\n") { "- [id ${it.first.id}] ${entschaerft(it.first).titel}" }, fehler = true)
+                        treffer.take(5).joinToString("\n") { "- [id ${it.first.id}] ${entschaerft(it.first).gezeigt}" }, fehler = true)
                 id = treffer[0].first.id
             }
         }
@@ -206,14 +227,14 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         val roh = NewsMeldung(id, m.optString("rubrik"), m.optString("titel"), absaetze.firstOrNull().orEmpty(), m.optString("wann"), quellen.firstOrNull().orEmpty(), m.optBoolean("update"), m.optLong("ausgabe_um"))
         val schutz = !a.optBoolean("ergebnis") && NewsRegeln.dortmundSpoiler(roh.titel + " " + absaetze.joinToString(" "))
         // Wer gezielt nachfragt, hat die Meldung gehört; die Antwort darauf markiert sie als genannt.
-        NewsGedaechtnis.angeboten(listOf(entschaerft(roh)))
+        gespraech()?.let { NewsGedaechtnis.angeboten(it, listOf(if (schutz) entschaerft(roh) else roh)) }
         val text = buildString {
             append("MELDUNG aus News-Kompass (").append(roh.rubrik).append(", Ausgabe ").append(zeit(roh.ausgabeUm)).append(")\n")
-            append(if (schutz) entschaerft(roh).titel else roh.titel)
+            append(if (schutz) entschaerft(roh).gezeigt else roh.titel)
             if (roh.wann.isNotBlank()) append(" (").append(roh.wann).append(")")
             if (roh.update) append(" [Folgemeldung]")
             append("\n\n")
-            absaetze.forEach { append(if (schutz) NewsRegeln.ohneErgebnis(it) else it).append("\n\n") }
+            absaetze.forEach { absatz -> (if (schutz) NewsRegeln.ohneErgebnis(absatz, erzwingen = true) else absatz).takeIf { it.isNotBlank() }?.let { append(it).append("\n\n") } }
             if (schutz) append("(Spielstand und Ergebnis von Borussia Dortmund ausgeblendet: Frank schaut zeitversetzt. Nur auf seine ausdrückliche Frage mit ergebnis.)\n\n")
             if (quellen.isNotEmpty()) append("Quellen (nur für dich, etwa für eine gezielte Websuche zu dieser Meldung; Frank nicht nennen):\n").append(quellen.take(6).joinToString("\n")).append('\n')
             append("\nGeht Franks Frage über diese Meldung hinaus oder will er eine Internetsuche dazu: gezielt mit der direkten Websuche zu genau dieser Meldung suchen, kein Agent.")

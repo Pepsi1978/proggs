@@ -28,8 +28,9 @@ import org.json.JSONObject
  * Aufruf: `ContentResolver.call(content://de.frank.newskompass.jarvis, methode, null, Bundle("json" → Anfrage))`,
  * Antwort im Bundle unter "json". Fachliche Fehler kommen als `{"fehler": "..."}` zurück.
  *
- * - `lesen` (`rubrik` optional, `tage` 1–10, Vorgabe 2): Rubriken mit Zeitplan und Stand (letzter Lauf, fälliger Termin,
+ * - `lesen` (`rubrik` optional, `tage` 1–31, Vorgabe 2, `aktuell`): Rubriken mit Zeitplan und Stand (letzter Lauf, fälliger Termin,
  *   Fehler) und die Meldungen der regulären Blöcke, neueste Ausgabe zuerst; dieselbe Geschichte aus mehreren Läufen nur einmal.
+ *   `aktuell` = nur heutige Ausgaben und je Rubrik die neueste (bis `tage` zurück); gelesen wird nur, bis jede Rubrik ihre hat.
  * - `meldung` (`id` = „Ausgabe/Meldung“): eine Meldung vollständig mit allen Absätzen und Quellen.
  *
  * Die Brücke stößt nie einen Lauf an und holt nichts nach: Das Sammeln um 5 und 17 Uhr bleibt allein Sache des Zeitplans.
@@ -42,7 +43,8 @@ class JarvisBruecke : ContentProvider() {
         nurEigeneSignatur()
         val antwort = runCatching {
             val anfrage = extras?.getString("json")?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
-            runBlocking(Dispatchers.IO) { withTimeoutOrNull(5_000L) { verarbeite(method, anfrage) } ?: fehler("News-Kompass antwortet nicht rechtzeitig.") }
+            // Zeitlimit (meist Kaltstart): als vorübergehend markiert, dann versucht Jarvis' AppBruecke es einmal neu.
+            runBlocking(Dispatchers.IO) { withTimeoutOrNull(5_000L) { verarbeite(method, anfrage) } ?: fehler("News-Kompass antwortet nicht rechtzeitig.").put("_voruebergehend", true) }
         }.getOrElse { f -> fehler(f.message ?: f.javaClass.simpleName) }
         return Bundle().apply { putString("json", antwort.toString()) }
     }
@@ -59,14 +61,27 @@ class JarvisBruecke : ContentProvider() {
 
     private suspend fun lesen(app: NewsApplication, a: JSONObject): JSONObject {
         val jetzt = ZonedDateTime.now()
-        val tage = a.optInt("tage", 2).coerceIn(1, 10)
+        val nun = System.currentTimeMillis()
+        val tage = a.optInt("tage", 2).coerceIn(1, 31)
+        val aktuell = a.optBoolean("aktuell")
+        val heute = jetzt.toLocalDate().atStartOfDay(jetzt.zone).toInstant().toEpochMilli()
         val stand = app.einstellungen.stand.value
         val themen = stand.themen.filter { it.text.isNotBlank() }
-        // Für den Stand je Rubrik mindestens zwei Tage zurück, auch wenn weniger Meldungen gewünscht sind.
-        val ausgaben = app.speicher.ausgabenSeit(System.currentTimeMillis() - maxOf(tage, 2) * 86_400_000L)
-            .filter { it.istRegulaer }.sortedByDescending { it.erstelltUm }
+        // Neueste zuerst; der Stand je Rubrik braucht immer die letzten zwei Tage. Mit `aktuell` endet das Lesen, sobald jede Rubrik
+        // ihre neueste gelaufene Ausgabe hat. Ohne Zwischenspeicher der Anzeige (merken = false), damit die App ihren behält.
+        val fenster = nun - maxOf(tage, 2) * 86_400_000L
+        val offen = themen.map { it.id }.toMutableSet()
+        val neuesteJeThema = HashMap<String, String>()
+        val ausgaben = mutableListOf<Ausgabe>()
+        for (e in app.speicher.index.value.filter { it.erstelltUm >= fenster }.sortedByDescending { it.erstelltUm }) {
+            if (aktuell && offen.isEmpty() && e.erstelltUm < minOf(heute, nun - 48 * 3_600_000L)) break
+            val aus = app.speicher.ausgabe(e.id, merken = false) ?: continue
+            if (!aus.istRegulaer) continue
+            ausgaben += aus
+            aus.bloecke.filter { NewsRecherche.istGelaufen(it) }.forEach { b -> if (offen.remove(b.themaId)) neuesteJeThema[b.themaId] = aus.id }
+        }
         val faellig = Zeitplan.faelligZwischen(themen, jetzt.minusHours(48), jetzt)
-        val rubrik = a.optString("rubrik").trim().lowercase()
+        val rubrik = a.optString("rubrik").trim()
 
         val rubriken = JSONArray()
         themen.forEach { thema ->
@@ -89,17 +104,19 @@ class JarvisBruecke : ContentProvider() {
             )
         }
 
-        val grenze = System.currentTimeMillis() - tage * 86_400_000L
+        val grenze = nun - tage * 86_400_000L
         val meldungen = JSONArray()
         val gesehen = mutableListOf<Meldung>()
-        ausgaben.filter { it.erstelltUm >= grenze }.forEach { aus ->
+        ausgaben.forEach { aus ->
             aus.bloecke.filter { it.frage == null }.forEach { block ->
+                val dabei = if (aktuell) aus.erstelltUm >= heute || neuesteJeThema[block.themaId] == aus.id else aus.erstelltUm >= grenze
+                if (!dabei) return@forEach
                 val thema = themen.firstOrNull { it.id == block.themaId }
                 val name = thema?.kopfzeile() ?: block.titel
                 if (rubrik.isNotEmpty() && !passt(rubrik, name, block.titel, thema?.text.orEmpty())) return@forEach
                 block.meldungen.forEach { m ->
                     // Neueste Fassung einer Geschichte gewinnt (die Ausgaben sind neueste zuerst sortiert).
-                    if (gesehen.any { Geschichten.gleich(it.titel, it.quellen.firstOrNull(), it.istUpdate, m.titel, m.quellen.firstOrNull(), m.istUpdate) }) return@forEach
+                    if (gesehen.any { gleicheGeschichte(it, m) }) return@forEach
                     gesehen += m
                     meldungen.put(
                         JSONObject()
@@ -121,7 +138,23 @@ class JarvisBruecke : ContentProvider() {
             .put("meldungen", meldungen)
             .put("zeitplan_aktiv", stand.zeitplanAktiv)
             .put("lauf_wartet", app.einstellungen.hatOffeneLaeufe)
-            .put("jetzt", System.currentTimeMillis())
+            .put("jetzt", nun)
+    }
+
+    /**
+     * Wie [Geschichten.gleich], aber nur echte Artikeladressen (mindestens zwei Pfadteile oder ein Slug mit Ziffer/Bindestrich):
+     * Rubrikseiten wie „bvb.de/news“ würden sonst verschiedene Meldungen zusammenwerfen.
+     */
+    private fun gleicheGeschichte(a: Meldung, b: Meldung): Boolean {
+        val qa = a.quellen.firstOrNull()?.takeIf(::artikel)
+        val qb = b.quellen.firstOrNull()?.takeIf(::artikel)
+        return Geschichten.gleich(a.titel, qa, a.istUpdate, b.titel, qb, b.istUpdate)
+    }
+
+    private fun artikel(url: String): Boolean {
+        val pfad = url.substringBefore('#').substringBefore('?').substringAfter("://", url).substringAfter('/', "").trimEnd('/')
+        val teile = pfad.split('/').filter { it.isNotEmpty() }
+        return teile.size >= 2 || teile.lastOrNull()?.let { it.length >= 8 && it.any { c -> c.isDigit() || c == '-' } } == true
     }
 
     private suspend fun meldung(app: NewsApplication, id: String): JSONObject {
@@ -149,13 +182,19 @@ class JarvisBruecke : ContentProvider() {
         return fehler("Meldung nicht gefunden.")
     }
 
-    /** „Fußball“ findet „Fußball kompakt“, „KI“ findet „KI Nachrichten“; verglichen werden auch die Wörter des Themas. */
+    /**
+     * „Fußball“ findet „Fußball kompakt“, „KI“ findet „KI Nachrichten“; verglichen werden auch die Wörter des Themas. Jedes Suchwort
+     * muss als Wort vorkommen: kurze (unter vier Zeichen, etwa „KI“) ganz, längere als Wortanfang („Fußball“ in „Fußballnews“),
+     * damit „KI“ nicht „Kicker“ oder „Kinder“ trifft.
+     */
     private fun passt(suche: String, vararg felder: String): Boolean {
         val norm = { s: String -> s.lowercase().replace("ß", "ss").replace("-", " ") }
-        val s = norm(suche).removeSuffix("news").removeSuffix("nachrichten").trim().ifEmpty { norm(suche) }
+        val worte = norm(suche).split(Regex("\\s+")).filter { it.length >= 2 && it != "news" && it != "nachrichten" && it != "meldungen" }
+            .ifEmpty { norm(suche).split(Regex("\\s+")).filter { it.length >= 2 } }
+        if (worte.isEmpty()) return true
         return felder.any { f ->
             val feld = norm(f)
-            feld.contains(s) || s.split(' ').filter { it.length >= 2 }.let { w -> w.isNotEmpty() && w.all { Regex("\\b${Regex.escape(it)}").containsMatchIn(feld) } }
+            worte.all { w -> Regex("(?<![\\p{L}\\p{N}])" + Regex.escape(w) + if (w.length < 4) "(?![\\p{L}\\p{N}])" else "").containsMatchIn(feld) }
         }
     }
 

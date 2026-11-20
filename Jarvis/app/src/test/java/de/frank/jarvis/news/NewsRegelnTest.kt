@@ -61,4 +61,22 @@ class NewsRegelnTest {
             assertTrue(NewsRegeln.genanntIn(antwort, NewsMeldung("y", "r", titel[(n + 1) % titel.size])))
         }
     }
+
+    @Test fun reviewFaelleSpoilerUndGeschichten() {
+        // Zusammensetzungen und Umschreibungen gelten als Ergebnis, Anstoßzeiten nicht.
+        assertTrue(NewsRegeln.spoiler(NewsMeldung("x", "F", "Borussen feiern Derbysieg")))
+        assertTrue(NewsRegeln.spoiler(NewsMeldung("x", "F", "Dortmund holt drei Punkte in Leipzig")))
+        assertFalse(NewsRegeln.spoiler(NewsMeldung("x", "F", "Dortmund: Anstoß um 20:30 Uhr")))
+        // Erzwungen: Der Absatz nennt Dortmund nicht, verrät aber das Ergebnis.
+        assertEquals("", NewsRegeln.ohneErgebnis("Guirassy traf doppelt beim 3:1-Erfolg.", erzwingen = true))
+        // Rubrikseiten sind keine Artikeladressen, Folgemeldungen unter derselben Liveticker-Adresse sind neu.
+        assertEquals(null, NewsRegeln.adresse("https://www.bvb.de/news"))
+        val g = Genannt("Liveticker: Anthropic-Börsengang", "https://example.com/live/anthropic-ipo", 0L)
+        assertFalse(NewsRegeln.gleich(NewsMeldung("y", "KI", "Anthropic-Aktie bricht ein", quelle = g.quelle, update = true), g))
+        assertTrue(NewsRegeln.gleich(NewsMeldung("y", "KI", "Anthropic-Aktie bricht ein", quelle = g.quelle), g))
+        // Zwei ausgeblendete Dortmund-Meldungen bleiben über ihren echten Titel unterscheidbar.
+        val morgens = Genannt("Dortmund gewinnt 3:1 in Gladbach", "https://a.de/x/1", 0L)
+        assertFalse(NewsRegeln.gleich(NewsMeldung("z", "F", "BVB scheitert im Pokal 1:2", quelle = "https://b.de/y/2"), morgens))
+    }
 }
+

@@ -22,12 +22,17 @@ object NewsGedaechtnis {
     const val ORDNER = "news_genannt"
     private const val HALTEN_TAGE = 7L
 
-    /** Zuletzt im Gespräch angebotene Meldungen (Abruf) mit Zeitpunkt; erst die Antwort entscheidet, was davon genannt wurde. */
-    private val angeboten = ArrayList<Pair<Long, NewsMeldung>>()
+    /** Je Gespräch: zuletzt angebotene Meldungen (Abruf) mit Zeitpunkt; erst eine Antwort in DIESEM Gespräch entscheidet, was davon genannt wurde. */
+    private class Angebot(val gespraech: String, val um: Long, val meldung: NewsMeldung)
+    private val angeboten = ArrayList<Angebot>()
 
     private fun ordner(context: Context) = File(context.filesDir, ORDNER).apply { mkdirs() }
     private fun eigeneDatei(context: Context, tag: LocalDate) =
         File(ordner(context), "${tag}_" + Geraet.ablageName.replace(Regex("[^A-Za-z0-9]"), "_") + ".json")
+
+    /** Heute Genanntes; mit [auchGestern] zusätzlich das von gestern (für Ausgaben von gestern, kurz nach Mitternacht). */
+    fun genannt(context: Context, auchGestern: Boolean): List<Genannt> =
+        genannt(context) + if (auchGestern) genannt(context, LocalDate.now().minusDays(1)) else emptyList()
 
     @Synchronized
     fun genannt(context: Context, tag: LocalDate = LocalDate.now()): List<Genannt> =
@@ -64,23 +69,26 @@ object NewsGedaechtnis {
         }
     }
 
-    /** Ein Abruf im Gespräch hat diese Meldungen geliefert (noch nicht genannt). */
+    /**
+     * Ein Abruf in Gespräch [gespraech] hat diese Meldungen geliefert (noch nicht genannt). Sie bleiben eine Stunde Kandidaten, auch
+     * über mehrere Antworten hinweg („Soll ich sie vorlesen?“ – „Ja“).
+     */
     @Synchronized
-    fun angeboten(meldungen: Collection<NewsMeldung>) {
+    fun angeboten(gespraech: String, meldungen: Collection<NewsMeldung>) {
         val jetzt = System.currentTimeMillis()
-        angeboten.removeAll { jetzt - it.first > 3_600_000L }
-        meldungen.forEach { m -> angeboten.removeAll { it.second.id == m.id }; angeboten += jetzt to m }
+        angeboten.removeAll { jetzt - it.um > 3_600_000L }
+        meldungen.forEach { m -> angeboten.removeAll { it.gespraech == gespraech && it.meldung.id == m.id }; angeboten += Angebot(gespraech, jetzt, m) }
     }
 
     /**
-     * Die fertige Antwort an Frank (eigener Chat oder Sprachgespräch): Was davon eine seit [seit] angebotene Meldung nennt, gilt als
-     * genannt. Läuft nach jeder Antwort, kostet ohne vorherigen News-Abruf nichts.
+     * Die fertige Antwort an Frank in Gespräch [gespraech] (eigener Chat oder Sprachgespräch): Was davon eine dort angebotene Meldung nennt,
+     * gilt als genannt. Läuft nach jeder Antwort, kostet ohne vorherigen News-Abruf nichts.
      */
-    fun antwortGegeben(context: Context, antwort: String, seit: Long) {
-        val kandidaten = synchronized(this) { angeboten.filter { it.first >= seit }.map { it.second } }
+    fun antwortGegeben(context: Context, antwort: String, gespraech: String) {
+        val kandidaten = synchronized(this) { angeboten.filter { it.gespraech == gespraech }.map { it.meldung } }
         if (kandidaten.isEmpty() || antwort.isBlank()) return
         val genannt = kandidaten.filter { NewsRegeln.genanntIn(antwort, it) }
         runCatching { merke(context, genannt) }.onFailure { Logbuch.fehler("News-Kompass genannt", it) }
-        synchronized(this) { angeboten.removeAll { a -> genannt.any { it.id == a.second.id } } }
+        synchronized(this) { angeboten.removeAll { a -> a.gespraech == gespraech && genannt.any { it.id == a.meldung.id } } }
     }
 }

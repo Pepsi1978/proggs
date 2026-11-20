@@ -44,7 +44,8 @@ import java.util.concurrent.TimeUnit
  *   gemeinsame Fassung (erster Abgleich nach dem Update) oder ist eine Datei unlesbar, gilt wie bisher die jüngste Fassung.
  * - **Erster Kontakt:** Kennt ein Gerät eine Datei noch nicht als abgeglichen und der Server hat eine andere Fassung, übernimmt
  *   das Tablet die des Servers, das Handy behält seine und lädt sie hoch (das Handy ist die Erstquelle).
- * - **Löschen** gibt es nur bei Gesprächen: Ein hier gelöschtes Gespräch wird als gelöscht gemeldet und verschwindet auch drüben.
+ * - **Löschen** gibt es nur bei Quellen mit `loeschbar` (Gespräche, Anhänge, Agenten, Tagesauswertungen, News-Merkliste älter als 7 Tage):
+ *   Eine hier gelöschte Datei wird als gelöscht gemeldet und verschwindet auch drüben.
  * - Geschrieben wird erst in eine Nachbardatei, dann umbenannt; Gespräche unter derselben Sperre wie jedes andere Schreiben.
  * - Nie während eines Sprachgesprächs (Sprachmodus vor Hintergrundarbeit).
  */
@@ -78,9 +79,9 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", de.frank.jarvis.listen.Listen.ORDNER, ordner = true, endung = ".json"),
         // Franks Veränderungen: je Eintrag eine Datei, gelöscht nur als Grabstein.
         Quelle("gedaechtnis", de.frank.jarvis.veraenderung.Veraenderungen.ORDNER, ordner = true, endung = ".json"),
-        // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
         // Was Frank aus News-Kompass schon genannt wurde: je Gerät und Tag eine eigene Datei, gelesen wird die Vereinigung.
         Quelle("gedaechtnis", de.frank.jarvis.news.NewsGedaechtnis.ORDNER, ordner = true, endung = ".json", loeschbar = true),
+        // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
         )

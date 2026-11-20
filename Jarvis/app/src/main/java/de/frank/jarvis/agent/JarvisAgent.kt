@@ -181,11 +181,11 @@ class JarvisAgent(context: Context) {
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
-            val start = System.currentTimeMillis()
+            val gespraech = currentCoroutineContext()[de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung]?.id
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
                 modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit, beiErstemSatz, beiDenken)
                 // Nur die Antwort an Frank (Chat, Sprache): Welche abgerufenen News-Kompass-Meldungen sie nennt, gilt ab jetzt als genannt.
-                .also { if (lernen && rolle == null && it != null) runCatching { de.frank.jarvis.news.NewsGedaechtnis.antwortGegeben(app, it, start) } }
+                .also { if (lernen && rolle == null && it != null && gespraech != null) runCatching { de.frank.jarvis.news.NewsGedaechtnis.antwortGegeben(app, it, gespraech) } }
         }
 
     private suspend fun versucheIntern(
