@@ -17,7 +17,7 @@ Sol 6.2 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Win
 (gpt-6.2-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
 Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay,
 danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
-Tenda: Alle fünf Minuten Funkwerte, Modus und Ping des Heimanschlusses (jarvis_tenda.py, POST /pc/tenda); Aufträge des Handys über /pc/mac-befehl.
+Tenda: Einmal je Stunde Funkwerte, Modus und Ping des Heimanschlusses (jarvis_tenda.py, POST /pc/tenda); Aufträge des Handys über /pc/mac-befehl.
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
@@ -714,7 +714,7 @@ def tenda_befehl(befehl: dict) -> None:
 
 
 def tenda_faden() -> None:
-    """Alle fünf Minuten Funkwerte, Modus und Ping des Heimanschlusses an den Relay (Startkarte, Live-Gedächtnis, Mobilfunk-Abruf)."""
+    """Einmal je Stunde Funkwerte, Modus und Ping des Heimanschlusses an den Relay (Startkarte, Live-Gedächtnis, Mobilfunk-Abruf)."""
     import jarvis_tenda
     while True:
         beginn = time.time()
@@ -725,7 +725,8 @@ def tenda_faden() -> None:
                 tenda_melden({"fehler": str(fehler), "art": fehler.art, "zeit": int(time.time())})
             except Exception as fehler:
                 tenda_melden({"fehler": f"Router nicht erreichbar ({type(fehler).__name__}).", "zeit": int(time.time())})
-        time.sleep(max(30, 300 - (time.time() - beginn)))
+        # Stündlich genügt (Franks Wunsch vom 20.11.2026): Frisch liest ohnehin jeder Tipp auf Aktualisieren und jede Frage.
+        time.sleep(max(30, 3600 - (time.time() - beginn)))
 
 
 class AnmeldungFehlt(Exception):

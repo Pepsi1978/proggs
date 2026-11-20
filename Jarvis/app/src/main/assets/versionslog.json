@@ -833,6 +833,7 @@
     {"versionCode": 824, "versionName": "1.8.813", "stand": "20.11.2026, 11:50 Uhr", "notiz": "Neue Startkarte „Tenda Internet“: Modus, Multiplayer-Einschätzung aus Ping, Jitter und Verlust, LTE- und 5G-Werte mit Bewertung, Moduswechsel, Connect und Router-Neustart, auch per Sprache."},
     {"versionCode": 825, "versionName": "1.8.814", "stand": "20.11.2026, 12:03 Uhr", "notiz": "Tenda Internet erkennt den aktiven Modus des Routers (5G SA, 5G NSA, 4G) direkt und prüft nach Moduswechsel, Connect und Neustart den neuen Zustand verlässlicher."},
     {"versionCode": 826, "versionName": "1.8.815", "stand": "20.11.2026, 12:19 Uhr", "notiz": "Tenda Internet kennzeichnet eine veraltete Multiplayer-Einschätzung mit „zuletzt“, zeigt RSRQ als Signalqualität und springt bei ausgefallenem Mac schneller direkt im Heim-WLAN ein."},
-    {"versionCode": 827, "versionName": "1.8.816", "stand": "20.11.2026, 12:24 Uhr", "notiz": "Tenda Internet liest den Router bei ausgefallenem Mac direkt im Heim-WLAN (fehlende WLAN-Berechtigung ergänzt) und nennt im 5G-SA- oder 4G-Modus die jeweils inaktive Technik statt fehlender Werte."}
+    {"versionCode": 827, "versionName": "1.8.816", "stand": "20.11.2026, 12:24 Uhr", "notiz": "Tenda Internet liest den Router bei ausgefallenem Mac direkt im Heim-WLAN (fehlende WLAN-Berechtigung ergänzt) und nennt im 5G-SA- oder 4G-Modus die jeweils inaktive Technik statt fehlender Werte."},
+    {"versionCode": 828, "versionName": "1.8.817", "stand": "20.11.2026, 12:31 Uhr", "notiz": "Tenda Internet liest den Router nur noch stündlich von selbst; der Aktualisieren-Knopf und jede Frage holen weiterhin sofort frische Werte."}
 ]
 }

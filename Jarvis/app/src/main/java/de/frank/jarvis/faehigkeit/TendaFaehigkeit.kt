@@ -41,7 +41,7 @@ import org.json.JSONObject
 /**
  * Franks Tenda-Mobilfunkrouter (5G03, O2-SIM) über die lokale Verwaltungsoberfläche (http://192.168.0.1, wie tendawifi.com).
  * Abruf: 1. der Mac zu Hause (Mac-Brücke, werkzeuge/pc-bruecke/jarvis_tenda.py, über den Relay: frische Momentabfrage, sonst sein
- * Fünf-Minuten-Stand), 2. liefert er nicht und ist das Handy im Heim-WLAN, liest es den Router selbst, 3. sonst der letzte Stand,
+ * stündlicher Stand), 2. liefert er nicht und ist das Handy im Heim-WLAN, liest es den Router selbst, 3. sonst der letzte Stand,
  * deutlich als veraltet gekennzeichnet. Unterwegs ohne Mac gibt es keine frischen Werte: Die Router-Verwaltung ist bewusst nicht aus
  * dem Internet erreichbar, und die Tenda-App zeigt keine Messwerte.
  * Zugang: nur der MD5-Hash des Passworts (so meldet sich auch die Weboberfläche an) in [SecureSettings]; der Mac bekommt ihn einmal über den
@@ -175,7 +175,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                     val direkt = runCatching { direktLesen() }.onFailure { gruende += "direkt: " + (it.message ?: it.javaClass.simpleName) }.getOrNull()
                     if (direkt != null) return@withContext Stand(direkt, "Handy direkt im Heim-WLAN").also { merken(it); fertig(it) }
                 } else if (hash().isNotBlank()) gruende += "Handy nicht im Heim-WLAN"
-                // 3. Letzter bekannter Stand: der jüngere von Relay (Fünf-Minuten-Takt des Macs) und Handy.
+                // 3. Letzter bekannter Stand: der jüngere von Relay (stündlicher Takt des Macs) und Handy.
                 val relayStand = runCatching { relayStand()?.optJSONObject("stand") }.getOrNull()?.let { Stand(it, "Mac zu Hause (Takt)") }
                 val alt = listOfNotNull(relayStand, letzter()).maxByOrNull { it.zeit }
                 alt?.copy(veraltetGrund = gruende.distinct().joinToString(", ").ifBlank { "keine frische Abfrage möglich" })?.also { fertig(it) }
@@ -310,13 +310,13 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    /** Wie aktuell ein Stand ist: bis 10 Minuten aktuell, bis eine Stunde älter, danach veraltet. */
+    /** Wie aktuell ein Stand ist: bis 10 Minuten aktuell, bis 90 Minuten älter (der Mac liest stündlich), danach veraltet. */
     fun gueltigkeit(s: Stand): String {
         val alter = System.currentTimeMillis() / 1000 - s.zeit
         return when {
             s.zeit <= 0 -> "ohne Messzeit"
             alter <= 600 -> "aktuell"
-            alter <= 3600 -> "älter"
+            alter <= 5400 -> "älter"
             else -> "veraltet"
         }
     }
