@@ -36,16 +36,19 @@ final class HauptViewModel {
     private(set) var kopfStatus = "Bereit." { didSet { beiAenderung?() } }
     private(set) var laeuftSammelvorgang = false { didSet { beiAenderung?() } }
 
-    /// Sammelt gescheiterte Pruefungen und startet 20 s nach dem letzten neuen Fehler, ausserhalb jedes
-    /// Sammelvorgangs, EINE Claude-Code-Sitzung fuer alle. Karten werden ueber die Id gefunden, weil
-    /// "Neu laden" die Kartenobjekte austauscht.
+    /// Collects failed checks and, 20 s after the last new failure and outside any batch operation, starts
+    /// ONE Claude Code session for all of them. Cards are looked up by id because "Neu laden" replaces
+    /// the card objects.
     private lazy var pruefFehler = PruefFehlerUebergabe(
         einstellungen: einstellungen,
         sammelLaeuft: { [weak self] in self?.laeuftSammelvorgang ?? false },
         karteMelden: { [weak self] id, text in
             self?.programme.first { $0.eintrag.id == id }?.pruefFehlerUebergabeMelden(text)
         },
-        protokollLesen: { [weak self] id in self?.programme.first { $0.eintrag.id == id }?.protokoll })
+        protokollLesen: { [weak self] id in self?.programme.first { $0.eintrag.id == id }?.protokoll },
+        karteHatFehler: { [weak self] id in
+            self?.programme.first { $0.eintrag.id == id }.map { !$0.istBeschaeftigt && $0.zustand == .fehler }
+        })
 
     /// Zweite Fusszeile waehrend eines Sammellaufs: was gerade laeuft, an welcher Position, seit wann.
     private(set) var laufDetail = "" { didSet { beiAenderung?() } }
@@ -249,6 +252,7 @@ final class HauptViewModel {
             karte.beiPruefFehler = { [weak self] eintrag, ergebnis, protokoll in
                 self?.pruefFehler.melden(eintrag, ergebnis, protokoll: protokoll)
             }
+            karte.beiPruefOhneFehler = { [weak self] id in self?.pruefFehler.erledigt(id) }
 
             // Der Verlauf ueberlebt Neustarts -- jede Karte kann zeigen, wie ihr letzter Lauf ging.
             if let bericht = berichte[eintrag.id] { karte.letzterBericht = bericht }

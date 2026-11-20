@@ -1,14 +1,14 @@
 import Foundation
 import Network
 
-/// Gescheiterte PRUEFUNGEN (Versionsabfrage einer Karte, einzeln, per „Alle prüfen“ oder in der
-/// Anfangspruefung) gehen automatisch an eine Claude-Code-Sitzung -- derselbe Startweg wie die
-/// Update-Fehler (`ClaudeUebergabe.sitzungStarten`: OpenLauncher, Opus 5.5, Profil minimal).
+/// Failed CHECKS (a card's version query, single, via „Alle prüfen“ or in the start check) go to a
+/// Claude Code session automatically -- the same start path as the update failures
+/// (`ClaudeUebergabe.sitzungStarten`: OpenLauncher, Opus 5.5, profile minimal).
 ///
-/// Gesammelt statt einzeln: jeder Fehler kommt in eine Warteschlange; 20 Sekunden nach dem letzten
-/// neuen Fehler und erst, wenn kein Sammelvorgang mehr laeuft, startet EINE Sitzung fuer alle.
-/// Eigene Sperrfrist je Programm (`pruefFehlerUebergebenAm`), getrennt von den Update-Fehlern.
-/// Ohne jede Netzverbindung startet nichts: das repariert keine Sitzung.
+/// Collected instead of one start each: every failure enters a queue; 20 seconds after the last new
+/// failure, and only once no batch operation runs, ONE session starts for all of them.
+/// Own lock per program (`pruefFehlerUebergebenAm`), separate from the update failures.
+/// Without any network connection nothing starts: no session can repair that.
 @MainActor
 final class PruefFehlerUebergabe {
 
@@ -17,18 +17,24 @@ final class PruefFehlerUebergabe {
         let zeit: Date
         let meldung: String
         let installiert: String
-        /// Das Kartenprotokoll beim Vormerken -- Rueckfall, falls die Karte inzwischen ersetzt wurde.
+        /// The card log when queued -- fallback in case the card has been replaced meanwhile.
         let auszug: String
     }
 
-    /// Hoechstens eine Sitzung je Programm und Stunde fuer Prueffehler.
+    /// At most one session per program and hour for check failures.
     static let sperrfrist: TimeInterval = 3600
 
-    /// Ruhe nach dem letzten neuen Fehler, bevor die Sitzung startet.
+    /// Quiet time after the last new failure before the session starts.
     private static let warteNanos: UInt64 = 20_000_000_000
 
-    /// Protokollauszug fuer alle Programme zusammen (der Launcher reicht den Auftrag als ein Argument weiter).
+    /// Log excerpt for all programs together (the launcher passes the task on as one argument).
     private static let protokollZeichen = 12000
+
+    /// Upper bound for one program's message.
+    private static let meldungZeichen = 600
+
+    /// Upper bound for the whole task text; the rest is in the log files.
+    private static let auftragZeichen = 25000
 
     static func kartenText(_ meldung: String) -> String {
         "Prüffehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und macht die Prüfung künftig robuster."
@@ -39,41 +45,57 @@ final class PruefFehlerUebergabe {
     private let sammelLaeuft: () -> Bool
     private let karteMelden: (String, String) -> Void
     private let protokollLesen: (String) -> String?
+    private let karteHatFehler: (String) -> Bool?
 
     private var warteschlange: [Fall] = []
     private var wecker: Task<Void, Never>?
     private var startLaeuft = false
 
     /// - Parameters:
-    ///   - sammelLaeuft: laeuft gerade ein Sammelvorgang (Anfangspruefung, „Alle prüfen“, Sammellauf)?
-    ///   - karteMelden: setzt den Status der Karte mit dieser Id.
-    ///   - protokollLesen: das aktuelle Kartenprotokoll der Id (nil, wenn es die Karte nicht mehr gibt).
+    ///   - sammelLaeuft: is a batch operation running right now (start check, „Alle prüfen“, batch update)?
+    ///   - karteMelden: sets the status of the card with this id.
+    ///   - protokollLesen: the current card log of the id (nil if the card no longer exists).
+    ///   - karteHatFehler: does the card of this id still show a failure (nil if the card no longer exists)?
     init(einstellungen: Einstellungen, sammelLaeuft: @escaping () -> Bool,
-         karteMelden: @escaping (String, String) -> Void, protokollLesen: @escaping (String) -> String?) {
+         karteMelden: @escaping (String, String) -> Void, protokollLesen: @escaping (String) -> String?,
+         karteHatFehler: @escaping (String) -> Bool?) {
         self.einstellungen = einstellungen
         self.sammelLaeuft = sammelLaeuft
         self.karteMelden = karteMelden
         self.protokollLesen = protokollLesen
+        self.karteHatFehler = karteHatFehler
     }
 
-    /// Merkt eine gescheiterte Pruefung vor und stellt den Wecker neu.
+    /// Queues a failed check and resets the timer.
     func melden(_ eintrag: ProgrammEintrag, _ ergebnis: PruefErgebnis, protokoll: String) {
         Netzwaechter.shared.beobachten()
         let fall = Fall(eintrag: eintrag, zeit: Date(),
                         meldung: ergebnis.meldung.istLeer ? "(keine Meldung)" : ergebnis.meldung,
                         installiert: ergebnis.installierteVersion,
                         auszug: String(protokoll.suffix(Self.protokollZeichen)))
-        // Je Programm zaehlt nur der neueste Fehler.
+        // Only the newest failure per program counts.
         warteschlange.removeAll { $0.eintrag.id == eintrag.id }
         warteschlange.append(fall)
         Diagnose.ereignis(.info, "uebergabe", "prueffehler.vorgemerkt", fall.meldung, ["programm": eintrag.id])
         weckerStellen()
     }
 
+    /// A later check of this program ended without a failure: the queued failure is gone.
+    func erledigt(_ id: String) {
+        let vorher = warteschlange.count
+        warteschlange.removeAll { $0.eintrag.id == id }
+        guard warteschlange.count != vorher else { return }
+        Diagnose.ereignis(.info, "uebergabe", "prueffehler.erledigt", "Spätere Prüfung ohne Fehler", ["programm": id])
+        if warteschlange.isEmpty {
+            wecker?.cancel()
+            wecker = nil
+        }
+    }
+
     private func weckerStellen() {
         wecker?.cancel()
         wecker = Task { [weak self] in
-            // Abgebrochen heisst: ein neuer Fehler kam dazu und hat einen neuen Wecker gestellt.
+            // Cancelled means: a new failure arrived and set a new timer.
             do { try await Task.sleep(nanoseconds: PruefFehlerUebergabe.warteNanos) } catch { return }
             while true {
                 guard let self else { return }
@@ -86,8 +108,8 @@ final class PruefFehlerUebergabe {
         }
     }
 
-    /// Nimmt die Warteschlange heraus und startet in einer EIGENEN Aufgabe: ein neuer Fehler bricht nur den
-    /// Wecker ab, nie einen laufenden Launcher-Start.
+    /// Takes the queue out and starts in a SEPARATE task: a new failure only cancels the timer, never a
+    /// launcher start in progress.
     private func abarbeiten() {
         wecker = nil
         let faelle = warteschlange
@@ -108,24 +130,35 @@ final class PruefFehlerUebergabe {
             return
         }
 
-        // Dieselbe Reihe wie die Update-Fehler: die Launcher-Starts laufen nacheinander.
+        // Same queue as the update failures: launcher starts run one after another.
         while ClaudeUebergabe.automatischLaeuft {
             do { try await Task.sleep(nanoseconds: 500_000_000) } catch { return }
         }
         ClaudeUebergabe.automatischLaeuft = true
         defer { ClaudeUebergabe.automatischLaeuft = false }
 
+        // Only failures the card still shows: a card that is checking again or no longer shows a failure
+        // drops out (a new failure queues itself again). A replaced card (catalog reload) keeps its case.
+        let aktuell = faelle.filter { karteHatFehler($0.eintrag.id) ?? true }
+        if aktuell.count < faelle.count {
+            Diagnose.ereignis(.info, "uebergabe", "prueffehler.verworfen", "Karte zeigt keinen Fehler mehr",
+                              ["programme": faelle.filter { !(karteHatFehler($0.eintrag.id) ?? true) }.map(\.eintrag.id).joined(separator: ",")])
+        }
+
         let jetzt = Date()
-        let offen = faelle.filter { fall in
+        let offen = aktuell.filter { fall in
             guard let zuletzt = einstellungen.fuer(fall.eintrag.id).pruefFehlerUebergebenAm else { return true }
             return jetzt.timeIntervalSince(zuletzt) >= Self.sperrfrist
         }
         guard !offen.isEmpty else {
-            Diagnose.ereignis(.info, "uebergabe", "prueffehler.gesperrt", "Sperrfrist für Prüffehler läuft", ["programme": ids])
+            if !aktuell.isEmpty {
+                Diagnose.ereignis(.info, "uebergabe", "prueffehler.gesperrt", "Sperrfrist für Prüffehler läuft",
+                                  ["programme": aktuell.map(\.eintrag.id).joined(separator: ",")])
+            }
             return
         }
 
-        // VOR dem Start vorgemerkt: endet die App waehrend des Launcher-Starts, gilt die Sperrfrist trotzdem.
+        // Marked BEFORE the start: if the app ends during the launcher start, the lock still holds.
         let bisher = offen.map { einstellungen.fuer($0.eintrag.id).pruefFehlerUebergebenAm }
         for fall in offen { einstellungen.fuer(fall.eintrag.id).pruefFehlerUebergebenAm = jetzt }
         einstellungen.speichern()
@@ -137,14 +170,14 @@ final class PruefFehlerUebergabe {
         Diagnose.ereignis(problem == nil ? .info : .warnung, "uebergabe", "prueffehler.start", problem ?? "Sitzung gestartet",
                           ["programme": offen.map(\.eintrag.id).joined(separator: ",")])
 
-        // Unklar (der Launcher antwortete nicht): die Sitzung laeuft meist doch, die Marke bleibt.
+        // Unclear (the launcher did not answer): the session usually runs anyway, so the mark stays.
         if problem != nil && !vielleicht {
             for (fall, alt) in zip(offen, bisher) { einstellungen.fuer(fall.eintrag.id).pruefFehlerUebergebenAm = alt }
             einstellungen.speichern()
         }
         for fall in offen {
             if problem == nil || vielleicht {
-                karteMelden(fall.eintrag.id, Self.kartenText(fall.meldung))
+                karteMelden(fall.eintrag.id, Self.kartenText(Self.kappen(fall.meldung, 200)))
             } else if let problem {
                 karteMelden(fall.eintrag.id, "Prüffehler konnte nicht an Claude Code übergeben werden: " + problem)
             }
@@ -184,11 +217,11 @@ final class PruefFehlerUebergabe {
             t += "Programm: \(eintrag.name) (Id \(eintrag.id), Art \(eintrag.art))\n"
             t += "Zeitpunkt: \(zeit.string(from: fall.zeit))\n"
             if !fall.installiert.istLeer { t += "Installierte Version: \(fall.installiert)\n" }
-            t += "Meldung: \(fall.meldung)\n"
+            t += "Meldung: \(Self.kappen(fall.meldung, Self.meldungZeichen))\n"
             t += "Tagesprotokoll (Zeilen mit [\(eintrag.id)]): \(Protokollierung.tagesDatei(fall.zeit))\n"
             t += "Weitere Protokolle (Diagnose-JSONL, verlauf.jsonl): \(Protokollierung.ordner)\n"
 
-            // Frisch gelesen: die letzten Zeilen der Pruefung kommen asynchron auf der Karte an.
+            // Read fresh: the last lines of the check reach the card asynchronously.
             let protokoll = protokollLesen(eintrag.id) ?? fall.auszug
             let auszug = Self.ende(protokoll, budget)
             if !auszug.istLeer {
@@ -196,14 +229,26 @@ final class PruefFehlerUebergabe {
                 t += "----\n" + auszug + "\n----\n"
             }
         }
+
+        // Hard cap for the whole text; whatever is cut off is in the log files.
+        if t.count > Self.auftragZeichen {
+            let hinweis = "\n… [Auftrag gekürzt – den Rest in den Protokolldateien unter \(Protokollierung.ordner) lesen]\n"
+            t = String(t.prefix(max(Self.auftragZeichen - hinweis.count, 0))) + hinweis
+        }
         return t
     }
 
-    /// Das Ende eines Protokolls in hoechstens `budget` Zeichen, an einer Zeilengrenze abgeschnitten.
+    /// Cuts a text to at most `grenze` characters, marked with „…“.
+    private static func kappen(_ text: String, _ grenze: Int) -> String {
+        text.count > grenze ? String(text.prefix(max(grenze - 2, 0))) + " …" : text
+    }
+
+    /// The end of a log in at most `budget` characters, cut at a line boundary.
     private static func ende(_ text: String, _ budget: Int) -> String {
         let sauber = text.trimmed
         guard sauber.count > budget else { return sauber }
-        let rest = String(sauber.suffix(max(budget - 2, 200)))
+        guard budget > 2 else { return "" }
+        let rest = String(sauber.suffix(budget - 2))
         if let umbruch = rest.firstIndex(of: "\n"), rest.distance(from: rest.startIndex, to: umbruch) < rest.count / 2 {
             return "… " + String(rest[rest.index(after: umbruch)...])
         }
@@ -211,9 +256,9 @@ final class PruefFehlerUebergabe {
     }
 }
 
-/// Netzstatus fuer die Prueffehler-Uebergabe. Beim ersten Fehler gestartet und danach dauerhaft gelesen:
-/// `currentPath` direkt nach `start()` ist noch nicht verlaesslich. Nur ein sicheres „kein Netz“
-/// (`.unsatisfied`) haelt die Sitzung auf; ein noch unbekannter Stand gilt als verbunden.
+/// Network state for the check-failure handover. Started at the first failure and read from then on:
+/// `currentPath` right after `start()` is not reliable yet. Only a definite "no network"
+/// (`.unsatisfied`) holds the session back; a state not yet known counts as connected.
 final class Netzwaechter: @unchecked Sendable {
     static let shared = Netzwaechter()
 

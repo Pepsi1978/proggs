@@ -25,9 +25,11 @@ final class ProgrammViewModel {
     var beiAenderung: (() -> Void)?
     /// Wird fuer Meldungen aufgerufen, die ein Hinweisfenster verdienen.
     var beiMeldung: ((String) -> Void)?
-    /// Wird nach jeder Pruefung mit Zustand Fehler aufgerufen (Eintrag, Ergebnis, Kartenprotokoll) --
-    /// die Prueffehler-Uebergabe sammelt sie fuer eine Claude-Code-Sitzung.
+    /// Called after every check that ends in a failure (entry, result, card log) --
+    /// the check-failure handover collects them for one Claude Code session.
     var beiPruefFehler: ((ProgrammEintrag, PruefErgebnis, String) -> Void)?
+    /// Called after every check WITHOUT a failure (program id): a queued failure is gone.
+    var beiPruefOhneFehler: ((String) -> Void)?
 
     let eintrag: ProgrammEintrag
 
@@ -439,7 +441,7 @@ final class ProgrammViewModel {
         }
     }
 
-    /// Status nach der automatischen Uebergabe eines Prueffehlers -- nur, solange die Karte noch den Fehler zeigt.
+    /// Status after a check failure was handed over automatically -- only while the card still shows the failure.
     func pruefFehlerUebergabeMelden(_ text: String) {
         guard !istBeschaeftigt, zustand == .fehler else { return }
         statusText = text
@@ -826,9 +828,14 @@ final class ProgrammViewModel {
         zustandAktualisieren()
         melden()
 
-        // Eine gescheiterte Pruefung (auch eine Ausnahme der Abfrage, die als Fehler endet) geht gesammelt an Claude Code.
-        if art == "pruefung" && ergebnis.zustand == .fehler {
-            beiPruefFehler?(eintrag, ergebnis, protokollPuffer)
+        // A failed check (including a query exception, which ends as a failure) goes to Claude Code, collected;
+        // a check without a failure drops a queued one.
+        if art == "pruefung" {
+            if ergebnis.zustand == .fehler {
+                beiPruefFehler?(eintrag, ergebnis, protokollPuffer)
+            } else {
+                beiPruefOhneFehler?(eintrag.id)
+            }
         }
     }
 

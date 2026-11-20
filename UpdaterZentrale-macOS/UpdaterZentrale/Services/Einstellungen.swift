@@ -17,8 +17,8 @@ final class ProgrammEinstellung: Codable {
     /// Neustarts hinweg). Schon vor dem Start gesetzt; scheitert er sicher, wird es zurueckgenommen.
     var automatischUebergebenAm: Date?
 
-    /// Wann zuletzt ein PRUEF-Fehler dieses Programms automatisch an Claude Code ging -- eigene Sperrfrist,
-    /// getrennt von den Update-Fehlern. Ebenfalls vor dem Start gesetzt und bei sicher gescheitertem Start zurueckgenommen.
+    /// When a CHECK failure of this program last went to Claude Code automatically -- own lock, separate
+    /// from the update failures. Also set before the start and taken back when the start surely failed.
     var pruefFehlerUebergebenAm: Date?
 
     /// Wann das anstehende Update per Knopf an eine CLI-Sitzung ging. Solange das frisch ist, bietet die
