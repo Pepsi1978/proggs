@@ -17,7 +17,7 @@ object PiepSchnitt {
     private const val PIEP_UND_NACHHALL_MS = 75
     /** Anteil beider Piepton-Frequenzen an der Energie eines Fensters (reiner Ton ≈ 1) und Mindestanteil jeder einzelnen. */
     private const val ANTEIL = 0.45
-    private const val ANTEIL_JE = 0.12
+    private const val ANTEIL_JE = 0.05
     /** Darunter ist ein Fenster zu leise, um überhaupt etwas zu sein (Effektivwert, 0 bis 1). */
     private const val MIN_PEGEL = 0.004
     /** 32-ms-Rahmen der Spracherkennung bei 16 kHz, 16 Bit. */

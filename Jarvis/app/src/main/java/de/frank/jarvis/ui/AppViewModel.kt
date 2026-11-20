@@ -2270,6 +2270,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Ende des Players noch nach. So heißt der Piepton wirklich „jetzt sprechen“, unabhängig von der Stillezeit.
             ruheVorPiep(mikroAn)
             if (!nimmtAuf) { freihaendig = false; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG }
+            // Während des Wartens „Sprachsession beenden“: nicht mehr piepen, Mikrofon zu, nichts davon abschicken.
+            if (sprachsitzungBeendet) {
+                freihaendig = false
+                nimmtAuf = false
+                mikro.stop()
+                konferenzFrei(sprachmodusNr)
+                return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT
+            }
             piepAbBytes = mikro.pufferBytes
         }
         // Ohne Spracherkennung zählt der Pegel; dann auch einen per Bluetooth verspäteten Piepton nicht als Sprache werten.
@@ -2401,6 +2409,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (freigeben && weckwortLauf?.isActive != true) {
                     de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                     de.frank.jarvis.speech.GespraechsFokus.freigeben()
+                }
+                // Vor dem Piepton gestoppt: Bis dahin war nur das Ende der eigenen Antwort zu hören, still verwerfen.
+                if (piepAb == PIEP_ALLES) {
+                    Logbuch.sprache("Mitschrift verworfen", "vor dem Piepton beendet")
+                    de.frank.jarvis.observability.Antwortkette.verwerfen()
+                    return@launch
                 }
                 // Nach dem Piepton keine Stimme erkannt (nur Nachklang oder Geräusch): nichts abschicken, keine Antwort auf eine Phantom-Eingabe.
                 if (piepAb >= 0 && stimmhaft != null && stimmhaft.count { it } < 3 && messFrage == null) {

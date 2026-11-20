@@ -851,6 +851,7 @@
     {"versionCode": 842, "versionName": "1.8.831", "stand": "20.11.2026, 13:39 Uhr", "notiz": "Jarvis erkennt genauer, welche Schlagzeilen er Frank wirklich genannt hat, und berücksichtigt auch News-Kompass-Rubriken, die seltener als täglich sammeln."},
     {"versionCode": 843, "versionName": "1.8.832", "stand": "20.11.2026, 13:50 Uhr", "notiz": "Review-Befunde behoben: Dortmund-Ergebnisse sind gründlicher ausgeblendet, vorgelesene Schlagzeilen werden auch über mehrere Antworten richtig gemerkt, und Folgemeldungen sowie seltene Rubriken kommen zuverlässig."},
     {"versionCode": 844, "versionName": "1.8.833", "stand": "20.11.2026, 16:18 Uhr", "notiz": "Im Sprachgespräch piept Jarvis nach einer Antwort erst, wenn sein eigenes Antwortende verklungen ist, und weder dieses Ende noch der Piepton landen in deiner Aufnahme, auch bei kurzer Stillezeit."},
-    {"versionCode": 845, "versionName": "1.8.834", "stand": "20.11.2026, 16:25 Uhr", "notiz": "Der Piepton nach einer Antwort wartet etwas sicherer, bis Jarvis' eigene Stimme verklungen ist, und dein Satzanfang wird nie mehr mit dem Piepton abgeschnitten."}
+    {"versionCode": 845, "versionName": "1.8.834", "stand": "20.11.2026, 16:25 Uhr", "notiz": "Der Piepton nach einer Antwort wartet etwas sicherer, bis Jarvis' eigene Stimme verklungen ist, und dein Satzanfang wird nie mehr mit dem Piepton abgeschnitten."},
+    {"versionCode": 846, "versionName": "1.8.835", "stand": "20.11.2026, 16:35 Uhr", "notiz": "Beendest du die Sprachsession, während Jarvis auf das Verklingen seiner Antwort wartet, piept er nicht mehr, und ein Stopp vor dem Piepton verwirft die Aufnahme still."}
 ]
 }
