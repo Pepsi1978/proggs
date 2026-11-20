@@ -16,7 +16,7 @@ final class TendaDaten {
         guard !laeuft else { return }
         laeuft = true
         defer { laeuft = false }
-        if let s = await McpKlient.shared.struktur("tenda_lesen", [:], sekunden: 90) { stand = s; meldung = nil }
+        if let s = await McpKlient.shared.struktur("tenda_lesen", [:], sekunden: 150) { stand = s; meldung = nil }
         else { meldung = "Das Handy-Jarvis ist gerade nicht erreichbar oder hat keinen Router-Stand." }
     }
 
@@ -25,7 +25,8 @@ final class TendaDaten {
         schaltet = true
         defer { schaltet = false }
         meldung = "Befehl wird gesendet …"
-        let e = await McpKlient.shared.rufe(werkzeug, args, sekunden: 60)
+        // Das Handy kann bei Mac-Ausfall direkt schalten (mehrere Router-Aufrufe): genug Zeit lassen.
+        let e = await McpKlient.shared.rufe(werkzeug, args, sekunden: 120)
         meldung = McpKlient.ohneKontextHinweis(e.text)
     }
 }

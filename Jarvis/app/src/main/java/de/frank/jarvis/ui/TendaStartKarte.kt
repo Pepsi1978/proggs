@@ -66,7 +66,9 @@ fun TendaStartKarte(griff: Modifier = Modifier) {
     var offen by rememberSaveable { mutableStateOf(false) }
     var einrichten by remember { mutableStateOf(false) }
     var neustartFrage by remember { mutableStateOf(false) }
-    var eingerichtet by remember { mutableStateOf(faehigkeit.eingerichtet()) }
+    // Neu gelesen bei jeder Zustandsänderung: Löscht Jarvis das Passwort im Hintergrund (Router meldet „falsch“), zeigt die Karte sofort die Einrichtung.
+    var dialogZu by remember { mutableStateOf(0) }
+    val eingerichtet = remember(z, dialogZu) { faehigkeit.eingerichtet() }
     fun lesen() { TendaStartStand.bereich.launch { faehigkeit.abrufen() } }
     LaunchedEffect(Unit) {
         if (z.stand == null) faehigkeit.letzter()?.let { s -> if (faehigkeit.zustand.value.stand == null) faehigkeit.zeigen(s) }
@@ -171,7 +173,7 @@ fun TendaStartKarte(griff: Modifier = Modifier) {
         confirmButton = { TextButton({ neustartFrage = false; TendaStartStand.bereich.launch { faehigkeit.schalten("neustart", "") } }) { Text("Ja") } },
         dismissButton = { TextButton({ neustartFrage = false }) { Text("Nein") } },
     )
-    if (einrichten) PasswortDialog(faehigkeit, schliessen = { einrichten = false; eingerichtet = faehigkeit.eingerichtet() })
+    if (einrichten) PasswortDialog(faehigkeit, schliessen = { einrichten = false; dialogZu++ })
 }
 
 private fun JSONObject?.istNull(k: String): Boolean = this == null || isNull(k) || optString(k).isBlank()

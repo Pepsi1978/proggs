@@ -55,23 +55,40 @@ def zugang_lesen() -> dict:
         return {}
 
 
-def zugang_speichern(hash_hex: str) -> None:
-    if not re.fullmatch(r"[0-9a-f]{32}", hash_hex or ""):
-        raise TendaFehler("Ungültiger Zugang", "zugang")
+# Schreiben der Zugangsdatei nur unter dieser Sperre: Neues Passwort und „falsch“-Markierung dürfen sich nie überschreiben.
+_ZUGANG_SPERRE = threading.Lock()
+
+
+def _zugang_schreiben(daten: dict) -> None:
     ZUGANG.parent.mkdir(parents=True, exist_ok=True)
     os.chmod(ZUGANG.parent, 0o700)
     zwischen = ZUGANG.with_suffix(".neu")
-    zwischen.write_text(json.dumps({"hash": hash_hex}), "utf-8")
+    zwischen.write_text(json.dumps(daten), "utf-8")
     os.chmod(zwischen, 0o600)
     os.replace(zwischen, ZUGANG)
 
 
+def zugang_speichern(hash_hex: str) -> None:
+    if not re.fullmatch(r"[0-9a-f]{32}", hash_hex or ""):
+        raise TendaFehler("Ungültiger Zugang", "zugang")
+    with _ZUGANG_SPERRE:
+        _zugang_schreiben({"hash": hash_hex})
+
+
 def _falsch_merken(benutzt: str) -> None:
     """Nur den Hash als falsch markieren, mit dem gerade angemeldet wurde: Ein inzwischen neu eingegebener bleibt unberührt."""
-    z = zugang_lesen()
-    if z.get("hash") and z.get("hash") == benutzt:
-        z["falsch"] = True
-        ZUGANG.write_text(json.dumps(z), "utf-8")
+    with _ZUGANG_SPERRE:
+        z = zugang_lesen()
+        if z.get("hash") and z.get("hash") == benutzt:
+            _zugang_schreiben({"hash": benutzt, "falsch": True})
+
+
+def _code(antwort: dict) -> int:
+    """errCode als Zahl, auch wenn der Router ihn als Text schickt; Unlesbares als -1 (statt ValueError)."""
+    try:
+        return int(str(antwort.get("errCode", -1)).strip())
+    except ValueError:
+        return -1
 
 
 class Router:
@@ -100,7 +117,7 @@ class Router:
         if z.get("falsch"):
             raise TendaFehler("Router-Passwort ist falsch: bitte in Jarvis neu eingeben (keine weiteren Versuche, sonst sperrt der Router).", "zugang")
         antwort = self._rufe("/login/Auth", {"username": "admin", "password": z["hash"]})
-        code = int(antwort.get("errCode", -1))
+        code = _code(antwort)
         if code == 0:
             return
         if code == 4:
@@ -126,7 +143,7 @@ class Router:
         if str(antwort.get("errCode")) == "1000":
             self.anmelden()
             antwort = self._rufe(pfad, rumpf, sekunden)
-        return int(antwort.get("errCode", -1))
+        return _code(antwort)
 
 
 ROUTER_SITZUNG = Router()
@@ -225,21 +242,26 @@ def aktion(art: str, wert: str = "") -> dict:
                     sim_wan["action"] = "1"
                     code = ROUTER_SITZUNG.setzen({"simWan": sim_wan})
                 elif art == "verbinden":
-                    trennen = dict(sim_wan, action="0")
-                    code = ROUTER_SITZUNG.setzen({"simWan": trennen})
-                    if code == 0:
+                    # Sobald das Trennen abgeschickt ist (auch ohne Antwort), muss das Verbinden folgen, sonst bliebe das Heim-Internet aus.
+                    # Ein zweites „verbinden“ ist unschädlich (es trennt nicht erneut).
+                    code = -1
+                    try:
+                        code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="0")})
+                    finally:
                         time.sleep(3)
-                        # Getrennt ist er jetzt: Das Verbinden darf nie ausbleiben, sonst bliebe das Heim-Internet weg.
-                        # Ein zweites „verbinden“ ist dabei unschädlich (kein erneutes Trennen).
-                        try:
-                            code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
-                        except Exception:
-                            code = -1
-                        if code != 0:
+                        verbunden = -1
+                        for _ in range(2):
+                            try:
+                                verbunden = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
+                            except Exception:
+                                verbunden = -1
+                            if verbunden == 0:
+                                break
                             time.sleep(3)
-                            code = ROUTER_SITZUNG.setzen({"simWan": dict(sim_wan, action="1")})
-                            if code != 0:
-                                return {"ergebnis": "fehler", "text": f"Getrennt, aber der Router nimmt das Verbinden nicht an (Code {code}); das Heim-Internet ist gerade aus. Bitte Connect erneut drücken."}
+                    if verbunden != 0:
+                        return {"ergebnis": "fehler", "text": f"Getrennt, aber der Router nimmt das Verbinden nicht an (Code {verbunden}); das Heim-Internet ist "
+                                "vermutlich aus. Bitte Connect erneut drücken."}
+                    code = verbunden   # entscheidend ist, dass er wieder verbunden ist
                 else:
                     return {"ergebnis": "fehler", "text": "Unbekannte Aktion."}
                 if code != 0:

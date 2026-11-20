@@ -27,7 +27,7 @@ public sealed class TendaDaten : Beobachtbar
         Laeuft = true;
         try
         {
-            var s = await McpKlient.Shared.Struktur("tenda_lesen", new JSONObjekt(), 90);
+            var s = await McpKlient.Shared.Struktur("tenda_lesen", new JSONObjekt(), 150);
             if (s != null) { Stand = s; Meldung = null; }
             else Meldung = "Das Handy-Jarvis ist gerade nicht erreichbar oder hat keinen Router-Stand.";
         }
@@ -41,7 +41,7 @@ public sealed class TendaDaten : Beobachtbar
         try
         {
             Meldung = "Befehl wird gesendet …";
-            var e = await McpKlient.Shared.Rufe(werkzeug, args, 60);
+            var e = await McpKlient.Shared.Rufe(werkzeug, args, 120);   // Handy kann bei Mac-Ausfall direkt schalten
             Meldung = McpKlient.OhneKontextHinweis(e.Text);
         }
         finally { schaltet = false; }

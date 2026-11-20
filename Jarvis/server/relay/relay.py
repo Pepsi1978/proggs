@@ -66,6 +66,7 @@ import logging
 import os
 import re
 import sqlite3
+import threading
 import time
 import uuid
 from datetime import date, timedelta
@@ -1613,6 +1614,7 @@ class AgentenKanal:
         self.licht_bestaetigt = {}           # Kennung -> True, sobald die Brücke den Auftrag angenommen hat (/pc/licht mit „angenommen“)
         self.licht_letzter_echter = 0        # „erstellt“ (ms) des letzten echten Licht-Befehls
         self.tenda_auftraege = []            # Aufträge für den Tenda-Router (TendaStand.befehl), die der Mac abholt; nur im Speicher
+        self.tenda_ausgegeben = set()        # Kennungen, die die Brücke tatsächlich abgeholt hat (sonst „nie zugestellt“)
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1904,7 +1906,9 @@ class AgentenKanal:
                 auftrag, self.licht_auftrag = self.licht_auftrag, None
                 return web.json_response({"befehl": "licht", **auftrag})
             if self.tenda_auftraege:
-                return web.json_response({"befehl": "tenda", **self.tenda_auftraege.pop(0)})
+                auftrag = self.tenda_auftraege.pop(0)
+                self.tenda_ausgegeben.add(auftrag.get("kennung"))
+                return web.json_response({"befehl": "tenda", **auftrag})
             if self.start_vorn is None and self.switchbot_lesen:
                 self.switchbot_lesen = False
                 return web.json_response({"befehl": "switchbot_lesen"})
@@ -2099,6 +2103,7 @@ class TendaStand:
         self.kanal = kanal
         self.datei = datei
         self.warten = {}       # Kennung -> Future
+        self.datei_sperre = threading.Lock()
         self.abgeloest = set() # Kennungen, die ein neuerer Auftrag gleicher Art ersetzt hat: nie wieder ausgeben
         self.quittiert = set() # Kennungen, deren Empfang die Brücke bestätigt hat (sonst nach 8 s erneut ausgeben, die Brücke dedupliziert)
         self.stand = None
@@ -2111,6 +2116,10 @@ class TendaStand:
             pass
 
     def _sichern(self) -> None:
+        with self.datei_sperre:   # zwei gleichzeitige Meldungen schreiben sonst dieselbe .neu-Datei
+            self._sichern_ohne_sperre()
+
+    def _sichern_ohne_sperre(self) -> None:
         try:
             zwischen = self.datei.with_suffix(".neu")
             zwischen.write_text(json.dumps({"stand": self.stand, "aktion": self.aktion}, ensure_ascii=False), "utf-8")
@@ -2166,17 +2175,21 @@ class TendaStand:
                         # Zweimal ohne Empfangsquittung: Die Brücke ist weg (Mac aus, Abfrage tot). Dann sofort melden, damit das
                         # Handy im Heim-WLAN selbst einspringt, statt 45 s zu warten.
                         # Nur beim Lesen: Ein Schreibauftrag, der doch noch ankam, darf nie zusätzlich vom Handy ausgeführt werden.
-                        if ausgaben >= 2 and art in ("lesen", "zugang"):
-                            self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
+                        if ausgaben >= 2 and (art in ("lesen", "zugang") or kennung not in self.kanal.tenda_ausgegeben):
                             return web.json_response({"ergebnis": "mac_nicht_verbunden", "kennung": kennung})
                         if auftrag not in self.kanal.tenda_auftraege:
                             self.kanal.tenda_auftraege.append(auftrag)
                             self.kanal.befehl.set()
                         ausgaben += 1
         except asyncio.TimeoutError:
-            self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
+            # Nie abgeholt: Die Brücke ist weg, das Handy darf selbst schalten. Abgeholt ohne Ergebnis: unklar, nie zusätzlich schalten.
+            if kennung not in self.kanal.tenda_ausgegeben:
+                return web.json_response({"ergebnis": "mac_nicht_verbunden", "kennung": kennung})
             return web.json_response({"ergebnis": "keine_rueckmeldung" if art in ("lesen", "zugang") else "unklar", "kennung": kennung})
         finally:
+            # Auch eine erneut eingereihte Kopie entfernen: Sie darf nach dem Ende nie mehr ausgegeben werden.
+            self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
+            self.kanal.tenda_ausgegeben.discard(kennung)
             self.warten.pop(kennung, None)
             self.quittiert.discard(kennung)
             self.abgeloest.discard(kennung)

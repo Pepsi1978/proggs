@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -167,7 +168,11 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                 when (mac?.optString("ergebnis")) {
                     "mac_nicht_verbunden" -> gruende += "Mac zu Hause nicht verbunden"
                     "keine_rueckmeldung" -> gruende += "Mac antwortet nicht"
-                    "fehler" -> gruende += mac.optString("text").ifBlank { "Mac konnte den Router nicht lesen" }
+                    "fehler" -> {
+                        gruende += mac.optString("text").ifBlank { "Mac konnte den Router nicht lesen" }
+                        // Der Mac hat dasselbe Passwort als falsch erkannt: kein eigener Versuch (jeder zählt zur Router-Sperre).
+                        if (mac.optString("art") == "zugang") runCatching { SecureSettings(context).use { it.tendaHash = "" } }
+                    }
                     null -> Unit
                     else -> gruende += "Mac lieferte keinen Stand"
                 }
@@ -249,7 +254,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
             when {
                 "NSA" in roh || "ENDC" in roh || "EN-DC" in roh -> return "5G NSA"
                 mit5g && ("LTE" in roh || "4G" in roh) -> return "5G NSA"
-                "SA" in roh -> return "5G SA"
+                Regex("\\bSA\\b").containsMatchIn(roh) -> return "5G SA"
                 "LTE" in roh || "4G" in roh -> return "4G"
                 "3G" in roh || "WCDMA" in roh || "UMTS" in roh -> return "3G"
                 // Nur „5G“: NSA, wenn zugleich LTE-Werte kommen (Anker im LTE), sonst SA.
@@ -391,12 +396,23 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun schalten(art: String, wert: String): Pair<String, Boolean> = withContext(Dispatchers.IO) {
         if (hash().isBlank()) return@withContext "Das Router-Passwort ist noch nicht eingerichtet." to false
-        _zustand.value.schaltet?.let { return@withContext "Es läuft noch: $it. Erst danach ist ein neuer Befehl möglich." to false }
         val was = when (art) { "modus" -> "Moduswechsel auf ${MODI[wert]}"; "verbinden" -> "Neuverbinden"; else -> "Neustart" }
         val pause = if (art == "neustart") "zwei bis vier Minuten" else "ein bis drei Minuten"
-        _zustand.update { it.copy(schaltet = was, meldung = "$was läuft. Das Internet ist jetzt etwa $pause unterbrochen; danach prüfe ich den neuen Zustand.") }
+        // Atomar prüfen und setzen: Karte, Sprache und Mac/Windows-Karte (über MCP) dürfen nie gleichzeitig schalten.
+        val vorher = _zustand.getAndUpdate { z ->
+            if (z.schaltet != null) z else z.copy(schaltet = was, meldung = "$was läuft. Das Internet ist jetzt etwa $pause unterbrochen; danach prüfe ich den neuen Zustand.")
+        }
+        vorher.schaltet?.let { return@withContext "Es läuft noch: $it. Erst danach ist ein neuer Befehl möglich." to false }
         Logbuch.aktion("Tenda: $was")
-        val antwort = runCatching { relayBefehl(art, wert) }.getOrNull()
+        // Server gar nicht erreicht (kein Netz, kein DNS, kein Token): Der Befehl ist nie raus, also darf das Handy selbst schalten.
+        // Abbruch nach dem Senden (Zeitlimit beim Lesen): unklar, nie zusätzlich schalten.
+        val antwort = try {
+            relayBefehl(art, wert) ?: JSONObject().put("ergebnis", "mac_nicht_verbunden")
+        } catch (f: java.net.UnknownHostException) { JSONObject().put("ergebnis", "mac_nicht_verbunden") }
+        catch (f: java.net.ConnectException) { JSONObject().put("ergebnis", "mac_nicht_verbunden") }
+        catch (f: java.net.NoRouteToHostException) { JSONObject().put("ergebnis", "mac_nicht_verbunden") }
+        catch (f: javax.net.ssl.SSLHandshakeException) { JSONObject().put("ergebnis", "mac_nicht_verbunden") }
+        catch (f: Exception) { null }
         when (antwort?.optString("ergebnis")) {
             "angenommen" -> {
                 bereich.launch { nachpruefen(art, wert, antwort.optString("kennung"), was) }
@@ -410,7 +426,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                 else {
                     val r = runCatching { direktSchalten(art, wert) }
                     r.exceptionOrNull()?.let { f ->
-                        if (f is UnklarFehler) { bereich.launch { delay(60_000); direktNachpruefen(art, wert, was) }; return@withContext ende(was, f.message ?: "unklar").let { it to false } }
+                        // Unklar: weiter als „läuft“ zeigen und nur nachlesen; das Ergebnis meldet direktNachpruefen.
+                        if (f is UnklarFehler) { bereich.launch { direktNachpruefen(art, wert, was) }; return@withContext (f.message ?: "unklar") to false }
                         return@withContext ende(was, f.message ?: f.javaClass.simpleName) to false
                     }
                     bereich.launch { direktNachpruefen(art, wert, was) }
@@ -432,7 +449,9 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Wartet auf das Ergebnis des Macs (er meldet nach Wiedererreichbarkeit an den Relay) und liest dann neu. */
     private suspend fun nachpruefen(art: String, wert: String, kennung: String, was: String) {
-        val ende = System.currentTimeMillis() + 6 * 60_000L
+        // Der Mac braucht im ungünstigsten Fall: Neustart bis 4 min Wiedererreichbarkeit + 1,5 min Nachlesen + Meldung.
+        val frist = if (art == "neustart") 9 else 6
+        val ende = System.currentTimeMillis() + frist * 60_000L
         delay(20_000)
         while (System.currentTimeMillis() < ende) {
             val r = runCatching { relayStand() }.getOrNull()
@@ -440,11 +459,12 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
             if (aktion != null && (kennung.isBlank() || aktion.optString("kennung") == kennung)) {
                 r.optJSONObject("stand")?.let { fertig(Stand(it, "Mac zu Hause")); merken(Stand(it, "Mac zu Hause")) }
                 val stand = _zustand.value.stand
-                val pruefung = if (art == "modus" && stand != null) " Eingestellt: ${eingestellterModus(stand) ?: "nicht gelesen"}, aktiv: ${aktiverModus(stand) ?: "nicht gelesen"}." else ""
+                val pruefung = if (art == "modus" && stand != null) modusPruefung(stand, wert) else ""
                 // Gleich nach dem Wiederverbinden sind Technik und Ping teils noch nicht da: kurz danach einmal frisch lesen.
                 bereich.launch { delay(30_000); abrufen() }
                 ende(was, when (aktion.optString("ergebnis")) {
-                    "fertig" -> "erledigt, Router wieder erreichbar." + pruefung
+                    "fertig" -> (if (aktion.optBoolean("wieder_online", true)) "erledigt, Router wieder erreichbar."
+                        else aktion.optString("text").ifBlank { "ausgeführt, das Internet ist aber noch nicht wieder da." }) + pruefung
                     "unklar" -> aktion.optString("text").ifBlank { "Ausgang unklar." } + " Nicht erneut ausgelöst."
                     else -> aktion.optString("text").ifBlank { "gescheitert." }
                 })
@@ -452,8 +472,16 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
             }
             delay(10_000)
         }
-        ende(was, "Nach sechs Minuten keine Rückmeldung vom Mac. Nicht erneut ausgelöst; bitte Zustand prüfen.")
+        ende(was, "Nach $frist Minuten keine Rückmeldung vom Mac. Nicht erneut ausgelöst; bitte Zustand prüfen.")
         abrufen()
+    }
+
+    /** Nach einem Moduswechsel: eingestellt und aktiv nennen und sagen, ob der gewünschte Modus wirklich gesetzt ist. */
+    private fun modusPruefung(s: Stand, wert: String): String {
+        val eingestellt = eingestellterModus(s)
+        val ok = s.simWan.optString("dataOptions") == wert
+        return " Eingestellt: ${eingestellt ?: "nicht gelesen"}, aktiv: ${aktiverModus(s) ?: "nicht gelesen"}." +
+            if (!ok && eingestellt != null) " Achtung: Der Router steht nicht auf ${MODI[wert]}." else ""
     }
 
     private suspend fun direktNachpruefen(art: String, wert: String, was: String) {
@@ -467,8 +495,8 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
                 (roh.optJSONObject("ping")?.optInt("empfangen") ?: 0) > 0
             if (roh != null && (steht || System.currentTimeMillis() > ende - 60_000)) {
                 val s = Stand(roh, "Handy direkt im Heim-WLAN"); merken(s); fertig(s)
-                val pruefung = if (art == "modus") " Eingestellt: ${eingestellterModus(s) ?: "nicht gelesen"}, aktiv: ${aktiverModus(s) ?: "nicht gelesen"}." else ""
-                ende(was, "erledigt, Router wieder erreichbar.$pruefung")
+                val pruefung = if (art == "modus") modusPruefung(s, wert) else ""
+                ende(was, (if (steht) "erledigt, Router wieder erreichbar." else "ausgeführt, das Internet ist aber noch nicht wieder da.") + pruefung)
                 return
             }
             delay(10_000)
@@ -487,9 +515,10 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         val h = md5(passwort)
         val daheim = zuHause(ohneSsid = true)
         if (daheim) {
-            val router = DirektRouter(wlan() ?: return@withContext "Kein WLAN gefunden.")
-            try { router.anmelden(h) } catch (f: Exception) { return@withContext f.message ?: "Anmeldung gescheitert." }
+            // Dieselbe Sitzung wie alle Direktabrufe (der Router lässt nur drei Anmeldungen zu); ein Tippfehler löscht den alten Hash nicht.
+            try { direktSperre.withLock { router().anmelden(h, beiFalschLoeschen = false) } } catch (f: Exception) { return@withContext f.message ?: "Anmeldung gescheitert." }
             SecureSettings(context).use { it.tendaHash = h; it.tendaSsid = ssid().orEmpty() }
+            _zustand.update { it.copy(meldung = null) }
         } else {
             SecureSettings(context).use { it.tendaHash = h }
         }
@@ -575,16 +604,23 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         private fun rufe(pfad: String, rumpf: JSONObject? = null): JSONObject {
             val b = Request.Builder().url(ROUTER + pfad)
             if (rumpf != null) b.post(rumpf.toString().toRequestBody(JSON))
-            return client.newCall(b.build()).execute().use { a -> JSONObject(a.body?.string().orEmpty().ifBlank { "{}" }) }
+            return client.newCall(b.build()).execute().use { a ->
+                if (!a.isSuccessful) throw java.io.IOException("HTTP ${a.code}")
+                // Unlesbare Antwort zählt wie eine verlorene: Beim Schreiben ist dann offen, ob der Router geschaltet hat.
+                try { JSONObject(a.body?.string().orEmpty().ifBlank { "{}" }) } catch (f: org.json.JSONException) { throw java.io.IOException("unlesbare Antwort") }
+            }
         }
 
-        fun anmelden(h: String) {
+        fun anmelden(h: String, beiFalschLoeschen: Boolean = true) {
             // Ohne gültigen Hash nie anmelden: Jeder Fehlversuch zählt zur Sperre des Routers.
             check(h.isNotBlank()) { "Passwort falsch oder nicht eingerichtet" }
             val a = rufe("/login/Auth", JSONObject().put("username", "admin").put("password", h))
             when (a.optInt("errCode", -1)) {
                 0 -> return
                 4 -> {
+                    // Falsch: den gespeicherten Hash sofort löschen, damit kein Lese- oder Schaltweg es erneut versucht (Sperre nach 4).
+                    if (beiFalschLoeschen) runCatching { SecureSettings(context).use { it.tendaHash = "" } }
+                    direkt = null
                     val rest = 4 - a.optInt("authErrNum", 0)
                     throw IllegalStateException("Passwort falsch" + (if (rest > 0) ", noch $rest Versuche, bevor der Router sperrt." else "; der Router ist gesperrt."))
                 }
@@ -690,8 +726,9 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         if (netz == null || standard != netz || !validiert) return p.put("fehler", "Heim-WLAN gerade ohne Internet oder nicht das Standardnetz; kein Ping")
         val aus = runCatching {
             val prozess = ProcessBuilder("ping", "-c", "$anzahl", "-i", "0.2", "-W", "2", ziel).redirectErrorStream(true).start()
-            val text = prozess.inputStream.bufferedReader().readText()
-            prozess.waitFor(15, TimeUnit.SECONDS); text
+            // Erst mit Zeitlimit warten (die Ausgabe ist klein und passt in den Puffer), sonst hielte ein hängender Ping die Router-Sperre ewig.
+            if (!prozess.waitFor(15, TimeUnit.SECONDS)) { prozess.destroyForcibly(); error("Ping hängt") }
+            prozess.inputStream.bufferedReader().readText()
         }.getOrElse { return p.put("fehler", "Ping am Handy nicht möglich") }
         val zeiten = Regex("time[=<]\\s*([\\d.]+)\\s*ms").findAll(aus).mapNotNull { it.groupValues[1].toDoubleOrNull() }.toList()
         p.put("empfangen", zeiten.size).put("verlust_prozent", Math.round(1000.0 * (anzahl - zeiten.size) / anzahl) / 10.0)

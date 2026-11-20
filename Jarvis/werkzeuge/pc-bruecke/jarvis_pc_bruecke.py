@@ -681,14 +681,18 @@ def tenda_befehl(befehl: dict) -> None:
     import jarvis_tenda
     kennung, art, wert = str(befehl.get("kennung") or ""), str(befehl.get("art") or ""), str(befehl.get("wert") or "")
     # Der Relay gibt einen unquittierten Auftrag nach 8 s erneut aus: jede Kennung nur einmal ausführen, Empfang sofort bestätigen.
+    schreibend = art in ("modus", "verbinden", "neustart")
     with TENDA_SPERRE:
         if kennung in TENDA_GESEHEN:
             tenda_melden({"kennung": kennung, "empfangen": True})
             return
         TENDA_GESEHEN.append(kennung)
         del TENDA_GESEHEN[:-50]
-    tenda_melden({"kennung": kennung, "empfangen": True})
+        # Ab hier bis zur Ergebnismeldung keine Selbst-Neustarts der Brücke (unter der Sperre, nicht atomar sonst).
+        if schreibend:
+            TENDA_SCHALTET[0] += 1
     try:
+        tenda_melden({"kennung": kennung, "empfangen": True})
         if art == "zugang":
             jarvis_tenda.zugang_speichern(wert)
             schreib("Tenda: neuer Zugang gespeichert")
@@ -699,26 +703,38 @@ def tenda_befehl(befehl: dict) -> None:
             return
         tenda_melden({"kennung": kennung, "angenommen": True})
         schreib(f"Tenda: {art} {wert}".strip())
-        # Bis das Ergebnis gemeldet ist (das Internet kann dafür Minuten brauchen), startet die Brücke nicht neu.
-        TENDA_SCHALTET[0] += 1
-        try:
-            ergebnis = jarvis_tenda.aktion(art, wert)
-            schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
-            tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
-        finally:
-            TENDA_SCHALTET[0] -= 1
+        ergebnis = jarvis_tenda.aktion(art, wert)
+        schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
+        tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
     except jarvis_tenda.TendaFehler as fehler:
-        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": str(fehler), "art": fehler.art})
+        # Nach „angenommen“ wartet das Handy auf ein Aktionsergebnis: dann mit „aktion“ melden, sonst sähe es keins.
+        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": str(fehler), "art": fehler.art, **({"aktion": art} if schreibend else {})},
+                     versuche=30 if schreibend else 1)
     except Exception as fehler:
         schreib(f"Tenda: {type(fehler).__name__}")
-        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": f"Router nicht erreichbar ({type(fehler).__name__})."})
+        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": f"Router nicht erreichbar ({type(fehler).__name__}).",
+                      **({"aktion": art} if schreibend else {})}, versuche=30 if schreibend else 1)
+    finally:
+        if schreibend:
+            with TENDA_SPERRE:
+                TENDA_SCHALTET[0] -= 1
 
 
 def tenda_faden() -> None:
     """Einmal je Stunde Funkwerte, Modus und Ping des Heimanschlusses an den Relay (Startkarte, Live-Gedächtnis, Mobilfunk-Abruf)."""
     import jarvis_tenda
+    # Nach einem Neustart der Brücke (jede neue Fassung) nicht sofort neu lesen: erst eine Stunde nach dem letzten Abruf.
+    zuletzt = ORDNER / "tenda-zuletzt.txt"
+    try:
+        time.sleep(max(60, 3600 - (time.time() - float(zuletzt.read_text()))))
+    except Exception:
+        time.sleep(60)
     while True:
         beginn = time.time()
+        try:
+            zuletzt.write_text(str(beginn))
+        except Exception:
+            pass
         if jarvis_tenda.zugang_lesen().get("hash"):
             try:
                 tenda_melden({"stand": jarvis_tenda.lesen()})
