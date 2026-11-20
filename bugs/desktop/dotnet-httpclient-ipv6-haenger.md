@@ -25,9 +25,15 @@ pro Adresse. Der erste Versuch frisst das ganze Zeitlimit; IPv4 kommt nie an die
 sich ähnlich. winget fragt ohne `--source` zusätzlich die Store-Quelle live ab und hängt dort.
 
 ## Lösung
-1. **HttpClient:** eigenen `ConnectCallback` setzen – Adressen per `Dns.GetHostAddressesAsync` holen,
-   IPv4 zuerst, jede Adresse auf 4 s begrenzen, bei Fehler die nächste. Siehe
-   `UpdateZentrale/Services/Netzdienst.cs`. Dazu ein Wiederholversuch bei Transportfehlern.
+1. **HttpClient:** eigenen `ConnectCallback` setzen. Siehe `UpdateZentrale/Services/Netzdienst.cs`.
+   Dazu ein Wiederholversuch bei Transportfehlern.
+   - **Korrektur 20.11.2026 (v1.3.90):** Die erste Fassung probierte die Adressen *nacheinander* mit je 4 s
+     Frist. Das ist selbst eine Falle: Schon 4 tote Adressen × 4 s überschreiten das Zeitlimit von 15 s, und
+     keine gute Adresse kommt an die Reihe. Richtig sind Adressen aus drei Abfragen (ohne Familie,
+     nur IPv4, nur IPv6), ein **gestaffelt-paralleler** Verbindungsaufbau (alle 250 ms die nächste Adresse,
+     die erste Verbindung gewinnt) und DNS-over-HTTPS (1.1.1.1) als Ausweichquelle, wenn keine Adresse
+     antwortet. Auslöser war ein filternder WLAN-DNS mit Sperr-Adressen:
+     `bugs/bug-cases/2026-11-20-updatezentrale-deno-dns-sperradresse.md`.
 2. **node-Kindprozesse (npm-Shims `*.cmd`):** `NODE_OPTIONS` um `--dns-result-order=ipv4first`
    ergänzen (anhängen, nicht ersetzen). Siehe `Kommandozeile.AusfuehrenKernAsync`.
 3. **Fremde Werkzeuge, die selbst nachladen** (`claude update`, `kimi update`): bei Netzfehler im
