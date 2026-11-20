@@ -87,6 +87,9 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
      */
     val sprachRahmen: Long? get() = zeitachse?.sprachRahmen
 
+    /** So viele PCM-Bytes hat die laufende Aufnahme bisher gesammelt; markiert eine Stelle, ab der die Aufnahme zählt (Piepton). */
+    val pufferBytes: Int get() = synchronized(bufferLock) { pcmBuffer.size() }
+
     /** Die Spracherkennung kommt gleich, rechnet aber noch nicht mit. Wer nur Stimme zählen will (Lüfter im Auto), wartet so lange, statt dem Pegel zu glauben. */
     val sprachErkennungLaedt: Boolean get() = vadWartet && zeitachse == null
     @Volatile private var vadWartet = false

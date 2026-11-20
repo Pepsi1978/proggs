@@ -849,6 +849,7 @@
     {"versionCode": 840, "versionName": "1.8.829", "stand": "20.11.2026, 13:31 Uhr", "notiz": "Jarvis liest auf Fragen nach News alle Rubriken aus News-Kompass, nennt am selben Tag nur noch nicht Genanntes, beantwortet Rückfragen aus der Meldung selbst und blendet Dortmunder Ergebnisse aus."},
     {"versionCode": 841, "versionName": "1.8.830", "stand": "20.11.2026, 13:35 Uhr", "notiz": "Fragt Frank nach News, nennt Jarvis den aktuellen Bestand aus News-Kompass (heutige Ausgaben, je Rubrik mindestens die neueste) statt aller Meldungen der letzten zwei Tage."},
     {"versionCode": 842, "versionName": "1.8.831", "stand": "20.11.2026, 13:39 Uhr", "notiz": "Jarvis erkennt genauer, welche Schlagzeilen er Frank wirklich genannt hat, und berücksichtigt auch News-Kompass-Rubriken, die seltener als täglich sammeln."},
-    {"versionCode": 843, "versionName": "1.8.832", "stand": "20.11.2026, 13:50 Uhr", "notiz": "Review-Befunde behoben: Dortmund-Ergebnisse sind gründlicher ausgeblendet, vorgelesene Schlagzeilen werden auch über mehrere Antworten richtig gemerkt, und Folgemeldungen sowie seltene Rubriken kommen zuverlässig."}
+    {"versionCode": 843, "versionName": "1.8.832", "stand": "20.11.2026, 13:50 Uhr", "notiz": "Review-Befunde behoben: Dortmund-Ergebnisse sind gründlicher ausgeblendet, vorgelesene Schlagzeilen werden auch über mehrere Antworten richtig gemerkt, und Folgemeldungen sowie seltene Rubriken kommen zuverlässig."},
+    {"versionCode": 844, "versionName": "1.8.833", "stand": "20.11.2026, 16:18 Uhr", "notiz": "Im Sprachgespräch piept Jarvis nach einer Antwort erst, wenn sein eigenes Antwortende verklungen ist, und weder dieses Ende noch der Piepton landen in deiner Aufnahme, auch bei kurzer Stillezeit."}
 ]
 }

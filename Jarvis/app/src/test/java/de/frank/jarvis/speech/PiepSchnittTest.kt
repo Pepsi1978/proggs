@@ -1,0 +1,54 @@
+package de.frank.jarvis.speech
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class PiepSchnittTest {
+    private val rate = 16_000
+
+    private fun wav(proben: DoubleArray): ByteArray {
+        val pcm = ByteArray(proben.size * 2)
+        proben.forEachIndexed { i, v ->
+            val s = (v.coerceIn(-1.0, 1.0) * 32_767).toInt()
+            pcm[i * 2] = (s and 0xFF).toByte(); pcm[i * 2 + 1] = (s shr 8).toByte()
+        }
+        val kopf = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN).apply {
+            put("RIFF".toByteArray()); putInt(pcm.size + 36); put("WAVE".toByteArray()); put("fmt ".toByteArray())
+            putInt(16); putShort(1); putShort(1); putInt(rate); putInt(rate * 2); putShort(2); putShort(16)
+            put("data".toByteArray()); putInt(pcm.size)
+        }.array()
+        return kopf + pcm
+    }
+
+    private fun ms(n: Int) = n * rate / 1_000
+    private val zufall = java.util.Random(7)
+    private fun stille(n: Int) = DoubleArray(ms(n)) { zufall.nextGaussian() * 0.001 }
+    private fun piep(n: Int) = DoubleArray(ms(n)) { val t = it.toDouble() / rate; 0.3 * Math.sin(2 * Math.PI * 400 * t) + 0.3 * Math.sin(2 * Math.PI * 1_200 * t) }
+    /** Stimmähnlich: Grundton 140 Hz mit Obertönen und Rauschen. */
+    private fun stimme(n: Int) = DoubleArray(ms(n)) { val t = it.toDouble() / rate; (1..12).sumOf { h -> 0.05 / h * Math.sin(2 * Math.PI * 140 * h * t) } + zufall.nextGaussian() * 0.02 }
+
+    @Test
+    fun piepUndNachklangFallenWegSpracheBleibt() {
+        // Nachklang der Antwort (Stimme), Ruhe, Piepton (per Bluetooth 200 ms verspätet), dann sofort Sprache.
+        val vor = stimme(300) + stille(400)
+        val ab = vor.size * 2
+        val proben = vor + stille(200) + piep(35) + stille(60) + stimme(800)
+        val r = PiepSchnitt.schneiden(wav(proben), ab, null)
+        assertTrue(r.piepGefunden)
+        val rest = (r.wav.size - 44) / 2
+        // Von der Stimme am Ende fehlt höchstens ein Rahmen (32 ms), der Piepton ist weg.
+        assertTrue("Rest $rest", rest >= ms(800) - ms(32) && rest <= ms(800) + ms(60))
+    }
+
+    @Test
+    fun ohnePiepWirdAbDerMarkeGeschnitten() {
+        val proben = stimme(300) + stille(500) + stimme(500)
+        val ab = ms(800) * 2
+        val r = PiepSchnitt.schneiden(wav(proben), ab, BooleanArray(proben.size / 512) { true })
+        assertEquals(false, r.piepGefunden)
+        val schnitt = (ab + 1023) / 1024 * 1024
+        assertEquals(proben.size - schnitt / 2, (r.wav.size - 44) / 2)
+        assertEquals(proben.size / 512 - (ab + 1023) / 1024, r.stimmhaft!!.size)
+    }
+}

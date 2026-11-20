@@ -97,6 +97,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val ZUSTELLUNG_WARTEN_MS = 30 * 60_000L
         /** So lange nach dem letzten erkannten Wort zeigt die Sprachblase noch „Du sprichst“. */
         private const val BLASE_SPRICHT_NOCH_MS = 1_200L
+        private const val PIEP_KEINER = -1
+        private const val PIEP_ALLES = -2
+        /** Vor dem Piepton nach einer Antwort: so lange mindestens warten, so lange ohne Stimme, höchstens so lange; ohne Spracherkennung fest. */
+        private const val RUHE_MIN_MS = 350L
+        private const val RUHE_STILL_MS = 250L
+        private const val RUHE_HOECHST_MS = 2_000L
+        private const val RUHE_OHNE_VAD_MS = 700L
         /** Mindestdauer einer Tätigkeitszeile, damit Frank sie mitlesen kann (Franks Vorgabe: zwei Sekunden). */
         const val ANZEIGE_MIN_MS = 2_000L
         private const val ABGEBROCHEN = "abgebrochen"
@@ -1875,6 +1882,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (stand != wechselStand) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return false }
         if (mikro.start(viewModelScope)) {
             nimmtAuf = true; aufnahmeStand = stand
+            piepAbBytes = PIEP_KEINER
             // Verbindungen schon jetzt öffnen: DNS und TLS fallen nicht mehr in die Wartezeit nach der Frage.
             runCatching { agent.auth.vorwaermen(einstellungen.modell); vorleser.vorwaermen() }
             // Offline: Das Modell lädt, während Frank spricht, statt danach.
@@ -2221,6 +2229,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var gespraechInApp = false
     /** Zeit seit dem letzten Wort, wenn die Stillezeit die Aufnahme beendet hat; sonst 0. */
     private var schlussStilleMs = 0L
+    /** PCM-Stelle, an der der Bereit-Piepton der laufenden Gesprächsrunde begann; [PIEP_KEINER] = nichts schneiden, [PIEP_ALLES] = noch kein Piepton, alles verwerfen. */
+    private var piepAbBytes = PIEP_KEINER
 
     /** Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen der App. */
     private fun stilleMsJetzt(): Int {
@@ -2250,10 +2260,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         freihaendig = true
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
         val stilleMs = stilleMsJetzt()
-        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
+        val mikroAn = System.currentTimeMillis()
+        rundeBeginn = mikroAn; rundeStilleMs = stilleMs.toLong()
+        rundeEnde = de.frank.module.transkriptionsmodul.SprechEnde(stilleMs = stilleMs.toLong())
+        if (!erste) {
+            // Nach einer vorgelesenen Antwort: Bis hierhin Aufgenommenes zählt nie (bricht Frank jetzt ab, geht nichts davon in die Mitschrift).
+            piepAbBytes = PIEP_ALLES
+            // Erst piepen, wenn das Mikrofon das Ende der eigenen Antwort nicht mehr hört: Lautsprecher und Bluetooth spielen nach dem
+            // Ende des Players noch nach. So heißt der Piepton wirklich „jetzt sprechen“, unabhängig von der Stillezeit.
+            ruheVorPiep(mikroAn)
+            if (!nimmtAuf) { freihaendig = false; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG }
+            piepAbBytes = mikro.pufferBytes
+        }
+        // Ohne Spracherkennung zählt der Pegel; dann auch einen per Bluetooth verspäteten Piepton nicht als Sprache werten.
+        val anlauf = if (erste || mikro.sprachRahmen != null) 250L else 600L
+        val ende = de.frank.module.transkriptionsmodul.SprechEnde(anlaufMs = anlauf, wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
         // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
         val start = System.currentTimeMillis()
-        rundeEnde = ende; rundeBeginn = start; rundeStilleMs = stilleMs.toLong()
+        rundeEnde = ende; rundeBeginn = start
         val rufUm = if (erste) weckwortRufUm else 0L
         piep()
         if (rufUm > 0L) Logbuch.sprache("Kette Weckwort", "Mikrofon ${start - rufUm} · Piepton ${System.currentTimeMillis() - start}", System.currentTimeMillis() - rufUm)
@@ -2292,6 +2316,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * Wartet nach einer vorgelesenen Antwort, bis das laufende Mikrofon keine Stimme mehr hört (Silero): mindestens
+     * [RUHE_MIN_MS] nach dem Mikrofonstart und [RUHE_STILL_MS] ohne neuen Sprachrahmen, höchstens [RUHE_HOECHST_MS].
+     * Ohne Spracherkennung eine feste Wartezeit. Lüfter und Fahrgeräusch zählen nicht, nur Stimme.
+     */
+    private suspend fun ruheVorPiep(mikroAn: Long) {
+        var stand: Long? = null
+        var ruheAb = mikroAn
+        var stimme = 0L
+        var grund = "Höchstzeit"
+        while (nimmtAuf && !sprachsitzungBeendet) {
+            val jetzt = System.currentTimeMillis()
+            if (jetzt - mikroAn >= RUHE_HOECHST_MS) break
+            val neu = mikro.sprachRahmen
+            if (neu == null) {
+                if (!mikro.sprachErkennungLaedt && jetzt - mikroAn >= RUHE_OHNE_VAD_MS) { grund = "ohne Spracherkennung"; break }
+            } else {
+                val alt = stand
+                if (alt == null) ruheAb = maxOf(ruheAb, jetzt - RUHE_STILL_MS / 2)
+                else if (neu > alt) { stimme += neu - alt; ruheAb = jetzt }
+                stand = neu
+                if (jetzt - mikroAn >= RUHE_MIN_MS && jetzt - ruheAb >= RUHE_STILL_MS) { grund = "Ruhe"; break }
+            }
+            kotlinx.coroutines.delay(20)
+        }
+        Logbuch.sprache("Piepton bereit", "$grund nach ${System.currentTimeMillis() - mikroAn} ms, Nachklang davor ${stimme * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms Stimme")
+    }
+
+    /**
      * Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort; steht der
      * Freisprech-Kanal zum Konferenz-Lautsprecher, über den Gesprächskanal (Medienton liefe dort nicht).
      */
@@ -2315,6 +2367,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nimmtAuf = false
         val schluss = schlussStilleMs
         schlussStilleMs = 0L
+        val piepAb = piepAbBytes
+        piepAbBytes = PIEP_KEINER
         de.frank.jarvis.observability.Antwortkette.start(schluss)
         // Die Mitschrift gehört zur Session, in der die Aufnahme begann.
         val stand = aufnahmeStand
@@ -2331,7 +2385,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
                 // Hauptfaden, sonst steht die Mitschrift-Animation still.
-                val (wav, stimmhaft) = withContext(Dispatchers.Default) { de.frank.jarvis.data.Einstellungen.ohneSchlussstille(mikro.stop(), schluss) to mikro.letzteStimmhaft }
+                val (wavRoh, stimmhaftRoh) = withContext(Dispatchers.Default) { de.frank.jarvis.data.Einstellungen.ohneSchlussstille(mikro.stop(), schluss) to mikro.letzteStimmhaft }
+                // Gesprächsrunde nach einer Antwort: Ende der eigenen Antwort und Piepton gehören nicht in die Mitschrift.
+                val (wav, stimmhaft) = when {
+                    wavRoh == null || piepAb == PIEP_KEINER -> wavRoh to stimmhaftRoh
+                    piepAb == PIEP_ALLES -> null to null
+                    else -> withContext(Dispatchers.Default) { de.frank.jarvis.speech.PiepSchnitt.schneiden(wavRoh, piepAb, stimmhaftRoh) }.let { r ->
+                        Logbuch.sprache("Piepton geschnitten", "${if (r.piepGefunden) "Piepton im Ton gefunden" else "kein Piepton im Ton"}, ${r.wegMs} ms ab Piepton entfernt, Stimme danach ${(r.stimmhaft?.count { it } ?: -1) * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms")
+                        r.wav to r.stimmhaft
+                    }
+                }
+                // Nach dem Piepton keine Stimme erkannt (nur Nachklang oder Geräusch): nichts abschicken, keine Antwort auf eine Phantom-Eingabe.
+                if (piepAb >= 0 && stimmhaft != null && stimmhaft.count { it } < 3 && messFrage == null) {
+                    Logbuch.sprache("Mitschrift verworfen", "nach dem Piepton keine Stimme")
+                    de.frank.jarvis.observability.Antwortkette.verwerfen()
+                    return@launch
+                }
                 // Aufnahme zu Ende: Der Konferenz-Lautsprecher spielt die Antwort wieder in voller Qualität.
                 konferenzFrei(sprachmodusNr)
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
