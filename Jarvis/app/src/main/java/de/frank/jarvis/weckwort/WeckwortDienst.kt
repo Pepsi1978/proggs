@@ -315,6 +315,7 @@ class WeckwortDienst : Service() {
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
     private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, spr: SprecherErkenner?, vad: SileroVad?, an: AtomicBoolean) {
         var aufnahme: AudioRecord? = null
+        var mitschnitt: WeckwortMitschnitt? = null
         // Über den Anker (Telefon-Profil): Strecke vor der Aufnahme öffnen, am Ende freigeben oder ans Gespräch übergeben.
         var ueberAnker = false
         var uebergabe = false
@@ -352,6 +353,8 @@ class WeckwortDienst : Service() {
             val ring = ShortArray(RING_WERTE)
             var ringPos = 0
             var verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
+            // Diagnose-Mitschnitt (nur per adb angestoßen): unverstärkter Ton und je Block, was der Filter und der Spotter taten.
+            mitschnitt = WeckwortMitschnitt.oeffnen(this)
             // Rückstand gegenüber der Uhr: Wächst er, kommt der Faden mit dem Lesen nicht nach und der Puffer läuft über.
             var uhrStart = SystemClock.elapsedRealtime()
             var gelesenWerte = 0L
@@ -441,6 +444,7 @@ class WeckwortDienst : Service() {
                     uhrStart = SystemClock.elapsedRealtime(); gelesenWerte = 0L
                 }
                 for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
+                mitschnitt = mitschnitt?.takeIf { it.ton(block) }
                 // Über den Anker leise Rufe hörbar machen: verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
                 if (ueberAnker && verstaerkung > 1f) verstaerken(block, verstaerkung)
                 val anlernen = Stimmprofil.lerntAn
@@ -466,6 +470,8 @@ class WeckwortDienst : Service() {
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
                     inFolge = 0
+                    phr?.ruhen(boden)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung, ueberAnker, false)
                     // Den Hintergrund fürs Stimmprofil trotzdem ab und zu weiter pflegen.
                     if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) if (!ueberAnker) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
                     continue
@@ -482,6 +488,7 @@ class WeckwortDienst : Service() {
                     else -> phr.einstellen(phrasenSchwelle, breit = false)
                 }
                 var nachgeholt = false
+                val nachgeholtBloecke = minOf(uebersprungen, NACHHOLEN)
                 if (uebersprungen > 0) {
                     // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
                     // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
@@ -498,7 +505,9 @@ class WeckwortDienst : Service() {
                 val wert = if (brauchtLaut) erk.bewerte(block) else 0f
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
-                    if (!nachgeholt && !phr.erkannt(block, boden)) {
+                    val spotterTreffer = nachgeholt || phr.erkannt(block, boden)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung, ueberAnker, spotterTreffer, nachgeholtBloecke)
+                    if (!spotterTreffer) {
                         if (merkmale != null && wert < 0.1f && !ueberAnker) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
@@ -587,6 +596,7 @@ class WeckwortDienst : Service() {
                 if (lauf === an) { faden = null; lauschen() }
             }
         } finally {
+            mitschnitt?.schliessen()
             runCatching { aufnahme?.stop() }
             runCatching { aufnahme?.release() }
             if (ueberAnker) {
@@ -804,11 +814,11 @@ class WeckwortDienst : Service() {
         private const val LAERM_BODEN = 150f
         /**
          * Stille-Filter: so viele Blöcke (je 80 ms, also 4 s) ohne Laut, dann ruhen die Modelle; beim Aufwachen so viele
-         * nachholen (rund 1 s). Der Ring hält 2,5 s; so fehlt den Modellen auch ein leiser Anlaut („Hey“) nicht, der
+         * nachholen (2 s: Die Phrase dauert bis gut 2 s, leise gesprochen wacht der Filter erst spät in ihr auf). Der Ring hält 2,5 s; so fehlt den Modellen auch ein leiser Anlaut („Hey“) nicht, der
          * deutlich vor der ersten lauten Silbe liegt.
          */
         private const val STILLE_BLOECKE = 50
-        private const val NACHHOLEN = 12
+        private const val NACHHOLEN = 25
         /**
          * Laut ist ein Block etwa 2 dB über dem Rauschboden, mindestens aber über einem sehr niedrigen Pegel (16 Bit,
          * etwa -65 dBFS): Ohne Verstärkung liegt leise Sprache aus mehreren Metern nur knapp darüber.

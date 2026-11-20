@@ -89,7 +89,20 @@ class PhrasenErkenner(
     }
 
     /** Verstärkung vor dem Spotter: leise und entfernte Rufe in den Pegelbereich bringen, den das Modell kennt. */
-    private var verstaerkung = 1f
+    var verstaerkung = 1f
+        private set
+
+    /** Zielverstärkung für den Rauschboden: im ruhigen Raum bis [MAX_VERSTAERKUNG], im Lärm 1. */
+    private fun ziel(rauschboden: Float) = if (rauschboden > 0f) (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG) else 1f
+
+    /**
+     * Ein Block, den der Stille-Filter überspringt: Die Verstärkung erholt sich trotzdem. Sonst blieb sie nach einem lauten
+     * Geräusch (Ruf, Tür, Klatschen) über die ganze folgende Stille niedrig, und der nächste leise Ruf kam zu leise beim Modell an.
+     */
+    fun ruhen(rauschboden: Float) {
+        val z = ziel(rauschboden)
+        verstaerkung = if (z < verstaerkung) z else verstaerkung + (z - verstaerkung) * ANSTIEG
+    }
 
     /**
      * Nimmt einen Block (16 kHz, 16 Bit) und meldet, ob die Phrase gerade zu Ende gesprochen wurde.
@@ -98,7 +111,7 @@ class PhrasenErkenner(
      * Verstärkung langsam wieder an, so bleibt sie innerhalb einer Phrase gleich.
      */
     fun erkannt(block: ShortArray, rauschboden: Float = -1f): Boolean {
-        val ziel = if (rauschboden > 0f) (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG) else 1f
+        val ziel = ziel(rauschboden)
         verstaerkung = if (ziel < verstaerkung) ziel else verstaerkung + (ziel - verstaerkung) * ANSTIEG
         var spitze = 0
         for (w in block) { val a = kotlin.math.abs(w.toInt()); if (a > spitze) spitze = a }
