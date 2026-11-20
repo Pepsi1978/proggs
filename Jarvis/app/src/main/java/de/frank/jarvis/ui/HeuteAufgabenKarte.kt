@@ -86,6 +86,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicInteger
@@ -168,6 +169,8 @@ private object HeuteAufgabenStand {
      */
     val abgehakt = mutableStateMapOf<Long, HeuteAufgabe>()
     var abgehaktTag = ""
+    /** Tag (ISO) der zuletzt erfolgreich gelesenen Liste: Stammt sie von gestern (Mitternacht, Lesefehler), sind alle Uhrzeiten vorbei. */
+    var gelesenTag by mutableStateOf("")
     /** Nur die zuletzt begonnene Lesung darf den Stand setzen; ältere, die später fertig werden, verfallen. */
     val lesung = AtomicInteger()
     /** Bis wann Meldungen der Aufgaben-App von Jarvis' eigenem Abhaken stammen (die Karte hat dann schon neu gelesen). */
@@ -284,6 +287,7 @@ private suspend fun neuLesen(context: android.content.Context) {
     liste.forEach { a -> if (a.id in s.abgehakt) s.abgehakt.remove(a.id) }
     val ids = liste.map { it.id }.toSet()
     s.aufgaben = sortiere(liste + s.abgehakt.values.filter { it.id !in ids })
+    s.gelesenTag = heute
     s.fehler = null
 }
 
@@ -295,6 +299,16 @@ private suspend fun neuLesen(context: android.content.Context) {
 /** [griff]: Titel und Zählerzeile, an denen sich die ganze Karte auf dem Startbildschirm verschieben lässt. */
 @Composable
 fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
+    // Ein Minutentakt für alle Zeilen (Farbe der Uhrzeit), nur solange Jarvis vorne ist; bei jeder Rückkehr sofort frisch.
+    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val jetzt by androidx.compose.runtime.produceState(remember { LocalDateTime.now().withSecond(0).withNano(0) }, lebenszyklus) {
+        lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            while (true) {
+                value = LocalDateTime.now().withSecond(0).withNano(0)
+                delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
+            }
+        }
+    }
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
     val s = HeuteAufgabenStand
@@ -424,7 +438,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
             // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
             // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
             Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
-                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, oeffnen = { aufgabenOeffnen(context, vm, LocalDate.now()) }) { umschalten(a) } } }
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, jetzt = jetzt, gelesenTag = s.gelesenTag, oeffnen = { aufgabenOeffnen(context, vm, LocalDate.now()) }) { umschalten(a) } } }
             }
             if (anzeige.size > SICHTBAR) Text(
                 if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
@@ -487,26 +501,24 @@ private fun MorgenBereich(vm: AppViewModel) {
  * roten Titel; Uhrzeit und „überfällig“ liest TalkBack über die Zustandsbeschreibung vor.
  */
 @Composable
-private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Unit, umschalten: () -> Unit) {
+private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, jetzt: LocalDateTime, gelesenTag: String, oeffnen: () -> Unit, umschalten: () -> Unit) {
     val f = LocalFarben.current
     // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Während der Halte-Zeit [gehalten] bleibt die
     // frisch abgehakte Zeile kräftig (Haken gut sichtbar) und graut erst beim Gleiten aus, im Takt mit der Bewegung.
     val deckung by animateFloatAsState(if (a.erledigt && !gehalten) 0.5f else 1f, tween(GLEITEN_MS), label = "deckung")
     val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
-    val zustand = listOfNotNull(
-        if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
-    ).joinToString(", ")
-    // Uhrzeit vor dem Titel: grün, solange sie noch kommt, rot, sobald sie vorbei ist und die Aufgabe offen (erledigt: wie die Zeile).
-    // Die aktuelle Minute läuft mit, damit die Farbe ohne neues Lesen umspringt.
+    // Uhrzeit vor dem Titel: grün, solange sie noch kommt, rot ab der fälligen Minute, solange die Aufgabe offen ist (erledigt: wie
+    // die Zeile). [jetzt] tickt minütlich für die ganze Karte; stammt die Liste von einem früheren Tag, ist jede Uhrzeit vorbei.
     val zeit = a.uhrzeit?.takeIf { it.isNotBlank() }
-    val jetzt by androidx.compose.runtime.produceState(java.time.LocalTime.now().toString().take(5), zeit) {
-        if (zeit == null) return@produceState
-        while (true) {
-            value = java.time.LocalTime.now().toString().take(5)
-            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
-        }
-    }
-    val zeitFarbe = when { a.erledigt -> f.textLeise; a.ueberfaellig || (zeit != null && zeit.take(5) <= jetzt) -> f.gefahr; else -> f.erfolg }
+    val zeitWert = zeit?.let { runCatching { java.time.LocalTime.parse(it.take(5)) }.getOrNull() }
+    val vorbei = !a.erledigt && zeitWert != null &&
+        (a.ueberfaellig || gelesenTag != jetzt.toLocalDate().toString() || !zeitWert.isAfter(jetzt.toLocalTime()))
+    val zeitFarbe = when { a.erledigt -> f.textLeise; vorbei || a.ueberfaellig -> f.gefahr; else -> f.erfolg }
+    // Die Uhrzeit liest TalkBack schon im Titel vor; der Zustand ergänzt, ob sie vorbei ist (Farbe allein reicht nicht).
+    val zustand = listOfNotNull(
+        if (a.erledigt) "erledigt" else "offen",
+        "überfällig".takeIf { a.ueberfaellig && !a.erledigt } ?: "Uhrzeit vorbei".takeIf { vorbei },
+    ).joinToString(", ")
     val titelMitZeit = if (zeit == null) androidx.compose.ui.text.AnnotatedString(a.titel) else androidx.compose.ui.text.buildAnnotatedString {
         pushStyle(androidx.compose.ui.text.SpanStyle(color = zeitFarbe)); append("$zeit:"); pop(); append(" ${a.titel}")
     }
