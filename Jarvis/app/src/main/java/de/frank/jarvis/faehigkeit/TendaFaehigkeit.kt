@@ -346,7 +346,12 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
         (lte(s) + nr(s)).filter { it.wert != null && it.name !in setOf("RSRP", "SINR", "SS-RSRP", "SS-SINR") }.takeIf { it.isNotEmpty() }?.let { w ->
             zeilen += "Weitere Werte: " + w.joinToString(", ") { "${it.name} ${it.text()} (${it.stufe?.wort ?: "ohne Bewertung"})" } + "."
         }
-        val fehlt = (lte(s) + nr(s)).filter { it.wert == null }.map { it.name }
+        val alle = lte(s) + nr(s)
+        val lteDa = lte(s).any { it.wert != null }; val nrDa = nr(s).any { it.wert != null }
+        if (!lteDa && nrDa) zeilen += "LTE ist im aktuellen Modus nicht aktiv."
+        if (!nrDa && lteDa) zeilen += "5G ist im aktuellen Modus nicht aktiv."
+        val fehlt = alle.filter { w -> w.wert == null && alle.none { it.name == w.name && it.wert != null } &&
+            ((w in lte(s) && lteDa) || (w in nr(s) && nrDa)) }.map { it.name }.distinct()
         if (fehlt.isNotEmpty()) zeilen += "Vom Router nicht geliefert: ${fehlt.joinToString(", ")}."
         zeilen += "Die Multiplayer-Einschätzung misst den Weg bis ${s.ping?.optString("ziel") ?: "1.1.1.1"}, nicht den Spielserver selbst."
         return zeilen.joinToString(" ")
@@ -529,7 +534,7 @@ class TendaFaehigkeit(private val context: Context) : Faehigkeit {
     @Suppress("DEPRECATION")
     private fun ssid(): String? {
         if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
-        val s = context.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo?.ssid?.trim('"') ?: return null
+        val s = runCatching { context.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo?.ssid?.trim('"') }.getOrNull() ?: return null
         return s.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
     }
 
