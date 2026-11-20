@@ -496,6 +496,20 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Uni
     val zustand = listOfNotNull(
         if (a.erledigt) "erledigt" else "offen", a.uhrzeit?.let { "$it Uhr" }, "überfällig".takeIf { a.ueberfaellig && !a.erledigt },
     ).joinToString(", ")
+    // Uhrzeit vor dem Titel: grün, solange sie noch kommt, rot, sobald sie vorbei ist und die Aufgabe offen (erledigt: wie die Zeile).
+    // Die aktuelle Minute läuft mit, damit die Farbe ohne neues Lesen umspringt.
+    val zeit = a.uhrzeit?.takeIf { it.isNotBlank() }
+    val jetzt by androidx.compose.runtime.produceState(java.time.LocalTime.now().toString().take(5), zeit) {
+        if (zeit == null) return@produceState
+        while (true) {
+            value = java.time.LocalTime.now().toString().take(5)
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
+        }
+    }
+    val zeitFarbe = when { a.erledigt -> f.textLeise; a.ueberfaellig || (zeit != null && zeit.take(5) <= jetzt) -> f.gefahr; else -> f.erfolg }
+    val titelMitZeit = if (zeit == null) androidx.compose.ui.text.AnnotatedString(a.titel) else androidx.compose.ui.text.buildAnnotatedString {
+        pushStyle(androidx.compose.ui.text.SpanStyle(color = zeitFarbe)); append("$zeit:"); pop(); append(" ${a.titel}")
+    }
     // Abhaken nur über Titel oder Abhakfeld; die freie Fläche links vom Titel öffnet Geniale Aufgaben mit Heute oben, die Lücke dazwischen tut nichts.
     Row(
         Modifier.gleitend().fillMaxWidth().alpha(deckung),
@@ -518,7 +532,7 @@ private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, oeffnen: () -> Uni
         ) {
         // Abstand innerhalb der Tippfläche: Ein knapper Tipp über, unter oder links vom Titel hakt trotzdem ab.
         Text(
-            a.uhrzeit?.takeIf { it.isNotBlank() }?.let { "$it: ${a.titel}" } ?: a.titel, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
+            titelMitZeit, Modifier.antippen(rolle = Role.Checkbox, aktion = umschalten).semantics { stateDescription = zustand }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
             color = when { a.erledigt -> f.textLeise; a.ueberfaellig -> f.gefahr; else -> f.text }, fontSize = 15.sp, fontWeight = FontWeight.Medium,
             textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, maxLines = 2, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
