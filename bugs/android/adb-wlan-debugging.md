@@ -90,3 +90,9 @@ Quelle der Einträge: eigene Messungen am Gerät (23.09.2026) + Sonnet-5-Recherc
 - **Ursache:** Das Gerät wurde von einem anderen Rechner eingerichtet (Tab S9 vom Mac) und hat den Schlüssel dieses Rechners nie gespeichert; über WLAN fragt es neue Rechner nicht nach. Kein Ablauf, kein Netzproblem.
 - **Fix (30 Sekunden, nicht lange suchen):** Frank sofort um den Kopplungscode bitten (Entwickleroptionen › Drahtloses Debugging › Gerät mit Kopplungscode koppeln). Port per `adb mdns services` (`_adb-tls-pairing._tcp`), dann `adb pair <ip>:<port> <code>`. Danach ist der Rechner dauerhaft freigegeben, auch für Port 5555. Jarvis Mac OS liest Kopplungscodes bewusst nicht aus (Sicherheitsgrenze): nicht darüber versuchen.
 - **Quelle:** eigene Messung 19.11.2026 (Windows-PC ↔ Tab S9 R52W800205N)
+
+## 15. `grep` auf `dumpsys bluetooth_manager` findet nichts (macOS)
+- **Symptom:** `adb shell dumpsys bluetooth_manager | grep …` bleibt leer, obwohl der Text drinsteht; die ersten Aufrufe klappen scheinbar zufällig.
+- **Ursache:** Der Dump enthält Binärzeichen; BSD-grep behandelt ihn dann als Binärdatei und gibt nichts aus.
+- **Fix:** `adb exec-out dumpsys bluetooth_manager > <scratchpad>/bt.txt` und `LC_ALL=C grep -a …` darauf. Profilereignisse: `grep -a "connection state changed"`.
+- **Quelle:** eigene Messung 20.11.2026 (Fold 8, Anker-Auftrag CG73F)
