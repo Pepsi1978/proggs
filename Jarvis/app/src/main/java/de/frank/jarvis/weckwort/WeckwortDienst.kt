@@ -126,7 +126,17 @@ class WeckwortDienst : Service() {
         bereich.launch {
             combine(Weckwort.belegt, vorleser.stand) { belegt, stand -> !belegt && stand.zustand == VorleseZustand.AUS }
                 .distinctUntilChanged()
-                .collect { frei -> if (frei) lauschen() else anhalten() }
+                .collect { frei ->
+                    if (frei) {
+                        pauseMelden()
+                        lauschen()
+                    } else {
+                        // Warum taub: Für die Auswertung „reagiert nicht“ (Leerlauf oder belegt) im Logbuch.
+                        pauseSeit = SystemClock.elapsedRealtime()
+                        pauseGrund = if (Weckwort.belegt.value) "Jarvis nimmt auf oder führt ein Sprachgespräch" else "Jarvis liest vor"
+                        anhalten()
+                    }
+                }
         }
         // Ruft der Dienst die App und sie kommt nicht (Android blockt den Start still), nicht taub bleiben: Der Ruf
         // kommt als Benachrichtigung zum Antippen, und das Mikrofon geht zurück ans Weckwort.
@@ -144,6 +154,19 @@ class WeckwortDienst : Service() {
             }
         }
         return START_STICKY
+    }
+
+    /** Seit wann der Dienst absichtlich nicht lauscht (0 = er lauscht) und warum. */
+    private var pauseSeit = 0L
+    private var pauseGrund = ""
+
+    /** Eine absichtliche Pause ab einer Sekunde kommt ins Logbuch: So lässt sich ein verpasster Ruf einer Ursache zuordnen. */
+    private fun pauseMelden() {
+        val seit = pauseSeit
+        pauseSeit = 0L
+        if (seit == 0L) return
+        val ms = SystemClock.elapsedRealtime() - seit
+        if (ms >= 1_000) Logbuch.dauer("Weckwort-Pause", ms, pauseGrund)
     }
 
     /** Weckwort, Phrase und Empfindlichkeit aus den Einstellungen lesen. */
@@ -181,6 +204,9 @@ class WeckwortDienst : Service() {
         val an = AtomicBoolean(true)
         lauf = an
         faden = Thread({
+            // Wie Audio-Aufnahme: Unter Last (Mitschrift, Modelle, Oberfläche) darf das Lesen nie zurückfallen, sonst läuft der
+            // Puffer über und ein Ruf geht verloren.
+            runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO) }
             // Hängt ein alter Durchgang noch (Treffer, Mikrofon), erst ihn auslaufen lassen: nie zwei Leser zugleich.
             val vorgaengerFertig = vorher == null || runCatching { vorher.join(3_000); !vorher.isAlive }.getOrDefault(false)
             if (!an.get()) return@Thread
@@ -279,7 +305,7 @@ class WeckwortDienst : Service() {
 
     /** Kann das Weckwort gerade über die Mikrofone des Anker gehört werden (Schalter, verbunden, keine fremde Musik, kein Telefonat)? */
     private fun ankerMoeglich(): Boolean {
-        if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn) return false
+        if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn || Weckwort.nurHandy) return false
         if (SystemClock.elapsedRealtime() < ankerSperreBis || telefoniert()) return false
         // Spielt eine andere App Musik, bliebe sie sonst in Telefonqualität: dann lauscht das Handy.
         if (getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true) return false
@@ -325,14 +351,30 @@ class WeckwortDienst : Service() {
             // Die letzten Sekunden Ton für den Stimm-Fingerabdruck: Das Weckwort ist schon gesagt, wenn es erkannt wird.
             val ring = ShortArray(RING_WERTE)
             var ringPos = 0
+            var verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
+            // Rückstand gegenüber der Uhr: Wächst er, kommt der Faden mit dem Lesen nicht nach und der Puffer läuft über.
+            var uhrStart = SystemClock.elapsedRealtime()
+            var gelesenWerte = 0L
+            // Der Ring hält den unverstärkten Ton. Über den Anker hebt [letzterTon] ihn nur linear an (in Gleitkomma, ohne Begrenzer):
+            // Der weiche Begrenzer der Verstärkung verzerrte laute Rufe, und die Stimmerkennung wies Frank dann ab (Stimme 0,43 statt
+            // um 0,6 am Handy).
             fun letzterTon(): FloatArray {
                 val n = TON_WERTE
-                return FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
+                val ton = FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
+                if (ueberAnker && verstaerkung > 1f) {
+                    var spitze = 0f
+                    for (w in ton) spitze = maxOf(spitze, kotlin.math.abs(w))
+                    val faktor = if (spitze > 0f) minOf(verstaerkung, TON_SPITZE / spitze) else 1f
+                    if (faktor > 1f) for (i in ton.indices) ton[i] *= faktor
+                }
+                return ton
             }
-            /** Ein früherer Block aus dem Ring: 1 = der Block vor dem gerade gelesenen. */
+            /** Ein früherer Block aus dem Ring (1 = der Block vor dem gerade gelesenen), verstärkt wie beim Lesen. */
             fun frueherBlock(zurueck: Int): ShortArray {
                 val start = ringPos - (zurueck + 1) * WeckwortErkenner.BLOCK
-                return ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
+                val b = ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
+                if (ueberAnker && verstaerkung > 1f) verstaerken(b, verstaerkung)
+                return b
             }
             // Lief das „Hey Jarvis“-Modell im letzten Block? Springt es wieder an, fängt es frisch an.
             var lautLief = true
@@ -374,7 +416,6 @@ class WeckwortDienst : Service() {
             var knappUm = 0L
             // Alle 50 Blöcke (4 s): Anker dazugekommen, Strecke abgerissen oder fremde Musik? Dann neu anfangen.
             var pruefZaehler = 0
-            var verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
             while (an.get()) {
                 if (++pruefZaehler >= 50) {
                     pruefZaehler = 0
@@ -382,7 +423,7 @@ class WeckwortDienst : Service() {
                     val wechsel = if (ueberAnker) {
                         val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
                         if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
-                        abgerissen || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn || telefoniert() || de.frank.jarvis.audio.AnkerVerbindung.fremdesAudioGeraet(this) != null || getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true
+                        abgerissen || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn || Weckwort.nurHandy || telefoniert() || de.frank.jarvis.audio.AnkerVerbindung.fremdesAudioGeraet(this) != null || getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true
                     } else ankerMoeglich()
                     if (wechsel) { neuStart = true; break }
                 }
@@ -393,9 +434,15 @@ class WeckwortDienst : Service() {
                     gelesen += n
                 }
                 if (!an.get()) break
+                gelesenWerte += block.size
+                val rueckstand = SystemClock.elapsedRealtime() - uhrStart - gelesenWerte * 1000 / WeckwortErkenner.ABTASTRATE
+                if (rueckstand > RUECKSTAND_MS) {
+                    Logbuch.system("Weckwort kommt nicht nach", "${rueckstand} ms Ton verloren oder verspätet (Last auf dem Handy)")
+                    uhrStart = SystemClock.elapsedRealtime(); gelesenWerte = 0L
+                }
+                for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 // Über den Anker leise Rufe hörbar machen: verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
                 if (ueberAnker && verstaerkung > 1f) verstaerken(block, verstaerkung)
-                for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 val anlernen = Stimmprofil.lerntAn
                 // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
                 // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
@@ -730,6 +777,10 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+        /** Ab so viel Rückstand beim Lesen meldet das Logbuch, dass der Faden nicht nachkommt (der Puffer hält 2 s). */
+        private const val RUECKSTAND_MS = 1_000L
+        /** Spitzenpegel, auf den der Ton für den Stimm-Fingerabdruck über den Anker höchstens linear angehoben wird. */
+        private const val TON_SPITZE = 0.9f
 
         /**
          * Empfindlichkeit geändert (App oder Jarvis per Sprache): Schwellen sofort übernehmen; die eigene Phrase bekommt

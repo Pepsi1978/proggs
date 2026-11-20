@@ -92,6 +92,7 @@ import de.frank.module.draganddrop.reorderViewport
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.auswertung.Tagesauswertung
@@ -294,7 +295,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             ), state = liste,
             // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
             // auch im Live-Gespräch, damit beim Starten und Beenden nichts neu umbricht und die Lesestelle springt.
-            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) textende - LISTEN_ABSTAND else 8.dp + schweber),
+            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = (if (vonUnten) textende - LISTEN_ABSTAND else 8.dp + schweber).coerceAtLeast(0.dp)),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(LISTEN_ABSTAND, Alignment.Bottom) else Arrangement.spacedBy(LISTEN_ABSTAND),
         ) {
             if (offen > 0) item(key = EINRICHTUNG_KEY, contentType = "einrichtung") {

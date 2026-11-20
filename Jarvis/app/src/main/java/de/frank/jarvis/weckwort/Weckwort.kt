@@ -113,7 +113,28 @@ object Weckwort {
     fun mikrofonFreigeben() {
         gerufenUm = 0L
         nachRuf = false
+        nurHandy = false
         _belegt.value = false
+    }
+
+    /**
+     * Während Jarvis im Sprachgespräch nachdenkt, darf der Dienst lauschen: Ein neues „Hey Jarvis“ startet dann eine weitere
+     * Session, die laufende arbeitet weiter. Nur über das Handy-Mikrofon, damit der Anker für die Antwort im Medien-Profil
+     * bleibt (kein Umschalten des Freisprech-Kanals, das die Antwort verzögern würde).
+     */
+    @Volatile var nurHandy = false
+        private set
+
+    /** Das Gespräch denkt: Mikrofon ans Weckwort, bis [denkpauseEnden]. */
+    fun denkpauseBeginnen() {
+        nurHandy = true
+        _belegt.value = false
+    }
+
+    /** Die Antwort kommt: Mikrofon wieder fürs Gespräch reservieren, ohne auf die Freigabe zu warten (das macht die nächste Runde). */
+    fun denkpauseEnden() {
+        _belegt.value = true
+        nurHandy = false
     }
 
     private const val SCHUTZPAUSE_MS = 300L

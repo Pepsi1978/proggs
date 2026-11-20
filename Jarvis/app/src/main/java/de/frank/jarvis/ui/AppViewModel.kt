@@ -2023,7 +2023,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // weicht der neuen Frage (sonst verwirft [sende] sie); ein Programmierauftrag läuft davon unabhängig weiter.
         // Abgebrochen wird erst in [sende], wenn feststeht, dass der Satz kein Wechsel der Session ist: Sonst endete die
         // Arbeit im alten Gespräch, obwohl Frank nur nebenher eine neue Session öffnen will.
-        weichendeRunde = if (fortsetzen) sitzungId?.let { laufende[it] } else null
+        // Parallel statt abbrechen: Arbeitet Jarvis im offenen Gespräch noch (auch nach „Hey Jarvis“ mitten im Nachdenken),
+        // beginnt die neue Anfrage eine eigene Session. Die laufende Antwort arbeitet weiter und wird danach zugestellt.
+        val laeuftNoch = fortsetzen && !wiederaufnahme && !perKnopf && sitzungId?.let { laufende[it] } != null
+        if (laeuftNoch) Logbuch.sprache("Hey Jarvis neben laufender Antwort", "neue Session, die laufende arbeitet weiter")
+        weichendeRunde = if (fortsetzen && !laeuftNoch) sitzungId?.let { laufende[it] } else null
         reiter = Reiter.JARVIS
         merkOffen = null
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
@@ -2034,7 +2038,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
         // gespeichert; arbeitet Jarvis dort noch, landet die Antwort in dessen Datei, der Programmierauftrag läuft weiter.
-        if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
+        if ((!fortsetzen || laeuftNoch) && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
         // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
         sprachsitzungBeendet = false
         // Weckwort von außerhalb (Bildschirm aus, gesperrt, andere App): Der erste Satz darf als Einzelauftrag die Session beenden.
@@ -2080,7 +2084,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (runde == 0 && !ohneWeckwort) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
                     // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist. Ohne feste Pausen:
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
-                    snapshotFlow { schreibtMit || denkt || navigiert || sprachWahlen > 0 }.first { !it }
+                    snapshotFlow { schreibtMit }.first { !it }
+                    // Solange Jarvis nachdenkt, hört das Weckwort wieder zu (über das Handy-Mikrofon): Ein neues „Hey Jarvis“
+                    // öffnet eine weitere Session, diese Antwort läuft weiter und wird danach zugestellt.
+                    val denkpause = denkt && !nimmtAuf && !holtMikro
+                    if (denkpause) de.frank.jarvis.weckwort.Weckwort.denkpauseBeginnen()
+                    try {
+                        snapshotFlow { schreibtMit || denkt || navigiert || sprachWahlen > 0 }.first { !it }
+                    } finally {
+                        if (denkpause && sprachmodusNr == nr) de.frank.jarvis.weckwort.Weckwort.denkpauseEnden()
+                    }
                     vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
                     // Nur der erste Satz zählt als möglicher Einzelauftrag, auch wenn er nie bei [sende] ankam.
                     einzelauftragOffen = false
@@ -2097,8 +2110,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Nur das eigene: Ein inzwischen neu gestartetes Gespräch behält sein Konferenz-Mikrofon.
                 konferenzFrei(nr)
                 if (sprachmodusNr == nr) { einzelauftragOffen = false; de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = false }
-                de.frank.jarvis.speech.GespraechsFokus.freigeben()
-                freihaendig = false
+                // Hat ein neues „Hey Jarvis“ dieses Gespräch abgelöst, gehören Tonfokus und Freihand-Anzeige schon dem neuen.
+                if (sprachmodusNr == nr) {
+                    de.frank.jarvis.speech.GespraechsFokus.freigeben()
+                    freihaendig = false
+                }
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (perKnopf && sprachmodusNr == nr && !nimmtAuf && !holtMikro) de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
