@@ -98,6 +98,7 @@ public sealed class ZentraleAnsicht : Decorator
             ["auswertung"] = () => new Reaktiv(AuswertungsKarte, new[] { nameof(ZentraleDaten.Auswertung), nameof(ZentraleDaten.Laedt), "Stand" }, daten, melder),
             ["biomarker"] = BiomarkerKarte.Bauen,
             ["solar"] = SolarKarte.Bauen,
+            ["tenda"] = TendaKarte.Bauen,
             ["aufgaben"] = () => ListenKarte("checklist", "Aufgaben heute", Farbe.Gruen, () => daten.Aufgaben, nameof(ZentraleDaten.Aufgaben)),
             ["termine"] = () => ListenKarte("calendar", "Termine", Farbe.Gold, () => daten.Termine, nameof(ZentraleDaten.Termine)),
             ["wetter"] = () => ListenKarte("cloud.sun.fill", "Wetter", Farbe.Warnung, () => daten.Wetter, nameof(ZentraleDaten.Wetter)),
@@ -128,7 +129,7 @@ public sealed class ZentraleAnsicht : Decorator
     }
 
     /// <summary>Die Werks-Reihenfolge wie am Handy oben die Lage, darunter Biomarker und Solarbatterie; neue Karten kommen hinten dazu.</summary>
-    public static readonly string[] Werk = { "pc", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter" };
+    public static readonly string[] Werk = { "pc", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter", "tenda" };
 
     public static List<string> Reihenfolge(IEnumerable<string> vorhanden)
     {

@@ -31,10 +31,10 @@ private val RECHNER = RECHNER_NAMEN.keys.toList()
  * Ein neuer Bereich kommt hier hinten dazu und bekommt in StartBildschirm seinen Zweig; er erscheint dann von selbst
  * und lässt sich wie die anderen verschieben.
  */
-val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron", "staubsauger", "kaffee", "licht")
+val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron", "staubsauger", "kaffee", "licht", "tenda")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
-val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht")
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht", "tenda" to "Tenda Internet")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {

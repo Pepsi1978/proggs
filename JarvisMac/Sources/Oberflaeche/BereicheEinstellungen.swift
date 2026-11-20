@@ -4,7 +4,7 @@ import SwiftUI
 /// Jede Einstellung steht auch im Katalog von mac_einstellungen, damit Frank sie per Sprache abfragen und umstellen kann.
 struct BereicheEinstellungen: View {
     static let zentraleKarten: [(id: String, titel: String)] = [
-        ("mac", "Am Mac"), ("auswertung", "Tagesauswertung"), ("biomarker", "Biomarker"), ("solar", "Solarbatterie"), ("aufgaben", "Aufgaben heute"), ("termine", "Termine"), ("wetter", "Wetter"),
+        ("mac", "Am Mac"), ("auswertung", "Tagesauswertung"), ("biomarker", "Biomarker"), ("solar", "Solarbatterie"), ("aufgaben", "Aufgaben heute"), ("termine", "Termine"), ("wetter", "Wetter"), ("tenda", "Tenda Internet"),
     ]
 
     @State private var einst = Einstellungen.shared

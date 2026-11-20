@@ -413,6 +413,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 "kaffee" -> KaffeeStartKarte(griff)
                 // LED-Streifen (KS Lite) direkt per Bluetooth: an/aus, Farbe, Helligkeit, Szenen, Mikrofon-Modi und die Automatik.
                 "licht" -> LichtStartKarte(griff)
+                // Tenda-Mobilfunkrouter: Modus, Multiplayer-Einschätzung, Empfangswerte, Moduswechsel, Neuverbinden, Neustart.
+                "tenda" -> TendaStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
                 else -> Unit
                 }

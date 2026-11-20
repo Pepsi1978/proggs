@@ -17,6 +17,7 @@ Sol 6.2 (seit 13.11.2026): mit X-Jarvis-Sol: 1 springt der Mac ein, wenn der Win
 (gpt-6.2-sol im Codex CLI oder OpenCode). Beim Auftragsstart baut Werkzeuge/vorwaermen die Auftrags-App vor (wie am PC).
 Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_victron.py) und meldet sie an den Relay,
 danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
+Tenda: Alle fünf Minuten Funkwerte, Modus und Ping des Heimanschlusses (jarvis_tenda.py, POST /pc/tenda); Aufträge des Handys über /pc/mac-befehl.
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
@@ -599,6 +600,8 @@ def jarvis_mac_faden() -> None:
             befehl = json.loads(roh.decode("utf-8"))
             if befehl.get("befehl") == "licht":
                 threading.Thread(target=licht_schalten, args=(befehl.get("befehle") or {}, str(befehl.get("kennung") or "")), daemon=True).start()
+            elif befehl.get("befehl") == "tenda":
+                threading.Thread(target=tenda_befehl, args=(befehl,), daemon=True).start()
             elif befehl.get("befehl") == "switchbot_lesen":
                 SWITCHBOT_SOFORT.set()   # eigener Faden: der Scan darf die Abfrage nie aufhalten
             elif befehl.get("befehl") == "jarvis_starten":
@@ -650,6 +653,64 @@ def victron_faden() -> None:
         time.sleep(max(5, 60 - (time.time() - beginn)))
 
 
+# ---------------------------------------------------------------- Tenda-Mobilfunkrouter (jarvis_tenda.py)
+
+def tenda_melden(rumpf: dict, versuche: int = 1) -> bool:
+    """POST /pc/tenda. Nach einem Moduswechsel oder Neustart ist das Internet kurz weg: dann bis zu fünf Minuten nachliefern."""
+    for i in range(versuche):
+        try:
+            zugang = lies_zugang()
+            code, _ = rufe(f"https://{zugang['host']}/pc/tenda", zugang["token"], 15, rumpf)
+            if code == 200:
+                return True
+        except Exception:
+            pass
+        if i + 1 < versuche:
+            time.sleep(10)
+    return False
+
+
+def tenda_befehl(befehl: dict) -> None:
+    """Auftrag des Handys über den Relay: lesen (frische Momentabfrage), zugang (Hash aus dem Einrichtungsdialog, nie protokolliert),
+    modus/verbinden/neustart (je genau ein Schreibvorgang, danach Zustand prüfen)."""
+    import jarvis_tenda
+    kennung, art, wert = str(befehl.get("kennung") or ""), str(befehl.get("art") or ""), str(befehl.get("wert") or "")
+    try:
+        if art == "zugang":
+            jarvis_tenda.zugang_speichern(wert)
+            schreib("Tenda: neuer Zugang gespeichert")
+            art = "lesen"
+        if art == "lesen":
+            stand = jarvis_tenda.lesen()
+            tenda_melden({"kennung": kennung, "ergebnis": "fertig", "stand": stand})
+            return
+        tenda_melden({"kennung": kennung, "angenommen": True})
+        schreib(f"Tenda: {art} {wert}".strip())
+        ergebnis = jarvis_tenda.aktion(art, wert)
+        schreib(f"Tenda: {art} → {ergebnis.get('ergebnis')}")
+        tenda_melden({"kennung": kennung, "aktion": art, "wert": wert, **ergebnis}, versuche=30)
+    except jarvis_tenda.TendaFehler as fehler:
+        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": str(fehler), "art": fehler.art})
+    except Exception as fehler:
+        schreib(f"Tenda: {type(fehler).__name__}")
+        tenda_melden({"kennung": kennung, "ergebnis": "fehler", "text": f"Router nicht erreichbar ({type(fehler).__name__})."})
+
+
+def tenda_faden() -> None:
+    """Alle fünf Minuten Funkwerte, Modus und Ping des Heimanschlusses an den Relay (Startkarte, Live-Gedächtnis, Mobilfunk-Abruf)."""
+    import jarvis_tenda
+    while True:
+        beginn = time.time()
+        if jarvis_tenda.zugang_lesen().get("hash"):
+            try:
+                tenda_melden({"stand": jarvis_tenda.lesen()})
+            except jarvis_tenda.TendaFehler as fehler:
+                tenda_melden({"fehler": str(fehler), "art": fehler.art, "zeit": int(time.time())})
+            except Exception as fehler:
+                tenda_melden({"fehler": f"Router nicht erreichbar ({type(fehler).__name__}).", "zeit": int(time.time())})
+        time.sleep(max(30, 300 - (time.time() - beginn)))
+
+
 class AnmeldungFehlt(Exception):
     pass
 
@@ -667,6 +728,7 @@ def main() -> int:
     threading.Thread(target=jarvis_mac_faden, daemon=True).start()
     threading.Thread(target=victron_faden, daemon=True).start()
     threading.Thread(target=switchbot_sofort_faden, daemon=True).start()
+    threading.Thread(target=tenda_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")

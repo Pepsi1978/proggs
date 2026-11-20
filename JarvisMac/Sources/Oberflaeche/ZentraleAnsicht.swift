@@ -75,7 +75,7 @@ struct ZentraleAnsicht: View {
     @State private var kachelZiehen = ZiehZustand()
 
     /// Die Werks-Reihenfolge wie am Handy oben die Lage, darunter Biomarker und Solarbatterie; neue Karten kommen hinten dazu.
-    static let werk = ["mac", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter"]
+    static let werk = ["mac", "auswertung", "biomarker", "solar", "aufgaben", "termine", "wetter", "tenda"]
 
     static func reihenfolge(_ vorhanden: [String]) -> [String] {
         var gespeichert: [String] = []
@@ -139,6 +139,7 @@ struct ZentraleAnsicht: View {
         case "auswertung": auswertungsKarte
         case "biomarker": BiomarkerKarte()
         case "solar": SolarKarte()
+        case "tenda": TendaKarte()
         case "aufgaben": listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
         case "termine": listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
         default: listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)

@@ -10,7 +10,7 @@ internal sealed class BereicheEinstellungen : UserControl
 {
     public static readonly (string Id, string Titel)[] ZentraleKarten =
     {
-        ("pc", "Am Laptop"), ("auswertung", "Tagesauswertung"), ("biomarker", "Biomarker"), ("solar", "Solarbatterie"), ("aufgaben", "Aufgaben heute"), ("termine", "Termine"), ("wetter", "Wetter"),
+        ("pc", "Am Laptop"), ("auswertung", "Tagesauswertung"), ("biomarker", "Biomarker"), ("solar", "Solarbatterie"), ("aufgaben", "Aufgaben heute"), ("termine", "Termine"), ("wetter", "Wetter"), ("tenda", "Tenda Internet"),
     };
 
     private readonly Einstellungen einst = Einstellungen.Shared;

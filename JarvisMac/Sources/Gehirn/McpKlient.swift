@@ -225,6 +225,17 @@ actor McpKlient {
         }
     }
 
+    /// Strukturiertes Ergebnis eines Handy-Werkzeugs (structuredContent, z. B. tenda_lesen für die Startkarte); nil bei Fehler.
+    func struktur(_ name: String, _ argumente: JSONObjekt = [:], sekunden: Double = 90) async -> JSONObjekt? {
+        let start = Date()
+        guard let r = try? await rpc("tools/call", ["name": name, "arguments": argumente], sekunden: sekunden) else {
+            log("werkzeug", "Handy-Werkzeug \(name): nicht erreichbar", wo: "Handy über MCP", werkzeug: name, fehler: "nicht erreichbar", dauerMs: Int(Date().timeIntervalSince(start) * 1000))
+            return nil
+        }
+        if r["isError"] as? Bool == true { return nil }
+        return r["structuredContent"] as? JSONObjekt
+    }
+
     /// Bequemer Textaufruf für die Oberfläche (Tagesauswertung, Aufgaben, Kontext …).
     func text(_ name: String, _ argumente: JSONObjekt = [:], sekunden: Double = 60) async -> String? {
         let e = await rufe(name, argumente, sekunden: sekunden)

@@ -318,6 +318,18 @@ public sealed class McpKlient
         }
     }
 
+    /// <summary>Strukturiertes Ergebnis eines Handy-Werkzeugs (structuredContent, z. B. tenda_lesen für die Startkarte); null bei Fehler.</summary>
+    public async Task<JSONObjekt?> Struktur(string name, JSONObjekt argumente, double sekunden = 90)
+    {
+        try
+        {
+            var r = await Rpc("tools/call", new JSONObjekt { ["name"] = name, ["arguments"] = argumente }, sekunden);
+            if (r.Wahr("isError") == true) return null;
+            return r.Obj("structuredContent");
+        }
+        catch { return null; }
+    }
+
     /// <summary>Bequemer Textaufruf für die Oberfläche (Tagesauswertung, Aufgaben, Kontext …).</summary>
     public async Task<string?> Text(string name, JSONObjekt? argumente = null, double sekunden = 60, CancellationToken ct = default)
     {

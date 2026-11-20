@@ -3,5 +3,7 @@
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">10.8.0.1</domain>
+        <!-- Verwaltung des Tenda-Routers im Heim-WLAN (nur lokal; Anmeldung mit MD5 wie die Weboberfläche). -->
+        <domain includeSubdomains="false">192.168.0.1</domain>
     </domain-config>
 </network-security-config>

@@ -88,6 +88,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GOOGLE_TTS_API_KEY, "")
         set(value) = writeString(Keys.GOOGLE_TTS_API_KEY, value)
 
+    /** Tenda-Router: MD5 des Passworts (so meldet sich auch die Weboberfläche an), nie das Passwort selbst; nie in die Cloud (Name enthält „zugang“). */
+    var tendaHash: String
+        get() = readString(Keys.TENDA_HASH, "")
+        set(value) = writeString(Keys.TENDA_HASH, value)
+
+    /** WLAN-Name des Heimnetzes beim Einrichten: Nur dort meldet sich das Handy direkt am Router an. */
+    var tendaSsid: String
+        get() = readString(Keys.TENDA_SSID, "")
+        set(value) = writeString(Keys.TENDA_SSID, value)
+
     var googleTtsVoice: String
         get() = readString(Keys.GOOGLE_TTS_VOICE, Defaults.GOOGLE_TTS_VOICE)
         set(value) = writeString(Keys.GOOGLE_TTS_VOICE, value)
@@ -392,6 +402,8 @@ class SecureSettings(context: Context) : Closeable {
         const val TTS_PROVIDER = "tts_provider"
         const val EDGE_TTS_VOICE = "edge_tts_voice"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
+        const val TENDA_HASH = "tenda_zugang_hash"
+        const val TENDA_SSID = "tenda_zugang_ssid"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
         const val GEMINI_FLASH_TTS_VOICE = "gemini_flash_tts_voice"
         const val AZURE_TTS_KEY = "azure_tts_key"

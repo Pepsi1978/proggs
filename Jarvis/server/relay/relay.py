@@ -1612,6 +1612,7 @@ class AgentenKanal:
         self.licht_warten = {}               # Kennung -> Future der wartenden Anfrage (/geraet/licht)
         self.licht_bestaetigt = {}           # Kennung -> True, sobald die Brücke den Auftrag angenommen hat (/pc/licht mit „angenommen“)
         self.licht_letzter_echter = 0        # „erstellt“ (ms) des letzten echten Licht-Befehls
+        self.tenda_auftraege = []            # Aufträge für den Tenda-Router (TendaStand.befehl), die der Mac abholt; nur im Speicher
         self.geweckt = 0.0
         try:
             daten = json.loads(self.datei.read_text("utf-8"))
@@ -1893,7 +1894,7 @@ class AgentenKanal:
             if self.start_vorn is None and self._frage_liegt() and time.monotonic() - self.geweckt >= MAC_WECKEN_ABSTAND_S:
                 self.geweckt = time.monotonic()
                 self.start_vorn = False
-            if self.start_vorn is None and not self.switchbot_lesen and self.licht_auftrag is None:
+            if self.start_vorn is None and not self.switchbot_lesen and self.licht_auftrag is None and not self.tenda_auftraege:
                 self.befehl.clear()
                 try:
                     await asyncio.wait_for(self.befehl.wait(), KANAL_ABFRAGE_S)
@@ -1902,6 +1903,8 @@ class AgentenKanal:
             if self.licht_auftrag is not None:
                 auftrag, self.licht_auftrag = self.licht_auftrag, None
                 return web.json_response({"befehl": "licht", **auftrag})
+            if self.tenda_auftraege:
+                return web.json_response({"befehl": "tenda", **self.tenda_auftraege.pop(0)})
             if self.start_vorn is None and self.switchbot_lesen:
                 self.switchbot_lesen = False
                 return web.json_response({"befehl": "switchbot_lesen"})
@@ -2079,6 +2082,103 @@ class VictronStand:
         if not self.stand:
             return web.json_response({"geraete": [], "alter_s": None})
         return web.json_response({**self.stand, "alter_s": int(time.time()) - int(self.stand.get("empfangen", 0))})
+
+
+TENDA_DATEI = ZUSTAND.with_name("tenda.json")
+TENDA_ARTEN = {"lesen", "zugang", "modus", "verbinden", "neustart"}
+
+
+class TendaStand:
+    """Franks Tenda-Mobilfunkrouter (5G03, O2) über den Mac zu Hause (jarvis_tenda.py). POST /pc/tenda (Rolle pc) legt den
+    letzten Stand ab oder beantwortet einen Auftrag (Kennung); GET /geraet/tenda (Handy) liefert Stand, Alter und die letzte Aktion.
+    POST /geraet/tenda-befehl (Handy) gibt dem Mac einen Auftrag: lesen (wartet auf frische Werte), zugang (Hash aus dem
+    Einrichtungsdialog: nur im Speicher bis zur Abholung, nie in Datei oder Protokoll), modus/verbinden/neustart (wartet nur auf
+    die Annahme). Schreibaufträge werden nie erneut ausgegeben: Ohne Rückmeldung heißt es „unklar“, das Handy prüft den Zustand."""
+
+    def __init__(self, kanal, datei: Path = TENDA_DATEI):
+        self.kanal = kanal
+        self.datei = datei
+        self.warten = {}       # Kennung -> Future
+        self.stand = None
+        self.aktion = None     # letztes Ergebnis eines Schreibauftrags (ohne Stand)
+        self.fehler = None     # letzter Fehler des Macs beim Lesen im Takt
+        try:
+            d = json.loads(datei.read_text("utf-8"))
+            self.stand, self.aktion = d.get("stand"), d.get("aktion")
+        except Exception:
+            pass
+
+    def _sichern(self) -> None:
+        try:
+            zwischen = self.datei.with_suffix(".neu")
+            zwischen.write_text(json.dumps({"stand": self.stand, "aktion": self.aktion}, ensure_ascii=False), "utf-8")
+            os.replace(zwischen, self.datei)
+        except Exception as fehler:
+            log.warning("tenda.json nicht geschrieben: %s", fehler)
+
+    async def befehl(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = json.loads((await request.read()).decode("utf-8"))
+            art = str(daten.get("art") or "")
+            if art not in TENDA_ARTEN:
+                raise ValueError
+            wert = str(daten.get("wert") or "")[:64]
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        if not self.kanal.bruecke.da():
+            return web.json_response({"ergebnis": "mac_nicht_verbunden"})
+        kennung = f"t{time.time():.6f}"
+        zukunft = asyncio.get_running_loop().create_future()
+        self.warten[kennung] = zukunft
+        # Höchstens ein offener Auftrag je Art; ein neuer löst einen noch nicht abgeholten gleicher Art ab.
+        self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("art") != art][-4:]
+        self.kanal.tenda_auftraege.append({"art": art, "wert": wert, "kennung": kennung})
+        self.kanal.befehl.set()
+        try:
+            return web.json_response(await asyncio.wait_for(zukunft, 45 if art in ("lesen", "zugang") else 20))
+        except asyncio.TimeoutError:
+            self.kanal.tenda_auftraege = [a for a in self.kanal.tenda_auftraege if a.get("kennung") != kennung]
+            return web.json_response({"ergebnis": "keine_rueckmeldung" if art in ("lesen", "zugang") else "unklar", "kennung": kennung})
+        finally:
+            self.warten.pop(kennung, None)
+
+    async def melden(self, request: web.Request) -> web.Response:
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        roh = await request.read()
+        if len(roh) > 64_000:
+            return web.Response(status=413, text="zu gross")
+        try:
+            daten = json.loads(roh.decode("utf-8"))
+            if not isinstance(daten, dict):
+                raise ValueError
+        except Exception:
+            return web.Response(status=400, text="ungueltig")
+        if isinstance(daten.get("stand"), dict):
+            self.stand = daten["stand"]
+            self.fehler = None
+        elif daten.get("fehler") and not daten.get("kennung"):
+            self.fehler = {"text": str(daten["fehler"])[:300], "art": str(daten.get("art") or ""), "zeit": int(time.time())}
+        if daten.get("aktion"):
+            self.aktion = {k: daten.get(k) for k in ("kennung", "aktion", "wert", "ergebnis", "text", "wieder_online")} | {"zeit": int(time.time())}
+        if isinstance(daten.get("stand"), dict) or daten.get("aktion"):
+            await asyncio.to_thread(self._sichern)
+        zukunft = self.warten.get(str(daten.get("kennung") or ""))
+        if zukunft is not None and not zukunft.done():
+            if daten.get("angenommen"):
+                zukunft.set_result({"ergebnis": "angenommen", "kennung": daten.get("kennung")})
+            else:
+                zukunft.set_result({k: daten.get(k) for k in ("ergebnis", "text", "art", "stand") if k in daten})
+        return web.json_response({"ok": True})
+
+    async def holen(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.json_response({}, status=404)
+        jetzt = int(time.time())
+        return web.json_response({"stand": self.stand, "alter_s": jetzt - int(self.stand.get("zeit", 0)) if self.stand else None,
+                                  "aktion": self.aktion, "fehler": self.fehler, "mac_da": self.kanal.bruecke.da()})
 
 
 class AblageAbgleich:
@@ -2410,6 +2510,10 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/switchbot-jetzt", switchbot.jetzt)
     anwendung.router.add_post("/pc/switchbot", switchbot.melden)
     anwendung.router.add_get("/geraet/switchbot", switchbot.holen)
+    tenda = TendaStand(kanal)
+    anwendung.router.add_post("/geraet/tenda-befehl", tenda.befehl)
+    anwendung.router.add_post("/pc/tenda", tenda.melden)
+    anwendung.router.add_get("/geraet/tenda", tenda.holen)
     anwendung.router.add_post("/switchbot/hook/{geheim}", switchbot.webhook)
     anwendung.router.add_get("/geraet/switchbot-hook", switchbot.hook_adresse)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
