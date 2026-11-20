@@ -461,6 +461,8 @@ scp -i ~/SK/second-brain/id_ed25519 server/relay/relay.py server/relay/Dockerfil
 ssh -i ~/SK/second-brain/id_ed25519 root@168.231.83.205 "cd /opt/jarvis && docker compose up -d --build"
 ```
 
+Handy-Wege (`/geraet/…`) von außen testen: Sie verlangen `JARVIS_HANDY_TOKEN`, der nur auf dem Server in `/opt/jarvis/.env` steht (per ssh in eine Variable lesen, nie ausgeben); `JARVIS_GERAET_TOKEN` aus `~/SK/Jarvis/server.env` bekommt dort „Not found“. `relay.py` lokal importieren braucht `aiohttp` (venv im Scratchpad) und `JARVIS_GERAET_TOKEN=x`.
+
 `/opt/jarvis/.env` enthält `JARVIS_GERAET_TOKEN` (Kopie: `~/SK/Jarvis/server.env`). Für IPv6 gibt es die
 UFW-Regel „Jarvis-Relay (IPv6)“; IPv4 läuft über Dockers Portfreigabe an der Firewall vorbei.
 Prüfen von außen: `curl -4 -o /dev/null -w "%{http_code}" https://srv1774016.hstgr.cloud/` muss 404 liefern.
