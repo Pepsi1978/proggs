@@ -49,7 +49,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         schema = schema(
             "rubrik" to text("Nur diese Rubrik, so wie Frank sie nennt (z. B. KI, Fußball). Weglassen = alle Rubriken."),
             "auch_genannte" to schalter("Auch heute schon Genanntes zeigen (nur wenn Frank alles noch einmal hören will). Vorgabe: aus."),
-            "tage" to zahl("Wie viele Tage zurück (1–10, Vorgabe 2)."),
+            "tage" to zahl("Nur wenn Frank ältere Meldungen will: so viele Tage zurück (1–10). Weglassen = aktueller Bestand (heutige Ausgaben, je Rubrik mindestens die neueste)."),
             "mitgeteilt" to textListe("Nur für ChatGPT und andere Wege außerhalb der Jarvis-App: ids der Meldungen, die du Frank seit dem letzten Abruf tatsächlich genannt hast."),
         ),
         nurLesen = true,
@@ -82,6 +82,16 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /**
+     * Der aktuelle Bestand: alle Ausgaben von heute und je Rubrik zusätzlich die neueste (etwa die von gestern Abend vor dem ersten Lauf).
+     * Ältere Tage nur, wenn Frank ausdrücklich weiter zurück will (tage).
+     */
+    private fun aktuell(liste: List<NewsMeldung>): List<NewsMeldung> {
+        val heute = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val neueste = liste.groupBy { it.rubrik }.mapValues { (_, l) -> l.maxOf { it.ausgabeUm } }
+        return liste.filter { it.ausgabeUm >= heute || it.ausgabeUm == neueste[it.rubrik] }
+    }
+
     /** Dortmund-Meldung mit Spielausgang: Schlagzeile und Kurztext verraten nichts. */
     private fun entschaerft(m: NewsMeldung): NewsMeldung = if (!NewsRegeln.spoiler(m)) m else
         m.copy(titel = "Borussia Dortmund: Meldung zum Spiel (Ergebnis ausgeblendet)", kurz = NewsRegeln.ohneErgebnis(m.kurz))
@@ -102,7 +112,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("NEWS-KOMPASS NICHT ERREICHBAR: $it Sag Frank klar, dass News-Kompass gerade nicht gelesen werden konnte (das ist nicht „keine neuen Meldungen“).", fehler = true)
         }
         val jetzt = antwort.optLong("jetzt", System.currentTimeMillis())
-        val alle = meldungen(antwort).map(::entschaerft)
+        val alle = meldungen(antwort).let { if (a.optInt("tage", 0) > 0) it else aktuell(it) }.map(::entschaerft)
         val genannt = NewsGedaechtnis.genannt(context)
         val neu = if (a.optBoolean("auch_genannte")) alle else NewsRegeln.neu(alle, genannt)
         val weggelassen = alle.size - neu.size
@@ -116,7 +126,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             val letzter = r.optLong("letzter_lauf")
             val faellig = r.optLong("faellig_seit")
             val zeiten = (r.optJSONArray("uhrzeiten") ?: JSONArray()).let { z -> (0 until z.length()).joinToString(" und ") { z.optString(it) } }
-            stand.append("- ").append(r.optString("titel").ifBlank { r.optString("name") })
+            stand.append("- ").append(r.optString("name").ifBlank { r.optString("titel") })
             if (zeiten.isNotEmpty()) stand.append(" (sammelt um ").append(zeiten).append(" Uhr)")
             stand.append(": letzter Stand ").append(if (letzter > 0) zeit(letzter) else "keiner in den letzten Tagen")
             if (r.optBoolean("nichts_neues")) stand.append(", beim letzten Lauf nichts Neues gefunden")
@@ -124,7 +134,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
             // Ein fälliger Termin ohne Ausgabe danach (mehr als 20 Minuten her): älterer Stand, nicht „nichts Neues“.
             if (faellig > 0 && letzter + 15 * 60_000L < faellig && jetzt - faellig > 20 * 60_000L) {
                 stand.append(", ÄLTERER STAND: der Lauf von ").append(zeit(faellig)).append(" fehlt")
-                veraltet += r.optString("titel").ifBlank { r.optString("name") }
+                veraltet += r.optString("name").ifBlank { r.optString("titel") }
             }
             stand.append('\n')
         }
@@ -152,7 +162,7 @@ class NewsFaehigkeit(private val context: Context) : Faehigkeit {
                         append("- [id ").append(m.id).append("] ").append(m.titel)
                         if (m.wann.isNotBlank()) append(" (").append(m.wann).append(")")
                         if (m.update) append(" [Folgemeldung]")
-                        if (m.kurz.isNotBlank()) append(": ").append(m.kurz.replace(Regex("\\s+"), " ").take(220))
+                        if (m.kurz.isNotBlank()) append(": ").append(m.kurz.replace(Regex("\\s+"), " ").take(180))
                         append('\n')
                     }
                 }
