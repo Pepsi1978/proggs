@@ -469,6 +469,7 @@ class WeckwortDienst : Service() {
                 val mitVad = !laut && boden > LAERM_BODEN && vad != null
                 val stimmeImLaerm = mitVad && runCatching { stimmeImBlock(vad!!) }.getOrDefault(false)
                 vadLief = mitVad
+                val stilleVorher = stilleBloecke
                 if (laut || stimmeImLaerm) stilleBloecke = 0 else stilleBloecke++
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
@@ -491,8 +492,12 @@ class WeckwortDienst : Service() {
                     else -> phr.einstellen(phrasenSchwelle, breit = false)
                 }
                 var nachgeholt = false
-                val nachgeholtBloecke = minOf(uebersprungen, NACHHOLEN)
-                if (uebersprungen > 0) {
+                // Nach gut 1 s Stille fängt der Spotter ebenfalls frisch an (sherpa-onnx 1.13.8 setzt seinen Strom nach 1,5 s Stille
+                // selbst zurück und verliert dabei den Anfang des nächsten Rufs, Almanach §16). Im Mitschnitt holte das einen
+                // deutlich gerufenen, sonst verpassten Ruf zurück, ohne einen anderen zu verlieren.
+                val frisch = uebersprungen > 0 || (phr != null && (laut || stimmeImLaerm) && stilleVorher >= FRISCH_NACH_STILLE)
+                val nachgeholtBloecke = if (!frisch) 0 else if (phr != null) NACHHOLEN else minOf(uebersprungen, NACHHOLEN)
+                if (frisch) {
                     // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
                     // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
                     // setzt ihn in Stille von selbst zurück und verliert dabei den Anfang eines Rufs (Almanach §16).
@@ -827,6 +832,8 @@ class WeckwortDienst : Service() {
         private const val NACHHOLEN = 25
         /** Blöcke (je 80 ms) bis zur ersten Anker-Prüfung nach einem Start am Handy. */
         private const val ANKER_ERSTPRUEFUNG = 12
+        /** Blöcke (je 80 ms) Stille, nach denen der Spotter beim nächsten Laut frisch mit 2 s Vorlauf anfängt. */
+        private const val FRISCH_NACH_STILLE = 12
         /**
          * Laut ist ein Block etwa 2 dB über dem Rauschboden, mindestens aber über einem sehr niedrigen Pegel (16 Bit,
          * etwa -65 dBFS): Ohne Verstärkung liegt leise Sprache aus mehreren Metern nur knapp darüber.
