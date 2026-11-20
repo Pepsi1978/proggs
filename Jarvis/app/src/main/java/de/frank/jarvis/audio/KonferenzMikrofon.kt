@@ -16,8 +16,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * Bluetooth kann nicht zugleich in Musikqualität ausgeben und das Mikrofon des Geräts liefern: Ist dessen Mikrofon offen
  * (Freisprechen, SCO), läuft jeder Ton in Telefonqualität. Deshalb öffnet Jarvis es nur, solange er Frank zuhört, und gibt
- * es frei, sobald die Aufnahme endet. Die Antwort kommt so wieder in voller Qualität über den Lautsprecher. Das Weckwort
- * selbst hört weiter das Handy, sonst stünde der Lautsprecher dauerhaft auf Telefonqualität.
+ * es frei, sobald die Aufnahme endet. Die Antwort kommt so wieder in voller Qualität über den Lautsprecher.
+ * Mit „Weckwort über den Anker“ hält der Weckwort-Dienst die Strecke unter [WECKWORT], solange er lauscht; nach dem Treffer
+ * übernimmt das Gespräch sie ([uebergeben]) oder sie wird frei, das Medien-Profil kommt zurück.
  *
  * Nur für Geräte, deren Name [GERAET] enthält; ohne dieses Gerät bleibt alles beim Handy-Mikrofon.
  * Besitz: Jedes Gespräch hält das Mikrofon unter seiner Nummer; ein abgebrochenes altes Gespräch gibt so nie das des neuen frei.
@@ -36,6 +37,18 @@ object KonferenzMikrofon {
     /** Eingang des Konferenz-Lautsprechers für die laufende Aufnahme; null = Androids Wahl. */
     @Volatile var eingang: AudioDeviceInfo? = null; private set
 
+    /** Besitzer-Nummer des Weckwort-Dienstes (Gespräche zählen ab 1). */
+    const val WECKWORT = -1
+    /** Hat der Weckwort-Dienst das Mikrofon für das Gespräch nach dem Treffer stehen lassen (Übergabe ohne Umschalten)? */
+    @Volatile private var uebergabeSeit = 0L
+
+    /** Ist der Anker gerade als Freisprechgerät (Telefon-Profil) erreichbar? */
+    fun verfuegbar(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return false
+        val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return false
+        return runCatching { am.availableCommunicationDevices.any(::istGeraet) }.getOrDefault(false)
+    }
+
     private fun istGeraet(d: AudioDeviceInfo) =
         d.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO && d.productName?.toString()?.contains(GERAET, ignoreCase = true) == true
 
@@ -45,6 +58,40 @@ object KonferenzMikrofon {
      */
     suspend fun holen(context: Context, gespraech: Int): Boolean {
         if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(context).konferenzMikrofonAn || gescheitertIn == gespraech) return false
+        // Übergabe vom Weckwort: Die Freisprech-Strecke steht schon, nur den Besitz übernehmen (kein Umschalten, kein Warten).
+        if (aktiv && besitzer == WECKWORT && kanalSteht(context)) {
+            besitzer = gespraech
+            uebergabeSeit = 0L
+            Logbuch.system("Konferenz-Mikrofon", "vom Weckwort übernommen")
+            return true
+        }
+        return oeffnen(context, gespraech) { gescheitertIn = gespraech }
+    }
+
+    /** Für den Weckwort-Dienst: Freisprech-Strecke zum Anker öffnen; false = nicht möglich, dann lauscht das Handy. */
+    suspend fun holenFuerWeckwort(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return false
+        // Hält gerade ein Gespräch das Mikrofon, nicht dazwischenfunken.
+        if (aktiv && besitzer != WECKWORT) return false
+        if (aktiv && besitzer == WECKWORT && kanalSteht(context)) { uebergabeSeit = 0L; return true }
+        return oeffnen(context, WECKWORT) {}
+    }
+
+    /**
+     * Treffer über den Anker und das Gespräch hört ebenfalls über ihn zu: Strecke stehen lassen, das Gespräch übernimmt sie.
+     * Holt es sie nicht binnen 10 Sekunden ab, gibt Jarvis sie frei (Medien-Profil).
+     */
+    fun uebergeben(context: Context) {
+        if (besitzer != WECKWORT || !aktiv) return
+        val seit = SystemClock.elapsedRealtime()
+        uebergabeSeit = seit
+        val app = context.applicationContext
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (uebergabeSeit == seit && besitzer == WECKWORT) { uebergabeSeit = 0L; freigeben(app, WECKWORT) }
+        }, 10_000L)
+    }
+
+    private suspend fun oeffnen(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
         val am = context.applicationContext.getSystemService(AudioManager::class.java) ?: return false
         val geraet = am.availableCommunicationDevices.firstOrNull(::istGeraet) ?: return false
         val beginn = SystemClock.elapsedRealtime()
@@ -57,12 +104,12 @@ object KonferenzMikrofon {
             if (am.communicationDevice?.id == geraet.id) umgeschaltet.complete(Unit)
             if (!runCatching { am.setCommunicationDevice(geraet) }.getOrDefault(false)) {
                 Logbuch.system("Konferenz-Mikrofon", "Umschalten auf ${geraet.productName} abgelehnt, Handy-Mikrofon")
-                gescheitertIn = gespraech
+                gescheitert()
                 return false
             }
             if (withTimeoutOrNull(WARTE_MS) { umgeschaltet.await() } == null) {
-                Logbuch.system("Konferenz-Mikrofon", "Keine Bestätigung nach ${WARTE_MS / 1000} s, in diesem Gespräch Handy-Mikrofon")
-                gescheitertIn = gespraech
+                Logbuch.system("Konferenz-Mikrofon", "Keine Bestätigung nach ${WARTE_MS / 1000} s, Handy-Mikrofon")
+                gescheitert()
                 if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
                 return false
             }
@@ -75,7 +122,7 @@ object KonferenzMikrofon {
         delay(150)
         eingang = am.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull(::istGeraet)
         aktiv = true
-        Logbuch.dauer("Konferenz-Mikrofon an", SystemClock.elapsedRealtime() - beginn, "${geraet.productName}${if (eingang == null) ", Eingang nicht gefunden" else ""}")
+        Logbuch.dauer(if (gespraech == WECKWORT) "Konferenz-Mikrofon an (Weckwort)" else "Konferenz-Mikrofon an", SystemClock.elapsedRealtime() - beginn, "${geraet.productName}${if (eingang == null) ", Eingang nicht gefunden" else ""}")
         return true
     }
 
@@ -93,6 +140,9 @@ object KonferenzMikrofon {
     fun freigeben(context: Context, gespraech: Int?) {
         if (gespraech != null && gespraech != besitzer) return
         if (!aktiv && gespraech != null) return
+        // Aufräumen ohne Nummer (Ende des ViewModels) lässt die Strecke des Weckworts stehen.
+        if (gespraech == null && besitzer == WECKWORT && aktiv) return
+        uebergabeSeit = 0L
         aktiv = false
         eingang = null
         if (Build.VERSION.SDK_INT < 31) return

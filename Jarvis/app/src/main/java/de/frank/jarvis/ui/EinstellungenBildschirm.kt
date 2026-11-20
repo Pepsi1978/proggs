@@ -250,6 +250,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "stimme") {
             // ---------------------------------------------------------------- Hey Jarvis
+            Bereich("Anker") { AnkerEinstellungen(e) }
             Bereich("Hey Jarvis") {
                 val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
                 val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
@@ -272,16 +273,6 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                         "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                         "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
                         "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
-                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
-                )
-                val konferenz = e.konferenzMikrofonAn
-                Zeile("Mikrofone des Konferenz-Lautsprechers", if (konferenz) "An" else "Aus", if (konferenz) f.erfolg else f.textLeise)
-                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("An", aktiv = konferenz) { e.konferenzMikrofonAn = true }
-                    Chip("Aus", aktiv = !konferenz) { e.konferenzMikrofonAn = false }
-                }
-                Text(
-                    "Ist der Anker PowerConf verbunden, hört Jarvis dir im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu. Nur solange er zuhört, sonst bliebe der Ton in Telefonqualität; die Antworten kommen in voller Qualität. Das Weckwort selbst hört weiter das Handy.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
                 if (e.weckwortAn && !vm.weckwortMikro) Knopf("Mikrofon erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
@@ -917,4 +908,48 @@ private fun RechnerReihenfolge(e: Einstellungen) {
 @Composable
 internal fun Unterzeile(text: String) {
     Text(text, Modifier.padding(top = 16.dp, bottom = 8.dp), color = LocalFarben.current.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+}
+
+
+/** Bereich Anker: automatische Verbindung zu Hause, Weckwort über den Anker, Mikrofone im Gespräch. */
+@Composable
+private fun AnkerEinstellungen(e: Einstellungen) {
+    val f = LocalFarben.current
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val zustand by de.frank.jarvis.audio.AnkerVerbindung.zustand.collectAsState()
+    var stand by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app) }
+    key(stand) {
+        val auto = e.ankerAutoVerbinden
+        Zeile("Zu Hause automatisch verbinden", if (!auto) "Aus" else zustand.text,
+            when { !auto -> f.textLeise; zustand == de.frank.jarvis.audio.AnkerVerbindung.Zustand.VERBUNDEN -> f.erfolg; zustand == de.frank.jarvis.audio.AnkerVerbindung.Zustand.SUCHT -> f.text; else -> f.textLeise })
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("An", aktiv = auto) { e.ankerAutoVerbinden = true; stand++; de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter") }
+            Chip("Aus", aktiv = !auto) { e.ankerAutoVerbinden = false; stand++; de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app) }
+        }
+        Text(
+            "Ist Bluetooth an und du bist zu Hause, verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener, bis er verbunden ist.",
+            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+        )
+        val weck = e.ankerWeckwort
+        Zeile("Weckwort über den Anker", if (weck) "An" else "Aus", if (weck) f.erfolg else f.textLeise)
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("An", aktiv = weck) { e.ankerWeckwort = true; stand++; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app) }
+            Chip("Aus", aktiv = !weck) { e.ankerWeckwort = false; stand++; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app) }
+        }
+        Text(
+            "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil). Nach dem Weckwort schaltet er ins Medien-Profil, damit das Gespräch in voller Tonqualität läuft, danach zurück. Spielt Musik oder ist der Anker nicht verbunden, hört das Handy.",
+            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+        )
+        val konferenz = e.konferenzMikrofonAn
+        Zeile("Mikrofone des Anker im Gespräch", if (konferenz) "An" else "Aus", if (konferenz) f.erfolg else f.textLeise)
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("An", aktiv = konferenz) { e.konferenzMikrofonAn = true; stand++ }
+            Chip("Aus", aktiv = !konferenz) { e.konferenzMikrofonAn = false; stand++ }
+        }
+        Text(
+            "Ist der Anker verbunden, hört Jarvis dir im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu, nur solange er zuhört; die Antworten kommen in voller Qualität.",
+            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+        )
+    }
 }

@@ -266,17 +266,44 @@ class WeckwortDienst : Service() {
         return alt
     }
 
+    /** Bis dahin nicht erneut über den Anker lauschen (Umschalten gescheitert oder Strecke abgerissen). */
+    @Volatile private var ankerSperreBis = 0L
+    /** Lauschte der letzte Durchgang über den Anker? Nur für knappe Logbuch-Einträge beim Wechsel. */
+    @Volatile private var zuletztAnker = false
+
+    /** Kann das Weckwort gerade über die Mikrofone des Anker gehört werden (Schalter, verbunden, keine fremde Musik)? */
+    private fun ankerMoeglich(): Boolean {
+        if (Build.VERSION.SDK_INT < 31 || !Einstellungen.get(this).ankerWeckwort || Stimmprofil.lerntAn) return false
+        if (SystemClock.elapsedRealtime() < ankerSperreBis) return false
+        // Spielt eine andere App Musik, bliebe sie sonst in Telefonqualität: dann lauscht das Handy.
+        if (getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true) return false
+        return de.frank.jarvis.audio.KonferenzMikrofon.verfuegbar(this)
+    }
+
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
     private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, spr: SprecherErkenner?, vad: SileroVad?, an: AtomicBoolean) {
         var aufnahme: AudioRecord? = null
+        // Über den Anker (Telefon-Profil): Strecke vor der Aufnahme öffnen, am Ende freigeben oder ans Gespräch übergeben.
+        var ueberAnker = false
+        var uebergabe = false
+        var neuStart = false
         try {
+            if (ankerMoeglich()) {
+                ueberAnker = kotlinx.coroutines.runBlocking { de.frank.jarvis.audio.KonferenzMikrofon.holenFuerWeckwort(this@WeckwortDienst) }
+                if (!ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + 60_000L
+            }
+            if (ueberAnker != zuletztAnker) {
+                zuletztAnker = ueberAnker
+                Logbuch.system("Weckwort", if (ueberAnker) "lauscht über die Mikrofone des Anker" else "lauscht über das Handy")
+            }
             val minimum = AudioRecord.getMinBufferSize(WeckwortErkenner.ABTASTRATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             aufnahme = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION, WeckwortErkenner.ABTASTRATE,
+                if (ueberAnker) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION, WeckwortErkenner.ABTASTRATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 4, WeckwortErkenner.ABTASTRATE * 2),
             )
             // Wie jeder andere Mikrofon-Fehler: nach einer Pause neu versuchen (catch unten).
             check(aufnahme.state == AudioRecord.STATE_INITIALIZED) { "Mikrofon nicht verfügbar" }
+            if (ueberAnker) de.frank.jarvis.audio.KonferenzMikrofon.eingang?.let { runCatching { aufnahme.setPreferredDevice(it) } }
             aufnahme.startRecording()
             Weckwort.hoertZu(true)
             lauschFehler = 0
@@ -337,7 +364,18 @@ class WeckwortDienst : Service() {
             }
             // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
             var knappUm = 0L
+            // Alle 50 Blöcke (4 s): Anker dazugekommen, Strecke abgerissen oder fremde Musik? Dann neu anfangen.
+            var pruefZaehler = 0
             while (an.get()) {
+                if (++pruefZaehler >= 50) {
+                    pruefZaehler = 0
+                    val wechsel = if (ueberAnker) {
+                        val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
+                        if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
+                        abgerissen || !Einstellungen.get(this).ankerWeckwort || getSystemService(android.media.AudioManager::class.java)?.isMusicActive == true
+                    } else ankerMoeglich()
+                    if (wechsel) { neuStart = true; break }
+                }
                 var gelesen = 0
                 while (gelesen < block.size && an.get()) {
                     val n = aufnahme.read(block, gelesen, block.size - gelesen)
@@ -472,6 +510,9 @@ class WeckwortDienst : Service() {
                 // Hat die Stimmerkennung Frank bestätigt, war es kein Fehlalarm, auch wenn danach nichts kommt: Dann
                 // gibt es keine Merkmale zum Lernen, sonst sperrt ein solcher Eintrag später Franks eigene Rufe aus.
                 Weckwort.trefferMerkmale = if (stimme?.ok == true) null else merkmale
+                // Hört das Gespräch ebenfalls über den Anker zu, bleibt die Strecke stehen; sonst zurück ins Medien-Profil.
+                uebergabe = ueberAnker && Einstellungen.get(this).konferenzMikrofonAn
+                if (ueberAnker) Logbuch.system("Weckwort über den Anker erkannt", if (uebergabe) "Gespräch übernimmt die Anker-Mikrofone" else "zurück ins Medien-Profil")
                 an.set(false)
                 bereich.launch { rufen() }
                 break
@@ -479,6 +520,8 @@ class WeckwortDienst : Service() {
         } catch (fehler: Exception) {
             Log.w(TAG, "Lauschen unterbrochen", fehler)
             if (lauschFehler++ % 100 == 0) Logbuch.fehler("Weckwort: Lauschen unterbrochen", fehler)
+            // Scheiterte es über den Anker, eine Weile am Handy lauschen.
+            if (ueberAnker) ankerSperreBis = SystemClock.elapsedRealtime() + 60_000L
             // Nach einem Fehler (Mikrofon belegt, Lesefehler) nach einer Pause neu versuchen.
             if (an.get()) bereich.launch {
                 delay(3_000)
@@ -487,6 +530,14 @@ class WeckwortDienst : Service() {
         } finally {
             runCatching { aufnahme?.stop() }
             runCatching { aufnahme?.release() }
+            if (ueberAnker) {
+                if (uebergabe) de.frank.jarvis.audio.KonferenzMikrofon.uebergeben(this)
+                else de.frank.jarvis.audio.KonferenzMikrofon.freigeben(this, de.frank.jarvis.audio.KonferenzMikrofon.WECKWORT)
+            }
+            if (neuStart && an.get()) bereich.launch {
+                delay(300)
+                if (lauf === an) { faden = null; lauschen() }
+            }
             // Läuft schon ein neuer Durchgang, gehört die Anzeige ihm.
             val aktuell = lauf
             if (aktuell == null || aktuell === an) Weckwort.hoertZu(false)

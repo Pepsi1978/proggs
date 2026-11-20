@@ -31,6 +31,8 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         de.frank.jarvis.timer.Timer.starte(this)
         de.frank.jarvis.timer.Stoppuhr.starte(this)
         de.frank.jarvis.ablage.ErinnerungPlaner.starte(this)
+        // Anker PowerConf zu Hause verbunden halten (Bluetooth an, Heimkommen, Trennung); läuft auch bei gesperrtem Handy.
+        runCatching { de.frank.jarvis.audio.AnkerVerbindung.starten(this) }.onFailure { de.frank.jarvis.observability.Logbuch.fehler("Anker-Verbindung starten", it) }
         // Listen-Widget nach jedem Update neu zeichnen: Sonst zeigt der Launcher nur das leere Grundlayout ohne Listenwahl und Tipps.
         Thread({ de.frank.jarvis.listen.ListenWidget.aktualisieren(this) }, "listen-widget-start").start()
         // Überholte, unverändert gebliebene Symbiose-Vorgaben einmal ersetzen (Regel 6: Websuche statt Agent); Dateizugriff nicht auf dem Hauptfaden.

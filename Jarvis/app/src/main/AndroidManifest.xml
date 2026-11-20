@@ -238,6 +238,7 @@
         <!-- Kaffeemaschine: Android meldet Betreten und Verlassen des Umkreises um Zuhause. -->
         <receiver android:name=".kaffee.KaffeeUmkreisEmpfaenger" android:exported="false" />
         <receiver android:name=".licht.LichtUmkreisEmpfaenger" android:exported="false" />
+        <receiver android:name=".audio.AnkerUmkreisEmpfaenger" android:exported="false" />
         <receiver android:name=".gedaechtnis.LernEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
         <!-- Ansagen eigener Apps (UpdateStation): nur mit Franks Signatur. -->

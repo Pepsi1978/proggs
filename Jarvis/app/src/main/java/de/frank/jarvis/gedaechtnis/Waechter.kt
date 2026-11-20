@@ -199,6 +199,8 @@ object Waechter {
             bereich.launch { runCatching { de.frank.jarvis.kaffee.Kaffeemaschine.wachHalten(app) }.onFailure { Logbuch.fehler("Kaffeemaschine wach halten", it) } }
             // LED-Licht: abends an, zur Ausschaltzeit aus, Umkreis um Zuhause; nur am Handy.
             bereich.launch { runCatching { de.frank.jarvis.licht.LichtAutomatik.pruefen(app) }.onFailure { Logbuch.fehler("Licht-Automatik", it) } }
+            // Anker PowerConf: Umkreis pflegen und, solange er nicht verbunden ist, weiter suchen.
+            bereich.launch { runCatching { de.frank.jarvis.audio.AnkerVerbindung.pruefen(app) }.onFailure { Logbuch.fehler("Anker-Verbindung", it) } }
             // Ein fester Minutentakt: Die Runde selbst kostet nichts, wenn nichts fällig ist. Kürzer zu schlafen brächte nichts
             // (die Abstände sind lang) und ließe einen gestörten Bereich, dessen Stand stehen bleibt, im Sekundentakt neu lesen.
             delay(60_000L)

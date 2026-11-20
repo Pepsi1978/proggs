@@ -461,6 +461,10 @@ class Einstellungen private constructor(context: Context) {
     var stilleAussenMs: Int get() = prefs.getInt("weckwort_stille_aussen_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_AUSSEN_MAX_MS); set(v) = put { putInt("weckwort_stille_aussen_ms", v) }
     /** Im Gespräch nach dem Weckwort und im Live-Modus über die Mikrofone des Konferenz-Lautsprechers (Anker PowerConf) zuhören, wenn er verbunden ist. */
     var konferenzMikrofonAn: Boolean get() = prefs.getBoolean("konferenz_mikrofon_an", true); set(v) = put { putBoolean("konferenz_mikrofon_an", v) }
+    /** Anker PowerConf zu Hause selbst verbinden und verbunden halten (siehe audio/AnkerVerbindung.kt); Vorgabe nur am Handy. */
+    var ankerAutoVerbinden: Boolean get() = prefs.getBoolean("anker_auto_verbinden", !Geraet.istTablet); set(v) = put { putBoolean("anker_auto_verbinden", v) }
+    /** Das Weckwort über die Mikrofone des Anker hören (Telefon-Profil), nach dem Treffer zurück ins Medien-Profil; Vorgabe nur am Handy. */
+    var ankerWeckwort: Boolean get() = prefs.getBoolean("anker_weckwort", !Geraet.istTablet); set(v) = put { putBoolean("anker_weckwort", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", !Geraet.istTablet); set(v) = put { putBoolean("weckwort_an", v) }
     /** niedrig | normal | hoch | sehr_hoch: wie leicht „Hey Jarvis“ anspringt und wie großzügig die Stimmerkennung urteilt. */

@@ -386,7 +386,18 @@ class EinstellungsKatalog(context: Context) {
             schalter("weckwort_an", "Hey Jarvis", "Auf „Hey Jarvis“ lauschen", "Dauerhaft auf das Weckwort hören, auch bei gesperrtem Handy.", { e.weckwortAn }) {
                 e.weckwortAn = it; de.frank.jarvis.weckwort.WeckwortDienst.abgleichen(app)
             },
-            schalter("konferenz_mikrofon_an", "Hey Jarvis", "Mikrofone des Konferenz-Lautsprechers", "Ist der Anker PowerConf per Bluetooth verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität, das Weckwort hört weiter das Handy.", { e.konferenzMikrofonAn }) {
+            // ---- Anker (Konferenz-Lautsprecher Anker PowerConf) ----
+            Eintrag("anker_auto_verbinden", "Anker", "Zu Hause automatisch verbinden",
+                "Ist Bluetooth an und Frank zu Hause (Umkreis), verbindet Jarvis den Anker PowerConf selbst und hält die Verbindung, auch bei gesperrtem Handy: erst alle paar Sekunden, dann seltener. Der Wert nennt auch den Verbindungsstand.",
+                "an oder aus", { (if (e.ankerAutoVerbinden) "an" else "aus") + ", Stand: " + de.frank.jarvis.audio.AnkerVerbindung.zustand.value.text }) {
+                e.ankerAutoVerbinden = jaNein(it)
+                de.frank.jarvis.audio.AnkerVerbindung.anstossen(app, "Schalter")
+                de.frank.jarvis.audio.AnkerVerbindung.zustandAktualisieren(app)
+            },
+            schalter("anker_weckwort", "Anker", "Weckwort über den Anker", "Ist der Anker verbunden, hört Jarvis das Weckwort über dessen Mikrofone (Telefon-Profil); nach dem Weckwort läuft das Gespräch im Medien-Profil in voller Tonqualität, danach zurück. Ohne Anker hört weiter das Handy.", { e.ankerWeckwort }) {
+                e.ankerWeckwort = it; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
+            },
+            schalter("konferenz_mikrofon_an", "Anker", "Mikrofone des Anker im Gespräch", "Ist der Anker PowerConf verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität.", { e.konferenzMikrofonAn }) {
                 e.konferenzMikrofonAn = it
             },
             stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Weckwort in der geöffneten App fiel; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.",
