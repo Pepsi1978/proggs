@@ -184,7 +184,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
             JSONObject().put("name", z.name).put("typ", z.typ).apply {
                 if (z.problem != null) { put("problem", z.problem); if (z.offline) put("offline", true) }
-                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) }; put("gemessen", z.zeit) }
+                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) }; if (z.quelle != null) put("gemessen", z.zeit) else put("abgerufen_s", z.zeit) }
             }
         })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)); webhook?.let { put("webhook", it) } }
         Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)

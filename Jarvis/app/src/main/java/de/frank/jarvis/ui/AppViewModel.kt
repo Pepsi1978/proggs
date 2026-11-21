@@ -1031,18 +1031,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Die Vollbildauswahl hinter dem Knopf „OpenLauncher“. */
     var openLauncherWahlOffen by mutableStateOf(false); private set
 
-    fun openLauncherWahlSchliessen() { openLauncherWahlOffen = false }
+    fun openLauncherWahlSchliessen() { openLauncherWahlOffen = false; vorwahlOhneAufgabeZuruecknehmen() }
 
     /** Ende der Vollbildauswahl: Alle Angaben kommen als Einstieg ins Feld, gesendet wird erst mit dem Pfeil. */
     fun openLauncherWahlUebernehmen(wahl: ProgrammiererVorlage.FreieWahl) {
         openLauncherWahlOffen = false
+        vorwahlEinstieg = null; vorwahlVorher = null
         einstiegSetzen(ProgrammiererVorlage.vorspannFrei(wahl))
         tastaturWeg++
     }
 
     private fun vorwahlFristNeu() {
         vorwahlFrist?.cancel()
-        vorwahlFrist = viewModelScope.launch { kotlinx.coroutines.delay(60_000); programmierVorwahlOffen = false }
+        vorwahlFrist = viewModelScope.launch {
+            kotlinx.coroutines.delay(60_000)
+            programmierVorwahlOffen = false
+            programmierVorwahlModell = null
+            // Vergessen: Ohne Aufgabe im Feld geht der Einstieg wieder heraus (eine laufende Aufnahme hängt ihre Aufgabe noch an).
+            vorwahlOhneAufgabeZuruecknehmen()
+        }
+    }
+
+    /** Entwurf und Papierkorb-Sicherung vor dem Öffnen der Modellwahl und der Einstieg, den die Wahl zuletzt gesetzt hat. */
+    private var vorwahlVorher: Pair<String, Geleert?>? = null
+    private var vorwahlEinstieg: String? = null
+
+    /** Nimmt den von der Wahl gesetzten Einstieg heraus und stellt den Entwurf von vorher her („Nachtrag:“, Papierkorb-Rückgängig). */
+    private fun vorwahlZuruecknehmen() {
+        val einstieg = vorwahlEinstieg ?: return
+        val vorher = vorwahlVorher
+        vorwahlEinstieg = null
+        vorwahlVorher = null
+        if (ProgrammiererVorlage.vorspannIn(entwurf) != einstieg) return
+        val rest = ProgrammiererVorlage.entfernen(entwurf)
+        entwurf = if (vorher != null && rest.trim() == ohneNachtragVorspann(vorher.first).trim()) vorher.first else rest
+        if (entwurf.isEmpty() && vorher?.second != null) geleert = vorher.second
+        if (sitzungId == null && !programmiererAktiv) sitzungProgrammierung = false
+    }
+
+    private fun vorwahlOhneAufgabeZuruecknehmen() {
+        if (nimmtAuf || schreibtMit || ProgrammiererVorlage.aufgabe(entwurf)?.isEmpty() != true) return
+        vorwahlZuruecknehmen()
     }
 
     /** Der Programmierbutton leuchtet, solange sein Einstieg im Entwurf steht oder die Modellwahl offen ist. */
@@ -1057,10 +1086,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             vorwahlFrist?.cancel()
             programmierVorwahlOffen = false
             programmierVorwahlModell = null
-            if (ProgrammiererVorlage.vorspannIn(entwurf) == ProgrammiererVorlage.STANDARD_EINSTIEG) {
-                entwurf = ProgrammiererVorlage.entfernen(entwurf)
-                if (sitzungId == null) sitzungProgrammierung = false
-            }
+            vorwahlZuruecknehmen()
             return
         }
         if (!programmiererAktiv) {
@@ -1068,8 +1094,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierVorwahlOffen = true
             programmierVorwahlModell = null
             // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg; der Opus-Einstieg bleibt.
-            vorwahlFristNeu()
+            vorwahlVorher = entwurf to geleert
             einstiegSetzen(ProgrammiererVorlage.STANDARD_EINSTIEG)
+            vorwahlEinstieg = ProgrammiererVorlage.STANDARD_EINSTIEG
+            vorwahlFristNeu()
             return
         }
         entwurf = ProgrammiererVorlage.entfernen(entwurf)
@@ -1088,6 +1116,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierVorwahlModell = modell
             // Schon das Modell gilt (mit seinem Standard-CLI), falls Frank kein CLI mehr antippt.
             einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell))
+            vorwahlEinstieg = ProgrammiererVorlage.vorspannFuer(modell)
             vorwahlFristNeu()
         } else programmierVorwahlCli(modell, clis.single().first)
     }
@@ -1096,6 +1125,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun programmierVorwahlCli(modell: String, cli: String) {
         programmierVorwahlOffen = false
         programmierVorwahlModell = null
+        vorwahlEinstieg = null; vorwahlVorher = null
         einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell, cli))
         tastaturWeg++
     }

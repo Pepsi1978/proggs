@@ -882,6 +882,7 @@
   {"versionCode": 873, "versionName": "1.8.862", "stand": "21.11.2026, 10:09 Uhr", "notiz": "Die Stillezeit gilt jetzt genau ab dem hörbaren Ende des Pieptons, auch wenn du gar nichts sagst, und der Endton folgt ohne spürbare Verzögerung."},
   {"versionCode": 874, "versionName": "1.8.863", "stand": "21.11.2026, 10:56 Uhr", "notiz": "Auf dem Tablet zeigt die Karte LED-Licht jetzt den echten Zustand der Streifen, also Aus, wenn das Licht aus ist."},
   {"versionCode": 875, "versionName": "1.8.864", "stand": "21.11.2026, 11:00 Uhr", "notiz": "Auf dem Tablet liest die LED-Karte seltener und weicht dem Schalten aus, zeigt nie mehr einen alten eigenen Zustand und lässt sich zum Neulesen antippen."},
-  {"versionCode": 876, "versionName": "1.8.865", "stand": "21.11.2026, 11:34 Uhr", "notiz": "Die Raumklima-Karte zeigt vor jedem Wert die Messzeit, und der Programmierbutton nimmt ohne Modellwahl Opus 5.5."}
+  {"versionCode": 876, "versionName": "1.8.865", "stand": "21.11.2026, 11:34 Uhr", "notiz": "Die Raumklima-Karte zeigt vor jedem Wert die Messzeit, und der Programmierbutton nimmt ohne Modellwahl Opus 5.5."},
+  {"versionCode": 877, "versionName": "1.8.866", "stand": "21.11.2026, 11:40 Uhr", "notiz": "Abbrechen der Modellwahl stellt den Entwurf von vorher her, ein vergessener Opus-Einstieg verschwindet wieder, und Messzeiten von gestern stehen mit Datum."}
 ]
 }

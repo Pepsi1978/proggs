@@ -117,7 +117,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 else Text(
                     // Herkunft vor dem Wert (Frank, 15.11.2026): nichts = SwitchBot-Cloud (auch Webhook), „Mac“ = Mac zu Hause, „BL“ = Handy direkt per Bluetooth.
                     // Danach die Messzeit (Frank, 21.11.2026): Uhrzeit, bei über einem Tag nur das Datum.
-                    herkunft(z.optString("quelle")) + messzeit(z.optLong("gemessen")) +
+                    herkunft(z.optString("quelle")) + messzeit(z.optLong("gemessen").takeIf { it > 0 } ?: z.optLong("abgerufen_s")) +
                     if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
                     else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")),
                     color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(2f), textAlign = TextAlign.End,
@@ -183,10 +183,10 @@ private fun herkunft(quelle: String): String = when {
     else -> ""
 }
 
-/** Messzeit als „11:20 · “, ist sie älter als einen Tag „19.11. · “; ohne Messzeit nichts. */
+/** Messzeit (bei der Cloud der Abruf) als „11:20 · “, stammt sie von einem anderen Tag „19.11. · “; ohne Zeit nichts. */
 private fun messzeit(sekunden: Long): String {
     if (sekunden <= 0) return ""
     val zeit = java.time.Instant.ofEpochSecond(sekunden).atZone(java.time.ZoneId.systemDefault())
-    val alt = System.currentTimeMillis() / 1000 - sekunden > 24 * 3600
+    val alt = zeit.toLocalDate() != java.time.LocalDate.now()
     return zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (alt) "dd.MM." else "HH:mm", Locale.GERMANY)) + " · "
 }
