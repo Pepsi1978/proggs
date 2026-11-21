@@ -875,6 +875,7 @@
   {"versionCode": 866, "versionName": "1.8.855", "stand": "21.11.2026, 09:40 Uhr", "notiz": "Der Endton ist jetzt noch viel tiefer, leiser, und der zweite Ton liegt deutlich tiefer unter dem ersten."},
   {"versionCode": 867, "versionName": "1.8.856", "stand": "21.11.2026, 09:44 Uhr", "notiz": "Die Tablet-Frage kommt nur noch zusammen mit der Code-Review-Frage in einem Block, nie allein; angesagt wird nur die Review-Frage."},
   {"versionCode": 868, "versionName": "1.8.857", "stand": "21.11.2026, 09:45 Uhr", "notiz": "Der zweite Ton des Endtons klingt jetzt etwas länger."},
-  {"versionCode": 869, "versionName": "1.8.858", "stand": "21.11.2026, 09:51 Uhr", "notiz": "In der Mac-Zentrale bleibt Aktualisieren fest oben rechts, darunter trennt ein Strich die beiden jetzt umrandeten Aufklapp-Felder mit gleich ausgerichteten Pfeilen."}
+  {"versionCode": 869, "versionName": "1.8.858", "stand": "21.11.2026, 09:51 Uhr", "notiz": "In der Mac-Zentrale bleibt Aktualisieren fest oben rechts, darunter trennt ein Strich die beiden jetzt umrandeten Aufklapp-Felder mit gleich ausgerichteten Pfeilen."},
+  {"versionCode": 870, "versionName": "1.8.859", "stand": "21.11.2026, 09:55 Uhr", "notiz": "Das CLI-Aufräumen schließt jetzt den ganzen Terminal-Reiter einer beendeten Sitzung statt nur Claude darin zu beenden."}
 ]
 }

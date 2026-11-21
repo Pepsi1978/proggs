@@ -10,7 +10,7 @@ Kandidat ist eine Sitzung nur, wenn ALLES eindeutig feststeht (sonst gilt „off
 Andere CLIs (Codex, OpenCode, Kimi, Antigravity) haben kein Statusregister: nicht bestimmbar, bleiben offen.
 
 Schließen: älteste zuerst, unmittelbar vorher die volle Prüfung noch einmal, dann SIGTERM (nach 20 s SIGKILL) nur an den
-CLI-Prozess. Erst wenn der Prozess nachweislich weg ist, gilt die Sitzung als beendet; ihr Registereintrag (die Liste der
+CLI-Prozess, danach SIGHUP an die Shells seines Terminal-Reiters, damit Terminal den Reiter schließt. Erst wenn der Prozess nachweislich weg ist, gilt die Sitzung als beendet; ihr Registereintrag (die Liste der
 offenen Sitzungen) wird nur dann entfernt, falls die CLI ihn nicht selbst gelöscht hat.
 
 Aufruf zum Prüfen ohne Wirkung: python3 jarvis_cli_aufraeumen.py probe
@@ -393,7 +393,8 @@ def kurz(s: dict, jetzt: float | None = None) -> dict:
     jetzt = jetzt or time.time()
     letzte = s.get("letzte")
     return {"name": s.get("name"), "cli": s.get("cli"), "zustand": s.get("zustand"), "grund": s.get("grund"),
-            "inaktiv_min": int((jetzt - letzte) // 60) if isinstance(letzte, (int, float)) and letzte > 0 else None}
+            "inaktiv_min": int((jetzt - letzte) // 60) if isinstance(letzte, (int, float)) and letzte > 0 else None,
+            **({"reiter_zu": s["reiter_zu"]} if "reiter_zu" in s else {})}
 
 
 # ---------------------------------------------------------------- Schließen
@@ -427,6 +428,51 @@ def beende(s: dict) -> bool:
         except OSError:
             pass
     return _weg(pid, start)
+
+
+SHELLS = ("zsh", "bash", "sh", "fish")
+
+
+def reiter_shells(pid: int, liste: dict[int, dict]) -> list[tuple[int, str]]:
+    """Die Shells des Terminal-Reiters über der CLI (innerste zuerst), nur wenn die Kette im selben tty bei „login“ endet
+    (Terminal.app-Reiter). Sonst (tmux, fremdes Terminal) leer: Dann wird nur die CLI beendet."""
+    d = liste.get(pid)
+    if not d:
+        return []
+    tty, kette, p = d["tty"], [], d["ppid"]
+    while p in liste and liste[p]["tty"] == tty:
+        teile = liste[p]["befehl"].split()
+        name = os.path.basename(teile[0]).lstrip("-") if teile else ""
+        if name == "login":
+            return [(k, startzeit(k) or "") for k in kette]
+        if name not in SHELLS:
+            return []
+        kette.append(p)
+        p = liste[p]["ppid"]
+    return []
+
+
+def schliesse_reiter(shells: list[tuple[int, str]], liste_vorher: dict[int, dict]) -> bool:
+    """Nach bestätigtem Ende der CLI: die Shells des Reiters mit SIGHUP beenden (wie beim Schließen des Fensters), innerste zuerst.
+    Endet die letzte Shell, schließt Terminal den Reiter (Profil „Beim Beenden der Shell: Fenster schließen“). Nur Shells ohne
+    weitere Kindprozesse, sonst bleibt der Reiter offen. True = alle Shells des Reiters sind weg."""
+    if not shells:
+        return False
+    for pid, start in shells:
+        if _weg(pid, start):
+            continue
+        jetzt = prozesse()
+        fremde = [k for k in nachfahren(pid, jetzt) if not any(k == q for q, _ in shells)]
+        if fremde:
+            return False
+        try:
+            os.kill(pid, signal.SIGHUP)
+        except OSError:
+            pass
+        ende = time.monotonic() + 5
+        while time.monotonic() < ende and not _weg(pid, start):
+            time.sleep(0.2)
+    return all(_weg(pid, start) for pid, start in shells)
 
 
 def aus_liste_entfernen(s: dict) -> None:
@@ -478,9 +524,11 @@ def aufraeumen(art: str, ohne: int | None = None, trocken: bool = False) -> dict
             if trocken:
                 s["grund"] = "würde beendet (Probelauf)"
                 continue
+            reiter = reiter_shells(neu["pid"], liste_b)
             if beende(neu):
                 aus_liste_entfernen(neu)
                 s["zustand"] = "beendet"
+                s["reiter_zu"] = schliesse_reiter(reiter, liste_b)
                 beendet.append(s)
             else:
                 s["grund"] = "Ende nicht bestätigt, bleibt offen"
@@ -497,6 +545,9 @@ def aufraeumen(art: str, ohne: int | None = None, trocken: bool = False) -> dict
             text += ". Offen: " + (", ".join(teile) if teile else f"{len(offen)}")
         if fehlgeschlagen:
             text += f". {len(fehlgeschlagen)} ließ sich nicht bestätigt beenden"
+        offene_reiter = sum(1 for x in beendet if not x.get("reiter_zu"))
+        if offene_reiter:
+            text += f". {offene_reiter} Reiter blieb offen (kein Terminal-Reiter oder noch andere Prozesse darin)"
         return {"art": art, "zeit": jetzt, "text": text + ".", "beendet": [kurz(x, jetzt) for x in beendet],
                 "offen": [kurz(x, jetzt) for x in offen]}
     finally:
