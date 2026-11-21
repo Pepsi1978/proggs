@@ -151,13 +151,13 @@ object KonferenzMikrofon {
             if (withTimeoutOrNull(WARTE_MS) { umgeschaltet.await() } == null) {
                 fehlerMelden(gespraech, "Keine Bestätigung nach ${WARTE_MS / 1000} s, Handy-Mikrofon")
                 gescheitert()
-                if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
+                if (besitzer == gespraech) { runCatching { am.clearCommunicationDevice() }; freiGegebenUm = SystemClock.elapsedRealtime() }
                 return false
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             // Abgebrochen, während der Kanal umschaltete (neues „Hey Jarvis“, Sessionwechsel): Sonst bliebe der Anker im Telefon-Profil,
             // denn freigeben() greift erst, wenn der Kanal als aktiv gilt.
-            if (besitzer == gespraech) runCatching { am.clearCommunicationDevice() }
+            if (besitzer == gespraech) { runCatching { am.clearCommunicationDevice() }; freiGegebenUm = SystemClock.elapsedRealtime() }
             throw e
         } finally {
             runCatching { am.removeOnCommunicationDeviceChangedListener(zuhoerer) }

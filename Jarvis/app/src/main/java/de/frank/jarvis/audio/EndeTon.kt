@@ -51,7 +51,7 @@ object EndeTon {
      * Spielt den Doppelton. [abbrechen] wird laufend gefragt: true (neue Session, Aufnahme, Vorlesen) beendet den Ton sofort.
      * true = der Ton lief vollständig.
      */
-    suspend fun spielen(context: Context, ueberKanal: Boolean, abbrechen: () -> Boolean): Boolean {
+    suspend fun spielen(context: Context, ueberKanal: Boolean, fokus: Boolean = true, abbrechen: () -> Boolean): Boolean {
         val daten = pcm
         val attribute = AudioAttributes.Builder()
             .setUsage(if (ueberKanal) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_MEDIA)
@@ -68,7 +68,7 @@ object EndeTon {
                 .build()
         }.getOrNull() ?: return false
         // Kurz den Ton für sich: Musik, die nach dem Gespräch weiterläuft, wird für den Doppelton leiser.
-        val am = context.applicationContext.getSystemService(AudioManager::class.java)
+        val am = if (fokus) context.applicationContext.getSystemService(AudioManager::class.java) else null
         val fokus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attribute).build()
         try {
             if (spur.write(daten, 0, daten.size) != daten.size) return false
@@ -80,9 +80,10 @@ object EndeTon {
                 if (abbrechen()) return false
                 delay(20)
             }
+            // Alle Abtastwerte sind abgespielt: Ein Abbruch im Nachlauf gilt als vollständig gespielt.
             val ende = SystemClock.elapsedRealtime() + NACHLAUF_MS
             while (SystemClock.elapsedRealtime() < ende) {
-                if (abbrechen()) return false
+                if (abbrechen()) return true
                 delay(20)
             }
             return true

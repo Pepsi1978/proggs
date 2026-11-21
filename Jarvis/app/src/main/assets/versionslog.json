@@ -878,6 +878,7 @@
   {"versionCode": 869, "versionName": "1.8.858", "stand": "21.11.2026, 09:51 Uhr", "notiz": "In der Mac-Zentrale bleibt Aktualisieren fest oben rechts, darunter trennt ein Strich die beiden jetzt umrandeten Aufklapp-Felder mit gleich ausgerichteten Pfeilen."},
   {"versionCode": 870, "versionName": "1.8.859", "stand": "21.11.2026, 09:55 Uhr", "notiz": "Das CLI-Aufräumen schließt jetzt den ganzen Terminal-Reiter einer beendeten Sitzung statt nur Claude darin zu beenden."},
   {"versionCode": 871, "versionName": "1.8.860", "stand": "21.11.2026, 10:06 Uhr", "notiz": "Das CLI-Aufräumen lässt Sitzungen mit Crons oder frischer Eingabe offen, beendet übrige Kindprozesse und zeigt veraltete oder abgelehnte Stände in der Mac-Zentrale richtig an."},
-  {"versionCode": 872, "versionName": "1.8.861", "stand": "21.11.2026, 10:07 Uhr", "notiz": "Review-Befunde behoben: Fürs Tablet zählt nur noch dein ausdrückliches Ja, und eine zurückgestellte Review-Ansage kommt nach, sobald die vorige Frage erledigt ist."}
+  {"versionCode": 872, "versionName": "1.8.861", "stand": "21.11.2026, 10:07 Uhr", "notiz": "Review-Befunde behoben: Fürs Tablet zählt nur noch dein ausdrückliches Ja, und eine zurückgestellte Review-Ansage kommt nach, sobald die vorige Frage erledigt ist."},
+  {"versionCode": 873, "versionName": "1.8.862", "stand": "21.11.2026, 10:09 Uhr", "notiz": "Die Stillezeit gilt jetzt genau ab dem hörbaren Ende des Pieptons, auch wenn du gar nichts sagst, und der Endton folgt ohne spürbare Verzögerung."}
 ]
 }

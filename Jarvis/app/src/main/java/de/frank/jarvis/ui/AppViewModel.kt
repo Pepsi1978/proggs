@@ -2076,10 +2076,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ohneWeckwort = wiederaufnahme || perKnopf
         val treffer = if (ohneWeckwort) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         if (!ohneWeckwort) de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
+        // Erst hochzählen, dann abbrechen: Läuft der finally-Block des alten Laufs dabei sofort, sieht er schon, dass er abgelöst ist
+        // (kein fertig(), kein Freigeben von Tonfokus und Mikrofon des neuen Gesprächs, kein Endton).
+        val nr = ++sprachmodusNr
         weckwortLauf?.cancel()
         // Eine Wiederaufnahme übergibt immer fortsetzen = true und ändert nichts daran, wo das Gespräch begann.
         if (!wiederaufnahme) gespraechInApp = fortsetzen
-        val nr = ++sprachmodusNr
         // Über den Knopf gibt es keinen Weckwort-Dienst, der das Mikrofon im Vordergrund hält (etwa am Tablet ohne „Hey Jarvis“):
         // Der eigene Mikrofon-Dienst hält es auch nach einem App-Wechsel oder bei gesperrtem Bildschirm.
         if (perKnopf) de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
@@ -2138,11 +2140,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 konferenzFrei(nr)
                 if (sprachmodusNr == nr) { einzelauftragOffen = false; de.frank.jarvis.faehigkeit.Sprachsession.einzelauftrag = false }
                 // Hat ein neues „Hey Jarvis“ dieses Gespräch abgelöst, gehören Tonfokus und Freihand-Anzeige schon dem neuen.
-                if (sprachmodusNr == nr) {
-                    de.frank.jarvis.speech.GespraechsFokus.freigeben()
-                    freihaendig = false
-                }
-                if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                // Echtes Ende: Tonfokus und Mikrofon erst nach dem Endton abgeben (höchstens [ENDTON_HALTEN_MS]). Sonst liefe Musik kurz
+                // wieder an, und der Weckwort-Dienst schaltete mitten in den Endton auf den Anker um.
+                val echtesEnde = sprachmodusNr == nr
+                if (echtesEnde) freihaendig = false
+                if (!echtesEnde && !nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (perKnopf && sprachmodusNr == nr && !nimmtAuf && !holtMikro) de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
                 if (sprachmodusNr == nr) { sprachmodusAktiv = false; de.frank.jarvis.speech.GespraechsFokus.sprachmodus = false }
@@ -2151,7 +2153,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (sprachmodusNr == nr) fertig()
                 SprachBlase.abgleichen(getApplication())
                 // Echtes Ende (nicht abgelöst): einmal „DÖ-DO“, sobald Mikrofon und Vorlesen wirklich aus sind.
-                if (sprachmodusNr == nr) endeTonSpielen(nr)
+                if (echtesEnde) endeTonSpielen(nr)
             }
         }
     }
@@ -2162,33 +2164,56 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * vorgelesen wird; startet inzwischen eine neue Session oder hat Frank von Hand übernommen, entfällt er.
      */
     private fun endeTonSpielen(nr: Int) {
+        // Einmal freigeben: nach dem Ton, bei jedem Abbruch oder spätestens nach ENDTON_HALTEN_MS. Hat inzwischen ein neues Gespräch
+        // begonnen, gehören Tonfokus und Mikrofon ihm und bleiben, wie sie sind.
+        var freigegeben = false
+        fun freigeben() {
+            if (freigegeben) return
+            freigegeben = true
+            if (sprachmodusNr != nr || sprachmodusAktiv) return
+            de.frank.jarvis.speech.GespraechsFokus.freigeben()
+            if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        }
+        endeTonBereich.launch { kotlinx.coroutines.delay(ENDTON_HALTEN_MS); freigeben() }
         endeTonBereich.launch {
-            // Erst nach dem Hochzählen eines womöglich direkt folgenden neuen Gesprächs prüfen (cancel kann den finally-Block sofort ausführen).
-            kotlinx.coroutines.delay(150)
-            fun abgeloest() = sprachmodusNr != nr || sprachmodusAktiv
-            fun mikroAn() = nimmtAuf || holtMikro || mikro.isRecording()
-            // Mitschrift, Nachdenken oder Navigation nach dem Ende: Frank hat von Hand übernommen, die Antwort kommt noch.
-            fun arbeitet() = schreibtMit || denkt || navigiert
-            fun liestVor() = vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS
-            fun belegt() = mikroAn() || arbeitet() || liestVor()
-            suspend fun warte(ms: Long, solange: () -> Boolean): Boolean = kotlinx.coroutines.withTimeoutOrNull(ms) {
-                while (solange()) { if (abgeloest()) return@withTimeoutOrNull false; kotlinx.coroutines.delay(50) }
-                true
-            } ?: false
-            // Beim Beenden von Hand stoppt die Aufnahme gleich danach; nimmt Frank nach 3 s noch auf, hat er selbst übernommen.
-            if (!warte(3_000L, ::mikroAn) || abgeloest() || arbeitet()) return@launch
-            // Nie über eine Antwort: erst, wenn nichts mehr vorgelesen wird (eine neue Aufnahme oder Arbeit dazwischen beendet das Warten).
-            if (!warte(30_000L) { liestVor() && !mikroAn() && !arbeitet() } || abgeloest() || mikroAn() || arbeitet()) return@launch
-            // Schaltet der Weckwort-Dienst gerade auf den Anker um, erst abwarten, über welchen Weg der Ton laufen muss.
-            warte(3_000L) { de.frank.jarvis.audio.KonferenzMikrofon.umschaltungLaeuft }
-            if (!de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())) de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
-            // Nach dem Warten alles noch einmal prüfen, dann den Weg erst unmittelbar vor dem Abspielen wählen.
-            if (abgeloest() || belegt()) return@launch
-            val ueberKanal = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
-            val gespielt = de.frank.jarvis.audio.EndeTon.spielen(getApplication(), ueberKanal) { abgeloest() || belegt() }
-            Logbuch.sprache("Endton", if (gespielt) "Sprachsession beendet, Mikrofon zu" + if (ueberKanal) ", über Gesprächskanal" else "" else "nicht oder nicht vollständig abgespielt")
+            try {
+                endeTonAbwarten(nr)
+            } finally {
+                freigeben()
+            }
         }
     }
+
+    private suspend fun endeTonAbwarten(nr: Int) {
+        // Erst nach dem Hochzählen eines womöglich direkt folgenden neuen Gesprächs prüfen; eine kurze Pause genügt.
+        kotlinx.coroutines.delay(30)
+        fun abgeloest() = sprachmodusNr != nr || sprachmodusAktiv
+        fun mikroAn() = nimmtAuf || holtMikro || mikro.isRecording()
+        // Mitschrift, Nachdenken oder Navigation nach dem Ende: Frank hat von Hand übernommen, die Antwort kommt noch.
+        fun arbeitet() = schreibtMit || denkt || navigiert
+        fun liestVor() = vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS
+        fun belegt() = mikroAn() || arbeitet() || liestVor()
+        suspend fun warte(ms: Long, solange: () -> Boolean): Boolean = kotlinx.coroutines.withTimeoutOrNull(ms) {
+            while (solange()) { if (abgeloest()) return@withTimeoutOrNull false; kotlinx.coroutines.delay(20) }
+            true
+        } ?: false
+        // Beim Beenden von Hand stoppt die Aufnahme gleich danach; nimmt Frank nach 1,5 s noch auf, hat er selbst übernommen.
+        if (!warte(1_500L, ::mikroAn) || abgeloest() || arbeitet()) return
+        // Nie über eine Antwort: erst, wenn nichts mehr vorgelesen wird (bis zur Haltegrenze, dann ohne Ton).
+        if (!warte(ENDTON_HALTEN_MS) { liestVor() && !mikroAn() && !arbeitet() } || abgeloest() || belegt()) return
+        // Das Mikrofon ist noch nicht ans Weckwort zurückgegeben: Steht der Anker-Kanal noch, läuft der Ton sofort über ihn,
+        // sonst über Medien, sobald das Medien-Profil nach einer Freigabe wieder bereit ist.
+        val ueberKanal = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
+        if (!ueberKanal) de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
+        if (abgeloest() || belegt()) return
+        val weg = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
+        // Den Tonfokus hält noch das Gespräch: Musik bleibt leise, ohne eigene Anfrage.
+        val gespielt = de.frank.jarvis.audio.EndeTon.spielen(getApplication(), weg, fokus = false) { abgeloest() || belegt() }
+        Logbuch.sprache("Endton", if (gespielt) "Sprachsession beendet, Mikrofon zu" + if (weg) ", über Gesprächskanal" else "" else "abgebrochen oder nicht abspielbar")
+    }
+
+    /** So lange hält das beendete Gespräch Tonfokus und Mikrofon höchstens für den Endton fest (das Weckwort wartet so lange). */
+    private val ENDTON_HALTEN_MS = 2_500L
 
     private val endeTonBereich = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
 
@@ -2338,24 +2363,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             piepSuchen = frankAb == null
             ohnePiep = frankAb != null
         }
-        // Ohne Spracherkennung zählt der Pegel; dann auch einen per Bluetooth verspäteten Piepton nicht als Sprache werten.
-        val anlauf = if (erste || mikro.sprachRahmen != null) 250L else 600L
-        val ende = de.frank.module.transkriptionsmodul.SprechEnde(anlaufMs = anlauf, wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
-        // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
-        val start = System.currentTimeMillis()
-        rundeEnde = ende; rundeBeginn = start
+        val vorPiep = System.currentTimeMillis()
         val rufUm = if (erste) weckwortRufUm else 0L
-        if (!ohnePiep) piep()
+        val mitPiep = !ohnePiep
+        // Stimme, die schon vor oder während des Pieptons erkannt wird (Frank spricht durch), zählt später als Gesprochenes.
+        val rahmenVorPiep = mikro.sprachRahmen
+        // Schnittmarke erst unmittelbar vor dem Abspielen setzen (nach dem Warten aufs Medien-Profil), damit die Suche den Piepton findet.
+        val markeSetzen = !erste && mitPiep
+        // Die Uhr läuft ab dem hörbaren Ende des Pieptons (Ausgabelatenz eingerechnet), ohne Piepton ab jetzt.
+        val start = if (mitPiep) piep { if (markeSetzen) piepAbBytes = mikro.pufferBytes } else System.currentTimeMillis()
         ohnePiep = false
-        if (rufUm > 0L) Logbuch.sprache("Kette Weckwort", "Mikrofon ${start - rufUm} · Piepton ${System.currentTimeMillis() - start}", System.currentTimeMillis() - rufUm)
+        // Nur noch der Nachhall des Pieptons im Mikrofon zählt nicht; ohne Spracherkennung (Pegel) etwas länger.
+        val anlauf = if (!mitPiep) 0L else if (mikro.sprachRahmen != null) 150L else 400L
+        // Die Stillezeit gilt ab dem Ende des Pieptons: Sagt Frank bis dahin nichts, endet die Runde genau dann (kein eigener Wartewert mehr).
+        val ende = de.frank.module.transkriptionsmodul.SprechEnde(anlaufMs = anlauf, wartenMs = stilleMs.toLong(), stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
+        rundeEnde = ende; rundeBeginn = start
+        if (rufUm > 0L) Logbuch.sprache("Kette Weckwort", "Mikrofon ${vorPiep - rufUm} · Piepton hörbar zu Ende nach ${start - vorPiep}", start - rufUm)
         var lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER
+        // Bezugspunkt der Stillezeit: das Piepton-Ende; lädt die Spracherkennung noch, beginnt sie erst, wenn gewertet werden kann.
+        var basis = start
         while (nimmtAuf && lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER) {
-            kotlinx.coroutines.delay(50)
-            val seit = System.currentTimeMillis() - start
+            // Enger Takt: Das Ende der Stillezeit wird höchstens 20 ms zu spät bemerkt.
+            kotlinx.coroutines.delay(20)
+            val jetzt = System.currentTimeMillis()
             // Außerhalb der App zählt nur Stimme (Silero): Lädt sie noch, nicht dem Pegel glauben, sonst gälte ein Lüfter im Auto als Sprechen.
             // Nach 5 Sekunden ohne sie gilt wieder der Pegel, damit eine hängende Spracherkennung die Frage nicht verschluckt.
-            if (!gespraechInApp && mikro.sprachErkennungLaedt && seit < 5_000) continue
-            lage = ende.neu(pegel.value, seit, mikro.sprachRahmen)
+            // Die Wartezeit läuft so lange nicht: Sonst wäre die Stillezeit vorbei, bevor überhaupt zugehört wurde.
+            if (!gespraechInApp && mikro.sprachErkennungLaedt && jetzt - start < 5_000) { basis = jetzt; rundeBeginn = jetzt; continue }
+            lage = ende.neu(pegel.value, jetzt - basis, mikro.sprachRahmen)
+        }
+        // „Nichts gehört“, obwohl Frank schon sprach (vor dem Piepton durchgesprochen, oder ohne Piepton, weil er schon redete):
+        // Seine Worte gelten, die Aufnahme wird abgeschickt statt verworfen.
+        if (lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT && nimmtAuf) {
+            val rahmenJetzt = mikro.sprachRahmen
+            val schonGesprochen = !mitPiep || (rahmenVorPiep != null && rahmenJetzt != null && rahmenJetzt > rahmenVorPiep)
+            if (schonGesprochen) {
+                Logbuch.sprache("Aufnahme-Ende", "Stimme vor oder während des Pieptons, wird abgeschickt")
+                lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG
+            }
         }
         freihaendig = false
         when {
@@ -2368,7 +2413,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 return lage
             }
             else -> {
-                schlussStilleMs = System.currentTimeMillis() - start - ende.letzteSpracheMs
+                schlussStilleMs = System.currentTimeMillis() - basis - ende.letzteSpracheMs
                 // Zeigt nach einer Fahrt, ob ein Geräusch die Aufnahme offen hielt: Sprachanteil laut Silero, Grundpegel und Art der Erkennung.
                 Logbuch.sprache("Aufnahme-Ende", "Erkennung ${if (mikro.sprachRahmen != null) "Silero" else "Pegel"}, Stimme ${(mikro.sprachRahmen ?: 0L) * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms von ${System.currentTimeMillis() - start} ms, Pegel zuletzt ${"%.2f".format(pegel.value)}")
                 aufnahmeBeenden(freigeben = false)
@@ -2436,21 +2481,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort; steht der
      * Freisprech-Kanal zum Konferenz-Lautsprecher, über den Gesprächskanal (Medienton liefe dort nicht).
+     * Klang wie bisher TONE_PROP_BEEP (400 Hz + 1200 Hz, 35 ms; [de.frank.jarvis.speech.PiepSchnitt] sucht genau ihn), aber selbst
+     * erzeugt: So ist bekannt, wann sein Ende wirklich zu hören war. Ergebnis: dieser Zeitpunkt (currentTimeMillis), ab dem die Stillezeit gilt.
      */
-    private suspend fun piep() {
+    private suspend fun piep(vorAbspielen: () -> Unit = {}): Long {
         // Mit offenem Konferenz-Mikrofon läuft der Lautsprecher als Freisprechgerät: Der Piepton geht dann über den Gesprächskanal.
         val ueberKanal = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
         // Gerade erst ins Medien-Profil zurück (Weckwort über den Anker): kurz warten, sonst verschluckt der Wechsel den Piepton.
         if (!ueberKanal) de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
+        vorAbspielen()
+        de.frank.jarvis.audio.Signalton.spielen(getApplication(), BEREIT_TON, ueberKanal, fokus = false)?.let { return it }
+        // Ersatz, falls die eigene Tonspur nicht startet: der bisherige ToneGenerator, Ende ohne gemessene Latenz.
         val strom = if (ueberKanal) android.media.AudioManager.STREAM_VOICE_CALL else android.media.AudioManager.STREAM_MUSIC
-        val ton = runCatching { android.media.ToneGenerator(strom, 100) }.getOrNull() ?: return
+        val ton = runCatching { android.media.ToneGenerator(strom, 100) }.getOrNull() ?: return System.currentTimeMillis()
         try {
             ton.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 160)
             kotlinx.coroutines.delay(220)
         } finally {
             ton.release()
         }
+        return System.currentTimeMillis()
     }
+
+    private val BEREIT_TON: ShortArray by lazy { de.frank.jarvis.audio.Signalton.ton(listOf(400.0 to 1.0, 1200.0 to 1.0), 35, 0.8, 2) }
 
     /** [freigeben] = false im Gesprächsmodus: Das Mikrofon bleibt für die nächste Runde reserviert. */
     private fun aufnahmeBeenden(freigeben: Boolean = true) {
