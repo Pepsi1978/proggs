@@ -406,14 +406,27 @@ class Relay:
                 zugestellt = True
             # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
             elif daten.get("stand") != "puls":
-                geraet.meldungen.append(daten)
-                # 1000 statt 100: Eine am PC gestartete Sitzung soll auch nach längerer Funkstille komplett in Jarvis stehen.
-                del geraet.meldungen[:-1000]
-                # Ganze Sitzungen (Spiegel „sitzung“) sind gross, der Dienst hat 128 MB: hoechstens 40 davon warten.
-                grosse = [i for i, m in enumerate(geraet.meldungen) if m.get("art") == "sitzung"]
-                for i in reversed(grosse[:-40]):
-                    del geraet.meldungen[i]
+                self._einreihen(geraet, daten)
         return zugestellt
+
+    @staticmethod
+    def _einreihen(geraet: "Geraet", daten: dict) -> None:
+        """Warteschlange eines nicht verbundenen Geraets. 1000 Meldungen (eine am PC gestartete Sitzung soll auch nach laengerer
+        Funkstille komplett in Jarvis stehen); gekuerzt werden zuerst gewoehnliche Meldungen, nie die Session, zu der sie gehoeren.
+        Ganze Sessions (Spiegel „sitzung“) sind gross und der Dienst hat 128 MB: je Auftrag bzw. Gespraech nur die neueste,
+        hoechstens 40 und zusammen 12 MB."""
+        if daten.get("art") == "sitzung":
+            schluessel = (daten.get("auftrag_id"), daten.get("gespraech") or "")
+            geraet.meldungen = [m for m in geraet.meldungen
+                                if not (m.get("art") == "sitzung" and (m.get("auftrag_id"), m.get("gespraech") or "") == schluessel)]
+            daten = {**daten, "_groesse": len(json.dumps(daten, ensure_ascii=False))}
+        geraet.meldungen.append(daten)
+        gross = [m for m in geraet.meldungen if m.get("art") == "sitzung"]
+        while gross and (len(gross) > 40 or sum(m.get("_groesse", 0) for m in gross) > 12_000_000):
+            geraet.meldungen.remove(gross.pop(0))
+        klein = [i for i, m in enumerate(geraet.meldungen) if m.get("art") != "sitzung"]
+        for i in reversed(klein[:max(0, len(geraet.meldungen) - 1000)]):
+            del geraet.meldungen[i]
 
     async def spiegel(self, request: web.Request) -> web.Response:
         """POST /geraet/spiegel (Handy, Tablet): {"art", "auftrag_id", ...}. Was nur auf einem Geraet entsteht (neuer Auftrag samt
@@ -423,11 +436,18 @@ class Relay:
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
-            assert isinstance(daten, dict) and daten.get("art") in ("sitzung", "zeile", "nachtrag", "weg")
+            assert isinstance(daten, dict) and daten.get("art") in ("sitzung", "zeile", "nachtrag", "weg", "verlauf")
         except Exception:
             return web.Response(status=400, text="Spiegel unlesbar")
         von = self.geraete.get(geraet_kennung(request)) or self.handy
-        daten = {**daten, "signal": "programmieren", "stand": "spiegel", "von": von.kennung, "auftrag_id": str(daten.get("auftrag_id") or "")[:20]}
+        auftrag_id = str(daten.get("auftrag_id") or "").strip().upper()[:20]
+        # Ein neuer Auftrag gehoert dem Geraet, das ihn gestellt hat (auch in der Cloud, die nicht ueber pc-auftrag laeuft):
+        # Dorthin gehen seine selbst gemeldeten Fortschritte zuerst, nur dort wird der Abschluss vorgelesen.
+        if daten.get("art") == "sitzung" and daten.get("live") and auftrag_id and auftrag_id not in self.auftrag_geraet:
+            self.auftrag_merken(auftrag_id, von.kennung)
+        # Eigenes Signal: Aeltere Jarvis-Fassungen kennen es nicht und lassen es liegen (unter „programmieren“ hielten sie es
+        # fuer eine Meldung der Sitzung und setzten den Auftrag auf „laeuft“).
+        daten = {**daten, "signal": "programmier_spiegel", "stand": "spiegel", "von": von.kennung, "auftrag_id": auftrag_id}
         zugestellt = await self.programmier_meldung(daten, ausser=von)
         return web.json_response({"zugestellt": zugestellt})
 
@@ -438,12 +458,23 @@ class Relay:
         stand = str(argumente.get("stand") or "")
         if not auftrag_id or stand not in ("laeuft", "frage", "fertig", "fehler"):
             return
-        await self.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "stand": stand,
-                                        "schritt": str(argumente.get("schritt") or "")[:20_000], "gespiegelt": True}, ausser=hat)
         try:
-            text = " ".join(str(t.get("text", "")) for t in (json.loads(antwort).get("result") or {}).get("content") or [])
+            ergebnis = json.loads(antwort).get("result") or {}
+            text = " ".join(str(t.get("text", "")) for t in ergebnis.get("content") or [])
         except (ValueError, AttributeError):
             return
+        if ergebnis.get("isError"):
+            return
+        # Wie die App: „Antwort auf G…:“ vorn wird zur Sprechblase 💬 (sonst zeigte das andere Geraet einen anderen Text).
+        schritt = str(argumente.get("schritt") or "").strip()
+        antwort_auf = str(argumente.get("antwort_auf") or "").strip()
+        vorspann = re.match(r"^(?:💬\s*)?Antwort auf (G[A-Z0-9]{5})\s*:", schritt, re.IGNORECASE)
+        if vorspann:
+            schritt = schritt[vorspann.end():].strip()
+        if vorspann or antwort_auf:
+            schritt = "💬 " + schritt
+        await self.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "stand": stand, "schritt": schritt[:20_000],
+                                        "link": str(argumente.get("link") or "")[:500], "gespiegelt": True}, ausser=hat)
         ids = re.findall(r"NACHTRAG (N[A-Z0-9]{5}|G[A-Z0-9]{5}):", text)
         if ids:
             await self.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "stand": "nachtrag",
@@ -549,6 +580,11 @@ class Relay:
                 return web.Response(text=antwort, content_type="application/json")
             gefragt.append(geraet.name)
         nummer = auftrag_id or "ohne Nummer"
+        if not gefragt:
+            text = (f"Jarvis ist gerade nicht erreichbar ({', '.join(fern) or 'kein Gerät verbunden'}). Die Meldung zu Auftrag {nummer} ist nicht "
+                    "angekommen, es wurde nichts geändert. Arbeite normal weiter und melde den nächsten Schritt wie gewohnt.")
+            return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
+                               "result": {"content": [{"type": "text", "text": text}], "isError": True}})
         text = (f"Diese Meldung ist nicht bei Frank angekommen: Kein Jarvis-Gerät kennt den Auftrag {nummer}"
                 + (f" (gefragt: {', '.join(gefragt)})" if gefragt else "")
                 + (f"; nicht erreichbar: {', '.join(fern)}" if fern else "") + ". "

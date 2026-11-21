@@ -171,6 +171,8 @@ object Gespraeche {
                 val d = datei(context, id)
                 val alt = if (d.exists() || File(d.path + ".bak").exists()) runCatching { lies(d) }.getOrNull() else null
                 val bisher = alt?.optJSONArray("nachrichten")?.length() ?: 0
+                // Auf dem anderen Gerät gelöscht, hier noch offen: nicht wieder anlegen.
+                if (alt == null && id in de.frank.jarvis.faehigkeit.ProgrammierSpiegel.geloescht(context)) return@runCatching null
                 if (nachrichten.size + kuerzenUm < bisher) {
                     Log.w(TAG, "Älterer Stand von $id verworfen ($bisher > ${nachrichten.size})")
                     return@runCatching null
@@ -212,9 +214,15 @@ object Gespraeche {
                 if (!json.optBoolean("programmierung") && istProgrammierung(json)) json.put("programmierung", true)
                 schreiben(d, json)
                 // Neue Zeilen einer Programmier-Session gehen auch ans andere Gerät (Franks und Jarvis' eigene, siehe ProgrammierSpiegel).
-                val schonDa = bisher - kuerzenUm
-                if (json.optBoolean("programmierung") && bisher > 0 && nachrichten.size > schonDa && schonDa >= 0)
-                    runCatching { de.frank.jarvis.faehigkeit.ProgrammierSpiegel.neueZeilen(context.applicationContext, id, nachrichten.drop(schonDa)) }
+                // Neu ist, was die Datei noch nicht hatte, nach Inhalt gezählt: Die App hält oft eine ältere Liste, während Meldungen
+                // der Sitzung schon direkt in die Datei gingen.
+                if (json.optBoolean("programmierung") && alt != null) {
+                    val vorhanden = HashMap<String, Int>()
+                    val a = alt.optJSONArray("nachrichten") ?: JSONArray()
+                    for (i in 0 until a.length()) a.optJSONObject(i)?.let { m -> val k = "${m.optBoolean("mir")}|${m.optString("art", "antwort")}|${m.optString("text")}"; vorhanden[k] = (vorhanden[k] ?: 0) + 1 }
+                    val neu = nachrichten.filter { n -> val k = "${n.vonMir}|${n.art}|${n.text}"; val z = vorhanden[k] ?: 0; if (z > 0) { vorhanden[k] = z - 1; false } else true }
+                    if (neu.isNotEmpty()) runCatching { de.frank.jarvis.faehigkeit.ProgrammierSpiegel.neueZeilen(context.applicationContext, id, neu) }
+                }
                 Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"), json.optBoolean("favorit"))
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
         }

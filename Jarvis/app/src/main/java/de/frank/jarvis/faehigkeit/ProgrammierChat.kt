@@ -191,10 +191,12 @@ object ProgrammierChat {
     /** Setzt die offene App: true = sie hat die Nachricht übernommen (Gespräch ist gerade offen). */
     @Volatile var empfaenger: ((gespraech: String, nachricht: GespeicherteNachricht) -> Boolean)? = null
 
-    fun poste(context: Context, gespraech: String, text: String, art: String, kontext: String = "", anhaenge: List<String> = emptyList(), vonMir: Boolean = false) {
+    /** true = die offene App hat die Nachricht übernommen, false = sie ging direkt in die Gesprächsdatei. */
+    fun poste(context: Context, gespraech: String, text: String, art: String, kontext: String = "", anhaenge: List<String> = emptyList(), vonMir: Boolean = false): Boolean {
         val nachricht = GespeicherteNachricht(vonMir, text, art, kontext, anhaenge)
-        if (runCatching { empfaenger?.invoke(gespraech, nachricht) }.getOrNull() == true) return
+        if (runCatching { empfaenger?.invoke(gespraech, nachricht) }.getOrNull() == true) return true
         Gespraeche.anhaengen(context, gespraech, nachricht)
+        return false
     }
 
     /**

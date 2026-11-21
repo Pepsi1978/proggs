@@ -137,7 +137,7 @@ object Waechter {
             if (dokument != "appdaten") de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             return
         }
-        if (art == "programmieren") {
+        if (art == "programmieren" || art == "programmier_spiegel") {
             // Fortschritt oder Rückfrage einer Programmier-Sitzung am PC (Hook über den Relay): Benachrichtigung und Gespräch.
             runCatching { Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.meldungVomServer(nachricht) }
                 .onFailure { Logbuch.fehler("Signal Programmieren", it) }
