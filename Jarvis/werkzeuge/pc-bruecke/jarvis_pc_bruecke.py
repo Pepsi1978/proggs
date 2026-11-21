@@ -19,6 +19,9 @@ Victron: Ein Faden scannt jede Minute die Solarbatterie per Bluetooth (jarvis_vi
 danach den SwitchBot-CO2-Monitor (jarvis_switchbot.py).
 Mac-Update-Zentrale: Aufträge des Handys (prüfen, unkritische oder kritische Updates installieren) über /pc/mac-befehl an die
 Updater-Zentrale macOS (Dateien in ~/Library/Application Support/UpdaterZentrale/fern), ihr Stand geht an POST /pc/updatezentrale.
+Programmier-CLI aufräumen: Auf Franks Ja (Mac-Zentrale) oder geplant (Schalter und Intervall 1–24 h in
+~/Library/Application Support/JarvisPcBruecke/cli-aufraeumen.json) beendet jarvis_cli_aufraeumen.py nur eindeutig seit mehr als
+einer Stunde inaktive CLI-Sitzungen; Stand und Liste gehen mit POST /pc/updatezentrale („cli“) ans Handy.
 Tenda: Einmal je Stunde Funkwerte, Modus und Ping des Heimanschlusses (jarvis_tenda.py, POST /pc/tenda); Aufträge des Handys über /pc/mac-befehl.
 Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
@@ -706,6 +709,9 @@ def uz_befehl(befehl: dict) -> None:
         UZ_GESEHEN.append(kennung)
         del UZ_GESEHEN[:-50]
     uz_melden({"kennung": kennung, "empfangen": True}, versuche=3)
+    if art in ("cli_aufraeumen", "cli_einstellung"):
+        cli_befehl(kennung, art, befehl)
+        return
     if art not in ("pruefen", "unkritisch", "kritisch"):
         return
     try:
@@ -747,6 +753,84 @@ def uz_faden() -> None:
         except Exception as fehler:
             schreib(f"Update-Zentrale melden: {fehler}")
             time.sleep(10)
+
+
+# ---------------------------------------------------------------- Programmier-CLI aufräumen (jarvis_cli_aufraeumen.py)
+
+CLI_STAND: dict = {"laeuft": False, "letzter": None, "sitzungen": None}
+
+
+def cli_melden() -> bool:
+    import jarvis_cli_aufraeumen as ca
+    e = ca.lies_einstellung()
+    stand = {"automatik": e["automatik"], "stunden": e["stunden"], "naechster": e.get("naechster") if e["automatik"] else None,
+             "laeuft": CLI_STAND["laeuft"], "letzter": e.get("letzter"), "sitzungen": CLI_STAND["sitzungen"], "zeit": time.time()}
+    return uz_melden({"cli": stand}, versuche=3)
+
+
+def cli_lauf(art: str) -> None:
+    """Ein Aufräumen (von Hand nach Franks Ja oder geplant); nie zwei gleichzeitig (Sperre im Modul)."""
+    import jarvis_cli_aufraeumen as ca
+    CLI_STAND["laeuft"] = True
+    cli_melden()
+    try:
+        ergebnis = ca.aufraeumen(art)
+        schreib(f"CLI-Aufräumen ({art}): {ergebnis['text']}")
+        e = ca.lies_einstellung()
+        e["letzter"] = ergebnis
+        if art == "auto" and e["automatik"]:
+            e["naechster"] = time.time() + e["stunden"] * 3600
+        ca.schreib_einstellung(e)
+        CLI_STAND["sitzungen"] = ergebnis["offen"]
+    except Exception as fehler:
+        schreib(f"CLI-Aufräumen: {type(fehler).__name__}: {fehler}")
+    finally:
+        CLI_STAND["laeuft"] = False
+        cli_melden()
+
+
+def cli_befehl(kennung: str, art: str, befehl: dict) -> None:
+    import jarvis_cli_aufraeumen as ca
+    if art == "cli_aufraeumen":
+        with UZ_SPERRE:
+            besetzt = CLI_STAND["laeuft"]
+            CLI_STAND["laeuft"] = True
+        if besetzt:
+            uz_melden({"kennung": kennung, "fehler": "Ein Aufräumen läuft bereits."}, versuche=3)
+            return
+        threading.Thread(target=cli_lauf, args=("hand",), daemon=True).start()
+        return
+    try:
+        automatik = befehl.get("automatik")
+        stunden = befehl.get("stunden")
+        ca.setze_einstellung(automatik if isinstance(automatik, bool) else None, stunden if stunden is not None else None)
+        schreib(f"CLI-Aufräumen: Automatik {automatik}, Intervall {stunden}")
+    except Exception as fehler:
+        uz_melden({"kennung": kennung, "fehler": f"Einstellung nicht gespeichert ({fehler})."}, versuche=3)
+    cli_melden()
+
+
+def cli_faden() -> None:
+    """Geplantes Aufräumen nur bei eingeschalteter Automatik (nach Ruhezustand höchstens ein nachgeholter Lauf), dazu alle
+    fünf Minuten die Liste der offenen Sitzungen für die Karte."""
+    import jarvis_cli_aufraeumen as ca
+    liste_zeit = 0.0
+    while True:
+        try:
+            with UZ_SPERRE:
+                los = not CLI_STAND["laeuft"] and ca.faellig(ca.lies_einstellung(), time.time())
+                if los:
+                    CLI_STAND["laeuft"] = True
+            if los:
+                cli_lauf("auto")
+                liste_zeit = time.time()
+            elif not CLI_STAND["laeuft"] and time.time() - liste_zeit >= 300:
+                liste_zeit = time.time()
+                CLI_STAND["sitzungen"] = [ca.kurz(x) for x in ca.sitzungen()]
+                cli_melden()
+        except Exception as fehler:
+            schreib(f"CLI-Aufräumen (Zeitplan): {type(fehler).__name__}: {fehler}")
+        time.sleep(60)
 
 
 # ---------------------------------------------------------------- Tenda-Mobilfunkrouter (jarvis_tenda.py)
@@ -861,6 +945,7 @@ def main() -> int:
     threading.Thread(target=switchbot_sofort_faden, daemon=True).start()
     threading.Thread(target=tenda_faden, daemon=True).start()
     threading.Thread(target=uz_faden, daemon=True).start()
+    threading.Thread(target=cli_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")

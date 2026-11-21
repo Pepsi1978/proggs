@@ -34,7 +34,7 @@ private val RECHNER = RECHNER_NAMEN.keys.toList()
 val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "biomarker", "raumklima", "victron", "staubsauger", "kaffee", "licht", "tenda", "wichtige_mails", "mac_update")
 
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
-val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht", "tenda" to "Tenda Internet", "wichtige_mails" to "Wichtige E-Mails", "mac_update" to "Mac-Update-Zentrale")
+val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht", "tenda" to "Tenda Internet", "wichtige_mails" to "Wichtige E-Mails", "mac_update" to "Mac-Zentrale")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {

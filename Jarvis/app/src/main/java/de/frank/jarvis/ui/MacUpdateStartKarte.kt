@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -70,6 +71,8 @@ object MacUpdateZentrale {
     data class Lage(
         val stand: JSONObject? = null, val app: Boolean = false, val alterS: Long? = null, val macDa: Boolean = false,
         val geholt: Long = 0, val abrufFehler: Boolean = false,
+        /** Programmier-CLI aufräumen (vom Mac): automatik, stunden, naechster, laeuft, letzter {art, zeit, text, beendet, offen}, sitzungen. */
+        val cli: JSONObject? = null,
     )
 
     val lage = MutableStateFlow(Lage())
@@ -94,22 +97,51 @@ object MacUpdateZentrale {
                 val fehler = j.optJSONObject("fehler")
                 if (fehler != null && fehler.optString("kennung") == eigeneKennung.value) meldung.value = fehler.optString("text")
                 lage.value = Lage(j.optJSONObject("stand"), j.optBoolean("app"), if (j.isNull("alter_s")) null else j.optLong("alter_s"),
-                    j.optBoolean("mac_da"), System.currentTimeMillis())
+                    j.optBoolean("mac_da"), System.currentTimeMillis(), cli = j.optJSONObject("cli"))
             }
         }.onFailure { lage.update { l -> l.copy(abrufFehler = true, geholt = System.currentTimeMillis()) } }
     }
 
-    fun senden(context: Context, art: String) {
+    fun senden(context: Context, art: String, zusatz: JSONObject? = null) {
         if (sendet.value != null) return
         sendet.value = art
         meldung.value = null
         bereich.launch {
-            val text = withContext(Dispatchers.IO) {
+            val text = auftrag(context, art, zusatz)
+            Logbuch.netz("Mac-Zentrale: $art", text ?: "angenommen")
+            meldung.value = text
+            sendet.value = null
+            holen(context)
+        }
+    }
+
+    val cliSendet = MutableStateFlow<String?>(null)
+    val cliMeldung = MutableStateFlow<String?>(null)
+
+    /** Programmier-CLI: „cli_aufraeumen“ (nur nach Franks Ja) oder „cli_einstellung“ mit automatik und/oder stunden. */
+    fun cliSenden(context: Context, art: String, zusatz: JSONObject? = null) {
+        if (cliSendet.value != null) return
+        cliSendet.value = art
+        cliMeldung.value = null
+        bereich.launch {
+            val text = auftrag(context, art, zusatz)
+            Logbuch.netz("Mac-Zentrale: $art", text ?: "angenommen")
+            cliMeldung.value = text
+            // Der Mac meldet seinen neuen Stand gleich danach: kurz nachlesen.
+            repeat(3) { delay(1_500); holen(context) }
+            cliSendet.value = null
+        }
+    }
+
+    /** Schickt einen Auftrag an den Mac; null = angenommen, sonst der Grund (für Karte und Sprache). Nie von selbst wiederholt. */
+    suspend fun auftrag(context: Context, art: String, zusatz: JSONObject? = null): String? = withContext(Dispatchers.IO) {
                 val e = Einstellungen.get(context)
                 if (e.serverToken.isBlank()) return@withContext "Kein Server eingerichtet. Es wurde nichts gestartet."
                 try {
+                    val rumpf = JSONObject().put("art", art)
+                    zusatz?.keys()?.forEach { rumpf.put(it, zusatz.get(it)) }
                     val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/updatezentrale-befehl")
-                        .post(JSONObject().put("art", art).toString().toRequestBody(JSON))
+                        .post(rumpf.toString().toRequestBody(JSON))
                         .header("X-Jarvis-Token", e.serverToken).header(Geraet.KOPFZEILE, Geraet.kennung).build()
                     NETZ.newCall(anfrage).execute().use { a ->
                         // Eine Fehlerantwort heißt: Der Relay hat nichts eingereiht.
@@ -129,12 +161,6 @@ object MacUpdateZentrale {
                     if (nieGesendet) "Server nicht erreichbar. Es wurde nichts gestartet."
                     else "Verbindung abgebrochen. Ob der Auftrag ankam, ist unklar – er wird nicht erneut gesendet; die Karte zeigt gleich den Stand des Macs."
                 }
-            }
-            Logbuch.netz("Mac-Update-Zentrale: $art", text ?: "angenommen")
-            meldung.value = text
-            sendet.value = null
-            holen(context)
-        }
     }
 }
 
@@ -143,9 +169,9 @@ private fun uhr(sekunden: Double): String = SimpleDateFormat("HH:mm", Locale.GER
 private fun JSONArray?.objekte(): List<JSONObject> = (0 until (this?.length() ?: 0)).map { this!!.getJSONObject(it) }
 
 /**
- * Startkarte „Mac-Update-Zentrale“: zugeklappt Zahl der Updates, Status und rechts „Aktualisieren“ (frische Prüfung am Mac, installiert
+ * Startkarte „Mac-Zentrale“ mit zwei aufklappbaren Abschnitten. „Update-Zentrale“ (der frühere Inhalt): zugeklappt Zahl der Updates, Status und rechts „Aktualisieren“ (frische Prüfung am Mac, installiert
  * nichts). Aufgeklappt oben Grün „Unkritische Updates installieren“ und Rot „Kritische Updates installieren“ (nur nach Ja im Warnfenster),
- * darunter Status, lokale Freigaben, Neustarts, Ergebnis und die Updates in zwei Gruppen.
+ * darunter Status, lokale Freigaben, Neustarts, Ergebnis und die Updates in zwei Gruppen. „Programmier-CLI“: [CliAbschnitt].
  */
 @Composable
 fun MacUpdateStartKarte(griff: Modifier = Modifier) {
@@ -156,6 +182,7 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     val sendet by MacUpdateZentrale.sendet.collectAsState()
     val eigene by MacUpdateZentrale.eigeneKennung.collectAsState()
     var offen by rememberSaveable { mutableStateOf(false) }
+    var cliOffen by rememberSaveable { mutableStateOf(false) }
     var kritischFrage by remember { mutableStateOf(false) }
     val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
 
@@ -167,8 +194,8 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     val beendet = !l.app && s != null && (s.optBoolean("laeuft") || vorgang?.optString("phase") == "laeuft")
     // Während eines Laufs meldet der Mac mindestens alle 30 s: Bleibt das aus, ist die Verbindung weg und der Stand unklar.
     val abgerissen = laeuft && ((l.alterS ?: 0) > 120 || !l.macDa)
-    val eilig by androidx.compose.runtime.rememberUpdatedState(laeuft || sendet != null)
-    val aufgeklappt by androidx.compose.runtime.rememberUpdatedState(offen)
+    val eilig by androidx.compose.runtime.rememberUpdatedState(laeuft || sendet != null || l.cli?.optBoolean("laeuft") == true)
+    val aufgeklappt by androidx.compose.runtime.rememberUpdatedState(offen || cliOffen)
     LaunchedEffect(Unit) {
         while (true) {
             MacUpdateZentrale.holen(context)
@@ -187,13 +214,16 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     val freigabe = s?.optString("freigabe").orEmpty()
 
     Karte(modifier = griff) {
-        Row(verticalAlignment = Alignment.Top) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.padding(end = 10.dp).size(44.dp).glas(f, 14.dp, erhoeht = 0.3f), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.LaptopMac, null, tint = f.primaer, modifier = Modifier.size(24.dp))
             }
+            Text("Mac-Zentrale", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f).antippen(haptik = false) { offen = !offen }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Mac-Update-Zentrale", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Update-Zentrale", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     val n = unkritisch.size + kritisch.size
                     if (n > 0) Text("$n", Modifier.padding(start = 8.dp).glas(f, 10.dp, erhoeht = 0.2f, toenung = f.primaer).padding(horizontal = 8.dp, vertical = 2.dp),
                         color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -278,6 +308,8 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
                 if (fehler.isNotEmpty()) Gruppe("Prüfung fehlgeschlagen (geht an Claude Code)", fehler, leer = "")
             }
         }
+
+        CliAbschnitt(l, cliOffen) { cliOffen = !cliOffen }
     }
 
     if (kritischFrage) AlertDialog(
@@ -317,4 +349,106 @@ private fun Gruppe(titel: String, liste: List<JSONObject>, leer: String, mitGrun
             zusatz.forEach { Text(it, color = f.textSchwach, fontSize = 12.sp) }
         }
     }
+}
+
+
+/**
+ * Abschnitt „Programmier-CLI“: „Aufräumen“ fragt „Möchtest du jetzt die CLI aufräumen?“; nur Ja startet am Mac das sichere Aufräumen
+ * (jarvis_cli_aufraeumen.py: beendet nur Sitzungen, die eindeutig seit mehr als einer Stunde inaktiv sind, älteste zuerst). Darunter der
+ * Schalter „Automatisches Aufräumen“ (zunächst aus) und das Intervall 1–24 Stunden. Schalter und Intervall speichert der Mac; die Karte
+ * zeigt seinen gemeldeten Stand.
+ */
+@Composable
+private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: () -> Unit) {
+    val f = LocalFarben.current
+    val context = LocalContext.current.applicationContext
+    val sendet by MacUpdateZentrale.cliSendet.collectAsState()
+    val meldung by MacUpdateZentrale.cliMeldung.collectAsState()
+    var frage by remember { mutableStateOf(false) }
+    val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "cliPfeil")
+    val c = l.cli
+    val laeuft = c?.optBoolean("laeuft") == true
+    val automatik = c?.optBoolean("automatik") == true
+    val stunden = (c?.optInt("stunden", 6) ?: 6).coerceIn(1, 24)
+    val letzter = c?.optJSONObject("letzter")
+    val sitzungen = c?.optJSONArray("sitzungen").objekte()
+    val bedienbar = l.macDa && c != null && sendet == null
+
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp).antippen(haptik = false) { umschalten() }, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Programmier-CLI", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                when {
+                    sendet == "cli_aufraeumen" || laeuft -> "Räumt am MacBook auf …"
+                    c == null && !l.macDa -> "MacBook nicht erreichbar"
+                    c == null -> "Noch kein Stand vom MacBook"
+                    else -> "${sitzungen.size} offene Sitzungen · Automatik " + if (automatik) "alle $stunden h" else "aus"
+                },
+                color = if (laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen",
+            Modifier.size(24.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
+    }
+
+    AnimatedVisibility(offen) {
+        Column {
+            Knopf(if (laeuft) "Aufräumen läuft …" else "Aufräumen", Modifier.fillMaxWidth().padding(top = 12.dp).alpha(if (bedienbar && !laeuft) 1f else 0.4f)) {
+                if (bedienbar && !laeuft) frage = true
+            }
+            Text("Beendet nur Sitzungen, die seit mehr als einer Stunde eindeutig inaktiv sind, älteste zuerst. Aktive, wartende, kürzlich " +
+                "genutzte und unklare bleiben offen. Verläufe und Projektdaten bleiben erhalten.",
+                color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Automatisches Aufräumen", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = automatik, enabled = bedienbar, onCheckedChange = {
+                    MacUpdateZentrale.cliSenden(context, "cli_einstellung", JSONObject().put("automatik", it))
+                })
+            }
+            // 0 und 25 sind nur leere Randmarken: Der Regler rastet auf 1 bis 24 ganze Stunden ein.
+            var wert by remember(stunden) { mutableStateOf(stunden.toFloat()) }
+            Text("Intervall: alle ${wert.toInt()} " + if (wert.toInt() == 1) "Stunde" else "Stunden",
+                color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+            androidx.compose.material3.Slider(
+                value = wert, onValueChange = { wert = kotlin.math.round(it).coerceIn(1f, 24f) }, valueRange = 0f..25f, steps = 24,
+                enabled = bedienbar, modifier = Modifier.fillMaxWidth().height(48.dp),
+                onValueChangeFinished = {
+                    val neu = wert.toInt().coerceIn(1, 24)
+                    if (neu != stunden) MacUpdateZentrale.cliSenden(context, "cli_einstellung", JSONObject().put("stunden", neu))
+                },
+            )
+            if (automatik) c?.optDouble("naechster")?.takeIf { !it.isNaN() && it > 0 }?.let {
+                Text("Nächster Lauf " + uhr(it) + " Uhr", color = f.textLeise, fontSize = 13.sp)
+            }
+            meldung?.let { Text(it, color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+            letzter?.let { e ->
+                val wann = e.optDouble("zeit").takeIf { !it.isNaN() }?.let { " (" + uhr(it) + ")" }.orEmpty()
+                Hinweis((if (e.optString("art") == "auto") "Automatisch: " else "Zuletzt: ") + e.optString("text") + wann,
+                    if (e.optJSONArray("beendet").objekte().isNotEmpty()) f.erfolg else f.primaer)
+                e.optJSONArray("beendet").objekte().forEach { b ->
+                    Text("✓ " + b.optString("name") + " beendet" + (b.optInt("inaktiv_min", -1).takeIf { it >= 0 }?.let { " (${it / 60} h inaktiv)" } ?: ""),
+                        color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            if (sitzungen.isNotEmpty()) {
+                Text("Offene Sitzungen (${sitzungen.size})", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+                sitzungen.forEach { x ->
+                    val min = x.optInt("inaktiv_min", -1)
+                    val dauer = when { min < 0 -> ""; min < 60 -> " · $min min"; else -> " · ${min / 60} h ${min % 60} min" }
+                    Text(x.optString("name") + " – " + when (x.optString("zustand")) {
+                        "aktiv" -> "aktiv"; "wartet" -> "wartet auf Antwort"; "kuerzlich" -> "kürzlich genutzt"
+                        "inaktiv" -> "inaktiv"; else -> "unklar"
+                    } + dauer, color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+        }
+    }
+
+    if (frage) AlertDialog(
+        onDismissRequest = { frage = false },
+        text = { Text("Möchtest du jetzt die CLI aufräumen?") },
+        confirmButton = { TextButton({ frage = false; MacUpdateZentrale.cliSenden(context, "cli_aufraeumen") }) { Text("Ja") } },
+        dismissButton = { TextButton({ frage = false }) { Text("Nein") } },
+    )
 }

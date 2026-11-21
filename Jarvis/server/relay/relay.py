@@ -2244,6 +2244,7 @@ class TendaStand:
 
 UZ_DATEI = ZUSTAND.with_name("updatezentrale.json")
 UZ_ARTEN = {"pruefen", "unkritisch", "kritisch"}
+CLI_ARTEN = {"cli_aufraeumen", "cli_einstellung"}  # Programmier-CLI aufräumen (Mac-Zentrale), gehen nur an die Brücke
 
 
 class UpdateZentraleStand:
@@ -2264,16 +2265,20 @@ class UpdateZentraleStand:
         self.empfangen = 0
         self.offen = None      # zuletzt angenommener Auftrag {kennung, art, zeit}
         self.fehler = None     # Fehler der Brücke zu einem Auftrag {kennung, text, zeit}
+        self.cli = None        # Programmier-CLI aufräumen: Schalter, Intervall, letzter Lauf, offene Sitzungen (vom Mac)
+        self.cli_empfangen = 0
         try:
             d = json.loads(datei.read_text("utf-8"))
             self.stand, self.app, self.empfangen = d.get("stand"), bool(d.get("app")), int(d.get("empfangen") or 0)
+            self.cli, self.cli_empfangen = d.get("cli"), int(d.get("cli_empfangen") or 0)
         except Exception:
             pass
 
     def _sichern(self) -> None:
         try:
             zwischen = self.datei.with_suffix(".neu")
-            zwischen.write_text(json.dumps({"stand": self.stand, "app": self.app, "empfangen": self.empfangen}, ensure_ascii=False), "utf-8")
+            zwischen.write_text(json.dumps({"stand": self.stand, "app": self.app, "empfangen": self.empfangen,
+                                               "cli": self.cli, "cli_empfangen": self.cli_empfangen}, ensure_ascii=False), "utf-8")
             os.replace(zwischen, self.datei)
         except Exception as fehler:
             log.warning("updatezentrale.json nicht geschrieben: %s", fehler)
@@ -2292,10 +2297,21 @@ class UpdateZentraleStand:
     async def befehl(self, request: web.Request) -> web.Response:
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
+        zusatz = {}
         try:
-            art = str(json.loads((await request.read()).decode("utf-8")).get("art") or "")
-            if art not in UZ_ARTEN:
+            rumpf = json.loads((await request.read()).decode("utf-8"))
+            art = str(rumpf.get("art") or "")
+            if art not in UZ_ARTEN | CLI_ARTEN:
                 raise ValueError
+            if art == "cli_einstellung":
+                automatik, stunden = rumpf.get("automatik"), rumpf.get("stunden")
+                if automatik is not None and not isinstance(automatik, bool):
+                    raise ValueError
+                if stunden is not None and (isinstance(stunden, bool) or not isinstance(stunden, int) or not 1 <= stunden <= 24):
+                    raise ValueError
+                if automatik is None and stunden is None:
+                    raise ValueError
+                zusatz = {"automatik": automatik, "stunden": stunden}
         except Exception:
             return web.Response(status=400, text="ungueltig")
         for _ in range(20):
@@ -2304,14 +2320,19 @@ class UpdateZentraleStand:
             await asyncio.sleep(0.5)
         else:
             return web.json_response({"ergebnis": "mac_nicht_verbunden"})
-        laeuft = self._laeuft()
-        if laeuft and (art != "pruefen" or ((self.stand or {}).get("vorgang") or {}).get("art") != "pruefen"):
-            return web.json_response({"ergebnis": "laeuft_bereits", "text": laeuft})
+        if art in CLI_ARTEN:
+            if art == "cli_aufraeumen" and (self.cli or {}).get("laeuft") and int(time.time()) - self.cli_empfangen < 600:
+                return web.json_response({"ergebnis": "laeuft_bereits", "text": "Das Aufräumen läuft bereits."})
+        else:
+            laeuft = self._laeuft()
+            if laeuft and (art != "pruefen" or ((self.stand or {}).get("vorgang") or {}).get("art") != "pruefen"):
+                return web.json_response({"ergebnis": "laeuft_bereits", "text": laeuft})
         kennung = f"u{time.time():.6f}"
         zukunft = asyncio.get_running_loop().create_future()
         self.warten[kennung] = zukunft
-        auftrag = {"art": art, "kennung": kennung}
-        self.offen = {"kennung": kennung, "art": art, "zeit": int(time.time())}
+        auftrag = {"art": art, "kennung": kennung, **zusatz}
+        if art not in CLI_ARTEN:
+            self.offen = {"kennung": kennung, "art": art, "zeit": int(time.time())}
         self.kanal.uz_auftraege.append(auftrag)
         self.kanal.befehl.set()
         ende = time.monotonic() + 20
@@ -2332,7 +2353,8 @@ class UpdateZentraleStand:
                         self.kanal.befehl.set()
         except asyncio.TimeoutError:
             if kennung not in self.kanal.uz_ausgegeben:
-                self.offen = None
+                if art not in CLI_ARTEN:
+                    self.offen = None
                 return web.json_response({"ergebnis": "mac_nicht_verbunden", "kennung": kennung})
             return web.json_response({"ergebnis": "unklar", "kennung": kennung})
         finally:
@@ -2357,6 +2379,9 @@ class UpdateZentraleStand:
         if isinstance(daten.get("stand"), dict):
             self.stand, self.app, self.empfangen = daten["stand"], bool(daten.get("app")), int(time.time())
             await asyncio.to_thread(self._sichern)
+        if isinstance(daten.get("cli"), dict):
+            self.cli, self.cli_empfangen = daten["cli"], int(time.time())
+            await asyncio.to_thread(self._sichern)
         if daten.get("fehler") and kennung:
             self.fehler = {"kennung": kennung, "text": str(daten["fehler"])[:300], "zeit": int(time.time())}
         if daten.get("empfangen"):
@@ -2371,7 +2396,8 @@ class UpdateZentraleStand:
         if not darf_handy(request):
             return web.json_response({}, status=404)
         return web.json_response({"stand": self.stand, "app": self.app, "alter_s": int(time.time()) - self.empfangen if self.stand else None,
-                                  "mac_da": self.kanal.bruecke.da(), "offen": self.offen, "fehler": self.fehler})
+                                  "mac_da": self.kanal.bruecke.da(), "offen": self.offen, "fehler": self.fehler,
+                                  "cli": self.cli, "cli_alter_s": int(time.time()) - self.cli_empfangen if self.cli else None})
 
 
 class AblageAbgleich:
