@@ -902,6 +902,7 @@
   {"versionCode": 893, "versionName": "1.8.882", "stand": "21.11.2026, 15:26 Uhr", "notiz": "Nachträge kommen jetzt auch während der Arbeit sofort beim nächsten Schritt in die Sitzung, nicht erst nach Bau und Installation, und ein Nachtrag, der wegen Verbindungsabbruch nicht ankam, wird von selbst nachgeschickt."},
   {"versionCode": 894, "versionName": "1.8.883", "stand": "21.11.2026, 15:29 Uhr", "notiz": "Ein angekommener Nachtrag steht jetzt auch im CLI wörtlich da, nicht nur der Hinweis, dass einer kam."},
   {"versionCode": 895, "versionName": "1.8.884", "stand": "21.11.2026, 15:30 Uhr", "notiz": "Je Programmier-Sitzung wartet wieder genau ein Warter auf Nachträge statt bei jedem Schritt ein weiterer."},
-  {"versionCode": 896, "versionName": "1.8.885", "stand": "21.11.2026, 15:37 Uhr", "notiz": "Ein Nachtrag, der wegen eines Server-Neustarts nicht ankam, wird jetzt auch ohne neues Verbinden nach Sekunden nachgeschickt, und Hinweise dazu setzen eine beendete Sitzung nicht mehr auf läuft."}
+  {"versionCode": 896, "versionName": "1.8.885", "stand": "21.11.2026, 15:37 Uhr", "notiz": "Ein Nachtrag, der wegen eines Server-Neustarts nicht ankam, wird jetzt auch ohne neues Verbinden nach Sekunden nachgeschickt, und Hinweise dazu setzen eine beendete Sitzung nicht mehr auf läuft."},
+  {"versionCode": 897, "versionName": "1.8.886", "stand": "21.11.2026, 15:49 Uhr", "notiz": "Nachträge kommen nach den Review-Befunden zuverlässiger an: vollständig mit Anhängen auch beim erneuten Übergeben, nie über einen Hilfsagenten und ohne doppelte Zeilen in Jarvis."}
 ]
 }

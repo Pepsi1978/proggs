@@ -99,9 +99,8 @@ function Jarvis-Hooks {
     return [ordered]@{
         PostToolUse        = @(Eintrag '*' 'post' 15 $true)
         PostToolUseFailure = @(Eintrag 'Bash|PowerShell' 'post' 15 $true)
-        # Auch vor jedem Werkzeug ein Warter (endet sofort, wenn schon einer läuft): sonst kamen Nachträge erst nach dem nächsten Stop an.
-        PreToolUse         = @((Eintrag 'AskUserQuestion' 'frage' 660), (Eintrag '*' 'puls' 10 $true),
-                               [ordered]@{ matcher = '*'; hooks = $warter.hooks })
+        # Den Warter vor jedem Werkzeug bringt das Profil mit (nachwarter; der Notweg setzt CLAUDE_CONFIG_DIR aufs Profil): hier nicht doppelt.
+        PreToolUse         = @((Eintrag 'AskUserQuestion' 'frage' 660), (Eintrag '*' 'puls' 10 $true))
         Stop               = @((Eintrag $null 'stop' 660), $warter)
         StopFailure        = @(Eintrag $null 'fehlschlag' 30)
         SessionStart       = @($warter)

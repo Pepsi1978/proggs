@@ -1118,14 +1118,21 @@ class PcBruecke:
         except FileNotFoundError:
             pass
         except Exception as fehler:
-            # Nicht still: Eine unlesbare Datei hieße leere Warteschlange und kein Doppelschutz.
-            log.warning("Nachtraege nicht lesbar (%s): Warteschlange startet leer", fehler)
+            # Nicht still und nicht überschreiben: Die unlesbare Datei bleibt zur Rettung als .kaputt liegen.
+            try:
+                os.replace(NACHTRAEGE, NACHTRAEGE.with_name(NACHTRAEGE.name + f".kaputt-{int(time.time())}"))
+            except Exception:
+                pass
+            log.warning("Nachtraege nicht lesbar (%s): beiseitegelegt, Warteschlange startet leer", fehler)
 
     def _sichere_nachtraege(self) -> None:
         grenze = time.time() - NACHTRAG_HALTEN_S
         self.nachtraege = {k: [n for n in v if n.get("zeit", 0) >= grenze] for k, v in self.nachtraege.items()}
         self.nachtraege = {k: v for k, v in self.nachtraege.items() if v}
-        self.erledigt = dict(sorted(self.erledigt.items(), key=lambda e: e[1])[-500:])
+        # Doppelschutz nach Zeit, nicht nach Anzahl: Jarvis fragt angenommene Nachträge bis zu sieben Tage nach; fiele eine Nummer
+        # vorher heraus, reihte eine Nachfrage sie erneut ein. Die Obergrenze fängt nur einen Ausreißer ab.
+        frist = time.time() - NACHTRAG_HALTEN_S - 86400
+        self.erledigt = dict(sorted(((k, v) for k, v in self.erledigt.items() if v >= frist), key=lambda e: e[1])[-20_000:])
         try:
             NACHTRAEGE.parent.mkdir(parents=True, exist_ok=True)
             # Atomar: Ein Neustart mitten im Schreiben ließ sonst eine halbe Datei zurück (Warteschlange und Doppelschutz weg).

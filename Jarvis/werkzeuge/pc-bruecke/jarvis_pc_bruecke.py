@@ -276,7 +276,8 @@ def katalog_cli(auftrag: dict) -> str:
 
 
 def jarvis_hooks() -> dict:
-    """Dieselben Hooks wie OpenLauncherService.JarvisHooks() (Windows) bzw. OpenLauncherMac, nur für den Notweg."""
+    """Dieselben Hooks wie OpenLauncherService.JarvisHooks() (Windows) bzw. OpenLauncherMac, nur für den Notweg. Den Warter vor
+    jedem Werkzeug liefern bei allen dreien die Profile (nachwarter in Profiles/ClaudeCode*/…/settings.json)."""
     befehl = f'python3 "{HOOK}"'
 
     def eintrag(matcher, art, timeout, hintergrund=False):
@@ -293,9 +294,8 @@ def jarvis_hooks() -> dict:
     return {
         "PostToolUse": [eintrag("*", "post", 15, True)],
         "PostToolUseFailure": [eintrag("Bash|PowerShell", "post", 15, True)],
-        # Auch vor jedem Werkzeug ein Warter (endet sofort, wenn schon einer läuft): Nach einer Übergabe wartete sonst bis zum
-        # nächsten Stop keiner, und Nachträge kamen erst nach Bau und Installation an.
-        "PreToolUse": [eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, True), dict(warter, matcher="*")],
+        # Den Warter vor jedem Werkzeug bringt das Profil mit (nachwarter, auch der Notweg setzt CLAUDE_CONFIG_DIR aufs Profil): hier nicht doppelt.
+        "PreToolUse": [eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, True)],
         "Stop": [eintrag(None, "stop", 660), warter],
         "StopFailure": [eintrag(None, "fehlschlag", 30)],
         "SessionStart": [warter],

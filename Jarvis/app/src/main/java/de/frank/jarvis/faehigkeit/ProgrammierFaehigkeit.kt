@@ -1607,7 +1607,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun fragenAbgleichen() = withContext(Dispatchers.IO) {
         if (e.serverHost.isBlank() || e.serverToken.isBlank()) return@withContext
-        runCatching { nachtraegeAbgleichen() }.onFailure { Logbuch.fehler("Nachträge abgleichen", it) }
+        // Eigenständig: Jeder Nachtrag ist ein eigener Aufruf, den der Server bis zu 8 s halten kann; die Rückfragen gehen vor.
+        nachtraegeImHintergrund()
         // Einmal je Version: alle Sessions dieses Geräts ans andere, das übernimmt, was ihm fehlt (gleicher Verlauf auf beiden).
         ProgrammierSpiegel.nachholen(app)
         if (ProgrammierSpiegel.verlaufFaellig(app)) verlaufSpiegeln()
@@ -1804,6 +1805,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Wann ein Nachtrag zuletzt beim Server nachgefragt wurde (Nummer -> Millisekunden), damit jedes Öffnen der App nicht alle neu schickt. */
     private val nachtragGeprueft = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Wie oft ein angenommener Nachtrag schon nachgefragt wurde: höchstens dreimal, der Doppelschutz des Servers ist begrenzt. */
+    private val nachtragStichproben = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /** Der eine laufende Abgleich bzw. Wiederholplan; ein neuer Anstoß ersetzt keinen laufenden. */
+    @Volatile private var nachtragLauf: kotlinx.coroutines.Job? = null
+    @Volatile private var nachtragPlan: kotlinx.coroutines.Job? = null
+
+    private fun nachtraegeImHintergrund() {
+        if (nachtragLauf?.isActive == true) return
+        nachtragLauf = baubereich.launch {
+            try { nachtraegeAbgleichen() } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) { Logbuch.fehler("Nachträge abgleichen", fehler) }
+        }
+    }
 
     /**
      * Nachträge dieses Geräts, die noch nicht als angekommen gelten (angenommen, fehler): noch einmal an den Server. Der Server
@@ -1829,9 +1842,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val fehlgeschlagen = n.optString("stand") == "fehler"
             val pause = if (fehlgeschlagen) 15_000L else 120_000L
             if ((!fehlgeschlagen && alter < 60_000L) || jetzt - (nachtragGeprueft[nummer] ?: 0L) < pause) continue
+            if (!fehlgeschlagen && (nachtragStichproben[nummer] ?: 0) >= 3) continue
             nachtragGeprueft[nummer] = jetzt
+            if (!fehlgeschlagen) nachtragStichproben.merge(nummer, 1, Int::plus)
             val senden = n.optJSONObject("senden") ?: continue
-            val antwort = runCatching { anSitzung(id, nummer, senden.optString("text"), senden.optJSONArray("anhaenge") ?: JSONArray()) }.getOrNull() ?: continue
+            val antwort = try { anSitzung(id, nummer, senden.optString("text"), senden.optJSONArray("anhaenge") ?: JSONArray()) }
+                catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) { continue }
             when {
                 antwort.optBoolean("zugestellt") -> alsZugestellt(id, setOf(nummer), "")
                 n.optString("stand") == "fehler" -> {
@@ -1854,10 +1870,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Nach einem gescheiterten Senden: in 20 s, 1 und 5 Minuten erneut, falls die Verbindung (etwa nach einem Server-Neustart) nicht neu aufgebaut wird. */
     private fun nachsendenPlanen() {
-        baubereich.launch {
+        if (nachtragPlan?.isActive == true) return
+        nachtragPlan = baubereich.launch {
             for (warte in listOf(20_000L, 60_000L, 300_000L)) {
                 kotlinx.coroutines.delay(warte)
-                runCatching { nachtraegeAbgleichen() }
+                try { nachtraegeAbgleichen() } catch (fehler: kotlinx.coroutines.CancellationException) { throw fehler } catch (fehler: Exception) { Logbuch.fehler("Nachträge nachsenden", fehler) }
                 if (Auftragsbuch.offeneNachtraege(app).none { it.second.optString("stand") == "fehler" }) break
             }
         }

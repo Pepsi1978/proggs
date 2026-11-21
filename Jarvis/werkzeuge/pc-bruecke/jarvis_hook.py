@@ -451,7 +451,7 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
         # OpenCode: Das Plugin liefert die fertigen Texte seit dem letzten Aufruf selbst mit.
         texte = []
         for text in eingabe.get("texte") or []:
-            text = lesbar(str(text))
+            text = ohne_zitat(lesbar(str(text)))
             if text and not schon_gesehen(z, text):
                 texte.append(text)
         return texte
@@ -482,8 +482,7 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
         for text in bloecke:
             text = lesbar(text)
             # Das sichtbare Zitat eines Nachtrags (ZITAT_ANWEISUNG) steht in Jarvis schon: nur den Rest weitergeben.
-            if text.startswith(ZITAT_MARKE):
-                text = text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
+            text = ohne_zitat(text)
             if text and not schon_gesehen(z, text):
                 texte.append(text)
     return texte
@@ -780,6 +779,15 @@ def bilder_einfuegen_jetzt(pfade: list[Path], vorspann: str) -> str:
 # vom 21.11.2026): Der Weckruf selbst zeigt dort nur „Nachtrag von Frank über Jarvis“. Die Sitzung zitiert ihn deshalb zuerst
 # sichtbar; neue_texte gibt diesen Absatz nicht noch einmal an Jarvis weiter (dort steht der Nachtrag schon).
 ZITAT_MARKE = "📨 Nachtrag "
+# Tolerant: Markdown davor („**“, „> “, Leerraum). Entfernt wird nur der Zitat-Absatz (bis zur Leerzeile, sonst bis zum Zeilenende).
+ZITAT_MUSTER = re.compile(r"^[\s>*_]*📨\s*Nachtrag\b[^\n]*(?:\n(?!\s*\n)[^\n]*)*", re.UNICODE)
+
+
+def ohne_zitat(text: str) -> str:
+    """Der Text ohne das vorangestellte Zitat eines Nachtrags (ZITAT_ANWEISUNG): Das steht in Jarvis schon."""
+    if "📨" not in text[:40]:
+        return text
+    return ZITAT_MUSTER.sub("", text, count=1).strip()
 ZITAT_ANWEISUNG = ("Schreib als Erstes für Frank sichtbar einen Absatz, der mit „📨 Nachtrag <Nummer> angekommen:“ beginnt und den Nachtrag "
                    "danach wörtlich und vollständig zitiert (in diesem einen Absatz, Zeilenumbrüche als Leerzeichen), erst danach setzt du ihn um.")
 
@@ -815,18 +823,50 @@ def uebergib(neu: list[dict], bilder_einfuegen: bool = True) -> str:
         return (f"Jarvis, Franks Sprachassistent, spricht über das Handy mit dir (Frank hört mit). Reagiere genau wie in der Nachricht "
                 f"beschrieben und arbeite danach an deiner bisherigen Aufgabe weiter. AUFTRAG-ID {AUFTRAG}.\n\n{teile}")
     teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in neu)
+    # Die freigegebenen Texte für ein späteres erneutes Übergeben (samt Anhangsblock, den anhaenge_uebernehmen anhängt).
+    belege_text(neu)
     if LOKAL:
         # Antworten auf eine freie Rückfrage kommen als Nachtrag „antwort-<frage_id>“: in Jarvis überall beantwortet.
         for n in neu:
             if n["nachtrag_id"].startswith("antwort-"):
                 frage_status(n["nachtrag_id"].removeprefix("antwort-"), "beantwortet", antwort=n["text"], versuche=2)
+        # Antworten auf eine Rückfrage sind keine Nachträge: kein Zitat-Absatz dafür.
+        zitat = "" if all(n["nachtrag_id"].startswith("antwort-") for n in neu) else " " + ZITAT_ANWEISUNG
         return (f"Frank hat dir über Jarvis (Handy) {'eine Nachricht' if len(neu) == 1 else str(len(neu)) + ' Nachrichten'} zu dieser Sitzung "
-                f"geschickt. Behandle sie wie eine Eingabe von ihm am Rechner und arbeite damit hier weiter. {ZITAT_ANWEISUNG}\n\n{teile}")
-    return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
+                f"geschickt. Behandle sie wie eine Eingabe von ihm am Rechner und arbeite damit hier weiter.{zitat}\n\n{teile}")
+    return auftrag_rahmen(len(neu), teile)
+
+
+def auftrag_rahmen(anzahl: int, teile: str, vorspann: str = "") -> str:
+    """Der Rahmen, mit dem Nachträge in eine Auftrags-Sitzung gehen (Zugehörigkeit, Abschlusspflicht, Meldung, Zitat)."""
+    return (f"{vorspann}Frank hat über Jarvis {'einen Nachtrag' if anzahl == 1 else str(anzahl) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
             f"{'mit jarvis_hook.py melde fertig' if os.environ.get('JARVIS_SERVER') else 'stand=fertig mit programmier_fortschritt'}. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}. "
             f"{ZITAT_ANWEISUNG}\n\n{teile}")
+
+
+def belege_text(neu: list[dict]) -> None:
+    """Hinterlegt den endgültigen Text (mit Anhangsblock) der noch unbelegten Nachträge: Geht einer erneut hinein, dann vollständig."""
+    try:
+        with Sperre():
+            z = lies_zustand()
+            offen = z.get("unbelegt") or {}
+            geaendert = False
+            for n in neu:
+                if n["nachtrag_id"] in offen:
+                    offen[n["nachtrag_id"]]["text"] = n["text"][:20_000]
+                    geaendert = True
+            if geaendert:
+                schreib_zustand(z)
+    except SperreBelegt:
+        pass
+
+
+def nochmal_text(nochmal: list[dict]) -> str:
+    """Erneutes Übergeben verlorener Nachträge: derselbe Rahmen wie beim ersten Mal, ohne zweite Quittung."""
+    teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal)
+    return auftrag_rahmen(len(nochmal), teile, "Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. ")
 
 
 def _windows_prozesse() -> dict[int, tuple[int, str]]:
@@ -991,31 +1031,61 @@ def nachtraege_im_stop(eingabe: dict | None = None) -> bool:
         return False
     teile = [uebergib(neu)] if neu else []
     if nochmal:
-        teile.append("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um. " + ZITAT_ANWEISUNG + "\n\n"
-                     + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
+        teile.append(nochmal_text(nochmal))
     sys.stdout.write(json.dumps({"decision": "block", "reason": "\n\n".join(teile)}, ensure_ascii=False))
     return True
+
+
+def _warter_lesen() -> tuple[str, int, str]:
+    """Inhalt der pid-Datei, PID und Startzeit. Die pid-Datei trägt PID und Startzeit („1234 Sa. 21 Nov. 15:30:20 2026“);
+    nur am ersten Leerzeichen trennen: Mit split() verglich lebt() nur „Sa.“, ein lebender Warter galt als tot, und jeder
+    Hook startete einen weiteren (Vorfall 21.11.2026). Ältere Fassungen schrieben nur die PID."""
+    try:
+        roh = WARTER.read_text(encoding="utf-8").strip()
+        teile = roh.split(maxsplit=1)
+        return roh, int(teile[0]), teile[1] if len(teile) > 1 else ""
+    except Exception:
+        return "", 0, ""
+
+
+def warter_beanspruchen(ereignis: str) -> bool:
+    """
+    True = dieser Prozess ist jetzt der eine Warter des Auftrags. Seit der Warter vor jedem Werkzeug angeboten wird (nachwarter),
+    starten oft mehrere gleichzeitig. Prüfen (ps, bis zu Sekunden) läuft außerhalb der Sperre; unter ihr nur Lesen, Vergleichen,
+    Schreiben: Hat ein anderer die Datei inzwischen übernommen, gehört sie ihm. Ein Stop- oder SessionStart-Warter ist der einzige
+    einer ruhenden Sitzung: Er gibt bei belegter Sperre nicht auf, sondern versucht es weiter und schreibt zuletzt ohne Sperre.
+    """
+    eigen = f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip()
+    beharrlich = ereignis in ("Stop", "SessionStart")
+    for versuch in range(4 if beharrlich else 1):
+        roh, alter, alter_start = _warter_lesen()
+        if alter and alter != os.getpid() and lebt(alter, alter_start):
+            return False
+        try:
+            with Sperre():
+                if _warter_lesen()[0] != roh:
+                    continue
+                WARTER.write_text(eigen, encoding="utf-8")
+                return True
+        except SperreBelegt:
+            if not beharrlich:
+                return False
+    if beharrlich:
+        roh, alter, alter_start = _warter_lesen()
+        if alter and alter != os.getpid() and lebt(alter, alter_start):
+            return False
+        WARTER.write_text(eigen, encoding="utf-8")
+        return True
+    return False
 
 
 def warte(eingabe: dict) -> int:
     """asyncRewake: wartet auf Nachträge; Exit 2 mit dem Nachtrag weckt die Sitzung. Nur ein Warter je Auftrag."""
     ORDNER.mkdir(parents=True, exist_ok=True)
-    # Unter der Sperre: Seit der Warter vor jedem Werkzeug neu angeboten wird (nachwarter), starten oft mehrere gleichzeitig;
-    # ohne Sperre sähen beide keinen lebenden Warter und holten parallel ab.
-    try:
-        with Sperre():
-            # Die pid-Datei trägt PID und Startzeit („1234 133…“); ältere Fassungen schrieben nur die PID.
-            try:
-                # Nur am ersten Leerzeichen trennen: Die Startzeit von macOS/Linux („Sa. 21 Nov. 15:30:20 2026“) enthält selbst
-                # Leerzeichen. Mit split() verglich lebt() nur „Sa.“, ein lebender Warter galt als tot, und jeder Hook startete einen weiteren.
-                teile = WARTER.read_text(encoding="utf-8").strip().split(maxsplit=1)
-                alter, alter_start = (int(teile[0]), teile[1] if len(teile) > 1 else "") if teile else (0, "")
-            except Exception:
-                alter, alter_start = 0, ""
-            if alter and alter != os.getpid() and lebt(alter, alter_start):
-                return 0
-            WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
-    except SperreBelegt:
+    # Werkzeuge eines Subagenten (Explore, Review …) starten keinen Warter: Sein Weckruf landete womöglich beim Subagenten statt in der Sitzung.
+    if eingabe.get("agent_id") or eingabe.get("agent_type"):
+        return 0
+    if not warter_beanspruchen(str(eingabe.get("hook_event_name") or "")):
         return 0
     # OpenCode: Das Plugin nennt seinen Prozess, einen claude*-Vorfahren gibt es dort nicht. Claude Code nennt sich selbst
     # (CLAUDE_PID, ab 2.1.x); der Vorfahr bleibt der Ersatz für ältere Fassungen.
@@ -1072,8 +1142,7 @@ def warte(eingabe: dict) -> int:
             if not LOKAL and transkript and zugstand(transkript) == "ende":
                 nochmal = nicht_angekommen(eingabe, BELEG_STILL_S)
                 if nochmal:
-                    sys.stderr.write("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um. " + ZITAT_ANWEISUNG + "\n\n"
-                                     + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
+                    sys.stderr.write(nochmal_text(nochmal))
                     schreib(f"Warter: {len(nochmal)} Nachtrag/Nachträge ohne Beleg erneut übergeben")
                     return 2
             try:
@@ -1885,7 +1954,8 @@ def frage(eingabe: dict) -> None:
 
 
 def stop(eingabe: dict) -> None:
-    letzte = lesbar(str(eingabe.get("last_assistant_message") or ""))
+    # Ohne das Zitat eines Nachtrags, genau wie neue_texte: sonst ginge der Rest einmal als 💬 und einmal im 🏁-Bericht an Jarvis.
+    letzte = ohne_zitat(lesbar(str(eingabe.get("last_assistant_message") or "")))
     raus = []
     erledigt = []
     sperr = []
