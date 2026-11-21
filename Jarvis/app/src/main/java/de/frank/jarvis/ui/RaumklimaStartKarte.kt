@@ -116,8 +116,8 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
                     // Herkunft vor dem Wert (Frank, 15.11.2026): nichts = SwitchBot-Cloud (auch Webhook), „Mac“ = Mac zu Hause, „BL“ = Handy direkt per Bluetooth.
-                    // Danach die Messzeit (Frank, 21.11.2026): Uhrzeit, bei über einem Tag nur das Datum.
-                    herkunft(z.optString("quelle")) + messzeit(z.optLong("gemessen").takeIf { it > 0 } ?: z.optLong("abgerufen_s")) +
+                    // Davor die Messzeit (Frank, 21.11.2026): Uhrzeit mit „Uhr“, von einem anderen Tag nur das Datum.
+                    messzeit(z.optLong("gemessen").takeIf { it > 0 } ?: z.optLong("abgerufen_s")) + herkunft(z.optString("quelle")) +
                     if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
                     else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")),
                     color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(2f), textAlign = TextAlign.End,
@@ -178,15 +178,15 @@ private fun Co2Skala(ppm: Int) {
 }
 
 private fun herkunft(quelle: String): String = when {
-    quelle.startsWith("über den Mac") -> "Mac "
-    quelle.startsWith("direkt per Bluetooth") -> "BL "
+    quelle.startsWith("über den Mac") -> "Mac · "
+    quelle.startsWith("direkt per Bluetooth") -> "BL · "
     else -> ""
 }
 
-/** Messzeit (bei der Cloud der Abruf) als „11:20 · “, stammt sie von einem anderen Tag „19.11. · “; ohne Zeit nichts. */
+/** Messzeit (bei der Cloud der Abruf) als „11:20 Uhr · “, stammt sie von einem anderen Tag „19.11. · “; ohne Zeit nichts. */
 private fun messzeit(sekunden: Long): String {
     if (sekunden <= 0) return ""
     val zeit = java.time.Instant.ofEpochSecond(sekunden).atZone(java.time.ZoneId.systemDefault())
     val alt = zeit.toLocalDate() != java.time.LocalDate.now()
-    return zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (alt) "dd.MM." else "HH:mm", Locale.GERMANY)) + " · "
+    return zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (alt) "dd.MM." else "HH:mm", Locale.GERMANY)) + (if (alt) " · " else " Uhr · ")
 }
