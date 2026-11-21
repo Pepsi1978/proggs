@@ -1351,9 +1351,9 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
                                      "nenne den kleinsten nötigen nächsten Schritt und erledige die übrigen sicheren Teile.")
             continue
         # Franks Vorgabe vom 21.11.2026: Aufs Tablet nur nach ausdrücklichem Ja; Schweigen heißt Nein, ohne Verbindungsversuch.
-        if re.search(r"(?i)tablet", frage_text) and re.search(r"(?i)install", frage_text):
-            antworten[frage_text] = (f"Nein (keine Antwort von Frank, {grund}). Jarvis NICHT aufs Tablet installieren, keinen "
-                                     "Verbindungs- oder Installationsversuch am Tablet; die übrigen Fragen gelten wie beantwortet.")
+        if re.search(r"(?i)tablet", frage_text):
+            antworten[frage_text] = (f"Nein (keine Antwort von Frank, {grund}). Die App NICHT aufs Tablet installieren, keinen "
+                                     "Verbindungs- oder Installationsversuch am Tablet.")
             continue
         # Franks Vorgabe vom 07.11.2026: Auch beim Angebot eines Code-Reviews entscheidet die Sitzung nach Ablauf selbst (früher Nein).
         if re.search(r"(?i)code[- ]?review", frage_text) and not re.search(r"(?i)befund|beheb|fix", frage_text):
@@ -1377,7 +1377,7 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
 def weiter_ohne_antwort(grund: str) -> str:
     """Anweisung an die Sitzung, wenn eine freie Rückfrage am Zugende ohne Antwort blieb (Stop-Hook, decision block)."""
     return (f"{grund}: Frank hat auf deine Frage nicht geantwortet. Halte das fest und frag nicht erneut. Geht es um das Angebot "
-            "eines Code-Reviews, entscheide selbst, ob es sinnvoll ist (klein und risikoarm: nein). Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende "
+            "eines Code-Reviews, entscheide selbst, ob es sinnvoll ist (klein und risikoarm: nein). Eine Frage nach der Installation aufs Tablet heißt Nein, ohne Tablet-Versuch. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende "
             "den Zug mit einem Satz. Sonst überlege selbst die bestmögliche Lösung, baue sie ein, arbeite weiter und nenne die "
             "Entscheidung in der Abschlussmeldung.")
 
@@ -1486,6 +1486,13 @@ def antwort_aus_jarvis(antwort: dict, fragen: list) -> dict:
     zusatz = str(antwort.get("text", "")).strip()
     if zusatz and not antworten:
         antworten = {str(f.get("question", "")): zusatz for f in fragen if isinstance(f, dict)}
+        # Franks Vorgabe vom 21.11.2026: Aufs Tablet nur nach ausdrücklichem Ja. Ein Freitext gilt für alle Fragen der Runde;
+        # ein „Ja, Standard“ zum Review darf dabei nicht als Ja zum Tablet zählen.
+        if len(antworten) > 1:
+            for frage_text in antworten:
+                if re.search(r"(?i)tablet", frage_text):
+                    antworten[frage_text] = (f"Frank sagte per Sprache für die ganze Runde: „{zusatz}“. Nur wenn er darin das Tablet "
+                                             "ausdrücklich bejaht, gilt Ja; sonst Nein, ohne Tablet-Versuch.")
     return antworten
 
 

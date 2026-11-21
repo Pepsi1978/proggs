@@ -393,6 +393,7 @@ object Meldungen {
     private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean) {
         // Franks Vorgabe vom 24.10.2026: Jede Rückfrage wird einzeln angesagt, auch bei gleichem Wortlaut aus einer anderen
         // Session. Die nächste wartet, bis die vorige gesprochen ist; ihr Start schnitt sonst die laufende mitten im Satz ab.
+        // Ausnahme (21.11.2026): Code-Review-Fragen, solange die vorige noch offen ist, siehe ReviewAnsage in ProgrammierFaehigkeit.kt.
         if (art === Meldungsarten.RUECKFRAGE) rueckfrageReihe.withLock { sprichEinzeln(context, art, titel, text, solange, ausdruecklich, warten = true) }
         else sprichEinzeln(context, art, titel, text, solange, ausdruecklich, warten = false)
     }
