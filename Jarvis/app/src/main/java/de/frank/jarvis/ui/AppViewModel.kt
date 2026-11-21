@@ -2150,9 +2150,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Sperrbildschirm über das neue Gespräch.
                 if (sprachmodusNr == nr) fertig()
                 SprachBlase.abgleichen(getApplication())
+                // Echtes Ende (nicht abgelöst): einmal „DÖ-DO“, sobald Mikrofon und Vorlesen wirklich aus sind.
+                if (sprachmodusNr == nr) endeTonSpielen(nr)
             }
         }
     }
+
+    /**
+     * Doppelton am Ende der Sprachsession. Eigener Bereich, damit er auch nach einem Abbruch des ViewModels noch läuft.
+     * Wartet, bis die Aufnahme gestoppt ist und keine Antwort mehr spricht; startet inzwischen eine neue Session
+     * oder nimmt Frank von Hand weiter auf, entfällt er.
+     */
+    private fun endeTonSpielen(nr: Int) {
+        endeTonBereich.launch {
+            val bereit = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
+                while (nimmtAuf || holtMikro || mikro.isRecording() ||
+                    vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) {
+                    if (sprachmodusNr != nr) return@withTimeoutOrNull false
+                    kotlinx.coroutines.delay(50)
+                }
+                true
+            } ?: false
+            if (!bereit || sprachmodusNr != nr || sprachmodusAktiv) return@launch
+            de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
+            if (sprachmodusNr != nr || sprachmodusAktiv) return@launch
+            runCatching { de.frank.jarvis.audio.EndeTon.spielen() }
+            Logbuch.sprache("Endton", "Sprachsession beendet, Mikrofon zu")
+        }
+    }
+
+    private val endeTonBereich = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
 
     private fun startName(perKnopf: Boolean) = if (perKnopf) "den Live-Modus" else "„Hey Jarvis“"
 
