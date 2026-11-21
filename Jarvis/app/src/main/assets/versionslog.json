@@ -871,6 +871,7 @@
   {"versionCode": 862, "versionName": "1.8.851", "stand": "21.11.2026, 09:35 Uhr", "notiz": "Kommen kurz nacheinander mehrere Code-Review-Fragen, sagt Jarvis sie nur noch einmal an; alle Fragen bleiben im Vollbild."},
   {"versionCode": 863, "versionName": "1.8.852", "stand": "21.11.2026, 09:38 Uhr", "notiz": "Der Endton ist jetzt viel tiefer, kürzer, dichter hintereinander und nur halb so laut."},
   {"versionCode": 864, "versionName": "1.8.853", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Das CLI-Aufräumen zeigt Fehler jetzt im richtigen Abschnitt, bestätigt Spracheinstellungen erst nach der Rückmeldung des Macs und lässt Sitzungen mit geplanten Läufen oder Hintergrund-Agenten offen."},
-  {"versionCode": 865, "versionName": "1.8.854", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Review-Befunde behoben: Die Review-Ansage wird nur unterdrückt, solange die vorige Frage offen ist, und ein Ja per Sprache zum Review zählt nicht mehr als Ja zum Tablet."}
+  {"versionCode": 865, "versionName": "1.8.854", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Review-Befunde behoben: Die Review-Ansage wird nur unterdrückt, solange die vorige Frage offen ist, und ein Ja per Sprache zum Review zählt nicht mehr als Ja zum Tablet."},
+  {"versionCode": 866, "versionName": "1.8.855", "stand": "21.11.2026, 09:40 Uhr", "notiz": "Der Endton ist jetzt noch viel tiefer, leiser, und der zweite Ton liegt deutlich tiefer unter dem ersten."}
 ]
 }
