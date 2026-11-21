@@ -789,7 +789,8 @@ def cli_lauf(art: str, kennung: str = "") -> None:
                 cli_melden()
             except Exception:
                 pass
-    threading.Thread(target=puls, daemon=True).start()
+    puls_faden = threading.Thread(target=puls, daemon=True)
+    puls_faden.start()
     try:
         try:
             ergebnis = ca.aufraeumen(art)
@@ -813,6 +814,8 @@ def cli_lauf(art: str, kennung: str = "") -> None:
     finally:
         puls_ende.set()
         CLI_STAND["laeuft"] = False
+        # Ein Puls mitten im Senden (bis zu drei Versuche) käme sonst mit „läuft“ nach der Schlussmeldung an.
+        puls_faden.join(timeout=90)
         cli_melden()
 
 

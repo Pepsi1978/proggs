@@ -168,12 +168,13 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 val mobil = istMobil(g)
                 // Cloud-Wert nur mit belegter Messzeit (21.11.2026): Ein Webhook- oder Mac-Wert mit Zeit muss genau ihn tragen.
                 val cloud = if (z.problem == null) cloudMitMesszeit(z, hook, mac, lebt = fern.cloudLebt && !mobil) else null
-                val direkt = nah[id]?.takeIf { cloud == null || mobil }?.let { ausPaket(z, it, "direkt per Bluetooth") }
+                val grenze = if (mobil) MOBIL_MAC_S else MAC_GILT_S
+                // Ein Cloud-Wert, den die Auswahl ohnehin verwirft, verdrängt den frischen Bluetooth-Wert nicht.
+                val direkt = nah[id]?.takeIf { brauchbar(cloud, grenze) == null || mobil }?.let { ausPaket(z, it, "direkt per Bluetooth") }
                 // Rangfolge (Frank, 16.11.2026): 1. frischer Wert vom Mac zu Hause, immer; 2. das Handy direkt per Bluetooth (Auto immer,
                 // sonst nur ohne belegten Cloud-Wert); 3. von Cloud (belegt), Webhook und älterem Mac-Wert der mit der jüngsten Messzeit
                 // (Review 21.11.2026: ein älterer Beleg verdrängte sonst einen neueren Mac-Wert). Beim Auto gilt dafür nur [MOBIL_MAC_S].
                 // Ohne Relay (kein Server, kein Webhook, nichts gemeldet) gilt die Cloud wie früher, aber ohne Messzeit, beim Auto nie.
-                val grenze = if (mobil) MOBIL_MAC_S else MAC_GILT_S
                 val ohneRelay = !mobil && z.problem == null && hook == null && mac == null && !fern.webhookAktiv
                 alsSensor(z, mac, macFrist(g)) ?: direkt
                     ?: listOfNotNull(brauchbar(cloud, grenze), alsSensor(z, hook, grenze), alsSensor(z, mac, grenze)).maxByOrNull { it.zeit }

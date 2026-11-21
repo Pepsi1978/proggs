@@ -159,13 +159,16 @@ object ProgrammierSpiegel {
         val p = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
         val marke = "verlauf_" + de.frank.jarvis.BuildConfig.VERSION_CODE
         if (p.getBoolean(marke, false)) return false
+        // Nach einem gescheiterten Abgleich frühestens nach einer halben Stunde ganz von vorn (kein voller Verlauf bei jedem Verbinden).
+        if (System.currentTimeMillis() < p.getLong("verlauf_wieder_um", 0L)) return false
         p.edit().putBoolean(marke, true).apply()
         return true
     }
 
     /** Ein Teil des Verlaufs kam nicht an: beim nächsten Verbinden den ganzen Abgleich wiederholen (das andere Gerät übernimmt nur Fehlendes). */
     private fun verlaufWiederFaellig(context: Context) {
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putBoolean("verlauf_" + de.frank.jarvis.BuildConfig.VERSION_CODE, false).apply()
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putBoolean("verlauf_" + de.frank.jarvis.BuildConfig.VERSION_CODE, false)
+            .putLong("verlauf_wieder_um", System.currentTimeMillis() + 30 * 60_000L).apply()
     }
 
     /** Bittet das andere Gerät um seinen Verlauf; es antwortet höchstens einmal je Stunde. */

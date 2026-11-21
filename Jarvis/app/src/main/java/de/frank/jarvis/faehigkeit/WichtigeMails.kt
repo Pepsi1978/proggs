@@ -150,20 +150,19 @@ object WichtigeMails {
         val app = context.applicationContext
         laden(app)
         if (_stand.value.geprueft == 0L && _stand.value.eintraege.isEmpty()) return
-        if (sperre.isLocked) { nochmal = true; return }
         // Höchstens alle [ABGLEICH_ABSTAND_MS] ein Abruf (Review 21.11.2026): Urteile und Löschungen beider Geräte stießen sonst
         // wechselseitig volle IMAP-Abrufe an. Was in der Zwischenzeit ankommt, nimmt ein einziger nachgeholter Abruf mit.
-        if (abgleichGeplant) return
-        abgleichGeplant = true
+        if (!abgleichGeplant.compareAndSet(false, true)) return
         bereich.launch {
             val rest = ABGLEICH_ABSTAND_MS - (System.currentTimeMillis() - maxOf(_stand.value.geprueft, letzterVersuch))
             if (rest > 0) kotlinx.coroutines.delay(rest)
-            abgleichGeplant = false
+            abgleichGeplant.set(false)
+            if (sperre.isLocked) { nochmal = true; return@launch }
             runCatching { if (mail(app).stoerung() == null) pruefen(app, manuell = false) }
         }
     }
 
-    @Volatile private var abgleichGeplant = false
+    private val abgleichGeplant = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun laden(app: Context) {
         if (geladen) return

@@ -2424,7 +2424,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId",
                 solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(nummer) })
         }
-        if (review && zusatz == null && !ReviewAnsage.belegen(frageId, ansagen))
+        if (review && zusatz == null && !ReviewAnsage.belegen(frageId, frage.optLong("bis"), ansagen))
             Logbuch.system("Review-Ansage zurückgestellt", "Auftrag ${eintrag.optString("id")}: eine andere Review-Frage ist noch offen")
         else ansagen()
     }
@@ -3614,40 +3614,58 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
  * weitere; ist die vorige erledigt, wird die nächste wartende angesagt, damit keine still bleibt.
  */
 private object ReviewAnsage {
+    /** Ohne bekannte Frist der Frage (bis): so lange gilt eine Ansage als offen. */
     private const val FRIST_MS = 3 * 60_000L
     private var frage = ""
     private var seit = 0L
-    private val wartend = LinkedHashMap<String, () -> Unit>()
+    private var frist = FRIST_MS
+    private val wartend = LinkedHashMap<String, Pair<Long, () -> Unit>>()
     private val uhr = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** Wie lange die Frage offen bleibt: bis zu ihrer Frist [bisS] (Sekunden seit 1970) und 30 s Spielraum, mindestens [FRIST_MS], höchstens 15 Minuten. */
+    private fun fristAus(bisS: Long): Long =
+        if (bisS <= 0) FRIST_MS else (bisS * 1000 - System.currentTimeMillis() + 30_000L).coerceIn(FRIST_MS, 15 * 60_000L)
+
     /** True, wenn [frageId] jetzt angesagt werden darf (und belegt dann die Ansage); sonst merkt es sich [ansagen] für später. */
-    @Synchronized fun belegen(frageId: String, ansagen: () -> Unit): Boolean {
+    @Synchronized fun belegen(frageId: String, bisS: Long, ansagen: () -> Unit): Boolean {
         val jetzt = android.os.SystemClock.elapsedRealtime()
-        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < FRIST_MS) { wartend[frageId] = ansagen; return false }
-        frage = frageId; seit = jetzt
-        fristStellen(frageId, jetzt)
+        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < frist) { wartend[frageId] = bisS to ansagen; return false }
+        frage = frageId; seit = jetzt; frist = fristAus(bisS)
+        fristStellen(frageId, jetzt, frist)
         return true
     }
+
     /**
-     * Wird die angesagte Frage nie freigegeben (Sitzung geschlossen, Stand verloren), endet ihre Belegung nach [FRIST_MS] von selbst
-     * und die älteste wartende kommt dran (Review 21.11.2026: sie blieb sonst für immer stumm).
+     * Wird die angesagte Frage nie freigegeben (Sitzung geschlossen, Stand verloren), endet ihre Belegung mit ihrer Frist von selbst
+     * und die älteste wartende kommt dran (Review 21.11.2026: sie blieb sonst für immer stumm). Eine noch offene Frage überholt sie nie.
      */
-    private fun fristStellen(frageId: String, beginn: Long) {
+    private fun fristStellen(frageId: String, beginn: Long, dauer: Long) {
         uhr.postDelayed({
             val naechste = synchronized(this) {
                 if (frage != frageId || seit != beginn) return@postDelayed
                 frage = ""
-                wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime(); fristStellen(it.key, seit) }
+                naechsteBelegen()
             }
-            naechste?.value?.invoke()
-        }, FRIST_MS)
+            naechste?.invoke()
+        }, dauer)
     }
+
+    /** Unter der Sperre: die älteste wartende Frage belegt die Ansage; ihre Ansage gibt der Aufrufer außerhalb der Sperre aus. */
+    private fun naechsteBelegen(): (() -> Unit)? {
+        val e = wartend.entries.firstOrNull() ?: return null
+        wartend.remove(e.key)
+        frage = e.key; seit = android.os.SystemClock.elapsedRealtime(); frist = fristAus(e.value.first)
+        fristStellen(e.key, seit, frist)
+        return e.value.second
+    }
+
     fun freigeben(frageId: String) {
         val naechste = synchronized(this) {
             wartend.remove(frageId)
             if (frage != frageId) return
             frage = ""
-            wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime(); fristStellen(it.key, seit) }
+            naechsteBelegen()
         }
-        naechste?.value?.invoke()
+        naechste?.invoke()
     }
 }

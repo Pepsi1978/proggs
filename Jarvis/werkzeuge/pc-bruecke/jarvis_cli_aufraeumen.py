@@ -287,7 +287,7 @@ def merkmale(pfad: Path) -> dict:
                             weckruf_bis = 0.0
                         else:
                             try:
-                                verzug = float(eingabe.get("delaySeconds") or 3600)
+                                verzug = float(eingabe["delaySeconds"]) if eingabe.get("delaySeconds") is not None else 3600.0
                             except (TypeError, ValueError):
                                 verzug = 3600.0
                             weckruf_bis = _zeit(eintrag) + verzug + WECKRUF_SPIEL_S

@@ -2496,6 +2496,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
         val stilleMs = stilleMsJetzt()
         val mikroAn = System.currentTimeMillis()
+        // Sprachrahmen bei Rundenbeginn, vor dem Warten aufs Antwortende: Ohne Piepton zählt auch die Stimme, die das Hineinsprechen auslöste.
+        val rahmenRundeAn = mikro.sprachRahmen
         rundeBeginn = mikroAn; rundeStilleMs = stilleMs.toLong()
         rundeEnde = de.frank.module.transkriptionsmodul.SprechEnde(stilleMs = stilleMs.toLong())
         if (!erste) {
@@ -2555,7 +2557,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val rahmenJetzt = mikro.sprachRahmen
             // Auch ohne Piepton nur mit echten Sprachrahmen seit Rundenbeginn (Review 21.11.2026): War das Hineinsprechen ein Fehlalarm
             // (Lüfter, Nachhall), ginge sonst Rauschen als Frage hinaus. Ohne Spracherkennung (nur Pegel) bleibt es wie bisher.
-            val schonGesprochen = if (rahmenJetzt == null || rahmenVorPiep == null) !mitPiep else rahmenJetzt > rahmenVorPiep
+            val bezug = if (mitPiep) rahmenVorPiep else rahmenRundeAn
+            val schonGesprochen = if (rahmenJetzt == null || bezug == null) !mitPiep else rahmenJetzt > bezug
             if (schonGesprochen) {
                 Logbuch.sprache("Aufnahme-Ende", "Stimme vor oder während des Pieptons, wird abgeschickt")
                 lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG

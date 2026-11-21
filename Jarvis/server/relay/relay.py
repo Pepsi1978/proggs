@@ -214,6 +214,7 @@ class Relay:
         # Welches Geraet einen Programmierauftrag gestellt hat: Dorthin gehen seine Meldungen und Rueckfragen.
         # AUFTRAG_ID -> [Kennung oder "*" (am Rechner gestartete Sitzung: alle Geraete), Zeit]
         self.auftrag_geraet = {}
+        self._schlangen_sperre = asyncio.Lock()   # nie zwei Schreiber der Warteschlangen-Datei zugleich
         self._lade()
 
     # Das Handy unter den bisherigen Namen: Tagebuch, Agentenkanal und Ablage fragen wie bisher nach relay.ws.
@@ -239,8 +240,9 @@ class Relay:
             pass
         try:
             for kennung, liste in (json.loads(WARTESCHLANGEN.read_text("utf-8")) or {}).items():
-                if GERAET_KENNUNG.match(kennung) and isinstance(liste, list):
-                    self.geraete.setdefault(kennung, Geraet(kennung)).meldungen = [m for m in liste if isinstance(m, dict)]
+                # Nur bekannte Geraete (Handy und die im Zustand gesicherten), nie eines allein aus dieser Datei anlegen.
+                if kennung in self.geraete and isinstance(liste, list):
+                    self.geraete[kennung].meldungen = [m for m in liste if isinstance(m, dict)]
         except Exception:
             pass
         try:
@@ -259,23 +261,41 @@ class Relay:
         except Exception as fehler:
             log.warning("Zustand nicht gesichert: %s", fehler)
 
-    def schlangen_sichern(self) -> None:
-        """Schreibt die Warteschlangen, wenn sie sich geaendert haben (erst in eine Teildatei, dann umbenannt)."""
+    def _schlangen_abzug(self) -> dict | None:
+        """Flache Kopie der Warteschlangen, wenn sie sich geaendert haben (auf der Ereignisschleife, billig); sonst None."""
         if not _SCHLANGEN_GEAENDERT[0]:
-            return
+            return None
         _SCHLANGEN_GEAENDERT[0] = False
+        return {k: list(g.meldungen) for k, g in self.geraete.items() if g.meldungen}
+
+    @staticmethod
+    def _schlangen_schreiben(abzug: dict) -> None:
         try:
+            WARTESCHLANGEN.parent.mkdir(parents=True, exist_ok=True)
             teil = WARTESCHLANGEN.with_suffix(".teil")
-            teil.write_text(json.dumps({k: g.meldungen for k, g in self.geraete.items() if g.meldungen}, ensure_ascii=False), "utf-8")
+            teil.write_text(json.dumps(abzug, ensure_ascii=False), "utf-8")
             teil.replace(WARTESCHLANGEN)
         except Exception as fehler:
             _SCHLANGEN_GEAENDERT[0] = True
             log.warning("Warteschlangen nicht gesichert: %s", fehler)
 
+    def schlangen_sichern(self) -> None:
+        """Beim Beenden: gleich hier schreiben."""
+        abzug = self._schlangen_abzug()
+        if abzug is not None:
+            self._schlangen_schreiben(abzug)
+
+    async def schlangen_sichern_bald(self) -> None:
+        """Serialisieren und Schreiben im Hintergrund-Thread: Bis zu 12 MB Sitzungen hielten sonst die Ereignisschleife an."""
+        async with self._schlangen_sperre:
+            abzug = self._schlangen_abzug()
+            if abzug is not None:
+                await asyncio.to_thread(self._schlangen_schreiben, abzug)
+
     async def schlangen_waechter(self) -> None:
         while True:
             await asyncio.sleep(5)
-            self.schlangen_sichern()
+            await self.schlangen_sichern_bald()
 
     def zu_geheimnis(self, geheimnis: str):
         """Das Geraet, dem dieses Geheimnis gehoert, sonst None."""
@@ -354,6 +374,8 @@ class Relay:
             except (ConnectionError, RuntimeError):
                 geraet.meldungen.insert(0, meldung)
                 break
+        # Gleich sichern, was zugestellt ist: Ein Neustart in den naechsten Sekunden schickte es sonst noch einmal.
+        _im_hintergrund(self.schlangen_sichern_bald())
         while geraet.ausstehend:
             signal = geraet.ausstehend.pop(0)
             try:
