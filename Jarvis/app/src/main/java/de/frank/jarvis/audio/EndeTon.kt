@@ -14,21 +14,23 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Fallender Doppelton „DÖ-DO“ am echten Ende einer Sprachsession: zwei tiefe, klar getrennte Töne, der zweite tiefer.
+ * Fallender Doppelton „DÖ-DO“ am echten Ende einer Sprachsession: zwei sehr tiefe, kurze Töne, der zweite tiefer.
  * Über die Medienlautstärke wie Piepton und Antwort; steht der Freisprech-Kanal zum Konferenz-Lautsprecher, über den
  * Gesprächskanal (dann gilt die Gesprächslautstärke).
  */
 object EndeTon {
     private const val RATE = 44_100
-    // Zwei tiefe, klar getrennte Töne (Franks Wunsch): erst H4, nach kurzer Pause E4.
-    private const val HOCH_HZ = 494.0     // H4
-    private const val TIEF_HZ = 330.0     // E4
-    private const val HOCH_MS = 240
-    private const val PAUSE_MS = 90
-    private const val TIEF_MS = 360
-    private const val RAMPE_MS = 15
-    /** Drei Viertel der bisherigen Lautstärke (Franks Wunsch): 0,7 × 0,75. */
-    private const val PEGEL = 0.7 * 0.75
+    // Zwei sehr tiefe, kurze Töne dicht hintereinander (Franks Wunsch): erst A3, dann E3.
+    private const val HOCH_HZ = 220.0     // A3
+    private const val TIEF_HZ = 165.0     // E3
+    private const val HOCH_MS = 170
+    private const val PAUSE_MS = 35
+    private const val TIEF_MS = 240
+    private const val RAMPE_MS = 12
+    /** Halbe Standard-Lautstärke (Franks Wunsch): 0,7 × 0,5. */
+    private const val PEGEL = 0.7 * 0.5
+    /** Obertöne, damit so tiefe Töne auch aus dem kleinen Handylautsprecher hörbar sind; die Tonhöhe bleibt die des Grundtons. */
+    private val OBERTOENE = doubleArrayOf(1.0, 0.5, 0.3, 0.15)
     /** Nach dem letzten Abtastwert noch etwas nachlaufen lassen: Über Bluetooth kommt der Ton verzögert an. */
     private const val NACHLAUF_MS = 400L
 
@@ -39,7 +41,9 @@ object EndeTon {
         val rampe = RATE * RAMPE_MS / 1000
         return ShortArray(n) { i ->
             val huelle = min(1.0, min(i.toDouble() / rampe, (n - 1 - i).toDouble() / rampe))
-            (sin(2 * PI * hz * i / RATE) * huelle * PEGEL * Short.MAX_VALUE).toInt().toShort()
+            var wert = 0.0
+            for (k in OBERTOENE.indices) wert += OBERTOENE[k] * sin(2 * PI * hz * (k + 1) * i / RATE)
+            (wert / OBERTOENE.sum() * huelle * PEGEL * Short.MAX_VALUE).toInt().toShort()
         }
     }
 
