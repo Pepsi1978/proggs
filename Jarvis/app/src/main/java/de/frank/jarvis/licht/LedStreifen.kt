@@ -183,10 +183,23 @@ object LedStreifen {
         }
     }
 
-    /** Tablet: liest die Streifen nur für die Kartenanzeige (an, sobald einer an ist) und schaltet nichts; null = keiner lesbar, Anzeige bleibt. */
-    suspend fun anzeigeLesen(c: Context): Boolean? = sperre.withLock {
-        val gelesen = lesenAlle(c)
-        if (gelesen.isEmpty()) null else gelesen.values.any { it.an }.also { anAnzeige = it }
+    /** Tablet-Karte: ob gerade gelesen wird und ob schon ein Leseversuch fertig ist (sonst „Unbekannt“ statt „Lese Zustand …“). */
+    var anzeigeLiest by mutableStateOf(false)
+    var anzeigeVersucht by mutableStateOf(false)
+    @Volatile private var anzeigeZuletzt = 0L
+
+    /**
+     * Tablet: liest die Streifen nur für die Kartenanzeige (an, sobald einer an ist) und schaltet nichts; null = nicht gelesen, Anzeige bleibt.
+     * Weicht jedem Schalten und Live-Ziehen aus (tryLock, nie warten lassen) und liest höchstens alle [abstandMs].
+     */
+    suspend fun anzeigeLesen(c: Context, abstandMs: Long = 0): Boolean? {
+        if (laeuft || liveJob?.isActive == true || System.currentTimeMillis() - anzeigeZuletzt < abstandMs) return null
+        if (!sperre.tryLock()) return null
+        anzeigeZuletzt = System.currentTimeMillis(); anzeigeLiest = true
+        try {
+            val gelesen = lesenAlle(c)
+            return if (gelesen.isEmpty()) null else gelesen.values.any { it.an }.also { anAnzeige = it }
+        } finally { sperre.unlock(); anzeigeLiest = false; anzeigeVersucht = true }
     }
 
     private class Meldung(val an: Boolean, val rgb: String, val hell: Int)

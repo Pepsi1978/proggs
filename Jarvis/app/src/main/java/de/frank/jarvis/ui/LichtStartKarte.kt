@@ -143,14 +143,23 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     androidx.compose.runtime.LaunchedEffect(Unit) {
         LedStreifen.aktuellLaden(c)
         if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
-        if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
+        // Tablet: nie den eigenen letzten Schaltbefehl zeigen, nur den gelesenen Zustand.
+        if (LedStreifen.anAnzeige == null && !de.frank.jarvis.data.Geraet.istTablet) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
     }
-    // Tablet: Es schaltet die Streifen selten selbst, deshalb zeigt die Karte den gelesenen Zustand (beim Öffnen, dann jede Minute, nur sichtbar).
-    if (de.frank.jarvis.data.Geraet.istTablet) {
+    // Tablet: Es schaltet die Streifen selten selbst, deshalb zeigt die Karte den gelesenen Zustand: beim Öffnen (höchstens alle 30 s),
+    // dann alle 3 Minuten, solange Jarvis im Vordergrund ist, und beim Antippen der Zustandsanzeige. Selten, damit Handy und Mac frei schalten können.
+    val tablet = de.frank.jarvis.data.Geraet.istTablet
+    val bereichKarte = androidx.compose.runtime.rememberCoroutineScope()
+    if (tablet) {
         val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
         androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
             lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                while (true) { if (!LedStreifen.laeuft) runCatching { LedStreifen.anzeigeLesen(c) }; kotlinx.coroutines.delay(60_000) }
+                var abstand = 30_000L
+                while (true) {
+                    try { LedStreifen.anzeigeLesen(c, abstand) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
+                    abstand = 170_000L
+                    kotlinx.coroutines.delay(if (LedStreifen.laeuft) 10_000 else 180_000)
+                }
             }
         }
     }
@@ -162,13 +171,13 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     // 13: Nur die Titelzeile ist Griff zum Verschieben der Karte; Farbplätze, Farbkreis und Regler behalten ihre Gesten.
     Karte {
         // Kopf: Titel und Helligkeit, darunter das 3D-LED-Band.
-        val an = if (de.frank.jarvis.data.Geraet.istTablet) LedStreifen.anAnzeige == true else LedStreifen.anAnzeige != false
+        val an = if (tablet) LedStreifen.anAnzeige == true else LedStreifen.anAnzeige != false
         Row(griff.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(
                 when {
                     LedStreifen.laeuft -> "Schaltet …"
-                    de.frank.jarvis.data.Geraet.istTablet && LedStreifen.anAnzeige == null && !frischerFehler -> "Lese Zustand …"
+                    tablet && LedStreifen.anAnzeige == null && !frischerFehler -> if (LedStreifen.anzeigeLiest || !LedStreifen.anzeigeVersucht) "Lese Zustand …" else "Unbekannt"
                     frischerFehler -> "Nicht erreicht"
                     !an -> "Aus"
                     z == null -> "An"
@@ -177,6 +186,7 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
                     else -> "An · Mikrofon"
                 },
                 color = when { LedStreifen.laeuft -> f.primaer; frischerFehler -> f.gefahr; else -> f.textLeise }, fontSize = 14.sp,
+                modifier = if (tablet) Modifier.antippen { bereichKarte.launch { runCatching { LedStreifen.anzeigeLesen(c) } } } else Modifier,
             )
         }
         b?.takeIf { frischerFehler }?.let { Text(it.text, color = f.gefahr, fontSize = 13.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp)) }
