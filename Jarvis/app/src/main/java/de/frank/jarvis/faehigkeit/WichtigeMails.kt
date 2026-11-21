@@ -150,6 +150,16 @@ object WichtigeMails {
         val app = context.applicationContext
         laden(app)
         if (_stand.value.geprueft == 0L && _stand.value.eintraege.isEmpty()) return
+        // Sofort und ohne Netz (Review 21.11.2026): Urteile vom anderen Gerät gleich in den Bestand übernehmen, nur der IMAP-Abruf wartet.
+        runCatching {
+            urteileEinlesen(app)
+            val vorher = _stand.value
+            val jetzt = vorher.eintraege.mapNotNull { e ->
+                val u = synchronized(urteile) { urteile[e.msgId] } ?: return@mapNotNull e
+                if (!u.has("w")) e else if (!u.optBoolean("w")) null else e.copy(kurz = u.optString("k").ifBlank { e.kurz }, antwort = u.optBoolean("a"))
+            }
+            if (jetzt != vorher.eintraege) { _stand.value = vorher.copy(eintraege = jetzt); speichern(app) }
+        }.onFailure { Logbuch.fehler("Wichtige E-Mails: Urteile übernehmen", it) }
         // Höchstens alle [ABGLEICH_ABSTAND_MS] ein Abruf (Review 21.11.2026): Urteile und Löschungen beider Geräte stießen sonst
         // wechselseitig volle IMAP-Abrufe an. Was in der Zwischenzeit ankommt, nimmt ein einziger nachgeholter Abruf mit.
         if (!abgleichGeplant.compareAndSet(false, true)) return

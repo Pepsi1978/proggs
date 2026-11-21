@@ -781,7 +781,8 @@ def bilder_einfuegen_jetzt(pfade: list[Path], vorspann: str) -> str:
 ZITAT_MARKE = "📨 Nachtrag "
 # Tolerant: Markdown davor („**“, „> “, Leerraum). Entfernt wird nur die Zitatzeile: Die Anweisung verlangt das Zitat in einer Zeile,
 # und eine Antwort direkt darunter ohne Leerzeile ging sonst mit verloren (Review 21.11.2026).
-ZITAT_MUSTER = re.compile(r"^[\s>*_]*📨\s*Nachtrag\b[^\n]*", re.UNICODE)
+# Als Markdown-Zitat („> “ je Zeile) gehören die direkt folgenden „>“-Zeilen noch dazu.
+ZITAT_MUSTER = re.compile(r"^[\s>*_]*📨\s*Nachtrag\b[^\n]*(?:\n[ \t]*>[^\n]*)*", re.UNICODE)
 
 
 def ohne_zitat(text: str) -> str:

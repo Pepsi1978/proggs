@@ -815,7 +815,7 @@ def cli_lauf(art: str, kennung: str = "") -> None:
         puls_ende.set()
         CLI_STAND["laeuft"] = False
         # Ein Puls mitten im Senden (bis zu drei Versuche) käme sonst mit „läuft“ nach der Schlussmeldung an.
-        puls_faden.join(timeout=90)
+        puls_faden.join(timeout=150)
         cli_melden()
 
 

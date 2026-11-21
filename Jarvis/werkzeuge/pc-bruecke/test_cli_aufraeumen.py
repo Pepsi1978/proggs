@@ -63,6 +63,10 @@ class Transkript(unittest.TestCase):
         alt = "2026-01-01T08:00:00Z"
         self.assertFalse(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600})], zeit=alt)))
         self.assertFalse(a.plant_weiter(self.schreib([("CronCreate", {})], zeit=alt)))
+        import datetime
+        vor_zwei_tagen = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)).isoformat()
+        self.assertFalse(a.plant_weiter(self.schreib([("CronCreate", {"recurring": False})], zeit=vor_zwei_tagen)))
+        self.assertTrue(a.plant_weiter(self.schreib([("CronCreate", {})], zeit=vor_zwei_tagen)))
         self.assertTrue(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "fertig"})])))
         self.assertFalse(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "laeuft"})])))
 

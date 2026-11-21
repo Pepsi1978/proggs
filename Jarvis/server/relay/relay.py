@@ -273,7 +273,9 @@ class Relay:
         try:
             WARTESCHLANGEN.parent.mkdir(parents=True, exist_ok=True)
             teil = WARTESCHLANGEN.with_suffix(".teil")
-            teil.write_text(json.dumps(abzug, ensure_ascii=False), "utf-8")
+            # Gestreamt statt als ein Riesen-String: bis zu 12 MB Sitzungen je Geraet sprengten sonst die 128 MB des Dienstes.
+            with open(teil, "w", encoding="utf-8") as f:
+                json.dump(abzug, f, ensure_ascii=False)
             teil.replace(WARTESCHLANGEN)
         except Exception as fehler:
             _SCHLANGEN_GEAENDERT[0] = True
@@ -373,6 +375,7 @@ class Relay:
                 await ws.send_str(json.dumps(meldung))
             except (ConnectionError, RuntimeError):
                 geraet.meldungen.insert(0, meldung)
+                _SCHLANGEN_GEAENDERT[0] = True
                 break
         # Gleich sichern, was zugestellt ist: Ein Neustart in den naechsten Sekunden schickte es sonst noch einmal.
         _im_hintergrund(self.schlangen_sichern_bald())
@@ -2870,7 +2873,9 @@ def app() -> web.Application:
         _im_hintergrund(relay.schlangen_waechter())
 
     async def schlangen_ende(_anwendung):
-        relay.schlangen_sichern()
+        # Unter derselben Sperre wie der Waechter: nie zwei Schreiber auf derselben Teildatei.
+        async with relay._schlangen_sperre:
+            relay.schlangen_sichern()
 
     anwendung.on_startup.append(schlangen_start)
     anwendung.on_cleanup.append(schlangen_ende)

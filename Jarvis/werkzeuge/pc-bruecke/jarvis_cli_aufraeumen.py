@@ -238,6 +238,7 @@ _MERKMALE: dict[str, tuple[float, int, dict]] = {}
 # ein längst ausgelöster Weckruf oder ein Einmal-Cron ohne CronDelete hielt die Sitzung sonst für immer offen).
 WECKRUF_SPIEL_S = 15 * 60
 CRON_HOECHSTENS_S = 7 * 86400
+CRON_EINMAL_S = 86400
 
 
 def _zeit(eintrag: dict) -> float:
@@ -278,7 +279,8 @@ def merkmale(pfad: Path) -> dict:
                     if "programmier_fortschritt" in name:
                         stand = eingabe.get("stand", stand)
                     elif name == "CronCreate":
-                        crons.append(_zeit(eintrag))
+                        # Einmal-Crons (recurring: false) löschen sich nach dem Auslösen selbst: höchstens einen Tag werten.
+                        crons.append(_zeit(eintrag) + (CRON_HOECHSTENS_S if eingabe.get("recurring") is not False else CRON_EINMAL_S))
                     elif name == "CronDelete":
                         if crons:
                             crons.pop(0)
@@ -306,7 +308,7 @@ def jarvis_abgeschlossen(pfad: Path) -> bool:
 def plant_weiter(pfad: Path) -> bool:
     """Bestehen Sitzungs-Crons oder ein geplanter Weckruf? Dann ruht die Sitzung absichtlich: nicht eindeutig inaktiv."""
     m, jetzt = merkmale(pfad), time.time()
-    return m["weckruf_bis"] > jetzt or any(jetzt - t <= CRON_HOECHSTENS_S for t in m["crons"])
+    return m["weckruf_bis"] > jetzt or any(bis > jetzt for bis in m["crons"])
 
 
 def hook_zustand(nummer: str) -> dict:

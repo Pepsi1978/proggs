@@ -2557,7 +2557,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val rahmenJetzt = mikro.sprachRahmen
             // Auch ohne Piepton nur mit echten Sprachrahmen seit Rundenbeginn (Review 21.11.2026): War das Hineinsprechen ein Fehlalarm
             // (Lüfter, Nachhall), ginge sonst Rauschen als Frage hinaus. Ohne Spracherkennung (nur Pegel) bleibt es wie bisher.
-            val bezug = if (mitPiep) rahmenVorPiep else rahmenRundeAn
+            // Ohne Piepton zählt jede Stimme seit Rundenbeginn (lud die Spracherkennung erst danach: seit ihrem Laden).
+            val bezug = if (mitPiep) rahmenVorPiep else (rahmenRundeAn ?: 0L)
             val schonGesprochen = if (rahmenJetzt == null || bezug == null) !mitPiep else rahmenJetzt > bezug
             if (schonGesprochen) {
                 Logbuch.sprache("Aufnahme-Ende", "Stimme vor oder während des Pieptons, wird abgeschickt")
@@ -2628,7 +2629,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 stand = neu
                 if (jetzt - mikroAn >= RUHE_MIN_MS && jetzt - ruheAb >= RUHE_STILL_MS) { grund = "Ruhe"; break }
-                if (jetzt - mikroAn >= FRANK_AB_MS && jetzt - ruheAb < RUHE_STILL_MS) {
+                // Nur echte Stimme seit dem ersten Blick (Review 21.11.2026): Lädt die Spracherkennung spät, stand ruheAb gerade erst
+                // auf jetzt, und ohne ein einziges Wort galt Frank als sprechend (kein Piepton, Rauschen ging als Frage hinaus).
+                if (jetzt - mikroAn >= FRANK_AB_MS && stimme > 0 && jetzt - ruheAb < RUHE_STILL_MS) {
                     frankAb = if (nachLuecke && einsatz >= 0) einsatz else minBytes.coerceAtLeast(0)
                     grund = "Frank spricht schon"
                     break

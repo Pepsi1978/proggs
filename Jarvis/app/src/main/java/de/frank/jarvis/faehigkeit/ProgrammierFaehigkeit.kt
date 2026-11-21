@@ -1358,7 +1358,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // stammt womöglich noch von vor dem Fehler); normalerweise meldet der Hook das selbst mit „anmeldung_ok“.
             val gesperrt = Auftragsbuch.finde(app, auftragId)?.takeIf { it.optString("stand") in GESPERRT }
             if (gesperrt != null && nachSperre(gesperrt, daten)) {
-                Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS); benachrichtige(it) }
+                Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS); benachrichtige(it, vorlesen = it.optString("gespiegeltVon").isEmpty()) }
                 return
             }
             Auftragsbuch.puls(app, auftragId, daten.optLong("hook_beginn"))?.let { aktivitaetMelden(it) }
@@ -1369,7 +1369,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // „Anmeldung erforderlich“ wird still durch den neuen Stand ersetzt.
             // Ohne Sperre in Jarvis (deren Meldung kam nie an) gibt es nichts aufzuheben.
             if (Auftragsbuch.finde(app, auftragId)?.optString("stand") !in GESPERRT) return
-            Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(daten.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "")?.let { verteile(it, null); benachrichtige(it) }
+            Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(daten.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "")?.let { verteile(it, null); benachrichtige(it, vorlesen = it.optString("gespiegeltVon").isEmpty()) }
             return
         }
         if (daten.optString("stand") == "nachtrag") {
@@ -2175,6 +2175,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             zusatz?.keys()?.forEach { kontext.put(it, zusatz.opt(it)) }
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             if (benachrichtigen && !gespiegelt) rueckfrageVorn(eintrag, frage, kurz)
+            // Rückfall (Review 21.11.2026): Ist die Frage nach einer Minute noch offen, war das Gerät des Auftrags wohl nicht erreichbar
+            // (Akku leer, kein Netz); dann holt das Spiegelgerät sie nach vorn, statt sie still ablaufen zu lassen.
+            if (benachrichtigen && gespiegelt) {
+                val id = eintrag.optString("id")
+                val frageId = frage.optString("frage_id")
+                baubereich.launch {
+                    kotlinx.coroutines.delay(60_000L)
+                    val jetzt = Auftragsbuch.finde(app, id) ?: return@launch
+                    if (jetzt.optString("stand") == "frage" && jetzt.optJSONObject("offeneFrage")?.optString("frage_id") == frageId) {
+                        Logbuch.system("Rückfrage auf dem Spiegelgerät", "$id: nach einer Minute noch offen, hier nach vorn")
+                        rueckfrageVorn(jetzt, frage, kurz)
+                    }
+                }
+            }
             return
         }
         val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT -> "⚠️"; STAND_UNKLAR -> "⏳"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
@@ -3652,6 +3666,9 @@ private object ReviewAnsage {
 
     /** Unter der Sperre: die älteste wartende Frage belegt die Ansage; ihre Ansage gibt der Aufrufer außerhalb der Sperre aus. */
     private fun naechsteBelegen(): (() -> Unit)? {
+        // Abgelaufene wartende Fragen fallen weg: Der Programmierer wartet dort nicht mehr (Review 21.11.2026).
+        val jetztS = System.currentTimeMillis() / 1000
+        wartend.entries.removeAll { it.value.first in 1 until jetztS }
         val e = wartend.entries.firstOrNull() ?: return null
         wartend.remove(e.key)
         frage = e.key; seit = android.os.SystemClock.elapsedRealtime(); frist = fristAus(e.value.first)

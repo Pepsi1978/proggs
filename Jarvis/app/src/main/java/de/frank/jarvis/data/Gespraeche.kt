@@ -215,13 +215,14 @@ object Gespraeche {
                 schreiben(d, json)
                 // Neue Zeilen einer Programmier-Session gehen auch ans andere Gerät (Franks und Jarvis' eigene, siehe ProgrammierSpiegel).
                 // Neu ist, was die Datei noch nicht hatte, nach Inhalt gezählt: Die App hält oft eine ältere Liste, während Meldungen
-                // der Sitzung schon direkt in die Datei gingen. Ohne die Art im Schlüssel: Eine abgebrochene Runde ändert nur die Art ihrer
-                // Frage, die sonst als neue Zeile ein zweites Mal aufs andere Gerät ging (Review 21.11.2026).
+                // der Sitzung schon direkt in die Datei gingen. Franks Zeilen ohne die Art im Schlüssel: Eine abgebrochene Runde ändert nur die
+                // Art ihrer Frage, die sonst als neue Zeile ein zweites Mal aufs andere Gerät ging (Review 21.11.2026). Bei
+                // Jarvis' Zeilen bleibt die Art drin, sonst verdeckte eine gleichlautende Statusmeldung eine neue Antwort.
                 if (json.optBoolean("programmierung") && alt != null) {
                     val vorhanden = HashMap<String, Int>()
                     val a = alt.optJSONArray("nachrichten") ?: JSONArray()
-                    for (i in 0 until a.length()) a.optJSONObject(i)?.let { m -> val k = "${m.optBoolean("mir")}|${m.optString("text")}"; vorhanden[k] = (vorhanden[k] ?: 0) + 1 }
-                    val neu = nachrichten.filter { n -> val k = "${n.vonMir}|${n.text}"; val z = vorhanden[k] ?: 0; if (z > 0) { vorhanden[k] = z - 1; false } else true }
+                    for (i in 0 until a.length()) a.optJSONObject(i)?.let { m -> val k = if (m.optBoolean("mir")) "true|${m.optString("text")}" else "false|${m.optString("art", "antwort")}|${m.optString("text")}"; vorhanden[k] = (vorhanden[k] ?: 0) + 1 }
+                    val neu = nachrichten.filter { n -> val k = if (n.vonMir) "true|${n.text}" else "false|${n.art}|${n.text}"; val z = vorhanden[k] ?: 0; if (z > 0) { vorhanden[k] = z - 1; false } else true }
                     if (neu.isNotEmpty()) runCatching { de.frank.jarvis.faehigkeit.ProgrammierSpiegel.neueZeilen(context.applicationContext, id, neu) }
                 }
                 Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"), json.optBoolean("favorit"))

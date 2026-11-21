@@ -137,7 +137,13 @@ object ProgrammierSpiegel {
             val rumpf = JSONObject().put("art", "zeile").put("auftrag_id", auftrag).put("gespraech", gespraech).put("nachricht", nachricht)
             // Über der Grenze des Servers (413, still verworfen): erst ohne Kontext, dann den Text gekürzt.
             if (bytes(rumpf) >= HOECHSTENS_BYTES) nachricht.remove("kontext")
-            if (bytes(rumpf) >= HOECHSTENS_BYTES) nachricht.put("text", n.text.take(HOECHSTENS_BYTES / 4) + " …")
+            if (bytes(rumpf) >= HOECHSTENS_BYTES) nachricht.remove("anhaenge")
+            if (bytes(rumpf) >= HOECHSTENS_BYTES) {
+                // An einer Zeichengrenze kürzen: ein halbes Emoji (Surrogat) käme sonst als „?“ an.
+                var ende = (HOECHSTENS_BYTES / 4).coerceAtMost(n.text.length)
+                if (ende in 1 until n.text.length && Character.isHighSurrogate(n.text[ende - 1])) ende--
+                nachricht.put("text", n.text.substring(0, ende) + " …")
+            }
             senden(context, rumpf)
         }
     }
