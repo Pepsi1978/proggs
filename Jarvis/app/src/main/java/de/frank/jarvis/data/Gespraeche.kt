@@ -37,7 +37,9 @@ fun Sitzung.archiviert(jetzt: Long, projektIds: Set<String>): Boolean =
  */
 data class GespeicherteNachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0,
     /** Davon geschätzt fürs Live-Gedächtnis, vom Modell selbst erzeugt (Denken und Antwort), und die geladenen Gedächtnis-Bereiche. */
-    val gedaechtnis: Long = 0, val ausgabe: Long = 0, val bereiche: String = "")
+    val gedaechtnis: Long = 0, val ausgabe: Long = 0, val bereiche: String = "",
+    /** Die E-Mail hinter „Erklären“ (nur Daten fürs Modell, eigenes Feld, damit Notizen in [kontext] sie nie überschreiben). */
+    val mail: String = "")
 
 /**
  * Jedes Gespräch mit Jarvis als eigene Datei unter `files/gespraeche/<id>.json`, damit Frank alte Gespräche in der
@@ -149,7 +151,7 @@ object Gespraeche {
         val nachrichten = (0 until a.length()).map {
             a.getJSONObject(it).let { n ->
                 val anh = n.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { k -> l.getString(k) } }.orEmpty()
-                GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"), n.optLong("tokens"), n.optLong("gedaechtnis"), n.optLong("ausgabe"), n.optString("bereiche"))
+                GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"), n.optLong("tokens"), n.optLong("gedaechtnis"), n.optLong("ausgabe"), n.optString("bereiche"), n.optString("mail"))
             }
         }
         sitzungAus(j, id) to nachrichten
@@ -197,6 +199,7 @@ object Gespraeche {
                                 // Nur Abweichungen speichern: Alte Dateien bleiben gültig, neue bleiben klein.
                                 if (n.art != "antwort") put("art", n.art)
                                 if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
+                                if (n.mail.isNotEmpty()) put("mail", n.mail)
                                 if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                                 if (n.bewertung != 0) put("bewertung", n.bewertung)
                                 if (n.tokens > 0) put("tokens", n.tokens)
@@ -282,6 +285,7 @@ object Gespraeche {
                 liste.put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
                     if (n.art != "antwort") put("art", n.art)
                     if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
+                    if (n.mail.isNotEmpty()) put("mail", n.mail)
                     if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                     if (n.tokens > 0) put("tokens", n.tokens)
                     if (n.gedaechtnis > 0) put("gedaechtnis", n.gedaechtnis)
