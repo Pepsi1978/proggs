@@ -1643,6 +1643,16 @@ def frage(eingabe: dict) -> None:
     fragen = ein.get("questions") or []
     if not fragen:
         return
+    # Franks Vorgabe vom 21.11.2026: Die Tablet-Frage kommt nur im selben Block wie die Code-Review-Frage, nie allein.
+    texte = [str(f.get("question", "")) for f in fragen if isinstance(f, dict)]
+    if any(re.search(r"(?i)tablet", t) and re.search(r"(?i)install", t) for t in texte) and \
+            not any(re.search(r"(?i)code[- ]?review", t) for t in texte):
+        sys.stdout.write(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": "Die Tablet-Frage nie allein stellen: nur im selben Fragenblock wie die Code-Review-Frage "
+                                        "(zuerst Tablet, dann Review), genau dann, wenn die Review-Frage dran ist. Entfällt die "
+                                        "Review-Frage, entfallen Tablet-Frage und Tablet-Installation."}}, ensure_ascii=False))
+        return
     raus = []
     sperr = []
     try:
