@@ -1607,6 +1607,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun fragenAbgleichen() = withContext(Dispatchers.IO) {
         if (e.serverHost.isBlank() || e.serverToken.isBlank()) return@withContext
+        runCatching { nachtraegeAbgleichen() }.onFailure { Logbuch.fehler("Nachträge abgleichen", it) }
         // Einmal je Version: alle Sessions dieses Geräts ans andere, das übernimmt, was ihm fehlt (gleicher Verlauf auf beiden).
         ProgrammierSpiegel.nachholen(app)
         if (ProgrammierSpiegel.verlaufFaellig(app)) verlaufSpiegeln()
@@ -1763,6 +1764,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ProgrammierSpiegel.senden(app, JSONObject().put("art", "zeile").put("auftrag_id", id).put("gespraech", zielGespraech)
                 .put("nachricht", JSONObject().put("mir", false).put("text", zeile).put("art", ProgrammierChat.ART_STATUS)))
         }
+        // Vollständig merken (Text ohne Kürzung, Anhänge): Scheitert das Senden, schickt der Abgleich beim nächsten Verbinden genau das nach.
+        if (!cloud) Auftragsbuch.nutzlastMerken(app, id, nummer, text, anhaenge)
         if (cloud) {
             anhaengeVerbraucht()
             return Ergebnis("Angenommen: Nachtrag $nummer für Auftrag $id ($appName) liegt bereit. Die Cloud-Sitzung bekommt ihn mit ihrer nächsten Fortschrittsmeldung; " +
@@ -1770,8 +1773,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val antwort = runCatching { anSitzung(id, nummer, text, anhaenge) }.getOrElse { fehler ->
             Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen"), "fehler")
-            return Ergebnis("Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). Er ist im Auftrag $id vermerkt, " +
-                "aber nicht zugestellt; ein erneuter Aufruf mit demselben Text schickt ihn noch einmal, ohne ihn zu verdoppeln.", fehler = true)
+            return Ergebnis("Noch NICHT zugestellt: Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). " +
+                "Er ist im Auftrag $id gespeichert, und Jarvis schickt ihn von selbst nach, sobald die Verbindung wieder steht (genau einmal, nur in diese Sitzung). " +
+                "Sag Frank das kurz; er muss ihn nicht noch einmal sprechen.", fehler = true)
         }
         anhaengeVerbraucht()
         if (antwort.optBoolean("zugestellt")) {
@@ -1787,12 +1791,53 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nachträge gewartet, ihn aber nicht sofort übernommen; vielleicht wurde sie gerade geschlossen. Er bleibt eingereiht und geht nur in genau diese Sitzung; " +
                 "ob er ankommt, zeigt programmierauftraege. Eine neue Sitzung startet Jarvis nicht von selbst.")
             arbeitet -> Ergebnis("Angenommen und eingereiht: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung arbeitet gerade (letztes Lebenszeichen vor " +
-                "${zeitspanne(vor)}) und bekommt ihn spätestens am Ende ihres aktuellen Schritts; zugestellt ist er, wenn programmierauftraege das zeigt.")
+                "${zeitspanne(vor)}) und bekommt ihn mit ihrem nächsten Arbeitsschritt, meist binnen Sekunden; sobald er angekommen ist, steht im Gespräch " +
+                "„Nachtrag in der Sitzung angekommen“.")
             else -> Ergebnis("Angenommen, aber NICHT zugestellt: Die Sitzung von Auftrag $id ($appName) ist gerade nicht erreichbar (" +
                 (if (vor < 0) "seit dem letzten Neustart des Jarvis-Servers kein Lebenszeichen" else "letztes Lebenszeichen vor ${zeitspanne(vor)}") + "; " +
                 (if (antwort.optBoolean("pc")) "der PC ist an" else "der PC ist aus oder die PC-Brücke läuft nicht") + "). Vermutlich ist die Sitzung geschlossen oder " +
                 "wartet ohne Nachtrags-Empfang. Nachtrag $nummer bleibt sieben Tage eingereiht und geht nur in genau diese Sitzung, sobald sie sich wieder meldet. " +
                 "Sag Frank das offen; einen Ersatzauftrag startet Jarvis nicht.")
+        }
+    }
+
+    /** Wann ein Nachtrag zuletzt beim Server nachgefragt wurde (Nummer -> Millisekunden), damit jedes Öffnen der App nicht alle neu schickt. */
+    private val nachtragGeprueft = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * Nachträge dieses Geräts, die noch nicht als angekommen gelten (angenommen, fehler): noch einmal an den Server. Der Server
+     * entdoppelt über die Nummer: Ist der Nachtrag schon zugestellt, sagt er das (die Quittung ging verloren); liegt er noch in der
+     * Warteschlange, bleibt er dort; fehlt er (Senden scheiterte, Verbindung brach ab, Server neu gestartet), reiht er ihn ein.
+     * Älter als sieben Tage: nicht zustellbar, sichtbar im Gespräch statt still weg. Beim Verbinden und beim Öffnen der App.
+     */
+    private suspend fun nachtraegeAbgleichen() {
+        val jetzt = System.currentTimeMillis()
+        for ((eintrag, n) in Auftragsbuch.offeneNachtraege(app)) {
+            val id = eintrag.optString("id")
+            val nummer = n.optString("id")
+            val alter = jetzt - n.optLong("zeit")
+            if (alter > 7 * 86_400_000L) {
+                if (Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen", "fehler"), "nicht_zustellbar").isNotEmpty()) {
+                    Logbuch.system("Nachtrag nicht zustellbar", "Auftrag $id, Nachtrag $nummer: sieben Tage ohne Übergabe")
+                    Auftragsbuch.melde(app, id, "laeuft", "⚠️ Nachtrag $nummer ist nicht zustellbar: Die Sitzung hat ihn in sieben Tagen nicht abgeholt.", "")
+                        ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
+                }
+                continue
+            }
+            // Frisch gesendete nicht gleich wieder; jede höchstens alle zwei Minuten.
+            if (alter < 60_000L || jetzt - (nachtragGeprueft[nummer] ?: 0L) < 120_000L) continue
+            nachtragGeprueft[nummer] = jetzt
+            val senden = n.optJSONObject("senden") ?: continue
+            val antwort = runCatching { anSitzung(id, nummer, senden.optString("text"), senden.optJSONArray("anhaenge") ?: JSONArray()) }.getOrNull() ?: continue
+            when {
+                antwort.optBoolean("zugestellt") -> alsZugestellt(id, setOf(nummer), "")
+                n.optString("stand") == "fehler" -> {
+                    Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("fehler"), "angenommen")
+                    Logbuch.system("Nachtrag nachgesendet", "Auftrag $id, Nachtrag $nummer")
+                    Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag $nummer nach dem Verbindungsabbruch nachgeschickt, er wartet jetzt auf die Sitzung.", "")
+                        ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
+                }
+            }
         }
     }
 
@@ -2751,6 +2796,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun letzteNachricht(e: JSONObject?): JSONObject? = e?.optJSONArray("nachtraege")
             ?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { istNachricht(it.optString("id")) }
 
+        /** Merkt am Nachtrag [nummer] die vollständige Nutzlast (Text, Anhänge) für das Nachsenden. */
+        @Synchronized
+        fun nutzlastMerken(context: Context, id: String, nummer: String, text: String, anhaenge: JSONArray) {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
+            val n = eintrag.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { it.optString("id") == nummer } ?: return
+            n.put("senden", JSONObject().put("text", text.take(20_000)).put("anhaenge", anhaenge))
+            schreib(context, liste)
+        }
+
+        /** Eigene, noch nicht angekommene Nachträge (angenommen, fehler) an Sitzungen am Rechner: (Auftrag, Nachtrag). */
+        fun offeneNachtraege(context: Context): List<Pair<JSONObject, JSONObject>> = alle(context)
+            .filter { !inDerCloud(it.optString("ziel")) }
+            .flatMap { e -> e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).map { e to l.getJSONObject(it) } }.orEmpty() }
+            .filter { (_, n) -> n.optString("stand") in listOf("angenommen", "fehler") && !istNachricht(n.optString("id")) &&
+                n.optString("geraet").ifEmpty { de.frank.jarvis.data.Geraet.kennung } == de.frank.jarvis.data.Geraet.kennung }
+
         /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
         @Synchronized
         fun setzeNachtraege(context: Context, id: String, ids: Set<String>?, von: Set<String>, nach: String): List<JSONObject> {
@@ -2831,7 +2893,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     e.optJSONArray("nachtraege")?.takeIf { it.length() > 0 }?.let { l ->
                         append("\n  Nachträge: ").append((0 until l.length()).mapNotNull { l.optJSONObject(it) }.joinToString("; ") { n ->
-                            n.optString("id") + " " + n.optString("stand") + " („" + n.optString("text").replace('\n', ' ').take(80) + "“)"
+                            // Für Frank unterscheidbar: nur eingereiht, tatsächlich zugestellt oder nicht zustellbar.
+                            val stand = when (n.optString("stand")) {
+                                "angenommen" -> "eingereiht, noch nicht zugestellt"
+                                "fehler" -> "noch nicht beim Server, Jarvis schickt ihn nach"
+                                "nicht_zustellbar" -> "nicht zustellbar"
+                                else -> n.optString("stand")
+                            }
+                            n.optString("id") + " " + stand + " („" + n.optString("text").replace('\n', ' ').take(80) + "“)"
                         })
                     }
                     append("\n  Nachträge möglich: ").append(

@@ -1115,8 +1115,11 @@ class PcBruecke:
             daten = json.loads(NACHTRAEGE.read_text("utf-8"))
             self.nachtraege = {k: v for k, v in (daten.get("offen") or {}).items() if isinstance(v, list)}
             self.erledigt = dict(daten.get("erledigt") or {})
-        except Exception:
+        except FileNotFoundError:
             pass
+        except Exception as fehler:
+            # Nicht still: Eine unlesbare Datei hieße leere Warteschlange und kein Doppelschutz.
+            log.warning("Nachtraege nicht lesbar (%s): Warteschlange startet leer", fehler)
 
     def _sichere_nachtraege(self) -> None:
         grenze = time.time() - NACHTRAG_HALTEN_S
@@ -1125,7 +1128,10 @@ class PcBruecke:
         self.erledigt = dict(sorted(self.erledigt.items(), key=lambda e: e[1])[-500:])
         try:
             NACHTRAEGE.parent.mkdir(parents=True, exist_ok=True)
-            NACHTRAEGE.write_text(json.dumps({"offen": self.nachtraege, "erledigt": self.erledigt}, ensure_ascii=False), "utf-8")
+            # Atomar: Ein Neustart mitten im Schreiben ließ sonst eine halbe Datei zurück (Warteschlange und Doppelschutz weg).
+            teil = NACHTRAEGE.with_name(NACHTRAEGE.name + ".tmp")
+            teil.write_text(json.dumps({"offen": self.nachtraege, "erledigt": self.erledigt}, ensure_ascii=False), "utf-8")
+            os.replace(teil, NACHTRAEGE)
         except Exception as fehler:
             log.warning("Nachtraege nicht gesichert: %s", fehler)
 

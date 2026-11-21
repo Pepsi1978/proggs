@@ -387,6 +387,18 @@
           }
         ],
         "matcher": "*"
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" nachwarter",
+            "timeout": 43200,
+            "asyncRewake": true,
+            "rewakeSummary": "Nachtrag von Frank über Jarvis"
+          }
+        ]
       }
     ],
     "Stop": [

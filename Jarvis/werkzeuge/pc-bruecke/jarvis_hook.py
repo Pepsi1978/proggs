@@ -702,6 +702,11 @@ def beanspruche(liste: list[dict]) -> list[dict]:
         neu = [n for n in liste if n["nachtrag_id"] not in z["nachtraege"]]
         alt = [n["nachtrag_id"] for n in liste if n["nachtrag_id"] in z["nachtraege"]]
         z["nachtraege"] = (z["nachtraege"] + [n["nachtrag_id"] for n in neu])[-200:]
+        # Bis der Stop-Hook sie im Transkript findet: Kam ein Weckruf nicht in der Sitzung an, geht der Text dort noch einmal hinein.
+        offen = z.setdefault("unbelegt", {})
+        for n in neu:
+            if not n["nachtrag_id"].startswith("G"):
+                offen[n["nachtrag_id"]] = {"zeit": time.time(), "text": n["text"][:20_000]}
         schreib_zustand(z)
     # Die Quittung darf die Übergabe nie verhindern: Die neuen sind schon als übergeben vermerkt und kämen sonst nie an.
     # Scheitert sie, bietet der Relay sie wieder an, und die nächste Abfrage quittiert sie still nach.
@@ -913,31 +918,90 @@ def lebt(pid: int, start: str = "") -> bool:
     return not start or not jetzt or jetzt == start
 
 
-def nachtraege_im_stop() -> bool:
-    """Stop: Liegen Nachträge bereit, gehen sie als decision block in die Sitzung. True = übergeben."""
+# So lange nach der Übergabe darf ein Nachtrag noch nicht im Transkript stehen: Kam der Weckruf, während das Modell seine
+# letzte Antwort schrieb, nimmt Claude Code ihn erst nach dem Stop als neuen Zug. Im Stop daher großzügig, im Warter (Sitzung
+# steht still, ein Weckruf wäre längst verarbeitet) knapp. Älter als BELEG_ENDE_S: nicht mehr prüfbar, nie blind ein zweites Mal.
+BELEG_STOP_S = 300
+BELEG_STILL_S = 60
+BELEG_ENDE_S = 3 * 3600
+
+
+def nicht_angekommen(eingabe: dict, frist: float = BELEG_STOP_S) -> list[dict]:
+    """Übergebene Nachträge, die nicht im Transkript stehen (Weckruf verloren): einmal zurück, als belegt vermerkt.
+    Belegte fallen aus der Liste. Genau einmal: Was im Transkript steht, kommt nie wieder."""
+    pfad = str(eingabe.get("transcript_path") or "")
+    if not pfad:
+        return []
+    try:
+        with Sperre():
+            z = lies_zustand()
+            offen = z.get("unbelegt") or {}
+            if not offen:
+                return []
+            try:
+                with open(pfad, "rb") as f:
+                    groesse = os.fstat(f.fileno()).st_size
+                    f.seek(max(0, groesse - 8_000_000))
+                    inhalt = f.read()
+            except OSError:
+                return []
+            jetzt = time.time()
+            zurueck = []
+            for nid, e in list(offen.items()):
+                alter = jetzt - float(e.get("zeit", 0))
+                if f"NACHTRAG {nid}".encode() in inhalt:
+                    offen.pop(nid)
+                elif alter > BELEG_ENDE_S:
+                    offen.pop(nid)
+                    schreib(f"Nachtrag {nid}: kein Beleg im Transkript, zu alt zum erneuten Übergeben")
+                elif alter > frist:
+                    offen.pop(nid)
+                    zurueck.append({"nachtrag_id": nid, "text": str(e.get("text", ""))})
+            z["unbelegt"] = offen
+            schreib_zustand(z)
+    except SperreBelegt:
+        return []
+    if zurueck:
+        schreib(f"Nachträge ohne Beleg im Transkript, gehen erneut hinein: {', '.join(n['nachtrag_id'] for n in zurueck)}")
+    return zurueck
+
+
+def nachtraege_im_stop(eingabe: dict | None = None) -> bool:
+    """Stop: Liegen Nachträge bereit, gehen sie als decision block in die Sitzung, ebenso übergebene ohne Beleg. True = übergeben."""
+    nochmal = nicht_angekommen(eingabe or {})
     try:
         neu = beanspruche(hole_nachtraege(0))
     except Exception as fehler:
         schreib(f"Nachträge im Stop: {fehler}")
+        neu = []
+    if not neu and not nochmal:
         return False
-    if not neu:
-        return False
-    sys.stdout.write(json.dumps({"decision": "block", "reason": uebergib(neu)}, ensure_ascii=False))
+    teile = [uebergib(neu)] if neu else []
+    if nochmal:
+        teile.append("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um:\n\n"
+                     + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
+    sys.stdout.write(json.dumps({"decision": "block", "reason": "\n\n".join(teile)}, ensure_ascii=False))
     return True
 
 
 def warte(eingabe: dict) -> int:
     """asyncRewake: wartet auf Nachträge; Exit 2 mit dem Nachtrag weckt die Sitzung. Nur ein Warter je Auftrag."""
     ORDNER.mkdir(parents=True, exist_ok=True)
-    # Die pid-Datei trägt PID und Startzeit („1234 133…“); ältere Fassungen schrieben nur die PID.
+    # Unter der Sperre: Seit der Warter vor jedem Werkzeug neu angeboten wird (nachwarter), starten oft mehrere gleichzeitig;
+    # ohne Sperre sähen beide keinen lebenden Warter und holten parallel ab.
     try:
-        teile = WARTER.read_text(encoding="utf-8").split()
-        alter, alter_start = (int(teile[0]), teile[1] if len(teile) > 1 else "") if teile else (0, "")
-    except Exception:
-        alter, alter_start = 0, ""
-    if alter and alter != os.getpid() and lebt(alter, alter_start):
+        with Sperre():
+            # Die pid-Datei trägt PID und Startzeit („1234 133…“); ältere Fassungen schrieben nur die PID.
+            try:
+                teile = WARTER.read_text(encoding="utf-8").split()
+                alter, alter_start = (int(teile[0]), teile[1] if len(teile) > 1 else "") if teile else (0, "")
+            except Exception:
+                alter, alter_start = 0, ""
+            if alter and alter != os.getpid() and lebt(alter, alter_start):
+                return 0
+            WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
+    except SperreBelegt:
         return 0
-    WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
     # OpenCode: Das Plugin nennt seinen Prozess, einen claude*-Vorfahren gibt es dort nicht. Claude Code nennt sich selbst
     # (CLAUDE_PID, ab 2.1.x); der Vorfahr bleibt der Ersatz für ältere Fassungen.
     claude = int(os.environ.get("JARVIS_ELTERN_PID") or 0) or int(os.environ.get("CLAUDE_PID") or 0) or claude_prozess()
@@ -989,6 +1053,14 @@ def warte(eingabe: dict) -> int:
                 sende_sperre(sperr)
             except SperreBelegt:
                 pass
+            transkript = str(eingabe.get("transcript_path") or "")
+            if not LOKAL and transkript and zugstand(transkript) == "ende":
+                nochmal = nicht_angekommen(eingabe, BELEG_STILL_S)
+                if nochmal:
+                    sys.stderr.write("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um:\n\n"
+                                     + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
+                    schreib(f"Warter: {len(nochmal)} Nachtrag/Nachträge ohne Beleg erneut übergeben")
+                    return 2
             try:
                 liste = hole_nachtraege(25)
             except Exception as fehler:
@@ -1831,7 +1903,7 @@ def stop(eingabe: dict) -> None:
     if not neu:
         # Lokal läuft Stop async: Eine Ausgabe nähme niemand an, Nachträge stellt dort nur der Warter zu.
         if not LOKAL:
-            nachtraege_im_stop()
+            nachtraege_im_stop(eingabe)
         return
     # Eine echte Rückfrage steht am Ende der Nachricht (Fragezeichen oder eine wörtlich aufgezählte Auswahl A/B/C … bzw.
     # 1/2/3 nach einer Frage, etwa Frage 1 des Research-Skills ohne AskUserQuestion); nur dann wartet der Hook (nie zweimal).
@@ -1877,7 +1949,7 @@ def stop(eingabe: dict) -> None:
             # Freigegeben: Frank antwortet am Rechner oder in der Claude-App wie auf jede Nachricht.
             frage_status(frage_id, "am_pc", grund="freigegeben")
             schreib("Freie Rückfrage ohne Antwort über Jarvis (freigegeben)")
-            nachtraege_im_stop()
+            nachtraege_im_stop(eingabe)
             return
         # Abgelaufen oder in Jarvis ohne Antwort geschlossen: nie stehen bleiben. Einmal weiterarbeiten lassen;
         # stop_hook_active verhindert beim nächsten Stop eine zweite Runde.
@@ -1894,7 +1966,7 @@ def stop(eingabe: dict) -> None:
     melde("info", "🏁 " + letzte + ("" if LOKAL else f"\n\n⏱️ Dauer seit Start: {dauer}"))
     # Danach (nicht davor: „info“ markiert in Jarvis die zuvor übergebenen Nachträge als bearbeitet) die neuen Nachträge.
     if not LOKAL:
-        nachtraege_im_stop()
+        nachtraege_im_stop(eingabe)
 
 
 def puls(eingabe: dict) -> None:
@@ -1937,6 +2009,13 @@ def main() -> int:
         return lokal(sys.argv[2] if len(sys.argv) > 2 else "")
     if art == "frage-warter":
         return frage_warter(sys.argv[2] if len(sys.argv) > 2 else "")
+    if art == "nachwarter":
+        # Profil-Hook vor jedem Werkzeug (asyncRewake, ohne Wächter auf JARVIS_AUFTRAG_ID): Ein Warter endet mit jeder
+        # Übergabe, und bis zum nächsten Stop wartete sonst keiner. Nachträge lagen dann, solange die Sitzung arbeitete
+        # (Bau, Installation, Review-Frage), nur in der Warteschlange (Vorfall 21.11.2026, TYDQZ). Läuft schon einer, endet er sofort.
+        if not AUFTRAG:
+            return lokal("warte")
+        art = "warte"
     if not AUFTRAG:
         return 0
     if art == "melde":

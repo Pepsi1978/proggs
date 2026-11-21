@@ -293,7 +293,9 @@ def jarvis_hooks() -> dict:
     return {
         "PostToolUse": [eintrag("*", "post", 15, True)],
         "PostToolUseFailure": [eintrag("Bash|PowerShell", "post", 15, True)],
-        "PreToolUse": [eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, True)],
+        # Auch vor jedem Werkzeug ein Warter (endet sofort, wenn schon einer läuft): Nach einer Übergabe wartete sonst bis zum
+        # nächsten Stop keiner, und Nachträge kamen erst nach Bau und Installation an.
+        "PreToolUse": [eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, True), dict(warter, matcher="*")],
         "Stop": [eintrag(None, "stop", 660), warter],
         "StopFailure": [eintrag(None, "fehlschlag", 30)],
         "SessionStart": [warter],
