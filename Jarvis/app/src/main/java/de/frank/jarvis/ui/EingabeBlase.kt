@@ -602,7 +602,7 @@ fun ProgrammierSchweber(
                     when {
                         ziel != vm.sitzungId.orEmpty() -> vm.meldung = "Das Gespräch hat inzwischen gewechselt. Nichts gelöscht."
                         ziel.isNotEmpty() -> vm.sitzungLoeschen(ziel)
-                        else -> vm.neuesGespraech()
+                        else -> vm.neuesGespraech("Gespräch gelöscht", mitnahmeErlaubt = false)
                     }
                     loeschenZiel = null
                 }) { Text("Löschen", color = f.gefahr) }

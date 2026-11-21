@@ -171,7 +171,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var nimmtAufZustand by mutableStateOf(false)
     var nimmtAuf: Boolean
         get() = nimmtAufZustand
-        private set(wert) { nimmtAufZustand = wert; de.frank.jarvis.speech.GespraechsFokus.aufnahme = wert }
+        private set(wert) { nimmtAufZustand = wert; de.frank.jarvis.speech.GespraechsFokus.aufnahme = wert || mikroGeteilt }
     var schreibtMit by mutableStateOf(false); private set
     var mikrofonAnfragen: () -> Unit = {}
     /** Die laufende Frage kam über das Mikrofon: Dann wird die Antwort vorgelesen. */
@@ -1987,9 +1987,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * der alten Session enden sofort. Nichts davon darf in der neuen Session landen oder dort das Mikrofon wieder öffnen.
      * Laufende Antworten und Programmieraufträge der alten Session bleiben unberührt und schreiben in deren Datei.
      */
-    private fun aufnahmeVerwerfen(anlass: String): Job? {
-        // Ein Feld-Diktat endet beim Wechsel nicht mehr, sondern läuft als mitgenommene Aufnahme weiter.
-        mitnehmen(anlass)
+    private fun aufnahmeVerwerfen(anlass: String, mitnahmeErlaubt: Boolean = false): Job? {
+        // Beim Verlassen der Session (nicht bei Löschen oder „Sprachsession beenden“) endet ein Feld-Diktat nicht, sondern läuft mitgenommen weiter.
+        if (mitnahmeErlaubt) mitnehmen(anlass)
         wechselStand++
         verwerfAnlass = anlass
         merkDiktat = false
@@ -2623,9 +2623,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
                 // Hauptfaden, sonst steht die Mitschrift-Animation still.
                 val (wavRoh, stimmhaftRoh) = if (abzweig >= 0) {
-                    val teil = withContext(Dispatchers.Default) { mikro.ausschnitt(abzweig) }
-                    abzweige = (abzweige - 1).coerceAtLeast(0)
-                    if (mitnahme?.laeuft != true && abzweige == 0 && mikroGeteilt) mikroGanzStoppen()
+                    // Im finally: Auch ein abgebrochener Abzweig (Sessionwechsel) gibt das Mikrofon frei.
+                    val teil = try { withContext(Dispatchers.Default) { mikro.ausschnitt(abzweig) } } finally {
+                        abzweige = (abzweige - 1).coerceAtLeast(0)
+                        if (mitnahme?.laeuft != true && abzweige == 0 && mikroGeteilt) mikroGanzStoppen()
+                    }
                     teil to (null as BooleanArray?)
                 } else withContext(Dispatchers.Default) { de.frank.jarvis.data.Einstellungen.ohneSchlussstille(mikro.stop(), schluss) to mikro.letzteStimmhaft }
                 // Gesprächsrunde nach einer Antwort: Ende der eigenen Antwort und Piepton gehören nicht in die Mitschrift.
@@ -3015,7 +3017,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 rueckfrageNebenher = ziel
                 Logbuch.sprache("Rückfrage nebenher", "Aufnahme läuft weiter, Gespräch bleibt offen")
             } else if (ziel.first != sitzungId) {
-                aufnahmeVerwerfen("Rückfrage einer anderen Session geöffnet")
+                aufnahmeVerwerfen("Rückfrage einer anderen Session geöffnet", mitnahmeErlaubt = true)
                 // Ließ sich das Gespräch nicht öffnen, bleibt die Frage nicht als offen stehen (sonst versuchte es jeder Anstoß erneut).
                 if (!sitzungLaden(ziel.first, wegenRueckfrage = true) && rueckfrageOffen == ziel) rueckfrageOffen = null
             }
@@ -3388,15 +3390,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Logbuch.sprache("Mitgenommene Aufnahme beendet", grund)
         viewModelScope.launch {
             try {
-                val wav = withContext(Dispatchers.Default) { mikro.ausschnitt(0) }
-                // Läuft noch ein Abzweig, stoppt dieser das Mikrofon, sobald er seinen Teil hat.
-                if (abzweige == 0) mikroGanzStoppen()
-                if (grund != "in der Session beendet" && sitzungId != m.sitzung) meldung = "Aufnahme für die Session beendet (${grund}). Ich schreibe sie mit."
+                // Niemand nimmt mehr mit: das ganze Ergebnis von stop() nehmen (keine zweite Kopie des Puffers). Läuft noch ein
+                // Abzweig, nur ausschneiden; er stoppt das Mikrofon, sobald er seinen Teil hat.
+                val wav = if (abzweige == 0) mikroStoppenMitTon() else withContext(Dispatchers.Default) { mikro.ausschnitt(0) }
                 val text = if (wav == null || wav.size < 2000) "" else mitnahmeMitschreiben(wav)
                 if (mitnahme !== m) return@launch
                 if (text.isBlank()) { mitnahme = null; meldung = "In der Aufnahme für die Session habe ich nichts verstanden."; return@launch }
                 m.text = text
-                if (sitzungId == m.sitzung) mitnahmeAbholen()
+                if (sitzungId == m.sitzung) {
+                    mitnahmeAbholen()
+                    if (!sessionSichtbar) meldung = "Die Aufnahme steht jetzt im Eingabefeld der Session (${grund})."
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -3424,15 +3428,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mitnahmeZurSession() {
         val m = mitnahme ?: return
         merkOffen = null
+        GedaechtnisAnsicht.offen = false
+        FunktionenAnsicht.offen = false
+        if (ListenAnsicht.offen) ListenAnsicht.schliessen()
+        if (de.frank.jarvis.bio.presentation.BioAnsicht.offen) de.frank.jarvis.bio.presentation.BioAnsicht.schliessen()
         reiter = Reiter.JARVIS
-        if (m.sitzung != null && m.sitzung != sitzungId) sitzungOeffnen(m.sitzung)
-        else if (m.text != null) mitnahmeAbholen()
+        when {
+            m.sitzung != null && m.sitzung != sitzungId -> sitzungOeffnen(m.sitzung)
+            // Die Aufnahme begann in einem noch leeren Gespräch: Ihr Text geht in ein neues, leeres.
+            m.sitzung == null && sitzungId != null -> { neuesGespraech("zur Session der Aufnahme"); if (m.text != null) mitnahmeAbholen() }
+            m.text != null -> mitnahmeAbholen()
+        }
+    }
+
+    /** Wartende Mitschrift oder laufende Aufnahme ohne Ziel wegwerfen (Einblendung, gelöschte Session). */
+    fun mitnahmeVerwerfen(anlass: String) {
+        val m = mitnahme ?: return
+        mitnahme = null
+        if (m.laeuft) { m.laeuft = false; if (abzweige == 0 && mikroGeteilt) mikroGanzStoppen() }
+        Logbuch.sprache("Mitgenommene Aufnahme verworfen", anlass)
+    }
+
+    /** Die Session ist gerade zu sehen (aus JarvisApp): Sonst sagt eine Meldung, wo der Text gelandet ist. */
+    var sessionSichtbar = true
+
+    /** Wie [mikroGanzStoppen], gibt aber den ganzen Ton zurück. stop() schaltet sofort ab, bevor eine neue Aufnahme starten kann. */
+    private suspend fun mikroStoppenMitTon(): ByteArray? {
+        mikroGeteilt = false
+        de.frank.jarvis.speech.GespraechsFokus.aufnahme = nimmtAuf
+        val wav = mikro.stop()
+        if (!mikroGeteilt && !nimmtAuf && !holtMikro) {
+            de.frank.jarvis.audio.AufnahmeDienst.stoppen()
+            de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+            de.frank.jarvis.speech.GespraechsFokus.freigeben()
+        }
+        return wav
     }
 
     /** Gibt das Mikrofon frei, wenn niemand es mehr braucht (mitgenommene Aufnahme und alle Abzweige fertig). */
     private fun mikroGanzStoppen(): Job {
         mikroGeteilt = false
-        if (!nimmtAuf) de.frank.jarvis.speech.GespraechsFokus.aufnahme = false
+        de.frank.jarvis.speech.GespraechsFokus.aufnahme = nimmtAuf
         return viewModelScope.launch {
             mikro.stop()
             if (mikroGeteilt || nimmtAuf || holtMikro) return@launch
@@ -3453,9 +3489,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
-    fun neuesGespraech(anlass: String = "neues Gespräch von Hand") {
-        // Von Hand (Knopf, Seitenleiste, Löschen): Aufnahme und Gesprächsmodus der alten Session enden.
-        aufnahmeVerwerfen(anlass)
+    fun neuesGespraech(anlass: String = "neues Gespräch von Hand", mitnahmeErlaubt: Boolean = true) {
+        // Von Hand (Knopf, Seitenleiste, Löschen): Aufnahme und Gesprächsmodus der alten Session enden; ein Feld-Diktat läuft mitgenommen weiter (außer beim Löschen).
+        aufnahmeVerwerfen(anlass, mitnahmeErlaubt)
         gespraechLeeren()
         eingabeKompakt = true
         tastaturWeg++
@@ -3583,7 +3619,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sitzungOeffnen(id: String) {
         if (id == sitzungId) return
         // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
-        aufnahmeVerwerfen("andere Session geöffnet")
+        aufnahmeVerwerfen("andere Session geöffnet", mitnahmeErlaubt = true)
         eingabeKompakt = true
         tastaturWeg++
         knoepfeAus()
@@ -3782,6 +3818,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sitzungLoeschen(id: String) {
         rundeAbbrechen(id)
+        // Gelöschte Session: Ihre Aufnahme wird verworfen, nicht mitgenommen.
+        if (id == sitzungId) aufnahmeVerwerfen("Session gelöscht")
+        if (mitnahme?.sitzung == id) mitnahmeVerwerfen("Session gelöscht")
         // Im Projekt bleiben: Das nächste Gespräch gehört wieder zu ihm.
         if (id == sitzungId) sitzungProjekt.let { p -> if (p.isEmpty()) neuesGespraech() else neuesGespraechImProjekt(p) }
         if (vorherigeSitzung == id) vorherigeSitzung = null

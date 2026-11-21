@@ -119,7 +119,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             // Session nicht mehr zu sehen (anderer Reiter oder Vollbild): Ein laufendes Diktat der Eingabeblase läuft als
             // mitgenommene Aufnahme weiter, oben eingeblendet; andere Bereiche können parallel aufnehmen.
             val sessionSichtbar = vm.reiter == Reiter.JARVIS && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
-            androidx.compose.runtime.LaunchedEffect(sessionSichtbar) { if (!sessionSichtbar) vm.mitnehmen("Bereich gewechselt") }
+            androidx.compose.runtime.LaunchedEffect(sessionSichtbar) { vm.sessionSichtbar = sessionSichtbar; if (!sessionSichtbar) vm.mitnehmen("Bereich gewechselt") }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
             val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
@@ -233,6 +233,7 @@ private fun MitnahmeLeiste(vm: AppViewModel, modifier: Modifier) {
         Text(text, Modifier.padding(start = 8.dp, end = 6.dp), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         androidx.compose.material3.TextButton(onClick = { vm.mitnahmeZurSession() }) { Text("Zur Session", color = f.primaer, fontSize = 14.sp) }
         if (m.laeuft) androidx.compose.material3.TextButton(onClick = { vm.mitnahmeBeenden("oben beendet") }) { Text("Beenden", color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
+        else if (m.text != null) androidx.compose.material3.TextButton(onClick = { vm.mitnahmeVerwerfen("oben verworfen") }) { Text("Verwerfen", color = f.gefahr, fontSize = 14.sp) }
     }
 }
 
