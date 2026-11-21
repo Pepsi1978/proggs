@@ -1048,14 +1048,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Der Programmierbutton leuchtet, solange sein Einstieg im Entwurf steht oder die Modellwahl offen ist. */
     val programmiererLeuchtet: Boolean get() = programmiererAktiv || programmierVorwahlOffen
 
-    /** Programmierbutton (Schwebesymbol und Plus-Menü): öffnet oder schließt die Modellwahl; steht der Einstieg schon im Entwurf, nimmt er ihn heraus. */
+    /**
+     * Programmierbutton (Schwebesymbol und Plus-Menü): öffnet die Modellwahl und setzt gleich den Einstieg mit Opus 5.5 ein; wählt Frank
+     * nichts, gilt Opus 5.5 (Frank, 21.11.2026), ein Knopf ersetzt den Einstieg. Erneutes Antippen schließt die Wahl bzw. nimmt den Einstieg heraus.
+     */
     fun programmiererTippen() {
+        if (programmierVorwahlOffen) {
+            vorwahlFrist?.cancel()
+            programmierVorwahlOffen = false
+            programmierVorwahlModell = null
+            if (ProgrammiererVorlage.vorspannIn(entwurf) == ProgrammiererVorlage.STANDARD_EINSTIEG) {
+                entwurf = ProgrammiererVorlage.entfernen(entwurf)
+                if (sitzungId == null) sitzungProgrammierung = false
+            }
+            return
+        }
         if (!programmiererAktiv) {
             vorwahlFrist?.cancel()
-            programmierVorwahlOffen = !programmierVorwahlOffen
+            programmierVorwahlOffen = true
             programmierVorwahlModell = null
-            // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg.
-            if (programmierVorwahlOffen) vorwahlFristNeu()
+            // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg; der Opus-Einstieg bleibt.
+            vorwahlFristNeu()
+            einstiegSetzen(ProgrammiererVorlage.STANDARD_EINSTIEG)
             return
         }
         entwurf = ProgrammiererVorlage.entfernen(entwurf)
@@ -1072,6 +1086,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val clis = ProgrammiererVorlage.cliOptionen(modell)
         if (clis.size > 1) {
             programmierVorwahlModell = modell
+            // Schon das Modell gilt (mit seinem Standard-CLI), falls Frank kein CLI mehr antippt.
+            einstiegSetzen(ProgrammiererVorlage.vorspannFuer(modell))
             vorwahlFristNeu()
         } else programmierVorwahlCli(modell, clis.single().first)
     }

@@ -75,7 +75,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     /** Ergebnis eines Sensors: Werte oder ein verständlicher Grund, warum es keine gibt. */
-    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val co2: Int? = null, val problem: String? = null, val offline: Boolean = false, val quelle: String? = null)
+    private class Sensor(val name: String, val typ: String, val temperatur: Double? = null, val feuchte: Double? = null, val batterie: Int? = null, val co2: Int? = null, val problem: String? = null, val offline: Boolean = false, val quelle: String? = null,
+        /** Messzeit in Sekunden seit 1970 (Mac und Webhook: ihre Messzeit; Cloud und Handy direkt: der Abruf). */
+        val zeit: Long = System.currentTimeMillis() / 1000)
 
     /** Geräteliste (nur Namen und Kennungen, keine Messwerte) mit Abrufzeit. */
     @Volatile private var liste: Pair<Long, List<JSONObject>>? = null
@@ -182,7 +184,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val struktur = JSONObject().put("abgerufen", uhr).put("sensoren", JSONArray(sensoren.map { z ->
             JSONObject().put("name", z.name).put("typ", z.typ).apply {
                 if (z.problem != null) { put("problem", z.problem); if (z.offline) put("offline", true) }
-                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) } }
+                else { put("temperatur_c", z.temperatur); put("luftfeuchtigkeit_prozent", z.feuchte); z.co2?.let { put("co2_ppm", it) }; z.quelle?.let { put("quelle", it) }; z.batterie?.let { put("batterie_prozent", it) }; put("gemessen", z.zeit) }
             }
         })).apply { if (fehlend.isNotEmpty()) put("nicht_im_konto", JSONArray(fehlend)); webhook?.let { put("webhook", it) } }
         Ergebnis(text + (if (fehlend.isEmpty()) "" else "\nKein Sensor mit diesem Namen im SwitchBot-Konto: ${fehlend.joinToString()}."), fehler = sensoren.all { it.problem != null }, struktur = struktur)
@@ -270,7 +272,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val f = w.wert("luftfeuchtigkeit_prozent") ?: return null
         val co2 = if (z.typ.contains("CO2", ignoreCase = true)) w.wert("co2_ppm")?.toInt() else null
         // Batterie kennt nur die Cloud: aus deren Antwort übernehmen, sonst ginge eine schwache Batterie verloren.
-        return Sensor(z.name, z.typ, t, f, z.batterie, co2, quelle = weg)
+        val jetzt = System.currentTimeMillis() / 1000
+        val zeit = w.optLong("zeit").takeIf { it > 0 }?.let { minOf(it, jetzt) } ?: jetzt
+        return Sensor(z.name, z.typ, t, f, z.batterie, co2, quelle = weg, zeit = zeit)
     }
 
     /** [w], wenn höchstens [FRISCH_S] alt (Messzeit in der Zukunft zählt als jetzt), sonst null. */

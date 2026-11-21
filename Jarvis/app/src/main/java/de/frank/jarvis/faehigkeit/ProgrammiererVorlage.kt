@@ -32,6 +32,9 @@ object ProgrammiererVorlage {
         KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode")),
     )
 
+    /** Einstieg, den der Programmierbutton sofort setzt: ohne Wahl gilt Opus 5.5 in Claude Code (Frank, 21.11.2026). */
+    val STANDARD_EINSTIEG: String get() = vorspannFuer(MODELL_OPUS, "claude")
+
     /** Wert und Beschriftung der Modellknöpfe, für Vorwahl und Karte dieselbe Reihenfolge. */
     val MODELL_OPTIONEN = KNOPF_MODELLE.map { it.wert to it.label }
 
