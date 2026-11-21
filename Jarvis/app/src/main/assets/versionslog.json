@@ -873,6 +873,7 @@
   {"versionCode": 864, "versionName": "1.8.853", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Das CLI-Aufräumen zeigt Fehler jetzt im richtigen Abschnitt, bestätigt Spracheinstellungen erst nach der Rückmeldung des Macs und lässt Sitzungen mit geplanten Läufen oder Hintergrund-Agenten offen."},
   {"versionCode": 865, "versionName": "1.8.854", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Review-Befunde behoben: Die Review-Ansage wird nur unterdrückt, solange die vorige Frage offen ist, und ein Ja per Sprache zum Review zählt nicht mehr als Ja zum Tablet."},
   {"versionCode": 866, "versionName": "1.8.855", "stand": "21.11.2026, 09:40 Uhr", "notiz": "Der Endton ist jetzt noch viel tiefer, leiser, und der zweite Ton liegt deutlich tiefer unter dem ersten."},
-  {"versionCode": 867, "versionName": "1.8.856", "stand": "21.11.2026, 09:44 Uhr", "notiz": "Die Tablet-Frage kommt nur noch zusammen mit der Code-Review-Frage in einem Block, nie allein; angesagt wird nur die Review-Frage."}
+  {"versionCode": 867, "versionName": "1.8.856", "stand": "21.11.2026, 09:44 Uhr", "notiz": "Die Tablet-Frage kommt nur noch zusammen mit der Code-Review-Frage in einem Block, nie allein; angesagt wird nur die Review-Frage."},
+  {"versionCode": 868, "versionName": "1.8.857", "stand": "21.11.2026, 09:45 Uhr", "notiz": "Der zweite Ton des Endtons klingt jetzt etwas länger."}
 ]
 }

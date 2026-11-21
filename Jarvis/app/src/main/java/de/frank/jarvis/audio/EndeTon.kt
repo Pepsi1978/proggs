@@ -25,7 +25,7 @@ object EndeTon {
     private const val TIEF_HZ = 87.0      // F2
     private const val HOCH_MS = 170
     private const val PAUSE_MS = 35
-    private const val TIEF_MS = 240
+    private const val TIEF_MS = 280
     private const val RAMPE_MS = 12
     /** Leiser als die halbe Standard-Lautstärke (Franks Wunsch): 0,7 × 0,35. */
     private const val PEGEL = 0.7 * 0.35
