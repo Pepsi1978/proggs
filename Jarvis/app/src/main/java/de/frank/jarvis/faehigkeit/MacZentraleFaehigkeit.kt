@@ -23,7 +23,7 @@ class MacZentraleFaehigkeit(private val context: Context) : Faehigkeit {
         val c = MacUpdateZentrale.lage.value.cli ?: return "Vom MacBook liegt noch kein Stand vor."
         val an = c.optBoolean("automatik")
         return "Automatisches Aufräumen " + (if (an) "an, alle ${c.optInt("stunden")} Stunden" else "aus (Intervall ${c.optInt("stunden")} Stunden)") +
-            ". " + (c.optJSONObject("letzter")?.optString("text")?.let { "Letztes Aufräumen: $it" } ?: "")
+            ". " + (c.optJSONObject("letzter")?.optString("text")?.takeIf { it.isNotBlank() }?.let { "Letztes Aufräumen: $it" } ?: "")
     }
 
     override val werkzeuge = listOf(
@@ -54,14 +54,20 @@ class MacZentraleFaehigkeit(private val context: Context) : Faehigkeit {
                 zusatz.put("stunden", zahl.toInt())
             }
             if (zusatz.length() == 0) return@Werkzeug Ergebnis(stand())
+            val gesendet = System.currentTimeMillis() / 1000.0
             val grund = MacUpdateZentrale.auftrag(context, "cli_einstellung", zusatz)
             if (grund != null) return@Werkzeug Ergebnis(grund.replace("Es wurde nichts gestartet.", "Nichts geändert."), fehler = true)
             // Der Mac speichert und meldet den neuen Stand; erst der bestätigt die Änderung.
             repeat(5) {
                 delay(1_500)
                 MacUpdateZentrale.holen(context)
-                val c = MacUpdateZentrale.lage.value.cli
-                val passt = c != null && (!zusatz.has("automatik") || c.optBoolean("automatik") == zusatz.getBoolean("automatik")) &&
+                val l = MacUpdateZentrale.lage.value
+                l.fehler?.takeIf { it.optString("kennung") == MacUpdateZentrale.cliKennung.value }?.let {
+                    return@Werkzeug Ergebnis(it.optString("text") + " Nichts geändert.", fehler = true)
+                }
+                val c = l.cli
+                // Nur ein Stand, den der Mac nach dem Auftrag gemeldet hat, bestätigt die Änderung.
+                val passt = c != null && c.optDouble("zeit", 0.0) >= gesendet - 2 && (!zusatz.has("automatik") || c.optBoolean("automatik") == zusatz.getBoolean("automatik")) &&
                     (!zusatz.has("stunden") || c.optInt("stunden") == zusatz.getInt("stunden"))
                 if (passt) return@Werkzeug Ergebnis("Gespeichert. " + stand())
             }

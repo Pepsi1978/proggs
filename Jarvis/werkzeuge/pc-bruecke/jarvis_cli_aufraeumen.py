@@ -163,8 +163,13 @@ def startzeit(pid: int) -> str | None:
 # ---------------------------------------------------------------- Transkript und Hook-Zustand
 
 def transkript(basis: Path, sitzung: str) -> Path | None:
-    treffer = sorted((basis / "projects").glob(f"*/{sitzung}.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return treffer[0] if treffer else None
+    treffer = []
+    for p in (basis / "projects").glob(f"*/{sitzung}.jsonl"):
+        try:
+            treffer.append((p.stat().st_mtime, p))
+        except OSError:
+            continue
+    return max(treffer)[1] if treffer else None
 
 
 def _zeitstempel(text) -> float:
@@ -198,6 +203,12 @@ def letzter_zug(pfad: Path) -> tuple[str, float]:
             continue
         zeit = _zeitstempel(e.get("timestamp"))
         if e["type"] == "user":
+            inhalt = (e.get("message") or {}).get("content")
+            text = inhalt if isinstance(inhalt, str) else " ".join(
+                str(b.get("text") or "") for b in inhalt or [] if isinstance(b, dict) and b.get("type") == "text")
+            # Von Frank abgebrochen oder nur ein lokaler Befehl (/clear, /model …): darauf antwortet niemand mehr.
+            if text.lstrip().startswith(("[Request interrupted by user", "<local-command-stdout>", "<command-name>", "<local-command-caveat>")):
+                return "fertig", zeit
             return "offen", zeit
         inhalt = (e.get("message") or {}).get("content")
         if isinstance(inhalt, list) and any(isinstance(b, dict) and b.get("type") == "tool_use" for b in inhalt):
@@ -206,7 +217,48 @@ def letzter_zug(pfad: Path) -> tuple[str, float]:
     return "unklar", 0.0
 
 
+PLANENDE_WERKZEUGE = (b'"name":"ScheduleWakeup"', b'"name":"CronCreate"', b'"name":"RemoteTrigger"')
+
+
+def plant_weiter(pfad: Path) -> bool:
+    """Hat die Sitzung zuletzt einen Weckruf oder wiederkehrenden Lauf geplant (/loop, ScheduleWakeup, CronCreate)? Dann ruht sie
+    absichtlich und arbeitet später weiter: nicht eindeutig inaktiv."""
+    try:
+        with open(pfad, "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - 400_000))
+            ende = f.read()
+    except OSError:
+        return True
+    return any(w in ende for w in PLANENDE_WERKZEUGE) and b'"stop":true' not in ende[ende.rfind(b'"name":"ScheduleWakeup"'):]
+
+
+def nebenarbeit_zeit(pfad: Path) -> float:
+    """Letzte Änderung an Transkripten von Hintergrund-Agenten dieser Sitzung (<sitzung>/subagents/*.jsonl)."""
+    try:
+        return max((p.stat().st_mtime for p in (pfad.parent / pfad.stem).glob("**/*.jsonl")), default=0.0)
+    except OSError:
+        return time.time()
+
+
+_ABGESCHLOSSEN: dict[str, tuple[float, int, bool]] = {}
+
+
 def jarvis_abgeschlossen(pfad: Path) -> bool:
+    """Wie [_jarvis_abgeschlossen], zwischengespeichert nach Größe und Änderungszeit (lange Transkripte nicht alle fünf Minuten lesen)."""
+    try:
+        st = pfad.stat()
+    except OSError:
+        return False
+    alt = _ABGESCHLOSSEN.get(str(pfad))
+    if alt and alt[0] == st.st_mtime and alt[1] == st.st_size:
+        return alt[2]
+    wert = _jarvis_abgeschlossen(pfad)
+    _ABGESCHLOSSEN[str(pfad)] = (st.st_mtime, st.st_size, wert)
+    return wert
+
+
+def _jarvis_abgeschlossen(pfad: Path) -> bool:
     """Hat ein Jarvis-Auftrag zuletzt „fertig“ oder „fehler“ gemeldet (programmier_fortschritt im Transkript)?"""
     stand = None
     try:
@@ -265,6 +317,8 @@ def bewerte(s: dict, jetzt: float) -> tuple[str, str]:
         return "unklar", "Transkript nicht lesbar"
     if s.get("auftrag") and not s.get("auftrag_fertig"):
         return "aktiv", "Jarvis-Auftrag läuft noch"
+    if s.get("plant_weiter"):
+        return "unklar", "hat einen späteren Lauf geplant"
     letzte = s.get("letzte")
     if not isinstance(letzte, (int, float)) or letzte <= 0:
         return "unklar", "letzte Aktivität unbekannt"
@@ -297,7 +351,8 @@ def sammle(pid: int, liste: dict[int, dict], vorher: dict[int, float] | None, na
     pfad = transkript(basis, sitzung) if sitzung else None
     if pfad:
         s["zug"], zeit = letzter_zug(pfad)
-        zeiten.append(zeit)
+        zeiten += [zeit, nebenarbeit_zeit(pfad)]
+        s["plant_weiter"] = plant_weiter(pfad)
     nummer = env.get("JARVIS_AUFTRAG_ID") or (h.lokale_nummer(sitzung) if sitzung else "")
     hz = hook_zustand(nummer) if nummer else {}
     zeiten.append(float(hz.get("zuletzt") or 0))
@@ -323,8 +378,12 @@ def sitzungen(ohne: int | None = None) -> list[dict]:
     for pid in kandidaten:
         if pid not in nachher or pid == ohne:
             continue
-        s = sammle(pid, nachher, vorher, nachher)
-        s["zustand"], s["grund"] = bewerte(s, jetzt)
+        try:
+            s = sammle(pid, nachher, vorher, nachher)
+            s["zustand"], s["grund"] = bewerte(s, jetzt)
+        except Exception as fehler:
+            s = {"pid": pid, "name": cli_name(nachher[pid]["befehl"]) or "CLI", "zustand": "unklar",
+                 "grund": f"nicht lesbar ({type(fehler).__name__})"}
         ergebnis.append(s)
     ergebnis.sort(key=lambda s: s.get("letzte") or jetzt)
     return ergebnis
@@ -400,13 +459,19 @@ def aufraeumen(art: str, ohne: int | None = None, trocken: bool = False) -> dict
             # Unmittelbar vor dem Schließen alles noch einmal frisch prüfen.
             liste_a = prozesse()
             if s["pid"] not in liste_a:
+                s["zustand"] = "weg"
                 continue
             time.sleep(MESSPAUSE_S)
             liste_b = prozesse()
             if s["pid"] not in liste_b:
+                s["zustand"] = "weg"
                 continue
-            neu = sammle(s["pid"], liste_b, {p: d["cpu"] for p, d in liste_a.items()}, liste_b)
-            neu["zustand"], neu["grund"] = bewerte(neu, time.time())
+            try:
+                neu = sammle(s["pid"], liste_b, {p: d["cpu"] for p, d in liste_a.items()}, liste_b)
+                neu["zustand"], neu["grund"] = bewerte(neu, time.time())
+            except Exception as fehler:
+                s.update(zustand="unklar", grund=f"nicht lesbar ({type(fehler).__name__})")
+                continue
             if neu["zustand"] != "inaktiv" or neu.get("start") != s.get("start"):
                 s.update(neu)
                 continue
@@ -422,11 +487,11 @@ def aufraeumen(art: str, ohne: int | None = None, trocken: bool = False) -> dict
                 s["zustand"] = "unklar"
                 fehlgeschlagen.append(s)
         jetzt = time.time()
-        offen = [x for x in alle if x["zustand"] != "beendet"]
+        offen = [x for x in alle if x["zustand"] not in ("beendet", "weg")]
         zaehl = {z: sum(1 for x in offen if x["zustand"] == z) for z in ("aktiv", "wartet", "kuerzlich", "unklar", "inaktiv")}
         teile = [f"{n} {name}" for name, n in (("aktiv", zaehl["aktiv"]), ("warten auf Antwort", zaehl["wartet"]),
                                                ("kürzlich genutzt", zaehl["kuerzlich"]), ("unklar", zaehl["unklar"]),
-                                               ("würden beendet (Probelauf)", zaehl["inaktiv"])) if n]
+                                               ("würden beendet (Probelauf)" if trocken else "inaktiv", zaehl["inaktiv"])) if n]
         text = (f"{len(beendet)} von {len(alle)} Sitzungen beendet" if beendet else f"Keine Sitzung beendet ({len(alle)} offen)")
         if offen:
             text += ". Offen: " + (", ".join(teile) if teile else f"{len(offen)}")

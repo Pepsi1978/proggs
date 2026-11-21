@@ -869,6 +869,7 @@
   {"versionCode": 860, "versionName": "1.8.849", "stand": "21.11.2026, 09:31 Uhr", "notiz": "Neue Jarvis-Versionen kommen nur noch aufs Tablet, wenn du am Ende der Programmier-Session die Tablet-Frage mit Ja beantwortest."},
   {"versionCode": 861, "versionName": "1.8.850", "stand": "21.11.2026, 09:34 Uhr", "notiz": "Der Endton bricht ab, sobald etwas Neues beginnt, entfällt bei Handübernahme, macht Musik kurz leiser und kommt auch am Konferenz-Lautsprecher sicher an."},
   {"versionCode": 862, "versionName": "1.8.851", "stand": "21.11.2026, 09:35 Uhr", "notiz": "Kommen kurz nacheinander mehrere Code-Review-Fragen, sagt Jarvis sie nur noch einmal an; alle Fragen bleiben im Vollbild."},
-  {"versionCode": 863, "versionName": "1.8.852", "stand": "21.11.2026, 09:38 Uhr", "notiz": "Der Endton ist jetzt viel tiefer, kürzer, dichter hintereinander und nur halb so laut."}
+  {"versionCode": 863, "versionName": "1.8.852", "stand": "21.11.2026, 09:38 Uhr", "notiz": "Der Endton ist jetzt viel tiefer, kürzer, dichter hintereinander und nur halb so laut."},
+  {"versionCode": 864, "versionName": "1.8.853", "stand": "21.11.2026, 09:39 Uhr", "notiz": "Das CLI-Aufräumen zeigt Fehler jetzt im richtigen Abschnitt, bestätigt Spracheinstellungen erst nach der Rückmeldung des Macs und lässt Sitzungen mit geplanten Läufen oder Hintergrund-Agenten offen."}
 ]
 }

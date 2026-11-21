@@ -713,6 +713,7 @@ def uz_befehl(befehl: dict) -> None:
         cli_befehl(kennung, art, befehl)
         return
     if art not in ("pruefen", "unkritisch", "kritisch"):
+        uz_melden({"kennung": kennung, "fehler": "Diese Mac-Brücke kennt den Auftrag nicht; bitte die Brücke aktualisieren."}, versuche=3)
         return
     try:
         (UZ_ORDNER / "auftraege").mkdir(parents=True, exist_ok=True)
@@ -784,6 +785,15 @@ def cli_lauf(art: str) -> None:
         CLI_STAND["sitzungen"] = ergebnis["offen"]
     except Exception as fehler:
         schreib(f"CLI-Aufräumen: {type(fehler).__name__}: {fehler}")
+        if art == "auto":
+            # Nach einem Fehler erst im nächsten Intervall erneut, nie im Minutentakt.
+            try:
+                e = ca.lies_einstellung()
+                if e["automatik"]:
+                    e["naechster"] = time.time() + e["stunden"] * 3600
+                    ca.schreib_einstellung(e)
+            except Exception:
+                pass
     finally:
         CLI_STAND["laeuft"] = False
         cli_melden()

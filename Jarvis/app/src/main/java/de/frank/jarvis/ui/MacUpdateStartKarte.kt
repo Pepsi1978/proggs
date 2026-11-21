@@ -73,6 +73,8 @@ object MacUpdateZentrale {
         val geholt: Long = 0, val abrufFehler: Boolean = false,
         /** Programmier-CLI aufräumen (vom Mac): automatik, stunden, naechster, laeuft, letzter {art, zeit, text, beendet, offen}, sitzungen. */
         val cli: JSONObject? = null,
+        /** Fehler der Brücke zum letzten Auftrag {kennung, text}. */
+        val fehler: JSONObject? = null,
     )
 
     val lage = MutableStateFlow(Lage())
@@ -96,8 +98,9 @@ object MacUpdateZentrale {
                 val j = JSONObject(a.body?.string().orEmpty())
                 val fehler = j.optJSONObject("fehler")
                 if (fehler != null && fehler.optString("kennung") == eigeneKennung.value) meldung.value = fehler.optString("text")
+                if (fehler != null && fehler.optString("kennung") == cliKennung.value) cliMeldung.value = fehler.optString("text")
                 lage.value = Lage(j.optJSONObject("stand"), j.optBoolean("app"), if (j.isNull("alter_s")) null else j.optLong("alter_s"),
-                    j.optBoolean("mac_da"), System.currentTimeMillis(), cli = j.optJSONObject("cli"))
+                    j.optBoolean("mac_da"), System.currentTimeMillis(), cli = j.optJSONObject("cli"), fehler = fehler)
             }
         }.onFailure { lage.update { l -> l.copy(abrufFehler = true, geholt = System.currentTimeMillis()) } }
     }
@@ -117,6 +120,8 @@ object MacUpdateZentrale {
 
     val cliSendet = MutableStateFlow<String?>(null)
     val cliMeldung = MutableStateFlow<String?>(null)
+    /** Kennung des letzten CLI-Auftrags von diesem Gerät (getrennt von der Update-Zentrale, damit Fehler im richtigen Abschnitt stehen). */
+    val cliKennung = MutableStateFlow<String?>(null)
 
     /** Programmier-CLI: „cli_aufraeumen“ (nur nach Franks Ja) oder „cli_einstellung“ mit automatik und/oder stunden. */
     fun cliSenden(context: Context, art: String, zusatz: JSONObject? = null) {
@@ -135,6 +140,7 @@ object MacUpdateZentrale {
 
     /** Schickt einen Auftrag an den Mac; null = angenommen, sonst der Grund (für Karte und Sprache). Nie von selbst wiederholt. */
     suspend fun auftrag(context: Context, art: String, zusatz: JSONObject? = null): String? = withContext(Dispatchers.IO) {
+                val kennungZiel = if (art.startsWith("cli_")) cliKennung else eigeneKennung
                 val e = Einstellungen.get(context)
                 if (e.serverToken.isBlank()) return@withContext "Kein Server eingerichtet. Es wurde nichts gestartet."
                 try {
@@ -148,10 +154,10 @@ object MacUpdateZentrale {
                         if (!a.isSuccessful) return@use "Der Server hat den Auftrag abgelehnt (HTTP ${a.code}). Es wurde nichts gestartet."
                         val j = JSONObject(a.body?.string().orEmpty())
                         when (j.optString("ergebnis")) {
-                            "angenommen" -> { eigeneKennung.value = j.optString("kennung"); null }
+                            "angenommen" -> { kennungZiel.value = j.optString("kennung"); null }
                             "mac_nicht_verbunden" -> "MacBook nicht erreichbar (aus, im Ruhezustand oder ohne Netz). Es wurde nichts gestartet."
                             "laeuft_bereits" -> "Läuft bereits: " + j.optString("text") + " Es wird nichts doppelt gestartet."
-                            "unklar" -> { eigeneKennung.value = j.optString("kennung"); "Der Auftrag ging an den Mac, die Bestätigung fehlt. Stand unklar – er wird nicht erneut gesendet." }
+                            "unklar" -> { kennungZiel.value = j.optString("kennung"); "Der Auftrag ging an den Mac, die Bestätigung fehlt. Stand unklar – er wird nicht erneut gesendet." }
                             else -> "Unerwartete Antwort vom Server."
                         }
                     }
@@ -407,7 +413,8 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
                 })
             }
             // 0 und 25 sind nur leere Randmarken: Der Regler rastet auf 1 bis 24 ganze Stunden ein.
-            var wert by remember(stunden) { mutableStateOf(stunden.toFloat()) }
+            // Nach jedem Auftrag (auch einem abgelehnten) wieder auf den Stand des Macs.
+            var wert by remember(stunden, sendet) { mutableStateOf(stunden.toFloat()) }
             Text("Intervall: alle ${wert.toInt()} " + if (wert.toInt() == 1) "Stunde" else "Stunden",
                 color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
             androidx.compose.material3.Slider(
