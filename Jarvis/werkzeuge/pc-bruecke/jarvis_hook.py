@@ -481,6 +481,9 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
         bloecke = [inhalt] if isinstance(inhalt, str) else [b.get("text", "") for b in inhalt or [] if isinstance(b, dict) and b.get("type") == "text"]
         for text in bloecke:
             text = lesbar(text)
+            # Das sichtbare Zitat eines Nachtrags (ZITAT_ANWEISUNG) steht in Jarvis schon: nur den Rest weitergeben.
+            if text.startswith(ZITAT_MARKE):
+                text = text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
             if text and not schon_gesehen(z, text):
                 texte.append(text)
     return texte
@@ -772,6 +775,14 @@ def bilder_einfuegen_jetzt(pfade: list[Path], vorspann: str) -> str:
     return jarvis_anhaenge.einfuegen(pfade, vorspann, claude_pid())
 
 
+# Frank will im CLI (Terminal, Claude-App, Remote Control) lesen, WAS angekommen ist, nicht nur dass etwas kam (Nachtrag NY57RM
+# vom 21.11.2026): Der Weckruf selbst zeigt dort nur „Nachtrag von Frank über Jarvis“. Die Sitzung zitiert ihn deshalb zuerst
+# sichtbar; neue_texte gibt diesen Absatz nicht noch einmal an Jarvis weiter (dort steht der Nachtrag schon).
+ZITAT_MARKE = "📨 Nachtrag "
+ZITAT_ANWEISUNG = ("Schreib als Erstes für Frank sichtbar einen Absatz, der mit „📨 Nachtrag <Nummer> angekommen:“ beginnt und den Nachtrag "
+                   "danach wörtlich und vollständig zitiert (in diesem einen Absatz, Zeilenumbrüche als Leerzeichen), erst danach setzt du ihn um.")
+
+
 def uebergib(neu: list[dict], bilder_einfuegen: bool = True) -> str:
     """Quittiert die Übergabe (Relay und Jarvis) und liefert den Text, mit dem die Sitzung weiterarbeitet. Bilder kommen als eigene
     Eingabe hinterher ([bilder_einfuegen]); der Warter schickt Text und Bilder lieber zusammen ab und nimmt dann NACHTRAG_BILDER."""
@@ -809,11 +820,12 @@ def uebergib(neu: list[dict], bilder_einfuegen: bool = True) -> str:
             if n["nachtrag_id"].startswith("antwort-"):
                 frage_status(n["nachtrag_id"].removeprefix("antwort-"), "beantwortet", antwort=n["text"], versuche=2)
         return (f"Frank hat dir über Jarvis (Handy) {'eine Nachricht' if len(neu) == 1 else str(len(neu)) + ' Nachrichten'} zu dieser Sitzung "
-                f"geschickt. Behandle sie wie eine Eingabe von ihm am Rechner und arbeite damit hier weiter.\n\n{teile}")
+                f"geschickt. Behandle sie wie eine Eingabe von ihm am Rechner und arbeite damit hier weiter. {ZITAT_ANWEISUNG}\n\n{teile}")
     return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
-            f"{'mit jarvis_hook.py melde fertig' if os.environ.get('JARVIS_SERVER') else 'stand=fertig mit programmier_fortschritt'}. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}.\n\n{teile}")
+            f"{'mit jarvis_hook.py melde fertig' if os.environ.get('JARVIS_SERVER') else 'stand=fertig mit programmier_fortschritt'}. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}. "
+            f"{ZITAT_ANWEISUNG}\n\n{teile}")
 
 
 def _windows_prozesse() -> dict[int, tuple[int, str]]:
@@ -978,7 +990,7 @@ def nachtraege_im_stop(eingabe: dict | None = None) -> bool:
         return False
     teile = [uebergib(neu)] if neu else []
     if nochmal:
-        teile.append("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um:\n\n"
+        teile.append("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um. " + ZITAT_ANWEISUNG + "\n\n"
                      + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
     sys.stdout.write(json.dumps({"decision": "block", "reason": "\n\n".join(teile)}, ensure_ascii=False))
     return True
@@ -1057,7 +1069,7 @@ def warte(eingabe: dict) -> int:
             if not LOKAL and transkript and zugstand(transkript) == "ende":
                 nochmal = nicht_angekommen(eingabe, BELEG_STILL_S)
                 if nochmal:
-                    sys.stderr.write("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um:\n\n"
+                    sys.stderr.write("Diese Nachträge hat dir Jarvis schon übergeben, sie sind aber nicht bei dir angekommen. Setze sie jetzt um. " + ZITAT_ANWEISUNG + "\n\n"
                                      + "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in nochmal))
                     schreib(f"Warter: {len(nochmal)} Nachtrag/Nachträge ohne Beleg erneut übergeben")
                     return 2
