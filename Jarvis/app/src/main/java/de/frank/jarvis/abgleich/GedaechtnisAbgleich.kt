@@ -84,6 +84,8 @@ object GedaechtnisAbgleich {
         // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
+        // Urteile der wichtigen E-Mails: je Nachricht eine Datei, damit Handy und Tablet dieselben Mails als wichtig zeigen.
+        Quelle("gedaechtnis", de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER, ordner = true, endung = ".json", loeschbar = true),
         )
     }
 
@@ -370,7 +372,8 @@ object GedaechtnisAbgleich {
             if (!r.isSuccessful) throw Abgelehnt("Datei hochladen: Server ${r.code}")
         }
         // Die Datei kann sich während des Hochladens geändert haben: Dann passt die Prüfsumme am Server nicht, die nächste Runde lädt neu.
-        val erstesTablet = Geraet.istTablet && pfad in HANDY_ZUERST && s.optString("basis").isEmpty()
+        // Urteile der wichtigen E-Mails: Hat das Handy dieselbe Nachricht eingestuft, gilt immer seins.
+        val erstesTablet = Geraet.istTablet && (pfad in HANDY_ZUERST || pfad.startsWith(de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER + "/")) && s.optString("basis").isEmpty()
         val geaendert = if (erstesTablet) 1L else maxOf(datei.lastModified(), (fern?.optLong("geaendert") ?: 0L) + 1)
         val daten = JSONObject().put("pfad", pfad).put("text_sha", sha).put("groesse", datei.length())
         val rumpf = JSONObject().put("daten", daten).put("geaendert", geaendert).put("geloescht", false).put("von", Geraet.ablageName).toString()
@@ -601,6 +604,7 @@ object GedaechtnisAbgleich {
         // Listen: neu einlesen, damit Oberfläche und Widget hier sofort den Stand des anderen Geräts zeigen.
         if (pfade.any { it.startsWith(de.frank.jarvis.listen.Listen.ORDNER + "/") }) runCatching { de.frank.jarvis.listen.Listen.neuLaden(app) }
         if (pfade.any { it.startsWith(de.frank.jarvis.veraenderung.Veraenderungen.ORDNER + "/") }) runCatching { de.frank.jarvis.veraenderung.Veraenderungen.neuLaden(app) }
+        if (pfade.any { it.startsWith(de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER + "/") }) runCatching { de.frank.jarvis.faehigkeit.WichtigeMails.nachAbgleich(app) }
         if (de.frank.jarvis.atem.AtemProfile.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemProfile.neuLaden(app) }
         if (de.frank.jarvis.atem.AtemSatzVerlauf.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemSatzVerlauf.neuLaden(app) }
     }

@@ -451,7 +451,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraech += Nachricht(true, MAIL_FRAGE, mail = daten)
         sitzungSichern()
         eingabeKompakt = true
-        rundeStarten(MAIL_FRAGE, emptyList(), verlauf, gespraech.size - 1, vorlesen = true, hinweis = "\n\n" + MAIL_ERKLAEREN + "\n" + daten)
+        rundeStarten(MAIL_FRAGE, emptyList(), verlauf, gespraech.size - 1, vorlesen = true, hinweis = "\n\n" + MAIL_ERKLAEREN + "\n" + daten,
+            // Ohne vorab gesprochenen ersten Satz: Die fertige Erklärung wird in einem Stück ganz vorgelesen.
+            vorabSatz = false)
     }
 
     /**
@@ -466,7 +468,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Startet die Antwort auf die Frage an Stelle [frage] im offenen Gespräch. [hinweis] geht zusätzlich ans Modell
      * (beim erneuten Versuch: was die verworfene Antwort schon erledigt hatte).
      */
-    private fun rundeStarten(text: String, anhaenge: List<de.frank.jarvis.data.Anhang>, verlauf: List<ChatTurn>, frage: Int, vorlesen: Boolean, hinweis: String) {
+    private fun rundeStarten(text: String, anhaenge: List<de.frank.jarvis.data.Anhang>, verlauf: List<ChatTurn>, frage: Int, vorlesen: Boolean, hinweis: String, vorabSatz: Boolean = true) {
         val plugins = aktivePlugins.toList()
         val id = sitzungId ?: return
         // Neu gesendet (nur dann trägt der Hinweis den Programmierer-Text; ein erneuter Versuch bleibt in seiner Runde und startet nicht doppelt).
@@ -514,7 +516,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         // Programmierauftrag mit Auswahlkarte: Deren fester Wortlaut steht jetzt fest, das Modell muss dafür nicht erst fertig schreiben.
                         if (vorlesen && aenderung.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL)) viewModelScope.launch { karteVorab(runde) }
                     }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },
-                    beiErstemSatz = if (!vorlesen) null else { satz -> viewModelScope.launch { ersterSatzVorab(runde, satz) } },
+                    beiErstemSatz = if (!vorlesen || !vorabSatz) null else { satz -> viewModelScope.launch { ersterSatzVorab(runde, satz) } },
                     beiTokenlimit = { stand -> runde.wartet = true; if (try { tokenlimitFragen(stand) } finally { runde.wartet = false }) null else "Tokenlimit von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} erreicht, von Frank abgebrochen" })
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText(grund)).also { art = "fehler" }
             } catch (e: CancellationException) {

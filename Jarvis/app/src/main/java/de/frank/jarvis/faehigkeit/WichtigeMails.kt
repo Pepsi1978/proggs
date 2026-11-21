@@ -74,6 +74,13 @@ object WichtigeMails {
     }
 
     private const val DATEI = "wichtige_mails.json"
+    /**
+     * Die Urteile je Nachricht als eigene Datei (`<X-GM-MSGID>.json`), abgeglichen über [de.frank.jarvis.abgleich.GedaechtnisAbgleich]: Handy und
+     * Tablet nutzen dasselbe Urteil, eine Nachricht wird nur einmal eingestuft. Fassen beide dieselbe Nachricht an, gilt die des Handys.
+     */
+    const val ORDNER = "wichtige_mails_urteile"
+    /** Urteile zu Nachrichten außerhalb des Posteingangs bleiben so lange liegen: Ein Gerät mit älterem Posteingangsstand löscht nie ein frisches Urteil. */
+    private const val URTEIL_AUFHEBEN_MS = 2 * 86_400_000L
     private const val AUTO_ABSTAND_MS = 3 * 3_600_000L
     private const val FEHLER_ABSTAND_MS = 30 * 60_000L
     private const val JE_ANFRAGE = 20
@@ -105,6 +112,45 @@ object WichtigeMails {
     private val urteile = HashMap<Long, JSONObject>()
 
     private fun datei(app: Context) = File(app.filesDir, DATEI)
+    private fun ordner(app: Context) = File(app.filesDir, ORDNER)
+    private fun urteilDatei(app: Context, id: Long) = File(ordner(app), java.lang.Long.toUnsignedString(id) + ".json")
+
+    /** Liest die gemeinsamen Urteile; sie gehen eigenen vor. Offene Fehlversuche (ohne Urteil) bleiben nur hier im Speicher. */
+    private fun urteileEinlesen(app: Context) {
+        val gelesen = HashMap<Long, JSONObject>()
+        ordner(app).listFiles { f -> f.isFile && f.name.endsWith(".json") }?.forEach { f ->
+            runCatching {
+                val id = java.lang.Long.parseUnsignedLong(f.name.removeSuffix(".json"))
+                val u = JSONObject(f.readText())
+                if (u.optInt("f") == FASSUNG && u.has("w")) gelesen[id] = u
+            }
+        }
+        synchronized(urteile) {
+            val offen = urteile.filterValues { !it.has("w") }
+            urteile.clear(); urteile.putAll(offen); urteile.putAll(gelesen)
+        }
+    }
+
+    private fun urteilSchreiben(app: Context, id: Long, u: JSONObject) = runCatching {
+        val ziel = urteilDatei(app, id)
+        ziel.parentFile?.mkdirs()
+        val inhalt = JSONObject(u.toString()).put("f", FASSUNG).toString()
+        if (ziel.isFile && ziel.readText() == inhalt) return@runCatching
+        val teil = File(ziel.parentFile, ziel.name + ".teil")
+        teil.writeText(inhalt)
+        if (!teil.renameTo(ziel)) { ziel.delete(); teil.renameTo(ziel) }
+    }.onFailure { Logbuch.fehler("Wichtige E-Mails: Urteil speichern", it) }
+
+    @Volatile private var nochmal = false
+
+    /** Der Abgleich hat Urteile vom anderen Gerät eingespielt: Bestand mit ihnen neu bilden (nur neu gelesen, ohne Modell für schon Eingestuftes). */
+    fun nachAbgleich(context: Context) {
+        val app = context.applicationContext
+        laden(app)
+        if (_stand.value.geprueft == 0L && _stand.value.eintraege.isEmpty()) return
+        if (sperre.isLocked) { nochmal = true; return }
+        bereich.launch { runCatching { if (mail(app).stoerung() == null) pruefen(app, manuell = false) } }
+    }
 
     private fun laden(app: Context) {
         if (geladen) return
@@ -127,6 +173,11 @@ object WichtigeMails {
                     letzterVersuch = if (aktuell) j.optLong("versuch") else 0L
                 }
             }.onFailure { Logbuch.fehler("Wichtige E-Mails: Laden", it) }
+            // Bisher lagen die Urteile nur in der Bestandsdatei dieses Geräts: einmal als gemeinsame Dateien ablegen (das Handy gewinnt im Abgleich).
+            runCatching {
+                if (ordner(app).listFiles()?.any { it.name.endsWith(".json") } != true) synchronized(urteile) { urteile.filterValues { it.has("w") } }.forEach { (id, u) -> urteilSchreiben(app, id, u) }
+            }
+            urteileEinlesen(app)
             geladen = true
         }
     }
@@ -138,7 +189,6 @@ object WichtigeMails {
             .put("fassung", FASSUNG).put("geprueft", s.geprueft).put("versuch", letzterVersuch).put("fehler", s.fehler ?: "")
             .put("ausgeblendet", JSONArray(s.ausgeblendet.toList()))
             .put("liste", JSONArray(s.eintraege.map { e -> JSONObject().put("m", e.msgId).put("t", e.thrId).put("von", e.absender).put("betreff", e.betreff).put("am", e.empfangen).put("k", e.kurz).put("a", e.antwort) }))
-            .put("urteile", JSONObject().apply { synchronized(urteile) { urteile.forEach { (k, v) -> put(k.toString(), v) } } })
         runCatching {
             val ziel = datei(app)
             val tmp = File(ziel.parentFile, "$DATEI.tmp")
@@ -258,6 +308,7 @@ object WichtigeMails {
             }
             val liste = _stand.value.eintraege
             speichern(app)
+            if (nochmal) { nochmal = false; bereich.launch { runCatching { pruefen(app, manuell = false) } } }
             Logbuch.system("Wichtige E-Mails geprüft", "${liste.size} wichtig" + (fehler?.let { ", Fehler: $it" } ?: "") + if (manuell) ", manuell" else "")
             _stand.value
         }
@@ -278,6 +329,8 @@ object WichtigeMails {
         val ich = mail.adresse.trim().lowercase(Locale.ROOT)
         fun adresseVon(n: Message): String = ((n.from?.firstOrNull() as? javax.mail.internet.InternetAddress)?.address ?: "").lowercase(Locale.ROOT)
         data class Kopf(val n: Message, val msgId: Long, val thrId: Long, val von: String, val betreff: String, val am: Long)
+        // Zuerst die gemeinsamen Urteile: Was das andere Gerät schon eingestuft hat, fragt dieses nicht noch einmal (sonst urteilten beide verschieden).
+        urteileEinlesen(app)
         // 1. Posteingang lesen: Kopfdaten und Gmail-Kennungen in einer Abfrage.
         val (koepfe, neueTexte) = mail.mitGmail { speicher ->
             val ordner = speicher.getFolder("INBOX")
@@ -362,11 +415,19 @@ object WichtigeMails {
                     }
                 }
                 if (fehlgeschlagen > 0) unvollstaendig("$fehlgeschlagen neue E-Mail(s) ließen sich nicht einstufen.")
+                // Neue Urteile als gemeinsame Dateien ablegen und gleich zum anderen Gerät schicken.
+                neueTexte.keys.forEach { id -> synchronized(urteile) { urteile[id]?.takeIf { it.has("w") } }?.let { urteilSchreiben(app, id, it) } }
+                de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             }
         }
         // Urteile zu Nachrichten, die nicht mehr im Posteingang liegen, dürfen gehen.
         val imPosteingang = koepfe.map { it.msgId }.toSet()
         synchronized(urteile) { urteile.keys.retainAll(imPosteingang) }
+        val grenze = System.currentTimeMillis() - URTEIL_AUFHEBEN_MS
+        ordner(app).listFiles { f -> f.isFile && f.name.endsWith(".json") }?.forEach { f ->
+            val id = runCatching { java.lang.Long.parseUnsignedLong(f.name.removeSuffix(".json")) }.getOrNull()
+            if (id != null && id !in imPosteingang && f.lastModified() < grenze) f.delete()
+        }
 
         // 3. Wichtige je Unterhaltung: die neueste wichtige Nachricht.
         val wichtig = koepfe.filter { k -> synchronized(urteile) { urteile[k.msgId]?.optBoolean("w", false) == true } }
