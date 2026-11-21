@@ -115,9 +115,18 @@ object KonferenzMikrofon {
         Logbuch.system("Konferenz-Mikrofon", text)
     }
 
+    /** Der Weckwort-Dienst schaltet die Strecke gerade auf den Anker um. */
+    @Volatile private var oeffnetWeckwort = false
+
+    /** Schaltet gerade jemand auf den Freisprech-Kanal um? Ein Ton wüsste dann noch nicht, über welchen Weg er läuft. */
+    val umschaltungLaeuft: Boolean get() = oeffnetGespraech != 0 || oeffnetWeckwort
+
     private suspend fun oeffnen(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
-        if (gespraech != WECKWORT) oeffnetGespraech = gespraech
-        try { return oeffnenIntern(context, gespraech, gescheitert) } finally { if (gespraech != WECKWORT && oeffnetGespraech == gespraech) oeffnetGespraech = 0 }
+        if (gespraech != WECKWORT) oeffnetGespraech = gespraech else oeffnetWeckwort = true
+        try { return oeffnenIntern(context, gespraech, gescheitert) } finally {
+            if (gespraech != WECKWORT && oeffnetGespraech == gespraech) oeffnetGespraech = 0
+            if (gespraech == WECKWORT) oeffnetWeckwort = false
+        }
     }
 
     private suspend fun oeffnenIntern(context: Context, gespraech: Int, gescheitert: () -> Unit): Boolean {
