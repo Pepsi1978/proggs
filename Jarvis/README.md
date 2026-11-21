@@ -462,6 +462,7 @@ ssh -i ~/SK/second-brain/id_ed25519 root@168.231.83.205 "cd /opt/jarvis && docke
 ```
 
 Handy-Wege (`/geraet/…`) von außen testen: Sie verlangen `JARVIS_HANDY_TOKEN`, der nur auf dem Server in `/opt/jarvis/.env` steht (per ssh in eine Variable lesen, nie ausgeben); `JARVIS_GERAET_TOKEN` aus `~/SK/Jarvis/server.env` bekommt dort „Not found“. `relay.py` lokal importieren braucht `aiohttp` (venv im Scratchpad) und `JARVIS_GERAET_TOKEN=x`.
+Zustand des Relays (Warteschlangen wie `nachtraege.json`, `fragen.json`, `auftrag-geraete.json`) liegt im Volume `/var/lib/docker/volumes/jarvis_relay_data/_data` (im Container `/data`); dort direkt lesen, nie `find /` (läuft über eine Minute). Hook-Protokoll am Mac: `~/Library/Logs/JarvisPcBruecke/hook.log`.
 
 `/opt/jarvis/.env` enthält `JARVIS_GERAET_TOKEN` (Kopie: `~/SK/Jarvis/server.env`). Für IPv6 gibt es die
 UFW-Regel „Jarvis-Relay (IPv6)“; IPv4 läuft über Dockers Portfreigabe an der Firewall vorbei.
