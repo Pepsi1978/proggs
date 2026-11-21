@@ -182,6 +182,20 @@ object WichtigeMails {
         bereich.launch { speichern(app) }
     }
 
+    /** Der lesbare Text genau dieser Nachricht frisch aus dem Posteingang (für „Erklären“); null, wenn sie dort nicht mehr liegt. */
+    suspend fun volltext(context: Context, e: Eintrag): String? = withContext(Dispatchers.IO) {
+        val mail = MailFaehigkeit(context.applicationContext)
+        mail.mitGmail { speicher ->
+            val ordner = speicher.getFolder("INBOX")
+            ordner.open(Folder.READ_ONLY)
+            try {
+                ordner.search(com.sun.mail.gimap.GmailMsgIdTerm(e.msgId)).firstOrNull()?.let { n ->
+                    mail.klartext(n).replace(Regex("\\s+"), " ").trim().take(8_000)
+                }
+            } finally { runCatching { ordner.close(false) } }
+        }
+    }
+
     /**
      * Öffnet genau diese Nachricht in der Gmail-App (Frank, 20.11.2026: „direkt in der App in der E-Mail“). Weg: Gmails eigener Link-Empfänger
      * für gmail.app.goo.gl mit `tf=cv` und innerem Link `…#cv?th=#thread-f:<X-GM-THRID>|msg-f:<X-GM-MSGID>` (dezimal), am Fold geprüft, auch

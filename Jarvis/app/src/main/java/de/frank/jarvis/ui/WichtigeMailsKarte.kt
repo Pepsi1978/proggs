@@ -5,6 +5,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -51,10 +57,10 @@ private val FRISCH_GRUEN = Color(0xFF3DBE7A)
 /**
  * Startbereich „Wichtige E-Mails“: eingeklappt nur die Anzahl („3 wichtige E-Mails“, bei bestätigtem Leerstand „Keine wichtigen E-Mails“),
  * aufgeklappt alle offenen wichtigen Einträge in höchstens drei Zeilen. Antippen öffnet die Nachricht direkt in Gmail und blendet den Eintrag
- * bis zum nächsten Aktualisieren aus. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da, nie als leerer Posteingang.
+ * bis zum nächsten Aktualisieren aus; die Glühbirne rechts (hinter einem senkrechten Strich) öffnet eine neue Session mit der Erklärung der Mail. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da, nie als leerer Posteingang.
  */
 @Composable
-fun WichtigeMailsKarte(griff: Modifier = Modifier) {
+fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Eintrag) -> Unit = {}) {
     val f = LocalFarben.current
     val context = LocalContext.current.applicationContext
     val s by remember(context) { WichtigeMails.stand(context) }.collectAsState()
@@ -100,14 +106,14 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier) {
         }
         if (offen && sichtbar.isNotEmpty()) {
             Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                sichtbar.forEach { e -> MailEintrag(e) { WichtigeMails.ausblenden(context, e.msgId); WichtigeMails.oeffnen(context, e) } }
+                sichtbar.forEach { e -> MailEintrag(e, erklaeren = { erklaeren(e) }) { WichtigeMails.ausblenden(context, e.msgId); WichtigeMails.oeffnen(context, e) } }
             }
         }
     }
 }
 
 @Composable
-private fun MailEintrag(e: WichtigeMails.Eintrag, oeffnen: () -> Unit) {
+private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, oeffnen: () -> Unit) {
     val f = LocalFarben.current
     val form = RoundedCornerShape(14.dp)
     val frisch = e.frisch
@@ -118,10 +124,15 @@ private fun MailEintrag(e: WichtigeMails.Eintrag, oeffnen: () -> Unit) {
         heute.minusDays(1) -> "Gestern " + z.format(DateTimeFormatter.ofPattern("HH:mm"))
         else -> z.format(DateTimeFormatter.ofPattern("d.M.yyyy"))
     }
-    Column(
-        Modifier.fillMaxWidth()
+    // Links der Eintrag (Antippen öffnet Gmail wie bisher), rechts hinter einem senkrechten Strich über die ganze Höhe die Glühbirne „Erklären“.
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            .clip(form)
             .background(f.flaeche, form)
-            .then(if (frisch) Modifier.border(2.dp, FRISCH_GRUEN, form) else Modifier.border(1.dp, f.rand, form))
+            .then(if (frisch) Modifier.border(2.dp, FRISCH_GRUEN, form) else Modifier.border(1.dp, f.rand, form)),
+    ) {
+    Column(
+        Modifier.weight(1f)
             .antippen(aktion = oeffnen)
             .padding(horizontal = 12.dp, vertical = 9.dp),
     ) {
@@ -138,5 +149,10 @@ private fun MailEintrag(e: WichtigeMails.Eintrag, oeffnen: () -> Unit) {
             },
             color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp),
         )
+    }
+    Box(Modifier.fillMaxHeight().width(if (frisch) 2.dp else 1.dp).background(if (frisch) FRISCH_GRUEN else f.rand))
+    Box(Modifier.fillMaxHeight().width(52.dp).antippen(aktion = erklaeren), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Lightbulb, "E-Mail erklären", tint = f.primaer, modifier = Modifier.size(24.dp))
+    }
     }
 }

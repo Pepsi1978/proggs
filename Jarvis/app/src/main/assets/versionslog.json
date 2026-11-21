@@ -886,6 +886,7 @@
   {"versionCode": 877, "versionName": "1.8.866", "stand": "21.11.2026, 11:40 Uhr", "notiz": "Abbrechen der Modellwahl stellt den Entwurf von vorher her, ein vergessener Opus-Einstieg verschwindet wieder, und Messzeiten von gestern stehen mit Datum."},
   {"versionCode": 878, "versionName": "1.8.867", "stand": "21.11.2026, 11:44 Uhr", "notiz": "Auf der Raumklima-Karte steht die Messzeit jetzt vorn vor der Herkunft, Uhrzeiten mit „Uhr“ dahinter."},
   {"versionCode": 879, "versionName": "1.8.868", "stand": "21.11.2026, 11:51 Uhr", "notiz": "Ein Diktat in der Session läuft beim Verlassen weiter, oben eingeblendet, andere Bereiche können parallel aufnehmen, und zurück in der Session landet der ganze Text im Eingabefeld."},
-  {"versionCode": 880, "versionName": "1.8.869", "stand": "21.11.2026, 12:05 Uhr", "notiz": "Review-Befunde zur mitgenommenen Aufnahme behoben: gelöschte Session verwirft sie, Sprachsession beenden stoppt sie, Zur Session schließt Vollbilder, wartender Text lässt sich verwerfen."}
+  {"versionCode": 880, "versionName": "1.8.869", "stand": "21.11.2026, 12:05 Uhr", "notiz": "Review-Befunde zur mitgenommenen Aufnahme behoben: gelöschte Session verwirft sie, Sprachsession beenden stoppt sie, Zur Session schließt Vollbilder, wartender Text lässt sich verwerfen."},
+  {"versionCode": 881, "versionName": "1.8.870", "stand": "21.11.2026, 14:09 Uhr", "notiz": "Wichtige E-Mails haben rechts eine Glühbirne, die in einer neuen Session genau diese E-Mail einfach erklärt."}
 ]
 }

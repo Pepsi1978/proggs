@@ -416,7 +416,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 // Tenda-Mobilfunkrouter: Modus, Multiplayer-Einschätzung, Empfangswerte, Moduswechsel, Neuverbinden, Neustart.
                 "tenda" -> TendaStartKarte(griff)
                 // Wichtige E-Mails aus dem ganzen Gmail-Posteingang: Anzahl, aufklappbare Einträge (öffnen direkt in Gmail), Aktualisieren.
-                "wichtige_mails" -> WichtigeMailsKarte(griff)
+                "wichtige_mails" -> WichtigeMailsKarte(griff) { vm.mailErklaeren(it) }
                 // Updater-Zentrale auf Franks MacBook: prüfen, unkritische und (nach Warnfenster) kritische Updates aus der Ferne installieren.
                 "mac_update" -> MacUpdateStartKarte(griff)
                 // Ein Bereich ohne Zweig zeigt nichts und hat keinen Griff, statt als leere ziehbare Lücke zu erscheinen.
