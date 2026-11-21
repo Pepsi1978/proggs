@@ -2195,7 +2195,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         } else if (review) "Eine Code-Review-Frage liegt vor, der Programmierer wartet auf deine Antwort."
             else "Eine Rückfrage vom Programmierer zu $appName muss beantwortet werden."
         val art = de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE
-        if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
+        // Franks Vorgabe vom 21.11.2026: Die Review-Ansage nennt keine Session; kommen mehrere kurz nacheinander (etwa aus zwei
+        // Sitzungen), klänge die zweite wie eine Wiederholung. Darum höchstens eine je drei Minuten, das Vollbild zeigt alle.
+        val jetzt = System.currentTimeMillis()
+        val reviewDoppelt = review && zusatz == null && ReviewAnsage.schonKurzZuvor(jetzt)
+        if (reviewDoppelt) Logbuch.system("Review-Ansage zusammengefasst", "Auftrag ${eintrag.optString("id")}: kurz zuvor schon angesagt")
+        else if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
             Logbuch.system("Rückfrage-Ansage eingereiht", "Auftrag ${eintrag.optString("id")}")
             val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
             de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId",
@@ -3313,4 +3318,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val SITZUNGS_HTTP: OkHttpClient = STATUS_HTTP.newBuilder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build()
         private val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
+}
+
+/** Merkt sich über alle Instanzen, wann zuletzt eine Code-Review-Frage angesagt wurde (höchstens eine je drei Minuten). */
+private object ReviewAnsage {
+    private var letzte = 0L
+    @Synchronized fun schonKurzZuvor(jetzt: Long): Boolean = (jetzt - letzte < 3 * 60_000L).also { if (!it) letzte = jetzt }
 }
