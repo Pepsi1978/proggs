@@ -1,6 +1,7 @@
 package de.frank.jarvis.ui
 
 import android.widget.Toast
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -144,6 +145,15 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
         if (s.plaetze.isEmpty()) s.plaetze = LedStreifen.plaetze(c)
         if (LedStreifen.anAnzeige == null) LedStreifen.anAnzeige = LedStreifen.zuletztAn(c)
     }
+    // Tablet: Es schaltet die Streifen selten selbst, deshalb zeigt die Karte den gelesenen Zustand (beim Öffnen, dann jede Minute, nur sichtbar).
+    if (de.frank.jarvis.data.Geraet.istTablet) {
+        val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
+            lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) { if (!LedStreifen.laeuft) runCatching { LedStreifen.anzeigeLesen(c) }; kotlinx.coroutines.delay(60_000) }
+            }
+        }
+    }
     var minute by remember { mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(60_000); minute++ } }
     val z = s.zustand
@@ -152,12 +162,13 @@ fun LichtStartKarte(griff: Modifier = Modifier) {
     // 13: Nur die Titelzeile ist Griff zum Verschieben der Karte; Farbplätze, Farbkreis und Regler behalten ihre Gesten.
     Karte {
         // Kopf: Titel und Helligkeit, darunter das 3D-LED-Band.
-        val an = LedStreifen.anAnzeige != false
+        val an = if (de.frank.jarvis.data.Geraet.istTablet) LedStreifen.anAnzeige == true else LedStreifen.anAnzeige != false
         Row(griff.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("LED-Licht", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(
                 when {
                     LedStreifen.laeuft -> "Schaltet …"
+                    de.frank.jarvis.data.Geraet.istTablet && LedStreifen.anAnzeige == null && !frischerFehler -> "Lese Zustand …"
                     frischerFehler -> "Nicht erreicht"
                     !an -> "Aus"
                     z == null -> "An"

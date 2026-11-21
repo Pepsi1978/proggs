@@ -183,6 +183,12 @@ object LedStreifen {
         }
     }
 
+    /** Tablet: liest die Streifen nur für die Kartenanzeige (an, sobald einer an ist) und schaltet nichts; null = keiner lesbar, Anzeige bleibt. */
+    suspend fun anzeigeLesen(c: Context): Boolean? = sperre.withLock {
+        val gelesen = lesenAlle(c)
+        if (gelesen.isEmpty()) null else gelesen.values.any { it.an }.also { anAnzeige = it }
+    }
+
     private class Meldung(val an: Boolean, val rgb: String, val hell: Int)
 
     /** Die Farbe, die die meisten erreichbaren Streifen gerade haben, als Zustand; null, wenn keiner lesbar war. */
