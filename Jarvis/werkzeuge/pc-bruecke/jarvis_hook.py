@@ -706,8 +706,9 @@ def beanspruche(liste: list[dict]) -> list[dict]:
         alt = [n["nachtrag_id"] for n in liste if n["nachtrag_id"] in z["nachtraege"]]
         z["nachtraege"] = (z["nachtraege"] + [n["nachtrag_id"] for n in neu])[-200:]
         # Bis der Stop-Hook sie im Transkript findet: Kam ein Weckruf nicht in der Sitzung an, geht der Text dort noch einmal hinein.
+        # Nur Claude-Code-Aufträge prüfen den Beleg (Stop und Warter); lokal und OpenCode bliebe die Liste sonst ewig stehen.
         offen = z.setdefault("unbelegt", {})
-        for n in neu:
+        for n in ([] if LOKAL or FREMDE_CLI else neu):
             if not n["nachtrag_id"].startswith("G"):
                 offen[n["nachtrag_id"]] = {"zeit": time.time(), "text": n["text"][:20_000]}
         schreib_zustand(z)

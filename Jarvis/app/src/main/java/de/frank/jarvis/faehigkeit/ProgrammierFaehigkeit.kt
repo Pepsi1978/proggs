@@ -1773,6 +1773,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val antwort = runCatching { anSitzung(id, nummer, text, anhaenge) }.getOrElse { fehler ->
             Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen"), "fehler")
+            nachsendenPlanen()
             return Ergebnis("Noch NICHT zugestellt: Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). " +
                 "Er ist im Auftrag $id gespeichert, und Jarvis schickt ihn von selbst nach, sobald die Verbindung wieder steht (genau einmal, nur in diese Sitzung). " +
                 "Sag Frank das kurz; er muss ihn nicht noch einmal sprechen.", fehler = true)
@@ -1819,13 +1820,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (alter > 7 * 86_400_000L) {
                 if (Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen", "fehler"), "nicht_zustellbar").isNotEmpty()) {
                     Logbuch.system("Nachtrag nicht zustellbar", "Auftrag $id, Nachtrag $nummer: sieben Tage ohne Übergabe")
-                    Auftragsbuch.melde(app, id, "laeuft", "⚠️ Nachtrag $nummer ist nicht zustellbar: Die Sitzung hat ihn in sieben Tagen nicht abgeholt.", "")
-                        ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
+                    statusZeile(eintrag, "⚠️ Nachtrag $nummer ist nicht zustellbar: Die Sitzung hat ihn in sieben Tagen nicht abgeholt.")
                 }
                 continue
             }
-            // Frisch gesendete nicht gleich wieder; jede höchstens alle zwei Minuten.
-            if (alter < 60_000L || jetzt - (nachtragGeprueft[nummer] ?: 0L) < 120_000L) continue
+            // Ein angenommener ist nur eine Stichprobe (frisch nicht gleich, dann höchstens alle zwei Minuten); ein gescheiterter
+            // geht bei jeder Gelegenheit wieder, höchstens alle 15 Sekunden.
+            val fehlgeschlagen = n.optString("stand") == "fehler"
+            val pause = if (fehlgeschlagen) 15_000L else 120_000L
+            if ((!fehlgeschlagen && alter < 60_000L) || jetzt - (nachtragGeprueft[nummer] ?: 0L) < pause) continue
             nachtragGeprueft[nummer] = jetzt
             val senden = n.optJSONObject("senden") ?: continue
             val antwort = runCatching { anSitzung(id, nummer, senden.optString("text"), senden.optJSONArray("anhaenge") ?: JSONArray()) }.getOrNull() ?: continue
@@ -1834,9 +1837,28 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 n.optString("stand") == "fehler" -> {
                     Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("fehler"), "angenommen")
                     Logbuch.system("Nachtrag nachgesendet", "Auftrag $id, Nachtrag $nummer")
-                    Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag $nummer nach dem Verbindungsabbruch nachgeschickt, er wartet jetzt auf die Sitzung.", "")
-                        ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
+                    statusZeile(eintrag, "📨 Nachtrag $nummer nach dem Verbindungsabbruch nachgeschickt, er wartet jetzt auf die Sitzung.")
                 }
+            }
+        }
+    }
+
+    /** Eine Zeile von Jarvis ins Gespräch des Auftrags (beide Geräte), ohne den Stand des Auftrags zu ändern. */
+    private fun statusZeile(eintrag: JSONObject, text: String) {
+        val gespraech = eintrag.optString("gespraech").ifEmpty { return }
+        val zeile = "📝 ${ProgrammierChat.VON_JARVIS} · $text"
+        ProgrammierChat.poste(app, gespraech, zeile, ProgrammierChat.ART_STATUS)
+        ProgrammierSpiegel.senden(app, JSONObject().put("art", "zeile").put("auftrag_id", eintrag.optString("id")).put("gespraech", gespraech)
+            .put("nachricht", JSONObject().put("mir", false).put("text", zeile).put("art", ProgrammierChat.ART_STATUS)))
+    }
+
+    /** Nach einem gescheiterten Senden: in 20 s, 1 und 5 Minuten erneut, falls die Verbindung (etwa nach einem Server-Neustart) nicht neu aufgebaut wird. */
+    private fun nachsendenPlanen() {
+        baubereich.launch {
+            for (warte in listOf(20_000L, 60_000L, 300_000L)) {
+                kotlinx.coroutines.delay(warte)
+                runCatching { nachtraegeAbgleichen() }
+                if (Auftragsbuch.offeneNachtraege(app).none { it.second.optString("stand") == "fehler" }) break
             }
         }
     }
@@ -2810,7 +2832,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun offeneNachtraege(context: Context): List<Pair<JSONObject, JSONObject>> = alle(context)
             .filter { !inDerCloud(it.optString("ziel")) }
             .flatMap { e -> e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).map { e to l.getJSONObject(it) } }.orEmpty() }
-            .filter { (_, n) -> n.optString("stand") in listOf("angenommen", "fehler") && !istNachricht(n.optString("id")) &&
+            .filter { (_, n) -> n.optString("stand") in listOf("angenommen", "fehler") && !istNachricht(n.optString("id")) && n.has("senden") &&
                 n.optString("geraet").ifEmpty { de.frank.jarvis.data.Geraet.kennung } == de.frank.jarvis.data.Geraet.kennung }
 
         /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
