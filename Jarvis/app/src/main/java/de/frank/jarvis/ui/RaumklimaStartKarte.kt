@@ -118,12 +118,14 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                         // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
                         Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, textAlign = TextAlign.End)
                         z.optJSONObject("letzter_wert")?.let { w ->
-                            Text("Letzter Wert " + werte(w, null) + " · " + herkunftUndZeit(w), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End, modifier = Modifier.padding(top = 2.dp))
+                            Text("Letzter Wert: " + wann(w) + " · " + werte(w, null), color = f.textLeise, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.padding(top = 2.dp))
+                            Text(herkunftUndAlter(w), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End)
                         }
                     } else {
                         val alt = z.optBoolean("alt")
-                        Text(werte(z, co2), color = if (alt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
-                        Text(herkunftUndZeit(z), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End)
+                        // Messzeit vor dem Wert (Nachtrag Frank, 21.11.2026), auch bei alten Werten.
+                        Text(wann(z) + " · " + werte(z, co2), color = if (alt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+                        Text(herkunftUndAlter(z), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End)
                     }
                 }
             }
@@ -185,19 +187,22 @@ private fun werte(z: org.json.JSONObject, co2: Int?): String =
     if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
     else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent"))
 
-/** „Mac · gemessen 14:27 Uhr“, von einem anderen Tag mit Datum; nicht frisch zusätzlich „· vor 3 Std. (alt)“. */
-private fun herkunftUndZeit(z: org.json.JSONObject): String {
+/** Messzeit des Werts: heute „14:27 Uhr“, sonst „20.11. 23:10 Uhr“; ohne Messzeit „Messzeit unbekannt“. */
+private fun wann(z: org.json.JSONObject): String {
+    val sekunden = z.optLong("gemessen")
+    if (sekunden <= 0) return "Messzeit unbekannt"
+    val zeit = java.time.Instant.ofEpochSecond(sekunden).atZone(java.time.ZoneId.systemDefault())
+    val heute = zeit.toLocalDate() == java.time.LocalDate.now()
+    return zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (heute) "HH:mm" else "dd.MM. HH:mm", Locale.GERMANY)) + " Uhr"
+}
+
+/** „Mac“, „Cloud“ oder „Bluetooth“; nicht frisch zusätzlich „· vor 3 Std. (alt)“. */
+private fun herkunftUndAlter(z: org.json.JSONObject): String {
     val quelle = z.optString("quelle")
     val weg = when {
         quelle.startsWith("über den Mac") -> "Mac"
         quelle.startsWith("direkt per Bluetooth") -> "Bluetooth"
         else -> "Cloud"
     }
-    val sekunden = z.optLong("gemessen")
-    if (sekunden <= 0) return "$weg · Messzeit unbekannt"
-    val zeit = java.time.Instant.ofEpochSecond(sekunden).atZone(java.time.ZoneId.systemDefault())
-    val heute = zeit.toLocalDate() == java.time.LocalDate.now()
-    val wann = zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (heute) "HH:mm" else "dd.MM. HH:mm", Locale.GERMANY)) + " Uhr"
-    val alter = if (z.optBoolean("alt")) " · vor ${SwitchbotFaehigkeit.alterText(z.optLong("alter_s"))} (alt)" else ""
-    return "$weg · gemessen $wann$alter"
+    return weg + if (z.optBoolean("alt")) " · vor ${SwitchbotFaehigkeit.alterText(z.optLong("alter_s"))} (alt)" else ""
 }

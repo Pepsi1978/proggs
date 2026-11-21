@@ -182,9 +182,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         val uhr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY))
         val zeilen = sensoren.map { z ->
             if (z.problem != null) "- ${z.name}: ${z.problem}" +
-                (z.letzter?.let { "; letzter Wert ${werteText(it)}, ${it.quelle}, gemessen ${zeitText(it.zeit)} (vor ${alterText(it.alterS)}), nicht aktuell" } ?: "")
-            else "- ${z.name}: ${werteText(z)}" + (z.batterie?.let { ", Batterie $it %" } ?: "") +
-                " (${z.quelle}, gemessen ${zeitText(z.zeit)}" + (if (z.alt) ", vor ${alterText(z.alterS)}, nicht mehr frisch" else "") + ")"
+                (z.letzter?.let { "; letzter Wert (nicht aktuell), gemessen ${zeitText(it.zeit)}, vor ${alterText(it.alterS)}, ${it.quelle}: ${werteText(it)}" } ?: "")
+            else "- ${z.name}: gemessen ${zeitText(z.zeit)}" + (if (z.alt) ", vor ${alterText(z.alterS)}, nicht mehr frisch" else "") +
+                ", ${z.quelle}: ${werteText(z)}" + (z.batterie?.let { ", Batterie $it %" } ?: "")
         }
         val vorweg = if (nur.isNotEmpty() && !einzeln) "Einen Sensor „$nur“ gibt es nicht, hier alle.\n" else ""
         val kopf = "Abgerufen um $uhr Uhr (je Sensor Herkunft und Messzeit):"
