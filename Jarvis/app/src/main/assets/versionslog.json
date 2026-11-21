@@ -865,6 +865,7 @@
   {"versionCode": 856, "versionName": "1.8.845", "stand": "21.11.2026, 09:20 Uhr", "notiz": "Der Endton kommt jetzt auch am Konferenz-Lautsprecher, entfällt, wenn du von Hand weiter aufnimmst, und wird direkt vor dem Abspielen noch einmal geprüft."},
   {"versionCode": 857, "versionName": "1.8.846", "stand": "21.11.2026, 09:23 Uhr", "notiz": "Der Endton besteht jetzt aus zwei deutlich getrennten, tiefen Tönen, der zweite tiefer als der erste."},
   {"versionCode": 858, "versionName": "1.8.847", "stand": "21.11.2026, 09:29 Uhr", "notiz": "Die Mac-Update-Zentrale heißt jetzt Mac-Zentrale mit den aufklappbaren Abschnitten Update-Zentrale und Programmier-CLI, in dem du inaktive CLI-Sitzungen am Mac aufräumen oder automatisch aufräumen lassen kannst."},
-  {"versionCode": 859, "versionName": "1.8.848", "stand": "21.11.2026, 09:30 Uhr", "notiz": "Der Endton spielt jetzt nur noch mit drei Viertel der bisherigen Lautstärke."}
+  {"versionCode": 859, "versionName": "1.8.848", "stand": "21.11.2026, 09:30 Uhr", "notiz": "Der Endton spielt jetzt nur noch mit drei Viertel der bisherigen Lautstärke."},
+  {"versionCode": 860, "versionName": "1.8.849", "stand": "21.11.2026, 09:31 Uhr", "notiz": "Neue Jarvis-Versionen kommen nur noch aufs Tablet, wenn du am Ende der Programmier-Session die Tablet-Frage mit Ja beantwortest."}
 ]
 }

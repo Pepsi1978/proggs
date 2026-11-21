@@ -1350,6 +1350,11 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
             antworten[frage_text] = (f"Keine Freigabe von Frank ({grund}). Führe den betroffenen Schritt NICHT aus. Melde ihn als blockiert, "
                                      "nenne den kleinsten nötigen nächsten Schritt und erledige die übrigen sicheren Teile.")
             continue
+        # Franks Vorgabe vom 21.11.2026: Aufs Tablet nur nach ausdrücklichem Ja; Schweigen heißt Nein, ohne Verbindungsversuch.
+        if re.search(r"(?i)tablet", frage_text) and re.search(r"(?i)install", frage_text):
+            antworten[frage_text] = (f"Nein (keine Antwort von Frank, {grund}). Jarvis NICHT aufs Tablet installieren, keinen "
+                                     "Verbindungs- oder Installationsversuch am Tablet; die übrigen Fragen gelten wie beantwortet.")
+            continue
         # Franks Vorgabe vom 07.11.2026: Auch beim Angebot eines Code-Reviews entscheidet die Sitzung nach Ablauf selbst (früher Nein).
         if re.search(r"(?i)code[- ]?review", frage_text) and not re.search(r"(?i)befund|beheb|fix", frage_text):
             antworten[frage_text] = (f"Keine Antwort von Frank ({grund}). Nicht erneut fragen und nicht warten: Entscheide selbst, ob ein "
