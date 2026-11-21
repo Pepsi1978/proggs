@@ -33,11 +33,15 @@ $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "
 
 function Ende([string]$status, [string]$text = "") {
     if ($text) { "JARVIS_INSTALL_STATUS=$status ($text)" } else { "JARVIS_INSTALL_STATUS=$status" }
+    if ($schnapp) { Remove-Item $schnapp -Force -ErrorAction SilentlyContinue }
     if ($status -eq "fehler") { exit 1 }
     exit 0
 }
 
 if (-not (Test-Path $Apk)) { Ende fehler "APK nicht gefunden: $Apk" }
+# Schnappschuss: Ein paralleler Bau überschreibt app\build\… sonst mitten im Lauf (Basis und Pflicht-Teil aus zwei Bauten, 21.11.2026).
+$schnapp = Join-Path ([IO.Path]::GetTempPath()) ("jarvis-install-" + [guid]::NewGuid().ToString("N") + ".apk")
+try { Copy-Item $Apk $schnapp -ErrorAction Stop; $Apk = $schnapp } catch { Ende fehler "APK ließ sich nicht sichern" }
 $adb = @($env:ADB, "$env:ANDROID_HOME\platform-tools\adb.exe", "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe", (Get-Command adb -ErrorAction SilentlyContinue).Source) |
     Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if (-not $adb) { Ende fehler "adb nicht gefunden" }
@@ -233,6 +237,7 @@ try {
 }
 finally {
     if ($teilDatei) { Remove-Item $teilDatei -Force -ErrorAction SilentlyContinue }
+    Remove-Item $schnapp -Force -ErrorAction SilentlyContinue
     # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
     # Nach einem Verbindungsabriss erst neu verbinden; auf einem anderen Gerät gehört uns dort nichts.
     if ($sperreMein -and (Verbinde) -and (Handy getprop ro.serialno) -eq $serie) {

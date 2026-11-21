@@ -828,6 +828,23 @@
       "ruecknahme": "Abschnitt '## 12. Gmail-App öffnet einzelne Nachrichten von außen nicht' und Kurzcheck-Zeile '| 20 | Gmail-App: Link auf einzelne Nachricht' entfernen",
       "kosten": "0 (Bedarfsdatei, eine Kurzcheck-Zeile)",
       "status": "aktiv"
+    },
+    {
+      "id": "M46",
+      "titel": "jarvis-install sichert die APK vor dem Lauf (paralleler Bau mischte Basis und Pflicht-Teil)",
+      "datum": "2026-11-21T09:45",
+      "beleg": "Sitzung 5ddd9047: Tablet-Installation scheiterte mit INSTALL_FAILED_INVALID_APK „version code 859 inconsistent with 858“, weil eine parallele Sitzung app/build während des Laufs neu baute; rund 2 min verloren, Umweg über eine Kopie im Scratchpad",
+      "ort": [
+        "Werkzeuge/jarvis-install/jarvis-install.sh",
+        "Werkzeuge/jarvis-install/jarvis-install.ps1"
+      ],
+      "fehler_regex": "version code \\d+ inconsistent with \\d+",
+      "werkzeug": "Bash|PowerShell",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "In späteren Jarvis-Installationen darf „inconsistent with“ nicht mehr vorkommen",
+      "ruecknahme": "Zeilen mit „SCHNAPP“ bzw. „$schnapp“ in beiden jarvis-install-Skripten entfernen",
+      "kosten": "eine Kopie der APK (~140 MB, unter 1 s) je Lauf, kein Kontext",
+      "status": "aktiv"
     }
   ]
 }

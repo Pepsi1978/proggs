@@ -41,6 +41,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -f "$APK" ] || ende fehler "APK nicht gefunden: $APK"
+# Schnappschuss: Ein paralleler Bau überschreibt app/build/… sonst mitten im Lauf (Basis und Pflicht-Teil aus zwei Bauten:
+# INSTALL_FAILED_INVALID_APK „version code … inconsistent“, 21.11.2026).
+SCHNAPP=$(mktemp -t jarvis-install-apk) && cp "$APK" "$SCHNAPP" && APK="$SCHNAPP" || ende fehler "APK ließ sich nicht sichern"
 # Feste Seriennummer des Zielgeräts: Ohne sie (Datei fehlt, altes Repo) gilt wie früher das erste verbundene Gerät.
 GERAETE_DATEI="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/geraete.json"
 ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null)
@@ -82,6 +85,7 @@ SERIE=""
 TEIL_DATEI=""
 # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
 aufraeumen() {
+  rm -f "${SCHNAPP:-}"
   # Nach einem Verbindungsabriss erst neu verbinden; auf einem anderen Gerät gehört uns dort nichts.
   [ -n "$SERIE" ] || { [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"; return 0; }
   # verbinde prüft die bisherige Adresse selbst und wechselt nur, wenn sie nicht mehr antwortet (sonst bliebe die Sperre liegen).
