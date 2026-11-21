@@ -89,6 +89,11 @@ MAX_RUMPF = 1_000_000
 # Antworten auf diese Methoden sind immer gleich; aus dem Zwischenspeicher kann ChatGPT sich auch
 # dann verbinden, wenn das Handy gerade kurz weg ist.
 MERKBAR = {"initialize", "tools/list"}
+# Werkzeuge, mit denen eine Programmier-Sitzung an ihren Auftrag meldet, und der Anfang der Antwort, mit der ein Geraet
+# „kenne ich nicht“ sagt (alte und neue App-Fassung). Sie gehen an das Geraet, das den Auftrag gestellt hat, nicht an das der
+# Plugin-Adresse: Der Mac nutzt die Adresse des Handys, ein Auftrag vom Tablet scheiterte sonst mit „Unbekannte auftrag_id“.
+AUFTRAG_WERKZEUGE = {"programmier_fortschritt", "helfer_registrieren"}
+AUFTRAG_UNBEKANNT = ("Unbekannte auftrag_id", "Auftrag unbekannt:", "Unbekannter Werkzeugbau")
 
 RCLONE_KONFIG = os.environ.get("JARVIS_RCLONE_KONFIG", "/data/rclone.conf")
 TAGEBUCH_ORDNER = Path(os.environ.get("JARVIS_TAGEBUCH", "/data/tagebuch"))
@@ -434,6 +439,8 @@ class Relay:
         # Ping prueft nur, ob der Dienst lebt: bei verbundenem Handy sofort antworten.
         if methode == "ping" and geraet.verbunden():
             return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": {}})
+        if methode == "tools/call" and name in AUFTRAG_WERKZEUGE:
+            return await self._auftrag_aufruf(einzeln, rumpf, geraet)
 
         if geraet.ws is None:
             try:
@@ -463,6 +470,62 @@ class Relay:
             except ValueError:
                 pass
         return web.Response(text=antwort, content_type="application/json")
+
+    async def _auftrag_aufruf(self, einzeln: dict, rumpf: str, adresse: Geraet) -> web.Response:
+        """Meldung einer Sitzung an ihren Auftrag: zuerst an das Geraet, das ihn gestellt hat, dann an das der Adresse, dann an
+        die uebrigen verbundenen. Ein Geraet, das den Auftrag nicht kennt, aendert nichts (die App prueft das zuerst), daher ist
+        das Weiterfragen sicher. Kennt ihn keines, eine verstaendliche Meldung statt „Unbekannte auftrag_id“."""
+        argumente = (einzeln.get("params") or {}).get("arguments") or {}
+        auftrag_id = str(argumente.get("auftrag_id") or "").strip().upper() if isinstance(argumente, dict) else ""
+        kennung = (self.auftrag_geraet.get(auftrag_id) or [None])[0]
+        besitzer = self.geraete.get(kennung) if kennung and kennung != ALLE_GERAETE else None
+        reihe = list(dict.fromkeys(g for g in [besitzer, adresse, *self.geraete.values()] if g is not None))
+        gefragt, fern = [], []
+        for geraet in reihe:
+            # Auf Besitzer und Adresse kurz warten (Funkloch), die uebrigen nur, wenn sie gerade verbunden sind.
+            if not geraet.verbunden():
+                if geraet not in (besitzer, adresse):
+                    continue
+                try:
+                    await asyncio.wait_for(geraet.da.wait(), WARTE_AUF_HANDY_S)
+                except asyncio.TimeoutError:
+                    fern.append(geraet.name)
+                    continue
+            antwort = await self._frage_handy(rumpf, geraet)
+            if antwort is _KEINE:
+                fern.append(geraet.name)
+                continue
+            if antwort is _UNKLAR:
+                text = ("Jarvis hat die Meldung erhalten, aber die Antwort kam nicht an. Ob sie eingetragen wurde, ist unklar. "
+                        "Arbeite normal weiter; die nächste Meldung zeigt Frank den aktuellen Stand.")
+                return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
+                                   "result": {"content": [{"type": "text", "text": text}], "isError": True}})
+            if not self._auftrag_unbekannt(antwort):
+                # Ohne Zuordnung (etwa ein Cloud-Auftrag) kuenftig gleich dorthin, auch fuer die Hook-Meldungen (_ziele).
+                if kennung is None and auftrag_id and geraet is not adresse:
+                    self.auftrag_merken(auftrag_id, geraet.kennung)
+                return web.Response(text=antwort, content_type="application/json")
+            gefragt.append(geraet.name)
+        nummer = auftrag_id or "ohne Nummer"
+        text = (f"Diese Meldung ist nicht bei Frank angekommen: Kein Jarvis-Gerät kennt den Auftrag {nummer}"
+                + (f" (gefragt: {', '.join(gefragt)})" if gefragt else "")
+                + (f"; nicht erreichbar: {', '.join(fern)}" if fern else "") + ". "
+                + ("Vermutlich ist das Gerät, von dem Frank den Auftrag gestellt hat, gerade ohne Verbindung: Versuche es bei der "
+                   "nächsten Meldung erneut. " if fern else
+                   "Prüfe, ob du genau die AUFTRAG-ID aus deinem Auftragstext angegeben hast. ")
+                + "Arbeite normal weiter und sag Frank am Ende in der Sitzung selbst, was fertig ist, falls auch die Fertig-Meldung nicht ankommt.")
+        log.warning("Auftrag %s keinem Geraet bekannt (gefragt %s, fern %s)", nummer, gefragt, fern)
+        return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
+                           "result": {"content": [{"type": "text", "text": text}], "isError": True}})
+
+    @staticmethod
+    def _auftrag_unbekannt(antwort) -> bool:
+        try:
+            ergebnis = json.loads(antwort).get("result") or {}
+            text = " ".join(str(t.get("text", "")) for t in ergebnis.get("content") or [] if isinstance(t, dict)).strip()
+            return bool(ergebnis.get("isError")) and text.startswith(AUFTRAG_UNBEKANNT)
+        except (ValueError, AttributeError, TypeError):
+            return False
 
     async def _frage_handy(self, rumpf: str, geraet: Geraet):
         ws = geraet.ws

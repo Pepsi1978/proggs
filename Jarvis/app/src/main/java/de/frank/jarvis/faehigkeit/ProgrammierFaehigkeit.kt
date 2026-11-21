@@ -347,7 +347,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val schritt = ProgrammierAbschluss.kuerzen(a.optString("schritt").trim().let { t -> vorspann?.let { t.removeRange(it.range).trim() } ?: t },
                     ProgrammierAbschluss.MAX_FORTSCHRITT)
                 val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), if (antwortAuf.isEmpty()) schritt else "💬 $schritt", a.optString("link").trim())
-                if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
+                // Beginnt mit „Auftrag unbekannt:“: Daran erkennt der Server die Antwort und fragt das Gerät, das den Auftrag gestellt hat.
+                if (eintrag == null) Ergebnis("Auftrag unbekannt: Jarvis auf diesem Gerät (${de.frank.jarvis.data.Geraet.kennung}) kennt den Auftrag „$id“ nicht, " +
+                    "die Meldung ist nicht bei Frank angekommen. Prüfe die AUFTRAG-ID aus deinem Auftragstext, arbeite normal weiter und sag Frank am Ende in der Sitzung selbst, was fertig ist.", fehler = true)
                 else {
                     if (antwortAuf.isNotEmpty()) gespraechsAntwort(eintrag, antwortAuf, schritt)
                     // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
