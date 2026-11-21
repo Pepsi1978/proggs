@@ -161,8 +161,8 @@ object ProgrammierChat {
      * Gespräch für eine am PC oder Mac direkt gestartete Sitzung (nicht über Jarvis): unter „Programmierung“, Titel
      * „Gestartet auf dem PC: <Name> (<Rechner>)“. Leer = ließ sich nicht anlegen.
      */
-    fun lokalesGespraech(context: Context, name: String, rechner: String): String {
-        val id = Gespraeche.neueId()
+    fun lokalesGespraech(context: Context, name: String, rechner: String, id: String = Gespraeche.neueId()): String {
+        if (Gespraeche.vorhanden(context, id)) return id
         val bei = if (rechner.isNotEmpty()) " ($rechner)" else ""
         val erste = GespeicherteNachricht(false, "💻 $VON_JARVIS · Gestartet auf dem PC$bei, nicht über Jarvis. Löschen entfernt die Sitzung nur aus Jarvis, am PC läuft sie weiter.", ART_STATUS)
         Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste), programmierung = true) ?: return ""
