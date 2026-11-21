@@ -3,6 +3,9 @@ package de.frank.jarvis.ui
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -190,7 +193,6 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     var offen by rememberSaveable { mutableStateOf(false) }
     var cliOffen by rememberSaveable { mutableStateOf(false) }
     var kritischFrage by remember { mutableStateOf(false) }
-    val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
 
     val s = l.stand
     val vorgang = s?.optJSONObject("vorgang")
@@ -220,61 +222,57 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     val freigabe = s?.optString("freigabe").orEmpty()
 
     Karte(modifier = griff) {
+        val linie = trennlinie(f)
+        // Kopf: Aktualisieren bleibt fest oben rechts, egal was darunter aufklappt.
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.padding(end = 10.dp).size(44.dp).glas(f, 14.dp, erhoeht = 0.3f), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.LaptopMac, null, tint = f.primaer, modifier = Modifier.size(24.dp))
             }
-            Text("Mac-Zentrale", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
-        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f).antippen(haptik = false) { offen = !offen }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Update-Zentrale", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    val n = unkritisch.size + kritisch.size
-                    if (n > 0) Text("$n", Modifier.padding(start = 8.dp).glas(f, 10.dp, erhoeht = 0.2f, toenung = f.primaer).padding(horizontal = 8.dp, vertical = 2.dp),
-                        color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-                Text(
-                    when {
-                        sendet != null -> "Sendet den Auftrag an das MacBook …"
-                        s == null && !l.macDa -> "MacBook nicht erreichbar"
-                        s == null -> "Noch kein Stand – Aktualisieren tippen"
-                        laeuft -> vorgang?.optString("text")?.takeIf { it.isNotBlank() && vorgang.optString("phase") == "laeuft" } ?: s.optString("kopf")
-                        unkritisch.isEmpty() && kritisch.isEmpty() -> if (fehler.isEmpty()) "Alles aktuell" else "Keine Updates · ${fehler.size} Prüffehler"
-                        else -> "${unkritisch.size} unkritisch · ${kritisch.size} CLI-kritisch"
-                    },
-                    color = when {
-                        abgerissen -> f.gefahr
-                        laeuft || sendet != null -> f.primaer
-                        s != null && unkritisch.isEmpty() && kritisch.isEmpty() && fehler.isEmpty() -> f.erfolg
-                        else -> f.text
-                    },
-                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp), maxLines = 2,
-                )
-                val zeile = listOfNotNull(
-                    s?.optDouble("geprueft")?.takeIf { !it.isNaN() && it > 0 }?.let { "Geprüft " + uhr(it) },
-                    s?.optDouble("zeit")?.takeIf { !it.isNaN() && it > 0 }?.let { "Stand " + uhr(it) },
-                    if (!l.macDa && s != null) "MacBook nicht erreichbar" else null,
-                    if (l.abrufFehler) "Server nicht erreichbar" else null,
-                ).joinToString(" · ")
-                if (zeile.isNotEmpty()) Text(zeile, color = if (!l.macDa || l.abrufFehler) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val pruefend = laeuft && s?.optString("art") == "pruefung"
-                Box(
-                    Modifier.offset(x = 4.dp, y = (-6).dp).size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (pruefend) f.primaer else null)
-                        .antippen { if (bedienbar) MacUpdateZentrale.senden(context, "pruefen") else if (!laeuft) MacUpdateZentrale.bereich.launch { MacUpdateZentrale.holen(context) } },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Refresh, "Am MacBook frisch prüfen", tint = if (pruefend) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
-                }
-                Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen",
-                    Modifier.padding(top = 2.dp).size(24.dp).graphicsLayer { rotationZ = drehung }.antippen(haptik = false) { offen = !offen }, tint = f.textLeise)
+            Text("Mac-Zentrale", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            val pruefend = laeuft && s?.optString("art") == "pruefung"
+            Box(
+                Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (pruefend) f.primaer else null)
+                    .antippen { if (bedienbar) MacUpdateZentrale.senden(context, "pruefen") else if (!laeuft) MacUpdateZentrale.bereich.launch { MacUpdateZentrale.holen(context) } },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Refresh, "Am MacBook frisch prüfen", tint = if (pruefend) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
             }
         }
-        meldung?.let { Text(it, color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+        androidx.compose.material3.HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 14.dp), thickness = 1.dp, color = linie)
 
-        AnimatedVisibility(offen) {
+        AufklappFeld(offen, { offen = !offen }, kopf = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Update-Zentrale", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                val n = unkritisch.size + kritisch.size
+                if (n > 0) Text("$n", Modifier.padding(start = 8.dp).glas(f, 10.dp, erhoeht = 0.2f, toenung = f.primaer).padding(horizontal = 8.dp, vertical = 2.dp),
+                    color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Text(
+                when {
+                    sendet != null -> "Sendet den Auftrag an das MacBook …"
+                    s == null && !l.macDa -> "MacBook nicht erreichbar"
+                    s == null -> "Noch kein Stand – Aktualisieren tippen"
+                    laeuft -> vorgang?.optString("text")?.takeIf { it.isNotBlank() && vorgang.optString("phase") == "laeuft" } ?: s.optString("kopf")
+                    unkritisch.isEmpty() && kritisch.isEmpty() -> if (fehler.isEmpty()) "Alles aktuell" else "Keine Updates · ${fehler.size} Prüffehler"
+                    else -> "${unkritisch.size} unkritisch · ${kritisch.size} CLI-kritisch"
+                },
+                color = when {
+                    abgerissen -> f.gefahr
+                    laeuft || sendet != null -> f.primaer
+                    s != null && unkritisch.isEmpty() && kritisch.isEmpty() && fehler.isEmpty() -> f.erfolg
+                    else -> f.text
+                },
+                fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp), maxLines = 2,
+            )
+            val zeile = listOfNotNull(
+                s?.optDouble("geprueft")?.takeIf { !it.isNaN() && it > 0 }?.let { "Geprüft " + uhr(it) },
+                s?.optDouble("zeit")?.takeIf { !it.isNaN() && it > 0 }?.let { "Stand " + uhr(it) },
+                if (!l.macDa && s != null) "MacBook nicht erreichbar" else null,
+                if (l.abrufFehler) "Server nicht erreichbar" else null,
+            ).joinToString(" · ")
+            if (zeile.isNotEmpty()) Text(zeile, color = if (!l.macDa || l.abrufFehler) f.gefahr else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            meldung?.let { Text(it, color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
+        }) {
             Column {
                 Knopf(if (installierbarU > 0) "Unkritische Updates installieren ($installierbarU)" else "Unkritische Updates installieren",
                     Modifier.fillMaxWidth().padding(top = 12.dp).alpha(if (bedienbar && installierbarU > 0) 1f else 0.4f), farbe = f.erfolg) {
@@ -315,6 +313,7 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
             }
         }
 
+        Spacer(Modifier.height(10.dp))
         CliAbschnitt(l, cliOffen) { cliOffen = !cliOffen }
     }
 
@@ -371,7 +370,6 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
     val sendet by MacUpdateZentrale.cliSendet.collectAsState()
     val meldung by MacUpdateZentrale.cliMeldung.collectAsState()
     var frage by remember { mutableStateOf(false) }
-    val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "cliPfeil")
     val c = l.cli
     val laeuft = c?.optBoolean("laeuft") == true
     val automatik = c?.optBoolean("automatik") == true
@@ -380,24 +378,18 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
     val sitzungen = c?.optJSONArray("sitzungen").objekte()
     val bedienbar = l.macDa && c != null && sendet == null
 
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp).antippen(haptik = false) { umschalten() }, verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text("Programmier-CLI", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(
-                when {
-                    sendet == "cli_aufraeumen" || laeuft -> "Räumt am MacBook auf …"
-                    c == null && !l.macDa -> "MacBook nicht erreichbar"
-                    c == null -> "Noch kein Stand vom MacBook"
-                    else -> "${sitzungen.size} offene Sitzungen · Automatik " + if (automatik) "alle $stunden h" else "aus"
-                },
-                color = if (laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen",
-            Modifier.size(24.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
-    }
-
-    AnimatedVisibility(offen) {
+    AufklappFeld(offen, umschalten, kopf = {
+        Text("Programmier-CLI", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(
+            when {
+                sendet == "cli_aufraeumen" || laeuft -> "Räumt am MacBook auf …"
+                c == null && !l.macDa -> "MacBook nicht erreichbar"
+                c == null -> "Noch kein Stand vom MacBook"
+                else -> "${sitzungen.size} offene Sitzungen · Automatik " + if (automatik) "alle $stunden h" else "aus"
+            },
+            color = if (laeuft) f.primaer else f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp),
+        )
+    }) {
         Column {
             Knopf(if (laeuft) "Aufräumen läuft …" else "Aufräumen", Modifier.fillMaxWidth().padding(top = 12.dp).alpha(if (bedienbar && !laeuft) 1f else 0.4f)) {
                 if (bedienbar && !laeuft) frage = true
@@ -458,4 +450,39 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
         confirmButton = { TextButton({ frage = false; MacUpdateZentrale.cliSenden(context, "cli_aufraeumen") }) { Text("Ja") } },
         dismissButton = { TextButton({ frage = false }) { Text("Nein") } },
     )
+}
+
+
+/** Linie für Trennstrich und Rahmen: Im hellen Modus wäre f.rand (fast weiß) unsichtbar. */
+private fun trennlinie(f: de.frank.jarvis.ui.theme.Farben): Color = if (f.dunkel) f.rand else f.primaer.copy(alpha = 0.28f)
+
+/**
+ * Umrandetes Aufklapp-Feld der Mac-Zentrale: Kopf mit [kopf] und dem Pfeil in eigener Fläche (bei allen Feldern an derselben Stelle),
+ * aufgeklappt der [inhalt] innerhalb der Umrandung. Nur die Kopfzeile reagiert auf Tippen.
+ */
+@Composable
+private fun AufklappFeld(offen: Boolean, umschalten: () -> Unit, kopf: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+                         inhalt: @Composable () -> Unit) {
+    val f = LocalFarben.current
+    val linie = trennlinie(f)
+    val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "feldPfeil")
+    val form = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+    Column(Modifier.fillMaxWidth().glas(f, 16.dp, erhoeht = 0.15f, verlaufHoehe = 72.dp)
+        .border(1.dp, if (offen) f.primaer.copy(alpha = if (f.dunkel) 0.45f else 0.5f) else linie, form)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).antippen(haptik = false) { umschalten() }
+            .padding(start = 14.dp, end = 10.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(end = 10.dp), content = kopf)
+            Box(Modifier.size(32.dp).glas(f, 10.dp, erhoeht = 0.2f, toenung = f.primaer), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen",
+                    Modifier.size(22.dp).graphicsLayer { rotationZ = drehung }, tint = f.primaer)
+            }
+        }
+        AnimatedVisibility(offen, enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
+            Column {
+                androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = linie.copy(alpha = linie.alpha * 0.6f))
+                Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) { inhalt() }
+            }
+        }
+    }
 }
