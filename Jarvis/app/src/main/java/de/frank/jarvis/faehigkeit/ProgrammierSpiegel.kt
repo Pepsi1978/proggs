@@ -42,7 +42,9 @@ object ProgrammierSpiegel {
 
     init {
         bereich.launch { for ((context, rumpf) in eilig) if (!sende(context, rumpf)) merkeOffen(context, rumpf) }
-        bereich.launch { for ((context, rumpf) in verlauf) if (!sende(context, rumpf)) merkeOffen(context, rumpf) }
+        // Verlauf nicht in die Datei (sie verwarf bei vielen großen Sessions den Großteil, Review 21.11.2026): Er lässt sich jederzeit neu
+        // erzeugen, also gilt der Abgleich wieder als fällig und läuft beim nächsten Verbinden vollständig noch einmal.
+        bereich.launch { for ((context, rumpf) in verlauf) if (!sende(context, rumpf)) verlaufWiederFaellig(context) }
     }
 
     fun senden(context: Context, rumpf: JSONObject) {
@@ -70,8 +72,9 @@ object ProgrammierSpiegel {
                 .header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             netz.newCall(anfrage).execute().use { a ->
-                // 400/413: Diesen Rumpf nimmt der Server nie; ihn aufzuheben, hielte nur die Schlange auf.
-                if (a.code in 400..499) { Logbuch.system("Spiegel abgelehnt", "${rumpf.optString("art")} ${rumpf.optString("auftrag_id")}: HTTP ${a.code}"); return@runCatching true }
+                // 400/413: Diesen Rumpf nimmt der Server nie; ihn aufzuheben, hielte nur die Schlange auf. Andere 4xx (401/403/404 bei
+                // falschem Token oder einem Relay ohne /geraet/spiegel mitten im Deploy, 429) gehen später noch einmal (Review 21.11.2026).
+                if (a.code == 400 || a.code == 413) { Logbuch.system("Spiegel abgelehnt", "${rumpf.optString("art")} ${rumpf.optString("auftrag_id")}: HTTP ${a.code}"); return@runCatching true }
                 if (!a.isSuccessful) throw IllegalStateException("HTTP ${a.code}")
             }
             true
@@ -130,8 +133,12 @@ object ProgrammierSpiegel {
         if (zeilen.isEmpty()) return
         val auftrag = ProgrammierFaehigkeit.auftragImGespraech(context, gespraech) ?: return
         zeilen.forEach { n ->
-            senden(context, JSONObject().put("art", "zeile").put("auftrag_id", auftrag).put("gespraech", gespraech).put("nachricht",
-                JSONObject().put("mir", n.vonMir).put("text", n.text).put("art", n.art).put("kontext", n.kontext).put("anhaenge", JSONArray(n.anhaenge))))
+            val nachricht = JSONObject().put("mir", n.vonMir).put("text", n.text).put("art", n.art).put("kontext", n.kontext).put("anhaenge", JSONArray(n.anhaenge))
+            val rumpf = JSONObject().put("art", "zeile").put("auftrag_id", auftrag).put("gespraech", gespraech).put("nachricht", nachricht)
+            // Über der Grenze des Servers (413, still verworfen): erst ohne Kontext, dann den Text gekürzt.
+            if (bytes(rumpf) >= HOECHSTENS_BYTES) nachricht.remove("kontext")
+            if (bytes(rumpf) >= HOECHSTENS_BYTES) nachricht.put("text", n.text.take(HOECHSTENS_BYTES / 4) + " …")
+            senden(context, rumpf)
         }
     }
 
@@ -154,6 +161,11 @@ object ProgrammierSpiegel {
         if (p.getBoolean(marke, false)) return false
         p.edit().putBoolean(marke, true).apply()
         return true
+    }
+
+    /** Ein Teil des Verlaufs kam nicht an: beim nächsten Verbinden den ganzen Abgleich wiederholen (das andere Gerät übernimmt nur Fehlendes). */
+    private fun verlaufWiederFaellig(context: Context) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putBoolean("verlauf_" + de.frank.jarvis.BuildConfig.VERSION_CODE, false).apply()
     }
 
     /** Bittet das andere Gerät um seinen Verlauf; es antwortet höchstens einmal je Stunde. */

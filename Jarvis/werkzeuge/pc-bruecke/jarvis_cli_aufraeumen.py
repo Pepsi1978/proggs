@@ -234,25 +234,41 @@ def nebenarbeit_zeit(pfad: Path) -> float:
 _MERKMALE: dict[str, tuple[float, int, dict]] = {}
 
 
+# Ein Weckruf gilt bis zu seiner Weckzeit plus Spielraum, ein Cron höchstens so lange, wie Claude Code ihn hält (Review 21.11.2026:
+# ein längst ausgelöster Weckruf oder ein Einmal-Cron ohne CronDelete hielt die Sitzung sonst für immer offen).
+WECKRUF_SPIEL_S = 15 * 60
+CRON_HOECHSTENS_S = 7 * 86400
+
+
+def _zeit(eintrag: dict) -> float:
+    """Zeitpunkt einer Transkriptzeile (ISO „timestamp“); ohne lesbare Zeit gilt jetzt, also weiter geplant (offen lassen)."""
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(str(eintrag["timestamp"]).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return time.time()
+
+
 def merkmale(pfad: Path) -> dict:
     """Aus dem ganzen Transkript (zwischengespeichert nach Größe und Änderungszeit): letzter gemeldeter Jarvis-Stand
-    (programmier_fortschritt), ob noch Sitzungs-Crons bestehen (CronCreate ohne passendes CronDelete) und ob der letzte
-    Weckruf (ScheduleWakeup, /loop) noch geplant ist. Nicht lesbar heißt: plant weiter (offen lassen)."""
+    (programmier_fortschritt), seit wann noch Sitzungs-Crons bestehen (CronCreate ohne passendes CronDelete) und bis wann der
+    letzte Weckruf (ScheduleWakeup, /loop) geplant ist. Nicht lesbar heißt: plant weiter (offen lassen)."""
     try:
         st = pfad.stat()
     except OSError:
-        return {"stand": None, "plant": True}
+        return {"stand": None, "crons": [], "weckruf_bis": float("inf")}
     alt = _MERKMALE.get(str(pfad))
     if alt and alt[0] == st.st_mtime and alt[1] == st.st_size:
         return alt[2]
-    stand, crons, weckruf = None, 0, False
+    stand, crons, weckruf_bis = None, [], 0.0
     try:
         with open(pfad, "rb") as f:
             for zeile in f:
                 if b'"tool_use"' not in zeile or not any(w in zeile for w in (b"programmier_fortschritt", b"CronCreate", b"CronDelete", b"ScheduleWakeup")):
                     continue
                 try:
-                    inhalt = (json.loads(zeile).get("message") or {}).get("content") or []
+                    eintrag = json.loads(zeile)
+                    inhalt = (eintrag.get("message") or {}).get("content") or []
                 except Exception:
                     continue
                 for blk in inhalt:
@@ -262,14 +278,22 @@ def merkmale(pfad: Path) -> dict:
                     if "programmier_fortschritt" in name:
                         stand = eingabe.get("stand", stand)
                     elif name == "CronCreate":
-                        crons += 1
+                        crons.append(_zeit(eintrag))
                     elif name == "CronDelete":
-                        crons = max(0, crons - 1)
+                        if crons:
+                            crons.pop(0)
                     elif name == "ScheduleWakeup":
-                        weckruf = eingabe.get("stop") is not True
+                        if eingabe.get("stop") is True:
+                            weckruf_bis = 0.0
+                        else:
+                            try:
+                                verzug = float(eingabe.get("delaySeconds") or 3600)
+                            except (TypeError, ValueError):
+                                verzug = 3600.0
+                            weckruf_bis = _zeit(eintrag) + verzug + WECKRUF_SPIEL_S
     except OSError:
-        return {"stand": None, "plant": True}
-    wert = {"stand": stand, "plant": crons > 0 or weckruf}
+        return {"stand": None, "crons": [], "weckruf_bis": float("inf")}
+    wert = {"stand": stand, "crons": crons, "weckruf_bis": weckruf_bis}
     _MERKMALE[str(pfad)] = (st.st_mtime, st.st_size, wert)
     return wert
 
@@ -281,7 +305,8 @@ def jarvis_abgeschlossen(pfad: Path) -> bool:
 
 def plant_weiter(pfad: Path) -> bool:
     """Bestehen Sitzungs-Crons oder ein geplanter Weckruf? Dann ruht die Sitzung absichtlich: nicht eindeutig inaktiv."""
-    return merkmale(pfad)["plant"]
+    m, jetzt = merkmale(pfad), time.time()
+    return m["weckruf_bis"] > jetzt or any(jetzt - t <= CRON_HOECHSTENS_S for t in m["crons"])
 
 
 def hook_zustand(nummer: str) -> dict:

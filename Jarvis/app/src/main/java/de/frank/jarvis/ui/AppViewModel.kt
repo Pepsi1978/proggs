@@ -2553,7 +2553,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Seine Worte gelten, die Aufnahme wird abgeschickt statt verworfen.
         if (lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT && nimmtAuf) {
             val rahmenJetzt = mikro.sprachRahmen
-            val schonGesprochen = !mitPiep || (rahmenVorPiep != null && rahmenJetzt != null && rahmenJetzt > rahmenVorPiep)
+            // Auch ohne Piepton nur mit echten Sprachrahmen seit Rundenbeginn (Review 21.11.2026): War das Hineinsprechen ein Fehlalarm
+            // (Lüfter, Nachhall), ginge sonst Rauschen als Frage hinaus. Ohne Spracherkennung (nur Pegel) bleibt es wie bisher.
+            val schonGesprochen = if (rahmenJetzt == null || rahmenVorPiep == null) !mitPiep else rahmenJetzt > rahmenVorPiep
             if (schonGesprochen) {
                 Logbuch.sprache("Aufnahme-Ende", "Stimme vor oder während des Pieptons, wird abgeschickt")
                 lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG

@@ -156,6 +156,10 @@ GERAET_KENNUNG = re.compile(r"^[a-z0-9_-]{1,20}$")
 HAUPTGERAET = "handy"
 GERAETE_HOECHSTENS = 6
 AUFTRAG_GERAETE = ZUSTAND.with_name("auftrag-geraete.json")
+# Warteschlangen der nicht verbundenen Geraete (Review 21.11.2026): Ein Neustart des Relays (Deploy) verlor sonst alles, was fuer ein
+# getrenntes Geraet eingereiht war, und Handy und Tablet blieben danach dauerhaft verschieden. Gesichert hoechstens alle 5 s.
+WARTESCHLANGEN = ZUSTAND.with_name("warteschlangen.json")
+_SCHLANGEN_GEAENDERT = [False]
 AUFTRAG_GERAETE_ALTER_S = 60 * 86_400
 ALLE_GERAETE = "*"
 
@@ -234,6 +238,12 @@ class Relay:
         except Exception:
             pass
         try:
+            for kennung, liste in (json.loads(WARTESCHLANGEN.read_text("utf-8")) or {}).items():
+                if GERAET_KENNUNG.match(kennung) and isinstance(liste, list):
+                    self.geraete.setdefault(kennung, Geraet(kennung)).meldungen = [m for m in liste if isinstance(m, dict)]
+        except Exception:
+            pass
+        try:
             grenze = time.time() - AUFTRAG_GERAETE_ALTER_S
             self.auftrag_geraet = {k: v for k, v in json.loads(AUFTRAG_GERAETE.read_text("utf-8")).items()
                                    if isinstance(v, list) and len(v) == 2 and v[1] > grenze}
@@ -248,6 +258,24 @@ class Relay:
             ZUSTAND.write_text(json.dumps({"geheimnis": self.handy.geheimnis, "gemerkt": self.handy.gemerkt, "geraete": weitere}), "utf-8")
         except Exception as fehler:
             log.warning("Zustand nicht gesichert: %s", fehler)
+
+    def schlangen_sichern(self) -> None:
+        """Schreibt die Warteschlangen, wenn sie sich geaendert haben (erst in eine Teildatei, dann umbenannt)."""
+        if not _SCHLANGEN_GEAENDERT[0]:
+            return
+        _SCHLANGEN_GEAENDERT[0] = False
+        try:
+            teil = WARTESCHLANGEN.with_suffix(".teil")
+            teil.write_text(json.dumps({k: g.meldungen for k, g in self.geraete.items() if g.meldungen}, ensure_ascii=False), "utf-8")
+            teil.replace(WARTESCHLANGEN)
+        except Exception as fehler:
+            _SCHLANGEN_GEAENDERT[0] = True
+            log.warning("Warteschlangen nicht gesichert: %s", fehler)
+
+    async def schlangen_waechter(self) -> None:
+        while True:
+            await asyncio.sleep(5)
+            self.schlangen_sichern()
 
     def zu_geheimnis(self, geheimnis: str):
         """Das Geraet, dem dieses Geheimnis gehoert, sonst None."""
@@ -320,6 +348,7 @@ class Relay:
         log.info("%s verbunden", geraet.name)
         while geraet.meldungen:
             meldung = geraet.meldungen.pop(0)
+            _SCHLANGEN_GEAENDERT[0] = True
             try:
                 await ws.send_str(json.dumps(meldung))
             except (ConnectionError, RuntimeError):
@@ -421,6 +450,7 @@ class Relay:
                                 if not (m.get("art") == "sitzung" and (m.get("auftrag_id"), m.get("gespraech") or "") == schluessel)]
             daten = {**daten, "_groesse": len(json.dumps(daten, ensure_ascii=False))}
         geraet.meldungen.append(daten)
+        _SCHLANGEN_GEAENDERT[0] = True
         gross = [m for m in geraet.meldungen if m.get("art") == "sitzung"]
         while gross and (len(gross) > 40 or sum(m.get("_groesse", 0) for m in gross) > 12_000_000):
             geraet.meldungen.remove(gross.pop(0))
@@ -2813,6 +2843,15 @@ def app() -> web.Application:
         _im_hintergrund(tagebuch.wache(relay))
 
     anwendung.on_startup.append(tagebuch_waechter)
+
+    async def schlangen_start(_anwendung):
+        _im_hintergrund(relay.schlangen_waechter())
+
+    async def schlangen_ende(_anwendung):
+        relay.schlangen_sichern()
+
+    anwendung.on_startup.append(schlangen_start)
+    anwendung.on_cleanup.append(schlangen_ende)
     anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
     anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
     anwendung.router.add_post("/geraet/signal", relay.signal)

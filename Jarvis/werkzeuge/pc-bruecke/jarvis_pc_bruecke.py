@@ -779,6 +779,17 @@ def cli_lauf(art: str, kennung: str = "") -> None:
     CLI_STAND["laeuft"] = True
     CLI_STAND["laeufe"] += 1
     cli_melden()
+    # Lebenszeichen alle vier Minuten (Review 21.11.2026): Die Karte hält einen Stand nach zehn Minuten für veraltet, zeigte bei
+    # einem langen Aufräumen „läuft nicht“ und gab den Knopf frei, obwohl der zweite Auftrag dann abgewiesen wurde.
+    puls_ende = threading.Event()
+
+    def puls() -> None:
+        while not puls_ende.wait(240):
+            try:
+                cli_melden()
+            except Exception:
+                pass
+    threading.Thread(target=puls, daemon=True).start()
     try:
         try:
             ergebnis = ca.aufraeumen(art)
@@ -800,6 +811,7 @@ def cli_lauf(art: str, kennung: str = "") -> None:
     except Exception as fehler:
         schreib(f"CLI-Aufräumen (Abschluss): {type(fehler).__name__}: {fehler}")
     finally:
+        puls_ende.set()
         CLI_STAND["laeuft"] = False
         cli_melden()
 

@@ -46,11 +46,11 @@ class Bewertung(unittest.TestCase):
 
 
 class Transkript(unittest.TestCase):
-    def schreib(self, namen_und_eingaben):
+    def schreib(self, namen_und_eingaben, zeit=None):
         import json, tempfile, pathlib
         d = tempfile.mkdtemp()
         p = pathlib.Path(d) / "t.jsonl"
-        p.write_text("\n".join(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": n, "input": e}]}})
+        p.write_text("\n".join(json.dumps({"type": "assistant", **({"timestamp": zeit} if zeit else {}), "message": {"content": [{"type": "tool_use", "name": n, "input": e}]}})
                                for n, e in namen_und_eingaben) + "\n")
         return p
 
@@ -59,6 +59,10 @@ class Transkript(unittest.TestCase):
         self.assertFalse(a.plant_weiter(self.schreib([("CronCreate", {}), ("CronDelete", {})])))
         self.assertTrue(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600})])))
         self.assertFalse(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600}), ("ScheduleWakeup", {"stop": True})])))
+        # Längst ausgelöster Weckruf und alter Cron ohne CronDelete planen nichts mehr (Review 21.11.2026).
+        alt = "2026-01-01T08:00:00Z"
+        self.assertFalse(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600})], zeit=alt)))
+        self.assertFalse(a.plant_weiter(self.schreib([("CronCreate", {})], zeit=alt)))
         self.assertTrue(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "fertig"})])))
         self.assertFalse(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "laeuft"})])))
 

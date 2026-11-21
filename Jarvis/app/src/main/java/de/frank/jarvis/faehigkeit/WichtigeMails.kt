@@ -82,6 +82,8 @@ object WichtigeMails {
     /** Urteile zu Nachrichten außerhalb des Posteingangs bleiben so lange liegen: Ein Gerät mit älterem Posteingangsstand löscht nie ein frisches Urteil. */
     private const val URTEIL_AUFHEBEN_MS = 2 * 86_400_000L
     private const val AUTO_ABSTAND_MS = 3 * 3_600_000L
+    /** Mindestabstand der Abrufe, die ein Abgleich mit dem anderen Gerät anstößt. */
+    private const val ABGLEICH_ABSTAND_MS = 5 * 60_000L
     private const val FEHLER_ABSTAND_MS = 30 * 60_000L
     private const val JE_ANFRAGE = 20
     private const val TEXT_ZEICHEN = 1_500
@@ -149,8 +151,19 @@ object WichtigeMails {
         laden(app)
         if (_stand.value.geprueft == 0L && _stand.value.eintraege.isEmpty()) return
         if (sperre.isLocked) { nochmal = true; return }
-        bereich.launch { runCatching { if (mail(app).stoerung() == null) pruefen(app, manuell = false) } }
+        // Höchstens alle [ABGLEICH_ABSTAND_MS] ein Abruf (Review 21.11.2026): Urteile und Löschungen beider Geräte stießen sonst
+        // wechselseitig volle IMAP-Abrufe an. Was in der Zwischenzeit ankommt, nimmt ein einziger nachgeholter Abruf mit.
+        if (abgleichGeplant) return
+        abgleichGeplant = true
+        bereich.launch {
+            val rest = ABGLEICH_ABSTAND_MS - (System.currentTimeMillis() - maxOf(_stand.value.geprueft, letzterVersuch))
+            if (rest > 0) kotlinx.coroutines.delay(rest)
+            abgleichGeplant = false
+            runCatching { if (mail(app).stoerung() == null) pruefen(app, manuell = false) }
+        }
     }
+
+    @Volatile private var abgleichGeplant = false
 
     private fun laden(app: Context) {
         if (geladen) return

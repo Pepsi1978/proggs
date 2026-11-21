@@ -69,10 +69,10 @@ object EndeTon {
         }.getOrNull() ?: return false
         // Kurz den Ton für sich: Musik, die nach dem Gespräch weiterläuft, wird für den Doppelton leiser.
         val am = if (fokus) context.applicationContext.getSystemService(AudioManager::class.java) else null
-        val fokus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attribute).build()
+        val fokusAnfrage = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attribute).build()
         try {
             if (spur.write(daten, 0, daten.size) != daten.size) return false
-            am?.let { runCatching { it.requestAudioFocus(fokus) } }
+            am?.let { runCatching { it.requestAudioFocus(fokusAnfrage) } }
             spur.play()
             // Bis der letzte Abtastwert abgespielt ist (mit Obergrenze), dann der Nachlauf; jederzeit abbrechbar.
             val frist = SystemClock.elapsedRealtime() + (HOCH_MS + PAUSE_MS + TIEF_MS) + 1_500L
@@ -94,7 +94,7 @@ object EndeTon {
         } finally {
             runCatching { spur.stop() }
             spur.release()
-            am?.let { runCatching { it.abandonAudioFocusRequest(fokus) } }
+            am?.let { runCatching { it.abandonAudioFocusRequest(fokusAnfrage) } }
         }
     }
 }

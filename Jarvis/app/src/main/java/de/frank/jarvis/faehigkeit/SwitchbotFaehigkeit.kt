@@ -152,7 +152,9 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
             val gebraucht = gewaehlt.zip(ausCloud).filter { (g, z) ->
                 val id = g.optString("deviceId").lowercase(Locale.ROOT)
                 val macDa = alsSensor(z, fern.mac[id], macFrist(g)) != null
-                !macDa && (istMobil(g) || (cloudMitMesszeit(z, fern.hook[id], fern.mac[id]) == null && frisch(fern.hook[id]) == null))
+                // Dieselbe Bedingung wie in der Auswahl unten (Review 21.11.2026): Ein Cloud-Wert, den die Auswahl verwirft, ersetzt den Scan nicht.
+                val cloudGilt = z.problem == null && brauchbar(cloudMitMesszeit(z, fern.hook[id], fern.mac[id], lebt = fern.cloudLebt), MAC_GILT_S) != null
+                !macDa && (istMobil(g) || (!cloudGilt && frisch(fern.hook[id]) == null))
             }.map { (g, _) -> g.optString("deviceId").lowercase(Locale.ROOT) }.toSet()
             if (gebraucht.isNotEmpty()) withTimeoutOrNull((scanEnde - System.currentTimeMillis()).coerceAtLeast(0)) {
                 while (!scan.isCompleted && !gebraucht.all { nah.containsKey(it) }) delay(150)
@@ -174,7 +176,7 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
                 val grenze = if (mobil) MOBIL_MAC_S else MAC_GILT_S
                 val ohneRelay = !mobil && z.problem == null && hook == null && mac == null && !fern.webhookAktiv
                 alsSensor(z, mac, macFrist(g)) ?: direkt
-                    ?: listOfNotNull(cloud?.takeIf { it.stabil || it.alterS <= grenze }, alsSensor(z, hook, grenze), alsSensor(z, mac, grenze)).maxByOrNull { it.zeit }
+                    ?: listOfNotNull(brauchbar(cloud, grenze), alsSensor(z, hook, grenze), alsSensor(z, mac, grenze)).maxByOrNull { it.zeit }
                     ?: (if (ohneRelay) Sensor(z.name, z.typ, z.temperatur, z.feuchte, z.batterie, z.co2, quelle = "über die SwitchBot-Cloud (Messzeit unbekannt)", zeit = 0) else null)
                     ?: nichtErreichbar(z, hook, mac, mobil)
             }
@@ -293,6 +295,12 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         return Sensor(z.name, z.typ, t, f, z.batterie, z.co2, quelle = if (lebt) "über die SwitchBot-Cloud (unverändert seit der Messzeit)" else "über die SwitchBot-Cloud",
             zeit = minOf(beleg.optLong("zeit"), jetzt), stabil = lebt)
     }
+
+    /**
+     * Cloud-Wert, der gezeigt werden darf: höchstens [grenze] alt, oder bei lebender Cloud unverändert, aber höchstens [STABIL_S]
+     * (Review 21.11.2026: ein Sensor mit leerer Batterie stand sonst tagelang als aktueller Wert da).
+     */
+    private fun brauchbar(cloud: Sensor?, grenze: Long): Sensor? = cloud?.takeIf { it.alterS <= grenze || (it.stabil && it.alterS <= STABIL_S) }
 
     /** Kein Wert mit belegter, brauchbarer Messzeit: „nicht erreichbar“, dazu der letzte bekannte Wert vom Relay (bis ein Tag) mit seiner Messzeit. */
     private fun nichtErreichbar(z: Sensor, hook: JSONObject?, mac: JSONObject?, mobil: Boolean): Sensor {
@@ -474,6 +482,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
         /** Die Cloud gilt als lebendig, solange in dieser Zeit irgendeine Webhook-Meldung kam (CO2-Monitor misst alle fünf, mit Batterie
          *  höchstens alle 30 Minuten; Thermometer melden nur bei Änderung). */
         private const val CLOUD_LEBT_S = 45 * 60L
+        /** So lange gilt ein unveränderter Cloud-Wert eines Wohnungssensors bei lebender Cloud noch als aktuell. */
+        private const val STABIL_S = 6 * 3600L
         /** Nach einem Fehler bei der Webhook-Anmeldung so lange nicht erneut (jeder Versuch kostet bis zu drei Netzanfragen). */
         private const val WEBHOOK_PAUSE_MS = 10 * 60 * 1000L
         /** Für den Sofort-Scan des Macs: Der Relay antwortet erst nach dessen Meldung (bis 50 s). */

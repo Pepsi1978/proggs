@@ -779,8 +779,9 @@ def bilder_einfuegen_jetzt(pfade: list[Path], vorspann: str) -> str:
 # vom 21.11.2026): Der Weckruf selbst zeigt dort nur „Nachtrag von Frank über Jarvis“. Die Sitzung zitiert ihn deshalb zuerst
 # sichtbar; neue_texte gibt diesen Absatz nicht noch einmal an Jarvis weiter (dort steht der Nachtrag schon).
 ZITAT_MARKE = "📨 Nachtrag "
-# Tolerant: Markdown davor („**“, „> “, Leerraum). Entfernt wird nur der Zitat-Absatz (bis zur Leerzeile, sonst bis zum Zeilenende).
-ZITAT_MUSTER = re.compile(r"^[\s>*_]*📨\s*Nachtrag\b[^\n]*(?:\n(?!\s*\n)[^\n]*)*", re.UNICODE)
+# Tolerant: Markdown davor („**“, „> “, Leerraum). Entfernt wird nur die Zitatzeile: Die Anweisung verlangt das Zitat in einer Zeile,
+# und eine Antwort direkt darunter ohne Leerzeile ging sonst mit verloren (Review 21.11.2026).
+ZITAT_MUSTER = re.compile(r"^[\s>*_]*📨\s*Nachtrag\b[^\n]*", re.UNICODE)
 
 
 def ohne_zitat(text: str) -> str:

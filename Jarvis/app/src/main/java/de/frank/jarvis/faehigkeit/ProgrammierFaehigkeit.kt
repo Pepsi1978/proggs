@@ -2143,8 +2143,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     private fun verteileEinfach(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean, von: String, zusatz: JSONObject?) {
+        // Vom anderen Gerät gespiegelter Auftrag (Review 21.11.2026): Der Server schickt jede Meldung an beide Geräte, vorgelesen,
+        // angesagt und als Vollbild nach vorn geholt wird aber nur auf dem Gerät des Auftrags; hier still Benachrichtigung und Gespräch.
+        val gespiegelt = eintrag.optString("gespiegeltVon").isNotEmpty()
         // Gleich zuerst: Eine Rückfrage hält jedes laufende Vorlesen an dieser Stelle an, bis sie erledigt ist.
-        if (frage != null && benachrichtigen && rueckfrageErreichtFrank(eintrag))
+        if (frage != null && benachrichtigen && !gespiegelt && rueckfrageErreichtFrank(eintrag))
             frage.optString("frage_id").takeIf { it.isNotEmpty() }?.let { de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(it, frage.optLong("bis")) }
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
@@ -2153,13 +2156,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Spricht gleich die Sprachzustellung den Abschluss, liest die Benachrichtigung nichts vor (keine zweite, konkurrierende Stimme).
         if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler" || letzter in GESPERRT))
             // Eine Rückfrage liest rueckfrageVorn vor (auch bei ausgeschaltetem Handy), nicht die Benachrichtigung.
-            benachrichtige(eintrag, vorlesen = frage == null && sprachAbschlussGeplant(eintrag) == null && !schonAngesagt(eintrag))
+            benachrichtige(eintrag, vorlesen = !gespiegelt && frage == null && sprachAbschlussGeplant(eintrag) == null && !schonAngesagt(eintrag))
         val gespraech = eintrag.optString("gespraech")
         val fragen = frage?.optJSONArray("fragen") ?: JSONArray()
         val kurz = (0 until fragen.length()).joinToString(" / ") { fragen.optJSONObject(it)?.optString("question").orEmpty() }.trim()
         if (gespraech.isEmpty()) {
             // Ohne Gespräch kein Vollbild, aber die Rückfrage wird trotzdem angesagt.
-            if (frage != null && benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
+            if (frage != null && benachrichtigen && !gespiegelt) rueckfrageVorn(eintrag, frage, kurz)
             return
         }
         val appName = eintrag.optString("app")
@@ -2171,7 +2174,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
             zusatz?.keys()?.forEach { kontext.put(it, zusatz.opt(it)) }
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
-            if (benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
+            if (benachrichtigen && !gespiegelt) rueckfrageVorn(eintrag, frage, kurz)
             return
         }
         val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT -> "⚠️"; STAND_UNKLAR -> "⏳"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
@@ -3611,22 +3614,39 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
  * weitere; ist die vorige erledigt, wird die nächste wartende angesagt, damit keine still bleibt.
  */
 private object ReviewAnsage {
+    private const val FRIST_MS = 3 * 60_000L
     private var frage = ""
     private var seit = 0L
     private val wartend = LinkedHashMap<String, () -> Unit>()
+    private val uhr = android.os.Handler(android.os.Looper.getMainLooper())
     /** True, wenn [frageId] jetzt angesagt werden darf (und belegt dann die Ansage); sonst merkt es sich [ansagen] für später. */
     @Synchronized fun belegen(frageId: String, ansagen: () -> Unit): Boolean {
         val jetzt = android.os.SystemClock.elapsedRealtime()
-        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < 3 * 60_000L) { wartend[frageId] = ansagen; return false }
+        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < FRIST_MS) { wartend[frageId] = ansagen; return false }
         frage = frageId; seit = jetzt
+        fristStellen(frageId, jetzt)
         return true
+    }
+    /**
+     * Wird die angesagte Frage nie freigegeben (Sitzung geschlossen, Stand verloren), endet ihre Belegung nach [FRIST_MS] von selbst
+     * und die älteste wartende kommt dran (Review 21.11.2026: sie blieb sonst für immer stumm).
+     */
+    private fun fristStellen(frageId: String, beginn: Long) {
+        uhr.postDelayed({
+            val naechste = synchronized(this) {
+                if (frage != frageId || seit != beginn) return@postDelayed
+                frage = ""
+                wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime(); fristStellen(it.key, seit) }
+            }
+            naechste?.value?.invoke()
+        }, FRIST_MS)
     }
     fun freigeben(frageId: String) {
         val naechste = synchronized(this) {
             wartend.remove(frageId)
             if (frage != frageId) return
             frage = ""
-            wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime() }
+            wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime(); fristStellen(it.key, seit) }
         }
         naechste?.value?.invoke()
     }
