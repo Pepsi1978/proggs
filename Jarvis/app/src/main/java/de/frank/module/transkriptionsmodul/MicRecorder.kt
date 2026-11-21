@@ -358,6 +358,21 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         return pcm.takeIf { it.isNotEmpty() }?.let(::pcmToWav)
     }
 
+    /**
+     * Das bisher Aufgenommene ab Byte [von] als WAV, ohne die Aufnahme anzuhalten: So kann eine zweite, kürzere Aufnahme
+     * denselben Mikrofonstrom mitnutzen, während die lange weiterläuft. null = nichts aufgenommen oder es läuft keine Aufnahme.
+     */
+    fun ausschnitt(von: Int = 0): ByteArray? {
+        if (!recording.get()) return null
+        val pcm = synchronized(bufferLock) {
+            val bis = pcmBuffer.size() - (pcmBuffer.size() - von.coerceAtLeast(0)) % 2
+            val ab = von.coerceIn(0, bis)
+            if (bis <= ab) return null
+            pcmBuffer.stueck(ab, bis)
+        }
+        return pcmToWav(pcm)
+    }
+
     fun isRecording(): Boolean = recording.get()
 
     /** Effektivwert des Blocks, auf 0 bis 1 gebracht und leicht angehoben, damit leise Sprache sichtbar bleibt. */
@@ -437,7 +452,8 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         private const val CHANNEL_COUNT = 1
         private const val BITS_PER_SAMPLE = 16
         private const val WAV_HEADER_BYTES = 44
-        private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
+        /** 16 Minuten: Eine mitgenommene Aufnahme darf bis zu 15 Minuten laufen. */
+        private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 16
         private const val STOP_JOIN_TIMEOUT_MS = 1_500L
 
         /** Höchstens so viel schon Aufgenommenes (10 s) rechnet ein spät geladenes Modell nach, sonst läuft der Puffer über. */

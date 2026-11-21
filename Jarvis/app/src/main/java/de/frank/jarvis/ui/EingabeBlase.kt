@@ -262,7 +262,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
             tastatur?.hide()
         }
         val platzhalter = when {
-            vm.nimmtAuf -> "Ich höre zu …"
+            vm.nimmtAuf || (vm.mitnahmeHier && vm.mitnahme?.laeuft == true) -> "Ich höre zu …"
             vm.schreibtMit -> "Schreibe mit …"
             else -> "Mit Jarvis arbeiten"
         }
@@ -342,14 +342,15 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier, platzOben: Dp 
             Spacer(Modifier.width(4.dp))
             // Frank spricht fast alles ein: Die Tastatur kommt nie von selbst, nur über diesen Knopf zwischen Modell und Mikrofon; nochmal tippen schließt sie.
             TastaturKnopf(kompakt, vm.tastaturWeg, oeffnen = { vm.eingabeKompakt = false; tastaturWunsch = true }, schliessen = { tastatur?.hide(); fokusVerwalter.clearFocus() })
-            // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
+            // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld. Auch rot für die mitgenommene Aufnahme dieser Session.
+            val mitnahmeLaeuft = vm.mitnahmeHier && vm.mitnahme?.laeuft == true
             Box(
-                Modifier.size(44.dp).clip(CircleShape).background(if (vm.nimmtAuf) f.gefahr else Color.Transparent).antippen { vm.diktatTippen() },
+                Modifier.size(44.dp).clip(CircleShape).background(if (vm.nimmtAuf || mitnahmeLaeuft) f.gefahr else Color.Transparent).antippen { vm.diktatTippen() },
                 contentAlignment = Alignment.Center,
             ) {
                 when {
-                    vm.schreibtMit -> Kern(26.dp, f.primaer, aktiv = true)
-                    vm.nimmtAuf -> Icon(Icons.Rounded.Stop, "Aufnahme beenden", tint = Color.White, modifier = Modifier.size(22.dp))
+                    vm.schreibtMit || (vm.mitnahmeHier && vm.mitnahme?.schreibt == true) -> Kern(26.dp, f.primaer, aktiv = true)
+                    vm.nimmtAuf || mitnahmeLaeuft -> Icon(Icons.Rounded.Stop, "Aufnahme beenden", tint = Color.White, modifier = Modifier.size(22.dp))
                     else -> Icon(Icons.Rounded.Mic, "Diktieren", tint = f.text, modifier = Modifier.size(26.dp))
                 }
             }

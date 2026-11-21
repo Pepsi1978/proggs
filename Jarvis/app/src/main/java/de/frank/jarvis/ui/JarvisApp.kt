@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -115,6 +116,10 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             // Die Session bleibt in der Seitenleiste.
             // Läuft eine von Hand gestartete Aufnahme, bleibt die Session offen und die Aufnahme läuft weiter (zurueckInSession).
             androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.zurueckInSession() }
+            // Session nicht mehr zu sehen (anderer Reiter oder Vollbild): Ein laufendes Diktat der Eingabeblase läuft als
+            // mitgenommene Aufnahme weiter, oben eingeblendet; andere Bereiche können parallel aufnehmen.
+            val sessionSichtbar = vm.reiter == Reiter.JARVIS && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
+            androidx.compose.runtime.LaunchedEffect(sessionSichtbar) { if (!sessionSichtbar) vm.mitnehmen("Bereich gewechselt") }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
             val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
@@ -200,8 +205,34 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.
             if (!vm.gesperrt) RueckfrageEbene(vm)
             if (!vm.gesperrt) TokenlimitFenster(vm)
+            if (!vm.gesperrt && vm.mitnahme != null && !(sessionSichtbar && vm.mitnahmeHier)) MitnahmeLeiste(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
             Meldung(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
+    }
+}
+
+/** Einblendung der mitgenommenen Session-Aufnahme in allen anderen Bereichen: Dauer, Beenden und zurück zur Session. */
+@Composable
+private fun MitnahmeLeiste(vm: AppViewModel, modifier: Modifier) {
+    val f = LocalFarben.current
+    val m = vm.mitnahme ?: return
+    var jetzt by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+    androidx.compose.runtime.LaunchedEffect(m, m.laeuft) { while (m.laeuft) { jetzt = System.currentTimeMillis(); delay(1_000) } }
+    val sek = ((jetzt - m.beginn) / 1000).coerceAtLeast(0)
+    val text = when {
+        m.laeuft -> "Aufnahme für die Session · %d:%02d".format(sek / 60, sek % 60)
+        m.schreibt -> "Schreibe die Aufnahme mit …"
+        else -> "Mitschrift wartet in der Session"
+    }
+    Row(
+        modifier.padding(top = 6.dp, start = 16.dp, end = 16.dp).glas(f, 18.dp, erhoeht = 1.4f, fuellung = menueFlaeche(f).copy(alpha = 0.97f))
+            .padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (m.laeuft) Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(f.gefahr))
+        Text(text, Modifier.padding(start = 8.dp, end = 6.dp), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        androidx.compose.material3.TextButton(onClick = { vm.mitnahmeZurSession() }) { Text("Zur Session", color = f.primaer, fontSize = 14.sp) }
+        if (m.laeuft) androidx.compose.material3.TextButton(onClick = { vm.mitnahmeBeenden("oben beendet") }) { Text("Beenden", color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
     }
 }
 
