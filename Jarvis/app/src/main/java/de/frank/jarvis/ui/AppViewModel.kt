@@ -3903,6 +3903,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.IO) {
                     // Eine am PC gestartete Sitzung darin: nur aus Jarvis entfernen und nie wieder anlegen; am PC läuft sie weiter.
                     de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleEntfernen(getApplication(), id)
+                    // Auf dem anderen Gerät (Handy oder Tablet) verschwindet die Session ebenso.
+                    de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.spiegelLoeschen(getApplication(), id)
                     de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
                     alleSitzungen()
                 }

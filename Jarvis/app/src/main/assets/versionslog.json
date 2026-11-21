@@ -895,6 +895,7 @@
   {"versionCode": 886, "versionName": "1.8.875", "stand": "21.11.2026, 14:33 Uhr", "notiz": "Raumklima zeigt die Messzeit jetzt vor jedem Wert, auch beim alten letzten Wert."},
   {"versionCode": 887, "versionName": "1.8.876", "stand": "21.11.2026, 14:35 Uhr", "notiz": "Raumklima sieht wieder aus wie vorher, eine Zeile je Sensor, vorn aber die echte Messzeit; beim Auto steht der letzte Wert mit seiner Uhrzeit."},
   {"versionCode": 888, "versionName": "1.8.877", "stand": "21.11.2026, 14:38 Uhr", "notiz": "Raumklima nimmt je Sensor den Wert mit der jüngsten Messzeit, liest Wohnungssensoren notfalls direkt per Bluetooth und zeigt die Cloud ohne Server wieder an."},
-  {"versionCode": 889, "versionName": "1.8.878", "stand": "21.11.2026, 14:53 Uhr", "notiz": "Fortschrittsmeldungen von Programmier-Sitzungen am Mac oder PC kommen jetzt auch bei Aufträgen vom Tablet an, weil der Server sie an das Gerät des Auftrags weiterleitet; kennt kein Gerät den Auftrag, sagt die Meldung verständlich, was passiert ist und was zu tun ist."}
+  {"versionCode": 889, "versionName": "1.8.878", "stand": "21.11.2026, 14:53 Uhr", "notiz": "Fortschrittsmeldungen von Programmier-Sitzungen am Mac oder PC kommen jetzt auch bei Aufträgen vom Tablet an, weil der Server sie an das Gerät des Auftrags weiterleitet; kennt kein Gerät den Auftrag, sagt die Meldung verständlich, was passiert ist und was zu tun ist."},
+  {"versionCode": 890, "versionName": "1.8.879", "stand": "21.11.2026, 15:07 Uhr", "notiz": "Programmier-Sessions laufen jetzt auf Handy und Tablet gleich und live mit: Meldungen, Rückfragen, Nachträge, eigene Zeilen und Löschen erscheinen auf beiden Geräten, der bisherige Verlauf wird einmal abgeglichen."}
 ]
 }

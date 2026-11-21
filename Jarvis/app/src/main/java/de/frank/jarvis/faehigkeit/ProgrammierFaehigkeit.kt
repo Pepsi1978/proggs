@@ -1254,6 +1254,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", schritt, gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
                 if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
                 verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
+                spiegelSitzung(nummer, live = true)
             }
             val start = try {
                 withContext(CliWahl(cli)) { ziel.starte(appName, mitFortschritt, review, nummer, modell) }
@@ -1288,6 +1289,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Bekommt der Auftrag ein eigenes Gespräch, merkt er sich das, aus dem er kam: Dort meint „in dieser neuen Session“ ihn.
             if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
             verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
+            spiegelSitzung(nummer, live = true)
             val titel = "Programmieren: $appName" + if (ausChatGpt) " (über ChatGPT/MCP)" else ""
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt als neuer, eigener Auftrag: ${ziel.name}. ${start.hinweis} " +
                 (if (!eigenes) "" else if (gespraech.isNotEmpty()) "In Jarvis steht er als eigene, getrennte Programmier-Session „$titel“. "
@@ -1348,6 +1350,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     fun meldungVomServer(daten: JSONObject) {
         val auftragId = daten.optString("auftrag_id")
+        if (daten.optString("stand") == "spiegel") { spiegelEmpfangen(daten); return }
         daten.optJSONObject("lokal")?.let { if (!lokaleSitzung(auftragId, it)) return }
         if (daten.optString("stand") == "puls") {
             // Lebenszeichen: nur die drehende Anzeige auffrischen, keine Nachricht, keine Benachrichtigung. Ein gesperrter Auftrag
@@ -1404,6 +1407,71 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         // Wiederholte Sperre (gleicher Stand) oder alte Meldung während der Sperre: keine zweite Benachrichtigung.
         verteile(eintrag, frage, benachrichtigen = bisher?.optString("stand") != eintrag.optString("stand") || stand !in GESPERRT)
+    }
+
+    /**
+     * Vom anderen Gerät (Handy oder Tablet) über den Server: was nur dort entstand. Beide Geräte zeigen so dieselbe Session; die
+     * Meldungen der Sitzung selbst bekommt jedes Gerät ohnehin direkt vom Server.
+     */
+    private fun spiegelEmpfangen(d: JSONObject) {
+        val id = d.optString("auftrag_id")
+        when (d.optString("art")) {
+            "sitzung" -> sitzungUebernehmen(d)
+            "nachtrag" -> d.optJSONObject("nachtrag")?.let { Auftragsbuch.nachtragUebernehmen(app, id, it) }
+            "zeile" -> {
+                val n = d.optJSONObject("nachricht") ?: return
+                // Dieselbe id auf beiden Geräten; eine am PC gestartete Sitzung hat auf jedem Gerät ihr eigenes Gespräch.
+                val gespraech = d.optString("gespraech").takeIf { Gespraeche.vorhanden(app, it) } ?: Auftragsbuch.finde(app, id)?.optString("gespraech") ?: return
+                if (gespraech.isEmpty() || gespraech in ProgrammierSpiegel.geloescht(app)) return
+                val text = n.optString("text")
+                ProgrammierSpiegel.eingegangen(gespraech, text)
+                val anhaenge = n.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { l.optString(it) } }.orEmpty()
+                ProgrammierChat.poste(app, gespraech, text, n.optString("art", "antwort"), n.optString("kontext"), anhaenge, vonMir = n.optBoolean("mir"))
+            }
+            "weg" -> {
+                val gespraech = d.optString("gespraech").ifEmpty { return }
+                ProgrammierSpiegel.alsGeloeschtMerken(app, gespraech)
+                Auftragsbuch.alleImGespraech(app, gespraech).filter { !it.optBoolean("lokal") }.forEach { Auftragsbuch.vergiss(app, it.optString("id")) }
+                if (Auftragsbuch.alleImGespraech(app, gespraech).isEmpty()) Gespraeche.loeschen(app, gespraech)
+                runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen?.invoke() }
+            }
+        }
+    }
+
+    /** Ein Auftrag vom anderen Gerät: ins Auftragsbuch und, wenn es fehlt, sein Gespräch mit derselben id. Was es schon gibt, bleibt. */
+    private fun sitzungUebernehmen(d: JSONObject) {
+        val eintrag = d.optJSONObject("eintrag") ?: return
+        val id = eintrag.optString("id").ifEmpty { return }
+        val gespraech = eintrag.optString("gespraech")
+        if (gespraech.isNotEmpty() && gespraech in ProgrammierSpiegel.geloescht(app)) return
+        if (Auftragsbuch.finde(app, id) != null) return
+        var geschrieben = false
+        if (gespraech.isNotEmpty()) {
+            val datei = d.optJSONObject("gespraech_datei") ?: JSONObject().put("titel", "Programmieren: " + eintrag.optString("app"))
+                .put("erstellt", eintrag.optLong("start")).put("geaendert", eintrag.optLong("zeit"))
+                .put("nachrichten", JSONArray().put(JSONObject().put("mir", true).put("text", ProgrammierChat.AUFTRAG_VORSPANN + eintrag.optString("app") + "):\n\n" + eintrag.optString("auftrag"))))
+            geschrieben = Gespraeche.uebernehmen(app, gespraech, datei)
+        }
+        // Vorgelesen wird der Abschluss nur auf dem Gerät, auf dem Frank gesprochen hat.
+        listOf("sprache", "sprachGespraech", "sprachSeit").forEach { eintrag.remove(it) }
+        eintrag.put("gespiegeltVon", d.optString("von"))
+        Auftragsbuch.uebernehmen(app, eintrag, d.optString("volltext"))
+        if (gespraech.isNotEmpty()) Gespraeche.markieren(app, gespraech, eintrag.optLong("start"))
+        // Neuer Auftrag in einer Session, die es hier schon gab: die Startzeile wie auf dem anderen Gerät.
+        if (!geschrieben && gespraech.isNotEmpty() && d.optBoolean("live")) verteile(eintrag, null, benachrichtigen = false, von = ProgrammierChat.VON_JARVIS)
+        aktivitaetMelden(eintrag)
+        Logbuch.system("Session vom anderen Gerät", "$id (${eintrag.optString("app")}) von ${d.optString("von")}" + if (d.optBoolean("live")) "" else ", aus dem Verlauf")
+        runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen?.invoke() }
+    }
+
+    /** Schickt den Auftrag [id] samt Gespräch ans andere Gerät ([live]: gerade gestartet, sonst aus dem Verlauf). */
+    private fun spiegelSitzung(id: String, live: Boolean) {
+        val eintrag = Auftragsbuch.finde(app, id) ?: return
+        if (eintrag.optBoolean("lokal") || de.frank.jarvis.helfer.HelferAblauf.istBau(id)) return
+        val rumpf = JSONObject().put("art", "sitzung").put("auftrag_id", id).put("live", live).put("eintrag", eintrag)
+        AuftragsVolltext.lesen(app, id)?.let { if (it.length < 200_000) rumpf.put("volltext", it) }
+        Gespraeche.roh(app, eintrag.optString("gespraech"))?.let { g -> if (g.toString().length < ProgrammierSpiegel.GESPRAECH_HOECHSTENS) rumpf.put("gespraech_datei", g) }
+        ProgrammierSpiegel.senden(app, rumpf)
     }
 
     /**
@@ -1489,6 +1557,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun fragenAbgleichen() = withContext(Dispatchers.IO) {
         if (e.serverHost.isBlank() || e.serverToken.isBlank()) return@withContext
+        // Einmal je Version: alle Sessions dieses Geräts ans andere, das übernimmt, was ihm fehlt (gleicher Verlauf auf beiden).
+        if (ProgrammierSpiegel.verlaufFaellig(app)) Auftragsbuch.alleIds(app).takeLast(40).forEach { spiegelSitzung(it, live = false) }
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/fragen").header("X-Jarvis-Token", e.serverToken).header(de.frank.jarvis.data.Geraet.KOPFZEILE, de.frank.jarvis.data.Geraet.kennung).get().build()
         val liste = runCatching {
             HTTP.newCall(anfrage).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONArray("fragen") }
@@ -1634,8 +1704,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Diesen Nachtrag hat Auftrag $id ($appName) schon (Nachtrag $nummer, ${n.optString("stand")}). Nichts wurde doppelt gesendet.")
         }
         val zielGespraech = eintrag.optString("gespraech")
+        // Das andere Gerät kennt den Nachtrag danach unter derselben Nummer: Die Quittung des Hooks passt dort ebenso.
+        if (!doppelt) ProgrammierSpiegel.senden(app, JSONObject().put("art", "nachtrag").put("auftrag_id", id).put("nachtrag", n))
         if (!doppelt && zielGespraech.isNotEmpty() && zielGespraech != gespraech) {
-            ProgrammierChat.poste(app, zielGespraech, "📝 ${ProgrammierChat.VON_JARVIS} · Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text", ProgrammierChat.ART_STATUS)
+            val zeile = "📝 ${ProgrammierChat.VON_JARVIS} · Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text"
+            ProgrammierChat.poste(app, zielGespraech, zeile, ProgrammierChat.ART_STATUS)
+            ProgrammierSpiegel.senden(app, JSONObject().put("art", "zeile").put("auftrag_id", id).put("gespraech", zielGespraech)
+                .put("nachricht", JSONObject().put("mir", false).put("text", zeile).put("art", ProgrammierChat.ART_STATUS)))
         }
         if (cloud) {
             anhaengeVerbraucht()
@@ -2368,6 +2443,28 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             })
         }
 
+        /** Ein Auftrag vom anderen Gerät, eingereiht nach seinem Start (beide Geräte zeigen die Sessions in derselben Reihenfolge). */
+        @Synchronized
+        fun uebernehmen(context: Context, eintrag: JSONObject, volltext: String) {
+            val liste = lies(context)
+            val alle = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }
+            if (alle.any { it.optString("id").equals(eintrag.optString("id"), ignoreCase = true) }) return
+            schreib(context, JSONArray((alle + eintrag).sortedBy { it.optLong("start") }))
+            AuftragsVolltext.speichern(context, eintrag.optString("id"), volltext.ifEmpty { eintrag.optString("auftrag") })
+        }
+
+        /** Ein Nachtrag, den Frank auf dem anderen Gerät geschickt hat, unter derselben Nummer. */
+        @Synchronized
+        fun nachtragUebernehmen(context: Context, id: String, n: JSONObject) {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
+            val nachtraege = eintrag.optJSONArray("nachtraege") ?: JSONArray().also { eintrag.put("nachtraege", it) }
+            if ((0 until nachtraege.length()).any { nachtraege.optJSONObject(it)?.optString("id") == n.optString("id") }) return
+            nachtraege.put(n)
+            while (nachtraege.length() > 20) nachtraege.remove(0)
+            schreib(context, liste)
+        }
+
         /** Wartet ein Nachtrag noch auf die Sitzung (angenommen oder zugestellt, nicht bearbeitet)? Dann arbeitet sie gleich weiter. */
         fun nachtragOffen(eintrag: JSONObject): Boolean {
             val l = eintrag.optJSONArray("nachtraege") ?: return false
@@ -2925,6 +3022,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Was Frank von einem Nachtrag sieht: bei Gesprächsnachrichten nur der erste Absatz (ohne die Anleitung an die Sitzung). */
         private fun anzeige(n: JSONObject) = n.optString("text").let { if (istNachricht(n.optString("id"))) it.substringBefore("\n\n") else it }
         private val ANTWORT_VORSPANN = Regex("^(?:💬\\s*)?Antwort auf (G[A-Z0-9]{5})\\s*:", RegexOption.IGNORE_CASE)
+
+        /** Der jüngste über Jarvis gestartete Auftrag eines Gesprächs (für den Spiegel), null = keiner. */
+        fun auftragImGespraech(context: Context, gespraech: String): String? =
+            Auftragsbuch.alleImGespraech(context.applicationContext, gespraech).lastOrNull()?.optString("id")?.takeIf { it.isNotEmpty() }
+
+        /** Frank löscht eine Session: auf dem anderen Gerät ebenso (Sitzungen vom PC entfernt jedes Gerät über den Server selbst). */
+        fun spiegelLoeschen(context: Context, gespraech: String) {
+            val app = context.applicationContext
+            if (Auftragsbuch.alleImGespraech(app, gespraech).none { !it.optBoolean("lokal") }) return
+            ProgrammierSpiegel.alsGeloeschtMerken(app, gespraech)
+            ProgrammierSpiegel.senden(app, JSONObject().put("art", "weg").put("auftrag_id", auftragImGespraech(app, gespraech).orEmpty()).put("gespraech", gespraech))
+        }
 
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
         fun gespraecheMitAuftrag(context: Context): Map<String, Long> = Auftragsbuch.gespraechStarts(context.applicationContext)

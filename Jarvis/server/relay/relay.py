@@ -395,11 +395,13 @@ class Relay:
                 log.info("Signal %s gemerkt: %s nicht verbunden", daten["signal"], geraet.name)
         return web.json_response({"zugestellt": je_geraet[(benannt or self.handy).kennung], "geraete": je_geraet})
 
-    async def programmier_meldung(self, daten: dict) -> bool:
-        """Reicht eine Programmier-Meldung an das Geraet des Auftrags (siehe _ziele); ohne Verbindung kommt sie in dessen
-        Warteschlange. True = mindestens einem Geraet sofort zugestellt."""
+    async def programmier_meldung(self, daten: dict, ausser: "Geraet | None" = None) -> bool:
+        """Reicht eine Programmier-Meldung an Handy und Tablet: Frank will jede Sitzung auf beiden Geraeten gleich und live sehen
+        (21.11.2026); _ziele bleibt fuer die Zuordnung lokaler Sitzungen. Ohne Verbindung kommt sie in die Warteschlange des
+        Geraets. True = mindestens einem Geraet sofort zugestellt. [ausser]: dieses Geraet hat sie schon (Spiegel, MCP)."""
+        self._ziele(daten)
         zugestellt = False
-        for geraet in self._ziele(daten):
+        for geraet in [g for g in self.geraete.values() if g is not ausser]:
             if await geraet.sende(daten):
                 zugestellt = True
             # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
@@ -407,7 +409,45 @@ class Relay:
                 geraet.meldungen.append(daten)
                 # 1000 statt 100: Eine am PC gestartete Sitzung soll auch nach längerer Funkstille komplett in Jarvis stehen.
                 del geraet.meldungen[:-1000]
+                # Ganze Sitzungen (Spiegel „sitzung“) sind gross, der Dienst hat 128 MB: hoechstens 40 davon warten.
+                grosse = [i for i, m in enumerate(geraet.meldungen) if m.get("art") == "sitzung"]
+                for i in reversed(grosse[:-40]):
+                    del geraet.meldungen[i]
         return zugestellt
+
+    async def spiegel(self, request: web.Request) -> web.Response:
+        """POST /geraet/spiegel (Handy, Tablet): {"art", "auftrag_id", ...}. Was nur auf einem Geraet entsteht (neuer Auftrag samt
+        Gespraech, Nachtrag, Franks und Jarvis' Zeilen, geloeschte Session), geht an die anderen Geraete, damit beide dieselbe
+        Programmier-Session zeigen. Der Relay reicht nur weiter, er wertet nichts aus."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            assert isinstance(daten, dict) and daten.get("art") in ("sitzung", "zeile", "nachtrag", "weg")
+        except Exception:
+            return web.Response(status=400, text="Spiegel unlesbar")
+        von = self.geraete.get(geraet_kennung(request)) or self.handy
+        daten = {**daten, "signal": "programmieren", "stand": "spiegel", "von": von.kennung, "auftrag_id": str(daten.get("auftrag_id") or "")[:20]}
+        zugestellt = await self.programmier_meldung(daten, ausser=von)
+        return web.json_response({"zugestellt": zugestellt})
+
+    async def _fortschritt_spiegeln(self, argumente: dict, hat: "Geraet", antwort: str) -> None:
+        """Eine selbst gemeldete Fortschrittsmeldung (MCP) kam bei [hat] an: die anderen Geraete bekommen sie wie eine Meldung des
+        Hooks. Gab die Antwort Nachtraege an die Sitzung, gelten sie dort ebenfalls als zugestellt (sonst kaemen sie doppelt)."""
+        auftrag_id = str(argumente.get("auftrag_id") or "").strip().upper()
+        stand = str(argumente.get("stand") or "")
+        if not auftrag_id or stand not in ("laeuft", "frage", "fertig", "fehler"):
+            return
+        await self.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "stand": stand,
+                                        "schritt": str(argumente.get("schritt") or "")[:20_000], "gespiegelt": True}, ausser=hat)
+        try:
+            text = " ".join(str(t.get("text", "")) for t in (json.loads(antwort).get("result") or {}).get("content") or [])
+        except (ValueError, AttributeError):
+            return
+        ids = re.findall(r"NACHTRAG (N[A-Z0-9]{5}|G[A-Z0-9]{5}):", text)
+        if ids:
+            await self.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "stand": "nachtrag",
+                                            "nachtrag_ids": ids, "schritt": "", "gespiegelt": True}, ausser=hat)
 
     # ---------------------------------------------------------------- ChatGPT
 
@@ -501,6 +541,8 @@ class Relay:
                 return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
                                    "result": {"content": [{"type": "text", "text": text}], "isError": True}})
             if not self._auftrag_unbekannt(antwort):
+                if einzeln.get("params", {}).get("name") == "programmier_fortschritt":
+                    _im_hintergrund(self._fortschritt_spiegeln(argumente, geraet, antwort))
                 # Ohne Zuordnung (etwa ein Cloud-Auftrag) kuenftig gleich dorthin, auch fuer die Hook-Meldungen (_ziele).
                 if kennung is None and auftrag_id and geraet is not adresse:
                     self.auftrag_merken(auftrag_id, geraet.kennung)
@@ -2742,6 +2784,7 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/nachtrag", pc.nachtrag_geben)
     anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
     anwendung.router.add_post("/geraet/lokal-entfernen", pc.lokal_entfernen)
+    anwendung.router.add_post("/geraet/spiegel", relay.spiegel)
     kanal = AgentenKanal(relay)
     kanal_hp = AgentenKanal(relay, "hp")
     kanal_power = AgentenKanal(relay, "power")

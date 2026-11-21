@@ -617,4 +617,9 @@ Stand 10.11.2026 (ab 1.8.604/1.8.605). Dieselbe APK läuft auf dem Handy (Galaxy
   `vorgaenge.json`, Protokolle. Löschungen nur bei Gesprächen, Agenten und alten Auswertungen; verschwindet der größere Teil eines
   Ordners auf einen Schlag, wird nichts als gelöscht gemeldet. Zustand `files/gedaechtnis-abgleich.json`, Logbuch „Gedächtnis-Abgleich“.
 - **Noch offen:** Genialer Wecker wird nicht abgeglichen (soll nicht auf beiden Geräten klingeln), Entropie Reductor nutzt seinen
-  eigenen Drive-Abgleich, Programmier-Gespräche und die ChatGPT-Anmeldung bleiben je Gerät.
+  eigenen Drive-Abgleich, die ChatGPT-Anmeldung bleibt je Gerät.
+- **Programmier-Sessions live auf beiden Geräten (ab 1.8.879):** Der Server schickt jede Meldung der Sitzung (Hook und
+  `programmier_fortschritt`) an Handy und Tablet; was nur auf einem Gerät entsteht, geht über `POST /geraet/spiegel` ans andere
+  (`faehigkeit/ProgrammierSpiegel.kt`): neuer Auftrag samt Gespräch mit derselben id, Franks und Jarvis' Zeilen, Nachträge unter
+  derselben Nummer, gelöschte Sessions. Den Verlauf schickt jedes Gerät einmal je Version, das andere übernimmt nur, was fehlt.
+  Selbst gemeldete Fortschritte leitet der Server an das Gerät des Auftrags (`AUFTRAG_WERKZEUGE` in `relay.py`). Beide Geräte brauchen dieselbe Jarvis-Fassung.

@@ -351,8 +351,8 @@ object GedaechtnisAbgleich {
         val marke = "${datei.length()}:${datei.lastModified()}"
         if (s.optString("marke") == marke) return false
         val quelle = quelleZu(pfad) ?: return false
-        // Programmier-Gespräche bleiben je Gerät: Sie hängen am Auftragsbuch dieses Geräts (Stand, Rückfragen, Nachträge), und am
-        // Rechner gestartete Sitzungen legt ohnehin jedes Gerät selbst an; abgeglichen erschienen sie doppelt und ohne ihre Knöpfe.
+        // Programmier-Gespräche gehen nicht über diesen Abgleich: Sie hängen am Auftragsbuch (Stand, Rückfragen, Nachträge), und beide
+        // Geräte schreiben sie gleichzeitig. Gleich und live hält sie der Spiegel (faehigkeit/ProgrammierSpiegel.kt) über den Server.
         if (quelle.art == "gespraech" && de.frank.jarvis.data.Gespraeche.istProgrammierDatei(datei)) {
             s.put("marke", marke)
             return false

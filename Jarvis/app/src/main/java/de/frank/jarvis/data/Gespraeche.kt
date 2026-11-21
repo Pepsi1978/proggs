@@ -211,6 +211,10 @@ object Gespraeche {
                     })
                 if (!json.optBoolean("programmierung") && istProgrammierung(json)) json.put("programmierung", true)
                 schreiben(d, json)
+                // Neue Zeilen einer Programmier-Session gehen auch ans andere Gerät (Franks und Jarvis' eigene, siehe ProgrammierSpiegel).
+                val schonDa = bisher - kuerzenUm
+                if (json.optBoolean("programmierung") && bisher > 0 && nachrichten.size > schonDa && schonDa >= 0)
+                    runCatching { de.frank.jarvis.faehigkeit.ProgrammierSpiegel.neueZeilen(context.applicationContext, id, nachrichten.drop(schonDa)) }
                 Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"), json.optBoolean("favorit"))
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
         }
@@ -358,6 +362,31 @@ object Gespraeche {
             val i = rueckfrageIndex(liste, frageId)
             if (i < 0) null else JSONObject(liste.getJSONObject(i).optString("kontext"))
         }.getOrNull()
+    }
+
+    /** Gibt es das Gespräch [id] auf diesem Gerät? */
+    fun vorhanden(context: Context, id: String): Boolean = id.isNotEmpty() && (datei(context, id).exists() || File(datei(context, id).path + ".bak").exists())
+
+    /** Die Gesprächsdatei als JSON (für den Spiegel ans andere Gerät), null = gibt es nicht. */
+    fun roh(context: Context, id: String): JSONObject? = if (!vorhanden(context, id)) null else synchronized(sperre) { runCatching { lies(datei(context, id)) }.getOrNull() }
+
+    /**
+     * Übernimmt eine Programmier-Session vom anderen Gerät mit derselben id. Eine schon vorhandene Programmier-Session bleibt, wie sie
+     * ist; ein gewöhnliches, über den Abgleich gekommenes Gespräch gleichen Namens wird ersetzt, wenn das andere Gerät mindestens so
+     * viele Nachrichten hat (dort ist es inzwischen die Session). true = geschrieben.
+     */
+    fun uebernehmen(context: Context, id: String, json: JSONObject): Boolean = synchronized(sperre) {
+        runCatching {
+            val d = datei(context, id)
+            if (d.exists() || File(d.path + ".bak").exists()) {
+                val alt = lies(d)
+                if (istProgrammierung(alt)) return@runCatching false
+                if ((json.optJSONArray("nachrichten")?.length() ?: 0) < (alt.optJSONArray("nachrichten")?.length() ?: 0)) return@runCatching false
+            }
+            json.put("id", id).put("programmierung", true)
+            schreiben(d, json)
+            true
+        }.getOrDefault(false)
     }
 
     fun loeschen(context: Context, id: String) {
