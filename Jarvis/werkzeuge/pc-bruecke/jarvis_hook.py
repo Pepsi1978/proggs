@@ -1005,7 +1005,9 @@ def warte(eingabe: dict) -> int:
         with Sperre():
             # Die pid-Datei trägt PID und Startzeit („1234 133…“); ältere Fassungen schrieben nur die PID.
             try:
-                teile = WARTER.read_text(encoding="utf-8").split()
+                # Nur am ersten Leerzeichen trennen: Die Startzeit von macOS/Linux („Sa. 21 Nov. 15:30:20 2026“) enthält selbst
+                # Leerzeichen. Mit split() verglich lebt() nur „Sa.“, ein lebender Warter galt als tot, und jeder Hook startete einen weiteren.
+                teile = WARTER.read_text(encoding="utf-8").strip().split(maxsplit=1)
                 alter, alter_start = (int(teile[0]), teile[1] if len(teile) > 1 else "") if teile else (0, "")
             except Exception:
                 alter, alter_start = 0, ""
