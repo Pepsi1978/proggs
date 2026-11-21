@@ -288,8 +288,8 @@ class SwitchbotFaehigkeit(private val context: Context) : Faehigkeit {
     /** Kein Wert mit belegter, brauchbarer Messzeit: „nicht erreichbar“, dazu der letzte bekannte Wert vom Relay (bis ein Tag) mit seiner Messzeit. */
     private fun nichtErreichbar(z: Sensor, hook: JSONObject?, mac: JSONObject?, mobil: Boolean): Sensor {
         val letzter = listOfNotNull(hook, mac).maxByOrNull { it.optLong("zeit") }?.let { ausPaket(z, it, weg(it)) }
-        val grund = z.problem ?: if (mobil) "nicht erreichbar, außer Reichweite von Hub, Mac und Handy; kein aktueller Messwert."
-            else "nicht erreichbar, kein aktueller Messwert (die SwitchBot-Cloud nennt nur einen Wert ohne Messzeit)."
+        val grund = z.problem ?: if (mobil) "nicht erreichbar."
+            else "nicht erreichbar, die SwitchBot-Cloud nennt nur einen Wert ohne Messzeit."
         return Sensor(z.name, z.typ, batterie = z.batterie, problem = grund, offline = z.problem == null || z.offline, letzter = letzter)
     }
 
