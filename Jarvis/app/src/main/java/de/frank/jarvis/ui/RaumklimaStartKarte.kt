@@ -97,7 +97,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 Text(
                     when {
                         s.laeuft -> if (s.macLiest) "Der Mac liest die Sensoren …" else "Liest die Sensoren …"
-                        struktur != null -> "Stand ${struktur.optString("abgerufen")} Uhr"
+                        struktur != null -> "Abgerufen ${struktur.optString("abgerufen")} Uhr"
                         else -> "Noch kein Stand"
                     },
                     color = if (s.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
@@ -112,16 +112,20 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
             val co2 = if (problem.isEmpty() && z.has("co2_ppm")) z.optInt("co2_ppm") else null
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                 Text(z.optString("name"), color = f.textLeise, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
-                if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
-                else Text(
-                    // Herkunft vor dem Wert (Frank, 15.11.2026): nichts = SwitchBot-Cloud (auch Webhook), „Mac“ = Mac zu Hause, „BL“ = Handy direkt per Bluetooth.
-                    // Davor die Messzeit (Frank, 21.11.2026): Uhrzeit mit „Uhr“, von einem anderen Tag nur das Datum.
-                    messzeit(z.optLong("gemessen").takeIf { it > 0 } ?: z.optLong("abgerufen_s")) + herkunft(z.optString("quelle")) +
-                    if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
-                    else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent")),
-                    color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(2f), textAlign = TextAlign.End,
-                )
+                // Rechts der Wert, darunter Herkunft und Messzeit (nie die Abrufzeit); alte Werte leise mit Alter, nicht erreichbar mit letztem Wert (Frank, 21.11.2026).
+                Column(Modifier.weight(2f), horizontalAlignment = Alignment.End) {
+                    if (problem.isNotEmpty()) {
+                        // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
+                        Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, textAlign = TextAlign.End)
+                        z.optJSONObject("letzter_wert")?.let { w ->
+                            Text("Letzter Wert " + werte(w, null) + " · " + herkunftUndZeit(w), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    } else {
+                        val alt = z.optBoolean("alt")
+                        Text(werte(z, co2), color = if (alt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+                        Text(herkunftUndZeit(z), color = f.textLeise, fontSize = 12.sp, textAlign = TextAlign.End)
+                    }
+                }
             }
             if (co2 != null) Co2Skala(co2)
         }
@@ -177,16 +181,23 @@ private fun Co2Skala(ppm: Int) {
     }
 }
 
-private fun herkunft(quelle: String): String = when {
-    quelle.startsWith("über den Mac") -> "Mac · "
-    quelle.startsWith("direkt per Bluetooth") -> "BL · "
-    else -> ""
-}
+private fun werte(z: org.json.JSONObject, co2: Int?): String =
+    if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
+    else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", z.optDouble("temperatur_c"), z.optDouble("luftfeuchtigkeit_prozent"))
 
-/** Messzeit (bei der Cloud der Abruf) als „11:20 Uhr · “, stammt sie von einem anderen Tag „19.11. · “; ohne Zeit nichts. */
-private fun messzeit(sekunden: Long): String {
-    if (sekunden <= 0) return ""
+/** „Mac · gemessen 14:27 Uhr“, von einem anderen Tag mit Datum; nicht frisch zusätzlich „· vor 3 Std. (alt)“. */
+private fun herkunftUndZeit(z: org.json.JSONObject): String {
+    val quelle = z.optString("quelle")
+    val weg = when {
+        quelle.startsWith("über den Mac") -> "Mac"
+        quelle.startsWith("direkt per Bluetooth") -> "Bluetooth"
+        else -> "Cloud"
+    }
+    val sekunden = z.optLong("gemessen")
+    if (sekunden <= 0) return "$weg · Messzeit unbekannt"
     val zeit = java.time.Instant.ofEpochSecond(sekunden).atZone(java.time.ZoneId.systemDefault())
-    val alt = zeit.toLocalDate() != java.time.LocalDate.now()
-    return zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (alt) "dd.MM." else "HH:mm", Locale.GERMANY)) + (if (alt) " · " else " Uhr · ")
+    val heute = zeit.toLocalDate() == java.time.LocalDate.now()
+    val wann = zeit.format(java.time.format.DateTimeFormatter.ofPattern(if (heute) "HH:mm" else "dd.MM. HH:mm", Locale.GERMANY)) + " Uhr"
+    val alter = if (z.optBoolean("alt")) " · vor ${SwitchbotFaehigkeit.alterText(z.optLong("alter_s"))} (alt)" else ""
+    return "$weg · gemessen $wann$alter"
 }

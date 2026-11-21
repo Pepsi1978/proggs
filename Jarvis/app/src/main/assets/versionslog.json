@@ -890,6 +890,7 @@
   {"versionCode": 881, "versionName": "1.8.870", "stand": "21.11.2026, 14:09 Uhr", "notiz": "Wichtige E-Mails haben rechts eine Glühbirne, die in einer neuen Session genau diese E-Mail einfach erklärt."},
   {"versionCode": 882, "versionName": "1.8.871", "stand": "21.11.2026, 14:11 Uhr", "notiz": "Die Erklärung einer wichtigen E-Mail wird nach dem Tipp auf die Glühbirne gleich vorgelesen."},
   {"versionCode": 883, "versionName": "1.8.872", "stand": "21.11.2026, 14:15 Uhr", "notiz": "Die Erklärung einer E-Mail ist robuster: neutrale Frage, Mail bleibt für Rückfragen und neue Versuche erhalten, landet nie in einer falschen Session und wartet höchstens 25 Sekunden auf Gmail."},
-  {"versionCode": 884, "versionName": "1.8.873", "stand": "21.11.2026, 14:27 Uhr", "notiz": "Handy und Tablet zeigen dieselben wichtigen E-Mails, und die Erklärung einer E-Mail wird ganz vorgelesen."}
+  {"versionCode": 884, "versionName": "1.8.873", "stand": "21.11.2026, 14:27 Uhr", "notiz": "Handy und Tablet zeigen dieselben wichtigen E-Mails, und die Erklärung einer E-Mail wird ganz vorgelesen."},
+  {"versionCode": 885, "versionName": "1.8.874", "stand": "21.11.2026, 14:31 Uhr", "notiz": "Raumklima zeigt je Sensor Herkunft und echte Messzeit, kennzeichnet alte Werte und zeigt einen Sensor ohne frischen Wert als nicht erreichbar statt alter Cloud-Werte."}
 ]
 }
