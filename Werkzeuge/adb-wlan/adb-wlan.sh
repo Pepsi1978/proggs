@@ -252,7 +252,8 @@ tunnel_tls_verbinden() {
 }
 
 # Parallele Aufrufe nicht gegeneinander laufen lassen
-LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
+# Je Gerät eine eigene Sperre: Ein ausgeschaltetes Tablet hält sonst die Handy-Verbindung auf (Review 21.11.2026).
+LOCK="${TMPDIR:-/tmp}/adb-wlan${ZUSATZ}.lock"
 HABE_SPERRE=0
 # Wachhund 90 s, direkte Aufrufe (Installation) bis 5 Minuten: Ein Lauf mit TLS-Suche dauert länger als 90 s.
 WARTE_SPERRE=90; [ $LEISE -eq 0 ] && WARTE_SPERRE=300

@@ -159,7 +159,8 @@ export const JarvisAuftragPlugin = async ({ client }) => {
     // Ohne Antwort (abgelaufen oder in Jarvis „am Rechner beantworten“) bleibt der Dialog in OpenCode offen.
     if (!antworten || typeof antworten !== "object") return
     const answers = liste.map((f, i) => {
-      const wert = String(antworten[f.question] ?? Object.values(antworten)[i] ?? "").trim()
+      // Nach Position nur, wenn jede Frage eine Antwort hat: Sonst landete etwa ein Review-Ja auf der Tablet-Frage.
+      const wert = String(antworten[f.question] ?? (Object.keys(antworten).length === liste.length ? Object.values(antworten)[i] : "") ?? "").trim()
       if (!wert) return []
       return f.multiSelect ? wert.split(/,\s*/).filter(Boolean) : [wert]
     })

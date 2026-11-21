@@ -379,7 +379,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: gibt die Antwort auf eine Rückfrage einer laufenden Programmier-Sitzung weiter (die Rückfrage steht im Gespräch mit ❓ oder in " +
                     "programmierauftraege, mit frage_id und Optionen). Die frage_id bestimmt Auftrag und Sitzung; die Sitzung wartet darauf und arbeitet danach weiter. " +
                     "Beantworte die Rückfrage selbst aus dem Gesprächskontext, dem ursprünglichen Auftrag (Kurzfassung in programmierauftraege) und den verfügbaren Informationen, " +
-                    "wenn die Antwort ableitbar ist oder eine Routineentscheidung betrifft, und beschreib die Anforderung dabei bei Bedarf genauer. Frag Frank nur kurz, wenn " +
+                    "wenn die Antwort ableitbar ist oder eine Routineentscheidung betrifft, und beschreib die Anforderung dabei bei Bedarf genauer (nie die Frage, ob aufs Tablet installiert wird: die nur mit Franks ausdrücklicher Antwort). Frag Frank nur kurz, wenn " +
                     "eine notwendige Angabe oder eine echte Entscheidung von ihm fehlt und sich nicht ableiten lässt; erfinde nie eine Antwort. Ordne die Antwort der passenden " +
                     "Option zu und gib genau deren label an; passt keine, gib sie als Freitext weiter. Für einen Wunsch ohne offene Rückfrage gibt es programmier_nachtrag.",
                 schema = schema(
@@ -1996,8 +1996,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ?: (if (gespraech.isNotEmpty()) de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, gespraech, frageId)?.optJSONArray("fragen") else null)
             ?: JSONArray()
         val zuordnung = JSONObject()
+        // Franks Vorgabe vom 21.11.2026: Fehlen Antworten (etwa per Sprache nur „Ja, Standard“ zum angesagten Review), bleibt die
+        // Tablet-Frage offen (= Nein), statt dass die erste Antwort nach Position auf ihr landet.
+        val alle = (0 until fragen.length()).map { fragen.optJSONObject(it)?.optString("question").orEmpty() }
+        val ziele = if (antworten.size < alle.size) alle.filterNot { Regex("(?i)tablet").containsMatchIn(it) && Regex("(?i)install").containsMatchIn(it) } else alle
         antworten.forEachIndexed { i, antwort ->
-            val frage = fragen.optJSONObject(i)?.optString("question").orEmpty()
+            val frage = ziele.getOrNull(i).orEmpty()
             if (frage.isNotEmpty() && antwort.isNotEmpty()) zuordnung.put(frage, antwort)
         }
         val rumpf = JSONObject().put("frage_id", frageId).put("antworten", zuordnung).put("text", text.ifEmpty { if (zuordnung.length() == 0) antworten.joinToString("; ") else "" })
@@ -2198,14 +2202,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Franks Vorgabe vom 21.11.2026: Die Review-Ansage nennt keine Session; kommen mehrere kurz nacheinander (etwa aus zwei
         // Sitzungen), klänge die zweite wie eine Wiederholung. Darum keine zweite, solange die vorige noch offen ist (höchstens drei
         // Minuten); ist deren Frage erledigt oder ihre Ansage verworfen, wird die nächste wieder angesagt. Das Vollbild zeigt alle.
-        val reviewDoppelt = review && zusatz == null && !ReviewAnsage.belegen(frageId)
-        if (reviewDoppelt) Logbuch.system("Review-Ansage zusammengefasst", "Auftrag ${eintrag.optString("id")}: kurz zuvor schon angesagt")
-        else if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
+        if (!de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) return
+        val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
+        val ansagen = {
             Logbuch.system("Rückfrage-Ansage eingereiht", "Auftrag ${eintrag.optString("id")}")
-            val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
             de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId",
                 solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(nummer) })
         }
+        if (review && zusatz == null && !ReviewAnsage.belegen(frageId, ansagen))
+            Logbuch.system("Review-Ansage zurückgestellt", "Auftrag ${eintrag.optString("id")}: eine andere Review-Frage ist noch offen")
+        else ansagen()
     }
 
     /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt, und das Vorlesen darf weiter. */
@@ -3321,16 +3327,28 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 }
 
-/** Über alle Instanzen: Welche Code-Review-Frage gerade angesagt ist; bis sie erledigt ist (höchstens drei Minuten), keine zweite Ansage. */
+/**
+ * Über alle Instanzen: Welche Code-Review-Frage gerade angesagt ist. Solange sie offen ist (höchstens drei Minuten), wartet jede
+ * weitere; ist die vorige erledigt, wird die nächste wartende angesagt, damit keine still bleibt.
+ */
 private object ReviewAnsage {
     private var frage = ""
     private var seit = 0L
-    /** True, wenn [frageId] angesagt werden darf (und belegt dann die Ansage). */
-    @Synchronized fun belegen(frageId: String): Boolean {
+    private val wartend = LinkedHashMap<String, () -> Unit>()
+    /** True, wenn [frageId] jetzt angesagt werden darf (und belegt dann die Ansage); sonst merkt es sich [ansagen] für später. */
+    @Synchronized fun belegen(frageId: String, ansagen: () -> Unit): Boolean {
         val jetzt = android.os.SystemClock.elapsedRealtime()
-        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < 3 * 60_000L) return false
+        if (frage.isNotEmpty() && frage != frageId && jetzt - seit < 3 * 60_000L) { wartend[frageId] = ansagen; return false }
         frage = frageId; seit = jetzt
         return true
     }
-    @Synchronized fun freigeben(frageId: String) { if (frage == frageId) frage = "" }
+    fun freigeben(frageId: String) {
+        val naechste = synchronized(this) {
+            wartend.remove(frageId)
+            if (frage != frageId) return
+            frage = ""
+            wartend.entries.firstOrNull()?.also { wartend.remove(it.key); frage = it.key; seit = android.os.SystemClock.elapsedRealtime() }
+        }
+        naechste?.value?.invoke()
+    }
 }

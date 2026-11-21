@@ -378,7 +378,8 @@ function Stabilisiere($tlsSerial, $ip) {
 }
 
 # Parallele Aufrufe (Wachhund + Sitzungen) nicht gegeneinander laufen lassen
-$mutex = New-Object System.Threading.Mutex($false, "Global\adb-wlan")
+# Je Gerät eine eigene Sperre: Ein ausgeschaltetes Tablet hält sonst die Handy-Verbindung auf (Review 21.11.2026).
+$mutex = New-Object System.Threading.Mutex($false, $(if ($Geraet -eq "handy") { "Global\adb-wlan" } else { "Global\adb-wlan-$Geraet" }))
 try { if (-not $mutex.WaitOne(90000)) { Melde "Anderer adb-wlan-Lauf aktiv – übersprungen"; exit 0 } }
 catch [System.Threading.AbandonedMutexException] { }
 

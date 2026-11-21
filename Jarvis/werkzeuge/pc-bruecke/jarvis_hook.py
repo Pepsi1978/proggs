@@ -1335,6 +1335,26 @@ def offene_am_pc(z: dict, tool_use_id: str | None = None) -> list[tuple[str, dic
     return treffer
 
 
+def ist_tablet_frage(text: str) -> bool:
+    """Die Frage, ob eine App zusätzlich aufs Tablet installiert werden soll (nicht: Fragen zum Tablet-Layout)."""
+    return bool(re.search(r"(?i)tablet", text)) and bool(re.search(r"(?i)install|aufs\s+tablet|auch\s+auf\s+(?:das|dem)\s+tablet", text))
+
+
+def ist_review_frage(f: dict) -> bool:
+    """Die Code-Review-Frage am Ende (Text oder Überschrift), nicht eine Frage nach Befunden oder Fixes."""
+    text = str(f.get("question", "")) + " " + str(f.get("header", ""))
+    return bool(re.search(r"(?i)review", text)) and not re.search(r"(?i)befund\w*\s+(?:beheb|fix)|beheben|fixen", str(f.get("question", "")))
+
+
+def tablet_antwort(antwort: str) -> str:
+    """Franks Vorgabe vom 21.11.2026: aufs Tablet nur nach ausdrücklichem Ja von Frank. Alles andere wird zum Nein."""
+    a = str(antwort or "").strip()
+    if re.match(r"(?i)^(?:ja|yes)\b", a) and not re.search(r"(?i)standard|ausführlich|review|befund|\(von jarvis", a):
+        return a
+    return (f"Nein (kein ausdrückliches Ja zur Tablet-Frage: „{a[:120]}“). Die App NICHT aufs Tablet installieren, "
+            "keinen Verbindungs- oder Installationsversuch am Tablet.")
+
+
 def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
     """
     Antwort an Franks Stelle, wenn keine kam: Die Sitzung darf nie an einem offenen Dialog stehen bleiben (Vorgabe vom
@@ -1351,7 +1371,7 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
                                      "nenne den kleinsten nötigen nächsten Schritt und erledige die übrigen sicheren Teile.")
             continue
         # Franks Vorgabe vom 21.11.2026: Aufs Tablet nur nach ausdrücklichem Ja; Schweigen heißt Nein, ohne Verbindungsversuch.
-        if re.search(r"(?i)tablet", frage_text):
+        if ist_tablet_frage(frage_text):
             antworten[frage_text] = (f"Nein (keine Antwort von Frank, {grund}). Die App NICHT aufs Tablet installieren, keinen "
                                      "Verbindungs- oder Installationsversuch am Tablet.")
             continue
@@ -1486,13 +1506,18 @@ def antwort_aus_jarvis(antwort: dict, fragen: list) -> dict:
     zusatz = str(antwort.get("text", "")).strip()
     if zusatz and not antworten:
         antworten = {str(f.get("question", "")): zusatz for f in fragen if isinstance(f, dict)}
-        # Franks Vorgabe vom 21.11.2026: Aufs Tablet nur nach ausdrücklichem Ja. Ein Freitext gilt für alle Fragen der Runde;
-        # ein „Ja, Standard“ zum Review darf dabei nicht als Ja zum Tablet zählen.
+        # Franks Vorgabe vom 21.11.2026: Ein Freitext gilt für alle Fragen der Runde; ein „Ja, Standard“ zum Review darf dabei
+        # nicht als Ja zum Tablet zählen.
         if len(antworten) > 1:
             for frage_text in antworten:
-                if re.search(r"(?i)tablet", frage_text):
+                if ist_tablet_frage(frage_text):
                     antworten[frage_text] = (f"Frank sagte per Sprache für die ganze Runde: „{zusatz}“. Nur wenn er darin das Tablet "
                                              "ausdrücklich bejaht, gilt Ja; sonst Nein, ohne Tablet-Versuch.")
+        return antworten
+    # Auch eine Auswahl gilt fürs Tablet nur als ausdrückliches Ja (etwa falsch zugeordnet: „Ja, Standard“ war fürs Review).
+    for frage_text in list(antworten):
+        if ist_tablet_frage(frage_text):
+            antworten[frage_text] = tablet_antwort(antworten[frage_text])
     return antworten
 
 
@@ -1644,14 +1669,22 @@ def frage(eingabe: dict) -> None:
     if not fragen:
         return
     # Franks Vorgabe vom 21.11.2026: Die Tablet-Frage kommt nur im selben Block wie die Code-Review-Frage, nie allein.
-    texte = [str(f.get("question", "")) for f in fragen if isinstance(f, dict)]
-    if any(re.search(r"(?i)tablet", t) and re.search(r"(?i)install", t) for t in texte) and \
-            not any(re.search(r"(?i)code[- ]?review", t) for t in texte):
-        sys.stdout.write(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse", "permissionDecision": "deny",
-            "permissionDecisionReason": "Die Tablet-Frage nie allein stellen: nur im selben Fragenblock wie die Code-Review-Frage "
-                                        "(zuerst Tablet, dann Review), genau dann, wenn die Review-Frage dran ist. Entfällt die "
-                                        "Review-Frage, entfallen Tablet-Frage und Tablet-Installation."}}, ensure_ascii=False))
+    gueltig = [f for f in fragen if isinstance(f, dict)]
+    if any(ist_tablet_frage(str(f.get("question", ""))) for f in gueltig) and not any(ist_review_frage(f) for f in gueltig):
+        warum = ("Die Tablet-Frage nie allein stellen: nur im selben Fragenblock wie die Code-Review-Frage (zuerst Tablet, dann "
+                 "Review), genau dann, wenn die Review-Frage dran ist. Entfällt die Review-Frage, entfallen Tablet-Frage und "
+                 "Tablet-Installation.")
+        if FREMDE_CLI:
+            # Das OpenCode-Plugin wertet nur answers aus; ein deny ließe den Dialog dort ohne Ende offen.
+            antworten = {str(f.get("question", "")): ("Nein. " + warum if ist_tablet_frage(str(f.get("question", "")))
+                         else "Nicht beantwortet: Diese Runde enthielt die Tablet-Frage ohne Review-Frage. Stelle diese Frage ohne sie erneut.")
+                         for f in gueltig}
+            sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                                                "permissionDecisionReason": warum, "updatedInput": {**ein, "answers": antworten}}},
+                                        ensure_ascii=False))
+        else:
+            sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                                                "permissionDecisionReason": warum}}, ensure_ascii=False))
         return
     raus = []
     sperr = []
@@ -1831,6 +1864,9 @@ def stop(eingabe: dict) -> None:
         antwort = warte_auf_antwort(frage_id, lambda: melde("frage", schritt, daten))
         if antwort and not antwort.get("freigeben") and not antwort.get("geschlossen"):
             inhalt = str(antwort.get("text", "")).strip() or "; ".join(str(v) for v in (antwort.get("antworten") or {}).values())
+            if ist_tablet_frage(letzte[-3000:]):
+                inhalt += (" (Tablet: nur wenn Frank darin das Tablet ausdrücklich bejaht, sonst Nein, ohne Tablet-Versuch; "
+                           "ein Ja zum Review ist kein Ja zum Tablet.)")
             # Zuerst die Antwort: Ein Netzfehler beim Melden ließ sie sonst verloren gehen.
             sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}, ensure_ascii=False))
             sys.stdout.flush()
