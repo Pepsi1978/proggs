@@ -339,7 +339,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Gespräch ----
 
     /** Gibt false zurück, wenn die Frage nicht angenommen wurde (leer, Jarvis denkt noch, nicht verbunden). */
-    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList(), diktiert: Boolean = false, kontext: String = ""): Boolean {
+    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList(), diktiert: Boolean = false, kontext: String = "", laut: Boolean = false): Boolean {
         // Vorgelesen wird nur die Antwort auf genau diese gesprochene Frage. Endet sie vorzeitig (Abbruch, leer, nicht
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
@@ -349,7 +349,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (vorlesen) einzelauftragOffen = false
         programmierVorwahlOffen = false
         // Ob die Antwort laut wird: gesprochene Frage (Hey Jarvis, Gesprächsmodus) oder eingesprochen und von Hand gesendet.
-        val antwortLaut = (vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen)
+        // [laut]: Die Antwort wird immer vorgelesen (etwa die Erklärung einer E-Mail); Frank kann das Vorlesen selbst stoppen.
+        val antwortLaut = laut || (vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen)
         val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) ANHANG_PLATZHALTER else "" }
         if (text.isEmpty()) return false
         // Nur der Vorspann aus dem Plus-Menü „Programmierer“, ohne Aufgabe dahinter und ohne Anhang: kein Auftrag, der Text bleibt in der Blase.
@@ -400,7 +401,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Glühbirne an einer wichtigen E-Mail: neue Session, die ohne weitere Eingabe genau diese Nachricht erklärt. Der volle Text kommt frisch
+     * Glühbirne an einer wichtigen E-Mail: neue Session, die ohne weitere Eingabe genau diese Nachricht erklärt und die Erklärung gleich vorliest. Der volle Text kommt frisch
      * aus Gmail (sonst Betreff und Kurzfassung) und geht nur als Daten ans Modell, nie als Anweisung.
      */
     fun mailErklaeren(e: de.frank.jarvis.faehigkeit.WichtigeMails.Eintrag) {
@@ -420,7 +421,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 append("Jarvis' Kurzfassung: ").append(e.kurz).append('\n')
                 append("Text: ").append(volltext?.replace(Regex("<{2,}|>{2,}"), " ")?.ifBlank { null } ?: "(nicht abrufbar, nur Betreff und Kurzfassung bekannt)")
             }
-            sende("Erkläre mir die E-Mail von ${e.name}: „${e.betreff}“", kontext = MAIL_ERKLAEREN + "\n<<<MAIL>>>\n" + daten + "\n<<<ENDE MAIL>>>")
+            sende("Erkläre mir die E-Mail von ${e.name}: „${e.betreff}“", kontext = MAIL_ERKLAEREN + "\n<<<MAIL>>>\n" + daten + "\n<<<ENDE MAIL>>>", laut = true)
         }
     }
 
