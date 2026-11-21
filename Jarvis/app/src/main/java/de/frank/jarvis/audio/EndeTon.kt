@@ -23,6 +23,8 @@ object EndeTon {
     private const val PAUSE_MS = 90
     private const val TIEF_MS = 360
     private const val RAMPE_MS = 15
+    /** Drei Viertel der bisherigen Lautstärke (Franks Wunsch): 0,7 × 0,75. */
+    private const val PEGEL = 0.7 * 0.75
 
     private val pcm: ShortArray by lazy { ton(HOCH_HZ, HOCH_MS) + ShortArray(RATE * PAUSE_MS / 1000) + ton(TIEF_HZ, TIEF_MS) }
 
@@ -31,7 +33,7 @@ object EndeTon {
         val rampe = RATE * RAMPE_MS / 1000
         return ShortArray(n) { i ->
             val huelle = min(1.0, min(i.toDouble() / rampe, (n - 1 - i).toDouble() / rampe))
-            (sin(2 * PI * hz * i / RATE) * huelle * 0.7 * Short.MAX_VALUE).toInt().toShort()
+            (sin(2 * PI * hz * i / RATE) * huelle * PEGEL * Short.MAX_VALUE).toInt().toShort()
         }
     }
 
