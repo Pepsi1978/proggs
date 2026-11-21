@@ -2163,19 +2163,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun endeTonSpielen(nr: Int) {
         endeTonBereich.launch {
-            val bereit = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
-                while (nimmtAuf || holtMikro || mikro.isRecording() ||
-                    vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) {
-                    if (sprachmodusNr != nr) return@withTimeoutOrNull false
-                    kotlinx.coroutines.delay(50)
-                }
+            // Erst nach dem Hochzählen eines womöglich direkt folgenden neuen Gesprächs prüfen (cancel kann den finally-Block sofort ausführen).
+            kotlinx.coroutines.delay(150)
+            fun abgeloest() = sprachmodusNr != nr || sprachmodusAktiv
+            fun mikroAn() = nimmtAuf || holtMikro || mikro.isRecording()
+            fun liestVor() = vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS
+            // Beim Beenden von Hand stoppt die Aufnahme gleich danach; nimmt Frank nach 3 s noch auf, hat er selbst übernommen: kein Endton.
+            val mikroZu = kotlinx.coroutines.withTimeoutOrNull(3_000L) {
+                while (mikroAn()) { if (abgeloest()) return@withTimeoutOrNull false; kotlinx.coroutines.delay(50) }
                 true
             } ?: false
-            if (!bereit || sprachmodusNr != nr || sprachmodusAktiv) return@launch
-            de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
-            if (sprachmodusNr != nr || sprachmodusAktiv) return@launch
-            runCatching { de.frank.jarvis.audio.EndeTon.spielen() }
-            Logbuch.sprache("Endton", "Sprachsession beendet, Mikrofon zu")
+            if (!mikroZu || abgeloest()) return@launch
+            // Nie über eine Antwort: erst, wenn nichts mehr vorgelesen wird.
+            val still = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
+                while (liestVor()) { if (abgeloest() || mikroAn()) return@withTimeoutOrNull false; kotlinx.coroutines.delay(50) }
+                true
+            } ?: false
+            if (!still || abgeloest() || mikroAn()) return@launch
+            val ueberKanal = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
+            if (!ueberKanal) de.frank.jarvis.audio.KonferenzMikrofon.medienBereit()
+            // Nach dem Warten aufs Medien-Profil alles noch einmal prüfen.
+            if (abgeloest() || mikroAn() || liestVor()) return@launch
+            val ueberKanalJetzt = de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(getApplication())
+            if (de.frank.jarvis.audio.EndeTon.spielen(ueberKanalJetzt)) Logbuch.sprache("Endton", "Sprachsession beendet, Mikrofon zu" + if (ueberKanalJetzt) ", über Gesprächskanal" else "")
+            else Logbuch.sprache("Endton", "konnte nicht abgespielt werden")
         }
     }
 

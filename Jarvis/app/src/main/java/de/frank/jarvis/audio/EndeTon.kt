@@ -33,12 +33,13 @@ object EndeTon {
         }
     }
 
-    suspend fun spielen() = withContext(Dispatchers.IO) {
+    /** true = der Ton lief wirklich. */
+    suspend fun spielen(ueberKanal: Boolean): Boolean = withContext(Dispatchers.IO) {
         val daten = pcm
         val spur = runCatching {
             AudioTrack.Builder()
                 .setAudioAttributes(AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setUsage(if (ueberKanal) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                 .setAudioFormat(AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -47,11 +48,15 @@ object EndeTon {
                 .setTransferMode(AudioTrack.MODE_STATIC)
                 .setBufferSizeInBytes(daten.size * 2)
                 .build()
-        }.getOrNull() ?: return@withContext
+        }.getOrNull() ?: return@withContext false
         try {
-            spur.write(daten, 0, daten.size)
+            if (spur.write(daten, 0, daten.size) <= 0) return@withContext false
             spur.play()
-            delay((HOCH_MS + TIEF_MS + 80).toLong())
+            // Großzügig nachlaufen lassen: Über Bluetooth kommt der Ton verzögert, ein frühes stop() schnitte den tiefen ab.
+            delay((HOCH_MS + TIEF_MS + 300).toLong())
+            true
+        } catch (e: Exception) {
+            false
         } finally {
             runCatching { spur.stop() }
             spur.release()

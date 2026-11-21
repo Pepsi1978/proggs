@@ -861,6 +861,7 @@
     {"versionCode": 852, "versionName": "1.8.841", "stand": "20.11.2026, 20:36 Uhr", "notiz": "Wichtige E-Mails: Antippen öffnet die Nachricht direkt in Gmail im Web über Chrome statt über den abstürzenden Gmail-Link, gleiche wiederkehrende Benachrichtigungen erscheinen nur einmal, Massen- und Routinemails fallen heraus."},
     {"versionCode": 853, "versionName": "1.8.842", "stand": "20.11.2026, 20:49 Uhr", "notiz": "Wichtige E-Mails öffnen sich am Handy direkt in der mobilen Gmail-Ansicht, die Sprachabfrage antwortet sofort aus dem Bestand, und Prüfung, Speichern und Ausblenden laufen robuster."},
     {"versionCode": 854, "versionName": "1.8.843", "stand": "20.11.2026, 21:23 Uhr", "notiz": "Antippen einer wichtigen E-Mail öffnet die Nachricht jetzt direkt in der Gmail-App statt im Browser."},
-  {"versionCode": 855, "versionName": "1.8.844", "stand": "21.11.2026, 09:13 Uhr", "notiz": "Am Ende jeder Sprachsession ertönt jetzt ein kurzer fallender Doppelton, sobald das Mikrofon zu ist."}
+  {"versionCode": 855, "versionName": "1.8.844", "stand": "21.11.2026, 09:13 Uhr", "notiz": "Am Ende jeder Sprachsession ertönt jetzt ein kurzer fallender Doppelton, sobald das Mikrofon zu ist."},
+  {"versionCode": 856, "versionName": "1.8.845", "stand": "21.11.2026, 09:20 Uhr", "notiz": "Der Endton kommt jetzt auch am Konferenz-Lautsprecher, entfällt, wenn du von Hand weiter aufnimmst, und wird direkt vor dem Abspielen noch einmal geprüft."}
 ]
 }
