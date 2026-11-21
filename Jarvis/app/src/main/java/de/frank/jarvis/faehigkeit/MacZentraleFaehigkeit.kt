@@ -54,7 +54,6 @@ class MacZentraleFaehigkeit(private val context: Context) : Faehigkeit {
                 zusatz.put("stunden", zahl.toInt())
             }
             if (zusatz.length() == 0) return@Werkzeug Ergebnis(stand())
-            val gesendet = System.currentTimeMillis() / 1000.0
             val grund = MacUpdateZentrale.auftrag(context, "cli_einstellung", zusatz)
             if (grund != null) return@Werkzeug Ergebnis(grund.replace("Es wurde nichts gestartet.", "Nichts geändert."), fehler = true)
             // Der Mac speichert und meldet den neuen Stand; erst der bestätigt die Änderung.
@@ -66,8 +65,8 @@ class MacZentraleFaehigkeit(private val context: Context) : Faehigkeit {
                     return@Werkzeug Ergebnis(it.optString("text") + " Nichts geändert.", fehler = true)
                 }
                 val c = l.cli
-                // Nur ein Stand, den der Mac nach dem Auftrag gemeldet hat, bestätigt die Änderung.
-                val passt = c != null && c.optDouble("zeit", 0.0) >= gesendet - 2 && (!zusatz.has("automatik") || c.optBoolean("automatik") == zusatz.getBoolean("automatik")) &&
+                // Bestätigt ist die Änderung erst, wenn der Mac genau diesen Auftrag als umgesetzt meldet (Kennung, kein Uhrvergleich).
+                val passt = c != null && c.optString("kennung") == MacUpdateZentrale.cliKennung.value && (!zusatz.has("automatik") || c.optBoolean("automatik") == zusatz.getBoolean("automatik")) &&
                     (!zusatz.has("stunden") || c.optInt("stunden") == zusatz.getInt("stunden"))
                 if (passt) return@Werkzeug Ergebnis("Gespeichert. " + stand())
             }

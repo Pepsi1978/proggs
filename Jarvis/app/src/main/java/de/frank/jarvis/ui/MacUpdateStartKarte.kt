@@ -78,6 +78,8 @@ object MacUpdateZentrale {
         val cli: JSONObject? = null,
         /** Fehler der Brücke zum letzten Auftrag {kennung, text}. */
         val fehler: JSONObject? = null,
+        /** Alter des CLI-Stands am Relay in Sekunden (null = keiner). */
+        val cliAlterS: Long? = null,
     )
 
     val lage = MutableStateFlow(Lage())
@@ -103,7 +105,8 @@ object MacUpdateZentrale {
                 if (fehler != null && fehler.optString("kennung") == eigeneKennung.value) meldung.value = fehler.optString("text")
                 if (fehler != null && fehler.optString("kennung") == cliKennung.value) cliMeldung.value = fehler.optString("text")
                 lage.value = Lage(j.optJSONObject("stand"), j.optBoolean("app"), if (j.isNull("alter_s")) null else j.optLong("alter_s"),
-                    j.optBoolean("mac_da"), System.currentTimeMillis(), cli = j.optJSONObject("cli"), fehler = fehler)
+                    j.optBoolean("mac_da"), System.currentTimeMillis(), cli = j.optJSONObject("cli"), fehler = fehler,
+                    cliAlterS = if (j.isNull("cli_alter_s")) null else j.optLong("cli_alter_s"))
             }
         }.onFailure { lage.update { l -> l.copy(abrufFehler = true, geholt = System.currentTimeMillis()) } }
     }
@@ -135,8 +138,8 @@ object MacUpdateZentrale {
             val text = auftrag(context, art, zusatz)
             Logbuch.netz("Mac-Zentrale: $art", text ?: "angenommen")
             cliMeldung.value = text
-            // Der Mac meldet seinen neuen Stand gleich danach: kurz nachlesen.
-            repeat(3) { delay(1_500); holen(context) }
+            // Angenommen: Der Mac meldet seinen neuen Stand gleich danach, kurz nachlesen. Abgelehnt: sofort wieder bedienbar.
+            if (text == null) repeat(3) { delay(1_500); holen(context) }
             cliSendet.value = null
         }
     }
@@ -371,11 +374,14 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
     val meldung by MacUpdateZentrale.cliMeldung.collectAsState()
     var frage by remember { mutableStateOf(false) }
     val c = l.cli
-    val laeuft = c?.optBoolean("laeuft") == true
+    // Ein Lauf meldet sich spätestens nach Minuten zurück; ein älterer „läuft“-Stand (Mac eingeschlafen) gilt nicht mehr.
+    val laeuft = c?.optBoolean("laeuft") == true && (l.cliAlterS ?: 0) < 600
     val automatik = c?.optBoolean("automatik") == true
+    var schalterWunsch by remember(automatik) { mutableStateOf<Boolean?>(null) }
     val stunden = (c?.optInt("stunden", 6) ?: 6).coerceIn(1, 24)
     val letzter = c?.optJSONObject("letzter")
     val sitzungen = c?.optJSONArray("sitzungen").objekte()
+    val ohneListe = c != null && (c.isNull("sitzungen") || !c.has("sitzungen"))
     val bedienbar = l.macDa && c != null && sendet == null
 
     AufklappFeld(offen, umschalten, kopf = {
@@ -385,10 +391,13 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
                 sendet == "cli_aufraeumen" || laeuft -> "Räumt am MacBook auf …"
                 c == null && !l.macDa -> "MacBook nicht erreichbar"
                 c == null -> "Noch kein Stand vom MacBook"
-                else -> "${sitzungen.size} offene Sitzungen · Automatik " + if (automatik) "alle $stunden h" else "aus"
+                else -> (if (ohneListe) "Sitzungen werden ermittelt …" else "${sitzungen.size} offene Sitzungen") +
+                    " · Automatik " + if (automatik) "alle $stunden h" else "aus"
             },
             color = if (laeuft) f.primaer else f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp),
         )
+        if (c != null && !l.macDa) Text("MacBook nicht erreichbar" + (c.optDouble("zeit").takeIf { !it.isNaN() && it > 0 }?.let { " · Stand " + uhr(it) } ?: ""),
+            color = f.gefahr, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
     }) {
         Column {
             Knopf(if (laeuft) "Aufräumen läuft …" else "Aufräumen", Modifier.fillMaxWidth().padding(top = 12.dp).alpha(if (bedienbar && !laeuft) 1f else 0.4f)) {
@@ -400,13 +409,15 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
 
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Automatisches Aufräumen", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                androidx.compose.material3.Switch(checked = automatik, enabled = bedienbar, onCheckedChange = {
+                androidx.compose.material3.Switch(checked = schalterWunsch ?: automatik, enabled = bedienbar, onCheckedChange = {
+                    schalterWunsch = it
                     MacUpdateZentrale.cliSenden(context, "cli_einstellung", JSONObject().put("automatik", it))
                 })
             }
             // 0 und 25 sind nur leere Randmarken: Der Regler rastet auf 1 bis 24 ganze Stunden ein.
-            // Nach jedem Auftrag (auch einem abgelehnten) wieder auf den Stand des Macs.
-            var wert by remember(stunden, sendet) { mutableStateOf(stunden.toFloat()) }
+            // Der gewählte Wert bleibt stehen, bis der Mac ihn meldet; nur ein abgelehnter Auftrag setzt auf den Stand des Macs zurück.
+            var wert by remember(stunden) { mutableStateOf(stunden.toFloat()) }
+            LaunchedEffect(sendet, meldung) { if (sendet == null && meldung != null) { wert = stunden.toFloat(); schalterWunsch = null } }
             Text("Intervall: alle ${wert.toInt()} " + if (wert.toInt() == 1) "Stunde" else "Stunden",
                 color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
             androidx.compose.material3.Slider(

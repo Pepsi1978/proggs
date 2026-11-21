@@ -43,7 +43,11 @@ done
 [ -f "$APK" ] || ende fehler "APK nicht gefunden: $APK"
 # Schnappschuss: Ein paralleler Bau überschreibt app/build/… sonst mitten im Lauf (Basis und Pflicht-Teil aus zwei Bauten:
 # INSTALL_FAILED_INVALID_APK „version code … inconsistent“, 21.11.2026).
-SCHNAPP=$(mktemp -t jarvis-install-apk) && cp "$APK" "$SCHNAPP" && APK="$SCHNAPP" || ende fehler "APK ließ sich nicht sichern"
+# mktemp mit XXXXXX: So geht es mit BSD (Mac) und GNU (Server); ohne X lehnt GNU-mktemp die Vorlage ab.
+SCHNAPP=$(mktemp "${TMPDIR:-/tmp}/jarvis-install-XXXXXX") || ende fehler "APK ließ sich nicht sichern"
+# Bis aufraeumen die Falle übernimmt, räumt diese die Kopie bei jedem frühen Ende weg.
+trap 'rm -f "$SCHNAPP"' EXIT
+cp "$APK" "$SCHNAPP" && APK="$SCHNAPP" || ende fehler "APK ließ sich nicht sichern"
 # Feste Seriennummer des Zielgeräts: Ohne sie (Datei fehlt, altes Repo) gilt wie früher das erste verbundene Gerät.
 GERAETE_DATEI="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/geraete.json"
 ZIEL_SERIE=$(awk -v g="\"$ZIEL\":" '$1==g {drin=1; next} drin && /}/ {exit} drin && $1=="\"serial\":" {gsub(/[",\r]/,"",$2); print $2; exit}' "$GERAETE_DATEI" 2>/dev/null)

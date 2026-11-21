@@ -758,42 +758,45 @@ def uz_faden() -> None:
 
 # ---------------------------------------------------------------- Programmier-CLI aufräumen (jarvis_cli_aufraeumen.py)
 
-CLI_STAND: dict = {"laeuft": False, "letzter": None, "sitzungen": None}
+CLI_STAND: dict = {"laeuft": False, "letzter": None, "sitzungen": None, "laeufe": 0, "kennung": None}
 
 
 def cli_melden() -> bool:
+    """Stand an den Relay. „kennung“ = zuletzt umgesetzte Einstellung: daran erkennt das Handy die Bestätigung (ohne Uhrvergleich)."""
     import jarvis_cli_aufraeumen as ca
     e = ca.lies_einstellung()
     stand = {"automatik": e["automatik"], "stunden": e["stunden"], "naechster": e.get("naechster") if e["automatik"] else None,
-             "laeuft": CLI_STAND["laeuft"], "letzter": e.get("letzter"), "sitzungen": CLI_STAND["sitzungen"], "zeit": time.time()}
+             "laeuft": CLI_STAND["laeuft"], "letzter": e.get("letzter"), "sitzungen": CLI_STAND["sitzungen"],
+             "kennung": CLI_STAND["kennung"], "zeit": time.time()}
     return uz_melden({"cli": stand}, versuche=3)
 
 
-def cli_lauf(art: str) -> None:
+def cli_lauf(art: str, kennung: str = "") -> None:
     """Ein Aufräumen (von Hand nach Franks Ja oder geplant); nie zwei gleichzeitig (Sperre im Modul)."""
     import jarvis_cli_aufraeumen as ca
     CLI_STAND["laeuft"] = True
+    CLI_STAND["laeufe"] += 1
     cli_melden()
     try:
-        ergebnis = ca.aufraeumen(art)
-        schreib(f"CLI-Aufräumen ({art}): {ergebnis['text']}")
-        e = ca.lies_einstellung()
-        e["letzter"] = ergebnis
-        if art == "auto" and e["automatik"]:
-            e["naechster"] = time.time() + e["stunden"] * 3600
-        ca.schreib_einstellung(e)
-        CLI_STAND["sitzungen"] = ergebnis["offen"]
+        try:
+            ergebnis = ca.aufraeumen(art)
+            schreib(f"CLI-Aufräumen ({art}): {ergebnis['text']}")
+            CLI_STAND["sitzungen"] = ergebnis["offen"]
+        except Exception as fehler:
+            schreib(f"CLI-Aufräumen: {type(fehler).__name__}: {fehler}")
+            ergebnis = {"art": art, "zeit": time.time(), "text": f"Aufräumen fehlgeschlagen ({type(fehler).__name__}), nichts weiter beendet.",
+                        "beendet": [], "offen": CLI_STAND["sitzungen"] or [], "fehler": True}
+            if kennung:
+                uz_melden({"kennung": kennung, "fehler": ergebnis["text"]}, versuche=3)
+        with ca.EINSTELLUNG_SPERRE:
+            e = ca.lies_einstellung()
+            e["letzter"] = ergebnis
+            # Auch nach einem Fehler erst im nächsten Intervall erneut, nie im Minutentakt.
+            if art == "auto" and e["automatik"]:
+                e["naechster"] = time.time() + e["stunden"] * 3600
+            ca.schreib_einstellung(e)
     except Exception as fehler:
-        schreib(f"CLI-Aufräumen: {type(fehler).__name__}: {fehler}")
-        if art == "auto":
-            # Nach einem Fehler erst im nächsten Intervall erneut, nie im Minutentakt.
-            try:
-                e = ca.lies_einstellung()
-                if e["automatik"]:
-                    e["naechster"] = time.time() + e["stunden"] * 3600
-                    ca.schreib_einstellung(e)
-            except Exception:
-                pass
+        schreib(f"CLI-Aufräumen (Abschluss): {type(fehler).__name__}: {fehler}")
     finally:
         CLI_STAND["laeuft"] = False
         cli_melden()
@@ -808,13 +811,14 @@ def cli_befehl(kennung: str, art: str, befehl: dict) -> None:
         if besetzt:
             uz_melden({"kennung": kennung, "fehler": "Ein Aufräumen läuft bereits."}, versuche=3)
             return
-        threading.Thread(target=cli_lauf, args=("hand",), daemon=True).start()
+        threading.Thread(target=cli_lauf, args=("hand", kennung), daemon=True).start()
         return
     try:
         automatik = befehl.get("automatik")
         stunden = befehl.get("stunden")
         ca.setze_einstellung(automatik if isinstance(automatik, bool) else None, stunden if stunden is not None else None)
         schreib(f"CLI-Aufräumen: Automatik {automatik}, Intervall {stunden}")
+        CLI_STAND["kennung"] = kennung
     except Exception as fehler:
         uz_melden({"kennung": kennung, "fehler": f"Einstellung nicht gespeichert ({fehler})."}, versuche=3)
     cli_melden()
@@ -836,8 +840,12 @@ def cli_faden() -> None:
                 liste_zeit = time.time()
             elif not CLI_STAND["laeuft"] and time.time() - liste_zeit >= 300:
                 liste_zeit = time.time()
-                CLI_STAND["sitzungen"] = [ca.kurz(x) for x in ca.sitzungen()]
-                cli_melden()
+                nr = CLI_STAND["laeufe"]
+                liste = [ca.kurz(x) for x in ca.sitzungen()]
+                # Hat inzwischen ein Aufräumen begonnen, ist diese Messung älter als sein Ergebnis: verwerfen.
+                if CLI_STAND["laeufe"] == nr and not CLI_STAND["laeuft"]:
+                    CLI_STAND["sitzungen"] = liste
+                    cli_melden()
         except Exception as fehler:
             schreib(f"CLI-Aufräumen (Zeitplan): {type(fehler).__name__}: {fehler}")
         time.sleep(60)

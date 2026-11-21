@@ -45,6 +45,24 @@ class Bewertung(unittest.TestCase):
         self.assertEqual(a.bewerte(sitzung(auftrag="WA99R", auftrag_fertig=True), JETZT)[0], "inaktiv")
 
 
+class Transkript(unittest.TestCase):
+    def schreib(self, namen_und_eingaben):
+        import json, tempfile, pathlib
+        d = tempfile.mkdtemp()
+        p = pathlib.Path(d) / "t.jsonl"
+        p.write_text("\n".join(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": n, "input": e}]}})
+                               for n, e in namen_und_eingaben) + "\n")
+        return p
+
+    def test_cron_und_weckruf(self):
+        self.assertTrue(a.plant_weiter(self.schreib([("CronCreate", {}), ("ScheduleWakeup", {"stop": True})])))
+        self.assertFalse(a.plant_weiter(self.schreib([("CronCreate", {}), ("CronDelete", {})])))
+        self.assertTrue(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600})])))
+        self.assertFalse(a.plant_weiter(self.schreib([("ScheduleWakeup", {"delaySeconds": 600}), ("ScheduleWakeup", {"stop": True})])))
+        self.assertTrue(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "fertig"})])))
+        self.assertFalse(a.jarvis_abgeschlossen(self.schreib([("mcp__jarvis__programmier_fortschritt", {"stand": "laeuft"})])))
+
+
 class Planung(unittest.TestCase):
     def test_aus_heisst_kein_lauf(self):
         self.assertFalse(a.faellig({"automatik": False, "naechster": JETZT - 10}, JETZT))

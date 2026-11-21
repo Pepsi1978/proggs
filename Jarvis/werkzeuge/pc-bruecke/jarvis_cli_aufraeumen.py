@@ -36,6 +36,7 @@ CLIS = ("claude", "codex", "opencode", "kimi", "gemini", "antigravity")
 WARTENDE_FRAGEN = ("am_pc", "jarvis", "warter", "tippt")
 EINSTELLUNG = Path.home() / "Library" / "Application Support" / "JarvisPcBruecke" / "cli-aufraeumen.json"
 SPERRE = threading.Lock()
+EINSTELLUNG_SPERRE = threading.Lock()  # jedes Lesen-Ändern-Schreiben der Einstellungsdatei (Auftrag und Lauf gleichzeitig)
 
 
 # ---------------------------------------------------------------- Einstellung (Schalter, Intervall, nächster Lauf)
@@ -60,6 +61,11 @@ def schreib_einstellung(e: dict) -> None:
 
 def setze_einstellung(automatik, stunden) -> dict:
     """Neuer Schalter und/oder neues Intervall (nur ganze Stunden 1–24). Der nächste Lauf liegt danach ein Intervall in der Zukunft."""
+    with EINSTELLUNG_SPERRE:
+        return _setze_einstellung(automatik, stunden)
+
+
+def _setze_einstellung(automatik, stunden) -> dict:
     e = lies_einstellung()
     if automatik is not None:
         e["automatik"] = automatik is True
@@ -217,22 +223,6 @@ def letzter_zug(pfad: Path) -> tuple[str, float]:
     return "unklar", 0.0
 
 
-PLANENDE_WERKZEUGE = (b'"name":"ScheduleWakeup"', b'"name":"CronCreate"', b'"name":"RemoteTrigger"')
-
-
-def plant_weiter(pfad: Path) -> bool:
-    """Hat die Sitzung zuletzt einen Weckruf oder wiederkehrenden Lauf geplant (/loop, ScheduleWakeup, CronCreate)? Dann ruht sie
-    absichtlich und arbeitet später weiter: nicht eindeutig inaktiv."""
-    try:
-        with open(pfad, "rb") as f:
-            f.seek(0, 2)
-            f.seek(max(0, f.tell() - 400_000))
-            ende = f.read()
-    except OSError:
-        return True
-    return any(w in ende for w in PLANENDE_WERKZEUGE) and b'"stop":true' not in ende[ende.rfind(b'"name":"ScheduleWakeup"'):]
-
-
 def nebenarbeit_zeit(pfad: Path) -> float:
     """Letzte Änderung an Transkripten von Hintergrund-Agenten dieser Sitzung (<sitzung>/subagents/*.jsonl)."""
     try:
@@ -241,41 +231,57 @@ def nebenarbeit_zeit(pfad: Path) -> float:
         return time.time()
 
 
-_ABGESCHLOSSEN: dict[str, tuple[float, int, bool]] = {}
+_MERKMALE: dict[str, tuple[float, int, dict]] = {}
 
 
-def jarvis_abgeschlossen(pfad: Path) -> bool:
-    """Wie [_jarvis_abgeschlossen], zwischengespeichert nach Größe und Änderungszeit (lange Transkripte nicht alle fünf Minuten lesen)."""
+def merkmale(pfad: Path) -> dict:
+    """Aus dem ganzen Transkript (zwischengespeichert nach Größe und Änderungszeit): letzter gemeldeter Jarvis-Stand
+    (programmier_fortschritt), ob noch Sitzungs-Crons bestehen (CronCreate ohne passendes CronDelete) und ob der letzte
+    Weckruf (ScheduleWakeup, /loop) noch geplant ist. Nicht lesbar heißt: plant weiter (offen lassen)."""
     try:
         st = pfad.stat()
     except OSError:
-        return False
-    alt = _ABGESCHLOSSEN.get(str(pfad))
+        return {"stand": None, "plant": True}
+    alt = _MERKMALE.get(str(pfad))
     if alt and alt[0] == st.st_mtime and alt[1] == st.st_size:
         return alt[2]
-    wert = _jarvis_abgeschlossen(pfad)
-    _ABGESCHLOSSEN[str(pfad)] = (st.st_mtime, st.st_size, wert)
-    return wert
-
-
-def _jarvis_abgeschlossen(pfad: Path) -> bool:
-    """Hat ein Jarvis-Auftrag zuletzt „fertig“ oder „fehler“ gemeldet (programmier_fortschritt im Transkript)?"""
-    stand = None
+    stand, crons, weckruf = None, 0, False
     try:
         with open(pfad, "rb") as f:
             for zeile in f:
-                if b"programmier_fortschritt" not in zeile or b'"tool_use"' not in zeile:
+                if b'"tool_use"' not in zeile or not any(w in zeile for w in (b"programmier_fortschritt", b"CronCreate", b"CronDelete", b"ScheduleWakeup")):
                     continue
                 try:
                     inhalt = (json.loads(zeile).get("message") or {}).get("content") or []
                 except Exception:
                     continue
-                for b in inhalt:
-                    if isinstance(b, dict) and b.get("type") == "tool_use" and "programmier_fortschritt" in str(b.get("name")):
-                        stand = (b.get("input") or {}).get("stand", stand)
+                for blk in inhalt:
+                    if not isinstance(blk, dict) or blk.get("type") != "tool_use":
+                        continue
+                    name, eingabe = str(blk.get("name") or ""), blk.get("input") or {}
+                    if "programmier_fortschritt" in name:
+                        stand = eingabe.get("stand", stand)
+                    elif name == "CronCreate":
+                        crons += 1
+                    elif name == "CronDelete":
+                        crons = max(0, crons - 1)
+                    elif name == "ScheduleWakeup":
+                        weckruf = eingabe.get("stop") is not True
     except OSError:
-        return False
-    return stand in ("fertig", "fehler")
+        return {"stand": None, "plant": True}
+    wert = {"stand": stand, "plant": crons > 0 or weckruf}
+    _MERKMALE[str(pfad)] = (st.st_mtime, st.st_size, wert)
+    return wert
+
+
+def jarvis_abgeschlossen(pfad: Path) -> bool:
+    """Hat ein Jarvis-Auftrag zuletzt „fertig“ oder „fehler“ gemeldet (programmier_fortschritt im Transkript)?"""
+    return merkmale(pfad)["stand"] in ("fertig", "fehler")
+
+
+def plant_weiter(pfad: Path) -> bool:
+    """Bestehen Sitzungs-Crons oder ein geplanter Weckruf? Dann ruht die Sitzung absichtlich: nicht eindeutig inaktiv."""
+    return merkmale(pfad)["plant"]
 
 
 def hook_zustand(nummer: str) -> dict:
@@ -353,6 +359,12 @@ def sammle(pid: int, liste: dict[int, dict], vorher: dict[int, float] | None, na
         s["zug"], zeit = letzter_zug(pfad)
         zeiten += [zeit, nebenarbeit_zeit(pfad)]
         s["plant_weiter"] = plant_weiter(pfad)
+    # Tippt Frank gerade (noch ohne Enter), ändert sich nur die Lesezeit des Terminals.
+    try:
+        zeiten.append(os.stat("/dev/" + d["tty"]).st_atime)
+    except OSError:
+        s["letzte"] = None
+        return s
     nummer = env.get("JARVIS_AUFTRAG_ID") or (h.lokale_nummer(sitzung) if sitzung else "")
     hz = hook_zustand(nummer) if nummer else {}
     zeiten.append(float(hz.get("zuletzt") or 0))
@@ -409,6 +421,8 @@ def beende(s: dict) -> bool:
     pid, start = s["pid"], s["start"]
     if not start:
         return False
+    # Vorher merken: Nach einem SIGKILL blieben MCP-Server und Hintergrund-Shells sonst als Waisen im Speicher.
+    baum = [(k, startzeit(k) or "") for k in nachfahren(pid, prozesse())]
     try:
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -427,7 +441,26 @@ def beende(s: dict) -> bool:
             os.kill(pid, sig)
         except OSError:
             pass
-    return _weg(pid, start)
+    if not _weg(pid, start):
+        return False
+    waisen_beenden(baum)
+    return True
+
+
+def waisen_beenden(baum: list[tuple[int, str]]) -> None:
+    """Übrig gebliebene Kindprozesse der beendeten CLI (nur dieselben Prozesse: PID und Startzeit) beenden."""
+    for sig, warte in ((signal.SIGTERM, 3), (signal.SIGKILL, 1)):
+        lebend = [(k, st) for k, st in baum if st and not _weg(k, st)]
+        if not lebend:
+            return
+        for k, _ in lebend:
+            try:
+                os.kill(k, sig)
+            except OSError:
+                pass
+        ende = time.monotonic() + warte
+        while time.monotonic() < ende and any(not _weg(k, st) for k, st in lebend):
+            time.sleep(0.2)
 
 
 SHELLS = ("zsh", "bash", "sh", "fish")
