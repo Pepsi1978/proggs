@@ -315,7 +315,24 @@ object Erinnerungen {
         .put("ort", e.ort?.let { o -> JSONObject().put("name", o.name).put("adresse", o.adresse).put("breite", o.breite).put("laenge", o.laenge).put("radius", o.radius).put("scharf_seit", o.scharfSeit).put("verzoegerung_min", o.verzoegerung) } ?: JSONObject.NULL)
         .put("ort_ausgeloest", e.ortAusgeloest)
 
-    fun aus(id: String, w: JSONObject, geaendert: Long): Erinnerung {
+    /** Ältere Jarvis-Fassungen (bis 1.8.906) kennen die Minuten nach Ankunft nicht: lokal gelesen gilt ihr bisheriges Verhalten (3 Minuten). */
+    const val VERZOEGERUNG_ALT = 3
+    private const val VERZOEGERUNG_UNBEKANNT = -1
+
+    /**
+     * Eine ferne Fassung ohne Minuten nach Ankunft (Gerät mit älterem Jarvis) behält die hiesigen Minuten, wenn es derselbe Ort ist; sonst gilt das alte Verhalten.
+     * [fern] stammt aus [aus] mit ohneVerzoegerung = unbekannt.
+     */
+    fun fernVerzoegerung(fern: Erinnerung, lokal: Erinnerung?): Erinnerung {
+        val o = fern.ort ?: return fern
+        if (o.verzoegerung != VERZOEGERUNG_UNBEKANNT) return fern
+        val l = lokal?.ort?.takeIf { it.breite == o.breite && it.laenge == o.laenge }
+        return fern.copy(ort = o.copy(verzoegerung = l?.verzoegerung ?: VERZOEGERUNG_ALT))
+    }
+
+    fun ausFern(id: String, w: JSONObject, geaendert: Long, lokal: Erinnerung?) = fernVerzoegerung(aus(id, w, geaendert, VERZOEGERUNG_UNBEKANNT), lokal)
+
+    fun aus(id: String, w: JSONObject, geaendert: Long, ohneVerzoegerung: Int = VERZOEGERUNG_ALT): Erinnerung {
         fun nullbar(o: JSONObject, k: String) = if (o.isNull(k)) null else o.optString(k).takeIf { it.isNotBlank() }
         val a = w.optJSONArray("ausloesungen") ?: JSONArray()
         return Erinnerung(
@@ -324,7 +341,7 @@ object Erinnerungen {
             (0 until a.length()).map { i -> a.getJSONObject(i).let { Ausloesung(it.getString("id"), it.optInt("minuten"), nullbar(it, "uhrzeit"), it.optLong("angelegt")) } },
             w.optLong("erledigt"), w.optLong("hinweis_um"), w.optLong("zuletzt_erwaehnt"), w.optString("quelle"), w.optLong("erstellt"), geaendert,
             w.optJSONObject("ort")?.let { o -> OrtBedingung(o.optString("name"), o.optString("adresse"), o.optDouble("breite"), o.optDouble("laenge"), o.optInt("radius", OrtErinnerungen.RADIUS_M), o.optLong("scharf_seit"),
-                OrtErinnerungen.verzoegerungGueltig(o.optInt("verzoegerung_min", OrtErinnerungen.VERZOEGERUNG_STANDARD))) }
+                if (o.has("verzoegerung_min")) OrtErinnerungen.verzoegerungGueltig(o.optInt("verzoegerung_min", OrtErinnerungen.VERZOEGERUNG_STANDARD)) else ohneVerzoegerung) }
                 ?.takeIf { !it.breite.isNaN() && !it.laenge.isNaN() },
             w.optLong("ort_ausgeloest"),
         )

@@ -190,7 +190,6 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                         e.ortAusgeloest > 0 -> "Zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)}. Löst bei der nächsten Ankunft wieder aus, bis du „Erledigt“ tippst."
                         else -> "Löst ${verzoegerungText(o.verzoegerung)} aus, auch bei gesperrtem Handy." + if (o.verzoegerung > 0) " Vorbeifahren oder kürzere Aufenthalte lösen nichts aus." else ""
                     }, color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
-                    Text("Minuten nach Ankunft: ${o.verzoegerung}", color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
                     if (!de.frank.jarvis.data.Geraet.istTablet) de.frank.jarvis.ablage.OrtErinnerungen.fehlendeFreigabe(app)?.let { Text(it, color = f.gefahr, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 4.dp)) }
                 }
                 Text(if (e.allgemein) "Hinweise" else if (e.ort != null) "Auslösungen" else "Erinnerungszeitpunkte", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))

@@ -1828,7 +1828,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit, ort)
                 else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
                     alt.copy(text = d.text.trim(), kurz = d.kurz.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.kurzAus(d.text) }, zeile = d.zeile.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.zeileAus(d.text) },
-                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein && ort == null, ort = ort,
+                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein && ort == null,
+                        // Unveränderter Ort: aktueller Stand statt der vorab gelesenen Kopie (Scharfstellung nach einer Auslösung), nur die Minuten setzen.
+                        ort = if (ort != null && bisher != null && ort.breite == bisher.breite && ort.laenge == bisher.laenge && alt.ort != null && alt.ort.breite == ort.breite && alt.ort.laenge == ort.laenge) alt.ort.copy(verzoegerung = ort.verzoegerung) else ort,
                         ausloesungen = if (!d.allgemein && ort == null && (alt.allgemein || alt.ort != null)) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
                 }
             }

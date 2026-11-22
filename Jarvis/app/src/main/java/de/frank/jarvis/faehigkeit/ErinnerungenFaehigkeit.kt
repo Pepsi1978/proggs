@@ -73,7 +73,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             append(kopf(e)).append('\n')
             append("Kurzfassung: ").append(e.kurz).append("\n\n").append(e.text)
             e.ort?.let { o ->
-                append("\n\nStandort-Erinnerung: löst ${de.frank.jarvis.ui.verzoegerungText(o.verzoegerung)} bei ${o.name} aus (${o.adresse}; Minuten nach Ankunft: ${o.verzoegerung}). ")
+                append("\n\nStandort-Erinnerung: löst ${de.frank.jarvis.ui.verzoegerungText(o.verzoegerung)} bei ${o.name} aus (${o.adresse}). ")
                 append(when { e.erledigt != 0L -> "Erledigt, löst nicht mehr aus."; e.ortAusgeloest > 0 -> "Zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)}; löst bei der nächsten Ankunft wieder aus, bis sie erledigt ist."; else -> "Wartet auf die Ankunft." })
                 if (!de.frank.jarvis.data.Geraet.istTablet) OrtErinnerungen.fehlendeFreigabe(context)?.let { append(" ACHTUNG: ").append(it) }
             }
@@ -228,6 +228,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 OrtErinnerungen.abgleichen(context)
                 return Ergebnis("Als Standort-Erinnerung gespeichert: ${e.zeile}. Sie löst ${de.frank.jarvis.ui.verzoegerungText(minuten)} bei ${ort.name} aus (${ort.adresse}). Form: ${if (e.wecker) "Wecker" else "Benachrichtigung"}." + freigabeHinweis())
             }
+            if (a.gesetzt("minuten_nach_ankunft")) return Ergebnis("minuten_nach_ankunft gilt nur für Standort-Erinnerungen (mit ort); nichts gespeichert.", fehler = true)
             val datum = if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else null
             val uhrzeit = if (datum != null && a.gesetzt("uhrzeit")) uhrzeitAus(a.optString("uhrzeit")) ?: return Ergebnis("„${a.optString("uhrzeit")}“ ist keine Uhrzeit.", fehler = true) else null
             val vorab = vorabAus(a.optString("vorab_minuten")).map { Erinnerungen.neueAusloesung(it) }
@@ -243,6 +244,8 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 val minuten = if (a.gesetzt("minuten_nach_ankunft")) verzoegerungAus(a) ?: return Ergebnis("minuten_nach_ankunft geht nur in ganzen Minuten von 0 bis 20; nichts geändert.", fehler = true) else null
                 val neuOrt: OrtBedingung? = (if (a.gesetzt("ort")) ortAus(a.optString("ort")).let { (o, f) -> o ?: return f!! } else if (a.gesetzt("datum")) null else e.ort)
                     ?.let { o -> o.copy(verzoegerung = minuten ?: e.ort?.verzoegerung ?: OrtErinnerungen.VERZOEGERUNG_STANDARD) }
+                if (minuten != null && neuOrt == null) return Ergebnis("minuten_nach_ankunft gilt nur für Standort-Erinnerungen; diese hat keinen Ort. Nichts geändert.", fehler = true)
+                val ortNeu = a.gesetzt("ort")
                 val datum = if (neuOrt != null) null else if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else e.tag()
                 val uhrzeit = when {
                     !a.gesetzt("uhrzeit") -> e.uhrzeit
@@ -252,7 +255,9 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 val form = when (a.optString("form")) { Erinnerung.FORM_WECKER -> Erinnerung.FORM_WECKER; Erinnerung.FORM_MELDUNG -> Erinnerung.FORM_MELDUNG; else -> e.form }
                 val neu = Erinnerungen.aendere(context, e.id) { alt ->
                     alt.copy(text = a.optString("text").trim().ifEmpty { alt.text }, kurz = a.optString("kurz").trim().ifEmpty { alt.kurz }, zeile = a.optString("zeile").trim().ifEmpty { alt.zeile },
-                        datum = datum?.toString(), uhrzeit = if (neuOrt != null) null else uhrzeit, form = form, allgemein = datum == null && neuOrt == null, ort = neuOrt,
+                        datum = datum?.toString(), uhrzeit = if (neuOrt != null) null else uhrzeit, form = form, allgemein = datum == null && neuOrt == null,
+                        // Gleicher Ort: den aktuellen Stand nehmen (Scharfstellung nach einer Auslösung), nicht die vorab gelesene Kopie; nur die Minuten setzen.
+                        ort = if (neuOrt != null && !ortNeu && alt.ort != null) alt.ort.copy(verzoegerung = neuOrt.verzoegerung) else neuOrt,
                         // Nur beim Wechsel von allgemein oder Ort zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
                         ausloesungen = if (datum != null && (alt.allgemein || alt.ort != null)) listOf(Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
                 } ?: return Ergebnis("Nicht gespeichert.", fehler = true)

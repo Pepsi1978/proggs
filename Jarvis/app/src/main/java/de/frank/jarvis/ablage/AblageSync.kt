@@ -379,7 +379,7 @@ object AblageSync {
             if (hierUnveraendert || bekannt == null) { eigenErinnerung { Erinnerungen.loescheFern(app, id) }; z.vergiss(s) } else z.zeiten[s] = geaendert
             return
         }
-        val fern = Erinnerungen.aus(id, d.getJSONObject("daten"), geaendert)
+        val fern = Erinnerungen.ausFern(id, d.getJSONObject("daten"), geaendert, lokal)
         val a = abdruck(fern)
         if (offen != null) { if (bekannt == a || offen >= geaendert) return; Erinnerungen.quittiereLoeschung(app, id) }
         if (lokal != null && abdruck(lokal) == a) { z.merke(s, a, geaendert); return }

@@ -168,7 +168,7 @@ object OrtErinnerungen {
         val kennung = orte.keys.sorted().joinToString("|")
         val jetzt = System.currentTimeMillis()
         // Geänderte Minuten nach Ankunft gelten sofort, auch mitten im Aufenthalt.
-        weckerStellen(app)
+        weckerPlanen(app)
         if (eingerichtet == kennung && jetzt - eingerichtetUm < NEU_EINRICHTEN_MS) return
         // Nach einem Fehlschlag nicht jede Minute, sondern höchstens alle 10 Minuten erneut versuchen.
         if (fehlschlag == kennung && jetzt - fehlschlagUm < 10 * 60_000L) return
@@ -201,13 +201,12 @@ object OrtErinnerungen {
                     hinweisPflegen(app, grund)
                 }
         }.onFailure { eingerichtet = ""; Logbuch.fehler("Standort-Erinnerungen einrichten", it) }
-        weckerStellen(app)
     }
 
     /** Zustand von Orten ohne offene Erinnerung vergessen: nichts bleibt liegen. */
     private fun aufraeumen(app: Context, behalten: Set<String>) {
         val p = prefs(app)
-        val weg = p.all.keys.filter { k -> listOf("drin_", "draussen_", "versuche_", "ausgeloest_", "reg_").any { k.startsWith(it) } && k.substringAfter('_') !in behalten }
+        val weg = p.all.keys.filter { k -> listOf("drin_", "draussen_", "versuche_", "geprueft_", "betreten_", "ausgeloest_", "reg_").any { k.startsWith(it) } && k.substringAfter('_') !in behalten }
         if (weg.isNotEmpty()) p.edit().apply { weg.forEach { remove(it) } }.apply()
     }
 
@@ -228,7 +227,7 @@ object OrtErinnerungen {
                             Geofence.GEOFENCE_TRANSITION_ENTER -> orte.forEach { betreten(app, it) }
                             Geofence.GEOFENCE_TRANSITION_EXIT -> orte.forEach { verlassen(app, it) }
                         }
-                        weckerStellen(app)
+                        sperre.withLock { weckerStellen(app) }
                     }
                 }
             } catch (e: Exception) { Logbuch.fehler("Standort-Erinnerungen", e) } finally { fertig() }
@@ -243,15 +242,19 @@ object OrtErinnerungen {
         // Ort erst seit Kurzem überwacht und jede offene Erinnerung dort gerade erst scharf: Frank war beim Anlegen schon da.
         val frisch = jetzt - p.getLong("reg_$k", 0L) < NEU_REGISTRIERT_MS &&
             offene(app).mapNotNull { it.ort }.filter { schluessel(it) == k }.let { l -> l.isNotEmpty() && l.all { jetzt - it.scharfSeit < NEU_REGISTRIERT_MS + 60_000L } }
+        // Schon in diesem Aufenthalt ausgelöst (alle oder nur die mit kürzerer Verzögerung)?
+        val schonAusgeloest = p.getBoolean("ausgeloest_$k", false) || (drin > 0L && offene(app).any { it.ort != null && schluessel(it.ort) == k && it.ortAusgeloest >= drin })
         val e = p.edit()
         when {
             // Neu eingerichtet und schon da (Anlegen vor Ort): keine Ankunft, erst die nächste zählt.
-            (drin == 0L || draussen > 0L) && frisch -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", true)
-            // Erneutes Einrichten oder Flattern: derselbe Aufenthalt.
+            (drin == 0L || draussen > 0L) && frisch -> e.putLong("drin_$k", jetzt).putLong("betreten_$k", jetzt).putBoolean("ausgeloest_$k", true)
+            // Erneutes Einrichten: derselbe Aufenthalt.
             drin > 0L && draussen == 0L -> Unit
-            // Binnen 10 Minuten zurück: derselbe Aufenthalt, die gewählte Verzögerung zählt weiter ab der ersten Ankunft (Geofences flattern in Gebäuden).
-            drin > 0L && jetzt - draussen < FLATTERN_MS -> Unit
-            else -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0)
+            // Binnen 10 Minuten zurück nach einer Auslösung (Geofences flattern in Gebäuden): derselbe Aufenthalt, nichts löst doppelt aus;
+            // die noch wartenden prüfen ab jetzt neu (Randschutz und Wiederholungen ab dieser Rückkehr).
+            drin > 0L && schonAusgeloest && jetzt - draussen < FLATTERN_MS -> e.putLong("betreten_$k", jetzt).putLong("geprueft_$k", 0L)
+            // Sonst eine neue Ankunft: Vorbeifahren und kurz darauf Wiederkommen zählt ab dem Wiederkommen.
+            else -> e.putLong("drin_$k", jetzt).putLong("betreten_$k", jetzt).putBoolean("ausgeloest_$k", false).putLong("geprueft_$k", 0L)
         }
         e.putLong("draussen_$k", 0L).apply()
     }
@@ -266,14 +269,20 @@ object OrtErinnerungen {
     private suspend fun test(app: Context, id: String) {
         val o = Erinnerungen.eine(app, id)?.ort ?: run { Logbuch.system("Standort-Erinnerungen", "Test: keine Standort-Erinnerung mit dieser Kennung"); return }
         val k = schluessel(o)
-        sperre.withLock { prefs(app).edit().putLong("drin_$k", System.currentTimeMillis()).putLong("draussen_$k", 0L).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0).apply() }
+        sperre.withLock {
+            val jetzt = System.currentTimeMillis()
+            prefs(app).edit().putLong("drin_$k", jetzt).putLong("betreten_$k", jetzt).putLong("draussen_$k", 0L).putBoolean("ausgeloest_$k", false).putLong("geprueft_$k", 0L).apply()
+            weckerStellen(app)
+        }
         Logbuch.system("Standort-Erinnerungen", "Test: Ankunft gesetzt, Prüfung nach ${verzoegerungGueltig(o.verzoegerung)} Minuten")
-        weckerStellen(app)
     }
 
     // ------------------------------------------------------------------ Nach der gewählten Verzögerung prüfen
 
-    /** Wartende Orte mit dem Zeitpunkt der nächsten Prüfung: die kürzeste Verzögerung der dort noch nicht ausgelösten Erinnerungen, plus Wiederholungen. */
+    /**
+     * Wartende Orte mit dem Zeitpunkt der nächsten Prüfung. Jede noch nicht ausgelöste Erinnerung hat ihr eigenes Fenster: ab Ankunft plus ihrer Verzögerung
+     * (frühestens ab der letzten Rückkehr) bis zu [MAX_VERSUCHE] Prüfungen im Minutentakt. Eine kurze Verzögerung verbraucht so keine Versuche der längeren.
+     */
     private fun wartende(app: Context): Map<String, Long> {
         val p = prefs(app)
         val orte = offene(app).mapNotNull { it.ort }.groupBy { schluessel(it) }
@@ -282,11 +291,18 @@ object OrtErinnerungen {
             if (drin == 0L || p.getLong("draussen_$k", 0L) > 0L || p.getBoolean("ausgeloest_$k", false)) return@mapNotNull null
             val offen = liste.filter { it.scharfSeit < drin }
             if (offen.isEmpty()) return@mapNotNull null
-            val versuche = p.getInt("versuche_$k", 0)
-            if (versuche >= MAX_VERSUCHE) return@mapNotNull null
-            k to (drin + offen.minOf { verzoegerungMs(it) } + versuche * 60_000L)
+            val basis = maxOf(drin, p.getLong("betreten_$k", 0L))
+            val letzte = p.getLong("geprueft_$k", 0L)
+            offen.mapNotNull { o ->
+                val start = drin + verzoegerungMs(o)
+                val ende = maxOf(start, basis) + (MAX_VERSUCHE - 1) * 60_000L
+                when { letzte < start -> start; letzte + 60_000L <= ende -> letzte + 60_000L; else -> null }
+            }.minOrNull()?.let { k to it }
         }.toMap()
     }
+
+    /** Aus dem minütlichen Abgleich (auch Hauptthread): im Hintergrund und gesperrt, damit kein Betreten oder Prüfen dazwischenfunkt. */
+    private fun weckerPlanen(app: Context) { bereich.launch { runCatching { sperre.withLock { weckerStellen(app) } }.onFailure { Logbuch.fehler("Standort-Erinnerung Wecker", it) } } }
 
     private fun weckerStellen(app: Context) {
         val wecker = app.getSystemService(AlarmManager::class.java)
@@ -312,7 +328,7 @@ object OrtErinnerungen {
     private suspend fun pruefen(app: Context) {
         val jetzt = System.currentTimeMillis()
         val faellig = wartende(app).filterValues { it <= jetzt + 5_000L }.keys
-        if (faellig.isEmpty()) { weckerStellen(app); return }
+        if (faellig.isEmpty()) { sperre.withLock { weckerStellen(app) }; return }
         if (Geraet.istTablet || fehlendeFreigabe(app) != null) { Logbuch.system("Standort-Erinnerungen", "nicht geprüft: Standortfreigabe fehlt"); hinweisPflegen(app, fehlendeFreigabe(app)); return }
         val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:ort-erinnerung").apply { setReferenceCounted(false) }
         runCatching { wach.acquire(60_000L) }
@@ -326,31 +342,30 @@ object OrtErinnerungen {
                     val drin = p.getLong("drin_$k", 0L)
                     val l0 = fix?.let { lage(abstand(o.breite, o.laenge, it.latitude, it.longitude), if (it.hasAccuracy()) it.accuracy else 9_999f, System.currentTimeMillis() - it.time, o.radius) } ?: Lage.UNSICHER
                     // Kurz nach dem Betreten (0 Minuten: Prüfung am Rand des Umkreises) zählt „knapp draußen“ noch nicht als weg, sondern als erneut prüfen.
-                    val l = if (l0 == Lage.DRAUSSEN && System.currentTimeMillis() - drin < ANKUNFT_RAND_MS) Lage.UNSICHER else l0
+                    val l = if (l0 == Lage.DRAUSSEN && System.currentTimeMillis() - maxOf(drin, p.getLong("betreten_$k", 0L)) < ANKUNFT_RAND_MS) Lage.UNSICHER else l0
                     when (l) {
                         Lage.DRIN -> {
                             val ausgeloest = System.currentTimeMillis()
                             // Nur die, deren Verzögerung um ist; die mit längerer warten im selben Aufenthalt weiter.
                             val wartend = liste.filter { it.ort!!.scharfSeit < drin }
                             val jetztDran = wartend.filter { drin + verzoegerungMs(it.ort!!) <= ausgeloest + 5_000L }
-                            p.edit().putBoolean("ausgeloest_$k", jetztDran.size == wartend.size).putInt("versuche_$k", 0).apply()
+                            p.edit().putBoolean("ausgeloest_$k", jetztDran.size == wartend.size).putLong("geprueft_$k", ausgeloest).apply()
                             jetztDran.forEach { e ->
                                 Erinnerungen.aendere(app, e.id) { alt -> if (alt.erledigt != 0L || alt.ort == null) alt else alt.copy(ortAusgeloest = ausgeloest, ort = alt.ort.copy(scharfSeit = ausgeloest)) }
                                 Logbuch.system("Standort-Erinnerung ausgelöst", "${e.zeile} (bei ${o.name})")
                             }
                         }
                         // Sicher nicht (mehr) dort: dieser Aufenthalt zählt nicht; die Erinnerung bleibt für die nächste Ankunft offen.
-                        Lage.DRAUSSEN -> { p.edit().putLong("drin_$k", 0L).putLong("draussen_$k", 0L).putInt("versuche_$k", 0).apply(); Logbuch.system("Standort-Erinnerungen", "nicht ausgelöst: nicht mehr bei ${o.name}") }
+                        Lage.DRAUSSEN -> { p.edit().putLong("drin_$k", 0L).putLong("draussen_$k", 0L).putLong("betreten_$k", 0L).putLong("geprueft_$k", 0L).apply(); Logbuch.system("Standort-Erinnerungen", "nicht ausgelöst: nicht mehr bei ${o.name}") }
                         Lage.UNSICHER -> {
-                            val v = p.getInt("versuche_$k", 0) + 1
-                            p.edit().putInt("versuche_$k", v).apply()
-                            Logbuch.system("Standort-Erinnerungen", if (v >= MAX_VERSUCHE) "nicht ausgelöst: kein verlässlicher Standort bei ${o.name}" else "Standort noch unsicher, neuer Versuch in einer Minute")
+                            p.edit().putLong("geprueft_$k", System.currentTimeMillis()).commit()
+                            Logbuch.system("Standort-Erinnerungen", if (k !in wartende(app)) "nicht ausgelöst: kein verlässlicher Standort bei ${o.name}" else "Standort noch unsicher, neuer Versuch")
                         }
                     }
                 }
             }
         } finally { runCatching { if (wach.isHeld) wach.release() } }
-        weckerStellen(app)
+        sperre.withLock { weckerStellen(app) }
     }
 
     /** Frischer Standort über die Google-Ortung (hohe Genauigkeit), ersatzweise über Android selbst. Wird nicht gespeichert. */
