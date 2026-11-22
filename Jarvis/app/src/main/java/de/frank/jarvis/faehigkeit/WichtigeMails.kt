@@ -149,6 +149,8 @@ object WichtigeMails {
     @Volatile private var beantwortetGeprueft: Set<Long> = emptySet()
     /** Ein Schreiber zur Zeit für Bewertungsdateien (zweimal schnell getippt: sonst gewinnt die ältere oder die Datei geht verloren). */
     private val bewertungSperre = Mutex()
+    /** Getippte Bewertungen, deren Datei noch nicht geschrieben ist. */
+    private val offeneBewertungen = HashSet<Long>()
     @Volatile private var nochmalManuell = false
     @Volatile private var ohneGeprueftListe = false
 
@@ -171,8 +173,8 @@ object WichtigeMails {
             }
         }
         synchronized(urteile) {
-            val offen = urteile.filterValues { !it.has("w") }
-            urteile.clear(); urteile.putAll(offen); urteile.putAll(gelesen)
+            // Zusammenführen statt leeren: Urteile eines laufenden Abrufs, die noch nicht geschrieben sind, bleiben erhalten (Review 22.11.2026).
+            urteile.putAll(gelesen)
         }
     }
 
@@ -181,9 +183,10 @@ object WichtigeMails {
         bewOrdner(app).listFiles { f -> f.isFile && f.name.endsWith(".json") }?.forEach { f ->
             runCatching { gelesen[java.lang.Long.parseUnsignedLong(f.name.removeSuffix(".json"))] = JSONObject(f.readText()) }
         }
-        // Eine eben getippte, noch nicht geschriebene Bewertung (neuere Zeit) bleibt stehen.
+        // Nur eine eben getippte, noch nicht geschriebene Bewertung bleibt stehen; sonst gilt die Datei (Gewinner des Abgleichs).
         synchronized(bewertungen) {
-            val behalten = bewertungen.filter { (id, o) -> o.optLong("zeit") > (gelesen[id]?.optLong("zeit") ?: -1L) }
+            val offen = synchronized(offeneBewertungen) { offeneBewertungen.toSet() }
+            val behalten = bewertungen.filterKeys { it in offen }
             bewertungen.clear(); bewertungen.putAll(gelesen); bewertungen.putAll(behalten)
         }
     }
@@ -210,7 +213,8 @@ object WichtigeMails {
         val app = context.applicationContext
         laden(app)
         runCatching {
-            urteileEinlesen(app); bewertungenEinlesen(app)
+            if (mitAbruf) urteileEinlesen(app)
+            bewertungenEinlesen(app)
             val vorher = _stand.value
             _stand.update { neuBilden(it) }
             if (_stand.value != vorher) speichern(app)
@@ -335,7 +339,7 @@ object WichtigeMails {
         }.filter { it.bewertung == 0 && hoch.none { h -> h.thrId == it.thrId && h.empfangen >= it.empfangen } }
         val wichtig = (hoch + ohneDoppel).sortedByDescending { it.empfangen }.map { it.copy(wichtig = true, kurz = it.kurz.ifBlank { it.betreff }) }
         val ids = wichtig.map { it.msgId }.toSet()
-        return alt.copy(eintraege = wichtig, posteingang = pe.map { it.copy(wichtig = it.msgId in ids) }, ausgeblendet = alt.ausgeblendet.filter { it in ids }.toSet())
+        return alt.copy(eintraege = wichtig, posteingang = pe.map { it.copy(wichtig = it.msgId in ids) })
     }
 
     // ---- Bewerten und Lernen ----
@@ -365,6 +369,11 @@ object WichtigeMails {
      */
     fun bewerten(context: Context, msgId: Long, richtung: Int) {
         val app = context.applicationContext
+        // Nicht auf dem Haupt-Thread: Laden und Neubilden über den ganzen Posteingang (Review 22.11.2026).
+        bereich.launch { bewertenJetzt(app, msgId, richtung) }
+    }
+
+    private suspend fun bewertenJetzt(app: Context, msgId: Long, richtung: Int) {
         laden(app)
         val alt = synchronized(bewertungen) { bewertungen[msgId] }
         val neu = if ((alt?.optInt("r") ?: 0) == richtung) 0 else richtung
@@ -375,19 +384,19 @@ object WichtigeMails {
             o.put("w0", u.optBoolean("w"))
         }
         _stand.value.posteingang.firstOrNull { it.msgId == msgId }?.let { o.put("d", domain(it.absender)) }
+        synchronized(offeneBewertungen) { offeneBewertungen += msgId }
         synchronized(bewertungen) { bewertungen[msgId] = o }
         _stand.update { neuBilden(it) }
         Logbuch.system("E-Mail bewertet", when (neu) { 1 -> "wichtig"; -1 -> "unwichtig"; else -> "wieder automatisch" } + " · " + musterText(muster(o)))
-        bereich.launch {
-            bewertungSperre.withLock {
-                val aktuell = synchronized(bewertungen) { bewertungen[msgId]?.toString() } ?: return@withLock
-                runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(msgId) + ".json"), aktuell) }
-                    .onFailure { Logbuch.fehler("Wichtige E-Mails: Bewertung speichern", it) }
-            }
-            speichern(app)
-            de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
-            runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.MAIL_LERNEN), "E-Mail bewertet") }
+        bewertungSperre.withLock {
+            val aktuell = synchronized(bewertungen) { bewertungen[msgId]?.toString() }
+            if (aktuell != null) runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(msgId) + ".json"), aktuell) }
+                .onFailure { Logbuch.fehler("Wichtige E-Mails: Bewertung speichern", it) }
+            synchronized(offeneBewertungen) { offeneBewertungen -= msgId }
         }
+        speichern(app)
+        de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
+        runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.MAIL_LERNEN), "E-Mail bewertet") }
     }
 
     private fun aktiveBewertungen(): List<JSONObject> = synchronized(bewertungen) { bewertungen.values.filter { it.optInt("r") != 0 }.map { JSONObject(it.toString()) } }
@@ -429,19 +438,26 @@ object WichtigeMails {
         val liste = aktiveBewertungen()
         if (liste.isEmpty()) return "Frank hat noch keine E-Mail bewertet; die Wichtigkeit folgt nur der festen Einstufung."
         val fest = festeMuster(liste)
-        return buildString {
+        val zeilen = mutableListOf<String>()
+        buildString {
             append("Frank hat ${liste.size} E-Mails bewertet (${liste.count { it.optInt("r") == 1 }} wichtig, ${liste.count { it.optInt("r") == -1 }} unwichtig). ")
             append("Seine Bewertung geht der automatischen Einstufung derselben Mail vor; neue ähnliche Mails stuft Jarvis danach ein, feste Muster ab 2 übereinstimmenden Bewertungen.\n")
-            liste.filter { it.has("t") }.groupBy { muster(it) }.entries.sortedByDescending { it.value.size }.take(15).forEach { (k, g) ->
+            zeilen += toString().trim()
+        }
+        liste.filter { it.has("t") }.groupBy { muster(it) }.entries.sortedByDescending { it.value.size }.take(15).forEach { (k, g) ->
+            zeilen += buildString {
                 val h = g.count { it.optInt("r") == 1 }
                 append("- ").append(musterText(k)).append(": ")
                 if (h > 0) append("${h}× wichtig")
                 if (h > 0 && g.size - h > 0) append(", ")
                 if (g.size - h > 0) append("${g.size - h}× unwichtig")
                 fest[k]?.let { append(if (it) " (fest: wichtig)" else " (fest: unwichtig)") }
-                append('\n')
             }
-        }.trim().take(1_500)
+        }
+        // Nur ganze Zeilen bis 1 500 Zeichen: nie eine halbe Regel im Live-Gedächtnis.
+        val text = StringBuilder()
+        zeilen.forEach { z -> if (text.isEmpty() || text.length + 1 + z.length <= 1_500) { if (text.isNotEmpty()) text.append('\n'); text.append(z) } }
+        return text.toString()
     }
 
     // ---- Abruf ----
@@ -555,15 +571,18 @@ object WichtigeMails {
                         geprueft = if (neu != null && fehler == null) System.currentTimeMillis() else alt.geprueft,
                         fehler = fehler,
                         laeuft = false,
-                        ausgeblendet = ausgeblendet,
+                        // Nur nach einer Prüfung kürzen: Mails, die nicht mehr im Posteingang liegen, brauchen keine Ausblendung mehr.
+                        ausgeblendet = neu?.posteingang?.map { it.msgId }?.toSet()?.let { ids -> ausgeblendet.filter { it in ids }.toSet() } ?: ausgeblendet,
                     ),
                 )
             }
             val liste = _stand.value.eintraege
             speichern(app)
-            if (nochmal) { val m = nochmalManuell; nochmal = false; nochmalManuell = false; bereich.launch { runCatching { pruefen(app, manuell = m) } } }
             Logbuch.system("Wichtige E-Mails geprüft", "${liste.size} wichtig von ${_stand.value.posteingang.size}" + (fehler?.let { ", Fehler: $it" } ?: "") + if (manuell) ", manuell" else "")
             _stand.value
+        }.also {
+            // Erst nach dem Freigeben: ein Aktualisieren kurz vor Schluss geht sonst verloren (Review 22.11.2026).
+            if (nochmal) { val m = nochmalManuell; nochmal = false; nochmalManuell = false; bereich.launch { runCatching { pruefen(app, manuell = m) } } }
         }
     }
 
@@ -690,18 +709,27 @@ object WichtigeMails {
             }
         }
         // Bewertungen ohne Merkmale (vor der ersten Einstufung getippt): Merkmale aus dem Urteil nachtragen, damit sie fürs Lernen zählen.
-        val ohne = synchronized(bewertungen) { bewertungen.filter { (id, o) -> !o.has("t") && urteil(id) != null }.keys.toList() }
+        val ohne = synchronized(bewertungen) { bewertungen.filter { (id, o) -> !o.has("t") && urteil(id)?.has("t") == true }.keys.toList() }
         if (ohne.isNotEmpty()) {
             bewertungSperre.withLock {
                 ohne.forEach { id ->
                     val u = urteil(id) ?: return@forEach
                     val o = synchronized(bewertungen) { bewertungen[id]?.let { JSONObject(it.toString()) } } ?: return@forEach
+                    val zeit0 = o.optLong("zeit")
                     listOf("t", "z", "s", "h").forEach { k -> u.optString(k).takeIf { it.isNotBlank() }?.let { o.put(k, it) } }
                     betrag(u).takeIf { it > 0.0 }?.let { o.put("b", it) }
                     o.put("w0", u.optBoolean("w"))
                     koepfe.firstOrNull { it.msgId == id }?.let { o.put("d", domain(it.von)) }
-                    synchronized(bewertungen) { bewertungen[id] = o }
-                    runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(id) + ".json"), o.toString()) }
+                    // Nur zurückschreiben, wenn Frank inzwischen nicht neu getippt hat (Review 22.11.2026).
+                    val gleich = synchronized(bewertungen) { (bewertungen[id]?.optLong("zeit") == zeit0).also { if (it) bewertungen[id] = o } }
+                    if (!gleich) return@forEach
+                    // Alte Änderungszeit behalten: Das Nachtragen ist keine neue Bewertung und darf im Abgleich keine neuere vom anderen Gerät schlagen.
+                    runCatching {
+                        val datei = File(bewOrdner(app), java.lang.Long.toUnsignedString(id) + ".json")
+                        val mtime = datei.lastModified()
+                        atomarSchreiben(datei, o.toString())
+                        if (mtime > 0L) datei.setLastModified(mtime)
+                    }
                 }
             }
             de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
@@ -723,15 +751,16 @@ object WichtigeMails {
                 ?: throw IllegalStateException("Gmail-Ordner „Alle Nachrichten“ nicht gefunden; beantwortete E-Mails lassen sich nicht erkennen.")
             alleOrdner.open(Folder.READ_ONLY)
             try {
-                wichtig.filter { k ->
-                    if (k.n.isSet(Flags.Flag.ANSWERED)) return@filter true
-                    if (ich.isEmpty()) return@filter false
-                    val eigene = alleOrdner.search(AndTerm(com.sun.mail.gimap.GmailThrIdTerm(k.thrId), FromStringTerm(ich)))
-                    if (eigene.isEmpty()) return@filter false
-                    alleOrdner.fetch(eigene, FetchProfile().apply { add(FetchProfile.Item.ENVELOPE) })
-                    // FROM sucht am Server nach Teiltext: nur genau Franks Adresse zählt.
-                    eigene.any { m -> adresseVon(m) == ich && ((m.receivedDate ?: m.sentDate)?.time ?: 0L) > k.am }
-                }.map { it.msgId }.toSet()
+                // Eine Suche je Unterhaltung, nicht je Mail (Review 22.11.2026).
+                val eigeneZeiten = if (ich.isEmpty()) emptyMap() else wichtig.map { it.thrId }.distinct().associateWith { thr ->
+                    val eigene = alleOrdner.search(AndTerm(com.sun.mail.gimap.GmailThrIdTerm(thr), FromStringTerm(ich)))
+                    if (eigene.isEmpty()) emptyList() else {
+                        alleOrdner.fetch(eigene, FetchProfile().apply { add(FetchProfile.Item.ENVELOPE) })
+                        // FROM sucht am Server nach Teiltext: nur genau Franks Adresse zählt.
+                        eigene.filter { m -> adresseVon(m) == ich }.map { m -> (m.receivedDate ?: m.sentDate)?.time ?: 0L }
+                    }
+                }
+                wichtig.filter { k -> k.n.isSet(Flags.Flag.ANSWERED) || eigeneZeiten[k.thrId].orEmpty().any { it > k.am } }.map { it.msgId }.toSet()
             } finally { runCatching { alleOrdner.close(false) } }
         }
         val posteingang = koepfe.sortedByDescending { it.am }.map { k ->

@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -131,7 +132,11 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
         }) {
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (sichtbar.isEmpty()) Text(
-                    if (s.bestaetigt) "Hier steht nichts, was du prüfen oder beantworten musst." else s.fehler ?: "Noch nicht geprüft.",
+                    when {
+                        s.eintraege.isNotEmpty() -> "Geöffnete wichtige E-Mails erscheinen nach dem Aktualisieren wieder, solange sie offen sind."
+                        s.bestaetigt -> "Hier steht nichts, was du prüfen oder beantworten musst."
+                        else -> s.fehler ?: "Noch nicht geprüft."
+                    },
                     color = if (s.bestaetigt) f.textLeise else f.gefahr, fontSize = 14.sp,
                 )
                 sichtbar.forEach { e ->
@@ -228,14 +233,15 @@ private fun DickerPfeil(hoch: Boolean, farbe: Color, voll: Boolean, modifier: Mo
  * für TalkBack „ausgewählt“. Sonst nur der leere Umriss. [herkunft] sagt TalkBack, ob Frank oder Jarvis die Einstufung gesetzt hat.
  */
 @Composable
-private fun PfeilFeld(modifier: Modifier, hoch: Boolean, aktiv: Boolean, herkunft: String, aktion: () -> Unit) {
+private fun PfeilFeld(modifier: Modifier, hoch: Boolean, aktiv: Boolean, herkunft: String, gesperrt: Boolean = false, aktion: () -> Unit) {
     val farbe = if (hoch) PFEIL_GRUEN else PFEIL_ROT
     val name = if (hoch) "Als wichtig markieren" else "Als unwichtig markieren"
     Box(
         modifier.fillMaxWidth().heightIn(min = 48.dp)
             .background(if (aktiv) farbe.copy(alpha = 0.18f) else Color.Transparent)
-            .antippen(rolle = Role.RadioButton, aktion = aktion)
+            .then(if (gesperrt) Modifier else Modifier.antippen(rolle = Role.RadioButton, aktion = aktion))
             .semantics(mergeDescendants = true) {
+                if (gesperrt) disabled()
                 contentDescription = name
                 selected = aktiv
                 stateDescription = if (aktiv) (if (hoch) "wichtig, $herkunft" else "unwichtig, $herkunft") else "nicht gewählt"
@@ -281,10 +287,11 @@ private fun AlleEintrag(e: WichtigeMails.Eintrag, bewerten: (Int) -> Unit, oeffn
             // Rot nur, wenn Frank sie als unwichtig markiert hat; sonst sind beide leer. Nie beide zugleich.
             val gruen = e.bewertung == 1 || (e.bewertung == 0 && e.wichtig)
             val rot = e.bewertung == -1
-            PfeilFeld(Modifier.weight(1f), hoch = true, aktiv = gruen, herkunft = if (e.bewertung == 1) "von dir markiert" else "von Jarvis erkannt") {
-                // Ein leuchtender Pfeil hebt nur Franks eigene Markierung auf; leuchtet er, weil Jarvis die Mail als wichtig erkannt hat, passiert nichts.
-                if (!(e.bewertung == 0 && e.wichtig)) bewerten(1)
-            }
+            // Leuchtet Grün, weil Jarvis die Mail als wichtig erkannt hat, ist der Pfeil gesperrt (TalkBack: „deaktiviert“), statt still nichts zu tun.
+            PfeilFeld(
+                Modifier.weight(1f), hoch = true, aktiv = gruen, herkunft = if (e.bewertung == 1) "von dir markiert" else "von Jarvis erkannt",
+                gesperrt = e.bewertung == 0 && e.wichtig,
+            ) { bewerten(1) }
             Box(Modifier.fillMaxWidth().height(1.dp).background(f.rand))
             PfeilFeld(Modifier.weight(1f), hoch = false, aktiv = rot, herkunft = "von dir markiert") { bewerten(-1) }
         }
