@@ -94,6 +94,9 @@ class PhrasenErkenner(
     /** Verstärkung vor dem Spotter: leise und entfernte Rufe in den Pegelbereich bringen, den das Modell kennt. */
     var verstaerkung = 1f
         private set
+
+    /** Zusätzliche Handy-Verstärkung fürs Weckwort (Regler, 1 bis 8): hebt Ziel und Höchstwert der eigenen Verstärkung an. */
+    @Volatile var zusatz = 1f
     private val zufall = java.util.Random()
 
     /** Zielverstärkung für den Rauschboden: im ruhigen Raum bis [MAX_VERSTAERKUNG], im Lärm 1. */
@@ -101,8 +104,8 @@ class PhrasenErkenner(
     // Verstärkung. Bisher galt er als Lärm (1), und in jeder Anker-Stille fiel die Verstärkung für den nächsten leisen Ruf auf 1.
     private fun ziel(rauschboden: Float) = when {
         rauschboden < 0f -> 1f // unbekannt
-        rauschboden < 1f -> MAX_VERSTAERKUNG
-        else -> (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG)
+        rauschboden < 1f -> MAX_VERSTAERKUNG * zusatz
+        else -> (BODEN_ZIEL / rauschboden * zusatz).coerceIn(1f, MAX_VERSTAERKUNG * zusatz)
     }
 
     /**
@@ -231,6 +234,14 @@ object PhrasenTokens {
         var formen = listOf(emptyList<String>())
         for (w in woerter) formen = formen.flatMap { f -> (listOf(w) + gleichKlingend[w].orEmpty()).map { f + it } }
         val alle = formen.map { it.joinToString(" ") }.toMutableList()
+        // Schnell gesprochen verschmelzen gleiche Laute an der Wortgrenze („Jarvis Smartphone“ → „Jarvismartphone“): Variante mit
+        // nur einem davon, damit zwei oder drei Wörter auch in einem Zug erkannt werden.
+        for (i in 0 until woerter.size - 1) {
+            val a = woerter[i]; val b = woerter[i + 1]
+            if (a.length > 2 && b.isNotEmpty() && a.last() == b.first()) {
+                alle += woerter.toMutableList().also { it[i] = a.dropLast(1) }.joinToString(" ")
+            }
+        }
         if (woerter.size >= 3 && woerter.first() in auftakt) alle += woerter.drop(1).joinToString(" ")
         val ohneSelbst = alle.distinct().filter { it != woerter.joinToString(" ") }
         // Erst die ohne Auftakt und die mit nur einer Abweichung, dann der Rest.

@@ -61,6 +61,13 @@ object Stimmprofil {
      */
     @Volatile var schwellenAbzug = 0f
 
+    /**
+     * Boden der Stimm-Schwelle für kurze Einzelrufe (höchstens [KURZ_RUF_S] Sprache im Ton), bei Empfindlichkeit „Sehr hoch“
+     * [STIMM_BODEN_KURZ], sonst [STIMM_BODEN]. Im Protokoll (14.10. bis 22.11.2026) lagen Franks leise und schnelle Rufe bei
+     * 0,26 bis 0,44 und kurzer Sprache, Fernseher und Fremde bei 0,11 bis 0,24 mit meist über 2 s durchgehender Sprache.
+     */
+    @Volatile var kurzerRufBoden = STIMM_BODEN
+
     /** Ist das Franks Stimme? null = keine Stimmerkennung angelernt oder zu wenig Sprache in der Aufnahme. */
     fun pruefeStimme(fingerabdruck: FloatArray?, dauer: Float? = null): StimmPruefung? {
         val s = stimmen
@@ -68,7 +75,8 @@ object Stimmprofil {
         val aehnlich = stimmWert(fingerabdruck, s)
         // Kurze Rufe (schnell gesprochen, unter 1,2 s Sprache) geben CAM++ wenig Stimme: bis zu 0,04 Spielraum.
         val kurz = dauer?.let { (1.2f - it).coerceIn(0f, 0.4f) * 0.1f } ?: 0f
-        val schwelle = maxOf(stimmSchwelle(s) - schwellenAbzug - kurz, STIMM_BODEN)
+        val boden = if (dauer != null && dauer <= KURZ_RUF_S) kurzerRufBoden else STIMM_BODEN
+        val schwelle = maxOf(stimmSchwelle(s) - schwellenAbzug - kurz, boden)
         val ok = aehnlich >= schwelle
         _stand.value = _stand.value.copy(letzteStimme = aehnlich, stimmSchwelle = schwelle)
         Log.i(TAG, "Stimme ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)}, Sprache ${dauer?.let { "%.2f s".format(it) }} → ${if (ok) "Frank" else "fremde Stimme"}")
@@ -104,6 +112,10 @@ object Stimmprofil {
      * ähnlichsten Einzelproben liegt für Fremde etwas höher, daher 0,45. Gilt auch für den Nachdruck.
      */
     const val STIMM_BODEN = 0.45f
+    /** Boden für kurze Einzelrufe bei „Sehr hoch“: Im Nachspielen des Protokolls ließ er 7 abgewiesene Rufe von Frank durch, keinen fremden. */
+    const val STIMM_BODEN_KURZ = 0.38f
+    /** Bis so viele Sekunden Sprache im Ton gilt ein Ruf als kurzer Einzelruf (Frank meist 0,9 bis 1,6 s, Fernseher über 2 s). */
+    const val KURZ_RUF_S = 1.6f
 
     private fun mittel(s: List<FloatArray>): FloatArray = FloatArray(s.first().size) { k -> s.sumOf { it[k].toDouble() }.toFloat() / s.size }
 

@@ -187,6 +187,7 @@ class WeckwortDienst : Service() {
         phrasenVarianten = if (phrasenTokens != null) PhrasenTokens.varianten(this, e.weckwortPhrase) else emptyList()
         phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
         Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
+        Stimmprofil.kurzerRufBoden = if (e.weckwortEmpfindlichkeit == "sehr_hoch") Stimmprofil.STIMM_BODEN_KURZ else Stimmprofil.STIMM_BODEN
         Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
     }
 
@@ -390,12 +391,13 @@ class WeckwortDienst : Service() {
                 }
                 return ton
             }
-            /** Ein früherer Block aus dem Ring (1 = der Block vor dem gerade gelesenen), verstärkt wie beim Lesen. */
+            // Handy-Verstärkung für das „Hey Jarvis“-Modell: gehalten (fällt bei lauter Spitze, steigt langsam), die Phrase verstärkt selbst.
+            val halten = GehalteneVerstaerkung()
+            /** Ein früherer Block aus dem Ring (1 = der Block vor dem gerade gelesenen), verstärkt wie beim Lesen (am Handy roh). */
             fun frueherBlock(zurueck: Int): ShortArray {
                 val start = ringPos - (zurueck + 1) * WeckwortErkenner.BLOCK
                 val b = ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
                 if (ueberAnker && verstaerkung > 1f) verstaerken(b, verstaerkung)
-                else if (!ueberAnker && verstaerkung > 1f) linearVerstaerken(b, verstaerkung)
                 return b
             }
             // Lief das „Hey Jarvis“-Modell im letzten Block? Springt es wieder an, fängt es frisch an.
@@ -502,7 +504,7 @@ class WeckwortDienst : Service() {
                     uebersprungen++
                     inFolge = 0
                     phr?.ruhen(boden)
-                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung?.times(handyFaktor), ueberAnker, false)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung, ueberAnker, false)
                     // Kein Hintergrund-Lernen in der Stille: Das Modell ruht, seine Merkmale stammen vom letzten Block davor und hätten
                     // über eine lange Stille (Nacht) den Hintergrund ganz auf diesen einen Vektor gezogen.
                     continue
@@ -518,7 +520,8 @@ class WeckwortDienst : Service() {
                     mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
                     else -> phr.einstellen(phrasenSchwelle, breit = false)
                 }
-                if (handyFaktor > 1f) linearVerstaerken(block, handyFaktor)
+                // Die Phrase bekommt den rohen Ton und hebt ihn in ihrer eigenen, gehaltenen Verstärkung um den Regler mit an.
+                phr?.zusatz = handyFaktor
                 var nachgeholt = false
                 // Nach gut 1 s Stille fängt der Spotter ebenfalls frisch an (sherpa-onnx 1.13.8 setzt seinen Strom nach 1,5 s Stille
                 // selbst zurück und verliert dabei den Anfang des nächsten Rufs, Almanach §16). Im Mitschnitt holte das einen
@@ -535,17 +538,17 @@ class WeckwortDienst : Service() {
                     // nur, was es noch nicht gehört hat.
                     for (k in (if (phr != null) minOf(NACHHOLEN, seitUrteil - 1) else minOf(uebersprungen, NACHHOLEN)) downTo 1) {
                         val frueher = frueherBlock(k)
-                        if (brauchtLaut && k <= uebersprungen) erk.bewerte(frueher)
+                        if (brauchtLaut && k <= uebersprungen) erk.bewerte(halten.anwenden(frueher, handyFaktor, nachfuehren = false))
                         // Ein Treffer schon im nachgeholten Ton zählt: Der Spotter hat danach zurückgesetzt und meldet ihn nicht noch einmal.
                         if (phr?.erkannt(frueher, boden) == true) nachgeholt = true
                     }
                     uebersprungen = 0
                 }
-                val wert = if (brauchtLaut) erk.bewerte(block) else 0f
+                val wert = if (brauchtLaut) erk.bewerte(halten.anwenden(block, handyFaktor)) else 0f
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
                     val spotterTreffer = nachgeholt || phr.erkannt(block, boden)
-                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung * handyFaktor, ueberAnker, spotterTreffer, nachgeholtBloecke)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung, ueberAnker, spotterTreffer, nachgeholtBloecke)
                     if (!spotterTreffer) {
                         if (merkmale != null && wert < 0.1f && !ueberAnker && handyFaktor <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
@@ -595,8 +598,9 @@ class WeckwortDienst : Service() {
                 val stimme = if (mitStimme) fingerabdruck().let { Stimmprofil.pruefeStimme(it, spr?.letzteDauer) } else null
                 // Nachdruck: Zwei knappe Abweisungen kurz hintereinander sind Frank, der es noch einmal sagt (schnell,
                 // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
-                // Nie unter [NACHDRUCK_MIN]: Darunter lässt CAM++ fremde Stimmen durch (siehe Stimmprofil).
-                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= maxOf(stimme.schwelle - NACHDRUCK_SPIEL, NACHDRUCK_MIN)
+                // Bis 1.8.902 war das Fenster leer (Schwelle = Boden 0,45 = Untergrenze des Nachdrucks): Kein Ruf zählte je als knapp.
+                // Jetzt zählt ein kurzer Einzelruf ab [NACHDRUCK_UNTEN]; Fernseher und Fremde reden meist länger am Stück.
+                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= NACHDRUCK_UNTEN && (stimme.dauer ?: Float.MAX_VALUE) <= Stimmprofil.KURZ_RUF_S
                 val jetzt = SystemClock.elapsedRealtime()
                 // Mindestabstand: Sonst urteilt das gleitende „Hey Jarvis“-Fenster nach dem Abklingen über denselben Ruf noch einmal.
                 val nachdruck = knapp && jetzt - knappUm in NACHDRUCK_ABSTAND_MS..NACHDRUCK_MS
@@ -670,18 +674,6 @@ class WeckwortDienst : Service() {
             val begrenzt = if (betrag <= KNIE) betrag else KNIE + (32_767f - KNIE) * (1f - kotlin.math.exp(-(betrag - KNIE) / (32_767f - KNIE)))
             block[i] = (if (y < 0) -begrenzt else begrenzt).toInt().coerceIn(-32_767, 32_767).toShort()
         }
-    }
-
-    /**
-     * Hebt einen Block linear um bis zu [faktor] an, höchstens bis 90 % Vollaussteuerung der lautesten Stelle: ohne Begrenzer, damit
-     * normal laute Rufe bei hoher Handy-Verstärkung nicht verzerren (das senkte die Treffer von Modell und Spotter).
-     */
-    private fun linearVerstaerken(block: ShortArray, faktor: Float) {
-        var spitze = 0
-        for (w in block) spitze = maxOf(spitze, kotlin.math.abs(w.toInt()))
-        val f = if (spitze > 0) minOf(faktor, TON_SPITZE * 32_767f / spitze) else faktor
-        if (f <= 1f) return
-        for (i in block.indices) block[i] = (block[i] * f).toInt().coerceIn(-32_767, 32_767).toShort()
     }
 
     /** Effektivwert eines Blocks in 16-Bit-Werten (für den Stille-Filter). */
@@ -858,16 +850,17 @@ class WeckwortDienst : Service() {
             val e = Einstellungen.get(context)
             Weckwort.schwelle = e.weckwortSchwelle
             Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
+            Stimmprofil.kurzerRufBoden = if (e.weckwortEmpfindlichkeit == "sehr_hoch") Stimmprofil.STIMM_BODEN_KURZ else Stimmprofil.STIMM_BODEN
             if (e.weckwortArt == "phrase") neuLaden(context)
         }
         /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
         private const val VAD_STIMME = 0.5f
         private const val VAD_MASKE = 0.3f
         /** Nachdruck: knapp heißt höchstens so weit unter der Stimm-Schwelle, und der zweite Ruf binnen dieser Zeit. */
-        private const val NACHDRUCK_SPIEL = 0.08f
         private const val NACHDRUCK_MS = 10_000L
         private const val NACHDRUCK_ABSTAND_MS = 1_500L
-        private const val NACHDRUCK_MIN = Stimmprofil.STIMM_BODEN
+        /** Untergrenze für einen knappen Ruf: Franks wiederholte leise Rufe lagen ab 0,26, Fremde bis 0,24 (Protokoll bis 22.11.2026). */
+        private const val NACHDRUCK_UNTEN = 0.25f
         /** Erst ab diesem Rauschboden (16 Bit, etwa -47 dBFS) ist es Lärm und Silero entscheidet; im ruhigen Raum schlafen die Modelle wie bisher. */
         private const val LAERM_BODEN = 150f
         /**
@@ -993,5 +986,34 @@ class WeckwortDienst : Service() {
             finish()
             overridePendingTransition(0, 0)
         }
+    }
+}
+
+/**
+ * Handy-Verstärkung fürs Weckwort-Modell: fällt bei einer lauten Spitze sofort auf das, was ohne Übersteuern geht, und steigt
+ * danach langsam (gut 2 s) zum Regler zurück. Anders als eine Normierung je Block bleibt so der Lautstärkeverlauf eines Rufs
+ * erhalten, und es entstehen keine Sprünge an den Blockgrenzen.
+ */
+private class GehalteneVerstaerkung {
+    private var g = -1f
+    private var aus = ShortArray(WeckwortErkenner.BLOCK)
+
+    /** Liefert den verstärkten Block (eigener Puffer, gilt bis zum nächsten Aufruf) oder bei [ziel] ≤ 1 den Block selbst. */
+    fun anwenden(block: ShortArray, ziel: Float, nachfuehren: Boolean = true): ShortArray {
+        if (ziel <= 1f) { g = -1f; return block }
+        if (g < 0f || g > ziel) g = ziel
+        var spitze = 0
+        for (w in block) spitze = maxOf(spitze, kotlin.math.abs(w.toInt()))
+        var f = if (nachfuehren) g + (ziel - g) * ANSTIEG else g
+        if (spitze > 0 && spitze * f > GRENZE) f = maxOf(1f, GRENZE / spitze)
+        if (nachfuehren) g = f
+        if (aus.size != block.size) aus = ShortArray(block.size)
+        for (i in block.indices) aus[i] = (block[i] * f).toInt().coerceIn(-32_767, 32_767).toShort()
+        return aus
+    }
+
+    private companion object {
+        const val GRENZE = 0.9f * 32_767f
+        const val ANSTIEG = 0.03f
     }
 }
