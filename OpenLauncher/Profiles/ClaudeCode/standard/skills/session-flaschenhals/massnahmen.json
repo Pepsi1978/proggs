@@ -48,7 +48,7 @@
       "id": "M42",
       "titel": "Bump-Wächter: Fehlalarme (Bump im selben Befehl, eintrag.py, committeter Bump, git pull vor dem Bau)",
       "datum": "2026-11-12T11:14",
-      "status": "aktiv",
+      "status": {"mac": "wirkt", "windows": "aktiv"},
       "zusammengelegt": [
         {
           "id": "M3",
@@ -488,7 +488,7 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre. Lesen der Skripte (cat/grep) zählt seit 19.11.2026 nicht mehr (Treffer im Quelltext).",
       "ruecknahme": "In beiden Skripten die eigner-Zeilen entfernen (rm -rf darf bleiben).",
       "kosten": "kein Dauerkontext, ein adb-cat je Warterunde",
-      "status": "aktiv"
+      "status": {"mac": "wirkt", "windows": "aktiv"}
     },
     {
       "id": "M28",
@@ -629,7 +629,7 @@
       "pruefung": "Nach 10 Sitzungen: keine 10-min-Läufe mit Warteschleifen; Fehlalarme (Blocks ohne echte Schleife) prüfen",
       "ruecknahme": "warte_schleife-Aufruf im Hook entfernen",
       "kosten": "kein Kontext",
-      "status": "aktiv"
+      "status": {"mac": "wirkt", "windows": "aktiv"}
     },
     {
       "id": "M35",
