@@ -23,9 +23,9 @@ object EndeTon {
     // Zwei lange, klar getrennte Töne (Franks Wunsch): erst D3, dann eine None tiefer C2, deutlich tiefer als der erste.
     private const val HOCH_HZ = 147.0     // D3
     private const val TIEF_HZ = 65.4      // C2
-    private const val HOCH_MS = 300
-    private const val PAUSE_MS = 90
-    private const val TIEF_MS = 480
+    private const val HOCH_MS = 240
+    private const val PAUSE_MS = 70
+    private const val TIEF_MS = 380
     private const val RAMPE_MS = 25
     /** Lautstärke des ganzen Endsignals: 45 Prozent (Franks Wunsch). */
     private const val PEGEL = 0.45
