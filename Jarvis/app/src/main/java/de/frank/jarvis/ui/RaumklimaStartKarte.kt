@@ -117,7 +117,7 @@ fun RaumklimaStartKarte(griff: Modifier = Modifier) {
                 // Offline (z. B. das Auto außer Reichweite des Hubs) ist normal: leise statt rot.
                 if (problem.isNotEmpty()) Text(problem.replaceFirstChar { it.uppercase() }, color = if (z.optBoolean("offline")) f.textLeise else f.gefahr, fontSize = 14.sp, modifier = Modifier.weight(2f))
                 else Text(
-                    // Vorn die echte Messzeit, nie die Abrufzeit (Frank, 21.11.2026), dann die Herkunft: nichts = SwitchBot-Cloud, „Mac“ = Mac zu Hause, „BL“ = Handy direkt.
+                    // Vorn die echte Messzeit, nie die Abrufzeit (Frank, 21.11.2026), dann die Herkunft kurz, damit „34 %“ in einer Zeile bleibt (Frank, 22.11.2026): „M“ = Mac zu Hause, „C“ = SwitchBot-Cloud, „BL“ = Handy direkt.
                     messzeit(w.optLong("gemessen")) + herkunft(w.optString("quelle")) +
                     if (co2 != null) "$co2 ppm · ${co2Stufe(co2)}"
                     else String.format(Locale.GERMANY, "%.1f °C · %.0f %%", w.optDouble("temperatur_c"), w.optDouble("luftfeuchtigkeit_prozent")),
@@ -179,9 +179,9 @@ private fun Co2Skala(ppm: Int) {
 }
 
 private fun herkunft(quelle: String): String = when {
-    quelle.startsWith("über den Mac") -> "Mac · "
+    quelle.startsWith("über den Mac") -> "M · "
     quelle.startsWith("direkt per Bluetooth") -> "BL · "
-    else -> ""
+    else -> "C · "
 }
 
 /** Messzeit als „00:27 Uhr · “, von einem anderen Tag mit Datum „20.11. 00:27 Uhr · “; ohne Zeit nichts. */
