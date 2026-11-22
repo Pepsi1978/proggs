@@ -52,7 +52,7 @@ object OrtErinnerungen {
     private const val MAX_VERSUCHE = 10
     private const val FIX_ALTER_MS = 90_000L
     private const val FIX_GENAUIGKEIT_M = 100f
-    private const val NEU_REGISTRIERT_MS = 60_000L
+    private const val NEU_REGISTRIERT_MS = 4 * 60_000L
     private const val NEU_EINRICHTEN_MS = 60 * 60_000L
     private const val PREFS = "ort_erinnerungen"
     const val AKTION_PRUEFEN = "de.frank.jarvis.ORT_ERINNERUNG_PRUEFEN"
@@ -65,6 +65,8 @@ object OrtErinnerungen {
     private val sperre = Mutex()
     @Volatile private var eingerichtet = ""
     @Volatile private var eingerichtetUm = 0L
+    @Volatile private var fehlschlag = ""
+    @Volatile private var fehlschlagUm = 0L
 
     // ------------------------------------------------------------------ Ort auflösen (beim Anlegen)
 
@@ -88,7 +90,8 @@ object OrtErinnerungen {
                 else -> "Zuhause"
             }
         } else roh
-        val adresse = benannt?.takeIf { it.isNotBlank() } ?: roh
+        if (benannt != null && benannt.isBlank()) return@withContext Aufloesung.Fehlt("Für $name ist in Jarvis keine Adresse hinterlegt (Einstellungen, Pünktlich losfahren). Frag Frank nach der Adresse.")
+        val adresse = benannt ?: roh
         val treffer = try { android.location.Geocoder(context, Locale.GERMANY).getFromLocationName(adresse, 5).orEmpty() }
             catch (e: Exception) { return@withContext Aufloesung.Fehlt("Die Adresse ließ sich gerade nicht auflösen (kein Netz?). Nichts gespeichert; bitte gleich noch einmal.") }
         if (treffer.isEmpty()) return@withContext Aufloesung.Fehlt("Zu „$adresse“ findet Jarvis keinen Ort. Frag Frank nach Straße, Hausnummer und Ort.")
@@ -113,6 +116,8 @@ object OrtErinnerungen {
     /** null = alles da; sonst ein verständlicher Satz, was fehlt. */
     fun fehlendeFreigabe(context: Context): String? = when {
         !Standort.erlaubt(context) -> "Jarvis darf den Standort nicht verwenden. Standort-Erinnerungen lösen erst aus, wenn du in den App-Infos von Jarvis unter Berechtigungen, Standort „Immer zulassen“ wählst."
+        androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED ->
+            "Jarvis kennt nur deinen ungefähren Standort. Damit Standort-Erinnerungen auslösen, schalte in den App-Infos von Jarvis unter Berechtigungen, Standort „Genauen Standort verwenden“ ein und wähle „Immer zulassen“."
         !Standort.immerErlaubt(context) -> "Jarvis darf den Standort nur bei geöffneter App verwenden. Damit Standort-Erinnerungen auch bei gesperrtem Handy auslösen, wähle in den App-Infos von Jarvis unter Berechtigungen, Standort „Immer zulassen“."
         !ortungAn(context) -> "Die Standortermittlung des Handys ist ausgeschaltet. Standort-Erinnerungen lösen erst wieder aus, wenn du den Standort in den Schnelleinstellungen einschaltest."
         else -> null
@@ -140,15 +145,17 @@ object OrtErinnerungen {
         if (Geraet.istTablet) return
         val orte = offene(app).mapNotNull { it.ort }.associateBy { schluessel(it) }
         val fehlt = fehlendeFreigabe(app)
-        hinweisPflegen(app, if (orte.isEmpty()) null else fehlt)
         val p = prefs(app)
+        // Ein Einrichtungsfehler bleibt sichtbar, bis eine Einrichtung gelingt; nicht jede Minute neu melden.
+        hinweisPflegen(app, if (orte.isEmpty()) null else fehlt ?: p.getString("fehler", "").orEmpty().ifEmpty { null })
         if (orte.isEmpty() || fehlt != null) {
             if (eingerichtet.isNotEmpty() || p.getString("eingerichtet", "").orEmpty().isNotEmpty()) {
                 runCatching { LocationServices.getGeofencingClient(app).removeGeofences(umkreisAbsicht(app)) }
                 p.edit().putString("eingerichtet", "").apply()
                 eingerichtet = ""
             }
-            aufraeumen(app, orte.keys)
+            // Ohne Umkreis kommt kein Verlassen an: alter Aufenthaltsstand gilt nicht mehr, die nächste Ankunft ist neu.
+            aufraeumen(app, emptySet())
             if (orte.isEmpty()) runCatching { app.getSystemService(AlarmManager::class.java).cancel(weckerAbsicht(app)) }
             return
         }
@@ -156,12 +163,14 @@ object OrtErinnerungen {
         val kennung = orte.keys.sorted().joinToString("|")
         val jetzt = System.currentTimeMillis()
         if (eingerichtet == kennung && jetzt - eingerichtetUm < NEU_EINRICHTEN_MS) return
-        // Neu bekannte Orte: Ein sofortiges „Betreten“ heißt dann „war schon da“, keine Ankunft.
-        val bekannt = p.getStringSet("bekannt", emptySet()).orEmpty()
+        // Nach einem Fehlschlag nicht jede Minute, sondern höchstens alle 10 Minuten erneut versuchen.
+        if (fehlschlag == kennung && jetzt - fehlschlagUm < 10 * 60_000L) return
+        // Erste Einrichtung eines Orts merken: Ein „Betreten“ kurz danach bei frisch angelegter Erinnerung heißt „war schon da“.
         val e = p.edit()
-        orte.keys.filter { it !in bekannt }.forEach { e.putLong("neu_$it", jetzt) }
-        e.putStringSet("bekannt", orte.keys.toSet()).apply()
-        val anfrage = GeofencingRequest.Builder().setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER).apply {
+        orte.keys.filter { !p.contains("reg_$it") }.forEach { e.putLong("reg_$it", jetzt) }
+        e.apply()
+        // Auch „draußen“ beim Einrichten melden: Nach Neustart oder Ortung aus kam kein Verlassen an, der alte Aufenthalt endet so.
+        val anfrage = GeofencingRequest.Builder().setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or GeofencingRequest.INITIAL_TRIGGER_EXIT).apply {
             orte.forEach { (k, o) ->
                 addGeofence(Geofence.Builder().setRequestId(k).setCircularRegion(o.breite, o.laenge, o.radius.toFloat())
                     .setExpirationDuration(Geofence.NEVER_EXPIRE).setNotificationResponsiveness(30_000)
@@ -172,13 +181,17 @@ object OrtErinnerungen {
         eingerichtetUm = jetzt
         runCatching {
             LocationServices.getGeofencingClient(app).addGeofences(anfrage, umkreisAbsicht(app))
-                .addOnSuccessListener { p.edit().putString("eingerichtet", kennung).remove("fehler").apply(); hinweisPflegen(app, null) }
+                .addOnSuccessListener { fehlschlag = ""; p.edit().putString("eingerichtet", kennung).remove("fehler").apply(); hinweisPflegen(app, fehlendeFreigabe(app)) }
                 .addOnFailureListener { f ->
                     eingerichtet = ""
+                    fehlschlag = kennung
+                    fehlschlagUm = System.currentTimeMillis()
                     val code = (f as? com.google.android.gms.common.api.ApiException)?.statusCode
                     Logbuch.system("Standort-Erinnerungen", "Umkreis nicht eingerichtet: ${f.message}")
-                    hinweisPflegen(app, if (code == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) "Android stellt gerade keine Ortsüberwachung bereit. Bitte den Standort einschalten und in den Standort-Einstellungen die Google-Standortgenauigkeit aktivieren."
-                        else "Die Ortsüberwachung für Standort-Erinnerungen ließ sich nicht einrichten (${f.message ?: "unbekannter Fehler"}). Jarvis versucht es jede Minute erneut.")
+                    val grund = if (code == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) "Android stellt gerade keine Ortsüberwachung bereit. Bitte den Standort einschalten und in den Standort-Einstellungen die Google-Standortgenauigkeit aktivieren."
+                        else "Die Ortsüberwachung für Standort-Erinnerungen ließ sich nicht einrichten (${f.message ?: "unbekannter Fehler"}). Jarvis versucht es alle 10 Minuten erneut."
+                    p.edit().putString("fehler", grund).apply()
+                    hinweisPflegen(app, grund)
                 }
         }.onFailure { eingerichtet = ""; Logbuch.fehler("Standort-Erinnerungen einrichten", it) }
         weckerStellen(app)
@@ -187,7 +200,7 @@ object OrtErinnerungen {
     /** Zustand von Orten ohne offene Erinnerung vergessen: nichts bleibt liegen. */
     private fun aufraeumen(app: Context, behalten: Set<String>) {
         val p = prefs(app)
-        val weg = p.all.keys.filter { k -> listOf("drin_", "draussen_", "versuche_", "ausgeloest_", "neu_").any { k.startsWith(it) } && k.substringAfter('_') !in behalten }
+        val weg = p.all.keys.filter { k -> listOf("drin_", "draussen_", "versuche_", "ausgeloest_", "reg_").any { k.startsWith(it) } && k.substringAfter('_') !in behalten }
         if (weg.isNotEmpty()) p.edit().apply { weg.forEach { remove(it) } }.apply()
     }
 
@@ -220,28 +233,32 @@ object OrtErinnerungen {
         val jetzt = System.currentTimeMillis()
         val drin = p.getLong("drin_$k", 0L)
         val draussen = p.getLong("draussen_$k", 0L)
+        // Ort erst seit Kurzem überwacht und jede offene Erinnerung dort gerade erst scharf: Frank war beim Anlegen schon da.
+        val frisch = jetzt - p.getLong("reg_$k", 0L) < NEU_REGISTRIERT_MS &&
+            offene(app).mapNotNull { it.ort }.filter { schluessel(it) == k }.let { l -> l.isNotEmpty() && l.all { jetzt - it.scharfSeit < NEU_REGISTRIERT_MS + 60_000L } }
         val e = p.edit()
         when {
-            // Neu eingerichtet und schon da (etwa beim Anlegen vor Ort): keine Ankunft, erst die nächste zählt.
-            drin == 0L && jetzt - p.getLong("neu_$k", 0L) < NEU_REGISTRIERT_MS -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", true)
+            // Neu eingerichtet und schon da (Anlegen vor Ort): keine Ankunft, erst die nächste zählt.
+            (drin == 0L || draussen > 0L) && frisch -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", true)
             // Erneutes Einrichten oder Flattern: derselbe Aufenthalt.
             drin > 0L && draussen == 0L -> Unit
             drin > 0L && p.getBoolean("ausgeloest_$k", false) && jetzt - draussen < FLATTERN_MS -> Unit
             else -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0)
         }
-        e.putLong("draussen_$k", 0L).remove("neu_$k").apply()
+        e.putLong("draussen_$k", 0L).apply()
     }
 
     private suspend fun verlassen(app: Context, k: String) = sperre.withLock {
         val p = prefs(app)
-        if (p.getLong("drin_$k", 0L) > 0L) p.edit().putLong("draussen_$k", System.currentTimeMillis()).apply()
+        // Nur das erste Verlassen zählt: Ein wiederholtes „draußen“ beim stündlichen Einrichten verlängert die Flatter-Frist nicht.
+        if (p.getLong("drin_$k", 0L) > 0L && p.getLong("draussen_$k", 0L) == 0L) p.edit().putLong("draussen_$k", System.currentTimeMillis()).apply()
     }
 
     /** Shell-Anstoß für den Gerätetest: Ankunft jetzt am Ort dieser Erinnerung; Wecker, echter Standort und Auslösung laufen danach unverändert. */
     private suspend fun test(app: Context, id: String) {
         val o = Erinnerungen.eine(app, id)?.ort ?: run { Logbuch.system("Standort-Erinnerungen", "Test: keine Standort-Erinnerung mit dieser Kennung"); return }
         val k = schluessel(o)
-        sperre.withLock { prefs(app).edit().putLong("drin_$k", System.currentTimeMillis()).putLong("draussen_$k", 0L).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0).remove("neu_$k").apply() }
+        sperre.withLock { prefs(app).edit().putLong("drin_$k", System.currentTimeMillis()).putLong("draussen_$k", 0L).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0).apply() }
         Logbuch.system("Standort-Erinnerungen", "Test: Ankunft gesetzt, Prüfung in drei Minuten")
         weckerStellen(app)
     }
@@ -325,7 +342,7 @@ object OrtErinnerungen {
     /** Frischer Standort über die Google-Ortung (hohe Genauigkeit), ersatzweise über Android selbst. Wird nicht gespeichert. */
     @SuppressLint("MissingPermission")
     private suspend fun frischerStandort(app: Context): Location? {
-        val google = withTimeoutOrNull(30_000L) {
+        val google = withTimeoutOrNull(15_000L) {
             suspendCancellableCoroutine<Location?> { w ->
                 val abbruch = CancellationTokenSource()
                 w.invokeOnCancellation { abbruch.cancel() }
@@ -337,7 +354,7 @@ object OrtErinnerungen {
             }
         }
         if (google != null) return google
-        return Standort.aktuell(app, 20_000L)
+        return Standort.aktuell(app, 8_000L)
     }
 
     // ------------------------------------------------------------------ Fehlende Freigabe sichtbar machen

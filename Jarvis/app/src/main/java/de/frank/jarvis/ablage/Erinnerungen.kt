@@ -238,7 +238,8 @@ object Erinnerungen {
         if (alt.termin() != neu.termin() || wiederOffen) neu = neu.copy(ausloesungen = neu.ausloesungen.map { it.copy(angelegt = neu.geaendert) }, hinweisUm = if (wiederOffen) 0L else neu.hinweisUm)
         // Neuer Ort oder wieder offen: erst die nächste Ankunft zählt, eine frühere Auslösung bleibt nicht stehen.
         val o = neu.ort
-        if (o != null && (wiederOffen || alt.ort == null || alt.ort.breite != o.breite || alt.ort.laenge != o.laenge)) neu = neu.copy(ort = o.copy(scharfSeit = neu.geaendert), ortAusgeloest = if (wiederOffen || alt.ort != null) 0L else neu.ortAusgeloest)
+        if (o != null && (wiederOffen || alt.ort == null || alt.ort.breite != o.breite || alt.ort.laenge != o.laenge)) neu = neu.copy(ort = o.copy(scharfSeit = neu.geaendert), ortAusgeloest = 0L)
+        if (o == null && alt.ort != null) neu = neu.copy(ortAusgeloest = 0L)
         return neu.takeIf { schreibe(c, Stand(s.liste.map { if (it.id == id) neu else it }, s.quittungen, s.geloescht)) }
     }
 

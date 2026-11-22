@@ -94,7 +94,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         val kommend = Erinnerungen.naechste(context, jetzt)
         val datiert = Erinnerungen.datiert(context, jetzt).filter { it.erledigt == 0L && (it.termin() ?: 0L) >= jetzt }
         val allgemein = Erinnerungen.allgemeine(context).filter { it.erledigt == 0L }
-        val orte = Erinnerungen.ortsgebundene(context).filter { it.erledigt == 0L }
+        val orte = Erinnerungen.ortsgebundene(context).filter { e -> e.erledigt == 0L && faellig.none { it.erinnerung.id == e.id } }
         if (faellig.isEmpty() && datiert.isEmpty() && allgemein.isEmpty() && orte.isEmpty()) return "Keine offenen Erinnerungen."
         return buildString {
             if (faellig.isNotEmpty()) append("Fällig und noch nicht bestätigt:\n").append(faellig.joinToString("\n") { "- ${it.erinnerung.zeile}: ${it.erinnerung.kurz} [id ${it.erinnerung.id}]" }).append('\n')
@@ -179,7 +179,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             if (datiert.isEmpty() && allgemein.isEmpty() && orte.isEmpty()) Ergebnis("Keine Erinnerungen.")
             else Ergebnis(buildString {
                 if (datiert.isNotEmpty()) append("Mit Datum:\n").append(datiert.joinToString("\n") { "- " + kopf(it) }).append('\n')
-                if (orte.isNotEmpty()) append("Standort:\n").append(orte.joinToString("\n") { "- " + kopf(it) + if (it.erledigt != 0L) " (erledigt)" else "" }).append('\n')
+                if (orte.isNotEmpty()) append("Standort:\n").append(orte.joinToString("\n") { "- " + kopf(it) }).append('\n')
                 if (allgemein.isNotEmpty()) append("Allgemein:\n").append(allgemein.joinToString("\n") { "- " + it.zeile + " [id ${it.id}]" + (if (it.erledigt != 0L) " (erledigt)" else "") })
             }.trim())
         },

@@ -168,7 +168,7 @@ class ErinnerungKlingelDienst : Service(), SavedStateRegistryOwner {
             .setContentIntent(vollbild)
             .apply { if (!direkt) setFullScreenIntent(vollbild, true) }
             .addAction(R.drawable.ic_stat_jarvis, "Wecker ausschalten", rundfunk(19_996, ErinnerungPlaner.AKTION_BESTAETIGEN))
-            .apply { liste.firstOrNull { it.erinnerung.ortsgebunden }?.let { addAction(R.drawable.ic_stat_jarvis, "Erledigt", ErinnerungPlaner.erledigtAbsicht(this@ErinnerungKlingelDienst, it.quittung, 19_994)) } }
+            .apply { liste.firstOrNull { it.erinnerung.ortsgebunden }?.let { addAction(R.drawable.ic_stat_jarvis, "Erledigt", ErinnerungPlaner.erledigtAbsicht(this@ErinnerungKlingelDienst, null, 19_994)) } }
             .apply { liste.firstOrNull()?.let { addAction(R.drawable.ic_stat_jarvis, "In Jarvis öffnen", ErinnerungPlaner.oeffnenAbsicht(this@ErinnerungKlingelDienst, it.erinnerung.id, 19_997)) } }
             .setDeleteIntent(rundfunk(19_995, ErinnerungPlaner.AKTION_ZEIGEN))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

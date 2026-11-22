@@ -205,7 +205,8 @@ object ErinnerungPlaner {
         else alle.firstOrNull { it.quittung == quittung }?.let { bestaetige(app, it) } ?: verstummen(app, quittung)
     }
 
-    fun erledigtAbsicht(context: Context, quittung: String, code: Int): PendingIntent = absicht(context.applicationContext, AKTION_ERLEDIGT, quittung, code)
+    /** [quittung] null = alle gerade klingelnden Standort-Erinnerungen. */
+    fun erledigtAbsicht(context: Context, quittung: String?, code: Int): PendingIntent = absicht(context.applicationContext, AKTION_ERLEDIGT, quittung, code)
 
     /** „Erledigt“ auf der Wecker-Karte: Standort-Erinnerungen darunter sind abgeschlossen, alles Klingelnde verstummt. */
     fun erledigtKlingelnde(context: Context) {
@@ -306,7 +307,11 @@ object ErinnerungPlaner {
             try {
                 when (intent.action) {
                     AKTION_BESTAETIGEN -> bestaetigeAus(app, intent.getStringExtra(EXTRA_QUITTUNG))
-                    AKTION_ERLEDIGT -> pruefSperre.withLock { erledigen(app, intent.getStringExtra(EXTRA_QUITTUNG)) }
+                    AKTION_ERLEDIGT -> pruefSperre.withLock {
+                        val q = intent.getStringExtra(EXTRA_QUITTUNG)
+                        if (q != null) erledigen(app, q)
+                        else { _klingelt.value.filter { it.erinnerung.ortsgebunden }.forEach { erledigen(app, it.quittung) }; bestaetigeAus(app, null) }
+                    }
                     AKTION_ZEIGEN -> ErinnerungKlingelDienst.abgleichen()
                     HausmuellPlaner.AKTION -> runCatching { HausmuellPlaner.pruefen(app, erzwingen = true) }.onFailure { Logbuch.fehler("Hausmüll-Erinnerungen", it) }.also { HausmuellPlaner.planen(app) }
                     else -> Unit
@@ -382,7 +387,7 @@ object ErinnerungStimme {
     /** Keine Erinnerung anlegen: Die Probe verwendet dieselben beiden Stimmenwege wie eine fällige Meldung. */
     suspend fun probe(context: Context, alsWecker: Boolean = false, ort: Boolean = false) {
         val art = Meldungen.erinnerungsArt(alsWecker, ort)
-        val nummer = if (alsWecker) 4_490 else if (ort) 4_492 else 4_491
+        val nummer = if (alsWecker) 4_490 else if (ort) 4_489 else 4_491
         Meldungen.ereignis(context, art, nummer, "Probe: Erinnerungen", "So meldet Jarvis deine Erinnerungen.")
         if (alsWecker) while (de.frank.jarvis.meldung.WeckerTon.klingelt(nummer)) delay(250L)
         else if (Meldungen.profil(context, art).ton) delay(1_000L)
