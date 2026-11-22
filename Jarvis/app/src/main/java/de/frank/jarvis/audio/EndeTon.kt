@@ -14,23 +14,23 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Fallender Doppelton „DÖ-DO“ am echten Ende einer Sprachsession: zwei sehr tiefe, kurze Töne, der zweite tiefer.
+ * Fallender Doppelton „DÖÖ-DOOO“ am echten Ende einer Sprachsession: zwei lange, tiefe Töne, der zweite klar tiefer.
  * Über die Medienlautstärke wie Piepton und Antwort; steht der Freisprech-Kanal zum Konferenz-Lautsprecher, über den
  * Gesprächskanal (dann gilt die Gesprächslautstärke).
  */
 object EndeTon {
     private const val RATE = 44_100
-    // Zwei sehr tiefe, kurze Töne dicht hintereinander mit großem Abstand (Franks Wunsch): erst D3, eine große Sexte tiefer F2.
+    // Zwei lange, klar getrennte Töne (Franks Wunsch): erst D3, dann eine None tiefer C2, deutlich tiefer als der erste.
     private const val HOCH_HZ = 147.0     // D3
-    private const val TIEF_HZ = 87.0      // F2
-    private const val HOCH_MS = 170
-    private const val PAUSE_MS = 35
-    private const val TIEF_MS = 280
-    private const val RAMPE_MS = 12
-    /** Leiser als die halbe Standard-Lautstärke (Franks Wunsch): 0,7 × 0,35. */
-    private const val PEGEL = 0.7 * 0.35
+    private const val TIEF_HZ = 65.4      // C2
+    private const val HOCH_MS = 450
+    private const val PAUSE_MS = 140
+    private const val TIEF_MS = 700
+    private const val RAMPE_MS = 25
+    /** Lautstärke des ganzen Endsignals: 45 Prozent (Franks Wunsch). */
+    private const val PEGEL = 0.45
     /** Obertöne, damit so tiefe Töne auch aus dem kleinen Handylautsprecher hörbar sind; die Tonhöhe bleibt die des Grundtons. */
-    private val OBERTOENE = doubleArrayOf(1.0, 0.6, 0.4, 0.25, 0.15)
+    private val OBERTOENE = doubleArrayOf(1.0, 0.7, 0.5, 0.4, 0.3, 0.22, 0.16, 0.12)
     /** Nach dem letzten Abtastwert noch etwas nachlaufen lassen: Über Bluetooth kommt der Ton verzögert an. */
     private const val NACHLAUF_MS = 400L
 
