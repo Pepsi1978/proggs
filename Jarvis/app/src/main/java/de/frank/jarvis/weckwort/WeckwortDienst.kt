@@ -187,7 +187,7 @@ class WeckwortDienst : Service() {
         phrasenVarianten = if (phrasenTokens != null) PhrasenTokens.varianten(this, e.weckwortPhrase) else emptyList()
         phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
         Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
-        Stimmprofil.kurzerRufBoden = if (e.weckwortEmpfindlichkeit == "sehr_hoch") Stimmprofil.STIMM_BODEN_KURZ else Stimmprofil.STIMM_BODEN
+        Stimmprofil.empfindlichkeitSetzen(e.weckwortEmpfindlichkeit)
         Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
     }
 
@@ -303,6 +303,8 @@ class WeckwortDienst : Service() {
 
     /** Bis dahin nicht erneut über den Anker lauschen (Umschalten gescheitert oder Strecke abgerissen). */
     @Volatile private var ankerSperreBis = 0L
+    /** Knapp an der Stimme gescheitert: Wann (elapsedRealtime), damit ein wiederholter Ruf als Nachdruck durchgeht, auch über einen Neustart des Lauschens. */
+    @Volatile private var knappUm = 0L
     /** Lauschte der letzte Durchgang über den Anker? Nur für knappe Logbuch-Einträge beim Wechsel. */
     @Volatile private var zuletztAnker = false
 
@@ -436,8 +438,15 @@ class WeckwortDienst : Service() {
                 val ton = letzterTon()
                 return runCatching { s.fingerabdruck(ton, stimmMaske(ton)) }.getOrNull()
             }
-            // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
-            var knappUm = 0L
+            // Je Block: lag er über dem Rauschboden oder sprach jemand? Die letzten 6 s, um Einzelrufe von Dauergerede (Fernseher) zu trennen.
+            val aktiv = BooleanArray(AKTIV_BLOECKE)
+            var aktivPos = 0
+            /** War es vor dem Fenster des Stimm-Fingerabdrucks (2,2 s bis 6 s zurück) überwiegend ruhig? */
+            fun vorlaufRuhig(): Boolean {
+                var an = 0
+                for (k in VORLAUF_AB until AKTIV_BLOECKE) if (aktiv[((aktivPos - 1 - k) % AKTIV_BLOECKE + AKTIV_BLOECKE) % AKTIV_BLOECKE]) an++
+                return an * 2 < AKTIV_BLOECKE - VORLAUF_AB
+            }
             // Blöcke seit dem letzten Urteil über einen Ruf (Treffer, Abweisung, Anlern-Probe): Der Vorlauf eines Frischstarts darf
             // diesen schon beurteilten Ruf nicht noch einmal durch den Spotter schicken.
             var seitUrteil = Int.MAX_VALUE / 2
@@ -498,12 +507,19 @@ class WeckwortDienst : Service() {
                 val mitVad = !laut && boden > LAERM_BODEN && vad != null
                 val stimmeImLaerm = mitVad && runCatching { stimmeImBlock(vad!!) }.getOrDefault(false)
                 vadLief = mitVad
+                aktiv[aktivPos] = laut || stimmeImLaerm
+                aktivPos = (aktivPos + 1) % AKTIV_BLOECKE
+                // Handy-Verstärkung fürs „Hey Jarvis“-Modell: im Lärm zurückgenommen (hebt sonst nur Lärm und Fernseher), und ohne
+                // Stimmerkennung mit Lautmerkmal-Profil gar nicht, weil dessen Proben unverstärkt sind.
+                val erkZiel = if (handyFaktor > 1f && !(Stimmprofil.aktiv && !mitStimme)) (handyFaktor * minOf(1f, LAERM_BODEN / maxOf(boden, 1f))).coerceAtLeast(1f) else 1f
                 val stilleVorher = stilleBloecke
                 if (laut || stimmeImLaerm) stilleBloecke = 0 else stilleBloecke++
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
                     inFolge = 0
                     phr?.ruhen(boden)
+                    // Die gehaltene Verstärkung erholt sich in der Stille ebenso, sonst käme ein leiser Ruf nach einem lauten Geräusch fast unverstärkt an.
+                    halten.ruhen(erkZiel)
                     mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung, ueberAnker, false)
                     // Kein Hintergrund-Lernen in der Stille: Das Modell ruht, seine Merkmale stammen vom letzten Block davor und hätten
                     // über eine lange Stille (Nacht) den Hintergrund ganz auf diesen einen Vektor gezogen.
@@ -538,19 +554,19 @@ class WeckwortDienst : Service() {
                     // nur, was es noch nicht gehört hat.
                     for (k in (if (phr != null) minOf(NACHHOLEN, seitUrteil - 1) else minOf(uebersprungen, NACHHOLEN)) downTo 1) {
                         val frueher = frueherBlock(k)
-                        if (brauchtLaut && k <= uebersprungen) erk.bewerte(halten.anwenden(frueher, handyFaktor, nachfuehren = false))
+                        if (brauchtLaut && k <= uebersprungen) erk.bewerte(halten.anwenden(frueher, erkZiel))
                         // Ein Treffer schon im nachgeholten Ton zählt: Der Spotter hat danach zurückgesetzt und meldet ihn nicht noch einmal.
                         if (phr?.erkannt(frueher, boden) == true) nachgeholt = true
                     }
                     uebersprungen = 0
                 }
-                val wert = if (brauchtLaut) erk.bewerte(halten.anwenden(block, handyFaktor)) else 0f
+                val wert = if (brauchtLaut) erk.bewerte(halten.anwenden(block, erkZiel)) else 0f
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
                     val spotterTreffer = nachgeholt || phr.erkannt(block, boden)
                     mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung, ueberAnker, spotterTreffer, nachgeholtBloecke)
                     if (!spotterTreffer) {
-                        if (merkmale != null && wert < 0.1f && !ueberAnker && handyFaktor <= 1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && erkZiel <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                 } else {
@@ -560,9 +576,10 @@ class WeckwortDienst : Service() {
                         mitStimme -> Weckwort.schwelle * 0.7f
                         else -> Weckwort.schwelle
                     }
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, halten.faktor, ueberAnker, wert >= schwelle, nachgeholtBloecke)
                     if (wert < schwelle) {
                         inFolge = 0
-                        if (merkmale != null && wert < 0.1f && !ueberAnker && handyFaktor <= 1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && erkZiel <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                     // Schnell gesprochen ist der Gipfel oft nur einen Block (80 ms) breit: Beim Anlernen und mit
@@ -595,18 +612,23 @@ class WeckwortDienst : Service() {
                 val pruefung = Stimmprofil.pruefe(merkmale)
                 // Mit Stimmerkennung entscheidet allein sie: Sie erkennt die Person, auch aus fünf Metern, wo die
                 // Lautmerkmale schon stark abweichen. Zu wenig Sprache im Ton zählt als „nicht Frank“.
-                val stimme = if (mitStimme) fingerabdruck().let { Stimmprofil.pruefeStimme(it, spr?.letzteDauer) } else null
+                // Einzelruf: kurz (höchstens 1,6 s Sprache) und davor überwiegend ruhig. Fernseher reden auch mit Pausen meist am Stück.
+                val stimme = if (mitStimme) fingerabdruck().let { fp ->
+                    val dauer = spr?.letzteDauer
+                    Stimmprofil.pruefeStimme(fp, dauer, einzelruf = dauer != null && dauer <= Stimmprofil.KURZ_RUF_S && vorlaufRuhig())
+                } else null
                 // Nachdruck: Zwei knappe Abweisungen kurz hintereinander sind Frank, der es noch einmal sagt (schnell,
                 // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
                 // Bis 1.8.902 war das Fenster leer (Schwelle = Boden 0,45 = Untergrenze des Nachdrucks): Kein Ruf zählte je als knapp.
-                // Jetzt zählt ein kurzer Einzelruf ab [NACHDRUCK_UNTEN]; Fernseher und Fremde reden meist länger am Stück.
-                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= NACHDRUCK_UNTEN && (stimme.dauer ?: Float.MAX_VALUE) <= Stimmprofil.KURZ_RUF_S
+                // Jetzt zählt ein Einzelruf ab [Stimmprofil.nachdruckBoden] (je Empfindlichkeit); Fernseher reden meist länger am Stück.
+                val knapp = stimme != null && !stimme.ok && stimme.einzelruf && stimme.aehnlich >= Stimmprofil.nachdruckBoden
                 val jetzt = SystemClock.elapsedRealtime()
-                // Mindestabstand: Sonst urteilt das gleitende „Hey Jarvis“-Fenster nach dem Abklingen über denselben Ruf noch einmal.
+                // Mindestabstand eine Fingerabdruck-Länge: Sonst urteilen beide über denselben Ton (gleitendes Fenster, Rest des Rufs).
                 val nachdruck = knapp && jetzt - knappUm in NACHDRUCK_ABSTAND_MS..NACHDRUCK_MS
                 val ok = if (mitStimme) stimme?.ok == true || nachdruck else pruefung?.ok != false
                 if (!ok) {
-                    if (knapp) knappUm = jetzt
+                    // Der erste knappe Ruf bleibt der Anker des Fensters; ein zu früher zweiter verschiebt ihn nicht.
+                    if (knapp && jetzt - knappUm > NACHDRUCK_MS) knappUm = jetzt
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
                     WeckwortProtokoll.treffer(this, art, modellwert, pruefung, if (knapp) "knapp abgewiesen" else "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
                     Weckwort.abgewiesen(modellwert ?: 1f)
@@ -628,7 +650,7 @@ class WeckwortDienst : Service() {
                 // Hat die Stimmerkennung Frank bestätigt, war es kein Fehlalarm, auch wenn danach nichts kommt: Dann
                 // gibt es keine Merkmale zum Lernen, sonst sperrt ein solcher Eintrag später Franks eigene Rufe aus.
                 // Mit Handy-Verstärkung stammen die Lautmerkmale aus angehobenem Ton: nicht als möglichen Fehlalarm lernen.
-                Weckwort.trefferMerkmale = if (stimme?.ok == true || handyFaktor > 1f) null else merkmale
+                Weckwort.trefferMerkmale = if (stimme?.ok == true || erkZiel > 1f) null else merkmale
                 // Hört das Gespräch ebenfalls über den Anker zu, bleibt die Strecke stehen; sonst zurück ins Medien-Profil.
                 uebergabe = ueberAnker && Einstellungen.get(this).konferenzMikrofonAn
                 if (ueberAnker) Logbuch.system("Weckwort über den Anker erkannt", if (uebergabe) "Gespräch übernimmt die Anker-Mikrofone" else "zurück ins Medien-Profil")
@@ -850,17 +872,18 @@ class WeckwortDienst : Service() {
             val e = Einstellungen.get(context)
             Weckwort.schwelle = e.weckwortSchwelle
             Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
-            Stimmprofil.kurzerRufBoden = if (e.weckwortEmpfindlichkeit == "sehr_hoch") Stimmprofil.STIMM_BODEN_KURZ else Stimmprofil.STIMM_BODEN
+            Stimmprofil.empfindlichkeitSetzen(e.weckwortEmpfindlichkeit)
             if (e.weckwortArt == "phrase") neuLaden(context)
         }
         /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
         private const val VAD_STIMME = 0.5f
         private const val VAD_MASKE = 0.3f
-        /** Nachdruck: knapp heißt höchstens so weit unter der Stimm-Schwelle, und der zweite Ruf binnen dieser Zeit. */
+        /** Nachdruck: der zweite knappe Einzelruf binnen dieser Zeit, frühestens nach einer Fingerabdruck-Länge (eigener Ton). */
         private const val NACHDRUCK_MS = 10_000L
-        private const val NACHDRUCK_ABSTAND_MS = 1_500L
-        /** Untergrenze für einen knappen Ruf: Franks wiederholte leise Rufe lagen ab 0,26, Fremde bis 0,24 (Protokoll bis 22.11.2026). */
-        private const val NACHDRUCK_UNTEN = 0.25f
+        private const val NACHDRUCK_ABSTAND_MS = 2_200L // = Länge von TON_WERTE (2,2 s)
+        /** Aktivität der letzten 6 s (75 Blöcke); ab Block 28 (2,24 s) zurück liegt sie vor dem Fenster des Fingerabdrucks. */
+        private const val AKTIV_BLOECKE = 75
+        private const val VORLAUF_AB = 28
         /** Erst ab diesem Rauschboden (16 Bit, etwa -47 dBFS) ist es Lärm und Silero entscheidet; im ruhigen Raum schlafen die Modelle wie bisher. */
         private const val LAERM_BODEN = 150f
         /**
@@ -998,15 +1021,26 @@ private class GehalteneVerstaerkung {
     private var g = -1f
     private var aus = ShortArray(WeckwortErkenner.BLOCK)
 
-    /** Liefert den verstärkten Block (eigener Puffer, gilt bis zum nächsten Aufruf) oder bei [ziel] ≤ 1 den Block selbst. */
-    fun anwenden(block: ShortArray, ziel: Float, nachfuehren: Boolean = true): ShortArray {
+    /** Aktuelle Verstärkung (für den Mitschnitt). */
+    val faktor: Float get() = if (g < 0f) 1f else g
+
+    /** Ein übersprungener Stille-Block: zum Ziel zurückkehren wie bei gelesenen Blöcken. */
+    fun ruhen(ziel: Float) {
+        g = when { ziel <= 1f -> -1f; g < 0f || g > ziel -> ziel; else -> g + (ziel - g) * ANSTIEG }
+    }
+
+    /**
+     * Liefert den verstärkten Block (eigener Puffer, gilt bis zum nächsten Aufruf) oder bei [ziel] ≤ 1 den Block selbst. Auch der
+     * nachgeholte Vorlauf führt die Verstärkung nach: Er kommt in zeitlicher Reihenfolge, so bleibt sie über den Ruf stetig.
+     */
+    fun anwenden(block: ShortArray, ziel: Float): ShortArray {
         if (ziel <= 1f) { g = -1f; return block }
         if (g < 0f || g > ziel) g = ziel
         var spitze = 0
         for (w in block) spitze = maxOf(spitze, kotlin.math.abs(w.toInt()))
-        var f = if (nachfuehren) g + (ziel - g) * ANSTIEG else g
+        var f = g + (ziel - g) * ANSTIEG
         if (spitze > 0 && spitze * f > GRENZE) f = maxOf(1f, GRENZE / spitze)
-        if (nachfuehren) g = f
+        g = f
         if (aus.size != block.size) aus = ShortArray(block.size)
         for (i in block.indices) aus[i] = (block[i] * f).toInt().coerceIn(-32_767, 32_767).toShort()
         return aus

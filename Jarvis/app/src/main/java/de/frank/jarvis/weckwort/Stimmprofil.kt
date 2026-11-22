@@ -53,7 +53,7 @@ object Stimmprofil {
     val stimmeAktiv: Boolean get() = stimmen.size >= MIN_STIMMEN
 
     /** Ergebnis der Stimmerkennung, auch fürs Protokoll. [dauer]: Sekunden Sprache im Fingerabdruck. */
-    data class StimmPruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float, val dauer: Float? = null)
+    data class StimmPruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float, val dauer: Float? = null, val einzelruf: Boolean = false)
 
     /**
      * So viel tiefer liegt die Stimm-Schwelle je Empfindlichkeit (aus den Einstellungen). Bis 17.10.2026 wirkte die
@@ -62,25 +62,38 @@ object Stimmprofil {
     @Volatile var schwellenAbzug = 0f
 
     /**
-     * Boden der Stimm-Schwelle für kurze Einzelrufe (höchstens [KURZ_RUF_S] Sprache im Ton), bei Empfindlichkeit „Sehr hoch“
+     * Boden der Stimm-Schwelle für Einzelrufe (kurz und mit ruhigem Vorlauf, siehe WeckwortDienst), bei Empfindlichkeit „Sehr hoch“
      * [STIMM_BODEN_KURZ], sonst [STIMM_BODEN]. Im Protokoll (14.10. bis 22.11.2026) lagen Franks leise und schnelle Rufe bei
      * 0,26 bis 0,44 und kurzer Sprache, Fernseher und Fremde bei 0,11 bis 0,24 mit meist über 2 s durchgehender Sprache.
      */
     @Volatile var kurzerRufBoden = STIMM_BODEN
+        private set
+    /**
+     * Ab hier zählt ein abgewiesener Einzelruf als knapp (Nachdruck): „Sehr hoch“ 0,25 (Franks wiederholte leise Rufe ab 0,26),
+     * „Hoch“ 0,33, sonst [STIMM_BODEN] (dann greift der Nachdruck praktisch nicht, wie bis 1.8.902).
+     */
+    @Volatile var nachdruckBoden = STIMM_BODEN
+        private set
+
+    /** Übernimmt die Empfindlichkeit aus den Einstellungen für Einzelruf-Boden und Nachdruck. */
+    fun empfindlichkeitSetzen(empfindlichkeit: String) {
+        kurzerRufBoden = if (empfindlichkeit == "sehr_hoch") STIMM_BODEN_KURZ else STIMM_BODEN
+        nachdruckBoden = when (empfindlichkeit) { "sehr_hoch" -> 0.25f; "hoch" -> 0.33f; else -> STIMM_BODEN }
+    }
 
     /** Ist das Franks Stimme? null = keine Stimmerkennung angelernt oder zu wenig Sprache in der Aufnahme. */
-    fun pruefeStimme(fingerabdruck: FloatArray?, dauer: Float? = null): StimmPruefung? {
+    fun pruefeStimme(fingerabdruck: FloatArray?, dauer: Float? = null, einzelruf: Boolean = false): StimmPruefung? {
         val s = stimmen
         if (s.size < MIN_STIMMEN || fingerabdruck == null) return null
         val aehnlich = stimmWert(fingerabdruck, s)
         // Kurze Rufe (schnell gesprochen, unter 1,2 s Sprache) geben CAM++ wenig Stimme: bis zu 0,04 Spielraum.
         val kurz = dauer?.let { (1.2f - it).coerceIn(0f, 0.4f) * 0.1f } ?: 0f
-        val boden = if (dauer != null && dauer <= KURZ_RUF_S) kurzerRufBoden else STIMM_BODEN
+        val boden = if (einzelruf) kurzerRufBoden else STIMM_BODEN
         val schwelle = maxOf(stimmSchwelle(s) - schwellenAbzug - kurz, boden)
         val ok = aehnlich >= schwelle
         _stand.value = _stand.value.copy(letzteStimme = aehnlich, stimmSchwelle = schwelle)
         Log.i(TAG, "Stimme ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)}, Sprache ${dauer?.let { "%.2f s".format(it) }} → ${if (ok) "Frank" else "fremde Stimme"}")
-        return StimmPruefung(ok, aehnlich, schwelle, dauer)
+        return StimmPruefung(ok, aehnlich, schwelle, dauer, einzelruf)
     }
 
     /**
@@ -109,7 +122,8 @@ object Stimmprofil {
 
     /**
      * Darunter fängt CAM++ an, fremde Stimmen durchzulassen (gemessen am Wert zur Mitte, 0,40). Der Wert aus den drei
-     * ähnlichsten Einzelproben liegt für Fremde etwas höher, daher 0,45. Gilt auch für den Nachdruck.
+     * ähnlichsten Einzelproben liegt für Fremde etwas höher, daher 0,45. Darunter nur Einzelrufe bei „Sehr hoch“ und der Nachdruck
+     * bei „Hoch“/„Sehr hoch“ ([kurzerRufBoden], [nachdruckBoden]).
      */
     const val STIMM_BODEN = 0.45f
     /** Boden für kurze Einzelrufe bei „Sehr hoch“: Im Nachspielen des Protokolls ließ er 7 abgewiesene Rufe von Frank durch, keinen fremden. */

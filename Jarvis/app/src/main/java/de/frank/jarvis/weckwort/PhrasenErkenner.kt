@@ -102,10 +102,15 @@ class PhrasenErkenner(
     /** Zielverstärkung für den Rauschboden: im ruhigen Raum bis [MAX_VERSTAERKUNG], im Lärm 1. */
     // Kein Rauschboden (unter 1, etwa die Nullstille des Anker oder der erste leere Block nach dem Start) ist ein ruhiger Raum: volle
     // Verstärkung. Bisher galt er als Lärm (1), und in jeder Anker-Stille fiel die Verstärkung für den nächsten leisen Ruf auf 1.
-    private fun ziel(rauschboden: Float) = when {
-        rauschboden < 0f -> 1f // unbekannt
-        rauschboden < 1f -> MAX_VERSTAERKUNG * zusatz
-        else -> (BODEN_ZIEL / rauschboden * zusatz).coerceIn(1f, MAX_VERSTAERKUNG * zusatz)
+    // Der Handy-Regler [zusatz] wirkt nur im ruhigen Raum (im Lärm hebt er nur Lärm und Fernseher): Er hebt den Höchstwert um
+    // seinen Faktor und das Ziel des Rauschbodens nur um dessen Wurzel, damit das Grundrauschen nicht 8-fach mitwächst.
+    private fun ziel(rauschboden: Float): Float {
+        val z = if (rauschboden in 0f..LAERM) zusatz else 1f
+        return when {
+            rauschboden < 0f -> 1f // unbekannt
+            rauschboden < 1f -> MAX_VERSTAERKUNG * z
+            else -> (BODEN_ZIEL * kotlin.math.sqrt(z) / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG * z)
+        }
     }
 
     /**
@@ -163,6 +168,8 @@ class PhrasenErkenner(
         /** Rauschboden (16 Bit, etwa -47 dBFS), auf den die Verstärkung zielt; Spitzen begrenzt auf [GRENZE]. */
         private const val BODEN_ZIEL = 150f
         private const val MAX_VERSTAERKUNG = 6f
+        /** Ab diesem Rauschboden (16 Bit, wie LAERM_BODEN im Dienst) ist es Lärm: dann ohne Handy-Regler. */
+        private const val LAERM = 150f
         private const val GRENZE = 0.9f
         /** Je Block (80 ms) so viel des Wegs zurück zum Ziel: rund 8 s nach einem lauten Ruf wieder voll. */
         private const val ANSTIEG = 0.01f
@@ -223,6 +230,8 @@ object PhrasenTokens {
         "WAKE" to listOf("WEAK"),
     )
     private val auftakt = setOf("HEY", "HI", "HELLO", "OKAY", "OK")
+    /** Konsonanten, die an der Wortgrenze schnell gesprochen zu einem Laut werden („Jarvis Smartphone“). */
+    private const val VERSCHMELZEND = "BDFGKLMNPRSTVZ"
 
     /**
      * Aussprache-Varianten der Phrase (als Tokens, ohne die Phrase selbst): je Wort die gleich klingenden
@@ -238,7 +247,8 @@ object PhrasenTokens {
         // nur einem davon, damit zwei oder drei Wörter auch in einem Zug erkannt werden.
         for (i in 0 until woerter.size - 1) {
             val a = woerter[i]; val b = woerter[i + 1]
-            if (a.length > 2 && b.isNotEmpty() && a.last() == b.first()) {
+            // Nur bei gleichen Konsonanten, die wirklich zu einem Laut verschmelzen (nicht Vokale, H, W, Y).
+            if (a.length > 2 && b.isNotEmpty() && a.last() == b.first() && a.last() in VERSCHMELZEND) {
                 alle += woerter.toMutableList().also { it[i] = a.dropLast(1) }.joinToString(" ")
             }
         }

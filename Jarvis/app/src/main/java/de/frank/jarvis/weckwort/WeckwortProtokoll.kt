@@ -34,6 +34,8 @@ object WeckwortProtokoll {
             j.put("stimme", runde(stimme.aehnlich)).put("stimmSchwelle", runde(stimme.schwelle))
             // Sekunden Sprache im Fingerabdruck: Grundlage, um die Schwelle für kurze Rufe nachzujustieren.
             stimme.dauer?.let { j.put("sprache", runde(it)) }
+            // Einzelruf (kurz, davor ruhig): Nur dann gelten der tiefere Boden bei „Sehr hoch“ und der Nachdruck.
+            j.put("einzelruf", stimme.einzelruf)
         }
         else if (mitStimme) j.put("stimme", "zu wenig Sprache")
         schreibe(context, j)
