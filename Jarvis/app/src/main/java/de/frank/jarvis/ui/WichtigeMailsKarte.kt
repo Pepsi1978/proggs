@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -26,9 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +38,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -55,22 +62,37 @@ import java.time.format.DateTimeFormatter
 private val FRISCH_GRUEN = Color(0xFF3DBE7A)
 
 /**
+ * Aufklappzustand beider Bereiche für die ganze Laufzeit des Prozesses: Zurück aus Gmail findet Frank sie so vor, wie er sie verlassen hat
+ * (die Scrollposition hält der Startbildschirm selbst).
+ */
+private object MailKartenZustand {
+    var wichtigOffen by mutableStateOf(false)
+    var alleOffen by mutableStateOf(false)
+}
+
+/**
  * Startbereich „Wichtige E-Mails“: eingeklappt nur die Anzahl („3 wichtige E-Mails“, bei bestätigtem Leerstand „Keine wichtigen E-Mails“),
  * aufgeklappt alle offenen wichtigen Einträge in höchstens drei Zeilen. Antippen öffnet die Nachricht direkt in Gmail und blendet den Eintrag
- * bis zum nächsten Aktualisieren aus; die Glühbirne rechts (hinter einem senkrechten Strich) öffnet eine neue Session mit der Erklärung der Mail. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da, nie als leerer Posteingang.
+ * bis zum nächsten Aktualisieren aus; rechts hinter einem senkrechten Strich oben die Glühbirne (neue Session mit der Erklärung der Mail),
+ * darunter der Pfeil „unwichtig“. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da, nie als leerer Posteingang.
+ * Darunter eigens aufklappbar „Alle E-Mails“: der ganze Posteingang (auch gelesene und wichtige), Antippen öffnet die Mail in Gmail, rechts ein
+ * zweigeteiltes Feld (Pfeil hoch = wichtig, runter = unwichtig, erneut antippen = wieder automatisch), sofort wirksam.
  */
 @Composable
 fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Eintrag) -> Unit = {}) {
     val f = LocalFarben.current
-    val context = LocalContext.current.applicationContext
+    val ui = LocalContext.current
+    val context = ui.applicationContext
     val s by remember(context) { WichtigeMails.stand(context) }.collectAsState()
-    var offen by rememberSaveable { mutableStateOf(false) }
+    val offen = MailKartenZustand.wichtigOffen
+    val alleOffen = MailKartenZustand.alleOffen
     val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
+    val drehungAlle by animateFloatAsState(if (alleOffen) 180f else 0f, label = "pfeilAlle")
     // Noch nie geprüft (etwa nach der Installation): einmal von selbst, ohne aufs Wächter-Fenster zu warten.
     LaunchedEffect(Unit) { if (s.geprueft == 0L && s.fehler == null && !s.laeuft) WichtigeMails.aktualisieren(context) }
     val sichtbar = s.sichtbar
     val schutz = remember { KnopfSchutz() }
-    Karte(modifier = griff.animateContentSize().antippenMitSchutz(schutz, imSchutz = { WichtigeMails.aktualisieren(context) }) { offen = !offen }) {
+    Karte(modifier = griff.animateContentSize().antippenMitSchutz(schutz, imSchutz = { WichtigeMails.aktualisieren(context) }) { MailKartenZustand.wichtigOffen = !offen }) {
         Row(verticalAlignment = Alignment.Top) {
             KartenSymbol(KartenArt.MAIL, Modifier.padding(end = 10.dp), wert = if (sichtbar.isNotEmpty()) 1f else 0f)
             Column(Modifier.weight(1f)) {
@@ -101,19 +123,119 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
         }
         if (sichtbar.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
-                Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Einträge zuklappen" else "Einträge aufklappen", tint = f.textLeise, modifier = Modifier.size(26.dp).rotate(drehung))
+                Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Wichtige E-Mails zuklappen" else "Wichtige E-Mails aufklappen", tint = f.textLeise, modifier = Modifier.size(26.dp).rotate(drehung))
             }
         }
         if (offen && sichtbar.isNotEmpty()) {
             Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                sichtbar.forEach { e -> MailEintrag(e, erklaeren = { erklaeren(e) }) { WichtigeMails.ausblenden(context, e.msgId); WichtigeMails.oeffnen(context, e) } }
+                sichtbar.forEach { e ->
+                    key(e.msgId) {
+                        MailEintrag(e, erklaeren = { erklaeren(e) }, unwichtig = { WichtigeMails.bewerten(context, e.msgId, -1) }) {
+                            WichtigeMails.ausblenden(context, e.msgId); WichtigeMails.oeffnen(ui, e)
+                        }
+                    }
+                }
+            }
+        }
+        // „Alle E-Mails“: eigener Kopf mit eigenem Pfeil; sein Antippen klappt nur diesen Bereich.
+        if (s.posteingang.isNotEmpty()) {
+            val ungelesen = s.posteingang.count { !it.gelesen }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(12.dp))
+                    .antippen { MailKartenZustand.alleOffen = !alleOffen }
+                    .semantics { stateDescription = if (alleOffen) "aufgeklappt" else "zugeklappt" }
+                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Alle E-Mails", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    " · ${s.posteingang.size}" + if (ungelesen > 0) " · $ungelesen ungelesen" else "",
+                    Modifier.weight(1f), color = f.textLeise, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                Icon(Icons.Rounded.KeyboardArrowDown, if (alleOffen) "Alle E-Mails zuklappen" else "Alle E-Mails aufklappen", tint = f.textLeise, modifier = Modifier.size(26.dp).rotate(drehungAlle))
+            }
+            if (alleOffen) {
+                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    s.posteingang.forEach { e ->
+                        key(e.msgId) { AlleEintrag(e, bewerten = { r -> WichtigeMails.bewerten(context, e.msgId, r) }) { WichtigeMails.oeffnen(ui, e) } }
+                    }
+                }
             }
         }
     }
 }
 
+private fun wannText(e: WichtigeMails.Eintrag): String {
+    val z = Instant.ofEpochMilli(e.empfangen).atZone(ZoneId.systemDefault())
+    val heute = LocalDate.now()
+    return when (e.tag) {
+        heute -> "Heute " + z.format(DateTimeFormatter.ofPattern("HH:mm"))
+        heute.minusDays(1) -> "Gestern " + z.format(DateTimeFormatter.ofPattern("HH:mm"))
+        else -> z.format(DateTimeFormatter.ofPattern("d.M.yyyy"))
+    }
+}
+
+/** Eine Hälfte des Pfeilfelds: mindestens 48 dp hoch, gewählt = gefüllt und für TalkBack als „ausgewählt“ angesagt. */
 @Composable
-private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, oeffnen: () -> Unit) {
+private fun PfeilFeld(modifier: Modifier, hoch: Boolean, gewaehlt: Boolean, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    val farbe = if (hoch) f.primaer else f.gefahr
+    val name = if (hoch) "Als wichtig markieren" else "Als unwichtig markieren"
+    Box(
+        modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .background(if (gewaehlt) farbe.copy(alpha = 0.22f) else Color.Transparent)
+            .antippen(rolle = Role.RadioButton, aktion = aktion)
+            .semantics(mergeDescendants = true) {
+                contentDescription = name
+                selected = gewaehlt
+                stateDescription = if (gewaehlt) (if (hoch) "als wichtig markiert, erneut tippen hebt auf" else "als unwichtig markiert, erneut tippen hebt auf") else "nicht markiert"
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(if (hoch) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, tint = if (gewaehlt) farbe else f.textLeise, modifier = Modifier.size(if (gewaehlt) 28.dp else 24.dp))
+    }
+}
+
+@Composable
+private fun AlleEintrag(e: WichtigeMails.Eintrag, bewerten: (Int) -> Unit, oeffnen: () -> Unit) {
+    val f = LocalFarben.current
+    val form = RoundedCornerShape(14.dp)
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            .clip(form)
+            .background(f.flaeche, form)
+            .border(if (e.wichtig) 2.dp else 1.dp, if (e.wichtig) f.primaer.copy(alpha = 0.7f) else f.rand, form),
+    ) {
+        Column(
+            Modifier.weight(1f)
+                .antippen(aktion = oeffnen)
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(e.name, Modifier.weight(1f), color = f.text, fontSize = 15.sp, fontWeight = if (e.gelesen) FontWeight.Normal else FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(8.dp))
+                Text(wannText(e), color = f.textLeise, fontSize = 13.sp, maxLines = 1)
+            }
+            Text(e.betreff, color = f.text, fontSize = 14.sp, fontWeight = if (e.gelesen) FontWeight.Normal else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            Text(
+                buildAnnotatedString {
+                    if (e.wichtig) withStyle(SpanStyle(color = f.primaer, fontWeight = FontWeight.SemiBold)) { append("Wichtig · ") }
+                    append(e.kurz.ifBlank { if (e.gelesen) "Gelesen" else "Ungelesen" })
+                },
+                color = f.textLeise, fontSize = 13.sp, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Box(Modifier.fillMaxHeight().width(1.dp).background(f.rand))
+        Column(Modifier.width(52.dp).fillMaxHeight()) {
+            PfeilFeld(Modifier.weight(1f), hoch = true, gewaehlt = e.bewertung == 1) { bewerten(1) }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(f.rand))
+            PfeilFeld(Modifier.weight(1f), hoch = false, gewaehlt = e.bewertung == -1) { bewerten(-1) }
+        }
+    }
+}
+
+@Composable
+private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, unwichtig: () -> Unit, oeffnen: () -> Unit) {
     val f = LocalFarben.current
     val form = RoundedCornerShape(14.dp)
     val frisch = e.frisch
@@ -151,8 +273,13 @@ private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, oeffnen
         )
     }
     Box(Modifier.fillMaxHeight().width(if (frisch) 2.dp else 1.dp).background(if (frisch) FRISCH_GRUEN else f.rand))
-    Box(Modifier.fillMaxHeight().width(52.dp).antippen(aktion = erklaeren), contentAlignment = Alignment.Center) {
-        Icon(Icons.Rounded.Lightbulb, "E-Mail erklären", tint = f.primaer, modifier = Modifier.size(24.dp))
+    // Oben die Glühbirne wie bisher, darunter der Pfeil „unwichtig“ (nimmt die Mail sofort aus diesem Bereich, unter „Alle E-Mails“ bleibt sie).
+    Column(Modifier.width(52.dp).fillMaxHeight()) {
+        Box(Modifier.weight(1f).fillMaxWidth().heightIn(min = 48.dp).antippen(aktion = erklaeren), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Lightbulb, "E-Mail erklären", tint = f.primaer, modifier = Modifier.size(24.dp))
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(if (frisch) FRISCH_GRUEN else f.rand))
+        PfeilFeld(Modifier.weight(1f), hoch = false, gewaehlt = false, aktion = unwichtig)
     }
     }
 }

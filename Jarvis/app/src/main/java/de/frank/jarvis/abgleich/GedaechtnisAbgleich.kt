@@ -86,6 +86,8 @@ object GedaechtnisAbgleich {
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
         // Urteile der wichtigen E-Mails: je Nachricht eine Datei, damit Handy und Tablet dieselben Mails als wichtig zeigen.
         Quelle("gedaechtnis", de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER, ordner = true, endung = ".json", loeschbar = true),
+        // Franks Wichtig/Unwichtig-Bewertungen je Nachricht (nur Richtung und Lernmerkmale): zuletzt geändert gewinnt, nie gelöscht (neutral = r 0).
+        Quelle("gedaechtnis", de.frank.jarvis.faehigkeit.WichtigeMails.BEWERTUNGEN_ORDNER, ordner = true, endung = ".json"),
         )
     }
 
@@ -604,7 +606,10 @@ object GedaechtnisAbgleich {
         // Listen: neu einlesen, damit Oberfläche und Widget hier sofort den Stand des anderen Geräts zeigen.
         if (pfade.any { it.startsWith(de.frank.jarvis.listen.Listen.ORDNER + "/") }) runCatching { de.frank.jarvis.listen.Listen.neuLaden(app) }
         if (pfade.any { it.startsWith(de.frank.jarvis.veraenderung.Veraenderungen.ORDNER + "/") }) runCatching { de.frank.jarvis.veraenderung.Veraenderungen.neuLaden(app) }
-        if (pfade.any { it.startsWith(de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER + "/") }) runCatching { de.frank.jarvis.faehigkeit.WichtigeMails.nachAbgleich(app) }
+        val urteileNeu = pfade.any { it.startsWith(de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER + "/") }
+        val bewertungenNeu = pfade.any { it.startsWith(de.frank.jarvis.faehigkeit.WichtigeMails.BEWERTUNGEN_ORDNER + "/") }
+        if (urteileNeu || bewertungenNeu) runCatching { de.frank.jarvis.faehigkeit.WichtigeMails.nachAbgleich(app, mitAbruf = urteileNeu) }
+        if (bewertungenNeu) runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.MAIL_LERNEN), "Geräteabgleich") }
         if (de.frank.jarvis.atem.AtemProfile.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemProfile.neuLaden(app) }
         if (de.frank.jarvis.atem.AtemSatzVerlauf.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemSatzVerlauf.neuLaden(app) }
     }
