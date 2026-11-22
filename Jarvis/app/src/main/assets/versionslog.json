@@ -910,6 +910,7 @@
   {"versionCode": 901, "versionName": "1.8.890", "stand": "22.11.2026, 09:13 Uhr", "notiz": "Gmail-Bereich erweitert: Abo-Verlängerungen und hohe Zahlungen gelten als wichtig, darunter steht aufklappbar der ganze Posteingang, und mit Pfeil hoch oder runter stufst du jede Mail selbst ein, woraus Jarvis auf Handy und Tablet dauerhaft lernt."},
   {"versionCode": 902, "versionName": "1.8.891", "stand": "22.11.2026, 09:18 Uhr", "notiz": "Gelernte Wichtig-Muster greifen nur noch bei Zahlungen und nie gegen nötige Antworten, ein geleerter Posteingang leert auch die wichtigen E-Mails."},
   {"versionCode": 903, "versionName": "1.8.892", "stand": "22.11.2026, 09:19 Uhr", "notiz": "Die E-Mail-Karte zeigt jetzt immer zwei große Aufklappfelder wie die Mac-Zentrale: Wichtige E-Mails mit Anzahl und darunter Alle E-Mails."},
-  {"versionCode": 904, "versionName": "1.8.893", "stand": "22.11.2026, 09:24 Uhr", "notiz": "Bei den wichtigen E-Mails steht nur noch die Glühbirne, und unter Alle E-Mails sind die Pfeile jetzt dick ausgemalt: grün nach oben, rot nach unten."}
+  {"versionCode": 904, "versionName": "1.8.893", "stand": "22.11.2026, 09:24 Uhr", "notiz": "Bei den wichtigen E-Mails steht nur noch die Glühbirne, und unter Alle E-Mails sind die Pfeile jetzt dick ausgemalt: grün nach oben, rot nach unten."},
+  {"versionCode": 905, "versionName": "1.8.894", "stand": "22.11.2026, 09:26 Uhr", "notiz": "Review-Befunde behoben: alte wichtige Mails bleiben sichtbar, zwei gleich teure Abos verschmelzen nicht mehr, schnell getippte Bewertungen gehen nicht verloren und Alle E-Mails lädt in Stücken."}
 ]
 }

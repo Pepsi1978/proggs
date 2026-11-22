@@ -66,7 +66,7 @@ object KontextWahl {
         Bereich.RUECKBLICK -> Profil(Rolle.WAHL, listOf("letzte tage", "letzten tage", "letzte woche", "letzten woche", "rückblick", "gestern", "vorgestern", "vergangen"))
         Bereich.ABLAGE -> Profil(Rolle.WAHL, listOf("ablage", "datei", "dokument", "pdf", "bild=", "bilder", "foto", "gespeichert", "anhang"))
         Bereich.MAIL -> Profil(Rolle.WAHL, listOf("mail=", "mails", "e-mail", "email", "posteingang", "newsletter", "bestellung", "post="))
-        Bereich.MAIL_LERNEN -> Profil(Rolle.WAHL, listOf("wichtige mail", "wichtige e-mail", "wichtigen mail", "wichtigen e-mail", "unwichtig", "hochgestuft", "heruntergestuft", "e-mail-lernen", "mail lernen"))
+        Bereich.MAIL_LERNEN -> Profil(Rolle.WAHL, listOf("wichtige mail", "wichtige e-mail", "wichtigen mail", "wichtigen e-mail", "als unwichtig", "mail unwichtig", "hochgestuft", "heruntergestuft", "e-mail-lernen", "mail lernen"))
         Bereich.WISSEN -> Profil(Rolle.WAHL, listOf("wissen", "datenbank", "artikel", "nachschlag", "studie"))
         Bereich.IDEEN -> Profil(Rolle.WAHL, listOf("idee"))
         Bereich.TAGEBUCH -> Profil(Rolle.WAHL, listOf("tagebuch", "journal", "gefühlt", "stimmung", "reflexion", "geschrieben="))

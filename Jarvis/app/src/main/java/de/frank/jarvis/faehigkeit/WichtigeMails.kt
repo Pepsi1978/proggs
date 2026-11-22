@@ -105,7 +105,6 @@ object WichtigeMails {
     private const val JE_ANFRAGE = 20
     private const val TEXT_ZEICHEN = 1_500
     private const val MAX_NEU = 60
-    private const val POSTEINGANG_MAX = 300
     /** Fassung der Einstufung: Ändert sich die Anweisung, werden alle Nachrichten neu eingestuft (mit neuem [ORDNER]). */
     private const val FASSUNG = 3
 
@@ -146,6 +145,11 @@ object WichtigeMails {
     private val bewertungen = HashMap<Long, JSONObject>()
     /** Automatisch wichtige Nachrichten, auf die Frank in der Unterhaltung schon geantwortet hat (Stand der letzten Prüfung). */
     @Volatile private var beantwortet: Set<Long> = emptySet()
+    /** Automatisch wichtige Nachrichten, deren Beantwortet-Stand die letzte Prüfung dieses Geräts kennt; andere warten auf die nächste Prüfung. */
+    @Volatile private var beantwortetGeprueft: Set<Long> = emptySet()
+    /** Ein Schreiber zur Zeit für Bewertungsdateien (zweimal schnell getippt: sonst gewinnt die ältere oder die Datei geht verloren). */
+    private val bewertungSperre = Mutex()
+    @Volatile private var nochmalManuell = false
 
     private fun datei(app: Context) = File(app.filesDir, DATEI)
     private fun ordner(app: Context) = File(app.filesDir, ORDNER)
@@ -243,11 +247,14 @@ object WichtigeMails {
                     val pe = j.optJSONArray("posteingang")?.let { a -> (0 until a.length()).map { kopfAusJson(a.getJSONObject(it)) } }.orEmpty()
                     val aus = j.optJSONArray("ausgeblendet")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
                     beantwortet = j.optJSONArray("beantwortet")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
+                    beantwortetGeprueft = j.optJSONArray("geprueft_wichtig")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
                     // Nach einer neuen Fassung gilt der alte Stand als ungeprüft: Karte und Wächter prüfen sofort neu.
                     _stand.value = Stand(eintraege, if (aktuell) j.optLong("geprueft") else 0L, j.optString("fehler").ifBlank { null }, false, aus, pe)
                     letzterVersuch = if (aktuell) j.optLong("versuch") else 0L
                 }
             }.onFailure { Logbuch.fehler("Wichtige E-Mails: Laden", it) }
+            // Urteile der Fassung 2 lagen im alten Ordner; er wird nicht mehr abgeglichen, also einmal aufräumen.
+            runCatching { File(app.filesDir, "wichtige_mails_urteile").takeIf { it.isDirectory }?.deleteRecursively() }
             urteileEinlesen(app)
             bewertungenEinlesen(app)
             runCatching { _stand.value = neuBilden(_stand.value) }
@@ -263,6 +270,7 @@ object WichtigeMails {
             .put("fassung", FASSUNG).put("geprueft", s.geprueft).put("versuch", letzterVersuch).put("fehler", s.fehler ?: "")
             .put("ausgeblendet", JSONArray(s.ausgeblendet.toList()))
             .put("beantwortet", JSONArray(beantwortet.toList()))
+            .put("geprueft_wichtig", JSONArray(beantwortetGeprueft.toList()))
             .put("liste", JSONArray(s.eintraege.map(::kopf)))
             // Nur Kopfdaten als Anzeigespeicher dieses Geräts (nicht abgeglichen, kein Mailtext).
             .put("posteingang", JSONArray(s.posteingang.map { e -> kopf(e).put("k", "").put("a", false) }))
@@ -296,8 +304,10 @@ object WichtigeMails {
         val hoch = pe.filter { it.bewertung == 1 }
         val runter = pe.filter { it.bewertung == -1 }
         val auto = pe.filter { k ->
-            k.bewertung == 0 && urteil(k.msgId)?.optBoolean("w") == true && k.msgId !in beantwortet &&
-                runter.none { r -> r.thrId == k.thrId && r.empfangen >= k.empfangen } && hoch.none { it.thrId == k.thrId }
+            // Nur was die letzte Prüfung auf „beantwortet“ geprüft hat: Ein Urteil vom anderen Gerät zu einer schon beantworteten Mail
+            // erscheint sonst bis zum nächsten Abruf als wichtig. Hochgestufte verdrängen nur ältere derselben Unterhaltung, nie eine neuere.
+            k.bewertung == 0 && urteil(k.msgId)?.optBoolean("w") == true && k.msgId in beantwortetGeprueft && k.msgId !in beantwortet &&
+                runter.none { r -> r.thrId == k.thrId && r.empfangen >= k.empfangen } && hoch.none { it.thrId == k.thrId && it.empfangen >= k.empfangen }
         }.groupBy { it.thrId }.values.map { g -> g.maxBy { it.empfangen } }.sortedByDescending { it.empfangen }
         // Wiederkehrende Benachrichtigungen (gleicher Absender, gleicher ausführlicher Betreff in getrennten Unterhaltungen) nur einmal, die neueste.
         // Kurze, allgemeine Betreffs („Zahlungserinnerung“) können verschiedene Vorgänge sein: nur bei gleicher Kurzfassung zusammenfassen.
@@ -309,13 +319,13 @@ object WichtigeMails {
             val betreff = norm(e.betreff)
             gesehen.add(adresse.lowercase(Locale.ROOT) + "|" + betreff + if (betreff.length >= 25) "" else "|" + norm(e.kurz))
         }
-        // Händlerbeleg und Zahlungsdienst-Beleg zu derselben Zahlung (gleicher Betrag binnen zwei Stunden): nur einmal, der Händler zuerst.
-        val betraege = ArrayList<Pair<Double, Long>>()
-        val ohneDoppel = einmal.sortedBy { if (urteil(it.msgId)?.optString("s") == "zahlungsdienst") 1 else 0 }.filter { e ->
+        // Händlerbeleg und Zahlungsdienst-Beleg zu derselben Zahlung (gleicher Betrag binnen zwei Stunden): nur der Händler. Zwei Mails, die
+        // nicht beide vom Zahlungsdienst kommen, bleiben immer beide (zwei Abos mit gleichem Preis am selben Morgen).
+        fun zahlungsdienst(e: Eintrag) = urteil(e.msgId)?.optString("s") == "zahlungsdienst"
+        val haendler = einmal.filter { !zahlungsdienst(it) && betrag(urteil(it.msgId)) > 0.0 }
+        val ohneDoppel = einmal.filter { e ->
             val b = betrag(urteil(e.msgId))
-            if (b <= 0.0 || e.antwort) return@filter true
-            if (betraege.any { (bb, am) -> kotlin.math.abs(bb - b) < 0.005 && kotlin.math.abs(am - e.empfangen) <= 2 * 3_600_000L }) false
-            else { betraege += b to e.empfangen; true }
+            !(zahlungsdienst(e) && !e.antwort && b > 0.0 && haendler.any { h -> kotlin.math.abs(betrag(urteil(h.msgId)) - b) < 0.005 && kotlin.math.abs(h.empfangen - e.empfangen) <= 2 * 3_600_000L })
         }
         val wichtig = (hoch + ohneDoppel).sortedByDescending { it.empfangen }.map { it.copy(wichtig = true, kurz = it.kurz.ifBlank { it.betreff }) }
         val ids = wichtig.map { it.msgId }.toSet()
@@ -363,8 +373,11 @@ object WichtigeMails {
         _stand.update { neuBilden(it) }
         Logbuch.system("E-Mail bewertet", when (neu) { 1 -> "wichtig"; -1 -> "unwichtig"; else -> "wieder automatisch" } + " · " + musterText(muster(o)))
         bereich.launch {
-            runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(msgId) + ".json"), o.toString()) }
-                .onFailure { Logbuch.fehler("Wichtige E-Mails: Bewertung speichern", it) }
+            bewertungSperre.withLock {
+                val aktuell = synchronized(bewertungen) { bewertungen[msgId]?.toString() } ?: return@withLock
+                runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(msgId) + ".json"), aktuell) }
+                    .onFailure { Logbuch.fehler("Wichtige E-Mails: Bewertung speichern", it) }
+            }
             speichern(app)
             de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.MAIL_LERNEN), "E-Mail bewertet") }
@@ -405,7 +418,8 @@ object WichtigeMails {
     /** Bereich „E-Mail-Lernen“ im Live-Gedächtnis: nur Muster aus Franks Bewertungen, keine Mails. */
     fun gelerntText(context: Context): String {
         val app = context.applicationContext
-        laden(app); bewertungenEinlesen(app)
+        // Der Speicher ist aktuell (Laden, Bewerten, Abgleich): kein erneutes Einlesen aller Dateien je Kontextabruf.
+        laden(app)
         val liste = aktiveBewertungen()
         if (liste.isEmpty()) return "Frank hat noch keine E-Mail bewertet; die Wichtigkeit folgt nur der festen Einstufung."
         val fest = festeMuster(liste)
@@ -430,7 +444,7 @@ object WichtigeMails {
     fun aktualisieren(context: Context) {
         val app = context.applicationContext
         // Läuft schon eine Prüfung, holt ein Lauf gleich danach nach, was seit ihrem Start ankam.
-        if (sperre.isLocked) { nochmal = true; return }
+        if (sperre.isLocked) { nochmalManuell = true; nochmal = true; return }
         bereich.launch { pruefen(app, manuell = true) }
     }
 
@@ -523,7 +537,7 @@ object WichtigeMails {
                 fehler = fehlerText(t)
                 Logbuch.fehler("Wichtige E-Mails: Prüfung", t)
             }
-            neu?.let { beantwortet = it.beantwortet }
+            neu?.let { beantwortet = it.beantwortet; beantwortetGeprueft = it.geprueft }
             bewertungenEinlesen(app)
             _stand.update { alt ->
                 // Während der Prüfung geöffnete Einträge bleiben ausgeblendet, auch beim manuellen Aktualisieren.
@@ -541,13 +555,13 @@ object WichtigeMails {
             }
             val liste = _stand.value.eintraege
             speichern(app)
-            if (nochmal) { nochmal = false; bereich.launch { runCatching { pruefen(app, manuell = false) } } }
+            if (nochmal) { val m = nochmalManuell; nochmal = false; nochmalManuell = false; bereich.launch { runCatching { pruefen(app, manuell = m) } } }
             Logbuch.system("Wichtige E-Mails geprüft", "${liste.size} wichtig von ${_stand.value.posteingang.size}" + (fehler?.let { ", Fehler: $it" } ?: "") + if (manuell) ", manuell" else "")
             _stand.value
         }
     }
 
-    private class Lauf(val posteingang: List<Eintrag>, val beantwortet: Set<Long>)
+    private class Lauf(val posteingang: List<Eintrag>, val beantwortet: Set<Long>, val geprueft: Set<Long>)
 
     private fun fehlerText(t: Throwable): String {
         val text = generateSequence(t) { it.cause }.mapNotNull { it.message }.joinToString(" | ")
@@ -669,6 +683,23 @@ object WichtigeMails {
                 de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
             }
         }
+        // Bewertungen ohne Merkmale (vor der ersten Einstufung getippt): Merkmale aus dem Urteil nachtragen, damit sie fürs Lernen zählen.
+        val ohne = synchronized(bewertungen) { bewertungen.filter { (id, o) -> !o.has("t") && urteil(id) != null }.keys.toList() }
+        if (ohne.isNotEmpty()) {
+            bewertungSperre.withLock {
+                ohne.forEach { id ->
+                    val u = urteil(id) ?: return@forEach
+                    val o = synchronized(bewertungen) { bewertungen[id]?.let { JSONObject(it.toString()) } } ?: return@forEach
+                    listOf("t", "z", "s", "h").forEach { k -> u.optString(k).takeIf { it.isNotBlank() }?.let { o.put(k, it) } }
+                    betrag(u).takeIf { it > 0.0 }?.let { o.put("b", it) }
+                    o.put("w0", u.optBoolean("w"))
+                    koepfe.firstOrNull { it.msgId == id }?.let { o.put("d", domain(it.von)) }
+                    synchronized(bewertungen) { bewertungen[id] = o }
+                    runCatching { atomarSchreiben(File(bewOrdner(app), java.lang.Long.toUnsignedString(id) + ".json"), o.toString()) }
+                }
+            }
+            de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen()
+        }
         // Urteile zu Nachrichten, die nicht mehr im Posteingang liegen, dürfen gehen. Bewertungen bleiben als Lerngrundlage.
         val imPosteingang = koepfe.map { it.msgId }.toSet()
         synchronized(urteile) { urteile.keys.retainAll(imPosteingang) }
@@ -697,10 +728,10 @@ object WichtigeMails {
                 }.map { it.msgId }.toSet()
             } finally { runCatching { alleOrdner.close(false) } }
         }
-        val posteingang = koepfe.sortedByDescending { it.am }.take(POSTEINGANG_MAX).map { k ->
+        val posteingang = koepfe.sortedByDescending { it.am }.map { k ->
             Eintrag(k.msgId, k.thrId, k.von, k.betreff, k.am, "", false, gelesen = k.gelesen)
         }
-        return Lauf(posteingang, beantwortet)
+        return Lauf(posteingang, beantwortet, wichtig.map { it.msgId }.toSet())
     }
 
     // ---- Abfrage per Chat und Sprache ----

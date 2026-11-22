@@ -68,6 +68,7 @@ private val FRISCH_GRUEN = Color(0xFF3DBE7A)
 private object MailKartenZustand {
     var wichtigOffen by mutableStateOf(false)
     var alleOffen by mutableStateOf(false)
+    var alleAnzahl by mutableStateOf(40)
 }
 
 /**
@@ -129,7 +130,10 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
             )
         }) {
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (sichtbar.isEmpty()) Text("Hier steht nichts, was du prüfen oder beantworten musst.", color = f.textLeise, fontSize = 14.sp)
+                if (sichtbar.isEmpty()) Text(
+                    if (s.bestaetigt) "Hier steht nichts, was du prüfen oder beantworten musst." else s.fehler ?: "Noch nicht geprüft.",
+                    color = if (s.bestaetigt) f.textLeise else f.gefahr, fontSize = 14.sp,
+                )
                 sichtbar.forEach { e ->
                     key(e.msgId) {
                         MailEintrag(e, erklaeren = { erklaeren(e) }) {
@@ -153,10 +157,20 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
             )
         }) {
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (s.posteingang.isEmpty()) Text("Keine E-Mails im Posteingang.", color = f.textLeise, fontSize = 14.sp)
-                s.posteingang.forEach { e ->
+                if (s.posteingang.isEmpty()) Text(
+                    if (s.bestaetigt) "Keine E-Mails im Posteingang." else s.fehler ?: "Noch nicht geladen.",
+                    color = if (s.bestaetigt) f.textLeise else f.gefahr, fontSize = 14.sp,
+                )
+                // In Stücken zu 40: Ein großer Posteingang baut sonst Hunderte Zeilen auf einmal.
+                s.posteingang.take(MailKartenZustand.alleAnzahl).forEach { e ->
                     key(e.msgId) { AlleEintrag(e, bewerten = { r -> WichtigeMails.bewerten(context, e.msgId, r) }) { WichtigeMails.oeffnen(ui, e) } }
                 }
+                val rest = s.posteingang.size - MailKartenZustand.alleAnzahl
+                if (rest > 0) Text(
+                    "Weitere ${minOf(rest, 40)} von $rest anzeigen",
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).antippen { MailKartenZustand.alleAnzahl += 40 }.padding(vertical = 12.dp),
+                    color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
             }
         }
     }
