@@ -23,8 +23,10 @@ import java.util.UUID
 /**
  * Auslösebedingung einer Standort-Erinnerung: [name] wie Frank ihn nennt („Papa“ oder die Adresse), [adresse] aufgelöst, Mittelpunkt und Radius in Metern.
  * [scharfSeit]: nur eine Ankunft danach löst aus (gesetzt beim Anlegen, bei Ortswechsel, „wieder offen“ und nach jeder Auslösung).
+ * [verzoegerung]: so viele ganze Minuten (0 bis 20) nach der erkannten Ankunft löst sie aus, je Erinnerung.
  */
-data class OrtBedingung(val name: String, val adresse: String, val breite: Double, val laenge: Double, val radius: Int = OrtErinnerungen.RADIUS_M, val scharfSeit: Long = 0L)
+data class OrtBedingung(val name: String, val adresse: String, val breite: Double, val laenge: Double, val radius: Int = OrtErinnerungen.RADIUS_M, val scharfSeit: Long = 0L,
+                        val verzoegerung: Int = OrtErinnerungen.VERZOEGERUNG_STANDARD)
 
 /** Ein eingestellter Erinnerungszeitpunkt. [minuten] vor dem Termin; bei [uhrzeit] (nur Termine ohne Uhrzeit) [minuten] / 1440 Tage vorher um diese Zeit. */
 data class Ausloesung(val id: String, val minuten: Int, val uhrzeit: String? = null, val angelegt: Long = 0L)
@@ -310,7 +312,7 @@ object Erinnerungen {
         .put("datum", e.datum ?: JSONObject.NULL).put("uhrzeit", e.uhrzeit ?: JSONObject.NULL).put("ohne_uhrzeit_um", e.ohneUhrzeitUm).put("form", e.form)
         .put("ausloesungen", JSONArray(e.ausloesungen.map { JSONObject().put("id", it.id).put("minuten", it.minuten).put("uhrzeit", it.uhrzeit ?: JSONObject.NULL).put("angelegt", it.angelegt) }))
         .put("erledigt", e.erledigt).put("hinweis_um", e.hinweisUm).put("zuletzt_erwaehnt", e.zuletztErwaehnt).put("quelle", e.quelle.ifBlank { AblageQuellen.HANDY }).put("erstellt", e.erstellt)
-        .put("ort", e.ort?.let { o -> JSONObject().put("name", o.name).put("adresse", o.adresse).put("breite", o.breite).put("laenge", o.laenge).put("radius", o.radius).put("scharf_seit", o.scharfSeit) } ?: JSONObject.NULL)
+        .put("ort", e.ort?.let { o -> JSONObject().put("name", o.name).put("adresse", o.adresse).put("breite", o.breite).put("laenge", o.laenge).put("radius", o.radius).put("scharf_seit", o.scharfSeit).put("verzoegerung_min", o.verzoegerung) } ?: JSONObject.NULL)
         .put("ort_ausgeloest", e.ortAusgeloest)
 
     fun aus(id: String, w: JSONObject, geaendert: Long): Erinnerung {
@@ -321,7 +323,8 @@ object Erinnerungen {
             w.optString("form", Erinnerung.FORM_MELDUNG),
             (0 until a.length()).map { i -> a.getJSONObject(i).let { Ausloesung(it.getString("id"), it.optInt("minuten"), nullbar(it, "uhrzeit"), it.optLong("angelegt")) } },
             w.optLong("erledigt"), w.optLong("hinweis_um"), w.optLong("zuletzt_erwaehnt"), w.optString("quelle"), w.optLong("erstellt"), geaendert,
-            w.optJSONObject("ort")?.let { o -> OrtBedingung(o.optString("name"), o.optString("adresse"), o.optDouble("breite"), o.optDouble("laenge"), o.optInt("radius", OrtErinnerungen.RADIUS_M), o.optLong("scharf_seit")) }
+            w.optJSONObject("ort")?.let { o -> OrtBedingung(o.optString("name"), o.optString("adresse"), o.optDouble("breite"), o.optDouble("laenge"), o.optInt("radius", OrtErinnerungen.RADIUS_M), o.optLong("scharf_seit"),
+                OrtErinnerungen.verzoegerungGueltig(o.optInt("verzoegerung_min", OrtErinnerungen.VERZOEGERUNG_STANDARD))) }
                 ?.takeIf { !it.breite.isNaN() && !it.laenge.isNaN() },
             w.optLong("ort_ausgeloest"),
         )

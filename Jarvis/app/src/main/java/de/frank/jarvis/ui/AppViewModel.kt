@@ -1745,7 +1745,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun erinnerungBearbeiten(e: de.frank.jarvis.ablage.Erinnerung) {
         erinnerungSitzung++
         erinnerungKi = null
-        erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form, e.ort?.name)
+        erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form, e.ort?.name, e.ort?.verzoegerung ?: de.frank.jarvis.ablage.OrtErinnerungen.VERZOEGERUNG_STANDARD)
     }
 
     fun erinnerungEntwurfSetzen(neu: ErinnerungEntwurf) { erinnerungEntwurf = neu }
@@ -1823,7 +1823,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     is de.frank.jarvis.ablage.OrtErinnerungen.Aufloesung.Mehrdeutig -> { meldung = "Mehrere Orte passen: " + r.vorschlaege.joinToString("; ") + ". Bitte genauer angeben."; return@launch }
                     is de.frank.jarvis.ablage.OrtErinnerungen.Aufloesung.Fehlt -> { meldung = if (" Frag Frank" in r.grund) r.grund.substringBefore(" Frag Frank") + " Bitte den Ort genauer angeben." else r.grund; return@launch }
                 }
-            }
+            }?.copy(verzoegerung = de.frank.jarvis.ablage.OrtErinnerungen.verzoegerungGueltig(d.verzoegerung))
             val e = withContext(Dispatchers.IO) {
                 if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit, ort)
                 else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
@@ -4474,7 +4474,9 @@ private const val LAGE_ABSTAND_MS = 5 * 60_000L
 
 /** Was die Eingabe einer Erinnerung gerade enthält. */
 /** [ort] nicht null = Standort-Erinnerung: „Papa“, „Zuhause“, „Arbeit“ oder eine Adresse. */
-data class ErinnerungEntwurf(val id: String? = null, val allgemein: Boolean = false, val text: String = "", val kurz: String = "", val zeile: String = "", val datum: String? = null, val uhrzeit: String? = null, val form: String = de.frank.jarvis.ablage.Erinnerung.FORM_MELDUNG, val ort: String? = null)
+data class ErinnerungEntwurf(val id: String? = null, val allgemein: Boolean = false, val text: String = "", val kurz: String = "", val zeile: String = "", val datum: String? = null, val uhrzeit: String? = null, val form: String = de.frank.jarvis.ablage.Erinnerung.FORM_MELDUNG, val ort: String? = null,
+    /** Standort: Minuten nach der Ankunft (0 bis 20). */
+    val verzoegerung: Int = de.frank.jarvis.ablage.OrtErinnerungen.VERZOEGERUNG_STANDARD)
 
 private const val ERINNERUNG_KI =
     "Du überarbeitest eine von Frank eingesprochene oder eingetippte Erinnerung. Antworte nur mit JSON: {\"text\":\"…\",\"kurz\":\"…\",\"zeile\":\"…\"}. " +

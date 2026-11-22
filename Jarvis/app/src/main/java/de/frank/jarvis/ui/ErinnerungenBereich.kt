@@ -188,8 +188,9 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                     Text(when {
                         e.erledigt != 0L -> "Erledigt: löst nicht mehr aus."
                         e.ortAusgeloest > 0 -> "Zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)}. Löst bei der nächsten Ankunft wieder aus, bis du „Erledigt“ tippst."
-                        else -> "Löst aus, wenn du etwa drei Minuten dort bist, auch bei gesperrtem Handy. Vorbeifahren oder kürzere Aufenthalte lösen nichts aus."
+                        else -> "Löst ${verzoegerungText(o.verzoegerung)} aus, auch bei gesperrtem Handy." + if (o.verzoegerung > 0) " Vorbeifahren oder kürzere Aufenthalte lösen nichts aus." else ""
                     }, color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
+                    Text("Minuten nach Ankunft: ${o.verzoegerung}", color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
                     if (!de.frank.jarvis.data.Geraet.istTablet) de.frank.jarvis.ablage.OrtErinnerungen.fehlendeFreigabe(app)?.let { Text(it, color = f.gefahr, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 4.dp)) }
                 }
                 Text(if (e.allgemein) "Hinweise" else if (e.ort != null) "Auslösungen" else "Erinnerungszeitpunkte", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
@@ -318,6 +319,15 @@ fun ErinnerungEbene(vm: AppViewModel) {
                 vm.erinnerungEntwurfSetzen(d.copy(form = if (d.form == Erinnerung.FORM_WECKER) Erinnerung.FORM_MELDUNG else Erinnerung.FORM_WECKER))
             }
         }
+        // Verzögerung je Standort-Erinnerung: ganze Minuten 0 bis 20 nach der erkannten Ankunft.
+        if (d.ort != null) Column(Modifier.padding(top = 2.dp, bottom = 2.dp)) {
+            Text("Minuten nach Ankunft: ${d.verzoegerung}" + if (d.verzoegerung == 0) " (sofort)" else "", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            androidx.compose.material3.Slider(
+                d.verzoegerung.toFloat(), { v -> vm.erinnerungEntwurf?.let { vm.erinnerungEntwurfSetzen(it.copy(verzoegerung = Math.round(v).coerceIn(0, de.frank.jarvis.ablage.OrtErinnerungen.VERZOEGERUNG_MAX))) } },
+                Modifier.fillMaxWidth(), valueRange = 0f..de.frank.jarvis.ablage.OrtErinnerungen.VERZOEGERUNG_MAX.toFloat(), steps = de.frank.jarvis.ablage.OrtErinnerungen.VERZOEGERUNG_MAX - 1,
+                colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.textLeise.copy(alpha = 0.25f), activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent),
+            )
+        }
         if (!d.allgemein && d.ort == null) Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Chip(d.datum?.let { t -> runCatching { LocalDate.parse(t).format(DateTimeFormatter.ofPattern("d. MMM yyyy", Locale.GERMAN)) }.getOrDefault(t) } ?: "Datum wählen", d.datum != null) { datumWaehlen(context, d.datum) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(datum = it)) } }
             Chip(d.uhrzeit?.let { "$it Uhr" } ?: "Ohne Uhrzeit", d.uhrzeit != null) { uhrWaehlen(context, d.uhrzeit ?: vm.einstellungen.erinnerungOhneUhrzeit) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(uhrzeit = it)) } }
@@ -369,3 +379,6 @@ private fun Rund(icon: androidx.compose.ui.graphics.vector.ImageVector, beschrei
         Icon(icon, beschreibung, tint = f.aufPrimaer, modifier = Modifier.size(24.dp))
     }
 }
+
+/** „sofort bei der Ankunft“ bzw. „10 Minuten nach der Ankunft“. */
+internal fun verzoegerungText(min: Int) = if (min <= 0) "sofort bei der Ankunft" else if (min == 1) "eine Minute nach der Ankunft" else "$min Minuten nach der Ankunft"

@@ -40,13 +40,17 @@ import kotlin.coroutines.resume
  * Standort-Erinnerungen: „Erinnere mich, wenn ich bei Papa bin, an …“.
  *
  * Der Geofence-Dienst von Android weckt Jarvis nur (Betreten, Verlassen). Ob ausgelöst wird, entscheidet allein ein frischer, genauer Standort
- * etwa drei Minuten nach der Ankunft: drin = auslösen, sicher draußen = nichts, unsicher = begrenzt jede Minute erneut prüfen.
+ * die je Erinnerung gewählte Verzögerung (0 bis 20 Minuten) nach der erkannten Ankunft: drin = auslösen, sicher draußen = nichts, unsicher = begrenzt jede Minute erneut prüfen.
  * Nur am Handy (Franks mitgeführtes Gerät); das Tablet richtet keinen Umkreis ein und löst nie aus, so gibt es keine doppelte Auslösung.
  * Kein Bewegungsverlauf: je Ort nur „drin seit“, „draußen seit“ und ein Versuchszähler, jeweils überschrieben; keine Koordinaten im Logbuch.
  */
 object OrtErinnerungen {
     const val RADIUS_M = 150
-    const val VERWEILEN_MS = 3 * 60_000L
+    /** Minuten nach der Ankunft: Vorgabe beim Anlegen (Sprache und Maske) und erlaubter Bereich des Reglers. */
+    const val VERZOEGERUNG_STANDARD = 5
+    const val VERZOEGERUNG_MAX = 20
+    fun verzoegerungGueltig(min: Int) = min.coerceIn(0, VERZOEGERUNG_MAX)
+    private fun verzoegerungMs(o: OrtBedingung) = verzoegerungGueltig(o.verzoegerung) * 60_000L
     /** Verlassen und binnen dieser Zeit wieder da: derselbe Aufenthalt, wenn er schon ausgelöst hat (Geofences flattern in Gebäuden). */
     private const val FLATTERN_MS = 10 * 60_000L
     private const val MAX_VERSUCHE = 10
@@ -236,13 +240,15 @@ object OrtErinnerungen {
         // Ort erst seit Kurzem überwacht und jede offene Erinnerung dort gerade erst scharf: Frank war beim Anlegen schon da.
         val frisch = jetzt - p.getLong("reg_$k", 0L) < NEU_REGISTRIERT_MS &&
             offene(app).mapNotNull { it.ort }.filter { schluessel(it) == k }.let { l -> l.isNotEmpty() && l.all { jetzt - it.scharfSeit < NEU_REGISTRIERT_MS + 60_000L } }
+        // Schon in diesem Aufenthalt ausgelöst (alle oder nur die mit kürzerer Verzögerung): Flattern beginnt keinen neuen.
+        val schonAusgeloest = p.getBoolean("ausgeloest_$k", false) || (drin > 0L && offene(app).any { it.ort != null && schluessel(it.ort) == k && it.ortAusgeloest >= drin })
         val e = p.edit()
         when {
             // Neu eingerichtet und schon da (Anlegen vor Ort): keine Ankunft, erst die nächste zählt.
             (drin == 0L || draussen > 0L) && frisch -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", true)
             // Erneutes Einrichten oder Flattern: derselbe Aufenthalt.
             drin > 0L && draussen == 0L -> Unit
-            drin > 0L && p.getBoolean("ausgeloest_$k", false) && jetzt - draussen < FLATTERN_MS -> Unit
+            drin > 0L && schonAusgeloest && jetzt - draussen < FLATTERN_MS -> Unit
             else -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0)
         }
         e.putLong("draussen_$k", 0L).apply()
@@ -259,23 +265,24 @@ object OrtErinnerungen {
         val o = Erinnerungen.eine(app, id)?.ort ?: run { Logbuch.system("Standort-Erinnerungen", "Test: keine Standort-Erinnerung mit dieser Kennung"); return }
         val k = schluessel(o)
         sperre.withLock { prefs(app).edit().putLong("drin_$k", System.currentTimeMillis()).putLong("draussen_$k", 0L).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0).apply() }
-        Logbuch.system("Standort-Erinnerungen", "Test: Ankunft gesetzt, Prüfung in drei Minuten")
+        Logbuch.system("Standort-Erinnerungen", "Test: Ankunft gesetzt, Prüfung nach ${verzoegerungGueltig(o.verzoegerung)} Minuten")
         weckerStellen(app)
     }
 
-    // ------------------------------------------------------------------ Nach drei Minuten prüfen
+    // ------------------------------------------------------------------ Nach der gewählten Verzögerung prüfen
 
-    /** Wartende Orte mit dem Zeitpunkt der nächsten Prüfung. */
+    /** Wartende Orte mit dem Zeitpunkt der nächsten Prüfung: die kürzeste Verzögerung der dort noch nicht ausgelösten Erinnerungen, plus Wiederholungen. */
     private fun wartende(app: Context): Map<String, Long> {
         val p = prefs(app)
         val orte = offene(app).mapNotNull { it.ort }.groupBy { schluessel(it) }
         return orte.mapNotNull { (k, liste) ->
             val drin = p.getLong("drin_$k", 0L)
             if (drin == 0L || p.getLong("draussen_$k", 0L) > 0L || p.getBoolean("ausgeloest_$k", false)) return@mapNotNull null
-            if (liste.none { it.scharfSeit < drin }) return@mapNotNull null
+            val offen = liste.filter { it.scharfSeit < drin }
+            if (offen.isEmpty()) return@mapNotNull null
             val versuche = p.getInt("versuche_$k", 0)
             if (versuche >= MAX_VERSUCHE) return@mapNotNull null
-            k to (drin + VERWEILEN_MS + versuche * 60_000L)
+            k to (drin + offen.minOf { verzoegerungMs(it) } + versuche * 60_000L)
         }.toMap()
     }
 
@@ -318,9 +325,12 @@ object OrtErinnerungen {
                     val l = fix?.let { lage(abstand(o.breite, o.laenge, it.latitude, it.longitude), if (it.hasAccuracy()) it.accuracy else 9_999f, System.currentTimeMillis() - it.time, o.radius) } ?: Lage.UNSICHER
                     when (l) {
                         Lage.DRIN -> {
-                            p.edit().putBoolean("ausgeloest_$k", true).putInt("versuche_$k", 0).apply()
                             val ausgeloest = System.currentTimeMillis()
-                            liste.filter { it.ort!!.scharfSeit < drin }.forEach { e ->
+                            // Nur die, deren Verzögerung um ist; die mit längerer warten im selben Aufenthalt weiter.
+                            val wartend = liste.filter { it.ort!!.scharfSeit < drin }
+                            val jetztDran = wartend.filter { drin + verzoegerungMs(it.ort!!) <= ausgeloest + 5_000L }
+                            p.edit().putBoolean("ausgeloest_$k", jetztDran.size == wartend.size).putInt("versuche_$k", 0).apply()
+                            jetztDran.forEach { e ->
                                 Erinnerungen.aendere(app, e.id) { alt -> if (alt.erledigt != 0L || alt.ort == null) alt else alt.copy(ortAusgeloest = ausgeloest, ort = alt.ort.copy(scharfSeit = ausgeloest)) }
                                 Logbuch.system("Standort-Erinnerung ausgelöst", "${e.zeile} (bei ${o.name})")
                             }
@@ -380,7 +390,7 @@ object OrtErinnerungen {
     }
 }
 
-/** Betreten, Verlassen, die Prüfung nach drei Minuten und der Shell-Test (`adb shell am broadcast -a de.frank.jarvis.ORT_ERINNERUNG_TEST -p de.frank.jarvis --es id <Kennung>`). */
+/** Betreten, Verlassen, die Prüfung nach der gewählten Verzögerung und der Shell-Test (`adb shell am broadcast -a de.frank.jarvis.ORT_ERINNERUNG_TEST -p de.frank.jarvis --es id <Kennung>`). */
 class OrtErinnerungEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val rest = goAsync()

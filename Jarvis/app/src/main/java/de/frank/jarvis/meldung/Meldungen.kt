@@ -183,7 +183,7 @@ object Meldungsarten {
     /** Standort-Erinnerungen in der Form Benachrichtigung: eigenes Profil; als Wecker gilt „Als Wecker“. */
     val ERINNERUNG_ORT = Meldungsart(
         "erinnerung_ort", "Standort-Erinnerung", "Einstellungen für Standort-Erinnerungen in der Form Benachrichtigung (etwa „wenn ich bei Papa bin“).",
-        "Etwa drei Minuten nach der Ankunft am Ort, nur auf dem Handy; mit „Erledigt“ ist sie abgeschlossen.", ERINNERUNGEN, "jarvis_erinnerung",
+        "Die je Erinnerung gewählten Minuten nach der Ankunft am Ort (0 bis 20, Vorgabe 5), nur auf dem Handy; mit „Erledigt“ ist sie abgeschlossen.", ERINNERUNGEN, "jarvis_erinnerung",
         schaltbar = false, wecker = false, vorlesenStandard = true, formFest = true,
     )
     val STOPPUHR = Meldungsart(
