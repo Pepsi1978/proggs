@@ -912,6 +912,7 @@
   {"versionCode": 903, "versionName": "1.8.892", "stand": "22.11.2026, 09:19 Uhr", "notiz": "Die E-Mail-Karte zeigt jetzt immer zwei große Aufklappfelder wie die Mac-Zentrale: Wichtige E-Mails mit Anzahl und darunter Alle E-Mails."},
   {"versionCode": 904, "versionName": "1.8.893", "stand": "22.11.2026, 09:24 Uhr", "notiz": "Bei den wichtigen E-Mails steht nur noch die Glühbirne, und unter Alle E-Mails sind die Pfeile jetzt dick ausgemalt: grün nach oben, rot nach unten."},
   {"versionCode": 905, "versionName": "1.8.894", "stand": "22.11.2026, 09:26 Uhr", "notiz": "Review-Befunde behoben: alte wichtige Mails bleiben sichtbar, zwei gleich teure Abos verschmelzen nicht mehr, schnell getippte Bewertungen gehen nicht verloren und Alle E-Mails lädt in Stücken."},
-  {"versionCode": 906, "versionName": "1.8.895", "stand": "22.11.2026, 09:27 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession ist länger, lauter (45 Prozent) und der zweite Ton klar tiefer, damit er gut als zwei Töne hörbar ist."}
+  {"versionCode": 906, "versionName": "1.8.895", "stand": "22.11.2026, 09:27 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession ist länger, lauter (45 Prozent) und der zweite Ton klar tiefer, damit er gut als zwei Töne hörbar ist."},
+  {"versionCode": 907, "versionName": "1.8.896", "stand": "22.11.2026, 09:33 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession läuft ein wenig schneller ab, bleibt aber klar als zwei Töne hörbar."}
 ]
 }
