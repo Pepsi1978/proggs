@@ -918,6 +918,7 @@
   {"versionCode": 909, "versionName": "1.8.898", "stand": "22.11.2026, 09:37 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession läuft noch etwas schneller ab."},
   {"versionCode": 910, "versionName": "1.8.899", "stand": "22.11.2026, 09:50 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession läuft noch einmal schneller ab."},
   {"versionCode": 911, "versionName": "1.8.900", "stand": "22.11.2026, 11:27 Uhr", "notiz": "E-Mail-Bereich nach gründlichem Review: Bewertungen gehen bei gleichzeitigem Abgleich oder Nachtragen nicht mehr verloren, laufende Einstufungen bleiben beim Abgleich erhalten, Beantwortet-Prüfung je Unterhaltung, Aktualisieren kurz vor Prüfungsende geht nicht mehr verloren, Pfeiltipp ohne Ruckeln und ein von Jarvis gesetzter grüner Pfeil gilt für TalkBack als deaktiviert."},
-  {"versionCode": 912, "versionName": "1.8.901", "stand": "22.11.2026, 13:50 Uhr", "notiz": "Neuer Regler für das eingebaute Mikrofon beim Weckwort (1- bis 8-fach, auch per Sprache), damit Jarvis auch ein geflüstertes Hey Jarvis hört; die Spracheingabe danach bleibt normal."}
+  {"versionCode": 912, "versionName": "1.8.901", "stand": "22.11.2026, 13:50 Uhr", "notiz": "Neuer Regler für das eingebaute Mikrofon beim Weckwort (1- bis 8-fach, auch per Sprache), damit Jarvis auch ein geflüstertes Hey Jarvis hört; die Spracheingabe danach bleibt normal."},
+  {"versionCode": 913, "versionName": "1.8.902", "stand": "22.11.2026, 13:54 Uhr", "notiz": "Die Handy-Mikrofon-Verstärkung fürs Weckwort verzerrt normal laute Rufe nicht mehr, lässt das Weckwort in ruhigen Räumen weiter schlafen und stört die Stimmerkennung nicht; der Regler zeigt per Sprache geänderte Werte sofort."}
 ]
 }

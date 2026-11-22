@@ -366,7 +366,10 @@ class WeckwortDienst : Service() {
             var ringPos = 0
             // Verstärkung nur fürs Weckwort: über den Anker dessen Regler, am eingebauten Mikrofon der eigene (nicht beim Anlernen,
             // damit das Stimmprofil aus normalem Ton entsteht). Die Spracheingabe danach öffnet ein eigenes Mikrofon ohne Verstärkung.
-            fun weckVerstaerkung(): Float = Einstellungen.get(this).let { if (ueberAnker) it.ankerVerstaerkung.toFloat() else if (Stimmprofil.lerntAn) 1f else it.handyVerstaerkung.toFloat() }
+            // Am Handy wirkt sie nur auf das, was die Modelle hören: Stille-Filter, Silero, Rauschboden und Stimm-Fingerabdruck
+            // bekommen den unverstärkten Ton (sonst schliefe das Weckwort in ruhigen Räumen nie und die Stimmerkennung hörte Rauschen).
+            var handyStufe = Einstellungen.get(this).handyVerstaerkung.toFloat()
+            fun weckVerstaerkung(): Float = if (ueberAnker) Einstellungen.get(this).ankerVerstaerkung.toFloat() else if (Stimmprofil.lerntAn) 1f else handyStufe
             var verstaerkung = weckVerstaerkung()
             // Diagnose-Mitschnitt (nur per adb angestoßen): unverstärkter Ton und je Block, was der Filter und der Spotter taten.
             mitschnitt = WeckwortMitschnitt.oeffnen(this)
@@ -379,7 +382,7 @@ class WeckwortDienst : Service() {
             fun letzterTon(): FloatArray {
                 val n = TON_WERTE
                 val ton = FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
-                if (verstaerkung > 1f) {
+                if (ueberAnker && verstaerkung > 1f) {
                     var spitze = 0f
                     for (w in ton) spitze = maxOf(spitze, kotlin.math.abs(w))
                     val faktor = if (spitze > 0f) minOf(verstaerkung, TON_SPITZE / spitze) else 1f
@@ -391,7 +394,8 @@ class WeckwortDienst : Service() {
             fun frueherBlock(zurueck: Int): ShortArray {
                 val start = ringPos - (zurueck + 1) * WeckwortErkenner.BLOCK
                 val b = ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
-                if (verstaerkung > 1f) verstaerken(b, verstaerkung)
+                if (ueberAnker && verstaerkung > 1f) verstaerken(b, verstaerkung)
+                else if (!ueberAnker && verstaerkung > 1f) linearVerstaerken(b, verstaerkung)
                 return b
             }
             // Lief das „Hey Jarvis“-Modell im letzten Block? Springt es wieder an, fängt es frisch an.
@@ -443,7 +447,8 @@ class WeckwortDienst : Service() {
             while (an.get()) {
                 if (++pruefZaehler >= 50) {
                     pruefZaehler = 0
-                    verstaerkung = weckVerstaerkung()
+                    handyStufe = Einstellungen.get(this).handyVerstaerkung.toFloat()
+                    if (ueberAnker) verstaerkung = weckVerstaerkung()
                     val wechsel = if (ueberAnker) {
                         val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
                         if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
@@ -467,10 +472,11 @@ class WeckwortDienst : Service() {
                 }
                 for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 mitschnitt = mitschnitt?.takeIf { it.ton(block) }
-                // Beim Anlernen am Handy unverstärkt (der Regler wird sonst nur alle 4 s neu gelesen).
-                if (Stimmprofil.lerntAn && !ueberAnker) verstaerkung = 1f
-                // Leise Rufe hörbar machen (Anker oder eingebautes Mikrofon): verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
-                if (verstaerkung > 1f) verstaerken(block, verstaerkung)
+                // Am Handy je Block: beim Anlernen unverstärkt, danach sofort wieder der Regler.
+                if (!ueberAnker) verstaerkung = weckVerstaerkung()
+                val handyFaktor = if (!ueberAnker && verstaerkung > 1f) verstaerkung else 1f
+                // Über den Anker leise Rufe hörbar machen: verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
+                if (ueberAnker && verstaerkung > 1f) verstaerken(block, verstaerkung)
                 val anlernen = Stimmprofil.lerntAn
                 // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
                 // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
@@ -486,7 +492,7 @@ class WeckwortDienst : Service() {
                 boden = if (boden < 0f || rms < boden) rms else boden + (rms - boden) * BODEN_ANSTIEG
                 // Bei gleichmäßigem Lärm (Auto, Lüfter, Straße) steigt der Rauschboden mit, eine Stimme aus der Ferne
                 // liegt kaum darüber: Dann entscheidet Silero, ob jemand spricht, statt die Modelle schlafen zu legen.
-                val laut = rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)
+                val laut = rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN / handyFaktor)
                 val mitVad = !laut && boden > LAERM_BODEN && vad != null
                 val stimmeImLaerm = mitVad && runCatching { stimmeImBlock(vad!!) }.getOrDefault(false)
                 vadLief = mitVad
@@ -496,7 +502,7 @@ class WeckwortDienst : Service() {
                     uebersprungen++
                     inFolge = 0
                     phr?.ruhen(boden)
-                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung, ueberAnker, false)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, true, phr?.verstaerkung?.times(handyFaktor), ueberAnker, false)
                     // Kein Hintergrund-Lernen in der Stille: Das Modell ruht, seine Merkmale stammen vom letzten Block davor und hätten
                     // über eine lange Stille (Nacht) den Hintergrund ganz auf diesen einen Vektor gezogen.
                     continue
@@ -512,6 +518,7 @@ class WeckwortDienst : Service() {
                     mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
                     else -> phr.einstellen(phrasenSchwelle, breit = false)
                 }
+                if (handyFaktor > 1f) linearVerstaerken(block, handyFaktor)
                 var nachgeholt = false
                 // Nach gut 1 s Stille fängt der Spotter ebenfalls frisch an (sherpa-onnx 1.13.8 setzt seinen Strom nach 1,5 s Stille
                 // selbst zurück und verliert dabei den Anfang des nächsten Rufs, Almanach §16). Im Mitschnitt holte das einen
@@ -538,9 +545,9 @@ class WeckwortDienst : Service() {
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
                     val spotterTreffer = nachgeholt || phr.erkannt(block, boden)
-                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung, ueberAnker, spotterTreffer, nachgeholtBloecke)
+                    mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung * handyFaktor, ueberAnker, spotterTreffer, nachgeholtBloecke)
                     if (!spotterTreffer) {
-                        if (merkmale != null && wert < 0.1f && !ueberAnker && verstaerkung <= 1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && handyFaktor <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                 } else {
@@ -552,7 +559,7 @@ class WeckwortDienst : Service() {
                     }
                     if (wert < schwelle) {
                         inFolge = 0
-                        if (merkmale != null && wert < 0.1f && !ueberAnker && verstaerkung <= 1f) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && handyFaktor <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                     // Schnell gesprochen ist der Gipfel oft nur einen Block (80 ms) breit: Beim Anlernen und mit
@@ -616,7 +623,8 @@ class WeckwortDienst : Service() {
                 Weckwort.erkannt(modellwert ?: 1f)
                 // Hat die Stimmerkennung Frank bestätigt, war es kein Fehlalarm, auch wenn danach nichts kommt: Dann
                 // gibt es keine Merkmale zum Lernen, sonst sperrt ein solcher Eintrag später Franks eigene Rufe aus.
-                Weckwort.trefferMerkmale = if (stimme?.ok == true) null else merkmale
+                // Mit Handy-Verstärkung stammen die Lautmerkmale aus angehobenem Ton: nicht als möglichen Fehlalarm lernen.
+                Weckwort.trefferMerkmale = if (stimme?.ok == true || handyFaktor > 1f) null else merkmale
                 // Hört das Gespräch ebenfalls über den Anker zu, bleibt die Strecke stehen; sonst zurück ins Medien-Profil.
                 uebergabe = ueberAnker && Einstellungen.get(this).konferenzMikrofonAn
                 if (ueberAnker) Logbuch.system("Weckwort über den Anker erkannt", if (uebergabe) "Gespräch übernimmt die Anker-Mikrofone" else "zurück ins Medien-Profil")
@@ -662,6 +670,18 @@ class WeckwortDienst : Service() {
             val begrenzt = if (betrag <= KNIE) betrag else KNIE + (32_767f - KNIE) * (1f - kotlin.math.exp(-(betrag - KNIE) / (32_767f - KNIE)))
             block[i] = (if (y < 0) -begrenzt else begrenzt).toInt().coerceIn(-32_767, 32_767).toShort()
         }
+    }
+
+    /**
+     * Hebt einen Block linear um bis zu [faktor] an, höchstens bis 90 % Vollaussteuerung der lautesten Stelle: ohne Begrenzer, damit
+     * normal laute Rufe bei hoher Handy-Verstärkung nicht verzerren (das senkte die Treffer von Modell und Spotter).
+     */
+    private fun linearVerstaerken(block: ShortArray, faktor: Float) {
+        var spitze = 0
+        for (w in block) spitze = maxOf(spitze, kotlin.math.abs(w.toInt()))
+        val f = if (spitze > 0) minOf(faktor, TON_SPITZE * 32_767f / spitze) else faktor
+        if (f <= 1f) return
+        for (i in block.indices) block[i] = (block[i] * f).toInt().coerceIn(-32_767, 32_767).toShort()
     }
 
     /** Effektivwert eines Blocks in 16-Bit-Werten (für den Stille-Filter). */

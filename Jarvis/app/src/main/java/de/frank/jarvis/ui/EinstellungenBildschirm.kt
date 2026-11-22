@@ -949,14 +949,14 @@ private fun AnkerEinstellungen(e: Einstellungen) {
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
         )
         if (weck) {
-            var faktor by remember { mutableFloatStateOf(e.ankerVerstaerkung.toFloat()) }
+            var faktor by remember(e.ankerVerstaerkung) { mutableFloatStateOf(e.ankerVerstaerkung.toFloat()) }
             Text("Mikrofon-Verstärkung fürs Weckwort: ${faktor.toInt()}-fach${if (faktor.toInt() == 8) " (Maximum)" else ""}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             Slider(value = faktor, onValueChange = { faktor = it.toInt().toFloat() }, valueRange = 1f..8f, steps = 6,
                 onValueChangeFinished = { e.ankerVerstaerkung = faktor.toInt() })
             Text("Damit erkennt Jarvis auch leise gesprochene Rufe; laute Rufe werden weich begrenzt. Springt das Weckwort zu oft grundlos an, etwas zurückdrehen.", color = f.textSchwach, fontSize = 12.sp)
         }
         run {
-            var handyFaktor by remember { mutableFloatStateOf(e.handyVerstaerkung.toFloat()) }
+            var handyFaktor by remember(e.handyVerstaerkung) { mutableFloatStateOf(e.handyVerstaerkung.toFloat()) }
             val stufe = handyFaktor.toInt()
             Text("Handy-Mikrofon fürs Weckwort: ${if (stufe == 1) "normal (1-fach)" else "$stufe-fach"}${if (stufe == 8) " (Maximum)" else ""}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
             Slider(value = handyFaktor, onValueChange = { handyFaktor = it.toInt().toFloat() }, valueRange = 1f..8f, steps = 6,
