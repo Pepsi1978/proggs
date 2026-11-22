@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.jarvis.faehigkeit.WichtigeMails
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
+import de.frank.jarvis.ui.theme.glas
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -71,12 +72,12 @@ private object MailKartenZustand {
 }
 
 /**
- * Startbereich „Wichtige E-Mails“: eingeklappt nur die Anzahl („3 wichtige E-Mails“, bei bestätigtem Leerstand „Keine wichtigen E-Mails“),
- * aufgeklappt alle offenen wichtigen Einträge in höchstens drei Zeilen. Antippen öffnet die Nachricht direkt in Gmail und blendet den Eintrag
- * bis zum nächsten Aktualisieren aus; rechts hinter einem senkrechten Strich oben die Glühbirne (neue Session mit der Erklärung der Mail),
- * darunter der Pfeil „unwichtig“. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da, nie als leerer Posteingang.
- * Darunter eigens aufklappbar „Alle E-Mails“: der ganze Posteingang (auch gelesene und wichtige), Antippen öffnet die Mail in Gmail, rechts ein
- * zweigeteiltes Feld (Pfeil hoch = wichtig, runter = unwichtig, erneut antippen = wieder automatisch), sofort wirksam.
+ * Startkarte „E-Mails“ im Stil der Mac-Zentrale: Kopf mit Stand und Aktualisieren, darunter immer zwei große, einzeln aufklappbare Felder.
+ * „Wichtige E-Mails“ (im Kopf die Anzahl): alle offenen wichtigen Einträge in höchstens drei Zeilen; Antippen öffnet die Nachricht direkt in
+ * Gmail und blendet den Eintrag bis zum nächsten Aktualisieren aus; rechts hinter einem senkrechten Strich oben die Glühbirne (neue Session mit
+ * der Erklärung der Mail), darunter der Pfeil „unwichtig“. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da.
+ * „Alle E-Mails“: der ganze Posteingang (auch gelesene und wichtige), Antippen öffnet die Mail in Gmail, rechts ein zweigeteiltes Feld
+ * (Pfeil hoch = wichtig, runter = unwichtig, erneut antippen = wieder automatisch), sofort wirksam.
  */
 @Composable
 fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Eintrag) -> Unit = {}) {
@@ -84,50 +85,52 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
     val ui = LocalContext.current
     val context = ui.applicationContext
     val s by remember(context) { WichtigeMails.stand(context) }.collectAsState()
-    val offen = MailKartenZustand.wichtigOffen
-    val alleOffen = MailKartenZustand.alleOffen
-    val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
-    val drehungAlle by animateFloatAsState(if (alleOffen) 180f else 0f, label = "pfeilAlle")
     // Noch nie geprüft (etwa nach der Installation): einmal von selbst, ohne aufs Wächter-Fenster zu warten.
     LaunchedEffect(Unit) { if (s.geprueft == 0L && s.fehler == null && !s.laeuft) WichtigeMails.aktualisieren(context) }
     val sichtbar = s.sichtbar
     val schutz = remember { KnopfSchutz() }
-    Karte(modifier = griff.animateContentSize().antippenMitSchutz(schutz, imSchutz = { WichtigeMails.aktualisieren(context) }) { MailKartenZustand.wichtigOffen = !offen }) {
-        Row(verticalAlignment = Alignment.Top) {
+    Karte(modifier = griff) {
+        val linie = trennlinie(f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
             KartenSymbol(KartenArt.MAIL, Modifier.padding(end = 10.dp), wert = if (sichtbar.isNotEmpty()) 1f else 0f)
             Column(Modifier.weight(1f)) {
-                Text(
-                    when {
-                        sichtbar.isNotEmpty() -> if (sichtbar.size == 1) "1 wichtige E-Mail" else "${sichtbar.size} wichtige E-Mails"
-                        s.eintraege.isNotEmpty() -> "Keine weiteren wichtigen E-Mails"
-                        s.bestaetigt -> "Keine wichtigen E-Mails"
-                        else -> "Wichtige E-Mails"
-                    },
-                    color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                )
-                val frische = sichtbar.count { it.frisch }
+                Text("E-Mails", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     when {
                         s.laeuft -> "Prüft den Posteingang …"
                         s.fehler != null -> s.fehler!!
                         s.geprueft > 0 -> "Stand " + Instant.ofEpochMilli(s.geprueft).atZone(ZoneId.systemDefault()).let { z ->
                             if (z.toLocalDate() == LocalDate.now()) z.format(DateTimeFormatter.ofPattern("HH:mm")) + " Uhr" else z.format(DateTimeFormatter.ofPattern("d.M., HH:mm")) + " Uhr"
-                        } + if (frische > 0) " · $frische von heute/gestern" else ""
+                        }
                         else -> "Noch nicht geprüft"
                     },
                     color = when { s.laeuft -> f.primaer; s.fehler != null -> f.gefahr; else -> f.textLeise },
                     fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
             }
-            AktualisierenKnopf(s.laeuft, "Wichtige E-Mails aktualisieren", "Wichtige E-Mails werden geprüft", schutz) { WichtigeMails.aktualisieren(context) }
+            AktualisierenKnopf(s.laeuft, "E-Mails aktualisieren", "E-Mails werden geprüft", schutz) { WichtigeMails.aktualisieren(context) }
         }
-        if (sichtbar.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
-                Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Wichtige E-Mails zuklappen" else "Wichtige E-Mails aufklappen", tint = f.textLeise, modifier = Modifier.size(26.dp).rotate(drehung))
+        androidx.compose.material3.HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 14.dp), thickness = 1.dp, color = linie)
+
+        AufklappFeld(MailKartenZustand.wichtigOffen, { MailKartenZustand.wichtigOffen = !MailKartenZustand.wichtigOffen }, kopf = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Wichtige E-Mails", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (sichtbar.isNotEmpty()) Zahl(sichtbar.size)
             }
-        }
-        if (offen && sichtbar.isNotEmpty()) {
-            Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val frische = sichtbar.count { it.frisch }
+            Text(
+                when {
+                    sichtbar.isNotEmpty() -> (if (sichtbar.size == 1) "1 wichtige E-Mail" else "${sichtbar.size} wichtige E-Mails") + if (frische > 0) " · $frische von heute/gestern" else ""
+                    s.eintraege.isNotEmpty() -> "Keine weiteren wichtigen E-Mails"
+                    s.bestaetigt -> "Keine wichtigen E-Mails"
+                    s.fehler != null -> "Nicht sicher geprüft"
+                    else -> "Noch nicht geprüft"
+                },
+                color = if (sichtbar.isEmpty() && s.bestaetigt) f.erfolg else f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp),
+            )
+        }) {
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (sichtbar.isEmpty()) Text("Hier steht nichts, was du prüfen oder beantworten musst.", color = f.textLeise, fontSize = 14.sp)
                 sichtbar.forEach { e ->
                     key(e.msgId) {
                         MailEintrag(e, erklaeren = { erklaeren(e) }, unwichtig = { WichtigeMails.bewerten(context, e.msgId, -1) }) {
@@ -137,32 +140,35 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
                 }
             }
         }
-        // „Alle E-Mails“: eigener Kopf mit eigenem Pfeil; sein Antippen klappt nur diesen Bereich.
-        if (s.posteingang.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        AufklappFeld(MailKartenZustand.alleOffen, { MailKartenZustand.alleOffen = !MailKartenZustand.alleOffen }, kopf = {
             val ungelesen = s.posteingang.count { !it.gelesen }
-            Row(
-                Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(12.dp))
-                    .antippen { MailKartenZustand.alleOffen = !alleOffen }
-                    .semantics { stateDescription = if (alleOffen) "aufgeklappt" else "zugeklappt" }
-                    .padding(vertical = 8.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Alle E-Mails", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    " · ${s.posteingang.size}" + if (ungelesen > 0) " · $ungelesen ungelesen" else "",
-                    Modifier.weight(1f), color = f.textLeise, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                Icon(Icons.Rounded.KeyboardArrowDown, if (alleOffen) "Alle E-Mails zuklappen" else "Alle E-Mails aufklappen", tint = f.textLeise, modifier = Modifier.size(26.dp).rotate(drehungAlle))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Alle E-Mails", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (s.posteingang.isNotEmpty()) Zahl(s.posteingang.size)
             }
-            if (alleOffen) {
-                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    s.posteingang.forEach { e ->
-                        key(e.msgId) { AlleEintrag(e, bewerten = { r -> WichtigeMails.bewerten(context, e.msgId, r) }) { WichtigeMails.oeffnen(ui, e) } }
-                    }
+            Text(
+                if (s.posteingang.isEmpty()) (if (s.bestaetigt) "Posteingang leer" else "Noch nicht geladen")
+                else "${s.posteingang.size} im Posteingang" + if (ungelesen > 0) " · $ungelesen ungelesen" else "",
+                color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp),
+            )
+        }) {
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (s.posteingang.isEmpty()) Text("Keine E-Mails im Posteingang.", color = f.textLeise, fontSize = 14.sp)
+                s.posteingang.forEach { e ->
+                    key(e.msgId) { AlleEintrag(e, bewerten = { r -> WichtigeMails.bewerten(context, e.msgId, r) }) { WichtigeMails.oeffnen(ui, e) } }
                 }
             }
         }
     }
+}
+
+/** Zahl-Plakette im Feldkopf wie bei der Mac-Zentrale. */
+@Composable
+private fun Zahl(n: Int) {
+    val f = LocalFarben.current
+    Text("$n", Modifier.padding(start = 8.dp).glas(f, 10.dp, erhoeht = 0.2f, toenung = f.primaer).padding(horizontal = 8.dp, vertical = 2.dp),
+        color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 }
 
 private fun wannText(e: WichtigeMails.Eintrag): String {

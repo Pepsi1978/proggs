@@ -465,14 +465,14 @@ private fun CliAbschnitt(l: MacUpdateZentrale.Lage, offen: Boolean, umschalten: 
 
 
 /** Linie für Trennstrich und Rahmen: Im hellen Modus wäre f.rand (fast weiß) unsichtbar. */
-private fun trennlinie(f: de.frank.jarvis.ui.theme.Farben): Color = if (f.dunkel) f.rand else f.primaer.copy(alpha = 0.28f)
+internal fun trennlinie(f: de.frank.jarvis.ui.theme.Farben): Color = if (f.dunkel) f.rand else f.primaer.copy(alpha = 0.28f)
 
 /**
- * Umrandetes Aufklapp-Feld der Mac-Zentrale: Kopf mit [kopf] und dem Pfeil in eigener Fläche (bei allen Feldern an derselben Stelle),
+ * Umrandetes Aufklapp-Feld der Mac-Zentrale (auch auf der Karte „E-Mails“): Kopf mit [kopf] und dem Pfeil in eigener Fläche (bei allen Feldern an derselben Stelle),
  * aufgeklappt der [inhalt] innerhalb der Umrandung. Nur die Kopfzeile reagiert auf Tippen.
  */
 @Composable
-private fun AufklappFeld(offen: Boolean, umschalten: () -> Unit, kopf: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+internal fun AufklappFeld(offen: Boolean, umschalten: () -> Unit, kopf: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
                          inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     val linie = trennlinie(f)
