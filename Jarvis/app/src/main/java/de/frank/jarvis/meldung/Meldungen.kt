@@ -180,6 +180,12 @@ object Meldungsarten {
         "Zu den eingestellten Zeitpunkten, bis du die Auslösung bestätigst.", ERINNERUNGEN, "jarvis-timer-wecker",
         schaltbar = false, vorlesenStandard = true, formFest = true, weckerStandard = true,
     )
+    /** Standort-Erinnerungen in der Form Benachrichtigung: eigenes Profil; als Wecker gilt „Als Wecker“. */
+    val ERINNERUNG_ORT = Meldungsart(
+        "erinnerung_ort", "Standort-Erinnerung", "Einstellungen für Standort-Erinnerungen in der Form Benachrichtigung (etwa „wenn ich bei Papa bin“).",
+        "Etwa drei Minuten nach der Ankunft am Ort, nur auf dem Handy; mit „Erledigt“ ist sie abgeschlossen.", ERINNERUNGEN, "jarvis_erinnerung",
+        schaltbar = false, wecker = false, vorlesenStandard = true, formFest = true,
+    )
     val STOPPUHR = Meldungsart(
         "stoppuhr", "Stoppuhr", "Zeigt die laufende Stoppuhr mit mitlaufender Zeit.",
         "Beim Starten oder Fortsetzen; danach läuft die Zeitanzeige still weiter.", ALLTAG, "jarvis-stoppuhr", tonStandard = false,
@@ -226,7 +232,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, ANKER, TIMER, ERINNERUNG, ERINNERUNG_WECKER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, KONTINGENT, ABFAHRT, ANKER, TIMER, ERINNERUNG, ERINNERUNG_WECKER, ERINNERUNG_ORT, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, ERINNERUNGEN, WECKWORT, DAUER)
 }
 
@@ -246,7 +252,7 @@ object Meldungen {
 
     fun profil(context: Context, art: Meldungsart) = MeldungsProfil(Einstellungen.get(context), art)
 
-    fun erinnerungsArt(alsWecker: Boolean) = if (alsWecker) Meldungsarten.ERINNERUNG_WECKER else Meldungsarten.ERINNERUNG
+    fun erinnerungsArt(alsWecker: Boolean, ort: Boolean = false) = if (alsWecker) Meldungsarten.ERINNERUNG_WECKER else if (ort) Meldungsarten.ERINNERUNG_ORT else Meldungsarten.ERINNERUNG
 
     /** Eigener hörbarer Ereigniskanal, auch wenn der frühere Statuskanal nur LOW war. */
     fun normalerKanal(context: Context, art: Meldungsart): String {
@@ -427,7 +433,7 @@ object Meldungen {
             Meldungsarten.ABFAHRT -> de.frank.jarvis.fahrt.Abfahrt.probe(app)
             Meldungsarten.TIMER -> de.frank.jarvis.timer.Timer.starten(app, 5_000L, "Probe-Timer")
             Meldungsarten.ANSAGE -> Ansage.ansage(app, "UpdateStation", "Ein Update von Jarvis ist bereit in UpdateStation.")
-            Meldungsarten.ERINNERUNG, Meldungsarten.ERINNERUNG_WECKER -> nebenher.launch { de.frank.jarvis.ablage.ErinnerungStimme.probe(app, art == Meldungsarten.ERINNERUNG_WECKER) }
+            Meldungsarten.ERINNERUNG, Meldungsarten.ERINNERUNG_WECKER, Meldungsarten.ERINNERUNG_ORT -> nebenher.launch { de.frank.jarvis.ablage.ErinnerungStimme.probe(app, art == Meldungsarten.ERINNERUNG_WECKER, art == Meldungsarten.ERINNERUNG_ORT) }
             else -> {
                 de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
                 de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(app)

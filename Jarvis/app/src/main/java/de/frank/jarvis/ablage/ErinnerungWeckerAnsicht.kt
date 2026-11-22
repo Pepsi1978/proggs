@@ -81,6 +81,13 @@ object ErinnerungWeckerAnsicht {
                 onAus, Modifier.fillMaxWidth().widthIn(max = 520.dp).height(84.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = f.primaer, contentColor = f.aufPrimaer),
             ) { Text("Wecker ausschalten", fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+            if (liste.any { it.erinnerung.ortsgebunden }) {
+                val c = androidx.compose.ui.platform.LocalContext.current
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedButton({ ErinnerungPlaner.erledigtKlingelnde(c) }, Modifier.fillMaxWidth().widthIn(max = 520.dp).height(64.dp)) {
+                    Text("Erledigt", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = f.text)
+                }
+            }
         }
     }
 }

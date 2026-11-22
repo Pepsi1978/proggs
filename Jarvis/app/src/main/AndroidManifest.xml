@@ -284,6 +284,16 @@
         </receiver>
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
         <receiver android:name=".ablage.ErinnerungEmpfaenger" android:exported="false" />
+        <receiver android:name=".ablage.OrtErinnerungEmpfaenger" android:exported="false" />
+        <!-- Gerätetest der Standort-Erinnerungen über adb (ablage/OrtErinnerungen.kt), nur Shell und System. -->
+        <receiver
+            android:name=".ablage.OrtErinnerungTestEmpfaenger"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="de.frank.jarvis.ORT_ERINNERUNG_TEST" />
+            </intent-filter>
+        </receiver>
         <service android:name=".ablage.ErinnerungKlingelDienst" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <activity
             android:name=".ablage.ErinnerungWeckerActivity"

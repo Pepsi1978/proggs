@@ -80,39 +80,64 @@ import java.util.Locale
 /** Filterwert des Reiters „Erinnerung“ in der Ablage (kein Ablage-Kategorie-Name). */
 const val ERINNERUNG_REITER = "ERINNERUNG"
 
-/** Reiter „Erinnerung“: Unterreiter „Mit Datum“ (nach Fälligkeit, das Nächste oben, das Älteste unten) und „Allgemein“. */
+/** Reiter „Erinnerung“: Unterreiter „Mit Datum“ (nach Fälligkeit, das Nächste oben, das Älteste unten), „Standort“ und „Allgemein“. */
 @Composable
 fun ErinnerungenBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val stand by Erinnerungen.stand.collectAsState()
-    var allgemein by rememberSaveable { mutableStateOf(false) }
+    var unterreiter by rememberSaveable { mutableStateOf("datum") }
+    val allgemein = unterreiter == "allgemein"
+    val standort = unterreiter == "ort"
     val datiert by ladeImHintergrund<List<Erinnerung>?>(null, stand, behalten = true) { Erinnerungen.datiert(context) }
     val allg by ladeImHintergrund<List<Erinnerung>?>(null, stand, behalten = true) { Erinnerungen.allgemeine(context) }
-    val liste = if (allgemein) allg else datiert
+    val orte by ladeImHintergrund<List<Erinnerung>?>(null, stand, behalten = true) { Erinnerungen.ortsgebundene(context) }
+    val liste = if (allgemein) allg else if (standort) orte else datiert
+    // Fehlende Freigabe beim Zurückkehren aus den Android-Einstellungen neu prüfen.
+    var freigabeStand by remember { mutableStateOf(0) }
+    val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lebenszyklus) {
+        val b = androidx.lifecycle.LifecycleEventObserver { _, ev -> if (ev == androidx.lifecycle.Lifecycle.Event.ON_RESUME) freigabeStand++ }
+        lebenszyklus.lifecycle.addObserver(b)
+        onDispose { lebenszyklus.lifecycle.removeObserver(b) }
+    }
+    val fehlt = remember(freigabeStand, standort) { if (de.frank.jarvis.data.Geraet.istTablet) null else de.frank.jarvis.ablage.OrtErinnerungen.fehlendeFreigabe(context) }
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Mit Datum", !allgemein) { allgemein = false }
-            Chip("Allgemein", allgemein) { allgemein = true }
+            Chip("Mit Datum", unterreiter == "datum") { unterreiter = "datum" }
+            Chip("Standort", standort) { unterreiter = "ort" }
+            Chip("Allgemein", allgemein) { unterreiter = "allgemein" }
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (Erinnerungen.defekt(context)) item(key = "defekt") {
                 Text("Die Erinnerungsdatei ist beschädigt und wurde gesichert. Jarvis speichert dort nichts Neues; Details unter Aktivität.", color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 4.dp))
-            } else if (liste?.isEmpty() == true) item(key = "leer") {
-                Text(if (allgemein) "Keine allgemeinen Erinnerungen. Sag Jarvis: „Erinnere mich später an …“" else "Keine Erinnerungen mit Datum. Tippe auf +, oder sag Jarvis: „Erinnere mich am 12. August daran, …“",
+            } else {
+                if (standort && fehlt != null) item(key = "freigabe") {
+                    Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(fehlt, color = f.gefahr, fontSize = 14.sp, lineHeight = 20.sp)
+                        Knopf("Freigabe öffnen", Modifier.padding(top = 8.dp), haupt = false) {
+                            context.startActivity(android.content.Intent(if (de.frank.jarvis.ablage.OrtErinnerungen.ortungAn(context)) android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS else android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                .apply { if (de.frank.jarvis.ablage.OrtErinnerungen.ortungAn(context)) data = android.net.Uri.fromParts("package", context.packageName, null) }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        }
+                    }
+                }
+                if (liste?.isEmpty() == true) item(key = "leer") {
+                Text(if (standort) "Keine Standort-Erinnerungen. Tippe auf +, oder sag Jarvis: „Erinnere mich, wenn ich bei Papa bin, daran, …“" else if (allgemein) "Keine allgemeinen Erinnerungen. Sag Jarvis: „Erinnere mich später an …“" else "Keine Erinnerungen mit Datum. Tippe auf +, oder sag Jarvis: „Erinnere mich am 12. August daran, …“",
                     color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                }
             }
             items(liste.orEmpty(), key = { it.id }) { e ->
-                val vorbei = !allgemein && (e.erledigt != 0L || (e.termin() ?: 0L) < System.currentTimeMillis())
+                val vorbei = if (standort) e.erledigt != 0L else !allgemein && (e.erledigt != 0L || (e.termin() ?: 0L) < System.currentTimeMillis())
                 Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { vm.erinnerungOffen = e.id }.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(if (allgemein) (if (e.erledigt != 0L) "Erledigt" else "Ohne festen Termin") else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Erinnerung") + if (e.erledigt != 0L) " · erledigt" else "",
+                    Text(if (standort) e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Benachrichtigung") + (if (e.erledigt != 0L) " · erledigt" else if (e.ortAusgeloest > 0) " · ausgelöst" else "")
+                        else if (allgemein) (if (e.erledigt != 0L) "Erledigt" else "Ohne festen Termin") else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Erinnerung") + if (e.erledigt != 0L) " · erledigt" else "",
                         color = if (vorbei) f.textLeise else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(e.zeile, color = if (vorbei) f.textLeise else f.text, fontSize = 16.sp, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                 }
             }
             item(key = "plus") {
                 Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(56.dp).knopf3d(f.primaer, f.tertiaer, 28.dp, f.dunkel).antippen { vm.erinnerungNeu(allgemein) }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(56.dp).knopf3d(f.primaer, f.tertiaer, 28.dp, f.dunkel).antippen { vm.erinnerungNeu(allgemein, standort) }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Add, "Neue Erinnerung", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
                     }
                 }
@@ -141,7 +166,7 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
     Box(Modifier.fillMaxSize().background(f.hgOben).pointerInput(Unit) { detectTapGestures { } }.windowInsetsPadding(WindowInsets.safeDrawing)) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (e.allgemein) "Ohne festen Termin" else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else "Erinnerung"), Modifier.weight(1f), color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(if (e.allgemein) "Ohne festen Termin" else e.datumAnzeige() + " · " + (if (e.wecker) "Wecker" else if (e.ort != null) "Benachrichtigung" else "Erinnerung"), Modifier.weight(1f), color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Box(Modifier.size(40.dp).antippen { schliessen() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -157,7 +182,17 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                         Chip("Wecker", e.wecker) { bereich.launch(Dispatchers.IO) { Erinnerungen.aendere(app, e.id) { it.copy(form = Erinnerung.FORM_WECKER) } } }
                     }
                 }
-                Text(if (e.allgemein) "Hinweise" else "Erinnerungszeitpunkte", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+                e.ort?.let { o ->
+                    Text("Ort", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+                    Text(o.name + if (o.adresse != o.name) " · ${o.adresse}" else "", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(when {
+                        e.erledigt != 0L -> "Erledigt: löst nicht mehr aus."
+                        e.ortAusgeloest > 0 -> "Zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)}. Löst bei der nächsten Ankunft wieder aus, bis du „Erledigt“ tippst."
+                        else -> "Löst aus, wenn du etwa drei Minuten dort bist, auch bei gesperrtem Handy. Vorbeifahren oder kürzere Aufenthalte lösen nichts aus."
+                    }, color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
+                    if (!de.frank.jarvis.data.Geraet.istTablet) de.frank.jarvis.ablage.OrtErinnerungen.fehlendeFreigabe(app)?.let { Text(it, color = f.gefahr, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 4.dp)) }
+                }
+                Text(if (e.allgemein) "Hinweise" else if (e.ort != null) "Auslösungen" else "Erinnerungszeitpunkte", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
                 if (e.allgemein && e.hinweisUm == 0L) Text("Jarvis meldet sich von selbst, wenn es zu Dienst, Schlaf und Tag passt.", color = f.textLeise, fontSize = 14.sp)
                 e.termine().forEach { t ->
                     val q = Erinnerungen.quittung(app, t.quittung)
@@ -172,16 +207,17 @@ fun ErinnerungAnsichtEbene(vm: AppViewModel) {
                             }, color = if (q != null) f.erfolg else f.textLeise, fontSize = 13.sp)
                         }
                         if (q == null && t.zeit <= jetzt) Knopf("Bestätigen", icon = Icons.Rounded.Check, haupt = false) { bereich.launch(Dispatchers.IO) { ErinnerungPlaner.bestaetige(app, t) } }
+                        if (e.ort != null && e.erledigt == 0L && t.zeit <= jetzt) Knopf("Erledigt", icon = Icons.Rounded.Check, modifier = Modifier.padding(start = 6.dp)) { bereich.launch(Dispatchers.IO) { ErinnerungPlaner.erledigen(app, t.quittung) } }
                         if (t.ausloesung != null) Box(Modifier.size(40.dp).antippen { bereich.launch(Dispatchers.IO) { Erinnerungen.aendere(app, e.id) { alt -> alt.copy(ausloesungen = alt.ausloesungen.filter { it.id != t.ausloesung.id }) } } }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Close, "Zeitpunkt entfernen", tint = f.textLeise, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
-                if (!e.allgemein) Box(Modifier.padding(top = 6.dp).size(48.dp).knopf3d(f.primaer, f.tertiaer, 24.dp, f.dunkel).antippen { plus = true }, contentAlignment = Alignment.Center) {
+                if (!e.allgemein && e.ort == null) Box(Modifier.padding(top = 6.dp).size(48.dp).knopf3d(f.primaer, f.tertiaer, 24.dp, f.dunkel).antippen { plus = true }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Add, "Erinnerungszeitpunkt hinzufügen", tint = f.aufPrimaer)
                 }
-                val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz, e.wecker) } }
-                val vorlesen = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungen.erinnerungsArt(e.wecker)).vorlesen
+                val bereit by ladeImHintergrund(false, e.kurz, stand) { withContext(Dispatchers.IO) { ErinnerungStimme.bereit(app, e.kurz, e.wecker, e.ortsgebunden && !e.wecker) } }
+                val vorlesen = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungen.erinnerungsArt(e.wecker, e.ortsgebunden)).vorlesen
                 Text(if (!vorlesen) "Vorlesen ist für diese Erinnerungsform ausgeschaltet." else if (bereit) "Sprachausgabe liegt offline bereit." else "Sprachausgabe wird erzeugt, sobald Netz da ist.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
                 Text("Von ${e.herkunftText}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
             }
@@ -272,10 +308,17 @@ fun ErinnerungEbene(vm: AppViewModel) {
             Box(Modifier.size(40.dp).antippen(aktion = versuchen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
         }
         Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Mit Datum", !d.allgemein) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = false)) }
-            Chip("Allgemein", d.allgemein) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = true)) }
+            Chip("Mit Datum", !d.allgemein && d.ort == null) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = false, ort = null)) }
+            Chip("Standort", d.ort != null) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = false, ort = d.ort ?: "")) }
+            Chip("Allgemein", d.allgemein && d.ort == null) { vm.erinnerungEntwurfSetzen(d.copy(allgemein = true, ort = null)) }
         }
-        if (!d.allgemein) Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (d.ort != null) Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Feld(d.ort, "Ort: Papa, Zuhause, Arbeit oder Adresse", Modifier.weight(1f).heightIn(min = 44.dp, max = 64.dp)) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(ort = it)) }
+            Chip(if (d.form == Erinnerung.FORM_WECKER) "Wecker" else "Benachrichtigung", d.form == Erinnerung.FORM_WECKER) {
+                vm.erinnerungEntwurfSetzen(d.copy(form = if (d.form == Erinnerung.FORM_WECKER) Erinnerung.FORM_MELDUNG else Erinnerung.FORM_WECKER))
+            }
+        }
+        if (!d.allgemein && d.ort == null) Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Chip(d.datum?.let { t -> runCatching { LocalDate.parse(t).format(DateTimeFormatter.ofPattern("d. MMM yyyy", Locale.GERMAN)) }.getOrDefault(t) } ?: "Datum wählen", d.datum != null) { datumWaehlen(context, d.datum) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(datum = it)) } }
             Chip(d.uhrzeit?.let { "$it Uhr" } ?: "Ohne Uhrzeit", d.uhrzeit != null) { uhrWaehlen(context, d.uhrzeit ?: vm.einstellungen.erinnerungOhneUhrzeit) { vm.erinnerungEntwurfSetzen(vm.erinnerungEntwurf!!.copy(uhrzeit = it)) } }
             if (d.uhrzeit != null) Box(Modifier.size(36.dp).antippen { vm.erinnerungEntwurfSetzen(d.copy(uhrzeit = null)) }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Uhrzeit entfernen", tint = f.textLeise, modifier = Modifier.size(18.dp)) }

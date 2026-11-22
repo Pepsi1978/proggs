@@ -6,6 +6,8 @@ import de.frank.jarvis.ablage.ErinnerungStimme
 import de.frank.jarvis.ablage.Erinnerung
 import de.frank.jarvis.ablage.Erinnerungen
 import de.frank.jarvis.ablage.Faellig
+import de.frank.jarvis.ablage.OrtBedingung
+import de.frank.jarvis.ablage.OrtErinnerungen
 import de.frank.jarvis.data.Einstellungen
 import org.json.JSONObject
 import java.time.LocalDate
@@ -14,13 +16,14 @@ import java.time.LocalDate
 class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "erinnerungen"
     override val name = "Erinnerungen"
-    override val beschreibung = "Erinnerungen mit Datum und allgemeine Erinnerungen ohne Termin anlegen, lesen, bearbeiten, Erinnerungszeitpunkte und Form einstellen, bestätigen."
+    override val beschreibung = "Erinnerungen mit Datum, Standort-Erinnerungen („wenn ich bei Papa bin“) und allgemeine Erinnerungen ohne Termin anlegen, lesen, bearbeiten, Erinnerungszeitpunkte und Form einstellen, bestätigen."
     override val hinweise =
         "„Erinnere mich am 12.8.2027 an …“ und „Erinnere mich später an …“ gehören NUR hierher (erinnerung_speichern, aktion anlegen), nie zusätzlich in Aufgaben, Kalender oder Wecker. " +
             "Aufgaben, Kalender und Wecker nur, wenn Frank das ausdrücklich so sagt („leg eine Aufgabe an“, „trag einen Termin ein“, „stell einen Wecker“). " +
             "Beim Anlegen schreibst du drei Fassungen: text (vollständig in Franks Sinn, jeder Punkt, jeder Name, jede Zahl), kurz (höchstens 35 Wörter, für sich allein verständlich, zum Vorlesen, ohne Anrede) und zeile (etwa sechs Wörter für die Liste). " +
             "Eine nicht genannte Uhrzeit nie erfinden: uhrzeit dann weglassen. Ohne Datum wird sie eine allgemeine Erinnerung; dafür NICHT nach einem Termin fragen, Jarvis entscheidet selbst, wann ein Hinweis passt. " +
             "Form: Beim Anlegen fragst du vor dem Speichern immer ausdrücklich „Benachrichtigung oder Wecker?“ und speicherst Franks Auswahl in form; ohne seine Antwort legst du die Erinnerung nicht an. Vorgelesen wird immer. " +
+            "Standort: „Erinnere mich, wenn ich bei Papa bin, daran …“ oder „… wenn ich an der Adresse XY bin …“ → aktion anlegen mit ort (papa, zuhause, arbeit oder die genannte Adresse), ohne datum und uhrzeit. Sie löst nur aus, wenn Franks Handy etwa drei Minuten dort ist, nie zu einer Uhrzeit und nie als allgemeiner Hinweis: nie von dir aus ansprechen. Fehlt der Ort oder meldet das Werkzeug mehrere Treffer oder keinen, frag Frank nach dem genauen Ort. " +
             "Allgemeine offene Erinnerungen sprichst du von dir aus an, wenn sie gerade wirklich passen (Gesprächsthema, freie Zeit), nie mehrfach kurz hintereinander und nicht, wenn zuletzt_erwähnt von heute ist; danach aktion erwaehnt. " +
             "Bestätigen betrifft genau eine Auslösung, die übrigen bleiben geplant; Bearbeiten ist keine Bestätigung. ids nie vorlesen."
 
@@ -52,7 +55,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun vorabAus(t: String) = t.split(',', ';').mapNotNull { it.trim().toIntOrNull()?.takeIf { m -> m >= 0 } }.distinct()
 
-    private fun kopf(e: Erinnerung) = "${e.datumAnzeige()}: ${e.zeile} [id ${e.id}]" + (if (e.wecker) " (Wecker)" else "") + (if (e.erledigt != 0L) " (erledigt)" else "")
+    private fun kopf(e: Erinnerung) = "${e.datumAnzeige()}: ${e.zeile} [id ${e.id}]" + (if (e.wecker) " (Wecker)" else "") + (if (e.ort != null && e.ortAusgeloest > 0) " (zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)})" else "") + (if (e.erledigt != 0L) " (erledigt)" else "")
 
     private fun stand(f: Faellig, jetzt: Long): String {
         val q = Erinnerungen.quittung(context, f.quittung)
@@ -69,13 +72,18 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         return buildString {
             append(kopf(e)).append('\n')
             append("Kurzfassung: ").append(e.kurz).append("\n\n").append(e.text)
+            e.ort?.let { o ->
+                append("\n\nStandort-Erinnerung: löst aus, wenn Franks Handy etwa drei Minuten bei ${o.name} ist (${o.adresse}). ")
+                append(when { e.erledigt != 0L -> "Erledigt, löst nicht mehr aus."; e.ortAusgeloest > 0 -> "Zuletzt ausgelöst ${Erinnerungen.zeitText(e.ortAusgeloest)}; löst bei der nächsten Ankunft wieder aus, bis sie erledigt ist."; else -> "Wartet auf die Ankunft." })
+                if (!de.frank.jarvis.data.Geraet.istTablet) OrtErinnerungen.fehlendeFreigabe(context)?.let { append(" ACHTUNG: ").append(it) }
+            }
             if (e.allgemein) {
                 append("\n\nAllgemeine Erinnerung ohne Termin.")
                 if (e.zuletztErwaehnt > 0) append(" Zuletzt erwähnt: ").append(Erinnerungen.zeitText(e.zuletztErwaehnt)).append('.')
             }
             val t = e.termine()
             if (t.isNotEmpty()) append("\n\nZeitpunkte:\n").append(t.joinToString("\n") { stand(it, jetzt) })
-            append("\nSprachausgabe offline: ").append(if (ErinnerungStimme.bereit(context, e.kurz, e.wecker)) "bereit" else "noch nicht erzeugt")
+            append("\nSprachausgabe offline: ").append(if (ErinnerungStimme.bereit(context, e.kurz, e.wecker, e.ortsgebunden && !e.wecker)) "bereit" else "noch nicht erzeugt")
         }
     }
 
@@ -86,11 +94,15 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         val kommend = Erinnerungen.naechste(context, jetzt)
         val datiert = Erinnerungen.datiert(context, jetzt).filter { it.erledigt == 0L && (it.termin() ?: 0L) >= jetzt }
         val allgemein = Erinnerungen.allgemeine(context).filter { it.erledigt == 0L }
-        if (faellig.isEmpty() && datiert.isEmpty() && allgemein.isEmpty()) return "Keine offenen Erinnerungen."
+        val orte = Erinnerungen.ortsgebundene(context).filter { it.erledigt == 0L }
+        if (faellig.isEmpty() && datiert.isEmpty() && allgemein.isEmpty() && orte.isEmpty()) return "Keine offenen Erinnerungen."
         return buildString {
             if (faellig.isNotEmpty()) append("Fällig und noch nicht bestätigt:\n").append(faellig.joinToString("\n") { "- ${it.erinnerung.zeile}: ${it.erinnerung.kurz} [id ${it.erinnerung.id}]" }).append('\n')
             if (datiert.isNotEmpty()) append("Mit Datum:\n").append(datiert.take(40).joinToString("\n") { e ->
                 "- ${e.datumAnzeige()}: ${e.kurz}" + (kommend.firstOrNull { it.erinnerung.id == e.id }?.let { " (nächste Erinnerung ${Erinnerungen.zeitText(it.zeit)})" } ?: "") + (if (e.wecker) " (Wecker)" else "") + " [id ${e.id}]"
+            }).append('\n')
+            if (orte.isNotEmpty()) append("An einen Ort gebunden (lösen nur bei Ankunft aus, nicht von dir aus ansprechen):\n").append(orte.take(40).joinToString("\n") { e ->
+                "- ${e.datumAnzeige()}: ${e.kurz}" + (if (e.wecker) " (Wecker)" else "") + " [id ${e.id}]"
             }).append('\n')
             if (allgemein.isNotEmpty()) append("Allgemein, ohne Termin (ansprechen, wenn es passt):\n").append(allgemein.take(40).joinToString("\n") { e ->
                 "- ${e.kurz}" + (if (e.zuletztErwaehnt > 0) " (zuletzt erwähnt ${Erinnerungen.zeitText(e.zuletztErwaehnt)})" else "") + " [id ${e.id}]"
@@ -110,6 +122,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             faellig.forEach { append("- FÄLLIG, unbestätigt: ").append(it.erinnerung.datumAnzeige()).append(": ").append(it.erinnerung.kurz).append('\n') }
             bald.forEach { append("- ").append(it.datumAnzeige()).append(": ").append(it.kurz).append('\n') }
             if (spaeter > 0) append("- Später als 14 Tage: ").append(spaeter).append(" weitere\n")
+            Erinnerungen.ortsgebundene(context).filter { it.erledigt == 0L }.forEach { append("- ").append(it.datumAnzeige()).append(" (bei Ankunft, nicht ansprechen): ").append(it.kurz).append('\n') }
             allgemein.forEach { append("- Allgemein, ohne Termin: ").append(it.kurz).append('\n') }
         }.trim().ifEmpty { "Keine offenen Erinnerungen." }
     }
@@ -118,7 +131,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "erinnerung_speichern",
             titel = "Erinnerung speichern",
-            beschreibung = "Jarvis: Reiter „Erinnerung“ der Ablage. „Erinnere mich am 12.8.2027 daran, mein Abo zu kündigen“ → aktion anlegen mit datum (Uhrzeit nur, wenn genannt). „Erinnere mich später an …“ → aktion anlegen ohne datum: allgemeine Erinnerung. " +
+            beschreibung = "Jarvis: Reiter „Erinnerung“ der Ablage. „Erinnere mich am 12.8.2027 daran, mein Abo zu kündigen“ → aktion anlegen mit datum (Uhrzeit nur, wenn genannt). „Erinnere mich später an …“ → aktion anlegen ohne datum: allgemeine Erinnerung. „Erinnere mich, wenn ich bei Papa bin, an …“ → aktion anlegen mit ort, ohne datum: Standort-Erinnerung. " +
                 "Nicht zusätzlich als Aufgabe oder Termin anlegen. Beim Anlegen immer ausdrücklich „Benachrichtigung oder Wecker?“ fragen und erst nach Franks Antwort mit seiner Auswahl in form speichern. aendern: nur die genannten Felder. ausloesung_hinzufuegen: „erinnere mich zusätzlich zwei Tage vorher“ (minuten, hier 2880). ausloesung_entfernen mit ausloesung_id. " +
                 "form: meldung oder wecker. bestaetigen: genau eine Auslösung (mit ausloesung_id oder die älteste fällige), die übrigen bleiben. erledigt: die ganze Erinnerung ist erledigt, wieder_offen macht das rückgängig. erwaehnt: du hast eine allgemeine Erinnerung gerade angesprochen. loeschen: nur auf Franks ausdrücklichen Wunsch.",
             schema = schema(
@@ -128,7 +141,8 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 "text" to text("Der vollständige ausführliche Inhalt."),
                 "kurz" to text("Kurzfassung zum Vorlesen: höchstens 35 Wörter, für sich allein gut verständlich."),
                 "zeile" to text("Listenzeile: etwa sechs Wörter."),
-                "datum" to text("Termin als JJJJ-MM-TT. Weglassen = allgemeine Erinnerung ohne Termin."),
+                "datum" to text("Termin als JJJJ-MM-TT. Weglassen = allgemeine Erinnerung ohne Termin (oder Standort-Erinnerung mit ort)."),
+                "ort" to text("Nur für Standort-Erinnerungen, statt datum: papa, zuhause, arbeit oder die genannte Adresse. Löst aus, wenn Franks Handy etwa drei Minuten dort ist. Beim Ändern: neuer Ort."),
                 "uhrzeit" to text("Nur wenn Frank eine Uhrzeit ausdrücklich nennt, HH:MM. Beim Ändern: „keine“ entfernt sie."),
                 "form" to text("Pflicht beim Anlegen nach ausdrücklicher Rückfrage: meldung (Benachrichtigung) oder wecker (klingelt, bis ausgeschaltet).", listOf("meldung", "wecker")),
                 "vorab_minuten" to text("Beim Anlegen, optional: Zeitpunkte als Minuten vor dem Termin, mit Komma getrennt, 0 = zum Termin; 1 Stunde = 60, 1 Tag = 1440. Vorgabe: 0."),
@@ -146,7 +160,7 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             schema = schema(
                 "id" to text("Kennung."),
                 "suche" to text("Wortteil."),
-                "art" to text("Nur diese Liste, Vorgabe alle.", listOf("alle", "datiert", "allgemein")),
+                "art" to text("Nur diese Liste, Vorgabe alle.", listOf("alle", "datiert", "ort", "allgemein")),
                 "mit_erledigten" to schalter("Auch erledigte und vergangene zeigen."),
             ),
             nurLesen = true,
@@ -159,11 +173,13 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
             val art = a.optString("art", "alle")
             val jetzt = System.currentTimeMillis()
             val mit = a.optBoolean("mit_erledigten")
-            val datiert = if (art == "allgemein") emptyList() else Erinnerungen.datiert(context, jetzt).filter { mit || (it.erledigt == 0L && (it.termin() ?: 0L) >= jetzt) || it.termine().any { t -> Erinnerungen.quittung(context, t.quittung) == null && t.zeit <= jetzt && Erinnerungen.meldbar(t, jetzt) } }
-            val allgemein = if (art == "datiert") emptyList() else Erinnerungen.allgemeine(context).filter { mit || it.erledigt == 0L }
-            if (datiert.isEmpty() && allgemein.isEmpty()) Ergebnis("Keine Erinnerungen.")
+            val orte = if (art == "alle" || art == "ort") Erinnerungen.ortsgebundene(context).filter { mit || it.erledigt == 0L } else emptyList()
+            val datiert = if (art == "allgemein" || art == "ort") emptyList() else Erinnerungen.datiert(context, jetzt).filter { mit || (it.erledigt == 0L && (it.termin() ?: 0L) >= jetzt) || it.termine().any { t -> Erinnerungen.quittung(context, t.quittung) == null && t.zeit <= jetzt && Erinnerungen.meldbar(t, jetzt) } }
+            val allgemein = if (art == "datiert" || art == "ort") emptyList() else Erinnerungen.allgemeine(context).filter { mit || it.erledigt == 0L }
+            if (datiert.isEmpty() && allgemein.isEmpty() && orte.isEmpty()) Ergebnis("Keine Erinnerungen.")
             else Ergebnis(buildString {
                 if (datiert.isNotEmpty()) append("Mit Datum:\n").append(datiert.joinToString("\n") { "- " + kopf(it) }).append('\n')
+                if (orte.isNotEmpty()) append("Standort:\n").append(orte.joinToString("\n") { "- " + kopf(it) + if (it.erledigt != 0L) " (erledigt)" else "" }).append('\n')
                 if (allgemein.isNotEmpty()) append("Allgemein:\n").append(allgemein.joinToString("\n") { "- " + it.zeile + " [id ${it.id}]" + (if (it.erledigt != 0L) " (erledigt)" else "") })
             }.trim())
         },
@@ -171,7 +187,17 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun vorbeiHinweis(e: Erinnerung) = if (Erinnerungen.meldetSichNoch(e)) "" else " ACHTUNG: Alle Zeitpunkte sind schon vorbei, von selbst meldet sie sich nicht. Sag das Frank und frag nach einer Uhrzeit."
 
-    private fun ausfuehren(a: JSONObject): Ergebnis {
+    /** Ort aus Franks Worten; ein Ergebnis statt eines Orts heißt: nachfragen. */
+    private suspend fun ortAus(text: String): Pair<OrtBedingung?, Ergebnis?> = when (val r = OrtErinnerungen.aufloesen(context, text)) {
+        is OrtErinnerungen.Aufloesung.Ok -> r.ort to null
+        is OrtErinnerungen.Aufloesung.Mehrdeutig -> null to Ergebnis("Nicht eindeutig, nichts gespeichert. Mehrere Orte passen: ${r.vorschlaege.joinToString("; ")}. Frag Frank, welcher gemeint ist, und übergib ihn genauer in ort.", fehler = true)
+        is OrtErinnerungen.Aufloesung.Fehlt -> null to Ergebnis(r.grund, fehler = true)
+    }
+
+    private fun freigabeHinweis() = if (de.frank.jarvis.data.Geraet.istTablet) " Ausgelöst wird am Handy, das Frank dabeihat."
+        else OrtErinnerungen.fehlendeFreigabe(context)?.let { " ACHTUNG, sag Frank: $it" } ?: ""
+
+    private suspend fun ausfuehren(a: JSONObject): Ergebnis {
         if (Erinnerungen.defekt(context)) return Ergebnis("Die Erinnerungsdatei ist beschädigt und wurde gesichert; nichts gespeichert.", fehler = true)
         val aktion = a.optString("aktion")
         if (aktion == "anlegen") {
@@ -181,6 +207,15 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 Erinnerung.FORM_MELDUNG -> Erinnerung.FORM_MELDUNG
                 Erinnerung.FORM_WECKER -> Erinnerung.FORM_WECKER
                 else -> return Ergebnis("Frag Frank ausdrücklich „Benachrichtigung oder Wecker?“ und übergib seine Auswahl in form.", fehler = true)
+            }
+            if (a.gesetzt("ort")) {
+                if (a.gesetzt("datum")) return Ergebnis("Entweder ort oder datum: Eine Standort-Erinnerung hat keinen Termin. Frag Frank, was er meint.", fehler = true)
+                val (ort, fehler) = ortAus(a.optString("ort"))
+                if (ort == null) return fehler!!
+                val e = Erinnerungen.anlegen(context, text, a.optString("zeile"), a.optString("kurz"), null, null, form, emptyList(), Einstellungen.get(context).erinnerungOhneUhrzeit, ort)
+                    ?: return Ergebnis("Die Erinnerung ließ sich nicht speichern.", fehler = true)
+                OrtErinnerungen.abgleichen(context)
+                return Ergebnis("Als Standort-Erinnerung gespeichert: ${e.zeile}. Sie löst aus, wenn du etwa drei Minuten bei ${ort.name} bist (${ort.adresse}). Form: ${if (e.wecker) "Wecker" else "Benachrichtigung"}." + freigabeHinweis())
             }
             val datum = if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else null
             val uhrzeit = if (datum != null && a.gesetzt("uhrzeit")) uhrzeitAus(a.optString("uhrzeit")) ?: return Ergebnis("„${a.optString("uhrzeit")}“ ist keine Uhrzeit.", fehler = true) else null
@@ -193,7 +228,9 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
         if (e == null) return Ergebnis(f.orEmpty(), fehler = true)
         return when (aktion) {
             "aendern" -> {
-                val datum = if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else e.tag()
+                if (a.gesetzt("ort") && a.gesetzt("datum")) return Ergebnis("Entweder ort oder datum.", fehler = true)
+                val neuOrt: OrtBedingung? = if (a.gesetzt("ort")) ortAus(a.optString("ort")).let { (o, f) -> o ?: return f!! } else if (a.gesetzt("datum")) null else e.ort
+                val datum = if (neuOrt != null) null else if (a.gesetzt("datum")) datumAus(a.optString("datum")) ?: return Ergebnis("„${a.optString("datum")}“ ist kein Datum.", fehler = true) else e.tag()
                 val uhrzeit = when {
                     !a.gesetzt("uhrzeit") -> e.uhrzeit
                     a.optString("uhrzeit").trim().lowercase() == "keine" -> null
@@ -202,14 +239,15 @@ class ErinnerungenFaehigkeit(private val context: Context) : Faehigkeit {
                 val form = when (a.optString("form")) { Erinnerung.FORM_WECKER -> Erinnerung.FORM_WECKER; Erinnerung.FORM_MELDUNG -> Erinnerung.FORM_MELDUNG; else -> e.form }
                 val neu = Erinnerungen.aendere(context, e.id) { alt ->
                     alt.copy(text = a.optString("text").trim().ifEmpty { alt.text }, kurz = a.optString("kurz").trim().ifEmpty { alt.kurz }, zeile = a.optString("zeile").trim().ifEmpty { alt.zeile },
-                        datum = datum?.toString(), uhrzeit = uhrzeit, form = form, allgemein = datum == null,
-                        // Nur beim Wechsel von allgemein zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
-                        ausloesungen = if (datum != null && alt.allgemein) listOf(Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+                        datum = datum?.toString(), uhrzeit = if (neuOrt != null) null else uhrzeit, form = form, allgemein = datum == null && neuOrt == null, ort = neuOrt,
+                        // Nur beim Wechsel von allgemein oder Ort zu datiert: Bewusst entfernte Zeitpunkte bleiben entfernt.
+                        ausloesungen = if (datum != null && (alt.allgemein || alt.ort != null)) listOf(Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
                 } ?: return Ergebnis("Nicht gespeichert.", fehler = true)
-                Ergebnis("Geändert: ${neu.datumAnzeige()}, ${neu.zeile}, Form ${if (neu.wecker) "Wecker" else "Benachrichtigung"}. Das ist keine Bestätigung." + if (neu.ausloesungen.isNotEmpty()) vorbeiHinweis(neu) else "")
+                Ergebnis("Geändert: ${neu.datumAnzeige()}, ${neu.zeile}, Form ${if (neu.wecker) "Wecker" else "Benachrichtigung"}. Das ist keine Bestätigung." + (neu.ort?.let { " Ort: ${it.adresse}." + freigabeHinweis() } ?: if (neu.ausloesungen.isNotEmpty()) vorbeiHinweis(neu) else ""))
             }
             "loeschen" -> if (Erinnerungen.loesche(context, e.id)) Ergebnis("Gelöscht: ${e.zeile}.") else Ergebnis("Nicht gelöscht.", fehler = true)
             "ausloesung_hinzufuegen" -> {
+                if (e.ort != null) return Ergebnis("Das ist eine Standort-Erinnerung: Sie löst bei Ankunft am Ort aus, nie zu einer Uhrzeit. Für einen Zeitpunkt gib ihr ein Datum (aendern).", fehler = true)
                 if (e.allgemein) return Ergebnis("Das ist eine allgemeine Erinnerung ohne Termin; dafür gibt es keine Zeitpunkte. Gib ihr erst ein Datum (aendern).", fehler = true)
                 val u = if (a.gesetzt("ausloesung_uhrzeit")) uhrzeitAus(a.optString("ausloesung_uhrzeit")) ?: return Ergebnis("Keine Uhrzeit: ${a.optString("ausloesung_uhrzeit")}", fehler = true) else null
                 if (!a.has("minuten")) return Ergebnis("Es fehlt minuten: wie lange vor dem Termin.", fehler = true)

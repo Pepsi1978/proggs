@@ -20,6 +20,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Auslösebedingung einer Standort-Erinnerung: [name] wie Frank ihn nennt („Papa“ oder die Adresse), [adresse] aufgelöst, Mittelpunkt und Radius in Metern.
+ * [scharfSeit]: nur eine Ankunft danach löst aus (gesetzt beim Anlegen, bei Ortswechsel, „wieder offen“ und nach jeder Auslösung).
+ */
+data class OrtBedingung(val name: String, val adresse: String, val breite: Double, val laenge: Double, val radius: Int = OrtErinnerungen.RADIUS_M, val scharfSeit: Long = 0L)
+
 /** Ein eingestellter Erinnerungszeitpunkt. [minuten] vor dem Termin; bei [uhrzeit] (nur Termine ohne Uhrzeit) [minuten] / 1440 Tage vorher um diese Zeit. */
 data class Ausloesung(val id: String, val minuten: Int, val uhrzeit: String? = null, val angelegt: Long = 0L)
 
@@ -45,8 +51,13 @@ data class Erinnerung(
     val quelle: String = "",
     val erstellt: Long = 0L,
     val geaendert: Long = 0L,
+    /** Standort-Erinnerung: löst nur bei nachgewiesener Ankunft an diesem Ort aus, nie zu einer Uhrzeit und nie als allgemeiner Hinweis. */
+    val ort: OrtBedingung? = null,
+    /** Zeitpunkt der letzten Auslösung am Ort (Aufenthalt bestätigt); 0 = noch nie. */
+    val ortAusgeloest: Long = 0L,
 ) {
     val wecker get() = form == FORM_WECKER
+    val ortsgebunden get() = ort != null
     /** Leer = aus der Zeit vor dem Abgleich, also vom Handy. */
     val quelleName: String get() = quelle.ifBlank { AblageQuellen.HANDY }
     /** Quelle mit Anlagezeitpunkt für die Anzeige. */
@@ -65,6 +76,7 @@ data class Erinnerung(
 
     /** Alle Auslösungen. Die Kennung trägt die Zeit: Wird der Termin verschoben, ist es eine neue Auslösung; bloßes Bearbeiten des Textes lässt Bestätigtes bestätigt. */
     fun termine(): List<Faellig> {
+        if (ort != null) return if (ortAusgeloest > 0) listOf(Faellig(this, "${id}_o_${ortAusgeloest / 60_000}", ortAusgeloest, null, "Bei Ankunft: ${ort.name}")) else emptyList()
         if (allgemein) return if (hinweisUm > 0) listOf(Faellig(this, "${id}_h_${hinweisUm / 60_000}", hinweisUm, null, "Hinweis von Jarvis")) else emptyList()
         return ausloesungen.mapNotNull { a -> zeitVon(a)?.let { z -> Faellig(this, "${id}_${a.id}_${z / 60_000}", z, a, vorlaufText(a)) } }.sortedBy { it.zeit }
     }
@@ -78,7 +90,7 @@ data class Erinnerung(
     }
 
     /** Erste Zeile des Eintrags: Datum und nur eine ausdrücklich genannte Uhrzeit. */
-    fun datumAnzeige(): String = tag()?.let { d -> d.format(ANZEIGE) + (uhrzeit?.let { " · $it Uhr" } ?: "") } ?: "Ohne festen Termin"
+    fun datumAnzeige(): String = ort?.let { "Bei ${it.name}" } ?: tag()?.let { d -> d.format(ANZEIGE) + (uhrzeit?.let { " · $it Uhr" } ?: "") } ?: "Ohne festen Termin"
 
     companion object {
         const val FORM_MELDUNG = "meldung"
@@ -168,10 +180,13 @@ object Erinnerungen {
 
     /** Datierte: das als Nächstes Kommende oben, danach das Vergangene, das Älteste ganz unten. Maßgeblich ist der Termin selbst. */
     fun datiert(c: Context, jetzt: Long = System.currentTimeMillis()): List<Erinnerung> {
-        val d = alle(c).filter { !it.allgemein }
+        val d = alle(c).filter { !it.allgemein && it.ort == null }
         val (kommend, vorbei) = d.partition { (it.termin() ?: 0L) >= jetzt && it.erledigt == 0L }
         return kommend.sortedBy { it.termin() } + vorbei.sortedByDescending { it.termin() }
     }
+
+    /** Standort-Erinnerungen: offene oben, dann ausgelöste, erledigte unten. */
+    fun ortsgebundene(c: Context): List<Erinnerung> = alle(c).filter { it.ort != null }.sortedWith(compareBy<Erinnerung> { it.erledigt != 0L }.thenBy { it.ortAusgeloest != 0L }.thenByDescending { it.erstellt })
 
     fun allgemeine(c: Context): List<Erinnerung> = alle(c).filter { it.allgemein }.sortedWith(compareBy<Erinnerung> { it.erledigt != 0L }.thenByDescending { it.erstellt })
 
@@ -199,14 +214,16 @@ object Erinnerungen {
     fun kurzAus(text: String) = text.trim().split(Regex("\\s+")).let { w -> w.take(35).joinToString(" ") + if (w.size > 35) " …" else "" }
 
     @Synchronized
-    fun anlegen(c: Context, text: String, zeile: String, kurz: String, datum: String?, uhrzeit: String?, form: String, vorab: List<Ausloesung>, ohneUhrzeitUm: String): Erinnerung? {
+    fun anlegen(c: Context, text: String, zeile: String, kurz: String, datum: String?, uhrzeit: String?, form: String, vorab: List<Ausloesung>, ohneUhrzeitUm: String, ort: OrtBedingung? = null): Erinnerung? {
         val sauber = text.trim()
         val s = lies(c)
         if (sauber.isEmpty() || s.defekt) return null
         val jetzt = System.currentTimeMillis()
-        val allgemein = datum == null
-        val ausl = if (allgemein) emptyList() else vorab.ifEmpty { listOf(neueAusloesung(0)) }
-        val e = Erinnerung(neueId(), allgemein, zeile.trim().ifEmpty { zeileAus(sauber) }, kurz.trim().ifEmpty { kurzAus(sauber) }, sauber, datum, uhrzeit, ohneUhrzeitUm, form, ausl, quelle = AblageQuellen.DIESES, erstellt = jetzt, geaendert = jetzt)
+        val ortsgebunden = ort != null
+        val allgemein = datum == null && !ortsgebunden
+        val ausl = if (allgemein || ortsgebunden) emptyList() else vorab.ifEmpty { listOf(neueAusloesung(0)) }
+        val e = Erinnerung(neueId(), allgemein, zeile.trim().ifEmpty { zeileAus(sauber) }, kurz.trim().ifEmpty { kurzAus(sauber) }, sauber, if (ortsgebunden) null else datum, if (ortsgebunden) null else uhrzeit, ohneUhrzeitUm, form, ausl,
+            quelle = AblageQuellen.DIESES, erstellt = jetzt, geaendert = jetzt, ort = ort?.copy(scharfSeit = jetzt))
         return e.takeIf { schreibe(c, Stand(s.liste + e, s.quittungen, s.geloescht)) }
     }
 
@@ -219,6 +236,9 @@ object Erinnerungen {
         // Verschobener Termin oder wieder geöffnet: Was jetzt schon vorbei ist, meldet sich nicht nachträglich; Künftiges bleibt.
         val wiederOffen = alt.erledigt != 0L && neu.erledigt == 0L
         if (alt.termin() != neu.termin() || wiederOffen) neu = neu.copy(ausloesungen = neu.ausloesungen.map { it.copy(angelegt = neu.geaendert) }, hinweisUm = if (wiederOffen) 0L else neu.hinweisUm)
+        // Neuer Ort oder wieder offen: erst die nächste Ankunft zählt, eine frühere Auslösung bleibt nicht stehen.
+        val o = neu.ort
+        if (o != null && (wiederOffen || alt.ort == null || alt.ort.breite != o.breite || alt.ort.laenge != o.laenge)) neu = neu.copy(ort = o.copy(scharfSeit = neu.geaendert), ortAusgeloest = if (wiederOffen || alt.ort != null) 0L else neu.ortAusgeloest)
         return neu.takeIf { schreibe(c, Stand(s.liste.map { if (it.id == id) neu else it }, s.quittungen, s.geloescht)) }
     }
 
@@ -241,8 +261,13 @@ object Erinnerungen {
 
     @Synchronized fun quittiereLoeschung(c: Context, id: String) { val s = lies(c); if (id in s.geloescht) schreibe(c, Stand(s.liste, s.quittungen, s.geloescht - id)) }
 
-    @Synchronized fun setzeFern(c: Context, e: Erinnerung): Boolean {
+    /** Mac und Windows kennen den Ort noch nicht und schreiben ihn bei einer Bearbeitung nicht mit: Dann bleibt der hiesige Ort samt Auslösestand. */
+    private fun ortBehalten(lokal: Erinnerung?, fern: Erinnerung): Erinnerung =
+        if (lokal?.ort != null && fern.ort == null && fern.datum == null && !fern.allgemein) fern.copy(ort = lokal.ort, ortAusgeloest = maxOf(lokal.ortAusgeloest, fern.ortAusgeloest)) else fern
+
+    @Synchronized fun setzeFern(c: Context, fern: Erinnerung): Boolean {
         val s = lies(c)
+        val e = ortBehalten(s.liste.firstOrNull { it.id == fern.id }, fern)
         val da = s.liste.any { it.id == e.id }
         return schreibe(c, Stand(if (da) s.liste.map { if (it.id == e.id) e else it } else s.liste + e, s.quittungen, s.geloescht))
     }
@@ -259,19 +284,33 @@ object Erinnerungen {
         val neuer = if (fern.geaendert >= lokal.geaendert) fern else lokal
         val aelter = if (neuer === fern) lokal else fern
         return neuer.copy(ausloesungen = neuer.ausloesungen + aelter.ausloesungen.filter { a -> a.angelegt > basis && neuer.ausloesungen.none { it.id == a.id } },
+            ort = ortVereint(neuer, aelter).first, ortAusgeloest = ortVereint(neuer, aelter).second,
             erledigt = maxOf(lokal.erledigt, fern.erledigt), zuletztErwaehnt = maxOf(lokal.zuletztErwaehnt, fern.zuletztErwaehnt), hinweisUm = maxOf(lokal.hinweisUm, fern.hinweisUm), geaendert = maxOf(lokal.geaendert, fern.geaendert))
+    }
+
+    /** Derselbe Ort auf beiden Seiten: Auslösung und Scharfstellung gehen nicht verloren. Fehlt er auf der jüngeren Seite ohne Datum (Mac, Windows), bleibt der ältere. */
+    private fun ortVereint(neuer: Erinnerung, aelter: Erinnerung): Pair<OrtBedingung?, Long> {
+        val n = neuer.ort
+        val a = aelter.ort
+        return when {
+            n == null -> if (a != null && neuer.datum == null && !neuer.allgemein) a to aelter.ortAusgeloest else null to 0L
+            a != null && a.breite == n.breite && a.laenge == n.laenge -> n.copy(scharfSeit = maxOf(n.scharfSeit, a.scharfSeit)) to maxOf(neuer.ortAusgeloest, aelter.ortAusgeloest)
+            else -> n to neuer.ortAusgeloest
+        }
     }
 
     /** Fällt dieser Zeitpunkt auf einen schon eingestellten? Dann gäbe es zwei Meldungen in derselben Minute. */
     fun doppelt(e: Erinnerung, a: Ausloesung): Boolean { val z = e.zeitVon(a); return e.ausloesungen.any { e.zeitVon(it) == z } }
 
     /** Meldet sich diese Erinnerung noch von selbst? Sonst sagt das Werkzeug es, statt still nichts zu tun. */
-    fun meldetSichNoch(e: Erinnerung, jetzt: Long = System.currentTimeMillis()) = e.allgemein || e.termine().any { it.zeit > jetzt }
+    fun meldetSichNoch(e: Erinnerung, jetzt: Long = System.currentTimeMillis()) = e.allgemein || (e.ort != null && e.erledigt == 0L) || e.termine().any { it.zeit > jetzt }
 
     fun alsJson(e: Erinnerung): JSONObject = JSONObject().put("allgemein", e.allgemein).put("zeile", e.zeile).put("kurz", e.kurz).put("text", e.text)
         .put("datum", e.datum ?: JSONObject.NULL).put("uhrzeit", e.uhrzeit ?: JSONObject.NULL).put("ohne_uhrzeit_um", e.ohneUhrzeitUm).put("form", e.form)
         .put("ausloesungen", JSONArray(e.ausloesungen.map { JSONObject().put("id", it.id).put("minuten", it.minuten).put("uhrzeit", it.uhrzeit ?: JSONObject.NULL).put("angelegt", it.angelegt) }))
         .put("erledigt", e.erledigt).put("hinweis_um", e.hinweisUm).put("zuletzt_erwaehnt", e.zuletztErwaehnt).put("quelle", e.quelle.ifBlank { AblageQuellen.HANDY }).put("erstellt", e.erstellt)
+        .put("ort", e.ort?.let { o -> JSONObject().put("name", o.name).put("adresse", o.adresse).put("breite", o.breite).put("laenge", o.laenge).put("radius", o.radius).put("scharf_seit", o.scharfSeit) } ?: JSONObject.NULL)
+        .put("ort_ausgeloest", e.ortAusgeloest)
 
     fun aus(id: String, w: JSONObject, geaendert: Long): Erinnerung {
         fun nullbar(o: JSONObject, k: String) = if (o.isNull(k)) null else o.optString(k).takeIf { it.isNotBlank() }
@@ -281,6 +320,9 @@ object Erinnerungen {
             w.optString("form", Erinnerung.FORM_MELDUNG),
             (0 until a.length()).map { i -> a.getJSONObject(i).let { Ausloesung(it.getString("id"), it.optInt("minuten"), nullbar(it, "uhrzeit"), it.optLong("angelegt")) } },
             w.optLong("erledigt"), w.optLong("hinweis_um"), w.optLong("zuletzt_erwaehnt"), w.optString("quelle"), w.optLong("erstellt"), geaendert,
+            w.optJSONObject("ort")?.let { o -> OrtBedingung(o.optString("name"), o.optString("adresse"), o.optDouble("breite"), o.optDouble("laenge"), o.optInt("radius", OrtErinnerungen.RADIUS_M), o.optLong("scharf_seit")) }
+                ?.takeIf { !it.breite.isNaN() && !it.laenge.isNaN() },
+            w.optLong("ort_ausgeloest"),
         )
     }
 

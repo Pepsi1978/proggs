@@ -1740,12 +1740,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var erinnerungSitzung = 0
     private var erinnerungSpeichert = false
 
-    fun erinnerungNeu(allgemein: Boolean) { erinnerungSitzung++; erinnerungKi = null; erinnerungEntwurf = ErinnerungEntwurf(allgemein = allgemein) }
+    fun erinnerungNeu(allgemein: Boolean, ort: Boolean = false) { erinnerungSitzung++; erinnerungKi = null; erinnerungEntwurf = ErinnerungEntwurf(allgemein = allgemein && !ort, ort = if (ort) "" else null) }
 
     fun erinnerungBearbeiten(e: de.frank.jarvis.ablage.Erinnerung) {
         erinnerungSitzung++
         erinnerungKi = null
-        erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form)
+        erinnerungEntwurf = ErinnerungEntwurf(e.id, e.allgemein, e.text, e.kurz, e.zeile, e.datum, e.uhrzeit, e.form, e.ort?.name)
     }
 
     fun erinnerungEntwurfSetzen(neu: ErinnerungEntwurf) { erinnerungEntwurf = neu }
@@ -1805,20 +1805,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun erinnerungSpeichern() {
         val d = erinnerungEntwurf ?: return
         if (d.text.isBlank() || nimmtAuf || schreibtMit || erinnerungFormuliert || erinnerungSpeichert) return
-        if (!d.allgemein && d.datum == null) { meldung = "Bitte ein Datum wählen."; return }
+        if (d.ort != null && d.ort.isBlank()) { meldung = "Bitte einen Ort angeben: Papa, Zuhause, Arbeit oder eine Adresse."; return }
+        if (d.ort == null && !d.allgemein && d.datum == null) { meldung = "Bitte ein Datum wählen."; return }
         val app = getApplication<android.app.Application>()
         erinnerungSpeichert = true
         viewModelScope.launch {
             try {
-            val datum = if (d.allgemein) null else d.datum
-            val uhrzeit = if (d.allgemein) null else d.uhrzeit
-            val e = withContext(Dispatchers.IO) {
-                if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit)
-                else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
-                    alt.copy(text = d.text.trim(), kurz = d.kurz.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.kurzAus(d.text) }, zeile = d.zeile.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.zeileAus(d.text) },
-                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein, ausloesungen = if (!d.allgemein && alt.allgemein) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+            val datum = if (d.allgemein || d.ort != null) null else d.datum
+            val uhrzeit = if (d.allgemein || d.ort != null) null else d.uhrzeit
+            // Standort: unveränderter Name behält den gespeicherten Ort; sonst neu auflösen, bei Mehrdeutigkeit nachfragen statt raten.
+            val bisher = d.id?.let { de.frank.jarvis.ablage.Erinnerungen.eine(app, it) }?.ort
+            val ort = when {
+                d.ort == null -> null
+                bisher != null && bisher.name.equals(d.ort.trim(), ignoreCase = true) -> bisher
+                else -> when (val r = de.frank.jarvis.ablage.OrtErinnerungen.aufloesen(app, d.ort)) {
+                    is de.frank.jarvis.ablage.OrtErinnerungen.Aufloesung.Ok -> r.ort
+                    is de.frank.jarvis.ablage.OrtErinnerungen.Aufloesung.Mehrdeutig -> { meldung = "Mehrere Orte passen: " + r.vorschlaege.joinToString("; ") + ". Bitte genauer angeben."; return@launch }
+                    is de.frank.jarvis.ablage.OrtErinnerungen.Aufloesung.Fehlt -> { meldung = if (" Frag Frank" in r.grund) r.grund.substringBefore(" Frag Frank") + " Bitte den Ort genauer angeben." else r.grund; return@launch }
                 }
             }
+            val e = withContext(Dispatchers.IO) {
+                if (d.id == null) de.frank.jarvis.ablage.Erinnerungen.anlegen(app, d.text, d.zeile, d.kurz, datum, uhrzeit, d.form, emptyList(), einstellungen.erinnerungOhneUhrzeit, ort)
+                else de.frank.jarvis.ablage.Erinnerungen.aendere(app, d.id) { alt ->
+                    alt.copy(text = d.text.trim(), kurz = d.kurz.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.kurzAus(d.text) }, zeile = d.zeile.trim().ifEmpty { de.frank.jarvis.ablage.Erinnerungen.zeileAus(d.text) },
+                        datum = datum, uhrzeit = uhrzeit, form = d.form, allgemein = d.allgemein && ort == null, ort = ort,
+                        ausloesungen = if (!d.allgemein && ort == null && (alt.allgemein || alt.ort != null)) listOf(de.frank.jarvis.ablage.Erinnerungen.neueAusloesung(0)) else alt.ausloesungen)
+                }
+            }
+            if (e?.ort != null) de.frank.jarvis.ablage.OrtErinnerungen.abgleichen(app)
             if (e == null) { meldung = "Die Erinnerung ließ sich nicht speichern."; return@launch }
             erinnerungEingabeSchliessen()
             if (e.ausloesungen.isNotEmpty() && !de.frank.jarvis.ablage.Erinnerungen.meldetSichNoch(e)) meldung = "Gespeichert, aber alle Zeitpunkte sind schon vorbei: Sie meldet sich nicht von selbst."
@@ -4459,7 +4473,8 @@ private const val MAX_VERLAUF = 40
 private const val LAGE_ABSTAND_MS = 5 * 60_000L
 
 /** Was die Eingabe einer Erinnerung gerade enthält. */
-data class ErinnerungEntwurf(val id: String? = null, val allgemein: Boolean = false, val text: String = "", val kurz: String = "", val zeile: String = "", val datum: String? = null, val uhrzeit: String? = null, val form: String = de.frank.jarvis.ablage.Erinnerung.FORM_MELDUNG)
+/** [ort] nicht null = Standort-Erinnerung: „Papa“, „Zuhause“, „Arbeit“ oder eine Adresse. */
+data class ErinnerungEntwurf(val id: String? = null, val allgemein: Boolean = false, val text: String = "", val kurz: String = "", val zeile: String = "", val datum: String? = null, val uhrzeit: String? = null, val form: String = de.frank.jarvis.ablage.Erinnerung.FORM_MELDUNG, val ort: String? = null)
 
 private const val ERINNERUNG_KI =
     "Du überarbeitest eine von Frank eingesprochene oder eingetippte Erinnerung. Antworte nur mit JSON: {\"text\":\"…\",\"kurz\":\"…\",\"zeile\":\"…\"}. " +

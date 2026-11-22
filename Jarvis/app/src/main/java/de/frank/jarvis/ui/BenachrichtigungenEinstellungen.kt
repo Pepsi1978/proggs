@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Campaign
@@ -179,6 +180,7 @@ private fun symbol(art: Meldungsart): ImageVector = when (art) {
     Meldungsarten.ABFAHRT -> Icons.Rounded.DirectionsCar
     Meldungsarten.TIMER -> Icons.Rounded.Timer
     Meldungsarten.ERINNERUNG, Meldungsarten.ERINNERUNG_WECKER -> Icons.Rounded.Alarm
+    Meldungsarten.ERINNERUNG_ORT -> Icons.Rounded.Place
     Meldungsarten.STOPPUHR -> Icons.Rounded.AvTimer
     Meldungsarten.ANSAGE -> Icons.Rounded.Campaign
     Meldungsarten.WECKWORT_HOERT -> Icons.Rounded.Hearing
