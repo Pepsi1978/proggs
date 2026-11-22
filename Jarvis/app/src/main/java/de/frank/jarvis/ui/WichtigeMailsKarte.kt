@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -74,10 +73,10 @@ private object MailKartenZustand {
 /**
  * Startkarte „E-Mails“ im Stil der Mac-Zentrale: Kopf mit Stand und Aktualisieren, darunter immer zwei große, einzeln aufklappbare Felder.
  * „Wichtige E-Mails“ (im Kopf die Anzahl): alle offenen wichtigen Einträge in höchstens drei Zeilen; Antippen öffnet die Nachricht direkt in
- * Gmail und blendet den Eintrag bis zum nächsten Aktualisieren aus; rechts hinter einem senkrechten Strich oben die Glühbirne (neue Session mit
- * der Erklärung der Mail), darunter der Pfeil „unwichtig“. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da.
+ * Gmail und blendet den Eintrag bis zum nächsten Aktualisieren aus; rechts hinter einem senkrechten Strich die Glühbirne (neue Session mit
+ * der Erklärung der Mail); Herunterstufen nur unter „Alle E-Mails“. Heute und gestern (Ortszeit) mit grünem Rahmen. Fehler stehen als Fehler da.
  * „Alle E-Mails“: der ganze Posteingang (auch gelesene und wichtige), Antippen öffnet die Mail in Gmail, rechts ein zweigeteiltes Feld
- * (Pfeil hoch = wichtig, runter = unwichtig, erneut antippen = wieder automatisch), sofort wirksam.
+ * (dicker grüner Pfeil hoch = wichtig, roter runter = unwichtig, erneut antippen = wieder automatisch), sofort wirksam.
  */
 @Composable
 fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Eintrag) -> Unit = {}) {
@@ -133,7 +132,7 @@ fun WichtigeMailsKarte(griff: Modifier = Modifier, erklaeren: (WichtigeMails.Ein
                 if (sichtbar.isEmpty()) Text("Hier steht nichts, was du prüfen oder beantworten musst.", color = f.textLeise, fontSize = 14.sp)
                 sichtbar.forEach { e ->
                     key(e.msgId) {
-                        MailEintrag(e, erklaeren = { erklaeren(e) }, unwichtig = { WichtigeMails.bewerten(context, e.msgId, -1) }) {
+                        MailEintrag(e, erklaeren = { erklaeren(e) }) {
                             WichtigeMails.ausblenden(context, e.msgId); WichtigeMails.oeffnen(ui, e)
                         }
                     }
@@ -181,11 +180,36 @@ private fun wannText(e: WichtigeMails.Eintrag): String {
     }
 }
 
-/** Eine Hälfte des Pfeilfelds: mindestens 48 dp hoch, gewählt = gefüllt und für TalkBack als „ausgewählt“ angesagt. */
+/** Kräftiges Grün für „wichtig“ und Rot für „unwichtig“ (Frank, 22.11.2026: „richtig schön rot nach unten, grün nach oben“). */
+private val PFEIL_GRUEN = Color(0xFF22C55E)
+private val PFEIL_ROT = Color(0xFFEF4444)
+
+/** Dicker, ausgemalter Pfeil (Spitze und breiter Schaft) nach oben oder unten. */
+@Composable
+private fun DickerPfeil(hoch: Boolean, farbe: Color, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val pfad = androidx.compose.ui.graphics.Path().apply {
+            // Nach oben gezeichnet, für „unten“ gespiegelt.
+            fun y(v: Float) = if (hoch) v * h else h - v * h
+            moveTo(0.5f * w, y(0f))
+            lineTo(w, y(0.52f))
+            lineTo(0.72f * w, y(0.52f))
+            lineTo(0.72f * w, y(1f))
+            lineTo(0.28f * w, y(1f))
+            lineTo(0.28f * w, y(0.52f))
+            lineTo(0f, y(0.52f))
+            close()
+        }
+        drawPath(pfad, farbe)
+    }
+}
+
+/** Eine Hälfte des Pfeilfelds: mindestens 48 dp hoch, gewählt = farbig hinterlegt, Pfeil voll und für TalkBack als „ausgewählt“ angesagt. */
 @Composable
 private fun PfeilFeld(modifier: Modifier, hoch: Boolean, gewaehlt: Boolean, aktion: () -> Unit) {
-    val f = LocalFarben.current
-    val farbe = if (hoch) f.primaer else f.gefahr
+    val farbe = if (hoch) PFEIL_GRUEN else PFEIL_ROT
     val name = if (hoch) "Als wichtig markieren" else "Als unwichtig markieren"
     Box(
         modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -198,7 +222,8 @@ private fun PfeilFeld(modifier: Modifier, hoch: Boolean, gewaehlt: Boolean, akti
             },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(if (hoch) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, tint = if (gewaehlt) farbe else f.textLeise, modifier = Modifier.size(if (gewaehlt) 28.dp else 24.dp))
+        // Ungewählt etwas blasser, gewählt voll und größer.
+        DickerPfeil(hoch, if (gewaehlt) farbe else farbe.copy(alpha = 0.55f), Modifier.size(if (gewaehlt) 26.dp else 22.dp))
     }
 }
 
@@ -241,7 +266,7 @@ private fun AlleEintrag(e: WichtigeMails.Eintrag, bewerten: (Int) -> Unit, oeffn
 }
 
 @Composable
-private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, unwichtig: () -> Unit, oeffnen: () -> Unit) {
+private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, oeffnen: () -> Unit) {
     val f = LocalFarben.current
     val form = RoundedCornerShape(14.dp)
     val frisch = e.frisch
@@ -279,13 +304,9 @@ private fun MailEintrag(e: WichtigeMails.Eintrag, erklaeren: () -> Unit, unwicht
         )
     }
     Box(Modifier.fillMaxHeight().width(if (frisch) 2.dp else 1.dp).background(if (frisch) FRISCH_GRUEN else f.rand))
-    // Oben die Glühbirne wie bisher, darunter der Pfeil „unwichtig“ (nimmt die Mail sofort aus diesem Bereich, unter „Alle E-Mails“ bleibt sie).
-    Column(Modifier.width(52.dp).fillMaxHeight()) {
-        Box(Modifier.weight(1f).fillMaxWidth().heightIn(min = 48.dp).antippen(aktion = erklaeren), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Lightbulb, "E-Mail erklären", tint = f.primaer, modifier = Modifier.size(24.dp))
-        }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(if (frisch) FRISCH_GRUEN else f.rand))
-        PfeilFeld(Modifier.weight(1f), hoch = false, gewaehlt = false, aktion = unwichtig)
+    // Nur die Glühbirne (Frank, 22.11.2026: kein Pfeil daneben, damit er nicht versehentlich herunterstuft; das geht unter „Alle E-Mails“).
+    Box(Modifier.fillMaxHeight().width(52.dp).antippen(aktion = erklaeren), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Lightbulb, "E-Mail erklären", tint = f.primaer, modifier = Modifier.size(24.dp))
     }
     }
 }
