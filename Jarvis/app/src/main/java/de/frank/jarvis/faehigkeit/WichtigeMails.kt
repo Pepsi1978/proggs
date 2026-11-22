@@ -150,6 +150,7 @@ object WichtigeMails {
     /** Ein Schreiber zur Zeit für Bewertungsdateien (zweimal schnell getippt: sonst gewinnt die ältere oder die Datei geht verloren). */
     private val bewertungSperre = Mutex()
     @Volatile private var nochmalManuell = false
+    @Volatile private var ohneGeprueftListe = false
 
     private fun datei(app: Context) = File(app.filesDir, DATEI)
     private fun ordner(app: Context) = File(app.filesDir, ORDNER)
@@ -248,6 +249,7 @@ object WichtigeMails {
                     val aus = j.optJSONArray("ausgeblendet")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
                     beantwortet = j.optJSONArray("beantwortet")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
                     beantwortetGeprueft = j.optJSONArray("geprueft_wichtig")?.let { a -> (0 until a.length()).map { a.getLong(it) }.toSet() }.orEmpty()
+                    ohneGeprueftListe = !j.has("geprueft_wichtig")
                     // Nach einer neuen Fassung gilt der alte Stand als ungeprüft: Karte und Wächter prüfen sofort neu.
                     _stand.value = Stand(eintraege, if (aktuell) j.optLong("geprueft") else 0L, j.optString("fehler").ifBlank { null }, false, aus, pe)
                     letzterVersuch = if (aktuell) j.optLong("versuch") else 0L
@@ -256,6 +258,8 @@ object WichtigeMails {
             // Urteile der Fassung 2 lagen im alten Ordner; er wird nicht mehr abgeglichen, also einmal aufräumen.
             runCatching { File(app.filesDir, "wichtige_mails_urteile").takeIf { it.isDirectory }?.deleteRecursively() }
             urteileEinlesen(app)
+            // Bestandsdatei von vor 1.8.894 ohne geprüfte Menge: Die letzte Prüfung hat alle damals wichtigen Mails auf „beantwortet“ geprüft.
+            if (ohneGeprueftListe) beantwortetGeprueft = synchronized(urteile) { urteile.filterValues { it.optBoolean("w") }.keys.toSet() }
             bewertungenEinlesen(app)
             runCatching { _stand.value = neuBilden(_stand.value) }
             geladen = true
@@ -303,11 +307,13 @@ object WichtigeMails {
         }
         val hoch = pe.filter { it.bewertung == 1 }
         val runter = pe.filter { it.bewertung == -1 }
+        // Die Doppel-Filter laufen über alle automatisch wichtigen Mails, bewertete eingeschlossen; erst danach fallen Franks bewertete heraus.
+        // Sonst rückte beim Bewerten der bisher verdeckte Zwilling nach (etwa der PayPal-Beleg zur Google-Mail).
+        // Nur was die letzte Prüfung auf „beantwortet“ geprüft hat: Ein Urteil vom anderen Gerät zu einer schon beantworteten Mail
+        // erscheint sonst bis zum nächsten Abruf als wichtig.
         val auto = pe.filter { k ->
-            // Nur was die letzte Prüfung auf „beantwortet“ geprüft hat: Ein Urteil vom anderen Gerät zu einer schon beantworteten Mail
-            // erscheint sonst bis zum nächsten Abruf als wichtig. Hochgestufte verdrängen nur ältere derselben Unterhaltung, nie eine neuere.
-            k.bewertung == 0 && urteil(k.msgId)?.optBoolean("w") == true && k.msgId in beantwortetGeprueft && k.msgId !in beantwortet &&
-                runter.none { r -> r.thrId == k.thrId && r.empfangen >= k.empfangen } && hoch.none { it.thrId == k.thrId && it.empfangen >= k.empfangen }
+            urteil(k.msgId)?.optBoolean("w") == true && k.msgId in beantwortetGeprueft && k.msgId !in beantwortet &&
+                runter.none { r -> r.thrId == k.thrId && r.empfangen > k.empfangen }
         }.groupBy { it.thrId }.values.map { g -> g.maxBy { it.empfangen } }.sortedByDescending { it.empfangen }
         // Wiederkehrende Benachrichtigungen (gleicher Absender, gleicher ausführlicher Betreff in getrennten Unterhaltungen) nur einmal, die neueste.
         // Kurze, allgemeine Betreffs („Zahlungserinnerung“) können verschiedene Vorgänge sein: nur bei gleicher Kurzfassung zusammenfassen.
@@ -326,7 +332,7 @@ object WichtigeMails {
         val ohneDoppel = einmal.filter { e ->
             val b = betrag(urteil(e.msgId))
             !(zahlungsdienst(e) && !e.antwort && b > 0.0 && haendler.any { h -> kotlin.math.abs(betrag(urteil(h.msgId)) - b) < 0.005 && kotlin.math.abs(h.empfangen - e.empfangen) <= 2 * 3_600_000L })
-        }
+        }.filter { it.bewertung == 0 && hoch.none { h -> h.thrId == it.thrId && h.empfangen >= it.empfangen } }
         val wichtig = (hoch + ohneDoppel).sortedByDescending { it.empfangen }.map { it.copy(wichtig = true, kurz = it.kurz.ifBlank { it.betreff }) }
         val ids = wichtig.map { it.msgId }.toSet()
         return alt.copy(eintraege = wichtig, posteingang = pe.map { it.copy(wichtig = it.msgId in ids) }, ausgeblendet = alt.ausgeblendet.filter { it in ids }.toSet())

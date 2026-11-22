@@ -198,9 +198,9 @@ private fun wannText(e: WichtigeMails.Eintrag): String {
 private val PFEIL_GRUEN = Color(0xFF22C55E)
 private val PFEIL_ROT = Color(0xFFEF4444)
 
-/** Dicker, ausgemalter Pfeil (Spitze und breiter Schaft) nach oben oder unten. */
+/** Dicker Pfeil nach oben oder unten: [voll] = ausgemalt (aktiv), sonst nur als Umriss (leer). */
 @Composable
-private fun DickerPfeil(hoch: Boolean, farbe: Color, modifier: Modifier) {
+private fun DickerPfeil(hoch: Boolean, farbe: Color, voll: Boolean, modifier: Modifier) {
     androidx.compose.foundation.Canvas(modifier) {
         val w = size.width
         val h = size.height
@@ -216,28 +216,33 @@ private fun DickerPfeil(hoch: Boolean, farbe: Color, modifier: Modifier) {
             lineTo(0f, y(0.52f))
             close()
         }
-        drawPath(pfad, farbe)
+        if (voll) drawPath(pfad, farbe)
+        else drawPath(pfad, farbe, style = androidx.compose.ui.graphics.drawscope.Stroke(
+            width = 2.dp.toPx(), join = androidx.compose.ui.graphics.StrokeJoin.Round,
+        ))
     }
 }
 
-/** Eine Hälfte des Pfeilfelds: mindestens 48 dp hoch, gewählt = farbig hinterlegt, Pfeil voll und für TalkBack als „ausgewählt“ angesagt. */
+/**
+ * Eine Hälfte des Pfeilfelds, mindestens 48 dp hoch. [aktiv] = so ist die Mail gerade eingestuft: Pfeil ausgemalt und farbig hinterlegt,
+ * für TalkBack „ausgewählt“. Sonst nur der leere Umriss. [herkunft] sagt TalkBack, ob Frank oder Jarvis die Einstufung gesetzt hat.
+ */
 @Composable
-private fun PfeilFeld(modifier: Modifier, hoch: Boolean, gewaehlt: Boolean, aktion: () -> Unit) {
+private fun PfeilFeld(modifier: Modifier, hoch: Boolean, aktiv: Boolean, herkunft: String, aktion: () -> Unit) {
     val farbe = if (hoch) PFEIL_GRUEN else PFEIL_ROT
     val name = if (hoch) "Als wichtig markieren" else "Als unwichtig markieren"
     Box(
         modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .background(if (gewaehlt) farbe.copy(alpha = 0.22f) else Color.Transparent)
+            .background(if (aktiv) farbe.copy(alpha = 0.18f) else Color.Transparent)
             .antippen(rolle = Role.RadioButton, aktion = aktion)
             .semantics(mergeDescendants = true) {
                 contentDescription = name
-                selected = gewaehlt
-                stateDescription = if (gewaehlt) (if (hoch) "als wichtig markiert, erneut tippen hebt auf" else "als unwichtig markiert, erneut tippen hebt auf") else "nicht markiert"
+                selected = aktiv
+                stateDescription = if (aktiv) (if (hoch) "wichtig, $herkunft" else "unwichtig, $herkunft") else "nicht gewählt"
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Ungewählt etwas blasser, gewählt voll und größer.
-        DickerPfeil(hoch, if (gewaehlt) farbe else farbe.copy(alpha = 0.55f), Modifier.size(if (gewaehlt) 26.dp else 22.dp))
+        DickerPfeil(hoch, if (aktiv) farbe else farbe.copy(alpha = 0.7f), voll = aktiv, Modifier.size(24.dp))
     }
 }
 
@@ -272,9 +277,16 @@ private fun AlleEintrag(e: WichtigeMails.Eintrag, bewerten: (Int) -> Unit, oeffn
         }
         Box(Modifier.fillMaxHeight().width(1.dp).background(f.rand))
         Column(Modifier.width(52.dp).fillMaxHeight()) {
-            PfeilFeld(Modifier.weight(1f), hoch = true, gewaehlt = e.bewertung == 1) { bewerten(1) }
+            // Grün leuchtet, wenn die Mail gerade unter „Wichtige E-Mails“ steht (von Frank hochgestuft oder von Jarvis als wichtig erkannt),
+            // Rot nur, wenn Frank sie als unwichtig markiert hat; sonst sind beide leer. Nie beide zugleich.
+            val gruen = e.bewertung == 1 || (e.bewertung == 0 && e.wichtig)
+            val rot = e.bewertung == -1
+            PfeilFeld(Modifier.weight(1f), hoch = true, aktiv = gruen, herkunft = if (e.bewertung == 1) "von dir markiert" else "von Jarvis erkannt") {
+                // Ein leuchtender Pfeil hebt nur Franks eigene Markierung auf; leuchtet er, weil Jarvis die Mail als wichtig erkannt hat, passiert nichts.
+                if (!(e.bewertung == 0 && e.wichtig)) bewerten(1)
+            }
             Box(Modifier.fillMaxWidth().height(1.dp).background(f.rand))
-            PfeilFeld(Modifier.weight(1f), hoch = false, gewaehlt = e.bewertung == -1) { bewerten(-1) }
+            PfeilFeld(Modifier.weight(1f), hoch = false, aktiv = rot, herkunft = "von dir markiert") { bewerten(-1) }
         }
     }
 }
