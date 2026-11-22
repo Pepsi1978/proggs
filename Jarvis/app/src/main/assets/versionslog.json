@@ -914,6 +914,7 @@
   {"versionCode": 905, "versionName": "1.8.894", "stand": "22.11.2026, 09:26 Uhr", "notiz": "Review-Befunde behoben: alte wichtige Mails bleiben sichtbar, zwei gleich teure Abos verschmelzen nicht mehr, schnell getippte Bewertungen gehen nicht verloren und Alle E-Mails lädt in Stücken."},
   {"versionCode": 906, "versionName": "1.8.895", "stand": "22.11.2026, 09:27 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession ist länger, lauter (45 Prozent) und der zweite Ton klar tiefer, damit er gut als zwei Töne hörbar ist."},
   {"versionCode": 907, "versionName": "1.8.896", "stand": "22.11.2026, 09:33 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession läuft ein wenig schneller ab, bleibt aber klar als zwei Töne hörbar."},
-  {"versionCode": 908, "versionName": "1.8.897", "stand": "22.11.2026, 09:34 Uhr", "notiz": "Die Pfeile unter Alle E-Mails sind jetzt leer und nur der aktuelle Stand leuchtet: grün für wichtig, rot für von dir als unwichtig markiert; beim Bewerten rückt kein verdeckter Doppelbeleg mehr nach."}
+  {"versionCode": 908, "versionName": "1.8.897", "stand": "22.11.2026, 09:34 Uhr", "notiz": "Die Pfeile unter Alle E-Mails sind jetzt leer und nur der aktuelle Stand leuchtet: grün für wichtig, rot für von dir als unwichtig markiert; beim Bewerten rückt kein verdeckter Doppelbeleg mehr nach."},
+  {"versionCode": 909, "versionName": "1.8.898", "stand": "22.11.2026, 09:37 Uhr", "notiz": "Der Doppelton am Ende der Sprachsession läuft noch etwas schneller ab."}
 ]
 }
