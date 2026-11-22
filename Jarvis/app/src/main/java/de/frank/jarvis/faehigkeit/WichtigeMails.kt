@@ -176,7 +176,11 @@ object WichtigeMails {
         bewOrdner(app).listFiles { f -> f.isFile && f.name.endsWith(".json") }?.forEach { f ->
             runCatching { gelesen[java.lang.Long.parseUnsignedLong(f.name.removeSuffix(".json"))] = JSONObject(f.readText()) }
         }
-        synchronized(bewertungen) { bewertungen.clear(); bewertungen.putAll(gelesen) }
+        // Eine eben getippte, noch nicht geschriebene Bewertung (neuere Zeit) bleibt stehen.
+        synchronized(bewertungen) {
+            val behalten = bewertungen.filter { (id, o) -> o.optLong("zeit") > (gelesen[id]?.optLong("zeit") ?: -1L) }
+            bewertungen.clear(); bewertungen.putAll(gelesen); bewertungen.putAll(behalten)
+        }
     }
 
     private fun atomarSchreiben(ziel: File, inhalt: String) {
@@ -203,8 +207,8 @@ object WichtigeMails {
         runCatching {
             urteileEinlesen(app); bewertungenEinlesen(app)
             val vorher = _stand.value
-            val jetzt = neuBilden(vorher)
-            if (jetzt != vorher) { _stand.value = jetzt; speichern(app) }
+            _stand.update { neuBilden(it) }
+            if (_stand.value != vorher) speichern(app)
         }.onFailure { Logbuch.fehler("Wichtige E-Mails: Abgleich übernehmen", it) }
         if (!mitAbruf || (_stand.value.geprueft == 0L && _stand.value.posteingang.isEmpty())) return
         // Höchstens alle [ABGLEICH_ABSTAND_MS] ein Abruf (Review 21.11.2026): Urteile und Löschungen beider Geräte stießen sonst
@@ -284,7 +288,7 @@ object WichtigeMails {
      */
     private fun neuBilden(alt: Stand): Stand {
         // Ohne Posteingang (Stand von vor dem Umbau, noch nie geprüft) bleibt der alte Bestand, bis die erste Prüfung ihn liefert.
-        if (alt.posteingang.isEmpty()) return alt
+        if (alt.posteingang.isEmpty() && alt.geprueft == 0L) return alt
         val pe = alt.posteingang.map { k ->
             val u = urteil(k.msgId)
             k.copy(kurz = u?.optString("k").orEmpty(), antwort = u?.optBoolean("a") == true, handlung = u?.optString("h").orEmpty(), bewertung = richtung(k.msgId), wichtig = false)
@@ -370,8 +374,11 @@ object WichtigeMails {
     private fun aktiveBewertungen(): List<JSONObject> = synchronized(bewertungen) { bewertungen.values.filter { it.optInt("r") != 0 }.map { JSONObject(it.toString()) } }
         .sortedByDescending { it.optLong("zeit") }
 
-    /** Feste Muster: ab zwei Bewertungen desselben Musters, die zu mindestens 80 % übereinstimmen. */
-    private fun festeMuster(liste: List<JSONObject>): Map<String, Boolean> = liste.filter { it.has("t") }.groupBy { muster(it) }.mapNotNull { (k, g) ->
+    /** Muster mit Geldbezug (Zahlungsanlass oder Betrag): nur sie dürfen fest überschreiben, alles andere bleibt Beispiel im Prompt. */
+    private fun mitGeld(o: JSONObject) = o.optString("z").let { it.isNotBlank() && it != "keiner" } || betrag(o) > 0.0
+
+    /** Feste Muster: ab zwei Bewertungen desselben Musters mit Geldbezug, die zu mindestens 80 % übereinstimmen. */
+    private fun festeMuster(liste: List<JSONObject>): Map<String, Boolean> = liste.filter { it.has("t") && mitGeld(it) }.groupBy { muster(it) }.mapNotNull { (k, g) ->
         val hoch = g.count { it.optInt("r") == 1 }
         val runter = g.size - hoch
         if (g.size < 2) null else when {
@@ -638,7 +645,9 @@ object WichtigeMails {
                             .put("k", o.optString("k").replace(Regex("\\s+"), " ").trim().take(140))
                         o.optDouble("b", 0.0).takeIf { !it.isNaN() && it > 0.0 && it < 1_000_000.0 }?.let { urteil.put("b", Math.round(it * 100) / 100.0) }
                         // Feste Muster aus Franks Bewertungen gehen dem Modell vor (ab 2 übereinstimmenden Bewertungen derselben Art).
-                        fest[muster(urteil)]?.let { w -> if (w != urteil.optBoolean("w")) urteil.put("w", w).put("gelernt", true) }
+                        // Nie fest auf unwichtig, wenn Frank antworten, zahlen oder eine Frist wahren muss.
+                        val muss = urteil.optBoolean("a") || urteil.optString("h") in setOf("antworten", "zahlen", "frist")
+                        fest[muster(urteil)]?.let { w -> if (w != urteil.optBoolean("w") && (w || !muss)) urteil.put("w", w).put("gelernt", true) }
                         synchronized(urteile) { urteile[id] = urteil }
                     }
                     // Nicht eingestuft: Versuche zählen. Nach drei Fehlversuchen gilt die Mail als unwichtig, damit eine einzelne Mail den
