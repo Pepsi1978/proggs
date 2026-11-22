@@ -54,6 +54,7 @@ object OrtErinnerungen {
     /** Verlassen und binnen dieser Zeit wieder da: derselbe Aufenthalt, wenn er schon ausgelöst hat (Geofences flattern in Gebäuden). */
     private const val FLATTERN_MS = 10 * 60_000L
     private const val MAX_VERSUCHE = 10
+    private const val ANKUNFT_RAND_MS = 3 * 60_000L
     private const val FIX_ALTER_MS = 90_000L
     private const val FIX_GENAUIGKEIT_M = 100f
     private const val NEU_REGISTRIERT_MS = 4 * 60_000L
@@ -166,6 +167,8 @@ object OrtErinnerungen {
         aufraeumen(app, orte.keys)
         val kennung = orte.keys.sorted().joinToString("|")
         val jetzt = System.currentTimeMillis()
+        // Geänderte Minuten nach Ankunft gelten sofort, auch mitten im Aufenthalt.
+        weckerStellen(app)
         if (eingerichtet == kennung && jetzt - eingerichtetUm < NEU_EINRICHTEN_MS) return
         // Nach einem Fehlschlag nicht jede Minute, sondern höchstens alle 10 Minuten erneut versuchen.
         if (fehlschlag == kennung && jetzt - fehlschlagUm < 10 * 60_000L) return
@@ -240,15 +243,14 @@ object OrtErinnerungen {
         // Ort erst seit Kurzem überwacht und jede offene Erinnerung dort gerade erst scharf: Frank war beim Anlegen schon da.
         val frisch = jetzt - p.getLong("reg_$k", 0L) < NEU_REGISTRIERT_MS &&
             offene(app).mapNotNull { it.ort }.filter { schluessel(it) == k }.let { l -> l.isNotEmpty() && l.all { jetzt - it.scharfSeit < NEU_REGISTRIERT_MS + 60_000L } }
-        // Schon in diesem Aufenthalt ausgelöst (alle oder nur die mit kürzerer Verzögerung): Flattern beginnt keinen neuen.
-        val schonAusgeloest = p.getBoolean("ausgeloest_$k", false) || (drin > 0L && offene(app).any { it.ort != null && schluessel(it.ort) == k && it.ortAusgeloest >= drin })
         val e = p.edit()
         when {
             // Neu eingerichtet und schon da (Anlegen vor Ort): keine Ankunft, erst die nächste zählt.
             (drin == 0L || draussen > 0L) && frisch -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", true)
             // Erneutes Einrichten oder Flattern: derselbe Aufenthalt.
             drin > 0L && draussen == 0L -> Unit
-            drin > 0L && schonAusgeloest && jetzt - draussen < FLATTERN_MS -> Unit
+            // Binnen 10 Minuten zurück: derselbe Aufenthalt, die gewählte Verzögerung zählt weiter ab der ersten Ankunft (Geofences flattern in Gebäuden).
+            drin > 0L && jetzt - draussen < FLATTERN_MS -> Unit
             else -> e.putLong("drin_$k", jetzt).putBoolean("ausgeloest_$k", false).putInt("versuche_$k", 0)
         }
         e.putLong("draussen_$k", 0L).apply()
@@ -322,7 +324,9 @@ object OrtErinnerungen {
                     val liste = offene(app).filter { it.ort != null && schluessel(it.ort) == k }
                     val o = liste.firstOrNull()?.ort ?: continue
                     val drin = p.getLong("drin_$k", 0L)
-                    val l = fix?.let { lage(abstand(o.breite, o.laenge, it.latitude, it.longitude), if (it.hasAccuracy()) it.accuracy else 9_999f, System.currentTimeMillis() - it.time, o.radius) } ?: Lage.UNSICHER
+                    val l0 = fix?.let { lage(abstand(o.breite, o.laenge, it.latitude, it.longitude), if (it.hasAccuracy()) it.accuracy else 9_999f, System.currentTimeMillis() - it.time, o.radius) } ?: Lage.UNSICHER
+                    // Kurz nach dem Betreten (0 Minuten: Prüfung am Rand des Umkreises) zählt „knapp draußen“ noch nicht als weg, sondern als erneut prüfen.
+                    val l = if (l0 == Lage.DRAUSSEN && System.currentTimeMillis() - drin < ANKUNFT_RAND_MS) Lage.UNSICHER else l0
                     when (l) {
                         Lage.DRIN -> {
                             val ausgeloest = System.currentTimeMillis()
