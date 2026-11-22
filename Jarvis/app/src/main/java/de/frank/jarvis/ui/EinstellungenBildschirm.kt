@@ -955,6 +955,14 @@ private fun AnkerEinstellungen(e: Einstellungen) {
                 onValueChangeFinished = { e.ankerVerstaerkung = faktor.toInt() })
             Text("Damit erkennt Jarvis auch leise gesprochene Rufe; laute Rufe werden weich begrenzt. Springt das Weckwort zu oft grundlos an, etwas zurückdrehen.", color = f.textSchwach, fontSize = 12.sp)
         }
+        run {
+            var handyFaktor by remember { mutableFloatStateOf(e.handyVerstaerkung.toFloat()) }
+            val stufe = handyFaktor.toInt()
+            Text("Handy-Mikrofon fürs Weckwort: ${if (stufe == 1) "normal (1-fach)" else "$stufe-fach"}${if (stufe == 8) " (Maximum)" else ""}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+            Slider(value = handyFaktor, onValueChange = { handyFaktor = it.toInt().toFloat() }, valueRange = 1f..8f, steps = 6,
+                onValueChangeFinished = { e.handyVerstaerkung = handyFaktor.toInt() })
+            Text("Verstärkt das eingebaute Mikrofon nur beim Lauschen auf das Weckwort, wenn Jarvis über Handy oder Tablet hört, etwa für ein geflüstertes Weckwort. Die Spracheingabe danach, Diktat, Live-Modus und Anker bleiben normal. Android lässt Apps die Mikrofon-Hardware nicht lauter stellen, deshalb verstärkt Jarvis digital; Rauschen wird mit angehoben. Springt das Weckwort grundlos an, zurückdrehen.", color = f.textSchwach, fontSize = 12.sp)
+        }
         val konferenz = e.konferenzMikrofonAn
         Zeile("Mikrofone des Anker im Gespräch", if (konferenz) "An" else "Aus", if (konferenz) f.erfolg else f.textLeise)
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

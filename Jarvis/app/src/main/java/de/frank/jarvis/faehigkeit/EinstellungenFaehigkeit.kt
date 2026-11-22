@@ -403,6 +403,9 @@ class EinstellungsKatalog(context: Context) {
             zahl("anker_verstaerkung", "Anker", "Mikrofon-Verstärkung fürs Weckwort", "Wie stark Jarvis die Anker-Mikrofone beim Lauschen auf das Weckwort verstärkt, damit auch leise Rufe ankommen; 8 ist das Maximum, laute Rufe werden dabei weich begrenzt. Gilt sofort.", 1, 8, "fach", { e.ankerVerstaerkung }) {
                 e.ankerVerstaerkung = it
             },
+            zahl("handy_verstaerkung", "Anker", "Handy-Mikrofon-Verstärkung fürs Weckwort", "Wie stark Jarvis das eingebaute Mikrofon von Handy oder Tablet nur beim Lauschen auf das Weckwort verstärkt, etwa damit auch ein geflüstertes Weckwort ankommt; 1 ist normal, 8 das Maximum, laute Rufe werden weich begrenzt. Gilt nicht für die Spracheingabe danach, das Diktat, den Live-Modus und die Anker-Mikrofone. Gilt sofort.", 1, 8, "fach", { e.handyVerstaerkung }) {
+                e.handyVerstaerkung = it
+            },
             schalter("konferenz_mikrofon_an", "Anker", "Mikrofone des Anker im Gespräch", "Ist der Anker PowerConf verbunden, hört Jarvis im Gespräch nach dem Weckwort und im Live-Modus über dessen Mikrofone zu; die Antworten bleiben in voller Qualität.", { e.konferenzMikrofonAn }) {
                 e.konferenzMikrofonAn = it
             },

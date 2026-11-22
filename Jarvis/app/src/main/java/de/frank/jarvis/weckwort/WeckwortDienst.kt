@@ -364,7 +364,10 @@ class WeckwortDienst : Service() {
             // Die letzten Sekunden Ton für den Stimm-Fingerabdruck: Das Weckwort ist schon gesagt, wenn es erkannt wird.
             val ring = ShortArray(RING_WERTE)
             var ringPos = 0
-            var verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
+            // Verstärkung nur fürs Weckwort: über den Anker dessen Regler, am eingebauten Mikrofon der eigene (nicht beim Anlernen,
+            // damit das Stimmprofil aus normalem Ton entsteht). Die Spracheingabe danach öffnet ein eigenes Mikrofon ohne Verstärkung.
+            fun weckVerstaerkung(): Float = Einstellungen.get(this).let { if (ueberAnker) it.ankerVerstaerkung.toFloat() else if (Stimmprofil.lerntAn) 1f else it.handyVerstaerkung.toFloat() }
+            var verstaerkung = weckVerstaerkung()
             // Diagnose-Mitschnitt (nur per adb angestoßen): unverstärkter Ton und je Block, was der Filter und der Spotter taten.
             mitschnitt = WeckwortMitschnitt.oeffnen(this)
             // Rückstand gegenüber der Uhr: Wächst er, kommt der Faden mit dem Lesen nicht nach und der Puffer läuft über.
@@ -376,7 +379,7 @@ class WeckwortDienst : Service() {
             fun letzterTon(): FloatArray {
                 val n = TON_WERTE
                 val ton = FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
-                if (ueberAnker && verstaerkung > 1f) {
+                if (verstaerkung > 1f) {
                     var spitze = 0f
                     for (w in ton) spitze = maxOf(spitze, kotlin.math.abs(w))
                     val faktor = if (spitze > 0f) minOf(verstaerkung, TON_SPITZE / spitze) else 1f
@@ -388,7 +391,7 @@ class WeckwortDienst : Service() {
             fun frueherBlock(zurueck: Int): ShortArray {
                 val start = ringPos - (zurueck + 1) * WeckwortErkenner.BLOCK
                 val b = ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
-                if (ueberAnker && verstaerkung > 1f) verstaerken(b, verstaerkung)
+                if (verstaerkung > 1f) verstaerken(b, verstaerkung)
                 return b
             }
             // Lief das „Hey Jarvis“-Modell im letzten Block? Springt es wieder an, fängt es frisch an.
@@ -440,7 +443,7 @@ class WeckwortDienst : Service() {
             while (an.get()) {
                 if (++pruefZaehler >= 50) {
                     pruefZaehler = 0
-                    verstaerkung = Einstellungen.get(this).ankerVerstaerkung.toFloat()
+                    verstaerkung = weckVerstaerkung()
                     val wechsel = if (ueberAnker) {
                         val abgerissen = !de.frank.jarvis.audio.KonferenzMikrofon.kanalSteht(this)
                         if (abgerissen) ankerSperreBis = SystemClock.elapsedRealtime() + 30_000L
@@ -464,8 +467,10 @@ class WeckwortDienst : Service() {
                 }
                 for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 mitschnitt = mitschnitt?.takeIf { it.ton(block) }
-                // Über den Anker leise Rufe hörbar machen: verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
-                if (ueberAnker && verstaerkung > 1f) verstaerken(block, verstaerkung)
+                // Beim Anlernen am Handy unverstärkt (der Regler wird sonst nur alle 4 s neu gelesen).
+                if (Stimmprofil.lerntAn && !ueberAnker) verstaerkung = 1f
+                // Leise Rufe hörbar machen (Anker oder eingebautes Mikrofon): verstärken, Spitzen weich begrenzen (kein hartes Übersteuern).
+                if (verstaerkung > 1f) verstaerken(block, verstaerkung)
                 val anlernen = Stimmprofil.lerntAn
                 // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
                 // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
@@ -535,7 +540,7 @@ class WeckwortDienst : Service() {
                     val spotterTreffer = nachgeholt || phr.erkannt(block, boden)
                     mitschnitt?.zeile(rms, boden, laut, stimmeImLaerm, false, phr.verstaerkung, ueberAnker, spotterTreffer, nachgeholtBloecke)
                     if (!spotterTreffer) {
-                        if (merkmale != null && wert < 0.1f && !ueberAnker) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && verstaerkung <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                 } else {
@@ -547,7 +552,7 @@ class WeckwortDienst : Service() {
                     }
                     if (wert < schwelle) {
                         inFolge = 0
-                        if (merkmale != null && wert < 0.1f && !ueberAnker) Stimmprofil.hintergrundLernen(merkmale)
+                        if (merkmale != null && wert < 0.1f && !ueberAnker && verstaerkung <= 1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                     // Schnell gesprochen ist der Gipfel oft nur einen Block (80 ms) breit: Beim Anlernen und mit
