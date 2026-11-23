@@ -196,6 +196,56 @@ case "$week_resets_raw" in
         ;;
 esac
 
+# Antigravity: frische Limits direkt vom Anbieter (Frank-Bug-Report 23.11.2026).
+# Das quota-Objekt im stdin ist ein Stand vom Sitzungsstart bzw. der letzten Antwort und
+# laeuft dem echten Verbrauch hinterher (Leiste 40 %/11 %, Anbieter 44 %/13 % verbraucht).
+# Deshalb holt ein Hintergrundlauf hoechstens alle 60 s `agy -p /usage` (gut 2 s, legt keine
+# Sitzung an) in einen gemeinsamen Cache; die Leiste liest nur den Cache und wartet nie.
+# Der Anbieter meldet "Remaining" -> Verbrauch = 100 - Rest. Liegt der Reset des Cache-Werts
+# schon in der Vergangenheit, ist das Fenster zurueckgesetzt -> 0 %, bis der naechste Lauf kommt.
+if [ "$product_name" = "antigravity" ]; then
+    _agy_cache="$HOME/.gemini/antigravity-cli/state/usage-cache.tsv"
+    _agy_lock="$HOME/.gemini/antigravity-cli/state/usage-cache.lock"
+    mkdir -p "${_agy_cache%/*}" 2>/dev/null
+    _agy_mtime=$(stat -f %m "$_agy_cache" 2>/dev/null || stat -c %Y "$_agy_cache" 2>/dev/null || echo 0)
+    if [ $((now_ts - ${_agy_mtime:-0})) -ge 60 ]; then
+        # Verwaiste Sperre (Lauf abgestuerzt) nach 2 Minuten freigeben
+        _agy_lmtime=$(stat -f %m "$_agy_lock" 2>/dev/null || stat -c %Y "$_agy_lock" 2>/dev/null || echo 0)
+        [ -d "$_agy_lock" ] && [ $((now_ts - ${_agy_lmtime:-0})) -ge 120 ] && rmdir "$_agy_lock" 2>/dev/null
+        if mkdir "$_agy_lock" 2>/dev/null; then
+            _agy_bin=$(command -v agy 2>/dev/null)
+            [ -z "$_agy_bin" ] && for _p in "$HOME/.local/bin/agy" /opt/homebrew/bin/agy /usr/local/bin/agy; do [ -x "$_p" ] && { _agy_bin="$_p"; break; }; done
+            if [ -n "$_agy_bin" ]; then
+                (
+                    env -u GEMINI_API_KEY "$_agy_bin" -p /usage </dev/null 2>/dev/null \
+                    | jq -Rr 'gsub("\u001b\\[[0-9;?]*[A-Za-z]"; "") | split("\t") | map(gsub("^\\s+|\\s+$"; ""))
+                        | select(length == 4 and (.[2] | endswith("%")))
+                        | (if (.[1] | test("(five|5)[ -]?hour"; "i")) then "5h" elif (.[1] | test("week"; "i")) then "7d" else empty end) as $art
+                        | [.[0], $art, ((100 - (.[2] | rtrimstr("%") | tonumber)) | tostring),
+                           ((.[3] | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring)? // "0")] | join("\t")' \
+                        > "$_agy_cache.tmp" 2>/dev/null
+                    [ -s "$_agy_cache.tmp" ] && mv -f "$_agy_cache.tmp" "$_agy_cache" || rm -f "$_agy_cache.tmp"
+                    rmdir "$_agy_lock" 2>/dev/null
+                ) </dev/null >/dev/null 2>&1 &
+                disown 2>/dev/null
+            else
+                rmdir "$_agy_lock" 2>/dev/null
+            fi
+        fi
+    fi
+    # Cache lesen (hoechstens 15 min alt): Gruppe passend zum aktiven Modell
+    if [ -s "$_agy_cache" ] && [ $((now_ts - ${_agy_mtime:-0})) -lt 900 ]; then
+        case "$model" in *[Gg]emini*) _agy_grp="Gemini Models" ;; *) _agy_grp="Claude and GPT models" ;; esac
+        while IFS=$'\t' read -r _g _a _u _r; do
+            [ "$_g" = "$_agy_grp" ] || continue
+            case "$_r" in ''|*[!0-9]*) _r=0 ;; esac
+            [ "$_r" -gt 0 ] && [ "$_r" -le "$now_ts" ] && _u=0
+            if [ "$_a" = "5h" ]; then five_h_used_raw="$_u"; five_h_resets_raw="$_r"
+            elif [ "$_a" = "7d" ]; then week_used_raw="$_u"; week_resets_raw="$_r"; fi
+        done < "$_agy_cache"
+    fi
+fi
+
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
 

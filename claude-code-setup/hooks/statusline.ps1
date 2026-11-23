@@ -245,6 +245,61 @@ function Test-ValidResetTs7d($ts, $now) {
     } catch { return $false }
 }
 
+# Antigravity: frische Limits direkt vom Anbieter (Frank-Bug-Report 23.11.2026), wie statusline.sh.
+# Das quota-Objekt im stdin laeuft dem echten Verbrauch hinterher. Ein versteckter Hintergrundlauf
+# holt hoechstens alle 60 s `agy -p /usage` in einen Cache (Gruppe<TAB>5h|7d<TAB>Verbrauch<TAB>Reset);
+# die Leiste liest nur den Cache. Verbrauch = 100 - Rest; Reset vorbei -> 0 %.
+if ($product_name -eq 'antigravity') {
+    try {
+        $agyState = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\state'
+        if (-not (Test-Path $agyState)) { New-Item -ItemType Directory -Path $agyState -Force | Out-Null }
+        $agyCache = Join-Path $agyState 'usage-cache.tsv'
+        $agyLock = Join-Path $agyState 'usage-cache.lock'
+        $agyNow = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $agyAge = if (Test-Path $agyCache) { $agyNow - ([DateTimeOffset](Get-Item $agyCache).LastWriteTimeUtc).ToUnixTimeSeconds() } else { 99999 }
+        if ($agyAge -ge 60) {
+            if ((Test-Path $agyLock) -and ($agyNow - ([DateTimeOffset](Get-Item $agyLock).LastWriteTimeUtc).ToUnixTimeSeconds()) -ge 120) { Remove-Item $agyLock -Force -ErrorAction SilentlyContinue }
+            $agyCmd = Get-Command agy -ErrorAction SilentlyContinue
+            if ($agyCmd -and -not (Test-Path $agyLock)) {
+                New-Item -ItemType File -Path $agyLock -Force | Out-Null
+                $bg = @'
+param($agy, $cache, $lock)
+try {
+    Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
+    $out = & $agy -p /usage 2>$null
+    $rows = foreach ($z in $out) {
+        $t = @(([string]$z -replace "`e\[[0-9;?]*[A-Za-z]", '').Split("`t") | ForEach-Object { $_.Trim() })
+        if ($t.Count -ne 4 -or -not $t[2].EndsWith('%')) { continue }
+        $art = if ($t[1] -match '(?i)(five|5)[ -]?hour') { '5h' } elseif ($t[1] -match '(?i)week') { '7d' } else { $null }
+        if (-not $art) { continue }
+        $used = [Math]::Round(100.0 - [double]::Parse($t[2].TrimEnd('%'), [Globalization.CultureInfo]::InvariantCulture), 2)
+        $reset = try { [DateTimeOffset]::Parse($t[3], [Globalization.CultureInfo]::InvariantCulture).ToUnixTimeSeconds() } catch { 0 }
+        "$($t[0])`t$art`t$($used.ToString([Globalization.CultureInfo]::InvariantCulture))`t$reset"
+    }
+    if ($rows) { $tmp = "$cache.tmp"; [IO.File]::WriteAllLines($tmp, [string[]]$rows); Move-Item $tmp $cache -Force }
+} finally { Remove-Item $lock -Force -ErrorAction SilentlyContinue }
+'@
+                $bgFile = Join-Path $agyState 'usage-refresh.ps1'
+                [IO.File]::WriteAllText($bgFile, $bg)
+                $exe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+                Start-Process -FilePath $exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$bgFile`"", "`"$($agyCmd.Source)`"", "`"$agyCache`"", "`"$agyLock`"") | Out-Null
+            }
+        }
+        if ((Test-Path $agyCache) -and $agyAge -lt 900) {
+            $agyGrp = if ($model -match '(?i)gemini') { 'Gemini Models' } else { 'Claude and GPT models' }
+            foreach ($z in [IO.File]::ReadAllLines($agyCache)) {
+                $t = $z.Split("`t")
+                if ($t.Count -ne 4 -or $t[0] -ne $agyGrp) { continue }
+                $r = 0L; [void][long]::TryParse($t[3], [ref]$r)
+                $u = [int][Math]::Round([double]::Parse($t[2], [Globalization.CultureInfo]::InvariantCulture))
+                if ($r -gt 0 -and $r -le $agyNow) { $u = 0 }
+                if ($t[1] -eq '5h') { $five_h_used = $u; $five_h_resets = $r }
+                elseif ($t[1] -eq '7d') { $week_used = $u; $week_resets = $r }
+            }
+        }
+    } catch {}
+}
+
 try {
     $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } elseif ($obj -and $obj.conversation_id) { [string]$obj.conversation_id } else { '' }
     $stateDir = if ($product_name -eq 'antigravity') { Join-Path $env:USERPROFILE '.gemini\antigravity-cli\state' } else { Join-Path $env:USERPROFILE '.claude\state' }
