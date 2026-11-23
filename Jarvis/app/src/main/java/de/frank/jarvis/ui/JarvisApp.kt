@@ -136,7 +136,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
             // Listen wohnen im Bereich „Tools“: Von außen geöffnet (Widget, Sprache), geht es direkt dorthin.
-            androidx.compose.runtime.LaunchedEffect(ListenAnsicht.offen) {
+            androidx.compose.runtime.LaunchedEffect(ListenAnsicht.offen, ListenAnsicht.liste) {
                 if (ListenAnsicht.offen) {
                     vm.reiter = Reiter.TOOLS
                     ToolsAnsicht.bearbeiten = null

@@ -176,6 +176,14 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht() {
     LaunchedEffect(reorder.dragging) {
         if (reorder.dragging) haptik.performHapticFeedback(HapticFeedbackType.LongPress)
     }
+    androidx.compose.runtime.DisposableEffect(context) {
+        onDispose {
+            val offenReihe = ziehReihe
+            if (offenReihe != null) {
+                Listen.listenOrdnen(context.applicationContext, offenReihe)
+            }
+        }
+    }
 
     Row(
         Modifier.fillMaxWidth().padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 4.dp),
@@ -247,7 +255,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht() {
                     .fillMaxWidth()
                     .glas(f, 22.dp, erhoeht = if (zieht) 1.7f else 0.85f, rand = !zieht, toenung = if (zieht) farbe else null)
                     .then(if (zieht) Modifier.border(1.5.dp, farbe.copy(alpha = 0.85f), form) else Modifier)
-                    .then(reorderHandle(reorder, l.id))
+                    .then(if (gezeigt.size > 1) reorderHandle(reorder, l.id) else Modifier)
                     .antippen(unterdruecken = { reorder.dragging || reorder.draggedId != null }) { ListenAnsicht.oeffnen(l.id) }
                     .semantics {
                         customActions = listOfNotNull(

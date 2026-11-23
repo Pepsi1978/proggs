@@ -106,6 +106,7 @@ internal fun ToolKarten3DBuehne(
                 .fillMaxSize()
                 .graphicsLayer(),
         ) {
+            if (size.minDimension < 2f) return@Canvas
             val t = zeitMs.longValue / 1000f
             when (toolId) {
                 "atem" -> zeichneAtem3D(t, atemPuffer ?: return@Canvas)
@@ -129,7 +130,7 @@ private fun buehnenVerlauf(toolId: String, f: Farben): Brush = when (toolId) {
     } else {
         Brush.linearGradient(listOf(Color(0xFF693B20), Color(0xFF432313), Color(0xFF27140B)))
     }
-    // Mentalität (unverändert): tiefes Nacht-Indigo/Violett
+    // Mentalität: tiefes Nacht-Indigo/Violett
     else -> if (f.dunkel) {
         Brush.radialGradient(listOf(Color(0xFF1E1942), Color(0xFF110F29), Color(0xFF09091A)))
     } else {
@@ -422,7 +423,7 @@ private fun DrawScope.zeichneListen3D(t: Float, puffer: ListenZeichenPuffer) {
     val u = ((t % LISTEN_ZYKLUS_S) + LISTEN_ZYKLUS_S) % LISTEN_ZYKLUS_S / LISTEN_ZYKLUS_S
     val w = u * TAU
 
-    // Ruhige, edle 3D-Schwenk-Parallax (kein 360°-Kreisel wie Mentalität, kein vertikales Flügel-Atmen wie Atem)
+    // Ruhige, edle 3D-Schwenk-Parallax für Klemmbrett und Einkaufswagen
     val yaw = -0.28f + 0.15f * sin(w)
     val pitch = 0.20f + 0.05f * cos(w)
     val cy = cos(yaw); val sy = sin(yaw)
@@ -539,10 +540,12 @@ private fun DrawScope.zeichneListen3D(t: Float, puffer: ListenZeichenPuffer) {
     val yO = by - bh; val yU = by + bh
     val zV = bz; val zH = bz + dicke
 
-    // Rechte 3D-Seitenkante (sichtbar wegen negativer yaw-Drehung)
-    fuelleQuad(xR, yO, zV, xR, yO, zH, xR, yU, zH, xR, yU, zV, LISTE_KANTE)
-    // Linke 3D-Seitenkante (falls yaw leicht positiv schwenkt)
-    fuelleQuad(xL, yO, zH, xL, yO, zV, xL, yU, zV, xL, yU, zH, LISTE_KANTE)
+    // Nur die aus aktueller Perspektive sichtbare 3D-Seitenkante zeichnen (verhindert Durchscheinen)
+    if (yaw <= 0f) {
+        fuelleQuad(xR, yO, zV, xR, yO, zH, xR, yU, zH, xR, yU, zV, LISTE_KANTE)
+    } else {
+        fuelleQuad(xL, yO, zH, xL, yO, zV, xL, yU, zV, xL, yU, zH, LISTE_KANTE)
+    }
     // Untere 3D-Kante
     fuelleQuad(xL, yU, zV, xR, yU, zV, xR, yU, zH, xL, yU, zH, Color(0xFF2B150A))
 
@@ -1251,18 +1254,20 @@ private fun DrawScope.zeichneGehirn3D(t: Float, puffer: GehirnZeichenPuffer) {
         val sx2d = projX(sx3, sy3, sz3)
         val sy2d = projY(sx3, sy3, sz3)
 
-        drawLine(
-            brush = Brush.linearGradient(
-                listOf(Color.Transparent, spur.farbe.copy(alpha = 0.65f * huelle), Color.White.copy(alpha = 0.80f * huelle)),
+        if (abs(x2d - sx2d) + abs(y2d - sy2d) > 0.5f) {
+            drawLine(
+                brush = Brush.linearGradient(
+                    listOf(Color.Transparent, spur.farbe.copy(alpha = 0.65f * huelle), Color.White.copy(alpha = 0.80f * huelle)),
+                    start = Offset(sx2d, sy2d),
+                    end = Offset(x2d, y2d),
+                ),
                 start = Offset(sx2d, sy2d),
                 end = Offset(x2d, y2d),
-            ),
-            start = Offset(sx2d, sy2d),
-            end = Offset(x2d, y2d),
-            strokeWidth = 3.2f * density * s2d,
-            cap = StrokeCap.Round,
-            blendMode = BlendMode.Plus,
-        )
+                strokeWidth = 3.2f * density * s2d,
+                cap = StrokeCap.Round,
+                blendMode = BlendMode.Plus,
+            )
+        }
 
         // Weicher Licht-Tropfen als Gedanken-Spitze
         val haloR = 8.5f * density * s2d * (0.7f + 0.3f * h)
