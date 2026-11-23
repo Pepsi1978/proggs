@@ -60,3 +60,6 @@
   Abschnitte, Ereignisse SessionStart/PreToolUse/PostToolUse/PreInvocation/PostInvocation/Stop, laufen synchron, werden live
   nachgeladen. PreInvocation `{"injectSteps":[{"userMessage":"…"}]}` speist Eingaben nach jedem Werkzeug ein. Vollständige Doku:
   `strings ~/.local/bin/agy | grep -n "Lifecycle Hooks"`. Jarvis-Nutzung: `Jarvis/werkzeuge/pc-bruecke/jarvis_agy_hook.py`.
+- [geprüft 23.11.2026, agy 1.5.15] Untere Statusleiste = `claude-code-setup/hooks/statusline.sh` (Windows `.ps1`), von OpenLauncher in
+  `~/.gemini/antigravity-cli/settings.json` eingetragen. Das stdin-`quota` hinkt nach; frische Limits liefert `agy -p /usage`
+  (Spalten Gruppe/Art/**Remaining**/Reset, ~2,5 s, keine Sitzung), die Leiste cacht das je Konto in `state/usage-cache-*.tsv`.
