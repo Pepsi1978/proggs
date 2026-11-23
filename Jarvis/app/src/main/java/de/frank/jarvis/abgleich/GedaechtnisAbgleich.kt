@@ -84,6 +84,8 @@ object GedaechtnisAbgleich {
         // Atemübungen (Reiter Tools): Profile samt Reihenfolge als eine Datei (bei beidseitiger Änderung je Profil zusammengeführt), dazu der Satzverlauf.
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemProfile.DATEI),
         Quelle("gedaechtnis", de.frank.jarvis.atem.AtemSatzVerlauf.DATEI),
+        // Mentalität (Reiter Tools): persönliche mentale Sätze samt Reihenfolge und Wiederholungszahl (1–10).
+        Quelle("gedaechtnis", de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI),
         // Urteile der wichtigen E-Mails: je Nachricht eine Datei, damit Handy und Tablet dieselben Mails als wichtig zeigen.
         Quelle("gedaechtnis", de.frank.jarvis.faehigkeit.WichtigeMails.ORDNER, ordner = true, endung = ".json", loeschbar = true),
         // Franks Wichtig/Unwichtig-Bewertungen je Nachricht (nur Richtung und Lernmerkmale): zuletzt geändert gewinnt, nie gelöscht (neutral = r 0).
@@ -96,7 +98,11 @@ object GedaechtnisAbgleich {
      * an, dass der Server sie gegen jede Fassung des Handys ablehnt und ihm die des Handys gibt (sonst gewönne eine zufällig jüngere
      * Tablet-Datei, wenn das Tablet als Erstes hochlädt).
      */
-    private val HANDY_ZUERST = setOf(de.frank.jarvis.atem.AtemProfile.DATEI, de.frank.jarvis.atem.AtemSatzVerlauf.DATEI)
+    private val HANDY_ZUERST = setOf(
+        de.frank.jarvis.atem.AtemProfile.DATEI,
+        de.frank.jarvis.atem.AtemSatzVerlauf.DATEI,
+        de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI,
+    )
 
     /** Setzt die Oberfläche: Der Abgleich hat Gespräche oder Projekte eingespielt, die Seitenleiste soll neu lesen. */
     @Volatile var beiGespraechen: (() -> Unit)? = null
@@ -436,7 +442,7 @@ object GedaechtnisAbgleich {
 
     /** Dateien mit Einträgen und ids, die bei beidseitiger Änderung zusammengeführt statt ganz ersetzt werden. */
     private fun zusammenfuehrbar(pfad: String): Boolean =
-        pfad == "gespraechsnotizen.json" || pfad == de.frank.jarvis.atem.AtemProfile.DATEI || de.frank.jarvis.faehigkeit.merkdateien().any { it.name == pfad }
+        pfad == "gespraechsnotizen.json" || pfad == de.frank.jarvis.atem.AtemProfile.DATEI || pfad == de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI || de.frank.jarvis.faehigkeit.merkdateien().any { it.name == pfad }
 
     private fun basisDatei(app: Context, pfad: String) = File(File(app.filesDir, BASIS), pfad)
 
@@ -473,10 +479,13 @@ object GedaechtnisAbgleich {
                 // Notizen: auch über jede je vergebene id hinaus nummerieren (Zähler des Gesprächsgedächtnisses), nie eine gelöschte neu vergeben.
                 val notizPrefs = if (notizen) app.getSharedPreferences("gespraechsgedaechtnis", Context.MODE_PRIVATE) else null
                 val text = runCatching {
-                    if (pfad == de.frank.jarvis.atem.AtemProfile.DATEI) de.frank.jarvis.atem.AtemProfile.fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"))
-                    else fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = notizen,
-                        mindestId = (notizPrefs?.getInt("hoechsteId", 0) ?: 0) + 1,
-                        beiVerworfen = { e -> Logbuch.system("Gedächtnis-Abgleich", "$pfad: Fassung von [${e.optInt("id")}] verworfen, weil Franks eigene Fassung gilt: ${e.optString("text").take(200)}") })
+                    when (pfad) {
+                        de.frank.jarvis.atem.AtemProfile.DATEI -> de.frank.jarvis.atem.AtemProfile.fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"))
+                        de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI -> de.frank.jarvis.mentalitaet.MentalitaetSpeicher.fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"))
+                        else -> fuehreZusammen(basisKopie.readText(), datei.readText(), neu.readText(), fernGewinnt = datei.lastModified() <= fern.optLong("geaendert"), notizen = notizen,
+                            mindestId = (notizPrefs?.getInt("hoechsteId", 0) ?: 0) + 1,
+                            beiVerworfen = { e -> Logbuch.system("Gedächtnis-Abgleich", "$pfad: Fassung von [${e.optInt("id")}] verworfen, weil Franks eigene Fassung gilt: ${e.optString("text").take(200)}") })
+                    }
                 }.onFailure { Logbuch.fehler("Gedächtnis-Abgleich", it, "$pfad: Zusammenführen nicht möglich, die jüngste Fassung gilt") }.getOrNull()
                 if (text != null) {
                     ersetze(datei, 0L) { it.writeText(text) }
@@ -583,6 +592,7 @@ object GedaechtnisAbgleich {
             quelle.pfad == de.frank.jarvis.veraenderung.Veraenderungen.ORDNER -> de.frank.jarvis.veraenderung.Veraenderungen.vonAussen(schreiben)
             quelle.pfad == de.frank.jarvis.atem.AtemProfile.DATEI -> de.frank.jarvis.atem.AtemProfile.vonAussen(schreiben)
             quelle.pfad == de.frank.jarvis.atem.AtemSatzVerlauf.DATEI -> de.frank.jarvis.atem.AtemSatzVerlauf.vonAussen(schreiben)
+            quelle.pfad == de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI -> de.frank.jarvis.mentalitaet.MentalitaetSpeicher.vonAussen(schreiben)
             else -> schreiben()
         }
     }
@@ -612,6 +622,7 @@ object GedaechtnisAbgleich {
         if (bewertungenNeu) runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(de.frank.jarvis.gedaechtnis.Bereich.MAIL_LERNEN), "Geräteabgleich") }
         if (de.frank.jarvis.atem.AtemProfile.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemProfile.neuLaden(app) }
         if (de.frank.jarvis.atem.AtemSatzVerlauf.DATEI in pfade) runCatching { de.frank.jarvis.atem.AtemSatzVerlauf.neuLaden(app) }
+        if (de.frank.jarvis.mentalitaet.MentalitaetSpeicher.DATEI in pfade) runCatching { de.frank.jarvis.mentalitaet.MentalitaetSpeicher.neuLaden(app) }
     }
 
     private fun loesche(app: Context, quelle: Quelle, datei: File) {

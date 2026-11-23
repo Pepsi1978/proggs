@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -120,6 +121,7 @@ private data class Tool(val id: String, val titel: String, val text: String, val
 
 private val TOOLS = listOf(
     Tool("atem", "Atemübungen", "Geführtes Atmen mit Animation, Stimme und eigenen Sätzen", Icons.Rounded.Air, listOf(GRUEN, Color(0xFF4FC8FF))),
+    Tool("mentalitaet", "Mentalität", "Eigene mentale Sätze einsprechen, ordnen und frisch in Schleife vorlesen", Icons.Rounded.Psychology, listOf(Color(0xFF7A8CFF), Color(0xFFB98CFF))),
 )
 
 @Composable

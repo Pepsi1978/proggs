@@ -178,6 +178,7 @@ object AtemSitzung {
         vorlesen = p.vorlesen; geraeusch = p.geraeusch
         pegel = de.frank.jarvis.data.Einstellungen.get(a).atemGeraeuschLautstaerke / 100f
         runCatching { Vorleser.aktuell()?.stopp() }
+        runCatching { de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp() }
         job = bereich.launch {
             withContext(Dispatchers.IO) { AtemStimme.frischAufraeumen(a); AtemStimme.aufraeumen(a) }
             vorbereitung = 0 to 1

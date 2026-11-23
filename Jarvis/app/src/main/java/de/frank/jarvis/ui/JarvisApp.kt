@@ -118,11 +118,11 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.zurueckInSession() }
             // Session nicht mehr zu sehen (anderer Reiter oder Vollbild): Ein laufendes Diktat der Eingabeblase läuft als
             // mitgenommene Aufnahme weiter, oben eingeblendet; andere Bereiche können parallel aufnehmen.
-            val sessionSichtbar = vm.reiter == Reiter.JARVIS && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
+            val sessionSichtbar = vm.reiter == Reiter.JARVIS && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen && ToolsAnsicht.tool != "mentalitaet"
             androidx.compose.runtime.LaunchedEffect(sessionSichtbar) { vm.sessionSichtbar = sessionSichtbar; if (!sessionSichtbar) vm.mitnehmen("Bereich gewechselt") }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
-            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen
+            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen && !de.frank.jarvis.bio.presentation.BioAnsicht.offen && !ListenAnsicht.offen && !de.frank.jarvis.atem.AtemSitzung.offen && ToolsAnsicht.tool != "mentalitaet"
             GespraecheSchublade(vm, schublade, wischen) {
             Box(Modifier.fillMaxSize()) {
             // Biomarker-Bereich als Vollbild über die ganze Breite (Kartenraster auf Fold und Tablet), statt der Spalte.
@@ -140,6 +140,9 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             if (!vm.gesperrt && de.frank.jarvis.atem.AtemSitzung.offen) {
                 // Laufende Atemübung im echten Vollbild, ohne Leiste.
                 AtemSitzungBildschirm(Modifier.fillMaxSize())
+            } else if (!vm.gesperrt && vm.reiter == Reiter.TOOLS && ToolsAnsicht.tool == "mentalitaet") {
+                // Vollbildansicht „Mentalität“ auf Handy und Tablet, ohne untere Leiste.
+                MentalitaetBildschirm(vm, Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else if (!vm.gesperrt && ListenAnsicht.offen && ListenAnsicht.liste != null) {
                 // Geöffnete Liste im Vollbild ohne Ablage-Kopf und Leiste, scrollbar; die Zurück-Geste führt zur Listen-Übersicht in der Ablage.
                 ListenBildschirm(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())

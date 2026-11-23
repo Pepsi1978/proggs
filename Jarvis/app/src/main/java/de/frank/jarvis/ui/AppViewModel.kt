@@ -1537,6 +1537,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Läuft gerade ein Diktat für die offene Merkliste? Nur dann zeigt sie „Ich höre zu“. */
     val merkNimmtAuf get() = nimmtAuf && merkDiktat
 
+    // ---- Mentalität (Reiter Tools): neue Sätze per Sprache einsprechen ----
+
+    /** Das laufende Diktat gehört zur Vollbildansicht „Mentalität“ und speichert den Satz dort. */
+    var mentalitaetDiktat by mutableStateOf(false); private set
+    /** Die Ansicht wurde geschlossen, während die Aufnahme noch startete: sie beginnt dann gar nicht erst. */
+    private var mentalitaetStartAbbrechen = false
+
+    val mentalitaetNimmtAuf get() = nimmtAuf && mentalitaetDiktat
+    val mentalitaetSchreibtMit get() = schreibtMit && mentalitaetDiktat
+    val mentalitaetHoltMikro get() = holtMikro && mentalitaetDiktat
+
+    /** Plus-Button in „Mentalität“: startet das Einsprechen eines neuen Satzes bzw. beendet und speichert ihn. */
+    fun mentalitaetMikrofonTippen() {
+        mitnehmen("Mikrofon der Mentalität")
+        when {
+            nimmtAuf && mentalitaetDiktat -> aufnahmeBeenden()
+            nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
+            else -> {
+                de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                mentalitaetStartAbbrechen = false
+                diktatZiel = { text ->
+                    viewModelScope.launch {
+                        de.frank.jarvis.mentalitaet.MentalitaetSpeicher.hinzufuegen(getApplication(), text)
+                    }
+                }
+                mentalitaetDiktat = true
+                mikrofonAnfragen()
+            }
+        }
+    }
+
+    /** Beendet eine laufende Mentalität-Aufnahme beim Schließen der Ansicht (das Gesagte wird noch gespeichert). */
+    fun mentalitaetAufnahmeBeenden() {
+        if (!mentalitaetDiktat) return
+        if (nimmtAuf) aufnahmeBeenden()
+        else if (!schreibtMit) {
+            mentalitaetStartAbbrechen = true
+            mentalitaetDiktat = false
+            diktatZiel = null
+        }
+    }
+
+    /** Verwirft eine laufende Mentalität-Aufnahme ohne Speichern. */
+    fun mentalitaetAufnahmeAbbrechen() {
+        if (!mentalitaetDiktat) return
+        if (nimmtAuf) aufnahmeVerwerfen("Mentalität-Aufnahme abgebrochen")
+        else if (!schreibtMit) {
+            mentalitaetStartAbbrechen = true
+            mentalitaetDiktat = false
+            diktatZiel = null
+        }
+    }
+
     // ---- Prompts (Reiter der Ablage) ----
 
     /** Das laufende Diktat gehört in die Prompt-Eingabe der Ablage, nicht ins Gespräch. */
@@ -2002,25 +2056,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; promptDiktat = false; merkDiktat = false; mentalitaetDiktat = false; mentalitaetStartAbbrechen = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (antwortStartAbbrechen) { antwortStartAbbrechen = false; diktatZiel = null; antwortDiktatFeld = null; return }
+        if (mentalitaetStartAbbrechen) {
+            mentalitaetStartAbbrechen = false
+            if (diktatZiel == null && !promptDiktat && !merkDiktat && antwortDiktatFeld == null && !diktatInsFeld) {
+                mentalitaetDiktat = false
+                return
+            }
+        }
         if (holtMikro) {
             // Ein anderer Start („Hey Jarvis“, Gesprächsmodus) ist schneller: Die Antwort-Aufnahme fängt nicht an und hängt nicht.
             if (antwortDiktatFeld != null) { antwortDiktatFeld = null; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
+            if (mentalitaetDiktat) { mentalitaetDiktat = false; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
             return
         }
         // Eine diktierte Antwort auf die Rückfrage beendet das dafür angehaltene Vorlesen nicht.
         if (antwortDiktatFeld == null || !vorleser.unterbrochen) vorleser.stopp() else vorleser.einschuebeAbbrechen()
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
         holtMikro = true
         viewModelScope.launch {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; merkDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; merkDiktat = false; mentalitaetDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else if (antwortStartAbbrechen) {
                     // Während des Starts geschlossen: Die Aufnahme gleich wieder verwerfen, sonst liefe sie unsichtbar weiter.
                     antwortStartAbbrechen = false
                     aufnahmeVerwerfen("beim Starten geschlossen")
+                } else if (mentalitaetStartAbbrechen) {
+                    mentalitaetStartAbbrechen = false
+                    aufnahmeVerwerfen("Mentalität beim Starten geschlossen")
                 } else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
@@ -2080,6 +2146,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         wechselStand++
         verwerfAnlass = anlass
         merkDiktat = false
+        mentalitaetDiktat = false
+        mentalitaetStartAbbrechen = false
         if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
@@ -2091,7 +2159,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         freihaendig = false
         schreibtMit = false
         feldMitschrift = false
-        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null
+        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; mentalitaetDiktat = false
         diktatInsFeld = false
         Logbuch.sprache("Aufnahme verworfen", anlass)
         // Ein Abzweig aus der mitgenommenen Aufnahme gibt nur seinen Anteil auf; das Mikrofon läuft für sie weiter.
@@ -2707,9 +2775,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
-        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat || antwortDiktatFeld != null }
-        // Das Antwortfeld bleibt bis zum Ende der Mitschrift markiert: So lange sperrt die Rückfrage das Senden.
+        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat || antwortDiktatFeld != null || mentalitaetDiktat }
+        // Das Antwortfeld und Mentalität bleiben bis zum Ende der Mitschrift markiert.
         val antwortFeld = antwortDiktatFeld
+        val warMentalitaet = mentalitaetDiktat
         feldMitschrift = ziel != null && diktatInsFeld
         diktatZiel = null; promptDiktat = false; merkDiktat = false
         diktatInsFeld = false
@@ -2794,6 +2863,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 schreibtMit = false
                 feldMitschrift = false
                 if (antwortFeld != null && antwortDiktatFeld == antwortFeld) antwortDiktatFeld = null
+                if (warMentalitaet) mentalitaetDiktat = false
             }
         }
     }

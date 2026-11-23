@@ -52,7 +52,11 @@ class VorleseDienst : Service() {
         sitzung = MediaSessionCompat(this, "JarvisVorlesen").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPause() {
-                    Vorleser.aktuell()?.pause()
+                    if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                        de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                    } else {
+                        Vorleser.aktuell()?.pause()
+                    }
                 }
 
                 override fun onPlay() {
@@ -61,6 +65,7 @@ class VorleseDienst : Service() {
 
                 override fun onStop() {
                     Vorleser.aktuell()?.stopp()
+                    de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
                 }
             })
             isActive = true
@@ -93,17 +98,26 @@ class VorleseDienst : Service() {
 
         // Verwaister Start: Das Vorlesen endete schon, bevor der Dienst lief (etwa ohne Schlüssel),
         // und sein beenden() kam ins Leere. Ohne diese Prüfung bliebe die Meldung für immer stehen.
-        if (intent?.action == null && Vorleser.aktuell()?.stand?.value?.zustand.let { it == null || it == VorleseZustand.AUS }) {
+        val irgendetwasAktiv = Vorleser.aktuell()?.stand?.value?.zustand.let { it != null && it != VorleseZustand.AUS } ||
+            de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv
+        if (intent?.action == null && !irgendetwasAktiv) {
             IdeenLog.info("VorleseDienst", "onStartCommand", "Verwaister Start, Dienst endet sofort")
             halteAn()
             return START_NOT_STICKY
         }
 
         when (intent?.action) {
-            VorleseAktion.PAUSE -> Vorleser.aktuell()?.pause()
+            VorleseAktion.PAUSE -> {
+                if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                    de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                } else {
+                    Vorleser.aktuell()?.pause()
+                }
+            }
             VorleseAktion.WEITER -> Vorleser.aktuell()?.weiter()
             VorleseAktion.STOPP -> {
                 Vorleser.aktuell()?.stopp()
+                de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
                 halteAn()
                 return START_NOT_STICKY
             }

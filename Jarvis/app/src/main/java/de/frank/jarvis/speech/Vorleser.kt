@@ -140,6 +140,7 @@ class Vorleser(
         // App zum Absturz (ForegroundServiceDidNotStartInTimeException).
         if (vorabQuelle != null) vorabVerdraengt = vorabQuelle
         stopp(dienstBeenden = false)
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp(dienstBeenden = false)
         val text = SprechText.fuerStimme(rohText)
         val absaetze = SprechText.absaetze(text)
         if (absaetze.isEmpty()) {

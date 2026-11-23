@@ -104,23 +104,25 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * Erzeugt den Absatz mit der gewählten Stimme. Scheitert sie, geht es die Rückfallkette
      * ([SecureSettings.ttsRueckfallKette]) der Reihe nach durch, jede Stufe mit ihrer eigenen eingestellten Stimme.
      * Netzfehler laufen unverändert durch — die wiederholt der Vorleser selbst. Scheitern alle, zählt der Fehler der Hauptstimme.
+     * Mit [frisch] = true wird jeder Zwischenspeicher (etwa der Gemini-Tonvorrat für kurze Texte) umgangen,
+     * sodass jede Ausgabe neu vom Vorlesemodell erzeugt wird.
      */
-    suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
+    suspend fun synthetisiere(text: String, wahl: StimmWahl? = null, frisch: Boolean = false): File = gleichzeitig.withPermit {
         // Der Platz wird noch auf dem Faden des Aufrufers geholt (der Vorleser startet die Teile sofort in Lesereihenfolge), gearbeitet wird auf IO.
         // Der kostenlose Gemini-Weg arbeitet nacheinander; auch dort steht der erste Satz so vorn.
-        if (nacheinander(wahl)) freiReihe.withPermit { withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) } }
-        else withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+        if (nacheinander(wahl)) freiReihe.withPermit { withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl, frisch) } }
+        else withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl, frisch) }
     }
 
     /** Wie [synthetisiere], aber vor der Warteschlange: Die Ansage einer Rückfrage wartet nicht hinter vorausgeschickten Absätzen. */
-    suspend fun synthetisiereSofort(text: String, wahl: StimmWahl? = null): File = withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+    suspend fun synthetisiereSofort(text: String, wahl: StimmWahl? = null, frisch: Boolean = false): File = withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl, frisch) }
 
     private fun nacheinander(wahl: StimmWahl?): Boolean {
         val a = anbieter(wahl)
         return (a == TtsProvider.GEMINI_FLASH.id || a == TtsProvider.GEMINI_LITE.id) && settings.geminiTtsSchluesselWahl != SecureSettings.GEMINI_TTS_NUR_BEZAHLT
     }
 
-    private suspend fun erzeugeMitRueckfall(text: String, wahl: StimmWahl?): File {
+    private suspend fun erzeugeMitRueckfall(text: String, wahl: StimmWahl?, frisch: Boolean = false): File {
         val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
         // Jede Stimme mit ihrem eigenen Tempo, auch als Rückfallstufe; ein Sondertempo der Meldung gilt für alle.
         fun tempo(anbieter: String) = wahl?.tempo ?: settings.ttsTempo(anbieter)
@@ -130,7 +132,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .filterNot { it.anbieter.id == haupt && it.schluessel == null }
             .filter(settings::rueckfallBereit)
         val hauptFehler = try {
-            return erzeuge(haupt, text, sonder, tempo(haupt), null, mitAusweg = kette.isNotEmpty())
+            return erzeuge(haupt, text, sonder, tempo(haupt), null, mitAusweg = kette.isNotEmpty(), frisch = frisch)
         } catch (fehler: Exception) {
             if (!rueckfallFaehig(fehler)) throw fehler
             fehler
@@ -138,7 +140,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         var zeitlimit: SyntheseZeitlimit? = null
         kette.forEachIndexed { i, stufe ->
             try {
-                val datei = erzeuge(stufe.anbieter.id, text, null, tempo(stufe.anbieter.id), stufe.schluessel, mitAusweg = i < kette.lastIndex)
+                val datei = erzeuge(stufe.anbieter.id, text, null, tempo(stufe.anbieter.id), stufe.schluessel, mitAusweg = i < kette.lastIndex, frisch = frisch)
                 Logbuch.sprache("Vorlese-Rückfall", "stufe=${stufe.id} haupt=$haupt grund=${hauptFehler.message?.take(80)}")
                 return datei
             } catch (fehler: Exception) {
@@ -155,11 +157,11 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     private fun rueckfallFaehig(fehler: Exception) = fehler is SyntheseAbbruch || fehler is SyntheseFehler || fehler is SyntheseZeitlimit
 
     /** [schluessel] nur für Gemini-Stufen der Rückfallkette: nur der kostenlose bzw. nur der bezahlte Schlüssel. */
-    private suspend fun erzeuge(anbieter: String, text: String, sonder: String?, tempo: Float, schluessel: String?, mitAusweg: Boolean): File =
+    private suspend fun erzeuge(anbieter: String, text: String, sonder: String?, tempo: Float, schluessel: String?, mitAusweg: Boolean, frisch: Boolean = false): File =
         when (anbieter) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text, sonder, tempo)
-            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, schluessel, mitAusweg, tempo)
-            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, schluessel, mitAusweg, tempo)
+            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, schluessel, mitAusweg, tempo, frisch)
+            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, schluessel, mitAusweg, tempo, frisch)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
             TtsProvider.EDGE.id -> edge(text, sonder, tempo)
@@ -296,10 +298,13 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * [mitAusweg]: Danach kommt noch eine Rückfallstufe — dann wird bei 429 nicht gewartet und der kostenlose Schlüssel
      * dieses Modells nach einem Fehler eine Weile übersprungen. Das Kontingent gilt je Modell, darum die Sperre auch.
      */
-    private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean, tempo: Float): File {
+    private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean, tempo: Float, frisch: Boolean = false): File {
         // Das Tempo entsteht erst auf dem Handy: Kurze Texte (etwa die Probe nach jeder Tempoänderung) kommen ungestreckt
         // aus dem Vorrat, statt Gemini erneut zu fragen und ins Ratenlimit (429) zu laufen — auch bei gesperrtem Schlüssel.
-        synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] }?.let { return schreibeDatei(mitTempo(it, tempo), "wav") }
+        // Bei [frisch] = true wird bewusst immer frisch erzeugt, damit die Betonung jedes Mal neu entsteht.
+        if (!frisch) {
+            synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] }?.let { return schreibeDatei(mitTempo(it, tempo), "wav") }
+        }
         val wahl = when (nurSchluessel) {
             RueckfallStufe.FREI -> SecureSettings.GEMINI_TTS_NUR_FREI
             RueckfallStufe.BEZAHLT -> SecureSettings.GEMINI_TTS_NUR_BEZAHLT
@@ -314,7 +319,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             val ausweg = mitAusweg || (wahl == SecureSettings.GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
             if (frei.isNotBlank() && !gesperrt) {
                 try {
-                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg, tempo)
+                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg, tempo, frisch)
                 } catch (fehler: Exception) {
                     if (fehler !is SyntheseAbbruch && fehler !is SyntheseFehler) throw fehler
                     fehlerFrei = fehler
@@ -335,10 +340,10 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                 "Vorlesen fehlgeschlagen: Es ist kein Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
             )
         }
-        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true, tempo)
+        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true, tempo, frisch)
     }
 
-    private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean, tempo: Float): File {
+    private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean, tempo: Float, frisch: Boolean = false): File {
         val beginn = System.currentTimeMillis()
         // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
         val koerper = JSONObject()
@@ -379,7 +384,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (ton != null && text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
-        if (text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] = wav }
+        if (!frisch && text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] = wav }
         val fertig = mitTempo(wav, tempo)
         Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
         return schreibeDatei(fertig, "wav")
