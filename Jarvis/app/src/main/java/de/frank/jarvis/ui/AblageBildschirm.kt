@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.drop
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -151,9 +148,6 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val alle = geladen.orEmpty()
 
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
-    // Listen von außen geöffnet (Widget, Sprache): gleich den Reiter „Listen“ zeigen. Verlässt man den Reiter, schließen sie.
-    LaunchedEffect(ListenAnsicht.offen) { if (ListenAnsicht.offen) filter = LISTEN_REITER else if (filter == LISTEN_REITER) filter = null }
-    LaunchedEffect(Unit) { snapshotFlow { filter }.drop(1).collect { if (it != LISTEN_REITER && ListenAnsicht.offen) ListenAnsicht.schliessen() } }
     var sucheOffen by rememberSaveable { mutableStateOf(false) }
     var sucheText by rememberSaveable { mutableStateOf("") }
     var sucheFokus by remember { mutableStateOf(false) }
@@ -177,8 +171,8 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var offenerAnhang by rememberSaveable { mutableStateOf<String?>(null) }
     var loeschFrage by remember { mutableStateOf<Pair<Eintrag, Anhang?>?>(null) }
 
-    // Ein noch gemerkter Filter auf einen ausgeblendeten Reiter fällt auf „Alle“ zurück.
-    LaunchedEffect(filter) { if (filter != null && AUSGEBLENDETE_REITER.any { it.name == filter }) filter = null }
+    // Ein noch gemerkter Filter auf einen ausgeblendeten oder verschobenen Reiter (z. B. Listen → Tools) fällt auf „Alle“ zurück.
+    LaunchedEffect(filter) { if (filter != null && (filter == "LISTEN" || AUSGEBLENDETE_REITER.any { it.name == filter })) filter = null }
     val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k && it !in AUSGEBLENDETE_REITER } }
     // Filtern und Sortieren abseits des Hauptfadens; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
     // null = erste Berechnung läuft noch: Erst danach darf „Nichts gefunden“ oder „Noch nichts abgelegt“ erscheinen.
@@ -275,7 +269,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 // Die Suche gilt für die ganze Ablage und steht deshalb in jedem Reiter bereit.
                 Rundknopf(Icons.Rounded.Search, "In der ganzen Ablage suchen", farbe = f.primaer) { sucheFokus = true; sucheOffen = true }
                 // Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für die Reiter „Prompts“ und „Erinnerung“.
-                if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER && filter != LISTEN_REITER) {
+                if (filter != PROMPTS_REITER && filter != ERINNERUNG_REITER) {
                     var sortMenue by remember { mutableStateOf(false) }
                     Box {
                         Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
@@ -306,23 +300,17 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             val promptZahl by ladeImHintergrund(0, promptStand) { de.frank.jarvis.ablage.Prompts.alle(context).size }
             val erinnerungZahl by ladeImHintergrund(0, erinnerungStand) { de.frank.jarvis.ablage.Erinnerungen.alle(context).size }
             val zahlen = remember(alle) { Kategorie.entries.associateWith { k -> alle.count { k in it.kategorien } } }
-            // Listen als eigener Reiter wie Prompts und Erinnerung; die Zahl sind die offenen Einträge aller Listen.
-            val listenStand by de.frank.jarvis.listen.Listen.stand.collectAsState()
-            LaunchedEffect(Unit) { de.frank.jarvis.listen.Listen.sicher(context) }
-            val listenOffenZahl = remember(listenStand) { listenStand.listen.sumOf { listenStand.offen(it.id) } }
             // „Alle“ vorn, danach alle Bereiche alphabetisch; der Inhalt steht in Klammern.
             class Bereich(val name: String, val zahl: Int, val kennung: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
             val bereiche = Kategorie.entries.filter { it !in AUSGEBLENDETE_REITER }.map { k -> Bereich(k.anzeige, zahlen[k] ?: 0, k.name, kategorieSymbol(k)) } + listOf(
                 Bereich("Prompts", promptZahl, PROMPTS_REITER, Icons.Rounded.Bolt),
                 Bereich("Erinnerung", erinnerungZahl, ERINNERUNG_REITER, Icons.Rounded.NotificationsActive),
-                Bereich("Listen", listenOffenZahl, LISTEN_REITER, Icons.Rounded.Checklist),
             )
             val sortierer = remember { java.text.Collator.getInstance(Locale.GERMAN) }
-            Chip("Alle (${alle.size})", filter == null || AUSGEBLENDETE_REITER.any { it.name == filter }) { filter = null }
+            Chip("Alle (${alle.size})", filter == null || filter == "LISTEN" || AUSGEBLENDETE_REITER.any { it.name == filter }) { filter = null }
             bereiche.sortedWith { x, y -> sortierer.compare(x.name, y.name) }.forEach { b ->
                 Chip("${b.name} (${b.zahl})", filter == b.kennung, icon = b.icon) {
-                    if (filter == b.kennung) filter = null
-                    else { filter = b.kennung; if (b.kennung == LISTEN_REITER) ListenAnsicht.oeffnen() }
+                    filter = if (filter == b.kennung) null else b.kennung
                 }
             }
         }
@@ -336,7 +324,6 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
         if (filter == ERINNERUNG_REITER) { ErinnerungenBereich(vm, Modifier.weight(1f)); return@Column }
-        if (filter == LISTEN_REITER) { ListenBildschirm(Modifier.weight(1f).fillMaxWidth()); return@Column }
         val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
         // Steht man ganz oben, bleibt man oben: Sonst landet ein neuer Eintrag von einem anderen Gerät unsichtbar über der Sichtfläche.
         val ersterEintrag = sicht?.firstOrNull()?.id

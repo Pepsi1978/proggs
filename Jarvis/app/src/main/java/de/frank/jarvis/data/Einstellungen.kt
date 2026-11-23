@@ -37,10 +37,10 @@ val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "bio
 val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht", "tenda" to "Tenda Internet", "wichtige_mails" to "Wichtige E-Mails", "mac_update" to "Mac-Zentrale")
 
 /** Die eingebauten Werkzeuge im Reiter „Tools“ in ihrer Grundreihenfolge (Kennungen für [Einstellungen.toolsReihenfolge]). */
-val TOOLS_REIHENFOLGE = listOf("atem", "mentalitaet")
+val TOOLS_REIHENFOLGE = listOf("atem", "mentalitaet", "listen")
 
 /** Anzeigenamen der Werkzeuge im Reiter „Tools“, etwa für die Sprachsteuerung der Reihenfolge. */
-val TOOL_NAMEN = mapOf("atem" to "Atemübungen", "mentalitaet" to "Mentalität")
+val TOOL_NAMEN = mapOf("atem" to "Atemübungen", "mentalitaet" to "Mentalität", "listen" to "Listen")
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {

@@ -135,8 +135,14 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 vm.einstellungsReiter = "biomarker"
                 vm.reiter = Reiter.EINSTELLUNGEN
             }
-            // Listen wohnen als Reiter in der Ablage: Von außen geöffnet (Widget, Sprache), geht es dorthin.
-            androidx.compose.runtime.LaunchedEffect(ListenAnsicht.offen) { if (ListenAnsicht.offen) vm.reiter = Reiter.ABLAGE }
+            // Listen wohnen im Bereich „Tools“: Von außen geöffnet (Widget, Sprache), geht es direkt dorthin.
+            androidx.compose.runtime.LaunchedEffect(ListenAnsicht.offen) {
+                if (ListenAnsicht.offen) {
+                    vm.reiter = Reiter.TOOLS
+                    ToolsAnsicht.bearbeiten = null
+                    ToolsAnsicht.tool = "listen"
+                }
+            }
             if (!vm.gesperrt && de.frank.jarvis.atem.AtemSitzung.offen) {
                 // Laufende Atemübung im echten Vollbild, ohne Leiste.
                 AtemSitzungBildschirm(Modifier.fillMaxSize())
@@ -144,7 +150,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 // Vollbildansicht „Mentalität“ auf Handy und Tablet, ohne untere Leiste.
                 MentalitaetBildschirm(vm, Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else if (!vm.gesperrt && ListenAnsicht.offen && ListenAnsicht.liste != null) {
-                // Geöffnete Liste im Vollbild ohne Ablage-Kopf und Leiste, scrollbar; die Zurück-Geste führt zur Listen-Übersicht in der Ablage.
+                // Geöffnete Liste im Vollbild ohne Leiste, scrollbar; die Zurück-Geste führt zur Listen-Übersicht unter Tools.
                 ListenBildschirm(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
             } else if (!vm.gesperrt && de.frank.jarvis.bio.presentation.BioAnsicht.offen) {
                 de.frank.jarvis.bio.presentation.BioBereich(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding())
@@ -292,7 +298,6 @@ private fun Leiste(vm: AppViewModel) {
         // Die Listen liegen über den Reitern: Jeder Tipp in der Leiste schließt sie, sonst bliebe der neue Reiter dahinter verdeckt.
         val listenOffen = ListenAnsicht.offen
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
-            // Die Listen gehören zur Ablage: Sind sie offen, leuchtet der Ablage-Reiter.
             val aktiv = vm.reiter == r
             val icon = when (r) {
                 Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
@@ -301,9 +306,12 @@ private fun Leiste(vm: AppViewModel) {
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
             Row(
                 Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen {
-                    // In einer offenen Liste führt der Ablage-Reiter erst zur Listen-Übersicht zurück, von dort in die Ablage.
-                    if (r == Reiter.ABLAGE && vm.reiter == r && listenOffen && ListenAnsicht.liste != null) { ListenAnsicht.liste = null; return@antippen }
-                    if (r != Reiter.ABLAGE) ListenAnsicht.schliessen(); if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null }; vm.reiter = r }
+                    // In einer offenen Liste führt der Tools-Reiter erst zur Listen-Übersicht zurück, von dort zur Tools-Übersicht.
+                    if (r == Reiter.TOOLS && vm.reiter == r && listenOffen && ListenAnsicht.liste != null) { ListenAnsicht.liste = null; return@antippen }
+                    if (r != Reiter.TOOLS) ListenAnsicht.schliessen()
+                    if (r == Reiter.TOOLS && vm.reiter == r) { ToolsAnsicht.bearbeiten = null; ToolsAnsicht.tool = null; ListenAnsicht.schliessen() }
+                    vm.reiter = r
+                }
                     .semantics { contentDescription = r.anzeige },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
@@ -314,7 +322,7 @@ private fun Leiste(vm: AppViewModel) {
         }
         reiterKnopf(Reiter.JARVIS)
         reiterKnopf(Reiter.ABLAGE)
-        // Listen stehen jetzt oben in der Ablage; hier die Tools (Atemübungen …).
+        // Tools: Atemübungen, Mentalität und Listen.
         reiterKnopf(Reiter.TOOLS)
         reiterKnopf(Reiter.VERAENDERUNGEN)
         // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der

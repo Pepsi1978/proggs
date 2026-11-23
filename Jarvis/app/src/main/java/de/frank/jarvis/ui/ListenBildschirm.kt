@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +22,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
@@ -44,7 +48,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -85,10 +93,7 @@ import de.frank.module.draganddrop.reorderHandle
 import de.frank.module.draganddrop.reorderItem
 import de.frank.module.draganddrop.reorderViewport
 
-/** Ob die Listen im Vollbild offen sind und welche Liste (null = Übersicht). Geöffnet über die Leiste oder das Widget. */
-/** Reiter „Listen“ in der Ablage, neben Prompts und Erinnerung. */
-const val LISTEN_REITER = "LISTEN"
-
+/** Zustand des Bereichs „Listen“ unter „Tools“ (null = Übersicht, sonst offene Liste). Geöffnet über Tools oder das Widget. */
 object ListenAnsicht {
     var offen by mutableStateOf(false)
         private set
@@ -139,37 +144,138 @@ fun ListenBildschirm(modifier: Modifier = Modifier) {
 
 // ---------------------------------------------------------------- Übersicht
 
+/** [liste] in der Folge von [ids]; neu hinzugekommene Listen bleiben hinten. */
+private fun ordneListen(liste: List<Liste>, ids: List<Long>): List<Liste> {
+    val rang = ids.withIndex().associate { (i, id) -> id to i }
+    return liste.withIndex().sortedBy { (i, l) -> rang[l.id] ?: (ids.size + i) }.map { it.value }
+}
+
 @Composable
 private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht() {
     val f = LocalFarben.current
     val context = LocalContext.current
+    val haptik = LocalHapticFeedback.current
+    val reduziert = !LocalBewegung.current
     val stand by Listen.stand.collectAsState()
-    // Eingebettet in die Ablage (Reiter „Listen“): ohne eigenen Kopf, der Ablage-Kopf steht darüber.
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (stand.listen.isEmpty()) item(key = "leer") {
+
+    var ziehReihe by remember { mutableStateOf<List<Long>?>(null) }
+    val gezeigt = remember(stand.listen, ziehReihe) {
+        ziehReihe?.let { ordneListen(stand.listen, it) } ?: stand.listen
+    }
+    val alleIds = remember(gezeigt) { gezeigt.map { it.id } }
+
+    fun schliessen() {
+        ListenAnsicht.schliessen()
+        ToolsAnsicht.tool = null
+    }
+    BackHandler { schliessen() }
+
+    val listState = rememberLazyListState()
+    val reorder = rememberReorderState(listState, "listen_uebersicht")
+    ReorderAutoScroll(reorder)
+    LaunchedEffect(reorder.dragging) {
+        if (reorder.dragging) haptik.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
+    Row(
+        Modifier.fillMaxWidth().padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(46.dp).antippen { schliessen() }.semantics { contentDescription = "Zurück" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = f.text, modifier = Modifier.size(24.dp))
+        }
+        Column(Modifier.weight(1f).padding(start = 2.dp)) {
+            Text("Listen", color = f.text, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            val untertitel = when (gezeigt.size) {
+                0 -> "Einkaufs-, Preis- und Aufgabenlisten"
+                1 -> "1 Liste"
+                else -> "${gezeigt.size} Listen · gedrückt halten zum Sortieren"
+            }
+            Text(untertitel, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+
+    LazyColumn(
+        Modifier
+            .weight(1f)
+            .fillMaxWidth()
+            .reorderViewport(
+                state = reorder,
+                order = { alleIds },
+                onMove = { von, nach ->
+                    val l = alleIds.toMutableList()
+                    if (von != nach && von in l.indices && nach in l.indices) {
+                        l.add(nach, l.removeAt(von))
+                        ziehReihe = l
+                        haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                },
+                onDrop = {
+                    val neu = ziehReihe
+                    if (neu != null) {
+                        Listen.listenOrdnen(context, neu)
+                        ziehReihe = null
+                    }
+                },
+                reducedMotion = reduziert,
+            ),
+        state = listState,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 104.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (gezeigt.isEmpty()) item(key = -1L) {
             Karte {
                 Text("Noch keine Listen", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("Lege mit dem Plus unten rechts eine an oder sag einfach: „Hey Jarvis, füge Zahnpasta meiner Einkaufsliste hinzu.“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp))
+                Text("Lege mit dem Plus unten rechts eine an — etwa Einkaufs-, Preis- oder Aufgabenlisten — oder sag einfach: „Hey Jarvis, füge Zahnpasta meiner Einkaufsliste hinzu.“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
-        items(stand.listen, key = { it.id }) { l ->
+        itemsIndexed(gezeigt, key = { _, it -> it.id }) { index, l ->
+            val zieht = reorder.isDragging(l.id)
             val offenZahl = stand.offen(l.id)
             val gesamt = stand.eintraegeVon(l.id).size
+            val farbe = LISTEN_FARBEN[l.farbe.mod(LISTEN_FARBEN.size)]
+            val form = RoundedCornerShape(22.dp)
+            fun schiebe(nach: Int) {
+                val neu = alleIds.toMutableList().apply { add(nach, removeAt(index)) }
+                Listen.listenOrdnen(context, neu)
+            }
             Row(
-                Modifier.fillMaxWidth().glas(f).antippen { ListenAnsicht.liste = l.id }.padding(horizontal = 18.dp, vertical = 16.dp),
+                reorderItem(reorder, l.id, reduziert)
+                    .fillMaxWidth()
+                    .glas(f, 22.dp, erhoeht = if (zieht) 1.7f else 0.85f, rand = !zieht, toenung = if (zieht) farbe else null)
+                    .then(if (zieht) Modifier.border(1.5.dp, farbe.copy(alpha = 0.85f), form) else Modifier)
+                    .then(reorderHandle(reorder, l.id))
+                    .antippen(unterdruecken = { reorder.dragging || reorder.draggedId != null }) { ListenAnsicht.oeffnen(l.id) }
+                    .semantics {
+                        customActions = listOfNotNull(
+                            CustomAccessibilityAction("Nach oben verschieben") { schiebe(index - 1); true }.takeIf { index > 0 },
+                            CustomAccessibilityAction("Nach unten verschieben") { schiebe(index + 1); true }.takeIf { index < alleIds.lastIndex },
+                        )
+                    }
+                    .padding(start = 10.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(42.dp).background(LISTEN_FARBEN[l.farbe.mod(LISTEN_FARBEN.size)].copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
+                if (gezeigt.size > 1) {
+                    Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.DragIndicator, "Gedrückt halten und ziehen", tint = f.textSchwach, modifier = Modifier.size(20.dp))
+                    }
+                } else {
+                    Spacer(Modifier.width(6.dp))
+                }
+                Box(Modifier.size(42.dp).background(farbe.copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
                     Text(ListenArt.von(l.art).symbol, fontSize = 20.sp)
                 }
-                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Column(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp)) {
                     Text(l.name, color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${ListenArt.von(l.art).anzeige} · " + (if (gesamt == 0) "leer" else "$offenZahl offen von $gesamt"), color = f.textLeise, fontSize = 13.sp)
+                    Text("${ListenArt.von(l.art).anzeige} · " + (if (gesamt == 0) "leer" else "$offenZahl offen von $gesamt"), color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(offenZahl.toString(), color = LISTEN_FARBEN[l.farbe.mod(LISTEN_FARBEN.size)], fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(offenZahl.toString(), color = farbe, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
-        item(key = "widget") {
+        item(key = -2L) {
             Row(Modifier.padding(top = 4.dp).antippen { widgetAnheften(context) }.padding(horizontal = 6.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Widgets, null, tint = f.textLeise, modifier = Modifier.size(18.dp))
                 Text("Widget auf den Startbildschirm", Modifier.padding(start = 8.dp), color = f.textLeise, fontSize = 14.sp)
@@ -479,8 +585,8 @@ private fun ListeDialog(l: Liste?, schliessen: () -> Unit) {
         onDismissRequest = schliessen, containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
         title = { Text(if (l == null) "Neue Liste" else "Liste bearbeiten") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Eingabe(name, { name = it }, "Name (etwa Einkaufsliste)", Modifier.fillMaxWidth())
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Eingabe(name, { name = it }, "Name (z. B. Einkauf, Preisliste, Aufgaben)", Modifier.fillMaxWidth())
                 Text("Art", color = f.textLeise, fontSize = 12.sp)
                 FlowRow { ListenArt.entries.forEach { a -> Chip("${a.symbol} ${a.anzeige}", art == a.kennung) { art = a.kennung } } }
                 Text("Farbe", color = f.textLeise, fontSize = 12.sp)
@@ -500,7 +606,7 @@ private fun ListeDialog(l: Liste?, schliessen: () -> Unit) {
                     if (l == null) {
                         val neu = Listen.listeAnlegen(context, n, art, farbe)
                         if (ab.isNotEmpty()) Listen.listeAendern(context, neu.id) { it.copy(abschnitte = ab) }
-                        ListenAnsicht.liste = neu.id
+                        ListenAnsicht.oeffnen(neu.id)
                     } else Listen.listeAendern(context, l.id) { it.copy(name = n, art = art, farbe = farbe, abschnitte = ab) }
                     schliessen()
                 }

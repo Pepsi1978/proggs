@@ -128,8 +128,9 @@ private data class Tool(val id: String, val titel: String, val akzent: Color)
 
 /** Eingebaute Werkzeuge im Reiter „Tools“; neue Kennungen auch in [de.frank.jarvis.data.TOOLS_REIHENFOLGE] und [de.frank.jarvis.data.TOOL_NAMEN] eintragen. */
 private val TOOLS = listOf(
-    Tool("atem", "Atemübungen", Color(0xFF4FC8FF)),
+    Tool("atem", "Atemübungen", Color(0xFF3EE0B8)),
     Tool("mentalitaet", "Mentalität", Color(0xFF9C8CFF)),
+    Tool("listen", "Listen", Color(0xFFFFB259)),
 )
 
 @Composable
@@ -138,6 +139,7 @@ fun ToolsBildschirm(vm: AppViewModel) {
     when {
         b != null -> AtemEditor(vm, b, ToolsAnsicht.neu)
         ToolsAnsicht.tool == "atem" -> AtemUebersicht()
+        ToolsAnsicht.tool == "listen" -> ListenBildschirm()
         else -> ToolsUebersicht(vm)
     }
 }
@@ -274,7 +276,10 @@ private fun ToolsUebersicht(vm: AppViewModel) {
                                     unterdruecken = {
                                         ordnen.isAnyItemDragging || SystemClock.uptimeMillis() - letzterDragEndeMs < 150L
                                     },
-                                ) { ToolsAnsicht.tool = t.id }
+                                ) {
+                                    if (t.id == "listen") ListenAnsicht.oeffnen()
+                                    ToolsAnsicht.tool = t.id
+                                }
                                 .glas(f, kartenRadius, erhoeht = if (zieht) 1.35f else 0.95f, rand = !zieht, toenung = t.akzent)
                                 .then(if (zieht) Modifier.border(2.dp, t.akzent.copy(alpha = 0.85f), kartenForm) else Modifier)
                                 .semantics {

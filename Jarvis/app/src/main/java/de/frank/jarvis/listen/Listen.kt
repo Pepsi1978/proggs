@@ -55,7 +55,7 @@ data class Eintrag(
 )
 
 enum class ListenArt(val kennung: String, val anzeige: String, val symbol: String) {
-    EINKAUF("einkauf", "Einkauf", "🛒"), AUFGABEN("aufgaben", "Aufgaben", "✅"), CHECKLISTE("checkliste", "Checkliste", "📋"),
+    EINKAUF("einkauf", "Einkauf", "🛒"), PREISLISTE("preisliste", "Preisliste", "🏷️"), AUFGABEN("aufgaben", "Aufgaben", "✅"), CHECKLISTE("checkliste", "Checkliste", "📋"),
     PACKLISTE("packliste", "Packliste", "🎒"), IDEEN("ideen", "Ideen", "💡"), SONSTIGES("sonstiges", "Sonstiges", "📝");
     companion object { fun von(k: String) = entries.firstOrNull { it.kennung == k } ?: SONSTIGES }
 }
@@ -261,6 +261,7 @@ object Listen {
 
     /** Reihenfolge der Listen (für die Auswahl in App und Widget). */
     fun listenOrdnen(context: Context, ids: List<Long>) = schreibe(context) {
+        if (ids.mapNotNull { liste(it) }.zipWithNext().all { (a, b) -> a.pos < b.pos }) return@schreibe
         ids.forEachIndexed { i, id -> liste(id)?.let { if (it.pos != i + 1.0) setze(it.copy(pos = i + 1.0)) } }
     }
 
@@ -473,6 +474,7 @@ object Listen {
     /** Wörter, an denen die Art einer Liste erkennbar ist („Einkaufsliste“ → Einkauf). */
     private val ART_WOERTER = mapOf(
         ListenArt.EINKAUF to listOf("einkauf", "einkaufen", "shopping", "supermarkt", "besorg"),
+        ListenArt.PREISLISTE to listOf("preis", "kosten", "vergleich", "angebot"),
         ListenArt.PACKLISTE to listOf("pack", "koffer", "urlaub", "reise"),
         ListenArt.IDEEN to listOf("idee"),
         ListenArt.AUFGABEN to listOf("aufgabe", "todo", "to do", "erledig"),

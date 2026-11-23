@@ -15,14 +15,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import de.frank.jarvis.atem.AtemFarben
 import de.frank.jarvis.ui.theme.Farben
 import de.frank.jarvis.ui.theme.LocalFarben
 import kotlin.math.PI
@@ -30,16 +31,15 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 private const val TAU = (2.0 * PI).toFloat()
 private const val FOKAL = 3.25f
 
-private val ATEM_EIN = Color(AtemFarben.EIN)
-private val ATEM_WIND_CYAN = Color(0xFF56DCFF)
-private val ATEM_HALT = Color(AtemFarben.HALTEN)
-private val ATEM_AUS = Color(AtemFarben.AUS)
-private val ATEM_WARM = Color(0xFFFFCA7A)
+private val ATEM_SMARAGD = Color(0xFF2EE2B4)
+private val ATEM_JADE = Color(0xFF7AF2D6)
+private val ATEM_SONNE = Color(0xFFFFE5A3)
+private val ATEM_HORIZONT = Color(0xFF176661)
+private val ATEM_PERLE = Color(0xFFF3FFF9)
 
 private val HIRN_FOKUS = Color(0xFF6B8CFF)
 private val HIRN_CYAN = Color(0xFF4FC8FF)
@@ -47,6 +47,23 @@ private val HIRN_KREATIV = Color(0xFFB98CFF)
 private val HIRN_MAGENTA = Color(0xFFE58CFF)
 private val HIRN_RUHE = Color(0xFF4FE0B5)
 private val HIRN_GOLD = Color(0xFFFFD166)
+
+private val LISTE_KUPFER = Color(0xFFFFB259)
+private val LISTE_BRETT_HELL = Color(0xFF9C5E37)
+private val LISTE_BRETT_DUNKEL = Color(0xFF5D331B)
+private val LISTE_KANTE = Color(0xFF3E2010)
+private val LISTE_PAPIER = Color(0xFFFFF6E8)
+private val LISTE_PAPIER_SCHATTEN = Color(0xFFE9D6BC)
+private val LISTE_CLIP_GOLD = Color(0xFFFFD678)
+private val LISTE_HAKEN_GRUEN = Color(0xFF2BD68B)
+private val LISTE_ZEILE_TEXT = Color(0xFF6E4B35)
+private val LISTE_ZEILE_ERLEDIGT = Color(0xFFB89E88)
+private val LISTE_KORB_METALL = Color(0xFFFFE7C7)
+private val LISTE_KORB_SCHATTEN = Color(0xFFD1A475)
+private val LISTE_GRIFF_KORALLE = Color(0xFFFF6E54)
+private val LISTE_PAKET_1 = Color(0xFFFF6E54)
+private val LISTE_PAKET_2 = Color(0xFF39D99B)
+private val LISTE_PAKET_3 = Color(0xFFFFCB52)
 
 private fun weich(x: Float): Float = 0.5f - 0.5f * cos(PI.toFloat() * x.coerceIn(0f, 1f))
 
@@ -66,12 +83,17 @@ internal fun ToolKarten3DBuehne(
     val form = RoundedCornerShape(eckenRadius)
     val buehnenHintergrund = remember(toolId, f.dunkel) { buehnenVerlauf(toolId, f) }
     val randFarbe = remember(toolId, f.dunkel) {
-        val akzent = if (toolId == "atem") ATEM_WIND_CYAN else HIRN_KREATIV
-        akzent.copy(alpha = if (f.dunkel) 0.28f else 0.36f)
+        val akzent = when (toolId) {
+            "atem" -> ATEM_JADE
+            "listen" -> LISTE_KUPFER
+            else -> HIRN_KREATIV
+        }
+        akzent.copy(alpha = if (f.dunkel) 0.34f else 0.44f)
     }
     // Wiederverwendbare Zeichenpuffer je Karte: keine Objekt-Erzeugung im 60/120-Hz-Takt.
     val atemPuffer = remember(toolId) { if (toolId == "atem") AtemZeichenPuffer() else null }
     val hirnPuffer = remember(toolId) { if (toolId == "mentalitaet") GehirnZeichenPuffer() else null }
+    val listenPuffer = remember(toolId) { if (toolId == "listen") ListenZeichenPuffer() else null }
 
     Box(
         modifier
@@ -88,17 +110,26 @@ internal fun ToolKarten3DBuehne(
             when (toolId) {
                 "atem" -> zeichneAtem3D(t, atemPuffer ?: return@Canvas)
                 "mentalitaet" -> zeichneGehirn3D(t, hirnPuffer ?: return@Canvas)
+                "listen" -> zeichneListen3D(t, listenPuffer ?: return@Canvas)
             }
         }
     }
 }
 
 private fun buehnenVerlauf(toolId: String, f: Farben): Brush = when (toolId) {
+    // Atemübungen: heller, luftig-frischer Morgenhimmel-Verlauf (Meergrün -> Jade -> warmes Morgenlicht)
     "atem" -> if (f.dunkel) {
-        Brush.radialGradient(listOf(Color(0xFF0E2938), Color(0xFF081624), Color(0xFF050D17)))
+        Brush.verticalGradient(listOf(Color(0xFF0E4752), Color(0xFF1A776D), Color(0xFF5FA88A)))
     } else {
-        Brush.radialGradient(listOf(Color(0xFF153B52), Color(0xFF0F273B), Color(0xFF0B1C2D)))
+        Brush.verticalGradient(listOf(Color(0xFF156774), Color(0xFF2D9C8F), Color(0xFFAAD8BA)))
     }
+    // Listen: warmes, edles Kupfer-Bernstein-Atelier (schräg von warmem Kupfer-Karamell nach Espresso)
+    "listen" -> if (f.dunkel) {
+        Brush.linearGradient(listOf(Color(0xFF4A2917), Color(0xFF2D180F), Color(0xFF160C08)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFF693B20), Color(0xFF432313), Color(0xFF27140B)))
+    }
+    // Mentalität (unverändert): tiefes Nacht-Indigo/Violett
     else -> if (f.dunkel) {
         Brush.radialGradient(listOf(Color(0xFF1E1942), Color(0xFF110F29), Color(0xFF09091A)))
     } else {
@@ -107,504 +138,606 @@ private fun buehnenVerlauf(toolId: String, f: Farben): Brush = when (toolId) {
 }
 
 // ================================================================================================
-// 3D-Szene 1: Atemübungen — 3D-Atemkugel mit sichtbaren Luftströmungen und Wind (Ein- & Ausatmen)
+// 3D-Szene 1: Atemübungen — 3D-Atemflügel (organische 3D-Lungen-Lamellen), vertikaler Atemstrom
+// und sanfte 3D-Morgenwellen am Horizont (ruhiges Entfalten & Senken statt Kreiselrotation)
 // ================================================================================================
 
-private const val ATEM_ZYKLUS_S = 7.6f
-private const val WIND_SEGMENTE = 14
+private const val ATEM_ZYKLUS_S = 7.2f
+private const val ATEM_LAMELLEN = 7
+private const val ATEM_BOGEN_PUNKTE = 18
+private const val ATEM_HORIZONT_PUNKTE = 16
 private const val RING_PUNKTE = 40
 
-private data class WindStrom(
-    val winkel: Float,
-    val neigung: Float,
-    val drall: Float,
-    val welle: Float,
-    val phase: Float,
-    val abstandAussen: Float,
-    val tempo: Float,
-    val breite: Float,
-    val istBoee: Boolean,
-)
-
-private data class LuftPartikel(
-    val winkel: Float,
-    val neigung: Float,
-    val drall: Float,
-    val phase: Float,
-    val tempo: Float,
-    val groesse: Float,
-)
-
-private data class WindBand(
-    val yVersatz: Float,
+private data class AtemPerle(
+    val xVersatz: Float,
     val zTiefe: Float,
-    val amplitude: Float,
     val phase: Float,
-    val breite: Float,
+    val tempo: Float,
+    val weite: Float,
+    val radius: Float,
 )
 
 private object AtemModell {
-    val stroeme: List<WindStrom> = run {
-        val r = Random(31)
-        List(16) { i ->
-            val basis = (i.toFloat() / 16f) * TAU + (r.nextFloat() - 0.5f) * 0.26f
-            // Ausgewogen über obere, mittlere und untere 3D-Breitengrade verteilt.
-            val elev = ((i % 4) - 1.5f) * 0.44f + (r.nextFloat() - 0.5f) * 0.16f
-            WindStrom(
-                winkel = basis,
-                neigung = elev,
-                drall = (if (i % 2 == 0) 1f else -1f) * (0.75f + r.nextFloat() * 0.55f),
-                welle = 0.08f + r.nextFloat() * 0.09f,
-                phase = r.nextFloat(),
-                abstandAussen = 1.28f + r.nextFloat() * 0.24f,
-                tempo = 0.85f + r.nextFloat() * 0.35f,
-                breite = if (i % 3 == 0) 2.5f else 1.75f,
-                istBoee = i % 3 == 0,
-            )
-        }
+    val perlen: List<AtemPerle> = List(22) { i ->
+        val norm = i.toFloat() / 22f
+        val spur = ((i * 7) % 11) / 10f - 0.5f
+        AtemPerle(
+            xVersatz = spur * 0.42f,
+            zTiefe = ((i % 5) - 2) * 0.16f,
+            phase = norm,
+            tempo = 0.72f + (i % 4) * 0.14f,
+            weite = 0.06f + (i % 3) * 0.045f,
+            radius = 1.35f + (i % 4) * 0.55f,
+        )
     }
-
-    val partikel: List<LuftPartikel> = run {
-        val r = Random(73)
-        List(38) {
-            LuftPartikel(
-                winkel = r.nextFloat() * TAU,
-                neigung = (r.nextFloat() - 0.5f) * 1.55f,
-                drall = (if (r.nextBoolean()) 1f else -1f) * (0.5f + r.nextFloat() * 0.8f),
-                phase = r.nextFloat(),
-                tempo = 0.72f + r.nextFloat() * 0.65f,
-                groesse = 1.3f + r.nextFloat() * 2.0f,
-            )
-        }
-    }
-
-    // Vier weite 3D-Windbänder in unterschiedlichen Tiefenebenen, die sich beim Einatmen
-    // zusammenziehen und beim Ausatmen wie sichtbare Windböen aufweiten.
-    val baender: List<WindBand> = listOf(
-        WindBand(yVersatz = -0.34f, zTiefe = 0.46f, amplitude = 0.18f, phase = 0.0f, breite = 2.0f),
-        WindBand(yVersatz = 0.02f, zTiefe = -0.52f, amplitude = 0.22f, phase = 2.1f, breite = 2.4f),
-        WindBand(yVersatz = 0.36f, zTiefe = 0.32f, amplitude = 0.16f, phase = 4.2f, breite = 1.9f),
-        WindBand(yVersatz = -0.14f, zTiefe = -0.36f, amplitude = 0.19f, phase = 1.1f, breite = 1.7f),
-    )
 }
 
 private class AtemZeichenPuffer {
-    val sx = FloatArray(WIND_SEGMENTE + 1)
-    val sy = FloatArray(WIND_SEGMENTE + 1)
-    val sz = FloatArray(WIND_SEGMENTE + 1)
-    val ss = FloatArray(WIND_SEGMENTE + 1)
-    val ringX = FloatArray(RING_PUNKTE + 1)
-    val ringY = FloatArray(RING_PUNKTE + 1)
-    val ringZ = FloatArray(RING_PUNKTE + 1)
+    val bx = FloatArray(ATEM_BOGEN_PUNKTE + 1)
+    val by = FloatArray(ATEM_BOGEN_PUNKTE + 1)
+    val bs = FloatArray(ATEM_BOGEN_PUNKTE + 1)
+    val pfad = Path()
+    val wellePfad = Path()
 }
 
 private fun DrawScope.zeichneAtem3D(t: Float, puffer: AtemZeichenPuffer) {
     val mitteX = size.width * 0.5f
-    val mitteY = size.height * 0.51f
-    val skala = size.minDimension * 0.42f
+    val mitteY = size.height * 0.47f
+    val skala = size.minDimension * 0.44f
 
-    // Vollständig nahtlose (C-unendlich) Atem-Schleife ohne Phasen-Schnitt oder Sprung:
-    // atemStand ∈ [0, 1] schwingt weich über -cos(w), die Strömungsgeschwindigkeit fluss ∈ [-1, +1]
-    // ist ihre exakte Ableitung sin(w): +1 = Einatmen (nach innen), 0 = ruhiger Wendepunkt, -1 = Ausatmen (nach außen).
+    // Vollständig nahtlose (C-unendlich) Atemwelle: 0 = entspannt ausgeatmet, 1 = voll eingeatmet.
     val w = (t / ATEM_ZYKLUS_S) * TAU
-    val atemStand = 0.5f - 0.5f * cos(w)
-    val fluss = sin(w)
-    val flussBetrag = abs(fluss)
+    val atem = 0.5f - 0.5f * cos(w)
+    val fluss = sin(w) // +1 Einatmen, -1 Ausatmen
 
-    // Durchgängige, stufenlose Farbmischung über den ganzen Zyklus (kein Übergangs-Knick bei 0 oder 0,5).
-    val einAnteil = 0.5f + 0.5f * fluss // 1 beim Einatmen, 0 beim Ausatmen, 0,5 an den Wendepunkten
-    val basisFarbe = lerp(ATEM_AUS, ATEM_EIN, weich(einAnteil))
-    val wendeFarbe = lerp(ATEM_WIND_CYAN, ATEM_HALT, atemStand)
-    val wendeGewicht = (1f - flussBetrag) * 0.48f
-    val hauptFarbe = lerp(basisFarbe, wendeFarbe, wendeGewicht)
-    val windFarbe = lerp(
-        lerp(ATEM_WARM, ATEM_WIND_CYAN, weich(einAnteil)),
-        Color.White,
-        0.24f + 0.14f * flussBetrag,
-    )
-
-    // Kontinuierlicher integraler Strömungsweg: wächst beim Einatmen stetig und kehrt am Wendepunkt
-    // mit Geschwindigkeit 0 völlig ruckfrei um (niemals ein Phasen-Reset oder Sprung).
-    val stromWeg = atemStand * 1.18f
-
-    val yaw = t * 0.26f + sin(t * 0.38f) * 0.16f
-    val pitch = 0.28f + 0.08f * sin(t * 0.52f)
+    // Ruhige, frontale Atem-Kamera: KEINE 360°-Drehung, nur ganz sanftes perspektivisches Atmen.
+    val yaw = sin(w * 0.5f) * 0.14f
+    val pitch = 0.18f - atem * 0.09f
     val cy = cos(yaw); val sy = sin(yaw)
     val cx = cos(pitch); val sx = sin(pitch)
 
-    val kugelR = 0.24f + atemStand * 0.23f
-    val kugelPx = kugelR * skala
-
-    // Weicher atmosphärischer Raumschein im Hintergrund
-    val hofR = skala * (0.95f + atemStand * 0.45f)
+    // 1) Sanftes Morgenlicht oben mittig (hell-luftige Atmosphäre statt dunkler Weltraum-Kugel)
+    val lichtY = size.height * (0.28f - atem * 0.06f)
+    val lichtR = size.maxDimension * (0.58f + atem * 0.18f)
     drawCircle(
         Brush.radialGradient(
             listOf(
-                hauptFarbe.copy(alpha = 0.30f + atemStand * 0.12f),
-                windFarbe.copy(alpha = 0.09f),
+                ATEM_SONNE.copy(alpha = 0.28f + atem * 0.14f),
+                ATEM_JADE.copy(alpha = 0.16f),
                 Color.Transparent,
             ),
-            Offset(mitteX, mitteY),
-            hofR,
+            Offset(mitteX, lichtY),
+            lichtR,
         ),
-        radius = hofR,
-        center = Offset(mitteX, mitteY),
+        radius = lichtR,
+        center = Offset(mitteX, lichtY),
     )
 
-    // 1) HINTERE EBENE (z > 0): Windbänder, Luftströme, Luftteilchen und Ringe hinter der 3D-Kugel
-    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, fluss, windFarbe, vorne = false, cy, sy, cx, sx)
-    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, hauptFarbe, vorne = false, cy, sy, cx, sx)
-    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, vorne = false, cy, sy, cx, sx)
-    zeichneAtemRinge(puffer, mitteX, mitteY, skala, kugelR, t, hauptFarbe, windFarbe, vorne = false, cy, sy, cx, sx)
+    // 2) Zwei geschichtete 3D-Horizont-Atemwellen unten (hinter den Flügeln)
+    zeichneAtemHorizont(puffer, t, atem, schicht = 0)
+    zeichneAtemHorizont(puffer, t, atem, schicht = 1)
 
-    // 2) MITTE: 3D-Atemkugel mit Volumen, Glanzpunkt, innerem Luftkern und Fresnel-Rand
-    val lichtOrt = Offset(mitteX - kugelPx * 0.30f, mitteY - kugelPx * 0.34f)
-    drawCircle(
-        Brush.radialGradient(
+    // 3) Zentrale aufsteigende/sinkende 3D-Atem-Lichtsäule zwischen den beiden Flügel-Fächern
+    val saeuleOben = mitteY - skala * (0.64f + atem * 0.22f)
+    val saeuleUnten = mitteY + skala * 0.66f
+    val saeuleBreite = skala * (0.13f + atem * 0.11f)
+    drawLine(
+        brush = Brush.verticalGradient(
             listOf(
-                lerp(hauptFarbe, Color.White, 0.72f).copy(alpha = 0.96f),
-                hauptFarbe.copy(alpha = 0.88f),
-                lerp(hauptFarbe, Color(0xFF061321), 0.56f).copy(alpha = 0.82f),
-            ),
-            center = lichtOrt,
-            radius = (kugelPx * 1.38f).coerceAtLeast(1f),
-        ),
-        radius = kugelPx,
-        center = Offset(mitteX, mitteY),
-    )
-    // Innerer heller Luftkern (pulsierendes Volumen beim Einatmen)
-    drawCircle(
-        Brush.radialGradient(
-            listOf(
-                Color.White.copy(alpha = 0.52f + atemStand * 0.25f),
-                windFarbe.copy(alpha = 0.26f),
+                Color.Transparent,
+                ATEM_SONNE.copy(alpha = 0.28f + atem * 0.22f),
+                ATEM_PERLE.copy(alpha = 0.44f + atem * 0.24f),
+                ATEM_JADE.copy(alpha = 0.22f),
                 Color.Transparent,
             ),
-            center = Offset(mitteX - kugelPx * 0.12f, mitteY - kugelPx * 0.14f),
-            radius = (kugelPx * 0.76f).coerceAtLeast(1f),
+            startY = saeuleOben,
+            endY = saeuleUnten,
         ),
-        radius = kugelPx * 0.72f,
-        center = Offset(mitteX, mitteY),
-        blendMode = BlendMode.Plus,
-    )
-    // Glanzlicht oben links für 3D-Plastizität
-    drawCircle(
-        Brush.radialGradient(
-            listOf(Color.White.copy(alpha = 0.68f), Color.Transparent),
-            center = Offset(mitteX - kugelPx * 0.32f, mitteY - kugelPx * 0.34f),
-            radius = (kugelPx * 0.38f).coerceAtLeast(1f),
-        ),
-        radius = kugelPx * 0.38f,
-        center = Offset(mitteX - kugelPx * 0.32f, mitteY - kugelPx * 0.34f),
-    )
-    // Fresnel-Kante der Kugel
-    drawCircle(
-        Brush.linearGradient(
-            listOf(Color.White.copy(alpha = 0.58f), hauptFarbe.copy(alpha = 0.28f), windFarbe.copy(alpha = 0.52f)),
-            Offset(mitteX - kugelPx, mitteY - kugelPx),
-            Offset(mitteX + kugelPx, mitteY + kugelPx),
-        ),
-        radius = kugelPx,
-        center = Offset(mitteX, mitteY),
-        style = Stroke(width = 1.4f * density),
+        start = Offset(mitteX, saeuleOben),
+        end = Offset(mitteX, saeuleUnten),
+        strokeWidth = saeuleBreite,
+        cap = StrokeCap.Round,
     )
 
-    // 3) VORDERE EBENE (z <= 0): 3D-Ringe, Windströme, Windbänder und Partikel VOR der Kugel
-    zeichneAtemRinge(puffer, mitteX, mitteY, skala, kugelR, t, hauptFarbe, windFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, hauptFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, fluss, windFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, vorne = true, cy, sy, cx, sx)
-}
+    // 4) Hintere aufsteigende 3D-Atemperlen (z > 0)
+    zeichneAtemPerlen(mitteX, mitteY, skala, t, atem, vorne = false, cy, sy, cx, sx)
 
-private fun DrawScope.zeichneAtemRinge(
-    puffer: AtemZeichenPuffer,
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    kugelR: Float,
-    t: Float,
-    hauptFarbe: Color,
-    windFarbe: Color,
-    vorne: Boolean,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    // Drei gekippte 3D-Atemringe um die Kugel, in Vorder- und Rückhälfte geteilt.
-    for (ring in 0 until 3) {
-        val radius = kugelR * (1.22f + ring * 0.14f)
-        val kippX = 0.45f + ring * 0.62f
-        val kippZ = -0.35f + ring * 0.54f
-        val dreh = t * (0.45f + ring * 0.18f) * (if (ring % 2 == 0) 1f else -1f)
-        val ckx = cos(kippX); val skx = sin(kippX)
-        val ckz = cos(kippZ); val skz = sin(kippZ)
+    // 5) Symmetrische 3D-Atemflügel (7 tiefengestaffelte 3D-Lamellenbögen je Seite, von hinten nach vorn)
+    // Beim Einatmen entfalten sie sich weit nach außen/oben wie Lungenflügel / Lotus-Lamellen;
+    // beim Ausatmen senken und schließen sie sich sanft zur Mitte.
+    for (tiefeIdx in ATEM_LAMELLEN - 1 downTo 0) {
+        val norm = tiefeIdx.toFloat() / (ATEM_LAMELLEN - 1) // 0 = vorderste Hauptlamelle, 1 = hinterste
+        // Sanfter Phasenversatz über die Tiefe: die Atembewegung fließt als echte 3D-Welle durch die Lamellen!
+        val lokW = w - norm * 0.58f
+        val lokAtem = 0.5f - 0.5f * cos(lokW)
+        val zBasis = -0.34f + norm * 0.78f
+        val spannWeite = (0.44f + lokAtem * 0.58f) * (1.06f - norm * 0.26f)
+        val bogenHoehe = (0.56f + lokAtem * 0.26f) * (1.04f - norm * 0.20f)
+        val hebung = -0.08f - lokAtem * 0.13f + norm * 0.05f
+        val spalt = 0.055f + (1f - lokAtem) * 0.015f
 
-        for (i in 0..RING_PUNKTE) {
-            val a = (i.toFloat() / RING_PUNKTE) * TAU + dreh
-            val lx = cos(a) * radius
-            val lz0 = sin(a) * radius
-            val ly1 = -lz0 * skx
-            val lz1 = lz0 * ckx
-            val lx2 = lx * ckz - ly1 * skz
-            val ly2 = lx * skz + ly1 * ckz
-            val rx = lx2 * cy + lz1 * sy
-            val rz1 = -lx2 * sy + lz1 * cy
-            val ry = ly2 * cx - rz1 * sx
-            val rz = ly2 * sx + rz1 * cx
-            val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
-            puffer.ringX[i] = mitteX + rx * skala * s
-            puffer.ringY[i] = mitteY + ry * skala * s
-            puffer.ringZ[i] = rz
-        }
+        val tiefenLicht = 1f - norm * 0.55f
+        val lamellenFarbe = lerp(
+            lerp(ATEM_SMARAGD, ATEM_SONNE, lokAtem * 0.36f),
+            ATEM_PERLE,
+            (1f - norm) * 0.45f,
+        )
+        val fuellFarbe = lerp(ATEM_HORIZONT, ATEM_JADE, 0.42f + lokAtem * 0.34f)
 
-        val farbe = if (ring == 1) windFarbe else hauptFarbe
-        val basisAlpha = if (vorne) 0.44f - ring * 0.07f else 0.16f - ring * 0.03f
-        val dicke = (if (vorne) 1.55f else 1.0f) * density
-        for (i in 0 until RING_PUNKTE) {
-            val zMitte = (puffer.ringZ[i] + puffer.ringZ[i + 1]) * 0.5f
-            if (vorne && zMitte > 0f) continue
-            if (!vorne && zMitte <= 0f) continue
-            drawLine(
-                color = farbe.copy(alpha = basisAlpha.coerceAtLeast(0.05f)),
-                start = Offset(puffer.ringX[i], puffer.ringY[i]),
-                end = Offset(puffer.ringX[i + 1], puffer.ringY[i + 1]),
-                strokeWidth = dicke,
-                cap = StrokeCap.Round,
+        for (seiteIdx in 0..1) {
+            val seite = if (seiteIdx == 0) -1f else 1f
+            puffer.pfad.rewind()
+            for (i in 0..ATEM_BOGEN_PUNKTE) {
+                val u = i.toFloat() / ATEM_BOGEN_PUNKTE // 0 = oben an Achse, 1 = unten an Achse
+                val profil = sin(u * PI.toFloat())
+                // Organische Flügelkontur: oben weiter gewölbt, unten weich zulaufend
+                val fluegelKurve = profil * (0.78f + 0.34f * sin(u * PI.toFloat() * 0.75f))
+                val x3 = seite * (spalt + fluegelKurve * spannWeite)
+                val y3 = (u - 0.5f) * 2f * bogenHoehe + hebung - profil * lokAtem * 0.12f
+                // Sanfte 3D-Wölbung der Flügel nach vorn beim Öffnen
+                val z3 = zBasis - profil * (0.14f + lokAtem * 0.16f)
+
+                val rx = x3 * cy + z3 * sy
+                val rz1 = -x3 * sy + z3 * cy
+                val ry = y3 * cx - rz1 * sx
+                val rz = y3 * sx + rz1 * cx
+                val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
+                val px = mitteX + rx * skala * s
+                val py = mitteY + ry * skala * s
+                puffer.bx[i] = px
+                puffer.by[i] = py
+                puffer.bs[i] = s
+                if (i == 0) puffer.pfad.moveTo(px, py) else puffer.pfad.lineTo(px, py)
+            }
+            puffer.pfad.close()
+
+            // Seidig-transluzente 3D-Lamellenfläche (verleiht Volumen ohne Kugel-Look)
+            drawPath(
+                path = puffer.pfad,
+                color = fuellFarbe.copy(alpha = (0.10f + 0.13f * tiefenLicht) * (0.75f + 0.25f * lokAtem)),
             )
+
+            // Leuchtende Außenkontur der 3D-Rippe
+            val kantenAlpha = (0.32f + 0.58f * tiefenLicht).coerceIn(0f, 0.94f)
+            val strich = (1.15f + 1.55f * tiefenLicht) * density
+            for (i in 0 until ATEM_BOGEN_PUNKTE) {
+                val segF = sin(((i + 0.5f) / ATEM_BOGEN_PUNKTE) * PI.toFloat()).coerceIn(0.2f, 1f)
+                drawLine(
+                    color = lamellenFarbe.copy(alpha = kantenAlpha * (0.45f + 0.55f * segF)),
+                    start = Offset(puffer.bx[i], puffer.by[i]),
+                    end = Offset(puffer.bx[i + 1], puffer.by[i + 1]),
+                    strokeWidth = strich * puffer.bs[i] * (0.65f + 0.45f * segF),
+                    cap = StrokeCap.Round,
+                )
+            }
         }
     }
-}
 
-private fun DrawScope.zeichneWindStroeme(
-    puffer: AtemZeichenPuffer,
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    t: Float,
-    kugelR: Float,
-    stromWeg: Float,
-    fluss: Float,
-    windFarbe: Color,
-    hauptFarbe: Color,
-    vorne: Boolean,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    val flussBetrag = abs(fluss)
-    // Sanfter Wechsel der Wirbelweite ohne Sprung (1,05 beim Einatmen <-> 1,45 beim Ausatmen)
-    val drallStaerke = 1.25f - 0.20f * fluss
-
-    for (strom in AtemModell.stroeme) {
-        // kopfU bewegt sich völlig stetig über stromWeg (Einatmen: 0->1 nach innen,
-        // am Wendepunkt Geschwindigkeit 0, Ausatmen: 1->0 nach außen).
-        // Am Umbruch (0 und 1) geht lebensHuelle exakt auf 0 -> absolut unsichtbarer Übergang.
-        val kopfU = ((strom.phase + stromWeg * strom.tempo) % 1f + 1f) % 1f
-        val schweifBasis = if (strom.istBoee) 0.50f else 0.38f
-        val radialeLaenge = schweifBasis * fluss
-        // An den Wendepunkten (fluss ~ 0) schwingt der Luftstrom weich tangential um die Kugel weiter,
-        // statt zusammenzuschrumpfen oder umzuspringen.
-        val tangentialBogen = (1f - flussBetrag) * 0.42f * strom.drall
-        var zSumme = 0f
-
-        for (i in 0..WIND_SEGMENTE) {
-            val fSeg = i.toFloat() / WIND_SEGMENTE // 0 = Schweifende, 1 = führende Windspitze
-            val schweif = 1f - fSeg
-            val u = (kopfU - schweif * radialeLaenge).coerceIn(0f, 1f)
-            val r = strom.abstandAussen * (1f - u) + (kugelR * 0.94f) * u
-            val wirbelWinkel = strom.winkel +
-                t * 0.22f * (if (strom.drall >= 0f) 1f else -1f) +
-                strom.drall * (1f - u) * drallStaerke -
-                schweif * tangentialBogen +
-                sin(t * 1.25f + strom.phase * TAU + u * 3.5f) * 0.14f
-            val elev = strom.neigung * (0.45f + 0.55f * (1f - u)) +
-                sin(u * 5.0f - t * 1.9f + strom.phase * TAU) * strom.welle
-
-            val cosE = cos(elev)
-            val x3 = r * cosE * cos(wirbelWinkel)
-            val y3 = r * sin(elev)
-            val z3 = r * cosE * sin(wirbelWinkel)
-
-            val rx = x3 * cy + z3 * sy
-            val rz1 = -x3 * sy + z3 * cy
-            val ry = y3 * cx - rz1 * sx
-            val rz = y3 * sx + rz1 * cx
-            val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
-
-            puffer.sx[i] = mitteX + rx * skala * s
-            puffer.sy[i] = mitteY + ry * skala * s
-            puffer.sz[i] = rz
-            puffer.ss[i] = s
-            zSumme += rz
-        }
-
-        val zMitte = zSumme / (WIND_SEGMENTE + 1)
-        if (vorne && zMitte > 0f) continue
-        if (!vorne && zMitte <= 0f) continue
-
-        // Quadratische Sinushülle: bei kopfU = 0 und 1 exakt 0,0 Alpha samt Ableitung 0 -> kein Aufblitzen/Springen.
-        val h = sin(kopfU * PI.toFloat()).coerceIn(0f, 1f)
-        val lebensHuelle = h * h
-        if (lebensHuelle < 0.008f) continue
-        val tiefenFaktor = ((1.35f - zMitte) / 2.7f).coerceIn(0.28f, 1f)
-        val grundAlpha = (0.34f + 0.58f * flussBetrag) * lebensHuelle * tiefenFaktor
-
-        for (i in 0 until WIND_SEGMENTE) {
-            val fSeg = (i + 0.5f) / WIND_SEGMENTE
-            val profil = sin(fSeg * PI.toFloat()).coerceAtLeast(0.06f) * (0.42f + 0.58f * fSeg)
-            val segAlpha = (grundAlpha * profil).coerceIn(0f, 0.92f)
-            if (segAlpha < 0.015f) continue
-            val farbe = lerp(hauptFarbe, Color.White, fSeg * 0.62f).let { lerp(it, windFarbe, 0.45f) }
-            val dicke = strom.breite * density * puffer.ss[i] * (0.42f + 0.85f * profil)
-            drawLine(
-                color = farbe.copy(alpha = segAlpha),
-                start = Offset(puffer.sx[i], puffer.sy[i]),
-                end = Offset(puffer.sx[i + 1], puffer.sy[i + 1]),
-                strokeWidth = dicke,
-                cap = StrokeCap.Round,
-            )
-        }
-
-        // Leuchtende Windspitze zeigt fließend die Strömungsrichtung
-        val spitzeAlpha = (grundAlpha * (0.45f + 0.55f * flussBetrag)).coerceIn(0f, 0.95f)
-        if (spitzeAlpha > 0.04f) {
-            val spX = puffer.sx[WIND_SEGMENTE]
-            val spY = puffer.sy[WIND_SEGMENTE]
-            val spR = (if (strom.istBoee) 2.5f else 1.85f) * density * puffer.ss[WIND_SEGMENTE]
-            drawCircle(Color.White.copy(alpha = spitzeAlpha), spR, Offset(spX, spY))
-        }
+    // 6) Zarter organischer Atem-Stamm / Luftkanal in der Mitte (zwei feine Lichtfäden)
+    for (fadenIdx in 0..1) {
+        val faden = if (fadenIdx == 0) -1f else 1f
+        val xStart = mitteX + faden * skala * 0.03f
+        val bogen = faden * skala * (0.04f + atem * 0.04f)
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(xStart, mitteY + skala * 0.54f)
+        puffer.pfad.cubicTo(
+            xStart + bogen, mitteY + skala * 0.14f,
+            xStart - bogen, mitteY - skala * 0.20f,
+            xStart + faden * skala * (0.05f + atem * 0.05f), mitteY - skala * (0.56f + atem * 0.16f),
+        )
+        drawPath(
+            path = puffer.pfad,
+            color = ATEM_PERLE.copy(alpha = 0.45f + 0.25f * abs(fluss)),
+            style = Stroke(width = 1.4f * density, cap = StrokeCap.Round),
+        )
     }
+
+    // 7) Vordere aufsteigende 3D-Atemperlen (z <= 0)
+    zeichneAtemPerlen(mitteX, mitteY, skala, t, atem, vorne = true, cy, sy, cx, sx)
 }
 
-private fun DrawScope.zeichneWindBaender(
-    puffer: AtemZeichenPuffer,
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    t: Float,
-    atemStand: Float,
-    fluss: Float,
-    windFarbe: Color,
-    vorne: Boolean,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    val flussBetrag = abs(fluss)
-    // Durchgängige Phase (integrale Atembewegung + ruhige Grundströmung): niemals ein Richtungssprung.
-    val schub = -atemStand * 3.6f + t * 0.42f
-    val weite = 0.88f + (1f - atemStand) * 0.34f
+private fun DrawScope.zeichneAtemHorizont(puffer: AtemZeichenPuffer, t: Float, atem: Float, schicht: Int) {
+    val basisY = size.height * (if (schicht == 0) 0.77f else 0.85f) + atem * size.height * (if (schicht == 0) 0.035f else 0.02f)
+    val amp = size.height * (if (schicht == 0) 0.052f else 0.038f)
+    val tempo = if (schicht == 0) 0.75f else -0.58f
+    val phase = if (schicht == 0) 0.0f else 2.2f
 
-    for (band in AtemModell.baender) {
-        var zMitte = 0f
-        for (i in 0..WIND_SEGMENTE) {
-            val u = (i.toFloat() / WIND_SEGMENTE) * 2f - 1f
-            val x3 = u * 1.28f * weite
-            val bogen = sin(u * 3.1f + schub + band.phase) * band.amplitude * (0.68f + 0.38f * flussBetrag)
-            // Stufenloser Sog nach innen beim Einatmen (fluss > 0) und weiches Aufweiten beim Ausatmen (fluss < 0).
-            val sog = (1f - u * u) * (-0.20f * fluss) * band.yVersatz
-            val y3 = band.yVersatz * (0.72f + 0.35f * (1f - atemStand)) + bogen + sog
-            val z3 = band.zTiefe * cos(u * 0.9f) + sin(u * 2.2f + band.phase + t * 0.35f) * 0.14f
-
-            val rx = x3 * cy + z3 * sy
-            val rz1 = -x3 * sy + z3 * cy
-            val ry = y3 * cx - rz1 * sx
-            val rz = y3 * sx + rz1 * cx
-            val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
-            puffer.sx[i] = mitteX + rx * skala * s
-            puffer.sy[i] = mitteY + ry * skala * s
-            puffer.sz[i] = rz
-            puffer.ss[i] = s
-            zMitte += rz
-        }
-        zMitte /= (WIND_SEGMENTE + 1)
-        if (vorne && zMitte > 0f) continue
-        if (!vorne && zMitte <= 0f) continue
-
-        val tiefenAlpha = (if (vorne) 0.44f else 0.18f) * (0.62f + 0.38f * flussBetrag)
-        for (i in 0 until WIND_SEGMENTE) {
-            val fSeg = (i + 0.5f) / WIND_SEGMENTE
-            val huelle = sin(fSeg * PI.toFloat())
-            val alpha = tiefenAlpha * huelle
-            if (alpha < 0.015f) continue
-            drawLine(
-                color = lerp(windFarbe, Color.White, 0.5f).copy(alpha = alpha),
-                start = Offset(puffer.sx[i], puffer.sy[i]),
-                end = Offset(puffer.sx[i + 1], puffer.sy[i + 1]),
-                strokeWidth = band.breite * density * puffer.ss[i] * (0.45f + 0.65f * huelle),
-                cap = StrokeCap.Round,
-            )
-        }
+    puffer.wellePfad.rewind()
+    puffer.wellePfad.moveTo(0f, size.height)
+    for (i in 0..ATEM_HORIZONT_PUNKTE) {
+        val u = i.toFloat() / ATEM_HORIZONT_PUNKTE
+        val x = u * size.width
+        val y = basisY + sin(u * TAU * 1.15f + t * tempo + phase) * amp
+        puffer.wellePfad.lineTo(x, y)
     }
+    puffer.wellePfad.lineTo(size.width, size.height)
+    puffer.wellePfad.close()
+
+    val farbe = if (schicht == 0) Color(0xFF0A3A40) else Color(0xFF072B30)
+    drawPath(puffer.wellePfad, farbe.copy(alpha = if (schicht == 0) 0.28f else 0.42f))
 }
 
-private fun DrawScope.zeichneLuftPartikel(
+private fun DrawScope.zeichneAtemPerlen(
     mitteX: Float,
     mitteY: Float,
     skala: Float,
     t: Float,
-    kugelR: Float,
-    stromWeg: Float,
-    fluss: Float,
-    windFarbe: Color,
+    atem: Float,
     vorne: Boolean,
     cy: Float,
     sy: Float,
     cx: Float,
     sx: Float,
 ) {
-    val flussBetrag = abs(fluss)
-    // Allokationsfreie, stetige 3D-Luftpartikel ohne Umbruch-Sprung (Alpha am Rand exakt 0).
-    for (p in AtemModell.partikel) {
-        val u = ((p.phase + stromWeg * p.tempo * 1.15f) % 1f + 1f) % 1f
+    // Stetig aufsteigender, sanft im Atemrhythmus schwingender Lichthauch (ohne Umbruch-Sprung).
+    val auftrieb = t * 0.20f + atem * 0.26f
+    for (p in AtemModell.perlen) {
+        val u = ((p.phase + auftrieb * p.tempo) % 1f + 1f) % 1f
         val h = sin(u * PI.toFloat()).coerceIn(0f, 1f)
         val huelle = h * h
-        if (huelle < 0.01f) continue
+        if (huelle < 0.015f) continue
 
-        val r1 = 1.44f * (1f - u) + (kugelR * 0.96f) * u
-        val w1 = p.winkel + p.drall * (1f - u) + t * 0.24f
-        val e1 = p.neigung * (0.4f + 0.6f * (1f - u))
-        val cosE1 = cos(e1)
-        val x31 = r1 * cosE1 * cos(w1)
-        val y31 = r1 * sin(e1)
-        val z31 = r1 * cosE1 * sin(w1)
-        val rx1 = x31 * cy + z31 * sy
-        val rzTmp1 = -x31 * sy + z31 * cy
-        val ry1 = y31 * cx - rzTmp1 * sx
-        val rz1 = y31 * sx + rzTmp1 * cx
+        val spreiz = 0.65f + u * (0.45f + atem * 0.55f)
+        val x3 = p.xVersatz * spreiz + sin(u * TAU + t * 0.9f + p.phase * TAU) * p.weite
+        val y3 = 0.72f - u * 1.48f
+        val z3 = p.zTiefe * (0.7f + 0.3f * spreiz)
 
-        if (vorne && rz1 > 0f) continue
-        if (!vorne && rz1 <= 0f) continue
+        val rx = x3 * cy + z3 * sy
+        val rz1 = -x3 * sy + z3 * cy
+        val ry = y3 * cx - rz1 * sx
+        val rz = y3 * sx + rz1 * cx
+        if (vorne && rz > 0f) continue
+        if (!vorne && rz <= 0f) continue
 
-        val uVorher = (u - 0.085f * fluss).coerceIn(0f, 1f)
-        val r0 = 1.44f * (1f - uVorher) + (kugelR * 0.96f) * uVorher
-        // Kleiner tangentialer Schweif bleibt auch am Wendepunkt sanft sichtbar
-        val w0 = p.winkel + p.drall * (1f - uVorher) + t * 0.24f - 0.035f
-        val e0 = p.neigung * (0.4f + 0.6f * (1f - uVorher))
-        val cosE0 = cos(e0)
-        val x30 = r0 * cosE0 * cos(w0)
-        val y30 = r0 * sin(e0)
-        val z30 = r0 * cosE0 * sin(w0)
-        val rx0 = x30 * cy + z30 * sy
-        val rzTmp0 = -x30 * sy + z30 * cy
-        val ry0 = y30 * cx - rzTmp0 * sx
-        val rz0 = y30 * sx + rzTmp0 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
+        val px = mitteX + rx * skala * s
+        val py = mitteY + ry * skala * s
+        val r = p.radius * density * s * (0.6f + 0.4f * h)
+        val alpha = (huelle * (if (vorne) 0.85f else 0.42f)).coerceIn(0f, 0.92f)
+        val farbe = lerp(ATEM_PERLE, ATEM_SONNE, u * 0.45f)
+        drawCircle(farbe.copy(alpha = alpha), r, Offset(px, py))
+    }
+}
 
-        val s1 = FOKAL / (FOKAL + rz1).coerceAtLeast(0.7f)
-        val s0 = FOKAL / (FOKAL + rz0).coerceAtLeast(0.7f)
-        val alpha = ((0.30f + 0.60f * flussBetrag) * huelle * if (vorne) 1f else 0.45f).coerceIn(0f, 0.92f)
-        if (alpha < 0.02f) continue
+// ================================================================================================
+// 3D-Szene 3: Listen — Plastisches 3D-Klemmbrett mit sequenziell abhakenden 3D-Punkten und
+// einem rollenden 3D-Einkaufswagen mit bunten 3D-Paketen (warmes Kupfer-Bernstein-Studio)
+// ================================================================================================
 
+private const val LISTEN_ZYKLUS_S = 6.6f
+private val LISTEN_ZEILEN_LAENGEN = floatArrayOf(0.56f, 0.46f, 0.52f)
+
+private class ListenZeichenPuffer {
+    val pfad = Path()
+    val hakenStand = FloatArray(3)
+    val zeilenY = FloatArray(3)
+    val radX = FloatArray(2)
+}
+
+private fun DrawScope.zeichneListen3D(t: Float, puffer: ListenZeichenPuffer) {
+    val mitteX = size.width * 0.49f
+    val mitteY = size.height * 0.50f
+    val skala = size.minDimension * 0.45f
+
+    // Vollständig nahtlose 6,6-Sekunden-Schleife: u ∈ [0, 1)
+    val u = ((t % LISTEN_ZYKLUS_S) + LISTEN_ZYKLUS_S) % LISTEN_ZYKLUS_S / LISTEN_ZYKLUS_S
+    val w = u * TAU
+
+    // Ruhige, edle 3D-Schwenk-Parallax (kein 360°-Kreisel wie Mentalität, kein vertikales Flügel-Atmen wie Atem)
+    val yaw = -0.28f + 0.15f * sin(w)
+    val pitch = 0.20f + 0.05f * cos(w)
+    val cy = cos(yaw); val sy = sin(yaw)
+    val cx = cos(pitch); val sx = sin(pitch)
+
+    fun projX(x: Float, y: Float, z: Float): Float {
+        val rx = x * cy + z * sy
+        val rz1 = -x * sy + z * cy
+        val rz = y * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+        return mitteX + rx * skala * s
+    }
+
+    fun projY(x: Float, y: Float, z: Float): Float {
+        val rz1 = -x * sy + z * cy
+        val ry = y * cx - rz1 * sx
+        val rz = y * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+        return mitteY + ry * skala * s
+    }
+
+    fun projS(x: Float, y: Float, z: Float): Float {
+        val rz1 = -x * sy + z * cy
+        val rz = y * sx + rz1 * cx
+        return FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+    }
+
+    fun fuelleQuad(
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        x2: Float, y2: Float, z2: Float,
+        x3: Float, y3: Float, z3: Float,
+        farbe: Color,
+    ) {
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(projX(x0, y0, z0), projY(x0, y0, z0))
+        puffer.pfad.lineTo(projX(x1, y1, z1), projY(x1, y1, z1))
+        puffer.pfad.lineTo(projX(x2, y2, z2), projY(x2, y2, z2))
+        puffer.pfad.lineTo(projX(x3, y3, z3), projY(x3, y3, z3))
+        puffer.pfad.close()
+        drawPath(puffer.pfad, farbe)
+    }
+
+    fun umrissQuad(
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        x2: Float, y2: Float, z2: Float,
+        x3: Float, y3: Float, z3: Float,
+        farbe: Color,
+        breite: Float,
+    ) {
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(projX(x0, y0, z0), projY(x0, y0, z0))
+        puffer.pfad.lineTo(projX(x1, y1, z1), projY(x1, y1, z1))
+        puffer.pfad.lineTo(projX(x2, y2, z2), projY(x2, y2, z2))
+        puffer.pfad.lineTo(projX(x3, y3, z3), projY(x3, y3, z3))
+        puffer.pfad.close()
+        drawPath(puffer.pfad, farbe, style = Stroke(width = breite, join = StrokeJoin.Round))
+    }
+
+    fun linie3D(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float, farbe: Color, breite: Float) {
         drawLine(
-            color = lerp(windFarbe, Color.White, 0.55f).copy(alpha = alpha),
-            start = Offset(mitteX + rx0 * skala * s0, mitteY + ry0 * skala * s0),
-            end = Offset(mitteX + rx1 * skala * s1, mitteY + ry1 * skala * s1),
-            strokeWidth = p.groesse * density * s1 * 0.72f,
+            color = farbe,
+            start = Offset(projX(x0, y0, z0), projY(x0, y0, z0)),
+            end = Offset(projX(x1, y1, z1), projY(x1, y1, z1)),
+            strokeWidth = breite,
             cap = StrokeCap.Round,
         )
+    }
+
+    // 1) Warmes Bernstein-Spotlicht oben links + weicher Raum-Bodenschatten
+    val spotR = size.maxDimension * 0.72f
+    drawCircle(
+        Brush.radialGradient(
+            listOf(LISTE_KUPFER.copy(alpha = 0.24f), LISTE_CLIP_GOLD.copy(alpha = 0.06f), Color.Transparent),
+            Offset(size.width * 0.30f, size.height * 0.26f),
+            spotR,
+        ),
+        radius = spotR,
+        center = Offset(size.width * 0.30f, size.height * 0.26f),
+    )
+    // Weicher 3D-Bodenschatten
+    val schattenOrt = Offset(mitteX + skala * 0.04f, mitteY + skala * 0.86f)
+    drawCircle(
+        Brush.radialGradient(
+            listOf(Color.Black.copy(alpha = 0.42f), Color.Transparent),
+            schattenOrt,
+            skala * 0.92f,
+        ),
+        radius = skala * 0.92f,
+        center = schattenOrt,
+    )
+
+    // 2) Fortschritt der 3 Abhak-Punkte im nahtlosen Zyklus (0 = offen, 1 = abgehakt)
+    // Alle 3 klingen zwischen u = 0.76..0.95 weich wieder aus -> C-unendlich nahtlose Schleife!
+    val ausklang = if (u > 0.76f) 1f - weich((u - 0.76f) / 0.19f) else 1f
+    val haken0 = weich((u - 0.05f) / 0.14f) * ausklang
+    val haken1 = weich((u - 0.26f) / 0.14f) * ausklang
+    val haken2 = weich((u - 0.47f) / 0.14f) * ausklang
+    puffer.hakenStand[0] = haken0
+    puffer.hakenStand[1] = haken1
+    puffer.hakenStand[2] = haken2
+
+    // Sanftes Schweben des 3D-Klemmbretts (leicht nach links gerückt, damit rechts vorn Platz für den 3D-Einkaufswagen ist)
+    val bx = -0.15f
+    val by = -0.02f + sin(w) * 0.035f
+    val bz = 0.10f
+    val bw = 0.56f
+    val bh = 0.74f
+    val dicke = 0.10f
+
+    // 3) 3D-Klemmbrett: Extrusions-Kanten (rechts & unten, echte 3D-Plastizität)
+    val xL = bx - bw; val xR = bx + bw
+    val yO = by - bh; val yU = by + bh
+    val zV = bz; val zH = bz + dicke
+
+    // Rechte 3D-Seitenkante (sichtbar wegen negativer yaw-Drehung)
+    fuelleQuad(xR, yO, zV, xR, yO, zH, xR, yU, zH, xR, yU, zV, LISTE_KANTE)
+    // Linke 3D-Seitenkante (falls yaw leicht positiv schwenkt)
+    fuelleQuad(xL, yO, zH, xL, yO, zV, xL, yU, zV, xL, yU, zH, LISTE_KANTE)
+    // Untere 3D-Kante
+    fuelleQuad(xL, yU, zV, xR, yU, zV, xR, yU, zH, xL, yU, zH, Color(0xFF2B150A))
+
+    // Vorderseite des 3D-Klemmbretts (warmes Kupfer-Walnuss)
+    fuelleQuad(xL, yO, zV, xR, yO, zV, xR, yU, zV, xL, yU, zV, LISTE_BRETT_HELL)
+    // Subtiler 3D-Schattierungsverlauf über das Brett
+    fuelleQuad(xL, by + 0.06f, zV - 0.002f, xR, by + 0.06f, zV - 0.002f, xR, yU, zV - 0.002f, xL, yU, zV - 0.002f, LISTE_BRETT_DUNKEL.copy(alpha = 0.42f))
+    umrissQuad(xL, yO, zV, xR, yO, zV, xR, yU, zV, xL, yU, zV, LISTE_KUPFER.copy(alpha = 0.48f), 1.2f * density)
+
+    // 4) 3D-Papierstapel (hinteres leicht schräges Blatt + vorderes Hauptblatt)
+    val pL = xL + 0.09f; val pR = xR - 0.09f
+    val pO = yO + 0.13f; val pU = yU - 0.09f
+    val zBlatt1 = zV - 0.035f
+    val zBlatt2 = zV - 0.068f
+    fuelleQuad(pL + 0.03f, pO + 0.02f, zBlatt1, pR + 0.03f, pO + 0.04f, zBlatt1, pR + 0.02f, pU + 0.03f, zBlatt1, pL + 0.02f, pU + 0.01f, zBlatt1, LISTE_PAPIER_SCHATTEN)
+    fuelleQuad(pL, pO, zBlatt2, pR, pO, zBlatt2, pR, pU, zBlatt2, pL, pU, zBlatt2, LISTE_PAPIER)
+    umrissQuad(pL, pO, zBlatt2, pR, pO, zBlatt2, pR, pU, zBlatt2, pL, pU, zBlatt2, Color.White.copy(alpha = 0.72f), 0.9f * density)
+
+    // 5) Plastischer 3D-Metall-Klemmbügel oben mittig (Sockel + gewölbter Bügel)
+    val cL = bx - 0.21f; val cR = bx + 0.21f
+    val cO = yO - 0.05f; val cU = yO + 0.14f
+    val zClip = zBlatt2 - 0.055f
+    // Clip-Schatten auf dem Blatt
+    fuelleQuad(cL + 0.02f, cO + 0.09f, zBlatt2 - 0.004f, cR + 0.02f, cO + 0.09f, zBlatt2 - 0.004f, cR + 0.02f, cU + 0.04f, zBlatt2 - 0.004f, cL + 0.02f, cU + 0.04f, zBlatt2 - 0.004f, Color.Black.copy(alpha = 0.16f))
+    // Clip-Unterkante (3D-Tiefe)
+    fuelleQuad(cL, cU, zClip, cR, cU, zClip, cR, cU, zBlatt2, cL, cU, zBlatt2, Color(0xFFB37D2C))
+    // Clip-Front
+    fuelleQuad(cL, cO, zClip, cR, cO, zClip, cR, cU, zClip, cL, cU, zClip, LISTE_CLIP_GOLD)
+    // Glanzstreifen auf dem Clip
+    linie3D(cL + 0.04f, cO + 0.045f, zClip - 0.004f, cR - 0.04f, cO + 0.045f, zClip - 0.004f, Color.White.copy(alpha = 0.78f), 1.6f * density)
+
+    // 6) Drei schwebende 3D-Checklisten-Zeilen mit lebendiger Abhak-Animation
+    puffer.zeilenY[0] = pO + 0.26f
+    puffer.zeilenY[1] = pO + 0.62f
+    puffer.zeilenY[2] = pO + 0.98f
+    for (idx in 0 until 3) {
+        val h = puffer.hakenStand[idx]
+        // Beim Abhaken springt die Zeile sanft nach vorn in Z (echter 3D-Pop!)
+        val pop = sin(h * PI.toFloat()).coerceIn(0f, 1f)
+        val zZ = zBlatt2 - 0.015f - h * 0.032f - pop * 0.055f
+        val zy = puffer.zeilenY[idx]
+
+        // Sanfter Schatten unter der schwebenden Checkbox
+        val boxL = pL + 0.09f
+        val boxR = boxL + 0.18f
+        val boxO = zy - 0.09f
+        val boxU = zy + 0.09f
+        if (h > 0.05f) {
+            fuelleQuad(
+                boxL + 0.02f, boxO + 0.03f, zBlatt2 - 0.004f,
+                boxR + 0.02f, boxO + 0.03f, zBlatt2 - 0.004f,
+                boxR + 0.02f, boxU + 0.03f, zBlatt2 - 0.004f,
+                boxL + 0.02f, boxU + 0.03f, zBlatt2 - 0.004f,
+                Color.Black.copy(alpha = 0.14f * h),
+            )
+        }
+
+        // 3D-Checkbox
+        val boxFarbe = lerp(Color(0xFFEDD9BE), LISTE_HAKEN_GRUEN, h)
+        fuelleQuad(boxL, boxO, zZ, boxR, boxO, zZ, boxR, boxU, zZ, boxL, boxU, zZ, boxFarbe)
+        umrissQuad(boxL, boxO, zZ, boxR, boxO, zZ, boxR, boxU, zZ, boxL, boxU, zZ, lerp(LISTE_ZEILE_TEXT.copy(alpha = 0.55f), Color.White.copy(alpha = 0.85f), h), 1.15f * density)
+
+        // Schwungvoll gezeichnetes 3D-Häkchen in der Checkbox
+        if (h > 0.04f) {
+            val zHaken = zZ - 0.016f
+            val h1 = (h * 2.1f).coerceIn(0f, 1f)
+            val h2 = ((h - 0.42f) / 0.58f).coerceIn(0f, 1f)
+            val ax = boxL + 0.035f; val ay = zy + 0.005f
+            val mx = boxL + 0.078f; val my = zy + 0.052f
+            val ex = boxR - 0.025f; val ey = zy - 0.052f
+            val strich = 2.1f * density * projS(mx, my, zHaken)
+            linie3D(ax, ay, zHaken, ax + (mx - ax) * h1, ay + (my - ay) * h1, zHaken, Color.White, strich)
+            if (h2 > 0f) {
+                linie3D(mx, my, zHaken, mx + (ex - mx) * h2, my + (ey - my) * h2, zHaken, Color.White, strich)
+            }
+            // Goldener Aufblitz-Funke beim Abhaken
+            if (pop > 0.12f) {
+                val fx = projX(boxR + 0.03f, boxO - 0.03f * pop, zHaken - 0.03f)
+                val fy = projY(boxR + 0.03f, boxO - 0.03f * pop, zHaken - 0.03f)
+                val fr = 5.5f * density * pop
+                drawCircle(
+                    Brush.radialGradient(listOf(Color.White.copy(alpha = 0.85f * pop), LISTE_CLIP_GOLD.copy(alpha = 0.55f * pop), Color.Transparent), Offset(fx, fy), fr),
+                    radius = fr,
+                    center = Offset(fx, fy),
+                    blendMode = BlendMode.Plus,
+                )
+            }
+        }
+
+        // 3D-Textbalken rechts neben der Checkbox (Hauptzeile + dezente Unterzeile)
+        val tL = boxR + 0.08f
+        val tR = (tL + LISTEN_ZEILEN_LAENGEN[idx]).coerceAtMost(pR - 0.07f)
+        val balkenFarbe = lerp(LISTE_ZEILE_TEXT, LISTE_ZEILE_ERLEDIGT, h * 0.85f)
+        val sZ = projS(tL, zy, zZ)
+        linie3D(tL, zy - 0.025f, zZ, tR, zy - 0.025f, zZ, balkenFarbe, 3.2f * density * sZ)
+        linie3D(tL, zy + 0.050f, zZ, tL + (tR - tL) * 0.62f, zy + 0.050f, zZ, balkenFarbe.copy(alpha = 0.48f), 2.1f * density * sZ)
+        // Feine grüne Erledigt-Spur beim Abhaken
+        if (h > 0.20f) {
+            val fortschritt = ((h - 0.20f) / 0.80f).coerceIn(0f, 1f)
+            linie3D(tL, zy - 0.025f, zZ - 0.008f, tL + (tR - tL) * fortschritt, zy - 0.025f, zZ - 0.008f, LISTE_HAKEN_GRUEN.copy(alpha = 0.72f), 1.4f * density * sZ)
+        }
+    }
+
+    // 7) Kleiner plastischer 3D-Einkaufswagen im Vordergrund unten rechts
+    // Gleitet weich hin und her, Räder drehen sich synchron zur Bewegung, Pakete hüpfen beim Abhaken mit!
+    val fahrt = 0.09f * sin(w)
+    val wx = 0.36f + fahrt
+    val wy = 0.36f + 0.015f * sin(w * 2f)
+    val wz = -0.34f
+    val radDreh = fahrt * 14f
+
+    // Korb-Abmessungen im 3D-Raum (trapezförmig: oben breiter, nach hinten verjüngt)
+    val kO = wy - 0.22f; val kU = wy + 0.14f
+    val kLO = wx - 0.26f; val kRO = wx + 0.30f
+    val kLU = wx - 0.19f; val kRU = wx + 0.22f
+    val kZV = wz - 0.16f; val kZH = wz + 0.16f
+    val draht = 1.65f * density * projS(wx, wy, wz)
+
+    // Hintere Korbwand (z = kZH)
+    fuelleQuad(kLO, kO, kZH, kRO, kO, kZH, kRU, kU, kZH, kLU, kU, kZH, LISTE_KORB_SCHATTEN.copy(alpha = 0.20f))
+    umrissQuad(kLO, kO, kZH, kRO, kO, kZH, kRU, kU, kZH, kLU, kU, kZH, LISTE_KORB_SCHATTEN.copy(alpha = 0.75f), draht * 0.85f)
+
+    // Korbboden
+    fuelleQuad(kLU, kU, kZV, kRU, kU, kZV, kRU, kU, kZH, kLU, kU, kZH, LISTE_KORB_SCHATTEN.copy(alpha = 0.32f))
+
+    // Drei bunte 3D-Einkaufspakete im Korb — hüpfen beim Abhaken des jeweiligen Listenpunkts auf!
+    fun zeichnePaket(px: Float, py: Float, pz: Float, wB: Float, hB: Float, tB: Float, farbe: Color, huepf: Float) {
+        val yTop = py - hB - huepf * 0.12f
+        val yBot = py - huepf * 0.12f
+        val x0 = px - wB * 0.5f; val x1 = px + wB * 0.5f
+        val z0 = pz - tB * 0.5f; val z1 = pz + tB * 0.5f
+        // Rechte Seitenfläche (dunkler)
+        fuelleQuad(x1, yTop, z0, x1, yTop, z1, x1, yBot, z1, x1, yBot, z0, lerp(farbe, Color.Black, 0.34f))
+        // Deckel (heller)
+        fuelleQuad(x0, yTop, z1, x1, yTop, z1, x1, yTop, z0, x0, yTop, z0, lerp(farbe, Color.White, 0.28f))
+        // Vorderseite
+        fuelleQuad(x0, yTop, z0, x1, yTop, z0, x1, yBot, z0, x0, yBot, z0, farbe)
+    }
+
+    val pop0 = sin(haken0 * PI.toFloat()).coerceIn(0f, 1f)
+    val pop1 = sin(haken1 * PI.toFloat()).coerceIn(0f, 1f)
+    val pop2 = sin(haken2 * PI.toFloat()).coerceIn(0f, 1f)
+    // Hinteres Paket zuerst, dann vordere (Painter's Order)
+    zeichnePaket(wx + 0.04f, kU - 0.01f, wz + 0.04f, 0.17f, 0.20f, 0.13f, LISTE_PAKET_3, pop2)
+    zeichnePaket(wx - 0.07f, kU - 0.01f, wz - 0.03f, 0.16f, 0.18f, 0.13f, LISTE_PAKET_1, pop0)
+    zeichnePaket(wx + 0.10f, kU - 0.01f, wz - 0.05f, 0.14f, 0.15f, 0.12f, LISTE_PAKET_2, pop1)
+
+    // Linke und rechte 3D-Korb-Querverbindungen + Schiebegriff
+    linie3D(kLO, kO, kZV, kLO, kO, kZH, LISTE_KORB_METALL, draht)
+    linie3D(kRO, kO, kZV, kRO, kO, kZH, LISTE_KORB_METALL, draht)
+    linie3D(kLU, kU, kZV, kLU, kU, kZH, LISTE_KORB_SCHATTEN, draht * 0.9f)
+    linie3D(kRU, kU, kZV, kRU, kU, kZH, LISTE_KORB_SCHATTEN, draht * 0.9f)
+
+    // Vordere Korbwand mit Gitterstreben (z = kZV)
+    fuelleQuad(kLO, kO, kZV, kRO, kO, kZV, kRU, kU, kZV, kLU, kU, kZV, LISTE_KORB_METALL.copy(alpha = 0.16f))
+    // Waagerechte Gitterlinie mittig
+    val mY = (kO + kU) * 0.5f
+    linie3D((kLO + kLU) * 0.5f, mY, kZV, (kRO + kRU) * 0.5f, mY, kZV, LISTE_KORB_METALL.copy(alpha = 0.72f), draht * 0.75f)
+    // Senkrechte Gitterstreben
+    for (g in 1..2) {
+        val fG = g / 3f
+        linie3D(kLO + (kRO - kLO) * fG, kO, kZV, kLU + (kRU - kLU) * fG, kU, kZV, LISTE_KORB_METALL.copy(alpha = 0.72f), draht * 0.75f)
+    }
+    umrissQuad(kLO, kO, kZV, kRO, kO, kZV, kRU, kU, kZV, kLU, kU, kZV, LISTE_KORB_METALL, draht)
+
+    // Schiebegriff links oben (am Korb-Ende mit farbigem Griffstück)
+    val gX = kLO - 0.11f; val gY = kO - 0.12f
+    linie3D(kLO, kO, kZV, gX, gY, kZV, LISTE_KORB_METALL, draht)
+    linie3D(kLO, kO, kZH, gX, gY, kZH, LISTE_KORB_SCHATTEN, draht * 0.9f)
+    linie3D(gX, gY, kZV, gX, gY, kZH, LISTE_GRIFF_KORALLE, draht * 1.9f)
+
+    // Untergestell (Stütze + Achse)
+    val achseY = kU + 0.12f
+    linie3D(kLU, kU, kZV, kLU - 0.04f, achseY, kZV, LISTE_KORB_METALL, draht * 0.9f)
+    linie3D(kLU - 0.04f, achseY, kZV, kRU + 0.02f, achseY, kZV, LISTE_KORB_METALL, draht * 0.9f)
+    linie3D(kLU - 0.04f, achseY, kZH, kRU + 0.02f, achseY, kZH, LISTE_KORB_SCHATTEN, draht * 0.8f)
+
+    // Zwei plastische 3D-Räder mit rotierenden Speichen
+    puffer.radX[0] = kLU - 0.01f
+    puffer.radX[1] = kRU - 0.01f
+    val radY = achseY + 0.07f
+    val radR = 0.068f
+    for (rIdx in 0..1) {
+        val rxPos = puffer.radX[rIdx]
+        val cx2d = projX(rxPos, radY, kZV)
+        val cy2d = projY(rxPos, radY, kZV)
+        val rPx = radR * skala * projS(rxPos, radY, kZV)
+        drawCircle(Color(0xFF1F1410), rPx, Offset(cx2d, cy2d))
+        drawCircle(LISTE_KORB_METALL, rPx, Offset(cx2d, cy2d), style = Stroke(width = 1.6f * density))
+        // Rotierende Speiche
+        val sx0 = cos(radDreh) * rPx * 0.7f
+        val sy0 = sin(radDreh) * rPx * 0.7f
+        drawLine(LISTE_KUPFER, Offset(cx2d - sx0, cy2d - sy0), Offset(cx2d + sx0, cy2d + sy0), strokeWidth = 1.2f * density, cap = StrokeCap.Round)
+        drawCircle(LISTE_CLIP_GOLD, rPx * 0.28f, Offset(cx2d, cy2d))
     }
 }
 
