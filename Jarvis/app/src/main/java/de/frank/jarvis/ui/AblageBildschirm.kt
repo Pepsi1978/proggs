@@ -177,7 +177,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var offenerAnhang by rememberSaveable { mutableStateOf<String?>(null) }
     var loeschFrage by remember { mutableStateOf<Pair<Eintrag, Anhang?>?>(null) }
 
-    val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k } }
+    // Ein noch gemerkter Filter auf einen ausgeblendeten Reiter fällt auf „Alle“ zurück.
+    LaunchedEffect(filter) { if (filter != null && AUSGEBLENDETE_REITER.any { it.name == filter }) filter = null }
+    val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k && it !in AUSGEBLENDETE_REITER } }
     // Filtern und Sortieren abseits des Hauptfadens; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
     // null = erste Berechnung läuft noch: Erst danach darf „Nichts gefunden“ oder „Noch nichts abgelegt“ erscheinen.
     var sicht by remember { mutableStateOf<List<Eintrag>?>(null) }
@@ -310,7 +312,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             val listenOffenZahl = remember(listenStand) { listenStand.listen.sumOf { listenStand.offen(it.id) } }
             // „Alle“ vorn, danach alle Bereiche alphabetisch; der Inhalt steht in Klammern.
             class Bereich(val name: String, val zahl: Int, val kennung: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-            val bereiche = Kategorie.entries.map { k -> Bereich(k.anzeige, zahlen[k] ?: 0, k.name, kategorieSymbol(k)) } + listOf(
+            val bereiche = Kategorie.entries.filter { it !in AUSGEBLENDETE_REITER }.map { k -> Bereich(k.anzeige, zahlen[k] ?: 0, k.name, kategorieSymbol(k)) } + listOf(
                 Bereich("Prompts", promptZahl, PROMPTS_REITER, Icons.Rounded.Bolt),
                 Bereich("Erinnerung", erinnerungZahl, ERINNERUNG_REITER, Icons.Rounded.NotificationsActive),
                 Bereich("Listen", listenOffenZahl, LISTEN_REITER, Icons.Rounded.Checklist),
@@ -689,6 +691,9 @@ fun dateiSymbol(art: Art): ImageVector = when (art) {
     Art.ARCHIV -> Icons.Rounded.FolderZip
     Art.SONSTIGE -> Icons.Rounded.InsertDriveFile
 }
+
+/** Reiter, die die Ablage nicht zeigt (Frank nutzt sie nicht). Die Dateien bleiben gespeichert und stehen unter „Alle“. */
+private val AUSGEBLENDETE_REITER = setOf(Kategorie.TABELLEN, Kategorie.PRAESENTATIONEN, Kategorie.AUDIO)
 
 private fun kategorieSymbol(k: Kategorie): ImageVector = when (k) {
     Kategorie.TEXTE -> Icons.AutoMirrored.Rounded.Article
