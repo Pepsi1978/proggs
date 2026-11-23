@@ -891,6 +891,21 @@
       "ruecknahme": "In build-ablauf-guard.py \"'--porcelain', '-uall', '--', '.'\" wieder zu \"'--porcelain', '--', '.'\" machen und die Kommentarzeile mit '-uall: Eine ganz neue' entfernen.",
       "kosten": "keine (nur bei Bauaufrufen, git status listet unversionierte Dateien des App-Ordners einzeln)",
       "status": "aktiv"
+    },
+    {
+      "id": "M49",
+      "titel": "Drag-Modul M1.2: order/onMove müssen State live lesen (nur ein Tausch pro Geste)",
+      "datum": "2026-11-23T20:41",
+      "beleg": "Sitzung 2e2a482b: 4,3 min Modellpause mit Compose-Bytecode-Analyse, bevor die eingefrorene alleIds-Lambda als Ursache gefunden war",
+      "ort": [
+        "Module/Android/M1.2-Drag-and-Drop/MODUL.md",
+        "bugs/android/jetpack-compose.md"
+      ],
+      "messbar": false,
+      "pruefung": "Von Hand: Taucht bei einem Drag-Fehler mit 'nur ein Tausch' wieder eine lange Ursachensuche im Modul statt in der Host-Anbindung auf, wirkt die Maßnahme nicht.",
+      "ruecknahme": "In MODUL.md den Absatz ab '`order` und `onMove` müssen den Reihenfolge-' und im Almanach die Zeile ab '**Variante (Jarvis 1.8.935):**' entfernen.",
+      "kosten": "keine (nur Bedarfsdateien)",
+      "status": "aktiv"
     }
   ]
 }

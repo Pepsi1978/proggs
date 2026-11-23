@@ -65,6 +65,8 @@ Nichts — alles läuft über Parameter. Zwei Dinge muss die App aber **lassen**
 | Der Karte einen eigenen Zeige-Effekt per `pointerInput` geben (Kippen, Neigen, Drücken) | Der fängt die Zieh-Geste ab, und die Liste hakt. In GenialeIdeen ist `IdeenKarte` deshalb ausdrücklich **nicht** kippbar |
 | Eine andere Liste als `LazyColumn` benutzen | Das Modul rechnet über `LazyListState` und nur senkrecht. Waagerecht oder `LazyVerticalGrid` geht nicht |
 
+`order` und `onMove` müssen den Reihenfolge-**State live lesen** (`{ reihenfolge }` mit `by mutableStateOf`), nie ein abgeleitetes `val` wie `alleIds`: Das Modul behält die Lambdas die ganze Geste, ein eingefangenes `val` erlaubt nur einen Tausch pro Geste (Jarvis Mentalität 1.8.935).
+
 Der `key` der `LazyColumn` **muss** derselbe `Long` sein, den `order` liefert —
 darüber findet das Modul die Karte.
 

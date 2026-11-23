@@ -340,6 +340,8 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 
 ### 4.9 Drag & Drop springt, flattert oder verliert die Karte am Listenrand
 
+**Variante (Jarvis 1.8.935):** Nur ein Platzwechsel pro Geste, Nachbarn weichen danach nicht mehr aus → `order`/`onMove` lesen ein abgeleitetes `val` statt des States; das Modul M1.2 hält die Lambdas ab dem Greifen fest. Fix: State live lesen.
+
 **Symptom:** Karte springt beim Umsortieren, erscheint schräg, Nachbarn flattern oder verdecken sie;
 am oberen Rand verschwindet sie und beim Richtungswechsel scrollt die Liste unzuverlässig.
 **Ursache:** Lokaler Implementierungsfehler: Nachbarhöhen ohne Kartenabstände aufsummiert,
