@@ -39,9 +39,22 @@ laeuft() { pgrep -f "OpenLauncher.app/Contents/MacOS/OpenLauncher" >/dev/null 2>
 # OPENLAUNCHER_UPDATE_FORCE=1 ueberspringt die Frage, NUR auf ausdrueckliche Ansage des Benutzers.
 DIALOG_TIMEOUT="${OPENLAUNCHER_UPDATE_DIALOG_TIMEOUT:-240}"
 
+# Scheitert osascript selbst (System Events beschaeftigt, AppleEvent-Zeitlimit), kam nie ein Fenster: das ist
+# kein "Nein" von Frank. Einmal neu versuchen, sonst "FEHLER:<Meldung>" (wird zu dialog-fehler, nichts geaendert).
 frage_freigabe() {
+    local frage="$1" out versuch err
+    err=$(mktemp -t launcher-dialog)
+    for versuch in 1 2; do
+        if out=$(dialog_zeigen "$frage" 2>"$err"); then rm -f "$err"; echo "$out"; return; fi
+        [ "$versuch" = 1 ] && sleep 2
+    done
+    echo "FEHLER:$(tr '\n' ' ' < "$err")"
+    rm -f "$err"
+}
+
+dialog_zeigen() {
     local frage="$1"
-    osascript - "$frage" "$DIALOG_TIMEOUT" <<'AS' 2>/dev/null || echo "Nein"
+    osascript - "$frage" "$DIALOG_TIMEOUT" <<'AS'
 on run argv
     tell application "System Events"
         activate
@@ -90,6 +103,7 @@ Jetzt aktualisieren?"
     case "$ANTWORT" in
         Ja) hinweis "Update per Klick freigegeben." ;;
         TIMEOUT) echo "LAUNCHER_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DIALOG_TIMEOUT Sekunden -- nichts geaendert)"; exit 0 ;;
+        FEHLER:*) echo "LAUNCHER_UPDATE_STATUS=dialog-fehler (Fenster liess sich nicht zeigen: ${ANTWORT#FEHLER:} -- nichts geaendert)"; exit 0 ;;
         *) echo "LAUNCHER_UPDATE_STATUS=cancelled"; exit 0 ;;
     esac
 fi
