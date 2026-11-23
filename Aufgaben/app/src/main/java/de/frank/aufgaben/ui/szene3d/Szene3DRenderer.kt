@@ -178,11 +178,12 @@ internal class Szene3DRenderer {
         val doorExit = smootherPhase(t, 32.1f, 1.15f) * (1f - smootherPhase(t, 34.9f, 0.95f))
         curDoorAngle = max(doorEnter, doorExit) * 72f
 
-        // Stuhl schwenkt beim Hinsetzen (7.0..8.3s) zum Tisch und beim Aufstehen (30.5..31.7s) leicht zurück
+        // Stuhl schwenkt beim Hinsetzen (7.0..8.3s) zum Tisch, beim Katzen-Streicheln leicht nach rechts (-14°) zur Katze und beim Aufstehen zurück
         val sitIn = smootherPhase(t, 7.0f, 1.25f)
         val standOut = smootherPhase(t, 30.5f, 1.15f)
         val sitFactor = sitIn * (1f - standOut)
-        curChairSwivel = mix(-34f, 0f, sitFactor) + sin(t * 0.9f) * 1.4f * sitFactor
+        val petSwivel = smootherPhase(t, 21.3f, 1.0f) * (1f - smootherPhase(t, 25.8f, 1.0f))
+        curChairSwivel = mix(-34f, 0f, sitFactor) - petSwivel * 14f + sin(t * 0.9f) * 1.4f * sitFactor
         // Sanftes Einfedern beim Hinsetzen
         val bounce = sin(phase(t, 7.2f, 0.9f) * PI_F) * 0.024f
         curChairDrop = sitFactor * 0.014f + bounce
@@ -849,14 +850,14 @@ internal class Szene3DRenderer {
                 }
             }
 
-            // ---- Mauspad & 3D-Maus ----
+            // ---- Mauspad & 3D-Maus (knapp neben Tastatur, damit rechts Platz für die Katze bleibt) ----
             ms.scoped {
-                ms.translate(-0.14f, 0.766f, 0.30f)
-                ms.scoped { ms.scale(0.22f, 0.006f, 0.20f); drawMesh(meshes.beveledBox, hexLinear(0x282B33), rough = 0.88f) }
-                val mouseShift = if (curScreenOn > 0.5f && curMugInHand < 0.5f) sin(curTime * 2.1f) * 0.014f else 0f
+                ms.translate(-0.15f, 0.766f, 0.24f)
+                ms.scoped { ms.scale(0.18f, 0.006f, 0.16f); drawMesh(meshes.beveledBox, hexLinear(0x282B33), rough = 0.88f) }
+                val mouseShift = if (curScreenOn > 0.5f && curMugInHand < 0.5f) sin(curTime * 2.1f) * 0.012f else 0f
                 ms.scoped {
                     ms.translate(mouseShift, 0.018f, mouseShift * 0.5f)
-                    ms.scale(0.095f, 0.032f, 0.058f)
+                    ms.scale(0.090f, 0.030f, 0.055f)
                     drawMesh(meshes.sphere, offWhiteRgb, rough = 0.30f)
                 }
             }
@@ -1161,11 +1162,11 @@ internal class Szene3DRenderer {
             // 9.2..13.5s: Konzentriertes Arbeiten & Tippen
             t < 13.5f -> typingPose(t)
 
-            // 13.5..16.1s: Nach Kaffee greifen, Schluck trinken, wieder abstellen
+            // 13.5..16.1s: Nach Kaffee greifen (links auf dem Tisch -> +Y-Drehung), Schluck trinken, wieder abstellen
             t < 16.1f -> {
                 val tp = typingPose(t)
-                val reach = sitPose(lean = 12f, twist = -8f, headYaw = -12f, headPitch = 12f, shL = 42f, elbL = 62f, shR = 56f, shROut = -8f, elbR = 36f)
-                val sip = sitPose(lean = 4f, twist = -4f, headYaw = -4f, headPitch = -10f, shL = 36f, elbL = 62f, shR = 48f, shROut = -4f, elbR = 114f)
+                val reach = sitPose(lean = 12f, twist = 8f, headYaw = 12f, headPitch = 12f, shL = 42f, elbL = 62f, shR = 56f, shROut = -8f, elbR = 36f)
+                val sip = sitPose(lean = 4f, twist = 4f, headYaw = 4f, headPitch = -10f, shL = 36f, elbL = 62f, shR = 48f, shROut = -4f, elbR = 114f)
                 when {
                     t < 14.0f -> lerpPose(tp, reach, phase(t, 13.5f, 0.5f))
                     t < 14.6f -> lerpPose(reach, sip, phase(t, 14.0f, 0.6f))
@@ -1175,51 +1176,56 @@ internal class Szene3DRenderer {
                 }
             }
 
-            // 16.1..17.6s: Schreibtischlampe anschalten als es dämmert
+            // 16.1..17.6s: Schreibtischlampe links anschalten (+Y-Drehung) als es dämmert
             t < 17.6f -> {
                 val tp = typingPose(t)
-                val lampReach = sitPose(lean = 18f, twist = -14f, headYaw = -18f, headPitch = 4f, shL = 40f, elbL = 60f, shR = 72f, shROut = -12f, elbR = 24f)
+                val lampReach = sitPose(lean = 18f, twist = 14f, headYaw = 18f, headPitch = 4f, shL = 40f, elbL = 60f, shR = 72f, shROut = -12f, elbR = 24f)
                 when {
                     t < 16.95f -> lerpPose(tp, lampReach, phase(t, 16.3f, 0.65f))
                     else -> lerpPose(lampReach, tp, phase(t, 16.95f, 0.65f))
                 }
             }
 
-            // 17.6..21.9s: Weiter tippen, ab 21.0s neugierig zur springenden Katze schauen
+            // 17.6..21.9s: Weiter tippen, ab 20.4s sofort nach rechts (-Y) zur springenden Katze schauen
             t < 21.9f -> {
                 val tp = typingPose(t)
-                val lookCat = smootherPhase(t, 20.8f, 1.0f)
+                val lookCat = smootherPhase(t, 20.4f, 1.1f)
                 tp.copy(
-                    headYaw = mix(tp.headYaw, 34f, lookCat),
+                    torsoTwist = mix(tp.torsoTwist, -14f, lookCat),
+                    headYaw = mix(tp.headYaw, -36f, lookCat),
                     headPitch = mix(tp.headPitch, 14f, lookCat),
                 )
             }
 
-            // 21.9..26.2s: Katze auf der Tischecke liebevoll streicheln
-            t < 26.2f -> {
+            // 21.9..26.5s: Zur Katze auf der Tischecke drehen (-Y = rechts!), sie direkt anschauen und über Kopf & Rücken streicheln
+            t < 26.5f -> {
                 val tp = typingPose(t)
-                val stroke = sin(t * 4.2f)
+                val stroke01 = 0.5f + 0.5f * sin(t * 4.4f)
                 val pet = sitPose(
-                    lean = 12f, twist = 16f,
-                    headYaw = 32f + stroke * 3f, headPitch = 18f,
-                    shL = 34f, shLOut = 10f, elbL = 60f,
-                    shR = 52f + stroke * 8f, shROut = 28f, elbR = 46f - stroke * 10f,
+                    lean = 14f,
+                    twist = -22f,
+                    headYaw = -16f - stroke01 * 4f,
+                    headPitch = 14f + stroke01 * 3f,
+                    shL = 28f, shLOut = 10f, elbL = 56f,
+                    shR = mix(92f, 96f, stroke01),
+                    shROut = -12f,
+                    elbR = mix(52f, 22f, stroke01),
                 )
                 when {
-                    t < 22.6f -> lerpPose(tp, pet, phase(t, 21.9f, 0.7f))
-                    t < 25.5f -> pet
-                    else -> lerpPose(pet, tp, phase(t, 25.5f, 0.7f))
+                    t < 22.45f -> lerpPose(tp, pet, phase(t, 21.9f, 0.55f))
+                    t < 25.85f -> pet
+                    else -> lerpPose(pet, tp, phase(t, 25.85f, 0.65f))
                 }
             }
 
-            // 26.2..28.6s: Letzte Aufgaben abhaken
+            // 26.5..28.6s: Letzte Aufgaben abhaken
             t < 28.6f -> typingPose(t)
 
             // 28.6..30.5s: Zufrieden strecken & Lampe/PC ausschalten
             t < 30.5f -> {
                 val tp = typingPose(t)
                 val stretch = sitPose(lean = -8f, headPitch = -12f, shL = 148f, shLOut = 28f, elbL = 22f, shR = 148f, shROut = 28f, elbR = 22f)
-                val offReach = sitPose(lean = 14f, twist = -10f, headYaw = -12f, shL = 32f, elbL = 54f, shR = 66f, shROut = -10f, elbR = 26f)
+                val offReach = sitPose(lean = 14f, twist = 10f, headYaw = 12f, shL = 32f, elbL = 54f, shR = 66f, shROut = -10f, elbR = 26f)
                 when {
                     t < 29.3f -> lerpPose(tp, stretch, phase(t, 28.6f, 0.7f))
                     t < 29.8f -> stretch
@@ -1468,24 +1474,24 @@ internal class Szene3DRenderer {
                 CatPose(cx, cy, cz, mix(38f, 52f, k), pitch, 0f, k * PI_F, 0f, 0f, 0f, -10f, 15f, 10f, earT, blink)
             }
 
-            // 22.0..28.3s: Auf der Schreibtischente sitzen, gestreichelt werden & Bildschirm beobachten
+            // 22.0..28.3s: Auf der Schreibtischente sitzen, zum Menschen schauen, genüsslich gestreichelt werden
             t < 28.3f -> {
-                val turn = smootherPhase(t, 22.0f, 0.65f)
-                val sit = smootherPhase(t, 22.15f, 0.7f) * (1f - smootherPhase(t, 27.9f, 0.4f))
-                val petted = smootherPhase(t, 22.4f, 0.5f) * (1f - smootherPhase(t, 25.6f, 0.5f))
-                val purrNod = sin(t * 4.2f) * 6f * petted
+                val turn = smootherPhase(t, 22.0f, 0.55f)
+                val sit = smootherPhase(t, 22.15f, 0.65f) * (1f - smootherPhase(t, 27.9f, 0.4f))
+                val petted = smootherPhase(t, 22.25f, 0.45f) * (1f - smootherPhase(t, 25.95f, 0.5f))
+                val purrNod = sin(t * 4.4f) * 7f * petted
                 CatPose(
                     deskCatX, deskCatY, deskCatZ,
-                    mix(52f, 178f, turn),
-                    24f * sit - petted * 6f,
+                    mix(52f, 165f, turn),
+                    24f * sit - petted * 5f,
                     0.028f * sit,
                     0f, 0f, sit,
-                    mix(0f, -18f, turn) + purrNod * 0.5f,
-                    -6f + purrNod,
-                    32f + petted * 22f,
-                    16f + petted * 14f,
+                    mix(0f, 6f, turn) + purrNod * 0.4f,
+                    -14f * petted + purrNod,
+                    36f + petted * 26f,
+                    16f + petted * 16f,
                     earT,
-                    max(blink, petted * 0.55f),
+                    max(blink, petted * 0.65f),
                 )
             }
 
@@ -1748,8 +1754,8 @@ internal class Szene3DRenderer {
         private const val CHAIR_WORLD_X = 0.468f
         private const val CHAIR_WORLD_Z = -0.108f
 
-        // Katzen-Landeplatz auf der vorderen linken Tischecke (desk-lokal (-0.08, 0.763, +0.48))
-        private const val CAT_DESK_X = 1.118f
-        private const val CAT_DESK_Z = 0.086f
+        // Katzen-Landeplatz auf der vorderen rechten Tischecke in bequemer Streichelreichweite (desk-lokal (-0.14, 0.763, +0.40))
+        private const val CAT_DESK_X = 1.030f
+        private const val CAT_DESK_Z = 0.041f
     }
 }
