@@ -11,8 +11,8 @@ Nachtrags selbst.
            (injectSteps userMessage, Test vom 23.11.2026). Dazu abgekoppelt das Lebenszeichen und neue Zwischentexte.
   post     PostToolUse: abgekoppelt neue Zwischentexte, geänderte Dateien, Bau, Commit, Push, Installation an Jarvis
            (jarvis_hook.post mit JARVIS_CLI=antigravity, wie das OpenCode-Plugin).
-  stop     Stop: meldet neue Zwischentexte. Liegt ein Nachtrag im Eingang, läuft die Sitzung weiter (decision continue) und
-           pre gibt ihn hinein. Sonst ruht die Sitzung ab hier.
+  stop     Stop: Liegt ein Nachtrag im Eingang, läuft die Sitzung weiter (decision continue, nur Zwischentexte) und pre gibt
+           ihn hinein. Sonst ruht die Sitzung ab hier: letzte Antwort als Bericht „info“ an Jarvis, der Punkt erlischt.
   warter   Abgekoppelt (einer je Auftrag, bis agy endet, höchstens 12 h): holt Nachträge vom Relay in den Eingang. Ruht die
            Sitzung, tippt er einen kurzen Weckruf in ihren Terminal-Tab (AppleScript do script); den Nachtrag selbst gibt pre.
   bericht  Abgekoppelter Teil von pre, post und stop.
@@ -393,11 +393,14 @@ def stop(eingabe: dict) -> dict | None:
     # Erst „ruht“ setzen, dann den Eingang prüfen: Kommt ein Nachtrag genau jetzt, sieht ihn der Stop oder der Warter.
     datei("ruht").touch()
     sorge_fuer_warter()
-    abgekoppelt("stop", eingabe)
     if offene_ids(lies_eingang()):
         datei("ruht").unlink(missing_ok=True)
+        # Die Sitzung arbeitet gleich weiter: nur die Zwischentexte, kein Zugende (der orange Punkt bleibt an).
+        abgekoppelt("weiter", eingabe)
         return {"decision": "continue",
                 "reason": "Frank hat über Jarvis einen Nachtrag zu diesem Auftrag geschickt; er folgt als nächste Nachricht."}
+    # Zugende wie bei Claude Code: Bericht als „info“, Jarvis zeigt die Sitzung danach als ruhend (Punkt aus).
+    abgekoppelt("stop", eingabe)
     return None
 
 
@@ -486,12 +489,56 @@ def bericht(eingabe: dict) -> None:
         raise
 
 
+def letzte_antwort(pfad: str) -> str:
+    """Die letzte Antwort des Modells im Transkript, falls sie schon ein früherer Bericht gelesen hat."""
+    try:
+        with open(pfad, "rb") as f:
+            f.seek(max(0, os.fstat(f.fileno()).st_size - 400_000))
+            zeilen = f.read().decode("utf-8", "replace").splitlines()
+    except OSError:
+        return ""
+    for zeile in reversed(zeilen):
+        try:
+            s = json.loads(zeile)
+        except Exception:
+            continue
+        if s.get("type") == "PLANNER_RESPONSE" and s.get("source") == "MODEL" and s.get("content"):
+            return str(s["content"])
+    return ""
+
+
+def zugende(pfad: str, texte: list[str]) -> None:
+    """Stop ohne Nachtrag: Die Sitzung ruht. Wie Claude Code (jarvis_hook.stop) geht die letzte Antwort als Bericht „info“
+    an Jarvis; „info“ setzt dort arbeitet=false, der orange Punkt erlischt, auch wenn agy offen bleibt. Vorher kamen am Zugende
+    nur Zwischentexte als „laeuft“, und der Punkt lief bis zur 20-Minuten-Frist weiter (Vorfall 23.11.2026, 2277L)."""
+    letzte = H.ohne_zitat(H.lesbar(texte[-1] if texte else letzte_antwort(pfad)))
+    if len(texte) > 1:
+        H.post({"tool_name": "", "texte": texte[:-1]})
+    try:
+        with H.Sperre():
+            z = H.lies_zustand()
+            neu = bool(letzte) and not H.schon_gesehen(z, letzte)
+            dauer = H.dauer_text(time.time() - z["beginn"])
+            H.schreib_zustand(z)
+    except H.SperreBelegt:
+        neu, dauer = bool(letzte), ""
+    # Der nächste Modellaufruf (Weckruf, Nachtrag, Eingabe am Rechner) meldet sofort wieder ein Lebenszeichen.
+    (H.ORDNER / f"puls-{AUFTRAG}.txt").unlink(missing_ok=True)
+    if neu:
+        H.melde("info", "🏁 " + letzte + (f"\n\n⏱️ Dauer seit Start: {dauer}" if dauer else ""))
+    else:
+        H.melde("laeuft", "🏁 Zug beendet, Antigravity wartet.", extra={"leerlauf": True})
+
+
 def melden(art, eingabe: dict, pfad: str, texte: list[str]) -> None:
     if art == "pre":
         H.puls({"tool_name": "", "texte": texte})
         return
-    if art == "stop":
+    if art == "weiter":
         H.post({"tool_name": "", "texte": texte})
+        return
+    if art == "stop":
+        zugende(pfad, texte)
         return
     aufruf = eingabe.get("toolCall") or {}
     name, args = str(aufruf.get("name") or ""), aufruf.get("args") or {}
