@@ -119,6 +119,20 @@ object MentalitaetSpeicher {
             geladen = false
             laden(context.applicationContext)
         }
+        liveAuffrischen(context, "Abgleich Mentalität")
+    }
+
+    /** Für das Live-Gedächtnis: die aktuell hinterlegten Sätze frisch aus der Datei, in ihrer Reihenfolge. */
+    fun gedaechtnis(context: Context): String {
+        val d = datei(context.applicationContext)
+        if (!d.exists()) return "Frank hat noch keine mentalen Sätze hinterlegt."
+        val liste = runCatching { parseListe(d.readText()) }.getOrElse { return "NICHT VERFÜGBAR: Mentalität-Datei nicht lesbar" }
+        if (liste.isEmpty()) return "Frank hat noch keine mentalen Sätze hinterlegt."
+        return liste.joinToString("\n") { "- " + it.text.replace(Regex("\\s+"), " ") }
+    }
+
+    private fun liveAuffrischen(context: Context, anlass: String) {
+        runCatching { de.frank.jarvis.gedaechtnis.Lagebild.anstossen(context.applicationContext, listOf(de.frank.jarvis.gedaechtnis.Bereich.MENTALITAET), anlass) }
     }
 
     /**
@@ -229,6 +243,7 @@ object MentalitaetSpeicher {
         _stand.value = liste
         _hinweis.value = null
         runCatching { de.frank.jarvis.abgleich.GedaechtnisAbgleich.anstossen() }
+        liveAuffrischen(context, "Mentalität geändert")
     }
 
     suspend fun hinzufuegen(context: Context, text: String, wiederholungen: Int = MIN_WIEDERHOLUNGEN): MentalSatz? {

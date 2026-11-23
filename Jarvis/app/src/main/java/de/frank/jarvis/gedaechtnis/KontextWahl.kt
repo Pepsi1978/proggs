@@ -53,6 +53,7 @@ object KontextWahl {
         Bereich.LISTEN -> Profil(Rolle.IMMER)
         Bereich.VERAENDERUNGEN -> Profil(Rolle.IMMER)
         Bereich.WECKER -> Profil(Rolle.IMMER)
+        Bereich.MENTALITAET -> Profil(Rolle.STANDARD, listOf("mental", "einstellung", "haltung", "fülle", "mangel", "loslassen", "abschalten", "grübel", "gedanken", "stress", "gestresst", "motivation", "disziplin", "resilienz", "gelassen", "ruhe", "zuversicht", "selbstvertrauen", "glücklich", "dankbar", "sinn=", "leitsatz", "mantra", "affirmation", "schlechte laune", "frust", "ärger", "angst", "sorge", "rückschlag", "bewusstsein"))
         Bereich.AUFGABEN -> Profil(Rolle.STANDARD, listOf("aufgabe", "todo", "to-do", "erledig", "abhak", "hake ", "entropie", "priorität", "anstehen", "steht an", "planen", "planung"), listOf(Bereich.ZIELE))
         Bereich.AUSWERTUNG -> Profil(Rolle.STANDARD, listOf("auswertung", "guten morgen", "wie geht es mir", "wie geht's mir", "einschätzung", "tagesplan", "wie war mein tag"))
         Bereich.GESPRAECHE -> Profil(Rolle.STANDARD, listOf("gespräch", "gesprochen", "vorhin", "letztens", "worüber", "besprochen", "erzählt", "unterhalten", "hatten wir"))

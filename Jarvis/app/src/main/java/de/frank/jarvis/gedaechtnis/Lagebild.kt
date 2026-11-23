@@ -67,6 +67,7 @@ enum class Bereich(
     ERINNERUNGEN("erinnerungen", "Erinnerungen", "ERINNERUNGEN (passende von dir aus ansprechen; alle mit erinnerungen_lesen)", 15 * 60_000L, true, true, 3_000L),
     LISTEN("listen", "Listen", "LISTEN (offene Einträge je Liste, Unterpunkte eingerückt; alles mit listen_lesen)", 15 * 60_000L, true, true, 2_000L),
     VERAENDERUNGEN("veraenderungen", "Veränderungen", "VERÄNDERUNGEN (Franks Lebensveränderungen mit Grund: AKTUELL = gerade in Umsetzung, in jeder Antwort berücksichtigen; OFFEN = steht noch an, nur passend ansprechen; veraenderungen_lesen)", 15 * 60_000L, true, true, 2_000L),
+    MENTALITAET("mentalitaet", "Mentalität", "MENTALITÄT (Franks persönliche mentale Sätze aus Tools → Mentalität, ihm wichtig für Haltung und Einstellung; in passenden Gesprächen als persönlichen Kontext berücksichtigen und aufgreifen, nicht ungefragt aufzählen)", 30 * 60_000L, true, true, 2_000L),
     WECKER("wecker", "Genialer Wecker", "WECKER (Genialer Wecker)", 30 * 60_000L, true, true, 4_000L),
     STACKS(
         "stacks", "Stack-Labor",
@@ -410,6 +411,7 @@ object Lagebild {
             Bereich.ERINNERUNGEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.ErinnerungenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.LISTEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.ListenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.VERAENDERUNGEN -> alle.filterIsInstance<de.frank.jarvis.faehigkeit.VeraenderungenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
+            Bereich.MENTALITAET -> de.frank.jarvis.mentalitaet.MentalitaetSpeicher.gedaechtnis(app)
             Bereich.WECKER -> alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick(mitJetzt = false) ?: "NICHT VERFÜGBAR"
             Bereich.STACKS -> alle.filterIsInstance<StackLaborFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.GESPRAECHE -> Gespraechsgedaechtnis.kurzzeit(app)
@@ -748,7 +750,7 @@ object Lagebild {
     private const val MONATE_MINDESTENS = 3_000
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
-        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.ERINNERUNGEN to 1_500, Bereich.LISTEN to 1_500, Bereich.VERAENDERUNGEN to 2_200, Bereich.WECKER to 700,
+        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.ERINNERUNGEN to 1_500, Bereich.LISTEN to 1_500, Bereich.VERAENDERUNGEN to 2_200, Bereich.MENTALITAET to 1_500, Bereich.WECKER to 700,
         Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.KONTINGENTE to 2_600, Bereich.WETTER to 900, Bereich.TENDA to 700,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
