@@ -339,10 +339,11 @@ def bau_ohne_bump(cmd, cwd, powershell=False):
         log = os.path.join(basis, 'app', 'src', 'main', 'assets', 'versionslog.json')
         if not os.path.isfile(log):
             continue
-        r = subprocess.run(['git', '-C', basis, 'status', '--porcelain', '--', '.'],
+        r = subprocess.run(['git', '-C', basis, 'status', '--porcelain', '-uall', '--', '.'],
                            capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=frist(4))
         if r.returncode != 0:
             continue
+        # -uall: Eine ganz neue, noch unversionierte App zeigt sonst nur "?? ./" statt ihres Versionslogs (M-Sitzung 40f80399).
         zeilen = [z[3:].strip().strip('"') for z in r.stdout.splitlines() if len(z) > 3]
         if not zeilen:
             continue

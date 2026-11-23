@@ -874,6 +874,23 @@
       "plattform": [
         "mac"
       ]
+    },
+    {
+      "id": "M48",
+      "titel": "build-ablauf-guard: ganz neue, unversionierte App nicht als 'Version nicht gebumpt' blocken (git status -uall)",
+      "datum": "2026-11-23T19:26",
+      "beleg": "Sitzung 40f80399: erster Bau der neuen App AntigravityKompass wurde geblockt, weil git status nur '?? ./' statt des neuen versionslog.json zeigte; 1 Fehlblock, Umweg über git add -N",
+      "ort": [
+        "claude-code-setup/hooks/build-ablauf-guard.py"
+      ],
+      "fehler_regex": "STOPP - erst die Version bumpen",
+      "fehler_am_aufruf": true,
+      "werkzeug": "Bash",
+      "messbar": false,
+      "pruefung": "Von Hand: Blockt der Hook den ersten Bau einer neu angelegten, noch nie committeten App, wirkt die Maßnahme nicht.",
+      "ruecknahme": "In build-ablauf-guard.py \"'--porcelain', '-uall', '--', '.'\" wieder zu \"'--porcelain', '--', '.'\" machen und die Kommentarzeile mit '-uall: Eine ganz neue' entfernen.",
+      "kosten": "keine (nur bei Bauaufrufen, git status listet unversionierte Dateien des App-Ordners einzeln)",
+      "status": "aktiv"
     }
   ]
 }
