@@ -56,9 +56,40 @@ object ProgrammiererVorlage {
     fun cliOptionen(modell: String): List<Pair<String, String>> =
         KNOPF_MODELLE.firstOrNull { it.wert == modell }?.clis.orEmpty().map { it to CLI_KNOPF.getValue(it) }
 
-    /** Einstieg je Modell und gewähltem CLI → (Modell, CLI). */
+    /** Review-Werte der Vorwahl (gleich wie in ProgrammierFaehigkeit): nein, standard, sehr_ausfuehrlich. */
+    const val REVIEW_NEIN = "nein"
+    const val REVIEW_STANDARD = "standard"
+    const val REVIEW_SEHR_AUSFUEHRLICH = "sehr_ausfuehrlich"
+    /** Zusatz vor dem Doppelpunkt des Einstiegs je Review-Wahl (Antigravity, Franks Wunsch vom 23.11.2026: Wahl vor dem Absenden). */
+    private val REVIEW_ZUSATZ = linkedMapOf(
+        REVIEW_NEIN to ", ohne Code-Review",
+        REVIEW_STANDARD to ", mit Code-Review Standard",
+        REVIEW_SEHR_AUSFUEHRLICH to ", mit sehr ausführlichem Code-Review (bis 100 Findings)",
+    )
+    const val REVIEW_FRAGE = "Soll nach der Programmierung ein Code-Review durchgeführt werden?"
+    const val REVIEW_UMFANG_FRAGE = "Wie ausführlich? Sehr ausführlich = bis zu 100 Findings."
+    val REVIEW_OPTIONEN = listOf("ja" to "Ja", REVIEW_NEIN to "Nein")
+    val REVIEW_UMFANG_OPTIONEN = listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich")
+
+    /** Fragt der Programmierbutton nach Modell und CLI noch das Review? Nur im Antigravity CLI (die Sitzung kann nicht selbst fragen). */
+    fun reviewVorwahl(cli: String): Boolean = OpenLauncherKatalog.cliAus(cli) == "antigravity" || cli == "antigravity"
+
+    private fun mitReview(einstieg: String, review: String) = einstieg.removeSuffix(":") + REVIEW_ZUSATZ.getValue(review) + ":"
+
+    /** Einstieg je Modell und gewähltem CLI → (Modell, CLI); bei Antigravity auch je Review-Wahl. */
+    private val REVIEW_EINSTIEGE: Map<String, Triple<String, String, String>> =
+        KNOPF_MODELLE.flatMap { k -> k.clis.filter { reviewVorwahl(it) }.flatMap { c -> REVIEW_ZUSATZ.keys.map { r -> mitReview(cliEinstieg(k, c), r) to Triple(k.wert, c, r) } } }.toMap()
     private val CLI_EINSTIEGE: Map<String, Pair<String, String>> =
-        KNOPF_MODELLE.flatMap { k -> k.clis.map { cliEinstieg(k, it) to (k.wert to it) } }.toMap()
+        KNOPF_MODELLE.flatMap { k -> k.clis.map { cliEinstieg(k, it) to (k.wert to it) } }.toMap() +
+            REVIEW_EINSTIEGE.mapValues { (_, t) -> t.first to t.second }
+
+    /** Der Einstieg zum Knopf [modell] im [cli] mit der Review-Wahl [review] (nein, standard, sehr_ausfuehrlich). */
+    fun vorspannFuer(modell: String, cli: String, review: String): String = mitReview(vorspannFuer(modell, cli), review)
+
+    /** Die im Einstieg per Knopf gewählte Review-Wahl (nein, standard, sehr_ausfuehrlich); null ohne. */
+    fun review(text: String): String? = vorspannIn(text)?.let { v ->
+        REVIEW_EINSTIEGE[v]?.third ?: FREI.find(v)?.groupValues?.get(8)?.let { z -> REVIEW_ZUSATZ.entries.firstOrNull { it.value == z }?.key }
+    }
 
     /** Der Einstieg zum Knopf [modell] mit gewähltem [cli]. */
     fun vorspannFuer(modell: String, cli: String): String {
@@ -71,10 +102,11 @@ object ProgrammiererVorlage {
     data class FreieWahl(val modell: String, val anbieter: String, val slug: String, val effort: String, val profil: String, val modus: String, val cli: String)
 
     private const val EINSTIEG_MODELL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell "
-    private val FREI = Regex("^" + Regex.escape(EINSTIEG_MODELL) + "(.+) von ([^,\\n]+?) \\(([^\\n]*?)\\), Effort ([^,\\n]+), Profil ([^,\\n]+), Modus ([^,\\n]+), CLI ([^:\\n]+):")
+    private val FREI = Regex("^" + Regex.escape(EINSTIEG_MODELL) + "(.+) von ([^,\\n]+?) \\(([^\\n]*?)\\), Effort ([^,\\n]+), Profil ([^,\\n]+), Modus ([^,\\n]+), CLI ([^:,\\n]+)(, (?:ohne|mit) [^:\\n]*Code-Review[^:\\n]*)?:")
 
     /** Der Einstieg der Vollbildauswahl; [freieWahl] liest ihn beim Senden wieder aus. */
-    fun vorspannFrei(w: FreieWahl) = "$EINSTIEG_MODELL${w.modell} von ${w.anbieter} (${w.slug}), Effort ${w.effort}, Profil ${w.profil}, Modus ${w.modus}, CLI ${w.cli}:"
+    fun vorspannFrei(w: FreieWahl, review: String? = null) = "$EINSTIEG_MODELL${w.modell} von ${w.anbieter} (${w.slug}), Effort ${w.effort}, Profil ${w.profil}, Modus ${w.modus}, CLI ${w.cli}" +
+        (review?.let { REVIEW_ZUSATZ.getValue(it) }.orEmpty()) + ":"
 
     /** Die Angaben aus dem Einstieg der Vollbildauswahl; null bei jedem anderen Text. */
     fun freieWahl(text: String): FreieWahl? = FREI.find(text.trimStart())?.groupValues?.let { FreieWahl(it[1], it[2], it[3], it[4], it[5], it[6], it[7]) }
@@ -151,5 +183,8 @@ object ProgrammiererVorlage {
         val gewaehlt = cli(text)
         "\n\n(Frank hat das Modell schon per Knopf gewählt, es gilt verbindlich für diesen Auftrag: modell=${katalogName(m) ?: m}" + (gewaehlt?.let { ", cli=$it" }.orEmpty()) +
             ". Das geht der Regel oben zum genannten Modell vor: Frag nicht nach dem Modell" + (if (gewaehlt != null) " oder dem CLI" else "") + " und nimm kein anderes; Effort, Profil und Modus nur, wenn Frank sie nennt.)"
-    }.orEmpty())
+    }.orEmpty()) + review(text)?.let {
+        "\n\n(Auch das Code-Review hat Frank schon per Knopf gewählt: " + (if (it == REVIEW_NEIN) "review=false" else "review=true, review_umfang=$it") +
+            ". Jarvis übernimmt es selbst aus dem Einstieg; frag Frank nicht nach dem Review oder dessen Umfang, sondern rufe programmieren sofort auf.)"
+    }.orEmpty()
 }

@@ -600,6 +600,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     if (a.opt("review") !is Boolean) a.remove("review")
                     if (reviewUmfang(a) != null && !a.has("review")) a.put("review", true)
                 }
+                // Review per Programmierbutton vor dem Absenden gewählt (Antigravity, Franks Wunsch vom 23.11.2026): verbindlich aus dem Einstieg,
+                // gegen jede Angabe des Modells; dann weder Karte noch Rückfrage, das Review läuft danach im gewählten Umfang.
+                vorwahl?.let { ProgrammiererVorlage.review(it.text) }?.let { r ->
+                    a.put("review", r != REVIEW_NEIN)
+                    if (r == REVIEW_NEIN) a.remove("review_umfang") else a.put("review_umfang", r)
+                }
                 when {
                     reviewSprache != null -> {
                         val (karteId, wert) = reviewSprache

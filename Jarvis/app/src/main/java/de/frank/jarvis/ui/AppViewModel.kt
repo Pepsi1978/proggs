@@ -1104,6 +1104,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Das Modell, zu dem gerade die CLI-Knöpfe stehen; null = die Modellknöpfe. Gilt nur bei offener Vorwahl. */
     var programmierVorwahlModell by mutableStateOf<String?>(null); private set
 
+    /**
+     * Review-Frage der Vorwahl im Antigravity CLI (Franks Wunsch vom 23.11.2026: vor dem Absenden, nur per Knopf): Modell und CLI des Knopfs
+     * oder die Vollbildauswahl [frei]; [umfang] = nach „Ja“ steht die Frage nach Standard oder sehr ausführlich. Gilt nur bei offener Vorwahl.
+     */
+    data class ReviewVorwahl(val modell: String? = null, val cli: String? = null, val frei: ProgrammiererVorlage.FreieWahl? = null, val umfang: Boolean = false)
+    var programmierReviewFrage by mutableStateOf<ReviewVorwahl?>(null); private set
+
     /** Die Vollbildauswahl hinter dem Knopf „OpenLauncher“. */
     var openLauncherWahlOffen by mutableStateOf(false); private set
 
@@ -1112,8 +1119,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Ende der Vollbildauswahl: Alle Angaben kommen als Einstieg ins Feld, gesendet wird erst mit dem Pfeil. */
     fun openLauncherWahlUebernehmen(wahl: ProgrammiererVorlage.FreieWahl) {
         openLauncherWahlOffen = false
+        if (ProgrammiererVorlage.reviewVorwahl(wahl.cli)) { reviewFrageOeffnen(ReviewVorwahl(frei = wahl), ProgrammiererVorlage.vorspannFrei(wahl)); return }
         vorwahlEinstieg = null; vorwahlVorher = null
         einstiegSetzen(ProgrammiererVorlage.vorspannFrei(wahl))
+        tastaturWeg++
+    }
+
+    /** Antigravity: Einstieg ohne Review ins Feld, die Knöpfe fragen „Ja“/„Nein“; sie bleiben bis zur Wahl offen (keine Minutenfrist). */
+    private fun reviewFrageOeffnen(frage: ReviewVorwahl, einstieg: String) {
+        vorwahlFrist?.cancel()
+        programmierVorwahlModell = null
+        programmierReviewFrage = frage
+        programmierVorwahlOffen = true
+        einstiegSetzen(einstieg)
+        vorwahlEinstieg = einstieg
+        tastaturWeg++
+    }
+
+    /** Knopf der Review-Frage: „Ja“ öffnet die Frage nach dem Umfang, „Nein“, „Standard“ oder „Sehr ausführlich“ setzen den fertigen Einstieg. */
+    fun programmierVorwahlReview(wert: String) {
+        val frage = programmierReviewFrage ?: return
+        if (wert == "ja") { programmierReviewFrage = frage.copy(umfang = true); return }
+        programmierVorwahlOffen = false
+        programmierReviewFrage = null
+        vorwahlEinstieg = null; vorwahlVorher = null
+        val frei = frage.frei
+        einstiegSetzen(if (frei != null) ProgrammiererVorlage.vorspannFrei(frei, wert)
+            else ProgrammiererVorlage.vorspannFuer(frage.modell.orEmpty(), frage.cli.orEmpty(), wert))
         tastaturWeg++
     }
 
@@ -1162,6 +1194,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             vorwahlFrist?.cancel()
             programmierVorwahlOffen = false
             programmierVorwahlModell = null
+            programmierReviewFrage = null
             vorwahlZuruecknehmen()
             return
         }
@@ -1169,6 +1202,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             vorwahlFrist?.cancel()
             programmierVorwahlOffen = true
             programmierVorwahlModell = null
+            programmierReviewFrage = null
             // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg; der Opus-Einstieg bleibt.
             vorwahlVorher = entwurf to geleert
             einstiegSetzen(ProgrammiererVorlage.STANDARD_EINSTIEG)
@@ -1199,6 +1233,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Modell und CLI stehen fest: Einstieg ins Feld. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
     fun programmierVorwahlCli(modell: String, cli: String) {
+        if (ProgrammiererVorlage.reviewVorwahl(cli)) { reviewFrageOeffnen(ReviewVorwahl(modell, cli), ProgrammiererVorlage.vorspannFuer(modell, cli)); return }
         programmierVorwahlOffen = false
         programmierVorwahlModell = null
         vorwahlEinstieg = null; vorwahlVorher = null

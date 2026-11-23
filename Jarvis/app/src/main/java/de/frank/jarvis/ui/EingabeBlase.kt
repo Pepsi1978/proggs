@@ -678,7 +678,18 @@ private fun WahlKnoepfe(vm: AppViewModel, karte: Nachricht) {
 @Composable
 private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
     val vorwahlModell = vm.programmierVorwahlModell
-    if (vm.programmierVorwahlOffen && vorwahlModell != null) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.cliOptionen(vorwahlModell)) { vm.programmierVorwahlCli(vorwahlModell, it) }
+    val reviewFrage = vm.programmierReviewFrage
+    if (vm.programmierVorwahlOffen && reviewFrage != null) {
+        // Antigravity: Review-Frage vor dem Absenden, nur per Knopf; die Frage steht über den Knöpfen, weil es keine Karte im Chat gibt.
+        val f = LocalFarben.current
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_FRAGE else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_FRAGE,
+                color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(12.dp)).background(f.flaeche).padding(horizontal = 12.dp, vertical = 8.dp))
+            AuswahlKnoepfe(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_OPTIONEN else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_OPTIONEN) { vm.programmierVorwahlReview(it) }
+        }
+    }
+    else if (vm.programmierVorwahlOffen && vorwahlModell != null) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.cliOptionen(vorwahlModell)) { vm.programmierVorwahlCli(vorwahlModell, it) }
     else if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.VORWAHL_OPTIONEN) { vm.programmierVorwahl(it) }
     else karte?.let { WahlKnoepfe(vm, it) }
 }

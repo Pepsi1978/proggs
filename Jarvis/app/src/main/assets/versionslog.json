@@ -938,6 +938,7 @@
     {"versionCode": 929, "versionName": "1.8.918", "stand": "23.11.2026, 17:22 Uhr", "notiz": "Antigravity-Aufträge: Ist ein Lauf fertig, meldet der Hook den Abschlussbericht wie bei Claude Code, und der orange Aktivitätspunkt geht aus, auch wenn die Sitzung offen bleibt."},
     {"versionCode": 930, "versionName": "1.8.919", "stand": "23.11.2026, 17:25 Uhr", "notiz": "Mentalität: Einstellungs-Zahnrad mit Pause zwischen Sätzen (3–30 s, Standard 5 s), auch per Sprache änderbar"},
     {"versionCode": 931, "versionName": "1.8.920", "stand": "23.11.2026, 17:26 Uhr", "notiz": "Antigravity-Aufträge: Das Zugende-Signal wird mehrfach versucht, damit der orange Punkt auch bei Netzaussetzern zuverlässig ausgeht."},
-    {"versionCode": 932, "versionName": "1.8.921", "stand": "23.11.2026, 17:32 Uhr", "notiz": "Antigravity-Aufträge: Der Abschlussbericht kommt nie doppelt, nicht mehr nach dem Wecken der Sitzung, und die Schlussantwort samt geänderten Dateien erscheint zuverlässig."}
+    {"versionCode": 932, "versionName": "1.8.921", "stand": "23.11.2026, 17:32 Uhr", "notiz": "Antigravity-Aufträge: Der Abschlussbericht kommt nie doppelt, nicht mehr nach dem Wecken der Sitzung, und die Schlussantwort samt geänderten Dateien erscheint zuverlässig."},
+    {"versionCode": 933, "versionName": "1.8.922", "stand": "23.11.2026, 18:14 Uhr", "notiz": "Programmierbutton: Bei Antigravity fragt Jarvis direkt nach der CLI-Wahl per Knopf nach dem Code-Review und dessen Umfang; nach dem Absenden kommt keine Review-Frage mehr."}
 ]
 }
