@@ -149,6 +149,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
         ziehReihe?.let { ordneNachIds(saetze, it) } ?: saetze
     }
     val alleIds = remember(gezeigt) { gezeigt.map { it.id } }
+    fun aktuelleIds(): List<Long> = (ziehReihe?.let { ordneNachIds(saetze, it) } ?: saetze).map { it.id }
     val reglerSatz = remember(saetze, reglerSatzId) {
         reglerSatzId?.let { id -> saetze.firstOrNull { it.id == id } }
     }
@@ -250,9 +251,12 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                         .reorderViewport(
                             state = reorder,
-                            order = { alleIds },
+                            // Live aus dem State lesen: Das Modul behält diese Lambdas die ganze Geste über.
+                            // Ein eingefangenes `alleIds` bliebe auf dem Stand beim Greifen stehen, dann gäbe es
+                            // nur einen einzigen Platzwechsel pro Geste und die Lücke folgte dem Finger nicht.
+                            order = { aktuelleIds() },
                             onMove = { von, nach ->
-                                val l = alleIds.toMutableList()
+                                val l = aktuelleIds().toMutableList()
                                 if (von != nach && von in l.indices && nach in l.indices) {
                                     l.add(nach, l.removeAt(von))
                                     ziehReihe = l
