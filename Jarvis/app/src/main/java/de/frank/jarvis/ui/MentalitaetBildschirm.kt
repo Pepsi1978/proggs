@@ -32,15 +32,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -54,16 +55,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -412,23 +419,23 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                 schliessen = { reglerSatzId = null },
             )
         }
-    }
 
-    // ---- Satz bearbeiten oder löschen (Tipp auf den Satztext)
-    bearbeiteSatz?.let { satz ->
-        SatzBearbeitenDialog(
-            satz = satz,
-            beiSpeichern = { neu ->
-                bearbeiteSatz = null
-                ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.textAendern(appContext, satz.id, neu) }
-            },
-            beiLoeschen = {
-                bearbeiteSatz = null
-                if (reglerSatzId == satz.id) reglerSatzId = null
-                ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.loeschen(appContext, satz.id) }
-            },
-            schliessen = { bearbeiteSatz = null },
-        )
+        // ---- Satz bearbeiten oder löschen (Wurzelebene über der Tastatur statt Dialog-Fenster)
+        bearbeiteSatz?.let { satz ->
+            SatzBearbeitenEbene(
+                satz = satz,
+                beiSpeichern = { neu ->
+                    bearbeiteSatz = null
+                    ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.textAendern(appContext, satz.id, neu) }
+                },
+                beiLoeschen = {
+                    bearbeiteSatz = null
+                    if (reglerSatzId == satz.id) reglerSatzId = null
+                    ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.loeschen(appContext, satz.id) }
+                },
+                schliessen = { bearbeiteSatz = null },
+            )
+        }
     }
 }
 
@@ -652,46 +659,128 @@ private fun WiederholungsReglerEbene(
     }
 }
 
+/**
+ * Bearbeiten-Ebene direkt in der Wurzel (mit `imePadding()`), damit das mehrzeilige Textfeld sofort
+ * den Fokus bekommt, die Tastatur öffnet und die Knöpfe immer vollständig erreichbar bleiben.
+ */
 @Composable
-private fun SatzBearbeitenDialog(
+private fun SatzBearbeitenEbene(
     satz: MentalSatz,
     beiSpeichern: (String) -> Unit,
     beiLoeschen: () -> Unit,
     schliessen: () -> Unit,
 ) {
     val f = LocalFarben.current
-    var text by remember(satz.id) { mutableStateOf(satz.text) }
+    val fokus = remember { FocusRequester() }
+    val tastatur = LocalSoftwareKeyboardController.current
+    var feld by remember(satz.id) {
+        mutableStateOf(TextFieldValue(satz.text, selection = TextRange(satz.text.length)))
+    }
     var loeschenBestaetigen by remember(satz.id) { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = schliessen,
-        containerColor = menueFlaeche(f),
-        titleContentColor = f.text,
-        textContentColor = f.text,
-        title = { Text("Satz bearbeiten") },
-        text = {
-            Eingabe(
-                wert = text,
-                beiAenderung = { text = it; loeschenBestaetigen = false },
-                platzhalter = "Mentaler Satz …",
-                modifier = Modifier.fillMaxWidth(),
-                einzeilig = false,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) beiSpeichern(text) else schliessen() }) {
-                Text("Speichern", color = f.primaer)
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = { if (loeschenBestaetigen) beiLoeschen() else loeschenBestaetigen = true }) {
+
+    LaunchedEffect(satz.id) {
+        runCatching { fokus.requestFocus() }
+        tastatur?.show()
+    }
+
+    fun zu() {
+        tastatur?.hide()
+        schliessen()
+    }
+
+    fun sichern() {
+        val sauber = feld.text.trim()
+        tastatur?.hide()
+        if (sauber.isNotEmpty()) beiSpeichern(sauber) else schliessen()
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = if (f.dunkel) 0.58f else 0.34f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = ::zu,
+            ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Column(
+            Modifier
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .glas(f, 26.dp, erhoeht = 1.6f, fuellung = menueFlaeche(f).copy(alpha = 0.98f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Satz bearbeiten",
+                    Modifier.weight(1f),
+                    color = f.text,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (loeschenBestaetigen) f.gefahr.copy(alpha = 0.18f) else Color.Transparent)
+                        .antippen {
+                            if (loeschenBestaetigen) {
+                                tastatur?.hide()
+                                beiLoeschen()
+                            } else {
+                                loeschenBestaetigen = true
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Icon(Icons.Rounded.Delete, null, tint = f.gefahr, modifier = Modifier.size(18.dp))
-                    Text(if (loeschenBestaetigen) " Wirklich löschen?" else " Löschen", color = f.gefahr)
-                }
-                TextButton(onClick = schliessen) {
-                    Text("Abbrechen", color = f.text)
+                    Text(
+                        if (loeschenBestaetigen) " Wirklich löschen?" else " Löschen",
+                        color = f.gefahr,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
-        },
-    )
+
+            OutlinedTextField(
+                value = feld,
+                onValueChange = { feld = it; loeschenBestaetigen = false },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .focusRequester(fokus),
+                placeholder = { Text("Mentaler Satz …", color = f.textSchwach) },
+                minLines = 3,
+                maxLines = 6,
+                shape = RoundedCornerShape(16.dp),
+                textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 22.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = f.text,
+                    unfocusedTextColor = f.text,
+                    cursorColor = MENTAL_AKZENT,
+                    focusedBorderColor = MENTAL_AKZENT,
+                    unfocusedBorderColor = f.rand,
+                    focusedContainerColor = f.flaecheStark,
+                    unfocusedContainerColor = f.flaecheStark,
+                ),
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Knopf("Abbrechen", Modifier.weight(1f), haupt = false, aktion = ::zu)
+                Knopf("Speichern", Modifier.weight(1f), icon = Icons.Rounded.Check, farbe = MENTAL_AKZENT, aktion = ::sichern)
+            }
+        }
+    }
 }
