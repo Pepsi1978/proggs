@@ -33,12 +33,11 @@ public static class OpenCodeVariantCatalog
 
     /// <summary>
     /// Antigravity CLI (agy --effort): Gemini 3.8 Flash kennt low/medium/high, Gemini 4 Argon bietet
-    /// agy als Medium und High an (antigravity.google/docs/models, Stand 14.10.2026). Gemini 4 Neon und
+    /// seit agy 1.5.15 auch Low (agy models, 23.11.2026), ebenso Carbon. Gemini 4 Neon und
     /// Hydrogen kennen low/medium/high/xhigh (agy models, 23.11.2026).
     /// </summary>
     private static IReadOnlyList<string> GetGeminiLevels(string slug) =>
-        slug.StartsWith("gemini-4-argon", StringComparison.Ordinal) ? ["medium", "high"]
-        : slug.StartsWith("gemini-4-neon", StringComparison.Ordinal) || slug.StartsWith("gemini-4-hydrogen", StringComparison.Ordinal) ? ["low", "medium", "high", "xhigh"]
+        slug.StartsWith("gemini-4-neon", StringComparison.Ordinal) || slug.StartsWith("gemini-4-hydrogen", StringComparison.Ordinal) ? ["low", "medium", "high", "xhigh"]
         : ["low", "medium", "high"];
 
     private static IReadOnlyList<string> GetAnthropicLevels(string slug)

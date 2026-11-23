@@ -38,10 +38,12 @@
                                                "high"
                                            ],
     "google/gemini-4-argon [antigravity]":  [
+                                                "low",
                                                 "medium",
                                                 "high"
                                             ],
     "google/gemini-4-argon [opencode]":  [
+                                             "low",
                                              "medium",
                                              "high"
                                          ],
