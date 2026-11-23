@@ -67,7 +67,7 @@ enum class Bereich(
     ERINNERUNGEN("erinnerungen", "Erinnerungen", "ERINNERUNGEN (passende von dir aus ansprechen; alle mit erinnerungen_lesen)", 15 * 60_000L, true, true, 3_000L),
     LISTEN("listen", "Listen", "LISTEN (offene Einträge je Liste, Unterpunkte eingerückt; alles mit listen_lesen)", 15 * 60_000L, true, true, 2_000L),
     VERAENDERUNGEN("veraenderungen", "Veränderungen", "VERÄNDERUNGEN (Franks Lebensveränderungen mit Grund: AKTUELL = gerade in Umsetzung, in jeder Antwort berücksichtigen; OFFEN = steht noch an, nur passend ansprechen; veraenderungen_lesen)", 15 * 60_000L, true, true, 2_000L),
-    MENTALITAET("mentalitaet", "Mentalität", "MENTALITÄT (Franks persönliche mentale Sätze aus Tools → Mentalität, ihm wichtig für Haltung und Einstellung; in passenden Gesprächen als persönlichen Kontext berücksichtigen und aufgreifen, nicht ungefragt aufzählen)", 30 * 60_000L, true, true, 2_000L),
+    MENTALITAET("mentalitaet", "Mentalität", "MENTALITÄT (Franks mentale Sätze; passend berücksichtigen, nicht aufzählen; alle: jarvis_kontext bereiche=[mentalitaet])", 30 * 60_000L, true, true, 2_000L),
     WECKER("wecker", "Genialer Wecker", "WECKER (Genialer Wecker)", 30 * 60_000L, true, true, 4_000L),
     STACKS(
         "stacks", "Stack-Labor",

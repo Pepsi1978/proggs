@@ -124,11 +124,18 @@ object MentalitaetSpeicher {
 
     /** Für das Live-Gedächtnis: die aktuell hinterlegten Sätze frisch aus der Datei, in ihrer Reihenfolge. */
     fun gedaechtnis(context: Context): String {
-        val d = datei(context.applicationContext)
-        if (!d.exists()) return "Frank hat noch keine mentalen Sätze hinterlegt."
-        val liste = runCatching { parseListe(d.readText()) }.getOrElse { return "NICHT VERFÜGBAR: Mentalität-Datei nicht lesbar" }
+        // Geladen gilt der Stand im Speicher (kein Lesen mitten im Ersetzen der Datei); nach einem Abgleich frisch aus der Datei.
+        val liste = if (geladen) _stand.value else {
+            val d = datei(context.applicationContext)
+            if (!d.exists()) {
+                if (File(d.parentFile, "saetze.json.tmp").exists()) return "NICHT VERFÜGBAR: Mentalität wird gerade gespeichert"
+                return "Frank hat noch keine mentalen Sätze hinterlegt."
+            }
+            runCatching { parseListe(d.readText()) }.getOrElse { return "NICHT VERFÜGBAR: Mentalität-Datei nicht lesbar" }
+        }
         if (liste.isEmpty()) return "Frank hat noch keine mentalen Sätze hinterlegt."
-        return liste.joinToString("\n") { "- " + it.text.replace(Regex("\\s+"), " ") }
+        // Die id hält einen Satz beim Bearbeiten als dasselbe Element (keine Meldung „entfernt“ und „neu“).
+        return liste.joinToString("\n") { "- " + it.text.replace(Regex("\\s+"), " ") + " [id ${it.id}]" }
     }
 
     private fun liveAuffrischen(context: Context, anlass: String) {
