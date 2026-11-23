@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -80,12 +81,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN
 import de.frank.jarvis.mentalitaet.MAX_WIEDERHOLUNGEN
+import de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN
 import de.frank.jarvis.mentalitaet.MIN_WIEDERHOLUNGEN
 import de.frank.jarvis.mentalitaet.MentalPhase
 import de.frank.jarvis.mentalitaet.MentalSatz
 import de.frank.jarvis.mentalitaet.MentalitaetSpeicher
 import de.frank.jarvis.mentalitaet.MentalitaetSpieler
+import de.frank.jarvis.mentalitaet.STANDARD_PAUSE_SEKUNDEN
 import de.frank.jarvis.mentalitaet.ordneNachIds
 import de.frank.jarvis.ui.theme.LocalBewegung
 import de.frank.jarvis.ui.theme.LocalFarben
@@ -108,7 +113,8 @@ private val MENTAL_AKZENT_HELL = Color(0xFFB98CFF)
  * - Oben eine scrollbare, per Drag-and-Drop sortierbare Liste persönlicher mentaler Sätze.
  * - Rechts neben jedem Satz nur seine Wiederholungszahl (1–10); Tipp auf die Zahl öffnet den Schieberegler.
  * - Unten rechts Plus zum Einsprechen eines neuen Satzes (mit Jarvis' Transkriptionsmodell),
- *   links daneben der Lautsprecher zum Starten und sofortigen Stoppen der Endlos-Vorleseschleife.
+ *   links daneben der Lautsprecher zum Starten und sofortigen Stoppen der Endlos-Vorleseschleife
+ *   und direkt links neben dem Lautsprecher das Zahnrad für die Einstellungen (Pause zwischen Sätzen).
  */
 @Composable
 fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
@@ -118,12 +124,15 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
     val haptik = LocalHapticFeedback.current
     val reduziert = !LocalBewegung.current
 
+    val einstellungen = remember(appContext) { Einstellungen.get(appContext) }
+    val pauseSekunden = einstellungen.mentalitaetPauseSekunden
     val saetze by MentalitaetSpeicher.stand.collectAsState()
     val speicherHinweis by MentalitaetSpeicher.hinweis.collectAsState()
     val spielStand by MentalitaetSpieler.stand.collectAsState()
 
     var reglerSatzId by remember { mutableStateOf<Long?>(null) }
     var bearbeiteSatzId by remember { mutableStateOf<Long?>(null) }
+    var einstellungenOffen by remember { mutableStateOf(false) }
     var ziehReihe by remember { mutableStateOf<List<Long>?>(null) }
 
     LaunchedEffect(Unit) { MentalitaetSpeicher.sicher(appContext) }
@@ -168,6 +177,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     BackHandler {
         when {
+            einstellungenOffen -> einstellungenOffen = false
             reglerSatzId != null -> reglerSatzId = null
             bearbeiteSatzId != null -> bearbeiteSatzId = null
             else -> schliessen()
@@ -212,7 +222,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                         val untertitel = when (spielStand.phase) {
                             MentalPhase.LAEDT -> "Stimme wird frisch erzeugt …"
                             MentalPhase.SPRICHT -> "Spricht · Wiederholung ${spielStand.wiederholung} von ${spielStand.wiederholungenGesamt}"
-                            MentalPhase.PAUSE -> "Pause (5 s) bis zur nächsten Ausgabe …"
+                            MentalPhase.PAUSE -> "Pause (${spielStand.pauseSekunden} s) bis zur nächsten Ausgabe …"
                             MentalPhase.AUS -> when (gezeigt.size) {
                                 0 -> "Noch keine Sätze"
                                 1 -> "1 Satz · gedrückt halten zum Sortieren"
@@ -284,6 +294,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                             spielPhase = if (istAktiv) spielStand.phase else MentalPhase.AUS,
                             aktuelleWiederholung = if (istAktiv) spielStand.wiederholung else 0,
                             gesamteWiederholungen = if (istAktiv) spielStand.wiederholungenGesamt else satz.wiederholungen,
+                            pauseSekunden = spielStand.pauseSekunden,
                             modifier = reorderItem(reorder, satz.id, reduziert).semantics {
                                 customActions = listOfNotNull(
                                     CustomAccessibilityAction("Nach oben verschieben") { speichereReihenfolge(schiebe(index - 1)); true }.takeIf { index > 0 },
@@ -292,8 +303,8 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                             },
                             griffModifier = reorderHandle(reorder, satz.id),
                             unterdrueckeKlick = { reorder.dragging || reorder.draggedId != null },
-                            beiSatzTippen = { reglerSatzId = null; bearbeiteSatzId = satz.id },
-                            beiZahlTippen = { bearbeiteSatzId = null; reglerSatzId = satz.id },
+                            beiSatzTippen = { einstellungenOffen = false; reglerSatzId = null; bearbeiteSatzId = satz.id },
+                            beiZahlTippen = { einstellungenOffen = false; bearbeiteSatzId = null; reglerSatzId = satz.id },
                         )
                     }
                 }
@@ -342,12 +353,38 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                 }
             }
 
-            // ---- Untere Knöpfe rechts: links Lautsprecher (Start/Stopp), rechts Plus (Einsprechen)
+            // ---- Untere Knöpfe rechts: links Zahnrad (Einstellungen), Mitte Lautsprecher (Start/Stopp), rechts Plus (Einsprechen)
             Row(
                 Modifier.align(Alignment.BottomEnd).padding(horizontal = 20.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Box(
+                    Modifier
+                        .size(62.dp)
+                        .glas(
+                            f,
+                            31.dp,
+                            erhoeht = if (einstellungenOffen) 1.3f else 1.0f,
+                            fuellung = f.flaecheStark,
+                            toenung = if (einstellungenOffen) MENTAL_AKZENT else null,
+                        )
+                        .antippen {
+                            reglerSatzId = null
+                            bearbeiteSatzId = null
+                            einstellungenOffen = true
+                        }
+                        .semantics { contentDescription = "Einstellungen für Mentalität" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Settings,
+                        null,
+                        tint = if (einstellungenOffen) MENTAL_AKZENT else f.text,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+
                 val kannVorlesen = gezeigt.isNotEmpty() || spielStand.laeuft
                 val laeuft = spielStand.laeuft
                 Box(
@@ -397,6 +434,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                             },
                         )
                         .antippen {
+                            einstellungenOffen = false
                             reglerSatzId = null
                             bearbeiteSatzId = null
                             vm.mentalitaetMikrofonTippen()
@@ -417,6 +455,15 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                     }
                 }
             }
+        }
+
+        // ---- Einstellungen für Mentalität (aktuell: Pause zwischen Sätzen)
+        if (einstellungenOffen) {
+            MentalitaetEinstellungenEbene(
+                pauseSekunden = pauseSekunden,
+                beiPauseAendern = { einstellungen.mentalitaetPauseSekunden = it },
+                schliessen = { einstellungenOffen = false },
+            )
         }
 
         // ---- Wiederholungszahl-Schieberegler (1 bis 10), bequem unten am Daumen
@@ -460,6 +507,7 @@ private fun MentalSatzKarte(
     spielPhase: MentalPhase,
     aktuelleWiederholung: Int,
     gesamteWiederholungen: Int,
+    pauseSekunden: Int,
     modifier: Modifier = Modifier,
     griffModifier: Modifier,
     unterdrueckeKlick: () -> Boolean,
@@ -517,7 +565,7 @@ private fun MentalSatzKarte(
                     val status = when (spielPhase) {
                         MentalPhase.LAEDT -> "Wird frisch erzeugt … ($aktuelleWiederholung/$gesamteWiederholungen)"
                         MentalPhase.SPRICHT -> "Spricht · $aktuelleWiederholung von $gesamteWiederholungen"
-                        MentalPhase.PAUSE -> "Pause (5 s) · nach $aktuelleWiederholung von $gesamteWiederholungen"
+                        MentalPhase.PAUSE -> "Pause (${pauseSekunden} s) · nach $aktuelleWiederholung von $gesamteWiederholungen"
                         MentalPhase.AUS -> ""
                     }
                     if (status.isNotEmpty()) {
@@ -557,6 +605,159 @@ private fun MentalSatzKarte(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             )
+        }
+    }
+}
+
+/**
+ * Einstellungsmenü für „Mentalität“ als eigene Wurzelebene am unteren Rand (bequem auf Handy und Tablet).
+ * Erste Einstellung: Pause zwischen Sätzen (3 bis 30 Sekunden, Standard 5 Sekunden).
+ */
+@Composable
+private fun MentalitaetEinstellungenEbene(
+    pauseSekunden: Int,
+    beiPauseAendern: (Int) -> Unit,
+    schliessen: () -> Unit,
+) {
+    val f = LocalFarben.current
+    val haptik = LocalHapticFeedback.current
+    val wert = pauseSekunden.coerceIn(MIN_PAUSE_SEKUNDEN, MAX_PAUSE_SEKUNDEN)
+
+    fun setze(neu: Int) {
+        val sauber = neu.coerceIn(MIN_PAUSE_SEKUNDEN, MAX_PAUSE_SEKUNDEN)
+        if (sauber != wert) {
+            haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            beiPauseAendern(sauber)
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = if (f.dunkel) 0.58f else 0.34f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = schliessen,
+            ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Column(
+            Modifier
+                .widthIn(max = 540.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 18.dp)
+                .glas(f, 26.dp, erhoeht = 1.6f, fuellung = menueFlaeche(f).copy(alpha = 0.98f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+        ) {
+            Text("Mentalität", color = f.textLeise, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Einstellungen",
+                color = f.text,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Pause zwischen Sätzen",
+                    color = f.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(MENTAL_AKZENT, MENTAL_AKZENT_HELL)))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "$wert Sekunden",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            Text(
+                "Nach dem Vorlesen eines Satzes bleibt diese Zeit zum eigenen Lesen, bevor die Wiedergabe fortgesetzt wird.",
+                color = f.textLeise,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+
+            Slider(
+                value = wert.toFloat(),
+                onValueChange = { setze(it.roundToInt()) },
+                valueRange = MIN_PAUSE_SEKUNDEN.toFloat()..MAX_PAUSE_SEKUNDEN.toFloat(),
+                steps = MAX_PAUSE_SEKUNDEN - MIN_PAUSE_SEKUNDEN - 1,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+                    .semantics {
+                        contentDescription = "Pause zwischen Sätzen: $wert Sekunden, von $MIN_PAUSE_SEKUNDEN bis $MAX_PAUSE_SEKUNDEN Sekunden"
+                    },
+                colors = SliderDefaults.colors(
+                    thumbColor = MENTAL_AKZENT,
+                    activeTrackColor = MENTAL_AKZENT,
+                    inactiveTrackColor = f.flaecheStark,
+                    activeTickColor = Color.Transparent,
+                    inactiveTickColor = Color.Transparent,
+                ),
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "$MIN_PAUSE_SEKUNDEN s",
+                    color = if (wert == MIN_PAUSE_SEKUNDEN) MENTAL_AKZENT else f.textLeise,
+                    fontSize = 12.sp,
+                    fontWeight = if (wert == MIN_PAUSE_SEKUNDEN) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .antippen(haptik = false) { setze(MIN_PAUSE_SEKUNDEN) }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                )
+                Text(
+                    "Standard: $STANDARD_PAUSE_SEKUNDEN s",
+                    color = if (wert == STANDARD_PAUSE_SEKUNDEN) MENTAL_AKZENT else f.textLeise,
+                    fontSize = 12.sp,
+                    fontWeight = if (wert == STANDARD_PAUSE_SEKUNDEN) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .antippen(haptik = false) { setze(STANDARD_PAUSE_SEKUNDEN) }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                )
+                Text(
+                    "$MAX_PAUSE_SEKUNDEN s",
+                    color = if (wert == MAX_PAUSE_SEKUNDEN) MENTAL_AKZENT else f.textLeise,
+                    fontSize = 12.sp,
+                    fontWeight = if (wert == MAX_PAUSE_SEKUNDEN) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .antippen(haptik = false) { setze(MAX_PAUSE_SEKUNDEN) }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                )
+            }
+
+            Knopf("Fertig", Modifier.fillMaxWidth(), farbe = MENTAL_AKZENT, aktion = schliessen)
         }
     }
 }

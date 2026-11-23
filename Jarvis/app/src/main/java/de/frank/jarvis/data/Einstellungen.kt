@@ -555,6 +555,16 @@ class Einstellungen private constructor(context: Context) {
     var ablageSortierung: String get() = s("ablage_sortierung", "neueste"); set(v) = put { putString("ablage_sortierung", v) }
     /** Regler des Atemgeräuschs in den Atemübungen, 0–100 (0 = aus, 50 = leises Nebengeräusch, 100 = so laut wie die Stimme). */
     var atemGeraeuschLautstaerke: Int get() = prefs.getInt("atem_geraeusch_regler", 50).coerceIn(0, 100); set(v) = put { putInt("atem_geraeusch_regler", v.coerceIn(0, 100)) }
+    /** Pause in Sekunden nach dem Vorlesen eines Satzes im Bereich „Mentalität“ (3 bis 30, Standard 5). */
+    var mentalitaetPauseSekunden: Int
+        get() = prefs.getInt("mentalitaet_pause_sekunden", de.frank.jarvis.mentalitaet.STANDARD_PAUSE_SEKUNDEN)
+            .coerceIn(de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN, de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN)
+        set(v) = put {
+            putInt(
+                "mentalitaet_pause_sekunden",
+                v.coerceIn(de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN, de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN),
+            )
+        }
     /** Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle, zum Beispiel „handy,mac,windows“. */
     var ablageQuellen: String get() = s("ablage_quellen", "handy,mac,windows"); set(v) = put { putString("ablage_quellen", v) }
     /** Prompts nach Quelle sortiert statt in der eigenen, gezogenen Reihenfolge. */

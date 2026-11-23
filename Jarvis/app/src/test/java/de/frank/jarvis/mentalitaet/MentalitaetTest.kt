@@ -228,4 +228,62 @@ class MentalitaetTest {
         assertEquals(1, gespielte.size)
         alleDateien.forEach { assertFalse("Datei ${it.name} nach Pausen-Stopp nicht gelöscht", it.exists()) }
     }
+
+    @Test
+    fun pauseSekundenParserAkzeptiertGueltigeWerteUndLehntUngueltigeAb() {
+        assertEquals(3, parseMentalitaetPauseSekunden("3"))
+        assertEquals(5, parseMentalitaetPauseSekunden("standard"))
+        assertEquals(5, parseMentalitaetPauseSekunden("zurücksetzen"))
+        assertEquals(3, parseMentalitaetPauseSekunden("minimal"))
+        assertEquals(30, parseMentalitaetPauseSekunden("maximal"))
+        assertEquals(12, parseMentalitaetPauseSekunden("12 s"))
+        assertEquals(18, parseMentalitaetPauseSekunden("18 Sekunden"))
+        assertEquals(30, parseMentalitaetPauseSekunden("30 sek."))
+
+        for (ungueltig in listOf("", "2", "31", "-5", "5,5", "3 Minuten", "schnell")) {
+            val geworfen = runCatching { parseMentalitaetPauseSekunden(ungueltig) }.isFailure
+            assertTrue("Hätte '$ungueltig' ablehnen müssen", geworfen)
+        }
+    }
+
+    @Test
+    fun schleifeNutztAktuellEingestelltePauseFuerJedeRunde() = runBlocking {
+        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 3)))
+        val pausen = CopyOnWriteArrayList<Long>()
+        val alleDateien = CopyOnWriteArrayList<File>()
+        val aktuell = AtomicInteger(8)
+        val fertig = CompletableDeferred<Unit>()
+        val zaehler = AtomicInteger(0)
+
+        val lauf = launch(Dispatchers.Default) {
+            mentalitaetSchleife(
+                plan = plan,
+                pauseMsAbrufen = { aktuell.get() * 1_000L },
+                erzeuge = {
+                    File.createTempFile("mental-dyn-${zaehler.incrementAndGet()}-", ".wav").apply {
+                        writeText("ton")
+                        alleDateien += this
+                    }
+                },
+                spiele = { datei ->
+                    assertTrue(datei.exists())
+                },
+                loesche = { it.delete() },
+                pause = { ms ->
+                    pausen += ms
+                    if (pausen.size == 1) {
+                        aktuell.set(15)
+                    } else if (pausen.size == 2) {
+                        fertig.complete(Unit)
+                        throw CancellationException("Fertig")
+                    }
+                },
+            )
+        }
+        fertig.await()
+        lauf.join()
+
+        assertEquals(listOf(8_000L, 15_000L), pausen)
+        alleDateien.forEach { assertFalse("Datei ${it.name} blieb liegen", it.exists()) }
+    }
 }

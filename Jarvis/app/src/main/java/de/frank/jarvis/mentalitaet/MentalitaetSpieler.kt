@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import de.frank.jarvis.atem.AtemSitzung
+import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.SprechText
@@ -60,6 +61,7 @@ data class MentalSpielStand(
     val wiederholung: Int = 0,
     val wiederholungenGesamt: Int = 0,
     val durchlauf: Int = 0,
+    val pauseSekunden: Int = STANDARD_PAUSE_SEKUNDEN,
     val fehler: String? = null,
 ) {
     val laeuft: Boolean get() = phase != MentalPhase.AUS
@@ -93,7 +95,7 @@ private class Vorbereitet(
  * Kern der Endlosschleife nach dem Vorbild von CortexAndroid (`startStreamingSpeech`):
  * - Ein Hintergrund-Erzeuger (`synthJob`) und ein gepufferter Kanal (`Channel(capacity = 1)`) sorgen dafür,
  *   dass während ein Satz vorgelesen wird bereits die nächste Ausgabe frisch im TTS erzeugt wird.
- * - Nach dem Ende jeder gesprochenen Ausgabe wartet die Schleife exakt [pauseMs] (5 Sekunden) und startet
+ * - Nach dem Ende jeder gesprochenen Ausgabe wartet die Schleife die eingestellte Pause ([pauseMsAbrufen]) und startet
  *   dann pünktlich die längst vorbereitete nächste Ausgabe — während im selben Moment schon die übernächste
  *   im Hintergrund frisch erzeugt wird.
  * - Jede Datei wird genau einmal gespielt und erst DANACH (oder bei Abbruch) gelöscht; keine Datei wird je
@@ -102,6 +104,7 @@ private class Vorbereitet(
 internal suspend fun mentalitaetSchleife(
     plan: List<MentalSchritt>,
     pauseMs: Long = MentalitaetSpieler.PAUSE_MS,
+    pauseMsAbrufen: () -> Long = { pauseMs },
     maxFehlerInFolge: Int = 3,
     vorSchritt: suspend () -> Unit = {},
     vorAbspielen: suspend () -> Unit = {},
@@ -188,11 +191,12 @@ internal suspend fun mentalitaetSchleife(
                     }
                 }
 
-                // Exakt [pauseMs] (5 Sekunden) Pause zwischen je zwei Ausgaben: zwischen Wiederholungen,
+                // Eingestellte Pause zwischen je zwei Ausgaben: zwischen Wiederholungen,
                 // zwischen verschiedenen Sätzen und beim Übergang zum nächsten Durchlauf.
                 // Während dieser Pause (und schon während des vorherigen Satzes) läuft synthJob im Hintergrund weiter.
+                val aktuellePauseMs = pauseMsAbrufen().coerceAtLeast(0L)
                 beiStand(MentalPhase.PAUSE, posten.schritt, posten.durchlauf, posten.schrittIndex)
-                pause(pauseMs)
+                pause(aktuellePauseMs)
 
                 naechsterIndex = (posten.schrittIndex + 1) % plan.size
                 naechsterDurchlauf = if (naechsterIndex == 0) posten.durchlauf + 1 else posten.durchlauf
@@ -213,7 +217,7 @@ internal suspend fun mentalitaetSchleife(
  * - Nutzt das in Jarvis standardmäßig eingestellte Vorlesemodell samt Stimme ([Synthese] ohne Sonderwahl).
  * - Liest die Sätze von oben nach unten; jeder Satz wird gemäß seiner Zahl direkt hintereinander wiederholt.
  * - Bereitet die jeweils nächste Ausgabe schon während des laufenden Satzes frisch im Hintergrund vor,
- *   hält exakt [PAUSE_MS] (5 Sekunden) Pause zwischen zwei Ausgaben und spielt jede Aufnahme genau einmal.
+ *   hält die eingestellte Pause (Standard [PAUSE_MS], 5 Sekunden) zwischen zwei Ausgaben und spielt jede Aufnahme genau einmal.
  * - Läuft in Endlosschleife, bis [stopp] aufgerufen wird (sofortiger Abbruch in Ansage, Laden oder Pause).
  */
 object MentalitaetSpieler {
@@ -277,6 +281,8 @@ object MentalitaetSpieler {
         runCatching { Vorleser.aktuell()?.stopp(dienstBeenden = false) }
         if (AtemSitzung.offen) runCatching { AtemSitzung.beenden() }
 
+        val einstellungen = Einstellungen.get(app)
+        var aktuellePauseSekunden = einstellungen.mentalitaetPauseSekunden
         val meinLauf = laufNummer.incrementAndGet()
         val erster = plan.first()
         _stand.value = MentalSpielStand(
@@ -285,6 +291,7 @@ object MentalitaetSpieler {
             wiederholung = erster.wiederholung,
             wiederholungenGesamt = erster.wiederholungenGesamt,
             durchlauf = 1,
+            pauseSekunden = aktuellePauseSekunden,
         )
 
         if (!fokusHolen(app)) {
@@ -296,13 +303,17 @@ object MentalitaetSpieler {
         VorleseDienst.aktualisiere(app, "Mentalität", 1, plan.size, pausiert = false)
         wachErneuern(app)
         val syn = synthese(app)
-        Logbuch.sprache("Mentalität gestartet", "schritte=${plan.size}")
+        Logbuch.sprache("Mentalität gestartet", "schritte=${plan.size}, pause=${aktuellePauseSekunden}s")
 
         job = bereich.launch {
             try {
                 mentalitaetSchleife(
                     plan = plan,
-                    pauseMs = PAUSE_MS,
+                    pauseMsAbrufen = {
+                        val sek = einstellungen.mentalitaetPauseSekunden
+                        aktuellePauseSekunden = sek
+                        sek * 1_000L
+                    },
                     vorSchritt = { wachErneuern(app) },
                     vorAbspielen = { warteBeiFokusPause(meinLauf) },
                     erzeuge = { text -> erzeugeFrischFuerLauf(syn, bereiteTextAuf(text), meinLauf) },
@@ -316,6 +327,7 @@ object MentalitaetSpieler {
                                 wiederholung = schritt.wiederholung,
                                 wiederholungenGesamt = schritt.wiederholungenGesamt,
                                 durchlauf = durchlauf,
+                                pauseSekunden = aktuellePauseSekunden,
                             )
                             if (phase == MentalPhase.SPRICHT) {
                                 VorleseDienst.aktualisiere(app, "Mentalität", schrittIndex + 1, plan.size, pausiert = false)

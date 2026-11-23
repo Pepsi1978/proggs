@@ -36,10 +36,11 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "einstellungen",
             titel = "Jarvis-Einstellungen",
             beschreibung = "Jarvis: beschreibt, liest und ändert die Einstellungen der Jarvis-App (Benachrichtigungen je Meldung mit Ton, Wecker, Vorlesen, Stimme und Lautstärke, Ruhezeit, Vorlesen, Update-Ansagen, Spracheingabe, Hey Jarvis, " +
-                "Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
+                "Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Atemübungen, Mentalität, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
                 "mit bereich nur diesen. aktion aendern setzt einen Schalter: kennung aus der Liste, wert wie dort angegeben (an/aus, Zahl oder eine der Auswahlen). " +
                 "Mehrere Änderungen auf einmal über aenderungen. Beispiele: „Schalte die Update-Ansagen aus“ → aendern, kennung ansage_vorlesen, wert aus. " +
                 "„Was hast du beim Vorlesen für Einstellungen?“ → lesen, bereich Vorlesen. „Lies schneller vor“ → aendern, kennung vorlese_tempo_<Anbieter>, wert Zügig. " +
+                "„Stelle die Pause bei Mentalität auf 10 Sekunden“ → aendern, kennung mentalitaet_pause_sekunden, wert 10. " +
                 "„Stelle den Gemini-Schlüssel auf nur bezahlt“ → aendern, kennung gemini_tts_schluessel, wert Nur bezahlt. „Nimm die Stimme Katja“ → aendern, kennung vorlese_stimme, wert Katja. " +
                 "Zugangsschlüssel und Passwörter gehen hier bewusst nicht.",
             schema = schema(
@@ -553,6 +554,16 @@ class EinstellungsKatalog(context: Context) {
             auswahl("ablage_quellen", "Ablage", "Welche Quelle zuerst", "Welche Jarvis-Version (Handy, Tablet, Mac, Windows HP, Power-PC) beim Sortieren nach Quelle zuerst steht; die übrigen behalten ihre Reihenfolge dahinter. Frei umordnen lassen sie sich in der App.",
                 { de.frank.jarvis.ablage.AblageQuellen.zuerstOptionen }, { de.frank.jarvis.ablage.AblageQuellen.erste(e.ablageQuellen) }) { e.ablageQuellen = de.frank.jarvis.ablage.AblageQuellen.mitZuerst(e.ablageQuellen, it) },
             zahl("atem_geraeusch_lautstaerke", "Atemübungen", "Lautstärke des Atemgeräuschs", "Regler für das Ein- und Ausatemgeräusch in den Atemübungen: 0 = aus, 50 = leises Nebengeräusch (Standard), 100 = so laut wie die Stimme.", 0, 100, "Prozent", { e.atemGeraeuschLautstaerke }) { e.atemGeraeuschLautstaerke = it; de.frank.jarvis.atem.AtemSitzung.pegelSetzen(it / 100f, speichern = false) },
+            Eintrag(
+                "mentalitaet_pause_sekunden",
+                "Mentalität",
+                "Pause zwischen Sätzen",
+                "Nach dem Vorlesen eines Satzes im Bereich „Mentalität“ bleibt diese Zeit zum eigenen Lesen, bevor die Wiedergabe fortgesetzt wird (Standard: ${de.frank.jarvis.mentalitaet.STANDARD_PAUSE_SEKUNDEN} Sekunden, gilt ab der nächsten Pause sofort).",
+                "${de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN} bis ${de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN} Sekunden (oder „standard“)",
+                { "${e.mentalitaetPauseSekunden} Sekunden" },
+            ) { w ->
+                e.mentalitaetPauseSekunden = de.frank.jarvis.mentalitaet.parseMentalitaetPauseSekunden(w)
+            },
             schalter("prompts_nach_quelle", "Ablage", "Prompts nach Quelle sortieren", "Zeigt die Prompts nach ihrer Jarvis-Version sortiert statt in der eigenen Reihenfolge.", { e.promptsNachQuelle }) { e.promptsNachQuelle = it },
 
             // ---- System ----

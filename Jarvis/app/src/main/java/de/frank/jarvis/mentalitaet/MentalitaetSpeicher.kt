@@ -14,8 +14,42 @@ import org.json.JSONObject
 import java.io.File
 import java.security.SecureRandom
 
+import java.util.Locale
+
 const val MIN_WIEDERHOLUNGEN = 1
 const val MAX_WIEDERHOLUNGEN = 10
+
+const val MIN_PAUSE_SEKUNDEN = 3
+const val MAX_PAUSE_SEKUNDEN = 30
+const val STANDARD_PAUSE_SEKUNDEN = 5
+
+/**
+ * Parst eine Sprach- oder Textangabe für die Pause zwischen Sätzen (3 bis 30 Sekunden).
+ * Akzeptiert ganze Zahlen mit optionaler Einheit („10“, „10 s“, „10 Sekunden“), „standard“/„zurücksetzen“ sowie „minimal“/„maximal“.
+ * Wirft [IllegalArgumentException] mit verständlichem Hinweis bei ungültigen Werten oder Bereichen.
+ */
+fun parseMentalitaetPauseSekunden(eingabe: String): Int {
+    val normiert = eingabe.trim().lowercase(Locale.GERMAN)
+    when (normiert) {
+        "standard", "zuruecksetzen", "zurücksetzen", "default" -> return STANDARD_PAUSE_SEKUNDEN
+        "minimal", "minimum", "min" -> return MIN_PAUSE_SEKUNDEN
+        "maximal", "maximum", "max", "voll" -> return MAX_PAUSE_SEKUNDEN
+    }
+    val treffer = Regex("""^(-?\d+)\s*(?:s|sek\.?|sekunden?)?$""").matchEntire(normiert)
+        ?: throw IllegalArgumentException(
+            "„${eingabe.trim()}“ ist keine gültige Sekundenzahl. Erlaubt: ganze Sekunden von $MIN_PAUSE_SEKUNDEN bis $MAX_PAUSE_SEKUNDEN.",
+        )
+    val wert = treffer.groupValues[1].toIntOrNull()
+        ?: throw IllegalArgumentException(
+            "„${eingabe.trim()}“ ist keine gültige Zahl. Erlaubt: $MIN_PAUSE_SEKUNDEN bis $MAX_PAUSE_SEKUNDEN Sekunden.",
+        )
+    if (wert !in MIN_PAUSE_SEKUNDEN..MAX_PAUSE_SEKUNDEN) {
+        throw IllegalArgumentException(
+            "$wert liegt außerhalb von $MIN_PAUSE_SEKUNDEN bis $MAX_PAUSE_SEKUNDEN Sekunden.",
+        )
+    }
+    return wert
+}
 
 /**
  * Ein persönlicher mentaler Satz mit seiner Wiederholungszahl (1 bis 10).
