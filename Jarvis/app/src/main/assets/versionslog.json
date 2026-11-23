@@ -936,6 +936,7 @@
     {"versionCode": 927, "versionName": "1.8.916", "stand": "23.11.2026, 14:51 Uhr", "notiz": "Mentalität: Gespeicherte Sätze lassen sich beim Antippen jetzt direkt in einem mehrzeiligen Textfeld mit automatischem Fokus und Tastatur bearbeiten, speichern oder löschen."},
     {"versionCode": 928, "versionName": "1.8.917", "stand": "23.11.2026, 14:58 Uhr", "notiz": "Mentalität: Vorlesen bereitet die nächste frische TTS-Ausgabe wie in CortexAndroid schon während der laufenden Ansage im Hintergrund vor und löscht sie erst nach dem Abspielen (behebt fehlende Wiederholungen nach dem ersten Satz); Bearbeiten-Ansicht weiter gehärtet."},
     {"versionCode": 929, "versionName": "1.8.918", "stand": "23.11.2026, 17:22 Uhr", "notiz": "Antigravity-Aufträge: Ist ein Lauf fertig, meldet der Hook den Abschlussbericht wie bei Claude Code, und der orange Aktivitätspunkt geht aus, auch wenn die Sitzung offen bleibt."},
-    {"versionCode": 930, "versionName": "1.8.919", "stand": "23.11.2026, 17:25 Uhr", "notiz": "Mentalität: Einstellungs-Zahnrad mit Pause zwischen Sätzen (3–30 s, Standard 5 s), auch per Sprache änderbar"}
+    {"versionCode": 930, "versionName": "1.8.919", "stand": "23.11.2026, 17:25 Uhr", "notiz": "Mentalität: Einstellungs-Zahnrad mit Pause zwischen Sätzen (3–30 s, Standard 5 s), auch per Sprache änderbar"},
+    {"versionCode": 931, "versionName": "1.8.920", "stand": "23.11.2026, 17:26 Uhr", "notiz": "Antigravity-Aufträge: Das Zugende-Signal wird mehrfach versucht, damit der orange Punkt auch bei Netzaussetzern zuverlässig ausgeht."}
 ]
 }

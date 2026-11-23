@@ -513,7 +513,10 @@ def zugende(pfad: str, texte: list[str]) -> None:
     nur Zwischentexte als „laeuft“, und der Punkt lief bis zur 20-Minuten-Frist weiter (Vorfall 23.11.2026, 2277L)."""
     letzte = H.ohne_zitat(H.lesbar(texte[-1] if texte else letzte_antwort(pfad)))
     if len(texte) > 1:
-        H.post({"tool_name": "", "texte": texte[:-1]})
+        try:
+            H.post({"tool_name": "", "texte": texte[:-1]})
+        except Exception as fehler:
+            H.schreib(f"agy Zugende: Zwischentexte {type(fehler).__name__}: {fehler}")
     try:
         with H.Sperre():
             z = H.lies_zustand()
@@ -524,10 +527,10 @@ def zugende(pfad: str, texte: list[str]) -> None:
         neu, dauer = bool(letzte), ""
     # Der nächste Modellaufruf (Weckruf, Nachtrag, Eingabe am Rechner) meldet sofort wieder ein Lebenszeichen.
     (H.ORDNER / f"puls-{AUFTRAG}.txt").unlink(missing_ok=True)
-    if neu:
-        H.melde("info", "🏁 " + letzte + (f"\n\n⏱️ Dauer seit Start: {dauer}" if dauer else ""))
-    else:
-        H.melde("laeuft", "🏁 Zug beendet, Antigravity wartet.", extra={"leerlauf": True})
+    # Immer „info“ (ändert in Jarvis den Stand nicht, ein fertiger Auftrag bleibt fertig), mit Wiederholung: Nach Stop holt
+    # kein Hook ein verlorenes Zugende nach.
+    text = "🏁 " + (letzte if neu else "Zug beendet, Antigravity wartet.") + (f"\n\n⏱️ Dauer seit Start: {dauer}" if dauer else "")
+    H.melde_sicher("info", text, versuche=3)
 
 
 def melden(art, eingabe: dict, pfad: str, texte: list[str]) -> None:
