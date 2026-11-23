@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Baustein J.3, Fassung fuer Android 12 und neuer. Gleiche Aufteilung wie backup_rules.xml:
+  Datenbank und Einstellungen ja, die verschluesselten Ablagen nein, das Protokoll gar nicht
+  erst eingeschlossen.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="claude_kompass_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="codex_oauth.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="claude_kompass_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="codex_oauth.xml" />
+    </device-transfer>
+</data-extraction-rules>

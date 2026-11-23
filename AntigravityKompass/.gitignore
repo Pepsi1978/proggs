@@ -1,0 +1,15 @@
+# Bauergebnisse und lokale Zustände
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Schlüssel gehören nach ~/SK/, niemals ins Verzeichnis
+*.jks
+*.keystore
+.env

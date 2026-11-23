@@ -1,0 +1,7 @@
+{
+"format": 1,
+"app": "AntigravityKompass",
+"eintraege": [
+    {"versionCode": 1, "versionName": "0.1.0", "stand": "23.11.2026, 19:09 Uhr", "notiz": "Erste Fassung: Antigravity CLI mit allen Slash-Befehlen, Startoptionen, Unterbefehlen, Tastenkürzeln, settings.json-Schlüsseln, Umgebungsvariablen, /config-Punkten und Best Practices auf Deutsch erklärt."}
+]
+}
