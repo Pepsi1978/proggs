@@ -396,9 +396,15 @@ internal class Szene3DRenderer {
         // Holzdielenboden (wirft selbst keinen Schatten)
         if (!forShadow) {
             ms.scoped {
-                ms.translate(0.15f, -0.05f, 0.20f)
-                ms.scale(5.2f, 0.10f, 4.2f)
+                ms.translate(0.0f, -0.05f, 0.55f)
+                ms.scale(4.8f, 0.10f, 5.2f)
                 drawMesh(meshes.box, p.bodenHolz, rough = 0.45f, pattern = 1, alt = p.bodenHolzAlt)
+            }
+            // Helle Decke über dem Raum (verhindert dunkle Kanten bei weiten Displays)
+            ms.scoped {
+                ms.translate(0.0f, 2.81f, 0.55f)
+                ms.scale(4.8f, 0.10f, 5.2f)
+                drawMesh(meshes.box, p.fussleiste, rough = 0.90f)
             }
         }
 
@@ -437,8 +443,8 @@ internal class Szene3DRenderer {
 
         // Fußleiste Rückwand
         ms.scoped {
-            ms.translate(0.15f, 0.055f, -1.635f)
-            ms.scale(4.65f, 0.11f, 0.03f)
+            ms.translate(-0.05f, 0.055f, -1.635f)
+            ms.scale(4.20f, 0.11f, 0.03f)
             drawMesh(meshes.beveledBox, p.fussleiste, rough = 0.50f)
         }
 
@@ -472,9 +478,9 @@ internal class Szene3DRenderer {
 
         // Gardinenstange + sanft schwingende 3D-Faltvorhänge
         ms.scoped {
-            ms.translate(1.05f, 2.24f, -1.55f)
+            ms.translate(1.03f, 2.24f, -1.55f)
             ms.rotateZ(90f)
-            ms.scale(0.026f, 2.12f, 0.026f)
+            ms.scale(0.026f, 1.98f, 0.026f)
             drawMesh(meshes.cylinder, darkMetalRgb, rough = 0.32f, metal = 1f)
         }
         val sway = sin(curTime * 0.9f) * 1.6f
@@ -485,10 +491,67 @@ internal class Szene3DRenderer {
             drawMesh(meshes.curtain, p.vorhang, rough = 0.86f)
         }
         ms.scoped {
-            ms.translate(1.90f, 1.50f, -1.54f)
+            ms.translate(1.86f, 1.50f, -1.54f)
             ms.rotateZ(-sway * 0.85f)
-            ms.scale(0.32f, 1.46f, 0.45f)
+            ms.scale(0.28f, 1.46f, 0.45f)
             drawMesh(meshes.curtain, p.vorhang, rough = 0.86f)
+        }
+
+        // ---- Rechte Wand (schließt den Raum rechts vollständig, auch auf breiten Bildschirmen) ----
+        ms.scoped {
+            ms.translate(2.16f, 1.38f, 0.65f)
+            ms.scale(0.22f, 2.76f, 5.04f)
+            drawMesh(meshes.box, p.wandLinks, rough = 0.86f, pattern = 4)
+        }
+        // Fußleiste rechte Wand
+        ms.scoped {
+            ms.translate(2.035f, 0.055f, 0.65f)
+            ms.scale(0.03f, 0.11f, 4.60f)
+            drawMesh(meshes.beveledBox, p.fussleiste, rough = 0.50f)
+        }
+        // Gerahmtes 3D-Wandbild an der rechten Wand (blickt nach -X in den Raum)
+        ms.scoped {
+            ms.translate(2.025f, 1.50f, 0.04f)
+            ms.rotateY(-90f)
+            ms.scoped { ms.scale(0.62f, 0.48f, 0.036f); drawMesh(meshes.beveledBox, p.tischHolz, rough = 0.44f) }
+            if (!forShadow) {
+                ms.scoped {
+                    ms.translate(0f, 0f, 0.020f)
+                    ms.scale(0.54f, 0.40f, 1f)
+                    drawMesh(meshes.quadXY, p.akzentHell, rough = 0.52f, pattern = 9, alt = p.akzent)
+                }
+            }
+        }
+        // Kleines schwebendes Deko-Regal rechts mit Büchern und kleiner Grünpflanze
+        ms.scoped {
+            ms.translate(1.94f, 1.08f, 0.78f)
+            ms.rotateY(-90f)
+            ms.scoped {
+                ms.scale(0.58f, 0.036f, 0.20f)
+                drawMesh(meshes.beveledBox, p.tischHolz, rough = 0.42f, pattern = 2, alt = p.bodenHolzAlt)
+            }
+            for (bx in floatArrayOf(-0.20f, 0.20f)) {
+                ms.scoped { ms.translate(bx, -0.055f, -0.06f); ms.scale(0.022f, 0.09f, 0.10f); drawMesh(meshes.box, darkMetalRgb, rough = 0.35f, metal = 1f) }
+            }
+            // Drei Deko-Bücher links auf dem kleinen Regal
+            for (bi in 0 until 3) {
+                val bh = 0.17f + bi * 0.022f
+                ms.scoped {
+                    ms.translate(-0.18f + bi * 0.052f, 0.018f + bh * 0.5f, 0f)
+                    ms.scale(0.042f, bh, 0.14f)
+                    drawMesh(meshes.beveledBox, bookColors[(bi + 2) % bookColors.size], rough = 0.62f)
+                }
+            }
+            // Kleine Pflanze rechts auf dem Regal
+            ms.scoped {
+                ms.translate(0.14f, 0.018f, 0f)
+                drawPottedPlant(p, potScale = 0.10f, leafCount = 5, leafScale = 0.16f, phaseOffset = 2.6f)
+            }
+        }
+        // Große 3D-Zimmerpflanze auf dem Boden vor der rechten Wand
+        ms.scoped {
+            ms.translate(1.74f, 0f, 0.72f)
+            drawPottedPlant(p, potScale = 0.24f, leafCount = 7, leafScale = 0.38f, phaseOffset = 3.2f)
         }
 
         // ---- Linke Wand mit echter 3D-Türöffnung (z: -0.82..+0.08, y: 0..2.04) ----
@@ -498,8 +561,8 @@ internal class Szene3DRenderer {
             drawMesh(meshes.box, p.wandLinks, rough = 0.86f, pattern = 4)
         }
         ms.scoped {
-            ms.translate(-2.26f, 1.38f, 1.12f)
-            ms.scale(0.22f, 2.76f, 2.08f)
+            ms.translate(-2.26f, 1.38f, 1.56f)
+            ms.scale(0.22f, 2.76f, 2.96f)
             drawMesh(meshes.box, p.wandLinks, rough = 0.86f, pattern = 4)
         }
         ms.scoped {
@@ -509,7 +572,7 @@ internal class Szene3DRenderer {
         }
         // Fußleiste linke Wand (vor und hinter Tür)
         ms.scoped { ms.translate(-2.135f, 0.055f, -1.24f); ms.scale(0.03f, 0.11f, 0.84f); drawMesh(meshes.beveledBox, p.fussleiste, rough = 0.50f) }
-        ms.scoped { ms.translate(-2.135f, 0.055f, 1.04f); ms.scale(0.03f, 0.11f, 1.92f); drawMesh(meshes.beveledBox, p.fussleiste, rough = 0.50f) }
+        ms.scoped { ms.translate(-2.135f, 0.055f, 1.56f); ms.scale(0.03f, 0.11f, 2.96f); drawMesh(meshes.beveledBox, p.fussleiste, rough = 0.50f) }
 
         // Warmer Flur-Hintergrund hinter der Tür (leuchtet angenehm wenn Tür aufgeht)
         if (!forShadow) {

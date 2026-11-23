@@ -360,12 +360,13 @@ void main() {
         albedo *= mix(0.90, 1.06, weave);
         rough = 0.92;
     } else if (uPattern == 4) {
-        // Feiner Wandputz mit sanfter Raum-Eck-AO
+        // Feiner Wandputz mit sanfter Raum-Eck-AO (links und rechts)
         float plaster = valueNoise(vWorldPos.xy * 9.0 + vWorldPos.zy * 9.0);
         albedo *= mix(0.96, 1.03, plaster);
         float floorAo = smoothstep(0.0, 0.45, vWorldPos.y);
-        float cornerAo = smoothstep(0.0, 0.55, length(vec2(vWorldPos.x + 2.15, vWorldPos.z + 1.65)));
-        localAo *= mix(0.74, 1.0, floorAo) * mix(0.72, 1.0, cornerAo);
+        float cornerL = smoothstep(0.0, 0.55, length(vec2(vWorldPos.x + 2.15, vWorldPos.z + 1.65)));
+        float cornerR = smoothstep(0.0, 0.55, length(vec2(vWorldPos.x - 2.05, vWorldPos.z + 1.65)));
+        localAo *= mix(0.74, 1.0, floorAo) * mix(0.74, 1.0, cornerL) * mix(0.74, 1.0, cornerR);
     } else if (uPattern == 5) {
         // Getigertes Katzenfell mit weichen Streifen
         float stripe = sin(vUv.y * 28.0 + sin(vUv.x * 10.0) * 1.4) * 0.5 + 0.5;
@@ -536,6 +537,11 @@ void main() {
     vec3 Lsun = normalize(uSunDir);
     float shadow = sampleShadow(vLightSpacePos, N, Lsun);
     Lo += evalPbrLight(N, V, Lsun, uSunColor * shadow, albedo, rough, metal);
+
+    // 1b. Sanftes indirektes Raum-Gegenlicht vom hellen Fenster/Boden, damit auch die rechte Wand warm erstrahlt
+    vec3 Lbounce = normalize(vec3(-0.68, 0.32, 0.66));
+    float bounceNdl = max(dot(N, Lbounce), 0.0);
+    Lo += (albedo / PI) * (uSunColor * 0.16 + uSkyColor * 0.24) * bounceNdl * (1.0 - metal * 0.8);
 
     // 2. Schreibtischlampe (warmer Kegel-Spot mit sanfter Distanzabnahme)
     if (dot(uLampColor, uLampColor) > 0.0001) {
