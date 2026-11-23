@@ -746,11 +746,12 @@ public sealed class ModelRegistry
         // Google-AI-Abo (Google-Konto per OAuth) in der Antigravity CLI (agy). Seit 18.06.2026 nimmt
         // nur noch agy die Privat-Abos an. Modelle laut antigravity.google/docs/models (14.10.2026):
         // Gemini 4 Argon nur mit AI Ultra, Gemini 3.8 Flash ab Free/Pro. 3.1 Pro, 3.6/3.7 Flash sind
-        // dort nur Enterprise. Gemini 4 Neon (agy 1.5.13) und Hydrogen (agy 1.5.8) seit 23.11.2026. Seit agy 1.3.4 genuegt der Basisname, die Stufe kommt per --effort.
+        // dort nur Enterprise. Gemini 4 Neon (agy 1.5.13), Hydrogen (agy 1.5.8) und Carbon (agy 1.5.15) seit 23.11.2026. Seit agy 1.3.4 genuegt der Basisname, die Stufe kommt per --effort.
         CreateGroup(GoogleGroupId, "Google", GoogleProviderId, "Google", new[]
         {
             Model("gemini-4-neon", "Gemini 4 Neon", GoogleProviderId, "Google"),
             Model("gemini-4-hydrogen", "Gemini 4 Hydrogen", GoogleProviderId, "Google"),
+            Model("gemini-4-carbon", "Gemini 4 Carbon", GoogleProviderId, "Google"),
             Model("gemini-4-argon", "Gemini 4 Argon (Ultra)", GoogleProviderId, "Google"),
             Model("gemini-3.8-flash", "Gemini 3.8 Flash", GoogleProviderId, "Google"),
         }),

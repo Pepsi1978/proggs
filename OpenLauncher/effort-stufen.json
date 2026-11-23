@@ -45,6 +45,16 @@
                                              "medium",
                                              "high"
                                          ],
+    "google/gemini-4-carbon [antigravity]":  [
+        "low",
+        "medium",
+        "high"
+    ],
+    "google/gemini-4-carbon [opencode]":  [
+        "low",
+        "medium",
+        "high"
+    ],
     "google/gemini-4-hydrogen [antigravity]":  [
         "low",
         "medium",
