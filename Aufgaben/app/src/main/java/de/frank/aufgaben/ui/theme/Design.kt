@@ -29,12 +29,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import de.frank.aufgaben.data.Prioritaet
 import kotlinx.coroutines.delay
 
-/** Die vier Erscheinungsbilder. Jedes hat Hell und Dunkel, eigene Szene und eigenen Hintergrund. */
+/** Die vier Erscheinungsbilder. Jedes hat Hell und Dunkel, eigene 3D-Raumstimmung und eigenen Hintergrund. */
 enum class Design(val id: String, val anzeige: String, val beschreibung: String, val emoji: String) {
-    ORANGE("orange", "Orange", "Orange auf Schwarz, hell in warmem Orange – Feierabend-Werkstatt mit Katze.", "🟠"),
-    AURORA("aurora", "Aurora", "Ruhiges Violett – Ideen an der Tafel skizzieren.", "🟣"),
-    GARTEN("garten", "Garten", "Sanftes Grün – gießen, wachsen lassen, ernten.", "🟢"),
-    KOSMOS("kosmos", "Kosmos", "Tiefes Blau – Checkliste, Countdown, Start.", "🔵");
+    ORANGE("orange", "Orange", "Orange auf Schwarz, hell in warmem Orange – gemütliches 3D-Arbeitszimmer mit Katze.", "🟠"),
+    AURORA("aurora", "Aurora", "Ruhiges Violett – kreatives 3D-Studio in Abendlicht und Violett.", "🟣"),
+    GARTEN("garten", "Garten", "Sanftes Grün – helles 3D-Arbeitszimmer in natürlichen Grüntönen.", "🟢"),
+    KOSMOS("kosmos", "Kosmos", "Tiefes Blau – klares 3D-Arbeitszimmer in kühlem Blau.", "🔵");
 
     companion object {
         fun von(id: String?): Design = if (id == "glut") ORANGE else entries.firstOrNull { it.id == id } ?: ORANGE

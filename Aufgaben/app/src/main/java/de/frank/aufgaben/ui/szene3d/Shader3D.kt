@@ -1,0 +1,645 @@
+package de.frank.aufgaben.ui.szene3d
+
+import android.opengl.GLES30
+import android.util.Log
+
+/**
+ * OpenGL ES 3.0 Shader-Programme für die 3D-Szene:
+ * 1. Shadow-Depth-Pass (1024×1024 PCF-Schattenkarte)
+ * 2. Haupt-PBR-Pass (Cook-Torrance GGX, 3×3 PCF-Schatten, Schreibtisch-Spot, Monitor-Glow,
+ *    prozedurale Holz-/Teppich-/Fell-/Monitor-UI-/Himmel-Shader, ACES-Tonemapping, sRGB-Ausgabe)
+ * 3. Atmosphärischer Transparenz-Pass (Sonnenstrahlen, Lampenkegel, Kaffeedampf, Staubpartikel)
+ */
+internal class ShaderPrograms {
+    val shadowProgram: Int
+    val shadowLightVP: Int
+    val shadowModel: Int
+
+    val mainProgram: Int
+    val uModel: Int
+    val uViewProj: Int
+    val uNormalMat: Int
+    val uLightViewProj: Int
+    val uCameraPos: Int
+    val uTime: Int
+    val uExposure: Int
+    val uBaseColor: Int
+    val uAltColor: Int
+    val uRoughness: Int
+    val uMetallic: Int
+    val uEmissive: Int
+    val uPattern: Int
+    val uParam: Int
+    val uSunDir: Int
+    val uSunColor: Int
+    val uSkyColor: Int
+    val uGroundColor: Int
+    val uLampPos: Int
+    val uLampDir: Int
+    val uLampColor: Int
+    val uMonitorPos: Int
+    val uMonitorColor: Int
+    val uDoorGlowPos: Int
+    val uDoorGlowColor: Int
+    val uShadowMap: Int
+    val uContact0: Int
+    val uContact1: Int
+    val uContact2: Int
+    val uContact3: Int
+
+    val alphaProgram: Int
+    val alphaModel: Int
+    val alphaViewProj: Int
+    val alphaColor: Int
+    val alphaMode: Int
+    val alphaTime: Int
+
+    init {
+        shadowProgram = linkProgram(SHADOW_VS, SHADOW_FS)
+        shadowLightVP = GLES30.glGetUniformLocation(shadowProgram, "uLightViewProj")
+        shadowModel = GLES30.glGetUniformLocation(shadowProgram, "uModel")
+
+        mainProgram = linkProgram(MAIN_VS, MAIN_FS)
+        uModel = GLES30.glGetUniformLocation(mainProgram, "uModel")
+        uViewProj = GLES30.glGetUniformLocation(mainProgram, "uViewProj")
+        uNormalMat = GLES30.glGetUniformLocation(mainProgram, "uNormalMat")
+        uLightViewProj = GLES30.glGetUniformLocation(mainProgram, "uLightViewProj")
+        uCameraPos = GLES30.glGetUniformLocation(mainProgram, "uCameraPos")
+        uTime = GLES30.glGetUniformLocation(mainProgram, "uTime")
+        uExposure = GLES30.glGetUniformLocation(mainProgram, "uExposure")
+        uBaseColor = GLES30.glGetUniformLocation(mainProgram, "uBaseColor")
+        uAltColor = GLES30.glGetUniformLocation(mainProgram, "uAltColor")
+        uRoughness = GLES30.glGetUniformLocation(mainProgram, "uRoughness")
+        uMetallic = GLES30.glGetUniformLocation(mainProgram, "uMetallic")
+        uEmissive = GLES30.glGetUniformLocation(mainProgram, "uEmissive")
+        uPattern = GLES30.glGetUniformLocation(mainProgram, "uPattern")
+        uParam = GLES30.glGetUniformLocation(mainProgram, "uParam")
+        uSunDir = GLES30.glGetUniformLocation(mainProgram, "uSunDir")
+        uSunColor = GLES30.glGetUniformLocation(mainProgram, "uSunColor")
+        uSkyColor = GLES30.glGetUniformLocation(mainProgram, "uSkyColor")
+        uGroundColor = GLES30.glGetUniformLocation(mainProgram, "uGroundColor")
+        uLampPos = GLES30.glGetUniformLocation(mainProgram, "uLampPos")
+        uLampDir = GLES30.glGetUniformLocation(mainProgram, "uLampDir")
+        uLampColor = GLES30.glGetUniformLocation(mainProgram, "uLampColor")
+        uMonitorPos = GLES30.glGetUniformLocation(mainProgram, "uMonitorPos")
+        uMonitorColor = GLES30.glGetUniformLocation(mainProgram, "uMonitorColor")
+        uDoorGlowPos = GLES30.glGetUniformLocation(mainProgram, "uDoorGlowPos")
+        uDoorGlowColor = GLES30.glGetUniformLocation(mainProgram, "uDoorGlowColor")
+        uShadowMap = GLES30.glGetUniformLocation(mainProgram, "uShadowMap")
+        uContact0 = GLES30.glGetUniformLocation(mainProgram, "uContact0")
+        uContact1 = GLES30.glGetUniformLocation(mainProgram, "uContact1")
+        uContact2 = GLES30.glGetUniformLocation(mainProgram, "uContact2")
+        uContact3 = GLES30.glGetUniformLocation(mainProgram, "uContact3")
+
+        alphaProgram = linkProgram(ALPHA_VS, ALPHA_FS)
+        alphaModel = GLES30.glGetUniformLocation(alphaProgram, "uModel")
+        alphaViewProj = GLES30.glGetUniformLocation(alphaProgram, "uViewProj")
+        alphaColor = GLES30.glGetUniformLocation(alphaProgram, "uColor")
+        alphaMode = GLES30.glGetUniformLocation(alphaProgram, "uMode")
+        alphaTime = GLES30.glGetUniformLocation(alphaProgram, "uTime")
+    }
+
+    fun release() {
+        GLES30.glDeleteProgram(shadowProgram)
+        GLES30.glDeleteProgram(mainProgram)
+        GLES30.glDeleteProgram(alphaProgram)
+    }
+
+    companion object {
+        private const val TAG = "Szene3DShader"
+
+        private fun compileShader(type: Int, src: String): Int {
+            val id = GLES30.glCreateShader(type)
+            GLES30.glShaderSource(id, src)
+            GLES30.glCompileShader(id)
+            val status = IntArray(1)
+            GLES30.glGetShaderiv(id, GLES30.GL_COMPILE_STATUS, status, 0)
+            if (status[0] == 0) {
+                val log = GLES30.glGetShaderInfoLog(id)
+                GLES30.glDeleteShader(id)
+                Log.e(TAG, "Shader compile error: $log")
+                throw IllegalStateException("Shader compile failed: $log")
+            }
+            return id
+        }
+
+        private fun linkProgram(vsSrc: String, fsSrc: String): Int {
+            val vs = compileShader(GLES30.GL_VERTEX_SHADER, vsSrc)
+            val fs = compileShader(GLES30.GL_FRAGMENT_SHADER, fsSrc)
+            val prog = GLES30.glCreateProgram()
+            GLES30.glAttachShader(prog, vs)
+            GLES30.glAttachShader(prog, fs)
+            GLES30.glLinkProgram(prog)
+            val status = IntArray(1)
+            GLES30.glGetProgramiv(prog, GLES30.GL_LINK_STATUS, status, 0)
+            GLES30.glDeleteShader(vs)
+            GLES30.glDeleteShader(fs)
+            if (status[0] == 0) {
+                val log = GLES30.glGetProgramInfoLog(prog)
+                GLES30.glDeleteProgram(prog)
+                Log.e(TAG, "Program link error: $log")
+                throw IllegalStateException("Program link failed: $log")
+            }
+            return prog
+        }
+
+        private const val SHADOW_VS = """#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+uniform mat4 uLightViewProj;
+uniform mat4 uModel;
+void main() {
+    gl_Position = uLightViewProj * uModel * vec4(aPos, 1.0);
+}
+"""
+
+        private const val SHADOW_FS = """#version 300 es
+precision mediump float;
+void main() {
+}
+"""
+
+        private const val MAIN_VS = """#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aUv;
+
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+uniform mat3 uNormalMat;
+uniform mat4 uLightViewProj;
+
+out vec3 vWorldPos;
+out vec3 vNormal;
+out vec2 vUv;
+out vec4 vLightSpacePos;
+
+void main() {
+    vec4 wp = uModel * vec4(aPos, 1.0);
+    vWorldPos = wp.xyz;
+    vNormal = normalize(uNormalMat * aNormal);
+    vUv = aUv;
+    vLightSpacePos = uLightViewProj * wp;
+    gl_Position = uViewProj * wp;
+}
+"""
+
+        private const val MAIN_FS = """#version 300 es
+precision highp float;
+precision highp sampler2DShadow;
+
+in vec3 vWorldPos;
+in vec3 vNormal;
+in vec2 vUv;
+in vec4 vLightSpacePos;
+
+uniform vec3 uCameraPos;
+uniform float uTime;
+uniform float uExposure;
+
+uniform vec3 uBaseColor;
+uniform vec3 uAltColor;
+uniform float uRoughness;
+uniform float uMetallic;
+uniform vec3 uEmissive;
+uniform int uPattern;
+uniform vec4 uParam;
+
+uniform vec3 uSunDir;
+uniform vec3 uSunColor;
+uniform vec3 uSkyColor;
+uniform vec3 uGroundColor;
+
+uniform vec3 uLampPos;
+uniform vec3 uLampDir;
+uniform vec3 uLampColor;
+
+uniform vec3 uMonitorPos;
+uniform vec3 uMonitorColor;
+
+uniform vec3 uDoorGlowPos;
+uniform vec3 uDoorGlowColor;
+
+uniform sampler2DShadow uShadowMap;
+uniform vec4 uContact0;
+uniform vec4 uContact1;
+uniform vec4 uContact2;
+uniform vec4 uContact3;
+
+out vec4 fragColor;
+
+const float PI = 3.14159265;
+
+float hash21(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// 3x3 PCF weicher Schatten über Hardware-Depth-Comparison
+float sampleShadow(vec4 lightSpacePos, vec3 N, vec3 L) {
+    vec3 proj = lightSpacePos.xyz / lightSpacePos.w;
+    proj = proj * 0.5 + 0.5;
+    if (proj.x < 0.02 || proj.x > 0.98 || proj.y < 0.02 || proj.y > 0.98 || proj.z > 0.995) {
+        return 1.0;
+    }
+    float ndl = max(dot(N, L), 0.0);
+    float bias = max(0.0022 * (1.0 - ndl), 0.0008);
+    vec2 texel = vec2(1.0 / 1024.0);
+    float sum = 0.0;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            vec3 coord = vec3(proj.xy + vec2(float(x), float(y)) * texel * 1.45, proj.z - bias);
+            sum += texture(uShadowMap, coord);
+        }
+    }
+    return sum / 9.0;
+}
+
+// Cook-Torrance GGX PBR-Beleuchtung für eine Lichtquelle
+vec3 evalPbrLight(vec3 N, vec3 V, vec3 L, vec3 radiance, vec3 albedo, float rough, float metal) {
+    float NdotL = max(dot(N, L), 0.0);
+    if (NdotL <= 0.0) return vec3(0.0);
+    vec3 H = normalize(V + L);
+    float NdotV = max(dot(N, V), 0.001);
+    float NdotH = max(dot(N, H), 0.0);
+    float HdotV = max(dot(H, V), 0.0);
+
+    float a = rough * rough;
+    float a2 = a * a;
+    float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
+    float D = a2 / max(PI * denom * denom, 0.0001);
+
+    float k = (rough + 1.0);
+    k = (k * k) / 8.0;
+    float gv = NdotV / (NdotV * (1.0 - k) + k);
+    float gl = NdotL / (NdotL * (1.0 - k) + k);
+    float G = gv * gl;
+
+    vec3 F0 = mix(vec3(0.04), albedo, metal);
+    vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - HdotV, 0.0, 1.0), 5.0);
+
+    vec3 spec = (D * G * F) / max(4.0 * NdotV * NdotL, 0.001);
+    vec3 kD = (vec3(1.0) - F) * (1.0 - metal);
+    return (kD * albedo / PI + spec) * radiance * NdotL;
+}
+
+float contactShadow(vec2 xz, vec4 c) {
+    if (c.w <= 0.001) return 1.0;
+    float d = length(xz - c.xy) / max(c.z, 0.05);
+    float f = smoothstep(0.15, 1.15, d);
+    return mix(1.0 - c.w, 1.0, f);
+}
+
+// ACES Filmic Tonemapping (nach Best-Practice: kein hartes Clipping, filmische Highlights)
+vec3 acesToneMap(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+void main() {
+    vec3 N = normalize(vNormal);
+    vec3 V = normalize(uCameraPos - vWorldPos);
+
+    vec3 albedo = uBaseColor;
+    float rough = clamp(uRoughness, 0.05, 1.0);
+    float metal = clamp(uMetallic, 0.0, 1.0);
+    vec3 emissive = uEmissive;
+    float localAo = 1.0;
+
+    // ---- Prozedurale 3D-Oberflächenmuster ----
+    if (uPattern == 1) {
+        // Warme Holzdielen auf dem Boden (Weltkoordinaten für echte Maßstäblichkeit)
+        float plankZ = vWorldPos.z * 3.1;
+        float row = floor(plankZ);
+        float rowFrac = fract(plankZ);
+        float plankX = vWorldPos.x * 0.72 + mod(row, 2.0) * 0.53;
+        float col = floor(plankX);
+        float colFrac = fract(plankX);
+        float tone = hash21(vec2(col * 3.7, row * 5.1));
+        float grain = valueNoise(vec2(vWorldPos.x * 5.0 + tone * 11.0, vWorldPos.z * 26.0));
+        albedo = mix(uBaseColor, uAltColor, tone * 0.55 + grain * 0.35);
+        float seamZ = smoothstep(0.0, 0.035, rowFrac) * smoothstep(0.0, 0.035, 1.0 - rowFrac);
+        float seamX = smoothstep(0.0, 0.014, colFrac) * smoothstep(0.0, 0.014, 1.0 - colFrac);
+        float seam = mix(0.68, 1.0, seamZ * seamX);
+        albedo *= seam;
+        rough = mix(0.36, 0.56, grain);
+        // Wand-Boden-Kontaktschatten
+        float aoBack = smoothstep(-1.68, -1.15, vWorldPos.z);
+        float aoLeft = smoothstep(-2.18, -1.65, vWorldPos.x);
+        localAo *= mix(0.66, 1.0, aoBack) * mix(0.72, 1.0, aoLeft);
+    } else if (uPattern == 2) {
+        // Feine Eichenholzmaserung (Schreibtischplatte, Regal, Tür)
+        float g1 = valueNoise(vec2(vUv.x * 16.0, vUv.y * 3.5));
+        float g2 = sin(vUv.y * 38.0 + g1 * 6.5) * 0.5 + 0.5;
+        albedo = mix(uBaseColor, uAltColor, g2 * 0.28 + g1 * 0.16);
+        rough = mix(0.30, 0.46, g2);
+    } else if (uPattern == 3) {
+        // Gewebter Teppich mit hellem Schmuckrand
+        vec2 p = abs(vUv - 0.5) * 2.0;
+        float edge = max(p.x, p.y);
+        float border = smoothstep(0.76, 0.79, edge) * (1.0 - smoothstep(0.87, 0.90, edge));
+        float weave = sin(vUv.x * 120.0) * sin(vUv.y * 90.0) * 0.5 + 0.5;
+        albedo = mix(uBaseColor, uAltColor, border * 0.85);
+        albedo *= mix(0.90, 1.06, weave);
+        rough = 0.92;
+    } else if (uPattern == 4) {
+        // Feiner Wandputz mit sanfter Raum-Eck-AO
+        float plaster = valueNoise(vWorldPos.xy * 9.0 + vWorldPos.zy * 9.0);
+        albedo *= mix(0.96, 1.03, plaster);
+        float floorAo = smoothstep(0.0, 0.45, vWorldPos.y);
+        float cornerAo = smoothstep(0.0, 0.55, length(vec2(vWorldPos.x + 2.15, vWorldPos.z + 1.65)));
+        localAo *= mix(0.74, 1.0, floorAo) * mix(0.72, 1.0, cornerAo);
+    } else if (uPattern == 5) {
+        // Getigertes Katzenfell mit weichen Streifen
+        float stripe = sin(vUv.y * 28.0 + sin(vUv.x * 10.0) * 1.4) * 0.5 + 0.5;
+        float band = smoothstep(0.58, 0.84, stripe);
+        albedo = mix(uBaseColor, uAltColor, band * 0.72);
+        // Samtiger Fell-Schimmer am Rand
+        float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        albedo += uBaseColor * rim * 0.25;
+        rough = 0.82;
+    } else if (uPattern == 6) {
+        // Weicher Strick-Hoodie
+        float knit = sin(vUv.x * 80.0) * sin(vUv.y * 80.0) * 0.5 + 0.5;
+        albedo *= mix(0.92, 1.06, knit);
+        rough = 0.84;
+    } else if (uPattern == 7) {
+        // Lebendiger 3D-Monitor-Bildschirm mit Aufgabenliste & Abhaken
+        float on = clamp(uParam.x, 0.0, 1.0);
+        float typed = uParam.y;   // 0..4 Aufgaben erscheinen
+        float checked = uParam.z; // 0..4 Aufgaben werden abgehakt
+        // Screen-UV: vUv.x links->rechts, vUv.y unten->oben
+        vec2 uv = vUv;
+        vec3 screenBg = mix(vec3(0.012, 0.013, 0.018), vec3(0.055, 0.062, 0.088), on);
+        vec3 ui = screenBg;
+        if (on > 0.02) {
+            // Kopfzeile oben
+            if (uv.y > 0.82) {
+                ui = mix(ui, uAltColor * 0.85, 0.9);
+                // 3 kleine Fensterpunkte links
+                for (int i = 0; i < 3; i++) {
+                    vec2 dotC = vec2(0.08 + float(i) * 0.055, 0.91);
+                    if (length((uv - dotC) * vec2(1.75, 1.0)) < 0.03) {
+                        ui = vec3(0.95);
+                    }
+                }
+            }
+            // 4 Aufgaben-Zeilen mit Checkbox, Textbalken und Haken
+            for (int i = 0; i < 4; i++) {
+                float fi = float(i);
+                float rowY = 0.68 - fi * 0.165;
+                float appear = clamp(typed - fi, 0.0, 1.0);
+                float done = clamp(checked - fi, 0.0, 1.0);
+                if (appear > 0.01) {
+                    // Kartenhintergrund der Aufgabe
+                    if (uv.x > 0.06 && uv.x < 0.94 && abs(uv.y - rowY) < 0.058) {
+                        ui = mix(ui, vec3(0.11, 0.125, 0.17), 0.72 * appear);
+                    }
+                    // Checkbox links
+                    vec2 boxC = vec2(0.14, rowY);
+                    vec2 bd = abs(uv - boxC) * vec2(1.75, 1.0);
+                    float inBox = step(max(bd.x, bd.y), 0.036);
+                    float borderBox = inBox * (1.0 - step(max(bd.x, bd.y), 0.024));
+                    if (done > 0.5) {
+                        ui = mix(ui, uAltColor * 1.35, inBox);
+                        // Helle Mitte als Haken-Akzent
+                        if (length((uv - boxC) * vec2(1.75, 1.0)) < 0.017) ui = vec3(1.0);
+                    } else {
+                        ui = mix(ui, uAltColor * 1.1, borderBox * appear);
+                    }
+                    // Textbalken (wächst beim Tippen)
+                    float barLen = (0.44 + mod(fi * 0.17, 0.24)) * appear;
+                    if (uv.x > 0.22 && uv.x < 0.22 + barLen && abs(uv.y - rowY) < 0.016) {
+                        vec3 barCol = mix(vec3(0.78, 0.83, 0.92), vec3(0.35, 0.40, 0.48), done * 0.7);
+                        ui = barCol;
+                    }
+                }
+            }
+            // Blinkender Cursor an der aktiven Zeile
+            float blink = step(0.5, fract(uTime * 1.8));
+            int activeRow = clamp(int(floor(typed)), 0, 3);
+            float curY = 0.68 - float(activeRow) * 0.165;
+            float curX = 0.22 + (0.44 + mod(float(activeRow) * 0.17, 0.24)) * fract(typed);
+            if (typed < 3.98 && abs(uv.x - curX) < 0.008 && abs(uv.y - curY) < 0.028) {
+                ui = mix(ui, uAltColor * 1.6, blink);
+            }
+        }
+        // Zarte Glas-Diagonalspiegelung
+        float glass = smoothstep(0.35, 0.55, uv.x * 0.6 + uv.y * 0.4) * (1.0 - smoothstep(0.55, 0.68, uv.x * 0.6 + uv.y * 0.4));
+        albedo = vec3(0.02);
+        rough = 0.14;
+        emissive = ui * (1.18 * on + 0.04) + vec3(0.06) * glass;
+    } else if (uPattern == 8) {
+        // Dynamischer Fenster-Himmel mit Sonne, Dämmerung, Sternen, Mond & Stadtsilhouette
+        float abend = clamp(uParam.x, 0.0, 1.0);
+        vec3 skyTop = mix(uBaseColor, vec3(0.025, 0.032, 0.10), smoothstep(0.35, 1.0, abend));
+        vec3 skyBot = mix(uAltColor, vec3(0.18, 0.09, 0.18), smoothstep(0.55, 1.0, abend));
+        // Goldenes Abendrot in der Mitte der Dämmerung
+        float sunsetGlow = sin(abend * PI);
+        skyBot = mix(skyBot, vec3(1.15, 0.38, 0.12), sunsetGlow * 0.65);
+        vec3 sky = mix(skyBot, skyTop, clamp(vUv.y * 1.08, 0.0, 1.0));
+
+        // Sonne senkt sich am Himmel
+        vec2 sunPos = vec2(0.34 + abend * 0.28, 0.78 - abend * 0.62);
+        float dSun = length((vUv - sunPos) * vec2(1.3, 1.0));
+        float sunVis = 1.0 - smoothstep(0.75, 0.96, abend);
+        sky += vec3(1.5, 0.85, 0.38) * exp(-dSun * 6.5) * 0.85 * sunVis;
+        sky += vec3(2.2, 1.6, 0.95) * smoothstep(0.08, 0.055, dSun) * sunVis;
+
+        // Sterne & Mondsichel am Abend
+        float night = smoothstep(0.55, 0.95, abend);
+        if (night > 0.01) {
+            vec2 starGrid = floor(vUv * vec2(32.0, 22.0));
+            float starSeed = hash21(starGrid);
+            if (starSeed > 0.93 && vUv.y > 0.34) {
+                float tw = 0.55 + 0.45 * sin(uTime * 2.5 + starSeed * 60.0);
+                sky += vec3(0.95, 0.96, 1.0) * night * tw * 1.1;
+            }
+            vec2 moonPos = vec2(0.74, 0.76);
+            float dm1 = length((vUv - moonPos) * vec2(1.3, 1.0));
+            float dm2 = length((vUv - (moonPos + vec2(0.028, 0.016))) * vec2(1.3, 1.0));
+            float crescent = smoothstep(0.072, 0.062, dm1) * (1.0 - smoothstep(0.066, 0.056, dm2));
+            sky += vec3(0.95, 0.92, 0.82) * crescent * night * 1.5;
+            sky += vec3(0.45, 0.50, 0.72) * exp(-dm1 * 9.0) * night * 0.35;
+        }
+
+        // Ferne Stadtsilhouette unten am Fenster
+        float bx = floor(vUv.x * 7.0);
+        float bh = 0.14 + hash21(vec2(bx, 3.1)) * 0.17;
+        if (vUv.y < bh) {
+            vec3 bCol = mix(vec3(0.11, 0.10, 0.14), vec3(0.022, 0.024, 0.045), abend);
+            // Kleine beleuchtete Fenster in den Häusern abends
+            vec2 winUv = fract(vec2(vUv.x * 28.0, vUv.y * 26.0));
+            float winSeed = hash21(floor(vec2(vUv.x * 28.0, vUv.y * 26.0)));
+            if (winUv.x > 0.25 && winUv.x < 0.75 && winUv.y > 0.25 && winUv.y < 0.75 && winSeed > 0.48 && vUv.y < bh - 0.025) {
+                bCol += vec3(1.1, 0.72, 0.25) * smoothstep(0.32, 0.82, abend);
+            }
+            sky = bCol;
+        }
+        albedo = vec3(0.0);
+        emissive = sky * 1.08;
+    } else if (uPattern == 9) {
+        // Gerahmtes Wandbild: minimalistische Sonnenuntergangs-Berge
+        vec3 bg = mix(uBaseColor, uAltColor, vUv.y);
+        float sunD = length(vUv - vec2(0.68, 0.68));
+        bg = mix(bg, vec3(1.1, 0.88, 0.58), smoothstep(0.15, 0.12, sunD));
+        float m1 = 0.36 + 0.18 * sin(vUv.x * 5.2 + 0.4) + 0.08 * cos(vUv.x * 11.0);
+        float m2 = 0.24 + 0.14 * sin(vUv.x * 4.5 + 2.3);
+        if (vUv.y < m1) bg = uBaseColor * 0.42;
+        if (vUv.y < m2) bg = uBaseColor * 0.22;
+        albedo = bg;
+        rough = 0.52;
+    } else if (uPattern == 10) {
+        // Rundes Zifferblatt der 3D-Wanduhr mit 12 Stundenmarkierungen
+        vec2 p = (vUv - 0.5) * 2.0;
+        float r = length(p);
+        if (r > 0.98) discard;
+        float ang = atan(p.y, p.x);
+        float tick = abs(sin(ang * 6.0));
+        if (r > 0.72 && r < 0.89 && tick < 0.09) {
+            albedo = uAltColor;
+        } else if (r > 0.91) {
+            albedo = mix(albedo, uAltColor, 0.25);
+        }
+        rough = 0.45;
+    } else if (uPattern == 11) {
+        // Mechanische Tastatur mit Tastenraster und dezentem Leuchten
+        vec2 g = fract(vUv * vec2(15.0, 5.0));
+        float gap = smoothstep(0.08, 0.15, g.x) * smoothstep(0.08, 0.15, 1.0 - g.x)
+                  * smoothstep(0.10, 0.18, g.y) * smoothstep(0.10, 0.18, 1.0 - g.y);
+        albedo = mix(uBaseColor * 0.45, uBaseColor, gap);
+        emissive = uAltColor * (1.0 - gap) * uParam.x * 0.55;
+        rough = 0.42;
+    }
+
+    // ---- Beleuchtung im linearen Farbraum ----
+    vec3 Lo = vec3(0.0);
+
+    // 1. Haupt-Sonnenlicht durch das Fenster mit 3x3 PCF-Schattenkarte
+    vec3 Lsun = normalize(uSunDir);
+    float shadow = sampleShadow(vLightSpacePos, N, Lsun);
+    Lo += evalPbrLight(N, V, Lsun, uSunColor * shadow, albedo, rough, metal);
+
+    // 2. Schreibtischlampe (warmer Kegel-Spot mit sanfter Distanzabnahme)
+    if (dot(uLampColor, uLampColor) > 0.0001) {
+        vec3 toLamp = uLampPos - vWorldPos;
+        float dist = length(toLamp);
+        vec3 Llamp = toLamp / max(dist, 0.001);
+        float cosAng = dot(-Llamp, normalize(uLampDir));
+        float cone = smoothstep(0.42, 0.84, cosAng);
+        float atten = 1.0 / (0.35 + dist * dist * 1.35);
+        Lo += evalPbrLight(N, V, Llamp, uLampColor * cone * atten, albedo, rough, metal);
+        // Sanftes warmes Streulicht rund um den Schirm
+        Lo += albedo * uLampColor * 0.045 * atten;
+    }
+
+    // 3. Dynamischer Monitor-Schein auf Gesicht, Hände und Tisch
+    if (dot(uMonitorColor, uMonitorColor) > 0.0001) {
+        vec3 toMon = uMonitorPos - vWorldPos;
+        float dist = length(toMon);
+        vec3 Lmon = toMon / max(dist, 0.001);
+        float atten = 1.0 / (0.45 + dist * dist * 1.9);
+        Lo += evalPbrLight(N, V, Lmon, uMonitorColor * atten, albedo, rough, metal);
+    }
+
+    // 4. Warmes Flurlicht durch die sich öffnende Tür
+    if (dot(uDoorGlowColor, uDoorGlowColor) > 0.0001) {
+        vec3 toDoor = uDoorGlowPos - vWorldPos;
+        float dist = length(toDoor);
+        vec3 Ldoor = toDoor / max(dist, 0.001);
+        float atten = 1.0 / (0.55 + dist * dist * 1.1);
+        Lo += evalPbrLight(N, V, Ldoor, uDoorGlowColor * atten, albedo, rough, metal);
+    }
+
+    // 5. Hemisphären-IBL (Himmel oben + warmer Holz-Bounce von unten + Fresnel-Reflex)
+    float hemi = N.y * 0.5 + 0.5;
+    vec3 ambientDiff = mix(uGroundColor, uSkyColor, hemi) * albedo * (1.0 - metal * 0.85);
+    vec3 R = reflect(-V, N);
+    float envHemi = R.y * 0.5 + 0.5;
+    vec3 envSpecColor = mix(uGroundColor * 0.8, uSkyColor * 1.35, envHemi);
+    vec3 F0 = mix(vec3(0.04), albedo, metal);
+    float fresnel = pow(clamp(1.0 - max(dot(N, V), 0.0), 0.0, 1.0), 5.0);
+    vec3 envSpec = envSpecColor * (F0 + (max(vec3(1.0 - rough), F0) - F0) * fresnel) * (1.0 - rough * 0.72) * 0.45;
+
+    // Weiche Boden-Kontaktschatten unter Figuren und Möbeln
+    if (vWorldPos.y < 0.14) {
+        float floorFade = 1.0 - smoothstep(0.0, 0.14, vWorldPos.y);
+        float cAo = contactShadow(vWorldPos.xz, uContact0)
+                  * contactShadow(vWorldPos.xz, uContact1)
+                  * contactShadow(vWorldPos.xz, uContact2)
+                  * contactShadow(vWorldPos.xz, uContact3);
+        localAo *= mix(1.0, cAo, floorFade);
+    }
+
+    vec3 color = (ambientDiff + envSpec) * localAo + Lo + emissive;
+    color *= uExposure;
+
+    // ACES-Tonemapping + sRGB-Gamma
+    color = acesToneMap(color);
+    color = pow(color, vec3(1.0 / 2.2));
+    fragColor = vec4(color, 1.0);
+}
+"""
+
+        private const val ALPHA_VS = """#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 2) in vec2 aUv;
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+out vec2 vUv;
+void main() {
+    vUv = aUv;
+    gl_Position = uViewProj * uModel * vec4(aPos, 1.0);
+}
+"""
+
+        private const val ALPHA_FS = """#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform vec4 uColor;
+uniform int uMode;
+uniform float uTime;
+out vec4 fragColor;
+
+void main() {
+    float a = uColor.a;
+    if (uMode == 0) {
+        // Weicher Sonnenstrahl / Lichtkegel mit sanftem Randabfall
+        float xFade = sin(clamp(vUv.x, 0.0, 1.0) * 3.14159);
+        float yFade = smoothstep(0.0, 0.25, vUv.y) * (1.0 - smoothstep(0.55, 1.0, vUv.y));
+        a *= xFade * xFade * yFade;
+    } else if (uMode == 1) {
+        // Zarter Kaffeedampf-Wisp
+        vec2 p = (vUv - 0.5) * 2.0;
+        p.x += sin(vUv.y * 6.0 + uTime * 2.4) * 0.25;
+        float d = length(p);
+        a *= smoothstep(1.0, 0.15, d);
+    } else {
+        // Feines leuchtendes Staubkorn im Sonnenstrahl
+        float d = length((vUv - 0.5) * 2.0);
+        a *= smoothstep(1.0, 0.1, d);
+    }
+    if (a < 0.002) discard;
+    fragColor = vec4(uColor.rgb, a);
+}
+"""
+    }
+}

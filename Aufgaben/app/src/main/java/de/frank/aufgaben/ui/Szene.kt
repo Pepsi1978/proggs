@@ -1,7 +1,6 @@
 package de.frank.aufgaben.ui
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,80 +9,73 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.frank.aufgaben.ui.szenen.szeneAurora
-import de.frank.aufgaben.ui.szenen.szeneGarten
-import de.frank.aufgaben.ui.szenen.szeneKosmos
-import de.frank.aufgaben.ui.szenen.szeneOrange
-import de.frank.aufgaben.ui.szenen.AURORA_ZYKLUS
-import de.frank.aufgaben.ui.szenen.GARTEN_ZYKLUS
-import de.frank.aufgaben.ui.szenen.KOSMOS_ZYKLUS
-import de.frank.aufgaben.ui.szenen.ORANGE_ZYKLUS
-import de.frank.aufgaben.ui.theme.Design
+import androidx.compose.ui.viewinterop.AndroidView
+import de.frank.aufgaben.ui.szene3d.SZENE_3D_PHASEN
+import de.frank.aufgaben.ui.szene3d.Szene3DView
+import de.frank.aufgaben.ui.szene3d.palette3DFuer
 import de.frank.aufgaben.ui.theme.LocalBewegung
 import de.frank.aufgaben.ui.theme.LocalFarben
-import de.frank.aufgaben.ui.theme.farbenFuer
 import de.frank.aufgaben.ui.theme.glas
 
 /**
- * Ablauf je Design: Zykluslänge, Standbild für reduzierte Bewegung, Phasen mit Startzeit. Die Zeiten müssen zu den
- * Szenen passen. Jede Szene ist eine Endlosschleife ohne Schnitt: Sie endet im Dunkeln mit leerem Bild, genau so, wie
- * sie beginnt.
+ * Die echtzeit-gerenderte 3D-Szene oben (OpenGL ES 3.0 mit PBR-Beleuchtung, weichen Echtzeitschatten
+ * und filmischer 3D-Kamera): Ein Mensch kommt mit seiner Katze durch die schwingende Tür herein,
+ * setzt sich an den PC-Arbeitsplatz und beginnt zu arbeiten, trinkt Kaffee, schaltet abends die
+ * Schreibtischlampe ein und streichelt die Katze auf dem Schreibtisch. Farbwelt und Atmosphäre passen
+ * sich nahtlos jedem gewählten App-Design an.
  */
-private class Ablauf(val zyklus: Float, val standbild: Float, val phasen: List<Pair<Float, String>>)
-
-private fun ablauf(d: Design) = when (d) {
-    Design.ORANGE -> Ablauf(ORANGE_ZYKLUS, 27f, listOf(0f to "Ankommen", 8.8f to "Arbeiten", 20f to "Katzenpause", 34f to "Feierabend"))
-    Design.AURORA -> Ablauf(AURORA_ZYKLUS, 28f, listOf(0f to "Nachdenken", 11.2f to "Skizzieren", 26f to "Abhaken", 31.4f to "Geschafft"))
-    Design.GARTEN -> Ablauf(GARTEN_ZYKLUS, 24f, listOf(0f to "Losgehen", 6f to "Gießen", 20.8f to "Wachsen", 26.4f to "Ernten"))
-    Design.KOSMOS -> Ablauf(KOSMOS_ZYKLUS, 22f, listOf(0f to "Checkliste", 5.6f to "Systeme prüfen", 15.6f to "Countdown", 21f to "Start!"))
-}
-
-/** Die animierte Szene oben: für jedes Design eine eigene Geschichte mit eigenem Blickwinkel. */
 @Composable
 fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") erledigtAnteil: Float, pausiert: Boolean = false) {
     val f = LocalFarben.current
     val bewegung = LocalBewegung.current
-    val zeit = rememberSzenenZeit(pausiert)
-    val schrift = rememberTextMeasurer()
-    val a = remember(f.design) { ablauf(f.design) }
-    // Die Szene bleibt auch im Dunkelmodus hell wie im Hellmodus, nur unter einem leichten Schleier etwas gedämpft.
-    val szenenFarben = remember(f) { if (f.dunkel) farbenFuer(f.design, false) else f }
-    val ms = (a.zyklus * 1000).toLong()
-    val aktivePhase by remember(a) {
-        derivedStateOf {
-            val t = if (!bewegung) a.standbild else (zeit.value % ms) / 1000f
-            a.phasen.indexOfLast { t >= it.first }.coerceAtLeast(0)
-        }
-    }
+    val vorne = rememberVorne()
+    val effektivPausiert = pausiert || !vorne
+    val palette = remember(f.design, f.dunkel) { palette3DFuer(f.design, f.dunkel) }
+    val eckenPx = with(LocalDensity.current) { (f.radius * 0.7f).toPx() }
+    var aktivePhase by remember { mutableIntStateOf(if (bewegung) 0 else 1) }
+
     Column(modifier.glas(f, erhoeht = 1.2f).padding(10.dp)) {
-        Canvas(Modifier.fillMaxWidth().height(172.dp)) {
-            val t = if (!bewegung) a.standbild else (zeit.value % ms) / 1000f
-            clipPath(Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(f.radius.toPx() * 0.7f))) }) {
-                when (f.design) {
-                    Design.ORANGE -> szeneOrange(t, szenenFarben)
-                    Design.AURORA -> szeneAurora(t, szenenFarben)
-                    Design.GARTEN -> szeneGarten(t, szenenFarben)
-                    Design.KOSMOS -> szeneKosmos(t, szenenFarben, schrift)
+        AndroidView(
+            modifier = Modifier.fillMaxWidth().height(184.dp),
+            factory = { ctx ->
+                Szene3DView(ctx).apply {
+                    setCornerRadiusPx(eckenPx)
+                    setPalette(palette)
+                    setZustand(effektivPausiert, bewegung)
+                    setOnPhaseChanged { aktivePhase = it }
                 }
-                if (f.dunkel) drawRect(f.hgOben.copy(alpha = 0.16f))
-            }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            a.phasen.forEachIndexed { i, (_, name) ->
+            },
+            update = { view ->
+                view.setCornerRadiusPx(eckenPx)
+                view.setPalette(palette)
+                view.setZustand(effektivPausiert, bewegung)
+                view.setOnPhaseChanged { aktivePhase = it }
+            },
+            onRelease = { view ->
+                view.setOnPhaseChanged(null)
+            },
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            SZENE_3D_PHASEN.forEachIndexed { i, (_, name) ->
                 val farbe by animateColorAsState(if (i == aktivePhase) f.primaer else f.textSchwach, label = "phase")
-                Text(name, color = farbe, fontSize = 12.sp, fontWeight = if (i == aktivePhase) FontWeight.Bold else FontWeight.Medium)
+                Text(
+                    name,
+                    color = farbe,
+                    fontSize = 12.sp,
+                    fontWeight = if (i == aktivePhase) FontWeight.Bold else FontWeight.Medium,
+                )
             }
         }
     }
