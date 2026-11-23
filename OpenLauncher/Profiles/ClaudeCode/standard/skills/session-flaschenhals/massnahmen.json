@@ -48,7 +48,10 @@
       "id": "M42",
       "titel": "Bump-Wächter: Fehlalarme (Bump im selben Befehl, eintrag.py, committeter Bump, git pull vor dem Bau)",
       "datum": "2026-11-12T11:14",
-      "status": {"mac": "wirkt", "windows": "aktiv"},
+      "status": {
+        "mac": "wirkt",
+        "windows": "aktiv"
+      },
       "zusammengelegt": [
         {
           "id": "M3",
@@ -488,7 +491,10 @@
       "pruefung": "Nach 10 Sitzungen mit jarvis-install: Wartemeldung nur noch bei echt parallelen Läufen anderer Rechner, kein Lauf > 5 min wegen Sperre. Lesen der Skripte (cat/grep) zählt seit 19.11.2026 nicht mehr (Treffer im Quelltext).",
       "ruecknahme": "In beiden Skripten die eigner-Zeilen entfernen (rm -rf darf bleiben).",
       "kosten": "kein Dauerkontext, ein adb-cat je Warterunde",
-      "status": {"mac": "wirkt", "windows": "aktiv"}
+      "status": {
+        "mac": "wirkt",
+        "windows": "aktiv"
+      }
     },
     {
       "id": "M28",
@@ -629,7 +635,10 @@
       "pruefung": "Nach 10 Sitzungen: keine 10-min-Läufe mit Warteschleifen; Fehlalarme (Blocks ohne echte Schleife) prüfen",
       "ruecknahme": "warte_schleife-Aufruf im Hook entfernen",
       "kosten": "kein Kontext",
-      "status": {"mac": "wirkt", "windows": "aktiv"}
+      "status": {
+        "mac": "wirkt",
+        "windows": "aktiv"
+      }
     },
     {
       "id": "M35",
@@ -845,6 +854,26 @@
       "ruecknahme": "Zeilen mit „SCHNAPP“ bzw. „$schnapp“ in beiden jarvis-install-Skripten entfernen",
       "kosten": "eine Kopie der APK (~140 MB, unter 1 s) je Lauf, kein Kontext",
       "status": "aktiv"
+    },
+    {
+      "id": "M47",
+      "titel": "Update-Dialoge (update-launcher.sh, rebuild-overlay.sh): AppleScript-Zeitlimit über die Fensterwartezeit, Dialogfehler eigener Status",
+      "datum": "2026-11-23T10:54",
+      "beleg": "Sitzung 5731664e: OpenLauncher-Update meldete cancelled, obwohl kein Fenster kam (osascript-Fehler wurde als Nein gewertet); display dialog brach nach 120 s (-1712) vor giving up after 240 ab; 3 Update-Läufe, rund 6 min",
+      "ort": [
+        "OpenLauncherMac/update-launcher.sh",
+        "rebuild-overlay.sh"
+      ],
+      "fehler_regex": "LAUNCHER_UPDATE_STATUS=dialog-fehler|OVERLAY_UPDATE_STATUS=cancelled",
+      "werkzeug": "Bash",
+      "messbar": false,
+      "pruefung": "Von Hand: Meldet ein Lauf dialog-fehler oder cancelled, obwohl Frank kein Fenster sah, ist die Ursache nicht behoben.",
+      "ruecknahme": "Block 'with timeout of' und Funktion dialog_zeigen in update-launcher.sh bzw. 'with timeout of' in rebuild-overlay.sh entfernen",
+      "kosten": "keine Kontextkosten",
+      "status": "aktiv",
+      "plattform": [
+        "mac"
+      ]
     }
   ]
 }
