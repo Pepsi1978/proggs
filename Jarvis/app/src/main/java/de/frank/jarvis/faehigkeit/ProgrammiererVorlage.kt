@@ -33,8 +33,7 @@ object ProgrammiererVorlage {
         KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS, clis = listOf("claude")),
         KnopfModell(MODELL_SOL, "Sol 6.2", VORSPANN_SOL, clis = listOf("codex", "opencode")),
         KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", clis = listOf("opencode", "kimi")),
-        // Gemini 4 Neon gibt es nur in der Antigravity CLI (opencode models kennt es nicht, 23.11.2026).
-        KnopfModell(MODELL_NEON, "Gemini 4 Neon", VORSPANN_NEON, "Gemini 4 Neon", "antigravity", clis = listOf("antigravity")),
+        KnopfModell(MODELL_NEON, "Gemini 4 Neon", VORSPANN_NEON, "Gemini 4 Neon", "antigravity", clis = listOf("antigravity", "opencode")),
         // Kein Knopf mehr, aber alte Einstiege und gespeicherte Karten mit „argon“ bleiben gültig.
         KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode"), alt = true),
     )

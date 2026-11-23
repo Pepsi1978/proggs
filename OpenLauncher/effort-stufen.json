@@ -51,7 +51,19 @@
         "high",
         "xhigh"
     ],
+    "google/gemini-4-hydrogen [opencode]":  [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+    ],
     "google/gemini-4-neon [antigravity]":  [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+    ],
+    "google/gemini-4-neon [opencode]":  [
         "low",
         "medium",
         "high",

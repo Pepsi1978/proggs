@@ -110,7 +110,7 @@ public static class ProgrammierVorspann
         new Modell("Kimi K3.1 Pro", MitStandard(new() { ["modell"] = "Kimi K3.1 Pro", ["cli"] = "opencode" }),
             MitStandard(new() { ["modell"] = "k3.1-pro", ["anbieter"] = "kimi-code-plan-global", ["cli"] = "opencode" }), new[] { "opencode", "kimi" }),
         new Modell("Gemini 4 Neon", MitStandard(new() { ["modell"] = "Gemini 4 Neon", ["cli"] = "antigravity" }),
-            MitStandard(new() { ["modell"] = "gemini-4-neon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity" }),
+            MitStandard(new() { ["modell"] = "gemini-4-neon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity", "opencode" }),
     };
     /// <summary>Früherer Argon-Knopf (bis 23.11.2026): kein Knopf mehr, gespeicherte Prompts mit seinem Einstieg gelten weiter.</summary>
     private static readonly Modell[] AltModelle =

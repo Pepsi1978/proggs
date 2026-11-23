@@ -399,13 +399,6 @@ final class MainViewModel {
             : Self.isMoonshotModel(model)
             ? CliTargetEntry(id: "kimi", displayName: "Kimi Code CLI", descriptionText: "Originales Kimi-CLI, Profil aus der AGENTS.md")
             : CliTargetEntry(id: "codex", displayName: "Codex CLI", descriptionText: "Eigenes OpenAI-CLI, Profil aus der AGENTS.md")
-        // Gemini 4 Neon und Hydrogen kennt OpenCode nicht (opencode models, 23.11.2026): nur die Antigravity CLI.
-        let nurEigenes = Self.isGoogleModel(model) && (model?.slug.hasPrefix("gemini-4-neon") == true || model?.slug.hasPrefix("gemini-4-hydrogen") == true)
-        if nurEigenes {
-            if cliTargets.count == 1, cliTargets[0].id == own.id { return }
-            cliTargets = [own]
-            return
-        }
         if cliTargets.count == 2, cliTargets[1].id == own.id { return }
         cliTargets = [
             CliTargetEntry(id: "opencode", displayName: "OpenCode", descriptionText: "Wie bisher: OpenCode-TUI mit Provider-Wahl"),

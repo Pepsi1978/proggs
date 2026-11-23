@@ -93,7 +93,7 @@ enum ProgrammierVorspann {
         Modell("Kimi K3.1 Pro", handy: mitStandard(["modell": "Kimi K3.1 Pro", "cli": "opencode"]),
                mac: mitStandard(["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"]), clis: ["opencode", "kimi"]),
         Modell("Gemini 4 Neon", handy: mitStandard(["modell": "Gemini 4 Neon", "cli": "antigravity"]),
-               mac: mitStandard(["modell": "gemini-4-neon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity"]),
+               mac: mitStandard(["modell": "gemini-4-neon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity", "opencode"]),
     ]
     /// Früherer Argon-Knopf (bis 23.11.2026): kein Knopf mehr, gespeicherte Prompts mit seinem Einstieg gelten weiter.
     private static let altModelle: [Modell] = [
