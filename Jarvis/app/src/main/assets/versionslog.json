@@ -946,6 +946,7 @@
     {"versionCode": 937, "versionName": "1.8.926", "stand": "23.11.2026, 18:41 Uhr", "notiz": "Die Ablage zeigt die Reiter Tabellen, Präsentationen und Audio nicht mehr; solche Dateien bleiben erhalten und stehen unter Alle."},
     {"versionCode": 938, "versionName": "1.8.927", "stand": "23.11.2026, 18:45 Uhr", "notiz": "Beim ersten Öffnen der Ablage nach dem Update ist „Alle“ sofort markiert, auch wenn vorher ein entfernter Reiter gewählt war."},
     {"versionCode": 939, "versionName": "1.8.928", "stand": "23.11.2026, 18:54 Uhr", "notiz": "Tools-Bereich auf Handy und Tablet kompakter im 3-Spalten-Raster, Reihenfolge per Drag-and-drop über Zeilengrenzen hinweg mit flüssigem Platzmachen und sanftem Einrasten änderbar."},
-    {"versionCode": 940, "versionName": "1.8.929", "stand": "23.11.2026, 19:12 Uhr", "notiz": "Atemübungen-Kachel unter Tools mit eigener 3D-Atemflügel-Animation und hellem Smaragd-Hintergrund neu gestaltet; Listen vollständig aus der Ablage nach Tools verschoben (eigene 3D-Klemmbrett- und Einkaufswagen-Kachel, Drag-and-drop-Sortierung, Preislisten-Art)."}
+    {"versionCode": 940, "versionName": "1.8.929", "stand": "23.11.2026, 19:12 Uhr", "notiz": "Atemübungen-Kachel unter Tools mit eigener 3D-Atemflügel-Animation und hellem Smaragd-Hintergrund neu gestaltet; Listen vollständig aus der Ablage nach Tools verschoben (eigene 3D-Klemmbrett- und Einkaufswagen-Kachel, Drag-and-drop-Sortierung, Preislisten-Art)."},
+    {"versionCode": 941, "versionName": "1.8.930", "stand": "23.11.2026, 19:18 Uhr", "notiz": "Mentalität-3D-Kachel unter Tools überarbeitet: scharfkantige Ringe entfernt und einheitlich weiches, sofort erkennbares 3D-Gehirn mit Großhirn-Windungen, Kleinhirn, Hirnstamm und fließenden Gedankenwellen gestaltet."}
 ]
 }

@@ -146,7 +146,6 @@ private const val ATEM_ZYKLUS_S = 7.2f
 private const val ATEM_LAMELLEN = 7
 private const val ATEM_BOGEN_PUNKTE = 18
 private const val ATEM_HORIZONT_PUNKTE = 16
-private const val RING_PUNKTE = 40
 
 private data class AtemPerle(
     val xVersatz: Float,
@@ -742,191 +741,188 @@ private fun DrawScope.zeichneListen3D(t: Float, puffer: ListenZeichenPuffer) {
 }
 
 // ================================================================================================
-// 3D-Szene 2: Mentalität — Animiertes 3D-Gehirn für Denken, Lösungswege und innere Einstellungen
+// 3D-Szene 2: Mentalität — Weich modelliertes, sofort erkennbares 3D-Gehirn (beide Hemisphären,
+// Schläfenlappen, Kleinhirn, Hirnstamm, plastische Windungen & fließende Gedankenwellen — ohne Ringe)
 // ================================================================================================
 
-private const val HIRN_FALTE_PUNKTE = 11
-private const val WEG_ZYKLUS_S = 9.0f
-private const val EINSTELLUNG_ZYKLUS_S = 13.5f
+private const val HIRN_ZYKLUS_S = 8.4f
+private const val EINSTELLUNG_ZYKLUS_S = 14.0f
+private const val HIRN_STAUB_ANZAHL = 14
 
-private data class HirnKnoten(val x: Float, val y: Float, val z: Float, val seite: Int, val gewicht: Float)
-private data class HirnKante(val a: Int, val b: Int, val bruecke: Boolean)
-private data class HirnFalte(val punkteX: FloatArray, val punkteY: FloatArray, val punkteZ: FloatArray, val seite: Int)
-private data class LoesungsWeg(val knoten: IntArray, val farbe: Color, val versatz: Float)
+private data class HirnKurve(
+    val x: FloatArray,
+    val y: FloatArray,
+    val z: FloatArray,
+    val breite: Float,
+    val tiefeFurche: Boolean = false,
+)
+
+private data class GedankenSpur(
+    val kurvenIndex: Int,
+    val farbe: Color,
+    val versatz: Float,
+    val richtung: Int,
+)
+
+private data class HirnStaub(
+    val x: Float,
+    val y: Float,
+    val z: Float,
+    val phase: Float,
+    val radius: Float,
+)
 
 private object GehirnModell {
-    val knoten: List<HirnKnoten>
-    val kanten: List<HirnKante>
-    val falten: List<HirnFalte>
-    val wege: List<LoesungsWeg>
+    // Anatomische Großhirn-Silhouette (geschlossen, im Uhrzeigersinn, Stirn links -> Scheitel -> Hinterhaupt -> Schläfenlappen)
+    val grosshirnX = floatArrayOf(
+        -0.93f, -0.92f, -0.80f, -0.58f, -0.28f, 0.06f, 0.40f, 0.68f, 0.87f,
+        0.95f, 0.91f, 0.77f, 0.56f, 0.34f, 0.14f, -0.06f, -0.30f, -0.54f, -0.76f, -0.90f,
+    )
+    val grosshirnY = floatArrayOf(
+        -0.02f, -0.26f, -0.49f, -0.65f, -0.74f, -0.76f, -0.70f, -0.55f, -0.32f,
+        -0.04f, 0.18f, 0.28f, 0.24f, 0.23f, 0.33f, 0.38f, 0.35f, 0.23f, 0.24f, 0.14f,
+    )
 
-    /** Formt einen normierten Richtungsvektor auf eine erkennbare 3D-Gehirnhälfte (links/rechts). */
-    private fun hirnPunkt(seite: Int, laenge: Float, hoehe: Float, weite: Float): Triple<Float, Float, Float> {
-        // laenge: -1 (Hinterhaupt/Okzipital) .. +1 (Stirn/Frontal)
-        // hoehe:  -1 (Scheitel oben) .. +1 (Basis unten)
-        // weite:   0 (Mittellinie/Fissur) .. 1 (äußere Schläfenwand)
-        val z = laenge * 0.96f
-        val kuppel = sqrt((1f - (laenge * 0.86f) * (laenge * 0.86f)).coerceAtLeast(0.06f))
-        // Schläfenlappen wölbt sich seitlich leicht nach unten-vorn, Stirn rundet weich ab.
-        val schlaefe = if (hoehe > 0.1f && laenge > -0.35f && laenge < 0.55f) 0.14f * weite else 0f
-        val y = hoehe * 0.62f * kuppel - 0.04f + schlaefe
-        val spalt = 0.055f + 0.04f * (1f - abs(hoehe))
-        val breiteHuelle = 0.64f * kuppel * (0.86f + 0.18f * (1f - abs(laenge + 0.1f)))
-        val x = seite * (spalt + weite * breiteHuelle)
-        return Triple(x, y, z)
+    // Kleinhirn (Cerebellum) rechts unten unter dem Hinterhauptslappen — macht die Gehirnform sofort unverkennbar
+    val kleinhirnX = floatArrayOf(0.24f, 0.44f, 0.68f, 0.81f, 0.77f, 0.60f, 0.39f, 0.24f)
+    val kleinhirnY = floatArrayOf(0.24f, 0.20f, 0.22f, 0.33f, 0.48f, 0.57f, 0.54f, 0.40f)
+
+    // Weicher Hirnstamm-Ansatz (Brainstem) unten mittig-rechts
+    val stammX = floatArrayOf(0.02f, 0.24f, 0.30f, 0.27f, 0.16f, 0.05f, 0.01f)
+    val stammY = floatArrayOf(0.27f, 0.27f, 0.44f, 0.68f, 0.76f, 0.69f, 0.48f)
+
+    /** Berechnet eine weiche 3D-Kuppelwölbung (z) für einen Punkt auf der Hemisphären-Oberfläche. */
+    private fun kuppelZ(x: Float, y: Float, basisZ: Float): Float {
+        val nx = (x / 0.96f).coerceIn(-1f, 1f)
+        val ny = ((y + 0.16f) / 0.64f).coerceIn(-1f, 1f)
+        val r2 = (nx * nx + ny * ny).coerceIn(0f, 1f)
+        return basisZ - sqrt((1f - r2 * 0.88f).coerceAtLeast(0.04f)) * 0.30f
     }
 
-    init {
-        val kListe = mutableListOf<HirnKnoten>()
-
-        // 0: Zentraler Ursprungsknoten im präfrontalen Bereich (Ausgangspunkt der Gedanken)
-        kListe += HirnKnoten(0f, -0.06f, 0.58f, 0, 1.35f)
-        // 1: Zentrale Balken-Brücke (Corpus callosum)
-        kListe += HirnKnoten(0f, -0.18f, 0.05f, 0, 1.15f)
-        // 2: Hintere Konvergenz / Erkenntnis-Zentrum
-        kListe += HirnKnoten(0f, -0.08f, -0.62f, 0, 1.25f)
-
-        // Je Hemisphäre 15 anatomisch verteilte Kortex-Knoten (3..17 links, 18..32 rechts)
-        val muster = listOf(
-            // Stirnlappen (Frontal)
-            Triple(0.76f, -0.36f, 0.42f),
-            Triple(0.58f, -0.68f, 0.52f),
-            Triple(0.68f, 0.12f, 0.64f),
-            // Scheitellappen (Parietal, obere Kuppel)
-            Triple(0.22f, -0.84f, 0.46f),
-            Triple(-0.18f, -0.88f, 0.50f),
-            Triple(0.18f, -0.46f, 0.86f),
-            Triple(-0.24f, -0.48f, 0.88f),
-            // Schläfenlappen (Temporal, seitlich unten)
-            Triple(0.32f, 0.24f, 0.94f),
-            Triple(-0.04f, 0.34f, 0.96f),
-            Triple(-0.38f, 0.26f, 0.82f),
-            // Hinterhauptslappen (Okzipital)
-            Triple(-0.62f, -0.54f, 0.54f),
-            Triple(-0.82f, -0.14f, 0.48f),
-            Triple(-0.74f, 0.26f, 0.44f),
-            // Tiefe innere Knoten (Denk-Netzwerk im Inneren)
-            Triple(0.10f, -0.10f, 0.38f),
-            Triple(-0.34f, -0.06f, 0.36f),
-        )
-        for (seite in listOf(-1, 1)) {
-            muster.forEachIndexed { idx, (l, h, w) ->
-                val (x, y, z) = hirnPunkt(seite, l, h, w)
-                val gewicht = if (idx in listOf(0, 3, 7, 11)) 1.15f else 0.92f
-                kListe += HirnKnoten(x, y, z, seite, gewicht)
-            }
+    private fun kurve(punkte: List<Pair<Float, Float>>, basisZ: Float, breite: Float, tiefeFurche: Boolean = false): HirnKurve {
+        val n = punkte.size
+        val xs = FloatArray(n)
+        val ys = FloatArray(n)
+        val zs = FloatArray(n)
+        for (i in 0 until n) {
+            val (px, py) = punkte[i]
+            xs[i] = px
+            ys[i] = py
+            zs[i] = kuppelZ(px, py, basisZ)
         }
-        knoten = kListe
+        return HirnKurve(xs, ys, zs, breite, tiefeFurche)
+    }
 
-        // Kanten: lokale Kortex-Verbindungen innerhalb jeder Hälfte + Querverbindungen zwischen beiden Hälften
-        val eListe = mutableListOf<HirnKante>()
-        val gesehen = HashSet<Int>()
-        fun fuegeKanteHinzu(a: Int, b: Int, bruecke: Boolean) {
-            val lo = minOf(a, b); val hi = maxOf(a, b)
-            val key = lo * 100 + hi
-            if (gesehen.add(key)) eListe += HirnKante(lo, hi, bruecke)
-        }
+    // Ikonische, weich geschwungene Hirnwindungen (Gyri) & die Sylvische Furche auf der vorderen Hemisphäre
+    val windungen: List<HirnKurve> = listOf(
+        // 0: Charakteristische Sylvische Furche (trennt Stirn-/Scheitellappen klar vom Schläfenlappen)
+        kurve(
+            listOf(-0.56f to 0.14f, -0.34f to 0.08f, -0.10f to 0.02f, 0.14f to -0.06f, 0.34f to -0.15f),
+            basisZ = -0.16f, breite = 2.6f, tiefeFurche = true,
+        ),
+        // 1: Obere Stirn- und Scheitelwindung (großer geschwungener Bogen)
+        kurve(
+            listOf(-0.78f to -0.24f, -0.58f to -0.44f, -0.30f to -0.56f, 0.02f to -0.58f, 0.32f to -0.50f),
+            basisZ = -0.18f, breite = 3.1f,
+        ),
+        // 2: Mittlere Stirnwindung (S-förmig geschwungen)
+        kurve(
+            listOf(-0.80f to -0.02f, -0.60f to -0.18f, -0.36f to -0.16f, -0.18f to -0.32f, 0.06f to -0.36f),
+            basisZ = -0.20f, breite = 2.9f,
+        ),
+        // 3: Zentrale Scheitel-Schleife (senkrecht gewellt wie echte Zentralfurche)
+        kurve(
+            listOf(-0.10f to -0.66f, -0.18f to -0.44f, -0.06f to -0.22f, -0.16f to -0.04f),
+            basisZ = -0.20f, breite = 2.8f,
+        ),
+        // 4: Hintere Scheitel- und Hinterhauptswindung
+        kurve(
+            listOf(0.16f to -0.64f, 0.36f to -0.42f, 0.56f to -0.46f, 0.74f to -0.26f, 0.78f to -0.04f),
+            basisZ = -0.18f, breite = 3.0f,
+        ),
+        // 5: Hinterhaupt-Bogen (Okzipitalwindung)
+        kurve(
+            listOf(0.32f to -0.24f, 0.52f to -0.16f, 0.68f to -0.02f, 0.74f to 0.14f, 0.56f to 0.16f),
+            basisZ = -0.18f, breite = 2.8f,
+        ),
+        // 6: Obere Schläfenwindung (Temporal-Bogen unterhalb der Sylvischen Furche)
+        kurve(
+            listOf(-0.46f to 0.22f, -0.22f to 0.20f, 0.02f to 0.16f, 0.24f to 0.08f, 0.42f to 0.04f),
+            basisZ = -0.20f, breite = 2.9f,
+        ),
+        // 7: Untere Schläfenwindung
+        kurve(
+            listOf(-0.34f to 0.29f, -0.10f to 0.30f, 0.14f to 0.24f, 0.30f to 0.16f),
+            basisZ = -0.18f, breite = 2.5f,
+        ),
+        // 8: Stirnpol-Schleife vorn links
+        kurve(
+            listOf(-0.74f to 0.12f, -0.58f to -0.01f, -0.40f to -0.04f, -0.30f to -0.26f),
+            basisZ = -0.19f, breite = 2.5f,
+        ),
+        // 9: Mittlere Querschleife (verbindet Scheitel und Hinterhaupt)
+        kurve(
+            listOf(0.06f to -0.22f, 0.24f to -0.34f, 0.46f to -0.30f, 0.60f to -0.16f),
+            basisZ = -0.20f, breite = 2.6f,
+        ),
+    )
 
-        val lokalPaare = listOf(
-            0 to 1, 0 to 2, 0 to 13, 1 to 3, 1 to 5, 2 to 7, 2 to 13,
-            3 to 4, 3 to 5, 3 to 13, 4 to 6, 4 to 10, 5 to 6, 5 to 7, 5 to 8,
-            6 to 8, 6 to 9, 6 to 10, 6 to 14, 7 to 8, 7 to 13, 8 to 9, 8 to 14,
-            9 to 11, 9 to 12, 9 to 14, 10 to 11, 10 to 14, 11 to 12, 11 to 14, 13 to 14,
-        )
-        for (halb in 0..1) {
-            val basis = 3 + halb * 15
-            lokalPaare.forEach { (a, b) -> fuegeKanteHinzu(basis + a, basis + b, false) }
-            fuegeKanteHinzu(0, basis + 0, true)
-            fuegeKanteHinzu(0, basis + 2, true)
-            fuegeKanteHinzu(0, basis + 13, true)
-            fuegeKanteHinzu(1, basis + 3, true)
-            fuegeKanteHinzu(1, basis + 4, true)
-            fuegeKanteHinzu(1, basis + 13, true)
-            fuegeKanteHinzu(1, basis + 14, true)
-            fuegeKanteHinzu(2, basis + 10, true)
-            fuegeKanteHinzu(2, basis + 11, true)
-            fuegeKanteHinzu(2, basis + 14, true)
-        }
-        listOf(1, 3, 4, 10, 13, 14).forEach { idx ->
-            fuegeKanteHinzu(3 + idx, 18 + idx, true)
-        }
-        kanten = eListe
+    // Feine parallele Kleinhirn-Rillen (Folia) — typische Struktur des Kleinhirns
+    val kleinhirnFalten: List<HirnKurve> = listOf(
+        kurve(listOf(0.32f to 0.31f, 0.50f to 0.28f, 0.71f to 0.32f), basisZ = -0.06f, breite = 1.6f),
+        kurve(listOf(0.30f to 0.38f, 0.52f to 0.36f, 0.74f to 0.40f), basisZ = -0.06f, breite = 1.6f),
+        kurve(listOf(0.33f to 0.45f, 0.52f to 0.44f, 0.71f to 0.47f), basisZ = -0.06f, breite = 1.5f),
+        kurve(listOf(0.39f to 0.51f, 0.55f to 0.51f, 0.66f to 0.52f), basisZ = -0.06f, breite = 1.3f),
+    )
 
-        // 3D-Hirnwindungen (Gyri) auf beiden Hemisphären: verleihen sofort die ikonische Gehirnform.
-        val fListe = mutableListOf<HirnFalte>()
-        for (seite in listOf(-1, 1)) {
-            val spuren = listOf(
-                Triple(0.84f, -0.82f, 0.24f) to Pair(-0.56f, 0.16f),
-                Triple(0.82f, -0.84f, 0.56f) to Pair(-0.50f, 0.18f),
-                Triple(0.76f, -0.82f, 0.82f) to Pair(-0.22f, 0.18f),
-                Triple(0.78f, -0.78f, 0.94f) to Pair(0.06f, 0.16f),
-                Triple(0.56f, -0.68f, 0.90f) to Pair(0.32f, 0.13f),
-                Triple(0.68f, 0.14f, 0.72f) to Pair(-0.34f, 0.22f),
-                Triple(-0.14f, -0.76f, 0.74f) to Pair(-0.36f, 0.20f),
-                Triple(-0.34f, -0.86f, 0.48f) to Pair(0.56f, 0.08f),
-            )
-            spuren.forEachIndexed { fIdx, (span, hoeheInfo) ->
-                val (lStart, lEnde, basisWeite) = span
-                val (basisHoehe, welligkeit) = hoeheInfo
-                val px = FloatArray(HIRN_FALTE_PUNKTE)
-                val py = FloatArray(HIRN_FALTE_PUNKTE)
-                val pz = FloatArray(HIRN_FALTE_PUNKTE)
-                for (i in 0 until HIRN_FALTE_PUNKTE) {
-                    val u = i.toFloat() / (HIRN_FALTE_PUNKTE - 1)
-                    val l = lStart + (lEnde - lStart) * u
-                    val schwing = sin(u * PI.toFloat() * 3.0f + fIdx * 1.15f)
-                    val h = (basisHoehe + schwing * welligkeit + (u - 0.5f) * (u - 0.5f) * 0.24f).coerceIn(-0.92f, 0.88f)
-                    val w = (basisWeite * (0.74f + 0.26f * sin(u * PI.toFloat())) + cos(u * PI.toFloat() * 2.5f + fIdx) * 0.07f).coerceIn(0.12f, 1.0f)
-                    val (x, y, z) = hirnPunkt(seite, l, h, w)
-                    px[i] = x; py[i] = y; pz[i] = z
-                }
-                fListe += HirnFalte(px, py, pz, seite)
-            }
-        }
-        falten = fListe
+    // Weiche Gedankenwellen, die direkt entlang der Hirnwindungen fließen (ohne kantiges Netz)
+    val spuren: List<GedankenSpur> = listOf(
+        GedankenSpur(kurvenIndex = 1, farbe = HIRN_CYAN, versatz = 0.00f, richtung = 1),
+        GedankenSpur(kurvenIndex = 4, farbe = HIRN_MAGENTA, versatz = 0.24f, richtung = 1),
+        GedankenSpur(kurvenIndex = 2, farbe = HIRN_GOLD, versatz = 0.50f, richtung = 1),
+        GedankenSpur(kurvenIndex = 6, farbe = HIRN_RUHE, versatz = 0.74f, richtung = -1),
+        GedankenSpur(kurvenIndex = 9, farbe = HIRN_KREATIV, versatz = 0.38f, richtung = 1),
+    )
 
-        // 4 verzweigte 3D-Lösungswege vom selben Impuls-Ursprung (Knoten 0) über verschiedene Routen:
-        // analytisch (links-oben), kreativ (rechts-weit), tief-intuitiv (Balken-Wechsel), Synthese (beidseitig).
-        wege = listOf(
-            LoesungsWeg(intArrayOf(0, 3, 4, 6, 7, 13, 2), HIRN_CYAN, 0.00f),
-            LoesungsWeg(intArrayOf(0, 20, 25, 26, 27, 29, 2), HIRN_MAGENTA, 0.26f),
-            LoesungsWeg(intArrayOf(0, 16, 1, 21, 22, 28, 2), HIRN_GOLD, 0.52f),
-            LoesungsWeg(intArrayOf(0, 18, 19, 1, 7, 14, 2), HIRN_RUHE, 0.76f),
+    // Zarte, sanft atmende Lichtstäubchen im weichen Raum (keine harten Linien)
+    val staub: List<HirnStaub> = List(HIRN_STAUB_ANZAHL) { i ->
+        val winkel = (i.toFloat() / HIRN_STAUB_ANZAHL) * TAU + 0.3f
+        val r = 1.05f + (i % 3) * 0.18f
+        HirnStaub(
+            x = cos(winkel) * r,
+            y = sin(winkel) * r * 0.82f - 0.04f,
+            z = ((i % 5) - 2) * 0.22f,
+            phase = i.toFloat() / HIRN_STAUB_ANZAHL,
+            radius = 1.4f + (i % 3) * 0.65f,
         )
     }
 }
 
 private class GehirnZeichenPuffer {
-    val knotenX = FloatArray(GehirnModell.knoten.size)
-    val knotenY = FloatArray(GehirnModell.knoten.size)
-    val knotenZ = FloatArray(GehirnModell.knoten.size)
-    val knotenS = FloatArray(GehirnModell.knoten.size)
-    val knotenErregung = FloatArray(GehirnModell.knoten.size)
-    val knotenWegIndex = IntArray(GehirnModell.knoten.size) { -1 }
-    val falteX = FloatArray(HIRN_FALTE_PUNKTE)
-    val falteY = FloatArray(HIRN_FALTE_PUNKTE)
-    val falteZ = FloatArray(HIRN_FALTE_PUNKTE)
-    val falteS = FloatArray(HIRN_FALTE_PUNKTE)
-    val ringX = FloatArray(RING_PUNKTE + 1)
-    val ringY = FloatArray(RING_PUNKTE + 1)
-    val ringZ = FloatArray(RING_PUNKTE + 1)
-    val knotenReihe = IntArray(GehirnModell.knoten.size) { it }
-    val faltenTiefe = FloatArray(GehirnModell.falten.size)
-    val faltenReihe = IntArray(GehirnModell.falten.size) { it }
+    val pfad = Path()
+    val kurvePfad = Path()
+    val schattenPfad = Path()
+    val glanzPfad = Path()
+    val px = FloatArray(24)
+    val py = FloatArray(24)
+    val ps = FloatArray(24)
 }
 
 private fun DrawScope.zeichneGehirn3D(t: Float, puffer: GehirnZeichenPuffer) {
-    val mitteX = size.width * 0.5f
+    val mitteX = size.width * 0.50f
     val mitteY = size.height * 0.51f
-    val skala = size.minDimension * 0.41f
+    val skala = size.minDimension * 0.44f
 
-    // Kontinuierliche, ruhige 3D-Drehung: zeigt Seitenprofil, 3/4-Tiefe und beide Hemisphären.
-    val yaw = 0.58f + t * 0.34f
-    val pitch = 0.26f + 0.08f * sin(t * 0.45f)
+    // Nahtlose, ruhige 3D-Schwebebewegung in ikonischer 3/4-Seitenansicht:
+    // Kein 360°-Kreiseln mehr — das Gehirn bleibt immer sofort als Gehirn erkennbar!
+    val w = (t / HIRN_ZYKLUS_S) * TAU
+    val yaw = -0.18f + 0.22f * sin(w)
+    val pitch = 0.11f + 0.06f * cos(w)
+    val schwebeY = sin(w) * 0.032f
     val cy = cos(yaw); val sy = sin(yaw)
     val cx = cos(pitch); val sx = sin(pitch)
 
-    // Innere Einstellungen: sanfter Wechsel durch 3 Grundhaltungen (Fokus -> Kreativität -> Ruhe/Zuversicht)
+    // Innere Einstellungen: sanfter, weicher Farbwandel (Fokus -> Kreativität -> Ruhe)
     val haltungU = ((t % EINSTELLUNG_ZYKLUS_S) + EINSTELLUNG_ZYKLUS_S) % EINSTELLUNG_ZYKLUS_S / EINSTELLUNG_ZYKLUS_S * 3f
     val haltungFarbe = when {
         haltungU < 1f -> lerp(HIRN_FOKUS, HIRN_KREATIV, weich(haltungU))
@@ -939,363 +935,346 @@ private fun DrawScope.zeichneGehirn3D(t: Float, puffer: GehirnZeichenPuffer) {
         else -> lerp(HIRN_GOLD, HIRN_CYAN, weich(haltungU - 2f))
     }
 
-    // Alle 3D-Knoten projizieren und Grundaktivität (Denken) zurücksetzen
-    val knoten = GehirnModell.knoten
-    for (i in knoten.indices) {
-        val k = knoten[i]
-        val rx = k.x * cy + k.z * sy
-        val rz1 = -k.x * sy + k.z * cy
-        val ry = k.y * cx - rz1 * sx
-        val rz = k.y * sx + rz1 * cx
-        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
-        puffer.knotenX[i] = mitteX + rx * skala * s
-        puffer.knotenY[i] = mitteY + ry * skala * s
-        puffer.knotenZ[i] = rz
-        puffer.knotenS[i] = s
-        puffer.knotenErregung[i] = 0.15f + 0.20f * (0.5f + 0.5f * sin(t * 2.1f + i * 0.95f))
-        puffer.knotenWegIndex[i] = -1
+    fun projX(x: Float, y: Float, z: Float): Float {
+        val yw = y + schwebeY
+        val rx = x * cy + z * sy
+        val rz1 = -x * sy + z * cy
+        val rz = yw * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
+        return mitteX + rx * skala * s
     }
 
-    // Atmosphärische Gedanken-Aura der aktuellen inneren Einstellung
-    val auraR = skala * 1.18f
+    fun projY(x: Float, y: Float, z: Float): Float {
+        val yw = y + schwebeY
+        val rz1 = -x * sy + z * cy
+        val ry = yw * cx - rz1 * sx
+        val rz = yw * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
+        return mitteY + ry * skala * s
+    }
+
+    fun projS(x: Float, y: Float, z: Float): Float {
+        val yw = y + schwebeY
+        val rz1 = -x * sy + z * cy
+        val rz = yw * sx + rz1 * cx
+        return FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
+    }
+
+    /** Baut einen glatten, weich gerundeten geschlossenen Pfad aus projizierten 3D-Konturpunkten. */
+    fun baueWeicheKontur(
+        xs: FloatArray,
+        ys: FloatArray,
+        zEbene: Float,
+        xVersatz: Float,
+        yVersatz: Float,
+        xSkal: Float,
+        ySkal: Float,
+        ziel: Path,
+    ) {
+        val n = xs.size
+        for (i in 0 until n) {
+            val vx = xs[i] * xSkal + xVersatz
+            val vy = ys[i] * ySkal + yVersatz
+            puffer.px[i] = projX(vx, vy, zEbene)
+            puffer.py[i] = projY(vx, vy, zEbene)
+        }
+        ziel.rewind()
+        val startX = (puffer.px[n - 1] + puffer.px[0]) * 0.5f
+        val startY = (puffer.py[n - 1] + puffer.py[0]) * 0.5f
+        ziel.moveTo(startX, startY)
+        for (i in 0 until n) {
+            val next = (i + 1) % n
+            val mx = (puffer.px[i] + puffer.px[next]) * 0.5f
+            val my = (puffer.py[i] + puffer.py[next]) * 0.5f
+            ziel.quadraticTo(puffer.px[i], puffer.py[i], mx, my)
+        }
+        ziel.close()
+    }
+
+    /** Baut eine weiche, offene Kurve durch projizierte 3D-Punkte (optional mit Pixel-Versatz). */
+    fun baueWeicheKurve(k: HirnKurve, dxPx: Float, dyPx: Float, ziel: Path): Float {
+        val n = k.x.size
+        var sSumme = 0f
+        for (i in 0 until n) {
+            puffer.px[i] = projX(k.x[i], k.y[i], k.z[i]) + dxPx
+            puffer.py[i] = projY(k.x[i], k.y[i], k.z[i]) + dyPx
+            val s = projS(k.x[i], k.y[i], k.z[i])
+            puffer.ps[i] = s
+            sSumme += s
+        }
+        ziel.rewind()
+        ziel.moveTo(puffer.px[0], puffer.py[0])
+        if (n == 2) {
+            ziel.lineTo(puffer.px[1], puffer.py[1])
+        } else {
+            for (i in 1 until n - 1) {
+                val mx = (puffer.px[i] + puffer.px[i + 1]) * 0.5f
+                val my = (puffer.py[i] + puffer.py[i + 1]) * 0.5f
+                ziel.quadraticTo(puffer.px[i], puffer.py[i], mx, my)
+            }
+            ziel.lineTo(puffer.px[n - 1], puffer.py[n - 1])
+        }
+        return sSumme / n
+    }
+
+    // 1) Weicher, organischer Lichthof im Hintergrund (KEINE scharfkantigen Ringe!)
+    val auraR = skala * (1.28f + 0.08f * sin(w))
     drawCircle(
         Brush.radialGradient(
             listOf(
-                haltungFarbe.copy(alpha = 0.30f),
-                haltungZweit.copy(alpha = 0.08f),
+                haltungFarbe.copy(alpha = 0.34f),
+                haltungZweit.copy(alpha = 0.14f),
                 Color.Transparent,
             ),
-            Offset(mitteX, mitteY),
+            Offset(mitteX - skala * 0.06f, mitteY - skala * 0.08f),
             auraR,
         ),
         radius = auraR,
         center = Offset(mitteX, mitteY),
     )
 
-    // 1) HINTERE 3D-Einstellungsringe (Perspektiv-Ebenen hinter dem Gehirn)
-    zeichneEinstellungsRinge(puffer, mitteX, mitteY, skala, t, haltungFarbe, haltungZweit, vorne = false, cy, sy, cx, sx)
-
-    // 2) Transluzente 3D-Hemisphären-Volumenkörper (tiefensortiert), damit die Gehirnform plastisch wirkt
-    zeichneHemisphaerenVolumen(mitteX, mitteY, skala, haltungFarbe, haltungZweit, cy, sy, cx, sx)
-
-    // 3) Tiefensortierung der 3D-Hirnwindungen (Gyri)
-    val falten = GehirnModell.falten
-    for (fIdx in falten.indices) {
-        val falte = falten[fIdx]
-        val mid = HIRN_FALTE_PUNKTE / 2
-        val mx = falte.punkteX[mid]; val my = falte.punkteY[mid]; val mz = falte.punkteZ[mid]
-        val rz1 = -mx * sy + mz * cy
-        puffer.faltenTiefe[fIdx] = my * sx + rz1 * cx
-        puffer.faltenReihe[fIdx] = fIdx
-    }
-    for (i in 1 until puffer.faltenReihe.size) {
-        val k = puffer.faltenReihe[i]
-        val z = puffer.faltenTiefe[k]
-        var j = i - 1
-        while (j >= 0 && puffer.faltenTiefe[puffer.faltenReihe[j]] < z) {
-            puffer.faltenReihe[j + 1] = puffer.faltenReihe[j]
-            j--
-        }
-        puffer.faltenReihe[j + 1] = k
-    }
-
-    // Hintere Hirnwindungen (z > 0)
-    for (ord in puffer.faltenReihe) {
-        if (puffer.faltenTiefe[ord] > 0f) {
-            zeichneHirnFalte(falten[ord], puffer, mitteX, mitteY, skala, haltungFarbe, haltungZweit, cy, sy, cx, sx)
-        }
-    }
-
-    // 4) Grund-Synapsennetz (Denken über beide Hemisphären)
-    for (kante in GehirnModell.kanten) {
-        val a = kante.a; val b = kante.b
-        val zMitte = (puffer.knotenZ[a] + puffer.knotenZ[b]) * 0.5f
-        val tiefe = ((1.25f - zMitte) / 2.5f).coerceIn(0.18f, 1f)
-        val alpha = (if (kante.bruecke) 0.26f else 0.19f) * tiefe
-        drawLine(
-            color = lerp(haltungFarbe, Color.White, 0.25f).copy(alpha = alpha),
-            start = Offset(puffer.knotenX[a], puffer.knotenY[a]),
-            end = Offset(puffer.knotenX[b], puffer.knotenY[b]),
-            strokeWidth = (if (kante.bruecke) 1.25f else 0.95f) * density * tiefe,
-            cap = StrokeCap.Round,
-        )
-    }
-
-    // 5) Verschiedene verzweigte 3D-Lösungswege mit laufenden Gedanken-Impulsen
-    val wegBasis = ((t % WEG_ZYKLUS_S) + WEG_ZYKLUS_S) % WEG_ZYKLUS_S / WEG_ZYKLUS_S
-    for (wIdx in GehirnModell.wege.indices) {
-        val weg = GehirnModell.wege[wIdx]
-        val p = ((wegBasis - weg.versatz) % 1f + 1f) % 1f
-        if (p > 0.68f) continue
-        val lauf = (p / 0.50f).coerceIn(0f, 1f)
-        val ausklang = if (p <= 0.50f) 1f else 1f - weich((p - 0.50f) / 0.18f)
-        val segmente = weg.knoten.size - 1
-        val kopfPos = lauf * segmente
-
-        for (seg in 0 until segmente) {
-            val a = weg.knoten[seg]
-            val b = weg.knoten[seg + 1]
-            val segAnteil = (kopfPos - seg).coerceIn(0f, 1f)
-            if (segAnteil <= 0f) continue
-
-            val ax = puffer.knotenX[a]; val ay = puffer.knotenY[a]
-            val bx = puffer.knotenX[b]; val by = puffer.knotenY[b]
-            val ex = ax + (bx - ax) * segAnteil
-            val ey = ay + (by - ay) * segAnteil
-            val zMitte = (puffer.knotenZ[a] + puffer.knotenZ[b]) * 0.5f
-            val tiefe = ((1.3f - zMitte) / 2.6f).coerceIn(0.35f, 1f)
-
-            val pfadAlpha = (0.86f * ausklang * tiefe).coerceIn(0f, 0.95f)
-            drawLine(
-                color = weg.farbe.copy(alpha = pfadAlpha * 0.38f),
-                start = Offset(ax, ay),
-                end = Offset(ex, ey),
-                strokeWidth = 4.6f * density * tiefe,
-                cap = StrokeCap.Round,
-                blendMode = BlendMode.Plus,
-            )
-            drawLine(
-                color = lerp(weg.farbe, Color.White, 0.45f).copy(alpha = pfadAlpha),
-                start = Offset(ax, ay),
-                end = Offset(ex, ey),
-                strokeWidth = 1.9f * density * tiefe,
-                cap = StrokeCap.Round,
-            )
-
-            // Aktivierte Knoten in der Farbe ihres Lösungswegs aufleuchten lassen
-            if (puffer.knotenErregung[a] < ausklang) {
-                puffer.knotenErregung[a] = ausklang
-                puffer.knotenWegIndex[a] = wIdx
-            }
-            if (segAnteil > 0.85f && puffer.knotenErregung[b] < ausklang) {
-                puffer.knotenErregung[b] = ausklang
-                puffer.knotenWegIndex[b] = wIdx
-            }
-
-            if (segAnteil in 0.02f..0.99f) {
-                val funkeR = 5.4f * density * tiefe
-                drawCircle(
-                    Brush.radialGradient(listOf(Color.White, weg.farbe.copy(alpha = 0.65f), Color.Transparent), Offset(ex, ey), funkeR),
-                    radius = funkeR,
-                    center = Offset(ex, ey),
-                    blendMode = BlendMode.Plus,
-                )
-            }
-        }
-
-        // Erkenntnis-Leuchten am Zielknoten, wenn ein Lösungsweg ankommt
-        if (lauf >= 0.96f) {
-            val ziel = weg.knoten.last()
-            val zx = puffer.knotenX[ziel]; val zy = puffer.knotenY[ziel]
-            val haloR = (10f + 8f * (1f - ausklang)) * density * puffer.knotenS[ziel]
-            drawCircle(
-                Brush.radialGradient(listOf(Color.White.copy(alpha = 0.7f * ausklang), weg.farbe.copy(alpha = 0.45f * ausklang), Color.Transparent), Offset(zx, zy), haloR),
-                radius = haloR,
-                center = Offset(zx, zy),
-                blendMode = BlendMode.Plus,
-            )
-        }
-    }
-
-    // 6) Tiefensortierte Neuronen-Knoten (back-to-front)
-    for (i in 1 until puffer.knotenReihe.size) {
-        val k = puffer.knotenReihe[i]
-        val z = puffer.knotenZ[k]
-        var j = i - 1
-        while (j >= 0 && puffer.knotenZ[puffer.knotenReihe[j]] < z) {
-            puffer.knotenReihe[j + 1] = puffer.knotenReihe[j]
-            j--
-        }
-        puffer.knotenReihe[j + 1] = k
-    }
-    for (idx in puffer.knotenReihe) {
-        val k = knoten[idx]
-        val x = puffer.knotenX[idx]; val y = puffer.knotenY[idx]
-        val s = puffer.knotenS[idx]
-        val tiefe = ((1.25f - puffer.knotenZ[idx]) / 2.5f).coerceIn(0.24f, 1f)
-        val erregt = puffer.knotenErregung[idx]
-        val wegIdx = puffer.knotenWegIndex[idx]
-        val grundFarbe = lerp(haltungFarbe, haltungZweit, if (k.seite >= 0) 0.55f else 0.15f)
-        val farbe = if (wegIdx >= 0) GehirnModell.wege[wegIdx].farbe else grundFarbe
-        val kernR = (1.8f + erregt * 1.9f) * k.gewicht * density * s * 0.86f
-        val haloR = kernR * 2.9f
-
-        if (erregt > 0.35f) {
-            drawCircle(
-                Brush.radialGradient(listOf(farbe.copy(alpha = 0.55f * erregt * tiefe), Color.Transparent), Offset(x, y), haloR),
-                radius = haloR,
-                center = Offset(x, y),
-                blendMode = BlendMode.Plus,
-            )
-        }
-        drawCircle(
-            color = lerp(farbe, Color.White, 0.35f + 0.55f * erregt).copy(alpha = (0.45f + 0.55f * erregt) * tiefe),
-            radius = kernR,
-            center = Offset(x, y),
-        )
-    }
-
-    // 7) Vordere Hirnwindungen (z <= 0) für klare 3D-Gehirn-Plastizität
-    for (ord in puffer.faltenReihe) {
-        if (puffer.faltenTiefe[ord] <= 0f) {
-            zeichneHirnFalte(falten[ord], puffer, mitteX, mitteY, skala, haltungFarbe, haltungZweit, cy, sy, cx, sx)
-        }
-    }
-
-    // 8) VORDERE 3D-Einstellungsringe (Perspektiv-Ebenen vor dem Gehirn)
-    zeichneEinstellungsRinge(puffer, mitteX, mitteY, skala, t, haltungFarbe, haltungZweit, vorne = true, cy, sy, cx, sx)
-}
-
-private fun DrawScope.zeichneHemisphaerenVolumen(
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    hauptFarbe: Color,
-    zweitFarbe: Color,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    // Zwei sanfte transluzente 3D-Volumenkerne für linke und rechte Hemisphäre (hintere zuerst).
-    val xLinks = -0.34f; val xRechts = 0.34f; val yMitte = -0.08f
-    val rzLinks = yMitte * sx + (-xLinks * sy) * cx
-    val rzRechts = yMitte * sx + (-xRechts * sy) * cx
-    val erstLinks = rzLinks >= rzRechts
-    for (schritt in 0..1) {
-        val links = if (schritt == 0) erstLinks else !erstLinks
-        val hx = if (links) xLinks else xRechts
-        val rx = hx * cy
-        val rz1 = -hx * sy
-        val ry = yMitte * cx - rz1 * sx
-        val rz = yMitte * sx + rz1 * cx
-        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
-        val cx2d = mitteX + rx * skala * s
-        val cy2d = mitteY + ry * skala * s
-        val r = skala * 0.64f * s
-        val farbe = if (links) hauptFarbe else lerp(hauptFarbe, zweitFarbe, 0.55f)
+    // Zarte, weich leuchtende Lichtstäubchen (harmonisch-organisch, ohne Linien)
+    for (p in GehirnModell.staub) {
+        val u = ((t * 0.09f + p.phase) % 1f + 1f) % 1f
+        val puls = sin(u * PI.toFloat()).coerceIn(0f, 1f)
+        val alpha = puls * puls * 0.42f
+        if (alpha < 0.02f) continue
+        val sx2d = projX(p.x + sin(w + p.phase * TAU) * 0.06f, p.y - puls * 0.08f, p.z)
+        val sy2d = projY(p.x + sin(w + p.phase * TAU) * 0.06f, p.y - puls * 0.08f, p.z)
+        val r = p.radius * density * (0.7f + 0.3f * puls)
         drawCircle(
             Brush.radialGradient(
-                listOf(
-                    farbe.copy(alpha = 0.24f),
-                    farbe.copy(alpha = 0.08f),
-                    Color.Transparent,
-                ),
-                Offset(cx2d - r * 0.18f, cy2d - r * 0.22f),
-                r,
+                listOf(Color.White.copy(alpha = alpha), haltungZweit.copy(alpha = alpha * 0.45f), Color.Transparent),
+                Offset(sx2d, sy2d),
+                r * 2.4f,
             ),
-            radius = r,
-            center = Offset(cx2d, cy2d),
+            radius = r * 2.4f,
+            center = Offset(sx2d, sy2d),
+            blendMode = BlendMode.Plus,
         )
     }
-}
 
-private fun DrawScope.zeichneHirnFalte(
-    falte: HirnFalte,
-    puffer: GehirnZeichenPuffer,
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    hauptFarbe: Color,
-    zweitFarbe: Color,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    for (i in 0 until HIRN_FALTE_PUNKTE) {
-        val x = falte.punkteX[i]; val y = falte.punkteY[i]; val z = falte.punkteZ[i]
-        val rx = x * cy + z * sy
-        val rz1 = -x * sy + z * cy
-        val ry = y * cx - rz1 * sx
-        val rz = y * sx + rz1 * cx
-        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
-        puffer.falteX[i] = mitteX + rx * skala * s
-        puffer.falteY[i] = mitteY + ry * skala * s
-        puffer.falteZ[i] = rz
-        puffer.falteS[i] = s
+    // 2) Hintere Gehirnhälfte (leicht nach hinten-oben versetzt für echte 3D-Tiefe beider Hemisphären)
+    baueWeicheKontur(
+        GehirnModell.grosshirnX, GehirnModell.grosshirnY,
+        zEbene = 0.34f, xVersatz = 0.06f, yVersatz = -0.07f, xSkal = 0.96f, ySkal = 0.96f,
+        ziel = puffer.pfad,
+    )
+    drawPath(
+        path = puffer.pfad,
+        brush = Brush.radialGradient(
+            listOf(
+                lerp(haltungFarbe, Color.White, 0.16f).copy(alpha = 0.62f),
+                lerp(haltungFarbe, Color(0xFF141033), 0.52f).copy(alpha = 0.72f),
+                Color(0xFF0E0B26).copy(alpha = 0.65f),
+            ),
+            center = Offset(mitteX - skala * 0.18f, mitteY - skala * 0.45f),
+            radius = skala * 1.25f,
+        ),
+    )
+    drawPath(
+        path = puffer.pfad,
+        color = lerp(haltungFarbe, Color.White, 0.30f).copy(alpha = 0.24f),
+        style = Stroke(width = 1.6f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+
+    // 3) Weicher Hirnstamm (Brainstem) unten mittig-rechts
+    baueWeicheKontur(
+        GehirnModell.stammX, GehirnModell.stammY,
+        zEbene = 0.08f, xVersatz = 0f, yVersatz = 0f, xSkal = 1f, ySkal = 1f,
+        ziel = puffer.pfad,
+    )
+    drawPath(
+        path = puffer.pfad,
+        brush = Brush.linearGradient(
+            listOf(
+                lerp(haltungFarbe, Color(0xFF1C1642), 0.22f).copy(alpha = 0.88f),
+                lerp(haltungFarbe, Color(0xFF0C0A22), 0.62f).copy(alpha = 0.72f),
+            ),
+            start = Offset(mitteX, mitteY + skala * 0.22f),
+            end = Offset(mitteX + skala * 0.18f, mitteY + skala * 0.82f),
+        ),
+    )
+
+    // 4) Kleinhirn (Cerebellum) rechts unten mit seinen typischen feinen weichen Falten
+    baueWeicheKontur(
+        GehirnModell.kleinhirnX, GehirnModell.kleinhirnY,
+        zEbene = 0.02f, xVersatz = 0f, yVersatz = 0f, xSkal = 1f, ySkal = 1f,
+        ziel = puffer.pfad,
+    )
+    drawPath(
+        path = puffer.pfad,
+        brush = Brush.radialGradient(
+            listOf(
+                lerp(haltungZweit, Color.White, 0.24f).copy(alpha = 0.86f),
+                lerp(haltungFarbe, haltungZweit, 0.45f).copy(alpha = 0.84f),
+                lerp(haltungFarbe, Color(0xFF100C2B), 0.62f).copy(alpha = 0.88f),
+            ),
+            center = Offset(projX(0.46f, 0.30f, 0f), projY(0.46f, 0.30f, 0f)),
+            radius = skala * 0.46f,
+        ),
+    )
+    for (falte in GehirnModell.kleinhirnFalten) {
+        val sF = baueWeicheKurve(falte, 0f, 0.8f * density, puffer.schattenPfad)
+        drawPath(
+            path = puffer.schattenPfad,
+            color = Color(0xFF110B2E).copy(alpha = 0.45f),
+            style = Stroke(width = falte.breite * 1.35f * density * sF, cap = StrokeCap.Round),
+        )
+        baueWeicheKurve(falte, 0f, 0f, puffer.kurvePfad)
+        drawPath(
+            path = puffer.kurvePfad,
+            color = lerp(haltungZweit, Color.White, 0.45f).copy(alpha = 0.50f),
+            style = Stroke(width = falte.breite * 0.72f * density * sF, cap = StrokeCap.Round),
+        )
     }
-    val seitenFarbe = if (falte.seite < 0) hauptFarbe else lerp(hauptFarbe, zweitFarbe, 0.55f)
-    for (i in 0 until HIRN_FALTE_PUNKTE - 1) {
-        val zMitte = (puffer.falteZ[i] + puffer.falteZ[i + 1]) * 0.5f
-        val tiefe = ((1.22f - zMitte) / 2.44f).coerceIn(0.16f, 1f)
-        val enden = sin(((i + 0.5f) / (HIRN_FALTE_PUNKTE - 1)) * PI.toFloat()).coerceIn(0.25f, 1f)
-        val dicke = (1.35f + 2.2f * tiefe) * density * puffer.falteS[i] * 0.85f
+
+    // 5) Vordere Haupt-Hemisphäre (weich plastisch ausgeleuchtete Großhirn-Form)
+    baueWeicheKontur(
+        GehirnModell.grosshirnX, GehirnModell.grosshirnY,
+        zEbene = -0.14f, xVersatz = 0f, yVersatz = 0f, xSkal = 1f, ySkal = 1f,
+        ziel = puffer.pfad,
+    )
+    // Weicher 3D-Hauptkörper mit Licht von oben links und sanftem Schatten unten rechts
+    drawPath(
+        path = puffer.pfad,
+        brush = Brush.radialGradient(
+            listOf(
+                lerp(haltungFarbe, Color.White, 0.56f).copy(alpha = 0.94f),
+                lerp(haltungFarbe, haltungZweit, 0.28f).copy(alpha = 0.90f),
+                lerp(haltungFarbe, Color(0xFF141038), 0.56f).copy(alpha = 0.92f),
+            ),
+            center = Offset(projX(-0.34f, -0.38f, -0.2f), projY(-0.34f, -0.38f, -0.2f)),
+            radius = skala * 1.48f,
+        ),
+    )
+    // Inneres weiches Subsurface-Leuchten im Zentrum des Gehirns
+    val innenX = projX(-0.04f, -0.16f, -0.22f)
+    val innenY = projY(-0.04f, -0.16f, -0.22f)
+    drawCircle(
+        Brush.radialGradient(
+            listOf(
+                lerp(haltungZweit, Color.White, 0.40f).copy(alpha = 0.28f + 0.08f * sin(w)),
+                haltungFarbe.copy(alpha = 0.10f),
+                Color.Transparent,
+            ),
+            Offset(innenX, innenY),
+            skala * 0.78f,
+        ),
+        radius = skala * 0.78f,
+        center = Offset(innenX, innenY),
+        blendMode = BlendMode.Plus,
+    )
+    // Seidiger weicher Rand-Schimmer (Rim-Light) für 3D-Volumen ohne harte Kontur
+    drawPath(
+        path = puffer.pfad,
+        brush = Brush.linearGradient(
+            listOf(
+                Color.White.copy(alpha = 0.55f),
+                haltungZweit.copy(alpha = 0.26f),
+                haltungFarbe.copy(alpha = 0.42f),
+            ),
+            start = Offset(mitteX - skala, mitteY - skala),
+            end = Offset(mitteX + skala, mitteY + skala),
+        ),
+        style = Stroke(width = 1.9f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+
+    // 6) Plastische, weich geschwungene 3D-Hirnwindungen (Gyri & Sulci)
+    for (windung in GehirnModell.windungen) {
+        val sM = baueWeicheKurve(windung, 0.9f * density, 1.4f * density, puffer.schattenPfad)
+        val bPx = windung.breite * density * sM
+        // Weiche dunkle Furche (Sulcus) für echtes organisches Relief
+        drawPath(
+            path = puffer.schattenPfad,
+            color = Color(0xFF100B2C).copy(alpha = if (windung.tiefeFurche) 0.58f else 0.40f),
+            style = Stroke(width = bPx * (if (windung.tiefeFurche) 1.55f else 1.30f), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+        if (!windung.tiefeFurche) {
+            // Weicher gewölbter Gyrus-Wulst
+            baueWeicheKurve(windung, 0f, 0f, puffer.kurvePfad)
+            drawPath(
+                path = puffer.kurvePfad,
+                color = lerp(haltungFarbe, haltungZweit, 0.35f).copy(alpha = 0.52f),
+                style = Stroke(width = bPx * 1.05f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+            // Seidiger Glanzkamm oben links auf jeder Windung
+            baueWeicheKurve(windung, -0.7f * density, -0.9f * density, puffer.glanzPfad)
+            drawPath(
+                path = puffer.glanzPfad,
+                color = Color.White.copy(alpha = 0.46f),
+                style = Stroke(width = bPx * 0.42f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+        } else {
+            // Zarter Lichtsaum an der Kante der Sylvischen Furche
+            baueWeicheKurve(windung, -0.6f * density, -1.0f * density, puffer.glanzPfad)
+            drawPath(
+                path = puffer.glanzPfad,
+                color = Color.White.copy(alpha = 0.28f),
+                style = Stroke(width = bPx * 0.38f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+        }
+    }
+
+    // 7) Weiche, leuchtende Gedankenwellen fließen direkt entlang der Hirnwindungen (nahtlose Schleife)
+    val impulsBasis = ((t % HIRN_ZYKLUS_S) + HIRN_ZYKLUS_S) % HIRN_ZYKLUS_S / HIRN_ZYKLUS_S
+    for (spur in GehirnModell.spuren) {
+        val p = ((impulsBasis - spur.versatz) % 1f + 1f) % 1f
+        if (p > 0.72f) continue
+        val lauf = (p / 0.72f).coerceIn(0f, 1f)
+        val h = sin(lauf * PI.toFloat()).coerceIn(0f, 1f)
+        val huelle = h * h
+        if (huelle < 0.02f) continue
+
+        val k = GehirnModell.windungen[spur.kurvenIndex]
+        val segmente = k.x.size - 1
+        val kopfU = if (spur.richtung > 0) lauf else 1f - lauf
+        val fPos = kopfU * segmente
+        val idx0 = fPos.toInt().coerceIn(0, segmente - 1)
+        val bruch = (fPos - idx0).coerceIn(0f, 1f)
+
+        val kx = k.x[idx0] + (k.x[idx0 + 1] - k.x[idx0]) * bruch
+        val ky = k.y[idx0] + (k.y[idx0 + 1] - k.y[idx0]) * bruch
+        val kz = k.z[idx0] + (k.z[idx0 + 1] - k.z[idx0]) * bruch - 0.03f
+        val x2d = projX(kx, ky, kz)
+        val y2d = projY(kx, ky, kz)
+        val s2d = projS(kx, ky, kz)
+
+        // Sanft glühender Schweif kurz hinter dem Gedanken-Impuls
+        val schwU = (kopfU - spur.richtung * 0.22f).coerceIn(0f, 1f)
+        val sPos = schwU * segmente
+        val sIdx = sPos.toInt().coerceIn(0, segmente - 1)
+        val sBruch = (sPos - sIdx).coerceIn(0f, 1f)
+        val sx3 = k.x[sIdx] + (k.x[sIdx + 1] - k.x[sIdx]) * sBruch
+        val sy3 = k.y[sIdx] + (k.y[sIdx + 1] - k.y[sIdx]) * sBruch
+        val sz3 = k.z[sIdx] + (k.z[sIdx + 1] - k.z[sIdx]) * sBruch - 0.03f
+        val sx2d = projX(sx3, sy3, sz3)
+        val sy2d = projY(sx3, sy3, sz3)
+
         drawLine(
-            color = seitenFarbe.copy(alpha = (0.14f + 0.44f * tiefe) * enden),
-            start = Offset(puffer.falteX[i], puffer.falteY[i]),
-            end = Offset(puffer.falteX[i + 1], puffer.falteY[i + 1]),
-            strokeWidth = dicke,
+            brush = Brush.linearGradient(
+                listOf(Color.Transparent, spur.farbe.copy(alpha = 0.65f * huelle), Color.White.copy(alpha = 0.80f * huelle)),
+                start = Offset(sx2d, sy2d),
+                end = Offset(x2d, y2d),
+            ),
+            start = Offset(sx2d, sy2d),
+            end = Offset(x2d, y2d),
+            strokeWidth = 3.2f * density * s2d,
             cap = StrokeCap.Round,
+            blendMode = BlendMode.Plus,
         )
-        if (tiefe > 0.54f) {
-            drawLine(
-                color = Color.White.copy(alpha = (tiefe - 0.54f) * 0.72f * enden),
-                start = Offset(puffer.falteX[i], puffer.falteY[i] - 0.6f * density),
-                end = Offset(puffer.falteX[i + 1], puffer.falteY[i + 1] - 0.6f * density),
-                strokeWidth = dicke * 0.36f,
-                cap = StrokeCap.Round,
-            )
-        }
-    }
-}
 
-private fun DrawScope.zeichneEinstellungsRinge(
-    puffer: GehirnZeichenPuffer,
-    mitteX: Float,
-    mitteY: Float,
-    skala: Float,
-    t: Float,
-    hauptFarbe: Color,
-    zweitFarbe: Color,
-    vorne: Boolean,
-    cy: Float,
-    sy: Float,
-    cx: Float,
-    sx: Float,
-) {
-    // Zwei sanft schwenkende 3D-Perspektivringe um das Gehirn: versinnbildlichen innere Haltungen.
-    for (ring in 0 until 2) {
-        val radius = 1.12f + ring * 0.14f
-        val kippX = (if (ring == 0) 0.58f else -0.46f) + 0.16f * sin(t * 0.42f + ring * 1.7f)
-        val kippZ = (if (ring == 0) -0.28f else 0.36f) + 0.14f * cos(t * 0.36f + ring * 2.1f)
-        val ckx = cos(kippX); val skx = sin(kippX)
-        val ckz = cos(kippZ); val skz = sin(kippZ)
-        val dreh = t * (if (ring == 0) 0.24f else -0.19f)
-
-        for (i in 0..RING_PUNKTE) {
-            val a = (i.toFloat() / RING_PUNKTE) * TAU + dreh
-            val lx = cos(a) * radius
-            val lz0 = sin(a) * radius
-            val ly1 = -lz0 * skx
-            val lz1 = lz0 * ckx
-            val lx2 = lx * ckz - ly1 * skz
-            val ly2 = lx * skz + ly1 * ckz
-
-            val rx = lx2 * cy + lz1 * sy
-            val rz1 = -lx2 * sy + lz1 * cy
-            val ry = ly2 * cx - rz1 * sx
-            val rz = ly2 * sx + rz1 * cx
-            val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.7f)
-            puffer.ringX[i] = mitteX + rx * skala * s
-            puffer.ringY[i] = mitteY + ry * skala * s
-            puffer.ringZ[i] = rz
-        }
-
-        val farbe = if (ring == 0) hauptFarbe else zweitFarbe
-        val alpha = if (vorne) 0.34f else 0.12f
-        val dicke = (if (vorne) 1.3f else 0.9f) * density
-        for (i in 0 until RING_PUNKTE) {
-            val zMitte = (puffer.ringZ[i] + puffer.ringZ[i + 1]) * 0.5f
-            if (vorne && zMitte > 0f) continue
-            if (!vorne && zMitte <= 0f) continue
-            drawLine(
-                color = farbe.copy(alpha = alpha),
-                start = Offset(puffer.ringX[i], puffer.ringY[i]),
-                end = Offset(puffer.ringX[i + 1], puffer.ringY[i + 1]),
-                strokeWidth = dicke,
-                cap = StrokeCap.Round,
-            )
-        }
+        // Weicher Licht-Tropfen als Gedanken-Spitze
+        val haloR = 8.5f * density * s2d * (0.7f + 0.3f * h)
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color.White.copy(alpha = 0.88f * huelle), spur.farbe.copy(alpha = 0.55f * huelle), Color.Transparent),
+                Offset(x2d, y2d),
+                haloR,
+            ),
+            radius = haloR,
+            center = Offset(x2d, y2d),
+            blendMode = BlendMode.Plus,
+        )
     }
 }
