@@ -318,7 +318,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Bereich("Listen", listenOffenZahl, LISTEN_REITER, Icons.Rounded.Checklist),
             )
             val sortierer = remember { java.text.Collator.getInstance(Locale.GERMAN) }
-            Chip("Alle (${alle.size})", filter == null) { filter = null }
+            Chip("Alle (${alle.size})", filter == null || AUSGEBLENDETE_REITER.any { it.name == filter }) { filter = null }
             bereiche.sortedWith { x, y -> sortierer.compare(x.name, y.name) }.forEach { b ->
                 Chip("${b.name} (${b.zahl})", filter == b.kennung, icon = b.icon) {
                     if (filter == b.kennung) filter = null

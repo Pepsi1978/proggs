@@ -943,6 +943,7 @@
     {"versionCode": 934, "versionName": "1.8.923", "stand": "23.11.2026, 18:16 Uhr", "notiz": "Tools-Karten auf Handy und Tablet mit eigenen 3D-Animationen neu gestaltet (Atemübungen mit Luftströmungen und Wind, Mentalität mit animiertem 3D-Gehirn für Denken, Lösungswege und innere Einstellungen), Beschreibungstexte unter den Karten entfernt."},
     {"versionCode": 935, "versionName": "1.8.924", "stand": "23.11.2026, 18:20 Uhr", "notiz": "Atemübungen-3D-Karte: Schleifenübergang zwischen Ein- und Ausatmen komplett nahtlos ohne Phasen-Sprung umgesetzt."},
     {"versionCode": 936, "versionName": "1.8.925", "stand": "23.11.2026, 18:20 Uhr", "notiz": "Die Auswahlknöpfe und Fragen am Programmierbutton haben jetzt einen deckenden Hintergrund, damit keine Schrift mehr durchscheint."},
-    {"versionCode": 937, "versionName": "1.8.926", "stand": "23.11.2026, 18:41 Uhr", "notiz": "Die Ablage zeigt die Reiter Tabellen, Präsentationen und Audio nicht mehr; solche Dateien bleiben erhalten und stehen unter Alle."}
+    {"versionCode": 937, "versionName": "1.8.926", "stand": "23.11.2026, 18:41 Uhr", "notiz": "Die Ablage zeigt die Reiter Tabellen, Präsentationen und Audio nicht mehr; solche Dateien bleiben erhalten und stehen unter Alle."},
+    {"versionCode": 938, "versionName": "1.8.927", "stand": "23.11.2026, 18:45 Uhr", "notiz": "Beim ersten Öffnen der Ablage nach dem Update ist „Alle“ sofort markiert, auch wenn vorher ein entfernter Reiter gewählt war."}
 ]
 }
