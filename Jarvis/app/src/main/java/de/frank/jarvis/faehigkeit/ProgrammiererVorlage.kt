@@ -33,9 +33,10 @@ object ProgrammiererVorlage {
         KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS, clis = listOf("claude")),
         KnopfModell(MODELL_SOL, "Sol 6.2", VORSPANN_SOL, clis = listOf("codex", "opencode")),
         KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", clis = listOf("opencode", "kimi")),
-        KnopfModell(MODELL_NEON, "Gemini 4 Neon", VORSPANN_NEON, "Gemini 4 Neon", "antigravity", clis = listOf("antigravity", "opencode")),
+        // Gemini nur im Antigravity CLI (Frank, 23.11.2026): keine CLI-Knöpfe, direkt die Review-Frage.
+        KnopfModell(MODELL_NEON, "Gemini 4 Neon", VORSPANN_NEON, "Gemini 4 Neon", "antigravity", clis = listOf("antigravity")),
         // Kein Knopf mehr, aber alte Einstiege und gespeicherte Karten mit „argon“ bleiben gültig.
-        KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode"), alt = true),
+        KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity"), alt = true),
     )
 
     /** Einstieg, den der Programmierbutton sofort setzt: ohne Wahl gilt Opus 5.5 in Claude Code (Frank, 21.11.2026). */

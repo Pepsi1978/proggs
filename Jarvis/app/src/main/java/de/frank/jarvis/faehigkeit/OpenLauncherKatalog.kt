@@ -92,12 +92,13 @@ object OpenLauncherKatalog {
         "antigravity" to listOf("low", "medium", "high", "xhigh", "max"),
     )
 
-    /** Wie fillCliTargets im OpenLauncherMac: Claude-Modelle nur in Claude Code, sonst OpenCode plus das eigene CLI des Anbieters. */
+    /** Wie fillCliTargets im OpenLauncherMac: Claude-Modelle nur in Claude Code, Google nur in Antigravity, sonst OpenCode plus das eigene CLI des Anbieters. */
     fun clisFuer(anbieter: String): List<String> = when (anbieter.lowercase(Locale.ROOT)) {
         ANTHROPIC -> listOf("claude")
         "openai" -> listOf("opencode", "codex")
         MOONSHOT -> listOf("opencode", "kimi")
-        GOOGLE -> listOf("antigravity", "opencode")
+        // Gemini-Modelle nur im Antigravity CLI (Frank, 23.11.2026): Die CLI-Frage entfällt, Jarvis fragt direkt nach dem Review.
+        GOOGLE -> listOf("antigravity")
         else -> listOf("opencode")
     }
 

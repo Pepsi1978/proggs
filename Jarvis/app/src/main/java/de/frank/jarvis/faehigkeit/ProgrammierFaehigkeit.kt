@@ -1088,8 +1088,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Folgefragen: Sol am Windows-PC → CLI, Codex CLI → Review. Ist der PC aus, geht Sol wie bisher ohne Frage weiter.
         val naechste = when {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
-            // Gemini 4 Neon: erst die CLI (Antigravity oder OpenCode); Antigravity fragt danach das Review, OpenCode fragt selbst.
-            w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_NEON && w.ziel != "cloud" -> w.copy(modell = wert, stufe = STUFE_CLI)
+            // Gemini 4 Neon nur im Antigravity CLI (Frank, 23.11.2026): keine CLI-Frage, gleich die Review-Frage.
+            w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_NEON && w.ziel != "cloud" -> w.copy(modell = wert, cli = CLI_ANTIGRAVITY, stufe = STUFE_REVIEW)
             w.stufe == STUFE_CLI && w.modell == ProgrammiererVorlage.MODELL_NEON && wert != CLI_OPENCODE -> w.copy(cli = CLI_ANTIGRAVITY, stufe = STUFE_REVIEW)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
             w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_ARGON && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
