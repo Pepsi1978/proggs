@@ -108,7 +108,7 @@ private fun buehnenVerlauf(toolId: String, f: Farben): Brush = when (toolId) {
 // 3D-Szene 1: Atemübungen — 3D-Atemkugel mit sichtbaren Luftströmungen und Wind (Ein- & Ausatmen)
 // ================================================================================================
 
-private const val ATEM_ZYKLUS_S = 7.4f
+private const val ATEM_ZYKLUS_S = 7.6f
 private const val WIND_SEGMENTE = 14
 private const val RING_PUNKTE = 40
 
@@ -201,60 +201,32 @@ private fun DrawScope.zeichneAtem3D(t: Float, puffer: AtemZeichenPuffer) {
     val mitteY = size.height * 0.51f
     val skala = size.minDimension * 0.42f
 
-    // Atemphase im 7,4-s-Zyklus:
-    // 0.00..0.42 Einatmen (Wind strömt sichtbar nach innen, Kugel wächst)
-    // 0.42..0.50 kurzes Halten oben
-    // 0.50..0.92 Ausatmen (Wind strömt sichtbar nach außen, Kugel schrumpft)
-    // 0.92..1.00 kurzes Halten unten
-    val zyklus = ((t % ATEM_ZYKLUS_S) + ATEM_ZYKLUS_S) % ATEM_ZYKLUS_S / ATEM_ZYKLUS_S
-    val atemStand: Float
-    val einwaerts: Boolean
-    val phasenLauf: Float // wächst innerhalb jeder aktiven Phase immer von 0 nach ~1,25
-    val strichStaerke: Float
-    val hauptFarbe: Color
-    val windFarbe: Color
+    // Vollständig nahtlose (C-unendlich) Atem-Schleife ohne Phasen-Schnitt oder Sprung:
+    // atemStand ∈ [0, 1] schwingt weich über -cos(w), die Strömungsgeschwindigkeit fluss ∈ [-1, +1]
+    // ist ihre exakte Ableitung sin(w): +1 = Einatmen (nach innen), 0 = ruhiger Wendepunkt, -1 = Ausatmen (nach außen).
+    val w = (t / ATEM_ZYKLUS_S) * TAU
+    val atemStand = 0.5f - 0.5f * cos(w)
+    val fluss = sin(w)
+    val flussBetrag = abs(fluss)
 
-    when {
-        zyklus < 0.42f -> {
-            val p = zyklus / 0.42f
-            atemStand = weich(p)
-            einwaerts = true
-            phasenLauf = p * 1.25f
-            strichStaerke = sin(p * PI.toFloat()).coerceIn(0.16f, 1f)
-            hauptFarbe = lerp(ATEM_WIND_CYAN, ATEM_EIN, weich(p))
-            windFarbe = lerp(ATEM_WIND_CYAN, Color(0xFFB6FFF0), 0.45f)
-        }
-        zyklus < 0.50f -> {
-            val p = (zyklus - 0.42f) / 0.08f
-            atemStand = 1f + 0.018f * sin(p * TAU)
-            einwaerts = true
-            phasenLauf = 1.25f + p * 0.14f
-            strichStaerke = 0.20f * (1f - p * 0.5f)
-            hauptFarbe = lerp(ATEM_EIN, ATEM_HALT, weich(p) * 0.65f)
-            windFarbe = lerp(Color(0xFFB6FFF0), ATEM_HALT, weich(p) * 0.55f)
-        }
-        zyklus < 0.92f -> {
-            val p = (zyklus - 0.50f) / 0.42f
-            atemStand = 1f - weich(p)
-            einwaerts = false
-            phasenLauf = p * 1.25f
-            strichStaerke = sin(p * PI.toFloat()).coerceIn(0.16f, 1f)
-            hauptFarbe = lerp(lerp(ATEM_HALT, ATEM_AUS, 0.45f), ATEM_AUS, weich(p))
-            windFarbe = lerp(ATEM_WARM, Color(0xFFFFE7C4), 0.42f)
-        }
-        else -> {
-            val p = (zyklus - 0.92f) / 0.08f
-            atemStand = 0f
-            einwaerts = false
-            phasenLauf = 1.25f + p * 0.14f
-            strichStaerke = 0.18f * (1f - p * 0.5f)
-            hauptFarbe = lerp(ATEM_AUS, ATEM_WIND_CYAN, weich(p))
-            windFarbe = lerp(ATEM_WARM, ATEM_WIND_CYAN, weich(p))
-        }
-    }
+    // Durchgängige, stufenlose Farbmischung über den ganzen Zyklus (kein Übergangs-Knick bei 0 oder 0,5).
+    val einAnteil = 0.5f + 0.5f * fluss // 1 beim Einatmen, 0 beim Ausatmen, 0,5 an den Wendepunkten
+    val basisFarbe = lerp(ATEM_AUS, ATEM_EIN, weich(einAnteil))
+    val wendeFarbe = lerp(ATEM_WIND_CYAN, ATEM_HALT, atemStand)
+    val wendeGewicht = (1f - flussBetrag) * 0.48f
+    val hauptFarbe = lerp(basisFarbe, wendeFarbe, wendeGewicht)
+    val windFarbe = lerp(
+        lerp(ATEM_WARM, ATEM_WIND_CYAN, weich(einAnteil)),
+        Color.White,
+        0.24f + 0.14f * flussBetrag,
+    )
 
-    val yaw = t * 0.28f + sin(t * 0.4f) * 0.18f
-    val pitch = 0.28f + 0.08f * sin(t * 0.55f)
+    // Kontinuierlicher integraler Strömungsweg: wächst beim Einatmen stetig und kehrt am Wendepunkt
+    // mit Geschwindigkeit 0 völlig ruckfrei um (niemals ein Phasen-Reset oder Sprung).
+    val stromWeg = atemStand * 1.18f
+
+    val yaw = t * 0.26f + sin(t * 0.38f) * 0.16f
+    val pitch = 0.28f + 0.08f * sin(t * 0.52f)
     val cy = cos(yaw); val sy = sin(yaw)
     val cx = cos(pitch); val sx = sin(pitch)
 
@@ -278,9 +250,9 @@ private fun DrawScope.zeichneAtem3D(t: Float, puffer: AtemZeichenPuffer) {
     )
 
     // 1) HINTERE EBENE (z > 0): Windbänder, Luftströme, Luftteilchen und Ringe hinter der 3D-Kugel
-    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, einwaerts, strichStaerke, windFarbe, vorne = false, cy, sy, cx, sx)
-    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, phasenLauf, einwaerts, strichStaerke, windFarbe, hauptFarbe, vorne = false, cy, sy, cx, sx)
-    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, phasenLauf, einwaerts, strichStaerke, windFarbe, vorne = false, cy, sy, cx, sx)
+    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, fluss, windFarbe, vorne = false, cy, sy, cx, sx)
+    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, hauptFarbe, vorne = false, cy, sy, cx, sx)
+    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, vorne = false, cy, sy, cx, sx)
     zeichneAtemRinge(puffer, mitteX, mitteY, skala, kugelR, t, hauptFarbe, windFarbe, vorne = false, cy, sy, cx, sx)
 
     // 2) MITTE: 3D-Atemkugel mit Volumen, Glanzpunkt, innerem Luftkern und Fresnel-Rand
@@ -337,9 +309,9 @@ private fun DrawScope.zeichneAtem3D(t: Float, puffer: AtemZeichenPuffer) {
 
     // 3) VORDERE EBENE (z <= 0): 3D-Ringe, Windströme, Windbänder und Partikel VOR der Kugel
     zeichneAtemRinge(puffer, mitteX, mitteY, skala, kugelR, t, hauptFarbe, windFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, phasenLauf, einwaerts, strichStaerke, windFarbe, hauptFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, einwaerts, strichStaerke, windFarbe, vorne = true, cy, sy, cx, sx)
-    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, phasenLauf, einwaerts, strichStaerke, windFarbe, vorne = true, cy, sy, cx, sx)
+    zeichneWindStroeme(puffer, mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, hauptFarbe, vorne = true, cy, sy, cx, sx)
+    zeichneWindBaender(puffer, mitteX, mitteY, skala, t, atemStand, fluss, windFarbe, vorne = true, cy, sy, cx, sx)
+    zeichneLuftPartikel(mitteX, mitteY, skala, t, kugelR, stromWeg, fluss, windFarbe, vorne = true, cy, sy, cx, sx)
 }
 
 private fun DrawScope.zeichneAtemRinge(
@@ -409,9 +381,8 @@ private fun DrawScope.zeichneWindStroeme(
     skala: Float,
     t: Float,
     kugelR: Float,
-    phasenLauf: Float,
-    einwaerts: Boolean,
-    strichStaerke: Float,
+    stromWeg: Float,
+    fluss: Float,
     windFarbe: Color,
     hauptFarbe: Color,
     vorne: Boolean,
@@ -420,29 +391,34 @@ private fun DrawScope.zeichneWindStroeme(
     cx: Float,
     sx: Float,
 ) {
+    val flussBetrag = abs(fluss)
+    // Sanfter Wechsel der Wirbelweite ohne Sprung (1,05 beim Einatmen <-> 1,45 beim Ausatmen)
+    val drallStaerke = 1.25f - 0.20f * fluss
+
     for (strom in AtemModell.stroeme) {
-        // lauf wächst innerhalb der Phase immer 0 -> 1:
-        // Einatmen (einwaerts): kopfU = lauf (0 = außen -> 1 = Kugeloberfläche)
-        // Ausatmen (!einwaerts): kopfU = 1 - lauf (1 = Kugeloberfläche -> 0 = weit außen)
-        val lauf = ((strom.phase + phasenLauf * strom.tempo) % 1f + 1f) % 1f
-        val kopfU = if (einwaerts) lauf else 1f - lauf
-        val schweifLaenge = if (strom.istBoee) 0.56f else 0.44f
+        // kopfU bewegt sich völlig stetig über stromWeg (Einatmen: 0->1 nach innen,
+        // am Wendepunkt Geschwindigkeit 0, Ausatmen: 1->0 nach außen).
+        // Am Umbruch (0 und 1) geht lebensHuelle exakt auf 0 -> absolut unsichtbarer Übergang.
+        val kopfU = ((strom.phase + stromWeg * strom.tempo) % 1f + 1f) % 1f
+        val schweifBasis = if (strom.istBoee) 0.50f else 0.38f
+        val radialeLaenge = schweifBasis * fluss
+        // An den Wendepunkten (fluss ~ 0) schwingt der Luftstrom weich tangential um die Kugel weiter,
+        // statt zusammenzuschrumpfen oder umzuspringen.
+        val tangentialBogen = (1f - flussBetrag) * 0.42f * strom.drall
         var zSumme = 0f
 
         for (i in 0..WIND_SEGMENTE) {
             val fSeg = i.toFloat() / WIND_SEGMENTE // 0 = Schweifende, 1 = führende Windspitze
-            val u = if (einwaerts) {
-                (kopfU - (1f - fSeg) * schweifLaenge).coerceIn(0f, 1f)
-            } else {
-                (kopfU + (1f - fSeg) * schweifLaenge).coerceIn(0f, 1f)
-            }
+            val schweif = 1f - fSeg
+            val u = (kopfU - schweif * radialeLaenge).coerceIn(0f, 1f)
             val r = strom.abstandAussen * (1f - u) + (kugelR * 0.94f) * u
-            // Spiralförmiger 3D-Windwirbel: beim Einatmen bündelnd, beim Ausatmen in weite Böen auffächernd
-            val drallStaerke = if (einwaerts) 1.05f else 1.45f
-            val wirbelWinkel = strom.winkel + strom.drall * (1f - u) * drallStaerke +
-                sin(t * 1.4f + strom.phase * TAU + u * 3.5f) * 0.15f
+            val wirbelWinkel = strom.winkel +
+                t * 0.22f * (if (strom.drall >= 0f) 1f else -1f) +
+                strom.drall * (1f - u) * drallStaerke -
+                schweif * tangentialBogen +
+                sin(t * 1.25f + strom.phase * TAU + u * 3.5f) * 0.14f
             val elev = strom.neigung * (0.45f + 0.55f * (1f - u)) +
-                sin(u * 5.2f - t * 2.2f + strom.phase * TAU) * strom.welle
+                sin(u * 5.0f - t * 1.9f + strom.phase * TAU) * strom.welle
 
             val cosE = cos(elev)
             val x3 = r * cosE * cos(wirbelWinkel)
@@ -466,16 +442,18 @@ private fun DrawScope.zeichneWindStroeme(
         if (vorne && zMitte > 0f) continue
         if (!vorne && zMitte <= 0f) continue
 
-        // Sanftes Ein- und Ausblenden an Anfang/Ende des Laufs
-        val lebensHuelle = sin(lauf * PI.toFloat()).coerceIn(0.08f, 1f)
+        // Quadratische Sinushülle: bei kopfU = 0 und 1 exakt 0,0 Alpha samt Ableitung 0 -> kein Aufblitzen/Springen.
+        val h = sin(kopfU * PI.toFloat()).coerceIn(0f, 1f)
+        val lebensHuelle = h * h
+        if (lebensHuelle < 0.008f) continue
         val tiefenFaktor = ((1.35f - zMitte) / 2.7f).coerceIn(0.28f, 1f)
-        val grundAlpha = (0.26f + 0.66f * strichStaerke) * lebensHuelle * tiefenFaktor
+        val grundAlpha = (0.34f + 0.58f * flussBetrag) * lebensHuelle * tiefenFaktor
 
         for (i in 0 until WIND_SEGMENTE) {
             val fSeg = (i + 0.5f) / WIND_SEGMENTE
-            val profil = sin(fSeg * PI.toFloat()).coerceAtLeast(0.08f) * (0.42f + 0.58f * fSeg)
+            val profil = sin(fSeg * PI.toFloat()).coerceAtLeast(0.06f) * (0.42f + 0.58f * fSeg)
             val segAlpha = (grundAlpha * profil).coerceIn(0f, 0.92f)
-            if (segAlpha < 0.02f) continue
+            if (segAlpha < 0.015f) continue
             val farbe = lerp(hauptFarbe, Color.White, fSeg * 0.62f).let { lerp(it, windFarbe, 0.45f) }
             val dicke = strom.breite * density * puffer.ss[i] * (0.42f + 0.85f * profil)
             drawLine(
@@ -487,12 +465,12 @@ private fun DrawScope.zeichneWindStroeme(
             )
         }
 
-        // Leuchtende Windspitze zeigt eindeutig die Strömungsrichtung (einwärts bzw. auswärts)
-        val spitzeAlpha = (grundAlpha * 0.95f).coerceIn(0f, 0.95f)
-        if (spitzeAlpha > 0.08f) {
+        // Leuchtende Windspitze zeigt fließend die Strömungsrichtung
+        val spitzeAlpha = (grundAlpha * (0.45f + 0.55f * flussBetrag)).coerceIn(0f, 0.95f)
+        if (spitzeAlpha > 0.04f) {
             val spX = puffer.sx[WIND_SEGMENTE]
             val spY = puffer.sy[WIND_SEGMENTE]
-            val spR = (if (strom.istBoee) 2.6f else 1.9f) * density * puffer.ss[WIND_SEGMENTE]
+            val spR = (if (strom.istBoee) 2.5f else 1.85f) * density * puffer.ss[WIND_SEGMENTE]
             drawCircle(Color.White.copy(alpha = spitzeAlpha), spR, Offset(spX, spY))
         }
     }
@@ -505,8 +483,7 @@ private fun DrawScope.zeichneWindBaender(
     skala: Float,
     t: Float,
     atemStand: Float,
-    einwaerts: Boolean,
-    strichStaerke: Float,
+    fluss: Float,
     windFarbe: Color,
     vorne: Boolean,
     cy: Float,
@@ -514,19 +491,21 @@ private fun DrawScope.zeichneWindBaender(
     cx: Float,
     sx: Float,
 ) {
-    // Fließende, weite 3D-Windfahnen mit charakteristischem Luftschwung über die Karte.
+    val flussBetrag = abs(fluss)
+    // Durchgängige Phase (integrale Atembewegung + ruhige Grundströmung): niemals ein Richtungssprung.
+    val schub = -atemStand * 3.6f + t * 0.42f
+    val weite = 0.88f + (1f - atemStand) * 0.34f
+
     for (band in AtemModell.baender) {
-        val schub = if (einwaerts) -t * 1.45f else t * 1.6f
-        val weite = 0.88f + (1f - atemStand) * 0.34f
         var zMitte = 0f
         for (i in 0..WIND_SEGMENTE) {
             val u = (i.toFloat() / WIND_SEGMENTE) * 2f - 1f
             val x3 = u * 1.28f * weite
-            val bogen = sin(u * 3.1f + schub + band.phase) * band.amplitude * (0.65f + 0.45f * strichStaerke)
-            // Beim Einatmen zieht der Luftstrom zur Mitte hin, beim Ausatmen wölbt er sich nach außen.
-            val sog = (1f - u * u) * (if (einwaerts) -0.18f else 0.16f) * band.yVersatz
+            val bogen = sin(u * 3.1f + schub + band.phase) * band.amplitude * (0.68f + 0.38f * flussBetrag)
+            // Stufenloser Sog nach innen beim Einatmen (fluss > 0) und weiches Aufweiten beim Ausatmen (fluss < 0).
+            val sog = (1f - u * u) * (-0.20f * fluss) * band.yVersatz
             val y3 = band.yVersatz * (0.72f + 0.35f * (1f - atemStand)) + bogen + sog
-            val z3 = band.zTiefe * cos(u * 0.9f) + sin(u * 2.2f + band.phase) * 0.14f
+            val z3 = band.zTiefe * cos(u * 0.9f) + sin(u * 2.2f + band.phase + t * 0.35f) * 0.14f
 
             val rx = x3 * cy + z3 * sy
             val rz1 = -x3 * sy + z3 * cy
@@ -543,12 +522,12 @@ private fun DrawScope.zeichneWindBaender(
         if (vorne && zMitte > 0f) continue
         if (!vorne && zMitte <= 0f) continue
 
-        val tiefenAlpha = (if (vorne) 0.44f else 0.18f) * (0.55f + 0.45f * strichStaerke)
+        val tiefenAlpha = (if (vorne) 0.44f else 0.18f) * (0.62f + 0.38f * flussBetrag)
         for (i in 0 until WIND_SEGMENTE) {
             val fSeg = (i + 0.5f) / WIND_SEGMENTE
             val huelle = sin(fSeg * PI.toFloat())
             val alpha = tiefenAlpha * huelle
-            if (alpha < 0.02f) continue
+            if (alpha < 0.015f) continue
             drawLine(
                 color = lerp(windFarbe, Color.White, 0.5f).copy(alpha = alpha),
                 start = Offset(puffer.sx[i], puffer.sy[i]),
@@ -566,9 +545,8 @@ private fun DrawScope.zeichneLuftPartikel(
     skala: Float,
     t: Float,
     kugelR: Float,
-    phasenLauf: Float,
-    einwaerts: Boolean,
-    strichStaerke: Float,
+    stromWeg: Float,
+    fluss: Float,
     windFarbe: Color,
     vorne: Boolean,
     cy: Float,
@@ -576,13 +554,16 @@ private fun DrawScope.zeichneLuftPartikel(
     cx: Float,
     sx: Float,
 ) {
-    // Allokationsfreie Berechnung von Start- und Endpunkt jedes 3D-Luftstrichs.
+    val flussBetrag = abs(fluss)
+    // Allokationsfreie, stetige 3D-Luftpartikel ohne Umbruch-Sprung (Alpha am Rand exakt 0).
     for (p in AtemModell.partikel) {
-        val lauf = ((p.phase + phasenLauf * p.tempo * 1.15f) % 1f + 1f) % 1f
-        val u = if (einwaerts) lauf else 1f - lauf
+        val u = ((p.phase + stromWeg * p.tempo * 1.15f) % 1f + 1f) % 1f
+        val h = sin(u * PI.toFloat()).coerceIn(0f, 1f)
+        val huelle = h * h
+        if (huelle < 0.01f) continue
 
         val r1 = 1.44f * (1f - u) + (kugelR * 0.96f) * u
-        val w1 = p.winkel + p.drall * (1f - u) + t * 0.18f
+        val w1 = p.winkel + p.drall * (1f - u) + t * 0.24f
         val e1 = p.neigung * (0.4f + 0.6f * (1f - u))
         val cosE1 = cos(e1)
         val x31 = r1 * cosE1 * cos(w1)
@@ -596,9 +577,10 @@ private fun DrawScope.zeichneLuftPartikel(
         if (vorne && rz1 > 0f) continue
         if (!vorne && rz1 <= 0f) continue
 
-        val uVorher = if (einwaerts) (u - 0.08f).coerceAtLeast(0f) else (u + 0.08f).coerceAtMost(1f)
+        val uVorher = (u - 0.085f * fluss).coerceIn(0f, 1f)
         val r0 = 1.44f * (1f - uVorher) + (kugelR * 0.96f) * uVorher
-        val w0 = p.winkel + p.drall * (1f - uVorher) + t * 0.18f
+        // Kleiner tangentialer Schweif bleibt auch am Wendepunkt sanft sichtbar
+        val w0 = p.winkel + p.drall * (1f - uVorher) + t * 0.24f - 0.035f
         val e0 = p.neigung * (0.4f + 0.6f * (1f - uVorher))
         val cosE0 = cos(e0)
         val x30 = r0 * cosE0 * cos(w0)
@@ -611,9 +593,8 @@ private fun DrawScope.zeichneLuftPartikel(
 
         val s1 = FOKAL / (FOKAL + rz1).coerceAtLeast(0.7f)
         val s0 = FOKAL / (FOKAL + rz0).coerceAtLeast(0.7f)
-        val huelle = sin(lauf * PI.toFloat())
-        val alpha = ((0.22f + 0.66f * strichStaerke) * huelle * if (vorne) 1f else 0.45f).coerceIn(0f, 0.92f)
-        if (alpha < 0.03f) continue
+        val alpha = ((0.30f + 0.60f * flussBetrag) * huelle * if (vorne) 1f else 0.45f).coerceIn(0f, 0.92f)
+        if (alpha < 0.02f) continue
 
         drawLine(
             color = lerp(windFarbe, Color.White, 0.55f).copy(alpha = alpha),
