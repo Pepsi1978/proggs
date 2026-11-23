@@ -206,7 +206,9 @@ $env:Path = $pathEntries -join ';'
             // eigenen provider.<id>.models.<slug>-Eintrag kennt OpenCode die Modell-ID nicht und
             // bricht mit "invalid model" ab. Deshalb wird jedes benutzerdefinierte Direktmodell
             // immer in die Konfig geschrieben -- auch dann, wenn es keine Denkstufe gibt.
-            if (model.IsUserDefined || !string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
+            // Google-Modelle (Gemini 4 Neon, Hydrogen ...) stehen ebenfalls nicht sicher im OpenCode-Katalog: immer eintragen.
+            if (model.IsUserDefined || !string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier
+                || string.Equals(model.ProviderId, ModelRegistry.GoogleProviderId, StringComparison.OrdinalIgnoreCase))
             {
                 var root = ReadConfig();
                 root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);

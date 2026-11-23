@@ -930,6 +930,7 @@
     {"versionCode": 921, "versionName": "1.8.910", "stand": "22.11.2026, 20:28 Uhr", "notiz": "Raumklima-Karte: Die Herkunft der Werte steht kurz als „M“ für den Mac und „C“ für die SwitchBot-Cloud, damit Temperatur und Luftfeuchtigkeit in eine Zeile passen."},
     {"versionCode": 922, "versionName": "1.8.911", "stand": "23.11.2026, 10:23 Uhr", "notiz": "Der Programmierbutton bietet statt Gemini 4 Argon jetzt Gemini 4 Neon als Schnellwahl an, und in der OpenLauncher-Auswahl stehen Gemini 4 Neon und Gemini 4 Hydrogen mit den Stufen Low bis XHigh."},
     {"versionCode": 923, "versionName": "1.8.912", "stand": "23.11.2026, 10:32 Uhr", "notiz": "„Gemini 4 Hydrogen“ oder „Argon“ als Antwort startet nicht mehr fälschlich Neon, alte Argon-Einstiege gelten weiter, und Neon und Hydrogen werden nur noch mit der Antigravity CLI angeboten."},
-    {"versionCode": 924, "versionName": "1.8.913", "stand": "23.11.2026, 10:41 Uhr", "notiz": "Beim Knopf Gemini 4 Neon und in der OpenLauncher-Auswahl lassen sich Gemini 4 Neon und Hydrogen jetzt wie alle Google-Modelle auch mit der OpenCode CLI starten, nicht nur mit Antigravity."}
+    {"versionCode": 924, "versionName": "1.8.913", "stand": "23.11.2026, 10:41 Uhr", "notiz": "Beim Knopf Gemini 4 Neon und in der OpenLauncher-Auswahl lassen sich Gemini 4 Neon und Hydrogen jetzt wie alle Google-Modelle auch mit der OpenCode CLI starten, nicht nur mit Antigravity."},
+    {"versionCode": 925, "versionName": "1.8.914", "stand": "23.11.2026, 10:49 Uhr", "notiz": "Tippst du auf der Modellkarte nach dem Absenden auf Gemini 4 Neon, fragt Jarvis jetzt auch dort Antigravity CLI oder OpenCode CLI, und „Antigravity“ wird als gesprochene Antwort erkannt."}
 ]
 }

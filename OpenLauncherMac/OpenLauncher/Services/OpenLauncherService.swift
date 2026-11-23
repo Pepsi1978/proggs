@@ -176,7 +176,9 @@ final class OpenLauncherService {
                 return modelString
             }
 
-            if thinkingLevel != nil || usesPriorityServiceTier {
+            // Google-Modelle (Gemini 4 Neon, Hydrogen ...) stehen nicht sicher im OpenCode-Katalog: immer eintragen.
+            if thinkingLevel != nil || usesPriorityServiceTier
+                || model.providerId.caseInsensitiveCompare(ModelRegistry.googleProviderId) == .orderedSame {
                 let root = Self.readConfig()
                 let patched = Self.patchDirectModel(root, providerId: model.providerId, slug: model.slug,
                                                     displayName: model.displayName)

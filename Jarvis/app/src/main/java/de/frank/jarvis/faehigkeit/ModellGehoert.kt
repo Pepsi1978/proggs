@@ -57,6 +57,9 @@ object ModellGehoert {
                     naechstes != null && klingtWie(w, "open") && klingtWie(naechstes, "code") -> { i++; ProgrammierFaehigkeit.CLI_OPENCODE }
                     klingtWie(w, "opencode") -> ProgrammierFaehigkeit.CLI_OPENCODE
                     klingtWie(w, "codex") -> ProgrammierFaehigkeit.CLI_CODEX
+                    // Gemini 4 Neon: „Antigravity“, auch als „Anti Gravity“ oder „agy“.
+                    naechstes != null && klingtWie(w, "anti") && klingtWie(naechstes, "gravity") -> { i++; ProgrammierFaehigkeit.CLI_ANTIGRAVITY }
+                    klingtWie(w, "antigravity") || w == "agy" -> ProgrammierFaehigkeit.CLI_ANTIGRAVITY
                     else -> null
                 }
                 "review" -> when (w) {
