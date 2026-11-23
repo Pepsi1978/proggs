@@ -56,3 +56,7 @@
 - [geprüft] Denkstufe für 3.x per `modelConfigs.customOverrides` mit `match.model: "chat-base-3"` →
   `generateContentConfig.thinkingConfig.thinkingLevel`.
 - [geprüft] Einstellungen in `~/.gemini/settings.json` statt System-Settings in `%TEMP%` (ACL-Prüfung, Almanach #2).
+- [geprüft 23.11.2026, agy 1.5.15] Hooks global in `~/.gemini/config/hooks.json` (Projekt: `.agents/hooks.json`), benannte
+  Abschnitte, Ereignisse SessionStart/PreToolUse/PostToolUse/PreInvocation/PostInvocation/Stop, laufen synchron, werden live
+  nachgeladen. PreInvocation `{"injectSteps":[{"userMessage":"…"}]}` speist Eingaben nach jedem Werkzeug ein. Vollständige Doku:
+  `strings ~/.local/bin/agy | grep -n "Lifecycle Hooks"`. Jarvis-Nutzung: `Jarvis/werkzeuge/pc-bruecke/jarvis_agy_hook.py`.
