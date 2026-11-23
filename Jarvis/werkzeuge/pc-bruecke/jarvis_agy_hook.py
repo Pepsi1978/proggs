@@ -479,7 +479,13 @@ def werkzeug_ausgabe(pfad: str, schritt: int) -> str:
 def bericht(eingabe: dict) -> None:
     art = eingabe.get("agy_art")
     pfad = str(eingabe.get("transcriptPath") or "")
-    schritte, stellen = neue_schritte(pfad)
+    try:
+        schritte, stellen = neue_schritte(pfad)
+    except H.SperreBelegt:
+        if art != "stop":
+            raise
+        # Das Zugende darf nie ausfallen: ohne neue Schritte weiter, die letzte Antwort liest zugende selbst.
+        schritte, stellen = [], (0, 0)
     texte = [str(s["content"]) for s in schritte
              if s.get("type") == "PLANNER_RESPONSE" and s.get("source") == "MODEL" and s.get("content")]
     try:
@@ -508,29 +514,65 @@ def letzte_antwort(pfad: str) -> str:
 
 
 def zugende(pfad: str, texte: list[str]) -> None:
-    """Stop ohne Nachtrag: Die Sitzung ruht. Wie Claude Code (jarvis_hook.stop) geht die letzte Antwort als Bericht „info“
-    an Jarvis; „info“ setzt dort arbeitet=false, der orange Punkt erlischt, auch wenn agy offen bleibt. Vorher kamen am Zugende
-    nur Zwischentexte als „laeuft“, und der Punkt lief bis zur 20-Minuten-Frist weiter (Vorfall 23.11.2026, 2277L)."""
+    """Stop ohne Nachtrag: Die Sitzung ruht. Wie Claude Code (jarvis_hook.stop) gehen offene Zwischentexte und geänderte
+    Dateien sofort an Jarvis, danach die letzte Antwort als Bericht „info“; „info“ setzt dort arbeitet=false, der orange Punkt
+    erlischt, auch wenn agy offen bleibt. Vorher kamen am Zugende nur Zwischentexte als „laeuft“, und der Punkt lief bis zur
+    20-Minuten-Frist weiter (Vorfall 23.11.2026, 2277L). Welche Antwort zuletzt als 🏁 ging, merkt sich agy_bericht: So kommt
+    die Schlussantwort auch dann als Bericht, wenn ein früherer Bericht sie schon als 💬 gemeldet hat, aber nie zweimal als 🏁."""
     letzte = H.ohne_zitat(H.lesbar(texte[-1] if texte else letzte_antwort(pfad)))
-    if len(texte) > 1:
-        try:
-            H.post({"tool_name": "", "texte": texte[:-1]})
-        except Exception as fehler:
-            H.schreib(f"agy Zugende: Zwischentexte {type(fehler).__name__}: {fehler}")
+    marke = H.hashlib.sha1(letzte.encode("utf-8")).hexdigest()[:16] if letzte else ""
+    raus = []
     try:
         with H.Sperre():
             z = H.lies_zustand()
-            neu = bool(letzte) and not H.schon_gesehen(z, letzte)
-            dauer = H.dauer_text(time.time() - z["beginn"])
+            neue = H.neue_texte({"texte": texte}, z)
+            raus = [("laeuft", "💬 " + t) for t in neue if t != letzte] + H.sammel(z, None, sofort=True)
+            neu = bool(marke) and z.get("agy_bericht") != marke
+            if neu:
+                z["agy_bericht"] = marke
+            beginn = z.get("beginn")
             H.schreib_zustand(z)
     except H.SperreBelegt:
-        neu, dauer = bool(letzte), ""
+        # Nur lesen, nichts vermerken (wie jarvis_hook.stop).
+        z = H.lies_zustand()
+        neu, beginn = bool(marke) and z.get("agy_bericht") != marke, z.get("beginn")
+    H.sende(raus)
     # Der nächste Modellaufruf (Weckruf, Nachtrag, Eingabe am Rechner) meldet sofort wieder ein Lebenszeichen.
     (H.ORDNER / f"puls-{AUFTRAG}.txt").unlink(missing_ok=True)
-    # Immer „info“ (ändert in Jarvis den Stand nicht, ein fertiger Auftrag bleibt fertig), mit Wiederholung: Nach Stop holt
-    # kein Hook ein verlorenes Zugende nach.
-    text = "🏁 " + (letzte if neu else "Zug beendet, Antigravity wartet.") + (f"\n\n⏱️ Dauer seit Start: {dauer}" if dauer else "")
-    H.melde_sicher("info", text, versuche=3)
+    dauer = f"\n\n⏱️ Dauer seit Start: {H.dauer_text(time.time() - beginn)}" if beginn else ""
+    # „info“ ändert in Jarvis den Stand nicht (ein fertiger Auftrag bleibt fertig). Den Platzhalter gibt es nur, wenn genau diese
+    # Antwort schon als 🏁 ging und die Sitzung seitdem trotzdem lief (Stop ohne neue Antwort).
+    melde_zugende("info", "🏁 " + (letzte if neu else "Zug beendet, Antigravity wartet.") + dauer)
+
+
+def melde_zugende(stand: str, text: str, versuche: int = 3) -> None:
+    """Das Zugende mit Wiederholung: Nach Stop holt kein Hook es nach. Wiederholt wird nur, solange die Sitzung noch ruht (sonst
+    schaltete ein später Bericht den Punkt einer wieder arbeitenden Sitzung aus und hakte ihren neuen Nachtrag ab) und nur, wenn
+    die Meldung den Relay sicher nicht erreicht hat: Nach einer Zeitüberschreitung kam sie womöglich an, ein zweiter Bericht
+    stünde doppelt in Jarvis."""
+    import socket
+    import urllib.error
+    for versuch in range(versuche):
+        if not datei("ruht").exists():
+            H.schreib("agy Zugende: Sitzung arbeitet wieder, Bericht entfällt")
+            return
+        try:
+            code = H.melde(stand, text)
+            if code == 200 or code < 500:
+                return
+        except urllib.error.URLError as fehler:
+            if isinstance(fehler.reason, (TimeoutError, socket.timeout)):
+                H.schreib(f"agy Zugende: Zeitüberschreitung, nicht wiederholt: {fehler}")
+                return
+            H.schreib(f"agy Zugende Versuch {versuch + 1}: {fehler}")
+        except (TimeoutError, socket.timeout) as fehler:
+            H.schreib(f"agy Zugende: Zeitüberschreitung, nicht wiederholt: {fehler}")
+            return
+        except Exception as fehler:
+            H.schreib(f"agy Zugende Versuch {versuch + 1}: {type(fehler).__name__}: {fehler}")
+        if versuch + 1 < versuche:
+            time.sleep(1 + 2 * versuch)
+    H.schreib("agy Zugende nach mehreren Versuchen aufgegeben")
 
 
 def melden(art, eingabe: dict, pfad: str, texte: list[str]) -> None:
