@@ -78,5 +78,25 @@ if [ "$(defaults read com.apple.Terminal AppleShowScrollBars 2>/dev/null || true
         && echo "Terminal.app: Rollbalken nur beim Scrollen. Wirkt nach dem nächsten Neustart von Terminal.app." \
         || echo "ACHTUNG: Terminal-Rollbalken nicht umgestellt (defaults write fehlgeschlagen)."
 fi
+# Antigravity CLI (agy): Hooks für Jarvis-Aufträge (Nachträge nach dem nächsten Werkzeug, Meldungen wie bei Claude Code).
+# agy liest sie global aus ~/.gemini/config/hooks.json; ohne JARVIS_AUFTRAG_ID tut jarvis_agy_hook.py nichts. Nur der eigene Abschnitt.
+"$PYTHON" - <<'AGY' || echo "ACHTUNG: agy-Hooks nicht eingetragen."
+import json, os
+p = os.path.expanduser("~/.gemini/config/hooks.json")
+os.makedirs(os.path.dirname(p), exist_ok=True)
+try:
+    d = json.load(open(p, encoding="utf-8"))
+except Exception:
+    d = {}
+c = 'python3 "$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_agy_hook.py" '
+d["jarvis-auftrag"] = {
+    "SessionStart": [{"type": "command", "command": c + "session", "timeout": 10}],
+    "PreInvocation": [{"type": "command", "command": c + "pre", "timeout": 60}],
+    "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": c + "post", "timeout": 10}]}],
+    "Stop": [{"type": "command", "command": c + "stop", "timeout": 10}],
+}
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+print("agy-Hooks für Jarvis-Aufträge eingetragen:", p)
+AGY
 echo "$NAME eingerichtet und gestartet. Protokoll: $LOGS/bruecke.log"
 [ -f "$HOME/SK/Jarvis/relay.properties" ] || echo "ACHTUNG: ~/SK/Jarvis/relay.properties fehlt, die Brücke wartet, bis sie da ist."

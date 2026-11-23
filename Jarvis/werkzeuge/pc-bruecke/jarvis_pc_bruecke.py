@@ -336,7 +336,8 @@ def auftragstext(auftrag: dict) -> str:
         unklar1 = "Nicht eindeutig: Frank mit dem Werkzeug question fragen und die Kandidaten nennen."
         unklar2 = "2. Wesentliche Unklarheiten mit dem Werkzeug question klären, Kleinigkeiten selbst entscheiden."
     elif cli in ("codex", "kimi", "antigravity"):
-        # Ohne Hooks und ohne Rückfragen (wie Sol im Codex CLI am Windows-PC): Die Sitzung meldet selbst über jarvis_hook.py melde.
+        # Ohne Rückfragen: Die Sitzung meldet selbst über jarvis_hook.py melde. Antigravity hat zusätzlich Hooks (jarvis_agy_hook.py):
+        # Nachträge nach dem nächsten Werkzeug, Zwischentexte und Schritte gehen wie bei Claude Code an Jarvis.
         kopf = ("Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis.\n"
                 f'MELDEN (statt programmier_fortschritt, das es hier nicht gibt): python3 "{HOOK}" melde <laeuft|fertig|fehler> "<ein Satz>"')
         unklar1 = "Nicht eindeutig: die wahrscheinlichste App nehmen und das in der ersten Meldung nennen."

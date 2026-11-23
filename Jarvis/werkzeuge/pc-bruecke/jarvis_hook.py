@@ -844,8 +844,16 @@ def auftrag_rahmen(anzahl: int, teile: str, vorspann: str = "") -> str:
     return (f"{vorspann}Frank hat über Jarvis {'einen Nachtrag' if anzahl == 1 else str(anzahl) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
-            f"{'mit jarvis_hook.py melde fertig' if os.environ.get('JARVIS_SERVER') else 'stand=fertig mit programmier_fortschritt'}. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}. "
+            f"{melde_weg()}. "
+            f"{'Ist er unklar, entscheide selbst sinnvoll und nenne das in der Meldung (Rückfragen gehen in dieser Sitzung nicht). ' if FREMDE_CLI == 'antigravity' else 'Ist er unklar, frag mit ' + ('dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion') + '. '}"
             f"{ZITAT_ANWEISUNG}\n\n{teile}")
+
+
+def melde_weg() -> str:
+    """Wie die Sitzung ihre Fertig-Meldung schickt: Antigravity (agy) und der Server kennen programmier_fortschritt nicht."""
+    if FREMDE_CLI == "antigravity":
+        return f'mit python3 "{Path(__file__).resolve()}" melde fertig "<Sätze>"'
+    return "mit jarvis_hook.py melde fertig" if os.environ.get("JARVIS_SERVER") else "stand=fertig mit programmier_fortschritt"
 
 
 def belege_text(neu: list[dict]) -> None:
