@@ -56,10 +56,13 @@ dialog_zeigen() {
     local frage="$1"
     osascript - "$frage" "$DIALOG_TIMEOUT" <<'AS'
 on run argv
-    tell application "System Events"
-        activate
-        set r to display dialog (item 1 of argv) with title "OpenLauncher aktualisieren" buttons {"Nein", "Ja"} default button "Ja" with icon caution giving up after ((item 2 of argv) as integer)
-    end tell
+    -- Ohne eigenes Zeitlimit bricht der AppleEvent nach 120 s mit -1712 ab, lange vor "giving up after".
+    with timeout of (((item 2 of argv) as integer) + 60) seconds
+        tell application "System Events"
+            activate
+            set r to display dialog (item 1 of argv) with title "OpenLauncher aktualisieren" buttons {"Nein", "Ja"} default button "Ja" with icon caution giving up after ((item 2 of argv) as integer)
+        end tell
+    end timeout
     if gave up of r then return "TIMEOUT"
     return button returned of r
 end run
