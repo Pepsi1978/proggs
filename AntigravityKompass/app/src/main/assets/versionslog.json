@@ -3,6 +3,7 @@
 "app": "AntigravityKompass",
 "eintraege": [
     {"versionCode": 1, "versionName": "0.1.0", "stand": "23.11.2026, 19:09 Uhr", "notiz": "Erste Fassung: Antigravity CLI mit allen Slash-Befehlen, Startoptionen, Unterbefehlen, Tastenkürzeln, settings.json-Schlüsseln, Umgebungsvariablen, /config-Punkten und Best Practices auf Deutsch erklärt."},
-    {"versionCode": 2, "versionName": "0.1.1", "stand": "23.11.2026, 19:25 Uhr", "notiz": "Der Aktualisieren-Knopf liest Tabellenzeilen mit Strichen in Befehlen richtig, fällt nicht mehr hinter die mitgelieferte Version zurück und meldet keine erfundenen /config-Punkte oder Scheinänderungen mehr."}
+    {"versionCode": 2, "versionName": "0.1.1", "stand": "23.11.2026, 19:25 Uhr", "notiz": "Der Aktualisieren-Knopf liest Tabellenzeilen mit Strichen in Befehlen richtig, fällt nicht mehr hinter die mitgelieferte Version zurück und meldet keine erfundenen /config-Punkte oder Scheinänderungen mehr."},
+    {"versionCode": 3, "versionName": "0.1.2", "stand": "23.11.2026, 19:33 Uhr", "notiz": "Der Bereich /config zeigt alle Punkte in genau der Reihenfolge wie das /config-Menü in Antigravity (alphabetisch von Agent Mode bis Voice Mode › Volume), dazu die fünf Voice-Mode-Einstellungen."}
 ]
 }

@@ -258,7 +258,7 @@ class Aktualisierer(
                     erklaerung = "",
                     seit = fund.version,
                     seitBeleg = "- " + fund.zeile,
-                    sortierName = "99 " + fund.name.lowercase(),
+                    sortierName = "999 " + fund.name.lowercase(),
                     entfernt = false,
                     entferntIn = "",
                     ersatz = "",

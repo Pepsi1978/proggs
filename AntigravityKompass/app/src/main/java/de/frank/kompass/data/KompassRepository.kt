@@ -124,8 +124,21 @@ class KompassRepository(context: Context) {
      * kommen dazu. Vorhandene Einträge bleiben unberührt — eigene Erklärungen gehen vor.
      */
     private suspend fun ergaenzeFehlendeAusSeed(context: Context) {
-        val vorhanden = eintraege.ladeKomplett().map { it.id }.toSet()
-        val fehlend = SeedLader.ladeAlles(context).filter { it.id !in vorhanden }
+        val bestand = eintraege.ladeKomplett()
+        val vorhanden = bestand.map { it.id }.toSet()
+        val seed = SeedLader.ladeAlles(context)
+        // Die Reihenfolge ist keine Nutzerarbeit: Ändert der Seed die Sortierung (etwa die
+        // /config-Liste in der Reihenfolge des Programms), zieht der Bestand nach.
+        val sortierung = seed.associate { it.id to it.zuEntity().sortierName }
+        val umsortiert = bestand.mapNotNull { alt ->
+            val neu = sortierung[alt.id] ?: return@mapNotNull null
+            if (neu == alt.sortierName) null else alt.copy(sortierName = neu)
+        }
+        if (umsortiert.isNotEmpty()) {
+            eintraege.setze(umsortiert)
+            KompassLog.info("Repository", "ergaenzeFehlendeAusSeed", "Sortierung aus Seed übernommen", mapOf("anzahl" to umsortiert.size))
+        }
+        val fehlend = seed.filter { it.id !in vorhanden }
         if (fehlend.isEmpty()) return
         val entitaeten = fehlend.map { it.zuEntity() }
         eintraege.setze(entitaeten)
