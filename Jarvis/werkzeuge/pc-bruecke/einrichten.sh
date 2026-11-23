@@ -80,22 +80,28 @@ if [ "$(defaults read com.apple.Terminal AppleShowScrollBars 2>/dev/null || true
 fi
 # Antigravity CLI (agy): Hooks für Jarvis-Aufträge (Nachträge nach dem nächsten Werkzeug, Meldungen wie bei Claude Code).
 # agy liest sie global aus ~/.gemini/config/hooks.json; ohne JARVIS_AUFTRAG_ID tut jarvis_agy_hook.py nichts. Nur der eigene Abschnitt.
-"$PYTHON" - <<'AGY' || echo "ACHTUNG: agy-Hooks nicht eingetragen."
-import json, os
+AGY_HOOK="$HIER/jarvis_agy_hook.py" "$PYTHON" - <<'AGY' || echo "ACHTUNG: agy-Hooks nicht eingetragen."
+import json, os, sys
 p = os.path.expanduser("~/.gemini/config/hooks.json")
 os.makedirs(os.path.dirname(p), exist_ok=True)
 try:
     d = json.load(open(p, encoding="utf-8"))
-except Exception:
+except FileNotFoundError:
     d = {}
-c = 'python3 "$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_agy_hook.py" '
+except Exception as fehler:
+    # Nie fremde Hooks verwerfen: Eine unlesbare Datei bleibt, wie sie ist.
+    sys.exit(f"{p} ist kein lesbares JSON ({fehler}), nichts geändert.")
+c = f'python3 "{os.environ["AGY_HOOK"]}" '
 d["jarvis-auftrag"] = {
     "SessionStart": [{"type": "command", "command": c + "session", "timeout": 10}],
     "PreInvocation": [{"type": "command", "command": c + "pre", "timeout": 60}],
     "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": c + "post", "timeout": 10}]}],
     "Stop": [{"type": "command", "command": c + "stop", "timeout": 10}],
 }
-json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+teil = p + f".{os.getpid()}.tmp"
+with open(teil, "w", encoding="utf-8") as f:
+    json.dump(d, f, ensure_ascii=False, indent=2)
+os.replace(teil, p)
 print("agy-Hooks für Jarvis-Aufträge eingetragen:", p)
 AGY
 echo "$NAME eingerichtet und gestartet. Protokoll: $LOGS/bruecke.log"

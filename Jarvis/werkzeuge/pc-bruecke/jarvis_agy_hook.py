@@ -80,40 +80,75 @@ def datei(name: str) -> Path:
 
 # ---------------------------------------------------------------- Sitzung, Warter, Eingang
 
+_AGY: tuple[int, str] | None = None
+FREMD = "-fremd-"
+
+
+def zahl(wert, rueckfall: int = 0) -> int:
+    try:
+        return int(str(wert).strip())
+    except (TypeError, ValueError):
+        return rueckfall
+
+
 def agy_prozess() -> tuple[int, str]:
-    """PID und Terminal (tty) des agy-Prozesses dieser Sitzung: der nächste Vorfahr namens agy."""
+    """PID und Terminal (tty) des agy-Prozesses dieser Sitzung: der nächste Vorfahr namens agy (je Hook einmal ermittelt)."""
+    global _AGY
+    if _AGY is not None:
+        return _AGY
+    _AGY = (0, "")
     pid = os.getppid()
     for _ in range(8):
         try:
             teile = subprocess.run(["ps", "-o", "ppid=,tty=,comm=", "-p", str(pid)], capture_output=True, text=True,
                                    timeout=3).stdout.split(None, 2)
         except Exception:
-            return 0, ""
+            break
         if len(teile) < 3:
-            return 0, ""
+            break
         if Path(teile[2].strip()).name == "agy":
-            return pid, ("" if teile[1] in ("??", "?") else "/dev/" + teile[1])
-        pid = int(teile[0])
+            _AGY = (pid, "" if teile[1] in ("??", "?") else "/dev/" + teile[1])
+            break
+        pid = zahl(teile[0])
         if pid <= 1:
             break
-    return 0, ""
+    return _AGY
+
+
+def auftrag_im_prozess(agy: int) -> bool:
+    """Wurde dieser agy für genau diesen Auftrag gestartet? Der OpenLauncher gibt den Auftrag mit „AUFTRAG-ID: …“ als
+    Startnachricht (-i) mit. Ein später im selben Tab von Hand gestarteter agy erbt JARVIS_AUFTRAG_ID, gehört aber nicht dazu."""
+    if not agy:
+        return False
+    try:
+        args = subprocess.run(["ps", "-ww", "-o", "args=", "-p", str(agy)], capture_output=True, text=True, timeout=3).stdout
+    except Exception:
+        return False
+    return f"AUFTRAG-ID: {AUFTRAG}" in args or f"AUFTRAG-ID {AUFTRAG}" in args
 
 
 def hauptsitzung(eingabe: dict, beim_start: bool = False) -> bool:
-    """True, wenn der Hook aus der Hauptsitzung kommt. Gemerkt wird „agy-PID Gesprächs-ID“: Ein Subagent läuft im selben
-    agy-Prozess und überschreibt den Eintrag nicht; ein neuer agy-Prozess für denselben Auftrag schon."""
-    gespraech = str(eingabe.get("conversationId") or "")
+    """True, wenn der Hook aus der Hauptsitzung eines Auftrags-agy kommt. Gemerkt wird „agy-PID Gesprächs-ID“: Ein Subagent
+    läuft im selben agy-Prozess und überschreibt den Eintrag nicht; ein neuer agy-Prozess für denselben Auftrag schon.
+    Ein agy ohne diesen Auftrag in der Startnachricht wird als fremd gemerkt und bekommt nie etwas."""
+    gespraech = str(eingabe.get("conversationId") or "").strip()
     agy, _ = agy_prozess()
     pfad = datei("sitzung")
     try:
-        alt_agy, alt_gespraech = pfad.read_text(encoding="utf-8").split(None, 1)
+        alt_agy, _, alt_gespraech = pfad.read_text(encoding="utf-8").strip().partition(" ")
     except Exception:
         alt_agy, alt_gespraech = "", ""
-    if not alt_gespraech or (beim_start and alt_agy != str(agy)) or (alt_agy != str(agy) and not H.lebt(int(alt_agy or 0))):
-        H.ORDNER.mkdir(parents=True, exist_ok=True)
-        pfad.write_text(f"{agy} {gespraech}", encoding="utf-8")
-        return True
-    return alt_gespraech.strip() == gespraech
+    if alt_agy == str(agy) and alt_gespraech:
+        return alt_gespraech == gespraech and gespraech != FREMD
+    if not gespraech or not agy:
+        return False
+    # Neuer agy-Prozess (oder noch keiner gemerkt): nur übernehmen, wenn der bisherige nicht mehr lebt oder dies sein Start ist.
+    if alt_gespraech and alt_gespraech != FREMD and not beim_start and H.lebt(zahl(alt_agy)):
+        return False
+    H.ORDNER.mkdir(parents=True, exist_ok=True)
+    eigen = auftrag_im_prozess(agy)
+    pfad.write_text(f"{agy} {gespraech if eigen else FREMD}", encoding="utf-8")
+    return eigen
 
 
 def lies_eingang() -> list[dict]:
@@ -133,15 +168,29 @@ def schreib_eingang(liste: list[dict]) -> None:
     os.replace(teil, pfad)
 
 
-def sorge_fuer_warter() -> None:
-    """Startet den Warter, wenn keiner lebt (abgekoppelt, hält den Hook nicht auf)."""
+def lies_warter() -> tuple[int, int, str]:
+    """warter.pid: „PID agy-PID Startzeit“."""
     try:
-        pid, start = datei("warter.pid").read_text(encoding="utf-8").split(None, 1)
-        if H.lebt(int(pid), start.strip()):
-            return
+        pid, agy, start = (datei("warter.pid").read_text(encoding="utf-8").strip().split(None, 2) + ["", "", ""])[:3]
+        return zahl(pid), zahl(agy), start
     except Exception:
-        pass
+        return 0, 0, ""
+
+
+def offene_ids(liste: list[dict]) -> list[dict]:
+    """Die Nachträge, die noch nicht in eine Sitzung übergeben wurden."""
+    bekannt = set(H.lies_zustand()["nachtraege"])
+    return [n for n in liste if n.get("nachtrag_id") not in bekannt]
+
+
+def sorge_fuer_warter() -> None:
+    """Startet den Warter, wenn für diesen agy keiner lebt (abgekoppelt, hält den Hook nicht auf)."""
     agy, tty = agy_prozess()
+    if not agy:
+        return
+    pid, warter_agy, start = lies_warter()
+    if pid and warter_agy == agy and H.lebt(pid, start):
+        return
     subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "warter", str(agy), tty], stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
@@ -176,34 +225,43 @@ def wecke(tty: str) -> bool:
     import jarvis_anhaenge
     try:
         r = subprocess.run(["osascript", "-e", jarvis_anhaenge.MAC_SKRIPT, tty, WECKRUF], capture_output=True, text=True, timeout=20)
-        return r.stdout.strip() == "ok"
+        if r.stdout.strip() != "ok":
+            return False
+        # Wie bei Claude Code (jarvis_anhaenge._mac): Das angehängte Enter kann die TUI mit dem Text zusammen als Einfügen nehmen;
+        # ein eigener leerer Aufruf ist das Enter. Kam das erste schon an, schickt ein leeres Enter in agy nichts ab.
+        time.sleep(1)
+        subprocess.run(["osascript", "-e", jarvis_anhaenge.MAC_SKRIPT, tty, ""], capture_output=True, text=True, timeout=20)
+        return True
     except Exception as fehler:
         H.schreib(f"agy Warter: Wecken {type(fehler).__name__}: {fehler}")
         return False
 
 
 def warter(agy: int, tty: str) -> int:
+    """Läuft, solange sein agy lebt (ohne festes Ende: Eine ruhende Sitzung startet keinen neuen Warter). Ein Warter für
+    einen anderen (neu gestarteten) agy desselben Auftrags löst ihn ab."""
     h = H
+    if not agy:
+        return 0
     h.ORDNER.mkdir(parents=True, exist_ok=True)
-    eigen = f"{os.getpid()} {h.startzeit(os.getpid()) or ''}"
     try:
         with h.Sperre():
-            try:
-                pid, start = datei("warter.pid").read_text(encoding="utf-8").split(None, 1)
-                if int(pid) != os.getpid() and h.lebt(int(pid), start.strip()):
-                    return 0
-            except Exception:
-                pass
-            datei("warter.pid").write_text(eigen, encoding="utf-8")
+            pid, warter_agy, start = lies_warter()
+            if pid and pid != os.getpid() and warter_agy == agy and h.lebt(pid, start):
+                return 0
+            datei("warter.pid").write_text(f"{os.getpid()} {agy} {h.startzeit(os.getpid()) or ''}", encoding="utf-8")
     except h.SperreBelegt:
         return 0
-    agy_start = (h.startzeit(agy) or "") if agy else ""
+    agy_start = h.startzeit(agy) or ""
     h.schreib(f"agy Warter gestartet (agy {agy}, {tty or 'ohne tty'})")
+    weckversuch = 0.0
     try:
-        ende = time.monotonic() + h.WARTER_MAX_S
-        while time.monotonic() < ende:
-            if agy and not h.lebt(agy, agy_start):
+        while True:
+            if not h.lebt(agy, agy_start):
                 h.schreib("agy Warter: Sitzung beendet")
+                return 0
+            if lies_warter()[0] != os.getpid():
+                h.schreib("agy Warter: abgelöst")
                 return 0
             try:
                 liste = h.hole_nachtraege(25)
@@ -211,32 +269,42 @@ def warter(agy: int, tty: str) -> int:
                 h.schreib(f"agy Warter: {fehler}")
                 time.sleep(5)
                 continue
-            neu = []
+            neu, alt = [], []
             if liste:
                 try:
                     with h.Sperre():
                         z = h.lies_zustand()
                         eingang = lies_eingang()
-                        bekannt = {n["nachtrag_id"] for n in eingang} | set(z["nachtraege"])
-                        neu = [n for n in liste if n["nachtrag_id"] not in bekannt]
+                        im_eingang = {n["nachtrag_id"] for n in eingang}
+                        neu = [n for n in liste if n["nachtrag_id"] not in im_eingang | set(z["nachtraege"])]
+                        alt = [n["nachtrag_id"] for n in liste if n["nachtrag_id"] in z["nachtraege"]]
                         if neu:
                             schreib_eingang(eingang + neu)
                 except h.SperreBelegt:
                     pass
             if neu:
                 h.schreib(f"agy Warter: {len(neu)} Nachtrag/Nachträge im Eingang")
+            if alt:
+                # Schon übergeben, aber die Quittung ging verloren: still nachquittieren, sonst bietet der Relay sie ewig an.
+                try:
+                    h.melde("nachtrag", "", nachtrag_ids=alt)
+                except Exception as fehler:
+                    h.schreib(f"agy Warter: Nachquittung {fehler}")
             # Ruht die Sitzung (nach Stop, kein pre seitdem), weckt nur ein Tippen sie auf; pre gibt dann den Nachtrag.
-            if lies_eingang() and datei("ruht").exists():
-                datei("ruht").unlink(missing_ok=True)
-                if wecke(tty):
-                    h.schreib("agy Warter: ruhende Sitzung geweckt")
+            # Kurz warten: Kommt der Nachtrag genau zum Stop, setzt der Stop selbst fort und löscht „ruht“.
+            if offene_ids(lies_eingang()) and datei("ruht").exists() and time.monotonic() - weckversuch > 30:
+                time.sleep(1.5)
+                if offene_ids(lies_eingang()) and datei("ruht").exists():
+                    weckversuch = time.monotonic()
+                    if wecke(tty):
+                        datei("ruht").unlink(missing_ok=True)
+                        h.schreib("agy Warter: ruhende Sitzung geweckt")
             if liste and not neu:
                 # Der Relay bietet sie bis zur Quittung weiter an: nicht im Kreis fragen.
                 time.sleep(3)
-        return 0
     finally:
         try:
-            if datei("warter.pid").read_text(encoding="utf-8").split()[:1] == [str(os.getpid())]:
+            if lies_warter()[0] == os.getpid():
                 datei("warter.pid").unlink()
         except Exception:
             pass
@@ -256,6 +324,10 @@ def pre(eingabe: dict) -> dict | None:
     datei("ruht").unlink(missing_ok=True)
     sorge_fuer_warter()
     abgekoppelt("pre", eingabe)
+    nochmal = unbelegt(eingabe)
+    if nochmal:
+        H.schreib("agy: übergebener Nachtrag fehlt im Transkript, geht erneut hinein")
+        return {"injectSteps": [{"userMessage": nochmal}]}
     if not lies_eingang():
         return None
     try:
@@ -268,13 +340,45 @@ def pre(eingabe: dict) -> dict | None:
         neu = H.beanspruche(liste)
     except H.SperreBelegt:
         # Zurück in den Eingang: Der nächste Modellaufruf versucht es wieder.
-        schreib_eingang(liste + lies_eingang())
+        try:
+            with H.Sperre():
+                schreib_eingang(liste + [n for n in lies_eingang() if n["nachtrag_id"] not in {m["nachtrag_id"] for m in liste}])
+        except H.SperreBelegt:
+            pass
         return None
     if not neu:
         return None
     text = H.uebergib(neu)
+    # Beleg: Bricht agy den Hook ab oder verwirft er die Ausgabe, gälte der Nachtrag sonst als übergeben, ohne je anzukommen.
+    datei("uebergeben.json").write_text(json.dumps({"ids": [n["nachtrag_id"] for n in neu], "text": text, "zeit": time.time()},
+                                                   ensure_ascii=False), encoding="utf-8")
     H.schreib(f"agy: {len(neu)} Nachtrag/Nachträge nach dem letzten Werkzeug übergeben")
     return {"injectSteps": [{"userMessage": text}]}
+
+
+def unbelegt(eingabe: dict) -> str:
+    """Prüft beim nächsten Modellaufruf, ob der zuletzt übergebene Nachtrag im Transkript steht. Fehlt er, kommt sein Text
+    zurück (einmal, höchstens eine Stunde lang); sonst leer."""
+    pfad = datei("uebergeben.json")
+    try:
+        beleg = json.loads(pfad.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    pfad.unlink(missing_ok=True)
+    if time.time() - float(beleg.get("zeit") or 0) > 3600:
+        return ""
+    marken = [f"NACHTRAG {i}" for i in beleg.get("ids") or []]
+    if any(m in str(eingabe.get("lastUserInput") or "") for m in marken):
+        return ""
+    try:
+        with open(str(eingabe.get("transcriptPath") or ""), "rb") as f:
+            f.seek(max(0, os.fstat(f.fileno()).st_size - 2_000_000))
+            inhalt = f.read().decode("utf-8", "replace")
+        if any(m in inhalt for m in marken):
+            return ""
+    except OSError:
+        return ""
+    return str(beleg.get("text") or "")
 
 
 def post(eingabe: dict) -> dict | None:
@@ -290,7 +394,7 @@ def stop(eingabe: dict) -> dict | None:
     datei("ruht").touch()
     sorge_fuer_warter()
     abgekoppelt("stop", eingabe)
-    if lies_eingang():
+    if offene_ids(lies_eingang()):
         datei("ruht").unlink(missing_ok=True)
         return {"decision": "continue",
                 "reason": "Frank hat über Jarvis einen Nachtrag zu diesem Auftrag geschickt; er folgt als nächste Nachricht."}
@@ -313,24 +417,26 @@ def befehl(roh) -> str:
     return text
 
 
-def neue_schritte(pfad: str) -> list[dict]:
-    """Die seit dem letzten Bericht dazugekommenen Schritte des agy-Transkripts (nur vollständige Zeilen)."""
+def neue_schritte(pfad: str) -> tuple[list[dict], tuple[int, int]]:
+    """Die seit dem letzten Bericht dazugekommenen Schritte des agy-Transkripts (nur vollständige Zeilen), dazu alte und neue
+    Lesestelle für zurueck(). Die Stelle gilt je Transkriptdatei: Ein neu gestarteter agy beginnt vorn."""
     if not pfad:
-        return []
+        return [], (0, 0)
     with H.Sperre():
         z = H.lies_zustand()
+        alt = z.get("agy_stelle", 0) if z.get("agy_pfad") == pfad else 0
         try:
             with open(pfad, "rb") as f:
                 groesse = os.fstat(f.fileno()).st_size
-                stelle = z.get("agy_stelle", 0) if 0 <= z.get("agy_stelle", 0) <= groesse else 0
+                stelle = alt if 0 <= alt <= groesse else 0
                 f.seek(stelle)
                 roh = f.read()
         except OSError:
-            return []
+            return [], (0, 0)
         ende = roh.rfind(b"\n")
         if ende < 0:
-            return []
-        z["agy_stelle"] = stelle + ende + 1
+            return [], (0, 0)
+        z["agy_pfad"], z["agy_stelle"] = pfad, stelle + ende + 1
         H.schreib_zustand(z)
     schritte = []
     for zeile in roh[:ende].decode("utf-8", "replace").splitlines():
@@ -338,7 +444,20 @@ def neue_schritte(pfad: str) -> list[dict]:
             schritte.append(json.loads(zeile))
         except Exception:
             pass
-    return schritte
+    return schritte, (stelle, stelle + ende + 1)
+
+
+def zurueck(pfad: str, stellen: tuple[int, int]) -> None:
+    """Melden scheiterte: Lesestelle zurück, damit der nächste Bericht diese Texte noch einmal versucht (schon gemeldete
+    filtert schon_gesehen heraus). Nur, wenn seitdem kein anderer Bericht weitergelesen hat."""
+    try:
+        with H.Sperre():
+            z = H.lies_zustand()
+            if z.get("agy_pfad") == pfad and z.get("agy_stelle") == stellen[1]:
+                z["agy_stelle"] = stellen[0]
+                H.schreib_zustand(z)
+    except Exception:
+        pass
 
 
 def werkzeug_ausgabe(pfad: str, schritt: int) -> str:
@@ -357,8 +476,17 @@ def werkzeug_ausgabe(pfad: str, schritt: int) -> str:
 def bericht(eingabe: dict) -> None:
     art = eingabe.get("agy_art")
     pfad = str(eingabe.get("transcriptPath") or "")
-    texte = [str(s["content"]) for s in neue_schritte(pfad)
+    schritte, stellen = neue_schritte(pfad)
+    texte = [str(s["content"]) for s in schritte
              if s.get("type") == "PLANNER_RESPONSE" and s.get("source") == "MODEL" and s.get("content")]
+    try:
+        melden(art, eingabe, pfad, texte)
+    except Exception:
+        zurueck(pfad, stellen)
+        raise
+
+
+def melden(art, eingabe: dict, pfad: str, texte: list[str]) -> None:
     if art == "pre":
         H.puls({"tool_name": "", "texte": texte})
         return
@@ -369,8 +497,13 @@ def bericht(eingabe: dict) -> None:
     name, args = str(aufruf.get("name") or ""), aufruf.get("args") or {}
     fehler = str(eingabe.get("error") or "")
     if name == "run_command":
-        ausgabe = werkzeug_ausgabe(pfad, int(eingabe.get("stepIdx") or -1))
-        m = re.search(r"exited with code (\d+)", ausgabe)
+        ausgabe = werkzeug_ausgabe(pfad, zahl(eingabe.get("stepIdx"), -1))
+        m = re.search(r"exited with code (-?\d+)", ausgabe)
+        if not m and not fehler:
+            # Nach WaitMsBeforeAsync läuft der Befehl im Hintergrund weiter (Bau, Push, Installation): Ohne Exit-Code steht
+            # das Ergebnis noch nicht fest, also weder Erfolg noch Fehler melden, nur die Texte.
+            H.post({"tool_name": "", "texte": texte})
+            return
         gescheitert = bool(fehler) or bool(m and m.group(1) != "0")
         H.post({"tool_name": "Bash", "tool_input": {"command": befehl(args.get("CommandLine"))}, "tool_response": ausgabe or fehler,
                 "hook_event_name": "PostToolUseFailure" if gescheitert else "PostToolUse", "texte": texte})

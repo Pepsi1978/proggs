@@ -852,7 +852,7 @@ def auftrag_rahmen(anzahl: int, teile: str, vorspann: str = "") -> str:
 def melde_weg() -> str:
     """Wie die Sitzung ihre Fertig-Meldung schickt: Antigravity (agy) und der Server kennen programmier_fortschritt nicht."""
     if FREMDE_CLI == "antigravity":
-        return f'mit python3 "{Path(__file__).resolve()}" melde fertig "<Sätze>"'
+        return f'mit {"python" if os.name == "nt" else "python3"} "{Path(__file__).resolve()}" melde fertig "<Sätze>"'
     return "mit jarvis_hook.py melde fertig" if os.environ.get("JARVIS_SERVER") else "stand=fertig mit programmier_fortschritt"
 
 
