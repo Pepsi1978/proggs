@@ -468,7 +468,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.2: am Windows-PC im Codex CLI, " +
                         "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6.2 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
-                        "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
+                        "„Gemini 4 Neon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
                         "OpenLauncher und startet genau dieses Modell am Vorrangrechner (Mac, Windows-PC oder Power-PC), ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
                     "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh, max oder ultra (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
                     "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
@@ -508,7 +508,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val freieAngabe = vorwahl?.let { ProgrammiererVorlage.freieWahl(it.text) }
                 // Per Knopf gewähltes CLI aus dem Einstieg.
                 val vorwahlCli = vorwahl?.let { ProgrammiererVorlage.cli(it.text) }
-                // Kimi K3.1 Pro und Gemini 4 Argon starten über das OpenLauncher-Angebot, mit festem CLI (Franks Wahl vom 31.10.2026).
+                // Kimi K3.1 Pro und Gemini 4 Neon starten über das OpenLauncher-Angebot, mit festem CLI (Franks Wahl vom 31.10.2026).
                 val festModell = knopfModell?.let { ProgrammiererVorlage.katalogName(it) }
                 if (festModell != null) {
                     a.put("modell", festModell)
@@ -526,7 +526,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (knopfModell == null && karteZurRunde && runde != null && (ProgrammiererVorlage.katalogName(runde.modell) != null || ProgrammiererVorlage.freieWahl(runde.text) != null)) {
                     a.remove("modell"); a.remove("cli")
                 }
-                // Kurze Antwort „Kimi“ oder „Argon“ auf eine offene Modellkarte gilt wie der Tipp auf den Knopf.
+                // Kurze Antwort „Kimi“ oder „Neon“ auf eine offene Modellkarte gilt wie der Tipp auf den Knopf.
                 val antwortModell = if (knopfModell == null && !ausChatGpt && !karteZurRunde && offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL })
                     festesModellAusAntwort(worte?.aktuell).takeIf { it.isNotEmpty() } else null
                 antwortModell?.let { m ->
@@ -812,7 +812,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                                   val ursprung: de.frank.jarvis.speech.SprachUrsprung?, val ziel: String = "",
                                   val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL,
                                   val seit: Long = System.currentTimeMillis(), val runde: String = "", val anhaenge: List<String> = emptyList(),
-                                  /** Franks Effort|Profil|Modus zu Kimi oder Argon, bis die Folgefrage beantwortet ist. */
+                                  /** Franks Effort|Profil|Modus zu Kimi oder Neon, bis die Folgefrage beantwortet ist. */
                                   val zusatz: String = "",
                                   /** Antigravity: das schon geprüfte Modell (Anbieter, Slug, Name; Tab-getrennt), damit der Tipp genau dieses startet. */
                                   val gewaehlt: String = "")
@@ -898,7 +898,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String, runde: String): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.2 läuft am Windows-PC, ist der aus, am Mac, sonst in Codex Cloud). Frag ihn kurz: " +
-            "„Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Argon mit cli=antigravity erneut auf.")
+            "„Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Neon?“ und rufe programmieren danach mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro mit cli=opencode bzw. modell=Gemini 4 Neon mit cli=antigravity erneut auf.")
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
         // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
@@ -914,12 +914,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 STUFE_CLI -> "Frank hat schon Sol 6.2 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon ${modellName(alt.modell, alt.cli)} gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
                 STUFE_REVIEW_UMFANG -> "Frank will ein Review; im Chat stehen die Knöpfe „Standard“ und „Sehr ausführlich“ (bis 100 Findings)."
-                else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“."
+                else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Neon“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
         karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde, anhaenge = anhangPfade()))
-        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Argon“. $KARTE_FRAGT " +
-            "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro bzw. modell=Gemini 4 Argon auf; sonst starte nichts.")
+        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“, „Sol 6.2“, „Kimi K3.1 Pro“ und „Gemini 4 Neon“. $KARTE_FRAGT " +
+            "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus, modell=sol, modell=Kimi K3.1 Pro bzw. modell=Gemini 4 Neon auf; sonst starte nichts.")
     }
 
     /**
@@ -1018,7 +1018,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         STUFE_REVIEW_UMFANG -> "Programmierauftrag${fuer(w.app)}: Review Standard oder sehr ausführlich mit bis zu 100 Findings?" to listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich")
         STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: " + (if (w.cli == CLI_ANTIGRAVITY) "Review: Ja oder Nein?"
             else "Soll ${ProgrammiererVorlage.katalogName(w.modell) ?: w.modell.takeIf { w.gewaehlt.isNotEmpty() } ?: "Codex"} ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?") to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?" to ProgrammiererVorlage.MODELL_OPTIONEN
+        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Neon?" to ProgrammiererVorlage.MODELL_OPTIONEN
     }
 
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
@@ -1079,7 +1079,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val naechste = when {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
-            w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_ARGON && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
+            w.stufe == STUFE_MODELL && (wert == ProgrammiererVorlage.MODELL_NEON || wert == ProgrammiererVorlage.MODELL_ARGON) && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
             w.stufe == STUFE_REVIEW && w.cli == CLI_ANTIGRAVITY && wert == REVIEW_JA -> w.copy(stufe = STUFE_REVIEW_UMFANG)
             else -> null
         }
@@ -1095,7 +1095,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val nummer = Auftragsbuch.neueNummer()
         val ergebnis = withContext(umgebung + ServerWahl(w.ziel)) {
             if (ProgrammiererVorlage.katalogName(modell) != null || w.gewaehlt.isNotEmpty()) {
-                // Kimi K3.1 Pro und Gemini 4 Argon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
+                // Kimi K3.1 Pro und Gemini 4 Neon: über das OpenLauncher-Angebot am Rechner, nie als Opus oder in der Cloud.
                 if (w.ziel == "cloud") Ergebnis("${ProgrammiererVorlage.katalogName(modell) ?: modell} ist nicht gestartet: Es läuft nur am Mac, am Windows-PC, am Power-PC oder auf dem Hostinger-Server, nicht in der Cloud.", fehler = true)
                 else when (val k = vorgepruefteWahl(w) ?: festeKatalogWahl(modell, w.cli, w.zusatz)) {
                     is OpenLauncherKatalog.Wahl -> starteKatalog(k, w.app, w.auftrag, review, nummer, w.neu, umfang)
@@ -3394,7 +3394,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Hörbare Erinnerung an eine noch offene Modellwahl (siehe modellErinnerung), je wahl_id höchstens eine. */
         private val erinnerungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
         private const val ERINNERUNG_NACH_MS = 30_000L
-        private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Argon?"
+        private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5, Sol 6.2, Kimi K3.1 Pro oder Gemini 4 Neon?"
         /**
          * Wahlen, die unten Knöpfe bekommen (Franks Wunsch vom 24.10.2026: erst nach dem Abschicken): nur die jüngste Modellfrage je
          * Gespräch samt ihren Folgefragen. Nach einem Neustart nur, was höchstens [FRISCH_NACH_NEUSTART_MS] alt ist; liegengebliebene
@@ -3472,18 +3472,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Vor der ersten Sprachwahl nach einem Kaltstart: die gesicherten Karten laden. */
         fun wahlenBereit(context: Context) = wahlenLaden(context)
 
-        /** Franks kurze Antwort nennt genau Kimi K3.1 Pro oder Gemini 4 Argon: dessen Knopfwert, sonst leer. Ein anderes Kimi („Kimi K3“) zählt nicht. */
+        /** Franks kurze Antwort nennt genau Kimi K3.1 Pro oder Gemini 4 Neon: dessen Knopfwert, sonst leer. Ein anderes Kimi („Kimi K3“) zählt nicht. */
         internal fun festesModellAusAntwort(worte: String?): String {
             val t = OpenLauncherKatalog.gesprochen(worte?.trim().orEmpty()).lowercase(Locale.ROOT).trimEnd('.', '!', ' ')
             return when {
                 t.isEmpty() || t.length > 60 -> ""
                 KIMI_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_KIMI
-                ARGON_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_ARGON
-                else -> ModellGehoert.modell(t).takeIf { it == ProgrammiererVorlage.MODELL_KIMI || it == ProgrammiererVorlage.MODELL_ARGON }.orEmpty()
+                NEON_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_NEON
+                else -> ModellGehoert.modell(t).takeIf { it == ProgrammiererVorlage.MODELL_KIMI || it == ProgrammiererVorlage.MODELL_NEON }.orEmpty()
             }
         }
         private val KIMI_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*kimi(?:\\s*k?\\s*3[.,]1)?(?:\\s*pro)?(?:\\s+bitte)?")
-        private val ARGON_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*(?:argon|gemini(?:\\s*4)?\\s+argon|gemini\\s*4)(?:\\s+bitte)?")
+        private val NEON_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*(?:neon|gemini(?:\\s*4)?\\s+neon|gemini(?:\\s*4)?)(?:\\s+bitte)?")
         private val ZUSATZ_FELDER = listOf("effort", "profil", "modus")
 
         /** Nennt Frank selbst ein Modell (Opus, Sol oder GPT)? Nur dann gilt ein vom Modell eingesetztes modell ohne Knöpfe. */

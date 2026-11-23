@@ -45,6 +45,18 @@
                                              "medium",
                                              "high"
                                          ],
+    "google/gemini-4-hydrogen [antigravity]":  [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+    ],
+    "google/gemini-4-neon [antigravity]":  [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+    ],
     "kimi-code-plan-global/k3 [opencode]":  [
                                                 "low",
                                                 "high",

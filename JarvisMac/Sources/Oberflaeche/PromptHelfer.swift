@@ -92,8 +92,8 @@ enum ProgrammierVorspann {
         Modell("Sol 6.2", handy: ["modell": "sol"], mac: mitStandard(["modell": "gpt-6.2-sol", "anbieter": "openai", "cli": "codex"]), clis: ["codex", "opencode"]),
         Modell("Kimi K3.1 Pro", handy: mitStandard(["modell": "Kimi K3.1 Pro", "cli": "opencode"]),
                mac: mitStandard(["modell": "k3.1-pro", "anbieter": "kimi-code-plan-global", "cli": "opencode"]), clis: ["opencode", "kimi"]),
-        Modell("Gemini 4 Argon", handy: mitStandard(["modell": "Gemini 4 Argon", "cli": "antigravity"]),
-               mac: mitStandard(["modell": "gemini-4-argon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity", "opencode"]),
+        Modell("Gemini 4 Neon", handy: mitStandard(["modell": "Gemini 4 Neon", "cli": "antigravity"]),
+               mac: mitStandard(["modell": "gemini-4-neon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity"]),
     ]
     private static let alleAuftraege: [String] = [auftrag] + modelle.map(\.vorspann)
 

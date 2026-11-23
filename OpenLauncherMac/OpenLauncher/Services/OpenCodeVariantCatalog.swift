@@ -59,7 +59,10 @@ enum OpenCodeVariantCatalog {
     /// Antigravity CLI (agy --effort): Gemini 3.8 Flash kennt low/medium/high, Gemini 4 Argon bietet
     /// agy als Medium und High an (antigravity.google/docs/models, Stand 14.10.2026).
     static func geminiLevels(_ slug: String) -> [String] {
-        slug.hasPrefix("gemini-4-argon") ? ["medium", "high"] : ["low", "medium", "high"]
+        if slug.hasPrefix("gemini-4-argon") { return ["medium", "high"] }
+        // Gemini 4 Neon und Hydrogen: low/medium/high/xhigh (agy models, 23.11.2026).
+        if slug.hasPrefix("gemini-4-neon") || slug.hasPrefix("gemini-4-hydrogen") { return ["low", "medium", "high", "xhigh"] }
+        return ["low", "medium", "high"]
     }
 
     private static func anthropicLevels(_ rawSlug: String) -> [String] {

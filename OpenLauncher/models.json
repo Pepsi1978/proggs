@@ -201,6 +201,24 @@
         "IsUserDefined": false,
         "ProviderId": "google",
         "ProviderName": "Google",
+        "Slug": "gemini-4-neon",
+        "DisplayName": "Gemini 4 Neon",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "google",
+        "ProviderName": "Google",
+        "Slug": "gemini-4-hydrogen",
+        "DisplayName": "Gemini 4 Hydrogen",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "google",
+        "ProviderName": "Google",
         "Slug": "gemini-4-argon",
         "DisplayName": "Gemini 4 Argon (Ultra)",
         "IsHidden": false
@@ -217,6 +235,8 @@
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
+      "gemini-4-neon",
+      "gemini-4-hydrogen",
       "gemini-4-argon",
       "gemini-3.8-flash"
     ],

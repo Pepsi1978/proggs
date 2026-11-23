@@ -110,7 +110,11 @@ def stufen(anbieter: str, slug_roh: str) -> list:
     if a == "kimi-code-plan-global":
         return ["low", "high", "max"] if slug in KIMI else []
     if a == "google":
-        return ["medium", "high"] if slug.startswith("gemini-4-argon") else BREIT
+        if slug.startswith("gemini-4-argon"):
+            return ["medium", "high"]
+        if slug.startswith(("gemini-4-neon", "gemini-4-hydrogen")):
+            return ["low", "medium", "high", "xhigh"]
+        return BREIT
     return _openrouter(slug) if a == "openrouter" else []
 
 

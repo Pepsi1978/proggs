@@ -927,6 +927,7 @@
   {"versionCode": 918, "versionName": "1.8.907", "stand": "22.11.2026, 17:01 Uhr", "notiz": "Standort-Erinnerungen haben einen Regler „Minuten nach Ankunft“ von 0 bis 20 Minuten, gesprochen sind ohne Angabe 5 Minuten voreingestellt, und die bisherige feste Wartezeit von drei Minuten fällt weg."},
   {"versionCode": 919, "versionName": "1.8.908", "stand": "22.11.2026, 17:04 Uhr", "notiz": "Standort-Erinnerungen mit 0 Minuten gehen am Rand des Umkreises nicht mehr verloren, kurzes Verlassen und Zurückkommen startet die Wartezeit nicht neu, und eine geänderte Minutenzahl gilt sofort."},
   {"versionCode": 920, "versionName": "1.8.909", "stand": "22.11.2026, 17:14 Uhr", "notiz": "Standort-Erinnerungen nach ausführlichem Review: Jede Erinnerung am selben Ort hat eigene Prüfungen, kurzes Verlassen und Zurückkommen verliert oder verdoppelt nichts, und Bearbeitungen vom Tablet mit älterem Jarvis setzen die gewählten Minuten nicht mehr zurück."},
-    {"versionCode": 921, "versionName": "1.8.910", "stand": "22.11.2026, 20:28 Uhr", "notiz": "Raumklima-Karte: Die Herkunft der Werte steht kurz als „M“ für den Mac und „C“ für die SwitchBot-Cloud, damit Temperatur und Luftfeuchtigkeit in eine Zeile passen."}
+    {"versionCode": 921, "versionName": "1.8.910", "stand": "22.11.2026, 20:28 Uhr", "notiz": "Raumklima-Karte: Die Herkunft der Werte steht kurz als „M“ für den Mac und „C“ für die SwitchBot-Cloud, damit Temperatur und Luftfeuchtigkeit in eine Zeile passen."},
+    {"versionCode": 922, "versionName": "1.8.911", "stand": "23.11.2026, 10:23 Uhr", "notiz": "Der Programmierbutton bietet statt Gemini 4 Argon jetzt Gemini 4 Neon als Schnellwahl an, und in der OpenLauncher-Auswahl stehen Gemini 4 Neon und Gemini 4 Hydrogen mit den Stufen Low bis XHigh."}
 ]
 }

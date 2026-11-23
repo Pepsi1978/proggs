@@ -50,7 +50,11 @@ object OpenLauncherEfforts {
             "nvidia" -> nvidia(slug)
             "anthropic" -> anthropic(slug)
             "kimi-code-plan-global" -> if (slug in setOf("k3.1-pro", "k3.1-pro-highspeed", "k3", "k3-256k", "kimi-for-coding")) listOf("low", "high", "max") else emptyList()
-            "google" -> if (slug.startsWith("gemini-4-argon")) listOf("medium", "high") else BREIT
+            "google" -> when {
+                slug.startsWith("gemini-4-argon") -> listOf("medium", "high")
+                slug.startsWith("gemini-4-neon") || slug.startsWith("gemini-4-hydrogen") -> listOf("low", "medium", "high", "xhigh")
+                else -> BREIT
+            }
             "openrouter" -> openRouter(slug)
             else -> emptyList()
         }

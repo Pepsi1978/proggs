@@ -109,8 +109,8 @@ public static class ProgrammierVorspann
         new Modell("Sol 6.2", new() { ["modell"] = "sol" }, MitStandard(new() { ["modell"] = "gpt-6.2-sol", ["anbieter"] = "openai", ["cli"] = "codex" }), new[] { "codex", "opencode" }),
         new Modell("Kimi K3.1 Pro", MitStandard(new() { ["modell"] = "Kimi K3.1 Pro", ["cli"] = "opencode" }),
             MitStandard(new() { ["modell"] = "k3.1-pro", ["anbieter"] = "kimi-code-plan-global", ["cli"] = "opencode" }), new[] { "opencode", "kimi" }),
-        new Modell("Gemini 4 Argon", MitStandard(new() { ["modell"] = "Gemini 4 Argon", ["cli"] = "antigravity" }),
-            MitStandard(new() { ["modell"] = "gemini-4-argon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity", "opencode" }),
+        new Modell("Gemini 4 Neon", MitStandard(new() { ["modell"] = "Gemini 4 Neon", ["cli"] = "antigravity" }),
+            MitStandard(new() { ["modell"] = "gemini-4-neon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity" }),
     };
     private static readonly List<string> AlleAuftraege = new[] { Auftrag }.Concat(Modelle.Select(m => m.Vorspann)).ToList();
 

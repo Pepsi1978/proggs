@@ -640,6 +640,8 @@ final class ModelRegistry {
             // Gemini 4 Argon nur mit AI Ultra, Gemini 3.8 Flash ab Free/Pro. Seit agy 1.3.4 genuegt der
             // Basisname, die Stufe kommt per --effort.
             createGroup(googleGroupId, "Google", googleProviderId, "Google", [
+                model("gemini-4-neon", "Gemini 4 Neon", googleProviderId, "Google"),
+                model("gemini-4-hydrogen", "Gemini 4 Hydrogen", googleProviderId, "Google"),
                 model("gemini-4-argon", "Gemini 4 Argon (Ultra)", googleProviderId, "Google"),
                 model("gemini-3.8-flash", "Gemini 3.8 Flash", googleProviderId, "Google")
             ]),
