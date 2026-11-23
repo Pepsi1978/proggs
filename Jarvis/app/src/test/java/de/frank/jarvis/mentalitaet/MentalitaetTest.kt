@@ -283,7 +283,103 @@ class MentalitaetTest {
         fertig.await()
         lauf.join()
 
-        assertEquals(listOf(8_000L, 15_000L), pausen)
+        // Verlängerung während der laufenden 8-s-Pause: die restlichen 7 s werden live nachgewartet.
+        assertEquals(listOf(8_000L, 7_000L), pausen)
         alleDateien.forEach { assertFalse("Datei ${it.name} blieb liegen", it.exists()) }
+    }
+
+    /** Spielt [schritte] Ausgaben mit veränderlichem Plan; [nachAusgabe] darf Plan oder Pause live ändern. */
+    private fun spieleLive(
+        startPlan: List<MentalSatz>,
+        schritte: Int,
+        pauseMs: () -> Long = { 0L },
+        pausenTakt: Long = Long.MAX_VALUE,
+        pausen: MutableList<Long> = CopyOnWriteArrayList(),
+        nachAusgabe: (Int, (List<MentalSatz>) -> Unit) -> Unit = { _, _ -> },
+    ): List<String> = runBlocking {
+        val saetze = java.util.concurrent.atomic.AtomicReference(startPlan)
+        val gesprochen = CopyOnWriteArrayList<String>()
+        val dateiText = java.util.concurrent.ConcurrentHashMap<File, String>()
+        val fertig = CompletableDeferred<Unit>()
+        val lauf = launch(Dispatchers.Default) {
+            mentalitaetSchleife(
+                planAbrufen = { mentalitaetPlan(saetze.get()) },
+                pauseMsAbrufen = pauseMs,
+                pausenTaktMs = pausenTakt,
+                erzeuge = { text ->
+                    File.createTempFile("mental-live-", ".wav").also { dateiText[it] = text }
+                },
+                spiele = { datei ->
+                    gesprochen += dateiText.getValue(datei)
+                    nachAusgabe(gesprochen.size) { saetze.set(it) }
+                    if (gesprochen.size >= schritte) {
+                        fertig.complete(Unit)
+                        throw CancellationException("Fertig")
+                    }
+                },
+                loesche = { it.delete() },
+                pause = { ms -> pausen += ms; delay(1) },
+            )
+        }
+        fertig.await()
+        lauf.join()
+        dateiText.keys.forEach { assertFalse("Datei ${it.name} blieb liegen", it.exists()) }
+        gesprochen.toList()
+    }
+
+    @Test
+    fun liveVerschiebenNachObenGiltAbNaechstemSatz() {
+        val a = MentalSatz(1L, "A", 1); val b = MentalSatz(2L, "B", 1); val c = MentalSatz(3L, "C", 1)
+        // Während A gesprochen wird, zieht Frank C nach oben: C, A, B.
+        val folge = spieleLive(listOf(a, b, c), 5) { nr, setze -> if (nr == 1) setze(listOf(c, a, b)) }
+        assertEquals(listOf("A", "B", "C", "A", "B"), folge)
+    }
+
+    @Test
+    fun liveVerschiebenNachUntenGiltAbNaechstemSatz() {
+        val a = MentalSatz(1L, "A", 1); val b = MentalSatz(2L, "B", 1); val c = MentalSatz(3L, "C", 1)
+        // Während B gesprochen wird, zieht Frank B ganz nach unten: A, C, B → danach neuer Durchlauf.
+        val folge = spieleLive(listOf(a, b, c), 5) { nr, setze -> if (nr == 2) setze(listOf(a, c, b)) }
+        assertEquals(listOf("A", "B", "A", "C", "B"), folge)
+    }
+
+    @Test
+    fun liveAnzahlErhoehenUndSenkenGreiftSofort() {
+        val a = MentalSatz(1L, "A", 2); val b = MentalSatz(2L, "B", 1)
+        // Nach A 1/2 auf 3 erhöht → A dreimal; im nächsten Durchlauf nach A 1/3 auf 1 gesenkt → direkt B.
+        val folge = spieleLive(listOf(a, b), 7) { nr, setze ->
+            if (nr == 1) setze(listOf(a.copy(wiederholungen = 3), b))
+            if (nr == 5) setze(listOf(a.copy(wiederholungen = 1), b))
+        }
+        assertEquals(listOf("A", "A", "A", "B", "A", "B", "A"), folge)
+    }
+
+    @Test
+    fun livePauseVerkuerzenUndVerlaengernAuchInLaufenderPause() {
+        val pause = java.util.concurrent.atomic.AtomicLong(1_000L)
+        val pausen = CopyOnWriteArrayList<Long>()
+        // Takt 200 ms: nach dem 1. Takt der 2. Pause wird auf 400 ms verkürzt, in der 3. Pause auf 1 600 ms verlängert.
+        spieleLive(
+            listOf(MentalSatz(1L, "A", 1)), 4,
+            pauseMs = {
+                if (pausen.size == 6) pause.set(400L)
+                if (pausen.size == 8) pause.set(1_600L)
+                pause.get()
+            },
+            pausenTakt = 200L,
+            pausen = pausen,
+        )
+        // 1. Pause 5×200 = 1 000; 2. Pause 200 + 200 (verkürzt auf 400); 3. Pause 8×200 = 1 600.
+        assertEquals(1_000L, pausen.take(5).sum())
+        assertEquals(400L, pausen.subList(5, 7).sum())
+        assertEquals(1_600L, pausen.drop(7).sum())
+    }
+
+    @Test
+    fun naechsterSchrittBeiGeloeschtemSatz() {
+        val alt = mentalitaetPlan(listOf(MentalSatz(1L, "A", 1), MentalSatz(2L, "B", 2), MentalSatz(3L, "C", 1)))
+        val neu = mentalitaetPlan(listOf(MentalSatz(1L, "A", 1), MentalSatz(3L, "C", 1)))
+        assertEquals(1 to false, mentalitaetNaechster(neu, alt, alt[1]))
+        assertEquals(0 to true, mentalitaetNaechster(neu, alt, neu[1]))
     }
 }
