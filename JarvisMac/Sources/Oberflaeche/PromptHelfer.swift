@@ -95,10 +95,15 @@ enum ProgrammierVorspann {
         Modell("Gemini 4 Neon", handy: mitStandard(["modell": "Gemini 4 Neon", "cli": "antigravity"]),
                mac: mitStandard(["modell": "gemini-4-neon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity"]),
     ]
-    private static let alleAuftraege: [String] = [auftrag] + modelle.map(\.vorspann)
+    /// Früherer Argon-Knopf (bis 23.11.2026): kein Knopf mehr, gespeicherte Prompts mit seinem Einstieg gelten weiter.
+    private static let altModelle: [Modell] = [
+        Modell("Gemini 4 Argon", handy: mitStandard(["modell": "Gemini 4 Argon", "cli": "antigravity"]),
+               mac: mitStandard(["modell": "gemini-4-argon", "anbieter": "google", "cli": "antigravity"]), clis: ["antigravity", "opencode"]),
+    ]
+    private static let alleAuftraege: [String] = [auftrag] + (modelle + altModelle).map(\.vorspann)
 
     /// Das per Knopf im Einstieg gewählte Modell; nil ohne Modell im Einstieg.
-    static func modell(in t: String) -> Modell? { let v = vorn(t); return modelle.first { v.hasPrefix($0.vorspann) } }
+    static func modell(in t: String) -> Modell? { let v = vorn(t); return (modelle + altModelle).first { v.hasPrefix($0.vorspann) } }
     static func istBlosserEinstieg(_ t: String) -> Bool { alleAuftraege.contains(t) || t == nachtrag }
 
     /// Wie am Handy: Musste Jarvis erst nachfragen, gilt das Modell der vorigen Nachricht weiter, höchstens 10 Minuten und nur, solange nichts gestartet ist.

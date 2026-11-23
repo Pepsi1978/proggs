@@ -13,6 +13,8 @@ object ProgrammiererVorlage {
     const val VORSPANN_SOL = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Sol 6.2:"
     const val VORSPANN_KIMI = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Kimi K3.1 Pro:"
     const val VORSPANN_NEON = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Gemini 4 Neon:"
+    /** Einstieg des früheren Argon-Knopfs: gespeicherte Prompts und ältere JarvisMac/JarvisWindows senden ihn weiter. */
+    const val VORSPANN_ARGON = "Übergib bitte folgende Aufgaben an den Programmierer mit dem Modell Gemini 4 Argon:"
 
     const val MODELL_OPUS = "opus"
     const val MODELL_SOL = "sol"
@@ -26,20 +28,22 @@ object ProgrammiererVorlage {
     const val OHNE_EFFORT = "ohne Stufe"
 
     /** Ein Modellknopf. [katalogName]: startet über das OpenLauncher-Angebot (Minimalprofil, Schnellmodus, Effort High) mit [cli] (Franks Standard vom 31.10.2026) oder einem der [clis], wenn Frank es nennt. */
-    private data class KnopfModell(val wert: String, val label: String, val vorspann: String, val katalogName: String? = null, val cli: String? = null, val clis: List<String>)
+    private data class KnopfModell(val wert: String, val label: String, val vorspann: String, val katalogName: String? = null, val cli: String? = null, val clis: List<String>, val alt: Boolean = false)
     private val KNOPF_MODELLE = listOf(
         KnopfModell(MODELL_OPUS, "Opus 5.5", VORSPANN_OPUS, clis = listOf("claude")),
         KnopfModell(MODELL_SOL, "Sol 6.2", VORSPANN_SOL, clis = listOf("codex", "opencode")),
         KnopfModell(MODELL_KIMI, "Kimi K3.1 Pro", VORSPANN_KIMI, "Kimi K3.1 Pro", "opencode", clis = listOf("opencode", "kimi")),
         // Gemini 4 Neon gibt es nur in der Antigravity CLI (opencode models kennt es nicht, 23.11.2026).
         KnopfModell(MODELL_NEON, "Gemini 4 Neon", VORSPANN_NEON, "Gemini 4 Neon", "antigravity", clis = listOf("antigravity")),
+        // Kein Knopf mehr, aber alte Einstiege und gespeicherte Karten mit „argon“ bleiben gültig.
+        KnopfModell(MODELL_ARGON, "Gemini 4 Argon", VORSPANN_ARGON, "Gemini 4 Argon", "antigravity", clis = listOf("antigravity", "opencode"), alt = true),
     )
 
     /** Einstieg, den der Programmierbutton sofort setzt: ohne Wahl gilt Opus 5.5 in Claude Code (Frank, 21.11.2026). */
     val STANDARD_EINSTIEG: String get() = vorspannFuer(MODELL_OPUS, "claude")
 
     /** Wert und Beschriftung der Modellknöpfe, für Vorwahl und Karte dieselbe Reihenfolge. */
-    val MODELL_OPTIONEN = KNOPF_MODELLE.map { it.wert to it.label }
+    val MODELL_OPTIONEN = KNOPF_MODELLE.filterNot { it.alt }.map { it.wert to it.label }
 
     /** Die Knöpfe des Programmierbuttons: die vier Modelle und danach die Vollbildauswahl. */
     val VORWAHL_OPTIONEN = MODELL_OPTIONEN + (OPENLAUNCHER to "OpenLauncher")
@@ -79,8 +83,8 @@ object ProgrammiererVorlage {
     /** Das im Einstieg gewählte CLI eines Modellknopfs; null ohne CLI im Einstieg. */
     fun cli(text: String): String? = vorspannIn(text)?.let { CLI_EINSTIEGE[it]?.second }
 
-    fun katalogName(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.katalogName ?: "Gemini 4 Argon".takeIf { modell == MODELL_ARGON }
-    fun katalogCli(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.cli ?: "antigravity".takeIf { modell == MODELL_ARGON }
+    fun katalogName(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.katalogName
+    fun katalogCli(modell: String): String? = KNOPF_MODELLE.firstOrNull { it.wert == modell }?.cli
 
     /** Das CLI zum Knopf: Ein anderes angebotenes nur, wenn [gegeben] es nennt und Franks [worte] es ausdrücklich enthalten; der Modellname allein („Kimi“) zählt nicht. */
     fun katalogCliFuer(modell: String, gegeben: String, worte: String): String? {

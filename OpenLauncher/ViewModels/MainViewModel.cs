@@ -1404,16 +1404,22 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private static bool HasExternalCli(ModelEntry? model) => IsOpenAiModel(model) || IsMoonshotModel(model) || IsGoogleModel(model);
 
+    /// <summary>Gemini 4 Neon und Hydrogen kennt OpenCode nicht (opencode models, 23.11.2026): nur die Antigravity CLI.</summary>
+    private static bool IsAntigravityOnlyModel(ModelEntry? model) =>
+        IsGoogleModel(model) && (model!.Slug.StartsWith("gemini-4-neon", StringComparison.Ordinal)
+            || model.Slug.StartsWith("gemini-4-hydrogen", StringComparison.Ordinal));
+
     /// <summary>Fuellt die CLI-Wahl passend zum Anbieter: OpenCode plus das eigene CLI des Anbieters.</summary>
     private void FillCliTargets(ModelEntry? model)
     {
         CliTargets.Clear();
-        CliTargets.Add(new CliTargetEntry
-        {
-            Id = "opencode",
-            DisplayName = "OpenCode",
-            Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
-        });
+        if (!IsAntigravityOnlyModel(model))
+            CliTargets.Add(new CliTargetEntry
+            {
+                Id = "opencode",
+                DisplayName = "OpenCode",
+                Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
+            });
         CliTargets.Add(IsGoogleModel(model)
             ? new CliTargetEntry
             {

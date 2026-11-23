@@ -3479,7 +3479,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 t.isEmpty() || t.length > 60 -> ""
                 KIMI_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_KIMI
                 NEON_ANTWORT.matches(t) -> ProgrammiererVorlage.MODELL_NEON
-                else -> ModellGehoert.modell(t).takeIf { it == ProgrammiererVorlage.MODELL_KIMI || it == ProgrammiererVorlage.MODELL_NEON }.orEmpty()
+                else -> ModellGehoert.modell(t).takeIf { it == ProgrammiererVorlage.MODELL_KIMI || it == ProgrammiererVorlage.MODELL_NEON || it == ProgrammiererVorlage.MODELL_ARGON }.orEmpty()
             }
         }
         private val KIMI_ANTWORT = Regex("(?:(?:nimm|mit|das|modell)\\s+)*kimi(?:\\s*k?\\s*3[.,]1)?(?:\\s*pro)?(?:\\s+bitte)?")

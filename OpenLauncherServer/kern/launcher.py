@@ -813,7 +813,7 @@ def katalog() -> dict:
             if not slug or m.get("IsHidden") or slug in verborgen:
                 continue
             standard = standards.get(effort_tabelle.modell_string(anbieter, slug)) or {}
-            clis = clis_fuer(anbieter)
+            clis = clis_fuer(anbieter, slug)
             modelle.append({"slug": slug, "name": m.get("DisplayName") or slug, "anbieter": anbieter, "gruppe": gruppe.get("Title") or anbieter,
                             "clis": clis, "profil": standard.get("ProfileId") or "minimal", "modus": standard.get("WorkModeId") or "schnell",
                             "effort": standard.get("ThinkingValue") or "high", "cli": standard.get("CliTargetId") or "",
@@ -822,7 +822,7 @@ def katalog() -> dict:
     return {"modelle": modelle, "profile": list(PROFIL_IDS), "modi": list(MODUS_IDS)}
 
 
-def clis_fuer(anbieter: str) -> list:
+def clis_fuer(anbieter: str, slug: str = "") -> list:
     if anbieter == "anthropic":
         return ["claude"]
     if anbieter == "openai":
@@ -830,7 +830,8 @@ def clis_fuer(anbieter: str) -> list:
     if anbieter == "kimi-code-plan-global":
         return ["kimi", "opencode"]
     if anbieter == "google":
-        return ["antigravity", "opencode"]
+        # Gemini 4 Neon und Hydrogen kennt OpenCode nicht (opencode models, 23.11.2026).
+        return ["antigravity"] if slug.startswith(("gemini-4-neon", "gemini-4-hydrogen")) else ["antigravity", "opencode"]
     return ["opencode"]
 
 

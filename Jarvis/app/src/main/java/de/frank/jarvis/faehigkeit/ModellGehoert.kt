@@ -4,7 +4,7 @@ import java.util.Locale
 
 /**
  * Franks Antwort auf eine offene Auswahlfrage (Modell, CLI, Review), so wie die Mitschrift sie liefert: Er spricht fast immer ein,
- * deshalb zählt der Klang, nicht die Schreibweise („Oppos 5.5“, „Kimmi“, „Kodex“, „Open Kot“). Vergleich je Wort über
+ * deshalb zählt der Klang, nicht die Schreibweise („Oppos 5.5“, „Kimmi“, „Aragon“, „Kodex“, „Open Kot“). Vergleich je Wort über
  * die Kölner Phonetik und kleine Tippabstände, dazu die gesprochene Versionsnummer („… 5.5“ = Opus, „… 6.1“ = Sol).
  *
  * [antwort] ist streng: Als Wahl gilt nur eine reine Antwort aus dem Namen und Füllwörtern („nimm bitte Opus 5.5“). Jedes andere
@@ -15,6 +15,10 @@ object ModellGehoert {
     private const val SOL = ProgrammiererVorlage.MODELL_SOL
     private const val KIMI = ProgrammiererVorlage.MODELL_KIMI
     private const val NEON = ProgrammiererVorlage.MODELL_NEON
+    /** Früherer Knopf; „Argon“ startet weiter Gemini 4 Argon (alte Karten, gesprochene Wahl). */
+    private const val ARGON = ProgrammiererVorlage.MODELL_ARGON
+    /** Ein anderes Gemini als Neon im Satz („Gemini 4 Hydrogen“, „Gemini 3.8 Flash“): dann ist „Gemini“ kein Beleg für Neon. */
+    private val ANDERES_GEMINI = Regex("hydrogen|carbon|flash|argon|aragon|\\b3\\s*[.,]\\s*8\\b")
 
     private val WORT = Regex("[a-zäöüß]+|\\d+")
     private val KIMI_K3 = Regex("\\bk\\s*3\\b(?![.,]\\s*1)")
@@ -87,13 +91,14 @@ object ModellGehoert {
         }
         if (stufe == "modell" || stufe.isEmpty()) {
             if (KIMI in treffer && KIMI_K3.containsMatchIn(t) && !PRO.containsMatchIn(t)) treffer -= KIMI
+            if (NEON in treffer && "neon" !in woerter && ANDERES_GEMINI.containsMatchIn(t)) treffer -= NEON
             if (treffer.isEmpty()) zahlModell(t)?.let { treffer += it }
             if (treffer.isEmpty() && soll) treffer += SOL
         }
         return treffer.singleOrNull().orEmpty()
     }
 
-    /** Locker: opus, sol, kimi oder neon, wenn die kurze Antwort genau ein Modell nennt (auch zwischen anderen Wörtern), sonst leer. */
+    /** Locker: opus, sol, kimi, neon oder argon, wenn die kurze Antwort genau ein Modell nennt (auch zwischen anderen Wörtern), sonst leer. */
     fun modell(worte: String?): String {
         val t = worte?.trim()?.lowercase(Locale.ROOT).orEmpty()
         if (t.isEmpty() || t.length > 60) return ""
@@ -101,6 +106,7 @@ object ModellGehoert {
         val treffer = woerter.mapNotNull { if (it == "soll") null else wortModell(it) }.toMutableSet()
         if (treffer.isEmpty() && "soll" in woerter) treffer += SOL
         if (KIMI in treffer && KIMI_K3.containsMatchIn(t) && !PRO.containsMatchIn(t)) treffer -= KIMI
+        if (NEON in treffer && "neon" !in woerter && ANDERES_GEMINI.containsMatchIn(t)) treffer -= NEON
         if (treffer.isEmpty()) zahlModell(t)?.let { treffer += it }
         return treffer.singleOrNull().orEmpty()
     }
@@ -119,6 +125,7 @@ object ModellGehoert {
         return when {
             // „neon“ nur genau: „nein“ und „neun“ liegen eine Änderung daneben und kommen in Ja/Nein-Fragen vor.
             aehnlich(w, "gemini", 2) || w == "neon" -> NEON
+            aehnlich(w, "argon", 1) || (code == "0746" && w[0] in "aeo") -> ARGON
             code == "018" && w.length <= 7 && (w[0] == 'o' || w.startsWith("ho")) -> OPUS
             code == "85" && w.length <= 4 && w[0] in "sz" -> SOL
             code == "46" && w.length <= 5 && w[0] in "kcgq" -> KIMI

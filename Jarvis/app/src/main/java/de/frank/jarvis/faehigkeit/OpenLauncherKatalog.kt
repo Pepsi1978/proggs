@@ -23,7 +23,7 @@ object OpenLauncherKatalog {
 
     data class Modell(val anbieter: String, val slug: String, val name: String, val anbieterName: String = "") {
         /** Die CLIs, die OpenLauncher diesem Modell anbietet (bei mehreren fragt Jarvis, wenn Frank keins nennt). */
-        val clis: List<String> get() = clisFuer(anbieter)
+        val clis: List<String> get() = clisFuer(anbieter, slug)
 
         /** Wie ModelEntry.ModelString: Trägt der Slug den Anbieter schon vorn, kommt er nicht doppelt (außer bei NVIDIA). */
         val modellString: String get() = if (!anbieter.equals("nvidia", true) && slug.startsWith("$anbieter/", true)) slug else "$anbieter/$slug"
@@ -93,11 +93,12 @@ object OpenLauncherKatalog {
     )
 
     /** Wie fillCliTargets im OpenLauncherMac: Claude-Modelle nur in Claude Code, sonst OpenCode plus das eigene CLI des Anbieters. */
-    fun clisFuer(anbieter: String): List<String> = when (anbieter.lowercase(Locale.ROOT)) {
+    fun clisFuer(anbieter: String, slug: String = ""): List<String> = when (anbieter.lowercase(Locale.ROOT)) {
         ANTHROPIC -> listOf("claude")
         "openai" -> listOf("opencode", "codex")
         MOONSHOT -> listOf("opencode", "kimi")
-        GOOGLE -> listOf("antigravity", "opencode")
+        // Gemini 4 Neon und Hydrogen kennt OpenCode nicht (opencode models, 23.11.2026).
+        GOOGLE -> if (slug.startsWith("gemini-4-neon") || slug.startsWith("gemini-4-hydrogen")) listOf("antigravity") else listOf("antigravity", "opencode")
         else -> listOf("opencode")
     }
 

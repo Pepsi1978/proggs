@@ -112,10 +112,16 @@ public static class ProgrammierVorspann
         new Modell("Gemini 4 Neon", MitStandard(new() { ["modell"] = "Gemini 4 Neon", ["cli"] = "antigravity" }),
             MitStandard(new() { ["modell"] = "gemini-4-neon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity" }),
     };
-    private static readonly List<string> AlleAuftraege = new[] { Auftrag }.Concat(Modelle.Select(m => m.Vorspann)).ToList();
+    /// <summary>Früherer Argon-Knopf (bis 23.11.2026): kein Knopf mehr, gespeicherte Prompts mit seinem Einstieg gelten weiter.</summary>
+    private static readonly Modell[] AltModelle =
+    {
+        new Modell("Gemini 4 Argon", MitStandard(new() { ["modell"] = "Gemini 4 Argon", ["cli"] = "antigravity" }),
+            MitStandard(new() { ["modell"] = "gemini-4-argon", ["anbieter"] = "google", ["cli"] = "antigravity" }), new[] { "antigravity", "opencode" }),
+    };
+    private static readonly List<string> AlleAuftraege = new[] { Auftrag }.Concat(Modelle.Concat(AltModelle).Select(m => m.Vorspann)).ToList();
 
     /// <summary>Das per Knopf im Einstieg gewählte Modell; null ohne Modell im Einstieg.</summary>
-    public static Modell? ModellIn(string t) { var v = Vorn(t); return Modelle.FirstOrDefault(m => v.StartsWith(m.Vorspann, StringComparison.Ordinal)); }
+    public static Modell? ModellIn(string t) { var v = Vorn(t); return Modelle.Concat(AltModelle).FirstOrDefault(m => v.StartsWith(m.Vorspann, StringComparison.Ordinal)); }
     public static bool IstBlosserEinstieg(string t) => AlleAuftraege.Contains(t) || t == Nachtrag;
 
     /// <summary>Wie am Handy: Musste Jarvis erst nachfragen, gilt das Modell der vorigen Nachricht weiter, höchstens 10 Minuten und nur, solange nichts gestartet ist.</summary>
