@@ -34,7 +34,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -84,6 +82,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.jarvis.atem.AtemFarben
 import de.frank.jarvis.atem.AtemProfil
 import de.frank.jarvis.atem.AtemProfile
@@ -93,6 +94,7 @@ import de.frank.jarvis.atem.AtemSatzVerlauf
 import de.frank.jarvis.atem.SatzArt
 import de.frank.jarvis.atem.dauerText
 import de.frank.jarvis.atem.zehntelText
+import de.frank.jarvis.ui.theme.LocalBewegung
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
@@ -117,11 +119,11 @@ private val GRUEN = Color(AtemFarben.EIN)
 private val GELB = Color(AtemFarben.HALTEN)
 private val ORANGE = Color(AtemFarben.AUS)
 
-private data class Tool(val id: String, val titel: String, val text: String, val icon: ImageVector, val farben: List<Color>)
+private data class Tool(val id: String, val titel: String, val akzent: Color)
 
 private val TOOLS = listOf(
-    Tool("atem", "Atemübungen", "Geführtes Atmen mit Animation, Stimme und eigenen Sätzen", Icons.Rounded.Air, listOf(GRUEN, Color(0xFF4FC8FF))),
-    Tool("mentalitaet", "Mentalität", "Eigene mentale Sätze einsprechen, ordnen und frisch in Schleife vorlesen", Icons.Rounded.Psychology, listOf(Color(0xFF7A8CFF), Color(0xFFB98CFF))),
+    Tool("atem", "Atemübungen", Color(0xFF4FC8FF)),
+    Tool("mentalitaet", "Mentalität", Color(0xFF9C8CFF)),
 )
 
 @Composable
@@ -137,17 +139,79 @@ fun ToolsBildschirm(vm: AppViewModel) {
 @Composable
 private fun ToolsUebersicht() {
     val f = LocalFarben.current
+    val bewegt = LocalBewegung.current
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    // Eine gemeinsame Bild-Uhr für alle 3D-Karten; läuft nur, solange der Reiter sichtbar ist.
+    // Bei reduzierter Bewegung bleibt ein sprechendes Standbild (Mitte des Einatmens / 3/4-Gehirn).
+    val zeitMs = remember { mutableLongStateOf(1650L) }
+    LaunchedEffect(bewegt, lebenszyklus) {
+        if (!bewegt) {
+            zeitMs.longValue = 1650L
+            return@LaunchedEffect
+        }
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            var letzter = 0L
+            while (true) {
+                withFrameMillis { jetzt ->
+                    if (letzter != 0L) {
+                        val dt = (jetzt - letzter).coerceIn(0L, 100L)
+                        zeitMs.longValue += dt
+                    }
+                    letzter = jetzt
+                }
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         Text("Tools", Modifier.padding(start = 20.dp, top = 8.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("In Jarvis eingebaute Werkzeuge", Modifier.padding(start = 20.dp, bottom = 8.dp), color = f.textLeise, fontSize = 14.sp)
-        LazyVerticalGrid(GridCells.Adaptive(170.dp), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(TOOLS, key = { it.id }) { t ->
-                Column(Modifier.fillMaxWidth().glas(f, 24.dp, erhoeht = 0.9f).antippen { ToolsAnsicht.tool = t.id }.semantics { contentDescription = t.titel }.padding(16.dp)) {
-                    Box(Modifier.size(54.dp).clip(CircleShape).background(Brush.linearGradient(t.farben)), contentAlignment = Alignment.Center) {
-                        Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val breit = maxWidth >= 520.dp
+            val spalten = when {
+                maxWidth < 320.dp -> 1
+                breit -> minOf(TOOLS.size, 3).coerceAtLeast(2)
+                else -> 2
+            }
+            val abstand = if (breit) 18.dp else 12.dp
+            val aussen = if (breit) 20.dp else 16.dp
+            val kartenVerhaeltnis = if (breit) 0.96f else 0.84f
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(spalten),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(aussen),
+                horizontalArrangement = Arrangement.spacedBy(abstand),
+                verticalArrangement = Arrangement.spacedBy(abstand),
+            ) {
+                items(TOOLS, key = { it.id }) { t ->
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 210.dp, max = 310.dp)
+                            .aspectRatio(kartenVerhaeltnis)
+                            .antippen { ToolsAnsicht.tool = t.id }
+                            .glas(f, 26.dp, erhoeht = 0.95f, toenung = t.akzent)
+                            .semantics { contentDescription = t.titel }
+                            .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        ToolKarten3DBuehne(
+                            toolId = t.id,
+                            zeitMs = zeitMs,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
+                        Text(
+                            text = t.titel,
+                            modifier = Modifier.padding(top = 12.dp, start = 6.dp, end = 6.dp),
+                            color = f.text,
+                            fontSize = if (breit) 20.sp else 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    Text(t.titel, Modifier.padding(top = 12.dp), color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(t.text, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 13.sp, lineHeight = 17.sp)
                 }
             }
         }
