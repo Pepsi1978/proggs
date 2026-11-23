@@ -26,8 +26,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -51,6 +54,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -70,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -118,7 +123,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
     val spielStand by MentalitaetSpieler.stand.collectAsState()
 
     var reglerSatzId by remember { mutableStateOf<Long?>(null) }
-    var bearbeiteSatz by remember { mutableStateOf<MentalSatz?>(null) }
+    var bearbeiteSatzId by remember { mutableStateOf<Long?>(null) }
     var ziehReihe by remember { mutableStateOf<List<Long>?>(null) }
 
     LaunchedEffect(Unit) { MentalitaetSpeicher.sicher(appContext) }
@@ -138,8 +143,14 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
     val reglerSatz = remember(saetze, reglerSatzId) {
         reglerSatzId?.let { id -> saetze.firstOrNull { it.id == id } }
     }
+    val bearbeiteSatz = remember(saetze, bearbeiteSatzId) {
+        bearbeiteSatzId?.let { id -> saetze.firstOrNull { it.id == id } }
+    }
     LaunchedEffect(reglerSatzId, reglerSatz) {
         if (reglerSatzId != null && reglerSatz == null) reglerSatzId = null
+    }
+    LaunchedEffect(bearbeiteSatzId, bearbeiteSatz) {
+        if (bearbeiteSatzId != null && bearbeiteSatz == null) bearbeiteSatzId = null
     }
 
     fun schliessen() {
@@ -158,7 +169,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
     BackHandler {
         when {
             reglerSatzId != null -> reglerSatzId = null
-            bearbeiteSatz != null -> bearbeiteSatz = null
+            bearbeiteSatzId != null -> bearbeiteSatzId = null
             else -> schliessen()
         }
     }
@@ -281,8 +292,8 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                             },
                             griffModifier = reorderHandle(reorder, satz.id),
                             unterdrueckeKlick = { reorder.dragging || reorder.draggedId != null },
-                            beiSatzTippen = { bearbeiteSatz = satz },
-                            beiZahlTippen = { reglerSatzId = satz.id },
+                            beiSatzTippen = { reglerSatzId = null; bearbeiteSatzId = satz.id },
+                            beiZahlTippen = { bearbeiteSatzId = null; reglerSatzId = satz.id },
                         )
                     }
                 }
@@ -387,6 +398,7 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                         )
                         .antippen {
                             reglerSatzId = null
+                            bearbeiteSatzId = null
                             vm.mentalitaetMikrofonTippen()
                         }
                         .semantics {
@@ -425,15 +437,16 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
             SatzBearbeitenEbene(
                 satz = satz,
                 beiSpeichern = { neu ->
-                    bearbeiteSatz = null
+                    bearbeiteSatzId = null
                     ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.textAendern(appContext, satz.id, neu) }
                 },
                 beiLoeschen = {
-                    bearbeiteSatz = null
+                    bearbeiteSatzId = null
                     if (reglerSatzId == satz.id) reglerSatzId = null
                     ToolsAnsicht.hintergrund.launch { MentalitaetSpeicher.loeschen(appContext, satz.id) }
                 },
-                schliessen = { bearbeiteSatz = null },
+                beiLeerHinweis = { vm.meldung = "Der Satz darf nicht leer sein. Zum Entfernen tippe auf Löschen." },
+                schliessen = { bearbeiteSatzId = null },
             )
         }
     }
@@ -668,6 +681,7 @@ private fun SatzBearbeitenEbene(
     satz: MentalSatz,
     beiSpeichern: (String) -> Unit,
     beiLoeschen: () -> Unit,
+    beiLeerHinweis: () -> Unit,
     schliessen: () -> Unit,
 ) {
     val f = LocalFarben.current
@@ -679,8 +693,13 @@ private fun SatzBearbeitenEbene(
     var loeschenBestaetigen by remember(satz.id) { mutableStateOf(false) }
 
     LaunchedEffect(satz.id) {
+        // Erst nach dem ersten Layout fokussieren, damit das Textfeld sicher an die Tastatur gebunden ist.
+        withFrameNanos { }
         runCatching { fokus.requestFocus() }
         tastatur?.show()
+    }
+    DisposableEffect(satz.id) {
+        onDispose { tastatur?.hide() }
     }
 
     fun zu() {
@@ -690,8 +709,12 @@ private fun SatzBearbeitenEbene(
 
     fun sichern() {
         val sauber = feld.text.trim()
+        if (sauber.isEmpty()) {
+            beiLeerHinweis()
+            return
+        }
         tastatur?.hide()
-        if (sauber.isNotEmpty()) beiSpeichern(sauber) else schliessen()
+        beiSpeichern(sauber)
     }
 
     Box(
@@ -716,6 +739,7 @@ private fun SatzBearbeitenEbene(
                     indication = null,
                     onClick = {},
                 )
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -762,6 +786,7 @@ private fun SatzBearbeitenEbene(
                 minLines = 3,
                 maxLines = 6,
                 shape = RoundedCornerShape(16.dp),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 22.sp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = f.text,

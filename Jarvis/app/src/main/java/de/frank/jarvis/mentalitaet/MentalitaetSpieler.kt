@@ -24,7 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -40,7 +40,6 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 
 /** Aktuelle Phase der Mentalität-Vorleseschleife. */
@@ -82,12 +81,23 @@ fun mentalitaetPlan(saetze: List<MentalSatz>): List<MentalSchritt> = buildList {
     }
 }
 
+/** Ein im Hintergrund frisch vorbereiteter Schritt in der Vorlese-Pipeline (wie in CortexAndroid). */
+private class Vorbereitet(
+    val schritt: MentalSchritt,
+    val schrittIndex: Int,
+    val durchlauf: Int,
+    val ergebnis: Result<File>,
+)
+
 /**
- * Kern der Endlosschleife, unabhängig von Android-Klassen für Unit-Tests:
- * - Erzeugt jede einzelne Ausgabe frisch über [erzeuge].
- * - Löscht jede erzeugte Datei direkt nach dem Abspielen (oder bei Abbruch) über [loesche].
- * - Hält zwischen je zwei gesprochenen Ausgaben [pauseMs] Pause; während der Pause wird die nächste
- *   Ausgabe bereits frisch erzeugt und bei Abbruch während der Pause verworfen und gelöscht.
+ * Kern der Endlosschleife nach dem Vorbild von CortexAndroid (`startStreamingSpeech`):
+ * - Ein Hintergrund-Erzeuger (`synthJob`) und ein gepufferter Kanal (`Channel(capacity = 1)`) sorgen dafür,
+ *   dass während ein Satz vorgelesen wird bereits die nächste Ausgabe frisch im TTS erzeugt wird.
+ * - Nach dem Ende jeder gesprochenen Ausgabe wartet die Schleife exakt [pauseMs] (5 Sekunden) und startet
+ *   dann pünktlich die längst vorbereitete nächste Ausgabe — während im selben Moment schon die übernächste
+ *   im Hintergrund frisch erzeugt wird.
+ * - Jede Datei wird genau einmal gespielt und erst DANACH (oder bei Abbruch) gelöscht; keine Datei wird je
+ *   vor dem Abspielen gelöscht oder wiederverwendet.
  */
 internal suspend fun mentalitaetSchleife(
     plan: List<MentalSchritt>,
@@ -103,102 +113,98 @@ internal suspend fun mentalitaetSchleife(
     beiFehler: (Throwable) -> Unit = {},
 ) {
     if (plan.isEmpty()) return
-    var index = 0
-    var durchlauf = 1
-    var fehlerInFolge = 0
-    var bereit: Result<File>? = null
-    try {
-        while (currentCoroutineContext().isActive) {
-            vorSchritt()
-            val schritt = plan[index]
 
-            val dateiErgebnis = bereit ?: run {
-                beiStand(MentalPhase.LAEDT, schritt, durchlauf, index)
-                try {
-                    Result.success(erzeuge(schritt.text))
-                } catch (abbruch: CancellationException) {
-                    throw abbruch
-                } catch (fehler: Exception) {
-                    Result.failure(fehler)
-                }
-            }
-            bereit = null
+    val kanal = Channel<Vorbereitet>(
+        capacity = 1,
+        onUndeliveredElement = { posten ->
+            posten.ergebnis.getOrNull()?.let { runCatching { loesche(it) } }
+        },
+    )
 
-            val datei = dateiErgebnis.getOrNull()
-            if (datei == null) {
-                val grund = dateiErgebnis.exceptionOrNull()
-                if (grund is CancellationException) throw grund
-                if (grund is SyntheseAbbruch) throw grund
-                fehlerInFolge++
-                if (grund != null) beiFehler(grund)
-                if (fehlerInFolge >= maxFehlerInFolge) {
-                    throw IllegalStateException(
-                        grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
-                    )
-                }
-            } else {
-                fehlerInFolge = 0
-                try {
-                    vorAbspielen()
-                    currentCoroutineContext().ensureActive()
-                    beiStand(MentalPhase.SPRICHT, schritt, durchlauf, index)
-                    spiele(datei)
-                } finally {
-                    // Einmal gespielt → sofort löschen, nie erneut abspielen.
-                    runCatching { loesche(datei) }
-                }
-            }
-
-            // Nächsten Schritt bestimmen (von oben nach unten, nach dem letzten wieder oben).
-            val naechsterIndex = (index + 1) % plan.size
-            val naechsterDurchlauf = if (naechsterIndex == 0) durchlauf + 1 else durchlauf
-            val naechsterSchritt = plan[naechsterIndex]
-
-            // Exakt [pauseMs] (5 Sekunden) Pause zwischen je zwei Ausgaben: zwischen Wiederholungen,
-            // zwischen verschiedenen Sätzen und beim Übergang zum nächsten Durchlauf.
-            beiStand(MentalPhase.PAUSE, schritt, durchlauf, index)
-            val erstellteDatei = AtomicReference<File?>(null)
-            val uebernommen = AtomicBoolean(false)
-            val vorab = coroutineScope {
-                val erzeugung = async(Dispatchers.IO) {
-                    try {
-                        val datei = erzeuge(naechsterSchritt.text)
-                        erstellteDatei.set(datei)
-                        Result.success(datei)
+    coroutineScope {
+        // Erzeuger im Hintergrund: bereitet immer genau 1 Ausgabe im Voraus frisch vor (während die aktuelle läuft).
+        val synthJob = launch(Dispatchers.IO) {
+            var index = 0
+            var durchlauf = 1
+            try {
+                while (isActive) {
+                    val schritt = plan[index]
+                    val ergebnis = try {
+                        Result.success(erzeuge(schritt.text))
                     } catch (abbruch: CancellationException) {
                         throw abbruch
                     } catch (fehler: Exception) {
                         Result.failure(fehler)
                     }
-                }
-                erzeugung.invokeOnCompletion {
-                    if (!uebernommen.get()) {
-                        erstellteDatei.getAndSet(null)?.let { runCatching { loesche(it) } }
+                    // Falls während der Synthese abgebrochen wurde, die frisch erzeugte Datei sofort aufräumen.
+                    if (!isActive) {
+                        ergebnis.getOrNull()?.let { runCatching { loesche(it) } }
+                        break
                     }
+                    kanal.send(Vorbereitet(schritt, index, durchlauf, ergebnis))
+                    index = (index + 1) % plan.size
+                    if (index == 0) durchlauf++
                 }
-                try {
-                    pause(pauseMs)
-                    if (!erzeugung.isCompleted) {
-                        beiStand(MentalPhase.LAEDT, naechsterSchritt, naechsterDurchlauf, naechsterIndex)
-                    }
-                    val ergebnis = erzeugung.await()
-                    uebernommen.set(true)
-                    erstellteDatei.set(null)
-                    ergebnis
-                } catch (abbruch: CancellationException) {
-                    erzeugung.cancel()
-                    if (!uebernommen.get()) {
-                        erstellteDatei.getAndSet(null)?.let { runCatching { loesche(it) } }
-                    }
-                    throw abbruch
-                }
+            } finally {
+                kanal.close()
             }
-            bereit = vorab
-            index = naechsterIndex
-            durchlauf = naechsterDurchlauf
         }
-    } finally {
-        bereit?.getOrNull()?.let { runCatching { loesche(it) } }
+
+        try {
+            var fehlerInFolge = 0
+            var naechsterIndex = 0
+            var naechsterDurchlauf = 1
+            while (isActive) {
+                vorSchritt()
+                // Zeigt „Lädt“ nur, wenn die nächste Ausgabe noch nicht im Hintergrund fertig bereitliegt.
+                var posten = kanal.tryReceive().getOrNull()
+                if (posten == null) {
+                    beiStand(MentalPhase.LAEDT, plan[naechsterIndex], naechsterDurchlauf, naechsterIndex)
+                    posten = kanal.receiveCatching().getOrNull() ?: break
+                }
+
+                val datei = posten.ergebnis.getOrNull()
+                if (datei == null) {
+                    val grund = posten.ergebnis.exceptionOrNull()
+                    if (grund is CancellationException) throw grund
+                    if (grund is SyntheseAbbruch) throw grund
+                    fehlerInFolge++
+                    if (grund != null) beiFehler(grund)
+                    if (fehlerInFolge >= maxFehlerInFolge) {
+                        throw IllegalStateException(
+                            grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
+                        )
+                    }
+                } else {
+                    fehlerInFolge = 0
+                    try {
+                        vorAbspielen()
+                        currentCoroutineContext().ensureActive()
+                        beiStand(MentalPhase.SPRICHT, posten.schritt, posten.durchlauf, posten.schrittIndex)
+                        spiele(datei)
+                    } finally {
+                        // Einmal gespielt → sofort löschen, nie erneut abspielen.
+                        runCatching { loesche(datei) }
+                    }
+                }
+
+                // Exakt [pauseMs] (5 Sekunden) Pause zwischen je zwei Ausgaben: zwischen Wiederholungen,
+                // zwischen verschiedenen Sätzen und beim Übergang zum nächsten Durchlauf.
+                // Während dieser Pause (und schon während des vorherigen Satzes) läuft synthJob im Hintergrund weiter.
+                beiStand(MentalPhase.PAUSE, posten.schritt, posten.durchlauf, posten.schrittIndex)
+                pause(pauseMs)
+
+                naechsterIndex = (posten.schrittIndex + 1) % plan.size
+                naechsterDurchlauf = if (naechsterIndex == 0) posten.durchlauf + 1 else posten.durchlauf
+            }
+        } finally {
+            synthJob.cancel()
+            kanal.cancel()
+            while (true) {
+                val rest = kanal.tryReceive().getOrNull() ?: break
+                rest.ergebnis.getOrNull()?.let { runCatching { loesche(it) } }
+            }
+        }
     }
 }
 
@@ -206,10 +212,8 @@ internal suspend fun mentalitaetSchleife(
  * Vorleseschleife für „Mentalität“:
  * - Nutzt das in Jarvis standardmäßig eingestellte Vorlesemodell samt Stimme ([Synthese] ohne Sonderwahl).
  * - Liest die Sätze von oben nach unten; jeder Satz wird gemäß seiner Zahl direkt hintereinander wiederholt.
- * - Hält zwischen je zwei gesprochenen Ausgaben exakt [PAUSE_MS] (5 Sekunden) Pause: zwischen Wiederholungen,
- *   zwischen verschiedenen Sätzen und beim Übergang zum nächsten Durchlauf.
- * - Lässt JEDE einzelne Ausgabe frisch aus dem gespeicherten Text erzeugen (`frisch = true`), spielt keine
- *   Aufnahme erneut ab und löscht jede erzeugte Audiodatei direkt nach der Wiedergabe.
+ * - Bereitet die jeweils nächste Ausgabe schon während des laufenden Satzes frisch im Hintergrund vor,
+ *   hält exakt [PAUSE_MS] (5 Sekunden) Pause zwischen zwei Ausgaben und spielt jede Aufnahme genau einmal.
  * - Läuft in Endlosschleife, bis [stopp] aufgerufen wird (sofortiger Abbruch in Ansage, Laden oder Pause).
  */
 object MentalitaetSpieler {

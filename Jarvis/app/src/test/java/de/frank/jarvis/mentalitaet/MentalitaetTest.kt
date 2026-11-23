@@ -3,9 +3,11 @@ package de.frank.jarvis.mentalitaet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -89,14 +91,14 @@ class MentalitaetTest {
     }
 
     @Test
-    fun schleifeErzeugtJedeAusgabeFrischMitFuenfSekundenPauseUndLoestAABBBADurchlauf() = runBlocking {
+    fun schleifeBereitetWaehrendDesAbspielensVorUndSpieltAlleEchtenDateienAABBBADurch() = runBlocking {
         val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2), MentalSatz(2L, "B", 3)))
         val erzeugteTexte = CopyOnWriteArrayList<String>()
-        val erzeugteDateien = CopyOnWriteArrayList<String>()
-        val gespielteDateien = CopyOnWriteArrayList<String>()
-        val geloeschteDateien = CopyOnWriteArrayList<String>()
+        val erzeugteDateien = CopyOnWriteArrayList<File>()
+        val gespielteDateien = CopyOnWriteArrayList<File>()
         val pausenMs = CopyOnWriteArrayList<Long>()
         val zaehler = AtomicInteger(0)
+        val zweiterSchonWaehrendErstemVorbereitet = CompletableDeferred<Unit>()
         val fertig = CompletableDeferred<Unit>()
 
         val lauf = launch(Dispatchers.Default) {
@@ -106,78 +108,114 @@ class MentalitaetTest {
                 erzeuge = { text ->
                     val nr = zaehler.incrementAndGet()
                     erzeugteTexte += text
-                    File("/tmp/mental-$nr-$text.wav").also { erzeugteDateien += it.name }
+                    File.createTempFile("mental-test-$nr-", ".wav").apply {
+                        writeText("ton-$nr-$text")
+                        erzeugteDateien += this
+                        if (nr == 2) zweiterSchonWaehrendErstemVorbereitet.complete(Unit)
+                    }
                 },
                 spiele = { datei ->
-                    gespielteDateien += datei.name
+                    // KRITISCH: Jede echte Datei muss beim Abspielen noch vorhanden sein (nie vorab gelöscht!).
+                    assertTrue("Datei ${datei.name} wurde vor dem Abspielen gelöscht!", datei.exists())
+                    if (gespielteDateien.isEmpty()) {
+                        // Belegt, dass Ausgabe 2 bereits im Hintergrund erzeugt wird, während Ausgabe 1 noch läuft.
+                        zweiterSchonWaehrendErstemVorbereitet.await()
+                    }
+                    gespielteDateien += datei
                     if (gespielteDateien.size == 6) {
                         fertig.complete(Unit)
                         throw CancellationException("Abnahme-Grenze erreicht")
                     }
                 },
-                loesche = { datei -> geloeschteDateien += datei.name },
-                pause = { ms -> pausenMs += ms },
+                loesche = { datei -> datei.delete() },
+                pause = { ms ->
+                    pausenMs += ms
+                    // Echte Wartezeit, damit die im Hintergrund vorbereitete Datei die Pause überstehen muss.
+                    delay(30)
+                },
             )
         }
         fertig.await()
         lauf.join()
 
-        // Genau A, A, B, B, B, A — 6 verschiedene, frisch erzeugte Dateien, keine Wiederverwendung.
+        // Genau A, A, B, B, B, A — 6 verschiedene, frisch erzeugte echte Dateien.
         assertEquals(listOf("A", "A", "B", "B", "B", "A"), erzeugteTexte.take(6))
         assertEquals(6, gespielteDateien.size)
-        assertEquals(6, gespielteDateien.toSet().size)
-        // Genau 5 Pausen à 5000 ms zwischen den 6 Ausgaben (Wiederholung, Satzwechsel, Durchlaufübergang).
+        assertEquals(6, gespielteDateien.map { it.name }.toSet().size)
+        // Genau 5 Pausen à 5000 ms zwischen den 6 Ausgaben.
         assertEquals(listOf(5_000L, 5_000L, 5_000L, 5_000L, 5_000L), pausenMs)
-        // Jede erzeugte Datei wurde gelöscht.
-        assertTrue(geloeschteDateien.containsAll(gespielteDateien))
+        // Alle erzeugten Dateien (inkl. einer schon vorab vorbereiteten 7. Datei) sind nach Ende gelöscht.
+        erzeugteDateien.forEach { assertFalse("Temp-Datei ${it.name} blieb liegen", it.exists()) }
     }
 
     @Test
-    fun stoppWaehrendAnsageBeendetSofortUndLoeschtDatei() = runBlocking {
-        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2)))
+    fun stoppWaehrendAnsageBeendetSofortUndLoeschtAlleDateien() = runBlocking {
+        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 3)))
         val inAnsage = CompletableDeferred<Unit>()
+        val zweiterBereit = CompletableDeferred<Unit>()
         val blockiert = CompletableDeferred<Unit>()
-        val geloescht = CopyOnWriteArrayList<String>()
+        val alleDateien = CopyOnWriteArrayList<File>()
         val pausen = AtomicInteger(0)
-
-        val lauf = launch(Dispatchers.Default) {
-            mentalitaetSchleife(
-                plan = plan,
-                pauseMs = 5_000L,
-                erzeuge = { File("/tmp/mental-ansage.wav") },
-                spiele = {
-                    inAnsage.complete(Unit)
-                    blockiert.await()
-                },
-                loesche = { geloescht += it.name },
-                pause = { pausen.incrementAndGet() },
-            )
-        }
-        inAnsage.await()
-        lauf.cancel()
-        lauf.join()
-
-        assertEquals(0, pausen.get())
-        assertEquals(listOf("mental-ansage.wav"), geloescht)
-    }
-
-    @Test
-    fun stoppWaehrendPauseBeendetSofortUndVerwirftVorabErzeugteDatei() = runBlocking {
-        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2), MentalSatz(2L, "B", 1)))
-        val inPause = CompletableDeferred<Unit>()
-        val blockiert = CompletableDeferred<Unit>()
-        val gespielte = CopyOnWriteArrayList<String>()
-        val geloeschte = CopyOnWriteArrayList<String>()
         val nr = AtomicInteger(0)
 
         val lauf = launch(Dispatchers.Default) {
             mentalitaetSchleife(
                 plan = plan,
                 pauseMs = 5_000L,
-                erzeuge = { File("/tmp/mental-pause-${nr.incrementAndGet()}.wav") },
-                spiele = { gespielte += it.name },
-                loesche = { geloeschte += it.name },
+                erzeuge = {
+                    val i = nr.incrementAndGet()
+                    File.createTempFile("mental-ansage-$i-", ".wav").apply {
+                        writeText("ton-$i")
+                        alleDateien += this
+                        if (i == 2) zweiterBereit.complete(Unit)
+                    }
+                },
+                spiele = { datei ->
+                    assertTrue(datei.exists())
+                    inAnsage.complete(Unit)
+                    blockiert.await()
+                },
+                loesche = { it.delete() },
+                pause = { pausen.incrementAndGet() },
+            )
+        }
+        inAnsage.await()
+        zweiterBereit.await()
+        lauf.cancel()
+        lauf.join()
+
+        assertEquals(0, pausen.get())
+        assertTrue(alleDateien.size >= 2)
+        alleDateien.forEach { assertFalse("Datei ${it.name} nicht aufgeräumt", it.exists()) }
+    }
+
+    @Test
+    fun stoppWaehrendPauseBeendetSofortUndLoeschtVorabErzeugteDatei() = runBlocking {
+        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2), MentalSatz(2L, "B", 1)))
+        val inPause = CompletableDeferred<Unit>()
+        val blockiert = CompletableDeferred<Unit>()
+        val gespielte = CopyOnWriteArrayList<File>()
+        val alleDateien = CopyOnWriteArrayList<File>()
+        val nr = AtomicInteger(0)
+
+        val lauf = launch(Dispatchers.Default) {
+            mentalitaetSchleife(
+                plan = plan,
+                pauseMs = 5_000L,
+                erzeuge = {
+                    val i = nr.incrementAndGet()
+                    File.createTempFile("mental-pause-$i-", ".wav").apply {
+                        writeText("ton-$i")
+                        alleDateien += this
+                    }
+                },
+                spiele = { datei ->
+                    assertTrue(datei.exists())
+                    gespielte += datei
+                },
+                loesche = { it.delete() },
                 pause = {
+                    delay(20)
                     inPause.complete(Unit)
                     blockiert.await()
                 },
@@ -187,8 +225,7 @@ class MentalitaetTest {
         lauf.cancel()
         lauf.join()
 
-        // Nur der erste Satz lief; nach dem Stopp in der Pause lief kein zweiter mehr, und alle erzeugten Dateien wurden gelöscht.
-        assertEquals(listOf("mental-pause-1.wav"), gespielte)
-        assertTrue(geloeschte.contains("mental-pause-1.wav"))
+        assertEquals(1, gespielte.size)
+        alleDateien.forEach { assertFalse("Datei ${it.name} nach Pausen-Stopp nicht gelöscht", it.exists()) }
     }
 }
