@@ -204,27 +204,42 @@ esac
 # Der Anbieter meldet "Remaining" -> Verbrauch = 100 - Rest. Liegt der Reset des Cache-Werts
 # schon in der Vergangenheit, ist das Fenster zurueckgesetzt -> 0 %, bis der naechste Lauf kommt.
 if [ "$product_name" = "antigravity" ]; then
-    _agy_cache="$HOME/.gemini/antigravity-cli/state/usage-cache.tsv"
-    _agy_lock="$HOME/.gemini/antigravity-cli/state/usage-cache.lock"
-    mkdir -p "${_agy_cache%/*}" 2>/dev/null
-    _agy_mtime=$(stat -f %m "$_agy_cache" 2>/dev/null || stat -c %Y "$_agy_cache" 2>/dev/null || echo 0)
-    if [ $((now_ts - ${_agy_mtime:-0})) -ge 60 ]; then
-        # Verwaiste Sperre (Lauf abgestuerzt) nach 2 Minuten freigeben
-        _agy_lmtime=$(stat -f %m "$_agy_lock" 2>/dev/null || stat -c %Y "$_agy_lock" 2>/dev/null || echo 0)
-        [ -d "$_agy_lock" ] && [ $((now_ts - ${_agy_lmtime:-0})) -ge 120 ] && rmdir "$_agy_lock" 2>/dev/null
+    # mtime portabel: GNU stat -c zuerst (GNU stat -f gibt trotz Fehler Text aus), dann BSD; nur Ziffern gelten
+    _agy_mt() { local m; m=$(stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null); case "$m" in ''|*[!0-9]*) m=0 ;; esac; echo "$m"; }
+    _agy_dir="$HOME/.gemini/antigravity-cli/state"
+    # Cache je Konto: nach einem Kontowechsel nie die Zahlen des alten Kontos zeigen
+    _agy_acct=$(printf '%s' "${agy_email:-default}" | tr -c 'A-Za-z0-9' '_')
+    _agy_cache="$_agy_dir/usage-cache-$_agy_acct.tsv"
+    _agy_try="$_agy_dir/usage-cache-$_agy_acct.attempt"
+    _agy_lock="$_agy_dir/usage-cache-$_agy_acct.lock"
+    mkdir -p "$_agy_dir" 2>/dev/null
+    _agy_mtime=$(_agy_mt "$_agy_cache")
+    # Abstand am letzten VERSUCH messen, nicht am letzten Erfolg: scheitert agy (offline,
+    # abgemeldet), startet sonst bei jedem Neuzeichnen ein neuer Lauf.
+    if [ $((now_ts - $(_agy_mt "$_agy_try"))) -ge 60 ]; then
+        [ -d "$_agy_lock" ] && [ $((now_ts - $(_agy_mt "$_agy_lock"))) -ge 120 ] && rmdir "$_agy_lock" 2>/dev/null
         if mkdir "$_agy_lock" 2>/dev/null; then
+            : > "$_agy_try" 2>/dev/null
             _agy_bin=$(command -v agy 2>/dev/null)
             [ -z "$_agy_bin" ] && for _p in "$HOME/.local/bin/agy" /opt/homebrew/bin/agy /usr/local/bin/agy; do [ -x "$_p" ] && { _agy_bin="$_p"; break; }; done
             if [ -n "$_agy_bin" ]; then
                 (
-                    env -u GEMINI_API_KEY "$_agy_bin" -p /usage </dev/null 2>/dev/null \
-                    | jq -Rr 'gsub("\u001b\\[[0-9;?]*[A-Za-z]"; "") | split("\t") | map(gsub("^\\s+|\\s+$"; ""))
+                    # Waechter statt timeout (fehlt auf macOS): haengt agy, nach 25 s beenden
+                    env -u GEMINI_API_KEY "$_agy_bin" -p /usage </dev/null >"$_agy_cache.raw" 2>/dev/null &
+                    _ap=$!
+                    ( sleep 25; kill "$_ap" 2>/dev/null ) </dev/null >/dev/null 2>&1 &
+                    _wp=$!
+                    wait "$_ap" 2>/dev/null
+                    kill "$_wp" 2>/dev/null
+                    jq -Rr 'gsub("\u001b\\[[0-9;?]*[A-Za-z]"; "") | split("\t") | map(gsub("^\\s+|\\s+$"; ""))
                         | select(length == 4 and (.[2] | endswith("%")))
                         | (if (.[1] | test("(five|5)[ -]?hour"; "i")) then "5h" elif (.[1] | test("week"; "i")) then "7d" else empty end) as $art
-                        | [.[0], $art, ((100 - (.[2] | rtrimstr("%") | tonumber)) | tostring),
+                        | ((.[2] | rtrimstr("%") | tonumber)? // empty) as $rest
+                        | [.[0], $art, ((100 - $rest) | tostring),
                            ((.[3] | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring)? // "0")] | join("\t")' \
-                        > "$_agy_cache.tmp" 2>/dev/null
+                        <"$_agy_cache.raw" >"$_agy_cache.tmp" 2>/dev/null
                     [ -s "$_agy_cache.tmp" ] && mv -f "$_agy_cache.tmp" "$_agy_cache" || rm -f "$_agy_cache.tmp"
+                    rm -f "$_agy_cache.raw"
                     rmdir "$_agy_lock" 2>/dev/null
                 ) </dev/null >/dev/null 2>&1 &
                 disown 2>/dev/null
@@ -233,12 +248,15 @@ if [ "$product_name" = "antigravity" ]; then
             fi
         fi
     fi
-    # Cache lesen (hoechstens 15 min alt): Gruppe passend zum aktiven Modell
-    if [ -s "$_agy_cache" ] && [ $((now_ts - ${_agy_mtime:-0})) -lt 900 ]; then
+    # Cache lesen (hoechstens 5 min alt, sonst gilt wieder das stdin-quota): Gruppe passend zum Modell.
+    # Bewusst "Gemini Models" auch fuer Argon: das ist das Wochenlimit, das Antigravity unter /usage
+    # als Gemini-Kontingent zeigt und an dem Frank vergleicht.
+    if [ -s "$_agy_cache" ] && [ $((now_ts - _agy_mtime)) -lt 300 ]; then
         case "$model" in *[Gg]emini*) _agy_grp="Gemini Models" ;; *) _agy_grp="Claude and GPT models" ;; esac
         while IFS=$'\t' read -r _g _a _u _r; do
             [ "$_g" = "$_agy_grp" ] || continue
             case "$_r" in ''|*[!0-9]*) _r=0 ;; esac
+            # Reset schon vorbei -> Fenster zurueckgesetzt -> 0 %, bis der naechste Lauf kommt
             [ "$_r" -gt 0 ] && [ "$_r" -le "$now_ts" ] && _u=0
             if [ "$_a" = "5h" ]; then five_h_used_raw="$_u"; five_h_resets_raw="$_r"
             elif [ "$_a" = "7d" ]; then week_used_raw="$_u"; week_resets_raw="$_r"; fi
@@ -501,7 +519,8 @@ fresh=$(jq -sr --arg fp "$account_fp" --argjson nowTs "$now_ts" '
         ($valid | max_by(.ts_seen // 0)) as $freshest |
         ($freshest.ts_seen // 0) as $freshTs |
         ($freshest.five_h_resets // 0) as $freshR |
-        ($valid | map(select((.five_h_resets // 0) == $freshR)) | max_by(.five_h // 0)) as $bestF |
+        # Fenster mit 60 s Toleranz: agy /usage und stdin-Quota liefern denselben Reset ~1 s versetzt (Review 23.11.2026)
+        ($valid | map(select(((.five_h_resets // 0) - $freshR) | fabs <= 60)) | max_by(.five_h // 0)) as $bestF |
         ($freshest.seven_d_resets // 0) as $maxSR |
         # 7d-Verbrauch NUR aus dem AKTUELLEN 7d-Fenster (gleiches seven_d_resets wie die
         # frischeste Session) — analog zur 5h-Fenster-Logik. Verhindert dass eine idle Session
@@ -517,8 +536,9 @@ fresh=$(jq -sr --arg fp "$account_fp" --argjson nowTs "$now_ts" '
         # von 5h (18000s) der frischesten Session. Parallele Live-Sessions refreshen sekuendlich
         # (immer frisch, bleiben drin); tote Vortags-Sessions eines alten Kontos fallen raus.
         # Lossless: kein echter aktueller Wert wird verworfen, nur veraltete Fremdkonto-Reste.
-        ($valid | (if $maxSR > 0 then map(select((.seven_d_resets // 0) == $maxSR)) else . end)
-                | map(select((.ts_seen // 0) >= ($freshTs - 18000))) | map(.seven_d // 0) | max) as $bestS |
+        # Abgelaufenes 7d-Fenster zaehlt nicht mehr (sonst holt das MAX nach dem Wochenreset den Altwert zurueck)
+        ($valid | (if $maxSR > 0 then map(select((((.seven_d_resets // 0) - $maxSR) | fabs <= 60) and (.seven_d_resets // 0) > $nowTs)) else . end)
+                | map(select((.ts_seen // 0) >= ($freshTs - 18000))) | map(.seven_d // 0) | (max // 0)) as $bestS |
         "\($bestF.five_h // 0)|\($freshR)|\($bestS)|\($bestF.session_id // "")|\($maxSR)"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)

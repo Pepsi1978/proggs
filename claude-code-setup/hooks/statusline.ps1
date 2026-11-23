@@ -251,32 +251,54 @@ function Test-ValidResetTs7d($ts, $now) {
 # die Leiste liest nur den Cache. Verbrauch = 100 - Rest; Reset vorbei -> 0 %.
 if ($product_name -eq 'antigravity') {
     try {
+        $inv = [Globalization.CultureInfo]::InvariantCulture
         $agyState = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\state'
         if (-not (Test-Path $agyState)) { New-Item -ItemType Directory -Path $agyState -Force | Out-Null }
-        $agyCache = Join-Path $agyState 'usage-cache.tsv'
-        $agyLock = Join-Path $agyState 'usage-cache.lock'
+        # Cache je Konto: nach einem Kontowechsel nie die Zahlen des alten Kontos zeigen
+        $agyAcct = (($(if ($agy_email) { $agy_email } else { 'default' })) -replace '[^A-Za-z0-9]', '_')
+        $agyCache = Join-Path $agyState "usage-cache-$agyAcct.tsv"
+        $agyTry = Join-Path $agyState "usage-cache-$agyAcct.attempt"
+        $agyLock = Join-Path $agyState "usage-cache-$agyAcct.lock"
         $agyNow = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $agyAge = if (Test-Path $agyCache) { $agyNow - ([DateTimeOffset](Get-Item $agyCache).LastWriteTimeUtc).ToUnixTimeSeconds() } else { 99999 }
-        if ($agyAge -ge 60) {
-            if ((Test-Path $agyLock) -and ($agyNow - ([DateTimeOffset](Get-Item $agyLock).LastWriteTimeUtc).ToUnixTimeSeconds()) -ge 120) { Remove-Item $agyLock -Force -ErrorAction SilentlyContinue }
+        $mt = { param($f) if (Test-Path $f) { ([DateTimeOffset](Get-Item $f).LastWriteTimeUtc).ToUnixTimeSeconds() } else { 0 } }
+        $agyAge = $agyNow - (& $mt $agyCache)
+        # Abstand am letzten VERSUCH messen, nicht am letzten Erfolg (sonst Dauerstarts, wenn agy scheitert)
+        if (($agyNow - (& $mt $agyTry)) -ge 60) {
+            if ((Test-Path $agyLock) -and ($agyNow - (& $mt $agyLock)) -ge 120) { Remove-Item $agyLock -Force -ErrorAction SilentlyContinue }
             $agyCmd = Get-Command agy -ErrorAction SilentlyContinue
-            if ($agyCmd -and -not (Test-Path $agyLock)) {
-                New-Item -ItemType File -Path $agyLock -Force | Out-Null
+            $gotLock = $false
+            if ($agyCmd) {
+                # Atomare Sperre: CreateNew scheitert, wenn eine parallele Sitzung sie schon haelt
+                try { ([IO.File]::Open($agyLock, [IO.FileMode]::CreateNew)).Close(); $gotLock = $true } catch {}
+            }
+            if ($gotLock) {
+                [IO.File]::WriteAllText($agyTry, '')
                 $bg = @'
 param($agy, $cache, $lock)
 try {
     Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
-    $out = & $agy -p /usage 2>$null
-    $rows = foreach ($z in $out) {
-        $t = @(([string]$z -replace "`e\[[0-9;?]*[A-Za-z]", '').Split("`t") | ForEach-Object { $_.Trim() })
-        if ($t.Count -ne 4 -or -not $t[2].EndsWith('%')) { continue }
-        $art = if ($t[1] -match '(?i)(five|5)[ -]?hour') { '5h' } elseif ($t[1] -match '(?i)week') { '7d' } else { $null }
-        if (-not $art) { continue }
-        $used = [Math]::Round(100.0 - [double]::Parse($t[2].TrimEnd('%'), [Globalization.CultureInfo]::InvariantCulture), 2)
-        $reset = try { [DateTimeOffset]::Parse($t[3], [Globalization.CultureInfo]::InvariantCulture).ToUnixTimeSeconds() } catch { 0 }
-        "$($t[0])`t$art`t$($used.ToString([Globalization.CultureInfo]::InvariantCulture))`t$reset"
+    $raw = "$cache.raw"
+    # Zeitlimit 25 s: haengt agy (Netz, Anmeldung), wird es beendet statt sich zu stapeln
+    $p = Start-Process -FilePath $agy -ArgumentList @('-p', '/usage') -RedirectStandardOutput $raw -WindowStyle Hidden -PassThru
+    if (-not $p.WaitForExit(25000)) { try { $p.Kill() } catch {} }
+    $inv = [Globalization.CultureInfo]::InvariantCulture
+    $rows = @()
+    if (Test-Path $raw) {
+        foreach ($z in [IO.File]::ReadAllLines($raw)) {
+            try {
+                $t = @(([string]$z -replace "`e\[[0-9;?]*[A-Za-z]", '').Split("`t") | ForEach-Object { $_.Trim() })
+                if ($t.Count -ne 4 -or -not $t[2].EndsWith('%')) { continue }
+                $art = if ($t[1] -match '(?i)(five|5)[ -]?hour') { '5h' } elseif ($t[1] -match '(?i)week') { '7d' } else { $null }
+                if (-not $art) { continue }
+                $rest = 0.0
+                if (-not [double]::TryParse($t[2].TrimEnd('%'), [Globalization.NumberStyles]::Float, $inv, [ref]$rest)) { continue }
+                $reset = try { [DateTimeOffset]::Parse($t[3], $inv).ToUnixTimeSeconds() } catch { 0 }
+                $rows += "$($t[0])`t$art`t$(([Math]::Round(100.0 - $rest, 2)).ToString($inv))`t$reset"
+            } catch {}
+        }
+        Remove-Item $raw -Force -ErrorAction SilentlyContinue
     }
-    if ($rows) { $tmp = "$cache.tmp"; [IO.File]::WriteAllLines($tmp, [string[]]$rows); Move-Item $tmp $cache -Force }
+    if ($rows.Count -gt 0) { $tmp = "$cache.tmp"; [IO.File]::WriteAllLines($tmp, [string[]]$rows); Move-Item $tmp $cache -Force }
 } finally { Remove-Item $lock -Force -ErrorAction SilentlyContinue }
 '@
                 $bgFile = Join-Path $agyState 'usage-refresh.ps1'
@@ -285,16 +307,21 @@ try {
                 Start-Process -FilePath $exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$bgFile`"", "`"$($agyCmd.Source)`"", "`"$agyCache`"", "`"$agyLock`"") | Out-Null
             }
         }
-        if ((Test-Path $agyCache) -and $agyAge -lt 900) {
+        # Cache lesen (hoechstens 5 min alt). Bewusst "Gemini Models" auch fuer Argon (das Kontingent aus /usage).
+        if ((Test-Path $agyCache) -and $agyAge -lt 300) {
             $agyGrp = if ($model -match '(?i)gemini') { 'Gemini Models' } else { 'Claude and GPT models' }
             foreach ($z in [IO.File]::ReadAllLines($agyCache)) {
-                $t = $z.Split("`t")
-                if ($t.Count -ne 4 -or $t[0] -ne $agyGrp) { continue }
-                $r = 0L; [void][long]::TryParse($t[3], [ref]$r)
-                $u = [int][Math]::Round([double]::Parse($t[2], [Globalization.CultureInfo]::InvariantCulture))
-                if ($r -gt 0 -and $r -le $agyNow) { $u = 0 }
-                if ($t[1] -eq '5h') { $five_h_used = $u; $five_h_resets = $r }
-                elseif ($t[1] -eq '7d') { $week_used = $u; $week_resets = $r }
+                try {
+                    $t = $z.Split("`t")
+                    if ($t.Count -ne 4 -or $t[0] -ne $agyGrp) { continue }
+                    $r = 0L; [void][long]::TryParse($t[3], [ref]$r)
+                    $d = 0.0
+                    if (-not [double]::TryParse($t[2], [Globalization.NumberStyles]::Float, $inv, [ref]$d)) { continue }
+                    $u = [int][Math]::Round($d)
+                    if ($r -gt 0 -and $r -le $agyNow) { $u = 0 }
+                    if ($t[1] -eq '5h') { $five_h_used = $u; $five_h_resets = $r }
+                    elseif ($t[1] -eq '7d') { $week_used = $u; $week_resets = $r }
+                } catch {}
             }
         }
     } catch {}
@@ -533,7 +560,8 @@ try {
         # Definition den korrekten aktuellen Reset. Verbrauch bleibt max (zaehlt hoch).
         $freshest = $allEntries | Sort-Object -Property @{Expression={[long]$_.ts_seen}} -Descending | Select-Object -First 1
         $freshResets = [long]$freshest.five_h_resets
-        $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $freshResets }
+        # Fenster mit 60 s Toleranz vergleichen: agy /usage und stdin-Quota liefern denselben Reset um ~1 s versetzt (Review 23.11.2026)
+        $candidates = $allEntries | Where-Object { [Math]::Abs([long]$_.five_h_resets - $freshResets) -le 60 }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
             # 7d-Reset zuerst: aus der frischesten Session (accountweite Konstante, nicht max)
@@ -554,11 +582,14 @@ try {
             # Parallele Live-Sessions refreshen sekuendlich (bleiben drin); tote Vortags-Sessions
             # eines alten Kontos fallen raus. Lossless: kein echter aktueller Wert wird verworfen.
             if ($freshWeekResets -gt 0) {
-                $weekCandidates = $allEntries | Where-Object { [long]$_.seven_d_resets -eq $freshWeekResets -and [long]$_.ts_seen -ge ($freshWeekTs - 18000) }
+                # Abgelaufenes 7d-Fenster zaehlt nicht mehr (sonst holt das MAX nach dem Wochenreset den Altwert zurueck)
+                $nowWeek = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                $weekCandidates = $allEntries | Where-Object { [Math]::Abs([long]$_.seven_d_resets - $freshWeekResets) -le 60 -and [long]$_.seven_d_resets -gt $nowWeek -and [long]$_.ts_seen -ge ($freshWeekTs - 18000) }
             } else {
                 $weekCandidates = $allEntries | Where-Object { [long]$_.ts_seen -ge ($freshWeekTs - 18000) }
             }
             $freshSeven = ($weekCandidates | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+            if ($null -eq $freshSeven) { $freshSeven = 0 }
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h
