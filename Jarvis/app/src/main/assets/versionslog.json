@@ -953,6 +953,7 @@
     {"versionCode": 944, "versionName": "1.8.933", "stand": "23.11.2026, 19:53 Uhr", "notiz": "Die mentalen Sätze aus Tools → Mentalität stehen jetzt als eigener Bereich im Live-Gedächtnis, damit Jarvis sie auf Handy und Tablet in passenden Gesprächen als persönlichen Kontext berücksichtigt."},
     {"versionCode": 945, "versionName": "1.8.934", "stand": "23.11.2026, 19:58 Uhr", "notiz": "Mentalität im Live-Gedächtnis feiner abgestimmt: genauere Stichworte, keine falschen Neu-Meldungen beim Bearbeiten eines Satzes, kürzere Überschrift."},
     {"versionCode": 946, "versionName": "1.8.935", "stand": "23.11.2026, 20:38 Uhr", "notiz": "Mentalität: Beim Ziehen eines Satzes weichen jetzt alle Nachbarn in beiden Richtungen zuverlässig aus, die Lücke folgt dem Finger und der Satz landet genau dort."},
-    {"versionCode": 947, "versionName": "1.8.936", "stand": "23.11.2026, 21:02 Uhr", "notiz": "Mentalität: Das laufende Vorlesen übernimmt neue Reihenfolge, geänderte Wiederholungszahlen und eine geänderte Pause sofort ab dem nächsten Schritt, ohne Neustart."}
+    {"versionCode": 947, "versionName": "1.8.936", "stand": "23.11.2026, 21:02 Uhr", "notiz": "Mentalität: Das laufende Vorlesen übernimmt neue Reihenfolge, geänderte Wiederholungszahlen und eine geänderte Pause sofort ab dem nächsten Schritt, ohne Neustart."},
+    {"versionCode": 948, "versionName": "1.8.937", "stand": "23.11.2026, 21:12 Uhr", "notiz": "Mentalität: Schnelles Hin- und Herschieben am Regler verbraucht keine Sprachanfragen mehr, Änderungen greifen auch während des Ladens, und die Schrittanzeige stimmt nach Änderungen."}
 ]
 }

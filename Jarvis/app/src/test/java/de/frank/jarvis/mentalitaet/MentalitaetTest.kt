@@ -247,7 +247,7 @@ class MentalitaetTest {
     }
 
     @Test
-    fun schleifeNutztAktuellEingestelltePauseFuerJedeRunde() = runBlocking {
+    fun schleifeVerlaengertLaufendePauseLive() = runBlocking {
         val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 3)))
         val pausen = CopyOnWriteArrayList<Long>()
         val alleDateien = CopyOnWriteArrayList<File>()
@@ -373,6 +373,17 @@ class MentalitaetTest {
         assertEquals(1_000L, pausen.take(5).sum())
         assertEquals(400L, pausen.subList(5, 7).sum())
         assertEquals(1_600L, pausen.drop(7).sum())
+    }
+
+    @Test
+    fun schleifeNutztNeuePauseInDerNaechstenRundeVoll() {
+        val pause = java.util.concurrent.atomic.AtomicLong(8_000L)
+        val pausen = CopyOnWriteArrayList<Long>()
+        // Nach der ersten Pause, während der 2. Ausgabe, auf 15 s verlängert → 2. Pause wartet volle 15 s.
+        spieleLive(listOf(MentalSatz(1L, "A", 1)), 3, pauseMs = { pause.get() }, pausen = pausen) { nr, _ ->
+            if (nr == 2) pause.set(15_000L)
+        }
+        assertEquals(listOf(8_000L, 15_000L), pausen)
     }
 
     @Test

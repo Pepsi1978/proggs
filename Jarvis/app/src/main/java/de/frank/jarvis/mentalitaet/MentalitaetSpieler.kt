@@ -38,6 +38,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -128,9 +129,11 @@ internal fun mentalitaetNaechster(
 /**
  * Kern der Endlosschleife nach dem Vorbild von CortexAndroid (`startStreamingSpeech`), mit Live-Übernahme:
  * - Während ein Satz vorgelesen wird, wird die nächste Ausgabe bereits frisch im Hintergrund erzeugt.
- * - Welcher Schritt der nächste ist, wird vor jedem Schritt und in jedem Pausentakt aus dem AKTUELLEN Plan
- *   ([planAbrufen]) neu bestimmt: neue Reihenfolge, geänderte Wiederholungszahl, geänderter oder gelöschter Satz
- *   greifen ab dem nächsten möglichen Schritt. Passt die Vorbereitung nicht mehr, wird sie verworfen und frisch erzeugt.
+ * - Welcher Schritt der nächste ist, wird vor jedem Schritt, während „Lädt“ und in jedem Pausentakt aus dem AKTUELLEN
+ *   Plan ([planAbrufen]) neu bestimmt: neue Reihenfolge, geänderte Wiederholungszahl, geänderter oder gelöschter Satz
+ *   greifen ab dem nächsten möglichen Schritt. Eine nicht mehr passende Vorbereitung wird erst verworfen, wenn die
+ *   Änderung [stabilMs] lang besteht (schnelles Hin- und Herschieben am Regler kostet keine TTS-Anfragen); vor dem
+ *   Abspielen entscheidet immer der aktuelle Plan.
  * - Die Pause ([pauseMsAbrufen]) wird in Takten von [pausenTaktMs] gewartet und jedes Mal neu gelesen, sodass eine
  *   verkürzte oder verlängerte Pause auch eine laufende Pause sofort anpasst. Der laufende Satz wird nie abgebrochen.
  * - Jede Datei wird genau einmal gespielt und erst DANACH (oder bei Abbruch/Verwerfen) gelöscht.
@@ -141,6 +144,7 @@ internal suspend fun mentalitaetSchleife(
     pauseMs: Long = MentalitaetSpieler.PAUSE_MS,
     pauseMsAbrufen: () -> Long = { pauseMs },
     pausenTaktMs: Long = Long.MAX_VALUE,
+    stabilMs: Long = 1_000L,
     maxFehlerInFolge: Int = 3,
     vorSchritt: suspend () -> Unit = {},
     vorAbspielen: suspend () -> Unit = {},
@@ -148,10 +152,11 @@ internal suspend fun mentalitaetSchleife(
     spiele: suspend (File) -> Unit,
     loesche: (File) -> Unit,
     pause: suspend (Long) -> Unit = { delay(it) },
-    beiStand: (MentalPhase, MentalSchritt, Int, Int) -> Unit = { _, _, _, _ -> },
+    beiStand: (MentalPhase, MentalSchritt, Int, Int, Int) -> Unit = { _, _, _, _, _ -> },
     beiFehler: (Throwable) -> Unit = {},
 ) {
     if (planAbrufen().isEmpty()) return
+    val takt = pausenTaktMs.coerceAtLeast(1L)
 
     coroutineScope {
         fun starteVorab(schritt: MentalSchritt): Vorab = Vorab(schritt).also { v ->
@@ -179,15 +184,34 @@ internal suspend fun mentalitaetSchleife(
         var letzterPlan: List<MentalSchritt> = emptyList()
         var vorab: Vorab? = null
 
+        // Entprellung: ein abweichendes Ziel muss [stabilMs] lang gleich bleiben, bevor neu erzeugt wird.
+        var kandidat: MentalSchritt? = null
+        var kandidatMs = 0L
+        fun stabilGeaendert(soll: MentalSchritt, vorbereitet: MentalSchritt, vergangenMs: Long): Boolean {
+            if (gleicheAusgabe(soll, vorbereitet)) {
+                kandidat = null
+                kandidatMs = 0L
+                return false
+            }
+            val k = kandidat
+            if (k != null && gleicheAusgabe(k, soll)) kandidatMs += vergangenMs else {
+                kandidat = soll
+                kandidatMs = 0L
+            }
+            return kandidatMs >= stabilMs
+        }
+
         /** Hält die Vorbereitung passend zum aktuellen Plan (nach Drag-and-drop, Zahl- oder Textänderung). */
-        fun vorabAbgleichen() {
+        fun vorabAbgleichen(vergangenMs: Long) {
             val aktuell = planAbrufen()
             if (aktuell.isEmpty()) return
             val soll = aktuell[mentalitaetNaechster(aktuell, letzterPlan, letzter).first]
             val v = vorab
-            if (v != null && gleicheAusgabe(v.schritt, soll)) return
+            if (v != null && !stabilGeaendert(soll, v.schritt, vergangenMs)) return
             v?.let(::verwerfe)
             vorab = starteVorab(soll)
+            kandidat = null
+            kandidatMs = 0L
         }
 
         try {
@@ -195,11 +219,10 @@ internal suspend fun mentalitaetSchleife(
             var durchlauf = 1
             while (isActive) {
                 vorSchritt()
-                val aktPlan = planAbrufen()
+                var aktPlan = planAbrufen()
                 if (aktPlan.isEmpty()) break
-                val (index, neuerDurchlauf) = mentalitaetNaechster(aktPlan, letzterPlan, letzter)
-                if (neuerDurchlauf) durchlauf++
-                val schritt = aktPlan[index]
+                var (index, neuerDurchlauf) = mentalitaetNaechster(aktPlan, letzterPlan, letzter)
+                var schritt = aktPlan[index]
 
                 var v = vorab
                 vorab = null
@@ -208,60 +231,87 @@ internal suspend fun mentalitaetSchleife(
                     v = null
                 }
                 if (v == null) v = starteVorab(schritt)
-                // „Lädt“ nur, wenn die Ausgabe noch nicht im Hintergrund fertig bereitliegt.
-                if (!v.ergebnis.isCompleted) beiStand(MentalPhase.LAEDT, schritt, durchlauf, index)
                 // Bis zum Abholen als Vorbereitung vermerkt, damit ein Stopp beim Laden die Datei sicher aufräumt.
                 vorab = v
-                val ergebnis = v.ergebnis.await()
+                kandidat = null
+                kandidatMs = 0L
+                // „Lädt“ nur, solange die Ausgabe noch nicht fertig bereitliegt; Änderungen greifen auch hier noch.
+                var ladenGezeigt = false
+                while (!v!!.ergebnis.isCompleted) {
+                    if (!ladenGezeigt) {
+                        ladenGezeigt = true
+                        val dl = if (neuerDurchlauf) durchlauf + 1 else durchlauf
+                        beiStand(MentalPhase.LAEDT, schritt, dl, index, aktPlan.size)
+                    }
+                    withTimeoutOrNull(takt) { v!!.ergebnis.join() }
+                    if (v!!.ergebnis.isCompleted) break
+                    val neuPlan = planAbrufen()
+                    if (neuPlan.isEmpty()) continue
+                    val (i2, n2) = mentalitaetNaechster(neuPlan, letzterPlan, letzter)
+                    if (stabilGeaendert(neuPlan[i2], v!!.schritt, takt)) {
+                        verwerfe(v!!)
+                        aktPlan = neuPlan
+                        index = i2
+                        neuerDurchlauf = n2
+                        schritt = neuPlan[i2]
+                        v = starteVorab(schritt)
+                        vorab = v
+                        kandidat = null
+                        kandidatMs = 0L
+                        ladenGezeigt = false
+                    }
+                }
+                if (neuerDurchlauf) durchlauf++
+                val ergebnis = v!!.ergebnis.await()
                 vorab = null
 
                 letzter = schritt
                 letzterPlan = aktPlan
-                // Nächste Ausgabe schon während dieses Satzes frisch vorbereiten.
-                vorabAbgleichen()
-
                 val datei = ergebnis.getOrNull()
-                if (datei == null) {
-                    val grund = ergebnis.exceptionOrNull()
-                    if (grund is CancellationException) throw grund
-                    if (grund is SyntheseAbbruch) throw grund
-                    fehlerInFolge++
-                    if (grund != null) beiFehler(grund)
-                    if (fehlerInFolge >= maxFehlerInFolge) {
-                        throw IllegalStateException(
-                            grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
-                        )
-                    }
-                } else {
-                    fehlerInFolge = 0
-                    try {
+                try {
+                    // Nächste Ausgabe schon während dieses Satzes frisch vorbereiten.
+                    vorabAbgleichen(0L)
+
+                    if (datei == null) {
+                        val grund = ergebnis.exceptionOrNull()
+                        if (grund is CancellationException) throw grund
+                        if (grund is SyntheseAbbruch) throw grund
+                        fehlerInFolge++
+                        if (grund != null) beiFehler(grund)
+                        if (fehlerInFolge >= maxFehlerInFolge) {
+                            throw IllegalStateException(
+                                grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
+                            )
+                        }
+                    } else {
+                        fehlerInFolge = 0
                         vorAbspielen()
                         currentCoroutineContext().ensureActive()
-                        beiStand(MentalPhase.SPRICHT, schritt, durchlauf, index)
+                        beiStand(MentalPhase.SPRICHT, schritt, durchlauf, index, aktPlan.size)
                         spiele(datei)
-                    } finally {
-                        // Einmal gespielt → sofort löschen, nie erneut abspielen.
-                        runCatching { loesche(datei) }
                     }
+                } finally {
+                    // Einmal gespielt → sofort löschen, nie erneut abspielen.
+                    datei?.let { runCatching { loesche(it) } }
                 }
 
                 // Eingestellte Pause zwischen je zwei Ausgaben, live nachgeführt: jede Änderung der Dauer gilt sofort,
                 // auch für die gerade laufende Pause (bereits gewartete Zeit zählt mit).
-                vorabAbgleichen()
+                vorabAbgleichen(0L)
                 var gewartet = 0L
                 var gezeigtMs = -1L
                 while (true) {
                     val ziel = pauseMsAbrufen().coerceAtLeast(0L)
                     if (ziel != gezeigtMs) {
                         gezeigtMs = ziel
-                        beiStand(MentalPhase.PAUSE, schritt, durchlauf, index)
+                        beiStand(MentalPhase.PAUSE, schritt, durchlauf, index, aktPlan.size)
                     }
                     val rest = ziel - gewartet
                     if (rest <= 0L) break
-                    val takt = minOf(rest, pausenTaktMs)
-                    pause(takt)
-                    gewartet += takt
-                    vorabAbgleichen()
+                    val stueck = minOf(rest, takt)
+                    pause(stueck)
+                    gewartet += stueck
+                    vorabAbgleichen(stueck)
                 }
             }
         } finally {
@@ -330,7 +380,8 @@ object MentalitaetSpieler {
      * Bei leerer Liste startet keine Wiedergabe.
      */
     fun starten(context: Context, saetze: List<MentalSatz>) {
-        val plan = mentalitaetPlan(saetze)
+        // Die Schleife liest live aus dem Speicher; der Start zeigt deshalb denselben Stand (Rückfall: übergebene Liste).
+        val plan = mentalitaetPlan(MentalitaetSpeicher.stand.value).ifEmpty { mentalitaetPlan(saetze) }
         if (plan.isEmpty()) return
 
         val app = context.applicationContext
@@ -365,11 +416,21 @@ object MentalitaetSpieler {
         val syn = synthese(app)
         Logbuch.sprache("Mentalität gestartet", "schritte=${plan.size}, pause=${aktuellePauseSekunden}s")
 
+        var planQuelle: List<MentalSatz>? = null
+        var planCache: List<MentalSchritt> = plan
         job = bereich.launch {
             try {
                 mentalitaetSchleife(
                     // Live: jede Änderung an Liste, Reihenfolge oder Wiederholungszahl greift ab dem nächsten Schritt.
-                    planAbrufen = { mentalitaetPlan(MentalitaetSpeicher.stand.value) },
+                    planAbrufen = {
+                        // Nur neu bauen, wenn sich die Liste wirklich geändert hat (Pausentakt alle 200 ms).
+                        val quelle = MentalitaetSpeicher.stand.value
+                        if (quelle !== planQuelle) {
+                            planQuelle = quelle
+                            planCache = mentalitaetPlan(quelle)
+                        }
+                        planCache
+                    },
                     pauseMsAbrufen = {
                         val sek = einstellungen.mentalitaetPauseSekunden
                         aktuellePauseSekunden = sek
@@ -381,7 +442,7 @@ object MentalitaetSpieler {
                     erzeuge = { text -> erzeugeFrischFuerLauf(syn, bereiteTextAuf(text), meinLauf) },
                     spiele = { datei -> spieleDatei(app, datei, meinLauf) },
                     loesche = { datei -> datei.delete() },
-                    beiStand = { phase, schritt, durchlauf, schrittIndex ->
+                    beiStand = { phase, schritt, durchlauf, schrittIndex, planGroesse ->
                         if (laufNummer.get() == meinLauf) {
                             _stand.value = MentalSpielStand(
                                 phase = phase,
@@ -394,7 +455,7 @@ object MentalitaetSpieler {
                             if (phase == MentalPhase.SPRICHT) {
                                 VorleseDienst.aktualisiere(
                                     app, "Mentalität", schrittIndex + 1,
-                                    mentalitaetPlan(MentalitaetSpeicher.stand.value).size.coerceAtLeast(1), pausiert = false,
+                                    planGroesse.coerceAtLeast(schrittIndex + 1), pausiert = false,
                                 )
                             }
                         }
