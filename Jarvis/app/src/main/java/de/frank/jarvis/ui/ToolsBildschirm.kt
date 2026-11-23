@@ -1,10 +1,13 @@
 package de.frank.jarvis.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,10 +23,12 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.graphicsLayer
 import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -121,6 +126,7 @@ private val ORANGE = Color(AtemFarben.AUS)
 
 private data class Tool(val id: String, val titel: String, val akzent: Color)
 
+/** Eingebaute Werkzeuge im Reiter „Tools“; neue Kennungen auch in [de.frank.jarvis.data.TOOLS_REIHENFOLGE] und [de.frank.jarvis.data.TOOL_NAMEN] eintragen. */
 private val TOOLS = listOf(
     Tool("atem", "Atemübungen", Color(0xFF4FC8FF)),
     Tool("mentalitaet", "Mentalität", Color(0xFF9C8CFF)),
@@ -132,14 +138,21 @@ fun ToolsBildschirm(vm: AppViewModel) {
     when {
         b != null -> AtemEditor(vm, b, ToolsAnsicht.neu)
         ToolsAnsicht.tool == "atem" -> AtemUebersicht()
-        else -> ToolsUebersicht()
+        else -> ToolsUebersicht(vm)
     }
 }
 
+/** Ordnet [liste] nach [ids]; neu hinzugekommene Tools hängen sich in ihrer Grundreihenfolge hinten an. */
+private fun ordneTools(liste: List<Tool>, ids: List<String>): List<Tool> {
+    val rang = ids.withIndex().associate { (i, id) -> id to i }
+    return liste.withIndex().sortedBy { (i, t) -> rang[t.id] ?: (ids.size + i) }.map { it.value }
+}
+
 @Composable
-private fun ToolsUebersicht() {
+private fun ToolsUebersicht(vm: AppViewModel) {
     val f = LocalFarben.current
     val bewegt = LocalBewegung.current
+    val haptik = LocalHapticFeedback.current
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
     // Eine gemeinsame Bild-Uhr für alle 3D-Karten; läuft nur, solange der Reiter sichtbar ist.
     // Bei reduzierter Bewegung bleibt ein sprechendes Standbild (Mitte des Einatmens / 3/4-Gehirn).
@@ -163,54 +176,135 @@ private fun ToolsUebersicht() {
         }
     }
 
+    val gespeichert = vm.einstellungen.toolsReihenfolge
+    // Während des Ziehens lebt die Reihenfolge lokal, damit die Nachbarn unmittelbar flüssig Platz machen;
+    // beim Loslassen (oder Verlassen) wird sie einmalig dauerhaft gespeichert.
+    var lokal by remember { mutableStateOf<List<String>?>(null) }
+    var letzterDragEndeMs by remember { mutableLongStateOf(0L) }
+    val reihe = lokal ?: gespeichert
+    val gezeigt = remember(reihe) { ordneTools(TOOLS, reihe) }
+    val aktuelleIds = remember(gezeigt) { gezeigt.map { it.id } }
+    DisposableEffect(vm) {
+        onDispose {
+            val offen = lokal
+            if (offen != null && offen != vm.einstellungen.toolsReihenfolge) {
+                vm.einstellungen.toolsReihenfolge = offen
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         Text("Tools", Modifier.padding(start = 20.dp, top = 8.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("In Jarvis eingebaute Werkzeuge", Modifier.padding(start = 20.dp, bottom = 8.dp), color = f.textLeise, fontSize = 14.sp)
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val breit = maxWidth >= 520.dp
-            val spalten = when {
-                maxWidth < 320.dp -> 1
-                breit -> minOf(TOOLS.size, 3).coerceAtLeast(2)
-                else -> 2
+            val spalten = if (maxWidth < 280.dp) 2 else 3
+            val abstand = if (breit) 14.dp else 10.dp
+            val aussen = if (breit) 18.dp else 12.dp
+            val rasterPadding = remember(aussen) { PaddingValues(aussen) }
+            val kartenRadius = if (breit) 22.dp else 18.dp
+            val buehnenRadius = if (breit) 15.dp else 12.dp
+            val kartenVerhaeltnis = if (breit) 0.96f else 0.86f
+            val innenRand = if (breit) 9.dp else 7.dp
+            val titelGroesse = when {
+                breit -> 16.sp
+                maxWidth >= 400.dp -> 14.sp
+                else -> 13.sp
             }
-            val abstand = if (breit) 18.dp else 12.dp
-            val aussen = if (breit) 20.dp else 16.dp
-            val kartenVerhaeltnis = if (breit) 0.96f else 0.84f
+
+            val rasterStand = rememberLazyGridState()
+            val ordnen = rememberReorderableLazyGridState(
+                lazyGridState = rasterStand,
+                scrollThresholdPadding = rasterPadding,
+            ) { von, nach ->
+                val vonId = von.key as? String ?: return@rememberReorderableLazyGridState
+                val nachId = nach.key as? String ?: return@rememberReorderableLazyGridState
+                if (vonId == nachId) return@rememberReorderableLazyGridState
+                val basis = lokal ?: ordneTools(TOOLS, gespeichert).map { it.id }
+                val a = basis.indexOf(vonId)
+                val b = basis.indexOf(nachId)
+                if (a < 0 || b < 0) return@rememberReorderableLazyGridState
+                lokal = basis.toMutableList().apply { add(b, removeAt(a)) }
+                haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(spalten),
+                state = rasterStand,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(aussen),
+                contentPadding = rasterPadding,
                 horizontalArrangement = Arrangement.spacedBy(abstand),
                 verticalArrangement = Arrangement.spacedBy(abstand),
             ) {
-                items(TOOLS, key = { it.id }) { t ->
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 210.dp, max = 310.dp)
-                            .aspectRatio(kartenVerhaeltnis)
-                            .antippen { ToolsAnsicht.tool = t.id }
-                            .glas(f, 26.dp, erhoeht = 0.95f, toenung = t.akzent)
-                            .semantics { contentDescription = t.titel }
-                            .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        ToolKarten3DBuehne(
-                            toolId = t.id,
-                            zeitMs = zeitMs,
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                        )
-                        Text(
-                            text = t.titel,
-                            modifier = Modifier.padding(top = 12.dp, start = 6.dp, end = 6.dp),
-                            color = f.text,
-                            fontSize = if (breit) 20.sp else 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                itemsIndexed(gezeigt, key = { _, it -> it.id }) { i, t ->
+                    ReorderableItem(
+                        state = ordnen,
+                        key = t.id,
+                        animateItemModifier = Modifier.animateItem(
+                            fadeInSpec = null,
+                            fadeOutSpec = null,
+                            placementSpec = if (bewegt) spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 450f) else null,
+                        ),
+                    ) { zieht ->
+                        fun schiebe(nach: Int) {
+                            lokal = null
+                            vm.einstellungen.toolsReihenfolge = aktuelleIds.toMutableList().apply { add(nach, removeAt(i)) }
+                        }
+                        val kartenForm = RoundedCornerShape(kartenRadius)
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = if (breit) 156.dp else 126.dp, max = 228.dp)
+                                .aspectRatio(kartenVerhaeltnis)
+                                // Langer Druck startet das Ziehen über Spalten und Zeilen hinweg; normales Antippen öffnet das Tool.
+                                .longPressDraggableHandle(
+                                    onDragStarted = {
+                                        haptik.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDragStopped = {
+                                        letzterDragEndeMs = SystemClock.uptimeMillis()
+                                        val neu = lokal
+                                        if (neu != null && neu != vm.einstellungen.toolsReihenfolge) {
+                                            vm.einstellungen.toolsReihenfolge = neu
+                                        }
+                                        lokal = null
+                                    },
+                                )
+                                .antippen(
+                                    unterdruecken = {
+                                        ordnen.isAnyItemDragging || SystemClock.uptimeMillis() - letzterDragEndeMs < 150L
+                                    },
+                                ) { ToolsAnsicht.tool = t.id }
+                                .glas(f, kartenRadius, erhoeht = if (zieht) 1.35f else 0.95f, rand = !zieht, toenung = t.akzent)
+                                .then(if (zieht) Modifier.border(2.dp, t.akzent.copy(alpha = 0.85f), kartenForm) else Modifier)
+                                .semantics {
+                                    contentDescription = t.titel
+                                    customActions = listOfNotNull(
+                                        CustomAccessibilityAction("Nach vorne verschieben") { schiebe(i - 1); true }.takeIf { i > 0 },
+                                        CustomAccessibilityAction("Nach hinten verschieben") { schiebe(i + 1); true }.takeIf { i < aktuelleIds.lastIndex },
+                                    )
+                                }
+                                .padding(start = innenRand, end = innenRand, top = innenRand, bottom = if (breit) 11.dp else 9.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            ToolKarten3DBuehne(
+                                toolId = t.id,
+                                zeitMs = zeitMs,
+                                eckenRadius = buehnenRadius,
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                            Text(
+                                text = t.titel,
+                                modifier = Modifier.padding(top = if (breit) 9.dp else 7.dp, start = 2.dp, end = 2.dp),
+                                color = f.text,
+                                fontSize = titelGroesse,
+                                lineHeight = titelGroesse * 1.2f,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }

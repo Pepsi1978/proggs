@@ -36,6 +36,12 @@ val START_BEREICHE = listOf("heute_aufgaben", "auswertung", "schnellstart", "bio
 /** Anzeigenamen der Startbereiche, etwa für die Sprachsteuerung der Reihenfolge. */
 val START_BEREICH_NAMEN = mapOf("auswertung" to "Tagesauswertung", "schnellstart" to "Schnellstart", "heute_aufgaben" to "Heutige Aufgaben", "biomarker" to "Biomarker", "raumklima" to "Raumklima", "victron" to "Solarbatterie", "staubsauger" to "Staubsauger", "kaffee" to "Kaffeemaschine", "licht" to "LED-Licht", "tenda" to "Tenda Internet", "wichtige_mails" to "Wichtige E-Mails", "mac_update" to "Mac-Zentrale")
 
+/** Die eingebauten Werkzeuge im Reiter „Tools“ in ihrer Grundreihenfolge (Kennungen für [Einstellungen.toolsReihenfolge]). */
+val TOOLS_REIHENFOLGE = listOf("atem", "mentalitaet")
+
+/** Anzeigenamen der Werkzeuge im Reiter „Tools“, etwa für die Sprachsteuerung der Reihenfolge. */
+val TOOL_NAMEN = mapOf("atem" to "Atemübungen", "mentalitaet" to "Mentalität")
+
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
     /**
@@ -497,6 +503,13 @@ class Einstellungen private constructor(context: Context) {
             return (mitRaumklima + START_BEREICHE).distinct()
         }
         set(v) = put { putString("start_reihenfolge", (v.filter { it in START_BEREICHE } + START_BEREICHE).distinct().joinToString(",")) }
+    /** Von Frank per Drag-and-drop gewählte Reihenfolge der Werkzeuge im Reiter „Tools“; neue Werkzeuge hängen sich hinten an. */
+    var toolsReihenfolge: List<String>
+        get() {
+            val gespeichert = (prefs.getString("tools_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in TOOLS_REIHENFOLGE }
+            return (gespeichert + TOOLS_REIHENFOLGE).distinct()
+        }
+        set(v) = put { putString("tools_reihenfolge", (v.filter { it in TOOLS_REIHENFOLGE } + TOOLS_REIHENFOLGE).distinct().joinToString(",")) }
     // ---- Programmieren am Rechner ----
     /**
      * Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“, „power“, „server“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026).

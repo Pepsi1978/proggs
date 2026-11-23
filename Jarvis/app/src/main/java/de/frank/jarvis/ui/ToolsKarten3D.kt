@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.frank.jarvis.atem.AtemFarben
 import de.frank.jarvis.ui.theme.Farben
@@ -59,9 +60,10 @@ internal fun ToolKarten3DBuehne(
     toolId: String,
     zeitMs: LongState,
     modifier: Modifier = Modifier,
+    eckenRadius: Dp = 18.dp,
 ) {
     val f = LocalFarben.current
-    val form = RoundedCornerShape(18.dp)
+    val form = RoundedCornerShape(eckenRadius)
     val buehnenHintergrund = remember(toolId, f.dunkel) { buehnenVerlauf(toolId, f) }
     val randFarbe = remember(toolId, f.dunkel) {
         val akzent = if (toolId == "atem") ATEM_WIND_CYAN else HIRN_KREATIV

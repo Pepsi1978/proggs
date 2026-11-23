@@ -944,6 +944,7 @@
     {"versionCode": 935, "versionName": "1.8.924", "stand": "23.11.2026, 18:20 Uhr", "notiz": "Atemübungen-3D-Karte: Schleifenübergang zwischen Ein- und Ausatmen komplett nahtlos ohne Phasen-Sprung umgesetzt."},
     {"versionCode": 936, "versionName": "1.8.925", "stand": "23.11.2026, 18:20 Uhr", "notiz": "Die Auswahlknöpfe und Fragen am Programmierbutton haben jetzt einen deckenden Hintergrund, damit keine Schrift mehr durchscheint."},
     {"versionCode": 937, "versionName": "1.8.926", "stand": "23.11.2026, 18:41 Uhr", "notiz": "Die Ablage zeigt die Reiter Tabellen, Präsentationen und Audio nicht mehr; solche Dateien bleiben erhalten und stehen unter Alle."},
-    {"versionCode": 938, "versionName": "1.8.927", "stand": "23.11.2026, 18:45 Uhr", "notiz": "Beim ersten Öffnen der Ablage nach dem Update ist „Alle“ sofort markiert, auch wenn vorher ein entfernter Reiter gewählt war."}
+    {"versionCode": 938, "versionName": "1.8.927", "stand": "23.11.2026, 18:45 Uhr", "notiz": "Beim ersten Öffnen der Ablage nach dem Update ist „Alle“ sofort markiert, auch wenn vorher ein entfernter Reiter gewählt war."},
+    {"versionCode": 939, "versionName": "1.8.928", "stand": "23.11.2026, 18:54 Uhr", "notiz": "Tools-Bereich auf Handy und Tablet kompakter im 3-Spalten-Raster, Reihenfolge per Drag-and-drop über Zeilengrenzen hinweg mit flüssigem Platzmachen und sanftem Einrasten änderbar."}
 ]
 }
