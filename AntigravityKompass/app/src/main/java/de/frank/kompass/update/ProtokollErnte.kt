@@ -149,7 +149,9 @@ object ProtokollErnte {
     private val panelName = Regex("\"([A-Z][^\"]{2,59})\"")
 
     /** Antigravity nennt Panelzeilen in Rückstrichen: „Added an `Agent Mode` setting … of `/config`". */
-    private val panelRueckstrich = Regex("`([A-Z][A-Za-z0-9 ()-]{2,40})`")
+    private val panelRueckstrich = Regex(
+        "`([A-Z][A-Za-z0-9 ()-]{2,40})`\\s+(?:(?:setting|option|toggle|row)\\b|(?:in|to|under)\\s+`/(?:config|settings)`)",
+    )
 
     /** „the TUI mode setting in `/settings`" — ältere übliche Form. */
     private val panelSetting =

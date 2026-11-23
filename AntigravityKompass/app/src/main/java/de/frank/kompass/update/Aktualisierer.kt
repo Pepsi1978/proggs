@@ -63,7 +63,15 @@ class Aktualisierer(
         try {
             // --- Schritt 1: Unterlagen holen ---------------------------------------------
             val changelog = DokuParser.cliProtokoll(abruf.hole(DokuAbruf.URL_CHANGELOG))
-            val version = DokuParser.leseNeuesteVersion(changelog)
+            // Die Webseite hinkt der installierten CLI oft hinterher; nie hinter den
+            // mitgelieferten Stand zurückfallen.
+            val version = DokuParser.leseNeuesteVersion(changelog).let { gefunden ->
+                if (gefunden.isNotBlank() && ProtokollErnte.istNeuer(AppProfil.SEEDED_CLI_VERSION, gefunden)) {
+                    AppProfil.SEEDED_CLI_VERSION
+                } else {
+                    gefunden
+                }
+            }
             probe(
                 version.isNotBlank(),
                 "Aus dem Änderungsprotokoll kam keine Versionsnummer",
@@ -76,17 +84,9 @@ class Aktualisierer(
             val befehleMd = abruf.hole(DokuAbruf.URL_BEFEHLE)
             // Befehle und Einstellungen stehen auf derselben Seite — nur einmal laden.
             val einstellungenMd = befehleMd
-            val variablenMd = runCatching { abruf.hole(DokuAbruf.URL_VARIABLEN) }.getOrElse {
-                // Die Variablenliste ist der am ehesten verzichtbare Teil. Fällt sie aus,
-                // läuft der Rest weiter, statt den ganzen Lauf scheitern zu lassen.
-                KompassLog.warn(
-                    "Aktualisierer",
-                    "fuehreAus",
-                    "Die Liste der Umgebungsvariablen kam nicht — der Rest läuft weiter",
-                    mapOf("grund" to it.message),
-                )
-                ""
-            }
+            // Die Antigravity-Doku hat keine eigene Variablenliste; die Umgebungsvariablen
+            // bleiben beim mitgelieferten Stand und werden nicht abgeglichen.
+            val variablenMd = ""
 
             // --- Schritt 2: auswerten -----------------------------------------------------
             stand = stand.copy(schritt = "Unterlagen werden ausgewertet")

@@ -36,6 +36,7 @@ STANDARD_ZIEL = None
 DATEIEN = (
     ("slash", "slash_befehle.json"),
     ("config", "config_einstellungen.json"),
+    ("panel", "panel_eintraege.json"),
     ("praxis", "best_practices.json"),
 )
 

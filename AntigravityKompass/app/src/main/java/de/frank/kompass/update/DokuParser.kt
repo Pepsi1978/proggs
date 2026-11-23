@@ -28,8 +28,6 @@ object DokuParser {
     private val tabellenZeile = Regex("^\\s*\\|(.+)\\|\\s*$")
     private val trennZeile = Regex("^\\s*\\|?[\\s:|-]{4,}\\|?\\s*$")
 
-    /** Teilt an Trennstrichen, die nicht mit `\` maskiert sind. */
-    private val spaltenTrenner = Regex("(?<!\\\\)\\|")
 
     /**
      * Ein Slash-Befehl steht in Rückstrichen, oft mit Argumenten dahinter. Der Name endet am
@@ -260,7 +258,31 @@ object DokuParser {
 
     private fun zerlege(zeile: String): List<String> {
         val inhalt = tabellenZeile.find(zeile)?.groupValues?.get(1) ?: return emptyList()
-        return inhalt.split(spaltenTrenner).map { saeubere(it) }
+        return teileSpalten(inhalt).map { saeubere(it) }
+    }
+
+    /**
+     * Teilt an Trennstrichen, die weder mit `\` maskiert sind noch in Rückstrichen stehen.
+     * Die Antigravity-Doku schreibt `` `/copy [n|btw]` `` ohne Maskierung.
+     */
+    private fun teileSpalten(inhalt: String): List<String> {
+        val zellen = mutableListOf<String>()
+        val aktuell = StringBuilder()
+        var imCode = false
+        var vorher = ' '
+        for (zeichen in inhalt) {
+            when {
+                zeichen == '`' -> { imCode = !imCode; aktuell.append(zeichen) }
+                zeichen == '|' && !imCode && vorher != '\\' -> {
+                    zellen += aktuell.toString()
+                    aktuell.clear()
+                }
+                else -> aktuell.append(zeichen)
+            }
+            vorher = zeichen
+        }
+        zellen += aktuell.toString()
+        return zellen
     }
 
     /** Nimmt Verweise, maskierte Striche und doppelte Leerzeichen aus einer Tabellenzelle. */
@@ -270,10 +292,6 @@ object DokuParser {
         .replace(Regex("\\s{2,}"), " ")
         .trim()
 
-    /**
-     * Findet die neueste Version im Änderungsprotokoll. Es ist absteigend sortiert — die
-     * erste Überschrift ist die aktuelle Version.
-     */
     /**
      * Schneidet aus dem gemeinsamen Änderungsprotokoll (App, CLI, IDE, SDK) nur den Abschnitt
      * `## Antigravity CLI` heraus und bringt ihn in die Form, die der Rest erwartet:
@@ -295,6 +313,10 @@ object DokuParser {
         }
     }
 
+    /**
+     * Findet die neueste Version im Änderungsprotokoll. Es ist absteigend sortiert — die
+     * erste Überschrift ist die aktuelle Version.
+     */
     fun leseNeuesteVersion(changelog: String): String =
         changelog.lineSequence().firstNotNullOfOrNull { versionsKopf.find(it)?.groupValues?.get(1) }.orEmpty()
 

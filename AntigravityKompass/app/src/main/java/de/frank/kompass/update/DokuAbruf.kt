@@ -52,14 +52,11 @@ class DokuAbruf {
         /** Eine Seite für Befehle UND settings.json-Schlüssel (getrennte Tabellen). */
         const val URL_BEFEHLE = "$DOKU/cli/reference.md"
         const val URL_EINSTELLUNGEN = "$DOKU/cli/reference.md"
-        /** Variablen stehen verstreut; die Settings-Seite ist der beste Fundort, ihr Ausfall ist verzichtbar. */
-        const val URL_VARIABLEN = "$DOKU/settings.md"
 
         /**
-         * Das Änderungsprotokoll kommt aus dem Quellverzeichnis statt von der Doku-Seite.
-         * Dort steht es vollständig und unverkürzt — auf der Webseite wird es ab einer
-         * gewissen Länge abgeschnitten, und genau die alten Einträge wären für die Frage
-         * „seit wann gibt es das?" die wichtigen.
+         * Gemeinsames Änderungsprotokoll von App, CLI, IDE und SDK (rund 640 KB);
+         * [DokuParser.cliProtokoll] schneidet den CLI-Abschnitt heraus. Die Webseite hinkt der
+         * installierten CLI oft einige Fassungen hinterher.
          */
         const val URL_CHANGELOG =
             "$DOKU/changelog.md"
