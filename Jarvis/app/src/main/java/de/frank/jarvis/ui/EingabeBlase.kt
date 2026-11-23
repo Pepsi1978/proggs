@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -685,7 +686,7 @@ private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_FRAGE else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_FRAGE,
                 color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(12.dp)).background(f.flaeche).padding(horizontal = 12.dp, vertical = 8.dp))
+                modifier = Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(12.dp)).background(auswahlGrund(f)).padding(horizontal = 12.dp, vertical = 8.dp))
             AuswahlKnoepfe(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_OPTIONEN else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_OPTIONEN) { vm.programmierVorwahlReview(it) }
         }
     }
@@ -693,6 +694,9 @@ private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
     else if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.VORWAHL_OPTIONEN) { vm.programmierVorwahl(it) }
     else karte?.let { WahlKnoepfe(vm, it) }
 }
+
+/** Deckender Grund der Einblendungen am Programmierbutton (Frank, 23.11.2026: nie durchsichtig, sonst steht Schrift über Schrift). */
+private fun auswahlGrund(f: de.frank.jarvis.ui.theme.Farben) = f.flaeche.compositeOver(f.hgUnten).copy(alpha = 1f)
 
 @Composable
 private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String) -> Unit) {
@@ -704,7 +708,7 @@ private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String
                 teil.forEachIndexed { i, (wert, label) ->
                     val erster = zeile == 0 && i == 0
                     Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
-                        .background(if (erster) f.text else f.flaeche).antippen { aktion(wert) }
+                        .background(if (erster) f.text.compositeOver(f.hgUnten) else auswahlGrund(f)).antippen { aktion(wert) }
                         .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                         Text(label, color = if (erster) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
