@@ -131,6 +131,7 @@ private val TOOLS = listOf(
     Tool("atem", "Atemübungen", Color(0xFF3EE0B8)),
     Tool("mentalitaet", "Mentalität", Color(0xFF9C8CFF)),
     Tool("listen", "Listen", Color(0xFFFFB259)),
+    Tool("veraenderungen", "Veränderungen", Color(0xFFFF6E87)),
 )
 
 @Composable
@@ -140,6 +141,7 @@ fun ToolsBildschirm(vm: AppViewModel) {
         b != null -> AtemEditor(vm, b, ToolsAnsicht.neu)
         ToolsAnsicht.tool == "atem" -> AtemUebersicht()
         ToolsAnsicht.tool == "listen" -> ListenBildschirm()
+        ToolsAnsicht.tool == "veraenderungen" -> VeraenderungenBildschirm()
         else -> ToolsUebersicht(vm)
     }
 }
@@ -210,8 +212,9 @@ private fun ToolsUebersicht(vm: AppViewModel) {
             val innenRand = if (breit) 9.dp else 7.dp
             val titelGroesse = when {
                 breit -> 16.sp
-                maxWidth >= 400.dp -> 14.sp
-                else -> 13.sp
+                maxWidth >= 400.dp -> 13.sp
+                maxWidth >= 340.dp -> 12.sp
+                else -> 11.5.sp
             }
 
             val rasterStand = rememberLazyGridState()
@@ -304,6 +307,7 @@ private fun ToolsUebersicht(vm: AppViewModel) {
                                 color = f.text,
                                 fontSize = titelGroesse,
                                 lineHeight = titelGroesse * 1.2f,
+                                letterSpacing = if (breit) 0.sp else (-0.2).sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
                                 maxLines = 2,

@@ -67,7 +67,7 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 
 /**
- * Reiter „Veränderungen“: Franks wichtige Veränderungen im Leben. Oben zwei Reiter: „Aktuell“ (angenommen, wird gerade umgesetzt;
+ * Bereich „Veränderungen“ unter „Tools“: Franks wichtige Veränderungen im Leben. Oben zwei Reiter: „Aktuell“ (angenommen, wird gerade umgesetzt;
  * Standard beim Öffnen) und „Offen“ (neu eingesprochen, steht noch an; Detail mit „Annehmen“). In „Aktuell“ (Einzeile, Kreis hakt ab), unten aufklappbar
  * „Erledigt“ (Zurückholen). Lange drücken und ziehen ordnet „Aktuell“ um (geräteübergreifend gespeichert). Antippen öffnet die genaue Beschreibung mit Papierkorb. Neue Einträge kommen nur per
  * Sprache an Jarvis (Werkzeug `veraenderung`).
@@ -120,7 +120,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.Uebersicht(alle: List
     val gruppe = if (zeigtOffene) offene else angenommen
     // Erledigte erscheinen in dem Reiter, aus dem sie kamen; Zurückholen bringt sie genau dorthin.
     val erledigt = alle.filter { it.erledigt && it.angenommen != zeigtOffene }.sortedByDescending { it.erledigtAm }
-    Text("Veränderungen", Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    BackHandler { ToolsAnsicht.tool = null }
+    Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(46.dp).antippen { ToolsAnsicht.tool = null }, contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück", tint = f.text, modifier = Modifier.size(24.dp))
+        }
+        Text("Veränderungen", Modifier.weight(1f).padding(start = 2.dp), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
     ReiterWahl(zeigtOffene, angenommen.size, offene.size, reiterWaehlen)
     // Je Reiter eine eigene Liste: Beim Wechsel erscheinen die Karten sofort samt Glasschatten, ohne Einblend-Animation,
     // deren Alpha-Ebene den Schatten außerhalb der Karte bis zum Ende abschneiden würde.

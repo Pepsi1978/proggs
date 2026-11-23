@@ -65,6 +65,17 @@ private val LISTE_PAKET_1 = Color(0xFFFF6E54)
 private val LISTE_PAKET_2 = Color(0xFF39D99B)
 private val LISTE_PAKET_3 = Color(0xFFFFCB52)
 
+private val WANDEL_SCHIEFER_HELL = Color(0xFFA8B8CC)
+private val WANDEL_SCHIEFER_MITTE = Color(0xFF6B7B90)
+private val WANDEL_SCHIEFER_DUNKEL = Color(0xFF3E4A5E)
+private val WANDEL_SCHIEFER_TIEF = Color(0xFF282032)
+private val WANDEL_SCHIEFER_KANTE = Color(0xFFDCE6F2)
+private val WANDEL_KORALLE = Color(0xFFFF6E87)
+private val WANDEL_MAGENTA = Color(0xFFE84F7D)
+private val WANDEL_PFIRSICH = Color(0xFFFFA06B)
+private val WANDEL_GOLD = Color(0xFFFFE18C)
+private val WANDEL_LICHT = Color(0xFFFFF8E8)
+
 private fun weich(x: Float): Float = 0.5f - 0.5f * cos(PI.toFloat() * x.coerceIn(0f, 1f))
 
 /**
@@ -86,6 +97,7 @@ internal fun ToolKarten3DBuehne(
         val akzent = when (toolId) {
             "atem" -> ATEM_JADE
             "listen" -> LISTE_KUPFER
+            "veraenderungen" -> WANDEL_KORALLE
             else -> HIRN_KREATIV
         }
         akzent.copy(alpha = if (f.dunkel) 0.34f else 0.44f)
@@ -94,6 +106,7 @@ internal fun ToolKarten3DBuehne(
     val atemPuffer = remember(toolId) { if (toolId == "atem") AtemZeichenPuffer() else null }
     val hirnPuffer = remember(toolId) { if (toolId == "mentalitaet") GehirnZeichenPuffer() else null }
     val listenPuffer = remember(toolId) { if (toolId == "listen") ListenZeichenPuffer() else null }
+    val wandelPuffer = remember(toolId) { if (toolId == "veraenderungen") VeraenderungenZeichenPuffer() else null }
 
     Box(
         modifier
@@ -112,6 +125,7 @@ internal fun ToolKarten3DBuehne(
                 "atem" -> zeichneAtem3D(t, atemPuffer ?: return@Canvas)
                 "mentalitaet" -> zeichneGehirn3D(t, hirnPuffer ?: return@Canvas)
                 "listen" -> zeichneListen3D(t, listenPuffer ?: return@Canvas)
+                "veraenderungen" -> zeichneVeraenderungen3D(t, wandelPuffer ?: return@Canvas)
             }
         }
     }
@@ -129,6 +143,12 @@ private fun buehnenVerlauf(toolId: String, f: Farben): Brush = when (toolId) {
         Brush.linearGradient(listOf(Color(0xFF4A2917), Color(0xFF2D180F), Color(0xFF160C08)))
     } else {
         Brush.linearGradient(listOf(Color(0xFF693B20), Color(0xFF432313), Color(0xFF27140B)))
+    }
+    // Veränderungen: tiefes Rubin-Abendrot / Rosen-Pflaume (klar getrennt von Smaragd, Nacht-Indigo und Kupfer)
+    "veraenderungen" -> if (f.dunkel) {
+        Brush.verticalGradient(listOf(Color(0xFF4C1730), Color(0xFF2D1023), Color(0xFF160A17)))
+    } else {
+        Brush.verticalGradient(listOf(Color(0xFF702246), Color(0xFF461836), Color(0xFF251023)))
     }
     // Mentalität: tiefes Nacht-Indigo/Violett
     else -> if (f.dunkel) {
@@ -1282,4 +1302,544 @@ private fun DrawScope.zeichneGehirn3D(t: Float, puffer: GehirnZeichenPuffer) {
             blendMode = BlendMode.Plus,
         )
     }
+}
+
+// ================================================================================================
+// 3D-Szene 4: Veränderungen — Metamorphose: Eine vertraute, kühl-silberne 3D-Schieferhülle öffnet
+// ihre vier gefalteten 3D-Deckel-Facetten nach außen, warmes Goldlicht bricht aus dem Inneren hervor,
+// und ein leuchtender 3D-Falter in Korallenrot und Sonnengold steigt mit schlagenden 3D-Flügeln auf.
+// ================================================================================================
+
+private const val WANDEL_ZYKLUS_S = 7.6f
+private const val WANDEL_FUNKEN_ANZAHL = 16
+
+private data class WandelFunke(
+    val winkel: Float,
+    val radius: Float,
+    val phase: Float,
+    val dreh: Float,
+    val groesse: Float,
+)
+
+private object VeraenderungenModell {
+    // Geschwungene 3D-Oberflügel-Kontur (rechts, lx >= 0; links wird gespiegelt)
+    val oberFluegelX = floatArrayOf(0.02f, 0.24f, 0.54f, 0.62f, 0.44f, 0.04f)
+    val oberFluegelY = floatArrayOf(-0.06f, -0.35f, -0.32f, -0.05f, 0.11f, 0.08f)
+
+    // Innerer Leuchtspiegel im Oberflügel
+    val spiegelX = floatArrayOf(0.11f, 0.30f, 0.46f, 0.34f)
+    val spiegelY = floatArrayOf(-0.08f, -0.23f, -0.14f, 0.02f)
+
+    // Gerundete 3D-Unterflügel-Kontur
+    val unterFluegelX = floatArrayOf(0.04f, 0.40f, 0.43f, 0.24f, 0.03f)
+    val unterFluegelY = floatArrayOf(0.06f, 0.10f, 0.31f, 0.42f, 0.24f)
+
+    // Aufsteigende Lichtfunken im nahtlosen Zyklus
+    val funken: List<WandelFunke> = List(WANDEL_FUNKEN_ANZAHL) { i ->
+        WandelFunke(
+            winkel = (i.toFloat() / WANDEL_FUNKEN_ANZAHL) * TAU + 0.4f,
+            radius = 0.16f + (i % 4) * 0.11f,
+            phase = i.toFloat() / WANDEL_FUNKEN_ANZAHL,
+            dreh = if (i % 2 == 0) 1f else -1f,
+            groesse = 1.5f + (i % 3) * 0.65f,
+        )
+    }
+}
+
+private class VeraenderungenZeichenPuffer {
+    val pfad = Path()
+    val fuehlerPfad = Path()
+    val px = FloatArray(8)
+    val py = FloatArray(8)
+}
+
+private fun DrawScope.zeichneVeraenderungen3D(t: Float, puffer: VeraenderungenZeichenPuffer) {
+    val mitteX = size.width * 0.50f
+    val mitteY = size.height * 0.53f
+    val skala = size.minDimension * 0.44f
+
+    // Nahtlose 7,6-Sekunden-Schleife mit Phasenversatz +0,34:
+    // Bei reduzierter Bewegung (t = 1,65 s -> u ≈ 0,56) steht die Szene im sprechenden Höhepunkt
+    // (geöffnete Schieferhülle mit leuchtendem, aufsteigendem 3D-Falter).
+    val u = (((t / WANDEL_ZYKLUS_S) + 0.34f) % 1f + 1f) % 1f
+    val w = u * TAU
+
+    // Ruhige 3/4-Isometrie: yaw bleibt positiv, damit Vorder- und rechte Seitenwand ohne Flimmern sichtbar bleiben.
+    val yaw = 0.36f + 0.14f * sin(w)
+    val pitch = 0.28f + 0.05f * cos(w)
+    val cy = cos(yaw); val sy = sin(yaw)
+    val cx = cos(pitch); val sx = sin(pitch)
+
+    fun projX(x: Float, y: Float, z: Float): Float {
+        val rx = x * cy + z * sy
+        val rz1 = -x * sy + z * cy
+        val rz = y * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+        return mitteX + rx * skala * s
+    }
+
+    fun projY(x: Float, y: Float, z: Float): Float {
+        val rz1 = -x * sy + z * cy
+        val ry = y * cx - rz1 * sx
+        val rz = y * sx + rz1 * cx
+        val s = FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+        return mitteY + ry * skala * s
+    }
+
+    fun projZ(x: Float, y: Float, z: Float): Float {
+        val rz1 = -x * sy + z * cy
+        return y * sx + rz1 * cx
+    }
+
+    fun projS(x: Float, y: Float, z: Float): Float {
+        val rz = projZ(x, y, z)
+        return FOKAL / (FOKAL + rz).coerceAtLeast(0.65f)
+    }
+
+    fun fuelleQuad(
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        x2: Float, y2: Float, z2: Float,
+        x3: Float, y3: Float, z3: Float,
+        farbe: Color,
+    ) {
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(projX(x0, y0, z0), projY(x0, y0, z0))
+        puffer.pfad.lineTo(projX(x1, y1, z1), projY(x1, y1, z1))
+        puffer.pfad.lineTo(projX(x2, y2, z2), projY(x2, y2, z2))
+        puffer.pfad.lineTo(projX(x3, y3, z3), projY(x3, y3, z3))
+        puffer.pfad.close()
+        drawPath(puffer.pfad, farbe)
+    }
+
+    fun umrissQuad(
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        x2: Float, y2: Float, z2: Float,
+        x3: Float, y3: Float, z3: Float,
+        farbe: Color,
+        breite: Float,
+    ) {
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(projX(x0, y0, z0), projY(x0, y0, z0))
+        puffer.pfad.lineTo(projX(x1, y1, z1), projY(x1, y1, z1))
+        puffer.pfad.lineTo(projX(x2, y2, z2), projY(x2, y2, z2))
+        puffer.pfad.lineTo(projX(x3, y3, z3), projY(x3, y3, z3))
+        puffer.pfad.close()
+        drawPath(puffer.pfad, farbe, style = Stroke(width = breite, join = StrokeJoin.Round))
+    }
+
+    fun fuelleDreieck(
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        x2: Float, y2: Float, z2: Float,
+        farbe: Color,
+        rand: Color,
+        randBreite: Float,
+    ) {
+        puffer.pfad.rewind()
+        puffer.pfad.moveTo(projX(x0, y0, z0), projY(x0, y0, z0))
+        puffer.pfad.lineTo(projX(x1, y1, z1), projY(x1, y1, z1))
+        puffer.pfad.lineTo(projX(x2, y2, z2), projY(x2, y2, z2))
+        puffer.pfad.close()
+        drawPath(puffer.pfad, farbe)
+        drawPath(puffer.pfad, rand, style = Stroke(width = randBreite, join = StrokeJoin.Round))
+    }
+
+    fun linie3D(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float, farbe: Color, breite: Float, modus: BlendMode = BlendMode.SrcOver) {
+        drawLine(
+            color = farbe,
+            start = Offset(projX(x0, y0, z0), projY(x0, y0, z0)),
+            end = Offset(projX(x1, y1, z1), projY(x1, y1, z1)),
+            strokeWidth = breite,
+            cap = StrokeCap.Round,
+            blendMode = modus,
+        )
+    }
+
+    // --- Nahtlose Phasen der Verwandlung (alle Werte und Ableitungen bei u = 0 und u = 1 identisch) ---
+    // 1) Öffnen der vier Deckel-Facetten (0 = geschlossen, 1 = voll entfaltet)
+    val oeffnen = when {
+        u < 0.14f -> 0f
+        u < 0.38f -> weich((u - 0.14f) / 0.24f)
+        u < 0.72f -> 1f
+        u < 0.92f -> 1f - weich((u - 0.72f) / 0.20f)
+        else -> 0f
+    }
+    // 2) Innerer Licht-Impuls kurz vor dem Aufbrechen
+    val vorGlut = if (u in 0.04f..0.28f) sin(((u - 0.04f) / 0.24f) * PI.toFloat()).coerceIn(0f, 1f) else 0f
+    val kernLicht = (0.12f + 0.88f * oeffnen + 0.34f * vorGlut).coerceIn(0f, 1f)
+
+    // 3) Flug und Sichtbarkeit des aufsteigenden 3D-Falters
+    val flugU = ((u - 0.22f) / 0.66f).coerceIn(0f, 1f)
+    val flugHoehe = weich(flugU)
+    val falterEin = weich(((u - 0.22f) / 0.12f).coerceIn(0f, 1f))
+    val falterAus = 1f - weich(((u - 0.72f) / 0.16f).coerceIn(0f, 1f))
+    val falterAlpha = if (u in 0.22f..0.88f) (falterEin * falterAus).coerceIn(0f, 1f) else 0f
+
+    // Grundmaße der vertrauten 3D-Schieferhülle (unten mittig, sanft schwebend)
+    val baseY = 0.42f + 0.026f * sin(w)
+    val hs = 0.34f
+    val hh = 0.26f
+    val yO = baseY - hh
+    val yU = baseY + hh
+
+    // Klappwinkel der vier dreieckigen 3D-Origami-Deckel (0 = flach geschlossen, ~136° = weit blühend geöffnet)
+    val klapp = oeffnen * 2.38f
+    val sinK = sin(klapp)
+    val cosK = cos(klapp)
+    val kantenStrich = 1.15f * density
+
+    // 1) Atmosphärisches Morgenrot-Licht im Hintergrund + weicher Bodenschatten unter der Hülle
+    val himmelR = (size.maxDimension * (0.64f + 0.16f * kernLicht)).coerceAtLeast(1f)
+    val himmelOrt = Offset(mitteX, mitteY - skala * (0.34f + 0.12f * flugHoehe))
+    drawCircle(
+        Brush.radialGradient(
+            listOf(
+                WANDEL_PFIRSICH.copy(alpha = 0.16f + 0.22f * kernLicht),
+                WANDEL_KORALLE.copy(alpha = 0.12f + 0.14f * kernLicht),
+                Color.Transparent,
+            ),
+            himmelOrt,
+            himmelR,
+        ),
+        radius = himmelR,
+        center = himmelOrt,
+    )
+    val schattenR = (skala * 0.78f).coerceAtLeast(1f)
+    val schattenOrt = Offset(mitteX + skala * 0.02f, mitteY + skala * 0.80f)
+    drawCircle(
+        Brush.radialGradient(
+            listOf(Color.Black.copy(alpha = 0.46f), Color.Transparent),
+            schattenOrt,
+            schattenR,
+        ),
+        radius = schattenR,
+        center = schattenOrt,
+    )
+
+    // 2) Hintere zwei 3D-Deckel-Facetten (Hinten z=+hs und Links x=-hs) — klappen in echtem 3D nach außen auf
+    val deckelInnenFarbe = lerp(WANDEL_SCHIEFER_DUNKEL, WANDEL_PFIRSICH, oeffnen * 0.52f)
+    val deckelRand = WANDEL_SCHIEFER_KANTE.copy(alpha = 0.48f)
+    // Hinterer Deckel (Scharnier bei z = +hs)
+    fuelleDreieck(
+        -hs, yO, hs,
+        hs, yO, hs,
+        0f, yO - hs * sinK, hs - hs * cosK,
+        lerp(WANDEL_SCHIEFER_MITTE, deckelInnenFarbe, oeffnen),
+        deckelRand,
+        kantenStrich,
+    )
+    // Linker Deckel (Scharnier bei x = -hs)
+    fuelleDreieck(
+        -hs, yO, -hs,
+        -hs, yO, hs,
+        -hs + hs * cosK, yO - hs * sinK, 0f,
+        lerp(WANDEL_SCHIEFER_MITTE, deckelInnenFarbe, oeffnen * 0.85f),
+        deckelRand,
+        kantenStrich,
+    )
+
+    // 3) Inneres der geöffneten Schieferhülle (hintere & linke Innenwand + leuchtender goldener Kern)
+    if (oeffnen > 0.02f) {
+        val innenWarm = lerp(WANDEL_SCHIEFER_TIEF, WANDEL_MAGENTA, kernLicht * 0.48f)
+        // Hintere Innenwand (z = +hs)
+        fuelleQuad(-hs, yO, hs, hs, yO, hs, hs, yU, hs, -hs, yU, hs, innenWarm)
+        // Linke Innenwand (x = -hs)
+        fuelleQuad(-hs, yO, -hs, -hs, yO, hs, -hs, yU, hs, -hs, yU, -hs, lerp(innenWarm, WANDEL_PFIRSICH, 0.24f))
+        // Leuchtender Kern auf dem Innenboden
+        val bodenGlut = lerp(WANDEL_PFIRSICH, WANDEL_GOLD, oeffnen)
+        fuelleQuad(-hs * 0.86f, yO + 0.14f, -hs * 0.86f, hs * 0.86f, yO + 0.14f, -hs * 0.86f, hs * 0.86f, yO + 0.14f, hs * 0.86f, -hs * 0.86f, yO + 0.14f, hs * 0.86f, bodenGlut.copy(alpha = 0.72f * oeffnen))
+
+        // Aufsteigender warmer Lichtstrahl aus der geöffneten Hülle
+        val strahlObenX = projX(0f, yO - 0.92f * oeffnen, 0f)
+        val strahlObenY = projY(0f, yO - 0.92f * oeffnen, 0f)
+        val strahlUntenX = projX(0f, yO + 0.04f, 0f)
+        val strahlUntenY = projY(0f, yO + 0.04f, 0f)
+        if (strahlUntenY - strahlObenY > 1f) {
+            drawLine(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.Transparent,
+                        WANDEL_KORALLE.copy(alpha = 0.22f * oeffnen),
+                        WANDEL_GOLD.copy(alpha = 0.44f * oeffnen),
+                        WANDEL_LICHT.copy(alpha = 0.56f * oeffnen),
+                    ),
+                    startY = strahlObenY,
+                    endY = strahlUntenY,
+                ),
+                start = Offset(strahlObenX, strahlObenY),
+                end = Offset(strahlUntenX, strahlUntenY),
+                strokeWidth = skala * (0.44f * oeffnen),
+                cap = StrokeCap.Round,
+                blendMode = BlendMode.Plus,
+            )
+        }
+    }
+
+    // 4) Hintere aufsteigende Verwandlungsfunken (z > 0)
+    fun zeichneFunken(vorne: Boolean) {
+        for (p in VeraenderungenModell.funken) {
+            val fu = ((u + p.phase) % 1f + 1f) % 1f
+            val h = sin(fu * PI.toFloat()).coerceIn(0f, 1f)
+            val sicht = h * h * (0.28f + 0.72f * kernLicht)
+            if (sicht < 0.03f) continue
+            val ang = p.winkel + fu * p.dreh * 2.1f
+            val rad = p.radius * (0.42f + 0.95f * fu)
+            val x3 = cos(ang) * rad
+            val z3 = sin(ang) * rad
+            val y3 = yO + 0.04f - fu * 1.18f
+            val rz = projZ(x3, y3, z3)
+            if (vorne && rz > 0f) continue
+            if (!vorne && rz <= 0f) continue
+            val sx2 = projX(x3, y3, z3)
+            val sy2 = projY(x3, y3, z3)
+            val s2 = projS(x3, y3, z3)
+            val rPx = (p.groesse * density * s2 * (0.65f + 0.35f * h)).coerceAtLeast(1f)
+            val farbe = lerp(WANDEL_GOLD, WANDEL_KORALLE, fu * 0.55f)
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(WANDEL_LICHT.copy(alpha = 0.90f * sicht), farbe.copy(alpha = 0.52f * sicht), Color.Transparent),
+                    Offset(sx2, sy2),
+                    rPx * 2.2f,
+                ),
+                radius = rPx * 2.2f,
+                center = Offset(sx2, sy2),
+                blendMode = BlendMode.Plus,
+            )
+        }
+    }
+    zeichneFunken(vorne = false)
+
+    // 5) Der leuchtende 3D-Falter (entsteht im Inneren der Hülle und steigt schwingend auf)
+    if (falterAlpha > 0.01f) {
+        val entfalten = weich(((u - 0.24f) / 0.18f).coerceIn(0f, 1f))
+        val schlag = sin(flugU * 3.5f * TAU)
+        val fluegelWinkel = (1f - entfalten) * 1.16f + entfalten * (0.50f + 0.44f * schlag)
+        val falterSkala = (0.38f + 0.66f * entfalten) * (1f + 0.06f * flugHoehe)
+        val fx = sin(flugU * PI.toFloat() * 1.5f) * 0.07f
+        val fy = (yO + 0.08f) - flugHoehe * 0.88f
+        val fz = -0.02f - flugHoehe * 0.10f
+        val fPitch = -0.34f - 0.10f * entfalten
+        val cP = cos(fPitch); val sP = sin(fPitch)
+        val cF = cos(fluegelWinkel); val sF = sin(fluegelWinkel)
+
+        // Weicher goldener Lichthof hinter dem Falter
+        val fX2d = projX(fx, fy, fz)
+        val fY2d = projY(fx, fy, fz)
+        val haloR = (skala * 0.62f * falterSkala).coerceAtLeast(1f)
+        drawCircle(
+            Brush.radialGradient(
+                listOf(
+                    WANDEL_GOLD.copy(alpha = 0.36f * falterAlpha),
+                    WANDEL_KORALLE.copy(alpha = 0.18f * falterAlpha),
+                    Color.Transparent,
+                ),
+                Offset(fX2d, fY2d),
+                haloR,
+            ),
+            radius = haloR,
+            center = Offset(fX2d, fY2d),
+            blendMode = BlendMode.Plus,
+        )
+
+        fun flPunktX(lx: Float, ly: Float, seite: Float): Float {
+            val wx = fx + seite * lx * falterSkala * cF
+            val wy = fy + (ly * cP - lx * sF) * falterSkala
+            val wz = fz + (ly * sP + seite * lx * sF * 0.18f) * falterSkala
+            return projX(wx, wy, wz)
+        }
+
+        fun flPunktY(lx: Float, ly: Float, seite: Float): Float {
+            val wx = fx + seite * lx * falterSkala * cF
+            val wy = fy + (ly * cP - lx * sF) * falterSkala
+            val wz = fz + (ly * sP + seite * lx * sF * 0.18f) * falterSkala
+            return projY(wx, wy, wz)
+        }
+
+        fun zeichneFluegelKontur(xs: FloatArray, ys: FloatArray, seite: Float) {
+            val n = xs.size
+            for (i in 0 until n) {
+                puffer.px[i] = flPunktX(xs[i], ys[i], seite)
+                puffer.py[i] = flPunktY(xs[i], ys[i], seite)
+            }
+            puffer.pfad.rewind()
+            val sx0 = (puffer.px[n - 1] + puffer.px[0]) * 0.5f
+            val sy0 = (puffer.py[n - 1] + puffer.py[0]) * 0.5f
+            puffer.pfad.moveTo(sx0, sy0)
+            for (i in 0 until n) {
+                val next = (i + 1) % n
+                val mx = (puffer.px[i] + puffer.px[next]) * 0.5f
+                val my = (puffer.py[i] + puffer.py[next]) * 0.5f
+                puffer.pfad.quadraticTo(puffer.px[i], puffer.py[i], mx, my)
+            }
+            puffer.pfad.close()
+        }
+
+        fun zeichneFluegelSeite(seite: Float) {
+            // Linker Flügel (hinten) etwas wärmer/tiefer, rechter Flügel (vorn) strahlender
+            val hellFaktor = if (seite > 0f) 0.24f else 0.0f
+            val unterFarbe = lerp(WANDEL_MAGENTA, WANDEL_KORALLE, 0.45f + hellFaktor)
+            val oberInnen = lerp(WANDEL_GOLD, WANDEL_LICHT, 0.28f + hellFaktor * 0.6f)
+            val oberAussen = lerp(WANDEL_KORALLE, WANDEL_PFIRSICH, 0.35f + hellFaktor)
+
+            // Unterflügel
+            zeichneFluegelKontur(VeraenderungenModell.unterFluegelX, VeraenderungenModell.unterFluegelY, seite)
+            drawPath(puffer.pfad, unterFarbe.copy(alpha = 0.88f * falterAlpha))
+            drawPath(
+                puffer.pfad,
+                WANDEL_GOLD.copy(alpha = 0.58f * falterAlpha),
+                style = Stroke(width = 1.15f * density, join = StrokeJoin.Round),
+            )
+
+            // Oberflügel mit plastischem Lichtverlauf von Gold-Kern nach Korallen-Spitze
+            zeichneFluegelKontur(VeraenderungenModell.oberFluegelX, VeraenderungenModell.oberFluegelY, seite)
+            val spitzeX = flPunktX(0.56f, -0.26f, seite)
+            val spitzeY = flPunktY(0.56f, -0.26f, seite)
+            val kernX = flPunktX(0.05f, 0.02f, seite)
+            val kernY = flPunktY(0.05f, 0.02f, seite)
+            if (abs(spitzeX - kernX) + abs(spitzeY - kernY) > 1f) {
+                drawPath(
+                    puffer.pfad,
+                    Brush.linearGradient(
+                        listOf(
+                            oberInnen.copy(alpha = 0.94f * falterAlpha),
+                            oberAussen.copy(alpha = 0.92f * falterAlpha),
+                            WANDEL_MAGENTA.copy(alpha = 0.88f * falterAlpha),
+                        ),
+                        start = Offset(kernX, kernY),
+                        end = Offset(spitzeX, spitzeY),
+                    ),
+                )
+            } else {
+                drawPath(puffer.pfad, oberAussen.copy(alpha = 0.92f * falterAlpha))
+            }
+            // Seidiger Gold-Glanzrand am Oberflügel
+            drawPath(
+                puffer.pfad,
+                WANDEL_LICHT.copy(alpha = 0.65f * falterAlpha),
+                style = Stroke(width = 1.25f * density, join = StrokeJoin.Round),
+            )
+
+            // Innerer Leuchtspiegel (Facette) im Oberflügel
+            zeichneFluegelKontur(VeraenderungenModell.spiegelX, VeraenderungenModell.spiegelY, seite)
+            drawPath(puffer.pfad, WANDEL_LICHT.copy(alpha = 0.34f * falterAlpha), blendMode = BlendMode.Plus)
+
+            // Zwei feine goldene Flügeladern
+            val aderBreite = 0.95f * density
+            drawLine(
+                WANDEL_GOLD.copy(alpha = 0.62f * falterAlpha),
+                Offset(kernX, kernY),
+                Offset(flPunktX(0.46f, -0.22f, seite), flPunktY(0.46f, -0.22f, seite)),
+                strokeWidth = aderBreite,
+                cap = StrokeCap.Round,
+            )
+            drawLine(
+                WANDEL_GOLD.copy(alpha = 0.50f * falterAlpha),
+                Offset(kernX, kernY),
+                Offset(flPunktX(0.32f, 0.26f, seite), flPunktY(0.32f, 0.26f, seite)),
+                strokeWidth = aderBreite * 0.9f,
+                cap = StrokeCap.Round,
+            )
+        }
+
+        // Painter's Order: linker Flügel (hinten) -> Körper + Fühler -> rechter Flügel (vorn)
+        zeichneFluegelSeite(-1f)
+
+        // Plastischer 3D-Körper des Falters
+        val kopfX = flPunktX(0f, -0.17f, 0f)
+        val kopfY = flPunktY(0f, -0.17f, 0f)
+        val schwanzX = flPunktX(0f, 0.24f, 0f)
+        val schwanzY = flPunktY(0f, 0.24f, 0f)
+        val fS = projS(fx, fy, fz)
+        drawLine(
+            WANDEL_LICHT.copy(alpha = 0.95f * falterAlpha),
+            Offset(kopfX, kopfY),
+            Offset(schwanzX, schwanzY),
+            strokeWidth = 3.2f * density * fS * falterSkala.coerceAtLeast(0.5f),
+            cap = StrokeCap.Round,
+        )
+        drawCircle(WANDEL_GOLD.copy(alpha = 0.95f * falterAlpha), 2.3f * density * fS * falterSkala.coerceAtLeast(0.5f), Offset(kopfX, kopfY))
+
+        // Zwei fein geschwungene Fühler (fest am Kopf, bewegen sich unabhängig vom Flügelschlag)
+        fun koerperX(lx: Float, ly: Float): Float = projX(fx + lx * falterSkala, fy + ly * cP * falterSkala, fz + ly * sP * falterSkala)
+        fun koerperY(lx: Float, ly: Float): Float = projY(fx + lx * falterSkala, fy + ly * cP * falterSkala, fz + ly * sP * falterSkala)
+        for (fSeite in -1..1 step 2) {
+            val fs = fSeite.toFloat()
+            puffer.fuehlerPfad.rewind()
+            puffer.fuehlerPfad.moveTo(kopfX, kopfY)
+            puffer.fuehlerPfad.quadraticTo(
+                koerperX(fs * 0.06f, -0.28f), koerperY(fs * 0.06f, -0.28f),
+                koerperX(fs * 0.13f, -0.34f), koerperY(fs * 0.13f, -0.34f),
+            )
+            drawPath(
+                puffer.fuehlerPfad,
+                WANDEL_GOLD.copy(alpha = 0.78f * falterAlpha),
+                style = Stroke(width = 1.0f * density, cap = StrokeCap.Round),
+            )
+        }
+
+        zeichneFluegelSeite(1f)
+    }
+
+    // 6) Vordere sichtbare Außenwände der vertrauten 3D-Schieferhülle (verdecken beim Aufsteigen den unteren Ansatz)
+    // Vorderwand (z = -hs): kühles Schiefer-Mittelgrau mit leichter Tiefe nach unten
+    fuelleQuad(-hs, yO, -hs, hs, yO, -hs, hs, yU, -hs, -hs, yU, -hs, WANDEL_SCHIEFER_MITTE)
+    fuelleQuad(-hs, baseY, -hs - 0.002f, hs, baseY, -hs - 0.002f, hs, yU, -hs - 0.002f, -hs, yU, -hs - 0.002f, WANDEL_SCHIEFER_DUNKEL.copy(alpha = 0.45f))
+    // Rechte Seitenwand (x = +hs): helleres Silber-Schiefer im Licht
+    fuelleQuad(hs, yO, -hs, hs, yO, hs, hs, yU, hs, hs, yU, -hs, WANDEL_SCHIEFER_HELL)
+    fuelleQuad(hs + 0.002f, baseY, -hs, hs + 0.002f, baseY, hs, hs + 0.002f, yU, hs, hs + 0.002f, yU, -hs, WANDEL_SCHIEFER_MITTE.copy(alpha = 0.42f))
+
+    // Klare 3D-Kanten der Schieferhülle + warmes Streiflicht an der oberen Kante beim Öffnen
+    umrissQuad(-hs, yO, -hs, hs, yO, -hs, hs, yU, -hs, -hs, yU, -hs, WANDEL_SCHIEFER_KANTE.copy(alpha = 0.36f), kantenStrich)
+    umrissQuad(hs, yO, -hs, hs, yO, hs, hs, yU, hs, hs, yU, -hs, WANDEL_SCHIEFER_KANTE.copy(alpha = 0.50f), kantenStrich)
+    if (kernLicht > 0.16f) {
+        val rimAlpha = ((kernLicht - 0.12f) * 0.85f).coerceIn(0f, 0.85f)
+        linie3D(-hs, yO, -hs, hs, yO, -hs, WANDEL_GOLD.copy(alpha = rimAlpha), 1.6f * density, BlendMode.Plus)
+        linie3D(hs, yO, -hs, hs, yO, hs, WANDEL_GOLD.copy(alpha = rimAlpha), 1.6f * density, BlendMode.Plus)
+    }
+
+    // 7) Vordere zwei 3D-Deckel-Facetten (Vorn z=-hs und Rechts x=+hs)
+    // Vorderer Deckel (Scharnier bei z = -hs)
+    fuelleDreieck(
+        -hs, yO, -hs,
+        hs, yO, -hs,
+        0f, yO - hs * sinK, -hs + hs * cosK,
+        lerp(WANDEL_SCHIEFER_HELL, WANDEL_SCHIEFER_DUNKEL, oeffnen * 0.70f),
+        deckelRand,
+        kantenStrich,
+    )
+    // Rechter Deckel (Scharnier bei x = +hs)
+    fuelleDreieck(
+        hs, yO, -hs,
+        hs, yO, hs,
+        hs - hs * cosK, yO - hs * sinK, 0f,
+        lerp(WANDEL_SCHIEFER_KANTE, WANDEL_SCHIEFER_MITTE, 0.32f + oeffnen * 0.45f),
+        deckelRand,
+        kantenStrich,
+    )
+
+    // Warm leuchtende Fugen auf der geschlossenen Hülle, wenn der Impuls zum Wandel einsetzt
+    if (oeffnen < 0.16f) {
+        val fugenAlpha = (weich(1f - oeffnen / 0.16f) * (0.28f + 0.72f * vorGlut)).coerceIn(0f, 0.95f)
+        val fugenBreite = (1.3f + 1.5f * vorGlut) * density
+        linie3D(-hs, yO - 0.004f, -hs, hs, yO - 0.004f, hs, WANDEL_GOLD.copy(alpha = fugenAlpha), fugenBreite, BlendMode.Plus)
+        linie3D(hs, yO - 0.004f, -hs, -hs, yO - 0.004f, hs, WANDEL_GOLD.copy(alpha = fugenAlpha), fugenBreite, BlendMode.Plus)
+        val zentrumX = projX(0f, yO - 0.006f, 0f)
+        val zentrumY = projY(0f, yO - 0.006f, 0f)
+        val pulsR = (skala * (0.14f + 0.18f * vorGlut)).coerceAtLeast(1f)
+        drawCircle(
+            Brush.radialGradient(
+                listOf(WANDEL_LICHT.copy(alpha = 0.72f * fugenAlpha), WANDEL_KORALLE.copy(alpha = 0.35f * fugenAlpha), Color.Transparent),
+                Offset(zentrumX, zentrumY),
+                pulsR,
+            ),
+            radius = pulsR,
+            center = Offset(zentrumX, zentrumY),
+            blendMode = BlendMode.Plus,
+        )
+    }
+
+    // 8) Vordere aufsteigende Verwandlungsfunken (z <= 0) für echte 3D-Tiefe
+    zeichneFunken(vorne = true)
 }

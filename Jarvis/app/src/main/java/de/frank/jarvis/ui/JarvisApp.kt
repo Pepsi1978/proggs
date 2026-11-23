@@ -39,7 +39,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.foundation.layout.offset
@@ -195,7 +194,6 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                             Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity, schublade)
                             Reiter.ABLAGE -> AblageBildschirm(vm, activity)
                             Reiter.TOOLS -> ToolsBildschirm(vm)
-                            Reiter.VERAENDERUNGEN -> VeraenderungenBildschirm()
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
                         }
@@ -300,7 +298,7 @@ private fun Leiste(vm: AppViewModel) {
         @Composable fun RowScope.reiterKnopf(r: Reiter) {
             val aktiv = vm.reiter == r
             val icon = when (r) {
-                Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman; Reiter.VERAENDERUNGEN -> Icons.AutoMirrored.Rounded.TrendingUp
+                Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.TOOLS -> Icons.Rounded.Handyman
                 Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune
             }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
@@ -322,9 +320,8 @@ private fun Leiste(vm: AppViewModel) {
         }
         reiterKnopf(Reiter.JARVIS)
         reiterKnopf(Reiter.ABLAGE)
-        // Tools: Atemübungen, Mentalität und Listen.
+        // Tools: Atemübungen, Mentalität, Listen und Veränderungen.
         reiterKnopf(Reiter.TOOLS)
-        reiterKnopf(Reiter.VERAENDERUNGEN)
         // Statt „Aktivität“ (jetzt unter Einstellungen): Programmierung öffnet die Seitenleiste direkt mit der Liste der
         // Programmier-Sessions. Arbeitet eine, blinkt derselbe orange Punkt wie am Reiter „Programmierung“ in der Leiste.
         val arbeitende = arbeitendeProgrammierungen()
