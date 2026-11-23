@@ -82,7 +82,9 @@ object ProgrammiererVorlage {
         KNOPF_MODELLE.flatMap { k -> k.clis.filter { reviewVorwahl(it) }.flatMap { c -> REVIEW_ZUSATZ.keys.map { r -> mitReview(cliEinstieg(k, c), r) to Triple(k.wert, c, r) } } }.toMap()
     private val CLI_EINSTIEGE: Map<String, Pair<String, String>> =
         KNOPF_MODELLE.flatMap { k -> k.clis.map { cliEinstieg(k, it) to (k.wert to it) } }.toMap() +
-            REVIEW_EINSTIEGE.mapValues { (_, t) -> t.first to t.second }
+            REVIEW_EINSTIEGE.mapValues { (_, t) -> t.first to t.second } +
+            // Gespeicherte Einstiege „Gemini 4 Neon/Argon im OpenCode CLI“ (bis 1.8.937) gelten weiter, jetzt im Antigravity CLI.
+            KNOPF_MODELLE.filter { it.clis == listOf("antigravity") }.associate { cliEinstieg(it, "opencode") to (it.wert to "antigravity") }
 
     /** Der Einstieg zum Knopf [modell] im [cli] mit der Review-Wahl [review] (nein, standard, sehr_ausfuehrlich). */
     fun vorspannFuer(modell: String, cli: String, review: String): String = mitReview(vorspannFuer(modell, cli), review)

@@ -55,7 +55,8 @@ object OpenLauncherKatalog {
             val effort = if (f.effort == ProgrammiererVorlage.OHNE_EFFORT) "".takeIf { stufen.isEmpty() } else stufen.firstOrNull { OpenLauncherEfforts.name(it) == f.effort }
             val profil = OpenLauncherEfforts.PROFILE.firstOrNull { it.name == f.profil }?.wert
             val modus = OpenLauncherEfforts.MODI.firstOrNull { it.name == f.modus }?.wert
-            val cli = m.clis.firstOrNull { CLI_NAMEN[it] == f.cli }
+            // Ein älterer Einstieg „CLI OpenCode“ für ein Google-Modell läuft jetzt im Antigravity CLI.
+            val cli = m.clis.firstOrNull { CLI_NAMEN[it] == f.cli } ?: m.clis.singleOrNull()?.takeIf { it == "antigravity" }
             return Wahl(m, effort ?: return null, profil ?: return null, modus ?: return null, cli ?: return null)
         }
     }
@@ -92,7 +93,7 @@ object OpenLauncherKatalog {
         "antigravity" to listOf("low", "medium", "high", "xhigh", "max"),
     )
 
-    /** Wie fillCliTargets im OpenLauncherMac: Claude-Modelle nur in Claude Code, Google nur in Antigravity, sonst OpenCode plus das eigene CLI des Anbieters. */
+    /** Wie fillCliTargets im OpenLauncherMac (Claude-Modelle nur in Claude Code, sonst OpenCode plus das eigene CLI des Anbieters); bewusst abweichend Google nur in Antigravity. */
     fun clisFuer(anbieter: String): List<String> = when (anbieter.lowercase(Locale.ROOT)) {
         ANTHROPIC -> listOf("claude")
         "openai" -> listOf("opencode", "codex")
@@ -308,7 +309,8 @@ object OpenLauncherKatalog {
             alle.filter(::direkt).joinToString(", ") { it.name } + ".")
         if (treffer.size > 1) return Aufloesung.Frage("„$modellText“ ist nicht eindeutig. Gemeint sein kann: " + treffer.take(8).joinToString(", ") { it.name } + ".")
         val m = treffer.single()
-        val cliGenannt = cliAus(cliText)
+        // Gemini nur im Antigravity CLI: ein genanntes anderes CLI (etwa „OpenCode“ von Jarvis Mac/Windows) wird dorthin umgelenkt.
+        val cliGenannt = cliAus(cliText)?.let { c -> if (m.clis == listOf("antigravity")) "antigravity" else c }
         if (cliGenannt == null && m.clis.size > 1) return Aufloesung.Frage("${m.name} bietet OpenLauncher in " +
             m.clis.joinToString(" und ") { CLI_NAMEN.getValue(it) } + " an. Frag Frank, in welchem CLI es starten soll, und gib seine Wahl in cli mit.", m)
         val cli = cliGenannt ?: m.clis.single()

@@ -917,7 +917,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             karten[id]?.let { karten[id] = it.copy(frage = frageUndKnoepfe(neuGefasst).first, zeit = System.currentTimeMillis(), ausRunde = true) }
             wahlenSichern(app)
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
-                STUFE_CLI -> if (alt.modell == ProgrammiererVorlage.MODELL_NEON) "Frank hat schon Gemini 4 Neon gewählt; im Chat stehen die Knöpfe „Antigravity CLI“ und „OpenCode CLI“."
+                STUFE_CLI -> if (alt.modell == ProgrammiererVorlage.MODELL_NEON) "Frank hat schon Gemini 4 Neon gewählt; es läuft nur im Antigravity CLI, im Chat steht der Knopf „Antigravity CLI“."
                     else "Frank hat schon Sol 6.2 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon ${modellName(alt.modell, alt.cli)} gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
                 STUFE_REVIEW_UMFANG -> "Frank will ein Review; im Chat stehen die Knöpfe „Standard“ und „Sehr ausführlich“ (bis 100 Findings)."
@@ -1022,7 +1022,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
         STUFE_CLI -> if (w.modell == ProgrammiererVorlage.MODELL_NEON)
-            "Programmierauftrag${fuer(w.app)}: Gemini 4 Neon mit Antigravity CLI oder OpenCode CLI?" to listOf(CLI_ANTIGRAVITY to "Antigravity CLI", CLI_OPENCODE to "OpenCode CLI")
+            "Programmierauftrag${fuer(w.app)}: Gemini 4 Neon läuft im Antigravity CLI." to listOf(CLI_ANTIGRAVITY to "Antigravity CLI")
             else "Programmierauftrag${fuer(w.app)}: Sol 6.2 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
         STUFE_REVIEW_UMFANG -> "Programmierauftrag${fuer(w.app)}: Review Standard oder sehr ausführlich mit bis zu 100 Findings?" to listOf(REVIEW_STANDARD to "Standard", REVIEW_SEHR_AUSFUEHRLICH to "Sehr ausführlich")
         STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: " + (if (w.cli == CLI_ANTIGRAVITY) "Review: Ja oder Nein?"
@@ -1069,7 +1069,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (folge != null && sprachGespraech.isNotEmpty()) sprachGespraeche[folge.key] = sprachGespraech
         val e = tippErgebnisse.remove(wahlId)
         val name = when (vorher.stufe) {
-            STUFE_CLI -> (if (vorher.modell == ProgrammiererVorlage.MODELL_NEON) "Gemini 4 Neon im " + (if (wert == CLI_OPENCODE) "OpenCode CLI" else "Antigravity CLI")
+            STUFE_CLI -> (if (vorher.modell == ProgrammiererVorlage.MODELL_NEON) "Gemini 4 Neon im Antigravity CLI"
                 else "Sol 6.2 im " + (if (wert == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI"))
             STUFE_MODELL -> ProgrammiererVorlage.katalogName(wert) ?: if (wert == MODELL_SOL) "Sol 6.2" else "Opus 5.5"
             else -> modellName(vorher.modell, vorher.cli)
@@ -1090,7 +1090,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             w.stufe == STUFE_MODELL && wert == MODELL_SOL && w.ziel != "cloud" && rechnerDa(w.ziel) -> w.copy(modell = MODELL_SOL, stufe = STUFE_CLI)
             // Gemini 4 Neon nur im Antigravity CLI (Frank, 23.11.2026): keine CLI-Frage, gleich die Review-Frage.
             w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_NEON && w.ziel != "cloud" -> w.copy(modell = wert, cli = CLI_ANTIGRAVITY, stufe = STUFE_REVIEW)
-            w.stufe == STUFE_CLI && w.modell == ProgrammiererVorlage.MODELL_NEON && wert != CLI_OPENCODE -> w.copy(cli = CLI_ANTIGRAVITY, stufe = STUFE_REVIEW)
+            // Alte gespeicherte Neon-CLI-Karte: Jede Antwort (auch „OpenCode“) führt ins Antigravity CLI und zur Review-Frage.
+            w.stufe == STUFE_CLI && w.modell == ProgrammiererVorlage.MODELL_NEON -> w.copy(cli = CLI_ANTIGRAVITY, stufe = STUFE_REVIEW)
             w.stufe == STUFE_CLI && wert == CLI_CODEX -> w.copy(cli = CLI_CODEX, stufe = STUFE_REVIEW)
             w.stufe == STUFE_MODELL && wert == ProgrammiererVorlage.MODELL_ARGON && w.ziel != "cloud" -> w.copy(modell = wert, cli = ProgrammiererVorlage.katalogCli(wert).orEmpty(), stufe = STUFE_REVIEW)
             w.stufe == STUFE_REVIEW && w.cli == CLI_ANTIGRAVITY && wert == REVIEW_JA -> w.copy(stufe = STUFE_REVIEW_UMFANG)
