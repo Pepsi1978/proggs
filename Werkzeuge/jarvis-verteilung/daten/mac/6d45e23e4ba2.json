@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Mac-Zentrale zeigt Aufgaben heute nur als Text aus aufgaben_lesen ohne Abhaken; die abhakbare Heute-Karte als Basis für den Bereich Erledigt fehlt in JarvisMac",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T18:31:13+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T18:32:25+01:00"
 }
