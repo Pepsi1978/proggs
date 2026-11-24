@@ -939,6 +939,20 @@
       "plattform": [
         "mac"
       ]
+    },
+    {
+      "id": "M52",
+      "titel": "Helfer-README: Bilder im Chat und Binärgrenze von http/textDatei",
+      "datum": "2026-11-24T13:48",
+      "beleg": "Sitzung 35d56805: rund 6 min Orientierung in HelferLauf.kt, HelferFaehigkeit.kt und ChatDateien.kt, um zu klären, ob und wie ein Helfer ein Foto im Chat zeigen kann",
+      "ort": [
+        "JarvisHelfer/README.md"
+      ],
+      "messbar": false,
+      "pruefung": "Beim nächsten Helferbau mit Bild oder Binärdatei: kein Lesen von HelferLauf.kt/ChatDateien.kt mehr nötig, um die Binärgrenze zu erkennen.",
+      "ruecknahme": "In JarvisHelfer/README.md die zwei Zeilen ab ‚Bilder im Chat: Jede Datei eines Helfers‘ entfernen.",
+      "kosten": "zwei Zeilen in einer Bedarfsdatei (nur beim Helferbau gelesen)",
+      "status": "aktiv"
     }
   ]
 }

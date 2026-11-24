@@ -72,6 +72,9 @@ function ausfuehren(eingabe) {
 - Dateien zählen nur, wenn sie über `textDatei` oder `zipDatei` entstanden sind; ein selbst genannter Pfad wird ignoriert. In der Prüfung bleibt `speicherSchreiben` im Arbeitsspeicher, Dateien landen im Probeordner.
 - Agent-Helfer sehen nur die Werkzeuge aus `rechte.werkzeuge`.
 
+Bilder im Chat: Jede Datei eines Helfers erscheint im laufenden Chat als Anhang; als Bild nur, was Androids BitmapFactory dekodiert (nicht SVG).
+Binärdaten gehen nicht durch: `http` liefert Text (UTF-8), `textDatei` schreibt UTF-8. Ein Foto entsteht deshalb nur als BMP aus 7-Bit-Bytes; Vorlage `ein-oeffentlich-verfuegbares-f` (wsrv.nl mit `output=png&l=0&encoding=base64`).
+
 Grenzen: 60 s Laufzeit, keine Java-Brücke, 20 MB je Datei, 64 MB Archivinhalt vor dem Packen, 2.000 Aufrufebenen, 4 MB je HTTP-Antwort. Höchstens zwei Läufe gleichzeitig, mit niedriger Priorität.
 
 Prüfung: alle Tests zusammen höchstens 2 Minuten, nach einem Zeitüberschreiten werden die übrigen übersprungen. Prüfläufe schreiben in einen eigenen Ordner. `enthaelt` vergleicht auch gegen `daten` als JSON-Text, und Android schreibt dort `/` als `\/`: Erwartungen mit Schrägstrich gehören in `text`.
