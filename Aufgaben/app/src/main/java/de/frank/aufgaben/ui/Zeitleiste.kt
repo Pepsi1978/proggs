@@ -53,7 +53,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -72,8 +75,19 @@ import kotlinx.coroutines.delay
 
 private val STUNDE = 42.dp
 private val LUECKE = 30.dp
-private val OBEN = 12.dp
+private val OBEN = 20.dp
 private val SPALTE = 54.dp
+/** Mindesthöhe einer Terminkarte; muss zu [Zeitband] BLOCK_MIN passen (28 dp bei 42 dp pro Stunde = 40 Minuten). */
+private val KARTE_MIN = 28.dp
+
+/** Höhe einer Terminkarte. Die Karte steht mittig auf ihrer Startzeit (Kartenmitte = Startzeit auf der Zeitleiste). */
+private fun karteHoehe(dauer: Int) = (STUNDE * (maxOf(dauer, 30) / 60f) - 3.dp).coerceAtLeast(KARTE_MIN)
+
+/** Gelb des Startzeit-Strichs (wie die mittlere Priorität). */
+private fun startGelb(dunkel: Boolean) = if (dunkel) Color(0xFFFFD233) else Color(0xFFE8B000)
+
+/** Wie weit der gelbe Startzeit-Strich in die Karte hineinreicht; dahinter beginnen Uhrzeit und Titel. */
+private val STRICH_IN_KARTE = 13.dp
 
 /**
  * Senkrechter Zeitpfeil. Karten, die darüber gezogen werden, zeigen links die Uhrzeit, die beim Loslassen gilt
@@ -223,14 +237,32 @@ private fun Leiste(
         val nSpalten = spalten.size.coerceAtLeast(1)
         sortiert.forEach { a ->
             val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
-            val oben = OBEN + yDp(min)
-            val h = (STUNDE * (maxOf(a.dauer, 30) / 60f) - 3.dp).coerceAtLeast(34.dp)
+            // Kartenmitte genau auf der Startzeit: Oberkante eine halbe Kartenhöhe darüber.
+            val h = karteHoehe(a.dauer)
+            val oben = OBEN + yDp(min) - h / 2
             val sp = spalteVon[a.id] ?: 0
             Box(
                 Modifier.offset(x = SPALTE + flaeche / nSpalten * sp, y = oben)
                     .width(flaeche / nSpalten - 4.dp).height(h)
-                    .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y) },
+                    // Gemeldet wird die Kartenmitte: Sie liegt auf der Zeitlinie, an der beim Loslassen abgelegt wurde.
+                    .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y + it.size.height / 2f) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
+        }
+        // Gelber Startzeit-Strich: vom Zeitpfeil waagerecht bis in die Karte, genau auf Höhe ihrer Mitte (= Startzeit).
+        // Über den Karten gezeichnet, damit er sichtbar in die Karte hineinreicht; dahinter steht „13:30 Uhr Titel“.
+        Canvas(Modifier.fillMaxSize()) {
+            val x = SPALTE.toPx() - 8.dp.toPx()
+            val gelb = startGelb(f.dunkel)
+            sortiert.forEach { a ->
+                val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
+                val y = obenPx + band.y(min, stundePx, lueckePx)
+                val sp = spalteVon[a.id] ?: 0
+                val ende = (SPALTE + flaeche / nSpalten * sp + STRICH_IN_KARTE).toPx()
+                val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
+                val farbe = gelb.copy(alpha = if (gezogen) 0.25f else if (a.erledigt) 0.45f else 1f)
+                drawLine(farbe, Offset(x, y), Offset(ende, y), 2.5.dp.toPx(), StrokeCap.Round)
+                drawCircle(farbe, 4.5.dp.toPx(), Offset(x, y))
+            }
         }
         // Uhrzeit-Marke mittig auf der Jetzt-Linie, über den Terminen gezeichnet, damit sie nie verdeckt ist
         Canvas(Modifier.fillMaxSize()) {
@@ -337,9 +369,11 @@ fun ZeitVorschau(zustand: ZiehZustand) {
     val breite = with(dichte) { (m.rechts - m.links).toDp() }
     val flaeche = breite - SPALTE - 6.dp
     val dauer = zustand.aufgabe?.dauer ?: 30
+    val h = karteHoehe(dauer)
+    // Wie die abgelegte Karte: mittig auf der Zeitlinie.
     Box(
-        Modifier.graphicsLayer { translationX = m.links - zustand.ursprung.x; translationY = zustand.linieY() - zustand.ursprung.y }.offset(x = SPALTE)
-            .width(flaeche).height(STUNDE * (maxOf(dauer, 30) / 60f))
+        Modifier.graphicsLayer { translationX = m.links - zustand.ursprung.x; translationY = zustand.linieY() - zustand.ursprung.y - h.toPx() / 2f }.offset(x = SPALTE)
+            .width(flaeche).height(h)
             .glas(f, radius = 12.dp, erhoeht = 0f, fuellung = f.primaer.copy(alpha = 0.22f)),
     )
     Canvas(
@@ -373,28 +407,28 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
     val f = LocalFarben.current.let { if (a.erledigt) it.erledigt() else it }
     val farbe = f.prio(a.prio)
     val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
-    val ende = (a.minuten ?: 0) + a.dauer
     Row(
         Modifier.fillMaxSize()
             .graphicsLayer { alpha = if (gezogen) 0.25f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
             .glas(f, radius = 12.dp, erhoeht = 1f, fuellung = f.flaecheStark, toenung = farbe)
             .ziehbar(a, zustand)
             .antippen(haptik = false) { if (zustand.tippErlaubt()) onTipp() },
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(5.dp).fillMaxSize().knopf3d(farbe, farbe.copy(alpha = 0.7f), 3.dp, f.dunkel))
-        Column(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 4.dp)) {
-            // Als Wecker eingestellt: Weckersymbol direkt neben dem Titel (auch in kurzen Blöcken sichtbar).
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    a.titel, color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
-                )
-                if (a.erinnerung && a.alsWecker) Icon(Icons.Rounded.Alarm, "Wecker", tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(14.dp))
-            }
-            Row {
-                Text("${Tage.zeit(a.minuten ?: 0)}–${Tage.zeit(ende % (24 * 60))}", color = f.textLeise, fontSize = 11.sp)
-                if (a.erinnerung && !a.alsWecker) Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(12.dp))
-            }
+        Box(Modifier.width(5.dp).fillMaxHeight().knopf3d(farbe, farbe.copy(alpha = 0.7f), 3.dp, f.dunkel))
+        // Auf Kartenmitte (= Startzeit): direkt hinter dem gelben Strich die gewählte Uhrzeit, dann der Titel.
+        Row(Modifier.weight(1f).padding(start = STRICH_IN_KARTE, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("${Tage.zeit(a.minuten ?: 0)} Uhr ") }
+                    append(a.titel)
+                },
+                color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
+            )
+            // Als Wecker eingestellt: Weckersymbol direkt neben dem Titel, sonst die Glocke bei Erinnerung.
+            if (a.erinnerung && a.alsWecker) Icon(Icons.Rounded.Alarm, "Wecker", tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(14.dp))
+            if (a.erinnerung && !a.alsWecker) Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(12.dp))
         }
         Box(Modifier.size(34.dp).antippen(haptik = true, aktion = onErledigt), contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(18.dp)) {

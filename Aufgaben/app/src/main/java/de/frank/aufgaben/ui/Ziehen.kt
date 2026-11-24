@@ -39,8 +39,8 @@ class LeistenMass(val links: Float, val rechts: Float, val startImInhalt: Float,
 }
 
 /**
- * Ein gerade auf eine Zeitleiste abgelegter Termin: [zielY] ist die Fensterhöhe, an der seine Oberkante beim Loslassen
- * lag (dort stand der Geisterblock). [istY] meldet der Termin selbst, sobald er an seinem neuen Platz liegt.
+ * Ein gerade auf eine Zeitleiste abgelegter Termin: [zielY] ist die Fensterhöhe der Zeitlinie beim Loslassen (dort steht
+ * die Mitte des Geisterblocks). [istY] meldet der Termin selbst (seine Kartenmitte), sobald er an seinem neuen Platz liegt.
  */
 class Ablage(val id: Long, val tag: Long, val minuten: Int, val zielY: Float) {
     var istY: Float? = null

@@ -57,8 +57,8 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
         /** Kürzeste Lücke, die zusammenrückt: Bei weniger als zwei freien Stunden verschwände keine Stundenzahl. */
         const val MIN_LUECKE = 120
 
-        /** Ein Terminblock ist mindestens 34 dp hoch, bei 42 dp pro Stunde also gut 48 Minuten. */
-        private const val BLOCK_MIN = 49
+        /** Ein Terminblock ist mindestens 28 dp hoch, bei 42 dp pro Stunde also 40 Minuten. */
+        private const val BLOCK_MIN = 40
 
         /**
          * Band ohne Ziehen. Mit [auto]: eine Stunde vor dem ersten bis eine Stunde nach dem letzten Termin. Mit [luecken]:
@@ -73,7 +73,9 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
                 a = minOf(a, jetzt / 60 * 60)
                 b = maxOf(b, ((jetzt / 60 + 1) * 60).coerceAtMost(24 * 60))
             }
-            val strecken = termine.mapNotNull { t -> t.minuten?.let { it to it + maxOf(t.dauer, BLOCK_MIN) } } + listOfNotNull(jetzt?.let { it to it + 1 })
+            // Die Karte steht mittig auf ihrer Startzeit: Belegt ist also auch die halbe Kartenhöhe davor, sonst schöbe sie
+            // sich über die „… frei“-Marke einer Lücke direkt darüber.
+            val strecken = termine.mapNotNull { t -> t.minuten?.let { val halb = maxOf(t.dauer, BLOCK_MIN) / 2; (it - halb) to it + maxOf(t.dauer, halb) } } + listOfNotNull(jetzt?.let { it to it + 1 })
             if (!luecken || strecken.size < 2) return Zeitband(a, b)
             // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
             val belegt = mutableListOf<IntArray>()
