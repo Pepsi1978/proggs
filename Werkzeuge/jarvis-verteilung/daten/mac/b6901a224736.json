@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Nachtragsstände führt nur das Auftragsbuch des Handy-Jarvis; JarvisMac liest sie per MCP (programmierauftraege, programmier_nachtrag) und bekommt die neuen Texte ohne eigenen Code, der Antigravity-Warter (jarvis_agy_hook.py) ist gemeinsamer PC-Brücken-Code und gilt am Mac schon",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T11:00:36+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T11:02:40+01:00"
 }
