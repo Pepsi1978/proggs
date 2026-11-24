@@ -403,38 +403,30 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                 val kannVorlesen = gezeigt.isNotEmpty() || spielStand.laeuft
                 val laeuft = spielStand.laeuft
 
-                // Pause/Weiter: nur während einer Session aktiv; hält genau an der aktuellen Stelle an und setzt dort fort.
-                val pausiert = laeuft && spielStand.pausiert
-                Box(
-                    Modifier
-                        .size(62.dp)
-                        .then(
-                            when {
-                                pausiert -> Modifier.knopf3d(MENTAL_AKZENT, MENTAL_AKZENT_HELL, 31.dp, f.dunkel)
-                                laeuft -> Modifier.glas(f, 31.dp, erhoeht = 1.2f, fuellung = f.flaecheStark, toenung = MENTAL_AKZENT)
-                                else -> Modifier.glas(f, 31.dp, erhoeht = 0.3f, fuellung = f.flaeche).alpha(0.45f)
-                            },
+                // Pause/Weiter: nur sichtbar, solange eine Session läuft; hält genau an der aktuellen Stelle an und setzt dort fort.
+                if (laeuft) {
+                    val pausiert = spielStand.pausiert
+                    Box(
+                        Modifier
+                            .size(62.dp)
+                            .then(
+                                if (pausiert) {
+                                    Modifier.knopf3d(MENTAL_AKZENT, MENTAL_AKZENT_HELL, 31.dp, f.dunkel)
+                                } else {
+                                    Modifier.glas(f, 31.dp, erhoeht = 1.2f, fuellung = f.flaecheStark, toenung = MENTAL_AKZENT)
+                                },
+                            )
+                            .antippen { MentalitaetSpieler.pauseUmschalten() }
+                            .semantics { contentDescription = if (pausiert) "Vorlesen fortsetzen" else "Vorlesen pausieren" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (pausiert) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            null,
+                            tint = if (pausiert) Color.White else f.text,
+                            modifier = Modifier.size(30.dp),
                         )
-                        .antippen(haptik = laeuft) { if (laeuft) MentalitaetSpieler.pauseUmschalten() }
-                        .semantics {
-                            contentDescription = when {
-                                pausiert -> "Vorlesen fortsetzen"
-                                laeuft -> "Vorlesen pausieren"
-                                else -> "Pause, erst nach dem Start verfügbar"
-                            }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (pausiert) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                        null,
-                        tint = when {
-                            pausiert -> Color.White
-                            laeuft -> f.text
-                            else -> f.textSchwach
-                        },
-                        modifier = Modifier.size(30.dp),
-                    )
+                    }
                 }
                 Box(
                     Modifier

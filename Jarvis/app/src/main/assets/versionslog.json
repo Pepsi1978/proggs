@@ -960,6 +960,8 @@
     {"versionCode": 951, "versionName": "1.8.940", "stand": "24.11.2026, 09:21 Uhr", "notiz": "Mentalität: Abgeschnittene Sätze werden erkannt und neu erzeugt, bei Netzproblemen erscheint „Internetprobleme“, und ein neuer Pause-/Weiter-Knopf hält die Session genau an der aktuellen Stelle an."},
     {"versionCode": 952, "versionName": "1.8.941", "stand": "24.11.2026, 09:32 Uhr", "notiz": "Mentalität: Ein dauerhaft fehlerhafter Satz wird nach drei Versuchen ausgelassen statt die Session zu beenden, kurze Netzaussetzer bleiben still, und Pause zeigt während des Ladens nicht mehr fälschlich Internetprobleme."},
     {"versionCode": 953, "versionName": "1.8.942", "stand": "24.11.2026, 09:36 Uhr", "notiz": "OpenLauncher-Auswahl am Programmier-Knopf zeigt die Modelle in derselben Reihenfolge und mit denselben ausgeblendeten Modellen wie OpenLauncher auf allen Rechnern."},
-    {"versionCode": 954, "versionName": "1.8.943", "stand": "24.11.2026, 09:45 Uhr", "notiz": "Modellfavoriten am Programmierbutton lassen sich per langem Druck einzeln über die OpenLauncher-Auswahl neu belegen, und die Programmierknöpfe heben sich im Hellmodus farbig ab."}
+    {"versionCode": 954, "versionName": "1.8.943", "stand": "24.11.2026, 09:45 Uhr", "notiz": "Modellfavoriten am Programmierbutton lassen sich per langem Druck einzeln über die OpenLauncher-Auswahl neu belegen, und die Programmierknöpfe heben sich im Hellmodus farbig ab."},
+    {"versionCode": 955, "versionName": "1.8.944", "stand": "24.11.2026, 09:49 Uhr", "notiz": "Mentalität: Der Pause-/Weiter-Knopf erscheint nur noch, solange eine Vorlese-Session läuft, und verschwindet nach dem Stoppen wieder."},
+    {"versionCode": 956, "versionName": "1.8.945", "stand": "24.11.2026, 09:49 Uhr", "notiz": "Review-Befunde an den Modellfavoriten behoben: Antigravity-Favorit bleibt nicht stiller Standard, lange Namen werden gekürzt, OpenLauncher-Knopf reagiert nicht auf langen Druck."}
 ]
 }
