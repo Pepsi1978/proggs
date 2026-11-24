@@ -310,6 +310,44 @@ fun RueckfrageEbene(vm: AppViewModel) {
     androidx.compose.runtime.key(r.id) { Vollbild(vm, r, gespraechId) }
 }
 
+/**
+ * Schutz nach dem Verschwinden der Rückfrage-Ebene (gesendet, geschlossen, nächste rückt nach): [NACHLAUF_MS] lang schluckt eine
+ * unsichtbare Schicht alle Tipps. Sonst traf ein zweiter Tipp auf „Antwort senden“ das Diktier-Mikrofon der Eingabeblase darunter
+ * und beendete ein laufendes Diktat (24.11.2026). Steht in [JarvisApp] direkt nach [RueckfrageEbene]; die Sperre im ViewModel
+ * ([AppViewModel.tippSperreBis]) fängt zusätzlich ab, was die Schicht verpasst.
+ */
+@Composable
+fun RueckfrageNachlauf(vm: AppViewModel) {
+    val offen = vm.rueckfrageDialog != null
+    // Bewusst kein Zustand: Die Schicht muss schon in dem Bild stehen, in dem die Ebene verschwindet, nicht erst ein Bild später.
+    val merker = androidx.compose.runtime.remember { longArrayOf(0L, 0L) } // [0] = war offen (1/0), [1] = Schutz bis
+    if (offen) merker[0] = 1L
+    else if (merker[0] == 1L) {
+        merker[0] = 0L
+        merker[1] = android.os.SystemClock.uptimeMillis() + NACHLAUF_MS
+        vm.tippSperreBis = merker[1]
+    }
+    var ende by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    val aktiv = !offen && android.os.SystemClock.uptimeMillis() < merker[1] && ende != merker[1]
+    if (!aktiv) return
+    val bis = merker[1]
+    LaunchedEffect(bis) {
+        delay((bis - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L))
+        ende = bis
+    }
+    Box(Modifier.fillMaxSize().pointerInput(bis) {
+        awaitPointerEventScope {
+            while (true) {
+                val ereignis = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                ereignis.changes.forEach { it.consume() }
+            }
+        }
+    })
+}
+
+/** So lange nach dem Verschwinden der Rückfrage-Ebene gelten Tipps als durchgereicht. */
+private const val NACHLAUF_MS = 900L
+
 @Composable
 private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
     val f = LocalFarben.current

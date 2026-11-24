@@ -1425,6 +1425,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Jedes Diktat endet direkt mit dem [DiktatTrenner] „ ; “ (ohne Zeilenumbruch), das nächste folgt dahinter; gesendet wird erst mit dem Pfeil.
      */
     fun diktatTippen() {
+        if (nachRueckfrageGesperrt("Mikrofon der Eingabeblase")) return
         // Zurück in der Session, deren Aufnahme mitgenommen wurde: Tippen beendet sie und schreibt alles seit dem Start ins Feld.
         mitnahme?.takeIf { it.sitzung == sitzungId }?.let { m ->
             when {
@@ -1436,7 +1437,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         when {
             schreibtMit -> Unit
-            nimmtAuf -> aufnahmeBeenden()
+            nimmtAuf -> aufnahmeBeenden(anlass = "Mikrofon der Eingabeblase getippt")
             transkriptionFehlt() != null -> { meldung = transkriptionFehlt(); reiter = Reiter.EINSTELLUNGEN }
             else -> {
                 // Der erkannte Text klappt die Blase auf, damit Frank ihn gleich sieht (ohne Tastatur).
@@ -1454,6 +1455,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Tipp auf den Live-Knopf: Live-Modus starten oder, wenn er läuft, beenden (wie langes Drücken der Sprachblase). */
     fun liveTippen() {
+        if (nachRueckfrageGesperrt("Live-Knopf")) return
         when {
             sprachmodusAktiv -> sprachmodusBeenden("Live-Knopf")
             // Diktat oder Mitschrift laufen noch: nichts still verschlucken, sondern sagen, was zuerst nötig ist.
@@ -2033,7 +2035,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ziel: (String) -> Unit = { t -> antwortDiktate[feld] = listOfNotNull(antwortDiktate[feld], t).joinToString(" ") }
         mitnehmen("Mikrofon eines Antwortfelds")
         when {
-            nimmtAuf && antwortDiktatFeld == feld -> aufnahmeBeenden()
+            nimmtAuf && antwortDiktatFeld == feld -> aufnahmeBeenden(anlass = "Mikrofon des Antwortfelds getippt")
             nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
             antwortFormuliertFeld == feld -> meldung = "Jarvis formuliert diese Antwort gerade."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
@@ -2044,7 +2046,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Beendet eine laufende Antwort-Aufnahme (Vollbild geschlossen oder nächste Frage): Das Gesprochene geht noch ins Feld. */
     fun antwortAufnahmeBeenden() {
         if (antwortDiktatFeld == null) return
-        if (nimmtAuf) aufnahmeBeenden()
+        if (nimmtAuf) aufnahmeBeenden(anlass = "Antwort-Diktat der Rückfrage beendet")
         // Noch beim Starten (Erlaubnis-Abfrage, Mikrofon wird geholt): nicht mehr anfangen.
         else if (!schreibtMit) { antwortStartAbbrechen = true; antwortDiktatFeld = null; diktatZiel = null }
     }
@@ -2206,6 +2208,67 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Bis zu diesem Zeitpunkt (uptimeMillis) gelten Tipps auf Mikrofon und Live-Knopf als durchgereicht: Die Rückfrage-Ebene ist
+     * gerade verschwunden, ein Tipp auf ihren „Antwort senden“ traf sonst den Knopf darunter und beendete das laufende Diktat.
+     * Setzt [RueckfrageNachlauf]; dort schluckt zusätzlich eine unsichtbare Schicht alle Tipps.
+     */
+    var tippSperreBis = 0L
+
+    private fun nachRueckfrageGesperrt(knopf: String): Boolean {
+        if (android.os.SystemClock.uptimeMillis() >= tippSperreBis) return false
+        Logbuch.sprache("Tipp nach Rückfrage ignoriert", knopf)
+        return true
+    }
+
+    private var aufnahmeWache: Job? = null
+
+    /**
+     * Wacht über eine eigene Aufnahme, solange sie läuft. Schaltet Android sie stumm (eine andere App hat das Mikrofon), steht das
+     * sichtbar da und die Aufnahme läuft weiter. Liefert das Mikrofon gar nichts mehr (vom System beendet), endet sie wie von Hand:
+     * Das bisher Aufgenommene wird mitgeschrieben statt still zu verfallen.
+     */
+    private fun aufnahmeWachen() {
+        aufnahmeWache?.cancel()
+        aufnahmeWache = viewModelScope.launch {
+            val app = getApplication<Application>()
+            val am = app.getSystemService(android.media.AudioManager::class.java)
+            var stumm = false
+            val rueckruf = if (android.os.Build.VERSION.SDK_INT >= 29 && am != null) object : android.media.AudioManager.AudioRecordingCallback() {
+                override fun onRecordingConfigChanged(configs: MutableList<android.media.AudioRecordingConfiguration>?) {
+                    // Nur die eigenen Aufnahmen tragen den Stumm-Zustand; das Weckwort pausiert während des Diktats.
+                    val jetzt = configs.orEmpty().any { it.isClientSilenced }
+                    if (jetzt == stumm || !nimmtAuf) return
+                    stumm = jetzt
+                    if (jetzt) {
+                        Logbuch.sprache("Aufnahme stummgeschaltet", "Android gibt das Mikrofon gerade einer anderen App")
+                        meldung = "Android hat das Mikrofon gerade einer anderen App gegeben. Was du bisher gesagt hast, bleibt erhalten."
+                    } else {
+                        Logbuch.sprache("Aufnahme wieder frei", "Mikrofon zurück bei Jarvis")
+                        meldung = "Das Mikrofon ist wieder frei, ich höre weiter zu."
+                    }
+                }
+            }.also { runCatching { am.registerAudioRecordingCallback(it, android.os.Handler(android.os.Looper.getMainLooper())) } } else null
+            try {
+                var bisher = mikro.pufferBytes
+                var still = 0
+                while (nimmtAuf && abzweigAb < 0) {
+                    kotlinx.coroutines.delay(500)
+                    val jetzt = mikro.pufferBytes
+                    if (jetzt != bisher) { bisher = jetzt; still = 0; continue }
+                    // 3 s ohne ein einziges neues Byte: Das Mikrofon liefert nichts mehr (Stille zählt mit, sie kommt als Nullen).
+                    if (++still < 6 || !nimmtAuf || abzweigAb >= 0) continue
+                    Logbuch.sprache("Aufnahme vom System unterbrochen", "${jetzt / 1024} KB gesichert")
+                    meldung = "Android hat die Aufnahme unterbrochen. Was du bis dahin gesagt hast, schreibe ich jetzt mit."
+                    aufnahmeBeenden(freigeben = weckwortLauf?.isActive != true, anlass = "vom System unterbrochen")
+                    break
+                }
+            } finally {
+                rueckruf?.let { runCatching { am?.unregisterAudioRecordingCallback(it) } }
+            }
+        }
+    }
+
     /** Wartet, bis „Hey Jarvis“ das Mikrofon losgelassen hat, und startet dann die Aufnahme. */
     private suspend fun aufnahmeStarten(): Boolean {
         val stand = wechselStand
@@ -2224,6 +2287,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf = true; aufnahmeStand = stand
             abzweigAb = -1
             aufnahmeBeginn = System.currentTimeMillis()
+            aufnahmeWachen()
             piepAbBytes = PIEP_KEINER
             // Verbindungen schon jetzt öffnen: DNS und TLS fallen nicht mehr in die Wartezeit nach der Frage.
             runCatching { agent.auth.vorwaermen(einstellungen.modell); vorleser.vorwaermen() }
@@ -2863,7 +2927,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val BEREIT_TON: ShortArray by lazy { de.frank.jarvis.audio.Signalton.ton(listOf(400.0 to 1.0, 1200.0 to 1.0), 35, 0.8, 2) }
 
     /** [freigeben] = false im Gesprächsmodus: Das Mikrofon bleibt für die nächste Runde reserviert. */
-    private fun aufnahmeBeenden(freigeben: Boolean = true) {
+    private fun aufnahmeBeenden(freigeben: Boolean = true, anlass: String = "") {
+        // Wer die Aufnahme beendet hat, steht im Logbuch: Ohne das war am 24.11.2026 nicht zu klären, ob Frank selbst oder ein Pfad der App stoppte.
+        if (anlass.isNotEmpty()) Logbuch.sprache("Aufnahme beendet", anlass)
         nimmtAuf = false
         val schluss = schlussStilleMs
         schlussStilleMs = 0L
@@ -3639,9 +3705,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun mitnahmeWachen(m: Mitnahme) {
         var letzteStimme = System.currentTimeMillis()
         var rahmen = mikro.sprachRahmen ?: 0L
+        var puffer = mikro.pufferBytes
+        var stillstand = 0
         while (m.laeuft && mitnahme === m) {
             kotlinx.coroutines.delay(1_000)
             if (!m.laeuft || mitnahme !== m) return
+            // Liefert das Mikrofon nichts mehr (vom System beendet), gilt es als beendet: alles bis dahin mitschreiben.
+            val pufferJetzt = mikro.pufferBytes
+            if (pufferJetzt != puffer) { puffer = pufferJetzt; stillstand = 0 } else stillstand++
+            if (stillstand >= 3) {
+                Logbuch.sprache("Aufnahme vom System unterbrochen", "mitgenommen, ${pufferJetzt / 1024} KB gesichert")
+                meldung = "Android hat die Aufnahme unterbrochen. Was du bis dahin gesagt hast, schreibe ich jetzt mit."
+                mitnahmeBeenden("vom System unterbrochen")
+                return
+            }
             val jetzt = System.currentTimeMillis()
             val r = mikro.sprachRahmen
             if (r != null) { if (r > rahmen) { rahmen = r; letzteStimme = jetzt } }

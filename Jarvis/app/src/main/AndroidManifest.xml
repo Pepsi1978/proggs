@@ -262,6 +262,15 @@
                 <action android:name="de.frank.jarvis.SPRACH_MESSLAUF" />
             </intent-filter>
         </receiver>
+        <!-- Gerätetest: Rückfragen während eines Diktats über adb (ui/RueckfrageTest.kt), nur Shell und System. -->
+        <receiver
+            android:name=".ui.RueckfrageTest"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="de.frank.jarvis.RUECKFRAGE_TEST" />
+            </intent-filter>
+        </receiver>
         <!-- Diagnose-Mitschnitt des Weckworts über adb (weckwort/WeckwortMitschnitt.kt), nur Shell und System. -->
         <receiver
             android:name=".weckwort.WeckwortMitschnitt$Empfaenger"

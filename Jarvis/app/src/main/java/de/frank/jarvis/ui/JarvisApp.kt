@@ -211,6 +211,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             if (!vm.gesperrt) OpenLauncherWahlEbene(vm)
             // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.
             if (!vm.gesperrt) RueckfrageEbene(vm)
+            RueckfrageNachlauf(vm)
             if (!vm.gesperrt) TokenlimitFenster(vm)
             if (!vm.gesperrt && vm.mitnahme != null && !(sessionSichtbar && vm.mitnahmeHier)) MitnahmeLeiste(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
             Meldung(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
