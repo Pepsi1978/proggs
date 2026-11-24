@@ -104,6 +104,8 @@ internal class MeshLibrary {
     val frustum: GpuMesh = buildCylinder(22, 0.5f, 0.24f)
     /** Offener Lampenschirm-Kegelstumpf (doppelseitig mit Wandstärke, unten r=0.5, oben r=0.20). */
     val lampShade: GpuMesh = buildHollowShade(22, 0.5f, 0.20f)
+    /** Leicht geschwungene doppelseitige Wandung für das geflochtene Katzenkörbchen (unten r=0.50, oben r=0.40). */
+    val catBasketWall: GpuMesh = buildHollowShade(24, 0.50f, 0.40f)
     /** Abgerundete Kapsel (Gesamthöhe 1.0 von -0.5..+0.5, Radius 0.22) für organische Gliedmaßen & Körper. */
     val capsule: GpuMesh = buildCapsule(16, 6, radius = 0.22f, totalHeight = 1.0f)
     /** Dickere Kapsel (Radius 0.34, Höhe 1.0) für Rumpf, Katzenkörper und Kissen. */
@@ -128,6 +130,7 @@ internal class MeshLibrary {
         cylinder.release()
         frustum.release()
         lampShade.release()
+        catBasketWall.release()
         capsule.release()
         thickCapsule.release()
         torus.release()

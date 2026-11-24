@@ -194,3 +194,84 @@ internal fun computeNormalMatrix3(model: FloatArray, out9: FloatArray) {
 internal fun degToRad(deg: Float): Float = deg * (PI_F / 180f)
 internal fun sinDeg(deg: Float): Float = sin(degToRad(deg))
 internal fun cosDeg(deg: Float): Float = cos(degToRad(deg))
+
+/** Interpoliert zwei Winkel in Grad stets über den kürzesten Drehweg (kein 300°-Rückwärtsspin). */
+internal fun lerpAngleDeg(a: Float, b: Float, t: Float): Float {
+    val c = t.coerceIn(0f, 1f)
+    val diff = ((b - a + 540f) % 360f + 360f) % 360f - 180f
+    return a + diff * c
+}
+
+/**
+ * Vorberechneter kubischer 2D-Bezierpfad (XZ-Ebene) mit exakter Bogenlänge, Tangenten-Ausrichtung
+ * und allokationsfreier Auswertung für rutschfreies, natürliches Gehen und Traben.
+ */
+internal class CubicPath2D(
+    private val x0: Float, private val z0: Float,
+    private val x1: Float, private val z1: Float,
+    private val x2: Float, private val z2: Float,
+    private val x3: Float, private val z3: Float,
+    samples: Int = 32,
+) {
+    private val cumLen = FloatArray(samples + 1)
+    val totalLength: Float
+
+    init {
+        var px = x0
+        var pz = z0
+        var acc = 0f
+        cumLen[0] = 0f
+        for (i in 1..samples) {
+            val u = i.toFloat() / samples
+            val cx = evalX(u)
+            val cz = evalZ(u)
+            val dx = cx - px
+            val dz = cz - pz
+            acc += sqrt(dx * dx + dz * dz)
+            cumLen[i] = acc
+            px = cx
+            pz = cz
+        }
+        totalLength = acc
+    }
+
+    fun evalX(uRaw: Float): Float {
+        val u = uRaw.coerceIn(0f, 1f)
+        val omt = 1f - u
+        return omt * omt * omt * x0 + 3f * omt * omt * u * x1 + 3f * omt * u * u * x2 + u * u * u * x3
+    }
+
+    fun evalZ(uRaw: Float): Float {
+        val u = uRaw.coerceIn(0f, 1f)
+        val omt = 1f - u
+        return omt * omt * omt * z0 + 3f * omt * omt * u * z1 + 3f * omt * u * u * z2 + u * u * u * z3
+    }
+
+    /** Tangenten-Gierwinkel in Grad (OpenGL: lokales +X zeigt nach (cos yaw, -sin yaw)). */
+    fun evalYawDeg(uRaw: Float): Float {
+        val u = uRaw.coerceIn(0.001f, 0.999f)
+        val omt = 1f - u
+        val dx = 3f * omt * omt * (x1 - x0) + 6f * omt * u * (x2 - x1) + 3f * u * u * (x3 - x2)
+        val dz = 3f * omt * omt * (z1 - z0) + 6f * omt * u * (z2 - z1) + 3f * u * u * (z3 - z2)
+        return kotlin.math.atan2(-dz, dx) * (180f / PI_F)
+    }
+
+    /** Zurückgelegte Bogenlänge in Metern bis zum Kurvenparameter [uRaw] (für rutschfreie Schritte). */
+    fun distanceAt(uRaw: Float): Float {
+        val u = uRaw.coerceIn(0f, 1f)
+        val n = cumLen.size - 1
+        val scaled = u * n
+        val idx = scaled.toInt().coerceIn(0, n - 1)
+        val frac = scaled - idx
+        return cumLen[idx] + (cumLen[idx + 1] - cumLen[idx]) * frac
+    }
+
+    /** Momentane Bogenlängen-Ableitung ds/du am Parameter [uRaw]. */
+    fun speedAt(uRaw: Float): Float {
+        val u = uRaw.coerceIn(0f, 1f)
+        val omt = 1f - u
+        val dx = 3f * omt * omt * (x1 - x0) + 6f * omt * u * (x2 - x1) + 3f * u * u * (x3 - x2)
+        val dz = 3f * omt * omt * (z1 - z0) + 6f * omt * u * (z2 - z1) + 3f * u * u * (z3 - z2)
+        return sqrt(dx * dx + dz * dz)
+    }
+}

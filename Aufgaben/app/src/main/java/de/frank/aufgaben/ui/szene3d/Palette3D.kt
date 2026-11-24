@@ -38,12 +38,20 @@ internal data class Palette3D(
     val lampeSchirm: FloatArray,
     val pflanzeBlatt: FloatArray,
     val topf: FloatArray,
+    val korbWicker: FloatArray,
+    val korbWickerAlt: FloatArray,
+    val korbKissen: FloatArray,
     val himmelTagOben: FloatArray,
     val himmelTagUnten: FloatArray,
     val himmelAbendOben: FloatArray,
     val himmelAbendUnten: FloatArray,
     val belichtung: Float,
-)
+) {
+    override fun equals(other: Any?): Boolean =
+        other is Palette3D && design == other.design && dunkel == other.dunkel
+
+    override fun hashCode(): Int = 31 * design.hashCode() + dunkel.hashCode()
+}
 
 internal fun palette3DFuer(design: Design, dunkel: Boolean): Palette3D {
     val belichtung = if (dunkel) 0.90f else 1.06f
@@ -78,6 +86,9 @@ internal fun palette3DFuer(design: Design, dunkel: Boolean): Palette3D {
             lampeSchirm = hexLinear(0xE96D1E),
             pflanzeBlatt = hexLinear(0x478A57),
             topf = hexLinear(0xC46F4B),
+            korbWicker = hexLinear(0xC99862),
+            korbWickerAlt = hexLinear(0x966939),
+            korbKissen = hexLinear(0xF7E8D4),
             himmelTagOben = hexLinear(0x5DA5DF),
             himmelTagUnten = hexLinear(0xFFE5BD),
             himmelAbendOben = hexLinear(0x3E3168),
@@ -114,6 +125,9 @@ internal fun palette3DFuer(design: Design, dunkel: Boolean): Palette3D {
             lampeSchirm = hexLinear(0x7355E8),
             pflanzeBlatt = hexLinear(0x4B8F69),
             topf = hexLinear(0xB89885),
+            korbWicker = hexLinear(0xBE9E78),
+            korbWickerAlt = hexLinear(0x8A6C4C),
+            korbKissen = hexLinear(0xEDE6FA),
             himmelTagOben = hexLinear(0x679CE2),
             himmelTagUnten = hexLinear(0xF5D9E8),
             himmelAbendOben = hexLinear(0x2A235E),
@@ -150,6 +164,9 @@ internal fun palette3DFuer(design: Design, dunkel: Boolean): Palette3D {
             lampeSchirm = hexLinear(0x348E5E),
             pflanzeBlatt = hexLinear(0x3B8E4C),
             topf = hexLinear(0xC4744F),
+            korbWicker = hexLinear(0xC69D6B),
+            korbWickerAlt = hexLinear(0x916B3E),
+            korbKissen = hexLinear(0xE5F4E9),
             himmelTagOben = hexLinear(0x5AA8DE),
             himmelTagUnten = hexLinear(0xE9F5CE),
             himmelAbendOben = hexLinear(0x2D3E5E),
@@ -186,6 +203,9 @@ internal fun palette3DFuer(design: Design, dunkel: Boolean): Palette3D {
             lampeSchirm = hexLinear(0x3870E0),
             pflanzeBlatt = hexLinear(0x428A68),
             topf = hexLinear(0x8E9BB0),
+            korbWicker = hexLinear(0xB79674),
+            korbWickerAlt = hexLinear(0x82654A),
+            korbKissen = hexLinear(0xE3EDFC),
             himmelTagOben = hexLinear(0x478CE0),
             himmelTagUnten = hexLinear(0xD8EBFF),
             himmelAbendOben = hexLinear(0x192554),

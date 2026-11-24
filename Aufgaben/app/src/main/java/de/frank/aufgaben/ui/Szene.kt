@@ -28,10 +28,11 @@ import de.frank.aufgaben.ui.theme.glas
 
 /**
  * Die echtzeit-gerenderte 3D-Szene oben (OpenGL ES 3.0 mit PBR-Beleuchtung, weichen Echtzeitschatten
- * und filmischer 3D-Kamera): Ein Mensch kommt mit seiner Katze durch die schwingende Tür herein,
- * setzt sich an den PC-Arbeitsplatz und beginnt zu arbeiten, trinkt Kaffee, schaltet abends die
- * Schreibtischlampe ein und streichelt die Katze auf dem Schreibtisch. Farbwelt und Atmosphäre passen
- * sich nahtlos jedem gewählten App-Design an.
+ * und filmischer 3D-Kamera): Mensch und Katze kommen durch die schwingende Tür herein, die Katze
+ * macht es sich zunächst links oben in ihrem Körbchen gemütlich, während es allmählich Abend wird
+ * und die Sterne funkeln. Zur Katzenpause verlässt sie das Körbchen und kommt zum Menschen; nach
+ * Feierabend folgt eine ruhige dunkle Nachtphase, ein sichtbarer Sonnenaufgang und die Rückkehr
+ * des Menschen mit langem, stimmungsvollem Ausklang.
  */
 @Composable
 fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") erledigtAnteil: Float, pausiert: Boolean = false) {
@@ -41,7 +42,7 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
     val effektivPausiert = pausiert || !vorne
     val palette = remember(f.design, f.dunkel) { palette3DFuer(f.design, f.dunkel) }
     val eckenPx = with(LocalDensity.current) { (f.radius * 0.7f).toPx() }
-    var aktivePhase by remember { mutableIntStateOf(if (bewegung) 0 else 1) }
+    var aktivePhase by remember { mutableIntStateOf(0) }
 
     Column(modifier.glas(f, erhoeht = 1.2f).padding(10.dp)) {
         AndroidView(
@@ -73,7 +74,9 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
                 Text(
                     name,
                     color = farbe,
-                    fontSize = 12.sp,
+                    fontSize = 11.5.sp,
+                    maxLines = 1,
+                    softWrap = false,
                     fontWeight = if (i == aktivePhase) FontWeight.Bold else FontWeight.Medium,
                 )
             }

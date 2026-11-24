@@ -161,6 +161,7 @@ internal class Szene3DView(context: Context) : TextureView(context), TextureView
                 val r = Szene3DRenderer()
                 renderer = r
                 var simTime = 0f
+                var visualTimeSec = 0.0
                 var lastNanos = System.nanoTime()
                 var lastPhase = -1
 
@@ -205,7 +206,13 @@ internal class Szene3DView(context: Context) : TextureView(context), TextureView
                     if (isMoving) {
                         if (lastNanos != 0L) {
                             val dt = ((now - lastNanos) / 1e9f).coerceIn(0f, 0.05f)
-                            simTime = (simTime + dt) % SZENE_3D_ZYKLUS
+                            simTime += dt
+                            val loopSpan = SZENE_3D_ZYKLUS - SZENE_3D_LOOP_START
+                            while (simTime >= SZENE_3D_ZYKLUS) {
+                                // Nahtloser Übergang nach dem langen Morgen-Ausklang direkt in den hellen Tag (ohne Sprung)
+                                simTime -= loopSpan
+                            }
+                            visualTimeSec = (visualTimeSec + dt) % 86_400.0
                         }
                         lastNanos = now
                     } else {
@@ -213,9 +220,10 @@ internal class Szene3DView(context: Context) : TextureView(context), TextureView
                     }
 
                     val tRender = if (isMoving) simTime else SZENE_3D_STANDBILD
+                    val vRender = if (isMoving) visualTimeSec.toFloat() else SZENE_3D_STANDBILD
                     if (needRender) {
                         val frameStart = System.nanoTime()
-                        r.drawFrame(tRender, palette)
+                        r.drawFrame(tRender, vRender, palette)
                         if (!EGL14.eglSwapBuffers(eglDisplay, eglSurface)) {
                             val err = EGL14.eglGetError()
                             if (err == EGL14.EGL_CONTEXT_LOST) {

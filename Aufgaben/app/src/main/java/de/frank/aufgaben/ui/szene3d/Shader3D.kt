@@ -448,56 +448,128 @@ void main() {
         rough = 0.14;
         emissive = ui * (1.18 * on + 0.04) + vec3(0.06) * glass;
     } else if (uPattern == 8) {
-        // Dynamischer Fenster-Himmel mit Sonne, Dämmerung, Sternen, Mond & Stadtsilhouette
-        float abend = clamp(uParam.x, 0.0, 1.0);
-        vec3 skyTop = mix(uBaseColor, vec3(0.025, 0.032, 0.10), smoothstep(0.35, 1.0, abend));
-        vec3 skyBot = mix(uAltColor, vec3(0.18, 0.09, 0.18), smoothstep(0.55, 1.0, abend));
-        // Goldenes Abendrot in der Mitte der Dämmerung
-        float sunsetGlow = sin(abend * PI);
-        skyBot = mix(skyBot, vec3(1.15, 0.38, 0.12), sunsetGlow * 0.65);
-        vec3 sky = mix(skyBot, skyTop, clamp(vUv.y * 1.08, 0.0, 1.0));
+        // Dynamischer Fenster-Himmel: Tag -> allmählicher Abend mit funkelnden Sternen -> dunkle Nacht -> sichtbarer Sonnenaufgang
+        float evening = clamp(uParam.x, 0.0, 1.0);
+        float night = clamp(uParam.y, 0.0, 1.0);
+        float dawn = clamp(uParam.z, 0.0, 1.0);
+        float sunY = uParam.w;
 
-        // Sonne senkt sich am Himmel
-        vec2 sunPos = vec2(0.34 + abend * 0.28, 0.78 - abend * 0.62);
-        float dSun = length((vUv - sunPos) * vec2(1.3, 1.0));
-        float sunVis = 1.0 - smoothstep(0.75, 0.96, abend);
-        sky += vec3(1.5, 0.85, 0.38) * exp(-dSun * 6.5) * 0.85 * sunVis;
-        sky += vec3(2.2, 1.6, 0.95) * smoothstep(0.08, 0.055, dSun) * sunVis;
+        // Basis-Himmel (Tag -> Abend -> tiefe Nacht -> Morgendämmerung)
+        vec3 skyTop = uBaseColor;
+        vec3 skyBot = uAltColor;
 
-        // Sterne & Mondsichel am Abend
-        float night = smoothstep(0.55, 0.95, abend);
-        if (night > 0.01) {
-            vec2 starGrid = floor(vUv * vec2(32.0, 22.0));
-            float starSeed = hash21(starGrid);
-            if (starSeed > 0.93 && vUv.y > 0.34) {
-                float tw = 0.55 + 0.45 * sin(uTime * 2.5 + starSeed * 60.0);
-                sky += vec3(0.95, 0.96, 1.0) * night * tw * 1.1;
+        // Abendliche Färbung (warmes Gold/Orange am Horizont, tiefes Indigo oben für deutliches Sternenfunkeln)
+        vec3 eveTop = vec3(0.032, 0.036, 0.145);
+        vec3 eveBot = vec3(1.18, 0.40, 0.13);
+        skyTop = mix(skyTop, eveTop, evening * 0.95);
+        skyBot = mix(skyBot, eveBot, evening * 0.88);
+
+        // Eigenständige dunkle Nacht (samtiges Mitternachtsblau)
+        vec3 nightTop = vec3(0.008, 0.013, 0.044);
+        vec3 nightBot = vec3(0.026, 0.032, 0.078);
+        skyTop = mix(skyTop, nightTop, night);
+        skyBot = mix(skyBot, nightBot, night);
+
+        // Morgendämmerung & Sonnenaufgang (zartes Rosé-Gold steigt vom Horizont auf)
+        vec3 dawnTop = vec3(0.15, 0.23, 0.52);
+        vec3 dawnBot = vec3(1.32, 0.50, 0.22);
+        skyTop = mix(skyTop, dawnTop, dawn * 0.88);
+        skyBot = mix(skyBot, dawnBot, dawn * 0.95);
+
+        vec3 sky = mix(skyBot, skyTop, clamp(pow(vUv.y, 0.88) * 1.06, 0.0, 1.0));
+
+        // Feiner warmer Horizontsaum bei Sonnenuntergang & Sonnenaufgang
+        float horizBand = exp(-abs(vUv.y - 0.22) * 5.2);
+        sky += vec3(1.15, 0.44, 0.16) * horizBand * evening * 0.48 * (1.0 - night);
+        sky += vec3(1.35, 0.54, 0.22) * horizBand * dawn * 0.72;
+
+        // Sichtbare Sonne (senkt sich abends langsam ab, verschwindet nachts, geht morgens sichtbar auf!)
+        float sunX = mix(0.35 + evening * 0.24, 0.30, dawn);
+        vec2 sunPos = vec2(sunX, sunY);
+        float dSun = length((vUv - sunPos) * vec2(1.28, 1.0));
+        float sunVis = smoothstep(0.02, 0.16, sunY) * (1.0 - night * 0.98);
+        if (sunVis > 0.005) {
+            vec3 sunHaloCol = mix(vec3(1.45, 0.96, 0.52), vec3(1.75, 0.60, 0.18), max(evening, dawn));
+            vec3 sunCoreCol = mix(vec3(2.35, 1.95, 1.25), vec3(2.50, 1.24, 0.52), max(evening, dawn) * 0.80);
+            sky += sunHaloCol * exp(-dSun * 4.8) * (0.90 + dawn * 0.65) * sunVis;
+            sky += sunCoreCol * smoothstep(0.092, 0.056, dSun) * sunVis;
+        }
+
+        // Deutlich funkelnde Sterne am Abend und in der Nacht (zwei Schichten + weich auslaufendes 4-Strahl-Glitzern)
+        float starVis = clamp(smoothstep(0.20, 0.72, evening) * 1.05 + night * 1.15 - dawn * 0.85, 0.0, 1.0);
+        if (starVis > 0.01 && vUv.y > 0.24) {
+            float skyFade = smoothstep(0.24, 0.40, vUv.y);
+            // Schicht 1: Kräftige Hauptsterne mit deutlichem Funkeln und sauber auslaufendem Sternkreuz
+            vec2 g1 = vUv * vec2(15.0, 10.0);
+            vec2 id1 = floor(g1);
+            vec2 f1 = fract(g1);
+            float s1 = hash21(id1 + vec2(3.7, 1.9));
+            if (s1 > 0.65) {
+                vec2 center = vec2(
+                    0.28 + 0.44 * hash21(id1 + vec2(11.3, 4.1)),
+                    0.28 + 0.44 * hash21(id1 + vec2(7.9, 19.3))
+                );
+                vec2 diff = (f1 - center) * vec2(1.18, 1.0);
+                float dist = length(diff);
+                float freq = 2.8 + fract(s1 * 17.3) * 4.0;
+                float phase = s1 * 83.0;
+                float tw = 0.20 + 0.80 * pow(0.5 + 0.5 * sin(uTime * freq + phase), 1.65);
+                float core = exp(-dist * dist * 145.0);
+                float radialMask = smoothstep(0.28, 0.04, dist);
+                float crossRay = (exp(-abs(diff.x) * 26.0 - abs(diff.y) * 5.8)
+                                + exp(-abs(diff.y) * 26.0 - abs(diff.x) * 5.8)) * radialMask;
+                float sparkle = core * 1.65 + crossRay * 0.60 * tw;
+                vec3 starCol = mix(vec3(0.86, 0.93, 1.0), vec3(1.0, 0.95, 0.82), fract(s1 * 9.1));
+                sky += starCol * sparkle * tw * starVis * skyFade * 1.85;
             }
-            vec2 moonPos = vec2(0.74, 0.76);
-            float dm1 = length((vUv - moonPos) * vec2(1.3, 1.0));
-            float dm2 = length((vUv - (moonPos + vec2(0.028, 0.016))) * vec2(1.3, 1.0));
-            float crescent = smoothstep(0.072, 0.062, dm1) * (1.0 - smoothstep(0.066, 0.056, dm2));
-            sky += vec3(0.95, 0.92, 0.82) * crescent * night * 1.5;
-            sky += vec3(0.45, 0.50, 0.72) * exp(-dm1 * 9.0) * night * 0.35;
+            // Schicht 2: Feine funkelnde Hintergrundsterne für tiefen Sternenhimmel
+            vec2 g2 = vUv * vec2(29.0, 19.0);
+            vec2 id2 = floor(g2);
+            vec2 f2 = fract(g2);
+            float s2 = hash21(id2 + vec2(23.1, 7.4));
+            if (s2 > 0.76) {
+                vec2 center2 = vec2(
+                    0.26 + 0.48 * hash21(id2 + vec2(2.3, 15.7)),
+                    0.26 + 0.48 * hash21(id2 + vec2(13.1, 6.9))
+                );
+                float dist2 = length((f2 - center2) * vec2(1.2, 1.0));
+                float tw2 = 0.24 + 0.76 * pow(0.5 + 0.5 * sin(uTime * (3.4 + fract(s2 * 13.0) * 3.2) + s2 * 91.0), 1.55);
+                float pt2 = exp(-dist2 * dist2 * 170.0);
+                sky += vec3(0.92, 0.95, 1.0) * pt2 * tw2 * starVis * skyFade * 1.38;
+            }
+        }
+
+        // Mondsichel (steigt am späten Abend auf, leuchtet ruhig in der Nacht, verblasst beim Sonnenaufgang)
+        float moonVis = clamp(smoothstep(0.45, 0.95, evening) * 0.85 + night * 1.05 - dawn * 0.95, 0.0, 1.0);
+        if (moonVis > 0.01) {
+            vec2 moonPos = vec2(0.74 - night * 0.06, 0.73 + night * 0.05);
+            float dm1 = length((vUv - moonPos) * vec2(1.28, 1.0));
+            float dm2 = length((vUv - (moonPos + vec2(0.028, 0.016))) * vec2(1.28, 1.0));
+            float crescent = smoothstep(0.074, 0.062, dm1) * (1.0 - smoothstep(0.068, 0.056, dm2));
+            sky += vec3(0.96, 0.94, 0.84) * crescent * moonVis * 1.65;
+            sky += vec3(0.40, 0.48, 0.78) * exp(-dm1 * 8.0) * moonVis * 0.42;
         }
 
         // Ferne Stadtsilhouette unten am Fenster
         float bx = floor(vUv.x * 7.0);
-        float bh = 0.14 + hash21(vec2(bx, 3.1)) * 0.17;
+        float bh = 0.13 + hash21(vec2(bx, 3.1)) * 0.16;
         if (vUv.y < bh) {
-            vec3 bCol = mix(vec3(0.11, 0.10, 0.14), vec3(0.022, 0.024, 0.045), abend);
-            // Kleine beleuchtete Fenster in den Häusern abends
+            float darkSky = clamp(evening * 0.75 + night, 0.0, 1.0);
+            vec3 bCol = mix(vec3(0.11, 0.10, 0.14), vec3(0.014, 0.017, 0.036), darkSky);
+            bCol = mix(bCol, vec3(0.08, 0.06, 0.09), dawn * 0.55);
+            // Beleuchtete Hausfenster abends und nachts (gehen morgens nach und nach aus)
             vec2 winUv = fract(vec2(vUv.x * 28.0, vUv.y * 26.0));
             float winSeed = hash21(floor(vec2(vUv.x * 28.0, vUv.y * 26.0)));
-            if (winUv.x > 0.25 && winUv.x < 0.75 && winUv.y > 0.25 && winUv.y < 0.75 && winSeed > 0.48 && vUv.y < bh - 0.025) {
-                bCol += vec3(1.1, 0.72, 0.25) * smoothstep(0.32, 0.82, abend);
+            float cityLight = clamp(smoothstep(0.32, 0.85, evening) + night * 0.95 - dawn * 0.95, 0.0, 1.0);
+            if (winUv.x > 0.25 && winUv.x < 0.75 && winUv.y > 0.25 && winUv.y < 0.75 && winSeed > 0.48 && vUv.y < bh - 0.024) {
+                bCol += vec3(1.10, 0.72, 0.25) * cityLight;
             }
             sky = bCol;
         }
         albedo = vec3(0.0);
         emissive = sky * 1.08;
     } else if (uPattern == 9) {
-        // Gerahmtes Wandbild: minimalistische Sonnenuntergangs-Berge
+        // Gerahmtes Wandbild rechts (unverändert): minimalistische Sonnenuntergangs-Berge
         vec3 bg = mix(uBaseColor, uAltColor, vUv.y);
         float sunD = length(vUv - vec2(0.68, 0.68));
         bg = mix(bg, vec3(1.1, 0.88, 0.58), smoothstep(0.15, 0.12, sunD));
@@ -528,6 +600,87 @@ void main() {
         albedo = mix(uBaseColor * 0.45, uBaseColor, gap);
         emissive = uAltColor * (1.0 - gap) * uParam.x * 0.55;
         rough = 0.42;
+    } else if (uPattern == 12) {
+        // Linkes Wandbild: Botanisches Stillleben (Keramikvase & Zweige auf hellem Leinen-Passepartout)
+        vec2 uv = vUv;
+        // Helles warmes Galerieleinen mit sanfter Struktur
+        float linen = valueNoise(uv * 38.0);
+        vec3 col = mix(vec3(0.84, 0.80, 0.72), vec3(0.90, 0.86, 0.78), linen);
+        // Zarter Innenrand (Passepartout)
+        vec2 edge = min(uv, 1.0 - uv);
+        float matLine = step(0.055, min(edge.x, edge.y)) * (1.0 - step(0.072, min(edge.x, edge.y)));
+        col = mix(col, vec3(0.62, 0.58, 0.51), matLine * 0.55);
+
+        // Sanfter hellgrün-salbeifarbener Dekobogen im Hintergrund
+        vec2 archP = (uv - vec2(0.50, 0.44)) * vec2(1.35, 0.85);
+        float inArch = step(length(archP), 0.34) * step(0.14, uv.y)
+                     + step(abs(uv.x - 0.50), 0.25) * step(0.14, uv.y) * (1.0 - step(0.44, uv.y));
+        col = mix(col, vec3(0.64, 0.73, 0.66), clamp(inArch, 0.0, 1.0) * 0.55);
+
+        // Tischlinie unter der Vase
+        if (uv.y < 0.15 && uv.x > 0.08 && uv.x < 0.92) {
+            col = mix(col, vec3(0.56, 0.46, 0.36), 0.65);
+        }
+
+        // Drei geschwungene botanische Stiele aus dem Vasenhals
+        float sMid = abs(uv.x - (0.50 + sin((uv.y - 0.36) * 5.0) * 0.035));
+        float sLeft = abs(uv.x - (0.50 - (uv.y - 0.36) * 0.58));
+        float sRight = abs(uv.x - (0.50 + (uv.y - 0.36) * 0.52));
+        vec3 stemCol = vec3(0.08, 0.22, 0.13);
+        if (uv.y > 0.35 && uv.y < 0.86 && sMid < 0.011) col = stemCol;
+        if (uv.y > 0.36 && uv.y < 0.76 && sLeft < 0.010) col = stemCol;
+        if (uv.y > 0.36 && uv.y < 0.78 && sRight < 0.010) col = stemCol;
+
+        // Kräftige botanische Blätter (6 oval-spitze Blätter + 2 warme Blütenknospen)
+        vec3 leafDark = vec3(0.07, 0.28, 0.14);
+        vec3 leafLight = vec3(0.14, 0.40, 0.21);
+        for (int li = 0; li < 6; li++) {
+            vec2 lc;
+            float ang;
+            vec2 sc;
+            if (li == 0) { lc = vec2(0.32, 0.62); ang = 0.75; sc = vec2(0.10, 0.052); }
+            else if (li == 1) { lc = vec2(0.27, 0.73); ang = 0.42; sc = vec2(0.095, 0.048); }
+            else if (li == 2) { lc = vec2(0.49, 0.81); ang = 1.48; sc = vec2(0.105, 0.055); }
+            else if (li == 3) { lc = vec2(0.54, 0.67); ang = -0.55; sc = vec2(0.095, 0.048); }
+            else if (li == 4) { lc = vec2(0.68, 0.64); ang = -0.68; sc = vec2(0.10, 0.052); }
+            else { lc = vec2(0.73, 0.75); ang = -0.38; sc = vec2(0.09, 0.046); }
+            vec2 lp = uv - lc;
+            float ca = cos(ang); float sa = sin(ang);
+            vec2 rot = vec2(lp.x * ca - lp.y * sa, lp.x * sa + lp.y * ca) / sc;
+            float dLeaf = length(rot);
+            float leafMask = smoothstep(1.02, 0.82, dLeaf);
+            if (leafMask > 0.01) {
+                vec3 lCol = mix(leafDark, leafLight, smoothstep(-0.8, 0.8, rot.y));
+                col = mix(col, lCol, leafMask);
+            }
+        }
+        // Zwei kleine gold-korallenfarbene Blütenpunkte als lebendiger Kontrast
+        float b1 = smoothstep(0.044, 0.032, length((uv - vec2(0.38, 0.76)) * vec2(1.0, 1.25)));
+        float b2 = smoothstep(0.040, 0.028, length((uv - vec2(0.64, 0.78)) * vec2(1.0, 1.25)));
+        col = mix(col, vec3(0.88, 0.46, 0.24), max(b1, b2));
+
+        // Tiefblaue Keramikvase mit schmalem Hals & weichem Glanzlicht
+        vec2 vp = (uv - vec2(0.50, 0.25)) * vec2(1.0, 1.12);
+        float vaseBody = smoothstep(0.150, 0.138, length(vp * vec2(1.18, 0.95))) * smoothstep(0.140, 0.152, uv.y);
+        float vaseNeck = smoothstep(0.046, 0.038, abs(uv.x - 0.50)) * smoothstep(0.315, 0.325, uv.y) * smoothstep(0.415, 0.405, uv.y);
+        float vaseLip = smoothstep(0.058, 0.050, abs(uv.x - 0.50)) * smoothstep(0.392, 0.400, uv.y) * smoothstep(0.422, 0.414, uv.y);
+        float vaseMask = clamp(max(max(vaseBody, vaseNeck), vaseLip), 0.0, 1.0);
+        if (vaseMask > 0.01) {
+            float shade = smoothstep(0.64, 0.38, uv.x);
+            vec3 vCol = mix(vec3(0.05, 0.15, 0.28), vec3(0.16, 0.36, 0.52), shade);
+            float spec = exp(-length((uv - vec2(0.44, 0.28)) * vec2(8.0, 4.5)) * 2.2);
+            vCol += vec3(0.28, 0.36, 0.42) * spec;
+            col = mix(col, vCol, vaseMask);
+        }
+        albedo = col;
+        rough = 0.56;
+    } else if (uPattern == 13) {
+        // Geflochtenes Weidenkörbchen (warmes Korbmuster für das Katzenkörbchen)
+        float band = sin(vUv.y * 44.0) * 0.5 + 0.5;
+        float crossWeave = sin(vUv.x * 78.0 + floor(vUv.y * 14.0) * 1.57) * 0.5 + 0.5;
+        float braid = band * 0.55 + crossWeave * 0.45;
+        albedo = mix(uAltColor, uBaseColor, braid);
+        rough = 0.84;
     }
 
     // ---- Beleuchtung im linearen Farbraum ----
