@@ -109,6 +109,7 @@
     {"versionCode": 105, "versionName": "1.0.104", "stand": "24.11.2026, 10:05 Uhr", "notiz": "Stundenansicht: Eingeplante Aufgaben stehen mit ihrer Kartenmitte genau auf der Startzeit, ein gelber Strich führt von der Zeitleiste in die Karte und dahinter steht die Uhrzeit vor dem Titel."},
     {"versionCode": 106, "versionName": "1.0.105", "stand": "24.11.2026, 10:13 Uhr", "notiz": "Stundenansicht: Lange Karten verdecken keine früheren mehr, ragen nicht mehr über den Umschalter, der gelbe Strich läuft nie quer über Nachbarkarten und ab einer Stunde Dauer steht das Ende dabei."},
     {"versionCode": 107, "versionName": "1.0.106", "stand": "24.11.2026, 10:17 Uhr", "notiz": "Zeitleiste: Liegen Aufgaben zeitlich dicht beieinander, wird nur dieser Abschnitt der Leiste höher, sodass sich keine Karten mehr verdecken; Aufgaben mit gleicher Startzeit stehen nebeneinander, alle anderen behalten die volle Breite."},
-    {"versionCode": 108, "versionName": "1.0.107", "stand": "24.11.2026, 10:24 Uhr", "notiz": "Zeitleiste: Dicht liegende Aufgaben werden zuverlässiger getrennt, auch bei fast gleicher Startzeit, am Rand der Leiste und ohne Uhrzeit; ein langer Dienst bläht die Leiste nicht mehr auf."}
+    {"versionCode": 108, "versionName": "1.0.107", "stand": "24.11.2026, 10:24 Uhr", "notiz": "Zeitleiste: Dicht liegende Aufgaben werden zuverlässiger getrennt, auch bei fast gleicher Startzeit, am Rand der Leiste und ohne Uhrzeit; ein langer Dienst bläht die Leiste nicht mehr auf."},
+    {"versionCode": 109, "versionName": "1.0.108", "stand": "24.11.2026, 10:24 Uhr", "notiz": "Über dem Zeitstrahl stehen nur noch offene Aufgaben: Eine abgehakte Karte verschwindet dort sofort und ist im Bereich Erledigt zu finden."}
 ]
 }
