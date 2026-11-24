@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Folge-Fix zu 1.8.951/1.8.952 (am Mac übersprungen): gerettete Mitschrift/Mitnahme beim Sessionwechsel, Mikrofon-Wächter mit Höchstlänge und Gesprächsmodus-Bruchstück, BackHandler, adb-Rückfragetest und Logbuch-Anlässe der Android-Aufnahmewege gibt es in JarvisMac nicht; dort geht Diktattext schon ins gemeinsame Eingabefeld",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T12:00:51+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T12:01:25+01:00"
 }
