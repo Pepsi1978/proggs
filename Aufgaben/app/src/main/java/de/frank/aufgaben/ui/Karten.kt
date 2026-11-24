@@ -35,6 +35,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DragIndicator
@@ -177,6 +180,52 @@ private fun Merkmal(icon: ImageVector?, text: String, farbe: Color) {
     }
 }
 
+/**
+ * Einzeiliger Text, der nur läuft, wenn er nicht in die Breite passt: zwei Sekunden Stillstand am Anfang,
+ * dann gleichmäßig nach links, bis das Ende sichtbar ist, Sprung zurück zum Anfang und wieder von vorn.
+ * Bei ausgeschalteter Bewegung bleibt er stehen und endet mit „…“.
+ */
+@Composable
+fun Lauftext(
+    text: String,
+    color: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight? = null,
+    textDecoration: TextDecoration? = null,
+) {
+    if (!LocalBewegung.current) {
+        Text(text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, textDecoration = textDecoration, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        return
+    }
+    var breite by remember { mutableIntStateOf(0) }
+    var textBreite by remember { mutableIntStateOf(0) }
+    val versatz = remember { Animatable(0f) }
+    val ueberstand = (textBreite - breite).coerceAtLeast(0)
+    val pxProSekunde = with(androidx.compose.ui.platform.LocalDensity.current) { 45.dp.toPx() }
+    LaunchedEffect(text, ueberstand) {
+        versatz.snapTo(0f)
+        if (ueberstand <= 0 || breite <= 0) return@LaunchedEffect
+        val dauer = (ueberstand / pxProSekunde * 1000f).toInt().coerceAtLeast(600)
+        while (true) {
+            delay(2000)
+            versatz.animateTo(-ueberstand.toFloat(), tween(dauer, easing = LinearEasing))
+            versatz.snapTo(0f)
+        }
+    }
+    Box(modifier.fillMaxWidth().clipToBounds().onSizeChanged { breite = it.width }) {
+        Text(
+            text,
+            Modifier
+                .wrapContentWidth(Alignment.Start, unbounded = true)
+                .onSizeChanged { textBreite = it.width }
+                .graphicsLayer { translationX = versatz.value },
+            color = color, fontSize = fontSize, fontWeight = fontWeight, textDecoration = textDecoration,
+            maxLines = 1, softWrap = false,
+        )
+    }
+}
+
 /** Eine Aufgabe als Glaskarte. */
 @Composable
 fun AufgabeKarte(
@@ -206,20 +255,18 @@ fun AufgabeKarte(
     ) {
         Checkkreis(a.erledigt, prio, aktion = onErledigt)
         Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
-            Text(
+            Lauftext(
                 a.titel,
                 color = f.text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null,
             )
             val schritte = a.schritte
             val ueberfaellig = a.ueberfaellig(heute)
             val zeigtMerkmale = a.minuten != null || a.erinnerung || a.wdh != Wiederholung.KEINE || schritte.isNotEmpty() || ueberfaellig || zeigeDatum
             if (a.text.isNotBlank() && a.text != a.titel) {
-                Text(a.text, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                Lauftext(a.text, color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
             }
             if (zeigtMerkmale) Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (ueberfaellig) Merkmal(null, "überfällig · ${Tage.datum(a.tag!!)}", f.gefahr)
