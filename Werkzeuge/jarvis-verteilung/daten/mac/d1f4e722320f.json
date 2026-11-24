@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Rückfrage-Vollbild mit Antwort senden gibt es in JarvisMac nicht; Tipp-Sperre, AudioRecordingCallback-Stummschaltung und adb-Testempfänger sind Android-spezifisch, Gerätewechsel am Mac fängt Erkenner bereits über AVAudioEngineConfigurationChange ab",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T11:12:54+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T11:15:01+01:00"
 }
