@@ -216,8 +216,11 @@ private fun Leiste(
         }
         // Uhrzeit der Jetzt-Linie: mittig als roter Knopf mit „Uhr“. Berührt oder überdeckt er eine Aufgabenkarte, steht sie
         // stattdessen links in der Beschriftungsspalte auf Höhe der Jetzt-Linie, ebenso rot gefüllt, aber ohne „Uhr“, und ersetzt dort
-        // die Stundenbeschriftung, mit der sie kollidieren würde. Jeden Frame neu gerechnet, der Rückweg geht also von selbst.
-        val uhr = jetztY()?.let { y ->
+        // die Stundenbeschriftung, mit der sie kollidieren würde. Bei jeder Änderung von Uhrzeit, Band, Terminen, Breite oder
+        // Ziehen neu gerechnet, der Rückweg in die Mitte geht also von selbst. Die gerade gezogene Karte zählt nicht mit: Sie
+        // steht nur noch als blasser Rest an der alten Stelle.
+        val gezogen = zustand.aufgabe?.id
+        val uhr = remember(jetzt, istHeute, band, termine, breite, obenPx, f, gezogen, dichte) { jetztY()?.let { y ->
             with(dichte) {
                 val x = SPALTE.toPx() - 8.dp.toPx()
                 val mittig = messer.measure("%02d:%02d Uhr".format(jetzt / 60, jetzt % 60), TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
@@ -225,17 +228,25 @@ private fun Leiste(
                 val bh = mittig.size.height + 5.dp.toPx()
                 val mitte = (x + breite.toPx()) / 2f
                 val knopf = Rechteck(mitte - bw / 2f, y - bh / 2f, mitte + bw / 2f, y + bh / 2f)
-                val karten = sortiert.map { a ->
+                val karten = sortiert.filter { it.id != gezogen }.map { a ->
                     val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
                     val h = karteHoehe(a.dauer).toPx()
                     val n = spaltenVon[a.id] ?: 1
                     val l = (SPALTE + flaeche / n * (spalteVon[a.id] ?: 0)).toPx()
                     val o = obenPx + band.y(min, stundePx, lueckePx) - h / 2f
                     Rechteck(l, o, l + (flaeche / n - 4.dp).toPx(), o + h)
+                } + band.luecken.map { l ->
+                    // „… frei“-Marken zusammengerückter Lücken verdeckt der Knopf genauso wenig wie eine Karte
+                    val o = obenPx + band.y(l.von, stundePx, lueckePx) + 4.dp.toPx()
+                    Rechteck((SPALTE + 2.dp).toPx(), o, (SPALTE + 2.dp + flaeche - 4.dp).toPx(), o + (LUECKE - 8.dp).toPx())
                 }
                 val kurz = "%02d:%02d".format(jetzt / 60, jetzt % 60)
-                var links = messer.measure(kurz, TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
-                if (links.size.width + 6.dp.toPx() > x - 8.dp.toPx()) links = messer.measure(kurz, TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+                // Platz links: von 1 dp bis 9 dp vor dem Zeitpfeil, abzüglich 6 dp Innenabstand. Bei großer Systemschrift wird
+                // verkleinert, zuletzt in dp-Größen, die die Schriftskalierung nicht mehr aufbläst.
+                val platz = x - 10.dp.toPx() - 6.dp.toPx()
+                val links = listOf(11.sp, 10.sp, 10.dp.toSp(), 9.dp.toSp(), 8.dp.toSp())
+                    .map { messer.measure(kurz, TextStyle(color = Color.White, fontSize = it, fontWeight = FontWeight.Bold)) }
+                    .let { m -> m.firstOrNull { it.size.width <= platz } ?: m.last() }
                 val stunden = ((vonMin + 59) / 60..bisMin / 60).map { it * 60 }.filterNot { band.inLuecke(it) }
                 val stundeHoehe = messer.measure("00:00", TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium)).size.height.toFloat()
                 val lage = uhrLage(
@@ -244,7 +255,7 @@ private fun Leiste(
                 )
                 UhrZeichnung(y, mittig, knopf, links, lage.links, lage.verdeckt.map { stunden[it] }.toSet())
             }
-        }
+        } }
         Canvas(Modifier.fillMaxSize()) {
             val x = SPALTE.toPx() - 8.dp.toPx()
             val y0 = obenPx
@@ -337,7 +348,8 @@ private fun Leiste(
             } else {
                 val x = SPALTE.toPx() - 8.dp.toPx()
                 val t = uhr.kurz
-                val rechts = x - 7.dp.toPx()
+                // 3 dp Abstand zum roten Jetzt-Punkt (Radius 6 dp), sonst verschmelzen beide zu einer Form
+                val rechts = x - 9.dp.toPx()
                 val bw = t.size.width + 6.dp.toPx()
                 val bh = t.size.height + 4.dp.toPx()
                 val l = (rechts - bw).coerceAtLeast(1.dp.toPx())

@@ -118,6 +118,7 @@
     {"versionCode": 114, "versionName": "1.0.113", "stand": "24.11.2026, 10:45 Uhr", "notiz": "Lauftext: Am Textende bleibt er jetzt drei Sekunden zum Lesen stehen, springt dann zum Anfang zurück und wartet dort ebenfalls drei Sekunden, bevor er wieder losläuft."},
     {"versionCode": 115, "versionName": "1.0.114", "stand": "24.11.2026, 10:58 Uhr", "notiz": "Zeitstrahl: Würde die rote Uhrzeit in der Mitte eine Aufgabe verdecken, steht sie jetzt links neben dem Zeitpfeil, rot umrandet und ohne „Uhr“, und ersetzt dort eine kollidierende Stundenbeschriftung; ist wieder Platz, kehrt sie in die Mitte zurück."},
     {"versionCode": 116, "versionName": "1.0.115", "stand": "24.11.2026, 11:04 Uhr", "notiz": "3D-Szene: Mensch geht mittig durch die Tür ohne Wand- oder Rahmenkontakt des Arms, und die Katze springt beim Aufstehen sauber über den Korbrand ohne Pfotendurchdringung."},
-    {"versionCode": 117, "versionName": "1.0.116", "stand": "24.11.2026, 11:09 Uhr", "notiz": "Zeitstrahl: Die nach links ausgewichene Uhrzeit ist jetzt wie in der Mitte rot gefüllt mit weißer Schrift statt nur rot umrandet."}
+    {"versionCode": 117, "versionName": "1.0.116", "stand": "24.11.2026, 11:09 Uhr", "notiz": "Zeitstrahl: Die nach links ausgewichene Uhrzeit ist jetzt wie in der Mitte rot gefüllt mit weißer Schrift statt nur rot umrandet."},
+    {"versionCode": 118, "versionName": "1.0.117", "stand": "24.11.2026, 11:13 Uhr", "notiz": "Zeitstrahl: Beim Ziehen und vor „frei“-Marken weicht die Uhrzeit richtig aus, bei großer Systemschrift passt sie links in die Spalte und steht mit Abstand zum roten Punkt."}
 ]
 }
