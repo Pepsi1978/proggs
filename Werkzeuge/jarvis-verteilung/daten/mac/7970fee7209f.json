@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Nur Review-Nachbesserung am Android-Bereich Erledigt (6d45e23e4ba2); die abhakbare Heute-Karte fehlt in JarvisMac",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T18:31:13+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T18:32:30+01:00"
 }
