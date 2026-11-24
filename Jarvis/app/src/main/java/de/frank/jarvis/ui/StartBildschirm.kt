@@ -133,6 +133,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val auswertung by Tagesauswertung.stand.collectAsState()
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
     var profilWahlOffen by rememberSaveable { mutableStateOf(false) }
+    // Beim Öffnen des Startreiters ist „Erledigt“ in der Heute-Karte zu (die Karte selbst lebt in der Liste und wird beim Scrollen neu aufgebaut).
+    androidx.compose.runtime.LaunchedEffect(Unit) { heuteErledigtEinklappen() }
     // Je Session ein eigener Listenstand: Eine neue oder gewechselte Session beginnt so ganz oben statt an der Lesestelle der vorigen.
     val liste = rememberSaveable(vm.sitzungId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) { androidx.compose.foundation.lazy.LazyListState() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()

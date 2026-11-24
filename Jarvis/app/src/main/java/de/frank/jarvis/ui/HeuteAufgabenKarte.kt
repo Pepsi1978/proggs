@@ -102,9 +102,6 @@ private val PRIO_RANG = listOf("HOCH", "MITTEL", "GERING", "SPAETER")
 /** Ab so vielen Aufgaben klappt die Karte den Rest ein („Alle zeigen“), damit der Startbildschirm nicht endlos wird. */
 private const val SICHTBAR = 25
 
-/** So lange bleibt eine abgehakte Aufgabe an ihrem Platz, bevor sie zu den erledigten gleitet. */
-private const val HALTEN_MS = 1_000L
-
 /** Dauer des Gleitens an den neuen Platz. */
 private const val GLEITEN_MS = 450
 
@@ -154,11 +151,6 @@ private object HeuteAufgabenStand {
     /** Während Jarvis eine Zeile umstellt, gilt dort der gewünschte Stand (kein Zurückspringen beim Neulesen). */
     val unterwegs = mutableStateMapOf<Long, Boolean>()
     /**
-     * Frisch abgehakte Zeilen: Haken und Durchstreichen sind schon zu sehen, einsortiert wird die Zeile aber noch als offen,
-     * bis [HALTEN_MS] um sind; erst dann gleitet sie zu den erledigten. Wert = Kennung des Tipps (ein neuer Tipp ersetzt ihn).
-     */
-    val halten = mutableStateMapOf<Long, Long>()
-    /**
      * Lebt so lange wie der Prozess: Abhaken und Halte-Zeit laufen auch zu Ende, wenn Frank die App per Zurück schließt
      * (im ViewModel blieben sonst halten/unterwegs für immer stehen und die Zeile wäre gesperrt).
      */
@@ -175,6 +167,11 @@ private object HeuteAufgabenStand {
     val lesung = AtomicInteger()
     /** Bis wann Meldungen der Aufgaben-App von Jarvis' eigenem Abhaken stammen (die Karte hat dann schon neu gelesen). */
     @Volatile var eigeneAenderungBis = 0L
+    /**
+     * „Erledigt“: Abgehakte verschwinden sofort aus der offenen Liste und stehen nur hier. Beim Öffnen des Startreiters zu,
+     * klappt beim Abhaken nicht von selbst auf, nur auf Antippen.
+     */
+    var erledigtOffen by mutableStateOf(false)
     /** „Aufgaben morgen“: standardmäßig zu, öffnet nur auf ausdrückliches Antippen; gelesen wird erst beim Öffnen. */
     var morgenOffen by mutableStateOf(false)
     var morgen by mutableStateOf<List<HeuteAufgabe>?>(null)
@@ -189,6 +186,9 @@ private object HeuteAufgabenStand {
         morgenOffen = !morgenOffen
     }
 }
+
+/** Beim Öffnen des Startreiters: Bereich „Erledigt“ der Heute-Karte zuklappen. */
+fun heuteErledigtEinklappen() { HeuteAufgabenStand.erledigtOffen = false }
 
 /**
  * Öffnet Geniale Aufgaben; mit [tag] (heute oder morgen, Extra „tag_datum“, ISO-Datum) die Startliste, gescrollt auf diesen Bereich. CLEAR_TOP + SINGLE_TOP:
@@ -353,14 +353,8 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
         // a ist der angezeigte Stand (bei laufender Umstellung schon der gewünschte): Ein zweiter Tipp kehrt ihn um.
         val ziel = !a.erledigt
         val laeuft = a.id in s.unterwegs
+        // Sofort umsortiert: abgehakt verschwindet die Zeile aus der offenen Liste (nur noch unter „Erledigt“), wieder geöffnet steht sie oben.
         s.unterwegs[a.id] = ziel
-        s.halten.remove(a.id)
-        // Abhaken: erst Haken und Durchstreichen am alten Platz zeigen, nach HALTEN_MS weich nach unten.
-        if (ziel) {
-            val tipp = System.nanoTime()
-            s.halten[a.id] = tipp
-            s.scope.launch { delay(HALTEN_MS); if (s.halten[a.id] == tipp) s.halten.remove(a.id) }
-        }
         // Läuft schon eine Umstellung, übernimmt sie den neuen Wunsch, sobald die Aufgaben-App geantwortet hat.
         if (laeuft) return
         // Im Prozess, nicht in der Karte oder im ViewModel: Scrollt Frank sie weg oder schließt die App, läuft es zu Ende.
@@ -385,7 +379,7 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
                     if (r.fehler || gewuenscht == gesetzt) break
                     gesetzt = gewuenscht
                 }
-                if (r.fehler) { vm.meldung = "Nicht sicher umgestellt: ${r.text}"; s.halten.remove(a.id) }
+                if (r.fehler) vm.meldung = "Nicht sicher umgestellt: ${r.text}"
                 else if (gesetzt && a.ueberfaellig) s.abgehakt[a.id] = a.copy(erledigt = true)
                 else if (!gesetzt) s.abgehakt.remove(a.id)
                 // Erst den frischen Stand lesen, dann die Sperre lösen: So springt der Haken nicht kurz zurück.
@@ -400,9 +394,10 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
     }
 
     Karte {
-        // Haken sofort sichtbar; einsortiert wird eine frisch abgehakte Zeile erst nach HALTEN_MS (bis dahin als offen).
-        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }
-            ?.let { liste -> sortiere(liste) { it.erledigt && it.id !in s.halten } }
+        // Während einer Umstellung gilt der gewünschte Stand: Die Zeile wechselt sofort zwischen offen und „Erledigt“.
+        val anzeige = s.aufgaben?.map { a -> s.unterwegs[a.id]?.let { a.copy(erledigt = it) } ?: a }?.let { sortiere(it) }
+        val offen = anzeige?.filter { !it.erledigt }
+        val erledigtListe = anzeige?.filter { it.erledigt }.orEmpty()
         val fertig = anzeige?.count { it.erledigt } ?: 0
         val fehler = s.fehler
         // Tipp auf den Kopf öffnet Geniale Aufgaben mit dem heutigen Tag. Kein onLongClick: Ein Lang-Druck-Handler verbraucht
@@ -433,20 +428,68 @@ fun HeuteAufgabenKarte(vm: AppViewModel, griff: Modifier = Modifier) {
         }
         }
         }
-        if (anzeige != null) {
-            val zeigen = if (s.alleZeigen || anzeige.size <= SICHTBAR) anzeige else anzeige.take(SICHTBAR)
+        if (anzeige != null && offen != null) {
+            if (offen.isEmpty() && anzeige.isNotEmpty()) Text("Alles für heute erledigt.", Modifier.fillMaxWidth().padding(vertical = 4.dp), color = f.textLeise, fontSize = 14.sp, textAlign = TextAlign.End)
+            val zeigen = if (s.alleZeigen || offen.size <= SICHTBAR) offen else offen.take(SICHTBAR)
             // Eigene Spalte: Die Zeilen gleiten relativ zueinander (eine umbrechende Zählerzeile darüber lässt nicht alle gleiten),
             // und die Höhe zieht weich mit, damit gleitende Zeilen nicht über den Bereich darunter ragen.
             Column(Modifier.fillMaxWidth().animateContentSize(tween(GLEITEN_MS, easing = FastOutSlowInEasing))) {
-                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, gehalten = a.id in s.halten, jetzt = jetzt, gelesenTag = s.gelesenTag, oeffnen = { aufgabenOeffnen(context, vm, LocalDate.now()) }) { umschalten(a) } } }
+                zeigen.forEach { a -> androidx.compose.runtime.key(a.id) { AufgabenZeile(a, jetzt = jetzt, gelesenTag = s.gelesenTag, oeffnen = { aufgabenOeffnen(context, vm, LocalDate.now()) }) { umschalten(a) } } }
             }
-            if (anzeige.size > SICHTBAR) Text(
-                if (s.alleZeigen) "Weniger zeigen" else "Alle ${anzeige.size} zeigen",
+            if (offen.size > SICHTBAR) Text(
+                if (s.alleZeigen) "Weniger zeigen" else "Alle ${offen.size} offenen zeigen",
                 Modifier.padding(top = 4.dp).antippen { s.alleZeigen = !s.alleZeigen },
                 color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             )
         }
+        if (anzeige != null) ErledigtBereich(erledigtListe) { umschalten(it) }
         MorgenBereich(vm)
+    }
+}
+
+/**
+ * Aufklappbarer Bereich „Erledigt“ direkt unter den offenen, gestaltet wie „Aufgaben morgen“: zu bis zum Antippen, zeigt dann
+ * die heute erledigten. Ein Tipp auf eine davon öffnet sie wieder, sie steht sofort wieder oben bei den offenen.
+ */
+@Composable
+private fun ErledigtBereich(liste: List<HeuteAufgabe>, wiederOeffnen: (HeuteAufgabe) -> Unit) {
+    val f = LocalFarben.current
+    val s = HeuteAufgabenStand
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp)
+            .antippen { s.erledigtOffen = !s.erledigtOffen }
+            .semantics(mergeDescendants = true) { stateDescription = if (s.erledigtOffen) "aufgeklappt" else "zugeklappt" }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Erledigt", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text("${liste.size}", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
+        Icon(
+            if (s.erledigtOffen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null,
+            tint = f.primaer, modifier = Modifier.size(24.dp),
+        )
+    }
+    if (!s.erledigtOffen) return
+    if (liste.isEmpty()) { Text("Heute noch nichts erledigt.", color = f.textLeise, fontSize = 14.sp); return }
+    liste.forEach { a ->
+        androidx.compose.runtime.key("erledigt_${a.id}") {
+            val zeit = a.uhrzeit?.takeIf { it.isNotBlank() }
+            // Rechtsbündig mit grünem Haken ganz rechts, wie die Punkte bei „Aufgaben morgen“; Antippen öffnet die Aufgabe wieder.
+            Row(
+                Modifier.fillMaxWidth().antippen(rolle = Role.Checkbox) { wiederOeffnen(a) }
+                    .semantics(mergeDescendants = true) { stateDescription = "erledigt, antippen öffnet sie wieder" }
+                    .padding(vertical = 5.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    if (zeit == null) a.titel else "$zeit: ${a.titel}", Modifier.weight(1f).padding(end = 12.dp),
+                    color = f.textLeise, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End,
+                )
+                Box(Modifier.padding(top = 1.dp, end = 4.dp).size(20.dp).knopf3d(f.erfolg, f.erfolg, 10.dp, f.dunkel), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                }
+            }
+        }
     }
 }
 
@@ -501,11 +544,10 @@ private fun MorgenBereich(vm: AppViewModel) {
  * roten Titel; Uhrzeit und „überfällig“ liest TalkBack über die Zustandsbeschreibung vor.
  */
 @Composable
-private fun AufgabenZeile(a: HeuteAufgabe, gehalten: Boolean, jetzt: LocalDateTime, gelesenTag: String, oeffnen: () -> Unit, umschalten: () -> Unit) {
+private fun AufgabenZeile(a: HeuteAufgabe, jetzt: LocalDateTime, gelesenTag: String, oeffnen: () -> Unit, umschalten: () -> Unit) {
     val f = LocalFarben.current
-    // Erledigte dezent ausgegraut (ganze Zeile samt Haken), offene voll deckend. Während der Halte-Zeit [gehalten] bleibt die
-    // frisch abgehakte Zeile kräftig (Haken gut sichtbar) und graut erst beim Gleiten aus, im Takt mit der Bewegung.
-    val deckung by animateFloatAsState(if (a.erledigt && !gehalten) 0.5f else 1f, tween(GLEITEN_MS), label = "deckung")
+    // In der offenen Liste stehen nur offene; Erledigte (nur kurz, falls doch) dezent ausgegraut.
+    val deckung by animateFloatAsState(if (a.erledigt) 0.5f else 1f, tween(GLEITEN_MS), label = "deckung")
     val haken by animateFloatAsState(if (a.erledigt) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "haken")
     // Uhrzeit vor dem Titel: grün, solange sie noch kommt, rot ab der fälligen Minute, solange die Aufgabe offen ist (erledigt: wie
     // die Zeile). [jetzt] tickt minütlich für die ganze Karte; stammt die Liste von einem früheren Tag, ist jede Uhrzeit vorbei.
