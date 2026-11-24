@@ -66,7 +66,36 @@ enum RepoSync {
 
     /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete
     /// Aenderungen paralleler Sitzungen bleiben unangetastet (Commit nur mit Pfad, --autostash beim Rebase).
-    static func commitAndPushFile(_ filePath: String, message commitMessage: String) -> Result {
+    /// Liest eine Datei so, wie sie auf GitHub (origin/main) liegt: nur `git fetch` plus `git show`, der
+    /// Arbeitsbaum bleibt unberuehrt. nil, wenn offline oder die Datei dort fehlt. Blockiert: nie auf dem Main-Thread.
+    static func readUpstreamFile(_ repoRelativePath: String) -> String? {
+        let repo = (Paths.home as NSString).appendingPathComponent("proggs")
+        guard FileManager.default.fileExists(atPath: (repo as NSString).appendingPathComponent(".git")) else { return nil }
+        let git = Shell.which("git") ?? "/usr/bin/git"
+        var env = ProcessInfo.processInfo.environment
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        let fetch = Shell.run(git, ["-C", repo, "fetch", "--quiet"], environment: env, timeout: 20)
+        guard fetch.finished, fetch.exitCode == 0 else { return nil }
+        let show = Shell.run(git, ["-C", repo, "show", "@{u}:" + repoRelativePath], environment: env, timeout: 10)
+        guard show.finished, show.exitCode == 0 else { return nil }
+        return show.stdout
+    }
+
+    /// Nimmt den eigenen Commit zurueck, solange er noch nicht auf GitHub liegt; die Datei bleibt geaendert.
+    private static func undoUnpushedCommit(_ git: String, _ repo: String, _ env: [String: String], _ filePath: String, _ message: String) {
+        let subject = Shell.run(git, ["-C", repo, "log", "-1", "--format=%s"], environment: env, timeout: 5)
+        let unpushed = Shell.run(git, ["-C", repo, "rev-list", "--count", "@{u}..HEAD"], environment: env, timeout: 5)
+        guard subject.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == message,
+              unpushed.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "1" else { return }
+        _ = Shell.run(git, ["-C", repo, "reset", "--soft", "HEAD~1"], environment: env, timeout: 10)
+        _ = Shell.run(git, ["-C", repo, "reset", "--quiet", "--", filePath], environment: env, timeout: 10)
+        Logger.shared.warn("RepoSync", "undoUnpushedCommit", "Eigenen Commit zurückgenommen, nächster Versuch bei der nächsten Änderung", ["filePath": filePath])
+    }
+
+    /// `localWins`: Bei einem Konflikt in genau dieser Datei gewinnt der eigene Stand (Rebase mit -X theirs),
+    /// richtig fuer die Modell-Anordnung, weil der Launcher den GitHub-Stand vorher schon uebernommen hat.
+    /// Scheitert der Abgleich trotzdem, wird der ungepushte eigene Commit zurueckgenommen.
+    static func commitAndPushFile(_ filePath: String, message commitMessage: String, localWins: Bool = false) -> Result {
         let log = Logger.shared
         let repo = (Paths.home as NSString).appendingPathComponent("proggs")
         let git = Shell.which("git") ?? "/usr/bin/git"
@@ -83,14 +112,19 @@ enum RepoSync {
                                environment: env, timeout: 20)
         guard commit.exitCode == 0 else { return Result(ok: false, message: firstLine(commit.stderr)) }
         // Timeout 0: Ein abgebrochener Rebase mit Autostash hinterliesse das Repo mitten in der Arbeit.
-        let pull = Shell.run(git, ["-C", repo, "pull", "--rebase", "--autostash", "--quiet"], environment: env, timeout: 0)
+        let pullArgs = ["-C", repo, "pull", "--rebase", "--autostash"] + (localWins ? ["-X", "theirs"] : []) + ["--quiet"]
+        let pull = Shell.run(git, pullArgs, environment: env, timeout: 0)
         guard pull.finished, pull.exitCode == 0 else {
             // Nie mitten im Rebase stehen lassen: sonst blieben Konfliktmarker im Arbeitsbaum.
-            if pull.finished { _ = Shell.run(git, ["-C", repo, "rebase", "--abort"], environment: env, timeout: 20) }
+            if pull.finished {
+                _ = Shell.run(git, ["-C", repo, "rebase", "--abort"], environment: env, timeout: 20)
+                if localWins { undoUnpushedCommit(git, repo, env, filePath, commitMessage) }
+            }
             return Result(ok: false, message: "committet, aber Abgleich fehlgeschlagen: " + firstLine(pull.stderr))
         }
         let push = Shell.run(git, ["-C", repo, "push", "--quiet", "origin", "HEAD:main"], environment: env, timeout: 30)
         guard push.finished, push.exitCode == 0 else {
+            if localWins && push.finished { undoUnpushedCommit(git, repo, env, filePath, commitMessage) }
             return Result(ok: false, message: "committet, aber Push fehlgeschlagen: " + firstLine(push.stderr))
         }
         log.info("RepoSync", "commitAndPushFile", "Datei committet und gepusht", ["filePath": filePath])

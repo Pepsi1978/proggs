@@ -75,7 +75,38 @@ public static class RepoSync
     /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete
     /// Aenderungen paralleler Sitzungen bleiben unangetastet (Commit nur mit Pfad, --autostash beim Rebase).
     /// </summary>
-    public static async Task<Result> CommitAndPushFileAsync(string filePath, string message)
+    /// <summary>
+    /// Liest eine Datei so, wie sie auf GitHub (origin/main) liegt: nur <c>git fetch</c> plus <c>git show</c>,
+    /// der Arbeitsbaum bleibt unberuehrt. Null, wenn offline oder die Datei dort fehlt.
+    /// </summary>
+    public static async Task<string?> ReadUpstreamFileAsync(string repoRelativePath)
+    {
+        var repo = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
+        try
+        {
+            if (!Directory.Exists(Path.Combine(repo, ".git"))) return null;
+            var fetch = await RunGitAsync(repo, PullTimeout, "fetch", "--quiet");
+            if (fetch.TimedOut || fetch.ExitCode != 0) return null;
+            var show = await RunGitAsync(repo, TimeSpan.FromSeconds(10), "show", "@{u}:" + repoRelativePath.Replace('\\', '/'));
+            return show.ExitCode == 0 && !show.TimedOut ? show.Output : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("RepoSync", "ReadUpstreamFileAsync", ex.Message, new { repoRelativePath });
+            return null;
+        }
+    }
+
+    public static Task<Result> CommitAndPushFileAsync(string filePath, string message) =>
+        CommitAndPushFileAsync(filePath, message, localWins: false);
+
+    /// <param name="localWins">
+    /// true: Bei einem Konflikt in genau dieser Datei gewinnt der eigene Stand (Rebase mit -X theirs). Fuer
+    /// die Modell-Anordnung richtig, weil der Launcher den GitHub-Stand vorher schon uebernommen hat.
+    /// Scheitert der Abgleich trotzdem, wird der ungepushte eigene Commit zurueckgenommen (die Datei bleibt
+    /// geaendert), damit kein lokaler Commit das Vorspulen dieses Rechners dauerhaft blockiert.
+    /// </param>
+    public static async Task<Result> CommitAndPushFileAsync(string filePath, string message, bool localWins)
     {
         var log = Logger.Instance;
         var repo = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
@@ -87,15 +118,25 @@ public static class RepoSync
             if (diff.ExitCode == 0) return new Result(true, "keine Änderung");
             var commit = await RunGitAsync(repo, TimeSpan.FromSeconds(20), "commit", "--quiet", "-m", message, "--", filePath);
             if (commit.ExitCode != 0) return new Result(false, FirstLine(commit.Error));
-            var pull = await RunGitAsync(repo, PullTimeout, killOnTimeout: false, "pull", "--rebase", "--autostash", "--quiet");
+            var pull = localWins
+                ? await RunGitAsync(repo, PullTimeout, killOnTimeout: false, "pull", "--rebase", "--autostash", "-X", "theirs", "--quiet")
+                : await RunGitAsync(repo, PullTimeout, killOnTimeout: false, "pull", "--rebase", "--autostash", "--quiet");
             if (pull.ExitCode != 0 || pull.TimedOut)
             {
                 // Nie mitten im Rebase stehen lassen: sonst blieben Konfliktmarker im Arbeitsbaum.
-                if (!pull.TimedOut) await RunGitAsync(repo, TimeSpan.FromSeconds(20), "rebase", "--abort");
+                if (!pull.TimedOut)
+                {
+                    await RunGitAsync(repo, TimeSpan.FromSeconds(20), "rebase", "--abort");
+                    if (localWins) await UndoUnpushedCommitAsync(repo, filePath, message);
+                }
                 return new Result(false, "committet, aber Abgleich fehlgeschlagen: " + FirstLine(pull.Error));
             }
             var push = await RunGitAsync(repo, TimeSpan.FromSeconds(30), "push", "--quiet", "origin", "HEAD:main");
-            if (push.ExitCode != 0 || push.TimedOut) return new Result(false, "committet, aber Push fehlgeschlagen: " + FirstLine(push.Error));
+            if (push.ExitCode != 0 || push.TimedOut)
+            {
+                if (localWins && !push.TimedOut) await UndoUnpushedCommitAsync(repo, filePath, message);
+                return new Result(false, "committet, aber Push fehlgeschlagen: " + FirstLine(push.Error));
+            }
             log.Info("RepoSync", "CommitAndPushFileAsync", "Datei committet und gepusht", new { filePath });
             return new Result(true, "committet und gepusht");
         }
@@ -104,6 +145,17 @@ public static class RepoSync
             log.Error("RepoSync", "CommitAndPushFileAsync", ex, new { filePath });
             return new Result(false, ex.Message);
         }
+    }
+
+    /// <summary>Nimmt den eigenen Commit zurueck, solange er noch nicht auf GitHub liegt; die Datei bleibt geaendert.</summary>
+    private static async Task UndoUnpushedCommitAsync(string repo, string filePath, string message)
+    {
+        var subject = await RunGitAsync(repo, TimeSpan.FromSeconds(5), "log", "-1", "--format=%s");
+        var unpushed = await RunGitAsync(repo, TimeSpan.FromSeconds(5), "rev-list", "--count", "@{u}..HEAD");
+        if (subject.Output.Trim() != message || unpushed.Output.Trim() != "1") return;
+        await RunGitAsync(repo, TimeSpan.FromSeconds(10), "reset", "--soft", "HEAD~1");
+        await RunGitAsync(repo, TimeSpan.FromSeconds(10), "reset", "--quiet", "--", filePath);
+        Logger.Instance.Warn("RepoSync", "UndoUnpushedCommitAsync", "Eigenen Commit zurückgenommen, nächster Versuch bei der nächsten Änderung", new { filePath });
     }
 
     private static Task<GitRun> RunGitAsync(string repo, TimeSpan timeout, params string[] args)

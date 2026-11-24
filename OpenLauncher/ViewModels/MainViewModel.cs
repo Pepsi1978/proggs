@@ -118,6 +118,9 @@ public sealed partial class MainViewModel : ObservableObject
         // Read-only LM Studio refresh every minute: picks up new models whenever LM Studio is running,
         // without ever starting it (connection refused costs nothing).
         _effortTimer.Tick += async (_, _) => await RefreshLmStudioModelsAsync();
+        // Gemeinsame Modell-Anordnung: beim Start und jede Minute mit GitHub abgleichen (nur lesend).
+        _ = SyncModelLayoutAsync();
+        _effortTimer.Tick += async (_, _) => await SyncModelLayoutAsync();
         _effortTimer.Start();
 
         // Version UND Zeitstempel kommen aus der Assembly: die Uhrzeit setzt MSBuild beim Compile
@@ -505,6 +508,26 @@ public sealed partial class MainViewModel : ObservableObject
             : failed.Count == 0
                 ? $"Modelle aktualisiert: {string.Join(" · ", updated)}."
                 : $"Modelle teilweise aktualisiert: {string.Join(" · ", updated)}; nicht erreichbar: {string.Join(", ", failed)}.";
+    }
+
+    private bool _layoutSyncRunning;
+
+    private async Task SyncModelLayoutAsync()
+    {
+        if (_layoutSyncRunning) return;
+        _layoutSyncRunning = true;
+        try
+        {
+            if (await _registry.SyncLayoutFromUpstreamAsync()) ApplyRegistryOrderToSidebar();
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("MainViewModel", "SyncModelLayoutAsync", ex.Message);
+        }
+        finally
+        {
+            _layoutSyncRunning = false;
+        }
     }
 
     /// <summary>Uebernimmt eine vom Repo geholte Anordnung (Gruppenreihenfolge, Ausgeblendet) in die Seitenleiste.</summary>

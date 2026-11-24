@@ -224,7 +224,37 @@ final class MainViewModel {
         // Ladezustand ab, sobald er wieder nach vorn kommt: Nach einem Modellstart laeuft der Server.
         _ = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification,
                                                    object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in await self?.refreshLmStudioModels() }
+            Task { @MainActor in
+                await self?.refreshLmStudioModels()
+                self?.syncModelLayout()
+            }
+        }
+
+        // Gemeinsame Modell-Anordnung: beim Start, bei jeder Aktivierung und jede Minute mit GitHub abgleichen.
+        syncModelLayout()
+        layoutSyncTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.syncModelLayout() }
+        }
+    }
+
+    private var layoutSyncTimer: Timer?
+    private var layoutSyncRunning = false
+
+    /// Liest die Anordnung im Hintergrund von GitHub und uebernimmt sie auf dem Main-Thread.
+    private func syncModelLayout() {
+        guard !layoutSyncRunning else { return }
+        layoutSyncRunning = true
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let text = RepoSync.readUpstreamFile("OpenLauncher/model-layout.json")
+            Task { @MainActor in
+                guard let self else { return }
+                self.layoutSyncRunning = false
+                guard let text, self.registry.applyUpstreamLayout(text) else { return }
+                self.modelGroups = self.registry.groups
+                self.refreshHiddenModels()
+                if self.selectedModel?.isHidden == true { self.selectedModel = self.modelGroups.flatMap(\.models).first { !$0.isHidden } }
+                self.delegate?.modelGroupsChanged()
+            }
         }
     }
 

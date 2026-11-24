@@ -797,10 +797,52 @@ def platz_schaffen() -> None:
         schliessen(max(frei, key=lambda s: s["still_s"])["name"])
 
 
+def _mit_anordnung(gruppen: list) -> list:
+    """Legt die gemeinsame Anordnung (OpenLauncher/model-layout.json) über models.json, wie ModelRegistry.ApplyLayout
+    in OpenLauncher: Gruppen- und Modellreihenfolge, Ausgeblendet, eigene Namen, eigene Modelle, entfernte Modelle."""
+    anordnung = _lies_json(PROGGS / "OpenLauncher" / "model-layout.json", {})
+    if not isinstance(anordnung, dict) or not anordnung:
+        return gruppen
+    def nach_id(karte, gid):
+        if not isinstance(karte, dict):
+            return None
+        return next((v for k, v in karte.items() if k.lower() == gid.lower()), None)
+    folge = [str(g).lower() for g in anordnung.get("Gruppen") or []]
+    gruppen = [g for g in gruppen if isinstance(g, dict)]
+    gruppen.sort(key=lambda g: folge.index(str(g.get("Id", "")).lower()) if str(g.get("Id", "")).lower() in folge else len(folge))
+    for gruppe in gruppen:
+        gid = str(gruppe.get("Id", ""))
+        eintraege = nach_id(anordnung.get("Modelle"), gid)
+        if not isinstance(eintraege, list):
+            continue
+        entfernt = {str(x).lower() for x in nach_id(anordnung.get("Entfernt"), gid) or []}
+        alle = {str(m.get("Slug", "")).lower(): m for m in gruppe.get("Models") or [] if isinstance(m, dict) and m.get("Slug")}
+        neu, bekannt = [], set()
+        for e in eintraege:
+            slug = str(e.get("Slug", "")) if isinstance(e, dict) else ""
+            if not slug or slug.lower() in bekannt:
+                continue
+            bekannt.add(slug.lower())
+            m = alle.get(slug.lower())
+            if m is None:
+                if not e.get("Eigen"):
+                    continue
+                m = {"Slug": slug, "DisplayName": e.get("Name") or slug, "ProviderId": gruppe.get("ProviderId"),
+                     "ProviderName": gruppe.get("ProviderName"), "IsUserDefined": True}
+            m = dict(m)
+            m["IsHidden"] = bool(e.get("Ausgeblendet"))
+            if e.get("EigenerName") and e.get("Name"):
+                m["DisplayName"] = e["Name"]
+            neu.append(m)
+        neu += [m for k, m in alle.items() if k not in bekannt and k not in entfernt]
+        gruppe["Models"] = neu
+    return gruppen
+
+
 def katalog() -> dict:
     """Modelle, Standards und Wahlmöglichkeiten für den Reiter OpenLauncher, gleiche Regeln wie OpenLauncherKatalog.kt in Jarvis."""
     modelle = []
-    gruppen = _lies_json(PROGGS / "OpenLauncher" / "models.json", [])
+    gruppen = _mit_anordnung(_lies_json(PROGGS / "OpenLauncher" / "models.json", []))
     standards = _lies_json(PROGGS / "OpenLauncher" / "model-defaults.json", {})
     gemerkt = _gemerkte_stufen()
     for gruppe in gruppen:

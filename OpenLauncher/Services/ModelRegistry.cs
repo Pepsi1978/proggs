@@ -314,6 +314,31 @@ public sealed class ModelRegistry
         return changed;
     }
 
+    /// <summary>
+    /// Holt die Anordnung von GitHub (nur lesend, ohne den Arbeitsbaum anzufassen) und uebernimmt sie, wenn ein
+    /// anderer Rechner etwas geaendert hat. Laeuft beim Start und jede Minute, damit Aenderungen sofort ankommen.
+    /// </summary>
+    public async Task<bool> SyncLayoutFromUpstreamAsync()
+    {
+        var text = await RepoSync.ReadUpstreamFileAsync("OpenLauncher/model-layout.json");
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        text = text.Replace("\r\n", "\n").TrimEnd('\n');
+        if (string.Equals(text, _layoutText?.TrimEnd('\n'), StringComparison.Ordinal)) return false;
+        ModelLayout? layout;
+        try { layout = JsonSerializer.Deserialize<ModelLayout>(text, JsonOpts); }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "SyncLayoutFromUpstreamAsync", ex.Message);
+            return false;
+        }
+        if (layout == null) return false;
+        _layoutText = text;
+        var changed = ApplyLayout(layout);
+        if (changed) Save();
+        Logger.Instance.Info("ModelRegistry", "SyncLayoutFromUpstreamAsync", "Anordnung von GitHub übernommen", new { changed });
+        return changed;
+    }
+
     private static List<T>? FindLayoutList<T>(Dictionary<string, List<T>> map, string groupId) =>
         map.FirstOrDefault(pair => string.Equals(pair.Key, groupId, StringComparison.OrdinalIgnoreCase)).Value;
 
@@ -396,7 +421,8 @@ public sealed class ModelRegistry
     {
         try
         {
-            var old = ReadLayout(out _);
+            // Grundlage ist der zuletzt uebernommene Stand (auch von GitHub), nicht unbedingt die Datei.
+            var old = _layoutText != null ? JsonSerializer.Deserialize<ModelLayout>(_layoutText, JsonOpts) : ReadLayout(out _);
             var layout = new ModelLayout();
             foreach (var group in Groups)
             {
@@ -457,7 +483,7 @@ public sealed class ModelRegistry
         try
         {
             Interlocked.Exchange(ref _layoutPushQueued, 0);
-            var result = await RepoSync.CommitAndPushFileAsync(LayoutPath, "OpenLauncher: Modell-Anordnung der Seitenleiste geändert");
+            var result = await RepoSync.CommitAndPushFileAsync(LayoutPath, "OpenLauncher: Modell-Anordnung der Seitenleiste geändert", localWins: true);
             if (result.Ok) Logger.Instance.Info("ModelRegistry", "PushLayoutAsync", result.Message);
             else Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", result.Message);
         }

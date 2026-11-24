@@ -238,6 +238,21 @@ final class ModelRegistry {
         return changed
     }
 
+    /// Uebernimmt die von GitHub gelesene Anordnung (RepoSync.readUpstreamFile), wenn ein anderer Rechner
+    /// etwas geaendert hat. Laeuft beim Start, bei jeder Aktivierung und jede Minute.
+    func applyUpstreamLayout(_ raw: String) -> Bool {
+        let text = raw.replacingOccurrences(of: "\r\n", with: "\n")
+        func ohneEnde(_ s: String?) -> String? { s.map { $0.trimmingCharacters(in: .newlines) } }
+        guard ohneEnde(text) != ohneEnde(layoutText),
+              let data = text.data(using: .utf8),
+              let layout = try? JSONDecoder().decode(ModelLayout.self, from: data) else { return false }
+        layoutText = text
+        let changed = applyLayout(layout)
+        if changed { save() }
+        Logger.shared.info("ModelRegistry", "applyUpstreamLayout", "Anordnung von GitHub übernommen", ["changed": "\(changed)"])
+        return changed
+    }
+
     private func applyLayout(_ layout: ModelLayout) -> Bool {
         var changed = false
         var target = 0
@@ -298,7 +313,9 @@ final class ModelRegistry {
     }
 
     private func saveLayout() {
-        let old = ModelRegistry.readLayout()?.layout
+        // Grundlage ist der zuletzt uebernommene Stand (auch von GitHub), nicht unbedingt die Datei.
+        let old = layoutText.flatMap { $0.data(using: .utf8) }.flatMap { try? JSONDecoder().decode(ModelLayout.self, from: $0) }
+            ?? ModelRegistry.readLayout()?.layout
         let modelle = JSONNode.object()
         let entfernt = JSONNode.object()
         var ids: [String] = []
@@ -362,7 +379,7 @@ final class ModelRegistry {
         layoutPushLock.unlock()
         layoutPushQueue.asyncAfter(deadline: .now() + 3) {
             layoutPushLock.lock(); layoutPushQueued = false; layoutPushLock.unlock()
-            let result = RepoSync.commitAndPushFile(layoutPath, message: "OpenLauncher: Modell-Anordnung der Seitenleiste geändert")
+            let result = RepoSync.commitAndPushFile(layoutPath, message: "OpenLauncher: Modell-Anordnung der Seitenleiste geändert", localWins: true)
             if result.ok { Logger.shared.info("ModelRegistry", "pushLayout", result.message) }
             else { Logger.shared.warn("ModelRegistry", "pushLayout", result.message) }
         }
