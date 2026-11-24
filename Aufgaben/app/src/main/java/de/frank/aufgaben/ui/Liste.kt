@@ -121,7 +121,6 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String, archivTage: Set<
     private val aufMorgen = gefiltert.mapNotNull { it.amTag(heute + 1, heute) }
     val heuteOffen = aufHeute.filter { !it.erledigt && it.tag != null && it.tag <= heute && (it.minuten == null || it.tag < heute) }.sortedWith(tagesOrdnung)
     val heuteTermine = aufHeute.filter { it.tag == heute && it.minuten != null }
-    val heuteErledigt = gefiltert.filter { it.erledigt && it.tag == heute && it.minuten == null }
     val morgenOffen = aufMorgen.filter { it.minuten == null && !it.erledigt }.sortedWith(tagesOrdnung)
     val morgenTermine = aufMorgen.filter { it.minuten != null }
     // Aufgaben aus der App „Ziele“ ohne Tag stehen unter „Ziele“ bei ihrem Ziel, nicht in den Prioritäten; tägliche stehen an den Tagen.
@@ -311,7 +310,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40, einblendDauer = 750, leuchten = true, dunklesBand = true,
                 // Wie alle Bereiche von Anfang an offen, auch leer (dann mit Hinweis und Zeitleiste);
                 // nur ein leeres Suchergebnis klappt ihn zu.
-                leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
+                leer = suche.isNotBlank() && b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty(), automatik = suche.isBlank(),
                 aktionen = { KalenderKnopf(vm); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")

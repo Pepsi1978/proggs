@@ -466,8 +466,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             repo.setzeErledigt(a, erledigt)
-            // Keine Leiste unten: Rückgängig geht durch erneutes Tippen auf den Haken.
-            if (erledigt) konfetti++
+            if (erledigt) {
+                konfetti++
+                // Abgehakte Karten verschwinden sofort aus Heute in den zugeklappten Bereich Erledigt: Rückgängig direkt hier anbieten.
+                melde("Erledigt") { viewModelScope.launch { repo.eine(a.id)?.let { repo.setzeErledigt(it, false) } } }
+            }
         }
     }
 
