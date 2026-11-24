@@ -1094,6 +1094,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         neueSessionBlitz++
     }
 
+    /** Wert eines umbelegten Favoritenknopfs, dahinter sein Platz. */
+    private val FAVORIT = "favorit:"
+
     /** Nach dem Antippen des Programmierbuttons stehen die Knöpfe der Modellwahl da, noch vor dem Diktat. */
     var programmierVorwahlOffen by mutableStateOf(false); private set
 
@@ -1114,11 +1117,63 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Die Vollbildauswahl hinter dem Knopf „OpenLauncher“. */
     var openLauncherWahlOffen by mutableStateOf(false); private set
 
-    fun openLauncherWahlSchliessen() { openLauncherWahlOffen = false; vorwahlOhneAufgabeZuruecknehmen() }
+    fun openLauncherWahlSchliessen() {
+        openLauncherWahlOffen = false
+        // Abgebrochenes Umbelegen eines Favoriten: Belegung und offene Modellwahl bleiben wie vorher.
+        if (favoritPlatz != null) { favoritPlatz = null; vorwahlFristNeu(); return }
+        vorwahlOhneAufgabeZuruecknehmen()
+    }
+
+    /**
+     * Modellfavoriten des Programmierbuttons (Frank, 24.11.2026): Ein langer Druck auf einen der vier Modellknöpfe öffnet die
+     * OpenLauncher-Auswahl, ohne einen Auftrag zu starten; die bestätigte Wahl ersetzt nur diesen Platz und bleibt gespeichert.
+     * Platz → Wahl; ein leerer Platz ist der eingebaute Knopf.
+     */
+    var favoritenBelegung by mutableStateOf(favoritenLaden()); private set
+
+    /** Der Platz, den die offene Vollbildauswahl gerade neu belegt; null = normale Auswahl für einen Auftrag. */
+    var favoritPlatz by mutableStateOf<Int?>(null); private set
+
+    private fun favoritenPrefs() = getApplication<Application>().getSharedPreferences("jarvis_programmier_favoriten", Context.MODE_PRIVATE)
+
+    private fun favoritenLaden(): Map<Int, ProgrammiererVorlage.FreieWahl> = ProgrammiererVorlage.MODELL_OPTIONEN.indices.mapNotNull { i ->
+        favoritenPrefs().getString("platz_$i", null)?.let { roh ->
+            runCatching {
+                val o = org.json.JSONObject(roh)
+                i to ProgrammiererVorlage.FreieWahl(o.getString("modell"), o.getString("anbieter"), o.getString("slug"), o.getString("effort"),
+                    o.getString("profil"), o.getString("modus"), o.getString("cli"))
+            }.getOrNull()
+        }
+    }.toMap()
+
+    /** Knöpfe der Modellwahl: belegte Favoriten zeigen ihr Modell (Wert „favorit:<Platz>“), danach „OpenLauncher“. */
+    val vorwahlOptionen: List<Pair<String, String>> get() = ProgrammiererVorlage.MODELL_OPTIONEN.mapIndexed { i, knopf ->
+        favoritenBelegung[i]?.let { "$FAVORIT$i" to it.modell } ?: knopf
+    } + (ProgrammiererVorlage.OPENLAUNCHER to "OpenLauncher")
+
+    /** Langer Druck auf einen Modellknopf der Vorwahl: Vollbildauswahl zum Umbelegen dieses Platzes; „OpenLauncher“ selbst ist kein Favorit. */
+    fun programmierFavoritAendern(wert: String) {
+        val platz = vorwahlOptionen.indexOfFirst { it.first == wert }.takeIf { it in ProgrammiererVorlage.MODELL_OPTIONEN.indices } ?: return
+        vorwahlFrist?.cancel()
+        favoritPlatz = platz
+        openLauncherWahlOffen = true
+    }
 
     /** Ende der Vollbildauswahl: Alle Angaben kommen als Einstieg ins Feld, gesendet wird erst mit dem Pfeil. */
     fun openLauncherWahlUebernehmen(wahl: ProgrammiererVorlage.FreieWahl) {
         openLauncherWahlOffen = false
+        favoritPlatz?.let { platz ->
+            // Nur diesen Favoriten ersetzen und speichern; kein Auftrag, die Modellwahl zeigt ihn sofort mit dem neuen Modell.
+            favoritPlatz = null
+            favoritenBelegung = favoritenBelegung + (platz to wahl)
+            favoritenPrefs().edit().putString("platz_$platz", org.json.JSONObject().put("modell", wahl.modell).put("anbieter", wahl.anbieter)
+                .put("slug", wahl.slug).put("effort", wahl.effort).put("profil", wahl.profil).put("modus", wahl.modus).put("cli", wahl.cli).toString()).apply()
+            if (platz == 0 && vorwahlEinstieg != null && ProgrammiererVorlage.vorspannIn(entwurf) == vorwahlEinstieg) {
+                standardEinstieg().also { einstiegSetzen(it); vorwahlEinstieg = it }
+            }
+            vorwahlFristNeu()
+            return
+        }
         if (ProgrammiererVorlage.reviewVorwahl(wahl.cli)) { reviewFrageOeffnen(ReviewVorwahl(frei = wahl), ProgrammiererVorlage.vorspannFrei(wahl)); return }
         vorwahlEinstieg = null; vorwahlVorher = null
         einstiegSetzen(ProgrammiererVorlage.vorspannFrei(wahl))
@@ -1205,8 +1260,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierReviewFrage = null
             // Vergessene Modellwahl: Sie soll nicht dauerhaft stehen bleiben, auch nicht über ein Live-Gespräch hinweg; der Opus-Einstieg bleibt.
             vorwahlVorher = entwurf to geleert
-            einstiegSetzen(ProgrammiererVorlage.STANDARD_EINSTIEG)
-            vorwahlEinstieg = ProgrammiererVorlage.STANDARD_EINSTIEG
+            val standard = standardEinstieg()
+            einstiegSetzen(standard)
+            vorwahlEinstieg = standard
             vorwahlFristNeu()
             return
         }
@@ -1214,8 +1270,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (sitzungId == null) sitzungProgrammierung = false
     }
 
+    /** Einstieg ohne Wahl: der erste Favorit (hervorgehoben); unbelegt Opus 5.5 in Claude Code. */
+    private fun standardEinstieg() = favoritenBelegung[0]?.let { ProgrammiererVorlage.vorspannFrei(it) } ?: ProgrammiererVorlage.STANDARD_EINSTIEG
+
     /** Knopf der Modellwahl: Bei mehreren CLIs kommen deren Knöpfe, bei einem steht der Einstieg sofort im Feld; „OpenLauncher“ öffnet die Vollbildauswahl. */
     fun programmierVorwahl(modell: String) {
+        if (modell.startsWith(FAVORIT)) {
+            val wahl = favoritenBelegung[modell.removePrefix(FAVORIT).toIntOrNull()] ?: return
+            vorwahlFrist?.cancel()
+            programmierVorwahlOffen = false
+            programmierVorwahlModell = null
+            openLauncherWahlUebernehmen(wahl)
+            return
+        }
         if (modell == ProgrammiererVorlage.OPENLAUNCHER) {
             programmierVorwahlOffen = false
             openLauncherWahlOffen = true

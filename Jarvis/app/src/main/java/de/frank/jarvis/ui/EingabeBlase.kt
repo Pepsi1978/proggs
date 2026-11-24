@@ -619,8 +619,8 @@ fun ProgrammierSchweber(
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
         if (vm.nachtragMoeglich) {
-            SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
-                Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
+            SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }, programmier = true) {
+                Icon(Icons.Rounded.Add, null, tint = auswahlSchrift(f), modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
@@ -633,8 +633,8 @@ fun ProgrammierSchweber(
                 Box(Modifier.height(SCHWEBE_GROESSE).wrapContentHeight(Alignment.Bottom, unbounded = true)) { Box(auswahlMessen) { OffeneAuswahl(vm, karte) } }
                 Spacer(Modifier.width(8.dp))
             }
-            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }) {
-                Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
+            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }, programmier = true) {
+                Icon(Icons.Rounded.Code, null, tint = auswahlSchrift(f), modifier = Modifier.size(26.dp))
             }
         }
         }
@@ -685,21 +685,26 @@ private fun OffeneAuswahl(vm: AppViewModel, karte: Nachricht?) {
         val f = LocalFarben.current
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_FRAGE else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_FRAGE,
-                color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                color = auswahlSchrift(f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(12.dp)).background(auswahlGrund(f)).padding(horizontal = 12.dp, vertical = 8.dp))
             AuswahlKnoepfe(if (reviewFrage.umfang) de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_UMFANG_OPTIONEN else de.frank.jarvis.faehigkeit.ProgrammiererVorlage.REVIEW_OPTIONEN) { vm.programmierVorwahlReview(it) }
         }
     }
     else if (vm.programmierVorwahlOffen && vorwahlModell != null) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.cliOptionen(vorwahlModell)) { vm.programmierVorwahlCli(vorwahlModell, it) }
-    else if (vm.programmierVorwahlOffen) AuswahlKnoepfe(de.frank.jarvis.faehigkeit.ProgrammiererVorlage.VORWAHL_OPTIONEN) { vm.programmierVorwahl(it) }
+    // Langer Druck auf einen Modellfavoriten belegt ihn über die OpenLauncher-Auswahl neu (Frank, 24.11.2026).
+    else if (vm.programmierVorwahlOffen) AuswahlKnoepfe(vm.vorwahlOptionen, lange = { vm.programmierFavoritAendern(it) }) { vm.programmierVorwahl(it) }
     else karte?.let { WahlKnoepfe(vm, it) }
 }
 
-/** Deckender Grund der Einblendungen am Programmierbutton (Frank, 23.11.2026: nie durchsichtig, sonst steht Schrift über Schrift). */
-private fun auswahlGrund(f: de.frank.jarvis.ui.theme.Farben) = f.flaeche.compositeOver(f.hgUnten).copy(alpha = 1f)
+/**
+ * Deckender Grund der Einblendungen am Programmierbutton (Frank, 23.11.2026: nie durchsichtig, sonst steht Schrift über Schrift).
+ * Im Hellmodus kräftig in der Akzentfarbe mit weißer Schrift, damit er sich vom hellen App-Grund abhebt (Frank, 24.11.2026); dunkel unverändert.
+ */
+private fun auswahlGrund(f: de.frank.jarvis.ui.theme.Farben) = if (f.dunkel) f.flaeche.compositeOver(f.hgUnten).copy(alpha = 1f) else f.tertiaer
+private fun auswahlSchrift(f: de.frank.jarvis.ui.theme.Farben) = if (f.dunkel) f.text else f.aufPrimaer
 
 @Composable
-private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String) -> Unit) {
+private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, lange: ((String) -> Unit)? = null, aktion: (String) -> Unit) {
     val f = LocalFarben.current
     // Je Zeile höchstens zwei Knöpfe: Vier Modelle passen sonst nicht auf das Frontdisplay. Der erste (Standard) bleibt hervorgehoben.
     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -708,9 +713,10 @@ private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String
                 teil.forEachIndexed { i, (wert, label) ->
                     val erster = zeile == 0 && i == 0
                     Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
-                        .background(if (erster) f.text.compositeOver(f.hgUnten) else auswahlGrund(f)).antippen { aktion(wert) }
+                        .background(if (erster) f.text.compositeOver(f.hgUnten) else auswahlGrund(f))
+                        .antippen(lange = lange?.let { l -> { l(wert) } }, langeText = lange?.let { "Favorit ändern" }) { aktion(wert) }
                         .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (erster) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text(label, color = if (erster) f.hgOben else auswahlSchrift(f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
             }
@@ -803,7 +809,7 @@ private fun RechnerAuswahl(da: List<de.frank.jarvis.fernsteuerung.Fernziel>, sch
 }
 
 @Composable
-private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, blitz: Int = 0, inhalt: @Composable () -> Unit) {
+private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, blitz: Int = 0, programmier: Boolean = false, inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     // Ein schmaler Lichtstreif wandert langsam über den Grund; der Grund selbst bleibt fast durchsichtig.
     val lauf by rememberInfiniteTransition(label = "schimmer").animateFloat(-1f, 2f,
@@ -820,7 +826,8 @@ private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Un
         aufblitzen.animateTo(0f, tween(650))
     }
     Box(
-        Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
+        // Programmier-Symbole im Hellmodus deckend in der Akzentfarbe wie ihre Auswahlknöpfe; dunkel bleibt alles wie bisher.
+        Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(if (programmier && !f.dunkel) auswahlGrund(f) else f.text.copy(alpha = 0.06f))
             .background(f.erfolg.copy(alpha = 0.85f * maxOf(gruen, aufblitzen.value))).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),

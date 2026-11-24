@@ -107,7 +107,7 @@ fun OpenLauncherWahlEbene(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(48.dp).antippen(aktion = zurueck), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück", tint = f.text) }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                    Text(listOf("OpenLauncher: Modell", "Effort", "Profil", "Modus", "CLI")[stufe], color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text((if (vm.favoritPlatz != null) "Favorit ersetzen: " else "") + listOf("OpenLauncher: Modell", "Effort", "Profil", "Modus", "CLI")[stufe], color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (modell != null) Text(
                         listOfNotNull(modell.name, effort.takeIf { it.isNotEmpty() }?.let(OpenLauncherEfforts::name),
                             OpenLauncherEfforts.PROFILE.firstOrNull { it.wert == profil }?.name, OpenLauncherEfforts.MODI.firstOrNull { it.wert == modus }?.name).joinToString(" · "),
