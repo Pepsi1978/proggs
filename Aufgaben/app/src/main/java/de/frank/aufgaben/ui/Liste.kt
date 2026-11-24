@@ -132,7 +132,8 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String, archivTage: Set<
     val demnaechst = gefiltert.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }.sortedWith(compareBy({ it.tag }, { it.minuten ?: -1 }))
     // Nur die letzten 30 Tage; ältere löscht das Aufräumen beim Start und um Mitternacht endgültig.
     private val grenze = erledigtGrenze()
-    val erledigt = gefiltert.filter { it.erledigt && it.tag != heute && (it.erledigtAm ?: Long.MAX_VALUE) >= grenze }.sortedByDescending { it.erledigtAm ?: 0 }
+    // Heute erledigte Aufgaben ohne Uhrzeit stehen sofort hier und nicht mehr über der Zeitleiste; erledigte Termine bleiben auf der Leiste.
+    val erledigt = gefiltert.filter { it.erledigt && (it.tag != heute || it.minuten == null) && (it.erledigtAm ?: Long.MAX_VALUE) >= grenze }.sortedByDescending { it.erledigtAm ?: 0 }
     val heuteGesamt = alle.map { it.aufHeute(heute) }.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
     val heuteFertig = alle.count { it.tag == heute && it.erledigt }
 
@@ -315,7 +316,6 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
                 b.heuteOffen.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
-                b.heuteErledigt.forEach { a -> androidx.compose.runtime.key(a.id) { Karte(vm, a, heute, zustand) } }
                 Zeitleiste(
                     heute, b.heuteTermine, true, zustand, leisteVon, leisteBis, leisteAuto, leisteLuecken, heuteGanz, { heuteGanz = it },
                     { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) },
