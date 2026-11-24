@@ -14,3 +14,8 @@
 - **Fix:** Muster immer quoten: `--include='*.kt'`, `find . -name '*.kt'`.
 - **Stand 19.11.2026:** `~/.zshrc` setzt `setopt nonomatch`, der Shell-Schnappschuss übernimmt es (geprüft): Das Muster bleibt
   dann wörtlich stehen, grep sucht normal. Quoten bleibt richtig (`*.kt` passt sonst auf Dateien im aktuellen Ordner).
+
+## Doppelpunkt nach Variable (24.11.2026, selbst erlebt)
+- **Signal:** `git push origin $c:refs/heads/main` meldet „Src-Refspec <sha>efs/heads/main entspricht keiner Referenz“.
+- **Warum:** zsh liest `$c:r` als Modifikator (`:r`, `:h`, `:t`, `:e` schneiden Pfadteile ab), das `r` verschwindet.
+- **Fix:** Immer klammern: `"${c}:refs/heads/main"`, ebenso `"${blob},${pfad}"`.
