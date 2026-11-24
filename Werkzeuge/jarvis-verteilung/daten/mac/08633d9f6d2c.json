@@ -1,0 +1,14 @@
+{
+ "quelle": "08633d9f6d2c2a013e03e545526bf5fafa62d1d6",
+ "plattform": "mac",
+ "titel": "review-befunde der jarvis-verteilung beheben (UpdateZentrale 1.3.93, macOS 1.0.58, JarvisWindows 1.0.35)",
+ "quellen": [
+  "windows"
+ ],
+ "status": "uebersprungen",
+ "grund": "nur Windows-interne Schreibweise der Live-Datei (atomar), JarvisMac schreibt sie schon atomar",
+ "review": "",
+ "tests": "",
+ "host": "Mac.lan",
+ "zeit": "2026-11-24T11:35:46+01:00"
+}
