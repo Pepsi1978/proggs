@@ -29,10 +29,11 @@ class RueckfrageTest : BroadcastReceiver() {
         val anzahl = intent.getIntExtra("anzahl", 1).coerceIn(1, 5)
         val abstand = intent.getLongExtra("abstand_ms", 400L).coerceIn(0L, 10_000L)
         val ende = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+        val fehler = kotlinx.coroutines.CoroutineExceptionHandler { _, e -> Logbuch.fehler("Rückfrage-Test", e) }
+        CoroutineScope(SupervisorJob() + Dispatchers.Main + fehler).launch {
             try {
                 val prog = Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().firstOrNull() ?: return@launch
-                val gespraech = testGespraech(app)
+                val gespraech = kotlinx.coroutines.withContext(Dispatchers.IO) { testGespraech(app) }
                 if (gespraech.isEmpty()) { Logbuch.system("Rückfrage-Test", "kein Testgespräch"); return@launch }
                 Logbuch.system("Rückfrage-Test", "$anzahl Rückfrage(n), Abstand $abstand ms")
                 repeat(anzahl) { i ->

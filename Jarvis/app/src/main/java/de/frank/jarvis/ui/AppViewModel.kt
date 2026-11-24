@@ -1620,7 +1620,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
         // Nur ein Diktat, das für die Liste begann: Das Mikrofon der Eingabeblase, ein Prompt- oder Antwort-Diktat läuft weiter.
         if (merkDiktat) {
-            if (nimmtAuf) aufnahmeBeenden()
+            if (nimmtAuf) aufnahmeBeenden(anlass = "Merkliste geschlossen")
             // Noch beim Starten: nicht mehr anfangen, sonst ginge der Listeneintrag als Frage an Jarvis.
             else if (!schreibtMit) { antwortStartAbbrechen = true; diktatZiel = null }
             merkDiktat = false
@@ -1633,7 +1633,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mitnehmen("Mikrofon einer Merkliste")
         when {
             schreibtMit -> Unit
-            nimmtAuf && merkDiktat -> { merkDiktat = false; aufnahmeBeenden() }
+            nimmtAuf && merkDiktat -> { merkDiktat = false; aufnahmeBeenden(anlass = "Mikrofon der Merkliste getippt") }
             // Eine Aufnahme aus der Eingabeblase, einem Prompt oder einer Antwort läuft über die Bereiche weiter und gehört nicht in die Liste.
             nimmtAuf || holtMikro -> meldung = "Es läuft schon eine andere Aufnahme. Bitte erst diese beenden."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
@@ -1662,7 +1662,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mentalitaetMikrofonTippen() {
         mitnehmen("Mikrofon der Mentalität")
         when {
-            nimmtAuf && mentalitaetDiktat -> aufnahmeBeenden()
+            nimmtAuf && mentalitaetDiktat -> aufnahmeBeenden(anlass = "Mikrofon der Mentalität getippt")
             nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
@@ -1682,7 +1682,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Beendet eine laufende Mentalität-Aufnahme beim Schließen der Ansicht (das Gesagte wird noch gespeichert). */
     fun mentalitaetAufnahmeBeenden() {
         if (!mentalitaetDiktat) return
-        if (nimmtAuf) aufnahmeBeenden()
+        if (nimmtAuf) aufnahmeBeenden(anlass = "Mentalität geschlossen")
         else if (!schreibtMit) {
             mentalitaetStartAbbrechen = true
             mentalitaetDiktat = false
@@ -1766,7 +1766,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mitnehmen("Mikrofon der Prompts")
         when {
             schreibtMit || promptFormuliert -> Unit
-            nimmtAuf -> aufnahmeBeenden()
+            nimmtAuf -> aufnahmeBeenden(anlass = "Mikrofon der Prompts getippt")
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
                 // Das Diktat gehört in die Eingabe, in der es begonnen hat, auch wenn das Fenster inzwischen gewechselt hat.
@@ -1788,7 +1788,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch in den Entwurf und die Aufnahme endet. */
     fun promptEingabeSchliessen() {
-        if (nimmtAuf && promptDiktat) aufnahmeBeenden()
+        if (nimmtAuf && promptDiktat) aufnahmeBeenden(anlass = "Prompt-Eingabe geschlossen")
         promptNeuOffen = false
         promptBearbeitet = null
         promptKi = null
@@ -1915,7 +1915,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun erinnerungEntwurfSetzen(neu: ErinnerungEntwurf) { erinnerungEntwurf = neu }
 
     fun erinnerungEingabeSchliessen() {
-        if (nimmtAuf && promptDiktat) aufnahmeBeenden()
+        if (nimmtAuf && promptDiktat) aufnahmeBeenden(anlass = "Erinnerungs-Eingabe geschlossen")
         erinnerungEntwurf = null
         erinnerungKi = null
     }
@@ -1927,7 +1927,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mitnehmen("Mikrofon der Erinnerungen")
         when {
             schreibtMit || erinnerungFormuliert -> Unit
-            nimmtAuf -> aufnahmeBeenden()
+            nimmtAuf -> aufnahmeBeenden(anlass = "Mikrofon der Erinnerungen getippt")
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
                 val sitzung = erinnerungSitzung
@@ -2222,6 +2222,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private var aufnahmeWache: Job? = null
+    /** Höchstlänge des Aufnahmepuffers im MicRecorder (16 kHz, 16 bit, 16 Minuten); dort privat. */
+    private val MIKRO_PUFFER_MAX = 16_000 * 2 * 60 * 16
 
     /**
      * Wacht über eine eigene Aufnahme, solange sie läuft. Schaltet Android sie stumm (eine andere App hat das Mikrofon), steht das
@@ -2251,13 +2253,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     kotlinx.coroutines.delay(500)
                     val jetzt = mikro.pufferBytes
                     if (jetzt != bisher) { bisher = jetzt; still = 0; continue }
-                    // Erst scharf, wenn das Mikrofon überhaupt geliefert hat (Bluetooth und Konferenz-Mikrofon brauchen beim Start länger).
-                    if (jetzt == 0) continue
-                    // 3 s ohne ein einziges neues Byte: Das Mikrofon liefert nichts mehr (Stille zählt mit, sie kommt als Nullen).
-                    if (++still < 6 || !nimmtAuf || abzweigAb >= 0) continue
-                    Logbuch.sprache("Aufnahme vom System unterbrochen", "${jetzt / 1024} KB gesichert")
-                    meldung = "Android hat die Aufnahme unterbrochen. Was du bis dahin gesagt hast, schreibe ich jetzt mit."
-                    aufnahmeBeenden(freigeben = weckwortLauf?.isActive != true, anlass = "vom System unterbrochen")
+                    still++
+                    // Vor dem ersten Byte großzügiger (Bluetooth und Konferenz-Mikrofon brauchen beim Start länger): 8 s, sonst 3 s.
+                    // Stille zählt nicht als Stillstand, sie kommt als Nullen.
+                    if (still < (if (jetzt == 0) 16 else 6) || !nimmtAuf || abzweigAb >= 0) continue
+                    // Puffer voll (16 Minuten): kein Systemabbruch, sondern die Höchstlänge einer Aufnahme.
+                    val voll = jetzt >= MIKRO_PUFFER_MAX - 64 * 1024
+                    val grund = when { voll -> "Höchstlänge von 16 Minuten erreicht"; jetzt == 0 -> "Mikrofon liefert von Anfang an nichts"; else -> "vom System unterbrochen" }
+                    Logbuch.sprache(if (voll) "Aufnahme an der Höchstlänge" else "Aufnahme vom System unterbrochen", "$grund, ${jetzt / 1024} KB gesichert")
+                    // Im Gesprächsmodus nie ein abgeschnittenes Bruchstück als Frage senden: Es landet im Eingabefeld.
+                    if (weckwortLauf?.isActive == true && diktatZiel == null) {
+                        diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true; eingabeKompakt = false }
+                        diktatInsFeld = true
+                    }
+                    aufnahmeBeenden(freigeben = weckwortLauf?.isActive != true, anlass = grund)
+                    meldung = when {
+                        voll -> "Die Aufnahme hat die Höchstlänge von 16 Minuten erreicht. Ich schreibe alles bis hierhin mit."
+                        jetzt == 0 -> "Das Mikrofon liefert nichts, vermutlich nutzt es gerade eine andere App. Bitte nochmal versuchen."
+                        else -> "Android hat die Aufnahme unterbrochen. Was du bis dahin gesagt hast, schreibe ich ins Eingabefeld."
+                    }
                     break
                 }
             } finally {
@@ -2303,8 +2317,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var verwerfAnlass = "Session von Hand gewechselt"
     /** Die Mitschrift der zuletzt beendeten Aufnahme; ein Wechsel von Hand bricht sie ab. */
     private var mitschriftJob: Job? = null
-    /** Eine Feld-Mitschrift, die beim Verlassen ihrer Session weiterlief und ihr Ergebnis als [Mitnahme] abliefert. */
-    private var geretteteMitschrift: Job? = null
+    /** Feld-Mitschriften, die beim Verlassen ihrer Session weiterliefen, mit der Session, in die ihr Text gehört. */
+    private val geretteteMitschriften = mutableMapOf<Job, String?>()
+    private val geretteteOhneSitzung = mutableSetOf<Job?>()
+    /** Fertige gerettete Diktate je Session; beim Öffnen der Session kommen sie ins Eingabefeld. */
+    private val geretteteTexte = mutableMapOf<String?, String>()
+
+    private fun geretteteAbholen() {
+        val text = geretteteTexte.remove(sitzungId) ?: return
+        entwurf = DiktatTrenner.anhaengen(entwurf, text); entwurfDiktiert = true; eingabeKompakt = false
+    }
 
     /**
      * Frank wechselt von Hand die Session (Seitenleiste, „Neues Gespräch“, Löschen): Aufnahme, Mitschrift und Gesprächsmodus
@@ -2324,11 +2346,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         weckwortLauf?.cancel()
         // Die Session wird nur verlassen und ein Diktat der Eingabeblase wird gerade mitgeschrieben (schwaches Netz): nicht
         // abbrechen, sondern als mitgenommene Aufnahme ihrer Session zu Ende schreiben (24.11.2026 ging so ein 36-s-Diktat verloren).
-        val retten = mitnahmeErlaubt && schreibtMit && feldMitschrift && !nimmtAuf && mitnahme == null && mitschriftJob?.isActive == true
-        if (retten) {
-            geretteteMitschrift = mitschriftJob
-            mitnahme = Mitnahme(sitzungId, System.currentTimeMillis()).apply { laeuft = false; schreibt = true }
+        val laufend = mitschriftJob
+        val retten = mitnahmeErlaubt && schreibtMit && feldMitschrift && !nimmtAuf && laufend?.isActive == true
+        if (retten && laufend != null) {
+            // Eigener Halter, nicht der Platz der Mitnahme: Ein neues Diktat in der nächsten Session bleibt mitnehmbar.
+            geretteteMitschriften[laufend] = sitzungId
             Logbuch.sprache("Mitschrift mitgenommen", anlass)
+            meldung = "Dein Diktat wird noch mitgeschrieben und steht danach im Eingabefeld seiner Session."
         } else mitschriftJob?.cancel()
         mitschriftJob = null
         weichendeRunde = null
@@ -2694,7 +2718,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             kotlinx.coroutines.delay(2_000)
             if (!nimmtAuf) return@launch
             messFrage = frage
-            aufnahmeBeenden(freigeben = false)
+            aufnahmeBeenden(freigeben = false, anlass = "Messlauf")
         }
     }
 
@@ -2831,6 +2855,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when {
             !nimmtAuf -> return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
             lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT -> {
+                Logbuch.sprache("Aufnahme beendet", "nichts gehört (Gesprächsmodus)")
                 nimmtAuf = false
                 piepAbBytes = PIEP_KEINER
                 mikro.stop()
@@ -2841,7 +2866,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 schlussStilleMs = System.currentTimeMillis() - basis - ende.letzteSpracheMs
                 // Zeigt nach einer Fahrt, ob ein Geräusch die Aufnahme offen hielt: Sprachanteil laut Silero, Grundpegel und Art der Erkennung.
                 Logbuch.sprache("Aufnahme-Ende", "Erkennung ${if (mikro.sprachRahmen != null) "Silero" else "Pegel"}, Stimme ${(mikro.sprachRahmen ?: 0L) * de.frank.module.transkriptionsmodul.SprachZeitachse.RAHMEN_MS} ms von ${System.currentTimeMillis() - start} ms, Pegel zuletzt ${"%.2f".format(pegel.value)}")
-                aufnahmeBeenden(freigeben = false)
+                aufnahmeBeenden(freigeben = false, anlass = "Stillezeit nach dem letzten Wort (Gesprächsmodus)")
             }
         }
         return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG
@@ -3018,14 +3043,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
                 if (stand != wechselStand) {
-                    val m = mitnahme
-                    if (geretteteMitschrift === coroutineContext[Job] && m != null && m.schreibt && m.text == null) {
-                        m.schreibt = false
-                        if (text.isBlank()) { mitnahme = null; meldung = "In der mitgenommenen Aufnahme habe ich nichts verstanden."; return@launch }
-                        m.text = text
-                        Logbuch.sprache("Mitschrift gerettet", "${text.length} Zeichen warten in ihrer Session")
-                        if (sitzungId == m.sitzung) mitnahmeAbholen()
-                        else meldung = "Dein Diktat ist mitgeschrieben. Es steht im Eingabefeld, sobald du in seine Session zurückkehrst."
+                    val eigener = coroutineContext[Job]
+                    if (eigener != null && geretteteMitschriften.containsKey(eigener)) {
+                        val herkunft = geretteteMitschriften[eigener]
+                        if (text.isBlank()) { meldung = "Im mitgenommenen Diktat habe ich nichts verstanden."; return@launch }
+                        Logbuch.sprache("Mitschrift gerettet", "${text.length} Zeichen für ihre Session")
+                        if (sitzungId == herkunft) { entwurf = DiktatTrenner.anhaengen(entwurf, text); entwurfDiktiert = true; eingabeKompakt = false }
+                        else {
+                            geretteteTexte[herkunft] = listOfNotNull(geretteteTexte[herkunft], text).joinToString(" ")
+                            meldung = "Dein Diktat ist mitgeschrieben. Es steht im Eingabefeld, sobald du in seine Session zurückkehrst."
+                        }
                         return@launch
                     }
                     Logbuch.sprache("Mitschrift verworfen", verwerfAnlass); return@launch
@@ -3053,9 +3080,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 meldung = e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden."
             } finally {
                 // Eine gerettete Mitschrift gehört nicht mehr zur offenen Session: deren Anzeige (eine neue Mitschrift) bleibt unberührt.
-                if (geretteteMitschrift === coroutineContext[Job]) {
-                    geretteteMitschrift = null
-                    mitnahme?.takeIf { it.schreibt && it.text == null }?.let { mitnahme = null }
+                val eigener = coroutineContext[Job]
+                if (eigener != null && (geretteteMitschriften.containsKey(eigener) || eigener in geretteteOhneSitzung)) {
+                    geretteteMitschriften.remove(eigener)
+                    geretteteOhneSitzung.remove(eigener)
                 } else {
                     schreibtMit = false
                     feldMitschrift = false
@@ -4045,6 +4073,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         letzteAktivitaet = System.currentTimeMillis()
         offenesGespraechMerken(id, letzteAktivitaet)
         if (mitnahme?.sitzung == id && mitnahme?.text != null) mitnahmeAbholen()
+        geretteteAbholen()
         return true
     }
 
@@ -4212,6 +4241,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Gelöschte Session: Ihre Aufnahme wird verworfen, nicht mitgenommen.
         if (id == sitzungId) aufnahmeVerwerfen("Session gelöscht")
         if (mitnahme?.sitzung == id) mitnahmeVerwerfen("Session gelöscht")
+        // Gerettete Mitschriften der gelöschten Session: abbrechen, nie in eine andere Session schreiben.
+        geretteteTexte.remove(id)
+        geretteteMitschriften.filterValues { it == id }.keys.toList().forEach { j -> geretteteMitschriften.remove(j); geretteteOhneSitzung += j; j.cancel() }
         // Im Projekt bleiben: Das nächste Gespräch gehört wieder zu ihm.
         if (id == sitzungId) sitzungProjekt.let { p -> if (p.isEmpty()) neuesGespraech() else neuesGespraechImProjekt(p) }
         if (vorherigeSitzung == id) vorherigeSitzung = null

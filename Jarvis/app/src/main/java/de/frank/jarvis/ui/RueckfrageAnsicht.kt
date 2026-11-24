@@ -337,6 +337,8 @@ fun RueckfrageNachlauf(vm: AppViewModel) {
         delay((bis - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L))
         ende = bis
     }
+    // Auch die Zurück-Geste, egal auf welchem Reiter: zuletzt zusammengesetzt, hat dieser Handler Vorrang.
+    androidx.activity.compose.BackHandler { de.frank.jarvis.observability.Logbuch.sprache("Tipp nach Rückfrage ignoriert", "Zurück-Geste") }
     Box(Modifier.fillMaxSize().pointerInput(bis) {
         awaitPointerEventScope {
             while (true) {
