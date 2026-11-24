@@ -619,8 +619,8 @@ fun ProgrammierSchweber(
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
         if (vm.nachtragMoeglich) {
-            SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }, programmier = true) {
-                Icon(Icons.Rounded.Add, null, tint = auswahlSchrift(f), modifier = Modifier.size(26.dp))
+            SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
+                Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
@@ -633,8 +633,8 @@ fun ProgrammierSchweber(
                 Box(Modifier.height(SCHWEBE_GROESSE).wrapContentHeight(Alignment.Bottom, unbounded = true)) { Box(auswahlMessen) { OffeneAuswahl(vm, karte) } }
                 Spacer(Modifier.width(8.dp))
             }
-            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }, programmier = true) {
-                Icon(Icons.Rounded.Code, null, tint = auswahlSchrift(f), modifier = Modifier.size(26.dp))
+            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererLeuchtet, { vm.programmiererTippen() }) {
+                Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
         }
@@ -811,7 +811,7 @@ private fun RechnerAuswahl(da: List<de.frank.jarvis.fernsteuerung.Fernziel>, sch
 }
 
 @Composable
-private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, blitz: Int = 0, programmier: Boolean = false, inhalt: @Composable () -> Unit) {
+private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, blitz: Int = 0, inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     // Ein schmaler Lichtstreif wandert langsam über den Grund; der Grund selbst bleibt fast durchsichtig.
     val lauf by rememberInfiniteTransition(label = "schimmer").animateFloat(-1f, 2f,
@@ -828,8 +828,8 @@ private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Un
         aufblitzen.animateTo(0f, tween(650))
     }
     Box(
-        // Programmier-Symbole im Hellmodus deckend in der Akzentfarbe wie ihre Auswahlknöpfe; dunkel bleibt alles wie bisher.
-        Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(if (programmier && !f.dunkel) auswahlGrund(f) else f.text.copy(alpha = 0.06f))
+        // Programmier- und Nachtrag-Symbol bleiben fast durchsichtig wie die übrigen Seitenbuttons (Frank, 24.11.2026: Gelb wirkte schon aktiv).
+        Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
             .background(f.erfolg.copy(alpha = 0.85f * maxOf(gruen, aufblitzen.value))).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),
