@@ -27,11 +27,14 @@ public sealed class JarvisVerteilungAktualisierer : IAktualisierer
         var lokal = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python");
         if (Directory.Exists(lokal))
         {
-            var exe = Directory.GetDirectories(lokal, "Python3*").OrderByDescending(d => d, StringComparer.OrdinalIgnoreCase)
+            // Nach Versionsnummer, nicht als Text: sonst gewänne Python39 gegen Python313.
+            var exe = Directory.GetDirectories(lokal, "Python3*")
+                               .OrderByDescending(d => int.TryParse(Path.GetFileName(d)["Python".Length..].Split('-')[0], out var n) ? n : 0)
                                .Select(d => Path.Combine(d, "python.exe")).FirstOrDefault(File.Exists);
             if (exe is not null) return exe;
         }
-        return "python";
+        // „py“ ist der offizielle Starter; „python“ kann der Store-Platzhalter sein.
+        return "py";
     }
 
     private static async Task<(BefehlErgebnis Lauf, JsonElement? Daten)> LaufAsync(string befehl, TimeSpan zeit, CancellationToken abbruch)
@@ -108,8 +111,9 @@ public sealed class JarvisVerteilungAktualisierer : IAktualisierer
             "bereitgestellt" => UpdateZustand.UpdateVerfuegbar,
             "wartet" => UpdateZustand.UpdateVerfuegbar,
             "nicht_installiert" => UpdateZustand.NichtInstalliert,
-            // Blockiert ist kein Fehler der Zentrale: die letzte funktionierende Version bleibt, der Grund steht auf der Karte.
-            "blockiert" => UpdateZustand.Aktuell,
+            // Blockiert ist kein Fehler der Zentrale (die letzte funktionierende Version bleibt), aber auch nicht „aktuell“:
+            // ein neuerer Stand wartet, der Grund steht auf der Karte.
+            "blockiert" => UpdateZustand.UpdateVerfuegbar,
             _ => UpdateZustand.Unbekannt
         };
         if (nachInstallation && kurz == "installiert") uz = UpdateZustand.Fertig;

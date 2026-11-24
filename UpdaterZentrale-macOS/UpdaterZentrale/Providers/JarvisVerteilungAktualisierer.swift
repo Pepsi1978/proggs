@@ -74,8 +74,9 @@ struct JarvisVerteilungAktualisierer: Aktualisierer {
         case "aktuell": zustand = .aktuell
         case "bereitgestellt", "wartet": zustand = .updateVerfuegbar
         case "nicht_installiert": zustand = .nichtInstalliert
-        // Blockiert ist kein Fehler der Zentrale: die letzte funktionierende Version bleibt, der Grund steht auf der Karte.
-        case "blockiert": zustand = .aktuell
+        // Blockiert ist kein Fehler der Zentrale (die letzte funktionierende Version bleibt), aber auch nicht "aktuell":
+        // ein neuerer Stand wartet, der Grund steht auf der Karte.
+        case "blockiert": zustand = .updateVerfuegbar
         default: zustand = .unbekannt
         }
         if nachInstallation && kurz == "installiert" {

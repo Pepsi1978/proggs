@@ -67,7 +67,11 @@ def alter_stunden(iso: str | None) -> float:
     if not iso:
         return 1e9
     try:
-        return (dt.datetime.now().astimezone() - dt.datetime.fromisoformat(iso)).total_seconds() / 3600
+        # Python 3.9 (/usr/bin/python3 am Mac) liest kein „Z“: als +00:00 lesen.
+        zeit = dt.datetime.fromisoformat(iso.strip().replace("Z", "+00:00"))
+        if zeit.tzinfo is None:
+            zeit = zeit.astimezone()
+        return (dt.datetime.now().astimezone() - zeit).total_seconds() / 3600
     except ValueError:
         return 1e9
 
@@ -122,11 +126,13 @@ def git(*args: str, eingabe: str | None = None, env: dict | None = None, pruefen
     umgebung["GIT_TERMINAL_PROMPT"] = "0"
     if env:
         umgebung.update(env)
-    r = subprocess.run(["git", "-C", str(REPO), *args], input=eingabe, capture_output=True, text=True,
-                       encoding="utf-8", errors="replace", env=umgebung, timeout=zeit, creationflags=OHNE_FENSTER)
+    # Bytes statt Text: unter Windows würde der Textmodus \n in \r\n wandeln und dasselbe Buch je Rechner anders speichern.
+    r = subprocess.run(["git", "-C", str(REPO), *args], input=eingabe.encode("utf-8") if eingabe is not None else None,
+                       capture_output=True, env=umgebung, timeout=zeit, creationflags=OHNE_FENSTER)
+    aus = r.stdout.decode("utf-8", "replace")
     if pruefen and r.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args[:3])}: {(r.stderr or r.stdout).strip()[:400]}")
-    return r.stdout
+        raise RuntimeError(f"git {' '.join(args[:3])}: {(r.stderr.decode('utf-8', 'replace') or aus).strip()[:400]}")
+    return aus
 
 
 def holen() -> bool:
@@ -151,8 +157,12 @@ def buch_lesen() -> dict[str, dict]:
              if n.endswith(".json")]
     if not namen:
         return {}
-    roh = subprocess.run(["git", "-C", str(REPO), "cat-file", "--batch"], input="".join(f"origin/main:{n}\n" for n in namen).encode(),
-                         capture_output=True, creationflags=OHNE_FENSTER, timeout=120).stdout
+    # Eingabe über eine Datei statt einer Pipe: Bei vielen Einträgen staut sonst das gleichzeitige Schreiben und Lesen (Hänger).
+    with tempfile.TemporaryFile() as eingabe:
+        eingabe.write("".join(f"origin/main:{n}\n" for n in namen).encode())
+        eingabe.seek(0)
+        roh = subprocess.run(["git", "-C", str(REPO), "cat-file", "--batch"], stdin=eingabe, capture_output=True,
+                             creationflags=OHNE_FENSTER, timeout=120).stdout
     buch, pos = {}, 0
     for n in namen:
         kopf_ende = roh.index(b"\n", pos)
@@ -217,22 +227,27 @@ def buch_schreiben(aenderungen: dict[str, dict | None], nachricht: str, bedingun
 # ---------------------------------------------------------------- Commits und Portierungsbedarf
 
 def commits() -> list[dict]:
-    """Alle Commits seit basis auf origin/main, älteste zuerst, mit Dateien und Portierungs-Trailer."""
+    """Alle Commits seit basis auf origin/main, älteste zuerst, mit Zeit, Dateien und Portierungs-Trailer.
+    Trailer-SHAs werden über ihr Präfix (ab 7 Zeichen) auf volle Quell-SHAs aufgelöst; gespeichert als sha[:12]."""
     bereich = f"{K['basis']}..origin/main"
-    roh = git("log", "--reverse", "--no-merges", "--format=%H%x1f%s%x1f%B%x1e", bereich)
+    roh = git("log", "--reverse", "--no-merges", "--format=%H%x1f%cI%x1f%s%x1f%B%x1e", bereich)
     liste, nach_sha = [], {}
     for block in roh.split("\x1e"):
         block = block.strip("\n")
         if not block:
             continue
-        sha, titel, text = (block.split("\x1f") + ["", ""])[:3]
-        portiert = []
+        sha, zeit, titel, text = (block.split("\x1f") + ["", "", ""])[:4]
+        roh_trailer = []
         for zeile in text.splitlines():
             if zeile.strip().startswith(TRAILER):
-                portiert += [s.strip()[:12] for s in zeile.split(":", 1)[1].replace(";", ",").split(",") if s.strip()]
-        eintrag = {"sha": sha.strip(), "titel": titel.strip(), "portiert": portiert, "dateien": []}
+                roh_trailer += [s.strip() for s in zeile.split(":", 1)[1].replace(";", ",").split(",") if len(s.strip()) >= 7]
+        eintrag = {"sha": sha.strip(), "zeit": zeit.strip(), "titel": titel.strip(), "portiert": [], "trailer": roh_trailer, "dateien": []}
         liste.append(eintrag)
         nach_sha[eintrag["sha"]] = eintrag
+    for c in liste:
+        for t in c.pop("trailer"):
+            treffer = [x["sha"] for x in liste if x["sha"].startswith(t.lower())]
+            c["portiert"].append(treffer[0][:12] if len(treffer) == 1 else t[:12].lower())
     aktuell = None
     for zeile in git("log", "--reverse", "--no-merges", "--name-only", "--format=@@@%H", bereich).splitlines():
         if zeile.startswith("@@@"):
@@ -240,6 +255,13 @@ def commits() -> list[dict]:
         elif zeile.strip() and aktuell is not None:
             aktuell["dateien"].append(zeile.strip())
     return liste
+
+
+def sha_aufloesen(kurz: str, alle: list[dict]) -> dict | None:
+    """Commit seit der Basis zu einer (auch kurzen, ab 7 Zeichen) SHA."""
+    kurz = kurz.strip().lower()
+    treffer = [c for c in alle if len(kurz) >= 7 and c["sha"].startswith(kurz)]
+    return treffer[0] if len(treffer) == 1 else None
 
 
 def quellplattformen(dateien: list[str]) -> dict[str, list[str]]:
@@ -302,17 +324,29 @@ def pid_lebt(pid: int) -> bool:
 
 
 def live_aktiv() -> str | None:
-    """Läuft gerade ein Live-Sprachgespräch? Die Jarvis-Apps schreiben live.json bei jedem Zustandswechsel."""
+    """Läuft gerade ein Live-Sprachgespräch? Die Jarvis-Apps schreiben live.json bei jedem Zustandswechsel.
+    Eine unlesbare, frische Datei (gerade im Schreiben) zählt vorsichtshalber als live."""
     if SIM:
         datei = Path(SIM) / f"{eigenes_ziel()}-live.json"
     elif IST_WINDOWS:
         datei = Path(os.environ.get("APPDATA", "")) / "JarvisWindows" / "live.json"
     else:
         datei = Path.home() / "Library/Application Support/JarvisMac/live.json"
-    try:
-        d = json.loads(datei.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    if not datei.exists():
         return None
+    d = None
+    for _ in range(3):
+        try:
+            d = json.loads(datei.read_text(encoding="utf-8"))
+            break
+        except (OSError, ValueError):
+            time.sleep(0.4)
+    if d is None:
+        try:
+            frisch = time.time() - datei.stat().st_mtime < 3 * 3600
+        except OSError:
+            frisch = False
+        return "Live-Zustand gerade unlesbar, vorsichtshalber warten" if frisch else None
     if d.get("zustand", "aus") == "aus" or alter_stunden(d.get("zeit")) > 3:
         return None
     if not SIM and not pid_lebt(int(d.get("pid", 0))):
@@ -419,50 +453,85 @@ def wiederherstellen(ziel: str, s: Path) -> str:
     r = pwsh(
         f"$exe='{exe}'; if (Test-Path $exe) {{ $b = Start-Process -FilePath $exe -ArgumentList '--beenden' -PassThru; $null = $b.WaitForExit(5000) }};"
         f"Get-Process JarvisWindows -EA 0 | Where-Object {{ $_.Path -ieq $exe }} | Stop-Process -Force;"
-        f"robocopy '{s / ordner.name}' '{ordner}' /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null;"
-        f"Start-Process -FilePath $exe", zeit=300)
-    return "wiederhergestellt" if r.returncode in (0, 1) else f"Wiederherstellung unklar ({r.returncode})"
+        f"robocopy '{s / ordner.name}' '{ordner}' /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null; $rc = $LASTEXITCODE;"
+        f"if ($rc -ge 8) {{ exit $rc }}; Start-Process -FilePath $exe; exit 0", zeit=300)
+    return "wiederhergestellt" if r.returncode == 0 else f"NICHT vollständig wiederhergestellt (robocopy {r.returncode}), Sicherung liegt unter {s}"
 
 
-def bauen_und_installieren(ziel: str) -> tuple[bool, str]:
-    if SIM:
-        if (Path(SIM) / f"{ziel}-installfehler").exists():
-            (Path(SIM) / f"{ziel}-installiert.txt").write_text("kaputt")
-            return False, "simulierter Baufehler"
-        (Path(SIM) / f"{ziel}-installiert.txt").write_text(quellversion(plattform_von(ziel)))
-        return True, "simuliert gebaut"
-    if ziel == "mac":
-        befehl = ["bash", str(REPO / "JarvisMac/build.sh"), "install"]
-    else:
-        exe = shutil.which("pwsh") or "powershell"
-        befehl = [exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(REPO / "JarvisWindows/publish.ps1")]
-        if ziel == "power":
-            befehl += ["-Geraet", "power"]
+def ausfuehren(befehl: list[str], ziel: str, art: str) -> tuple[bool, str]:
     try:
         r = subprocess.run(befehl, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
                            cwd=str(REPO), creationflags=OHNE_FENSTER)
     except subprocess.TimeoutExpired:
-        return False, "Bau/Installation nach 30 Minuten abgebrochen"
-    (zustand_ordner() / f"bau-{ziel}.log").write_text((r.stdout or "") + "\n" + (r.stderr or ""), encoding="utf-8")
+        return False, f"{art} nach 30 Minuten abgebrochen"
+    with open(zustand_ordner() / f"bau-{ziel}.log", "a", encoding="utf-8") as f:
+        f.write(f"\n===== {jetzt()} {' '.join(befehl)}\n{r.stdout or ''}\n{r.stderr or ''}")
     if r.returncode != 0:
         letzte = [z for z in (r.stderr or r.stdout or "").splitlines() if z.strip()][-3:]
-        return False, "Bau/Installation fehlgeschlagen: " + " | ".join(letzte)[:300]
-    return True, "gebaut und installiert"
+        return False, f"{art} fehlgeschlagen: " + " | ".join(letzte)[:300]
+    return True, art + " ok"
+
+
+def bauen_und_installieren(ziel: str) -> tuple[bool, str]:
+    """Erst nur bauen (die laufende App bleibt unberührt), dann den Live-Zustand erneut prüfen und erst danach tauschen:
+    Ein Gespräch, das während des Baus begann, wird so nicht beendet."""
+    if SIM:
+        if (Path(SIM) / f"{ziel}-installfehler").exists():
+            (Path(SIM) / f"{ziel}-installiert.txt").write_text("kaputt")
+            return False, "simulierter Baufehler"
+        if (live := live_aktiv()):
+            return False, "abgebrochen vor dem Tausch: " + live
+        (Path(SIM) / f"{ziel}-installiert.txt").write_text(quellversion(plattform_von(ziel)))
+        return True, "simuliert gebaut"
+    if ziel == "mac":
+        ok, info = ausfuehren(["bash", str(REPO / "JarvisMac/build.sh")], ziel, "Bau")
+        if not ok:
+            return False, info
+        if (live := live_aktiv()):
+            return False, "abgebrochen vor dem Tausch: " + live
+        subprocess.run(["pkill", "-x", "Jarvis"], capture_output=True)
+        time.sleep(1)
+        shutil.rmtree("/Applications/Jarvis.app", ignore_errors=True)
+        r = subprocess.run(["ditto", str(REPO / "JarvisMac/build/Jarvis.app"), "/Applications/Jarvis.app"], capture_output=True, text=True)
+        if r.returncode != 0:
+            return False, "Kopieren nach /Applications fehlgeschlagen: " + (r.stderr or "").strip()[:200]
+        subprocess.run(["open", "/Applications/Jarvis.app"])
+        return True, "gebaut und installiert"
+    exe = shutil.which("pwsh") or "powershell"
+    basis = [exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(REPO / "JarvisWindows/publish.ps1")]
+    geraet = ["-Geraet", "power"] if ziel == "power" else []
+    ok, info = ausfuehren(basis + ["-NurBauen"] + geraet, ziel, "Bau")
+    if not ok:
+        return False, info
+    if (live := live_aktiv()):
+        return False, "abgebrochen vor dem Tausch: " + live
+    # publish.ps1 baut dann nur noch inkrementell (Sekunden) und tauscht die App.
+    ok, info = ausfuehren(basis + geraet, ziel, "Installation")
+    return ok, ("gebaut und installiert" if ok else info)
 
 
 # ---------------------------------------------------------------- Sperren
 
 def lauf_sperre() -> Path | None:
+    """Ein Lauf je Rechner. Die Sperre trägt die PID: Lebt der Prozess nicht mehr (abgeschossen), ist sie sofort frei."""
     s = zustand_ordner() / "lauf.lock"
-    try:
-        if s.exists() and time.time() - s.stat().st_mtime > 3600:
-            s.unlink()
-        fd = os.open(str(s), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-        return s
-    except FileExistsError:
-        return None
+    for _ in range(2):
+        try:
+            fd = os.open(str(s), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            return s
+        except FileExistsError:
+            try:
+                pid = int(s.read_text().strip() or 0)
+                alt = time.time() - s.stat().st_mtime
+            except (OSError, ValueError):
+                pid, alt = 0, 0
+            if (pid and not pid_lebt(pid)) or alt > 3 * 3600:
+                s.unlink(missing_ok=True)
+                continue
+            return None
+    return None
 
 
 def ist_erhoeht() -> bool:
@@ -476,9 +545,8 @@ def ist_erhoeht() -> bool:
 
 
 def installations_sperre(plattform: str, buch: dict, alle: list[dict]) -> str | None:
-    """Warum dieser Rechner jetzt nicht installieren darf (None = frei). Nur geprüfte, freigegebene Stände gehen raus."""
-    # Eine laufende Prüfsitzung sperrt nicht pauschal: Gewöhnliche Updates (etwa HP -> Power-PC) gehen weiter. Gesperrt wird
-    # erst, wenn ein Portierungs-Commit ohne Freigabe auf main liegt (unten) – genau der Stand, der ungeprüft wäre.
+    """Warum dieser Rechner jetzt nicht installieren darf (None = frei). Nur geprüfte, freigegebene Stände gehen raus.
+    Eine laufende Prüfsitzung sperrt gewöhnliche Updates nicht; gesperrt ist nur, was ungeprüft auf main liegen könnte."""
     ordner = K["plattformen"][plattform]["ordner"]
     portierte = {s: c for c in alle if any(f.startswith(ordner) for f in c["dateien"]) for s in c["portiert"]}
     for k, e in buch.items():
@@ -486,11 +554,22 @@ def installations_sperre(plattform: str, buch: dict, alle: list[dict]) -> str | 
             c = portierte[e["quelle"][:12]]
             return f"blockiert: Portierung {c['sha'][:8]} ist ohne Freigabe auf main ({e.get('grund', '')})"
     for c in alle:
-        if not c["portiert"] or not any(f.startswith(K["plattformen"][plattform]["ordner"]) for f in c["dateien"]):
+        if not c["portiert"] or not any(f.startswith(ordner) for f in c["dateien"]):
             continue
         offen = [s for s in c["portiert"] if (buch.get(schluessel(plattform, s)) or {}).get("status") != "freigegeben"]
         if offen:
             return f"Portierung {c['sha'][:8]} ist noch nicht freigegeben (Review und Tests fehlen)"
+    # Läuft eine Prüfsitzung und kam seit ihrem Start ein Commit in diesen Ordner, der kein freigegebenes Ergebnis ist
+    # (etwa ein Port mit vertipptem Trailer), wird nichts installiert, bis die Sitzung gemeldet hat.
+    laufend = [e for k, e in buch.items() if k.startswith(plattform + "/") and e.get("status") == "in_arbeit"
+               and alter_stunden(e.get("zeit")) < K["claimStunden"]]
+    if laufend:
+        seit = min(alter_stunden(e.get("zeit")) for e in laufend)
+        for c in alle:
+            if (any(f.startswith(ordner) for f in c["dateien"]) and alter_stunden(c.get("zeit")) < seit
+                    and not c["portiert"]):
+                return (f"Portierungssitzung auf {laufend[0].get('host')} läuft und {c['sha'][:8]} kam währenddessen "
+                        f"ohne Freigabe-Trailer, Verteilung wartet auf ihre Meldung")
     return None
 
 
@@ -501,9 +580,10 @@ def auftrag_text(plattform: str, faelle: list[dict], ziel: str) -> str:
     ordner = K["plattformen"][plattform]["ordner"].rstrip("/")
     skript = "python" if IST_WINDOWS else "python3"
     melden = f"{skript} Werkzeuge/jarvis-verteilung/jarvis_verteilung.py melden --plattform {plattform}"
-    tests = ("`dotnet build JarvisWindows/JarvisWindows.csproj -c Release` und `pwsh -File JarvisWindows/publish.ps1 -NurBauen`, "
-             "danach die gebaute App einmal starten und prüfen, dass sie läuft" if plattform == "windows"
-             else "`bash JarvisMac/build.sh check` und `bash JarvisMac/build.sh` (Bau), dazu ein Start der gebauten App")
+    tests = ("`dotnet build JarvisWindows/JarvisWindows.csproj -c Release` und `pwsh -File JarvisWindows/publish.ps1 -NurBauen` "
+             "(keine zweite App starten: die laufende hält die Einzelinstanz; den Start- und Versionstest mit Rückfall macht die Verteilung beim Installieren)"
+             if plattform == "windows" else
+             "`bash JarvisMac/build.sh check` und `bash JarvisMac/build.sh` (Bau; keine zweite App starten, den Start- und Versionstest mit Rückfall macht die Verteilung beim Installieren)")
     zeilen = [
         f"Auftrag von der Jarvis-Verteilung der Update-Zentrale ({K['ziele'][ziel]['name']}): Portierungsprüfung für Jarvis {pn} ({ordner}).",
         "REVIEW: ja (das Standard-Code-Review ist festgelegt: ohne Rückfrage ausführen, keine Review- oder Tablet-Frage stellen).",
@@ -522,9 +602,9 @@ def auftrag_text(plattform: str, faelle: list[dict], ziel: str) -> str:
         f"2. Sonst portiere die Funktion nach {ordner} (gleiche Namen und Texte wie im Ursprung). Live-Sprachmodus und bestehende Abläufe dürfen nicht gestört werden.",
         f"3. Plattformtests: {tests}. Danach das Standard-Code-Review (`/code-review`) auf deine Änderung und alle Befunde beheben, dann Tests erneut.",
         "4. Nur wenn Review und Tests grün sind: Version bumpen (echte Systemzeit), funktionen.md der Zielplattform knapp nachziehen, committen mit der "
-        f"Commit-Nachricht `{ordner}: <was portiert wurde>` und dem Trailer `{TRAILER} <sha12>[, <sha12>]` als eigene letzte Zeile vor Co-Authored-By, "
+        f"Commit-Nachricht `{ordner}: <was portiert wurde>` und dem Trailer `{TRAILER} <sha12>[, <sha12>]` (12 Zeichen) als eigene letzte Zeile vor Co-Authored-By, "
         f"rebasen, pushen. Dann `{melden} --quelle <sha>[,<sha>] --ergebnis freigegeben --review ok --tests ok`.",
-        f"5. Bleibt das Review oder ein Test rot, NICHT pushen und die eigene Änderung vollständig verwerfen (eigene Dateien per git restore auf origin/main, eigene Commits per git reset), sonst blockiert der abweichende Arbeitsbaum jede spätere Installation; dann melden: `{melden} --quelle <sha> --ergebnis blockiert --review <ok|fehler> --tests <ok|fehler> --grund \"<Grund>\"`. "
+        f"5. Bleibt das Review oder ein Test rot, NICHT pushen und die eigene Änderung vollständig verwerfen mit genau `git reset --soft origin/main` (nur falls du lokal committet hast) und `git restore --source=origin/main --staged --worktree -- {ordner}`; NIE `git reset --hard` (fremde Änderungen im Arbeitsbaum), sonst blockiert der abweichende Arbeitsbaum jede spätere Installation; dann melden: `{melden} --quelle <sha> --ergebnis blockiert --review <ok|fehler> --tests <ok|fehler> --grund \"<Grund>\"`. "
         "Die Verteilung blockiert dann diese Änderung, die letzte funktionierende Version bleibt installiert.",
         "6. Jeder aufgeführte Commit braucht genau eine Meldung. Installiert wird nicht von dir, sondern von der Verteilung "
         f"(`{skript} Werkzeuge/jarvis-verteilung/jarvis_verteilung.py auto` darfst du am Ende einmal starten).",
@@ -644,7 +724,10 @@ def portierung(plattform: str, ziel: str, buch: dict, alle: list[dict], darf_sta
 
 # ---------------------------------------------------------------- Installation
 
-def installieren(ziel: str, buch: dict, alle: list[dict], erzwingen_pruefen: bool = True) -> dict:
+ANZEIGE = {"uebersprungen": "übersprungen", "nicht_installiert": "nicht installiert", "in_arbeit": "in Arbeit"}
+
+
+def installieren(ziel: str, buch: dict, alle: list[dict], vorspul: str = "") -> dict:
     plattform = plattform_von(ziel)
     ordner = K["plattformen"][plattform]["ordner"]
     vorher = installierte_version(ziel)
@@ -652,10 +735,17 @@ def installieren(ziel: str, buch: dict, alle: list[dict], erzwingen_pruefen: boo
     ergebnis = {"ziel": ziel, "vorher": vorher, "soll": soll}
     if not vorher:
         return {**ergebnis, "ergebnis": "nicht_installiert", "grund": "Jarvis ist auf diesem Rechner nicht installiert"}
-    if vtupel(soll) <= vtupel(vorher):
+    if vtupel(quellversion(plattform, "origin/main") or soll) <= vtupel(vorher):
         return {**ergebnis, "ergebnis": "aktuell", "grund": f"installiert {vorher} ist aktuell"}
     if (abw := git("diff", "--name-only", "origin/main", "--", ordner, pruefen=False).strip()):
+        if vorspul:
+            return {**ergebnis, "ergebnis": "wartet", "grund": f"Repo ließ sich nicht vorspulen ({vorspul[:160]}), neuer Stand liegt noch nicht im Arbeitsbaum"}
         return {**ergebnis, "ergebnis": "wartet", "grund": f"lokaler Stand von {ordner} weicht von origin/main ab ({abw.splitlines()[0]} …)"}
+    if vtupel(soll) <= vtupel(vorher):
+        return {**ergebnis, "ergebnis": "aktuell", "grund": f"installiert {vorher} ist aktuell"}
+    letzte = buch.get(f"installiert/{ziel}.json") or {}
+    if letzte.get("ergebnis") == "fehlgeschlagen" and letzte.get("versucht") == soll and alter_stunden(letzte.get("zeit")) < 6:
+        return {**ergebnis, "ergebnis": "wartet", "grund": f"{soll} scheiterte zuletzt ({letzte.get('grund', '')[:160]}); nächster Versuch nach 6 Stunden oder mit neuer Version"}
     if (sperre := installations_sperre(plattform, buch, alle)):
         return {**ergebnis, "ergebnis": "blockiert" if sperre.startswith("blockiert") else "wartet", "grund": sperre}
     if (live := live_aktiv()):
@@ -672,15 +762,22 @@ def installieren(ziel: str, buch: dict, alle: list[dict], erzwingen_pruefen: boo
         ok = nachher == soll and laeuft(ziel)
         if not ok:
             info = f"Prüfung nach der Installation fehlgeschlagen (Version {nachher or '?'} statt {soll}, läuft: {'ja' if laeuft(ziel) else 'nein'})"
+    abgebrochen_vor_tausch = info.startswith("abgebrochen vor dem Tausch")
     if ok:
         e = {**ergebnis, "ergebnis": "installiert", "nachher": nachher, "grund": info}
+    elif abgebrochen_vor_tausch:
+        e = {**ergebnis, "ergebnis": "wartet", "nachher": nachher, "grund": info + "; installierte Version unberührt"}
+    elif nachher == vorher and laeuft(ziel):
+        # Bau scheiterte, bevor die installierte App angefasst wurde: nichts wiederherstellen, Jarvis nicht neu starten.
+        e = {**ergebnis, "ergebnis": "fehlgeschlagen", "nachher": nachher, "grund": f"{info}; installierte Version {vorher} unberührt"}
     else:
         rueck = wiederherstellen(ziel, sicherung) if sicherung else "keine Sicherung vorhanden"
         e = {**ergebnis, "ergebnis": "fehlgeschlagen", "nachher": installierte_version(ziel), "grund": f"{info}; letzte Version {rueck}"}
     log(f"Installation: {e['ergebnis']} – {e['grund']}")
-    eintrag = {"ziel": ziel, "version": e.get("nachher") or vorher, "versucht": soll, "ergebnis": e["ergebnis"],
-               "grund": e["grund"], "host": host(), "zeit": jetzt()}
-    buch_schreiben({f"installiert/{ziel}.json": eintrag}, f"Jarvis-Verteilung: {ziel} {e['ergebnis']} {soll}")
+    if e["ergebnis"] != "wartet":
+        eintrag = {"ziel": ziel, "version": e.get("nachher") or vorher, "versucht": soll, "ergebnis": e["ergebnis"],
+                   "grund": e["grund"], "host": host(), "zeit": jetzt()}
+        buch_schreiben({f"installiert/{ziel}.json": eintrag}, f"Jarvis-Verteilung: {ziel} {ANZEIGE.get(e['ergebnis'], e['ergebnis'])} {soll}")
     return e
 
 
@@ -769,7 +866,10 @@ def befehl_auto(args) -> int:
         return 0
     sperre = lauf_sperre()
     if sperre is None:
-        print("JARVIS_VERTEILUNG_STATUS=laeuft_schon")
+        # Ein anderer Lauf (meist der Hintergrund) arbeitet gerade: den Stand trotzdem zeigen, statt die Karte rot zu färben.
+        holen()
+        ausgeben(status(buch_lesen(), commits(), {"meldungen": ["ein anderer Lauf der Verteilung arbeitet gerade (etwa ein Bau), Ergebnis folgt"]}),
+                 args.json, "laeuft_schon")
         return 0
     try:
         online = holen()
@@ -783,7 +883,7 @@ def befehl_auto(args) -> int:
             buch = buch_lesen()
         kurz = "geprueft"
         if not args.ohne_installation:
-            inst = installieren(ziel, buch, alle) if online or SIM else {"ergebnis": "wartet", "grund": "offline"}
+            inst = installieren(ziel, buch, alle, vorspul) if online or SIM else {"ergebnis": "wartet", "grund": "offline"}
             lokal["installation"] = inst
             lokal["meldungen"].append(f"Installation hier: {inst['ergebnis']} – {inst['grund']}")
             kurz = inst["ergebnis"]
@@ -815,15 +915,14 @@ def befehl_melden(args) -> int:
         else:
             portiert = {s for c in alle for s in c["portiert"]
                         if any(f.startswith(K["plattformen"][plattform]["ordner"]) for f in c["dateien"])}
-            fehlt = [s for s in shas if s[:12] not in portiert]
+            fehlt = [s for s in shas if (c := sha_aufloesen(s, alle)) is None or c["sha"][:12] not in portiert]
             if fehlt:
                 print(f"Kein Portierungs-Commit mit '{TRAILER} {fehlt[0][:12]}' für {plattform} auf origin/main. Erst committen und pushen.")
                 print("JARVIS_VERTEILUNG_STATUS=fehler")
                 return 2
     aend = {}
-    voll = {c["sha"][:12]: c for c in alle}
     for s in shas:
-        c = voll.get(s[:12])
+        c = sha_aufloesen(s, alle)
         if c is None:
             print(f"Commit {s} ist nicht seit der Basis auf origin/main.")
             print("JARVIS_VERTEILUNG_STATUS=fehler")
@@ -832,7 +931,7 @@ def befehl_melden(args) -> int:
                                                  "quellen": sorted(quellplattformen(c["dateien"])), "status": ergebnis,
                                                  "grund": grund, "review": args.review or "", "tests": args.tests or "",
                                                  "host": host(), "zeit": jetzt()}
-    ok, info = buch_schreiben(aend, f"Jarvis-Verteilung: {plattform} {ergebnis} ({', '.join(s[:8] for s in shas)})")
+    ok, info = buch_schreiben(aend, f"Jarvis-Verteilung: {plattform} {ANZEIGE.get(ergebnis, ergebnis)} ({', '.join(s[:8] for s in shas)})")
     print(f"{ergebnis}: {', '.join(s[:12] for s in shas)} – {info}")
     print("JARVIS_VERTEILUNG_STATUS=" + (ergebnis if ok else "fehler"))
     return 0 if ok else 1
@@ -859,6 +958,11 @@ def befehl_einrichten(args) -> int:
         r = subprocess.run(["schtasks", "/Create", "/F", "/TN", "JarvisVerteilung", "/SC", "MINUTE", "/MO", "30", "/RL", "LIMITED",
                             "/TR", f'"{exe}" "{skript}" auto'], capture_output=True, text=True, creationflags=OHNE_FENSTER)
         print((r.stdout or r.stderr).strip())
+        benutzer = f"{os.environ.get('USERDOMAIN', '')}\\{os.environ.get('USERNAME', '')}"
+        a = subprocess.run(["schtasks", "/Create", "/F", "/TN", "JarvisVerteilung-Anmeldung", "/SC", "ONLOGON", "/DELAY", "0002:00",
+                            "/RL", "LIMITED", "/RU", benutzer, "/IT", "/TR", f'"{exe}" "{skript}" auto'],
+                           capture_output=True, text=True, creationflags=OHNE_FENSTER)
+        print("Anmelde-Auslöser: " + ("eingerichtet" if a.returncode == 0 else "nicht eingerichtet (braucht Administratorrechte), der 30-Minuten-Lauf holt nach"))
         print("JARVIS_VERTEILUNG_STATUS=" + ("eingerichtet" if r.returncode == 0 else "fehler"))
         return r.returncode
     if sys.platform == "darwin":

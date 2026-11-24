@@ -522,7 +522,7 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Läuft auch ohne Fenster alle 30 Minuten (Hintergrundaufgabe JarvisVerteilung). Während eines Live-Sprachgesprächs wird nichts installiert und keine Sitzung gestartet. Scheitert eine Installation, bleibt die letzte funktionierende Version.",
+      "hinweis": "Läuft auch ohne Fenster alle 30 Minuten und bei der Anmeldung (Aufgaben JarvisVerteilung und JarvisVerteilung-Anmeldung). Während eines Live-Sprachgesprächs wird nichts installiert und keine Sitzung gestartet. Scheitert eine Installation, bleibt die letzte funktionierende Version.",
       "akzent": "#F97316"
     },
     {

@@ -150,7 +150,7 @@ commit("hp", {"JarvisWindows/Sources/A.cs": "// a3 Einkaufsliste teilen\n", "Jar
 pruefe(motor("hp", "auto")[1] and installiert("hp") == "1.0.2", "HP installiert nicht vor der Freigabe (Portierung in Arbeit)")
 motor("hp", "melden", "--plattform", "windows", "--quelle", m1[:12], "--ergebnis", "freigegeben", "--review", "ok", "--tests", "ok")
 commit("mac", {"JarvisMac/Sources/A.swift": "// a3 Einkaufsliste teilen\n", "JarvisMac/Info.plist": plist("1.0.3")},
-       f"JarvisMac: Einkaufsliste teilen portiert (1.0.3)\n\nJarvis-Portierung: {m1[:12]}")
+       f"JarvisMac: Einkaufsliste teilen portiert (1.0.3)\n\nJarvis-Portierung: {m1[:8]}")
 motor("mac", "melden", "--plattform", "mac", "--quelle", m1[:12], "--ergebnis", "freigegeben", "--review", "ok", "--tests", "ok")
 motor("hp", "auto")
 motor("mac", "auto")
@@ -175,7 +175,7 @@ pruefe(any(u["sha"] == n1[:12] and "Android-Ressourcen" in u["grund"] for u in u
 pruefe(len(sitzungen("hp")) == vorher_hp + 1, "für die Sensor-Änderung startet genau eine Prüfsitzung")
 auftrag = sitzungen("hp")[-1].read_text()
 pruefe(n2[:12] in auftrag and n1[:12] not in auftrag, "die Sitzung prüft nur die unklare Änderung")
-motor("hp", "melden", "--plattform", "windows", "--quelle", n2[:12], "--ergebnis", "uebersprungen", "--grund", "Schrittzähler-Sensor gibt es nur am Handy")
+motor("hp", "melden", "--plattform", "windows", "--quelle", n2[:9], "--ergebnis", "uebersprungen", "--grund", "Schrittzähler-Sensor gibt es nur am Handy")
 st, d, _ = motor("mac", "auto")
 motor("mac", "melden", "--plattform", "mac", "--quelle", n2[:12], "--ergebnis", "uebersprungen", "--grund", "Schrittzähler-Sensor gibt es nur am Handy")
 st, d, _ = motor("power", "auto")
@@ -211,12 +211,15 @@ st, _, r = motor("mac", "melden", "--plattform", "mac", "--quelle", w5[:12], "--
 pruefe(st == "fehler", "Freigabe ohne gepushten Portierungs-Commit wird abgelehnt")
 
 # ------------------------------------------------------------------ 5. Installation scheitert → letzte Version bleibt
-print("5. Installation scheitert → Wiederherstellung")
+print("5. Installation scheitert → Wiederherstellung, keine Dauerschleife")
 VOR5 = installiert("hp")
 (TMP / "sim-hp" / "hp-installfehler").write_text("1")
 st, d, _ = motor("hp", "auto")
 pruefe(st == "fehlgeschlagen" and installiert("hp") == VOR5, f"HP: Bau scheitert, {VOR5} wiederhergestellt ({st}, {installiert('hp')})")
 (TMP / "sim-hp" / "hp-installfehler").unlink()
+st, d, _ = motor("hp", "auto")
+pruefe(st == "wartet" and installiert("hp") == VOR5, f"HP: dieselbe gescheiterte Version wird nicht alle 30 Minuten neu versucht ({st})")
+commit("hp", {"JarvisWindows/Sources/A.cs": "// a6\n", "JarvisWindows/JarvisWindows.csproj": csproj("1.0.6")}, "JarvisWindows: Korrektur (1.0.6)")
 (TMP / "sim-hp" / "hp-startfehler").write_text("1")
 st, d, _ = motor("hp", "auto")
 pruefe(st == "fehlgeschlagen" and installiert("hp") == VOR5, f"HP: neue Fassung startet nicht → {VOR5} wiederhergestellt")
@@ -225,12 +228,18 @@ pruefe(st == "fehlgeschlagen" and installiert("hp") == VOR5, f"HP: neue Fassung 
 # ------------------------------------------------------------------ 6. Live-Modus wird nicht gestört
 print("6. Live-Sprachmodus")
 import datetime as dt
+commit("hp", {"JarvisWindows/Sources/A.cs": "// a7\n", "JarvisWindows/JarvisWindows.csproj": csproj("1.0.7")}, "JarvisWindows: Korrektur (1.0.7)")
 (TMP / "sim-hp" / "hp-live.json").write_text(json.dumps({"zustand": "hoert", "pid": os.getpid(), "zeit": dt.datetime.now().astimezone().isoformat()}))
 st, d, _ = motor("hp", "auto")
 pruefe(st == "wartet" and installiert("hp") == VOR5, f"HP wartet während Live ({st})")
 (TMP / "sim-hp" / "hp-live.json").write_text(json.dumps({"zustand": "aus", "pid": os.getpid(), "zeit": dt.datetime.now().astimezone().isoformat()}))
 st, d, _ = motor("hp", "auto")
-pruefe(installiert("hp") == "1.0.5", f"HP installiert nach dem Live-Gespräch 1.0.5 ({st})")
+pruefe(installiert("hp") == "1.0.7", f"HP installiert nach dem Live-Gespräch 1.0.7 ({st})")
+(TMP / "sim-hp" / "hp-live.json").write_text(json.dumps({"zustand": "spricht", "pid": os.getpid(), "zeit": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}))
+commit("hp", {"JarvisWindows/Sources/A.cs": "// a8\n", "JarvisWindows/JarvisWindows.csproj": csproj("1.0.8")}, "JarvisWindows: Korrektur (1.0.8)")
+st, d, _ = motor("hp", "auto")
+pruefe(st == "wartet" and installiert("hp") == "1.0.7", f"Live-Zeit mit „Z“ (Mac in UTC) wird erkannt ({st})")
+(TMP / "sim-hp" / "hp-live.json").unlink()
 
 # ------------------------------------------------------------------ 7. Gleichzeitiger Anspruch zweier Windows-Rechner
 print("7. Doppelte Aufträge")
@@ -245,6 +254,17 @@ for p in prozesse:
     p.wait()
 neu = (len(sitzungen("hp")) - vor_hp) + (len(sitzungen("power")) - vor_power)
 pruefe(neu == 1, f"gleichzeitig geprüft: genau eine Windows-Sitzung ({neu})")
+
+# ------------------------------------------------------------------ 8. Laufsperre
+print("8. Laufsperre")
+sperre = TMP / "sim-mac" / "zustand" / "mac" / "lauf.lock"
+sperre.parent.mkdir(parents=True, exist_ok=True)
+sperre.write_text(str(os.getpid()))
+st, d, _ = motor("mac", "auto")
+pruefe(st == "laeuft_schon" and d.get("ziele"), f"belegte Sperre: Karte bekommt trotzdem den Stand ({st})")
+sperre.write_text("999999")
+st, d, _ = motor("mac", "auto")
+pruefe(st != "laeuft_schon", f"Sperre eines toten Prozesses wird sofort frei ({st})")
 
 print()
 if FEHLER:

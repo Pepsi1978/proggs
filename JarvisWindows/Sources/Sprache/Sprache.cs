@@ -1295,7 +1295,10 @@ public static class LiveStatusDatei
         {
             var text = "{\"zustand\":\"" + zustand.ToString().ToLowerInvariant() + "\",\"pid\":" + Environment.ProcessId
                        + ",\"zeit\":\"" + DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:sszzz") + "\"}";
-            File.WriteAllText(Path.Combine(Pfade.Unterstuetzung, "live.json"), text);
+            // Erst in eine Nebendatei, dann tauschen: Die Verteilung liest so nie eine halb geschriebene Datei.
+            var ziel = Path.Combine(Pfade.Unterstuetzung, "live.json");
+            File.WriteAllText(ziel + ".tmp", text);
+            File.Move(ziel + ".tmp", ziel, overwrite: true);
         }
         catch (Exception) { }
     }
