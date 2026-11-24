@@ -181,8 +181,8 @@ private fun Merkmal(icon: ImageVector?, text: String, farbe: Color) {
 }
 
 /**
- * Einzeiliger Text, der nur läuft, wenn er nicht in die Breite passt: zwei Sekunden Stillstand am Anfang,
- * dann gleichmäßig nach links, bis das Ende sichtbar ist, Sprung zurück zum Anfang und wieder von vorn.
+ * Einzeiliger Text, der nur läuft, wenn er nicht in die Breite passt: drei Sekunden Stillstand am Anfang,
+ * dann gleichmäßig nach links, bis das Ende sichtbar ist, drei Sekunden Stillstand am Ende, Sprung zurück zum Anfang und wieder von vorn.
  * Bei ausgeschalteter Bewegung bleibt er stehen und endet mit „…“.
  */
 @Composable
@@ -218,8 +218,9 @@ fun Lauftext(
         if (ueberstand <= 0 || breite <= 0) return@LaunchedEffect
         val dauer = (ueberstand / pxProSekunde * 1000f).toInt().coerceAtLeast(600)
         while (true) {
-            delay(2000)
+            delay(3000)
             versatz.animateTo(-ueberstand.toFloat(), tween(dauer, easing = LinearEasing))
+            delay(3000)
             versatz.snapTo(0f)
         }
     }
