@@ -253,8 +253,9 @@ private fun Leiste(
             nachOben.forEach { a ->
                 val h = karteHoehe(a.dauer).value
                 val oben = mitte(a) - h / 2
-                if (oben >= gruppeEnde - 0.5f) abschliessen()
-                val i = spalten.indexOfFirst { it <= oben + 0.5f }.let { if (it < 0) { spalten.add(0f); spalten.lastIndex } else it }
+                // Nur Rundungsrauschen wird übersehen; jede echte Überdeckung kommt in dieselbe Gruppe.
+                if (oben >= gruppeEnde - 0.01f) abschliessen()
+                val i = spalten.indexOfFirst { it <= oben + 0.01f }.let { if (it < 0) { spalten.add(0f); spalten.lastIndex } else it }
                 spalten[i] = oben + h
                 spalteVon[a.id] = i
                 gruppe.add(a.id)

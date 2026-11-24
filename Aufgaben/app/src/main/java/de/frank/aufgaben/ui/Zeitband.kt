@@ -83,22 +83,31 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
         private const val KARTEN_ABSTAND = 4
 
         /**
+         * Größte Zusatzhöhe einer Dehnung in Minuten normaler Höhe (2 Std. ≈ 84 dp). Bräuchte es mehr (z. B. ein langer
+         * Dienst und kurz danach eine Aufgabe), stehen die Karten stattdessen nebeneinander, statt die Leiste aufzublähen.
+         */
+        private const val MAX_ZUSATZ = 120
+
+        /**
          * Dehnt die Abschnitte zwischen zwei Startzeiten, deren Karten sich sonst verdecken: Die Karten stehen mittig auf
          * ihrer Startzeit, zwei aufeinanderfolgende brauchen also mindestens eine halbe Kartenhöhe der einen plus eine der
          * anderen Abstand. Gestreckt wird nur die Strecke zwischen den beiden Startzeiten, so weit wie nötig. Startzeiten,
-         * die fast gleich sind ([GLEICHE_REIHE]), bilden eine Reihe; ihre Karten stehen nebeneinander.
+         * die fast gleich sind ([GLEICHE_REIHE]), bilden eine Reihe; ihre Karten stehen nebeneinander. Startzeiten zählen
+         * so, wie die Leiste sie zeichnet: ohne Uhrzeit am Bandanfang, außerhalb von [von]–[bis] an dessen Rand.
          */
-        fun dehnungen(termine: List<Aufgabe>): List<Dehnung> {
-            val reihen = mutableListOf<Pair<Int, Int>>() // Startzeit der Reihe, größte halbe Kartenhöhe darin
-            termine.mapNotNull { t -> t.minuten?.let { it to halbeKarte(t.dauer) } }.sortedBy { it.first }.forEach { (start, halb) ->
+        fun dehnungen(termine: List<Aufgabe>, von: Int, bis: Int): List<Dehnung> {
+            class Reihe(val erster: Int, var letzter: Int, var halb: Int)
+            val reihen = mutableListOf<Reihe>()
+            termine.map { t -> (t.minuten ?: von).coerceIn(von, bis) to halbeKarte(t.dauer) }.sortedBy { it.first }.forEach { (start, halb) ->
                 val letzte = reihen.lastOrNull()
-                if (letzte != null && start - letzte.first < GLEICHE_REIHE) reihen[reihen.lastIndex] = letzte.first to maxOf(letzte.second, halb)
-                else reihen.add(start to halb)
+                if (letzte != null && start - letzte.erster < GLEICHE_REIHE) { letzte.letzter = start; letzte.halb = maxOf(letzte.halb, halb) }
+                else reihen.add(Reihe(start, start, halb))
             }
+            // Gemessen ab der spätesten Startzeit der oberen Reihe: Auch deren Karte muss über der nächsten Reihe enden.
             return reihen.zipWithNext().mapNotNull { (a, b) ->
-                val noetig = a.second + b.second + KARTEN_ABSTAND
-                val da = b.first - a.first
-                if (da >= noetig) null else Dehnung(a.first, b.first, noetig.toFloat() / da)
+                val noetig = a.halb + b.halb + KARTEN_ABSTAND
+                val da = b.erster - a.letzter
+                if (da >= noetig || noetig - da > MAX_ZUSATZ) null else Dehnung(a.letzter, b.erster, noetig.toFloat() / da)
             }
         }
 
@@ -131,7 +140,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             // Die Karte steht mittig auf ihrer Startzeit: Belegt ist also auch die halbe Kartenhöhe davor, sonst schöbe sie
             // sich über die „… frei“-Marke einer Lücke direkt darüber.
             val strecken = termine.mapNotNull { t -> t.minuten?.let { val halb = halbeKarte(t.dauer); (it - halb) to it + maxOf(t.dauer, halb) } } + listOfNotNull(jetzt?.let { it to it + 1 })
-            val dehnungen = dehnungen(termine)
+            val dehnungen = dehnungen(termine, a, b)
             if (!luecken || strecken.size < 2) return Zeitband(a, b, dehnungen = dehnungen)
             // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
             val belegt = mutableListOf<IntArray>()
@@ -165,7 +174,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             val obenFrei = termine.minOf { t -> t.minuten?.let { it - halbeKarte(t.dauer) } ?: erster }
             val a = minOf(von, Math.floorDiv(obenFrei, 60) * 60).coerceAtLeast(0)
             val b = maxOf(bis, (letzter + 59) / 60 * 60).coerceAtMost(24 * 60)
-            return Zeitband(a, b, dehnungen = dehnungen(termine))
+            return Zeitband(a, b, dehnungen = dehnungen(termine, a, b))
         }
 
         private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, jetzt: Int?): Pair<Int, Int> {
