@@ -193,6 +193,16 @@ fun Lauftext(
     modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
     textDecoration: TextDecoration? = null,
+) = Lauftext(androidx.compose.ui.text.AnnotatedString(text), color, fontSize, modifier, fontWeight, textDecoration)
+
+@Composable
+fun Lauftext(
+    text: androidx.compose.ui.text.AnnotatedString,
+    color: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight? = null,
+    textDecoration: TextDecoration? = null,
 ) {
     if (!LocalBewegung.current) {
         Text(text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, textDecoration = textDecoration, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -213,7 +223,7 @@ fun Lauftext(
             versatz.snapTo(0f)
         }
     }
-    Box(modifier.fillMaxWidth().clipToBounds().onSizeChanged { breite = it.width }) {
+    Box(modifier.clipToBounds().onSizeChanged { breite = it.width }) {
         Text(
             text,
             Modifier

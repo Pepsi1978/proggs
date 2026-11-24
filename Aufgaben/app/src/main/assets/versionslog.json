@@ -113,6 +113,7 @@
     {"versionCode": 109, "versionName": "1.0.108", "stand": "24.11.2026, 10:24 Uhr", "notiz": "Über dem Zeitstrahl stehen nur noch offene Aufgaben: Eine abgehakte Karte verschwindet dort sofort und ist im Bereich Erledigt zu finden."},
     {"versionCode": 110, "versionName": "1.0.109", "stand": "24.11.2026, 10:26 Uhr", "notiz": "3D-Szene: natürlichere Figur mit sauberem Gang und weitem Abstand am Stuhl, langsamerer Abend mit funkelnden Sternen, eigenständige dunkle Nacht, sichtbarer Sonnenaufgang mit Rückkehr und längerem Ausklang, neues botanisches Wandbild links und Katzenkörbchen links oben."},
     {"versionCode": 111, "versionName": "1.0.110", "stand": "24.11.2026, 10:29 Uhr", "notiz": "Aufgabenliste: Zu lange Aufgabentexte laufen jetzt als Lauftext durch, springen danach zum Anfang zurück und starten nach zwei Sekunden Pause erneut; kurze Texte bleiben ruhig stehen."},
-    {"versionCode": 112, "versionName": "1.0.111", "stand": "24.11.2026, 10:30 Uhr", "notiz": "Nach dem Abhaken einer Karte erscheint unten „Erledigt“ mit Rückgängig, falls du dich vertippt hast; die Suche zeigt Heute nicht mehr leer an, wenn der Treffer unter Erledigt steht."}
+    {"versionCode": 112, "versionName": "1.0.111", "stand": "24.11.2026, 10:30 Uhr", "notiz": "Nach dem Abhaken einer Karte erscheint unten „Erledigt“ mit Rückgängig, falls du dich vertippt hast; die Suche zeigt Heute nicht mehr leer an, wenn der Treffer unter Erledigt steht."},
+    {"versionCode": 113, "versionName": "1.0.112", "stand": "24.11.2026, 10:39 Uhr", "notiz": "Zeitleiste: Auch dort laufen zu lange Aufgabentexte jetzt als Lauftext durch, statt mit drei Punkten abgeschnitten zu werden."}
 ]
 }

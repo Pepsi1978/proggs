@@ -454,12 +454,12 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
         Box(Modifier.width(5.dp).fillMaxHeight().knopf3d(farbe, farbe.copy(alpha = 0.7f), 3.dp, f.dunkel))
         // Auf Kartenmitte (= Startzeit): direkt hinter dem gelben Strich die gewählte Uhrzeit, dann der Titel.
         Row(Modifier.weight(1f).padding(start = STRICH_IN_KARTE, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            Lauftext(
                 buildAnnotatedString {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("${Tage.zeit(a.minuten ?: 0)} Uhr ") }
                     append(a.titel)
                 },
-                color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
             )
             // Ab einer Stunde Dauer das Ende dazu: Die mittige Karte zeigt es mit ihrer Unterkante nicht mehr an.
