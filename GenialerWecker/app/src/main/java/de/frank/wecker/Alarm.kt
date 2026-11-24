@@ -81,7 +81,7 @@ data class Alarm(
     val tasksRepeats: Int = 0,
     /** "" = feste Uhrzeit (hour/minute); sonst Kennung eines [SonnenWecker.Ereignis]: Weckzeit folgt täglich der Sonne. */
     val sunMode: String = "",
-    /** Versatz zum Sonnenzeitpunkt in Minuten (−60 bis +90), nur mit [sunMode]. */
+    /** Versatz zum Sonnenzeitpunkt in Minuten (−90 bis +90), nur mit [sunMode]. */
     val sunOffsetMinutes: Int = 0,
 ) {
     /**

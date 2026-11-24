@@ -1994,7 +1994,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         // Kept outside the section: its content is removed while collapsed, the remembered date must survive that.
         var gemerktesDatum by rememberSaveable(alarm.id) { mutableStateOf(alarm.startDate) }
         Section("Deine Weckzeit", collapsible = true, initiallyExpanded = true,
-            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null }, scheduleLabel(alarm),
+            summary = listOfNotNull(alarm.timeLabel, scheduleLabel(alarm),
                 if (alarm.sleepMinutes > 0) "Schlafdauer ${Schlaf.dauer(alarm.sleepMinutes)}" else null).joinToString(" · ")) {
             Text("Weckzeit", style = MaterialTheme.typography.labelLarge, color = LocalGold.current.textGedaempft)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -3390,6 +3390,9 @@ private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
     }
     val context = LocalContext.current
     var ortStand by remember { mutableIntStateOf(0) }
+    val freigabe = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        SonnenOrt.aktualisiere(context); SonnenOrt.neuPlanen(context); ortStand++
+    }
     LaunchedEffect(Unit) { SonnenOrt.aktualisiere(context); ortStand++ }
     val heute = remember(rememberNow(60_000) / 3_600_000) { java.time.LocalDate.now() }
     val vorschau = remember(alarm.sunMode, versatz, heute, ortStand) { SonnenWecker.vorschau(alarm.copy(sunOffsetMinutes = versatz), heute.plusDays(1)) }
@@ -3402,8 +3405,11 @@ private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
             }
         }
     }
-    val zone = remember { ZoneId.systemDefault().let { it.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.GERMAN).ifBlank { it.id } } }
+    val zone = remember(heute, ZoneId.systemDefault()) { ZoneId.systemDefault().let { it.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.GERMAN).ifBlank { it.id } } }
     Text("Berechnet für deine Zeitzone: $zone", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+    // Ohne Freigabe rechnet der Wecker mit einem geschätzten Ort; nur dann gibt es den Knopf dafür.
+    if (!remember(ortStand) { SonnenOrt.erlaubt(context) })
+        StillerKnopf("Ungefähren Standort erlauben", { freigabe.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }, hervorgehoben = true)
     Text("Wiederholung, Schlafdauer und Schlafzeiterinnerung richten sich automatisch nach der jeweils berechneten Weckzeit.",
         style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
 }
