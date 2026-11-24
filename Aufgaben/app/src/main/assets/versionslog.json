@@ -106,6 +106,7 @@
     {"versionCode": 102, "versionName": "1.0.101", "stand": "23.11.2026, 18:40 Uhr", "notiz": "Die Animation ganz oben ist jetzt eine echte 3D-Szene (OpenGL ES 3.0) mit räumlicher Perspektive, Licht, Schatten, schwingender Tür, detailliertem Arbeitsplatz und natürlichen Bewegungen von Mensch und Katze."},
     {"versionCode": 103, "versionName": "1.0.102", "stand": "23.11.2026, 18:46 Uhr", "notiz": "3D-Szene: helle rechte Zimmerwand mit Fußleiste, gerahmtem 3D-Bild, Deko-Regal, Zimmerpflanze und warmem Raum-Gegenlicht ergänzt (keine schwarze Fläche mehr rechts)."},
     {"versionCode": 104, "versionName": "1.0.103", "stand": "23.11.2026, 18:53 Uhr", "notiz": "3D-Szene: Wenn die Katze auf den Schreibtisch springt, dreht sich der Mensch samt Stuhl direkt zu ihr, schaut sie an und streichelt sie sichtbar über Kopf und Rücken."},
-    {"versionCode": 105, "versionName": "1.0.104", "stand": "24.11.2026, 10:05 Uhr", "notiz": "Stundenansicht: Eingeplante Aufgaben stehen mit ihrer Kartenmitte genau auf der Startzeit, ein gelber Strich führt von der Zeitleiste in die Karte und dahinter steht die Uhrzeit vor dem Titel."}
+    {"versionCode": 105, "versionName": "1.0.104", "stand": "24.11.2026, 10:05 Uhr", "notiz": "Stundenansicht: Eingeplante Aufgaben stehen mit ihrer Kartenmitte genau auf der Startzeit, ein gelber Strich führt von der Zeitleiste in die Karte und dahinter steht die Uhrzeit vor dem Titel."},
+    {"versionCode": 106, "versionName": "1.0.105", "stand": "24.11.2026, 10:13 Uhr", "notiz": "Stundenansicht: Lange Karten verdecken keine früheren mehr, ragen nicht mehr über den Umschalter, der gelbe Strich läuft nie quer über Nachbarkarten und ab einer Stunde Dauer steht das Ende dabei."}
 ]
 }

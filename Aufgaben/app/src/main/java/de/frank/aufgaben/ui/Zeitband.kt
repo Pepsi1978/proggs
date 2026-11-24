@@ -57,13 +57,20 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
         /** Kürzeste Lücke, die zusammenrückt: Bei weniger als zwei freien Stunden verschwände keine Stundenzahl. */
         const val MIN_LUECKE = 120
 
-        /** Ein Terminblock ist mindestens 28 dp hoch, bei 42 dp pro Stunde also 40 Minuten. */
+        /** Ein Terminblock ist mindestens 28 dp hoch, bei 42 dp pro Stunde also 40 Minuten (Zeitleiste KARTE_MIN). */
         private const val BLOCK_MIN = 40
 
         /**
+         * Halbe Kartenhöhe in Minuten (aufgerundet, eher etwas mehr): So weit reicht eine Terminkarte vor und nach ihrer
+         * Startzeit, weil sie mittig auf ihr steht. Zeitleiste vergibt danach die Spalten, das Band plant den Platz ein.
+         */
+        fun halbeKarte(dauer: Int): Int = (maxOf(dauer, BLOCK_MIN) + 1) / 2
+
+        /**
          * Band ohne Ziehen. Mit [auto]: eine Stunde vor dem ersten bis eine Stunde nach dem letzten Termin. Mit [luecken]:
-         * zwei oder mehr freie volle Stunden zwischen zwei Terminen rücken zusammen (Termin 15 Uhr, nächster 19 Uhr:
-         * 16:00 und 19:00 bleiben als Ränder stehen, 17 und 18 Uhr verschwinden).
+         * zwei oder mehr freie volle Stunden zwischen zwei Terminen rücken zusammen. Weil jede Karte mittig auf ihrer
+         * Startzeit steht, gilt auch die halbe Kartenhöhe davor als belegt (Termin 15 Uhr, nächster 20 Uhr: 16:00 und
+         * 19:00 bleiben als Ränder stehen, 17 und 18 Uhr verschwinden).
          */
         fun fuer(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, luecken: Boolean, jetzt: Int? = null): Zeitband {
             var (a, b) = spanne(termine, von, bis, auto, jetzt)
@@ -75,7 +82,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             }
             // Die Karte steht mittig auf ihrer Startzeit: Belegt ist also auch die halbe Kartenhöhe davor, sonst schöbe sie
             // sich über die „… frei“-Marke einer Lücke direkt darüber.
-            val strecken = termine.mapNotNull { t -> t.minuten?.let { val halb = maxOf(t.dauer, BLOCK_MIN) / 2; (it - halb) to it + maxOf(t.dauer, halb) } } + listOfNotNull(jetzt?.let { it to it + 1 })
+            val strecken = termine.mapNotNull { t -> t.minuten?.let { val halb = halbeKarte(t.dauer); (it - halb) to it + maxOf(t.dauer, halb) } } + listOfNotNull(jetzt?.let { it to it + 1 })
             if (!luecken || strecken.size < 2) return Zeitband(a, b)
             // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
             val belegt = mutableListOf<IntArray>()
@@ -105,7 +112,9 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             if (starts.isEmpty()) return Zeitband(von, bis)
             val erster = starts.min()
             val letzter = termine.maxOf { (it.minuten ?: erster) + maxOf(it.dauer, 30) }
-            val a = minOf(von, erster / 60 * 60).coerceAtLeast(0)
+            // Mit der halben Kartenhöhe davor: Die erste Karte steht mittig auf ihrem Start und ragt sonst über die Leiste.
+            val obenFrei = termine.minOf { t -> t.minuten?.let { it - halbeKarte(t.dauer) } ?: erster }
+            val a = minOf(von, Math.floorDiv(obenFrei, 60) * 60).coerceAtLeast(0)
             val b = maxOf(bis, (letzter + 59) / 60 * 60).coerceAtMost(24 * 60)
             return Zeitband(a, b)
         }
@@ -120,7 +129,9 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             }
             val erster = termine.minOf { it.minuten ?: von }
             val letzter = termine.maxOf { (it.minuten ?: von) + maxOf(it.dauer, 30) }
-            val a = ((erster / 60 - 1) * 60).coerceIn(0, 23 * 60)
+            // Eine Stunde Vorlauf, bei langen Karten (mittig auf dem Start) so viel mehr, dass die erste ganz zu sehen ist.
+            val obenFrei = termine.minOf { t -> (t.minuten ?: von) - halbeKarte(t.dauer) }
+            val a = minOf((erster / 60 - 1) * 60, Math.floorDiv(obenFrei, 60) * 60).coerceIn(0, 23 * 60)
             val b = (((letzter + 59) / 60 + 1) * 60).coerceIn(a + 60, 24 * 60)
             return a to b
         }

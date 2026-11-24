@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -83,8 +84,11 @@ private val KARTE_MIN = 28.dp
 /** Höhe einer Terminkarte. Die Karte steht mittig auf ihrer Startzeit (Kartenmitte = Startzeit auf der Zeitleiste). */
 private fun karteHoehe(dauer: Int) = (STUNDE * (maxOf(dauer, 30) / 60f) - 3.dp).coerceAtLeast(KARTE_MIN)
 
-/** Gelb des Startzeit-Strichs (wie die mittlere Priorität). */
-private fun startGelb(dunkel: Boolean) = if (dunkel) Color(0xFFFFD233) else Color(0xFFE8B000)
+/** Gelb des Startzeit-Strichs (wie die mittlere Priorität); blasser für erledigte und gerade gezogene Termine. */
+private fun strichFarbe(dunkel: Boolean, a: Aufgabe, zustand: ZiehZustand): Color {
+    val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
+    return (if (dunkel) Color(0xFFFFD233) else Color(0xFFE8B000)).copy(alpha = if (gezogen) 0.25f else if (a.erledigt) 0.45f else 1f)
+}
 
 /** Wie weit der gelbe Startzeit-Strich in die Karte hineinreicht; dahinter beginnen Uhrzeit und Titel. */
 private val STRICH_IN_KARTE = 13.dp
@@ -138,12 +142,21 @@ private fun Leiste(
     val messer = rememberTextMeasurer()
     val stundePx = with(dichte) { STUNDE.toPx() }
     val lueckePx = with(dichte) { LUECKE.toPx() }
-    val obenPx = with(dichte) { OBEN.toPx() }
     val vonMin = band.vonMin
     val bisMin = band.bisMin
+    // Oberer Rand: Karten stehen mittig auf ihrer Startzeit, eine Karte am Bandanfang (0 Uhr, lange Dauer) ragt sonst über
+    // die Leiste. Gerechnet am Band ohne Ziehen ([rueckBand]): Beim Ziehstart darf sich die Höhe über dem Band nicht
+    // ändern, den Ausgleich in ZiehZustand gibt es nur für die Bandhöhe selbst.
+    val obenDp = remember(termine, rueckBand) {
+        termine.maxOfOrNull { a ->
+            val min = (a.minuten ?: rueckBand.vonMin).coerceIn(rueckBand.vonMin, rueckBand.bisMin)
+            karteHoehe(a.dauer) / 2 - rueckBand.y(min, STUNDE.value, LUECKE.value).dp + 2.dp
+        }?.coerceAtLeast(OBEN) ?: OBEN
+    }
     // Höhen in dp: dieselbe Rechnung wie in px, nur mit den dp-Werten.
     fun yDp(min: Int) = band.y(min, STUNDE.value, LUECKE.value).dp
-    val hoehe = OBEN + band.hoehe(STUNDE.value, LUECKE.value).dp + 30.dp
+    val obenPx = with(dichte) { obenDp.toPx() }
+    val hoehe = obenDp + band.hoehe(STUNDE.value, LUECKE.value).dp + 30.dp
     // Höhe der Jetzt-Linie in px ab Oberkante der Leiste. In einer zusammengerückten Lücke läuft sie nie durch den Text
     // „… frei“: Sie steht in der ersten Hälfte der Lücke knapp über der Marke, in der zweiten knapp darunter.
     fun jetztY(): Float? {
@@ -221,25 +234,41 @@ private fun Leiste(
         band.luecken.forEach { l ->
             LueckenMarke(
                 l, onLuecke,
-                Modifier.offset(x = SPALTE + 2.dp, y = OBEN + yDp(l.von) + 4.dp).width(flaeche - 4.dp).height(LUECKE - 8.dp),
+                Modifier.offset(x = SPALTE + 2.dp, y = obenDp + yDp(l.von) + 4.dp).width(flaeche - 4.dp).height(LUECKE - 8.dp),
             )
         }
         // Termine, Überlappungen nebeneinander
         val sortiert = termine.sortedBy { it.minuten }
         val spalten = mutableListOf<Int>()
         val spalteVon = HashMap<Long, Int>()
+        // Spalten nach der sichtbaren Ausdehnung: Die Karte reicht eine halbe Kartenhöhe vor und nach ihrer Startzeit.
         sortiert.forEach { a ->
             val start = a.minuten ?: 0
-            val i = spalten.indexOfFirst { it <= start }.let { if (it < 0) { spalten.add(0); spalten.lastIndex } else it }
-            spalten[i] = start + maxOf(a.dauer, 30)
+            val halb = Zeitband.halbeKarte(a.dauer)
+            val i = spalten.indexOfFirst { it <= start - halb }.let { if (it < 0) { spalten.add(Int.MIN_VALUE); spalten.lastIndex } else it }
+            spalten[i] = start + halb
             spalteVon[a.id] = i
         }
         val nSpalten = spalten.size.coerceAtLeast(1)
+        // Gelber Startzeit-Strich, äußerer Teil: vom Zeitpfeil waagerecht bis an die Karte, genau auf Höhe ihrer Mitte
+        // (= Startzeit). Unter den Karten gezeichnet, damit er nie quer über eine Karte links daneben läuft; das Stück in
+        // der Karte bis zur Uhrzeit zeichnet TerminBlock selbst.
+        Canvas(Modifier.fillMaxSize()) {
+            val x = SPALTE.toPx() - 8.dp.toPx()
+            sortiert.forEach { a ->
+                val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
+                val y = obenPx + band.y(min, stundePx, lueckePx)
+                val sp = spalteVon[a.id] ?: 0
+                val farbe = strichFarbe(f.dunkel, a, zustand)
+                drawLine(farbe, Offset(x, y), Offset((SPALTE + flaeche / nSpalten * sp).toPx() + 2.dp.toPx(), y), 2.5.dp.toPx(), StrokeCap.Round)
+                drawCircle(farbe, 4.5.dp.toPx(), Offset(x, y))
+            }
+        }
         sortiert.forEach { a ->
             val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
             // Kartenmitte genau auf der Startzeit: Oberkante eine halbe Kartenhöhe darüber.
             val h = karteHoehe(a.dauer)
-            val oben = OBEN + yDp(min) - h / 2
+            val oben = obenDp + yDp(min) - h / 2
             val sp = spalteVon[a.id] ?: 0
             Box(
                 Modifier.offset(x = SPALTE + flaeche / nSpalten * sp, y = oben)
@@ -247,22 +276,6 @@ private fun Leiste(
                     // Gemeldet wird die Kartenmitte: Sie liegt auf der Zeitlinie, an der beim Loslassen abgelegt wurde.
                     .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y + it.size.height / 2f) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
-        }
-        // Gelber Startzeit-Strich: vom Zeitpfeil waagerecht bis in die Karte, genau auf Höhe ihrer Mitte (= Startzeit).
-        // Über den Karten gezeichnet, damit er sichtbar in die Karte hineinreicht; dahinter steht „13:30 Uhr Titel“.
-        Canvas(Modifier.fillMaxSize()) {
-            val x = SPALTE.toPx() - 8.dp.toPx()
-            val gelb = startGelb(f.dunkel)
-            sortiert.forEach { a ->
-                val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
-                val y = obenPx + band.y(min, stundePx, lueckePx)
-                val sp = spalteVon[a.id] ?: 0
-                val ende = (SPALTE + flaeche / nSpalten * sp + STRICH_IN_KARTE).toPx()
-                val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
-                val farbe = gelb.copy(alpha = if (gezogen) 0.25f else if (a.erledigt) 0.45f else 1f)
-                drawLine(farbe, Offset(x, y), Offset(ende, y), 2.5.dp.toPx(), StrokeCap.Round)
-                drawCircle(farbe, 4.5.dp.toPx(), Offset(x, y))
-            }
         }
         // Uhrzeit-Marke mittig auf der Jetzt-Linie, über den Terminen gezeichnet, damit sie nie verdeckt ist
         Canvas(Modifier.fillMaxSize()) {
@@ -407,12 +420,20 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
     val f = LocalFarben.current.let { if (a.erledigt) it.erledigt() else it }
     val farbe = f.prio(a.prio)
     val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
+    val strich = strichFarbe(LocalFarben.current.dunkel, a, zustand).copy(alpha = if (a.erledigt) 0.45f else 1f)
+    val ende = ((a.minuten ?: 0) + a.dauer) % (24 * 60)
     Row(
         Modifier.fillMaxSize()
             .graphicsLayer { alpha = if (gezogen) 0.25f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
             .glas(f, radius = 12.dp, erhoeht = 1f, fuellung = f.flaecheStark, toenung = farbe)
             .ziehbar(a, zustand)
-            .antippen(haptik = false) { if (zustand.tippErlaubt()) onTipp() },
+            .antippen(haptik = false) { if (zustand.tippErlaubt()) onTipp() }
+            // Inneres Stück des gelben Startzeit-Strichs: über der Farbleiste bis direkt vor die Uhrzeit, auf Kartenmitte.
+            .drawWithContent {
+                drawContent()
+                val y = size.height / 2f
+                drawLine(strich, Offset(0f, y), Offset(STRICH_IN_KARTE.toPx() - 3.dp.toPx(), y), 2.5.dp.toPx(), StrokeCap.Round)
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(5.dp).fillMaxHeight().knopf3d(farbe, farbe.copy(alpha = 0.7f), 3.dp, f.dunkel))
@@ -426,6 +447,8 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
                 color = f.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f, fill = false),
             )
+            // Ab einer Stunde Dauer das Ende dazu: Die mittige Karte zeigt es mit ihrer Unterkante nicht mehr an.
+            if (a.dauer >= 60) Text(" · bis ${Tage.zeit(ende)}", color = f.textLeise, fontSize = 11.sp, maxLines = 1, softWrap = false)
             // Als Wecker eingestellt: Weckersymbol direkt neben dem Titel, sonst die Glocke bei Erinnerung.
             if (a.erinnerung && a.alsWecker) Icon(Icons.Rounded.Alarm, "Wecker", tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(14.dp))
             if (a.erinnerung && !a.alsWecker) Icon(Icons.Rounded.NotificationsActive, null, tint = f.sekundaer, modifier = Modifier.padding(start = 4.dp).size(12.dp))
