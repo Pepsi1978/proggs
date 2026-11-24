@@ -145,7 +145,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         get() = aktuellerReiter
         set(neu) {
             if (neu == aktuellerReiter) return
-            if (neu == Reiter.JARVIS) reiterVerlauf.clear() else { reiterVerlauf.remove(neu); reiterVerlauf += aktuellerReiter }
+            // Beim Öffnen des Startreiters ist „Erledigt“ in der Heute-Karte zu, schon im ersten Bild.
+            if (neu == Reiter.JARVIS) { reiterVerlauf.clear(); heuteErledigtEinklappen() } else { reiterVerlauf.remove(neu); reiterVerlauf += aktuellerReiter }
             aktuellerReiter = neu
         }
 
