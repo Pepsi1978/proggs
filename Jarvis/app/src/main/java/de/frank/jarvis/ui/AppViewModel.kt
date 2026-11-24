@@ -1120,7 +1120,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun openLauncherWahlSchliessen() {
         openLauncherWahlOffen = false
         // Abgebrochenes Umbelegen eines Favoriten: Belegung und offene Modellwahl bleiben wie vorher.
-        if (favoritPlatz != null) { favoritPlatz = null; vorwahlFristNeu(); return }
+        if (favoritPlatz != null) { favoritPlatz = null; if (programmierVorwahlOffen) vorwahlFristNeu(); return }
         vorwahlOhneAufgabeZuruecknehmen()
     }
 
@@ -1136,8 +1136,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun favoritenPrefs() = getApplication<Application>().getSharedPreferences("jarvis_programmier_favoriten", Context.MODE_PRIVATE)
 
+    /** Gespeichert je eingebautem Knopf („favorit_opus“ …), damit eine neue Knopfreihenfolge keinen Favoriten verschiebt. */
+    private fun favoritSchluessel(platz: Int) = "favorit_" + ProgrammiererVorlage.MODELL_OPTIONEN[platz].first
+
     private fun favoritenLaden(): Map<Int, ProgrammiererVorlage.FreieWahl> = ProgrammiererVorlage.MODELL_OPTIONEN.indices.mapNotNull { i ->
-        favoritenPrefs().getString("platz_$i", null)?.let { roh ->
+        favoritenPrefs().getString(favoritSchluessel(i), null)?.let { roh ->
             runCatching {
                 val o = org.json.JSONObject(roh)
                 i to ProgrammiererVorlage.FreieWahl(o.getString("modell"), o.getString("anbieter"), o.getString("slug"), o.getString("effort"),
@@ -1166,12 +1169,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Nur diesen Favoriten ersetzen und speichern; kein Auftrag, die Modellwahl zeigt ihn sofort mit dem neuen Modell.
             favoritPlatz = null
             favoritenBelegung = favoritenBelegung + (platz to wahl)
-            favoritenPrefs().edit().putString("platz_$platz", org.json.JSONObject().put("modell", wahl.modell).put("anbieter", wahl.anbieter)
+            favoritenPrefs().edit().putString(favoritSchluessel(platz), org.json.JSONObject().put("modell", wahl.modell).put("anbieter", wahl.anbieter)
                 .put("slug", wahl.slug).put("effort", wahl.effort).put("profil", wahl.profil).put("modus", wahl.modus).put("cli", wahl.cli).toString()).apply()
             if (platz == 0 && vorwahlEinstieg != null && ProgrammiererVorlage.vorspannIn(entwurf) == vorwahlEinstieg) {
                 standardEinstieg().also { einstiegSetzen(it); vorwahlEinstieg = it }
             }
-            vorwahlFristNeu()
+            if (programmierVorwahlOffen) vorwahlFristNeu()
             return
         }
         if (ProgrammiererVorlage.reviewVorwahl(wahl.cli)) { reviewFrageOeffnen(ReviewVorwahl(frei = wahl), ProgrammiererVorlage.vorspannFrei(wahl)); return }
@@ -1271,7 +1274,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Einstieg ohne Wahl: der erste Favorit (hervorgehoben); unbelegt Opus 5.5 in Claude Code. */
-    private fun standardEinstieg() = favoritenBelegung[0]?.let { ProgrammiererVorlage.vorspannFrei(it) } ?: ProgrammiererVorlage.STANDARD_EINSTIEG
+    // Antigravity braucht die Review-Wahl vor dem Absenden (nur per Knopf): Ein solcher erster Favorit gilt deshalb nicht still, es bleibt Opus 5.5.
+    private fun standardEinstieg() = favoritenBelegung[0]?.takeUnless { ProgrammiererVorlage.reviewVorwahl(it.cli) }
+        ?.let { ProgrammiererVorlage.vorspannFrei(it) } ?: ProgrammiererVorlage.STANDARD_EINSTIEG
 
     /** Knopf der Modellwahl: Bei mehreren CLIs kommen deren Knöpfe, bei einem steht der Einstieg sofort im Feld; „OpenLauncher“ öffnet die Vollbildauswahl. */
     fun programmierVorwahl(modell: String) {
@@ -1284,6 +1289,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         if (modell == ProgrammiererVorlage.OPENLAUNCHER) {
+            vorwahlFrist?.cancel()
             programmierVorwahlOffen = false
             openLauncherWahlOffen = true
             return

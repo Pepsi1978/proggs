@@ -714,9 +714,11 @@ private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, lange: ((String
                     val erster = zeile == 0 && i == 0
                     Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
                         .background(if (erster) f.text.compositeOver(f.hgUnten) else auswahlGrund(f))
-                        .antippen(lange = lange?.let { l -> { l(wert) } }, langeText = lange?.let { "Favorit ändern" }) { aktion(wert) }
+                        .antippen(lange = lange?.takeIf { wert != de.frank.jarvis.faehigkeit.ProgrammiererVorlage.OPENLAUNCHER }?.let { l -> { l(wert) } },
+                            langeText = lange?.takeIf { wert != de.frank.jarvis.faehigkeit.ProgrammiererVorlage.OPENLAUNCHER }?.let { "Favorit ändern" }) { aktion(wert) }
                         .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (erster) f.hgOben else auswahlSchrift(f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text(label, color = if (erster) f.hgOben else auswahlSchrift(f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 150.dp))
                     }
                 }
             }
