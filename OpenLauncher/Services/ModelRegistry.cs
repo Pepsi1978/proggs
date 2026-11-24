@@ -271,10 +271,15 @@ public sealed class ModelRegistry
         public bool Ausgeblendet { get; set; }
     }
 
+    private const string LayoutRepoPath = "OpenLauncher/model-layout.json";
     private string? _layoutText;
     private readonly Dictionary<string, HashSet<string>> _removedSinceSave = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly SemaphoreSlim LayoutPushLock = new(1, 1);
-    private static int _layoutPushQueued;
+    // Ein lokaler, noch nicht gepushter Stand: solange gilt er und wird nie vom GitHub-Stand ueberschrieben.
+    private bool _layoutPending;
+    private int _layoutVersion;
+    // Ein gemeinsames Schloss fuer Lesen von und Schreiben nach GitHub: nie zwei git-Laeufe gleichzeitig.
+    private static readonly SemaphoreSlim LayoutGitLock = new(1, 1);
+    private int _layoutPushQueued;
 
     private static ModelLayout? ReadLayout(out string? text)
     {
@@ -305,8 +310,9 @@ public sealed class ModelRegistry
     /// </summary>
     public bool ReloadLayoutIfChanged()
     {
+        if (_layoutPending) return false;
         var layout = ReadLayout(out var text);
-        if (layout == null || text == _layoutText) return false;
+        if (layout == null || text?.TrimEnd('\n') == _layoutText?.TrimEnd('\n')) return false;
         _layoutText = text;
         var changed = ApplyLayout(layout);
         if (changed) Save();
@@ -320,8 +326,17 @@ public sealed class ModelRegistry
     /// </summary>
     public async Task<bool> SyncLayoutFromUpstreamAsync()
     {
-        var text = await RepoSync.ReadUpstreamFileAsync("OpenLauncher/model-layout.json");
-        if (string.IsNullOrWhiteSpace(text)) return false;
+        // Eigener Stand noch nicht auf GitHub: nicht ueberschreiben, sondern den Push erneut versuchen.
+        if (_layoutPending)
+        {
+            _ = PushLayoutAsync(TimeSpan.Zero);
+            return false;
+        }
+        string? text;
+        await LayoutGitLock.WaitAsync();
+        try { text = await RepoSync.ReadUpstreamFileAsync(LayoutRepoPath); }
+        finally { LayoutGitLock.Release(); }
+        if (string.IsNullOrWhiteSpace(text) || _layoutPending) return false;
         text = text.Replace("\r\n", "\n").TrimEnd('\n');
         if (string.Equals(text, _layoutText?.TrimEnd('\n'), StringComparison.Ordinal)) return false;
         ModelLayout? layout;
@@ -335,8 +350,42 @@ public sealed class ModelRegistry
         _layoutText = text;
         var changed = ApplyLayout(layout);
         if (changed) Save();
+        // Datei auf den GitHub-Stand bringen und vormerken: dann blockiert sie kein spaeteres Vorspulen.
+        try
+        {
+            var onDisk = File.Exists(LayoutPath) ? File.ReadAllText(LayoutPath).Replace("\r\n", "\n").TrimEnd('\n') : null;
+            if (onDisk != text)
+            {
+                var tmp = LayoutPath + ".tmp";
+                File.WriteAllText(tmp, text);
+                File.Move(tmp, LayoutPath, overwrite: true);
+                await RepoSync.StageFileAsync(LayoutRepoPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "SyncLayoutFromUpstreamAsync", $"Datei nicht aktualisiert: {ex.Message}");
+        }
         Logger.Instance.Info("ModelRegistry", "SyncLayoutFromUpstreamAsync", "Anordnung von GitHub übernommen", new { changed });
         return changed;
+    }
+
+    /// <summary>
+    /// Legt die zuletzt uebernommene Anordnung erneut ueber die Gruppen, etwa nachdem ein Katalog-Abgleich
+    /// (LM Studio, OpenRouter) Modelle hinzugefuegt hat: bekannte Modelle behalten Platz und Sichtbarkeit.
+    /// </summary>
+    private void ReapplyCurrentLayout()
+    {
+        if (_layoutText == null) return;
+        try
+        {
+            var layout = JsonSerializer.Deserialize<ModelLayout>(_layoutText, JsonOpts);
+            if (layout != null) ApplyLayout(layout);
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "ReapplyCurrentLayout", ex.Message);
+        }
     }
 
     private static List<T>? FindLayoutList<T>(Dictionary<string, List<T>> map, string groupId) =>
@@ -393,6 +442,13 @@ public sealed class ModelRegistry
                 {
                     model.DisplayName = entry.Name;
                     model.HasCustomDisplayName = true;
+                    changed = true;
+                }
+                else if (!entry.EigenerName && model.HasCustomDisplayName)
+                {
+                    // Eigener Name wurde auf einem anderen Rechner zurueckgesetzt.
+                    model.HasCustomDisplayName = false;
+                    model.DisplayName = string.IsNullOrWhiteSpace(entry.Name) ? ToDisplayName(model.Slug) : entry.Name;
                     changed = true;
                 }
                 position++;
@@ -463,7 +519,9 @@ public sealed class ModelRegistry
             File.WriteAllText(tmp, json);
             File.Move(tmp, LayoutPath, overwrite: true);
             _layoutText = json;
-            _ = PushLayoutAsync();
+            _layoutPending = true;
+            _layoutVersion++;
+            _ = PushLayoutAsync(TimeSpan.FromSeconds(3));
         }
         catch (Exception ex)
         {
@@ -472,28 +530,38 @@ public sealed class ModelRegistry
     }
 
     /// <summary>
-    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit) und
-    /// nacheinander, damit sich zwei Laeufe nie im selben Repo ueberholen.
+    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit) und nie
+    /// gleichzeitig mit dem Lesen von GitHub. Scheitert er, bleibt der Stand ausstehend und der naechste
+    /// Minutenabgleich versucht es erneut.
     /// </summary>
-    private static async Task PushLayoutAsync()
+    private async Task PushLayoutAsync(TimeSpan delay)
     {
         if (Interlocked.Exchange(ref _layoutPushQueued, 1) == 1) return;
-        await Task.Delay(TimeSpan.FromSeconds(3));
-        await LayoutPushLock.WaitAsync();
         try
         {
-            Interlocked.Exchange(ref _layoutPushQueued, 0);
-            var result = await RepoSync.CommitAndPushFileAsync(LayoutPath, "OpenLauncher: Modell-Anordnung der Seitenleiste geändert", localWins: true);
-            if (result.Ok) Logger.Instance.Info("ModelRegistry", "PushLayoutAsync", result.Message);
-            else Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", result.Message);
+            if (delay > TimeSpan.Zero) await Task.Delay(delay);
+            await LayoutGitLock.WaitAsync();
+            try
+            {
+                Interlocked.Exchange(ref _layoutPushQueued, 0);
+                var version = _layoutVersion;
+                var result = await RepoSync.PushFileOnUpstreamAsync(LayoutRepoPath, "OpenLauncher: Modell-Anordnung der Seitenleiste geändert");
+                if (result.Ok)
+                {
+                    if (version == _layoutVersion) _layoutPending = false;
+                    Logger.Instance.Info("ModelRegistry", "PushLayoutAsync", result.Message);
+                }
+                else Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", result.Message);
+            }
+            finally
+            {
+                LayoutGitLock.Release();
+            }
         }
         catch (Exception ex)
         {
+            Interlocked.Exchange(ref _layoutPushQueued, 0);
             Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", ex.Message);
-        }
-        finally
-        {
-            LayoutPushLock.Release();
         }
     }
 
@@ -739,6 +807,7 @@ public sealed class ModelRegistry
         foreach (var model in merged) group.Models.Add(model);
         group.KnownSyncedModelSlugs = remote.Select(m => m.Slug).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         group.HiddenModelSlugs = group.HiddenModelSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        ReapplyCurrentLayout();
 
         Save();
         group.RefreshHeaderText();

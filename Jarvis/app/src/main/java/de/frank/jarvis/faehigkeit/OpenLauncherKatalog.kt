@@ -64,7 +64,8 @@ object OpenLauncherKatalog {
     /** Die Gruppen in Franks Reihenfolge: Anthropic, OpenAI, Moonshot, Google, danach die übrigen wie im OpenLauncher. */
     fun sortiert(gruppen: List<Gruppe>) =
         // Mit gemeinsamer Anordnung (OpenLauncher/model-layout.json) genau die Gruppenfolge der Seitenleiste von OpenLauncher.
-        if (gruppen.isNotEmpty() && gruppen.all { it.position >= 0 }) gruppen.sortedBy { it.position }
+        // Gruppen, die die Anordnung noch nicht kennt, hängen wie in OpenLauncher hinten an.
+        if (gruppen.any { it.position >= 0 }) gruppen.sortedBy { if (it.position >= 0) it.position else Int.MAX_VALUE }
         else gruppen.sortedBy { g -> VORRANG.indexOf(g.anbieter.lowercase(Locale.ROOT)).let { if (it < 0) VORRANG.size else it } }
     fun anfangsOffen(g: Gruppe) = g.anbieter.lowercase(Locale.ROOT) in VORRANG
 

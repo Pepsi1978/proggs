@@ -962,6 +962,7 @@
     {"versionCode": 953, "versionName": "1.8.942", "stand": "24.11.2026, 09:36 Uhr", "notiz": "OpenLauncher-Auswahl am Programmier-Knopf zeigt die Modelle in derselben Reihenfolge und mit denselben ausgeblendeten Modellen wie OpenLauncher auf allen Rechnern."},
     {"versionCode": 954, "versionName": "1.8.943", "stand": "24.11.2026, 09:45 Uhr", "notiz": "Modellfavoriten am Programmierbutton lassen sich per langem Druck einzeln über die OpenLauncher-Auswahl neu belegen, und die Programmierknöpfe heben sich im Hellmodus farbig ab."},
     {"versionCode": 955, "versionName": "1.8.944", "stand": "24.11.2026, 09:49 Uhr", "notiz": "Mentalität: Der Pause-/Weiter-Knopf erscheint nur noch, solange eine Vorlese-Session läuft, und verschwindet nach dem Stoppen wieder."},
-    {"versionCode": 956, "versionName": "1.8.945", "stand": "24.11.2026, 09:49 Uhr", "notiz": "Review-Befunde an den Modellfavoriten behoben: Antigravity-Favorit bleibt nicht stiller Standard, lange Namen werden gekürzt, OpenLauncher-Knopf reagiert nicht auf langen Druck."}
+    {"versionCode": 956, "versionName": "1.8.945", "stand": "24.11.2026, 09:49 Uhr", "notiz": "Review-Befunde an den Modellfavoriten behoben: Antigravity-Favorit bleibt nicht stiller Standard, lange Namen werden gekürzt, OpenLauncher-Knopf reagiert nicht auf langen Druck."},
+    {"versionCode": 957, "versionName": "1.8.946", "stand": "24.11.2026, 09:52 Uhr", "notiz": "OpenLauncher-Auswahl ordnet neue, noch unbekannte Modellgruppen hinten an statt die ganze Reihenfolge umzustellen."}
 ]
 }

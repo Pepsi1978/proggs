@@ -242,19 +242,32 @@ final class MainViewModel {
 
     /// Liest die Anordnung im Hintergrund von GitHub und uebernimmt sie auf dem Main-Thread.
     private func syncModelLayout() {
+        // Eigener Stand noch nicht auf GitHub: nicht ueberschreiben, sondern den Push erneut versuchen.
+        if registry.layoutPending {
+            registry.pushLayout(delay: 0)
+            return
+        }
         guard !layoutSyncRunning else { return }
         layoutSyncRunning = true
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            let text = RepoSync.readUpstreamFile("OpenLauncher/model-layout.json")
+        ModelRegistry.layoutGitQueue.async { [weak self] in
+            let text = RepoSync.readUpstreamFile(ModelRegistry.layoutRepoPath)
             Task { @MainActor in
                 guard let self else { return }
                 self.layoutSyncRunning = false
                 guard let text, self.registry.applyUpstreamLayout(text) else { return }
                 self.modelGroups = self.registry.groups
                 self.refreshHiddenModels()
-                if self.selectedModel?.isHidden == true { self.selectedModel = self.modelGroups.flatMap(\.models).first { !$0.isHidden } }
+                self.reselectIfGone()
                 self.delegate?.modelGroupsChanged()
             }
+        }
+    }
+
+    /// Ausgeblendet oder auf einem anderen Rechner entfernt: ein sichtbares Modell waehlen.
+    private func reselectIfGone() {
+        let alle = modelGroups.flatMap(\.models)
+        if let current = selectedModel, current.isHidden || !alle.contains(where: { $0 === current }) {
+            selectedModel = alle.first { !$0.isHidden }
         }
     }
 
@@ -1099,7 +1112,7 @@ final class MainViewModel {
         else if registry.reloadLayoutIfChanged() {
             modelGroups = registry.groups
             refreshHiddenModels()
-            if selectedModel?.isHidden == true { selectedModel = modelGroups.flatMap(\.models).first { !$0.isHidden } }
+            reselectIfGone()
             delegate?.modelGroupsChanged()
         }
 

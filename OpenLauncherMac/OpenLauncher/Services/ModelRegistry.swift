@@ -201,11 +201,15 @@ final class ModelRegistry {
         var Entfernt: [String: [String]] = [:]
     }
 
+    static let layoutRepoPath = "OpenLauncher/model-layout.json"
     private var layoutText: String?
     private var removedSinceSave: [String: Set<String>] = [:]
-    private static let layoutPushQueue = DispatchQueue(label: "OpenLauncher.LayoutPush")
-    private static var layoutPushQueued = false
-    private static let layoutPushLock = NSLock()
+    /// Ein lokaler, noch nicht gepushter Stand: solange gilt er und wird nie vom GitHub-Stand ueberschrieben.
+    private(set) var layoutPending = false
+    private var layoutVersion = 0
+    /// Eine serielle Warteschlange fuer Lesen von und Schreiben nach GitHub: nie zwei git-Laeufe gleichzeitig.
+    static let layoutGitQueue = DispatchQueue(label: "OpenLauncher.LayoutGit")
+    private var layoutPushQueued = false
 
     private static func readLayout() -> (layout: ModelLayout, text: String)? {
         guard let raw = try? String(contentsOfFile: layoutPath, encoding: .utf8) else { return nil }
@@ -230,7 +234,8 @@ final class ModelRegistry {
 
     /// Nach einem Repo-Abgleich: hat ein anderer Rechner eine neue Anordnung gepusht, sie uebernehmen.
     func reloadLayoutIfChanged() -> Bool {
-        guard let stored = ModelRegistry.readLayout(), stored.text != layoutText else { return false }
+        guard !layoutPending, let stored = ModelRegistry.readLayout(),
+              stored.text.trimmingCharacters(in: .newlines) != layoutText?.trimmingCharacters(in: .newlines) else { return false }
         layoutText = stored.text
         let changed = applyLayout(stored.layout)
         if changed { save() }
@@ -241,14 +246,18 @@ final class ModelRegistry {
     /// Uebernimmt die von GitHub gelesene Anordnung (RepoSync.readUpstreamFile), wenn ein anderer Rechner
     /// etwas geaendert hat. Laeuft beim Start, bei jeder Aktivierung und jede Minute.
     func applyUpstreamLayout(_ raw: String) -> Bool {
-        let text = raw.replacingOccurrences(of: "\r\n", with: "\n")
-        func ohneEnde(_ s: String?) -> String? { s.map { $0.trimmingCharacters(in: .newlines) } }
-        guard ohneEnde(text) != ohneEnde(layoutText),
+        let text = raw.replacingOccurrences(of: "\r\n", with: "\n").trimmingCharacters(in: .newlines)
+        guard !layoutPending, text != layoutText?.trimmingCharacters(in: .newlines),
               let data = text.data(using: .utf8),
               let layout = try? JSONDecoder().decode(ModelLayout.self, from: data) else { return false }
         layoutText = text
         let changed = applyLayout(layout)
         if changed { save() }
+        // Datei auf den GitHub-Stand bringen und vormerken: dann blockiert sie kein spaeteres Vorspulen.
+        let onDisk = (try? String(contentsOfFile: ModelRegistry.layoutPath, encoding: .utf8))?.trimmingCharacters(in: .newlines)
+        if onDisk != text, Paths.writeAtomic(text, to: ModelRegistry.layoutPath) {
+            ModelRegistry.layoutGitQueue.async { RepoSync.stageFile(ModelRegistry.layoutRepoPath) }
+        }
         Logger.shared.info("ModelRegistry", "applyUpstreamLayout", "Anordnung von GitHub übernommen", ["changed": "\(changed)"])
         return changed
     }
@@ -293,6 +302,12 @@ final class ModelRegistry {
                 if entry.EigenerName, !entry.Name.isEmpty, !model.hasCustomDisplayName || model.displayName != entry.Name {
                     model.displayName = entry.Name
                     model.hasCustomDisplayName = true
+                    changed = true
+                }
+                else if !entry.EigenerName && model.hasCustomDisplayName {
+                    // Eigener Name wurde auf einem anderen Rechner zurueckgesetzt.
+                    model.hasCustomDisplayName = false
+                    model.displayName = entry.Name.isEmpty ? ModelRegistry.toDisplayName(model.slug) : entry.Name
                     changed = true
                 }
                 position += 1
@@ -367,21 +382,38 @@ final class ModelRegistry {
             return
         }
         layoutText = json
-        ModelRegistry.pushLayout()
+        layoutPending = true
+        layoutVersion += 1
+        pushLayout(delay: 3)
     }
 
-    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit) und
-    /// nacheinander auf einer eigenen Warteschlange, nie auf dem Main-Thread.
-    private static func pushLayout() {
-        layoutPushLock.lock()
-        if layoutPushQueued { layoutPushLock.unlock(); return }
+    /// Legt die zuletzt uebernommene Anordnung erneut ueber die Gruppen, etwa nachdem ein Katalog-Abgleich
+    /// (LM Studio, OpenRouter) Modelle hinzugefuegt hat: bekannte Modelle behalten Platz und Sichtbarkeit.
+    private func reapplyCurrentLayout() {
+        guard let data = layoutText?.data(using: .utf8),
+              let layout = try? JSONDecoder().decode(ModelLayout.self, from: data) else { return }
+        _ = applyLayout(layout)
+    }
+
+    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit), auf der
+    /// gemeinsamen git-Warteschlange und nie auf dem Main-Thread. Scheitert er, bleibt der Stand ausstehend und
+    /// der naechste Minutenabgleich versucht es erneut.
+    func pushLayout(delay: TimeInterval) {
+        guard !layoutPushQueued else { return }
         layoutPushQueued = true
-        layoutPushLock.unlock()
-        layoutPushQueue.asyncAfter(deadline: .now() + 3) {
-            layoutPushLock.lock(); layoutPushQueued = false; layoutPushLock.unlock()
-            let result = RepoSync.commitAndPushFile(layoutPath, message: "OpenLauncher: Modell-Anordnung der Seitenleiste geändert", localWins: true)
-            if result.ok { Logger.shared.info("ModelRegistry", "pushLayout", result.message) }
-            else { Logger.shared.warn("ModelRegistry", "pushLayout", result.message) }
+        let version = layoutVersion
+        ModelRegistry.layoutGitQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            let result = RepoSync.pushFileOnUpstream(ModelRegistry.layoutRepoPath, message: "OpenLauncher: Modell-Anordnung der Seitenleiste geändert")
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.layoutPushQueued = false
+                if result.ok {
+                    if version == self.layoutVersion { self.layoutPending = false } else { self.pushLayout(delay: 0) }
+                    Logger.shared.info("ModelRegistry", "pushLayout", result.message)
+                } else {
+                    Logger.shared.warn("ModelRegistry", "pushLayout", result.message)
+                }
+            }
         }
     }
 
@@ -597,6 +629,7 @@ final class ModelRegistry {
         var uniqueHidden: [String] = []
         for slug in group.hiddenModelSlugs { ModelRegistry.addUnique(&uniqueHidden, slug) }
         group.hiddenModelSlugs = uniqueHidden
+        reapplyCurrentLayout()
 
         save()
         Logger.shared.info("ModelRegistry", "syncGroupModels",

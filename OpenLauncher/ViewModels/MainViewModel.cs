@@ -539,7 +539,8 @@ public sealed partial class MainViewModel : ObservableObject
             if (current >= 0 && current != index) ModelGroups.Move(current, index);
         }
         RefreshHiddenModels();
-        if (SelectedModel is { IsHidden: true })
+        // Ausgeblendet oder auf einem anderen Rechner entfernt: ein sichtbares Modell waehlen.
+        if (SelectedModel is { IsHidden: true } || (SelectedModel != null && !ModelGroups.Any(group => group.Models.Contains(SelectedModel))))
             SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
     }
 
