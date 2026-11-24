@@ -828,7 +828,7 @@ private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Un
         aufblitzen.animateTo(0f, tween(650))
     }
     Box(
-        // Programmier- und Nachtrag-Symbol bleiben fast durchsichtig wie die übrigen Seitenbuttons (Frank, 24.11.2026: Gelb wirkte schon aktiv).
+        // Grund aller Schwebesymbole bleibt fast durchsichtig, auch bei Programmierer und Nachtrag (Frank, 24.11.2026: farbiger Grund wirkte schon aktiv).
         Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
             .background(f.erfolg.copy(alpha = 0.85f * maxOf(gruen, aufblitzen.value))).drawBehind {
             val x = size.width * lauf
