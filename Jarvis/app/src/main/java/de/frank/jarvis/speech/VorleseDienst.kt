@@ -78,11 +78,17 @@ class VorleseDienst : Service() {
         // um startForeground nachzuliefern; sonst beendet Android die ganze App mit
         // ForegroundServiceDidNotStartInTimeException. Genau daran stürzte die App ab, wenn
         // man von einer vorgelesenen Idee zur nächsten sprang.
+        // Knopf-Intents (Pause, Weiter …) tragen keinen Stand: dann bleibt die zuletzt gemeldete Anzeige stehen,
+        // statt kurz „Wird vorbereitet“ mit falschem Pausenzustand zu zeigen.
+        val knopf = intent?.action != null
         val titel = intent?.getStringExtra(EXTRA_TITEL) ?: letzterTitel
-        val nummer = intent?.getIntExtra(EXTRA_NUMMER, 0) ?: 0
-        val gesamt = intent?.getIntExtra(EXTRA_GESAMT, 0) ?: 0
-        val pausiert = intent?.getBooleanExtra(EXTRA_PAUSIERT, false) ?: false
+        val nummer = if (knopf) letzteNummer else intent?.getIntExtra(EXTRA_NUMMER, 0) ?: 0
+        val gesamt = if (knopf) letzteGesamt else intent?.getIntExtra(EXTRA_GESAMT, 0) ?: 0
+        val pausiert = if (knopf) letztesPausiert else intent?.getBooleanExtra(EXTRA_PAUSIERT, false) ?: false
         letzterTitel = titel
+        letzteNummer = nummer
+        letzteGesamt = gesamt
+        letztesPausiert = pausiert
         starteImVordergrund(baueMeldung(titel, nummer, gesamt, pausiert))
         // Jede Aktualisierung verlängert die Frist — auch ein sehr langer Text bleibt wach.
         // Pausiert läuft weder Netz noch Ton: Dann wird der Wakelock freigegeben und erst beim
@@ -144,6 +150,9 @@ class VorleseDienst : Service() {
     override fun onDestroy() {
         laeuft = false
         letzterTitel = "Jarvis"
+        letzteNummer = 0
+        letzteGesamt = 0
+        letztesPausiert = false
         runCatching { if (wach?.isHeld == true) wach?.release() }
         wach = null
         sitzung?.isActive = false
@@ -241,6 +250,9 @@ class VorleseDienst : Service() {
 
         /** Der zuletzt gezeigte Titel, damit ein Neustart ohne Extras nicht leer dasteht. */
         @Volatile private var letzterTitel = "Jarvis"
+        @Volatile private var letzteNummer = 0
+        @Volatile private var letzteGesamt = 0
+        @Volatile private var letztesPausiert = false
 
         private const val KANAL_ID = "vorlesen"
         private const val MELDUNG_ID = 4711

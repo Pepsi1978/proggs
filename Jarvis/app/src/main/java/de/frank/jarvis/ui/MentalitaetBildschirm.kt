@@ -223,8 +223,8 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                     Column(Modifier.weight(1f).padding(start = 2.dp)) {
                         Text("Mentalität", color = f.text, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         val untertitel = when {
-                            spielStand.laeuft && spielStand.internetProbleme -> "Internetprobleme · Satz wird erneut angefragt …"
                             spielStand.laeuft && spielStand.pausiert -> "Pausiert · Weiter setzt genau hier fort"
+                            spielStand.laeuft && spielStand.internetProbleme -> "Internetprobleme · Satz wird erneut angefragt …"
                             else -> null
                         } ?: when (spielStand.phase) {
                             MentalPhase.LAEDT -> "Stimme wird frisch erzeugt …"
@@ -239,11 +239,11 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
                         Text(
                             untertitel,
                             color = when {
-                                spielStand.laeuft && spielStand.internetProbleme -> f.gefahr
+                                spielStand.laeuft && !spielStand.pausiert && spielStand.internetProbleme -> f.gefahr
                                 spielStand.laeuft -> MENTAL_AKZENT
                                 else -> f.textLeise
                             },
-                            fontWeight = if (spielStand.laeuft && spielStand.internetProbleme) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (spielStand.laeuft && !spielStand.pausiert && spielStand.internetProbleme) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

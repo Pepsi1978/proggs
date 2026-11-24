@@ -59,6 +59,12 @@ class SyntheseFehler(message: String, cause: Throwable? = null) : Exception(mess
 class SyntheseZeitlimit(message: String) : Exception(message)
 
 /**
+ * Gemini hat einen frisch erzeugten kurzen Satz abgeschnitten (meldet trotzdem STOP). Kein Schlüssel- oder Dienstfehler:
+ * sperrt keinen Schlüssel und läuft nicht durch die Rückfallkette; der Aufrufer fragt denselben Satz einfach neu an.
+ */
+class SyntheseZuKurz(message: String) : Exception(message)
+
+/**
  * Eigene Stimme für einzelne Meldungen (z. B. Update-Ansagen von UpdateStation), abweichend von Jarvis' Vorlese-Stimme.
  * [stimme] ist eine Kennung aus dem [TtsCatalog] (Edge, Google oder Alibaba), null = wie Jarvis; [tempo] null = wie Jarvis.
  */
@@ -389,7 +395,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val gesprochen = ton?.let { gesprocheneSekunden(it.first, it.second) }
         if (frisch && gesprochen != null && text.length >= 12 && gesprochen < text.length / 25.0) {
             Logbuch.netz("Gemini-Audio abgeschnitten", "zeichen=${text.length} gesprochen=${"%.2f".format(gesprochen)}s gesamt=${"%.2f".format(sekunden)}s")
-            throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(gesprochen)} s gesprochen für ${text.length} Zeichen).")
+            throw SyntheseZuKurz("Gemini-Audio zu kurz (${"%.1f".format(gesprochen)} s gesprochen für ${text.length} Zeichen).")
         }
         if (!frisch && text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] = wav }
         val fertig = mitTempo(wav, tempo)
