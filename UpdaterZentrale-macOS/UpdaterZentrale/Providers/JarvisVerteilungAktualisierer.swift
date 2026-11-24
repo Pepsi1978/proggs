@@ -78,7 +78,12 @@ struct JarvisVerteilungAktualisierer: Aktualisierer {
         case "blockiert": zustand = .aktuell
         default: zustand = .unbekannt
         }
-        if nachInstallation && kurz == "installiert" { zustand = .fertig }
+        if nachInstallation && kurz == "installiert" {
+            zustand = .fertig
+        } else if nachInstallation {
+            // Nichts installiert (wartet, blockiert, schon aktuell): kein Fehler, keine Uebergabe an Claude Code; der Grund steht auf der Karte.
+            zustand = .abgebrochen
+        }
         return PruefErgebnis(zustand: zustand, installierteVersion: installiert, verfuegbareVersion: bereit, meldung: text, protokoll: erg.ausgabe)
     }
 }

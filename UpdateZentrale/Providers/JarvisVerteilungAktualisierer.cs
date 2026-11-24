@@ -113,6 +113,9 @@ public sealed class JarvisVerteilungAktualisierer : IAktualisierer
             _ => UpdateZustand.Unbekannt
         };
         if (nachInstallation && kurz == "installiert") uz = UpdateZustand.Fertig;
+        // Nichts installiert (wartet auf Live-Gespräch oder Freigabe, blockiert, an die Hintergrundaufgabe übergeben, schon aktuell):
+        // kein Fehler und keine Übergabe an Claude Code, die letzte funktionierende Version bleibt; der Grund steht auf der Karte.
+        else if (nachInstallation) uz = UpdateZustand.Abgebrochen;
         return new PruefErgebnis(uz, installiert, bereit, text, lauf.Ausgabe);
     }
 }

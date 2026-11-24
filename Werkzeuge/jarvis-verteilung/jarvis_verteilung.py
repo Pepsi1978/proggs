@@ -477,10 +477,8 @@ def ist_erhoeht() -> bool:
 
 def installations_sperre(plattform: str, buch: dict, alle: list[dict]) -> str | None:
     """Warum dieser Rechner jetzt nicht installieren darf (None = frei). Nur geprüfte, freigegebene Stände gehen raus."""
-    ausstehend = [e for k, e in buch.items() if k.startswith(plattform + "/") and e.get("status") == "in_arbeit"
-                  and alter_stunden(e.get("zeit")) < K["claimStunden"]]
-    if ausstehend:
-        return f"Portierung läuft ({len(ausstehend)} Änderung(en) auf {ausstehend[0].get('host')}), Verteilung wartet auf Review und Tests"
+    # Eine laufende Prüfsitzung sperrt nicht pauschal: Gewöhnliche Updates (etwa HP -> Power-PC) gehen weiter. Gesperrt wird
+    # erst, wenn ein Portierungs-Commit ohne Freigabe auf main liegt (unten) – genau der Stand, der ungeprüft wäre.
     ordner = K["plattformen"][plattform]["ordner"]
     portierte = {s: c for c in alle if any(f.startswith(ordner) for f in c["dateien"]) for s in c["portiert"]}
     for k, e in buch.items():
@@ -526,7 +524,7 @@ def auftrag_text(plattform: str, faelle: list[dict], ziel: str) -> str:
         "4. Nur wenn Review und Tests grün sind: Version bumpen (echte Systemzeit), funktionen.md der Zielplattform knapp nachziehen, committen mit der "
         f"Commit-Nachricht `{ordner}: <was portiert wurde>` und dem Trailer `{TRAILER} <sha12>[, <sha12>]` als eigene letzte Zeile vor Co-Authored-By, "
         f"rebasen, pushen. Dann `{melden} --quelle <sha>[,<sha>] --ergebnis freigegeben --review ok --tests ok`.",
-        f"5. Bleibt das Review oder ein Test rot, NICHT pushen (Änderung verwerfen oder lokal lassen) und melden: `{melden} --quelle <sha> --ergebnis blockiert --review <ok|fehler> --tests <ok|fehler> --grund \"<Grund>\"`. "
+        f"5. Bleibt das Review oder ein Test rot, NICHT pushen und die eigene Änderung vollständig verwerfen (eigene Dateien per git restore auf origin/main, eigene Commits per git reset), sonst blockiert der abweichende Arbeitsbaum jede spätere Installation; dann melden: `{melden} --quelle <sha> --ergebnis blockiert --review <ok|fehler> --tests <ok|fehler> --grund \"<Grund>\"`. "
         "Die Verteilung blockiert dann diese Änderung, die letzte funktionierende Version bleibt installiert.",
         "6. Jeder aufgeführte Commit braucht genau eine Meldung. Installiert wird nicht von dir, sondern von der Verteilung "
         f"(`{skript} Werkzeuge/jarvis-verteilung/jarvis_verteilung.py auto` darfst du am Ende einmal starten).",
